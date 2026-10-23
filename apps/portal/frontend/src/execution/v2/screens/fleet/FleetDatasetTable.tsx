@@ -9,20 +9,21 @@
  * Every absence is a statement: no owner is "Not available"; no single stage names why; days in stage is `Not published (FE-027)`, never a dash
  * and never 0. Sorting is the server's: a header is a sort control only for a field the dataset offers (money fields: with a basis pinned).
  */
-import type { ReactNode } from "react";
+import { useMemo, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 
 import { CardsTable, type CardsColumn } from "../../cardsTable";
 import { GapWhy, JourneySpine, NaWhy } from "../../blocks";
 import { Spark } from "../../charts";
 import { Flag } from "../../Flag";
-import type { ManagerRow, ManagerSortField } from "../../readers/managerDataset";
+import type { ManagerGroup, ManagerGroupField, ManagerRow, ManagerSortField } from "../../readers/managerDataset";
+import { MetricValue } from "../manager/MetricValue";
 import { FE, healthView, humanize, type UnpublishedFact } from "./fleetModel";
-import { ENVIRONMENT_LABEL, inStageOf, lifecycleFlagOf, stageViewOf } from "./fleetDatasetModel";
+import { ENVIRONMENT_LABEL, findGroup, groupEntries, groupLabel, inStageOf, lifecycleFlagOf, stageViewOf, type GroupedEntry } from "./fleetDatasetModel";
 import {
   DATASET_COLUMNS, equityScalarOf, isMoneyField, qbtsOf, qbtsRows, sortFieldOf, type EquityScalar, type SortKey,
 } from "./fleetMetricsModel";
-import { DOMAIN_LABEL, PartitionFigures } from "./PartitionFigures";
+import { DOMAIN_LABEL, PartitionFigures, partitionTag } from "./PartitionFigures";
 import { spineStage } from "./FleetTable";
 import { sparkKey, type SparkEntry } from "./useFleetSparks";
 
@@ -66,13 +67,20 @@ function InStageCell({ row }: { row: ManagerRow }) {
 }
 
 /** The portfolio, and a badge with the deployments behind the row when there are several (guide 8.1: "badge + children"). */
-function PortfolioCell({ row }: { row: ManagerRow }) {
+function PortfolioCell({ row, owner }: { row: ManagerRow; owner: boolean }) {
   const n = row.children.length;
   return (
     <span className="exec-fleet-portfolio">
-      <span className="exec-fleet-trunc" title={row.portfolioId}>{row.portfolioId}</span>
-      {n > 1 ? (
-        <span className="exec-fleet-badge" title={`${n} deployments: ${row.children.map((child) => `${child.deploymentId} (${child.stage})`).join(", ")}`}>{n}</span>
+      <span className="exec-fleet-portfolio-line">
+        <span className="exec-fleet-trunc" title={row.portfolioId}>{row.portfolioId}</span>
+        {n > 1 ? (
+          <span className="exec-fleet-badge" title={`${n} deployments: ${row.children.map((child) => `${child.deploymentId} (${child.stage})`).join(", ")}`}>{n}</span>
+        ) : null}
+      </span>
+      {owner ? (
+        row.ownerUserId === null
+          ? <NaWhy className="exec-fleet-np" text="Owner not available" reason="The dataset row publishes no owner." />
+          : <span className="exec-fleet-owner-line" title={`Owner ${row.ownerUserId}`}>{row.ownerUserId}</span>
       ) : null}
     </span>
   );
@@ -93,7 +101,7 @@ export function QbtsCell({ row, carried }: { row: ManagerRow; carried: boolean }
   }
   return (
     <span className="exec-fleet-qbts" data-state="value" data-band={view.band?.code}>
-      <span className="exec-mgr-num" title={view.policy === null ? (view.exact ?? undefined) : `${view.exact} · policy ${view.policy}`} data-zero={view.exact === "0" ? "true" : undefined}>{view.exact}</span>
+      <span className="exec-mgr-num" title={`${view.exact === "0" ? "A published score of zero (a missing score reads Not available) · " : ""}${view.policy === null ? (view.exact ?? "") : `${view.exact} · policy ${view.policy}`}`} data-zero={view.exact === "0" ? "true" : undefined}>{view.exact}</span>
       {view.band ? <Flag kind={view.band.kind} label={view.band.label} size="sm" /> : <span className="exec-fleet-np" title="The dataset names no band for this score.">No band</span>}
       {view.provisional ? <Flag kind="pending" label="Provisional" size="sm" /> : null}
       <GapWhy name={`QBTS details, ${row.name ?? row.alphaId}`} rows={qbtsRows(view)} next={null} />
@@ -132,6 +140,10 @@ export interface FleetDatasetTableProps {
   /** The Alpha 360 of the row's alpha, with the context the Fleet carries. */
   hrefFor(row: ManagerRow): string;
   empty?: ReactNode;
+  /** The group levels the read asked for (`group`, `then`): the rows are placed under a header row per group. */
+  groupFields?: readonly ManagerGroupField[];
+  /** The server's groups (the whole filtered query): the header's count and partition money. */
+  groups?: readonly ManagerGroup[];
   /** The row's `sel` value when its peek is open. */
   selectedKey?: string | null;
   /** A click or Enter on the row opens the peek; the name stays a link to the alpha. */
@@ -142,7 +154,7 @@ export interface FleetDatasetTableProps {
 
 export function FleetDatasetTable({
   rows, metricKeys = null, showEnvironment = false, shownOptional, hidden, offeredSorts = null, basisPinned = false, sorts = [], onSort,
-  equityScalar = "value", sparks, datasetEnvironment, hrefFor, empty, selectedKey, onOpen, selectionReasonId,
+  equityScalar = "value", sparks, datasetEnvironment, hrefFor, empty, selectedKey, onOpen, selectionReasonId, groupFields = [], groups = [],
 }: FleetDatasetTableProps) {
   const scalar = equityScalarOf(equityScalar);
   const carried = metricKeys === null || metricKeys.includes("score");
@@ -160,7 +172,7 @@ export function FleetDatasetTable({
       </span>
     ),
     owner: (row) => row.ownerUserId,
-    portfolio: (row) => <PortfolioCell row={row} />,
+    portfolio: (row) => <PortfolioCell row={row} owner={!(shownOptional?.has("owner") ?? false)} />,
     stage: (row) => <StageCell row={row} />,
     "in-stage": (row) => <InStageCell row={row} />,
     allocation: money("allocation", ALLOCATION_GAP),
@@ -169,7 +181,9 @@ export function FleetDatasetTable({
     balance: money("balance_total", BALANCE_GAP),
     equity: (row) => {
       const environment = row.environment ?? (datasetEnvironment === "ALL" || datasetEnvironment === undefined ? null : datasetEnvironment);
-      const spark = environment === null || sparks === undefined ? undefined : sparks.get(sparkKey(environment as "paper" | "sandbox" | "live", row.portfolioId));
+      // A sparkline beside "Not available" would draw a trend for a figure the row does not publish (QA1 R2-04): only where the scalar has a value.
+      const published = row.economicPartitions.some((entry) => entry.metrics.get(scalar.key)?.kind === "value");
+      const spark = !published || environment === null || sparks === undefined ? undefined : sparks.get(sparkKey(environment as "paper" | "sandbox" | "live", row.portfolioId));
       return (
         <span className="exec-fleet-equity">
           <PartitionFigures partitions={row.economicPartitions} metricKey={scalar.key} metricKeys={scalar.id === "drawdown" ? null : metricKeys} gap={scalar.id === "value" ? EQUITY_GAP : { fe: "FE-013", what: scalar.label }} />
@@ -184,11 +198,15 @@ export function FleetDatasetTable({
     health: (row) => {
       const view = row.health === null ? null : healthView(row.health);
       const lifecycle = lifecycleFlagOf(row.lifecycle);
-      if (view === null && lifecycle === null) return null;
+      const source = shownOptional?.has("source") ?? false ? null : row.sourceState;
+      if (view === null && lifecycle === null && source === null) return null;
       return (
-        <span className="exec-fleet-stagecell">
-          {view ? <Flag kind={view.kind} label={view.label} size="sm" /> : null}
-          {lifecycle ? <Flag kind={lifecycle.kind} label={lifecycle.label} size="sm" /> : null}
+        <span className="exec-fleet-healthcell">
+          <span className="exec-fleet-stagecell">
+            {view ? <Flag kind={view.kind} label={view.label} size="sm" /> : null}
+            {lifecycle ? <Flag kind={lifecycle.kind} label={lifecycle.label} size="sm" /> : null}
+          </span>
+          {source !== null ? <span className="exec-fleet-source-line" title={`Source state ${source}`}>{humanize(source)}</span> : null}
         </span>
       );
     },
@@ -247,15 +265,48 @@ export function FleetDatasetTable({
       render: render[spec.key]!,
     });
   }
+  const entries = useMemo(() => groupEntries(rows, groupFields, groups), [rows, groupFields, groups]);
+  const entryColumns: CardsColumn<GroupedEntry>[] = columns.map((column) => ({ ...column, render: (entry) => column.render(entry.row) }));
+  const groupHeader = (entry: GroupedEntry, index: number): ReactNode => {
+    if (entry.group === null) return null;
+    const previous = index === 0 ? null : entries[index - 1]!;
+    const at = (candidate: GroupedEntry | null) => (candidate === null || candidate.group === null ? "" : JSON.stringify(candidate.group));
+    if (at(previous) === at(entry)) return null;
+    const published = findGroup(groups, entry.group);
+    const loaded = entries.filter((candidate) => at(candidate) === at(entry)).length;
+    const label = groupLabel({ key: entry.group, uniqueRowCount: 0, totalsScope: "FULL_AUTHORIZED_FILTERED_QUERY", economicPartitions: [] });
+    return (
+      <span className="exec-fleet-grouphead" data-testid="group-header">
+        <strong className="exec-fleet-groupname">{label}</strong>
+        <span className="exec-fleet-groupcount">
+          {published === null
+            ? `${loaded} loaded rows`
+            : `${published.uniqueRowCount} ${published.uniqueRowCount === 1 ? "row" : "rows"}${loaded !== published.uniqueRowCount ? ` (${loaded} loaded)` : ""}`}
+        </span>
+        {published === null || published.economicPartitions.length === 0 ? null : (
+          <span className="exec-fleet-groupmoney">
+            {published.economicPartitions.map((part) => (
+              <span key={`${part.partition.economicDomain}|${part.partition.currency}|${part.partition.basis}|${part.partition.nativeProfileRef}`} className="exec-fleet-groupmoney-part">
+                <span className="exec-fleet-part-tag">{partitionTag(part)}</span>
+                Alloc <MetricValue metric={part.metrics.get("allocation") ?? null} />
+                PNL <MetricValue metric={part.metrics.get("net_pnl") ?? null} signed />
+              </span>
+            ))}
+          </span>
+        )}
+      </span>
+    );
+  };
   return (
     <CardsTable
       label="Alpha fleet"
       className={selectionReasonId !== undefined && shownOptional?.has("select") ? "exec-fleet-dataset exec-fleet-sel" : "exec-fleet-dataset"}
-      columns={columns}
-      rows={rows}
-      rowKey={(row) => row.rowKey}
-      selectedKey={selectedKey}
-      onRowOpen={onOpen}
+      columns={entryColumns}
+      rows={entries}
+      rowKey={(entry) => entry.key}
+      groupBefore={groupFields.length === 0 ? undefined : groupHeader}
+      selectedKey={selectedKey === null || selectedKey === undefined ? selectedKey : entries.find((entry) => entry.row.rowKey === selectedKey)?.key ?? null}
+      onRowOpen={onOpen === undefined ? undefined : (entry) => onOpen(entry.row)}
       empty={empty}
       sorts={sorts.map((key) => ({ key: key.field, dir: key.dir }))}
       {...(onSort !== undefined ? { onSort: (key: string) => onSort(key as ManagerSortField) } : {})}

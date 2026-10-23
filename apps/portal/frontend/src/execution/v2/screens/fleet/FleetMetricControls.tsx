@@ -6,7 +6,7 @@
 import { useEffect, useId, useRef, useState, type FocusEvent } from "react";
 
 import {
-  DATASET_COLUMNS, EQUITY_SCALARS, EVIDENCE_FILTERS, RANGE_FIELDS, isDecimalText, isMoneyField, rangeText,
+  DATASET_COLUMNS, EQUITY_SCALARS, EVIDENCE_FILTERS, RANGE_FIELDS, isDecimalText, isMoneyField, rangeText, serializeRanges,
   type BasisOption, type EquityScalar, type EvidenceFilter, type Range,
 } from "./fleetMetricsModel";
 
@@ -61,27 +61,43 @@ export function RangeFilter({ ranges, offered, basis, onChange }: RangeFilterPro
   useEffect(() => {
     if (open) setDraft(Object.fromEntries(ranges.map((range) => [range.field, { min: range.min ?? "", max: range.max ?? "" }])));
   }, [open, ranges]);
+  const skipCommit = useRef(false);
+  const wasOpen = useRef(false);
   const fields = RANGE_FIELDS.filter((spec) => offered !== null && offered.includes(spec.field));
-  if (fields.length === 0) return null;
   const valueOf = (field: string) => draft[field] ?? { min: "", max: "" };
   const invalid = (text: string) => text !== "" && !isDecimalText(text);
-  const apply = () => {
+  const drafted = (): Range[] => {
     const next: Range[] = [];
     for (const spec of fields) {
       const { min, max } = valueOf(spec.field);
       if (invalid(min) || invalid(max) || (min === "" && max === "")) continue;
+      // A blocked money row (no basis) keeps what it had; it cannot be typed into.
       next.push({ field: spec.field, min: min === "" ? null : min, max: max === "" ? null : max });
     }
-    onChange(next);
+    return next;
+  };
+  const apply = () => {
+    skipCommit.current = true;
+    onChange(drafted());
     setOpen(false);
   };
+  // Typing and then clicking away keeps the values (QA1 R2-06): closing the popover any way but Escape / Clear commits the draft.
+  useEffect(() => {
+    if (wasOpen.current && !open) {
+      if (skipCommit.current) skipCommit.current = false;
+      else if (serializeRanges(drafted()) !== serializeRanges(ranges)) onChange(drafted());
+    }
+    wasOpen.current = open;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
+  if (fields.length === 0) return null;
   return (
     <span className="exec-fleet-pop" ref={wrap} onBlur={leave}>
       <button ref={button} type="button" className="exec-fleet-select" aria-expanded={open} aria-controls={open ? menuId : undefined} onClick={() => setOpen((v) => !v)}>
         Ranges{ranges.length > 0 ? `: ${ranges.length}` : ""} ▾
       </button>
       {open ? (
-        <div id={menuId} className="exec-fleet-menu" role="group" aria-label="Numeric ranges">
+        <div id={menuId} className="exec-fleet-menu exec-fleet-rangemenu" role="group" aria-label="Numeric ranges" onKeyDown={(event) => { if (event.key === "Escape") skipCommit.current = true; }}>
           <span className="exec-fleet-note">Inclusive bounds: at least the first value and at most the second. Leave a side empty for no bound.</span>
           {basis === null && fields.some((spec) => isMoneyField(spec.field)) ? (
             <span className="exec-fleet-note" data-testid="range-needs-basis">A money range is made in one currency and basis: choose a Basis first. Return and QBTS ranges need none.</span>
@@ -97,13 +113,13 @@ export function RangeFilter({ ranges, offered, basis, onChange }: RangeFilterPro
                   aria-invalid={invalid(min) || undefined} value={min} onChange={(event) => setDraft({ ...draft, [spec.field]: { min: event.target.value.trim(), max } })} />
                 <input className="exec-fleet-input" type="text" inputMode="decimal" aria-label={`${spec.label} at most`} placeholder="max" disabled={blocked}
                   aria-invalid={invalid(max) || undefined} value={max} onChange={(event) => setDraft({ ...draft, [spec.field]: { min, max: event.target.value.trim() } })} />
-                <span className="exec-fleet-range-unit">{money ? (basis === null ? "needs a basis" : `in ${basis.label}`) : spec.unit}</span>
+                <span className="exec-fleet-range-unit">{money ? (basis === null ? "" : `in ${basis.label}`) : spec.unit}</span>
               </div>
             );
           })}
-          <span className="exec-fleet-sortbar">
+          <span className="exec-fleet-sortbar exec-fleet-rangeactions">
             <button type="button" className="exec-fleet-btn" onClick={apply}>Apply</button>
-            <button type="button" className="exec-fleet-link" onClick={() => { onChange([]); setOpen(false); }}>Clear ranges</button>
+            <button type="button" className="exec-fleet-link" onClick={() => { skipCommit.current = true; onChange([]); setOpen(false); }}>Clear ranges</button>
           </span>
         </div>
       ) : null}

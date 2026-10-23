@@ -52,6 +52,7 @@ import { MANAGER_STATEMENT_SCOPE } from "../../readers/managerDataset";
 import { ColumnsMenu, FilterChips, MultiPick, type FilterChip } from "./fleetControls";
 import { OptionFilter } from "./OptionFilter";
 import { FleetBoard } from "./FleetBoard";
+import { FleetDatasetBoard } from "./FleetDatasetBoard";
 import { FleetDatasetDrawer } from "./FleetDatasetDrawer";
 import { FleetDatasetTable } from "./FleetDatasetTable";
 import { FleetEnvironmentCoverage } from "./FleetEnvironmentCoverage";
@@ -167,8 +168,10 @@ export default function FleetScreen({ api, workspaceId, streamFlag = FLEET_STREA
   // The legacy read is NOT started while the answer to "is it published?" is pending for a lens the dataset could serve: a
   // request for the fleet read that the dataset then replaces would be a wasted read and a flash of the other table.
   // The Map reads the same dataset rows as the table (its tile size is the published allocation), so it is a dataset view too.
-  const waitingForDataset = !forceFleet && scope !== null && (tableView || mapView) && publication.phase === "checking";
-  const datasetMode = published && !forceFleet && (tableView || mapView);
+  const waitingForDataset = !forceFleet && scope !== null && (tableView || mapView || boardView) && publication.phase === "checking";
+  const datasetMode = published && !forceFleet && (tableView || mapView || boardView);
+  // The map and the board have their own switches and lanes: the table-only controls (group, ranges scalar, density, columns, compare, export) stay with the table.
+  const gridless = mapView || boardView;
   const offered = publication.phase === "published" ? publication.dataset.queryOptions : null;
   const sortOptions = useMemo(() => datasetSortOptions(offered === null ? null : offered.sortFields), [offered]);
   const groupOptions = useMemo(() => datasetGroupOptions(offered === null ? null : offered.groupFields), [offered]);
@@ -518,7 +521,7 @@ export default function FleetScreen({ api, workspaceId, streamFlag = FLEET_STREA
 
   // Group by is a control only when the dataset can group; otherwise the gap is one word on this line, not a disabled select.
   const canGroup = datasetMode && groupOptions.some((option) => option.field !== null);
-  const unpublishedList = datasetMode ? [...(canGroup ? [] : [FE.group]), FE.window, FE.readiness, FE_STAGE_ENTRY, FE.compare, FE.archived] : NOT_PUBLISHED_LIST;
+  const unpublishedList = datasetMode ? [...(canGroup ? [] : [FE.group]), FE.window, FE.readiness, ...(dataset.first?.stageTimingPublished === true ? [] : [FE_STAGE_ENTRY]), FE.compare, FE.archived] : NOT_PUBLISHED_LIST;
   const unpublishedView = (fact: { fe: string; what: string }) => (
     <div className="exec-fleet-nppanel" role="status">
       <strong>{fact.what}</strong>
@@ -603,6 +606,12 @@ export default function FleetScreen({ api, workspaceId, streamFlag = FLEET_STREA
       {!archived && datasetMode ? (
         <p className="exec-fleet-counts-src" data-testid="counts-source" title={countsRead.envelope?.sourceAsOf ? `${COUNTS_SOURCE_TITLE} Counts as of ${formatInstant(countsRead.envelope.sourceAsOf)}.` : COUNTS_SOURCE_TITLE}>
           Counts: Fleet read, alphas in your whole scope. Table: Manager dataset, alpha versions in {scopeWords}.
+          <GapWhy name="How these counts relate" next={null} rows={[
+            "Alphas, Deployments, Portfolios and the stage tabs are the Fleet read over your whole scope: the unit is an alpha (Deployments: running deployments).",
+            "An alpha in two stages is counted in each of its tabs, so the stage tabs do not add up to Alphas, and Real-funded (Canary + Live) is an upper bound.",
+            "The environment strip and the table are the Manager dataset: the unit is a row, one alpha version in one portfolio, so rows and alphas differ by design (one alpha in two portfolios is two rows).",
+            "Showing N of M counts rows of the table: N loaded, M over the whole filtered query. An environment the dataset does not read says Not available there, whatever the tab counts.",
+          ]} />
         </p>
       ) : null}
 
@@ -716,7 +725,7 @@ export default function FleetScreen({ api, workspaceId, streamFlag = FLEET_STREA
                 </select>
               )}
             </label>
-            {canGroup ? (
+            {canGroup && !gridless ? (
               <label className="exec-fleet-field">
                 <span className="exec-fleet-sr">Group by</span>
                 <select
@@ -729,7 +738,7 @@ export default function FleetScreen({ api, workspaceId, streamFlag = FLEET_STREA
                 </select>
               </label>
             ) : null}
-            {canGroup && datasetFilters?.group != null ? (
+            {canGroup && !gridless && datasetFilters?.group != null ? (
               <label className="exec-fleet-field">
                 <span className="exec-fleet-sr">Then group by</span>
                 <select
@@ -744,7 +753,7 @@ export default function FleetScreen({ api, workspaceId, streamFlag = FLEET_STREA
               </label>
             ) : null}
             <span className="exec-fleet-grow" />
-            {datasetMode ? <DatasetColumnsMenu showEnvironment={allMode} hidden={hiddenDataset} shownOptional={shownOptional} onToggle={setDatasetColumn} /> : <ColumnsMenu hidden={hiddenColumns} onToggle={setColumn} />}
+            {datasetMode && gridless ? null : datasetMode ? <DatasetColumnsMenu showEnvironment={allMode} hidden={hiddenDataset} shownOptional={shownOptional} onToggle={setDatasetColumn} /> : <ColumnsMenu hidden={hiddenColumns} onToggle={setColumn} />}
           </div>}
           {archived || !datasetMode ? null : (
             <div className="exec-fleet-tool2" role="group" aria-label="Metric filters">
@@ -776,11 +785,12 @@ export default function FleetScreen({ api, workspaceId, streamFlag = FLEET_STREA
               <EvidenceSelect value={evidence} onChange={(next) => setMany({ evidence: next })} />
               <BasisSelect options={seenBasis} value={basis === null ? null : basis.id} onChange={(next) => setMany({ basis: next })} />
               <RangeFilter ranges={ranges} offered={offeredFields} basis={basis} onChange={(next) => setMany({ rng: serializeRanges(next) })} />
-              <EquityScalarSelect value={equityScalar} onChange={(next) => setMany({ eq: next === "value" ? null : next })} />
-              <DensityToggle compact={compact} onChange={(next) => setMany({ density: next ? "compact" : null })} />
+              {/* Table-only controls: the map has its own size and colour switches. */}
+              {gridless ? null : <EquityScalarSelect value={equityScalar} onChange={(next) => setMany({ eq: next === "value" ? null : next })} />}
+              {gridless ? null : <DensityToggle compact={compact} onChange={(next) => setMany({ density: next ? "compact" : null })} />}
             </div>
           )}
-          {archived || !datasetMode ? null : (
+          {archived || !datasetMode || gridless ? null : (
             <div className="exec-fleet-sortbar" data-testid="sortbar">
               {sorts.length === 0
                 ? <span>Server order. Click a column header to sort; again to reverse; again to remove. Up to three keys, in the order you click them.</span>
@@ -790,6 +800,9 @@ export default function FleetScreen({ api, workspaceId, streamFlag = FLEET_STREA
                     <button type="button" className="exec-fleet-link" onClick={() => setSorts([])}>Clear sort</button>
                   </>
                 )}
+              {basis === null && seenBasis.length > 0
+                ? <span className="exec-fleet-note" data-testid="money-sort-hint">Alloc, PNL, Unrealized, Balance and Equity 30D sort inside one economic partition: choose a Basis to enable their headers.</span>
+                : null}
               {askable.unaskable.map(({ key, why }) => <span key={key.field} className="exec-fleet-np">{sortLabel(key.field)} is not applied: {why}</span>)}
               <button type="button" className="exec-fleet-btn" disabled aria-describedby={selectionReasonId}>Compare selected</button>
               <button type="button" className="exec-fleet-btn" disabled aria-describedby={exportReasonId}>Export</button>
@@ -858,7 +871,19 @@ export default function FleetScreen({ api, workspaceId, streamFlag = FLEET_STREA
                       Group counts are rows (alpha versions in a portfolio) over the whole filtered result, not the loaded page. A stage group is a membership: an alpha in two stages is in both, so groups are never added into a total.
                     </p>
                   ) : null}
-                  {mapView ? (
+                  {boardView ? (
+                    datasetRows.length === 0 ? emptyBlock : (
+                      <FleetDatasetBoard
+                        rows={datasetRows}
+                        stages={stage}
+                        metricKeys={dataset.first === null ? null : dataset.first.queryOptions.metricKeys}
+                        showEnvironment={allMode}
+                        selectedKey={selection}
+                        hrefFor={(row) => withContext(withOrigin(alphaHref(row.alphaId), { kind: "fleet" }, params), params)}
+                        onOpen={(row) => { if (row.rowKey.length <= SEL_MAX) select(row.rowKey); }}
+                      />
+                    )
+                  ) : mapView ? (
                     datasetRows.length === 0 ? emptyBlock : (
                       <FleetMap
                         rows={datasetRows}
@@ -871,6 +896,8 @@ export default function FleetScreen({ api, workspaceId, streamFlag = FLEET_STREA
                   ) : (
                     <FleetDatasetTable
                       rows={datasetRows}
+                      groupFields={datasetFilters === null ? [] : [datasetFilters.group, datasetFilters.then ?? null].filter((field): field is NonNullable<typeof field> => field !== null)}
+                      groups={dataset.last === null ? [] : dataset.last.groups}
                       showEnvironment={allMode}
                       shownOptional={shownOptional}
                       hidden={hiddenDataset}

@@ -72,7 +72,7 @@ const mount = (api: ExecutionApi, entry = "/execution/fleet?stage=paper", all = 
 const search = () => new URLSearchParams((screen.getByTestId("where").textContent ?? "").split("?")[1] ?? "");
 const table = () => screen.getByRole("table", { name: "Alpha fleet" });
 const loaded = async () => screen.findByRole("table", { name: "Alpha fleet" }, SLOW);
-const dataRows = () => within(table()).getAllByRole("row").slice(1);
+const dataRows = () => within(table()).getAllByRole("row").slice(1).filter((row) => !row.classList.contains("exec-cards-group"));
 const cell = (row: HTMLElement, label: string) => row.querySelector(`td[data-l='${label}']`)?.textContent ?? "";
 const headers = () => [...table().querySelectorAll("th")].map((th) => th.textContent ?? "");
 const rowOf = (name: string) => dataRows().find((row) => cell(row, "Alpha").includes(name))!;
@@ -87,11 +87,15 @@ const BASIS_ID = JSON.stringify(["PAPER", "USDT", "TEST_ONLY:net-ledger", "TEST_
 const PAPER_BASIS = { economic_domain: "PAPER", currency: "USDT", basis: "TEST_ONLY:net-ledger", native_profile_ref: "TEST_ONLY:paper-ledger", domain_proof_ref: "TEST_ONLY:not-economic-authority" };
 
 describe("guide 8.1 · the columns", () => {
-  it("the default set is the seven columns that fit 1440 without a sideways scroll, QBTS among them; the rest are one click away", async () => {
+  it("the default set is the guide 8.1 set with QBTS, Alloc and PNL early; Owner and Source are lines of their cells until their own columns are switched on", async () => {
     const { api } = harness();
     mount(api, "/execution/fleet?stage=paper", false);
     await loaded();
-    expect(headers()).toEqual(["Alpha", "Portfolio", "Current stage", "Alloc", "PNL Amount", "Health", "QBTS"]);
+    expect(headers()).toEqual(["Alpha", "Portfolio", "Current stage", "In stage", "QBTS", "Alloc", "PNL Amount", "Unrealized PNL", "Account balance", "Equity 30D", "Health"]);
+    const a1 = rowOf("a-1");
+    // Owner / Portfolio and Health / Source are one cell each: the owner is the second line, the source state the second line
+    expect(a1.querySelector("td[data-l='Portfolio'] .exec-fleet-owner-line")?.textContent).toBeTruthy();
+    expect(a1.querySelector("td[data-l='Health'] .exec-fleet-source-line")?.textContent).toBeTruthy();
     expect(within(table()).queryAllByRole("checkbox")).toHaveLength(0);
     // the economic-domain tag is visible on every money figure (environment does not imply economic domain)
     const tag = rowOf("a-1").querySelector("td[data-l='Alloc'] .exec-fleet-part-tag") as HTMLElement;
@@ -104,7 +108,7 @@ describe("guide 8.1 · the columns", () => {
     mount(api);
     await loaded();
     expect(headers().filter((h) => h !== "Select")).toEqual([
-      "Alpha", "Owner", "Portfolio", "Current stage", "In stage", "Alloc", "PNL Amount", "Unrealized PNL", "Account balance", "Equity 30D", "Health", "Source", "QBTS",
+      "Alpha", "Owner", "Portfolio", "Current stage", "In stage", "QBTS", "Alloc", "PNL Amount", "Unrealized PNL", "Account balance", "Equity 30D", "Health", "Source",
     ]);
     const a1 = rowOf("a-1");
     expect(cell(a1, "Alloc")).toContain("Paper · USDT");
@@ -169,7 +173,7 @@ describe("guide 8.1 · the columns", () => {
     const menu = screen.getByRole("group", { name: "Columns" });
     const labels = within(menu).getAllByRole("checkbox").map((box) => (box as HTMLInputElement).labels?.[0]?.textContent?.replace(" optional", ""));
     expect(labels).toEqual([
-      "Owner", "Portfolio", "Current stage", "In stage", "Alloc", "PNL Amount", "Unrealized PNL", "Account balance", "Equity 30D", "Health", "Source", "QBTS",
+      "Owner", "Portfolio", "Current stage", "In stage", "QBTS", "Alloc", "PNL Amount", "Unrealized PNL", "Account balance", "Equity 30D", "Health", "Source",
       "Select", "Venue", "Lifecycle", "Version", "Economic domain", "Drawdown", "Score coverage",
     ]);
     expect(menu.textContent).not.toMatch(/Deployer|Regime|Last trade|funding completeness/);
@@ -305,6 +309,26 @@ describe("guide 8.2 · filters are the server's", () => {
     await waitFor(() => expect(last(state).filters).toBeNull());
   });
 
+  it("typing a range and clicking away keeps it; Escape cancels it (QA1 R2-06)", async () => {
+    const { api, state } = harness();
+    mount(api);
+    await loaded();
+    fireEvent.click(within(metrics()).getByRole("button", { name: /^Ranges/ }));
+    fireEvent.change(within(screen.getByRole("group", { name: "Numeric ranges" })).getByLabelText("QBTS at least"), { target: { value: "55" } });
+    fireEvent.mouseDown(document.body);
+    await waitFor(() => expect(search().get("rng")).toBe("score~55~"), SLOW);
+    await waitFor(() => expect(last(state).filters).toEqual([{ field: "score", op: "GTE", value: "55" }]));
+    fireEvent.click(within(metrics()).getByRole("button", { name: /^Ranges/ }));
+    const menu = screen.getByRole("group", { name: "Numeric ranges" });
+    fireEvent.change(within(menu).getByLabelText("QBTS at most"), { target: { value: "90" } });
+    fireEvent.keyDown(menu, { key: "Escape" });
+    fireEvent.keyDown(document, { key: "Escape" });
+    await Promise.resolve();
+    expect(search().get("rng")).toBe("score~55~");
+    // the money rows say once, in one sentence, that they need a basis
+    expect(screen.queryAllByText("needs a basis")).toHaveLength(0);
+  });
+
   it("a money range with a Basis pins the partition and says which currency it is in", async () => {
     const { api, state } = harness();
     mount(api, `/execution/fleet?stage=paper&basis=${encodeURIComponent(BASIS_ID)}`);
@@ -374,6 +398,19 @@ describe("guide 8.2 / 8.3 · groups, density, selection, KPIs", () => {
     expect(screen.getByTestId("group-note").textContent).toContain("never added into a total");
     const options = [...(screen.getByRole("combobox", { name: "Group by" }) as HTMLSelectElement).options].map((option) => option.textContent);
     expect(options).toEqual(expect.arrayContaining(["Group: Portfolio", "Group: Owner", "Group: Venue", "Group: Source state", "Group: Stage presence"]));
+  });
+
+  it("a group renders as header rows in the table, with the whole-query row count, and the rows sit under their group (QA1 R2-07)", async () => {
+    const { api } = harness();
+    mount(api, "/execution/fleet?stage=paper&group=portfolio");
+    await loaded();
+    const heads = await screen.findAllByTestId("group-header");
+    expect(heads.map((head) => head.querySelector(".exec-fleet-groupname")?.textContent)).toEqual(["pf-1", "pf-2"]);
+    expect(heads[0]!.querySelector(".exec-fleet-groupcount")?.textContent).toMatch(/^4 rows/);
+    // the row order is the group order: every pf-1 row precedes every pf-2 row, under its header
+    const order = [...table().querySelectorAll("tbody tr")].map((tr) => (tr.classList.contains("exec-cards-group") ? `# ${tr.textContent?.slice(0, 4)}` : cell(tr as HTMLElement, "Portfolio").slice(0, 4)));
+    expect(order[0]).toBe("# pf-1");
+    expect(order.indexOf("# pf-2")).toBeGreaterThan(order.lastIndexOf("pf-1"));
   });
 
   it("compact density is a switch in the URL; the figures keep their size, the rows get shorter", async () => {

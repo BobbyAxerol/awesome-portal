@@ -77,3 +77,19 @@
 .exec-fleet-env-tag[data-environment="paper"]::before,
 .exec-fleet-env-tag[data-environment="sandbox"]::before { background: var(--ink-faint); }
 .exec-fleet-env-tag[data-environment="live"]::before { background: var(--ink); }
+
+/* Fleet Map as nested boxes (QA1 R2-11): one box per portfolio, its tiles inside; the colour mode is the reader's, the legend names it. */
+.exec-fleet-pfs { display: flex; flex-wrap: wrap; gap: var(--space-3); align-items: stretch; }
+.exec-fleet-pf { display: flex; flex: 1 1 280px; flex-direction: column; gap: var(--space-2); min-width: 0; padding: var(--space-2); border: 1px solid var(--line-strong); }
+.exec-fleet-pf-head { display: flex; align-items: baseline; gap: var(--space-3); }
+.exec-fleet-legend { display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-4); margin: 0; padding: 0; list-style: none; font: var(--exec-font-meta); color: var(--ink-faint); }
+.exec-fleet-legend-item { display: inline-flex; align-items: center; gap: var(--space-1); }
+.exec-fleet-legend-swatch { display: inline-block; width: 12px; height: 12px; border: 1px solid var(--line-strong); }
+.exec-fleet-legend-swatch[data-tone="ok"], .exec-fleet-tile[data-tone="ok"] { background: var(--f-ok-bg); border-left-color: var(--f-ok); }
+.exec-fleet-legend-swatch[data-tone="attention"], .exec-fleet-tile[data-tone="attention"] { background: var(--f-attention-bg); border-left-color: var(--f-attention); }
+.exec-fleet-legend-swatch[data-tone="neutral"], .exec-fleet-tile[data-tone="neutral"] { background: var(--f-neutral-bg); border-left-color: var(--f-neutral); }
+.exec-fleet-legend-swatch[data-tone="unknown"], .exec-fleet-tile[data-tone="unknown"] { background: var(--f-unknown-bg); border-left-color: var(--f-unknown); }
+.exec-fleet-legend-swatch[data-tone="stage-paper"], .exec-fleet-tile[data-tone="stage-paper"] { background: var(--surface-2); border-left-color: var(--env-paper); }
+.exec-fleet-legend-swatch[data-tone="stage-sandbox"], .exec-fleet-tile[data-tone="stage-sandbox"] { background: var(--surface-2); border-left-color: var(--env-sandbox); }
+.exec-fleet-legend-swatch[data-tone="stage-canary"], .exec-fleet-tile[data-tone="stage-canary"] { background: var(--surface-2); border-left-color: var(--env-live); border-left-style: dashed; }
+.exec-fleet-legend-swatch[data-tone="stage-live"], .exec-fleet-tile[data-tone="stage-live"] { background: var(--surface-2); border-left-color: var(--env-live); }

@@ -71,7 +71,7 @@ const where = () => screen.getByTestId("where").textContent ?? "";
 const search = () => new URLSearchParams(where().split("?")[1] ?? "");
 const table = () => screen.getByRole("table", { name: "Alpha fleet" });
 const loaded = async () => screen.findByRole("table", { name: "Alpha fleet" }, SLOW);
-const dataRows = () => within(table()).getAllByRole("row").slice(1);
+const dataRows = () => within(table()).getAllByRole("row").slice(1).filter((row) => !row.classList.contains("exec-cards-group"));
 const cell = (row: HTMLElement, label: string) => row.querySelector(`td[data-l='${label}']`)?.textContent ?? "";
 const isDatasetTable = () => [...table().querySelectorAll("th")].some((th) => th.textContent === "In stage");
 const isLegacyTable = () => [...table().querySelectorAll("th")].some((th) => th.textContent === "Deployments");
@@ -259,7 +259,7 @@ describe("the Map over ALL: one partition at a time, environments never on one m
     const { api } = harness(POPULATION);
     mount(api, "/execution/fleet?view=map");
     const map = await screen.findByTestId("fleet-map", {}, SLOW);
-    const buttons = within(map).getAllByRole("button").filter((button) => button.className.includes("segbtn")).map((button) => button.textContent);
+    const buttons = within(within(map).getByRole("group", { name: "Map partition" })).getAllByRole("button").map((button) => button.textContent);
     expect(buttons.sort()).toEqual(["Paper · USDT", "Real-funded · USDT", "Sandbox · USDT"]);
     const tiles = () => within(map).getAllByRole("listitem").filter((item) => item.className.includes("exec-fleet-tile")).length;
     // Real-funded first (published order): only the live alpha with an allocation is drawn; the other 3 rows are of other environments

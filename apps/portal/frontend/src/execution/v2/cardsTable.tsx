@@ -19,7 +19,7 @@
  * (it overflows AND holds no link, button or focusable row) the wrap becomes a named, focusable region. Otherwise it is a
  * plain div and adds no Tab stop.
  */
-import type { KeyboardEvent, ReactNode } from "react";
+import { Fragment, type KeyboardEvent, type ReactNode } from "react";
 
 import "./css/cards.css";
 import { useKeyboardScroll } from "./useKeyboardScroll";
@@ -62,6 +62,8 @@ export interface CardsTableProps<Row> {
   onSort?(key: string): void;
   /** A screen's own class on the table, for a card layout of its own (the Alpha 360 orders and fills). */
   className?: string;
+  /** A group header row before this row (it starts a group), or `null`. The rows arrive already ordered by group. */
+  groupBefore?(row: Row, index: number): ReactNode;
 }
 
 /** A cell that rendered nothing says so; it is never a dash and never 0. */
@@ -69,7 +71,7 @@ function present(content: ReactNode): boolean {
   return content !== null && content !== undefined && content !== false && content !== "";
 }
 
-export function CardsTable<Row>({ columns, rows, rowKey, label, selectedKey, onRowOpen, empty, sort, sorts, onSort, className }: CardsTableProps<Row>) {
+export function CardsTable<Row>({ columns, rows, rowKey, label, selectedKey, onRowOpen, empty, sort, sorts, onSort, className, groupBefore }: CardsTableProps<Row>) {
   const open = (row: Row) => (event: KeyboardEvent) => {
     // Space is prevented so the page does not scroll from under the row.
     if (event.key === "Enter" || event.key === " ") {
@@ -117,11 +119,13 @@ export function CardsTable<Row>({ columns, rows, rowKey, label, selectedKey, onR
               <td colSpan={columns.length}>{empty}</td>
             </tr>
           ) : null}
-          {rows.map((row) => {
+          {rows.map((row, index) => {
             const key = rowKey(row);
+            const header = groupBefore === undefined ? null : groupBefore(row, index);
             return (
+              <Fragment key={key}>
+              {header !== null && header !== undefined ? <tr className="exec-cards-group"><th scope="rowgroup" colSpan={columns.length}>{header}</th></tr> : null}
               <tr
-                key={key}
                 data-selected={key === selectedKey ? "true" : undefined}
                 aria-current={key === selectedKey ? "true" : undefined}
                 data-interactive={onRowOpen ? "true" : undefined}
@@ -140,6 +144,7 @@ export function CardsTable<Row>({ columns, rows, rowKey, label, selectedKey, onR
                   );
                 })}
               </tr>
+              </Fragment>
             );
           })}
         </tbody>

@@ -71,7 +71,7 @@ const where = () => screen.getByTestId("where").textContent ?? "";
 const search = () => new URLSearchParams(where().split("?")[1] ?? "");
 const table = () => screen.getByRole("table", { name: "Alpha fleet" });
 const loaded = async () => screen.findByRole("table", { name: "Alpha fleet" }, SLOW);
-const dataRows = () => within(table()).getAllByRole("row").slice(1);
+const dataRows = () => within(table()).getAllByRole("row").slice(1).filter((row) => !row.classList.contains("exec-cards-group"));
 const cell = (row: HTMLElement, label: string) => row.querySelector(`td[data-l='${label}']`)?.textContent ?? "";
 const ids = () => dataRows().map((row) => cell(row, "Alpha"));
 /** The fleet read's table has a Deployments column; the dataset's has Current stage and In stage. Neither has the other's. */
@@ -173,7 +173,7 @@ describe("published: the dataset is the source, chosen by the data (no toggle)",
     expect(Object.fromEntries(datasetCalls(state)[0]!.query)).toEqual({ environment: "live", limit: "50" });
   });
 
-  it("the All lens and the board stay on the fleet read, and the chip says which population they show", async () => {
+  it("the All lens stays on the fleet read, and the board over a published dataset is built from its rows (QA1 R2-10)", async () => {
     const first = harness({ live: MIXED });
     const view = mount(first.api, "/execution/fleet");
     await loaded();
@@ -182,9 +182,8 @@ describe("published: the dataset is the source, chosen by the data (no toggle)",
     view.unmount();
     const second = harness({ live: MIXED });
     mount(second.api, "/execution/fleet?stage=canary,live&view=board");
-    await waitFor(() => expect(second.legacy.length).toBeGreaterThan(0), SLOW);
-    expect(await screen.findByText(/Loaded rows only/)).toBeTruthy();
-    expect(document.querySelector("[data-source='fleet']")?.textContent).toBe("Fleet read · alphas");
+    expect(await screen.findByRole("group", { name: "Alpha fleet board" }, SLOW)).toBeTruthy();
+    expect(document.querySelector("[data-source='dataset']")).not.toBeNull();
     expect(screen.queryByRole("group", { name: "Source" })).toBeNull();
   });
 
@@ -384,6 +383,25 @@ describe("dataset mode: Map (tile size = published allocation of ONE partition, 
     expect(whyText(within(map).getByTestId("map-undrawn"))).toContain("no economic partition matching");
     // Nothing is added across the two partitions.
     expect(map.textContent).not.toMatch(/1290|1250|total/i);
+  });
+
+  it("nests tiles in a box per portfolio, sizes by Allocation or Equal, colours by Health, Return or Stage, and names every colour in a legend (QA1 R2-11)", async () => {
+    mount(mapApi(true), "/execution/fleet?stage=paper&view=map");
+    const map = await screen.findByTestId("fleet-map", undefined, SLOW);
+    expect(within(map).getAllByRole("region").length).toBeGreaterThan(0);
+    const tiles = () => within(map).getAllByRole("listitem").filter((li) => li.classList.contains("exec-fleet-tile"));
+    expect(tiles().map((tile) => (tile as HTMLElement).style.flexGrow)).toEqual(["100", "25"]);
+    fireEvent.click(within(within(map).getByRole("group", { name: "Map size" })).getByRole("button", { name: "Equal" }));
+    expect(tiles().map((tile) => (tile as HTMLElement).style.flexGrow)).toEqual(["1", "1"]);
+    expect(within(map).getByTestId("map-legend").textContent).toContain("Needs attention or finding");
+    fireEvent.click(within(within(map).getByRole("group", { name: "Map colour" })).getByRole("button", { name: "Stage" }));
+    expect(within(map).getByTestId("map-legend").textContent).toContain("Canary");
+    expect(tiles().every((tile) => /^(stage-[a-z]+|unknown)$/.test(tile.getAttribute("data-tone") ?? ""))).toBe(true);
+    fireEvent.click(within(within(map).getByRole("group", { name: "Map colour" })).getByRole("button", { name: "Return" }));
+    expect(within(map).getByTestId("map-legend").textContent).toContain("Return 30D above zero");
+    // the table-only controls are not on the map page
+    expect(screen.queryByRole("combobox", { name: "Group by" })).toBeNull();
+    expect(screen.queryByTestId("sortbar")).toBeNull();
   });
 
   it("says plainly when no loaded row publishes an allocation, instead of drawing equal tiles", async () => {
@@ -653,11 +671,16 @@ describe("dataset mode: answers that must not become rows", () => {
     expect(ids()[0]).toContain("a-001");
   });
 
-  it("the board is built from the fleet read, whatever the dataset publishes", async () => {
-    const { api, legacy, state } = harness({ live: MIXED });
+  it("the board cards carry the allocation per partition, QBTS and health of the dataset row, and name readiness once as not published", async () => {
+    const { api, state } = harness({ live: MIXED });
     mount(api, "/execution/fleet?stage=canary,live&view=board");
-    await waitFor(() => expect(legacy.length).toBeGreaterThan(0), SLOW);
-    expect(datasetCalls(state)).toEqual([]);
+    const board = await screen.findByRole("group", { name: "Alpha fleet board" }, SLOW);
+    expect(datasetCalls(state).length).toBeGreaterThan(0);
+    const figures = within(board).getAllByTestId("board-figures");
+    expect(figures.length).toBeGreaterThan(0);
+    expect(figures[0]!.textContent).toContain("Alloc");
+    expect(figures[0]!.textContent).toContain("QBTS");
+    expect(board.textContent).toContain("Readiness");
     expect(screen.queryByRole("group", { name: "Source" })).toBeNull();
   });
 });

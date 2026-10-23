@@ -103,8 +103,11 @@ export function datasetGroupOptions(offered: readonly ManagerGroupField[] | null
 }
 
 /** `group=current_stage` in the URL; anything else is no grouping. */
-export const groupFieldOf = (raw: string | null): ManagerGroupField | null =>
-  DATASET_GROUP_OPTIONS.find((option) => option.field !== null && option.field === raw)?.field ?? null;
+const GROUP_ALIAS: Readonly<Record<string, string>> = { portfolio: "portfolio_id", stage: "current_stage", presence: "stage_presence", owner: "owner_user_id", alpha: "alpha_id", source: "source_state" };
+export const groupFieldOf = (raw: string | null): ManagerGroupField | null => {
+  const wanted = raw === null ? null : (GROUP_ALIAS[raw] ?? raw);
+  return DATASET_GROUP_OPTIONS.find((option) => option.field !== null && option.field === wanted)?.field ?? null;
+};
 
 export interface DatasetFilters {
   scope: DatasetScope;
@@ -355,3 +358,56 @@ export function moneyProvenanceRows(rows: readonly ManagerRow[], metricKeys: rea
   }
   return lines;
 }
+
+/* ── group header rows (QA1 R2-07) ─────────────────────────────────────── */
+
+/** The values a row has for a group field: one, or several for a membership field (an alpha in two stages is in both groups). */
+export function groupValuesOf(row: ManagerRow, field: ManagerGroupField): readonly (string | null)[] {
+  switch (field) {
+    case "portfolio_id": return [row.portfolioId];
+    case "current_stage": return [row.currentStage];
+    case "stage_presence": return row.stagePresence.length === 0 ? [null] : row.stagePresence;
+    case "owner_user_id": return [row.ownerUserId];
+    case "alpha_id": return [row.alphaId];
+    case "venue": return [row.venue];
+    case "health": return [row.health];
+    case "source_state": return [row.sourceState];
+    case "lifecycle": return [row.lifecycle];
+    default: return [null];
+  }
+}
+
+export interface GroupedEntry {
+  /** Unique per (row, group): a membership group lists the same row under each group. */
+  key: string;
+  row: ManagerRow;
+  /** `null` without a grouping. */
+  group: ManagerGroup["key"] | null;
+}
+
+const sameKey = (a: ManagerGroup["key"], b: ManagerGroup["key"]): boolean =>
+  a.length === b.length && a.every((part, index) => part.field === b[index]!.field && part.value === b[index]!.value);
+
+/**
+ * The loaded rows in group order: the order of the server's groups (the whole filtered query), a group the server did not list after them.
+ * Nothing is computed from the rows beyond placing each under the group its own field values name.
+ */
+export function groupEntries(rows: readonly ManagerRow[], fields: readonly ManagerGroupField[], groups: readonly ManagerGroup[]): readonly GroupedEntry[] {
+  if (fields.length === 0) return rows.map((row) => ({ key: row.rowKey, row, group: null }));
+  const buckets: { key: ManagerGroup["key"]; rows: ManagerRow[] }[] = [];
+  const place = (row: ManagerRow, level: number, prefix: ManagerGroup["key"]) => {
+    for (const value of groupValuesOf(row, fields[level]!)) {
+      const key = [...prefix, { field: fields[level]!, value }];
+      if (level + 1 < fields.length) { place(row, level + 1, key); continue; }
+      let bucket = buckets.find((candidate) => sameKey(candidate.key, key));
+      if (bucket === undefined) { bucket = { key, rows: [] }; buckets.push(bucket); }
+      bucket.rows.push(row);
+    }
+  };
+  for (const row of rows) place(row, 0, []);
+  const rank = (key: ManagerGroup["key"]): number => { const at = groups.findIndex((group) => sameKey(group.key, key)); return at < 0 ? Number.MAX_SAFE_INTEGER : at; };
+  buckets.sort((a, b) => rank(a.key) - rank(b.key));
+  return buckets.flatMap((bucket) => bucket.rows.map((row) => ({ key: row.rowKey + "|" + JSON.stringify(bucket.key), row, group: bucket.key })));
+}
+
+export const findGroup = (groups: readonly ManagerGroup[], key: ManagerGroup["key"]): ManagerGroup | null => groups.find((group) => sameKey(group.key, key)) ?? null;

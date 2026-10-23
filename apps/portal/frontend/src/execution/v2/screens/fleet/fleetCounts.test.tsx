@@ -69,7 +69,7 @@ const mount = (api: ExecutionApi, entry: string) =>
 const search = () => new URLSearchParams((screen.getByTestId("where").textContent ?? "").split("?")[1] ?? "");
 const table = () => screen.getByRole("table", { name: "Alpha fleet" });
 const loaded = async () => screen.findByRole("table", { name: "Alpha fleet" });
-const dataRows = () => within(table()).getAllByRole("row").slice(1);
+const dataRows = () => within(table()).getAllByRole("row").slice(1).filter((row) => !row.classList.contains("exec-cards-group"));
 const cell = (row: HTMLElement, label: string) => row.querySelector(`td[data-l='${label}']`)?.textContent ?? "";
 const kpis = () =>
   Object.fromEntries([...document.querySelectorAll(".exec-blk-kpi")].map((k) => [k.querySelector("dt")?.textContent ?? "", k.querySelector("dd")?.textContent ?? ""]));
@@ -139,7 +139,7 @@ describe("the KPI strip and the lens counts stay on a dataset table (Bobby 2026-
     expect(dataRows()).toHaveLength(6);
   });
 
-  it("where the fleet read IS the table (the All lens, the board) there is no second population to state", async () => {
+  it("where the fleet read IS the table (the All lens) there is no second population to state; the board over a dataset states it", async () => {
     const first = harness(MIXED);
     const view = mount(first.api, "/execution/fleet");
     await loaded();
@@ -147,11 +147,11 @@ describe("the KPI strip and the lens counts stay on a dataset table (Bobby 2026-
     expect(screen.queryByTestId("counts-source")).toBeNull();
     expect(first.legacy.every((query) => query.limit === 50)).toBe(true);
     view.unmount();
+    // the board over a published dataset is a dataset view (QA1 R2-10): it states the second population like the table does
     const second = harness(MIXED);
     mount(second.api, "/execution/fleet?stage=canary,live&view=board");
     await waitFor(() => expect(kpis()["Alphas"]).toBe("5"));
-    expect(screen.queryByTestId("counts-source")).toBeNull();
-    expect(second.legacy.every((query) => query.limit === 50)).toBe(true);
+    expect(screen.getByTestId("counts-source")).toBeTruthy();
   });
 
   it("the Archived lens has no strip and no counts read", async () => {

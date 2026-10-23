@@ -10,7 +10,11 @@
   white-space: nowrap;
   vertical-align: bottom;
 }
-.exec-fleet-portfolio { display: inline-flex; align-items: baseline; gap: var(--space-2); white-space: nowrap; }
+.exec-fleet-portfolio { display: inline-flex; flex-direction: column; align-items: flex-start; gap: 0; white-space: nowrap; }
+.exec-fleet-portfolio-line { display: inline-flex; align-items: baseline; gap: var(--space-2); }
+.exec-fleet-owner-line,
+.exec-fleet-source-line { font: var(--exec-font-meta); color: var(--ink-faint); }
+.exec-fleet-healthcell { display: inline-flex; flex-direction: column; align-items: flex-start; gap: 0; white-space: nowrap; }
 .exec-fleet-badge {
   box-sizing: border-box;
   min-width: 20px;
@@ -22,7 +26,7 @@
 }
 .exec-fleet-qbts { display: inline-flex; align-items: center; gap: var(--space-1); white-space: nowrap; }
 .exec-fleet-qbts-why { font: var(--exec-font-meta); color: var(--ink-faint); }
-.exec-fleet-equity { display: inline-flex; flex-direction: column; align-items: flex-end; gap: 2px; }
+.exec-fleet-equity { display: inline-flex; flex-direction: column; align-items: flex-end; gap: 2px; min-width: max-content; }
 .exec-fleet-spark { display: inline-flex; align-items: center; }
 
 /* Sticky identity columns (guide 8.3): the alpha stays while the metrics scroll. With the Select column, both stay. */
@@ -72,8 +76,10 @@
 
 /* The second toolbar row (metric filters) and the range popover. */
 .exec-fleet-tool2 { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
-.exec-fleet-range { display: grid; grid-template-columns: minmax(0, 1fr) 96px 96px; gap: var(--space-2); align-items: center; }
-.exec-fleet-range-label { font: var(--exec-font-meta); color: var(--ink); }
+.exec-fleet-rangemenu { min-width: 440px; max-width: min(520px, 92vw); }
+.exec-fleet-rangeactions { position: sticky; bottom: 0; background: var(--paper-raised); padding-top: var(--space-1); }
+.exec-fleet-range { display: grid; grid-template-columns: minmax(16ch, max-content) 96px 96px; gap: var(--space-2); align-items: center; }
+.exec-fleet-range-label { font: var(--exec-font-meta); color: var(--ink); white-space: nowrap; }
 .exec-fleet-range-unit { grid-column: 1 / -1; font: var(--exec-font-meta); color: var(--ink-faint); }
 .exec-fleet-range input { width: 100%; box-sizing: border-box; }
 .exec-fleet-sortbar { display: inline-flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); font: var(--exec-font-meta); color: var(--ink-faint); }
@@ -82,3 +88,44 @@
  * figure, so it costs no width (the default columns still fit 1440) and no row height (the stage cell beside it is two lines tall). */
 .exec-fleet-dataset .exec-fleet-part { flex-direction: column; align-items: flex-end; gap: 0; }
 .exec-fleet-dataset .exec-fleet-part-tag { font: var(--exec-font-meta); }
+
+/* Group header rows (QA1 R2-07): the group, its rows over the whole filtered query, and its money per partition. */
+.exec-fleet-dataset .exec-cards-group th {
+  position: static;
+  padding: var(--space-1) var(--space-3);
+  text-align: left;
+  background: var(--paper-sunken);
+  border-top: 1px solid var(--line-strong);
+}
+.exec-fleet-grouphead { display: inline-flex; flex-wrap: wrap; align-items: baseline; gap: var(--space-3); font: var(--exec-font-body); }
+.exec-fleet-groupcount { font: var(--exec-font-meta); color: var(--ink-faint); }
+.exec-fleet-groupmoney { display: inline-flex; flex-wrap: wrap; gap: var(--space-3); font: var(--exec-font-meta); color: var(--ink-faint); }
+.exec-fleet-groupmoney-part { display: inline-flex; align-items: baseline; gap: var(--space-1); white-space: nowrap; }
+
+/* The alpha name wraps to two lines before it clips (QA1 R2-08): "Reversion 06 · synthetic review" must stay distinguishable from its siblings. */
+.exec-fleet-dataset .exec-fleet-name.exec-fleet-trunc {
+  display: -webkit-box;
+  max-width: 24ch;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+@media (max-width: 660px) {
+  .exec-fleet-dataset .exec-fleet-name.exec-fleet-trunc,
+  .exec-fleet-dataset .exec-fleet-trunc { display: inline; max-width: none; overflow: visible; white-space: normal; }
+}
+
+/* The QBTS details mark shows on hover or focus of its row (25 permanent "?" icons were noise); it stays in the tab order and opens as before. */
+.exec-fleet-dataset tbody tr:not(:hover):not(:focus-within) .exec-fleet-qbts .exec-blk-why-btn[aria-expanded="false"] { opacity: 0; }
+
+/* Seven counts in four columns left the eighth cell empty, and the 1px-gap background showed through it as a grey block (QA1 R2-23): the last tile spans the rest of its row. */
+@media (min-width: 1001px) {
+  .exec-fleet-v2 .exec-blk-kpis > .exec-blk-kpi:last-child:nth-child(4n+3) { grid-column: span 2; }
+}
+
+/* Dataset board cards (QA1 R2-10): allocation and QBTS beside their labels; above the card-wide link so the QBTS details stay clickable. */
+.exec-fleet-card-figures { position: relative; z-index: 1; display: flex; flex-direction: column; gap: 2px; align-self: stretch; }
+.exec-fleet-card-fig { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-2); }
+.exec-fleet-card-figlabel { font: var(--exec-font-meta); color: var(--ink-faint); }
+.exec-fleet-card-instage { font: var(--exec-font-meta); color: var(--ink-faint); }
