@@ -22,6 +22,7 @@ import { isScaleName, setFixtureNow, setFixtureScale, type ScaleName } from "../
 import { isReviewProfile, reviewCatalog, reviewHtml, type ReviewProfile } from "./review-catalog";
 import { answerReviewManager, wpAccountBook, wpAlphaResource, wpDeploymentFact, wpPortfolioBook } from "./review-manager";
 import { setPositiveMode } from "../frontend/e2e/bffPositiveMode";
+import { commandStoryRoute } from "./command-story";
 import { applyScenarioBody, resetFixtureTransitions, scenarioRequest, scenarioVariants } from "./scenario-apply";
 import { healsDoubles, configuredScenario, configureScenario, DEFAULT_SCENARIO, type FixtureScenario, FIXTURE_SCENARIOS, getScenario, isFixtureScenario, resetScenario, SCENARIO_DESCRIPTIONS, setScenario } from "./scenario";
 import { transformReviewBody } from "./review-relations";
@@ -429,6 +430,13 @@ async function handle(config: FixtureConfig, incoming: IncomingMessage, response
 
   if (method !== "GET" && config.writes === "refuse") {
     send(response, config, 405, { error: "FIXTURE_METHOD_NOT_ALLOWED" }, { allow: "GET" });
+    return;
+  }
+
+  // WP-P: the in-memory command story (lane-internal paths, only with FIXTURE_WRITES=doubles: a refusing server already answered 405 above).
+  const story = commandStoryRoute(method, url.pathname, body);
+  if (story !== null) {
+    send(response, config, story.status, story.body);
     return;
   }
 

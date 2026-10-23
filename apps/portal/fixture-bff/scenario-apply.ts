@@ -10,6 +10,7 @@
 import type { OverviewDoubleVariants } from "../frontend/e2e/bffDoubleOverview";
 import type { UsersDoubleVariant } from "../frontend/e2e/bffDoubleUsers";
 import type { BffRequest } from "../frontend/e2e/bffAnswerer";
+import { resetCommandStory, storyRecords } from "./command-story";
 import { transformReviewBody } from "./review-relations";
 import { healsDoubles, type FixtureScenario } from "./scenario";
 
@@ -38,12 +39,12 @@ export function scenarioRequest(scenario: FixtureScenario, request: BffRequest):
 
 /** Clears the in-memory command-story state (plan/apply/status/retry, WP-P deliverable 5). Nothing to clear until the story is wired. */
 export function resetFixtureTransitions(): void {
-  /* wired with the command story */
+  resetCommandStory();
 }
 
 /** Shapes a served JSON body for the value-rewrite scenarios. Identity for the others. */
 export function applyScenarioBody(scenario: FixtureScenario, path: string, body: unknown): unknown {
-  const healed = healsDoubles(scenario) ? aliasIds(healBody(body)) : body;
+  const healed = healsDoubles(scenario) ? withStoryAudit(path, aliasIds(healBody(body))) : body;
   if (scenario === "zero") return path.includes("/manager/") ? zeroBody(healed) : healed;
   if (scenario === "dense") return transformReviewBody(path, healed, "layout-stress");
   return healed;
@@ -69,6 +70,25 @@ function healBody(value: unknown, depth = 0): unknown {
     out[key] = next;
   }
   return changed ? out : value;
+}
+
+/**
+ * The command story's operations in the audit feed: a PLANNED line for each, and an APPLIED line carrying the SAME receipt_ref the story states once it is
+ * applied. Newest first, like the feed. Only the positive-like scenarios, and only while the story holds a record (an empty story changes nothing).
+ */
+function withStoryAudit(path: string, body: unknown): unknown {
+  const records = storyRecords();
+  if (records.length === 0 || !path.endsWith("/operations/audit") || body === null || typeof body !== "object") return body;
+  const feed = body as { items?: unknown[]; read_at_ms?: number };
+  if (!Array.isArray(feed.items)) return body;
+  const base = typeof feed.read_at_ms === "number" ? feed.read_at_ms : Date.now();
+  const rows = records.flatMap((record, index) => {
+    const subject = { type: "OPERATION", id: record.operation_id };
+    const planned = { audit_id: `FIXTURE_LAB:${record.operation_id}:planned`, at_ms: base - (records.length - index) * 120_000, actor: "bjones", action: "PLANNED", subject, receipt_ref: null };
+    const applied = record.receipt_ref === null ? [] : [{ audit_id: `FIXTURE_LAB:${record.operation_id}:applied`, at_ms: base - (records.length - index) * 120_000 + 60_000, actor: "bjones", action: "APPLIED", subject, receipt_ref: record.receipt_ref }];
+    return [...applied, planned];
+  }).reverse();
+  return { ...feed, items: [...rows, ...feed.items] };
 }
 
 /**
