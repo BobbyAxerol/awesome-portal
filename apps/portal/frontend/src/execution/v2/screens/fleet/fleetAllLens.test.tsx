@@ -111,23 +111,23 @@ describe("the All lens reads the dataset in ALL mode when it is offered", () => 
     const paper = rowOf("Alpha b-1").find((row) => cell(row, "Environment") === "Paper")!;
     const live = rowOf("Alpha b-1").find((row) => cell(row, "Environment") === "Real-funded")!;
     const sandbox = rowOf("Alpha s-1")[0]!;
-    expect(cell(paper, "Net PnL")).toContain("Paper · USDT");
-    expect(cell(paper, "Net PnL")).toContain("11.5");
-    expect(cell(paper, "Allocation")).toContain("1,000");
-    expect(cell(live, "Net PnL")).toContain("Real-funded · USDT");
-    expect(cell(live, "Net PnL")).toContain("900.125");
-    expect(cell(live, "Net PnL")).not.toContain("Paper");
-    expect(cell(sandbox, "Net PnL")).toContain("Sandbox · USDT");
-    expect(cell(sandbox, "Net PnL")).toContain("3.25");
+    expect(cell(paper, "PNL Amount")).toContain("Paper · USDT");
+    expect(cell(paper, "PNL Amount")).toContain("11.5");
+    expect(cell(paper, "Alloc")).toContain("1,000");
+    expect(cell(live, "PNL Amount")).toContain("Real-funded · USDT");
+    expect(cell(live, "PNL Amount")).toContain("900.125");
+    expect(cell(live, "PNL Amount")).not.toContain("Paper");
+    expect(cell(sandbox, "PNL Amount")).toContain("Sandbox · USDT");
+    expect(cell(sandbox, "PNL Amount")).toContain("3.25");
     // a true zero is printed as zero; an alpha with no allocation says so, it is not a 0
     const zero = rowOf("Alpha l-2")[0]!;
-    expect(cell(zero, "Net PnL")).toMatch(/Real-funded · USDT\s*0/);
-    expect(cell(zero, "Allocation")).toContain("Not available");
+    expect(cell(zero, "PNL Amount")).toMatch(/Real-funded · USDT\s*0/);
+    expect(cell(zero, "Alloc")).toContain("Not available");
     // no figure on the screen is a sum over environments or over the one currency
     const text = document.body.textContent ?? "";
     for (const sum of ["908.375", "911.625", "21,500", "21500", "20,500", "1,500"]) expect(text).not.toContain(sum);
     // the partition tag names the basis and the profile on its title, so a cell can be traced
-    const tag = paper.querySelector("td[data-l='Net PnL'] .exec-fleet-part-tag") as HTMLElement;
+    const tag = paper.querySelector("td[data-l='PNL Amount'] .exec-fleet-part-tag") as HTMLElement;
     expect(tag.title).toContain("PAPER");
     expect(tag.title).toContain("TEST_ONLY:net-ledger");
     expect(tag.title).toContain("TEST_ONLY:paper-ledger");
@@ -288,7 +288,7 @@ describe("when the dataset does not answer ALL, nothing is faked", () => {
     expect(document.querySelector("[data-source='fleet']")?.textContent).toBe("Fleet read · alphas");
     expect(screen.queryByTestId("env-coverage")).toBeNull();
     expect(screen.queryByTestId("money-provenance")).toBeNull();
-    expect(screen.queryByRole("button", { name: "Map" })).toBeNull();
+    expect((screen.getByRole("button", { name: "Map" }) as HTMLButtonElement).disabled).toBe(true);
   });
 
   it("a page answered with another environment's rows is refused, not drawn", async () => {

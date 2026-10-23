@@ -55,11 +55,17 @@ import { FleetBoard } from "./FleetBoard";
 import { FleetDatasetDrawer } from "./FleetDatasetDrawer";
 import { FleetDatasetTable } from "./FleetDatasetTable";
 import { FleetEnvironmentCoverage } from "./FleetEnvironmentCoverage";
+import { BasisSelect, DatasetColumnsMenu, DensityToggle, EquityScalarSelect, EvidenceSelect, RangeFilter, rangeText } from "./FleetMetricControls";
+import {
+  BASIS_PARAM, DATASET_COLUMNS, OPTIONAL_SHOWN_PARAM, askableSorts, basisOf, basisOptions, cycleSort, equityScalarOf, evidenceOf, parseRanges, parseShownOptional, parseSorts,
+  serializeRanges, serializeShownOptional, serializeSorts, EVIDENCE_FILTERS, type BasisOption,
+} from "./fleetMetricsModel";
+import { useFleetSparks } from "./useFleetSparks";
 import { FleetMap } from "./FleetMap";
 import { FleetDrawer } from "./FleetDrawer";
 import { FleetTable } from "./FleetTable";
 import {
-  FE_STAGE_ENTRY, datasetCountLine, datasetGroupOptions, datasetKey, datasetQuery, datasetScopeOf, datasetSortOf, datasetSortOptions, groupFieldOf,
+  FE_STAGE_ENTRY, datasetCountLine, datasetGroupOptions, datasetKey, datasetQuery, datasetScopeOf, datasetSortOptions, groupFieldOf,
   groupLabel, healthWord, moneyProvenanceRows, parseHealths, serializeHealths, type DatasetFilters,
 } from "./fleetDatasetModel";
 import { useDatasetPublication, useFleetDataset } from "./useFleetDataset";
@@ -73,6 +79,7 @@ import {
 import { useFleetRead } from "./useFleetRead";
 
 import "../../css/fleet.css";
+import "./fleetMetrics.css";
 import { formatInstant } from "../../boundary";
 
 export const FLEET_SCREEN_KEY = "fleet" as const;
@@ -110,6 +117,10 @@ function freshnessFlag(freshness: string): { kind: FlagKind; label: string } {
 }
 
 const COUNTS_SOURCE_TITLE = "The figures above and the tab counts are the fleet read:one count per alpha over everything you may see, not narrowed by the lens or the filters. The table is the Manager dataset: one row per alpha version in a portfolio, in the lens's environment.";
+
+const DATASET_COLUMNS_OPTIONAL: ReadonlySet<string> = new Set(DATASET_COLUMNS.filter((column) => column.optional).map((column) => column.key));
+/** A sort field in the words of its column. */
+const sortLabel = (field: string): string => (field === "return_30d_pct" ? "Return 30D" : DATASET_COLUMNS.find((column) => column.sortField === field)?.label ?? field);
 
 const NOT_PUBLISHED_LIST = [FE.group, FE.map, FE.window, FE.readiness, FE.compare, FE.archived];
 
@@ -162,6 +173,23 @@ export default function FleetScreen({ api, workspaceId, streamFlag = FLEET_STREA
   const sortOptions = useMemo(() => datasetSortOptions(offered === null ? null : offered.sortFields), [offered]);
   const groupOptions = useMemo(() => datasetGroupOptions(offered === null ? null : offered.groupFields), [offered]);
   const healths = useMemo(() => parseHealths(params.get("health")), [params]);
+  // Alpha Fleet metrics (guide M03 8.2). Every one is a screen-local URL param, so a link reproduces the view; defaults leave the URL clean.
+  const sorts = useMemo(() => parseSorts(params.get("sorts") ?? sort), [params, sort]);
+  const ranges = useMemo(() => parseRanges(params.get("rng")), [params]);
+  const basisId = params.get(BASIS_PARAM);
+  const portfolios = useMemo(() => parseHealths(params.get("portfolio")), [params]);
+  const venues = useMemo(() => parseHealths(params.get("venue")), [params]);
+  const sources = useMemo(() => parseHealths(params.get("source")), [params]);
+  const version = params.get("version")?.trim() || null;
+  const lifecycleFilter = params.get("lifecycle")?.trim() || null;
+  const evidence = evidenceOf(params.get("evidence"));
+  const equityScalar = equityScalarOf(params.get("eq")).id;
+  const compact = params.get("density") === "compact";
+  const hiddenDataset = useMemo(() => new Set((params.get("dhide") ?? "").split(",").map((part) => part.trim()).filter(Boolean)), [params]);
+  const shownOptional = useMemo(() => parseShownOptional(params.get(OPTIONAL_SHOWN_PARAM)), [params]);
+  // The partitions the loaded rows publish (kept while filtering): the Basis choices, and the partition a money order or range pins.
+  const [seenBasis, setSeenBasis] = useState<readonly BasisOption[]>([]);
+  const basis = useMemo(() => basisOf(basisId, seenBasis), [basisId, seenBasis]);
   const datasetFilters = useMemo<DatasetFilters | null>(() => {
     if (scope === null) return null;
     const field = groupFieldOf(params.get("group"));
@@ -171,9 +199,10 @@ export default function FleetScreen({ api, workspaceId, streamFlag = FLEET_STREA
       scope, q, owner, healths, sort: sort,
       group,
       then: group !== null && second !== null && second !== group && groupOptions.some((option) => option.field === second) ? second : null,
+      sorts, ranges, basis, portfolios, venues, sources, version, lifecycle: lifecycleFilter, evidence,
       ...(workspaceId ? { workspaceId } : {}),
     };
-  }, [scope, q, owner, healths, sort, params, groupOptions, workspaceId]);
+  }, [scope, q, owner, healths, sort, params, groupOptions, workspaceId, sorts, ranges, basis, portfolios, venues, sources, version, lifecycleFilter, evidence]);
   const offeredSorts = offered === null ? null : offered.sortFields;
   const [datasetNonce, setDatasetNonce] = useState(0);
   const dataset = useFleetDataset(
@@ -223,6 +252,33 @@ export default function FleetScreen({ api, workspaceId, streamFlag = FLEET_STREA
     setSeenDatasetOwners((c) => mergeSeen(c, dataset.rows.flatMap((r) => (r.ownerUserId ? [r.ownerUserId] : []))));
     setSeenDatasetHealths((c) => mergeSeen(c, dataset.rows.flatMap((r) => (r.health ? [r.health] : []))));
   }, [dataset.rows]);
+  const probed = publication.phase === "published" ? publication.dataset : null;
+  useEffect(() => {
+    const options = basisOptions([...dataset.rows, ...(probed === null ? [] : probed.items)]);
+    setSeenBasis((current) => {
+      const merged = [...current, ...options.filter((option) => !current.some((entry) => entry.id === option.id))];
+      return merged.length === current.length ? current : merged;
+    });
+  }, [dataset.rows, probed]);
+  // The loaded rows' portfolios, venues and source states: honest "loaded so far" choices (the server filters on the typed value either way).
+  const [seenFacets, setSeenFacets] = useState<{ portfolio: readonly string[]; venue: readonly string[]; source: readonly string[]; lifecycle: readonly string[] }>({ portfolio: [], venue: [], source: [], lifecycle: [] });
+  useEffect(() => {
+    setSeenFacets((c) => {
+      const next = {
+        portfolio: mergeSeen(c.portfolio, dataset.rows.map((r) => r.portfolioId)),
+        venue: mergeSeen(c.venue, dataset.rows.flatMap((r) => (r.venue ? [r.venue] : []))),
+        source: mergeSeen(c.source, dataset.rows.flatMap((r) => (r.sourceState ? [r.sourceState] : []))),
+        lifecycle: mergeSeen(c.lifecycle, dataset.rows.flatMap((r) => (r.lifecycle ? [r.lifecycle] : []))),
+      };
+      // Same lists: the same object, so nothing re-renders for a page that taught us nothing new.
+      return next.portfolio === c.portfolio && next.venue === c.venue && next.source === c.source && next.lifecycle === c.lifecycle ? c : next;
+    });
+  }, [dataset.rows]);
+  const offeredFields = offered === null ? null : offered.sortFields;
+  const askable = useMemo(() => askableSorts(sorts, offeredFields, basis !== null), [sorts, offeredFields, basis]);
+  const sparks = useFleetSparks(api, datasetMode && tableView, datasetRows, scope === null ? "ALL" : scope.environment, workspaceId);
+  const selectionReasonId = useId();
+  const mapReasonId = useId();
   // RV-09: the whole authorized population when the dataset published it (a group list over the whole filtered query); otherwise only
   // the rows loaded so far, which is worded as such and never offered as complete.
   const published_ = useDatasetOptions(api, datasetMode, scope, workspaceId, offered === null ? null : offered.groupFields);
@@ -288,12 +344,38 @@ export default function FleetScreen({ api, workspaceId, streamFlag = FLEET_STREA
     }
     setParams(params2, { replace: true });
   };
+  /** Several screen-local params at once; a null or empty value removes the param. A new view drops the open peek. */
+  const setMany = (updates: Readonly<Record<string, string | null>>) => {
+    const next = new URLSearchParams(params);
+    for (const [name, value] of Object.entries(updates)) {
+      if (value === null || value === "") next.delete(name);
+      else next.set(name, value);
+    }
+    next.delete("sel");
+    setParams(next, { replace: true });
+  };
+  const setSorts = (keys: readonly import("./fleetMetricsModel").SortKey[]) => setMany({ sorts: serializeSorts(keys), sort: null });
+  const setDatasetColumn = (key: string, shown: boolean) => {
+    const optional = DATASET_COLUMNS_OPTIONAL.has(key);
+    if (optional) {
+      const next = new Set(shownOptional);
+      if (shown) next.add(key); else next.delete(key);
+      setMany({ [OPTIONAL_SHOWN_PARAM]: serializeShownOptional(next) });
+    } else {
+      const next = new Set(hiddenDataset);
+      if (shown) next.delete(key); else next.add(key);
+      setMany({ dhide: next.size === 0 ? null : [...next].sort().join(",") });
+    }
+  };
+  const [versionText, setVersionText] = useState(version ?? "");
+  useEffect(() => setVersionText(version ?? ""), [version]);
   const pickLens = (next: FleetLens) =>
     url.set({ stage: stagesForLens(next), tab: next === "archived" ? ARCHIVED_TAB : null, sel: null });
   const clearFilters = () => {
     const next = serializeUrlParams({ q: null, stage: [], tab: null, sel: null }, params);
     next.delete("owner");
     next.delete("health");
+    for (const name of ["rng", "basis", "portfolio", "venue", "source", "version", "lifecycle", "evidence"]) next.delete(name);
     setParams(next);
   };
 
@@ -313,7 +395,8 @@ export default function FleetScreen({ api, workspaceId, streamFlag = FLEET_STREA
   const searchInput = useRef<HTMLInputElement>(null);
   const commitNow = () => url.set({ q: text.trim() === "" ? null : text.trim(), sel: null }, { replace: true });
 
-  const filtered = q !== null || owner !== null || health !== null || stage.length > 0;
+  const metricFiltered = ranges.length > 0 || portfolios.length > 0 || venues.length > 0 || sources.length > 0 || version !== null || lifecycleFilter !== null || evidence !== null;
+  const filtered = q !== null || owner !== null || health !== null || stage.length > 0 || (datasetMode && metricFiltered);
   // One chip per thing the URL filters by, as the HIFI #chips row; each clears only itself.
   const chips: FilterChip[] = [];
   if (archived) chips.push({ id: "lens", name: "lens", value: "Archived", clear: () => pickLens("all") });
@@ -327,6 +410,19 @@ export default function FleetScreen({ api, workspaceId, streamFlag = FLEET_STREA
   }
   if (owner !== null) chips.push({ id: "owner", name: "owner", value: owner, clear: () => setLocal("owner", "") });
   if (health !== null) chips.push({ id: "health", name: "health", value: datasetMode ? healths.map(healthWord).join(", ") : healthView(health).label, clear: () => setLocal("health", "") });
+  if (datasetMode) {
+    if (portfolios.length > 0) chips.push({ id: "portfolio", name: "portfolio", value: portfolios.join(", "), clear: () => setMany({ portfolio: null }) });
+    if (venues.length > 0) chips.push({ id: "venue", name: "venue", value: venues.join(", "), clear: () => setMany({ venue: null }) });
+    if (sources.length > 0) chips.push({ id: "source", name: "source", value: sources.map(humanize).join(", "), clear: () => setMany({ source: null }) });
+    if (version !== null) chips.push({ id: "version", name: "version", value: version, clear: () => setMany({ version: null }) });
+    if (lifecycleFilter !== null) chips.push({ id: "lifecycle", name: "lifecycle", value: humanize(lifecycleFilter), clear: () => setMany({ lifecycle: null }) });
+    if (evidence !== null) chips.push({ id: "evidence", name: "evidence", value: EVIDENCE_FILTERS.find((entry) => entry.id === evidence)!.label, clear: () => setMany({ evidence: null }) });
+    for (const range of ranges) {
+      chips.push({ id: `range-${range.field}`, name: "range", value: rangeText(range, basis === null ? null : basis.label),
+        clear: () => setMany({ rng: serializeRanges(ranges.filter((entry) => entry.field !== range.field)) }) });
+    }
+    if (basis !== null) chips.push({ id: "basis", name: "basis", value: basis.label, clear: () => setMany({ basis: null }) });
+  }
   if (q !== null) chips.push({ id: "q", name: "search", value: q, clear: () => url.set({ q: null, sel: null }, { replace: true }) });
   const urlText = params.toString() === "" ? "No parameters" : `?${decodeURIComponent(params.toString().replace(/\+/g, " "))}`;
   const customStage = lens === null;
@@ -397,7 +493,7 @@ export default function FleetScreen({ api, workspaceId, streamFlag = FLEET_STREA
     if (datasetMode) {
       if (dataset.state.phase !== "ready") return undefined;
       // The lens alone is not a filter the reader chose: with only the lens, no row means the dataset published none for the view.
-      if (q === null && owner === null && health === null) return <PanelState status="empty" reason="The Manager dataset published no rows for this view." />;
+      if (q === null && owner === null && health === null && !metricFiltered) return <PanelState status="empty" reason="The Manager dataset published no rows for this view." />;
       return (
         <div className="exec-fleet-empty">
           <p>No rows match these filters.</p>
@@ -430,7 +526,7 @@ export default function FleetScreen({ api, workspaceId, streamFlag = FLEET_STREA
   );
 
   return (
-    <div className="exec-fleet-v2" data-screen="alpha-fleet-v2">
+    <div className={compact && datasetMode ? "exec-fleet-v2 exec-fleet-compact" : "exec-fleet-v2"} data-screen="alpha-fleet-v2">
       <header className="exec-fleet-head">
         <div>
           <h1 className="exec-fleet-title">Alpha Fleet</h1>
@@ -440,7 +536,10 @@ export default function FleetScreen({ api, workspaceId, streamFlag = FLEET_STREA
             <button type="button" className="exec-fleet-segbtn" aria-pressed={tableView} onClick={() => url.set({ view: null })}>Table</button>
             <button type="button" className="exec-fleet-segbtn" aria-pressed={boardView} onClick={() => url.set({ view: "board" })}>Board</button>
             {/* The Map exists only where the Manager dataset is the source: its tiles are sized by the published allocation. A control that cannot work stays out (DEBT-048). */}
-            {published && !forceFleet ? <button type="button" className="exec-fleet-segbtn" aria-pressed={mapView} onClick={() => url.set({ view: "map" })}>Map</button> : null}
+            {published && !forceFleet
+              ? <button type="button" className="exec-fleet-segbtn" aria-pressed={mapView} onClick={() => url.set({ view: "map" })}>Map</button>
+              : <button type="button" className="exec-fleet-segbtn" aria-pressed="false" disabled aria-describedby={mapReasonId} title={notPublished(FE.map)}>Map</button>}
+            <span id={mapReasonId} className="exec-fleet-sr">{notPublished(FE.map)}: the Map reads the Manager dataset, which is not published here.</span>
           </span>
           {sourceChip}
           {streamOn && scope !== null ? (
@@ -594,10 +693,13 @@ export default function FleetScreen({ api, workspaceId, streamFlag = FLEET_STREA
               {datasetMode ? (
                 <select
                   className="exec-fleet-select"
-                  value={datasetSortOf(sort, sortOptions).value ?? ""}
-                  title="Stages sort by name, not by risk. A row with no single stage comes last in both directions."
-                  onChange={(event) => url.set({ sort: event.target.value === "" ? null : event.target.value, sel: null })}
+                  value={serializeSorts(sorts) ?? ""}
+                  title="Stages sort by name, not by risk. A row with no single stage comes last in both directions. Click a column header to add a key."
+                  onChange={(event) => setSorts(parseSorts(event.target.value))}
                 >
+                  {sorts.length > 0 && !sortOptions.some((option) => option.value === serializeSorts(sorts)) ? (
+                    <option value={serializeSorts(sorts) ?? ""}>Sort: custom ({sorts.length} {sorts.length === 1 ? "key" : "keys"})</option>
+                  ) : null}
                   {sortOptions.map((option) => <option key={option.id} value={option.value ?? ""}>Sort: {option.label}</option>)}
                 </select>
               ) : (
@@ -641,8 +743,57 @@ export default function FleetScreen({ api, workspaceId, streamFlag = FLEET_STREA
               </label>
             ) : null}
             <span className="exec-fleet-grow" />
-            <ColumnsMenu hidden={hiddenColumns} onToggle={setColumn} />
+            {datasetMode ? <DatasetColumnsMenu hidden={hiddenDataset} shownOptional={shownOptional} onToggle={setDatasetColumn} /> : <ColumnsMenu hidden={hiddenColumns} onToggle={setColumn} />}
           </div>}
+          {archived || !datasetMode ? null : (
+            <div className="exec-fleet-tool2" role="group" aria-label="Metric filters">
+              <MultiPick name="Portfolio" complete={false} options={mergeSeen(seenFacets.portfolio, portfolios).map((value) => ({ value, label: value }))} selected={portfolios} onChange={(next) => setMany({ portfolio: serializeHealths(next) })} />
+              <MultiPick name="Venue" complete={false} options={mergeSeen(seenFacets.venue, venues).map((value) => ({ value, label: value }))} selected={venues} onChange={(next) => setMany({ venue: serializeHealths(next) })} />
+              <MultiPick name="Source" complete={false} options={mergeSeen(seenFacets.source, sources).map((value) => ({ value, label: humanize(value) }))} selected={sources} onChange={(next) => setMany({ source: serializeHealths(next) })} />
+              <div className="exec-fleet-field">
+                <OptionFilter
+                  name="Lifecycle"
+                  value={lifecycleFilter}
+                  options={mergeSeen(seenFacets.lifecycle, lifecycleFilter ? [lifecycleFilter] : []).map((value) => ({ value, label: humanize(value) }))}
+                  complete={false}
+                  limit="These are the lifecycle words of the rows loaded so far. Type a word to filter on the server."
+                  onChange={(next) => setMany({ lifecycle: next })}
+                />
+              </div>
+              <label className="exec-fleet-field">
+                <span className="exec-fleet-sr">Version</span>
+                <input
+                  className="exec-fleet-input"
+                  type="text"
+                  placeholder="Version (exact)"
+                  value={versionText}
+                  onChange={(event) => setVersionText(event.target.value)}
+                  onBlur={() => setMany({ version: versionText.trim() === "" ? null : versionText.trim() })}
+                  onKeyDown={(event) => { if (event.key === "Enter") setMany({ version: versionText.trim() === "" ? null : versionText.trim() }); }}
+                />
+              </label>
+              <EvidenceSelect value={evidence} onChange={(next) => setMany({ evidence: next })} />
+              <BasisSelect options={seenBasis} value={basis === null ? null : basis.id} onChange={(next) => setMany({ basis: next })} />
+              <RangeFilter ranges={ranges} offered={offeredFields} basis={basis} onChange={(next) => setMany({ rng: serializeRanges(next) })} />
+              <EquityScalarSelect value={equityScalar} onChange={(next) => setMany({ eq: next === "value" ? null : next })} />
+              <DensityToggle compact={compact} onChange={(next) => setMany({ density: next ? "compact" : null })} />
+            </div>
+          )}
+          {archived || !datasetMode ? null : (
+            <div className="exec-fleet-sortbar" data-testid="sortbar">
+              {sorts.length === 0
+                ? <span>Server order. Click a column header to sort; again to reverse; again to remove. Up to three keys, in the order you click them.</span>
+                : (
+                  <>
+                    <span>Sorted by {sorts.map((key, index) => `${sortLabel(key.field)} ${key.dir === "asc" ? "ascending" : "descending"}${sorts.length > 1 ? ` (${index + 1})` : ""}`).join(", then ")}. Empty values go last in both directions.</span>
+                    <button type="button" className="exec-fleet-link" onClick={() => setSorts([])}>Clear sort</button>
+                  </>
+                )}
+              {askable.unaskable.map(({ key, why }) => <span key={key.field} className="exec-fleet-np">{sortLabel(key.field)} is not applied: {why}</span>)}
+              <button type="button" className="exec-fleet-btn" disabled aria-describedby={selectionReasonId}>Compare selected</button>
+              <span id={selectionReasonId} className="exec-fleet-note">Select 2 to 4 alphas to compare: {notPublished(FE.compare)}.</span>
+            </div>
+          )}
           {archived ? null : <FilterChips chips={chips} onClearAll={clearFilters} urlText={urlText} onFocusFallback={() => searchInput.current?.focus()} />}
           {/* Tied to every disabled control by aria-describedby: the visible words are the names, the ids are in the title and the hidden text. The Archived lens has no list to filter, so its panel says the one thing and this line is for assistive tech only. */}
           <p id={reasonId} className={archived ? "exec-fleet-sr" : "exec-fleet-unpub"}>
@@ -699,6 +850,11 @@ export default function FleetScreen({ api, workspaceId, streamFlag = FLEET_STREA
                       ))}
                     </ul>
                   ) : null}
+                  {dataset.last && dataset.last.groups.length > 0 ? (
+                    <p className="exec-fleet-note" data-testid="group-note">
+                      Group counts are rows (alpha versions in a portfolio) over the whole filtered result, not the loaded page. A stage group is a membership: an alpha in two stages is in both, so groups are never added into a total.
+                    </p>
+                  ) : null}
                   {mapView ? (
                     datasetRows.length === 0 ? emptyBlock : (
                       <FleetMap
@@ -713,6 +869,16 @@ export default function FleetScreen({ api, workspaceId, streamFlag = FLEET_STREA
                     <FleetDatasetTable
                       rows={datasetRows}
                       showEnvironment={allMode}
+                      shownOptional={shownOptional}
+                      hidden={hiddenDataset}
+                      offeredSorts={offeredFields}
+                      basisPinned={basis !== null}
+                      sorts={sorts}
+                      onSort={(field) => setSorts(cycleSort(sorts, field))}
+                      equityScalar={equityScalar}
+                      sparks={sparks}
+                      datasetEnvironment={scope === null ? undefined : scope.environment}
+                      selectionReasonId={selectionReasonId}
                       metricKeys={dataset.first === null ? null : dataset.first.queryOptions.metricKeys}
                       hrefFor={(row) => withContext(withOrigin(alphaHref(row.alphaId), { kind: "fleet" }, params), params)}
                       selectedKey={selection}

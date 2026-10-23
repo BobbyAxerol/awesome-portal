@@ -22,6 +22,7 @@ import type { ManagerEconomicDomain, ManagerMetricRead } from "../../readers/man
 import type { ExecStage } from "../../urlState";
 import type { FlagKind } from "../../flagKinds";
 import { PAGE_LIMIT, healthView, humanize, stageLabel, type UnpublishedFact } from "./fleetModel";
+import { askableSorts, isMoneyField, rangeFilters, type BasisOption, type EvidenceFilter, type Range, type SortKey } from "./fleetMetricsModel";
 
 /** The request that owns days in stage and entry time (the stage lifecycle). */
 export const FE_STAGE_ENTRY: UnpublishedFact = { fe: "FE-027", what: "Days in stage" };
@@ -67,6 +68,9 @@ export const DATASET_SORT_OPTIONS: readonly DatasetSortOption[] = [
   { id: "name", label: "Name, A to Z", value: "name:asc", keys: [{ field: "name", direction: "asc" }], field: "name" },
   { id: "stage-asc", label: "Current stage, A to Z", value: "current_stage:asc", keys: [{ field: "current_stage", direction: "asc" }, { field: "alpha_id", direction: "asc" }], field: "current_stage" },
   { id: "stage-desc", label: "Current stage, Z to A", value: "current_stage:desc", keys: [{ field: "current_stage", direction: "desc" }, { field: "alpha_id", direction: "asc" }], field: "current_stage" },
+  // QBTS needs no basis (a score is not money): high to low puts the strongest first, a version with no score comes last either way.
+  { id: "qbts-desc", label: "QBTS, high to low", value: "score:desc", keys: [{ field: "score", direction: "desc" }], field: "score" },
+  { id: "qbts-asc", label: "QBTS, low to high", value: "score:asc", keys: [{ field: "score", direction: "asc" }], field: "score" },
 ];
 
 export function datasetSortOptions(offered: readonly ManagerSortField[] | null): readonly DatasetSortOption[] {
@@ -84,8 +88,14 @@ export const DATASET_GROUP_OPTIONS: readonly { id: string; label: string; field:
   { id: "none", label: "Group: none", field: null },
   { id: "portfolio_id", label: "Group: Portfolio", field: "portfolio_id" },
   { id: "current_stage", label: "Group: Current stage", field: "current_stage" },
+  // Membership groups (guide 8.2): an alpha in several stages is in each of them; the groups are never added into a total.
+  { id: "stage_presence", label: "Group: Stage presence", field: "stage_presence" },
   { id: "owner_user_id", label: "Group: Owner", field: "owner_user_id" },
+  { id: "alpha_id", label: "Group: Alpha", field: "alpha_id" },
+  { id: "venue", label: "Group: Venue", field: "venue" },
   { id: "health", label: "Group: Health", field: "health" },
+  { id: "source_state", label: "Group: Source state", field: "source_state" },
+  { id: "lifecycle", label: "Group: Lifecycle", field: "lifecycle" },
 ];
 
 export function datasetGroupOptions(offered: readonly ManagerGroupField[] | null): typeof DATASET_GROUP_OPTIONS {
@@ -107,6 +117,23 @@ export interface DatasetFilters {
   /** The second grouping level (`then=` in the URL); only meaningful with a `group` and never the same field. */
   then?: ManagerGroupField | null;
   workspaceId?: string;
+  /** Alpha Fleet metrics (guide 8.2). Absent: the legacy single-key `sort` above. */
+  sorts?: readonly SortKey[];
+  ranges?: readonly Range[];
+  /** The pinned economic partition, used on the wire only when a money sort or range needs it. */
+  basis?: BasisOption | null;
+  portfolios?: readonly string[];
+  venues?: readonly string[];
+  sources?: readonly string[];
+  version?: string | null;
+  lifecycle?: string | null;
+  evidence?: EvidenceFilter | null;
+}
+
+/** `EQ` for one word, `IN` for several (the dataset's own operators). */
+function wordsFilter(field: ManagerDatasetFilter["field"], words: readonly string[]): ManagerDatasetFilter[] {
+  if (words.length === 0) return [];
+  return words.length === 1 ? [{ field, op: "EQ", value: words[0]! }] : [{ field, op: "IN", values: words }];
 }
 
 /** `health=A,B` in the URL. */
@@ -121,11 +148,28 @@ export function datasetQuery(filters: DatasetFilters, offered: readonly ManagerS
   if (filters.scope.stageFilter.length > 0) query.stageFilter = filters.scope.stageFilter;
   const list: ManagerDatasetFilter[] = [];
   if (filters.owner) list.push({ field: "owner_user_id", op: "EQ", value: filters.owner });
-  if (filters.healths.length === 1) list.push({ field: "health", op: "EQ", value: filters.healths[0]! });
-  else if (filters.healths.length > 1) list.push({ field: "health", op: "IN", values: filters.healths });
+  list.push(...wordsFilter("health", filters.healths));
+  list.push(...wordsFilter("portfolio_id", filters.portfolios ?? []));
+  list.push(...wordsFilter("venue", filters.venues ?? []));
+  if (filters.version) list.push({ field: "alpha_version_id", op: "EQ", value: filters.version });
+  list.push(...wordsFilter("source_state", filters.sources ?? []));
+  // "Missing / stale / insufficient evidence": a missing score is `score IS_NULL`; a stale source is `source_state EQ STALE`.
+  if (filters.evidence === "missing") list.push({ field: "score", op: "IS_NULL" });
+  if (filters.evidence === "stale") list.push({ field: "source_state", op: "EQ", value: "STALE" });
+  const pinned = filters.basis != null;
+  list.push(...rangeFilters(filters.ranges ?? [], offered, pinned));
   if (list.length > 0) query.filters = list;
-  const sort = datasetSortOf(filters.sort, datasetSortOptions(offered));
-  if (sort.keys.length > 0) query.sort = sort.keys;
+  if (filters.lifecycle) query.lifecycleFilter = filters.lifecycle;
+  if (filters.sorts !== undefined) {
+    const asked = askableSorts(filters.sorts, offered, pinned).sort;
+    if (asked.length > 0) query.sort = asked.map((key) => ({ field: key.field, direction: key.dir }));
+    // A money order or range needs ONE partition; it is pinned only then, so a plain read keeps its default headlines.
+    const needsPin = asked.some((key) => isMoneyField(key.field)) || (filters.ranges ?? []).some((range) => isMoneyField(range.field));
+    if (needsPin && filters.basis) query.economicPartition = filters.basis.query;
+  } else {
+    const sort = datasetSortOf(filters.sort, datasetSortOptions(offered));
+    if (sort.keys.length > 0) query.sort = sort.keys;
+  }
   if (filters.group !== null) query.groupBy = filters.then != null && filters.then !== filters.group ? [filters.group, filters.then] : [filters.group];
   if (after) query.after = after;
   return query;
@@ -192,7 +236,7 @@ export function lifecycleFlagOf(lifecycle: string | null): { kind: FlagKind; lab
 export function groupLabel(group: ManagerGroup): string {
   return group.key.map((part) => {
     if (part.value === null) return part.field === "current_stage" ? "No single stage" : "Not available";
-    if (part.field === "current_stage") return stageLabel(part.value);
+    if (part.field === "current_stage" || part.field === "stage_presence") return stageLabel(part.value);
     return part.field === "health" ? healthView(part.value).label : part.value;
   }).join(", ");
 }

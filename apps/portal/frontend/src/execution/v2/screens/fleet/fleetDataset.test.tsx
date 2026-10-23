@@ -227,7 +227,7 @@ describe("dataset mode: rows, current stage, days in stage", () => {
     const { api } = harness({ live: alphasOf(3, [["LIVE"]], { owners: [null], healths: [null] }) });
     const { container } = mount(api, LIVE_URL);
     await loaded();
-    const cells = [...container.querySelectorAll("td")].map((td) => (td.textContent ?? "").trim());
+    const cells = [...container.querySelectorAll("td:not([data-l='Select'])")].map((td) => (td.textContent ?? "").trim());
     expect(cells.filter((text) => /^(-|–|—|N\/A|0)?$/.test(text))).toEqual([]);
     expect(container.textContent).not.toMatch(/—|–|N\/A/);
     const rows = dataRows();
@@ -282,21 +282,21 @@ describe("dataset mode: rows, current stage, days in stage", () => {
     expect(dataRows().map((row) => cell(row, "Current stage"))).toEqual(["Paper", "Paper"]);
     const rows = dataRows();
     const parts = (row: HTMLElement, label: string) => [...row.querySelectorAll(`td[data-l='${label}'] .exec-fleet-part`)].map((part) => part.textContent);
-    const exact = (row: HTMLElement) => [...row.querySelectorAll("td[data-l='Net PnL'] .exec-mgr-num")].map((node) => (node.getAttribute("title") ?? "").split(" · ")[0]);
+    const exact = (row: HTMLElement) => [...row.querySelectorAll("td[data-l='PNL Amount'] .exec-mgr-num")].map((node) => (node.getAttribute("title") ?? "").split(" · ")[0]);
     // Row 1: one USDT partition. A TRUE ZERO is a value (not a dash, not "Not available"); the published unrealized key is not a column.
-    expect(parts(rows[0]!, "Net PnL")).toEqual(["Paper · USDT0.00 USDT"]);
+    expect(parts(rows[0]!, "PNL Amount")).toEqual(["Paper · USDT0.00 USDT"]);
     expect(exact(rows[0]!)).toEqual(["0"]);
-    expect(rows[0]!.querySelector("td[data-l='Net PnL'] .exec-mgr-num")?.getAttribute("data-zero")).toBe("true");
+    expect(rows[0]!.querySelector("td[data-l='PNL Amount'] .exec-mgr-num")?.getAttribute("data-zero")).toBe("true");
     // Row 2: two currencies of one domain are TWO cells; the row's own net_pnl says MIXED_ECONOMIC_DOMAINS and nothing is summed.
-    expect(parts(rows[1]!, "Net PnL")).toEqual(["Paper · USDT0.00 USDT", "Paper · EUR-12.50 EUR"]);
+    expect(parts(rows[1]!, "PNL Amount")).toEqual(["Paper · USDT0.00 USDT", "Paper · EUR-12.50 EUR"]);
     expect(exact(rows[1]!)).toEqual(["0", "-12.5"]);
-    expect(cell(rows[1]!, "Net PnL")).not.toMatch(/-12\.5\d*\s*USDT|\+|MIXED/);
+    expect(cell(rows[1]!, "PNL Amount")).not.toMatch(/-12\.5\d*\s*USDT|\+|MIXED/);
     // Allocation: the fixture carries the key in query_options but no partition publishes it: a typed absence per partition, not 0.
-    expect(parts(rows[0]!, "Allocation")).toEqual(["Paper · USDTNot available"]);
-    expect(parts(rows[1]!, "Allocation")).toEqual(["Paper · USDTNot available", "Paper · EURNot available"]);
-    expect(cell(rows[0]!, "Allocation")).not.toMatch(/\b0\b/);
+    expect(parts(rows[0]!, "Alloc")).toEqual(["Paper · USDTNot available"]);
+    expect(parts(rows[1]!, "Alloc")).toEqual(["Paper · USDTNot available", "Paper · EURNot available"]);
+    expect(cell(rows[0]!, "Alloc")).not.toMatch(/\b0\b/);
     // Equity: the dataset does not carry equity_30d_end_value: Not published with its request id, not a figure.
-    expect(cell(rows[0]!, "Equity")).toBe("Not published (FE-013)");
+    expect(cell(rows[0]!, "Equity 30D")).toBe("Not published (FE-013)");
     expect(container.textContent).not.toMatch(/ACTUAL/);
   });
 });
@@ -326,14 +326,14 @@ describe("dataset mode: money columns when the dataset publishes the keys", () =
     await loaded();
     const rows = dataRows();
     const titleOf = (row: HTMLElement, label: string) => [...row.querySelectorAll(`td[data-l='${label}'] .exec-mgr-num`)].map((node) => (node.getAttribute("title") ?? "").split(" · ")[0]);
-    expect(titleOf(rows[0]!, "Allocation")).toEqual(["1500.250000000000000001"]);
-    expect(titleOf(rows[0]!, "Net PnL")).toEqual(["-42.5"]);
-    expect(titleOf(rows[0]!, "Equity")).toEqual(["1457.750000000000000001"]);
-    expect(cell(rows[0]!, "Net PnL")).toBe("Real-funded · USDT-42.50 USDT");
+    expect(titleOf(rows[0]!, "Alloc")).toEqual(["1500.250000000000000001"]);
+    expect(titleOf(rows[0]!, "PNL Amount")).toEqual(["-42.5"]);
+    expect(titleOf(rows[0]!, "Equity 30D")).toEqual(["1457.750000000000000001"]);
+    expect(cell(rows[0]!, "PNL Amount")).toBe("Real-funded · USDT-42.50 USDT");
     // A true zero allocation is a figure, with its zero marker, not an absence.
-    expect(cell(rows[1]!, "Allocation")).toBe("Real-funded · USDT0.00 USDT");
-    expect(rows[1]!.querySelector("td[data-l='Allocation'] .exec-mgr-num")?.getAttribute("data-zero")).toBe("true");
-    expect(cell(rows[1]!, "Net PnL")).toBe("Real-funded · USDT+7.00 USDT");
+    expect(cell(rows[1]!, "Alloc")).toBe("Real-funded · USDT0.00 USDT");
+    expect(rows[1]!.querySelector("td[data-l='Alloc'] .exec-mgr-num")?.getAttribute("data-zero")).toBe("true");
+    expect(cell(rows[1]!, "PNL Amount")).toBe("Real-funded · USDT+7.00 USDT");
   });
 });
 
@@ -400,13 +400,13 @@ describe("dataset mode: sort and group by current stage (FE-012)", () => {
     const sort = screen.getByRole("combobox", { name: "Sort" }) as HTMLSelectElement;
     expect([...sort.options].map((option) => option.textContent)).toEqual(["Sort: Server order", "Sort: Name, A to Z", "Sort: Current stage, A to Z", "Sort: Current stage, Z to A"]);
     fireEvent.change(sort, { target: { value: "current_stage:asc" } });
-    await waitFor(() => expect(search().get("sort")).toBe("current_stage:asc"), SLOW);
+    await waitFor(() => expect(search().get("sorts")).toBe("current_stage:asc"), SLOW);
     await waitFor(() => expect(datasetCalls(state)).toHaveLength(2), SLOW);
-    expect(datasetCalls(state)[1]!.sort).toEqual([{ field: "current_stage", direction: "asc" }, { field: "alpha_id", direction: "asc" }]);
+    expect(datasetCalls(state)[1]!.sort).toEqual([{ field: "current_stage", direction: "asc" }]);
     await waitFor(() => expect(dataRows().map((row) => cell(row, "Current stage").slice(0, 6))).toEqual(["Canary", "Canary", "Live", "Live", "No sin", "No sin"]), SLOW);
     fireEvent.change(sort, { target: { value: "current_stage:desc" } });
     await waitFor(() => expect(dataRows().map((row) => cell(row, "Current stage").slice(0, 6))).toEqual(["Live", "Live", "Canary", "Canary", "No sin", "No sin"]), SLOW);
-    expect(datasetCalls(state)[2]!.sort).toEqual([{ field: "current_stage", direction: "desc" }, { field: "alpha_id", direction: "asc" }]);
+    expect(datasetCalls(state)[2]!.sort).toEqual([{ field: "current_stage", direction: "desc" }]);
   });
 
   it("a sort in the URL the dataset does not offer is the server order, not a request the server would refuse", async () => {
@@ -422,7 +422,7 @@ describe("dataset mode: sort and group by current stage (FE-012)", () => {
     await loaded();
     const group = screen.getByRole("combobox", { name: "Group by" }) as HTMLSelectElement;
     expect(group.disabled).toBe(false);
-    expect([...group.options].map((option) => option.textContent)).toEqual(["Group: none", "Group: Portfolio", "Group: Current stage", "Group: Owner", "Group: Health"]);
+    expect([...group.options].map((option) => option.textContent)).toEqual(["Group: none", "Group: Portfolio", "Group: Current stage", "Group: Stage presence", "Group: Owner", "Group: Alpha", "Group: Venue", "Group: Health", "Group: Source state", "Group: Lifecycle"]);
     fireEvent.change(group, { target: { value: "current_stage" } });
     await waitFor(() => expect(search().get("group")).toBe("current_stage"), SLOW);
     const groups = await screen.findByTestId("dataset-groups");
@@ -440,7 +440,7 @@ describe("dataset mode: sort and group by current stage (FE-012)", () => {
     expect(screen.queryByRole("combobox", { name: "Then group by" })).toBeNull();
     fireEvent.change(screen.getByRole("combobox", { name: "Group by" }), { target: { value: "current_stage" } });
     const then = (await screen.findByRole("combobox", { name: "Then group by" })) as HTMLSelectElement;
-    expect([...then.options].map((option) => option.textContent)).toEqual(["Then: none", "Then: Portfolio", "Then: Owner", "Then: Health"]);
+    expect([...then.options].map((option) => option.textContent)).toEqual(["Then: none", "Then: Portfolio", "Then: Stage presence", "Then: Owner", "Then: Alpha", "Then: Venue", "Then: Health", "Then: Source state", "Then: Lifecycle"]);
     fireEvent.change(then, { target: { value: "owner_user_id" } });
     await waitFor(() => expect(search().get("then")).toBe("owner_user_id"), SLOW);
     await waitFor(() => expect(datasetCalls(state).at(-1)!.query.get("group_by")).toBe("current_stage,owner_user_id"), SLOW);
@@ -472,7 +472,7 @@ describe("dataset mode: filters are the server's (never a client-side narrowing 
     const { api, state } = harness({ live: MIXED });
     mount(api, LIVE_URL);
     await loaded();
-    fireEvent.click(screen.getByRole("button", { name: "Health" }));
+    fireEvent.click(within(screen.getByRole("search")).getByRole("button", { name: "Health" }));
     const menu = screen.getByRole("group", { name: "Health" });
     fireEvent.click(within(menu).getByRole("checkbox", { name: "Ready" }));
     await waitFor(() => expect(search().get("health")).toBe("READY"), SLOW);
@@ -482,7 +482,7 @@ describe("dataset mode: filters are the server's (never a client-side narrowing 
     await waitFor(() => expect(search().get("health")).toBe("ATTENTION,READY"), SLOW);
     await waitFor(() => expect(datasetCalls(state).at(-1)!.filters).toEqual([{ field: "health", op: "IN", values: ["ATTENTION", "READY"] }]), SLOW);
     await waitFor(() => expect(dataRows()).toHaveLength(4), SLOW);
-    expect(screen.getByRole("button", { name: "Health" }).textContent).toContain("Health: Needs attention +1");
+    expect(within(screen.getByRole("search")).getByRole("button", { name: "Health" }).textContent).toContain("Health: Needs attention +1");
     expect(screen.getByText("health: Needs attention, Ready")).toBeTruthy();
   });
 
@@ -693,7 +693,7 @@ describe("Owner and Health choices are the authorized population, or they say th
     expect(ownerControl().tagName).toBe("SELECT");
     // the whole population is on offer, so there is no "loaded so far" sentence
     expect(screen.queryByTestId("options-limit")).toBeNull();
-    fireEvent.click(screen.getByRole("button", { name: "Health" }));
+    fireEvent.click(within(screen.getByRole("search")).getByRole("button", { name: "Health" }));
     expect(within(screen.getByRole("group", { name: "Health" })).getAllByRole("checkbox").map((box) => (box as HTMLInputElement).labels?.[0]?.textContent)).toEqual(["Finding open", "Ready"]);
     expect(screen.queryByTestId("health-limit")).toBeNull();
     // two reads, one per field, over the lens alone: no search, owner or health in them
@@ -760,7 +760,7 @@ describe("Owner and Health choices are the authorized population, or they say th
     withoutOwnerHealthGroups(state);
     mount(api, LIVE_URL);
     await loaded();
-    fireEvent.click(screen.getByRole("button", { name: "Health" }));
+    fireEvent.click(within(screen.getByRole("search")).getByRole("button", { name: "Health" }));
     expect(screen.getByTestId("health-limit").textContent).toContain("Loaded so far");
     const add = screen.getByRole("textbox", { name: "Add a health value" });
     fireEvent.change(add, { target: { value: "finding" } });

@@ -101,6 +101,12 @@
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
+/* Multi-sort priority next to the arrow: a number, same voice as the head. */
+.exec-cards-rank {
+  margin-left: 2px;
+  font: var(--exec-font-label);
+  color: var(--accent);
+}
 .exec-cards-head {
   display: inline-block;
   margin-right: var(--space-2);

@@ -171,14 +171,80 @@ const plainMetric = (template: Draft, value: string | null, unit: string): Draft
 const pctMetric = (template: Draft, value: string | null): Draft => plainMetric(template, value, "PERCENT");
 /** A present metric becomes a typed absence in its own unit. */
 const nulled = (key: string, template: Draft, currency: string): Draft =>
-  (key === "return_30d_pct" || key === "max_drawdown_pct") ? pctMetric(template, null) : metric(template, null, currency);
+  (key === "return_30d_pct" || key === "max_drawdown_pct") ? pctMetric(template, null)
+    : (key === "score" || key.startsWith("qbts_")) ? qbtsMetric(template, null, "SCORE", "INSUFFICIENT_EVIDENCE") : metric(template, null, currency);
 
-const NEW_ROW_KEYS = ["balance_total", "equity_30d_end_value", "return_30d_pct"] as const;
+const NEW_ROW_KEYS = ["balance_total", "equity_30d_end_value", "return_30d_pct", "score"] as const;
+
+/**
+ * SIMULATED QBTS (FIXTURE_LAB, quality_bands_v1_1 shape). Per row, from a deterministic seed: raw q = 0.45 P + 0.30 R + 0.25 B with P, R, B in tenths
+ * (integer arithmetic, exact to 3 places), the band looked up on the unrounded value, an evidence state (eligible / provisional / insufficient),
+ * and variety on purpose: high, mid and low bands, a provisional score, a true zero, an insufficient-evidence typed absence. The closed row key
+ * `score` carries q; P, R, B, band, evidence and the provisional flag live in the OPEN partition map (`qbts_p`, `qbts_r`, `qbts_b`, `qbts_band`,
+ * `qbts_evidence`, `qbts_provisional`). A band code or an evidence word is not a decimal, so it is the `reason_code` of an AVAILABLE ordinal metric
+ * (needs a contract field; recorded in ALPHA_FLEET_COMPLETION). The contribution w*q is NOT a Fleet column and has no band.
+ */
+const QBTS_BANDS = [
+  { code: "weak", below: 40_000n }, { code: "neutral", below: 60_000n }, { code: "fair", below: 75_000n }, { code: "good", below: 90_000n }, { code: "very_good", below: 1_000_000n },
+] as const;
+function qbtsMetric(template: Draft, value: string | null, unit: string, reason: string | null = null, extra: { evidence?: string; reasonCode?: string } = {}): Draft {
+  const out = plainMetric(template, value, unit);
+  out.basis = "FIXTURE_LAB:qbts-comparable-basis";
+  out.methodology_ref = value === null ? null : "FIXTURE_LAB:qbts_v1_1";
+  out.policy_revision = "FIXTURE_LAB";
+  out.calculation_revision = "FIXTURE_LAB:qbts-fixture.v1";
+  out.window = null;
+  if (value === null) out.reason_code = reason ?? "INSUFFICIENT_EVIDENCE";
+  else if (extra.reasonCode) out.reason_code = extra.reasonCode;
+  if (extra.evidence === "provisional") {
+    out.quality = { completeness: "COMPLETE", freshness: "FRESH", reasons: ["PROVISIONAL_EVIDENCE", "FIXTURE_LAB_SYNTHETIC"] };
+  } else if (extra.evidence === "eligible") {
+    out.source_confidence = "VERIFIED";
+    out.quality = { completeness: "COMPLETE", freshness: "FRESH", reasons: ["FIXTURE_LAB_SYNTHETIC"] };
+  } else if (value === null) {
+    out.quality = { completeness: "UNRESOLVED", freshness: "FRESH", reasons: [out.reason_code] };
+  }
+  return out;
+}
+function addQbts(m: Draft, template: Draft, rowKey: string, components: boolean): void {
+  const seed = seedOf(rowKey, "qbts");
+  const bucket = seed % 10;
+  if (bucket === 0) {
+    // Insufficient evidence: no score, no components, no band; the reason is the same everywhere.
+    if (!components) return;
+    m.score = qbtsMetric(template, null, "SCORE", "INSUFFICIENT_EVIDENCE");
+    for (const key of ["qbts_p", "qbts_r", "qbts_b"]) m[key] = qbtsMetric(template, null, "SCORE", "INSUFFICIENT_EVIDENCE");
+    m.qbts_band = qbtsMetric(template, null, "BAND_ORDINAL", "INSUFFICIENT_EVIDENCE");
+    m.qbts_evidence = qbtsMetric(template, "0", "EVIDENCE_STATE", null, { reasonCode: "insufficient" });
+    m.qbts_provisional = qbtsMetric(template, "0", "FLAG");
+    return;
+  }
+  const zero = bucket === 1;
+  const tenths = (salt: string, low: number, span: number): bigint => BigInt(low + seedOf(rowKey, salt) % span);
+  // Three profiles over the 0..100 range so every band is seen: weak/neutral, fair/good, good/very good.
+  const profile = seed % 3;
+  const [low, span] = profile === 0 ? [150, 450] : profile === 1 ? [450, 400] : [650, 340];
+  const P = zero ? 0n : tenths("p", low, span), R = zero ? 0n : tenths("r", low, span), B = zero ? 0n : tenths("b", low, span);
+  const thousandths = 45n * P + 30n * R + 25n * B;
+  const band = QBTS_BANDS.find((entry) => thousandths < entry.below)!;
+  const evidence = bucket === 2 || bucket === 3 ? "provisional" : "eligible";
+  const q = trimmed(thousandths, 3) === "" ? "0" : trimmed(thousandths, 3);
+  const text = (tenth: bigint): string => (tenth === 0n ? "0" : trimmed(tenth, 1));
+  // The layout-stress profile serves no QBTS at all (its responses are near the size bound); the populated profile has all of it.
+  if (!components) return;
+  m.score = qbtsMetric(template, q, "SCORE", null, { evidence });
+  m.qbts_p = qbtsMetric(template, text(P), "SCORE", null, { evidence });
+  m.qbts_r = qbtsMetric(template, text(R), "SCORE", null, { evidence });
+  m.qbts_b = qbtsMetric(template, text(B), "SCORE", null, { evidence });
+  m.qbts_band = qbtsMetric(template, String(QBTS_BANDS.indexOf(band)), "BAND_ORDINAL", null, { evidence, reasonCode: band.code });
+  m.qbts_evidence = qbtsMetric(template, evidence === "eligible" ? "2" : "1", "EVIDENCE_STATE", null, { evidence, reasonCode: evidence });
+  m.qbts_provisional = qbtsMetric(template, evidence === "provisional" ? "1" : "0", "FLAG", null, { evidence });
+}
 /**
  * SIMULATED row keys, per economic partition, from that partition's own allocation (A), net PnL (N) and unrealized PnL (U):
  * balance_total = A + N, equity_30d_end_value = A + N + U, return_30d_pct = N * 100 / A. A missing input is a typed absence.
  */
-function enrichRow(row: Draft, preset: WindowPreset): Draft {
+function enrichRow(row: Draft, preset: WindowPreset, components = true): Draft {
   const template = row.metrics.net_pnl;
   for (const entry of row.economic_partitions) {
     const m = entry.metrics;
@@ -199,10 +265,13 @@ function enrichRow(row: Draft, preset: WindowPreset): Draft {
     m.cost_drag_funding = metric(template, cost(2n), entry.partition.currency);
     m.cost_drag_slippage = metric(template, seedOf(row.row_key, "slippage") % 4 === 0 ? null : cost(1n), entry.partition.currency);
     m.forward_observation_days = plainMetric(template, A === null ? null : String(5 + seedOf(row.row_key, "forward") % 36), "DAYS");
+    addQbts(m, template, row.row_key, components);
   }
   for (const key of NEW_ROW_KEYS) {
+    if (key === "score" && !components) continue;
     // One partition: the headline IS that partition's figure. Several: the row headline names no currency (mixed), as net_pnl does.
-    row.metrics[key] = row.economic_partitions.length === 1 ? copy(row.economic_partitions[0].metrics[key]) : copy(template);
+    row.metrics[key] = row.economic_partitions.length === 1 ? copy(row.economic_partitions[0].metrics[key])
+      : key === "score" ? qbtsMetric(template, null, "SCORE", "MIXED_ECONOMIC_DOMAINS") : copy(template);
   }
   return row;
 }
@@ -215,7 +284,7 @@ function aggregate(rows: Draft[]): Draft[] {
     if (!found) { byPartition.set(key, { item: copy(item), members: [item.metrics] }); continue; }
     found.members.push(item.metrics);
     for (const name of Object.keys(item.metrics)) {
-      if (name === "return_30d_pct" || name === "max_drawdown_pct" || name === "forward_observation_days") continue;
+      if (name === "return_30d_pct" || name === "max_drawdown_pct" || name === "forward_observation_days" || name === "score" || name.startsWith("qbts_")) continue;
       const a = found.item.metrics[name];
       const b = item.metrics[name];
       found.item.metrics[name] = metric(a, a.value === null || b.value === null ? null : addDecimal(a.value, b.value), item.partition.currency);
@@ -235,7 +304,8 @@ function aggregate(rows: Draft[]): Draft[] {
     item.metrics.concentration_hhi = pctMetric(template, hhi(members.map((metrics) => metrics.allocation?.availability === "AVAILABLE" ? metrics.allocation.value : null)));
     item.metrics.concentration_hhi.unit = "RATIO";
     // Row-only keys (days observed, cost drag) are not portfolio totals here and would only grow the response.
-    for (const rowOnly of ["forward_observation_days", "cost_drag_fees", "cost_drag_funding", "cost_drag_slippage"]) delete item.metrics[rowOnly];
+    // A score is per alpha version and is never added up: the group carries none.
+    for (const rowOnly of ["forward_observation_days", "cost_drag_fees", "cost_drag_funding", "cost_drag_slippage", "score", "qbts_p", "qbts_r", "qbts_b", "qbts_band", "qbts_evidence", "qbts_provisional"]) delete item.metrics[rowOnly];
     return item;
   });
 }
@@ -389,7 +459,7 @@ const SUITE_ALPHAS: AlphaSpec[] = [
   ]),
 ];
 
-function rowsFor(environment: string, template: Draft, preset: WindowPreset): Draft[] {
+function rowsFor(environment: string, template: Draft, preset: WindowPreset, components = true): Draft[] {
   const universe = scaled();
   // The small universe has no generated alphas: the review lane then answers with the e2e suite's own alpha ids and portfolio ids
   // (SUITE_ALPHAS), one single-book partition per row, so every screen shows real simulated figures instead of the canonical test row.
@@ -433,7 +503,7 @@ function rowsFor(environment: string, template: Draft, preset: WindowPreset): Dr
     }
     for (const deployments of books.values()) make(alpha, deployments);
   }
-  return rows.map((row) => enrichRow(windowedRow(row, preset), preset));
+  return rows.map((row) => enrichRow(windowedRow(row, preset), preset, components));
 }
 
 /**
@@ -624,7 +694,7 @@ function datasetAnswer(method: string, path: string, search: URLSearchParams, pr
   const surface = match[1] === "fleet" ? "FLEET" : match[1] === "fund-overview" ? "FUND" : ({ portfolios: "PORTFOLIO", alphas: "ALPHA", accounts: "ACCOUNT", deployments: "DEPLOYMENT" } as Record<string, string>)[match[1]!.split("/")[0]!]!;
   let id: string | undefined;
   try { id = match[2] === undefined ? undefined : decodeURIComponent(match[2]); } catch { return problem(400, "EXECUTION_READ_QUERY_INVALID", "The resource id is not URI text."); }
-  let rows = rowsFor(environment, template, windowPreset);
+  let rows = rowsFor(environment, template, windowPreset, profile === "populated");
   const universe = scaled();
   if (id !== undefined) {
     const known = surface === "PORTFOLIO" ? universe.portfolios.some((entry) => entry.id === id) : surface === "ALPHA" ? universe.alphas.some((entry) => entry.id === id)
@@ -722,6 +792,7 @@ function datasetAnswer(method: string, path: string, search: URLSearchParams, pr
   body.query_options = copy(template.query_options);
   // SIMULATED metric keys (README): rows carry exactly the keys the dataset names; each is also offered as a sort field.
   for (const key of NEW_ROW_KEYS) {
+    if (key === "score" && profile !== "populated") continue;
     body.query_options.metric_keys.push(key);
     if (!body.query_options.sort_fields.includes(key)) body.query_options.sort_fields.push(key);
   }

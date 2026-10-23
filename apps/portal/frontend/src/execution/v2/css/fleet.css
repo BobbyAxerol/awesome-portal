@@ -584,6 +584,25 @@ a.exec-fleet-open {
 .exec-fleet-lane[data-stage="LIVE"] > .exec-fleet-lane-head {
   border-top-color: var(--env-live);
 }
+/* Lane domain (audit A3): the tag says it in words; simulated lanes are hatched, real-funded lanes are framed. */
+.exec-fleet-lane-tag {
+  align-self: flex-start;
+  padding: 0 6px;
+  font: var(--exec-font-label);
+  color: var(--ink-faint);
+  border: 1px solid var(--line-strong);
+}
+.exec-fleet-lane-tag[data-domain="real"] {
+  color: var(--ink);
+  border-color: var(--env-live);
+}
+.exec-fleet-lane[data-domain="simulated"] > .exec-fleet-lane-cards,
+.exec-fleet-lane[data-domain="simulated"] > .exec-fleet-lane-empty {
+  background-image: repeating-linear-gradient(135deg, transparent 0 7px, var(--line) 7px 8px);
+}
+.exec-fleet-lane[data-domain="real"] {
+  border-color: var(--env-live);
+}
 .exec-fleet-lane-title {
   margin: 0;
   font: var(--exec-font-label);

@@ -1,0 +1,67 @@
+/* Alpha Fleet metrics (guide M03): metric cells, sticky identity columns, density, the control rows. Tokens only; a table body is 13px in
+ * every role (cards.css), so nothing here names a size. */
+
+/* A long name truncates with its full text on the title; a figure never does. */
+.exec-fleet-trunc {
+  display: inline-block;
+  max-width: 22ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: bottom;
+}
+.exec-fleet-portfolio { display: inline-flex; align-items: baseline; gap: var(--space-2); white-space: nowrap; }
+.exec-fleet-badge {
+  box-sizing: border-box;
+  min-width: 20px;
+  padding: 0 6px;
+  font: var(--exec-font-label);
+  text-align: center;
+  color: var(--ink-faint);
+  border: 1px solid var(--line-strong);
+}
+.exec-fleet-qbts { display: inline-flex; align-items: center; gap: var(--space-2); white-space: nowrap; }
+.exec-fleet-qbts-why { font: var(--exec-font-meta); color: var(--ink-faint); }
+.exec-fleet-equity { display: inline-flex; flex-direction: column; align-items: flex-end; gap: 2px; }
+.exec-fleet-spark { display: inline-flex; align-items: center; }
+
+/* Sticky identity columns (guide 8.3): the alpha stays while the metrics scroll. With the Select column, both stay. */
+.exec-fleet-dataset thead th:first-child,
+.exec-fleet-dataset tbody td:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: var(--paper);
+}
+.exec-fleet-dataset thead th:first-child { background: var(--paper-sunken); z-index: 2; }
+.exec-fleet-dataset.exec-fleet-sel thead th:nth-child(2),
+.exec-fleet-dataset.exec-fleet-sel tbody td:nth-child(2) {
+  position: sticky;
+  left: 44px;
+  z-index: 1;
+  background: var(--paper);
+}
+.exec-fleet-dataset.exec-fleet-sel thead th:nth-child(2) { background: var(--paper-sunken); z-index: 2; }
+.exec-fleet-dataset.exec-fleet-sel thead th:first-child,
+.exec-fleet-dataset.exec-fleet-sel tbody td:first-child { width: 44px; min-width: 44px; max-width: 44px; }
+.exec-fleet-dataset tbody tr[data-selected="true"] td:first-child,
+.exec-fleet-dataset.exec-fleet-sel tbody tr[data-selected="true"] td:nth-child(2) { background: var(--accent-soft); }
+@media (max-width: 660px) {
+  /* Cards: nothing is pinned. */
+  .exec-fleet-dataset thead th:first-child,
+  .exec-fleet-dataset tbody td:first-child,
+  .exec-fleet-dataset.exec-fleet-sel thead th:nth-child(2),
+  .exec-fleet-dataset.exec-fleet-sel tbody td:nth-child(2) { position: static; background: transparent; width: auto; min-width: 0; max-width: none; }
+}
+
+/* Density (guide 8.3): compact trims the row height and the cell padding; the figures keep their size. */
+.exec-fleet-compact .exec-cards tbody td { height: 24px; padding-block: 2px; }
+.exec-fleet-compact .exec-cards thead th { padding-block: 3px; }
+
+/* The second toolbar row (metric filters) and the range popover. */
+.exec-fleet-tool2 { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
+.exec-fleet-range { display: grid; grid-template-columns: minmax(0, 1fr) 96px 96px; gap: var(--space-2); align-items: center; }
+.exec-fleet-range-label { font: var(--exec-font-meta); color: var(--ink); }
+.exec-fleet-range-unit { grid-column: 1 / -1; font: var(--exec-font-meta); color: var(--ink-faint); }
+.exec-fleet-range input { width: 100%; box-sizing: border-box; }
+.exec-fleet-sortbar { display: inline-flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); font: var(--exec-font-meta); color: var(--ink-faint); }

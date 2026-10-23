@@ -255,7 +255,7 @@ describe("group choices (guide 8.2): portfolio, stage, owner, health, each only 
     mount(api, LIVE_URL);
     await loaded();
     const group = screen.getByRole("combobox", { name: "Group by" }) as HTMLSelectElement;
-    expect([...group.options].map((option) => option.textContent)).toEqual(["Group: none", "Group: Portfolio", "Group: Current stage", "Group: Owner", "Group: Health"]);
+    expect([...group.options].map((option) => option.textContent)).toEqual(["Group: none", "Group: Portfolio", "Group: Current stage", "Group: Stage presence", "Group: Owner", "Group: Alpha", "Group: Venue", "Group: Health", "Group: Source state", "Group: Lifecycle"]);
     fireEvent.change(group, { target: { value: "owner_user_id" } });
     await waitFor(() => expect(search().get("group")).toBe("owner_user_id"));
     const groups = await screen.findByTestId("dataset-groups");
@@ -281,7 +281,7 @@ describe("group choices (guide 8.2): portfolio, stage, owner, health, each only 
     mount(api, `${LIVE_URL}&group=owner_user_id`);
     await loaded();
     const group = screen.getByRole("combobox", { name: "Group by" }) as HTMLSelectElement;
-    expect([...group.options].map((option) => option.textContent)).toEqual(["Group: none", "Group: Current stage"]);
+    expect([...group.options].map((option) => option.textContent)).toEqual(["Group: none", "Group: Current stage", "Group: Stage presence", "Group: Alpha", "Group: Venue", "Group: Source state", "Group: Lifecycle"]);
     expect(group.value).toBe("");
     expect(screen.queryByTestId("dataset-groups")).toBeNull();
   });

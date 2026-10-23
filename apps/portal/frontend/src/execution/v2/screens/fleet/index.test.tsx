@@ -163,10 +163,13 @@ describe("identity table", () => {
     const { api, getAlphaFleet } = makeApi();
     mount(api, "/execution/fleet?view=map");
     // The Map segment is gone (the gap is one word on the "Not available:" line); the deep link still names itself once.
-    expect(screen.getAllByText("Map")).toHaveLength(1);
+    expect(screen.getAllByText("Map").length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText("Not published (FE-035)").length).toBeGreaterThan(0);
     expect(getAlphaFleet).not.toHaveBeenCalled();
-    expect(screen.queryByRole("button", { name: "Map" })).toBeNull();
+    // The Map toggle is typed: present, disabled, with its reason (audit A3), not a control that does nothing silently.
+    const toggle = screen.getByRole("button", { name: "Map" }) as HTMLButtonElement;
+    expect(toggle.disabled).toBe(true);
+    expect(document.getElementById(toggle.getAttribute("aria-describedby")!)?.textContent).toContain("Not published (FE-035)");
     fireEvent.click(screen.getByRole("button", { name: "Back to Table" }));
     await loaded();
     expect(where()).toBe("/execution/fleet");
@@ -875,14 +878,14 @@ describe("board view", () => {
     };
   };
 
-  it("the Board button is a real toggle that writes view=board, and Table clears it; there is no Map segment", async () => {
+  it("the Board button is a real toggle that writes view=board, and Table clears it; the Map toggle is typed (disabled, with its reason) while the dataset is not published", async () => {
     const { api } = makeApi();
     mount(api);
     await loaded();
     const boardBtn = screen.getByRole("button", { name: "Board" });
     expect(boardBtn.getAttribute("aria-pressed")).toBe("false");
     expect(boardBtn.hasAttribute("disabled")).toBe(false);
-    expect(screen.queryByRole("button", { name: "Map" })).toBeNull();
+    expect((screen.getByRole("button", { name: "Map" }) as HTMLButtonElement).disabled).toBe(true);
     fireEvent.click(boardBtn);
     await board();
     expect(search().get("view")).toBe("board");
