@@ -125,6 +125,28 @@ describe("ELP2-06 Manager exact query, field and economic scope (TEST_ONLY)", ()
       expect(g.economic_partitions[0].metrics).not.toHaveProperty("return_30d_pct");
     }
   });
+  it("WP-K: group_sort/group_filters order and narrow the WHOLE group population, then package-5 paging walks that order without gap or repeat", async () => {
+    const f = await fixture({ full: true, many: 205 });
+    const base = { group_by: ["alpha_id"], limit: 1 };
+    const plain = f.read(base, "FUND");
+    const metric = Object.keys(plain.groups[0].economic_partitions[0].metrics)[0]!;
+    const q = { ...base, group_limit: 50, group_sort: [{ metric_key: metric, direction: "desc" }] };
+    const seen: string[] = []; let page = f.read(q, "FUND");
+    expect(page.group_query).toMatchObject({ groups_before_filter: 207, groups_returned: 50 });
+    for (let i = 0; i < 6; i++) {
+      seen.push(...page.groups.map(g => JSON.stringify(g.key)));
+      if (!page.group_page!.next_cursor) break;
+      page = f.read({ ...q, group_after: page.group_page!.next_cursor }, "FUND");
+    }
+    expect(seen).toHaveLength(207);
+    expect(new Set(seen).size).toBe(207);
+    // The fixture's groups tie on every measure, so the order is the group-key tiebreak both ways; what this proves is that the query is applied to the
+    // whole population, echoed, and that the cursor walks it. The ordering rules themselves are proven in wpk-group-query.spec.ts.
+    const asc = f.read({ ...q, group_sort: [{ metric_key: metric, direction: "asc" }] }, "FUND");
+    expect(asc.group_query).toMatchObject({ sort: [{ metric_key: metric, direction: "asc" }], groups_before_filter: 207, groups_returned: 50 });
+    const none = f.read({ ...base, group_filters: [{ metric_key: metric, op: "IS_NULL" }] }, "FUND");
+    expect(none.group_query).toMatchObject({ groups_before_filter: 207, groups_returned: none.groups.length });
+  });
   it("isolates signed group cursors from rows and from changed query or authority", async () => {
     const f = await fixture({ full: true });
     const q = { group_by: ["alpha_id"], limit: 1, group_limit: 1 };

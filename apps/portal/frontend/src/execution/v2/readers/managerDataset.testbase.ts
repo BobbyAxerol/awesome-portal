@@ -32,7 +32,9 @@ export const FIXTURE_INVARIANT_CASES = "execution-manager-dataset.invariants.syn
 export const FIXTURE_METRIC = "execution-manager-metric.derived-reasons.synthetic";
 /** Codex 82947ceb2: a dataset whose producer binds exact snapshot transitions (the entry time is published for the row a transition fact binds). */
 export const FIXTURE_STAGE_TRANSITIONS = "execution-manager-dataset.lifecycle.transitions.synthetic";
-export const DATASET_FIXTURES = [FIXTURE_EMPTY, FIXTURE_ROWS, FIXTURE_ALL, FIXTURE_PARTITIONS, FIXTURE_LIFECYCLE_LIVE, FIXTURE_ALL_ENVIRONMENTS, FIXTURE_STAGE_TRANSITIONS] as const;
+/** Codex ace3547ca (package 5): a Fund overview paged by alpha_id, with the group page and the group attribution. */
+export const FIXTURE_CONTRIBUTORS = "execution-manager-contributors.synthetic";
+export const DATASET_FIXTURES = [FIXTURE_EMPTY, FIXTURE_ROWS, FIXTURE_ALL, FIXTURE_PARTITIONS, FIXTURE_LIFECYCLE_LIVE, FIXTURE_ALL_ENVIRONMENTS, FIXTURE_STAGE_TRANSITIONS, FIXTURE_CONTRIBUTORS] as const;
 
 export const clone = <T,>(value: T): T => structuredClone(value);
 

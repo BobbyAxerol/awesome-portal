@@ -91,6 +91,10 @@ export interface ManagerDatasetQueryBase {
   limit?: number;
   after?: string;
   before?: string;
+  /** Package 5: page the GROUPS (needs `groupBy`; one direction at most). 1 to 200, default 200 on the server. The cursors are the opaque `groupPage` ones of an earlier answer to the same query. */
+  groupLimit?: number;
+  groupAfter?: string;
+  groupBefore?: string;
 }
 
 export type ManagerDatasetQuery = ManagerDatasetQueryBase & ManagerDatasetScope;
@@ -281,6 +285,18 @@ export function encodeManagerDatasetQuery(query: ManagerDatasetQuery): ManagerDa
     if (typeof cursor !== "string" || cursor.length < 1 || cursor.length > 4096) return null;
     wire[name] = cursor;
   }
+  if (query.groupLimit !== undefined || query.groupAfter !== undefined || query.groupBefore !== undefined) {
+    if (query.groupBy === undefined || query.groupBy.length === 0 || (query.groupAfter !== undefined && query.groupBefore !== undefined)) return null;
+    if (query.groupLimit !== undefined) {
+      if (!Number.isInteger(query.groupLimit) || query.groupLimit < 1 || query.groupLimit > 200) return null;
+      wire.group_limit = String(query.groupLimit);
+    }
+    for (const [name, cursor] of [["group_after", query.groupAfter], ["group_before", query.groupBefore]] as const) {
+      if (cursor === undefined) continue;
+      if (typeof cursor !== "string" || cursor.length < 1 || cursor.length > 4096) return null;
+      wire[name] = cursor;
+    }
+  }
   return { path: ROUTES[query.surface](id), wire };
 }
 
@@ -343,6 +359,9 @@ export function datasetQueryMismatch(dataset: ManagerDataset, query: ManagerData
   }
 
   if (query.limit !== undefined && dataset.page.limit !== query.limit) return "limit";
+  // Package 5: a group page limit that was asked is the limit the body answers with; a body that does not page groups cannot answer a paged ask.
+  if (query.groupLimit !== undefined && (dataset.groupPage === undefined || dataset.groupPage.limit !== query.groupLimit)) return "group_limit";
+  if ((query.groupAfter !== undefined || query.groupBefore !== undefined) && dataset.groupPage === undefined) return "group_limit";
 
   // WP-K slice 6: the body echoes the group query it applied, and only when one was asked; it never promises an order it did not apply.
   const askedSort = query.groupSort ?? [];

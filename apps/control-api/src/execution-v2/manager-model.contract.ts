@@ -224,7 +224,7 @@ export const managerDatasetResponse = z.object({ schema_version: z.literal("port
   // WP-K slice 6: present only when the query named a group sort or filter. `partition_basis` says which partition each group's metric was read in.
   group_query: z.object({ sort: z.array(managerGroupSort).max(1), filters: z.array(managerGroupFilter).max(8),
     partition_basis: z.enum(["PINNED_PARTITION", "SINGLE_PARTITION_ONLY"]),
-    groups_before_filter: z.number().int().min(0).max(200), groups_returned: z.number().int().min(0).max(200) }).strict().optional(),
+    groups_before_filter: z.number().int().min(0).max(40_000), groups_returned: z.number().int().min(0).max(200) }).strict().optional(),
   capital_statements: z.array(partitionMetrics).max(200),
   statement_scope: z.literal("AUTHORIZED_RESOURCE_SELECTED_STAGES_BEFORE_TABLE_FILTERS"),
   scores: z.object({ raw: scorePending, composition: compositionSummary, direct_nav: scorePending,
