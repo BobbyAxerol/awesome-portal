@@ -840,6 +840,14 @@
 .exec-ck-table td {
   overflow-wrap: break-word;
 }
+/* Counts and exact figures in a detail table: mono, tabular, right-aligned (QA1 I-21). */
+.exec-ck-num {
+  font: var(--exec-font-num);
+  font-variant-numeric: tabular-nums;
+}
+.exec-ck-kv[data-numeric="true"] td {
+  text-align: right;
+}
 .exec-ck-backq {
   display: none;
   justify-self: start;

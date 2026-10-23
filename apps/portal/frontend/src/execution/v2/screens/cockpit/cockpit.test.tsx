@@ -1413,7 +1413,7 @@ describe("approval evidence (WP-K)", () => {
     await openExit(withEvidence("published"));
     const pane = within(evidencePane());
     expect(pane.getByTestId("ck-history-caption").textContent).toMatch(/portfolio TEST_ONLY:portfolio-a · NAV in USDT · methodology TEST_ONLY:nav-twr\.v1/);
-    expect(pane.getByTestId("ck-evidence-diff").textContent).toMatch(/Requested capital10000\.00 \u2192 15000\.00/);
+    expect(pane.getByTestId("ck-evidence-diff").textContent).toMatch(/Requested capital10,000\.00 \u2192 15,000\.00/);
     expect(pane.getByTestId("ck-open-openPositions").textContent).toBe("2");
     expect(pane.getByTestId("ck-open-workingOrders").textContent).toBe("0");
     expect(pane.getByTestId("ck-obligations-fact").textContent).toBe("3 obligations stay open after approval");

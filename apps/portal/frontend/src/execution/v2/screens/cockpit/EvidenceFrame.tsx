@@ -12,6 +12,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 
+import { groupExact } from "../blotter/blotterModel";
 import { breakable } from "./breakable";
 
 import type { PanelStatus } from "../../../contracts";
@@ -172,9 +173,15 @@ function Panel({ title, right, children }: { title: string; right?: ReactNode; c
   );
 }
 
-function Kv({ rows }: { rows: readonly { label: string; value: ReactNode }[] }) {
+/** An exact decimal string with its thousands grouped and every published digit kept; any other published text as it is; no value as "None". */
+function shown(value: string | null): string {
+  if (value === null) return "None";
+  return /^-?(0|[1-9]\d*)(\.\d+)?$/.test(value) ? groupExact(value) : value;
+}
+
+function Kv({ rows, ...rest }: { rows: readonly { label: string; value: ReactNode }[]; "data-numeric"?: boolean }) {
   return (
-    <table className="exec-ck-kv">
+    <table className="exec-ck-kv" data-numeric={rest["data-numeric"] ? "true" : undefined}>
       <tbody>
         {rows.map((row) => (
           <tr key={row.label}>
@@ -257,7 +264,7 @@ function StillOpenPanel() {
     const o = got.value;
     return (
       <Panel title="Still open after approval" right={extra.status === "ready" ? `Read ${formatAsOf(extra.evidence.readAtMs)}` : ""}>
-        <Kv rows={OBLIGATION_ROWS.map(([label, key]) => ({ label, value: <span className="exec-mgr-num" data-testid={`ck-open-${key}`}>{String(o[key])}</span> }))} />
+        <Kv rows={OBLIGATION_ROWS.map(([label, key]) => ({ label, value: <span className="exec-ck-num" data-testid={`ck-open-${key}`}>{String(o[key])}</span> }))} data-numeric />
       </Panel>
     );
   }
@@ -279,7 +286,7 @@ function EvidenceDiffPanel() {
           {diff.changes.length === 0 ? <span>No change since {diff.previousRevision}</span> : (
             <Kv rows={diff.changes.map((change) => ({
               label: change.label,
-              value: <span className="exec-mgr-num">{change.before ?? "None"} {"\u2192"} {change.after ?? "None"}</span>,
+              value: <span className="exec-ck-num">{shown(change.before)} {"\u2192"} {shown(change.after)}</span>,
             }))} />
           )}
         </div>
