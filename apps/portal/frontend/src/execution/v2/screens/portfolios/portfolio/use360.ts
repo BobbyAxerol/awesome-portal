@@ -90,6 +90,8 @@ export function usePortfolioReads(api: ExecutionApi, portfolioId: string, enable
   const returnQuery = useMemo<ManagerSeriesQuery | null>(() => (navQuery === null ? null : { ...navQuery, metric: "RETURN" }), [navQuery]);
   const pnl = useManagerSeries(api, enabled && ready !== null && served, pnlQuery);
   const ret = useManagerSeries(api, enabled && ready !== null && served, returnQuery);
+  const drawdownQuery = useMemo<ManagerSeriesQuery | null>(() => (navQuery === null ? null : { ...navQuery, metric: "DRAWDOWN" }), [navQuery]);
+  const drawdown = useManagerSeries(api, enabled && ready !== null && served, drawdownQuery);
 
   // The portfolio's Manager dataset (PORTFOLIO surface, grouped by portfolio so its own totals come as a group) for the selected
   // environment and the page window: capital statements and Net PnL per economic partition. Same port as everything else.
@@ -144,7 +146,7 @@ export function usePortfolioReads(api: ExecutionApi, portfolioId: string, enable
     (scoped) => scoped.listOperationalQueueV2({ targetType: "PORTFOLIO", targetId: portfolioId, limit: 10 }),
   );
 
-  return { resource, capital, chart, nav, pnl, ret, served, flows, dataset, contributors, ledgers, correlation, operations, selected, range, present };
+  return { resource, capital, chart, nav, pnl, ret, drawdown, served, flows, dataset, contributors, ledgers, correlation, operations, selected, range, present };
 }
 
 export type PortfolioReads = ReturnType<typeof usePortfolioReads>;

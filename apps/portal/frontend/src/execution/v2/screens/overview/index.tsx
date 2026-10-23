@@ -57,6 +57,7 @@ import {
 } from "./overviewModel";
 import type { ManagerSeriesQuery } from "../../readers/managerSeries";
 import { ManagerSeriesPanel } from "../series/ManagerSeriesPanel";
+import { drawdownInputOf } from "../series/drawdownInput";
 import { isDescribed, latestPoint, seriesValueText, UNAVAILABLE_SENTENCE } from "../series/seriesModel";
 import { useManagerSeries, type SeriesReadState } from "../series/useManagerSeries";
 import { MeasureSeg, type FundMeasure } from "./MeasureSeg";
@@ -74,12 +75,7 @@ import { formatInstant } from "../../boundary";
 
 export const OVERVIEW_SCREEN_KEY = "overview" as const;
 
-/** The drawdown strip under the performance chart. The series port has no DRAWDOWN metric, and a drawdown is never worked out from the NAV line here. */
-const DRAWDOWN_ABSENT = {
-  kind: "absent",
-  copy: "Not published (FE-013, FE-025)",
-  reason: "The series port publishes NAV, Net PnL and Return only; a drawdown series is requested (WP-F1 request to the contracts lane)",
-} as const;
+// The drawdown strip under the performance chart reads the port's DRAWDOWN series (`series/drawdownInput.ts`); a drawdown is never worked out from the NAV line here.
 
 export interface OverviewScreenProps {
   api: ExecutionApi;
@@ -232,6 +228,9 @@ export default function OverviewScreen({ api, workspaceId, sseFactory, accessHre
   const returnQuery = useMemo<ManagerSeriesQuery>(() => ({ ...navQuery, metric: "RETURN" }), [navQuery]);
   const pnlRead = useManagerSeries(api, serves, pnlQuery, seriesNonce);
   const returnRead = useManagerSeries(api, serves, returnQuery, seriesNonce);
+  // The drawdown strip: the same fund, window and environment, metric DRAWDOWN (WP-K), asked once the port serves the fund.
+  const drawdownQuery = useMemo<ManagerSeriesQuery>(() => ({ ...navQuery, metric: "DRAWDOWN" }), [navQuery]);
+  const drawdownRead = useManagerSeries(api, serves, drawdownQuery, seriesNonce);
   const measureRead = metric === "NAV" ? nav : metric === "NET_PNL" ? pnlRead : returnRead;
   // The fund's Manager dataset for the same environment and window: capital statements per economic partition (and Net PnL where a
   // partition publishes it). A refusal or a missing surface leaves every cell on its own `Not published`.
@@ -431,7 +430,7 @@ export default function OverviewScreen({ api, workspaceId, sseFactory, accessHre
             gapCopy={`Not published (${FE_MONEY})`}
             tools
             height={280}
-            drawdown={DRAWDOWN_ABSENT}
+            drawdown={drawdownInputOf(drawdownRead)}
           />
         </SectionPanel>
         <SectionPanel title="Capital" aside={ENV_WORD[url.value.env] ?? url.value.env}>

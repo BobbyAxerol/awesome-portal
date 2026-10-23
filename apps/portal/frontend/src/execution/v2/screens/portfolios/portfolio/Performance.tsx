@@ -14,7 +14,8 @@ import { useState } from "react";
 import type { CapitalLedger } from "../../../../analytics";
 import { readDecimal } from "../../../boundary";
 import { GapWhy, SectionPanel } from "../../../blocks";
-import type { DrawdownInput, FlowPin } from "../../../charts";
+import type { FlowPin } from "../../../charts";
+import { drawdownInputOf } from "../../series/drawdownInput";
 import { MeasureSeg } from "../../overview/MeasureSeg";
 import type { FundMeasure } from "../../overview/MeasureSeg";
 import { ManagerSeriesPanel } from "../../series/ManagerSeriesPanel";
@@ -24,11 +25,6 @@ import type { TabCtx } from "./ctx";
 import { ledgerRows } from "./model";
 import { readUtcEpochMs } from "../../../../screenDataContract";
 
-const DRAWDOWN_ABSENT: DrawdownInput = {
-  kind: "absent",
-  copy: "Not published (FE-013, FE-025)",
-  reason: "The series port publishes NAV, Net PnL and Return only; a drawdown series is requested (WP-F1 request to the contracts lane)",
-};
 
 /** The currency of the drawn series, or `null` when none is drawn (a ratio has none; no read has no pin to place). */
 function seriesCurrency(read: SeriesReadState): string | null {
@@ -79,7 +75,7 @@ export function PerformanceCard({ ctx }: { ctx: TabCtx }) {
         </span>
       }
     >
-      <ManagerSeriesPanel label={label} read={read} gapCopy={npText(PF_FE.nav)} height={240} tools drawdown={DRAWDOWN_ABSENT} flows={pins} />
+      <ManagerSeriesPanel label={label} read={read} gapCopy={npText(PF_FE.nav)} height={240} tools drawdown={drawdownInputOf(reads.drawdown)} flows={pins} />
       <p className="exec-pf-note" data-testid="perf-flows-note">
         {metric === "RETURN"
           ? "Capital pins are not drawn on a ratio."

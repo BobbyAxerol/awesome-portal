@@ -51,6 +51,11 @@ export function seriesBodyFor(params: URLSearchParams, variant: SeriesVariant): 
     // A pair of populated series shares the fixture's points; a third and fourth subject cycle through them.
     // A RETURN is a RATIO whose source states its scale (FE-013); the double states FRACTION, the published return fixture's.
     if (metric === "RETURN") { entry.unit = "RATIO"; entry.currency = null; entry.ratio_scale = "FRACTION"; }
+    // A DRAWDOWN is a RATIO at or below zero (WP-K, MS-S11): the first point is a true zero, the rest a fraction below it.
+    if (metric === "DRAWDOWN") {
+      entry.unit = "RATIO"; entry.currency = null; entry.ratio_scale = "FRACTION";
+      entry.points = (entry.points as Draft[]).map((point, i) => ({ ...point, value: i === 0 ? "0" : `-0.0${(i % 9) + 1}`, ...(point.exact !== undefined ? { exact: i === 0 ? "0" : `-0.0${(i % 9) + 1}` } : {}) }));
+    }
     return entry;
   });
   body.series_source = variant === "unavailable" ? body.series_source : { state: "PUBLISHED", reason_code: null };

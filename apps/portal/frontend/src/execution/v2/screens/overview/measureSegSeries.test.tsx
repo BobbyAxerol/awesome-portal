@@ -92,7 +92,7 @@ describe("the fund series is served (source published)", () => {
   it("Net PnL asks the port for NET_PNL on the FUND over the same environment and window, and draws it in its currency", async () => {
     const group = await ready();
     fireEvent.click(button(group, "Net PnL"));
-    await waitFor(() => expect(askedOnce()).toEqual(["NAV", "NET_PNL", "RETURN"]));
+    await waitFor(() => expect(askedOnce()).toEqual(["DRAWDOWN", "NAV", "NET_PNL", "RETURN"]));
     expect(series.calls.find((c) => c.metric === "NET_PNL")).toEqual({ environment: "paper", metric: "NET_PNL", subjects: [{ subject_type: "FUND" }], window: "30D", partition: null });
     await waitFor(() => expect(performance().querySelector("[data-testid='series-caption']")?.textContent).toContain("Net PnL in USDT"));
     expect(button(group, "Net PnL").getAttribute("aria-pressed")).toBe("true");
@@ -105,7 +105,7 @@ describe("the fund series is served (source published)", () => {
   it("Return asks the port for RETURN on the FUND, with no currency on a ratio, drawn by the shared series panel", async () => {
     const group = await ready();
     fireEvent.click(button(group, "Return"));
-    await waitFor(() => expect(askedOnce()).toEqual(["NAV", "NET_PNL", "RETURN"]));
+    await waitFor(() => expect(askedOnce()).toEqual(["DRAWDOWN", "NAV", "NET_PNL", "RETURN"]));
     await waitFor(() => expect(performance().querySelector("[data-testid='series-caption']")?.textContent).toContain("Return"));
     expect(performance().textContent).not.toMatch(/USDT/);
     expect(performance().querySelector(".exec-ser")).not.toBeNull();
@@ -124,11 +124,12 @@ describe("the fund series is served (source published)", () => {
     expect(metricsAsked().filter((m) => m === "NET_PNL")).toHaveLength(1);
   });
 
-  it("the drawn measure carries the drawdown strip as a typed absence (no DRAWDOWN series is published), never a derived line", async () => {
+  it("the drawn measure carries the drawdown strip from the port's DRAWDOWN series of the same fund, environment and window, never a line worked out from NAV", async () => {
     await ready();
-    const strip = performance().querySelector("[data-testid='drawdown-pane']");
-    expect(strip).not.toBeNull();
-    expect(strip!.textContent).toContain("Not published (FE-013, FE-025)");
+    await waitFor(() => expect(performance().querySelector("[data-testid='drawdown-pane']")?.textContent).toContain("-3.00%"));
+    const asked = series.calls.find((c) => c.metric === "DRAWDOWN");
+    expect(asked).toEqual({ environment: "paper", metric: "DRAWDOWN", subjects: [{ subject_type: "FUND" }], window: "30D", partition: null });
+    expect(performance().querySelector("[data-testid='drawdown-pane']")!.textContent).not.toContain("Not published");
     expect(performance().querySelectorAll("[data-testid='flow-pin']")).toHaveLength(0);
     expect(performance().textContent).toContain("Capital markers: Not published");
   });

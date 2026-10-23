@@ -25,13 +25,13 @@ States: DATA (drawn from fixture or published data), TYPED (typed absence where 
 | 14 | Chart tabs Net PnL / Return / Equity | DATA | `MeasureSeg`: Net PnL (default once served), Return, NAV; the design's "Equity" is the fund NAV series and is named NAV (retained equity is not a certified NAV) |
 | 15 | High / low markers and end tag | DATA | the chart's own flags on the published points |
 | 16 | Capital added / returned markers | TYPED, CONTRACT | no fund-level capital event is published (the ledger is per portfolio); line "Capital markers: Not published" with its reason; request F1 to K row 2 |
-| 17 | Drawdown strip | TYPED, CONTRACT | drawn as the chart's own drawdown pane with the typed copy; the series port has no DRAWDOWN metric and a drawdown is never worked out from NAV; request F1 to K row 1 |
+| 17 | Drawdown strip | DATA | the chart's drawdown pane draws the port's DRAWDOWN series (WP-K) of the same fund, environment and window (`series/drawdownInput.ts`, `drawdownInputOf`); a source that is UNAVAILABLE, EMPTY, failed or not asked keeps the typed pane with its reason |
 | 18 | Capital panel initial / added / returned / NAV | DATA | existing rows, now at the 13px table rule |
 | 19 | Budget used bar | DATA | `BudgetBar`: published `allocation` against `current_budget` per partition, recalling as a second segment; fixture keys (register 2f1) |
 | 20 | Needs attention with SLA bar | DATA | a state stripe by the published `sla_state` (no elapsed time is published, so no progress length is drawn; DESIGN note below) |
 | 21 | Since your last visit | TYPED, EDGE_INPUT | frame drawn as designed (three kinds of line as placeholders, "No baseline"); a persisted per-user baseline is Edge's; no line is invented |
 | 22 | Contributors Amount / Portfolios | DATA | tabs Amount and Portfolios (second read grouped by `portfolio_id`), drawn bars scaled inside one partition, first eight groups with Show all |
-Counts: DATA 14, TYPED 3, BLOCKED 5 (all WP-D shell).
+Counts: DATA 15, TYPED 2 (capital markers: CONTRACT; digest: EDGE_INPUT), BLOCKED 5 (all WP-D shell). (Follow-up: the drawdown strip moved from TYPED to DATA when WP-K published DRAWDOWN.)
 
 ### Portfolios (24)
 | # | Element | State | Where / note |
@@ -67,7 +67,7 @@ Counts: DATA 20, TYPED 3 (items 5, 8, 21; 5 and 21 carry the CONTRACT blocker N3
 | 7 to 10 | KPI NAV, Net PnL, Return, Drawdown | DATA | existing; KPI tiles never narrower than their own 24px figure (the 1024 spill is fixed locally) |
 | 11 | KPI Allocated / Deployments | DATA | existing |
 | 12 | Chart tabs Net PnL / Return / NAV, Table / Expand / Export | DATA | `PerformanceCard`; Export is the typed sentence |
-| 13 | Line with high / low and drawdown strip | TYPED, CONTRACT | line and flags DATA; the strip is the typed pane (same request as Overview 17) |
+| 13 | Line with high / low and drawdown strip | DATA | line, flags and the strip from the port's DRAWDOWN series of the same portfolio, environment and window (typed pane when not published) |
 | 14 | Capital added / returned marker | DATA | allocation-flow pins from the published ledger in the series' own currency (the ledger records allocations to accounts, not funding, and the caption says so) |
 | 15 | Capital panel Cash flows | DATA | initial, added, returned, net external flows, Net PnL, NAV; fixture statement keys |
 | 16 | Budget, not cash | DATA | approved, allocated, recalling, headroom |
@@ -80,11 +80,11 @@ Counts: DATA 20, TYPED 3 (items 5, 8, 21; 5 and 21 carry the CONTRACT blocker N3
 | 23 | Simulated block with its own flow and ledger | DATA | one flow per environment, Paper and Sandbox never in the Real-funded block |
 | 24 | Actions with AVAILABLE and Review (preview not recorded) | DATA | "Review available" and Review from the advisory eligibility; PREVIEW, NOT RECORDED of published figures; the result is `Not published (FE-020)`; no apply, submit or reserve |
 | 25 | Simulated-capital banner | DATA | existing |
-Counts: DATA 23, TYPED 2 (items 4 and 13; 13 carries the CONTRACT blocker for the drawdown series), BLOCKED 0. Item 17 counts DATA (its funding-source half is the typed line FE-032).
+Counts: DATA 24, TYPED 1 (item 4, the report pack sentence), BLOCKED 0. Item 17 counts DATA (its funding-source half is the typed line FE-032).
 
 Tabs per the design: Allocations (above), Risk and Health (drawdown max in window from the published group figure, now typed; margin typed; correlation typed), People and Activity (attribution, operations; activity feed and audit typed, FE-031/FE-021), Alphas and Accounts (existing); Risk, Alphas and People now stack their panels so no table sits behind a scroll fade at 1440.
 
-Totals over the three checklists (71 elements): DATA 57, TYPED 8, BLOCKED 6 (the five Overview shell items and Portfolios 1, all WP-D). The CONTRACT blockers that sit inside TYPED rows are listed in section 4.
+Totals over the three checklists (71 elements): DATA 59, TYPED 6, BLOCKED 6 (the five Overview shell items and Portfolios 1, all WP-D). The CONTRACT blockers that sit inside TYPED rows are listed in section 4.
 
 ## 2. What was built, by design name
 
@@ -101,7 +101,7 @@ Functions I added: `wpF1Money`, `wpF1Value`, `wpF1Part`, `addWpF1`, `wpF1Ledger`
 Existing tests changed (each for a stated reason, never to silence a real failure): `reviewManager.test.ts` (the original-key list excludes the four WP-F1 keys), `overview.test.tsx`, `measureSegSeries.test.tsx`, `contributors.test.tsx` (Net PnL default tab, NAV tab, digest frame), `portfolios.test.tsx`, `datasetWiring.test.tsx`, `portfolios.conformance.test.tsx`, `registerScreen.test.tsx` (default columns, bare base-currency figures, always-drawn freshness chip, score cell), `portfolio.test.tsx`, `railEligibility.test.tsx` (Performance tabs, capital panel rows, Review instead of an always-off rail).
 
 ## 4. Requests and blockers (board inbox rows from F1)
-- F1 to K: series metric DRAWDOWN (strip under the Overview and 360 charts), fund-level capital events (Overview markers), statement keys `allocation`, `headroom`, `recalling`, `net_external_flows` and group `allocation_share_pct` need published homes (N4 family and a share key). The earlier N1 (portfolio-grain sort/filter) and N3 (Health roll-up) are the first inbox row (from A); F1 confirms the register waits on them (INFO row).
+- F1 to K: series metric DRAWDOWN: DONE by WP-K (both strips wired in the follow-up); still open: fund-level capital events (Overview markers), statement keys `allocation`, `headroom`, `recalling`, `net_external_flows` and group `allocation_share_pct` need published homes (N4 family and a share key). The earlier N1 (portfolio-grain sort/filter) and N3 (Health roll-up) are the first inbox row (from A); F1 confirms the register waits on them (INFO row).
 - F1 to WP-C: pf_TEST_ONLY_* rows and scale-account margin. WP-C answered in a message: the TEST_ONLY portfolios answer in their worktree (section `// ===== WP-C` of review-manager.ts) and land with their branch; the margin gap in bffScale is not theirs. It stays open for the primary.
 - F1 to WP-D: basis chip, scope selector, Cmd K field, user chip, sidebar badges (five Overview items and Portfolios 1).
 - EDGE_INPUT: the digest baseline (FE-024), funding source and receipts (FE-032), capital-action preview result (FE-020).
@@ -131,3 +131,6 @@ Numbers come from the probe's output for this worktree (`scripts/probe-portfolio
 - Layout was measured on a vite dev server with the fixture BFF in chromium, not on the preview stack and not at the real Edge.
 - The pf_TEST_ONLY_* subjects were not re-measured after WP-C's rows (their branch is not integrated here); on the audit route the Overview of those still reads empty until it lands.
 - The Review in the Actions rail was looked at on pf_scale_001 with `workspace_id` in the address; a page address without a workspace keeps the old reason sentence (the eligibility read is not asked).
+
+## 8. Follow-up: the DRAWDOWN strips (after WP-K slice 1)
+`useManagerSeries` asks metric DRAWDOWN for the same subject, window and environment as each chart, once the NAV read says the port serves it (Overview `index.tsx`; 360 `use360.ts`, `reads.drawdown`). `series/drawdownInput.ts` turns the read into the chart's drawdown pane: a published series is drawn (FRACTION moved to percent in the string, nothing derived), every other state keeps the typed pane. The test double `seriesDouble.testbase.ts` now answers DRAWDOWN as a RATIO (FRACTION, first point a true zero, the rest below it). No fixture key and no register row were added. Tests: `drawdownInput.test.ts` (4); `measureSegSeries.test.tsx` and `performance.test.tsx` assert the DRAWDOWN question (subject, window, environment) and the drawn strip. Final run on the tree reset to lane tip 4230ae2f6: `overview + portfolios + series + fixtureBff` 57 files passed, 1 skipped, 1049 passed, 1 skipped; hygiene and shared (`disabledReason`, `testHygiene`, `titleAbsence`, `v2Hygiene`, `uxm10Css`, `flagOn`, `flagOff`, `budgets`, `compare`, `alpha`, `charts`) 43 files, 979 passed. Still typed, not invented: fund-level capital events (Overview markers) and the four statement keys / `allocation_share_pct` homes, because K delivered neither.

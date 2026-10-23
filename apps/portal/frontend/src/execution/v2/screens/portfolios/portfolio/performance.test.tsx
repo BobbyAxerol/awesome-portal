@@ -59,14 +59,18 @@ describe("the Performance card", () => {
     fireEvent.click(within(group).getByRole("button", { name: "NAV" }));
     await waitFor(() => expect(card().querySelector("[data-testid='series-caption']")?.textContent).toContain("NAV in USDT"));
     const metrics = harness.queriesOf("/manager/series").map((q) => q.get("metric"));
-    expect([...new Set(metrics)].sort()).toEqual(["NAV", "NET_PNL", "RETURN"]);
+    expect([...new Set(metrics)].sort()).toEqual(["DRAWDOWN", "NAV", "NET_PNL", "RETURN"]);
     expect(metrics.filter((m) => m === "NAV")).toHaveLength(1);
   });
 
-  it("the drawdown strip is a typed absence (no DRAWDOWN series exists), and the export and report pack are sentences", async () => {
-    mount(makeApi(serving).api, "?window=30d");
-    await waitFor(() => expect(card().querySelector("[data-testid='drawdown-pane']")).not.toBeNull());
-    expect(card().querySelector("[data-testid='drawdown-pane']")!.textContent).toContain("Not published (FE-013, FE-025)");
+  it("the drawdown strip is the port's DRAWDOWN series of the same portfolio, environment and window; the export and report pack are sentences", async () => {
+    const harness = makeApi(serving);
+    mount(harness.api, "?window=30d");
+    await waitFor(() => expect(card().querySelector("[data-testid='drawdown-pane']")?.textContent).toContain("-3.00%"));
+    const query = harness.queriesOf("/manager/series").find((q) => q.get("metric") === "DRAWDOWN")!;
+    expect(JSON.parse(query.get("subjects")!)).toEqual([{ subject_type: "PORTFOLIO", subject_id: PF.core }]);
+    expect(query.get("window")).toBe("\"30D\"");
+    expect(card().querySelector("[data-testid='drawdown-pane']")!.textContent).not.toContain("Not published");
     expect(card().textContent).toContain("Export: not available yet");
     // The reasons are behind disclosures (a button that opens them, by keyboard and touch), the one sentence of D20 in both.
     fireEvent.click(within(screen.getByTestId("report-pack")).getByRole("button", { name: "Report pack: not available yet, reason" }));
