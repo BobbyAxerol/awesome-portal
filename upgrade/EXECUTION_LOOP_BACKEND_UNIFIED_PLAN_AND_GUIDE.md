@@ -31723,3 +31723,124 @@ New link/anchor/secret-pattern and staged-scope checks precede the docs-only
 commit under Bobby-approved campaign§10.10d. Three original peer WIP hashes
 still match fe4fcfc7/1cf04b20/109659d2. No product/test/config changes or claim
 that R0 replaces real runtime acceptance. No push/merge/hostedCI minutes.
+
+### Original08 — cache P22 and independent-scope continuation
+
+**OWNER_APPROVED / EXECUTING,23Oct05:01UTC /12:01VN.** Bobby approves the
+remaining cache/P22 and independent-scope work in original08. Do not rerun
+the accepted STREAM active-revoke specimen or reopen retired native9/trust.
+Guide: [original08](upgrade_v1.2/EXECUTION_PORTAL_EDGE_UPGRADE_GUIDE_v1.2_VI.md#epg10-08-hoàn-thiện-revocation-scope-và-tls),
+existing [current-epoch cache recipe](evidence/execution-edge-v1_2/EPG10-08/EDGE_TO_CORE_08_ACCEPTANCE_HANDOFF_2026-10-21.md#106-current-epoch-cache-specimen-correction-21oct1924utc).
+
+**Scope/ownership:** reuse scripts/epg10-08/connected_read.py and Core's existing
+private P22 exact-key CLI/receipt, no new service/API/DB privileges or framework.
+Inspect actual Core/Claude heads and installed opt-in first. Core latest282c7b39
+assigns P22/G2 source landing/integration to its existing closeout lane; no
+installed-P22 return was found in the latest mailbox. Edge completes any missing
+owned driver binding/strict proof checks and affected tests while that proceeds.
+Independent SAME-actor control requires a real distinct sealed native domain,
+not another URL/session or READ after STREAM revoke. No fabricated grant or
+loosening of Core's single-Paper selector.
+
+**Invariants/test gates:** repeat200 alone never proves HIT; matching current
+cache/epoch identity must come from actual P22 receipts, with exact lease/attempt,
+body and durable terminal/source ACK. CORRELATED with pending/nonterminal/
+unreconciled custody is insufficient. No STALE/PARTIAL→FRESH promotion. Existing
+bounded driver must recognize the actual typed403 wire denial, not arbitrary403
+or cursor409 as authorization proof. Pure fixtures remain TEST_ONLY; real case
+stays NOT_RUN until fresh reviewed image/config/trust/source/grant/session and
+current-epoch P22 receipts are available. Any fresh connected source requires
+matched new pins/window; old artifacts stay immutable.
+
+**Rollback/decision boundary:** owned changes are private operator automation
+only, default behavior backward-compatible; no runtime activation by tests.
+Stop new requests on scope/receipt/hash mismatch, preserve original custody and
+official same-key recovery. No stable/dev/provider28445/command/Live change.
+Record current producer input gaps separately from owned implementation; finish
+the runnable owned part before ending the turn.
+
+**05:18UTC tested slice — EDGE_OPERATOR_READY / CACHE_CONNECTED_NOT_RUN.**
+[Cache/P22 binding return](evidence/execution-edge-v1_2/EPG10-08/EDGE_CACHE_P22_BINDING_RETURN_2026-10-23.md)
+records exact private config format, source pins, tests and producer actions.
+Completed the existing bounded operator driver, NOT a Python product adapter:
+optional owner-pinned P22 prime/HIT pair, same cache/epoch MAC but distinct
+lease+attempt, exact operation and individually observed body digests. Each
+durable SERVED/terminal receipt/source ACK is checked independently, not inferred
+from CORRELATED. Per-request bodies may legitimately differ. Default absent
+proof leaves cache NOT_RUN and old checkpoints usable for their original scope.
+
+Reused the official domain-revoke verifier for the exact READ grant transition
+before expiry; refuse expired/no-op/replay/wrong grant/action/revision. Both
+actual typed READ/cursor403 denials are required after that proof; workspace404
+or cursor409 alone is insufficient. Recognize actual
+EXECUTION_READ_SCOPE_REQUIRED, not arbitrary403. No extra HTTP requests, grant
+writer, SQL, secret store, source authority or public wire/schema introduced.
+Private proof references existing exact-key Core CLI outputs; its owner envelope
+binds scope/baseline/producer but does NOT authenticate HMACs or commission a
+producer. Public result omits paths/MACs/cursors/IDs/credential contents, keeps
+full08/read09NOT_MET and independent-scope/active-revoke NOT_RUN. Unit regression
+does not replay the accepted connected active-revoke specimen.
+
+**Actual gates:** capped host Python3 -I -B, one allowed CPU/512MiB; all three
+scripts/epg10-08/test_*.py suites:149PASS/0FAIL/0SKIP,2.635s/EXIT0 (84driver,
+65unchanged publication/TLS guards). Initial driver82tests/1ERROR came from
+new test setup reusing revoked producer; fixed isolated setup,83PASS retake,
+then added actual typed-wire unit and ran final149PASS. Two no-bytecode compile
+checks PASS; execution-tracking reconciliation EXIT0 and diffcheck PASS.
+No external HTTP, DB or native authority is exercised by these TEST_ONLY suites.
+
+**Producer inspection/current decision:** canonical Core282c7b39, active
+closeout454323456 with peer staged integration; fe2 advanced2f9ca2dc while
+existing successor3d4164bd contains qualified P22 factory122fc5f1/G2. Do not edit
+those peer checkouts. TS canonical668e1032 and PM1eaefa6e inspected; no TS/PM
+source mutation. SGP candidate still actual image3cb7f24a/source3265ce18/schema149/
+restart0, active configa8142e41fd134907251497035124cf7ad8fefe7296ac08b466a4244fd49ec168.
+Read-only installed config has zero cache_observation fields; correct
+/opt/control-api/dist/main.js and app.module.js exist, but P22 compiled module
+does not. Therefore P22 NOT_INSTALLED is directly established, not upgraded
+from source-qualified/health. No new owner-return in latest canonical mailbox.
+Existing Edge/Core historical handoff hashes differ (1c02e3e8 vs018d5095):
+do NOT overwrite Core's changed file. This new bounded return is additive.
+
+**Runnable versus genuinely dependent:** owned cache binding/strict proof and
+impact tests are complete. Core/Claude next lands/qualifies its already approved
+P22 composition and returns actual image/config/private opt-in+CLI references;
+Core/TS/PM supplies a genuine distinct sealed SAME-actor native control or names
+its minimum source composition delta. Another URL/session/principal, fixture or
+READ surviving STREAM revoke is not that control. Edge then binds fresh
+source/trust/census/bounds and feasible interval; Core owns current READ/session
+and official READ revoke; run current-epoch prime/HIT→READ revoke→read/cursor/
+terminal/source ACK. No new generic approval, framework, command/Manager/G2
+prerequisite or replay of closed active revoke. Expired native9/trust remains
+retired. Full08 and connected09/release stay NOT_MET; approved independent09
+implementation may proceed, not connected acceptance/cutover.
+
+**Runtime/cleanup/release:** no runtime/DB/credential/grant/session/role/config
+mutation, no new container/image/build/cache/SGP source packet. Test contexts
+clean their exact disposable files; no broad prune or deletion of audit custody.
+05:18UTC inventory116images/43active,607BuildKit70.73GB unchanged; retain foreign
+active/rollback/cache. Disk used333191938048/free185724964864B (shared-host
+change, not claimed reclamation). Existing HK native28ea/Edge d6aa/Proxy aa14,
+Paper/Sandbox/Live configuration6180b9bf/cd79e9c6/98a191c7 and stable/rollback
+set not changed. Canonical54c6f5f3 and active feature1fca3dc0 checkouts remain;
+no merged worktree removal. Peer WIP fe4fcfc7/1cf04b20/109659d2 unchanged.
+
+**Publication lane:** focused intermediate operator slice under already
+Bobby-approved campaign§10.10c, NOT docs-only R0 or normal frozen landing.
+Use explicit owned script/test/guide/return and this main-plan append only;
+exclude peer C5hunk, two tracked peer docs and all unrelated untracked returns/
+code. Staged diff/scope, compile/tests/tracking/link/secret checks precede
+coherent commit. No push/merge/hostedCI;0CI minutes. Full normal gate remains
+required for a frozen integration landing, not claimed by these unit results.
+
+**Delivery/gate/cleanup receipt:** copied exactly one public bounded return,
+no source/dependency/private inputs, into Core's existing mailbox at
+/home/bobby/portal-research/upgrade/execution_loop/evidence/ELP2-10/EDGE_CACHE_P22_BINDING_RETURN_2026-10-23.md.
+The new target was checked absent before transfer; original differing handoff
+was not overwritten. HK/SGP SHA256 both
+67f0bca4eb9b5b4a78b1af232f8933fb9f58d08d42c7704debb3804c792be502.
+Six new staged local links/anchors and source-pin/secret-pattern checks PASS;
+the first link check caught one new cache-recipe anchor typo, corrected before
+publication. All four exact unit-temporary prefixes have0remaining paths.
+No default pre-commit hook/core.hooksPath is installed in this checkout; focused
+gates were executed explicitly, no full-hook PASS asserted or hook config changed.

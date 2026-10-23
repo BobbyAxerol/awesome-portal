@@ -6,6 +6,9 @@ session and owner receipts are private pinned references. This driver never
 issues identity, grants, JWTs, SQL, commands or revocation. Core/PM perform their
 official revoke separately. Baseline/post_revoke are distinct finite specimens;
 reconnect denial is NOT proof of active-stream revocation or a cache HIT.
+Optional private cache_proof pins the existing P22 CLI prime/HIT receipts to
+this baseline. It requires a real pre-expiry READ revoke, durable SERVED/source
+ACK and two current HTTP403 denials; P22 MACs are not verified by this driver.
 Opt-in observe_active_stream holds the existing stream past its first notice
 to collect bounded client-side facts while the owner revokes separately. Those
 facts never prove server final-egress or grant a mutation capability.
@@ -34,6 +37,7 @@ import threading
 import time
 from types import ModuleType
 from urllib.parse import urlencode
+from uuid import UUID
 
 ORIGIN = "https://research-portal.primusspark.com"
 HOST = "research-portal.primusspark.com"
@@ -236,35 +240,117 @@ def prepare(config, now=None):
                 "REVOKE_PROVENANCE_INVALID")
         if action == "stream.subscribe":
             validate_stream_revoke(receipt, prior, revoke, now)
+    cache = None
+    if "cache_proof" in config:
+        require(config["stage"] == "post_revoke" and action == "business.read_all" and
+                revoke["authority"] == "CORE_MANAGER_DOMAIN", "CACHE_PROOF_SCOPE_INVALID")
+        validate_domain_revoke(receipt, prior, revoke, now, "business.read_all")
+        cache = validate_cache_proof(config, prior, scope)
     return {"config": config, "producer": receipt, "headers": headers, "ip": str(ip),
             "scope": scope, "prior": prior, "revoke": revoke,
-            "revoke_action": action, "session_evidence_class": session_evidence_class}
+            "revoke_action": action, "session_evidence_class": session_evidence_class,
+            "cache_proof": cache}
+
+
+def validate_cache_proof(config, prior, scope):
+    """Consume pinned outputs of the EXISTING Core private exact-key P22 CLI.
+
+    The private owner envelope binds those outputs to the observed baseline;
+    P22 MACs alone disclose neither scope nor time. This creates no authority,
+    authenticates no MAC, and is not a substitute for installed-producer pins.
+    PASS is credited only later, after this driver observes post-revoke denial.
+    """
+    proof = document(config["cache_proof"])
+    require(type(proof) is dict and set(proof) == {"schema_version", "baseline_sha256",
+            "producer_sha256", "scope_sha256", "prime", "hit"} and
+            proof["schema_version"] == "portal.execution.connected-cache-proof.v1" and
+            proof["baseline_sha256"] == config["baseline"]["sha256"] and
+            proof["producer_sha256"] == prior["producer_sha256"] and
+            proof["scope_sha256"] == scope and pin(prior.get("read_body_sha256")) and
+            pin(prior.get("prime_body_sha256")),
+            "CACHE_PROOF_PROVENANCE_INVALID")
+    observations = []
+    refs = []
+    for name in ("prime", "hit"):
+        ref = proof[name]
+        require(type(ref) is dict and set(ref) == {"path", "sha256"} and pin(ref["sha256"]),
+                "CACHE_PROOF_RECEIPT_INVALID")
+        value = document(ref)
+        require(type(value) is dict and set(value) == {"schema_version", "observation",
+                "custody", "checks", "durable_egress", "verdict"} and
+                value["schema_version"] == "portal.native-cache-observation-receipt.v1" and
+                value["verdict"] == "CORRELATED" and value["durable_egress"] == "SERVED",
+                "CACHE_PROOF_RECEIPT_INVALID")
+        obs, custody, checks = value["observation"], value["custody"], value["checks"]
+        require(type(obs) is dict and set(obs) == {"schema_version", "lease_id", "attempt_id",
+                "operation_id", "cache_state", "cache_identity_mac", "native_epoch_mac",
+                "body_digest", "egress_evidence_kind", "egress_semantics"} and
+                obs["schema_version"] == "portal.native-cache-observation.v1" and
+                obs["operation_id"] == "maximumDataDeploymentPageV1" and
+                obs["cache_state"] in ("HIT", "MISS", "COALESCED") and
+                obs["body_digest"] == "sha256:" + prior[
+                    "prime_body_sha256" if name == "prime" else "read_body_sha256"] and
+                obs["egress_evidence_kind"] in ("FINAL_HTTP_SEND_COMPLETED",
+                    "EGRESS_NOT_OBSERVED_IN_RETURN") and
+                obs["egress_semantics"] == "LOCAL_CORE_HTTP_EGRESS_ONLY" and
+                all(type(obs[k]) is str and re.fullmatch(r"hmac-sha256:[a-f0-9]{64}", obs[k])
+                    for k in ("cache_identity_mac", "native_epoch_mac")),
+                "CACHE_PROOF_OBSERVATION_INVALID")
+        for key in ("lease_id", "attempt_id"):
+            require(type(obs[key]) is str and
+                    re.fullmatch(r"[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}", obs[key]) and
+                    str(UUID(obs[key])) == obs[key], "CACHE_PROOF_OBSERVATION_INVALID")
+        require(type(custody) is dict and set(custody) == {"lease_id", "attempt_id", "phase",
+                "body_digest", "receipt_digest", "source_ack_digest", "source_reconciled"} and
+                all(custody[k] == obs[k] for k in ("lease_id", "attempt_id", "body_digest")) and
+                custody["phase"] == "SERVED" and custody["source_reconciled"] is True and
+                all(type(custody[k]) is str and re.fullmatch(r"sha256:[a-f0-9]{64}", custody[k])
+                    for k in ("receipt_digest", "source_ack_digest")) and
+                type(checks) is dict and set(checks) == {"lease_attempt_match", "body_digest_match",
+                    "egress_phase_consistent"} and all(x is True for x in checks.values()),
+                "CACHE_PROOF_CUSTODY_INVALID")
+        observations.append(obs)
+        refs.append(ref["sha256"])
+    prime, hit = observations
+    require(hit["cache_state"] == "HIT" and
+            all(prime[k] == hit[k] for k in ("cache_identity_mac", "native_epoch_mac")) and
+            all(prime[k] != hit[k] for k in ("lease_id", "attempt_id")) and refs[0] != refs[1],
+            "CACHE_HIT_NOT_PROVED")
+    return {"status": "PASS", "evidence_class": "OWNER_PINNED_P22_AND_HTTP_DENIAL",
+            "prime_cli_sha256": refs[0], "hit_cli_sha256": refs[1]}
 
 
 def validate_stream_revoke(producer, prior, revoke, now):
-    """Bind the distinct STREAM grant to the real coordinator receipt, not a label.
+    validate_domain_revoke(producer, prior, revoke, now, "stream.subscribe")
+
+
+def validate_domain_revoke(producer, prior, revoke, now, action):
+    """Bind the selected READ/STREAM grant to a real pre-expiry coordinator revoke.
 
     READY/checkpoint data is assembled from actual install ACK/readback. The
     official receipt remains a private pinned document; no new exporter/API.
     """
+    prefix = "stream" if action == "stream.subscribe" else "manager"
+    code = "STREAM_REVOKE_RECEIPT_INVALID" if prefix == "stream" else "CACHE_REVOKE_RECEIPT_INVALID"
     ref = revoke.get("official_receipt")
     require(type(ref) is dict and ref.get("sha256") == revoke["official_receipt_sha256"],
-            "STREAM_REVOKE_RECEIPT_INVALID")
+            code)
     envelope = document(ref)
     require(type(envelope) is dict and envelope.get("schema_version") ==
             "portal.native-research-manager-revoke.v1" and
             type(envelope.get("results")) is list and len(envelope["results"]) == 1 and
-            all(type(item) is dict for item in envelope["results"]), "STREAM_REVOKE_RECEIPT_INVALID")
-    selected = [item for item in envelope["results"] if item.get("grant_id") == producer["stream_grant_id"]]
-    require(len(selected) == 1, "STREAM_REVOKE_RECEIPT_INVALID")
+            all(type(item) is dict for item in envelope["results"]), code)
+    selected = [item for item in envelope["results"] if item.get("grant_id") == producer[prefix + "_grant_id"]]
+    require(len(selected) == 1, code)
     official = selected[0]
     require(type(official) is dict and official.get("schema_version") ==
             "portal.manager-domain-revoke-receipt.v1" and
-            official.get("grant_id") == producer["stream_grant_id"] and
-            official.get("action") == "stream.subscribe" and official.get("mode") == "REVOKE" and
+            official.get("grant_id") == producer[prefix + "_grant_id"] and
+            official.get("action") == action and official.get("mode") == "REVOKE" and
             official.get("outcome") == "REVOKED" and
-            official.get("grant_revision_before") == prior["stream_grant_revision"] and
-            official.get("grant_revision_after") == producer["stream_grant_revision"] and
+            official.get("grant_revision_before") == prior[prefix + "_grant_revision"] and
+            official.get("grant_revision_after") == producer[prefix + "_grant_revision"] and
+            official.get("grant_revision_before") != official.get("grant_revision_after") and
             official.get("policy_revision") == producer["policy_revision"] and
             official.get("replayed") is False and
             all(type(official.get(k)) is str and 1 <= len(official[k]) <= 256
@@ -276,7 +362,7 @@ def validate_stream_revoke(producer, prior, revoke, now):
             official["decided_at_ms"] == official["revoked_at_ms"] and
             utc(prior["at_utc"]) * 1000 <= official["revoked_at_ms"] <=
             utc(revoke["committed_at_utc"]) * 1000 <= now * 1000,
-            "STREAM_REVOKE_RECEIPT_INVALID")
+            code)
 
 
 def cursor_valid(value):
@@ -570,8 +656,9 @@ def run(config, transport_factory=Transport, checkpoint_sink=None):
                     status, _, raw = request("stream", cursor)
                     body = shared().decode(raw)
                     error = body.get("error", body) if type(body) is dict else None
-                    require(status == 403 and type(error) is dict and error.get("code") ==
-                            "ACCESS_DENIED", "REVOKED_STREAM_NOT_DENIED")
+                    require(status == 403 and type(error) is dict and error.get("code") in
+                            ("ACCESS_DENIED", "EXECUTION_READ_SCOPE_REQUIRED"),
+                            "REVOKED_STREAM_NOT_DENIED")
                     receipt["cases"][case] = {"status": "PASS", "http_status": status,
                         "body_sha256": sha256(raw).hexdigest()}
                 receipt["status"] = "SCOPED_OBSERVATIONS_ONLY"
@@ -584,12 +671,20 @@ def run(config, transport_factory=Transport, checkpoint_sink=None):
                     type(body.get("error", body)) is dict else None)
                 allowed = ({403: ("NATIVE_MANAGER_READ_DENIED", "ACCESS_DENIED"),
                             404: ("WORKSPACE_NOT_FOUND",)} if name == "deployments" else
-                           {403: ("NATIVE_MANAGER_READ_DENIED", "ACCESS_DENIED"),
+                           {403: ("NATIVE_MANAGER_READ_DENIED", "ACCESS_DENIED",
+                                  "EXECUTION_READ_SCOPE_REQUIRED"),
                             409: ("SCOPE_CHANGED", "CURSOR_INVALID_OR_EXPIRED")})
                 require(code in allowed.get(status, ()),
                         "REVOKED_ACCESS_NOT_DENIED")
                 receipt["cases"][case] = {"status": "PASS", "http_status": status,
                     "body_sha256": sha256(raw).hexdigest()}
+            if p["cache_proof"] is not None:
+                # A scoped 404 or invalidated cursor409 alone cannot establish
+                # current authorization denial of an existing cached entry.
+                require(all(receipt["cases"][name]["http_status"] == 403
+                            for name in ("post_revoke_read", "post_revoke_cursor")),
+                        "CACHE_REVOKE_DENIAL_NOT_PROVED")
+                receipt["cases"]["cache_revocation"] = p["cache_proof"]
         else:
             finite_results = {}
             for case, name in (("deployments", "deployments"), ("relation", "relation"),
@@ -608,6 +703,8 @@ def run(config, transport_factory=Transport, checkpoint_sink=None):
                     "policy_revision": p["producer"]["policy_revision"],
                     "manager_grant_revision": p["producer"]["manager_grant_revision"],
                     "native_revision": p["producer"]["native_revision"],
+                    "prime_body_sha256": finite_results["deployments"]["body_sha256"],
+                    "read_body_sha256": finite_results["repeat_read"]["body_sha256"],
                     "read_authorized": p["producer"]["read_authorized"],
                     "stream_authorized": p["producer"]["stream_authorized"],
                     "at_utc": datetime.now(timezone.utc).isoformat(), "cursor": cursor}

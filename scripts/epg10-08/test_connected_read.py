@@ -496,7 +496,7 @@ class DriverTests(unittest.TestCase):
                 "observation": observation})]
         checkpoints = []
         with patch.object(driver.time, "time", return_value=NOW), \
-                patch.object(driver, "finite", return_value={"status": "PASS"}):
+                patch.object(driver, "finite", return_value={"status": "PASS", "body_sha256": PIN}):
             result = driver.run(self.cfg, lambda _: transport, checkpoints.append)
         self.assertEqual(result["status"], "SCOPED_OBSERVATIONS_ONLY")
         self.assertEqual(result["requests"], 4)
@@ -506,6 +506,8 @@ class DriverTests(unittest.TestCase):
         self.assertEqual(transport.request.call_args.kwargs, {"stream": True})
         self.assertEqual(result["active_stream_observation"], observation)
         self.assertEqual(len(checkpoints), 1)
+        self.assertEqual(checkpoints[0]["prime_body_sha256"], PIN)
+        self.assertEqual(checkpoints[0]["read_body_sha256"], PIN)
         for key, value in (("read_authorized", True), ("stream_authorized", True),
                 ("stream_grant_id", "stream-grant-TEST_ONLY"),
                 ("stream_grant_revision", "stream-revision-1"),
@@ -667,6 +669,20 @@ class DriverTests(unittest.TestCase):
                     result = driver.run(self.cfg, lambda _: transport)
                 self.assertEqual(result["reason"], "REVOKED_STREAM_NOT_DENIED")
                 self.assertEqual(result["cases"]["post_revoke_stream"]["status"], "NOT_RUN")
+
+    def test_actual_typed_scope_denial_is_supported_without_loosening_other_403s(self):
+        self.stream_revoke_inputs()
+        transport = MagicMock()
+        transport.request.side_effect = [(200, {}, b"TEST_ONLY-page"), (200, {}, b"TEST_ONLY-snapshot"),
+            (403, {}, b'{"error":{"code":"EXECUTION_READ_SCOPE_REQUIRED"}}'),
+            (403, {}, b'{"code":"EXECUTION_READ_SCOPE_REQUIRED"}')]
+        with patch.object(driver, "prepare", return_value=self.prepare()), \
+                patch.object(driver, "finite", return_value={"status": "PASS"}):
+            result = driver.run(self.cfg, lambda _: transport)
+        self.assertEqual(result["status"], "SCOPED_OBSERVATIONS_ONLY")
+        self.assertEqual(result["cases"]["post_revoke_cursor"]["status"], "PASS")
+        for case in ("cache_revocation", "active_stream_revocation", "unaffected_scope"):
+            self.assertEqual(result["cases"][case]["status"], "NOT_RUN")
 
     def test_legacy_read_revoke_still_runs_exact_two_denial_probes(self):
         producer, _ = self.post_inputs("CORE_MANAGER_DOMAIN")
@@ -936,6 +952,236 @@ class SseTests(unittest.TestCase):
         observation = self.assertObservation(result, "DEADLINE", [])
         self.assertEqual(observation["elapsed_ms"], 2000)
         self.assertEqual(result["notices"], 0)
+
+
+class CacheProofTests(unittest.TestCase):
+    """TEST_ONLY P22 receipts; no key, DB, HTTP, authority or runtime issued."""
+    setUp = DriverTests.setUp
+    prepare = DriverTests.prepare
+    post_inputs = DriverTests.post_inputs
+    prepare_baseline_scope = DriverTests.prepare_baseline_scope
+    assertRefusedNoNetwork = DriverTests.assertRefusedNoNetwork
+
+    def cache_inputs(self):
+        producer, revoke = self.post_inputs("CORE_MANAGER_DOMAIN")
+        producer.update(read_authorized=False, policy_revision="policy-2",
+                        manager_grant_revision="grant-revision-2")
+        prior = self.docs["/TEST_ONLY/baseline"]
+        prior["prime_body_sha256"] = "a" * 64
+        prior["read_body_sha256"] = "b" * 64
+        revoke["official_receipt"] = {"path": "/TEST_ONLY/official", "sha256": "f" * 64}
+        decided = int(datetime(2026, 10, 20, 5, 0, 30, tzinfo=timezone.utc).timestamp() * 1000)
+        self.docs["/TEST_ONLY/official"] = {
+            "schema_version": "portal.native-research-manager-revoke.v1", "results": [{
+                "schema_version": "portal.manager-domain-revoke-receipt.v1",
+                "revocation_id": "TEST_ONLY-revocation", "receipt_id": "TEST_ONLY-receipt",
+                "grant_id": producer["manager_grant_id"], "action": "business.read_all",
+                "mode": "REVOKE", "outcome": "REVOKED", "grant_revision_before": "grant-revision-1",
+                "grant_revision_after": "grant-revision-2", "policy_revision": "policy-2",
+                "valid_until_ms_before": decided + 3600000, "valid_until_ms_after": decided + 3600000,
+                "revoked_at_ms": decided, "decided_at_ms": decided, "replayed": False}]}
+        self.cfg["cache_proof"] = {"path": "/TEST_ONLY/cache-proof", "sha256": "1" * 64}
+        envelope = {"schema_version": "portal.execution.connected-cache-proof.v1",
+            "baseline_sha256": self.cfg["baseline"]["sha256"],
+            "producer_sha256": prior["producer_sha256"], "scope_sha256": prior["scope_sha256"],
+            "prime": {"path": "/TEST_ONLY/prime", "sha256": "2" * 64},
+            "hit": {"path": "/TEST_ONLY/hit", "sha256": "3" * 64}}
+        self.docs["/TEST_ONLY/cache-proof"] = envelope
+        for name, n in (("prime", 1), ("hit", 2)):
+            obs = {"schema_version": "portal.native-cache-observation.v1",
+                "lease_id": f"00000000-0000-4000-8000-{n:012d}",
+                "attempt_id": f"00000000-0000-4000-8001-{n:012d}",
+                "operation_id": "maximumDataDeploymentPageV1",
+                "cache_state": "MISS" if name == "prime" else "HIT",
+                "cache_identity_mac": "hmac-sha256:" + PIN,
+                "native_epoch_mac": "hmac-sha256:" + "b" * 64,
+                "body_digest": "sha256:" + prior[
+                    "prime_body_sha256" if name == "prime" else "read_body_sha256"],
+                "egress_evidence_kind": "FINAL_HTTP_SEND_COMPLETED",
+                "egress_semantics": "LOCAL_CORE_HTTP_EGRESS_ONLY"}
+            self.docs["/TEST_ONLY/" + name] = {
+                "schema_version": "portal.native-cache-observation-receipt.v1",
+                "observation": obs, "custody": {**{k: obs[k] for k in
+                    ("lease_id", "attempt_id", "body_digest")}, "phase": "SERVED",
+                    "receipt_digest": "sha256:" + PIN, "source_ack_digest": "sha256:" + PIN,
+                    "source_reconciled": True},
+                "checks": {k: True for k in ("lease_attempt_match", "body_digest_match",
+                    "egress_phase_consistent")}, "durable_egress": "SERVED", "verdict": "CORRELATED"}
+        return envelope
+
+    def execute(self, responses=None):
+        transport = MagicMock()
+        transport.request.side_effect = responses or [
+            (403, {}, b'{"code":"NATIVE_MANAGER_READ_DENIED"}'),
+            (403, {}, b'{"code":"EXECUTION_READ_SCOPE_REQUIRED"}')]
+        with patch.object(driver.time, "time", return_value=NOW):
+            result = driver.run(self.cfg, lambda _: transport)
+        return result, transport
+
+    def test_actual_p22_pair_and_current_denials_credit_only_cache_case(self):
+        self.cache_inputs()
+        result, transport = self.execute()
+        self.assertEqual(result["status"], "SCOPED_OBSERVATIONS_ONLY")
+        self.assertEqual(result["cases"]["cache_revocation"]["status"], "PASS")
+        self.assertEqual((result["requests"], transport.request.call_count, result["mutations"]), (2, 2, 0))
+        for name in ("active_stream_revocation", "unaffected_scope"):
+            self.assertEqual(result["cases"][name]["status"], "NOT_RUN")
+        self.assertEqual((result["full_08"], result["full_09"]), ("NOT_MET", "NOT_MET"))
+        public = json.dumps(result)
+        for private in ("hmac-sha256:", "00000000-0000-4000", "/TEST_ONLY/", "TEST_ONLY_PRIVATE_COOKIE"):
+            self.assertNotIn(private, public)
+
+    def test_default_without_p22_pair_keeps_cache_not_run(self):
+        self.cache_inputs()
+        del self.cfg["cache_proof"]
+        self.assertEqual(self.execute()[0]["cases"]["cache_revocation"]["status"], "NOT_RUN")
+
+    def test_proof_is_bound_to_exact_baseline_producer_and_scope(self):
+        for field in ("schema_version", "baseline_sha256", "producer_sha256", "scope_sha256"):
+            with self.subTest(field=field):
+                self.cfg, self.docs = inputs()
+                self.cache_inputs()[field] = "0" * 64
+                self.assertRefusedNoNetwork("CACHE_PROOF_PROVENANCE_INVALID")
+
+    def test_historical_checkpoint_without_actual_read_body_cannot_credit_cache(self):
+        for field in ("prime_body_sha256", "read_body_sha256"):
+            with self.subTest(field=field):
+                self.cfg, self.docs = inputs()
+                self.cache_inputs()
+                del self.docs["/TEST_ONLY/baseline"][field]
+                self.assertRefusedNoNetwork("CACHE_PROOF_PROVENANCE_INVALID")
+
+    def test_cache_denial_requires_real_read_revoke_not_expiry_noop_or_stream_revoke(self):
+        for field, value in (("outcome", "NOOP_EXPIRED"), ("outcome", "NOOP_ALREADY_REVOKED"),
+                ("action", "stream.subscribe"), ("replayed", True), ("replayed", 0),
+                ("grant_id", "TEST_ONLY-other-grant"), ("grant_revision_before", "OTHER"),
+                ("grant_revision_after", "grant-revision-1"), ("policy_revision", "OTHER"),
+                ("valid_until_ms_before", 0), ("revoked_at_ms", 0)):
+            with self.subTest(field=field):
+                self.cfg, self.docs = inputs()
+                self.cache_inputs()
+                self.docs["/TEST_ONLY/official"]["results"][0][field] = value
+                self.assertRefusedNoNetwork("CACHE_REVOKE_RECEIPT_INVALID")
+        del self.docs["/TEST_ONLY/revoke"]["official_receipt"]
+        self.assertRefusedNoNetwork("CACHE_REVOKE_RECEIPT_INVALID")
+
+    def test_envelope_and_receipt_unknown_fields_are_not_accepted(self):
+        for path in ("/TEST_ONLY/cache-proof", "/TEST_ONLY/hit"):
+            with self.subTest(path=path):
+                self.cfg, self.docs = inputs()
+                self.cache_inputs()
+                self.docs[path]["TEST_ONLY_secret"] = "TEST_ONLY_PRIVATE_PAYLOAD"
+                self.assertRefusedNoNetwork()
+
+    def test_noncorrelated_or_no_observation_never_proves_hit(self):
+        for verdict in ("NO_OBSERVATION", "NO_CUSTODY_ROW", "MISMATCH", None):
+            with self.subTest(verdict=verdict):
+                self.cfg, self.docs = inputs()
+                self.cache_inputs()
+                self.docs["/TEST_ONLY/hit"]["verdict"] = verdict
+                self.assertRefusedNoNetwork("CACHE_PROOF_RECEIPT_INVALID")
+
+    def test_correlated_but_unresolved_aborted_or_unacked_is_refused(self):
+        for field, value in (("phase", "UNKNOWN"), ("phase", "ABORTED"), ("phase", "CANCELLED"),
+                ("source_reconciled", False), ("source_reconciled", 1),
+                ("source_ack_digest", None), ("receipt_digest", None), ("source_ack_digest", PIN)):
+            with self.subTest(field=field, value=value):
+                self.cfg, self.docs = inputs()
+                self.cache_inputs()
+                self.docs["/TEST_ONLY/hit"]["custody"][field] = value
+                self.assertRefusedNoNetwork("CACHE_PROOF_CUSTODY_INVALID")
+
+    def test_correlator_boolean_flags_do_not_replace_independent_key_body_checks(self):
+        for field, value in (("lease_id", "00000000-0000-4000-8000-999999999999"),
+                ("attempt_id", "00000000-0000-4000-8001-999999999999"), ("body_digest", "sha256:" + PIN)):
+            with self.subTest(field=field):
+                self.cfg, self.docs = inputs()
+                self.cache_inputs()
+                self.docs["/TEST_ONLY/hit"]["custody"][field] = value
+                self.assertRefusedNoNetwork("CACHE_PROOF_CUSTODY_INVALID")
+
+    def test_checks_require_exact_true_not_truthy_or_extra(self):
+        for change in ("false", "truthy", "missing", "extra"):
+            with self.subTest(change=change):
+                self.cfg, self.docs = inputs()
+                self.cache_inputs()
+                checks = self.docs["/TEST_ONLY/hit"]["checks"]
+                if change == "missing": del checks["body_digest_match"]
+                elif change == "extra": checks["extra"] = True
+                else: checks["body_digest_match"] = 1 if change == "truthy" else False
+                self.assertRefusedNoNetwork("CACHE_PROOF_CUSTODY_INVALID")
+
+    def test_wrong_operation_body_and_egress_are_refused(self):
+        for field, value in (("operation_id", "portal.manager-observation.snapshot.v1"),
+                ("body_digest", "sha256:" + PIN), ("egress_semantics", "BROWSER_ACK"),
+                ("egress_evidence_kind", "NO_FINAL_WITNESS"),
+                ("egress_evidence_kind", "FINAL_HTTP_ABORT_CONFIRMED"),
+                ("lease_id", "not-a-uuid"), ("attempt_id", None),
+                ("native_epoch_mac", "sha256:" + PIN)):
+            with self.subTest(field=field):
+                self.cfg, self.docs = inputs()
+                self.cache_inputs()
+                self.docs["/TEST_ONLY/hit"]["observation"][field] = value
+                self.assertRefusedNoNetwork("CACHE_PROOF_OBSERVATION_INVALID")
+
+    def test_observed_return_absence_is_accepted_only_with_genuine_durable_served_ack(self):
+        self.cache_inputs()
+        self.docs["/TEST_ONLY/hit"]["observation"]["egress_evidence_kind"] = "EGRESS_NOT_OBSERVED_IN_RETURN"
+        self.assertEqual(self.execute()[0]["cases"]["cache_revocation"]["status"], "PASS")
+
+    def test_miss_coalesced_different_cache_or_epoch_cannot_be_called_hit(self):
+        for field, value in (("cache_state", "MISS"), ("cache_state", "COALESCED"),
+                ("cache_identity_mac", "hmac-sha256:" + "c" * 64),
+                ("native_epoch_mac", "hmac-sha256:" + "c" * 64)):
+            with self.subTest(field=field):
+                self.cfg, self.docs = inputs()
+                self.cache_inputs()
+                self.docs["/TEST_ONLY/hit"]["observation"][field] = value
+                self.assertRefusedNoNetwork("CACHE_HIT_NOT_PROVED")
+
+    def test_same_lease_attempt_or_receipt_replay_cannot_prove_two_requests(self):
+        for field in ("lease_id", "attempt_id", "sha256"):
+            with self.subTest(field=field):
+                self.cfg, self.docs = inputs()
+                envelope = self.cache_inputs()
+                if field == "sha256": envelope["hit"][field] = envelope["prime"][field]
+                else:
+                    value = self.docs["/TEST_ONLY/prime"]["observation"][field]
+                    self.docs["/TEST_ONLY/hit"]["observation"][field] = value
+                    self.docs["/TEST_ONLY/hit"]["custody"][field] = value
+                self.assertRefusedNoNetwork("CACHE_HIT_NOT_PROVED")
+
+    def test_p22_pair_never_turns_404_or_cursor409_into_cache_revoke_proof(self):
+        for read, cursor in ((404, 403), (403, 409)):
+            with self.subTest(read=read, cursor=cursor):
+                self.cfg, self.docs = inputs()
+                self.cache_inputs()
+                responses = [(read, {}, b'{"code":"WORKSPACE_NOT_FOUND"}' if read == 404 else
+                    b'{"code":"ACCESS_DENIED"}'), (cursor, {}, b'{"code":"SCOPE_CHANGED"}' if cursor == 409
+                    else b'{"code":"ACCESS_DENIED"}')]
+                result, _ = self.execute(responses)
+                self.assertEqual(result["status"], "FAIL")
+                self.assertEqual(result["reason"], "CACHE_REVOKE_DENIAL_NOT_PROVED")
+                self.assertEqual(result["cases"]["cache_revocation"]["status"], "NOT_RUN")
+
+    def test_invalid_pair_denied_before_any_network_or_session_mutation(self):
+        self.cache_inputs()
+        self.docs["/TEST_ONLY/hit"]["custody"]["source_reconciled"] = False
+        self.assertRefusedNoNetwork("CACHE_PROOF_CUSTODY_INVALID")
+
+    def test_pm_native_or_stream_only_revoke_cannot_borrow_cache_proof(self):
+        for authority in ("PM_NATIVE_READ", "CORE_MANAGER_DOMAIN"):
+            with self.subTest(authority=authority):
+                self.cfg, self.docs = inputs()
+                self.cache_inputs()
+                if authority == "PM_NATIVE_READ":
+                    self.docs["/TEST_ONLY/revoke"]["authority"] = authority
+                    self.docs["/TEST_ONLY/core"].update(read_authorized=True, native_revoked=True, native_revision=4)
+                else:
+                    self.cfg, self.docs = inputs()
+                    DriverTests.stream_revoke_inputs(self)
+                    self.cfg["cache_proof"] = {"path": "/TEST_ONLY/cache-proof", "sha256": PIN}
+                self.assertRefusedNoNetwork("CACHE_PROOF_SCOPE_INVALID")
 
 
 if __name__ == "__main__":

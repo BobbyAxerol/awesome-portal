@@ -1036,6 +1036,17 @@ uncommissioned; no flag, route or financial effect is enabled by this work.
 
 ### EPG10-08 Hoàn thiện revocation scope và TLS
 
+**Latest23Oct12:18VN /05:18UTC: cache driver READY, real P22 NOT_INSTALLED.**
+[Scoped cache/P22 return](../evidence/execution-edge-v1_2/EPG10-08/EDGE_CACHE_P22_BINDING_RETURN_2026-10-23.md):
+existing private driver consumes exact Core CLI prime/HIT/custody receipts and
+an official pre-expiry READ revoke, then requires two typed HTTP403 denials.
+No repeated200/UNKNOWN/expiry/cursor409 or STREAM-only revoke may certify cache.
+149 TEST_ONLY PASS/0FAIL/0SKIP; no real case replay or runtime mutation. Actual
+candidate3cb7/configa814 has no P22 compiled module/opt-in. Core/Claude owns
+existing approved factory landing/image/config; genuine independent SAME-actor
+native control remains a separate source input. Expired native9/trust stays
+retired. Full08/read09NOT_MET; active-revoke acceptance below is unchanged.
+
 **Latest23Oct11:45VN /04:45UTC: native missing-only case ACCEPTED/RETIRED.**
 [Actual correlation and retirement](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#original08--reconcile-actual-revoke-and-finish-exact-source-retirement)
 independently joins5/5 original TS/Core leases:4SERVED matching terminal receipt/
