@@ -156,16 +156,25 @@ export function AccountsList({ api, binding = null, capabilities }: AccountsList
   // behind the cursor mean the count is a floor, so it carries a plus.
   const issueCountText = pages.state.phase === "ready" ? `${issueCount}${pages.nextCursor !== null ? "+" : ""}` : null;
 
-  // The selected tab counts what this read returned. The others show the count the server published for that environment from
-  // the same authorized snapshot (FE-CAT-4); without one, or when the server could not compute it (`null`), nothing is shown, never 0.
-  const published = envelope?.counts?.byEnvironment ?? null;
-  const tabCount = (id: BindingEnv): number | null => {
-    // A tab count is the environment's authorized total, not what the filters left: it does not move with search, venue or Issues.
-    if (env === id) return envelope !== null ? envelope.page.totalCount : null;
+  // Tab counts come from the server's published counts block, from the same authorized snapshot as the page (FE-CAT-4). The selected
+  // tab uses its published count; without one it uses this read's own authorized total (the page's total_count), never the filtered
+  // count, so no filter moves a tab. Another environment's count is a number when published, a typed absence ("n/a", reason in the
+  // note under the strip) when the block exists and says null, and nothing when the producer publishes no block at all. Never 0.
+  const block = envelope?.counts ?? null;
+  const published = block?.byEnvironment ?? null;
+  type TabCount = { kind: "number"; value: number } | { kind: "absent" } | null;
+  const tabCount = (id: BindingEnv): TabCount => {
     const count = published === null ? undefined : published[id];
-    return typeof count === "number" ? count : null;
+    if (typeof count === "number") return { kind: "number", value: count };
+    if (env === id) return envelope !== null ? { kind: "number", value: envelope.page.totalCount } : null;
+    return block !== null ? { kind: "absent" } : null;
   };
-  const issuesEverywhere = envelope?.counts?.issues;
+  const issuesEverywhere = block?.issues;
+  const issuesCount: TabCount = typeof issuesEverywhere === "number" ? { kind: "number", value: issuesEverywhere } : block !== null ? { kind: "absent" } : null;
+  const countNode = (count: TabCount) => (count === null ? null
+    : count.kind === "number" ? <span className="exec-acct-tab-count">{count.value}</span>
+      : <span className="exec-acct-tab-count" data-state="absent" aria-label="Count not published">n/a</span>);
+  const someAbsent = [...ENV_TABS.map((id) => tabCount(id)), issuesCount].some((count) => count?.kind === "absent");
 
   const columns: CardsColumn<BindingRow>[] = [
     {
@@ -342,7 +351,7 @@ export function AccountsList({ api, binding = null, capabilities }: AccountsList
                 onClick={() => pickEnv(id)}
               >
                 {ENV_LABEL[id]}
-                {tabCount(id) !== null ? <span className="exec-acct-tab-count">{tabCount(id)}</span> : null}
+                {countNode(tabCount(id))}
               </button>
             ))}
           </div>
@@ -354,9 +363,11 @@ export function AccountsList({ api, binding = null, capabilities }: AccountsList
                 : `${issueCountText} of the ${all.length} loaded rows need attention. The server does not filter on this.${typeof issuesEverywhere === "number" ? ` ${issuesEverywhere} across all environments.` : ""}`}
               onClick={() => setLocal("issues", issuesOnly ? "" : "1")}
             >
-              Issues{typeof issuesEverywhere === "number" ? <span className="exec-acct-tab-count">{issuesEverywhere}</span> : null}
+              Issues{countNode(issuesCount)}
             </button>
           </div>
+
+          {someAbsent ? <p className="exec-acct-note">n/a: the server did not publish that count from this snapshot, so none is shown.</p> : null}
 
           <div className="exec-acct-tool" role="search">
             <label className="exec-acct-field">

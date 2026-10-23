@@ -167,11 +167,24 @@ describe("the tab strip counts", () => {
     expect(tabs()).toEqual(["Real-funded1", "Paper4", "Sandbox2"]);
   });
 
-  it("prints no number for an environment the server could not count (null), never 0", async () => {
-    stubFetch(() => listBody((body) => { body.counts.by_environment.live = null; }));
+  it("the selected tab (Paper here) falls back to this read's own authorized total when its count is null; another environment's null is a typed n/a, never 0", async () => {
+    stubFetch(() => listBody((body) => { body.counts.by_environment.paper = null; body.counts.by_environment.live = null; }));
     mount();
     await loaded();
-    expect(tabs()).toEqual(["Real-funded", "Paper4", "Sandbox2"]);
+    const shown = tabs();
+    expect(shown[0]).toBe("Real-fundedn/a");
+    expect(shown[1]).toMatch(/^Paper\d+$/);
+    expect(shown[2]).toBe("Sandbox2");
+    expect(screen.getByRole("tab", { name: /^Real-funded/ }).querySelector("[aria-label='Count not published']")?.textContent).toBe("n/a");
+    expect(screen.getByText(/n\/a: the server did not publish that count from this snapshot/)).toBeTruthy();
+  });
+
+  it("the producer's shape today (only the selected environment exact; the others, all and issues null) prints n/a on those tabs and on Issues", async () => {
+    stubFetch(() => listBody((body) => { body.counts.by_environment = { live: null, paper: 4, sandbox: null }; body.counts.all = null; body.counts.issues = null; }));
+    mount();
+    await loaded();
+    expect(tabs()).toEqual(["Real-fundedn/a", "Paper4", "Sandboxn/a"]);
+    expect(screen.getByRole("button", { name: /^Issues only/ }).textContent).toBe("Issuesn/a");
   });
 
   it("keeps a counted zero as 0", async () => {
