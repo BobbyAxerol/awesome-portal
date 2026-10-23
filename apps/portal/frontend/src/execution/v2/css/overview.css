@@ -112,8 +112,9 @@
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 2.1fr);
   gap: var(--space-5);
 }
-/* below 1400px the figure table (the last panel) takes a full row, so Needs attention and Since last visit keep a readable width */
-@media (max-width: 1400px) {
+/* below 1500px (WP-F1: the Contributors table with its bars needs 640px; at 1440 the panel is 580px wide) the figure table (the last panel) takes a
+ * full row, so Needs attention and Since last visit keep a readable width and nothing scrolls inside Contributors */
+@media (max-width: 1500px) {
   .exec-ov-grid3 {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
