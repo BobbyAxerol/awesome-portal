@@ -84,6 +84,9 @@ export const managerModelDocument = z.object({ schema_version: z.literal("portal
   source_set_digest: publicationDigest, as_of_ms: utcMilliseconds, recorded_through_ms: utcMilliseconds,
   facts_through_ms: utcMilliseconds.nullable(), observed_at_ms: utcMilliseconds,
   source_quality: managerQuality, members: z.array(managerMember).max(10_000), facts: z.array(managerFact).max(20_000),
+  stage_transitions: z.array(z.object({ alpha_id: text, alpha_version_id: text, portfolio_id: text,
+    environment: executionEnvironment, stage: financialStage, entered_at_ms: utcMilliseconds,
+    exited_at_ms: utcMilliseconds.nullable(), source_revision: opaqueRevision }).strict()).max(10_000).optional(),
   precomputed_scores: z.array(managerScorePublication).max(128).optional(),
   precomputed_compositions: z.array(managerCompositionPublication).max(128).optional(),
   precomputed_regimes: z.array(managerRegimePublication).max(128).optional(),
@@ -95,6 +98,13 @@ export const managerModelDocument = z.object({ schema_version: z.literal("portal
     d.facts.some(f => f.recorded_at_ms > d.recorded_through_ms || f.effective_at_ms > d.as_of_ms))
     c.addIssue({ code: z.ZodIssueCode.custom, message: "MANAGER_CUTOFF_INVALID" });
   const allowedStages = d.environment === "paper" ? ["PAPER"] : d.environment === "sandbox" ? ["SANDBOX"] : ["CANARY", "LIVE"];
+  const stageMembers = new Set(d.members.map(m => JSON.stringify([m.tuple.alpha_id, m.tuple.alpha_version_id, m.tuple.portfolio_id, m.stage])));
+  for (const t of d.stage_transitions ?? []) {
+    if (t.source_revision !== d.revision || t.environment !== d.environment || !allowedStages.includes(t.stage) ||
+      t.entered_at_ms > d.as_of_ms || t.exited_at_ms !== null && (t.exited_at_ms <= t.entered_at_ms || t.exited_at_ms > d.as_of_ms) ||
+      !stageMembers.has(JSON.stringify([t.alpha_id, t.alpha_version_id, t.portfolio_id, t.stage])))
+      c.addIssue({ code: z.ZodIssueCode.custom, message: "MANAGER_STAGE_TRANSITION_BINDING_INVALID" });
+  }
   if (d.members.some(member => !allowedStages.includes(member.stage)))
     c.addIssue({ code: z.ZodIssueCode.custom, message: "MANAGER_ENVIRONMENT_STAGE_MISMATCH" });
   validateManagerSeriesPublications(d, c);

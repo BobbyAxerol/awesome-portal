@@ -11,7 +11,7 @@ import { canonicalizeManagerDatasetZero } from "./manager-dataset-invariants";
 import { selectManagerScorePublications, type ManagerScoreReadFence } from "./manager-score-publication";
 import { selectManagerCompositionPublications,type ManagerCompositionReadFence } from "./manager-composition-publication";
 import { selectManagerRegimePublications, type ManagerRegimeReadFence } from "./manager-regime-publication";
-import { deriveManagerRowLifecycle, MANAGER_STAGE_LIFECYCLE_POLICY } from "./manager-lifecycle";
+import { deriveManagerRowLifecycle, deriveManagerRowLifecycleFromFacts, MANAGER_STAGE_LIFECYCLE_POLICY } from "./manager-lifecycle";
 import { MANAGER_ALL_ENVIRONMENTS, managerAllRowKey, type ManagerAllReason } from "./manager-all-scope";
 import { managerModelDocument, managerModelQuery, managerDatasetResponse, MANAGER_SCALARS, managerMoneyFields, managerStatementFields,
   type ManagerMember, type ManagerFact, type ManagerMetric, type ManagerModelDocument, type ManagerModelQuery } from "./manager-model.contract";
@@ -152,8 +152,17 @@ export function managerPartitionTotals(facts: ManagerFact[], keys: readonly stri
 const DEFAULT_METRICS = [...managerMoneyFields, "return_30d_pct", "score"];
 const nullableConsensus = (values: Array<string | null>) => new Set(values).size === 1 ? values[0] : null;
 function rowsFor(members: ManagerMember[], facts: ManagerFact[], query: ManagerModelQuery, scope: AuthorizedExecutionReadScope,
-  lifecycleStages: ReadonlyMap<string, ManagerMember["stage"][]>) {
+  lifecycleStages: ReadonlyMap<string, ManagerMember["stage"][]>, doc: ManagerModelDocument) {
   const groups = new Map<string, ManagerMember[]>();
+  // A transition belongs to the complete logical row, not a visible deployment.
+  // Withhold timing when another current member of that row is unauthorized.
+  const hiddenTimingRows = new Set(doc.members.filter(m => m.valid_from_ms <= doc.as_of_ms &&
+    (m.valid_to_ms === null || m.valid_to_ms > doc.as_of_ms) && !projectionRowVisible(scope, m.tuple)).map(managerRowKey));
+  const transitionsByRow = new Map<string, NonNullable<ManagerModelDocument["stage_transitions"]>>();
+  for (const transition of doc.stage_transitions ?? []) {
+    const key = JSON.stringify([transition.alpha_id, transition.alpha_version_id, transition.portfolio_id]);
+    const values = transitionsByRow.get(key) ?? []; values.push(transition); transitionsByRow.set(key, values);
+  }
   const byTuple = new Map<string, ManagerFact[]>();
   for (const fact of facts) { const key = managerTupleKey(fact.tuple), rows = byTuple.get(key) ?? []; rows.push(fact); byTuple.set(key, rows); }
   for (const member of members) { const key = managerRowKey(member), rows = groups.get(key) ?? []; rows.push(member); groups.set(key, rows); }
@@ -167,7 +176,10 @@ function rowsFor(members: ManagerMember[], facts: ManagerFact[], query: ManagerM
       key === "score" ? absent("RUNTIME_SCORE_POLICY_NOT_APPROVED") : selected?.metrics[key] ?? absent(economic_partitions.length > 1 ? "MIXED_ECONOMIC_DOMAINS" : "SOURCE_FACTS_NOT_PUBLISHED")]));
     const identity = group[0].tuple;
     const stagePresence = scopeAllowsField(scope, "stage") ? [...new Set(group.map(m => m.stage))].sort() : [];
-    return { row_key, ...deriveManagerRowLifecycle(scopeAllowsField(scope, "stage") ? lifecycleStages.get(row_key) ?? stagePresence : []), alpha_id: identity.alpha_id, alpha_version_id: identity.alpha_version_id, portfolio_id: identity.portfolio_id,
+    return { row_key, ...deriveManagerRowLifecycleFromFacts({
+      stages: scopeAllowsField(scope, "stage") ? lifecycleStages.get(row_key) ?? stagePresence : [],
+      ...identity, environment: doc.environment, as_of_ms: doc.as_of_ms, source_revision: doc.revision,
+      facts: hiddenTimingRows.has(row_key) ? [] : transitionsByRow.get(row_key) ?? [] }), alpha_id: identity.alpha_id, alpha_version_id: identity.alpha_version_id, portfolio_id: identity.portfolio_id,
       name: scopeAllowsField(scope, "name") ? nullableConsensus(group.map(m => m.name)) : null,
       owner_user_id: scopeAllowsField(scope, "owner_user_id") ? nullableConsensus(group.map(m => m.owner_user_id)) : null,
       lifecycle: scopeAllowsField(scope, "lifecycle") ? nullableConsensus(group.map(m => m.lifecycle)) : null,
@@ -269,7 +281,7 @@ export function collectManagerRows(scope: AuthorizedExecutionReadScope, input: u
   if (facts.length && ["currency", "profile_id", "provenance_ref"].some(field => !scopeAllowsField(scope, field)))
     fail("EXECUTION_READ_FIELD_POLICY_PENDING");
   const selectedFacts = managerFactsForWindow(facts, selectedWindow);
-  const allRows = rowsFor(members, selectedFacts, query, scope, lifecycleStages);
+  const allRows = rowsFor(members, selectedFacts, query, scope, lifecycleStages, doc);
   // No score computation on this read path. Exact authorized population and
   // economic partition must match a separately precomputed, current-policy result.
   if (scopeAllowsField(scope, "score")) for (const row of allRows) {
@@ -394,9 +406,11 @@ export function queryManagerModel(scope: AuthorizedExecutionReadScope, input: un
     economic_partitions: partitionTotalsOf(collected, new Set(group.rows.map(r => r.row_key))) }));
   const statement = statementOf(collected);
   const response = { schema_version: "portal.execution.manager-dataset.v1" as const, surface, workspace_id: scope.workspaceId,
-    stage_lifecycle: MANAGER_STAGE_LIFECYCLE_POLICY,
+    stage_lifecycle: { ...MANAGER_STAGE_LIFECYCLE_POLICY, entry_time: rows.some(row => row.entered_at_ms !== null)
+      ? "EXACT_SNAPSHOT_TRANSITION_WHEN_PUBLISHED" as const : MANAGER_STAGE_LIFECYCLE_POLICY.entry_time },
     selected_window: selectedWindow,
     query_options: managerQueryOptions({ asOf: doc.as_of_ms, canSearchName: scopeAllowsField(scope, "name"),
+      stageTimingPublished: rows.length > 0 && rows.every(row => row.entered_at_ms !== null),
       sortFields: (Object.keys(MANAGER_SCALARS) as Array<keyof typeof MANAGER_SCALARS>).filter(key => scopeAllowsField(scope, fieldPolicy(key))),
       groupFields: (["portfolio_id", "owner_user_id", "alpha_id", "stage_presence", "current_stage", "venue", "health", "source_state", "lifecycle"] as const)
         .filter(key => scopeAllowsField(scope, fieldPolicy(key))),
@@ -583,8 +597,10 @@ export function queryManagerModelAll(reads: readonly ManagerAllRead[], rawQuery:
   const reasons = reasonList.length > 32 ? [...reasonList.slice(0, 31), "REASONS_TRUNCATED"] : reasonList;
 
   const response = { schema_version: "portal.execution.manager-dataset.v1" as const, surface: "FLEET" as const, workspace_id: workspaceId,
-    stage_lifecycle: MANAGER_STAGE_LIFECYCLE_POLICY, selected_window: null,
-    query_options: managerQueryOptions({ asOf: Math.min(...docs.map(doc => doc.as_of_ms)), canSearchName, sortFields, groupFields, metricKeys, facts: [] }),
+    stage_lifecycle: { ...MANAGER_STAGE_LIFECYCLE_POLICY, entry_time: rows.some(row => row.entered_at_ms !== null)
+      ? "EXACT_SNAPSHOT_TRANSITION_WHEN_PUBLISHED" as const : MANAGER_STAGE_LIFECYCLE_POLICY.entry_time }, selected_window: null,
+    query_options: managerQueryOptions({ asOf: Math.min(...docs.map(doc => doc.as_of_ms)), canSearchName, sortFields, groupFields, metricKeys, facts: [],
+      stageTimingPublished: rows.length > 0 && rows.every(row => row.entered_at_ms !== null) }),
     environment: "ALL" as const, environment_coverage: environmentCoverage,
     record_authority: "PORTAL_PROJECTION" as const, source_authority: "TRADING_SYSTEM" as const,
     snapshot_id: accessDigest({ environments: included.map(({ environment, collected }) => [environment, collected.scope.fingerprint]), queryId, rows }),

@@ -89,6 +89,33 @@ async function fixture(options: { full?: boolean; fields?: string[]; environment
 }
 
 describe("ELP2-06 Manager exact query, field and economic scope (TEST_ONLY)", () => {
+  it("serves exact stage transitions from the authorized same revision, not membership time", async () => {
+    const f = await fixture();
+    f.doc.stage_transitions = f.doc.members.map(m => ({ ...m.tuple, environment: f.doc.environment,
+      stage: m.stage, entered_at_ms: f.doc.as_of_ms - 7 * 86_400_000, exited_at_ms: null,
+      source_revision: f.doc.revision })).map(({ deployment_id, account_id, ...t }) => t);
+    const response = f.read();
+    expect(response.items.length).toBeGreaterThan(0);
+    expect(response.items.every(row => row.alpha_id !== PEER.alpha_id)).toBe(true);
+    expect(response.items.every(row => row.days_in_stage === 7 && row.entered_at_ms === f.doc.as_of_ms - 7 * 86_400_000)).toBe(true);
+    expect(response.stage_lifecycle.entry_time).toBe("EXACT_SNAPSHOT_TRANSITION_WHEN_PUBLISHED");
+    expect(managerDatasetResponse.safeParse(response).success).toBe(true);
+    f.doc.stage_transitions[0].source_revision = "wrong-revision";
+    expect(() => f.read()).toThrow("MANAGER_STAGE_TRANSITION_BINDING_INVALID");
+  });
+  it("does not derive timing from member assignment when transitions are absent", async () => {
+    const f = await fixture();
+    expect(f.read().items.every(row => row.entered_at_ms === null && row.days_in_stage === null)).toBe(true);
+  });
+  it("withholds row timing when a current sibling deployment is not authorized", async () => {
+    const f = await fixture();
+    const own = f.doc.members.find(m => m.tuple.alpha_id === OWN.alpha_id)!;
+    f.doc.members.push({ ...own, tuple: { ...own.tuple, deployment_id: "TEST_ONLY:hidden-deployment", account_id: "TEST_ONLY:hidden-account" } });
+    f.doc.stage_transitions = [{ alpha_id: own.tuple.alpha_id, alpha_version_id: own.tuple.alpha_version_id,
+      portfolio_id: own.tuple.portfolio_id, environment: f.doc.environment, stage: own.stage,
+      source_revision: f.doc.revision, entered_at_ms: f.doc.as_of_ms - 86_400_000, exited_at_ms: null }];
+    expect(f.read().items.find(row => row.alpha_id === OWN.alpha_id)?.entered_at_ms).toBeNull();
+  });
   it("does not add account valuation snapshots from different cutoffs",async()=>{
     const f=await fixture({full:true});
     f.doc.facts=f.doc.members.map((m,i)=>fact(m.tuple,"TEST_ONLY:nav-"+i,"100",{kind:"current_nav",effective_at_ms:NOW-100-i}));

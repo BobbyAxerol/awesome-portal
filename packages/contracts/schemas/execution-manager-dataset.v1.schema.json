@@ -551,44 +551,54 @@
           ]
         },
         "unavailable_fields": {
-          "type": "array",
-          "prefixItems": [
+          "anyOf": [
             {
-              "type": "object",
-              "additionalProperties": false,
-              "properties": {
-                "field": {
-                  "const": "days_in_stage"
-                },
-                "reason_code": {
-                  "const": "STAGE_ENTRY_TIME_NOT_PUBLISHED"
-                }
-              },
-              "required": [
-                "field",
-                "reason_code"
-              ]
+              "type": "array",
+              "minItems": 0,
+              "maxItems": 0,
+              "items": false
             },
             {
-              "type": "object",
-              "additionalProperties": false,
-              "properties": {
-                "field": {
-                  "const": "entered_at_ms"
+              "type": "array",
+              "prefixItems": [
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "field": {
+                      "const": "days_in_stage"
+                    },
+                    "reason_code": {
+                      "const": "STAGE_ENTRY_TIME_NOT_PUBLISHED"
+                    }
+                  },
+                  "required": [
+                    "field",
+                    "reason_code"
+                  ]
                 },
-                "reason_code": {
-                  "const": "STAGE_ENTRY_TIME_NOT_PUBLISHED"
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "field": {
+                      "const": "entered_at_ms"
+                    },
+                    "reason_code": {
+                      "const": "STAGE_ENTRY_TIME_NOT_PUBLISHED"
+                    }
+                  },
+                  "required": [
+                    "field",
+                    "reason_code"
+                  ]
                 }
-              },
-              "required": [
-                "field",
-                "reason_code"
-              ]
+              ],
+              "minItems": 2,
+              "maxItems": 2,
+              "items": false
             }
-          ],
-          "minItems": 2,
-          "maxItems": 2,
-          "items": false
+          ]
         }
       },
       "required": [
@@ -1769,7 +1779,11 @@
           "const": "DEPLOYED_STAGES_OF_SELECTED_ENVIRONMENT_ONLY"
         },
         "entry_time": {
-          "const": "STAGE_ENTRY_TIME_NOT_PUBLISHED"
+          "type": "string",
+          "enum": [
+            "STAGE_ENTRY_TIME_NOT_PUBLISHED",
+            "EXACT_SNAPSHOT_TRANSITION_WHEN_PUBLISHED"
+          ]
         }
       },
       "required": [

@@ -55,7 +55,7 @@ function json(schema) {
       else if (c.kind !== 'int') throw new Error('Unsupported number constraint');
     } return value;
   }
-  if (type === 'ZodTuple') return { type:'array',prefixItems:d.items.map(json),minItems:d.items.length,maxItems:d.items.length,items:false };
+  if (type === 'ZodTuple') return { type:'array',...(d.items.length ? {prefixItems:d.items.map(json)} : {}),minItems:d.items.length,maxItems:d.items.length,items:false };
   if (type === 'ZodArray') return { type: 'array', items: json(d.type), ...(d.minLength ? { minItems: d.minLength.value } : {}), ...(d.maxLength ? { maxItems: d.maxLength.value } : {}), ...(d.exactLength ? {minItems:d.exactLength.value,maxItems:d.exactLength.value} : {}) };
   if (type === 'ZodRecord') return { type: 'object', propertyNames: json(d.keyType), additionalProperties: json(d.valueType) };
   if (type === 'ZodObject') {
@@ -202,6 +202,9 @@ for(const [name,context] of [
     const lifecycle=managerLifecycleLiveSyntheticFixture(sample);
     contract.managerDatasetResponse.parse(lifecycle.value);
     outputs['fixtures/execution-manager-dataset.lifecycle.live.synthetic.valid.json']=lifecycle;
+    const timedLifecycle=managerLifecycleLiveSyntheticFixture(sample, {withTransitions:true});
+    contract.managerDatasetResponse.parse(timedLifecycle.value);
+    outputs['fixtures/execution-manager-dataset.lifecycle.transitions.synthetic.valid.json']=timedLifecycle;
   }
 }
 for (const [file, value] of Object.entries(outputs)) {

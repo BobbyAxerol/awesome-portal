@@ -235,7 +235,7 @@ export interface components {
                     environment: "paper" | "sandbox" | "live";
                     stages: ("PAPER" | "SANDBOX" | "CANARY" | "LIVE")[];
                 }[];
-                unavailable_fields: [
+                unavailable_fields: unknown[] | [
                     {
                         /** @constant */
                         field: "days_in_stage";
@@ -258,8 +258,8 @@ export interface components {
                 current_stage_rule: "SINGLE_ACTIVE_MEMBER_STAGE_IN_SELECTED_ENVIRONMENT";
                 /** @constant */
                 covers: "DEPLOYED_STAGES_OF_SELECTED_ENVIRONMENT_ONLY";
-                /** @constant */
-                entry_time: "STAGE_ENTRY_TIME_NOT_PUBLISHED";
+                /** @enum {string} */
+                entry_time: "STAGE_ENTRY_TIME_NOT_PUBLISHED" | "EXACT_SNAPSHOT_TRANSITION_WHEN_PUBLISHED";
             };
             /**
              * @description A single environment, or ALL (Fleet only): navigation across separately authorized environments. An ALL body lists the authorized rows of every environment that answered, each row with its own environment and economic partitions, plus environment_coverage. It never carries a total over environments or partitions.
@@ -1452,7 +1452,7 @@ export interface components {
                 environment: "paper" | "sandbox" | "live";
                 stages: ("PAPER" | "SANDBOX" | "CANARY" | "LIVE")[];
             }[];
-            unavailable_fields: [
+            unavailable_fields: unknown[] | [
                 {
                     /** @constant */
                     field: "days_in_stage";

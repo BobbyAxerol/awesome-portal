@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { deriveManagerRowLifecycleFromFacts as derive, managerStageLifecyclePolicy, MS_PER_DAY,
+import { deriveManagerRowLifecycleFromFacts as derive, validateManagerLifecycle, managerStageLifecyclePolicy, MS_PER_DAY,
   MANAGER_STAGE_LIFECYCLE_POLICY, type ManagerStageTransitionFact } from "../src/execution-v2/manager-lifecycle";
 
 const fact: ManagerStageTransitionFact = { alpha_id: "a", alpha_version_id: "v", portfolio_id: "p",
@@ -8,6 +8,14 @@ const input = () => ({ ...fact, stages: ["PAPER"] as const, as_of_ms: 1000 + 7 *
   facts: [fact] });
 
 describe("Manager source stage timing", () => {
+  it("validates ALL timing at each environment cutoff, not the oldest combined clock", () => {
+    const i = input(), issues: unknown[] = [];
+    validateManagerLifecycle({ as_of_ms: 1000, environment: "ALL",
+      environment_coverage: [{ environment: "paper", as_of_ms: i.as_of_ms }],
+      items: [{ ...derive(i), environment: "paper", stage_presence: ["PAPER"] }] },
+      { addIssue: issue => issues.push(issue), path: [] });
+    expect(issues).toEqual([]);
+  });
   it("publishes exact transition and elapsed complete UTC days without mutating source", () => {
     const i = input(); const before = structuredClone(i);
     expect(derive(i)).toEqual({ current_stage: "PAPER", entered_at_ms: 1000, days_in_stage: 7,
