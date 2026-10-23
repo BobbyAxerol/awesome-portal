@@ -107,9 +107,15 @@ function Where() {
 const search = () => new URLSearchParams((screen.getByTestId("where").textContent ?? "").split("?")[1] ?? "");
 
 const rail = () => screen.getByRole("complementary", { name: "Actions" });
-const control = (name: string) => within(rail()).getByRole("button", { name }) as HTMLButtonElement;
-const reasonOf = (name: string) => document.getElementById(control(name).getAttribute("aria-describedby")!)!.textContent ?? "";
-const ALL = ["Grant budget", "Recall budget", "Set target budget", "Return capital", "Lock allocation", "Deploy version"] as const;
+// One list item per action. An action the caller's grant ALLOWS wears "Review available" and a Review button (a preview of published figures,
+// WP-F1), with the sentence in a note beside it; every other control is off and describes itself by its reason.
+const item = (name: string) => within(rail()).getByText(name, { selector: "strong" }).closest("li") as HTMLElement;
+const control = (name: string) => item(name).querySelector("button") as HTMLButtonElement;
+const reasonOf = (name: string) => {
+  const id = control(name).getAttribute("aria-describedby");
+  if (id !== null) return document.getElementById(id)!.textContent ?? "";
+  return [...item(name).querySelectorAll("p.exec-pf-note")].map((p) => p.textContent).join(" ");
+};
 const openedRail = () => screen.findByRole("complementary", { name: "Actions" });
 const settled = (name: string, text: string | RegExp) => waitFor(() => expect(reasonOf(name)).toMatch(text));
 
@@ -191,16 +197,38 @@ describe("what it says", () => {
     expect(reasonOf("Set target budget")).toContain("Target budget: you hold a current grant");
   });
 
-  it("an ALLOWED row never enables a control: every one of the six stays off, with a reason", async () => {
+  it("an ALLOWED row offers a REVIEW of published figures and nothing else: no apply, no submit, no reserve; the three controls with no action stay off", async () => {
     const everything = Object.fromEntries(RAIL_ELIGIBILITY_ACTIONS.map((a) => [a, "ALLOWED"])) as Partial<Record<EligibilityAction, Answer>>;
     mount(vi.fn(async () => read(body({ answers: everything }))));
     await openedRail();
     await settled("Grant budget", /you hold a current grant/);
-    for (const name of ALL) {
+    for (const [name, review] of [["Grant budget", "Review grant"], ["Recall budget", "Review recall"], ["Set target budget", "Review target"]] as const) {
+      expect(within(item(name)).getByText("Review available"), name).toBeTruthy();
+      expect(control(name).textContent, name).toBe(review);
+      expect(control(name).disabled, name).toBe(false);
+      expect(reasonOf(name), name).toContain(`${RAIL_PREVIEW_NOTE} (FE-020)`);
+    }
+    for (const name of ["Return capital", "Lock allocation", "Deploy version"] as const) {
       expect(control(name).disabled, name).toBe(true);
       expect(reasonOf(name).length, name).toBeGreaterThan(0);
     }
-    expect(within(rail()).queryByRole("button", { name: "Preview" })).toBeNull();
+    // Nothing in the rail can send: there is no submit, apply, reserve or confirm control, whatever the batch says.
+    expect(within(rail()).queryByRole("button", { name: /Submit|Apply|Reserve|Confirm|Send|Preview$/ })).toBeNull();
+  });
+
+  it("Review opens a PREVIEW, NOT RECORDED: the published figures now, the result as Not published (FE-020), no computed 'after'; Close review closes it", async () => {
+    mount(vi.fn(async () => read(body({ answers: { "capital.initial_grant": "ALLOWED" } }))));
+    await openedRail();
+    await settled("Grant budget", /you hold a current grant/);
+    fireEvent.click(control("Grant budget"));
+    const review = await screen.findByTestId("rail-review");
+    expect(review.textContent).toContain("Preview · not recorded");
+    expect(review.textContent).toContain("Nothing is applied, reserved or recorded. Sending is not enabled.");
+    // The test page's dataset is not served, so no figure is published: the panel says so and still names the missing result.
+    expect(review.textContent).toContain("Not published (FE-020)");
+    expect(control("Grant budget").getAttribute("aria-expanded")).toBe("true");
+    fireEvent.click(within(review).getByRole("button", { name: "Close review" }));
+    expect(screen.queryByTestId("rail-review")).toBeNull();
   });
 
   it("the three controls with no action keep Not published (FE-015) and name what is missing, whatever the batch says", async () => {

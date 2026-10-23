@@ -156,6 +156,8 @@
 }
 .exec-pf-kpis > .exec-pf-kpi {
   flex: 1 1 230px;
+  /* never narrower than its own 24px figure with its unit (540,000.00 USDT spilled 14px at 1024); on a phone the strip's own width is the cap */
+  min-width: min(100%, max-content);
 }
 .exec-pf-kpi-value {
   white-space: nowrap;
@@ -178,3 +180,48 @@
   font: var(--exec-font-kpi);
   font-variant-numeric: tabular-nums;
 }
+
+/* WP-F1: Portfolio 360 header note, Performance card aside, funding-source line */
+.exec-pf-report { font: var(--exec-font-caption); color: var(--ink-faint); }
+.exec-pf-report .exec-blk-why-btn { font: var(--exec-font-caption); }
+.exec-pf-perf-aside { display: inline-flex; flex-wrap: wrap; align-items: baseline; gap: var(--space-3); }
+.exec-pf-perf-export .exec-blk-why-btn { font: var(--exec-font-caption); }
+.exec-pf-source { padding: var(--space-2) 0 0; }
+.exec-pf-flow { display: flex; flex-direction: column; gap: var(--space-3); min-width: 0; }
+.exec-pf-flow-facts { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-5); margin: 0; padding: 0; list-style: none; font: var(--exec-font-body); color: var(--ink-soft); }
+.exec-pf-flow-facts .exec-pf-num, .exec-pf-flow-facts .exec-mgr-num { font: var(--exec-font-num); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.exec-pf-captable td { font: var(--exec-font-num); font-variant-numeric: tabular-nums; }
+.exec-pf-captable .exec-pf-unit { font: var(--exec-font-caption); }
+.exec-pf-review { display: flex; flex-direction: column; gap: var(--space-2); margin-top: var(--space-2); padding: var(--space-3); background: var(--paper-sunken); border: 1px solid var(--line-soft); }
+.exec-pf-review-head { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); margin: 0; font: var(--exec-font-body); color: var(--ink-soft); }
+
+/* WP-F1: the register at 1440 without a horizontal scroll: tighter cell padding, headers may take two lines (the hi-fi's "ALPHAS / DEPLOY."),
+ * the identity column is capped (its id ends in an ellipsis, the full text is on the title). */
+.exec-cards.exec-pf-reg thead th { padding-inline: var(--space-2); white-space: normal; letter-spacing: 0.06em; vertical-align: bottom; }
+.exec-cards.exec-pf-reg tbody td { padding-inline: var(--space-2); }
+.exec-cards.exec-pf-reg .exec-pf-name { max-width: 150px; }
+.exec-cards.exec-pf-reg .exec-cards-sort { white-space: normal; text-align: left; }
+
+/* WP-F1: table body text follows the cards.css rule (every role 13px inside a table body, face and colour kept) for the tables that are not
+ * `.exec-cards`: the 360 capital tables. Set through the role tokens, never a size. */
+.exec-pf-captable td,
+.exec-pf-captable th,
+.exec-pf-statements td,
+.exec-pf-statements th {
+  --exec-font-data: 400 13px/18px var(--font-body);
+  --exec-font-meta: 400 13px/18px var(--font-body);
+  --exec-font-body: 400 13px/18px var(--font-body);
+  --exec-font-num: 400 13px/18px var(--font-mono);
+  --exec-font-id: 400 13px/18px var(--font-mono);
+  --exec-font-term: 400 13px/18px var(--font-mono);
+}
+/* WP-F1: tabs whose panels hold a table wider than a 360px side column (Alphas, People, Risk) stack their panels: nothing sits behind a scroll fade at 1440 */
+.exec-pf-grid2.exec-pf-grid2--tables { grid-template-columns: minmax(0, 1fr); }
+@media (min-width: 1760px) {
+  .exec-pf-grid2.exec-pf-grid2--tables { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+}
+/* WP-F1: Portfolios export sentence and the scope statement line */
+.exec-pf-exportline { font: var(--exec-font-caption); color: var(--ink-faint); white-space: nowrap; }
+.exec-pf-exportline .exec-blk-why-btn { font: var(--exec-font-caption); }
+.exec-pf-total { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: var(--space-2) var(--space-5); margin-top: var(--space-2); padding: var(--space-2) var(--space-3); background: var(--paper-sunken); border: 1px solid var(--line-soft); font: var(--exec-font-body); }
+.exec-pf-total .exec-part { align-items: flex-end; }

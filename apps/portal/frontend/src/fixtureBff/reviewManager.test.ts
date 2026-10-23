@@ -211,7 +211,7 @@ describe("six opt-in review Manager datasets", () => {
     const statements = raw.body.capital_statements as Body[];
     expect(statements.length).toBeGreaterThan(1);
     for (const { partition, metrics } of statements) {
-      const original = Object.fromEntries(Object.entries<Body>(metrics).filter(([kind]) => !["net_pnl", "return_30d_pct", "max_drawdown_pct"].includes(kind)));
+      const original = Object.fromEntries(Object.entries<Body>(metrics).filter(([kind]) => !["net_pnl", "return_30d_pct", "max_drawdown_pct", "allocation", "headroom", "net_external_flows", "recalling"].includes(kind))); // the last four are WP-F1's (reviewCapital.test.ts)
       expect(Object.keys(original).sort()).toEqual(["added_funds", "current_budget", "current_nav", "initial_funds", "pending_amount", "returned_capital"]);
       for (const [kind, entry] of Object.entries<Body>(original)) {
         expect(entry).toMatchObject({ currency: partition.currency, unit: "MONEY", window: null,

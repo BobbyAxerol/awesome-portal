@@ -46,7 +46,7 @@ export function AlphasTab({ ctx }: { ctx: TabCtx }) {
   ];
   const contribution = contributionByCurrency(ctx.deployments);
   return (
-    <div className="exec-pf-grid2">
+    <div className="exec-pf-grid2 exec-pf-grid2--tables">
       <SectionPanel
         title="Alphas"
         aside={<>{groups.length} {groups.length === 1 ? "alpha" : "alphas"} · {ctx.deployments.length} {ctx.deployments.length === 1 ? "deployment" : "deployments"} · <InternalLink to={ctx.routes.fleet} search={ctx.search}>Open in Alpha Fleet</InternalLink></>}

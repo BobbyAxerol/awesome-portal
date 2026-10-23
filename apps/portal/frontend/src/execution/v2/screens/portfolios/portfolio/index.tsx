@@ -42,6 +42,7 @@ import { holds, V2_NAV_TOKEN } from "../../../shell/roleNav";
 import { applyTab, resolveTab } from "../../../tabAliases";
 import { useExecUrlState, withContext } from "../../../urlState";
 import { freshnessFlag, humanize } from "../format";
+import { EXPORT_REASON } from "../fe";
 import { COMPARE_OFF_REASON, DEFAULT_ROUTES, FROM_PORTFOLIO_PREFIX, joinQuery, type PortfolioRoutes } from "../routes";
 import { IN_PARAM } from "../selection";
 import { Allocations } from "./Allocations";
@@ -264,8 +265,12 @@ export default function PortfolioScreen({ api, portfolioId, capabilities, routes
         </div>
         <div className="exec-pf-ctrls">
           {identity ? <Flag kind={identity.stateKind} label={identity.stateLabel} size="sm" /> : null}
-          {fresh && fresh.kind !== "ok" ? <Flag kind={fresh.kind} label={fresh.label} size="sm" /> : null}
+          {fresh ? <Flag kind={fresh.kind} label={fresh.label} size="sm" /> : null}
           {resource ? <span className="exec-pf-dim">{resource.asOf ? `As of ${formatInstant(resource.asOf)}` : "Source time not published"}</span> : null}
+          <span className="exec-pf-report" data-testid="report-pack">
+            <GapWhy className="exec-blk-np-word" gap="D20" text="Report pack: not available yet" name="Report pack: not available yet, reason" rows={[EXPORT_REASON, "A report pack needs the export contract; nothing is generated here."]} next={null} />
+            {" · "}<Link to={withContext(routes.access, params)}>My access</Link>
+          </span>
           {compareHref === null ? (
             <span className="exec-pf-btnwhy">
               <button type="button" className="exec-pf-btn" disabled aria-describedby={`${tabsId}-compare`}>Compare with</button>
@@ -285,6 +290,7 @@ export default function PortfolioScreen({ api, portfolioId, capabilities, routes
             mode={mode}
             onClose={close}
             access={<Link to={withContext(routes.access, params)}>See what you can access</Link>}
+            statements={(reads.dataset.phase === "ready" ? reads.dataset.value : reads.dataset.phase === "loading" || reads.dataset.phase === "error" ? reads.dataset.last : null)?.capitalStatements ?? []}
             eligibility={railEligibility.view}
             onRetry={railEligibility.retry}
           />

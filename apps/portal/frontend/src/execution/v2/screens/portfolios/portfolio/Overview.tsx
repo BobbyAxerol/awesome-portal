@@ -17,16 +17,18 @@ import { GapWhy, NotAvailableLine, SectionPanel, type UnavailableFact } from "..
 import { Flag } from "../../../Flag";
 import { formatAsOf, formatInstant } from "../../../boundary";
 import { readUtcEpochMs } from "../../../../screenDataContract";
-import { PF_FE, npText } from "../fe";
+import { PF_FE } from "../fe";
 import type { ManagerPartitionedMetrics } from "../../../readers/managerMetric";
+import type { ManagerGroup } from "../../../readers/managerDataset";
 import { PartitionFigures, figureSource, publishes } from "../PartitionFigures";
 import { ScoreList } from "../ScoreCell";
 import { SCORE_KEYS } from "../registerMetrics";
 import { ContributorsBody } from "../../overview/Contributors";
 import { contributorsView } from "../../overview/contributorsModel";
-import { ManagerSeriesPanel } from "../../series/ManagerSeriesPanel";
 import { isDescribed, latestPoint, seriesValueText, UNAVAILABLE_SENTENCE } from "../../series/seriesModel";
 import { Absent, MoneyList, Np } from "../format";
+import { BudgetBar, ShareBar } from "../CapitalBlocks";
+import { PerformanceCard } from "./Performance";
 import type { TabCtx } from "./ctx";
 import { FlowRibbonChips, FlowRibbonLanes, FlowRibbonNotes, useRibbonLanes } from "./FlowRibbon";
 import { chartState, equitySeries, serverEnvelope } from "./model";
@@ -55,14 +57,6 @@ function NavFigure({ ctx, withNote = true }: { ctx: TabCtx; withNote?: boolean }
       {entry.currency ? <small className="exec-pf-unit">{entry.currency}</small> : null}
       {withNote ? <small className="exec-pf-dim exec-pf-stamp">{formatInstant(last.tsMs)}</small> : null}
     </span>
-  );
-}
-
-function NavCard({ ctx }: { ctx: TabCtx }) {
-  return (
-    <SectionPanel title="NAV" aside={ctx.window === "ALL" ? "All history" : `Last ${ctx.window}`}>
-      <ManagerSeriesPanel label="Portfolio NAV" read={ctx.reads.nav} gapCopy={npText(PF_FE.nav)} height={220} tools />
-    </SectionPanel>
   );
 }
 
@@ -143,20 +137,28 @@ const UNPUBLISHED_OVERVIEW: readonly UnavailableFact[] = [
 ];
 const OTHER_GAPS: readonly UnavailableFact[] = UNPUBLISHED_OVERVIEW.filter((fact) => fact.label !== "Score");
 
-/** Capital statements (hi-fi right column): every row stays; none is published (FE-017), so each says so. Nothing is summed from the allocation. */
-const CAPITAL_ROWS: readonly { label: string; key?: string }[] = [
+/**
+ * Capital statements (hi-fi right column): "Cash flows" (initial, added, returned, net external flows, Net PnL, NAV) and "Budget, not cash"
+ * (approved, allocated, recalling, headroom), one line per economic partition and never totalled; then the allocation bar. A row no
+ * partition publishes says so with its id (FE-017); nothing is summed or derived from another figure here.
+ */
+const CASH_ROWS: readonly { label: string; key?: string; nav?: true; total?: true; signed?: true }[] = [
   { label: "Initial funds", key: "initial_funds" },
   { label: "Added funds", key: "added_funds" },
   { label: "Returned", key: "returned_capital" },
-  { label: "Net external flows" },
-  { label: "Approved budget", key: "current_budget" },
-  { label: "Recalling" },
-  { label: "Headroom" },
+  { label: "Net external flows", key: "net_external_flows", total: true },
+  { label: "Net PnL", key: "net_pnl", signed: true },
+  { label: "NAV", nav: true, total: true },
 ];
-/** Capital-statement keys the dataset publishes, each with a row of its own (one line per economic partition, never totalled). */
+const BUDGET_ROWS: readonly { label: string; key: string }[] = [
+  { label: "Approved", key: "current_budget" },
+  { label: "Allocated", key: "allocation" },
+  { label: "Recalling", key: "recalling" },
+  { label: "Headroom", key: "headroom" },
+];
+/** Statement keys the dataset publishes beyond the hi-fi rows, each with a row of its own (one line per economic partition, never totalled). */
 const STATEMENT_ROWS: readonly { key: string; label: string }[] = [
   { key: "balance_total", label: "Balance total" },
-  { key: "allocation", label: "Allocated" },
 ];
 
 /** The portfolio's dataset: the last good read while a refresh runs; `null` until one answered (or when the surface is not served). */
@@ -167,37 +169,40 @@ const datasetOf = (ctx: TabCtx) => {
 
 function CapitalCard({ ctx }: { ctx: TabCtx }) {
   const statements = datasetOf(ctx)?.capitalStatements ?? [];
+  const row = (label: string, key: string | undefined, nav: boolean, total: boolean, signed: boolean) => (
+    <tr key={label} data-total={total ? "true" : undefined}>
+      <th scope="row">{label}</th>
+      <td>{nav ? <NavFigure ctx={ctx} withNote={false} /> : key !== undefined && publishes(statements, key) ? <PartitionFigures list={statements} metricKey={key} signed={signed} labels="several" /> : <Np fact={PF_FE.statements} />}</td>
+    </tr>
+  );
   return (
     <SectionPanel title="Capital" aside="Statements">
-      <table className="exec-pf-captable" aria-label="Capital statements">
+      <table className="exec-pf-captable exec-pf-statements" aria-label="Capital statements">
         <tbody>
-          {STATEMENT_ROWS.filter((row) => publishes(statements, row.key)).map((row) => (
-            <tr key={row.key}><th scope="row">{row.label}</th><td><PartitionFigures list={statements} metricKey={row.key} /></td></tr>
-          ))}
-          {CAPITAL_ROWS.map((row) => (
-            <tr key={row.label}>
-              <th scope="row">{row.label}</th>
-              <td>{row.key !== undefined && publishes(statements, row.key) ? <PartitionFigures list={statements} metricKey={row.key} /> : <Np fact={PF_FE.statements} />}</td>
-            </tr>
-          ))}
+          <tr className="exec-pf-grp"><th scope="colgroup" colSpan={2}>Cash flows</th></tr>
+          {CASH_ROWS.map((r) => row(r.label, r.key, r.nav === true, r.total === true, r.signed === true))}
+          {STATEMENT_ROWS.filter((r) => publishes(statements, r.key)).map((r) => row(r.label, r.key, false, false, false))}
+          <tr className="exec-pf-grp"><th scope="colgroup" colSpan={2}>Budget, not cash</th></tr>
+          {BUDGET_ROWS.map((r) => row(r.label, r.key, false, false, false))}
         </tbody>
       </table>
+      <BudgetBar list={statements} title="Allocated of approved budget" />
+      <p className="exec-pf-note exec-pf-source">
+        By funding source: <GapWhy className="exec-blk-np-word" gap="FE-032" text="Not published" name="Not published, reason (funding source)" rows={["No per-source attribution is published for the portfolio's capital (FE-032)."]} />
+      </p>
     </SectionPanel>
   );
 }
 
-/** Concentration (HHI) keeps its panel; shares need the Manager grouping, so no share is drawn or worked out here. */
-function ConcentrationCard({ list }: { list: readonly ManagerPartitionedMetrics[] | null }) {
+/**
+ * Concentration: the HHI the dataset publishes, and the stacked bar of the alpha shares the server publishes
+ * (`allocation_share_pct` of the groups by `alpha_id`; a width is that published number, never a share worked out here).
+ */
+function ConcentrationCard({ list, groups }: { list: readonly ManagerPartitionedMetrics[] | null; groups: readonly ManagerGroup[] }) {
   return (
     <SectionPanel title="Concentration" aside="HHI">
-      {list !== null ? (
-        <PartitionFigures list={list} metricKey="concentration_hhi" />
-      ) : (
-        <>
-          <p className="exec-pf-note"><Np fact={PF_FE.concentration} /></p>
-          <p className="exec-pf-note">Shares need the Manager grouping, so none is drawn or worked out here.</p>
-        </>
-      )}
+      {list !== null ? <PartitionFigures list={list} metricKey="concentration_hhi" /> : <p className="exec-pf-note"><Np fact={PF_FE.concentration} /></p>}
+      {groups.length > 0 ? <ShareBar groups={groups} /> : <p className="exec-pf-note">Alpha shares are not published for this portfolio, so no bar is drawn.</p>}
     </SectionPanel>
   );
 }
@@ -245,6 +250,7 @@ export function Overview({ ctx }: { ctx: TabCtx }) {
   const hhiList = figureSource(datasetOf(ctx), "concentration_hhi", identity.portfolioId);
   const scoreList = figureSource(datasetOf(ctx), SCORE_KEYS.score, identity.portfolioId);
   const contributorsRead = ctx.reads.contributors;
+  const contributorGroups = (contributorsRead.phase === "ready" ? contributorsRead.value : contributorsRead.phase === "loading" || contributorsRead.phase === "error" ? contributorsRead.last : null)?.groups ?? [];
   const contributors = contributorsView({
     served: ctx.reads.dataset.phase !== "idle",
     fundRead: ctx.reads.dataset,
@@ -275,7 +281,7 @@ export function Overview({ ctx }: { ctx: TabCtx }) {
       </PfKpiStrip>
       <NotAvailableLine facts={scoreList !== null ? OTHER_GAPS : UNPUBLISHED_OVERVIEW} className="exec-pf-na-line" />
       <div className="exec-pf-grid2">
-        <NavCard ctx={ctx} />
+        <PerformanceCard ctx={ctx} />
         <CapitalCard ctx={ctx} />
       </div>
       <EquityCard ctx={ctx} />
@@ -284,7 +290,7 @@ export function Overview({ ctx }: { ctx: TabCtx }) {
       </SectionPanel>
       <div className="exec-pf-grid2">
         <Attention ctx={ctx} />
-        <ConcentrationCard list={hhiList} />
+        <ConcentrationCard list={hhiList} groups={contributorGroups} />
       </div>
     </div>
   );

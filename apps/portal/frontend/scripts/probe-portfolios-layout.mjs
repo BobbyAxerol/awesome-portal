@@ -10,15 +10,26 @@ import { createRequire } from "node:module";
 
 const require = createRequire(import.meta.url);
 const { chromium } = require("playwright");
-const base = process.argv[2];
+const argv = process.argv.slice(2);
+const opt = (name) => { const i = argv.indexOf(`--${name}`); return i >= 0 ? argv[i + 1] : null; };
+const base = argv[0];
 if (!base || !/^http:\/\/(127\.0\.0\.1|localhost):\d+$/.test(base)) throw new Error("pass a local http origin, e.g. http://127.0.0.1:48124");
-const out = process.argv[3] ?? null;
-const WIDTHS = [1440, 1280, 1024, 660, 390];
-const ROUTES = [
+const out = argv[1] && !argv[1].startsWith("--") ? argv[1] : null;
+const WIDTHS = (opt("widths") ?? "1440,1280,1024,660,390").split(",").map(Number);
+// WP-F1 added the Overview and the 360 tabs. `--only name,name` runs a subset; `--widths 1440,1024` a subset of widths.
+const ALL_ROUTES = [
+  ["overview", "/execution"],
   ["portfolios", "/deployments/portfolios"],
   ["portfolio-360-scale", "/deployments/portfolios/pf_scale_018"],
   ["portfolio-360-suite", "/deployments/portfolios/pf_TEST_ONLY_core"],
+  ["portfolio-360-allocations", "/deployments/portfolios/pf_scale_018?tab=allocations"],
+  ["portfolio-360-alphas", "/deployments/portfolios/pf_scale_018?tab=alphas"],
+  ["portfolio-360-accounts", "/deployments/portfolios/pf_scale_018?tab=accounts"],
+  ["portfolio-360-risk", "/deployments/portfolios/pf_scale_018?tab=risk"],
+  ["portfolio-360-people", "/deployments/portfolios/pf_scale_018?tab=people"],
 ];
+const onlyNames = opt("only")?.split(",") ?? null;
+const ROUTES = onlyNames ? ALL_ROUTES.filter(([name]) => onlyNames.includes(name)) : ALL_ROUTES;
 
 function measure() {
   const px = (el) => getComputedStyle(el).fontSize;
@@ -86,7 +97,10 @@ function measure() {
     const stick = [...tile.querySelectorAll(".exec-pf-kpi-value *")].filter((el) => el.getBoundingClientRect().right > box.right + 1.5).length;
     return { label: tile.querySelector(".exec-pf-kpi-label")?.textContent, height: Math.round(box.height), figureSticksOut: stick };
   });
+  // Scroll regions inside panels (a table wider than its panel scrolls, and fades): a figure behind that fade is clipped in practice.
+  const scrollRegions = [...document.querySelectorAll(".exec-cards-wrap, .exec-ov-contrib-wrap")].map((el) => ({ label: el.querySelector("table")?.getAttribute("aria-label") ?? el.className, over: el.scrollWidth - el.clientWidth })).filter((r) => r.over > 1);
   const blocks = {
+    scrollRegions,
     kpiValueFontSizes: sizesIn(".exec-pf-kpi-value"),
     capitalFontSizes: sizesIn(".exec-pf-captable td"),
     contributorFontSizes: sizesIn(".exec-ov-contrib tbody td"),
@@ -112,10 +126,10 @@ try {
       const page = await browser.newPage({ viewport: { width, height: 900 } });
       const errors = [];
       page.on("console", (m) => { if (m.type() === "error") errors.push(m.text().slice(0, 120)); });
-      await page.goto(`${base}${path}`, { waitUntil: "networkidle", timeout: 60_000 });
+      await page.goto(`${base}${path}`, { waitUntil: "load", timeout: 60_000 });
       // A route that draws neither a table nor KPI tiles is reported as such instead of stopping the run.
-      await page.waitForSelector("table.exec-cards, .exec-pf-kpis", { timeout: 20_000 }).catch(() => errors.push(`nothing measurable at ${path}`));
-      await page.waitForTimeout(1500);
+      await page.waitForSelector("table.exec-cards, .exec-pf-kpis, .exec-ov-kpis", { timeout: 20_000 }).catch(() => errors.push(`nothing measurable at ${path}`));
+      await page.waitForTimeout(3500);
       const result = await page.evaluate(measure);
       results.push({ route: name, width, ...result, consoleErrors: errors.slice(0, 3) });
       await page.close();
@@ -126,7 +140,7 @@ try {
 }
 for (const r of results) {
   const tables = r.tables.map((t) => `${t.label}[rows ${t.rows}, wrap +${t.wrapOverflow}, sizes ${JSON.stringify(t.fontSizes)}, numeric ${JSON.stringify(t.numericFontSizes)}, clipped ${t.clippedCount}${t.clippedCount ? ` ${JSON.stringify(t.clipped.slice(0, 3))}` : ""}, wrapped ${t.wrappedCount}]`).join(" ");
-  const k = r.blocks ? `; kpi sizes ${JSON.stringify(r.blocks.kpiValueFontSizes)} tiles ${r.blocks.kpiTiles.length} sticking ${r.blocks.kpiTiles.filter((t) => t.figureSticksOut > 0).length} heights ${[...new Set(r.blocks.kpiTiles.map((t) => t.height))].join("/")}; capital ${JSON.stringify(r.blocks.capitalFontSizes)}; contributors ${JSON.stringify(r.blocks.contributorFontSizes)}` : "";
+  const k = r.blocks ? `; kpi sizes ${JSON.stringify(r.blocks.kpiValueFontSizes)} tiles ${r.blocks.kpiTiles.length} sticking ${r.blocks.kpiTiles.filter((t) => t.figureSticksOut > 0).length} heights ${[...new Set(r.blocks.kpiTiles.map((t) => t.height))].join("/")}; scroll regions ${JSON.stringify(r.blocks.scrollRegions)}; capital ${JSON.stringify(r.blocks.capitalFontSizes)}; contributors ${JSON.stringify(r.blocks.contributorFontSizes)}` : "";
   console.log(`${r.route} @${r.width}: doc +${r.docOverflow}; past viewport ${r.pastViewport.length}; sticky ${JSON.stringify(r.stickyIdentity)}; ${tables}${k}`);
 }
 if (out) writeFileSync(out, JSON.stringify(results, null, 2));

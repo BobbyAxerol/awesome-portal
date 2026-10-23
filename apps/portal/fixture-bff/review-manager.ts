@@ -670,6 +670,162 @@ function addGroupScores(body: Draft, groupFields: string[], windowName: string |
   }
 }
 
+// ===== WP-F1 begin (Overview / Portfolio 360 capital statements and allocation shares; register 2f1; one call line in datasetAnswer)
+/* SIMULATED capital-statement keys (FIXTURE_LAB, 2026-10-23; register 2f1). Open metric keys in `capital_statements[].metrics` of ONE partition,
+ * derived from the SAME partition's published statement values (like every capital receipt of this fixture, they are separate synthetic
+ * receipts and NOT aliases of the table's allocation column):
+ *   allocation         = current_budget * P / 100 truncated to 2 places, P = 55 + (seed of the partition mod 36), so 55 to 90 percent of the budget
+ *   net_external_flows = initial_funds + added_funds - returned_capital (exact)
+ *   headroom           = current_budget - allocation (never negative by construction: a budget is a limit, not cash)
+ *   recalling          = current_budget * R / 100 truncated to 2 places, R = 1 + (seed mod 4); an exact "0" in one partition of three
+ * and, on the groups by alpha_id only, `allocation_share_pct` = that group's allocation * 100 / the sum of the allocations of the groups
+ * in the SAME partition (6 places, truncated; absent when the total is not positive). Bigint only; never across partitions or currencies;
+ * windows do not apply (current facts, window null). No schema is widened: both maps are open. */
+function wpF1Money(template: Draft, value: string | null, currency: string, kind: string): Draft {
+  const out = metric(template, value, currency);
+  out.window = null;
+  out.denominator = null;
+  out.methodology_ref = value === null ? null : "FIXTURE_LAB:synthetic-capital-derived-v1";
+  out.provenance_refs = [digest(["FIXTURE_LAB_SYNTHETIC_CAPITAL_F1", kind, currency])];
+  out.calculation_revision = "FIXTURE_LAB:capital-review-f1.v1";
+  return out;
+}
+const wpF1Value = (entry: Draft, key: string): string | null => (entry.metrics[key]?.availability === "AVAILABLE" ? entry.metrics[key].value : null);
+const wpF1Part = (budget: string, percent: bigint): string => trimmed(toScaled(budget) * percent / 100n / 10n ** 16n * 10n ** 16n, SCALE);
+function addWpF1(body: Draft, groupFields: string[]): void {
+  for (const entry of body.capital_statements) {
+    const currency = entry.partition.currency;
+    const template = entry.metrics.current_budget;
+    const key = JSON.stringify(entry.partition);
+    const [initial, added, returned, budget] = ["initial_funds", "added_funds", "returned_capital", "current_budget"].map((name) => wpF1Value(entry, name));
+    const net = initial !== null && added !== null && returned !== null ? trimmed(toScaled(initial) + toScaled(added) - toScaled(returned), SCALE) : null;
+    const allocation = budget === null ? null : wpF1Part(budget, 55n + BigInt(seedOf(key, "allocation") % 36));
+    const room = budget !== null && allocation !== null ? trimmed(toScaled(budget) - toScaled(allocation), SCALE) : null;
+    const recall = budget === null ? null : seedOf(key, "recalling") % 3 === 0 ? "0" : wpF1Part(budget, 1n + BigInt(seedOf(key, "recall-pct") % 4));
+    entry.metrics.allocation = wpF1Money(template, allocation, currency, "allocation");
+    entry.metrics.net_external_flows = wpF1Money(template, net, currency, "net_external_flows");
+    entry.metrics.headroom = wpF1Money(template, room, currency, "headroom");
+    entry.metrics.recalling = wpF1Money(template, recall, currency, "recalling");
+  }
+  if (groupFields.length === 1 && groupFields[0] === "alpha_id") {
+    const totals = new Map<string, bigint>();
+    for (const group of body.groups) for (const item of group.economic_partitions) {
+      const value = wpF1Value(item, "allocation");
+      if (value !== null) totals.set(JSON.stringify(item.partition), (totals.get(JSON.stringify(item.partition)) ?? 0n) + toScaled(value));
+    }
+    for (const group of body.groups) for (const item of group.economic_partitions) {
+      const value = wpF1Value(item, "allocation");
+      const total = totals.get(JSON.stringify(item.partition)) ?? 0n;
+      const share = pctMetric(item.metrics.net_pnl, value === null ? null : pct(toScaled(value), total));
+      share.window = null;
+      share.denominator = null;
+      share.methodology_ref = share.availability === "AVAILABLE" ? "FIXTURE_LAB:synthetic-allocation-share-v1" : null;
+      item.metrics.allocation_share_pct = share;
+    }
+  }
+}
+
+/* SIMULATED capital ledger of the scale portfolios (FIXTURE_LAB, register 2f1). `GET /portfolios/{id}/capital-ledger?environment=` for a portfolio
+ * of the generated universe (`pf_scale_*`; the suite portfolios `pf_TEST_ONLY_*` keep the double's own answers, WP-C's). The ledger is an ALLOCATION
+ * ledger (capital allocated to accounts), one bucket per currency, built from the portfolio's own deployments of that environment:
+ *   per deployment: INITIAL_ALLOCATE of 60% of its allocation (82 days before FIXTURE_NOW) and ALLOCATE of the other 40% (41 days before);
+ *   the first deployment adds a REBALANCE that moved nothing (UNCHANGED, 8 days before) and a WITHDRAW of 5% of its allocation (6 days before).
+ * Amounts are truncated to 2 places, exact decimals, bigint only; `before_allocated` / `after_allocated` are that account's running total;
+ * the bucket totals are the sums of THIS bucket's own entries (one currency). An environment the portfolio has no book in answers an empty ledger
+ * (a fact, not a zero balance). Receipts are not part of this contract (FE-032). */
+function wpF1Ledger(id: string, environment: string): Draft | null {
+  const universe = scaled();
+  const portfolio = universe.portfolios.find((entry) => entry.id === id);
+  if (portfolio === undefined || !["live", "paper", "sandbox"].includes(environment)) return null;
+  const base = JSON.parse(readFileSync(join(CONTRACTS, "execution-analytics.capital-ledger.valid.json"), "utf8")) as Draft;
+  const deployments = portfolio.environments.includes(environment as never)
+    ? universe.alphas.flatMap((alpha) => alpha.deployments).filter((entry) => entry.portfolioId === id && entry.environment === environment)
+    : [];
+  const DAY = 86_400_000;
+  const now = fixtureNowMs();
+  const iso = (daysBefore: number): string => new Date(now - daysBefore * DAY).toISOString().replace(".000Z", "Z");
+  const trunc = (value: bigint): bigint => value / 10n ** 16n * 10n ** 16n;
+  const cents = (value: bigint): string => trimmed(trunc(value), SCALE);
+  const buckets = new Map<string, { entries: Draft[]; up: bigint; down: bigint }>();
+  let n = 0;
+  deployments.forEach((dep, index) => {
+    const bucket = buckets.get(dep.currency) ?? { entries: [], up: 0n, down: 0n };
+    const total = toScaled(dep.allocation);
+    const first = trunc(total * 60n / 100n);
+    const second = total - first;
+    let running = 0n;
+    const add = (movement: string, direction: string, amount: bigint, days: number): void => {
+      const before = running;
+      running = direction === "INCREASE" ? running + amount : direction === "DECREASE" ? running - amount : running;
+      n += 1;
+      bucket.entries.push({ ledger_id: `ledger-${id}-${n}`, allocation_id: `allocation-${dep.id}`, account_id: dep.accountId, movement_type: movement, direction, amount: cents(amount), before_allocated: cents(before), after_allocated: cents(running), occurred_at: iso(days) });
+      if (direction === "INCREASE") bucket.up += amount;
+      if (direction === "DECREASE") bucket.down += amount;
+    };
+    add("INITIAL_ALLOCATE", "INCREASE", first, 82 - (index % 5));
+    add("ALLOCATE", "INCREASE", second, 41 - (index % 5));
+    if (index === 0) {
+      add("REBALANCE", "UNCHANGED", 0n, 8);
+      add("WITHDRAW", "DECREASE", trunc(total * 5n / 100n), 6);
+    }
+    buckets.set(dep.currency, bucket);
+  });
+  const list = [...buckets.entries()].sort(([a], [b]) => (a < b ? -1 : 1)).map(([currency, bucket]) => ({
+    currency, gross_increase: cents(bucket.up), gross_decrease: cents(bucket.down), entry_count: bucket.entries.length, entries: bucket.entries.reverse(),
+  }));
+  const count = list.reduce((sum, bucket) => sum + bucket.entry_count, 0);
+  const analytics = base.analytics as Draft;
+  return { ...base, read_at: new Date(now).toISOString(), analytics: { ...analytics, input_as_of: new Date(now).toISOString(), data: { ...analytics.data, portfolio_id: id, entry_count: count, returned_entry_count: count, has_more: false, buckets: list } } };
+}
+/* SIMULATED self-eligibility for the Portfolio 360 Actions rail (FIXTURE_LAB, register 2f1). `GET /api/admin/profile-access/v2/eligibility/batch` for
+ * resources that are all `PORTFOLIO:pf_*` (the rail's own question; the canonical `portfolio_TEST_ONLY` question stays with its double). Rows are
+ * the canonical `capital.top_up` row of the published batch case with the asked action name: ALLOWED for the grant and recall actions, and for
+ * `capital.adjust_target_budget` on half of the portfolios (seeded by id), the others UNAVAILABLE / ACTION_TARGET_UNSUPPORTED (the canonical
+ * unavailable row). ADVISORY ONLY, as the contract says: `command_readiness` stays NOT_CHECKED, nothing is a permit, no command is enabled. */
+function wpF1Eligibility(search: URLSearchParams): ReviewManagerResponse | null {
+  const resources = (search.get("resources") ?? "").split(",").filter((token) => token !== "");
+  if (resources.length === 0 || !resources.every((token) => /^PORTFOLIO:pf_[A-Za-z0-9._:%-]+$/.test(token))) return null;
+  const actions = (search.get("actions") ?? "").split(",").filter((token) => token !== "");
+  const environment = search.get("environment") ?? "";
+  const workspace = search.get("workspace_id") ?? "";
+  if (actions.length === 0 || !["paper", "sandbox", "live"].includes(environment) || !/^[A-Za-z0-9._:-]{1,128}$/.test(workspace)) return null;
+  const file = JSON.parse(readFileSync(join(CONTRACTS, "execution-access.synthetic.valid.json"), "utf8")) as Draft;
+  const base = copy(file.batch_cases.find((entry: Draft) => entry.case_name === "STEP_UP_REQUIRED_NOT_ACTIVE").value) as Draft;
+  const rows = base.results.flatMap((result: Draft) => result.actions) as Draft[];
+  const allowed = rows.find((row) => row.action === "capital.top_up")!;
+  const refused = rows.find((row) => row.permission === "UNAVAILABLE")!;
+  const now = fixtureNowMs();
+  const ceiling = 365 * 86_400_000;
+  base.workspace_id = workspace;
+  base.environment = environment;
+  base.observed_at_ms = now;
+  base.valid_until_ms = now + ceiling;
+  base.results = resources.map((token) => {
+    const id = decodeURIComponent(token.slice("PORTFOLIO:".length));
+    return {
+      resource: { kind: "PORTFOLIO", id },
+      actions: actions.map((action) => {
+        const open = action !== "capital.adjust_target_budget" || seedOf(id, "target-eligibility") % 2 === 0;
+        const row = copy(open ? allowed : refused);
+        row.action = action;
+        if (open) row.grant_ref = `acg_FIXTURE_LAB_OWN_${action.replace(/\W/g, "_").toUpperCase()}`;
+        return row;
+      }),
+    };
+  });
+  return { status: 200, body: base };
+}
+function wpF1Answer(method: string, path: string, search: URLSearchParams): ReviewManagerResponse | null {
+  if (method === "GET" && path === "/api/admin/profile-access/v2/eligibility/batch") return wpF1Eligibility(search);
+  const match = /^\/portfolios\/([^/]+)\/capital-ledger$/.exec(path);
+  if (method !== "GET" || match === null) return null;
+  let id: string;
+  try { id = decodeURIComponent(match[1]!); } catch { return null; }
+  const body = wpF1Ledger(id, search.get("environment") ?? "live");
+  return body === null ? null : { status: 200, body };
+}
+// ===== WP-F1 end
+
 function datasetAnswer(method: string, path: string, search: URLSearchParams, profile: ReviewManagerProfile): ReviewManagerResponse | null {
   if (method === "GET" && search.get("environment") === "ALL") return allAnswer(path, search, profile);
   const match = /^\/manager\/(fund-overview|fleet|(?:portfolios|alphas|accounts|deployments)\/([^/]+)\/overview)$/.exec(path);
@@ -806,13 +962,14 @@ function datasetAnswer(method: string, path: string, search: URLSearchParams, pr
   if (!body.query_options.window.independent_metrics.includes("balance_total")) body.query_options.window.independent_metrics.push("balance_total");
   if (windowName !== null) applyWindow(body, windowName, windowPreset);
   addGroupScores(body, groups, windowName); // SIMULATED score keys (register 2c), after the window so ALL stays a gap
+  addWpF1(body, groups); // WP-F1: capital statement keys and allocation shares (register 2f1)
   if (Buffer.byteLength(JSON.stringify(body)) > body.query_policy.maximum_response_bytes) return problem(400, "MANAGER_REVIEW_RESPONSE_TOO_LARGE", "Reduce limit/grouping for this bounded review response.");
   return { status: 200, body };
 }
 
 export function answerReviewManager(method: string, path: string, search: URLSearchParams, profile: ReviewManagerProfile): ReviewManagerResponse | null {
   const normalized = path.replace(/^\/api\/v1\/execution(?=\/)/, "");
-  return seriesAnswer(method, normalized, search, profile) ?? wpcCandles(method, normalized, search) ?? wpcEquity(method, normalized, search) ?? wpcAlphaKeys(normalized, search, datasetAnswer(method, normalized, search, profile));
+  return seriesAnswer(method, normalized, search, profile) ?? wpcCandles(method, normalized, search) ?? wpcEquity(method, normalized, search) ?? wpF1Answer(method, normalized, search) ?? wpcAlphaKeys(normalized, search, datasetAnswer(method, normalized, search, profile));
 }
 
 // ===== WP-C begin (Alpha 360, Trade replay, Compare; FIXTURE_LAB, register section 2c-wpc)

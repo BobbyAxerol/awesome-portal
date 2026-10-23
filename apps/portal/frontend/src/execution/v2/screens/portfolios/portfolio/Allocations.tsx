@@ -2,10 +2,8 @@
  * Allocations: two blocks, Real-funded and Simulated, never merged. Each holds
  * the capital by environment (current facts), the capital flow and the ledger.
  *
- * The capital flow and the ledger receipts are not published (FE-032): one
- * `Not available` line says so. A structure-only diagram of hatched boxes was
- * removed (UX audit A, 2026-10-20): it carried no amount, no link and, per node,
- * one more `Not published`.
+ * The capital flow (WP-F1, concept C2) is the Sankey of `AllocationFlow` per environment, from the published statements and alpha groups;
+ * the ledger receipts are not published (FE-032): one `Not available` line says so.
  *
  * The ledger is the append-only `getCapitalLedger` read: per entry the
  * movement, the server's direction word, the amount, and the allocation before
@@ -19,6 +17,7 @@ import { Money, envWord } from "../format";
 import type { TabCtx } from "./ctx";
 import { ledgerIsEmpty, ledgerRows, unreadEntries, type Environment, type LedgerRowView } from "./model";
 import { CapitalEnv } from "./CapitalEnv";
+import { AllocationFlow } from "./AllocationFlow";
 import { InternalLink, ReadGate } from "./parts";
 
 import "../../../css/portfolios.css";
@@ -105,6 +104,7 @@ function Block({ domain, ctx }: { domain: "real" | "simulated"; ctx: TabCtx }) {
       ) : (
         <div className="exec-pf-stack">
           {envs.map((env) => <CapitalEnv key={env} environment={env} read={ctx.reads.capital[env]} />)}
+          {envs.map((env) => <AllocationFlow key={`flow-${env}`} ctx={ctx} environment={env} />)}
           {envs.map((env) => <Ledger key={env} environment={env} ctx={ctx} anchor={env === ctx.environments[0]} />)}
         </div>
       )}
@@ -117,7 +117,7 @@ export function Allocations({ ctx }: { ctx: TabCtx }) {
   return (
     <div className="exec-pf-stack">
       {simulated ? <p className="exec-pf-banner" data-tone="info">Simulated capital. It is never added to Real-funded figures.</p> : null}
-      <NotAvailableLine facts={[{ label: "Capital flow", id: PF_FE.flowEdges.fe }, { label: "Ledger receipts", id: PF_FE.flowEdges.fe }]} />
+      <NotAvailableLine facts={[{ label: "Ledger receipts", id: PF_FE.flowEdges.fe }]} />
       <Block domain="real" ctx={ctx} />
       <Block domain="simulated" ctx={ctx} />
     </div>
