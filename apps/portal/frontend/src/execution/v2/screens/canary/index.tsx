@@ -213,7 +213,7 @@ function CanaryBody({ api, deploymentId, workspaceId }: CanaryScreenProps) {
         )
       }
       chips={chips}
-      spine={{ current: "canary", onSelect: spineSelect, stages: history }}
+      spine={{ current: "canary", onSelect: spineSelect, stages: history, lockAhead: true }}
       extra={current === null ? undefined : <TrialStrip trial={trialOf(current)} calendar={trialCalendar(current)} />}
       renderLink={(to, children) => <Link to={to}>{children}</Link>}
     />
@@ -261,7 +261,7 @@ function CanaryBody({ api, deploymentId, workspaceId }: CanaryScreenProps) {
       {header(chipsOf(result.view), result.view)}
 
       {banners.map((banner) => (
-        <div key={banner.key} className="exec-blk-banner" role={banner.key === "untrusted" ? "alert" : "status"} data-banner={banner.key}>
+        <div key={banner.key} className="exec-blk-banner" role={banner.tone === "bad" ? "alert" : "status"} data-banner={banner.key} data-tone={banner.tone}>
           {banner.text}
         </div>
       ))}
@@ -299,7 +299,7 @@ function CanaryBody({ api, deploymentId, workspaceId }: CanaryScreenProps) {
           </UrlTabs>
         </div>
         <div className="exec-cny-rail">
-          <DecisionPanel />
+          <DecisionPanel view={result.view} />
           <BeforeScaleUp view={result.view} />
           <RollbackPanel view={result.view} />
         </div>

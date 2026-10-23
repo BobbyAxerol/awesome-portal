@@ -210,6 +210,8 @@ export interface OrderRow {
   price: string | null;
   /** Epoch ms the order was opened; `null` = not stated. */
   sinceMs: number | null;
+  /** The source's own status word (ACCEPTED, FILLED...); `null` = not stated. */
+  status: string | null;
   /** Exact integer milliseconds as a string. */
   ackLatencyMs: string | null;
 }
@@ -537,7 +539,7 @@ function typedPositions(typed: TypedRows<TypedPositionRow> | null): Pick<RowsFac
 function typedOrders(typed: TypedRows<TypedOrderRow> | null): Pick<RowsFact<OrderRow>, "rows" | "total" | "notPublishedColumns" | "typedReasonCode"> {
   if (typed === null) return { rows: null, total: null, notPublishedColumns: [], typedReasonCode: null };
   return {
-    rows: typed.availability === "AVAILABLE" ? typed.rows.map((r) => ({ symbol: r.symbol, type: r.type, side: r.side, quantity: r.quantity, price: r.price, sinceMs: r.since === null ? null : msOf(r.since), ackLatencyMs: null })) : null,
+    rows: typed.availability === "AVAILABLE" ? typed.rows.map((r) => ({ symbol: r.symbol, type: r.type, side: r.side, quantity: r.quantity, price: r.price, sinceMs: r.since === null ? null : msOf(r.since), status: r.status, ackLatencyMs: null })) : null,
     total: null,
     notPublishedColumns: typed.notPublishedColumns,
     typedReasonCode: typed.reasonCode,

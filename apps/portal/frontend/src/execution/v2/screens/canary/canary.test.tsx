@@ -239,10 +239,10 @@ describe("the four decisions (D6, D9): drawn, disabled, explained, never enabled
     mount(canaryPort(answering(v1Body())));
     await ready();
     const panel = screen.getByRole("heading", { name: "Promotion decision" }).closest("section")!;
-    // One reason and one My access link for the four decisions that are off for the same reason.
-    expect(within(panel).getAllByRole("link", { name: /My access/ })).toHaveLength(1);
-    expect(within(panel).getByRole("link", { name: "My access: Hold, Reduce, Rollback, Request scale" }).getAttribute("href")).toContain("/administration/profile-access");
-    expect(panel.textContent?.match(new RegExp(STAGE_WHY.liveClosed, "g"))).toHaveLength(1);
+    // The design draws each decision with what it does, its closed button and its own reason and My access link (R5-09).
+    expect(within(panel).getAllByRole("link", { name: /My access/ })).toHaveLength(4);
+    expect(within(panel).getByRole("link", { name: "My access: Hold" }).getAttribute("href")).toContain("/administration/profile-access");
+    expect(panel.textContent?.match(new RegExp(STAGE_WHY.liveClosed, "g"))).toHaveLength(4);
     for (const label of ["Hold", "Reduce", "Rollback", "Request scale"]) {
       const button = within(panel).getByRole("button", { name: label }) as HTMLButtonElement;
       expect(button.disabled, label).toBe(true);
@@ -251,10 +251,10 @@ describe("the four decisions (D6, D9): drawn, disabled, explained, never enabled
       expect(document.getElementById(reasonId!)?.textContent, label).toBe(STAGE_WHY.liveClosed);
       fireEvent.click(button);
     }
-    // What each does is the button's title, not a printed sentence; the "How promotion works" disclosure is gone.
-    expect(within(panel).getByRole("button", { name: "Hold" }).getAttribute("title")).toBe("Keep the envelope unchanged.");
-    expect(panel.textContent).not.toContain("Keep the envelope unchanged");
-    expect(within(panel).queryByText("How promotion works")).toBeNull();
+    // What each does is printed above its button, and the disclosure says how promotion works.
+    expect(panel.textContent).toContain("Keep the envelope unchanged.");
+    expect(panel.textContent).toContain("Return to Paper and close positions.");
+    expect(within(panel).getByText("How promotion works")).toBeTruthy();
     expect(where()).toBe(`/deployments/live/${DEP}/canary`);
   });
 
@@ -549,8 +549,11 @@ describe("tabs and navigation", () => {
   it("the spine's Live node goes to /deployments/live/:id and carries the workspace", async () => {
     mount(canaryPort(answering(v1Body())), `/deployments/live/${DEP}/canary?workspace_id=ws_TEST_ONLY`);
     await ready();
-    fireEvent.click(within(screen.getByRole("list", { name: "Lifecycle" })).getByRole("button", { name: /Live/ }));
-    expect(where()).toContain(`/deployments/live/${DEP}`);
+    // Live is a stage this deployment has not reached: its node is not a link (R5-07); Paper still is.
+    const lifecycle = within(screen.getByRole("list", { name: "Lifecycle" }));
+    expect(lifecycle.queryByRole("button", { name: /Live/ })).toBeNull();
+    fireEvent.click(lifecycle.getByRole("button", { name: /Paper/ }));
+    expect(where()).toContain(`/deployments/paper/${DEP}`);
     expect(where()).toContain("workspace_id=ws_TEST_ONLY");
   });
 
@@ -721,8 +724,8 @@ describe("keyboard and focus", () => {
     await ready();
     const panel = screen.getByRole("heading", { name: "Promotion decision" }).closest("section")!;
     const reachable = Array.from(panel.querySelectorAll<HTMLElement>("a[href], button:not([disabled]), summary"));
-    // One My access link for the four decisions that share one reason; nothing else to tab to.
-    expect(reachable.map((el) => el.textContent)).toEqual(["My access"]);
+    // One My access link per decision, and the disclosure; nothing else to tab to.
+    expect(reachable.map((el) => el.textContent)).toEqual(["My access", "My access", "My access", "My access", "How promotion works"]);
     await act(async () => undefined);
   });
 });

@@ -374,7 +374,7 @@ export function verdictLine(view: CanaryView): VerdictLine | null {
     case "WITHIN_ENVELOPE":
       return { flag: "ok", label: "Within envelope", sentence: "All four caps are proven and none is above its approved limit." };
     case "BREACH":
-      return { flag: "attention", label: "Breach", sentence: named.length === 0 ? "A proven figure is above its approved limit." : `A proven figure is above its approved limit. Not proven: ${named.join(", ")}.` };
+      return { flag: "rejected", label: "Breach", sentence: named.length === 0 ? "A proven figure is above its approved limit." : `A proven figure is above its approved limit. Not proven: ${named.join(", ")}.` };
     case "UNDETERMINED":
       return { flag: "partial", label: "Undetermined", sentence: `Not proven: ${named.join(", ")}.` };
   }
@@ -593,6 +593,8 @@ export function guardSentence(view: CanaryView): string {
 export interface Banner {
   key: string;
   text: string;
+  /** `warn` (amber: a figure may be old or missing) or `bad` (red: the deployment is halted, or a proven limit is breached, or the figures are not trusted). */
+  tone: "warn" | "bad";
 }
 
 function allPanels(view: CanaryView): readonly PanelFact[] {
@@ -606,28 +608,37 @@ function allPanels(view: CanaryView): readonly PanelFact[] {
 export function bannersOf(view: CanaryView): readonly Banner[] {
   const out: Banner[] = [];
   if (view.sourceActed) {
-    out.push({ key: "untrusted", text: "Not trusted. A source action was requested; the figures below are not trusted." });
+    out.push({ key: "untrusted", tone: "bad", text: "Not trusted. A source action was requested; the figures below are not trusted." });
   }
   if (view.proposalOnly) {
-    out.push({ key: "proposal", text: "Canary proposal only; no runtime figures." });
+    out.push({ key: "proposal", tone: "warn", text: "Canary proposal only; no runtime figures." });
   }
   if (view.declaredStage !== null && view.declaredStage !== "LIVE_CANARY") {
-    out.push({ key: "stage", text: "This deployment does not declare the Canary stage. Its operations are on the Live screen." });
+    out.push({ key: "stage", tone: "warn", text: "This deployment does not declare the Canary stage. Its operations are on the Live screen." });
+  }
+  // A halted runtime and a breached envelope each say so at the top, in red, with their own sentence (the server's words, nothing computed).
+  if (view.runtime !== null && view.runtime.state.kind === "value" && view.runtime.state.value === "HALTED") {
+    const since = view.runtime.sinceMs.kind === "value" ? timeOf(view.runtime.sinceMs.value) : null;
+    out.push({ key: "halted", tone: "bad", text: since === null ? "Halted. The runtime reports HALTED." : `Halted. The runtime reports HALTED since ${since}.` });
+  }
+  if (view.verdict !== null && view.verdict.state === "BREACH") {
+    out.push({ key: "breach", tone: "bad", text: "Envelope breached. A proven figure is above its approved limit; the Envelope tab names it." });
   }
   const brokerStale = view.broker !== null && (view.broker.freshness === "STALE" || view.broker.state === "stale");
   if (brokerStale) {
     const asymmetric = view.scaleUp?.brokerSyncBlocks === true && view.protective?.brokerSyncBlocks === false;
     out.push({
       key: "guarded",
+      tone: "warn",
       text: asymmetric ? "Broker data is stale. Scale-up is blocked; protective actions stay open." : "Broker data is stale.",
     });
   }
   const panels = allPanels(view);
   if (!brokerStale && panels.some((p) => p.state === "stale")) {
-    out.push({ key: "stale", text: "Some figures are stale." });
+    out.push({ key: "stale", tone: "warn", text: "Some figures are stale." });
   }
   if (panels.some((p) => p.state === "partial")) {
-    out.push({ key: "partial", text: "Some figures are missing." });
+    out.push({ key: "partial", tone: "warn", text: "Some figures are missing." });
   }
   return out;
 }

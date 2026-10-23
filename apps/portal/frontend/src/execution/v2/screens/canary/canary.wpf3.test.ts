@@ -24,7 +24,7 @@ describe("KPI captions", () => {
     const cells = kpiCells(lit("dep_canary_01"));
     const basis = (key: string) => (cells.find((c) => c.key === key) as { basis?: string }).basis;
     expect(basis("capital_consumed")).toBe("76.40% of approved");
-    expect(basis("gross_notional")).toBe("61.204% of approved");
+    expect(basis("gross_notional")).toBe("61.00% of approved");
     expect(basis("daily_pnl")).toBe("Daily loss cap 250.00");
     expect(basis("open_orders")).toBe("Max 20");
   });

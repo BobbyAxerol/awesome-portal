@@ -286,3 +286,99 @@
   margin-left: auto;
   white-space: nowrap;
 }
+
+/* QA1 R5/R4 fixes (WP-F3). The alpha id in the sub-line is the id size, not a larger mono than its neighbours (R5-16). */
+.exec-cny-v2 .exec-stage-sub .exec-blk-num,
+.exec-cny-v2 .exec-wb-sub .exec-blk-num {
+  font: var(--exec-font-id);
+}
+/* Touch targets at phone width (R5-26): a 44px hit area for the small controls without enlarging their drawn size. */
+@media (max-width: 660px) {
+  .exec-cny-v2 :is(.exec-blk-link, .exec-dock-access, .exec-blk-btn, .exec-wb-btn, .exec-dock-btn, .exec-cny-refresh) {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+  }
+  .exec-cny-v2 .exec-blk-why-btn {
+    position: relative;
+  }
+  .exec-cny-v2 .exec-blk-why-btn::after {
+    content: "";
+    position: absolute;
+    inset: -13px;
+  }
+}
+/* Internal / Broker / Difference rows (R5-14): one line each while the columns are wide enough, else EVERY row stacks label over figure in
+ * EVERY column, so the rows keep one baseline across the three columns. */
+@media (max-width: 1360px) {
+  .exec-cny-v2 .exec-blk-triad-row {
+    display: block;
+    min-height: 0;
+    padding-bottom: var(--space-1);
+  }
+  .exec-cny-v2 .exec-blk-triad-row dd {
+    text-align: right;
+    margin-left: 0;
+  }
+}
+/* One banner component, two tones (R5-05): amber for old or missing figures, red for a halted runtime, a breached envelope, untrusted figures. */
+.exec-cny-v2 .exec-blk-banner[data-tone="warn"] {
+  background: var(--warn-bg);
+  border: 1px solid var(--warn);
+}
+.exec-cny-v2 .exec-blk-banner[data-tone="bad"] {
+  background: var(--bad-bg);
+  border: 1px solid var(--bad);
+}
+/* Promotion decision (R5-09): what each does, its closed button and its reason; Request scale says when it opens. */
+.exec-cny-dec {
+  padding-bottom: var(--space-2);
+  border-bottom: 1px solid var(--line-soft);
+}
+.exec-cny-dec:last-child {
+  border-bottom: 0;
+}
+.exec-cny-dec-hint,
+.exec-cny-dec-opens {
+  margin: 0 0 var(--space-1);
+  font: var(--exec-font-meta);
+  color: var(--ink-soft);
+}
+.exec-cny-dec-opens {
+  margin: var(--space-1) 0 0;
+  color: var(--ink-faint);
+}
+.exec-cny-how {
+  margin-top: var(--space-3);
+  font: var(--exec-font-meta);
+  color: var(--ink-soft);
+}
+.exec-cny-how summary {
+  cursor: pointer;
+}
+.exec-cny-how p {
+  margin: var(--space-1) 0 0;
+}
+/* The used bar column (R5-12): one fixed text width, so every bar has the same length and the 80% mark the same place. */
+.exec-cny-v2 .exec-gauge-wrap {
+  display: flex;
+  flex-wrap: nowrap;
+  width: 100%;
+}
+.exec-cny-v2 .exec-gauge {
+  flex: 1 1 auto;
+  width: auto;
+  min-width: 80px;
+}
+.exec-cny-v2 .exec-gauge-text {
+  flex: none;
+  min-width: 11ch;
+  text-align: right;
+  white-space: nowrap;
+}
+/* Guard rule: the three result columns are the rule's effect, not the present state (R5-22). */
+.exec-cny-guard-note {
+  margin: 0 0 var(--space-2);
+  font: var(--exec-font-meta);
+  color: var(--ink-faint);
+}
