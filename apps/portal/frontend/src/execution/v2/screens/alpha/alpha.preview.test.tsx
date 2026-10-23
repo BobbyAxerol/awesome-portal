@@ -129,6 +129,29 @@ describe("every alpha opens with its own identity and its own books (QA1 R2-02, 
   });
 });
 
+describe("Net PnL and Exposure are the book in view, never all books added (QA2 R2-02)", () => {
+  it("alpha_a on the Real-funded book prints its Live deployment alone and lists Paper and Sandbox apart; the Paper book prints Paper alone", async () => {
+    mount("/deployments/alphas/alpha_a", "alpha_a");
+    await spine();
+    const pnl = tile("Net PnL, current");
+    await waitFor(() => expect(within(pnl).getByTestId("book-here").textContent).toContain("dep_live_01"));
+    expect(within(pnl).getByTestId("book-here").textContent).not.toContain("dep_paper_01");
+    const apart = within(pnl).getByTestId("book-apart");
+    expect(apart.textContent).toContain("dep_paper_01");
+    expect(apart.textContent).toContain("dep_sandbox_01");
+    // No figure on the tile is a sum of the three: 980.40 + 140.40 (live) - 84.20 (paper) + 0 = 1,036.60.
+    expect(pnl.textContent).not.toContain("1,036.60");
+    expect(tile("Net PnL, current").textContent).toContain("Real-funded book, current facts");
+    cleanup();
+    endPreviewLane();
+    mount("/deployments/alphas/alpha_a?env=paper", "alpha_a");
+    await spine();
+    const paper = tile("Net PnL, current");
+    await waitFor(() => expect(within(paper).getByTestId("book-here").textContent).toContain("dep_paper_01"));
+    expect(within(paper).getByTestId("book-here").textContent).not.toContain("dep_live_01");
+  });
+});
+
 describe("the event ribbon is pinned on the Performance chart", () => {
   it("draws the five lanes with the published events, kind chips with counts, and the drawdown strip from the alpha's DRAWDOWN series (WP-K, FIXTURE_LAB)", async () => {
     mount("/deployments/alphas/alpha_a", "alpha_a");

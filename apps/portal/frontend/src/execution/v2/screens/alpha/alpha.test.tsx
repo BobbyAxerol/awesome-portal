@@ -175,7 +175,10 @@ describe("current facts", () => {
     await ready();
     const facts = screen.getByLabelText("Current facts");
     expect(within(facts).getByText("+1,120.80")).toBeTruthy();
-    expect(facts.textContent).toContain("All stages, current facts");
+    expect(facts.textContent).toContain("Real-funded book, current facts");
+    // QA2 R2-02: the books are never added: the Live figure stands alone, Paper's -84.20 is listed apart, and there is no all-stages total.
+    expect(facts.textContent).not.toContain("1,036.60");
+    expect(within(facts).getAllByTestId("book-apart").length).toBeGreaterThan(0);
     // The windowed figures keep their tiles (hi-fi), each Not published with its id.
     for (const [label, id] of [["Return", "FE-006"], ["Max drawdown", "FE-025"], ["Regime fit", "FE-011"]] as const) {
       const tile = within(facts).getByText(label).closest("div")!;

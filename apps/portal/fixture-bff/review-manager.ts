@@ -1354,11 +1354,30 @@ function wpcAlphaKeys(path: string, search: URLSearchParams, answer: ReviewManag
   if (match === null || answer === null || answer.status !== 200 || search.get("environment") === "ALL") return answer;
   const body = answer.body as Draft;
   const id = decodeURIComponent(match[1]!);
+  // QA2 R2-04: the Max drawdown tile and the drawdown pane are one figure: the tile is the worst point of the alpha's DRAWDOWN series of the same window and book.
+  const worst = wpcWorstDrawdownPercent(id, search);
   for (const row of body.items) {
     const keys = wpcLifecycleKeys(row.alpha_id ?? id, row.metrics.net_pnl);
-    for (const entry of row.economic_partitions) Object.assign(entry.metrics, copy(keys));
+    for (const entry of row.economic_partitions) {
+      Object.assign(entry.metrics, copy(keys));
+      const tile = entry.metrics.max_drawdown_pct;
+      if (worst !== null && tile?.availability === "AVAILABLE") tile.value = worst;
+    }
   }
   return answer;
+}
+/** The lowest point of the alpha's DRAWDOWN series for the window and book of this read, as a percent string (6 places); `null` when the series is not served. */
+function wpcWorstDrawdownPercent(alphaId: string, search: URLSearchParams): string | null {
+  const environment = search.get("environment");
+  const window = search.get("window");
+  if (environment === null || environment === "ALL" || window === JSON.stringify("ALL") || window === "ALL") return null;
+  const query = new URLSearchParams({ environment, metric: "DRAWDOWN", window: window === null ? JSON.stringify("30D") : window.startsWith('"') ? window : JSON.stringify(window),
+    subjects: JSON.stringify([{ subject_type: "ALPHA", subject_id: alphaId }]) });
+  const answer = seriesAnswer("GET", "/manager/series", query, "populated");
+  const entry = answer?.status === 200 ? (answer.body as Draft).series?.[0] : undefined;
+  if (!entry || entry.state !== "AVAILABLE" || !Array.isArray(entry.points) || entry.points.length === 0) return null;
+  const lowest = entry.points.reduce((low: bigint, point: Draft) => { const v = toScaled(point.value); return v < low ? v : low; }, 0n);
+  return lowest === 0n ? "0" : trimmed(lowest / 10n ** 10n, 6);
 }
 /* ---- Trade replay candles (review lane only; the e2e double and its golden are untouched). The double's venue candles drift around 67,200 while
  * the book's trades print up to 67,411, so a fill sat 200 above its candles and stretched the axis. These bars wander (mean-reverting, integer

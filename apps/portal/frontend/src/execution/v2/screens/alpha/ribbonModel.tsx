@@ -29,7 +29,7 @@ export interface RibbonData {
 
 export function useRibbon(
   timeline: PagedRead<ObservedTimeline>,
-  life: { events: readonly LifeEvent[]; missing: readonly EventKind[]; spans?: readonly StageSpan[] },
+  life: { events: readonly LifeEvent[]; missing: readonly EventKind[]; spans?: readonly StageSpan[]; future?: number },
   paths: readonly StagePath[],
   lead: EquityPanelInput | null,
 ): RibbonData {
@@ -65,8 +65,12 @@ export function useRibbon(
   );
   // The observed timeline publishes decisions only; a kind with no event from either source is a gap, named once.
   const unpublished = life.missing.filter((kind) => kind !== "decision" || !events.some((e) => e.kind === "decision"));
-  const gaps = unpublished.length === 0 ? null : (
-    <span>{unpublished.map((kind) => EVENT_KIND_TABLE[kind].label).join(", ")}: <Np id="FE-031" /></span>
+  const later = life.future ?? 0;
+  const gaps = unpublished.length === 0 && later === 0 ? null : (
+    <>
+      {unpublished.length === 0 ? null : <span>{unpublished.map((kind) => EVENT_KIND_TABLE[kind].label).join(", ")}: <Np id="FE-031" /></span>}
+      {later === 0 ? null : <span data-testid="events-after-asof">{later} {later === 1 ? "event is" : "events are"} dated after this read's as-of time and not shown</span>}
+    </>
   );
   return { domain, events, lifeEvents: life.events, seen, ribbon, chips, gaps };
 }

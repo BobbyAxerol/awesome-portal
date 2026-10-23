@@ -165,3 +165,22 @@ describe("replay candles and the alpha equity line (review lane only)", () => {
     expect(points.every(([t], i) => i === 0 || t - points[i - 1]![0] === DAY)).toBe(true);
   });
 });
+
+describe("the Max drawdown tile and the drawdown pane are one figure (QA2 R2-04)", () => {
+  const drawdown = (alpha: string) => ask("/manager/series", "live", { metric: "DRAWDOWN", window: JSON.stringify("30D"), subjects: JSON.stringify([{ subject_type: "ALPHA", subject_id: alpha }]) });
+
+  it("the tile of the alpha dataset equals the worst point of the same alpha's DRAWDOWN series, as a percent", () => {
+    for (const alpha of ["alpha_a", "alpha_btc_trend"]) {
+      const series = drawdown(alpha).body.series[0];
+      expect(series.state).toBe("AVAILABLE");
+      const worst = Math.min(0, ...series.points.map((p: Body) => Number(p.value))) * 100;
+      const tile = ask(`/manager/alphas/${alpha}/overview`, "live").body.items[0].economic_partitions[0].metrics.max_drawdown_pct;
+      expect(Math.abs(Number(tile.value) - worst)).toBeLessThan(0.0001);
+    }
+  });
+
+  it("the two alphas do not share one drawdown path", () => {
+    const [a, b] = ["alpha_a", "alpha_btc_trend"].map((alpha) => drawdown(alpha).body.series[0].points.map((p: Body) => p.value).join(","));
+    expect(a).not.toBe(b);
+  });
+});

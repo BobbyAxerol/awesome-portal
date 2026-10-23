@@ -80,6 +80,11 @@ describe("pairs that cannot share a basis", () => {
     expect(screen.getAllByText(/Real-funded and Simulated/).length).toBeGreaterThan(0);
     expect(screen.queryAllByTestId("compare-line")).toHaveLength(0);
     expect(screen.getAllByTestId("not-comparable").length).toBeGreaterThan(0);
+    // One click to a pair that can be compared (QA2 R1-10): the chart then draws.
+    const suggest = await screen.findByTestId("compare-suggest", {}, { timeout: 4000 });
+    fireEvent.click(within(suggest).getByRole("button"));
+    await waitFor(() => expect(screen.getAllByTestId("compare-line")).toHaveLength(2), { timeout: 4000 });
+    expect(screen.queryByTestId("compare-suggest")).toBeNull();
   });
 });
 

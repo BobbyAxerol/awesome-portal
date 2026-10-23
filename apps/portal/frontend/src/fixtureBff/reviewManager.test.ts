@@ -565,7 +565,7 @@ describe("simulated suite universe (small scale)", () => {
     expect(m.cost_drag_fees).toMatchObject({ value: "40", unit: "MONEY", currency: "USDT" });
     expect(m.cost_drag_funding.value).toBe("16");
     expect(m.max_drawdown_pct).toMatchObject({ unit: "PERCENT", currency: null });
-    expect(m.max_drawdown_pct.value).toMatch(/^-\d+(\.\d\d?)?$/);
+    expect(m.max_drawdown_pct.value).toMatch(/^-\d+(\.\d+)?$/);
     expect(m.forward_observation_days).toMatchObject({ unit: "DAYS", currency: null });
     expect(m.forward_observation_days.value).toMatch(/^\d+$/);
   });

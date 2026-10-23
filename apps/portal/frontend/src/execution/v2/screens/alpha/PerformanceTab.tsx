@@ -72,7 +72,7 @@ export interface PerformanceTabProps {
   drawdown?: SeriesReadState;
   /** Net PnL per venue from the lifecycle read (WP-K); `null`/absent keeps the section off. */
   venues?: EvidenceSection<readonly LifecycleVenuePnl[]> | null;
-  life?: { events: readonly LifeEvent[]; missing: readonly EventKind[]; spans?: readonly StageSpan[] };
+  life?: { events: readonly LifeEvent[]; missing: readonly EventKind[]; spans?: readonly StageSpan[]; future?: number };
 }
 
 const NO_LIFE = { events: [] as readonly LifeEvent[], missing: ["stage", "decision", "incident", "recall", "flow"] as readonly EventKind[] };
@@ -265,7 +265,7 @@ export function PerformanceTab(props: PerformanceTabProps) {
             </tbody>
           </table>
         </SectionPanel>
-        <SectionPanel title="Forward observation" aside="Not an actual track record">
+        <SectionPanel title="Forward observation" aside={<Flag kind="partial" label="Not an actual track record" size="sm" />}>
           <table className="exec-alp2-gaptable" aria-label="Forward observation">
             <tbody>
               <tr><th scope="row">Forward days</th><td>{fig("forward_observation_days", <Np id="FE-029" />, (metric) => <DaysValue metric={metric} />)}</td></tr>

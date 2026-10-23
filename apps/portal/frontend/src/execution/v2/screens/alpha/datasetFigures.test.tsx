@@ -122,8 +122,8 @@ describe("review lane rows for the suite's alpha (simulated keys through the por
     await waitFor(() => expect(facts.textContent).toMatch(/\d%/));
     // Max drawdown: a published negative percent of the same partition, not Not published.
     const drawdown = (await tile("Max drawdown")).querySelector(".exec-mgr-num")!;
-    expect(drawdown.textContent).toMatch(/^-\d+(\.\d\d?)?%$/);
-    expect(drawdown.getAttribute("title")).toMatch(/^-\d+(\.\d\d?)? · /);
+    expect(drawdown.textContent).toMatch(/^-\d+(\.\d+)?%$/); // the worst point of the same window's DRAWDOWN series (QA2 R2-04), so its places are the series'
+    expect(drawdown.getAttribute("title")).toMatch(/^-\d+(\.\d+)? · /);
     const table = await screen.findByRole("table", { name: "Windowed figures by portfolio" });
     const row = within(table).getAllByRole("row")[1]!;
     // The id pf_core is printed by the name the alpha body states for it.

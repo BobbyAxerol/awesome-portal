@@ -607,3 +607,19 @@
 .exec-alp2-gaptable .exec-fleet-part-tag {
   font: inherit;
 }
+
+/* One line per deployment inside a book (never added): left-aligned inside a tile, wrapping between lines not inside a figure. */
+.exec-alp2-lines {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+}
+.exec-alp2-apart {
+  margin-top: var(--space-2);
+  font: var(--exec-font-caption);
+  color: var(--ink-faint);
+}
+.exec-alp2-apart summary {
+  cursor: pointer;
+}

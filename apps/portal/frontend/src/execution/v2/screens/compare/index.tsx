@@ -253,6 +253,16 @@ export default function CompareScreen({ api, portfolioId, capabilities, routes =
     );
   })();
   const basisText = overlay.basis;
+  // QA2 R1-10: two picks that cannot share a basis open with the reason (above) and ONE click to a pair that can: the first comparable pick (or the first comparable
+  // portfolio) with the first other portfolio on its basis: same currency, same domain, no mixed books.
+  const suggestion = (() => {
+    if (seriesQuery !== null || picked.ids.length < 2) return null;
+    const shares = (a: PortfolioRow, b: PortfolioRow) => a.baseCurrency === b.baseCurrency && a.domain === b.domain;
+    const clean = (row: PortfolioRow) => row.comparable && !row.mixedBooks && row.domain !== "unknown";
+    const anchor = basis.comparable.find(clean) ?? all.find(clean);
+    const partner = anchor === undefined ? undefined : all.find((row) => clean(row) && row.portfolioId !== anchor.portfolioId && shares(anchor, row));
+    return anchor === undefined || partner === undefined ? null : { ids: [anchor.portfolioId, partner.portfolioId], names: [anchor.label, partner.label] as const };
+  })();
 
   // Square marks the best published value of a row, only among the picks on the basis (one currency, one domain): the server's strings
   // compared as decimals, nothing added or converted. A row with fewer than two published values marks nothing.
@@ -429,6 +439,11 @@ export default function CompareScreen({ api, portfolioId, capabilities, routes =
                 />
               </ChartTools>
             )}
+            {suggestion !== null ? (
+              <p className="exec-pf-banner" role="status" data-testid="compare-suggest">
+                These picks cannot be read on one basis. <button type="button" className="exec-pf-segbtn" onClick={() => setPicks(suggestion.ids)}>Compare {suggestion.names[0]} with {suggestion.names[1]}</button> (same currency, same domain).
+              </p>
+            ) : null}
             {/* The overlay prints its own "Basis:" line under the chart; this one is visible only when no chart is drawn (it stays for assistive tech either way). */}
             <p className={overlay.series.length > 0 && overlay.state?.kind !== "unavailable" ? "exec-blk-sr" : "exec-pf-note"} data-testid="basis-caption">Basis: {basisText}</p>
           </SectionPanel>

@@ -44,7 +44,7 @@ import { applyTab, resolveTab } from "../../tabAliases";
 import { useMediaQuery } from "../../useMediaQuery";
 import { ENV_LABEL, serializeUrlParams, useExecUrlState, withContext, type ExecEnv } from "../../urlState";
 import { alphaBack } from "./backLinks";
-import { Dec, Na } from "./cells";
+import { Na } from "./cells";
 import { ActivityTab } from "./ActivityTab";
 import { LifecyclePanel } from "./Lifecycle";
 import { dayMonth, lifeEvents, lifeEventsOfRead, regimeFit, regimeFitOfRead, runIdentity, stageSpans, stageSpansOfRead } from "./lifecycleModel";
@@ -73,6 +73,7 @@ import {
 import { Np, WhyMark } from "./np";
 import { PercentValue, ReturnFig, RowFigure, useAlphaDataset } from "./DatasetFigures";
 import { QbtsCell } from "../fleet/FleetDatasetTable";
+import { BookFigures } from "./BookFigures";
 import { qbtsOf } from "../fleet/fleetMetricsModel";
 import { alphaViewOf } from "./view";
 import AlphaReplay from "./replay";
@@ -162,10 +163,10 @@ function Alpha360({ api, alphaId, workspaceId }: AlphaScreenProps) {
   const rollup = useActivityRollup(api, alphaId, env, settled && tab === "orders");
   const timeline = useObservedFeed(api, alphaId, env, settled && (tab === "activity" || tab === "performance"));
   const book = useSubjectBook(api, alphaId, env, settled && (tab === "orders" || tab === "activity" || tab === "replay"), explicitWs);
-  // WP-K: the alpha's published DRAWDOWN series (FE-025) for the pane under the equity chart. Asked only on the Performance tab, over the 90-day preset the pane is drawn for.
+  // WP-K: the alpha's published DRAWDOWN series (FE-025) for the pane under the equity chart. Asked only on the Performance tab, over the page's window: the Max drawdown tile reads the same window, so the tile and the pane state one figure (QA2 R2-04).
   const drawdownQuery = useMemo<ManagerSeriesQuery>(
-    () => ({ environment: env, metric: "DRAWDOWN", window: "90D", subjects: [{ subjectType: "ALPHA", subjectId: alphaId }], ...(explicitWs ? { workspaceId: explicitWs } : {}) }),
-    [env, alphaId, explicitWs],
+    () => ({ environment: env, metric: "DRAWDOWN", window: url.value.window, subjects: [{ subjectType: "ALPHA", subjectId: alphaId }], ...(explicitWs ? { workspaceId: explicitWs } : {}) }),
+    [env, alphaId, explicitWs, url.value.window],
   );
   const drawdown = useManagerSeries(api, settled && tab === "performance", drawdownQuery);
 
@@ -242,8 +243,12 @@ function Alpha360({ api, alphaId, workspaceId }: AlphaScreenProps) {
   const life = useMemo(() => {
     const read = lifeEventsOfRead(lifecycle);
     const spans = stageSpansOfRead(lifecycle);
-    return { ...(read ?? lifeEvents(datasetValue)), spans: spans.length > 0 ? spans : stageSpans(datasetValue) };
-  }, [datasetValue, lifecycle]);
+    const all = read ?? lifeEvents(datasetValue);
+    // QA2 R2-05: an event dated after the read's own as-of time cannot have happened yet; it is not drawn or listed, and the count is said.
+    const asOf = view?.asOfMs ?? null;
+    const events = asOf === null ? all.events : all.events.filter((event) => event.t <= asOf);
+    return { ...all, events, future: all.events.length - events.length, spans: spans.length > 0 ? spans : stageSpans(datasetValue) };
+  }, [datasetValue, lifecycle, view?.asOfMs]);
   const regime = useMemo(() => regimeFitOfRead(lifecycle) ?? regimeFit(datasetValue), [datasetValue, lifecycle]);
   // Run date and evidence revision: open dataset keys (FIXTURE_LAB); absent keys keep the typed line.
   const run = useMemo(() => runIdentity(datasetValue), [datasetValue]);
@@ -323,19 +328,16 @@ function Alpha360({ api, alphaId, workspaceId }: AlphaScreenProps) {
 
             {tab === "replay" ? null : (
             <dl className="exec-blk-kpis exec-alp2-kpis" aria-label="Current facts">
-              <Fig label="Net PnL, current" basis="All stages, current facts">
+              {/* QA2 R2-02: the headline is the book in view, deployment by deployment; the other books (Paper and Sandbox are simulated, Canary and Live Real-funded) are listed apart and never added to it. */}
+              <Fig label="Net PnL, current" basis={`${ENV_LABEL[env]} book, current facts. Other books apart, never added`}>
                 {view?.money.published === false
                   ? <span><Np id="FE-005" /><WhyMark name="Money, reason" reason={view.money.reason} /></span>
-                  : view?.money.published && view.money.netPnl.length > 0
-                    ? view.money.netPnl.map((p) => <span key={p.currency} className="exec-alp2-fig"><Dec value={p.value} currency={p.currency} signed /></span>)
-                    : <Na />}
+                  : rows.length > 0 ? <BookFigures rows={rows} book={env} metric="netPnl" /> : <Na />}
               </Fig>
-              <Fig label="Exposure, current" basis="All stages, current facts">
+              <Fig label="Exposure, current" basis={`${ENV_LABEL[env]} book, current facts. Other books apart, never added`}>
                 {view?.money.published === false
                   ? <span><Np id="FE-005" /><WhyMark name="Money, reason" reason={view.money.reason} /></span>
-                  : view?.money.published && view.money.exposure.length > 0
-                    ? view.money.exposure.map((e) => <span key={e.currency} className="exec-alp2-fig"><Dec value={e.value} currency={e.currency} /></span>)
-                    : <Na />}
+                  : rows.length > 0 ? <BookFigures rows={rows} book={env} metric="exposure" /> : <Na />}
               </Fig>
               <Fig label="Return" basis="30D; methodology per source"><ReturnFig read={dataset} names={names} /></Fig>
               <Fig label="Max drawdown" basis="Window per source"><RowFigure read={dataset} names={names} metricKey="max_drawdown_pct" fallback={<Np id="FE-025" />} cell={(metric) => <PercentValue metric={metric} signed={false} />} /></Fig>

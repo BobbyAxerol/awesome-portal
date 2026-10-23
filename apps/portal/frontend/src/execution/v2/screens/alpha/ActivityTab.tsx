@@ -66,7 +66,7 @@ export interface ActivityTabProps {
   timeline: PagedRead<ObservedTimeline>;
   book: SubjectBook;
   /** The dataset's published lifecycle events (WP-C keys); empty with every kind missing when the dataset carries none. */
-  life?: { events: readonly LifeEvent[]; missing: readonly EventKind[]; spans?: readonly StageSpan[] };
+  life?: { events: readonly LifeEvent[]; missing: readonly EventKind[]; spans?: readonly StageSpan[]; future?: number };
 }
 
 const NO_LIFE = { events: [] as readonly LifeEvent[], missing: ["stage", "decision", "incident", "recall", "flow"] as readonly EventKind[] };
