@@ -45,7 +45,7 @@ import { useManagerDataset } from "../manager/useManagerDataset";
 import { PartitionFigures, groupsByPortfolio, publishes, rowCountsByPortfolio, servesDataset } from "./PartitionFigures";
 import { EXPORT_REASON } from "./fe";
 import { FilterChips, RangeFilters, type FilterChip } from "./RangeFilters";
-import { RANGES, SCORE_KEYS, SCORE_MISSING, SCORE_STATE_PARAM, parseRange, rangeText, writeRange, type Range, type RangeId } from "./registerMetrics";
+import { RANGES, SCORE_KEYS, SCORE_MISSING, SCORE_STATE_PARAM, readRangeState, rangeText, writeRange, type Range, type RangeId } from "./registerMetrics";
 import { OPTIONAL_COLUMNS, PortfolioTable, readHidden, writeHidden, type ColumnId, type PortfolioFigures } from "./PortfolioTable";
 import { COMPARE_OFF_REASON, DEFAULT_ROUTES, FROM_LIST, joinQuery, type PortfolioRoutes } from "./routes";
 import { COMPARE_MAX, COMPARE_MIN, IN_PARAM, partitionByCurrency, selectionFrom, withSelection } from "./selection";
@@ -141,13 +141,17 @@ export default function PortfolioListScreen({ api, capabilities, routes = DEFAUL
   const domain: DomainFilter | null = readDomainFilter(params.get("domain"));
   const hidden = readHidden(params.get("hide"));
   const compact = params.get("density") === "compact";
-  const ranges = useMemo(() => {
+  // A range in the address is a range, nothing, or INVALID (not decimals, or a minimum above the maximum): an invalid one is said on the page
+  // and never read as "no filter" (Codex post-freeze review, change 1).
+  const { ranges, invalidRanges } = useMemo(() => {
     const out: Partial<Record<RangeId, Range>> = {};
+    const bad: { id: RangeId; label: string; raw: string; reason: string }[] = [];
     for (const spec of RANGES) {
-      const range = parseRange(params.get(spec.param));
-      if (range !== null) out[spec.id] = range;
+      const state = readRangeState(params.get(spec.param));
+      if (state.kind === "range") out[spec.id] = state.range;
+      else if (state.kind === "invalid") bad.push({ id: spec.id, label: spec.label, raw: state.raw, reason: state.reason });
     }
-    return out;
+    return { ranges: out, invalidRanges: bad };
   }, [params]);
   const scoreMissingOnly = params.get(SCORE_STATE_PARAM) === SCORE_MISSING;
   const { sort } = parseSort(sortRaw);
@@ -157,15 +161,15 @@ export default function PortfolioListScreen({ api, capabilities, routes = DEFAUL
   /* ── rows ─────────────────────────────────────────────────────────── */
   const loaded = useMemo(() => (envelope ? toRows(envelope.items) : []), [envelope]);
   const currencies = useMemo(() => currenciesOf(loaded), [loaded]);
-  const rangeCount = Object.keys(ranges).length + (scoreMissingOnly ? 1 : 0);
+  const rangeCount = Object.keys(ranges).length + invalidRanges.length + (scoreMissingOnly ? 1 : 0);
   const filtered = q !== null || domain !== null || rangeCount > 0;
   const groups = figures?.groups ?? null;
   // The dataset's own capital statement of the environment (one entry per economic partition): the "Total · NAV" line of the hi-fi, as published.
   const statementList = dataset.phase === "ready" ? dataset.value.capitalStatements : null;
   const scopeNav = statementList !== null && publishes(statementList, "current_nav") ? statementList : null;
   const visible = useMemo(
-    () => sortRows(filterRows(loaded, q, domain, { ranges, scoreMissing: scoreMissingOnly, currency: ccy, groups }), sort, ccy, groups).slice(0, ROW_CAP),
-    [loaded, q, domain, ranges, scoreMissingOnly, sort, ccy, groups],
+    () => (invalidRanges.length > 0 ? [] : sortRows(filterRows(loaded, q, domain, { ranges, scoreMissing: scoreMissingOnly, currency: ccy, groups }), sort, ccy, groups).slice(0, ROW_CAP)),
+    [loaded, q, domain, ranges, invalidRanges, scoreMissingOnly, sort, ccy, groups],
   );
   // Portfolios that hold nothing in the chosen currency (base currency and every allocation are another one): a count of rows, no money added.
   const otherCurrency = useMemo(
@@ -230,6 +234,7 @@ export default function PortfolioListScreen({ api, capabilities, routes = DEFAUL
     ...(q !== null ? [{ id: "q", text: `Search: ${q}`, clear: () => url.set({ q: null }, { replace: true }) }] : []),
     ...(domain !== null ? [{ id: "domain", text: `Domain: ${domain === "real" ? "Real-funded" : "Simulated"}`, clear: () => setLocal("domain", null) }] : []),
     ...RANGES.flatMap((spec) => (ranges[spec.id] === undefined ? [] : [{ id: spec.id, text: rangeText(spec, ranges[spec.id]!, ccy), clear: () => setRange(spec.id, null) }])),
+    ...invalidRanges.map((bad) => ({ id: `${bad.id}-invalid`, text: `${bad.label} ${bad.raw} (invalid range)`, clear: () => setRange(bad.id, null) })),
     ...(scoreMissingOnly ? [{ id: SCORE_STATE_PARAM, text: "Score missing or insufficient evidence", clear: () => setScoreMissing(false) }] : []),
   ];
 
@@ -400,6 +405,16 @@ export default function PortfolioListScreen({ api, capabilities, routes = DEFAUL
             </span>
           </div>
           <FilterChips chips={chips} onClearAll={clearFilters} />
+          {invalidRanges.length > 0 ? (
+            <div className="exec-pf-banner" role="alert" data-testid="invalid-range">
+              {invalidRanges.map((bad) => (
+                <p key={bad.id} className="exec-pf-banner-line">
+                  <Flag kind="attention" label="Invalid range" size="sm" /> <span>{bad.label} {bad.raw}: {bad.reason}. No portfolio is shown until it is corrected or cleared.</span>{" "}
+                  <button type="button" className="exec-pf-btn" onClick={() => setRange(bad.id, null)}>Clear {bad.label}</button>
+                </p>
+              ))}
+            </div>
+          ) : null}
           <p className="exec-pf-basis" data-testid="basis-text">
             Basis: {url.value.env === "live" ? "Real-funded" : url.value.env === "paper" ? "Paper" : "Sandbox"} · one economic partition per figure, one currency each, never summed · Net PnL, Return, Drawdown and Score follow the {url.value.window === "ALL" ? "ALL window (not published yet)" : `${url.value.window} window`}; Economic capital and Allocated capital are current.
           </p>

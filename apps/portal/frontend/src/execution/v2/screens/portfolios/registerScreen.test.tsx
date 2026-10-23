@@ -173,10 +173,12 @@ describe("filters: ranges, missing score, chips", () => {
     expect(names()).toEqual(["Yen-Carry"]);
   });
 
-  it("an unreadable range in the address is ignored, not applied", async () => {
-    await ready(served(), "/deployments/portfolios?env=paper&f_score=abc..5&f_pnl=5..-5");
-    expect(names()).toHaveLength(6);
-    expect(screen.queryByRole("list", { name: "Active filters" })).toBeNull();
+  it("an unreadable or reversed range in the address is INVALID and said (registerReview.test.tsx), never read as no filter", async () => {
+    mount(served(), "/deployments/portfolios?env=paper&f_score=abc..5&f_pnl=5..-5");
+    const alert = await screen.findByTestId("invalid-range", undefined, { timeout: 5000 });
+    expect(alert.textContent).toContain("Score abc..5");
+    expect(alert.textContent).toContain("Net PnL 5..-5");
+    expect(names().filter((name) => name !== "")).toHaveLength(0);
   });
 
   it("Clear all removes every filter and keeps the sort", async () => {

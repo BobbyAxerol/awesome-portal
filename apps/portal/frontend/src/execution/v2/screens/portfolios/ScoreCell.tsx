@@ -28,11 +28,18 @@ export function ScoreBandChip({ band }: { band: keyof typeof BAND_LABEL }) {
 /** One partition's score. `full` adds the P / R / B components and the methodology line (Portfolio 360). */
 export function ScoreFigure({ read, full = false }: { read: ScoreRead; full?: boolean }) {
   if (read.kind === "none") return <NaWhy reason={read.reason} className="exec-pf-na" />;
+  if (read.kind === "invalid") {
+    return (
+      <span className="exec-pf-score" data-state="invalid">
+        <span className="exec-pf-score-top"><NaWhy reason={`Published value ${read.exact}: ${read.reason}`} className="exec-pf-na" text="Invalid score" /></span>
+      </span>
+    );
+  }
   if (read.kind === "absent") {
     return (
       <span className="exec-pf-score" data-state="absent">
         <span className="exec-pf-score-top">
-          <NaWhy reason={`${read.reason}. Policy ${read.policy}.`} className="exec-pf-na" text={absenceWord(read.code)} />
+          <NaWhy reason={`${read.reason}. Availability ${read.availability.toLowerCase()}. Policy ${read.policy}.`} className="exec-pf-na" text={absenceWord(read.code)} />
         </span>
         <span className="exec-pf-score-sub" title={`Policy ${read.policy}`}>{read.evidence !== null ? `Evidence ${evidencePercent(read.evidence)}` : "No evidence figure"}{full ? ` · ${read.policy}` : ""}</span>
       </span>
@@ -44,11 +51,16 @@ export function ScoreFigure({ read, full = false }: { read: ScoreRead; full?: bo
         <span className="exec-pf-score-val" title={`${read.exact} · ${read.methodology ?? "no methodology published"}${read.window === null ? "" : ` · ${read.window}`} · ${read.evidence !== null ? `evidence ${read.evidence}` : "no evidence figure"} · policy ${read.policy}`}>{truncateDecimal(read.exact)}</span>
         <ScoreBandChip band={read.band} />
       </span>
-      {full || read.provisional ? (
+      {full || read.caveats.length > 0 ? (
         <span className="exec-pf-score-sub">
-          {read.provisional ? <span className="exec-pf-prov" title="Sample below maturity: a numeric score, not yet validated">Provisional</span> : null}
+          {/* What the source says about itself sits beside the value: provisional, partial, stale, unknown freshness or confidence, no methodology.
+              The maturity sentence is printed only when the owning fact states a maturity reason. */}
+          {read.caveats.map((caveat) => (
+            <span key={caveat.word} className="exec-pf-prov" data-caveat={caveat.word} title={caveat.word === "Provisional" && read.maturity !== null ? read.maturity : caveat.note}>{caveat.word}</span>
+          ))}
           {full ? (read.evidence !== null ? <span title={`Evidence coverage ${read.evidence}`}>Evidence {evidencePercent(read.evidence)}</span> : <span>No evidence figure</span>) : null}
           {full ? <span title={read.methodology ?? undefined}>{read.policy}</span> : null}
+          {full && read.reasonCode !== null ? <span title="Code the source published with the value">{read.reasonCode}</span> : null}
         </span>
       ) : null}
       {full ? (

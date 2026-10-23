@@ -24,8 +24,14 @@ function entries(list: { domain?: string; currency: string; tag: string; metrics
 describe("score bands (spec 11.2, from the exact published value)", () => {
   it.each([
     ["0", "weak"], ["39.9999", "weak"], ["40", "neutral"], ["59.9999", "neutral"], ["60", "fair"], ["74.999", "fair"],
-    ["75", "good"], ["89.9999", "good"], ["90", "very_good"], ["100", "very_good"], ["-3", "weak"],
+    ["75", "good"], ["89.9999", "good"], ["90", "very_good"], ["100", "very_good"],
   ])("%s is %s", (value, band) => expect(bandOf(value)).toBe(band));
+
+  it("a -3 is not a Weak portfolio: the published value is outside 0 to 100, so the score is typed invalid and never banded", () => {
+    const read = scoreOf(entries([{ currency: "USDT", tag: "a", metrics: { portfolio_score: score("-3") } }]), null);
+    expect(read.kind).toBe("invalid");
+    expect(scoreMissing(entries([{ currency: "USDT", tag: "a", metrics: { portfolio_score: score("-3") } }]), null)).toBe(true);
+  });
 
   it("has a label for every band", () => {
     expect(Object.values(BAND_LABEL)).toEqual(["Weak", "Neutral", "Fair", "Good", "Very good"]);

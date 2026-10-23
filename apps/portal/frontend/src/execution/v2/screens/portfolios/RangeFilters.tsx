@@ -5,9 +5,9 @@
  * drawn and a sentence says why: there is no dead control. A value that is not an exact decimal is refused where it is typed and
  * never reaches the address. Operands stay text; nothing is parsed to a float.
  */
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 
-import { RANGES, SCORE_MISSING, isDecimal, rangeText, writeRange, type Range, type RangeId, type RangeSpec } from "./registerMetrics";
+import { RANGES, SCORE_MISSING, isDecimal, isReversed, rangeText, writeRange, type Range, type RangeId, type RangeSpec } from "./registerMetrics";
 
 const UNIT_TEXT: Readonly<Record<RangeSpec["unit"], string>> = {
   money: "in the page currency",
@@ -22,10 +22,13 @@ function RangeField({ spec, range, currency, windowLabel, onChange }: { spec: Ra
     setMin(range?.min ?? "");
     setMax(range?.max ?? "");
   }, [range?.min, range?.max]);
+  const noteId = useId();
   const bad = (text: string) => text !== "" && !isDecimal(text);
-  const invalid = bad(min) || bad(max);
+  // A reversed range is refused where it is typed: the text stays, the reason is tied to both inputs, and nothing reaches the address.
+  const reversed = !bad(min) && !bad(max) && isReversed(min, max);
+  const invalid = bad(min) || bad(max) || reversed;
   const commit = (nextMin: string, nextMax: string) => {
-    if (bad(nextMin) || bad(nextMax)) return;
+    if (bad(nextMin) || bad(nextMax) || isReversed(nextMin, nextMax)) return;
     if (nextMin === "" && nextMax === "") return onChange(null);
     onChange({ min: nextMin === "" ? null : nextMin, max: nextMax === "" ? null : nextMax });
   };
@@ -41,16 +44,16 @@ function RangeField({ spec, range, currency, windowLabel, onChange }: { spec: Ra
           <span className="exec-pf-range-inputs">
             <label className="exec-pf-field">
               <span className="exec-pf-sr">{spec.label} minimum</span>
-              <input className="exec-pf-input" inputMode="decimal" placeholder="min" value={min} aria-invalid={bad(min) || undefined} onChange={(e) => setMin(e.target.value.trim())} onBlur={() => commit(min, max)} onKeyDown={(e) => { if (e.key === "Enter") commit(min, max); }} />
+              <input className="exec-pf-input" inputMode="decimal" placeholder="min" value={min} aria-invalid={bad(min) || reversed || undefined} aria-describedby={noteId} onChange={(e) => setMin(e.target.value.trim())} onBlur={() => commit(min, max)} onKeyDown={(e) => { if (e.key === "Enter") commit(min, max); }} />
             </label>
             <span aria-hidden="true">to</span>
             <label className="exec-pf-field">
               <span className="exec-pf-sr">{spec.label} maximum</span>
-              <input className="exec-pf-input" inputMode="decimal" placeholder="max" value={max} aria-invalid={bad(max) || undefined} onChange={(e) => setMax(e.target.value.trim())} onBlur={() => commit(min, max)} onKeyDown={(e) => { if (e.key === "Enter") commit(min, max); }} />
+              <input className="exec-pf-input" inputMode="decimal" placeholder="max" value={max} aria-invalid={bad(max) || reversed || undefined} aria-describedby={noteId} onChange={(e) => setMax(e.target.value.trim())} onBlur={() => commit(min, max)} onKeyDown={(e) => { if (e.key === "Enter") commit(min, max); }} />
             </label>
           </span>
-          <span className="exec-pf-note" role={invalid ? "alert" : undefined}>
-            {invalid ? "Enter an exact decimal such as -100.50." : `${unit}${UNIT_TEXT[spec.unit]}; both ends inclusive; a portfolio with no figure is outside the range.`}
+          <span id={noteId} className="exec-pf-note" role={invalid ? "alert" : undefined}>
+            {reversed ? `The minimum ${min} is above the maximum ${max}: nothing is applied. Equal ends are allowed.` : invalid ? "Enter an exact decimal such as -100.50." : `${unit}${UNIT_TEXT[spec.unit]}; both ends inclusive; a portfolio with no figure is outside the range.`}
           </span>
         </>
       )}

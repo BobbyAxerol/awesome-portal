@@ -71,21 +71,65 @@ export function pickPartition(group: Group | undefined, currency: string | null)
 
 const published = (metric: ManagerMetricRead | undefined): ManagerMetricValue | null => (metric !== undefined && metric.kind === "value" ? metric : null);
 
-/** The exact string a group publishes for `key` in the chosen partition, or `null`. */
+/**
+ * The unit each register key is published in. A figure whose unit is another one is not this measure: it is refused (null), never sorted,
+ * filtered or banded. `MONEY` also has to be in the partition's own currency (a figure in another currency inside a partition is a
+ * contract violation, not a number to compare). Real-funded and Simulated are different partitions and `pickPartition` never merges them.
+ */
+const KEY_UNIT: Readonly<Record<string, string>> = {
+  net_pnl: "MONEY", current_nav: "MONEY", return_30d_pct: "PERCENT", max_drawdown_pct: "PERCENT", concentration_hhi: "RATIO",
+  [SCORE_KEYS.score]: "SCORE", [SCORE_KEYS.p]: "SCORE", [SCORE_KEYS.r]: "SCORE", [SCORE_KEYS.b]: "SCORE", [SCORE_KEYS.evidence]: "RATIO",
+};
+/** The published range of a bounded unit: points 0..100, a coverage ratio 0..1. */
+const KEY_DOMAIN: Readonly<Record<string, readonly [string, string]>> = {
+  [SCORE_KEYS.score]: ["0", "100"], [SCORE_KEYS.p]: ["0", "100"], [SCORE_KEYS.r]: ["0", "100"], [SCORE_KEYS.b]: ["0", "100"], [SCORE_KEYS.evidence]: ["0", "1"],
+};
+
+/** Why a published value is not a valid figure of its key, or `null` when it is one. */
+export function invalidFigure(entry: ManagerPartitionedMetrics, key: string, metric: ManagerMetricValue): string | null {
+  const unit = KEY_UNIT[key];
+  if (unit !== undefined && metric.unit !== unit) return `${key} is published in the unit ${metric.unit}, not ${unit}`;
+  if (metric.unit === "MONEY" && metric.currency !== entry.partition.currency) return `${key} is in ${metric.currency ?? "no currency"} inside the ${entry.partition.currency} partition`;
+  const domain = KEY_DOMAIN[key];
+  if (domain !== undefined && (compareDecimal(metric.exact, domain[0]) < 0 || compareDecimal(metric.exact, domain[1]) > 0)) return `${key} ${metric.exact} is outside ${domain[0]} to ${domain[1]}`;
+  return null;
+}
+
+/** The published value of `key` in one partition entry, only if it is a valid figure of that key. */
+function figureOf(entry: ManagerPartitionedMetrics | null, key: string): ManagerMetricValue | null {
+  if (entry === null) return null;
+  const metric = published(entry.metrics.get(key));
+  return metric === null || invalidFigure(entry, key, metric) !== null ? null : metric;
+}
+
+/** The exact string a group publishes for `key` in the chosen partition, or `null` (not published, or not a valid figure of the key). */
 export function measureValue(group: Group | undefined, key: string, currency: string | null): string | null {
-  return published(pickPartition(group, currency)?.metrics.get(key))?.exact ?? null;
+  return figureOf(pickPartition(group, currency), key)?.exact ?? null;
 }
 
 /* ── the score of one partition ────────────────────────────────────────── */
 
+/** What a value's source says about itself, as short words for the cell and one sentence each for its title (never a clean look for a weaker source). */
+export interface ScoreCaveat {
+  word: string;
+  note: string;
+}
+
 export type ScoreRead =
   | { kind: "none"; reason: string }
-  | { kind: "absent"; code: string; reason: string; evidence: string | null; policy: string }
+  | { kind: "absent"; code: string; reason: string; evidence: string | null; policy: string; availability: string }
+  /** A value the contract cannot hold for a score (wrong unit, outside 0 to 100): typed invalid, never banded. */
+  | { kind: "invalid"; exact: string; reason: string }
   | {
       kind: "value";
       exact: string;
       band: ScoreBand;
       provisional: boolean;
+      /** Quality, caveats and the reason code of the AVAILABLE metric, carried as published. */
+      caveats: readonly ScoreCaveat[];
+      reasonCode: string | null;
+      /** The maturity sentence, only when the owning fact states a maturity reason (`SAMPLE_BELOW_MATURITY`). */
+      maturity: string | null;
       policy: string;
       methodology: string | null;
       evidence: string | null;
@@ -95,26 +139,43 @@ export type ScoreRead =
       window: string | null;
     };
 
-const exactOf = (metric: ManagerMetricRead | undefined): string | null => published(metric)?.exact ?? null;
+const exactOf = (entry: ManagerPartitionedMetrics, key: string): string | null => figureOf(entry, key)?.exact ?? null;
+
+/** The caveats of an AVAILABLE metric: its quality words and its source confidence, one entry each, nothing hidden when the source is weaker. */
+export function caveatsOf(metric: ManagerMetricValue): readonly ScoreCaveat[] {
+  const out: ScoreCaveat[] = [];
+  if (metric.quality.completeness !== "COMPLETE") out.push({ word: metric.quality.completeness === "PARTIAL" ? "Partial" : "Incomplete", note: `Completeness ${metric.quality.completeness.toLowerCase()}` });
+  if (metric.quality.freshness === "STALE") out.push({ word: "Stale", note: "The source is stale" });
+  else if (metric.quality.freshness !== "FRESH") out.push({ word: "Freshness unknown", note: "The source does not state how fresh the value is" });
+  if (metric.sourceConfidence === "PROVISIONAL") out.push({ word: "Provisional", note: "Source confidence is provisional" });
+  else if (metric.sourceConfidence !== "VERIFIED") out.push({ word: "Unverified", note: "The source confidence is not stated" });
+  if (metric.methodologyRef === null) out.push({ word: "No methodology", note: "No methodology is published for this value" });
+  return out;
+}
 
 /** The score of one partition entry, from the keys it publishes. A partition that publishes no `portfolio_score` is `none`. */
 export function scoreOfEntry(entry: ManagerPartitionedMetrics): ScoreRead {
   const metric = entry.metrics.get(SCORE_KEYS.score);
   if (metric === undefined) return { kind: "none", reason: "This partition publishes no portfolio score." };
-  const evidence = exactOf(entry.metrics.get(SCORE_KEYS.evidence));
-  if (metric.kind === "absent") return { kind: "absent", code: metric.reasonCode, reason: metric.copy, evidence, policy: metric.policyRevision };
+  const evidence = exactOf(entry, SCORE_KEYS.evidence);
+  if (metric.kind === "absent") return { kind: "absent", code: metric.reasonCode, reason: metric.copy, evidence, policy: metric.policyRevision, availability: metric.availability };
+  const refused = invalidFigure(entry, SCORE_KEYS.score, metric);
+  if (refused !== null) return { kind: "invalid", exact: metric.exact, reason: `${refused}; no band is given` };
   const window = metric.window === null ? null : `${new Date(metric.window.fromMs).toISOString().slice(0, 10)} to ${new Date(metric.window.toMs).toISOString().slice(0, 10)} (UTC)`;
   return {
     kind: "value",
     exact: metric.exact,
     band: bandOf(metric.exact),
     provisional: metric.sourceConfidence === "PROVISIONAL",
+    caveats: caveatsOf(metric),
+    reasonCode: metric.reasonCode,
+    maturity: metric.quality.reasons.includes("SAMPLE_BELOW_MATURITY") ? "Sample below maturity: a numeric score, not yet validated" : null,
     policy: metric.policyRevision,
     methodology: metric.methodologyRef,
     evidence,
-    p: exactOf(entry.metrics.get(SCORE_KEYS.p)),
-    r: exactOf(entry.metrics.get(SCORE_KEYS.r)),
-    b: exactOf(entry.metrics.get(SCORE_KEYS.b)),
+    p: exactOf(entry, SCORE_KEYS.p),
+    r: exactOf(entry, SCORE_KEYS.r),
+    b: exactOf(entry, SCORE_KEYS.b),
     window,
   };
 }
@@ -188,6 +249,27 @@ export function parseRange(raw: string | null): Range | null {
 }
 
 export const writeRange = (range: Range): string => `${range.min ?? ""}..${range.max ?? ""}`;
+
+/** True when both ends are given and the minimum is above the maximum. Equal ends are a valid, inclusive range. */
+export const isReversed = (min: string | null, max: string | null): boolean => min !== null && max !== null && min !== "" && max !== "" && compareDecimal(min, max) > 0;
+
+/**
+ * What an address says about one range: nothing, a valid range, or an INVALID one (text that is not a decimal, or a minimum above the
+ * maximum). An invalid range is never read as "no filter": the screen says so and shows no row until it is cleared or corrected.
+ */
+export type RangeState = { kind: "none" } | { kind: "range"; range: Range } | { kind: "invalid"; raw: string; reason: string };
+
+export function readRangeState(raw: string | null): RangeState {
+  if (raw === null) return { kind: "none" };
+  const at = raw.indexOf("..");
+  if (at < 0) return { kind: "invalid", raw, reason: "Write it as min..max, either end may be empty" };
+  const min = raw.slice(0, at);
+  const max = raw.slice(at + 2);
+  if ((min !== "" && !isDecimal(min)) || (max !== "" && !isDecimal(max))) return { kind: "invalid", raw, reason: "An end is not an exact decimal" };
+  if (min === "" && max === "") return { kind: "none" };
+  if (isReversed(min, max)) return { kind: "invalid", raw, reason: "The minimum is above the maximum" };
+  return { kind: "range", range: { min: min === "" ? null : min, max: max === "" ? null : max } };
+}
 
 /** Inclusive on both ends. A portfolio with no figure is outside every range. */
 export function inRange(value: string | null, range: Range): boolean {
