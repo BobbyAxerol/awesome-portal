@@ -354,7 +354,7 @@ describe("binding peek (Binding Detail, merged)", () => {
     const drawer = await screen.findByRole("complementary");
     await within(drawer).findByText("Capital invariant: Σ virtual ≤ physical");
     expect(within(drawer).getByText(/Withheld\. The portal never shows the broker account reference\./)).toBeTruthy();
-    expect(within(drawer).getByText("LIVE_BINANCE_USDM")).toBeTruthy();
+    expect(within(drawer).getByText("Live binance usdm")).toBeTruthy();
     const invariant = await within(drawer).findByRole("table", { name: "Capital invariant by currency" });
     expect(within(invariant).getAllByRole("row")).toHaveLength(3);
     expect(within(invariant).getAllByText("Within physical")).toHaveLength(2);
@@ -548,8 +548,7 @@ describe("Account 360: the shared sleeve", () => {
     stubFetch();
     account("acc_bnc_core");
     await loaded360();
-    expect(screen.getByText("Shared account · 3 sleeves")).toBeTruthy();
-    expect(screen.getByText(". Native figures are not sleeve capital.")).toBeTruthy();
+    expect(screen.getByText(/Shared account · 3 sleeves.*\. Native figures are not sleeve capital\./)).toBeTruthy();
     expect(screen.getByText("Stale 14 min")).toBeTruthy();
     expect(screen.getByText("As of 17 Oct 09:00Z")).toBeTruthy();
     expect(screen.getByText("Broker sync: Synced")).toBeTruthy();
@@ -1118,7 +1117,7 @@ describe("Accounts list: the Issues only count", () => {
     mount("/deployments/accounts");
     const button = issuesButton();
     expect(button.querySelector(".exec-acct-tab-count")).toBeNull();
-    expect(button.textContent).toBe("Issues only");
+    expect(button.textContent).toBe("Issues");
     expect(button.getAttribute("aria-label")).not.toMatch(/\d/);
     expect(button.getAttribute("title")).not.toMatch(/\d/);
     expect(button.getAttribute("title")).toContain("The server does not filter on this");
@@ -1139,12 +1138,12 @@ describe("Accounts list: the Issues only count", () => {
     await loadedList();
     const button = issuesButton();
     // Page one holds bnc_sub (stale) and bnc_main (ok): one issue so far, more behind the cursor.
-    expect(button.querySelector(".exec-acct-tab-count")?.textContent).toBe("1+");
+    // The visible number is the server's published total (none in this double); the loaded count is in the label.
+    expect(button.querySelector(".exec-acct-tab-count")).toBeNull();
     expect(button.getAttribute("aria-label")).toBe("Issues only, 1+ in the 2 loaded rows");
     expect(button.getAttribute("title")).toContain("The server does not filter on this");
     fireEvent.click(screen.getByRole("button", { name: "Load more" }));
     await waitFor(() => expect(bodyRows(bindingsTable())).toHaveLength(3), SLOW);
-    expect(issuesButton().querySelector(".exec-acct-tab-count")?.textContent).toBe("2");
     expect(issuesButton().getAttribute("aria-label")).toBe("Issues only, 2 in the 3 loaded rows");
   });
 });

@@ -19,7 +19,7 @@ import { GapWhy, KpiStrip, Kpi, NotAvailableLine, SectionPanel, Triad } from "..
 import { withoutOrigin } from "../../backTo";
 import { withContext } from "../../urlState";
 import {
-  FE, SYNC_SHOWN, alphaHref, balanceFacts, brokerFacts, coverageFlag, deploymentHref, diffFacts, headroomFacts,
+  FE, SYNC_SHOWN, humanize, alphaHref, balanceFacts, brokerFacts, coverageFlag, deploymentHref, diffFacts, headroomFacts,
   ledgerPnl, marginFacts, portfolioHref, sleeveRows, stageWord, triadModel,
   type AccountView, type AllocationFacts, type PositionFacts, type Population, type SleeveRow, type SyncEntry,
 } from "./model";
@@ -288,12 +288,22 @@ export function ReconciliationPanel({ ctx, exposure }: { ctx: PanelContext; expo
   );
 }
 
+/** `1.2 s`, `14 min`: the published milliseconds as words, by integer arithmetic. */
+function durationText(ms: number): string {
+  if (ms < 1000) return `${ms} ms`;
+  if (ms < 60_000) return `${Math.floor(ms / 1000)}.${Math.floor((ms % 1000) / 100)} s`;
+  return `${Math.floor(ms / 60_000)} min`;
+}
+
 export function SyncHistory({ entries }: { entries: readonly SyncEntry[] }) {
+  const [params] = useSearchParams();
   const shown = entries.slice(0, SYNC_SHOWN);
   const columns: CardsColumn<SyncEntry>[] = [
     { key: "when", label: "When (UTC)", render: (row) => (row.at === null ? <Na why="Time not published" /> : <When at={row.at} />) },
     { key: "source", label: "Source", render: (row) => row.source },
+    { key: "check", label: "Check", render: (row) => (row.check === null ? <Na why="The source names no check for this sync" /> : humanize(row.check)) },
     { key: "result", label: "Result", render: (row) => <Flag kind={row.status.kind} label={row.status.label} size="sm" /> },
+    { key: "duration", label: "Duration", numeric: true, render: (row) => (row.durationMs === null ? <Na why="The source states no duration for this sync" /> : durationText(row.durationMs)) },
     { key: "bp", label: "Buying power", numeric: true, render: (row) => (row.source === "BROKER" ? <Value metric={row.detail} /> : <Na why="Broker rows only" />) },
   ];
   return (
@@ -305,6 +315,7 @@ export function SyncHistory({ entries }: { entries: readonly SyncEntry[] }) {
         label="Sync history"
         empty={<span className="exec-acct-note">No sync row is published for this account.</span>}
       />
+      <p className="exec-acct-cap"><Link className="exec-acct-link" to={withContext("/execution/operations?view=exceptions", params)}>Open findings in Operations</Link></p>
       {entries.length > shown.length ? <p className="exec-acct-cap">Showing the newest {shown.length} of {entries.length}<GapWhy name="Why gaps in time are not filled" rows={["Rows are listed as the source gave them; gaps in time are not filled."]} next={null} /></p> : null}
     </SectionPanel>
   );

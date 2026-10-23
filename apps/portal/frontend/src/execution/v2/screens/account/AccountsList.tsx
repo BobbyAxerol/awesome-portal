@@ -160,7 +160,8 @@ export function AccountsList({ api, binding = null, capabilities }: AccountsList
   // the same authorized snapshot (FE-CAT-4); without one, or when the server could not compute it (`null`), nothing is shown, never 0.
   const published = envelope?.counts?.byEnvironment ?? null;
   const tabCount = (id: BindingEnv): number | null => {
-    if (env === id) return envelope !== null ? envelope.page.filteredCount : null;
+    // A tab count is the environment's authorized total, not what the filters left: it does not move with search, venue or Issues.
+    if (env === id) return envelope !== null ? envelope.page.totalCount : null;
     const count = published === null ? undefined : published[id];
     return typeof count === "number" ? count : null;
   };
@@ -353,7 +354,7 @@ export function AccountsList({ api, binding = null, capabilities }: AccountsList
                 : `${issueCountText} of the ${all.length} loaded rows need attention. The server does not filter on this.${typeof issuesEverywhere === "number" ? ` ${issuesEverywhere} across all environments.` : ""}`}
               onClick={() => setLocal("issues", issuesOnly ? "" : "1")}
             >
-              Issues only{issueCountText !== null ? <span className="exec-acct-tab-count">{issueCountText}</span> : null}
+              Issues{typeof issuesEverywhere === "number" ? <span className="exec-acct-tab-count">{issuesEverywhere}</span> : null}
             </button>
           </div>
 
@@ -433,6 +434,7 @@ export function AccountsList({ api, binding = null, capabilities }: AccountsList
                       {pages.loadingMore ? "Loading" : "Load more"}
                     </button>
                   ) : null}
+                  <span className="exec-acct-note exec-acct-scrollhint">Scroll sideways for the other columns</span>
                   {factsCapped ? <span className="exec-acct-note">{beyond}</span> : null}
                   {pages.nextCursor && capped ? <span className="exec-acct-note">Showing the first {ROW_CAP} rows. Narrow the filters to see the rest.</span> : null}
                 </div>

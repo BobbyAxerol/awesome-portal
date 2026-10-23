@@ -301,9 +301,10 @@ function Loaded({ api, accountId, profile, staleReason, refreshing, reload, back
       ) : null}
       {population.shared ? (
         <div className="exec-acct-banner" role="note" data-tone="shared">
-          <span>Shared account · {population.expected ?? population.published} sleeves</span>
-          {population.partial ? `. ${population.published} of ${population.expected} are published here` : ""}
-          <span>. Native figures are not sleeve capital.</span>
+          <span>
+            Shared account · {population.expected ?? population.published} sleeves
+            {population.partial ? `. ${population.published} of ${population.expected} are published here` : ""}. Native figures are not sleeve capital.
+          </span>
         </div>
       ) : null}
       {credential !== null && (credential.kind === "attention" || credential.kind === "stale") ? (

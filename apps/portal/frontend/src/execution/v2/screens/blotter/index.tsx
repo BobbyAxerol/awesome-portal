@@ -46,7 +46,7 @@ import { withContext } from "../../urlState";
 import { ExactText, OrderDetail, type FunnelRead } from "./OrderDetail";
 import {
   CHIPS, COLUMNS, DEFAULT_COLUMNS, GROUP_CAP, NOT_IN_READ, NOT_IN_READ_REQUEST, NARROW_PAGE_LIMIT, NO_SCOPE, PAGE_LIMIT, applyScope, blotterCsv, blotterCsvName, blotterQuery, chipCounts, filtersKey, unchippedStatusCounts,
-  fillsFor, groupExact, humanize, isBucket, legsFor, scopeActive, shortUtc, statusView, type BlotterOrder, type ColumnId, type Scope, type ServerFilters,
+  fillsFor, groupExact, humanize, isBucket, pageFunnel, legsFor, scopeActive, shortUtc, statusView, type BlotterOrder, type ColumnId, type Scope, type ServerFilters,
 } from "./blotterModel";
 import { useBlotterRead } from "./useBlotterRead";
 
@@ -322,6 +322,9 @@ export default function BlotterScreen({ api, accessHref, chartHref: chartHrefPro
       case "tif": return order.timeInForce ?? <span className="exec-blt2-na">Not available</span>;
       case "price": return <ExactText value={order.price} absent="At market" />;
       case "trigger": return <ExactText value={order.triggerPrice} absent="No trigger" />;
+      case "fillqty": return (
+        <span><ExactText value={order.filledQuantity} absent="Not published" /> <span className="exec-blt2-na">/</span> <ExactText value={order.quantity} /></span>
+      );
       case "qty": return <ExactText value={order.quantity} />;
       case "filled": return <ExactText value={order.filledQuantity} absent="Not published for this order" />;
       case "client": return order.clientOrderId ? <span className="exec-blt2-id">{order.clientOrderId}</span> : <span className="exec-blt2-na">Not available</span>;
@@ -608,9 +611,23 @@ export default function BlotterScreen({ api, accessHref, chartHref: chartHrefPro
 
       <FoldPanel
         title="Order funnel"
-        aside={lastOpened ? `Order ${lastOpened}` : undefined}
+        aside={lastOpened ? `Order ${lastOpened}` : "On the loaded orders"}
         defaultOpen
       >
+        {emptyPage ? null : (
+          <>
+            <div className="exec-blt2-funnel" role="group" aria-label="Order path over the loaded orders">
+              {pageFunnel(page.orders).map((step) => (
+                <div key={step.id} className="exec-blt2-fstep">
+                  <span className="exec-blt2-fk">{step.label}</span>
+                  <span className="exec-blt2-fv">{step.count}</span>
+                  <span className="exec-blt2-na">{step.percent !== null ? `${step.percent}%` : ""}{step.id === "submitted" ? " of the loaded orders" : " of submitted"}</span>
+                </div>
+              ))}
+            </div>
+            <p className="exec-blt2-note">Counted over the {page.orders.length} loaded orders. The server publishes no scope-level funnel yet; intent and signal steps happen before the order and are not carried here.</p>
+          </>
+        )}
         {lastOpened === null ? (
           <p className="exec-blt2-na" title="Expand an order to read its path: submitted, risk grant, venue acknowledged, fill.">Open an order to see its path</p>
         ) : (funnels[lastOpened]?.phase ?? "loading") === "loading" ? (

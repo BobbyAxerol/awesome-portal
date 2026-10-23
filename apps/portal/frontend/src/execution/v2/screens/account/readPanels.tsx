@@ -90,17 +90,33 @@ export function DrawdownBlock({ api, accountId, environment, workspaceId, curren
     ? null
     : chart.series.find((entry) => currency !== null && entry.currency === currency) ?? chart.series.find((entry) => entry.currency === null) ?? null;
   const model = equityModel(series === null ? { ...chart, series: [] } : { ...chart, series: [series] }, series?.currency ?? null);
+  // A series that names no currency is a ratio; it is drawn in percent by moving the decimal point two places (exact, no float).
+  const asPercent = series !== null && series.currency === null;
+  const points = asPercent ? model.points.map((p) => ({ t: p.t, v: p.v === null ? null : ratioToPercent(p.v) })) : model.points;
   return (
     <SectionPanel title="Drawdown" aside={aside}>
       <EquityPanel
         label="Account drawdown"
-        points={model.points}
+        points={points}
+        unit={asPercent ? "pct" : undefined}
         currency={model.currency ?? undefined}
         state={model.state.kind === "unavailable" ? { ...model.state, reason: series === null && chart.series.length > 0 ? "No drawdown series is published for this currency." : model.state.reason } : model.state}
         height={140}
       />
     </SectionPanel>
   );
+}
+
+/** `-0.006932` -> `-0.6932`: a ratio as percent, by moving the decimal point two places in the text. */
+export function ratioToPercent(value: string): string {
+  const m = /^(-?)(0|[1-9][0-9]*)(?:\.([0-9]+))?$/.exec(value);
+  if (m === null) return value;
+  const [, sign = "", whole = "0", frac = ""] = m;
+  const padded = frac.padEnd(2, "0");
+  const head = `${whole}${padded.slice(0, 2)}`.replace(/^0+(?=[0-9])/, "");
+  const tail = padded.slice(2);
+  const out = tail === "" ? head : `${head}.${tail}`;
+  return /^0(\.0*)?$/.test(out) ? out : `${sign}${out}`;
 }
 
 /* ── activity ───────────────────────────────────────────────────────────── */

@@ -291,7 +291,7 @@ describe("L3 negative", () => {
 
 describe("blotter default columns and time (BLT-B1)", () => {
   it("opens with the hi-fi's columns (Deployment, Filled, Avg price and Fee are kept, Not available where the read has none): Alpha, Account and Venue are off until chosen", () => {
-    expect([...DEFAULT_COLUMNS].sort()).toEqual(["avg", "deployment", "fee", "filled", "order", "price", "qty", "side", "status", "symbol", "time"].sort());
+    expect([...DEFAULT_COLUMNS].sort()).toEqual(["avg", "deployment", "fee", "fillqty", "order", "price", "side", "status", "symbol", "time"].sort());
     for (const id of ["alpha", "account", "venue"] as const) {
       expect(COLUMNS.find((c) => c.id === id)?.dflt, id).toBe(false);
     }

@@ -436,7 +436,8 @@ a.exec-acct-open {
   padding: 4px 4px 4px 0;
   text-align: left;
   border-top: 1px solid var(--line-soft);
-  white-space: normal;
+  /* A figure or a badge never breaks across lines (QA1 R4 I1). */
+  white-space: nowrap;
 }
 .exec-acct-minitable thead th {
   font: var(--exec-font-th);
@@ -502,4 +503,80 @@ a.exec-acct-open {
     grid-template-columns: minmax(0, 1fr);
     gap: 2px;
   }
+}
+
+/* The capital invariant inside the narrow drawer: one block per currency, label left and figure right, so no figure or badge is
+ * squeezed to a few characters (QA1 R4 I1). The wide Physical binding view keeps the table. */
+.exec-acct-drawer .exec-acct-minitable,
+.exec-acct-drawer .exec-acct-minitable tbody,
+.exec-acct-drawer .exec-acct-minitable tr {
+  display: block;
+}
+.exec-acct-drawer .exec-acct-minitable thead {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+}
+.exec-acct-drawer .exec-acct-minitable tr {
+  padding: var(--space-2) 0;
+  border-top: 1px solid var(--line-soft);
+}
+.exec-acct-drawer .exec-acct-minitable tr > th,
+.exec-acct-drawer .exec-acct-minitable tr > td {
+  border-top: 0;
+}
+.exec-acct-drawer .exec-acct-minitable tbody th[scope="row"] {
+  display: block;
+  padding: 0 0 2px;
+  font: var(--exec-font-label);
+  color: var(--ink);
+}
+.exec-acct-drawer .exec-acct-minitable td {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: 2px 0;
+  text-align: right;
+}
+.exec-acct-drawer .exec-acct-minitable td::before {
+  content: attr(data-l);
+  font: var(--exec-font-label);
+  letter-spacing: 0.08em;
+  color: var(--ink-faint);
+}
+
+/* Accounts table: tighter cell padding so the eight columns fit the 1440 panel (QA1 R4 I2); the binding identity stays in view when
+ * the table scrolls at narrower widths (I5), and a sentence says so. */
+.exec-acct-v2 .exec-cards thead th,
+.exec-acct-v2 .exec-cards tbody td {
+  padding-left: var(--space-2);
+  padding-right: var(--space-2);
+}
+.exec-acct-v2 .exec-cards thead th:first-child,
+.exec-acct-v2 .exec-cards tbody td:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: var(--paper-raised);
+  box-shadow: 1px 0 0 var(--line);
+}
+.exec-acct-v2 .exec-cards-wrap {
+  scrollbar-width: thin;
+}
+.exec-acct-scrollhint {
+  display: none;
+}
+@media (max-width: 1300px) and (min-width: 661px) {
+  .exec-acct-scrollhint {
+    display: inline;
+  }
+}
+
+/* A numeric column lines its figures, its absences and its sub-lines up on the right edge together (QA1 R4 I4). */
+.exec-acct-v2 .exec-cards td[data-numeric="true"] .exec-acct-cell {
+  align-items: flex-end;
+  text-align: right;
 }

@@ -81,11 +81,19 @@ describe("simulated order rows", () => {
     }
   });
 
-  it("a traded order with an unpublished commission or two fee currencies has no fee at all", async () => {
+  it("a traded order whose fill states no commission has no fee at all (typed absent, never 0)", async () => {
     const page = await firstPage();
     const traded = page.orders.filter((o) => o.averageFillPrice.kind === "value");
-    expect(traded.some((o) => o.fee.kind === "absent")).toBe(true);
-    expect(traded.filter((o) => o.fee.kind === "absent").every((o) => o.feeCurrency === null)).toBe(true);
+    const unpublished = traded.filter((o) => page.fills.some((f) => f.clientOrderId === o.clientOrderId && f.commission.kind !== "value"));
+    for (const order of unpublished) {
+      expect(order.fee.kind).toBe("absent");
+      expect(order.feeCurrency).toBeNull();
+    }
+    // Every fee that is published is in one currency per order, the first fill's.
+    for (const order of traded.filter((o) => o.fee.kind === "value")) {
+      const currencies = new Set(page.fills.filter((f) => f.clientOrderId === order.clientOrderId).map((f) => f.commissionCurrency));
+      expect(currencies.size).toBe(1);
+    }
   });
 });
 
@@ -95,7 +103,7 @@ describe("the screen", () => {
     const table = await screen.findByRole("table", { name: "Orders" });
     const rows = within(table).getAllByRole("row").slice(1).filter((r) => !r.classList.contains("exec-blt2-kid"));
     const cell = (row: HTMLElement, label: string) => row.querySelector(`td[data-l='${label}']`)?.textContent ?? "";
-    expect(cell(rows[0]!, "Deployment")).toMatch(/^dep_btc_liveBINANCE$/);
+    expect(cell(rows[0]!, "Deployment")).toMatch(/^dep_btc_paperBINANCE$/);
     expect(cell(rows[0]!, "Avg price")).toMatch(/\d/);
     expect(cell(rows[0]!, "Fee")).toMatch(/USDT$/);
     const idle = rows.find((r) => /Accepted|Canceled|Submitted/.test(cell(r, "Status")))!;
@@ -120,11 +128,11 @@ describe("the screen", () => {
     const before = within(table).getAllByRole("row").length;
     const pick = screen.getByLabelText("Add scope") as HTMLSelectElement;
     expect([...pick.querySelectorAll("optgroup")].map((g) => g.label)).toEqual(expect.arrayContaining(["Deployment", "Account", "Alpha"]));
-    fireEvent.change(pick, { target: { value: "deployment|dep_carry_live" } });
-    await waitFor(() => expect(screen.getByTestId("where").textContent).toContain("deployment=dep_carry_live"));
+    fireEvent.change(pick, { target: { value: "deployment|dep_carry_paper" } });
+    await waitFor(() => expect(screen.getByTestId("where").textContent).toContain("deployment=dep_carry_paper"));
     expect(screen.getByRole("button", { name: "Remove deployment scope" })).toBeTruthy();
     const rows = within(screen.getByRole("table", { name: "Orders" })).getAllByRole("row");
     expect(rows.length).toBeLessThan(before);
-    expect(rows.slice(1).every((r) => (r.querySelector("td[data-l='Deployment']")?.textContent ?? "").startsWith("dep_carry_live"))).toBe(true);
+    expect(rows.slice(1).every((r) => (r.querySelector("td[data-l='Deployment']")?.textContent ?? "").startsWith("dep_carry_paper"))).toBe(true);
   });
 });

@@ -186,7 +186,9 @@ describe("the Triad rows", () => {
     const model = triadModel(p, "acc_bnc_core", "USDT", true);
     for (const key of ["free", "total", "initial", "maintenance"]) {
       const row = model.rows.find((r) => r.key === key)!;
-      expect(row.broker, key).toEqual({ kind: "not-computed", reason: "SHARED_BINDING" });
+      // The venue's published buying power is drawn on the broker side (whole account); every other broker cell and every difference is not computed.
+      if (key === "free") expect(row.broker, key).toMatchObject({ decimal: { full: "301100.00" } });
+      else expect(row.broker, key).toEqual({ kind: "not-computed", reason: "SHARED_BINDING" });
       expect(row.difference, key).toEqual({ kind: "not-computed", reason: "SHARED_BINDING" });
     }
     expect(model.rows.find((r) => r.key === "free")!.internal).toMatchObject({ decimal: { full: "80000.00" } });

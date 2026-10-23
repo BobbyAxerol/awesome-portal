@@ -116,6 +116,13 @@ function overlayAccountF2(data: Obj, accountId: string): void {
     account.network = "MAINNET";
     if (newest) account.network_proof_at_ms = (newest.synced_at_ms as number) - 120_000;
   }
+  // The sync history states which check each sync was and how long it took (open keys on the broker sync rows).
+  const checks = ["BALANCE", "POSITIONS", "OPEN_ORDERS"] as const;
+  const durations = [1200, 800, 600, 1100, 840_000, 2400, 900];
+  rows("broker_sync").forEach((row, index) => {
+    row.check = checks[index % checks.length];
+    row.duration_ms = durations[index % durations.length];
+  });
   for (const margin of rows("margin_balances")) {
     if (margin.account_id === accountId && margin.currency === "USDT" && margin.instrument_id === undefined) margin.margin_ratio = "5.10";
   }
@@ -123,6 +130,30 @@ function overlayAccountF2(data: Obj, accountId: string): void {
     const pf = typeof row.portfolio_id === "string" ? row.portfolio_id : "";
     if (pf in PORTFOLIO_NAMES_F2) row.portfolio_name = PORTFOLIO_NAMES_F2[pf];
   }
+}
+
+/**
+ * Account equity for the core sleeve: 90 daily observations ending on `lastT` at exactly 88200.00 (the account balance). A deterministic
+ * walk in whole cents (integer LCG, no float) between about 87,000 and 88,600 with one dip, one published gap (null) at day 41, and the
+ * series' own high and low inside the window; the drawdown series is derived from it by the existing overlay.
+ */
+function accountEquityPoints(lastT: number): [number, string | null][] {
+  const days = 90;
+  const out: [number, string | null][] = [];
+  let seed = 20261023n;
+  let walk = 0n;
+  for (let k = 0; k < days; k += 1) {
+    seed = (seed * 6364136223846793005n + 1442695040888963407n) % (1n << 63n);
+    const noise = ((seed >> 33n) % 8001n) - 4000n; // +-40.00
+    walk = (walk * 7n) / 10n + noise;
+    let cents = 8_743_000n + (BigInt(k) * 77_000n) / 89n + walk; // a trend from about 87,430 to 88,200
+    if (k >= 20 && k <= 26) cents -= BigInt(7 - Math.abs(k - 23) * 2) * 8_000n; // a dip of about 560.00 around day 23
+    const t = lastT - (days - 1 - k) * 86_400_000;
+    out.push([t, k === 41 ? null : decimalOf(cents, 2)]);
+  }
+  // Land on the account balance exactly at the last point.
+  out[days - 1] = [lastT, "88200.00"];
+  return out;
 }
 // ===== WP-F2 end =====
 
@@ -161,8 +192,11 @@ function overlayChart(body: Obj, metric: string): Obj {
   if (!isObj(panel) || !isObj(panel.data) || !Array.isArray(panel.data.series) || panel.data.series.length === 0) return out;
   const series = panel.data.series[0];
   if (!isObj(series) || !Array.isArray(series.points)) return out;
-  const points = series.points as [number, string | null][];
-  if (points.length >= 5 && points[4]![1] !== null) points[4] = [points[4]![0], "87400.00"];
+  let points = series.points as [number, string | null][];
+  if (points.length >= 5) {
+    points = accountEquityPoints(points[points.length - 1]![0]); // WP-F2: a 90-day daily series ending on the double's own last instant
+    series.points = points;
+  }
   if (metric !== "drawdown") return out;
   let peak: string | null = null;
   const drawdown = points.map(([t, v]): [number, string | null] => {
@@ -183,16 +217,16 @@ function overlayChart(body: Obj, metric: string): Obj {
 // ===== WP-F2 begin: blotter order rows (FIXTURE_LAB; register 2f2) =====
 /**
  * Every order row carries what the design's table shows. Rules (integer arithmetic on the page's own published fills, one currency):
- *  - `deployment_id`: by alpha (btc adaptive -> dep_btc_live, carry -> dep_carry_live, grid -> dep_grid_paper); the venue is the row's own.
- *  - `filled_quantity`: the exact sum of the order's fills on the page; "0" (a true zero) for an order that traded nothing; one order in
- *    twenty-three leaves it out (the typed absence stays testable).
+ *  - `deployment_id`: by alpha (btc adaptive -> dep_btc_paper, carry -> dep_carry_paper, grid -> dep_grid_paper: the read is the paper environment, so are its deployments); the venue is the row's own.
+ *  - `filled_quantity`: the exact sum of the order's fills on the page; "0" (a true zero) for an order that traded nothing; a canceled order
+ *    in five leaves it out (the typed absence stays testable).
  *  - `average_fill_price`: the quantity-weighted fill price truncated to the fills' price places (toward zero); absent without fills.
- *  - `fee` + `fee_currency`: the sum of the fills' commissions when every fill states one in the same currency. A fill without a
- *    commission, or fills in two currencies, leave the order without a fee: absent, never defaulted to 0 and never converted.
+ *  - `fee` + `fee_currency`: the sum of the fills' commissions (one currency per order: the first fill's). A fill without a
+ *    commission leaves the order without a fee: absent, never defaulted to 0 and never converted.
  */
 const DEPLOYMENT_OF_ALPHA: Readonly<Record<string, string>> = {
-  adaptive_hma_cpp_00115m: "dep_btc_live",
-  carry_basis_v3: "dep_carry_live",
+  adaptive_hma_cpp_00115m: "dep_btc_paper",
+  carry_basis_v3: "dep_carry_paper",
   grid_mean_v1: "dep_grid_paper",
 };
 
@@ -207,13 +241,21 @@ function overlayBlotter(body: Obj): Obj {
   const data = out.data;
   if (!isObj(data) || !Array.isArray(data.orders)) return out;
   const fills = (Array.isArray(data.fills) ? data.fills : []).filter(isObj);
+  // The fills of one order settle their fee in one currency (the first fill's), so the order's fee is one exact sum. A fill whose
+  // commission the source did not publish stays null and still leaves the order without a fee.
+  const feeCurrencyOf = new Map<unknown, unknown>();
+  for (const fill of fills) {
+    if (!feeCurrencyOf.has(fill.client_order_id)) feeCurrencyOf.set(fill.client_order_id, fill.commission_currency);
+    fill.commission_currency = feeCurrencyOf.get(fill.client_order_id);
+  }
   for (const order of data.orders) {
     if (!isObj(order)) continue;
     const alpha = typeof order.strategy_id === "string" ? order.strategy_id : "";
     if (alpha in DEPLOYMENT_OF_ALPHA) order.deployment_id = DEPLOYMENT_OF_ALPHA[alpha];
     const mine = fills.filter((fill) => typeof fill.client_order_id === "string" && fill.client_order_id === order.client_order_id);
     const orderId = typeof order.order_id === "string" ? order.order_id : "";
-    if (hashOf(orderId) % 23 !== 0) {
+    // A traded order always states what was filled; a typed absence stays on a canceled order in five (what filled before the cancel is unknown).
+    if (!(order.status === "CANCELED" && hashOf(orderId) % 5 === 0)) {
       if (mine.length === 0) order.filled_quantity = "0";
       else {
         const qPlaces = Math.max(...mine.map((fill) => placesOf(String(fill.quantity))));

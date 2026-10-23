@@ -485,6 +485,9 @@ export interface SyncEntry {
   at: UtcEpochMs | null;
   status: { kind: FlagKind; label: string };
   detail: Metric | null | undefined;
+  /** The row's own `check` word (Balance, Positions, Open orders) and `duration_ms`, when the source publishes them (QA1 R4 I13). */
+  check: string | null;
+  durationMs: number | null;
 }
 
 export interface AccountIdentity {
@@ -640,6 +643,8 @@ export function readAccountView(profile: ProfileEnvelope, accountId: string): Ac
       at: timeOf(row, "synced_at") ?? timeOf(row, "created_at"),
       status: syncView(text(row.status)),
       detail: metricOf(row.buying_power, "money"),
+      check: safeWord(text(row.check)),
+      durationMs: typeof row.duration_ms === "number" && Number.isSafeInteger(row.duration_ms) && row.duration_ms >= 0 ? row.duration_ms : null,
     }))
     // Newest first; a row with no published time sorts last and says so.
     .sort((a, b) => (b.at ?? -1) - (a.at ?? -1))
@@ -802,12 +807,13 @@ export function triadModel(profile: ProfileEnvelope, accountId: string, currency
       label: "Free cash / buying power",
       suffix: currency ?? undefined,
       internal: pick(diff?.internal, bal?.free),
-      // A whole-account buying power next to one sleeve's free cash is the wrong
-      // scope: on a shared binding the broker side of this row is not computed.
-      broker: diff !== null ? diff.broker : shared ? SHARED : broker?.buyingPower,
+      // The broker column is the venue's own whole-account report, so its published buying power is drawn there; it is NOT compared with
+      // one sleeve's free cash: on a shared binding the difference is not computed (QA1 R4 I13).
+      broker: diff !== null ? diff.broker : broker?.buyingPower,
       difference: diff !== null ? diff.delta : sharedCell(),
     },
-    { key: "total", label: "Account balance", suffix: currency ?? undefined, internal: bal?.total, broker: sharedCell(), difference: sharedCell() },
+    // The venue's wallet balance covers the whole account: drawn on the broker side when it is published, never set against one sleeve.
+    { key: "total", label: "Account balance", suffix: currency ?? undefined, internal: bal?.total, broker: broker?.walletBalance ?? sharedCell(), difference: sharedCell() },
     { key: "locked", label: "Cash locked", suffix: currency ?? undefined, internal: bal?.locked },
     { key: "initial", label: "Initial margin", suffix: currency ?? undefined, internal: margin?.initial, broker: sharedCell(), difference: sharedCell() },
     { key: "maintenance", label: "Maintenance", suffix: currency ?? undefined, internal: margin?.maintenance, broker: sharedCell(), difference: sharedCell() },
