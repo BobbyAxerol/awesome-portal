@@ -241,6 +241,10 @@ export function fleetKpis(summary: AlphaFleetSummary | null): readonly Kpi[] {
     { id: "deployments", label: "Deployments", value: v(summary?.deploymentCount) },
     { id: "portfolios", label: "Portfolios", value: v(summary?.portfolioCount) },
     { id: "attention", label: "Need attention", value: v(summary?.needsAttentionCount) },
+    // The design's two lifecycle tiles. The fleet summary carries neither count (UXM-07 audit: FE-027 readiness, FE-034 archive list), so they
+    // are typed absences with their request ids, never a 0 and never a count derived from the loaded rows.
+    { id: "exit-review", label: "Ready for exit review", value: null, note: notPublished({ fe: "FE-027", what: FE.readiness.what }) },
+    { id: "archive", label: "Archive in progress", value: null, note: notPublished(FE.archived) },
     { id: "research", label: "Research only", value: v(summary?.researchOnlyCount) },
   ];
 }

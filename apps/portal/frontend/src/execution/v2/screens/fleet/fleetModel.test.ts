@@ -61,7 +61,7 @@ describe("fixture to model", () => {
   it("derives the KPI strip from the summary counts only", () => {
     const kpis = fleetKpis(envelope.summary!);
     expect(kpis.map((k) => [k.id, k.value])).toEqual([
-      ["alphas", 1], ["deployments", 1], ["portfolios", 1], ["attention", 0], ["research", 0],
+      ["alphas", 1], ["deployments", 1], ["portfolios", 1], ["attention", 0], ["exit-review", null], ["archive", null], ["research", 0],
     ]);
     expect(JSON.stringify(kpis)).not.toMatch(/USDT|pnl|alloc/i);
   });

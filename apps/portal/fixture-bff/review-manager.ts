@@ -254,6 +254,8 @@ function enrichRow(row: Draft, preset: WindowPreset, components = true): Draft {
     const equity = balance !== null && U !== null ? trimmed(toScaled(balance) + toScaled(U), SCALE) : null;
     const ret = A !== null && N !== null ? pct(toScaled(N), toScaled(A)) : null;
     m.balance_total = metric(template, balance, entry.partition.currency);
+    // Guide 8.1: the default Account Balance basis is the internal account balance (never a native custody balance, never summed across shared sources).
+    m.balance_total.basis = "FIXTURE_LAB:INTERNAL_ACCOUNT_BALANCE";
     m.equity_30d_end_value = metric(template, equity, entry.partition.currency);
     m.return_30d_pct = pctMetric(template, ret);
     // SIMULATED partition-level keys (open key names inside `economic_partitions[].metrics`): max drawdown, cost drag, forward days.

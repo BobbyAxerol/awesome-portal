@@ -54,6 +54,17 @@ Level FIXTURE_LAB. Open metric keys of the two group maps only (`economic_partit
 | group by portfolio_id | max_drawdown_pct | PERCENT | changed rule: the seed now carries the group's own row keys (it used the partition alone, so every USDT portfolio drew the same value and 100% of them were absent); one group in five is a typed absence | Portfolios Drawdown | FE-013/025 |
 
 Where a place does not exist: there is no key for the score band, for "eligibility", for the policy version number or for a score `observed_days` in any published map, so the band is derived on the page from the value, eligibility is the metric's `availability` + `reason_code`, provisional is `source_confidence`, and the policy is `policy_revision`. Real sources are not claimed.
+## 2a. WP-A Alpha Fleet QBTS (23 October 2026, `fixture-bff/review-manager.ts`: `addQbts`, `qbtsMetric`; populated profile only)
+Rule: guide M03 8.1 and score spec 5.8. A score is per alpha version, so it is a row key and a partition value, never a group or statement value (a group deletes it; it is never added). The layout-stress profile serves none (its responses sit at the size bound). Deterministic from the row key; integer tenths; no float. The band, the evidence word and the provisional flag are FIXTURE encodings because the metric shape carries a decimal only (see ALPHA_FLEET_COMPLETION, needs-contract 1).
+
+| Level | Key | Unit | Rule | Consumer | Expected real source |
+|---|---|---|---|---|---|
+| row (closed key) and partition | score | SCORE | q = 0.45 P + 0.30 R + 0.25 B from tenths, exact to 3 places; 1 row in 10 is an insufficient-evidence typed absence (reason INSUFFICIENT_EVIDENCE), 1 in 10 a true zero (P = R = B = 0), 2 in 10 provisional; methodology `FIXTURE_LAB:qbts_v1_1`, policy_revision `FIXTURE_LAB` | Fleet QBTS column, sort, range | Manager score publication (raw QBTS slot) |
+| partition (open) | qbts_p, qbts_r, qbts_b | SCORE | the three components in tenths (0 to 99.9), three profiles so every band is reached | QBTS disclosure | score publication components |
+| partition (open) | qbts_band | BAND_ORDINAL | ordinal of the policy band of the UNROUNDED q (`quality_bands_v1_1`: weak below 40, neutral below 60, fair below 75, good below 90, very_good); the band code is the metric's `reason_code` | QBTS band flag | `band_code`, `band_policy_version` |
+| partition (open) | qbts_evidence | EVIDENCE_STATE | 2 eligible, 1 provisional, 0 insufficient; the word is the `reason_code` | QBTS provisional / coverage | evidence maturity state |
+| partition (open) | qbts_provisional | FLAG | 1 when provisional | QBTS flag | provisional marker |
+| row | balance_total | MONEY | basis `FIXTURE_LAB:INTERNAL_ACCOUNT_BALANCE` (was `synthetic-book`); still allocation + net PnL inside the partition | Fleet Account balance | internal account balance projection |
 
 ## 3. Facts no published route carries yet (proposed; not served; screens keep Not published)
 From the subagent reports of 2026-10-22; each is a field to ask Codex for, with the value the fixture lane would simulate.

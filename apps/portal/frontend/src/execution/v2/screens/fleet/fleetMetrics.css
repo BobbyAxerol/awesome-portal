@@ -37,13 +37,13 @@
 .exec-fleet-dataset.exec-fleet-sel thead th:nth-child(2),
 .exec-fleet-dataset.exec-fleet-sel tbody td:nth-child(2) {
   position: sticky;
-  left: 44px;
+  left: 72px;
   z-index: 1;
   background: var(--paper);
 }
 .exec-fleet-dataset.exec-fleet-sel thead th:nth-child(2) { background: var(--paper-sunken); z-index: 2; }
 .exec-fleet-dataset.exec-fleet-sel thead th:first-child,
-.exec-fleet-dataset.exec-fleet-sel tbody td:first-child { width: 44px; min-width: 44px; max-width: 44px; }
+.exec-fleet-dataset.exec-fleet-sel tbody td:first-child { width: 72px; min-width: 72px; max-width: 72px; }
 .exec-fleet-dataset tbody tr[data-selected="true"] td:first-child,
 .exec-fleet-dataset.exec-fleet-sel tbody tr[data-selected="true"] td:nth-child(2) { background: var(--accent-soft); }
 @media (max-width: 660px) {

@@ -83,7 +83,10 @@ describe("the KPI strip and the lens counts stay on a dataset table (Bobby 2026-
     await loaded();
     expect(document.querySelector("[data-source='dataset']")).not.toBeNull();
     await waitFor(() => expect(kpis()["Alphas"]).toBe("5"));
-    expect(kpis()).toEqual({ Alphas: "5", Deployments: "7", Portfolios: "2", "Need attention": "1", "Research only": "1" });
+    expect(kpis()).toEqual({
+      Alphas: "5", Deployments: "7", Portfolios: "2", "Need attention": "1", "Research only": "1",
+      "Ready for exit review": "Not available" + "Not published (FE-027)", "Archive in progress": "Not available" + "Not published (FE-034)",
+    });
     // the fleet read made exactly one request: one row, nothing narrowed, no lens, no search
     expect(legacy).toEqual([{ limit: 1 }]);
     // and the tabs carry the fleet read's alpha counts (Real-funded is an upper bound: an alpha in Canary and Live counts in each)
@@ -126,8 +129,8 @@ describe("the KPI strip and the lens counts stay on a dataset table (Bobby 2026-
     const { api } = harness(MIXED, "ok", () => ({ ok: false, status: "unavailable", reason: "HTTP_503" }));
     mount(api, LIVE_URL);
     await loaded();
-    await waitFor(() => expect(Object.keys(kpis())).toHaveLength(5));
-    for (const value of Object.values(kpis())) expect(value).toBe("Not available");
+    await waitFor(() => expect(Object.keys(kpis())).toHaveLength(7));
+    for (const value of Object.values(kpis())) expect(value).toMatch(/^Not available/);
     expect(tabText(/^All/)).not.toMatch(/\d/);
     // the population line stays: it still says what the table is and that the counts are the fleet read's
     expect(screen.getByTestId("counts-source")).toBeTruthy();

@@ -123,7 +123,7 @@ describe("L0 · canonical, verbatim", () => {
     expect(envelope.page.rows).toHaveLength(1);
     const row = toFleetRow(envelope.page.rows[0]!);
     expect(row).toMatchObject({ alphaId: "alpha_a", stageCode: "PAPER", owner: "Bobby-001", health: { kind: "ok", label: "Ready" } });
-    expect(fleetKpis(envelope.summary!).map((k) => k.value)).toEqual([1, 1, 1, 0, 0]);
+    expect(fleetKpis(envelope.summary!).map((k) => k.value)).toEqual([1, 1, 1, 0, null, null, 0]);
     expect(lensCounts(envelope.summary!).all.text).toBe("1");
   });
 
