@@ -349,6 +349,47 @@ def({
     { id: 'state-unknown', base: 'applied', rule: 'states are closed', ops: [{ op: 'set', path: ['state'], value: 'DONE' }] }],
 });
 
+// GAP-10: typed order fields of ONE order (the blotter rows carry open scalars; this is the typed, strict read) and the blotter's bucket / funnel summary.
+// FEE RULE (F2->K 3): a fee is NEVER defaulted to 0. It is published only when every fill states a commission in ONE currency; otherwise it is not published and the reason is stated.
+def({
+  name: 'order-detail', gap: 'GAP-10', route: '/api/v1/execution/orders/{order_id}/detail', params: ['order_id'], query: ['workspace_id'],
+  description: 'The typed fields of one order: deployment, filled quantity (a true 0 is a value), average fill price, fee with the fee rule (never defaulted to 0; absent with a stated reason when a fill has no commission or the fills use two currencies), acknowledgement latency and the order intent record.',
+  schema: T.rule(T.obj({ ...head('order-detail'), order_id: T.id(), deployment_id: T.sec(T.id()), filled_quantity: T.sec(T.dec()), average_fill_price: T.sec(T.dec()),
+    fee: T.sec(money), fee_absence: T.sec(T.en('NO_FILLS', 'FILL_WITHOUT_COMMISSION', 'MIXED_FEE_CURRENCIES')), ack_latency_ms: T.sec(T.int()),
+    intent: T.sec(T.obj({ intent_id: T.id(), idempotency_scope: T.en('ACTOR_REQUEST_KEY', 'WORKSPACE_REQUEST_KEY') })) }),
+    '!(v.fee.state === "PUBLISHED" && v.fee_absence.state === "PUBLISHED")',
+    [{ not: { type: 'object', required: ['fee', 'fee_absence'], properties: { fee: { type: 'object' }, fee_absence: { type: 'string' } } } }]),
+  valid: {
+    filled: { ...hv('order-detail'), order_id: 'TEST_ONLY:ord-1', deployment_id: 'TEST_ONLY:dep-1', filled_quantity: '0.5', average_fill_price: '67250.5', fee: { currency: 'USDT', value: '1.25' }, ack_latency_ms: 42,
+      intent: { intent_id: 'TEST_ONLY:intent-1', idempotency_scope: 'ACTOR_REQUEST_KEY' } },
+    'no-fills': { ...hv('order-detail'), order_id: 'TEST_ONLY:ord-2', deployment_id: 'TEST_ONLY:dep-1', filled_quantity: '0', fee_absence: 'NO_FILLS' },
+    'mixed-fee': { ...hv('order-detail'), order_id: 'TEST_ONLY:ord-3', filled_quantity: '2', average_fill_price: '100', fee_absence: 'MIXED_FEE_CURRENCIES', ack_latency_ms: 7 },
+  },
+  negatives: [
+    { id: 'fee-and-absence', base: 'filled', rule: 'a fee and its absence reason never coexist', ops: [{ op: 'set', path: ['fee_absence'], value: 'NO_FILLS' }] },
+    { id: 'fee-number', base: 'filled', rule: 'a fee is exact decimal text', ops: [{ op: 'set', path: ['fee', 'value'], value: 1.25 }] },
+    { id: 'fee-no-currency', base: 'filled', rule: 'a fee states its currency', ops: [{ op: 'delete', path: ['fee', 'currency'] }] },
+    { id: 'absence-unknown', base: 'no-fills', rule: 'fee absence reasons are closed', ops: [{ op: 'set', path: ['fee_absence'], value: 'FORGOTTEN' }] },
+    { id: 'latency-float', base: 'filled', rule: 'a latency is an integer', ops: [{ op: 'set', path: ['ack_latency_ms'], value: 4.5 }] },
+    { id: 'scope-unknown', base: 'filled', rule: 'idempotency scopes are closed', ops: [{ op: 'set', path: ['intent', 'idempotency_scope'], value: 'GLOBAL' }] }],
+});
+def({
+  name: 'blotter-summary', gap: 'GAP-10', route: '/api/v1/execution/blotter/summary', params: [], query: ['workspace_id', 'environment', 'deployment_id'],
+  description: 'Status buckets (incl. Working, Conditional, Cancelled) and the order funnel of one query scope. The funnel counts are integers (a true 0 is a value) and never grow along the funnel: filled <= venue_acknowledged <= risk_granted <= submitted.',
+  schema: T.obj({ ...head('blotter-summary'), environment: T.en('paper', 'sandbox', 'live'),
+    status_buckets: T.sec(T.arr(T.obj({ bucket: T.en('OPEN', 'WORKING', 'CONDITIONAL', 'PARTIAL', 'FILLED', 'CANCELLED', 'REJECTED'), count: T.int() }), 7)),
+    funnel: T.sec(T.rule(T.obj({ submitted: T.int(), risk_granted: T.int(), venue_acknowledged: T.int(), filled: T.int() }), 'v.filled <= v.venue_acknowledged && v.venue_acknowledged <= v.risk_granted && v.risk_granted <= v.submitted')) }),
+  valid: {
+    published: { ...hv('blotter-summary'), environment: 'paper', status_buckets: [{ bucket: 'WORKING', count: 3 }, { bucket: 'CONDITIONAL', count: 0 }, { bucket: 'CANCELLED', count: 5 }, { bucket: 'FILLED', count: 40 }],
+      funnel: { submitted: 50, risk_granted: 48, venue_acknowledged: 47, filled: 40 } },
+    'not-read': { ...hv('blotter-summary'), environment: 'paper', status_buckets: null, funnel: null },
+  },
+  negatives: [
+    { id: 'funnel-grows', base: 'published', rule: 'the funnel never grows along its steps', ops: [{ op: 'set', path: ['funnel', 'filled'], value: 49 }], schemaCannot: true },
+    { id: 'bucket-unknown', base: 'published', rule: 'buckets are closed', ops: [{ op: 'set', path: ['status_buckets', 0, 'bucket'], value: 'LIMBO' }] },
+    { id: 'count-negative', base: 'published', rule: 'a count is not negative', ops: [{ op: 'set', path: ['funnel', 'submitted'], value: -1 }] }],
+});
+
 /* ── generation ──────────────────────────────────────────────────────────── */
 const headers = { 'Cache-Control': { required: true, schema: { type: 'string', const: 'private, no-store' } } };
 const header = file => ({ $schema: 'https://json-schema.org/draft/2020-12/schema', $id: `https://schemas.primusspark.com/portal/${file}` });

@@ -892,6 +892,10 @@ export interface PortfolioListItem {
   updatedAt: string;
   /** WP-K slice 6 (N3). Absent = this producer has no owning source. A published roll-up is the worst class among the deployments, with the counts. */
   health?: PortfolioHealthRead;
+  /** WP-K (GAP-17): the capital root; absent = no owning source. */
+  rootId?: string;
+  /** WP-K (GAP-19): the owner as a Portal user id (a link target); `null` = the owner has none; absent = no owning source. `owner` stays the display text. */
+  ownerUserId?: string | null;
 }
 
 export const PORTFOLIO_HEALTH_CLASSES = ["HEALTHY", "ATTENTION", "DEGRADED", "HALTED"] as const;
@@ -961,9 +965,14 @@ function readPortfolioItem(raw: unknown): PortfolioListItem | null {
     || environments.length !== root.environments.length || environments.length === 0) return null;
   const health = Object.prototype.hasOwnProperty.call(root, "health") ? readPortfolioHealth(root.health, deploymentCount) : undefined;
   if (health === null) return null;
+  const idText = (v: unknown): string | null => (typeof v === "string" && /^[A-Za-z0-9._:-]{1,191}$/.test(v) ? v : null);
+  const rootId = Object.prototype.hasOwnProperty.call(root, "root_id") ? idText(root.root_id) : undefined;
+  const ownerUserId = Object.prototype.hasOwnProperty.call(root, "owner_user_id") ? (root.owner_user_id === null ? null : idText(root.owner_user_id)) : undefined;
+  if (rootId === null || (ownerUserId === null && root.owner_user_id !== null)) return null;
   return {
     portfolioId, name, owner: str(root.owner), state, baseCurrency, environments,
     allocationCount, deploymentCount, allocatedByCurrency, updatedAt, ...(health === undefined ? {} : { health }),
+    ...(rootId === undefined ? {} : { rootId }), ...(ownerUserId === undefined ? {} : { ownerUserId }),
   };
 }
 

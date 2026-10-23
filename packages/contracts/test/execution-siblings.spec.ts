@@ -18,8 +18,8 @@ const apply = (body: any, ops: Array<{ op: string; path: Array<string | number>;
 };
 
 describe("WP-K siblings: the index", () => {
-  it("names the thirteen reads and the gaps they answer", () => {
-    expect(index.map((s) => s.gap)).toEqual(["GAP-7", "GAP-3", "GAP-4", "GAP-5", "GAP-6", "GAP-9", "GAP-11", "GAP-12", "GAP-15", "GAP-13", "GAP-14", "GAP-16", "GAP-2"]);
+  it("names the fifteen reads and the gaps they answer", () => {
+    expect(index.map((s) => s.gap)).toEqual(["GAP-7", "GAP-3", "GAP-4", "GAP-5", "GAP-6", "GAP-9", "GAP-11", "GAP-12", "GAP-15", "GAP-13", "GAP-14", "GAP-16", "GAP-2", "GAP-10", "GAP-10"]);
   });
 });
 

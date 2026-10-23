@@ -33,7 +33,9 @@
         "deployment_count": { "type": "integer", "minimum": 0 },
         "allocated_by_currency": { "type": "array", "maxItems": 20, "items": { "$ref": "#/$defs/CurrencyValue" } },
         "updated_at": { "$ref": "#/$defs/Timestamp" },
-        "health": { "$ref": "#/$defs/PortfolioHealth" }
+        "health": { "$ref": "#/$defs/PortfolioHealth" },
+        "root_id": { "$ref": "#/$defs/Identifier", "description": "WP-K (GAP-17), OPTIONAL: the capital root this portfolio hangs under; omitted = this producer has no owning source." },
+        "owner_user_id": { "oneOf": [{ "$ref": "#/$defs/Identifier" }, { "type": "null" }], "description": "WP-K (GAP-19), OPTIONAL: the owner as a Portal user id (the link target); `owner` stays the display text. null = the owner has no Portal user; omitted = no owning source." }
       }
     },
     "PortfolioHealth": {

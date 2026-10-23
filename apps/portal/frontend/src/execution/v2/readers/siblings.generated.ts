@@ -114,5 +114,22 @@ export const SIBLINGS = {
       return `/commands/${encodeURIComponent(params.operation_id)}/receipt${query.toString() === "" ? "" : "?" + query.toString()}`;
     },
   },
+  "order-detail": {
+    gap: "GAP-10", schemaVersion: "portal.execution.order-detail.v1",
+    read: S.refine(S.obj({ "schema_version": S.lit("portal.execution.order-detail.v1"), "workspace_id": S.str(256), "record_authority": S.lit("PORTAL_PROJECTION"), "read_at_ms": S.ms, "order_id": S.id, "deployment_id": S.sec(S.id), "filled_quantity": S.sec(S.dec), "average_fill_price": S.sec(S.dec), "fee": S.sec(S.obj({ "currency": S.str(32), "value": S.dec })), "fee_absence": S.sec(S.en("NO_FILLS", "FILL_WITHOUT_COMMISSION", "MIXED_FEE_CURRENCIES")), "ack_latency_ms": S.sec(S.int(0)), "intent": S.sec(S.obj({ "intent_id": S.id, "idempotency_scope": S.en("ACTOR_REQUEST_KEY", "WORKSPACE_REQUEST_KEY") })) }), (v: any) => !(v.fee.state === "PUBLISHED" && v.fee_absence.state === "PUBLISHED")),
+    path: (params) => {
+      if (!ID.test(params.order_id ?? "")) return null;
+      const query = new URLSearchParams(); for (const key of ["workspace_id"]) if (params[key]) query.set(key, params[key]!);
+      return `/orders/${encodeURIComponent(params.order_id)}/detail${query.toString() === "" ? "" : "?" + query.toString()}`;
+    },
+  },
+  "blotter-summary": {
+    gap: "GAP-10", schemaVersion: "portal.execution.blotter-summary.v1",
+    read: S.obj({ "schema_version": S.lit("portal.execution.blotter-summary.v1"), "workspace_id": S.str(256), "record_authority": S.lit("PORTAL_PROJECTION"), "read_at_ms": S.ms, "environment": S.en("paper", "sandbox", "live"), "status_buckets": S.sec(S.arr(S.obj({ "bucket": S.en("OPEN", "WORKING", "CONDITIONAL", "PARTIAL", "FILLED", "CANCELLED", "REJECTED"), "count": S.int(0) }), 7)), "funnel": S.sec(S.refine(S.obj({ "submitted": S.int(0), "risk_granted": S.int(0), "venue_acknowledged": S.int(0), "filled": S.int(0) }), (v: any) => v.filled <= v.venue_acknowledged && v.venue_acknowledged <= v.risk_granted && v.risk_granted <= v.submitted)) }),
+    path: (params) => {
+      const query = new URLSearchParams(); for (const key of ["workspace_id","environment","deployment_id"]) if (params[key]) query.set(key, params[key]!);
+      return `/blotter/summary${query.toString() === "" ? "" : "?" + query.toString()}`;
+    },
+  },
 } as const satisfies Record<string, SiblingSpec>;
 export type SiblingId = keyof typeof SIBLINGS;

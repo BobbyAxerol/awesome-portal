@@ -1481,6 +1481,9 @@ function wpkPortfolioHealth(method: string, path: string, search: URLSearchParam
     item.health = total === 0 || worst === undefined ? { state: "NOT_PUBLISHED", value: null, basis: null, deployments_by_health: null, as_of: null, reason_code: "DEPLOYMENT_HEALTH_NOT_PUBLISHED" }
       : total > item.deployment_count ? { state: "NOT_PUBLISHED", value: null, basis: null, deployments_by_health: null, as_of: null, reason_code: "DEPLOYMENT_COUNT_MISMATCH" }
         : { state: "PUBLISHED", value: worst, basis: "WORST_OF_DEPLOYMENT_HEALTH", deployments_by_health: counts, as_of: now, reason_code: null };
+    // GAP-17 / GAP-19 (FIXTURE_LAB): one capital root for the review universe; the owner's Portal user id is a digest of the owner text, null for a portfolio with no owner.
+    item.root_id = "FIXTURE_LAB:root-1";
+    item.owner_user_id = item.owner === null ? null : `FIXTURE_LAB:user-${seedOf(item.owner, "wpk-owner") % 5 + 1}`;
   }
   return { status: 200, body };
 }
@@ -1549,6 +1552,42 @@ function wpkSiblings(method: string, path: string, search: URLSearchParams, requ
   const ok = (body: Draft): ReviewManagerResponse => ({ status: 200, body });
   const T = (n: number): number => now - n * 3_600_000;
 
+  const order = /^\/orders\/([A-Za-z0-9._:-]{1,191})\/detail$/.exec(path);
+  if (order !== null && method === "GET") {
+    // GAP-10. The fee rule: never defaulted to 0. An order without fills has no fee (NO_FILLS); fills in two currencies leave no single fee (MIXED_FEE_CURRENCIES); a fill
+    // without a commission leaves none either; otherwise the fee is the exact sum of the fills' commissions in their one currency.
+    const orderId = order[1]!, seed = seedOf(orderId, "wpk-order"), m = mode(orderId);
+    const body: Draft = { ...head("order-detail"), order_id: orderId };
+    if (m === "null") { body.deployment_id = null; body.filled_quantity = null; body.average_fill_price = null; body.fee = null; body.fee_absence = null; body.ack_latency_ms = null; body.intent = null; return ok(body); }
+    if (m === "omit") return ok(body);
+    body.deployment_id = `FIXTURE_LAB:dep-${1 + seed % 6}`;
+    const kind = seed % 5; // 0: no fills, 1: mixed currencies, 2: a fill without commission, else a clean fee
+    if (kind === 0) { body.filled_quantity = "0"; body.fee_absence = "NO_FILLS"; }
+    else {
+      body.filled_quantity = decimal(BigInt(1 + seed % 90), 2);
+      body.average_fill_price = decimal(BigInt(6_700_000 + seed % 40_000), 2);
+      if (kind === 1) body.fee_absence = "MIXED_FEE_CURRENCIES"; else if (kind === 2) body.fee_absence = "FILL_WITHOUT_COMMISSION";
+      else body.fee = { currency: "USDT", value: decimal(BigInt(10 + seed % 900), 2) };
+    }
+    if (kind !== 0 || seed % 2 === 0) body.ack_latency_ms = 8 + seed % 120;
+    body.intent = { intent_id: `FIXTURE_LAB:intent-${orderId}`, idempotency_scope: seed % 2 === 0 ? "ACTOR_REQUEST_KEY" : "WORKSPACE_REQUEST_KEY" };
+    return ok(body);
+  }
+  if (path === "/blotter/summary" && method === "GET") {
+    const environment = search.get("environment") ?? "paper";
+    if (!["paper", "sandbox", "live"].includes(environment)) return invalid;
+    const scope = search.get("deployment_id") ?? "all";
+    if (scope !== "all" && !ID.test(scope)) return invalid;
+    const seed = seedOf(environment, scope, "wpk-blotter"), m = mode(environment, scope);
+    const body: Draft = { ...head("blotter-summary"), environment };
+    return ok(sections(body, ["status_buckets", "funnel"], m, () => {
+      const submitted = 40 + seed % 400, granted = submitted - seed % 7, acknowledged = granted - (seed >>> 3) % 5, filled = acknowledged - (seed >>> 6) % 30;
+      const rest = acknowledged - filled;
+      return { funnel: { submitted, risk_granted: granted, venue_acknowledged: acknowledged, filled },
+        status_buckets: [{ bucket: "WORKING", count: Math.min(rest, 1 + seed % 6) }, { bucket: "CONDITIONAL", count: seed % 3 === 0 ? 0 : seed % 4 }, { bucket: "PARTIAL", count: seed % 5 },
+          { bucket: "CANCELLED", count: Math.max(0, rest - 2) }, { bucket: "REJECTED", count: submitted - granted }, { bucket: "FILLED", count: filled }] };
+    }));
+  }
   const receipt = /^\/commands\/([A-Za-z0-9._:-]{1,191})\/receipt$/.exec(path);
   if (receipt !== null && method === "GET") {
     // GAP-2: the positive receipt. The pinned F0 denial is untouched; this is the sibling that carries the applied case. FIXTURE_LAB: one operation in four is denied.

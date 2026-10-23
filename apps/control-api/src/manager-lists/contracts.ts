@@ -67,6 +67,9 @@ export interface PortfolioListItem {
   updated_at: string;
   /** WP-K slice 6 (N3), OPTIONAL: no owning source exists yet, so the control-api omits it. See `PortfolioHealth` in the published schema. */
   health?: PortfolioHealth;
+  /** WP-K (GAP-17 / GAP-19), OPTIONAL: no owning source exists yet, so the control-api omits them. */
+  root_id?: string;
+  owner_user_id?: string | null;
 }
 
 export interface PortfolioHealth {

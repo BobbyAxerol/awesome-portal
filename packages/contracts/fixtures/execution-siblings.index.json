@@ -149,6 +149,29 @@
         "denied"
       ],
       "post": null
+    },
+    {
+      "name": "order-detail",
+      "gap": "GAP-10",
+      "schema": "execution-order-detail.v1.schema.json",
+      "route": "/api/v1/execution/orders/{order_id}/detail",
+      "valid": [
+        "filled",
+        "no-fills",
+        "mixed-fee"
+      ],
+      "post": null
+    },
+    {
+      "name": "blotter-summary",
+      "gap": "GAP-10",
+      "schema": "execution-blotter-summary.v1.schema.json",
+      "route": "/api/v1/execution/blotter/summary",
+      "valid": [
+        "published",
+        "not-read"
+      ],
+      "post": null
     }
   ]
 }

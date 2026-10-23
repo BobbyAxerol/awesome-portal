@@ -1,0 +1,102 @@
+{
+  "lane": "TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT",
+  "bases": {
+    "filled": "execution-order-detail.filled.synthetic.valid.json",
+    "no-fills": "execution-order-detail.no-fills.synthetic.valid.json",
+    "mixed-fee": "execution-order-detail.mixed-fee.synthetic.valid.json"
+  },
+  "cases": [
+    {
+      "id": "fee-and-absence",
+      "base": "filled",
+      "rule": "a fee and its absence reason never coexist",
+      "ops": [
+        {
+          "op": "set",
+          "path": [
+            "fee_absence"
+          ],
+          "value": "NO_FILLS"
+        }
+      ],
+      "refused_by": "SCHEMA_AND_READER"
+    },
+    {
+      "id": "fee-number",
+      "base": "filled",
+      "rule": "a fee is exact decimal text",
+      "ops": [
+        {
+          "op": "set",
+          "path": [
+            "fee",
+            "value"
+          ],
+          "value": 1.25
+        }
+      ],
+      "refused_by": "SCHEMA_AND_READER"
+    },
+    {
+      "id": "fee-no-currency",
+      "base": "filled",
+      "rule": "a fee states its currency",
+      "ops": [
+        {
+          "op": "delete",
+          "path": [
+            "fee",
+            "currency"
+          ]
+        }
+      ],
+      "refused_by": "SCHEMA_AND_READER"
+    },
+    {
+      "id": "absence-unknown",
+      "base": "no-fills",
+      "rule": "fee absence reasons are closed",
+      "ops": [
+        {
+          "op": "set",
+          "path": [
+            "fee_absence"
+          ],
+          "value": "FORGOTTEN"
+        }
+      ],
+      "refused_by": "SCHEMA_AND_READER"
+    },
+    {
+      "id": "latency-float",
+      "base": "filled",
+      "rule": "a latency is an integer",
+      "ops": [
+        {
+          "op": "set",
+          "path": [
+            "ack_latency_ms"
+          ],
+          "value": 4.5
+        }
+      ],
+      "refused_by": "SCHEMA_AND_READER"
+    },
+    {
+      "id": "scope-unknown",
+      "base": "filled",
+      "rule": "idempotency scopes are closed",
+      "ops": [
+        {
+          "op": "set",
+          "path": [
+            "intent",
+            "idempotency_scope"
+          ],
+          "value": "GLOBAL"
+        }
+      ],
+      "refused_by": "SCHEMA_AND_READER"
+    }
+  ]
+}

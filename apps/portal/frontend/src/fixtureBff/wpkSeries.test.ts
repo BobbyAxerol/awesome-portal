@@ -387,7 +387,7 @@ describe("WP-K FIXTURE_LAB: stage entry on the Manager datasets", () => {
   });
 });
 
-describe("WP-K FIXTURE_LAB: the thirteen sibling reads", () => {
+describe("WP-K FIXTURE_LAB: the fifteen sibling reads", () => {
   const route = (path: string, query: Record<string, string> = {}, method = "GET", body: unknown = null): Body => {
     prepare();
     return answerReviewManager(method, `/api/v1/execution${path}`, new URLSearchParams(query), "populated", body);
@@ -404,6 +404,8 @@ describe("WP-K FIXTURE_LAB: the thirteen sibling reads", () => {
     ["report-snapshots", "execution-report-snapshots.v1", "/reports", [{ subject_type: "PORTFOLIO", subject_id: "pf_a" }, { subject_type: "PORTFOLIO", subject_id: "pf_b" }]],
     ["recovery-events", "execution-recovery-events.v1", "/recovery-events", [{ subject_type: "INCIDENT", subject_id: "inc_a" }, { subject_type: "INCIDENT", subject_id: "inc_b" }]],
     ["command-receipt", "execution-command-receipt.v1", "/commands/op_a/receipt", [{}]],
+    ["order-detail", "execution-order-detail.v1", "/orders/ord_a/detail", [{}]],
+    ["blotter-summary", "execution-blotter-summary.v1", "/blotter/summary", [{ environment: "paper" }, { environment: "live", deployment_id: "dep_x" }]],
     ["grants", "execution-grants.v1", "/grants", [{ subject_type: "DEPLOYMENT", subject_id: "dep_a" }, { subject_type: "DEPLOYMENT", subject_id: "dep_b" }]],
   ];
   it.each(CASES)("%s answers deterministically with schema-valid bodies that the generated reader accepts", (name, file, path, queries) => {
@@ -483,5 +485,32 @@ describe("WP-K FIXTURE_LAB: the thirteen sibling reads", () => {
     expect(limits.ok, JSON.stringify(limits)).toBe(true);
     const refused = await api.getSibling!("portfolio-members", {});
     expect(refused.ok).toBe(false);
+  });
+});
+
+describe("WP-K FIXTURE_LAB: order fee rule and funnel", () => {
+  const order = (id: string): Body => { prepare(); return answerReviewManager("GET", `/api/v1/execution/orders/${id}/detail`, new URLSearchParams(), "populated").body; };
+  it("a fee is never defaulted to 0: it is the exact figure in one currency, or absent with its reason; never both; an order with no fills has filled_quantity 0 and no fee", () => {
+    const seen = new Set<string>();
+    for (let i = 0; i < 60; i += 1) {
+      const b = order(`ord_scan_${i}`);
+      if (!("filled_quantity" in b) || b.filled_quantity === null) continue;
+      if (b.fee && b.fee_absence) throw new Error("fee and its absence together");
+      if (b.fee) { seen.add("fee"); expect(b.fee.currency).toBe("USDT"); expect(b.fee.value).toMatch(/^\d+\.\d{2}$/); expect(b.fee.value).not.toBe("0.00"); }
+      else { seen.add(b.fee_absence); expect(b.fee).toBeUndefined(); }
+      if (b.fee_absence === "NO_FILLS") { expect(b.filled_quantity).toBe("0"); expect(b.average_fill_price).toBeUndefined(); }
+    }
+    expect([...seen].sort()).toEqual(["FILL_WITHOUT_COMMISSION", "MIXED_FEE_CURRENCIES", "NO_FILLS", "fee"]);
+  });
+  it("the funnel never grows along its steps and the buckets include Working, Conditional and Cancelled", () => {
+    prepare();
+    for (const environment of ["paper", "sandbox", "live"]) {
+      const b = answerReviewManager("GET", "/api/v1/execution/blotter/summary", new URLSearchParams({ environment }), "populated").body;
+      if (!b.funnel) continue;
+      expect(b.funnel.filled).toBeLessThanOrEqual(b.funnel.venue_acknowledged);
+      expect(b.funnel.venue_acknowledged).toBeLessThanOrEqual(b.funnel.risk_granted);
+      expect(b.funnel.risk_granted).toBeLessThanOrEqual(b.funnel.submitted);
+      expect((b.status_buckets as Body[]).map((x) => x.bucket)).toEqual(expect.arrayContaining(["WORKING", "CONDITIONAL", "CANCELLED"]));
+    }
   });
 });
