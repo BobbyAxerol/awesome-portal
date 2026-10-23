@@ -17,7 +17,23 @@ EDGE_BASE_URL=https://<edge host> EDGE_I_UNDERSTAND_READ_ONLY=1 EDGE_CONFIG=./ed
 EDGE_REPORT=./edge-report.json npx vitest run src/edgeConformance
 ```
 `edge.config.json`: `{ "headers": {"cookie": "..."}, "workspaceId": "...", "environment": "paper", "ids": {"<fixture id>": "<real id>"} }`. GET only, one request per distinct URL, at most 150, spaced 250 ms; fixture ids never go to a real host (reported SKIPPED_NO_REAL_ID); the report keeps no header or token. Per route it records status, schema violations (same checker as the fixture), whether the real reader accepted the body, unread fields and fields the reader read that the schema does not publish.
-Self-test on 2026-10-22 against the populated fixture BFF on loopback (`EDGE_ALLOW_FIXTURE_IDS=1`): 51 OK, 9 SCHEMA_VIOLATIONS, which are the doubles' known drift from the published schemas (ROUTES.md DRIFT rows). A connected run on a real Edge has NOT been done.
+Self-test, retest 2026-10-23 (lane `4997d8e7b`; fixture BFF bundle from that worktree on a loopback port, `EDGE_ALLOW_FIXTURE_IDS=1`, not the preview): **89 OK, 0 SCHEMA_VIOLATIONS, verdict PASS**. The first run of 2026-10-22 was 80 OK / 9 SCHEMA_VIOLATIONS (the first retest listed 51 OK because the probe then counted fewer routes; the 9 violations are the finding). This is a fixture-conformance result: it proves the doubles match the published schemas, not that a real Edge does. A connected run on a real Edge has NOT been done, and the 150-GET checker must not be pointed at the finite native08 source.
+
+The nine dispositions (all FIXED against the published contract; negative fixtures untouched):
+
+| # | Route | Disposition | Note |
+|---|---|---|---|
+| 1 | GET `/screen-contracts` | FIXED | 23 screens in the double. FINDING for Codex: the real control-api catalogue serves 25 screens against a schema maximum of 23; the double drops the two BR-EX-72 list screens. The real server still exceeds its own schema. |
+| 2 | GET `/alphas/{id}/stage-drift` | FIXED, opt-in body | v2 exact decimals served with `?numeric_format=DECIMAL_STRING` (as the real control-api does); the default URL stays the v1 JSON-number body the reader consumes, and is not judged by a v2 schema. |
+| 3 | GET `/resources/portfolios/{id}` | FIXED, opt-in body | v2 body for workspace `ws_TEST_SCOPED_V2`; the default body is the legacy one the screens read (no published v1 schema exists for it). |
+| 4 | GET `/resources/accounts/{id}` | FIXED, opt-in body | same |
+| 5 | GET `/resources/bindings/{id}` | FIXED, opt-in body | same |
+| 6 | GET `/governance/approvals` | FIXED | published inbox envelope (actor, read_truth, counts, page). |
+| 7 | GET `/governance/approvals/history` | FIXED | actor, read_truth, applied filters/sort. |
+| 8 | GET `/governance/approvals/{id}/r1` | FIXED | published R1 envelope; the loose `sla` and `expected_version` fields are no longer served (the published Approval has none), so a screen shows an absent R1 SLA age as absent. |
+| 9 | GET `/governance/waivers` | FIXED | read_truth, non-empty applied sort, filters from the query. |
+
+Open for routes 2-5: making the DEFAULT URL v2 needs reader and screen changes (not done; ACCEPTED_FOR_IMPLEMENTATION). Hardening of the probe itself (limits, timeout, non-JSON 200, verdict, `EDGE_REQUIRE_PASS=1`) is in `edgeProbe.ts` (`ea537a9ba` to `15d73578f`); a report-only success is not a source-conformance verdict.
 
 ## 4. Per-endpoint switch-on checklist (one endpoint at a time)
 1. Owner names the endpoint and its source (Source Truth Board row `EXISTS_MOUNTED` is Codex's call; a fixture result never changes it).
