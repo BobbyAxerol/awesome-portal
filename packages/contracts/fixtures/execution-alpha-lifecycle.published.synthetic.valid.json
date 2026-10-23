@@ -1,0 +1,301 @@
+{
+  "lane": "TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT",
+  "value": {
+    "schema_version": "portal.execution.alpha-lifecycle.v1",
+    "workspace_id": "TEST_ONLY:workspace",
+    "alpha_id": "TEST_ONLY:alpha-a",
+    "alpha_version_id": "TEST_ONLY:alpha-a-v2",
+    "record_authority": "PORTAL_PROJECTION",
+    "read_at_ms": 1800000000000,
+    "stages": [
+      {
+        "stage": "R1",
+        "state": "DONE",
+        "entered_at_ms": 1786176000000,
+        "exited_at_ms": 1787040000000,
+        "days_in_stage": 10,
+        "criteria": null,
+        "decider_role": "Manager",
+        "decided_by": "TEST_ONLY:actor-1",
+        "receipt_ref": "TEST_ONLY:receipt-r1",
+        "blocked_reason": null
+      },
+      {
+        "stage": "R2",
+        "state": "DONE",
+        "entered_at_ms": 1787040000000,
+        "exited_at_ms": 1787904000000,
+        "days_in_stage": 10,
+        "criteria": null,
+        "decider_role": "Manager",
+        "decided_by": "TEST_ONLY:actor-2",
+        "receipt_ref": "TEST_ONLY:receipt-r2",
+        "blocked_reason": null
+      },
+      {
+        "stage": "PAPER",
+        "state": "DONE",
+        "entered_at_ms": 1787904000000,
+        "exited_at_ms": 1791360000000,
+        "days_in_stage": 40,
+        "criteria": {
+          "met": 7,
+          "total": 7,
+          "items": [
+            {
+              "label": "Criterion 1",
+              "observed": "70.0",
+              "threshold": "60.0",
+              "met": true
+            },
+            {
+              "label": "Criterion 2",
+              "observed": "71.0",
+              "threshold": "60.0",
+              "met": true
+            },
+            {
+              "label": "Criterion 3",
+              "observed": "72.0",
+              "threshold": "60.0",
+              "met": true
+            },
+            {
+              "label": "Criterion 4",
+              "observed": "73.0",
+              "threshold": "60.0",
+              "met": true
+            },
+            {
+              "label": "Criterion 5",
+              "observed": "74.0",
+              "threshold": "60.0",
+              "met": true
+            },
+            {
+              "label": "Criterion 6",
+              "observed": "75.0",
+              "threshold": "60.0",
+              "met": true
+            },
+            {
+              "label": "Criterion 7",
+              "observed": "76.0",
+              "threshold": "60.0",
+              "met": true
+            }
+          ]
+        },
+        "decider_role": "Manager",
+        "decided_by": "TEST_ONLY:actor-1",
+        "receipt_ref": "TEST_ONLY:receipt-paper",
+        "blocked_reason": null
+      },
+      {
+        "stage": "SANDBOX",
+        "state": "DONE",
+        "entered_at_ms": 1791360000000,
+        "exited_at_ms": 1793952000000,
+        "days_in_stage": 30,
+        "criteria": {
+          "met": 7,
+          "total": 7,
+          "items": [
+            {
+              "label": "Criterion 1",
+              "observed": "70.0",
+              "threshold": "60.0",
+              "met": true
+            },
+            {
+              "label": "Criterion 2",
+              "observed": "71.0",
+              "threshold": "60.0",
+              "met": true
+            },
+            {
+              "label": "Criterion 3",
+              "observed": "72.0",
+              "threshold": "60.0",
+              "met": true
+            },
+            {
+              "label": "Criterion 4",
+              "observed": "73.0",
+              "threshold": "60.0",
+              "met": true
+            },
+            {
+              "label": "Criterion 5",
+              "observed": "74.0",
+              "threshold": "60.0",
+              "met": true
+            },
+            {
+              "label": "Criterion 6",
+              "observed": "75.0",
+              "threshold": "60.0",
+              "met": true
+            },
+            {
+              "label": "Criterion 7",
+              "observed": "76.0",
+              "threshold": "60.0",
+              "met": true
+            }
+          ]
+        },
+        "decider_role": "Manager",
+        "decided_by": "TEST_ONLY:actor-3",
+        "receipt_ref": "TEST_ONLY:receipt-sandbox",
+        "blocked_reason": null
+      },
+      {
+        "stage": "CANARY",
+        "state": "CURRENT",
+        "entered_at_ms": 1793952000000,
+        "exited_at_ms": null,
+        "days_in_stage": 70,
+        "criteria": {
+          "met": 6,
+          "total": 7,
+          "items": [
+            {
+              "label": "Criterion 1",
+              "observed": "70.0",
+              "threshold": "60.0",
+              "met": true
+            },
+            {
+              "label": "Criterion 2",
+              "observed": "71.0",
+              "threshold": "60.0",
+              "met": true
+            },
+            {
+              "label": "Criterion 3",
+              "observed": "72.0",
+              "threshold": "60.0",
+              "met": true
+            },
+            {
+              "label": "Criterion 4",
+              "observed": "73.0",
+              "threshold": "60.0",
+              "met": true
+            },
+            {
+              "label": "Criterion 5",
+              "observed": "74.0",
+              "threshold": "60.0",
+              "met": true
+            },
+            {
+              "label": "Criterion 6",
+              "observed": "75.0",
+              "threshold": "60.0",
+              "met": true
+            },
+            {
+              "label": "Criterion 7",
+              "observed": "41.5",
+              "threshold": "60.0",
+              "met": false
+            }
+          ]
+        },
+        "decider_role": "Manager",
+        "decided_by": null,
+        "receipt_ref": null,
+        "blocked_reason": "Criterion 7 of 7 is not met"
+      },
+      {
+        "stage": "LIVE",
+        "state": "NOT_STARTED",
+        "entered_at_ms": null,
+        "exited_at_ms": null,
+        "days_in_stage": null,
+        "criteria": null,
+        "decider_role": null,
+        "decided_by": null,
+        "receipt_ref": null,
+        "blocked_reason": null
+      }
+    ],
+    "events": {
+      "total": 5,
+      "truncated": false,
+      "items": [
+        {
+          "event_id": "TEST_ONLY:evt-1",
+          "kind": "stage",
+          "at_ms": 1787904000000,
+          "title": "Paper started",
+          "actor": null,
+          "receipt_ref": null
+        },
+        {
+          "event_id": "TEST_ONLY:evt-2",
+          "kind": "decision",
+          "at_ms": 1791360000000,
+          "title": "Paper exit approved",
+          "actor": "TEST_ONLY:actor-1",
+          "receipt_ref": "TEST_ONLY:receipt-paper"
+        },
+        {
+          "event_id": "TEST_ONLY:evt-3",
+          "kind": "incident",
+          "at_ms": 1798272000000,
+          "title": "Venue feed gap",
+          "actor": null,
+          "receipt_ref": null
+        },
+        {
+          "event_id": "TEST_ONLY:evt-4",
+          "kind": "recall",
+          "at_ms": 1799827200000,
+          "title": "Recall pending",
+          "actor": "TEST_ONLY:actor-2",
+          "receipt_ref": "TEST_ONLY:receipt-recall"
+        },
+        {
+          "event_id": "TEST_ONLY:evt-5",
+          "kind": "flow",
+          "at_ms": 1793952000000,
+          "title": "Allocation added",
+          "actor": "TEST_ONLY:actor-2",
+          "receipt_ref": null
+        }
+      ]
+    },
+    "regime_fit": {
+      "state": "PUBLISHED",
+      "ratio_scale": "FRACTION",
+      "value": "0.6125",
+      "reason_code": null
+    },
+    "venue_net_pnl": [
+      {
+        "venue": "BINANCE",
+        "economic_domain": "ACTUAL",
+        "currency": "USDT",
+        "net_pnl": "1250.5",
+        "as_of_ms": 1800000000000
+      },
+      {
+        "venue": "OKX",
+        "economic_domain": "ACTUAL",
+        "currency": "USDT",
+        "net_pnl": "-310.25",
+        "as_of_ms": 1800000000000
+      },
+      {
+        "venue": "DERIBIT",
+        "economic_domain": "ACTUAL",
+        "currency": "BTC",
+        "net_pnl": "0.0412",
+        "as_of_ms": 1800000000000
+      }
+    ]
+  }
+}

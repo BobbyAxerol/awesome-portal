@@ -24,6 +24,8 @@ import { NotAvailableLine, SectionPanel } from "../../blocks";
 import { formatAsOf } from "../../boundary";
 import { Flag } from "../../Flag";
 import type { IncidentRootV2, InstantV2, OperationV2 } from "../../readers/operationalQueue";
+import type { IncidentChildren } from "../../readers/incidentChildren";
+import type { UtcEpochMs } from "../../../screenDataContract";
 import { ENV_LABEL, withContext } from "../../urlState";
 import { INCIDENT_ACTION_REASONS, railFor, STATE_FLAG } from "./IncidentRootDrawer";
 import { ACCESS_PATH, AccessLink, FE, FE_B1, notPublishedReason } from "./notPublished";
@@ -120,6 +122,23 @@ function useScan(api: ExecutionApi, workspaceId: string | undefined): ScanLoad {
   return state;
 }
 
+/** The scoped incident's children (WP-K `portal.execution.incident-children.v1`). A port without the read, a refusal or a throw is `null`: every section keeps its typed absence. */
+function useChildren(api: ExecutionApi, incidentId: string, workspaceId: string | undefined): IncidentChildren | null {
+  const [children, setChildren] = useState<IncidentChildren | null>(null);
+  useEffect(() => {
+    setChildren(null);
+    if (api.getIncidentChildren === undefined) return;
+    let live = true;
+    let pending: ReturnType<NonNullable<ExecutionApi["getIncidentChildren"]>>;
+    try { pending = api.getIncidentChildren(incidentId, workspaceId); } catch { return; }
+    void pending.then((result) => { if (live && result.ok) setChildren(result.value); }, () => undefined);
+    return () => { live = false; };
+  }, [api, incidentId, workspaceId]);
+  return children;
+}
+const atText = (ms: UtcEpochMs) => <time dateTime={new Date(ms).toISOString()} title={new Date(ms).toISOString()}>{formatAsOf(ms)}</time>;
+const SOURCE_WORD = { FINDING: "Findings", ALERT: "Alerts", DEAD_LETTER: "Dead letters", ORDER_TRACE: "Order trace" } as const;
+
 export interface IncidentPageProps {
   api: ExecutionApi;
   incidentId: string;
@@ -148,6 +167,7 @@ export default function IncidentPage({ api, incidentId, workspaceId, queuePath =
   const [params] = useSearchParams();
   const [root, setRoot] = useState<RootLoad>({ phase: "loading" });
   const scan = useScan(api, workspaceId);
+  const kids = useChildren(api, incidentId, workspaceId);
 
   useEffect(() => {
     let live = true;
@@ -236,6 +256,22 @@ export default function IncidentPage({ api, incidentId, workspaceId, queuePath =
       </section>
 
       <div className="exec-opi-grid">
+        {kids !== null && kids.evidence.state === "PUBLISHED" ? (
+          <SectionPanel title="Evidence" level={2} aside={`${kids.evidence.value.length} ${kids.evidence.value.length === 1 ? "reference" : "references"}`}>
+            <ul className="exec-opi-chiplist" role="list" aria-label="Evidence sources" data-testid="children-evidence">
+              {(Object.keys(SOURCE_WORD) as (keyof typeof SOURCE_WORD)[]).map((source) => {
+                const mine = kids.evidence.state === "PUBLISHED" ? kids.evidence.value.filter((e) => e.source === source) : [];
+                return (
+                  <li key={source} className="exec-opi-gapchip" data-source={SOURCE_WORD[source]}>
+                    {SOURCE_WORD[source]} · {mine.length}
+                    {mine.map((e) => <span key={e.digest} className="exec-ops-meta"> {e.label} <span className="exec-ops-mono">{e.digest.slice(0, 15)}</span> {atText(e.addedAtMs)}</span>)}
+                  </li>
+                );
+              })}
+            </ul>
+            <p className="exec-ops-reason">References only: a digest and metadata, never the artifact itself. A source with 0 is a published zero.</p>
+          </SectionPanel>
+        ) : (
         <SectionPanel title="Evidence" level={2} aside="Not published">
           <ul className="exec-opi-chiplist" role="list" aria-label="Evidence sources">
             {EVIDENCE_SOURCES.map((name) => (
@@ -248,6 +284,7 @@ export default function IncidentPage({ api, incidentId, workspaceId, queuePath =
           />
           <p className="exec-ops-reason">Missing evidence, not an absence of findings. References only: a digest and metadata, never the artifact itself.</p>
         </SectionPanel>
+        )}
 
         <SectionPanel title="Operations taken" level={2} aside={scan.phase === "ready" ? `${linked.length} ${linked.length === 1 ? "operation" : "operations"}` : undefined}>
           {scan.phase === "loading" ? <PanelState status="loading" /> : null}
@@ -269,7 +306,7 @@ export default function IncidentPage({ api, incidentId, workspaceId, queuePath =
                         <span className="exec-ops-meta">{RELATION_WORD[relationship]} · linked {instant(linkedAt, "")}</span>
                         <span className="exec-ops-meta">
                           Target now <TargetLink type={row.targetType} id={row.targetId} environment={row.environment} />
-                          {" · "}Original target: not attested ({incident.historicalChildren.reasonCode})
+                          {" · "}{originalTargetText(kids, row.operationId, incident.historicalChildren.reasonCode)}
                         </span>
                         {row.deliveryState ? <span className="exec-ops-meta">Receipt: {humanize(row.deliveryState)}</span> : null}
                       </li>
@@ -287,20 +324,41 @@ export default function IncidentPage({ api, incidentId, workspaceId, queuePath =
           ) : null}
         </SectionPanel>
 
-        <SectionPanel title="Resolution gates" level={2} aside="Server verdict not published">
+        <SectionPanel title="Resolution gates" level={2} aside={kids !== null && kids.resolutionGate.state === "PUBLISHED" ? "Server verdict" : "Server verdict not published"}>
           <ul className="exec-opi-gates" role="list" aria-label="Resolution gates">
             <Gate label="Somebody has acknowledged this incident" state={incident.acknowledgedAt ? "met" : "open"}>
               {incident.acknowledgedAt ? <>Acknowledged {instant(incident.acknowledgedAt, "")}</> : "Not acknowledged"}
             </Gate>
-            <Gate label="This incident has an assignee" state="not-published">Not available ({FE.assignee})</Gate>
+            {kids !== null && kids.assignedTo.state === "PUBLISHED"
+              ? <Gate label="This incident has an assignee" state="met">Assigned to {kids.assignedTo.value.actor} {atText(kids.assignedTo.value.assignedAtMs)}</Gate>
+              : <Gate label="This incident has an assignee" state="not-published">Not available ({FE.assignee})</Gate>}
             <Gate label="Exposure is recorded as mitigated" state={incident.mitigatedAt ? "met" : "open"}>
               {incident.mitigatedAt ? <>Mitigated {instant(incident.mitigatedAt, "")}</> : "Not mitigated"}
             </Gate>
             <Gate label="A clean dry-run evidence reference is attached" state="not-published">Not available ({FE.events})</Gate>
           </ul>
+          {kids !== null && kids.resolutionGate.state === "PUBLISHED" ? (
+            <p className="exec-ops-reason" data-testid="children-gate">
+              {kids.resolutionGate.value.eligible ? "The server reports this incident eligible to resolve." : `The server reports this incident not yet eligible to resolve: ${kids.resolutionGate.value.blockerCodes.map(humanize).join(", ")}.`}
+            </p>
+          ) : null}
           <p className="exec-ops-reason">Resolve unlocks only when every gate is met. The server enforces the gates and does not publish its verdict ({FE.eligibility}); this list mirrors the facts the incident root does publish.</p>
         </SectionPanel>
 
+        {kids !== null && kids.timeline.state === "PUBLISHED" ? (
+        <SectionPanel title="Timeline" level={2} aside={`${kids.timeline.value.length} ${kids.timeline.value.length === 1 ? "event" : "events"}`}>
+          <ol className="exec-opi-timeline" aria-label="Timeline" data-testid="children-timeline">
+            {kids.timeline.value.map((event) => (
+              <li key={event.eventId} className="exec-opi-event">
+                <span className="exec-opi-event-time">{atText(event.atMs)}</span>
+                <span className="exec-opi-event-word">
+                  {humanize(event.action)}{event.actor ? ` · ${event.actor}` : ""} · {event.versionBefore === null ? `v${event.versionAfter}` : `v${event.versionBefore} to v${event.versionAfter}`}
+                </span>
+              </li>
+            ))}
+          </ol>
+        </SectionPanel>
+        ) : (
         <SectionPanel title="Timeline" level={2} aside={`${events.length} ${events.length === 1 ? "event" : "events"}`}>
           <ol className="exec-opi-timeline" aria-label="Timeline">
             {events.map((event) => (
@@ -312,8 +370,21 @@ export default function IncidentPage({ api, incidentId, workspaceId, queuePath =
           </ol>
           <NotAvailableLine className="exec-ops-na-line" facts={[{ label: "Actor", id: FE.audit }, { label: "Version per event", id: FE.events }]} />
         </SectionPanel>
+        )}
       </div>
 
+      {kids !== null && kids.linkedOperations.state === "PUBLISHED" ? (
+        <SectionPanel title="Children and original targets" level={2} aside={`${kids.linkedOperations.value.length} ${kids.linkedOperations.value.length === 1 ? "child" : "children"}`}>
+          <ul className="exec-opi-ops" role="list" aria-label="Child operations" data-testid="children-linked">
+            {kids.linkedOperations.value.map((o) => (
+              <li key={o.operationId} className="exec-opi-op">
+                <span className="exec-ops-mono">{o.operationId}</span>
+                <span className="exec-ops-meta">{o.originalTarget === null ? "Original target not attested" : `Original target ${humanize(o.originalTarget.type)} ${o.originalTarget.id}`}</span>
+              </li>
+            ))}
+          </ul>
+        </SectionPanel>
+      ) : (
       <SectionPanel title="Children and original targets" level={2} aside="Not published">
         <NotAvailableLine
           className="exec-ops-na-line"
@@ -326,6 +397,7 @@ export default function IncidentPage({ api, incidentId, workspaceId, queuePath =
           The incident root is the current record, not the historical lineage ({incident.historicalChildren.reasonCode}). The target above is the one it holds now.
         </p>
       </SectionPanel>
+      )}
 
       <SectionPanel title="Actions" level={2}>
         <div className="exec-ops-actions" role="group" aria-label="Incident actions">
@@ -340,6 +412,14 @@ export default function IncidentPage({ api, incidentId, workspaceId, queuePath =
       </SectionPanel>
     </div>
   );
+}
+
+/** The original target of a linked operation: the child read's, or the root's typed reason. */
+function originalTargetText(kids: IncidentChildren | null, operationId: string, reasonCode: string): string {
+  if (kids === null || kids.linkedOperations.state !== "PUBLISHED") return `Original target: not attested (${reasonCode})`;
+  const child = kids.linkedOperations.value.find((o) => o.operationId === operationId);
+  if (child === undefined) return `Original target: not attested (${reasonCode})`;
+  return child.originalTarget === null ? "Original target: not attested" : `Original target: ${humanize(child.originalTarget.type)} ${child.originalTarget.id}`;
 }
 
 function withoutPeek(params: URLSearchParams): URLSearchParams {

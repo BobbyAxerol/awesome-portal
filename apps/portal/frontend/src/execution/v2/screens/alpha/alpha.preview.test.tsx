@@ -122,6 +122,24 @@ describe("the event ribbon is pinned on the Performance chart", () => {
   });
 });
 
+describe("the published lifecycle read (WP-K slice 5, FIXTURE_LAB)", () => {
+  it("Performance prints Net PnL per venue in each venue's own currency, one row per venue and book, never a total", async () => {
+    mount("/deployments/alphas/alpha_a", "alpha_a");
+    const table = await screen.findByTestId("venue-pnl", {}, { timeout: 4000 });
+    const rows = within(table).getAllByRole("row");
+    expect(rows.length).toBeGreaterThan(0);
+    for (const row of rows) expect(row.textContent).toMatch(/USDT|BTC|USDC|[A-Z]{3,5}/);
+    expect(table.textContent).not.toMatch(/Total/i);
+    expect(screen.getByText("Per venue, never summed")).toBeTruthy();
+  });
+  it("the regime tile and the spine read the same alpha through the lifecycle read", async () => {
+    mount("/deployments/alphas/alpha_a", "alpha_a");
+    await screen.findByTestId("venue-pnl", {}, { timeout: 4000 });
+    expect(document.body.textContent).toMatch(/Regime fit/);
+    expect(document.body.textContent).toMatch(/Exit \d{2} [A-Z][a-z]{2}/);
+  });
+});
+
 describe("Trade Replay is its own screen", () => {
   it("has its own title, subtitle and chips at the same address, and draws STAGE / DECISION / INCIDENT lanes under the chart", async () => {
     mount("/deployments/alphas/alpha_btc_trend?tab=replay", "alpha_btc_trend");

@@ -47,7 +47,7 @@ import { alphaBack } from "./backLinks";
 import { Dec, Na } from "./cells";
 import { ActivityTab } from "./ActivityTab";
 import { LifecyclePanel } from "./Lifecycle";
-import { lifeEvents, regimeFit, stageSpans } from "./lifecycleModel";
+import { lifeEvents, lifeEventsOfRead, regimeFit, regimeFitOfRead, stageSpans, stageSpansOfRead } from "./lifecycleModel";
 import { OrdersTab } from "./OrdersTab";
 import { PERFORMANCE_VIEWS, PerformanceTab, type PerformanceView } from "./PerformanceTab";
 import type { ManagerSeriesQuery } from "../../readers/managerSeries";
@@ -76,7 +76,7 @@ import { QbtsCell } from "../fleet/FleetDatasetTable";
 import { qbtsOf } from "../fleet/fleetMetricsModel";
 import { alphaViewOf } from "./view";
 import AlphaReplay from "./replay";
-import {
+import { useAlphaLifecycle,
   useActivityRollup,
   useAlphaResource,
   useEquityChart,
@@ -237,8 +237,14 @@ function Alpha360({ api, alphaId, workspaceId }: AlphaScreenProps) {
   const dataset = useAlphaDataset(api, present, alphaId, env, explicitWs);
   const datasetValue = dataset.phase === "ready" ? dataset.value : null;
   // WP-C: the events and the lifecycle the dataset publishes (open `evt_*` and `life_*` partition keys); none = the lanes say Not published.
-  const life = useMemo(() => ({ ...lifeEvents(datasetValue), spans: stageSpans(datasetValue) }), [datasetValue]);
-  const regime = useMemo(() => regimeFit(datasetValue), [datasetValue]);
+  // WP-K: the published lifecycle read (stages with criteria, decider and receipt; the unified feed; regime fit; Net PnL per venue) wins over the open keys.
+  const lifecycle = useAlphaLifecycle(api, present, alphaId, env, explicitWs);
+  const life = useMemo(() => {
+    const read = lifeEventsOfRead(lifecycle);
+    const spans = stageSpansOfRead(lifecycle);
+    return { ...(read ?? lifeEvents(datasetValue)), spans: spans.length > 0 ? spans : stageSpans(datasetValue) };
+  }, [datasetValue, lifecycle]);
+  const regime = useMemo(() => regimeFitOfRead(lifecycle) ?? regimeFit(datasetValue), [datasetValue, lifecycle]);
   // The QBTS the dataset publishes (row key `score` plus the open `qbts_*` partition keys): one per alpha version, so the first row speaks for it.
   const qbtsRow = datasetValue?.items[0] ?? null;
   const qbts = useMemo(() => (qbtsRow === null ? null : qbtsOf(qbtsRow)), [qbtsRow]);
@@ -309,7 +315,7 @@ function Alpha360({ api, alphaId, workspaceId }: AlphaScreenProps) {
       ) : (
         <div className="exec-alp2-main" data-docked={selection === "score" && mode === "dock" ? "true" : undefined}>
           <div className="exec-alp2-body">
-            {tab === "replay" ? null : <LifecyclePanel rows={rows} current={current} selected={stagePick} onSelect={setStagePick} linkTo={linkTo} currentNote={view?.currentNote} withheld={view?.withheld} dataset={datasetValue} />}
+            {tab === "replay" ? null : <LifecyclePanel rows={rows} current={current} selected={stagePick} onSelect={setStagePick} linkTo={linkTo} currentNote={view?.currentNote} withheld={view?.withheld} dataset={datasetValue} lifecycle={lifecycle} />}
 
             {tab === "replay" ? null : (
             <dl className="exec-blk-kpis exec-alp2-kpis" aria-label="Current facts">
@@ -397,7 +403,7 @@ function Alpha360({ api, alphaId, workspaceId }: AlphaScreenProps) {
 
             <div role="tabpanel" id={panelId} aria-labelledby={inMore ? undefined : tabId(tab)} aria-label={inMore ? ALPHA_MORE_TABS.find((t) => t.key === tab)?.label : undefined} className="exec-alp2-panel">
               {tab === "performance" ? (
-                <PerformanceTab timeline={timeline} drawdown={drawdown} life={life} rows={rows} noTotals={view?.money.published === false ? view.money.reason : null} dataset={dataset} names={names} env={env} equity={equity} drift={drift} inputs={inputs} paths={paths} view={perfView} onView={(next) => url.set({ view: next === "act" ? null : next })} />
+                <PerformanceTab timeline={timeline} drawdown={drawdown} venues={lifecycle?.venueNetPnl ?? null} life={life} rows={rows} noTotals={view?.money.published === false ? view.money.reason : null} dataset={dataset} names={names} env={env} equity={equity} drift={drift} inputs={inputs} paths={paths} view={perfView} onView={(next) => url.set({ view: next === "act" ? null : next })} />
               ) : null}
               {tab === "deployments" ? (
                 <DeploymentsTab

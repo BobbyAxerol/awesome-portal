@@ -1,0 +1,44 @@
+{
+  "lane": "TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT",
+  "value": {
+    "schema_version": "portal.execution.approval-evidence.v1",
+    "workspace_id": "TEST_ONLY:workspace",
+    "approval_id": "TEST_ONLY:approval-1",
+    "record_authority": "PORTAL_PROJECTION",
+    "read_at_ms": 1800000000000,
+    "prior_economic_history": {
+      "subject": {
+        "subject_type": "PORTFOLIO",
+        "subject_id": "TEST_ONLY:portfolio-a"
+      },
+      "metric": "DRAWDOWN",
+      "unit": "RATIO",
+      "currency": null,
+      "ratio_scale": "FRACTION",
+      "window": {
+        "from_ms": 1797408000000,
+        "to_ms": 1800000000000
+      },
+      "methodology_ref": "TEST_ONLY:drawdown-peak-to-trough.v1",
+      "as_of_ms": 1800000000000,
+      "points": [
+        {
+          "ts_ms": 1797408000000,
+          "value": "0"
+        },
+        {
+          "ts_ms": 1798272000000,
+          "value": "-0.0123"
+        },
+        {
+          "ts_ms": 1799136000000,
+          "value": "-0.0045"
+        },
+        {
+          "ts_ms": 1800000000000,
+          "value": "0"
+        }
+      ]
+    }
+  }
+}

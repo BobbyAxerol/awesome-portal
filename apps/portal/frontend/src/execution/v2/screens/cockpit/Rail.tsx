@@ -8,6 +8,7 @@
  * know to decide elsewhere: who created the request, how many approvers it has,
  * and what the server has recorded.
  */
+import { IDLE_EXTRA, sectionOf, type ExtraState } from "./evidenceExtra";
 import { useEffect, useId, useState, type ReactNode } from "react";
 
 import type { ConditionRow, ExecutionApi } from "../../../api/ports";
@@ -161,9 +162,11 @@ export interface RailProps {
    * (FE-015/060). Absent (today: no cockpit decision names a capital action) the rail keeps its informational "Not published" block.
    */
   stepUp?: Omit<StepUpBlockProps, "api">;
+  /** The approval evidence read (WP-K): the receipt preview's "What changes" sentence. Absent keeps the typed absence. */
+  extra?: ExtraState;
 }
 
-export function Rail({ api, target, evidence, principal, workspaceId, stepUp }: RailProps) {
+export function Rail({ api, target, evidence, principal, workspaceId, stepUp, extra = IDLE_EXTRA }: RailProps) {
   const noteId = useId();
   const noteReasonId = useId();
   const summary = summarizeEvidence(evidence.status === "ready" ? evidence.data : null);
@@ -216,6 +219,12 @@ export function Rail({ api, target, evidence, principal, workspaceId, stepUp }: 
         : met !== null && required !== null
           ? `If approved: ${met + 1} of ${required} approvals`
           : <Np text={NOT_PUBLISHED.approvers} />;
+
+  // "What changes": the source's own sentence (WP-K receipt_preview); nothing is composed here. Not offered for a waiver (no approval is counted).
+  const preview = waiver ? null : sectionOf(extra, (e) => e.receipt);
+  const previewRow: { label: string; value: ReactNode } | null = preview !== null && preview.kind === "value"
+    ? { label: "What changes", value: <span data-testid="ck-what-changes">{preview.value.whatChanges}</span> }
+    : null;
 
   return (
     <div className="exec-ck-railbody">
@@ -289,7 +298,7 @@ export function Rail({ api, target, evidence, principal, workspaceId, stepUp }: 
             // The signed-in person, as the session names them; their role preset is not published (FE-015), so none is printed.
             ...(decided ? [] : [{ label: "You", value: youText }]),
             ...(decided ? [] : [{ label: "Counts as", value: countsAs }]),
-            ...(decided ? [] : [{ label: "What changes", value: <Np text={NOT_PUBLISHED.decisionCall} /> }]),
+            ...(decided ? [] : [previewRow ?? { label: "What changes", value: <Np text={NOT_PUBLISHED.decisionCall} /> }]),
             ...(v2
               ? [
                   { label: "Requested by", value: <ActorCell actors={summary.actors} pick={(a) => ({ id: a.requesterUserId, isViewer: a.viewerIsRequester })} /> },

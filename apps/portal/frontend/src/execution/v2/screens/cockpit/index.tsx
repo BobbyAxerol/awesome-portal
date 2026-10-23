@@ -45,6 +45,7 @@ import { Flag } from "../../Flag";
 import { useExecUrlState, withContext } from "../../urlState";
 import { RequestDrawer } from "../request/RequestDrawer";
 import "../../css/cockpit.css";
+import { useApprovalEvidence } from "./evidenceExtra";
 import { EvidenceFrame, useEvidenceRead, WaiverEvidence, type EvidenceHeader, type EvidenceTarget } from "./EvidenceFrame";
 import { mergeInboxRows, readRawRows, type InboxRowV2 } from "./inboxRowV2";
 import {
@@ -332,6 +333,7 @@ function OwnRequests({
   const refused = wanted !== null && inbox.status === "ready" && onPage !== undefined && !isOwn;
   const evidenceTarget: EvidenceTarget | null = wanted !== null && settled && !refused ? { kind: wanted.kind, id: wanted.id } : null;
   const evidence = useEvidenceRead(api, evidenceTarget, workspaceId);
+  const extra = useApprovalEvidence(api, evidenceTarget === null ? null : evidenceTarget.id, workspaceId);
   const header: EvidenceHeader | null =
     wanted === null || evidenceTarget === null
       ? null
@@ -398,7 +400,7 @@ function OwnRequests({
           ) : null}
           {evidenceTarget !== null ? (
             <section className="exec-ck-main" aria-label="Evidence">
-              <EvidenceFrame kind={evidenceTarget.kind} header={header} evidence={evidence} />
+              <EvidenceFrame kind={evidenceTarget.kind} header={header} evidence={evidence} extra={extra} />
             </section>
           ) : null}
         </DockRow>
@@ -585,6 +587,7 @@ function DecisionCockpit({ api, workspaceId, pathSelection, onClearPathSelection
     }
   }
   const evidence = useEvidenceRead(api, evidenceTarget, workspaceId);
+  const extra = useApprovalEvidence(api, evidenceTarget === null ? null : evidenceTarget.id, workspaceId);
 
   const target = evidenceTarget;
   const railTarget: RailTarget | null =
@@ -734,14 +737,14 @@ function DecisionCockpit({ api, workspaceId, pathSelection, onClearPathSelection
           ) : selected?.kind === "waiver" ? (
             <WaiverEvidence row={selected.row} register={waivers.rows} readAt={waivers.readAt} onSelect={select} />
           ) : (
-            <EvidenceFrame kind={evidenceTarget?.kind ?? null} header={header} evidence={evidence} unknownReason={unknownReason} />
+            <EvidenceFrame kind={evidenceTarget?.kind ?? null} header={header} evidence={evidence} unknownReason={unknownReason} extra={extra} />
           )}
         </section>
         <aside className="exec-ck-rail" aria-label="Decision">
           {family !== null ? (
             <FamilyRail family={family} />
           ) : (
-            <Rail api={api} target={railTarget} evidence={evidence} principal={principal} workspaceId={workspaceId} />
+            <Rail api={api} target={railTarget} evidence={evidence} principal={principal} workspaceId={workspaceId} extra={extra} />
           )}
         </aside>
       </div>

@@ -1,0 +1,46 @@
+{
+  "lane": "TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT",
+  "value": {
+    "schema_version": "portal.execution.operations-audit.v1",
+    "workspace_id": "TEST_ONLY:workspace",
+    "record_authority": "PORTAL_PROJECTION",
+    "read_at_ms": 1800000000000,
+    "items": [
+      {
+        "audit_id": "TEST_ONLY:audit-1",
+        "at_ms": 1799996400000,
+        "actor": "TEST_ONLY:actor-1",
+        "action": "ACKNOWLEDGED",
+        "subject": {
+          "type": "OPERATION",
+          "id": "TEST_ONLY:op-1"
+        },
+        "receipt_ref": "TEST_ONLY:receipt-1"
+      },
+      {
+        "audit_id": "TEST_ONLY:audit-2",
+        "at_ms": 1799992800000,
+        "actor": "TEST_ONLY:actor-1",
+        "action": "ASSIGNED",
+        "subject": {
+          "type": "INCIDENT",
+          "id": "TEST_ONLY:incident-1"
+        },
+        "receipt_ref": null
+      },
+      {
+        "audit_id": "TEST_ONLY:audit-3",
+        "at_ms": 1799989200000,
+        "actor": "TEST_ONLY:actor-1",
+        "action": "RESOLVED",
+        "subject": {
+          "type": "OPERATION",
+          "id": "TEST_ONLY:op-2"
+        },
+        "receipt_ref": "TEST_ONLY:receipt-2"
+      }
+    ],
+    "has_more": true,
+    "next_cursor": "TEST_ONLY:cursor-1"
+  }
+}

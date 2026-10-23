@@ -971,7 +971,7 @@ function datasetAnswer(method: string, path: string, search: URLSearchParams, pr
 
 export function answerReviewManager(method: string, path: string, search: URLSearchParams, profile: ReviewManagerProfile): ReviewManagerResponse | null {
   const normalized = path.replace(/^\/api\/v1\/execution(?=\/)/, "");
-  return seriesAnswer(method, normalized, search, profile) ?? wpcCandles(method, normalized, search) ?? wpcEquity(method, normalized, search) ?? wpF1Answer(method, normalized, search) ?? wpcAlphaKeys(normalized, search, datasetAnswer(method, normalized, search, profile));
+  return seriesAnswer(method, normalized, search, profile) ?? wpkApprovalEvidence(method, normalized, search, profile) ?? wpkAlphaLifecycle(method, normalized, search) ?? wpkOperationsExtras(method, normalized, search) ?? wpkEntitySearch(method, normalized, search) ?? wpcCandles(method, normalized, search) ?? wpcEquity(method, normalized, search) ?? wpF1Answer(method, normalized, search) ?? wpcAlphaKeys(normalized, search, datasetAnswer(method, normalized, search, profile));
 }
 
 // ===== WP-C begin (Alpha 360, Trade replay, Compare; FIXTURE_LAB, register section 2c-wpc)
@@ -1220,5 +1220,181 @@ function wpkDrawdownFromNav(entry: Draft): void {
     const ratio = peak !== null && peak > 0n ? (value - peak) * 100_000_000n / peak : 0n;
     point.value = ratio === 0n ? "0" : trimmed(ratio, 8);
   }
+}
+
+/* ---- Approval evidence (slice 2): `GET /governance/approvals/{id}/evidence`, FIXTURE_LAB. Deterministic per approval id (FNV digest); nothing here is a
+ * source fact. The history is the review lane's own NAV series of a native portfolio (so the panel draws what the Compare overlay draws), the
+ * counts are small integers with true zeros, and some ids answer null (source not read) or omit a section (no owning source). */
+function wpkApprovalEvidence(method: string, path: string, search: URLSearchParams, profile: ReviewManagerProfile): ReviewManagerResponse | null {
+  const match = /^\/governance\/approvals\/([A-Za-z0-9._:-]{1,191})\/evidence$/.exec(path);
+  if (match === null || method !== "GET") return null;
+  const approvalId = match[1]!;
+  const seed = seedOf(approvalId, "wpk-evidence");
+  const now = fixtureNowMs();
+  const body: Draft = { schema_version: "portal.execution.approval-evidence.v1", workspace_id: search.get("workspace_id") ?? "ws_FIXTURE_LAB", approval_id: approvalId,
+    record_authority: "PORTAL_PROJECTION", read_at_ms: now };
+  const mode = seed % 7; // 0: nothing read (null); 1: no owning source (omitted); else published
+  if (mode === 1) return { status: 200, body };
+  if (mode === 0) {
+    Object.assign(body, { prior_economic_history: null, evidence_diff: null, obligations_after_approval: null, receipt_preview: null });
+    return { status: 200, body };
+  }
+  const subject = ["pf_TEST_ONLY_satellite", "pf_TEST_ONLY_core"][seed % 2]!;
+  const environment = subject === "pf_TEST_ONLY_core" ? "live" : "paper";
+  const query = new URLSearchParams({ environment, metric: "NAV", window: JSON.stringify("90D"), subjects: JSON.stringify([{ subject_type: "PORTFOLIO", subject_id: subject }]) });
+  const series = seriesAnswer("GET", "/manager/series", query, profile);
+  const entry = series?.status === 200 ? (series.body as Draft).series[0] : null;
+  body.prior_economic_history = entry && entry.state === "AVAILABLE" ? { subject: { subject_type: "PORTFOLIO", subject_id: subject }, metric: "NAV", unit: entry.unit,
+    currency: entry.currency, ratio_scale: null, window: entry.window, methodology_ref: entry.methodology_ref, points: entry.points, as_of_ms: (series!.body as Draft).as_of_ms } : null;
+  const n = (k: number, max: number): number => (seed >>> k) % max; // small integers; a true 0 is common
+  body.evidence_diff = { previous_revision: `FIXTURE_LAB:revision-${1 + n(3, 6)}`, changes: [
+    { label: "Requested capital", before: `${10_000 + n(5, 5) * 1000}.00`, after: `${16_000 + n(7, 5) * 1000}.00`, unit: "MONEY" },
+    { label: "Criteria met", before: String(5 + n(9, 2)), after: "7", unit: "COUNT" },
+    { label: "Reviewer note", before: null, after: "Added", unit: "TEXT" }] };
+  body.obligations_after_approval = { open_positions: n(2, 4), working_orders: n(4, 3) === 2 ? 0 : n(4, 3), reservations: n(6, 2), unknown_outcomes: 0, settlement_pending: n(8, 3) === 0 ? 1 : 0 };
+  const total = Object.values(body.obligations_after_approval as Record<string, number>).reduce((sum, value) => sum + value, 0);
+  body.receipt_preview = { what_changes: `Allocation changes on ${subject}; the gate counts 7 of 7 criteria as met after approval. ${total === 0 ? "Nothing stays open." : `${total} obligations stay open.`}`,
+    counts_as: { met_after: 7, required: 7 } };
+  return { status: 200, body };
+}
+
+/* ---- Alpha lifecycle (slice 5): `GET /alphas/{id}/lifecycle`, FIXTURE_LAB. The stage instants, days, actors, events and the regime fit are the SAME
+ * derivation the WP-C open keys use (`wpcLifecycleKeys`), restated in the published shape; the criteria counts have no observed values (items stay empty:
+ * no observed figure is invented); Net PnL per venue is the exact decimal sum of the alpha's own deployments in that venue and currency. */
+function wpkAlphaLifecycle(method: string, path: string, search: URLSearchParams): ReviewManagerResponse | null {
+  const match = /^\/alphas\/([A-Za-z0-9._:-]{1,191})\/lifecycle$/.exec(path);
+  if (match === null || method !== "GET") return null;
+  const alphaId = match[1]!;
+  const alpha = [...scaled().alphas, ...WPC_ALPHAS].find((candidate) => candidate.id === alphaId);
+  if (alpha === undefined) return problem(404, "EXECUTION_READ_NOT_AVAILABLE", "The requested Execution read is not available.");
+  const now = fixtureNowMs();
+  const keys = wpcLifecycleKeys(alphaId, {});
+  const num = (key: string): number | null => { const metric = keys[key]; return metric && metric.availability === "AVAILABLE" ? Number(metric.value) : null; };
+  const who = (key: string): string | null => keys[key]?.reason_code ?? null;
+  const receipt = (stage: string): string => `FIXTURE_LAB:receipt-${alphaId}-${stage}`;
+  const day = 86_400_000;
+  const row = (stage: string, exit: number | null, days: number | null, entered: number | null, criteria: boolean, state: string, extra: Draft = {}): Draft => ({
+    stage, state, entered_at_ms: entered, exited_at_ms: exit, days_in_stage: days,
+    criteria: criteria ? { met: num(`life_${stage.toLowerCase()}_criteria_met`) ?? 0, total: num(`life_${stage.toLowerCase()}_criteria_total`) ?? 0, items: [] } : null,
+    decider_role: "Manager", decided_by: who(`life_${stage.toLowerCase()}_exit_ms`), receipt_ref: exit === null ? null : receipt(stage.toLowerCase()), blocked_reason: null, ...extra });
+  const exit = (stage: string): number | null => num(`life_${stage}_exit_ms`);
+  const days = (stage: string): number | null => num(`life_${stage}_days`);
+  const from = (stage: string): number | null => { const to = exit(stage); const d = days(stage); return to === null || d === null ? null : to - d * day; };
+  const stages = [
+    row("R1", exit("r1"), null, null, false, "DONE"), row("R2", exit("r2"), null, null, false, "DONE"),
+    row("PAPER", exit("paper"), days("paper"), from("paper"), true, "DONE"), row("SANDBOX", exit("sandbox"), days("sandbox"), from("sandbox"), true, "DONE"),
+    row("CANARY", exit("canary"), days("canary"), from("canary"), true, "DONE"),
+    row("LIVE", null, days("live"), exit("canary"), false, "CURRENT", { decided_by: null, receipt_ref: null, decider_role: who("life_live_decider"), blocked_reason: who("life_blocked_reason") })];
+  const kinds = ["stage", "decision", "incident", "recall", "flow"] as const;
+  const items: Draft[] = [];
+  for (const [key, metric] of Object.entries(keys)) {
+    const m = /^evt_(stage|decision|incident|recall|flow)_(\d+)_ms$/.exec(key);
+    if (m === null || metric.availability !== "AVAILABLE") continue;
+    const [title, actor] = String(metric.reason_code).split("|");
+    items.push({ event_id: `FIXTURE_LAB:${alphaId}:${key}`, kind: m[1], at_ms: Number(metric.value), title, actor: actor && actor !== "system" ? actor : null,
+      receipt_ref: m[1] === "decision" ? receipt(`${key}`) : null });
+  }
+  items.sort((x, y) => x.at_ms - y.at_ms || x.event_id.localeCompare(y.event_id));
+  void kinds;
+  const fit = keys.regime_fit;
+  const regime = fit && fit.availability === "AVAILABLE" ? { state: "PUBLISHED", ratio_scale: "FRACTION", value: fit.value, reason_code: null }
+    : { state: "NOT_PUBLISHED", ratio_scale: null, value: null, reason_code: "INSUFFICIENT_DATA" };
+  const environment = search.get("environment");
+  const books = new Map<string, Draft>();
+  for (const dep of alpha.deployments.filter((candidate) => environment === null || candidate.environment === environment)) {
+    const key = `${dep.venue}|${dep.environment}|${dep.currency}`;
+    const net = addDecimal(dep.realized, dep.unrealized);
+    const have = books.get(key);
+    books.set(key, have ? { ...have, net_pnl: addDecimal(have.net_pnl, net) }
+      : { venue: dep.venue, economic_domain: dep.environment === "live" ? "ACTUAL" : dep.environment.toUpperCase(), currency: dep.currency, net_pnl: net, as_of_ms: now });
+  }
+  const body: Draft = { schema_version: "portal.execution.alpha-lifecycle.v1", workspace_id: search.get("workspace_id") ?? "ws_FIXTURE_LAB", alpha_id: alphaId, alpha_version_id: null,
+    record_authority: "PORTAL_PROJECTION", read_at_ms: now, stages, events: { total: items.length, truncated: false, items }, regime_fit: regime, venue_net_pnl: [...books.values()] };
+  return { status: 200, body };
+}
+
+/* ---- Operations extras (slice 3): `GET /operations/incidents/{id}/children` and `GET /operations/audit`, FIXTURE_LAB. Deterministic per id (FNV digest).
+ * The audit rows are the loaded universe's operations: created at the operation's own time, acknowledged and resolved at stated offsets after it (the
+ * triage state decides which exist), by one of three actors from the digest; every acknowledgement and resolution carries `FIXTURE_LAB:receipt-...`. */
+const WPK_ACTORS = ["bjones", "asmith", "lnguyen"] as const;
+function wpkOperationsExtras(method: string, path: string, search: URLSearchParams): ReviewManagerResponse | null {
+  if (method !== "GET") return null;
+  const now = fixtureNowMs();
+  const workspace = search.get("workspace_id") ?? "ws_FIXTURE_LAB";
+  const children = /^\/operations\/incidents\/([A-Za-z0-9._:-]{1,191})\/children$/.exec(path);
+  if (children !== null) {
+    const incidentId = children[1]!;
+    const seed = seedOf(incidentId, "wpk-children");
+    const body: Draft = { schema_version: "portal.execution.incident-children.v1", workspace_id: workspace, incident_id: incidentId, record_authority: "PORTAL_PROJECTION", read_at_ms: now };
+    const mode = seed % 6; // 0: not read (null); 1: no owning source (omitted); else published
+    if (mode === 1) return { status: 200, body };
+    if (mode === 0) { Object.assign(body, { evidence: null, assigned_to: null, resolution_gate: null, timeline: null, linked_operations: null }); return { status: 200, body }; }
+    const hour = 3_600_000;
+    const sources = ["FINDING", "ALERT", "DEAD_LETTER", "ORDER_TRACE"] as const;
+    body.evidence = sources.flatMap((source, i) => Array.from({ length: (seed >>> (i * 3)) % 3 }, (_, n) => ({ source, digest: digest([incidentId, source, n]), label: `${source.replace("_", " ").toLowerCase()} ${n + 1}`, added_at_ms: now - (6 - i + n) * hour })));
+    body.assigned_to = seed % 2 === 0 ? { actor: WPK_ACTORS[seed % 3], assigned_at_ms: now - 5 * hour } : null;
+    const blockers = [...(body.evidence.some((e: Draft) => e.source === "DEAD_LETTER") ? ["OPEN_DEAD_LETTER"] : []), ...(seed % 5 === 0 ? ["UNVERIFIED_ORDER_TRACE"] : [])];
+    body.resolution_gate = { eligible: blockers.length === 0, blocker_codes: blockers };
+    body.timeline = [{ event_id: `FIXTURE_LAB:${incidentId}:1`, action: "OPENED", actor: null, version_before: null, version_after: 1, at_ms: now - 8 * hour },
+      { event_id: `FIXTURE_LAB:${incidentId}:2`, action: "ACKNOWLEDGED", actor: WPK_ACTORS[(seed >>> 4) % 3], version_before: 1, version_after: 2, at_ms: now - 7 * hour }];
+    const ops = scaled().operations;
+    body.linked_operations = ops.length === 0 ? [] : Array.from({ length: 1 + (seed % 3) }, (_, n) => ops[(seed + n * 7) % ops.length]!).filter((op, i, all) => all.findIndex((x) => x.id === op.id) === i)
+      .map((op, n) => ({ operation_id: op.id, original_target: n % 4 === 3 ? null : { type: op.target[0], id: op.target[1] } }));
+    return { status: 200, body };
+  }
+  if (path === "/operations/audit") {
+    const incident = search.get("incident_id");
+    const limit = Math.min(250, Math.max(1, Number(search.get("limit") ?? 100)));
+    const after = search.get("after");
+    const start = after === null ? 0 : Number.parseInt(after.replace(/^FIXTURE_LAB:cursor:/, ""), 10);
+    if (!Number.isInteger(start) || start < 0) return problem(400, "EXECUTION_READ_QUERY_INVALID", "The audit cursor is not one this feed issued.");
+    const rows: Draft[] = [];
+    for (const op of scaled().operations) {
+      if (incident !== null && seedOf(incident, op.id) % 4 !== 0) continue;
+      const created = Date.parse(op.at);
+      if (!Number.isFinite(created)) continue;
+      const actor = WPK_ACTORS[seedOf(op.id, "actor") % 3]!;
+      const subject = { type: "OPERATION", id: op.id };
+      rows.push({ audit_id: `FIXTURE_LAB:${op.id}:created`, at_ms: created, actor, action: "CREATED", subject, receipt_ref: null });
+      if (op.triage !== "UNACKNOWLEDGED") rows.push({ audit_id: `FIXTURE_LAB:${op.id}:ack`, at_ms: created + 5 * 60_000, actor, action: "ACKNOWLEDGED", subject, receipt_ref: `FIXTURE_LAB:receipt-${op.id}-ack` });
+      if (op.triage === "RESOLVED") rows.push({ audit_id: `FIXTURE_LAB:${op.id}:resolved`, at_ms: created + 60 * 60_000, actor, action: "RESOLVED", subject, receipt_ref: `FIXTURE_LAB:receipt-${op.id}-resolved` });
+    }
+    rows.sort((x, y) => y.at_ms - x.at_ms || x.audit_id.localeCompare(y.audit_id));
+    const items = rows.slice(start, start + limit);
+    const more = start + limit < rows.length;
+    return { status: 200, body: { schema_version: "portal.execution.operations-audit.v1", workspace_id: workspace, record_authority: "PORTAL_PROJECTION", read_at_ms: now,
+      items, has_more: more, next_cursor: more ? `FIXTURE_LAB:cursor:${start + limit}` : null } };
+  }
+  return null;
+}
+
+/* ---- Entity search (slice 7): `GET /search`, FIXTURE_LAB. A case-insensitive contains-match on id and label over what the loaded universe holds, per kind, capped at
+ * `limit`; `total_matched` is the exact number of matches for the kinds counted here (alpha, portfolio, operation, approval) and null for the kinds with no list in
+ * this lane (account, incident). The lane serves every entity to every caller (no authorization model here): the real producer must scope. */
+function wpkEntitySearch(method: string, path: string, search: URLSearchParams): ReviewManagerResponse | null {
+  if (method !== "GET" || path !== "/search") return null;
+  const q = (search.get("q") ?? "").trim();
+  if (q.length < 1 || q.length > 128) return problem(400, "EXECUTION_READ_QUERY_INVALID", "The search text is 1 to 128 printable characters.");
+  const all = ["alpha", "portfolio", "account", "operation", "incident", "approval"] as const;
+  const kinds = search.get("kinds") === null ? [...all] : search.get("kinds")!.split(",").filter((k): k is (typeof all)[number] => (all as readonly string[]).includes(k));
+  if (kinds.length < 1 || new Set(kinds).size !== kinds.length) return problem(400, "EXECUTION_READ_QUERY_INVALID", "kinds is a comma-separated subset of the six kinds.");
+  const limit = Math.min(50, Math.max(1, Number(search.get("limit") ?? 8)));
+  const needle = q.toLowerCase();
+  const universe = scaled();
+  const pools: Record<string, { id: string; label: string; detail: string | null; route: string }[] | null> = {
+    alpha: [...universe.alphas, ...WPC_ALPHAS].map((a) => ({ id: a.id, label: a.label, detail: `v${a.version}`, route: `/deployments/alphas/${encodeURIComponent(a.id)}` })),
+    portfolio: universe.portfolios.map((p) => ({ id: p.id, label: p.name, detail: p.base, route: `/deployments/portfolios/${encodeURIComponent(p.id)}` })),
+    operation: universe.operations.map((o) => ({ id: o.id, label: o.command, detail: o.env, route: `/operations?operation=${encodeURIComponent(o.id)}` })),
+    approval: universe.approvals.map((a: Draft) => ({ id: String(a.id), label: String(a.subject ?? a.id), detail: a.gate ? String(a.gate) : null, route: `/approvals?sel=${encodeURIComponent(String(a.id))}` })),
+    account: null, incident: null,
+  };
+  const groups = kinds.map((kind) => {
+    const pool = pools[kind];
+    if (pool === null || pool === undefined) return { kind, total_matched: null, rows: [] };
+    const hits = pool.filter((row) => /^[A-Za-z0-9._:-]{1,191}$/.test(row.id) && (row.id.toLowerCase().includes(needle) || row.label.toLowerCase().includes(needle)));
+    return { kind, total_matched: hits.length, rows: hits.slice(0, limit).map((row) => ({ kind, id: row.id, label: row.label, detail: row.detail, route_hint: row.route })) };
+  });
+  return { status: 200, body: { schema_version: "portal.execution.entity-search.v1", workspace_id: search.get("workspace_id") ?? "ws_FIXTURE_LAB", record_authority: "PORTAL_PROJECTION", read_at_ms: fixtureNowMs(),
+    query: { q, kinds, limit }, groups } };
 }
 // ===== WP-K end

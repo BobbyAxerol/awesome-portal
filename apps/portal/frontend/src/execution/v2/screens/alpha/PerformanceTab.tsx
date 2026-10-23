@@ -30,6 +30,9 @@ import { ENV_LABEL, type ExecEnv } from "../../urlState";
 import { chartPointsOf, seriesCaptionShort, unavailableChart } from "../series/seriesModel";
 import type { SeriesReadState } from "../series/useManagerSeries";
 import type { DrawdownInput } from "../../charts/EquityPanel";
+import type { EvidenceSection } from "../../readers/approvalEvidence";
+import type { LifecycleVenuePnl } from "../../readers/alphaLifecycle";
+import { showDecimal } from "../../charts";
 import { Na } from "./cells";
 import { DaysValue, RowFigure, WindowedFigures, type DatasetReadState } from "./DatasetFigures";
 
@@ -67,6 +70,8 @@ export interface PerformanceTabProps {
   timeline?: PagedRead<ObservedTimeline>;
   /** The alpha's DRAWDOWN series read (`execution-manager-series.v1`, subject ALPHA). Absent when the caller does not ask for it: the pane keeps its typed absence. */
   drawdown?: SeriesReadState;
+  /** Net PnL per venue from the lifecycle read (WP-K); `null`/absent keeps the section off. */
+  venues?: EvidenceSection<readonly LifecycleVenuePnl[]> | null;
   life?: { events: readonly LifeEvent[]; missing: readonly EventKind[]; spans?: readonly StageSpan[] };
 }
 
@@ -196,6 +201,26 @@ function Contribution({ rows, noTotals }: { rows: readonly DeploymentRow[]; noTo
   );
 }
 
+/** Net PnL by venue as the source states it: one row per venue, book and currency; nothing is added across venues or currencies. */
+function VenueContribution({ venues }: { venues: readonly LifecycleVenuePnl[] }) {
+  return (
+    <SectionPanel title="Contribution by venue" aside="Per venue, never summed">
+      {venues.length === 0 ? <Na why="No venue figure is published." /> : (
+        <table className="exec-alp2-gaptable" aria-label="Net PnL by venue" data-testid="venue-pnl">
+          <tbody>
+            {venues.map((v) => (
+              <tr key={`${v.venue}|${v.economicDomain}|${v.currency}`}>
+                <th scope="row">{v.venue}<span className="exec-alp2-why"> {v.economicDomain === "ACTUAL" ? "Real-funded" : "Simulated"}</span></th>
+                <td><span className="exec-mgr-num" title={`${v.exact} ${v.currency}`}>{showDecimal(v.exact, { unit: "money", currency: v.currency, signed: true })}</span></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+    </SectionPanel>
+  );
+}
+
 export function PerformanceTab(props: PerformanceTabProps) {
   const { rows, env, view, onView } = props;
   const rb = useRibbon(props.timeline ?? NO_TIMELINE, props.life ?? NO_LIFE, props.paths, props.inputs[0] ?? null);
@@ -224,6 +249,8 @@ export function PerformanceTab(props: PerformanceTabProps) {
       <SectionPanel title="Contribution" aside="Current">
         <Contribution rows={rows} noTotals={props.noTotals ?? null} />
       </SectionPanel>
+
+      {props.venues && props.venues.state === "PUBLISHED" ? <VenueContribution venues={props.venues.value} /> : null}
 
       {props.dataset ? <WindowedFigures read={props.dataset} names={props.names ?? NO_NAMES} /> : null}
 

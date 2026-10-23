@@ -58,6 +58,10 @@ import type { StageActionEligibilityRead } from "../v2/readers/stageActionEligib
 import type { PaperExitParentQuery, PaperExitParentRead } from "../v2/readers/paperExitParent";
 import type { AccessEligibilityBatchRead, EligibilityBatchRequest } from "../v2/readers/accessSelfBatch";
 import type { AccessStepUpInput, SessionStepUpOutcome } from "../v2/readers/accessStepUp";
+import type { AlphaLifecycle } from "../v2/readers/alphaLifecycle";
+import type { EntityKind, EntitySearch } from "../v2/readers/entitySearch";
+import type { IncidentChildren, OperationsAuditPage } from "../v2/readers/incidentChildren";
+import type { ApprovalEvidence } from "../v2/readers/approvalEvidence";
 import type { AccessSelfContextRead } from "../v2/readers/accessSelfContext";import type { ApprovalRequestLookupQuery, ApprovalRequestLookupRead } from "../v2/readers/approvalRequestLookup";
 import type { CanaryControlRoom, SandboxCertification } from "../certification";
 import type { LiveFullOperations } from "../liveFull";
@@ -622,6 +626,33 @@ export interface ExecutionApi {
    * own requests (`governance.approval-request-lookup.v1`). A read: it writes nothing and creates nothing.
    */
   lookupApprovalRequest(query: ApprovalRequestLookupQuery): Promise<Result<ApprovalRequestLookupRead>>;
+  /**
+   * `GET /api/v1/execution/governance/approvals/{approval_id}/evidence` (WP-K, `portal.execution.approval-evidence.v1`): the evidence beside one
+   * request (prior economic history, evidence diff, obligations still open, receipt preview, the Portal's evaluation time). Optional: a port
+   * that does not offer it, or a route nothing serves yet, leaves the cockpit panels on their typed absence.
+   */
+  getApprovalEvidence?(approvalId: string, workspaceId?: string): Promise<Result<ApprovalEvidence>>;
+  /**
+   * `GET /api/v1/execution/alphas/{alpha_id}/lifecycle` (WP-K, `portal.execution.alpha-lifecycle.v1`): stage transitions with criteria, decider, actor
+   * and receipt; the unified event feed; the regime fit apart from the score; Net PnL per venue. Optional, like the approval evidence: a port or a
+   * route that does not offer it leaves Alpha 360 on what it read before.
+   */
+  getAlphaLifecycle?(alphaId: string, environment?: "paper" | "sandbox" | "live", workspaceId?: string): Promise<Result<AlphaLifecycle>>;
+  /**
+   * `GET /api/v1/execution/operations/incidents/{incident_id}/children` (WP-K, `portal.execution.incident-children.v1`): the evidence, assignee, resolution gate,
+   * timeline and original targets of a scoped incident, which the V2 root does not carry. Optional: absent leaves the incident page on its typed absences.
+   */
+  getIncidentChildren?(incidentId: string, workspaceId?: string): Promise<Result<IncidentChildren>>;
+  /**
+   * `GET /api/v1/execution/operations/audit` (WP-K, `portal.execution.operations-audit.v1`): actor, action, subject, time and receipt of the operations
+   * workflow, newest first, keyset paged. Optional: absent leaves the Audit tab on the workflow record of the loaded rows.
+   */
+  getOperationsAudit?(query?: { workspaceId?: string; limit?: number; after?: string; incidentId?: string }): Promise<Result<OperationsAuditPage>>;
+  /**
+   * `GET /api/v1/execution/search` (WP-K, `portal.execution.entity-search.v1`): the command bar's cross-entity search, per kind at most `limit` rows already
+   * scoped to the caller (an unauthorized entity is absent). Optional: absent leaves the bar fanning out to the list reads.
+   */
+  searchEntities?(query: { q: string; kinds?: readonly EntityKind[]; limit?: number; workspaceId?: string }): Promise<Result<EntitySearch>>;
   /**
    * `POST /api/v1/execution/commands/plans` with the EXECUTION_COMMAND body.
    *

@@ -499,7 +499,7 @@ export default function OperationsV2({
 
             {view === "audit" ? (
               ready ? (
-                <AuditPanel rows={visible} onOpenOperation={(id) => url.set({ view: null, sel: id })} />
+                <AuditPanel rows={visible} api={api} workspaceId={workspaceId} onOpenOperation={(id) => url.set({ view: null, sel: id })} />
               ) : (
                 <div className="exec-ops-panel">
                   <h2 className="exec-ops-panel-title">Audit</h2>

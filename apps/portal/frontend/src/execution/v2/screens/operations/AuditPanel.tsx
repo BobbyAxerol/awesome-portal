@@ -4,14 +4,18 @@
  * unavailable and the queue drops actors on purpose), so the actor is said once for the whole table, never as a name, a dash or a
  * guess per line. The list is bounded (`AUDIT_CAP`) and says how many events the loaded rows held.
  */
+import { useEffect, useState } from "react";
+
+import type { ExecutionApi } from "../../../api/ports";
 import { CardsTable, type CardsColumn } from "../../cardsTable";
+import type { AuditFeedRow, OperationsAuditPage } from "../../readers/incidentChildren";
 import { formatAsOf } from "../../boundary";
 import { Flag } from "../../Flag";
 import type { OperationV2 } from "../../readers/operationalQueue";
 import { ENV_LABEL } from "../../urlState";
 import { FE, NotPublished } from "./notPublished";
 import { AUDIT_WORD, auditEventsOf, type AuditEvent } from "./opsViews";
-import { commandLabel } from "./outcome";
+import { commandLabel, humanize } from "./outcome";
 import { TargetLink } from "./TargetLink";
 
 import "../../css/operations.css";
@@ -20,8 +24,34 @@ import "../../css/operations.css";
 export const AUDIT_CAP = 100;
 const number = (n: number) => n.toLocaleString("en-US");
 
+/** The published audit feed (WP-K `portal.execution.operations-audit.v1`). A port without the read, a refusal or a throw is `null`: the tab keeps the record of the loaded rows. */
+function useAuditFeed(api: ExecutionApi | undefined, workspaceId: string | undefined): OperationsAuditPage | null {
+  const [page, setPage] = useState<OperationsAuditPage | null>(null);
+  useEffect(() => {
+    setPage(null);
+    if (api === undefined || api.getOperationsAudit === undefined) return;
+    let live = true;
+    let pending: ReturnType<NonNullable<ExecutionApi["getOperationsAudit"]>>;
+    try { pending = api.getOperationsAudit({ ...(workspaceId ? { workspaceId } : {}), limit: AUDIT_CAP }); } catch { return; }
+    void pending.then((result) => { if (live && result.ok) setPage(result.value); }, () => undefined);
+    return () => { live = false; };
+  }, [api, workspaceId]);
+  return page;
+}
+
+const feedColumns: readonly CardsColumn<AuditFeedRow>[] = [
+  { key: "time", label: "Time", render: (row) => <time className="exec-ops-time" dateTime={new Date(row.atMs).toISOString()}>{formatAsOf(row.atMs)}</time> },
+  { key: "actor", label: "Actor", render: (row) => <span className="exec-ops-mono">{row.actor}</span> },
+  { key: "action", label: "Action", render: (row) => <Flag kind="neutral" label={humanize(row.action)} size="sm" /> },
+  { key: "subject", label: "Subject", render: (row) => <span className="exec-ops-target"><span>{humanize(row.subject.type)}</span><span className="exec-ops-meta">{row.subject.id}</span></span> },
+  { key: "receipt", label: "Receipt", render: (row) => (row.receiptRef === null ? <span className="exec-ops-meta">No receipt written</span> : <span className="exec-ops-mono">{row.receiptRef}</span>) },
+];
+
 export interface AuditPanelProps {
   rows: readonly OperationV2[];
+  /** When given, the published audit feed (actor, action, subject, receipt) is read and shown; without it the tab is the workflow record of the loaded rows. */
+  api?: ExecutionApi;
+  workspaceId?: string;
   /** Opens the operation in the Commands tab drawer. */
   onOpenOperation(operationId: string): void;
 }
@@ -60,7 +90,22 @@ function columnsFor(onOpenOperation: (id: string) => void): readonly CardsColumn
   ];
 }
 
-export function AuditPanel({ rows, onOpenOperation }: AuditPanelProps) {
+export function AuditPanel({ rows, api, workspaceId, onOpenOperation }: AuditPanelProps) {
+  const feed = useAuditFeed(api, workspaceId);
+  if (feed !== null) {
+    return (
+      <div className="exec-ops-panel" data-view="audit" data-source="feed">
+        <h2 className="exec-ops-panel-title">Audit</h2>
+        <p className="exec-ops-reason">The audit feed of the operations workflow, newest first: who did what, to which subject, and the receipt it wrote.</p>
+        <div className="exec-ops-table">
+          <CardsTable columns={feedColumns} rows={feed.items} rowKey={(row) => row.auditId} label="Audit feed" empty="The audit feed has no event." />
+          <div className="exec-ops-foot">
+            <span>{feed.items.length === 0 ? "0 events." : `${number(feed.items.length)} ${feed.items.length === 1 ? "event" : "events"} shown${feed.hasMore ? "; older events exist and are not loaded." : "."}`}</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
   const all = auditEventsOf(rows);
   const shown = all.slice(0, AUDIT_CAP);
   return (

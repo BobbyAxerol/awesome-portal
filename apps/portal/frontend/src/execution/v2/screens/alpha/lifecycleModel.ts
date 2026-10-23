@@ -14,6 +14,7 @@ import { readUtcEpochMs } from "../../../screenDataContract";
 import type { ManagerDataset } from "../../readers/managerDataset";
 import type { ManagerMetricRead } from "../../readers/managerMetric";
 import type { EventFeedRow } from "../../blocks";
+import type { AlphaLifecycle, LifecycleStageId } from "../../readers/alphaLifecycle";
 
 type Metrics = ReadonlyMap<string, ManagerMetricRead>;
 
@@ -130,6 +131,8 @@ export function regimeFit(dataset: ManagerDataset | null): { kind: "value"; exac
 
 export interface LifeEvent extends ChartEvent {
   readonly actor: string;
+  /** The receipt reference when the source publishes it (WP-K lifecycle read); the dataset keys carry none. */
+  readonly receipt?: string | null;
 }
 
 const KINDS: readonly EventKind[] = ["stage", "decision", "incident", "recall", "flow"];
@@ -160,5 +163,68 @@ const FEED_KIND: Readonly<Record<EventKind, { kind: EventFeedRow["kind"]; label:
 };
 /** The same events as table rows: actor as published; the receipt is not in this source (stays absent). */
 export function lifeFeedRows(events: readonly LifeEvent[], target: string): EventFeedRow[] {
-  return events.map((e) => ({ id: e.id, at: e.t, kind: FEED_KIND[e.kind].kind, kindLabel: FEED_KIND[e.kind].label, target, outcome: e.title, actor: e.actor }));
+  return events.map((e) => ({ id: e.id, at: e.t, kind: FEED_KIND[e.kind].kind, kindLabel: FEED_KIND[e.kind].label, target, outcome: e.title, actor: e.actor, ...(e.receipt === undefined ? {} : { receipt: e.receipt }) }));
+}
+
+/* ── the same facts from the published lifecycle read (WP-K, `portal.execution.alpha-lifecycle.v1`) ─────────────────────────────────────── */
+
+const STAGE_KEY: Readonly<Record<LifecycleStageId, SpineStageId>> = { R1: "r1", R2: "r2", PAPER: "paper", SANDBOX: "sandbox", CANARY: "canary", LIVE: "live" };
+
+/** Facts per stage from the read's stage rows; `null` unless the stages section is published. Same rules as `lifecycleFacts`: done only with a published exit. */
+export function lifecycleFactsOfRead(lifecycle: AlphaLifecycle | null, current: SpineStageId | null): LifecycleFacts | null {
+  if (lifecycle === null || lifecycle.stages.state !== "PUBLISHED" || current === null) return null;
+  const rows = lifecycle.stages.value;
+  const here = ORDER.indexOf(current);
+  const stages: Partial<Record<SpineStageId, SpineStageFacts>> = {};
+  for (const row of rows) {
+    const id = STAGE_KEY[row.stage];
+    const index = ORDER.indexOf(id);
+    const criteria = row.criteria === null ? null : { met: row.criteria.met, total: row.criteria.total };
+    if (index < here) {
+      if (row.exitedAtMs === null) continue;
+      const gate = id === "r1" || id === "r2";
+      stages[id] = {
+        outcome: "done",
+        daysInStage: gate ? null : row.daysInStage,
+        criteria: gate ? null : criteria,
+        decidedBy: row.decidedBy,
+        line: gate ? dayMonth(row.exitedAtMs) : `Exit ${dayMonth(row.exitedAtMs)}${row.decidedBy === null ? "" : ` · ${row.decidedBy}`}`,
+      };
+    } else if (index === here) {
+      stages[id] = { daysInStage: row.daysInStage, criteria, decider: row.deciderRole };
+    }
+  }
+  // The reason is the alpha's, as on the dataset keys: the first stage that states one (the stage-state toggle shows it on whichever stage it previews).
+  const blocked = rows.find((row) => row.blockedReason !== null)?.blockedReason ?? null;
+  return { stages, blockedReason: blocked };
+}
+
+/** Where each running stage sat on the time axis, from the read's own entry and exit instants (no day arithmetic). A stage missing either instant has no span. */
+export function stageSpansOfRead(lifecycle: AlphaLifecycle | null): readonly StageSpan[] {
+  if (lifecycle === null || lifecycle.stages.state !== "PUBLISHED") return [];
+  const spans: StageSpan[] = [];
+  for (const row of lifecycle.stages.value) {
+    const stage = STAGE_KEY[row.stage];
+    if (stage !== "paper" && stage !== "sandbox" && stage !== "canary" && stage !== "live") continue;
+    if (row.enteredAtMs === null) continue;
+    if (stage === "live") spans.push({ stage, from: row.enteredAtMs, to: row.exitedAtMs });
+    else if (row.exitedAtMs !== null) spans.push({ stage, from: row.enteredAtMs, to: row.exitedAtMs });
+  }
+  return spans;
+}
+
+/** The regime-fit tile from the read: the published exact ratio, or the typed absence's code. `null` unless the section is published. */
+export function regimeFitOfRead(lifecycle: AlphaLifecycle | null): { kind: "value"; exact: string } | { kind: "absent"; code: string } | null {
+  if (lifecycle === null || lifecycle.regimeFit.state !== "PUBLISHED") return null;
+  const fit = lifecycle.regimeFit.value;
+  return fit.state === "PUBLISHED" ? { kind: "value", exact: fit.exact } : { kind: "absent", code: fit.reasonCode };
+}
+
+/** The events of the unified feed; `missing` names the kinds the published feed carries none of. `null` unless the events section is published. */
+export function lifeEventsOfRead(lifecycle: AlphaLifecycle | null): { events: readonly LifeEvent[]; missing: readonly EventKind[] } | null {
+  if (lifecycle === null || lifecycle.events.state !== "PUBLISHED") return null;
+  const events: LifeEvent[] = lifecycle.events.value.items
+    .map((e) => ({ id: e.eventId, t: e.atMs, kind: e.kind as EventKind, title: e.title, actor: e.actor ?? "Not published", receipt: e.receiptRef }))
+    .sort((a, b) => a.t - b.t || a.id.localeCompare(b.id));
+  return { events, missing: KINDS.filter((kind) => !events.some((e) => e.kind === kind)) };
 }

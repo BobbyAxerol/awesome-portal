@@ -68,6 +68,10 @@ import { paperExitParentAnswers, paperExitParentUrl, readPaperExitParentV1 } fro
 import { accessEligibilityBatchUrl, eligibilityBatchAnswers, readAccessEligibilityBatch } from "../v2/readers/accessSelfBatch";
 import { ACCESS_SELF_CONTEXT_PATH, readAccessSelfContext } from "../v2/readers/accessSelfContext";
 import { ACCESS_STEP_UP_PATH, accessStepUpAnswers, accessStepUpBody, readAccessStepUp } from "../v2/readers/accessStepUp";
+import { incidentChildrenAnswers, incidentChildrenPath, operationsAuditPath, readIncidentChildrenV1, readOperationsAuditV1 } from "../v2/readers/incidentChildren";
+import { entitySearchAnswers, entitySearchPath, readEntitySearchV1 } from "../v2/readers/entitySearch";
+import { alphaLifecycleAnswers, alphaLifecyclePath, readAlphaLifecycleV1 } from "../v2/readers/alphaLifecycle";
+import { approvalEvidenceAnswers, approvalEvidencePath, readApprovalEvidenceV1 } from "../v2/readers/approvalEvidence";
 import { approvalRequestLookupAnswers, approvalRequestLookupUrl, readApprovalRequestLookupV1 } from "../v2/readers/approvalRequestLookup";
 import { readCanaryControlRoom, readSandboxCertification } from "../certification";
 import { readLiveFullOperations } from "../liveFull";
@@ -1236,6 +1240,53 @@ export function createHttpApi({ policy, signal, readScope = {} }: HttpApiOptions
         return unavailable("The request lookup answered another question than the one asked, so it is not shown.");
       }
       return result;
+    },
+
+    async getIncidentChildren(incidentId, workspaceId) {
+      const path = incidentChildrenPath(incidentId, workspaceId);
+      if (path === null) return unavailable("The incident id is not one the Portal accepts, so its children were not requested.");
+      return readGet(
+        path,
+        (raw) => { const read = readIncidentChildrenV1(raw); return read !== null && read.kind === "incident_children" && incidentChildrenAnswers(read.children, incidentId) ? read.children : null; },
+        "The incident children",
+      );
+    },
+
+    async getOperationsAudit(query = {}) {
+      const path = operationsAuditPath(query);
+      if (path === null) return unavailable("The audit request was not valid, so it was not sent.");
+      return readGet(path, (raw) => { const read = readOperationsAuditV1(raw); return read !== null && read.kind === "operations_audit" ? read.page : null; }, "The operations audit");
+    },
+
+    async searchEntities(query) {
+      const path = entitySearchPath(query);
+      if (path === null) return unavailable("The search text was not one the Portal accepts, so it was not sent.");
+      const asked = query.q.trim();
+      return readGet(
+        path,
+        (raw) => { const read = readEntitySearchV1(raw); return read !== null && read.kind === "entity_search" && entitySearchAnswers(read.search, asked) ? read.search : null; },
+        "The entity search",
+      );
+    },
+
+    async getAlphaLifecycle(alphaId, environment, workspaceId) {
+      const path = alphaLifecyclePath(alphaId, environment, workspaceId);
+      if (path === null) return unavailable("The alpha id is not one the Portal accepts, so the lifecycle was not requested.");
+      return readGet(
+        path,
+        (raw) => { const read = readAlphaLifecycleV1(raw); return read !== null && read.kind === "alpha_lifecycle" && alphaLifecycleAnswers(read.lifecycle, alphaId) ? read.lifecycle : null; },
+        "The alpha lifecycle",
+      );
+    },
+
+    async getApprovalEvidence(approvalId, workspaceId) {
+      const path = approvalEvidencePath(approvalId, workspaceId);
+      if (path === null) return unavailable("The approval id is not one the Portal accepts, so the evidence was not requested.");
+      return readGet(
+        path,
+        (raw) => { const read = readApprovalEvidenceV1(raw); return read !== null && read.kind === "approval_evidence" && approvalEvidenceAnswers(read.evidence, approvalId) ? read.evidence : null; },
+        "The approval evidence",
+      );
     },
 
     async planCommand(input) {

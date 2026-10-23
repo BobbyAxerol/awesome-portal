@@ -1,0 +1,148 @@
+{
+  "lane": "TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT",
+  "bases": {
+    "published": "execution-alpha-lifecycle.published.synthetic.valid.json",
+    "regimeAbsent": "execution-alpha-lifecycle.regime-absent.synthetic.valid.json"
+  },
+  "note": "WP-K slice 5: a regime fit is a ratio with a stated scale or a typed absence (never both, never a zero in place of an absence); a criteria count is an integer; Net PnL is an exact decimal string with its currency; the object is closed.",
+  "cases": [
+    {
+      "id": "WP-K/regime-published-without-scale",
+      "base": "published",
+      "rule": "a published ratio states its scale",
+      "ops": [
+        {
+          "op": "set",
+          "path": [
+            "regime_fit",
+            "ratio_scale"
+          ],
+          "value": null
+        }
+      ]
+    },
+    {
+      "id": "WP-K/regime-published-with-reason",
+      "base": "published",
+      "rule": "a published ratio has no absence reason",
+      "ops": [
+        {
+          "op": "set",
+          "path": [
+            "regime_fit",
+            "reason_code"
+          ],
+          "value": "INSUFFICIENT_DATA"
+        }
+      ]
+    },
+    {
+      "id": "WP-K/regime-absent-with-value",
+      "base": "regimeAbsent",
+      "rule": "a typed absence carries no number (not even 0)",
+      "ops": [
+        {
+          "op": "set",
+          "path": [
+            "regime_fit",
+            "value"
+          ],
+          "value": "0"
+        }
+      ]
+    },
+    {
+      "id": "WP-K/regime-absent-without-reason",
+      "base": "regimeAbsent",
+      "rule": "a typed absence names its reason",
+      "ops": [
+        {
+          "op": "set",
+          "path": [
+            "regime_fit",
+            "reason_code"
+          ],
+          "value": null
+        }
+      ]
+    },
+    {
+      "id": "WP-K/criteria-met-float",
+      "base": "published",
+      "rule": "a criteria count is an integer",
+      "ops": [
+        {
+          "op": "set",
+          "path": [
+            "stages",
+            4,
+            "criteria",
+            "met"
+          ],
+          "value": 6.5
+        }
+      ]
+    },
+    {
+      "id": "WP-K/net-pnl-number",
+      "base": "published",
+      "rule": "Net PnL is an exact decimal string, never a JS number",
+      "ops": [
+        {
+          "op": "set",
+          "path": [
+            "venue_net_pnl",
+            0,
+            "net_pnl"
+          ],
+          "value": 1250.5
+        }
+      ]
+    },
+    {
+      "id": "WP-K/venue-without-currency",
+      "base": "published",
+      "rule": "one currency per figure",
+      "ops": [
+        {
+          "op": "delete",
+          "path": [
+            "venue_net_pnl",
+            0,
+            "currency"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "WP-K/unknown-stage",
+      "base": "published",
+      "rule": "the stage vocabulary is closed",
+      "ops": [
+        {
+          "op": "set",
+          "path": [
+            "stages",
+            0,
+            "stage"
+          ],
+          "value": "BETA"
+        }
+      ]
+    },
+    {
+      "id": "WP-K/unknown-key",
+      "base": "published",
+      "rule": "closed object",
+      "ops": [
+        {
+          "op": "set",
+          "path": [
+            "score"
+          ],
+          "value": 1
+        }
+      ]
+    }
+  ]
+}

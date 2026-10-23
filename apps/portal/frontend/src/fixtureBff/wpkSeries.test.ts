@@ -124,3 +124,139 @@ describe("WP-K FIXTURE_LAB: the L0 double", () => {
     expect(get({ metric: "NAV", subjects: JSON.stringify([{ subject_type: "ALPHA", subject_id: "x" }, { subject_type: "ALPHA", subject_id: "x" }]) })?.status).toBe(400);
   });
 });
+
+describe("WP-K FIXTURE_LAB: approval evidence", () => {
+  const evidence = (id: string): Body => { prepare(); return answerReviewManager("GET", `/api/v1/execution/governance/approvals/${id}/evidence`, new URLSearchParams(), "populated"); };
+  const ids = Array.from({ length: 28 }, (_, i) => `apr_fixture_${i}`);
+  it("answers every id deterministically with a schema-valid body in all three modes (not read, no source, published)", () => {
+    const modes = new Set<string>();
+    for (const id of ids) {
+      const result = evidence(id);
+      expect(result.status).toBe(200);
+      expect(violationsOf({ file: "execution-approval-evidence.v1", ptr: "" }, result.body).violations).toEqual([]);
+      expect(evidence(id)).toEqual(result);
+      const b = result.body;
+      modes.add(!("evidence_diff" in b) ? "no-source" : b.evidence_diff === null ? "not-read" : "published");
+    }
+    expect([...modes].sort()).toEqual(["no-source", "not-read", "published"]);
+  });
+  it("a published answer carries a NAV history from the review series, exact counts with true zeros, and read_at at the fixture clock", () => {
+    const published = ids.map(evidence).map((r) => r.body).find((b) => b.evidence_diff);
+    expect(published.prior_economic_history).toMatchObject({ metric: "NAV", unit: "MONEY" });
+    expect(published.prior_economic_history.points.length).toBeGreaterThan(100);
+    expect(Object.values(published.obligations_after_approval).every((n) => Number.isInteger(n) && (n as number) >= 0)).toBe(true);
+    expect(published.obligations_after_approval.unknown_outcomes).toBe(0);
+  });
+  it("the strict reader accepts it through the unmodified HTTP port", async () => {
+    const api = client();
+    const id = ids.find((candidate) => evidence(candidate).body.evidence_diff)!;
+    const parsed = await api.getApprovalEvidence!(id);
+    expect(parsed.ok, JSON.stringify(parsed)).toBe(true);
+    if (parsed.ok) expect(parsed.value.obligations.state).toBe("PUBLISHED");
+  });
+});
+
+describe("WP-K FIXTURE_LAB: alpha lifecycle", () => {
+  const lifecycle = (id: string, environment?: string): Body => {
+    prepare();
+    return answerReviewManager("GET", `/api/v1/execution/alphas/${id}/lifecycle`, new URLSearchParams(environment ? { environment } : {}), "populated");
+  };
+  it("answers a native alpha with schema-valid stages, a unified feed with receipts on decisions, a regime fit and Net PnL per venue", () => {
+    const result = lifecycle("alpha_a");
+    expect(result.status).toBe(200);
+    expect(violationsOf({ file: "execution-alpha-lifecycle.v1", ptr: "" }, result.body).violations).toEqual([]);
+    const b = result.body;
+    expect(b.stages.map((s: Body) => s.stage)).toEqual(["R1", "R2", "PAPER", "SANDBOX", "CANARY", "LIVE"]);
+    expect(b.stages[2].criteria).toEqual({ met: 7, total: 7, items: [] });
+    expect(b.stages[2].decided_by).toBeTruthy();
+    expect(new Set(b.events.items.map((e: Body) => e.kind))).toEqual(new Set(["stage", "decision", "incident", "recall", "flow"]));
+    expect(b.events.items.filter((e: Body) => e.kind === "decision").every((e: Body) => typeof e.receipt_ref === "string")).toBe(true);
+    expect(lifecycle("alpha_a")).toEqual(result);
+  });
+  it("Net PnL per venue is the exact sum of the alpha's own deployments per venue, book and currency, and never mixes books", () => {
+    const all = lifecycle("alpha_a").body.venue_net_pnl as Body[];
+    const keys = all.map((v) => `${v.venue}|${v.economic_domain}|${v.currency}`);
+    expect(new Set(keys).size).toBe(keys.length);
+    const live = (lifecycle("alpha_a", "live").body.venue_net_pnl as Body[]);
+    expect(live.length).toBeGreaterThan(0);
+    expect(live.every((v) => v.economic_domain === "ACTUAL")).toBe(true);
+    expect(live.every((v) => typeof v.net_pnl === "string")).toBe(true);
+  });
+  it("an unknown alpha is a 404 problem, and the strict reader accepts the answer through the unmodified HTTP port", async () => {
+    expect(lifecycle("alpha_missing").status).toBe(404);
+    const api = client();
+    const parsed = await api.getAlphaLifecycle!("alpha_a", "paper");
+    expect(parsed.ok, JSON.stringify(parsed)).toBe(true);
+    if (parsed.ok) expect(parsed.value.stages.state).toBe("PUBLISHED");
+  });
+});
+
+describe("WP-K FIXTURE_LAB: operations extras", () => {
+  const ask = (path: string, query: Record<string, string> = {}): Body => { prepare(); return answerReviewManager("GET", `/api/v1/execution${path}`, new URLSearchParams(query), "populated"); };
+  const ids = Array.from({ length: 24 }, (_, i) => `inc_fixture_${i}`);
+  it("incident children answer every id deterministically in all three modes with schema-valid bodies and the blocker rule", () => {
+    const modes = new Set<string>();
+    for (const id of ids) {
+      const result = ask(`/operations/incidents/${id}/children`);
+      expect(result.status).toBe(200);
+      expect(violationsOf({ file: "execution-incident-children.v1", ptr: "" }, result.body).violations).toEqual([]);
+      expect(ask(`/operations/incidents/${id}/children`)).toEqual(result);
+      const b = result.body;
+      modes.add(!("evidence" in b) ? "no-source" : b.evidence === null ? "not-read" : "published");
+      if (b.resolution_gate) expect(b.resolution_gate.eligible).toBe(b.resolution_gate.blocker_codes.length === 0);
+    }
+    expect([...modes].sort()).toEqual(["no-source", "not-read", "published"]);
+  });
+  it("the audit feed pages newest first with receipts on acknowledgements and resolutions, and refuses a cursor it did not issue", () => {
+    const first = ask("/operations/audit", { limit: "10" });
+    expect(first.status).toBe(200);
+    expect(violationsOf({ file: "execution-operations-audit.v1", ptr: "" }, first.body).violations).toEqual([]);
+    const body = first.body;
+    expect(body.items).toHaveLength(10);
+    expect(body.has_more).toBe(true);
+    const times = body.items.map((r: Body) => r.at_ms as number);
+    expect([...times].sort((a, b) => b - a)).toEqual(times);
+    expect(body.items.filter((r: Body) => r.action !== "CREATED").every((r: Body) => typeof r.receipt_ref === "string")).toBe(true);
+    const next = ask("/operations/audit", { limit: "10", after: body.next_cursor });
+    expect(next.body.items[0].audit_id).not.toBe(body.items[0].audit_id);
+    expect(ask("/operations/audit", { after: "garbage" }).status).toBe(400);
+  });
+  it("the strict reader accepts both through the unmodified HTTP port", async () => {
+    const api = client();
+    const parsed = await api.getOperationsAudit!({ limit: 25 });
+    expect(parsed.ok, JSON.stringify(parsed)).toBe(true);
+    const published = ids.find((id) => ask(`/operations/incidents/${id}/children`).body.evidence);
+    const kids = await api.getIncidentChildren!(published!);
+    expect(kids.ok, JSON.stringify(kids)).toBe(true);
+  });
+});
+
+describe("WP-K FIXTURE_LAB: entity search", () => {
+  const ask = (query: Record<string, string>): Body => { prepare(); return answerReviewManager("GET", "/api/v1/execution/search", new URLSearchParams(query), "populated"); };
+  it("answers per kind with exact counts, honours kinds and limit, and is schema-valid", () => {
+    const result = ask({ q: "alpha", limit: "3" });
+    expect(result.status).toBe(200);
+    expect(violationsOf({ file: "execution-entity-search.v1", ptr: "" }, result.body).violations).toEqual([]);
+    const groups = result.body.groups as Body[];
+    expect(groups.map((g) => g.kind)).toEqual(["alpha", "portfolio", "account", "operation", "incident", "approval"]);
+    const alpha = groups.find((g) => g.kind === "alpha")!;
+    expect(alpha.rows.length).toBe(3);
+    expect(alpha.total_matched).toBeGreaterThanOrEqual(3);
+    expect(alpha.rows.every((r: Body) => r.route_hint.startsWith("/deployments/alphas/"))).toBe(true);
+    expect(groups.find((g) => g.kind === "account")).toMatchObject({ total_matched: null, rows: [] });
+    const only = ask({ q: "alpha", kinds: "alpha,portfolio", limit: "2" }).body.groups as Body[];
+    expect(only.map((g) => g.kind)).toEqual(["alpha", "portfolio"]);
+  });
+  it("a text that matches nothing is a counted zero, never an absence; a bad query is a 400", () => {
+    const none = ask({ q: "zz_no_such_entity_zz" }).body.groups as Body[];
+    expect(none.filter((g) => g.total_matched !== null).every((g) => g.total_matched === 0 && g.rows.length === 0)).toBe(true);
+    expect(ask({ q: "" }).status).toBe(400);
+    expect(ask({ q: "x", kinds: "user" }).status).toBe(400);
+  });
+  it("the strict reader accepts it through the unmodified HTTP port", async () => {
+    const api = client();
+    const parsed = await api.searchEntities!({ q: "alpha", limit: 5 });
+    expect(parsed.ok, JSON.stringify(parsed)).toBe(true);
+    if (parsed.ok) expect(parsed.value.groups.length).toBe(6);
+  });
+});

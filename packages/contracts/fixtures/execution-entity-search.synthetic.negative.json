@@ -1,0 +1,123 @@
+{
+  "lane": "TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT",
+  "bases": {
+    "hit": "execution-entity-search.hit.synthetic.valid.json"
+  },
+  "note": "WP-K slice 7: a count is a non-negative integer or null (never a string, never -1); a route hint is a path; kinds are closed; an entity is never \"denied\" (there is no such state); the object is closed.",
+  "cases": [
+    {
+      "id": "WP-K/total-negative",
+      "base": "hit",
+      "rule": "a count is not negative",
+      "ops": [
+        {
+          "op": "set",
+          "path": [
+            "groups",
+            0,
+            "total_matched"
+          ],
+          "value": -1
+        }
+      ]
+    },
+    {
+      "id": "WP-K/total-string",
+      "base": "hit",
+      "rule": "a count is an integer, never text",
+      "ops": [
+        {
+          "op": "set",
+          "path": [
+            "groups",
+            0,
+            "total_matched"
+          ],
+          "value": "4"
+        }
+      ]
+    },
+    {
+      "id": "WP-K/unknown-kind",
+      "base": "hit",
+      "rule": "kinds are closed",
+      "ops": [
+        {
+          "op": "set",
+          "path": [
+            "groups",
+            0,
+            "kind"
+          ],
+          "value": "user"
+        }
+      ]
+    },
+    {
+      "id": "WP-K/route-hint-absolute-url",
+      "base": "hit",
+      "rule": "a route hint is an in-app path",
+      "ops": [
+        {
+          "op": "set",
+          "path": [
+            "groups",
+            0,
+            "rows",
+            0,
+            "route_hint"
+          ],
+          "value": "https://example.com/x"
+        }
+      ]
+    },
+    {
+      "id": "WP-K/denied-state",
+      "base": "hit",
+      "rule": "an unauthorized entity is absent, there is no denied row",
+      "ops": [
+        {
+          "op": "set",
+          "path": [
+            "groups",
+            0,
+            "rows",
+            0,
+            "state"
+          ],
+          "value": "DENIED"
+        }
+      ]
+    },
+    {
+      "id": "WP-K/limit-zero",
+      "base": "hit",
+      "rule": "limit is 1 to 50",
+      "ops": [
+        {
+          "op": "set",
+          "path": [
+            "query",
+            "limit"
+          ],
+          "value": 0
+        }
+      ]
+    },
+    {
+      "id": "WP-K/empty-query",
+      "base": "hit",
+      "rule": "a query is not empty",
+      "ops": [
+        {
+          "op": "set",
+          "path": [
+            "query",
+            "q"
+          ],
+          "value": ""
+        }
+      ]
+    }
+  ]
+}

@@ -21,6 +21,7 @@ import { PanelSkeleton, PanelState } from "../../../components/states";
 import { reviewRouteFor, type ApprovalGate } from "../../../screens/ApprovalInbox";
 import { QuietIdsWhy } from "../../blocks";
 import { formatAsOf } from "../../boundary";
+import { EvidenceExtraContext, IDLE_EXTRA, OBLIGATION_ROWS, HistoryChart, historyCaption, obligationTotal, sectionOf, useEvidenceExtra, type ExtraState } from "./evidenceExtra";
 import { codeName } from "../../displayNames";
 import { Flag } from "../../Flag";
 import type { FlagKind } from "../../flagKinds";
@@ -213,8 +214,19 @@ function Criteria({ rows }: { rows: readonly CriteriaRow[] }) {
   );
 }
 
-/** The hi-fi's "Prior economic history": the series is not published (FE-029), so the panel says so under its own title. */
+/** The hi-fi's "Prior economic history": the published series of the request's subject (WP-K), or the typed absence under its own title. */
 function ChartPanel() {
+  const got = sectionOf(useEvidenceExtra(), (e) => e.history);
+  if (got !== null && got.kind === "value") {
+    return (
+      <Panel title="Prior economic history" right={got.value.metric}>
+        <div className="exec-ck-pad" data-testid="ck-history">
+          <HistoryChart evidence={got.value} />
+          <p className="exec-ck-note" data-testid="ck-history-caption">{historyCaption(got.value)}</p>
+        </div>
+      </Panel>
+    );
+  }
   return (
     <Panel title="Prior economic history" right="Series not published">
       <div className="exec-ck-pad" data-testid="ck-history"><NotPublished text={NOT_PUBLISHED.chart} /></div>
@@ -226,6 +238,16 @@ function ChartPanel() {
 const STILL_OPEN = ["Open positions", "Working orders", "Reservations", "Unknown outcomes", "Settlement pending"] as const;
 
 function StillOpenPanel() {
+  const extra = useEvidenceExtra();
+  const got = sectionOf(extra, (e) => e.obligations);
+  if (got !== null && got.kind === "value") {
+    const o = got.value;
+    return (
+      <Panel title="Still open after approval" right={extra.status === "ready" ? `Read ${formatAsOf(extra.evidence.readAtMs)}` : ""}>
+        <Kv rows={OBLIGATION_ROWS.map(([label, key]) => ({ label, value: <span className="exec-mgr-num" data-testid={`ck-open-${key}`}>{String(o[key])}</span> }))} />
+      </Panel>
+    );
+  }
   return (
     <Panel title="Still open after approval" right="Not published">
       <Kv rows={STILL_OPEN.map((label) => ({ label, value: <NotPublished text={NOT_PUBLISHED.decisionCall} /> }))} />
@@ -235,6 +257,22 @@ function StillOpenPanel() {
 
 /** What changed in the evidence since the last review (concept C4). No source publishes a diff, so the panel is the typed absence. */
 function EvidenceDiffPanel() {
+  const got = sectionOf(useEvidenceExtra(), (e) => e.diff);
+  if (got !== null && got.kind === "value") {
+    const diff = got.value;
+    return (
+      <Panel title="Evidence diff" right={`Since ${diff.previousRevision}`}>
+        <div className="exec-ck-pad" data-testid="ck-evidence-diff">
+          {diff.changes.length === 0 ? <span>No change since {diff.previousRevision}</span> : (
+            <Kv rows={diff.changes.map((change) => ({
+              label: change.label,
+              value: <span className="exec-mgr-num">{change.before ?? "None"} {"\u2192"} {change.after ?? "None"}</span>,
+            }))} />
+          )}
+        </div>
+      </Panel>
+    );
+  }
   return (
     <Panel title="Evidence diff" right="Since the last review">
       <div className="exec-ck-pad" data-testid="ck-evidence-diff"><NotPublished text={NOT_PUBLISHED.chart} /></div>
@@ -930,9 +968,11 @@ export interface EvidenceFrameProps {
   evidence: EvidenceState;
   /** Why nothing can be shown for a selection the queue does not know. */
   unknownReason?: string | null;
+  /** The approval evidence read (WP-K): history, diff and obligations; absent keeps the typed absences. */
+  extra?: ExtraState;
 }
 
-export function EvidenceFrame({ kind, header, evidence, unknownReason }: EvidenceFrameProps) {
+export function EvidenceFrame({ kind, header, evidence, unknownReason, extra = IDLE_EXTRA }: EvidenceFrameProps) {
   const [params] = useSearchParams();
 
   if (header === null) {
@@ -946,8 +986,14 @@ export function EvidenceFrame({ kind, header, evidence, unknownReason }: Evidenc
   const data = evidence.status === "ready" ? evidence.data : null;
   const gate = header.gate ?? (kind ? GATE_OF_KIND[kind] : null);
   const verdict = data ? verdictOf(data) : null;
+  // "N obligations stay open after approval": only the source's own five counts, only when published, and never on an R1 (it closes nothing).
+  const published = extra.status === "ready" && extra.evidence.obligations.state === "PUBLISHED" ? extra.evidence.obligations.value : null;
+  const obligationsFact = published !== null && data !== null && data.kind !== "r1"
+    ? (obligationTotal(published) === 0 ? "No obligations stay open after approval" : `${obligationTotal(published)} obligations stay open after approval`)
+    : null;
 
   return (
+    <EvidenceExtraContext.Provider value={extra}>
     <div className="exec-ck-evidence">
       <div className="exec-ck-head">
         <div className="exec-ck-titleline">
@@ -969,7 +1015,7 @@ export function EvidenceFrame({ kind, header, evidence, unknownReason }: Evidenc
       {verdict ? (
         <div className="exec-ck-verdict" data-tone={verdict.tone}>
           <h3 className="exec-ck-vh">{verdict.headline}</h3>
-          {verdict.facts.length > 0 ? <div className="exec-ck-meta">{verdict.facts.map((fact) => <span key={fact}>{fact}</span>)}</div> : null}
+          {verdict.facts.length > 0 || obligationsFact !== null ? <div className="exec-ck-meta">{verdict.facts.map((fact) => <span key={fact}>{fact}</span>)}{obligationsFact !== null ? <span data-testid="ck-obligations-fact">{obligationsFact}</span> : null}</div> : null}
           {/* The hi-fi's one line under the headline: the approvers so far and the time left, each only as published (the checklist count is the headline and the meter's). */}
           {header.quorum || header.left ? (
             <div className="exec-ck-meta" data-testid="ck-verdict-line">
@@ -1004,6 +1050,7 @@ export function EvidenceFrame({ kind, header, evidence, unknownReason }: Evidenc
       {data !== null && data.kind !== "r1" ? <StillOpenPanel /> : null}
       {data !== null ? <ProvenanceDetails data={data} gate={gate} /> : null}
     </div>
+    </EvidenceExtraContext.Provider>
   );
 }
 

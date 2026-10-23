@@ -1,0 +1,115 @@
+{
+  "lane": "TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT",
+  "bases": {
+    "published": "execution-approval-evidence.published.synthetic.valid.json",
+    "drawdown": "execution-approval-evidence.drawdown.synthetic.valid.json"
+  },
+  "note": "WP-K slice 2: a count is a non-negative integer (a true 0 is published, never a string or a default); a drawdown is at or below zero; a ratio states its scale; money has a currency.",
+  "cases": [
+    {
+      "id": "WP-K/obligation-negative",
+      "base": "published",
+      "rule": "a count is not negative",
+      "ops": [
+        {
+          "op": "set",
+          "path": [
+            "obligations_after_approval",
+            "working_orders"
+          ],
+          "value": -1
+        }
+      ]
+    },
+    {
+      "id": "WP-K/obligation-string",
+      "base": "published",
+      "rule": "a count is an integer, not text",
+      "ops": [
+        {
+          "op": "set",
+          "path": [
+            "obligations_after_approval",
+            "open_positions"
+          ],
+          "value": "2"
+        }
+      ]
+    },
+    {
+      "id": "WP-K/obligation-missing-key",
+      "base": "published",
+      "rule": "all five counts or the section is null",
+      "ops": [
+        {
+          "op": "delete",
+          "path": [
+            "obligations_after_approval",
+            "reservations"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "WP-K/history-money-without-currency",
+      "base": "published",
+      "rule": "money states its currency",
+      "ops": [
+        {
+          "op": "set",
+          "path": [
+            "prior_economic_history",
+            "currency"
+          ],
+          "value": null
+        }
+      ]
+    },
+    {
+      "id": "WP-K/history-drawdown-above-zero",
+      "base": "drawdown",
+      "rule": "a drawdown is at or below zero",
+      "ops": [
+        {
+          "op": "set",
+          "path": [
+            "prior_economic_history",
+            "points",
+            1,
+            "value"
+          ],
+          "value": "0.5"
+        }
+      ]
+    },
+    {
+      "id": "WP-K/history-ratio-without-scale",
+      "base": "drawdown",
+      "rule": "a ratio states its scale",
+      "ops": [
+        {
+          "op": "set",
+          "path": [
+            "prior_economic_history",
+            "ratio_scale"
+          ],
+          "value": null
+        }
+      ]
+    },
+    {
+      "id": "WP-K/unknown-key",
+      "base": "published",
+      "rule": "closed object",
+      "ops": [
+        {
+          "op": "set",
+          "path": [
+            "score"
+          ],
+          "value": 1
+        }
+      ]
+    }
+  ]
+}

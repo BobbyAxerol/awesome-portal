@@ -8,6 +8,7 @@ import type { ExecutionApi, InboxResult } from "../../../api/ports";
 import { readLiveReview } from "../../../api/profileRead";
 import { readConditionsPage, readGateR1Detail, readGateR2Detail, readPaperExitDetail } from "../../../api/rows";
 import type { ApprovalRow, DecidedRow } from "../../../screens/ApprovalInbox";
+import { readApprovalEvidenceV1 } from "../../readers/approvalEvidence";
 import { v1GovernanceParent, type GovernanceParentKind } from "../../readers/dispatch";
 import { V2_ROLE_PRESETS } from "../../shell/roleNav";
 import Cockpit, { type CockpitProps } from "./index";
@@ -38,7 +39,7 @@ const WRITES = [
   "planCommand", "runOperatorTask", "acknowledgeOperation", "resolveOperation",
 ] as const;
 const READS = [
-  "listApprovals", "getApprovalHistory", "getGateR1", "getGateR2", "getLiveReview", "getGovernanceParent", "getPaperExit", "getWaivers", "getReviewCaptureCapabilities",
+  "listApprovals", "getApprovalHistory", "getGateR1", "getGateR2", "getLiveReview", "getGovernanceParent", "getPaperExit", "getWaivers", "getReviewCaptureCapabilities", "getApprovalEvidence",
 ] as const;
 
 type Handler = (...args: never[]) => unknown;
@@ -1387,5 +1388,46 @@ describe("the New request drawer", () => {
       expect(where()).toContain("compose=request");
       expect(drawer()).not.toBeNull();
     });
+  });
+});
+
+/* ── WP-K slice 2: the approval evidence read (history, diff, obligations, receipt preview) ─────────────── */
+describe("approval evidence (WP-K)", () => {
+  const evidenceOf = (name: string) => {
+    const read = readApprovalEvidenceV1((fixture(`execution-approval-evidence.${name}.synthetic.valid.json`) as { value: unknown }).value);
+    if (read === null || read.kind !== "approval_evidence") throw new Error("evidence fixture unreadable");
+    return read.evidence;
+  };
+  const withEvidence = (name: string) => standardPort({ getApprovalEvidence: () => ({ ok: true, value: evidenceOf(name) }) } as never);
+  const openExit = async (p: Port) => {
+    await mount(p, "/execution/approvals", { workspaceId: "ws_x" });
+    fireEvent.click(rowButton(/Gamma Exit/));
+    await settle();
+  };
+  const evidencePane = () => screen.getByRole("region", { name: "Evidence" });
+
+  it("a published read fills the history chart, the diff, the five counts (a true zero is a number) and the claim; the rail says what changes", async () => {
+    await openExit(withEvidence("published"));
+    const pane = within(evidencePane());
+    expect(pane.getByTestId("ck-history-caption").textContent).toMatch(/portfolio TEST_ONLY:portfolio-a · NAV in USDT · methodology TEST_ONLY:nav-twr\.v1/);
+    expect(pane.getByTestId("ck-evidence-diff").textContent).toMatch(/Requested capital10000\.00 \u2192 15000\.00/);
+    expect(pane.getByTestId("ck-open-openPositions").textContent).toBe("2");
+    expect(pane.getByTestId("ck-open-workingOrders").textContent).toBe("0");
+    expect(pane.getByTestId("ck-obligations-fact").textContent).toBe("3 obligations stay open after approval");
+    expect(within(rail()).getByTestId("ck-what-changes").textContent).toMatch(/Allocation to portfolio A rises by 5000\.00 USDT/);
+  });
+  it.each(["not-read", "no-source"])("%s keeps every panel on its typed absence and makes no claim", async (name) => {
+    await openExit(withEvidence(name));
+    const pane = within(evidencePane());
+    expect(pane.queryByTestId("ck-obligations-fact")).toBeNull();
+    expect(pane.queryByTestId("ck-open-workingOrders")).toBeNull();
+    expect(pane.queryByTestId("ck-history-caption")).toBeNull();
+    expect(within(rail()).queryByTestId("ck-what-changes")).toBeNull();
+    expect(pane.getByText("Still open after approval")).toBeTruthy();
+  });
+  it("a refused or unthrowable read is the same typed absence", async () => {
+    await openExit(standardPort({ getApprovalEvidence: () => ({ ok: false, status: "unavailable", reason: "The approval evidence never reached the Portal." }) } as never));
+    expect(within(evidencePane()).queryByTestId("ck-obligations-fact")).toBeNull();
+    expect(within(evidencePane()).getByText("Still open after approval")).toBeTruthy();
   });
 });

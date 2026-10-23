@@ -1,0 +1,193 @@
+{
+  "lane": "TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT",
+  "bases": {
+    "detail": "execution-incident-children.published.synthetic.valid.json",
+    "eligible": "execution-incident-children.eligible.synthetic.valid.json",
+    "audit": "execution-operations-audit.page.synthetic.valid.json",
+    "last": "execution-operations-audit.last.synthetic.valid.json"
+  },
+  "note": "WP-K slice 3: an eligible resolution gate has no blocker; evidence sources, audit subject types and target types are closed; a digest is sha256; the audit cursor exists exactly when there is another page; the objects are closed.",
+  "cases": [
+    {
+      "id": "WP-K/gate-eligible-with-blockers",
+      "schema": "detail",
+      "base": "detail",
+      "rule": "an eligible gate has no blocker",
+      "ops": [
+        {
+          "op": "set",
+          "path": [
+            "resolution_gate",
+            "eligible"
+          ],
+          "value": true
+        }
+      ]
+    },
+    {
+      "id": "WP-K/evidence-unknown-source",
+      "schema": "detail",
+      "base": "detail",
+      "rule": "evidence sources are closed",
+      "ops": [
+        {
+          "op": "set",
+          "path": [
+            "evidence",
+            0,
+            "source"
+          ],
+          "value": "RUMOUR"
+        }
+      ]
+    },
+    {
+      "id": "WP-K/evidence-bad-digest",
+      "schema": "detail",
+      "base": "detail",
+      "rule": "a digest is sha256",
+      "ops": [
+        {
+          "op": "set",
+          "path": [
+            "evidence",
+            0,
+            "digest"
+          ],
+          "value": "abc"
+        }
+      ]
+    },
+    {
+      "id": "WP-K/timeline-version-zero",
+      "schema": "detail",
+      "base": "detail",
+      "rule": "a version is positive",
+      "ops": [
+        {
+          "op": "set",
+          "path": [
+            "timeline",
+            1,
+            "version_after"
+          ],
+          "value": 0
+        }
+      ]
+    },
+    {
+      "id": "WP-K/original-target-unknown-type",
+      "schema": "detail",
+      "base": "detail",
+      "rule": "target types are closed",
+      "ops": [
+        {
+          "op": "set",
+          "path": [
+            "linked_operations",
+            0,
+            "original_target",
+            "type"
+          ],
+          "value": "VENUE"
+        }
+      ]
+    },
+    {
+      "id": "WP-K/detail-unknown-key",
+      "schema": "detail",
+      "base": "detail",
+      "rule": "closed object",
+      "ops": [
+        {
+          "op": "set",
+          "path": [
+            "severity"
+          ],
+          "value": "HIGH"
+        }
+      ]
+    },
+    {
+      "id": "WP-K/audit-more-without-cursor",
+      "schema": "audit",
+      "base": "audit",
+      "rule": "another page needs its cursor",
+      "ops": [
+        {
+          "op": "set",
+          "path": [
+            "next_cursor"
+          ],
+          "value": null
+        }
+      ]
+    },
+    {
+      "id": "WP-K/audit-cursor-on-last-page",
+      "schema": "audit",
+      "base": "last",
+      "rule": "the last page has no cursor",
+      "ops": [
+        {
+          "op": "set",
+          "path": [
+            "next_cursor"
+          ],
+          "value": "TEST_ONLY:cursor-x"
+        }
+      ]
+    },
+    {
+      "id": "WP-K/audit-lowercase-action",
+      "schema": "audit",
+      "base": "audit",
+      "rule": "an action is an upper-case code",
+      "ops": [
+        {
+          "op": "set",
+          "path": [
+            "items",
+            0,
+            "action"
+          ],
+          "value": "acknowledged"
+        }
+      ]
+    },
+    {
+      "id": "WP-K/audit-without-actor",
+      "schema": "audit",
+      "base": "audit",
+      "rule": "an audit row names its actor",
+      "ops": [
+        {
+          "op": "delete",
+          "path": [
+            "items",
+            0,
+            "actor"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "WP-K/audit-unknown-subject-type",
+      "schema": "audit",
+      "base": "audit",
+      "rule": "subject types are closed",
+      "ops": [
+        {
+          "op": "set",
+          "path": [
+            "items",
+            0,
+            "subject",
+            "type"
+          ],
+          "value": "USER"
+        }
+      ]
+    }
+  ]
+}

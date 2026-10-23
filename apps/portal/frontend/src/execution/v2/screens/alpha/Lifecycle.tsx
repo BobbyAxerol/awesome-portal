@@ -19,7 +19,8 @@ import { Flag } from "../../Flag";
 import { JourneySpine, SectionPanel, SPINE_STAGES, type SpineStageId } from "../../blocks";
 import type { ManagerDataset } from "../../readers/managerDataset";
 import { Dec } from "./cells";
-import { lifecycleFacts } from "./lifecycleModel";
+import { lifecycleFacts, lifecycleFactsOfRead } from "./lifecycleModel";
+import type { AlphaLifecycle } from "../../readers/alphaLifecycle";
 import { stageWord, type DeploymentRow } from "./model";
 import { Np, WhyMark } from "./np";
 
@@ -36,6 +37,8 @@ export interface LifecyclePanelProps {
   withheld?: string | null;
   /** The alpha's Manager dataset: days in stage, criteria, exit dates and decider per stage when it publishes them (WP-C keys `life_*`). */
   dataset?: ManagerDataset | null;
+  /** The published lifecycle read (WP-K): its stage rows win over the dataset's open keys when published. */
+  lifecycle?: AlphaLifecycle | null;
 }
 
 type StatePick = "live" | "sandbox" | "blocked";
@@ -92,14 +95,14 @@ function StageDetail({
   );
 }
 
-export function LifecyclePanel({ rows, current, selected, onSelect, linkTo, currentNote = null, withheld = null, dataset = null }: LifecyclePanelProps) {
+export function LifecyclePanel({ rows, current, selected, onSelect, linkTo, currentNote = null, withheld = null, dataset = null, lifecycle = null }: LifecyclePanelProps) {
   const headingId = useId();
   const [preview, setPreview] = useState<StatePick | null>(null);
   // The spine's own stage first; the three-state toggle appears only when the dataset published the lifecycle it would draw.
   const own: StatePick | null = current === "sandbox" ? "sandbox" : current === "live" || current === "canary" ? "live" : null;
   const pick = preview ?? own;
   const shownCurrent: SpineStageId | null = pick === "sandbox" ? "sandbox" : current ?? (pick === "live" ? "live" : null);
-  const life = useMemo(() => lifecycleFacts(dataset, shownCurrent), [dataset, shownCurrent]);
+  const life = useMemo(() => lifecycleFactsOfRead(lifecycle, shownCurrent) ?? lifecycleFacts(dataset, shownCurrent), [dataset, lifecycle, shownCurrent]);
   const blocked = pick === "blocked" && life !== null;
   const stages = useMemo(() => {
     if (life === null) return undefined;

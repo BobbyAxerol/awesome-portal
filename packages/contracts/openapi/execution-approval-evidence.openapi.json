@@ -1,0 +1,638 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Approval evidence",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/api/v1/execution/governance/approvals/{approval_id}/evidence": {
+      "get": {
+        "operationId": "executionApprovalEvidenceGetV1",
+        "security": [
+          {
+            "PortalSession": []
+          }
+        ],
+        "description": "The evidence beside one approval request: prior economic history, evidence diff, obligations still open after approval, the receipt preview, and the Portal evaluation time. Each section is omitted (no owning source), null (source not read) or published; a count of 0 is a published true zero. CONTRACT ONLY: no producer exists yet (Edge/Core inputs are in WP_K_CONTRACTS_2026-10-23.md), so nothing serves this route and every screen keeps its typed absence.",
+        "parameters": [
+          {
+            "name": "approval_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 191,
+              "pattern": "^[A-Za-z0-9._:-]+$(?![\\s\\S])"
+            }
+          },
+          {
+            "name": "workspace_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256,
+              "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Authorized current evidence; absence stays typed",
+            "headers": {
+              "Cache-Control": {
+                "required": true,
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApprovalEvidence"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid query",
+            "headers": {
+              "Cache-Control": {
+                "required": true,
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApprovalEvidenceProblem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Session required",
+            "headers": {
+              "Cache-Control": {
+                "required": true,
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApprovalEvidenceProblem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Approval unavailable or not authorized",
+            "headers": {
+              "Cache-Control": {
+                "required": true,
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApprovalEvidenceProblem"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Source unavailable",
+            "headers": {
+              "Cache-Control": {
+                "required": true,
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApprovalEvidenceProblem"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "PortalSession": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "__Host-portal_session"
+      }
+    },
+    "schemas": {
+      "ApprovalEvidence": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "schema_version",
+          "workspace_id",
+          "approval_id",
+          "record_authority",
+          "read_at_ms"
+        ],
+        "properties": {
+          "schema_version": {
+            "const": "portal.execution.approval-evidence.v1"
+          },
+          "workspace_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+          },
+          "approval_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 191,
+            "pattern": "^[A-Za-z0-9._:-]+$(?![\\s\\S])"
+          },
+          "record_authority": {
+            "const": "PORTAL_PROJECTION"
+          },
+          "read_at_ms": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "prior_economic_history": {
+            "anyOf": [
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "subject",
+                  "metric",
+                  "unit",
+                  "currency",
+                  "ratio_scale",
+                  "window",
+                  "methodology_ref",
+                  "points",
+                  "as_of_ms"
+                ],
+                "properties": {
+                  "subject": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "subject_type",
+                      "subject_id"
+                    ],
+                    "properties": {
+                      "subject_type": {
+                        "type": "string",
+                        "enum": [
+                          "ALPHA",
+                          "PORTFOLIO",
+                          "ACCOUNT",
+                          "DEPLOYMENT"
+                        ]
+                      },
+                      "subject_id": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 191,
+                        "pattern": "^[A-Za-z0-9._:-]+$(?![\\s\\S])"
+                      }
+                    }
+                  },
+                  "metric": {
+                    "type": "string",
+                    "enum": [
+                      "NAV",
+                      "NET_PNL",
+                      "RETURN",
+                      "DRAWDOWN"
+                    ]
+                  },
+                  "unit": {
+                    "type": "string",
+                    "enum": [
+                      "MONEY",
+                      "RATIO"
+                    ]
+                  },
+                  "currency": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 256,
+                        "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "ratio_scale": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "enum": [
+                          "FRACTION",
+                          "PERCENT"
+                        ]
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "window": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "from_ms",
+                      "to_ms"
+                    ],
+                    "properties": {
+                      "from_ms": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 9007199254740991
+                      },
+                      "to_ms": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 9007199254740991
+                      }
+                    }
+                  },
+                  "methodology_ref": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256,
+                    "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+                  },
+                  "points": {
+                    "type": "array",
+                    "maxItems": 2000,
+                    "items": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "ts_ms",
+                        "value"
+                      ],
+                      "properties": {
+                        "ts_ms": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        "value": {
+                          "type": "string",
+                          "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$(?![\\s\\S])",
+                          "maxLength": 80
+                        }
+                      }
+                    }
+                  },
+                  "as_of_ms": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  }
+                }
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "evidence_diff": {
+            "anyOf": [
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "previous_revision",
+                  "changes"
+                ],
+                "properties": {
+                  "previous_revision": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256,
+                    "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+                  },
+                  "changes": {
+                    "type": "array",
+                    "maxItems": 64,
+                    "items": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "label",
+                        "before",
+                        "after",
+                        "unit"
+                      ],
+                      "properties": {
+                        "label": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 256,
+                          "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+                        },
+                        "before": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 256,
+                              "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "after": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 256,
+                              "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "unit": {
+                          "type": "string",
+                          "enum": [
+                            "MONEY",
+                            "RATIO",
+                            "COUNT",
+                            "TEXT",
+                            "TIMESTAMP_MS"
+                          ]
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "obligations_after_approval": {
+            "anyOf": [
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "open_positions",
+                  "working_orders",
+                  "reservations",
+                  "unknown_outcomes",
+                  "settlement_pending"
+                ],
+                "properties": {
+                  "open_positions": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "working_orders": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "reservations": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "unknown_outcomes": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "settlement_pending": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  }
+                }
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "receipt_preview": {
+            "anyOf": [
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "what_changes",
+                  "counts_as"
+                ],
+                "properties": {
+                  "what_changes": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256,
+                    "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+                  },
+                  "counts_as": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "met_after",
+                      "required"
+                    ],
+                    "properties": {
+                      "met_after": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 9007199254740991
+                      },
+                      "required": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 9007199254740991
+                      }
+                    }
+                  }
+                }
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "allOf": [
+          {
+            "if": {
+              "type": "object",
+              "required": [
+                "prior_economic_history"
+              ],
+              "properties": {
+                "prior_economic_history": {
+                  "type": "object"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "prior_economic_history": {
+                  "allOf": [
+                    {
+                      "if": {
+                        "type": "object",
+                        "properties": {
+                          "metric": {
+                            "enum": [
+                              "RETURN",
+                              "DRAWDOWN"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "metric"
+                        ]
+                      },
+                      "then": {
+                        "properties": {
+                          "unit": {
+                            "const": "RATIO"
+                          },
+                          "currency": {
+                            "type": "null"
+                          },
+                          "ratio_scale": {
+                            "type": "string"
+                          }
+                        },
+                        "type": "object"
+                      },
+                      "else": {
+                        "properties": {
+                          "unit": {
+                            "const": "MONEY"
+                          },
+                          "currency": {
+                            "type": "string"
+                          },
+                          "ratio_scale": {
+                            "type": "null"
+                          }
+                        },
+                        "type": "object"
+                      }
+                    },
+                    {
+                      "if": {
+                        "type": "object",
+                        "properties": {
+                          "metric": {
+                            "const": "DRAWDOWN"
+                          }
+                        },
+                        "required": [
+                          "metric"
+                        ]
+                      },
+                      "then": {
+                        "properties": {
+                          "points": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "value": {
+                                  "type": "string",
+                                  "pattern": "^(?:0(?:\\.0+)?|-(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?)$(?![\\s\\S])"
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "type": "object"
+                      }
+                    }
+                  ]
+                }
+              },
+              "type": "object"
+            }
+          }
+        ]
+      },
+      "ApprovalEvidenceProblem": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "error",
+          "request_id"
+        ],
+        "properties": {
+          "error": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "code",
+              "message"
+            ],
+            "properties": {
+              "code": {
+                "type": "string",
+                "enum": [
+                  "EXECUTION_READ_NOT_AVAILABLE",
+                  "EXECUTION_READ_CURRENT_ONLY"
+                ]
+              },
+              "message": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256,
+                "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+              }
+            }
+          },
+          "request_id": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}
