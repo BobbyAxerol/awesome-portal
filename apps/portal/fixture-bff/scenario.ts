@@ -52,6 +52,44 @@ export function resetScenario(): FixtureScenario {
   return current;
 }
 
-/** Predicate helpers read by the producers. */
-export const isPositive = (): boolean => current === "positive" || current === "zero" || current === "dense";
-export const degraded = (): boolean => !isPositive();
+/* ── traits: what each scenario means for the producers ─────────────────── */
+
+export interface Quality { completeness: string; freshness: string; reasons: string[] }
+export interface ScenarioTraits {
+  /** The former default: deliberate typed absences, true zeros and "variety on purpose" (provisional, insufficient, adverse) rows. */
+  legacy: boolean;
+  /** A series carries a missing midpoint and the SOURCE_GAP reason. */
+  seriesGap: boolean;
+  /** Body-level quality of the manager dataset reads and of the series port. */
+  dataset: Quality;
+  series: Quality;
+  /** `source_confidence` of the figures the producers stamp. */
+  confidence: "VERIFIED" | "PROVISIONAL";
+  /** The Paper environment of the All lens. */
+  paper: Quality;
+  /** The Sandbox environment of the All lens is a typed absence (NOT_CONFIGURED). */
+  sandboxDark: boolean;
+}
+
+const OK: Quality = { completeness: "COMPLETE", freshness: "FRESH", reasons: [] };
+const POSITIVE: ScenarioTraits = { legacy: false, seriesGap: false, dataset: OK, series: OK, confidence: "VERIFIED", paper: OK, sandboxDark: false };
+const LEGACY_DATASET: Quality = { completeness: "PARTIAL", freshness: "FRESH", reasons: ["FIXTURE_LAB_SYNTHETIC", "RUNTIME_SCORE_POLICY_AND_SOURCE_NOT_QUALIFIED"] };
+const LEGACY_SERIES: Quality = { completeness: "PARTIAL", freshness: "FRESH", reasons: ["FIXTURE_LAB_SYNTHETIC", "SOURCE_GAP"] };
+const LAG: Quality = { completeness: "COMPLETE", freshness: "STALE", reasons: ["FIXTURE_LAB_SIMULATED_SOURCE_LAG"] };
+
+export const SCENARIO_TRAITS: Readonly<Record<FixtureScenario, ScenarioTraits>> = Object.freeze({
+  positive: POSITIVE,
+  zero: POSITIVE,
+  dense: POSITIVE,
+  denied: POSITIVE,
+  empty: POSITIVE,
+  partial: { legacy: true, seriesGap: true, dataset: { completeness: "PARTIAL", freshness: "FRESH", reasons: ["SOURCE_COVERAGE_PARTIAL"] }, series: LEGACY_SERIES,
+    confidence: "PROVISIONAL", paper: { completeness: "PARTIAL", freshness: "FRESH", reasons: ["FIXTURE_LAB_SIMULATED_PARTIAL_COVERAGE"] }, sandboxDark: false },
+  stale: { legacy: false, seriesGap: false, dataset: LAG, series: LAG, confidence: "PROVISIONAL", paper: LAG, sandboxDark: false },
+  missing: { legacy: true, seriesGap: true, dataset: LEGACY_DATASET, series: LEGACY_SERIES, confidence: "PROVISIONAL",
+    paper: { completeness: "PARTIAL", freshness: "STALE", reasons: ["FIXTURE_LAB_SIMULATED_SOURCE_LAG"] }, sandboxDark: true },
+});
+
+export const traits = (): ScenarioTraits => SCENARIO_TRAITS[current];
+/** True for the scenarios that keep the former default's deliberate absences, zeros and variety (`partial`, `missing`). */
+export const legacy = (): boolean => SCENARIO_TRAITS[current].legacy;

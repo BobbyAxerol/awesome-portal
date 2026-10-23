@@ -4,6 +4,7 @@
  * Fleet and Portfolios answer through the same routes with figures; the series end on the dataset's own figure; the lifecycle and
  * event keys are open partition keys (register 2c-wpc). FIXTURE_LAB: nothing here is acceptance evidence.
  */
+import "./useMissingScenario";
 import { afterAll, afterEach, describe, expect, it } from "vitest";
 
 import { answerReviewManager } from "../../../fixture-bff/review-manager";

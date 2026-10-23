@@ -3,6 +3,7 @@
  * WP-K slice 1 (FIXTURE_LAB): the review lane serves ALPHA subjects and the DRAWDOWN metric through the same HTTP route and the unmodified strict reader.
  * Every figure here is simulated (register section 2k); nothing claims a real source.
  */
+import "./useMissingScenario";
 import { afterAll, afterEach, describe, expect, it, vi } from "vitest";
 
 import { answerReviewManager, type ReviewManagerProfile } from "../../../fixture-bff/review-manager";

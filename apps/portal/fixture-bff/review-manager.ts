@@ -13,6 +13,7 @@ import { ALPHA_DOUBLE_AS_OF_MS, answerAlpha } from "../frontend/e2e/bffDoubleAlp
 import { answerManagerFleet, answerManagerSeries } from "../frontend/e2e/bffDoubleManager";
 import { answerPortfolios } from "../frontend/e2e/bffDoublePortfolios";
 import { addDecimal, fixtureNowMs, scaled, type AlphaSpec, type DeploymentSpec } from "../frontend/e2e/bffScale";
+import { legacy, traits } from "./scenario";
 
 // Mutable copies of published JSON templates, confined to this server-only fixture module.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -67,7 +68,7 @@ function decimal(value: bigint, places: number): string {
   return `${sign}${raw.slice(0, -places)}.${raw.slice(-places)}`;
 }
 
-function seriesAnswer(method: string, path: string, search: URLSearchParams, profile: ReviewManagerProfile): ReviewManagerResponse | null {
+function seriesAnswer(method: string, path: string, search: URLSearchParams, profile: ReviewManagerProfile, raw = false): ReviewManagerResponse | null {
   const checked = answerManagerSeries(method, path, search);
   if (checked === null || checked.status !== 200) return checked;
   const original = checked.body as Draft;
@@ -89,7 +90,7 @@ function seriesAnswer(method: string, path: string, search: URLSearchParams, pro
   body.workspace_id = original.workspace_id;
   body.as_of_ms = now;
   body.recorded_through_ms = now;
-  body.quality = { completeness: "COMPLETE", freshness: "FRESH", reasons: [] };
+  body.quality = copy(traits().series); // WP-P: COMPLETE/FRESH in the positive world (Codex's default); the former PARTIAL body is partial/missing
   body.selected_window = { requested, resolved: window, selection_basis: "EXACT_PUBLISHED_METRIC_WINDOW_ONLY", reason_code: null };
   const pinned = search.has("economic_partition") ? JSON.parse(search.get("economic_partition")!) : null;
   const knownPortfolios = new Map([...scaled().portfolios, ...wpcPortfolioStubs(body.environment)].map((portfolio) => [portfolio.id, portfolio]));
@@ -110,15 +111,20 @@ function seriesAnswer(method: string, path: string, search: URLSearchParams, pro
     entry.basis = entry.partition.basis;
     entry.methodology_ref = `FIXTURE_LAB:${metric}:synthetic-sequence-v1`;
     entry.window = copy(window);
-    const at = (index: number): number => window.from_ms + Math.floor(index * (window.to_ms - window.from_ms - 1) / (target - 1));
-    entry.points = Array.from({ length: target }, (_, index) => index)
+    const drawn = traits().seriesGap ? target + 1 : target; // WP-P: a legacy hole removes one of target+1 points
+    const at = (index: number): number => window.from_ms + Math.floor(index * (window.to_ms - window.from_ms - 1) / (drawn - 1));
+    entry.points = Array.from({ length: drawn }, (_, index) => index)
       .map((index) => ({ ts_ms: at(index), value: sampleValue(metric === "DRAWDOWN" ? "NAV" : metric, index, subjectIndex) })); // WP-K: a drawdown is derived from the NAV walk below
     entry.gaps = [];
     if (subject.subject_type === "FUND") wpF1ShapeFund(entry, metric === "DRAWDOWN" ? "NAV" : metric, body.environment, requested); // WP-F1: the fund line ends on the fund dataset's own statement figure
     else wpcShapeSeries(entry, metric === "DRAWDOWN" ? "NAV" : metric, identity.subject_id, body.environment, requested, subject.subject_type === "ALPHA" ? "alpha_id" : "portfolio_id"); // WP-C: per-subject shape that ends on the dataset's own figure
+    if (traits().seriesGap) { // WP-P: partial/missing keep the real hole (one removed midpoint and the SOURCE_GAP reason)
+      const hole = entry.points.splice(Math.floor(target / 2), 1)[0];
+      entry.gaps = [{ from_ms: hole.ts_ms, to_ms: hole.ts_ms, reason: "SOURCE_GAP" }];
+    }
     if (metric === "DRAWDOWN") wpkDrawdownFromNav(entry); // WP-K
     entry.quality = copy(body.quality);
-    entry.source_confidence = "VERIFIED";
+    entry.source_confidence = traits().confidence;
     entry.provenance_refs = [digest(["FIXTURE_LAB_SYNTHETIC", profile, body.environment, identity, metric, window])];
     entry.calculation_revision = "FIXTURE_LAB:review-manager.v1";
     entry.policy_revision = "FIXTURE_LAB:NOT_PRODUCT_POLICY";
@@ -127,21 +133,9 @@ function seriesAnswer(method: string, path: string, search: URLSearchParams, pro
   body.comparison = comparison(body.series);
   body.lineage.source_set_ref = digest(["FIXTURE_LAB_SYNTHETIC", profile, now]);
   body.lineage.revision = digest([body.workspace_id, body.environment, body.metric, body.selected_window, body.series]);
-  // NAV and drawdown use exactly the same complete synthetic walk. PnL and
-  // Return retain their published dataset bases: allocated capital is not the
-  // capital statement NAV, so zero-flow returns must not replace those values.
-  if (metric === "DRAWDOWN") {
-    const navQuery = new URLSearchParams(search);
-    navQuery.set("metric", "NAV");
-    const nav = seriesAnswer(method, path, navQuery, profile);
-    if (nav?.status === 200 && (nav.body as Draft).series.every((entry: Draft) => entry.state === "AVAILABLE" && toScaled(entry.points[0].value) > 0n && toScaled(entry.points.at(-1).value) > 0n)) {
-      return { status: 200, body: buildPositiveManagerSeries({ lane: "FIXTURE_LAB", nav: nav.body, pointCount: target }).DRAWDOWN };
-    }
-  }
-  if (metric === "NAV" && body.series.every((entry: Draft) => entry.state === "AVAILABLE" && toScaled(entry.points[0].value) > 0n && toScaled(entry.points.at(-1).value) > 0n)) {
-    return { status: 200, body: buildPositiveManagerSeries({ lane: "FIXTURE_LAB", nav: body, pointCount: target }).NAV };
-  }
-  return { status: 200, body };
+  // WP-P: Codex's BFF builds NAV and DRAWDOWN from one complete walk; here every view (PnL and Return too) is built from the SAME NAV book by Codex's
+  // producer, so the four views tie to the statement (NAV = opening + realized, NET_PNL = realized). A scenario with a source gap keeps the generic body.
+  return { status: 200, body: raw || traits().seriesGap ? body : wpPositiveSeries(body, method, path, search, profile, target) };
 }
 
 function metric(template: Draft, value: string | null, currency: string): Draft {
@@ -154,7 +148,7 @@ function metric(template: Draft, value: string | null, currency: string): Draft 
   out.availability = value === null ? "UNAVAILABLE" : "AVAILABLE";
   out.reason_code = value === null ? "SOURCE_FACTS_NOT_PUBLISHED" : null;
   out.quality = { completeness: value === null ? "UNRESOLVED" : "COMPLETE", freshness: "FRESH", reasons: ["FIXTURE_LAB_SYNTHETIC"] };
-  out.source_confidence = "PROVISIONAL";
+  out.source_confidence = traits().confidence; // WP-P: VERIFIED in the positive world, PROVISIONAL in partial/stale/missing
   out.provenance_refs = ["FIXTURE_LAB:SYNTHETIC_NOT_SOURCE_ACCEPTANCE"];
   out.policy_revision = "FIXTURE_LAB:NOT_PRODUCT_POLICY";
   return out;
@@ -229,7 +223,8 @@ function qbtsMetric(template: Draft, value: string | null, unit: string, reason:
 }
 function addQbts(m: Draft, template: Draft, rowKey: string, components: boolean): void {
   const seed = seedOf(rowKey, "qbts");
-  const bucket = seed % 10;
+  // WP-P: the positive world has no insufficient-evidence, zero or provisional score (buckets 0..3 are the legacy variety).
+  const bucket = legacy() ? seed % 10 : 4 + seed % 6;
   if (bucket === 0) {
     // Insufficient evidence: no score, no components, no band; the reason is the same everywhere.
     if (!components) return;
@@ -287,7 +282,7 @@ function enrichRow(row: Draft, preset: WindowPreset, components = true): Draft {
     m.max_drawdown_pct = pctMetric(template, A === null ? null : N !== null && toScaled(N) === 0n ? "0" : drawdownOf(row.row_key, "row"));
     m.cost_drag_fees = metric(template, cost(5n), entry.partition.currency);
     m.cost_drag_funding = metric(template, cost(2n), entry.partition.currency);
-    m.cost_drag_slippage = metric(template, seedOf(row.row_key, "slippage") % 4 === 0 ? null : cost(1n), entry.partition.currency);
+    m.cost_drag_slippage = metric(template, legacy() && seedOf(row.row_key, "slippage") % 4 === 0 ? null : cost(1n), entry.partition.currency);
     m.forward_observation_days = plainMetric(template, A === null ? null : String(5 + seedOf(row.row_key, "forward") % 36), "DAYS");
     addQbts(m, template, row.row_key, components);
   }
@@ -324,7 +319,7 @@ function aggregate(rows: Draft[]): Draft[] {
     item.metrics.return_30d_pct = pctMetric(template, A !== null && N !== null ? pct(toScaled(N), toScaled(A)) : null);
     // The seed carries the group's own rows: with the partition alone every portfolio of one currency drew the same value (all absent).
     const salt = rows.map((row) => row.row_key).join("|");
-    item.metrics.max_drawdown_pct = pctMetric(template, seedOf(key, "group-drawdown", salt) % 5 === 0 ? null : drawdownOf(key, members.length, salt));
+    item.metrics.max_drawdown_pct = pctMetric(template, legacy() && seedOf(key, "group-drawdown", salt) % 5 === 0 ? null : drawdownOf(key, members.length, salt));
     item.metrics.concentration_hhi = pctMetric(template, hhi(members.map((metrics) => metrics.allocation?.availability === "AVAILABLE" ? metrics.allocation.value : null)));
     item.metrics.concentration_hhi.unit = "RATIO";
     // Row-only keys (days observed, cost drag) are not portfolio totals here and would only grow the response.
@@ -414,9 +409,18 @@ function capitalStatements(rows: Draft[]): Draft[] {
     const known = members.every(d => d !== undefined && d.currency === entry.partition.currency);
     const opening = known ? sum(members.map(d => d!.allocation)) : null;
     const currentPnl = known ? sum(members.map(d => d!.realized)) : null;
-    // Explicit synthetic current receipt/valuation amounts, independent of the
-    // performance window. Adverse books belong to explicit negative scenarios.
-    const values: Record<string, string | null> = {
+    const count = BigInt(accounts.length);
+    const scale = 1_000_000_000_000_000_000n;
+    // Explicit synthetic current receipt/valuation amounts, independent of the performance window (Codex's positive book: NAV = opening
+    // allocation + realized PnL). WP-P: the former receipts (adverse NAV, a null pending amount, an off-book opening capital) are the `partial`/`missing` scenarios.
+    const values: Record<string, string | null> = legacy() ? {
+      initial_funds: decimal(count * 10_000n * scale + 1n, 18),
+      added_funds: "0",
+      returned_capital: decimal(count * 125n * scale, 18),
+      current_nav: index === 1 ? "-125.500000000000000001" : decimal(count * 11_500n * scale + 7n, 18),
+      current_budget: decimal(count * 9_000n * scale, 18),
+      pending_amount: index === 0 ? null : "0",
+    } : {
       initial_funds: opening,
       added_funds: "0",
       returned_capital: "0",
@@ -446,12 +450,12 @@ function capitalStatements(rows: Draft[]): Draft[] {
       return built;
     };
     const ret = pnl === null || opening === null ? null : pct(toScaled(pnl), toScaled(opening));
-    const returnMetric = perf("return_30d_pct", pctMetric(entry.template, ret));
+    const returnMetric = perf("return_30d_pct", pctMetric(entry.template, legacy() && index === 1 && all.length > 1 ? null : ret));
     returnMetric.denominator = returnMetric.availability === "AVAILABLE" ? values.initial_funds : null;
     const extra = {
       net_pnl: perf("net_pnl", metric(entry.template, pnl, entry.partition.currency)),
       return_30d_pct: returnMetric,
-      max_drawdown_pct: perf("max_drawdown_pct", pctMetric(entry.template, index === 0 ? "0" : drawdownOf(key, "capital"))),
+      max_drawdown_pct: perf("max_drawdown_pct", pctMetric(entry.template, legacy() && index === 0 ? "0" : drawdownOf(key, "capital"))),
     };
     return { partition: copy(entry.partition), metrics: { ...money, ...extra } };
   });
@@ -517,8 +521,8 @@ function rowsFor(environment: string, template: Draft, preset: WindowPreset, com
     // Preserve the shared deployment facts; row position must not invent a zero
     // or missing value that differs from the linked detail's source.
     row.metrics = { allocation: metric(sourceMetric, sum(deployments.map((entry) => entry.allocation)), first.currency),
-      net_pnl: metric(sourceMetric, sum(deployments.map((entry) => entry.realized)), first.currency),
-      unrealized_pnl: metric(sourceMetric, sum(deployments.map((entry) => entry.unrealized)), first.currency) };
+      net_pnl: metric(sourceMetric, legacy() && rows.length % 11 === 0 ? "0" : sum(deployments.map((entry) => entry.realized)), first.currency), // WP-P: the first row's true zero is the legacy variety
+      unrealized_pnl: metric(sourceMetric, legacy() && rows.length % 7 === 0 ? null : sum(deployments.map((entry) => entry.unrealized)), first.currency) };
     row.economic_partitions = [{ partition: { economic_domain: domain(environment), currency: first.currency, basis: "FIXTURE_LAB:synthetic-book",
       native_profile_ref: `FIXTURE_LAB:${environment}:synthetic`, domain_proof_ref: "FIXTURE_LAB:NOT_PRODUCT_AUTHORITY" }, metrics: copy(row.metrics) }];
     rows.push(row);
@@ -608,10 +612,18 @@ function fleetOrder(sort: Draft[], pin: Draft | null, textOf: (row: Draft, field
 // ===== WP-A end
 
 const ALL_ORDER = ["paper", "sandbox", "live"] as const;
+/** WP-P: the body quality of the All lens follows the scenario. Positive: nothing degraded, so COMPLETE/FRESH with no reason and no banner. */
+function allQuality(): Draft {
+  const t = traits();
+  const paperOk = t.paper.completeness === "COMPLETE" && t.paper.freshness === "FRESH";
+  if (paperOk && !t.sandboxDark) return { completeness: "COMPLETE", freshness: "FRESH", reasons: [] };
+  return { completeness: t.sandboxDark || t.paper.completeness !== "COMPLETE" ? "PARTIAL" : "COMPLETE", freshness: t.paper.freshness,
+    reasons: [...(paperOk ? [] : t.paper.reasons.map((reason) => `paper:${reason}`)), ...(t.sandboxDark ? ["sandbox:ENVIRONMENT_UNAVAILABLE:NOT_CONFIGURED"] : [])] };
+}
 function allAnswer(path: string, search: URLSearchParams, profile: ReviewManagerProfile): ReviewManagerResponse {
   if (profile !== "populated" || path !== "/manager/fleet" || search.has("window") || search.has("before")) return problem(400, "EXECUTION_READ_QUERY_INVALID", "ALL is the Fleet read of the populated review profile, without a window.");
   const subs = ALL_ORDER.map((env) => {
-    if (env === "sandbox") return { env, body: null as Draft | null, reason: "NOT_CONFIGURED" as string | null };
+    if (env === "sandbox" && traits().sandboxDark) return { env, body: null as Draft | null, reason: "NOT_CONFIGURED" as string | null };
     const params = new URLSearchParams(search);
     params.set("environment", env); params.set("limit", "200"); params.delete("after"); params.delete("group_by");
     const stages = params.get("stage_filter")?.split(",").filter((stage) => STAGES[env]!.includes(stage));
@@ -666,11 +678,11 @@ function allAnswer(path: string, search: URLSearchParams, profile: ReviewManager
   body.environment_coverage = subs.map((entry) => {
     if (entry.body === null) return { environment: entry.env, availability: "UNAVAILABLE", reason_code: entry.reason, snapshot_id: null, as_of_ms: null, recorded_through_ms: null, facts_through_ms: null, quality: null, authorized_filtered_count: null, returned_count: null };
     const own = merged.filter((row) => row.environment === entry.env).length;
-    const degraded = entry.env === "paper" ? { completeness: "PARTIAL", freshness: "STALE", reasons: ["FIXTURE_LAB_SIMULATED_SOURCE_LAG"] } : { completeness: "COMPLETE", freshness: "FRESH", reasons: [] };
+    const degraded = entry.env === "paper" ? traits().paper : { completeness: "COMPLETE", freshness: "FRESH", reasons: [] as string[] };
     return { environment: entry.env, availability: "INCLUDED", reason_code: null, snapshot_id: digest([snapshot, entry.env]), as_of_ms: body.as_of_ms, recorded_through_ms: body.recorded_through_ms,
       facts_through_ms: body.facts_through_ms, quality: degraded, authorized_filtered_count: own, returned_count: body.items.filter((row: Draft) => row.environment === entry.env).length };
   });
-  body.quality = { completeness: "PARTIAL", freshness: "STALE", reasons: ["paper:FIXTURE_LAB_SIMULATED_SOURCE_LAG", "sandbox:ENVIRONMENT_UNAVAILABLE:NOT_CONFIGURED"] };
+  body.quality = allQuality();
   body.snapshot_id = snapshot;
   body.lineage.source_set_ref = digest(["FIXTURE_LAB_SYNTHETIC", profile, "ALL", fixtureNowMs()]);
   body.lineage.revision = snapshot;
@@ -695,7 +707,9 @@ const SCORE_RANGE: Record<ScoreCase, [bigint, bigint]> = {
 const SCORE_EVIDENCE: Record<ScoreCase, string> = { high: "0.9712", good: "0.9420", mid: "0.8834", low: "0.8120", provisional: "0.6405", insufficient: "0.1830", zero: "0.9301" };
 const SCORE_POLICY = "FIXTURE_LAB";
 const SCORE_METHOD = "FIXTURE_LAB:portfolio-score-direct-nav-v1";
-const scoreCaseOf = (id: string, environment: string): ScoreCase => SCORE_CASE_OF[id] ?? SCORE_CASES[seedOf(id, environment, "score-case") % SCORE_CASES.length]!;
+/** WP-P: the positive world scores every portfolio on the four published bands (high, good, mid, low); provisional, insufficient and zero are the legacy variety. */
+const POSITIVE_CASE: Record<ScoreCase, ScoreCase> = { high: "high", good: "good", mid: "mid", low: "low", provisional: "good", insufficient: "mid", zero: "low" };
+const scoreCaseOf = (id: string, environment: string): ScoreCase => { const kind = SCORE_CASE_OF[id] ?? SCORE_CASES[seedOf(id, environment, "score-case") % SCORE_CASES.length]!; return legacy() ? kind : POSITIVE_CASE[kind]; };
 const scoreMetric = (template: Draft, value: string | null, unit: string, kind: ScoreCase, window: Draft | null, absentReason: string): Draft => {
   const out = plainMetric(template, value, unit);
   out.window = window === null ? null : copy(window);
@@ -782,7 +796,7 @@ function addWpF1(body: Draft, groupFields: string[]): void {
     const net = initial !== null && added !== null && returned !== null ? trimmed(toScaled(initial) + toScaled(added) - toScaled(returned), SCALE) : null;
     const allocation = budget === null ? null : wpF1Part(budget, 55n + BigInt(seedOf(key, "allocation") % 36));
     const room = budget !== null && allocation !== null ? trimmed(toScaled(budget) - toScaled(allocation), SCALE) : null;
-    const recall = budget === null ? null : seedOf(key, "recalling") % 3 === 0 ? "0" : wpF1Part(budget, 1n + BigInt(seedOf(key, "recall-pct") % 4));
+    const recall = budget === null ? null : legacy() && seedOf(key, "recalling") % 3 === 0 ? "0" : wpF1Part(budget, 1n + BigInt(seedOf(key, "recall-pct") % 4));
     entry.metrics.allocation = wpF1Money(template, allocation, currency, "allocation");
     entry.metrics.net_external_flows = wpF1Money(template, net, currency, "net_external_flows");
     entry.metrics.headroom = wpF1Money(template, room, currency, "headroom");
@@ -886,7 +900,7 @@ function wpF1Eligibility(search: URLSearchParams): ReviewManagerResponse | null 
     return {
       resource: { kind: "PORTFOLIO", id },
       actions: actions.map((action) => {
-        const open = action !== "capital.adjust_target_budget" || seedOf(id, "target-eligibility") % 2 === 0;
+        const open = !legacy() || action !== "capital.adjust_target_budget" || seedOf(id, "target-eligibility") % 2 === 0;
         const row = copy(open ? allowed : refused);
         row.action = action;
         if (open) row.grant_ref = `acg_FIXTURE_LAB_OWN_${action.replace(/\W/g, "_").toUpperCase()}`;
@@ -1005,7 +1019,7 @@ function datasetAnswer(method: string, path: string, search: URLSearchParams, pr
   body.as_of_ms = fixtureNowMs();
   body.recorded_through_ms = fixtureNowMs();
   body.facts_through_ms = fixtureNowMs();
-  body.quality = { completeness: "PARTIAL", freshness: "FRESH", reasons: ["FIXTURE_LAB_SYNTHETIC", "RUNTIME_SCORE_POLICY_AND_SOURCE_NOT_QUALIFIED"] };
+  body.quality = copy(traits().dataset); // WP-P: COMPLETE/FRESH in the positive world; the former PARTIAL copy is the `missing` scenario
   body.capital_statements = capitalStatements(rows); // Selected resource/stages BEFORE table filters.
   const textOf = (row: Draft, field: string): string | null => field === "stage_presence" ? row.stage_presence.join(",") : typeof row[field] === "string" ? row[field] : null;
   const q = search.get("q")?.toLowerCase();
@@ -1025,7 +1039,7 @@ function datasetAnswer(method: string, path: string, search: URLSearchParams, pr
   body.groups = [...grouped.values()].map((group) => ({ key: group.key, unique_row_count: group.rows.length, totals_scope: "FULL_AUTHORIZED_FILTERED_QUERY", economic_partitions: aggregate(group.rows) }));
   // SIMULATED (FE-CAT-5): in a read grouped by alpha_id alone, the first group's first partition publishes a true zero net_pnl
   // and the second group's first partition publishes none (a typed absence, SOURCE_FACTS_NOT_PUBLISHED).
-  if (groups.length === 1 && groups[0] === "alpha_id") {
+  if (legacy() && groups.length === 1 && groups[0] === "alpha_id") {
     body.groups.slice(0, 2).forEach((group: Draft, index: number) => {
       const entry = group.economic_partitions[0];
       if (entry?.metrics.net_pnl) entry.metrics.net_pnl = metric(entry.metrics.net_pnl, index === 0 ? "0" : null, entry.partition.currency);
@@ -1141,10 +1155,10 @@ function wpcWalk(seed: number, n: number, start: bigint, end: bigint, amp: bigin
 }
 const wpcAbs = (value: bigint): bigint => (value < 0n ? -value : value);
 /** The dataset figures of one portfolio, from the SAME rows the overview read serves: the series ends on them. */
-function wpcTarget(environment: string, id: string, preset: WindowPreset, currency: string, by: "portfolio_id" | "alpha_id" = "portfolio_id"): { net: bigint; nav: bigint; ret: bigint } | null {
+function wpcTarget(environment: string, id: string, preset: WindowPreset, currency: string, by: "portfolio_id" | "alpha_id" | "fund" = "portfolio_id"): { net: bigint; nav: bigint; ret: bigint } | null {
   wpcTemplate ??= fixture("execution-manager-dataset.partitions.synthetic.valid.json");
-  const only = wpcAlphasFor(by === "alpha_id" ? "ALPHA" : "PORTFOLIO", id); // WP-K: the same figures, by alpha
-  const rows = rowsFor(environment, wpcTemplate, preset, true, only).filter((row) => row[by] === id);
+  const only = by === "fund" ? undefined : wpcAlphasFor(by === "alpha_id" ? "ALPHA" : "PORTFOLIO", id); // WP-K: the same figures, by alpha; WP-P: the FUND is every row of the environment, as fund-overview serves it
+  const rows = rowsFor(environment, wpcTemplate, preset, true, only).filter((row) => by === "fund" || row[by] === id);
   const partition = aggregate(rows).find((entry) => entry.partition.currency === currency);
   const available = (key: string): string | null => partition?.metrics[key]?.availability === "AVAILABLE" ? partition.metrics[key].value : null;
   // NAV is the capital statement's `current_nav` of this partition (what the Compare table prints for NAV); the group's own sum is the fallback.
@@ -1154,7 +1168,7 @@ function wpcTarget(environment: string, id: string, preset: WindowPreset, curren
   return net === null || nav === null || ret === null ? null : { net: toScaled(net), nav: toScaled(nav), ret: toScaled(ret) / 100n };
 }
 /** Replaces the values of one series entry with a per-subject walk whose end equals the subject's dataset figure (NAV, Net PnL, Return). */
-function wpcShapeSeries(entry: Draft, metricName: string, subjectId: string, environment: string, requested: unknown, by: "portfolio_id" | "alpha_id" = "portfolio_id"): void {
+function wpcShapeSeries(entry: Draft, metricName: string, subjectId: string, environment: string, requested: unknown, by: "portfolio_id" | "alpha_id" | "fund" = "portfolio_id"): void {
   const days = requested === "7D" ? "7D" : requested === "90D" ? "90D" : "30D";
   const target = wpcTarget(environment, subjectId, WINDOW_PRESETS[days], entry.partition.currency, by);
   if (target === null) return;
@@ -1231,7 +1245,7 @@ function wpcLifecycleKeys(alphaId: string, template: Draft): Record<string, Draf
     put(`evt_${kind}_${seen[kind]}_ms`, at(time), "TIMESTAMP_MS", `${title}|${by}`);
   }
   // Regime fit: one alpha in three is a typed absence (insufficient data); the others publish a ratio, apart from the score.
-  if (seed % 3 === 0) { const absent = plainMetric(template, null, "RATIO"); absent.reason_code = "INSUFFICIENT_DATA"; out.regime_fit = absent; }
+  if (legacy() && seed % 3 === 0) { const absent = plainMetric(template, null, "RATIO"); absent.reason_code = "INSUFFICIENT_DATA"; out.regime_fit = absent; }
   else put("regime_fit", trimmed(BigInt(5200 + (seed % 3500)), 4), "RATIO");
   return out;
 }
@@ -1397,7 +1411,7 @@ function wpkApprovalEvidence(method: string, path: string, search: URLSearchPara
   const now = fixtureNowMs();
   const body: Draft = { schema_version: "portal.execution.approval-evidence.v1", workspace_id: search.get("workspace_id") ?? "ws_FIXTURE_LAB", approval_id: approvalId,
     record_authority: "PORTAL_PROJECTION", read_at_ms: now };
-  const mode = seed % 7; // 0: nothing read (null); 1: no owning source (omitted); else published
+  const mode = legacy() ? seed % 7 : 2 + (seed % 5); // 0: nothing read (null); 1: no owning source (omitted); else published
   if (mode === 1) return { status: 200, body };
   if (mode === 0) {
     Object.assign(body, { prior_economic_history: null, evidence_diff: null, obligations_after_approval: null, receipt_preview: null });
@@ -1490,20 +1504,20 @@ function wpkOperationsExtras(method: string, path: string, search: URLSearchPara
     const incidentId = children[1]!;
     const seed = seedOf(incidentId, "wpk-children");
     const body: Draft = { schema_version: "portal.execution.incident-children.v1", workspace_id: workspace, incident_id: incidentId, record_authority: "PORTAL_PROJECTION", read_at_ms: now };
-    const mode = seed % 6; // 0: not read (null); 1: no owning source (omitted); else published
+    const mode = legacy() ? seed % 6 : 2 + (seed % 4); // 0: not read (null); 1: no owning source (omitted); else published
     if (mode === 1) return { status: 200, body };
     if (mode === 0) { Object.assign(body, { evidence: null, assigned_to: null, resolution_gate: null, timeline: null, linked_operations: null }); return { status: 200, body }; }
     const hour = 3_600_000;
     const sources = ["FINDING", "ALERT", "DEAD_LETTER", "ORDER_TRACE"] as const;
     body.evidence = sources.flatMap((source, i) => Array.from({ length: (seed >>> (i * 3)) % 3 }, (_, n) => ({ source, digest: digest([incidentId, source, n]), label: `${source.replace("_", " ").toLowerCase()} ${n + 1}`, added_at_ms: now - (6 - i + n) * hour })));
-    body.assigned_to = seed % 2 === 0 ? { actor: WPK_ACTORS[seed % 3], assigned_at_ms: now - 5 * hour } : null;
+    body.assigned_to = !legacy() || seed % 2 === 0 ? { actor: WPK_ACTORS[seed % 3], assigned_at_ms: now - 5 * hour } : null;
     const blockers = [...(body.evidence.some((e: Draft) => e.source === "DEAD_LETTER") ? ["OPEN_DEAD_LETTER"] : []), ...(seed % 5 === 0 ? ["UNVERIFIED_ORDER_TRACE"] : [])];
     body.resolution_gate = { eligible: blockers.length === 0, blocker_codes: blockers };
     body.timeline = [{ event_id: `FIXTURE_LAB:${incidentId}:1`, action: "OPENED", actor: null, version_before: null, version_after: 1, at_ms: now - 8 * hour },
       { event_id: `FIXTURE_LAB:${incidentId}:2`, action: "ACKNOWLEDGED", actor: WPK_ACTORS[(seed >>> 4) % 3], version_before: 1, version_after: 2, at_ms: now - 7 * hour }];
     const ops = scaled().operations;
     body.linked_operations = ops.length === 0 ? [] : Array.from({ length: 1 + (seed % 3) }, (_, n) => ops[(seed + n * 7) % ops.length]!).filter((op, i, all) => all.findIndex((x) => x.id === op.id) === i)
-      .map((op, n) => ({ operation_id: op.id, original_target: n % 4 === 3 ? null : { type: op.target[0], id: op.target[1] } }));
+      .map((op, n) => ({ operation_id: op.id, original_target: legacy() && n % 4 === 3 ? null : { type: op.target[0], id: op.target[1] } }));
     return { status: 200, body };
   }
   if (path === "/operations/audit") {
@@ -1835,3 +1849,47 @@ function wpkStageEntry(body: Draft): void {
   }
 }
 // ===== WP-K end
+
+// ===== WP-P begin (positive world: the four series views from ONE NAV book; scenario guards live next to the code they guard, marked `WP-P`)
+/**
+ * Positive scenario series (FIXTURE_LAB). The requested view is rebuilt by Codex's `buildPositiveManagerSeries` from the SAME NAV entries (the ones
+ * `wpcShapeSeries` ends on the dataset's statement NAV and net PnL), so for one subject, window and partition: NET_PNL = NAV - opening NAV, RETURN =
+ * NET_PNL / opening NAV and DRAWDOWN = NAV / running peak - 1, all in fixed-point BigInt, with no gap and no SOURCE_GAP. Subjects the NAV cannot be
+ * built for (unavailable, one point) keep their typed entry. The partition and basis of the requested metric are kept, so a pinned partition still matches.
+ */
+function wpPositiveSeries(body: Draft, method: string, path: string, search: URLSearchParams, profile: ReviewManagerProfile, pointCount: number): Draft {
+  const metricName = body.metric as "NAV" | "NET_PNL" | "RETURN" | "DRAWDOWN";
+  let nav: Draft = body;
+  if (metricName !== "NAV") {
+    const asNav = new URLSearchParams(search);
+    asNav.set("metric", "NAV");
+    asNav.delete("economic_partition"); // the pin names the requested metric's partition; the NAV only supplies the book
+    const res = seriesAnswer(method, path, asNav, profile, true);
+    if (res === null || res.status !== 200) return body;
+    nav = res.body;
+  }
+  const usable = (nav.series as Draft[]).map((entry, index) => ({ entry, index })).filter(({ entry }) => entry.state === "AVAILABLE" && entry.points.length >= 2);
+  if (usable.length === 0) return body;
+  const views = new Map<number, Draft>();
+  try {
+    for (let from = 0; from < usable.length; from += 4) {
+      const chunk = usable.slice(from, from + 4);
+      const built = buildPositiveManagerSeries({ lane: "FIXTURE_LAB", nav: copy({ ...nav, series: chunk.map(({ entry }) => entry) }), pointCount });
+      chunk.forEach(({ index }, k) => views.set(index, built[metricName].series[k]));
+    }
+  } catch {
+    return body; // an input the producer refuses (duplicate subject, too small a window) keeps the generic answer
+  }
+  const quality = traits().series;
+  body.series = (body.series as Draft[]).map((entry, index) => {
+    const view = views.get(index);
+    if (view === undefined) return entry;
+    return { ...view, subject: entry.subject, partition: entry.partition, basis: entry.basis, window: entry.window,
+      quality: copy(quality), source_confidence: traits().confidence, provenance_refs: entry.provenance_refs };
+  });
+  body.quality = copy(quality);
+  body.comparison = comparison(body.series);
+  body.lineage.revision = digest([body.workspace_id, body.environment, body.metric, body.selected_window, body.series]);
+  return body;
+}
+// ===== WP-P end

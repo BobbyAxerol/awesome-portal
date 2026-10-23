@@ -5,6 +5,7 @@
  * Exact decimals from bigint, windows do not apply, the production readers accept every body, the suite portfolios are left to their double.
  * Nothing here is source acceptance.
  */
+import "./useMissingScenario";
 import { afterAll, afterEach, describe, expect, it } from "vitest";
 
 import { answerReviewManager } from "../../../fixture-bff/review-manager";

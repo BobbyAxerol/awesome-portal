@@ -5,6 +5,7 @@
  * map; the layout-stress profile serves none (size bound); a group never carries a score; every body is schema-valid and is read by the
  * production reader.
  */
+import "./useMissingScenario";
 import { afterAll, afterEach, describe, expect, it } from "vitest";
 
 import { answerReviewManager, type ReviewManagerProfile } from "../../../fixture-bff/review-manager";

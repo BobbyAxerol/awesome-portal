@@ -1,5 +1,6 @@
 // @vitest-environment node
 /** Explicit SYNTHETIC review lane, judged by schemas AND the unmodified production HTTP port. */
+import "./useMissingScenario";
 import { afterAll, afterEach, describe, expect, it, vi } from "vitest";
 
 import { answerReviewManager, type ReviewManagerProfile } from "../../../fixture-bff/review-manager";

@@ -4,6 +4,7 @@
  * 0.45 P + 0.30 R + 0.25 B identity on the published components, every case present, the window gap, and the unchanged
  * production reader accepting the open keys. Nothing here is source acceptance.
  */
+import "./useMissingScenario";
 import { afterAll, afterEach, describe, expect, it } from "vitest";
 
 import { answerReviewManager, type ReviewManagerProfile } from "../../../fixture-bff/review-manager";
