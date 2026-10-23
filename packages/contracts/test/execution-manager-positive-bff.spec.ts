@@ -1,9 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { answerReviewManager } from '../../../apps/portal/fixture-bff/review-manager';
+import { answerReviewManager, wpAccountBook, wpWorldAlphas } from '../../../apps/portal/fixture-bff/review-manager';
 import { managerSeriesResponse } from '../../../apps/control-api/src/execution-v2/manager-series.contract';
 import { scaled, setFixtureScale, setFixtureNow } from '../../../apps/portal/frontend/e2e/bffScale';
+import { setPositiveMode } from '../../../apps/portal/frontend/e2e/bffPositiveMode';
 import { answerAccount } from '../../../apps/portal/frontend/e2e/bffDoubleAccount';
 import { transformReviewBody } from '../../../apps/portal/fixture-bff/review-relations';
+const world=()=>wpWorldAlphas('FUND',undefined)??scaled().alphas;
 function read(metric: string, profile: 'populated' | 'layout-stress' = 'populated', workspace?: string) {
   const query = new URLSearchParams({environment:'paper', metric, window:JSON.stringify('30D'), subjects:JSON.stringify([{subject_type:'PORTFOLIO',subject_id:'TEST_ONLY:portfolio-a'}])});
   if(workspace) query.set('workspace_id', workspace);
@@ -13,14 +15,14 @@ function read(metric: string, profile: 'populated' | 'layout-stress' = 'populate
 }
 describe('populated BFF positive series',()=>{
   it('links Fleet rows to the same alpha/deployment/account facts without index-based missing values',()=>{
-    setFixtureScale('medium'); setFixtureNow('2026-10-22T12:00:00Z');
+    setFixtureScale('medium'); setFixtureNow('2026-10-22T12:00:00Z'); setPositiveMode(true, wpAccountBook); // WP-P: the account double tells the positive world's story, as the BFF does
     try {
       const response=answerReviewManager('GET','/manager/fleet',new URLSearchParams({environment:'paper',limit:'200'}),'populated');
       expect(response?.status).toBe(200);
       const rows=(response!.body as any).items;
       expect(rows.length).toBeGreaterThan(0);
       for(const row of rows) {
-        const alpha=scaled().alphas.find(a=>a.id===row.alpha_id)!;
+        const alpha=world().find(a=>a.id===row.alpha_id)!; // WP-P: the positive world also holds the native books
         expect(alpha).toBeDefined();
         const members=row.children.map((child:any)=> {
           const d=alpha.deployments.find(d=>d.id===child.deployment_id)!;
@@ -38,7 +40,7 @@ describe('populated BFF positive series',()=>{
           const findBalances=(v:any):any[]=>!v||typeof v!=='object'?[]:Array.isArray(v)?v.flatMap(findBalances):Object.entries(v).flatMap(([k,x])=>k==='account_balances'&&Array.isArray(x)?x:findBalances(x));
           const balances=findBalances(projected);
           expect(balances.length).toBeGreaterThan(0);
-          const all=scaled().alphas.flatMap(a=>a.deployments).filter(d=>d.accountId===accountId&&d.environment==='paper');
+          const all=world().flatMap(a=>a.deployments).filter(d=>d.accountId===accountId&&d.environment==='paper');
           for(const b of balances) {
             expect(Number(b.total)).toBeCloseTo(all.filter(d=>d.currency===b.currency).reduce((n,d)=>n+Number(d.allocation)+Number(d.realized),0),8);
             expect(Number(b.free)+Number(b.locked)).toBeCloseTo(Number(b.total),8);
@@ -65,7 +67,7 @@ describe('populated BFF positive series',()=>{
         const statement=book.capital_statements.find((s:any)=>s.partition.currency===entry.partition.currency);
         expect(Number(entry.points.at(-1).value)).toBe(Number(statement.metrics.current_nav.value));
       }
-    } finally { setFixtureScale('small'); }
+    } finally { setFixtureScale('small'); setPositiveMode(false); }
   });
   it('preserves deliberately unavailable and empty scenarios',()=>{
     const absent=read('NAV','populated','ws_TEST_SERIES_UNAVAILABLE');

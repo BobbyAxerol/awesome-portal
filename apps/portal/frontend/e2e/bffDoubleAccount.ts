@@ -505,7 +505,7 @@ function positiveAccount(spec: AccountSpec, id: string): AccountSpec {
     const deployments = book.deployments;
     const sum = (pick: (d: (typeof deployments)[number]) => string): bigint => deployments.reduce((acc, d) => acc + toCents(pick(d)), 0n);
     const allocation = sum((d) => d.allocation);
-    return { currency: book.deployments[0]!.currency, allocation, unrealized: sum((d) => d.unrealized), total: allocation + sum((d) => d.realized) + sum((d) => d.unrealized), locked: allocation / 10n };
+    return { currency: book.deployments[0]!.currency, allocation, unrealized: sum((d) => d.unrealized), total: allocation + sum((d) => d.realized), locked: allocation / 10n };
   };
   const own = money(primary);
   const currency = own?.currency ?? (rows.account_balances?.[0]?.currency as string | undefined) ?? "USDT";

@@ -154,9 +154,9 @@ export async function runTies(get, options = {}) {
       if (!row.children.every((c) => SLEEVES.includes(c.account_id))) continue;
       const p = row.economic_partitions[0];
       const a = metricOf(p, "allocation"), n = metricOf(p, "net_pnl"), u = metricOf(p, "unrealized_pnl");
-      if (a !== null && n !== null && u !== null) booked += a + n + u;
+      if (a !== null && n !== null && u !== null) booked += a + n;
     }
-    eq("T6 sleeve balances = allocation + realized + unrealized of the deployments booked on them", sleeveBalance, booked);
+    eq("T6 sleeve balances = allocation + realized of the deployments booked on them", sleeveBalance, booked);
   } else out.skipped.push("T6: sleeves or live fleet not readable");
 
   // T7 alpha resource vs Fleet rows

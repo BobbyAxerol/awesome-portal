@@ -1224,7 +1224,10 @@ const wpcNativePortfolio = (id: string | undefined): boolean => id !== undefined
 function wpcAlphasFor(surface: WpcSurface, id: string | undefined): AlphaSpec[] | undefined {
   // The small scale keeps the e2e suite's own SUITE_ALPHAS (pinned by tests); medium and large have no native alphas in the generated universe.
   if (scaled().alphas.length === 0) return undefined;
-  return (surface === "ALPHA" && wpcNativeAlpha(id)) || (surface === "PORTFOLIO" && wpcNativePortfolio(id)) ? WPC_ALPHAS : undefined;
+  const nativeDeployment = id !== undefined && WPC_ALPHAS.some((alpha) => alpha.deployments.some((deployment) => deployment.id === id));
+  const nativeAccount = id !== undefined && Object.prototype.hasOwnProperty.call(WP_BINDING_OF_ACCOUNT, id);
+  // WP-P: in the positive world a native deployment and a native sleeve account answer their overview from the native books too
+  return (surface === "ALPHA" && wpcNativeAlpha(id)) || (surface === "PORTFOLIO" && wpcNativePortfolio(id)) || (!legacy() && ((surface === "DEPLOYMENT" && nativeDeployment) || (surface === "ACCOUNT" && nativeAccount))) ? WPC_ALPHAS : undefined;
 }
 const wpcKnown = (surface: WpcSurface, id: string | undefined): boolean => wpcAlphasFor(surface, id) !== undefined;
 /** WP-P: the positive world is ONE universe. The fleet and the fund read hold the native books (Core, Satellite, Canary) next to the generated ones, so the list, the groups, the statements and the series of a native portfolio come from the same rows as its detail page. `missing`/`partial` keep the two universes apart. */
@@ -2007,7 +2010,7 @@ export function wpAlphaResource(body: unknown, alphaId: string): unknown {
   const first = (rows: unknown): Draft => (Array.isArray(rows) && rows[0] !== undefined ? copy(rows[0]) : {});
   const cents = (value: string): bigint => { const negative = value.startsWith("-"); const [w, f = ""] = value.replace("-", "").split("."); const n = BigInt(w + `${f}00`.slice(0, 2)); return negative ? -n : n; };
   const text = (value: bigint): string => `${value < 0n ? "-" : ""}${(value < 0n ? -value : value) / 100n}.${String((value < 0n ? -value : value) % 100n).padStart(2, "0")}`;
-  const net = (deployment: DeploymentSpec): bigint => cents(deployment.realized) + cents(deployment.unrealized);
+  const net = (deployment: DeploymentSpec): bigint => cents(deployment.realized); // the book identity: balance = allocation + realized (unrealized is the equity row / positions)
   const accounts = [...new Set(own.map((deployment) => deployment.accountId))];
   const portfolios = [...new Map(own.map((deployment) => [deployment.portfolioId, deployment.portfolioName])).entries()];
   const profile = { profile_environment: environment };
