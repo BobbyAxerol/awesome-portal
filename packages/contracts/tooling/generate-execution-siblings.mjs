@@ -78,34 +78,6 @@ const sha = c => 'sha256:' + c.repeat(64);
 const DEFS = [];
 const def = d => DEFS.push(d);
 
-// GAP-7: the visit digest and its per-user, per-workspace baseline (the server keeps the baseline; "mark seen" moves it).
-def({
-  name: 'visit-digest', gap: 'GAP-7', route: '/api/v1/execution/digest', params: [], query: ['workspace_id'],
-  description: 'What changed since this user last looked, in this workspace. The baseline is kept on the server per user and workspace (never in the browser): `baseline` is null before the first visit. `current_cut` is the cut the items were read at. POST /api/v1/execution/digest/baseline {cut_revision} moves the baseline to that cut (mark seen); it is defined in this contract and served by the fixture lane only.',
-  schema: T.obj({ ...head('visit-digest'), user_id: T.id(), baseline: T.nul(T.obj({ set_at_ms: T.ms(), set_by: T.id(), cut_revision: T.sha() })),
-    current_cut: T.obj({ as_of_ms: T.ms(), revision: T.sha() }),
-    items: T.arr(T.obj({ item_id: T.id(), kind: T.en('APPROVAL_DECIDED', 'INCIDENT_OPENED', 'OPERATION_FAILED', 'STAGE_CHANGED', 'RECALL', 'CAPITAL_COMMAND', 'ACCESS_CHANGED'),
-      at_ms: T.ms(), title: T.str(), subject, since_baseline: T.bool() }), 200),
-    counts_by_kind: T.arr(T.obj({ kind: T.en('APPROVAL_DECIDED', 'INCIDENT_OPENED', 'OPERATION_FAILED', 'STAGE_CHANGED', 'RECALL', 'CAPITAL_COMMAND', 'ACCESS_CHANGED'), count: T.int() }), 8) }),
-  post: { route: '/api/v1/execution/digest/baseline', body: T.obj({ workspace_id: T.str(), cut_revision: T.sha() }), response: 'visit-digest',
-    description: 'Mark seen: moves the caller\'s baseline for this workspace to the named cut. Idempotent for the same cut. FIXTURE ONLY today.' },
-  valid: {
-    first: { ...hv('visit-digest'), user_id: 'TEST_ONLY:user-1', baseline: null, current_cut: { as_of_ms: T0, revision: sha('a') },
-      items: [{ item_id: 'TEST_ONLY:d1', kind: 'APPROVAL_DECIDED', at_ms: T0 - H, title: 'R2 approved', subject: { type: 'APPROVAL', id: 'TEST_ONLY:approval-1' }, since_baseline: true },
-        { item_id: 'TEST_ONLY:d2', kind: 'INCIDENT_OPENED', at_ms: T0 - 2 * H, title: 'Feed gap', subject: { type: 'INCIDENT', id: 'TEST_ONLY:incident-1' }, since_baseline: true }],
-      counts_by_kind: [{ kind: 'APPROVAL_DECIDED', count: 1 }, { kind: 'INCIDENT_OPENED', count: 1 }] },
-    seen: { ...hv('visit-digest'), user_id: 'TEST_ONLY:user-1', baseline: { set_at_ms: T0 - 30 * 60_000, set_by: 'TEST_ONLY:user-1', cut_revision: sha('b') }, current_cut: { as_of_ms: T0, revision: sha('a') },
-      items: [{ item_id: 'TEST_ONLY:d1', kind: 'APPROVAL_DECIDED', at_ms: T0 - H, title: 'R2 approved', subject: { type: 'APPROVAL', id: 'TEST_ONLY:approval-1' }, since_baseline: false }], counts_by_kind: [] },
-    quiet: { ...hv('visit-digest'), user_id: 'TEST_ONLY:user-1', baseline: { set_at_ms: T0, set_by: 'TEST_ONLY:user-1', cut_revision: sha('a') }, current_cut: { as_of_ms: T0, revision: sha('a') }, items: [], counts_by_kind: [] },
-  },
-  negatives: [
-    { id: 'baseline-without-who', base: 'seen', rule: 'a baseline names who set it', ops: [{ op: 'delete', path: ['baseline', 'set_by'] }] },
-    { id: 'item-unknown-kind', base: 'first', rule: 'item kinds are closed', ops: [{ op: 'set', path: ['items', 0, 'kind'], value: 'GOSSIP' }] },
-    { id: 'count-float', base: 'first', rule: 'a count is an integer', ops: [{ op: 'set', path: ['counts_by_kind', 0, 'count'], value: 1.5 }] },
-    { id: 'cut-not-a-digest', base: 'first', rule: 'a cut revision is a sha256', ops: [{ op: 'set', path: ['current_cut', 'revision'], value: 'abc' }] },
-    { id: 'unknown-key', base: 'first', rule: 'closed object', ops: [{ op: 'set', path: ['score'], value: 1 }] }],
-});
-
 // GAP-3: controls (locks and trading state).
 def({
   name: 'controls', gap: 'GAP-3', route: '/api/v1/execution/controls', params: [], query: ['workspace_id', 'scope_type', 'scope_id'],

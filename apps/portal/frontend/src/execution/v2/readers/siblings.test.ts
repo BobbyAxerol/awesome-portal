@@ -64,8 +64,6 @@ describe("paths", () => {
     expect(SIBLINGS["portfolio-members"].path({ portfolio_id: "pf_1", workspace_id: "ws_1" })).toBe("/portfolios/pf_1/members?workspace_id=ws_1");
     expect(SIBLINGS["portfolio-members"].path({ portfolio_id: "../x" })).toBeNull();
     expect(SIBLINGS["portfolio-members"].path({})).toBeNull();
-    expect(SIBLINGS["visit-digest"].path({})).toBe("/digest");
-    expect(SIBLINGS["visit-digest"].post).toBe("/digest/baseline");
     expect(SIBLINGS.limits.path({ subject_type: "DEPLOYMENT", subject_id: "d1" })).toBe("/limits?subject_type=DEPLOYMENT&subject_id=d1");
   });
 });

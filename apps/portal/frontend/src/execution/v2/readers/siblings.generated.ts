@@ -6,15 +6,6 @@ const ID = /^[A-Za-z0-9._:-]{1,191}$/;
 export interface SiblingSpec { readonly gap: string; readonly schemaVersion: string; readonly read: S.R<any>; readonly path: (params: Readonly<Record<string, string>>) => string | null; readonly post?: string }
 
 export const SIBLINGS = {
-  "visit-digest": {
-    gap: "GAP-7", schemaVersion: "portal.execution.visit-digest.v1",
-    read: S.obj({ "schema_version": S.lit("portal.execution.visit-digest.v1"), "workspace_id": S.str(256), "record_authority": S.lit("PORTAL_PROJECTION"), "read_at_ms": S.ms, "user_id": S.id, "baseline": S.nul(S.obj({ "set_at_ms": S.ms, "set_by": S.id, "cut_revision": S.sha })), "current_cut": S.obj({ "as_of_ms": S.ms, "revision": S.sha }), "items": S.arr(S.obj({ "item_id": S.id, "kind": S.en("APPROVAL_DECIDED", "INCIDENT_OPENED", "OPERATION_FAILED", "STAGE_CHANGED", "RECALL", "CAPITAL_COMMAND", "ACCESS_CHANGED"), "at_ms": S.ms, "title": S.str(256), "subject": S.obj({ "type": S.en("ALPHA", "PORTFOLIO", "ACCOUNT", "DEPLOYMENT", "OPERATION", "INCIDENT", "APPROVAL"), "id": S.id }), "since_baseline": S.bool }), 200), "counts_by_kind": S.arr(S.obj({ "kind": S.en("APPROVAL_DECIDED", "INCIDENT_OPENED", "OPERATION_FAILED", "STAGE_CHANGED", "RECALL", "CAPITAL_COMMAND", "ACCESS_CHANGED"), "count": S.int(0) }), 8) }),
-    path: (params) => {
-      const query = new URLSearchParams(); for (const key of ["workspace_id"]) if (params[key]) query.set(key, params[key]!);
-      return `/digest${query.toString() === "" ? "" : "?" + query.toString()}`;
-    },
-    post: "/digest/baseline",
-  },
   "controls": {
     gap: "GAP-3", schemaVersion: "portal.execution.controls.v1",
     read: S.obj({ "schema_version": S.lit("portal.execution.controls.v1"), "workspace_id": S.str(256), "record_authority": S.lit("PORTAL_PROJECTION"), "read_at_ms": S.ms, "locks": S.sec(S.arr(S.obj({ "lock_id": S.id, "scope": S.obj({ "type": S.en("WORKSPACE", "PORTFOLIO", "ACCOUNT", "DEPLOYMENT"), "id": S.id }), "revision": S.int(1), "state": S.en("ACTIVE", "RELEASED"), "set_at_ms": S.ms, "set_by": S.nul(S.str(256)), "reason_code": S.nul(S.code) }), 100)), "trading_state": S.sec(S.obj({ "state": S.en("ACTIVE", "REDUCING", "HALTED"), "since_ms": S.ms, "history": S.arr(S.obj({ "state": S.en("ACTIVE", "REDUCING", "HALTED"), "at_ms": S.ms, "actor": S.nul(S.str(256)), "reason_code": S.nul(S.code) }), 100) })) }),

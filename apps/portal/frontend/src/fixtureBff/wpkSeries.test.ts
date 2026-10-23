@@ -419,34 +419,8 @@ describe("WP-K FIXTURE_LAB: the fifteen sibling reads", () => {
     expect(route("/readiness", { environment: "nope" }).status).toBe(400);
     expect(route("/controls", { scope_type: "VENUE", scope_id: "x" }).status).toBe(400);
   });
-  it("the digest: no baseline on a first visit, mark-seen moves it on the server, a stale cut is a 409, a bad body a 400, and the move survives the next read", async () => {
-    const ws = "ws_digest_test";
-    const first = route("/digest", { workspace_id: ws }).body;
-    expect(violationsOf({ file: "execution-visit-digest.v1", ptr: "" }, first).violations).toEqual([]);
-    expect(first.baseline).toBeNull();
-    expect((first.items as Body[]).every((i) => i.since_baseline)).toBe(true);
-    expect(first.items.length).toBeGreaterThan(0);
-    expect(route("/digest/baseline", {}, "POST", { workspace_id: ws, cut_revision: "sha256:" + "0".repeat(64) }).status).toBe(409);
-    expect(route("/digest/baseline", {}, "POST", { workspace_id: ws }).status).toBe(400);
-    expect(route("/digest/baseline", {}, "POST", { workspace_id: ws, cut_revision: "abc" }).status).toBe(400);
-    const moved = route("/digest/baseline", {}, "POST", { workspace_id: ws, cut_revision: first.current_cut.revision });
-    expect(moved.status).toBe(200);
-    expect(moved.body.baseline).toMatchObject({ set_by: "FIXTURE_LAB:user", cut_revision: first.current_cut.revision });
-    expect((moved.body.items as Body[]).every((i) => i.since_baseline === false)).toBe(true);
-    expect(moved.body.counts_by_kind).toEqual([]);
-    const again = route("/digest", { workspace_id: ws }).body;
-    expect(again.baseline).toEqual(moved.body.baseline);
-    // another workspace keeps its own baseline
-    expect(route("/digest", { workspace_id: "ws_other" }).body.baseline).toBeNull();
-  });
-  it("the strict generated readers accept them through the unmodified HTTP port, and mark-seen goes through POST", async () => {
+  it("the strict generated readers accept them through the unmodified HTTP port, ", async () => {
     const api = client();
-    const digest = await api.getSibling!("visit-digest", { workspace_id: "ws_http" });
-    expect(digest.ok, JSON.stringify(digest)).toBe(true);
-    if (!digest.ok) return;
-    const marked = await api.markVisitDigestSeen!("ws_http", digest.value.current_cut.revision);
-    expect(marked.ok, JSON.stringify(marked)).toBe(true);
-    if (marked.ok) expect(marked.value.baseline).not.toBeNull();
     const limits = await api.getSibling!("limits", { subject_type: "DEPLOYMENT", subject_id: "dep_http" });
     expect(limits.ok, JSON.stringify(limits)).toBe(true);
     const refused = await api.getSibling!("portfolio-members", {});

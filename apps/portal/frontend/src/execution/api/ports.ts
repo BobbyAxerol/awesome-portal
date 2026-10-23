@@ -665,7 +665,6 @@ export interface ExecutionApi {
    */
   getSibling?<K extends SiblingId>(id: K, params?: Readonly<Record<string, string>>): Promise<Result<SiblingBody<K>>>;
   /** `POST /api/v1/execution/digest/baseline` (WP-K, GAP-7): move this user's digest baseline for the workspace to the named cut (mark seen). Fixture-served only today. */
-  markVisitDigestSeen?(workspaceId: string, cutRevision: string): Promise<Result<SiblingBody<"visit-digest">>>;
   /**
    * `POST /api/v1/execution/commands/plans` with the EXECUTION_COMMAND body.
    *

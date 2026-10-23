@@ -1,5 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.primusspark.com/portal/execution-visit-digest.v1.schema.json",
   "type": "object",
   "additionalProperties": false,
   "required": [

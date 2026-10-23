@@ -1636,34 +1636,8 @@ function wpkPortfolioHealth(method: string, path: string, search: URLSearchParam
 
 /* ---- Sibling reads (second pass, GAP-3 4 5 6 7 9 11 12 13 14 15 16), FIXTURE_LAB. Each answer is deterministic per id (FNV digest) and follows the slice-2 rule:
  * about one id in seven answers every section null (source not read), one in seven omits them (no owning source), the rest publish. Registered in the
- * register section 2k2. Only the visit digest is stateful: the baseline is kept per workspace in this process (the "server" of the fixture). */
-const wpkBaselines = new Map<string, { set_at_ms: number; set_by: string; cut_revision: string }>();
-const WPK_USER = "FIXTURE_LAB:user";
-function wpkDigest(workspace: string): Draft {
-  const now = fixtureNowMs();
-  const alpha = WPC_ALPHAS[2]!;
-  const keys = wpcLifecycleKeys(alpha.id, {});
-  const kindOf: Record<string, string> = { stage: "STAGE_CHANGED", decision: "APPROVAL_DECIDED", incident: "INCIDENT_OPENED", recall: "RECALL", flow: "CAPITAL_COMMAND" };
-  const items: Draft[] = [];
-  for (const [key, metric] of Object.entries(keys)) {
-    const m = /^evt_(stage|decision|incident|recall|flow)_(\d+)_ms$/.exec(key);
-    if (m === null || metric.availability !== "AVAILABLE") continue;
-    // The events are placed in the last 36 hours before FIXTURE_NOW, newest by key order, so a baseline set "a while ago" has some before and some after.
-    const age = (seedOf(alpha.id, key, "wpk-digest") % 36) * 3_600_000 + 60_000;
-    items.push({ item_id: `FIXTURE_LAB:${key}`, kind: kindOf[m[1]!], at_ms: now - age, title: String(metric.reason_code).split("|")[0], subject: { type: "ALPHA", id: alpha.id } });
-  }
-  for (const op of scaled().operations.filter((o) => o.source === "FAILED").slice(0, 3))
-    items.push({ item_id: `FIXTURE_LAB:${op.id}`, kind: "OPERATION_FAILED", at_ms: now - (seedOf(op.id, "wpk-digest") % 30) * 3_600_000 - 120_000, title: op.command, subject: { type: "OPERATION", id: op.id } });
-  items.sort((a, b) => b.at_ms - a.at_ms || a.item_id.localeCompare(b.item_id));
-  const shown = items.slice(0, 24);
-  const baseline = wpkBaselines.get(workspace) ?? null;
-  const rows = shown.map((item) => ({ ...item, since_baseline: baseline === null ? true : item.at_ms > baseline.set_at_ms }));
-  const kinds = ["APPROVAL_DECIDED", "INCIDENT_OPENED", "OPERATION_FAILED", "STAGE_CHANGED", "RECALL", "CAPITAL_COMMAND", "ACCESS_CHANGED"];
-  return { schema_version: "portal.execution.visit-digest.v1", workspace_id: workspace, record_authority: "PORTAL_PROJECTION", read_at_ms: now, user_id: WPK_USER, baseline,
-    current_cut: { as_of_ms: now, revision: digest(["FIXTURE_LAB:cut", workspace, shown.map((i) => i.item_id), now]) }, items: rows,
-    counts_by_kind: kinds.flatMap((kind) => { const count = rows.filter((r) => r.since_baseline && r.kind === kind).length; return count > 0 ? [{ kind, count }] : []; }) };
-}
-function wpkSiblings(method: string, path: string, search: URLSearchParams, requestBody: unknown): ReviewManagerResponse | null {
+ * register section 2k2. The visit digest is NOT served here: Codex's persisted digest (review-visit-digest.ts, GET /visit-digest) owns it. */
+function wpkSiblings(method: string, path: string, search: URLSearchParams, _requestBody: unknown): ReviewManagerResponse | null {
   const now = fixtureNowMs();
   const workspace = search.get("workspace_id") ?? "ws_FIXTURE_LAB";
   const head = (name: string): Draft => ({ schema_version: `portal.execution.${name}.v1`, workspace_id: workspace, record_authority: "PORTAL_PROJECTION", read_at_ms: now });
@@ -1725,16 +1699,6 @@ function wpkSiblings(method: string, path: string, search: URLSearchParams, requ
     if (state !== "DENIED") body.receipt = { receipt_ref: `FIXTURE_LAB:receipt-${operationId}`, content_hash: digest(["FIXTURE_LAB:receipt", operationId]), issued_at_ms: T(2), issued_by: WPK_ACTORS[seed % 3]!,
       what_changes: "Allocation changes as the request stated; nothing else.", verification: state === "VERIFIED" ? { result: "SUCCEEDED", verified_at_ms: T(1) } : { result: "PENDING", verified_at_ms: null } };
     return ok(body);
-  }
-  if (path === "/digest" && method === "GET") return ok(wpkDigest(workspace));
-  if (path === "/digest/baseline" && method === "POST") {
-    const b = requestBody as Draft;
-    if (!b || typeof b !== "object" || Object.keys(b).sort().join(",") !== "cut_revision,workspace_id" || typeof b.workspace_id !== "string" || !/^sha256:[a-f0-9]{64}$/.test(String(b.cut_revision))) return invalid;
-    const current = wpkDigest(b.workspace_id);
-    // The cut moves with the clock; a cut the server no longer holds is a conflict, never a silent move to a different cut.
-    if (current.current_cut.revision !== b.cut_revision) return problem(409, "EXECUTION_READ_NOT_AVAILABLE", "The cut changed since it was read; read the digest again.");
-    wpkBaselines.set(b.workspace_id, { set_at_ms: now, set_by: WPK_USER, cut_revision: b.cut_revision });
-    return ok(wpkDigest(b.workspace_id));
   }
   if (method !== "GET") return null;
 

@@ -1267,17 +1267,6 @@ export function createHttpApi({ policy, signal, readScope = {} }: HttpApiOptions
       return readGet(path, (raw) => run(spec.read as never, raw) as SiblingBody<K> | null, `The ${id} read`) as Promise<Result<SiblingBody<K>>>;
     },
 
-    async markVisitDigestSeen(workspaceId, cutRevision) {
-      if (!workspaceId || !/^sha256:[a-f0-9]{64}$/.test(cutRevision)) return unavailable("The digest baseline request was not valid, so it was not sent.");
-      let response: Response;
-      try { response = await post("/digest/baseline", { workspace_id: workspaceId, cut_revision: cutRevision }, signal); } catch { return unavailable("The digest baseline request never reached the Portal — network failure."); }
-      if (!response.ok) return problem(response);
-      let body: unknown = null;
-      try { body = await response.json(); } catch { /* fails closed below */ }
-      const read = run(SIBLINGS["visit-digest"].read, body);
-      return read === null ? unavailable("The digest baseline answer could not be read.") : { ok: true, value: read, warnings: [] };
-    },
-
     async searchEntities(query) {
       const path = entitySearchPath(query);
       if (path === null) return unavailable("The search text was not one the Portal accepts, so it was not sent.");

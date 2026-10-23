@@ -2,18 +2,6 @@
   "lane": "TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT",
   "siblings": [
     {
-      "name": "visit-digest",
-      "gap": "GAP-7",
-      "schema": "execution-visit-digest.v1.schema.json",
-      "route": "/api/v1/execution/digest",
-      "valid": [
-        "first",
-        "seen",
-        "quiet"
-      ],
-      "post": "/api/v1/execution/digest/baseline"
-    },
-    {
       "name": "controls",
       "gap": "GAP-3",
       "schema": "execution-controls.v1.schema.json",

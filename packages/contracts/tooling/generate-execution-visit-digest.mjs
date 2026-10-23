@@ -35,7 +35,7 @@ const api={openapi:'3.1.0',info:{title:'Execution visit digest',version:'1.0.0'}
   '/api/v1/execution/visit-digest':{get:{operationId:'executionVisitDigestGetV1',parameters:[workspace],responses}},
   '/api/v1/execution/visit-digest/seen':{post:{operationId:'executionVisitDigestSeenV1',parameters:[workspace,{name:'x-portal-csrf',in:'header',required:true,schema:{type:'string'}}],requestBody:{required:true,content:{'application/json':{schema:{$ref:'#/components/schemas/VisitDigestSeen'}}}},responses}}},
   components:{schemas:{VisitDigest:response,VisitDigestSeen:seen,VisitDigestProblem:problem}}};
-const outputs={'schemas/execution-visit-digest.v1.schema.json':{$schema:'https://json-schema.org/draft/2020-12/schema',...response},'openapi/execution-visit-digest.openapi.json':api};
+const outputs={'schemas/execution-visit-digest.v1.schema.json':{$schema:'https://json-schema.org/draft/2020-12/schema',$id:'https://schemas.primusspark.com/portal/execution-visit-digest.v1.schema.json',...response},'openapi/execution-visit-digest.openapi.json':api};
 const hash = v => createHash('sha256').update(JSON.stringify(v)).digest('hex');
 const fact={id:'operation:TEST_ONLY:operation-1',kind:'OPERATION',label:'Capital request verified',value:'VERIFIED',
   href:'/execution/operations?operation_id=TEST_ONLY%3Aoperation-1&workspace_id=ws_TEST_ONLY',as_of:'2026-10-23T12:00:00.000Z'};

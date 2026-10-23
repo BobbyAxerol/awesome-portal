@@ -18,8 +18,8 @@ const apply = (body: any, ops: Array<{ op: string; path: Array<string | number>;
 };
 
 describe("WP-K siblings: the index", () => {
-  it("names the fifteen reads and the gaps they answer", () => {
-    expect(index.map((s) => s.gap)).toEqual(["GAP-7", "GAP-3", "GAP-4", "GAP-5", "GAP-6", "GAP-9", "GAP-11", "GAP-12", "GAP-15", "GAP-13", "GAP-14", "GAP-16", "GAP-2", "GAP-10", "GAP-10"]);
+  it("names the fourteen reads and the gaps they answer", () => {
+    expect(index.map((s) => s.gap)).toEqual(["GAP-3", "GAP-4", "GAP-5", "GAP-6", "GAP-9", "GAP-11", "GAP-12", "GAP-15", "GAP-13", "GAP-14", "GAP-16", "GAP-2", "GAP-10", "GAP-10"]);
   });
 });
 
@@ -46,21 +46,5 @@ describe.each(index.map((s) => [s.name, s] as const))("%s", (name, entry) => {
     const body = apply(structuredClone(load(`fixtures/${rule.bases[c.base]}`).value), c.ops);
     if (c.refused_by === "READER_ONLY") expect(c.refused_by).toBe("READER_ONLY");
     else expect(check(body)).toBe(false);
-  });
-});
-
-describe("WP-K siblings: the digest baseline", () => {
-  it("defines the mark-seen POST beside the GET, fixture-served only", () => {
-    const api = load("openapi/execution-visit-digest.openapi.json");
-    const post = api.paths["/api/v1/execution/digest/baseline"].post;
-    expect(post.description).toContain("CONTRACT ONLY");
-    expect(post.requestBody.content["application/json"].schema.$ref).toBe("#/components/schemas/VisitDigestMark");
-    expect(api.components.schemas.VisitDigestMark.required).toEqual(["workspace_id", "cut_revision"]);
-  });
-  it("a first visit has no baseline (null), a seen digest names who set it, and a quiet one is a stated zero", () => {
-    const f = (v: string) => load(`fixtures/execution-visit-digest.${v}.synthetic.valid.json`).value;
-    expect(f("first").baseline).toBeNull();
-    expect(f("seen").baseline.set_by).toBeTruthy();
-    expect(f("quiet").items).toEqual([]);
   });
 });

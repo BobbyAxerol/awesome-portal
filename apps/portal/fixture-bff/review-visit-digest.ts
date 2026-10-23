@@ -8,7 +8,7 @@ export function createVisitDigestFixture() {
   const baselines = new Map<string, DigestBaseline | null>();
   return (config: FixtureConfig, request: BffRequest): BffResponse | null => {
     if (!['/api/v1/execution/visit-digest','/api/v1/execution/visit-digest/seen'].includes(request.path)) return null;
-    const fail = (status: number, code: string): BffResponse => ({status, body:{error:{code,message:'Refresh the visit digest.'},request_id:'TEST_ONLY:visit-digest'}});
+    const fail = (status: number, code: string): BffResponse => ({status, headers:{'content-type':'application/json'}, body:{error:{code,message:'Refresh the visit digest.'},request_id:'TEST_ONLY:visit-digest'}});
     const query = new URLSearchParams(request.search);
     if ([...query.keys()].some(k=>k!=='workspace_id') || query.getAll('workspace_id').length>1) return fail(400,'VISIT_DIGEST_INPUT_INVALID');
     const workspace = query.get('workspace_id') ?? 'ws_TEST_ONLY';
@@ -44,6 +44,6 @@ export function createVisitDigestFixture() {
         baseline=makeBaseline(snapshot,(baseline?.version??0)+1,config.nowIso);baselines.set(key,baseline);
       }
     }
-    return {status:200,body:composeVisitDigest(snapshot,baseline,config.writes!=='refuse')};
+    return {status:200,headers:{'content-type':'application/json'},body:composeVisitDigest(snapshot,baseline,config.writes!=='refuse')};
   };
 }
