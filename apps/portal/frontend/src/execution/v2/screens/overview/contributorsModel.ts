@@ -23,6 +23,10 @@ import type { ManagerMetricRead, ManagerPartition } from "../../readers/managerM
 import type { DatasetReadState } from "../manager/useManagerDataset";
 
 export const CONTRIBUTORS_GROUP_FIELD = "alpha_id" as const;
+/** The Portfolios view of the same panel (hi-fi tab "Portfolios"): the same read grouped by `portfolio_id` instead. */
+export const CONTRIBUTORS_PORTFOLIO_FIELD = "portfolio_id" as const;
+export type ContributorsField = typeof CONTRIBUTORS_GROUP_FIELD | typeof CONTRIBUTORS_PORTFOLIO_FIELD;
+const WORD: Readonly<Record<ContributorsField, string>> = { alpha_id: "alpha", portfolio_id: "portfolio" };
 export const CONTRIBUTORS_AMOUNT_KEY = "net_pnl";
 export const CONTRIBUTORS_RETURN_KEY = "return_30d_pct";
 export const CONTRIBUTORS_SCORE_KEY = "score";
@@ -43,7 +47,7 @@ export interface ContributorLine {
 }
 
 export interface ContributorGroup {
-  /** The published `alpha_id` of the group key; `null` is a group whose key says no alpha. */
+  /** The published group key (`alpha_id`, or `portfolio_id` in the Portfolios view); `null` is a group whose key says none. */
   alphaId: string | null;
   uniqueRowCount: number;
   lines: readonly ContributorLine[];
@@ -63,15 +67,15 @@ export interface ContributorsPopulation {
 export type ContributorsView =
   | { kind: "loading" }
   | { kind: "absent"; code: ContributorsAbsenceCode; reason: string }
-  | { kind: "empty"; population: ContributorsPopulation }
-  | { kind: "ready"; groups: readonly ContributorGroup[]; showReturn: boolean; showScore: boolean; population: ContributorsPopulation };
+  | { kind: "empty"; population: ContributorsPopulation; field?: ContributorsField }
+  | { kind: "ready"; groups: readonly ContributorGroup[]; showReturn: boolean; showScore: boolean; population: ContributorsPopulation; field?: ContributorsField };
 
 /** Whether the ungrouped fund dataset offers `alpha_id` as a group field. `null` while nothing has been read. */
-export function alphaGroupOffered(fund: ManagerDataset | null): boolean | null {
-  return fund === null ? null : fund.queryOptions.groupFields.includes(CONTRIBUTORS_GROUP_FIELD);
+export function alphaGroupOffered(fund: ManagerDataset | null, field: ContributorsField = CONTRIBUTORS_GROUP_FIELD): boolean | null {
+  return fund === null ? null : fund.queryOptions.groupFields.includes(field);
 }
 
-const isAlphaGroup = (group: ManagerGroup): boolean => group.key.length === 1 && group.key[0]!.field === CONTRIBUTORS_GROUP_FIELD;
+const isFieldGroup = (group: ManagerGroup, field: ContributorsField): boolean => group.key.length === 1 && group.key[0]!.field === field;
 
 function windowOf(dataset: ManagerDataset): string {
   const selected = dataset.selectedWindow;
@@ -79,14 +83,15 @@ function windowOf(dataset: ManagerDataset): string {
   return typeof selected.requested === "string" ? selected.requested : "custom range";
 }
 
-export function populationOf(dataset: ManagerDataset): ContributorsPopulation {
+export function populationOf(dataset: ManagerDataset, field: ContributorsField = CONTRIBUTORS_GROUP_FIELD): ContributorsPopulation {
+  const word = WORD[field];
   const count = dataset.page.authorizedFilteredCount;
   const groupCount = dataset.groups.length;
   const atGroupCap = groupCount >= MAX_GROUPS;
   const window = windowOf(dataset);
   const statement = atGroupCap
-    ? `The first ${groupCount} alpha groups only. The server lists at most ${MAX_GROUPS} groups, so this is not the whole population of ${count} authorized rows.`
-    : `${groupCount} alpha ${groupCount === 1 ? "group" : "groups"} over ${count} authorized ${count === 1 ? "row" : "rows"} (full authorized filtered query), ${dataset.environment}, window ${window}.`;
+    ? `The first ${groupCount} ${word} groups only. The server lists at most ${MAX_GROUPS} groups, so this is not the whole population of ${count} authorized rows.`
+    : `${groupCount} ${word} ${groupCount === 1 ? "group" : "groups"} over ${count} authorized ${count === 1 ? "row" : "rows"} (full authorized filtered query), ${dataset.environment}, window ${window}.`;
   return { authorizedFilteredCount: count, groupCount, atGroupCap, window, environment: dataset.environment, statement };
 }
 
@@ -99,28 +104,30 @@ export interface ContributorsInput {
   fundRead: DatasetReadState;
   fund: ManagerDataset | null;
   grouped: DatasetReadState;
+  /** The grouping the `grouped` read asked for. Default `alpha_id`. */
+  field?: ContributorsField;
 }
 
-export function contributorsView({ served, fundRead, fund, grouped }: ContributorsInput): ContributorsView {
+export function contributorsView({ served, fundRead, fund, grouped, field = CONTRIBUTORS_GROUP_FIELD }: ContributorsInput): ContributorsView {
   if (!served) return absent("DATASET_NOT_SERVED", "This shell does not serve the Manager dataset.");
   if (fund === null) {
     return fundRead.phase === "error"
       ? absent("DATASET_READ_FAILED", fundRead.reason)
       : fundRead.phase === "idle" ? absent("DATASET_NOT_SERVED", "The fund dataset was not asked.") : { kind: "loading" };
   }
-  if (alphaGroupOffered(fund) === false) return absent("GROUP_FIELD_NOT_OFFERED", "The fund dataset does not offer alpha_id in query_options.group_fields.");
+  if (alphaGroupOffered(fund, field) === false) return absent("GROUP_FIELD_NOT_OFFERED", `The fund dataset does not offer ${field} in query_options.group_fields.`);
   const dataset = grouped.phase === "ready" ? grouped.value : grouped.phase === "loading" || grouped.phase === "error" ? grouped.last : null;
   if (dataset === null) {
     if (grouped.phase === "error") return absent("DATASET_READ_FAILED", grouped.reason);
     return grouped.phase === "idle" ? absent("DATASET_NOT_SERVED", "The grouped read was not asked.") : { kind: "loading" };
   }
-  if (alphaGroupOffered(dataset) === false) return absent("GROUP_FIELD_NOT_OFFERED", "The dataset does not offer alpha_id in query_options.group_fields.");
-  if (dataset.groups.some((group) => !isAlphaGroup(group))) return absent("GROUPING_NOT_ANSWERED", "The dataset answered a different grouping than alpha_id, so it is not drawn as contributors.");
-  const population = populationOf(dataset);
+  if (alphaGroupOffered(dataset, field) === false) return absent("GROUP_FIELD_NOT_OFFERED", `The dataset does not offer ${field} in query_options.group_fields.`);
+  if (dataset.groups.some((group) => !isFieldGroup(group, field))) return absent("GROUPING_NOT_ANSWERED", `The dataset answered a different grouping than ${field}, so it is not drawn as contributors.`);
+  const population = populationOf(dataset, field);
   if (dataset.groups.length === 0) {
     return dataset.page.authorizedFilteredCount === 0
-      ? { kind: "empty", population }
-      : absent("NO_GROUPS_PUBLISHED", `The dataset counts ${dataset.page.authorizedFilteredCount} authorized rows but publishes no alpha group.`);
+      ? { kind: "empty", population, ...(field !== CONTRIBUTORS_GROUP_FIELD ? { field } : {}) }
+      : absent("NO_GROUPS_PUBLISHED", `The dataset counts ${dataset.page.authorizedFilteredCount} authorized rows but publishes no ${WORD[field]} group.`);
   }
   const groups: ContributorGroup[] = dataset.groups.map((group) => ({
     alphaId: group.key[0]!.value,
@@ -134,5 +141,5 @@ export function contributorsView({ served, fundRead, fund, grouped }: Contributo
   }));
   const any = (pick: (line: ContributorLine) => ManagerMetricRead | null): boolean => groups.some((group) => group.lines.some((line) => pick(line) !== null));
   if (!any((line) => line.amount)) return absent("METRIC_NOT_PUBLISHED", "No group publishes net_pnl, so there is no amount to draw.");
-  return { kind: "ready", groups, showReturn: any((line) => line.ret), showScore: any((line) => line.score), population };
+  return { kind: "ready", groups, showReturn: any((line) => line.ret), showScore: any((line) => line.score), population, ...(field !== CONTRIBUTORS_GROUP_FIELD ? { field } : {}) };
 }

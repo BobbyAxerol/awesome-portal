@@ -555,13 +555,12 @@ describe("the fund NAV series (FE-013, BE-P4 manager series)", () => {
     await mountWith("populated", "/execution?env=paper&window=30d");
     await waitFor(() => expect(performance().querySelector("[data-testid='series-caption']")).not.toBeNull());
     const caption = performance().querySelector("[data-testid='series-caption']")!.textContent!;
-    expect(caption).toContain("NAV in USDT");
+    expect(caption).toContain("Net PnL in USDT"); // Net PnL is the hi-fi default once the series is served
     // Methodology, basis and the exact window are in the title, not in a second line of the page.
     const captionTitle = performance().querySelector("[data-testid='series-caption']")!.getAttribute("title")!;
-    expect(captionTitle).toContain("methodology TEST_ONLY:nav-twr.v1");
     expect(captionTitle).toMatch(/window .* to .* \(UTC\)/);
     expect(performance().querySelector("svg")).not.toBeNull();
-    expect(performance().querySelector(".exec-ser")!.textContent).not.toContain("Not published");
+    expect(performance().querySelector(".exec-ser")!.getAttribute("data-state")).toBe("AVAILABLE");
     // The KPI is the last published point, as the server sent it (the title carries the full string), never a derived NAV.
     const populated = JSON.parse(JSON.stringify(series.calls)) as { metric: string }[];
     expect(populated.filter((c) => c.metric === "NAV")).toHaveLength(1);

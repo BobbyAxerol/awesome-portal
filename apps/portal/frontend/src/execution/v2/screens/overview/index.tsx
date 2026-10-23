@@ -52,7 +52,7 @@ import type { FlagKind } from "../../flagKinds";
 import { profileLabel } from "../../profileLabel";
 import { isInternalPath, useExecUrlState, withContext } from "../../urlState";
 import {
-  FE_DIGEST, FE_MONEY, KIND_FLAG, currencyFacts, fleetCellGroups, humanize, modeOf,
+  FE_CAPITAL_EVENTS, FE_DIGEST, FE_MONEY, KIND_FLAG, currencyFacts, fleetCellGroups, humanize, modeOf,
   needsAttention, openIncidents, stageCounts, streamSentence, todayRows, triageRows, type CurrencyFact,
 } from "./overviewModel";
 import type { ManagerSeriesQuery } from "../../readers/managerSeries";
@@ -65,13 +65,21 @@ import { useManagerDataset } from "../manager/useManagerDataset";
 import { PartitionFigures, figureSource, publishes, servesDataset } from "../portfolios/PartitionFigures";
 import { useOverviewReads } from "./useOverviewReads";
 import { ContributorsBody } from "./Contributors";
-import { CONTRIBUTORS_GROUP_FIELD, alphaGroupOffered, contributorsView } from "./contributorsModel";
+import { CONTRIBUTORS_GROUP_FIELD, CONTRIBUTORS_PORTFOLIO_FIELD, alphaGroupOffered, contributorsView, type ContributorsField } from "./contributorsModel";
+import { BudgetBar } from "../portfolios/CapitalBlocks";
 
 import "../../css/blocks.css";
 import "../../css/overview.css";
 import { formatInstant } from "../../boundary";
 
 export const OVERVIEW_SCREEN_KEY = "overview" as const;
+
+/** The drawdown strip under the performance chart. The series port has no DRAWDOWN metric, and a drawdown is never worked out from the NAV line here. */
+const DRAWDOWN_ABSENT = {
+  kind: "absent",
+  copy: "Not published (FE-013, FE-025)",
+  reason: "The series port publishes NAV, Net PnL and Return only; a drawdown series is requested (WP-F1 request to the contracts lane)",
+} as const;
 
 export interface OverviewScreenProps {
   api: ExecutionApi;
@@ -165,6 +173,17 @@ function MoneyCell({ value, signed = false }: { value: CurrencyFact["allocation"
   return <span className="exec-ov-num" title={value.full} data-tone={signed && value.tone !== "neutral" ? value.tone : undefined}>{value.display}</span>;
 }
 
+const ENV_WORD: Readonly<Record<string, string>> = { live: "Real-funded", paper: "Paper", sandbox: "Sandbox" };
+
+/** The three kinds of line the hi-fi digest lists. The frame is drawn; no line is, because no baseline is published (FE-024). */
+const DIGEST_KINDS = ["Approval", "Operation", "NAV"] as const;
+
+/** `HH:MMZ` of an ISO instant the server published; the full instant is in the title elsewhere. */
+function formatClock(iso: string): string {
+  const at = Date.parse(iso);
+  return Number.isNaN(at) ? "time not readable" : `${new Date(at).toISOString().slice(11, 16)}Z`;
+}
+
 const STATE_FLAG: Record<string, { kind: FlagKind; label: string }> = {
   busy: { kind: "attention", label: "Busy" },
   quiet: { kind: "ok", label: "Quiet" },
@@ -205,15 +224,15 @@ export default function OverviewScreen({ api, workspaceId, sseFactory, accessHre
   // read, so a refresh does not blink the switch); otherwise the measure stays NAV and the switch says why it is off.
   const navBody = nav.phase === "ready" ? nav.value : nav.phase === "loading" || nav.phase === "error" ? nav.last : null;
   const serves = navBody !== null && navBody.seriesSource.state === "PUBLISHED";
-  const [measure, setMeasure] = useState<FundMeasure>("NAV");
-  const metric = serves ? measure : "NAV";
-  const measureQuery = useMemo<ManagerSeriesQuery>(() => ({ ...navQuery, metric: metric === "NAV" ? "NET_PNL" : metric }), [navQuery, metric]);
-  const measureRead = useManagerSeries(api, metric !== "NAV", measureQuery, seriesNonce);
+  // Net PnL is the hi-fi default once the series is served; the chart then draws the same read the Net PnL tile asks for.
+  const [measure, setMeasure] = useState<FundMeasure | null>(null);
+  const metric: FundMeasure = serves ? (measure ?? "NET_PNL") : "NAV";
   // The Net PnL and Return tiles ask the same port for the same fund once the NAV read says the series is served; a typed refusal keeps its ids.
   const pnlQuery = useMemo<ManagerSeriesQuery>(() => ({ ...navQuery, metric: "NET_PNL" }), [navQuery]);
   const returnQuery = useMemo<ManagerSeriesQuery>(() => ({ ...navQuery, metric: "RETURN" }), [navQuery]);
   const pnlRead = useManagerSeries(api, serves, pnlQuery, seriesNonce);
   const returnRead = useManagerSeries(api, serves, returnQuery, seriesNonce);
+  const measureRead = metric === "NAV" ? nav : metric === "NET_PNL" ? pnlRead : returnRead;
   // The fund's Manager dataset for the same environment and window: capital statements per economic partition (and Net PnL where a
   // partition publishes it). A refusal or a missing surface leaves every cell on its own `Not published`.
   const fundQuery = useMemo<ManagerDatasetQuery>(
@@ -230,7 +249,14 @@ export default function OverviewScreen({ api, workspaceId, sseFactory, accessHre
   // offers `alpha_id`; limit 1 because only `groups` (the whole filtered query) is read, never the page of rows.
   const contributorsQuery = useMemo<ManagerDatasetQuery>(() => ({ ...fundQuery, groupBy: [CONTRIBUTORS_GROUP_FIELD], limit: 1 }), [fundQuery]);
   const contributorsRead = useManagerDataset(api, servesDataset(api) && fund !== null && alphaGroupOffered(fund) === true, contributorsQuery, seriesNonce);
-  const contributors = contributorsView({ served: servesDataset(api), fundRead, fund, grouped: contributorsRead });
+  // The hi-fi's second tab: the same read grouped by portfolio, asked only once the fund says it offers `portfolio_id` and the tab is open.
+  const [contribBy, setContribBy] = useState<ContributorsField>(CONTRIBUTORS_GROUP_FIELD);
+  const portfolioOffered = fund !== null && alphaGroupOffered(fund, CONTRIBUTORS_PORTFOLIO_FIELD) === true;
+  const portfolioQuery = useMemo<ManagerDatasetQuery>(() => ({ ...fundQuery, groupBy: [CONTRIBUTORS_PORTFOLIO_FIELD], limit: 1 }), [fundQuery]);
+  const portfolioRead = useManagerDataset(api, servesDataset(api) && portfolioOffered && contribBy === CONTRIBUTORS_PORTFOLIO_FIELD, portfolioQuery, seriesNonce);
+  const contributors = contribBy === CONTRIBUTORS_PORTFOLIO_FIELD && portfolioOffered
+    ? contributorsView({ served: servesDataset(api), fundRead, fund, grouped: portfolioRead, field: CONTRIBUTORS_PORTFOLIO_FIELD })
+    : contributorsView({ served: servesDataset(api), fundRead, fund, grouped: contributorsRead });
   const refresh = () => { reads.reload(); setSeriesNonce((n) => n + 1); };
 
   const { snapshot } = reads;
@@ -328,6 +354,7 @@ export default function OverviewScreen({ api, workspaceId, sseFactory, accessHre
               </div>
               {r.summary ? <div className="exec-ov-sub">{r.summary}</div> : null}
               <div className="exec-ov-sub exec-ov-item-sla" title={r.sla}>{r.slaShort}</div>
+              <span className="exec-ov-sla-stripe" data-sla={r.slaState ?? "none"} aria-hidden="true" />
             </li>
           ))}
         </ol>
@@ -346,7 +373,7 @@ export default function OverviewScreen({ api, workspaceId, sseFactory, accessHre
         </div>
         <div className="exec-ov-chips">
           <Flag kind={flag.kind} label={mode === "busy" ? `Busy, ${needs?.items.length ?? 0} ranked` : flag.label} size="sm" />
-          {fresh.kind !== "ok" ? <Flag kind={fresh.kind} label={fresh.label} size="sm" /> : null}
+          <Flag kind={fresh.kind} label={fresh.kind === "ok" && composition?.readAt ? `${fresh.label} · ${formatClock(composition.readAt)}` : fresh.label} size="sm" />
           <span className="exec-ov-meta" title={streamNote ?? undefined}>{composition?.readAt ? `Read ${formatInstant(composition.readAt)}` : "Read time not published"}{streamNote ? " · Not live" : ""}</span>
           <button type="button" className="exec-ov-btn" onClick={refresh}>Refresh</button>
         </div>
@@ -397,10 +424,17 @@ export default function OverviewScreen({ api, workspaceId, sseFactory, accessHre
       </dl>
 
       <div className="exec-ov-grid2 exec-ov-top">
-        <SectionPanel title="Performance" lead={<MeasureSeg serves={serves} selected={metric} onSelect={setMeasure} />}>
-          <ManagerSeriesPanel label={metric === "NAV" ? "Fund performance" : `Fund ${metric === "NET_PNL" ? "Net PnL" : "Return"}`} read={metric === "NAV" ? nav : measureRead} gapCopy={`Not published (${FE_MONEY})`} tools />
+        <SectionPanel title="Performance" lead={<MeasureSeg serves={serves} selected={metric} onSelect={setMeasure} />} aside={<span className="exec-ov-markers"><GapWhy className="exec-blk-np-word" gap={FE_CAPITAL_EVENTS} text="Capital markers: Not published" name="Capital markers: Not published, reason" rows={[gapTitle(FE_CAPITAL_EVENTS, null, "NO_FUND_CAPITAL_EVENTS"), "No fund-level capital event list is published, so no added or returned marker is drawn. The ledger is per portfolio."]} next={null} /></span>}>
+          <ManagerSeriesPanel
+            label={metric === "NAV" ? "Fund performance" : `Fund ${metric === "NET_PNL" ? "Net PnL" : "Return"}`}
+            read={measureRead}
+            gapCopy={`Not published (${FE_MONEY})`}
+            tools
+            height={280}
+            drawdown={DRAWDOWN_ABSENT}
+          />
         </SectionPanel>
-        <SectionPanel title="Capital" aside="Real-funded">
+        <SectionPanel title="Capital" aside={ENV_WORD[url.value.env] ?? url.value.env}>
           <table className="exec-ov-cap" aria-label="Capital">
             <tbody>
               {CAPITAL_ROWS.map((row) => (
@@ -417,13 +451,19 @@ export default function OverviewScreen({ api, workspaceId, sseFactory, accessHre
               ))}
             </tbody>
           </table>
+          <BudgetBar list={statements} />
         </SectionPanel>
       </div>
 
       <div className="exec-ov-grid3">
         {needsPanel}
-        <SectionPanel title="Since your last visit">
+        <SectionPanel title="Since your last visit" aside="No baseline">
           <p className="exec-ov-na"><Gap ids={FE_DIGEST} /></p>
+          <ul className="exec-ov-digest" aria-label="What the digest will list">
+            {DIGEST_KINDS.map((kind) => (
+              <li key={kind}><Flag kind="neutral" label={kind} size="sm" /><span className="exec-ov-digest-line" /></li>
+            ))}
+          </ul>
           <p className="exec-ov-note" data-digest-absence="NO_COMPARISON_BASELINE">
             No comparison baseline is published yet.
             <GapWhy
@@ -436,7 +476,16 @@ export default function OverviewScreen({ api, workspaceId, sseFactory, accessHre
             />
           </p>
         </SectionPanel>
-        <SectionPanel title="Contributors" aside={contributors.kind === "ready" ? `Net PnL by alpha · window ${url.value.window}` : "Amount · Return · Score"}>
+        <SectionPanel
+          title="Contributors"
+          lead={portfolioOffered ? (
+            <span className="exec-ov-seg" role="group" aria-label="Contributors grouping">
+              <button type="button" className="exec-ov-segbtn" aria-pressed={contribBy === CONTRIBUTORS_GROUP_FIELD ? "true" : "false"} onClick={() => setContribBy(CONTRIBUTORS_GROUP_FIELD)}>Amount</button>
+              <button type="button" className="exec-ov-segbtn" aria-pressed={contribBy === CONTRIBUTORS_PORTFOLIO_FIELD ? "true" : "false"} onClick={() => setContribBy(CONTRIBUTORS_PORTFOLIO_FIELD)}>Portfolios</button>
+            </span>
+          ) : undefined}
+          aside={contributors.kind === "ready" ? `Net PnL by ${contribBy === CONTRIBUTORS_PORTFOLIO_FIELD && portfolioOffered ? "portfolio" : "alpha"} · window ${url.value.window}` : "Amount · Return · Score"}
+        >
           <ContributorsBody view={contributors} />
         </SectionPanel>
       </div>

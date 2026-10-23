@@ -213,7 +213,10 @@ describe("Since your last visit", () => {
     const digest = screen.getByRole("region", { name: "Since your last visit" });
     expect(digest.textContent).toContain("Not published (FE-024)");
     expect(digest.textContent).toContain("No comparison baseline is published yet.");
-    expect(digest.querySelector("li, ol, ul")).toBeNull();
+    // The frame of the hi-fi digest is drawn (three kinds of line, hatched placeholders) but no digest line is: nothing is listed.
+    const frame = digest.querySelector("ul[aria-label='What the digest will list']")!;
+    expect([...frame.querySelectorAll("li")].map((li) => (/(Approval|Operation|NAV)$/.exec(li.textContent ?? "") ?? [])[1])).toEqual(["Approval", "Operation", "NAV"]);
+    expect(digest.querySelector("ol")).toBeNull();
     const why = whyText(digest.querySelector("[data-digest-absence] .exec-blk-why")!);
     expect(why).toContain("persisted, user-scoped baseline");
     expect(why).toContain("current source facts");

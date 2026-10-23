@@ -109,7 +109,7 @@
 .exec-ov-grid3 {
   display: grid;
   /* the third panel (Contributors) is a five-column figure table: it gets the wider share so no figure has to break */
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.9fr);
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 2.1fr);
   gap: var(--space-5);
 }
 /* below 1400px the figure table (the last panel) takes a full row, so Needs attention and Since last visit keep a readable width */
@@ -347,4 +347,39 @@ a.exec-ov-what-title {
 .exec-ov-contrib .exec-ov-contrib-num {
   text-align: right;
   font-variant-numeric: tabular-nums;
+}
+
+/* WP-F1: Performance panel aside, SLA state stripe, digest frame, contributors bars */
+.exec-ov-markers { font: var(--exec-font-caption); color: var(--ink-faint); }
+.exec-ov-markers .exec-blk-why-btn { font: var(--exec-font-caption); }
+/* A STATE stripe, not a progress bar: no elapsed time is published, so its length says nothing; only its colour (and the text line above) does. */
+.exec-ov-sla-stripe { display: block; height: 2px; margin-top: 6px; background: var(--line-soft); }
+.exec-ov-sla-stripe[data-sla="OVERDUE"] { background: var(--bad); }
+.exec-ov-sla-stripe[data-sla="DUE_SOON"] { background: var(--warn); }
+.exec-ov-sla-stripe[data-sla="ON_TRACK"] { background: var(--good); }
+/* The digest frame (hi-fi "Since your last visit"): the lines are drawn as hatched placeholders because no baseline is published. */
+.exec-ov-digest { display: flex; flex-direction: column; gap: var(--space-3); margin: var(--space-3) 0 0; padding: 0; list-style: none; }
+.exec-ov-digest li { display: flex; align-items: center; gap: var(--space-3); padding-bottom: var(--space-3); border-bottom: 1px solid var(--line-soft); }
+.exec-ov-digest li:last-child { border-bottom: 0; }
+.exec-ov-digest-line { flex: 1; height: 8px; background: repeating-linear-gradient(135deg, var(--line-soft) 0 2px, transparent 2px 6px); }
+/* Contributors: a drawn bar beside the published amount, scaled inside one partition only. */
+.exec-ov-contrib-wrap { overflow-x: auto; }
+.exec-ov-bar-track { display: block; height: 4px; margin-top: 3px; background: var(--surface-2); }
+.exec-ov-bar { display: block; height: 100%; background: var(--series); }
+.exec-ov-bar[data-neg="true"] { background: var(--series-dd); }
+.exec-ov-linkbtn { padding: 0; font: var(--exec-font-caption); color: var(--accent); background: none; border: 0; cursor: pointer; text-decoration: underline; }
+.exec-ov-contrib .exec-ov-contrib-part { white-space: nowrap; overflow-wrap: normal; }
+
+/* WP-F1: table body text follows the cards.css rule (every role 13px inside a table body, face and colour kept) for the tables that are not
+ * `.exec-cards`: contributors, the capital tables. Set through the role tokens, never a size. */
+.exec-ov-contrib tbody td,
+.exec-ov-contrib tbody th,
+.exec-ov-cap td,
+.exec-ov-cap th {
+  --exec-font-data: 400 13px/18px var(--font-body);
+  --exec-font-meta: 400 13px/18px var(--font-body);
+  --exec-font-body: 400 13px/18px var(--font-body);
+  --exec-font-num: 400 13px/18px var(--font-mono);
+  --exec-font-id: 400 13px/18px var(--font-mono);
+  --exec-font-term: 400 13px/18px var(--font-mono);
 }

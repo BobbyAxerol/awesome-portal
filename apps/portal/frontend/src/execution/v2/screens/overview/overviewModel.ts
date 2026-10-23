@@ -27,6 +27,8 @@ import type { FlagKind } from "../../flagKinds";
 export const FE_MONEY = "FE-005/006/013/025";
 export const FE_CAPITAL = "FE-017";
 export const FE_DIGEST = "FE-024";
+/** Fund-level capital events (added, returned) for markers on the performance chart: no published place (the ledger is per portfolio). */
+export const FE_CAPITAL_EVENTS = "FE-017";
 export const FE_CONTRIBUTORS = "FE-025";
 export const FE_RESEARCHER = "FE-026";
 
