@@ -185,8 +185,8 @@ describe("deep link", () => {
     await screen.findByTestId("v1-replay");
     expect(await screen.findByText(/Opened at/)).toBeTruthy();
     expect(props().focusId).toBe("order:ord_004");
-    expect(screen.getByRole("button", { name: "More" }).getAttribute("data-active")).toBe("true");
-    // The replay is the page: no lifecycle and no current-facts strip above the chart.
+    // The replay is a page of its own (title, chips), at the same address: no lifecycle and no current-facts strip above the chart.
+    expect(screen.getByRole("heading", { level: 1, name: "Trade Replay" })).toBeTruthy();
     expect(screen.queryByRole("list", { name: "Alpha lifecycle" })).toBeNull();
     expect(screen.queryByLabelText("Current facts")).toBeNull();
   });
