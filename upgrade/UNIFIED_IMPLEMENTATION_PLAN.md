@@ -15277,6 +15277,11 @@ the three existing entity APIs, and invalidation of old-workspace count badges.
 Do not attach the new workspace to an old response. Claude keeps frontend
 design ownership; fixture-only nginx `2e9531af6` is ACCEPT, not runtime proof.
 
+Further independent review at `a71325eab` requests retaining visible economic
+domain labels outside explicitly proven equivalence: one Paper partition in a
+Live lens must not look like Live money. See the same post-freeze review packet;
+the newer presentation slice remains separate and its earlier findings stay open.
+
 
 ### P0 Bobby has called Edge — NEW Core-first PREPARED23Oct00:56VN
 
