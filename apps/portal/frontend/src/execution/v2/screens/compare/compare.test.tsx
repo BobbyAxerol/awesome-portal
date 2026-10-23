@@ -322,7 +322,9 @@ describe("series (FE-013/033, BE-P4 manager series)", () => {
     const { api, calls } = makeApi();
     const { container } = mount(api, pick(PF.satellite, PF.canary));
     await loaded();
-    expect(overlay(container).textContent).toContain("Pick two comparable portfolios");
+    // Two picked, fewer than two on one basis: the headline says so, and the left-out pick's reason is beside it (QA1 CM-01).
+    expect(overlay(container).textContent).toContain("Fewer than two picks share one basis");
+    expect(overlay(container).textContent).not.toContain("Pick two comparable portfolios");
     expect(overlay(container).textContent).not.toContain("Not published");
     expect(overlay(container).querySelectorAll("svg")).toHaveLength(0);
     expect(screen.getByTestId("basis-caption").textContent).toBe("Basis: No aligned series: the common basis is not established");

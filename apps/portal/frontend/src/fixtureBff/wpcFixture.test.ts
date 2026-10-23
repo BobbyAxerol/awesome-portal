@@ -154,13 +154,13 @@ describe("replay candles and the alpha equity line (review lane only)", () => {
     expect(Math.max(...(result.body.candles as Body[]).map((candle) => Number(candle.h)))).toBeGreaterThan(67_411);
   });
 
-  it("the alpha equity chart is 120 daily closes that keep the double's start and end values", () => {
+  it("the alpha equity chart is 120 daily closes that start at the alpha's own allocation and end on its own balance", () => {
     const result = ask("/views/equity-chart", "live", { subject_kind: "alpha", subject_id: "alpha_a" });
     expect(result.status).toBe(200);
     const points = result.body.panel.data.series[0].points as [number, string][];
     expect(points).toHaveLength(120);
     expect(points[0]![1]).toBe("40000.00");
-    expect(points.at(-1)![1]).toBe("40812.00");
+    expect(points.at(-1)![1]).toBe("41120.80"); // alpha_a's own live book: allocation 40,000.00 plus its net PnL, the figure the Windowed figures table prints
     expect(points.every(([t], i) => i === 0 || t - points[i - 1]![0] === DAY)).toBe(true);
   });
 });

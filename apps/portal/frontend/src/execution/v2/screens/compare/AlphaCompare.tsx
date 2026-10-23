@@ -136,6 +136,11 @@ export function AlphaCompare({ api, enabled, env, picks, onPicks, windowLabel, w
   if (items === null) return fleet.phase === "error" ? <PanelState status={fleet.status} reason={fleet.reason} /> : <PanelSkeleton label="Loading the alphas" />;
 
   const labelOf = (id: string): string => items.find((item) => item.alphaId === id)?.alphaLabel ?? id;
+  // A pick whose dataset has no row in this book (it runs in no stage of it): named, so a column of "Not available" is explained once (QA1 CA-01).
+  const idle = picks.filter((id) => {
+    const state = reads.get(id);
+    return state !== undefined && state.phase === "ready" && state.value.items.length === 0;
+  });
   const needle = filter.trim().toLowerCase();
   const shown = items.filter((item) => needle === "" || [item.alphaLabel, item.alphaId, item.owner ?? ""].some((part) => part.toLowerCase().includes(needle))).slice(0, CHIP_CAP);
   const toggle = (id: string) => onPicks(picks.includes(id) ? picks.filter((x) => x !== id) : [...picks, id].slice(0, COMPARE_MAX));
@@ -172,6 +177,11 @@ export function AlphaCompare({ api, enabled, env, picks, onPicks, windowLabel, w
           })}
         </div>
         <p className="exec-pf-note" role="status">{picks.length < 2 ? "Pick two to four alphas to put them side by side." : `${picks.length} alphas picked.`}</p>
+        {idle.length > 0 ? (
+          <p className="exec-pf-banner" role="status" data-testid="alpha-idle">
+            {idle.map(labelOf).join(", ")} {idle.length === 1 ? "has" : "have"} no deployment in this book, so there is no figure to put beside the others. Pick an alpha that runs here or change the book in the context bar.
+          </p>
+        ) : null}
       </section>
 
       <SectionPanel

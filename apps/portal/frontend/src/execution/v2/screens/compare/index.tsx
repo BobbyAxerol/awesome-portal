@@ -217,7 +217,14 @@ export default function CompareScreen({ api, portfolioId, capabilities, routes =
   const noBasisText = basis.currency === null ? "No comparable portfolio picked yet" : "No aligned series: the common basis is not established";
   const overlay: { series: CompareSeries[]; notComparable: NotComparable[]; state: Parameters<typeof CompareOverlay>[0]["state"]; basis: string; unit: Parameters<typeof CompareOverlay>[0]["unit"]; currency?: string } = (() => {
     const none = (copy: string, reason: string, notComparable: NotComparable[] = apart) => ({ series: [], notComparable, state: { kind: "unavailable" as const, copy, reason }, basis: noBasisText, unit: "pct" as const });
-    if (seriesQuery === null) return none("Pick two comparable portfolios", "Aligned series need two to four portfolios on one basis. Nothing is rebased or worked out here.");
+    if (seriesQuery === null) {
+      // Two or more picks but fewer than two on one basis (QA1 CM-01): say that, and why each left-out pick is left out, instead of asking for what was already done.
+      if (picked.ids.length >= 2) {
+        const why = apart.map((entry) => `${entry.label}: ${entry.reason}`).join(" · ");
+        return none("Fewer than two picks share one basis", `${why === "" ? "" : `${why}. `}Pick another portfolio on the same basis. Nothing is rebased, converted or worked out here.`);
+      }
+      return none("Pick two comparable portfolios", "Aligned series need two to four portfolios on one basis. Nothing is rebased or worked out here.");
+    }
     if (series === null || comparison === null) return none("Not available", `The series could not be read${seriesRead.phase === "error" ? ` (${seriesRead.reason})` : ""}. Nothing is rebased or worked out here.`);
     if (comparison.state === "ALIGNED") {
       const drawn = series.series.flatMap((entry) => (entry.state === "AVAILABLE" ? [{ entry, id: entry.subject.subjectId }] : []));

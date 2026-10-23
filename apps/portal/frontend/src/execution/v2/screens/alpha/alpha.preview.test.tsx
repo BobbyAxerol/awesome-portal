@@ -100,6 +100,35 @@ describe("Alpha 360 spine and tiles for alpha_a (live book)", () => {
   });
 });
 
+describe("every alpha opens with its own identity and its own books (QA1 R2-02, R2-12)", () => {
+  it("alpha_a and alpha_btc_trend are no longer clones: own name and version, own run and evidence, own deployments and figures", async () => {
+    mount("/deployments/alphas/alpha_a", "alpha_a");
+    expect(await screen.findByRole("heading", { level: 1, name: /Carry A/ })).toBeTruthy();
+    expect(screen.getByRole("heading", { level: 1 }).textContent).toContain("v1.0");
+    await waitFor(() => expect(document.querySelector(".exec-alp2-meta")?.textContent).toMatch(/Run\s*\d\d \w{3}/));
+    expect(document.querySelector(".exec-alp2-meta")?.textContent).toMatch(/Evidence revision\s*\d/);
+    expect(document.body.textContent).not.toMatch(/Not available: .*(Name|Version|Run|Evidence)/);
+    const alphaA = tile("Net PnL, current").textContent;
+    cleanup();
+    endPreviewLane();
+    mount("/deployments/alphas/alpha_btc_trend", "alpha_btc_trend");
+    expect(await screen.findByRole("heading", { level: 1, name: /BTC Trend/ })).toBeTruthy();
+    await waitFor(() => expect(screen.getAllByText("dep_btc_live").length).toBeGreaterThan(0));
+    expect(screen.queryByText("dep_live_01")).toBeNull();
+    expect(tile("Net PnL, current").textContent).not.toBe(alphaA);
+  });
+
+  it("a generated alpha opens with its own name, its own portfolios and its own deployments, not the template's dep_live_01 / 40,000.00", async () => {
+    mount("/deployments/alphas/alpha_scale_001", "alpha_scale_001");
+    expect(await screen.findByRole("heading", { level: 1, name: /Reversion 06/ })).toBeTruthy();
+    await spine();
+    await waitFor(() => expect(document.body.textContent).not.toContain("dep_live_01"));
+    // Its own books: 25,000.00 and 2,500.50 allocated; the equity line ends on this alpha's own balance, not the template's 40,812.00.
+    expect(document.body.textContent).toContain("25,000.00");
+    expect(document.body.textContent).not.toContain("40,812.00");
+  });
+});
+
 describe("the event ribbon is pinned on the Performance chart", () => {
   it("draws the five lanes with the published events, kind chips with counts, and the drawdown strip from the alpha's DRAWDOWN series (WP-K, FIXTURE_LAB)", async () => {
     mount("/deployments/alphas/alpha_a", "alpha_a");

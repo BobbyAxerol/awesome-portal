@@ -992,7 +992,7 @@ function datasetAnswer(method: string, path: string, search: URLSearchParams, pr
 
 export function answerReviewManager(method: string, path: string, search: URLSearchParams, profile: ReviewManagerProfile, requestBody: unknown = null): ReviewManagerResponse | null {
   const normalized = path.replace(/^\/api\/v1\/execution(?=\/)/, "");
-  return seriesAnswer(method, normalized, search, profile) ?? wpkApprovalEvidence(method, normalized, search, profile) ?? wpkAlphaLifecycle(method, normalized, search) ?? wpkOperationsExtras(method, normalized, search) ?? wpkEntitySearch(method, normalized, search) ?? wpkPortfolioHealth(method, normalized, search) ?? wpkSiblings(method, normalized, search, requestBody) ?? wpcCandles(method, normalized, search) ?? wpcEquity(method, normalized, search) ?? wpF1Answer(method, normalized, search) ?? wpcAlphaKeys(normalized, search, datasetAnswer(method, normalized, search, profile));
+  return seriesAnswer(method, normalized, search, profile) ?? wpkApprovalEvidence(method, normalized, search, profile) ?? wpkAlphaLifecycle(method, normalized, search) ?? wpkOperationsExtras(method, normalized, search) ?? wpkEntitySearch(method, normalized, search) ?? wpkPortfolioHealth(method, normalized, search) ?? wpkSiblings(method, normalized, search, requestBody) ?? wpcCandles(method, normalized, search) ?? wpcEquity(method, normalized, search) ?? wpcAlphaResource(method, normalized, search) ?? wpF1Answer(method, normalized, search) ?? wpcAlphaKeys(normalized, search, datasetAnswer(method, normalized, search, profile));
 }
 
 // ===== WP-C begin (Alpha 360, Trade replay, Compare; FIXTURE_LAB, register section 2c-wpc)
@@ -1126,6 +1126,8 @@ function wpcLifecycleKeys(alphaId: string, template: Draft): Record<string, Draf
   put("life_canary_days", String(canaryDays), "DAYS");
   put("life_live_days", String(liveDays), "DAYS");
   for (const stage of ["paper", "sandbox", "canary"]) { put(`life_${stage}_criteria_met`, "7", "COUNT"); put(`life_${stage}_criteria_total`, "7", "COUNT"); }
+  put("life_run_ms", at(r1 - 20 * DAY_MS), "TIMESTAMP_MS", actor(1));
+  put("life_evidence_revision", String(1 + (seed >> 11) % 4), "COUNT");
   put("life_live_decider", "1", "ROLE", "Manager");
   put("life_blocked_reason", "1", "TEXT", "Criterion 6 of 7 is not met");
   // Events: kind, time, "Title|actor". Offsets are inside the lifecycle above, so the stage lane agrees with the spine.
@@ -1196,7 +1198,15 @@ function wpcEquity(method: string, path: string, search: URLSearchParams): Revie
   const cents = (text: string): bigint => BigInt(text.replace(".", ""));
   const first = series.points[0];
   const last = series.points[series.points.length - 1];
-  const [from, to] = [cents(first[1] as string), cents(last[1] as string)];
+  let [from, to] = [cents(first[1] as string), cents(last[1] as string)];
+  // This alpha's own book (QA1 R2-02): in this environment its USDT deployments open at their allocation and end at allocation plus their net PnL.
+  const own = [...WPC_ALPHAS, ...scaled().alphas].find((alpha) => alpha.id === search.get("subject_id"));
+  const mine = own?.deployments.filter((d) => d.environment === search.get("environment") && d.currency === "USDT") ?? [];
+  if (mine.length > 0 && scaled().alphas.length > 0) {
+    const centsOf = (value: string): bigint => toScaled(value) / 10n ** 16n;
+    from = mine.reduce((total, d) => total + centsOf(d.allocation), 0n);
+    to = mine.reduce((total, d) => total + centsOf(addDecimal(d.allocation, addDecimal(d.realized, d.unrealized))), 0n);
+  }
   const n = 119;
   const end = last[0] as number;
   const walk = wpcWalk(seedOf(search.get("subject_id"), search.get("environment"), "wpc-equity"), n, from, to, from / 160n);
@@ -1207,6 +1217,58 @@ function wpcEquity(method: string, path: string, search: URLSearchParams): Revie
   panel.coverage = { ...panel.coverage, from_ms: start, to_ms: end, source_total: String(points.length), filtered_total: String(points.length), returned_count: points.length };
   panel.data.sampling = { ...panel.data.sampling, source_rows: String(points.length), numeric_rows: String(points.length), returned_rows: points.length };
   panel.data.retention = { ...panel.data.retention, oldest_available_ms: start, newest_available_ms: end };
+  return { status: base.status, body };
+}
+/* ---- Alpha resource (review lane, medium and large scale; QA1 R2-02, R2-12): the alpha double answers EVERY id with one template (dep_live_01, 40,000.00,
+ * +1,120.80, "Unnamed alpha"), so a Fleet row opened a 360 with another alpha's figures. The same body now carries THIS alpha's own published identity (label,
+ * version, owner, health) and its own deployments, with the money fields summed per currency from those deployments (exact decimals, never across currencies).
+ * Orders, fills, positions and the equity path keep the double's single book (a request to the fixture world, not invented here). */
+const WPC_STAGE_ORDER = ["LIVE", "CANARY", "SANDBOX", "PAPER"] as const;
+function wpcAlphaResource(method: string, path: string, search: URLSearchParams): ReviewManagerResponse | null {
+  const match = /^\/resources\/alphas\/([^/]+)$/.exec(path);
+  if (method !== "GET" || match === null || search.has("workspace_id") || scaled().alphas.length === 0) return null;
+  const id = decodeURIComponent(match[1]!);
+  const spec = [...WPC_ALPHAS, ...scaled().alphas].find((alpha) => alpha.id === id);
+  if (spec === undefined) return null;
+  const base = answerAlpha(method, path, search);
+  const body = base?.body as Draft;
+  const alpha = body?.data?.alpha;
+  if (base === null || base.status !== 200 || !alpha || !Array.isArray(alpha.deployments) || alpha.deployments.length === 0) return base;
+  const template = alpha.deployments[0];
+  const sum = (values: string[]): string => values.reduce(addDecimal, "0");
+  const currencies = [...new Set(spec.deployments.map((d) => d.currency))];
+  const mode: Record<string, string> = { paper: "paper", sandbox: "sandbox", live: "live" };
+  alpha.alpha_label = spec.label;
+  alpha.version = spec.version;
+  alpha.owner = spec.owner;
+  alpha.health = spec.health;
+  alpha.stage = WPC_STAGE_ORDER.find((stage) => spec.deployments.some((d) => d.stage === stage && d.active)) ?? spec.deployments[0]?.stage ?? "PAPER";
+  alpha.stages = WPC_STAGE_ORDER.filter((stage) => spec.deployments.some((d) => d.stage === stage)).reverse();
+  alpha.portfolios = [...new Map(spec.deployments.map((d) => [d.portfolioId, { portfolio_id: d.portfolioId, name: d.portfolioName, base_currency: d.currency }])).values()];
+  alpha.deployments = spec.deployments.map((d) => {
+    const net = addDecimal(d.realized, d.unrealized);
+    return { ...copy(template), deployment_id: d.id, strategy_id: id, stage: d.stage, venue: d.venue, account_id: d.accountId, portfolio_id: d.portfolioId, currency: d.currency,
+      allocation: d.allocation, balance_total: addDecimal(d.allocation, net), balance_free: addDecimal(d.allocation, net), balance_locked: "0", realized_pnl: d.realized,
+      unrealized_pnl: d.unrealized, net_pnl: net, exposure: d.exposure, state: d.active ? "ACTIVE" : "ENDED", active: d.active, health: d.health };
+  });
+  const per = (pick: (d: DeploymentSpec) => string, currency: string): string => sum(spec.deployments.filter((d) => d.currency === currency).map(pick));
+  alpha.allocations = currencies.map((currency) => ({ currency, value: per((d) => d.allocation, currency) }));
+  alpha.balances = currencies.map((currency) => ({ currency, total: per((d) => addDecimal(d.allocation, addDecimal(d.realized, d.unrealized)), currency), free: per((d) => addDecimal(d.allocation, addDecimal(d.realized, d.unrealized)), currency), locked: "0" }));
+  alpha.position_pnl = currencies.map((currency) => ({ currency, realized: per((d) => d.realized, currency), unrealized: per((d) => d.unrealized, currency), net: per((d) => addDecimal(d.realized, d.unrealized), currency) }));
+  alpha.exposure = currencies.map((currency) => ({ currency, value: per((d) => d.exposure, currency) }));
+  body.resource = { ...body.resource, label: spec.label };
+  const rows = spec.deployments.map((d) => ({ deployment_id: d.id, strategy_id: id, account_id: d.accountId, mode: mode[d.environment], venue: d.venue, currency: d.currency, portfolio_id: d.portfolioId,
+    state: d.active ? "ACTIVE" : "ENDED", active: d.active, updated_at: alpha.updated_at, updated_at_ms: alpha.updated_at_ms, profile_environment: d.environment }));
+  body.data.deployments = rows;
+  if (body.panels?.deployments) {
+    body.panels.deployments.data = { rows };
+    body.panels.deployments.coverage = { ...body.panels.deployments.coverage, source_total: String(rows.length), filtered_total: String(rows.length), returned_count: rows.length };
+  }
+  const first = spec.deployments.find((d) => d.stage === "LIVE" && d.active) ?? spec.deployments[0]!;
+  for (const key of ["positions", "reconciliation"]) {
+    const list = body.data[key];
+    if (Array.isArray(list)) for (const row of list) { row.deployment_id = first.id; row.account_id = first.accountId; }
+  }
   return { status: base.status, body };
 }
 // ===== WP-C end

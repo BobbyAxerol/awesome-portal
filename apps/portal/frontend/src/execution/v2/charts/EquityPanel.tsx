@@ -466,7 +466,7 @@ export function EquityPanel(props: EquityPanelProps) {
                   {ddModel.low ? (
                     <g className="exec-c2-dd-min">
                       <circle cx={x(ddModel.obs[ddModel.low.index].t)} cy={ddY(ddModel.obs[ddModel.low.index].n as number)} r={4} />
-                      <text x={Math.min(x(ddModel.obs[ddModel.low.index].t) + 9, W - frame.mr - 34)} y={ddY(ddModel.obs[ddModel.low.index].n as number) + 4}>{showDecimal(ddModel.low.s, { unit: "pct" })}</text>
+                      <text x={Math.min(x(ddModel.obs[ddModel.low.index].t) + 9, W - frame.mr - 34)} y={Math.max(ddTop + 12, Math.min(ddY(ddModel.obs[ddModel.low.index].n as number) + 4, ddTop + ddH - 6))}>{showDecimal(ddModel.low.s, { unit: "pct" })}</text>
                     </g>
                   ) : null}
                 </>

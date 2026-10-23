@@ -47,7 +47,7 @@ import { alphaBack } from "./backLinks";
 import { Dec, Na } from "./cells";
 import { ActivityTab } from "./ActivityTab";
 import { LifecyclePanel } from "./Lifecycle";
-import { lifeEvents, lifeEventsOfRead, regimeFit, regimeFitOfRead, stageSpans, stageSpansOfRead } from "./lifecycleModel";
+import { dayMonth, lifeEvents, lifeEventsOfRead, regimeFit, regimeFitOfRead, runIdentity, stageSpans, stageSpansOfRead } from "./lifecycleModel";
 import { OrdersTab } from "./OrdersTab";
 import { PERFORMANCE_VIEWS, PerformanceTab, type PerformanceView } from "./PerformanceTab";
 import type { ManagerSeriesQuery } from "../../readers/managerSeries";
@@ -245,6 +245,8 @@ function Alpha360({ api, alphaId, workspaceId }: AlphaScreenProps) {
     return { ...(read ?? lifeEvents(datasetValue)), spans: spans.length > 0 ? spans : stageSpans(datasetValue) };
   }, [datasetValue, lifecycle]);
   const regime = useMemo(() => regimeFitOfRead(lifecycle) ?? regimeFit(datasetValue), [datasetValue, lifecycle]);
+  // Run date and evidence revision: open dataset keys (FIXTURE_LAB); absent keys keep the typed line.
+  const run = useMemo(() => runIdentity(datasetValue), [datasetValue]);
   // The QBTS the dataset publishes (row key `score` plus the open `qbts_*` partition keys): one per alpha version, so the first row speaks for it.
   const qbtsRow = datasetValue?.items[0] ?? null;
   const qbts = useMemo(() => (qbtsRow === null ? null : qbtsOf(qbtsRow)), [qbtsRow]);
@@ -272,6 +274,8 @@ function Alpha360({ api, alphaId, workspaceId }: AlphaScreenProps) {
             <>
               <p className="exec-alp2-meta">
                 {view.owner.kind === "not-published" ? null : <span>Owner <b>{view.owner.kind === "value" ? view.owner.value : "Not available"}</b></span>}
+                {run.runMs !== null ? <span>Run <b>{dayMonth(run.runMs)}</b></span> : null}
+                {run.evidenceRevision !== null ? <span>Evidence revision <b>{run.evidenceRevision}</b></span> : null}
                 {view.portfolioNames.length > 0 ? <span>{view.portfolioNames.join(", ")}</span> : null}
               </p>
               {/* The gaps of the header (name, version, owner, run, evidence) are ONE line, not a "Not published" per fact. */}
@@ -280,8 +284,8 @@ function Alpha360({ api, alphaId, workspaceId }: AlphaScreenProps) {
                   ...(view.name === null ? [{ label: "Name", id: "FE-066" as const, why: view.nameReason }] : []),
                   ...(view.version === null ? [{ label: "Version", id: "FE-066" as const, why: view.versionReason }] : []),
                   ...(view.owner.kind === "not-published" ? [{ label: "Owner", id: view.owner.id, why: view.owner.reason }] : []),
-                  { label: "Run", id: "FE-029" as const },
-                  { label: "Evidence", id: "FE-029" as const },
+                  ...(run.runMs === null ? [{ label: "Run", id: "FE-029" as const }] : []),
+                  ...(run.evidenceRevision === null ? [{ label: "Evidence", id: "FE-029" as const }] : []),
                 ]}
               />
             </>

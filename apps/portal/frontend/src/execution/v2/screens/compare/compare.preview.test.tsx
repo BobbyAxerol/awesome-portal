@@ -76,9 +76,24 @@ describe("the Drawdown measure on the Portfolios tab", () => {
 describe("pairs that cannot share a basis", () => {
   it("Core spans Real-funded and Simulated books: it is listed apart with the reason, and the overlay says so instead of drawing", async () => {
     mount("?in=pf_TEST_ONLY_core,pf_TEST_ONLY_satellite");
-    expect(await screen.findByText("Pick two comparable portfolios", {}, { timeout: 4000 })).toBeTruthy();
+    expect(await screen.findByText("Fewer than two picks share one basis", {}, { timeout: 4000 })).toBeTruthy();
+    expect(screen.getAllByText(/Real-funded and Simulated/).length).toBeGreaterThan(0);
     expect(screen.queryAllByTestId("compare-line")).toHaveLength(0);
     expect(screen.getAllByTestId("not-comparable").length).toBeGreaterThan(0);
+  });
+});
+
+describe("the Alphas tab with a pick that runs nowhere in this book", () => {
+  it("names the idle pick once, instead of a column of bare Not available (QA1 CA-01); a pair that both run here has figures in both columns", async () => {
+    mount("?kind=alpha&in=alpha_scale_001,alpha_scale_002");
+    const note = await screen.findByTestId("alpha-idle", {}, { timeout: 4000 });
+    expect(note.textContent).toMatch(/no deployment in this book/);
+    cleanup();
+    endPreviewLane();
+    mount("?kind=alpha&in=alpha_scale_001,alpha_scale_006");
+    const table = within(await screen.findByRole("table", { name: "Alpha metrics" }, { timeout: 4000 }));
+    await waitFor(() => expect(table.getAllByText(/USDT/).length).toBeGreaterThan(3), { timeout: 4000 });
+    expect(screen.queryByTestId("alpha-idle")).toBeNull();
   });
 });
 

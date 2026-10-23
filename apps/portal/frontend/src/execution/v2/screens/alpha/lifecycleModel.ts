@@ -85,6 +85,14 @@ export function lifecycleFacts(dataset: ManagerDataset | null, current: SpineSta
   return { stages, blockedReason: text(m.get("life_blocked_reason")) };
 }
 
+/** The run the alpha version came from and the evidence revision, as the dataset publishes them (open keys `life_run_ms`, `life_evidence_revision`). */
+export function runIdentity(dataset: ManagerDataset | null): { runMs: number | null; evidenceRevision: number | null } {
+  const m = lifeMetrics(dataset);
+  if (m === null) return { runMs: null, evidenceRevision: null };
+  const run = m.get("life_run_ms");
+  return { runMs: run !== undefined && run.kind === "value" && /^\d+$/.test(run.exact) ? Number(run.exact) : null, evidenceRevision: whole(m.get("life_evidence_revision")) };
+}
+
 export interface StageSpan {
   readonly stage: "paper" | "sandbox" | "canary" | "live";
   readonly from: number;
