@@ -9,6 +9,8 @@ mod pm_command_port;
 // Independent business composition only; no command listener is commissioned.
 #[allow(dead_code)]
 mod command_gateway;
+#[allow(dead_code)]
+mod financial_projection;
 
 use manager_projection_command::ManagerProjectionClassIntervals;
 

@@ -32192,3 +32192,20 @@ Owned raw observations are not a public browser route. Missing actual writer
 coverage/retention and source-held authority remain distinct from this local
 store, not evidence of full orders/fills/positions/corrections coverage.
 <!-- BUSINESS_COMPOSE_NATIVE_END -->
+
+**Financial slice — IMPLEMENTED / TESTED_ISOLATED:**
+`edge-service::financial_projection::FinancialProjection` now owns the actual
+report HTTP/wire→exact financial validation→existing sealed atomic store seam;
+snapshot placement Auto/Shadow is explicit, never network-triggered default.
+Candidate/proof/manifest/page/chunk/group/qualified report/version/entity pins
+must match completely. Hidden-only scan can advance its authenticated checkpoint;
+an empty poll cannot. New versioned cost report must be independently qualified
+before selection. The existing scoped reader returns typed full originals only
+under explicit current whole-original authority, before/after I/O; nested account
+slicing is not inferred. Fees/funding/capital flows/PnL/nulls retain source meaning;
+Edge does not recompute authoritative NAV or turn capital transfer into profit.
+Ungoverned pools are refused.8pure+5real-PG/mTLS cases PASS. No source signer,
+financial publication definition, provider/route or worker is installed by this
+module. Owning runtime must supply those actual definitions and fresh independent
+proofs; this is not a complete financial ingest service merely from module presence.
+<!-- BUSINESS_COMPOSE_FINANCIAL_END -->

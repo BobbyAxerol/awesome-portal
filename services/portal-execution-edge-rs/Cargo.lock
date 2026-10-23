@@ -545,6 +545,7 @@ dependencies = [
  "manager-projection",
  "manager-v2-client",
  "manager-v2-contract",
+ "maximum-data-adapter",
  "paper-source-ingestor",
  "paper-source-runner",
  "paper-source-transport",
