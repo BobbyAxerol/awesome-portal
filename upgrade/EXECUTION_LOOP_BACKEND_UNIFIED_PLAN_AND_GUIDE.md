@@ -32642,3 +32642,142 @@ concrete adapter and negative-test slice; neither must wait for the other.
 No additional generic approval or new phase. Actual adapter implementation
 and connected tests remain NOT_IMPLEMENTED/NOT_RUN,08/09 full NOT_MET. Do not
 equate this delivered request, trait or documentation PASS with contract closure.
+
+<a id="epg10-08-independent-response-lifetime-20261023"></a>
+### Original08/09 — response admission, fair current-policy polling and ACK timeout
+
+**BOBBY_APPROVED / EXECUTING,23Oct10:39UTC.** Continue runnable Edge work while
+the two producer wires remain unpublished. Repin Core2a89e6d0 (no new section7
+ACK), PM4b60911e3c4de6e111aea01addc752872ccf4c54: admission loader publication,
+not report-source proof/ACK; report bootstrap/endpoint hashes unchanged.
+Guides: preceding two-contract scope, EDGE05/06/08/09 and BE05.1/05.3 current
+policy/cache/replay invariants. No new phase or accepting authority adapter.
+
+**Confirmed owned defects:** scoped page handler releases admission at Response
+construction while independently copied bytes remain with slow clients; store
+leases do not cover that response lifetime. Coordinator selects policy members
+sequentially newest-first under one deadline: a stalled session can repeatedly
+starve valid equivalent peers. Fix actual byte ownership/admission and bounded
+concurrent fresh selection, without granting rights or caching ALLOW. Independent
+missing specimen: ACK recorded remotely then response timeout must retain the
+same manifest/committed receipt and avoid new source polling before ACK recovery.
+
+**Task map:** root owns scoped_backend.rs, its unit/PG tests, journal/receipt,
+test driver and integration. Reused assembly_authority reviews read-only;
+assembly_worker may change only financial_projection/tests/pg.rs for the
+TEST_ONLY lost-ACK timeout case, no shared source/wire/manifest, builds or runtime.
+Root integrates and runs one capped cell. No other peer files or producers edited.
+
+**Test gates:** reproduce response leak on original implementation, then test
+unpolled body/transport Bytes clone/drop, shared request/entry/byte exhaustion,
+cached Current and History/Export admission, cancellation and valid-peer stream
+progress beside pending authority. Extend actual disposable-PG same-original ACK
+specimen. Run impacted Edge library/PG, fmt/strict Clippy and runner regressions
+if runner changes. TEST_ONLY evidence, not production capacity/connected PASS.
+
+**Resources/rollback:** one compiler2CPU/4GiB/one cargo job; disposable PG0.5CPU/
+768MiB/tmpfs512MiB/24connections, self-removing with exact unique scratch paths.
+Read host lock; correctness per34b, no measurement claim/lock. No operational
+DB/schema/grant/session/secret/TLS/listener/command/Live or Core/PM code mutation;
+no accepted READ/STREAM-revoke/restart specimen rerun. Source revert only for
+this slice; clean exact own scratch/new unreferenced test image at terminal.
+Preserve foreign cache, active/rollback images, peer WIP and all custody.
+Concrete adapters remain NOT_IMPLEMENTED and full08/09 NOT_MET until actual wires.
+
+**Owned slice10:51UTC:** response-byte owner now retains the request permit and
+pre-allocation page-bound entry/byte lease through the final transport clone;
+current-policy representative selection polls bounded original session futures
+concurrently, retaining per-frame checks. Read-only independent review found no
+blocking issue. Tracking reconciliation PASS. Actual old-code PG regression
+reproduced the response bug: one unpolled body left8permits, expected7, FAIL1/1
+(intentional red, not qualification). Disposable snapshot bootstrap initially
+missed unchanged contract/release include files; reconciled against existing
+runner RESOURCE_COMPILE_INPUTS, no repository fixture or contract edits. Final
+source qualification and exact-resource teardown are still RUNNING below.
+
+**10:53UTC test disposition:** old sequential coordinator also reproduces the
+pending-peer notification timeout. First fixed-source Edge run65PASS/1FAIL:
+the pending fixture yielded before marking its stall and a valid peer could
+legitimately win selection first, so the test waited for a non-required poll.
+Moved that TEST_ONLY yield after the explicit pending branch; no deadline,
+authority or production condition weakened. The corrected specimen again
+FAIL1/1 on the exact original implementation; complete final retake running.
+Producer recheck: Core2a89e6d0, scope/transport source hashes unchanged;
+PM82115c7785697f4d5708332437c89a85a37c906f, owner response§7.12 now covers
+admission/source-config writer, not financial proof/APPLIED wire. Original report
+bootstrap/endpoint hashes unchanged, neither requested contract ACK published.
+
+**Fixture differential correction:** next retake65PASS/1FAIL reached the
+notification check, revealing that the previously frozen source/read clock kept
+the hub NotDue even for fair selection. Added a TEST_ONLY atomic clock initialized
+NOW for all cases, advancing100ms only after this specimen's durable append
+(beyond20ms cadence+bounded jitter). Earlier frozen-clock stall reds are
+superseded/not credited as differential proof. The clock-controlled final
+specimen fails on exact original coordinator at its notification deadline;
+fixed complete-profile retake is now running. No production timeout widened.
+
+**10:59UTC apparatus capacity correction:** corrected-clock Edge66library+
+96binary PASS, including all5new regressions. Shared-library run21PASS/1FAIL
+because disposable PG alone exhausted its512MiB tmpfs (SQLSTATE53100) after
+the repeated fixture/old-red attempts; host root still has183GB free. This is
+not a production DB fault or PASS. Stop/recreate only the exact disposable
+cell with measured finite test storage/memory headroom, then retake the complete
+profile; no shared cleanup, operational DB reset or production budget inferred.
+
+**Terminal closeout23Oct11:08UTC — OWNED RESPONSE/FAIRNESS SLICE ISOLATED
+QUALIFIED / NOT_INSTALLED; original08/09 full NOT_MET.** Complete clean-cell
+retake295distinct Rust PASS/0FAIL/0ignored/0filtered:66Edge library,96binary,
+22projection library,36query library,30realtime library,45actual scoped-read
+PG. Five new tests included, not added twice. Workspace format and strict Clippy
+for the three impacted packages/all targets/Edge PG feature PASS, no warning
+suppression. Exact commands, source hashes, final log hash, meaningful original
+red specimens and corrected predecessors in
+[bounded qualification](evidence/execution-edge-v1_2/EPG10-08/response-lifetime-policy-fairness-qualification.json).
+Tracking and source/hash/diff verification PASS. Unchanged runner was not rerun;
+prior127 is not added to this total. Full normal monorepo landing/release gate
+NOT_RUN; focused source intermediate under existing campaign§10.10c. No hook
+configuration changed/bypassed;0hosted CI minutes, no push/merge/deploy.
+
+**Behavior delivered:** slow/unpolled Current cache, History and Export bodies
+retain their request permit and conservative page-bound byte/entry charge until
+the last transport Bytes clone drops. Exhaustion/revoke/cancel releases exactly;
+no SQL/field/profile contract widened. Shared notification coordinator selects a
+fresh valid original session concurrently under its unchanged overall deadline;
+each frame still uses its own original custody/current check, not a cached ALLOW.
+Accepted ACK timeout specimen uses actual isolated receiver COMMIT, orderly stop,
+original-manifest/checkpoint resume and identical full receipt, with no new source
+request before successful ACK. This fixture proves no PM runtime proof/ACK wire.
+
+**Cleanup done:** exact disposable PG removed (`--rm`/tmpfs), new unreferenced
+compiler image removed, exact `/tmp/epg10-08-response-lifetime-un0ovKBe` absent:
+1528092568logical source/cache/target/log bytes removed. Final apparatus PG0.5CPU/
+1.5GiB RAM/1GiB tmpfs/24connections/128MiB WAL target after53100; compiler2CPU/
+4GiB/1job unchanged. Root free182859972608→186710720512B; initial186404233216B,
+shared-host changes are not exclusively attributed to cleanup. Docker117→116
+images,90→89containers;607foreign BuildKit records70.73GB retained,0own builds/
+BuildKit, no prune/volume/network/shared state removal. Borrowed cf78e766 PG and
+all active/explicit rollback images/configs retained.0SGP resources created.
+
+**Source/runtime reconciliation:** canonical Portal
+`/home/bobby/.worktrees/portal-execution-manager-v2`,
+`feat/manager-v2-paper-read@54c6f5f3`; owned feature path/branch unchanged, source
+basebea86a1c; TS canonical668e1032. All7feature checkouts retained with exact refs
+in qualification, no worktree/branch cleanup authority inferred. HK10service
+image/config/state identities unchanged: Edge/worker d6aa7a51, SourceProxy
+aa14e21c, native28ea3958, release `/srv/primus/portal/releases/a9b10385ab6c16350555f70f4379dfa23ca6b20c/`,
+native configv1.0.0-9e7d3455. Rollback refs6180b9bf/cd79e9c6/98a191c7 retained.
+Existing Paper worker continued10729→10771autonomous restarts; other nine0,
+no whole-runtime health PASS or restart by this slice. SGP stable/dev/provider
+28445 neither changed nor requalified. Peer C5hunk, two tracked owner returns
+and three untracked source/guide hashes remain outside the owned commit.
+
+**Remaining exact dependencies / next action:** final read-only Core return/hash
+and PM82115c77/exporter hashes still unchanged, no new Core mailbox file after
+10:53UTC. Core/Claude+Core/Codex publish/accept existing request§7.2 transferable
+current-policy wire; TS/PM publish/ACK§7.3 financial proof/current revalidation+
+receiver-APPLIED custody/status. Each accepted source contract immediately opens
+its own concrete adapter/negatives, independently of the other and of image/P22/
+Manager/calibration. No generic approval/new phase needed. No runnable owned fix
+from this slice remains; concrete adapters are still NOT_IMPLEMENTED, four new
+binary routes stay503, connected08/09 NOT_MET. Do not advance connected09 or
+re-run retired accepted READ/STREAM-revoke/restart specimens on these unit results.

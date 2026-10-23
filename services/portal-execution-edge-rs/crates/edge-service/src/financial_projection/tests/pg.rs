@@ -295,7 +295,9 @@ impl ReadAuthorizer for RevocablePolicy {
 struct WorkerAuthority {
     denied: AtomicBool,
     lose_ack_once: AtomicBool,
+    pending_after_accepted_ack_once: AtomicBool,
     acks: Mutex<Vec<String>>,
+    ack_bindings: Mutex<Vec<Value>>,
 }
 
 impl WorkerAuthority {
@@ -303,7 +305,9 @@ impl WorkerAuthority {
         Self {
             denied: AtomicBool::new(false),
             lose_ack_once: AtomicBool::new(lose_ack_once),
+            pending_after_accepted_ack_once: AtomicBool::new(false),
             acks: Mutex::new(vec![]),
+            ack_bindings: Mutex::new(vec![]),
         }
     }
 
@@ -384,12 +388,23 @@ impl crate::scoped_worker::FinancialSourceAuthority for WorkerAuthority {
 
     fn acknowledge<'a>(
         &'a self,
-        _: &'a Manifest,
+        manifest: &'a Manifest,
         receipt: &'a BootstrapReceipt,
     ) -> crate::scoped_worker::AuthorityFuture<'a, ()> {
         Box::pin(async move {
             self.current()?;
             self.acks.lock().unwrap().push(receipt.cursor().to_owned());
+            self.ack_bindings
+                .lock()
+                .unwrap()
+                .push(json!({"manifest": manifest, "receipt": receipt}));
+            if self
+                .pending_after_accepted_ack_once
+                .swap(false, Ordering::SeqCst)
+            {
+                // The source accepted the exact receipt, but its response never arrived.
+                return std::future::pending().await;
+            }
             if self.lose_ack_once.swap(false, Ordering::SeqCst) {
                 Err(crate::scoped_worker::SourceAuthorityError::Transient)
             } else {
@@ -477,6 +492,88 @@ async fn source_worker_lost_ack_restart_reuses_actual_checkpoint_without_new_sou
         source.state.requests.lock().unwrap().last().unwrap().0,
         DELTA_PATH
     );
+    source.finish().await;
+}
+
+#[tokio::test]
+async fn source_worker_accepted_ack_timeout_stop_resume_reuses_exact_manifest_and_receipt() {
+    use crate::scoped_worker::{
+        FinancialSourceWorker, WorkerError, WorkerExit, WorkerPlacement, WorkerStart, WorkerStep,
+    };
+    let store = test_store().await;
+    let (manifest, pages) = snapshot(payload());
+    let source = Source::start(
+        json!({"manifest":manifest,"pages":pages}),
+        json!({"group":null,"chunks":[]}),
+    );
+    let bindings = bindings();
+    let clock = Clock(AtomicI64::new(NOW));
+    let authority = WorkerAuthority::new(false);
+    authority
+        .pending_after_accepted_ack_once
+        .store(true, Ordering::SeqCst);
+    let mut limits = worker_limits();
+    limits.authority_timeout = Duration::from_millis(20);
+    let mut worker = FinancialSourceWorker::new(
+        worker_projection(&source, &store, &manifest, &bindings, &clock),
+        &authority,
+        WorkerStart::Bootstrap {
+            placement: WorkerPlacement::Auto,
+        },
+        limits,
+    )
+    .unwrap();
+    for _ in 0..3 {
+        assert_eq!(worker.step().await.unwrap(), WorkerStep::Progress);
+    }
+    assert_eq!(worker.step().await.unwrap(), WorkerStep::Committed);
+    assert!(authority.ack_bindings.lock().unwrap().is_empty());
+    let error = worker.step().await.unwrap_err();
+    assert!(matches!(&error, WorkerError::AuthorityTimeout));
+    assert!(error.retryable());
+    let expected_ack = json!({
+        "manifest": manifest,
+        "receipt": {"generation": manifest.generation, "cursor": mark('A')}
+    });
+    assert_eq!(
+        *authority.ack_bindings.lock().unwrap(),
+        vec![expected_ack.clone()]
+    );
+    let original_requests = source.state.requests.lock().unwrap().clone();
+    assert_eq!(original_requests.len(), 1);
+    assert_eq!(original_requests[0].0, SNAPSHOT_PATH);
+    let (_stop, stopped) = tokio::sync::watch::channel(true);
+    assert_eq!(worker.run(stopped).await, WorkerExit::Stopped);
+    drop(worker);
+    assert_eq!(authority.ack_bindings.lock().unwrap().len(), 1);
+    let mut resumed = FinancialSourceWorker::new(
+        worker_projection(&source, &store, &manifest, &bindings, &clock),
+        &authority,
+        WorkerStart::Resume {
+            manifest: manifest.clone(),
+            placement: WorkerPlacement::Auto,
+        },
+        limits,
+    )
+    .unwrap();
+    assert_eq!(resumed.step().await.unwrap(), WorkerStep::Progress);
+    assert_eq!(resumed.step().await.unwrap(), WorkerStep::Committed);
+    assert_eq!(*source.state.requests.lock().unwrap(), original_requests);
+    assert_eq!(authority.ack_bindings.lock().unwrap().len(), 1);
+    assert_eq!(resumed.step().await.unwrap(), WorkerStep::Acknowledged);
+    assert_eq!(
+        *authority.ack_bindings.lock().unwrap(),
+        vec![expected_ack.clone(), expected_ack]
+    );
+    assert_eq!(*source.state.requests.lock().unwrap(), original_requests);
+    assert_eq!(resumed.step().await.unwrap(), WorkerStep::Idle);
+    assert_eq!(*authority.acks.lock().unwrap(), vec![mark('A'), mark('A')]);
+    assert_eq!(authority.ack_bindings.lock().unwrap().len(), 2);
+    {
+        let requests = source.state.requests.lock().unwrap();
+        assert_eq!(requests.len(), 2);
+        assert_eq!(requests[1].0, DELTA_PATH);
+    }
     source.finish().await;
 }
 

@@ -2,7 +2,7 @@
 //! authority, native source, production DB or connected acceptance is claimed.
 
 use std::collections::BTreeSet;
-use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::atomic::{AtomicI64, AtomicUsize, Ordering};
 
 use authoritative_event_core::{
     bootstrap::{
@@ -30,10 +30,10 @@ const NOW: i64 = 1_792_735_200_000;
 const TOKEN: &str = "TEST_ONLY-current-authentication";
 const SECOND_TOKEN: &str = "TEST_ONLY-second-session";
 
-struct Clock;
+struct Clock(AtomicI64);
 impl ReadClock for Clock {
     fn now_ms(&self) -> i64 {
-        NOW
+        self.0.load(Ordering::SeqCst)
     }
 }
 
@@ -82,6 +82,9 @@ struct Policy {
     checks: AtomicUsize,
     deny_on_check: AtomicUsize,
     revoked_credential: Mutex<Option<String>>,
+    stalled_credential: Mutex<Option<String>>,
+    stalled_checks: AtomicUsize,
+    stall_on_check: AtomicUsize,
 }
 impl Policy {
     fn allowed(&self, operation: Operation) -> bool {
@@ -114,11 +117,16 @@ impl CurrentPolicy for Policy {
     fn recheck<'a>(&'a self, resolved: &'a ResolvedPolicy, _now: i64) -> PolicyFuture<'a, ()> {
         Box::pin(async move {
             let checked = self.checks.fetch_add(1, Ordering::SeqCst) + 1;
-            tokio::task::yield_now().await;
             let deny = self.deny_on_check.load(Ordering::SeqCst);
             let original = resolved
                 .custody::<String>()
                 .ok_or(ScopedError::AccessDenied)?;
+            let stalled = self.stalled_credential.lock().unwrap().as_ref() == Some(original);
+            if stalled || self.stall_on_check.load(Ordering::SeqCst) == checked {
+                self.stalled_checks.fetch_add(1, Ordering::SeqCst);
+                return std::future::pending().await;
+            }
+            tokio::task::yield_now().await;
             if !self.allowed(resolved.operation())
                 || (deny > 0 && checked >= deny)
                 || self.revoked_credential.lock().unwrap().as_ref() == Some(original)
@@ -135,6 +143,7 @@ struct Fixture {
     backend: ScopedBackend,
     policy: Arc<Policy>,
     handle: BootstrapHandle,
+    clock: Arc<Clock>,
 }
 
 fn resources() -> Arc<ResourceEnvelope> {
@@ -314,6 +323,9 @@ impl Fixture {
             checks: AtomicUsize::new(0),
             deny_on_check: AtomicUsize::new(0),
             revoked_credential: Mutex::new(None),
+            stalled_credential: Mutex::new(None),
+            stalled_checks: AtomicUsize::new(0),
+            stall_on_check: AtomicUsize::new(0),
         });
         let codec = CursorCodec::new(
             "TEST_ONLY",
@@ -321,19 +333,21 @@ impl Fixture {
             Duration::from_secs(300),
         )
         .unwrap();
+        let clock = Arc::new(Clock(AtomicI64::new(NOW)));
         let backend = ScopedBackend::assemble(
             store,
             resources,
             policy.clone(),
             codec,
             limits(),
-            Arc::new(Clock),
+            clock.clone(),
         )
         .unwrap();
         Self {
             backend,
             policy,
             handle,
+            clock,
         }
     }
     async fn request(&self, suffix: &str, parameters: &str) -> Response {
@@ -488,6 +502,171 @@ async fn cached_route_rechecks_actual_async_authority_after_cached_read() {
 }
 
 #[tokio::test]
+async fn unpolled_pages_and_transport_clones_hold_admission_until_last_byte_owner_drops() {
+    let fixture = Fixture::new().await;
+    fixture.append().await;
+    // Warm only the authorized cache so its retained charge is a stable baseline.
+    drop(fixture.request("query", "?limit=2&max_bytes=1048576").await);
+    let baseline = fixture.backend.0.resources.stats().unwrap();
+    for (suffix, parameters) in [
+        ("query", "?limit=2&max_bytes=1048576".into()),
+        (
+            "history",
+            format!(
+                "?limit=2&max_bytes=1048576&from_ms={}&to_ms={}",
+                NOW - 1,
+                NOW + 1
+            ),
+        ),
+        ("export", "?limit=2&max_bytes=1048576".into()),
+    ] {
+        let mut responses = Vec::new();
+        for admitted in 1..=fixture.backend.0.limits.maximum_requests {
+            let response = fixture.request(suffix, &parameters).await;
+            assert_eq!(response.status(), StatusCode::OK);
+            responses.push(response);
+            assert_eq!(
+                fixture.backend.0.requests.available_permits(),
+                fixture.backend.0.limits.maximum_requests - admitted,
+                "an unpolled response must still own its request admission"
+            );
+        }
+        assert_eq!(
+            fixture.request(suffix, &parameters).await.status(),
+            StatusCode::TOO_MANY_REQUESTS
+        );
+        let held = fixture.backend.0.resources.stats().unwrap();
+        assert_eq!(held.entries, baseline.entries + responses.len());
+        assert_eq!(held.bytes, baseline.bytes + responses.len() * 1_048_576);
+        let bytes = to_bytes(responses.pop().unwrap().into_body(), 1_048_576)
+            .await
+            .unwrap();
+        let transport_copy = bytes.clone();
+        drop(bytes);
+        assert_eq!(fixture.backend.0.requests.available_permits(), 0);
+        drop(transport_copy);
+        assert_eq!(fixture.backend.0.requests.available_permits(), 1);
+        drop(fixture.request(suffix, &parameters).await);
+        drop(responses);
+        assert_eq!(
+            fixture.backend.0.requests.available_permits(),
+            fixture.backend.0.limits.maximum_requests
+        );
+        let released = fixture.backend.0.resources.stats().unwrap();
+        assert_eq!(
+            (released.entries, released.bytes),
+            (baseline.entries, baseline.bytes)
+        );
+    }
+}
+
+#[tokio::test]
+async fn page_envelope_exhaustion_and_final_revoke_release_request_admission() {
+    let fixture = Fixture::new().await;
+    drop(fixture.request("query", "?limit=2&max_bytes=1048576").await);
+    let resources = &fixture.backend.0.resources;
+    let baseline = resources.stats().unwrap();
+    let bounds = resources.limits();
+    for (entries, bytes) in [
+        (
+            bounds.max_entries - bounds.foreground_reserved_entries - baseline.entries,
+            1,
+        ),
+        (
+            1,
+            bounds.max_bytes - bounds.foreground_reserved_bytes - baseline.bytes - 1_048_576 + 1,
+        ),
+    ] {
+        let held = resources.try_register(entries, bytes).unwrap();
+        let before = resources.stats().unwrap();
+        assert_eq!(
+            fixture
+                .request("query", "?limit=2&max_bytes=1048576")
+                .await
+                .status(),
+            StatusCode::TOO_MANY_REQUESTS
+        );
+        let after = resources.stats().unwrap();
+        assert_eq!((after.entries, after.bytes), (before.entries, before.bytes));
+        assert_eq!(
+            fixture.backend.0.requests.available_permits(),
+            fixture.backend.0.limits.maximum_requests
+        );
+        drop(held);
+    }
+    // Deny precisely the post-cache recheck, after a response charge exists.
+    fixture.policy.deny_on_check.store(
+        fixture.policy.checks.load(Ordering::SeqCst) + 3,
+        Ordering::SeqCst,
+    );
+    assert_eq!(
+        fixture
+            .request("query", "?limit=2&max_bytes=1048576")
+            .await
+            .status(),
+        StatusCode::FORBIDDEN
+    );
+    let after = resources.stats().unwrap();
+    assert_eq!(
+        (after.entries, after.bytes),
+        (baseline.entries, baseline.bytes)
+    );
+    assert_eq!(
+        fixture.backend.0.requests.available_permits(),
+        fixture.backend.0.limits.maximum_requests
+    );
+}
+
+#[tokio::test]
+async fn cancelled_final_policy_recheck_releases_response_reservation() {
+    let fixture = Fixture::new().await;
+    drop(fixture.request("query", "?limit=2&max_bytes=1048576").await);
+    let baseline = fixture.backend.0.resources.stats().unwrap();
+    fixture.policy.stall_on_check.store(
+        fixture.policy.checks.load(Ordering::SeqCst) + 3,
+        Ordering::SeqCst,
+    );
+    let router = fixture.backend.router();
+    let task = tokio::spawn(async move {
+        router
+            .oneshot(
+                Request::builder()
+                    .uri(format!(
+                        "{ROUTE_PREFIX}/orders/query?limit=2&max_bytes=1048576"
+                    ))
+                    .header(header::AUTHORIZATION, format!("Bearer {TOKEN}"))
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap()
+    });
+    tokio::time::timeout(Duration::from_secs(2), async {
+        while fixture.policy.stalled_checks.load(Ordering::SeqCst) == 0 {
+            tokio::time::sleep(Duration::from_millis(5)).await;
+        }
+    })
+    .await
+    .unwrap();
+    let held = fixture.backend.0.resources.stats().unwrap();
+    assert_eq!(
+        (held.entries, held.bytes),
+        (baseline.entries + 1, baseline.bytes + 1_048_576)
+    );
+    task.abort();
+    assert!(task.await.unwrap_err().is_cancelled());
+    let released = fixture.backend.0.resources.stats().unwrap();
+    assert_eq!(
+        (released.entries, released.bytes),
+        (baseline.entries, baseline.bytes)
+    );
+    assert_eq!(
+        fixture.backend.0.requests.available_permits(),
+        fixture.backend.0.limits.maximum_requests
+    );
+}
+
+#[tokio::test]
 async fn direct_requests_cannot_inject_authority_or_turn_current_into_stream() {
     let fixture = Fixture::new().await;
     *fixture.policy.operations.lock().unwrap() = vec![Operation::Current];
@@ -611,6 +790,66 @@ async fn same_scope_sessions_share_notifications_but_not_revocation_custody() {
     assert!(frame.is_some_and(|frame| frame.is_ok()));
     drop(revoked);
     drop(surviving);
+}
+
+#[tokio::test]
+async fn stalled_newest_session_does_not_starve_valid_peer_notifications() {
+    let fixture = Fixture::new().await;
+    let first = fixture.request("stream", "").await;
+    let second = fixture
+        .backend
+        .router()
+        .oneshot(
+            Request::builder()
+                .uri(format!("{ROUTE_PREFIX}/orders/stream"))
+                .header(header::AUTHORIZATION, format!("Bearer {SECOND_TOKEN}"))
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(first.status(), StatusCode::OK);
+    assert_eq!(second.status(), StatusCode::OK);
+    let mut surviving = first.into_body().into_data_stream();
+    // Complete reconnect catch-up BEFORE the new commit. Only the coordinator
+    // can now deliver its notification; catch-up must not mask a stalled poller.
+    tokio::time::timeout(Duration::from_secs(2), async {
+        loop {
+            let frame = surviving.next().await.unwrap().unwrap();
+            if String::from_utf8_lossy(&frame).contains("notification-only") {
+                break;
+            }
+        }
+    })
+    .await
+    .unwrap();
+    *fixture.policy.stalled_credential.lock().unwrap() = Some(SECOND_TOKEN.into());
+    tokio::time::timeout(Duration::from_secs(2), async {
+        while fixture.policy.stalled_checks.load(Ordering::SeqCst) == 0 {
+            tokio::time::sleep(Duration::from_millis(5)).await;
+        }
+    })
+    .await
+    .unwrap();
+    fixture.append().await;
+    // The source/read clock was deliberately frozen for all other specimens.
+    // Advance past the poll cadence (including its bounded jitter), otherwise
+    // NotDue would mask BOTH the old and fixed representative algorithms.
+    fixture.clock.0.store(NOW + 100, Ordering::SeqCst);
+    tokio::time::timeout(Duration::from_millis(600), async {
+        loop {
+            let frame = surviving.next().await.unwrap().unwrap();
+            if String::from_utf8_lossy(&frame).contains("projection-changed") {
+                break;
+            }
+        }
+    })
+    .await
+    .expect("valid original session must progress beside a pending peer");
+    // The pending peer is not treated as ALLOW, merged into another session,
+    // nor removed from custody. Dropping both bodies releases client admission.
+    drop(surviving);
+    drop(second);
 }
 
 #[tokio::test]

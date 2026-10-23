@@ -15,14 +15,15 @@ use std::{
 };
 
 use axum::{
+    body::Bytes,
     extract::{Path, Query, State},
     http::{header, HeaderMap, StatusCode},
     response::{sse::Event, IntoResponse, Response, Sse},
     routing::get,
     Json, Router,
 };
-use futures_util::stream;
-use projection_core::resources::ResourceEnvelope;
+use futures_util::{stream, StreamExt as _};
+use projection_core::resources::{ResourceEnvelope, ResourceLease};
 use projection_store_pg::{
     scoped_read::{
         PgScopedReplaySource, ReadClock, ReadError, ReadLimits, ScopedReadService, SystemReadClock,
@@ -126,6 +127,20 @@ struct Cohort {
 /// reference keeps a source/pool alive forever. No migrations run here.
 #[derive(Clone)]
 pub struct ScopedBackend(Arc<Inner>);
+
+/// A response and every zero-copy transport clone retain the same admission.
+/// A stream-local guard would release too early when yielding its final chunk.
+struct ResponseBytes {
+    bytes: Vec<u8>,
+    _permit: OwnedSemaphorePermit,
+    _charge: ResourceLease,
+}
+
+impl AsRef<[u8]> for ResponseBytes {
+    fn as_ref(&self) -> &[u8] {
+        &self.bytes
+    }
+}
 
 /// Private mTLS entrypoint for a composition with an actual authority adapter.
 /// `tls` must use the caller's reviewed client-certificate verifier. This starts
@@ -359,13 +374,21 @@ impl ScopedBackend {
         op: Operation,
         params: PageRequest,
     ) -> Result<Response, ApiError> {
-        let _permit = Arc::clone(&self.0.requests)
+        let permit = Arc::clone(&self.0.requests)
             .try_acquire_owned()
             .map_err(|_| ScopedError::Busy)?;
         let resolved = self.resolve(headers, resource, op).await?;
         let read = resolved.authorize(self.0.clock.now_ms())?;
         let query = params.query(op);
         query.validate(resolved.scope())?;
+        // Reserve the validated upper bound BEFORE copying cached bytes or
+        // serializing a new envelope. This is conservative logical accounting,
+        // not an RSS claim. Cache storage has its own independent reservation.
+        let charge = self
+            .0
+            .resources
+            .try_register(1, params.max_bytes)
+            .map_err(|_| ScopedError::Busy)?;
         self.recheck(&resolved).await?;
         let service = self.service(&resolved);
         let bytes = if op == Operation::Current && params.cursor.is_none() {
@@ -394,7 +417,11 @@ impl ScopedBackend {
                 (header::CONTENT_TYPE, "application/json"),
                 (header::CACHE_CONTROL, "no-store"),
             ],
-            bytes,
+            Bytes::from_owner(ResponseBytes {
+                bytes,
+                _permit: permit,
+                _charge: charge,
+            }),
         )
             .into_response())
     }
@@ -830,12 +857,21 @@ impl ScopedBackend {
                     .unwrap_or_default();
                 // A cohort is NOT owned by its first subscriber's session.
                 // Choose a currently valid original context from live members.
-                // The entire selection is bounded, not N sequential timeouts.
+                // Poll all bounded live contexts fairly: a pending newest
+                // session must not consume every selection deadline. ALLOW is
+                // never cached or transferred to another session's frames.
                 let representative = timeout(backend.0.limits.policy_timeout, async {
-                    let mut remaining = members;
-                    while let Some(member) = remaining.pop() {
-                        if backend.recheck(&member).await.is_ok() {
-                            return Some(member);
+                    let mut checks = members
+                        .into_iter()
+                        .rev()
+                        .map(|member| {
+                            let backend = &backend;
+                            async move { backend.recheck(&member).await.ok().map(|()| member) }
+                        })
+                        .collect::<stream::FuturesUnordered<_>>();
+                    while let Some(result) = checks.next().await {
+                        if result.is_some() {
+                            return result;
                         }
                     }
                     None
