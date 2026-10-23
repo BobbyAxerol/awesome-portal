@@ -3,8 +3,8 @@
  *
  * Comparable pairs draw the overlay from the published series port (aligned, per partition, never rebased or summed across currencies),
  * the chart ends on the figure the metrics table prints, the best of a row is marked by an exact decimal comparison, and a pair that
- * cannot share a basis gets the typed state. The Alphas tab reads the Alpha Fleet and the ALPHA dataset; its overlay is a typed absence
- * (the series port has no alpha subject). Nothing here proves what the real Edge returns.
+ * cannot share a basis gets the typed state. The Alphas tab reads the Alpha Fleet and the ALPHA dataset, and draws its overlay from the
+ * same series port asked for ALPHA subjects (WP-K, FIXTURE_LAB). Nothing here proves what the real Edge returns.
  */
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
@@ -63,6 +63,16 @@ describe("comparable portfolios (Satellite and a generated USDT book, Real-funde
   });
 });
 
+describe("the Drawdown measure on the Portfolios tab", () => {
+  it("is offered beside NAV, Net PnL and Return and draws the published DRAWDOWN series of the two portfolios", async () => {
+    mount("?in=pf_TEST_ONLY_satellite,pf_scale_006");
+    await waitFor(() => expect(screen.getAllByTestId("end-tag")).toHaveLength(2), { timeout: 4000 });
+    fireEvent.click(screen.getByRole("button", { name: "Drawdown" }));
+    await waitFor(() => expect(screen.getByTestId("basis-caption").textContent).toMatch(/Drawdown, a ratio stated as a fraction/), { timeout: 4000 });
+    await waitFor(() => expect(screen.getAllByTestId("compare-line")).toHaveLength(2), { timeout: 4000 });
+  });
+});
+
 describe("pairs that cannot share a basis", () => {
   it("Core spans Real-funded and Simulated books: it is listed apart with the reason, and the overlay says so instead of drawing", async () => {
     mount("?in=pf_TEST_ONLY_core,pf_TEST_ONLY_satellite");
@@ -73,16 +83,32 @@ describe("pairs that cannot share a basis", () => {
 });
 
 describe("the Alphas tab", () => {
-  it("lists the Fleet's alphas, reads each pick's dataset and keeps the overlay a typed absence", async () => {
+  it("lists the Fleet's alphas, reads each pick's dataset and draws the overlay from the ALPHA series read", async () => {
     mount("?kind=alpha");
     const group = await screen.findByRole("group", { name: "Alphas to compare" }, { timeout: 4000 });
     const chips = within(group).getAllByRole("button");
     expect(chips.length).toBeGreaterThan(2);
     fireEvent.click(chips[0]!);
     fireEvent.click(chips[1]!);
-    expect(await screen.findByText("Not published (FE-033)")).toBeTruthy();
+    await waitFor(() => expect(screen.getAllByTestId("compare-line")).toHaveLength(2), { timeout: 4000 });
+    expect(screen.queryByText("Not published (FE-033)")).toBeNull();
     const table = within(await screen.findByRole("table", { name: "Alpha metrics" }));
     await waitFor(() => expect(table.getAllByText(/USDT/).length).toBeGreaterThan(0), { timeout: 4000 });
     for (const label of ["Net PnL", "Return", "Max drawdown", "Score", "Allocation"]) expect(table.getByText(label, { selector: "td[data-l='Metric'] *, td[data-l='Metric']" })).toBeTruthy();
+  });
+
+  it("the Drawdown measure is the published DRAWDOWN series of the picked alphas: a ratio at or below zero, drawn as percent, never worked out from NAV here", async () => {
+    mount("?kind=alpha");
+    const group = await screen.findByRole("group", { name: "Alphas to compare" }, { timeout: 4000 });
+    const chips = within(group).getAllByRole("button");
+    fireEvent.click(chips[0]!);
+    fireEvent.click(chips[1]!);
+    await waitFor(() => expect(screen.getAllByTestId("compare-line")).toHaveLength(2), { timeout: 4000 });
+    const measure = within(screen.getByRole("group", { name: "Series measure" }));
+    expect(measure.getAllByRole("button").map((b) => b.textContent)).toEqual(["NAV", "Net PnL", "Return", "Drawdown"]);
+    fireEvent.click(measure.getByRole("button", { name: "Drawdown" }));
+    await waitFor(() => expect(screen.getByTestId("basis-caption").textContent).toMatch(/Drawdown, a ratio stated as a fraction/), { timeout: 4000 });
+    await waitFor(() => expect(screen.getAllByTestId("end-tag")).toHaveLength(2), { timeout: 4000 });
+    for (const tag of screen.getAllByTestId("end-tag")) expect(tag.textContent ?? "").toMatch(/(?:^|[^\d])(?:0|-[\d,]+\.\d+)%|%/);
   });
 });

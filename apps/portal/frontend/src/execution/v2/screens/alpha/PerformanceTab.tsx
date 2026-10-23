@@ -5,9 +5,11 @@
  * Three facets, as in the hi-fi, and they never share an axis:
  *  - Actual: the book's own equity series, exact decimals, per currency
  *    partition. Paper and Sandbox books are drawn hatched and worded as
- *    simulated. Windowed return and drawdown are not published (FE-006,
- *    FE-025), so the panel prints the words, not a figure derived from the
- *    line.
+ *    simulated. Windowed return is not published (FE-006), so the panel
+ *    prints the words, not a figure derived from the line. The drawdown pane
+ *    under the chart is the published DRAWDOWN series of the alpha (WP-K,
+ *    FE-025), a ratio at or below zero in the source's own scale; while the
+ *    source does not publish it the pane keeps the typed absence.
  *  - Forward simulated: each stage's own daily closes (stage drift), one row
  *    each, "never stitched into actual". Returns per stage are FE-006.
  *  - Research OOS: the bound run is not published (FE-029).
@@ -25,6 +27,9 @@ import { Flag } from "../../Flag";
 import { NaWhy, NotAvailableLine, SectionPanel } from "../../blocks";
 import { ChartTools, DivBars, EquityPanel, Spark, type DivBarRow } from "../../charts";
 import { ENV_LABEL, type ExecEnv } from "../../urlState";
+import { chartPointsOf, seriesCaptionShort, unavailableChart } from "../series/seriesModel";
+import type { SeriesReadState } from "../series/useManagerSeries";
+import type { DrawdownInput } from "../../charts/EquityPanel";
 import { Na } from "./cells";
 import { DaysValue, RowFigure, WindowedFigures, type DatasetReadState } from "./DatasetFigures";
 
@@ -60,13 +65,36 @@ export interface PerformanceTabProps {
   onView: (view: PerformanceView) => void;
   /** The observed timeline (decisions) and the dataset's lifecycle events: the ribbon pinned on the chart is the same one the Activity tab draws. */
   timeline?: PagedRead<ObservedTimeline>;
+  /** The alpha's DRAWDOWN series read (`execution-manager-series.v1`, subject ALPHA). Absent when the caller does not ask for it: the pane keeps its typed absence. */
+  drawdown?: SeriesReadState;
   life?: { events: readonly LifeEvent[]; missing: readonly EventKind[]; spans?: readonly StageSpan[] };
 }
 
 const NO_LIFE = { events: [] as readonly LifeEvent[], missing: ["stage", "decision", "incident", "recall", "flow"] as readonly EventKind[] };
 const NO_TIMELINE: PagedRead<ObservedTimeline> = { read: { phase: "idle" }, loadingMore: false, moreError: null, hasMore: false, loadMore: () => undefined };
 
-function ActualFacet({ env, equity, inputs, drift, rb }: Pick<PerformanceTabProps, "env" | "equity" | "inputs" | "drift"> & { rb: RibbonData }) {
+const NO_DRAWDOWN: DrawdownInput = { kind: "absent", copy: "Not published (FE-025)", reason: "The source publishes no drawdown series for this book; the windowed maximum is the tile above when it is published." };
+
+/** The pane under the chart and the caption under it, by what the DRAWDOWN read said. Nothing is derived from the equity line. */
+function drawdownOf(read: SeriesReadState | undefined): { input: DrawdownInput; caption: string | null } {
+  if (read === undefined) return { input: NO_DRAWDOWN, caption: null };
+  const series = read.phase === "ready" ? read.value : read.phase === "loading" || read.phase === "error" ? read.last : null;
+  if (series === null) {
+    return read.phase === "error"
+      ? { input: { kind: "absent", copy: "Not available", reason: `The drawdown series could not be read (${read.reason}). Nothing is drawn.` }, caption: null }
+      : { input: { kind: "absent", copy: "Loading the drawdown" }, caption: null };
+  }
+  const entry = series.series[0]!;
+  if (entry.state === "UNAVAILABLE") {
+    const { copy, reason } = unavailableChart(entry, "FE-025");
+    return { input: { kind: "absent", copy, reason }, caption: null };
+  }
+  if (entry.state === "EMPTY") return { input: { kind: "absent", copy: "No points in this window", reason: "The source published a drawdown series with no point in the window." }, caption: seriesCaptionShort(series.metric, entry) };
+  return { input: { kind: "series", points: chartPointsOf(entry) }, caption: seriesCaptionShort(series.metric, entry) };
+}
+
+function ActualFacet({ env, equity, inputs, drift, rb, drawdown }: Pick<PerformanceTabProps, "env" | "equity" | "inputs" | "drift" | "drawdown"> & { rb: RibbonData }) {
+  const dd = drawdownOf(drawdown);
   const loading = equity.phase === "loading" || equity.phase === "idle" || (inputs.length === 0 && drift.phase === "loading");
   if (loading) return <PanelState status="loading" />;
   if (inputs.length === 0) {
@@ -96,11 +124,12 @@ function ActualFacet({ env, equity, inputs, drift, rb }: Pick<PerformanceTabProp
               state={input.state}
               segments={input.segments}
               height={240}
-              {...(index === 0 ? { ribbon: rb.ribbon, domain: rb.domain ?? undefined, drawdown: { kind: "absent" as const, copy: "Not published (FE-025)", reason: "The source publishes no drawdown series for this book; the windowed maximum is the tile above when it is published." } } : {})}
+              {...(index === 0 ? { ribbon: rb.ribbon, domain: rb.domain ?? undefined, drawdown: dd.input } : {})}
             />
           </ChartTools>
           {/* The book is the segmented control above, the sampling is the chart's own envelope line, and the windowed figures are the one "Not available" line of the screen. */}
           {index === 0 && rb.gaps !== null ? <p className="exec-alp2-cap">{rb.gaps}</p> : null}
+          {index === 0 && dd.caption !== null ? <p className="exec-alp2-cap" data-testid="drawdown-caption"><span>{dd.caption}</span></p> : null}
           {input.gapCount > 0 ? <p className="exec-alp2-cap"><span>{input.gapCount} {input.gapCount === 1 ? "gap" : "gaps"} the source declared</span></p> : null}
         </div>
       ))}
@@ -187,7 +216,7 @@ export function PerformanceTab(props: PerformanceTabProps) {
           </span>
         }
       >
-        {view === "act" ? <ActualFacet env={env} equity={props.equity} inputs={props.inputs} drift={props.drift} rb={rb} /> : null}
+        {view === "act" ? <ActualFacet env={env} equity={props.equity} inputs={props.inputs} drift={props.drift} rb={rb} drawdown={props.drawdown} /> : null}
         {view === "sim" ? <SimulatedFacet paths={props.paths} drift={props.drift} /> : null}
         {view === "oos" ? <OosFacet /> : null}
       </SectionPanel>

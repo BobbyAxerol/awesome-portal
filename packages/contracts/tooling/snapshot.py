@@ -571,6 +571,11 @@ TRACKED = (
     "fixtures/execution-manager-series.currency-mixed.synthetic.valid.json",
     "fixtures/execution-manager-series-publication.synthetic.valid.json",
     "fixtures/execution-manager-series-query.synthetic.valid.json",
+    "fixtures/execution-manager-series.alpha.synthetic.valid.json",
+    "fixtures/execution-manager-series.drawdown.synthetic.valid.json",
+    "fixtures/execution-manager-series.drawdown.synthetic.negative.json",
+    "fixtures/execution-manager-series-publication.drawdown.synthetic.valid.json",
+    "fixtures/execution-manager-series-query.alpha-drawdown.synthetic.valid.json",
     # BE-P13 (2026-10-20): served command catalogue (the extract fixture above stays byte-pinned by N16B).
     "fixtures/execution-command-catalog.served.valid.json",
     "fixtures/execution-command-plan.emergency-close.valid.json",

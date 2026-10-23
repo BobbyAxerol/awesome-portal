@@ -81,7 +81,7 @@ function seriesAnswer(method: string, path: string, search: URLSearchParams, pro
   if (window.from_ms < 0 || window.to_ms > now || window.to_ms - window.from_ms < target + 1) {
     return problem(400, "MANAGER_REVIEW_WINDOW_NOT_SUPPORTED", "Synthetic review windows must end by FIXTURE_NOW and contain enough distinct timestamps for this profile.");
   }
-  const body = fixture(metric === "RETURN" ? "execution-manager-series.return.synthetic.valid.json" : "execution-manager-series.populated.synthetic.valid.json");
+  const body = fixture(wpkTemplateFile(metric));
   body.metric = metric;
   body.environment = original.environment;
   body.workspace_id = original.workspace_id;
@@ -93,26 +93,28 @@ function seriesAnswer(method: string, path: string, search: URLSearchParams, pro
   const knownPortfolios = new Map([...scaled().portfolios, ...wpcPortfolioStubs(body.environment)].map((portfolio) => [portfolio.id, portfolio]));
   body.series = subjects.map((subject, subjectIndex) => {
     const identity = { subject_type: subject.subject_type, subject_id: subject.subject_type === "FUND" ? body.workspace_id : subject.subject_id };
-    const portfolio = knownPortfolios.get(identity.subject_id);
+    const portfolio = subject.subject_type === "ALPHA" ? wpkAlphaBook(identity.subject_id, body.environment) : knownPortfolios.get(identity.subject_id); // WP-K
     // Keep the canonical small-lane subjects valid; unknown scaled IDs are not fabricated.
+    if (subject.subject_type === "ALPHA" && !portfolio) return unavailable(identity, "SUBJECT_HAS_NO_ACTIVE_MEMBERS"); // WP-K
     if (subject.subject_type === "PORTFOLIO" && !portfolio && !["TEST_ONLY:portfolio-a", "TEST_ONLY:portfolio-b", "pf_a", "pf_b"].includes(identity.subject_id)) return unavailable(identity, "SUBJECT_HAS_NO_ACTIVE_MEMBERS");
     const entry = copy(body.series[0]);
     entry.subject = identity;
     entry.partition = { economic_domain: domain(body.environment), currency: portfolio?.base ?? "USDT", basis: `FIXTURE_LAB:${metric}:synthetic-book`,
       native_profile_ref: `FIXTURE_LAB:${body.environment}:synthetic`, domain_proof_ref: "FIXTURE_LAB:NOT_PRODUCT_AUTHORITY" };
     if (pinned && Object.keys(entry.partition).some((key) => pinned[key] !== entry.partition[key])) return unavailable(identity, "ECONOMIC_PARTITION_REQUIRED");
-    entry.unit = metric === "RETURN" ? "RATIO" : "MONEY";
-    entry.currency = metric === "RETURN" ? null : entry.partition.currency;
-    entry.ratio_scale = metric === "RETURN" ? "FRACTION" : null;
+    entry.unit = wpkRatio(metric) ? "RATIO" : "MONEY";
+    entry.currency = wpkRatio(metric) ? null : entry.partition.currency;
+    entry.ratio_scale = wpkRatio(metric) ? "FRACTION" : null;
     entry.basis = entry.partition.basis;
     entry.methodology_ref = `FIXTURE_LAB:${metric}:synthetic-sequence-v1`;
     entry.window = copy(window);
     const missing = Math.floor(target / 2);
     const at = (index: number): number => window.from_ms + Math.floor(index * (window.to_ms - window.from_ms - 1) / target);
     entry.points = Array.from({ length: target + 1 }, (_, index) => index).filter((index) => index !== missing)
-      .map((index) => ({ ts_ms: at(index), value: sampleValue(metric, index, subjectIndex) }));
+      .map((index) => ({ ts_ms: at(index), value: sampleValue(metric === "DRAWDOWN" ? "NAV" : metric, index, subjectIndex) })); // WP-K: a drawdown is derived from the NAV walk below
     entry.gaps = [{ from_ms: at(missing), to_ms: at(missing), reason: "SOURCE_GAP" }];
-    wpcShapeSeries(entry, metric, identity.subject_id, body.environment, requested); // WP-C: per-subject shape that ends on the dataset's own figure
+    wpcShapeSeries(entry, metric === "DRAWDOWN" ? "NAV" : metric, identity.subject_id, body.environment, requested, subject.subject_type === "ALPHA" ? "alpha_id" : "portfolio_id"); // WP-C: per-subject shape that ends on the dataset's own figure
+    if (metric === "DRAWDOWN") wpkDrawdownFromNav(entry); // WP-K
     entry.quality = copy(body.quality);
     entry.source_confidence = "PROVISIONAL";
     entry.provenance_refs = [digest(["FIXTURE_LAB_SYNTHETIC", profile, body.environment, identity, metric, window])];
@@ -1036,10 +1038,10 @@ function wpcWalk(seed: number, n: number, start: bigint, end: bigint, amp: bigin
 }
 const wpcAbs = (value: bigint): bigint => (value < 0n ? -value : value);
 /** The dataset figures of one portfolio, from the SAME rows the overview read serves: the series ends on them. */
-function wpcTarget(environment: string, id: string, preset: WindowPreset, currency: string): { net: bigint; nav: bigint; ret: bigint } | null {
+function wpcTarget(environment: string, id: string, preset: WindowPreset, currency: string, by: "portfolio_id" | "alpha_id" = "portfolio_id"): { net: bigint; nav: bigint; ret: bigint } | null {
   wpcTemplate ??= fixture("execution-manager-dataset.partitions.synthetic.valid.json");
-  const only = wpcAlphasFor("PORTFOLIO", id);
-  const rows = rowsFor(environment, wpcTemplate, preset, true, only).filter((row) => row.portfolio_id === id);
+  const only = wpcAlphasFor(by === "alpha_id" ? "ALPHA" : "PORTFOLIO", id); // WP-K: the same figures, by alpha
+  const rows = rowsFor(environment, wpcTemplate, preset, true, only).filter((row) => row[by] === id);
   const partition = aggregate(rows).find((entry) => entry.partition.currency === currency);
   const available = (key: string): string | null => partition?.metrics[key]?.availability === "AVAILABLE" ? partition.metrics[key].value : null;
   // NAV is the capital statement's `current_nav` of this partition (what the Compare table prints for NAV); the group's own sum is the fallback.
@@ -1049,9 +1051,9 @@ function wpcTarget(environment: string, id: string, preset: WindowPreset, curren
   return net === null || nav === null || ret === null ? null : { net: toScaled(net), nav: toScaled(nav), ret: toScaled(ret) / 100n };
 }
 /** Replaces the values of one series entry with a per-subject walk whose end equals the subject's dataset figure (NAV, Net PnL, Return). */
-function wpcShapeSeries(entry: Draft, metricName: string, subjectId: string, environment: string, requested: unknown): void {
+function wpcShapeSeries(entry: Draft, metricName: string, subjectId: string, environment: string, requested: unknown, by: "portfolio_id" | "alpha_id" = "portfolio_id"): void {
   const days = requested === "7D" ? "7D" : requested === "90D" ? "90D" : "30D";
-  const target = wpcTarget(environment, subjectId, WINDOW_PRESETS[days], entry.partition.currency);
+  const target = wpcTarget(environment, subjectId, WINDOW_PRESETS[days], entry.partition.currency, by);
   if (target === null) return;
   const n = entry.points.length;
   const missing = Math.floor(n / 2);
@@ -1188,3 +1190,35 @@ function wpcEquity(method: string, path: string, search: URLSearchParams): Revie
   return { status: base.status, body };
 }
 // ===== WP-C end
+
+// ===== WP-K begin (contracts lane: ALPHA subjects and the DRAWDOWN series, FIXTURE_LAB, register section 2k)
+// Touches in shared functions (one expression each): seriesAnswer (template file, alpha book lookup, ratio test, NAV walk for a drawdown, one call after
+// wpcShapeSeries), wpcTarget / wpcShapeSeries (optional grain parameter `by`, default unchanged).
+const wpkRatio = (metric: string): boolean => metric === "RETURN" || metric === "DRAWDOWN";
+const wpkTemplateFile = (metric: string): string => metric === "RETURN" ? "execution-manager-series.return.synthetic.valid.json"
+  : metric === "DRAWDOWN" ? "execution-manager-series.drawdown.synthetic.valid.json" : "execution-manager-series.populated.synthetic.valid.json";
+/** The two alpha ids the published canonical fixtures name (small lane). */
+const TEST_ONLY_ALPHAS = new Set(["TEST_ONLY:alpha-a", "TEST_ONLY:alpha-b"]);
+/** The book of one alpha in this environment: its currency is its deployment's. `null` for an alpha the universe does not hold. */
+function wpkAlphaBook(alphaId: string, environment: string): { id: string; base: string } | null {
+  const alphas = [...scaled().alphas, ...WPC_ALPHAS];
+  const alpha = alphas.find((candidate) => candidate.id === alphaId);
+  if (alpha === undefined) return TEST_ONLY_ALPHAS.has(alphaId) ? { id: alphaId, base: "USDT" } : null;
+  const deployment = alpha.deployments.find((candidate) => candidate.environment === environment);
+  return deployment === undefined ? null : { id: alphaId, base: deployment.currency };
+}
+/**
+ * Peak-to-trough drawdown of the entry's own NAV values: (value - running peak) / running peak, 8 places truncated toward zero, so it is zero at a
+ * new high and never above zero. Bigint only. Derived from FIXTURE_LAB NAV values, never a source fact; a non-positive peak is undefined and
+ * leaves the point at a true zero (no ratio is invented).
+ */
+function wpkDrawdownFromNav(entry: Draft): void {
+  let peak: bigint | null = null;
+  for (const point of entry.points) {
+    const value = toScaled(point.value);
+    if (peak === null || value > peak) peak = value;
+    const ratio = peak !== null && peak > 0n ? (value - peak) * 100_000_000n / peak : 0n;
+    point.value = ratio === 0n ? "0" : trimmed(ratio, 8);
+  }
+}
+// ===== WP-K end

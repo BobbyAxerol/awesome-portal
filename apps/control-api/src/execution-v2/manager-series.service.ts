@@ -40,13 +40,14 @@ export class ManagerSeriesService {
       const inputs: SeriesSubjectScope[] = [];
       for (const subject of q.subjects) {
         const fund = subject.subject_type === "FUND";
-        const requirement: ReadScopeRequirement = { action: fund ? "business.read_all" : "portfolio.read", dataset,
-          ...(fund ? { requireWholePopulation: true } : { resource: { kind: "PORTFOLIO" as const, id: subject.subject_id! } }) };
+        const alpha = subject.subject_type === "ALPHA";
+        const requirement: ReadScopeRequirement = { action: fund ? "business.read_all" : alpha ? "alpha.read" : "portfolio.read", dataset,
+          ...(fund ? { requireWholePopulation: true } : { resource: { kind: alpha ? "ALPHA" as const : "PORTFOLIO" as const, id: subject.subject_id! } }) };
         let scope: AuthorizedExecutionReadScope;
         try { scope = await this.scopes.authorize(principal, { environment: env, profileId: profile }, requirement); }
         catch (error) {
           // A restricted portfolio viewer is still a viewer: the subject is answered, as a typed "not authorized as a whole".
-          if (fund || !(error instanceof ExecutionReadScopeError) || error.code !== "EXECUTION_READ_NOT_AVAILABLE") throw error;
+          if (fund || alpha || !(error instanceof ExecutionReadScopeError) || error.code !== "EXECUTION_READ_NOT_AVAILABLE") throw error;
           scope = await this.scopes.authorize(principal, { environment: env, profileId: profile }, { ...requirement, action: "portfolio.read_restricted" });
         }
         if (scope.mode !== "SCOPED_V2" || !head) throw new ExecutionReadScopeError("EXECUTION_READ_PUBLICATION_NOT_QUALIFIED", 503);

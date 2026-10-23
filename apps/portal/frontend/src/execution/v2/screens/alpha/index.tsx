@@ -50,6 +50,8 @@ import { LifecyclePanel } from "./Lifecycle";
 import { lifeEvents, regimeFit, stageSpans } from "./lifecycleModel";
 import { OrdersTab } from "./OrdersTab";
 import { PERFORMANCE_VIEWS, PerformanceTab, type PerformanceView } from "./PerformanceTab";
+import type { ManagerSeriesQuery } from "../../readers/managerSeries";
+import { useManagerSeries } from "../series/useManagerSeries";
 import { ScopeBanner } from "./ScopeBanner";
 import { ScoreDrawer } from "./ScoreDrawer";
 import { DeploymentsTab, EvidenceTab, PositionsTab, ReconciliationTab, RegimeTab } from "./TableTabs";
@@ -160,6 +162,12 @@ function Alpha360({ api, alphaId, workspaceId }: AlphaScreenProps) {
   const rollup = useActivityRollup(api, alphaId, env, settled && tab === "orders");
   const timeline = useObservedFeed(api, alphaId, env, settled && (tab === "activity" || tab === "performance"));
   const book = useSubjectBook(api, alphaId, env, settled && (tab === "orders" || tab === "activity" || tab === "replay"), explicitWs);
+  // WP-K: the alpha's published DRAWDOWN series (FE-025) for the pane under the equity chart. Asked only on the Performance tab, over the 90-day preset the pane is drawn for.
+  const drawdownQuery = useMemo<ManagerSeriesQuery>(
+    () => ({ environment: env, metric: "DRAWDOWN", window: "90D", subjects: [{ subjectType: "ALPHA", subjectId: alphaId }], ...(explicitWs ? { workspaceId: explicitWs } : {}) }),
+    [env, alphaId, explicitWs],
+  );
+  const drawdown = useManagerSeries(api, settled && tab === "performance", drawdownQuery);
 
   const current: SpineStageId | null = view?.current ?? null;
   const [stagePick, setStagePick] = useState<SpineStageId | null>(null);
@@ -389,7 +397,7 @@ function Alpha360({ api, alphaId, workspaceId }: AlphaScreenProps) {
 
             <div role="tabpanel" id={panelId} aria-labelledby={inMore ? undefined : tabId(tab)} aria-label={inMore ? ALPHA_MORE_TABS.find((t) => t.key === tab)?.label : undefined} className="exec-alp2-panel">
               {tab === "performance" ? (
-                <PerformanceTab timeline={timeline} life={life} rows={rows} noTotals={view?.money.published === false ? view.money.reason : null} dataset={dataset} names={names} env={env} equity={equity} drift={drift} inputs={inputs} paths={paths} view={perfView} onView={(next) => url.set({ view: next === "act" ? null : next })} />
+                <PerformanceTab timeline={timeline} drawdown={drawdown} life={life} rows={rows} noTotals={view?.money.published === false ? view.money.reason : null} dataset={dataset} names={names} env={env} equity={equity} drift={drift} inputs={inputs} paths={paths} view={perfView} onView={(next) => url.set({ view: next === "act" ? null : next })} />
               ) : null}
               {tab === "deployments" ? (
                 <DeploymentsTab

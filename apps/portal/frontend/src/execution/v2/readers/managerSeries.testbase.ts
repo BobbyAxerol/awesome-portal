@@ -30,6 +30,13 @@ export const FIXTURE_PUBLICATION_RETURN = "execution-manager-series-publication.
 /** The metric <-> unit negatives: `cases[].ops` applied to `bases[case.base]`; `stored_cases` apply to a publication. */
 export const FIXTURE_METRIC_UNIT = "execution-manager-series.metric-unit.synthetic.negative.json";
 
+/** WP-K slice 1: ALPHA subjects and the DRAWDOWN metric (new canonical fixtures; the stored form and the negatives beside them). */
+export const FIXTURE_ALPHA = "execution-manager-series.alpha.synthetic";
+export const FIXTURE_DRAWDOWN = "execution-manager-series.drawdown.synthetic";
+export const FIXTURE_PUBLICATION_DRAWDOWN = "execution-manager-series-publication.drawdown.synthetic";
+export const FIXTURE_QUERY_ALPHA_DRAWDOWN = "execution-manager-series-query.alpha-drawdown.synthetic";
+export const FIXTURE_DRAWDOWN_RULE = "execution-manager-series.drawdown.synthetic.negative.json";
+
 export const DAY = 86_400_000;
 export const clone = <T,>(value: T): T => structuredClone(value);
 

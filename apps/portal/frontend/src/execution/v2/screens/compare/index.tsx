@@ -300,7 +300,7 @@ export default function CompareScreen({ api, portfolioId, capabilities, routes =
         <button type="button" className="exec-pf-segbtn" aria-pressed={alphaMode} onClick={() => setMode(true)}>Alphas</button>
       </div>
 
-      {alphaMode ? <AlphaCompare api={api} enabled={permitted} env={url.value.env} picks={picked.ids} onPicks={setPicks} windowLabel={windowLabel} /> : null}
+      {alphaMode ? <AlphaCompare api={api} enabled={permitted} env={url.value.env} picks={picked.ids} onPicks={setPicks} windowLabel={windowLabel} window={url.value.window} /> : null}
       {!alphaMode && read.phase === "loading" && envelope === null ? <PanelState status="loading" /> : null}
       {!alphaMode && read.phase === "error" ? <PanelState status={read.status} reason={read.reason} /> : null}
 
@@ -369,7 +369,7 @@ export default function CompareScreen({ api, portfolioId, capabilities, routes =
                   <span className="exec-cmpr-sum-more">Partitions</span>
                 </button>
                 <span className="exec-pf-seg" role="group" aria-label="Series measure">
-                  {(["NAV", "NET_PNL", "RETURN"] as const).map((metric) => (
+                  {(["NAV", "NET_PNL", "RETURN", "DRAWDOWN"] as const).map((metric) => (
                     <button key={metric} type="button" className="exec-pf-segbtn" aria-pressed={measure === metric} onClick={() => setMeasure(metric)}>
                       {METRIC_WORD[metric]}
                     </button>

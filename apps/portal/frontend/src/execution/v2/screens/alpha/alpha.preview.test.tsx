@@ -101,7 +101,7 @@ describe("Alpha 360 spine and tiles for alpha_a (live book)", () => {
 });
 
 describe("the event ribbon is pinned on the Performance chart", () => {
-  it("draws the five lanes with the published events, kind chips with counts, and the drawdown strip as a typed absence", async () => {
+  it("draws the five lanes with the published events, kind chips with counts, and the drawdown strip from the alpha's DRAWDOWN series (WP-K, FIXTURE_LAB)", async () => {
     mount("/deployments/alphas/alpha_a", "alpha_a");
     const ribbon = await screen.findByRole("group", { name: "Events and stages" });
     expect(ribbon).toBeTruthy();
@@ -112,7 +112,11 @@ describe("the event ribbon is pinned on the Performance chart", () => {
     expect(count("Incident")).toMatch(/[23]$/);
     expect(count("Recall")).toMatch(/1$/);
     expect(count("Flow")).toMatch(/2$/);
-    expect(document.body.textContent).toContain("Not published (FE-025)");
+    // The pane is the published DRAWDOWN series of this alpha (a ratio stated as a fraction, shown in %), with its caption; the typed absence is gone.
+    const caption = await screen.findByTestId("drawdown-caption", {}, { timeout: 4000 });
+    expect(caption.textContent).toMatch(/^Drawdown, a ratio stated as a fraction \(1\.0 is 100%\), shown in % · /);
+    expect(await screen.findByTestId("drawdown-pane")).toBeTruthy();
+    expect(document.body.textContent).not.toContain("Not published (FE-025)");
     // Every kind has a source in the dataset, so the gap line is not printed on this chart.
     expect(document.querySelector(".exec-alp2-cap")?.textContent ?? "").not.toMatch(/Incident, Recall/);
   });

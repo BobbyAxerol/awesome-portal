@@ -4,9 +4,10 @@
  * Identity comes from the Alpha Fleet read (the alphas the Fleet publishes). The metric rows are the Manager dataset of each picked alpha
  * (`getManagerDataset({surface: "ALPHA", id})`): one line per dataset row (an alpha version in one portfolio) and per economic partition,
  * exactly as the dataset publishes them. Nothing is added across rows, partitions, currencies or the Real-funded and Simulated books,
- * and a currency is never converted; a Return or a score is the server's figure. The overlay chart is a typed absence: the manager series
- * port answers FUND and PORTFOLIO subjects only (`execution-manager-series.v1` subject_type), so an alpha series is a request (FE-033,
- * subject type ALPHA), never a line built from other data.
+ * and a currency is never converted; a Return or a score is the server's figure. The overlay chart is the manager series port asked for
+ * ALPHA subjects (`execution-manager-series.v1` subject_type ALPHA, WP-K): 2 to 4 alphas, one measure (NAV, Net PnL, Return or Drawdown), and the
+ * server's own `comparison` (ALIGNED / INCOMPARABLE / UNAVAILABLE) decides whether a line is drawn. Nothing is rebased, summed or converted here, and
+ * a series the port does not publish stays the typed absence it answers with.
  */
 import { useMemo, useState, type ReactNode } from "react";
 
@@ -14,10 +15,14 @@ import type { ExecutionApi } from "../../../api/ports";
 import { PanelSkeleton, PanelState } from "../../../components/states";
 import { NaWhy, SectionPanel } from "../../blocks";
 import { CardsTable, type CardsColumn } from "../../cardsTable";
+import { ChartTools, CompareOverlay, type CompareSeries, type NotComparable } from "../../charts";
 import { ChartUnavailable } from "../../charts/ChartStateView";
 import type { ManagerRow } from "../../readers/managerDataset";
 import type { ManagerEnvironment } from "../../readers/managerDataset";
 import type { ManagerMetricRead } from "../../readers/managerMetric";
+import type { ManagerSeriesMetric, ManagerSeriesQuery } from "../../readers/managerSeries";
+import { METRIC_WORD, MISMATCH_SENTENCE, UNAVAILABLE_SENTENCE, chartPointsOf, chartStateOf, chartUnit, commonCaption, isSigned, sourceNotPublished } from "../series/seriesModel";
+import { useManagerSeries } from "../series/useManagerSeries";
 import { PartitionFigures } from "../fleet/PartitionFigures";
 import { PercentValue } from "../alpha/DatasetFigures";
 import { useManagerDataset, type DatasetReadState } from "../manager/useManagerDataset";
@@ -110,9 +115,20 @@ export interface AlphaCompareProps {
   picks: readonly string[];
   onPicks: (ids: readonly string[]) => void;
   windowLabel: string;
+  /** The window the series is asked for (the address's window preset). Without it the overlay stays the typed absence. */
+  window?: "7D" | "30D" | "90D" | "ALL";
 }
 
-export function AlphaCompare({ api, enabled, env, picks, onPicks, windowLabel }: AlphaCompareProps) {
+/** The four measures the alpha overlay offers (WP-K: DRAWDOWN is a published series kind, never worked out from NAV here). */
+const OVERLAY_MEASURES = ["NAV", "NET_PNL", "RETURN", "DRAWDOWN"] as const satisfies readonly ManagerSeriesMetric[];
+
+export function AlphaCompare({ api, enabled, env, picks, onPicks, windowLabel, window }: AlphaCompareProps) {
+  const [measure, setMeasure] = useState<ManagerSeriesMetric>("NAV");
+  const seriesQuery = useMemo<ManagerSeriesQuery | null>(
+    () => (window === undefined || picks.length < 2 ? null : { environment: env, metric: measure, window, subjects: picks.map((subjectId) => ({ subjectType: "ALPHA" as const, subjectId })) }),
+    [picks, measure, env, window],
+  );
+  const seriesRead = useManagerSeries(api, enabled && seriesQuery !== null, seriesQuery);
   const fleet = useRead(api, enabled, `compare-alpha-fleet|${env}`, (scoped) => scoped.getAlphaFleet({ environment: env, limit: CHIP_CAP }));
   const items = fleet.phase === "ready" ? fleet.value.page.rows : fleet.phase === "loading" || fleet.phase === "error" ? fleet.last?.page.rows ?? null : null;
   const reads = useAlphaDatasets(api, enabled, picks, env);
@@ -158,13 +174,26 @@ export function AlphaCompare({ api, enabled, env, picks, onPicks, windowLabel }:
         <p className="exec-pf-note" role="status">{picks.length < 2 ? "Pick two to four alphas to put them side by side." : `${picks.length} alphas picked.`}</p>
       </section>
 
-      <SectionPanel title="Series">
-        <ChartUnavailable
-          label="Alpha comparison"
-          copy="Not published (FE-033)"
-          reason="The series port answers fund and portfolio subjects only, so there is no aligned series for an alpha. Nothing is drawn from other data, and nothing is rebased or added here."
-          height={160}
-        />
+      <SectionPanel
+        title="Series"
+        aside={
+          <span className="exec-pf-seg" role="group" aria-label="Series measure">
+            {OVERLAY_MEASURES.map((metric) => (
+              <button key={metric} type="button" className="exec-pf-segbtn" aria-pressed={measure === metric} onClick={() => setMeasure(metric)}>{METRIC_WORD[metric]}</button>
+            ))}
+          </span>
+        }
+      >
+        {seriesQuery === null ? (
+          <ChartUnavailable
+            label="Alpha comparison"
+            copy={window === undefined ? "Not published (FE-033)" : "Pick two alphas"}
+            reason={window === undefined ? "The series window is not known here. Nothing is drawn from other data, and nothing is rebased or added here." : "An aligned series needs two to four alphas. Nothing is rebased or worked out here."}
+            height={160}
+          />
+        ) : (
+          <AlphaOverlay seriesRead={seriesRead} measure={measure} labelOf={labelOf} />
+        )}
       </SectionPanel>
 
       <SectionPanel title="Metrics">
@@ -175,5 +204,49 @@ export function AlphaCompare({ api, enabled, env, picks, onPicks, windowLabel }:
         )}
       </SectionPanel>
     </>
+  );
+}
+
+/** The overlay of one alpha series read, by what the server said (its comparison and each entry's typed state). */
+function AlphaOverlay({ seriesRead, measure, labelOf }: { seriesRead: ReturnType<typeof useManagerSeries>; measure: ManagerSeriesMetric; labelOf: (id: string) => string }) {
+  const series = seriesRead.phase === "ready" ? seriesRead.value : seriesRead.phase === "loading" || seriesRead.phase === "error" ? seriesRead.last : null;
+  if (series === null) {
+    if (seriesRead.phase === "loading") return <PanelSkeleton label="Loading the series" />;
+    return <ChartUnavailable label="Alpha comparison" copy="Not available" reason={`The series could not be read${seriesRead.phase === "error" ? ` (${seriesRead.reason})` : ""}. Nothing is rebased or worked out here.`} height={160} />;
+  }
+  const comparison = series.comparison;
+  const notes: NotComparable[] = series.series.map((entry) => ({
+    id: entry.subject.subjectId,
+    label: labelOf(entry.subject.subjectId),
+    reason: entry.state === "UNAVAILABLE"
+      ? `${UNAVAILABLE_SENTENCE[entry.reasonCode]} (${entry.reasonCode})`
+      : `${entry.currency ?? `ratio, scale ${entry.ratioScale ?? "not stated"}`} · basis ${entry.basis} · methodology ${entry.methodologyRef} · ${entry.partition.economicDomain.toLowerCase()} book, ${entry.partition.nativeProfileRef}${entry.state === "EMPTY" ? " · no points in this window" : ""}`,
+  }));
+  if (comparison.state === "ALIGNED") {
+    const drawn = series.series.flatMap((entry) => (entry.state === "AVAILABLE" ? [{ entry, id: entry.subject.subjectId }] : []));
+    const worst = drawn.map(({ entry }) => chartStateOf(entry)).find((state) => state.kind !== "ready") ?? { kind: "ready" as const };
+    const overlay: CompareSeries[] = drawn.map(({ entry, id }) => ({ id, label: labelOf(id), points: chartPointsOf(entry) }));
+    const unit = chartUnit(drawn[0]!.entry);
+    const currency = comparison.common.currency ?? undefined;
+    const basis = commonCaption(series.metric, comparison);
+    return (
+      <>
+        <ChartTools label="Alpha comparison" columns={overlay.slice(0, 4).map((s) => ({ key: s.id, label: s.label, points: s.points, unit, currency, signed: isSigned(measure) }))}>
+          <CompareOverlay label="Alpha comparison" series={overlay} notComparable={[]} basis={basis} unit={unit} currency={currency} signed={isSigned(measure)} state={worst} />
+        </ChartTools>
+        <p className="exec-blk-sr" data-testid="basis-caption">Basis: {basis}</p>
+      </>
+    );
+  }
+  const none = (copy: string, reason: string) => (
+    <CompareOverlay label="Alpha comparison" series={[]} notComparable={notes} basis="No aligned series" unit="pct" state={{ kind: "unavailable", copy, reason }} />
+  );
+  if (comparison.state === "INCOMPARABLE") return none("Not comparable", `${MISMATCH_SENTENCE[comparison.reasonCode]} (${comparison.reasonCode}). Each series is listed apart; none is converted, rebased or combined.`);
+  const missing = series.series.find((entry) => entry.state === "UNAVAILABLE");
+  return none(
+    sourceNotPublished(series) || (missing !== undefined && missing.state === "UNAVAILABLE" && missing.reasonCode === "RATIO_SCALE_NOT_PUBLISHED") ? "Not published (FE-013/033)" : "Not available",
+    missing !== undefined && missing.state === "UNAVAILABLE"
+      ? `At least one pick has no series: ${UNAVAILABLE_SENTENCE[missing.reasonCode]} (${missing.reasonCode}). Nothing is drawn from the rest.`
+      : "At least one pick has no points in this window, so the picks are not aligned. Nothing is drawn from the rest.",
   );
 }

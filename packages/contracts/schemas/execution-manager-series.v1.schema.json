@@ -31,7 +31,8 @@
       "enum": [
         "NAV",
         "NET_PNL",
-        "RETURN"
+        "RETURN",
+        "DRAWDOWN"
       ]
     },
     "selected_window": {
@@ -207,7 +208,8 @@
                 "type": "string",
                 "enum": [
                   "FUND",
-                  "PORTFOLIO"
+                  "PORTFOLIO",
+                  "ALPHA"
                 ]
               },
               "subject_id": {
@@ -1071,7 +1073,10 @@
         "type": "object",
         "properties": {
           "metric": {
-            "const": "RETURN"
+            "enum": [
+              "RETURN",
+              "DRAWDOWN"
+            ]
           }
         },
         "required": [
@@ -1114,6 +1119,44 @@
                 "reason_code": {
                   "not": {
                     "const": "RATIO_SCALE_NOT_PUBLISHED"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "type": "object",
+        "properties": {
+          "metric": {
+            "const": "DRAWDOWN"
+          }
+        },
+        "required": [
+          "metric"
+        ]
+      },
+      "then": {
+        "type": "object",
+        "properties": {
+          "series": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "points": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "value": {
+                        "type": "string",
+                        "pattern": "^(?:0(?:\\.0+)?|-(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?)$(?![\\s\\S])"
+                      }
+                    }
                   }
                 }
               }

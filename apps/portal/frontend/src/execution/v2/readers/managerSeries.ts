@@ -36,6 +36,7 @@
  *   MS-S8 `ALL` is a typed gap (`resolved: null`), so an entry cannot carry points for it; ALL/window reasons agree
  *   MS-S9 `comparison` equals the value re-derived from the entries; `axis_ms` ascending
  *   MS-S10 clocks stay inside the Date range (schema: up to 2^53-1)
+ *   MS-S11 (WP-K) a DRAWDOWN point is zero or negative (a peak-to-trough ratio never rises above zero); DRAWDOWN is a RATIO like RETURN
  *
  * The result of `readManagerSeries(raw)` is the typed read, `unsupported_shape` for a readable body of another schema,
  * or `null` for a malformed body. It never throws.
@@ -60,14 +61,16 @@ import {
 } from "./managerMetric";
 
 export const MANAGER_SERIES_SCHEMA = "portal.execution.manager-series.v1";
-export const MANAGER_SERIES_METRICS = ["NAV", "NET_PNL", "RETURN"] as const;
+export const MANAGER_SERIES_METRICS = ["NAV", "NET_PNL", "RETURN", "DRAWDOWN"] as const;
 export type ManagerSeriesMetric = (typeof MANAGER_SERIES_METRICS)[number];
+/** WP-K: RETURN and DRAWDOWN are ratios that state their scale; NAV and NET_PNL are money. */
+export const isRatioMetric = (metric: ManagerSeriesMetric): boolean => metric === "RETURN" || metric === "DRAWDOWN";
 export const MANAGER_SERIES_UNITS = ["MONEY", "RATIO"] as const;
 export type ManagerSeriesUnit = (typeof MANAGER_SERIES_UNITS)[number];
 /** FE-013: the scale a SOURCE states for a RATIO. FRACTION: 1.0 is 100% (0.0123 is 1.23%). PERCENT: 100 is 100% (1.23 is 1.23%). */
 export const MANAGER_SERIES_RATIO_SCALES = ["FRACTION", "PERCENT"] as const;
 export type ManagerSeriesRatioScale = (typeof MANAGER_SERIES_RATIO_SCALES)[number];
-export const MANAGER_SERIES_SUBJECT_TYPES = ["FUND", "PORTFOLIO"] as const;
+export const MANAGER_SERIES_SUBJECT_TYPES = ["FUND", "PORTFOLIO", "ALPHA"] as const;
 export type ManagerSeriesSubjectType = (typeof MANAGER_SERIES_SUBJECT_TYPES)[number];
 export const SERIES_STATES = ["AVAILABLE", "EMPTY", "UNAVAILABLE"] as const;
 export type ManagerSeriesState = (typeof SERIES_STATES)[number];
@@ -249,7 +252,7 @@ function readEntryWindow(raw: unknown): MsWindow | null {
   return fromMs === null || toMs === null || fromMs >= toMs ? null : { fromMs, toMs };
 }
 
-function readPoints(raw: unknown, window: MsWindow): readonly ManagerSeriesPoint[] | null {
+function readPoints(raw: unknown, window: MsWindow, drawdown = false): readonly ManagerSeriesPoint[] | null {
   if (!Array.isArray(raw) || raw.length > MAX_SERIES_POINTS) return null;
   const points: ManagerSeriesPoint[] = [];
   let previous = -1;
@@ -260,6 +263,8 @@ function readPoints(raw: unknown, window: MsWindow): readonly ManagerSeriesPoint
     const value = exactValue(point.value);
     // MS-S4: strictly ascending (a repeated timestamp has two values), inside the window the series was published for.
     if (tsMs === null || value === null || tsMs <= previous || tsMs < window.fromMs || tsMs > window.toMs) return null;
+    // MS-S11: a drawdown is zero or negative.
+    if (drawdown && !value.zero && !value.exact.startsWith("-")) return null;
     previous = tsMs;
     points.push({ tsMs, exact: value.exact, zero: value.zero });
   }
@@ -320,7 +325,7 @@ function readEntry(raw: unknown, ctx: { metric: ManagerSeriesMetric; selected: M
     const all = ctx.selected.kind === "gap";
     if (all && ["EXACT_METRIC_WINDOW_NOT_PUBLISHED", "ECONOMIC_PARTITION_REQUIRED", "AMBIGUOUS_SERIES_PUBLICATION"].includes(reasonCode)) return null;
     // FE-013: a source that publishes a return without a scale is a statement about RETURN only.
-    if (reasonCode === "RATIO_SCALE_NOT_PUBLISHED" && ctx.metric !== "RETURN") return null;
+    if (reasonCode === "RATIO_SCALE_NOT_PUBLISHED" && !isRatioMetric(ctx.metric)) return null;
     if (!all && reasonCode === "ALL_HISTORY_WINDOW_NOT_PUBLISHED") return null;
     return { ...base, state, reasonCode, copy: `Not available · ${reasonCode}` };
   }
@@ -335,14 +340,14 @@ function readEntry(raw: unknown, ctx: { metric: ManagerSeriesMetric; selected: M
   const window = readEntryWindow(entry.window);
   if (partition === null || unit === null || ratioScale === undefined || (entry.currency !== null && currency === null) || basis === null || methodologyRef === null || window === null) return null;
   // MS-S6: the unit follows the metric; MONEY is in the partition's currency and RATIO names none; the basis is the partition's.
-  if (ctx.metric === "RETURN" ? unit !== "RATIO" : unit !== "MONEY") return null;
+  if (isRatioMetric(ctx.metric) ? unit !== "RATIO" : unit !== "MONEY") return null;
   if (unit === "MONEY" ? currency === null || currency !== partition.currency : currency !== null) return null;
   // FE-013: a ratio states its scale (EMPTY included); money has none. The scale is never guessed from the values.
   if (unit === "RATIO" ? ratioScale === null : ratioScale !== null) return null;
   if (basis !== partition.basis) return null;
   // MS-S5: the entry is for the window that was selected and resolved, and never ends after the cutoff.
   if (ctx.selected.kind !== "window" || window.fromMs !== ctx.selected.resolved.fromMs || window.toMs !== ctx.selected.resolved.toMs || window.toMs > ctx.asOfMs) return null;
-  const points = readPoints(entry.points, window);
+  const points = readPoints(entry.points, window, ctx.metric === "DRAWDOWN");
   const gaps = readGaps(entry.gaps, window);
   if (points === null || gaps === null) return null;
   if (state === "AVAILABLE") {
@@ -480,7 +485,7 @@ export function readManagerSeries(raw: unknown): ManagerSeriesRead | null {
 
 export type ManagerSeriesWindowQuery = "7D" | "30D" | "90D" | "ALL" | { fromMs: number; toMs: number };
 
-export type ManagerSeriesQuerySubject = { subjectType: "FUND" } | { subjectType: "PORTFOLIO"; subjectId: string };
+export type ManagerSeriesQuerySubject = { subjectType: "FUND" } | { subjectType: "PORTFOLIO" | "ALPHA"; subjectId: string };
 
 export interface ManagerSeriesQuery {
   environment: ManagerEnvironment;
@@ -524,9 +529,9 @@ export function encodeManagerSeriesQuery(query: ManagerSeriesQuery): Record<stri
       wire.push({ subject_type: "FUND" });
     } else {
       const id = managerText(subject.subjectId);
-      if (id === null || seen.has(`PORTFOLIO:${id}`)) return null;
-      seen.add(`PORTFOLIO:${id}`);
-      wire.push({ subject_type: "PORTFOLIO", subject_id: id });
+      if (id === null || seen.has(`${subject.subjectType}:${id}`)) return null;
+      seen.add(`${subject.subjectType}:${id}`);
+      wire.push({ subject_type: subject.subjectType, subject_id: id });
     }
   }
   let window: unknown;

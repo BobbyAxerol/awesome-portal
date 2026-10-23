@@ -29,7 +29,7 @@ import type {
 } from "../../readers/managerSeries";
 import { formatInstant } from "../../boundary";
 
-export const METRIC_WORD: Readonly<Record<ManagerSeriesMetric, string>> = { NAV: "NAV", NET_PNL: "Net PnL", RETURN: "Return" };
+export const METRIC_WORD: Readonly<Record<ManagerSeriesMetric, string>> = { NAV: "NAV", NET_PNL: "Net PnL", RETURN: "Return", DRAWDOWN: "Drawdown" };
 
 /** The request id a still-unpublished series prints, as `Not published (FE-013)`. */
 export const SERIES_FE = "FE-013";

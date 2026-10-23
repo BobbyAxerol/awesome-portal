@@ -207,13 +207,13 @@ describe("BE-P4 FE-013/FE-033 generated Manager series contract", () => {
     });
     it.each([
       ["no window", { environment: "paper", metric: "NAV", subjects: [{ subject_type: "FUND" }] }],
-      ["an unknown metric", { environment: "paper", metric: "DRAWDOWN", window: "30D", subjects: [{ subject_type: "FUND" }] }],
+      ["an unknown metric", { environment: "paper", metric: "SHARPE", window: "30D", subjects: [{ subject_type: "FUND" }] }],
       ["no subject", { environment: "paper", metric: "NAV", window: "30D", subjects: [] }],
       ["five subjects", { environment: "paper", metric: "NAV", window: "30D", subjects: ["a", "b", "c", "d", "e"].map(subject_id => ({ subject_type: "PORTFOLIO", subject_id })) }],
       ["a fund with an id", { environment: "paper", metric: "NAV", window: "30D", subjects: [{ subject_type: "FUND", subject_id: "x" }] }],
       ["a portfolio without an id", { environment: "paper", metric: "NAV", window: "30D", subjects: [{ subject_type: "PORTFOLIO" }] }],
       ["an as_of_ms", { environment: "paper", metric: "NAV", window: "30D", subjects: [{ subject_type: "FUND" }], as_of_ms: 1 }],
-      ["an unknown subject kind", { environment: "paper", metric: "NAV", window: "30D", subjects: [{ subject_type: "ALPHA", subject_id: "a" }] }],
+      ["an unknown subject kind", { environment: "paper", metric: "NAV", window: "30D", subjects: [{ subject_type: "STRATEGY", subject_id: "a" }] }],
     ])("rejects %s", (_name, query) => {
       expect(q(query)).toBe(false); expect(managerSeriesQuery.safeParse(query).success).toBe(false);
     });

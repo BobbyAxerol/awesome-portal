@@ -33,18 +33,20 @@ const unavailable = (subject: ManagerSeriesEntry["subject"], reason: ManagerSeri
   source_confidence: "UNKNOWN", provenance_refs: ["SOURCE_NOT_PUBLISHED"], calculation_revision: "manager-series.v1", policy_revision: "NOT_PUBLISHED" });
 
 const subjectKey = (s: Subject, workspaceId: string) => s.subject_type === "FUND" ? { subject_type: "FUND" as const, subject_id: workspaceId } :
-  { subject_type: "PORTFOLIO" as const, subject_id: s.subject_id! };
+  { subject_type: s.subject_type, subject_id: s.subject_id! };
 
 function entryFor(input: SeriesSubjectScope, doc: ManagerModelDocument, query: ManagerSeriesQuery,
   window: { from_ms: number; to_ms: number } | null): ManagerSeriesEntry {
   const { scope, subject } = input, id = subjectKey(subject, scope.workspaceId);
   const portfolioId = subject.subject_type === "PORTFOLIO" ? subject.subject_id : undefined;
+  const alphaId = subject.subject_type === "ALPHA" ? subject.subject_id : undefined; // WP-K: an alpha is authorized as a whole like a portfolio
   // 1. Authority first. One reason for "not allowed to see this as a whole", whatever the cause.
   const fields = [SERIES_METRIC_FIELD[query.metric], "currency", "provenance_ref"];
-  if (!fields.every(field => scopeAllowsField(scope, field)) || !scopeAllowsFullAccountingPopulation(scope, portfolioId))
+  if (!fields.every(field => scopeAllowsField(scope, field)) || !scopeAllowsFullAccountingPopulation(scope, portfolioId, alphaId))
     return unavailable(id, "SERIES_SCOPE_NOT_AUTHORIZED");
   const members: ManagerMember[] = doc.members.filter(m => m.valid_from_ms <= doc.as_of_ms && (m.valid_to_ms === null || m.valid_to_ms > doc.as_of_ms) &&
-    projectionRowVisible(scope, m.tuple) && (portfolioId === undefined || m.tuple.portfolio_id === portfolioId));
+    projectionRowVisible(scope, m.tuple) && (portfolioId === undefined || m.tuple.portfolio_id === portfolioId) &&
+    (alphaId === undefined || m.tuple.alpha_id === alphaId));
   if (!members.length) return unavailable(id, "SUBJECT_HAS_NO_ACTIVE_MEMBERS");
   // 2. Then the source: nothing published, or published but not qualified, is not a series.
   if (doc.precomputed_series === undefined) return unavailable(id, "SERIES_SOURCE_NOT_PUBLISHED");
@@ -52,7 +54,7 @@ function entryFor(input: SeriesSubjectScope, doc: ManagerModelDocument, query: M
     return unavailable(id, "SOURCE_NOT_QUALIFIED");
   if (window === null) return unavailable(id, "ALL_HISTORY_WINDOW_NOT_PUBLISHED");
   const population = managerScorePopulationDigest(members), stages = seriesStagesFor(scope.environment);
-  const subjectType = subject.subject_type === "FUND" ? "manager_book" : "portfolio";
+  const subjectType = subject.subject_type === "FUND" ? "manager_book" : subject.subject_type === "ALPHA" ? "alpha" : "portfolio";
   const candidates = doc.precomputed_series.filter(p => {
     const b = p.binding, v = p.provenance;
     return b.subject_type === subjectType && b.subject_id === id.subject_id && b.metric === query.metric &&

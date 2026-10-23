@@ -42,16 +42,18 @@ async function fixture(options: { full?: boolean; qualification?: "SOURCE_VERIFI
   const scope = await f.scopes.authorize(f.principal, { environment: "paper", profileId: profile },
     { action: options.full === false ? "alpha.read" : "business.read_all", dataset: binding });
   const populationOf = (portfolioId?: string) => managerScorePopulationDigest(doc.members.filter(m => portfolioId === undefined || m.tuple.portfolio_id === portfolioId));
+  const populationOfAlpha = (alphaId: string) => managerScorePopulationDigest(doc.members.filter(m => m.tuple.alpha_id === alphaId));
   /** A hand-built TEST_ONLY publication for a subject; patch edits the binding/series/provenance. */
   const publication = (portfolioId: string | undefined, patch: { currency?: string; points?: Array<[number, string]>; methodology?: string; basis?: string;
-    window?: { from_ms: number; to_ms: number }; metric?: "NAV" | "NET_PNL" | "RETURN"; population?: string; native?: string; scale?: "FRACTION" | "PERCENT" | null } = {}): ManagerSeriesPublication => {
+    window?: { from_ms: number; to_ms: number }; metric?: "NAV" | "NET_PNL" | "RETURN" | "DRAWDOWN"; population?: string; alpha?: string; native?: string; scale?: "FRACTION" | "PERCENT" | null } = {}): ManagerSeriesPublication => {
     const w = patch.window ?? WINDOW, currency = patch.currency ?? "USDT", p = { ...partition(currency, "PAPER", patch.native), basis: patch.basis ?? "TEST_ONLY:nav-ledger" };
-    const metric = patch.metric ?? "NAV";
-    return { binding: { subject_type: portfolioId === undefined ? "manager_book" : "portfolio", subject_id: portfolioId ?? doc.workspace_id,
-      tuple_population_digest: patch.population ?? populationOf(portfolioId), stage_filter: ["PAPER"], metric, partition: p,
+    const metric = patch.metric ?? "NAV", ratio = metric === "RETURN" || metric === "DRAWDOWN";
+    return { binding: { subject_type: patch.alpha !== undefined ? "alpha" : portfolioId === undefined ? "manager_book" : "portfolio",
+      subject_id: patch.alpha ?? portfolioId ?? doc.workspace_id,
+      tuple_population_digest: patch.population ?? (patch.alpha !== undefined ? populationOfAlpha(patch.alpha) : populationOf(portfolioId)), stage_filter: ["PAPER"], metric, partition: p,
       window_start_ms: w.from_ms, window_end_ms: w.to_ms },
-    series: { unit: metric === "RETURN" ? "RATIO" : "MONEY", currency: metric === "RETURN" ? null : currency,
-      ratio_scale: metric === "RETURN" ? (patch.scale === undefined ? "FRACTION" : patch.scale) : null, basis: p.basis,
+    series: { unit: ratio ? "RATIO" : "MONEY", currency: ratio ? null : currency,
+      ratio_scale: ratio ? (patch.scale === undefined ? "FRACTION" : patch.scale) : null, basis: p.basis,
       methodology_ref: patch.methodology ?? "TEST_ONLY:nav-twr.v1",
       points: (patch.points ?? [[0, "100"], [1, "101.5"]]).map(([day, value]) => ({ ts_ms: w.from_ms + day * DAY, value })), gaps: [] },
     quality: { completeness: "COMPLETE", freshness: "FRESH", reasons: [] }, source_confidence: "VERIFIED",
@@ -60,8 +62,8 @@ async function fixture(options: { full?: boolean; qualification?: "SOURCE_VERIFI
       input_digest: accessDigest([portfolioId ?? "fund", currency, metric, patch.points ?? null]), calculation_revision: "TEST_ONLY:calc", policy_revision: "TEST_ONLY:policy" ,
       source_as_of_ms: AS_OF } };
   };
-  const inputs = (subjects: Array<{ subject_type: "FUND" | "PORTFOLIO"; subject_id?: string }>): SeriesSubjectScope[] => subjects.map(subject => ({ subject, scope }));
-  const read = (subjects: Array<{ subject_type: "FUND" | "PORTFOLIO"; subject_id?: string }>, query: Record<string, unknown> = {}, document: unknown = doc) =>
+  const inputs = (subjects: Array<{ subject_type: "FUND" | "PORTFOLIO" | "ALPHA"; subject_id?: string }>): SeriesSubjectScope[] => subjects.map(subject => ({ subject, scope }));
+  const read = (subjects: Array<{ subject_type: "FUND" | "PORTFOLIO" | "ALPHA"; subject_id?: string }>, query: Record<string, unknown> = {}, document: unknown = doc) =>
     queryManagerSeries(inputs(subjects), document, { environment: "paper", metric: "NAV", window: "30D", subjects, ...query });
   return { f, doc, scope, publication, read, populationOf };
 }
@@ -221,7 +223,7 @@ describe("BE-P4 FE-033: aligned series for 2-4 subjects, typed refusal when they
     for (const subjects of [portfolios, [], [portfolios[0], portfolios[0]], [{ subject_type: "FUND", subject_id: "x" }], [{ subject_type: "PORTFOLIO" }], [FUND, FUND]])
       expect(managerSeriesQuery.safeParse({ ...ok, subjects }).success).toBe(false);
     expect(managerSeriesQuery.safeParse({ environment: "paper", metric: "NAV", subjects: [FUND] }).success).toBe(false); // window is mandatory
-    expect(managerSeriesQuery.safeParse({ ...ok, subjects: [FUND], metric: "DRAWDOWN" }).success).toBe(false);
+    expect(managerSeriesQuery.safeParse({ ...ok, subjects: [FUND], metric: "SHARPE" }).success).toBe(false);
     expect(managerSeriesQuery.safeParse({ ...ok, subjects: [FUND], as_of_ms: 1 }).success).toBe(false);
   });
 });
@@ -424,7 +426,7 @@ describe("service + controller (synthetic adapters, no PostgreSQL)", () => {
   });
   it("closed query is checked before any source metadata is read", async () => {
     const s = await service();
-    for (const bad of [{ environment: "paper" }, query([]), query([A, A]), query([A], { metric: "DRAWDOWN" }), query([A], { sql: "x" }),
+    for (const bad of [{ environment: "paper" }, query([]), query([A, A]), query([A], { metric: "SHARPE" }), query([A], { sql: "x" }),
       { ...query([A]), subjects: "{" }, { ...query([A]), window: "{" }, query(Array(5).fill(A))])
       await expect(s.controller.read(s.request, bad)).rejects.toMatchObject({ code: "EXECUTION_READ_NOT_AVAILABLE" });
     await expect(s.controller.read(s.request, query([A], { as_of_ms: "" }))).rejects.toMatchObject({ code: "EXECUTION_READ_CURRENT_ONLY", status: 400 });
@@ -459,5 +461,70 @@ describe("canonical fixtures agree with the validator and the suite's expectatio
     expect(states("unavailable").series_source.state).toBe("NOT_PUBLISHED");
     expect(states("unavailable").series.every((s: any) => s.state === "UNAVAILABLE")).toBe(true);
     expect(states("currency-mixed").comparison).toMatchObject({ state: "INCOMPARABLE", reason_code: "CURRENCY_MIXED" });
+  });
+});
+
+describe("WP-K slice 1: ALPHA subjects and the DRAWDOWN metric", () => {
+  const ALPHA = { subject_type: "ALPHA" as const, subject_id: OWN.alpha_id };
+  it("an alpha subject is read like a portfolio: exact series, partition, window, alpha identity", async () => {
+    const t = await fixture(); t.doc.precomputed_series = [t.publication(undefined, { alpha: OWN.alpha_id, points: [[0, "100"], [1, "100.8"]] })];
+    const r = t.read([ALPHA]);
+    expect(r.series[0]).toMatchObject({ subject: { subject_type: "ALPHA", subject_id: OWN.alpha_id }, state: "AVAILABLE", unit: "MONEY", currency: "USDT" });
+    expect(r.series[0].points.map(p => p.value)).toEqual(["100", "100.8"]);
+    expect(r.comparison).toMatchObject({ state: "SINGLE_SUBJECT" });
+  });
+  it("an alpha and a portfolio in one partition and window are ALIGNED on the union axis; mixed currency stays INCOMPARABLE", async () => {
+    const t = await fixture();
+    t.doc.precomputed_series = [t.publication(undefined, { alpha: OWN.alpha_id, points: [[0, "1"], [1, "2"]] }), t.publication(SHARED, { points: [[0, "5"], [2, "6"]] })];
+    const r = t.read([ALPHA, A]);
+    expect(r.comparison).toMatchObject({ state: "ALIGNED" });
+    expect(r.comparison.axis_ms).toEqual([0, 1, 2].map(day => WINDOW.from_ms + day * DAY));
+    t.doc.precomputed_series = [t.publication(undefined, { alpha: OWN.alpha_id, currency: "VND" }), t.publication(SHARED)];
+    expect(t.read([ALPHA, A]).comparison).toMatchObject({ state: "INCOMPARABLE", reason_code: "CURRENCY_MIXED" });
+  });
+  it("an alpha outside the authorized population gets the same typed refusal as an unknown one (no existence oracle)", async () => {
+    const t = await fixture(); t.doc.precomputed_series = [t.publication(undefined, { alpha: "no-such-alpha", population: t.populationOf() })];
+    expect(t.read([{ subject_type: "ALPHA", subject_id: "no-such-alpha" }]).series[0]).toMatchObject({ state: "UNAVAILABLE", reason_code: "SERIES_SCOPE_NOT_AUTHORIZED" });
+  });
+  it("a restricted viewer never gets an alpha series", async () => {
+    const t = await fixture({ full: false }); t.doc.precomputed_series = [t.publication(undefined, { alpha: OWN.alpha_id })];
+    expect(t.read([ALPHA]).series[0]).toMatchObject({ state: "UNAVAILABLE", points: [] });
+  });
+  it("no source published: an alpha is a typed UNAVAILABLE, never an empty series", async () => {
+    const t = await fixture();
+    expect(t.read([ALPHA]).series[0]).toMatchObject({ state: "UNAVAILABLE", reason_code: "SERIES_SOURCE_NOT_PUBLISHED", points: [] });
+  });
+  it("DRAWDOWN is a RATIO with the scale its source stated, no currency, and points at or below zero", async () => {
+    const t = await fixture();
+    t.doc.precomputed_series = [t.publication(undefined, { alpha: OWN.alpha_id, metric: "DRAWDOWN", points: [[0, "0"], [1, "-0.0123"], [2, "-0.0045"]] })];
+    const r = t.read([ALPHA], { metric: "DRAWDOWN" });
+    expect(r.metric).toBe("DRAWDOWN");
+    expect(r.series[0]).toMatchObject({ state: "AVAILABLE", unit: "RATIO", currency: null, ratio_scale: "FRACTION" });
+    expect(r.series[0].points.map(p => p.value)).toEqual(["0", "-0.0123", "-0.0045"]);
+    t.doc.precomputed_series = [t.publication(undefined, { alpha: OWN.alpha_id, metric: "DRAWDOWN", points: [[0, "0"], [1, "-1.23"]], scale: "PERCENT" })];
+    expect(t.read([ALPHA], { metric: "DRAWDOWN" }).series[0]).toMatchObject({ unit: "RATIO", ratio_scale: "PERCENT" });
+  });
+  it("a drawdown above zero is refused at the source and at the response; a NAV series is not served as a drawdown", async () => {
+    const t = await fixture();
+    expect(managerModelDocument.safeParse({ ...t.doc, precomputed_series: [t.publication(undefined, { alpha: OWN.alpha_id, metric: "DRAWDOWN", points: [[0, "0.01"]] })] }).success).toBe(false);
+    t.doc.precomputed_series = [t.publication(undefined, { alpha: OWN.alpha_id, metric: "DRAWDOWN", points: [[0, "0"], [1, "-0.5"]] })];
+    const response = structuredClone(t.read([ALPHA], { metric: "DRAWDOWN" }));
+    response.series[0].points[1].value = "0.5";
+    const parsed = managerSeriesResponse.safeParse(response);
+    expect(parsed.success).toBe(false);
+    expect(!parsed.success && parsed.error.issues.map(i => i.message)).toContain("MANAGER_SERIES_DRAWDOWN_POSITIVE");
+    t.doc.precomputed_series = [t.publication(undefined, { alpha: OWN.alpha_id, metric: "NAV" })];
+    expect(t.read([ALPHA], { metric: "DRAWDOWN" }).series[0]).toMatchObject({ state: "UNAVAILABLE", reason_code: "SERIES_SOURCE_NOT_PUBLISHED" });
+  });
+  it("a drawdown ratio with no stated scale is typed absence", async () => {
+    const t = await fixture(); t.doc.precomputed_series = [t.publication(undefined, { alpha: OWN.alpha_id, metric: "DRAWDOWN", points: [], scale: null })];
+    // An empty unscaled ratio is admitted by the source and is never served: typed RATIO_SCALE_NOT_PUBLISHED. Values without a scale are refused at the source.
+    expect(t.read([ALPHA], { metric: "DRAWDOWN" }).series[0]).toMatchObject({ state: "UNAVAILABLE", reason_code: "RATIO_SCALE_NOT_PUBLISHED", points: [] });
+    expect(managerModelDocument.safeParse({ ...t.doc, precomputed_series: [t.publication(undefined, { alpha: OWN.alpha_id, metric: "DRAWDOWN", scale: null, points: [[0, "-1"]] })] }).success).toBe(false);
+  });
+  it("the query refuses an ALPHA subject without an id and a duplicate alpha", () => {
+    expect(managerSeriesQuery.safeParse({ environment: "paper", metric: "DRAWDOWN", window: "30D", subjects: [{ subject_type: "ALPHA" }] }).success).toBe(false);
+    expect(managerSeriesQuery.safeParse({ environment: "paper", metric: "DRAWDOWN", window: "30D", subjects: [ALPHA, ALPHA] }).success).toBe(false);
+    expect(managerSeriesQuery.safeParse({ environment: "paper", metric: "DRAWDOWN", window: "30D", subjects: [ALPHA, A] }).success).toBe(true);
   });
 });
