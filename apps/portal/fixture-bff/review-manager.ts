@@ -989,9 +989,9 @@ function datasetAnswer(method: string, path: string, search: URLSearchParams, pr
   return { status: 200, body };
 }
 
-export function answerReviewManager(method: string, path: string, search: URLSearchParams, profile: ReviewManagerProfile): ReviewManagerResponse | null {
+export function answerReviewManager(method: string, path: string, search: URLSearchParams, profile: ReviewManagerProfile, requestBody: unknown = null): ReviewManagerResponse | null {
   const normalized = path.replace(/^\/api\/v1\/execution(?=\/)/, "");
-  return seriesAnswer(method, normalized, search, profile) ?? wpkApprovalEvidence(method, normalized, search, profile) ?? wpkAlphaLifecycle(method, normalized, search) ?? wpkOperationsExtras(method, normalized, search) ?? wpkEntitySearch(method, normalized, search) ?? wpkPortfolioHealth(method, normalized, search) ?? wpcCandles(method, normalized, search) ?? wpcEquity(method, normalized, search) ?? wpF1Answer(method, normalized, search) ?? wpcAlphaKeys(normalized, search, datasetAnswer(method, normalized, search, profile));
+  return seriesAnswer(method, normalized, search, profile) ?? wpkApprovalEvidence(method, normalized, search, profile) ?? wpkAlphaLifecycle(method, normalized, search) ?? wpkOperationsExtras(method, normalized, search) ?? wpkEntitySearch(method, normalized, search) ?? wpkPortfolioHealth(method, normalized, search) ?? wpkSiblings(method, normalized, search, requestBody) ?? wpcCandles(method, normalized, search) ?? wpcEquity(method, normalized, search) ?? wpF1Answer(method, normalized, search) ?? wpcAlphaKeys(normalized, search, datasetAnswer(method, normalized, search, profile));
 }
 
 // ===== WP-C begin (Alpha 360, Trade replay, Compare; FIXTURE_LAB, register section 2c-wpc)
@@ -1375,7 +1375,7 @@ function wpkOperationsExtras(method: string, path: string, search: URLSearchPara
       const actor = WPK_ACTORS[seedOf(op.id, "actor") % 3]!;
       const subject = { type: "OPERATION", id: op.id };
       rows.push({ audit_id: `FIXTURE_LAB:${op.id}:created`, at_ms: created, actor, action: "CREATED", subject, receipt_ref: null });
-      if (op.triage !== "UNACKNOWLEDGED") rows.push({ audit_id: `FIXTURE_LAB:${op.id}:ack`, at_ms: created + 5 * 60_000, actor, action: "ACKNOWLEDGED", subject, receipt_ref: `FIXTURE_LAB:receipt-${op.id}-ack` });
+      if (op.triage !== "UNACKNOWLEDGED") rows.push({ audit_id: `FIXTURE_LAB:${op.id}:ack`, at_ms: created + 5 * 60_000, actor, action: "ACKNOWLEDGED", subject, receipt_ref: `FIXTURE_LAB:receipt-${op.id}-ack`, policy_revision: "FIXTURE_LAB:policy-4" });
       if (op.triage === "RESOLVED") rows.push({ audit_id: `FIXTURE_LAB:${op.id}:resolved`, at_ms: created + 60 * 60_000, actor, action: "RESOLVED", subject, receipt_ref: `FIXTURE_LAB:receipt-${op.id}-resolved` });
     }
     rows.sort((x, y) => y.at_ms - x.at_ms || x.audit_id.localeCompare(y.audit_id));
@@ -1485,4 +1485,204 @@ function wpkPortfolioHealth(method: string, path: string, search: URLSearchParam
   return { status: 200, body };
 }
 
+/* ---- Stage entry (A->K): `stage_lifecycle.entry_time` STAGE_TRANSITION_SOURCE_PUBLISHED, `unavailable_fields` empty, and per row `entered_at_ms` /
+ * `days_in_stage` for a row with ONE current stage. FIXTURE_LAB: 1 to 45 whole days, the entry instant a deterministic offset (under one day) older, so
+ * `days_in_stage == floor((as_of_ms - entered_at_ms) / 86400000)` holds exactly. One row in nine keeps the typed absence (coverage is per row). */
+function wpkStageEntry(body: Draft): void {
+  body.stage_lifecycle = { ...body.stage_lifecycle, entry_time: "STAGE_TRANSITION_SOURCE_PUBLISHED" };
+  body.query_options.unavailable_fields = [];
+  const day = 86_400_000;
+  for (const row of body.items as Draft[]) {
+    const reasons = row.stage_lifecycle_reasons ?? {};
+    if (row.current_stage === null || row.current_stage === undefined) { row.stage_lifecycle_reasons = { ...reasons, entered_at_ms: "STAGE_ENTRY_TIME_NOT_PUBLISHED", days_in_stage: "STAGE_ENTRY_TIME_NOT_PUBLISHED" }; continue; }
+    const seed = seedOf(row.row_key, "wpk-stage-entry");
+    if (seed % 9 === 0) { row.entered_at_ms = null; row.days_in_stage = null; row.stage_lifecycle_reasons = { ...reasons, entered_at_ms: "STAGE_ENTRY_TIME_NOT_PUBLISHED", days_in_stage: "STAGE_ENTRY_TIME_NOT_PUBLISHED" }; continue; }
+    const days = 1 + (seed % 45);
+    row.entered_at_ms = body.as_of_ms - days * day - ((seed >>> 8) % day);
+    row.days_in_stage = days;
+    row.stage_lifecycle_reasons = { ...reasons, entered_at_ms: null, days_in_stage: null };
+  }
+}
+
+/* ---- Sibling reads (second pass, GAP-3 4 5 6 7 9 11 12 13 14 15 16), FIXTURE_LAB. Each answer is deterministic per id (FNV digest) and follows the slice-2 rule:
+ * about one id in seven answers every section null (source not read), one in seven omits them (no owning source), the rest publish. Registered in the
+ * register section 2k2. Only the visit digest is stateful: the baseline is kept per workspace in this process (the "server" of the fixture). */
+const wpkBaselines = new Map<string, { set_at_ms: number; set_by: string; cut_revision: string }>();
+const WPK_USER = "FIXTURE_LAB:user";
+function wpkDigest(workspace: string): Draft {
+  const now = fixtureNowMs();
+  const alpha = WPC_ALPHAS[2]!;
+  const keys = wpcLifecycleKeys(alpha.id, {});
+  const kindOf: Record<string, string> = { stage: "STAGE_CHANGED", decision: "APPROVAL_DECIDED", incident: "INCIDENT_OPENED", recall: "RECALL", flow: "CAPITAL_COMMAND" };
+  const items: Draft[] = [];
+  for (const [key, metric] of Object.entries(keys)) {
+    const m = /^evt_(stage|decision|incident|recall|flow)_(\d+)_ms$/.exec(key);
+    if (m === null || metric.availability !== "AVAILABLE") continue;
+    // The events are placed in the last 36 hours before FIXTURE_NOW, newest by key order, so a baseline set "a while ago" has some before and some after.
+    const age = (seedOf(alpha.id, key, "wpk-digest") % 36) * 3_600_000 + 60_000;
+    items.push({ item_id: `FIXTURE_LAB:${key}`, kind: kindOf[m[1]!], at_ms: now - age, title: String(metric.reason_code).split("|")[0], subject: { type: "ALPHA", id: alpha.id } });
+  }
+  for (const op of scaled().operations.filter((o) => o.source === "FAILED").slice(0, 3))
+    items.push({ item_id: `FIXTURE_LAB:${op.id}`, kind: "OPERATION_FAILED", at_ms: now - (seedOf(op.id, "wpk-digest") % 30) * 3_600_000 - 120_000, title: op.command, subject: { type: "OPERATION", id: op.id } });
+  items.sort((a, b) => b.at_ms - a.at_ms || a.item_id.localeCompare(b.item_id));
+  const shown = items.slice(0, 24);
+  const baseline = wpkBaselines.get(workspace) ?? null;
+  const rows = shown.map((item) => ({ ...item, since_baseline: baseline === null ? true : item.at_ms > baseline.set_at_ms }));
+  const kinds = ["APPROVAL_DECIDED", "INCIDENT_OPENED", "OPERATION_FAILED", "STAGE_CHANGED", "RECALL", "CAPITAL_COMMAND", "ACCESS_CHANGED"];
+  return { schema_version: "portal.execution.visit-digest.v1", workspace_id: workspace, record_authority: "PORTAL_PROJECTION", read_at_ms: now, user_id: WPK_USER, baseline,
+    current_cut: { as_of_ms: now, revision: digest(["FIXTURE_LAB:cut", workspace, shown.map((i) => i.item_id), now]) }, items: rows,
+    counts_by_kind: kinds.flatMap((kind) => { const count = rows.filter((r) => r.since_baseline && r.kind === kind).length; return count > 0 ? [{ kind, count }] : []; }) };
+}
+function wpkSiblings(method: string, path: string, search: URLSearchParams, requestBody: unknown): ReviewManagerResponse | null {
+  const now = fixtureNowMs();
+  const workspace = search.get("workspace_id") ?? "ws_FIXTURE_LAB";
+  const head = (name: string): Draft => ({ schema_version: `portal.execution.${name}.v1`, workspace_id: workspace, record_authority: "PORTAL_PROJECTION", read_at_ms: now });
+  const ID = /^[A-Za-z0-9._:-]{1,191}$/;
+  const subject = (fallbackType: string, fallbackId: string): { type: string; id: string } | null => {
+    const type = search.get("subject_type") ?? fallbackType, id = search.get("subject_id") ?? fallbackId;
+    return ID.test(id) && ["ALPHA", "PORTFOLIO", "ACCOUNT", "DEPLOYMENT", "OPERATION", "INCIDENT", "APPROVAL"].includes(type) ? { type, id } : null;
+  };
+  /** 0: every section null (not read); 1: every section omitted (no source); else published. */
+  const mode = (...parts: unknown[]): "null" | "omit" | "ok" => { const m = seedOf(...parts, "wpk-sib") % 7; return m === 0 ? "null" : m === 1 ? "omit" : "ok"; };
+  const sections = (body: Draft, keys: string[], m: "null" | "omit" | "ok", fill: () => Draft): Draft => { if (m === "null") for (const k of keys) body[k] = null; else if (m === "ok") Object.assign(body, fill()); return body; };
+  const invalid = problem(400, "EXECUTION_READ_QUERY_INVALID", "The query names an id or a type this read does not accept.");
+  const ok = (body: Draft): ReviewManagerResponse => ({ status: 200, body });
+  const T = (n: number): number => now - n * 3_600_000;
+
+  const receipt = /^\/commands\/([A-Za-z0-9._:-]{1,191})\/receipt$/.exec(path);
+  if (receipt !== null && method === "GET") {
+    // GAP-2: the positive receipt. The pinned F0 denial is untouched; this is the sibling that carries the applied case. FIXTURE_LAB: one operation in four is denied.
+    const operationId = receipt[1]!, seed = seedOf(operationId, "wpk-receipt");
+    const state = (["APPLIED", "VERIFIED", "VERIFIED", "DENIED"] as const)[seed % 4]!;
+    const body: Draft = { ...head("command-receipt"), operation_id: operationId, command_key: "allocation/increase", request_key: `FIXTURE_LAB:req-${operationId}`, state,
+      side_effect: state === "DENIED" ? { source_request_sent: false, relay: "DISABLED" } : { source_request_sent: true, relay: "RELAYED" } };
+    if (state !== "DENIED") body.receipt = { receipt_ref: `FIXTURE_LAB:receipt-${operationId}`, content_hash: digest(["FIXTURE_LAB:receipt", operationId]), issued_at_ms: T(2), issued_by: WPK_ACTORS[seed % 3]!,
+      what_changes: "Allocation changes as the request stated; nothing else.", verification: state === "VERIFIED" ? { result: "SUCCEEDED", verified_at_ms: T(1) } : { result: "PENDING", verified_at_ms: null } };
+    return ok(body);
+  }
+  if (path === "/digest" && method === "GET") return ok(wpkDigest(workspace));
+  if (path === "/digest/baseline" && method === "POST") {
+    const b = requestBody as Draft;
+    if (!b || typeof b !== "object" || Object.keys(b).sort().join(",") !== "cut_revision,workspace_id" || typeof b.workspace_id !== "string" || !/^sha256:[a-f0-9]{64}$/.test(String(b.cut_revision))) return invalid;
+    const current = wpkDigest(b.workspace_id);
+    // The cut moves with the clock; a cut the server no longer holds is a conflict, never a silent move to a different cut.
+    if (current.current_cut.revision !== b.cut_revision) return problem(409, "EXECUTION_READ_NOT_AVAILABLE", "The cut changed since it was read; read the digest again.");
+    wpkBaselines.set(b.workspace_id, { set_at_ms: now, set_by: WPK_USER, cut_revision: b.cut_revision });
+    return ok(wpkDigest(b.workspace_id));
+  }
+  if (method !== "GET") return null;
+
+  if (path === "/controls") {
+    const type = search.get("scope_type") ?? "WORKSPACE", id = search.get("scope_id") ?? workspace;
+    if (!ID.test(id) || !["WORKSPACE", "PORTFOLIO", "ACCOUNT", "DEPLOYMENT"].includes(type)) return invalid;
+    const seed = seedOf(type, id, "wpk-controls"), m = mode(type, id);
+    return ok(sections(head("controls"), ["locks", "trading_state"], m, () => {
+      const locks = Array.from({ length: seed % 3 }, (_, i) => ({ lock_id: `FIXTURE_LAB:lock-${id}-${i + 1}`, scope: { type, id }, revision: 1 + (seed >>> (i + 3)) % 5, state: i === 0 ? "ACTIVE" : "RELEASED",
+        set_at_ms: T(30 + i * 20), set_by: WPK_ACTORS[(seed + i) % 3]!, reason_code: i === 0 ? "RISK_REVIEW" : null }));
+      const reducing = seed % 4 === 0;
+      return { locks, trading_state: { state: reducing ? "REDUCING" : "ACTIVE", since_ms: T(reducing ? 3 : 48),
+        history: reducing ? [{ state: "REDUCING", at_ms: T(3), actor: WPK_ACTORS[seed % 3]!, reason_code: "LIMIT_WARN" }, { state: "ACTIVE", at_ms: T(48), actor: null, reason_code: null }] : [{ state: "ACTIVE", at_ms: T(48), actor: null, reason_code: null }] } };
+    }));
+  }
+  if (path === "/obligations") {
+    const sub = subject("PORTFOLIO", "pf_TEST_ONLY_core"); if (sub === null) return invalid;
+    const seed = seedOf(sub.type, sub.id, "wpk-ob"), m = mode(sub.type, sub.id);
+    const kinds = ["OPEN_POSITION", "WORKING_ORDER", "RESERVATION", "UNKNOWN_OUTCOME", "SETTLEMENT_PENDING"] as const;
+    return ok(sections({ ...head("obligations"), subject: sub }, ["items"], m, () => ({ items: Array.from({ length: seed % 5 }, (_, i) => {
+      const kind = kinds[(seed + i) % kinds.length]!, unknown = kind === "UNKNOWN_OUTCOME";
+      return { obligation_id: `FIXTURE_LAB:ob-${sub.id}-${i + 1}`, kind, state: unknown ? "RECOVERING" : "OPEN", recovery_id: unknown ? `FIXTURE_LAB:rec-${i + 1}` : null,
+        order_id: kind === "WORKING_ORDER" || unknown ? `FIXTURE_LAB:ord-${i + 1}` : null, operation_id: unknown ? `FIXTURE_LAB:op-${i + 1}` : null, opened_at_ms: T(2 + i * 5) };
+    }) })));
+  }
+  const members = /^\/portfolios\/([A-Za-z0-9._:-]{1,191})\/members$/.exec(path);
+  if (members !== null) {
+    const id = members[1]!, seed = seedOf(id, "wpk-members"), m = mode(id);
+    const labels = ["Manager", "Researcher", "Viewer"];
+    return ok(sections({ ...head("portfolio-members"), portfolio_id: id }, ["members"], m, () => ({ members: Array.from({ length: 1 + seed % 3 }, (_, i) => ({
+      membership_id: `FIXTURE_LAB:m-${id}-${i + 1}`, user_id: `FIXTURE_LAB:user-${(seed + i) % 5 + 1}`, role_label: labels[i % 3]!, valid_from_ms: T(24 * 90), valid_until_ms: i === 2 ? T(24) : null, state: i === 2 ? "ENDED" : "ACTIVE" })) })));
+  }
+  const profile = /^\/accounts\/([A-Za-z0-9._:-]{1,191})\/profile$/.exec(path);
+  if (profile !== null) {
+    const id = profile[1]!, seed = seedOf(id, "wpk-profile"), m = mode(id);
+    const usdt = seed % 4 !== 0;
+    const cents = (n: number): string => `${Math.trunc(n / 100)}.${String(n % 100).padStart(2, "0")}`;
+    return ok(sections({ ...head("account-profile"), account_id: id }, ["product", "network", "margin_mode", "margin_ratio", "wallet_balance", "native_equity"], m, () => ({
+      product: usdt ? "USDT-M futures · hedge" : "Perpetual swap · net", network: { name: "MAINNET", proof_at_ms: now - 120_000 }, margin_mode: ["CROSS", "ISOLATED", "PORTFOLIO"][seed % 3]!,
+      margin_ratio: { percent: cents(200 + seed % 900), as_of_ms: now }, wallet_balance: { currency: usdt ? "USDT" : "BTC", value: cents(4_000_000 + seed % 5_000_000), as_of_ms: now },
+      native_equity: { currency: usdt ? "USDT" : "BTC", value: cents(4_000_000 + (seed >>> 5) % 5_000_000), as_of_ms: now } })));
+  }
+  if (path === "/readiness") {
+    const environment = search.get("environment") ?? "paper";
+    if (!["paper", "sandbox", "live"].includes(environment)) return invalid;
+    const alphas = [...scaled().alphas, ...WPC_ALPHAS].filter((a) => a.deployments.some((d) => d.environment === environment));
+    return ok({ ...head("alpha-readiness"), environment, items: alphas.slice(0, 200).map((a) => {
+      const seed = seedOf(a.id, environment, "wpk-ready"), item: Draft = { alpha_id: a.id };
+      if (seed % 11 !== 0) item.readiness = { met: seed % 8, total: 7 };
+      if (seed % 13 !== 0) item.archive_state = seed % 17 === 0 ? "ARCHIVED" : seed % 9 === 0 ? "PAPER_WATCH" : "ACTIVE";
+      return item;
+    }) });
+  }
+  if (path === "/reconciliation") {
+    const sub = subject("ACCOUNT", "acct_fixture"); if (sub === null) return invalid;
+    const seed = seedOf(sub.type, sub.id, "wpk-rec"), m = mode(sub.type, sub.id);
+    return ok(sections({ ...head("reconciliation"), subject: sub }, ["runs", "breaks"], m, () => {
+      const open = seed % 3 === 0 ? 1 : 0;
+      const runs = [{ run_id: `FIXTURE_LAB:run-${sub.id}-2`, state: open ? "BREAKS_FOUND" : "MATCHED", started_at_ms: T(1), finished_at_ms: T(1) + 60_000, breaks_open: open },
+        { run_id: `FIXTURE_LAB:run-${sub.id}-1`, state: "MATCHED", started_at_ms: T(25), finished_at_ms: T(25) + 60_000, breaks_open: 0 }];
+      return { runs, breaks: open ? [{ break_id: `FIXTURE_LAB:brk-${sub.id}-1`, run_id: runs[0]!.run_id, state: "OPEN", kind: ["POSITION", "BALANCE", "ORDER", "FILL"][seed % 4]!, resolution_revision: null, detected_at_ms: T(1) }] : [] };
+    }));
+  }
+  if (path === "/limits") {
+    const sub = subject("DEPLOYMENT", "dep_fixture"); if (sub === null) return invalid;
+    const m = mode(sub.type, sub.id);
+    const scopeType = sub.type === "PORTFOLIO" || sub.type === "ACCOUNT" || sub.type === "DEPLOYMENT" ? sub.type : "WORKSPACE";
+    return ok(sections({ ...head("limits"), subject: sub }, ["items"], m, () => ({ items: ["Gross notional", "Open orders", "Leverage"].map((label, i) => {
+      const seed = seedOf(sub.id, label, "wpk-limit"), thousandths = seed % 1_100_000; // used ratio in millionths of the cap, above 1 is a breach
+      const ratio = i === 2 && seed % 3 === 0 ? null : `${Math.trunc(thousandths / 1_000_000)}.${String(thousandths % 1_000_000).padStart(6, "0")}`;
+      return { limit_id: `FIXTURE_LAB:lim-${sub.id}-${i + 1}`, scope: { type: scopeType, id: sub.id }, label, model_revision: "FIXTURE_LAB:model-4", used_ratio: ratio,
+        state: ratio === null ? "UNKNOWN" : thousandths >= 1_000_000 ? "BREACH" : thousandths >= 800_000 ? "WARN" : "OK", cap: i === 0 ? { currency: "USDT", value: "150000.00" } : null };
+    }) })));
+  }
+  if (path === "/cost-events") {
+    const sub = subject("ALPHA", "alpha_a"); if (sub === null) return invalid;
+    const seed = seedOf(sub.type, sub.id, "wpk-cost"), m = mode(sub.type, sub.id);
+    return ok(sections({ ...head("cost-events"), subject: sub }, ["events", "totals"], m, () => {
+      const kinds = ["FEE", "FUNDING", "INTEREST"] as const;
+      const events = Array.from({ length: 2 + seed % 5 }, (_, i) => {
+        const kind = kinds[(seed + i) % 3]!, currency = i % 4 === 3 ? "BNB" : "USDT", n = BigInt((seed >>> i) % 90_000 + 1), neg = kind === "FUNDING" && i % 2 === 0;
+        const value = currency === "BNB" ? decimal(n, 6) : decimal(n, 2);
+        return { event_id: `FIXTURE_LAB:cost-${sub.id}-${i + 1}`, kind, at_ms: T(1 + i * 3), currency, amount: neg ? `-${value}` : value, order_id: kind === "FEE" ? `FIXTURE_LAB:ord-${i + 1}` : null };
+      });
+      const totals = new Map<string, string>();
+      for (const e of events) { const key = `${e.kind}|${e.currency}`; totals.set(key, addDecimal(totals.get(key) ?? "0", e.amount)); }
+      return { events, totals: [...totals].map(([key, amount]) => { const [kind, currency] = key.split("|"); return { kind, currency, amount }; }) };
+    }));
+  }
+  if (path === "/reports") {
+    const sub = subject("PORTFOLIO", "pf_TEST_ONLY_core"); if (sub === null) return invalid;
+    const seed = seedOf(sub.type, sub.id, "wpk-report"), m = mode(sub.type, sub.id);
+    return ok(sections({ ...head("report-snapshots"), subject: sub }, ["items"], m, () => ({ items: Array.from({ length: seed % 4 }, (_, i) => ({
+      report_id: `FIXTURE_LAB:rep-${sub.id}-${i + 1}`, content_hash: digest(["FIXTURE_LAB:report", sub.id, i]), source_cut: { as_of_ms: T(24 * (i + 1)), revision: digest(["FIXTURE_LAB:cut", sub.id, i]) },
+      created_at_ms: T(24 * (i + 1)) + 5000, created_by: i % 2 === 0 ? WPK_ACTORS[seed % 3]! : null })) })));
+  }
+  if (path === "/recovery-events") {
+    const sub = subject("INCIDENT", "inc_fixture"); if (sub === null) return invalid;
+    const seed = seedOf(sub.type, sub.id, "wpk-recov"), m = mode(sub.type, sub.id);
+    return ok(sections({ ...head("recovery-events"), subject: sub }, ["events"], m, () => ({ events: Array.from({ length: seed % 4 }, (_, i) => {
+      const kind = (["RECOVERY_STARTED", "QUALITY_DEGRADED", "RECOVERY_COMPLETED", "QUALITY_RESTORED"] as const)[(seed + i) % 4]!;
+      return { event_id: `FIXTURE_LAB:rev-${sub.id}-${i + 1}`, kind, at_ms: T(1 + i), recovery_id: kind.startsWith("RECOVERY") ? `FIXTURE_LAB:rec-${i + 1}` : null,
+        quality_event_id: kind.startsWith("QUALITY") ? `FIXTURE_LAB:q-${i + 1}` : null, detail: kind === "QUALITY_DEGRADED" ? "Feed gap" : null };
+    }) })));
+  }
+  if (path === "/grants") {
+    const sub = subject("DEPLOYMENT", "dep_fixture"); if (sub === null) return invalid;
+    const seed = seedOf(sub.type, sub.id, "wpk-grants"), m = mode(sub.type, sub.id);
+    return ok(sections({ ...head("grants"), subject: sub }, ["items"], m, () => ({ items: Array.from({ length: seed % 4 }, (_, i) => {
+      const state = (["GRANTED", "RESERVED", "CONSUMED", "RELEASED", "EXPIRED"] as const)[(seed + i) % 5]!;
+      return { grant_id: `FIXTURE_LAB:g-${sub.id}-${i + 1}`, reservation_id: state === "RESERVED" || state === "CONSUMED" ? `FIXTURE_LAB:res-${i + 1}` : null, state,
+        amounts: [{ currency: "USDT", value: decimal(BigInt((seed >>> i) % 900_000 + 100), 2) }, ...(i === 1 ? [{ currency: "BTC", value: "0.01" }] : [])], granted_at_ms: T(2 + i), expires_at_ms: state === "RESERVED" ? now + 3_600_000 : null };
+    }) })));
+  }
+  return null;
+}
 // ===== WP-K end

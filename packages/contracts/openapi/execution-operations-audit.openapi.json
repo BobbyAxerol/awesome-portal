@@ -248,7 +248,10 @@
                         "INCIDENT",
                         "ACCOUNT",
                         "PORTFOLIO",
-                        "DEPLOYMENT"
+                        "DEPLOYMENT",
+                        "APPROVAL",
+                        "CAPITAL_COMMAND",
+                        "ACCESS_GRANT"
                       ]
                     },
                     "id": {
@@ -266,6 +269,19 @@
                       "minLength": 1,
                       "maxLength": 191,
                       "pattern": "^[A-Za-z0-9._:-]+$(?![\\s\\S])"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "policy_revision": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 256,
+                      "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
                     },
                     {
                       "type": "null"

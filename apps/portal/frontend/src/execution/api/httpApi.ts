@@ -69,6 +69,8 @@ import { accessEligibilityBatchUrl, eligibilityBatchAnswers, readAccessEligibili
 import { ACCESS_SELF_CONTEXT_PATH, readAccessSelfContext } from "../v2/readers/accessSelfContext";
 import { ACCESS_STEP_UP_PATH, accessStepUpAnswers, accessStepUpBody, readAccessStepUp } from "../v2/readers/accessStepUp";
 import { incidentChildrenAnswers, incidentChildrenPath, operationsAuditPath, readIncidentChildrenV1, readOperationsAuditV1 } from "../v2/readers/incidentChildren";
+import { run } from "../v2/readers/strictRead";
+import { SIBLINGS, type SiblingId } from "../v2/readers/siblings.generated";
 import { entitySearchAnswers, entitySearchPath, readEntitySearchV1 } from "../v2/readers/entitySearch";
 import { alphaLifecycleAnswers, alphaLifecyclePath, readAlphaLifecycleV1 } from "../v2/readers/alphaLifecycle";
 import { approvalEvidenceAnswers, approvalEvidencePath, readApprovalEvidenceV1 } from "../v2/readers/approvalEvidence";
@@ -1256,6 +1258,24 @@ export function createHttpApi({ policy, signal, readScope = {} }: HttpApiOptions
       const path = operationsAuditPath(query);
       if (path === null) return unavailable("The audit request was not valid, so it was not sent.");
       return readGet(path, (raw) => { const read = readOperationsAuditV1(raw); return read !== null && read.kind === "operations_audit" ? read.page : null; }, "The operations audit");
+    },
+
+    async getSibling(id: SiblingId, params = {}) {
+      const spec = SIBLINGS[id];
+      const path = spec.path(params);
+      if (path === null) return unavailable(`The ${id} request was not valid (an id the Portal accepts is required), so it was not sent.`);
+      return readGet(path, (raw) => run(spec.read, raw), `The ${id} read`);
+    },
+
+    async markVisitDigestSeen(workspaceId, cutRevision) {
+      if (!workspaceId || !/^sha256:[a-f0-9]{64}$/.test(cutRevision)) return unavailable("The digest baseline request was not valid, so it was not sent.");
+      let response: Response;
+      try { response = await post("/digest/baseline", { workspace_id: workspaceId, cut_revision: cutRevision }, signal); } catch { return unavailable("The digest baseline request never reached the Portal — network failure."); }
+      if (!response.ok) return problem(response);
+      let body: unknown = null;
+      try { body = await response.json(); } catch { /* fails closed below */ }
+      const read = run(SIBLINGS["visit-digest"].read, body);
+      return read === null ? unavailable("The digest baseline answer could not be read.") : { ok: true, value: read, warnings: [] };
     },
 
     async searchEntities(query) {

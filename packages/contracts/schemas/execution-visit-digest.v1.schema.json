@@ -1,0 +1,203 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.primusspark.com/portal/execution-visit-digest.v1.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "workspace_id",
+    "record_authority",
+    "read_at_ms",
+    "user_id",
+    "baseline",
+    "current_cut",
+    "items",
+    "counts_by_kind"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "portal.execution.visit-digest.v1"
+    },
+    "workspace_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256,
+      "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+    },
+    "record_authority": {
+      "const": "PORTAL_PROJECTION"
+    },
+    "read_at_ms": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+    },
+    "user_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 191,
+      "pattern": "^[A-Za-z0-9._:-]+$(?![\\s\\S])"
+    },
+    "baseline": {
+      "anyOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "set_at_ms",
+            "set_by",
+            "cut_revision"
+          ],
+          "properties": {
+            "set_at_ms": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            },
+            "set_by": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 191,
+              "pattern": "^[A-Za-z0-9._:-]+$(?![\\s\\S])"
+            },
+            "cut_revision": {
+              "type": "string",
+              "pattern": "^sha256:[a-f0-9]{64}$(?![\\s\\S])"
+            }
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "current_cut": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "as_of_ms",
+        "revision"
+      ],
+      "properties": {
+        "as_of_ms": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "revision": {
+          "type": "string",
+          "pattern": "^sha256:[a-f0-9]{64}$(?![\\s\\S])"
+        }
+      }
+    },
+    "items": {
+      "type": "array",
+      "maxItems": 200,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "item_id",
+          "kind",
+          "at_ms",
+          "title",
+          "subject",
+          "since_baseline"
+        ],
+        "properties": {
+          "item_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 191,
+            "pattern": "^[A-Za-z0-9._:-]+$(?![\\s\\S])"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "APPROVAL_DECIDED",
+              "INCIDENT_OPENED",
+              "OPERATION_FAILED",
+              "STAGE_CHANGED",
+              "RECALL",
+              "CAPITAL_COMMAND",
+              "ACCESS_CHANGED"
+            ]
+          },
+          "at_ms": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+          },
+          "subject": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "type",
+              "id"
+            ],
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": [
+                  "ALPHA",
+                  "PORTFOLIO",
+                  "ACCOUNT",
+                  "DEPLOYMENT",
+                  "OPERATION",
+                  "INCIDENT",
+                  "APPROVAL"
+                ]
+              },
+              "id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 191,
+                "pattern": "^[A-Za-z0-9._:-]+$(?![\\s\\S])"
+              }
+            }
+          },
+          "since_baseline": {
+            "type": "boolean"
+          }
+        }
+      }
+    },
+    "counts_by_kind": {
+      "type": "array",
+      "maxItems": 8,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "kind",
+          "count"
+        ],
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "APPROVAL_DECIDED",
+              "INCIDENT_OPENED",
+              "OPERATION_FAILED",
+              "STAGE_CHANGED",
+              "RECALL",
+              "CAPITAL_COMMAND",
+              "ACCESS_CHANGED"
+            ]
+          },
+          "count": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          }
+        }
+      }
+    }
+  }
+}

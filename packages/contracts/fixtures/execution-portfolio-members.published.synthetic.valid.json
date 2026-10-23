@@ -1,0 +1,28 @@
+{
+  "lane": "TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT",
+  "value": {
+    "schema_version": "portal.execution.portfolio-members.v1",
+    "workspace_id": "TEST_ONLY:workspace",
+    "record_authority": "PORTAL_PROJECTION",
+    "read_at_ms": 1800000000000,
+    "portfolio_id": "TEST_ONLY:portfolio-a",
+    "members": [
+      {
+        "membership_id": "TEST_ONLY:m-1",
+        "user_id": "TEST_ONLY:user-1",
+        "role_label": "Manager",
+        "valid_from_ms": 1792224000000,
+        "valid_until_ms": null,
+        "state": "ACTIVE"
+      },
+      {
+        "membership_id": "TEST_ONLY:m-2",
+        "user_id": "TEST_ONLY:user-2",
+        "role_label": "Researcher",
+        "valid_from_ms": 1792224000000,
+        "valid_until_ms": 1799913600000,
+        "state": "ENDED"
+      }
+    ]
+  }
+}

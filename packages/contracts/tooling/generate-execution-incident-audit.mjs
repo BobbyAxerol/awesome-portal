@@ -59,12 +59,15 @@ const audit = typed({
   properties: {
     schema_version: { const: 'portal.execution.operations-audit.v1' }, workspace_id: text, record_authority: { const: 'PORTAL_PROJECTION' }, read_at_ms: ms,
     items: { type: 'array', maxItems: 250, items: object({ audit_id: id, at_ms: ms, actor: text, action: { type: 'string', pattern: '^[A-Z][A-Z0-9_]{1,63}$(?![\\s\\S])' },
-      subject: object({ type: { type: 'string', enum: ['OPERATION', 'INCIDENT', 'ACCOUNT', 'PORTFOLIO', 'DEPLOYMENT'] }, id }), receipt_ref: nullable(id) }) },
+      subject: object({ type: { type: 'string', enum: ['OPERATION', 'INCIDENT', 'ACCOUNT', 'PORTFOLIO', 'DEPLOYMENT', 'APPROVAL', 'CAPITAL_COMMAND', 'ACCESS_GRANT'] }, id }), receipt_ref: nullable(id) }) },
     has_more: { type: 'boolean' }, next_cursor: nullable({ type: 'string', minLength: 1, maxLength: 4096 }),
   },
   allOf: [{ type: 'object', if: { type: 'object', required: ['has_more'], properties: { has_more: { const: true } } }, then: { type: 'object', properties: { next_cursor: { type: 'string' } } },
     else: { type: 'object', properties: { next_cursor: { type: 'null' } } } }],
 });
+
+// GAP-18: the policy revision the action was decided under: OPTIONAL and nullable (omitted = this producer has no owning source; null = the action had none).
+audit.properties.items.items.properties.policy_revision = nullable(text);
 
 const op = (operationId, description, parameters, name) => ({ get: { operationId, security: [{ PortalSession: [] }], description, parameters,
   responses: { 200: { description: 'Authorized current answer; absence stays typed', headers, content: { 'application/json': { schema: { $ref: `#/components/schemas/${name}` } } } }, ...errors(name) } } });

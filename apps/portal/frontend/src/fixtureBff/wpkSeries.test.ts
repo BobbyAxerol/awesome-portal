@@ -12,6 +12,8 @@ import { createHttpApi } from "../execution/api/httpApi";
 import type { ExecutionApi } from "../execution/api/ports";
 import type { DeliveryPolicy } from "../execution/profile";
 import { disposeSchemaCheck, violationsOf } from "./schemaCheck";
+import { run } from "../execution/v2/readers/strictRead";
+import { SIBLINGS, type SiblingId } from "../execution/v2/readers/siblings.generated";
 
 const OPEN: DeliveryPolicy = { policyRevision: 4, queryEnabled: true, projectionIngestionEnabled: false, sseEnabled: false,
   governanceWriteEnabled: false, paperCommandsEnabled: false, sandboxCommandsEnabled: false,
@@ -25,9 +27,9 @@ const ask = (metric: string, subjects: unknown[], extra: Record<string, string> 
 };
 function client(): ExecutionApi {
   prepare();
-  vi.stubGlobal("fetch", async (input: string) => {
+  vi.stubGlobal("fetch", async (input: string, init?: { method?: string; body?: string }) => {
     const url = new URL(String(input), "http://fixture.test");
-    const response = answerReviewManager("GET", url.pathname, url.searchParams, "populated");
+    const response = answerReviewManager(init?.method ?? "GET", url.pathname, url.searchParams, "populated", init?.body ? JSON.parse(init.body) : null);
     return new Response(JSON.stringify(response?.body ?? { error: { code: "FIXTURE_GAP" } }), { status: response?.status ?? 501, headers: { "content-type": "application/json", "x-fixture-lane": "FIXTURE_LAB" } });
   });
   return createHttpApi({ policy: OPEN, readScope: {} });
@@ -349,3 +351,137 @@ describe("WP-K FIXTURE_LAB: portfolio health roll-up", () => {
   });
 });
 
+describe("WP-K FIXTURE_LAB: stage entry on the Manager datasets", () => {
+  const fleet = (extra: Record<string, string> = {}): Body => {
+    prepare();
+    return answerReviewManager("GET", "/api/v1/execution/manager/fleet", new URLSearchParams({ environment: "paper", limit: "100", window: JSON.stringify("30D"), ...extra }), "populated");
+  };
+  it("the single-environment reads publish the entry time: policy, empty unavailable_fields, and exact day arithmetic on every covered row", () => {
+    const result = fleet();
+    expect(result.status).toBe(200);
+    expect(violationsOf({ file: "execution-manager-dataset.v1", ptr: "" }, result.body).violations).toEqual([]);
+    const body = result.body;
+    expect(body.stage_lifecycle.entry_time).toBe("STAGE_TRANSITION_SOURCE_PUBLISHED");
+    expect(body.query_options.unavailable_fields).toEqual([]);
+    const withStage = (body.items as Body[]).filter((row) => row.current_stage);
+    expect(withStage.length).toBeGreaterThan(5);
+    const covered = withStage.filter((row) => row.entered_at_ms !== null);
+    const uncovered = withStage.filter((row) => row.entered_at_ms === null);
+    expect(covered.length).toBeGreaterThan(0);
+    expect(uncovered.length).toBeGreaterThan(0); // coverage is per row: some rows keep the typed absence
+    for (const row of covered) {
+      expect(row.days_in_stage).toBe(Math.floor((body.as_of_ms - row.entered_at_ms) / 86_400_000));
+      expect(row.stage_lifecycle_reasons).toMatchObject({ entered_at_ms: null, days_in_stage: null });
+    }
+    for (const row of uncovered) expect(row.stage_lifecycle_reasons).toMatchObject({ entered_at_ms: "STAGE_ENTRY_TIME_NOT_PUBLISHED", days_in_stage: "STAGE_ENTRY_TIME_NOT_PUBLISHED" });
+    expect(fleet()).toEqual(result);
+  });
+  it("the strict reader accepts it through the unmodified HTTP port and says the entry time is published", async () => {
+    const api = client();
+    const parsed = await api.getManagerDataset({ surface: "FLEET", environment: "paper", window: "30D", limit: 100 });
+    expect(parsed.ok, JSON.stringify(parsed)).toBe(true);
+    if (parsed.ok) {
+      expect(parsed.value.stageEntryPublished).toBe(true);
+      expect(parsed.value.items.some((row) => row.daysInStage !== null)).toBe(true);
+    }
+  });
+});
+
+describe("WP-K FIXTURE_LAB: the thirteen sibling reads", () => {
+  const route = (path: string, query: Record<string, string> = {}, method = "GET", body: unknown = null): Body => {
+    prepare();
+    return answerReviewManager(method, `/api/v1/execution${path}`, new URLSearchParams(query), "populated", body);
+  };
+  const CASES: Array<[string, string, string, Record<string, string>[]]> = [
+    ["controls", "execution-controls.v1", "/controls", [{ scope_type: "PORTFOLIO", scope_id: "pf_a" }, { scope_type: "DEPLOYMENT", scope_id: "dep_b" }, { scope_id: "ws_x" }, { scope_type: "ACCOUNT", scope_id: "acct_c" }, { scope_type: "PORTFOLIO", scope_id: "pf_d" }]],
+    ["obligations", "execution-obligations.v1", "/obligations", [{ subject_type: "PORTFOLIO", subject_id: "pf_a" }, { subject_type: "APPROVAL", subject_id: "apr_b" }, { subject_type: "PORTFOLIO", subject_id: "pf_c" }]],
+    ["portfolio-members", "execution-portfolio-members.v1", "/portfolios/pf_TEST_ONLY_core/members", [{}]],
+    ["account-profile", "execution-account-profile.v1", "/accounts/acct_a/profile", [{}]],
+    ["alpha-readiness", "execution-alpha-readiness.v1", "/readiness", [{ environment: "paper" }, { environment: "live" }]],
+    ["reconciliation", "execution-reconciliation.v1", "/reconciliation", [{ subject_type: "ACCOUNT", subject_id: "acct_a" }, { subject_type: "ACCOUNT", subject_id: "acct_b" }, { subject_type: "ACCOUNT", subject_id: "acct_c" }]],
+    ["limits", "execution-limits.v1", "/limits", [{ subject_type: "DEPLOYMENT", subject_id: "dep_a" }, { subject_type: "PORTFOLIO", subject_id: "pf_b" }]],
+    ["cost-events", "execution-cost-events.v1", "/cost-events", [{ subject_type: "ALPHA", subject_id: "alpha_a" }, { subject_type: "ALPHA", subject_id: "alpha_b" }]],
+    ["report-snapshots", "execution-report-snapshots.v1", "/reports", [{ subject_type: "PORTFOLIO", subject_id: "pf_a" }, { subject_type: "PORTFOLIO", subject_id: "pf_b" }]],
+    ["recovery-events", "execution-recovery-events.v1", "/recovery-events", [{ subject_type: "INCIDENT", subject_id: "inc_a" }, { subject_type: "INCIDENT", subject_id: "inc_b" }]],
+    ["command-receipt", "execution-command-receipt.v1", "/commands/op_a/receipt", [{}]],
+    ["grants", "execution-grants.v1", "/grants", [{ subject_type: "DEPLOYMENT", subject_id: "dep_a" }, { subject_type: "DEPLOYMENT", subject_id: "dep_b" }]],
+  ];
+  it.each(CASES)("%s answers deterministically with schema-valid bodies that the generated reader accepts", (name, file, path, queries) => {
+    for (const query of queries) {
+      const result = route(path, query);
+      expect(result?.status, `${path} ${JSON.stringify(query)}`).toBe(200);
+      expect(violationsOf({ file, ptr: "" }, result.body).violations).toEqual([]);
+      expect(route(path, query)).toEqual(result);
+      expect(run(SIBLINGS[name as SiblingId].read, result.body), `${name} ${JSON.stringify(query)}`).not.toBeNull();
+    }
+  });
+  it("across ids the sections show all three states (published, null = not read, omitted = no source) and a published zero", () => {
+    const bodies = Array.from({ length: 28 }, (_, i) => route("/obligations", { subject_type: "PORTFOLIO", subject_id: `pf_scan_${i}` }).body);
+    const states = new Set(bodies.map((b: Body) => ("items" in b ? (b.items === null ? "null" : "published") : "omitted")));
+    expect([...states].sort()).toEqual(["null", "omitted", "published"]);
+    expect(bodies.some((b: Body) => Array.isArray(b.items) && b.items.length === 0)).toBe(true);
+  });
+  it("the money in cost events is one currency per row and the totals are per kind and currency (never merged)", () => {
+    for (let i = 0; i < 12; i += 1) {
+      const body = route("/cost-events", { subject_type: "ALPHA", subject_id: `alpha_c${i}` }).body;
+      if (!Array.isArray(body.events)) continue;
+      const keys = body.totals.map((t: Body) => `${t.kind}|${t.currency}`);
+      expect(new Set(keys).size).toBe(keys.length);
+      for (const t of body.totals) {
+        const mine = (body.events as Body[]).filter((e) => e.kind === t.kind && e.currency === t.currency);
+        expect(mine.length).toBeGreaterThan(0);
+      }
+    }
+  });
+  it("limits state the server's ratio as six-place text and the state follows it (WARN from 0.8, BREACH from 1)", () => {
+    for (let i = 0; i < 12; i += 1) {
+      const body = route("/limits", { subject_type: "DEPLOYMENT", subject_id: `dep_l${i}` }).body;
+      if (!Array.isArray(body.items)) continue;
+      for (const item of body.items as Body[]) {
+        if (item.used_ratio === null) { expect(item.state).toBe("UNKNOWN"); continue; }
+        expect(item.used_ratio).toMatch(/^\d+\.\d{6}$/);
+        const millionths = Number(item.used_ratio.replace(".", ""));
+        expect(item.state).toBe(millionths >= 1_000_000 ? "BREACH" : millionths >= 800_000 ? "WARN" : "OK");
+      }
+    }
+  });
+  it("a bad id or type is a 400, not an empty answer", () => {
+    expect(route("/obligations", { subject_type: "USER", subject_id: "x" }).status).toBe(400);
+    expect(route("/limits", { subject_type: "DEPLOYMENT", subject_id: "../x" }).status).toBe(400);
+    expect(route("/readiness", { environment: "nope" }).status).toBe(400);
+    expect(route("/controls", { scope_type: "VENUE", scope_id: "x" }).status).toBe(400);
+  });
+  it("the digest: no baseline on a first visit, mark-seen moves it on the server, a stale cut is a 409, a bad body a 400, and the move survives the next read", async () => {
+    const ws = "ws_digest_test";
+    const first = route("/digest", { workspace_id: ws }).body;
+    expect(violationsOf({ file: "execution-visit-digest.v1", ptr: "" }, first).violations).toEqual([]);
+    expect(first.baseline).toBeNull();
+    expect((first.items as Body[]).every((i) => i.since_baseline)).toBe(true);
+    expect(first.items.length).toBeGreaterThan(0);
+    expect(route("/digest/baseline", {}, "POST", { workspace_id: ws, cut_revision: "sha256:" + "0".repeat(64) }).status).toBe(409);
+    expect(route("/digest/baseline", {}, "POST", { workspace_id: ws }).status).toBe(400);
+    expect(route("/digest/baseline", {}, "POST", { workspace_id: ws, cut_revision: "abc" }).status).toBe(400);
+    const moved = route("/digest/baseline", {}, "POST", { workspace_id: ws, cut_revision: first.current_cut.revision });
+    expect(moved.status).toBe(200);
+    expect(moved.body.baseline).toMatchObject({ set_by: "FIXTURE_LAB:user", cut_revision: first.current_cut.revision });
+    expect((moved.body.items as Body[]).every((i) => i.since_baseline === false)).toBe(true);
+    expect(moved.body.counts_by_kind).toEqual([]);
+    const again = route("/digest", { workspace_id: ws }).body;
+    expect(again.baseline).toEqual(moved.body.baseline);
+    // another workspace keeps its own baseline
+    expect(route("/digest", { workspace_id: "ws_other" }).body.baseline).toBeNull();
+  });
+  it("the strict generated readers accept them through the unmodified HTTP port, and mark-seen goes through POST", async () => {
+    const api = client();
+    const digest = await api.getSibling!("visit-digest", { workspace_id: "ws_http" });
+    expect(digest.ok, JSON.stringify(digest)).toBe(true);
+    if (!digest.ok) return;
+    const marked = await api.markVisitDigestSeen!("ws_http", digest.value.current_cut.revision);
+    expect(marked.ok, JSON.stringify(marked)).toBe(true);
+    if (marked.ok) expect(marked.value.baseline).not.toBeNull();
+    const limits = await api.getSibling!("limits", { subject_type: "DEPLOYMENT", subject_id: "dep_http" });
+    expect(limits.ok, JSON.stringify(limits)).toBe(true);
+    const refused = await api.getSibling!("portfolio-members", {});
+    expect(refused.ok).toBe(false);
+  });
+});

@@ -216,7 +216,7 @@ function answererOptions(config: FixtureConfig): FixtureAnswererOptions {
 function answerFor(config: FixtureConfig, request: BffRequest): BffResponse | null {
   const profile = config.reviewProfile;
   const review = profile === "sparse-realistic" ? null : answerReviewManager(request.method, request.path,
-    new URLSearchParams(request.search), profile);
+    new URLSearchParams(request.search), profile, request.body);
   const answered = review === null ? answerFixtureRequest(request, answererOptions(config)) : {
     ...review, headers: { "content-type": "application/json" },
   };

@@ -1,0 +1,56 @@
+{
+  "lane": "TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT",
+  "value": {
+    "schema_version": "portal.execution.cost-events.v1",
+    "workspace_id": "TEST_ONLY:workspace",
+    "record_authority": "PORTAL_PROJECTION",
+    "read_at_ms": 1800000000000,
+    "subject": {
+      "type": "ALPHA",
+      "id": "TEST_ONLY:alpha-a"
+    },
+    "events": [
+      {
+        "event_id": "TEST_ONLY:cost-1",
+        "kind": "FEE",
+        "at_ms": 1799996400000,
+        "currency": "USDT",
+        "amount": "1.25",
+        "order_id": "TEST_ONLY:ord-1"
+      },
+      {
+        "event_id": "TEST_ONLY:cost-2",
+        "kind": "FUNDING",
+        "at_ms": 1799971200000,
+        "currency": "USDT",
+        "amount": "-0.40",
+        "order_id": null
+      },
+      {
+        "event_id": "TEST_ONLY:cost-3",
+        "kind": "FEE",
+        "at_ms": 1799992800000,
+        "currency": "BNB",
+        "amount": "0.0012",
+        "order_id": "TEST_ONLY:ord-2"
+      }
+    ],
+    "totals": [
+      {
+        "kind": "FEE",
+        "currency": "USDT",
+        "amount": "1.25"
+      },
+      {
+        "kind": "FEE",
+        "currency": "BNB",
+        "amount": "0.0012"
+      },
+      {
+        "kind": "FUNDING",
+        "currency": "USDT",
+        "amount": "-0.40"
+      }
+    ]
+  }
+}

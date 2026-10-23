@@ -1,0 +1,86 @@
+{
+  "lane": "TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT",
+  "bases": {
+    "applied": "execution-command-receipt.applied.synthetic.valid.json",
+    "verified": "execution-command-receipt.verified.synthetic.valid.json",
+    "denied": "execution-command-receipt.denied.synthetic.valid.json"
+  },
+  "cases": [
+    {
+      "id": "applied-without-receipt",
+      "base": "applied",
+      "rule": "an applied command has a receipt",
+      "ops": [
+        {
+          "op": "delete",
+          "path": [
+            "receipt"
+          ]
+        }
+      ],
+      "refused_by": "SCHEMA_AND_READER"
+    },
+    {
+      "id": "applied-receipt-null",
+      "base": "applied",
+      "rule": "an applied command has a receipt (not \"not read\")",
+      "ops": [
+        {
+          "op": "set",
+          "path": [
+            "receipt"
+          ],
+          "value": null
+        }
+      ],
+      "refused_by": "SCHEMA_AND_READER"
+    },
+    {
+      "id": "denied-with-relay",
+      "base": "denied",
+      "rule": "a denied command sent nothing to the source",
+      "ops": [
+        {
+          "op": "set",
+          "path": [
+            "side_effect",
+            "source_request_sent"
+          ],
+          "value": true
+        }
+      ],
+      "refused_by": "SCHEMA_AND_READER"
+    },
+    {
+      "id": "hash-not-sha",
+      "base": "applied",
+      "rule": "a receipt hash is a sha256",
+      "ops": [
+        {
+          "op": "set",
+          "path": [
+            "receipt",
+            "content_hash"
+          ],
+          "value": "abc"
+        }
+      ],
+      "refused_by": "SCHEMA_AND_READER"
+    },
+    {
+      "id": "state-unknown",
+      "base": "applied",
+      "rule": "states are closed",
+      "ops": [
+        {
+          "op": "set",
+          "path": [
+            "state"
+          ],
+          "value": "DONE"
+        }
+      ],
+      "refused_by": "SCHEMA_AND_READER"
+    }
+  ]
+}

@@ -1,0 +1,30 @@
+{
+  "lane": "TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT",
+  "value": {
+    "schema_version": "portal.execution.account-profile.v1",
+    "workspace_id": "TEST_ONLY:workspace",
+    "record_authority": "PORTAL_PROJECTION",
+    "read_at_ms": 1800000000000,
+    "account_id": "TEST_ONLY:account-1",
+    "product": "USDT-M futures · hedge",
+    "network": {
+      "name": "MAINNET",
+      "proof_at_ms": 1799999880000
+    },
+    "margin_mode": "CROSS",
+    "margin_ratio": {
+      "percent": "5.10",
+      "as_of_ms": 1800000000000
+    },
+    "wallet_balance": {
+      "currency": "USDT",
+      "value": "88200.00",
+      "as_of_ms": 1800000000000
+    },
+    "native_equity": {
+      "currency": "USDT",
+      "value": "88580.38",
+      "as_of_ms": 1800000000000
+    }
+  }
+}

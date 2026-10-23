@@ -18,7 +18,7 @@ export const INCIDENT_CHILDREN_SCHEMA = "portal.execution.incident-children.v1";
 export const OPERATIONS_AUDIT_SCHEMA = "portal.execution.operations-audit.v1";
 export const INCIDENT_EVIDENCE_SOURCES = ["FINDING", "ALERT", "DEAD_LETTER", "ORDER_TRACE"] as const;
 const TARGET_TYPES = ["ACCOUNT", "PORTFOLIO", "DEPLOYMENT"] as const;
-const AUDIT_SUBJECTS = ["OPERATION", "INCIDENT", "ACCOUNT", "PORTFOLIO", "DEPLOYMENT"] as const;
+const AUDIT_SUBJECTS = ["OPERATION", "INCIDENT", "ACCOUNT", "PORTFOLIO", "DEPLOYMENT", "APPROVAL", "CAPITAL_COMMAND", "ACCESS_GRANT"] as const;
 const ID = /^[A-Za-z0-9._:-]{1,191}$/;
 const DIGEST = /^sha256:[a-f0-9]{64}$/;
 const CODE = /^[A-Z][A-Z0-9_]{1,63}$/;
@@ -151,7 +151,9 @@ export const incidentChildrenPath = (incidentId: string, workspaceId?: string): 
   ID.test(incidentId) ? `/operations/incidents/${encodeURIComponent(incidentId)}/children${workspaceId ? `?workspace_id=${encodeURIComponent(workspaceId)}` : ""}` : null;
 
 /* ── the audit feed ── */
-export interface AuditFeedRow { auditId: string; atMs: UtcEpochMs; actor: string; action: string; subject: { type: (typeof AUDIT_SUBJECTS)[number]; id: string }; receiptRef: string | null }
+export interface AuditFeedRow { auditId: string; atMs: UtcEpochMs; actor: string; action: string; subject: { type: (typeof AUDIT_SUBJECTS)[number]; id: string }; receiptRef: string | null;
+  /** GAP-18: the policy revision the action was decided under; `undefined` = this producer has no owning source, `null` = the action had none. */
+  policyRevision?: string | null }
 export interface OperationsAuditPage { workspaceId: string; readAtMs: UtcEpochMs; items: readonly AuditFeedRow[]; hasMore: boolean; nextCursor: string | null }
 export type OperationsAuditRead = { kind: "operations_audit"; page: OperationsAuditPage } | { kind: "unsupported_shape"; schemaVersion: string | null };
 
@@ -172,7 +174,9 @@ export function readOperationsAuditV1(raw: unknown): OperationsAuditRead | null 
     let previous = Number.POSITIVE_INFINITY;
     for (const entry of root.items) {
       const r = record(entry);
-      if (r === null || !hasOnly(r, ["audit_id", "at_ms", "actor", "action", "subject", "receipt_ref"])) return null;
+      if (r === null || !hasOnly(r, ["audit_id", "at_ms", "actor", "action", "subject", "receipt_ref", "policy_revision"])) return null;
+      const policyRevision = !("policy_revision" in r) ? undefined : r.policy_revision === null ? null : managerText(r.policy_revision);
+      if (policyRevision === null && r.policy_revision !== null) return null;
       const subject = record(r.subject);
       const auditId = idOf(r.audit_id);
       const atMs = clockMs(r.at_ms);
@@ -184,7 +188,7 @@ export function readOperationsAuditV1(raw: unknown): OperationsAuditRead | null 
       if (seen.has(auditId) || atMs > previous) return null; // AU-1, AU-2
       seen.add(auditId);
       previous = atMs;
-      items.push({ auditId, atMs, actor, action: r.action, subject: { type, id: subjectId }, receiptRef });
+      items.push({ auditId, atMs, actor, action: r.action, subject: { type, id: subjectId }, receiptRef, ...(policyRevision === undefined ? {} : { policyRevision }) });
     }
     return { kind: "operations_audit", page: { workspaceId, readAtMs, items, hasMore: root.has_more, nextCursor } };
   } catch {

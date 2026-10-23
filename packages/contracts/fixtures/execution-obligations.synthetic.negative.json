@@ -1,0 +1,61 @@
+{
+  "lane": "TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT",
+  "bases": {
+    "published": "execution-obligations.published.synthetic.valid.json",
+    "none": "execution-obligations.none.synthetic.valid.json",
+    "not-read": "execution-obligations.not-read.synthetic.valid.json"
+  },
+  "cases": [
+    {
+      "id": "unknown-kind",
+      "base": "published",
+      "rule": "kinds are closed",
+      "ops": [
+        {
+          "op": "set",
+          "path": [
+            "items",
+            0,
+            "kind"
+          ],
+          "value": "DEBT"
+        }
+      ],
+      "refused_by": "SCHEMA_AND_READER"
+    },
+    {
+      "id": "state-lowercase",
+      "base": "published",
+      "rule": "a state is an upper-case code",
+      "ops": [
+        {
+          "op": "set",
+          "path": [
+            "items",
+            0,
+            "state"
+          ],
+          "value": "open"
+        }
+      ],
+      "refused_by": "SCHEMA_AND_READER"
+    },
+    {
+      "id": "opened-negative",
+      "base": "published",
+      "rule": "a clock is not negative",
+      "ops": [
+        {
+          "op": "set",
+          "path": [
+            "items",
+            0,
+            "opened_at_ms"
+          ],
+          "value": -1
+        }
+      ],
+      "refused_by": "SCHEMA_AND_READER"
+    }
+  ]
+}

@@ -60,6 +60,8 @@ import type { AccessEligibilityBatchRead, EligibilityBatchRequest } from "../v2/
 import type { AccessStepUpInput, SessionStepUpOutcome } from "../v2/readers/accessStepUp";
 import type { AlphaLifecycle } from "../v2/readers/alphaLifecycle";
 import type { EntityKind, EntitySearch } from "../v2/readers/entitySearch";
+import type { Out } from "../v2/readers/strictRead";
+import type { SIBLINGS, SiblingId } from "../v2/readers/siblings.generated";
 import type { IncidentChildren, OperationsAuditPage } from "../v2/readers/incidentChildren";
 import type { ApprovalEvidence } from "../v2/readers/approvalEvidence";
 import type { AccessSelfContextRead } from "../v2/readers/accessSelfContext";import type { ApprovalRequestLookupQuery, ApprovalRequestLookupRead } from "../v2/readers/approvalRequestLookup";
@@ -656,6 +658,15 @@ export interface ExecutionApi {
    */
   searchEntities?(query: { q: string; kinds?: readonly EntityKind[]; limit?: number; workspaceId?: string }): Promise<Result<EntitySearch>>;
   /**
+   * WP-K second pass: one of the small sibling reads (visit digest, controls, obligations, portfolio members, account profile, readiness, reconciliation,
+   * limits, cost events, report snapshots, recovery events, grants), strictly read by the reader GENERATED from the same definition as its schema
+   * (`siblings.generated.ts`). Optional: a port or a route that does not offer it leaves the screen on its typed absence. `params` are the path and
+   * query values the definition names (`portfolio_id`, `workspace_id`, `subject_type`, ...).
+   */
+  getSibling?<K extends SiblingId>(id: K, params?: Readonly<Record<string, string>>): Promise<Result<SiblingBody<K>>>;
+  /** `POST /api/v1/execution/digest/baseline` (WP-K, GAP-7): move this user's digest baseline for the workspace to the named cut (mark seen). Fixture-served only today. */
+  markVisitDigestSeen?(workspaceId: string, cutRevision: string): Promise<Result<SiblingBody<"visit-digest">>>;
+  /**
    * `POST /api/v1/execution/commands/plans` with the EXECUTION_COMMAND body.
    *
    * Distinct from `planDecision`, which plans a GOVERNANCE decision on the same
@@ -842,3 +853,6 @@ export function unavailable(reason: string): Result<never> {
 export function denied(reason: string): Result<never> {
   return { ok: false, status: "denied", reason };
 }
+
+/** The typed body of one sibling read (the wire names, snake_case; a section is NO_SOURCE / NOT_READ / PUBLISHED). */
+export type SiblingBody<K extends SiblingId> = Out<(typeof SIBLINGS)[K]["read"]>;

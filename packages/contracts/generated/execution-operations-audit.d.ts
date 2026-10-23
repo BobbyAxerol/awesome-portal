@@ -39,10 +39,11 @@ export interface components {
                 action: string;
                 subject: {
                     /** @enum {string} */
-                    type: "OPERATION" | "INCIDENT" | "ACCOUNT" | "PORTFOLIO" | "DEPLOYMENT";
+                    type: "OPERATION" | "INCIDENT" | "ACCOUNT" | "PORTFOLIO" | "DEPLOYMENT" | "APPROVAL" | "CAPITAL_COMMAND" | "ACCESS_GRANT";
                     id: string;
                 };
                 receipt_ref: string | null;
+                policy_revision?: string | null;
             }[];
             has_more: boolean;
             next_cursor: string | null;

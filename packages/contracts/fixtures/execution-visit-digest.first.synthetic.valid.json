@@ -1,0 +1,49 @@
+{
+  "lane": "TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT",
+  "value": {
+    "schema_version": "portal.execution.visit-digest.v1",
+    "workspace_id": "TEST_ONLY:workspace",
+    "record_authority": "PORTAL_PROJECTION",
+    "read_at_ms": 1800000000000,
+    "user_id": "TEST_ONLY:user-1",
+    "baseline": null,
+    "current_cut": {
+      "as_of_ms": 1800000000000,
+      "revision": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    },
+    "items": [
+      {
+        "item_id": "TEST_ONLY:d1",
+        "kind": "APPROVAL_DECIDED",
+        "at_ms": 1799996400000,
+        "title": "R2 approved",
+        "subject": {
+          "type": "APPROVAL",
+          "id": "TEST_ONLY:approval-1"
+        },
+        "since_baseline": true
+      },
+      {
+        "item_id": "TEST_ONLY:d2",
+        "kind": "INCIDENT_OPENED",
+        "at_ms": 1799992800000,
+        "title": "Feed gap",
+        "subject": {
+          "type": "INCIDENT",
+          "id": "TEST_ONLY:incident-1"
+        },
+        "since_baseline": true
+      }
+    ],
+    "counts_by_kind": [
+      {
+        "kind": "APPROVAL_DECIDED",
+        "count": 1
+      },
+      {
+        "kind": "INCIDENT_OPENED",
+        "count": 1
+      }
+    ]
+  }
+}

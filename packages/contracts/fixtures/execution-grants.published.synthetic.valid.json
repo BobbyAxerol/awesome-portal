@@ -1,0 +1,45 @@
+{
+  "lane": "TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT",
+  "value": {
+    "schema_version": "portal.execution.grants.v1",
+    "workspace_id": "TEST_ONLY:workspace",
+    "record_authority": "PORTAL_PROJECTION",
+    "read_at_ms": 1800000000000,
+    "subject": {
+      "type": "DEPLOYMENT",
+      "id": "TEST_ONLY:dep-1"
+    },
+    "items": [
+      {
+        "grant_id": "TEST_ONLY:g-1",
+        "reservation_id": "TEST_ONLY:res-1",
+        "state": "RESERVED",
+        "amounts": [
+          {
+            "currency": "USDT",
+            "value": "5000.00"
+          }
+        ],
+        "granted_at_ms": 1799996400000,
+        "expires_at_ms": 1800003600000
+      },
+      {
+        "grant_id": "TEST_ONLY:g-2",
+        "reservation_id": null,
+        "state": "CONSUMED",
+        "amounts": [
+          {
+            "currency": "USDT",
+            "value": "250"
+          },
+          {
+            "currency": "BTC",
+            "value": "0.01"
+          }
+        ],
+        "granted_at_ms": 1799913600000,
+        "expires_at_ms": null
+      }
+    ]
+  }
+}

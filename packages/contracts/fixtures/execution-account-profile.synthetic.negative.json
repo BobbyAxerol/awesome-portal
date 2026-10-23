@@ -1,0 +1,71 @@
+{
+  "lane": "TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT",
+  "bases": {
+    "published": "execution-account-profile.published.synthetic.valid.json",
+    "partial": "execution-account-profile.partial.synthetic.valid.json"
+  },
+  "cases": [
+    {
+      "id": "balance-number",
+      "base": "published",
+      "rule": "money is exact decimal text",
+      "ops": [
+        {
+          "op": "set",
+          "path": [
+            "wallet_balance",
+            "value"
+          ],
+          "value": 88200
+        }
+      ],
+      "refused_by": "SCHEMA_AND_READER"
+    },
+    {
+      "id": "balance-no-currency",
+      "base": "published",
+      "rule": "one currency per figure",
+      "ops": [
+        {
+          "op": "delete",
+          "path": [
+            "wallet_balance",
+            "currency"
+          ]
+        }
+      ],
+      "refused_by": "SCHEMA_AND_READER"
+    },
+    {
+      "id": "margin-mode-unknown",
+      "base": "published",
+      "rule": "margin modes are closed",
+      "ops": [
+        {
+          "op": "set",
+          "path": [
+            "margin_mode"
+          ],
+          "value": "YOLO"
+        }
+      ],
+      "refused_by": "SCHEMA_AND_READER"
+    },
+    {
+      "id": "ratio-exponent",
+      "base": "published",
+      "rule": "a ratio is a plain decimal",
+      "ops": [
+        {
+          "op": "set",
+          "path": [
+            "margin_ratio",
+            "percent"
+          ],
+          "value": "5.1e0"
+        }
+      ],
+      "refused_by": "SCHEMA_AND_READER"
+    }
+  ]
+}

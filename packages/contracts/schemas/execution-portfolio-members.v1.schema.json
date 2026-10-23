@@ -1,0 +1,106 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.primusspark.com/portal/execution-portfolio-members.v1.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "workspace_id",
+    "record_authority",
+    "read_at_ms",
+    "portfolio_id"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "portal.execution.portfolio-members.v1"
+    },
+    "workspace_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256,
+      "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+    },
+    "record_authority": {
+      "const": "PORTAL_PROJECTION"
+    },
+    "read_at_ms": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+    },
+    "portfolio_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 191,
+      "pattern": "^[A-Za-z0-9._:-]+$(?![\\s\\S])"
+    },
+    "members": {
+      "anyOf": [
+        {
+          "type": "array",
+          "maxItems": 200,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "membership_id",
+              "user_id",
+              "role_label",
+              "valid_from_ms",
+              "valid_until_ms",
+              "state"
+            ],
+            "properties": {
+              "membership_id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 191,
+                "pattern": "^[A-Za-z0-9._:-]+$(?![\\s\\S])"
+              },
+              "user_id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 191,
+                "pattern": "^[A-Za-z0-9._:-]+$(?![\\s\\S])"
+              },
+              "role_label": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 64,
+                "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+              },
+              "valid_from_ms": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "valid_until_ms": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "state": {
+                "type": "string",
+                "enum": [
+                  "ACTIVE",
+                  "SCHEDULED",
+                  "ENDED"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    }
+  }
+}

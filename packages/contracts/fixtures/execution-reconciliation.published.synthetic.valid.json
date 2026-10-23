@@ -1,0 +1,39 @@
+{
+  "lane": "TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT",
+  "value": {
+    "schema_version": "portal.execution.reconciliation.v1",
+    "workspace_id": "TEST_ONLY:workspace",
+    "record_authority": "PORTAL_PROJECTION",
+    "read_at_ms": 1800000000000,
+    "subject": {
+      "type": "ACCOUNT",
+      "id": "TEST_ONLY:account-1"
+    },
+    "runs": [
+      {
+        "run_id": "TEST_ONLY:run-2",
+        "state": "BREAKS_FOUND",
+        "started_at_ms": 1799996400000,
+        "finished_at_ms": 1799996460000,
+        "breaks_open": 1
+      },
+      {
+        "run_id": "TEST_ONLY:run-1",
+        "state": "MATCHED",
+        "started_at_ms": 1799913600000,
+        "finished_at_ms": 1799913660000,
+        "breaks_open": 0
+      }
+    ],
+    "breaks": [
+      {
+        "break_id": "TEST_ONLY:brk-1",
+        "run_id": "TEST_ONLY:run-2",
+        "state": "OPEN",
+        "kind": "BALANCE",
+        "resolution_revision": null,
+        "detected_at_ms": 1799996400000
+      }
+    ]
+  }
+}

@@ -1,0 +1,60 @@
+{
+  "lane": "TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT",
+  "bases": {
+    "published": "execution-reconciliation.published.synthetic.valid.json",
+    "clean": "execution-reconciliation.clean.synthetic.valid.json"
+  },
+  "cases": [
+    {
+      "id": "break-state-unknown",
+      "base": "published",
+      "rule": "break states are closed",
+      "ops": [
+        {
+          "op": "set",
+          "path": [
+            "breaks",
+            0,
+            "state"
+          ],
+          "value": "IGNORED"
+        }
+      ],
+      "refused_by": "SCHEMA_AND_READER"
+    },
+    {
+      "id": "revision-zero",
+      "base": "published",
+      "rule": "a resolution revision is positive",
+      "ops": [
+        {
+          "op": "set",
+          "path": [
+            "breaks",
+            0,
+            "resolution_revision"
+          ],
+          "value": 0
+        }
+      ],
+      "refused_by": "SCHEMA_AND_READER"
+    },
+    {
+      "id": "breaks-open-negative",
+      "base": "published",
+      "rule": "a count is not negative",
+      "ops": [
+        {
+          "op": "set",
+          "path": [
+            "runs",
+            0,
+            "breaks_open"
+          ],
+          "value": -1
+        }
+      ],
+      "refused_by": "SCHEMA_AND_READER"
+    }
+  ]
+}
