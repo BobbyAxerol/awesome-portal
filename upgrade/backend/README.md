@@ -7,6 +7,14 @@ Chúng không thay thế phase hoặc exit gate trong
 
 ## Active deep dives
 
+- **23Oct executable scoped backend assembly — source-only:**
+  [same-phase04/05/06/08/09 journal](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#epg10-entrypoint-assembly-20261023)
+  covers actual query/history/export/notification router and serving lifecycle,
+  async current-policy/original custody, shared governed resources and financial
+  worker recovery/ACK. No fake provider/proof wire or operational activation;
+  new binary paths explicitly unavailable until actual authority binding.
+  Full08/09 connected remains NOT_MET; exact test/cleanup evidence in journal.
+
 - **23Oct business backend composition — source-only:**
   [current04/05/06/07/09 journal](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#epg10-backend-composition-20261023)
   covers financial transport/atomic projection/scoped reads, native P16

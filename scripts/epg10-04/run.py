@@ -94,7 +94,7 @@ RESOURCE_BUILD_SCRIPTS = (
     'crates/manager-v2-contract/build.rs',
 )
 EDGE_TEST_ARGUMENTS = ('cargo', 'test', '--offline', '--locked', '-p', 'edge-service',
-                       '--bins', '--', '--test-threads=1')
+                       '--lib', '--bins', '--', '--test-threads=1')
 TLS_TEST_ARGUMENTS = ('cargo', 'test', '--offline', '--locked', '-p', 'manager-v2-client',
                       '--test', 'epg10_08_tls', '--', '--nocapture', '--test-threads=1')
 MAX_COST_LINE_BYTES = 4096
@@ -149,6 +149,14 @@ RESOURCE_OWNED_RUST = (
     'crates/projection-store-pg/tests/epg10_06_manager.rs',
     'crates/query-api/Cargo.toml',
     'crates/edge-service/src/main.rs',
+    'crates/edge-service/src/lib.rs',
+    'crates/edge-service/src/scoped_backend.rs',
+    'crates/edge-service/src/scoped_backend/tests.rs',
+    'crates/edge-service/src/scoped_backend/tests/pg.rs',
+    'crates/edge-service/src/scoped_policy.rs',
+    'crates/edge-service/src/scoped_policy/tests.rs',
+    'crates/edge-service/src/scoped_worker.rs',
+    'crates/edge-service/src/scoped_worker/tests.rs',
     'crates/edge-service/src/manager_projection_command.rs',
     'crates/edge-service/src/projection_resources.rs',
     'crates/edge-service/src/projection_resources/tests.rs',
@@ -1177,7 +1185,7 @@ def main():
         if profile in ('06', '07', '08', '09', '10', '11'):
             stage = 'edge_tests'
             receipt['edge_tests'] = parse_rust_results(logged(stage,
-                edge_test_arguments(profile), timeout=240), 1)
+                edge_test_arguments(profile), timeout=240), 2)
         if profile in ('08', '09', '10', '11'):
             stage = 'tls_tests'
             receipt['tls_tests'] = parse_rust_results(logged(stage,

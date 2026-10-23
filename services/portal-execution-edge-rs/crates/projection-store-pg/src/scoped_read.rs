@@ -363,6 +363,23 @@ pub struct ScopedReadService<'a> {
 }
 
 impl ScopedReadService<'_> {
+    /// Exact authorized generation for notification-only cohort assembly.
+    /// Subsequent replay still validates its own generation-bound durable cursor.
+    /// # Errors
+    /// Missing Replay authority, unavailable generation or changed current policy.
+    pub async fn replay_generation(&self, read: &AuthorizedRead) -> Result<String, ReadError> {
+        deadline(async {
+            self.authorize(read, &replay_query())?;
+            let _permit = self.store.admit(WorkClass::ControlRead, 1, 8192)?;
+            let mut tx = read_tx(self.store).await?;
+            let current = active(&mut tx, read.scope(), self.clock.now_ms()).await?;
+            tx.commit().await?;
+            read.recheck(self.authorizer, self.clock.now_ms())?;
+            Ok(current.generation.to_string())
+        })
+        .await
+    }
+
     fn authorize(&self, read: &AuthorizedRead, query: &ReadQuery) -> Result<(), ReadError> {
         self.limits.validate()?;
         at(self.clock.now_ms())?;

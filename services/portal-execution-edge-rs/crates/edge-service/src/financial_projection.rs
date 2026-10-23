@@ -188,6 +188,105 @@ impl<'a> FinancialProjection<'a> {
         })
     }
 
+    /// Reopens the SAME independently authenticated original after restart.
+    /// This never fetches a new snapshot or substitutes its manifest. The store
+    /// preserves its staging/committed state and independently checks fences.
+    /// # Errors
+    /// Rejects foreign/expired-new manifests, stale proofs and durable fences.
+    pub async fn resume_manifest(
+        &self,
+        proof: &Verified<Manifest>,
+        placement: SnapshotPlacement,
+    ) -> Result<BootstrapHandle, FinancialProjectionError> {
+        self.wire.delta_request(
+            proof.value(),
+            &proof.value().delta_start,
+            self.clock.now_ms(),
+        )?;
+        Ok(match placement {
+            SnapshotPlacement::Auto => {
+                self.store
+                    .bootstrap_begin(proof, self.limits, self.clock.now_ms())
+                    .await?
+            }
+            SnapshotPlacement::Shadow => {
+                self.store
+                    .bootstrap_begin_shadow(proof, self.limits, self.clock.now_ms())
+                    .await?
+            }
+        })
+    }
+
+    /// Reuses the source's EXISTING PAGE wire for an interrupted original
+    /// snapshot; no new snapshot token/generation or extended lifetime.
+    /// # Errors
+    /// Rejects foreign/expired manifests or an index outside the original plan.
+    pub fn page_request(
+        &self,
+        handle: &BootstrapHandle,
+        index: u64,
+    ) -> Result<PreparedRequest, FinancialProjectionError> {
+        Ok(self
+            .wire
+            .page_request(handle.manifest(), index, self.clock.now_ms())?)
+    }
+
+    /// # Errors
+    /// Rejects delivery, wire/page integrity or unqualified financial originals.
+    pub async fn fetch_page(
+        &self,
+        handle: &BootstrapHandle,
+        index: u64,
+        assertion: &str,
+    ) -> Result<SnapshotPage, FinancialProjectionError> {
+        let request = self.page_request(handle, index)?;
+        let body = self.http.execute(&request, assertion).await?;
+        let page =
+            self.wire
+                .decode_page(body.bytes(), handle.manifest(), index, self.clock.now_ms())?;
+        for row in &page.page().rows {
+            validate_report(&row.payload, &row.entity_id, &row.revision, self.bindings)?;
+        }
+        Ok(page.page().clone())
+    }
+
+    /// Same-page idempotent recovery does not require retaining every source
+    /// page in memory. Its financial binding is rechecked before durable I/O.
+    /// # Errors
+    /// Rejects a foreign/expired page, original-report binding or store fence.
+    pub async fn stage_resumed_page(
+        &self,
+        handle: &BootstrapHandle,
+        proof: &Verified<SnapshotPage>,
+    ) -> Result<(), FinancialProjectionError> {
+        self.page_request(handle, proof.value().index)?;
+        for row in &proof.value().rows {
+            validate_report(&row.payload, &row.entity_id, &row.revision, self.bindings)?;
+        }
+        Ok(self
+            .store
+            .bootstrap_stage_page(handle, proof, self.clock.now_ms())
+            .await?)
+    }
+
+    /// # Errors
+    /// Rejects changed/fenced metadata, incomplete page chains or stale control.
+    pub async fn finish_resumed_snapshot(
+        &self,
+        handle: &BootstrapHandle,
+        control: &Verified<Binding>,
+    ) -> Result<Option<BootstrapReceipt>, FinancialProjectionError> {
+        self.wire.delta_request(
+            handle.manifest(),
+            &handle.manifest().delta_start,
+            self.clock.now_ms(),
+        )?;
+        Ok(self
+            .store
+            .bootstrap_finish_snapshot(handle, control, self.clock.now_ms())
+            .await?)
+    }
+
     /// # Errors
     /// Rejects cross-candidate pages, invalid proofs or store fence failures.
     pub async fn stage_page(

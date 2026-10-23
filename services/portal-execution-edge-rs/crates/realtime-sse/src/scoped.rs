@@ -86,6 +86,13 @@ pub struct ScopedRealtimeConfig {
 }
 
 impl ScopedRealtimeConfig {
+    /// Validates explicit service bounds without constructing a fake read scope.
+    /// # Errors
+    /// Rejects any unbounded queue, cadence or request ceiling.
+    pub fn validate_bounds(self) -> Result<(), ScopedRealtimeError> {
+        self.validate().map(|_| ())
+    }
+
     fn validate(self) -> Result<Self, ScopedRealtimeError> {
         if self.maximum_clients == 0
             || self.maximum_clients > 4096

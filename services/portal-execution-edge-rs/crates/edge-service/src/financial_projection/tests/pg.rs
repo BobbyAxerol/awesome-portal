@@ -26,7 +26,7 @@ use std::{
 };
 use ts_transport::{
     report_publication_http::{ReportHttpConfig, ReportHttpLimits},
-    report_publication_wire::{DELTA_PATH, SNAPSHOT_PATH},
+    report_publication_wire::{DELTA_PATH, PAGE_PATH, SNAPSHOT_PATH},
 };
 
 struct Clock(AtomicI64);
@@ -70,6 +70,10 @@ fn seal<T: Serialize + Clone>(value: &T, binding: &Binding, kind: &str) -> Verif
 }
 
 async fn test_store() -> PgProjectionStore {
+    test_store_and_resources().await.0
+}
+
+async fn test_store_and_resources() -> (PgProjectionStore, Arc<ResourceEnvelope>) {
     assert_eq!(std::env::var("EPG10_TEST_ONLY").as_deref(), Ok("1"));
     let url =
         std::env::var("TEST_PROJECTION_DATABASE_URL").expect("disposable PG required; no skip");
@@ -107,11 +111,11 @@ async fn test_store() -> PgProjectionStore {
             },
         )
         .unwrap();
-    let store = PgProjectionStore::connect_with_resources(&url, resources, 8)
+    let store = PgProjectionStore::connect_with_resources(&url, resources.clone(), 8)
         .await
         .unwrap();
     store.migrate().await.unwrap();
-    store
+    (store, resources)
 }
 
 struct SourceState {
@@ -136,9 +140,14 @@ async fn handler(
         .unwrap()
         .push((uri.path().into(), body.to_vec()));
     let value = if uri.path() == SNAPSHOT_PATH {
-        &state.snapshot
+        state.snapshot.clone()
+    } else if uri.path() == PAGE_PATH {
+        let request: Value = serde_json::from_slice(&body).unwrap();
+        assert_eq!(request["manifest"], state.snapshot["manifest"]);
+        let index = usize::try_from(request["index"].as_u64().unwrap()).unwrap();
+        state.snapshot["pages"][index].clone()
     } else {
-        &state.delta
+        state.delta.clone()
     };
     (
         [
@@ -147,7 +156,7 @@ async fn handler(
             ("cache-control", "no-store"),
             ("vary", "authorization"),
         ],
-        bytes(value),
+        bytes(&value),
     )
 }
 
@@ -182,32 +191,7 @@ fn tls() -> (Vec<u8>, Vec<u8>, Vec<u8>, Vec<u8>) {
 impl Source {
     fn start(snapshot: Value, delta: Value) -> Self {
         let (ca, certificate, key, identity) = tls();
-        let certificates = |raw: &[u8]| {
-            rustls_pemfile::certs(&mut Cursor::new(raw))
-                .collect::<Result<Vec<_>, _>>()
-                .unwrap()
-        };
-        let mut roots = rustls::RootCertStore::empty();
-        for certificate in certificates(&ca) {
-            roots.add(certificate).unwrap();
-        }
-        let provider = Arc::new(rustls::crypto::ring::default_provider());
-        let verifier = rustls::server::WebPkiClientVerifier::builder_with_provider(
-            Arc::new(roots),
-            provider.clone(),
-        )
-        .build()
-        .unwrap();
-        let key = rustls_pemfile::private_key(&mut Cursor::new(&key))
-            .unwrap()
-            .unwrap();
-        let mut config = rustls::ServerConfig::builder_with_provider(provider)
-            .with_protocol_versions(&[&rustls::version::TLS13])
-            .unwrap()
-            .with_client_cert_verifier(verifier)
-            .with_single_cert(certificates(&certificate), key)
-            .unwrap();
-        config.alpn_protocols = vec![b"http/1.1".to_vec()];
+        let config = test_server_tls(&ca, &certificate, &key);
         let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
         listener.set_nonblocking(true).unwrap();
         let origin = format!(
@@ -228,19 +212,17 @@ impl Source {
         });
         let app = Router::new()
             .route(SNAPSHOT_PATH, post(handler))
+            .route(PAGE_PATH, post(handler))
             .route(DELTA_PATH, post(handler))
             .with_state(state.clone());
         let handle = axum_server::Handle::new();
         let serving = handle.clone();
         let job = tokio::spawn(async move {
-            axum_server::from_tcp_rustls(
-                listener,
-                axum_server::tls_rustls::RustlsConfig::from_config(Arc::new(config)),
-            )
-            .handle(serving)
-            .serve(app.into_make_service())
-            .await
-            .unwrap();
+            axum_server::from_tcp_rustls(listener, config)
+                .handle(serving)
+                .serve(app.into_make_service())
+                .await
+                .unwrap();
         });
         Self {
             client,
@@ -259,6 +241,40 @@ impl Source {
     }
 }
 
+fn test_server_tls(
+    ca: &[u8],
+    certificate: &[u8],
+    key: &[u8],
+) -> axum_server::tls_rustls::RustlsConfig {
+    let certificates = |raw: &[u8]| {
+        rustls_pemfile::certs(&mut Cursor::new(raw))
+            .collect::<Result<Vec<_>, _>>()
+            .unwrap()
+    };
+    let mut roots = rustls::RootCertStore::empty();
+    for certificate in certificates(ca) {
+        roots.add(certificate).unwrap();
+    }
+    let provider = Arc::new(rustls::crypto::ring::default_provider());
+    let verifier = rustls::server::WebPkiClientVerifier::builder_with_provider(
+        Arc::new(roots),
+        provider.clone(),
+    )
+    .build()
+    .unwrap();
+    let key = rustls_pemfile::private_key(&mut Cursor::new(key))
+        .unwrap()
+        .unwrap();
+    let mut config = rustls::ServerConfig::builder_with_provider(provider)
+        .with_protocol_versions(&[&rustls::version::TLS13])
+        .unwrap()
+        .with_client_cert_verifier(verifier)
+        .with_single_cert(certificates(certificate), key)
+        .unwrap();
+    config.alpn_protocols = vec![b"http/1.1".to_vec()];
+    axum_server::tls_rustls::RustlsConfig::from_config(Arc::new(config))
+}
+
 impl Drop for Source {
     fn drop(&mut self) {
         self.handle.shutdown();
@@ -273,6 +289,728 @@ impl ReadAuthorizer for RevocablePolicy {
     fn current(&self, _: &ReadScope, op: Operation, _: i64) -> bool {
         !self.0.load(Ordering::SeqCst) && op == Operation::Current
     }
+}
+
+/// `TEST_ONLY` exact fixture proof source, not an issuer or production grant.
+struct WorkerAuthority {
+    denied: AtomicBool,
+    lose_ack_once: AtomicBool,
+    acks: Mutex<Vec<String>>,
+}
+
+impl WorkerAuthority {
+    fn new(lose_ack_once: bool) -> Self {
+        Self {
+            denied: AtomicBool::new(false),
+            lose_ack_once: AtomicBool::new(lose_ack_once),
+            acks: Mutex::new(vec![]),
+        }
+    }
+
+    fn current(&self) -> Result<(), crate::scoped_worker::SourceAuthorityError> {
+        if self.denied.load(Ordering::SeqCst) {
+            Err(crate::scoped_worker::SourceAuthorityError::Denied)
+        } else {
+            Ok(())
+        }
+    }
+
+    fn proof<'a, T: Serialize + Clone + Send + Sync + 'a>(
+        &'a self,
+        value: &'a T,
+        binding: &'a Binding,
+        kind: &'a str,
+    ) -> crate::scoped_worker::AuthorityFuture<'a, Verified<T>> {
+        Box::pin(async move {
+            self.current()?;
+            Ok(seal(value, binding, kind))
+        })
+    }
+}
+
+impl crate::scoped_worker::FinancialSourceAuthority for WorkerAuthority {
+    fn assertion<'a>(
+        &'a self,
+        request: &'a PreparedRequest,
+    ) -> crate::scoped_worker::AuthorityFuture<'a, String> {
+        Box::pin(async move {
+            self.current()?;
+            assert!(matches!(
+                request.path(),
+                SNAPSHOT_PATH | PAGE_PATH | DELTA_PATH
+            ));
+            assert!(request.body().len() <= 1024 * 1024);
+            Ok("TEST_ONLY-original-assertion".into())
+        })
+    }
+
+    fn manifest<'a>(
+        &'a self,
+        value: &'a Manifest,
+    ) -> crate::scoped_worker::AuthorityFuture<'a, Verified<Manifest>> {
+        self.proof(value, &value.binding, "MANIFEST")
+    }
+
+    fn page<'a>(
+        &'a self,
+        manifest: &'a Manifest,
+        value: &'a SnapshotPage,
+    ) -> crate::scoped_worker::AuthorityFuture<'a, Verified<SnapshotPage>> {
+        self.proof(value, &manifest.binding, "PAGE")
+    }
+
+    fn chunk<'a>(
+        &'a self,
+        manifest: &'a Manifest,
+        value: &'a DeltaChunk,
+    ) -> crate::scoped_worker::AuthorityFuture<'a, Verified<DeltaChunk>> {
+        self.proof(value, &manifest.binding, "CHUNK")
+    }
+
+    fn group<'a>(
+        &'a self,
+        manifest: &'a Manifest,
+        value: &'a DeltaGroup,
+    ) -> crate::scoped_worker::AuthorityFuture<'a, Verified<DeltaGroup>> {
+        self.proof(value, &manifest.binding, "GROUP")
+    }
+
+    fn control<'a>(
+        &'a self,
+        value: &'a Binding,
+    ) -> crate::scoped_worker::AuthorityFuture<'a, Verified<Binding>> {
+        self.proof(value, value, "CONTROL")
+    }
+
+    fn acknowledge<'a>(
+        &'a self,
+        _: &'a Manifest,
+        receipt: &'a BootstrapReceipt,
+    ) -> crate::scoped_worker::AuthorityFuture<'a, ()> {
+        Box::pin(async move {
+            self.current()?;
+            self.acks.lock().unwrap().push(receipt.cursor().to_owned());
+            if self.lose_ack_once.swap(false, Ordering::SeqCst) {
+                Err(crate::scoped_worker::SourceAuthorityError::Transient)
+            } else {
+                Ok(())
+            }
+        })
+    }
+}
+
+fn worker_limits() -> crate::scoped_worker::WorkerLimits {
+    crate::scoped_worker::WorkerLimits {
+        poll_interval: Duration::from_millis(10),
+        authority_timeout: Duration::from_secs(1),
+        retry_base: Duration::from_millis(1),
+        retry_max: Duration::from_millis(10),
+        max_consecutive_failures: 3,
+        jitter_seed: 7,
+    }
+}
+
+fn worker_projection<'a>(
+    source: &'a Source,
+    store: &'a PgProjectionStore,
+    manifest: &Manifest,
+    bindings: &'a BTreeMap<String, FinancialBinding>,
+    clock: &'a Clock,
+) -> FinancialProjection<'a> {
+    FinancialProjection::new(
+        &source.client,
+        store,
+        manifest.binding.clone(),
+        limits(),
+        bindings,
+        clock,
+    )
+    .unwrap()
+}
+
+#[tokio::test]
+async fn source_worker_lost_ack_restart_reuses_actual_checkpoint_without_new_source_request() {
+    use crate::scoped_worker::{FinancialSourceWorker, WorkerPlacement, WorkerStart, WorkerStep};
+    let store = test_store().await;
+    let (manifest, pages) = snapshot(payload());
+    let source = Source::start(
+        json!({"manifest":manifest,"pages":pages}),
+        json!({"group":null,"chunks":[]}),
+    );
+    let bindings = bindings();
+    let clock = Clock(AtomicI64::new(NOW));
+    let authority = WorkerAuthority::new(true);
+    let mut worker = FinancialSourceWorker::new(
+        worker_projection(&source, &store, &manifest, &bindings, &clock),
+        &authority,
+        WorkerStart::Bootstrap {
+            placement: WorkerPlacement::Auto,
+        },
+        worker_limits(),
+    )
+    .unwrap();
+    for _ in 0..3 {
+        assert_eq!(worker.step().await.unwrap(), WorkerStep::Progress);
+    }
+    assert_eq!(worker.step().await.unwrap(), WorkerStep::Committed);
+    assert!(authority.acks.lock().unwrap().is_empty());
+    assert!(worker.step().await.unwrap_err().retryable());
+    drop(worker);
+    let mut resumed = FinancialSourceWorker::new(
+        worker_projection(&source, &store, &manifest, &bindings, &clock),
+        &authority,
+        WorkerStart::Resume {
+            manifest: manifest.clone(),
+            placement: WorkerPlacement::Auto,
+        },
+        worker_limits(),
+    )
+    .unwrap();
+    assert_eq!(resumed.step().await.unwrap(), WorkerStep::Progress);
+    assert_eq!(resumed.step().await.unwrap(), WorkerStep::Committed);
+    assert_eq!(resumed.step().await.unwrap(), WorkerStep::Acknowledged);
+    assert_eq!(*authority.acks.lock().unwrap(), vec![mark('A'), mark('A')]);
+    assert_eq!(source.state.requests.lock().unwrap().len(), 1);
+    assert_eq!(resumed.step().await.unwrap(), WorkerStep::Idle);
+    assert_eq!(authority.acks.lock().unwrap().len(), 2);
+    assert_eq!(
+        source.state.requests.lock().unwrap().last().unwrap().0,
+        DELTA_PATH
+    );
+    source.finish().await;
+}
+
+#[tokio::test]
+async fn source_worker_interrupted_staging_resumes_original_pages_idempotently() {
+    use crate::scoped_worker::{FinancialSourceWorker, WorkerPlacement, WorkerStart, WorkerStep};
+    let store = test_store().await;
+    let (manifest, pages) = snapshot(payload());
+    let source = Source::start(
+        json!({"manifest":manifest,"pages":pages}),
+        json!({"group":null,"chunks":[]}),
+    );
+    let bindings = bindings();
+    let clock = Clock(AtomicI64::new(NOW));
+    let authority = WorkerAuthority::new(false);
+    let mut worker = FinancialSourceWorker::new(
+        worker_projection(&source, &store, &manifest, &bindings, &clock),
+        &authority,
+        WorkerStart::Bootstrap {
+            placement: WorkerPlacement::Auto,
+        },
+        worker_limits(),
+    )
+    .unwrap();
+    // Crash after the PAGE transaction committed but before finishing snapshot.
+    for _ in 0..3 {
+        assert_eq!(worker.step().await.unwrap(), WorkerStep::Progress);
+    }
+    drop(worker);
+    let mut resumed = FinancialSourceWorker::new(
+        worker_projection(&source, &store, &manifest, &bindings, &clock),
+        &authority,
+        WorkerStart::Resume {
+            manifest: manifest.clone(),
+            placement: WorkerPlacement::Auto,
+        },
+        worker_limits(),
+    )
+    .unwrap();
+    for _ in 0..3 {
+        assert_eq!(resumed.step().await.unwrap(), WorkerStep::Progress);
+    }
+    assert_eq!(resumed.step().await.unwrap(), WorkerStep::Committed);
+    assert_eq!(resumed.step().await.unwrap(), WorkerStep::Acknowledged);
+    {
+        let requests = source.state.requests.lock().unwrap();
+        assert_eq!(
+            requests
+                .iter()
+                .map(|request| request.0.as_str())
+                .collect::<Vec<_>>(),
+            vec![SNAPSHOT_PATH, PAGE_PATH]
+        );
+    }
+    assert_eq!(*authority.acks.lock().unwrap(), vec![mark('A')]);
+    source.finish().await;
+}
+
+#[tokio::test]
+async fn source_worker_current_denial_prevents_fetch_and_source_ack() {
+    use crate::scoped_worker::{FinancialSourceWorker, WorkerPlacement, WorkerStart, WorkerStep};
+    let store = test_store().await;
+    let (manifest, pages) = snapshot(payload());
+    let source = Source::start(
+        json!({"manifest":manifest,"pages":pages}),
+        json!({"group":null,"chunks":[]}),
+    );
+    let bindings = bindings();
+    let clock = Clock(AtomicI64::new(NOW));
+    let authority = WorkerAuthority::new(false);
+    let mut worker = FinancialSourceWorker::new(
+        worker_projection(&source, &store, &manifest, &bindings, &clock),
+        &authority,
+        WorkerStart::Bootstrap {
+            placement: WorkerPlacement::Auto,
+        },
+        worker_limits(),
+    )
+    .unwrap();
+    authority.denied.store(true, Ordering::SeqCst);
+    assert!(!worker.step().await.unwrap_err().retryable());
+    assert!(source.state.requests.lock().unwrap().is_empty());
+    authority.denied.store(false, Ordering::SeqCst);
+    for _ in 0..3 {
+        assert_eq!(worker.step().await.unwrap(), WorkerStep::Progress);
+    }
+    assert_eq!(worker.step().await.unwrap(), WorkerStep::Committed);
+    authority.denied.store(true, Ordering::SeqCst);
+    assert!(!worker.step().await.unwrap_err().retryable());
+    assert!(authority.acks.lock().unwrap().is_empty());
+    assert_eq!(source.state.requests.lock().unwrap().len(), 1);
+    source.finish().await;
+}
+
+#[tokio::test]
+async fn source_worker_hidden_scan_commit_then_lost_ack_recovers_same_durable_cursor() {
+    use crate::scoped_worker::{FinancialSourceWorker, WorkerPlacement, WorkerStart, WorkerStep};
+    let store = test_store().await;
+    let (manifest, pages) = snapshot(payload());
+    let group = DeltaGroup {
+        generation: manifest.generation,
+        group_id: "TEST_ONLY-worker-hidden".into(),
+        from_cursor: mark('A'),
+        to_cursor: mark('B'),
+        chunk_digests: vec![],
+        events_digest: events_digest(&[]).unwrap(),
+        reached_catchup: false,
+    };
+    let source = Source::start(
+        json!({"manifest":manifest,"pages":pages}),
+        json!({"group":group,"chunks":[]}),
+    );
+    let bindings = bindings();
+    let clock = Clock(AtomicI64::new(NOW));
+    let authority = WorkerAuthority::new(false);
+    let mut worker = FinancialSourceWorker::new(
+        worker_projection(&source, &store, &manifest, &bindings, &clock),
+        &authority,
+        WorkerStart::Bootstrap {
+            placement: WorkerPlacement::Auto,
+        },
+        worker_limits(),
+    )
+    .unwrap();
+    for _ in 0..3 {
+        assert_eq!(worker.step().await.unwrap(), WorkerStep::Progress);
+    }
+    assert_eq!(worker.step().await.unwrap(), WorkerStep::Committed);
+    assert_eq!(worker.step().await.unwrap(), WorkerStep::Acknowledged);
+    assert_eq!(worker.step().await.unwrap(), WorkerStep::Progress);
+    assert_eq!(worker.step().await.unwrap(), WorkerStep::Committed);
+    authority.lose_ack_once.store(true, Ordering::SeqCst);
+    assert!(worker.step().await.unwrap_err().retryable());
+    drop(worker);
+    let mut resumed = FinancialSourceWorker::new(
+        worker_projection(&source, &store, &manifest, &bindings, &clock),
+        &authority,
+        WorkerStart::Resume {
+            manifest: manifest.clone(),
+            placement: WorkerPlacement::Auto,
+        },
+        worker_limits(),
+    )
+    .unwrap();
+    assert_eq!(resumed.step().await.unwrap(), WorkerStep::Progress);
+    assert_eq!(resumed.step().await.unwrap(), WorkerStep::Committed);
+    assert_eq!(resumed.step().await.unwrap(), WorkerStep::Acknowledged);
+    assert_eq!(
+        *authority.acks.lock().unwrap(),
+        vec![mark('A'), mark('B'), mark('B')]
+    );
+    assert_eq!(
+        source
+            .state
+            .requests
+            .lock()
+            .unwrap()
+            .iter()
+            .map(|request| request.0.clone())
+            .collect::<Vec<_>>(),
+        vec![SNAPSHOT_PATH, DELTA_PATH]
+    );
+    source.finish().await;
+}
+
+#[tokio::test]
+async fn source_worker_expired_incomplete_snapshot_never_mints_replacement_generation() {
+    use crate::scoped_worker::{FinancialSourceWorker, WorkerPlacement, WorkerStart, WorkerStep};
+    let store = test_store().await;
+    let (mut manifest, pages) = snapshot(payload());
+    manifest.expires_at_ms = NOW + 1;
+    let source = Source::start(
+        json!({"manifest":manifest,"pages":pages}),
+        json!({"group":null,"chunks":[]}),
+    );
+    let bindings = bindings();
+    let clock = Clock(AtomicI64::new(NOW));
+    let authority = WorkerAuthority::new(false);
+    let mut worker = FinancialSourceWorker::new(
+        worker_projection(&source, &store, &manifest, &bindings, &clock),
+        &authority,
+        WorkerStart::Bootstrap {
+            placement: WorkerPlacement::Auto,
+        },
+        worker_limits(),
+    )
+    .unwrap();
+    for _ in 0..2 {
+        assert_eq!(worker.step().await.unwrap(), WorkerStep::Progress);
+    }
+    drop(worker);
+    clock.0.store(NOW + 2, Ordering::SeqCst);
+    let mut resumed = FinancialSourceWorker::new(
+        worker_projection(&source, &store, &manifest, &bindings, &clock),
+        &authority,
+        WorkerStart::Resume {
+            manifest: manifest.clone(),
+            placement: WorkerPlacement::Auto,
+        },
+        worker_limits(),
+    )
+    .unwrap();
+    assert!(!resumed.step().await.unwrap_err().retryable());
+    assert!(authority.acks.lock().unwrap().is_empty());
+    assert_eq!(source.state.requests.lock().unwrap().len(), 1);
+    source.finish().await;
+}
+
+const MANAGER_SESSION: &str = "TEST_ONLY-original-manager-session";
+
+struct EntrypointPolicy(ReadScope);
+
+impl crate::scoped_policy::CurrentPolicy for EntrypointPolicy {
+    fn resolve<'a>(
+        &'a self,
+        credential: &'a str,
+        resource: &'a str,
+        operation: Operation,
+        _: i64,
+    ) -> crate::scoped_policy::PolicyFuture<'a, crate::scoped_policy::ResolvedPolicy> {
+        Box::pin(async move {
+            if credential != MANAGER_SESSION
+                || resource != "reports"
+                || operation != Operation::Current
+            {
+                return Err(ScopedError::AccessDenied);
+            }
+            crate::scoped_policy::ResolvedPolicy::from_current_authority(
+                self.0.clone(),
+                operation,
+                Arc::new(credential.to_owned()),
+            )
+        })
+    }
+
+    fn recheck<'a>(
+        &'a self,
+        resolved: &'a crate::scoped_policy::ResolvedPolicy,
+        _: i64,
+    ) -> crate::scoped_policy::PolicyFuture<'a, ()> {
+        Box::pin(async move {
+            if resolved.scope() == &self.0
+                && resolved.operation() == Operation::Current
+                && resolved
+                    .custody::<String>()
+                    .is_some_and(|value| value == MANAGER_SESSION)
+            {
+                Ok(())
+            } else {
+                Err(ScopedError::AccessDenied)
+            }
+        })
+    }
+}
+
+fn entrypoint_limits() -> crate::scoped_backend::BackendLimits {
+    crate::scoped_backend::BackendLimits {
+        read: ReadLimits {
+            cursor_ttl_ms: 60_000,
+            max_scope_cursors: 32,
+            max_total_cursors: 128,
+        },
+        cache: query_api::scoped::CacheLimits {
+            max_entries: 8,
+            max_bytes: 1024 * 1024,
+            max_flights: 2,
+            ttl_ms: 30_000,
+            load_timeout_ms: 5_000,
+        },
+        realtime: realtime_sse::scoped::ScopedRealtimeConfig {
+            maximum_clients: 4,
+            client_queue_entries: 4,
+            client_queue_bytes: 65_536,
+            total_queue_bytes: 262_144,
+            notices_per_poll: 8,
+            maximum_notice_bytes: 16_384,
+            poll_interval_ms: 20,
+            poll_timeout_ms: 1000,
+        },
+        maximum_requests: 8,
+        maximum_streams: 3,
+        maximum_cohorts: 4,
+        policy_timeout: Duration::from_secs(1),
+        stream_check_interval: Duration::from_millis(10),
+        maximum_stream_lifetime: Duration::from_secs(5),
+        storage_refresh_interval: Duration::from_secs(1),
+    }
+}
+
+fn entrypoint_backend(
+    store: Arc<PgProjectionStore>,
+    resources: Arc<ResourceEnvelope>,
+    policy: Arc<dyn crate::scoped_policy::CurrentPolicy>,
+) -> crate::scoped_backend::ScopedBackend {
+    crate::scoped_backend::ScopedBackend::assemble(
+        store,
+        resources,
+        policy,
+        CursorCodec::new(
+            "TEST_ONLY",
+            [("TEST_ONLY".into(), vec![7; 32])].into(),
+            Duration::from_secs(60),
+        )
+        .unwrap(),
+        entrypoint_limits(),
+        Arc::new(Clock(AtomicI64::new(NOW))),
+    )
+    .unwrap()
+}
+
+fn entrypoint_source(
+    source: &Source,
+    manifest: &Manifest,
+    authority: Arc<WorkerAuthority>,
+) -> crate::scoped_backend::FinancialSource {
+    crate::scoped_backend::FinancialSource {
+        http: source.client.clone(),
+        binding: manifest.binding.clone(),
+        limits: limits(),
+        bindings: bindings(),
+        authority,
+        start: crate::scoped_worker::WorkerStart::Bootstrap {
+            placement: crate::scoped_worker::WorkerPlacement::Auto,
+        },
+        worker_limits: worker_limits(),
+    }
+}
+
+struct EntrypointServer {
+    address: std::net::SocketAddr,
+    client: reqwest::Client,
+    client_without_identity: reqwest::Client,
+    shutdown: Option<tokio::sync::oneshot::Sender<()>>,
+    job: Option<tokio::task::JoinHandle<std::io::Result<()>>>,
+}
+
+impl EntrypointServer {
+    fn start(
+        backend: crate::scoped_backend::ScopedBackend,
+        source: crate::scoped_backend::FinancialSource,
+    ) -> Self {
+        let (ca, certificate, key, identity) = tls();
+        let config = test_server_tls(&ca, &certificate, &key);
+        let client = |identity: Option<&[u8]>| {
+            let mut builder = reqwest::Client::builder()
+                .https_only(true)
+                .no_proxy()
+                .tls_built_in_root_certs(false)
+                .add_root_certificate(reqwest::Certificate::from_pem(&ca).unwrap())
+                .min_tls_version(reqwest::tls::Version::TLS_1_3)
+                .max_tls_version(reqwest::tls::Version::TLS_1_3)
+                .http1_only()
+                .pool_max_idle_per_host(0)
+                .timeout(Duration::from_secs(2));
+            if let Some(identity) = identity {
+                builder = builder.identity(reqwest::Identity::from_pem(identity).unwrap());
+            }
+            builder.build().unwrap()
+        };
+        // Select an ephemeral loopback test port, never an operational listener.
+        let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+        let address = listener.local_addr().unwrap();
+        drop(listener);
+        let (shutdown, signal) = tokio::sync::oneshot::channel();
+        let job = tokio::spawn(crate::scoped_backend::serve_with_financial_source(
+            backend,
+            source,
+            address,
+            config,
+            async move {
+                let _ = signal.await;
+            },
+        ));
+        Self {
+            address,
+            client: client(Some(&identity)),
+            client_without_identity: client(None),
+            shutdown: Some(shutdown),
+            job: Some(job),
+        }
+    }
+
+    fn url(&self) -> String {
+        format!(
+            "https://localhost:{}/internal/v2/scoped/reports/query?limit=2&max_bytes=1048576",
+            self.address.port()
+        )
+    }
+
+    async fn finish(mut self) -> std::io::Result<()> {
+        if let Some(shutdown) = self.shutdown.take() {
+            let _ = shutdown.send(());
+        }
+        tokio::time::timeout(Duration::from_secs(10), self.job.take().unwrap())
+            .await
+            .unwrap()
+            .unwrap()
+    }
+
+    async fn await_stopped(mut self) -> std::io::Result<()> {
+        tokio::time::timeout(Duration::from_secs(10), self.job.take().unwrap())
+            .await
+            .unwrap()
+            .unwrap()
+    }
+}
+
+impl Drop for EntrypointServer {
+    fn drop(&mut self) {
+        if let Some(shutdown) = self.shutdown.take() {
+            let _ = shutdown.send(());
+        }
+        // Failed assertions also release ONLY this disposable listener/task.
+        if let Some(job) = self.job.take() {
+            job.abort();
+        }
+    }
+}
+
+async fn await_entrypoint_ack(authority: &WorkerAuthority) {
+    tokio::time::timeout(Duration::from_secs(10), async {
+        loop {
+            if !authority.acks.lock().unwrap().is_empty() {
+                break;
+            }
+            tokio::time::sleep(Duration::from_millis(2)).await;
+        }
+    })
+    .await
+    .expect("bounded TEST_ONLY source did not ACK");
+}
+
+#[tokio::test]
+async fn complete_mtls_entrypoint_commits_queries_and_gracefully_releases_worker_listener() {
+    let (store, resources) = test_store_and_resources().await;
+    let store = Arc::new(store);
+    let (manifest, pages) = snapshot(payload());
+    let source = Source::start(
+        json!({"manifest":manifest,"pages":pages}),
+        json!({"group":null,"chunks":[]}),
+    );
+    let authority = Arc::new(WorkerAuthority::new(false));
+    let backend = entrypoint_backend(
+        store.clone(),
+        resources.clone(),
+        Arc::new(EntrypointPolicy(read_scope(&manifest))),
+    );
+    let server = EntrypointServer::start(
+        backend,
+        entrypoint_source(&source, &manifest, authority.clone()),
+    );
+    await_entrypoint_ack(&authority).await;
+    let response = server
+        .client
+        .get(server.url())
+        .bearer_auth(MANAGER_SESSION)
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(response.status(), reqwest::StatusCode::OK);
+    assert_eq!(response.headers()["cache-control"], "no-store");
+    let body: Value = response.json().await.unwrap();
+    assert_eq!(
+        body["rows"][0]["payload"]["rows"][0]["economics"]["nav"],
+        "900"
+    );
+    assert_eq!(
+        body["projection_generation"],
+        manifest.generation.to_string()
+    );
+    assert!(server
+        .client_without_identity
+        .get(server.url())
+        .bearer_auth(MANAGER_SESSION)
+        .send()
+        .await
+        .is_err());
+    let clock = Clock(AtomicI64::new(NOW));
+    let bindings = bindings();
+    let projection = worker_projection(&source, &store, &manifest, &bindings, &clock);
+    let handle = projection
+        .resume_manifest(
+            &seal(&manifest, &manifest.binding, "MANIFEST"),
+            SnapshotPlacement::Auto,
+        )
+        .await
+        .unwrap();
+    assert_eq!(
+        projection
+            .checkpoint(
+                &handle,
+                &seal(&manifest.binding, &manifest.binding, "CONTROL")
+            )
+            .await
+            .unwrap()
+            .cursor(),
+        mark('A')
+    );
+    let address = server.address;
+    server.finish().await.unwrap();
+    assert!(tokio::net::TcpStream::connect(address).await.is_err());
+    assert_eq!(resources.stats().unwrap().active, 0);
+    assert_eq!(resources.stats().unwrap().bytes, 0);
+    source.finish().await;
+}
+
+#[tokio::test]
+async fn complete_entrypoint_denied_source_stops_listener_without_source_http_or_receipt() {
+    let (store, resources) = test_store_and_resources().await;
+    let (manifest, pages) = snapshot(payload());
+    let source = Source::start(
+        json!({"manifest":manifest,"pages":pages}),
+        json!({"group":null,"chunks":[]}),
+    );
+    let authority = Arc::new(WorkerAuthority::new(false));
+    authority.denied.store(true, Ordering::SeqCst);
+    let backend = entrypoint_backend(
+        Arc::new(store),
+        resources.clone(),
+        Arc::new(crate::scoped_policy::UnavailableCurrentPolicy),
+    );
+    let server = EntrypointServer::start(
+        backend,
+        entrypoint_source(&source, &manifest, authority.clone()),
+    );
+    let address = server.address;
+    let error = server.await_stopped().await.unwrap_err();
+    assert_eq!(error.to_string(), "FINANCIAL_SOURCE_WORKER_STOPPED");
+    assert!(tokio::net::TcpStream::connect(address).await.is_err());
+    assert!(source.state.requests.lock().unwrap().is_empty());
+    assert!(authority.acks.lock().unwrap().is_empty());
+    assert_eq!(resources.stats().unwrap().active, 0);
+    assert_eq!(resources.stats().unwrap().bytes, 0);
+    source.finish().await;
 }
 
 fn query() -> ReadQuery {

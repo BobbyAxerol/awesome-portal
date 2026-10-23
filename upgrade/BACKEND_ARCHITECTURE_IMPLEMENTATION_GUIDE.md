@@ -650,6 +650,14 @@ deep-dive → ADR → slice → evidence discipline documented above.
 
 ### 14.1 Current backend state (tracking snapshot — 2026-08-17)
 
+**23Oct executable scoped assembly — source-only:**
+[current04/05/06/08/09 journal](EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#epg10-entrypoint-assembly-20261023)
+tracks the private router/serving entrypoints, asynchronous current-policy/custody
+port, shared PG/cache/notification lifecycle and owning financial worker. Actual
+provider/proof commissioning is not inferred from native ACKs or signed claims.
+Existing binary new routes explicitly unavailable until that actual binding;
+legacy paths and operational runtime unchanged. Exact tests/pins/cleanup in journal.
+
 **23Oct business backend — source composition, not runtime commissioning:**
 [current04/05/06/07/09 journal](EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#epg10-backend-composition-20261023)
 tracks financial HTTP→validated atomic PG→authorized typed reads, native P16

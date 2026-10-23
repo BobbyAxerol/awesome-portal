@@ -32352,3 +32352,188 @@ above intentionally keeps unmounted Edge integration work visible rather than
 claiming the whole backend/08/09 is closed. Next concrete action is that exact
 authenticated backend assembly under actual Core/TS publication contracts,
 then connected qualification; no new phase, fake provider or repeated approval.
+
+<a id="epg10-entrypoint-assembly-20261023"></a>
+### Original04/05/06/08/09 — executable scoped backend assembly
+
+**BOBBY_APPROVED / EXECUTING,23Oct.** Complete the Edge-owned entrypoint,
+current-policy boundary, query/history/export/notification router and bounded
+source-worker lifecycle. This continues the original approved phases, not a
+new phase or runtime activation. Previous component tests do not close assembly.
+
+**Guides:** [EDGE §§5–6/8,04–06/08](upgrade_v1.2/EXECUTION_PORTAL_EDGE_UPGRADE_GUIDE_v1.2_VI.md)
+and [BE §§4–6/8/9/13](upgrade_v1.2/EXECUTION_LOOP_PORTAL_V2_BACKEND_DATA_CONTRACT_GUIDE_v1.2_VI.md),
+plus the preceding composition inventory. Read actual Core authority contracts
+before choosing an adapter. A signed delegation authenticates a caller; it does
+not substitute for current policy, field scope, source proof or STREAM rights.
+
+**Owned runnable scope:** additive versioned executable/router composition;
+shared governed store/cache/fanout; server-resolved exact scope; current checks
+before/after I/O and each streamed disclosure; bounded poll/stop/recovery and
+ACK only after durable commit. Reuse the existing algorithms and real HTTP/wire
+adapters. Worker/proof/provider custody must remain explicit. A missing producer
+wire must fail closed, not be fabricated or disguised by a ready health result.
+
+**Tests/exit:** impact-based Rust unit/router tests and disposable PG/mTLS where
+needed, malformed/foreign/expired/revoked identity, operation separation,
+cursor/cache isolation, bounded response/export/stream, cancellation and worker
+COMMIT-before-ACK/recovery. Run fmt/strict Clippy. Report callable versus installed
+and genuine unpublished boundaries separately;08/09 connected remains NOT_MET.
+
+**Safety/rollback:** no legacy/V1 route changes, operational migration, grant,
+role, session, TLS/key/config change, command/Live activation or repeated accepted
+READ/active-revoke/restart case. Root owns main/manifests/journal/compiler;
+agents have disjoint module ownership. Preserve the peer C5 hunk and incoming
+returns. Source-only revert is rollback. No push/merge/CI. Disposable capped
+cells/scratch cleaned exactly after verification with disk/runtime evidence.
+
+**Implementation checkpoint23Oct09:30UTC (not yet a test PASS):** actual
+versioned router and private serving entrypoints now compose the existing PG
+query/history/bounded JSON export/cache and notification hub. Async authority
+checks surround I/O/serialization and each frame; every request retains its own
+opaque original custody, including equivalent scopes from different sessions.
+Stream admission is separate from short read requests, reconnect buffers are
+charged, and a cohort can choose a still-current member instead of inheriting
+the first subscriber's session. Reconnect traverses bounded durable continuation
+before live delivery; notifications are not full event payloads or FRESH proof.
+
+The owning financial worker uses actual snapshot/page/delta HTTP, validation,
+same-original staged/committed recovery, exact proofs and post-COMMIT ACK with
+bounded authority/cancellation/retry. Its source/proof port has no invented ACK
+URL or accepting implementation. Public library entrypoints can run the complete
+composition with commissioned dependencies; existing binary explicitly mounts
+uncommissioned503 routes, preserving legacy behavior and avoiding silent enable.
+Its normal gate now includes BOTH library and binary tests, not just old --bins.
+
+**Actual authority audit:** Core's `ExecutionReadScopes`/native candidate are
+in-process opaque authority, explicitly NOT transferable permission. Published
+PM→Core current-human ENTER/RESOLVE ACKs are attempt/lease receipts, not generic
+field/history/export policy introspection. Existing RS256 delegation authenticates
+but does not resolve current session/grants. PM report publication source also
+explicitly does not issue source proofs or receiver ACKs. Hence no JWT/config/
+HTTPS→grant/proof shortcut. Commissioned current-policy and financial proof/ACK
+adapters require an actual owner-published custody contract; their concrete Rust
+binding remains visible, not claimed implemented by a trait or by these tests.
+All independent owning router/worker/lifecycle tests are being executed now.
+
+**09:51UTC tested checkpoint:** capped disposable-PG retake is terminal
+289Rust PASS (60Edge library,96Edge binary,22projection-store,36query,
+30realtime,45scoped-read PG),0fail/ignored. Runner127PASS. This intermediate
+was compiled before the final denied-source shutdown-race refinement and
+`None receipt => Progress` correction; a complete final-source retake plus
+strict Clippy is now running, so289 is NOT the final revision receipt.
+Two actual loopback mTLS entrypoint cases exercised source→COMMIT→ACK→GET,
+client-certificate rejection, original checkpoint and listener/resource release.
+Eight mounted-router PG cases exercised field/decimal/query/history/export,
+cache final revoke, exact scope/operation cursor and separate-session fanout.
+
+**Corrected predecessors, not hidden skips:** initial8new router PG cases
+failed fixture pool3 versus explicit envelope8, fixed by matching fixture8;
+production admission checks were not weakened. An owned refactor left one
+`&ResolvedPolicy.as_ref()` compile error, fixed directly. Strict Clippy caught
+owned function shape/docs and test mutex-await scope; fixed without lint
+suppression. Review also corrected first-session-only cohort authority,
+stream/query slot starvation, uncharged reconnect batches, source worker
+denial-test stop race and receipt-less `Committed` reporting. Final source
+must pass again before publication; no operational database/service changed.
+
+**09:54UTC final-source qualification — EXECUTABLE_ASSEMBLY_ISOLATED_QUALIFIED;
+CONCRETE_CURRENT_AUTHORITY_BINDING_NOT_IMPLEMENTED / NOT_INSTALLED.** Final
+test run is terminal290Rust PASS,0fail/ignored/filtered:61Edge library,
+96Edge binary,22projection-store library,36query library,30realtime library,
+45actual scoped-read PG.39new Rust test functions are included, not added twice.
+Runner127PASS; workspace fmt check and strict Clippy for the three impacted
+packages/all targets/Edge PG feature PASS, no warning suppression. Full frozen
+monorepo landing/release gate NOT_RUN (focused source intermediate under the
+already approved campaign§10.10c); no installed default hook/core.hooksPath was
+bypassed or changed.0hosted CI minutes; no push/merge/deploy.
+
+Exact commands were the capped driver `fmt`, `tests`, `lint`: `cargo test
+--offline --locked -p edge-service --all-targets --features pm-custody-pg-test
+-- --test-threads=1`; `cargo test --offline --locked -p projection-store-pg
+-p query-api -p realtime-sse --lib -- --test-threads=1`; `cargo test --offline
+--locked -p projection-store-pg --test epg10_05_scoped_read -- --test-threads=1`;
+`cargo fmt --all -- --check`; `cargo clippy --offline --locked -p edge-service
+-p projection-store-pg -p realtime-sse --all-targets --features
+edge-service/pm-custody-pg-test -- -D warnings`; runner `python3 -B -m unittest
+-q test_run` with bytecode disabled. Test-only bounded fixtures never establish
+native/current human authority or production latency/capacity/HA. No SGP
+resource or transfer was required. Compiler2CPU/4GiB/one job, PG0.5CPU/768MiB,
+512MiB tmpfs/24connections, both self-removing; no measurement lock acquired.
+
+Receipt: [entrypoint-assembly-qualification.json](evidence/execution-edge-v1_2/EPG10-08/entrypoint-assembly-qualification.json),
+17exact source hashes/manifest3ca05a9f…; its source base isd4e1bee6, not a
+claim that the deployed image includes the working tree. Actual source entry:
+`services/portal-execution-edge-rs/crates/edge-service/src/lib.rs` and
+`scoped_backend.rs`. Route map and compatibility are in the linked05contract.
+Research owns query/history/rollup placement; HK remains a bounded publisher.
+No new active HTTP command, arbitrary DB/SQL/table route or browser authority.
+
+| Remaining item in original phases | Runnable versus actual missing input / owner/action |
+| --- | --- |
+| Scoped router, governed store/cache, separate request/stream admission, durable catch-up, per-session/frame current checks, bounded listener/worker shutdown | Implemented and isolated-qualified here. Four new paths in the existing binary are explicit503, NOT an accepting current-policy provider or installed query service. |
+| Concrete `CurrentPolicy` adapter | NOT_IMPLEMENTED; requires Core's actual transferable current human/session + app/field/model + resource/source-set/operation decision and original recheck/custody wire. Existing in-process scopes and ENTER/RESOLVE are not that wire. Core publishes exact contract; Edge owns implementing the concrete adapter and its negative tests, then actual binding. This is NOT reported as “all Edge code done.” |
+| Owning financial worker | Executable HTTP snapshot/page/delta, same-original resume and post-COMMIT ACK lifecycle qualified. TS/PM publishes actual independent manifest/page/chunk/group/control proof and ACK/custody contract; Edge implements its concrete authority port and binds the qualified source. Present PM endpoint explicitly supplies delivery only, so HTTPS/hash is not a substitute. |
+| Native P16/current-state surfaces | Previous retained-observation/checkpoint source remains PARTIAL/unknown freshness. TS supplies actual qualified publication/reader transport and coverage/fence; Edge binds it without converting semantic facts into current-state UPSERTs or full replay. No new native source is invented by this financial worker. |
+| Commands and Manager profiles | Previous source compositions remain as recorded, not activated by these read routes. Real current-requester/service-recovery command ingress and per-profile Research/trust/source commissioning still need their exact accepted inputs; read Live never enables trading Live. |
+| 08/09 connected | NOT_MET. Bind concrete authority/source adapters when those exact contracts are available, then qualify only missing cases. Do not rerun accepted READ/STREAM-revoke/restart specimens or start an old interval. No new phase or repeated generic approval is needed. |
+
+**Parallel source reconciliation09:54UTC:** TS canonical remains
+`fix/dev-consumer-recovery-integration@668e10320c0bf5a9089e33b72f317d8d7c7215c3`;
+TS next-upgrade `docs/ts-option-a-release-record@0cd356dab20dc385d9effbda408a0ea53280aa4b`.
+PM advanced0520ec5c→b3ef69ece592c45f3589b5cdf5640c5ff432370f: bounded private
+membership loader/scope history, dormant and explicitly not session auth/ALLOW
+or installed COMMIT authority. Targeted review found no newly published generic
+scope/proof/ACK wire; report bootstrap68577ab8… and endpointbf1d421d… hashes are
+unchanged. No TS/PM/Research source or branch was edited. Canonical Portal
+checkout `/home/bobby/.worktrees/portal-execution-manager-v2`, branch
+`feat/manager-v2-paper-read@54c6f5f3`; active owned feature remains
+`/home/bobby/.worktrees/portal-execution-edge-upgrade-v1_2`,
+`feat/execution-edge-upgrade-v1_2` (source base d4e1bee6). Other active feature
+worktrees eds-current-bff/bab79402, eds09-owner-return/ec97c483,
+elp210-provider/9db77811, data-activation/6f6503ea, r4r5/d63a6501 retained;
+none was merged/abandoned or eligible for deletion here.
+
+**09:58UTC scoped cleanup:** all own capped compiler/PG containers are terminal
+and absent, including corrected failed attempts. Verified the exact0700/owned
+scratch was not a container mount and no container referenced the compiler;
+removed ONLY `/tmp/epg10-scoped-assembly-EglTcyK2` (sum logical file bytes
+2,093,385,342) and newly pulled unreferenced public Ruste51d0265 image, without
+force. Its toolchain/dependencies/targets are reproducible; bounded source/test
+counts and log hashes remain in the receipt, not unbounded raw logs. No volume,
+network, operational/rollback image, foreign BuildKit/cache/source/worktree or
+audit custody removed.0owned build records created;607foreign BuildKit records/
+70.73GB retained. Raw image-ID listing143→142 includes repeated tags, NOT a
+unique image census. Before cleanup root used337559285760/free181357617152B;
+after used332711301120/free186205601792B. Shared-host delta is observational,
+not exclusively attributed to this cleanup. SGP0new resources to remove.
+
+**Runtime/source reconciliation:** source-only, NOT installed. Retain release
+`/srv/primus/portal/releases/a9b10385ab6c16350555f70f4379dfa23ca6b20c/`,
+Paper/Sandbox/Live Edge+Manager-worker imaged6aa7a51, Source Proxyaa14e21c,
+native provider28ea3958/config
+`/home/bobby/.local/share/portal-native-manager-read/runtime/v1.0.0-9e7d3455/compose.json`.
+Versioned config references6180b9bf/cd79e9c6/98a191c7 and all named rollback
+artifacts were retained, not rewritten. At09:48UTC the old Paper worker already
+showed10599autonomous restarts (previous slice10474); all nine other inspected
+Edge/Proxy/Sandbox/Live/native services restart0. This source-only work did not
+restart any operational service; do NOT call the old worker healthy or infer
+its cause from isolated tests. SGP stable `/home/bobby/portal-main-release` was
+not touched/revalidated. Peer C5 journal hunk, two tracked returns, incoming
+untracked returns and all three peer hashes remain preserved. No owned
+independent code/test/cleanup is being deferred; concrete unpublished authority
+adapter work remains expressly NOT_IMPLEMENTED in the table, not claimed done
+by a trait. Next action is exact producer-contract commission→Edge concrete
+binding→missing08/09 specimens, not another phase or another generic approval.
+
+**Post-cleanup verification / publication scope:** Docker system-df reports
+117→116images; its accounting is separate from the raw tagged-ID listing above.
+BuildKit remains607/70.73GB. All10operational image identities are unchanged;
+Paper worker now10622autonomous restarts, the other nine0.0own cells and exact
+scratch absent.17/17source hashes + manifest,290final test counts, six terminal
+log/driver hashes and three peer hashes verified before raw test cleanup;
+new local documentation links7/7 resolve. Staged scope is20owned files,
++4354/−54lines, including this same-phase journal/tracking/contract/receipt;
+peer C5hunk and two peer returns excluded. Bobby identity verified; no default
+hook configured, no full-hook PASS claimed. Commit is a focused source-only
+intermediate, not installation/acceptance/publication to remote.

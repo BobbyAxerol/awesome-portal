@@ -5,6 +5,62 @@ This is an additive **source-dark Rust implementation**, not a new deployed API,
 TS publication, Research BFF release or capacity certification. Test status is
 recorded in the qualification receipt and main plan, not inferred from this map.
 
+## 23Oct executable assembly (source-only, not installed)
+
+The [current assembly journal](../../../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#epg10-entrypoint-assembly-20261023)
+adds `edge_service::scoped_backend::{ScopedBackend,serve,serve_with_financial_source}`.
+It assembles one governed PG pool/cache, bounded notification cohorts and an
+optional owning financial source worker. No migration is performed on connect.
+This is the Rust projection/query side of the approved Research placement, not
+permission to move history/rollup work onto the TS/HK publisher. The binary is
+shared source; an owner-reviewed deployment selects placement and finite budgets.
+The existing binary mounts the four new paths as explicit503
+`CURRENT_POLICY_PROVIDER_NOT_COMMISSIONED`; legacy routes remain unchanged.
+The accepting composition REQUIRES the actual owner-supplied async current-policy
+adapter and its original session/request custody. No accepting provider is
+configured or manufactured from JWT claims, config, source hashes or native ACKs.
+
+| New private source route | Required operation | Bounded request / response |
+| --- | --- | --- |
+| `GET /internal/v2/scoped/:resource/query` | Current | Required `limit`/`max_bytes`; optional exact entity/cursor; only first page is cached |
+| `GET /internal/v2/scoped/:resource/history` | History | Required limit/byte bounds and authorized `[from_ms,to_ms)`; exact continuation |
+| `GET /internal/v2/scoped/:resource/export` | Export | Separately authorized JSON chunks, not an unbounded download/job |
+| `GET /internal/v2/scoped/:resource/stream` | Replay | Optional opaque `cursor`; notification-only SSE, not native economic event/replay |
+
+`:resource` is a logical server-resolved selection, never table/SQL/source URL.
+Query parameters cannot supply a scope, policy, allowed fields or operation.
+Rows<=200 and complete JSON envelope<=1MiB; lower requested bounds remain enforced.
+All responses are no-store. Typed errors are safe and record-free:403 denied,
+400 invalid/bounds,409 resync,422 unavailable history,429 capacity,503 unavailable/
+deadline/integrity. The uncommissioned four-route default is503, not a connected
+acceptance claim or a replacement for the existing Manager service.
+
+Async current checks run before/after query/cache/replay and after serialization,
+plus immediately before EVERY SSE frame. Per-request custody is opaque and not
+deserializable; two equivalent-scope sessions do not inherit each other's grant.
+Current never implies History/Export/Replay. The coordinator uses a currently
+authorized live cohort member, while every delivery rechecks its own session.
+Reconnect scans bounded durable continuation across the subscribe/live handoff;
+duplicate refetch hints are permitted, missing economic events are not inferred.
+There is one PG notification coordinator per exact scope/generation, no TS poller
+per browser. Independent stream/request admission preserves query capacity;
+replay memory and hub queues share explicit resource charges. Stream lifetime is
+a disclosure deadline, not a proof of remote TCP teardown or production capacity.
+
+Financial source lifecycle uses actual published snapshot/page/delta paths,
+same-original manifest recovery, sealed proofs and durable checkpoint before ACK.
+It has no accepting proof/ACK adapter or invented source ACK endpoint. Source
+current/proof custody must be commissioned against an actual owner contract.
+Native P16 retained observations are NOT silently converted to these current-state
+routes or claimed complete source history. Full08/09 remains NOT_MET until actual
+authority/source/installation qualification; isolated tests are recorded in the
+linked journal and receipt. Historical source-dark maps below remain the original
+library baseline, not a claim that the new assembly is deployed.
+
+Final isolated receipt: [entrypoint assembly qualification](../EPG10-08/entrypoint-assembly-qualification.json).
+Its actual source hashes, test counts and absent commissioning boundaries govern
+this additive assembly; historical receipts below are not reused as new proof.
+
 ## Architecture and compatibility
 
 ```text

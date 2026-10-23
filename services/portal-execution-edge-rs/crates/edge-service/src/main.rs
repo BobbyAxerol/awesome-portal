@@ -4,16 +4,13 @@ mod d4_command;
 mod manager_event_ledger_command;
 mod manager_projection_command;
 // Versioned opt-in only; legacy workers cannot silently join its governed pool.
-#[allow(dead_code)]
-mod projection_resources;
+use edge_service::projection_resources;
 // Source-qualified only; commissioning must supply the owning durable context.
 #[allow(dead_code)]
 mod pm_command_port;
 // Independent business composition only; no command listener is commissioned.
 #[allow(dead_code)]
 mod command_gateway;
-#[allow(dead_code)]
-mod financial_projection;
 
 use manager_projection_command::ManagerProjectionClassIntervals;
 
@@ -1232,6 +1229,7 @@ fn private_router(state: AppState) -> Router {
             get(manager_query_analytics),
         )
         .with_state(state)
+        .merge(edge_service::scoped_backend::uncommissioned_router())
 }
 
 fn health_router(state: AppState) -> Router {

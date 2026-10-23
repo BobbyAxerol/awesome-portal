@@ -832,16 +832,16 @@ class RunnerSafety(unittest.TestCase):
                 qualification.source_hashes(source, '06')
             (source / name).write_text('TEST_ONLY\n')
 
-    def test_profile06_edge_bin_tests_execute_separately_from_six_lib_summaries(self):
+    def test_profile06_edge_library_and_binary_are_both_required(self):
         self.assertEqual(qualification.EDGE_TEST_ARGUMENTS, (
             'cargo', 'test', '--offline', '--locked', '-p', 'edge-service',
-            '--bins', '--', '--test-threads=1'))
+            '--lib', '--bins', '--', '--test-threads=1'))
         row = 'test result: ok. 17 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out'
-        result = qualification.parse_rust_results(row, 1)
-        self.assertEqual(result['passed'], 17)
-        self.assertEqual(result['test_binaries'], 1)
+        result = qualification.parse_rust_results(row + '\n' + row, 2)
+        self.assertEqual(result['passed'], 34)
+        self.assertEqual(result['test_binaries'], 2)
         with self.assertRaisesRegex(ValueError, 'ALL_REQUIRED'):
-            qualification.parse_rust_results(row + '\n' + row, 1)
+            qualification.parse_rust_results(row, 2)
 
     def test_profile06_copied_input_mtimes_refresh_without_changing_bytes_or_cache(self):
         source = self.source_fixture('06', private_prefix='epg10-06-')
@@ -993,12 +993,12 @@ class RunnerSafety(unittest.TestCase):
             arguments = qualification.edge_test_arguments(profile)
             self.assertEqual(arguments, [
                 'cargo', 'test', '--offline', '--locked', '-p', 'edge-service',
-                '--bins', *feature, '--', '--test-threads=1'])
+                '--lib', '--bins', *feature, '--', '--test-threads=1'])
             self.assertLess(arguments.index('--features'), arguments.index('--'))
             self.assertNotIn('--all-features', arguments)
         self.assertEqual(qualification.EDGE_TEST_ARGUMENTS, (
             'cargo', 'test', '--offline', '--locked', '-p', 'edge-service',
-            '--bins', '--', '--test-threads=1'))
+            '--lib', '--bins', '--', '--test-threads=1'))
 
     def test_profile07_pm_custody_pg_target_is_mandatory_in_inherited_suites(self):
         baseline = [('resource_tests', 'epg10_06_resources', 8, 'RESOURCE'),
