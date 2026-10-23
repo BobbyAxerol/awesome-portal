@@ -51,3 +51,19 @@ Prepared 2026-10-22 05:25Z by a read-only Claude subagent, checked by Claude. Le
 - Row 3: Codex asks for the exact quietGate helper from `90f2a2c1` on a common base; it is already in the lane.
 
 No claim in these files is CONNECTED_READ or full08 PASS, and none claims it wrongly.
+
+## Current dispositions, 2026-10-23 (appended; the history above is unchanged)
+
+Source: [CODEX_TO_CLAUDE_APPROVED_CLOSEOUT_2026-10-23.md](CODEX_TO_CLAUDE_APPROVED_CLOSEOUT_2026-10-23.md) §4 (Bobby's current instruction as recorded by Codex). The seven "decisions only Bobby can make" above are no longer a reading task for Bobby; each has a disposition and the remaining input is named. None of this is CONNECTED_READ, a calibrated policy, or a full-suite PASS.
+
+| # | Earlier question | Disposition 2026-10-23 | What remains (exact owner and input) |
+|---|---|---|---|
+| 1 | Second native domain as unaffected control | The missing-only native STREAM specimen and Core settlement completed (READ200, STREAM-only REVOKED before expiry, retry403, separate READ still 200; actual return `CORE_TO_EDGE_08_CORE_FIRST_ACTUAL_RETURN_2026-10-23.md`, mirrored on HK 01:45:13 VN). This does not qualify Manager financial datasets or the UI. | A truly independent economic control domain is a separate scoped authority input (Edge coordinates the owning source response). Claude prepares the target, numeric proposal, workload, stop limits, validation and rollback. |
+| 2 | When to apply C288 | C288 and Codex's P22/G2 ownership were already approved. For this missing-only specimen the preparation starts H16 and requires `H + 244 + 2 + 20 = 282 <= 288`. The different full-suite formula (`H + 273`, H<=15) does not apply, and the unresolved upper bound is not today's measured count. | None for this specimen. |
+| 3 | Numeric budget / calibration | Formula and contract are accepted; that is not calibrated production policy. Load/calibration numeric artifacts are a separate scoped authority input. | Claude: numeric proposal packet (target, workload, stop limits, validation, rollback) with a recommendation. Edge: the owning source response. No fixture constant is used as approved configuration. |
+| 4 | Manager PKI | The Manager Research leaf was already issued using the existing CSR/key: public leaf `33015a80`, chain `665a11f7`, inactive config `153a8f0e`; the existing Paper TLS probe passed. No new issuer, keypair or blanket PKI permission is requested. | Edge: exact profile, audience/kid/overlap reconciliation, overlay installation, business read. Core mapper `3cb7f24a` is installed (source `3265ce18`, schema 149); the old `a96` serving/not-installed statements are historical; inactive config was `a814...`; a finite source-bound overlay must be identified separately. |
+| 5 | C5 mapping relay | Source requests go through Edge only. The financial source stays MISSING; the reducer stays dark; no financial mount. | Edge: the C5 mapping or a typed NOT_PUBLISHED. |
+| 6 | Missed 13:00-13:30 VN slot | Superseded by the actual native specimen above (a new explicit owner return exists). Trust `12504f44` expiry (23 Oct 10:00:58 VN) is historical for this round. | None for this specimen. |
+| 7 | Who takes P22/G2 source | Confirmed approved: Codex. | None. |
+
+Stale facts the closeout settles: the capacity formulas are two different cases (specimen vs full suite), not a contradiction to be resolved by Bobby; `a96` serving assertions are historical because `3cb7f24a` is installed.
