@@ -15266,6 +15266,17 @@ that separate slice lands. No Codex UI redesign. The offline reservation
 calculator has 11/11 focused tests PASS, uses the actual workload tab census
 and always returns `execution_authorized=false`; no budget/load was approved.
 
+Follow-through: six isolated backend files passed 424/424, but the runner then
+failed before restore after an in-flight script edit by Codex; not a complete
+gate. The fixed runner subsequently passed Paper 37/37 plus actual restore/
+four scoped-access digests; final normal hook and landing remain pending.
+The offline planner now passed 12/12 after an independently reproduced own-set
+validation fix. Newer shell `766615d12` remains separate; the linked review
+requests scope-bound search cancellation/results, workspace plumbing through
+the three existing entity APIs, and invalidation of old-workspace count badges.
+Do not attach the new workspace to an old response. Claude keeps frontend
+design ownership; fixture-only nginx `2e9531af6` is ACCEPT, not runtime proof.
+
 
 ### P0 Bobby has called Edge — NEW Core-first PREPARED23Oct00:56VN
 

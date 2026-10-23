@@ -2560,6 +2560,18 @@ now independent tests with unchanged assertions/default timeout. The offline
 proposal calculator passed11/11 and cannot authorize execution or calibration.
 No new source connection, image install, command/Live, push or dev/main change.
 
+Latest separate shell review at `766615d12`: `ExecCommandBar` must scope/abort
+search results on workspace/environment/session/capability changes; selection
+cannot relabel an old result with the new workspace. Thread workspace through
+all three entity API ports and invalidate previous-workspace count badges. Same
+[review packet](evidence/ELP2-10/CLAUDE_POST_FREEZE_REVIEW_2026-10-23.md), Claude
+owns the component-preserving fixes. Fixture-only nginx `2e9531af6` is ACCEPT.
+Six isolated backend files passed 424/424;
+the runner failed before restore due to an in-flight script edit by Codex, so
+not a complete gate. The subsequent fixed-runner Paper retake passed 37/37
+plus actual restore/four scoped-access digests. Final normal hook/landing pending.
+Offline planner now 12/12, still `execution_authorized=false`.
+
 
 ### P0 Bobby has called Edge — NEW Core-first PREPARED23Oct00:56VN
 

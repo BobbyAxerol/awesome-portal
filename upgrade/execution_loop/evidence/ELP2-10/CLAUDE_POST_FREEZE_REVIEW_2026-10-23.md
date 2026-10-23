@@ -95,3 +95,40 @@ Current gate correction: the normal backend run ended with 10,175 PASS,
 Five affected fixture/Financial/Command/queue files retook 118/118 on the host.
 The six independent optional-purpose/anchor cases retain the original timeout
 and assertions; their isolated PostgreSQL retake and final landing are pending.
+
+## Addendum — shell cut `766615d12`, separate scope review
+
+Claude's newer `766615d12` shell remains outside the frozen integration.
+This read-only review requests three scoped logic corrections:
+
+1. `shell/ExecCommandBar.tsx:92` keys search only by text/search/debounce;
+completed or late results can survive workspace, environment or permission
+changes. Selection at line 78 then attaches the new workspace to an old result.
+Clear/abort/refetch using the full owning scope/session/allowed-source key;
+bind displayed results and selection to that same key. Test a deferred old
+workspace response after navigation, environment switch and capability removal.
+2. `shell/entitySearch.ts:101–134` omits `workspace_id` from Alpha, Account
+and Portfolio reads. `manager-lists.controller.ts:29–50` already accepts this
+scope, but lines 75–80 fall back to the home workspace if it is absent.
+Thread the current workspace through those three existing ports/query types;
+do not search workspace A and navigate its IDs into workspace B. Test all five
+search families with a non-home workspace. No backend contract change is needed.
+3. `shell/navCounts.tsx:95–117` aborts the old request without invalidating
+its displayed counts when workspace changes. Key the badge state to its
+workspace/eligibility, or clear it synchronously; a pending B read must never
+show A's old counts. Test deferred B and revoked eligibility.
+
+Keep the approved component/design and server authorization fences intact.
+This is a read-only finding, not a claim of runtime exploitation or a reason
+to drop Claude's later commits. Return these with their separate corrected SHA.
+Fixture-only nginx commit `2e9531af6` is ACCEPT: its two exact Access routes
+remain in the explicitly mounted fixture overlay and do not enable production
+authority. The previous six Portfolio/Fleet findings remain open at this cut.
+
+Focused update: six files now passed 424/424 on isolated PG/HTTP. The runner
+then failed before restore after Codex edited its running Bash file; that is
+an operator error, **not a complete restore gate**. The fixed runner then
+passed both Paper-reader suites (37/37) and the actual PostgreSQL restore/four
+scoped-access digest drill, exit 0. Final normal hook and landing stay
+pending. Offline proposal validation is now 12/12 after an independently found
+inherited-workload-key error was demonstrated then fixed. No load authorized.
