@@ -8,7 +8,8 @@
  * What it will and will not do:
  * - It sends a rollback preview (`previewPendingControl`) and nothing else. It applies nothing, reserves nothing and has no submit:
  *   a submit needs this preview's digest and a fresh step-up, and stays dark. The result says so.
- * - It is mounted only where the build enables command previews (flag `command`; dark otherwise, nothing is drawn). It is shut when
+ * - It is mounted only on the FIXTURE LAB (flag key `pending-preview`, an explicit TEST_ONLY workspace; OperationDock), where it prints the
+ *   simulation label; dark otherwise, nothing is drawn. The `command` key does not mount it. It is shut when
  *   no workspace is named, the recall's outcome is unknown (no counters), or the discovery serves no opaque policy revision for the request
  *   to name (`policy_revision` NOT_PUBLISHED; typed gap `POLICY_REVISION_NOT_PUBLISHED`).
  * - A refusal is shown with its closed code and the Portal's own sentence, never the server's text. A relay denial says whether anything
@@ -27,7 +28,7 @@ import { Flag } from "../../Flag";
 import { AMOUNT_KEYS, PENDING_OPERATIONS, PENDING_VERSION_KEYS, type PendingOperation } from "../../readers/commandCurrency";
 import { PENDING_PROBLEM_CODES, pendingControlWords, type PendingControlPreview as Preview } from "../../readers/pendingControlPreview";
 import {
-  OPERATION_LABEL, REASON_MAX, buildPendingControlIntent, intentFingerprint, newPendingKey, previewGate, reasonBlock,
+  OPERATION_LABEL, REASON_MAX, SIMULATION_COPY, buildPendingControlIntent, intentFingerprint, newPendingKey, previewGate, reasonBlock,
   type PendingControlTarget,
 } from "./pendingControlIntent";
 
@@ -56,9 +57,11 @@ function splitReason(reason: string): { code: string | null; words: string } {
 export interface PendingControlPreviewProps {
   api: ExecutionApi;
   target: PendingControlTarget;
+  /** The fixture-lab mount (DEBT-048 item 9): print the simulation label. The preview itself is the same rollback either way. */
+  simulation?: boolean;
 }
 
-export function PendingControlPreview({ api, target }: PendingControlPreviewProps) {
+export function PendingControlPreview({ api, target, simulation = false }: PendingControlPreviewProps) {
   const gate = previewGate(target);
   const { recall } = target;
   const scope = JSON.stringify([
@@ -89,6 +92,7 @@ export function PendingControlPreview({ api, target }: PendingControlPreviewProp
   if (!gate.open) {
     return (
       <div className="exec-pc" data-state="shut">
+        {simulation ? <p className="exec-pc-sim" data-testid="pending-preview-simulation">{SIMULATION_COPY}</p> : null}
         <DockAction label={LABEL} reason={gate.reason} />
         <GapWhy name="Reason code" rows={[`Reason code: ${gate.code}`]} next={null} />
       </div>
@@ -138,6 +142,7 @@ export function PendingControlPreview({ api, target }: PendingControlPreviewProp
 
   return (
     <div className="exec-pc" data-state="open">
+      {simulation ? <p className="exec-pc-sim" data-testid="pending-preview-simulation">{SIMULATION_COPY}</p> : null}
       <label className="exec-pc-label" htmlFor={ids.op}>Control</label>
       <select
         id={ids.op}

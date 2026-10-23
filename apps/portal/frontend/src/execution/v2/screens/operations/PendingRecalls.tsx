@@ -9,8 +9,9 @@
  *   recall whose last receipt is known. They are a starting point, not an authority: the next preview rechecks them against the source;
  * - an UNKNOWN recall (a control was sent, no receipt is known) has no amounts and no counters. It says so; it never prints zero;
  * - a recall is never invented, closed or reordered here. A failed read says it failed and shows no list at all;
- * - the list sends nothing. Where the build enables command previews (flag `command`) each recall with known versions also carries the
- *   "Preview control" form (`PendingControlPreview`), which sends a rollback preview and never applies; otherwise no button is drawn.
+ * - the list sends nothing. Where the FIXTURE LAB enables it (flag key `pending-preview`, TEST_ONLY workspace only; OperationDock) each
+ *   recall also carries the "Preview control" form (`PendingControlPreview`), which sends a rollback preview and never applies;
+ *   otherwise no button is drawn.
  */
 import { useEffect, useState, type ReactNode } from "react";
 
@@ -87,6 +88,7 @@ interface PreviewWiring {
   resource: { kind: "PORTFOLIO" | "DEPLOYMENT"; id: string };
   environment: CommandEnvironment;
   policyRevision: string | null;
+  simulation: boolean;
 }
 
 function Recall({ item, preview }: { item: DiscoveredRecall; preview: PreviewWiring | null }) {
@@ -147,6 +149,7 @@ function Recall({ item, preview }: { item: DiscoveredRecall; preview: PreviewWir
         <PendingControlPreview
           api={preview.api}
           target={{ workspaceId: preview.workspaceId ?? null, resource: preview.resource, environment: preview.environment, recall: item, policyRevision: preview.policyRevision }}
+          simulation={preview.simulation}
         />
       )}
     </li>
@@ -173,6 +176,8 @@ export interface PendingRecallsSectionProps {
    * flag turns it on (OperationDock); a test passes it explicitly.
    */
   previewEnabled?: boolean;
+  /** The fixture-lab mount (DEBT-048 item 9): the form carries the visible simulation label. Default false. */
+  previewSimulation?: boolean;
 }
 
 /** The opaque policy revision a preview must name: the string the SAME discovery read served, or `null` (typed gap) when it served none. */
@@ -180,10 +185,10 @@ export function servedPolicyRevision(load: PendingRecallsLoad): string | null {
   return load.phase === "ready" && load.discovery.policyRevision.availability === "PUBLISHED" ? load.discovery.policyRevision.value : null;
 }
 
-export function PendingRecallsSection({ api, workspaceId, targetType, targetId, environment, previewEnabled = false }: PendingRecallsSectionProps) {
+export function PendingRecallsSection({ api, workspaceId, targetType, targetId, environment, previewEnabled = false, previewSimulation = false }: PendingRecallsSectionProps) {
   const load = usePendingRecalls(api, workspaceId, targetType, targetId, environment);
   const preview: PreviewWiring | null = previewEnabled
-    ? { api, workspaceId, resource: { kind: targetType, id: targetId }, environment, policyRevision: servedPolicyRevision(load) }
+    ? { api, workspaceId, resource: { kind: targetType, id: targetId }, environment, policyRevision: servedPolicyRevision(load), simulation: previewSimulation }
     : null;
   return (
     <section aria-label="Open recalls the Portal controlled" data-testid="pending-recalls">

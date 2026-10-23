@@ -11,6 +11,13 @@
   font: var(--exec-font-label);
   color: var(--ink-faint);
 }
+/* The fixture-lab simulation label (DEBT-048 item 9). Plain text, wraps at 660. */
+.exec-pc-sim {
+  margin: 0;
+  font: var(--exec-font-label);
+  color: var(--ink-soft);
+  overflow-wrap: anywhere;
+}
 .exec-pc-note {
   margin: 0;
   font: var(--exec-font-meta);
