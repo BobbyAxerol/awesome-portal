@@ -6,6 +6,9 @@ mod manager_projection_command;
 // Source-qualified only; commissioning must supply the owning durable context.
 #[allow(dead_code)]
 mod pm_command_port;
+// Independent business composition only; no command listener is commissioned.
+#[allow(dead_code)]
+mod command_gateway;
 
 use manager_projection_command::ManagerProjectionClassIntervals;
 

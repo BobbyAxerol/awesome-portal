@@ -463,6 +463,7 @@ impl AuthorityProvider for TestAuthority {
 struct TestPort {
     effects: Arc<AtomicUsize>,
     lookups: Arc<AtomicUsize>,
+    recovery_lookups: Arc<AtomicUsize>,
     committed: Arc<Mutex<Option<AuthorityReceipt>>>,
     ack_only: bool,
     hang: bool,
@@ -495,6 +496,18 @@ impl CommandPort for TestPort {
     fn lookup<'a>(&'a self, _: &'a CommandIntent) -> SourceFuture<'a> {
         Box::pin(async move {
             self.lookups.fetch_add(1, Ordering::SeqCst);
+            self.committed
+                .lock()
+                .unwrap()
+                .clone()
+                .map_or(SourceReply::Unknown, |receipt| {
+                    SourceReply::Receipt(Box::new(receipt))
+                })
+        })
+    }
+    fn lookup_recovery<'a>(&'a self, _: &'a CommandIntent) -> SourceFuture<'a> {
+        Box::pin(async move {
+            self.recovery_lookups.fetch_add(1, Ordering::SeqCst);
             self.committed
                 .lock()
                 .unwrap()
@@ -772,6 +785,8 @@ async fn private_recovery_survives_revoked_human_without_disclosing_receipt() {
     authority.revoked.store(true, Ordering::SeqCst);
     assert!(relay.status(&intent, true).await.is_err());
     relay.recover(&intent, &TestRecovery).await.unwrap();
+    assert_eq!(port.lookups.load(Ordering::SeqCst), 0);
+    assert_eq!(port.recovery_lookups.load(Ordering::SeqCst), 1);
     assert!(relay.status(&intent, false).await.is_err());
     // Private test inspection only: service recovery persisted, did not resend.
     assert_eq!(
@@ -784,6 +799,155 @@ async fn private_recovery_survives_revoked_human_without_disclosing_receipt() {
             .unwrap()
             .state(),
         BusinessState::Applied
+    );
+    assert_eq!(port.effects.load(Ordering::SeqCst), 1);
+}
+
+#[tokio::test]
+async fn pm_ingress_refuses_generic_original_without_claiming_or_backfill() {
+    use projection_store_pg::command_pm::OriginalPmBinding;
+    let store = store().await;
+    let ledger = ledger();
+    store.configure_command_ledger(&ledger, 10).await.unwrap();
+    let port = TestPort::default();
+    let relay = DurableCommandRelay::new(
+        store.clone(),
+        &ledger,
+        TestAuthority::default(),
+        port.clone(),
+        1,
+        Duration::from_millis(100),
+    )
+    .unwrap();
+    relay.set_sends_enabled(true);
+    let intent = intent("TEST_ONLY.generic-original", "5");
+    store.prepare_command(&ledger, &intent).await.unwrap();
+    let original = OriginalPmBinding::new(
+        &intent,
+        "TEST_ONLY-reference",
+        &"a".repeat(64),
+        "TEST_ONLY-target",
+    )
+    .unwrap();
+    assert!(relay.submit_pm(&intent, None).await.is_err());
+    assert!(relay.submit_pm(&intent, Some(&original)).await.is_err());
+    assert_eq!(
+        store
+            .command_status(&ledger, &intent)
+            .await
+            .unwrap()
+            .delivery,
+        "PREPARED"
+    );
+    assert!(store.pm_original_binding(&ledger, &intent).await.is_err());
+    assert_eq!(port.effects.load(Ordering::SeqCst), 0);
+    assert_eq!(port.lookups.load(Ordering::SeqCst), 0);
+}
+
+/// A real PM human-only transport must NOT inherit unattended recovery just
+/// because the relay has a service grant. No human assertion may be minted.
+struct HumanOnlyPort(TestPort);
+impl CommandPort for HumanOnlyPort {
+    fn send<'a>(&'a self, intent: &'a CommandIntent) -> SourceFuture<'a> {
+        self.0.send(intent)
+    }
+    fn lookup<'a>(&'a self, intent: &'a CommandIntent) -> SourceFuture<'a> {
+        self.0.lookup(intent)
+    }
+}
+
+#[tokio::test]
+async fn private_recovery_never_falls_back_to_human_lookup() {
+    let store = store().await;
+    let ledger = ledger();
+    store.configure_command_ledger(&ledger, 10).await.unwrap();
+    let authority = TestAuthority::default();
+    let port = TestPort::default();
+    let relay = DurableCommandRelay::new(
+        store.clone(),
+        &ledger,
+        authority.clone(),
+        HumanOnlyPort(port.clone()),
+        1,
+        Duration::from_millis(100),
+    )
+    .unwrap();
+    relay.set_sends_enabled(true);
+    let intent = intent("TEST_ONLY.human-only", "5");
+    relay.submit(&intent).await.unwrap();
+    authority.revoked.store(true, Ordering::SeqCst);
+    relay.recover(&intent, &TestRecovery).await.unwrap();
+    assert_eq!(port.lookups.load(Ordering::SeqCst), 0);
+    assert_eq!(port.recovery_lookups.load(Ordering::SeqCst), 0);
+    assert_eq!(port.effects.load(Ordering::SeqCst), 1);
+    let retained = store.command_status(&ledger, &intent).await.unwrap();
+    assert_eq!(retained.delivery, "DELIVERY_UNKNOWN");
+    assert!(
+        retained.receipt.is_none(),
+        "Unknown cannot prove settlement"
+    );
+}
+
+#[tokio::test]
+async fn pm_admission_retains_original_before_claim_and_never_retargets() {
+    use projection_store_pg::command_pm::OriginalPmBinding;
+    let store = store().await;
+    let ledger = ledger();
+    store.configure_command_ledger(&ledger, 10).await.unwrap();
+    let port = TestPort::default();
+    let relay = DurableCommandRelay::new(
+        store.clone(),
+        &ledger,
+        TestAuthority::default(),
+        port.clone(),
+        1,
+        Duration::from_millis(100),
+    )
+    .unwrap();
+    let intent = intent("TEST_ONLY.pm-original", "5");
+    let original = OriginalPmBinding::new(
+        &intent,
+        "TEST_ONLY-original",
+        &"a".repeat(64),
+        "TEST_ONLY-target",
+    )
+    .unwrap();
+    assert!(matches!(
+        relay.submit_pm(&intent, Some(&original)).await,
+        Err(RelayError::Disabled)
+    ));
+    assert!(store
+        .existing_command(&ledger, &intent)
+        .await
+        .unwrap()
+        .is_none());
+    relay.set_sends_enabled(true);
+    assert!(matches!(
+        relay.submit_pm(&intent, None).await,
+        Err(RelayError::Configuration)
+    ));
+    assert!(store
+        .existing_command(&ledger, &intent)
+        .await
+        .unwrap()
+        .is_none());
+    relay.submit_pm(&intent, Some(&original)).await.unwrap();
+    assert_eq!(
+        store.pm_original_binding(&ledger, &intent).await.unwrap(),
+        original
+    );
+    let replacement = OriginalPmBinding::new(
+        &intent,
+        "TEST_ONLY-new",
+        &"b".repeat(64),
+        "TEST_ONLY-retarget",
+    )
+    .unwrap();
+    relay.set_sends_enabled(false);
+    relay.submit_pm(&intent, Some(&replacement)).await.unwrap();
+    assert_eq!(
+        store.pm_original_binding(&ledger, &intent).await.unwrap(),
+        original
     );
     assert_eq!(port.effects.load(Ordering::SeqCst), 1);
 }

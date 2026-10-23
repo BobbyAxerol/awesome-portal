@@ -34,7 +34,15 @@ const MAX_RECEIPT: usize = 1024 * 1024;
 /// bytes, and never retry a mutation. Read transport is not such an adapter.
 pub trait CommandPort: Send + Sync {
     fn send<'a>(&'a self, intent: &'a CommandIntent) -> SourceFuture<'a>;
+    /// Current HUMAN status. A service recovery grant must never use this
+    /// path or cause a transport to impersonate the original human actor.
     fn lookup<'a>(&'a self, intent: &'a CommandIntent) -> SourceFuture<'a>;
+    /// Separately commissioned, status-only SERVICE transport. Human-only
+    /// ports deliberately provide no fallback, even if the relay's independent
+    /// recovery authority is valid. Unknown is not settlement/acceptance proof.
+    fn lookup_recovery<'a>(&'a self, _intent: &'a CommandIntent) -> SourceFuture<'a> {
+        Box::pin(async { SourceReply::Unknown })
+    }
 }
 pub type SourceFuture<'a> = Pin<Box<dyn Future<Output = SourceReply> + Send + 'a>>;
 
@@ -120,6 +128,57 @@ impl<A: AuthorityProvider, P: CommandPort> DurableCommandRelay<A, P> {
     /// Every new send still needs a current published operation authorization.
     pub fn set_sends_enabled(&self, enabled: bool) {
         self.sends_enabled.store(enabled, Ordering::SeqCst);
+    }
+
+    /// Core-facing PM admission: atomically retain the original source pins
+    /// before the generic single-send relay can claim the intent. Existing
+    /// originals are never re-resolved or overwritten by current aliases.
+    /// # Errors
+    /// Disabled admission cannot create rows; current human submit authority,
+    /// bounded admission and owning source pins are mandatory for a new intent.
+    pub async fn submit_pm(
+        &self,
+        intent: &CommandIntent,
+        original: Option<&crate::command_pm::OriginalPmBinding>,
+    ) -> Result<CommandRecord, RelayError> {
+        {
+            let _permit = self.admission.try_acquire().map_err(|_| RelayError::Busy)?;
+            self.check(intent, Action::Status)?;
+            if self
+                .store
+                .existing_command(&self.ledger, intent)
+                .await?
+                .is_none()
+            {
+                if !self.sends_enabled.load(Ordering::SeqCst) {
+                    return Err(RelayError::Disabled);
+                }
+                self.check(intent, Action::Submit)?;
+                let original = original.ok_or(RelayError::Configuration)?;
+                self.store
+                    .prepare_pm_command(&self.ledger, intent, original)
+                    .await?;
+            } else {
+                // Generic PREPARED is not a sealed PM original. Refuse before
+                // claiming; never backfill or re-normalize it in this path.
+                self.store.pm_original_binding(&self.ledger, intent).await?;
+            }
+        }
+        self.submit(intent).await
+    }
+
+    /// Read full PM custody, never replacing current requester authorization.
+    /// # Errors
+    /// Rechecks human disclosure after the asynchronous owning-custody read.
+    pub async fn pm_outcome(
+        &self,
+        intent: &CommandIntent,
+    ) -> Result<Option<command_relay::pm_source::PmOutcome>, RelayError> {
+        let _permit = self.admission.try_acquire().map_err(|_| RelayError::Busy)?;
+        self.check(intent, Action::Status)?;
+        let outcome = self.store.read_pm_outcome(&self.ledger, intent).await?;
+        self.check(intent, Action::Status)?;
+        Ok(outcome)
     }
 
     fn check(&self, intent: &CommandIntent, action: Action) -> Result<(), RelayError> {
@@ -262,7 +321,7 @@ impl<A: AuthorityProvider, P: CommandPort> DurableCommandRelay<A, P> {
         }
         authorize_recovery(service, intent, chrono::Utc::now().timestamp_millis())?;
         if let Ok(SourceReply::Receipt(receipt)) =
-            tokio::time::timeout(self.deadline, self.port.lookup(intent)).await
+            tokio::time::timeout(self.deadline, self.port.lookup_recovery(intent)).await
         {
             authorize_recovery(service, intent, chrono::Utc::now().timestamp_millis())?;
             self.store

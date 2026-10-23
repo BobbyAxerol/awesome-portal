@@ -9834,6 +9834,11 @@ and [package/compatibility/errors/crosswalk](../services/portal-execution-edge-r
 **Runtime activation:** NOT_AUTHORIZED; owned proof package delivered, producer
 generation-fence/selected-writer publication required for connected acceptance.
 
+**Latest23Oct source:** actual P16 wire adapter qualified with16new tests;
+PM publisher fence already exists as a qualified source candidate. The gap is
+installed generation/drain/coverage/permit evidence, not missing fence code.
+See [business source closeout](#epg10-business-source-20261023).
+
 **Guide chi tiết bắt buộc:** [EDGE / EPG10-03](upgrade_v1.2/EXECUTION_PORTAL_EDGE_UPGRADE_GUIDE_v1.2_VI.md#epg10-03-chứng-minh-capture-và-commit-ordering);
 [BE §§6.4–6.6, 8.1–8.3; ELP2-05](upgrade_v1.2/EXECUTION_LOOP_PORTAL_V2_BACKEND_DATA_CONTRACT_GUIDE_v1.2_VI.md); [SCORE §§4.3–4.5, 8.6](upgrade_v1.2/SCORE_REGIME_SPECIFICATION_v1.1_FINAL_VI.md);
 [REVIEW §§2.1, 9](upgrade_v1.2/REVIEW_DECISIONS_AND_PM_DELTA_v1.2_VI.md). PM-R2/source links ở §23.1 áp dụng theo dependency.
@@ -9883,6 +9888,10 @@ production source publication or a rewrite of TS/PM writers.
 
 <a id="epg10-04-plan"></a>
 #### EPG10-04 Bootstrap delta và atomic projection
+
+**Latest23Oct source:** typed selected PM financial-report and native P16
+adapters added/tested without replacing atomic projection/checkpoint authority;
+see [business source closeout](#epg10-business-source-20261023).
 
 **Status:** IN_PROGRESS / OWNED_IMPLEMENTATION_TESTED_SOURCE_DARK — **Approval:** BOBBY_APPROVED (2026-10-16).
 **Tests:** 99PASS / 0FAIL / 0SKIP; fmt/strict clippy PASS;8formal cases PASS in isolated scope only.
@@ -9934,6 +9943,10 @@ DB proof only, no new source-connected certification or runtime activation.
 
 <a id="epg10-05-plan"></a>
 #### EPG10-05 Tích hợp query history và realtime fanout
+
+**Latest23Oct source:** exact financial mapping, P16 source adaptation and
+Manager all-mode contract hardening tested; no fabricated history or COMPLETE.
+See [business source closeout](#epg10-business-source-20261023).
 
 **Status:** IN_PROGRESS / OWNED_IMPLEMENTATION_TESTED_SOURCE_DARK — **Approval:** BOBBY_APPROVED (2026-10-16), named phase.
 **Tests:** 191PASS / 0FAIL / 0SKIP; 8formal families PASS isolated; fmt/strict clippy PASS.
@@ -10075,7 +10088,12 @@ not reclassified as somebody else's technical debt.07 was not started at that
 **Owned package:** QUALIFIED_SOURCE_DARK — **Full phase exit:** NOT_MET —
 **Runtime activation:** NOT_AUTHORIZED / NOT_PERFORMED.
 
-**Latest original-round2 slice (2026-10-20):** real bounded PM HTTP CommandPort
+**Latest23Oct source:** Core original codec, atomic PM original admission/full
+custody disclosure and disjoint human/service lookup qualified;289affected
+tests PASS. HTTP/current-authority/target commissioning remains separate; see
+[business source closeout](#epg10-business-source-20261023).
+
+**Historical original-round2 slice (2026-10-20):** real bounded PM HTTP CommandPort
 implemented and135affected Rust tests PASS (18new), strict Clippy/fmt PASS;
 source-only, actual target/current authority/custody commissioning pending.
 See [current execution](#original07-resumed--bounded-pm-http-commandport--20oct0635utc)
@@ -10150,7 +10168,12 @@ Owned7.365GB test copies/cache/logs removed;12HK+5SGP tuples unchanged/restarts0
 **Vòng triển khai độc lập lịch sử16/10:** COMPLETE — **Vòng2 actual provider:** IN_PROGRESS_OWNED_IMPLEMENTATION; connected acceptance OPEN.
 **Đi tiếp:** GO cho phần09 độc lập sau khi09 được duyệt; không đợi đóng toàn bộ08.
 Đây không phải COMPLETE toàn phase hoặc quyền mở runtime chưa được nghiệm thu.
-**Latest actual21Oct10:26UTC:** Core00973435311/image9cf5 is installed on the
+**Latest23Oct:** native active-revoke specimen is accepted/retired; do not rerun
+it. Business-source package now independently qualified; full08 remains NOT_MET
+for P22/cache and independent scope/commissioning evidence. See
+[business source closeout](#epg10-business-source-20261023).
+
+**Historical actual21Oct10:26UTC (superseded by23Oct receipts):** Core00973435311/image9cf5 is installed on the
 isolated Research backend; genuine scoped retained READ/SSE has3snapshot+
 4frame exact independent TS/Core terminal/ACK matches. Genuine expired-session
 denial401 created zero native admissions. Active STREAM revoke exposed one
@@ -10326,6 +10349,11 @@ or product-security acceptance claimed;09…11 remain not started.
 
 <a id="epg10-09-plan"></a>
 #### EPG10-09 Kiểm thử E2E dữ liệu command và recovery
+
+**Latest23Oct business source:** four backend lanes independently qualified,
+including full83Edge tests and45disposable-PG command/custody tests. Not native
+financial/event/command acceptance; see
+[business source closeout](#epg10-business-source-20261023).
 
 **Status:** IN_PROGRESS — **Approval:** BOBBY_APPROVED (2026-10-16).
 **Tests:** PASS_INDEPENDENT_SCOPE (606 final tests;0FAIL/skip/ignored) —
@@ -31977,3 +32005,114 @@ drain/paused-old-writer, selected writer/export/retention/permit acceptance.
 P16 presently publishes a capture-certified Paper view, not a Sandbox/Live
 journal. Do not widen source coverage merely because Manager reads all modes.
 Sixteen new P16 tests plus31 existing event/bootstrap tests passed.
+
+**Command business ingress/custody (07):** added private source-only
+`edge-service::command_gateway` with strict bounded original-intent codec
+`execution.core-pm-original.v1`. Exact fields are schema_version, action
+(SUBMIT|STATUS), key, operation, payload, payload_digest and request_digest.
+Maximum32KiB, no extra/recursive duplicate fields. Original CommandScope is
+supplied by authenticated owning composition, NEVER body identity/permissions,
+current profile aliases, a URL/SQL/CLI selector or an authorization DTO.
+Reconstruct through existing CommandIntent::new; retain original PM operation/
+payload/request/source digests as DIFFERENT identities. This is an Edge source
+composition contract, not a claim that Core's proposal DTO is an installed HTTP
+wire. Core must map its Portal intent via the selected owner normalization.
+
+`execute_human` reuses the existing DurableCommandRelay; `submit_pm` checks
+current requester, disabled admission and bounded concurrency before atomically
+persisting command+original PM pins. Existing generic PREPARED without PM custody
+is refused before claim, not backfilled or stranded after an attempted send.
+Repeated originals never re-resolve/retarget. STATUS prepares/sends nothing;
+`pm_outcome` reads FULL owning custody and rechecks human disclosure after await.
+Known generic receipt must agree with full custody; otherwise fail closed and
+query the SAME original. Delivery and full source outcome are not a fictitious
+atomic/current business snapshot.
+
+Unattended `recover_service` is a separate API, unavailable from HumanAction.
+The relay now calls CommandPort::lookup_recovery, NOT human lookup; its safe
+default is Unknown. Existing PM HTTP transport is human-authenticated and does
+not acquire service scope by implementing lookup. No fresh historical-human
+impersonation, send retry, fake receipt or return of public data on recovery.
+Ok with Unknown means no new settlement evidence, not recovery acceptance.
+Five new decoder tests cover8operations×3source modes, body/auth separation,
+original/digest immutability, duplicates and bounds. Three new real disposable-PG
+regressions cover atomic original admission/no retarget, generic-row refusal,
+and human-only transport never being used by service recovery; existing service
+recovery also verifies the two lookup counters stay disjoint.
+
+**Independent review and remaining decision boundary:** cross-reviewed the
+three Rust lanes and command composition before final gates. Fixed missing-null
+financial columns, nested Event duplicate keys and generic PREPARED-without-PM-
+custody admission, all with regression evidence; none is relabeled external
+debt. Runnable owned code is distinct from commissioning: PM must publish exact
+selected whole-original financial bindings and current HISTORY/EXPORT/fence;
+TS/PM must return installed P16 generation/coverage/permit evidence; Core/Edge
+must bind the versioned private command wire to actual current human verifier,
+issuer and target; PM must separately publish service-status authority/transport
+before unattended recovery can settle. Manager needs per-profile current grant,
+audience/catalogue/TLS/JWKS receipts for actual Research commissioning. These
+are original-phase connected round2 inputs, not a new gate on independent work.
+Do not change source databases/providers or invent them in this slice.
+
+**Final owned-slice status,23Oct — IMPLEMENTED / ISOLATED_SOURCE_QUALIFIED:**
+four business lanes have code, regression and independent review; no known
+owned code/test defect is deferred as external debt. This is NOT native-source
+financial/event/command commissioning or full03/04/05/07/08/09 acceptance.
+No HTTP command mount, policy provider, grant or financial publication is
+invented by the successful tests. Closed actual native active revoke stays
+closed. Next permitted work is the original connected round2 with actual
+producer/Research authority and reviewed source release; no new phase or
+blanket approval is needed, and no source input is replaced by fixtures.
+
+Final locked correctness commands and bounded metadata are in
+[business qualification](evidence/execution-edge-v1_2/EPG10-08/business-backend-qualification.json),
+SHA256 0a58f6c05c19cf2591bf86eecb140374855db3bcb7b068db43fd3ce4ec496c9e.
+**289PASS/0FAIL/0ignored/0filtered final:** event47, command-relay79, Manager15,
+financial/maximum-data20, command-PG30, PM-custody-PG15, fullEdge83. Includes
+44new test functions. fmt-all and six affected packages/all-target strictClippy
+`-D warnings` PASS. Intermediate Clippy failures were redundant must_use,
+doc-markdown and readable numeric literals; corrected, not suppressed. The
+final post-test change was doc markup only, retaken fmt/Clippy PASS. Normal
+integration-landing/full release gate NOT_RUN; these are focused source-only
+intermediates under the already approved campaign§10.10c, not R0/release PASS.
+No push/merge/hostedCI;0CI minutes. Bobby identity verified for each coherent
+commit; source manifest cb62eb11a8ee8f282cb8390b13de414baa125c4b30336994a1c6a10cf979e4d4
+covers15exact source/lock paths and is independently reproduced from the receipt.
+Final peer recheck: PM32d25c1c, only docs changed since reviewedb6badae4 for the
+four report/reader/command source paths; nativeTS0cd356da/reader25874684 stable.
+
+**Cleanup/retention performed:** only owned
+`/tmp/epg10-business-rust-lPNA7qHw` removed (2,234,201,196logical bytes incl
+compiler/cache/target/logs/driver); exact temporary PG
+`epg10-business-pg-lpna7qhw` auto-removed in finally on BOTH failed and successful
+qualification runs. All compiler cells used --rm and0remain. Newly pulled
+unreferenced Rust1.85.1 imagee51d0265 removed without force; operational PGcf78
+retained. Before cleanup disk used338137792512/free180779110400B; after
+used333847556096/free185069346816B. Shared-host delta is observational, not a
+claim that every freed byte was exclusively ours. Images117→116; foreign
+BuildKit607records/70.73GB retained. No build was performed, no owned BuildKit
+records to prune; no broad prune or volumes/networks/foreign containers/source/
+custody/worktree deletion. SGP received no source/dependency/secret packet and
+had0new resources to clean. Test data lived solely in the destroyed temp-PG.
+
+**Source/release/runtime reconciliation:** canonical Edge checkout
+`/home/bobby/.worktrees/portal-execution-manager-v2`,
+feat/manager-v2-paper-read@54c6f5f3 unchanged; owned active feature checkout
+`/home/bobby/.worktrees/portal-execution-edge-upgrade-v1_2`,
+feat/execution-edge-upgrade-v1_2. Coherent source commits Manager11e0b77a,
+financiale9b1f13e, Eventaaf15f83 and the command/closeout commit carrying this
+entry; source is not installed. Other active worktrees/branches are untouched.
+Paper/Sandbox/Live Edge d6aa7a510ddf and Source Proxy aa14e21c5469 remain;
+native provider28ea39588edd remains. Versioned config revisions remain
+6180b9bf/cd79e9c6/98a191c7; stable release and explicitly retained rollback
+artifacts untouched. No operational DB/schema/role/session/key/TLS/config/
+traffic mutation or restart by this slice. Edge/Proxy/native restart0 on final
+inspection. Existing Paper projection worker on oldd6aa image showed restart
+count10137; do NOT claim all running profiles are healthy from these unit
+results. Its bounded12-line diagnostic was hashed/redacted, not committed raw;
+subsequent4-line bounded redacted check identified existing SourceProxyHTTP429,
+cycle failed closed, last warning04:08:02UTC (before this slice05:50UTC). This
+does not prove the cause of lifetime restarts. Edge owns quota/current-worker
+inspection with actual source/release target during01/06+08 binding; no blind
+retry, rate-limit bypass or silent restart here. Preserve peer C5journalhunk, two tracked peer returns
+and all incoming untracked files; original three peer hashes still match.
