@@ -11,6 +11,12 @@ describe("preview clock anchor: rebaseTimes", () => {
     expect(rebaseTimes("2026-08-22T13:00:00.250Z", DAY)).toBe("2026-08-23T13:00:00.250Z");
   });
 
+  it("shifts microsecond and nanosecond instants too (the queue keyset is six places wide), keeping the places beyond millis", () => {
+    expect(rebaseTimes("2026-08-22T11:58:00.123456Z", DAY)).toBe("2026-08-23T11:58:00.123456Z");
+    expect(rebaseTimes("2026-08-22T11:58:00.000001Z", 120_000)).toBe("2026-08-22T12:00:00.000001Z");
+    expect(rebaseTimes("2026-08-22T23:59:59.999999999Z", 1000)).toBe("2026-08-23T00:00:00.999999999Z");
+  });
+
   it("shifts plain days by whole days only", () => {
     expect(rebaseTimes("2026-08-22", 3 * DAY)).toBe("2026-08-25");
     expect(rebaseTimes("2026-08-22", DAY / 3)).toBe("2026-08-22");

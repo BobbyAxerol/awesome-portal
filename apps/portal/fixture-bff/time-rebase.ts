@@ -12,7 +12,7 @@
  * Anything else (durations, counters, ids, free text) is left alone.
  */
 
-const INSTANT = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(\.\d{1,3})?Z$/;
+const INSTANT = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(\.\d{1,9})?Z$/;
 const DAY = /^\d{4}-\d{2}-\d{2}$/;
 const MS_DAY = 86_400_000;
 /** A plausible epoch in ms: 2017 to 2096. Smaller numbers under `_ms` keys are durations. */
@@ -27,7 +27,11 @@ export function rebaseTimes(value: unknown, deltaMs: number, key = ""): unknown 
       const at = Date.parse(value);
       if (!Number.isFinite(at)) return value;
       const shifted = new Date(at + deltaMs).toISOString();
-      return m[7] === undefined ? shifted.replace(/\.\d{3}Z$/, "Z") : shifted;
+      if (m[7] === undefined) return shifted.replace(/\.\d{3}Z$/, "Z");
+      // Up to nine fraction places are legal (the queue keyset is six wide): the first three move with the clock, the rest are
+      // kept as written, so the number of places is the one the body had.
+      const places = m[7].slice(1);
+      return places.length <= 3 ? shifted : `${shifted.slice(0, 19)}.${shifted.slice(20, 23)}${places.slice(3)}Z`;
     }
     if (DAY.test(value)) {
       const at = Date.parse(`${value}T00:00:00Z`);
