@@ -86,6 +86,32 @@ const click = async (label: string) => { await loaded(); fireEvent.click(sortBut
 const BASIS_ID = JSON.stringify(["PAPER", "USDT", "TEST_ONLY:net-ledger", "TEST_ONLY:paper-ledger", "TEST_ONLY:not-economic-authority"]);
 const PAPER_BASIS = { economic_domain: "PAPER", currency: "USDT", basis: "TEST_ONLY:net-ledger", native_profile_ref: "TEST_ONLY:paper-ledger", domain_proof_ref: "TEST_ONLY:not-economic-authority" };
 
+describe("QA3 R2-04 · no ticket ids in the rendered words of any Fleet view", () => {
+  const TICKET = /\bFE-[A-Z0-9]{2,}|BR-EX-|A360-|ELP2-REQ-|BQ-FLEET/;
+  const words = () => [document.body.textContent ?? "", ...[...document.querySelectorAll("[title],[aria-label]")].map((el) => `${el.getAttribute("title") ?? ""} ${el.getAttribute("aria-label") ?? ""}`)].join("\n");
+  it("the table (with its peek drawer), the board and the map print reasons in words", async () => {
+    const { api } = harness();
+    mount(api);
+    await loaded();
+    expect(words()).not.toMatch(TICKET);
+    fireEvent.click(rowOf("a-1"));
+    await waitFor(() => expect(search().get("sel")).not.toBeNull());
+    expect(words()).not.toMatch(TICKET);
+  });
+  it("the board", async () => {
+    const { api } = harness();
+    mount(api, "/execution/fleet?stage=paper&view=board", false);
+    await screen.findByRole("group", { name: "Alpha fleet board" }, SLOW);
+    expect(words()).not.toMatch(TICKET);
+  });
+  it("the map", async () => {
+    const { api } = harness();
+    mount(api, "/execution/fleet?stage=paper&view=map", false);
+    await screen.findByTestId("fleet-map", undefined, SLOW);
+    expect(words()).not.toMatch(TICKET);
+  });
+});
+
 describe("guide 8.1 · the columns", () => {
   it("the default set is the guide 8.1 set with QBTS, Alloc and PNL early; Owner and Source are lines of their cells until their own columns are switched on", async () => {
     const { api } = harness();
@@ -439,7 +465,7 @@ describe("guide 8.2 / 8.3 · groups, density, selection, KPIs", () => {
     expect(boxes).toHaveLength(5);
     const reasonId = boxes[0]!.getAttribute("aria-describedby")!;
     expect(boxes.every((box) => box.disabled && box.getAttribute("aria-describedby") === reasonId)).toBe(true);
-    expect(document.getElementById(reasonId)!.textContent).toBe("Select 2 to 4 alphas to compare: Not published (FE-033).");
+    expect(document.getElementById(reasonId)!.textContent).toBe("Select 2 to 4 alphas to compare: Not published: compare.");
     expect((screen.getByRole("button", { name: "Compare selected" }) as HTMLButtonElement).disabled).toBe(true);
   });
 
@@ -449,8 +475,8 @@ describe("guide 8.2 / 8.3 · groups, density, selection, KPIs", () => {
     await loaded();
     await waitFor(() => expect(document.querySelectorAll(".exec-blk-kpi").length).toBe(7));
     const tile = (label: string) => [...document.querySelectorAll(".exec-blk-kpi")].find((k) => k.querySelector("dt")?.textContent === label)?.textContent ?? "";
-    expect(tile("Ready for exit review")).toContain("Not published (FE-027)");
-    expect(tile("Archive in progress")).toContain("Not published (FE-034)");
+    expect(tile("Ready for exit review")).toContain("Not published: readiness");
+    expect(tile("Archive in progress")).toContain("Not published: archived list");
     expect(tile("Ready for exit review")).not.toMatch(/\b0\b/);
   });
 });

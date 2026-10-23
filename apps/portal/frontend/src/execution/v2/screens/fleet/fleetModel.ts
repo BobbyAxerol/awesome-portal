@@ -34,7 +34,7 @@ export const FE = {
   archived: { fe: "FE-034", what: "Archived list" },
 } as const satisfies Record<string, UnpublishedFact>;
 
-export const notPublished = (fact: UnpublishedFact): string => `${NOT_PUBLISHED} (${fact.fe})`;
+export const notPublished = (fact: UnpublishedFact): string => `${NOT_PUBLISHED}: ${fact.what.toLowerCase()}`;
 
 /* ── lenses ────────────────────────────────────────────────────────────── */
 
@@ -359,8 +359,8 @@ export const FLEET_COLUMNS = [
  */
 export const MONEY_COLUMN_WHY = {
   allocation: "The register publishes allocation per alpha as one list per currency but does not say whether that list spans Real-funded and Simulated books, so no figure is printed until the contract says (backend question BQ-FLEET-ALLOC).",
-  pnl: `${NOT_PUBLISHED} (FE-025): windowed Net PnL needs the window.`,
-  equity: `${NOT_PUBLISHED} (FE-013): the equity series is not published.`,
+  pnl: `${NOT_PUBLISHED}: windowed Net PnL needs the window.`,
+  equity: `${NOT_PUBLISHED}: the equity series is not published.`,
 } as const;
 export type FleetColumnKey = (typeof FLEET_COLUMNS)[number]["key"];
 

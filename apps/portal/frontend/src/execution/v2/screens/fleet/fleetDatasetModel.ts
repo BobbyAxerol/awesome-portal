@@ -201,7 +201,7 @@ export function stageViewOf(row: ManagerRow): StageView {
   const reason = row.stageLifecycleReasons.currentStage;
   const presence = row.stagePresence.map(stageLabel);
   return reason === "STAGE_FIELD_NOT_PUBLISHED"
-    ? { kind: "unpublished", code: null, label: "Not published (FE-027)", reason, presence }
+    ? { kind: "unpublished", code: null, label: "Not published", reason, presence }
     : { kind: "several", code: null, label: "No single stage", reason, presence };
 }
 
@@ -219,7 +219,7 @@ export function inStageOf(row: ManagerRow, stamp: (ms: number) => string): InSta
     return { text: row.daysInStage === 1 ? "1 day" : `${row.daysInStage} days`, detail: `In this stage since ${stamp(row.enteredAtMs)}`, published: true };
   }
   const reason = row.stageLifecycleReasons.daysInStage ?? row.stageLifecycleReasons.enteredAtMs ?? "STAGE_ENTRY_TIME_NOT_PUBLISHED";
-  return { text: `Not published (${FE_STAGE_ENTRY.fe})`, detail: reason, published: false };
+  return { text: "Not published", detail: reason, published: false };
 }
 
 /**
@@ -353,7 +353,7 @@ export function moneyProvenanceRows(rows: readonly ManagerRow[], metricKeys: rea
     });
   }
   if (lines.length > 0) {
-    lines.push("Ownership: not published (FE-CAT-7). Nothing in the dataset says whether a balance is alpha-owned or a shared account's, so a cell is the figure of its named partition only.");
+    lines.push("Ownership: not published. Nothing in the dataset says whether a balance is alpha-owned or a shared account's, so a cell is the figure of its named partition only.");
     lines.push("Partitions are never added together: a Real-funded, a Paper and a Sandbox figure in the same currency are three figures.");
   }
   return lines;

@@ -205,6 +205,7 @@ export function FleetMap({ rows, metricKeys, hrefFor, selectedKey, onOpen }: Fle
                 return (
                   <li key={row.rowKey} className="exec-fleet-tile" data-health={health === null ? "unknown" : health.kind} data-tone={toneOf(row)} data-weight={grow(weight)} data-selected={selectedKey === row.rowKey ? "true" : undefined}
                     data-simulated={row.environment === "paper" || row.environment === "sandbox" || row.currentStage === "PAPER" || row.currentStage === "SANDBOX" ? "true" : undefined}
+                    title={`${row.name ?? row.alphaId} · ${row.alphaVersionId} · ${row.currentStage === null ? "No single stage" : stageLabel(row.currentStage)}${health ? ` · ${health.label}` : ""}`}
                     style={pct(tileRect)}>
                     <Link className="exec-fleet-name" title={row.name ?? row.alphaId} to={hrefFor(row)}>{row.name ?? row.alphaId}</Link>
                     <span className="exec-fleet-version">{row.alphaVersionId} · {row.currentStage === null ? "No single stage" : stageLabel(row.currentStage)}</span>

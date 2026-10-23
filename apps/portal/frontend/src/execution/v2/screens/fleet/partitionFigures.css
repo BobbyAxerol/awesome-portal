@@ -104,3 +104,10 @@
 .exec-fleet-treemap .exec-fleet-tile[data-simulated="true"] { background-image: repeating-linear-gradient(45deg, transparent 0 6px, var(--line-strong) 6px 7px); }
 .exec-fleet-legend-swatch[data-tone="simulated"] { background-image: repeating-linear-gradient(45deg, transparent 0 3px, var(--line-strong) 3px 4px); }
 @media (max-width: 660px) { .exec-fleet-treemap { height: 1100px; } }
+
+/* Small tiles keep what identifies them (QA3 R2-15): by the tile's own size, the detail drops away and the name stays, with the full line on the tile's title. */
+.exec-fleet-treemap .exec-fleet-tile { container-type: size; }
+@container (max-height: 96px) { .exec-fleet-tile .exec-flag, .exec-fleet-tile .exec-fleet-link, .exec-fleet-tile .exec-fleet-version:last-of-type { display: none; } }
+@container (max-height: 62px) { .exec-fleet-tile .exec-fleet-version, .exec-fleet-tile .exec-fleet-np { display: none; } }
+@container (max-height: 40px) { .exec-fleet-tile .exec-mgr-num { display: none; } }
+@container (max-width: 90px) { .exec-fleet-tile .exec-mgr-num, .exec-fleet-tile .exec-fleet-version { display: none; } }

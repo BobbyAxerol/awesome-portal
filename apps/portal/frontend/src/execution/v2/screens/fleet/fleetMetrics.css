@@ -142,3 +142,9 @@
 .exec-fleet-board .exec-fleet-lane { min-width: 240px; }
 .exec-fleet-dataset .exec-fleet-portfolio-line .exec-fleet-trunc { max-width: 22ch; }
 .exec-fleet-dataset .exec-cards-group th, .exec-fleet-pf-head { text-transform: none; letter-spacing: normal; }
+
+/* The pinned Alpha column is opaque and above every positioned cell beside it (QA3 R2-28). */
+.exec-fleet-dataset tbody td:first-child { z-index: 3; background-color: var(--paper); }
+.exec-fleet-dataset thead th:first-child { z-index: 4; }
+/* A tag never breaks inside its word ("Real-/funded"). */
+.exec-fleet-card .exec-fleet-env-tag, .exec-fleet-card .exec-fleet-lane-tag, .exec-fleet-card .exec-fleet-version, .exec-fleet-lane-tag { white-space: nowrap; hyphens: none; }

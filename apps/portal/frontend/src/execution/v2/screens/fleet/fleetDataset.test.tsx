@@ -200,7 +200,7 @@ describe("published: the dataset is the source, chosen by the data (no toggle)",
 });
 
 describe("dataset mode: rows, current stage, days in stage", () => {
-  it("prints identity, the producer's current stage, and Not published (FE-027) for days in stage with the typed reason", async () => {
+  it("prints identity, the producer's current stage, and Not published: readiness for days in stage with the typed reason", async () => {
     const { api, legacy } = harness({ live: MIXED });
     mount(api, LIVE_URL);
     await loaded();
@@ -215,13 +215,13 @@ describe("dataset mode: rows, current stage, days in stage", () => {
     expect(cell(byId("a-001"), "Current stage")).toContain("in Canary, Live");
     expect(whyText(byId("a-001").querySelector("td[data-l='Current stage']"))).toBe("MULTIPLE_ACTIVE_STAGES");
     for (const row of rows) {
-      expect(cell(row, "In stage")).toBe("Not published (FE-027)");
+      expect(cell(row, "In stage")).toBe("Not published");
       expect(whyText(row.querySelector("td[data-l='In stage']"))).toBe("STAGE_ENTRY_TIME_NOT_PUBLISHED");
     }
     expect(cell(byId("a-000"), "Portfolio")).toBe("pf-1");
     expect(cell(byId("a-000"), "Owner")).toBe("Lan-002");
     expect(cell(byId("a-000"), "Health")).toContain("Ready");
-    expect(document.body.textContent).toContain("Days in stage (FE-027)");
+    expect(document.body.textContent).toContain("Days in stage");
   });
 
   it("never prints a dash, N/A or a bare zero for an absent value", async () => {
@@ -297,7 +297,7 @@ describe("dataset mode: rows, current stage, days in stage", () => {
     expect(parts(rows[1]!, "Alloc")).toEqual(["Paper · USDTNot available", "Paper · EURNot available"]);
     expect(cell(rows[0]!, "Alloc")).not.toMatch(/\b0\b/);
     // Equity: the dataset does not carry equity_30d_end_value: Not published with its request id, not a figure.
-    expect(cell(rows[0]!, "Equity 30D")).toBe("Not published (FE-013)");
+    expect(cell(rows[0]!, "Equity 30D")).toBe("Not published: equity");
     expect(container.textContent).not.toMatch(/ACTUAL/);
   });
 });

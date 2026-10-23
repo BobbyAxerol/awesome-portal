@@ -87,7 +87,7 @@ describe("the KPI strip and the lens counts stay on a dataset table (Bobby 2026-
     await waitFor(() => expect(kpis()["Alphas"]).toBe("5"));
     expect(kpis()).toEqual({
       Alphas: "5", Deployments: "7", Portfolios: "2", "Need attention": "1", "Research only": "1",
-      "Ready for exit review": "Not available" + "Not published (FE-027)", "Archive in progress": "Not available" + "Not published (FE-034)",
+      "Ready for exit review": "Not available" + "Not published: readiness", "Archive in progress": "Not available" + "Not published: archived list",
     });
     // the fleet read made exactly one request: one row, nothing narrowed, no lens, no search
     expect(legacy).toEqual([{ limit: 1 }]);
@@ -221,13 +221,13 @@ describe("dataset rows: the mini spine, the lifecycle flag, the peek", () => {
     expect(within(drawer).getByText("Alpha a-000")).toBeTruthy();
     expect(within(drawer).getByText("Version av-1")).toBeTruthy();
     const facts = Object.fromEntries([...drawer.querySelectorAll(".exec-fleet-fact")].map((f) => [f.querySelector("dt")!.textContent, f.querySelector("dd")!.textContent]));
-    expect(facts).toMatchObject({ "Alpha id": "a-000", Portfolio: "pf-1", "Current stage": "Live", "In stage": "Not published (FE-027)" });
+    expect(facts).toMatchObject({ "Alpha id": "a-000", Portfolio: "pf-1", "Current stage": "Live", "In stage": "Not published" });
     // no money, no invented history
     expect(drawer.textContent).not.toMatch(/\bUSDT\b|\bdays?\b/);
     const open = within(drawer).getByRole("link", { name: "Open Alpha 360" });
     expect(open.getAttribute("href")).toMatch(/^\/deployments\/alphas\/a-000/);
     // Compare is disabled with its request id, never hidden
-    expect(drawer.textContent).toContain("Not published (FE-033)");
+    expect(drawer.textContent).toContain("Not published: compare");
     expect(first.getAttribute("aria-current")).toBe("true");
     fireEvent.keyDown(document, { key: "Escape" });
     await waitFor(() => expect(search().get("sel")).toBeNull());

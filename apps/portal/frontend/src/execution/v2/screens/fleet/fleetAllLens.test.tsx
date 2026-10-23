@@ -191,7 +191,7 @@ describe("the All lens reads the dataset in ALL mode when it is offered", () => 
     cleanup();
     const archived = harness(POPULATION);
     mount(archived.api, "/execution/fleet?tab=archived");
-    await screen.findByText(/Not published \(FE-034\)/);
+    await screen.findByText(/Not published: archived list/);
     expect(archived.state.calls).toEqual([]);
   });
 
@@ -239,7 +239,7 @@ describe("FE-CAT-7 · the money columns say where they come from", () => {
     for (const line of ["Real-funded · USDT: basis TEST_ONLY:net-ledger; profile TEST_ONLY:live-ledger", "Paper · USDT: basis TEST_ONLY:net-ledger; profile TEST_ONLY:paper-ledger",
       "Sandbox · USDT: basis TEST_ONLY:net-ledger; profile TEST_ONLY:sandbox-ledger"]) expect(text).toContain(line);
     expect(text).toContain("Allocation: 1 of 1 loaded rows publish a figure");
-    expect(text).toContain("Ownership: not published (FE-CAT-7)");
+    expect(text).toContain("Ownership: not published");
     expect(text).toContain("three figures");
   });
 
@@ -250,7 +250,7 @@ describe("FE-CAT-7 · the money columns say where they come from", () => {
     expect(screen.queryByTestId("env-coverage")).toBeNull();
     expect(screen.queryByText("Environment", { selector: "th" })).toBeNull();
     fireEvent.click(within(screen.getByTestId("money-provenance")).getByRole("button", { name: "Where the money columns come from" }));
-    expect(screen.getByTestId("money-provenance").textContent).toContain("Ownership: not published (FE-CAT-7)");
+    expect(screen.getByTestId("money-provenance").textContent).toContain("Ownership: not published");
   });
 });
 

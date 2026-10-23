@@ -815,8 +815,8 @@ export default function FleetScreen({ api, workspaceId, streamFlag = FLEET_STREA
           {/* Tied to every disabled control by aria-describedby: the visible words are the names, the ids are in the title and the hidden text. The Archived lens has no list to filter, so its panel says the one thing and this line is for assistive tech only. */}
           <p id={reasonId} className={archived ? "exec-fleet-sr" : "exec-fleet-unpub"}>
             Not available: {unpublishedList.map((fact) => fact.what).join(", ")}
-            <span className="exec-fleet-sr"> ({unpublishedList.map((fact) => `${fact.what} (${fact.fe})`).join(", ")})</span>
-            {archived ? null : <GapWhy name="Why these are not available" rows={unpublishedList.map((fact) => `${fact.what}: ${notPublished(fact)}`)} />}
+            <span className="exec-fleet-sr"> ({unpublishedList.map((fact) => `${fact.what}`).join(", ")})</span>
+            {archived ? null : <GapWhy name="Why these are not available" rows={unpublishedList.map((fact) => notPublished(fact))} />}
           </p>
           {datasetNote ? <p className="exec-fleet-sr" data-testid="dataset-note">{datasetNote}</p> : null}
           {limitNote ? <p className="exec-fleet-note exec-fleet-limit" data-testid="options-limit">{limitNote}</p> : null}
@@ -825,7 +825,7 @@ export default function FleetScreen({ api, workspaceId, streamFlag = FLEET_STREA
             {archived ? (
               <div className="exec-fleet-nppanel" role="status">
                 <strong>Archived alphas</strong>
-                <p title="No archived-alpha read is published (FE-034), so this lens asks for nothing.">
+                <p title="No archived-alpha read is published, so this lens asks for nothing.">
                   <span className="exec-fleet-sr">{notPublished(FE.archived)}</span>
                   <span aria-hidden="true">Not available</span>
                 </p>

@@ -227,7 +227,7 @@ export function FleetDatasetTable({
     drawdown: money("max_drawdown_pct", { fe: "FE-013", what: "Drawdown" }, false, null),
     coverage: (row) => {
       const view = qbtsOf(row);
-      if (view === null) return <NaWhy className="exec-fleet-np" text={`Not published (${SCORE_COVERAGE_GAP.fe})`} reason="No score on this row, so no coverage." />;
+      if (view === null) return <NaWhy className="exec-fleet-np" text={"Not published"} reason="No score on this row, so no coverage." />;
       return <span>{view.evidence === null ? "Evidence not published" : humanize(view.evidence)}</span>;
     },
   };
