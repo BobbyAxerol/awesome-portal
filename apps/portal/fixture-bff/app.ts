@@ -21,7 +21,7 @@ import { isScaleName, setFixtureNow, setFixtureScale, type ScaleName } from "../
 import { isReviewProfile, reviewCatalog, reviewHtml, type ReviewProfile } from "./review-catalog";
 import { answerReviewManager } from "./review-manager";
 import { transformReviewBody } from "./review-relations";
-import { rebaseDelta, rebaseTimes } from "./time-rebase";
+import { rebaseBody } from "./time-rebase";
 
 export const LANE_HEADER = "x-fixture-lane";
 export const DEFAULT_LANE = "FIXTURE_LAB";
@@ -326,7 +326,7 @@ async function handle(config: FixtureConfig, incoming: IncomingMessage, response
 
   const answered = answerFor(config, request);
   if (answered !== null) {
-    const served = config.rebaseTime && typeof answered.body !== "string" ? rebaseTimes(answered.body, rebaseDelta(OPERATIONS_V2_DOUBLE_NOW_ISO, Date.now())) : answered.body;
+    const served = config.rebaseTime && typeof answered.body !== "string" ? rebaseBody(answered.body, OPERATIONS_V2_DOUBLE_NOW_ISO, Date.now()) : answered.body;
     send(response, config, answered.status, served, { ...answered.headers });
     return;
   }

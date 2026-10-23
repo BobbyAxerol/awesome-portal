@@ -57,3 +57,29 @@ export function rebaseDelta(doubleNowIso: string, realNowMs: number): number {
   const anchor = Date.parse(doubleNowIso);
   return Math.floor(realNowMs / 60_000) * 60_000 - anchor;
 }
+
+/**
+ * The instant a body says it was read, when it says so at the top level (`read_at` as an ISO instant or `read_at_ms`). The doubles are
+ * not written against one instant (the operations double uses 22 Aug, the alpha doubles 17 Oct), so shifting every body by one global
+ * delta would push some of them past the real clock. A body that names its own read time is shifted so that read time becomes "now";
+ * everything inside it keeps its distance from that read time, which is what makes a window, a series and an event ribbon line up.
+ */
+export function bodyAnchor(body: unknown): number | null {
+  if (body === null || typeof body !== "object" || Array.isArray(body)) return null;
+  const record = body as Record<string, unknown>;
+  const iso = record.read_at;
+  if (typeof iso === "string" && INSTANT.test(iso)) {
+    const at = Date.parse(iso);
+    if (Number.isFinite(at)) return at;
+  }
+  const ms = record.read_at_ms;
+  if (typeof ms === "number" && Number.isInteger(ms) && ms >= EPOCH_MS_MIN && ms <= EPOCH_MS_MAX) return ms;
+  return null;
+}
+
+/** Shift a served body to the real clock: by its own read time when it names one, else by the doubles' common instant. */
+export function rebaseBody(body: unknown, doubleNowIso: string, realNowMs: number): unknown {
+  const now = Math.floor(realNowMs / 60_000) * 60_000;
+  const anchor = bodyAnchor(body);
+  return rebaseTimes(body, anchor === null ? rebaseDelta(doubleNowIso, realNowMs) : now - anchor);
+}
