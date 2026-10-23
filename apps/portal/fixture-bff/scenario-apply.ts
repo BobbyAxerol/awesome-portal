@@ -10,6 +10,7 @@
 import type { OverviewDoubleVariants } from "../frontend/e2e/bffDoubleOverview";
 import type { UsersDoubleVariant } from "../frontend/e2e/bffDoubleUsers";
 import type { BffRequest } from "../frontend/e2e/bffAnswerer";
+import { transformReviewBody } from "./review-relations";
 import { healsDoubles, type FixtureScenario } from "./scenario";
 
 export interface ScenarioVariants {
@@ -43,7 +44,8 @@ export function resetFixtureTransitions(): void {
 /** Shapes a served JSON body for the value-rewrite scenarios. Identity for the others. */
 export function applyScenarioBody(scenario: FixtureScenario, path: string, body: unknown): unknown {
   const healed = healsDoubles(scenario) ? aliasIds(healBody(body)) : body;
-  void path;
+  if (scenario === "zero") return path.includes("/manager/") ? zeroBody(healed) : healed;
+  if (scenario === "dense") return transformReviewBody(path, healed, "layout-stress");
   return healed;
 }
 
@@ -70,6 +72,25 @@ function healBody(value: unknown, depth = 0): unknown {
 }
 
 /**
+ * The `zero` scenario: every published money / ratio / percent figure that is AVAILABLE becomes an exact "0" (a true zero, never an absence), and every
+ * series point does too. Scores, counts, days, timestamps, ids and every typed absence are left as they are, so a zero is told apart from a missing
+ * figure. Applies to the manager reads (`/manager/*`) only.
+ */
+const ZERO_UNITS = new Set(["MONEY", "PERCENT", "RATIO"]);
+function zeroBody(value: unknown, depth = 0): unknown {
+  if (depth > 14 || value === null || typeof value !== "object") return value;
+  if (Array.isArray(value)) return value.map((entry) => zeroBody(entry, depth + 1));
+  const record = value as Record<string, unknown>;
+  const out: Record<string, unknown> = {};
+  for (const [key, child] of Object.entries(record)) {
+    if (key === "points" && Array.isArray(child)) out[key] = child.map((point) => (point && typeof point === "object" ? { ...(point as Record<string, unknown>), value: "0" } : point));
+    else out[key] = zeroBody(child, depth + 1);
+  }
+  if (record.availability === "AVAILABLE" && typeof record.value === "string" && ZERO_UNITS.has(String(record.unit)) && /^-?\d/.test(record.value)) out.value = "0";
+  return out;
+}
+
+/**
  * ONE id space for the navigation spine (WP-P). Ids the doubles print as a link target but that no read serves are pointed at the entity that does
  * answer, in every served body of the positive-like scenarios: the operation queue names accounts `acc_TEST_ONLY_*`, the account double names the
  * portfolios `pf_core`, `pf_satellite`, `pf_canary`. Exact string match only (a bare id or the id as the last path segment of a link); nothing else is
@@ -82,6 +103,7 @@ export const ID_ALIASES: Readonly<Record<string, string>> = Object.freeze({
   pf_core: "pf_TEST_ONLY_core",
   pf_satellite: "pf_TEST_ONLY_satellite",
   pf_canary: "pf_TEST_ONLY_canary",
+  inc_44: "inc_TEST_ONLY_fx_budget",
 });
 function aliasIds(value: unknown, depth = 0): unknown {
   if (depth > 12) return value;

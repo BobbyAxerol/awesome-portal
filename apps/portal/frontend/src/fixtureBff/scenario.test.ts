@@ -99,6 +99,42 @@ describe("the selector over HTTP", () => {
   });
 });
 
+describe("the value-rewrite scenarios", () => {
+  it("zero: every AVAILABLE money, percent and ratio figure is an exact 0 and stays AVAILABLE; series points are 0; scores are untouched", async () => {
+    const server = createFixtureServer(loadConfig({ PORT: "0", FIXTURE_HOST: "127.0.0.1", FIXTURE_REVIEW_PROFILE: "populated", FIXTURE_SCENARIO: "zero" }));
+    await new Promise<void>((done) => server.listen(0, "127.0.0.1", done));
+    const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
+    try {
+      const fleet = await fetch(`${base}/api/v1/execution/manager/fleet?environment=live&limit=20`).then((response) => response.json());
+      const metrics = fleet.items[0].economic_partitions[0].metrics;
+      expect(metrics.net_pnl).toMatchObject({ availability: "AVAILABLE", value: "0" });
+      expect(metrics.allocation).toMatchObject({ availability: "AVAILABLE", value: "0" });
+      expect(metrics.score.value).not.toBe("0");
+      const series = await fetch(`${base}/api/v1/execution/manager/series?environment=live&metric=NET_PNL&window=%2230D%22&subjects=${encodeURIComponent(JSON.stringify([{ subject_type: "FUND" }]))}`).then((response) => response.json());
+      expect(series.series[0].points.every((point: { value: string }) => point.value === "0")).toBe(true);
+    } finally {
+      server.closeAllConnections();
+      await new Promise<void>((done) => server.close(() => done()));
+      resetFixtureGlobals();
+      resetScenario();
+    }
+  });
+  it("dense: display names are the long layout-stress names", async () => {
+    const server = createFixtureServer(loadConfig({ PORT: "0", FIXTURE_HOST: "127.0.0.1", FIXTURE_REVIEW_PROFILE: "populated", FIXTURE_SCENARIO: "dense" }));
+    await new Promise<void>((done) => server.listen(0, "127.0.0.1", done));
+    const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
+    try {
+      const fleet = await fetch(`${base}/api/v1/execution/manager/fleet?environment=live&limit=5`).then((response) => response.json());
+      expect(String(fleet.items[0].name).length).toBeGreaterThan(80);
+    } finally {
+      server.closeAllConnections();
+      await new Promise<void>((done) => server.close(() => done()));
+      resetFixtureGlobals();
+      resetScenario();
+    }
+  });
+});
+
 describe("the legacy lane ignores the scenario", () => {
   it("sparse-realistic keeps the doubles' defaults whatever is selected", async () => {
     const server = createFixtureServer(loadConfig({ PORT: "0", FIXTURE_HOST: "127.0.0.1" }));
