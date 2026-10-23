@@ -16,7 +16,7 @@ import { answerFixtureRequest, type BffRequest, type BffResponse, type FixtureAn
 import { setOverviewDoubleVariants, setOverviewPlanMode, resetOverviewDouble, type OverviewDoubleVariants } from "../frontend/e2e/bffDoubleOverview";
 import { OPERATIONS_V2_DOUBLE_NOW_ISO } from "../frontend/e2e/bffDoubleV2";
 import { ACCESS_DOUBLE_DEFAULT_USER } from "../frontend/e2e/bffDoubleAccess";
-import { setUsersDoubleVariant, type UsersDoubleVariant } from "../frontend/e2e/bffDoubleUsers";
+import { setUsersDoubleLastSignIn, setUsersDoubleVariant, type UsersDoubleVariant } from "../frontend/e2e/bffDoubleUsers";
 import { isScaleName, setFixtureNow, setFixtureScale, type ScaleName } from "../frontend/e2e/bffScale";
 import { isReviewProfile, reviewCatalog, reviewHtml, type ReviewProfile } from "./review-catalog";
 import { answerReviewManager } from "./review-manager";
@@ -123,6 +123,7 @@ export function resetFixtureGlobals(): void {
   setOverviewPlanMode("sequence");
   resetOverviewDouble();
   setUsersDoubleVariant("paged");
+  setUsersDoubleLastSignIn(false);
 }
 
 function applyConfig(config: FixtureConfig): void {
@@ -133,6 +134,8 @@ function applyConfig(config: FixtureConfig): void {
   setOverviewPlanMode("blocked");
   setOverviewDoubleVariants(config.overview);
   if (config.users !== null) setUsersDoubleVariant(config.users);
+  // SIMULATED (FE-CAT-8): the roster's last sign-in, only on the populated and layout-stress profiles like the other overlays.
+  setUsersDoubleLastSignIn(config.reviewProfile !== "sparse-realistic");
 }
 
 /* ── the request ────────────────────────────────────────────────────────── */

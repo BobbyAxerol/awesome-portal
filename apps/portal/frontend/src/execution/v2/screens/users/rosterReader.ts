@@ -128,6 +128,13 @@ function readAccountRow(row: unknown, at: string, code: "ROSTER_MALFORMED" | "HI
   if (typeof row.locked !== "boolean") return fail("locked");
   const revision = row.account_revision;
   if (typeof revision !== "number" || !Number.isSafeInteger(revision) || revision < 0) return fail("account_revision");
+  // FE-CAT-8: optional. Omitted stays omitted; null is "never signed in"; anything but a real UTC instant refuses the row.
+  let lastSignIn: { lastSignInAt: string | null } | Record<string, never> = {};
+  if (row.last_sign_in_at !== undefined) {
+    if (row.last_sign_in_at === null) lastSignIn = { lastSignInAt: null };
+    else if (typeof row.last_sign_in_at === "string" && isRealInstant(row.last_sign_in_at)) lastSignIn = { lastSignInAt: row.last_sign_in_at };
+    else return fail("last_sign_in_at");
+  }
   return {
     userId,
     username,
@@ -137,6 +144,7 @@ function readAccountRow(row: unknown, at: string, code: "ROSTER_MALFORMED" | "HI
     mustChangePassword: row.must_change_password,
     accountRevision: revision,
     locked: row.locked,
+    ...lastSignIn,
   };
 }
 

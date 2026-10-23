@@ -31,6 +31,11 @@ export interface AccountSummary {
   mustChangePassword: boolean;
   accountRevision: number;
   locked: boolean;
+  /**
+   * FE-CAT-8, V2 roster only. The published instant of the newest sign-in (ISO), `null` = the account never signed in,
+   * `undefined` = this producer does not publish it. A label, not an authorization fact.
+   */
+  lastSignInAt?: string | null;
 }
 
 export interface HistoryEntry {
