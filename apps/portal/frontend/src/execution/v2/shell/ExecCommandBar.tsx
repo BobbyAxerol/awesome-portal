@@ -76,10 +76,15 @@ export function ExecCommandBar({ registry, options, open, onClose, searchApi, de
     const value = parseUrlParams(search).value;
     return { workspaceId: value.workspace_id ?? undefined, environment: value.env };
   }, [search]);
-  const onSelect = useCallback((entry: CommandEntry) => navigate(withContext(entry.href, search)), [navigate, search]);
+  // The owning scope of every search result: workspace, environment, the caller's capabilities (and so the kinds searched). A result belongs
+  // to exactly one scope; when any part changes the old results are dropped on the same render and the search runs again.
+  const scope = useMemo(
+    () => JSON.stringify([workspaceId ?? null, environment, [...(options.capabilities ?? [])].sort(), sources]),
+    [workspaceId, environment, options.capabilities, sources],
+  );
 
   const [query, setQuery] = useState("");
-  const [found, setFound] = useState<{ for: string; entries: CommandEntry[]; notes: string[] }>({ for: "", entries: [], notes: [] })
+  const [found, setFound] = useState<{ scope: string; for: string; entries: CommandEntry[]; notes: string[] }>({ scope: "", for: "", entries: [], notes: [] });
   // What the last search learned about `GET /search`: not asked yet, served, or not served (then the per-read fallback answers and the
   // index is not probed again for every keystroke; a fresh mount asks again).
   const [index, setIndex] = useState<"unknown" | "published" | "unpublished">("unknown");
@@ -96,9 +101,15 @@ export function ExecCommandBar({ registry, options, open, onClose, searchApi, de
 
   const latest = useRef({ searchApi, sources, workspaceId, environment });
   latest.current = { searchApi, sources, workspaceId, environment };
+  // Whether /search is served is learned per scope: another workspace or permission asks again.
+  const learnedFor = useRef(scope);
+  if (learnedFor.current !== scope) {
+    learnedFor.current = scope;
+    skipIndex.current = false;
+  }
   useEffect(() => {
     if (!searching) {
-      setFound((previous) => (previous.entries.length === 0 && previous.notes.length === 0 ? previous : { for: "", entries: [], notes: [] }));
+      setFound((previous) => (previous.entries.length === 0 && previous.notes.length === 0 ? previous : { scope: "", for: "", entries: [], notes: [] }));
       setBusy(false);
       return undefined;
     }
@@ -109,9 +120,11 @@ export function ExecCommandBar({ registry, options, open, onClose, searchApi, de
       const api = now.searchApi ?? createHttpApi({ policy: null, signal: controller.signal });
       void searchEntities(api, text, now.sources, now.workspaceId, controller.signal, now.environment, { skipIndex: skipIndex.current }).then((outcome) => {
         if (outcome === null || controller.signal.aborted) return;
+        // A late answer for another scope never lands: the effect aborts on a scope change, and this guard is the second fence.
+        if (learnedFor.current !== scope) return;
         if (outcome.via === "index") { skipIndex.current = false; setIndex("published"); }
         else if (outcome.via === "reads") { skipIndex.current = true; setIndex("unpublished"); }
-        setFound({ for: text, ...outcome });
+        setFound({ scope, for: text, ...outcome });
         setBusy(false);
       });
     }, debounceMs);
@@ -119,16 +132,27 @@ export function ExecCommandBar({ registry, options, open, onClose, searchApi, de
       clearTimeout(timer);
       controller.abort();
     };
-  }, [searching, text, debounceMs]);
+  }, [searching, text, debounceMs, scope]);
 
+  // An answer is shown only under the scope AND the text it was asked for.
+  const current = searching && found.scope === scope && found.for === text;
   // The bar's own filter is off (`filterLocally`): "Go to" rows are matched here, the server rows are shown as the server returned them.
   const entries = useMemo(() => {
     const needle = text.toLowerCase();
     const jump = needle === "" ? goTo : goTo.filter((entry) => matches(entry, needle));
     // An answer for older text is not shown under newer text.
-    return searching && found.for === text ? [...jump, ...found.entries] : jump;
-  }, [goTo, text, searching, found]);
-  const notes = searching && found.for === text ? found.notes : [];
+    return current ? [...jump, ...found.entries] : jump;
+  }, [goTo, text, found, current]);
+  const notes = current ? found.notes : [];
+  // Choosing a row navigates with the CURRENT context; a result of another scope cannot be chosen, because it is no longer in the list.
+  const chosen = useMemo(() => new Set<CommandEntry>(entries), [entries]);
+  const onSelect = useCallback(
+    (entry: CommandEntry) => {
+      if (!chosen.has(entry)) return;
+      navigate(withContext(entry.href, search));
+    },
+    [chosen, navigate, search],
+  );
 
   return (
     <CommandBar

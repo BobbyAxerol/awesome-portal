@@ -12,7 +12,7 @@
  * - The shell's workspace is the address's `workspace_id`; without one the read means "my own workspace", exactly like the screens.
  * - Never a sum, a client count of rows, or a default.
  */
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef } from "react";
 import { useLocation } from "react-router-dom";
 
 import { useSession } from "../../../auth/session";
@@ -91,6 +91,13 @@ export default function NavCounts({ registry, options, onView, enabled = EXECUTI
   const tick = usePollTick(NAV_COUNTS_POLL_MS, enabled && sessionKey !== null);
   const latest = useRef(onView);
   latest.current = onView;
+
+  // The owning scope of every badge: session, workspace and which entries are listed (eligibility). Counts of another scope are
+  // cleared on the same commit, before the new read starts, so a pending read for workspace B never shows workspace A's numbers.
+  const scope = `${sessionKey ?? ""}|${workspaceId ?? ""}|${listed.operations ? 1 : 0}${listed.approvals ? 1 : 0}`;
+  useLayoutEffect(() => {
+    latest.current(NO_NAV_BADGES);
+  }, [scope]);
 
   useEffect(() => {
     if (!enabled || sessionKey === null || (!listed.operations && !listed.approvals)) {

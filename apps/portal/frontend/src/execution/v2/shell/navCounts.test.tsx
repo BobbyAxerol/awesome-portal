@@ -2,10 +2,10 @@
  * Sidebar count badges (WP-D): a badge exists only for a count the owning read published, drawn only for an entry the rail lists,
  * read once per cadence and never invented.
  */
-import { act, cleanup, render } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter, useNavigate } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { NO_NAV_BADGES, type NavBadges } from "../../../app/selfNavView";
@@ -168,5 +168,69 @@ describe("NavCounts component", () => {
     await act(async () => { await Promise.resolve(); });
     view.unmount();
     expect(seen[seen.length - 1]).toBe(NO_NAV_BADGES);
+  });
+});
+
+describe("badges belong to one scope (session, workspace, eligibility)", () => {
+  const deferred = () => {
+    const pending: { workspaceId: string | undefined; resolve: (n: number) => void }[] = [];
+    const api = {
+      listOperationalQueueV2: vi.fn((query: { workspaceId?: string }) =>
+        new Promise((resolve) => pending.push({ workspaceId: query.workspaceId, resolve: (n) => resolve(queue({ count: n, observedAt: {}, coverage: "COMPLETE" })) }))),
+      listApprovals: async () => inbox(null),
+    } as unknown as ExecutionApi & { listOperationalQueueV2: ReturnType<typeof vi.fn> };
+    return { api, pending };
+  };
+  function ToB() {
+    const nav = useNavigate();
+    return <button onClick={() => nav("/execution?workspace_id=ws_B")}>to B</button>;
+  }
+  // The router keeps its own location, so a workspace switch is a navigation, not a new `initialEntries`.
+  const tree = (url: string, api: ExecutionApi, options: { capabilities: readonly string[] }, onView: (b: NavBadges) => void) => (
+    <MemoryRouter initialEntries={[url]}>
+      <ToB />
+      <NavCounts registry={registry} options={options} onView={onView} api={api} enabled />
+    </MemoryRouter>
+  );
+
+  it("a pending read for workspace B never shows workspace A's numbers: the badges are cleared before B reads", async () => {
+    const { api, pending } = deferred();
+    const seen: NavBadges[] = [];
+    render(tree("/execution?workspace_id=ws_A", api, MANAGER, (b) => seen.push(b)));
+    await act(async () => { await Promise.resolve(); });
+    await act(async () => pending[0].resolve(7));
+    expect(seen[seen.length - 1][OPERATIONS_FEATURE]?.count).toBe(7);
+    fireEvent.click(screen.getByRole("button", { name: "to B" }));
+    expect(seen[seen.length - 1]).toBe(NO_NAV_BADGES);
+    await act(async () => { await Promise.resolve(); });
+    expect(pending[pending.length - 1].workspaceId).toBe("ws_B");
+    expect(seen[seen.length - 1]).toBe(NO_NAV_BADGES);
+  });
+
+  it("a late answer for A arriving after the switch to B is dropped", async () => {
+    const { api, pending } = deferred();
+    const seen: NavBadges[] = [];
+    render(tree("/execution?workspace_id=ws_A", api, MANAGER, (b) => seen.push(b)));
+    await act(async () => { await Promise.resolve(); });
+    fireEvent.click(screen.getByRole("button", { name: "to B" }));
+    await act(async () => { await Promise.resolve(); });
+    await act(async () => pending.find((p) => p.workspaceId === "ws_A")!.resolve(9));
+    expect(seen[seen.length - 1]).toBe(NO_NAV_BADGES);
+    await act(async () => pending.find((p) => p.workspaceId === "ws_B")!.resolve(2));
+    expect(seen[seen.length - 1][OPERATIONS_FEATURE]?.count).toBe(2);
+  });
+
+  it("revoked eligibility clears the badge at once and stops the read", async () => {
+    const { api, pending } = deferred();
+    const seen: NavBadges[] = [];
+    const view = render(tree("/execution", api, MANAGER, (b) => seen.push(b)));
+    await act(async () => { await Promise.resolve(); });
+    await act(async () => pending[0].resolve(4));
+    expect(seen[seen.length - 1][OPERATIONS_FEATURE]?.count).toBe(4);
+    const reads = api.listOperationalQueueV2.mock.calls.length;
+    view.rerender(tree("/execution", api, { capabilities: [] }, (b) => seen.push(b)));
+    expect(seen[seen.length - 1]).toBe(NO_NAV_BADGES);
+    await act(async () => { await Promise.resolve(); });
+    expect(api.listOperationalQueueV2.mock.calls.length).toBe(reads);
   });
 });

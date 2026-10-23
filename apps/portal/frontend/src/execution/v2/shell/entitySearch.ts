@@ -101,9 +101,9 @@ async function guard(label: string, run: () => Promise<Settled>, signal: AbortSi
 
 const failed = (label: string, reason: string): Settled => ({ entries: [], note: `${label}: not available (${reason})` });
 
-async function alphas(api: ExecutionApi, text: string): Promise<Settled> {
+async function alphas(api: ExecutionApi, text: string, workspaceId: string | undefined): Promise<Settled> {
   const label = GROUP.alpha;
-  const result = await api.getAlphaFleet({ search: text, limit: PER_KIND, environment: "all" });
+  const result = await api.getAlphaFleet({ search: text, limit: PER_KIND, environment: "all", ...(workspaceId ? { workspace_id: workspaceId } : {}) });
   if (!result.ok) return failed(label, result.reason);
   const rows = result.value.page.rows.slice(0, PER_KIND);
   return {
@@ -112,9 +112,9 @@ async function alphas(api: ExecutionApi, text: string): Promise<Settled> {
   };
 }
 
-async function accounts(api: ExecutionApi, text: string, environment: ExecEnv): Promise<Settled> {
+async function accounts(api: ExecutionApi, text: string, environment: ExecEnv, workspaceId: string | undefined): Promise<Settled> {
   const label = GROUP.account;
-  const result = await api.getBindings({ search: text, limit: PER_KIND, environment });
+  const result = await api.getBindings({ search: text, limit: PER_KIND, environment, ...(workspaceId ? { workspace_id: workspaceId } : {}) });
   if (!result.ok) return failed(label, result.reason);
   const seen = new Set<string>();
   const rows = result.value.page.rows.filter((row) => (seen.has(row.accountId) ? false : (seen.add(row.accountId), true))).slice(0, PER_KIND);
@@ -124,9 +124,9 @@ async function accounts(api: ExecutionApi, text: string, environment: ExecEnv): 
   };
 }
 
-async function portfolios(api: ExecutionApi, text: string): Promise<Settled> {
+async function portfolios(api: ExecutionApi, text: string, workspaceId: string | undefined): Promise<Settled> {
   const label = GROUP.portfolio;
-  const result = await api.listPortfolios();
+  const result = await api.listPortfolios(workspaceId ? { workspaceId } : undefined);
   if (!result.ok) return failed(label, result.reason);
   const needle = text.toLowerCase();
   const matched = result.value.items.filter((item) => contains(item.portfolioId, needle) || contains(item.name, needle));
@@ -249,9 +249,9 @@ async function searchByReads(
   const query = text.trim();
   if (query.length < MIN_QUERY) return { entries: [], notes: [] };
   const jobs: Promise<Settled | Settled[] | null>[] = [];
-  if (sources.alpha) jobs.push(guard(GROUP.alpha, () => alphas(api, query), signal));
-  if (sources.portfolio) jobs.push(guard(GROUP.portfolio, () => portfolios(api, query), signal));
-  if (sources.account) jobs.push(guard(GROUP.account, () => accounts(api, query, environment), signal));
+  if (sources.alpha) jobs.push(guard(GROUP.alpha, () => alphas(api, query, workspaceId), signal));
+  if (sources.portfolio) jobs.push(guard(GROUP.portfolio, () => portfolios(api, query, workspaceId), signal));
+  if (sources.account) jobs.push(guard(GROUP.account, () => accounts(api, query, environment, workspaceId), signal));
   if (sources.operation) {
     jobs.push(
       (async () => {

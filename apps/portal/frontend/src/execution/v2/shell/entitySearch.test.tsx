@@ -5,7 +5,7 @@
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { MemoryRouter, useLocation } from "react-router-dom";
+import { MemoryRouter, useLocation, useNavigate } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { PortalRegistryDocument } from "../../../portal/contracts";
@@ -28,6 +28,7 @@ interface Calls {
   alphas: unknown[];
   bindings: unknown[];
   portfolios: number;
+  portfolioQueries: unknown[];
   operations: unknown[];
   incidents: unknown[];
   approvals: unknown[];
@@ -35,7 +36,7 @@ interface Calls {
 
 /** A port that answers the six reads the search uses, and records what it was asked. */
 function fakeApi(over: Partial<Record<keyof ExecutionApi, unknown>> = {}): { api: ExecutionApi; calls: Calls } {
-  const calls: Calls = { alphas: [], bindings: [], portfolios: 0, operations: [], incidents: [], approvals: [] };
+  const calls: Calls = { alphas: [], bindings: [], portfolios: 0, portfolioQueries: [], operations: [], incidents: [], approvals: [] };
   const api = {
     getAlphaFleet: async (query: unknown) => {
       calls.alphas.push(query);
@@ -45,8 +46,9 @@ function fakeApi(over: Partial<Record<keyof ExecutionApi, unknown>> = {}): { api
       calls.bindings.push(query);
       return ok({ page: { rows: [{ bindingId: "b1", accountId: "acct_main", venue: "BINANCE" }, { bindingId: "b2", accountId: "acct_main", venue: "BINANCE" }], filteredCount: 2, totalCount: 9 } });
     },
-    listPortfolios: async () => {
+    listPortfolios: async (query?: unknown) => {
       calls.portfolios += 1;
+      calls.portfolioQueries.push(query);
       return ok({ truncated: true, items: [{ portfolioId: "pf_core", name: "Core Book" }, { portfolioId: "pf_alt", name: "Alt Sleeve" }, { portfolioId: "pf_core2", name: "Other" }] });
     },
     listOperationalQueueV2: async (query: unknown) => {
@@ -398,5 +400,111 @@ describe("ExecCommandBar with the server search", () => {
     expect(spy).toHaveBeenCalledTimes(1);
     expect(noticeText()).toBe(`${ENTITY_SEARCH_NOTICE}. ${ENTITY_SEARCH_HINT}`);
     expect(screen.getByRole("list", { name: "Reads used" }).textContent).toContain("matched here");
+  });
+});
+
+describe("a NON-HOME workspace reaches every search family", () => {
+  it("the five per-read families carry the workspace (alpha, account and portfolio reads included), and so does /search", async () => {
+    const { api, calls } = fakeApi();
+    await searchEntities(api, "core", ALL, "ws_other", signal(), "paper", { skipIndex: true });
+    expect(calls.alphas).toEqual([{ search: "core", limit: PER_KIND, environment: "all", workspace_id: "ws_other" }]);
+    expect(calls.bindings).toEqual([{ search: "core", limit: PER_KIND, environment: "paper", workspace_id: "ws_other" }]);
+    expect(calls.portfolioQueries).toEqual([{ workspaceId: "ws_other" }]);
+    expect(calls.operations[0]).toMatchObject({ workspaceId: "ws_other" });
+    expect(calls.approvals[0]).toMatchObject({ workspaceId: "ws_other" });
+    const spy = vi.fn(async () => ok(indexBody()));
+    await searchEntities(fakeApi({ searchEntities: spy }).api, "core", ALL, "ws_other", signal());
+    expect(spy).toHaveBeenCalledWith(expect.objectContaining({ workspaceId: "ws_other" }));
+  });
+
+  it("no workspace in the address: no workspace_id is sent (the server's own home), never an invented one", async () => {
+    const { api, calls } = fakeApi();
+    await searchEntities(api, "core", ALL, undefined, signal(), "live", { skipIndex: true });
+    expect(calls.alphas[0]).not.toHaveProperty("workspace_id");
+    expect(calls.bindings[0]).not.toHaveProperty("workspace_id");
+    expect(calls.portfolioQueries).toEqual([undefined]);
+  });
+});
+
+describe("results belong to one scope (workspace, environment, capabilities, text)", () => {
+  /** A port whose /search answer is released by hand, so an old answer can arrive after the scope changed. */
+  function deferredApi() {
+    const pending: { workspaceId: string | undefined; release: (body: unknown) => void }[] = [];
+    const api = {
+      searchEntities: (query: { workspaceId?: string }) =>
+        new Promise((resolve) => pending.push({ workspaceId: query.workspaceId, release: (body) => resolve(ok(body)) })),
+    } as unknown as ExecutionApi;
+    return { api, pending };
+  }
+  const bodyFor = (label: string) => indexBody({ groups: [{ kind: "alpha", totalMatched: 1, rows: [{ kind: "alpha", id: "al_x", label, detail: null, routeHint: "/deployments/alphas/al_x" }] }] });
+
+  function GoTo() {
+    const nav = useNavigate();
+    return (
+      <>
+        <button onClick={() => nav("/execution?workspace_id=ws_B")}>to B</button>
+        <button onClick={() => nav("/execution?workspace_id=ws_A&env=paper")}>to paper</button>
+        <Where />
+      </>
+    );
+  }
+  const tree = (url: string, api: ExecutionApi, capabilities: readonly string[]) => (
+    <MemoryRouter initialEntries={[url]}>
+      <ExecCommandBar registry={registry} options={{ capabilities }} open onClose={() => undefined} searchApi={api} debounceMs={1} />
+      <GoTo />
+    </MemoryRouter>
+  );
+
+  it("a deferred workspace A answer that arrives after the switch to B is dropped, and nothing of A can be chosen", async () => {
+    const { api, pending } = deferredApi();
+    render(tree("/execution?workspace_id=ws_A", api, MANAGER.capabilities));
+    fireEvent.change(screen.getByRole("combobox"), { target: { value: "core" } });
+    await waitFor(() => expect(pending).toHaveLength(1));
+    expect(pending[0].workspaceId).toBe("ws_A");
+    fireEvent.click(screen.getByRole("button", { name: "to B" }));
+    await waitFor(() => expect(pending).toHaveLength(2));
+    expect(pending[1].workspaceId).toBe("ws_B");
+    await act(async () => pending[0].release(bodyFor("Alpha of A")));
+    expect(screen.queryByText("Alpha of A")).toBeNull();
+    expect(screen.queryByRole("list", { name: "Reads used" })).toBeNull();
+    await act(async () => pending[1].release(bodyFor("Alpha of B")));
+    fireEvent.click(await screen.findByRole("option", { name: /Alpha of B/ }));
+    expect(new URL(screen.getByTestId("where").textContent ?? "", "http://x").searchParams.get("workspace_id")).toBe("ws_B");
+  });
+
+  it("an environment switch drops the old answer and asks again", async () => {
+    const { api, pending } = deferredApi();
+    render(tree("/execution?workspace_id=ws_A", api, MANAGER.capabilities));
+    fireEvent.change(screen.getByRole("combobox"), { target: { value: "core" } });
+    await waitFor(() => expect(pending).toHaveLength(1));
+    fireEvent.click(screen.getByRole("button", { name: "to paper" }));
+    await waitFor(() => expect(pending).toHaveLength(2));
+    await act(async () => pending[0].release(bodyFor("Live answer")));
+    expect(screen.queryByText("Live answer")).toBeNull();
+  });
+
+  it("a delivered answer is dropped when the workspace changes", async () => {
+    const { api, pending } = deferredApi();
+    render(tree("/execution?workspace_id=ws_A", api, MANAGER.capabilities));
+    fireEvent.change(screen.getByRole("combobox"), { target: { value: "core" } });
+    await waitFor(() => expect(pending).toHaveLength(1));
+    await act(async () => pending[0].release(bodyFor("Alpha of A")));
+    expect(await screen.findByText("Alpha of A")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "to B" }));
+    expect(screen.queryByText("Alpha of A")).toBeNull();
+  });
+
+  it("removing a capability removes its group from the shown results and its read from the next search", async () => {
+    const { api, calls } = fakeApi();
+    const view = render(tree("/execution?workspace_id=ws_A", api, MANAGER.capabilities));
+    fireEvent.change(screen.getByRole("combobox"), { target: { value: "core" } });
+    await waitFor(() => expect(calls.approvals).toHaveLength(1));
+    await screen.findByRole("list", { name: "Reads used" });
+    expect(screen.getByRole("list", { name: "Reads used" }).textContent).toContain("Approvals");
+    view.rerender(tree("/execution?workspace_id=ws_A", api, []));
+    expect(screen.queryByRole("list", { name: "Reads used" })).toBeNull();
+    await waitFor(() => expect(screen.getByRole("list", { name: "Reads used" }).textContent).not.toContain("Approvals"));
+    expect(screen.getByRole("list", { name: "Reads used" }).textContent).not.toContain("Portfolios");
+    expect(calls.approvals).toHaveLength(1);
   });
 });

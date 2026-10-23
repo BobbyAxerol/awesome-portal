@@ -308,6 +308,8 @@ export interface WaiverQuery {
 }
 
 export interface ManagerListQuery {
+  /** `workspace_id`: the workspace the list is read in. Absent means the caller's HOME workspace (the server's fallback). */
+  workspace_id?: string;
   environment?: "all" | "paper" | "sandbox" | "live";
   after?: string;
   before?: string;
@@ -459,7 +461,7 @@ export interface ExecutionApi {
   /** `GET /alphas` — BR-EX-72 bounded Fleet projection. */
   getAlphaFleet(query?: AlphaFleetQuery): Promise<Result<ManagerListEnvelope<AlphaFleetItem>>>;
   /** `GET /portfolios` — BR-EX-76 all-profile portfolio identity list. */
-  listPortfolios(): Promise<Result<PortfolioListEnvelope>>;
+  listPortfolios(query?: { workspaceId?: string }): Promise<Result<PortfolioListEnvelope>>;
   /** `GET /broker-bindings` — BR-EX-72 bounded binding projection. */
   getBindings(query?: BindingListQuery): Promise<Result<ManagerListEnvelope<BindingItem>>>;
   /** `GET /broker-bindings/{id}` — narrow, non-secret binding detail. */

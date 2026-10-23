@@ -53,3 +53,9 @@ Then `scripts/research-preview/preview.sh build portal-web portal-fixture-bff &&
 
 ## Inbox answers
 B to D (chips, badges): done. C to D (replay alias): done. E to D (workspace pass-through, badges and chips): done; nginx item restated above. F1 to D, F2 to D (basis, scope, window chips, search, user chip, badges): done, except the scope selector (typed, no parameter). Posted: D to K, D to F3.
+
+## Follow-up 2: Codex post-freeze review, three corrections (fix(shell))
+1. Command-bar results are keyed to their owning scope `(workspace, environment, capability set and the kinds it lists)` and to the text. A scope change drops the shown results on the same render, aborts the in-flight search and asks again; a late answer for an old scope is refused by a second guard; "is /search served" is learned per scope; a row can be chosen only if it is in the current list, so a selection is never re-labelled with another workspace.
+2. `workspace_id` is sent on the Alpha, Account and Portfolio reads (optional `workspace_id` on `ManagerListQuery`; optional `{ workspaceId }` on `listPortfolios`, both additive) and was already sent on `/search`, operations, incident and approvals. No workspace in the address sends none (the server's home workspace); nothing is invented.
+3. Nav badges are keyed to `(session, workspace, listed entries)`: a scope change clears the badges in a layout effect before the new read starts, so a pending read never shows another workspace's numbers; revoked eligibility clears at once and stops the read.
+Tests: entitySearch (all five per-read families and /search with a non-home workspace, no workspace sends none; deferred A answer after the switch to B, after an environment switch, a delivered answer after a switch, capability removal), navCounts (deferred B, late A dropped, revoked eligibility).
