@@ -1,6 +1,6 @@
 /**
  * The commands table, in the hi-fi column order: Time, Target and operation, Intent, Receipt, Display, Next.
- * Intent (FE-020) and Display (FE-032) have no source, so each cell says "Not available" and the request id is behind its disclosure.
+ * Intent (FE-020) has no published field, so it is said once above the table (a column of identical placeholders told the reader nothing); Display (FE-032) is a cell per row.
  *
  * Time is `created_at`; Target + operation is the target and `command_key`;
  * Receipt is `source_status` with `verification_result`; Next is
@@ -15,7 +15,7 @@ import { NaWhy } from "../../blocks";
 import { Flag } from "../../Flag";
 import { formatAsOf } from "../../boundary";
 import type { FlagKind } from "../../flagKinds";
-import type { DeliveryStateV2, DisplayStateV2, OperationV2 } from "../../readers/operationalQueue";
+import type { DisplayStateV2, OperationV2 } from "../../readers/operationalQueue";
 import { ENV_LABEL } from "../../urlState";
 import { IncidentLinks } from "./IncidentLinks";
 import { nextActionOf } from "./opsViews";
@@ -25,12 +25,6 @@ import { TargetLink } from "./TargetLink";
 import "../../css/operations.css";
 
 /** FE-CAT-2 axis words. A word is a published value restated; nothing here is derived from other fields. */
-const DELIVERY_WORD: Readonly<Record<DeliveryStateV2, string>> = {
-  NOT_APPLICABLE: "Delivery: no receipt expected",
-  AWAITING_RECEIPT: "Delivery: awaiting receipt",
-  RECEIPT_CONFIRMED: "Delivery: receipt confirmed",
-  RECEIPT_FAILED: "Delivery: receipt failed",
-};
 const DISPLAY_WORD: Readonly<Record<DisplayStateV2, { kind: FlagKind; label: string }>> = {
   CURRENT: { kind: "ok", label: "Current" },
   CATCHING_UP: { kind: "pending", label: "Catching up" },
@@ -58,11 +52,6 @@ function columnsFor(onOpen: (row: OperationV2) => void, incidentTo: (incidentId:
       ),
     },
     {
-      key: "intent",
-      label: "Intent",
-      render: () => <NaWhy reason="Not published (FE-020): whether the command was only previewed." />,
-    },
-    {
       key: "receipt",
       label: "Receipt",
       render: (row) => {
@@ -71,7 +60,6 @@ function columnsFor(onOpen: (row: OperationV2) => void, incidentTo: (incidentId:
           <span className="exec-ops-cell">
             <Flag kind={outcome.kind} label={outcome.label} size="sm" />
             {/* One badge, then the delivery axis when published. The two axes behind the badge (source status, verification) are in the drawer's Receipt section, in words. */}
-            {row.deliveryState ? <span className="exec-ops-meta">{DELIVERY_WORD[row.deliveryState]}</span> : null}
           </span>
         );
       },

@@ -107,11 +107,11 @@ describe("loaded queue", () => {
     expect(screen.getByRole("button", { name: "Needs attention" }).getAttribute("aria-pressed")).toBe("true");
   });
 
-  it("renders the six hi-fi columns: Time, Target and operation, Intent, Receipt, Display, Next; Intent and Display are Not available per row (OP-6)", async () => {
+  it("renders five columns: Time, Target and operation, Receipt, Display, Next; Intent is said once above the table, Display is Not available per row (OP-6)", async () => {
     const { api } = fakeApi();
     mount(api);
     const t = await table();
-    expect(within(t).getAllByRole("columnheader").map((h) => h.textContent)).toEqual(["Time", "Target and operation", "Intent", "Receipt", "Display", "Next"]);
+    expect(within(t).getAllByRole("columnheader").map((h) => h.textContent)).toEqual(["Time", "Target and operation", "Receipt", "Display", "Next"]);
     const row = within(t).getByText(/Account acc_TEST_ONLY_operational/).closest("tr") as HTMLElement;
     expect(within(row).getByText("22 Aug 12:00Z")).toBeTruthy();
     expect(within(row).getByText(/Sync · Paper · Warning/)).toBeTruthy();
@@ -119,14 +119,13 @@ describe("loaded queue", () => {
     // Next is an action, not a repeat of the lens: the default lens is all UNACKNOWLEDGED.
     expect(within(row).queryByText("Unacknowledged")).toBeNull();
     expect(within(row).getByRole("button", { name: "Review" })).toBeTruthy();
-    // Intent and Display have no source yet: each cell says Not available and the request id is behind its disclosure.
-    for (const [label, fe] of [["Intent", "FE-020"], ["Display", "FE-032"]] as const) {
-      const cell = row.querySelector(`td[data-l='${label}']`);
-      expect(cell?.textContent, label).toContain("Not available");
-      expect(whyText(cell ?? null), label).toContain(`Not published (${fe})`);
-    }
-    // The queue no longer carries a one-line "Not available: Intent, Display" under its filters.
-    expect(document.querySelector(".exec-ops-na-line")?.textContent ?? "").not.toContain("Intent");
+    // Display has no source on this read: the cell says Not available with the request id behind its disclosure.
+    const display = row.querySelector("td[data-l='Display']");
+    expect(display?.textContent).toContain("Not available");
+    expect(whyText(display ?? null)).toContain("Not published (FE-032)");
+    // Intent has no published field at all: one line above the table says so, not a placeholder per row.
+    expect(row.querySelector("td[data-l='Intent']")).toBeNull();
+    expect(document.querySelector(".exec-ops-na-line")?.textContent ?? "").toContain("Intent");
   });
 
   it("prints no dash, no N/A, and says Not published with the request ids", async () => {
@@ -136,7 +135,7 @@ describe("loaded queue", () => {
     const text = document.body.textContent ?? "";
     expect(text).not.toMatch(/[—–]/);
     expect(text).not.toContain("N/A");
-    const reasons = [...document.querySelectorAll("td[data-l='Intent'], td[data-l='Display']")].map((cell) => whyText(cell)).join("\n");
+    const reasons = [...document.querySelectorAll("td[data-l='Display'], .exec-ops-na-line")].map((cell) => whyText(cell)).join("\n");
     expect(reasons).toContain("Not published (FE-020)");
     expect(reasons).toContain("Not published (FE-032)");
     fireEvent.click(screen.getByRole("tab", { name: "Audit" }));

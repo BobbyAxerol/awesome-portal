@@ -324,7 +324,8 @@ export default function IncidentPage({ api, incidentId, workspaceId, queuePath =
                         <span className="exec-ops-meta">{RELATION_WORD[relationship]} · linked {instant(linkedAt, "")}</span>
                         <span className="exec-ops-meta">
                           Target now <TargetLink type={row.targetType} id={row.targetId} environment={row.environment} />
-                          {" · "}{originalTargetText(kids, row.operationId, incident.historicalChildren.reasonCode)}
+                          {" · "}{originalTargetText(kids, row.operationId)}
+                          <span className="exec-blk-sr"> ({incident.historicalChildren.reasonCode})</span>
                         </span>
                         {row.deliveryState ? <span className="exec-ops-meta">Receipt: {humanize(row.deliveryState)}</span> : null}
                       </li>
@@ -410,7 +411,7 @@ export default function IncidentPage({ api, incidentId, workspaceId, queuePath =
           <ul className="exec-opi-ops" role="list" aria-label="Child operations" data-testid="children-linked">
             {kids.linkedOperations.value.map((o) => (
               <li key={o.operationId} className="exec-opi-op">
-                <span className="exec-ops-mono">{o.operationId}</span>
+                <span className="exec-ops-mono">{scan.phase === "ready" && scan.rows.find((r) => r.operationId === o.operationId) ? `${commandLabel(scan.rows.find((r) => r.operationId === o.operationId)!.commandKey)} · ${o.operationId}` : o.operationId}</span>
                 <span className="exec-ops-meta">{o.originalTarget === null ? "Original target not attested" : `Original target ${humanize(o.originalTarget.type)} ${o.originalTarget.id}`}</span>
               </li>
             ))}
@@ -447,11 +448,11 @@ export default function IncidentPage({ api, incidentId, workspaceId, queuePath =
 }
 
 /** The original target of a linked operation: the child read's, or the root's typed reason. */
-function originalTargetText(kids: IncidentChildren | null, operationId: string, reasonCode: string): string {
-  if (kids === null || kids.linkedOperations.state !== "PUBLISHED") return `Original target: not attested (${reasonCode})`;
+function originalTargetText(kids: IncidentChildren | null, operationId: string): string {
+  if (kids === null || kids.linkedOperations.state !== "PUBLISHED") return "Original target: not attested";
   const child = kids.linkedOperations.value.find((o) => o.operationId === operationId);
-  if (child === undefined) return `Original target: not attested (${reasonCode})`;
-  return child.originalTarget === null ? "Original target: not attested" : `Original target: ${humanize(child.originalTarget.type)} ${child.originalTarget.id}`;
+  if (child === undefined || child.originalTarget === null) return "Original target: not attested";
+  return `Original target: ${humanize(child.originalTarget.type)} ${child.originalTarget.id}`;
 }
 
 function withoutPeek(params: URLSearchParams): URLSearchParams {

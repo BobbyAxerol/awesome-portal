@@ -99,9 +99,8 @@ describe("the Receipt and Display columns", () => {
     const rows = dataRows();
     expect(rows).toHaveLength(3);
     const text = rows.map((r) => `${cell(r, "Receipt")}|${cell(r, "Display")}`).join("\n");
-    expect(text).toContain("Delivery: receipt confirmed");
-    expect(text).toContain("Delivery: awaiting receipt");
-    expect(text).toContain("Delivery: no receipt expected");
+    // The delivery axis is in the drawer's Receipt section, not a second line under every badge (QA2 R3-02).
+    expect(text).not.toContain("Delivery:");
     expect(rows.every((r) => cell(r, "Display").includes("Current"))).toBe(true);
   });
 

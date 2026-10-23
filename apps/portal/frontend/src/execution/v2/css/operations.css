@@ -578,6 +578,16 @@ span.exec-ops-link-id {
     display: block;
   }
 }
+/* Where the table scrolls sideways the action column stays pinned at the right edge, so Next is never the column that is cut (QA2 R3-23). */
+@media (max-width: 1300px) and (min-width: 661px) {
+  .exec-ops-table .exec-cards th:last-child,
+  .exec-ops-table .exec-cards td:last-child {
+    position: sticky;
+    right: 0;
+    background: var(--paper-raised);
+    box-shadow: -1px 0 0 var(--line-strong);
+  }
+}
 /* An id breaks only when it must (at a separator), not in the middle of a token. */
 .exec-ops-target .exec-ops-id {
   overflow-wrap: break-word;

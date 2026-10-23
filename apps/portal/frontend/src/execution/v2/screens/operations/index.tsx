@@ -460,7 +460,7 @@ export default function OperationsV2({
           <div id="exec-ops-panel" role="tabpanel" aria-labelledby={`exec-ops-tab-${view}`}>
             {view === "exceptions" ? (
               ready ? (
-                <ExceptionsPanel rows={visible} serverCount={ready.queue.page.health?.openException} incidentTo={incidentTo} moreRows={page?.hasMore === true} />
+                <ExceptionsPanel rows={visible} serverCount={ready.queue.page.health?.openException} incidentTo={incidentTo} moreRows={page?.hasMore === true} loadedCount={ready.rows.length} />
               ) : (
                 <div className="exec-ops-panel">
                   <h2 className="exec-ops-panel-title">Exceptions</h2>
@@ -591,6 +591,7 @@ export default function OperationsV2({
                 <NotAvailableLine
                   className="exec-ops-na-line"
                   facts={[
+                    { label: "Intent", id: FE.intent, why: "Whether the command was sent or only previewed" },
                     ...(ready?.rows.some((row) => row.incidentLinks === undefined) ? [{ label: "Linked incidents", id: "FE-042" as const, why: "An older server body omits the field" }] : []),
                   ]}
                 />

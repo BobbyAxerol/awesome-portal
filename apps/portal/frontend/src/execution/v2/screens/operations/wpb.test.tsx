@@ -65,8 +65,7 @@ describe("Operations with the lane's rows", () => {
     const canary = rowOf(t, /pf_TEST_ONLY_canary/);
     expect(within(canary).getByText("Unknown outcome")).toBeTruthy();
     expect(within(canary).getByText("Catching up")).toBeTruthy();
-    expect(canary.textContent).toContain("Delivery: awaiting receipt");
-    expect(canary.textContent).toContain("Not available");
+    expect(canary.textContent).not.toContain("Delivery:");
     const stale = rowOf(t, /pf_TEST_ONLY_core.*Adjust target budget/s);
     expect(within(stale).getByText("Stale")).toBeTruthy();
   });
@@ -207,7 +206,7 @@ describe("incident page", () => {
     expect(items).toHaveLength(2);
     expect(items[0].textContent).toContain("Triggered by this incident");
     expect(items[1].textContent).toContain("Related to this incident");
-    expect(ops.textContent).toContain("Original target: not attested (ORIGINAL_INCIDENT_TARGET_NOT_ATTESTED)");
+    expect(ops.textContent).toContain("Original target: not attested");
     expect(within(items[0]).getByText("Unknown outcome")).toBeTruthy();
     const href = within(items[0]).getByRole("link", { name: "Adjust target budget" }).getAttribute("href");
     expect(href).toContain("/execution/operations?");
@@ -386,11 +385,11 @@ describe("wave 2: unknown ids, honest reads, settled rows", () => {
     expect(within(within(dock).getByRole("region", { name: "Intent" })).getByText("Sent or previewed")).toBeTruthy();
   });
 
-  it("the receipt cell is one badge and the delivery word; the two axes in words live in the drawer", async () => {
+  it("the receipt cell is one badge; the two axes and the delivery axis in words live in the drawer", async () => {
     mount();
     const t = await table();
     expect(within(rowOf(t, /pf_TEST_ONLY_canary/)).queryByText(/Source uncertain/)).toBeNull();
-    expect(rowOf(t, /pf_TEST_ONLY_canary/).textContent).toContain("Delivery: awaiting receipt");
+    expect(rowOf(t, /pf_TEST_ONLY_canary/).textContent).not.toContain("Delivery:");
   });
 
   it("the table says it scrolls inside its panel, and the narrowing selects sit on their own row after Lens, Range and Source", async () => {
@@ -432,5 +431,22 @@ describe("wave 2: unknown ids, honest reads, settled rows", () => {
   it("an event log and a root that differ on the acknowledgement time say so", async () => {
     mountIncident("inc_TEST_ONLY_fx_recall", childrenApi({ eligible: false, ackedAtMs: 1_787_403_600_000 - 6 * 3_600_000 }));
     expect((await screen.findByTestId("timeline-disagreement")).textContent).toContain("The event log says acknowledged");
+  });
+});
+
+describe("round 3 (QA2 R3): one Intent absence, no sub-line, counts that tie", () => {
+  it("Intent is said once above the table, not as a column of placeholders", async () => {
+    mount();
+    const t = await table();
+    expect(within(t).queryByRole("columnheader", { name: "Intent" })).toBeNull();
+    const line = screen.getAllByTestId("not-available-line").find((el) => el.textContent?.includes("Intent"))!;
+    expect(whyText(line)).toContain("Intent: Not published (FE-020)");
+    expect(within(t).queryAllByText("Not available").length).toBeLessThan(within(t).getAllByRole("row").length);
+  });
+
+  it("Exceptions names the rows in range and the rows loaded when they differ", async () => {
+    mount("/execution/operations?view=exceptions&lens=all");
+    await screen.findByRole("table", { name: "Exceptions" });
+    expect(screen.getByText(/operations? in this range/)).toBeTruthy();
   });
 });

@@ -30,6 +30,8 @@ export interface ExceptionsPanelProps {
   incidentTo(incidentId: string): To;
   /** The operation list is bounded: more rows exist than were loaded. */
   moreRows: boolean;
+  /** Operations the read loaded, before the range cut (the Commands tab's own "loaded" figure). */
+  loadedCount?: number;
 }
 
 export function serverCountSentence(count: HealthCountV2 | undefined): string {
@@ -82,7 +84,7 @@ function columnsFor(incidentTo: (id: string) => To): readonly CardsColumn<Incide
   ];
 }
 
-export function ExceptionsPanel({ rows, serverCount, incidentTo, moreRows }: ExceptionsPanelProps) {
+export function ExceptionsPanel({ rows, serverCount, incidentTo, moreRows, loadedCount }: ExceptionsPanelProps) {
   const navigate = useNavigate();
   const exceptions = openExceptionsOf(rows);
   const empty = serverCount?.count !== undefined && serverCount.count !== null && serverCount.count > 0
@@ -95,7 +97,7 @@ export function ExceptionsPanel({ rows, serverCount, incidentTo, moreRows }: Exc
       <h2 className="exec-ops-panel-title">Exceptions</h2>
       <p className="exec-ops-reason" data-role="server-count">{serverCountSentence(serverCount)}</p>
       <p className="exec-ops-reason">
-        From the incident links of the {number(rows.length)} loaded {rows.length === 1 ? "operation" : "operations"}; the list shows {number(exceptions.length)} open {exceptions.length === 1 ? "incident" : "incidents"}.
+        From the incident links of the {number(rows.length)} {rows.length === 1 ? "operation" : "operations"} in this range{loadedCount !== undefined && loadedCount !== rows.length ? ` (${number(loadedCount)} loaded)` : ""}; the list shows {number(exceptions.length)} open {exceptions.length === 1 ? "incident" : "incidents"}.
         {moreRows ? " More operations exist than are loaded, so the list can be shorter than the count." : ""}
         {" "}
         {serverCount === undefined ? <NotPublished id={FE.events}>No exception feed beyond incident links.</NotPublished> : null}
