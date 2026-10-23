@@ -9889,9 +9889,10 @@ production source publication or a rewrite of TS/PM writers.
 <a id="epg10-04-plan"></a>
 #### EPG10-04 Bootstrap delta và atomic projection
 
-**Latest23Oct source:** typed selected PM financial-report and native P16
-adapters added/tested without replacing atomic projection/checkpoint authority;
-see [business source closeout](#epg10-business-source-20261023).
+**Latest23Oct source:** financial transport→typed validation→atomic PG and
+native P16 observations/checkpoint composition added; SOURCE_ONLY, not mounted
+source/replay acceptance. See [composition audit](#epg10-backend-composition-20261023)
+and [prior typed adapters](#epg10-business-source-20261023).
 
 **Status:** IN_PROGRESS / OWNED_IMPLEMENTATION_TESTED_SOURCE_DARK — **Approval:** BOBBY_APPROVED (2026-10-16).
 **Tests:** 99PASS / 0FAIL / 0SKIP; fmt/strict clippy PASS;8formal cases PASS in isolated scope only.
@@ -9944,9 +9945,10 @@ DB proof only, no new source-connected certification or runtime activation.
 <a id="epg10-05-plan"></a>
 #### EPG10-05 Tích hợp query history và realtime fanout
 
-**Latest23Oct source:** exact financial mapping, P16 source adaptation and
-Manager all-mode contract hardening tested; no fabricated history or COMPLETE.
-See [business source closeout](#epg10-business-source-20261023).
+**Latest23Oct source:** authorized typed financial reads and Manager
+cadence/lease/config-drift safeguards added. Existing scoped algorithms are
+concrete; authenticated router/provider assembly remains unmounted, not a
+flag-only activation. See [composition audit](#epg10-backend-composition-20261023).
 
 **Status:** IN_PROGRESS / OWNED_IMPLEMENTATION_TESTED_SOURCE_DARK — **Approval:** BOBBY_APPROVED (2026-10-16), named phase.
 **Tests:** 191PASS / 0FAIL / 0SKIP; 8formal families PASS isolated; fmt/strict clippy PASS.
@@ -10009,6 +10011,11 @@ Owned implementation qualified/source-dark; no real-source activation/route chan
 
 <a id="epg10-06-plan"></a>
 #### EPG10-06 Áp resource budgets và tối ưu hot path
+
+**Latest23Oct source:** explicit resource factory and legacy-mix refusal;
+source admission no longer lets drifting replicas overwrite shared caps.
+No invented production numeric bounds or claim of legacy per-method quotas.
+See [composition audit](#epg10-backend-composition-20261023).
 
 **Status:** IN_PROGRESS — **Approval:** BOBBY_APPROVED (2026-10-16), named phase.
 **Tests:** 317PASS /0FAIL/skip isolated; fmt + strict zero-warning Clippy PASS.
@@ -10088,10 +10095,11 @@ not reclassified as somebody else's technical debt.07 was not started at that
 **Owned package:** QUALIFIED_SOURCE_DARK — **Full phase exit:** NOT_MET —
 **Runtime activation:** NOT_AUTHORIZED / NOT_PERFORMED.
 
-**Latest23Oct source:** Core original codec, atomic PM original admission/full
-custody disclosure and disjoint human/service lookup qualified;289affected
-tests PASS. HTTP/current-authority/target commissioning remains separate; see
-[business source closeout](#epg10-business-source-20261023).
+**Latest23Oct source:** callable Core handler→durable custody→PM mTLS→full
+result with exact counters, tested isolated. Human STATUS never resends;
+private service-only recovery still needs its separate owning wire. Only eight
+PM capital shapes, not64CLI/nine N12. No command listener mounted; see
+[composition audit](#epg10-backend-composition-20261023).
 
 **Historical original-round2 slice (2026-10-20):** real bounded PM HTTP CommandPort
 implemented and135affected Rust tests PASS (18new), strict Clippy/fmt PASS;
@@ -32231,3 +32239,116 @@ operations; no capital aliases were introduced. Actual command current-requester
 issuer/target installation and unpublished private service-only recovery wire
 remain required; missing business/control semantics are not invented in Edge.
 <!-- BUSINESS_COMPOSE_COMMAND_END -->
+
+**Manager/resource/runner slice — IMPLEMENTED / TESTED_ISOLATED:**
+Scheduler cadence is measured after completion/failure; a slow cycle cannot
+immediately re-poll the attempted classes. HTTP may start only inside the
+actual admission deadline, including source wait/queue/request bounds. Ordinary
+completion/timeout releases the exact owned lease; cancellation cannot release
+another caller's token. This is not proof that a cancelled remote SQL query
+already stopped. Shared admission now refuses cap drift BEFORE schedule/lease
+mutation, rather than letting replicas rewrite each other's concurrency/rate.
+Seven new Edge timing/cadence and two actual-PG cap-drift tests PASS. A release
+must align stored caps and replica config explicitly; no silent rolling change
+or runtime table rewrite was performed here.
+
+`ProjectionResources` supplies the missing callable versioned04/05 pool factory:
+bounded versioned config, explicit caps/storage budget and genuine observation
+reference, existing ResourceEnvelope, shared handle for pool/cache/fanout and
+explicit refresh.8unit+1actual-PG factory tests PASS. No default production
+numbers, fake initial storage sample or background sampler. Samples expire
+closed. Existing main/Manager worker/event-ledger are legacy domain APIs and
+MUST NOT silently share that pool: their actual entrypoints now reject an
+opt-in before DB connect, absent config retains labelled LEGACY_UNGOVERNED.
+This is compatibility/safe preparation, NOT enforcement of new quotas on every
+legacy method or deployment of a replacement worker. Participating versioned
+composition and owner-driven sample refresh must be installed together.
+
+Existing runner gets optional `EPG10_EXPECT_P16_HISTORY_TESTS=13`, exact native
+PG stage/count/hash inputs and8new safety cases. Absent keeps old profile/count
+behavior; malformed/empty value fails preflight. Under existing06+ and07+ source
+manifests now require the financial/factory/command composition files that those
+targets actually compile. No new profile/framework or automatic runtime enabling.
+
+**Final correctness evidence:**
+[bounded composition receipt](evidence/execution-edge-v1_2/EPG10-08/backend-composition-qualification.json)
+contains21source/runner hashes, manifest
+bf1ede7faa00e7619aff3aaa5ef835037c2c88888a7cc0186f35779ae5e07bbf.
+**500Rust/PG/mTLS +127runner PASS,0FAIL/ignored/filtered in final selected gates.**
+224library cases (47event/79relay/15Manager/20financial-adapter/63transport),
+158projection PG cases (22lib/33bootstrap/13native/45scoped-read/30command/
+15custody),118full Edge with PG feature.50new Rust and8new runner test functions;
+repeated retakes/failed-attempt successes are NOT added. Final `--locked` gates,
+workspace fmt and7affected packages/all-target `clippy -D warnings` PASS.
+Initial Clippy eight owned diagnostics (field suffixes, declaration placement,
+semicolon/docs/default access, oversized test and unused async fixture helper)
+fixed; config JSON units preserved through serde names, test assertions preserved
+in a helper, no lint allowlist lowered. Full118Edge cases rerun after these fixes.
+One initial formatter attempt was sandbox-denied before starting a container;
+authorized capped runner retook it. No normal full-monorepo/landing hook claimed;
+campaign§10.10c focused source-only intermediate, no hook config changed.0push,
+merge or hostedCI minutes. Canonical tracking§14.1/backend index link this journal.
+
+**Whole-backend inventory / honest remaining boundary:**
+
+| Surface | Callable business source now | Still required, not claimed complete |
+| --- | --- | --- |
+| Financial portfolio/account | mTLS/wire, exact report validation, sealed atomic snapshot/delta/checkpoint, current authorized typed read | Real qualified publication definitions, independent proofs, owning worker/current-provider composition; Edge binds, PM owns monetary truth |
+| Native Event/history | Exact P16 decoder plus durable retained facts/scan/retry/internal bounded read | Certified writer/export/retention/correction coverage and source-held authority/ACK; semantic reducer only when its dataset contract is published, not guessed from SEMANTIC_FACT |
+| Query/history/export/cache/fanout | Existing concrete scoped service/replay/cache/shared hub, PG/revoke/reconnect/correction tests | Edge-owned authenticated factory/router/current provider and notification-stream adapter at actual Core scope/custody boundary; NOT merely enabling a flag |
+| Command | Original Core handler, durable custody, PM mTLS submit/status, full exact result | Current-requester issuer and original-context/route mount, native target; separate private service-recovery wire is still genuinely unpublished by PM |
+| Manager all profiles | Existing exact profile/catalogue transport; new cadence/lease/cap drift safeguards | Research/current-policy/trust commissioning for each real Paper/Sandbox/Canary/Live binding; read Live is not trading Live |
+| Resource capacity | Shared source admission plus explicit new pool/envelope/cache/hub factory | Install genuine storage refresh and versioned workload wiring, approved numeric/coexistence target; legacy per-method quotas are NOT inferred from a new constructor |
+
+**Status / next permitted action:** this owned composition slice is
+IMPLEMENTED_TESTED_ISOLATED_SOURCE_ONLY, not full backend mounted or08/09
+connected acceptance. No new defect/failed test is externalized as debt.
+Source algorithms do not need rewriting while integration waits. Remaining
+Edge-owned integration code above must be done in the original04/05/06/07/08
+round using the actual producer/current-policy wire and source pins—not relabeled
+as someone else's task or a new phase. No new blanket phase approval is needed;
+independent available binding is runnable immediately. Current user asks backend
+first: no new actual Core acceptance window, no grant/session/role, command/Live,
+stable/dev/provider28445 change, or replay of the already closed active-revoke.
+
+Source commits: native38ee6626, financial146a3f0f, command55635529; Manager/
+resource/runner and final evidence are the coherent commit carrying this entry.
+Worktree `/home/bobby/.worktrees/portal-execution-edge-upgrade-v1_2`, branch
+`feat/execution-edge-upgrade-v1_2`; canonical checkout remains
+`/home/bobby/.worktrees/portal-execution-manager-v2`,
+`feat/manager-v2-paper-read@54c6f5f3`. Six other feature checkouts retained,
+none merged/abandoned/deleted. TS668e1032 and next0cd356da unchanged; PM6aebbff1
+advanced independently, relevant command/report/native reader bytes unchanged
+from32d25c1c. No peer edits; original C5 hunk, two tracked returns, three pinned
+peer files and incoming untracked packets preserved. Runtime/release still old
+Edge d6aa7a510ddf / Proxy aa14e21c5469 across Paper/Sandbox/Live, native provider
+28ea39588edd. Release compose root `/srv/primus/portal/releases/a9b10385ab6c16350555f70f4379dfa23ca6b20c/`,
+native config `/home/bobby/.local/share/portal-native-manager-read/runtime/v1.0.0-9e7d3455/compose.json`;
+versioned config refs6180b9bf/cd79e9c6/98a191c7 retained, not rewritten. Edge/
+Proxy/native and Sandbox/Live worker restart0; old Paper worker observed10474
+restarts, continuing its pre-existing cycle. No manual restart by this slice;
+do NOT report all runtime healthy or cause attribution from isolated tests.
+SGP stable `/home/bobby/portal-main-release` was not touched or revalidated here.
+Existing operational/explicit rollback images/configs/custody remain retained.
+
+**08:57UTC scoped cleanup / final reconciliation:** own compiler/PG cells all
+terminated with --rm/finally, including failed attempts and the explicitly
+stopped empty-PG diagnosis probe.0own containers remain. Removed ONLY validated
+owned0700 `/tmp/epg10-backend-compose-ATBNEqQW`,2,514,349,021logical bytes
+(compiler/caches/target/source-free test logs/driver/index helper), and newly
+pulled unreferenced Ruste51d0265 image after checking no container referenced it.
+Operational PGcf78/Edge/Proxy/native and all pre-existing rollback images kept.
+Images117→116; foreign BuildKit607records/70.73GB untouched,0owned build records
+created. No broad prune, volume/network/foreign container/source/worktree/custody
+removal. Before cleanup used336525238272/free182391664640B; after
+used331982450688/free186934452224B. Shared-host delta is observational, not
+exclusive attribution; foreign inventory also changed independently. SGP had
+0new resources/source/dependency/secret transfer to clean.21/21source hashes,
+manifest,500Rust total and receipt JSON revalidated after cleanup; original
+three peer hashes still match. Receipt SHA256
+a9d3c5f0bbb30715e222aa960bf113317c701edef96e0d0f3187a0e48150a46e.
+No owned unfinished test/cleanup item remains in this source slice; the table
+above intentionally keeps unmounted Edge integration work visible rather than
+claiming the whole backend/08/09 is closed. Next concrete action is that exact
+authenticated backend assembly under actual Core/TS publication contracts,
+then connected qualification; no new phase, fake provider or repeated approval.

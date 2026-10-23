@@ -15,6 +15,10 @@ EPG10_PORTAL_REVISION, EPG10_EXPECT_BOOTSTRAP_TESTS and, for05 through11,
 EPG10_EXPECT_READ_TESTS;06 through11 also require EPG10_EXPECT_RESOURCE_TESTS and
 EPG10_EXPECT_MANAGER_TESTS;07 through11 also require EPG10_EXPECT_COMMAND_TESTS
 and EPG10_EXPECT_PM_CUSTODY_TESTS;08 through11 require EPG10_EXPECT_TLS_TESTS.
+An explicit optional EPG10_EXPECT_P16_HISTORY_TESTS adds the native retained-
+observations PG target for any existing profile. Absence preserves the previous
+suite/count contract; an empty or invalid value is not absence. The opt-in also
+requires the exact native parser/store/migration/test inputs in the source hash.
 The custody PG feature is enabled only for07 through11. TLS tests create only
 ephemeral TEST_ONLY keys below the private TMPDIR; no operational trust material
 is supplied.
@@ -117,6 +121,17 @@ OWNED_RUST = (
     'crates/projection-store-pg/tests/epg10_04_bootstrap.rs',
     'crates/projection-store-pg/tests/epg10_04_bootstrap/edge_cases.rs',
 )
+P16_HISTORY_OWNED_RUST = (
+    'crates/authoritative-event-core/Cargo.toml',
+    'crates/authoritative-event-core/src/p16.rs',
+    'crates/authoritative-event-core/src/p16/tests.rs',
+    'crates/projection-store-pg/src/lib.rs',
+    'crates/projection-store-pg/src/p16_history.rs',
+    'crates/projection-store-pg/migrations/0024_native_p16_history.sql',
+    'crates/projection-store-pg/tests/epg10_04_p16_history.rs',
+)
+P16_HISTORY_TEST_ARGUMENTS = ('cargo', 'test', '--offline', '--locked', '-p', 'projection-store-pg',
+    '--test', 'epg10_04_p16_history', '--', '--nocapture', '--test-threads=1')
 SCOPED_OWNED_RUST = (
     'crates/query-api/src/scoped.rs',
     'crates/realtime-sse/src/scoped.rs',
@@ -135,6 +150,17 @@ RESOURCE_OWNED_RUST = (
     'crates/query-api/Cargo.toml',
     'crates/edge-service/src/main.rs',
     'crates/edge-service/src/manager_projection_command.rs',
+    'crates/edge-service/src/projection_resources.rs',
+    'crates/edge-service/src/projection_resources/tests.rs',
+    'crates/edge-service/src/financial_projection.rs',
+    'crates/edge-service/src/financial_projection/tests.rs',
+    'crates/maximum-data-adapter/src/financial_report.rs',
+    'crates/maximum-data-adapter/src/financial_report/tests.rs',
+    'crates/ts-transport/src/report_publication_wire.rs',
+    'crates/ts-transport/src/report_publication_wire/tests.rs',
+    'crates/ts-transport/src/report_publication_http.rs',
+    'crates/ts-transport/src/report_publication_http/tests.rs',
+    'crates/projection-store-pg/src/source_admission.rs',
 )
 COMMAND_OWNED_RUST = (
     'crates/command-relay/src/authority.rs',
@@ -145,6 +171,9 @@ COMMAND_OWNED_RUST = (
     'crates/edge-service/src/pm_command_port/stored.rs',
     'crates/edge-service/src/pm_command_port/tests.rs',
     'crates/edge-service/src/pm_command_port/tests/pg_custody.rs',
+    'crates/edge-service/src/command_gateway.rs',
+    'crates/edge-service/src/command_gateway/tests.rs',
+    'crates/edge-service/src/financial_projection/tests/pg.rs',
     'crates/projection-store-pg/src/command.rs',
     'crates/projection-store-pg/src/command_pm.rs',
     'crates/projection-store-pg/migrations/0023_pm_command_custody.sql',
@@ -193,7 +222,8 @@ def test_profile(profile=None):
 
 def owned_rust(profile=None):
     profile = test_profile(profile)
-    return (OWNED_RUST + (SCOPED_OWNED_RUST if profile != '04' else ())
+    return (OWNED_RUST + (P16_HISTORY_OWNED_RUST if expected_p16_history_test_count() is not None else ())
+            + (SCOPED_OWNED_RUST if profile != '04' else ())
             + (RESOURCE_OWNED_RUST if profile in ('06', '07', '08', '09', '10', '11') else ())
             + (COMMAND_OWNED_RUST if profile in ('07', '08', '09', '10', '11') else ())
             + (SECURITY_OWNED_RUST if profile in ('08', '09', '10', '11') else ()))
@@ -214,7 +244,7 @@ def package_arguments(profile=None):
 
 
 def expected_test_count(value, kind):
-    if kind not in ('BOOTSTRAP', 'READ', 'RESOURCE', 'MANAGER', 'COMMAND', 'PM_CUSTODY', 'TLS'):
+    if kind not in ('BOOTSTRAP', 'READ', 'RESOURCE', 'MANAGER', 'COMMAND', 'PM_CUSTODY', 'TLS', 'P16_HISTORY'):
         raise ValueError('EXPLICIT_TEST_COUNT_KIND_REQUIRED')
     if not isinstance(value, str) or not re.fullmatch('[1-9][0-9]{0,2}', value) or int(value) > 128:
         raise ValueError('EXACT_BOUNDED_' + kind + '_TEST_COUNT_REQUIRED')
@@ -225,6 +255,11 @@ def expected_pm_custody_test_count(profile=None):
     if test_profile(profile) not in ('07', '08', '09', '10', '11'):
         return None
     return expected_test_count(os.environ.get('EPG10_EXPECT_PM_CUSTODY_TESTS'), 'PM_CUSTODY')
+
+
+def expected_p16_history_test_count():
+    value = os.environ.get('EPG10_EXPECT_P16_HISTORY_TESTS')
+    return None if value is None else expected_test_count(value, 'P16_HISTORY')
 
 
 def command_feature_arguments(profile=None):
@@ -991,12 +1026,15 @@ def main():
         expected_command = (expected_test_count(os.environ.get('EPG10_EXPECT_COMMAND_TESTS'), 'COMMAND')
                             if profile in ('07', '08', '09', '10', '11') else None)
         expected_pm_custody = expected_pm_custody_test_count(profile)
+        expected_p16_history = expected_p16_history_test_count()
         expected_tls = (expected_test_count(os.environ.get('EPG10_EXPECT_TLS_TESTS'), 'TLS')
                         if profile in ('08', '09', '10', '11') else None)
         if not re.fullmatch('[0-9a-f]{40}', revision):
             raise ValueError('EXACT_SOURCE_REVISION_REQUIRED')
         receipt['source_revision'] = revision
         receipt['expected_bootstrap_tests'] = expected
+        if expected_p16_history is not None:
+            receipt['expected_p16_history_tests'] = expected_p16_history
         if expected_read is not None:
             receipt['expected_read_tests'] = expected_read
         if profile in ('06', '07', '08', '09', '10', '11'):
@@ -1081,6 +1119,10 @@ def main():
             stage = 'compile_integration_tests'
             logged(stage, ['cargo', 'test', '--offline', '--locked', '-p', 'projection-store-pg',
                 '--tests', '--no-run'], timeout=240)
+        elif profile == '04' and expected_p16_history is not None:
+            stage = 'compile_p16_history_tests'
+            logged(stage, ['cargo', 'test', '--offline', '--locked', '-p', 'projection-store-pg',
+                '--test', 'epg10_04_p16_history', '--no-run'], timeout=240)
         elif profile in ('06', '07', '08', '09', '10', '11'):
             receipt['integration_compile_coverage'] = dict(
                 basis='COVERED_BY_' + profile + '_ALL_TARGETS_NO_RUN', package_count=len(compile_packages) // 2,
@@ -1146,6 +1188,12 @@ def main():
              '--test', 'epg10_04_bootstrap', '--', '--nocapture', '--test-threads=1'], timeout=240),
              1, expected)
         database_stages = ['unit_tests', 'bootstrap_tests']
+        if expected_p16_history is not None:
+            stage = 'p16_history_tests'
+            receipt[stage] = parse_rust_results(logged(stage,
+                list(P16_HISTORY_TEST_ARGUMENTS), timeout=240), 1, expected_p16_history,
+                count_kind='P16_HISTORY')
+            database_stages.append(stage)
         if profile != '04':
             stage = 'read_tests'
             read_output = logged(stage,

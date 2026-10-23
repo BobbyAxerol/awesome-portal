@@ -275,6 +275,158 @@ class RunnerSafety(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'EXACT_READ_TEST_COUNT'):
             qualification.parse_rust_results(row, 1, 3, count_kind='READ')
 
+    def test_native_history_is_opt_in_without_changing_existing_profile_suites(self):
+        with patch.dict(qualification.os.environ, {}, clear=True):
+            self.assertIsNone(qualification.expected_p16_history_test_count())
+            for profile in ('04', '05', '06', '07', '08', '09', '10', '11'):
+                baseline = qualification.owned_rust(profile)
+                packages = qualification.package_arguments(profile)
+                suites = qualification.integration_test_suites(profile, 8, 9, 12, 15)
+                self.assertNotIn('crates/projection-store-pg/src/p16_history.rs', baseline)
+                with patch.dict(qualification.os.environ, {'EPG10_EXPECT_P16_HISTORY_TESTS': '13'}):
+                    self.assertEqual(qualification.expected_p16_history_test_count(), 13)
+                    self.assertTrue(set(qualification.P16_HISTORY_OWNED_RUST)
+                                    <= set(qualification.owned_rust(profile)))
+                    self.assertEqual(qualification.package_arguments(profile), packages)
+                    self.assertEqual(qualification.integration_test_suites(profile, 8, 9, 12, 15), suites)
+                self.assertEqual(qualification.owned_rust(profile), baseline)
+
+    def test_native_history_count_is_explicit_bounded_and_not_silently_disabled(self):
+        for value in ('', '0', '129', '-1', '1.0', '01', '13 ', 'true'):
+            with patch.dict(qualification.os.environ, {'EPG10_EXPECT_P16_HISTORY_TESTS': value}):
+                with self.subTest(value=value), self.assertRaisesRegex(ValueError, 'EXACT_BOUNDED_P16_HISTORY'):
+                    qualification.expected_p16_history_test_count()
+        for value in ('1', '13', '128'):
+            with patch.dict(qualification.os.environ, {'EPG10_EXPECT_P16_HISTORY_TESTS': value}):
+                self.assertEqual(qualification.expected_p16_history_test_count(), int(value))
+        for value in (None, 13, True):
+            with self.subTest(value=value), self.assertRaisesRegex(ValueError, 'EXACT_BOUNDED_P16_HISTORY'):
+                qualification.expected_test_count(value, 'P16_HISTORY')
+
+    def test_native_history_target_is_exact_offline_locked_and_unfiltered(self):
+        self.assertEqual(qualification.P16_HISTORY_TEST_ARGUMENTS, (
+            'cargo', 'test', '--offline', '--locked', '-p', 'projection-store-pg',
+            '--test', 'epg10_04_p16_history', '--', '--nocapture', '--test-threads=1'))
+        row = 'test result: ok. 13 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out'
+        self.assertEqual(qualification.parse_rust_results(row, 1, 13, count_kind='P16_HISTORY')['passed'], 13)
+        with self.assertRaisesRegex(ValueError, 'EXACT_P16_HISTORY_TEST_COUNT'):
+            qualification.parse_rust_results(row, 1, 12, count_kind='P16_HISTORY')
+        for invalid in ('', row.replace('0 ignored', '1 ignored'), row.replace('0 filtered out', '1 filtered out')):
+            with self.subTest(result=invalid), self.assertRaisesRegex(ValueError, 'ALL_REQUIRED'):
+                qualification.parse_rust_results(invalid, 1, 13, count_kind='P16_HISTORY')
+
+    def test_native_history_opt_in_requires_and_hash_binds_exact_owned_inputs(self):
+        with patch.dict(qualification.os.environ, {}, clear=True):
+            legacy = self.source_fixture('04')
+            qualification.source_hashes(legacy, '04')
+            with patch.dict(qualification.os.environ, {'EPG10_EXPECT_P16_HISTORY_TESTS': '13'}):
+                with self.assertRaisesRegex(ValueError, 'EXACT_OWNED_INPUT_MISSING'):
+                    qualification.source_hashes(legacy, '04')
+                for profile in ('04', '08'):
+                    source = self.source_fixture(profile)
+                    before = qualification.source_hashes(source, profile)
+                    for name in qualification.P16_HISTORY_OWNED_RUST:
+                        relative = name if profile == '04' else qualification.RUST_WORKSPACE + '/' + name
+                        path = source / relative
+                        self.assertIn(relative, before)
+                        path.unlink()
+                        with self.subTest(profile=profile, missing=name), self.assertRaisesRegex(
+                                ValueError, 'EXACT_OWNED_INPUT_MISSING'):
+                            qualification.source_hashes(source, profile)
+                        path.write_text('TEST_ONLY_CHANGED\n')
+                        self.assertNotEqual(before[relative], qualification.source_hashes(source, profile)[relative])
+                        path.write_text('TEST_ONLY\n')
+
+    def test_native_history_owned_clippy_warnings_are_not_upstream_when_opted_in(self):
+        warning = {'message': {'level': 'warning', 'code': {'code': 'clippy::native'}, 'spans': [
+            {'is_primary': True, 'file_name': 'crates/projection-store-pg/src/p16_history.rs'}]}}
+        with patch.dict(qualification.os.environ, {}, clear=True):
+            self.assertEqual(qualification.clippy_findings(json.dumps(warning), '04')['owned_warnings'], [])
+            with patch.dict(qualification.os.environ, {'EPG10_EXPECT_P16_HISTORY_TESTS': '13'}):
+                self.assertEqual(qualification.clippy_findings(json.dumps(warning), '04')['owned_warnings'],
+                                 ['clippy::native'])
+
+    def test_financial_composition_and_resource_factory_inputs_follow_existing_profiles(self):
+        names = ('crates/edge-service/src/financial_projection.rs',
+                 'crates/edge-service/src/financial_projection/tests.rs',
+                 'crates/edge-service/src/projection_resources.rs',
+                 'crates/edge-service/src/projection_resources/tests.rs',
+                 'crates/projection-store-pg/src/source_admission.rs')
+        for profile in ('04', '05'):
+            self.assertFalse(set(names) & set(qualification.owned_rust(profile)))
+        source = self.source_fixture('06')
+        before = qualification.source_hashes(source, '06')
+        for name in names:
+            self.assertIn(name, qualification.RESOURCE_OWNED_RUST)
+            relative = qualification.RUST_WORKSPACE + '/' + name
+            path = source / relative
+            path.unlink()
+            with self.subTest(missing=name), self.assertRaisesRegex(ValueError, 'EXACT_OWNED_INPUT_MISSING'):
+                qualification.source_hashes(source, '06')
+            path.write_text('TEST_ONLY_CHANGED\n')
+            self.assertNotEqual(before[relative], qualification.source_hashes(source, '06')[relative])
+
+    def test_financial_pg_child_follows_existing_custody_feature_not_new_runtime_gate(self):
+        child = 'crates/edge-service/src/financial_projection/tests/pg.rs'
+        for profile in ('04', '05', '06'):
+            self.assertNotIn(child, qualification.owned_rust(profile))
+        for profile in ('07', '08', '09', '10', '11'):
+            self.assertIn(child, qualification.owned_rust(profile))
+            self.assertEqual(qualification.command_feature_arguments(profile),
+                             ['--features', 'edge-service/pm-custody-pg-test'])
+
+    def test_native_stage_is_wired_to_real_pg_target_after_bootstrap_only_when_requested(self):
+        helper, sampler = MagicMock(), MagicMock()
+        helper.OWNER, helper.PG = 'TEST_ONLY-owner', 'TEST_ONLY-pg'
+        helper.obs.ACTIVITY_DIR = Path('/TEST_ONLY/host-activity')
+        helper.free_bytes.return_value = 150 * 1024**3
+        helper.obs.correctness_activity.return_value.__enter__.return_value = {'class': 'correctness'}
+        def docker(*args, **_kwargs):
+            value = b'127.0.0.1:25432' if args[0] == 'port' else qualification.IMAGE.encode()
+            return self.result(stdout=value)
+        helper.docker.side_effect = docker
+        def run_logged(_args, path, **_kwargs):
+            if path.stem == 'p16_history_tests':
+                raise RuntimeError('TEST_ONLY_REACHED_NATIVE_STAGE_WITHOUT_EXTERNAL_JOB')
+            return {'returncode': 0, 'elapsed_seconds': 0}
+        def log_text(path, **_kwargs):
+            if path.stem == 'runner_safety_tests':
+                return 'Ran 1 test in 0.001s\nOK'
+            row = 'test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out'
+            return row + '\n' + row if path.stem == 'unit_tests' else row
+        with ExitStack() as stack:
+            stack.enter_context(patch.dict(qualification.os.environ, {'EPG10_TEST_PROFILE': '04',
+                'EPG10_PORTAL_REVISION': 'a' * 40, 'EPG10_EXPECT_BOOTSTRAP_TESTS': '1',
+                'EPG10_EXPECT_P16_HISTORY_TESTS': '13'}, clear=True))
+            for name in ('validate_base', 'require_absent', 'finish_observation_and_cleanup'):
+                stack.enter_context(patch.object(qualification, name))
+            stack.enter_context(patch.object(qualification, 'load_cleanup_helpers', return_value=helper))
+            stack.enter_context(patch.object(qualification, 'source_hashes', return_value={}))
+            stack.enter_context(patch.object(qualification, 'workspace_directory', side_effect=lambda source, _p: source))
+            stack.enter_context(patch.object(qualification, 'isolated_environment', return_value={}))
+            stack.enter_context(patch.object(qualification, 'peer_test_metadata', return_value=[]))
+            stack.enter_context(patch.object(qualification, 'OwnPgSampler', return_value=sampler))
+            logged = stack.enter_context(patch.object(qualification, 'run_logged', side_effect=run_logged))
+            stack.enter_context(patch.object(qualification.subprocess, 'run', return_value=self.result()))
+            stack.enter_context(patch.object(qualification.secrets, 'token_urlsafe', return_value='TEST_ONLY'))
+            stack.enter_context(patch.object(qualification.os, 'sched_getaffinity', return_value={0}))
+            stack.enter_context(patch.object(qualification.os, 'umask'))
+            stack.enter_context(patch.object(qualification.signal, 'signal'))
+            stack.enter_context(patch.object(qualification.signal, 'alarm'))
+            stack.enter_context(patch.object(Path, 'read_bytes', return_value=b'TEST_ONLY'))
+            stack.enter_context(patch.object(Path, 'read_text', log_text))
+            written = stack.enter_context(patch.object(Path, 'write_text'))
+            stack.enter_context(patch('builtins.print'))
+            self.assertEqual(qualification.main(), 1)
+        receipt = json.loads(written.call_args.args[0])
+        self.assertEqual(receipt['failed_stage'], 'p16_history_tests')
+        self.assertEqual(receipt['expected_p16_history_tests'], 13)
+        self.assertEqual(receipt['bootstrap_tests']['passed'], 1)
+        stages = [call.args[1].stem for call in logged.call_args_list]
+        self.assertLess(stages.index('compile_p16_history_tests'), stages.index('bootstrap_tests'))
+        self.assertEqual(logged.call_args.args[0][-len(qualification.P16_HISTORY_TEST_ARGUMENTS):],
+                         list(qualification.P16_HISTORY_TEST_ARGUMENTS))
+
     def test_profile04_source_inputs_remain_sufficient_only_for04(self):
         source = self.source_fixture('04')
         hashes = qualification.source_hashes(source, '04')

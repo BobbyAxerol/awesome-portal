@@ -3,6 +3,9 @@
 mod d4_command;
 mod manager_event_ledger_command;
 mod manager_projection_command;
+// Versioned opt-in only; legacy workers cannot silently join its governed pool.
+#[allow(dead_code)]
+mod projection_resources;
 // Source-qualified only; commissioning must supply the owning durable context.
 #[allow(dead_code)]
 mod pm_command_port;
@@ -447,7 +450,7 @@ impl EdgeConfig {
         }
         let (realtime_freshness_policy, realtime_venue_session) =
             realtime_freshness_from_environment()?;
-        Ok(Self {
+        let config = Self {
             bind_address,
             health_bind_address,
             environment,
@@ -558,7 +561,18 @@ impl EdgeConfig {
             query_cursor_active_key_id: runtime.query_cursor_active_key_id,
             query_cursor_ttl: runtime.query_cursor_ttl,
             shadow_query_freshness_policy: runtime.shadow_query_freshness_policy,
-        })
+        };
+        if config.manager_v2_read_enabled.is_enabled()
+            && !manager_projection_command::valid_source_admission_timing(
+                config.manager_shared_admission_maximum_wait,
+                config.manager_shared_admission_lease_ttl,
+            )
+        {
+            return Err(ConfigError::Invalid(
+                "EDGE_MANAGER_SHARED_ADMISSION_LEASE_TTL_MS",
+            ));
+        }
+        Ok(config)
     }
 }
 
@@ -1019,6 +1033,7 @@ fn manager_v2_client_from_config(
 async fn connect_projection_store(
     config: &EdgeConfig,
 ) -> Result<Option<PgProjectionStore>, ServiceError> {
+    projection_resources::validate_legacy_configuration()?;
     if !config.projection_ingestion_enabled.is_enabled()
         && !config.realtime_sse_enabled.is_enabled()
         && !config.analytics_query_enabled.is_enabled()
@@ -1032,7 +1047,7 @@ async fn connect_projection_store(
         .as_deref()
         .ok_or(ConfigError::Missing("EDGE_PROJECTION_DATABASE_URL_FILE"))?;
     let database_url = read_text(database_url_file)?;
-    let store = PgProjectionStore::connect(database_url.trim()).await?;
+    let store = projection_resources::connect_legacy(database_url.trim()).await?;
     store.ping().await?;
     Ok(Some(store))
 }
@@ -2135,6 +2150,7 @@ async fn admitted_manager_execute(
         .projection_store
         .as_ref()
         .ok_or(ManagerDispatchError::AdmissionUnavailable)?;
+    let deadline = tokio::time::Instant::now() + state.manager_shared_admission_lease_ttl;
     let admission = store
         .acquire_source_admission(&SourceAdmissionRequest {
             source_id: "manager-v2".to_owned(),
@@ -2153,18 +2169,19 @@ async fn admitted_manager_execute(
             return Err(ManagerDispatchError::AdmissionDenied(reason));
         }
     };
-    if !lease.wait.is_zero() {
-        tokio::time::sleep(lease.wait).await;
-    }
-    let result = client
-        .execute(request)
-        .await
-        .map_err(ManagerDispatchError::Client);
+    let result = manager_projection_command::within_source_admission_lease(
+        deadline,
+        lease.wait,
+        client.execute(request),
+    )
+    .await;
     store
         .release_source_admission(&lease)
         .await
         .map_err(|_| ManagerDispatchError::AdmissionUnavailable)?;
     result
+        .map_err(|_| ManagerDispatchError::AdmissionUnavailable)?
+        .map_err(ManagerDispatchError::Client)
 }
 
 #[derive(Debug)]
@@ -2188,6 +2205,7 @@ async fn admitted_manager_extension_execute(
         .projection_store
         .as_ref()
         .ok_or(ManagerExtensionDispatchError::AdmissionUnavailable)?;
+    let deadline = tokio::time::Instant::now() + state.manager_shared_admission_lease_ttl;
     let admission = store
         .acquire_source_admission(&SourceAdmissionRequest {
             source_id: "manager-v2".to_owned(),
@@ -2206,18 +2224,19 @@ async fn admitted_manager_extension_execute(
             return Err(ManagerExtensionDispatchError::AdmissionDenied(reason));
         }
     };
-    if !lease.wait.is_zero() {
-        tokio::time::sleep(lease.wait).await;
-    }
-    let result = client
-        .execute_extension(request)
-        .await
-        .map_err(ManagerExtensionDispatchError::Client);
+    let result = manager_projection_command::within_source_admission_lease(
+        deadline,
+        lease.wait,
+        client.execute_extension(request),
+    )
+    .await;
     store
         .release_source_admission(&lease)
         .await
         .map_err(|_| ManagerExtensionDispatchError::AdmissionUnavailable)?;
     result
+        .map_err(|_| ManagerExtensionDispatchError::AdmissionUnavailable)?
+        .map_err(ManagerExtensionDispatchError::Client)
 }
 
 async fn fetch_manager_catalogue(
@@ -4790,6 +4809,8 @@ enum ServiceError {
     CurrentProtectiveAcceptance(#[from] CurrentProtectiveError),
     #[error(transparent)]
     ProjectionStore(#[from] projection_store_pg::StoreError),
+    #[error(transparent)]
+    ProjectionResources(#[from] projection_resources::ProjectionResourceError),
     #[error(transparent)]
     D4Command(#[from] d4_command::D4CommandError),
     #[error(transparent)]

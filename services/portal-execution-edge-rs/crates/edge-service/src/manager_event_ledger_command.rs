@@ -39,7 +39,10 @@ use tokio::time::{self, MissedTickBehavior};
 use tracing::{info, warn};
 use uuid::Uuid;
 
-use super::EdgeConfig;
+use super::{
+    manager_projection_command::{valid_source_admission_timing, within_source_admission_lease},
+    EdgeConfig,
+};
 
 const RUNTIME_MANIFEST_SCHEMA_VERSION: &str =
     "portal.execution.eds11r.event-ledger-runtime-manifest.v1";
@@ -248,7 +251,9 @@ async fn run_once_mode(
         .projection_database_url_file
         .as_deref()
         .ok_or(ManagerEventLedgerCommandError::MissingDatabaseUrl)?;
-    let store = PgProjectionStore::connect(read_nonempty(database_url_path)?.trim()).await?;
+    let store =
+        crate::projection_resources::connect_legacy(read_nonempty(database_url_path)?.trim())
+            .await?;
     store.ping().await?;
     let client = manager_client(config, profile_id)?;
 
@@ -705,6 +710,13 @@ async fn admitted_extension_execute(
     client: &ManagerV2Client,
     request: &ManagerExtensionRequest,
 ) -> Result<ManagerExtensionRead, ManagerEventLedgerCommandError> {
+    if !valid_source_admission_timing(
+        config.manager_shared_admission_maximum_wait,
+        config.manager_shared_admission_lease_ttl,
+    ) {
+        return Err(ManagerEventLedgerCommandError::AdmissionTimingInvalid);
+    }
+    let deadline = time::Instant::now() + config.manager_shared_admission_lease_ttl;
     let outcome = store
         .acquire_source_admission(&SourceAdmissionRequest {
             source_id: "manager-v2".to_owned(),
@@ -725,15 +737,14 @@ async fn admitted_extension_execute(
             return Err(ManagerEventLedgerCommandError::AdmissionRateDenied);
         }
     };
-    if !lease.wait.is_zero() {
-        time::sleep(lease.wait).await;
-    }
-    let result = client.execute_extension(request).await;
+    let result =
+        within_source_admission_lease(deadline, lease.wait, client.execute_extension(request))
+            .await;
     let release = store.release_source_admission(&lease).await;
     if release.is_err() {
         return Err(ManagerEventLedgerCommandError::AdmissionReleaseFailed);
     }
-    Ok(result?)
+    Ok(result.map_err(|_| ManagerEventLedgerCommandError::AdmissionLeaseExpired)??)
 }
 
 fn unexpected_extension_read(read: &ManagerExtensionRead) -> ManagerEventLedgerCommandError {
@@ -811,6 +822,10 @@ pub enum ManagerEventLedgerCommandError {
     AdmissionConcurrencyDenied,
     #[error("the Edge-wide Manager rate budget denied this source request")]
     AdmissionRateDenied,
+    #[error("the Manager admission lease cannot cover its bounded wait and request")]
+    AdmissionTimingInvalid,
+    #[error("the Manager admission lease expired before the local request completed")]
+    AdmissionLeaseExpired,
     #[error("the Edge-wide Manager admission lease could not be released")]
     AdmissionReleaseFailed,
     #[error("the event-ledger state machine violated an internal invariant")]
@@ -821,6 +836,8 @@ pub enum ManagerEventLedgerCommandError {
     Core(#[from] authoritative_event_core::CoreError),
     #[error(transparent)]
     Store(#[from] StoreError),
+    #[error(transparent)]
+    ProjectionResources(#[from] crate::projection_resources::ProjectionResourceError),
     #[error(transparent)]
     Client(#[from] ManagerV2ClientError),
     #[error(transparent)]

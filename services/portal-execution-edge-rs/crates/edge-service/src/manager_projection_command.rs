@@ -1,6 +1,7 @@
 use std::{
     collections::{BTreeMap, BTreeSet},
     fs,
+    future::Future,
     sync::Arc,
     time::Duration,
 };
@@ -290,7 +291,7 @@ async fn run_once_mode(
         delegated_resource: DELEGATED_RESOURCE,
         owner_contract_revision: RUNTIME_CONTRACT_REVISION,
     })?;
-    let store = PgProjectionStore::connect(database_url.trim()).await?;
+    let store = crate::projection_resources::connect_legacy(database_url.trim()).await?;
     store.ping().await?;
     let (catalogue, catalogue_digest) =
         load_catalogue(&store, config, owner_digest, &client, bound).await?;
@@ -524,7 +525,7 @@ pub async fn run_rollback_once_cli(
         execution_contracts::CanonicalId::parse("workspace_execution_manager")?,
         profile.environment(),
     )?;
-    let store = PgProjectionStore::connect(database_url.trim()).await?;
+    let store = crate::projection_resources::connect_legacy(database_url.trim()).await?;
     store.ping().await?;
     let rollback = store
         .rollback_manager_projection_epoch(&scope, failed_epoch_id, retained_epoch_id)
@@ -599,6 +600,63 @@ pub fn due_groups(groups: &[(Duration, Vec<FeedClass>)], elapsed: &[Duration]) -
         .collect()
 }
 
+/// Record the time AFTER an attempted cycle, not its start. A slow successful
+/// refresh or failed source call must not turn the next tick into an immediate
+/// retry merely because its own execution consumed the configured cadence.
+fn record_attempt_completion(last_run: &mut [Option<tokio::time::Instant>], groups: &[usize]) {
+    let completed_at = tokio::time::Instant::now();
+    for &index in groups {
+        last_run[index] = Some(completed_at);
+    }
+}
+
+/// The shared permit starts before its scheduled wait. Its lifetime must cover
+/// both the client queue and the whole bounded request, not just connection.
+/// Bounds come from the SAME client defaults used by all Manager callers.
+#[must_use]
+pub(super) fn valid_source_admission_timing(maximum_wait: Duration, lease_ttl: Duration) -> bool {
+    let limits = manager_v2_client::ManagerV2ClientLimits::default();
+    maximum_wait
+        .checked_add(limits.queue_timeout)
+        .and_then(|bound| bound.checked_add(limits.request_timeout))
+        .is_some_and(|bound| lease_ttl > bound)
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(super) struct SourceAdmissionLeaseExpired;
+
+/// Use a conservative monotonic deadline captured BEFORE acquiring the DB
+/// permit. DB acquisition/COMMIT delay therefore consumes, never extends, the
+/// local budget. Normal return/timeout paths release only their exact token;
+/// whole-task cancellation instead leaves that token to its existing DB expiry.
+/// Cancellation bounds this LOCAL future; it is not remote-read completion or
+/// proof that the upstream has cancelled its own database operation.
+pub(super) async fn within_source_admission_lease<F: Future>(
+    deadline: tokio::time::Instant,
+    wait: Duration,
+    request: F,
+) -> Result<F::Output, SourceAdmissionLeaseExpired> {
+    if tokio::time::Instant::now()
+        .checked_add(wait)
+        .is_none_or(|scheduled| scheduled >= deadline)
+    {
+        return Err(SourceAdmissionLeaseExpired);
+    }
+    tokio::time::timeout_at(deadline, async move {
+        if !wait.is_zero() {
+            tokio::time::sleep(wait).await;
+        }
+        // Explicit check matters because Tokio can poll a ready inner future
+        // before its timeout timer. Never start HTTP on an expired permit.
+        if tokio::time::Instant::now() >= deadline {
+            return Err(SourceAdmissionLeaseExpired);
+        }
+        Ok(request.await)
+    })
+    .await
+    .map_err(|_| SourceAdmissionLeaseExpired)?
+}
+
 fn normalized_classes(classes: &[FeedClass]) -> Vec<FeedClass> {
     FeedClass::ALL
         .into_iter()
@@ -645,14 +703,17 @@ pub async fn run_forever(config: &EdgeConfig) -> Result<(), ManagerProjectionCom
                     report,
                     refreshed_classes,
                 } = attempt;
-                for (index, (_, classes)) in class_groups.iter().enumerate() {
-                    if classes
-                        .iter()
-                        .all(|class| refreshed_classes.contains(class))
-                    {
-                        last_run[index] = Some(now);
-                    }
-                }
+                let completed_groups = class_groups
+                    .iter()
+                    .enumerate()
+                    .filter(|(_, (_, classes))| {
+                        classes
+                            .iter()
+                            .all(|class| refreshed_classes.contains(class))
+                    })
+                    .map(|(index, _)| index)
+                    .collect::<Vec<_>>();
+                record_attempt_completion(&mut last_run, &completed_groups);
                 info!(
                     environment = report.environment,
                     epoch_id = %report.epoch_id,
@@ -667,9 +728,7 @@ pub async fn run_forever(config: &EdgeConfig) -> Result<(), ManagerProjectionCom
                 // Only the groups attempted on this tick are deferred. A
                 // failed account-state poll cannot slow the transactional
                 // class, and each class still has a bounded retry cadence.
-                for index in due {
-                    last_run[index] = Some(now);
-                }
+                record_attempt_completion(&mut last_run, &due);
                 warn!(error = %error, "N24 Manager projection cadence cycle failed closed");
             }
         }
@@ -890,10 +949,17 @@ async fn admitted_projection_execute(
     client: &ManagerV2Client,
     request: &ManagerV2Request,
 ) -> Result<ManagerRead, ManagerProjectionCommandError> {
+    if !valid_source_admission_timing(
+        config.manager_shared_admission_maximum_wait,
+        config.manager_shared_admission_lease_ttl,
+    ) {
+        return Err(ManagerProjectionCommandError::SourceAdmissionDenied);
+    }
     let profile_id = config
         .manager_v2_profile_id
         .as_deref()
         .ok_or(ManagerProjectionCommandError::MissingProfile)?;
+    let deadline = tokio::time::Instant::now() + config.manager_shared_admission_lease_ttl;
     let admission = store
         .acquire_source_admission(&SourceAdmissionRequest {
             source_id: "manager-v2".to_owned(),
@@ -911,12 +977,11 @@ async fn admitted_projection_execute(
             return Err(ManagerProjectionCommandError::SourceAdmissionDenied);
         }
     };
-    if !lease.wait.is_zero() {
-        tokio::time::sleep(lease.wait).await;
-    }
-    let result = client.execute(request).await;
+    let result = within_source_admission_lease(deadline, lease.wait, client.execute(request)).await;
     store.release_source_admission(&lease).await?;
-    result.map_err(Into::into)
+    result
+        .map_err(|_| ManagerProjectionCommandError::SourceAdmissionDenied)?
+        .map_err(Into::into)
 }
 
 fn page_result(
@@ -1126,12 +1191,157 @@ pub enum ManagerProjectionCommandError {
     Projection(#[from] projection_core::ProjectionError),
     #[error(transparent)]
     Store(#[from] StoreError),
+    #[error(transparent)]
+    ProjectionResources(#[from] crate::projection_resources::ProjectionResourceError),
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use chrono::TimeZone as _;
+
+    #[test]
+    fn long_cycle_completion_defers_attempted_classes_without_delaying_peers() {
+        let groups = vec![
+            (Duration::from_secs(2), vec![FeedClass::Transactional]),
+            (Duration::from_secs(10), vec![FeedClass::AccountState]),
+            (Duration::from_secs(60), vec![FeedClass::Metadata]),
+        ];
+        // TEST_ONLY: an attempted cycle consumed much longer than its cadence.
+        let started = tokio::time::Instant::now() - Duration::from_secs(90);
+        let mut last_run = vec![Some(started); groups.len()];
+        record_attempt_completion(&mut last_run, &[0, 1]);
+        let completed = last_run[0].unwrap();
+        assert!(completed.duration_since(started) >= Duration::from_secs(90));
+        assert_eq!(last_run[1], Some(completed));
+        assert_eq!(last_run[2], Some(started));
+        let due_at = |now: tokio::time::Instant| {
+            let elapsed = last_run
+                .iter()
+                .map(|last| now.duration_since(last.unwrap()))
+                .collect::<Vec<_>>();
+            due_groups(&groups, &elapsed)
+        };
+        // Success and failure both use this completion marker. Neither may
+        // immediately retry the attempted groups; an independent peer stays due.
+        assert_eq!(due_at(completed), vec![2]);
+        assert_eq!(due_at(completed + Duration::from_secs(2)), vec![0, 2]);
+        assert_eq!(due_at(completed + Duration::from_secs(10)), vec![0, 1, 2]);
+    }
+
+    #[test]
+    fn cold_full_refresh_completion_resets_every_refreshed_class() {
+        let started = tokio::time::Instant::now() - Duration::from_secs(90);
+        let mut last_run = vec![Some(started); FeedClass::ALL.len()];
+        let classes = FeedClass::ALL;
+        let completed = classes
+            .iter()
+            .enumerate()
+            .map(|(index, _)| index)
+            .collect::<Vec<_>>();
+        record_attempt_completion(&mut last_run, &completed);
+        assert!(last_run.iter().all(|at| *at == last_run[0]));
+        assert!(last_run[0].unwrap() > started);
+    }
+
+    #[test]
+    fn source_permit_ttl_covers_scheduled_wait_queue_and_entire_request() {
+        let limits = manager_v2_client::ManagerV2ClientLimits::default();
+        let wait = Duration::from_secs(1);
+        let bound = wait + limits.queue_timeout + limits.request_timeout;
+        assert!(!valid_source_admission_timing(wait, bound));
+        assert!(valid_source_admission_timing(
+            wait,
+            bound + Duration::from_nanos(1)
+        ));
+        assert!(valid_source_admission_timing(wait, Duration::from_secs(7)));
+        assert!(!valid_source_admission_timing(
+            wait,
+            Duration::from_millis(500)
+        ));
+        assert!(!valid_source_admission_timing(
+            Duration::from_secs(5),
+            Duration::from_secs(7)
+        ));
+    }
+
+    #[test]
+    fn source_permit_timing_overflow_fails_closed() {
+        assert!(!valid_source_admission_timing(Duration::MAX, Duration::MAX));
+        assert!(!valid_source_admission_timing(
+            Duration::ZERO,
+            Duration::ZERO
+        ));
+    }
+
+    #[tokio::test]
+    async fn expired_acquisition_and_oversized_wait_never_start_request() {
+        use std::cell::Cell;
+        for (deadline, wait) in [
+            (tokio::time::Instant::now(), Duration::ZERO),
+            (
+                tokio::time::Instant::now() - Duration::from_secs(1),
+                Duration::ZERO,
+            ),
+            (
+                tokio::time::Instant::now() + Duration::from_secs(1),
+                Duration::from_secs(2),
+            ),
+        ] {
+            let calls = Cell::new(0);
+            let result = within_source_admission_lease(deadline, wait, async {
+                calls.set(calls.get() + 1);
+            })
+            .await;
+            assert_eq!(result, Err(SourceAdmissionLeaseExpired));
+            assert_eq!(calls.get(), 0);
+        }
+    }
+
+    #[tokio::test]
+    async fn source_permit_timeout_drops_local_future_without_remote_completion_claim() {
+        use std::cell::Cell;
+        struct DropWitness<'a>(&'a Cell<bool>);
+        impl Drop for DropWitness<'_> {
+            fn drop(&mut self) {
+                self.0.set(true);
+            }
+        }
+        let polled = Cell::new(false);
+        let dropped = Cell::new(false);
+        let result = within_source_admission_lease(
+            tokio::time::Instant::now() + Duration::from_secs(1),
+            Duration::ZERO,
+            async {
+                let witness = DropWitness(&dropped);
+                polled.set(true);
+                std::future::pending::<()>().await;
+                drop(witness);
+            },
+        )
+        .await;
+        assert_eq!(result, Err(SourceAdmissionLeaseExpired));
+        assert!(polled.get());
+        assert!(dropped.get());
+    }
+
+    #[tokio::test]
+    async fn source_permit_preserves_request_failure_without_retry() {
+        use std::cell::Cell;
+        let calls = Cell::new(0);
+        let result: Result<Result<(), &str>, SourceAdmissionLeaseExpired> =
+            within_source_admission_lease(
+                tokio::time::Instant::now() + Duration::from_secs(1),
+                Duration::ZERO,
+                async {
+                    calls.set(calls.get() + 1);
+                    Err("TEST_ONLY-request-failure")
+                },
+            )
+            .await;
+        assert_eq!(result, Ok(Err("TEST_ONLY-request-failure")));
+        assert_eq!(calls.get(), 1);
+    }
 
     fn at(second: u32) -> DateTime<Utc> {
         Utc.with_ymd_and_hms(2026, 9, 1, 0, 0, second)

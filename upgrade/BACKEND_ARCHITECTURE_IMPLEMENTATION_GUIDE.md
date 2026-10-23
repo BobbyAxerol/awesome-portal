@@ -650,6 +650,16 @@ deep-dive → ADR → slice → evidence discipline documented above.
 
 ### 14.1 Current backend state (tracking snapshot — 2026-08-17)
 
+**23Oct business backend — source composition, not runtime commissioning:**
+[current04/05/06/07/09 journal](EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#epg10-backend-composition-20261023)
+tracks financial HTTP→validated atomic PG→authorized typed reads, native P16
+retained observations/checkpoints, callable Core command ingress/full outcome
+and Manager cadence/lease/config-drift fixes. Explicit governed resource
+factory refuses legacy mixing; existing legacy workers are NOT newly governed.
+Only eight PM capital shapes, not64CLI/nine N12. Current provider/router and
+source commissioning remain owned connected assembly; do not claim a flag-only
+activation or new connected PASS. Exact tests/cleanup/pins remain in the journal.
+
 **20Oct23:16ICT — four-input Portal handoff, documentation-only:**
 [current owner packet](evidence/execution-edge-v1_2/EPG10-08/EDGE_CONNECTED_ACCEPTANCE_PRIORITY_HANDOFF_2026-10-20.md)
 and [same-phase journal](EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#original0807030106--consolidated-portal-owner-handoff-20oct2316ict)

@@ -7,6 +7,16 @@ Chúng không thay thế phase hoặc exit gate trong
 
 ## Active deep dives
 
+- **23Oct business backend composition — source-only:**
+  [current04/05/06/07/09 journal](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#epg10-backend-composition-20261023)
+  covers financial transport/atomic projection/scoped reads, native P16
+  observations/checkpoints, command full-result composition and Manager
+  cadence/lease/cap-drift safety. Resource factory is opt-in and rejects mixing
+  legacy traffic; no runtime budgets or auth are inferred. Eight PM capital
+  shapes do not provide64CLI/nine N12 operations. Callable source qualification
+  is not mounted provider/router/connected acceptance; tests/pins/cleanup are
+  recorded in that journal.
+
 - **Four-input Portal handoff,20Oct23:16ICT — documentation/coordination:**
   [single owner packet](../evidence/execution-edge-v1_2/EPG10-08/EDGE_CONNECTED_ACCEPTANCE_PRIORITY_HANDOFF_2026-10-20.md)
   separates Core009→08/read09, PM07, TS03 and target/bounds01/06. Read the
