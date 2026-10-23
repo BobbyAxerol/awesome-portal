@@ -58,6 +58,7 @@ import type { StageActionEligibilityRead } from "../v2/readers/stageActionEligib
 import type { PaperExitParentQuery, PaperExitParentRead } from "../v2/readers/paperExitParent";
 import type { AccessEligibilityBatchRead, EligibilityBatchRequest } from "../v2/readers/accessSelfBatch";
 import type { AccessStepUpInput, SessionStepUpOutcome } from "../v2/readers/accessStepUp";
+import type { VisitDigestMarkResult, VisitDigestRead, VisitDigestSeenBody } from "../v2/readers/visitDigest";
 import type { AlphaLifecycle } from "../v2/readers/alphaLifecycle";
 import type { EntityKind, EntitySearch } from "../v2/readers/entitySearch";
 import type { Out } from "../v2/readers/strictRead";
@@ -612,6 +613,20 @@ export interface ExecutionApi {
    * step-up state (`portal.self-eligibility-batch.v1`). Advisory; the single-resource `portal.self-eligibility.v1` is unchanged.
    */
   getSelfEligibilityBatch(request: EligibilityBatchRequest): Promise<Result<AccessEligibilityBatchRead>>;
+  /**
+   * `GET /api/v1/execution/visit-digest?workspace_id=` (Codex package 3, `portal.execution.visit-digest.v1`): the Portal's own
+   * last-seen OBSERVATION baseline of this user in this workspace compared with the current authorized command-center slice.
+   * A GET never writes. `NO_BASELINE` is a first visit; `coverage` is bounded observations, never an event history. A body for another
+   * workspace than the one asked is `unavailable`. Not polled: it is read on open and on an explicit Refresh.
+   */
+  getVisitDigest(workspaceId?: string): Promise<Result<VisitDigestRead>>;
+  /**
+   * `POST /api/v1/execution/visit-digest/seen?workspace_id=` with `x-portal-csrf`: acknowledges the digest the user is looking at, with
+   * the `mark_seen` body of that GET (snapshot revision and expected baseline version). Only an explicit user action calls it, and only when
+   * `may_mark_seen`. A 409 (another tab acknowledged, or the source moved) is `conflict`: read again and let the user act again. A 503 or a
+   * failure to read the answer is `unavailable` and changes nothing the screen already shows.
+   */
+  markVisitDigestSeen(workspaceId: string | undefined, body: VisitDigestSeenBody): Promise<VisitDigestMarkResult>;
   /**
    * `POST /api/admin/profile-access/v2/step-up` (FE-015/060, BE-P7): the caller re-enters their OWN password to open THIS session's
    * step-up for one proof family (`portal.access-step-up.v1`). The body always names the family. CSRF and a fresh idempotency key

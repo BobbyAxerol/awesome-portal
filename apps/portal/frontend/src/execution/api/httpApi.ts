@@ -67,6 +67,7 @@ import { readStageActionEligibilityV1, stageActionEligibilityUrl } from "../v2/r
 import { paperExitParentAnswers, paperExitParentUrl, readPaperExitParentV1 } from "../v2/readers/paperExitParent";
 import { accessEligibilityBatchUrl, eligibilityBatchAnswers, readAccessEligibilityBatch } from "../v2/readers/accessSelfBatch";
 import { ACCESS_SELF_CONTEXT_PATH, readAccessSelfContext } from "../v2/readers/accessSelfContext";
+import { VISIT_DIGEST_PATH, VISIT_DIGEST_SEEN_PATH, readVisitDigest, visitDigestAnswers, visitDigestQuery } from "../v2/readers/visitDigest";
 import { ACCESS_STEP_UP_PATH, accessStepUpAnswers, accessStepUpBody, readAccessStepUp } from "../v2/readers/accessStepUp";
 import { incidentChildrenAnswers, incidentChildrenPath, operationsAuditPath, readIncidentChildrenV1, readOperationsAuditV1 } from "../v2/readers/incidentChildren";
 import { run } from "../v2/readers/strictRead";
@@ -1181,6 +1182,43 @@ export function createHttpApi({ policy, signal, readScope = {} }: HttpApiOptions
         return unavailable("The eligibility batch answered another question than the one asked, so it is not shown.");
       }
       return result;
+    },
+
+    async getVisitDigest(workspaceId) {
+      const query = visitDigestQuery(workspaceId);
+      if (query === null) return unavailable("The visit digest query is not one the Portal accepts.");
+      const result = await readGetAt(`${BASE}${VISIT_DIGEST_PATH}${query}`, readVisitDigest, "The visit digest");
+      if (result.ok && result.value.kind === "digest" && !visitDigestAnswers(result.value.digest, workspaceId)) {
+        return unavailable("The visit digest answered another workspace than the one asked, so it is not shown.");
+      }
+      if (result.ok && result.value.kind === "unsupported_shape") return unavailable("The visit digest is a shape this build does not read, so it is not shown.");
+      return result;
+    },
+
+    async markVisitDigestSeen(workspaceId, body) {
+      const query = visitDigestQuery(workspaceId);
+      if (query === null) return { kind: "unavailable", reason: "The visit digest query is not one the Portal accepts, so nothing was sent." };
+      // No session token, no request: the route would answer 403 and the 403 would read as "your token is wrong".
+      if (csrfToken() === null) return { kind: "unavailable", reason: "The session token is missing, so nothing was sent. Sign in again." };
+      let response: Response;
+      try {
+        response = await post(`${VISIT_DIGEST_SEEN_PATH}${query}`, { snapshot_revision: body.snapshot_revision, expected_baseline_version: body.expected_baseline_version }, signal);
+      } catch {
+        return { kind: "unavailable", reason: "The acknowledgement never reached the Portal. Nothing changed." };
+      }
+      let answer: unknown = null;
+      try { answer = await response.json(); } catch { /* the status alone still types the answer */ }
+      if (!response.ok) {
+        const code = readProblem(answer, response.status).code;
+        const typed = /^[A-Z][A-Z0-9_]{2,63}$/.test(code) && code !== `HTTP_${response.status}` ? code : null;
+        if (response.status === 409) return { kind: "conflict", code: typed };
+        if (response.status === 503) return { kind: "unavailable", reason: "The Portal could not store the acknowledgement. Nothing changed." };
+        return { kind: "refused", status: response.status, code: typed };
+      }
+      const read = readVisitDigest(answer);
+      if (read === null || read.kind !== "digest") return { kind: "unavailable", reason: "The acknowledgement answer could not be read, so it is not used." };
+      if (!visitDigestAnswers(read.digest, workspaceId)) return { kind: "unavailable", reason: "The acknowledgement answered another workspace than the one asked, so it is not used." };
+      return { kind: "ok", digest: read.digest };
     },
 
     async getSelfContext() {

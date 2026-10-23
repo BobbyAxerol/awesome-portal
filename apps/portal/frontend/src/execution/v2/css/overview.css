@@ -390,3 +390,12 @@ a.exec-ov-what-title {
 .exec-ov-kpis .exec-blk-kpi-value > .exec-ov-num { font: var(--exec-font-kpi); font-variant-numeric: tabular-nums; }
 /* WP-F1 (QA1 P3-07): an id reads as published in the contributors (no capitals), like the concentration legend beside it */
 .exec-ov-contrib tbody th { text-transform: none; letter-spacing: normal; }
+
+/* Visit digest (Codex package 3): bounded observations since the last "Mark as seen". */
+.exec-ov-vd { display: flex; flex-direction: column; gap: var(--space-3); }
+.exec-ov-vd-line { margin: 0; }
+.exec-ov-vd-items { display: flex; flex-direction: column; gap: var(--space-3); margin: 0; padding: 0; list-style: none; }
+.exec-ov-vd-item { display: flex; flex-direction: column; gap: var(--space-1); padding-bottom: var(--space-3); border-bottom: 1px solid var(--line-soft); }
+.exec-ov-vd-item:last-child { border-bottom: 0; }
+.exec-ov-vd-head { display: flex; align-items: center; gap: var(--space-2); min-width: 0; }
+.exec-ov-vd-actions { display: flex; align-items: center; gap: var(--space-3); margin: 0; flex-wrap: wrap; }

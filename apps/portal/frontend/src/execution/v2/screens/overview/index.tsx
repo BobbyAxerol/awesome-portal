@@ -65,6 +65,8 @@ import type { ManagerDatasetQuery } from "../../../api/managerDatasetQuery";
 import { useManagerDataset } from "../manager/useManagerDataset";
 import { PartitionFigures, figureSource, publishes, servesDataset } from "../portfolios/PartitionFigures";
 import { useOverviewReads } from "./useOverviewReads";
+import { useVisitDigest } from "./useVisitDigest";
+import { VisitDigestPanel } from "./VisitDigestPanel";
 import { ContributorsBody } from "./Contributors";
 import { CONTRIBUTORS_GROUP_FIELD, CONTRIBUTORS_PORTFOLIO_FIELD, alphaGroupOffered, contributorsView, type ContributorsField } from "./contributorsModel";
 import { BudgetBar } from "../portfolios/CapitalBlocks";
@@ -274,6 +276,8 @@ export default function OverviewScreen({ api, workspaceId, sseFactory, accessHre
     ? contributorsView({ served: servesDataset(api), fundRead, fund, grouped: portfolioRead, field: CONTRIBUTORS_PORTFOLIO_FIELD })
     : contributorsView({ served: servesDataset(api), fundRead, fund, grouped: contributorsRead });
   const refresh = () => { reads.reload(); setSeriesNonce((n) => n + 1); };
+  // The visit digest: one read on open and on Refresh (the same nonce), never polled; it is written only by its own button.
+  const visit = useVisitDigest(api, workspaceId, seriesNonce);
 
   const { snapshot } = reads;
   const fleet = reads.fleet.phase === "ready" ? reads.fleet.value : null;
@@ -473,25 +477,31 @@ export default function OverviewScreen({ api, workspaceId, sseFactory, accessHre
 
       <div className="exec-ov-grid3">
         {needsPanel}
-        <SectionPanel title="Since your last visit" aside="No baseline">
-          <p className="exec-ov-na"><Gap ids={FE_DIGEST} /></p>
-          <ul className="exec-ov-digest" aria-label="What the digest will list">
-            {DIGEST_KINDS.map((kind) => (
-              <li key={kind}><Flag kind="neutral" label={kind} size="sm" /><span className="exec-ov-digest-line" /></li>
-            ))}
-          </ul>
-          <p className="exec-ov-note" data-digest-absence="NO_COMPARISON_BASELINE">
-            No comparison baseline is published yet.
-            <GapWhy
-              name="Why there is no comparison baseline"
-              rows={[
-                gapTitle(FE_DIGEST, null, "NO_COMPARISON_BASELINE"),
-                "It needs a persisted, user-scoped baseline (what this user last saw) and the current source facts to compare it with.",
-                "Nothing is estimated from fixture dates or from this browser's clock.",
-              ]}
-            />
-          </p>
-        </SectionPanel>
+        {visit.ui.phase === "ready" ? (
+          <SectionPanel title="Since your last visit" aside={visit.ui.digest.state === "NO_BASELINE" ? "First visit" : visit.ui.digest.state === "EMPTY" ? "Nothing changed" : `${visit.ui.digest.unseenCount} to look at`}>
+            <VisitDigestPanel ui={visit.ui} onMark={visit.markSeen} to={serverTo} />
+          </SectionPanel>
+        ) : (
+          <SectionPanel title="Since your last visit" aside="No baseline">
+            <p className="exec-ov-na"><Gap ids={FE_DIGEST} /></p>
+            <ul className="exec-ov-digest" aria-label="What the digest will list">
+              {DIGEST_KINDS.map((kind) => (
+                <li key={kind}><Flag kind="neutral" label={kind} size="sm" /><span className="exec-ov-digest-line" /></li>
+              ))}
+            </ul>
+            <p className="exec-ov-note" data-digest-absence="NO_COMPARISON_BASELINE">
+              No comparison baseline is published yet.
+              <GapWhy
+                name="Why there is no comparison baseline"
+                rows={[
+                  gapTitle(FE_DIGEST, null, "NO_COMPARISON_BASELINE"),
+                  "It needs a persisted, user-scoped baseline (what this user last saw) and the current source facts to compare it with.",
+                  "Nothing is estimated from fixture dates or from this browser's clock.",
+                ]}
+              />
+            </p>
+          </SectionPanel>
+        )}
         <SectionPanel
           title="Contributors"
           lead={portfolioOffered ? (

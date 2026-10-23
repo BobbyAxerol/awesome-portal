@@ -855,6 +855,12 @@ export function createFixtureApi(options: FixtureApiOptions = {}): ExecutionApi 
     async getSelfContext() {
       return unavailable("The self context is not served by the fixture port.");
     },
+    async getVisitDigest() {
+      return unavailable("The visit digest is not served by the fixture port.");
+    },
+    async markVisitDigestSeen() {
+      return { kind: "unavailable" as const, reason: "The visit digest is not served by the fixture port, so nothing was sent." };
+    },
     // A password never goes to a fixture: the lab port answers without reading the input.
     async postSessionStepUp() {
       return { kind: "unavailable" as const, reason: "The session step-up is not served by the fixture port." };
