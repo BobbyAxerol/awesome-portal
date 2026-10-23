@@ -168,7 +168,7 @@ export default function AccessSelfView({ manage, sessionWorkspaceId = null, now,
     {
       key: "status",
       label: "Status",
-      render: (r) => r.absent
+      render: (r) => r.absent || r.closed
         ? <Flag kind="stale" size="sm" label="Not available yet" />
         : r.allowed
           ? (
@@ -378,9 +378,15 @@ export default function AccessSelfView({ manage, sessionWorkspaceId = null, now,
               rows={grantView.rows}
               rowKey={(g) => g.grantId}
               label="Granted to you"
-              empty={effective.availability === "POLICY_PENDING"
-                ? "No grants are listed while the access policy is pending."
-                : "No grants are published for you in this workspace."}
+              empty={(
+                <>
+                  <span>{effective.availability === "POLICY_PENDING"
+                    ? "No grants are listed while the access policy is pending."
+                    : "No grants are published for you in this workspace."}</span>
+                  {/* An owner's authority is the anchor, not a grant (the V1 matrix says the same): one sentence, so an empty table does not read as no access. */}
+                  {session?.isOwner === true ? <span data-testid="acc-owner-anchor"> You hold every capability through the owner anchor, not through a grant.</span> : null}
+                </>
+              )}
             />
             {grantView.label !== null ? (
               <p className="exec-acc-foot" role="status" data-testid="exec-acc-grants-cap">

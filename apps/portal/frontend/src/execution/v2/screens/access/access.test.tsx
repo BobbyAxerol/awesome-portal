@@ -342,7 +342,8 @@ describe("what you can see and do come from capabilities alone", () => {
     signIn({ capabilities: V2_ROLE_PRESETS[preset] });
     mount();
     const doTable = await screen.findByRole("table", { name: "What you can do" });
-    for (const label of allowed) expect(statusOf(doTable, label), label).toContain("Allowed");
+    // The Live gate is held by the capability but closed on this build: "Not available yet" (QA2 R3-15), never "Allowed" beside the closed sentence.
+    for (const label of allowed) expect(statusOf(doTable, label), label).toContain(label === "Decide at Live gate" ? "Not available yet" : "Allowed");
     for (const label of blocked) expect(statusOf(doTable, label), label).toContain("Not allowed");
   });
 

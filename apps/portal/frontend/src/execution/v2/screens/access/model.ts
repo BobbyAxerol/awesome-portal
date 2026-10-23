@@ -106,6 +106,11 @@ export interface CapabilityRow {
   stepUpAbsent?: boolean;
   /** One more published sentence beside the reason (the Live gate: the build does not record Live decisions). */
   note?: string;
+  /**
+   * The capability allows it, but the build does not offer it (Live decisions): the status reads "Not available yet", never "Allowed" beside a sentence
+   * that says it is closed. `allowed` stays the capability fact; the reason column keeps the capability and adds the closed sentence.
+   */
+  closed?: true;
 }
 
 /** The words the Live gate row adds: the cockpit's own sentence (Rail, `DECISIONS.live`), so the two screens say one thing. */
@@ -219,7 +224,7 @@ export function doRows(
     const base = row(`decide:${gate.id}`, `Decide at ${gate.label.replace(" gate", "")} gate`, capabilities, { allOf: [gate.decide] }, "No capability needed");
     // R2 decisions ask for a step-up in the design; no read states it for a gate decision (`stepUpRequired` is null), so it is typed.
     if (gate.id === "r2" && base.allowed) return { ...base, stepUpAbsent: true };
-    if (gate.id === "live" && base.allowed) return { ...base, note: LIVE_CLOSED_NOTE };
+    if (gate.id === "live" && base.allowed) return { ...base, note: LIVE_CLOSED_NOTE, closed: true };
     return base;
   });
   return [

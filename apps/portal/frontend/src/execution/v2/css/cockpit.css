@@ -829,6 +829,14 @@
   }
 }
 
+/* The primary decision stays blue while it is off (dimmed), as the design draws it; its reason is the line beside the buttons (QA2 R3-12). */
+.exec-ck-rail .exec-dock-btn[data-variant="primary"]:disabled {
+  color: var(--on-accent);
+  background: var(--accent-strong);
+  border-color: var(--accent-strong);
+  opacity: 0.55;
+}
+
 /* Verdict badges and their cells keep each word whole (QA1 I-18): the flag is one line, the column is as wide as the flag. */
 .exec-ck-table td .exec-flag,
 .exec-ck-kv td .exec-flag {

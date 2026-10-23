@@ -225,7 +225,8 @@
   display: grid;
   grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
   gap: var(--space-4);
-  align-items: start;
+  /* Stretch: the two panels are one pair of equal height, not a short table beside a long one (QA2 R3-17). */
+  align-items: stretch;
 }
 @media (max-width: 1100px) {
   .exec-acc-two {

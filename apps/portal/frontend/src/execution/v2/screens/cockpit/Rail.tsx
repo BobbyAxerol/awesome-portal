@@ -273,6 +273,8 @@ export function Rail({ api, target, evidence, principal, workspaceId, stepUp, ex
           {spec.note ? <p className="exec-ck-note">{spec.note}</p> : null}
 
           <div className="exec-ck-actions">
+            {/* The one reason every decision control is off, said beside them (the buttons keep it as their description too). */}
+            <p className="exec-ck-note" data-testid="ck-preview-note">{PREVIEW_REASON}</p>
             <DockAction label={spec.primary} variant="primary" reason={PREVIEW_REASON} quietReason keyHint="A" />
             {spec.others.length > 0 ? (
               <>

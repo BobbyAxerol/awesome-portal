@@ -934,7 +934,7 @@ function verdictOf(data: EvidenceData): Verdict {
       return { tone: d.gateMet ? "ok" : "warn", headline: d.gateMet ? "Gate met" : "Gate not met", facts: [d.gateSummary ?? "Gate summary not published", `Promotes to ${d.promoteTo}`] };
     }
     case "r2":
-      return { tone: "mute", headline: `R1 ${data.detail.r1State.toLowerCase().replace(/_/g, " ")}`, facts: data.detail.grantName ? [`Grant ${codeName(data.detail.grantName).name}`] : [] };
+      return { tone: "mute", headline: `R2 review · R1 ${data.detail.r1State.toLowerCase().replace(/_/g, " ")}`, facts: data.detail.grantName ? [`Grant ${codeName(data.detail.grantName).name}`] : [] };
     case "live":
       return { tone: "mute", headline: "Evidence ready · Live decisions are closed", facts: data.payload.readAt ? [`Read ${instantText(data.payload.readAt) ?? data.payload.readAt}`] : [] };
     case "r2v2": {

@@ -137,7 +137,9 @@ describe("step-up chips and the Live note", () => {
     mount();
     await granted();
     const row = doRow("Decide at Live gate");
-    expect(row.textContent).toContain("Allowed");
+    // QA2 R3-15: the capability allows it but the build closes Live decisions, so the status never reads Allowed beside the closed sentence.
+    expect(row.textContent).toContain("Not available yet");
+    expect(row.textContent).not.toContain("Allowed");
     expect(within(row).getByTestId("acc-row-note").textContent).toBe(LIVE_CLOSED_NOTE);
   });
 
@@ -223,6 +225,19 @@ describe("Manage grants head", () => {
     const row = doRow("Manage grants");
     expect(row.textContent).toContain("administration.profile_access.manage");
     expect(row.querySelectorAll("wbr").length).toBeGreaterThan(0);
+  });
+
+  it("QA2 R3-14: an owner with no grants listed reads one sentence about the owner anchor; a non-owner does not", async () => {
+    signIn({ capabilities: OWNER_CAPS, owner: true });
+    mount({}, `${ACCESS_PATH}?workspace_id=${ACCESS_DOUBLE_WORKSPACES.pending}`);
+    await granted();
+    expect(screen.getByText("No grants are listed while the access policy is pending.")).toBeTruthy();
+    expect(screen.getByTestId("acc-owner-anchor").textContent).toContain("owner anchor, not through a grant");
+    cleanup();
+    signIn({ capabilities: OWNER_CAPS, owner: false });
+    mount({}, `${ACCESS_PATH}?workspace_id=${ACCESS_DOUBLE_WORKSPACES.pending}`);
+    await granted();
+    expect(screen.queryByTestId("acc-owner-anchor")).toBeNull();
   });
 
   it("is not drawn on the self tab", async () => {

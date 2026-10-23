@@ -577,6 +577,21 @@ describe("QA1 I-19 / I-23: the detail is reachable from the queue", () => {
     expect(scrolled.some((c) => c.includes("exec-ck-q"))).toBe(true);
   });
 
+  it("QA2 R3-25: with nothing selected there is no Go to the decision control, only the way back to the queue", async () => {
+    // Narrow: the stacked query matches and the wide (auto-select) query does not, so nothing is chosen on load.
+    (window as unknown as { matchMedia: (q: string) => MediaQueryList }).matchMedia = (q: string) =>
+      ({ matches: q.includes("max-width"), media: q, addEventListener: () => undefined, removeEventListener: () => undefined }) as unknown as MediaQueryList;
+    await mount(standard());
+    expect(within(evidence()).getByRole("button", { name: "Back to the queue" })).toBeTruthy();
+    expect(within(evidence()).queryByRole("button", { name: "Go to the decision" })).toBeNull();
+  });
+
+  it("QA2 R3-12: the reason the decision controls are off is printed beside them, and the R2 heading names the review it heads", async () => {
+    await mount(standard(), "/execution/approvals?sel=apr_b");
+    expect(within(rail()).getByTestId("ck-preview-note").textContent).toBe("Preview · not recorded");
+    expect(within(evidence()).getByRole("heading", { level: 3, name: /^R2 review · R1 / })).toBeTruthy();
+  });
+
   it("and a Go to the decision control that scrolls the decision rail into view", async () => {
     stacked(true);
     await mount(standard(), "/execution/approvals?sel=apr_a");
