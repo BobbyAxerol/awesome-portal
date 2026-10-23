@@ -3,6 +3,7 @@
  * WP-F3 QA1 fix round (R5-02, R5-03, R5-04, R5-07): the lit stage bodies come from ONE lifecycle record per deployment and ONE book per
  * deployment, and every instant in them is an offset from one `now` constant. Asserted on the bodies the fixture server answers.
  */
+import "./useMissingScenario";
 import type { AddressInfo } from "node:net";
 
 import { afterAll, beforeAll, describe, expect, it } from "vitest";

@@ -14,6 +14,7 @@ import { answerManagerFleet, answerManagerSeries } from "../frontend/e2e/bffDoub
 import { answerPortfolios } from "../frontend/e2e/bffDoublePortfolios";
 import type { PositiveAccountBook, PositiveDeploymentFact, PositivePortfolioBook, PositiveRecall } from "../frontend/e2e/bffPositiveMode";
 import { addDecimal, fixtureNowMs, scaled, type AlphaSpec, type DeploymentSpec } from "../frontend/e2e/bffScale";
+import { lifecycleOf, NATIVE_ALPHAS, stageDays } from "../frontend/e2e/bffWorld";
 import { legacy, traits } from "./scenario";
 
 // Mutable copies of published JSON templates, confined to this server-only fixture module.
@@ -1178,46 +1179,16 @@ export function answerReviewManager(method: string, path: string, search: URLSea
 // parameter), datasetAnswer (the rowsFor call and the 404 test), answerReviewManager (one wrapper around datasetAnswer).
 type WpcSurface = string;
 let wpcTemplate: Draft | null = null;
-const WPC_CORE: [string, string] = ["pf_TEST_ONLY_core", "Core"];
-const WPC_SAT: [string, string] = ["pf_TEST_ONLY_satellite", "Satellite"];
-const WPC_CAN: [string, string] = ["pf_TEST_ONLY_canary", "Canary"];
 /** The portfolio ids the Portfolios list publishes for the native (TEST_ONLY) universe; Pilot (empty) has no members and keeps no series. */
 const WPC_PORTFOLIO_IDS = ["pf_TEST_ONLY_core", "pf_TEST_ONLY_satellite", "pf_TEST_ONLY_canary", "pf_TEST_ONLY_yen", "pf_TEST_ONLY_empty"] as const;
 /** The native alphas of the e2e suite (the ids the doubles and the audit open), booked into the TEST_ONLY portfolios. dep_*_01 are the ids the alpha resource double names. */
 // The fixture makes the FIRST row of an environment a true zero (rows.length % 11), so the halted and grid alphas come first: the default audit subjects keep their figures.
 // ===== WP-P begin (linked sleeves: a native deployment is booked on the account its environment and portfolio name)
 /** Live deployments sit on the sleeve of their portfolio (the three sleeves of the shared binding bnc_main@BINANCE); Paper on the paper simulator; Sandbox on the testnet account. */
-const WP_SLEEVE_OF_PORTFOLIO: Readonly<Record<string, string>> = { pf_TEST_ONLY_core: "acc_bnc_core", pf_TEST_ONLY_satellite: "acc_bnc_sat", pf_TEST_ONLY_canary: "acc_bnc_can" };
 const WP_SLEEVE_BINDING = "bnc_main@BINANCE";
 const WP_BINDING_OF_ACCOUNT: Readonly<Record<string, string>> = { acc_bnc_core: WP_SLEEVE_BINDING, acc_bnc_sat: WP_SLEEVE_BINDING, acc_bnc_can: WP_SLEEVE_BINDING, acc_pap_sim: "pap_sim@BINANCE", acc_tn_bnc: "tn_bnc@BINANCE" };
-const wpcDeployment = (...args: Parameters<typeof suiteDeployment>): DeploymentSpec => {
-  const deployment = suiteDeployment(...args);
-  const accountId = deployment.environment === "paper" ? "acc_pap_sim" : deployment.environment === "sandbox" ? "acc_tn_bnc" : WP_SLEEVE_OF_PORTFOLIO[deployment.portfolioId] ?? deployment.accountId;
-  return { ...deployment, accountId };
-};
-// ===== WP-P end
-const WPC_ALPHAS: AlphaSpec[] = [
-  suiteAlpha("alpha_c", "Momentum C", "2.0", "Minh-003", "ATTENTION", [wpcDeployment("dep_c1", "alpha_c", "CANARY", "live", WPC_SAT, "15000", "-125.4", "-18.2", "HALTED")]),
-  suiteAlpha("alpha_d", "Grid D", "0.9", "Bobby-001", "READY", [
-    wpcDeployment("dep_d1", "alpha_d", "SANDBOX", "sandbox", WPC_CAN, "8000", "61.2", "3"),
-    wpcDeployment("dep_d2", "alpha_d", "PAPER", "paper", WPC_SAT, "10000", "-30.75", "8.4"),
-  ]),
-  suiteAlpha("alpha_a", "Carry A", "1.0", "Bobby-001", "READY", [
-    wpcDeployment("dep_live_01", "alpha_a", "LIVE", "live", WPC_CORE, "40000.00", "980.40", "140.40"),
-    wpcDeployment("dep_paper_01", "alpha_a", "PAPER", "paper", WPC_CORE, "20000.00", "-84.20", "0"),
-    wpcDeployment("dep_sandbox_01", "alpha_a", "SANDBOX", "sandbox", WPC_CORE, "10000.00", "-41.6", "12.3", "HALTED"),
-  ]),
-  suiteAlpha("alpha_btc_trend", "BTC Trend", "3.0", "Lan-002", "READY", [
-    wpcDeployment("dep_btc_live", "alpha_btc_trend", "LIVE", "live", WPC_CORE, "80000", "1120.8", "55.4"),
-    wpcDeployment("dep_btc_paper", "alpha_btc_trend", "PAPER", "paper", WPC_CORE, "50000.5", "-125.25", "40.1"),
-    wpcDeployment("dep_btc_sandbox", "alpha_btc_trend", "SANDBOX", "sandbox", WPC_CAN, "12000", "61.2", "3"),
-  ]),
-  suiteAlpha("alpha_b", "Basis B", "1.4", "Lan-002", "READY", [
-    wpcDeployment("dep_b1", "alpha_b", "LIVE", "live", WPC_CORE, "120000", "2150.75", "310.2"),
-    wpcDeployment("dep_b2", "alpha_b", "LIVE", "live", WPC_SAT, "60000", "-98.4", "21.05"),
-    wpcDeployment("dep_b3", "alpha_b", "CANARY", "live", WPC_CORE, "30000", "410.1", "-5.5"),
-  ]),
-];
+/** The native books are the world's (e2e/bffWorld.ts): one source for the deployments, their accounts, their dates and their prices. */
+const WPC_ALPHAS: AlphaSpec[] = NATIVE_ALPHAS;
 const wpcNativeAlpha = (id: string | undefined): boolean => id !== undefined && WPC_ALPHAS.some((alpha) => alpha.id === id);
 const wpcNativePortfolio = (id: string | undefined): boolean => id !== undefined && (WPC_PORTFOLIO_IDS as readonly string[]).includes(id);
 /** The native ids answer from the native books, in whatever environment is asked (an empty environment is a 200 with no rows, never a 404). */
@@ -1293,16 +1264,9 @@ function wpcLifecycleKeys(alphaId: string, template: Draft): Record<string, Draf
   const now = wpcAnchorMs();
   const seed = seedOf(alphaId, "wpc-life");
   const actor = (n: number): string => WPC_ACTORS[(seed + n) % WPC_ACTORS.length]!;
-  const liveDays = 4 + (seed % 17);
-  const canaryDays = 3 + (seed >> 3) % 5;
-  const sandboxDays = 14 + (seed >> 5) % 11;
-  const paperDays = 25 + (seed >> 7) % 20;
-  const liveFrom = now - liveDays * DAY_MS;
-  const canaryFrom = liveFrom - canaryDays * DAY_MS;
-  const sandboxFrom = canaryFrom - sandboxDays * DAY_MS;
-  const paperFrom = sandboxFrom - paperDays * DAY_MS;
-  const r2 = paperFrom - DAY_MS;
-  const r1 = r2 - (8 + (seed >> 9) % 8) * DAY_MS;
+  const L = lifecycleOf(alphaId); // WORLD: one stage history per alpha (Fleet days in stage, the stage screens' start dates and this spine read it)
+  const { liveDays, canaryDays, sandboxDays, paperDays } = L;
+  const liveFrom = L.liveFromMs, canaryFrom = L.canaryFromMs, sandboxFrom = L.sandboxFromMs, paperFrom = L.paperFromMs, r2 = L.r2Ms, r1 = L.r1Ms;
   const out: Record<string, Draft> = {};
   const put = (key: string, value: string, unit: string, text: string | null = null): void => {
     const built = plainMetric(template, value, unit);
@@ -1960,8 +1924,11 @@ function wpkStageEntry(body: Draft): void {
     if (row.current_stage === null || row.current_stage === undefined) { row.stage_lifecycle_reasons = { ...reasons, entered_at_ms: "STAGE_ENTRY_TIME_NOT_PUBLISHED", days_in_stage: "STAGE_ENTRY_TIME_NOT_PUBLISHED" }; continue; }
     const seed = seedOf(row.row_key, "wpk-stage-entry");
     if (legacy() && seed % 9 === 0) { row.entered_at_ms = null; row.days_in_stage = null; row.stage_lifecycle_reasons = { ...reasons, entered_at_ms: "STAGE_ENTRY_TIME_NOT_PUBLISHED", days_in_stage: "STAGE_ENTRY_TIME_NOT_PUBLISHED" }; continue; }
-    const days = 1 + (seed % 45);
-    row.entered_at_ms = body.as_of_ms - days * day - ((seed >>> 8) % day);
+    // WORLD: the days in the current stage are the alpha's own stage history (the spine of Alpha 360 and the stage screens read the same record)
+    const stageKey = String(row.current_stage).toLowerCase();
+    const known = ["paper", "sandbox", "canary", "live"].includes(stageKey) && !legacy();
+    const days = known ? stageDays(String(row.alpha_id), stageKey as "live") : 1 + (seed % 45);
+    row.entered_at_ms = body.as_of_ms - days * day - (known ? 0 : (seed >>> 8) % day);
     row.days_in_stage = days;
     row.stage_lifecycle_reasons = { ...reasons, entered_at_ms: null, days_in_stage: null };
   }

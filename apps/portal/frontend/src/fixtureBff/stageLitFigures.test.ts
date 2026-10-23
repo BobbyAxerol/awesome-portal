@@ -4,6 +4,7 @@
  * difference, a used ratio, the trial's review date) is asserted here in integer arithmetic on the body the fixture server answers, so a
  * simulated value can never contradict another simulated value. The broker side of a MISMATCH is asserted absent from the body itself.
  */
+import "./useMissingScenario";
 import type { AddressInfo } from "node:net";
 
 import { afterAll, beforeAll, describe, expect, it } from "vitest";

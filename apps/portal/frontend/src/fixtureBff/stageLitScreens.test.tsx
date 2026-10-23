@@ -4,6 +4,7 @@
  * the audit could not reach: the design's chips, KPIs, envelope, rollback readiness, the Internal / Broker / Difference columns, the
  * spine ticks, and the states a deployment id reaches (stale, breach, halted, gap, MISMATCH, dark).
  */
+import "./useMissingScenario";
 import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import type { AddressInfo } from "node:net";
 import { MemoryRouter } from "react-router-dom";
