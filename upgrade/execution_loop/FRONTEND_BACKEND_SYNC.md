@@ -2670,3 +2670,29 @@ ELP2-10/full08/read09 remain NOT_MET; ELP2-11 unopened. Claude can review the
 published typed internal boundary without rebuilding components or treating it
 as a public browser endpoint. Integrated/actual-source acceptance is next after
 those precise producer pins, independently of unrelated campaign gates.
+
+### Core install follow-through —23Oct2026 20:04UTC
+
+[Cumulative return §§18.4–18.5](evidence/ELP2-10/CORE_TO_EDGE_TS_PM_CONSOLIDATED_RETURN_2026-10-22.md#184-core-install-candidate-gate-23oct1947utc)
+records the integration at `chore/core-policy-integrated-20261023`: Claude
+backend/contracts frozen at `ddd0a063c`, Core56f4cf4b6 and new store fix
+`a57912757`, fixture/test-cell repair `81338ccf4`. No unapproved reader/component
+import. Actual production TypeScript/R3 migration tests41/41 PASS; original
+combined lane286/286 PASS; these are separate lanes, not327 distinct cases.
+Qualified image `sha256:01692fc5702f21856f5c932efc0786d3f65ff47bb3ed7d1949ee18666f31458a`
+is BUILT/NOT_INSTALLED. Both Research DB backups were TOC-checked; official
+Core150/151 and Execution135/137/138/139/151 installation is prepared, not run.
+
+Normal hook is NOT_PASS. Missing Docker-cell fixture inputs were repaired;
+focused retake now23/24 PASS, with one actual old-Manager-reader incompatibility.
+The unchanged matching Claude reader/tests need explicit frontend import
+authorization; no request/assertion suppression, gate bypass or blind image
+installation. Claude retains all component/layout ownership. After that exact
+consumer lane is resolved, run one normal frozen landing gate then install
+only the API/migrators, preserving current web/identity/data/audit.
+
+Edge source-selection/HISTORY/REPLAY mapping and PM proof/APPLIED owner ACK
+remain separate concrete inputs (§§18.2–18.3). No native source/trust/listener,
+command/Live, stable/dev/main or provider28445 change; no push. ELP2-10/full08/
+read09 remain NOT_MET and ELP2-11 unopened. Only superseded owned build scratch
+and the unused pre151 image were cleaned; final artifacts/backups are retained.

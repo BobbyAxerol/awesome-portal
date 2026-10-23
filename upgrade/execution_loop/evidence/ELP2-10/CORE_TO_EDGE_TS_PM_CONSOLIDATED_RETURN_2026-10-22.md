@@ -1477,3 +1477,153 @@ HISTORY/REPLAY purpose mapping remains independent; CURRENT does not grant it.
 Core continues listener/identity/build work without waiting for this source;
 no placeholder provider, default503 bypass, retired original rerun or falsely
 labelled connected PASS. Full08/read09 and ELP2-10 remain NOT_MET.
+
+### 18.4 Core install candidate gate —23Oct19:47UTC
+
+Core source `56f4cf4b6` adds the real Auth/ExecutionReadScopes composition,
+AppModule lifecycle and opt-in private current-view runtime. Absolute TLS
+pre-header deadlines and shutdown/in-flight quota are covered by real sockets.
+The actual disposable PostgreSQL identity suite resolves/rechecks the real
+session/user/workspace rows; it does not substitute a permission provider.
+
+Frozen integration starts at `0d74d2dce72b9b71e2a9fc92492ed6c1f1dcdac5`:
+Claude backend/contracts from `ddd0a063c` plus Core wire/composition. The newer
+Claude frontend tree and both canonical dirty documents are preserved, not
+committed by Core. Unchanged fixture BFF/E2E helpers from the same Claude source
+are included to keep linked contract fixtures coherent; no component/design edit.
+
+Installation preflight caught a real isolated-DB upgrade defect: migration151
+added `execution_binding_projection.list_figures` only to the Core migration
+chain, but Accounts reads that table in `EXECUTION_DATA_POOL`. The official
+Execution-store migrator now applies the existing151 SQL by its immutable
+SHA256 `15a7f258e08195256c1aa52e6b5ba140b0b1961f1472012a969d8762a8392536`.
+Frozen v131/old forward hashes are unchanged. Migration150 visit baselines stays
+Core-only because its user/workspace/member foreign keys must not cross stores.
+The new actual-PG regression upgrades a pre151 store twice, preserves retained
+rows/old ledger hashes and checks repository reads and wrong-workspace refusal.
+
+- Full production TypeScript build and first combined19-file/286-test cell:
+  PASS; DB dump/restore plus all four scoped-access row digests PASS. Its first
+  capture destination was refused for a group-writable parent; this is recorded
+  as a packaging failure, not hidden as a successful overall invocation.
+- Final151 focused R3 cell:3 files/41 tests PASS, full production TypeScript
+  build PASS, dump/restore and scoped-access row-digest gate PASS. Qualified
+  source tree `f3d233e71f714e70297503e442b58e18db393993`,663 compiled files;
+  build receipt SHA256
+  `b48ebdfada5e6c9c3d3b0fbc382de610f293736f17668d8aa9d9f52a84c08651`.
+  Source-input digest
+  `4433841854013cf104c4b2267d7c7cbe57686d1c4efe2841199883058d10b541`.
+  Operator log: `/home/bobby/.local/state/portal-core-current-view-20261023/core-forward151-qualified.log`.
+- Real host TLS/lifecycle focused lane:39/39 PASS. Fixture HTTP contracts7/7
+  PASS with localhost listening permitted. One linked Contributors contract
+  assertion remains FAIL against the older canonical FE reader; the unchanged
+  newer Claude reader is required. No reader import without the requested
+  approval, and no claim that all consumer/contract tests passed.
+
+Normal landing hook and Research image/migration installation are the next
+actions; none is inferred from the build receipt. Backup dumps of both Research
+databases were made and TOC-checked in an owner-only directory. The initial
+pre151 image0964b01e is superseded and must not be installed. The existing web
+image is preserved. No native runtime/config/trust is installed by this gate;
+without real qualified Edge source/trust inputs the new listener remains OFF,
+not a fake connected endpoint. R2/full08/read09 and ELP2-10 remain NOT_MET.
+
+Fresh owner checkpoint19:46UTC: PM `ddb939f54ee655b380c51c31305123637b09442d`
+has newer FIX01 cold-refresh work, but no proof/APPLIED ownership/namespace ACK;
+Edge `8727e5303b1815d54bc2bdcb927a55457ff4da5b` has no new source-selection or
+HISTORY/REPLAY mapping return. Owners/actions are the concrete independent
+inputs in18.2–18.3, not a new generic request for Bobby's permission.
+
+Landing-hook preflight found a missing integration dependency in the selective
+source import: P01's live-route census did not yet contain the two visit-digest
+routes. Its official `--write-live-routes` generator now records322 routes,
+zero collisions and the unchanged protected kernel. The matching two capability
+entries and Portal-owned visit-baseline persistence entry are copied unchanged
+from frozen Claude source and reviewed against the controller/store/migration.
+This does not change compiled backend inputs, grant authority or route behavior.
+The first normal-hook invocation therefore exited1, not PASS; focused census/
+ownership checks precede resuming the one landing milestone.
+
+### 18.5 Frozen image, focused gate repair and explicit landing stop —23Oct20:04UTC
+
+The qualified Research-only image was actually built from source tree
+`f3d233e71f714e70297503e442b58e18db393993`, without recompiling or changing
+the already-qualified artifacts:
+`local/portal-research-core-current-view:20261023-forward151` →
+`sha256:01692fc5702f21856f5c932efc0786d3f65ff47bb3ed7d1949ee18666f31458a`.
+The build log is
+`/home/bobby/.local/state/portal-core-current-view-20261023/qualified-image-final-build.log`.
+This is **BUILT, NOT_INSTALLED**, not a connected-provider receipt. The existing
+Research API image `d13cef069471` and web image `dc0c5387a26f` are unchanged.
+
+The second normal landing hook also exited1:107 contract suites/1863 tests
+passed, while five suites could not import their linked fixture dependencies
+in the isolated test cell. `scripts/contracts-test.sh` now copies an explicit
+57-file public dependency closure, never an env/credential or whole checkout.
+It also accepts validated exact `test/*.spec.ts` arguments so only the red
+lane needs rerunning; no arguments still runs the complete original gate.
+Shell syntax/diff and11 invalid-argument refusals PASS. The repaired Docker
+cell ran all five affected suites: **23 PASS /1 FAIL**, zero import failures.
+Its real remaining failure is
+`execution-contributors-linked-fixture.spec.ts:34`: the canonical older
+`readManagerDataset` rejects the updated response. Neither this assertion nor
+the reader has been weakened. Log:
+`/home/bobby/.local/state/portal-core-current-view-20261023/contracts-five-focused.log`.
+
+The matching unchanged Claude reader and its tests already exist at
+`ddd0a063c`; importing those frontend paths was refused as outside the current
+backend-only package. Approval has been requested, not silently inferred or
+retried via another tool. No component, layout or visual baseline needs changing.
+Until that import is explicitly authorized and its exact consumer lane passes,
+the integrator must not call the normal gate green, ff-land this candidate or
+install it. The backend migration/composition tests above remain valid; no
+additional full hook is scheduled while the known consumer failure persists.
+
+The safe official installation plan is ready: preserve both checked backups,
+pin the same qualified image for `control-api-migrate`,
+`execution-store-admin` and `control-api`, then run only those services through
+the preview helper. Actual Core DB is pending150/151; actual Execution store
+has frozen131 only, so its pinned additive forwards are135/137/138/139/151.
+No manual SQL, seed/bootstrap, web rebuild, identity reset or down-migration.
+Verify old131 digest, retained rows, identity/access digests and exact compiled
+source inputs before/after. Keep current-view configuration absent (listener
+OFF) until Edge returns real source/trust binding; rollback pins the unchanged
+old API image and retains additive schema, data and audit.
+
+Fresh20:04UTC owner check: Edge8727e530/fa96dc38 and PMddb939f54 are unchanged;
+no source-selection/HISTORY/REPLAY mapping or proof/APPLIED namespace ACK has
+arrived. PM and Edge actions remain18.2–18.3, not permission requests to Bobby.
+Edge's candidate is Git-fast-forwardable but has neither a normal landing gate
+nor a commissioned `main.rs` provider; Core tests do not certify that runtime.
+R2/full08/read09/ELP2-10 remain NOT_MET; ELP2-11 remains unopened.
+
+Intermediate commit policy: campaign§10.10c applies. The isolated-store fix is
+committed as `a57912757` after its actual-PG R3 lane41/41 PASS. The fixture/cell
+repair is an R1 integration commit with the above consumer failure explicitly
+retained, **not** a normal-hook/landing PASS. No full hook is repeated merely
+to record this known failure or append Markdown. Canonical dirty Unified and
+Edge-request files, Claude's branch, and all runtime state remain untouched.
+
+R1 source pins are now `a57912757` (isolated-store151 and receipt) and
+`81338ccf4` (linked fixture inputs, exact focused runner, official route/ownership
+ledgers). Both are committed in `chore/core-policy-integrated-20261023`;
+canonical landing is still withheld by the explicit consumer failure. The image
+input closure remains identical to qualified treef3d233e7: no rebuild is needed
+for documentation, public fixture helpers or the test runner changes alone.
+
+Cleanup recorded23Oct20:04UTC: the unused pre151 image0964b01e had zero container
+references and was removed without force, together with exactly two owned
+superseded17MiB artifact/package directories. Those are reproducible build
+scratch, not source, custody or backups. Final qualified image/artifacts,
+both DB dumps, actual running/rollback images and all volumes remain intact.
+The focused test cell removed its own container/temp workspace. Capacity
+observation:215GiB disk free/66% used,16,176MiB RAM available; not a G2 result.
+
+Edge receipt reuse review received in this round: candidatefa96's63 Rust tests remain the
+23 new plus40 existing scoped tests;31 cross-language vectors are checked within
+those tests, not31 additional tests. The old490-test receipt pinsf10c15f6 and
+has38 changed dependency inputs relative to this candidate, so it must not be
+inherited wholesale. Its PG/bootstrap counts are not a current PG PASS. Edge
+normal landing gate and candidate fmt/strict-Clippy receipts remain required;
+no Git FF or Core build is substituted for those gates or for owner source
+selection. The old source-retired READ/restart/revoke originals stay retired.
