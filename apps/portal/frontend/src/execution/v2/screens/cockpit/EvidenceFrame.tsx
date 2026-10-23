@@ -30,7 +30,10 @@ import type {
   R2ParentV2, RecordedActivityV2, RecordedVerdictsV2, ScalarV2, SectionV2,
 } from "../../readers/governanceParents";
 import { withContext } from "../../urlState";
-import { instantText, KIND_TAG, NOT_PUBLISHED, notPublishedFor, settledPanel, type EvidenceData, type EvidenceKind } from "./laneModel";
+import {
+  instantText, KIND_TAG, lapseView, NOT_PUBLISHED, notPublishedFor, RUNWAY_AXIS_DAYS, RUNWAY_TICKS_DAYS, settledPanel, summarizeEvidence,
+  type EvidenceData, type EvidenceKind,
+} from "./laneModel";
 
 /* ── the read ─────────────────────────────────────────────────────────────── */
 
@@ -210,11 +213,56 @@ function Criteria({ rows }: { rows: readonly CriteriaRow[] }) {
   );
 }
 
+/** The hi-fi's "Prior economic history": the series is not published (FE-029), so the panel says so under its own title. */
 function ChartPanel() {
   return (
-    <Panel title="Evidence chart" right="Excluded from this preview">
-      <div className="exec-ck-pad"><NotPublished text={NOT_PUBLISHED.chart} /></div>
+    <Panel title="Prior economic history" right="Series not published">
+      <div className="exec-ck-pad" data-testid="ck-history"><NotPublished text={NOT_PUBLISHED.chart} /></div>
     </Panel>
+  );
+}
+
+/** The five things the hi-fi lists as still open after an approval. Each is a count the source has to state; none is published, so none is drawn as a number. */
+const STILL_OPEN = ["Open positions", "Working orders", "Reservations", "Unknown outcomes", "Settlement pending"] as const;
+
+function StillOpenPanel() {
+  return (
+    <Panel title="Still open after approval" right="Not published">
+      <Kv rows={STILL_OPEN.map((label) => ({ label, value: <NotPublished text={NOT_PUBLISHED.decisionCall} /> }))} />
+    </Panel>
+  );
+}
+
+/** What changed in the evidence since the last review (concept C4). No source publishes a diff, so the panel is the typed absence. */
+function EvidenceDiffPanel() {
+  return (
+    <Panel title="Evidence diff" right="Since the last review">
+      <div className="exec-ck-pad" data-testid="ck-evidence-diff"><NotPublished text={NOT_PUBLISHED.chart} /></div>
+    </Panel>
+  );
+}
+
+/** Where this evidence came from, in the words the reads publish. Collapsed (hi-fi "Provenance"). */
+function ProvenanceDetails({ data, gate }: { data: EvidenceData; gate: ApprovalGate | null }) {
+  const summary = summarizeEvidence(data);
+  const readTime =
+    data.kind === "r2v2" || data.kind === "exitv2" || data.kind === "livev2"
+      ? formatAsOf(data.parent.header.observedAt)
+      : data.kind === "live" && data.payload.readAt
+        ? instantText(data.payload.readAt) ?? data.payload.readAt
+        : null;
+  return (
+    <details className="exec-ck-panel exec-ck-details" data-testid="ck-provenance">
+      <summary>Provenance</summary>
+      <Kv
+        rows={[
+          { label: "Gate", value: gate === null ? <NotPublished text={NOT_PUBLISHED.decisionCall} /> : gate.replace(/_/g, " ").toLowerCase() },
+          { label: "Policy", value: summary.policyVersion ?? <NotPublished text={NOT_PUBLISHED.policy} /> },
+          { label: "Workspace", value: summary.workspaceId === null ? <NotPublished text={NOT_PUBLISHED.decisionCall} /> : <span className="exec-ck-id">{summary.workspaceId}</span> },
+          { label: "Read", value: readTime ?? <NotPublished text={NOT_PUBLISHED.chart} /> },
+        ]}
+      />
+    </details>
   );
 }
 
@@ -775,6 +823,12 @@ export interface EvidenceHeader {
   title: string | null;
   context: string | null;
   gate: ApprovalGate | null;
+  /** Who asked, as the queue row publishes it; absent or `null` keeps the typed absence. */
+  requestedBy?: string | null;
+  /** The approver count the queue row publishes. */
+  quorum?: { met: number; required: number } | null;
+  /** The review clock in words (`slaView(...).phrase`), from the queue row. */
+  left?: string | null;
 }
 
 type Tone = "ok" | "warn" | "bad" | "mute";
@@ -903,6 +957,7 @@ export function EvidenceFrame({ kind, header, evidence, unknownReason }: Evidenc
         <div className="exec-ck-meta">
           <span className="exec-ck-id">{header.id}</span>
           {header.context ? <span>{header.context}</span> : null}
+          {header.requestedBy ? <span data-testid="ck-requested-by">Requested by {header.requestedBy}</span> : <span data-testid="ck-requested-by">Requested by: <NotPublished text={NOT_PUBLISHED.decisionCall} /></span>}
           <span>Ladder: <NotPublished text={NOT_PUBLISHED.decisionCall} /></span>
           {gate ? <Link className="exec-ck-link" to={withContext(reviewRouteFor({ id: header.id, gate }), params)}>Open full review</Link> : null}
         </div>
@@ -915,7 +970,19 @@ export function EvidenceFrame({ kind, header, evidence, unknownReason }: Evidenc
         <div className="exec-ck-verdict" data-tone={verdict.tone}>
           <h3 className="exec-ck-vh">{verdict.headline}</h3>
           {verdict.facts.length > 0 ? <div className="exec-ck-meta">{verdict.facts.map((fact) => <span key={fact}>{fact}</span>)}</div> : null}
-          {verdict.meter && verdict.meter.length > 0 ? <Meter marks={verdict.meter} /> : null}
+          {/* The hi-fi's one line under the headline: the approvers so far and the time left, each only as published (the checklist count is the headline and the meter's). */}
+          {header.quorum || header.left ? (
+            <div className="exec-ck-meta" data-testid="ck-verdict-line">
+              {header.quorum ? <span>Quorum {header.quorum.met} of {header.quorum.required}</span> : null}
+              {header.left ? <span>{header.left}</span> : null}
+            </div>
+          ) : null}
+          {verdict.meter && verdict.meter.length > 0 ? (
+            <div className="exec-ck-meterline">
+              <span className="exec-ck-meter-count">{verdict.meter.filter((m) => m === "pass").length}/{verdict.meter.length}</span>
+              <Meter marks={verdict.meter} />
+            </div>
+          ) : null}
         </div>
       ) : null}
 
@@ -930,6 +997,12 @@ export function EvidenceFrame({ kind, header, evidence, unknownReason }: Evidenc
       {data?.kind === "r2v2" ? <R2V2Body parent={data.parent} /> : null}
       {data?.kind === "exitv2" ? <ExitV2Body parent={data.parent} /> : null}
       {data?.kind === "livev2" ? <LiveV2Body parent={data.parent} /> : null}
+
+      {/* The structure the hi-fi gives every gate (concept C4): the diff, what stays open after approval (not an R1 matter: R1 closes
+          nothing), and where the evidence came from. Typed absences until a source publishes them (inbox requests, WP-E). */}
+      {data !== null ? <EvidenceDiffPanel /> : null}
+      {data !== null && data.kind !== "r1" ? <StillOpenPanel /> : null}
+      {data !== null ? <ProvenanceDetails data={data} gate={gate} /> : null}
     </div>
   );
 }
@@ -948,7 +1021,79 @@ export function WaiverFlag({ state }: { state: ConditionRow["state"] }) {
   return <Flag kind={spec.kind} label={spec.label} size="sm" />;
 }
 
-export function WaiverEvidence({ row }: { row: ConditionRow }) {
+/** The banner's headline for a waiver, from the server's own state word (`state` is server-computed; nothing here re-derives it). */
+const WAIVER_BANNER: Readonly<Record<ConditionRow["state"], { tone: Tone; headline: string }>> = {
+  EXPIRING: { tone: "warn", headline: "Expiring · decide before it lapses" },
+  LAPSED: { tone: "bad", headline: "Lapsed" },
+  OPEN: { tone: "mute", headline: "Open" },
+  WAIVED: { tone: "mute", headline: "Waived" },
+};
+
+/** Rows drawn on the runway: the register's first page is at most 50, and 12 lines are as many as the pane reads at a glance. */
+export const RUNWAY_ROWS = 12;
+
+/**
+ * "What lapses when": one line per waiver on a shared axis of 0 to 45 days, counted from the register's own read time. A waiver with
+ * a lapse time is a marker on its line; one that already lapsed sits at the start and says how long ago; one with no `due_at` is a
+ * dashed line that says it closes by an event. Nothing here is a forecast: the lengths are the published times and the axis is only scale.
+ */
+function Runway({ register, readAt, selectedId, onSelect }: { register: readonly ConditionRow[]; readAt: string | null; selectedId: string; onSelect?(key: string): void }) {
+  const views = register.map((entry) => ({ entry, clock: lapseView(entry.dueAt, readAt) }));
+  const clocked = views.filter((v) => v.clock.kind !== "none").sort((a, b) => (Date.parse(a.entry.dueAt ?? "") || 0) - (Date.parse(b.entry.dueAt ?? "") || 0));
+  const unclocked = views.filter((v) => v.clock.kind === "none");
+  const ordered = [...clocked, ...unclocked];
+  const shown = ordered.slice(0, RUNWAY_ROWS);
+  // The open waiver is always on its own runway, even when the register has more lines than fit.
+  if (!shown.some((v) => v.entry.conditionId === selectedId)) {
+    const own = ordered.find((v) => v.entry.conditionId === selectedId);
+    if (own) shown[shown.length - 1] = own;
+  }
+  return (
+    <Panel title="Runway · what lapses when" right={`Shared axis 0 to ${RUNWAY_AXIS_DAYS} d`}>
+      {register.length === 0 ? (
+        <div className="exec-ck-pad"><span className="exec-ck-np">The register page holds no waiver to draw.</span></div>
+      ) : (
+        <div className="exec-ck-runway" data-testid="ck-runway">
+          <ol className="exec-ck-runway-list" aria-label="What lapses when">
+            {shown.map(({ entry, clock }) => (
+              <li key={entry.conditionId} data-selected={entry.conditionId === selectedId ? "true" : undefined} data-clock={clock.kind}>
+                <button type="button" className="exec-ck-runway-row" aria-current={entry.conditionId === selectedId ? "true" : undefined} onClick={() => onSelect?.(entry.conditionId)}>
+                  <span className="exec-ck-runway-name">{entry.subjectLabel} · {entry.label}</span>
+                  <span className="exec-ck-runway-track" data-kind={clock.kind} role="img" aria-label={clock.phrase}>
+                    {clock.kind === "ahead" ? (
+                      <>
+                        <i className="exec-ck-runway-fill" style={{ width: `${clock.offsetPct}%` }} />
+                        <b className="exec-ck-runway-mark" data-beyond={clock.beyond ? "true" : undefined} style={{ left: `${clock.offsetPct}%` }} />
+                      </>
+                    ) : clock.kind === "lapsed" ? (
+                      <b className="exec-ck-runway-mark" data-lapsed="true" style={{ left: "0%" }} />
+                    ) : null}
+                  </span>
+                  <span className="exec-ck-runway-when">
+                    {clock.kind === "ahead" ? `${clock.beyond ? "past " : ""}${clock.beyond ? `${RUNWAY_AXIS_DAYS} d` : clock.phrase.replace(/^lapses in /, "")}` : clock.phrase}
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ol>
+          <div className="exec-ck-runway-axisrow" aria-hidden="true">
+            <span />
+            <div className="exec-ck-runway-axis">
+              {RUNWAY_TICKS_DAYS.map((day) => <span key={day} style={{ left: `${(day / RUNWAY_AXIS_DAYS) * 100}%` }}>{day === 0 ? "Lapse" : `${day} d`}</span>)}
+            </div>
+            <span />
+          </div>
+          {ordered.length > shown.length ? <p className="exec-ck-note exec-ck-pad">Showing {shown.length} of {ordered.length} waivers loaded.</p> : null}
+          <p className="exec-ck-note exec-ck-pad">Counted from the register's read time{readAt ? ` (${instantText(readAt) ?? readAt})` : ", which this read does not state"}.</p>
+        </div>
+      )}
+    </Panel>
+  );
+}
+
+export function WaiverEvidence({ row, register = [], readAt = null, onSelect }: { row: ConditionRow; register?: readonly ConditionRow[]; readAt?: string | null; onSelect?(key: string): void }) {
+  const clock = lapseView(row.dueAt, readAt);
+  const banner = WAIVER_BANNER[row.state];
   return (
     <div className="exec-ck-evidence">
       <div className="exec-ck-head">
@@ -962,6 +1107,15 @@ export function WaiverEvidence({ row }: { row: ConditionRow }) {
           {row.blocking ? <Flag kind="incident" label="Blocking" size="sm" /> : null}
         </div>
       </div>
+      <div className="exec-ck-verdict" data-tone={banner.tone} data-testid="ck-waiver-banner">
+        <h3 className="exec-ck-vh">{banner.headline}</h3>
+        <div className="exec-ck-meta">
+          <span>Runway below</span>
+          <span>{clock.kind === "none" ? clock.phrase : clock.phrase[0]!.toUpperCase() + clock.phrase.slice(1)}</span>
+          <span>No approver quorum</span>
+        </div>
+      </div>
+      <Runway register={register.length > 0 ? register : [row]} readAt={readAt} selectedId={row.conditionId} onSelect={onSelect} />
       <Panel title="Condition">
         <Kv
           rows={[
@@ -975,9 +1129,6 @@ export function WaiverEvidence({ row }: { row: ConditionRow }) {
             { label: "Policy", value: row.policyVersion },
           ]}
         />
-      </Panel>
-      <Panel title="Runway" right="Excluded from this preview">
-        <div className="exec-ck-pad"><NotPublished text={NOT_PUBLISHED.chart} /></div>
       </Panel>
     </div>
   );

@@ -229,7 +229,9 @@ describe("R2, V2 body with the sections added by e19ad906", () => {
     // What the body still does not carry stays named with its request.
     // ... on one 'Not available' line, with FE-030 behind its disclosure (no row of "Not published" per fact).
     const line = within(receipt()).getByTestId("not-available-line");
-    expect(line.textContent).toContain("Not available: Ladder, Call, Receipt ref, What changes");
+    expect(line.textContent).toContain("Not available: Ladder, Call, Receipt ref");
+    // "What changes" is a row of the receipt preview (hi-fi), typed, not a fact of that line.
+    expect(within(receipt()).getByRole("rowheader", { name: "What changes" }).nextElementSibling?.textContent).toContain("Not published");
     expect(line.hasAttribute("title")).toBe(false);
     expect(whyText(line)).toContain("Ladder: Not published (FE-030)");
   });

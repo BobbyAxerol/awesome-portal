@@ -202,6 +202,21 @@ export function Rail({ api, target, evidence, principal, workspaceId, stepUp }: 
       ? { outcome: summary.decided.outcome, by: summary.decided.by, at: instantText(summary.decided.at) ?? summary.decided.at, policy }
       : null;
 
+  // The receipt preview's rows (hi-fi `.rc`): the title of the request, the signed-in person, and what an approval would count as.
+  const requestTitle = target.row?.subject ?? target.waiver?.label ?? null;
+  const youText = principal.username ?? principal.userIds[0] ?? "Not named by the session";
+  // "Counts as" is the published count plus this one approval, said conditionally: the server decides whether it is accepted.
+  // Nothing is claimed for a waiver (no quorum), a Live gate (closed), your own request (you cannot decide it) or a count not published.
+  const countsAs: ReactNode = waiver
+    ? "Not counted: a waiver is not an approval"
+    : target.kind === "live"
+      ? "Not counted: Live decisions are closed on this build"
+      : sod.kind === "violation"
+        ? "Not counted: you cannot decide this request"
+        : met !== null && required !== null
+          ? `If approved: ${met + 1} of ${required} approvals`
+          : <Np text={NOT_PUBLISHED.approvers} />;
+
   return (
     <div className="exec-ck-railbody">
       <section className="exec-ck-panel" aria-label="Decision controls">
@@ -249,7 +264,7 @@ export function Rail({ api, target, evidence, principal, workspaceId, stepUp }: 
           {spec.note ? <p className="exec-ck-note">{spec.note}</p> : null}
 
           <div className="exec-ck-actions">
-            <DockAction label={spec.primary} variant="primary" reason={PREVIEW_REASON} quietReason />
+            <DockAction label={spec.primary} variant="primary" reason={PREVIEW_REASON} quietReason keyHint="A" />
             {spec.others.length > 0 ? (
               <>
                 <DockAction label="Other decisions" reason={PREVIEW_REASON} quietReason />
@@ -263,14 +278,18 @@ export function Rail({ api, target, evidence, principal, workspaceId, stepUp }: 
 
       <section className="exec-ck-panel" aria-label="Receipt" data-recorded={decided ? "true" : undefined}>
         <div className="exec-ck-ph">
-          <h3 className="exec-ck-pt">{decided ? "Recorded" : "Receipt"}</h3>
+          <h3 className="exec-ck-pt">{decided ? "Recorded" : "Preview · not recorded"}</h3>
           {decided ? <span className="exec-ck-pr">Read from the decision history</span> : null}
         </div>
         <ReceiptRows
           rows={[
-            { label: "Decision", value: decided ? decided.outcome.replace(/_/g, " ").toLowerCase() : "None recorded" },
+            { label: "Decision", value: decided ? decided.outcome.replace(/_/g, " ").toLowerCase() : "None chosen" },
             ...(decided ? [{ label: "By", value: decided.by }, { label: "At", value: decided.at }] : []),
-            { label: "Request", value: <span className="exec-ck-id">{target.id}</span> },
+            { label: "Request", value: <><span className="exec-ck-id">{target.id}</span>{requestTitle ? ` · ${requestTitle}` : ""}</> },
+            // The signed-in person, as the session names them; their role preset is not published (FE-015), so none is printed.
+            ...(decided ? [] : [{ label: "You", value: youText }]),
+            ...(decided ? [] : [{ label: "Counts as", value: countsAs }]),
+            ...(decided ? [] : [{ label: "What changes", value: <Np text={NOT_PUBLISHED.decisionCall} /> }]),
             ...(v2
               ? [
                   { label: "Requested by", value: <ActorCell actors={summary.actors} pick={(a) => ({ id: a.requesterUserId, isViewer: a.viewerIsRequester })} /> },
@@ -282,7 +301,7 @@ export function Rail({ api, target, evidence, principal, workspaceId, stepUp }: 
         />
         <NotAvailableLine
           className="exec-ck-note exec-ck-pad"
-          facts={["Ladder", "Call", "Receipt ref", "What changes"].map((label) => ({ label, id: "FE-030" as const }))}
+          facts={["Ladder", "Call", "Receipt ref"].map((label) => ({ label, id: "FE-030" as const }))}
         />
       </section>
 

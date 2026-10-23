@@ -310,11 +310,13 @@ export interface DockActionProps {
   quietReason?: boolean;
   /** The name printed before a reason that several actions share ("Disable, Archive"). Default: this action's label. */
   reasonLabel?: string;
+  /** The key that does this action elsewhere on the page (hi-fi: a small "A" chip on Approve). Drawn as generated content, so the button's text and name stay its label; named by `aria-keyshortcuts`. */
+  keyHint?: string;
 }
 
 const NOT_OFFERED = "Not offered in the portal yet.";
 
-export function DockAction({ label, onAction, reason, accessHref, accessLabel = "My access", variant = "default", quietReason = false, reasonLabel }: DockActionProps) {
+export function DockAction({ label, onAction, reason, accessHref, accessLabel = "My access", variant = "default", quietReason = false, reasonLabel, keyHint }: DockActionProps) {
   const reasonId = useId();
   const [params] = useSearchParams();
   const text = reason?.trim() || (onAction ? "" : NOT_OFFERED);
@@ -327,6 +329,10 @@ export function DockAction({ label, onAction, reason, accessHref, accessLabel = 
         data-variant={variant}
         disabled={blocked}
         aria-describedby={blocked ? reasonId : undefined}
+        aria-keyshortcuts={keyHint}
+        // The chip is generated content (`data-key`), so the button's text stays its label; the name is pinned for the same reason.
+        aria-label={keyHint ? label : undefined}
+        data-key={keyHint}
         onClick={blocked ? undefined : onAction}
       >
         {label}

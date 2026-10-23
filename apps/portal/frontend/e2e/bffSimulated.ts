@@ -17,7 +17,7 @@
 import { createHash } from "node:crypto";
 
 import { credentialView, stateView } from "../src/execution/v2/screens/account/model";
-import { scaled } from "./bffScale";
+import { fixtureNowMs, scaled } from "./bffScale";
 
 type Obj = Record<string, unknown>;
 const isObj = (value: unknown): value is Obj => typeof value === "object" && value !== null && !Array.isArray(value);
@@ -259,6 +259,41 @@ export function overlayAdminTasks(body: Obj): Obj {
   return out;
 }
 
+/**
+ * Approvals, "Decided today" (SIMULATED, FIXTURE_LAB; register 2d): two decisions made 25 and 70 minutes before the fixture clock, ahead of the
+ * canonical history row, so the cockpit's disclosure has something to count. Same route, same `governance.approval-history.v1` row shape;
+ * the instants follow the fixture clock (and the preview's time rebase), so they are "today" whenever the page is read at the fixture's time.
+ */
+export const SIMULATED_DECISIONS_TODAY: readonly { id: string; approval: string; gate: string; subject: string; outcome: string; by: string; minutesAgo: number }[] = [
+  { id: "dec_fx_today_1", approval: "AP-198", gate: "R1", subject: "RSI v0.9", outcome: "APPROVED", by: "minh", minutesAgo: 25 },
+  { id: "dec_fx_today_2", approval: "AP-197", gate: "R1", subject: "Carry v3.1", outcome: "CHANGES_REQUESTED", by: "lan", minutesAgo: 70 },
+];
+
+export function overlayApprovalHistory(body: Obj, nowMs: number): Obj {
+  const out = clone(body);
+  const page = out.page;
+  if (!isObj(page) || !Array.isArray(page.rows)) return out;
+  const mine = SIMULATED_DECISIONS_TODAY.map((d) => ({
+    id: d.id,
+    approval_id: d.approval,
+    gate: d.gate,
+    subject_id: `subject_${d.approval.toLowerCase()}`,
+    subject: d.subject,
+    outcome: d.outcome,
+    decided_by: { user_id: `usr_${d.by}`, username: d.by },
+    decided_at: new Date(nowMs - d.minutesAgo * 60_000).toISOString(),
+    policy_version: "approval.v3",
+    evidence_digest: `sha256:${"b".repeat(64)}`,
+    approval_version: 2,
+  }));
+  const have = new Set(page.rows.map((row) => (isObj(row) ? row.id : null)));
+  const fresh = mine.filter((row) => !have.has(row.id));
+  page.rows = [...fresh, ...page.rows];
+  if (typeof page.total_count === "number") page.total_count += fresh.length;
+  if (typeof page.filtered_count === "number") page.filtered_count += fresh.length;
+  return out;
+}
+
 const RUN_RESULTS: Readonly<Record<string, Obj>> = {
   health: { services: [{ name: "projection", state: "OK" }, { name: "query", state: "OK" }, { name: "live updates", state: "STALE" }] },
   inspect: { subject: "alpha_btc_trend", mode: "paper", state: "ACTIVE", positions: 2, working_orders: 1 },
@@ -305,5 +340,6 @@ export function simulate<T extends SimulatedAnswer>(method: string, path: string
   if (path === "/screens/blotter") return { ...answer, body: overlayBlotter(answer.body) };
   if (path === "/broker-bindings") return { ...answer, body: overlayBindingsList(answer.body) };
   if (path === "/commands/tasks") return { ...answer, body: overlayAdminTasks(answer.body) }; // WP-E
+  if (path === "/governance/approvals/history") return { ...answer, body: overlayApprovalHistory(answer.body, fixtureNowMs()) }; // WP-E
   return answer;
 }

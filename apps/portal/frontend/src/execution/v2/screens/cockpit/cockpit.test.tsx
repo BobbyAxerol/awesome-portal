@@ -815,12 +815,18 @@ describe("decision rail", () => {
   it("ladder, call and receipt ref are one 'Not available' line (FE-030 behind its disclosure); the receipt is a preview", async () => {
     await mount(standardPort(), "/execution/approvals?sel=apr_a");
     const receipt = within(rail()).getByRole("region", { name: "Receipt" });
-    for (const label of ["Ladder", "Call", "Receipt ref", "What changes"]) expect(within(receipt).queryByRole("rowheader", { name: label }), label).toBeNull();
+    for (const label of ["Ladder", "Call", "Receipt ref"]) expect(within(receipt).queryByRole("rowheader", { name: label }), label).toBeNull();
     const line = within(receipt).getByTestId("not-available-line");
-    expect(line.textContent).toContain("Not available: Ladder, Call, Receipt ref, What changes");
+    expect(line.textContent).toContain("Not available: Ladder, Call, Receipt ref");
     expect(line.hasAttribute("title")).toBe(false);
     expect(whyText(line)).toContain("Receipt ref: Not published (FE-030)");
-    expect(within(receipt).getByRole("rowheader", { name: "Decision" }).nextElementSibling?.textContent).toBe("None recorded");
+    // The hi-fi's preview rows: nothing chosen, the request and its title, the signed-in person, what an approval would count as, what changes.
+    expect(within(receipt).getByRole("heading", { name: "Preview · not recorded" })).toBeTruthy();
+    expect(within(receipt).getByRole("rowheader", { name: "Decision" }).nextElementSibling?.textContent).toBe("None chosen");
+    expect(within(receipt).getByRole("rowheader", { name: "Request" }).nextElementSibling?.textContent).toBe("apr_a · Alpha One");
+    expect(within(receipt).getByRole("rowheader", { name: "You" }).nextElementSibling?.textContent).toBe("bobby");
+    expect(within(receipt).getByRole("rowheader", { name: "Counts as" }).nextElementSibling?.textContent).toBe("If approved: 1 of 1 approvals"); // the evidence read's own quorum (1) wins over the queue row's (2)
+    expect(within(receipt).getByRole("rowheader", { name: "What changes" }).nextElementSibling?.textContent).toContain("Not published");
     // UXM07-048/6: the preview reason is each control's description (hidden text) and the page banner says it once; the rail draws none
     expect(rail().querySelectorAll(".exec-dock-reason")).toHaveLength(0);
     expect(within(rail()).getAllByText(PREVIEW).length).toBeGreaterThan(0);
@@ -916,7 +922,9 @@ describe("waiver lane", () => {
     await settle();
     const evidence = screen.getByRole("region", { name: "Evidence" });
     expect(within(evidence).getByRole("region", { name: "Condition" }).textContent).toContain("Keep paper exposure below the certified envelope.");
-    expect(npCells(evidence, "Not published (FE-029)").length).toBeGreaterThan(0);
+    // The runway is drawn from the register page (it was a typed absence before WP-E): one line for the open waiver, on the shared axis.
+    expect(within(evidence).getByTestId("ck-runway")).toBeTruthy();
+    expect(within(evidence).getByTestId("ck-waiver-banner").textContent).toContain("Expiring");
     // The "?" reason disclosures (GapWhy) are buttons too; this is about the decision controls.
     const buttons = (within(rail()).getAllByRole("button") as HTMLButtonElement[]).filter((b) => !b.hasAttribute("aria-expanded"));
     expect(buttons.map((b) => b.textContent)).toEqual(["Extend 14 days", "Other decisions"]);
