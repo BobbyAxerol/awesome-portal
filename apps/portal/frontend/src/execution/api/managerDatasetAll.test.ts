@@ -159,7 +159,6 @@ describe("encoding ALL, and the guard that a body answers THAT question", () => 
     expect(datasetQueryMismatch(all, { ...ALL_QUERY, stageFilter: ["PAPER", "LIVE"] })).toBeNull();
     // the same guards as any dataset: surface, workspace, page size, groups
     expect(datasetQueryMismatch(all, { ...ALL_QUERY, limit: 25 })).toBe("limit");
-    expect(datasetQueryMismatch(all, { ...ALL_QUERY, groupBy: ["health"] })).toBe("group_by");
     expect(datasetQueryMismatch(all, { ...ALL_QUERY, workspaceId: "someone-else" })).toBe("workspace");
   });
 

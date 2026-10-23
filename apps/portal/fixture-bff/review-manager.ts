@@ -434,7 +434,93 @@ function rowsFor(environment: string, template: Draft, preset: WindowPreset): Dr
   return rows.map((row) => enrichRow(windowedRow(row, preset), preset));
 }
 
+/**
+ * FE-CAT-3 (FIXTURE_LAB, populated profile only): `environment=ALL` on the Fleet. Each environment is answered by the SAME single-environment
+ * path above, then merged: rows relabelled with their environment, partitions side by side, per-environment coverage, no total. Simulated
+ * states: Paper is degraded (its own quality), Sandbox is a typed absence (NOT_CONFIGURED), a stage filter that excludes an environment
+ * leaves it a counted zero. The layout-stress profile does not offer ALL (400), so the Portal keeps the fleet read there.
+ */
+const ALL_ORDER = ["paper", "sandbox", "live"] as const;
+function allAnswer(path: string, search: URLSearchParams, profile: ReviewManagerProfile): ReviewManagerResponse {
+  if (profile !== "populated" || path !== "/manager/fleet" || search.has("window") || search.has("before")) return problem(400, "EXECUTION_READ_QUERY_INVALID", "ALL is the Fleet read of the populated review profile, without a window.");
+  const subs = ALL_ORDER.map((env) => {
+    if (env === "sandbox") return { env, body: null as Draft | null, reason: "NOT_CONFIGURED" as string | null };
+    const params = new URLSearchParams(search);
+    params.set("environment", env); params.set("limit", "200"); params.delete("after"); params.delete("group_by");
+    const stages = params.get("stage_filter")?.split(",").filter((stage) => STAGES[env]!.includes(stage));
+    if (params.has("stage_filter")) { if (stages!.length === 0) params.delete("stage_filter"); else params.set("stage_filter", stages!.join(",")); }
+    const excluded = search.has("stage_filter") && stages!.length === 0;
+    const answer = excluded ? null : datasetAnswer("GET", path, params, profile);
+    if (!excluded && (answer === null || answer.status !== 200)) return { env, body: null, reason: "SOURCE_UNAVAILABLE" };
+    return { env, body: excluded ? { items: [], groups: [], capital_statements: [], quality: { completeness: "COMPLETE", freshness: "FRESH", reasons: [] } } as Draft : copy(answer!.body) as Draft, reason: null };
+  });
+  const first = subs.find((entry) => entry.body !== null && entry.body.snapshot_id !== undefined)?.body;
+  if (!first) return problem(503, "EXECUTION_READ_AUTHORITY_UNAVAILABLE", "No environment answered.");
+  const body = copy(first) as Draft;
+  const merged: Draft[] = [];
+  for (const entry of subs) for (const row of entry.body?.items ?? []) {
+    row.environment = entry.env;
+    row.row_key = JSON.stringify([entry.env, row.alpha_id, row.alpha_version_id, row.portfolio_id]);
+    merged.push(row);
+  }
+  const sort = JSON.parse(search.get("sort") ?? "[]") as Draft[];
+  const textOf = (row: Draft, field: string): string | null => field === "stage_presence" ? row.stage_presence.join(",") : typeof row[field] === "string" ? row[field] : null;
+  merged.sort((a, b) => {
+    for (const key of sort) {
+      const x = textOf(a, key.field); const y = textOf(b, key.field);
+      if (x === y) continue;
+      if (x === null) return 1;
+      if (y === null) return -1;
+      return (x < y ? -1 : 1) * (key.direction === "asc" ? 1 : -1);
+    }
+    return a.row_key < b.row_key ? -1 : a.row_key > b.row_key ? 1 : 0;
+  });
+  const groups = search.has("group_by") ? search.get("group_by")!.split(",") : [];
+  const grouped = new Map<string, { key: Draft[]; rows: Draft[] }>();
+  for (const row of merged) if (groups.length) {
+    const key = groups.map((field) => ({ field, value: textOf(row, field) }));
+    const group = grouped.get(JSON.stringify(key)) ?? { key, rows: [] };
+    group.rows.push(row); grouped.set(JSON.stringify(key), group);
+  }
+  body.groups = [...grouped.values()].map((group) => ({ key: group.key, unique_row_count: group.rows.length, totals_scope: "FULL_AUTHORIZED_FILTERED_QUERY",
+    economic_partitions: ALL_ORDER.flatMap((env) => aggregate(group.rows.filter((row) => row.environment === env))) }));
+  body.capital_statements = subs.flatMap((entry) => entry.body?.capital_statements ?? []);
+  const limit = Number(search.get("limit") ?? 100);
+  const bound = digest([profile, path, [...search.entries()].filter(([key]) => !["after", "before", "limit"].includes(key)).sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0)]);
+  const snapshot = digest(["FIXTURE_LAB_SYNTHETIC", profile, "ALL", fixtureNowMs(), merged]);
+  let offset = 0;
+  const cursorText = search.get("after");
+  if (cursorText !== null) {
+    let cursor: Draft;
+    try { cursor = JSON.parse(Buffer.from(cursorText, "base64url").toString("utf8")); } catch { return problem(400, "EXECUTION_READ_QUERY_INVALID", "The cursor was not issued by this review profile."); }
+    if (!cursor || typeof cursor !== "object" || Object.keys(cursor).sort().join(",") !== "b,o,s" || !Number.isSafeInteger(cursor.o) || cursor.o < 0) return problem(400, "EXECUTION_READ_QUERY_INVALID", "The cursor shape is invalid.");
+    if (cursor.b !== bound || cursor.s !== snapshot) return problem(409, "MANAGER_CURSOR_CHANGED", "The cursor belongs to another query, profile or snapshot.");
+    offset = cursor.o;
+    if (offset >= merged.length) return problem(400, "EXECUTION_READ_QUERY_INVALID", "The cursor is outside this result.");
+  }
+  const encode = (at: number): string => Buffer.from(JSON.stringify({ o: at, b: bound, s: snapshot })).toString("base64url");
+  body.items = merged.slice(offset, offset + limit);
+  body.page = { limit, returned_count: body.items.length, authorized_filtered_count: merged.length,
+    next_cursor: offset + limit < merged.length ? encode(offset + limit) : null, previous_cursor: offset > 0 ? encode(Math.max(0, offset - limit)) : null };
+  body.environment = "ALL";
+  body.selected_window = null;
+  body.environment_coverage = subs.map((entry) => {
+    if (entry.body === null) return { environment: entry.env, availability: "UNAVAILABLE", reason_code: entry.reason, snapshot_id: null, as_of_ms: null, recorded_through_ms: null, facts_through_ms: null, quality: null, authorized_filtered_count: null, returned_count: null };
+    const own = merged.filter((row) => row.environment === entry.env).length;
+    const degraded = entry.env === "paper" ? { completeness: "PARTIAL", freshness: "STALE", reasons: ["FIXTURE_LAB_SIMULATED_SOURCE_LAG"] } : { completeness: "COMPLETE", freshness: "FRESH", reasons: [] };
+    return { environment: entry.env, availability: "INCLUDED", reason_code: null, snapshot_id: digest([snapshot, entry.env]), as_of_ms: body.as_of_ms, recorded_through_ms: body.recorded_through_ms,
+      facts_through_ms: body.facts_through_ms, quality: degraded, authorized_filtered_count: own, returned_count: body.items.filter((row: Draft) => row.environment === entry.env).length };
+  });
+  body.quality = { completeness: "PARTIAL", freshness: "STALE", reasons: ["paper:FIXTURE_LAB_SIMULATED_SOURCE_LAG", "sandbox:ENVIRONMENT_UNAVAILABLE:NOT_CONFIGURED"] };
+  body.snapshot_id = snapshot;
+  body.lineage.source_set_ref = digest(["FIXTURE_LAB_SYNTHETIC", profile, "ALL", fixtureNowMs()]);
+  body.lineage.revision = snapshot;
+  body.query_options.sort_fields = body.query_options.sort_fields.slice();
+  return { status: 200, body };
+}
+
 function datasetAnswer(method: string, path: string, search: URLSearchParams, profile: ReviewManagerProfile): ReviewManagerResponse | null {
+  if (method === "GET" && search.get("environment") === "ALL") return allAnswer(path, search, profile);
   const match = /^\/manager\/(fund-overview|fleet|(?:portfolios|alphas|accounts|deployments)\/([^/]+)\/overview)$/.exec(path);
   if (method !== "GET" || !match) return null;
   const checkedQuery = new URLSearchParams(search);
