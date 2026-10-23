@@ -189,13 +189,38 @@ function simulatedLastSignIn(row: Wire): string | null {
   return `2026-10-${String(day).padStart(2, "0")}T09:14:00Z`;
 }
 
+/**
+ * SIMULATED (FIXTURE_LAB, WP-E, opt-in): the signed-in person is a row of the roster. The first account (`usr_0001`, bobby) is
+ * served under the session's own user id, so the screen can mark it "(you)" and say why Disable is off for it. The id is only
+ * a key: nothing else about the row changes. Off by default (`null`): the roster is unchanged.
+ */
+let sessionAlias: string | null = null;
+export function setUsersDoubleSessionUser(id: string | null): void {
+  sessionAlias = id === null || id === "" || id === "usr_0001" ? null : id;
+}
+const ALIASED = "usr_0001";
+function aliasRow<T extends { user_id?: string }>(row: T): T {
+  return sessionAlias !== null && row.user_id === ALIASED ? { ...row, user_id: sessionAlias } : row;
+}
+
 export function answerUsers(method: string, pathname: string, search: URLSearchParams): UsersAnswer | null {
-  const answer = answerUsersBase(method, pathname, search);
-  if (!lastSignIn || answer === null || answer.status !== 200) return answer;
-  const body = answer.body as { accounts?: Wire[] } | null;
-  if (body === null || !Array.isArray(body.accounts)) return answer;
-  // Roster reads only; the detail read and the lifecycle history keep the unextended summary.
-  return { ...answer, body: { ...body, accounts: body.accounts.map((row) => ({ ...row, last_sign_in_at: simulatedLastSignIn(row) })) } };
+  // The alias is undone on the way in (a detail read under the session id is the first account's) and applied on the way out.
+  const seg = pathname.split("/").filter(Boolean);
+  const unaliased = sessionAlias !== null && seg.length === 4 && seg[2] === "accounts" && decodeURIComponent(seg[3]!) === sessionAlias
+    ? `/api/admin/accounts/${ALIASED}`
+    : pathname;
+  const answer = answerUsersBase(method, unaliased, search);
+  if (answer === null || answer.status !== 200) return answer;
+  const body = answer.body as { accounts?: Wire[]; account?: Wire } | null;
+  if (body === null) return answer;
+  let next: Record<string, unknown> = body as Record<string, unknown>;
+  if (Array.isArray(body.accounts)) {
+    // Roster reads only; the detail read and the lifecycle history keep the unextended summary.
+    next = { ...body, accounts: body.accounts.map((row) => aliasRow(lastSignIn ? { ...row, last_sign_in_at: simulatedLastSignIn(row) } : row)) };
+  } else if (body.account !== undefined && body.account !== null) {
+    next = { ...body, account: aliasRow(body.account) };
+  }
+  return next === body ? answer : { ...answer, body: next };
 }
 
 function answerUsersBase(method: string, pathname: string, search: URLSearchParams): UsersAnswer | null {

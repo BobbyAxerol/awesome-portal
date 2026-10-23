@@ -30,7 +30,7 @@
 import { answerAccessEffective, ACCESS_DOUBLE_DEFAULT_USER } from "./bffDoubleAccess";
 import { answerSelfAccess } from "./bffDoubleSelfAccess";
 import { fixtureNowMs } from "./bffScale";
-import { answerUsers } from "./bffDoubleUsers";
+import { answerUsers, setUsersDoubleSessionUser } from "./bffDoubleUsers";
 import { answerExecutionBff, type BffDoubleOptions } from "./bffDouble";
 import { answerQuantbtRuns, QUANTBT_RUNS_PATH } from "./bffDoubleStage";
 import { answerShell, SHELL_PATHS } from "./bffDoubleShell";
@@ -149,6 +149,9 @@ export function answerFixtureRequest(request: BffRequest, options: FixtureAnswer
   }
 
   if (path.startsWith("/api/admin/")) {
+    // ===== WP-E begin: the roster carries the signed-in person (simulated lanes only; see bffDoubleUsers `setUsersDoubleSessionUser`)
+    setUsersDoubleSessionUser(options.simulated === true ? options.userId ?? ACCESS_DOUBLE_DEFAULT_USER : null);
+    // ===== WP-E end
     // The same order the V2 spec uses: the access read first, then the Users reads.
     const answer =
       answerSelfAccess(method, path, params, { nowMs: fixtureNowMs(), ceilingMs: SELF_ACCESS_CEILING_MS }) ??

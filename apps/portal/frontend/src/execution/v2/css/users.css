@@ -24,6 +24,24 @@
   font: var(--exec-font-meta);
   color: var(--ink-soft);
 }
+.exec-usr-inline-why {
+  display: block;
+  margin-top: var(--space-1);
+}
+.exec-usr-how {
+  font: var(--exec-font-meta);
+  color: var(--ink-soft);
+}
+.exec-usr-how summary {
+  cursor: pointer;
+  color: var(--accent);
+}
+.exec-usr-how ul {
+  margin: var(--space-2) 0 0;
+  padding-left: var(--space-4);
+  font: var(--exec-font-caption);
+  color: var(--ink-faint);
+}
 .exec-usr-chips,
 .exec-usr-step {
   display: inline-flex;

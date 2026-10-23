@@ -140,11 +140,18 @@ function rowActionOf(account: AccountSummary, me: string | null): ReactNode {
   const reasonId = `exec-usr-why-${account.userId}`;
   const reason = self ? "You cannot disable yourself" : gapTitle(ROW_ACTION_FE, "Per-row action", CHANGES_ELSEWHERE);
   // The click must not open the row's drawer: the control is off, and its reason is a disclosure of its own.
+  // The signed-in account's reason is the design's own sentence, printed under the button: a rule of the screen, not a gap.
   return (
     <Inert className="exec-usr-rowact">
       <button type="button" className="exec-usr-btn" disabled aria-label={`${label} ${account.username}`} aria-describedby={reasonId}>{label}</button>
-      <span id={reasonId} className="exec-blk-sr">{reason}</span>
-      <GapWhy name={`Why ${label} is off for ${account.username}`} rows={[reason]} next={null} />
+      {self ? (
+        <span id={reasonId} className="exec-usr-meta exec-usr-inline-why" data-testid="users-inline-why">{reason}</span>
+      ) : (
+        <>
+          <span id={reasonId} className="exec-blk-sr">{reason}</span>
+          <GapWhy name={`Why ${label} is off for ${account.username}`} rows={[reason]} next={null} />
+        </>
+      )}
     </Inert>
   );
 }
@@ -351,7 +358,8 @@ export default function UsersScreen({ client = DEFAULT_CLIENT, legacyHref, acces
     <div className="exec-usr-v2" data-screen="users-v2">
       <header className="exec-usr-head">
         <div>
-          <h1 className="exec-usr-title" title="Accounts and their lifecycle. Administrators only. This view reads accounts only.">Users</h1>
+          <h1 className="exec-usr-title">Users</h1>
+          <p className="exec-usr-sub" data-testid="users-subtitle">Accounts and their lifecycle · Administrators only</p>
         </div>
         <div className="exec-usr-chips">
           {stepRead === "loading" ? (
@@ -478,6 +486,16 @@ export default function UsersScreen({ client = DEFAULT_CLIENT, legacyHref, acces
                 ) : null}
                 {capped ? <span className="exec-usr-note">Showing the first {ROW_CAP} rows. Narrow the search to see the rest.</span> : null}
               </div>
+              <details className="exec-usr-how" data-testid="users-how">
+                <summary>How accounts work</summary>
+                <ul>
+                  <li>An invited account holds no credential until its first password is set.</li>
+                  <li>A disabled account cannot sign in; its history stays.</li>
+                  <li>An archived account is kept as it is, with its history.</li>
+                  <li>Administrator and User are the two roles the roster publishes; role presets are not published yet.</li>
+                  <li>{CHANGES_ELSEWHERE}</li>
+                </ul>
+              </details>
             </div>
 
             {selection !== null ? (
