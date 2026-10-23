@@ -640,15 +640,21 @@ function DecisionCockpit({ api, workspaceId, pathSelection, onClearPathSelection
   }, [urlSet, onClearPathSelection]);
 
   // Stacked, the evidence sits below the whole queue: bring it into view when a request is picked.
+  // The scroll waits for the new selection to be in the page (the evidence column re-renders), then brings the detail to the top: a tap on a
+  // card changes what the reader sees (QA1 I-23). Wide, the detail is already beside the queue and nothing scrolls.
+  const wantDetail = useRef(false);
   const select = useCallback(
     (key: string) => {
       urlSet({ sel: key });
-      if (typeof window.matchMedia === "function" && window.matchMedia(STACKED_QUERY).matches) {
-        requestAnimationFrame(() => document.querySelector(".exec-ck-main")?.scrollIntoView?.({ block: "start" }));
-      }
+      if (typeof window.matchMedia === "function" && window.matchMedia(STACKED_QUERY).matches) wantDetail.current = true;
     },
     [urlSet],
   );
+  useEffect(() => {
+    if (!wantDetail.current || selectedKey === null) return;
+    wantDetail.current = false;
+    requestAnimationFrame(() => document.querySelector(".exec-ck-main")?.scrollIntoView?.({ block: "start" }));
+  }, [selectedKey]);
 
   // First load on a wide screen opens the request that most needs the reader, so the evidence and the decision
   // rail are not an empty page (HIFI selects one). Once per mount: Esc still clears, and a link's `sel` wins.
@@ -732,6 +738,7 @@ function DecisionCockpit({ api, workspaceId, pathSelection, onClearPathSelection
           waiverReadAt={waivers.readAt}
         />
         <section className="exec-ck-main" aria-label="Evidence">
+          <button type="button" className="exec-ck-backq" onClick={() => document.querySelector(".exec-ck-q")?.scrollIntoView?.({ block: "start" })}>Back to the queue</button>
           {family !== null ? (
             <FamilyPanel family={family} />
           ) : selected?.kind === "waiver" ? (

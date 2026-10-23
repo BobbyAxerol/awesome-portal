@@ -12,6 +12,8 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 
+import { breakable } from "./breakable";
+
 import type { PanelStatus } from "../../../contracts";
 import type { ConditionRow, ExecutionApi } from "../../../api/ports";
 import type { LiveReviewPayload } from "../../../api/profileRead";
@@ -128,7 +130,15 @@ export function useEvidenceRead(api: ExecutionApi, target: EvidenceTarget | null
 /* ── small pieces ─────────────────────────────────────────────────────────── */
 
 function NotPublished({ text }: { text: string }) {
-  return <span className="exec-ck-np"><QuietIdsWhy text={text} /></span>;
+  // A code in the sentence wraps between its parts, never inside a word (QA1 I-18); a sentence with ids behind "?" is QuietIdsWhy's.
+  const body = QuietIdsWhy({ text });
+  return <span className="exec-ck-np">{typeof body === "string" ? breakable(body) : body}</span>;
+}
+
+/** A published state word (`NOT_ELIGIBLE`, `MISSING`) in words; the code itself stays in a title-free hidden place only where a screen needs it. */
+function stateWords(value: string): string {
+  const words = value.replace(/_/g, " ").trim().toLowerCase();
+  return words === "" ? value : words.charAt(0).toUpperCase() + words.slice(1);
 }
 
 /** A published word, or the absence named with the FE request that will publish it. */
@@ -187,6 +197,8 @@ interface CriteriaRow {
 
 function Criteria({ rows }: { rows: readonly CriteriaRow[] }) {
   if (rows.length === 0) return <div className="exec-ck-pad"><span className="exec-ck-np">No findings published</span></div>;
+  // A column that is the same typed absence on every row is said once under the table, not drawn as a column of placeholders (QA1 I-16).
+  const observed = rows.some((row) => row.cell !== undefined);
   return (
     <div className="exec-ck-tw">
       <table className="exec-ck-table">
@@ -194,7 +206,7 @@ function Criteria({ rows }: { rows: readonly CriteriaRow[] }) {
           <tr>
             <th scope="col">Criterion</th>
             <th scope="col">Verdict</th>
-            <th scope="col">Observed and limit</th>
+            {observed ? <th scope="col">Observed and limit</th> : null}
           </tr>
         </thead>
         <tbody>
@@ -205,11 +217,12 @@ function Criteria({ rows }: { rows: readonly CriteriaRow[] }) {
                 {row.note ? <div className="exec-ck-note">{row.note}</div> : null}
               </td>
               <td><MarkFlag mark={row.mark} /></td>
-              <td>{row.cell ?? <NotPublished text={NOT_PUBLISHED.criteria} />}</td>
+              {observed ? <td>{row.cell ?? <NotPublished text={NOT_PUBLISHED.criteria} />}</td> : null}
             </tr>
           ))}
         </tbody>
       </table>
+      {observed ? null : <p className="exec-ck-note exec-ck-pad" data-testid="ck-observed-absent">Observed and limit: <NotPublished text={NOT_PUBLISHED.criteria} /> for every finding.</p>}
     </div>
   );
 }
@@ -364,7 +377,7 @@ function R2Body({ detail, heading = "R2 review" }: { detail: GateR2Detail; headi
         {detail.r1LineagePublished ? (
           <Kv
             rows={[
-              { label: "R1 state", value: detail.r1State },
+              { label: "R1 state", value: stateWords(detail.r1State) },
               { label: "R1 request", value: <Word value={detail.r1Id} fe="FE-028" /> },
               { label: "Decided by", value: <Word value={detail.r1DecidedBy} fe="FE-030" /> },
               { label: "Decided at", value: <Word value={instantText(detail.r1DecidedAt)} fe="FE-030" /> },
@@ -485,8 +498,8 @@ function LiveBody({ data }: { data: Extract<EvidenceData, { kind: "live" }> }) {
                 {payload.derivedBranches.map((branch) => (
                   <tr key={branch.capabilityId}>
                     <td>{branch.capabilityId.replace(/_/g, " ")}</td>
-                    <td>{branch.state}</td>
-                    <td className="exec-ck-id">{branch.reasonCode ?? "none given"}</td>
+                    <td>{stateWords(branch.state)}</td>
+                    <td className="exec-ck-id">{branch.reasonCode ? breakable(branch.reasonCode) : "none given"}</td>
                   </tr>
                 ))}
               </tbody>
@@ -520,7 +533,7 @@ function Absent({ section }: { section: AbsentSectionV2 }) {
 }
 
 function Id({ value }: { value: string }) {
-  return <span className="exec-ck-id">{value}</span>;
+  return <span className="exec-ck-id">{breakable(value)}</span>;
 }
 
 function when(value: Parameters<typeof formatAsOf>[0] | null): ReactNode {

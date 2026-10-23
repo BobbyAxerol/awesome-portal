@@ -637,7 +637,10 @@ describe("evidence frame", () => {
     const evidence = screen.getByRole("region", { name: "Evidence" });
     expect(within(evidence).getByRole("heading", { name: "Alpha One" })).toBeTruthy();
     const checklist = within(evidence).getByRole("region", { name: "Checklist findings" });
-    expect(npCells(checklist, "Not published (FE-028)").length).toBe(3);
+    // QA1 I-16: the same absence on every row is one line under the table, not a column of three placeholders.
+    expect(within(checklist).queryByRole("columnheader", { name: "Observed and limit" })).toBeNull();
+    expect(npCells(checklist, "Not published (FE-028)").length).toBe(1);
+    expect(within(checklist).getByTestId("ck-observed-absent").textContent).toContain("for every finding");
     expect(within(checklist).getByText("Capacity evidence covers the top 3 symbols only")).toBeTruthy();
     expect(within(checklist).getByText("Approve with a condition")).toBeTruthy();
     expect(within(checklist).getByText("Watch")).toBeTruthy();

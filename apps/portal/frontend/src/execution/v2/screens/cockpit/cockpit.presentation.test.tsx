@@ -21,6 +21,7 @@ import { V2_ROLE_PRESETS } from "../../shell/roleNav";
 import Cockpit, { type CockpitProps } from "./index";
 import { decidedToday, isDecidedToday, lapseView, NO_CLOCK, RUNWAY_AXIS_DAYS } from "./laneModel";
 import { RUNWAY_ROWS } from "./EvidenceFrame";
+import { breakable } from "./breakable";
 
 const session = vi.hoisted(() => ({ current: null as unknown }));
 vi.mock("../../../../auth/session", () => ({ useSession: () => session.current }));
@@ -493,5 +494,86 @@ describe("the simulated decisions of today (register 2d)", () => {
 
   it("a record that is not a page is returned as it is", () => {
     expect(overlayApprovalHistory({ nothing: true }, NOW)).toEqual({ nothing: true });
+  });
+});
+
+/* ── QA1 fixes: codes wrap at separators, one-line flags, master-detail, tap to detail ───────────────────────────────────── */
+
+describe("QA1 I-18: codes and flags keep their words whole", () => {
+  it("breakable puts a break opportunity after each separator of a long code and leaves the text as it was", () => {
+    const code = "N23_GATE_POLICY_EVALUATION_NOT_PUBLISHED";
+    const { container } = render(<p>{breakable(`Not published (FE-028) · ${code}`)}</p>);
+    expect(container.textContent).toBe(`Not published (FE-028) · ${code}`);
+    expect(container.querySelectorAll("wbr").length).toBe(code.split("_").length - 1);
+    const plain = render(<p>{breakable("Not published (FE-028) and AP-352")}</p>);
+    expect(plain.container.querySelectorAll("wbr")).toHaveLength(0);
+    expect(breakable("Within")).toBe("Within");
+    const key = render(<p>{breakable("administration.profile_access.manage")}</p>);
+    expect(key.container.textContent).toBe("administration.profile_access.manage");
+    expect(key.container.querySelectorAll("wbr").length).toBe(3);
+  });
+
+  it("the verdict column of a findings table is one-line flags with whole words, and the empty observed column is said once", async () => {
+    const withChecklist = { ...r1(), checklist: [{ label: "Sharpe", outcome: "pass" as const }, { label: "Capacity", outcome: "watch" as const }, { label: "Replay", outcome: "insufficient" as const }] };
+    await mount(standard({ getGateR1: () => ({ ok: true, value: withChecklist }) }), "/execution/approvals?sel=apr_a");
+    const table = within(evidence()).getByRole("region", { name: "Checklist findings" });
+    expect(within(table).getAllByRole("columnheader").map((th) => th.textContent)).toEqual(["Criterion", "Verdict"]);
+    const flags = [...table.querySelectorAll(".exec-flag")].map((f) => f.textContent ?? "");
+    expect(flags.some((t) => /Within/.test(t))).toBe(true);
+    expect(flags.some((t) => /Insufficient/.test(t))).toBe(true);
+    expect(within(table).getByTestId("ck-observed-absent").textContent).toContain("Not published (FE-028)");
+  });
+
+  it("a Live branch row names its state in words, not as the raw enum", async () => {
+    await mount(standard(), "/execution/approvals?sel=apr_d");
+    const branches = within(evidence()).queryByRole("region", { name: "Canary evidence branches" });
+    if (branches === null) return;
+    for (const branchRow of within(branches).getAllByRole("row").slice(1)) {
+      expect(branchRow.querySelectorAll("td")[1]?.textContent ?? "").not.toMatch(/_/);
+    }
+  });
+});
+
+describe("QA1 I-19 / I-23: the detail is reachable from the queue", () => {
+  const scrolled: string[] = [];
+  beforeEach(() => {
+    scrolled.length = 0;
+    (Element.prototype as unknown as { scrollIntoView: (o?: unknown) => void }).scrollIntoView = function scrollIntoView(this: Element) {
+      scrolled.push(this.className);
+    };
+  });
+  afterEach(() => {
+    delete (Element.prototype as unknown as { scrollIntoView?: unknown }).scrollIntoView;
+  });
+  const stacked = (matches: boolean) => {
+    (window as unknown as { matchMedia: (q: string) => MediaQueryList }).matchMedia = (q: string) =>
+      ({ matches, media: q, addEventListener: () => undefined, removeEventListener: () => undefined }) as unknown as MediaQueryList;
+  };
+
+  it("where the panes stack, picking a request brings the detail to the top, after the new selection is in the page", async () => {
+    stacked(true);
+    await mount(standard());
+    fireEvent.click(within(queue()).getByRole("button", { name: /Beta Two/ }));
+    await settle();
+    await act(async () => { await new Promise((done) => requestAnimationFrame(() => done(null))); });
+    expect(where()).toContain("sel=apr_b");
+    expect(scrolled.some((c) => c.includes("exec-ck-main"))).toBe(true);
+  });
+
+  it("wide, picking a request scrolls nothing: the detail is already beside the queue", async () => {
+    stacked(false);
+    await mount(standard());
+    scrolled.length = 0;
+    fireEvent.click(within(queue()).getByRole("button", { name: /Beta Two/ }));
+    await settle();
+    expect(scrolled.filter((c) => c.includes("exec-ck-main"))).toEqual([]);
+  });
+
+  it("the detail has a Back to the queue control that scrolls the queue into view", async () => {
+    stacked(true);
+    await mount(standard(), "/execution/approvals?sel=apr_a");
+    scrolled.length = 0;
+    fireEvent.click(within(evidence()).getByRole("button", { name: "Back to the queue" }));
+    expect(scrolled.some((c) => c.includes("exec-ck-q"))).toBe(true);
   });
 });

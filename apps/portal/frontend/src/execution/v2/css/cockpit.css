@@ -92,7 +92,7 @@
 }
 .exec-ck-rail {
   position: sticky;
-  top: var(--space-4);
+  top: calc(var(--topbar-h, 56px) + var(--space-3));
   min-width: 0;
 }
 .exec-ck-railbody {
@@ -303,9 +303,28 @@
   overflow-wrap: anywhere;
 }
 
-/* queue */
+/* queue: master-detail (QA1 I-19). The queue is a fixed-height panel whose list scrolls inside it, so the page is as long as the
+ * evidence and the decision rail (sticky, below) stays beside whatever is open. Stacked (<= 1100px) it is a capped panel above the detail. */
 .exec-ck-q {
+  display: flex;
+  flex-direction: column;
+  position: sticky;
+  top: calc(var(--topbar-h, 56px) + var(--space-3));
+  max-height: calc(100vh - var(--topbar-h, 56px) - 2 * var(--space-3));
   overflow: hidden;
+}
+.exec-ck-q > * {
+  flex: none;
+}
+.exec-ck-q > .exec-ck-list {
+  flex: 1 1 auto;
+  min-height: 80px;
+  overflow-y: auto;
+}
+.exec-ck-decided[open] > .exec-ck-list,
+.exec-ck-decided[open] > .exec-ck-pad {
+  max-height: 24vh;
+  overflow-y: auto;
 }
 .exec-ck-lanes {
   display: flex;
@@ -808,7 +827,42 @@
   }
 }
 
+/* Verdict badges and their cells keep each word whole (QA1 I-18): the flag is one line, the column is as wide as the flag. */
+.exec-ck-table td .exec-flag,
+.exec-ck-kv td .exec-flag {
+  white-space: nowrap;
+}
+.exec-ck-table th:nth-child(2),
+.exec-ck-table td:nth-child(2) {
+  white-space: nowrap;
+  width: 1%;
+}
+.exec-ck-table td {
+  overflow-wrap: break-word;
+}
+.exec-ck-backq {
+  display: none;
+  justify-self: start;
+  padding: 2px var(--space-3);
+  font: var(--exec-font-control);
+  color: var(--accent);
+  background: var(--surface-2);
+  border: 1px solid var(--line-strong);
+  cursor: pointer;
+}
+.exec-ck-backq:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
 @media (max-width: 1100px) {
+  .exec-ck-q {
+    position: static;
+    max-height: 70vh;
+  }
+  .exec-ck-backq {
+    display: inline-block;
+  }
   .exec-ck {
     grid-template-columns: minmax(0, 1fr);
   }
