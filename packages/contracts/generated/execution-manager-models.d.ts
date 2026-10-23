@@ -481,6 +481,23 @@ export interface components {
                     };
                 }[];
             }[];
+            group_query?: {
+                sort: {
+                    metric_key: string;
+                    /** @enum {string} */
+                    direction: "asc" | "desc";
+                }[];
+                filters: {
+                    metric_key: string;
+                    /** @enum {string} */
+                    op: "GTE" | "LTE" | "IS_NULL";
+                    value?: string;
+                }[];
+                /** @enum {string} */
+                partition_basis: "PINNED_PARTITION" | "SINGLE_PARTITION_ONLY";
+                groups_before_filter: number;
+                groups_returned: number;
+            };
             /** @description A partition appears once per list (identity: economic_domain, currency, basis, native_profile_ref; domain_proof_ref is evidence, not identity). A metric that names a currency names its partition's currency. uniqueItems here catches an exact repeat; a repeat of the identity with different metrics is refused by the producer (MANAGER_PARTITION_DUPLICATE) and by the reader, because JSON Schema cannot compare a property of two items. */
             capital_statements: {
                 partition: {
@@ -922,6 +939,17 @@ export interface components {
                 direction: "asc" | "desc";
             }[] & (unknown[] & unknown[] & unknown[] & unknown[] & unknown[] & unknown[] & unknown[] & unknown[] & unknown[] & unknown[] & unknown[] & unknown[] & unknown[] & unknown[] & unknown[] & unknown[] & unknown[] & unknown[]);
             group_by?: ("portfolio_id" | "owner_user_id" | "alpha_id" | "stage_presence" | "current_stage" | "venue" | "health" | "source_state" | "lifecycle")[];
+            group_sort?: {
+                metric_key: string;
+                /** @enum {string} */
+                direction: "asc" | "desc";
+            }[];
+            group_filters?: {
+                metric_key: string;
+                /** @enum {string} */
+                op: "GTE" | "LTE" | "IS_NULL";
+                value?: string;
+            }[];
             economic_partition?: {
                 /** @enum {string} */
                 economic_domain: "ACTUAL" | "PAPER" | "SANDBOX";
@@ -2965,6 +2993,8 @@ export interface operations {
                 filters?: string;
                 sort?: string;
                 group_by?: ("portfolio_id" | "owner_user_id" | "alpha_id" | "stage_presence" | "current_stage" | "venue" | "health" | "source_state" | "lifecycle")[];
+                group_sort?: string;
+                group_filters?: string;
                 economic_partition?: string;
                 limit?: number;
                 after?: string;
@@ -3043,6 +3073,8 @@ export interface operations {
                 filters?: string;
                 sort?: string;
                 group_by?: ("portfolio_id" | "owner_user_id" | "alpha_id" | "stage_presence" | "current_stage" | "venue" | "health" | "source_state" | "lifecycle")[];
+                group_sort?: string;
+                group_filters?: string;
                 economic_partition?: string;
                 limit?: number;
                 after?: string;
@@ -3121,6 +3153,8 @@ export interface operations {
                 filters?: string;
                 sort?: string;
                 group_by?: ("portfolio_id" | "owner_user_id" | "alpha_id" | "stage_presence" | "current_stage" | "venue" | "health" | "source_state" | "lifecycle")[];
+                group_sort?: string;
+                group_filters?: string;
                 economic_partition?: string;
                 limit?: number;
                 after?: string;
@@ -3201,6 +3235,8 @@ export interface operations {
                 filters?: string;
                 sort?: string;
                 group_by?: ("portfolio_id" | "owner_user_id" | "alpha_id" | "stage_presence" | "current_stage" | "venue" | "health" | "source_state" | "lifecycle")[];
+                group_sort?: string;
+                group_filters?: string;
                 economic_partition?: string;
                 limit?: number;
                 after?: string;
@@ -3281,6 +3317,8 @@ export interface operations {
                 filters?: string;
                 sort?: string;
                 group_by?: ("portfolio_id" | "owner_user_id" | "alpha_id" | "stage_presence" | "current_stage" | "venue" | "health" | "source_state" | "lifecycle")[];
+                group_sort?: string;
+                group_filters?: string;
                 economic_partition?: string;
                 limit?: number;
                 after?: string;
@@ -3361,6 +3399,8 @@ export interface operations {
                 filters?: string;
                 sort?: string;
                 group_by?: ("portfolio_id" | "owner_user_id" | "alpha_id" | "stage_presence" | "current_stage" | "venue" | "health" | "source_state" | "lifecycle")[];
+                group_sort?: string;
+                group_filters?: string;
                 economic_partition?: string;
                 limit?: number;
                 after?: string;

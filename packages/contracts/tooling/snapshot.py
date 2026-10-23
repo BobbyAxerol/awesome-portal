@@ -618,8 +618,6 @@ TRACKED = (
     "fixtures/execution-entity-search.none.synthetic.valid.json",
     "fixtures/execution-entity-search.synthetic.negative.json",
     "fixtures/execution-portfolio-list.health.valid.json",
-    "fixtures/execution-manager-dataset.stage-entry.synthetic.valid.json",
-    "fixtures/execution-manager-dataset.stage-entry.synthetic.negative.json",
     "tooling/generate-execution-siblings.mjs",
     "fixtures/execution-siblings.index.json",
     "schemas/execution-command-receipt.v1.schema.json",

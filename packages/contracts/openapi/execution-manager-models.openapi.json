@@ -778,6 +778,81 @@
             "explode": false
           },
           {
+            "name": "group_sort",
+            "in": "query",
+            "required": false,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "metric_key": {
+                        "type": "string",
+                        "pattern": "^[a-z][a-z0-9_]{1,63}$"
+                      },
+                      "direction": {
+                        "type": "string",
+                        "enum": [
+                          "asc",
+                          "desc"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "metric_key",
+                      "direction"
+                    ]
+                  },
+                  "maxItems": 1
+                }
+              }
+            }
+          },
+          {
+            "name": "group_filters",
+            "in": "query",
+            "required": false,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "metric_key": {
+                        "type": "string",
+                        "pattern": "^[a-z][a-z0-9_]{1,63}$"
+                      },
+                      "op": {
+                        "type": "string",
+                        "enum": [
+                          "GTE",
+                          "LTE",
+                          "IS_NULL"
+                        ]
+                      },
+                      "value": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 256,
+                        "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+                      }
+                    },
+                    "required": [
+                      "metric_key",
+                      "op"
+                    ]
+                  },
+                  "maxItems": 8
+                }
+              }
+            }
+          },
+          {
             "name": "economic_partition",
             "in": "query",
             "required": false,
@@ -1741,6 +1816,81 @@
             },
             "style": "form",
             "explode": false
+          },
+          {
+            "name": "group_sort",
+            "in": "query",
+            "required": false,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "metric_key": {
+                        "type": "string",
+                        "pattern": "^[a-z][a-z0-9_]{1,63}$"
+                      },
+                      "direction": {
+                        "type": "string",
+                        "enum": [
+                          "asc",
+                          "desc"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "metric_key",
+                      "direction"
+                    ]
+                  },
+                  "maxItems": 1
+                }
+              }
+            }
+          },
+          {
+            "name": "group_filters",
+            "in": "query",
+            "required": false,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "metric_key": {
+                        "type": "string",
+                        "pattern": "^[a-z][a-z0-9_]{1,63}$"
+                      },
+                      "op": {
+                        "type": "string",
+                        "enum": [
+                          "GTE",
+                          "LTE",
+                          "IS_NULL"
+                        ]
+                      },
+                      "value": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 256,
+                        "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+                      }
+                    },
+                    "required": [
+                      "metric_key",
+                      "op"
+                    ]
+                  },
+                  "maxItems": 8
+                }
+              }
+            }
           },
           {
             "name": "economic_partition",
@@ -2718,6 +2868,81 @@
             "explode": false
           },
           {
+            "name": "group_sort",
+            "in": "query",
+            "required": false,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "metric_key": {
+                        "type": "string",
+                        "pattern": "^[a-z][a-z0-9_]{1,63}$"
+                      },
+                      "direction": {
+                        "type": "string",
+                        "enum": [
+                          "asc",
+                          "desc"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "metric_key",
+                      "direction"
+                    ]
+                  },
+                  "maxItems": 1
+                }
+              }
+            }
+          },
+          {
+            "name": "group_filters",
+            "in": "query",
+            "required": false,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "metric_key": {
+                        "type": "string",
+                        "pattern": "^[a-z][a-z0-9_]{1,63}$"
+                      },
+                      "op": {
+                        "type": "string",
+                        "enum": [
+                          "GTE",
+                          "LTE",
+                          "IS_NULL"
+                        ]
+                      },
+                      "value": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 256,
+                        "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+                      }
+                    },
+                    "required": [
+                      "metric_key",
+                      "op"
+                    ]
+                  },
+                  "maxItems": 8
+                }
+              }
+            }
+          },
+          {
             "name": "economic_partition",
             "in": "query",
             "required": false,
@@ -3691,6 +3916,81 @@
             },
             "style": "form",
             "explode": false
+          },
+          {
+            "name": "group_sort",
+            "in": "query",
+            "required": false,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "metric_key": {
+                        "type": "string",
+                        "pattern": "^[a-z][a-z0-9_]{1,63}$"
+                      },
+                      "direction": {
+                        "type": "string",
+                        "enum": [
+                          "asc",
+                          "desc"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "metric_key",
+                      "direction"
+                    ]
+                  },
+                  "maxItems": 1
+                }
+              }
+            }
+          },
+          {
+            "name": "group_filters",
+            "in": "query",
+            "required": false,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "metric_key": {
+                        "type": "string",
+                        "pattern": "^[a-z][a-z0-9_]{1,63}$"
+                      },
+                      "op": {
+                        "type": "string",
+                        "enum": [
+                          "GTE",
+                          "LTE",
+                          "IS_NULL"
+                        ]
+                      },
+                      "value": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 256,
+                        "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+                      }
+                    },
+                    "required": [
+                      "metric_key",
+                      "op"
+                    ]
+                  },
+                  "maxItems": 8
+                }
+              }
+            }
           },
           {
             "name": "economic_partition",
@@ -4668,6 +4968,81 @@
             "explode": false
           },
           {
+            "name": "group_sort",
+            "in": "query",
+            "required": false,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "metric_key": {
+                        "type": "string",
+                        "pattern": "^[a-z][a-z0-9_]{1,63}$"
+                      },
+                      "direction": {
+                        "type": "string",
+                        "enum": [
+                          "asc",
+                          "desc"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "metric_key",
+                      "direction"
+                    ]
+                  },
+                  "maxItems": 1
+                }
+              }
+            }
+          },
+          {
+            "name": "group_filters",
+            "in": "query",
+            "required": false,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "metric_key": {
+                        "type": "string",
+                        "pattern": "^[a-z][a-z0-9_]{1,63}$"
+                      },
+                      "op": {
+                        "type": "string",
+                        "enum": [
+                          "GTE",
+                          "LTE",
+                          "IS_NULL"
+                        ]
+                      },
+                      "value": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 256,
+                        "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+                      }
+                    },
+                    "required": [
+                      "metric_key",
+                      "op"
+                    ]
+                  },
+                  "maxItems": 8
+                }
+              }
+            }
+          },
+          {
             "name": "economic_partition",
             "in": "query",
             "required": false,
@@ -5641,6 +6016,81 @@
             },
             "style": "form",
             "explode": false
+          },
+          {
+            "name": "group_sort",
+            "in": "query",
+            "required": false,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "metric_key": {
+                        "type": "string",
+                        "pattern": "^[a-z][a-z0-9_]{1,63}$"
+                      },
+                      "direction": {
+                        "type": "string",
+                        "enum": [
+                          "asc",
+                          "desc"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "metric_key",
+                      "direction"
+                    ]
+                  },
+                  "maxItems": 1
+                }
+              }
+            }
+          },
+          {
+            "name": "group_filters",
+            "in": "query",
+            "required": false,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "metric_key": {
+                        "type": "string",
+                        "pattern": "^[a-z][a-z0-9_]{1,63}$"
+                      },
+                      "op": {
+                        "type": "string",
+                        "enum": [
+                          "GTE",
+                          "LTE",
+                          "IS_NULL"
+                        ]
+                      },
+                      "value": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 256,
+                        "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+                      }
+                    },
+                    "required": [
+                      "metric_key",
+                      "op"
+                    ]
+                  },
+                  "maxItems": 8
+                }
+              }
+            }
           },
           {
             "name": "economic_partition",
@@ -10323,6 +10773,93 @@
             "maxItems": 200,
             "uniqueItems": true,
             "description": "A group appears once (identity: key) and holds no more unique rows than page.authorized_filtered_count (MANAGER_GROUP_DUPLICATE, MANAGER_GROUP_COUNT_OVER_FILTERED). Its key names a field of query_options.group_fields once (MANAGER_GROUP_FIELD_NOT_OFFERED)."
+          },
+          "group_query": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "sort": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "metric_key": {
+                      "type": "string",
+                      "pattern": "^[a-z][a-z0-9_]{1,63}$"
+                    },
+                    "direction": {
+                      "type": "string",
+                      "enum": [
+                        "asc",
+                        "desc"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "metric_key",
+                    "direction"
+                  ]
+                },
+                "maxItems": 1
+              },
+              "filters": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "metric_key": {
+                      "type": "string",
+                      "pattern": "^[a-z][a-z0-9_]{1,63}$"
+                    },
+                    "op": {
+                      "type": "string",
+                      "enum": [
+                        "GTE",
+                        "LTE",
+                        "IS_NULL"
+                      ]
+                    },
+                    "value": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 256,
+                      "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+                    }
+                  },
+                  "required": [
+                    "metric_key",
+                    "op"
+                  ]
+                },
+                "maxItems": 8
+              },
+              "partition_basis": {
+                "type": "string",
+                "enum": [
+                  "PINNED_PARTITION",
+                  "SINGLE_PARTITION_ONLY"
+                ]
+              },
+              "groups_before_filter": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 200
+              },
+              "groups_returned": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 200
+              }
+            },
+            "required": [
+              "sort",
+              "filters",
+              "partition_basis",
+              "groups_before_filter",
+              "groups_returned"
+            ]
           },
           "capital_statements": {
             "type": "array",
@@ -15804,6 +16341,63 @@
             },
             "maxItems": 2,
             "uniqueItems": true
+          },
+          "group_sort": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "metric_key": {
+                  "type": "string",
+                  "pattern": "^[a-z][a-z0-9_]{1,63}$"
+                },
+                "direction": {
+                  "type": "string",
+                  "enum": [
+                    "asc",
+                    "desc"
+                  ]
+                }
+              },
+              "required": [
+                "metric_key",
+                "direction"
+              ]
+            },
+            "maxItems": 1
+          },
+          "group_filters": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "metric_key": {
+                  "type": "string",
+                  "pattern": "^[a-z][a-z0-9_]{1,63}$"
+                },
+                "op": {
+                  "type": "string",
+                  "enum": [
+                    "GTE",
+                    "LTE",
+                    "IS_NULL"
+                  ]
+                },
+                "value": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 256,
+                  "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+                }
+              },
+              "required": [
+                "metric_key",
+                "op"
+              ]
+            },
+            "maxItems": 8
           },
           "economic_partition": {
             "type": "object",

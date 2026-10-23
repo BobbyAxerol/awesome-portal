@@ -109,6 +109,8 @@ export const CURRENT_STAGE_REASONS = ["MULTIPLE_ACTIVE_STAGES", "STAGE_FIELD_NOT
 export type CurrentStageReason = (typeof CURRENT_STAGE_REASONS)[number];
 /** The one reason `entered_at_ms` / `days_in_stage` carry today, and `stage_lifecycle.entry_time`. */
 export const STAGE_ENTRY_TIME_NOT_PUBLISHED = "STAGE_ENTRY_TIME_NOT_PUBLISHED";
+/** `stage_lifecycle.entry_time` once the producer binds exact snapshot transitions (Codex 82947ceb2): rows then carry the entry time where a transition fact binds, and keep the absence where none does. */
+export const STAGE_TIMING_PUBLISHED = "EXACT_SNAPSHOT_TRANSITION_WHEN_PUBLISHED";
 /** Milliseconds per day: `days_in_stage == floor((as_of_ms - entered_at_ms) / MS_PER_DAY)` (BE-P4, producer rule). */
 export const MS_PER_DAY = 86_400_000;
 /** Schema `days_in_stage` maximum. */
@@ -281,6 +283,8 @@ export interface ManagerGroupQuery {
 export interface ManagerDataset {
   /** Present only when the query named a group sort or filter. */
   groupQuery?: ManagerGroupQuery;
+  /** True when the producer publishes stage timing (`entry_time` EXACT_SNAPSHOT_TRANSITION_WHEN_PUBLISHED): a row's `enteredAtMs` / `daysInStage` are then the snapshot-bound transition, or the typed absence on a row no fact binds. Absent = the legacy pin. */
+  stageTimingPublished?: true;
   surface: ManagerSurface;
   workspaceId: string;
   /** What `currentStage` means (constants of the response, BE-P4); print them, do not re-derive them. */
@@ -447,7 +451,8 @@ function readQueryOptions(raw: unknown): ManagerQueryOptions | null {
   if (!isConst(options.stage_environment, stageEnvironment)) return null;
 
   // BE-P4: `current_stage` is published; the two entry-time fields are the ones the contract cannot publish, in this order.
-  if (!Array.isArray(options.unavailable_fields) || options.unavailable_fields.length !== 2) return null;
+  // The legacy pin lists both entry-time fields as unavailable; a producer that publishes stage timing lists none (cross-checked with `stage_lifecycle.entry_time` in readDataset).
+  if (!Array.isArray(options.unavailable_fields) || (options.unavailable_fields.length !== 2 && options.unavailable_fields.length !== 0)) return null;
   const unavailableFields: { field: "days_in_stage" | "entered_at_ms"; reasonCode: typeof STAGE_ENTRY_TIME_NOT_PUBLISHED }[] = [];
   const expected = [["days_in_stage", STAGE_ENTRY_TIME_NOT_PUBLISHED], ["entered_at_ms", STAGE_ENTRY_TIME_NOT_PUBLISHED]] as const;
   for (const [index, entry] of options.unavailable_fields.entries()) {
@@ -878,7 +883,7 @@ function readDataset(root: Record<string, unknown>): ManagerDataset | null {
   if (
     stageLifecycle === null || !hasOnly(stageLifecycle, ["current_stage_rule", "covers", "entry_time"]) || !hasAll(stageLifecycle, ["current_stage_rule", "covers", "entry_time"])
     || stageLifecycle.current_stage_rule !== MANAGER_STAGE_LIFECYCLE.currentStageRule || stageLifecycle.covers !== MANAGER_STAGE_LIFECYCLE.covers
-    || stageLifecycle.entry_time !== MANAGER_STAGE_LIFECYCLE.entryTime
+    || (stageLifecycle.entry_time !== MANAGER_STAGE_LIFECYCLE.entryTime && stageLifecycle.entry_time !== STAGE_TIMING_PUBLISHED)
   ) return null;
   const queryPolicy = record(root.query_policy);
   if (
@@ -902,6 +907,9 @@ function readDataset(root: Record<string, unknown>): ManagerDataset | null {
   const queryOptions = readQueryOptions(root.query_options);
   const page = readPage(root.page);
   if (quality === null || selectedWindow === undefined || queryOptions === null || page === null) return null;
+  // ST-1: the policy and the options say the same thing about stage timing: published leaves no field unavailable, and the legacy pin lists both.
+  const stageTimingPublished = stageLifecycle.entry_time === STAGE_TIMING_PUBLISHED;
+  if (stageTimingPublished !== (queryOptions.unavailableFields.length === 0)) return null;
   // FE-CAT-3: the coverage list belongs to ALL and only to ALL; an ALL body carries no window (a window resolves against ONE cutoff).
   const groupQuery = Object.prototype.hasOwnProperty.call(root, "group_query") ? readGroupQuery(root.group_query) : undefined;
   if (groupQuery === null) return null;
@@ -951,7 +959,7 @@ function readDataset(root: Record<string, unknown>): ManagerDataset | null {
   if (environmentCoverage !== null && !coverageAddsUp(environmentCoverage, items, page, quality)) return null;
 
   return {
-    surface, workspaceId, stageLifecycle: MANAGER_STAGE_LIFECYCLE, environment, ...(environmentCoverage === null ? {} : { environmentCoverage }), ...(groupQuery === undefined ? {} : { groupQuery }), snapshotId, asOfMs, recordedThroughMs, factsThroughMs, quality, selectedWindow, queryOptions, page, items, groups,
+    surface, workspaceId, stageLifecycle: MANAGER_STAGE_LIFECYCLE, environment, ...(environmentCoverage === null ? {} : { environmentCoverage }), ...(groupQuery === undefined ? {} : { groupQuery }), ...(stageTimingPublished ? { stageTimingPublished: true as const } : {}), snapshotId, asOfMs, recordedThroughMs, factsThroughMs, quality, selectedWindow, queryOptions, page, items, groups,
     capitalStatements, statementScope: MANAGER_STATEMENT_SCOPE, scores, fundingBucketPnl, lineage,
     unreadDetails: { scoreDetails, compositionDetails, regimeDetails }, hasMore: page.nextCursor !== null,
   };

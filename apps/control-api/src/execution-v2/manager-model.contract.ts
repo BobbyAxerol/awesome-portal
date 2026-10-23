@@ -10,7 +10,7 @@ import { managerCompositionPublication } from "./manager-composition-publication
 export { managerCompositionPublication } from "./manager-composition-publication.contract";
 import { managerRegimePublication } from "./manager-regime-publication.contract";
 export { managerRegimePublication } from "./manager-regime-publication.contract";
-import { managerStageLifecycleReasons, managerStageLifecyclePolicy, STAGE_ENTRY_PUBLISHED, validateManagerLifecycle } from "./manager-lifecycle";
+import { managerStageLifecycleReasons, managerStageLifecyclePolicy, validateManagerLifecycle } from "./manager-lifecycle";
 import { managerSeriesPublication, validateManagerSeriesPublications } from "./manager-series-publication.contract";
 import { validateManagerAllScope, MANAGER_ALL_REASONS } from "./manager-all-scope";
 
@@ -228,8 +228,4 @@ export const managerDatasetResponse = z.object({ schema_version: z.literal("port
   funding_bucket_pnl: z.object({ value: z.null(), reason_code: z.literal("LOT_ATTRIBUTION_METHOD_NOT_APPROVED") }).strict(),
   lineage: z.object({ reducer_revision: z.literal("manager-model.v1"), source_set_ref: publicationDigest,
     revision: publicationDigest, supersedes_revision: publicationDigest.nullable() }).strict(),
-}).strict().superRefine(validateManagerAllScope).superRefine(validateManagerP1Response).superRefine(validateManagerLifecycle).superRefine((v, c) => {
-  // WP-K: the policy and the options say the same thing about the entry time.
-  if ((v.stage_lifecycle.entry_time === STAGE_ENTRY_PUBLISHED) !== (v.query_options.unavailable_fields.length === 0))
-    c.addIssue({ code: z.ZodIssueCode.custom, path: ["stage_lifecycle", "entry_time"], message: "MANAGER_STAGE_ENTRY_POLICY_MISMATCH" });
-}).superRefine(validateManagerDatasetInvariants).superRefine(validateManagerDisplayText);
+}).strict().superRefine(validateManagerAllScope).superRefine(validateManagerP1Response).superRefine(validateManagerLifecycle).superRefine(validateManagerDatasetInvariants).superRefine(validateManagerDisplayText);
