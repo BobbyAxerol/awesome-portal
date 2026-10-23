@@ -9370,8 +9370,12 @@ Real-source batch carrier/wiring remains OPEN; not installed/landed. Package5
 Contributors source/fixture delivered ace3547ca: authorized attribution + independent group
 continuation; backend108/108, controller14/14, contract72/72, linked fixture4/4,
 regressions27/27 and builds PASS. Claude must update closed grouped reader before
-rollout; real consolidated Return/Score source remains OPEN. Package6
-QUEUED. See packet for exact verification and Claude/Edge handoff.
+rollout; real consolidated Return/Score source remains OPEN. Package6 Names/finance
+delivered37bbecf92: same-authorized-snapshot portfolio labels, linked synthetic
+budget/exposure and complete order summary fixtures; no invented real financial
+source. Backend31/contract33/fixture8/buildsPASS. All six support source/fixture
+packages delivered on isolated lane, not landed/runtime/browser accepted; Claude
+reader updates precede integration. See packet for exact verification and Claude/Edge handoff.
 No production change, push or new release gate follows this assignment.
 
 **23 October — Bobby: complete linked fixtures for UI review.**

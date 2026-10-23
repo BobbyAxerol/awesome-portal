@@ -2,6 +2,19 @@
 
 ## Codex ownership — six approved backend packages, 23 October
 
+Package6 Names/finance (24October Asia/Saigon) delivered `37bbecf92`. Scoped
+Resource360 deployments/allocations gain optional portfolio_name/reason, same
+authorized snapshot and name field policy, no extra source read. Claude extends
+closed reader before rollout; no accepted component redesign. Positive fixtures
+use existing open ProfileRead financial keys, shared account book and deployment
+graph. Repaired200-order/100-fill truncation via bounded complete fixture pages;
+tail and filters tested on1500orders. Wallet/equity, capital/risk budget and mixed
+currencies remain distinct. Edge financial batch definitions/publication still
+OPEN, no runtime allowlist widening or claimed connected acceptance. Exact
+fields/methods/source inputs in the sequential packet. Backend31/contract33/
+financial-Accounts8PASS; Control API/BFF build and snapshot611PASS.14code/fixture/
+generated files,+1958/-7. No frontend edit; closeout source-only, not installed.
+
 Package5 Contributors source/fixture delivered `ace3547ca` on the support lane.
 New optional Manager query group_limit/group_after/group_before and group_page
 separate group continuation from row pagination. Alpha attribution comes from the

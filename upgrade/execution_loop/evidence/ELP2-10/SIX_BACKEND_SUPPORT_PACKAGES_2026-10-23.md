@@ -13,12 +13,132 @@ The existing frozen integration gate is not restarted for this work.
 | 3 Visit digest | User/workspace baseline, snapshot revision, explicit seen transition, typed changes and safe links; authorization/isolation/replay tests plus populated fixture | BACKEND_SOURCE_DELIVERED 8822d58f2; PG/contract/fixture gates PASS; not installed/consumer accepted |
 | 4 Accounts | Authorized same-snapshot counts and list figures projection; reuse published DTO; no per-row read amplification; query/permission tests | PROJECTION_AND_FIXTURE_DELIVERED 0f0d5cc85; real-source batch carrier/wiring OPEN, browser/installation pending |
 | 5 Contributors | Authorized alpha attribution and bounded group continuation beyond 200; full-population aggregate semantics; no sum of returns/scores; pagination/security tests | SOURCE_AND_FIXTURE_DELIVERED ace3547ca; grouped reader integration and real Return/Score publication OPEN |
-| 6 Names/finance | Authorized portfolio label joins; exact grain/unit/source binding for financial DTO/fixtures; no wallet-equity substitution or cross-currency sums | QUEUED |
+| 6 Names/finance | Authorized portfolio label joins; exact grain/unit/source binding for financial DTO/fixtures; no wallet-equity substitution or cross-currency sums | SOURCE_AND_FIXTURE_DELIVERED 37bbecf92; consumer/browser and qualified real financial inputs OPEN |
 
 Each closeout must name code SHA, changed paths, tests actually run, contract
 generation impact, remaining real-source inputs and Claude consumer action.
 Helpers alone do not close a served route; a fixture test is not a browser receipt.
 Conversely, real Edge readiness does not block rich positive fixture acceptance.
+
+## Package6 entry — Names/finance, 24 October (Asia/Saigon)
+
+Base4253f88ed, clean support lane; Claude inspected atbeed0225e. Inputs:
+[FE-CAT-8/9](FE_CAT_8_9_ADDITIVE_FIELDS_2026-10-23.md), previous five package
+receipts and Unified §14. Preserve their source gaps; do not relabel fixture
+completion as financial commissioning. No runtime/remote push/UI ownership change.
+
+Requirement matrix: (1) portfolio_name in scoped deployments/allocations joined
+only from portfolios already authorized in the SAME document/profile; (2) complete
+positive fixture wallet/equity, budget/exposure and order VWAP/fees with explicit
+grain, units and exact arithmetic; (3) reusable DTO/generator/tests and precise
+Claude handoff. No strategy/deployment display name invented for real data.
+Source fields absent from Edge remain unqualified, not copied from fixture.
+
+Disjoint lanes: names backend agent owns ResourceRead helper/service/tests;
+fixture agent owns review-finance/review-relations and fixture tests; reviewer
+read-only source/contract audit. Primary owns public generator/types, docs and
+integration. Shared component/e2e source remains Claude's. Focused tests and one
+backend build; no PG gate unless implementation actually changes persistence.
+Rollback: revert source slice before installation, preserve all data and receipts.
+
+### Package6 delivery and exact consumer handoff
+
+1. `ResourceReadService` joins portfolio labels only AFTER scoped row/field
+   authorization from the same detached retained profile snapshot. Both
+   `DeploymentsScopedRow` and `PortfolioAllocationsScopedRow` gain optional
+   `portfolio_name: string|null` and `portfolio_name_reason_code`. Known name has
+   null reason; absence uses PORTFOLIO_NAME_NOT_READ/NOT_PUBLISHED/NOT_AUTHORIZED/
+   AMBIGUOUS. Hidden and genuinely missing identity both stay NOT_PUBLISHED,
+   never existence disclosure. A global name register is not read. One raw
+   snapshot, no N+1, no change to legacy v1 or full-portfolio financial authority.
+   Public revision changes with visible label, not hidden label changes.
+2. Generated contract: `execution-resource-scoped.d.ts`, same four
+   `executionScoped{Alpha,Portfolio,Account,Binding}ResourceGetV2` operations.
+   JSON/Zod share generator `generate-execution-resource-scoped.mjs`.
+   New canonical fixture `execution-resource-portfolio-names.synthetic.valid.json`
+   has positive label and null+reason cases without rewriting old fixtures.
+3. Claude must extend closed Resource360 reader allowlists/validation for these
+   optional fields before rollout; show ID fallback when missing and retain
+   workspace/environment link context. Label is never an access grant. Existing
+   components can consume names; no design change was made here. Add fixture and
+   browser1280/660 long-label checks. Producer tests are not browser acceptance.
+4. Opt-in `review-finance.ts` completes generated Account rows using the same
+   graph: portfolio/strategy/deployment display labels, allocation-level
+   exposure_long/short/gross, budget_used/approved. Explicit **synthetic** margin
+   scenario: used=10% of graph gross exposure; approved=used+500 units. This is
+   independent of allocated capital, not a production risk/leverage default.
+   All figures remain exact decimal strings with that row's currency/time;
+   per-currency partitions are not summed. Existing shared physical book keeps
+   wallet != equity and distinct list/detail/exposure figures. Native adverse/
+   missing-source cases are not overwritten. Existing open ProfileRead rows
+   accept these keys; closed real custody DTO/allowlists are NOT widened.
+5. Fixed a genuine positive-fixture bug: a200-order response can contain only
+   100 fills. Prior helper inferred zero/absent financial facts for tail orders.
+   Reuse the existing exact VWAP/fee helper on25-order fixture source pages,
+   bounded60pages/1500orders. Match original order/account/mode/venue/client IDs;
+   public order/fill pages and cursors stay unchanged. Mixed-currency fees stay
+   absent as a scalar, never combined. This is in-process fixture work, not
+   product/source fanout or a new real financial derivation.
+
+### Package6 source inputs still OPEN — single coordinator Edge
+
+The source registry `apps/control-api/src/execution/eds11r-manager-relation-registry.generated.ts`
+still publishes broker buying_power/currency/synced_at, not wallet/native equity;
+orders do not carry order VWAP/fees; allocations carry allocated_capital/max_capital,
+not a defined margin/risk used/approved statement or allocation exposure. An order
+leg price or per-fill commission is not automatically an order summary. Source
+catalogue pins were not changed. Do not interpret uncommissioned real fields as0.
+
+Required Edge return (TS/PM stay behind Edge): (a) broker wallet/equity per currency
+with observed time and coverage, (b) budget definitions distinguishing economic
+backing/margin-risk budget/exposure cap, (c) allocation exposure per side/currency
+and exact population, (d) complete order fill-summary VWAP + per-currency fees,
+source revision, completeness and correction semantics. After those exist, wire
+the qualified batch adapter—not one upstream call per UI row. Package4 batch and
+package5 Return/Score requests remain OPEN. This packet is a written source-input
+handoff, not a claim that Edge has received/accepted/implemented it.
+
+### Package6 verification checkpoint
+
+Backend31 distinct PASS (30 initial,1 new revision-binding targeted retake),
+including16 existing Resource360 regressions. Contract/schema fixtures33/33PASS.
+Final financial fixture+Accounts regression **8/8 PASS**, including1500-order
+independent traversal, page after1300 and FILLED+ETHUSDT filtered continuation;
+mixed-currency source example leaves scalar fee absent while VWAP remains present.
+Independent review ACCEPT, requested tail/filter coverage implemented before
+freeze. Generator/snapshot611 and diff checks PASS. Build/browser/landing statuses
+are recorded at final freeze; no DB/migration changes, so no redundant DB restore.
+No frontend edits, runtime/source change, grant, command/Live or remote push.
+
+Reused package4 wallet/equity implementation, not a second delivery. Financial
+fixture tests validate through the actual ProfileRead consumer. BFF bundle build
+PASS; schema generator and snapshot611PASS. Current Claude pin remainsbeed0225e;
+new source/consumer work after that pin must be reconciled at landing, not
+overwritten wholesale. Source census above is the checked-in contract, not a
+claim of a new HK runtime inspection.
+
+Resource cleanup: no DB/container/network/session/credential created. Tests
+finished; dependency links and ignored build outputs retained for reuse.
+Root217GiB free/66%used: NO_ACTION_NEEDED. Normal integration hook is reserved for
+the frozen common-branch landing under §10.10c; this source slice uses focused
+gates, docs use R0 §10.10d. No remote push or dev/main merge follows this work.
+
+### Package6 final pin / next-ready work
+
+Code `37bbecf92`:14files,+1958/-7, largely the new canonical JSON response fixture
+and generated schemas/types, not1958 handwritten logic lines. Control API build
+PASS on final source. Backend31, contract33, financial/Accounts8 PASS as scoped
+above; BFF build, generator/snapshot611 and tracking/diff checksPASS. Independent
+review ACCEPT with tail/filter test added. Producer delivered on support lane only;
+not landed/installed/browser accepted. No new source migration or configuration.
+
+Claude can now consume label fields and review all six package fixtures, preserving
+approved components. **Gói1–6 source/fixture tasks delivered, not whole ELP2-10
+qualified.** Next integrator work is reconcile these focused diffs with Claude's
+reader changes and one frozen landing gate; next real backend work is Edge batch
+financial/Return/Score source binding already listed, not repeated fixture work.
+Claude returns reader/browser acceptance or exact contract request in this packet.
+No new numbered package/phase, command/Live or runtime rollout starts implicitly.
 
 ## Package5 entry and contract handoff — Contributors, 23 October
 

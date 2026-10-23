@@ -163,6 +163,28 @@ new product screen.
 - This does not fill a missing contract or a hard-coded UI placeholder. Consumer gaps belong in
   the Claude handoff; they must not be hidden by relabelling synthetic source facts as qualified.
 
+### Package6 linked finance refinement — 24 October 2026 (Asia/Saigon)
+
+For generated Accounts in populated/layout-stress, `review-finance.ts` joins the
+same deployment graph as Manager, fenced by account/environment/portfolio and
+currency. It publishes the graph's portfolio/alpha labels, not IDs renamed as
+names. Existing native/adverse fixtures are preserved.
+
+The synthetic PM scenario explicitly sets risk/margin budget used to10% of gross
+exposure and approved to used+500 currency units. This is **fixture methodology**,
+not a production leverage/budget rule or a rename of allocated capital. Gross
+exposure is the graph's deployment exposure; alternate long/short books partition
+it, with zero a real scenario value. Currency and source `updated_at` follow that
+deployment. Wallet/equity stay distinct through the existing shared physical book.
+
+Blotter order facts reuse the existing exact VWAP/fee helper over complete bounded
+25-order source pages when the public100-fill array is cut. Up to60 in-process
+fixture pages, no network/real adapter. The returned order/fill page is unchanged;
+only already-selected order IDs with matching account/mode/venue/client IDs are
+enriched. Missing/failed source traversal removes uncertain summary facts; mixed
+commission currencies never become one scalar fee. No fixture constant or derived
+amount is promoted into a real producer allowlist.
+
 Run a disposable private process (stop with Ctrl-C):
 
 ```bash
