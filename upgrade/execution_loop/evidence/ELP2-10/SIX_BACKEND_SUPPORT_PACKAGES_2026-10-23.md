@@ -8,7 +8,7 @@ The existing frozen integration gate is not restarted for this work.
 
 | Package | Work and acceptance | Current state |
 | --- | --- | --- |
-| 1 Linked fixtures | BFF uses shared synthetic facts; same IDs across tables/detail/charts; exact financial endpoints; contract and navigation tests | IN_PROGRESS; helper delivery already accepted by Claude at c7471e516/c059d9844; BFF wiring still required |
+| 1 Linked fixtures | BFF uses shared synthetic facts; same IDs across tables/detail/charts; exact financial endpoints; contract and navigation tests | BACKEND_FIXTURE_READY 0297c4902; browser/visual and rollout not claimed |
 | 2 Fleet timing | Exact lifecycle fact binding; entered-at/days agree with as-of; ambiguous/missing transitions remain explicit; schema/producer tests | BACKEND_SOURCE_DELIVERED 40d3540c7; consumer and real transition-source acceptance pending |
 | 3 Visit digest | User/workspace baseline, snapshot revision, explicit seen transition, typed changes and safe links; authorization/isolation/replay tests plus populated fixture | QUEUED |
 | 4 Accounts | Authorized same-snapshot counts and list figures projection; reuse published DTO; no per-row read amplification; query/permission tests | QUEUED |
@@ -107,3 +107,31 @@ Verification uses focused §10.10c gates; no extra heavy hook, deploy or push.
 Dependency symlink is retained in this isolated worktree; no temporary diagnostic
 file, container, DB or process from these tests remains. Core's separate frozen
 integration landed at2a89e6d0d; this support branch is not part of that landing.
+
+## Third checkpoint — core graph and scenario closeout, 0297c4902
+
+Supersedes package1 graph/test debt above; historical failures remain recorded.
+Account/Deployment overview now selects source contributions BEFORE aggregation.
+Scaled internal Account balances use the same allocation + realized PnL graph as
+Manager, with free + locked = total. Broker wallet/equity remain distinct. Capital
+statements derive opening capital/current NAV from unique source deployments,
+not arbitrary account-count constants. Current receipts use unwindowed source;
+performance keeps its declared window and basis. Currencies remain separate.
+
+Tests follow Fleet → deployment/account and Portfolio → series, checking IDs,
+contributions and endpoints. Shared physical account balances are not summed once
+per portfolio. Positive defaults no longer force gaps/index-based missing facts.
+Dedicated sparse regression preserves zero/null/negative/EMPTY/UNAVAILABLE cases.
+Legacy/native adverse fixtures are not overwritten to make positive paths pass.
+
+Final affected consumer gate: **84/84 PASS**, four files,11.03s. Producer fixture
+gate: **15/15 PASS**, three files,3.83s. Earlier runs overlap these totals, not
+additional coverage. Fixture BFF bundle build and diff check PASS. No component
+changes (only two consumer test files), no heavy hook, DB/Docker, runtime or push.
+
+Package1 backend fixture scope is ready for integration and Claude browser review,
+not a certification of every catalogue family. Package2 producer/schema delivery
+remains40d3540c7; Claude accepts its enum/options before opting into timed fixture.
+Claude next: integrate focused diffs, schedule fixture/web rebuild, review journeys
+at1280/660 without redesign. Next backend package3 visit digest is already approved.
+Ignored build output/dependency links retained; no test process or diagnostic left.

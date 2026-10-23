@@ -2,6 +2,13 @@
 
 ## Codex ownership — six approved backend packages, 23 October
 
+Closeout update:0297c4902 links scoped account/deployment contributions and capital
+to the common graph; affected consumer84/84 and producer15/15 PASS, BFF buildPASS.
+Package1 backend fixture ready; Claude browser/rollout not claimed. Package2
+40d3540c7 publishes timing, with separate new fixture to preserve old readers.
+Claude accepts new lifecycle policy enum and empty unavailable-fields option
+before opting in. No component redesign or production/remote change.
+
 [Sequential implementation ledger](evidence/ELP2-10/SIX_BACKEND_SUPPORT_PACKAGES_2026-10-23.md).
 Codex owns isolated BFF positive-series wiring, lifecycle fact helper and subsequent
 backend contracts/projections; Claude keeps accepted component design and its own

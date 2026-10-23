@@ -9358,8 +9358,9 @@ No remote push, dev/main merge, signed release or production/source activation.
 [Live package status and ownership](./execution_loop/evidence/ELP2-10/SIX_BACKEND_SUPPORT_PACKAGES_2026-10-23.md):
 linked fixtures → Fleet timing → user/workspace visit digest → Accounts list →
 Contributors → authorized names/financial fields. Codex implementation in isolated
-support lane; Claude keeps components/design. Current package1 IN_PROGRESS,
-package2 helper preparation is not served delivery, packages3–6 QUEUED.
+support lane; Claude keeps components/design. Package1 backend fixture ready
+at0297c4902 (84/84 consumer,15/15 producer); package2 producer/schema delivered
+at40d3540c7. Consumer timing/browser review remains separate; packages3–6 QUEUED.
 No production change, push or new release gate follows this assignment.
 
 **23 October — Bobby: complete linked fixtures for UI review.**
