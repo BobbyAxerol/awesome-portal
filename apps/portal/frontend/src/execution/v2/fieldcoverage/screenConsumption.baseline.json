@@ -37,7 +37,6 @@
     "page.rows[].metricsAvailability.account_balance.state",
     "page.rows[].metricsAvailability.current_position_pnl.reasonCode",
     "page.rows[].metricsAvailability.current_position_pnl.state",
-    "page.rows[].metricsAvailability.equity_series_30d.reasonCode",
     "page.rows[].metricsAvailability.equity_series_30d.state",
     "page.rows[].metricsAvailability.max_drawdown_30d.reasonCode",
     "page.rows[].metricsAvailability.max_drawdown_30d.state",

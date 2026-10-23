@@ -1,6 +1,6 @@
 {
   "portfolios": {
-    "offered": 50,
+    "offered": 52,
     "unread": [
       "delivery_profile",
       "freshness_budget_ms.fresh",
@@ -14,6 +14,8 @@
       "items[].health.reason_code",
       "items[].health.state",
       "items[].health.value",
+      "items[].owner_user_id",
+      "items[].root_id",
       "matching_portfolios",
       "workspace_id"
     ],
