@@ -2,7 +2,7 @@
 
 Directive (Bobby, owner): where the real API has no data, the UI is filled with rule-bound FIXTURE_LAB data (register rows, replaceable) so the whole design is visible and testable; the real API continues in parallel. Level FIXTURE_LAB throughout: nothing here is source acceptance, the fixture banner is unchanged, no baseline was recorded, no command or Live flag was touched, no schema or generated file was widened. Fixture values never wear the word "real".
 
-Worktree `/home/bobby/portal/.claude/worktrees/agent-a9eacf3e2bde81ba6`, rebased on `claude/post-land-20261022` (8a17b3ad9 at the time of the rebase). Commits: `feat(overview)`, `feat(portfolio360)`, `feat(portfolios)`, this note.
+Worktree `/home/bobby/portal/.claude/worktrees/agent-a9eacf3e2bde81ba6`, rebased on `claude/post-land-20261022` (b0ab1da0c, with WP-F2 and WP-C integrated; the conflict in `answerReviewManager` was resolved by adding `wpF1Answer` to the chain after WP-C's `wpcEquity`). Commits: `feat(overview)`, `feat(portfolio360)`, `feat(portfolios)`, this note.
 
 Inputs read: the board and LOG, the audit sections 1, 3, 4 and 6(d) (A4, A11, B2, B3), the previous Portfolios note (N1 to N5), register sections 2, 2a, 2c, the design images (overview, portfolios, portfolio manager views, hl-portfolio-flow, hl-portfolio-actions) against the live shots, and Artifact 2 concept C2.
 
@@ -122,13 +122,12 @@ Existing tests changed (each for a stated reason, never to silence a real failur
 Numbers come from the probe's output for this worktree (`scripts/probe-portfolios-layout.mjs ... --only ... --widths ...`); the full-stack `scripts/layout-audit.mjs` (vite build) was NOT run: the machine had 5 to 11 GB available and the board asks for one heavy command at a time, so the small probe was used.
 
 ## 6. Tests (all from `apps/portal/frontend`, `--maxWorkers=2`)
-- `npx vitest run src/execution/v2/screens/overview src/execution/v2/screens/portfolios src/fixtureBff`: 49 files passed, 1 skipped; 947 passed, 1 skipped (run on the rebased tree; the last small edits, the title wording and the Overview breakpoint, were re-run: `titleAbsence` plus `registerWpf1` 15 passed, probe 0). New files, 76 tests (run together: 8 files, 76 passed): `overviewWpf1.test.tsx` (11), `capitalModel.test.ts` (13), `capitalBlocks.test.tsx` (8), `flowModel.test.ts` (9), `performance.test.tsx` (6), `allocationFlow.test.tsx` (7), `registerWpf1.test.tsx` (11), `reviewCapital.test.ts` (11).
-- Hygiene: `disabledReason`, `testHygiene`, `v2Hygiene`, `uxm10Css`, `flagOn`, `flagOff`, `budgets`, `charts`, `series`, `compare` all green; `titleAbsence` green after rewording my one title.
-- `npx tsc --noEmit -p .` (separately): my files clean; one error remains in WP-A's `screens/fleet/FleetDatasetTable.tsx(96,38)` on the lane tip (not mine).
+- `npx vitest run src/execution/v2/screens/overview src/execution/v2/screens/portfolios src/fixtureBff`: 50 files passed, 1 skipped; 963 passed, 1 skipped (final run, on the tree rebased onto the lane tip with WP-C and WP-F2 in; the last small edits, the title wording and the Overview breakpoint, were re-run: `titleAbsence` plus `registerWpf1` 15 passed, probe 0). New files, 76 tests (run together: 8 files, 76 passed): `overviewWpf1.test.tsx` (11), `capitalModel.test.ts` (13), `capitalBlocks.test.tsx` (8), `flowModel.test.ts` (9), `performance.test.tsx` (6), `allocationFlow.test.tsx` (7), `registerWpf1.test.tsx` (11), `reviewCapital.test.ts` (11).
+- Hygiene (final tree): `disabledReason`, `testHygiene`, `titleAbsence`, `v2Hygiene`, `uxm10Css`, `flagOn`, `flagOff`, `budgets`, `charts`, `series`, `compare`: 27 files, 559 passed.
+- `npx tsc --noEmit -p .` (separately, on the final tree): exit 0, no output.
 
 ## 7. Not verified
 - No Playwright visual suite, no baseline recording (instructed). Baselines that will differ: Overview, Portfolios, Portfolio 360 every tab, anything mounting the Portfolios list or the 360 chrome.
 - Layout was measured on a vite dev server with the fixture BFF in chromium, not on the preview stack and not at the real Edge.
 - The pf_TEST_ONLY_* subjects were not re-measured after WP-C's rows (their branch is not integrated here); on the audit route the Overview of those still reads empty until it lands.
 - The Review in the Actions rail was looked at on pf_scale_001 with `workspace_id` in the address; a page address without a workspace keeps the old reason sentence (the eligibility read is not asked).
-- `tsc` error in the Fleet file and the three earlier `titleAbsence` Fleet entries are WP-A's, fixed or not on the lane tip as the primary integrates.
