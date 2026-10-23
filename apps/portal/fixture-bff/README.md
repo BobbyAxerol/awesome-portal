@@ -90,6 +90,7 @@ Read through `loadConfig`; no file, no secret. A bad value stops the process wit
 | `FIXTURE_LANE_LABEL` | `FIXTURE_LAB` | value of `X-Fixture-Lane`; must start with `FIXTURE_LAB` |
 | `FIXTURE_SCALE` | `medium` | `small` (the specs' rows), `medium`, `large`: see `ROUTES.md` |
 | `FIXTURE_REVIEW_PROFILE` | `sparse-realistic` | `sparse-realistic` preserves existing answers; `populated` adds Manager data and known account links; `layout-stress` also uses long display labels and denser series. Server/test-only, not a UI flag |
+| `FIXTURE_SCENARIO` | `positive` | WP-P review scenario (populated and layout-stress profiles; the sparse-realistic profile ignores it): `positive` (complete, linked world), `partial`, `stale`, `denied`, `empty`, `missing` (the former source-dark default), `zero`, `dense`. Switch at run time with `GET /__fixture/scenario?set=<name>` or `POST /__fixture/scenario {"scenario":"stale"}`, reset with `{"reset":true}`; in memory only. With `FIXTURE_WRITES=doubles` the lane-internal command story (`POST /__fixture/command-story/plan`, `/{operation_id}/apply`, `/retry`, `GET /{operation_id}/status`) walks plan, apply, status and retry in memory with one id set; it never reaches the product command routes |
 | `FIXTURE_NOW_ISO` | `2026-08-22T13:00:00Z` | instant the generated operations are placed relative to (see the clock note in `ROUTES.md`) |
 | `FIXTURE_USER_ID` | `principal-visual-baseline` | the id of the fixture user: `/api/auth/context`, `/api/admin/access/self` and the Access screen all describe it. It is a label, not an account; there is no reason to change it now that the fixture signs itself in |
 | `FIXTURE_WRITES` | `doubles` | `refuse` turns every non-GET into `405` |
@@ -161,6 +162,28 @@ new product screen.
 
 - This does not fill a missing contract or a hard-coded UI placeholder. Consumer gaps belong in
   the Claude handoff; they must not be hidden by relabelling synthetic source facts as qualified.
+
+### Package6 linked finance refinement — 24 October 2026 (Asia/Saigon)
+
+For generated Accounts in populated/layout-stress, `review-finance.ts` joins the
+same deployment graph as Manager, fenced by account/environment/portfolio and
+currency. It publishes the graph's portfolio/alpha labels, not IDs renamed as
+names. Existing native/adverse fixtures are preserved.
+
+The synthetic PM scenario explicitly sets risk/margin budget used to10% of gross
+exposure and approved to used+500 currency units. This is **fixture methodology**,
+not a production leverage/budget rule or a rename of allocated capital. Gross
+exposure is the graph's deployment exposure; alternate long/short books partition
+it, with zero a real scenario value. Currency and source `updated_at` follow that
+deployment. Wallet/equity stay distinct through the existing shared physical book.
+
+Blotter order facts reuse the existing exact VWAP/fee helper over complete bounded
+25-order source pages when the public100-fill array is cut. Up to60 in-process
+fixture pages, no network/real adapter. The returned order/fill page is unchanged;
+only already-selected order IDs with matching account/mode/venue/client IDs are
+enriched. Missing/failed source traversal removes uncertain summary facts; mixed
+commission currencies never become one scalar fee. No fixture constant or derived
+amount is promoted into a real producer allowlist.
 
 Run a disposable private process (stop with Ctrl-C):
 

@@ -159,6 +159,8 @@ export function answerApprovalRequestLookup(method: string, path: string, search
 
 export const PENDING_RECALLS_ROUTE = "/pending-recalls";
 
+import { positiveRecallOf } from "./bffPositiveMode";
+
 export function answerPendingRecallDiscovery(method: string, path: string, search: URLSearchParams): BffAnswerGovernance | null {
   if (path !== PENDING_RECALLS_ROUTE || method !== "GET") return null;
   if (!keysOk(search, ["workspace_id", "resource_kind", "resource_id", "environment"]) || [...search.keys()].length !== 4) {
@@ -174,6 +176,17 @@ export function answerPendingRecallDiscovery(method: string, path: string, searc
   const file = canonical(PENDING_CONTROL);
   const held = [file.discovery_open, file.discovery_deployment].find((body: Draft) => body.resource.kind === kind && body.resource.id === id && body.environment === environment);
   const body: Draft = structuredClone(held ?? file.discovery_empty);
+  // WP-P: a native portfolio's open recall is the amount its capital statement states as Recalling (one WAITING item), next to a finished APPLIED and a REJECTED one on the Core book.
+  const world = held === undefined && kind === "PORTFOLIO" ? positiveRecallOf(id!, environment) : null;
+  if (world !== null) {
+    const template = structuredClone(file.discovery_open.items[0]);
+    const item = (suffix: string, state: string, amounts: Draft): Draft => ({ ...structuredClone(template), original_recall_id: `recall_${id}_${suffix}`, currency: world.currency, state, amounts, recipient_account_id: null,
+      last_operation: state === "WAITING_ENCUMBRANCE" ? "APPLY_PENDING" : state === "APPLIED" ? "APPLY" : "REJECT" });
+    body.policy_revision = structuredClone(file.discovery_open.policy_revision);
+    body.items = [item("1", "WAITING_ENCUMBRANCE", { requested: world.pending, applied: "0", pending: world.pending, cancelled: "0", rejected: "0" }),
+      ...(id === "pf_TEST_ONLY_core" ? [item("2", "APPLIED", { requested: "1000.00", applied: "1000.00", pending: "0", cancelled: "0", rejected: "0" }),
+        item("3", "REJECTED", { requested: "500.00", applied: "0", pending: "0", cancelled: "0", rejected: "500.00" })] : [])];
+  }
   body.resource = { kind, id };
   body.environment = environment;
   return { status: 200, body };

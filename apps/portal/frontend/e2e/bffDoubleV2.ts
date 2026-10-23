@@ -103,11 +103,25 @@ function dataset(): Row[] {
 }
 
 let memo: { source: unknown; rows: Row[] } | null = null;
+let memoSim: { source: unknown; rows: Row[] } | null = null;
 /** Built once per scale: the generated list is a different array for each scale, so identity is the key. */
-function allRows(): Row[] {
+function allRows(simulate = false): Row[] {
   const source = scaled().operations;
   if (memo === null || memo.source !== source) memo = { source, rows: dataset() };
-  return memo.rows;
+  if (!simulate) return memo.rows;
+  if (memoSim === null || memoSim.source !== source) memoSim = { source, rows: memo.rows.map(settleHealthy) };
+  return memoSim.rows;
+}
+
+/**
+ * SIMULATED (FIXTURE_LAB, opt-in): a row whose source succeeded, whose verification succeeded and whose display is current needs nobody, so
+ * the lane has it already settled in the Portal (acknowledged and resolved when it was recorded). The default "Needs attention" lens is the
+ * published `triage_state=UNACKNOWLEDGED`, so without this it listed healthy rows beside the ones that need a person.
+ */
+function settleHealthy(row: Row): Row {
+  if (row.triage_state !== "UNACKNOWLEDGED" || row.source_status !== "SUCCEEDED" || row.verification_result !== "SUCCEEDED") return row;
+  if (simulatedAxes(row).display_state !== "CURRENT") return row;
+  return { ...row, triage_state: "RESOLVED", workflow_version: 2, acknowledged_at: row.created_at, resolved_at: row.created_at };
 }
 
 function problem(status: number, code: string, message: string): BffAnswerV2 {
@@ -186,17 +200,104 @@ function simulatedStatusCounts(all: readonly Row[], applied: readonly { field: s
 }
 
 /**
- * SIMULATED (FIXTURE_LAB, opt-in, FE-CAT-2): the delivery and display axes of a row, restated from the row's own source status and
- * verification, and the queue health counted over the SAME filtered set the page was cut from (never over the loaded page).
- * A BLOCKED row has no display to catch up, so the source "did not report" it (null); every other row reports CURRENT.
+ * SIMULATED (FIXTURE_LAB, opt-in, WP-B): the incidents the queue rows link to (FE-042) and the incident roots those links open.
+ * The ids, targets, severities and states are the SAME in the link summary on a row and in the root the route answers, so the
+ * two reads agree. Open exceptions are counted from these records (OPEN only), never from the loaded page.
+ * Real source: the Portal incident records (`execution-operations.v1` OperationalIncidentCurrentV2 and OperationalIncidentLinksV2).
  */
+interface SimIncident {
+  id: string;
+  target: [string, string];
+  env: "PAPER" | "SANDBOX" | "LIVE";
+  severity: string;
+  state: "OPEN" | "MITIGATED" | "RESOLVED";
+  version: number;
+  createdAt: string;
+  acknowledgedAt: string | null;
+  mitigatedAt: string | null;
+  resolvedAt: string | null;
+}
+export const SIM_INCIDENTS: readonly SimIncident[] = [
+  { id: "inc_TEST_ONLY_fx_mismatch", target: ["PORTFOLIO", "pf_TEST_ONLY_canary"], env: "LIVE", severity: "CRITICAL", state: "OPEN", version: 1, createdAt: "2026-08-22T11:55:00.000Z", acknowledgedAt: null, mitigatedAt: null, resolvedAt: null },
+  { id: "inc_TEST_ONLY_fx_recall", target: ["PORTFOLIO", "pf_TEST_ONLY_satellite"], env: "LIVE", severity: "WARNING", state: "OPEN", version: 2, createdAt: "2026-08-22T11:42:00.000Z", acknowledgedAt: "2026-08-22T11:50:00.000Z", mitigatedAt: null, resolvedAt: null },
+  { id: "inc_TEST_ONLY_fx_sync", target: ["ACCOUNT", "acc_TEST_ONLY_binance02"], env: "PAPER", severity: "WARNING", state: "MITIGATED", version: 3, createdAt: "2026-08-22T09:45:00.000Z", acknowledgedAt: "2026-08-22T10:00:00.000Z", mitigatedAt: "2026-08-22T11:25:00.000Z", resolvedAt: null },
+  { id: "inc_TEST_ONLY_fx_budget", target: ["PORTFOLIO", "pf_TEST_ONLY_core"], env: "LIVE", severity: "ERROR", state: "OPEN", version: 2, createdAt: "2026-08-22T10:32:00.000Z", acknowledgedAt: "2026-08-22T10:40:00.000Z", mitigatedAt: null, resolvedAt: null },
+  { id: "inc_TEST_ONLY_fx_resume", target: ["DEPLOYMENT", "dep_TEST_ONLY_eth"], env: "PAPER", severity: "INFO", state: "RESOLVED", version: 4, createdAt: "2026-08-22T08:46:00.000Z", acknowledgedAt: "2026-08-22T08:50:00.000Z", mitigatedAt: "2026-08-22T09:00:00.000Z", resolvedAt: "2026-08-22T09:20:00.000Z" },
+];
+const SIM_INCIDENT_BY_ID = new Map(SIM_INCIDENTS.map((incident) => [incident.id, incident]));
+
+/** operation id -> [incident id, relationship, linked at]: many to many (two operations share an incident, one operation names two). */
+const SIM_LINKS: Readonly<Record<string, readonly (readonly [string, "TRIGGERED_BY" | "MITIGATES" | "RELATED", string])[]>> = {
+  op_TEST_ONLY_s01: [["inc_TEST_ONLY_fx_mismatch", "TRIGGERED_BY", "2026-08-22T11:58:30.000001Z"], ["inc_TEST_ONLY_fx_budget", "RELATED", "2026-08-22T11:58:40.000002Z"]],
+  op_TEST_ONLY_s02: [["inc_TEST_ONLY_fx_recall", "TRIGGERED_BY", "2026-08-22T11:42:30.000003Z"]],
+  op_TEST_ONLY_s03: [["inc_TEST_ONLY_fx_sync", "TRIGGERED_BY", "2026-08-22T09:46:00.000004Z"]],
+  op_TEST_ONLY_s05: [["inc_TEST_ONLY_fx_budget", "TRIGGERED_BY", "2026-08-22T10:32:30.000005Z"], ["inc_TEST_ONLY_fx_mismatch", "RELATED", "2026-08-22T11:56:00.000006Z"]],
+  op_TEST_ONLY_s07: [["inc_TEST_ONLY_fx_sync", "MITIGATES", "2026-08-22T09:41:00.000007Z"]],
+  op_TEST_ONLY_s08: [["inc_TEST_ONLY_fx_budget", "RELATED", "2026-08-22T10:35:00.000008Z"]],
+  op_TEST_ONLY_s09: [["inc_TEST_ONLY_fx_resume", "TRIGGERED_BY", "2026-08-22T08:46:30.000009Z"]],
+};
+
+const LINK_BOUND = 3;
+const NOT_ATTESTED_HISTORY = { availability: "NOT_PUBLISHED", reason_code: "ORIGINAL_INCIDENT_TARGET_NOT_ATTESTED" };
+
+function simulatedIncidentLinks(row: Row): Record<string, unknown> {
+  const linked = (SIM_LINKS[row.operation_id] ?? []).flatMap(([id, relationship, at]) => {
+    const incident = SIM_INCIDENT_BY_ID.get(id);
+    return incident === undefined ? [] : [{
+      state: "LINKED", incident_id: id, relationship, linked_at: at,
+      incident: { target: { type: incident.target[0], id: incident.target[1] }, environment: incident.env, severity: incident.severity, workflow_state: incident.state },
+      link_history: NOT_ATTESTED_HISTORY,
+    }];
+  });
+  // Newest first, bounded (FE-042): the schema's own order and bound.
+  const items = [...linked].sort((a, b) => (instantKey(a.linked_at) < instantKey(b.linked_at) ? 1 : -1)).slice(0, LINK_BOUND);
+  return { basis: "CURRENT_LINK_ROWS_AUTHORIZED_INCIDENTS_ONLY", bound: LINK_BOUND, authorized_link_count: linked.length, truncated: linked.length > items.length, items };
+}
+
+/** The distinct OPEN incidents a set of rows links to: the simulated owning source's open-exception count. */
+function openIncidentIds(rows: readonly Row[]): readonly string[] {
+  const ids = new Set<string>();
+  for (const row of rows) {
+    for (const [id] of SIM_LINKS[row.operation_id] ?? []) if (SIM_INCIDENT_BY_ID.get(id)?.state === "OPEN") ids.add(id);
+  }
+  return [...ids];
+}
+
+/**
+ * SIMULATED (FIXTURE_LAB, opt-in, FE-CAT-2): the delivery and display axes of a row. The eleven named rows carry a fixed pair so every
+ * badge of the design shows (awaiting a receipt, receipt failed, display catching up, stale, current, no display reported); a generated
+ * row restates its own source status, with every fifth applied row still catching up (a rule of the row id's last two digits, not a clock).
+ * A null display is "the source did not report it".
+ */
+const SIM_AXES: Readonly<Record<string, readonly [string, string | null]>> = {
+  op_TEST_ONLY_s01: ["AWAITING_RECEIPT", "CATCHING_UP"],
+  op_TEST_ONLY_s02: ["AWAITING_RECEIPT", "CATCHING_UP"],
+  op_TEST_ONLY_s03: ["RECEIPT_CONFIRMED", "CURRENT"],
+  op_TEST_ONLY_s04: ["AWAITING_RECEIPT", "CURRENT"],
+  op_TEST_ONLY_s05: ["RECEIPT_FAILED", "STALE"],
+  op_TEST_ONLY_s06: ["RECEIPT_CONFIRMED", "CATCHING_UP"],
+  op_TEST_ONLY_s07: ["AWAITING_RECEIPT", null],
+  op_TEST_ONLY_s08: ["RECEIPT_FAILED", "CURRENT"],
+  op_TEST_ONLY_s09: ["NOT_APPLICABLE", null],
+  op_TEST_ONLY_s10: ["RECEIPT_FAILED", "CURRENT"],
+  op_TEST_ONLY_s11: ["RECEIPT_CONFIRMED", "CURRENT"],
+};
+
 function simulatedAxes(row: Row): { delivery_state: string; display_state: string | null } {
+  const named = SIM_AXES[row.operation_id];
+  if (named !== undefined) return { delivery_state: named[0], display_state: named[1] };
   const status = String(row.source_status);
   const delivery = status === "BLOCKED" ? "NOT_APPLICABLE"
     : status === "SUCCEEDED" ? "RECEIPT_CONFIRMED"
     : status === "FAILED" || status === "EXPIRED" ? "RECEIPT_FAILED"
     : "AWAITING_RECEIPT"; // PENDING, RUNNING, UNCERTAIN: no receipt yet
-  return { delivery_state: delivery, display_state: status === "BLOCKED" ? null : "CURRENT" };
+  if (status === "BLOCKED") return { delivery_state: delivery, display_state: null };
+  const lastTwo = Number(row.operation_id.replace(/\D/g, "").slice(-2));
+  return { delivery_state: delivery, display_state: status === "SUCCEEDED" && Number.isFinite(lastTwo) && lastTwo % 5 === 0 ? "CATCHING_UP" : "CURRENT" };
+}
+
+function simulatedRow(row: Row): Row {
+  return { ...row, ...simulatedAxes(row), incident_links: simulatedIncidentLinks(row) };
 }
 
 function simulatedHealth(filtered: readonly Row[]): Record<string, unknown> {
@@ -210,8 +311,8 @@ function simulatedHealth(filtered: readonly Row[]): Record<string, unknown> {
       count: axes.filter((a) => a.display_state === "CATCHING_UP").length, observed_at: at,
       coverage: axes.some((a) => a.display_state === null) ? "PARTIAL" : "COMPLETE",
     },
-    // The exception source is not published: typed null, not 0.
-    open_exception_count: { count: null, observed_at: null, coverage: "UNKNOWN" },
+    // WP-B: the exception source is simulated from the OPEN incidents the filtered rows link to (a true zero stays 0).
+    open_exception_count: { count: openIncidentIds(filtered).length, observed_at: at, coverage: "COMPLETE" },
   };
 }
 
@@ -223,7 +324,7 @@ function queue(search: URLSearchParams, simulate = false): BffAnswerV2 {
     if (!KNOWN.has(key)) return problem(400, "OPERATIONAL_READ_INPUT_INVALID", `Unknown query parameter ${key}.`);
   }
   const applied: { field: string; op: "eq"; value: string }[] = [];
-  const all = allRows();
+  const all = allRows(simulate);
   let rows = all;
   for (const spec of FILTERS) {
     const value = search.get(spec.param);
@@ -268,7 +369,7 @@ function queue(search: URLSearchParams, simulate = false): BffAnswerV2 {
     observed_at_ms: Date.parse(OPERATIONS_V2_DOUBLE_NOW_ISO),
     read_truth: { state: ordered.length === 0 ? "EMPTY" : "AVAILABLE", reason_code: null, scope: "REQUEST" },
     page: {
-      rows: simulate ? page.map((row) => ({ ...row, ...simulatedAxes(row) })) : page,
+      rows: simulate ? page.map(simulatedRow) : page,
       total_count: all.length,
       filtered_count: ordered.length,
       next_cursor: end < ordered.length && page.length > 0 ? encodeCursor(page[page.length - 1], signature) : null,
@@ -286,12 +387,27 @@ function queue(search: URLSearchParams, simulate = false): BffAnswerV2 {
   return { status: 200, body };
 }
 
-function incident(id: string): BffAnswerV2 {
+/** The ids besides the simulated five that the lane's roots exist for: the canonical fixture's and the two lifecycle ids the specs use. */
+const KNOWN_INCIDENT_IDS: ReadonlySet<string> = new Set([String(FIXTURE.incident.incident_id), "inc_TEST_ONLY_mitigated", "inc_TEST_ONLY_resolved"]);
+
+function incident(id: string, simulate = false): BffAnswerV2 {
   if (id === "inc_NOT_FOUND") return problem(404, "OPERATIONAL_READ_NOT_FOUND", "The incident was not found.");
   if (id === "inc_LEGACY_SHAPE") {
     return { status: 200, body: { schema_version: "execution.incident-detail.v1", incident: { incident_id: id, state: "OPEN" } } };
   }
   const root = { ...FIXTURE.incident, incident_id: id, observed_at_ms: Date.parse(OPERATIONS_V2_DOUBLE_NOW_ISO) } as Record<string, unknown>;
+  const sim = simulate ? SIM_INCIDENT_BY_ID.get(id) : undefined;
+  // The lane knows the incidents it serves: any other id is "not found", as the server answers (a lane that rendered an incident for any
+  // id read as if every typed id existed, and the command bar offered it). Off keeps the one body every id got, for the specs written on it.
+  if (simulate && sim === undefined && !KNOWN_INCIDENT_IDS.has(id)) return problem(404, "OPERATIONAL_READ_NOT_FOUND", "The incident was not found.");
+  if (sim !== undefined) {
+    const updated = [sim.createdAt, sim.acknowledgedAt, sim.mitigatedAt, sim.resolvedAt].filter((t): t is string => t !== null).sort().pop();
+    return { status: 200, body: {
+      ...root, target: { type: sim.target[0], id: sim.target[1] }, environment: sim.env, severity: sim.severity, workflow_state: sim.state,
+      workflow_version: sim.version, acknowledged_at: sim.acknowledgedAt, mitigated_at: sim.mitigatedAt, resolved_at: sim.resolvedAt,
+      created_at: sim.createdAt, updated_at: updated,
+    } };
+  }
   if (id === "inc_TEST_ONLY_mitigated") {
     return { status: 200, body: { ...root, workflow_state: "MITIGATED", workflow_version: 3, acknowledged_at: "2026-08-22T12:10:00Z", mitigated_at: "2026-08-22T12:30:00.654321Z", updated_at: "2026-08-22T12:30:00.654321Z" } };
   }
@@ -309,6 +425,6 @@ export function answerOperationsV2(method: string, path: string, search: URLSear
   if (method !== "GET") return null;
   if (path === "/operations") return queue(search, simulate);
   const seg = path.split("/").filter(Boolean);
-  if (seg[0] === "operations" && seg[1] === "incidents" && seg.length === 3) return incident(decodeURIComponent(seg[2]));
+  if (seg[0] === "operations" && seg[1] === "incidents" && seg.length === 3) return incident(decodeURIComponent(seg[2]), simulate);
   return null;
 }

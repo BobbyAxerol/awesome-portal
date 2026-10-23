@@ -19,7 +19,7 @@ import { fileURLToPath } from "node:url";
 import type { Page } from "@playwright/test";
 import { answerOperationsV2 } from "./bffDoubleV2";
 import { answerAccount } from "./bffDoubleAccount";
-import { simulate } from "./bffSimulated";
+import { simulate, simulatedRunResult } from "./bffSimulated";
 import { answerAlpha } from "./bffDoubleAlpha";
 import { answerGovernance } from "./bffDoubleGovernance";
 import { answerManager } from "./bffDoubleManager";
@@ -1122,6 +1122,13 @@ export interface BffDoubleOptions {
  * passes none, which is how its answers have always been; the standalone server does.
  */
 export function answerExecutionBff(method: string, pathname: string, search: URLSearchParams, options: BffDoubleOptions = {}, requestBody?: unknown): Answer {
+  // ===== WP-E begin: a simulated connected read (bffSimulated `SIMULATED_CONNECTED_READS`) answers its local-projection receipt; any other task still 409s
+  if (options.screensV2 === true && options.simulated === true && method.toUpperCase() === "POST") {
+    const ran = /^\/api\/v1\/execution\/commands\/tasks\/([^/]+)\/run$/.exec(pathname);
+    const receipt = ran === null ? null : simulatedRunResult(decodeURIComponent(ran[1]!));
+    if (receipt !== null) return { status: 200, body: receipt } as Answer;
+  }
+  // ===== WP-E end
   const answer = answerExecutionBffBase(method, pathname, search, options, requestBody);
   if (options.screensV2 !== true || (options.simulated !== true && options.reviewManager !== true)) return answer;
   const path = pathname.replace(/^\/api\/v1\/execution/, "") || "/";

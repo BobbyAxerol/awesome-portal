@@ -60,7 +60,7 @@
     {
       "id": "n29_acceptance",
       "file": "services/portal-execution-edge-rs/contracts/n29-product-acceptance-v1/product-acceptance.v1.json",
-      "sha256": "sha256:b9d40fc32658fd15d002728daf86d5952cd239fba73b3479883814f5ba4e5bf3"
+      "sha256": "sha256:f90e95d00f133275db20a5363907deba96a5a0c2a728b0e49de41acf2b6b2583"
     },
     {
       "id": "n29_debt",

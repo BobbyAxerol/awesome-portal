@@ -2,12 +2,34 @@
  * Opt-in FIXTURE_LAB review projections, never a product/source adapter.
  *
  * Three legacy Portfolio double account keys name counterparts the Account double actually holds.
- * Only those exact references are unified. Neither financial rows, deployment/portfolio ownership,
- * physical-account attribution nor economic totals are reconciled by this display/navigation aid.
+ * Those exact references are unified. Scaled internal account balances also use
+ * the shared deployment graph; generated bindings share an explicit synthetic
+ * physical book. Native legacy adverse scenarios are not rewritten or
+ * relabelled as economic sleeves.
  * Unknown resources/errors remain unknown; an account alias in the URL is not a fallback lookup.
  * The caller must opt in AFTER selecting the original response and preserve its HTTP status.
  */
 export type ReviewProfile = "populated" | "layout-stress";
+import { scaled, addDecimal } from "../frontend/e2e/bffScale";
+import { linkedAccountFigures } from "./review-accounts";
+import { linkedReviewFinance } from "./review-finance";
+
+/** Review-only internal balance projection from the same deployment graph as
+ * Manager. Physical broker equity/wallet and native sparse fixtures are untouched. */
+function linkedBalances(rows: unknown[]): unknown[] {
+  return rows.map(row => {
+    if (!record(row) || typeof row.account_id !== "string" || typeof row.currency !== "string") return row;
+    const binding = scaled().bindings.find(b => b.accountId === row.account_id);
+    if (!binding) return row;
+    const members = scaled().alphas.flatMap(a => a.deployments).filter(d =>
+      d.accountId === row.account_id && d.environment === binding.environment && d.currency === row.currency);
+    if (!members.length) return row;
+    const total = members.reduce((n, d) => addDecimal(addDecimal(n, d.allocation), d.realized), "0");
+    if (typeof row.locked !== "string" || !/^-?\d+(\.\d+)?$/.test(row.locked)) return row;
+    const negativeLocked = row.locked.startsWith("-") ? row.locked.slice(1) : `-${row.locked}`;
+    return { ...row, total, free: addDecimal(total, negativeLocked) };
+  });
+}
 
 const ACCOUNT_KEYS: Readonly<Record<string, string>> = Object.freeze({
   "Binance-02": "acc_bnc_core",
@@ -48,6 +70,7 @@ function walk(value: unknown, stress: boolean): unknown {
   if (Object.prototype.hasOwnProperty.call(value, "error")) return value;
   const entity = ENTITY_KEYS.some((key) => typeof value[key] === "string");
   return Object.fromEntries(Object.entries(value).map(([key, child]) => {
+    if (key === "account_balances" && Array.isArray(child)) return [key, linkedBalances(child).map(row => walk(row, stress))];
     if (key === "account_id" && typeof child === "string") return [key, accountKey(child)];
     if (key === "account_ids" && Array.isArray(child)) return [key, child.map((id) => typeof id === "string" ? accountKey(id) : id)];
     if (key === "id" && value.kind === "ACCOUNT" && typeof child === "string") return [key, accountKey(child)];
@@ -61,11 +84,11 @@ function walk(value: unknown, stress: boolean): unknown {
 
 /**
  * JSON bodies only, explicitly selected review profiles only. Defaults are unchanged because nothing
- * calls this function without opting in. No added rows, absent values, permissions or successful outcomes.
+ * calls this function without opting in. No added rows, permissions or successful outcomes.
  */
 export function transformReviewBody(path: string, body: unknown, profile: ReviewProfile): unknown {
   const pathname = path.split("?", 1)[0]!;
   if (!pathname.startsWith("/api/v1/execution/") && pathname !== "/api/admin/accounts") return body;
   if (!record(body) || Object.prototype.hasOwnProperty.call(body, "error")) return body;
-  return walk(body, profile === "layout-stress");
+  return walk(linkedReviewFinance(pathname, linkedAccountFigures(pathname, body)), profile === "layout-stress");
 }

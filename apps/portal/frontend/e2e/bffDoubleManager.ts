@@ -96,12 +96,16 @@ const SERIES_FILES = {
   return: "execution-manager-series.return.synthetic.valid.json",
   returnScaleMixed: "execution-manager-series.return-scale-mixed.synthetic.valid.json",
   returnScaleNotPublished: "execution-manager-series.return-scale-not-published.synthetic.valid.json",
+  // ===== WP-K begin (slice 1: ALPHA subjects and the DRAWDOWN metric; FIXTURE_LAB, register section 2k)
+  drawdown: "execution-manager-series.drawdown.synthetic.valid.json",
+  // ===== WP-K end
 } as const;
 export type SeriesFixtureName = keyof typeof SERIES_FILES;
 
 /** The fixture a read selects, or `unavailable` for a metric that has none. */
 export function seriesFixtureFor(metric: string, workspaceId: string | null): SeriesFixtureName {
   if (metric === "NET_PNL") return "unavailable";
+  if (metric === "DRAWDOWN") return "drawdown"; // WP-K
   const ws = workspaceId ?? "";
   if (metric === "RETURN") {
     if (ws === SERIES_DOUBLE_WORKSPACES.returnScaleMixed) return "returnScaleMixed";
@@ -170,13 +174,13 @@ export function answerManagerSeries(method: string, path: string, search: URLSea
   const environment = search.get("environment");
   const metric = search.get("metric");
   if (environment === null || !(ENVIRONMENTS as readonly string[]).includes(environment)) return invalid("environment is paper, sandbox or live.");
-  if (metric !== "NAV" && metric !== "NET_PNL" && metric !== "RETURN") return invalid("metric is NAV, NET_PNL or RETURN.");
+  if (metric !== "NAV" && metric !== "NET_PNL" && metric !== "RETURN" && metric !== "DRAWDOWN") return invalid("metric is NAV, NET_PNL, RETURN or DRAWDOWN.");
   const workspaceId = search.get("workspace_id");
   if (workspaceId !== null && !WORKSPACE.test(workspaceId)) return invalid("workspace_id is 1 to 256 printable characters.");
 
   const subjectsRaw = parseJson(search.get("subjects"));
   if (!subjectsRaw.ok || !Array.isArray(subjectsRaw.value) || subjectsRaw.value.length < 1 || subjectsRaw.value.length > 4) return invalid("subjects is a JSON array of 1 to 4 subjects.");
-  const subjects: { subject_type: "FUND" | "PORTFOLIO"; subject_id?: string }[] = [];
+  const subjects: { subject_type: "FUND" | "PORTFOLIO" | "ALPHA"; subject_id?: string }[] = [];
   const seen = new Set<string>();
   for (const raw of subjectsRaw.value as Draft[]) {
     const type = raw?.subject_type;
@@ -189,7 +193,13 @@ export function answerManagerSeries(method: string, path: string, search: URLSea
       if (seen.has(`PORTFOLIO:${raw.subject_id}`)) return invalid("A subject is asked once.");
       seen.add(`PORTFOLIO:${raw.subject_id}`);
       subjects.push({ subject_type: "PORTFOLIO", subject_id: raw.subject_id });
-    } else return invalid("A subject is {subject_type: FUND} or {subject_type: PORTFOLIO, subject_id}.");
+    // ===== WP-K begin
+    } else if (type === "ALPHA" && keysOf.length === 2 && typeof raw.subject_id === "string" && WORKSPACE.test(raw.subject_id)) {
+      if (seen.has(`ALPHA:${raw.subject_id}`)) return invalid("A subject is asked once.");
+      seen.add(`ALPHA:${raw.subject_id}`);
+      subjects.push({ subject_type: "ALPHA", subject_id: raw.subject_id });
+    // ===== WP-K end
+    } else return invalid("A subject is {subject_type: FUND}, {subject_type: PORTFOLIO, subject_id} or {subject_type: ALPHA, subject_id}.");
   }
 
   const windowRaw = parseJson(search.get("window"));

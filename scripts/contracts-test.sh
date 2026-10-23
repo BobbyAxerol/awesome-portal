@@ -4,6 +4,15 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 CONTRACTS_DIR="${ROOT_DIR}/packages/contracts"
+# Focused reruns accept exact checked-in spec paths only, never arbitrary
+# Vitest flags, glob patterns or traversal. Refuse before temp/Docker resources.
+for spec in "$@"; do
+  if [[ ! "$spec" =~ ^test/[A-Za-z0-9][A-Za-z0-9._-]*\.spec\.ts$ ||
+    ! -f "${CONTRACTS_DIR}/${spec}" || -L "${CONTRACTS_DIR}/${spec}" ]]; then
+    printf 'Expected an existing test/*.spec.ts file argument.\n' >&2
+    exit 2
+  fi
+done
 NODE_IMAGE="node@sha256:c610fcdfb1d5b4740dd70c284ed3cb16bb857e0f7166196e36a5501df7a3aa32"
 DEPS_DIR="$(mktemp -d)"
 # Different worktrees/agents may verify concurrently. A fixed name collided
@@ -264,6 +273,71 @@ cp -a \
 cp -a \
   "${ROOT_DIR}/upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/trading_system_portal_contract_pack/openapi.sanitized.json" \
   "${WORKSPACE_DIR}/upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/trading_system_portal_contract_pack/"
+# Linked Accounts/Contributors/finance/visit-digest/positive-BFF specs exercise
+# the real, pure fixture graph and canonical readers, not replacement stubs.
+# This explicit runtime-import closure contains only checked-in public inputs;
+# never copy the whole frontend/BFF tree, env files, configs or credentials.
+for input in \
+  apps/control-api/src/command-center/visit-digest.ts \
+  apps/control-api/src/manager-lists/binding-figures.ts \
+  apps/portal/fixture-bff/app.ts \
+  apps/portal/fixture-bff/command-story.ts \
+  apps/portal/fixture-bff/review-accounts.ts \
+  apps/portal/fixture-bff/review-catalog.ts \
+  apps/portal/fixture-bff/review-finance.ts \
+  apps/portal/fixture-bff/review-manager.ts \
+  apps/portal/fixture-bff/review-relations.ts \
+  apps/portal/fixture-bff/review-visit-digest.ts \
+  apps/portal/fixture-bff/scenario-apply.ts \
+  apps/portal/fixture-bff/scenario.ts \
+  apps/portal/fixture-bff/time-rebase.ts \
+  apps/portal/frontend/e2e/bffAnswerer.ts \
+  apps/portal/frontend/e2e/bffDouble.ts \
+  apps/portal/frontend/e2e/bffDoubleAccess.ts \
+  apps/portal/frontend/e2e/bffDoubleAccount.ts \
+  apps/portal/frontend/e2e/bffDoubleAlpha.ts \
+  apps/portal/frontend/e2e/bffDoubleApprovalEnvelopes.ts \
+  apps/portal/frontend/e2e/bffDoubleCatalogue.ts \
+  apps/portal/frontend/e2e/bffDoubleGovernance.ts \
+  apps/portal/frontend/e2e/bffDoubleManager.ts \
+  apps/portal/frontend/e2e/bffDoubleOverview.ts \
+  apps/portal/frontend/e2e/bffDoublePortfolios.ts \
+  apps/portal/frontend/e2e/bffDoubleScopedResource.ts \
+  apps/portal/frontend/e2e/bffDoubleSelfAccess.ts \
+  apps/portal/frontend/e2e/bffDoubleShell.ts \
+  apps/portal/frontend/e2e/bffDoubleStage.ts \
+  apps/portal/frontend/e2e/bffDoubleUsers.ts \
+  apps/portal/frontend/e2e/bffDoubleV2.ts \
+  apps/portal/frontend/e2e/bffPositiveMode.ts \
+  apps/portal/frontend/e2e/bffScale.ts \
+  apps/portal/frontend/e2e/bffSimulated.ts \
+  apps/portal/frontend/e2e/bffSimulatedStage.ts \
+  apps/portal/frontend/src/execution/adapter.ts \
+  apps/portal/frontend/src/execution/adminCatalog.fixtures.ts \
+  apps/portal/frontend/src/execution/analytics.presentation.fixtures.ts \
+  apps/portal/frontend/src/execution/analytics.ts \
+  apps/portal/frontend/src/execution/api/fixtureData.ts \
+  apps/portal/frontend/src/execution/api/profileRead.ts \
+  apps/portal/frontend/src/execution/api/schemaGuard.ts \
+  apps/portal/frontend/src/execution/certification.fixtures.ts \
+  apps/portal/frontend/src/execution/contracts.ts \
+  apps/portal/frontend/src/execution/derivedReads.fixtures.ts \
+  apps/portal/frontend/src/execution/formatExact.ts \
+  apps/portal/frontend/src/execution/operations.fixtures.ts \
+  apps/portal/frontend/src/execution/screenContracts.fixtures.ts \
+  apps/portal/frontend/src/execution/screenDataContract.ts \
+  apps/portal/frontend/src/execution/v2/boundary.ts \
+  apps/portal/frontend/src/execution/v2/readers/managerDataset.ts \
+  apps/portal/frontend/src/execution/v2/readers/managerMetric.ts \
+  apps/portal/frontend/src/execution/v2/screens/account/model.ts \
+  apps/portal/frontend/src/execution/v2/screens/stage/reasons.ts \
+  apps/portal/frontend/src/execution/v2/shell/roleNav.ts \
+  apps/portal/registry/fixtures/links.public.json \
+  apps/portal/registry/fixtures/registry.public.json \
+  apps/portal/registry/fixtures/summary.healthy.json; do
+  mkdir -p "${WORKSPACE_DIR}/${input%/*}"
+  cp -a "${ROOT_DIR}/${input}" "${WORKSPACE_DIR}/${input}"
+done
 mv "${DEPS_DIR}/node_modules" "${WORKSPACE_DIR}/node_modules"
 ln -s ../../node_modules "${WORKSPACE_DIR}/packages/contracts/node_modules"
 
@@ -277,6 +351,14 @@ ln -s ../../node_modules "${WORKSPACE_DIR}/packages/contracts/node_modules"
   -e HOME=/tmp \
   "${NODE_IMAGE}" sh -c '
     set -e
-    ./tooling/verify-generated.sh
-  '
-printf 'Contracts workspace tests passed.\n'
+    if [ "$#" -gt 0 ]; then
+      ./node_modules/.bin/vitest run --no-cache --maxWorkers=2 "$@"
+    else
+      ./tooling/verify-generated.sh
+    fi
+  ' contracts-test "$@"
+if [[ $# -gt 0 ]]; then
+  printf 'Focused contracts tests passed (%s files).\n' "$#"
+else
+  printf 'Contracts workspace tests passed.\n'
+fi

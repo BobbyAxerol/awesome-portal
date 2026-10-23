@@ -5,7 +5,8 @@
  * It answers the routes the doubles model, from the doubles' own code (`e2e/bffAnswerer.ts`), and
  * nothing else: an unknown path is 404 FIXTURE_ROUTE_NOT_SERVED, never a fabricated body. It reads
  * no file but the published fixtures the doubles load at start, opens no outbound connection and
- * keeps no state between requests.
+ * keeps no production state. The visit-digest adapter retains bounded per-user/workspace
+ * scenario acknowledgement state for this server's lifetime only.
  *
  * `createFixtureServer` applies the configuration to the doubles, which are module singletons, so a
  * process runs ONE fixture server (tests call `resetFixtureGlobals` between runs).
@@ -19,9 +20,14 @@ import { ACCESS_DOUBLE_DEFAULT_USER } from "../frontend/e2e/bffDoubleAccess";
 import { setUsersDoubleLastSignIn, setUsersDoubleVariant, type UsersDoubleVariant } from "../frontend/e2e/bffDoubleUsers";
 import { isScaleName, setFixtureNow, setFixtureScale, type ScaleName } from "../frontend/e2e/bffScale";
 import { isReviewProfile, reviewCatalog, reviewHtml, type ReviewProfile } from "./review-catalog";
-import { answerReviewManager } from "./review-manager";
+import { answerReviewManager, wpAccountBook, wpAlphaResource, wpDeploymentFact, wpPortfolioBook, wpRecall } from "./review-manager";
+import { setPositiveMode } from "../frontend/e2e/bffPositiveMode";
+import { commandStoryRoute } from "./command-story";
+import { applyScenarioBody, resetFixtureTransitions, scenarioRequest, scenarioVariants } from "./scenario-apply";
+import { healsDoubles, configuredScenario, configureScenario, DEFAULT_SCENARIO, type FixtureScenario, FIXTURE_SCENARIOS, getScenario, isFixtureScenario, resetScenario, SCENARIO_DESCRIPTIONS, setScenario } from "./scenario";
 import { transformReviewBody } from "./review-relations";
-import { rebaseDelta, rebaseTimes } from "./time-rebase";
+import { rebaseBody } from "./time-rebase";
+import { createVisitDigestFixture } from "./review-visit-digest";
 
 export const LANE_HEADER = "x-fixture-lane";
 export const DEFAULT_LANE = "FIXTURE_LAB";
@@ -41,6 +47,8 @@ export interface FixtureConfig {
   users: UsersDoubleVariant | null;
   /** Opt-in server-only data. Never a browser/real-API fallback. */
   reviewProfile: ReviewProfile;
+  /** WP-P: the review scenario (FIXTURE_SCENARIO). `positive` is the default world; the others are separately selectable. */
+  scenario: FixtureScenario;
   /** Preview only (FIXTURE_REBASE_TIME=1): shift the time-valued fields of a served body to the real clock (see time-rebase.ts). */
   rebaseTime: boolean;
 }
@@ -87,6 +95,9 @@ export function loadConfig(env: Record<string, string | undefined>): FixtureConf
   const reviewProfile = text("FIXTURE_REVIEW_PROFILE") ?? "sparse-realistic";
   if (!isReviewProfile(reviewProfile)) throw new ConfigError("FIXTURE_REVIEW_PROFILE must be sparse-realistic, populated or layout-stress");
 
+  const scenario = text("FIXTURE_SCENARIO") ?? DEFAULT_SCENARIO;
+  if (!isFixtureScenario(scenario)) throw new ConfigError(`FIXTURE_SCENARIO must be one of ${FIXTURE_SCENARIOS.join(", ")}`);
+
   let overview: Partial<OverviewDoubleVariants> = {};
   let users: UsersDoubleVariant | null = null;
   const variantsText = text("FIXTURE_VARIANTS");
@@ -121,6 +132,7 @@ export function loadConfig(env: Record<string, string | undefined>): FixtureConf
     overview,
     users,
     reviewProfile,
+    scenario,
   };
 }
 
@@ -129,6 +141,7 @@ export function resetFixtureGlobals(): void {
   setFixtureScale("small");
   setOverviewPlanMode("sequence");
   resetOverviewDouble();
+  setPositiveMode(false);
   setUsersDoubleVariant("paged");
   setUsersDoubleLastSignIn(false);
 }
@@ -139,16 +152,31 @@ function applyConfig(config: FixtureConfig): void {
   setFixtureNow(config.nowIso);
   // The real command relay only ever answers BLOCKED; the doubles' ACCEPTED/UNKNOWN walk is for specs.
   setOverviewPlanMode("blocked");
-  setOverviewDoubleVariants(config.overview);
-  if (config.users !== null) setUsersDoubleVariant(config.users);
+  configureScenario(config.scenario);
+  applyScenarioToDoubles(config);
   // SIMULATED (FE-CAT-8): the roster's last sign-in, only on the populated and layout-stress profiles like the other overlays.
   setUsersDoubleLastSignIn(config.reviewProfile !== "sparse-realistic");
+}
+
+/**
+ * WP-P: puts the doubles' variants where the SELECTED scenario wants them. An explicit FIXTURE_VARIANTS still wins (it is the
+ * operator's own override). The sparse-realistic profile is the legacy contract lane: it keeps the doubles' defaults whatever the scenario.
+ */
+function applyScenarioToDoubles(config: FixtureConfig): void {
+  resetOverviewDouble();
+  // WP-P: the positive world heals the doubles that used to default to a degraded story (accounts, bindings); stale/partial/missing keep them.
+  setPositiveMode(config.reviewProfile !== "sparse-realistic" && healsDoubles(getScenario()), wpAccountBook, wpPortfolioBook, wpDeploymentFact, wpRecall);
+  setOverviewPlanMode("blocked");
+  const chosen = config.reviewProfile === "sparse-realistic" ? { overview: {}, users: "paged" as const } : scenarioVariants(getScenario());
+  setOverviewDoubleVariants({ ...chosen.overview, ...config.overview });
+  setUsersDoubleVariant(config.users ?? chosen.users);
 }
 
 /* ── the request ────────────────────────────────────────────────────────── */
 
 const LANE_PATH = "/__fixture/lane";
 const HEALTH_PATH = "/__fixture/healthz";
+const SCENARIO_PATH = "/__fixture/scenario";
 
 function send(response: ServerResponse, config: FixtureConfig, status: number, body: unknown, headers: Record<string, string> = {}): void {
   const payload = typeof body === "string" ? body : JSON.stringify(body);
@@ -159,6 +187,7 @@ function send(response: ServerResponse, config: FixtureConfig, status: number, b
     "x-content-type-options": "nosniff",
     [LANE_HEADER]: config.laneLabel,
     "x-fixture-profile": config.reviewProfile,
+    "x-fixture-scenario": getScenario(),
     ...headers,
   });
   response.end(payload);
@@ -203,6 +232,8 @@ function laneBody(config: FixtureConfig): Record<string, unknown> {
     fixture_now_iso: config.nowIso,
     writes: config.writes,
     review_profile: config.reviewProfile,
+    scenario: getScenario(),
+    configured_scenario: configuredScenario(),
     review_catalog: "/__fixture/review",
     real_api_fallback: false,
   };
@@ -213,22 +244,29 @@ function answererOptions(config: FixtureConfig): FixtureAnswererOptions {
   return { ...V2_OPTIONS, userId: config.userId, simulated: config.reviewProfile !== "sparse-realistic" };
 }
 
-function answerFor(config: FixtureConfig, request: BffRequest): BffResponse | null {
+function answerFor(config: FixtureConfig, rawRequest: BffRequest): BffResponse | null {
   const profile = config.reviewProfile;
+  // WP-P: the selected scenario may reroute a read to a negative case the doubles already model, and shape the value-rewrite scenarios.
+  const request = profile === "sparse-realistic" ? rawRequest : scenarioRequest(getScenario(), rawRequest);
   const review = profile === "sparse-realistic" ? null : answerReviewManager(request.method, request.path,
-    new URLSearchParams(request.search), profile);
+    new URLSearchParams(request.search), profile, request.body);
   const answered = review === null ? answerFixtureRequest(request, answererOptions(config)) : {
     ...review, headers: { "content-type": "application/json" },
   };
   if (answered === null || profile === "sparse-realistic" || answered.status !== 200 || request.method !== "GET") return answered;
-  return { ...answered, body: transformReviewBody(request.path, answered.body, profile) };
+  let shaped = transformReviewBody(request.path, answered.body, profile);
+  // WP-P (R2-02): every alpha resource is derived from that alpha's own deployments in the positive-like scenarios, not cloned from the double's one alpha.
+  const alphaResource = healsDoubles(getScenario()) ? /^\/api\/v1\/execution\/resources\/alphas\/([^/]+)$/.exec(request.path) : null;
+  if (alphaResource !== null) shaped = wpAlphaResource(shaped, decodeURIComponent(alphaResource[1]!));
+  return { ...answered, body: applyScenarioBody(getScenario(), request.path, shaped) };
 }
 
 export function createFixtureServer(config: FixtureConfig): Server {
   applyConfig(config);
+  const visitDigest = createVisitDigestFixture();
 
   const server = createServer((incoming, response) => {
-    void handle(config, incoming, response).catch((error: unknown) => {
+    void handle(config, incoming, response, visitDigest).catch((error: unknown) => {
       if (response.headersSent) {
         response.destroy();
         return;
@@ -246,7 +284,74 @@ export function createFixtureServer(config: FixtureConfig): Server {
   return server;
 }
 
-async function handle(config: FixtureConfig, incoming: IncomingMessage, response: ServerResponse): Promise<void> {
+/**
+ * `GET /__fixture/scenario` reports the selection; `POST` switches it (`{"scenario":"stale"}` or `?name=stale`) or resets it
+ * (`{"reset":true}`). In memory only: nothing is stored, a restart returns the configured scenario. Lane-internal, so it
+ * answers even under FIXTURE_WRITES=refuse (it changes the fixture's own state, not a product write).
+ */
+async function handleScenario(config: FixtureConfig, method: string, url: URL, incoming: IncomingMessage, response: ServerResponse): Promise<void> {
+  if (method === "GET") {
+    // `?set=<name>` is the harness page's no-script chooser (a plain link). Lane-internal and in memory like the POST.
+    const requested = url.searchParams.get("set");
+    if (requested !== null) {
+      if (!isFixtureScenario(requested)) {
+        send(response, config, 400, { error: "FIXTURE_SCENARIO_UNKNOWN", scenarios: FIXTURE_SCENARIOS });
+        return;
+      }
+      setScenario(requested);
+      applyScenarioToDoubles(config);
+      resetFixtureTransitions();
+    }
+    send(response, config, 200, scenarioBody(config));
+    return;
+  }
+  if (method !== "POST") {
+    send(response, config, 405, { error: "FIXTURE_METHOD_NOT_ALLOWED" }, { allow: "GET, POST" });
+    return;
+  }
+  let body: { scenario?: unknown; reset?: unknown } = {};
+  try {
+    const raw = await readBody(incoming);
+    if (raw.length > 0) body = JSON.parse(raw.toString("utf8")) as typeof body;
+  } catch (error) {
+    if (error instanceof TooLarge) {
+      response.once("finish", () => incoming.destroy());
+      send(response, config, 413, { error: "FIXTURE_BODY_TOO_LARGE" }, { connection: "close" });
+      return;
+    }
+    send(response, config, 400, { error: "FIXTURE_BAD_REQUEST" });
+    return;
+  }
+  if (body.reset === true) resetScenario();
+  else {
+    const name = body.scenario ?? url.searchParams.get("name");
+    if (!isFixtureScenario(name)) {
+      send(response, config, 400, { error: "FIXTURE_SCENARIO_UNKNOWN", scenarios: FIXTURE_SCENARIOS });
+      return;
+    }
+    setScenario(name);
+  }
+  // Deterministic: the doubles go back to the variants of the selected scenario, nothing from the previous one survives.
+  applyScenarioToDoubles(config);
+  resetFixtureTransitions();
+  send(response, config, 200, scenarioBody(config));
+}
+
+function scenarioBody(config: FixtureConfig): Record<string, unknown> {
+  return {
+    lane: DEFAULT_LANE,
+    not_acceptance: true,
+    scenario: getScenario(),
+    configured_scenario: configuredScenario(),
+    default_scenario: DEFAULT_SCENARIO,
+    legacy_profile_ignores_scenario: config.reviewProfile === "sparse-realistic",
+    scenarios: FIXTURE_SCENARIOS.map((id) => ({ id, description: SCENARIO_DESCRIPTIONS[id] })),
+    persistence: "NONE",
+  };
+}
+
+async function handle(config: FixtureConfig, incoming: IncomingMessage, response: ServerResponse,
+  visitDigest: ReturnType<typeof createVisitDigestFixture>): Promise<void> {
   const method = (incoming.method ?? "GET").toUpperCase();
   let url: URL;
   try {
@@ -263,8 +368,12 @@ async function handle(config: FixtureConfig, incoming: IncomingMessage, response
       return;
     }
     const html = url.pathname.endsWith(".html");
-    send(response, config, 200, html ? reviewHtml(config.reviewProfile, config.scale) : reviewCatalog(config.reviewProfile, config.scale),
+    send(response, config, 200, html ? reviewHtml(config.reviewProfile, config.scale, getScenario()) : reviewCatalog(config.reviewProfile, config.scale, getScenario()),
       html ? { "content-type": "text/html; charset=utf-8", "content-security-policy": "default-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'" } : {});
+    return;
+  }
+  if (url.pathname === SCENARIO_PATH) {
+    await handleScenario(config, method, url, incoming, response);
     return;
   }
   if (url.pathname === LANE_PATH || url.pathname === HEALTH_PATH) {
@@ -324,9 +433,16 @@ async function handle(config: FixtureConfig, incoming: IncomingMessage, response
     return;
   }
 
-  const answered = answerFor(config, request);
+  // WP-P: the in-memory command story (lane-internal paths, only with FIXTURE_WRITES=doubles: a refusing server already answered 405 above).
+  const story = commandStoryRoute(method, url.pathname, body);
+  if (story !== null) {
+    send(response, config, story.status, story.body);
+    return;
+  }
+
+  const answered = visitDigest(config, request) ?? answerFor(config, request);
   if (answered !== null) {
-    const served = config.rebaseTime && typeof answered.body !== "string" ? rebaseTimes(answered.body, rebaseDelta(OPERATIONS_V2_DOUBLE_NOW_ISO, Date.now())) : answered.body;
+    const served = config.rebaseTime && typeof answered.body !== "string" ? rebaseBody(answered.body, OPERATIONS_V2_DOUBLE_NOW_ISO, Date.now()) : answered.body;
     send(response, config, answered.status, served, { ...answered.headers });
     return;
   }
