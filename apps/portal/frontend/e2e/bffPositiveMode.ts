@@ -44,14 +44,21 @@ export interface PositiveDeploymentFact {
 let deploymentFacts: ((deploymentId: string) => PositiveDeploymentFact | null) | null = null;
 export const positiveDeploymentFact = (deploymentId: string): PositiveDeploymentFact | null => (positive && deploymentFacts !== null ? deploymentFacts(deploymentId) : null);
 
+/** The pending recall of one portfolio in one environment: the amount the Portfolio 360 Recalling row states, in its currency. */
+export interface PositiveRecall { currency: string; pending: string }
+let recallProvider: ((portfolioId: string, environment: string) => PositiveRecall | null) | null = null;
+export const positiveRecallOf = (portfolioId: string, environment: string): PositiveRecall | null => (positive && recallProvider !== null ? recallProvider(portfolioId, environment) : null);
+
 let positive = false;
 let books: ((accountId: string) => PositiveAccountBook | null) | null = null;
 let portfolioBooks: ((portfolioId: string) => PositivePortfolioBook | null) | null = null;
 
 export const setPositiveMode = (on: boolean, provider: ((accountId: string) => PositiveAccountBook | null) | null = null,
   portfolioProvider: ((portfolioId: string) => PositivePortfolioBook | null) | null = null,
-  facts: ((deploymentId: string) => PositiveDeploymentFact | null) | null = null): void => {
+  facts: ((deploymentId: string) => PositiveDeploymentFact | null) | null = null,
+  recalls: ((portfolioId: string, environment: string) => PositiveRecall | null) | null = null): void => {
   positive = on;
+  recallProvider = on ? recalls : null;
   deploymentFacts = on ? facts : null;
   books = on ? provider : null;
   portfolioBooks = on ? portfolioProvider : null;

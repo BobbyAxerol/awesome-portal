@@ -12,7 +12,7 @@ import { buildPositiveManagerSeries } from "../../../packages/contracts/tooling/
 import { ALPHA_DOUBLE_AS_OF_MS, answerAlpha } from "../frontend/e2e/bffDoubleAlpha";
 import { answerManagerFleet, answerManagerSeries } from "../frontend/e2e/bffDoubleManager";
 import { answerPortfolios } from "../frontend/e2e/bffDoublePortfolios";
-import type { PositiveAccountBook, PositiveDeploymentFact, PositivePortfolioBook } from "../frontend/e2e/bffPositiveMode";
+import type { PositiveAccountBook, PositiveDeploymentFact, PositivePortfolioBook, PositiveRecall } from "../frontend/e2e/bffPositiveMode";
 import { addDecimal, fixtureNowMs, scaled, type AlphaSpec, type DeploymentSpec } from "../frontend/e2e/bffScale";
 import { legacy, traits } from "./scenario";
 
@@ -1976,6 +1976,18 @@ export function wpDeploymentFact(deploymentId: string): PositiveDeploymentFact |
   for (const alpha of [...scaled().alphas, ...WPC_ALPHAS, ...SUITE_ALPHAS]) {
     const deployment = alpha.deployments.find((entry) => entry.id === deploymentId);
     if (deployment !== undefined) return { stage: deployment.stage.toLowerCase() as PositiveDeploymentFact["stage"], alphaId: alpha.id, alphaName: alpha.label, portfolioId: deployment.portfolioId, portfolioName: deployment.portfolioName };
+  }
+  return null;
+}
+
+/** The Recalling amount of a native portfolio in one environment: the capital statement's own `recalling` (one currency, the first partition that states one). */
+export function wpRecall(portfolioId: string, environment: string): PositiveRecall | null {
+  if (!wpcNativePortfolio(portfolioId) || !["paper", "sandbox", "live"].includes(environment)) return null;
+  const answer = datasetAnswer("GET", `/manager/portfolios/${portfolioId}/overview`, new URLSearchParams({ environment, window: "30D" }), "populated");
+  if (answer === null || answer.status !== 200) return null;
+  for (const statement of (answer.body as Draft).capital_statements as Draft[]) {
+    const metric = statement.metrics.recalling;
+    if (metric?.availability === "AVAILABLE" && toScaled(metric.value) > 0n) return { currency: statement.partition.currency, pending: metric.value };
   }
   return null;
 }

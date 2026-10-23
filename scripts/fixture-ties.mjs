@@ -90,6 +90,13 @@ export async function runTies(get, options = {}) {
         const line = chart.status === 200 ? chart.body.panel?.data?.series?.[0] : null;
         if (line?.points?.length && line.currency === partition.partition.currency) eq(`T9 Equity chart end = NAV ${id} ${env}`, toUnits(line.points.at(-1)[1]), metricOf(statement, "current_nav"));
         else out.skipped.push(`T9 ${id} ${env}: no equity line in ${partition.partition.currency}`);
+        // T10 the Recalling row = the sum of the pending amounts of the open recalls of the same portfolio, environment and currency
+        const recalling = metricOf(statement, "recalling");
+        const recalls = await get(`${E}/pending-recalls?workspace_id=ws_fixture&resource_kind=PORTFOLIO&resource_id=${id}&environment=${env}`);
+        if (recalling !== null && recalls.status === 200) {
+          const pending = (recalls.body.items ?? []).filter((r) => r.currency === partition.partition.currency).reduce((n, r) => n + toUnits(r.amounts.pending), 0n);
+          eq(`T10 Recalling = sum of pending recalls ${id} ${env}`, recalling, pending);
+        }
         // T5
         const approved = metricOf(statement, "current_budget");
         const allocation = metricOf(statement, "allocation");
