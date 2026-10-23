@@ -157,3 +157,19 @@
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
+
+/* The best-in-row square (hi-fi: "Square marks the best in a row"): a filled square beside the figure, shape as well as colour. */
+.exec-cmpr-best {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin-right: var(--space-2);
+  vertical-align: middle;
+  background: var(--ink);
+}
+
+/* Portfolios / Alphas: the subject tabs above the chooser. */
+.exec-cmpr-modes {
+  display: inline-flex;
+  align-self: flex-start;
+}

@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 
 import type { PortfolioListItem } from "../../../api/profileRead";
 import { toRows, type PortfolioRow } from "../portfolios/listModel";
-import { backTarget, basisOf, resolveSelection, selectionHint, selectionState } from "./model";
+import { backTarget, basisOf, bestIndexes, resolveSelection, selectionHint, selectionState } from "./model";
 
 const item = (id: string, over: Partial<PortfolioListItem> = {}): PortfolioListItem => ({
   portfolioId: id, name: id, owner: null, state: "ACTIVE", baseCurrency: "USDT", environments: ["live"], allocationCount: 1, deploymentCount: 1,
@@ -98,5 +98,23 @@ describe("selection words and Back", () => {
     expect(backTarget("portfolio:")).toEqual({ kind: "list" });
     expect(backTarget("portfolios")).toEqual({ kind: "list" });
     expect(backTarget(null)).toEqual({ kind: "list" });
+  });
+});
+
+describe("bestIndexes (best in row)", () => {
+  it("marks the highest exact decimal among two or more published values, signed and of different lengths, with no float", () => {
+    expect([...bestIndexes(["-3254.39", "18174.71", "-389.15"])]).toEqual([1]);
+    expect([...bestIndexes(["-0.6", "5.3", "-0.2"])]).toEqual([1]);
+    expect([...bestIndexes(["-3.3", "-6.8", "-2.4"])]).toEqual([2]);
+    expect([...bestIndexes(["0.1", "0.10", "0.09"])].sort()).toEqual([0, 1]);
+    expect([...bestIndexes(["9007199254740993", "9007199254740992"])]).toEqual([0]);
+  });
+
+  it("skips an absence, and marks nothing with fewer than two published values or when every published value is equal", () => {
+    expect([...bestIndexes(["1.5", null, "2.5"])]).toEqual([2]);
+    expect(bestIndexes(["1.5", null, null]).size).toBe(0);
+    expect(bestIndexes([null, null]).size).toBe(0);
+    expect(bestIndexes(["2", "2.0"]).size).toBe(0);
+    expect(bestIndexes(["abc", "1"]).size).toBe(0);
   });
 });

@@ -22,6 +22,8 @@ import { humanize } from "../fleet/fleetModel";
 import type { DatasetReadState } from "../manager/useManagerDataset";
 import { PF_FE, npText, type Unpublished } from "../portfolios/fe";
 import { Absent } from "../portfolios/format";
+import { ScoreList } from "../portfolios/ScoreCell";
+import { SCORE_KEYS } from "../portfolios/registerMetrics";
 
 export interface DatasetCellContext {
   /** The dataset read of each comparable portfolio, by portfolio id. */
@@ -93,6 +95,11 @@ export function ScoreCell({ id, ctx }: { id: string; ctx: DatasetCellContext }):
   const state = ctx.reads.get(id);
   const wait = pending(state, PF_FE.score);
   if (wait !== null || state === undefined || state.phase !== "ready") return wait;
+  // A published `portfolio_score` of the portfolio's own group (the Portfolios register's key) is drawn as the register draws it: value, band, evidence.
+  const own = state.value.groups.find((entry) => entry.key.length === 1 && entry.key[0]!.field === "portfolio_id" && entry.key[0]!.value === id);
+  if (own !== undefined && own.economicPartitions.some((entry) => entry.metrics.has(SCORE_KEYS.score))) {
+    return <ScoreList list={onBasis(own.economicPartitions, ctx.currency).shown} />;
+  }
   const scores = state.value.scores;
   const words = SCORE_SLOTS.map(([label, key]) => ({ label, word: slotWord(scores[key]) }));
   const same = words.every((entry) => entry.word === words[0]!.word);

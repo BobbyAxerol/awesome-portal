@@ -116,3 +116,27 @@ export function backTarget(from: string | null): { kind: "list" } | { kind: "por
   if (from !== null && from.startsWith("portfolio:") && from.length > "portfolio:".length) return { kind: "portfolio", portfolioId: from.slice("portfolio:".length) };
   return { kind: "list" };
 }
+
+/**
+ * The best value of a row, by comparing the published exact strings of columns that share one basis (same currency, same partition).
+ * It is an ordering of strings read as decimals (bigint, no float, nothing added or converted): higher is better. Fewer than two
+ * published values, or all of them equal, mark nothing. Returns the indexes of the best cells (several only on an exact tie).
+ */
+export function bestIndexes(values: readonly (string | null)[]): ReadonlySet<number> {
+  const parsed = values.map((value) => {
+    if (value === null || !/^-?\d+(\.\d+)?$/.test(value)) return null;
+    const negative = value.startsWith("-");
+    const [whole, fraction = ""] = value.replace("-", "").split(".");
+    return { negative, whole: whole!, fraction };
+  });
+  const known = parsed.flatMap((entry, index) => (entry === null ? [] : [{ entry, index }]));
+  if (known.length < 2) return new Set();
+  const places = Math.max(...known.map(({ entry }) => entry.fraction.length));
+  const scaled = known.map(({ entry, index }) => {
+    const n = BigInt(entry.whole + entry.fraction.padEnd(places, "0"));
+    return { index, n: entry.negative ? -n : n };
+  });
+  const top = scaled.reduce((a, b) => (b.n > a ? b.n : a), scaled[0]!.n);
+  const best = scaled.filter((entry) => entry.n === top);
+  return best.length === scaled.length ? new Set() : new Set(best.map((entry) => entry.index));
+}

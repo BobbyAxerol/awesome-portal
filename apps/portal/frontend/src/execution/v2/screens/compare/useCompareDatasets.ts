@@ -7,19 +7,20 @@
  */
 import { useMemo } from "react";
 
-import type { ManagerDatasetQuery } from "../../../api/managerDatasetQuery";
+import type { ManagerDatasetQuery, ManagerDatasetWindowQuery } from "../../../api/managerDatasetQuery";
 import type { ExecutionApi } from "../../../api/ports";
 import type { ManagerEnvironment } from "../../readers/managerDataset";
 import { useManagerDataset, type DatasetReadState } from "../manager/useManagerDataset";
 
-const queryFor = (id: string | undefined, environment: ManagerEnvironment): ManagerDatasetQuery | null =>
-  id === undefined ? null : { surface: "PORTFOLIO", id, environment, groupBy: ["portfolio_id"], limit: 1 };
+// The window of the page (the same one the series read is asked for), so the table and the chart state the same window.
+const queryFor = (id: string | undefined, environment: ManagerEnvironment, window: ManagerDatasetWindowQuery | undefined): ManagerDatasetQuery | null =>
+  id === undefined ? null : { surface: "PORTFOLIO", id, environment, ...(window === undefined ? {} : { window }), groupBy: ["portfolio_id"], limit: 1 };
 
-export function useCompareDatasets(api: ExecutionApi, enabled: boolean, ids: readonly string[], environment: ManagerEnvironment): ReadonlyMap<string, DatasetReadState> {
-  const a = useManagerDataset(api, enabled && ids[0] !== undefined, queryFor(ids[0], environment));
-  const b = useManagerDataset(api, enabled && ids[1] !== undefined, queryFor(ids[1], environment));
-  const c = useManagerDataset(api, enabled && ids[2] !== undefined, queryFor(ids[2], environment));
-  const d = useManagerDataset(api, enabled && ids[3] !== undefined, queryFor(ids[3], environment));
+export function useCompareDatasets(api: ExecutionApi, enabled: boolean, ids: readonly string[], environment: ManagerEnvironment, window?: ManagerDatasetWindowQuery): ReadonlyMap<string, DatasetReadState> {
+  const a = useManagerDataset(api, enabled && ids[0] !== undefined, queryFor(ids[0], environment, window));
+  const b = useManagerDataset(api, enabled && ids[1] !== undefined, queryFor(ids[1], environment, window));
+  const c = useManagerDataset(api, enabled && ids[2] !== undefined, queryFor(ids[2], environment, window));
+  const d = useManagerDataset(api, enabled && ids[3] !== undefined, queryFor(ids[3], environment, window));
   return useMemo(() => {
     const out = new Map<string, DatasetReadState>();
     [a, b, c, d].forEach((state, index) => {

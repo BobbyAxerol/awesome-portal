@@ -56,7 +56,9 @@ import { toRows, type PortfolioRow } from "../portfolios/listModel";
 import { DEFAULT_ROUTES, type PortfolioRoutes } from "../portfolios/routes";
 import { COMPARE_MAX, selectionFrom, withSelection } from "../portfolios/selection";
 import { useRead } from "../portfolios/useRead";
-import { backTarget, basisOf, resolveSelection, selectionHint, selectionState } from "./model";
+import { backTarget, basisOf, bestIndexes, resolveSelection, selectionHint, selectionState } from "./model";
+import { measureValue, scoreOf } from "../portfolios/registerMetrics";
+import { AlphaCompare } from "./AlphaCompare";
 import { DrawdownCell, NavCell, NetPnlCell, ReturnCell, ScoreCell, type DatasetCellContext } from "./DatasetCells";
 import { useCompareDatasets } from "./useCompareDatasets";
 
@@ -124,6 +126,15 @@ export default function CompareScreen({ api, portfolioId, capabilities, routes =
   // The bar shows the basis currency the screen computes in, and none when there is none (a `ccy` left in the URL is not this screen's).
   useContextFacts({ ccy: basis.currency });
   const kindWanted = params.get("kind");
+  // Portfolios / Alphas (hi-fi subject tabs): `kind=alpha` is the Alphas tab; a pick of one kind is not a pick of the other, so switching clears `in`.
+  const alphaMode = kindWanted === "alpha" || kindWanted === "alphas";
+  const setMode = (alpha: boolean) => {
+    const next = new URLSearchParams(params);
+    next.delete("in");
+    next.delete("ids");
+    if (alpha) next.set("kind", "alpha"); else next.delete("kind");
+    setParams(next, { replace: true });
+  };
 
   // FE-013/033: the comparable picks (two to four, one basis) are asked for as one series read through the port.
   const [measure, setMeasure] = useState<ManagerSeriesMetric>("NAV");
@@ -134,7 +145,7 @@ export default function CompareScreen({ api, portfolioId, capabilities, routes =
   );
   const seriesRead = useManagerSeries(api, permitted && seriesQuery !== null, seriesQuery);
   // The metric rows (NAV, Net PnL, Score) are the Manager dataset of each portfolio on the basis: one read per pick, exact and per partition.
-  const datasetReads = useCompareDatasets(api, permitted, comparableIds, url.value.env);
+  const datasetReads = useCompareDatasets(api, permitted, comparableIds, url.value.env, url.value.window);
   const datasetCtx = useMemo<DatasetCellContext>(() => ({ reads: datasetReads, currency: basis.currency }), [datasetReads, basis.currency]);
 
   // The 360 hands over one id. It becomes the first pick once, as a replace.
@@ -236,12 +247,34 @@ export default function CompareScreen({ api, portfolioId, capabilities, routes =
   })();
   const basisText = overlay.basis;
 
+  // Square marks the best published value of a row, only among the picks on the basis (one currency, one domain): the server's strings
+  // compared as decimals, nothing added or converted. A row with fewer than two published values marks nothing.
+  const bestOf = (read: (id: string) => string | null): ReadonlySet<string> => {
+    const ids = basis.comparable.map((row) => row.portfolioId);
+    const picked = bestIndexes(ids.map(read));
+    return new Set(ids.filter((_, index) => picked.has(index)));
+  };
+  const groupOf = (id: string) => {
+    const state = datasetReads.get(id);
+    return state !== undefined && state.phase === "ready" ? state.value.groups.find((entry) => entry.key.length === 1 && entry.key[0]!.field === "portfolio_id" && entry.key[0]!.value === id)?.economicPartitions : undefined;
+  };
+  const bests: Readonly<Record<string, ReadonlySet<string>>> = {
+    netpnl: bestOf((id) => measureValue(groupOf(id), "net_pnl", basis.currency)),
+    return: bestOf((id) => measureValue(groupOf(id), "return_30d_pct", basis.currency)),
+    drawdown: bestOf((id) => measureValue(groupOf(id), "max_drawdown_pct", basis.currency)),
+    score: bestOf((id) => { const read = scoreOf(groupOf(id), basis.currency); return read.kind === "value" ? read.exact : null; }),
+  };
   const tableColumns: CardsColumn<MetricRow>[] = [
     { key: "metric", label: "Metric", render: (m) => m.label },
     ...chosen.map<CardsColumn<MetricRow>>((row) => {
       const tone = Math.max(0, toneOf(row.portfolioId));
       // K-B5: the column head wears the series swatch of its chip (shape as well as colour), and the figures sit right.
-      return { key: row.portfolioId, label: row.label, numeric: true, head: <i className="exec-cmpr-sw" data-tone={TONES[tone]} data-glyph={GLYPHS[tone]} />, render: (m) => m.cell(row, datasetCtx) };
+      return { key: row.portfolioId, label: row.label, numeric: true, head: <i className="exec-cmpr-sw" data-tone={TONES[tone]} data-glyph={GLYPHS[tone]} />, render: (m) => (
+        <>
+          {bests[m.id]?.has(row.portfolioId) ? <i className="exec-cmpr-best" role="img" aria-label="Best in this row" title="Best in this row" /> : null}
+          {m.cell(row, datasetCtx)}
+        </>
+      ) };
     }),
   ];
 
@@ -250,18 +283,28 @@ export default function CompareScreen({ api, portfolioId, capabilities, routes =
       <header className="exec-pf-head">
         <div>
           <h1 className="exec-pf-h1">Compare</h1>
+          {/* Hi-fi subtitle "2 to 4 · one currency · <methodology>": printed only when the series read published a common basis; the words are its own. */}
+          {!alphaMode && comparison?.state === "ALIGNED" ? (
+            <p className="exec-pf-sub">2 to 4 · {comparison.common.currency ?? "ratio"} · {comparison.common.methodologyRef}</p>
+          ) : null}
         </div>
         <div className="exec-pf-ctrls">
-          {fresh && fresh.kind !== "ok" ? <Flag kind={fresh.kind} label={fresh.label} size="sm" /> : null}
+          {fresh ? <Flag kind={fresh.kind} label={fresh.label} size="sm" /> : null}
           {envelope ? <span className="exec-pf-dim">{envelope.sourceAsOf ? `As of ${formatInstant(envelope.sourceAsOf)}` : "Source time not published"}</span> : null}
           <Link to={withContext(backHref, params)}>{backLabel}</Link>
         </div>
       </header>
 
-      {read.phase === "loading" && envelope === null ? <PanelState status="loading" /> : null}
-      {read.phase === "error" ? <PanelState status={read.status} reason={read.reason} /> : null}
+      <div className="exec-cmpr-modes" role="group" aria-label="Compare">
+        <button type="button" className="exec-pf-segbtn" aria-pressed={!alphaMode} onClick={() => setMode(false)}>Portfolios</button>
+        <button type="button" className="exec-pf-segbtn" aria-pressed={alphaMode} onClick={() => setMode(true)}>Alphas</button>
+      </div>
 
-      {envelope ? (
+      {alphaMode ? <AlphaCompare api={api} enabled={permitted} env={url.value.env} picks={picked.ids} onPicks={setPicks} windowLabel={windowLabel} /> : null}
+      {!alphaMode && read.phase === "loading" && envelope === null ? <PanelState status="loading" /> : null}
+      {!alphaMode && read.phase === "error" ? <PanelState status={read.status} reason={read.reason} /> : null}
+
+      {!alphaMode && envelope ? (
         <>
           <section className="exec-pf-panel" aria-label="Choose portfolios">
             <div className="exec-pf-tool">
@@ -271,8 +314,8 @@ export default function CompareScreen({ api, portfolioId, capabilities, routes =
               </label>
               <span className="exec-pf-dim">Window {windowLabel}</span>
             </div>
-            {kindWanted !== null && kindWanted !== "portfolio" && kindWanted !== "pf" ? (
-              <p className="exec-pf-banner" role="status">Comparing alphas is not available. Showing portfolios.<GapWhy name="Why comparing alphas is not available" gap={PF_FE.compareSeries.fe} rows={[npText(PF_FE.compareSeries)]} next={null} /></p>
+            {kindWanted !== null && !alphaMode && kindWanted !== "portfolio" && kindWanted !== "pf" ? (
+              <p className="exec-pf-banner" role="status">Comparing that kind is not available. Showing portfolios.<GapWhy name="Why comparing alphas is not available" gap={PF_FE.compareSeries.fe} rows={[npText(PF_FE.compareSeries)]} next={null} /></p>
             ) : null}
             <div className="exec-cmpr-pick" role="group" aria-label="Portfolios to compare">
               {chips.map((row) => {
@@ -383,7 +426,7 @@ export default function CompareScreen({ api, portfolioId, capabilities, routes =
             <p className={overlay.series.length > 0 && overlay.state?.kind !== "unavailable" ? "exec-blk-sr" : "exec-pf-note"} data-testid="basis-caption">Basis: {basisText}</p>
           </SectionPanel>
 
-          <SectionPanel title="Metrics">
+          <SectionPanel title="Metrics" aside={chosen.length > 1 ? "Square marks the best in a row" : undefined}>
             {chosen.length === 0 ? (
               <p className="exec-pf-note">Pick portfolios above to see their identity and allocation side by side.</p>
             ) : (
