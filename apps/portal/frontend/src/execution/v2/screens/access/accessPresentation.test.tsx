@@ -196,6 +196,35 @@ describe("Manage grants head", () => {
     expect(screen.queryByRole("table", { name: "What you can do" })).toBeNull();
   });
 
+  it("QA1 I-31: the matrix is inside the page's own flow (no empty band), and says which workspace the page reads and that the grants are portal-wide", async () => {
+    signIn({ capabilities: OWNER_CAPS, owner: true });
+    mount({ manage: <p data-testid="matrix">matrix</p>, readStepUp: async () => ({ state: "REQUIRED", expiresAt: null }) }, `${ACCESS_PATH}?view=manage&workspace_id=${ACCESS_DOUBLE_WORKSPACES.available}`);
+    const head = await screen.findByTestId("acc-manage-head");
+    const panel = screen.getByTestId("matrix").closest("#exec-acc-panel") as HTMLElement;
+    expect(panel.className).toContain("exec-acc-manage-body");
+    expect(panel.closest(".exec-surface")).not.toBeNull();
+    expect(head.compareDocumentPosition(panel) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(screen.getByTestId("acc-manage-workspace").textContent).toContain(ACCESS_DOUBLE_WORKSPACES.available);
+    expect(screen.getByTestId("acc-manage-workspace").textContent).toContain("portal-wide");
+    expect(screen.getByTestId("acc-manage-intro").textContent).toContain("changes nothing outside the Portal");
+  });
+
+  it("QA1 I-31: no workspace line when the page names none", async () => {
+    signIn({ capabilities: OWNER_CAPS, owner: true });
+    mount({ manage: <p>matrix</p> }, `${ACCESS_PATH}?view=manage`);
+    await screen.findByTestId("acc-manage-head");
+    expect(screen.queryByTestId("acc-manage-workspace")).toBeNull();
+  });
+
+  it("QA1 I-29: a long capability key wraps between its parts (break opportunities), and the text is unchanged", async () => {
+    signIn({ capabilities: OWNER_CAPS, owner: true });
+    mount();
+    await granted();
+    const row = doRow("Manage grants");
+    expect(row.textContent).toContain("administration.profile_access.manage");
+    expect(row.querySelectorAll("wbr").length).toBeGreaterThan(0);
+  });
+
   it("is not drawn on the self tab", async () => {
     signIn({ capabilities: OWNER_CAPS, owner: true });
     mount({ manage: <p>matrix</p> });

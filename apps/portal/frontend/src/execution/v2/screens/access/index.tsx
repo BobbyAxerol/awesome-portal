@@ -49,6 +49,7 @@ import {
 import { useAccessEffective } from "./useAccessEffective";
 import { useRootCapitalEligibility } from "./useRootCapitalEligibility";
 import { useManageStepUp, type ReadStepUp } from "./useManageStepUp";
+import { breakable } from "../cockpit/breakable";
 import "../../css/access.css";
 
 /** This screen's own route; the "My access" link of a disabled control lands here. */
@@ -184,7 +185,7 @@ export default function AccessSelfView({ manage, sessionWorkspaceId = null, now,
       label: reasonLabel,
       render: (r) => (
         <span className="exec-acc-why">
-          {r.reason}
+          {breakable(r.reason)}
           {r.note ? <> · <span data-testid="acc-row-note">{r.note}</span></> : null}
           {r.absent ? <GapWhy name={`Why ${r.label} is not available yet`} rows={[gapTitle(r.absent.fe, r.absent.what)]} /> : null}
           {withLink && !r.allowed && !r.absent ? <> · <Link className="exec-acc-link" to={myAccessHref}>My access</Link></> : null}
@@ -203,6 +204,7 @@ export default function AccessSelfView({ manage, sessionWorkspaceId = null, now,
         <span className="exec-acc-cell">
           <span className="exec-acc-id">{g.action}</span>
           <span className="exec-acc-effect" data-effect={g.effect}>{g.effect === "ALLOW" ? "Allow" : "Deny"}</span>
+          <span className="exec-acc-meta" data-testid="acc-grant-rev">Revision <span className="exec-acc-id">{g.revision}</span></span>
         </span>
       ),
     },
@@ -211,13 +213,16 @@ export default function AccessSelfView({ manage, sessionWorkspaceId = null, now,
       label: "Scope",
       render: (g) => {
         const all = selectorAllIds(g.selector);
-        return <span className="exec-acc-why" title={all.length > 0 ? all.join(", ") : undefined}>{selectorText(g.selector)}</span>;
+        return (
+          <span className="exec-acc-cell">
+            <span className="exec-acc-why" title={all.length > 0 ? all.join(", ") : undefined}>{selectorText(g.selector)}</span>
+            <span className="exec-acc-meta" data-testid="acc-grant-env">{environmentsText(g)}</span>
+          </span>
+        );
       },
     },
-    { key: "env", label: "Environments", render: (g) => environmentsText(g) },
     { key: "from", label: "Since", render: (g) => <span className="exec-acc-id">{validFromText(g)}</span> },
     { key: "until", label: "Expires", render: (g) => <span className="exec-acc-id">{validUntilText(g)}</span> },
-    { key: "rev", label: "Revision", render: (g) => <span className="exec-acc-id">{g.revision}</span> },
     {
       key: "current",
       label: "State",
@@ -501,7 +506,20 @@ export default function AccessSelfView({ manage, sessionWorkspaceId = null, now,
                 <GapWhy name="Why role presets are not available" rows={[gapTitle(ACCESS_FE.reasons, "Role preset")]} next={null} />
                 <span> · Access is granted per gate below: see and decide, one account at a time.</span>
               </p>
+              <p className="exec-acc-manage-line" data-testid="acc-manage-intro">
+                Who may see a Governance gate, and who may record its Portal decision. Granting a capability here changes nothing outside the Portal: it records no command and moves no capital.
+              </p>
+              {workspaceId !== null ? (
+                <p className="exec-acc-manage-line" data-testid="acc-manage-workspace">
+                  This page reads workspace <span className="exec-acc-code">{workspaceId}</span>. The grants below are portal-wide: their read takes no workspace, so the address does not change them.
+                </p>
+              ) : null}
             </section>
+          ) : null}
+
+          {/* The matrix sits in the page's own flow (it used to render after the surface's full-height box, leaving an empty band). */}
+          {tab === "manage" ? (
+            <div id="exec-acc-panel" role="tabpanel" aria-labelledby="exec-acc-tab-manage" className="exec-acc-manage-body">{manage}</div>
           ) : null}
 
           {tab === "self" ? (
@@ -511,9 +529,6 @@ export default function AccessSelfView({ manage, sessionWorkspaceId = null, now,
           ) : null}
         </div>
       </ExecutionSurface>
-      {tab === "manage" ? (
-        <div id="exec-acc-panel" role="tabpanel" aria-labelledby="exec-acc-tab-manage">{manage}</div>
-      ) : null}
     </>
   );
 }

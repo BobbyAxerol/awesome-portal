@@ -148,11 +148,12 @@ describe("AVAILABLE with grants", () => {
     const first = rows[0];
     expect(cell(first, "Access").textContent).toContain("portfolio.read");
     expect(cell(first, "Access").textContent).toContain("Allow");
-    expect(cell(first, "Scope").textContent).toBe("Portfolio: pf_TEST_ONLY_core, pf_TEST_ONLY_satellite");
-    expect(cell(first, "Environments").textContent).toBe("Paper, Sandbox");
+    expect(cell(first, "Scope").textContent).toContain("Portfolio: pf_TEST_ONLY_core, pf_TEST_ONLY_satellite");
+    // Environments and Revision ride under Scope and Access (QA1 I-29: eight columns did not fit the panel at 1024).
+    expect(within(cell(first, "Scope")).getByTestId("acc-grant-env").textContent).toBe("Paper, Sandbox");
     expect(cell(first, "Since").textContent).toBe("1 Sep 09:14Z");
     expect(cell(first, "Expires").textContent).toBe("No end date");
-    expect(cell(first, "Revision").textContent).toBe("r3_TEST_ONLY");
+    expect(within(cell(first, "Access")).getByTestId("acc-grant-rev").textContent).toBe("Revision r3_TEST_ONLY");
     expect(cell(first, "State").querySelector(".exec-flag")?.getAttribute("data-k")).toBe("ok");
     expect(cell(first, "State").textContent).toContain("Current");
     expect(cell(first, "Trading system").textContent).toContain("Not required");
@@ -572,7 +573,7 @@ describe("L2 · grants over the DOM cap", () => {
     expect(screen.getByTestId("exec-acc-grants-cap-label").textContent).toBe("Showing 200 of 201 grants");
     expect(capLabel()!.textContent).toContain("The other 1 are not drawn here");
     // The first 200 in the order the server sent them; the 201st is not drawn.
-    expect(cell(rows[0], "Revision").textContent).toBe("r3_TEST_ONLY");
+    expect(within(cell(rows[0], "Access")).getByTestId("acc-grant-rev").textContent).toBe("Revision r3_TEST_ONLY");
     expect(screen.queryByText("acg_scale_0200")).toBeNull();
   });
 
