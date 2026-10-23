@@ -58,7 +58,7 @@ let bffProc = null, web = null, base = opt("base-url", null);
 if (base && /:8095\b/.test(base)) throw new Error("refusing to walk the live preview (port 8095)");
 if (!base) {
   if (!existsSync(join(DIST, "index.html")) || !existsSync(join(BFF, "dist/server.mjs"))) throw new Error("no dist: run with --build, or pass --dist");
-  bffProc = spawn("node", ["dist/server.mjs"], { cwd: BFF, env: { ...process.env, PORT: "0", FIXTURE_HOST: "127.0.0.1", FIXTURE_REVIEW_PROFILE: PROFILE, FIXTURE_WRITES: "doubles" } });
+  bffProc = spawn("node", ["dist/server.mjs"], { cwd: BFF, env: { ...process.env, PORT: "0", FIXTURE_HOST: "127.0.0.1", FIXTURE_REVIEW_PROFILE: PROFILE, FIXTURE_WRITES: "doubles", FIXTURE_REBASE_TIME: flag("no-rebase") ? "0" : "1" } });
   const bffPort = await new Promise((res, rej) => {
     let buf = "";
     bffProc.stdout.on("data", (d) => { buf += d; const m = buf.match(/on 127\.0\.0\.1:(\d+)/); if (m) res(Number(m[1])); });
@@ -137,17 +137,34 @@ function scanDegraded(value, path, into, depth = 0) {
 
 const KNOWN_TYPED_404 = [/retained-review/];
 
+/** Instants later than now+1min in a served body, except under a deadline key (due, expires, valid_until, next_*, ceiling ...). Mirrors time-rebase.ts futureInstants. */
+const DEADLINE_KEY = /(^|_)(due|expires?|expiry|valid_until|until|deadline|next|ceiling|retention_floor|renew|rotate)(_|$)/i;
+const ISO = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,9})?Z$/;
+function futureInstants(value, limit, path = "", key = "") {
+  if (DEADLINE_KEY.test(key)) return [];
+  if (typeof value === "string") return ISO.test(value) && Date.parse(value) > limit ? [`${path}=${value}`] : [];
+  if (typeof value === "number") return key.endsWith("_ms") && Number.isInteger(value) && value >= 1.5e12 && value <= 4e12 && value > limit ? [`${path}=${new Date(value).toISOString()}`] : [];
+  if (Array.isArray(value)) return value.flatMap((item, i) => futureInstants(item, limit, `${path}[]`, key));
+  if (value && typeof value === "object") return Object.entries(value).flatMap(([k, v]) => futureInstants(v, limit, `${path}.${k}`, k));
+  return [];
+}
+
 /* ── a visited screen ─────────────────────────────────────────────────────── */
 
 function newTracker(page, denied = false) {
-  const state = { responses: [], consoleErrors: [], pageErrors: [], degraded: new Map() };
+  const state = { responses: [], consoleErrors: [], pageErrors: [], degraded: new Map(), future: new Map() };
   page.on("response", async (r) => {
     const u = new URL(r.url());
     if (!u.pathname.startsWith("/api/") && !u.pathname.startsWith("/__fixture/")) return;
     const rec = { status: r.status(), path: u.pathname, method: r.request().method() };
     state.responses.push(rec);
     if (r.status() === 200 && r.request().method() === "GET" && (r.headers()["content-type"] ?? "").includes("json")) {
-      try { scanDegraded(await r.json(), u.pathname.replace(/\/api\/v1\/execution/, "").replace(/\/[A-Za-z]+_[A-Za-z0-9_:.-]+/g, "/:id"), state.degraded); } catch { /* body gone */ }
+      try {
+        const json = await r.json();
+        const where = u.pathname.replace(/\/api\/v1\/execution/, "").replace(/\/[A-Za-z]+_[A-Za-z0-9_:.-]+/g, "/:id");
+        scanDegraded(json, where, state.degraded);
+        for (const hit of futureInstants(json, Date.now() + 60_000, where).slice(0, 3)) state.future.set(hit.split("=")[0], hit);
+      } catch { /* body gone */ }
     }
   });
   page.on("console", (m) => {
@@ -163,8 +180,9 @@ function newTracker(page, denied = false) {
 }
 
 const drain = (state) => {
-  const out = { responses: state.responses.splice(0), consoleErrors: state.consoleErrors.splice(0), pageErrors: state.pageErrors.splice(0), degraded: new Map(state.degraded) };
+  const out = { responses: state.responses.splice(0), consoleErrors: state.consoleErrors.splice(0), pageErrors: state.pageErrors.splice(0), degraded: new Map(state.degraded), future: [...state.future.values()] };
   state.degraded.clear();
+  state.future.clear();
   return out;
 };
 
@@ -202,10 +220,27 @@ const STEPS = [
   { id: "approval", re: /^\/governance\/approvals\/(?!new)[^/?]+/, hub: "/governance/approvals" },
   { id: "operation", re: /^\/execution\/operations(\?|$)/, hub: null, navOk: true },
   { id: "incident", re: /^\/execution\/operations\/incidents\/[^/?]+/, hub: "/execution/operations" },
-  { id: "audit", re: /^\/(execution\/operations\?(.*&)?tab=audit|administration\/actions|governance\/audit)/, hub: "/execution/operations?tab=audit", navOk: true },
+  // the Audit view of the Operations screen is a tab (a button that sets ?view=audit), not an anchor
+  { id: "audit", tab: /^Audit$/, hub: "/execution/operations" },
 ];
 
 async function findAndFollow(page, step) {
+  if (step.tab) {
+    let via = "page";
+    let tab = page.getByRole("tab", { name: step.tab }).first();
+    if (!(await tab.count())) tab = page.getByRole("button", { name: step.tab }).first();
+    if (!(await tab.count()) && step.hub) {
+      await page.goto(base + step.hub, { waitUntil: "domcontentloaded" });
+      await settle(page);
+      via = "hub:" + step.hub;
+      tab = page.getByRole("tab", { name: step.tab }).first();
+      if (!(await tab.count())) tab = page.getByRole("button", { name: step.tab }).first();
+    }
+    if (!(await tab.count())) return { found: false };
+    await tab.click({ timeout: 8000 }).catch(() => {});
+    await settle(page);
+    return { found: true, href: "(tab " + step.tab.source + ")", via };
+  }
   const pick = async () => {
     const list = await anchors(page);
     return list.find((a) => step.re.test(a.href) && (step.navOk || !a.inNav)) ?? list.find((a) => step.re.test(a.href)) ?? null;
@@ -244,6 +279,7 @@ async function walk(browser, scenario) {
       overflow1280: m.overflow1280, overflow660: m.overflow660, notFound: m.notFound,
       apiBad: unexpected.map((r) => `${r.status} ${r.method} ${r.path}`), apiDenied: bad.length - unexpected.length,
       consoleErrors: d.consoleErrors, pageErrors: d.pageErrors,
+      future: d.future.slice(0, 6),
       degraded: [...d.degraded.entries()].sort((a, b) => b[1] - a[1]).slice(0, Number(opt("deg", "12"))) };
     screens.push(rec);
     for (const a of await anchors(page)) if (!a.inNav && !seenHrefs.has(a.href)) seenHrefs.set(a.href, id);
@@ -260,7 +296,7 @@ async function walk(browser, scenario) {
     if (!res.found) { problems.push(`${step.id}: NO_LINK_FOUND (after ${previous})`); screens.push({ id: step.id, missing: true }); continue; }
     const rec = await record(step.id, res.href, { via: res.via, from: previous });
     // the back-link: history back must land on a rendering screen (the page we came from when we clicked on it)
-    if (res.via === "page") {
+    if (res.via === "page" && !res.href.startsWith("(tab")) {
       await page.goBack({ waitUntil: "domcontentloaded" }).catch(() => {});
       await settle(page);
       const back = stripOrigin(page.url());
@@ -279,13 +315,20 @@ async function walk(browser, scenario) {
   // Link sweep: every distinct internal detail link seen on the journey must resolve.
   const sweep = [];
   const detail = [...seenHrefs.keys()].filter((h) => /^\/(deployments\/(alphas|portfolios|accounts|paper|sandbox|live)\/|execution\/operations\/incidents\/|governance\/approvals\/)[^/?]+/.test(h) && !/\/new(\?|$)/.test(h));
-  for (const href of detail.slice(0, SWEEP_MAX)) {
+  const visit = async (href) => {
     await page.goto(base + href, { waitUntil: "domcontentloaded" });
     await settle(page);
     const m = await page.evaluate(inPage);
     const d = drain(tracker);
     const bad = d.responses.filter((r) => r.status >= 400 && !KNOWN_TYPED_404.some((re) => re.test(r.path)) && !(scenario === "denied" && r.status === 403));
-    sweep.push({ href, from: seenHrefs.get(href), ok: bad.length === 0 && !m.notFound && m.textLength > 200, bad: bad.map((r) => `${r.status} ${r.path}`).slice(0, 3), notFound: m.notFound, errors: d.consoleErrors.length + d.pageErrors.length });
+    const firstError = [...d.pageErrors, ...d.consoleErrors][0] ?? null;
+    return { m, d, bad, firstError, ok: bad.length === 0 && !m.notFound && m.textLength > 200 };
+  };
+  for (const href of detail.slice(0, SWEEP_MAX)) {
+    let r = await visit(href);
+    // a lazy chunk aborted by the previous navigation is a harness race, not a broken link: look again once
+    if (!r.ok && r.bad.length === 0 && /dynamically imported|preload CSS/.test(r.firstError ?? "")) r = await visit(href);
+    sweep.push({ href, from: seenHrefs.get(href), ok: r.ok, bad: r.bad.map((x) => `${x.status} ${x.path}`).slice(0, 3), notFound: r.m.notFound, errors: r.d.consoleErrors.length + r.d.pageErrors.length, firstError: r.firstError });
   }
   await ctx.close();
   return { scenario, screens, problems, sweep, sweepTotal: detail.length };
@@ -309,14 +352,14 @@ writeFileSync(join(OUT, `journey-${LABEL}.json`), JSON.stringify({ generated: ne
 for (const r of results) {
   console.log(`\n## scenario ${r.scenario}`);
   if (r.fatal) { console.log("FATAL", r.fatal); continue; }
-  console.log("| screen | url | absences | ovf1280 | ovf660 | bad api | console | back | degraded markers |");
-  console.log("|---|---|---|---|---|---|---|---|---|");
+  console.log("| screen | url | absences | ovf1280 | ovf660 | bad api | console | back | future | degraded markers |");
+  console.log("|---|---|---|---|---|---|---|---|---|---|");
   for (const s of r.screens) {
     if (s.missing) { console.log(`| ${s.id} | NO LINK | | | | | | | |`); continue; }
-    console.log(`| ${s.id} | ${s.url.slice(0, 60)} | ${s.absences} | ${s.overflow1280} | ${s.overflow660} | ${s.apiBad.length ? s.apiBad.slice(0, 2).join("; ") : "0"}${s.apiDenied ? ` (+${s.apiDenied} denied)` : ""} | ${s.consoleErrors.length + s.pageErrors.length} | ${s.backLink ?? ""} | ${s.degraded.length} |`);
+    console.log(`| ${s.id} | ${s.url.slice(0, 60)} | ${s.absences} | ${s.overflow1280} | ${s.overflow660} | ${s.apiBad.length ? s.apiBad.slice(0, 2).join("; ") : "0"}${s.apiDenied ? ` (+${s.apiDenied} denied)` : ""} | ${s.consoleErrors.length + s.pageErrors.length} | ${s.backLink ?? ""} | ${s.future.length} | ${s.degraded.length} |`);
   }
   console.log(`total absences: ${r.screens.reduce((n, s) => n + (s.absences ?? 0), 0)}; problems: ${r.problems.length ? r.problems.join("; ") : "none"}`);
   const failed = r.sweep.filter((x) => !x.ok);
-  console.log(`link sweep: ${r.sweep.length}/${r.sweepTotal} detail links followed, ${failed.length} failed${failed.length ? ": " + failed.slice(0, 12).map((x) => `${x.href} [${x.bad.join(",") || (x.notFound ? "not-found text" : "no render")}] from ${x.from}`).join("; ") : ""}`);
+  console.log(`link sweep: ${r.sweep.length}/${r.sweepTotal} detail links followed, ${failed.length} failed${failed.length ? ": " + failed.slice(0, 12).map((x) => `${x.href} [${x.bad.join(",") || (x.notFound ? "not-found text" : "no render")}${x.firstError ? " err: " + x.firstError.slice(0, 100) : ""}] from ${x.from}`).join("; ") : ""}`);
 }
 process.exit(0);

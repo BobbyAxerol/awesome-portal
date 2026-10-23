@@ -77,9 +77,46 @@ export function bodyAnchor(body: unknown): number | null {
   return null;
 }
 
-/** Shift a served body to the real clock: by its own read time when it names one, else by the doubles' common instant. */
+/** Keys whose instant is a deadline or a ceiling: allowed to lie in the future, and never the anchor of a body. */
+const DEADLINE_KEY = /(^|_)(due|expires?|expiry|valid_until|until|deadline|next|ceiling|retention_floor|renew|rotate)(_|$)/i;
+/** Content may legitimately sit this far after the stated read time in a double (a series written against another clock); beyond it is a deadline. */
+const CONTENT_WINDOW_MS = 120 * MS_DAY;
+
+/** The latest instant of the body that is content (not a deadline) and within CONTENT_WINDOW_MS of `after`. */
+export function latestContentInstant(value: unknown, after: number, key = ""): number {
+  let latest = after;
+  const consider = (at: number): void => { if (Number.isFinite(at) && at > latest && at <= after + CONTENT_WINDOW_MS) latest = at; };
+  if (DEADLINE_KEY.test(key)) return latest;
+  if (typeof value === "string") {
+    if (INSTANT.test(value)) consider(Date.parse(value));
+  } else if (typeof value === "number") {
+    if (key.endsWith("_ms") && Number.isInteger(value) && value >= EPOCH_MS_MIN && value <= EPOCH_MS_MAX) consider(value);
+  } else if (Array.isArray(value)) {
+    for (const item of value) latest = Math.max(latest, latestContentInstant(item, after, key));
+  } else if (value !== null && typeof value === "object") {
+    for (const [k, v] of Object.entries(value as Record<string, unknown>)) latest = Math.max(latest, latestContentInstant(v, after, k));
+  }
+  return latest;
+}
+
+/**
+ * Shift a served body to the real clock: by its own read time when it names one, else by the doubles' common instant. WP-P: when the content of
+ * a body reaches past its stated read time (a series or an activity list written against a later clock than its envelope), the latest content
+ * instant is the anchor, so no content lands after "now" (only deadline keys may). One constant shift per body, so distances are preserved.
+ */
 export function rebaseBody(body: unknown, doubleNowIso: string, realNowMs: number): unknown {
   const now = Math.floor(realNowMs / 60_000) * 60_000;
-  const anchor = bodyAnchor(body);
-  return rebaseTimes(body, anchor === null ? rebaseDelta(doubleNowIso, realNowMs) : now - anchor);
+  const read = bodyAnchor(body);
+  if (read === null) return rebaseTimes(body, now - latestContentInstant(body, Date.parse(doubleNowIso))); // no stated read time: the doubles' common instant, or later content
+  return rebaseTimes(body, now - latestContentInstant(body, read));
+}
+
+/** Test and walker helper: every non-deadline instant of a body later than `limitMs`, as `path=value`. */
+export function futureInstants(value: unknown, limitMs: number, path = "", key = ""): string[] {
+  if (DEADLINE_KEY.test(key)) return [];
+  if (typeof value === "string") return INSTANT.test(value) && Date.parse(value) > limitMs ? [`${path}=${value}`] : [];
+  if (typeof value === "number") return key.endsWith("_ms") && Number.isInteger(value) && value >= EPOCH_MS_MIN && value <= EPOCH_MS_MAX && value > limitMs ? [`${path}=${new Date(value).toISOString()}`] : [];
+  if (Array.isArray(value)) return value.flatMap((item, index) => futureInstants(item, limitMs, `${path}[${index}]`, key));
+  if (value !== null && typeof value === "object") return Object.entries(value as Record<string, unknown>).flatMap(([k, v]) => futureInstants(v, limitMs, `${path}.${k}`, k));
+  return [];
 }

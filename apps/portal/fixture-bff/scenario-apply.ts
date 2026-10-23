@@ -42,7 +42,7 @@ export function resetFixtureTransitions(): void {
 
 /** Shapes a served JSON body for the value-rewrite scenarios. Identity for the others. */
 export function applyScenarioBody(scenario: FixtureScenario, path: string, body: unknown): unknown {
-  const healed = healsDoubles(scenario) ? healBody(body) : body;
+  const healed = healsDoubles(scenario) ? aliasIds(healBody(body)) : body;
   void path;
   return healed;
 }
@@ -63,6 +63,48 @@ function healBody(value: unknown, depth = 0): unknown {
   const out: Record<string, unknown> = {};
   for (const [key, child] of Object.entries(record)) {
     const next = healBody(child, depth + 1);
+    if (next !== child) changed = true;
+    out[key] = next;
+  }
+  return changed ? out : value;
+}
+
+/**
+ * ONE id space for the navigation spine (WP-P). Ids the doubles print as a link target but that no read serves are pointed at the entity that does
+ * answer, in every served body of the positive-like scenarios: the operation queue names accounts `acc_TEST_ONLY_*`, the account double names the
+ * portfolios `pf_core`, `pf_satellite`, `pf_canary`. Exact string match only (a bare id or the id as the last path segment of a link); nothing else is
+ * rewritten, so a free-text field that merely contains the word is left alone. The legacy `missing` scenario keeps the dangling ids on purpose.
+ */
+export const ID_ALIASES: Readonly<Record<string, string>> = Object.freeze({
+  acc_TEST_ONLY_operational: "acc_bnc_core",
+  acc_TEST_ONLY_binance01: "acc_bnc_sub",
+  acc_TEST_ONLY_binance02: "acc_okx_main",
+  pf_core: "pf_TEST_ONLY_core",
+  pf_satellite: "pf_TEST_ONLY_satellite",
+  pf_canary: "pf_TEST_ONLY_canary",
+});
+function aliasIds(value: unknown, depth = 0): unknown {
+  if (depth > 12) return value;
+  if (typeof value === "string") {
+    const direct = ID_ALIASES[value];
+    if (direct !== undefined) return direct;
+    const slash = value.lastIndexOf("/");
+    if (slash > 0 && value.startsWith("/")) {
+      const tail = ID_ALIASES[value.slice(slash + 1)];
+      if (tail !== undefined) return `${value.slice(0, slash + 1)}${tail}`;
+    }
+    return value;
+  }
+  if (value === null || typeof value !== "object") return value;
+  if (Array.isArray(value)) {
+    let changed = false;
+    const out = value.map((entry) => { const next = aliasIds(entry, depth + 1); if (next !== entry) changed = true; return next; });
+    return changed ? out : value;
+  }
+  let changed = false;
+  const out: Record<string, unknown> = {};
+  for (const [key, child] of Object.entries(value as Record<string, unknown>)) {
+    const next = aliasIds(child, depth + 1);
     if (next !== child) changed = true;
     out[key] = next;
   }
