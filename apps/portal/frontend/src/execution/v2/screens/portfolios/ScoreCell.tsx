@@ -34,21 +34,23 @@ export function ScoreFigure({ read, full = false }: { read: ScoreRead; full?: bo
         <span className="exec-pf-score-top">
           <NaWhy reason={`${read.reason}. Policy ${read.policy}.`} className="exec-pf-na" text={absenceWord(read.code)} />
         </span>
-        <span className="exec-pf-score-sub">{read.evidence !== null ? `Evidence ${evidencePercent(read.evidence)}` : "No evidence figure"} · {read.policy}</span>
+        <span className="exec-pf-score-sub" title={`Policy ${read.policy}`}>{read.evidence !== null ? `Evidence ${evidencePercent(read.evidence)}` : "No evidence figure"}{full ? ` · ${read.policy}` : ""}</span>
       </span>
     );
   }
   return (
     <span className="exec-pf-score" data-state={read.provisional ? "provisional" : "scored"} data-band={read.band}>
       <span className="exec-pf-score-top">
-        <span className="exec-pf-score-val" title={`${read.exact} · ${read.methodology ?? "no methodology published"}${read.window === null ? "" : ` · ${read.window}`}`}>{truncateDecimal(read.exact)}</span>
+        <span className="exec-pf-score-val" title={`${read.exact} · ${read.methodology ?? "no methodology published"}${read.window === null ? "" : ` · ${read.window}`} · ${read.evidence !== null ? `evidence ${read.evidence}` : "no evidence figure"} · policy ${read.policy}`}>{truncateDecimal(read.exact)}</span>
         <ScoreBandChip band={read.band} />
       </span>
-      <span className="exec-pf-score-sub">
-        {read.provisional ? <span className="exec-pf-prov" title="Sample below maturity: a numeric score, not yet validated">Provisional</span> : null}
-        {read.evidence !== null ? <span title={`Evidence coverage ${read.evidence}`}>Evidence {evidencePercent(read.evidence)}</span> : <span>No evidence figure</span>}
-        <span title={read.methodology ?? undefined}>{read.policy}</span>
-      </span>
+      {full || read.provisional ? (
+        <span className="exec-pf-score-sub">
+          {read.provisional ? <span className="exec-pf-prov" title="Sample below maturity: a numeric score, not yet validated">Provisional</span> : null}
+          {full ? (read.evidence !== null ? <span title={`Evidence coverage ${read.evidence}`}>Evidence {evidencePercent(read.evidence)}</span> : <span>No evidence figure</span>) : null}
+          {full ? <span title={read.methodology ?? undefined}>{read.policy}</span> : null}
+        </span>
+      ) : null}
       {full ? (
         <span className="exec-pf-score-parts" aria-label="Score components">
           {([["P", read.p], ["R", read.r], ["B", read.b]] as const).map(([name, value]) => (

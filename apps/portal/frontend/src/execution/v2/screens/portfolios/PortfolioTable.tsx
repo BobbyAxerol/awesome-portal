@@ -73,11 +73,10 @@ export const UNPUBLISHED: Readonly<Partial<Record<ColumnId, Unpublished>>> = {
 };
 
 /**
- * Columns hidden until the reader asks (hi-fi `hide={dom:true}`): Domain, which
- * the Domain filter above the table already says. 11 columns fit at 1440; with
- * Domain the register is wider than the page and the five measures scroll away.
+ * Columns hidden until the reader asks (hi-fi `hide={dom:true}`): Domain, which the Domain filter above the table already says, and,
+ * so that the default register fits 1440 without a horizontal scroll (WP-F1, measured), Allocations and Alphas / Dep. (counts, also on the 360 and in the row's title) and HHI (a diagnostic). All four are one click away in the column chooser and in the address (`hide=none`).
  */
-export const DEFAULT_HIDDEN: readonly ColumnId[] = ["domain"];
+export const DEFAULT_HIDDEN: readonly ColumnId[] = ["alphas", "allocations", "domain", "hhi"];
 
 /** The `hide` value that means "hide nothing", so a reader can switch the default off. */
 export const HIDE_NONE = "none";
@@ -201,6 +200,7 @@ export function PortfolioTable({ rows, hidden, routes, search, selected, onToggl
   return (
     <CardsTable
       label="Portfolios"
+      className="exec-pf-reg"
       columns={columns}
       rows={rows}
       rowKey={(row) => row.key}
@@ -239,7 +239,7 @@ function cell(id: ColumnId, row: PortfolioRow, figures: PortfolioFigures | null)
     const group = figures.groups.get(row.portfolioId);
     if (group === undefined) return <Absent reason={`No ${figures.environment} figures are published for this portfolio`} />;
     // A group that does not publish this key keeps the column's own Not published (the contract has not spoken for it).
-    if (publishes(group, source.key)) return <PartitionFigures list={group} metricKey={source.key} signed={source.signed} labels="several" />;
+    if (publishes(group, source.key)) return <PartitionFigures list={group} metricKey={source.key} signed={source.signed} labels="several" omitUnit={row.baseCurrency} />;
   }
   const fact = UNPUBLISHED[id];
   if (fact) return <Absent reason={`${npText(fact)}: ${fact.what}`} />;
@@ -256,11 +256,11 @@ function cell(id: ColumnId, row: PortfolioRow, figures: PortfolioFigures | null)
       if (row.unallocated) return <span className="exec-pf-np" title="The source publishes no figure for capital that no portfolio holds">Not published</span>;
       return (
         <span className="exec-pf-alloc">
-          <MoneyList entries={row.allocated} empty={<Absent reason="no allocation published" />} />
+          <MoneyList entries={row.allocated} empty={<Absent reason="no allocation published" />} omitUnit={row.baseCurrency} />
           {row.mixedBooks ? (
             // Seventeen of twenty-five rows carried the full sentence as a chip: the chip is two words, the sentence is its title and hidden text.
             <span title="Real-funded and Simulated books together">
-              <Flag kind="partial" label="Mixed books" size="sm" />
+              <Flag kind="partial" label="Mixed" size="sm" />
               <span className="exec-blk-sr"> (Real-funded and Simulated books together)</span>
             </span>
           ) : null}

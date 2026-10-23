@@ -11,7 +11,8 @@
 import type { ExecutionApi } from "../../../api/ports";
 import type { ManagerDataset } from "../../readers/managerDataset";
 import { figuresByPartition, type ManagerPartition, type ManagerPartitionedMetrics } from "../../readers/managerMetric";
-import { MetricValue } from "../manager/MetricValue";
+import { MetricValue, metricTitle } from "../manager/MetricValue";
+import { showDecimal } from "../../charts/decimal";
 
 import "./partitionFigures.css";
 
@@ -68,14 +69,26 @@ export function figureSource(dataset: ManagerDataset | null, key: string, portfo
  * `labels="several"` (the register table): a partition label is printed only when the list holds more than one partition, because one
  * partition is already named by the page basis line; the label stays on the figure's title either way.
  */
-export function PartitionFigures({ list, metricKey, signed = false, labels = "always" }: { list: readonly ManagerPartitionedMetrics[]; metricKey: string; signed?: boolean; labels?: "always" | "several" }) {
+export function PartitionFigures({ list, metricKey, signed = false, labels = "always", omitUnit = null }: {
+  list: readonly ManagerPartitionedMetrics[];
+  metricKey: string;
+  signed?: boolean;
+  labels?: "always" | "several";
+  /**
+   * A currency whose money figures print as the bare number: the register row already states its base currency in the identity cell,
+   * so a figure in THAT currency needs no unit beside it (it stays in the title). A figure in any other currency keeps its unit.
+   */
+  omitUnit?: string | null;
+}) {
   const figures = figuresByPartition(list, metricKey);
   return (
     <ul className="exec-part" aria-label={`${metricKey} by economic partition`}>
       {figures.map(({ partition, metric }) => (
         <li key={`${partition.economicDomain}|${partition.currency}|${partition.basis}|${partition.nativeProfileRef}`} className="exec-part-line" data-domain={partition.economicDomain} title={`${partitionLabel(partition)} · ${partition.basis}`}>
           {labels === "several" && figures.length === 1 ? null : <span className="exec-part-label" title={`${partition.basis} · ${partition.nativeProfileRef}`}>{partitionLabel(partition)}</span>}
-          <MetricValue metric={metric} signed={signed} />
+          {omitUnit !== null && metric !== null && metric.kind === "value" && metric.unit === "MONEY" && metric.currency === omitUnit
+            ? <span className="exec-mgr-num" title={`${metric.exact} ${metric.currency} · ${metricTitle(metric)}`} data-zero={metric.zero ? "true" : undefined}>{showDecimal(metric.exact, { unit: "money", signed })}</span>
+            : <MetricValue metric={metric} signed={signed} />}
         </li>
       ))}
     </ul>

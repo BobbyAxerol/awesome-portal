@@ -66,10 +66,12 @@ describe("register", () => {
     await loaded();
     const rows = bodyRows();
     const money = (name: string) => cell(rows.find((r) => r.textContent?.includes(name))!, "Allocated capital");
+    // A figure in the row's own base currency prints as the bare number (the identity cell states the base); the unit is on the title.
     expect(money("Core")).toContain("540,000.00");
-    expect(money("Core")).toContain("USDT");
     expect(money("Yen-Carry")).toContain("48,000,000");
-    expect(money("Yen-Carry")).toContain("JPY");
+    const unitOf = (name: string) => [...bodyRows().find((r) => r.textContent?.includes(name))!.querySelectorAll("td[data-l='Allocated capital'] .exec-pf-num")].map((n) => n.getAttribute("title"));
+    expect(unitOf("Core").join(" ")).toContain("540000.00 USDT");
+    expect(unitOf("Yen-Carry").join(" ")).toContain("48000000 JPY");
     // The exact original rides on the title; no total exists anywhere.
     const exact = [...table().querySelectorAll(".exec-pf-num")].map((n) => n.getAttribute("data-full"));
     expect(exact).toEqual(expect.arrayContaining(["540000.00", "350000.00", "48000000"]));
@@ -85,7 +87,7 @@ describe("register", () => {
   });
 
   it("says what an empty allocation and a missing owner are, never a zero or a dash", async () => {
-    mount(makeApi().api);
+    mount(makeApi().api, "/deployments/portfolios?hide=none");
     await loaded();
     const pilot = bodyRows().find((r) => r.textContent?.includes("Pilot"))!;
     expect(cell(pilot, "Allocated capital")).toBe("Not available · no allocation published");
@@ -96,7 +98,7 @@ describe("register", () => {
   });
 
   it("keeps Economic capital, Net PnL, Return, Drawdown, HHI and Portfolio score as columns (hi-fi), each cell Not available with its request id when no group is served; Score is named once", async () => {
-    mount(makeApi().api);
+    mount(makeApi().api, "/deployments/portfolios?hide=none");
     await loaded();
     const ids: Record<string, string> = {
       "Economic capital": "FE-013", "Net PnL": "FE-005, FE-025", Return: "FE-006, FE-025", Drawdown: "FE-013, FE-025", HHI: "FE-005", "Portfolio score": "FE-011",
@@ -138,20 +140,20 @@ describe("register", () => {
     expect(href).toContain("window=30d");
   });
 
-  it("opens with Domain hidden (the hi-fi default); the chooser brings it back and the address remembers it", async () => {
+  it("opens with Domain, Alphas / Dep., Allocations and HHI hidden (the register fits 1440); the chooser brings one back and the address remembers it", async () => {
     mount(makeApi().api);
     await loaded();
     for (const row of bodyRows()) {
       expect([...row.querySelectorAll("td")].map((td) => td.getAttribute("data-l"))).toEqual([
-        "Compare", "Portfolio", "Manager", "Alphas / Dep.", "Allocations", "Economic capital", "Allocated capital",
-        "Net PnL \u00b7 90D", "Return \u00b7 90D", "Drawdown \u00b7 90D", "HHI", "Portfolio score \u00b7 90D", "Health",
+        "Compare", "Portfolio", "Manager", "Economic capital", "Allocated capital",
+        "Net PnL \u00b7 90D", "Return \u00b7 90D", "Drawdown \u00b7 90D", "Portfolio score \u00b7 90D", "Health",
       ]);
     }
     expect(search().has("hide")).toBe(false);
     const menu = screen.getByRole("group", { name: "Columns" });
     expect((within(menu).getByRole("checkbox", { name: "Domain" }) as HTMLInputElement).checked).toBe(false);
     fireEvent.click(within(menu).getByRole("checkbox", { name: "Domain" }));
-    expect(search().get("hide")).toBe("none");
+    expect(search().get("hide")).toBe("alphas,allocations,hhi");
     expect(cell(bodyRows()[0], "Domain")).not.toBe("");
     fireEvent.click(within(menu).getByRole("checkbox", { name: "Domain" }));
     expect(search().has("hide")).toBe(false);
@@ -166,7 +168,7 @@ describe("register", () => {
         "Net PnL \u00b7 90D", "Return \u00b7 90D", "Drawdown \u00b7 90D", "HHI", "Portfolio score \u00b7 90D", "Health",
       ]);
     }
-    expect(table().className).toBe("exec-cards");
+    expect(table().className).toContain("exec-cards");
   });
 
   it("never renders a dash, N/A or a bare zero as an absent value", async () => {
@@ -184,8 +186,8 @@ describe("header, banners and footer", () => {
   it("states freshness, the read's clock, the partial read and the branch that is not whole", async () => {
     mount(makeApi().api);
     await loaded();
-    // FRESH prints no chip: the as-of line says it. A tier that is not fresh keeps its chip (conformance matrix).
-    expect(screen.queryByText("Fresh")).toBeNull();
+    // The freshness chip is always drawn (hi-fi "Fresh"), beside the as-of line; a tier that is not fresh wears its own word (conformance matrix).
+    expect(screen.getByText("Fresh")).toBeTruthy();
     expect(screen.getByText(/As of 17 Oct/)).toBeTruthy();
     // UXM07-048/10: one banner. The branch that is not whole names what is missing; the partial read's sentence is its disclosure
     expect(screen.queryByText("Some portfolios or figures may be missing")).toBeNull();
@@ -382,15 +384,19 @@ describe("columns", () => {
     // Every measure is in the chooser like any other column.
     expect(within(menu).getByRole("checkbox", { name: "Economic capital" })).not.toBeNull();
     expect(within(menu).getByRole("checkbox", { name: "Portfolio score" })).not.toBeNull();
+    // HHI, Allocations, Alphas / Dep. and Domain are hidden by default; a click brings one back and the address remembers the rest.
     fireEvent.click(within(menu).getByRole("checkbox", { name: "HHI" }));
     fireEvent.click(within(menu).getByRole("checkbox", { name: "Allocations" }));
-    expect(search().get("hide")).toBe("allocations,domain,hhi");
+    expect(search().get("hide")).toBe("alphas,domain");
     const headers = [...table().querySelectorAll("th")].map((th) => th.textContent);
-    expect(headers).not.toContain("HHI");
-    expect(headers).not.toContain("Allocations");
+    expect(headers).toContain("HHI");
+    expect(headers).toContain("Allocations");
     expect(headers).toContain("Manager");
     fireEvent.click(within(menu).getByRole("checkbox", { name: "HHI" }));
-    expect(search().get("hide")).toBe("allocations,domain");
+    expect(search().get("hide")).toBe("alphas,domain,hhi");
+    fireEvent.click(within(menu).getByRole("checkbox", { name: "Manager" }));
+    expect(search().get("hide")).toBe("owner,alphas,domain,hhi");
+    expect([...table().querySelectorAll("th")].map((th) => th.textContent)).not.toContain("Manager");
   });
 
   it("honours a hide list in the address and ignores a name it does not know", async () => {

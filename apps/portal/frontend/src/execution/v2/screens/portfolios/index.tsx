@@ -42,7 +42,8 @@ import {
 } from "./listModel";
 import type { ManagerDatasetQuery } from "../../../api/managerDatasetQuery";
 import { useManagerDataset } from "../manager/useManagerDataset";
-import { groupsByPortfolio, publishes, rowCountsByPortfolio, servesDataset } from "./PartitionFigures";
+import { PartitionFigures, groupsByPortfolio, publishes, rowCountsByPortfolio, servesDataset } from "./PartitionFigures";
+import { EXPORT_REASON } from "./fe";
 import { FilterChips, RangeFilters, type FilterChip } from "./RangeFilters";
 import { RANGES, SCORE_KEYS, SCORE_MISSING, SCORE_STATE_PARAM, parseRange, rangeText, writeRange, type Range, type RangeId } from "./registerMetrics";
 import { OPTIONAL_COLUMNS, PortfolioTable, readHidden, writeHidden, type ColumnId, type PortfolioFigures } from "./PortfolioTable";
@@ -159,9 +160,17 @@ export default function PortfolioListScreen({ api, capabilities, routes = DEFAUL
   const rangeCount = Object.keys(ranges).length + (scoreMissingOnly ? 1 : 0);
   const filtered = q !== null || domain !== null || rangeCount > 0;
   const groups = figures?.groups ?? null;
+  // The dataset's own capital statement of the environment (one entry per economic partition): the "Total · NAV" line of the hi-fi, as published.
+  const statementList = dataset.phase === "ready" ? dataset.value.capitalStatements : null;
+  const scopeNav = statementList !== null && publishes(statementList, "current_nav") ? statementList : null;
   const visible = useMemo(
     () => sortRows(filterRows(loaded, q, domain, { ranges, scoreMissing: scoreMissingOnly, currency: ccy, groups }), sort, ccy, groups).slice(0, ROW_CAP),
     [loaded, q, domain, ranges, scoreMissingOnly, sort, ccy, groups],
+  );
+  // Portfolios that hold nothing in the chosen currency (base currency and every allocation are another one): a count of rows, no money added.
+  const otherCurrency = useMemo(
+    () => (ccy === null ? 0 : loaded.filter((row) => !row.unallocated && row.baseCurrency !== ccy && !row.allocated.some((entry) => entry.currency === ccy)).length),
+    [loaded, ccy],
   );
   // A range is offered when the register has a figure to compare: Allocated capital always; the group measures once a group publishes them.
   const scorePublished = groups !== null && [...groups.values()].some((group) => publishes(group, SCORE_KEYS.score));
@@ -291,7 +300,7 @@ export default function PortfolioListScreen({ api, capabilities, routes = DEFAUL
           </p>
         </div>
         <div className="exec-pf-fresh">
-          {fresh && fresh.kind !== "ok" ? <Flag kind={fresh.kind} label={fresh.label} size="sm" /> : null}
+          {fresh ? <Flag kind={fresh.kind} label={fresh.label} size="sm" /> : null}
           {envelope ? <span>{envelope.sourceAsOf ? `As of ${formatInstant(envelope.sourceAsOf)}` : "Source time not published"}</span> : null}
         </div>
       </header>
@@ -385,6 +394,10 @@ export default function PortfolioListScreen({ api, capabilities, routes = DEFAUL
               </div>
             </details>
             <button type="button" className="exec-pf-btn" aria-pressed={compact} onClick={() => setLocal("density", compact ? null : "compact")}>Compact</button>
+            <span className="exec-pf-exportline" data-testid="export-line">
+              <GapWhy className="exec-blk-np-word" gap="D20" text="Export: not available yet" name="Export: not available yet, reason" rows={[EXPORT_REASON]} next={null} />
+              {" · "}<Link to={withContext(routes.access, params)}>My access</Link>
+            </span>
           </div>
           <FilterChips chips={chips} onClearAll={clearFilters} />
           <p className="exec-pf-basis" data-testid="basis-text">
@@ -417,8 +430,16 @@ export default function PortfolioListScreen({ api, capabilities, routes = DEFAUL
             figures={figures}
           />
 
+          {scopeNav !== null ? (
+            <div className="exec-pf-total" role="group" aria-label="Scope statement" data-testid="scope-total">
+              <span className="exec-pf-dim" title="The Manager's own statement for this environment, before the table filters: one line per economic partition, never added across partitions. It is not a sum of the rows above.">Scope statement · Economic capital · {url.value.env === "live" ? "Real-funded" : url.value.env === "paper" ? "Paper" : "Sandbox"}</span>
+              <PartitionFigures list={scopeNav} metricKey="current_nav" />
+            </div>
+          ) : null}
+
           <div className="exec-pf-foot">
             <span className="exec-pf-count-line" role="status" aria-live="polite">{line ? line.text : null}</span>
+            {otherCurrency > 0 ? <span className="exec-pf-note" data-testid="other-currency">{otherCurrency} {otherCurrency === 1 ? "portfolio" : "portfolios"} in another currency · pick "Currency: any" to see {otherCurrency === 1 ? "it" : "them"}</span> : null}
             {envelope.truncated ? <span className="exec-pf-note">{LOAD_MORE_REASON}</span> : null}
             {capped ? <span className="exec-pf-note">Showing the first {ROW_CAP} rows. Narrow the filters to see the rest.</span> : null}
           </div>

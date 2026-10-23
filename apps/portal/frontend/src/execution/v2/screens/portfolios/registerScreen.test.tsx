@@ -85,9 +85,11 @@ describe("Portfolio score column", () => {
     const core = cellOf("Core", "Portfolio score");
     expect(core).toContain("82.80");
     expect(core).toContain("Good");
-    expect(core).toContain("Evidence 97%");
-    expect(core).toContain("FIXTURE_LAB");
+    // The register cell is value and band (the column must fit 1440): the evidence and the policy ride the value's title, and the 360 prints them.
     expect(core).not.toContain("Provisional");
+    const coreTitle = table().querySelector(".exec-pf-score-val[title^='82.8 ']")!.getAttribute("title")!;
+    expect(coreTitle).toContain("evidence 0.9712");
+    expect(coreTitle).toContain("policy FIXTURE_LAB");
     const satellite = cellOf("Satellite", "Portfolio score");
     expect(satellite).toContain("69.62");
     expect(satellite).toContain("Fair");
