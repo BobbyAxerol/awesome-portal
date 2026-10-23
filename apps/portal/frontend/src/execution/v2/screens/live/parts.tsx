@@ -219,15 +219,15 @@ export function V1RowsSection({ title, aside, rows, what }: { title: string; asi
   if (rows.kind === "typed-positions" || rows.kind === "typed-orders") {
     // The server's typed rows (FE-072): exact text, no sum; the two columns the source relation lacks say so with the server's reason.
     // Leverage and Ack latency are the design's columns: they are drawn, each cell a typed `Not available` with the server's reason, until the source publishes them.
-    const shown = withPaddedQuantity(rows.rows.slice(0, ROW_CAP));
+    const shown = rows.rows.slice(0, ROW_CAP);
     const keep = (_column: { key: string }) => true;
     return (
       <SectionPanel level={2} title={title} aside={aside}>
         {rows.line ? <p className="exec-liv-line"><span className="exec-blk-na">{rows.line}</span></p> : null}
         {rows.kind === "typed-positions" ? (
-          <CardsTable columns={POSITION_COLUMNS(rows.reasons).filter(keep)} rows={shown as TypedPositionRow[]} rowKey={(row) => `${row.id ?? row.symbol}`} label={title} empty="The source reported none." />
+          <CardsTable columns={POSITION_COLUMNS(rows.reasons).filter(keep)} rows={withPaddedQuantity(shown as TypedPositionRow[])} rowKey={(row) => `${row.id ?? row.symbol}`} label={title} empty="The source reported none." />
         ) : (
-          <CardsTable columns={ORDER_COLUMNS(rows.reasons).filter(keep)} rows={shown as TypedOrderRow[]} rowKey={(row) => `${row.id ?? row.symbol}`} label={title} empty="The source reported none." />
+          <CardsTable columns={ORDER_COLUMNS(rows.reasons).filter(keep)} rows={withPaddedQuantity(shown as unknown as TypedOrderRow[])} rowKey={(row) => `${row.id ?? row.symbol}`} label={title} empty="The source reported none." />
         )}
         <div className="exec-liv-more">
           <span className="exec-liv-cap">{rows.caption}</span>

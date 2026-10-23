@@ -8,7 +8,7 @@
  * identity keys of the body, FE-066) and only when the port can answer it: a port without the method (a screen's unit test) is `idle`.
  * Nothing here is computed: no day, no criterion and no instant is derived.
  */
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import type { ExecutionApi } from "../../../api/ports";
 import type { SpineStageId } from "../../blocks";
@@ -39,4 +39,36 @@ export function spineHistory(lifecycle: LifecycleFacts | null): Partial<Record<S
     if (facts?.outcome === "done") out[id] = { outcome: "done" };
   }
   return Object.keys(out).length === 0 ? undefined : out;
+}
+
+/**
+ * The gate criteria count of the stage the alpha is IN ("3 of 7 criteria"), from the published alpha lifecycle sibling read
+ * (`getAlphaLifecycle`, `stages[].criteria {met, total}`). Only the stage whose state is CURRENT speaks: a finished stage's count says nothing
+ * about this deployment's own gate. `null` = not published, not asked or another stage is current (the panel then names the gap).
+ */
+export function useStageCriteria(api: ExecutionApi, alphaId: string | null, stage: "PAPER" | "SANDBOX" | "CANARY" | "LIVE", env: ExecEnv, workspaceId: string | null): { met: number; total: number } | null {
+  const [found, setFound] = useState<{ key: string; criteria: { met: number; total: number } | null } | null>(null);
+  const key = `${alphaId}|${stage}|${env}|${workspaceId ?? ""}`;
+  useEffect(() => {
+    if (alphaId === null || typeof api.getAlphaLifecycle !== "function") return;
+    let cancelled = false;
+    let pending: ReturnType<NonNullable<ExecutionApi["getAlphaLifecycle"]>>;
+    try {
+      pending = api.getAlphaLifecycle(alphaId, env, workspaceId ?? undefined);
+    } catch {
+      return;
+    }
+    pending
+      .then((result) => {
+        if (cancelled) return;
+        const stages = result.ok && result.value.stages.state === "PUBLISHED" ? result.value.stages.value : [];
+        const row = stages.find((s) => s.stage === stage && s.state === "CURRENT");
+        setFound({ key, criteria: row?.criteria == null ? null : { met: row.criteria.met, total: row.criteria.total } });
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [api, alphaId, env, workspaceId, stage, key]);
+  return found !== null && found.key === key ? found.criteria : null;
 }

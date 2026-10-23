@@ -300,12 +300,11 @@
     min-height: 44px;
   }
   .exec-cny-v2 .exec-blk-why-btn {
-    position: relative;
-  }
-  .exec-cny-v2 .exec-blk-why-btn::after {
-    content: "";
-    position: absolute;
-    inset: -13px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    margin-block: -13px;
   }
 }
 /* Internal / Broker / Difference rows (R5-14): one line each while the columns are wide enough, else EVERY row stacks label over figure in

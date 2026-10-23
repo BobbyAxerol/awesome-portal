@@ -182,7 +182,9 @@ export function EquityPanel(props: EquityPanelProps) {
 
   const hasDd = drawdown !== undefined;
   const gap = hasDd ? DD_GAP : 0;
-  const frame: Frame = { W, ml: CHART_MARGIN.l, mr: CHART_MARGIN.r, top: CHART_MARGIN.t, bottom: height - CHART_MARGIN.b };
+  // The latest-value callout sits in the right margin, to the right of the end dot: the margin grows to hold the label, so it never covers the last points.
+  const endMargin = Math.ceil(showDecimal(model.obs[latestDrawable(model)].s as string, { unit, signed, currency }).length * 7.4 + 16) + 12;
+  const frame: Frame = { W, ml: CHART_MARGIN.l, mr: Math.max(CHART_MARGIN.r, endMargin), top: CHART_MARGIN.t, bottom: height - CHART_MARGIN.b };
   const iw = W - frame.ml - frame.mr;
   // The drawdown-absent copy wraps inside the plot width and the pane grows with it, instead of clipping.
   const ddAbsentCopy =
@@ -272,9 +274,11 @@ export function EquityPanel(props: EquityPanelProps) {
     const xx = x(ob.t);
     const yy = y(ob.n as number);
     const w = text.length * charW + 12;
-    const ty = up ? yy - 22 : yy + 22;
+    // A low that sits near the axis would put its box over the tick labels: it is drawn above its point instead.
+    const geomUp = up || yy + 22 > frame.bottom - 2;
+    const ty = geomUp ? yy - 22 : yy + 22;
     const gx = Math.max(frame.ml, Math.min(frame.W - frame.mr - w, xx - w / 2));
-    return { xx, yy, w, ty, gx, text, up };
+    return { xx, yy, w, ty, gx, text, up, geomUp };
   };
   const flags: ReturnType<typeof flagBox>[] = [];
   if (hiIdx && loIdx && compareDecimal(hiIdx.s, loIdx.s) !== 0) {
@@ -420,9 +424,9 @@ export function EquityPanel(props: EquityPanelProps) {
 
           {flags.map((f) => (
             <g key={f.text} className="exec-c2-flag" data-testid={f.up ? "high-flag" : "low-flag"}>
-              <line x1={f.xx} x2={f.xx} y1={f.yy} y2={f.ty + (f.up ? 14 : -14)} />
-              <rect x={f.gx} y={f.ty - (f.up ? 0 : 14)} width={f.w} height={14} />
-              <text x={f.gx + 6} y={f.ty - (f.up ? 0 : 14) + 11}>{f.text}</text>
+              <line x1={f.xx} x2={f.xx} y1={f.yy} y2={f.ty + (f.geomUp ? 14 : -14)} />
+              <rect x={f.gx} y={f.ty - (f.geomUp ? 0 : 14)} width={f.w} height={14} />
+              <text x={f.gx + 6} y={f.ty - (f.geomUp ? 0 : 14) + 11}>{f.text}</text>
               <circle cx={f.xx} cy={f.yy} r={3} />
             </g>
           ))}

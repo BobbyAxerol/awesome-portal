@@ -118,3 +118,40 @@ Counts: DATA 83, TYPED 2, BLOCKED 14 (WP-D 4, CONTRACT 10).
 
 ## Not verified
 - Context bar chips on these routes (WP-D lands them); the real Edge (all lit values are fixture); Playwright, visual baselines, `e2e` specs (not run: board rule); the chart's Low marker at the first point; Low label overlapping an x tick in the Live chart (charts, WP-C).
+
+## QA1 fixes (R5 Canary and Live, R4 Paper and Sandbox)
+
+Reproduced on the QA1 review's own evidence (the bodies and shots it names), fixed, re-measured with `scripts/layout-audit.mjs` at 1440/1280/1024/660/390 (label wpf3-qa1 and wpf3-qa1b: every route and width 0/0/0/0 except Paper 0/0/0/2, the flag-versus-figure column-mode heuristic). Tests: `stageLitQa1.test.ts` (10), plus the updated suites; tsc clean.
+
+| Id | State | How and evidence |
+|---|---|---|
+| R5-07 | FIXED | one lifecycle record (`STAGE_OF`, `stageOf`, `reached`): `/deployments/dep_canary_01/live` answers the dark body, not a lit Live page; `/deployments/dep_live_01/canary` is a finished trial dated before the activation (STOPPED, LIVE_FULL, banner "does not declare the Canary stage"). Chips to a stage not reached are not links (`JourneySpine lockAhead`, used by Canary, Sandbox, Paper). Test: "R5-07 one lifecycle record". |
+| R5-05 | FIXED | one banner component with a tone: stale amber, halted and breach red with their own sentence; halted is its own fixture (HALTED, broker FRESH, since now - 3 h) and stale is its own (RUNNING, broker STALE, series cut at the stamp); breach adds the red banner and the red BREACH flag. Shot canary-breach-1440. |
+| R5-03 | FIXED (limit stays typed) | duration row Used prints "Day 6 of 14" from the published day and duration; no ratio. Limit stays Not available: CONTRACT request (1) (no duration cap row). |
+| R5-04 | FIXED | Canary gross notional 6,100.00 = 1.2 x 3,490.5 + 10 x 191.14; Daily PnL -38.60 = last series point minus the point 24 h earlier (series 150.1 to 111.5); Live gross 39,109.95 = the four positions at marks, daily PnL -530.25 from its series. Asserted in `stageLitQa1.test.ts`. |
+| R5-09 | FIXED | Promotion decision prints what each does, its closed button and its reason, "Opens at day 14 · exit review 26 Oct 08:00Z" for Request scale, and a "How promotion works" disclosure. Two tests changed on purpose (one My access per decision). |
+| R5-08 | FIXED as columns, values typed | Leverage and Ack latency are columns again (Canary and Live), each cell a typed Not available with the server's reason; no place carries a value (the typed rows pin both null; K delivered no row for it). Canary Orders gained Status. CONTRACT (2) stands. |
+| R5-10 | FIXED | the chart's right margin grows to hold the latest-value label, so it no longer covers the last points (`EquityPanel.tsx`, WP-C's file, small). |
+| R5-11 | FIXED | a Low flag that would sit over the axis ticks is drawn above its point. |
+| R5-12, R5-13 | FIXED | Used column: fixed text width, flexible bar, so every bar and 80% mark has one length; fixture ratios have at most four places so every readout has two (asserted). |
+| R5-14 | FIXED | at 1360px and below every Triad row stacks label over figure in every column (one baseline); above, one line. |
+| R5-15 | NOT FIXED | the repeated "Deployment series" sub-title is inside `EquityPanel` (needs a prop on WP-C's chart); cosmetic. |
+| R5-16 | FIXED | the alpha id in the sub-line is the id size. |
+| R5-17, R5-28 | NOT FIXED | "Allocated", "68% of capital", "2 limit" need server values (CONTRACT 8); the filler "Execution figure" stays as the figure's authority. |
+| R5-18 | FIXED | one quantity column, one number of places (`stage/padDecimals.ts`, formatting only). |
+| R5-19 | FIXED | a continuous feed that names no affected source says "None". |
+| R5-20 | PARTLY | predecessor status is Active and active for Live; the reader (`liveFull.ts`, shared) carries three caps, so open orders is not listed. |
+| R5-21 | FIXED | Mismatch flag is red (rejected kind). |
+| R5-22 | FIXED | a sentence says the Scale-up and Protective columns are the rule's effect and Now is the present state. |
+| R5-23 | FIXED | R1 and R2 chips carry their own approval (`?sel=AP-118`, `?sel=AP-152`). |
+| R5-24 | FIXED as far as an id exists | "Open operations for this deployment" goes to `/execution/operations?target_id=<deployment>`; the dry-run link likewise; no operation id is published, so it is the filtered list, not one item. |
+| R5-26 | FIXED | at 660 buttons, links and the "?" buttons have 44px height (negative margin keeps the layout). |
+| R5-27 | FIXED | canary Positions and orders links to the deployment's blotter. |
+| R5-30 | FIXED | an empty Exposure tab says why. |
+| R5-01, R5-06 | NOT FIXED | CONTRACT (3) Paper and Backtest series, (4) drawdown and window delta; typed and honest. |
+| R5-02, R5-29 | PARTLY | every lit instant is an offset from one `STAGE_NOW_ISO` (WP-P swaps it); a stale body no longer sends newer data. Month and rebase drift is WP-P's. |
+| R5-31 | WP-D | not touched. |
+| I16 | PARTLY | Lifecycle panel draws "Request exit review" disabled with the gate's reason (the working control stays in the Exit gate); "Paper · N of M criteria" consumes `getAlphaLifecycle` criteria when the Paper stage is CURRENT (no review alpha has it current, so typed); approved band, drawdown and per-criterion verdicts: CONTRACT (4), (5) (K's lifecycle `criteria.items` carry no observed value in the fixture). |
+| I17 | FIXED | kv panel labels in sentence case, figures 13px. |
+| I25, I26 | FIXED | the sandbox mismatch has its own finding "Equity differs by 46.87 USDT" and 3 open findings. |
+| I18, I11 (dates) | WP-P | ids and time anchoring. |

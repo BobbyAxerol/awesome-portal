@@ -19,6 +19,7 @@ import { Link } from "react-router-dom";
 import { GapWhy, JourneySpine, NotPublished, SectionPanel, StageChipRow, type SpineStageId, type StageChips, type StageChipValue } from "../../blocks";
 import { formatAsOf } from "../../boundary";
 import { Flag } from "../../Flag";
+import { DockAction } from "../../Drawer";
 import { reconciliationFactOf, runtimeFactOf } from "../../readers/stageFactViews";
 import type { StageFacts } from "../../../stageFacts";
 import { AlphaNameLine } from "../stage/AlphaNameLine";
@@ -136,17 +137,22 @@ export interface LifecycleProps {
   gate: GateFacts;
   /** The stages the alpha has completed (the ticks), from its Manager dataset; `undefined` = the history is not published (FE-027). */
   history?: Partial<Record<SpineStageId, { outcome: "done" }>>;
+  /** "3 of 7 criteria" of the stage the alpha is in, when the lifecycle read published it. */
+  criteria?: { met: number; total: number } | null;
+  /** The one-line reason the exit review cannot be requested from here (the request control itself is in the Exit gate panel). */
+  exitReason?: string;
   /** Where "My access" lives (the grant behind the disabled action). */
   accessHref: string;
 }
 
-export function LifecyclePanel({ gate, history }: LifecycleProps) {
+export function LifecyclePanel({ gate, history, criteria = null, exitReason, accessHref }: LifecycleProps) {
   const verdict = GATE_FLAG[gate.verdict];
   return (
     <SectionPanel level={2}
       title="Lifecycle"
       aside={
         <span className="exec-wb-aside">
+          {criteria === null ? null : <span className="exec-blk-num">Paper · {criteria.met} of {criteria.total} criteria · </span>}
           Observation gate <Flag kind={verdict.kind} label={verdict.label} size="sm" />
         </span>
       }
@@ -154,6 +160,11 @@ export function LifecyclePanel({ gate, history }: LifecycleProps) {
       <div className="exec-wb-life">
         <div className="exec-wb-spine">
           <JourneySpine variant="compact" current="paper" blocked={gate.verdict === "blocked"} stages={history} lockAhead label="Deployment lifecycle" />
+          {exitReason === undefined ? null : (
+            <div className="exec-wb-exitask">
+              <DockAction label="Request exit review" reason={exitReason} accessHref={accessHref} />
+            </div>
+          )}
           <p className="exec-wb-cap">
             {history === undefined ? <NotPublished id="FE-027/028">Stage history, gate criteria and decider</NotPublished> : <NotPublished id="FE-028">Gate criteria and decider</NotPublished>}
           </p>

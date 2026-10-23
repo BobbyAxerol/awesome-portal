@@ -582,7 +582,7 @@ describe("components against typed rows and published ratios (FIXTURE_LAB, view-
   const positions = (n: number): PositionRow[] =>
     Array.from({ length: n }, (_, i) => ({ symbol: `SYM${i}`, side: i % 2 === 0 ? "long" : "short", quantity: "1.2000", entry: "3412.50", mark: "3421.10", unrealised: i % 2 === 0 ? "10.32" : "-4.55", leverage: "1.1" }));
   const orders = (n: number): OrderRow[] =>
-    Array.from({ length: n }, (_, i) => ({ symbol: `ORD${i}`, type: "Limit", side: "buy", quantity: "0.4000", price: "3380.00", sinceMs: Date.UTC(2026, 9, 17, 11, 58), ackLatencyMs: "212" }));
+    Array.from({ length: n }, (_, i) => ({ symbol: `ORD${i}`, type: "Limit", side: "buy", quantity: "0.4000", price: "3380.00", sinceMs: Date.UTC(2026, 9, 17, 11, 58), status: "ACCEPTED", ackLatencyMs: "212" }));
 
   it("Positions & orders: 250 loaded rows draw 200 and say '200 of 5,000'; the hi-fi columns are all there", () => {
     const view = viewOf(v1Body());

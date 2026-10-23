@@ -237,6 +237,8 @@ a.exec-wb-stage:focus-visible {
   border-bottom: 1px solid var(--line);
 }
 .exec-wb-kv th {
+  text-transform: none;
+  letter-spacing: 0;
   font: var(--exec-font-body);
   text-align: left;
   color: var(--ink);
@@ -410,11 +412,14 @@ a.exec-wb-stage:focus-visible {
     min-height: 44px;
   }
   .exec-wb-v2 .exec-blk-why-btn {
-    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    margin-block: -13px;
   }
-  .exec-wb-v2 .exec-blk-why-btn::after {
-    content: "";
-    position: absolute;
-    inset: -13px;
-  }
+}
+
+.exec-wb-exitask {
+  margin-top: var(--space-3);
 }

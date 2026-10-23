@@ -230,11 +230,13 @@ describe("the lifecycle spine will not infer (D13b)", () => {
   });
 });
 
-describe("the exit review request has one control, in the exit gate", () => {
-  it("the lifecycle panel no longer repeats it", async () => {
+describe("the exit review request: one working control in the exit gate, a closed statement in the lifecycle panel", () => {
+  it("the lifecycle panel draws the design's Request exit review as a disabled button with its reason (QA1 I16); it never acts", async () => {
     mount();
     await ready();
-    expect(screen.queryByRole("button", { name: "Request exit review" })).toBeNull();
+    const closed = screen.getByRole("button", { name: "Request exit review" }) as HTMLButtonElement;
+    expect(closed.disabled).toBe(true);
+    expect(closed.getAttribute("aria-describedby")).toBeTruthy();
     expect(screen.getAllByRole("button", { name: /request review/i }).length).toBeLessThanOrEqual(1);
   });
 });
