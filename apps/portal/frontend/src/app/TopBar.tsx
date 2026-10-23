@@ -20,11 +20,13 @@ import { useRunLabelRead } from "../research/useRunLabelRead";
 import { workspaceNamedHref } from "../research/ResearchScopedLink";
 import { researchRunCrumb, useRunUnknown } from "./researchRunCrumb";
 import { ADMIN_USERS_ROUTE } from "./PortalRoutes";
+import { usePortalContext } from "./context";
+import { v2Crumbs } from "../execution/v2/shell/roleNav";
 import { usePreferences, type PreferencesContextValue } from "./preferences";
 import { usePresentation } from "./presentation";
 
 export function TopBar({
-  breadcrumbs,
+  breadcrumbs: trail,
   environment,
   onOpenPalette,
   onToggleMobileNav,
@@ -44,6 +46,9 @@ export function TopBar({
   navToggleRef?: Ref<HTMLButtonElement>;
 }) {
   const preferences = usePreferences();
+  const { registry } = usePortalContext();
+  // On a V2 route the trail reads as the design writes it ("Execution / Overview"), from the same labels the rail uses.
+  const breadcrumbs = v2 && registry ? v2Crumbs(trail, registry.features) : trail;
   const { mode: presentationMode, entityLabel, chrome } = usePresentation();
   const { access, principal } = useSession();
   const location = useLocation();
@@ -92,7 +97,17 @@ export function TopBar({
         Default Workspace
       </span>
 
-      {environment ? <EnvironmentBadge environment={environment} /> : null}
+      {environment ? (
+        v2 ? (
+          // The summary's environment is the PORTAL deployment's, not an Execution mode; on an Execution screen it says so.
+          <span className="portal-env-wrap" title="The Portal deployment's environment, from the summary. It is not an Execution environment: that is in the context bar.">
+            <span className="portal-env-prefix">Portal</span>
+            <EnvironmentBadge environment={environment} />
+          </span>
+        ) : (
+          <EnvironmentBadge environment={environment} />
+        )
+      ) : null}
       <RetainedPill />
 
       <nav aria-label="Breadcrumb" className={runCrumb ? "portal-breadcrumbs portal-breadcrumbs--run" : "portal-breadcrumbs"}>

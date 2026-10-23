@@ -63,6 +63,14 @@ export function execGoToEntries(registry: PortalRegistryDocument, options: NavOp
   return goToEntries(sidebarGroups(registry, options), capabilities, extras);
 }
 
+/** Reads that found nothing are one line, not six: the ones with results keep their own line (R3 I-41). */
+export function compactNotes(notes: readonly string[]): string[] {
+  const empty = (note: string) => /(?:, 0 of 0 shown|none returned|0 of 0 shown|none found|, 0 shown)/.test(note);
+  const named = notes.filter(empty).map((note) => note.split(":")[0]!);
+  const kept = notes.filter((note) => !empty(note));
+  return named.length === 0 ? kept : [...kept, `No match in: ${named.join(", ")}`];
+}
+
 function matches(entry: CommandEntry, needle: string): boolean {
   return `${entry.group} ${entry.label} ${entry.detail ?? ""}`.toLowerCase().includes(needle);
 }
@@ -99,6 +107,8 @@ export function ExecCommandBar({ registry, options, open, onClose, searchApi, de
     if (!open) setQuery("");
   }, [open]);
 
+  // The routes the app owns: a server route hint outside them is not followed (it would land on "No feature claims this route").
+  const routes = useMemo(() => registry.features.map((feature) => feature.canonical_route), [registry]);
   const latest = useRef({ searchApi, sources, workspaceId, environment });
   latest.current = { searchApi, sources, workspaceId, environment };
   // Whether /search is served is learned per scope: another workspace or permission asks again.
@@ -118,7 +128,7 @@ export function ExecCommandBar({ registry, options, open, onClose, searchApi, de
     const timer = setTimeout(() => {
       const now = latest.current;
       const api = now.searchApi ?? createHttpApi({ policy: null, signal: controller.signal });
-      void searchEntities(api, text, now.sources, now.workspaceId, controller.signal, now.environment, { skipIndex: skipIndex.current }).then((outcome) => {
+      void searchEntities(api, text, now.sources, now.workspaceId, controller.signal, now.environment, { skipIndex: skipIndex.current, routes }).then((outcome) => {
         if (outcome === null || controller.signal.aborted) return;
         // A late answer for another scope never lands: the effect aborts on a scope change, and this guard is the second fence.
         if (learnedFor.current !== scope) return;
@@ -143,7 +153,7 @@ export function ExecCommandBar({ registry, options, open, onClose, searchApi, de
     // An answer for older text is not shown under newer text.
     return current ? [...jump, ...found.entries] : jump;
   }, [goTo, text, found, current]);
-  const notes = current ? found.notes : [];
+  const notes = current ? compactNotes(found.notes) : [];
   // Choosing a row navigates with the CURRENT context; a result of another scope cannot be chosen, because it is no longer in the list.
   const chosen = useMemo(() => new Set<CommandEntry>(entries), [entries]);
   const onSelect = useCallback(

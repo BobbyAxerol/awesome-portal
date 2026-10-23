@@ -112,16 +112,27 @@ async function alphas(api: ExecutionApi, text: string, workspaceId: string | und
   };
 }
 
+/** The bindings read takes ONE environment, so an account is looked for in each: the one the bar is on first, then the others (an id on screen may live in any). */
 async function accounts(api: ExecutionApi, text: string, environment: ExecEnv, workspaceId: string | undefined): Promise<Settled> {
   const label = GROUP.account;
-  const result = await api.getBindings({ search: text, limit: PER_KIND, environment, ...(workspaceId ? { workspace_id: workspaceId } : {}) });
-  if (!result.ok) return failed(label, result.reason);
+  const order: ExecEnv[] = [environment, ...(["live", "paper", "sandbox"] as const).filter((env) => env !== environment)];
+  const answers = await Promise.all(order.map((env) => api.getBindings({ search: text, limit: PER_KIND, environment: env, ...(workspaceId ? { workspace_id: workspaceId } : {}) })));
   const seen = new Set<string>();
-  const rows = result.value.page.rows.filter((row) => (seen.has(row.accountId) ? false : (seen.add(row.accountId), true))).slice(0, PER_KIND);
-  return {
-    entries: rows.map((row) => ({ id: `account:${row.accountId}`, group: label, label: row.accountId, detail: row.venue, href: `/deployments/accounts/${enc(row.accountId)}` })),
-    note: capNote(label, rows.length, result.value.page.filteredCount, `bindings read, server search in ${ENV_LABEL[environment]}`),
-  };
+  const entries: CommandEntry[] = [];
+  const notes: string[] = [];
+  const failures: string[] = [];
+  answers.forEach((result, i) => {
+    const env = order[i]!;
+    if (!result.ok) { failures.push(`${ENV_LABEL[env]}: ${result.reason}`); return; }
+    const rows = result.value.page.rows.filter((row) => (seen.has(row.accountId) ? false : (seen.add(row.accountId), true)));
+    for (const row of rows) {
+      if (entries.length >= PER_KIND) break;
+      entries.push({ id: `account:${row.accountId}`, group: label, label: row.accountId, detail: `${row.venue} · ${ENV_LABEL[env]}`, href: `/deployments/accounts/${enc(row.accountId)}?env=${env}` });
+    }
+    notes.push(`${ENV_LABEL[env]} ${rows.length}${result.value.page.filteredCount > rows.length ? ` of ${result.value.page.filteredCount}` : ""}`);
+  });
+  if (answers.every((r) => !r.ok)) return failed(label, failures[0] ?? "no read answered");
+  return { entries, note: `${label}: bindings read, server search per environment (${notes.join(", ")} shown)${failures.length > 0 ? `; not available in ${failures.length}` : ""}` };
 }
 
 async function portfolios(api: ExecutionApi, text: string, workspaceId: string | undefined): Promise<Settled> {
@@ -154,14 +165,38 @@ async function operations(api: ExecutionApi, text: string, workspaceId: string |
     });
   }
   // An incident id is looked up by that exact id; any other text is not guessed at.
-  if (/^inc[_-]/i.test(text)) {
-    const incident = await api.getIncidentRootV2(text, workspaceId);
-    if (incident.ok && incident.value.kind === "incident") {
-      const root = incident.value.incident;
-      out.push({ entries: [{ id: `incident:${root.incidentId}`, group: GROUP.incident, label: root.incidentId, detail: root.workflowState, href: `/execution/operations/incidents/${enc(root.incidentId)}` }], note: `${GROUP.incident}: incident read, exact id, 1 shown` });
-    } else out.push({ entries: [], note: `${GROUP.incident}: incident read, exact id, none found` });
-  }
+  if (/^inc[_-]/i.test(text)) out.push((await incidentById(api, text, workspaceId)) ?? { entries: [], note: `${GROUP.incident}: incident read, exact id, none found` });
   return out;
+}
+
+/** One incident by its exact id, or null when the read does not find it. */
+async function incidentById(api: ExecutionApi, id: string, workspaceId: string | undefined): Promise<Settled | null> {
+  const incident = await api.getIncidentRootV2(id, workspaceId);
+  if (!incident.ok || incident.value.kind !== "incident") return null;
+  const root = incident.value.incident;
+  return { entries: [{ id: `incident:${root.incidentId}`, group: GROUP.incident, label: root.incidentId, detail: root.workflowState, href: `/execution/operations/incidents/${enc(root.incidentId)}` }], note: `${GROUP.incident}: incident read, exact id, 1 shown` };
+}
+
+/** The screen each kind opens, as the app routes it (used when the server's route hint is not a route this app has). */
+const CANONICAL_HREF: Readonly<Record<string, (id: string) => string>> = {
+  alpha: (id) => `/deployments/alphas/${enc(id)}`,
+  portfolio: (id) => `/deployments/portfolios/${enc(id)}`,
+  account: (id) => `/deployments/accounts/${enc(id)}`,
+  operation: (id) => `/execution/operations?operation=${enc(id)}`,
+  incident: (id) => `/execution/operations/incidents/${enc(id)}`,
+  approval: (id) => `/governance/approvals?sel=${enc(id)}`,
+};
+
+/**
+ * The target of a result. The server's route hint is used when it is a route the app owns (`routes`: the registry's feature routes);
+ * a hint that no feature claims would land on "No feature claims this route", so the entity's own screen is used instead. Without a
+ * `routes` list (a caller that does not know the registry) the hint is used as given.
+ */
+export function hrefFor(kind: string, id: string, hint: string, routes: readonly string[] | undefined): string {
+  if (routes === undefined) return hint;
+  const path = hint.split(/[?#]/)[0] ?? hint;
+  const owned = routes.some((route) => route !== "/" && (path === route || path.startsWith(`${route}/`)));
+  return owned ? hint : (CANONICAL_HREF[kind]?.(id) ?? hint);
 }
 
 async function approvals(api: ExecutionApi, text: string, workspaceId: string | undefined): Promise<Settled> {
@@ -187,7 +222,7 @@ const INDEX_GROUP: Readonly<Record<string, string>> = { alpha: GROUP.alpha, port
  * defines (an unauthorized entity is absent; `total_matched` null = the source did not count). `null` when the port has no such method or the read
  * is not served (any refusal or unreadable body): the caller then falls back to the per-read searches, once, and the labels say which path answered.
  */
-async function searchByIndex(api: ExecutionApi, query: string, sources: SearchSources, workspaceId: string | undefined, signal: AbortSignal): Promise<EntitySearchOutcome | null> {
+async function searchByIndex(api: ExecutionApi, query: string, sources: SearchSources, workspaceId: string | undefined, signal: AbortSignal, environment: ExecEnv, routes: readonly string[] | undefined): Promise<EntitySearchOutcome | null> {
   if (typeof api.searchEntities !== "function") return null;
   const kinds: EntityKind[] = [...KIND_ORDER.filter((kind) => sources[kind]), ...(sources.operation ? (["incident"] as const) : [])];
   if (kinds.length === 0) return null;
@@ -205,10 +240,26 @@ async function searchByIndex(api: ExecutionApi, query: string, sources: SearchSo
     const label = INDEX_GROUP[kind];
     if (group === undefined) { notes.push(`${label}: entity search read, none returned`); continue; }
     for (const hit of group.rows.slice(0, PER_KIND)) {
-      entries.push({ id: `${kind}:${hit.id}`, group: label, label: hit.label, ...(hit.detail === null ? {} : { detail: hit.detail }), href: hit.routeHint });
+      entries.push({ id: `${kind}:${hit.id}`, group: label, label: hit.label, ...(hit.detail === null ? {} : { detail: hit.detail }), href: hrefFor(kind, hit.id, hit.routeHint, routes) });
     }
     const shown = Math.min(group.rows.length, PER_KIND);
     notes.push(group.totalMatched === null ? `${label}: entity search read, ${shown} shown, count not published` : `${label}: entity search read, ${shown} of ${group.totalMatched} shown`);
+  }
+  // A kind the index could not count and returned nothing for (its source has no list in the index) is asked of its own read, so an id on
+  // screen is still found: accounts by the bindings read, an incident by its exact id. Labelled as such.
+  const uncovered = (kind: SearchKind | "incident") => {
+    const group = result.value.groups.find((g) => g.kind === kind);
+    return group === undefined || (group.totalMatched === null && group.rows.length === 0);
+  };
+  const extra: Promise<Settled | Settled[] | null>[] = [];
+  if (sources.account && uncovered("account")) extra.push(guard(GROUP.account, () => accounts(api, query, environment, workspaceId), signal));
+  if (sources.operation && /^inc[_-]/i.test(query) && uncovered("incident")) extra.push(guard(GROUP.incident, async () => (await incidentById(api, query, workspaceId)) ?? { entries: [], note: `${GROUP.incident}: incident read, exact id, none found` }, signal));
+  if (extra.length > 0) {
+    const done = (await Promise.all(extra)).flatMap((item) => (item === null ? [] : Array.isArray(item) ? item : [item]));
+    if (signal.aborted) return null;
+    const replaced = new Set(done.map((item) => item.note.split(":")[0]));
+    const kept = notes.filter((note) => !replaced.has(note.split(":")[0]!) );
+    return { via: "index", entries: [...entries.filter((e) => !replaced.has(e.group)), ...done.flatMap((item) => item.entries)], notes: [...kept, ...done.map((item) => item.note)] };
   }
   return { via: "index", entries, notes };
 }
@@ -224,12 +275,12 @@ export async function searchEntities(
   workspaceId: string | undefined,
   signal: AbortSignal,
   environment: ExecEnv = "live",
-  options: { skipIndex?: boolean } = {},
+  options: { skipIndex?: boolean; routes?: readonly string[] } = {},
 ): Promise<EntitySearchOutcome | null> {
   const query = text.trim();
   if (query.length < MIN_QUERY) return { entries: [], notes: [] };
   if (options.skipIndex !== true) {
-    const indexed = await searchByIndex(api, query, sources, workspaceId, signal);
+    const indexed = await searchByIndex(api, query, sources, workspaceId, signal, environment, options.routes);
     if (signal.aborted) return null;
     if (indexed !== null) return indexed;
   }

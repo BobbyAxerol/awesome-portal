@@ -11,6 +11,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { PreferencesProvider } from "./preferences";
 import { PortalPresentationProvider } from "./presentation";
+import { PortalContext } from "./context";
 import { TopBar } from "./TopBar";
 
 const session = vi.hoisted(() => ({ principal: true }));
@@ -27,14 +28,18 @@ afterEach(() => {
   session.principal = true;
 });
 
-function mount(v2: Parameters<typeof TopBar>[0]["v2"], onOpenPalette = () => undefined) {
+const registryDoc = JSON.parse(readFileSync(join(process.cwd(), "../registry/fixtures/registry.public.json"), "utf8"));
+
+function mount(v2: Parameters<typeof TopBar>[0]["v2"], onOpenPalette = () => undefined, extra: { breadcrumbs?: { label: string; route: string | null }[]; environment?: "research" | null } = {}) {
   return render(
     <MemoryRouter initialEntries={["/execution"]}>
-      <PreferencesProvider>
-        <PortalPresentationProvider registry={null}>
-          <TopBar breadcrumbs={[]} environment={null} onOpenPalette={onOpenPalette} onToggleMobileNav={() => undefined} v2={v2} />
-        </PortalPresentationProvider>
-      </PreferencesProvider>
+      <PortalContext.Provider value={{ registry: registryDoc, environment: null }}>
+        <PreferencesProvider>
+          <PortalPresentationProvider registry={null}>
+            <TopBar breadcrumbs={extra.breadcrumbs ?? []} environment={(extra.environment ?? null) as never} onOpenPalette={onOpenPalette} onToggleMobileNav={() => undefined} v2={v2} />
+          </PortalPresentationProvider>
+        </PreferencesProvider>
+      </PortalContext.Provider>
     </MemoryRouter>,
   );
 }
@@ -80,6 +85,39 @@ describe("V2 top bar", () => {
   });
 });
 
+describe("V2 breadcrumbs and the Portal environment badge (QA1 OV-06, R2-18, R2-25)", () => {
+  const crumb = (route: string) => registryDoc.features.find((f: { canonical_route: string; group: string; label: string }) => f.canonical_route === route);
+  const trailFor = (route: string) => {
+    const feature = crumb(route);
+    const group = registryDoc.feature_groups.find((g: { id: string }) => g.id === feature.group);
+    return [{ label: group.label, route: null }, { label: feature.label, route }];
+  };
+  const text = () => [...document.querySelectorAll(".portal-breadcrumbs .portal-crumb")].map((n) => n.textContent?.replace(/^\//, ""));
+
+  it.each([["/execution", "Overview"], ["/deployments/alphas", "Alpha Fleet"], ["/execution/operations", "Operations"], ["/governance/approvals", "Approvals"], ["/deployments/portfolios", "Portfolios"]])(
+    "%s reads Execution / %s on a V2 bar",
+    (route, label) => {
+      mount({ userHref: null }, undefined, { breadcrumbs: trailFor(route) });
+      expect(text()).toEqual(["Execution", label]);
+    },
+  );
+
+  it("without the v2 prop the registry's own trail is untouched", () => {
+    mount(undefined, undefined, { breadcrumbs: trailFor("/execution") });
+    expect(text()[0]).not.toBe("Execution");
+  });
+
+  it("labels the summary's environment as the Portal's on a V2 bar, and leaves it alone otherwise", () => {
+    mount({ userHref: null }, undefined, { environment: "research" });
+    expect(document.querySelector(".portal-env-prefix")?.textContent).toBe("Portal");
+    expect(document.querySelector(".portal-env-wrap")?.getAttribute("title")).toMatch(/not an Execution environment/);
+    expect(document.querySelector(".badge-env")?.textContent).toBe("RESEARCH");
+    cleanup();
+    mount(undefined, undefined, { environment: "research" });
+    expect(document.querySelector(".portal-env-wrap")).toBeNull();
+  });
+});
+
 describe("the carbon stylesheet", () => {
   const css = readFileSync(join(__dirname, "../styles/shell.css"), "utf8").replace(/\s+/g, " ");
 
@@ -89,7 +127,12 @@ describe("the carbon stylesheet", () => {
   });
 
   it("the field is a clamped width only above the phone breakpoint; the phone bar keeps its 44px button", () => {
-    expect(css).toMatch(/@media \(min-width: 721px\) \{ :root\[data-theme="execution-carbon"\] \.portal-topbar \.portal-search-btn\[data-v2-search\] \{ width: clamp\(150px, 14vw, 200px\);/);
+    expect(css).toMatch(/@media \(min-width: 721px\) \{ :root\[data-theme="execution-carbon"\] \.portal-topbar \.portal-search-btn\[data-v2-search\] \{ width: clamp\(176px, 16vw, 240px\);/);
+  });
+
+  it("the V2 bar's chrome text is on the 11px floor and the field's label does not wrap", () => {
+    expect(css).toMatch(/\.portal-topbar:has\(\[data-v2-search\]\) :is\(\.portal-workspace, \.portal-pref select, \.portal-search-btn, \.portal-user-chip, \.portal-env-prefix, \.badge-env\) \{ font-size: 11px;/);
+    expect(css).toMatch(/\.portal-search-label \{ white-space: nowrap; overflow: hidden; text-overflow: ellipsis;/);
   });
 
   it("the user chip is hidden below 1280px, where the trail needs the room", () => {

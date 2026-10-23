@@ -10,8 +10,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { PortalRegistryDocument } from "../../../portal/contracts";
 import type { ExecutionApi } from "../../api/ports";
-import { ENTITY_SEARCH_HINT, ENTITY_SEARCH_INDEX_NOTICE, ENTITY_SEARCH_NOTICE, ExecCommandBar } from "./ExecCommandBar";
-import { MIN_QUERY, PER_KIND, searchEntities, searchSourcesFor, type SearchSources } from "./entitySearch";
+import { ENTITY_SEARCH_HINT, ENTITY_SEARCH_INDEX_NOTICE, ENTITY_SEARCH_NOTICE, ExecCommandBar, compactNotes } from "./ExecCommandBar";
+import { MIN_QUERY, PER_KIND, hrefFor, searchEntities, searchSourcesFor, type SearchSources } from "./entitySearch";
 import { V2_ROLE_PRESETS } from "./roleNav";
 
 afterEach(cleanup);
@@ -104,13 +104,17 @@ describe("searchEntities", () => {
   it("accounts: the bindings read's own search; a repeated account is listed once", async () => {
     const { api, calls } = fakeApi();
     const out = (await searchEntities(api, "acct", { ...ALL, alpha: false, portfolio: false, operation: false, approval: false }, undefined, signal()))!;
-    expect(calls.bindings).toEqual([{ search: "acct", limit: PER_KIND, environment: "live" }]);
-    expect(out.entries.map((e) => [e.label, e.detail, e.href])).toEqual([["acct_main", "BINANCE", "/deployments/accounts/acct_main"]]);
-    expect(out.notes[0]).toBe("Accounts: bindings read, server search in Real-funded, 1 of 2 shown");
-    // The read takes one environment: the bar's own is what is asked, and the note names it.
+    // The read takes one environment, so an account is asked of each, the bar's own first; a repeated account is listed once.
+    expect(calls.bindings).toEqual([
+      { search: "acct", limit: PER_KIND, environment: "live" },
+      { search: "acct", limit: PER_KIND, environment: "paper" },
+      { search: "acct", limit: PER_KIND, environment: "sandbox" },
+    ]);
+    expect(out.entries.map((e) => [e.label, e.detail, e.href])).toEqual([["acct_main", "BINANCE · Real-funded", "/deployments/accounts/acct_main?env=live"]]);
+    expect(out.notes[0]).toBe("Accounts: bindings read, server search per environment (Real-funded 1 of 2, Paper 0 of 2, Sandbox 0 of 2 shown)");
     const paper = (await searchEntities(api, "acct", { ...ALL, alpha: false, portfolio: false, operation: false, approval: false }, undefined, signal(), "paper"))!;
-    expect(calls.bindings[1]).toEqual({ search: "acct", limit: PER_KIND, environment: "paper" });
-    expect(paper.notes[0]).toBe("Accounts: bindings read, server search in Paper, 1 of 2 shown");
+    expect(calls.bindings[3]).toEqual({ search: "acct", limit: PER_KIND, environment: "paper" });
+    expect(paper.entries[0]?.detail).toBe("BINANCE · Paper");
   });
 
   it("portfolios: no search parameter exists, so the text is matched here and the note says so, including a truncated list", async () => {
@@ -399,7 +403,7 @@ describe("ExecCommandBar with the server search", () => {
     await waitFor(() => expect(calls.alphas).toHaveLength(2));
     expect(spy).toHaveBeenCalledTimes(1);
     expect(noticeText()).toBe(`${ENTITY_SEARCH_NOTICE}. ${ENTITY_SEARCH_HINT}`);
-    expect(screen.getByRole("list", { name: "Reads used" }).textContent).toContain("matched here");
+    expect(screen.getByRole("list", { name: "Reads used" }).textContent).toContain("Alphas: alpha fleet read, server search by name");
   });
 });
 
@@ -408,7 +412,7 @@ describe("a NON-HOME workspace reaches every search family", () => {
     const { api, calls } = fakeApi();
     await searchEntities(api, "core", ALL, "ws_other", signal(), "paper", { skipIndex: true });
     expect(calls.alphas).toEqual([{ search: "core", limit: PER_KIND, environment: "all", workspace_id: "ws_other" }]);
-    expect(calls.bindings).toEqual([{ search: "core", limit: PER_KIND, environment: "paper", workspace_id: "ws_other" }]);
+    expect(calls.bindings.map((q) => [(q as { environment: string }).environment, (q as { workspace_id: string }).workspace_id])).toEqual([["paper", "ws_other"], ["live", "ws_other"], ["sandbox", "ws_other"]]);
     expect(calls.portfolioQueries).toEqual([{ workspaceId: "ws_other" }]);
     expect(calls.operations[0]).toMatchObject({ workspaceId: "ws_other" });
     expect(calls.approvals[0]).toMatchObject({ workspaceId: "ws_other" });
@@ -506,5 +510,61 @@ describe("results belong to one scope (workspace, environment, capabilities, tex
     await waitFor(() => expect(screen.getByRole("list", { name: "Reads used" }).textContent).not.toContain("Approvals"));
     expect(screen.getByRole("list", { name: "Reads used" }).textContent).not.toContain("Portfolios");
     expect(calls.approvals).toHaveLength(1);
+  });
+});
+
+describe("ids on screen are found, and nothing that does not exist is offered (QA1 I-40, I-42)", () => {
+  it("hrefFor follows the server's hint only when the app owns that route; otherwise the entity's own screen", () => {
+    const routes = ["/deployments/alphas", "/execution/operations", "/governance/approvals", "/deployments/portfolios", "/deployments/accounts"];
+    expect(hrefFor("alpha", "al_1", "/deployments/alphas/al_1", routes)).toBe("/deployments/alphas/al_1");
+    expect(hrefFor("operation", "op_1", "/operations?operation=op_1", routes)).toBe("/execution/operations?operation=op_1");
+    expect(hrefFor("approval", "AP-1", "/approvals?sel=AP-1", routes)).toBe("/governance/approvals?sel=AP-1");
+    expect(hrefFor("incident", "inc_1", "/execution/operations/incidents/inc_1", routes)).toBe("/execution/operations/incidents/inc_1");
+    expect(hrefFor("alpha", "al_1", "/nowhere/al_1", routes)).toBe("/deployments/alphas/al_1");
+    expect(hrefFor("alpha", "al_1", "/anything", undefined)).toBe("/anything");
+  });
+
+  it("the index path maps a hint the app does not own to the entity's screen", async () => {
+    const body = indexBody({ groups: [{ kind: "operation", totalMatched: 1, rows: [{ kind: "operation", id: "op_TEST_ONLY_s01", label: "RECALL", detail: "live", routeHint: "/operations?operation=op_TEST_ONLY_s01" }] }] });
+    const { api } = fakeApi({ searchEntities: async () => ok(body) });
+    const out = (await searchEntities(api, "op_TEST", ALL, undefined, signal(), "live", { routes: ["/execution/operations"] }))!;
+    expect(out.entries.find((e) => e.group === "Operations")?.href).toBe("/execution/operations?operation=op_TEST_ONLY_s01");
+  });
+
+  it("an account the index cannot count (null, no rows) is asked of the bindings read in every environment", async () => {
+    const body = indexBody({ groups: [{ kind: "alpha", totalMatched: 0, rows: [] }, { kind: "account", totalMatched: null, rows: [] }] });
+    const { api, calls } = fakeApi({ searchEntities: async () => ok(body) });
+    const out = (await searchEntities(api, "acct_main", ALL, undefined, signal()))!;
+    expect(out.via).toBe("index");
+    expect(calls.bindings).toHaveLength(3);
+    expect(out.entries.filter((e) => e.group === "Accounts").map((e) => e.label)).toEqual(["acct_main"]);
+    // The index's own empty line for that kind is replaced, not repeated.
+    expect(out.notes.filter((n) => n.startsWith("Accounts:"))).toHaveLength(1);
+  });
+
+  it("an index that DID answer for accounts (rows or a counted zero) is not asked twice", async () => {
+    const body = indexBody({ groups: [{ kind: "account", totalMatched: 0, rows: [] }] });
+    const { api, calls } = fakeApi({ searchEntities: async () => ok(body) });
+    await searchEntities(api, "acct_main", ALL, undefined, signal());
+    expect(calls.bindings).toHaveLength(0);
+  });
+
+  it("an inc_ id the index cannot count is looked up by its exact id; a missing one is said to be missing, not invented", async () => {
+    const empty = indexBody({ groups: [{ kind: "incident", totalMatched: null, rows: [] }] });
+    const found = fakeApi({ searchEntities: async () => ok(empty) });
+    const hit = (await searchEntities(found.api, "inc_77", ALL, "ws_1", signal()))!;
+    expect(found.calls.incidents).toEqual([["inc_77", "ws_1"]]);
+    expect(hit.entries.map((e) => [e.group, e.href])).toContainEqual(["Incidents", "/execution/operations/incidents/inc_77"]);
+    const missing = fakeApi({ searchEntities: async () => ok(empty), getIncidentRootV2: async () => fail("not found") });
+    const none = (await searchEntities(missing.api, "inc_404", ALL, undefined, signal()))!;
+    expect(none.entries.map((e) => e.group)).not.toContain("Incidents");
+    expect(none.notes).toContain("Incidents: incident read, exact id, none found");
+  });
+
+  it("compactNotes: reads with a result keep their line, the empty ones are one line", () => {
+    expect(compactNotes(["Alphas: a, 2 of 14 shown", "Portfolios: p, 0 of 0 shown", "Operations: entity search read, none returned", "Incidents: x, none found"]))
+      .toEqual(["Alphas: a, 2 of 14 shown", "No match in: Portfolios, Operations, Incidents"]);
+    expect(compactNotes(["Alphas: a, 2 of 14 shown"])).toEqual(["Alphas: a, 2 of 14 shown"]);
+    expect(compactNotes([])).toEqual([]);
   });
 });

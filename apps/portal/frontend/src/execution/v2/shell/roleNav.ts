@@ -201,6 +201,20 @@ export function applyV2Nav(groups: readonly NavGroup[], capabilities: ReadonlySe
   return out;
 }
 
+/**
+ * The trail of an Execution screen as the design writes it ("Execution / Overview"): the registry's group word for the five Execution
+ * entries (Command, Deployments, Governance) and the registry's feature label become the rail's group and label. Any other trail
+ * (Research, Planning, Administration, an entity tail) is returned as it was. Pure.
+ */
+export function v2Crumbs<T extends { label: string; route: string | null }>(trail: readonly T[], features: readonly PortalFeatureDefinition[]): T[] {
+  const last = trail[trail.length - 1];
+  if (last === undefined || last.route === null || trail.length !== 2) return [...trail];
+  const feature = features.find((entry) => entry.canonical_route === last.route && RULE_BY_FEATURE.get(entry.id)?.home === "execution");
+  const rule = feature === undefined ? undefined : RULE_BY_FEATURE.get(feature.id);
+  if (rule === undefined || rule.label === undefined) return [...trail];
+  return [{ ...trail[0]!, label: "Execution", route: null }, { ...last, label: rule.label }];
+}
+
 /** One row of the command bar. `href` is a plain path; the caller carries context onto it. */
 export interface CommandEntry {
   id: string;
