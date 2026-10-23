@@ -68,6 +68,52 @@ export function deriveManagerRowLifecycle(stages: readonly ManagerStageName[]): 
       entered_at_ms: STAGE_ENTRY_ABSENCE, days_in_stage: STAGE_ENTRY_ABSENCE } };
 }
 
+/** Already-authorized transition facts from the same source snapshot as the row.
+ * Never substitute membership valid_from, owner change, or observation time. */
+export interface ManagerStageTransitionFact {
+  alpha_id: string;
+  alpha_version_id: string;
+  portfolio_id: string;
+  environment: string;
+  stage: ManagerStageName;
+  entered_at_ms: number;
+  exited_at_ms: number | null;
+  source_revision: string;
+}
+
+export function deriveManagerRowLifecycleFromFacts(input: {
+  stages: readonly ManagerStageName[];
+  alpha_id: string;
+  alpha_version_id: string;
+  portfolio_id: string;
+  environment: string;
+  as_of_ms: number;
+  source_revision: string;
+  facts: readonly ManagerStageTransitionFact[];
+}): ManagerRowLifecycle {
+  const absent = deriveManagerRowLifecycle(input.stages);
+  if (absent.current_stage === null) return absent;
+  if (!Number.isSafeInteger(input.as_of_ms) || input.as_of_ms < 0 || !input.source_revision)
+    throw new Error("MANAGER_STAGE_SNAPSHOT_INVALID");
+  const facts = input.facts.filter(f => f.alpha_id === input.alpha_id &&
+    f.alpha_version_id === input.alpha_version_id && f.portfolio_id === input.portfolio_id &&
+    f.environment === input.environment && f.stage === absent.current_stage &&
+    f.source_revision === input.source_revision);
+  for (const f of facts) {
+    if (!Number.isSafeInteger(f.entered_at_ms) || f.entered_at_ms < 0 ||
+      (f.exited_at_ms !== null && (!Number.isSafeInteger(f.exited_at_ms) || f.exited_at_ms <= f.entered_at_ms)))
+      throw new Error("MANAGER_STAGE_TRANSITION_INVALID");
+  }
+  const current = facts.filter(f => f.entered_at_ms <= input.as_of_ms &&
+    (f.exited_at_ms === null || input.as_of_ms < f.exited_at_ms));
+  const times = [...new Set(current.map(f => f.entered_at_ms))];
+  if (times.length > 1) throw new Error("MANAGER_STAGE_TRANSITION_AMBIGUOUS");
+  if (times.length === 0) return absent;
+  return { current_stage: absent.current_stage, entered_at_ms: times[0],
+    days_in_stage: Math.floor((input.as_of_ms - times[0]) / MS_PER_DAY),
+    stage_lifecycle_reasons: { current_stage: null, entered_at_ms: null, days_in_stage: null } };
+}
+
 type RowShape = ManagerRowLifecycle & { stage_presence: string[] };
 /** Cross-field rules a row-by-row schema cannot say. Run as a response refinement. */
 export function validateManagerLifecycle(v: { as_of_ms: number; items: RowShape[] }, c: z.RefinementCtx): void {
