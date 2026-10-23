@@ -334,7 +334,7 @@ function SandboxBody({ api, deploymentId, workspaceId }: SandboxScreenProps) {
           </>
         }
         chips={chipsOf(view)}
-        spine={{ current: "sandbox", blocked: gate === "blocked", stages: mergeSpine(history, spineFacts(view)), label: "Lifecycle" }}
+        spine={{ current: "sandbox", blocked: gate === "blocked", stages: mergeSpine(history, spineFacts(view)), label: "Lifecycle", lockAhead: true }}
         actions={
           <button type="button" className="exec-dock-btn" disabled={read.refreshing} title={read.refreshing ? "Reading the certification again" : "Read the certification again"} aria-busy={read.refreshing ? "true" : undefined} onClick={reload}>
             Refresh

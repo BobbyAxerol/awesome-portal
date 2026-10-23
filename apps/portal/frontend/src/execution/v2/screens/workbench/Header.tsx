@@ -153,7 +153,7 @@ export function LifecyclePanel({ gate, history }: LifecycleProps) {
     >
       <div className="exec-wb-life">
         <div className="exec-wb-spine">
-          <JourneySpine variant="compact" current="paper" blocked={gate.verdict === "blocked"} stages={history} label="Deployment lifecycle" />
+          <JourneySpine variant="compact" current="paper" blocked={gate.verdict === "blocked"} stages={history} lockAhead label="Deployment lifecycle" />
           <p className="exec-wb-cap">
             {history === undefined ? <NotPublished id="FE-027/028">Stage history, gate criteria and decider</NotPublished> : <NotPublished id="FE-028">Gate criteria and decider</NotPublished>}
           </p>

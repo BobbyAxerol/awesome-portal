@@ -396,3 +396,25 @@ a.exec-wb-stage:focus-visible {
     height: auto;
   }
 }
+
+/* QA1 R5/R4 fixes (WP-F3). The alpha id in the sub-line is the id size, not a larger mono than its neighbours (R5-16). */
+.exec-wb-v2 .exec-stage-sub .exec-blk-num,
+.exec-wb-v2 .exec-wb-sub .exec-blk-num {
+  font: var(--exec-font-id);
+}
+/* Touch targets at phone width (R5-26): a 44px hit area for the small controls without enlarging their drawn size. */
+@media (max-width: 660px) {
+  .exec-wb-v2 :is(.exec-blk-link, .exec-dock-access, .exec-blk-btn, .exec-wb-btn, .exec-dock-btn, .exec-cny-refresh) {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+  }
+  .exec-wb-v2 .exec-blk-why-btn {
+    position: relative;
+  }
+  .exec-wb-v2 .exec-blk-why-btn::after {
+    content: "";
+    position: absolute;
+    inset: -13px;
+  }
+}
