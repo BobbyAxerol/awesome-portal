@@ -1036,6 +1036,20 @@ uncommissioned; no flag, route or financial effect is enabled by this work.
 
 ### EPG10-08 Hoàn thiện revocation scope và TLS
 
+**Latest23Oct11:45VN /04:45UTC: native missing-only case ACCEPTED/RETIRED.**
+[Actual correlation and retirement](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#original08--reconcile-actual-revoke-and-finish-exact-source-retirement)
+independently joins5/5 original TS/Core leases:4SERVED matching terminal receipt/
+resolve ACK,1never-ENTERED RETIRED/CANCELLED with cancel-unentered ACK. Active
+STREAM revoke committed50.112s before expiry, old cursor403/no new admission,
+separate READ200; REMOTE_READ_ERROR is NOT graceful EOF. Core original custody
+settled0unresolved/0unreconciled; source self-drain/pools0/exit0/die/destroy/
+socketabsent proved. Original native revoke4c1c3dbd/CAS9→10 committed
+23Oct04:38:37.340156UTC; same-original STATUS matches/EXIT0/runtime_enabledfalse.
+No new grant/session/window or protected runtime change; don't rerun this case.
+Full08/read09 still NOT_MET: current P22/cache READ-domain revoke and genuine
+unaffected native scope, Manager/financial/command and other actor cases retain
+their own gates. Expired native9/trust cannot be reused for remaining cases.
+
 **Latest23Oct01:38VN:** [Actual Core-first READY](../evidence/execution-edge-v1_2/EPG10-08/EDGE_TO_CORE_08_CORE_FIRST_ACTUAL_READY_2026-10-23.md)
 ACK06ead936 matched → official install4b9dce98/CAS8→9+STATUS RECORDED/EXIT0
 → real sourceSDK_READY/RRobserver EXIT0, actual752B59bc4568 delivered to Core

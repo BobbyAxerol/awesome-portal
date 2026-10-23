@@ -31591,3 +31591,135 @@ tracking and original3peerWIP hashes PASS. Original08 source readiness is
 implemented and observed; **full08/read09 NOT_MET**, no09connected promotion.
 Pending producer action: Core sole missing-case run/actual receipts/settlement;
 source retirement deliberately follows custody, not an unfinished code task.
+
+### Original08 — reconcile actual revoke and finish exact source retirement
+
+**OWNER_APPROVED / EXECUTING,23Oct11:34VN /04:34UTC.** Bobby directs actual
+work, no further handoff drafting. Fully read Core actual return: missing-only
+STREAM received official REVOKED18:42:21.804UTC before fixed expiry, denied
+current cursor/independent READ200; Core exact grant/session/custody settlement
+18:42:41.128UTC. Verify original remote return and private receipt hashes, then
+correlate source's actual terminal/leave/custody rather than rename remote read
+error graceful EOF. Source independently self-drained at fixed20:00UTC; retained
+SDK log proves pools0/closedtrue/wrapperEXIT0/stderr0 and exact-ID witness
+dieEXIT0/destroy, socket absent/container absent now. Tool session49317 is no
+longer available; durable actual files, not missing interactive session, are
+the evidence. Do not restart, reopen old native8/9, renew expired trust/window,
+issue any new attempt/grant/session or force-close. Next immediate authorized
+mutation is ONLY original revoke4c1c3dbd/CAS9→10 + same-original STATUS, valid
+maintenance until23Oct20:00. Protect stable/dev/provider28445/other modes.
+Complete actual correlated disposition in this plan/08 guide; narrow native
+missing-case acceptance is distinct from full08/read09 and unrelated owners.
+
+**Actual result23Oct11:45VN /04:45UTC: NATIVE_ACTIVE_REVOKE_CORRELATED /
+SOURCE_RETIRED; this missing-only case ACCEPTED.** No new handoff, source window,
+grant, session, attempt, build or product code was created. Core's immutable
+[actual return](evidence/execution-edge-v1_2/EPG10-08/CORE_TO_EDGE_08_CORE_FIRST_ACTUAL_RETURN_2026-10-23.md)
+raw12e9efc1595f8fafca2fe713eb435221e0e950018a300ee7331fc85b84fe048a
+matches HK/SGP. Actual scenario d308cf60 and later settlement9aa3f85d raw hashes
+were independently checked on the owning SGP private files, not inferred from
+health. Scenario snapshot had unresolved1/unreconciled1; subsequent genuine
+18:42:41.128UTC settlement has pending0/unresolved0/unreconciled0/retained21,
+healthytrue/source_renewedfalse/other_sessions_touched0. Do not conflate snapshots.
+
+**Cross-host original-custody proof:** bounded RR READ ONLY joins verified TS
+live_data_executor/system7674585245102796834 and Research portal_control/
+system7688673963308855330, actual API3cb→portal-postgres on volume
+portal-research-preview_portal-postgres-data. Five exact lease/attempt/binding/
+source digests match, all belong to acceptanceb922c105, all Core source ACKs
+reconciled. Four SERVED terminal receipt IDs/digests match source events and
+Core custody; one never-ENTERED lease is honestly RETIRED at TS/CANCELLED at
+Core with cancel-unentered ACK/no_send_fencedtrue and NO invented receipt:
+
+| Exact lease | Actual role | TS / Core disposition |
+|---|---|---|
+| dce04923-e01f-47d0-9afc-12d48d47f7cf | Baseline finite READ | SERVED / SERVED + resolve ACK |
+| 12ec5d3a-7550-4331-b0f4-0b8e4758f412 | SSE frame | SERVED / SERVED + resolve ACK |
+| 00e8405c-4274-4b3d-a77e-debcdec03915 | SSE frame | SERVED / SERVED + resolve ACK |
+| 7460b8de-d3bb-40af-923e-f0df110f7715 | Unentered SSE frame | RETIRED / CANCELLED + cancel-unentered ACK |
+| d3c3dd23-9105-420c-9923-5c5d11d71a43 | Separate READ after STREAM revoke | SERVED / SERVED + resolve ACK |
+
+Last served SSE terminal18:42:16.967504UTC; original unentered frame retired
+18:42:18.105353UTC. Subscriber18:42:17.722UTC REMOTE_READ_ERROR is still NOT
+clean EOF/terminal ACK. Official original revoke receiptace_063c3000 committed
+18:42:21.804UTC,50.112s before original expiry; current cursor403/no new native
+admission and separate READ200 are actual action-isolation controls, not an
+independent native domain or cache-HIT proof. Known75→same-original recovery
+and pre-dispatch ENOENT→reviewed additive continuation remain transparent in
+the Core return; no new intents or fake dispatch success.
+
+**Exact retirement executed:** original SDK revoke
+4c1c3dbd-6f29-488e-9eff-6575ae709a4c/CAS9→10 committed
+23Oct04:38:37.340156UTC. Revoke and original STATUS both EXIT0/stderr0/
+RECORDED/exact_current_headtrue/current_version10/historicalfalse/
+runtime_enabledfalse/held_authorityfalse; each maintenance pool closed0.
+Manifest a0ab8a7b/documentb649348c match the frozen original. No direct SQL
+mutation/grant/schema change. Maintenance uses its still-valid remove-only
+authority, not renewal of expired serving TLS or source expiry.
+
+Actual private evidence remains0700/0600 under
+/home/bobby/secure/edge-core009-active-revoke-20261023-0100-yHoOlP/;
+only bounded identifiers/hashes/counts are published here:
+
+| Private evidence filename | Raw SHA256 |
+|---|---|
+| source-terminal-correlation.actual.jsonl | 9d1e7cd33f0e9cbe9f815246b7bf417cdbce2c32af0ec433cb022afa3bee1e61 |
+| core-terminal-correlation.actual.jsonl | c74f94b567d19d90f2520121b8392007573249c27c7df832602195a4228f5eee |
+| correlation-verification.actual.json | 32d30fc1dd3e1123b5899bc11a5ae17b4e8ed39835e4e7e578b8648f144f846e |
+| revoke.actual.jsonl | 53b8a06244ab98fdd930deace251497bb1f24ee3b644d035765bb774bba92313 |
+| revoke-status.actual.jsonl | 6fe03a3cdd4634425de19cd6bf031e79318c81f6d4fab8a58c12b9141714f7a6 |
+| source.actual.jsonl | 92ed0c19e5e03d8452c89bd0a7efa29d3956ad0f65f34d45e8987ac23e9dc32f |
+| source-docker-events.actual.jsonl | 19409ce6683e3a3ab418cb87772dc5b6d419f4eb3aba12eaec02e7e12df824b9 |
+| final-census.actual.jsonl | a22198ee24be99b3c48e95577dfefe6b0464e305d05201c719124c884ccd86d2 |
+
+Final independent source census across the complete18:38–18:44UTC specimen
+interval is exactly5admissions/4SERVED/1RETIRED/0unresolved for this acceptance,
+not merely five selected positives. Original serving/maintenance application
+backends0. The exact5/5 cross-host correlation assertions, original revoke+
+STATUS assertions and persisted physical-drain assertions PASS; no unit/
+synthetic fixture is counted as this real source evidence.
+
+Diagnostics are not hidden: least-privilege source/control cannot SELECT raw
+fence metadata, so no grant was widened. Maintenance observational pg_control
+probe was denied(EXIT1,redacted stderr hash16328205); native maintenance itself
+passed. First local admin probe guessed nonexistent postgres role and failed;
+correct container POSTGRES_USER=bobby then RR READ ONLY verified the actual
+cluster. One exec omitted stdin forwarding and executed no SQL; corrected -i
+ran the bounded queries. No failed probe is counted as acceptance.
+
+**Cleanup/runtime:** source self-drained22Oct20:00UTC, closedtrue/both pools0;
+exact ee7e2e75 witness dieEXIT0 at20:00:00.349946UTC/destroy20:00:00.495286UTC,
+wrapperEXIT0/stderr0. Exact0100-yHoOlP container scan and socket28446 are empty.
+All new maintenance/readonly --rm containers gone; no new image/build/cache or
+remote test cell/secret copied. Private original custody/audit retained, not
+purged to hide ambiguity. Disk used342035468288→333175181312B/free
+176881434624→185741721600B reflects shared-host activity, NOT claimed own
+reclamation. Fresh inventory116images/43active,607BuildKit/70.73GB: foreign
+activity changed totals; retain shared active/rollback/cache, no broad prune.
+Protected native28445 image28ea and three Paper/Sandbox/Live Edge imagesd6aa
+directly rechecked running/restart0. Existing config matrix6180b9bf/cd79e9c6/
+98a191c7, Proxy/Manager set and named SGP stable/rollback releases unchanged,
+not newly promoted/released. Canonical Edge54c6f5f3 and active feature0f1e2671
+remain their recorded checkouts/branches; no worktree removal/push/merge/CI.
+
+**Remaining scope and next permitted action:** full08/read09 remains NOT_MET,
+but actual native active-revoke/cursor/action-isolation/custody/retirement is
+now CLOSED and must not be requested/run again. Review current P22 factory/
+installed opt-in and current-epoch HIT→READ revoke/cache/cursor cases plus a
+genuine independently sealed unaffected native domain; Core owns those current
+application/grant inputs, TS/PM owns domain authority, Edge owns exact source
+binding when available. Manager all-mode commissioning, command-through-COMMIT,
+identity/field-matrix cases and G2 absolute measurement remain separately scoped;
+none may be silently certified by this specimen. No fresh connected run can use
+expired native9/trust/window. Approved independent09 implementation remains
+permitted; full connected09/release/cutover not promoted. No independently
+runnable owned implementation from this missing-only slice is left deferred.
+
+**Verification: R0.** Tracking reconciliation (`bash scripts/execution-tracking-test.sh`)
+EXIT0; diffcheck PASS. Local publication is exactly this owned main-plan append,
+the08guide status and byte-identical received Core actual return; exclude peer
+C5hunk, two tracked peer documents and all unrelated untracked packets/code.
+New link/anchor/secret-pattern and staged-scope checks precede the docs-only
+commit under Bobby-approved campaign§10.10d. Three original peer WIP hashes
+still match fe4fcfc7/1cf04b20/109659d2. No product/test/config changes or claim
+that R0 replaces real runtime acceptance. No push/merge/hostedCI minutes.
