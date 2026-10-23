@@ -42,6 +42,19 @@ Source: `apps/portal/fixture-bff/review-manager.ts`, README section "Explicit po
 
 Not done: the design's tab counts across environments (ALL, ISSUES, REAL-FUNDED, PAPER, TESTNET): one environment per bindings read (ELP2-REQ-FE-014), so the counts are not published.
 
+## 2c. Score keys (23 October 2026, `review-manager.ts` `addGroupScores`; populated and layout-stress profiles)
+Level FIXTURE_LAB. Open metric keys of the two group maps only (`economic_partitions[].metrics` of a group by `portfolio_id` or by `alpha_id`); no row-level key, no capital-statement key, no schema widened. Exact decimals from bigint: `portfolio_score = (45*P + 30*R + 25*B) / 100` with P, R, B in hundredths, so the value is exact at four places (`82.8000` is published as `82.8`). Policy `policy_revision = FIXTURE_LAB`, `methodology_ref = FIXTURE_LAB:portfolio-score-direct-nav-v1`, provenance `FIXTURE_LAB:SYNTHETIC_SCORE_NOT_SOURCE_ACCEPTANCE`. The band is not published: the screen maps the published value to the spec's band edges (SCORE_REGIME_SPECIFICATION v1.1, 11.2). Cases are stable per portfolio id (suite ids fixed, others by digest), the same on 7D, 30D and 90D (values differ per window inside the case's range); `ALL` is the window gap (`ALL_HISTORY_WINDOW_NOT_PUBLISHED`, `window` null) on every key.
+
+| Level | Key | Unit | Rule | Consumer | Expected real source |
+|---|---|---|---|---|---|
+| group by portfolio_id | portfolio_score | SCORE | direct from the portfolio NAV, 0..100. Cases: high 91.0-98.0 (very good), good 76.0-84.0, mid 42.0-58.0 (neutral), low 9.0-32.0 (weak), provisional 62.0-73.0 (`source_confidence` PROVISIONAL, fair), insufficient (typed absence `INSUFFICIENT_EVIDENCE`), zero (true `"0"`, weak) | Portfolios Portfolio score column, filters, sort; Portfolio 360 score tile | `scores.direct_nav` per portfolio group (Edge) or a group metric `portfolio_score` |
+| group by portfolio_id | portfolio_score_p, _r, _b | SCORE | the three components in hundredths, same case and window; absent with the score | Portfolio 360 score tile (P / R / B) | score_details components (`score_details` is read by count only today) |
+| group by portfolio_id | portfolio_score_evidence | RATIO | evidence coverage 0..1: high 0.9712, good 0.9420, mid 0.8834, low 0.8120, provisional 0.6405, insufficient 0.1830, zero 0.9301; present even when the score is absent | evidence line of the cell and the tile | evidence / eligibility of the score publication |
+| group by alpha_id | score | SCORE | raw alpha q_i by the same rule (`SCORE_CASE_OF` by alpha id digest), never summed across alphas, never a quality band on a contribution | Portfolio 360 Contributors (the Overview Contributors already reads the key `score`) | `scores.raw` per alpha group |
+| group by portfolio_id | max_drawdown_pct | PERCENT | changed rule: the seed now carries the group's own row keys (it used the partition alone, so every USDT portfolio drew the same value and 100% of them were absent); one group in five is a typed absence | Portfolios Drawdown | FE-013/025 |
+
+Where a place does not exist: there is no key for the score band, for "eligibility", for the policy version number or for a score `observed_days` in any published map, so the band is derived on the page from the value, eligibility is the metric's `availability` + `reason_code`, provisional is `source_confidence`, and the policy is `policy_revision`. Real sources are not claimed.
+
 ## 3. Facts no published route carries yet (proposed; not served; screens keep Not published)
 From the subagent reports of 2026-10-22; each is a field to ask Codex for, with the value the fixture lane would simulate.
 

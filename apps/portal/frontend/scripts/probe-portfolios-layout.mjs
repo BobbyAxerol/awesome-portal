@@ -113,7 +113,8 @@ try {
       const errors = [];
       page.on("console", (m) => { if (m.type() === "error") errors.push(m.text().slice(0, 120)); });
       await page.goto(`${base}${path}`, { waitUntil: "networkidle", timeout: 60_000 });
-      await page.waitForSelector("table.exec-cards, .exec-pf-kpis", { timeout: 45_000 });
+      // A route that draws neither a table nor KPI tiles is reported as such instead of stopping the run.
+      await page.waitForSelector("table.exec-cards, .exec-pf-kpis", { timeout: 20_000 }).catch(() => errors.push(`nothing measurable at ${path}`));
       await page.waitForTimeout(1500);
       const result = await page.evaluate(measure);
       results.push({ route: name, width, ...result, consoleErrors: errors.slice(0, 3) });
