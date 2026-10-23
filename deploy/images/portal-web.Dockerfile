@@ -22,6 +22,10 @@ COPY packages/contracts/fixtures packages/contracts/fixtures
 # sources must be in the build context. Build stage only: nothing from this directory reaches the served image.
 COPY apps/portal/registry/fixtures/registry.public.json apps/portal/registry/fixtures/links.public.json apps/portal/registry/fixtures/summary.healthy.json apps/portal/registry/fixtures/
 COPY apps/portal/fixture-bff apps/portal/fixture-bff
+# The frontend type-check reaches the fixture BFF (through src/fixtureBff tests), which imports these two outside modules.
+COPY packages/contracts/tooling/execution-manager-positive-series-fixtures.mjs packages/contracts/tooling/execution-manager-positive-series-fixtures.d.mts packages/contracts/tooling/
+COPY apps/control-api/src/domain.ts apps/control-api/src/domain.ts
+COPY apps/control-api/src/command-center/contracts.ts apps/control-api/src/command-center/visit-digest.ts apps/control-api/src/command-center/
 COPY apps/portal/frontend apps/portal/frontend
 ARG ROADMAP_TASK_BOARD_LOCAL_ONLY=false
 ARG ROADMAP_TASK_BOARD_PERSISTENCE=v1
