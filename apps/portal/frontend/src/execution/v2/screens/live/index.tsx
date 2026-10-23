@@ -33,6 +33,7 @@ import { PanelSkeleton, PanelState } from "../../../components/states";
 import { BlockerList, CompactGaps, GapLine, Kpi, KpiStrip, StageHeader, UrlTabs, type GapItem, type StageCrumb, type StageTab } from "../../blocks";
 import { AlphaNameLine } from "../stage/AlphaNameLine";
 import { alphaCrumb, portfolioLabel } from "../stage/identity";
+import { spineHistory, useStageLifecycle } from "../stage/useStageLifecycle";
 import { unsupportedText, type LiveFullVersionRead } from "../../readers/dispatch";
 import { useExecUrlState, withContext } from "../../urlState";
 import { ChartSlot } from "./parts";
@@ -101,6 +102,8 @@ function LiveBody({ model, api, deploymentId, workspaceId, v2, reload }: { model
   const navigate = useNavigate();
   const paging = usePanelPaging(api, deploymentId, workspaceId, v2);
   const id = model.deploymentId ?? deploymentId;
+  // The stages the alpha has completed (FE-027): the ticks of the spine, from the alpha's Manager dataset when it publishes them.
+  const history = spineHistory(useStageLifecycle(api, model.identity.alphaId, "live", "live", workspaceId ?? null));
   const shown = model.kpis.filter(printable);
   const missing = model.kpis.filter((cell) => !printable(cell));
   // ONE gap line for the screen. A V1 body also lists here what its chart and its Exposure tab have no value for (UXM07-048/5), so no panel repeats it.
@@ -159,6 +162,7 @@ function LiveBody({ model, api, deploymentId, workspaceId, v2, reload }: { model
         spine={{
           current: model.stage,
           blocked: model.spineBlocked,
+          stages: history,
           onSelect: (stage) => {
             const to = model.spineTargets[stage];
             if (to !== undefined) navigate(withContext(to, params));

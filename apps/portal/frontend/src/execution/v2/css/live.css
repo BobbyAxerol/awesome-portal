@@ -213,3 +213,13 @@
   white-space: normal;
   text-overflow: clip;
 }
+
+/* A figure and its unit stay on one line in the Internal / Broker / Difference rows; a long label wraps by word instead. */
+.exec-liv-v2 .exec-blk-triad-row {
+  flex-wrap: wrap;
+}
+.exec-liv-v2 .exec-blk-triad-row dd {
+  flex: none;
+  margin-left: auto;
+  white-space: nowrap;
+}
