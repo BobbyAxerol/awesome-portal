@@ -738,7 +738,11 @@ function DecisionCockpit({ api, workspaceId, pathSelection, onClearPathSelection
           waiverReadAt={waivers.readAt}
         />
         <section className="exec-ck-main" aria-label="Evidence">
-          <button type="button" className="exec-ck-backq" onClick={() => document.querySelector(".exec-ck-q")?.scrollIntoView?.({ block: "start" })}>Back to the queue</button>
+          {/* Where the panes stack the decision is below the evidence: two jumps, up to the queue and down to the decision (QA1 I-19). */}
+          <div className="exec-ck-jumps">
+            <button type="button" className="exec-ck-backq" onClick={() => document.querySelector(".exec-ck-q")?.scrollIntoView?.({ block: "start" })}>Back to the queue</button>
+            <button type="button" className="exec-ck-backq" onClick={() => document.querySelector(".exec-ck-rail")?.scrollIntoView?.({ block: "start" })}>Go to the decision</button>
+          </div>
           {family !== null ? (
             <FamilyPanel family={family} />
           ) : selected?.kind === "waiver" ? (

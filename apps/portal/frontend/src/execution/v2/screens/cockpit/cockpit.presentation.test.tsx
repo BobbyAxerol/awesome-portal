@@ -576,4 +576,12 @@ describe("QA1 I-19 / I-23: the detail is reachable from the queue", () => {
     fireEvent.click(within(evidence()).getByRole("button", { name: "Back to the queue" }));
     expect(scrolled.some((c) => c.includes("exec-ck-q"))).toBe(true);
   });
+
+  it("and a Go to the decision control that scrolls the decision rail into view", async () => {
+    stacked(true);
+    await mount(standard(), "/execution/approvals?sel=apr_a");
+    scrolled.length = 0;
+    fireEvent.click(within(evidence()).getByRole("button", { name: "Go to the decision" }));
+    expect(scrolled.some((c) => c.includes("exec-ck-rail"))).toBe(true);
+  });
 });

@@ -848,8 +848,12 @@
 .exec-ck-kv[data-numeric="true"] td {
   text-align: right;
 }
-.exec-ck-backq {
+.exec-ck-jumps {
   display: none;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.exec-ck-backq {
   justify-self: start;
   padding: 2px var(--space-3);
   font: var(--exec-font-control);
@@ -868,8 +872,8 @@
     position: static;
     max-height: 70vh;
   }
-  .exec-ck-backq {
-    display: inline-block;
+  .exec-ck-jumps {
+    display: flex;
   }
   .exec-ck {
     grid-template-columns: minmax(0, 1fr);

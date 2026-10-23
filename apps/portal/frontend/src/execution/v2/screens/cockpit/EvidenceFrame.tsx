@@ -367,7 +367,7 @@ function R1Body({ detail }: { detail: GateR1Detail }) {
       </Panel>
       {detail.locks.length > 0 ? (
         <Panel title="Locks reported by the server">
-          <div className="exec-ck-pad">{detail.locks.join(" · ")}</div>
+          <div className="exec-ck-pad">{detail.locks.map(stateWords).join(" · ")}</div>
         </Panel>
       ) : null}
     </>
@@ -432,7 +432,7 @@ function R2Body({ detail, heading = "R2 review" }: { detail: GateR2Detail; headi
       ))}
       {detail.locks.length > 0 ? (
         <Panel title="Locks reported by the server">
-          <div className="exec-ck-pad">{detail.locks.join(" · ")}</div>
+          <div className="exec-ck-pad">{detail.locks.map(stateWords).join(" · ")}</div>
         </Panel>
       ) : null}
     </>
