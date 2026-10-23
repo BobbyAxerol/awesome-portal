@@ -1136,3 +1136,272 @@ custody, Edge drains pools0/exit0/die/destroy/socketabsent then exact revoke
 CAS9→10/STATUS. No replay of completed READ/restart gates. No stable/dev/main,
 provider28445/command/Live mutation. **Full08/read09 remain NOT_MET until actual
 receipts. Next action: Edge install this ACKed packet and return actual READY.**
+
+<a id="core-current-view-ack-20261023"></a>
+
+## 16. Coordinated producer/adapter implementation ACK —23Oct2026 18:20UTC
+
+ACK Bobby's explicit Core/Edge/TS-PM implementation assignment and original
+request sections7.2–7.5. Coordinator: Codex/Core. This is a source-work ACK,
+not a time-limited runtime ACK. Next checkpoint: **23Oct2026 19:00UTC**, or
+immediately when either producer publishes its first frozen contract.
+
+Read-only repin: Core `docs/research-loop-plan@2a89e6d0d6bb221e87f24da6be1e3394f8f22f4d`;
+its two pre-existing dirty Markdown paths remain untouched. Edge
+`feat/execution-edge-upgrade-v1_2@8727e5303b1815d54bc2bdcb927a55457ff4da5b`;
+PM `feat/portfolio-account-v1_1-parallel@35fa7bf69570c1c393782273cb962071ae6a8aa4`.
+PM has advanced beyond the prompt's05f4657b snapshot; mapped/control WIP is
+preserved, not checked out or rolled back. Claude's local lane is advancing;
+no ownership of its existing implementation or UI is assumed.
+
+**Ownership request, before overlapping edits:** Codex owns NEW Core current-view
+authority/transport/schema/test paths in isolated
+`/home/bobby/portal-core-policy-wire` (`chore/core-policy-wire-20261024`), plus
+this cumulative return. Existing `read-scope.ts`, Auth, financial readers and
+Claude files remain read-only until an exact additive change is agreed.
+Core reuses actual session/current-scope providers; no new user, permission
+provider or copied stable rights. Edge owner: please reserve concrete policy
+adapter/composition changes or return the conflicting path before writing;
+PM owner: please confirm the off-path financial wrapper/signing/receiver-APPLIED
+paths and frozen wire in your existing §7.18 return, independently of FIX-01/02.
+This request is **AWAITING_OWNER_ACK**, not a claim those agents accepted it.
+
+Source/test plan: exact operation/context/session/workload-bound resolve and
+fresh recheck; isolated unit/contract negatives first, then real source/PG
+tests only where impacted. Correctness cells retain the approved ceilings
+(2CPU/1536MiB, bounded300s per run); no absolute-capacity assertion or shared
+measurement lock is taken. Primary alone integrates shared schemas/docs;
+independent read-only Edge/PM audits run in parallel.
+
+No service/image/config/trust/schema/grant mutation or expiring source window
+has been started. Runtime commissioning will name the exact target, immutable
+artifact, matched trust and rollback before execution. Accepted original READ,
+restart and active-STREAM-revoke remain retired; no duplicate specimen. No
+stable/dev/main/provider28445, command/Live, production or peer-WIP mutation.
+Full08/read09 remains NOT_MET. Cleanup at ACK: no test resources created.
+
+<a id="core-current-view-source-20261023"></a>
+
+## 17. Implemented current-policy producer and Rust consumer —23Oct2026 18:55UTC
+
+**Disposition: Core producer FROZEN / consumer SOURCE_TESTED; not installed,
+not CONNECTED_ACCEPTED, R1 only/R2 pending.** This is the cumulative follow-up
+to §16, not a new source window or a replacement for accepted retired originals.
+Coordinator/integrator: Codex/Core. No secret value is included below.
+
+### 17.1 Actual source and ownership
+
+| Part | Exact source | Change / state |
+| --- | --- | --- |
+| Core | `chore/core-policy-wire-20261024@c808a0de564c75201fe37f73c9e17e8db8bcc95a`, `/home/bobby/portal-core-policy-wire` | 14 owned paths, +3884/-0; clean after commit; base `2a89e6d0d6bb221e87f24da6be1e3394f8f22f4d` |
+| Edge | `feat/core-current-policy-wire-20261024@fa96dc385ad3c7c07fbfe881aef581acd58c4f09`, `/home/bobby/.worktrees/portal-core-current-policy-wire-20261024` | 9 owned paths, +3984/-0; clean after commit; base `8727e5303b1815d54bc2bdcb927a55457ff4da5b` |
+| PM | `feat/portfolio-account-v1_1-parallel@35fa7bf69570c1c393782273cb962071ae6a8aa4` | Source/WIP unchanged by Core; main-plan coordination note appended with exact-hash guard. §7.18 remains MINIMAL_CHANGE_REQUIRED, not PM CONTRACT_ACCEPTED |
+
+The line counts include generated OpenAPI/schema/types/vectors and their exact
+public mirror at Edge; they are **not** 7868 new lines of business logic.
+Active Edge source, PM FIX-01→FIX-02 and Claude's advancing lane are preserved.
+No active branch reset/rebase, main/dev/stable merge or remote push occurred.
+The canonical Core checkout still has its peer's two pre-existing dirty
+Markdown files; this return and own Unified/sync additions do not commit them.
+
+### 17.2 Exact producer contract and trust boundary
+
+Private TLS1.3/mTLS, POST only:
+
+- `/internal/elp210/current-view/resolve`, request
+  `portal.execution.current-view-resolve.v1`.
+- `/internal/elp210/current-view/recheck`, request
+  `portal.execution.current-view-recheck.v1` and original `decision_digest`.
+- Direct response `portal.execution.current-view-decision.v1`; typed safe
+  errors `portal.execution.current-view-error.v1`. No wrapped/sample authority.
+
+Core's `current-view-authority.ts` uses the actual `AuthService.pool` joined
+user/session/workspace and existing branded `ExecutionReadScopes`; legacy mode
+refuses. Registration is **server-only**, never an HTTP actor-ID endpoint.
+The 43-character opaque context binds the original human/session generation,
+workload, workspace, selected resource/profile/dataset, operation and fixed
+expiry. Context custody stores no cached ALLOW. Release is exact and process
+loss fails closed; it does not mint another actor, source receipt or ACK.
+
+Fresh checks cover resolve/recheck, cache-hit or finite I/O completion, held
+upstream errors and STREAM's existing physical-write boundary. Original expiry
+is checked after awaited work. CURRENT alone never grants HISTORY, EXPORT,
+STREAM or REPLAY. EXPORT independently requires report.export; STREAM requires
+stream.subscribe. HISTORY/REPLAY require an explicitly commissioned independent
+purpose mapping; **none is invented or installed in this slice**. Physical
+REPLAY frame delivery remains typed503 until the atomic final-write boundary
+can retain all historical/replay obligations as well as READ+STREAM.
+
+The transport authenticates exact peer certificate DER SHA256 + SAN + workload,
+not JWT role, forwarded certificate or mTLS-as-human. Bounds: request8192B,
+decision65536B,16 in-flight,5000ms deadline; TTL60s/default,300s/hard maximum,
+context256/default and2000/hard maximum. These are source safety ceilings, not
+an approved production workload/calibration artifact. Timeouts retain capacity
+until the actual authority operation finishes. Busy event-loop continuations
+cannot win a timer race: the final absolute monotonic deadline is checked.
+
+| Public producer artifact | SHA256 |
+| --- | --- |
+| `packages/contracts/openapi/execution-current-view.openapi.json` | `b1b49a52aaa69c7985656989a5e335a4c050dd887c983b2bc015726911285d2b` |
+| `packages/contracts/schemas/execution-current-view.v1.schema.json` | `af4d856efe3e73499ae508592733f5cb6fe59b2ce8437a7bdf9a57e0e6341328` |
+| `packages/contracts/generated/execution-current-view.d.ts` | `9dd64739bfa6fb2f77199bb421cb044c360549df190705efaa72aba20f9cb8ed` |
+| `packages/contracts/fixtures/execution-current-view.test-only.v1.json` | `2663fdbf848bc8107d737b3e34477d6a83e4749480fee875d448c10d92e54e0a` |
+
+All31 canonical vectors are explicitly TEST_ONLY/authority NONE/runtime false.
+Core and Rust agree on canonical bytes/SHA256 and all six decision examples.
+`npm run generate:execution-current-view` is the narrow generation target;
+generator `--check` passed. Edge owns the exact public copies under
+`services/portal-execution-edge-rs/contracts/core-current-view-v1/` in its new
+candidate, including source paths/hashes and limitations in README.
+
+### 17.3 Real adapters/composition, not a flag or permissive provider
+
+Core `current-view-edge-client.ts` now performs finite Core→Edge mTLS GETs on
+`/internal/v2/scoped/:resource/query|history|export`, keeping the same original
+context until the full bounded response/request close and final current check.
+Errors are held behind that same final check. No redirect, retry, cookie/JWT
+forwarding, browser-selected URL, source ACK or replacement context is used.
+It deliberately refuses a stream handle that would release custody too early.
+
+Rust `core_policy_http.rs` implements actual HTTP `CurrentPolicy::resolve` and
+`recheck` with opaque same-original custody, strict DTO/nullable semantics,
+bounded TLS/queue/deadline/bytes and fresh selection checks. Authority is the
+intersection with an actual injected `QualifiedSelectionProvider`: exact
+workspace/environment/profile/resource/dataset binding, source generation,
+coverage/retention, correlated five-part native tuples and ALL required fields.
+It never cross-joins independently permitted IDs, truncates population, treats
+an empty list as ALL, or exposes a whole nested row from a single metric grant.
+After provider awaits it advances the trusted clock by actual monotonic elapsed
+time and rechecks expiry; a late source future does not extend authority.
+
+`core_scoped_entrypoint::connect` now constructs the concrete policy and
+existing governed `ScopedBackend`; `serve_financial` assembles the existing
+router, real injected financial source/worker, projection/checkpoint/ACK and
+shutdown lifecycle. This is a compiled **library entrypoint**, not a deployed
+binary configuration. The legacy main/default uncommissioned503 is unchanged.
+A real financial source authority is still required: neither this entrypoint
+nor a JSON selection can manufacture PM's absent §7.3 proof contract.
+
+Rust file SHA256: module
+`fe32d4154591c27c18c8761cff8c991a330bae800e80c671a8eaea4bb3bce012`;
+tests `0f5db526db5942f6a78d7a6a41c318c7a249215ab57b462b545203db2c954787`;
+entrypoint `bf52d7bc90efa2ec6e1cf52209f6e2f370762d9776fcff2d5c2685ef95e5d437`.
+
+### 17.4 Tests, failures and verification tier
+
+| Executed lane | Actual result | Scope |
+| --- | --- | --- |
+| Core four focused specs | **111/111 PASS**, four files,7.44s | authority34, contract46, private transport15, finite Edge client16 |
+| Strict narrow TypeScript | **PASS**, exit0 | Four new production modules plus four tests and imported dependency types |
+| Contract generator `--check` | **PASS**, exit0 | Exact source/schema/OpenAPI/vector regeneration; no whole-repo generation |
+| Rust new adapter | **23/23 PASS**,0.54s tests | Actual loopback TLS13/mTLS, original/operation/session binding, malformed/wrong-CA/timeout, correlated population/fields, revoke/expiry/source change, cross-language vectors |
+| Existing Rust scoped unit regressions | **40/40 PASS**,0.37s tests | Existing policy, backend, worker, financial projection and governed resource paths; new23 explicitly excluded from this run |
+| Actual PG/native/current source/receiver-APPLIED | **NOT_RUN** this slice | Test doubles are explicitly source-only fixtures, never financial/native qualification |
+| Research↔HK connected/browser/G2 | **NOT_RUN** this slice | No listener, provider, trust or workload was installed |
+
+Counts are174 distinct test cases (111+23+40), not reruns counted as new
+coverage. Rust's existing PG suites are feature-gated and **not** included.
+Commands: Vitest `run test/current-view-{authority,contract,transport,edge-client}.spec.ts
+--maxWorkers=1 --no-file-parallelism`; narrow `tsc --noEmit --strict
+--skipLibCheck --esModuleInterop --resolveJsonModule --target ES2022
+--module commonjs --moduleResolution node --experimentalDecorators
+--emitDecoratorMetadata` on those eight paths. Rust `cargo test --offline
+--locked -p edge-service --lib core_policy_http::tests -- --test-threads=1`,
+then existing regressions `--lib -- --test-threads=1 --skip core_policy_http::tests`.
+
+Honest failed setup attempts: whole-project TypeScript exceeded its1200MiB
+Node heap/exit134, so it is **not** PASS. Narrow strict checking then passed
+after fixing four test Socket/Duplex typing errors. Rust first lacked pinned
+registry sources and external immutable build inputs; these were supplied in
+the isolated copy only, verified against HK hashes. Final locked/offline
+compilation+tests passed; no input check was removed to make compilation pass.
+Production code review also corrected transport post-deadline disclosure,
+late source expiry, Unicode/code-point parity and detail-field cap2000.
+
+Verification tier **R1/source-only**, campaign rules10.10c: Core intermediate
+commit uses the explicitly permitted focused-test lane, no full hook/build
+repeat or landing. Edge used normal git commit; no configured hook supplied
+an R2 certificate. **R2 pending** on the eventual integrated frozen candidate.
+No DELIVERED/installed/connected claim is inferred from either commit.
+
+### 17.5 PM authority/wire still needed, concrete owner action
+
+PM owner-return §7.18 and subsequent updates is the existing local file on HK:
+`/home/bobby/.worktrees/trading-system-pm-v1_1/upgrade/PM_TO_EXECUTION_REVIEW_RESPONSE_2026-10-22.md`.
+Its latest inspected disposition is MINIMAL_CHANGE_REQUIRED. Existing snapshot/
+page/delta outputs and post-COMMIT return order are reusable; current-human
+JWS, native numeric advance_cursor and STORED/TRANSPORT_STORED are not the
+financial-purpose attestation or receiver APPLIED. No PM acceptance is forged.
+
+Final independent read-only checkpoint23Oct18:54:29UTC: PM owner-return
+SHA256 `d81a97a022fb54962a87166f281db62a84af55c4cb118f2f31e4e60a82a7298e`,
+latest §7.20, no accepted financial wire;89 current PM WIP paths are preserved.
+Edge's canonical consolidated request and PM mirror match SHA256
+`d007c0317999368c740b326d5d3897c51c2750aa94cccfe6ecdf9a5ed68aa938`.
+PM's existing local694binding/527mapped PASS and FIX-01 work do not close §7.3.
+
+**PM owner via Edge:** freeze exact assertion issue/renewal, MANIFEST/PAGE/CHUNK/
+GROUP/CONTROL attestation/revalidation, financial-purpose signing/canonical
+negative vectors, and receiver-authenticated APPLIED/status for the SAME original
+receipt/full binding/consumer/UUID generation/opaque cursor after COMMIT.
+Confirm storage association against existing append-only source receipt metadata;
+do not create a second economic ledger or reuse an economic-event writer.
+Record ACCEPTED/CHANGE and own source/tests in the existing PM return. Core has
+appended this request to PM's main plan with a hash guard, preserving all mapped/
+control WIP and FIX-01→FIX-02. No PM source path is claimed without owner ACK.
+
+**Edge owner:** review/accept this exact independent Core wire/source candidate
+now; publish the actual qualified selection/coverage/retention mapping per
+resource and an explicit HISTORY/REPLAY purpose mapping. Assemble the PM adapter
+immediately when PM freezes its wire, without holding current-policy tests for
+the entire TS upgrade. Integrated R2/PG/source qualification and explicit image/
+config/trust/schema/target/rollback pins precede a NEW runtime window. No rerun
+of retired original READ/restart/active-revoke or generic cached authority.
+
+### 17.6 Manager/modes, commands and remaining phase work
+
+- Manager certificate/CSR/key are **not recreated**. Existing offline receipt
+  `CORE_MANAGER_OFFLINE_RECONCILIATION_2026-10-23.md` records leaf33015a80,
+  chain665a11f7, JWKS a8b44aad and kid research-20261021-c185ee3d, valid until
+  29Oct13:27:14UTC; it explicitly remains NOT_INSTALLED/CONNECTED_BUSINESS_READ_NOT_RUN.
+  Need Edge's loaded JWKS overlap/source/image/config/audience/profile pins and
+  a fresh actual current READ binding before the matched Paper overlay/API probe.
+- Paper8443/PAPER_BINANCE_USDM, Sandbox8444/SANDBOX_BINANCE_USDM and Live8445/
+  LIVE_BINANCE_USDM have distinct audience/profile bindings. Canary is a governed
+  Live binding, not a fourth environment. Research commissioning of the new
+  Manager bindings is not proven in **any** mode by this source-only slice;
+  Paper qualification is not a product ceiling, Live read is not trading permission.
+- Command07 gateway remains UNCOMMISSIONED. Keep original intent/key/digest/
+  receipt and service-only same-original status recovery; no resend. Edge must
+  deliver its commissioned Core-facing submit/status gateway/current-requester
+  verifier and pins. Core does not use a direct PM endpoint or execute a business
+  command to demonstrate read connectivity.
+- Publisher coverage/fence, financial inputs, target/numeric bounds, budget/
+  calibration, coexistence/G2 and Claude browser acceptance remain separate
+  owner actions, not falsely closed by this wire. Existing approved limits and
+  UNKNOWN/source-terminal custody are unchanged. ELP2-10/full08/read09 remain
+  **NOT_MET**, ELP2-11 remains unopened.
+
+Checkpoint: this frozen source/test return is delivered before23Oct19:00UTC.
+PM/Edge should ACK the exact independent wire or precise CHANGE in the existing
+returns; next runnable Core action is the affected integration/PG lane on those
+accepted source/selection pins, then exact target commissioning—not another
+round of generic authorization questions or an expiring ACK before source-ready.
+
+### 17.7 Cleanup / rollback / resource disposition
+
+All Core TLS test listeners closed; synthetic test certificates stayed in memory.
+All correctness scopes finished; no task compiler/test remained on HK. No PG,
+container, source window, grant/session, token file, image or schema was created.
+The owned isolated SGP Rust build/source/cache directory
+`/tmp/core-policy-edge-test-20261024.4EoE5a` (2.0GiB before cleanup) was removed
+after tests/commit pins were recorded. No shared/DL/active Cargo cache was altered.
+Read-only host snapshot before teardown:32,092MiB RAM total,8,583MiB available;
+`/tmp` filesystem213GiB available. These are capacity observations, not G2/SLO.
+
+Retain the two clean committed source worktrees and exact public contract pins
+for owner review/integration. Other temporary public patch/source archives are
+coordination artifacts only, no private credential/custody, and are not runtime
+dependencies. Rollback of this SOURCE_ONLY slice is simply not selecting the
+new library/server composition; existing runtime has not changed. Do not revert
+8727's OOM work, erase UNKNOWN custody, delete peer WIP or reopen old originals.

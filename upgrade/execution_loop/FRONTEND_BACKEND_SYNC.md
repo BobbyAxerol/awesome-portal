@@ -2597,3 +2597,58 @@ Read `upgrade/execution_loop/evidence/ELP2-10/EDGE_TO_CORE_08_CORE_FIRST_ACTUAL_
 ### Edge ACTUAL READY source publication —23Oct01:42VN
 
 Local Edge source publication 0f1e26717e7bcbc15e2ed3cad37cdc6f575c964f onfeat/execution-edge-upgrade-v1_2,3Markdown/+183; actualREADY raw59bc4568b8ddaacdfa2c624e481824930ad4eb3f933aaca9fc1241a632f21453 and immutable public return8dbe5218756c5b3a422434cd6929b3ac0c17a8943da5b825e84e07425fbd450c already delivered. Officialnative9/RECORDED+STATUS and real SDK/RR READY, sourceee7e2e75/image28ea/1CPU512MiB/restart0/28446 running, fixedexpiry20:00UTC. R0 exact3Markdown/4links+anchors/secret/diff/tracking/3peerWIP PASS, no push/merge/CI. Core now solely runs existingactive-revoke-only+settlement with actualSGPREADY ref; no extraACK/PREPARED/build needed. Edge monitors exact finite source/witness, then originaldrain/revoke/status afterCore receipts; physical cleanup intentionallyPENDING while source is serving. 5short-livedSDKcontainers gone, no images/buildcachecreated, stable/dev/provider28445/Manager/command/Live untouched. Full08/read09NOT_MET until actualcorrelatedreceipts.
+
+
+### Core/Edge producer-wire implementation ACK —23Oct2026 18:20UTC
+
+Bobby's current assignment is ACKNOWLEDGED; coordinator Codex/Core. The [single cumulative return §16](evidence/ELP2-10/CORE_TO_EDGE_TS_PM_CONSOLIDATED_RETURN_2026-10-22.md#core-current-view-ack-20261023)
+was mirrored byte-identically to HK (SHA256 `62de242e580c7caefb8cca275ffbb046ef2819c601510e814f9171377b50a9b0`).
+This is a source-work ACK, not a new runtime window. Core source candidate:
+`/home/bobby/portal-core-policy-wire`, branch `chore/core-policy-wire-20261024`,
+base `2a89e6d0d6bb221e87f24da6be1e3394f8f22f4d`.
+Edge isolated source candidate:
+`/home/bobby/.worktrees/portal-core-current-policy-wire-20261024`,
+branch `feat/core-current-policy-wire-20261024`, base
+`8727e5303b1815d54bc2bdcb927a55457ff4da5b`.
+New Core authority/wire/transport and Edge adapter modules have disjoint writers;
+existing PM/Claude WIP is preserved. No runtime rollout or OOM optimization
+deployment is authorized by this source-work acknowledgement.
+
+Current-policy resolve/recheck implementation is proceeding independently of PM.
+PM at `35fa7bf69570c1c393782273cb962071ae6a8aa4` still explicitly answers
+financial proof/APPLIED §7.18 **MINIMAL_CHANGE_REQUIRED**. Edge remains the
+single TS/PM routing point. PM must freeze its original-session financial-purpose
+assertion/attestation and same-original receiver APPLIED/status contract, reusing
+existing metadata and preserving FIX-01→FIX-02; native numeric cursor,
+storage STORED and human-lease ACK are not substitutes.
+Next coordination checkpoint:23Oct19:00UTC or the first frozen wire, whichever
+comes first. No repeated retired READ/restart/active-revoke; no stable/dev,
+provider28445, command/Live, credential or DB changes. Full08/read09 and
+ELP2-10 remain NOT_MET, ELP2-11 unopened.
+
+
+### Core/Edge current-view source freeze —23Oct2026 18:55UTC
+
+[Single cumulative return §17](evidence/ELP2-10/CORE_TO_EDGE_TS_PM_CONSOLIDATED_RETURN_2026-10-22.md#core-current-view-source-20261023)
+records actual implementation, not another runtime ACK: Core
+`c808a0de564c75201fe37f73c9e17e8db8bcc95a` in isolated
+`/home/bobby/portal-core-policy-wire`; Edge
+`fa96dc385ad3c7c07fbfe881aef581acd58c4f09` in isolated
+`/home/bobby/.worktrees/portal-core-current-policy-wire-20261024` on HK.
+Core111 focused tests/strict narrow TypeScript/generator PASS; Rust23 new tests
+and40 existing scoped regressions PASS,174 distinct cases. Cross-language31
+canonical vector hashes and six decision DTO examples match. Failed full tsc
+heap attempt is explicitly recorded, not PASS. R1 source-only/R2 pending.
+
+Actual Auth/session/current scoped policy → private mTLS resolve/recheck →
+concrete Rust intersection/entrypoint and finite Core→Edge client are implemented.
+No provider/listener/image/config/schema/trust was installed or runtime gate
+repeated. Physical REPLAY purpose commissioning and PM financial §7.3 wire remain
+explicit dependencies; PM existing §7.18 is MINIMAL_CHANGE_REQUIRED. PM/Edge
+owners ACK their exact wire/selection/storage association in existing returns;
+Core does not fabricate financial source truth or acceptance. No UI changes,
+remote push, dev/main/stable/provider28445 or command/Live mutation.
+ELP2-10/full08/read09 remain NOT_MET; ELP2-11 unopened. Claude can review the
+published typed internal boundary without rebuilding components or treating it
+as a public browser endpoint. Integrated/actual-source acceptance is next after
+those precise producer pins, independently of unrelated campaign gates.
