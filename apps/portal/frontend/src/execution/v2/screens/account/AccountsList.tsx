@@ -4,10 +4,12 @@
  * One row is one binding (`GET /broker-bindings`): its venue, the account it
  * backs, the state and credential words the source published, and when it was
  * last updated. Physical equity, the sum of virtual allocations and the
- * check between them are NOT on this projection, so they print
- * `Not available` with the reason, never a dash and never 0; the binding peek
- * (the Drawer) reads the exposure per binding instead of fanning out one
- * request per row.
+ * check between them are NOT on this projection. They are read per row through
+ * two published carriers (the account resource and the binding exposure) for the
+ * first ROW_FACTS_CAP rows, four at a time (a capped fallback until the bindings
+ * list publishes them, DEBT-UXM07-052); a row beyond the cap, or a failed read,
+ * prints `Not available` with the reason, never a dash and never 0. The
+ * binding peek (the Drawer) reads the exposure for the one selected binding.
  *
  * Filters that the server can apply (environment lens, search, venue) are sent
  * with the read; the Issues lens and the credential filter narrow only the
@@ -26,7 +28,7 @@ import { withOrigin } from "../../backTo";
 import { ENV_LABEL, serializeUrlParams, useExecUrlState, withContext, type ExecEnv } from "../../urlState";
 import { BindingDrawer } from "./BindingDrawer";
 import { StateFlag, CredentialFlag, Na, Updated, Value } from "./parts";
-import { useBindingPages, useRowFacts } from "./reads";
+import { factKey, useBindingPages, useRowFacts } from "./reads";
 import {
   ACCESS_PATH, CREDENTIAL_FILTERS, ENV_TABS, ROW_CAP, ROW_FACTS_CAP, accountHref, checkOf, freshnessFlag, humanize, inScope, matchesCredential,
   readCredentialFilter, timeOf, toBindingRow, type BindingEnv, type BindingRow,
@@ -77,12 +79,14 @@ export function AccountsList({ api, binding = null, capabilities }: AccountsList
     () => all.filter((row) => inScope(row, issuesOnly) && matchesCredential(row, credentialFilter)).slice(0, ROW_CAP),
     [all, issuesOnly, credentialFilter],
   );
-  const rowFacts = useRowFacts(api, visible);
+  // Cached row figures belong to the identity that read them: another workspace, environment or authority starts from nothing.
+  const factsScope = `${params.get("workspace_id") ?? ""}|${env}|${[...capabilities].sort().join(",")}`;
+  const rowFacts = useRowFacts(api, visible, factsScope);
   const factsCapped = visible.length > ROW_FACTS_CAP;
   const factsOf = (row: BindingRow) => {
     const index = visible.indexOf(row);
     if (index >= ROW_FACTS_CAP) return "beyond" as const;
-    return rowFacts.get(row.bindingId) ?? ({ phase: "loading" } as const);
+    return rowFacts.get(factKey(row)) ?? ({ phase: "loading" } as const);
   };
   const selected = selection === null ? null : all.find((row) => row.bindingId === selection) ?? null;
 

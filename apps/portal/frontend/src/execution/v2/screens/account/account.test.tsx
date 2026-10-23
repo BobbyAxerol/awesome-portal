@@ -152,7 +152,13 @@ describe("Accounts list", () => {
     mount("/deployments/accounts");
     const rows = bodyRows(await loadedList());
     await waitFor(() => expect(cell(rows[0]!, "Check")).toContain("Within physical"), SLOW);
-    expect(cell(rows[0]!, "Physical equity")).toContain("412,880.25");
+    // Physical equity is the venue's native equity (414,010.40); the wallet balance (412,880.25) is a different figure and never stands in.
+    expect(cell(rows[0]!, "Physical equity")).toContain("414,010.40");
+    expect(cell(rows[0]!, "Physical equity")).not.toContain("412,880.25");
+    // The sub account publishes a wallet balance (118,050.00) but no native equity: a typed absence, not the wallet figure.
+    expect(cell(rows[1]!, "Binding · Venue")).toContain("bnc_sub");
+    await waitFor(() => expect(cell(rows[1]!, "Physical equity")).toContain("Not available"), SLOW);
+    expect(cell(rows[1]!, "Physical equity")).not.toContain("118,050.00");
     expect(cell(rows[0]!, "Σ Virtual · Headroom")).toContain("197,500.00");
     expect(cell(rows[0]!, "Σ Virtual · Headroom")).toContain("Headroom 215,380.25");
     // The expired-credential binding has no broker report: its check stays a typed absence.

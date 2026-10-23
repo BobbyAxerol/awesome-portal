@@ -1133,7 +1133,8 @@ export function listRowFacts(profile: ProfileEnvelope | null, exposure: BindingE
   const bucket = exposure === null || currency === null ? null : exposure.buckets.find((entry) => entry.currency === currency) ?? null;
   const money = (value: unknown) => (typeof value === "string" ? metricOf(value, "money") : value === null ? metricOf(null, "money") : undefined);
   return {
-    physical: broker === null ? undefined : broker.walletBalance,
+    // Physical equity is the venue's native equity; the wallet balance is a different figure (Account 360 prints both) and is never a fallback.
+    physical: broker === null ? undefined : broker.nativeEquity,
     currency,
     virtual: bucket === null ? undefined : money(bucket.used),
     headroom: bucket === null ? undefined : money(bucket.headroom),
