@@ -251,7 +251,7 @@ div.exec-pf-banner {
   .exec-pf-panel .exec-cards tbody td {
     padding: 6px 5px;
   }
-  .exec-pf-panel .exec-cards td[data-l="Owner"] {
+  .exec-pf-panel .exec-cards td[data-l="Manager"] {
     max-width: 104px;
     white-space: normal;
   }
@@ -269,7 +269,7 @@ div.exec-pf-banner {
     white-space: normal;
     text-align: right;
   }
-  .exec-pf-panel .exec-cards td[data-l="Owner"] .exec-pf-na,
+  .exec-pf-panel .exec-cards td[data-l="Manager"] .exec-pf-na,
   .exec-pf-panel .exec-cards td[data-l="Domain"] .exec-pf-na {
     text-align: left;
   }

@@ -7,6 +7,7 @@
  * | the portfolio resource | `getPortfolio360Resource` | always |
  * | capital, per environment | `getPortfolioCapital` x3 | always (a separate book per environment, never folded) |
  * | equity series | `getFinancialChart` (portfolio, equity) | once the resource names its environment |
+ * | contributors | `getManagerDataset` (PORTFOLIO, `group_by=alpha_id`, the page window, the selected environment) | once the portfolio dataset offers `alpha_id` |
  * | NAV series | `getManagerSeries` (one PORTFOLIO subject, metric NAV, the page window, the selected environment) | once the resource names its environment |
  * | capital ledger, per environment | `getCapitalLedger` | the Allocations tab has been opened; the selected environment's also from the start (the Overview's event ribbon sits on the equity) |
  * | correlation | `getCorrelation` | the Risk tab has been opened |
@@ -26,6 +27,7 @@ import { useRead } from "../useRead";
 import type { ManagerDatasetQuery } from "../../../../api/managerDatasetQuery";
 import { useManagerDataset } from "../../manager/useManagerDataset";
 import { servesDataset } from "../PartitionFigures";
+import { alphaGroupOffered } from "../../overview/contributorsModel";
 import type { ManagerSeriesQuery } from "../../../readers/managerSeries";
 import { useManagerSeries } from "../../series/useManagerSeries";
 
@@ -90,6 +92,14 @@ export function usePortfolioReads(api: ExecutionApi, portfolioId: string, enable
     [selected, navWindow, portfolioId, ready?.workspaceId],
   );
   const dataset = useManagerDataset(api, enabled && ready !== null && servesDataset(api), datasetQuery);
+  // Contributors: the same portfolio, environment and window grouped by alpha_id by the server (Net PnL, Return, Score per alpha).
+  // Asked once the dataset above has said it offers alpha_id as a group field.
+  const contributorsQuery = useMemo<ManagerDatasetQuery | null>(
+    () => (datasetQuery === null ? null : { ...datasetQuery, groupBy: ["alpha_id"] }),
+    [datasetQuery],
+  );
+  const datasetValue = dataset.phase === "ready" ? dataset.value : null;
+  const contributors = useManagerDataset(api, enabled && ready !== null && servesDataset(api) && datasetValue !== null && alphaGroupOffered(datasetValue) === true, contributorsQuery);
 
   const ledgers = {
     live: useRead(api, enabled && (visited.allocations || selected === "live") && present.includes("live"), `ledger|${portfolioId}|live`, (scoped) => scoped.getCapitalLedger(portfolioId, "live")),
@@ -111,7 +121,7 @@ export function usePortfolioReads(api: ExecutionApi, portfolioId: string, enable
     (scoped) => scoped.listOperationalQueueV2({ targetType: "PORTFOLIO", targetId: portfolioId, limit: 10 }),
   );
 
-  return { resource, capital, chart, nav, dataset, ledgers, correlation, operations, selected, range, present };
+  return { resource, capital, chart, nav, dataset, contributors, ledgers, correlation, operations, selected, range, present };
 }
 
 export type PortfolioReads = ReturnType<typeof usePortfolioReads>;

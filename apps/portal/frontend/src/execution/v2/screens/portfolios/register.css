@@ -1,0 +1,180 @@
+/* Portfolios register and Portfolio 360 layout (2026-10-23): metric filters, chips, basis text, sticky identity, one figure size.
+ * Loaded after css/portfolios.css by the screens that use it; scoped to .exec-pf-* so no other screen changes. */
+.exec-pf-menu-wide {
+  min-width: 300px;
+  max-width: min(360px, calc(100vw - 32px));
+}
+.exec-pf-range {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.exec-pf-range-legend {
+  padding: 0;
+  font: var(--exec-font-control);
+  color: var(--ink);
+}
+.exec-pf-range-inputs {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.exec-pf-range-inputs .exec-pf-input {
+  width: 112px;
+}
+.exec-pf-chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.exec-pf-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 2px var(--space-2) 2px var(--space-3);
+  font: var(--exec-font-data);
+  color: var(--ink);
+  background: var(--accent-soft);
+  border: 1px solid var(--accent);
+}
+.exec-pf-chip-x {
+  padding: 0 var(--space-1);
+  font: var(--exec-font-control);
+  color: var(--ink-soft);
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+.exec-pf-chip-x:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+.exec-pf-basis {
+  margin: 0;
+  font: var(--exec-font-meta);
+  color: var(--ink-soft);
+}
+.exec-pf-pair {
+  white-space: nowrap;
+}
+@media (min-width: 661px) {
+  /* The identity (compare box and Portfolio) stays put while the measures scroll. */
+  .exec-pf-panel .exec-cards thead th:nth-child(1),
+  .exec-pf-panel .exec-cards tbody td:nth-child(1) {
+    position: sticky;
+    left: 0;
+    z-index: 2;
+    width: 36px;
+    min-width: 36px;
+    max-width: 36px;
+    background: var(--paper-raised);
+  }
+  .exec-pf-panel .exec-cards thead th:nth-child(2),
+  .exec-pf-panel .exec-cards tbody td:nth-child(2) {
+    position: sticky;
+    left: 36px;
+    z-index: 2;
+    min-width: 160px;
+    max-width: 220px;
+    background: var(--paper-raised);
+    box-shadow: 1px 0 0 var(--line-strong);
+  }
+  .exec-pf-panel .exec-cards thead th:nth-child(1),
+  .exec-pf-panel .exec-cards thead th:nth-child(2) {
+    z-index: 3;
+    background: var(--paper-sunken);
+  }
+  /* "Not available" is one line in every cell: a typed absence never grows the row. */
+  .exec-pf-panel .exec-cards td .exec-pf-na,
+  .exec-pf-panel .exec-cards td .exec-pf-np {
+    max-width: none;
+    white-space: nowrap;
+  }
+  /* The compare column's head is a screen-reader name only: 36px holds the box, not the word. */
+  .exec-pf-panel .exec-cards thead th:nth-child(1) {
+    overflow: hidden;
+    text-indent: -999px;
+    white-space: nowrap;
+  }
+  /* Long names and ids end in an ellipsis (the full text is on the title); they never break the grid. */
+  .exec-pf-panel .exec-cards .exec-pf-name {
+    max-width: 208px;
+  }
+  .exec-pf-panel .exec-cards .exec-pf-title,
+  .exec-pf-panel .exec-cards .exec-pf-id {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    overflow-wrap: normal;
+  }
+  .exec-pf-panel .exec-cards th[data-numeric="true"],
+  .exec-pf-panel .exec-cards td[data-numeric="true"] {
+    white-space: nowrap;
+  }
+}
+@media (max-width: 660px) {
+  /* A card holds its label and the figure side by side: a long figure may break before its unit instead of leaving the card. */
+  .exec-pf-panel .exec-cards td[data-numeric="true"] .exec-mgr-num {
+    white-space: normal;
+    text-align: right;
+  }
+  .exec-pf-panel .exec-cards .exec-pf-score,
+  .exec-pf-panel .exec-cards .exec-pf-score-list,
+  .exec-pf-panel .exec-cards .exec-pf-score-line {
+    align-items: flex-end;
+    white-space: normal;
+  }
+}
+/* Capital statements in Portfolio 360: every row is the label on the left, the partition caption over the right-aligned figure. */
+.exec-pf-captable .exec-part-line {
+  flex-direction: column;
+  align-items: flex-end;
+  flex-wrap: nowrap;
+  gap: 0;
+}
+.exec-pf-captable .exec-part-line .exec-mgr-num,
+.exec-pf-captable .exec-part-line .exec-mgr-na {
+  margin-left: 0;
+  font: var(--exec-font-num);
+  font-variant-numeric: tabular-nums;
+}
+.exec-pf-captable td {
+  white-space: nowrap;
+}
+/* KPI tiles: wide enough for a 24px figure with its unit on one line. */
+.exec-pf-kpis {
+  display: flex;
+  flex-wrap: wrap;
+}
+.exec-pf-kpis > .exec-pf-kpi {
+  flex: 1 1 230px;
+}
+.exec-pf-kpi-value {
+  white-space: nowrap;
+}
+.exec-pf-kpi-value .exec-pf-unit {
+  margin-left: var(--space-1);
+}
+.exec-pf-kpi-score {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  white-space: nowrap;
+}
+.exec-pf-kpi-score .exec-pf-score,
+.exec-pf-kpi-score .exec-part-line {
+  align-items: flex-start;
+}
+.exec-pf-kpi-score .exec-pf-score-val {
+  font: var(--exec-font-kpi);
+  font-variant-numeric: tabular-nums;
+}

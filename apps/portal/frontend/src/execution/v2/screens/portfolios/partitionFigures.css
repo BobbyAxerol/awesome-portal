@@ -1,13 +1,39 @@
 .exec-part { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
 .exec-part-line { display: flex; gap: 8px; align-items: baseline; justify-content: space-between; }
-.exec-part-label { font-size: 11px; opacity: 0.7; white-space: nowrap; }
+.exec-part-label { font: var(--exec-font-caption); opacity: 0.7; white-space: nowrap; }
 /* In a narrow tile the label goes on its own line and the figure keeps its unit: a value never splits across lines. */
 .exec-part-line { flex-wrap: wrap; }
 .exec-part-line .exec-mgr-num,
 .exec-part-line .exec-mgr-na,
 .exec-part-line .exec-blk-na { white-space: nowrap; margin-left: auto; }
-/* Inside a KPI tile the lines use the data size, not the tile's large figure size. */
-.exec-pf-kpi-value .exec-part,
-.exec-blk-kpi-value .exec-part,
-.exec-pf-kpi-value .exec-part .exec-mgr-num,
-.exec-blk-kpi-value .exec-part .exec-mgr-num { font: var(--exec-font-data); }
+/* Inside a KPI tile one partition reads like every other tile (label above, the figure at the KPI size, left aligned, never split);
+ * several partitions are lines at the number size, because a stack of 24px figures would not fit a tile. */
+.exec-pf-kpi-value .exec-part-line,
+.exec-blk-kpi-value .exec-part-line { flex-direction: column; align-items: flex-start; justify-content: flex-start; gap: 0; }
+.exec-pf-kpi-value .exec-part-line .exec-mgr-num,
+.exec-pf-kpi-value .exec-part-line .exec-mgr-na,
+.exec-blk-kpi-value .exec-part-line .exec-mgr-num,
+.exec-blk-kpi-value .exec-part-line .exec-mgr-na { margin-left: 0; font: var(--exec-font-num); }
+.exec-pf-kpi-value .exec-part-line:only-child .exec-mgr-num,
+.exec-blk-kpi-value .exec-part-line:only-child .exec-mgr-num { font: var(--exec-font-kpi); }
+/* One secondary size inside figure cells: labels, units and "Not available" all read at the caption size. */
+.exec-cards td[data-numeric="true"] .exec-part-label,
+.exec-cards td[data-numeric="true"] .exec-pf-na,
+.exec-cards td[data-numeric="true"] .exec-pf-np,
+.exec-cards td[data-numeric="true"] .exec-pf-unit,
+.exec-cards td[data-numeric="true"] .exec-mgr-na { font: var(--exec-font-caption); }
+/* A score is a figure: value at the number size, band and notes at the caption size, nothing wraps. */
+.exec-pf-score-list { align-items: flex-end; }
+.exec-pf-score-line { display: flex; flex-direction: column; align-items: flex-end; gap: 0; }
+.exec-pf-score { display: inline-flex; flex-direction: column; align-items: flex-end; gap: 2px; white-space: nowrap; }
+.exec-pf-score-top { display: inline-flex; align-items: baseline; gap: var(--space-2); }
+.exec-pf-score-val { font: var(--exec-font-num); font-variant-numeric: tabular-nums; color: var(--ink); }
+.exec-pf-score-sub { display: inline-flex; gap: var(--space-2); font: var(--exec-font-caption); color: var(--ink-faint); }
+.exec-pf-score-parts { display: inline-flex; gap: var(--space-3); font: var(--exec-font-caption); color: var(--ink-soft); }
+.exec-pf-score-partname { color: var(--ink-faint); }
+.exec-pf-prov { color: var(--warn); }
+.exec-pf-band { padding: 0 var(--space-2); font: var(--exec-font-caption); color: var(--ink-soft); border: 1px solid var(--line-strong); }
+.exec-pf-band[data-band="very_good"], .exec-pf-band[data-band="good"] { color: var(--good); border-color: var(--good); }
+.exec-pf-band[data-band="neutral"], .exec-pf-band[data-band="fair"] { color: var(--ink); border-color: var(--line-strong); }
+.exec-pf-band[data-band="weak"] { color: var(--warn); border-color: var(--warn); }
+.exec-pf-score[data-state="absent"] .exec-pf-score-top { color: var(--ink-faint); }

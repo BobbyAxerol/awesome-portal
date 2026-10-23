@@ -37,18 +37,21 @@ import { holds, V2_NAV_TOKEN } from "../../shell/roleNav";
 import { useExecUrlState, withContext } from "../../urlState";
 import { freshnessFlag, humanize } from "./format";
 import {
-  ROW_CAP, SORT_KEYS, branchReasonText, countLine, currenciesOf, degradedBranches, filterRows, parseSort, readDomainFilter, sortRows, toRows, writeSort,
+  MONEY_SORT_KEYS, ROW_CAP, SORT_KEYS, branchReasonText, countLine, currenciesOf, degradedBranches, filterRows, parseSort, readDomainFilter, sortRows, toRows, writeSort,
   type DomainFilter, type SortKey,
 } from "./listModel";
 import type { ManagerDatasetQuery } from "../../../api/managerDatasetQuery";
 import { useManagerDataset } from "../manager/useManagerDataset";
-import { groupsByPortfolio, servesDataset } from "./PartitionFigures";
+import { groupsByPortfolio, publishes, rowCountsByPortfolio, servesDataset } from "./PartitionFigures";
+import { FilterChips, RangeFilters, type FilterChip } from "./RangeFilters";
+import { RANGES, SCORE_KEYS, SCORE_MISSING, SCORE_STATE_PARAM, parseRange, rangeText, writeRange, type Range, type RangeId } from "./registerMetrics";
 import { OPTIONAL_COLUMNS, PortfolioTable, readHidden, writeHidden, type ColumnId, type PortfolioFigures } from "./PortfolioTable";
 import { COMPARE_OFF_REASON, DEFAULT_ROUTES, FROM_LIST, joinQuery, type PortfolioRoutes } from "./routes";
 import { COMPARE_MAX, COMPARE_MIN, IN_PARAM, partitionByCurrency, selectionFrom, withSelection } from "./selection";
 import { useRead } from "./useRead";
 
 import "../../css/portfolios.css";
+import "./register.css";
 import { formatInstant } from "../../boundary";
 
 export const PORTFOLIOS_SCREEN_KEY = "portfolios" as const;
@@ -69,23 +72,34 @@ const SEARCH_DEBOUNCE_MS = 300;
 
 const SORT_LABEL: Readonly<Record<SortKey, string>> = {
   name: "Name",
-  owner: "Owner",
+  owner: "Manager",
   allocations: "Allocations",
   deployments: "Deployments",
   allocated: "Allocated capital",
   updated: "Last updated",
+  nav: "Economic capital",
+  pnl: "Net PnL",
+  ret: "Return",
+  dd: "Drawdown",
+  hhi: "HHI",
+  score: "Portfolio score",
 };
 
 const LOAD_MORE_REASON = "The read publishes no cursor.";
-/** What the register does not carry and has no column for, said once (the five measures are columns). */
+/** The score is a column; this line only appears while no portfolio group publishes it (then the column says Not published too). */
 const UNPUBLISHED_MEASURES: readonly UnavailableFact[] = [
   { label: "Score", id: "FE-011", why: "Policy not set" },
 ];
 const SORT_RULES: readonly (readonly [string, string])[] = [
   ["Money", "Sorts inside one currency; pick the currency first"],
-  ["Rows with no value", "Sort last in both directions"],
+  ["Numbers", "Compared as exact decimals, never as text or floats"],
+  ["Rows with no value", "Sort last in both directions (a missing score is never 0)"],
+  ["Several partitions", "A portfolio with figures in more than one economic partition has no single figure until a currency is picked: it sorts and filters as having none"],
+  ["Score", "Direct from the portfolio NAV, as published. The band is the spec's band for the published value; the page never computes a score"],
   ["Unallocated", "Always last, and not comparable"],
 ];
+/** Where sort and filter run, said once: the published portfolio read has no query. */
+const LOCAL_ORDER_NOTE = "Sort and filters apply to the loaded portfolios and their published group figures. The portfolio groups of the Manager dataset carry no sort or filter of their own yet.";
 
 export function DeniedPortfolios({ routes }: { routes: PortfolioRoutes }) {
   return (
@@ -118,7 +132,7 @@ export default function PortfolioListScreen({ api, capabilities, routes = DEFAUL
   );
   const dataset = useManagerDataset(api, permitted && servesDataset(api), datasetQuery);
   const figures = useMemo<PortfolioFigures | null>(
-    () => (dataset.phase === "ready" ? { environment: url.value.env, groups: groupsByPortfolio(dataset.value) } : null),
+    () => (dataset.phase === "ready" ? { environment: url.value.env, groups: groupsByPortfolio(dataset.value), rows: rowCountsByPortfolio(dataset.value) } : null),
     [dataset, url.value.env],
   );
 
@@ -126,6 +140,15 @@ export default function PortfolioListScreen({ api, capabilities, routes = DEFAUL
   const domain: DomainFilter | null = readDomainFilter(params.get("domain"));
   const hidden = readHidden(params.get("hide"));
   const compact = params.get("density") === "compact";
+  const ranges = useMemo(() => {
+    const out: Partial<Record<RangeId, Range>> = {};
+    for (const spec of RANGES) {
+      const range = parseRange(params.get(spec.param));
+      if (range !== null) out[spec.id] = range;
+    }
+    return out;
+  }, [params]);
+  const scoreMissingOnly = params.get(SCORE_STATE_PARAM) === SCORE_MISSING;
   const { sort } = parseSort(sortRaw);
   const picked = selectionFrom(params);
   const selected = useMemo(() => new Set(picked.ids), [picked.ids.join(",")]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -133,10 +156,18 @@ export default function PortfolioListScreen({ api, capabilities, routes = DEFAUL
   /* ── rows ─────────────────────────────────────────────────────────── */
   const loaded = useMemo(() => (envelope ? toRows(envelope.items) : []), [envelope]);
   const currencies = useMemo(() => currenciesOf(loaded), [loaded]);
-  const filtered = q !== null || domain !== null;
+  const rangeCount = Object.keys(ranges).length + (scoreMissingOnly ? 1 : 0);
+  const filtered = q !== null || domain !== null || rangeCount > 0;
+  const groups = figures?.groups ?? null;
   const visible = useMemo(
-    () => sortRows(filterRows(loaded, q, domain), sort, ccy).slice(0, ROW_CAP),
-    [loaded, q, domain, sort, ccy],
+    () => sortRows(filterRows(loaded, q, domain, { ranges, scoreMissing: scoreMissingOnly, currency: ccy, groups }), sort, ccy, groups).slice(0, ROW_CAP),
+    [loaded, q, domain, ranges, scoreMissingOnly, sort, ccy, groups],
+  );
+  // A range is offered when the register has a figure to compare: Allocated capital always; the group measures once a group publishes them.
+  const scorePublished = groups !== null && [...groups.values()].some((group) => publishes(group, SCORE_KEYS.score));
+  const offered = useMemo<readonly RangeId[]>(
+    () => RANGES.filter((spec) => spec.source === "allocated" || (groups !== null && [...groups.values()].some((group) => publishes(group, spec.key!)))).map((spec) => spec.id),
+    [groups],
   );
   const domainCounts = useMemo(() => ({
     all: loaded.length,
@@ -170,9 +201,28 @@ export default function PortfolioListScreen({ api, capabilities, routes = DEFAUL
   };
   const clearFilters = () => {
     const next = new URLSearchParams(params);
-    for (const key of ["q", "domain"]) next.delete(key);
+    for (const key of ["q", "domain", SCORE_STATE_PARAM, ...RANGES.map((spec) => spec.param)]) next.delete(key);
     setParams(next);
   };
+  const setRange = (id: RangeId, range: Range | null) => {
+    const spec = RANGES.find((entry) => entry.id === id)!;
+    const next = new URLSearchParams(params);
+    if (range === null) next.delete(spec.param);
+    else next.set(spec.param, writeRange(range));
+    setParams(next, { replace: true });
+  };
+  const setScoreMissing = (on: boolean) => {
+    const next = new URLSearchParams(params);
+    if (on) next.set(SCORE_STATE_PARAM, SCORE_MISSING);
+    else next.delete(SCORE_STATE_PARAM);
+    setParams(next, { replace: true });
+  };
+  const chips: FilterChip[] = [
+    ...(q !== null ? [{ id: "q", text: `Search: ${q}`, clear: () => url.set({ q: null }, { replace: true }) }] : []),
+    ...(domain !== null ? [{ id: "domain", text: `Domain: ${domain === "real" ? "Real-funded" : "Simulated"}`, clear: () => setLocal("domain", null) }] : []),
+    ...RANGES.flatMap((spec) => (ranges[spec.id] === undefined ? [] : [{ id: spec.id, text: rangeText(spec, ranges[spec.id]!, ccy), clear: () => setRange(spec.id, null) }])),
+    ...(scoreMissingOnly ? [{ id: SCORE_STATE_PARAM, text: "Score missing or insufficient evidence", clear: () => setScoreMissing(false) }] : []),
+  ];
 
   // The search box commits after a pause; the URL is the state. The timer calls
   // the newest setter, never the one from the render that started it.
@@ -203,7 +253,7 @@ export default function PortfolioListScreen({ api, capabilities, routes = DEFAUL
       : narrowed ? `${visible.length} of ${loaded.length} loaded portfolios` : `${loaded.length} ${loaded.length === 1 ? "portfolio" : "portfolios"}`
     : "";
   // `sort=allocated:*` in the address with no currency: sortRows has nothing to compare, so the order is the name order. Say so.
-  const sortFallsBack = sort.key === "allocated" && ccy === null;
+  const sortFallsBack = MONEY_SORT_KEYS.includes(sort.key) && ccy === null;
   const compareOn = routes.compare !== null;
   const comparable = compareOn && chosen.length >= COMPARE_MIN && chosen.length <= COMPARE_MAX && unknownChosen.length === 0;
   const compareHref = routes.compare === null ? null : withContext(joinQuery(routes.compare, `${IN_PARAM}=${picked.ids.join(",")}&from=${FROM_LIST}`), params);
@@ -246,7 +296,7 @@ export default function PortfolioListScreen({ api, capabilities, routes = DEFAUL
         </div>
       </header>
 
-      <NotAvailableLine facts={UNPUBLISHED_MEASURES} className="exec-pf-na-line" />
+      {scorePublished ? null : <NotAvailableLine facts={UNPUBLISHED_MEASURES} className="exec-pf-na-line" />}
       {(incomplete && envelope) || degraded.length > 0 ? (
         <div className="exec-pf-banner" role="status">
           {/* One banner: a degraded branch already says what is missing, so the generic partial line is only for a partial read with no named branch. */}
@@ -308,8 +358,8 @@ export default function PortfolioListScreen({ api, capabilities, routes = DEFAUL
                   onChange={(event) => url.set({ sort: writeSort({ key: event.target.value as SortKey, dir: sort.dir }) }, { replace: true })}
                 >
                   {SORT_KEYS.map((key) => (
-                    <option key={key} value={key} disabled={key === "allocated" && ccy === null}>
-                      Sort: {SORT_LABEL[key]}{key === "allocated" && ccy === null ? " (pick a currency)" : ""}
+                    <option key={key} value={key} disabled={MONEY_SORT_KEYS.includes(key) && ccy === null}>
+                      Sort: {SORT_LABEL[key]}{MONEY_SORT_KEYS.includes(key) && ccy === null ? " (pick a currency)" : ""}
                     </option>
                   ))}
                 </select>
@@ -320,22 +370,29 @@ export default function PortfolioListScreen({ api, capabilities, routes = DEFAUL
             </span>
             <span className="exec-pf-spacer" />
             <details className="exec-pf-pop">
+              <summary className="exec-pf-btn">Filters{rangeCount > 0 ? ` (${rangeCount})` : ""}</summary>
+              <RangeFilters ranges={ranges} scoreMissing={scoreMissingOnly} currency={ccy} windowLabel={url.value.window} offered={offered} onRange={setRange} onScoreMissing={setScoreMissing} />
+            </details>
+            <details className="exec-pf-pop">
               <summary className="exec-pf-btn">Columns</summary>
               <div className="exec-pf-menu" role="group" aria-label="Columns">
                 <label className="exec-pf-menuitem"><input type="checkbox" checked disabled title="Portfolio is always shown" /> Portfolio</label>
                 {OPTIONAL_COLUMNS.map((c) => (
                   <label key={c.id} className="exec-pf-menuitem">
-                    <input type="checkbox" checked={!hidden.has(c.id)} onChange={(event) => toggleColumn(c.id, event.target.checked)} /> {c.label}
+                    <input type="checkbox" checked={!hidden.has(c.id)} onChange={(event) => toggleColumn(c.id, event.target.checked)} /> <span title={c.hint}>{c.label}</span>
                   </label>
                 ))}
               </div>
             </details>
             <button type="button" className="exec-pf-btn" aria-pressed={compact} onClick={() => setLocal("density", compact ? null : "compact")}>Compact</button>
-            {filtered ? <button type="button" className="exec-pf-btn" onClick={clearFilters}>Clear filters</button> : null}
           </div>
+          <FilterChips chips={chips} onClearAll={clearFilters} />
+          <p className="exec-pf-basis" data-testid="basis-text">
+            Basis: {url.value.env === "live" ? "Real-funded" : url.value.env === "paper" ? "Paper" : "Sandbox"} · one economic partition per figure, one currency each, never summed · Net PnL, Return, Drawdown and Score follow the {url.value.window === "ALL" ? "ALL window (not published yet)" : `${url.value.window} window`}; Economic capital and Allocated capital are current.
+          </p>
 
           {sortFallsBack ? (
-            <p className="exec-pf-note" role="status" data-testid="sort-fallback">Sorted by name. Pick a currency to sort by allocated capital.</p>
+            <p className="exec-pf-note" role="status" data-testid="sort-fallback">Sorted by name. Pick a currency to sort by {SORT_LABEL[sort.key].toLowerCase()}.</p>
           ) : null}
 
           <div className="exec-pf-selbar" role="status" aria-live="polite">
@@ -356,6 +413,7 @@ export default function PortfolioListScreen({ api, capabilities, routes = DEFAUL
             sort={sort}
             onSort={headerSort}
             currency={ccy}
+            windowLabel={url.value.window}
             figures={figures}
           />
 
@@ -365,7 +423,7 @@ export default function PortfolioListScreen({ api, capabilities, routes = DEFAUL
             {capped ? <span className="exec-pf-note">Showing the first {ROW_CAP} rows. Narrow the filters to see the rest.</span> : null}
           </div>
           {filtered || envelope.truncated ? (
-            <p className="exec-pf-note" title="The read has no server filter: search, domain and sort apply to the loaded portfolios.">Filters cover the {loaded.length} loaded {loaded.length === 1 ? "portfolio" : "portfolios"} only.</p>
+            <p className="exec-pf-note" title={LOCAL_ORDER_NOTE}>Filters cover the {loaded.length} loaded {loaded.length === 1 ? "portfolio" : "portfolios"} only.</p>
           ) : null}
 
           <details className="exec-pf-rules">

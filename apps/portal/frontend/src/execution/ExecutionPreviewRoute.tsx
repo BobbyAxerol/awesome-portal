@@ -230,6 +230,8 @@ export function windowLockFor(screenId: string, context: EnvLockContext = {}, is
   // Overview: its fund series reads (NAV, Net PnL, Return) take the bar's window, so the control is drawn and pressed means followed.
   // `null` is "no lock"; `undefined` would keep the bar's generic "server takes no window" lock.
   if (screenId === "EXECUTION_COMMAND_CENTER_SCREEN" && isV2("overview")) return null;
+  // Portfolios (register and 360): the group figures, NAV series and contributors all take the bar's window, so the control is drawn.
+  if (screenId === "EXECUTION_PORTFOLIO_360_SCREEN" && isV2("portfolios")) return null;
   if (screenId === "EXECUTION_OPERATIONS_QUEUE_SCREEN" && isV2("ops")) return OPERATIONS_WINDOW_LOCK;
   if (screenId === "EXECUTION_FULL_BLOTTER_SCREEN" && isV2("blotter")) return BLOTTER_WINDOW_LOCK;
   if (context.hasDeploymentId !== true) return undefined;

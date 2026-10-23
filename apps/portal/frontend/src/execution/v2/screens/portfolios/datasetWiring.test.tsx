@@ -40,7 +40,7 @@ describe("Portfolios list: Net PnL column from the FLEET dataset grouped by port
     const table = await screen.findByRole("table", { name: "Portfolios" }, { timeout: 5000 });
     await waitFor(() => expect(table.querySelector(".exec-part")).not.toBeNull());
     const row = [...table.querySelectorAll("tbody tr")].find((tr) => tr.textContent?.includes(PF.core)) as HTMLElement;
-    const pnl = row.querySelector("td[data-l='Net PnL']");
+    const pnl = row.querySelector("td[data-l^='Net PnL']");
     expect(lines(pnl)).toEqual(["Paper · USDT+100.25 USDT", "Paper · EUR-12.50 EUR", "Real-funded · USDT0.00 USDT"]);
     expect(pnl?.textContent).not.toContain("Not published");
     // The question: FLEET, the URL's environment and window, grouped by portfolio.
@@ -50,21 +50,21 @@ describe("Portfolios list: Net PnL column from the FLEET dataset grouped by port
   it("a portfolio with no group in the dataset says so in every measure column, never a zero; a group that lacks a key keeps that column's Not published with its id", async () => {
     mountList(withDataset(makeApi().api, () => datasetFor("FLEET", "someone-else")));
     const table = await screen.findByRole("table", { name: "Portfolios" }, { timeout: 5000 });
-    await waitFor(() => expect(table.querySelector("td[data-l='Net PnL'] .exec-pf-na")).not.toBeNull());
+    await waitFor(() => expect(table.querySelector("td[data-l^='Net PnL'] .exec-pf-na")).not.toBeNull());
     const row = [...table.querySelectorAll("tbody tr")].find((tr) => tr.textContent?.includes(PF.core)) as HTMLElement;
-    expect(row.querySelector("td[data-l='Net PnL']")?.textContent).toContain("No paper figures are published for this portfolio");
-    for (const label of ["NAV", "Return", "Drawdown", "Concentration"]) {
-      expect(row.querySelector(`td[data-l='${label}']`)?.textContent, label).toContain("No paper figures are published for this portfolio");
+    expect(row.querySelector("td[data-l^='Net PnL']")?.textContent).toContain("No paper figures are published for this portfolio");
+    for (const label of ["Economic capital", "Return", "Drawdown", "HHI"]) {
+      expect(row.querySelector(`td[data-l^='${label}']`)?.textContent, label).toContain("No paper figures are published for this portfolio");
     }
   });
 
   it("a group that publishes only net_pnl keeps NAV, Return, Drawdown and Concentration on their own Not published ids", async () => {
     mountList(withDataset(makeApi().api, () => datasetFor("FLEET", PF.core)));
     const table = await screen.findByRole("table", { name: "Portfolios" }, { timeout: 5000 });
-    await waitFor(() => expect(table.querySelector("td[data-l='Net PnL'] .exec-part")).not.toBeNull());
+    await waitFor(() => expect(table.querySelector("td[data-l^='Net PnL'] .exec-part")).not.toBeNull());
     const row = [...table.querySelectorAll("tbody tr")].find((tr) => tr.textContent?.includes(PF.core)) as HTMLElement;
-    for (const [label, id] of [["NAV", "FE-013"], ["Return", "FE-006, FE-025"], ["Drawdown", "FE-013, FE-025"], ["Concentration", "FE-005"]] as const) {
-      expect(row.querySelector(`td[data-l='${label}']`)?.textContent, label).toContain(`Not published (${id})`);
+    for (const [label, id] of [["Economic capital", "FE-013"], ["Return", "FE-006, FE-025"], ["Drawdown", "FE-013, FE-025"], ["HHI", "FE-005"]] as const) {
+      expect(row.querySelector(`td[data-l^='${label}']`)?.textContent, label).toContain(`Not published (${id})`);
     }
   });
 
@@ -79,12 +79,12 @@ describe("Portfolios list: Net PnL column from the FLEET dataset grouped by port
     };
     mountList(withDataset(makeApi().api, () => datasetFor("FLEET", PF.core, withKeys)));
     const table = await screen.findByRole("table", { name: "Portfolios" }, { timeout: 5000 });
-    await waitFor(() => expect(table.querySelector("td[data-l='NAV'] .exec-part")).not.toBeNull());
+    await waitFor(() => expect(table.querySelector("td[data-l='Economic capital'] .exec-part")).not.toBeNull());
     const row = [...table.querySelectorAll("tbody tr")].find((tr) => tr.textContent?.includes(PF.core)) as HTMLElement;
-    expect(row.querySelector("td[data-l='NAV']")?.textContent).toContain("10,250.75");
-    expect(row.querySelector("td[data-l='Return']")?.textContent).toContain("+3.42%");
-    expect(row.querySelector("td[data-l='Drawdown']")?.textContent).toContain("-4.80%");
-    expect(row.querySelector("td[data-l='Concentration']")?.textContent).toContain("0.2850");
+    expect(row.querySelector("td[data-l='Economic capital']")?.textContent).toContain("10,250.75");
+    expect(row.querySelector("td[data-l^='Return']")?.textContent).toContain("+3.42%");
+    expect(row.querySelector("td[data-l^='Drawdown']")?.textContent).toContain("-4.80%");
+    expect(row.querySelector("td[data-l='HHI']")?.textContent).toContain("0.2850");
   });
 
   it("keeps Not published (FE-005, FE-025) when the dataset is not served", async () => {
@@ -92,7 +92,7 @@ describe("Portfolios list: Net PnL column from the FLEET dataset grouped by port
     const table = await screen.findByRole("table", { name: "Portfolios" }, { timeout: 5000 });
     await settle();
     const row = [...table.querySelectorAll("tbody tr")].find((tr) => tr.textContent?.includes(PF.core)) as HTMLElement;
-    expect(row.querySelector("td[data-l='Net PnL']")?.textContent).toContain("Not published (FE-005, FE-025)");
+    expect(row.querySelector("td[data-l^='Net PnL']")?.textContent).toContain("Not published (FE-005, FE-025)");
   });
 });
 

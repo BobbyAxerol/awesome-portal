@@ -38,7 +38,8 @@ const search = () => new URLSearchParams(where().split("?")[1] ?? "");
 const table = () => screen.getByRole("table", { name: "Portfolios" });
 const loaded = () => screen.findByRole("table", { name: "Portfolios" }, SLOW);
 const bodyRows = () => within(table()).getAllByRole("row").slice(1);
-const cell = (row: HTMLElement, label: string) => row.querySelector(`td[data-l='${label}']`)?.textContent ?? "";
+// A windowed column's label ends with its window (`Net PnL · 90D`): match the name, exact for the others.
+const cell = (row: HTMLElement, label: string) => (row.querySelector(`td[data-l='${label}']`) ?? row.querySelector(`td[data-l^='${label} \u00b7 ']`))?.textContent ?? "";
 const names = () => bodyRows().map((row) => row.querySelector(".exec-pf-title")?.textContent ?? "");
 
 describe("register", () => {
@@ -51,12 +52,13 @@ describe("register", () => {
     await loaded();
     expect(names()).toEqual(["Canary", "Core", "Pilot", "Satellite", "Yen-Carry", "Unallocated"]);
     const core = bodyRows().find((r) => r.textContent?.includes("Core"))!;
-    expect(cell(core, "Owner")).toBe("M. Tran");
+    expect(cell(core, "Manager")).toBe("M. Tran");
     expect(cell(core, "Allocations")).toBe("5");
-    expect(cell(core, "Deployments")).toBe("5");
+    // Alphas / Dep.: the alpha count comes from the dataset group (not served here), the deployment count from the read.
+    expect(cell(core, "Alphas / Dep.")).toBe("Not available · alpha count not published / 5");
     expect(cell(core, "Domain")).toContain("Real-funded and Simulated");
     expect(cell(core, "Domain")).toContain("paper, live");
-    expect(cell(core, "State")).toContain("Active");
+    expect(cell(core, "Health")).toContain("Active");
   });
 
   it("prints allocated capital as exact per-currency strings and adds nothing", async () => {
@@ -88,18 +90,20 @@ describe("register", () => {
     const pilot = bodyRows().find((r) => r.textContent?.includes("Pilot"))!;
     expect(cell(pilot, "Allocated capital")).toBe("Not available · no allocation published");
     expect(whyText(pilot.querySelector("td[data-l='Allocated capital']"))).toBe("no allocation published");
-    expect(cell(pilot, "Owner")).toBe("Not available · owner not published");
-    expect(whyText(pilot.querySelector("td[data-l='Owner']"))).toBe("owner not published");
+    expect(cell(pilot, "Manager")).toBe("Not available · owner not published");
+    expect(whyText(pilot.querySelector("td[data-l='Manager']"))).toBe("owner not published");
     expect(cell(pilot, "Allocations")).toBe("0");
   });
 
-  it("keeps NAV, Net PnL, Return, Drawdown and Concentration as columns (hi-fi), each cell Not available with its request id; Score is named once", async () => {
+  it("keeps Economic capital, Net PnL, Return, Drawdown, HHI and Portfolio score as columns (hi-fi), each cell Not available with its request id when no group is served; Score is named once", async () => {
     mount(makeApi().api);
     await loaded();
-    const ids: Record<string, string> = { NAV: "FE-013", "Net PnL": "FE-005, FE-025", Return: "FE-006, FE-025", Drawdown: "FE-013, FE-025", Concentration: "FE-005" };
+    const ids: Record<string, string> = {
+      "Economic capital": "FE-013", "Net PnL": "FE-005, FE-025", Return: "FE-006, FE-025", Drawdown: "FE-013, FE-025", HHI: "FE-005", "Portfolio score": "FE-011",
+    };
     for (const row of bodyRows()) {
       for (const [label, id] of Object.entries(ids)) {
-        const td = row.querySelector(`td[data-l="${label}"]`);
+        const td = row.querySelector(`td[data-l="${label}"], td[data-l^="${label} \u00b7 "]`);
         expect(td, label).not.toBeNull();
         expect(td?.textContent, label).toContain("Not available");
         expect(td?.textContent, label).toContain(`Not published (${id})`);
@@ -121,7 +125,7 @@ describe("register", () => {
     expect(box.title).toContain("nothing to compare");
     expect(cell(una, "Allocated capital")).toBe("Not published");
     expect(cell(una, "Domain")).toContain("Not available");
-    expect(cell(una, "State")).toContain("Unknown");
+    expect(cell(una, "Health")).toContain("Unknown");
   });
 
   it("links a portfolio to its 360 and keeps the context params on the link", async () => {
@@ -134,12 +138,13 @@ describe("register", () => {
     expect(href).toContain("window=30d");
   });
 
-  it("opens with Domain hidden (the hi-fi default), so the eleven columns fit; the chooser brings it back and the address remembers it", async () => {
+  it("opens with Domain hidden (the hi-fi default); the chooser brings it back and the address remembers it", async () => {
     mount(makeApi().api);
     await loaded();
     for (const row of bodyRows()) {
       expect([...row.querySelectorAll("td")].map((td) => td.getAttribute("data-l"))).toEqual([
-        "Compare", "Portfolio", "Owner", "State", "Allocations", "Deployments", "Allocated capital", "NAV", "Net PnL", "Return", "Drawdown", "Concentration",
+        "Compare", "Portfolio", "Manager", "Alphas / Dep.", "Allocations", "Economic capital", "Allocated capital",
+        "Net PnL \u00b7 90D", "Return \u00b7 90D", "Drawdown \u00b7 90D", "HHI", "Portfolio score \u00b7 90D", "Health",
       ]);
     }
     expect(search().has("hide")).toBe(false);
@@ -157,7 +162,8 @@ describe("register", () => {
     await loaded();
     for (const row of bodyRows()) {
       expect([...row.querySelectorAll("td")].map((td) => td.getAttribute("data-l"))).toEqual([
-        "Compare", "Portfolio", "Owner", "State", "Domain", "Allocations", "Deployments", "Allocated capital", "NAV", "Net PnL", "Return", "Drawdown", "Concentration",
+        "Compare", "Portfolio", "Manager", "Alphas / Dep.", "Allocations", "Domain", "Economic capital", "Allocated capital",
+        "Net PnL \u00b7 90D", "Return \u00b7 90D", "Drawdown \u00b7 90D", "HHI", "Portfolio score \u00b7 90D", "Health",
       ]);
     }
     expect(table().className).toBe("exec-cards");
@@ -212,11 +218,11 @@ describe("header, banners and footer", () => {
     expect(screen.getAllByText("6 portfolios").length).toBeGreaterThan(0);
   });
 
-  it("never adds a total NAV for the set: every NAV cell is Not available", async () => {
+  it("never adds a total NAV for the set: every Economic capital cell is Not available", async () => {
     mount(makeApi().api);
     await loaded();
     expect(screen.queryByText(/Total NAV/)).toBeNull();
-    for (const row of bodyRows()) expect(cell(row, "NAV")).toContain("Not available");
+    for (const row of bodyRows()) expect(cell(row, "Economic capital")).toContain("Not available");
   });
 
   it("switches to a compact table from the toolbar and the URL", async () => {
@@ -247,7 +253,7 @@ describe("search, domain, currency and sort", () => {
     await waitFor(() => expect(search().get("q")).toBe("nguyen"), SLOW);
     expect(names()).toEqual(["Canary", "Satellite"]);
     expect(screen.getAllByText("2 of the top 6 / 9 portfolios").length).toBeGreaterThan(0);
-    expect(screen.getByText("Filters cover the 6 loaded portfolios only.").getAttribute("title")).toContain("The read has no server filter");
+    expect(screen.getByText("Filters cover the 6 loaded portfolios only.").getAttribute("title")).toContain("carry no sort or filter of their own");
   });
 
   it("filters by domain; a mixed portfolio belongs to both", async () => {
@@ -284,18 +290,21 @@ describe("search, domain, currency and sort", () => {
     mount(makeApi().api);
     await loaded();
     const head = (name: string) => within(table()).getByRole("columnheader", { name });
-    expect(head("Owner").getAttribute("aria-sort")).toBeNull();
-    fireEvent.click(within(head("Owner")).getByRole("button"));
+    expect(head("Manager").getAttribute("aria-sort")).toBeNull();
+    fireEvent.click(within(head("Manager")).getByRole("button"));
     expect(search().get("sort")).toBe("owner:asc");
-    expect(head("Owner").getAttribute("aria-sort")).toBe("ascending");
-    fireEvent.click(within(head("Owner")).getByRole("button"));
+    expect(head("Manager").getAttribute("aria-sort")).toBe("ascending");
+    fireEvent.click(within(head("Manager")).getByRole("button"));
     expect(search().get("sort")).toBe("owner:desc");
-    expect(head("Owner").getAttribute("aria-sort")).toBe("descending");
+    expect(head("Manager").getAttribute("aria-sort")).toBe("descending");
     // Money sorts inside one currency: with none chosen the head is not a control and says why.
     expect(within(head("Allocated capital")).queryByRole("button")).toBeNull();
     expect(head("Allocated capital").getAttribute("title")).toBe("Money sorts inside one currency; pick the currency first");
-    // The unpublished measures are columns with no sort: the head is not a control.
-    expect(within(head("NAV")).queryByRole("button")).toBeNull();
+    // Money measures sort inside one currency too: Economic capital and Net PnL are not controls until a currency is picked.
+    expect(within(head("Economic capital")).queryByRole("button")).toBeNull();
+    expect(within(head("Net PnL \u00b7 90D")).queryByRole("button")).toBeNull();
+    // Unit-free measures sort from the head, null-last.
+    expect(within(head("Portfolio score \u00b7 90D")).getByRole("button")).toBeTruthy();
   });
 
   it("does not repeat the Context or the domain under the title: the bar and the Domain control already say them", async () => {
@@ -370,23 +379,24 @@ describe("columns", () => {
     await loaded();
     const menu = screen.getByRole("group", { name: "Columns" });
     expect((within(menu).getByRole("checkbox", { name: "Portfolio" }) as HTMLInputElement).disabled).toBe(true);
-    // The unpublished measures are in the chooser like any other column.
-    expect(within(menu).getByRole("checkbox", { name: "NAV" })).not.toBeNull();
-    fireEvent.click(within(menu).getByRole("checkbox", { name: "Deployments" }));
+    // Every measure is in the chooser like any other column.
+    expect(within(menu).getByRole("checkbox", { name: "Economic capital" })).not.toBeNull();
+    expect(within(menu).getByRole("checkbox", { name: "Portfolio score" })).not.toBeNull();
+    fireEvent.click(within(menu).getByRole("checkbox", { name: "HHI" }));
     fireEvent.click(within(menu).getByRole("checkbox", { name: "Allocations" }));
-    expect(search().get("hide")).toBe("domain,allocations,deployments");
+    expect(search().get("hide")).toBe("allocations,domain,hhi");
     const headers = [...table().querySelectorAll("th")].map((th) => th.textContent);
-    expect(headers).not.toContain("Deployments");
+    expect(headers).not.toContain("HHI");
     expect(headers).not.toContain("Allocations");
-    expect(headers).toContain("Owner");
-    fireEvent.click(within(menu).getByRole("checkbox", { name: "Deployments" }));
-    expect(search().get("hide")).toBe("domain,allocations");
+    expect(headers).toContain("Manager");
+    fireEvent.click(within(menu).getByRole("checkbox", { name: "HHI" }));
+    expect(search().get("hide")).toBe("allocations,domain");
   });
 
   it("honours a hide list in the address and ignores a name it does not know", async () => {
     mount(makeApi().api, "/deployments/portfolios?hide=owner,nonsense");
     await loaded();
-    expect([...table().querySelectorAll("th")].map((th) => th.textContent)).not.toContain("Owner");
+    expect([...table().querySelectorAll("th")].map((th) => th.textContent)).not.toContain("Manager");
   });
 });
 

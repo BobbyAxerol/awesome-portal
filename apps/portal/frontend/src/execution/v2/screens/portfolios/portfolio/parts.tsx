@@ -10,6 +10,7 @@ import { withContext } from "../../../urlState";
 import type { ReadState } from "../useRead";
 
 import "../../../css/portfolios.css";
+import "../register.css";
 
 export function PfKpi({ label, children, note }: { label: string; children: ReactNode; note?: ReactNode }) {
   return (

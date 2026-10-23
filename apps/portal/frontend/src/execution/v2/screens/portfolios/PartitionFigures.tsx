@@ -44,6 +44,15 @@ export function groupsByPortfolio(dataset: ManagerDataset): ReadonlyMap<string, 
   return out;
 }
 
+/** `unique_row_count` of each portfolio group: the (alpha, version, portfolio) rows of the queried environment. Published, never counted here. */
+export function rowCountsByPortfolio(dataset: ManagerDataset): ReadonlyMap<string, number> {
+  const out = new Map<string, number>();
+  for (const group of dataset.groups) {
+    if (group.key.length === 1 && group.key[0]!.field === "portfolio_id" && group.key[0]!.value !== null) out.set(group.key[0]!.value, group.uniqueRowCount);
+  }
+  return out;
+}
+
 /**
  * Where `key` is published for a scope: the capital statements first, then the scope's own portfolio group. `null` when neither
  * says anything (the contract does not carry it, so the caller keeps its gap).
@@ -55,12 +64,17 @@ export function figureSource(dataset: ManagerDataset | null, key: string, portfo
   return group !== null && publishes(group, key) ? group : null;
 }
 
-export function PartitionFigures({ list, metricKey, signed = false }: { list: readonly ManagerPartitionedMetrics[]; metricKey: string; signed?: boolean }) {
+/**
+ * `labels="several"` (the register table): a partition label is printed only when the list holds more than one partition, because one
+ * partition is already named by the page basis line; the label stays on the figure's title either way.
+ */
+export function PartitionFigures({ list, metricKey, signed = false, labels = "always" }: { list: readonly ManagerPartitionedMetrics[]; metricKey: string; signed?: boolean; labels?: "always" | "several" }) {
+  const figures = figuresByPartition(list, metricKey);
   return (
     <ul className="exec-part" aria-label={`${metricKey} by economic partition`}>
-      {figuresByPartition(list, metricKey).map(({ partition, metric }) => (
-        <li key={`${partition.economicDomain}|${partition.currency}|${partition.basis}|${partition.nativeProfileRef}`} className="exec-part-line" data-domain={partition.economicDomain}>
-          <span className="exec-part-label" title={`${partition.basis} · ${partition.nativeProfileRef}`}>{partitionLabel(partition)}</span>
+      {figures.map(({ partition, metric }) => (
+        <li key={`${partition.economicDomain}|${partition.currency}|${partition.basis}|${partition.nativeProfileRef}`} className="exec-part-line" data-domain={partition.economicDomain} title={`${partitionLabel(partition)} · ${partition.basis}`}>
+          {labels === "several" && figures.length === 1 ? null : <span className="exec-part-label" title={`${partition.basis} · ${partition.nativeProfileRef}`}>{partitionLabel(partition)}</span>}
           <MetricValue metric={metric} signed={signed} />
         </li>
       ))}

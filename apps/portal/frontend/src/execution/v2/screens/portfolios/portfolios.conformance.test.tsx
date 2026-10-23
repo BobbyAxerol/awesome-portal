@@ -282,9 +282,9 @@ describe("L1 · matrix B · row states", () => {
       const money = cellOf(tr, "Allocated capital");
       if (it.allocated_by_currency.length === 0 && money !== "Not available · no allocation published") problems.push(`${it.name}: empty allocation says "${money}"`);
       for (const entry of it.allocated_by_currency as Draft[]) if (!money.includes(entry.currency)) problems.push(`${it.name}: ${entry.currency} missing`);
-      if (cellOf(tr, "Owner") !== (it.owner ?? "Not available · owner not published")) problems.push(`${it.name}: owner "${cellOf(tr, "Owner")}"`);
+      if (cellOf(tr, "Manager") !== (it.owner ?? "Not available · owner not published")) problems.push(`${it.name}: owner "${cellOf(tr, "Manager")}"`);
       if (domainOf(it.environments) === "mixed" && it.allocated_by_currency.length > 0 && !money.includes("books together")) problems.push(`${it.name}: mixed flag missing`);
-      if (it.state !== "ACTIVE" && cellOf(tr, "State").includes("Active")) problems.push(`${it.name}: ${it.state} drawn as Active`);
+      if (it.state !== "ACTIVE" && cellOf(tr, "Health").includes("Active")) problems.push(`${it.name}: ${it.state} drawn as Active`);
       if (cellOf(tr, "Allocations") !== String(it.allocation_count)) problems.push(`${it.name}: count`);
     });
     expect(problems).toEqual([]);

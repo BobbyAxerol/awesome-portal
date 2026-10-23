@@ -24,7 +24,9 @@ import type { CurrencyValue, PortfolioListEnvelope, PortfolioListItem } from "..
 import { readDecimal } from "../../boundary";
 import { compareDecimal } from "../../charts/decimal";
 import type { FlagKind } from "../../flagKinds";
+import type { ManagerPartitionedMetrics } from "../../readers/managerMetric";
 import { DOMAIN_LABEL, domainOf, humanize, type Domain } from "./format";
+import { RANGES, SCORE_KEYS, inRange, measureValue, scoreMissing, type Range, type RangeId } from "./registerMetrics";
 
 /** The DOM budget. The schema caps a page at 100 items; this holds if it ever grows. */
 export const ROW_CAP = 200;
@@ -119,17 +121,43 @@ export function readDomainFilter(raw: string | null): DomainFilter | null {
   return (DOMAIN_FILTERS as readonly string[]).includes(raw ?? "") ? (raw as DomainFilter) : null;
 }
 
-export function filterRows(rows: readonly PortfolioRow[], q: string | null, domain: DomainFilter | null): readonly PortfolioRow[] {
+/** The portfolio groups the Manager dataset published, by portfolio id (null when it is not served). */
+export type GroupMap = ReadonlyMap<string, readonly ManagerPartitionedMetrics[]> | null;
+
+export interface RowFilters {
+  q: string | null;
+  domain: DomainFilter | null;
+  /** Inclusive numeric ranges, one per measure; money ranges read the page currency. */
+  ranges?: Readonly<Partial<Record<RangeId, Range>>>;
+  /** Only portfolios with no published score value (missing, or insufficient evidence). */
+  scoreMissing?: boolean;
+  currency?: string | null;
+  groups?: GroupMap;
+}
+
+export function filterRows(rows: readonly PortfolioRow[], q: string | null, domain: DomainFilter | null, extra: Omit<RowFilters, "q" | "domain"> = {}): readonly PortfolioRow[] {
   const needle = q?.trim().toLowerCase() ?? "";
+  const currency = extra.currency ?? null;
+  const groups = extra.groups ?? null;
+  const ranges = RANGES.flatMap((spec) => {
+    const range = extra.ranges?.[spec.id];
+    return range === undefined ? [] : [{ spec, range }];
+  });
   return rows.filter((row) => {
     if (domain === "real" && row.domain !== "real" && row.domain !== "mixed") return false;
     if (domain === "simulated" && row.domain !== "simulated" && row.domain !== "mixed") return false;
+    const group = groups?.get(row.portfolioId);
+    for (const { spec, range } of ranges) {
+      const value = spec.source === "allocated" ? (currency === null ? null : allocatedIn(row, currency)) : row.unallocated ? null : measureValue(group, spec.key!, currency);
+      if (!inRange(value, range)) return false;
+    }
+    if (extra.scoreMissing && (row.unallocated ? false : !scoreMissing(group, currency))) return false;
     if (needle === "") return true;
     return [row.label, row.portfolioId, row.owner ?? ""].some((part) => part.toLowerCase().includes(needle));
   });
 }
 
-export const SORT_KEYS = ["name", "owner", "allocations", "deployments", "allocated", "updated"] as const;
+export const SORT_KEYS = ["name", "owner", "allocations", "deployments", "allocated", "updated", "nav", "pnl", "ret", "dd", "hhi", "score"] as const;
 export type SortKey = (typeof SORT_KEYS)[number];
 export interface SortSpec { key: SortKey; dir: "asc" | "desc" }
 export const DEFAULT_SORT: SortSpec = { key: "name", dir: "asc" };
@@ -162,9 +190,15 @@ export function currenciesOf(rows: readonly PortfolioRow[]): readonly string[] {
  * directions (the hi-fi rule), money sorts inside one currency, and the
  * Unallocated bucket always sorts after real portfolios.
  */
-export function sortRows(rows: readonly PortfolioRow[], sort: SortSpec, currency: string | null): readonly PortfolioRow[] {
+export function sortRows(rows: readonly PortfolioRow[], sort: SortSpec, currency: string | null, groups: GroupMap = null): readonly PortfolioRow[] {
   const sign = sort.dir === "asc" ? 1 : -1;
   const text = (a: string, b: string) => a.localeCompare(b) * sign;
+  /** Exact decimal order with the rows that have no value last in BOTH directions. */
+  const decimals = (x: string | null, y: string | null): number => {
+    if (x === null || y === null) return x === y ? 0 : x === null ? 1 : -1;
+    return compareDecimal(x, y) * sign;
+  };
+  const measure = (row: PortfolioRow, key: string): string | null => (row.unallocated ? null : measureValue(groups?.get(row.portfolioId), key, currency));
   const compare = (a: PortfolioRow, b: PortfolioRow): number => {
     if (a.unallocated !== b.unallocated) return a.unallocated ? 1 : -1;
     switch (sort.key) {
@@ -176,16 +210,20 @@ export function sortRows(rows: readonly PortfolioRow[], sort: SortSpec, currency
       case "allocations": return (a.allocationCount - b.allocationCount) * sign;
       case "deployments": return (a.deploymentCount - b.deploymentCount) * sign;
       case "updated": return text(a.updatedAt, b.updatedAt);
-      case "allocated": {
-        const x = currency === null ? null : allocatedIn(a, currency);
-        const y = currency === null ? null : allocatedIn(b, currency);
-        if (x === null || y === null) return x === y ? 0 : x === null ? 1 : -1;
-        return compareDecimal(x, y) * sign;
-      }
+      case "allocated": return decimals(currency === null ? null : allocatedIn(a, currency), currency === null ? null : allocatedIn(b, currency));
+      case "nav": return decimals(measure(a, "current_nav"), measure(b, "current_nav"));
+      case "pnl": return decimals(measure(a, "net_pnl"), measure(b, "net_pnl"));
+      case "ret": return decimals(measure(a, "return_30d_pct"), measure(b, "return_30d_pct"));
+      case "dd": return decimals(measure(a, "max_drawdown_pct"), measure(b, "max_drawdown_pct"));
+      case "hhi": return decimals(measure(a, "concentration_hhi"), measure(b, "concentration_hhi"));
+      case "score": return decimals(measure(a, SCORE_KEYS.score), measure(b, SCORE_KEYS.score));
     }
   };
-  return [...rows].sort((a, b) => compare(a, b) || a.label.localeCompare(b.label));
+  return [...rows].sort((a, b) => compare(a, b) || a.label.localeCompare(b.label) || a.key.localeCompare(b.key));
 }
+
+/** Sort keys whose figure is money: they order inside one currency, so they need the page currency. */
+export const MONEY_SORT_KEYS: readonly SortKey[] = ["allocated", "nav", "pnl"];
 
 /* ── words for the footer and the header ───────────────────────────────── */
 

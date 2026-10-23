@@ -229,7 +229,9 @@ function aggregate(rows: Draft[]): Draft[] {
     // SIMULATED group keys, inside this ONE partition only: NAV, return on allocation, drawdown, concentration of allocation.
     item.metrics.current_nav = metric(template, B, currency);
     item.metrics.return_30d_pct = pctMetric(template, A !== null && N !== null ? pct(toScaled(N), toScaled(A)) : null);
-    item.metrics.max_drawdown_pct = pctMetric(template, seedOf(key, "group-drawdown") % 6 === 0 ? null : drawdownOf(key, members.length));
+    // The seed carries the group's own rows: with the partition alone every portfolio of one currency drew the same value (all absent).
+    const salt = rows.map((row) => row.row_key).join("|");
+    item.metrics.max_drawdown_pct = pctMetric(template, seedOf(key, "group-drawdown", salt) % 5 === 0 ? null : drawdownOf(key, members.length, salt));
     item.metrics.concentration_hhi = pctMetric(template, hhi(members.map((metrics) => metrics.allocation?.availability === "AVAILABLE" ? metrics.allocation.value : null)));
     item.metrics.concentration_hhi.unit = "RATIO";
     // Row-only keys (days observed, cost drag) are not portfolio totals here and would only grow the response.
@@ -519,6 +521,79 @@ function allAnswer(path: string, search: URLSearchParams, profile: ReviewManager
   return { status: 200, body };
 }
 
+/* SIMULATED scores (FIXTURE_LAB, 2026-10-23; register section 2c). Open metric keys in `economic_partitions[].metrics` of a GROUP only:
+ *   portfolio_score (+ _p, _r, _b, _evidence) on the groups by portfolio_id, and `score` (the raw alpha q_i) on the groups by alpha_id.
+ * Exact decimals, bigint only: score = (45*P + 30*R + 25*B) / 100 with P, R, B in hundredths, so the value is exact at four places and
+ * no float, no rounding and no client arithmetic is involved. The band is NOT published (the screen maps the published value to the
+ * spec's band edges). One case per portfolio, stable across windows and surfaces: a high (very good), a good, a mid, a low, a provisional, an
+ * "insufficient evidence" typed absence and a true zero. ALL is the window gap, as for the scores block. No schema is widened. */
+type ScoreCase = "high" | "good" | "mid" | "low" | "provisional" | "insufficient" | "zero";
+const SCORE_CASES: readonly ScoreCase[] = ["high", "good", "mid", "low", "provisional", "insufficient", "zero"];
+const SCORE_CASE_OF: Record<string, ScoreCase> = {
+  pf_main: "high", pf_sat: "good", pf_core: "low", pf_TEST_ONLY_core: "provisional", pf_TEST_ONLY_satellite: "insufficient", pf_TEST_ONLY_canary: "zero",
+};
+const SCORE_RANGE: Record<ScoreCase, [bigint, bigint]> = {
+  high: [9100n, 9800n], good: [7600n, 8400n], mid: [4200n, 5800n], low: [900n, 3200n], provisional: [6200n, 7300n], insufficient: [0n, 0n], zero: [0n, 0n],
+};
+const SCORE_EVIDENCE: Record<ScoreCase, string> = { high: "0.9712", good: "0.9420", mid: "0.8834", low: "0.8120", provisional: "0.6405", insufficient: "0.1830", zero: "0.9301" };
+const SCORE_POLICY = "FIXTURE_LAB";
+const SCORE_METHOD = "FIXTURE_LAB:portfolio-score-direct-nav-v1";
+const scoreCaseOf = (id: string, environment: string): ScoreCase => SCORE_CASE_OF[id] ?? SCORE_CASES[seedOf(id, environment, "score-case") % SCORE_CASES.length]!;
+const scoreMetric = (template: Draft, value: string | null, unit: string, kind: ScoreCase, window: Draft | null, absentReason: string): Draft => {
+  const out = plainMetric(template, value, unit);
+  out.window = window === null ? null : copy(window);
+  out.methodology_ref = value === null ? null : SCORE_METHOD;
+  out.policy_revision = SCORE_POLICY;
+  out.calculation_revision = "FIXTURE_LAB:score-review.v1";
+  out.source_confidence = kind === "provisional" ? "PROVISIONAL" : "VERIFIED";
+  out.reason_code = value === null ? absentReason : null;
+  out.quality = { completeness: value === null || kind === "provisional" ? "PARTIAL" : "COMPLETE", freshness: "FRESH", reasons: ["FIXTURE_LAB_SYNTHETIC", ...(kind === "provisional" ? ["SAMPLE_BELOW_MATURITY"] : [])] };
+  out.provenance_refs = ["FIXTURE_LAB:SYNTHETIC_SCORE_NOT_SOURCE_ACCEPTANCE"];
+  return out;
+};
+const scorePart = (id: string, partition: Draft, windowName: string, part: string, kind: ScoreCase): bigint => {
+  const [lo, hi] = SCORE_RANGE[kind];
+  return hi === 0n ? 0n : lo + BigInt(seedOf(id, partition.economic_domain, windowName, part) % Number(hi - lo + 1n));
+};
+/** The five portfolio score keys of one partition entry (a group by portfolio_id). */
+function portfolioScoreMetrics(template: Draft, id: string, partition: Draft, windowName: string, window: Draft | null): Record<string, Draft> {
+  const kind = scoreCaseOf(id, partition.economic_domain);
+  const gap = windowName === "ALL";
+  const reason = gap ? ALL_GAP : "INSUFFICIENT_EVIDENCE";
+  const [P, R, B] = ["p", "r", "b"].map((part) => scorePart(id, partition, windowName, part, kind)) as [bigint, bigint, bigint];
+  const absent = gap || kind === "insufficient";
+  const hundredths = (value: bigint): string | null => (absent ? null : trimmed(value, 2));
+  return {
+    portfolio_score: scoreMetric(template, absent ? null : trimmed(45n * P + 30n * R + 25n * B, 4), "SCORE", kind, window, reason),
+    portfolio_score_p: scoreMetric(template, hundredths(P), "SCORE", kind, window, reason),
+    portfolio_score_r: scoreMetric(template, hundredths(R), "SCORE", kind, window, reason),
+    portfolio_score_b: scoreMetric(template, hundredths(B), "SCORE", kind, window, reason),
+    portfolio_score_evidence: scoreMetric(template, gap ? null : SCORE_EVIDENCE[kind], "RATIO", kind, window, reason),
+  };
+}
+/** The raw alpha score q_i under the key `score` of each group by alpha_id: same rule, never summed across alphas. */
+function alphaScoreMetric(template: Draft, id: string, partition: Draft, windowName: string, window: Draft | null): Draft {
+  const kind = scoreCaseOf(id, partition.economic_domain);
+  const gap = windowName === "ALL";
+  const absent = gap || kind === "insufficient";
+  const [P, R, B] = ["p", "r", "b"].map((part) => scorePart(id, partition, windowName, part, kind)) as [bigint, bigint, bigint];
+  return scoreMetric(template, absent ? null : trimmed(45n * P + 30n * R + 25n * B, 4), "SCORE", kind, window, gap ? ALL_GAP : "INSUFFICIENT_EVIDENCE");
+}
+/** Adds the score keys to the groups of the answer (after `groups` and the window are known). */
+function addGroupScores(body: Draft, groupFields: string[], windowName: string | null): void {
+  if (groupFields.length !== 1 || (groupFields[0] !== "portfolio_id" && groupFields[0] !== "alpha_id")) return;
+  const window = body.selected_window?.resolved ?? null;
+  const name = windowName ?? "30D";
+  for (const group of body.groups) {
+    const id = group.key[0].value as string | null;
+    if (id === null) continue;
+    for (const entry of group.economic_partitions) {
+      if (groupFields[0] === "portfolio_id") Object.assign(entry.metrics, portfolioScoreMetrics(entry.metrics.net_pnl, id, entry.partition, name, window));
+      else entry.metrics.score = alphaScoreMetric(entry.metrics.net_pnl, id, entry.partition, name, window);
+    }
+  }
+}
+
 function datasetAnswer(method: string, path: string, search: URLSearchParams, profile: ReviewManagerProfile): ReviewManagerResponse | null {
   if (method === "GET" && search.get("environment") === "ALL") return allAnswer(path, search, profile);
   const match = /^\/manager\/(fund-overview|fleet|(?:portfolios|alphas|accounts|deployments)\/([^/]+)\/overview)$/.exec(path);
@@ -653,6 +728,7 @@ function datasetAnswer(method: string, path: string, search: URLSearchParams, pr
   body.query_options.economic_partition_required_for.push("balance_total", "equity_30d_end_value");
   if (!body.query_options.window.independent_metrics.includes("balance_total")) body.query_options.window.independent_metrics.push("balance_total");
   if (windowName !== null) applyWindow(body, windowName, windowPreset);
+  addGroupScores(body, groups, windowName); // SIMULATED score keys (register 2c), after the window so ALL stays a gap
   if (Buffer.byteLength(JSON.stringify(body)) > body.query_policy.maximum_response_bytes) return problem(400, "MANAGER_REVIEW_RESPONSE_TOO_LARGE", "Reduce limit/grouping for this bounded review response.");
   return { status: 200, body };
 }
