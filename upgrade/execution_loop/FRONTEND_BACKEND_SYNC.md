@@ -2,6 +2,15 @@
 
 ## Codex ownership — six approved backend packages, 23 October
 
+Package3 delivered8822d58f2: new `execution-visit-digest.d.ts` GET/seen operations with a
+Portal-owned durable user/workspace baseline. Claude connects existing C1 frame,
+not new UI: NO_BASELINE/READY/EMPTY, `may_mark_seen`, exact revision/version POST,
+workspace-pinned hrefs. Real coverage is bounded authorized observations, not a
+complete event feed. Rich linked fixture is available independently of Edge.
+Migration150 + isolated PG19/19/restore PASS; final unit17/17, contract/HTTP7/7
+and ledger22/22 PASS (overlap; exact receipt in package packet). No preview installation
+or native-manager allowlist widening. AWAITING_CONSUMER_REVIEW.
+
 Closeout update:0297c4902 links scoped account/deployment contributions and capital
 to the common graph; affected consumer84/84 and producer15/15 PASS, BFF buildPASS.
 Package1 backend fixture ready; Claude browser/rollout not claimed. Package2

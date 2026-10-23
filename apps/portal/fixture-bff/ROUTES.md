@@ -336,3 +336,17 @@ rows keep their dates).
 
 Regenerate the table after changing `routeTable.ts`:
 `FIXTURE_BFF_WRITE_ROUTES=1 npx vitest run src/fixtureBff/server.test.ts` in `apps/portal/frontend`.
+# Visit digest — package3 additive review adapter
+
+`GET /api/v1/execution/visit-digest?workspace_id=...` and
+`POST /api/v1/execution/visit-digest/seen?workspace_id=...` use the published
+`execution-visit-digest` contract. POST accepts the preceding GET's `mark_seen`
+body. Populated/layout-stress seed a named synthetic earlier baseline against
+shared scaled deployments/operations; sparse starts `NO_BASELINE`. GET does not
+advance seen state. POST is still refused under `FIXTURE_WRITES=refuse`.
+
+State is bounded to32 user/workspace keys per server and resets on restart;
+production uses the separate Core PostgreSQL baseline, never this in-memory map.
+`ws_TEST_DENIED`/`ws_TEST_UNAVAILABLE` exercise404/503. A stale snapshot/version
+gets409; no UI/credential/command implementation is introduced by this adapter.
+

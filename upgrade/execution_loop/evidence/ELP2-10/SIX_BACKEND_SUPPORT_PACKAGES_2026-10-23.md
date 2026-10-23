@@ -10,7 +10,7 @@ The existing frozen integration gate is not restarted for this work.
 | --- | --- | --- |
 | 1 Linked fixtures | BFF uses shared synthetic facts; same IDs across tables/detail/charts; exact financial endpoints; contract and navigation tests | BACKEND_FIXTURE_READY 0297c4902; browser/visual and rollout not claimed |
 | 2 Fleet timing | Exact lifecycle fact binding; entered-at/days agree with as-of; ambiguous/missing transitions remain explicit; schema/producer tests | BACKEND_SOURCE_DELIVERED 40d3540c7; consumer and real transition-source acceptance pending |
-| 3 Visit digest | User/workspace baseline, snapshot revision, explicit seen transition, typed changes and safe links; authorization/isolation/replay tests plus populated fixture | QUEUED |
+| 3 Visit digest | User/workspace baseline, snapshot revision, explicit seen transition, typed changes and safe links; authorization/isolation/replay tests plus populated fixture | BACKEND_SOURCE_DELIVERED 8822d58f2; PG/contract/fixture gates PASS; not installed/consumer accepted |
 | 4 Accounts | Authorized same-snapshot counts and list figures projection; reuse published DTO; no per-row read amplification; query/permission tests | QUEUED |
 | 5 Contributors | Authorized alpha attribution and bounded group continuation beyond 200; full-population aggregate semantics; no sum of returns/scores; pagination/security tests | QUEUED |
 | 6 Names/finance | Authorized portfolio label joins; exact grain/unit/source binding for financial DTO/fixtures; no wallet-equity substitution or cross-currency sums | QUEUED |
@@ -135,3 +135,115 @@ remains40d3540c7; Claude accepts its enum/options before opting into timed fixtu
 Claude next: integrate focused diffs, schedule fixture/web rebuild, review journeys
 at1280/660 without redesign. Next backend package3 visit digest is already approved.
 Ignored build output/dependency links retained; no test process or diagnostic left.
+
+## Package3 — per-user/workspace visit digest
+
+Entry: Bobby assigned package3 explicitly; source `1e21ee7fb0ff0b0966e4ed40b5e47f6d3feb8e27`, clean
+`chore/complete-fixture-review-20261023` in `/home/bobby/portal-fixture-support`.
+Read Claude FE_CAT_5_CONTRIBUTORS_DIGEST_2026-10-23 and current review2 C1 stories.
+Claude lane observed `ca011f3c4` at entry, then `b1642585b`; its UI files remain untouched.
+Primary owns pure projection/schema/BFF/shared registration; subagent owns
+store/service/controller and focused tests; primary reviewed authorization and bounds.
+
+### Implementation and scope
+
+- New GET `/api/v1/execution/visit-digest` and POST `/api/v1/execution/visit-digest/seen`,
+  optional `workspace_id`; actor always from session. Existing command-center feature
+  gate and current scoped reader fences reused. No external request or new grant.
+- Portal Core owns the comparison baseline, not Edge. Migration150 adds one row
+  per current user/workspace membership; fingerprints only, no historical labels,
+  financial amounts or new event ledger. Removing membership/user/workspace cascades
+  its baseline; no production database modified. GET does not write.
+- POST requires Origin + session-bound `x-portal-csrf` and cookie, exact snapshot
+  revision and expected baseline version. Same-revision retry is idempotent. Another
+  tab/stale source returns409; never silently mark newer unseen facts. Transaction
+  commits after final reader authority fence, rollback on revoke/failure.
+- Bounded200 observations/96KiB stored fingerprints, max2 admitted writers/process,
+  reduced for smaller configured pools with a reserved Core connection (max1 refuses
+  seen with503 before acquiring a client),
+  nonblocking user/workspace advisory lock; no unbounded wait queue. Source and pool
+  failure return typed503; no success without persistence. Core-owned source does
+  not require another Edge acknowledgement to design/test the UI.
+- Current real source is the authorized command-center triage/today/source slice.
+  `coverage=BOUNDED_OBSERVATIONS` is explicit: no complete history, NAV-delta or
+  resolved/deleted inference from rows falling out of a top-N query. Newly visible
+  fact is `NEW_OBSERVATION`, not proof of newly created business object. Revoked
+  previous facts never appear in output. Missing workflow lineage in scoped source
+  remains missing; this package does not invent authority/source events.
+- Rich fixture uses the shared scaled deployment/operation graph with an explicit
+  seeded earlier baseline, changed/new observations, safe object links and mark-seen
+  state. User/workspace stores are isolated and bounded32 in the fixture server;
+  scenario resets on fixture server restart. This is not the durable real adapter.
+
+### Claude handoff (AWAITING_CONSUMER_REVIEW)
+
+Generated `packages/contracts/generated/execution-visit-digest.d.ts`:
+`executionVisitDigestGetV1`, `executionVisitDigestSeenV1`, `VisitDigest`, `VisitDigestSeen`.
+Regenerate: `npm run generate:execution-visit-digest` in contracts workspace.
+Canonical example: `fixtures/execution-visit-digest.synthetic.valid.json`, three
+cases first_visit/changed/seen; standalone schema and OpenAPI publish the same shape.
+
+Connect Overview's existing C1 frame via typed port; no redesigned component needed.
+Check response `workspace_id` against request, and `may_mark_seen` before enabling
+the explicit action (`READ_ONLY_PROFILE` for retained reads / refused fixture writes).
+`NO_BASELINE` is a first-visit state, not an empty history. Explicitly mark seen using
+the returned `mark_seen` body; don't do it during GET/render/mount. Display current
+label/value/as_of and server href without parsing strings into permissions/events;
+retain workspace context. EMPTY after acknowledgement is not a complete-history
+claim. Refetch on409 and let the user act again;503 retains the prior UI baseline.
+Fixture writes obey `FIXTURE_WRITES=refuse`; no polling/source connection is added.
+Ordinary profile supports authenticated seen after migration. Retained GET keeps
+Core workspace and all retained writes remain forbidden. `native_manager_review_v1`
+has a closed allowlist that does NOT include these new routes: its commissioning
+is separate, not silently widened by this feature or claimed available on preview.
+Review populated, first-visit sparse, empty-after-seen, wrong workspace, two-tab
+conflict, reload and1280/660 overflow. Browser/visual and real installed API remain
+Claude/commissioning acceptance, not claimed by producer tests.
+
+### Verification / remaining
+
+Contract + actual loopback BFF7/7PASS; route/persistence ledger22/22PASS. Initial
+HTTP attempt was refused by sandbox EPERM, not a product regression; bounded
+loopback retake passed. PG migration/rollback test receipt follows below. No remote
+push, runtime change, preview rebuild, command or Live; normal integration hook is
+deferred to frozen landing under §10.10c, not bypassed as a completion claim.
+Backend next approved package4 Accounts projection; packages5/6 remain queued.
+Rollback: revert source slice before installation; after future migration, disable
+consumer/route use and preserve baseline table rather than destructive rollback.
+
+Independent review found and fixed a CSRF request type mismatch, undersized-pool
+admission and terminal version overflow. Native profile allowlist limitation is
+accepted/documented, not bypassed. Frozen PG cell tests migration/store before the
+two final conservative admission/version guards; those receive focused unit retake,
+not a false claim of the entire HEAD being one installed candidate.
+
+### Final producer receipt — 8822d58f2
+
+23 code/schema/test/ledger files, +1916/-6 (includes generated OpenAPI/schema/types,
+not 1916 lines of hand-written backend). No frontend source/component changes.
+
+- Final isolated `control-api-test.sh` selected3specs: buildPASS, migration150PASS,
+  **19/19PASS** (includes4 real PostgreSQL tests), restore drillPASS with scoped
+  access digests. Real DB tests cover persistence/isolation, final-fence rollback,
+  nonblocking concurrent lock and removal-of-membership cleanup.
+- Latest focused service/controller retake **17/17PASS**, including pool-size1
+  refusal, terminal version bound and retained-profile behavior. Overlaps15 tests
+  in the frozen PG run; do NOT add totals as distinct coverage.
+- Final contract/loopback fixture **7/7PASS**; ledger **22/22PASS**; fixture BFF build
+  PASS; generator check/snapshot609files PASS; diff/tracking checks PASS.
+- Initial full build failed on missing request `csrfSecretHash` type; fixed and
+  retaken. First failed log SHA256
+  `dd1d0ac76d471a4021f30a5ccc600562465ab6aa56b4c1a89cbafbe8a179fe5c`.
+- Final local log `/tmp/visit-digest-focused-gate-final.log`, SHA256
+  `e062fbef25c41d1d915b61f64e992fdd394a65807fc420009889746deff8859d`.
+- C4 cleanup: exact test node/Postgres/network suffix18987952814118471 absent
+  after script trap; loopback server closed. Root218GiB free/65% used.
+  NO_ACTION_NEEDED; keep dependency links/build outputs for reuse, no image prune.
+
+Intermediate code commit used focused-gate exception §10.10c (hooks disabled only
+for this command); no normal-hook/landing claim. Docs verification R0 §10.10d.
+Exit: backend baseline + bounded-source adapter + fixture contract delivered.
+Installation/native commissioning and Claude consumer/browser remain NOT_RUN;
+full event history/NAV change feed is not claimed. Claude can implement fixture
+consumer now from this SHA. Backend next package4; no new Bobby decision needed
+for that already-approved package, no implicit release/runtime authority.
