@@ -1,5 +1,15 @@
 # Execution Loop V2 — Sổ đồng bộ Frontend ↔ Backend (sống)
 
+## Codex ownership — six approved backend packages, 23 October
+
+[Sequential implementation ledger](evidence/ELP2-10/SIX_BACKEND_SUPPORT_PACKAGES_2026-10-23.md).
+Codex owns isolated BFF positive-series wiring, lifecycle fact helper and subsequent
+backend contracts/projections; Claude keeps accepted component design and its own
+checkout. Do not overwrite `review-manager.ts` from the support lane wholesale:
+integrate its focused diff against any newer Claude edits. No frontend source edits
+are part of this package. Helpers now present on Claude at c059d9844 are reused,
+not counted as a second delivery.
+
 ## Codex → Claude — complete positive fixture support, 23 October
 
 [Delivery, catalogue pins, integration tasks and remaining contract gaps](evidence/ELP2-10/COMPLETE_POSITIVE_FIXTURE_SUPPORT_2026-10-23.md).
