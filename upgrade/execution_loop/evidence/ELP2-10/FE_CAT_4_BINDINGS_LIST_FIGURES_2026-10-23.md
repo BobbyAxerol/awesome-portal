@@ -1,5 +1,7 @@
 # FE-CAT-4 / DEBT-UXM07-052: figures and counts on the bindings list (2026-10-23)
 
+> **CORRECTED IN PART (2026-10-23, Codex review): native equity is NOT a published source today. See the section 'Corrections' at the end. The original text below is kept as history.**
+
 Level: R0 note, contract SOURCE_ONLY (additive, optional), FE and fixture lane FIXTURE_VERIFIED. Nothing here connects a real source. Approved by the Codex closeout of 2026-10-23, section 5 (FE-CAT-4 / DEBT-052). Replaces the capped two-read fallback for every row whose producer publishes the figures; the fallback stays for rows without them.
 
 ## 1. Decision in one paragraph
@@ -80,3 +82,8 @@ The L0 fixtures are not edited.
 - The N29 product-acceptance pin (`services/portal-execution-edge-rs/contracts/n29-product-acceptance-v1/product-acceptance.v1.json`, key `br72_schema_sha256`) pins the old `execution-manager-lists.v1.schema.json` hash. It must be re-pinned from the gate's table (then EDS-12, which pins N29), not by hand. Not done in this slice (no full hook).
 - The populated-profile Accounts visual baselines will differ for the live list (two rows now carry published figures, one row a second currency line, tab counts). They were not re-recorded here.
 - `contracts-snapshot.json`: exactly two hash lines changed (schema, d.ts) and one added (the new fixture); `tooling/snapshot.py` TRACKED gained the new fixture.
+
+## Corrections (2026-10-23, after Codex review CODEX_NUMERIC_AND_FINANCIAL_REVIEW_2026-10-23.md and CLAUDE_POST_FREEZE_REVIEW_2026-10-23.md)
+
+- Row `native equity` above (the table row that names `broker_account_sync_effective.native_equity` as the source): that field is **not published**. Codex: the generated relation census `eds11r-manager-relation-registry.generated.ts:708-759` lists buying power, currency, status, source and sync time, but neither native equity nor wallet balance, and `profile-read.service.ts:87-90` also lacks both. `FE_CAT_8_9_ADDITIVE_FIELDS_2026-10-23.md` line 36 already said so; the two notes now agree.
+- Consequence: the Accounts "Physical equity" cell stays a typed absence on any real response until Edge publishes native equity (an Edge input: two DECIMAL columns in the row's currency, observed at `synced_at`). The FIXTURE_LAB lane serves it only to draw the design; it is labelled FIXTURE_LAB and is not evidence of a real source.
