@@ -147,13 +147,16 @@ export function FleetDatasetTable({
   const scalar = equityScalarOf(equityScalar);
   const carried = metricKeys === null || metricKeys.includes("score");
   const money = (key: string, gap: UnpublishedFact, signed = false, keys: readonly string[] | null = metricKeys) =>
-    (row: ManagerRow) => <PartitionFigures partitions={row.economicPartitions} metricKey={key} metricKeys={keys} gap={gap} signed={signed} />;
+    (row: ManagerRow) => <PartitionFigures partitions={row.economicPartitions} metricKey={key} metricKeys={keys} gap={gap} signed={signed} quietTag />;
 
   const render: Readonly<Record<string, CardsColumn<ManagerRow>["render"]>> = {
     alpha: (row) => (
       <span className="exec-fleet-alpha">
         <Link className="exec-fleet-name exec-fleet-trunc" title={row.name ?? row.alphaId} to={hrefFor(row)} onClick={(event) => event.stopPropagation()}>{row.name ?? row.alphaId}</Link>
-        <span className="exec-fleet-version">{row.alphaVersionId}</span>
+        <span className="exec-fleet-version">
+          {row.alphaVersionId}
+          {showEnvironment && row.environment !== undefined ? <> <span className="exec-fleet-env-tag" data-environment={row.environment}>{ENVIRONMENT_LABEL[row.environment]}</span></> : null}
+        </span>
       </span>
     ),
     owner: (row) => row.ownerUserId,
@@ -169,7 +172,7 @@ export function FleetDatasetTable({
       const spark = environment === null || sparks === undefined ? undefined : sparks.get(sparkKey(environment as "paper" | "sandbox" | "live", row.portfolioId));
       return (
         <span className="exec-fleet-equity">
-          <PartitionFigures partitions={row.economicPartitions} metricKey={scalar.key} metricKeys={scalar.id === "drawdown" ? null : metricKeys} gap={scalar.id === "value" ? EQUITY_GAP : { fe: "FE-013", what: scalar.label }} />
+          <PartitionFigures partitions={row.economicPartitions} metricKey={scalar.key} metricKeys={scalar.id === "drawdown" ? null : metricKeys} gap={scalar.id === "value" ? EQUITY_GAP : { fe: "FE-013", what: scalar.label }} quietTag />
           {spark !== undefined && spark.kind === "series" ? (
             <span className="exec-fleet-spark" title={`Portfolio ${row.portfolioId} NAV, 30 days (${spark.basis}); the series port has portfolio and fund subjects only, not the alpha version`}>
               <Spark values={spark.values} unit="money" label={`Portfolio ${row.portfolioId} NAV, 30 days`} width={64} height={16} />
@@ -212,13 +215,25 @@ export function FleetDatasetTable({
   };
 
   const columns: CardsColumn<ManagerRow>[] = [];
-  if (selectionReasonId !== undefined) {
+  if (selectionReasonId !== undefined && shownOptional?.has("select")) {
     columns.push({
       key: "select", label: "Select",
       render: (row) => <input type="checkbox" disabled aria-describedby={selectionReasonId} aria-label={`Select ${row.name ?? row.alphaId} for compare`} />,
     });
   }
   for (const spec of DATASET_COLUMNS) {
+    if (spec.key === "select") continue;
+    if (spec.key === "environment") {
+      if (showEnvironment && (shownOptional?.has("environment") ?? false)) {
+        columns.push({
+          key: "environment", label: "Environment",
+          render: (row) => row.environment === undefined
+            ? <NaWhy className="exec-fleet-np" reason="This row does not name its environment." />
+            : <span className="exec-fleet-env-tag" data-environment={row.environment}>{ENVIRONMENT_LABEL[row.environment]}</span>,
+        });
+      }
+      continue;
+    }
     if (spec.optional ? !(shownOptional?.has(spec.key) ?? false) : spec.key !== "alpha" && (hidden?.has(spec.key) ?? false)) continue;
     const field = sortFieldOf(spec, scalar);
     const offered = field !== null && offeredSorts !== null && offeredSorts.includes(field);
@@ -231,19 +246,11 @@ export function FleetDatasetTable({
       ...(!askable ? { sortOffReason: field === null ? "This column is not a published sort field." : !offered ? "The dataset does not offer this field for sorting." : "A money order needs one economic partition: choose a Basis." } : {}),
       render: render[spec.key]!,
     });
-    if (spec.key === "alpha" && showEnvironment) {
-      columns.push({
-        key: "environment", label: "Environment",
-        render: (row) => row.environment === undefined
-          ? <NaWhy className="exec-fleet-np" reason="This row does not name its environment." />
-          : <span className="exec-fleet-env-tag" data-environment={row.environment}>{ENVIRONMENT_LABEL[row.environment]}</span>,
-      });
-    }
   }
   return (
     <CardsTable
       label="Alpha fleet"
-      className={selectionReasonId !== undefined ? "exec-fleet-dataset exec-fleet-sel" : "exec-fleet-dataset"}
+      className={selectionReasonId !== undefined && shownOptional?.has("select") ? "exec-fleet-dataset exec-fleet-sel" : "exec-fleet-dataset"}
       columns={columns}
       rows={rows}
       rowKey={(row) => row.rowKey}

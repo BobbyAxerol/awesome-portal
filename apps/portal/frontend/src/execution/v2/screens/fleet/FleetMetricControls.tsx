@@ -165,12 +165,14 @@ export function DensityToggle({ compact, onChange }: { compact: boolean; onChang
 /* ── columns ───────────────────────────────────────────────────────────── */
 
 export interface DatasetColumnsMenuProps {
+  /** An ALL read: the Environment column is offered (a single-environment table has nothing to repeat). */
+  showEnvironment?: boolean;
   hidden: ReadonlySet<string>;
   shownOptional: ReadonlySet<string>;
   onToggle(key: string, shown: boolean): void;
 }
 
-export function DatasetColumnsMenu({ hidden, shownOptional, onToggle }: DatasetColumnsMenuProps) {
+export function DatasetColumnsMenu({ hidden, shownOptional, onToggle, showEnvironment = false }: DatasetColumnsMenuProps) {
   const { open, setOpen, wrap, button, leave } = usePopover();
   const menuId = useId();
   return (
@@ -178,7 +180,7 @@ export function DatasetColumnsMenu({ hidden, shownOptional, onToggle }: DatasetC
       <button ref={button} type="button" className="exec-fleet-btn" aria-expanded={open} aria-controls={open ? menuId : undefined} onClick={() => setOpen((v) => !v)}>Columns ▾</button>
       {open ? (
         <div id={menuId} className="exec-fleet-menu" role="group" aria-label="Columns">
-          {DATASET_COLUMNS.filter((column) => column.key !== "alpha").map((column) => (
+          {DATASET_COLUMNS.filter((column) => column.key !== "alpha" && (column.key !== "environment" || showEnvironment)).map((column) => (
             <label key={column.key} className="exec-fleet-menuitem">
               <input type="checkbox" checked={column.optional ? shownOptional.has(column.key) : !hidden.has(column.key)} onChange={(event) => onToggle(column.key, event.target.checked)} />
               {column.label}

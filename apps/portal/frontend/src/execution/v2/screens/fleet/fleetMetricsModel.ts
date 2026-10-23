@@ -44,18 +44,22 @@ export interface DatasetColumnSpec {
 
 export const DATASET_COLUMNS: readonly DatasetColumnSpec[] = [
   { key: "alpha", label: "Alpha", guide: "Alpha / Version", optional: false, sortField: "name" },
-  { key: "owner", label: "Owner", guide: "Owner / Portfolio", optional: false, sortField: "owner_user_id" },
+  { key: "owner", label: "Owner", guide: "Owner / Portfolio", optional: true, sortField: "owner_user_id" },
   { key: "portfolio", label: "Portfolio", guide: "Owner / Portfolio", optional: false, sortField: "portfolio_id" },
   { key: "stage", label: "Current stage", guide: "Stage Presence", optional: false, sortField: "current_stage" },
-  { key: "in-stage", label: "In stage", guide: "Stage Presence", optional: false, sortField: null },
+  { key: "in-stage", label: "In stage", guide: "Stage Presence", optional: true, sortField: null },
   { key: "allocation", label: "Alloc", guide: "Alloc", optional: false, sortField: "allocation", numeric: true },
   { key: "pnl", label: "PNL Amount", guide: "PNL Amount", optional: false, sortField: "net_pnl", numeric: true },
-  { key: "unrealized", label: "Unrealized PNL", guide: "Unrealized PNL", optional: false, sortField: "unrealized_pnl", numeric: true },
-  { key: "balance", label: "Account balance", guide: "Account Balance", optional: false, sortField: "balance_total", numeric: true },
-  { key: "equity", label: "Equity 30D", guide: "Equity 30D", optional: false, sortField: "equity_30d_end_value", numeric: true },
+  { key: "unrealized", label: "Unrealized PNL", guide: "Unrealized PNL", optional: true, sortField: "unrealized_pnl", numeric: true },
+  { key: "balance", label: "Account balance", guide: "Account Balance", optional: true, sortField: "balance_total", numeric: true },
+  { key: "equity", label: "Equity 30D", guide: "Equity 30D", optional: true, sortField: "equity_30d_end_value", numeric: true },
   { key: "health", label: "Health", guide: "Health / Source State", optional: false, sortField: "health" },
-  { key: "source", label: "Source", guide: "Health / Source State", optional: false, sortField: "source_state" },
+  { key: "source", label: "Source", guide: "Health / Source State", optional: true, sortField: "source_state" },
   { key: "qbts", label: "QBTS", guide: "QBTS", optional: false, sortField: "score", numeric: true },
+  // The Select column (compare capability) is optional too: no capability exists, so its disabled boxes are one click away, not a default column.
+  // ALL reads only: the environment is always stated in the Alpha cell; this column repeats it on its own when switched on.
+  { key: "environment", label: "Environment", guide: "FE-CAT-3 environment label", optional: true, sortField: null },
+  { key: "select", label: "Select", guide: "8.3 bulk selection (explicit capability only)", optional: true, sortField: null },
   // Optional (guide 8.1 "additional optional columns"): only those the dataset can carry. The others are recorded, not drawn.
   { key: "venue", label: "Venue", guide: "8.1 optional: venue / profile", optional: true, sortField: "venue" },
   { key: "lifecycle", label: "Lifecycle", guide: "8.1 optional: archive monitor state", optional: true, sortField: "lifecycle" },
@@ -65,6 +69,12 @@ export const DATASET_COLUMNS: readonly DatasetColumnSpec[] = [
   { key: "coverage", label: "Score coverage", guide: "8.1 optional: score coverage", optional: true, sortField: null },
 ];
 
+/**
+ * The default set fits a 1440px screen without a sideways scroll (Bobby, 2026-10-23: QBTS must be visible at first sight): Alpha, Portfolio,
+ * Current stage, Alloc, PNL Amount, QBTS, Health (+ Environment on an ALL read). The rest of guide 8.1 (Owner, In stage, Unrealized PNL, Account
+ * balance, Equity 30D, Source) is one click away in the Columns menu and in the URL (`cols=`). "In stage" is also a column the published
+ * dataset cannot fill today (every cell would be `Not published (FE-027)`), so it is not a default.
+ */
 export const OPTIONAL_SHOWN_PARAM = "cols";
 export function parseShownOptional(raw: string | null): ReadonlySet<string> {
   const optional = new Set(DATASET_COLUMNS.filter((column) => column.optional).map((column) => column.key));

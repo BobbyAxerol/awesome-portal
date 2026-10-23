@@ -58,9 +58,11 @@ function Where() {
   const { pathname, search } = useLocation();
   return <output data-testid="where">{pathname + search}</output>;
 }
+const ALL_COLUMNS = "cols=owner,in-stage,unrealized,balance,equity,source,select,environment";
+const withAllColumns = (entry: string): string => `${entry}${entry.includes("?") ? "&" : "?"}${ALL_COLUMNS}`;
 const mount = (api: ExecutionApi, entry: string) =>
   render(
-    <MemoryRouter initialEntries={[entry]}>
+    <MemoryRouter initialEntries={[withAllColumns(entry)]}>
       <FleetScreen api={api} />
       <Where />
     </MemoryRouter>,

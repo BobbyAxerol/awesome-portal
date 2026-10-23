@@ -20,7 +20,7 @@
   color: var(--ink-faint);
   border: 1px solid var(--line-strong);
 }
-.exec-fleet-qbts { display: inline-flex; align-items: center; gap: var(--space-2); white-space: nowrap; }
+.exec-fleet-qbts { display: inline-flex; align-items: center; gap: var(--space-1); white-space: nowrap; }
 .exec-fleet-qbts-why { font: var(--exec-font-meta); color: var(--ink-faint); }
 .exec-fleet-equity { display: inline-flex; flex-direction: column; align-items: flex-end; gap: 2px; }
 .exec-fleet-spark { display: inline-flex; align-items: center; }
@@ -53,6 +53,18 @@
   .exec-fleet-dataset.exec-fleet-sel thead th:nth-child(2),
   .exec-fleet-dataset.exec-fleet-sel tbody td:nth-child(2) { position: static; background: transparent; width: auto; min-width: 0; max-width: none; }
 }
+
+/* One line wide: the default columns must fit 1440. The alpha stacks its version under the name, cells pack tighter, content centres vertically
+ * so a one-line figure beside a two-line stage is not padded with empty space. */
+.exec-fleet-dataset .exec-fleet-alpha { flex-direction: column; align-items: flex-start; gap: 0; }
+.exec-fleet-dataset .exec-fleet-trunc { max-width: 12ch; }
+.exec-fleet-dataset thead th,
+.exec-fleet-dataset tbody td { padding-inline: var(--space-2); }
+.exec-fleet-dataset tbody td { vertical-align: middle; }
+/* A flag is one line: a squeezed column must widen, never break "NEEDS ATTENTION" letter by letter into a tall row. */
+.exec-fleet-dataset .exec-flag,
+.exec-fleet-dataset .exec-fleet-stagecell { white-space: nowrap; }
+@media (max-width: 660px) { .exec-fleet-dataset .exec-fleet-alpha { flex-direction: row; align-items: baseline; gap: var(--space-2); } }
 
 /* Density (guide 8.3): compact trims the row height and the cell padding; the figures keep their size. */
 .exec-fleet-compact .exec-cards tbody td { height: 24px; padding-block: 2px; }

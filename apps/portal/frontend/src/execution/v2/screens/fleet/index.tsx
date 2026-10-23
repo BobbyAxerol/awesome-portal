@@ -744,7 +744,7 @@ export default function FleetScreen({ api, workspaceId, streamFlag = FLEET_STREA
               </label>
             ) : null}
             <span className="exec-fleet-grow" />
-            {datasetMode ? <DatasetColumnsMenu hidden={hiddenDataset} shownOptional={shownOptional} onToggle={setDatasetColumn} /> : <ColumnsMenu hidden={hiddenColumns} onToggle={setColumn} />}
+            {datasetMode ? <DatasetColumnsMenu showEnvironment={allMode} hidden={hiddenDataset} shownOptional={shownOptional} onToggle={setDatasetColumn} /> : <ColumnsMenu hidden={hiddenColumns} onToggle={setColumn} />}
           </div>}
           {archived || !datasetMode ? null : (
             <div className="exec-fleet-tool2" role="group" aria-label="Metric filters">

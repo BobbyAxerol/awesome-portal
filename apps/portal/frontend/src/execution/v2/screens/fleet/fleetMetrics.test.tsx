@@ -60,9 +60,11 @@ function Where() {
   const { pathname, search } = useLocation();
   return <output data-testid="where">{pathname + search}</output>;
 }
-const mount = (api: ExecutionApi, entry = "/execution/fleet?stage=paper") =>
+// Every guide 8.1 column on (the default set is only the seven that fit 1440; one test below pins that default).
+const ALL_COLUMNS = "cols=owner,in-stage,unrealized,balance,equity,source,select";
+const mount = (api: ExecutionApi, entry = "/execution/fleet?stage=paper", all = true) =>
   render(
-    <MemoryRouter initialEntries={[entry]}>
+    <MemoryRouter initialEntries={[all ? `${entry}${entry.includes("?") ? "&" : "?"}${ALL_COLUMNS}` : entry]}>
       <FleetScreen api={api} />
       <Where />
     </MemoryRouter>,
@@ -84,6 +86,18 @@ const click = async (label: string) => { await loaded(); fireEvent.click(sortBut
 const PAPER_BASIS = { economic_domain: "PAPER", currency: "USDT", basis: "TEST_ONLY:net-ledger", native_profile_ref: "TEST_ONLY:paper-ledger", domain_proof_ref: "TEST_ONLY:not-economic-authority" };
 
 describe("guide 8.1 · the columns", () => {
+  it("the default set is the seven columns that fit 1440 without a sideways scroll, QBTS among them; the rest are one click away", async () => {
+    const { api } = harness();
+    mount(api, "/execution/fleet?stage=paper", false);
+    await loaded();
+    expect(headers()).toEqual(["Alpha", "Portfolio", "Current stage", "Alloc", "PNL Amount", "Health", "QBTS"]);
+    expect(within(table()).queryAllByRole("checkbox")).toHaveLength(0);
+    // a money cell of a one-partition row prints no visible tag (the figure carries its currency); the tag is kept for assistive technology
+    const tag = rowOf("a-1").querySelector("td[data-l='Alloc'] .exec-fleet-part-tag") as HTMLElement;
+    expect(tag.className).toContain("exec-fleet-sr");
+    expect(tag.textContent).toBe("Paper · USDT");
+  });
+
   it("has every mandatory column, in the guide's order, on the fixture lane", async () => {
     const { api } = harness();
     mount(api);
@@ -147,7 +161,7 @@ describe("guide 8.1 · the columns", () => {
 
   it("optional columns live in the Columns menu: venue, lifecycle, version, economic domain, drawdown, score coverage; the rest are not controls", async () => {
     const { api } = harness();
-    mount(api);
+    mount(api, "/execution/fleet?stage=paper", false);
     await loaded();
     expect(headers()).not.toContain("Venue");
     fireEvent.click(screen.getByRole("button", { name: /^Columns/ }));
@@ -155,7 +169,7 @@ describe("guide 8.1 · the columns", () => {
     const labels = within(menu).getAllByRole("checkbox").map((box) => (box as HTMLInputElement).labels?.[0]?.textContent?.replace(" optional", ""));
     expect(labels).toEqual([
       "Owner", "Portfolio", "Current stage", "In stage", "Alloc", "PNL Amount", "Unrealized PNL", "Account balance", "Equity 30D", "Health", "Source", "QBTS",
-      "Venue", "Lifecycle", "Version", "Economic domain", "Drawdown", "Score coverage",
+      "Select", "Venue", "Lifecycle", "Version", "Economic domain", "Drawdown", "Score coverage",
     ]);
     expect(menu.textContent).not.toMatch(/Deployer|Regime|Last trade|funding completeness/);
     fireEvent.click(within(menu).getByRole("checkbox", { name: /Venue/ }));
