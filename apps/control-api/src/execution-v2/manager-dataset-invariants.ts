@@ -128,8 +128,10 @@ interface PartitionedMetricsLike { partition: PartitionLike; metrics: Record<str
 export interface ManagerDatasetInvariantInput {
   query_options: { group_fields: readonly string[] };
   page: { limit: number; returned_count: number; authorized_filtered_count: number; next_cursor: string | null; previous_cursor: string | null };
+  group_page?: { limit: number; returned_count: number; authorized_filtered_count: number; next_cursor: string | null; previous_cursor: string | null };
   items: Array<{ row_key: string; metrics: Record<string, MetricLike>; economic_partitions: PartitionedMetricsLike[] }>;
-  groups: Array<{ key: Array<{ field: string }>; unique_row_count: number; economic_partitions: PartitionedMetricsLike[] }>;
+  groups: Array<{ key: Array<{ field: string; value?: string | null }>; unique_row_count: number; economic_partitions: PartitionedMetricsLike[];
+    attribution?: { alpha_id: string; name: string | null; owner_user_id: string | null; name_reason_code: string | null; owner_reason_code: string | null } }>;
   capital_statements: PartitionedMetricsLike[];
 }
 
@@ -150,6 +152,10 @@ export function validateManagerDatasetInvariants(v: ManagerDatasetInvariantInput
   if (page.returned_count > page.authorized_filtered_count) issue(["page", "returned_count"], "MANAGER_PAGE_RETURNED_OVER_FILTERED");
   if (page.next_cursor === null && page.previous_cursor === null && v.items.length > 0 && v.items.length !== page.authorized_filtered_count)
     issue(["page"], "MANAGER_PAGE_CURSOR_MISSING");
+  const gp = v.group_page;
+  if (gp && (gp.returned_count !== v.groups.length || gp.returned_count > gp.limit || gp.returned_count > gp.authorized_filtered_count ||
+    gp.next_cursor === null && gp.previous_cursor === null && gp.returned_count !== gp.authorized_filtered_count))
+    issue(["group_page"], "MANAGER_GROUP_PAGE_INCONSISTENT");
 
   // MD-6: a row appears once (the reader keys React lists and selection by row_key).
   const rowKeys = new Set<string>();
@@ -195,6 +201,10 @@ export function validateManagerDatasetInvariants(v: ManagerDatasetInvariantInput
   // than the filtered query it totals over.
   const offered = new Set(v.query_options.group_fields), groupKeys = new Set<string>();
   v.groups.forEach((group, i) => {
+    const a = group.attribution;
+    if (a && (group.key.find(k => k.field === "alpha_id")?.value !== a.alpha_id ||
+      (a.name === null) !== (a.name_reason_code !== null) || (a.owner_user_id === null) !== (a.owner_reason_code !== null)))
+      issue(["groups", i, "attribution"], "MANAGER_GROUP_ATTRIBUTION_INCONSISTENT");
     const identity = JSON.stringify(group.key);
     if (groupKeys.has(identity)) issue(["groups", i, "key"], "MANAGER_GROUP_DUPLICATE");
     groupKeys.add(identity);

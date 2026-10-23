@@ -36,6 +36,57 @@ const unavailable = (subject: Draft, reason: string): Draft => {
 const STAGES: Record<string, readonly string[]> = { paper: ["PAPER"], sandbox: ["SANDBOX"], live: ["CANARY", "LIVE"] };
 const domain = (environment: string): string => environment === "live" ? "ACTUAL" : environment.toUpperCase();
 
+function groupQueryError(search: URLSearchParams): ReviewManagerResponse | null {
+  const fields = search.get("group_by")?.split(",") ?? [];
+  const allowed = ["portfolio_id", "owner_user_id", "alpha_id", "stage_presence", "current_stage", "venue", "health", "source_state", "lifecycle"];
+  if ([...search.keys()].some(key => search.getAll(key).length !== 1)
+    || fields.length > 2 || new Set(fields).size !== fields.length || fields.some(field => !allowed.includes(field))
+    || (search.has("group_after") && search.has("group_before"))
+    || (["group_limit", "group_after", "group_before"].some(key => search.has(key)) && !fields.length)
+    || (search.has("group_limit") && (!/^\d{1,3}$/.test(search.get("group_limit")!) || Number(search.get("group_limit")) < 1 || Number(search.get("group_limit")) > 200))) {
+    return problem(400, "EXECUTION_READ_QUERY_INVALID", "Group pagination requires a grouping, a limit from 1 to 200, and one cursor direction.");
+  }
+  return null;
+}
+
+function groupAttribution(key: Draft[], rows: Draft[]): Draft {
+  const alphaId = key.find(entry => entry.field === "alpha_id")?.value;
+  if (typeof alphaId !== "string") return {};
+  const fact = (field: string, prefix: string): [string | null, string | null] => {
+    const values = rows.map(row => row[field]);
+    if (new Set(values).size !== 1) return [null, `${prefix}_AMBIGUOUS`];
+    return typeof values[0] === "string" ? [values[0], null] : [null, `${prefix}_NOT_PUBLISHED`];
+  };
+  const [name, nameReason] = fact("name", "GROUP_NAME");
+  const [owner, ownerReason] = fact("owner_user_id", "GROUP_OWNER");
+  return { attribution: { alpha_id: alphaId, name, owner_user_id: owner, name_reason_code: nameReason, owner_reason_code: ownerReason } };
+}
+
+/** Page only after full-query economic derivation: shares never rebase to this page. */
+function pageGroups(body: Draft, path: string, search: URLSearchParams, profile: ReviewManagerProfile): ReviewManagerResponse | null {
+  if (!search.has("group_by")) return null;
+  const limit = Number(search.get("group_limit") ?? 200);
+  const bound = digest(["manager-review-groups", profile, path, [...search.entries()].filter(([key]) => !["after", "before", "group_after", "group_before"].includes(key)).sort(([a], [b]) => a.localeCompare(b)), body.snapshot_id]);
+  const cursorText = search.get("group_after") ?? search.get("group_before");
+  let offset = 0;
+  if (cursorText !== null) {
+    if (cursorText.length > 4096) return problem(400, "EXECUTION_READ_QUERY_INVALID", "Invalid group cursor.");
+    let cursor: Draft;
+    try { cursor = JSON.parse(Buffer.from(cursorText, "base64url").toString("utf8")); } catch { return problem(400, "EXECUTION_READ_QUERY_INVALID", "Invalid group cursor."); }
+    if (!cursor || Object.keys(cursor).sort().join(",") !== "b,d,g,o" || cursor.d !== (search.has("group_after") ? "after" : "before") || cursor.g !== "manager-review-groups" || !Number.isSafeInteger(cursor.o) || cursor.o < 0) return problem(400, "EXECUTION_READ_QUERY_INVALID", "Invalid group cursor.");
+    if (cursor.b !== bound) return problem(409, "MANAGER_CURSOR_CHANGED", "The group cursor belongs to another query or source snapshot.");
+    offset = cursor.o;
+    if (offset >= body.groups.length) return problem(400, "EXECUTION_READ_QUERY_INVALID", "Group cursor outside this result.");
+  }
+  const count = body.groups.length;
+  const encode = (o: number, d: string): string => Buffer.from(JSON.stringify({ g: "manager-review-groups", b: bound, o, d })).toString("base64url");
+  body.groups = body.groups.slice(offset, offset + limit);
+  body.group_page = { limit, returned_count: body.groups.length, authorized_filtered_count: count,
+    next_cursor: offset + limit < count ? encode(offset + limit, "after") : null,
+    previous_cursor: offset > 0 ? encode(Math.max(0, offset - limit), "before") : null };
+  return null;
+}
+
 function comparison(series: Draft[]): Draft {
   const neutral = { transform: "NONE_NO_REBASE_NO_CROSS_CURRENCY_SUM", axis_ms: null };
   const described = series.filter((entry) => entry.state !== "UNAVAILABLE");
@@ -623,16 +674,35 @@ function allQuality(): Draft {
     reasons: [...(paperOk ? [] : t.paper.reasons.map((reason) => `paper:${reason}`)), ...(t.sandboxDark ? ["sandbox:ENVIRONMENT_UNAVAILABLE:NOT_CONFIGURED"] : [])] };
 }
 function allAnswer(path: string, search: URLSearchParams, profile: ReviewManagerProfile): ReviewManagerResponse {
+  const groupError = groupQueryError(search);
+  if (groupError) return groupError;
   if (profile !== "populated" || path !== "/manager/fleet" || search.has("window") || search.has("before")) return problem(400, "EXECUTION_READ_QUERY_INVALID", "ALL is the Fleet read of the populated review profile, without a window.");
   const subs = ALL_ORDER.map((env) => {
     if (env === "sandbox" && traits().sandboxDark) return { env, body: null as Draft | null, reason: "NOT_CONFIGURED" as string | null };
     const params = new URLSearchParams(search);
-    params.set("environment", env); params.set("limit", "200"); params.delete("after"); params.delete("group_by");
+    params.set("environment", env); params.set("limit", "20"); params.delete("after"); params.delete("group_by");
+    for (const key of ["group_limit", "group_after", "group_before"]) params.delete(key);
     const stages = params.get("stage_filter")?.split(",").filter((stage) => STAGES[env]!.includes(stage));
     if (params.has("stage_filter")) { if (stages!.length === 0) params.delete("stage_filter"); else params.set("stage_filter", stages!.join(",")); }
     const excluded = search.has("stage_filter") && stages!.length === 0;
     const answer = excluded ? null : datasetAnswer("GET", path, params, profile);
     if (!excluded && (answer === null || answer.status !== 200)) return { env, body: null, reason: "SOURCE_UNAVAILABLE" };
+    if (answer?.status === 200) {
+      const firstBody = answer.body as Draft;
+      let next = firstBody.page.next_cursor;
+      const visited = new Set<string>();
+      while (next !== null && firstBody.items.length < 10000 && visited.size < 500) {
+        if (visited.has(next)) return { env, body: null, reason: "SOURCE_UNAVAILABLE" };
+        visited.add(next);
+        params.set("after", next);
+        const continued = datasetAnswer("GET", path, params, profile);
+        if (continued?.status !== 200) return { env, body: null, reason: "SOURCE_UNAVAILABLE" };
+        const page = continued.body as Draft;
+        firstBody.items.push(...page.items);
+        next = page.page.next_cursor;
+      }
+      if (next !== null) return { env, body: null, reason: "SOURCE_UNAVAILABLE" };
+    }
     return { env, body: excluded ? { items: [], groups: [], capital_statements: [], quality: { completeness: "COMPLETE", freshness: "FRESH", reasons: [] } } as Draft : copy(answer!.body) as Draft, reason: null };
   });
   const first = subs.find((entry) => entry.body !== null && entry.body.snapshot_id !== undefined)?.body;
@@ -656,10 +726,11 @@ function allAnswer(path: string, search: URLSearchParams, profile: ReviewManager
     group.rows.push(row); grouped.set(JSON.stringify(key), group);
   }
   body.groups = [...grouped.values()].map((group) => ({ key: group.key, unique_row_count: group.rows.length, totals_scope: "FULL_AUTHORIZED_FILTERED_QUERY",
+    ...groupAttribution(group.key, group.rows),
     economic_partitions: ALL_ORDER.flatMap((env) => aggregate(group.rows.filter((row) => row.environment === env))) }));
   body.capital_statements = subs.flatMap((entry) => entry.body?.capital_statements ?? []);
   const limit = Number(search.get("limit") ?? 100);
-  const bound = digest([profile, path, [...search.entries()].filter(([key]) => !["after", "before", "limit"].includes(key)).sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0)]);
+  const bound = digest([profile, path, [...search.entries()].filter(([key]) => !["after", "before", "limit", "group_after", "group_before"].includes(key)).sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0)]);
   const snapshot = digest(["FIXTURE_LAB_SYNTHETIC", profile, "ALL", fixtureNowMs(), merged]);
   let offset = 0;
   const cursorText = search.get("after");
@@ -689,6 +760,9 @@ function allAnswer(path: string, search: URLSearchParams, profile: ReviewManager
   body.lineage.source_set_ref = digest(["FIXTURE_LAB_SYNTHETIC", profile, "ALL", fixtureNowMs()]);
   body.lineage.revision = snapshot;
   body.query_options.sort_fields = body.query_options.sort_fields.slice();
+  const pageError = pageGroups(body, path, search, profile);
+  if (pageError) return pageError;
+  if (Buffer.byteLength(JSON.stringify(body)) > body.query_policy.maximum_response_bytes) return problem(400, "MANAGER_REVIEW_RESPONSE_TOO_LARGE", "Reduce limit/grouping for this bounded review response.");
   return { status: 200, body };
 }
 
@@ -951,6 +1025,8 @@ function datasetAnswer(method: string, path: string, search: URLSearchParams, pr
   if (method === "GET" && search.get("environment") === "ALL") return allAnswer(path, search, profile);
   const match = /^\/manager\/(fund-overview|fleet|(?:portfolios|alphas|accounts|deployments)\/([^/]+)\/overview)$/.exec(path);
   if (method !== "GET" || !match) return null;
+  const groupError = groupQueryError(search);
+  if (groupError) return groupError;
   const checkedQuery = new URLSearchParams(search);
   checkedQuery.delete("after");
   checkedQuery.delete("before");
@@ -964,6 +1040,7 @@ function datasetAnswer(method: string, path: string, search: URLSearchParams, pr
   if (textSort.length > 0) checkedQuery.set("sort", JSON.stringify(textSort)); else checkedQuery.delete("sort");
   checkedQuery.delete("group_sort"); // WP-K: validated and applied below (the L0 double refuses what it cannot apply)
   checkedQuery.delete("group_filters");
+  for (const key of ["group_limit", "group_after", "group_before"]) checkedQuery.delete(key);
   // SIMULATED window presets: bare (`30D`) or JSON-quoted (`"30D"`, as httpApi encodes it). Any other window shape stays the double's 400.
   const rawWindow = search.get("window");
   const windowName = rawWindow === null ? null : (["7D", "30D", "90D", "ALL"] as const).find((name) => rawWindow === name || rawWindow === JSON.stringify(name)) ?? null;
@@ -1038,7 +1115,7 @@ function datasetAnswer(method: string, path: string, search: URLSearchParams, pr
     group.rows.push(row);
     grouped.set(encoded, group);
   }
-  body.groups = [...grouped.values()].map((group) => ({ key: group.key, unique_row_count: group.rows.length, totals_scope: "FULL_AUTHORIZED_FILTERED_QUERY", economic_partitions: aggregate(group.rows) }));
+  body.groups = [...grouped.values()].map((group) => ({ key: group.key, unique_row_count: group.rows.length, totals_scope: "FULL_AUTHORIZED_FILTERED_QUERY", ...groupAttribution(group.key, group.rows), economic_partitions: aggregate(group.rows) }));
   // SIMULATED (FE-CAT-5): in a read grouped by alpha_id alone, the first group's first partition publishes a true zero net_pnl
   // and the second group's first partition publishes none (a typed absence, SOURCE_FACTS_NOT_PUBLISHED).
   if (legacy() && groups.length === 1 && groups[0] === "alpha_id") {
@@ -1047,7 +1124,7 @@ function datasetAnswer(method: string, path: string, search: URLSearchParams, pr
       if (entry?.metrics.net_pnl) entry.metrics.net_pnl = metric(entry.metrics.net_pnl, index === 0 ? "0" : null, entry.partition.currency);
     });
   }
-  const bound = digest([profile, path, [...search.entries()].filter(([key]) => !["after", "before", "limit"].includes(key)).sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0)]);
+  const bound = digest([profile, path, [...search.entries()].filter(([key]) => !["after", "before", "limit", "group_after", "group_before"].includes(key)).sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0)]);
   const snapshot = digest(["FIXTURE_LAB_SYNTHETIC", profile, environment, body.workspace_id, fixtureNowMs(), rows]);
   const limit = Number(search.get("limit") ?? 100);
   let offset = 0;
@@ -1084,6 +1161,9 @@ function datasetAnswer(method: string, path: string, search: URLSearchParams, pr
   wpkStageEntry(body); // WP-K: FIXTURE_LAB stage entry (register 2k2), the single-environment reads only
   const groupQuery = wpkGroupQuery(body, search, groups);
   if (groupQuery !== null) return groupQuery; // WP-K slice 6: a 400 for a malformed or unsupported group query
+  const pageError = pageGroups(body, path, search, profile);
+  if (pageError) return pageError;
+  if (body.group_query) body.group_query.groups_returned = body.groups.length; // WP-K: the page, after package 5 paging
   if (Buffer.byteLength(JSON.stringify(body)) > body.query_policy.maximum_response_bytes) return problem(400, "MANAGER_REVIEW_RESPONSE_TOO_LARGE", "Reduce limit/grouping for this bounded review response.");
   return { status: 200, body };
 }

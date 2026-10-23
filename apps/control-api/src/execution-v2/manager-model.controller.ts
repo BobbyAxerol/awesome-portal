@@ -44,7 +44,8 @@ export class ManagerModelController {
         query[field] = JSON.parse(query[field] as string);
       }
       for (const field of ["stage_filter", "group_by"]) if (typeof query[field] === "string") query[field] = (query[field] as string).split(",");
-      if (typeof query.limit === "string") query.limit = /^\d{1,3}$/.test(query.limit) ? Number(query.limit) : NaN;
+      for (const field of ["limit", "group_limit"]) if (typeof query[field] === "string")
+        query[field] = /^\d{1,3}$/.test(query[field] as string) ? Number(query[field]) : NaN;
       const workspace = typeof query.workspace_id === "string" ? query.workspace_id : r.portalWorkspaceId;
       if (!(await this.workspaces.canReadExecution(workspace, r.portalUser.userId)))
         throw new ExecutionReadScopeError("EXECUTION_READ_NOT_AVAILABLE", 404);

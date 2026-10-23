@@ -935,6 +935,39 @@
               "minLength": 1,
               "maxLength": 4096
             }
+          },
+          {
+            "name": "group_limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "description": "Independent group page size, default 200; row limit does not limit the authorized group population."
+            }
+          },
+          {
+            "name": "group_after",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 4096,
+              "description": "Opaque forward group cursor; not interchangeable with the row cursor. Bound to current authority, source and query."
+            }
+          },
+          {
+            "name": "group_before",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 4096,
+              "description": "Opaque backward group cursor; mutually exclusive with group_after."
+            }
           }
         ],
         "responses": {
@@ -1974,6 +2007,39 @@
               "type": "string",
               "minLength": 1,
               "maxLength": 4096
+            }
+          },
+          {
+            "name": "group_limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "description": "Independent group page size, default 200; row limit does not limit the authorized group population."
+            }
+          },
+          {
+            "name": "group_after",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 4096,
+              "description": "Opaque forward group cursor; not interchangeable with the row cursor. Bound to current authority, source and query."
+            }
+          },
+          {
+            "name": "group_before",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 4096,
+              "description": "Opaque backward group cursor; mutually exclusive with group_after."
             }
           }
         ],
@@ -3025,6 +3091,39 @@
               "minLength": 1,
               "maxLength": 4096
             }
+          },
+          {
+            "name": "group_limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "description": "Independent group page size, default 200; row limit does not limit the authorized group population."
+            }
+          },
+          {
+            "name": "group_after",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 4096,
+              "description": "Opaque forward group cursor; not interchangeable with the row cursor. Bound to current authority, source and query."
+            }
+          },
+          {
+            "name": "group_before",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 4096,
+              "description": "Opaque backward group cursor; mutually exclusive with group_after."
+            }
           }
         ],
         "responses": {
@@ -4074,6 +4173,39 @@
               "type": "string",
               "minLength": 1,
               "maxLength": 4096
+            }
+          },
+          {
+            "name": "group_limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "description": "Independent group page size, default 200; row limit does not limit the authorized group population."
+            }
+          },
+          {
+            "name": "group_after",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 4096,
+              "description": "Opaque forward group cursor; not interchangeable with the row cursor. Bound to current authority, source and query."
+            }
+          },
+          {
+            "name": "group_before",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 4096,
+              "description": "Opaque backward group cursor; mutually exclusive with group_after."
             }
           }
         ],
@@ -5125,6 +5257,39 @@
               "minLength": 1,
               "maxLength": 4096
             }
+          },
+          {
+            "name": "group_limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "description": "Independent group page size, default 200; row limit does not limit the authorized group population."
+            }
+          },
+          {
+            "name": "group_after",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 4096,
+              "description": "Opaque forward group cursor; not interchangeable with the row cursor. Bound to current authority, source and query."
+            }
+          },
+          {
+            "name": "group_before",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 4096,
+              "description": "Opaque backward group cursor; mutually exclusive with group_after."
+            }
           }
         ],
         "responses": {
@@ -6174,6 +6339,39 @@
               "type": "string",
               "minLength": 1,
               "maxLength": 4096
+            }
+          },
+          {
+            "name": "group_limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "description": "Independent group page size, default 200; row limit does not limit the authorized group population."
+            }
+          },
+          {
+            "name": "group_after",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 4096,
+              "description": "Opaque forward group cursor; not interchangeable with the row cursor. Bound to current authority, source and query."
+            }
+          },
+          {
+            "name": "group_before",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 4096,
+              "description": "Opaque backward group cursor; mutually exclusive with group_after."
             }
           }
         ],
@@ -8946,6 +9144,57 @@
             ],
             "description": "returned_count is items.length, at most limit and at most authorized_filtered_count; a non-empty page with neither cursor is the whole filtered result (returned_count equals authorized_filtered_count). JSON Schema cannot compare a count with an array length: the producer refuses to emit a body that breaks this (MANAGER_PAGE_*), and the reader refuses it too. The schema states the empty case exactly."
           },
+          "group_page": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "limit": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 200
+              },
+              "returned_count": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 200
+              },
+              "authorized_filtered_count": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 40000
+              },
+              "next_cursor": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "maxLength": 4096
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "previous_cursor": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "maxLength": 4096
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "limit",
+              "returned_count",
+              "authorized_filtered_count",
+              "next_cursor",
+              "previous_cursor"
+            ],
+            "description": "Pagination over all authorized filtered groups, independent of page/items. A null next_cursor means complete; exactly 200 groups need not be truncated. Group aggregates retain their full group population."
+          },
           "items": {
             "type": "array",
             "items": {
@@ -10425,6 +10674,79 @@
                         "minContains": 2
                       }
                     }
+                  ]
+                },
+                "attribution": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "alpha_id": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 256,
+                      "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+                    },
+                    "name": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 256,
+                          "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "owner_user_id": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 256,
+                          "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "name_reason_code": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": [
+                            "GROUP_NAME_NOT_PUBLISHED",
+                            "GROUP_NAME_AMBIGUOUS"
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "owner_reason_code": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": [
+                            "GROUP_OWNER_NOT_PUBLISHED",
+                            "GROUP_OWNER_AMBIGUOUS"
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "alpha_id",
+                    "name",
+                    "owner_user_id",
+                    "name_reason_code",
+                    "owner_reason_code"
                   ]
                 },
                 "unique_row_count": {
@@ -16458,12 +16780,83 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 4096
+          },
+          "group_limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 200,
+            "description": "Independent group page size, default 200; row limit does not limit the authorized group population."
+          },
+          "group_after": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4096,
+            "description": "Opaque forward group cursor; not interchangeable with the row cursor. Bound to current authority, source and query."
+          },
+          "group_before": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4096,
+            "description": "Opaque backward group cursor; mutually exclusive with group_after."
           }
         },
         "required": [
           "environment"
         ],
         "allOf": [
+          {
+            "not": {
+              "properties": {
+                "group_after": {},
+                "group_before": {}
+              },
+              "required": [
+                "group_after",
+                "group_before"
+              ]
+            }
+          },
+          {
+            "if": {
+              "anyOf": [
+                {
+                  "properties": {
+                    "group_limit": {}
+                  },
+                  "required": [
+                    "group_limit"
+                  ]
+                },
+                {
+                  "properties": {
+                    "group_after": {}
+                  },
+                  "required": [
+                    "group_after"
+                  ]
+                },
+                {
+                  "properties": {
+                    "group_before": {}
+                  },
+                  "required": [
+                    "group_before"
+                  ]
+                }
+              ]
+            },
+            "then": {
+              "required": [
+                "group_by"
+              ],
+              "properties": {
+                "group_by": {
+                  "type": "array",
+                  "minItems": 1
+                }
+              }
+            }
+          },
           {
             "if": {
               "type": "object",

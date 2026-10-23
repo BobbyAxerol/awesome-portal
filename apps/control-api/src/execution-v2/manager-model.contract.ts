@@ -125,9 +125,13 @@ export const managerModelQuery = z.object({ workspace_id: text.optional(), envir
   group_sort: z.array(managerGroupSort).max(1).default([]), group_filters: z.array(managerGroupFilter).max(8).default([]),
   economic_partition: managerPartition.optional(), limit: z.number().int().min(1).max(200).default(100),
   after: z.string().min(1).max(4096).optional(), before: z.string().min(1).max(4096).optional(),
+  group_limit: z.number().int().min(1).max(200).optional(),
+  group_after: z.string().min(1).max(4096).optional(), group_before: z.string().min(1).max(4096).optional(),
 }).strict().superRefine((q, c) => {
   if (q.q_mode !== undefined && q.q === undefined)
     c.addIssue({ code: z.ZodIssueCode.custom, message: "MANAGER_SEARCH_QUERY_REQUIRED" });
+  if (q.group_after && q.group_before || !q.group_by.length && (q.group_limit !== undefined || q.group_after || q.group_before))
+    c.addIssue({ code: z.ZodIssueCode.custom, message: "MANAGER_GROUP_QUERY_INVALID" });
   // ALL spans every environment: any stage word may narrow it (an environment without that stage then holds no row).
   const allowedStages = q.environment === "ALL" ? ["PAPER", "SANDBOX", "CANARY", "LIVE"] : q.environment === "paper" ? ["PAPER"] :
     q.environment === "sandbox" ? ["SANDBOX"] : ["CANARY", "LIVE"];
@@ -210,7 +214,12 @@ export const managerDatasetResponse = z.object({ schema_version: z.literal("port
   query_policy: z.object({ null_order: z.literal("LAST_BOTH_DIRECTIONS"), stage_order: z.literal("LEXICAL_SET_NOT_RISK_RANK"), maximum_response_bytes: z.literal(1048576) }).strict(),
   page: z.object({ limit: z.number().int().min(1).max(200), returned_count: z.number().int().min(0).max(200),
     authorized_filtered_count: z.number().int().min(0).max(10_000), next_cursor: z.string().max(4096).nullable(), previous_cursor: z.string().max(4096).nullable() }).strict(),
+  group_page: z.object({ limit: z.number().int().min(1).max(200), returned_count: z.number().int().min(0).max(200),
+    authorized_filtered_count: z.number().int().min(0).max(40_000), next_cursor: z.string().max(4096).nullable(), previous_cursor: z.string().max(4096).nullable() }).strict().optional(),
   items: z.array(managerDatasetRow).max(200), groups: z.array(z.object({ key: z.array(z.object({ field: managerGroupField, value: text.nullable() }).strict()).max(2),
+    attribution: z.object({ alpha_id: text, name: text.nullable(), owner_user_id: text.nullable(),
+      name_reason_code: z.enum(["GROUP_NAME_NOT_PUBLISHED", "GROUP_NAME_AMBIGUOUS"]).nullable(),
+      owner_reason_code: z.enum(["GROUP_OWNER_NOT_PUBLISHED", "GROUP_OWNER_AMBIGUOUS"]).nullable() }).strict().optional(),
     unique_row_count: z.number().int().min(0).max(10_000), totals_scope: z.literal("FULL_AUTHORIZED_FILTERED_QUERY"), economic_partitions: z.array(partitionMetrics).max(200) }).strict()).max(200),
   // WP-K slice 6: present only when the query named a group sort or filter. `partition_basis` says which partition each group's metric was read in.
   group_query: z.object({ sort: z.array(managerGroupSort).max(1), filters: z.array(managerGroupFilter).max(8),

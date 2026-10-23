@@ -403,6 +403,25 @@ function pageOfRows<R extends { row_key: string }>(rows: readonly R[], query: { 
     previous_cursor: start > 0 && items.length ? encode(items[0], "before") : null } };
 }
 
+/** Attribution is a consensus of the same authorized group, never a join to the row page or an unrestricted register. */
+function groupAttribution(key: Array<{ field: string; value: string | null }>, rows: ManagerDatasetRow[]) {
+  const alpha = key.find(k => k.field === "alpha_id")?.value;
+  if (!alpha) return {};
+  const names = new Set(rows.map(r => r.name)), owners = new Set(rows.map(r => r.owner_user_id));
+  const name = names.size === 1 ? rows[0].name : null, owner = owners.size === 1 ? rows[0].owner_user_id : null;
+  return { attribution: { alpha_id: alpha, name, owner_user_id: owner,
+    name_reason_code: name !== null ? null : names.size > 1 ? "GROUP_NAME_AMBIGUOUS" as const : "GROUP_NAME_NOT_PUBLISHED" as const,
+    owner_reason_code: owner !== null ? null : owners.size > 1 ? "GROUP_OWNER_AMBIGUOUS" as const : "GROUP_OWNER_NOT_PUBLISHED" as const } };
+}
+function pageOfGroups<G>(groups: Map<string, G>, query: ManagerModelQuery, codec: KeysetCursorCodec,
+  resourceId: string, workspaceId: string, queryId: string) {
+  // At most 10k authorized rows, each contributing at most four distinct stage memberships.
+  if (groups.size > 40_000) fail("EXECUTION_READ_SCOPE_LIMIT");
+  return pageOfRows([...groups].sort(([a], [b]) => lexical(a, b)).map(([row_key, group]) => ({ row_key, group })),
+    { limit: query.group_limit ?? 200, after: query.group_after, before: query.group_before }, codec,
+    `manager-model-groups:${resourceId}`, workspaceId, queryId);
+}
+
 export function queryManagerModel(scope: AuthorizedExecutionReadScope, input: unknown, rawQuery: unknown,
   codec: KeysetCursorCodec, surface: ManagerSurface = "FLEET", resourceId?: string, scoreFence?: ManagerScoreReadFence,
   compositionFence?:ManagerCompositionReadFence, regimeFence?: ManagerRegimeReadFence) {
@@ -423,7 +442,7 @@ export function queryManagerModel(scope: AuthorizedExecutionReadScope, input: un
   const queryId = accessDigest({ scope: scope.fingerprint, source: doc.revision, generation: doc.projection_generation,
     surface, resourceId: resourceId ?? null, scores:accessDigest({details,compositions,regimes,rows:allRows.map(r => r.metrics.score)}),
     query: { ...query, q_mode: query.q === undefined ? undefined : query.q_mode ?? "CONTAINS",
-      selected_window: selectedWindow, after: undefined, before: undefined } });
+      selected_window: selectedWindow, after: undefined, before: undefined, group_after: undefined, group_before: undefined } });
   const { items, page } = pageOfRows(rows, query, codec, `manager-model:${surface}`, scope.workspaceId, queryId);
   const groupMap = new Map<string, { key: Array<{ field: string; value: string | null }>; rows: ManagerDatasetRow[] }>();
   if (query.group_by.length) for (const row of rows) {
@@ -435,12 +454,30 @@ export function queryManagerModel(scope: AuthorizedExecutionReadScope, input: un
     }
     for (const key of keys) { const id = JSON.stringify(key), group = groupMap.get(id) ?? { key, rows: [] }; group.rows.push(row); groupMap.set(id, group); }
   }
-  if (groupMap.size > 200) fail("EXECUTION_READ_SCOPE_LIMIT");
-  const groupBase = [...groupMap].sort(([a], [b]) => lexical(a, b)).map(([, group]) => ({
+  const groupOf = (group: { key: Array<{ field: string; value: string | null }>; rows: ManagerDatasetRow[] }) => ({
     key: group.key, unique_row_count: group.rows.length, totals_scope: "FULL_AUTHORIZED_FILTERED_QUERY" as const,
-    economic_partitions: partitionTotalsOf(collected, new Set(group.rows.map(r => r.row_key))) }));
-  const grouped = applyGroupQuery(groupBase, query);
-  const groupOutput = grouped.groups;
+    ...groupAttribution(group.key, group.rows),
+    economic_partitions: partitionTotalsOf(collected, new Set(group.rows.map(r => r.row_key))) });
+  // WP-K group_sort/group_filters order and narrow the WHOLE group population by a measure; package 5 then pages that ordered list. With neither, the
+  // lexical page is cut first so a page of a large population never computes the totals of the groups it does not return.
+  let groupSlice: ReturnType<typeof pageOfGroups<{ key: Array<{ field: string; value: string | null }>; rows: ManagerDatasetRow[] }>>;
+  let groupOutput: ReturnType<typeof groupOf>[];
+  let groupApplied: ReturnType<typeof applyGroupQuery>["applied"] = null;
+  if (query.group_sort.length || query.group_filters.length) {
+    if (groupMap.size > 40_000) fail("EXECUTION_READ_SCOPE_LIMIT");
+    const all = [...groupMap].sort(([a], [b]) => lexical(a, b)).map(([row_key, group]) => ({ row_key, group, out: groupOf(group) }));
+    const byOut = new Map(all.map(entry => [entry.out, entry]));
+    const grouped = applyGroupQuery(all.map(entry => entry.out), query);
+    groupApplied = grouped.applied;
+    const paged = pageOfRows(grouped.groups.map(out => byOut.get(out)!), { limit: query.group_limit ?? 200, after: query.group_after, before: query.group_before },
+      codec, `manager-model-groups:${surface}`, scope.workspaceId, queryId);
+    groupSlice = paged as unknown as typeof groupSlice;
+    groupOutput = paged.items.map(entry => entry.out);
+    if (groupApplied) groupApplied = { ...groupApplied, groups_returned: groupOutput.length };
+  } else {
+    groupSlice = pageOfGroups(groupMap, query, codec, surface, scope.workspaceId, queryId);
+    groupOutput = groupSlice.items.map(({ group }) => groupOf(group));
+  }
   const statement = statementOf(collected);
   const response = { schema_version: "portal.execution.manager-dataset.v1" as const, surface, workspace_id: scope.workspaceId,
     stage_lifecycle: { ...MANAGER_STAGE_LIFECYCLE_POLICY, entry_time: rows.some(row => row.entered_at_ms !== null)
@@ -458,7 +495,7 @@ export function queryManagerModel(scope: AuthorizedExecutionReadScope, input: un
     quality: doc.source_quality, coverage: "AUTHORIZED_ONLY" as const, economic_aggregation: "PARTITIONED_ONLY" as const,
     query_policy: { null_order: "LAST_BOTH_DIRECTIONS" as const, stage_order: "LEXICAL_SET_NOT_RISK_RANK" as const, maximum_response_bytes: 1048576 as const },
     page,
-    items, groups: groupOutput, ...(grouped.applied ? { group_query: grouped.applied } : {}), capital_statements: statement,
+    items, groups: groupOutput, ...(groupApplied ? { group_query: groupApplied } : {}), ...(query.group_by.length ? { group_page: groupSlice.page } : {}), capital_statements: statement,
     statement_scope: "AUTHORIZED_RESOURCE_SELECTED_STAGES_BEFORE_TABLE_FILTERS" as const,
     scores: { raw: summary("RAW"), composition: compositions.length===1?
       {value:compositions[0].result.value,status:compositions[0].result.status}:
@@ -520,7 +557,7 @@ export type ManagerAllRead = { environment: ManagerEnvironmentName } & ({ collec
 
 /** The per-environment question of an ALL query: the same filters, sort and group, one concrete environment, no cursor. */
 export const managerAllEnvironmentQuery = (all: ManagerModelQuery, environment: ManagerEnvironmentName): ManagerEnvQuery =>
-  ({ ...all, environment, after: undefined, before: undefined });
+  ({ ...all, environment, after: undefined, before: undefined, group_after: undefined, group_before: undefined });
 
 /** What an ALL read refuses before it touches any environment: only the Fleet surface, no window, no money order without a pinned partition. */
 export function assertManagerAllQuery(query: ManagerModelQuery): void {
@@ -589,7 +626,8 @@ export function queryManagerModelAll(reads: readonly ManagerAllRead[], rawQuery:
   const queryId = accessDigest({ environments: included.map(({ environment, collected: c }) => [environment, c.scope.fingerprint, c.doc.revision, c.doc.projection_generation,
       accessDigest({ details: c.details, compositions: c.compositions, regimes: c.regimes, rows: c.allRows.map(r => r.metrics.score) })]),
     unavailable: ordered.flatMap(read => "unavailable" in read ? [[read.environment, read.unavailable]] : []), surface: "FLEET",
-    query: { ...query, q_mode: query.q === undefined ? undefined : query.q_mode ?? "CONTAINS", selected_window: null, after: undefined, before: undefined } });
+    query: { ...query, q_mode: query.q === undefined ? undefined : query.q_mode ?? "CONTAINS", selected_window: null, after: undefined, before: undefined,
+      group_after: undefined, group_before: undefined } });
   const { items, page } = pageOfRows(rows, query, codec, "manager-model:FLEET:ALL", workspaceId, queryId);
 
   const groupMap = new Map<string, { key: Array<{ field: string; value: string | null }>; rows: Merged[] }>();
@@ -601,8 +639,9 @@ export function queryManagerModelAll(reads: readonly ManagerAllRead[], rawQuery:
     }
     for (const key of keys) { const id = JSON.stringify(key), group = groupMap.get(id) ?? { key, rows: [] }; group.rows.push(entry); groupMap.set(id, group); }
   }
-  if (groupMap.size > 200) fail("EXECUTION_READ_SCOPE_LIMIT");
-  const groups = [...groupMap].sort(([a], [b]) => lexical(a, b)).map(([, group]) => ({ key: group.key, unique_row_count: group.rows.length,
+  const groupSlice = pageOfGroups(groupMap, query, codec, "FLEET:ALL", workspaceId, queryId);
+  const groups = groupSlice.items.map(({ group }) => ({ key: group.key, unique_row_count: group.rows.length,
+    ...groupAttribution(group.key, group.rows.map(entry => entry.row)),
     totals_scope: "FULL_AUTHORIZED_FILTERED_QUERY" as const,
     // Each environment's partitions side by side. Never merged: a partition belongs to exactly one environment's economic domain.
     economic_partitions: included.flatMap(({ collected }) => {
@@ -645,7 +684,7 @@ export function queryManagerModelAll(reads: readonly ManagerAllRead[], rawQuery:
     facts_through_ms: docs.some(doc => doc.facts_through_ms === null) ? null : Math.min(...docs.map(doc => doc.facts_through_ms!)),
     quality: { completeness, freshness, reasons }, coverage: "AUTHORIZED_ONLY" as const, economic_aggregation: "PARTITIONED_ONLY" as const,
     query_policy: { null_order: "LAST_BOTH_DIRECTIONS" as const, stage_order: "LEXICAL_SET_NOT_RISK_RANK" as const, maximum_response_bytes: 1048576 as const },
-    page, items, groups, capital_statements: included.flatMap(({ collected }) => statementOf(collected)),
+    page, items, groups, ...(query.group_by.length ? { group_page: groupSlice.page } : {}), capital_statements: included.flatMap(({ collected }) => statementOf(collected)),
     statement_scope: "AUTHORIZED_RESOURCE_SELECTED_STAGES_BEFORE_TABLE_FILTERS" as const,
     // A Fleet read names no subject, so no Score is selected here (the single-environment Fleet read says the same).
     scores: { raw: { value: null, status: "policy_pending" as const }, composition: { value: null, status: "policy_pending" as const },

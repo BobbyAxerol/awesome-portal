@@ -66,6 +66,15 @@ function json(schema) {
   throw new Error('Unsupported Zod node: ' + type);
 }
 const response = json(contract.managerDatasetResponse), query = json(contract.managerModelQuery);
+query.properties.group_limit.description = 'Independent group page size, default 200; row limit does not limit the authorized group population.';
+query.properties.group_after.description = 'Opaque forward group cursor; not interchangeable with the row cursor. Bound to current authority, source and query.';
+query.properties.group_before.description = 'Opaque backward group cursor; mutually exclusive with group_after.';
+query.allOf = [...(query.allOf ?? []),
+  {not:{properties:{group_after:{},group_before:{}},required:['group_after','group_before']}},
+  {if:{anyOf:['group_limit','group_after','group_before'].map(name=>({properties:{[name]:{}},required:[name]}))},
+    then:{required:['group_by'],properties:{group_by:{type:'array',minItems:1}}}},
+];
+response.properties.group_page.description = 'Pagination over all authorized filtered groups, independent of page/items. A null next_cursor means complete; exactly 200 groups need not be truncated. Group aggregates retain their full group population.';
 // Zod refinements do not serialize themselves: retain the operator-specific
 // value shape in the published JSON contract rather than publishing loose IN.
 const scalarFilter=query.properties.filters.items;
@@ -166,6 +175,16 @@ for(const [name,context] of [
   contract.managerDatasetResponse.parse(sample.value);
   outputs['fixtures/'+name]=sample;
   if(name==='execution-manager-dataset.rows.synthetic.valid.json'){
+    const contributors=structuredClone(sample);
+    const row=contributors.value.items[0];
+    contributors.value.surface='FUND';
+    contributors.value.groups=[{key:[{field:'alpha_id',value:row.alpha_id}],
+      unique_row_count:1,totals_scope:'FULL_AUTHORIZED_FILTERED_QUERY',economic_partitions:[],
+      attribution:{alpha_id:row.alpha_id,name:row.name,owner_user_id:row.owner_user_id,
+        name_reason_code:null,owner_reason_code:null}}];
+    contributors.value.group_page={limit:200,returned_count:1,authorized_filtered_count:1,next_cursor:null,previous_cursor:null};
+    contract.managerDatasetResponse.parse(contributors.value);
+    outputs['fixtures/execution-manager-contributors.synthetic.valid.json']=contributors;
     const all=managerP1AllWindowSyntheticFixture(sample);
     contract.managerDatasetResponse.parse(all.value);
     outputs['fixtures/execution-manager-dataset.all-window.synthetic.valid.json']=all;

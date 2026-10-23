@@ -322,6 +322,14 @@ export interface components {
                 next_cursor: string | null;
                 previous_cursor: string | null;
             };
+            /** @description Pagination over all authorized filtered groups, independent of page/items. A null next_cursor means complete; exactly 200 groups need not be truncated. Group aggregates retain their full group population. */
+            group_page?: {
+                limit: number;
+                returned_count: number;
+                authorized_filtered_count: number;
+                next_cursor: string | null;
+                previous_cursor: string | null;
+            };
             /** @description A row appears once: row_key is unique within a body (MANAGER_ROW_KEY_DUPLICATE). uniqueItems catches an exact repeat; a repeated row_key with different content is refused by the producer. */
             items: ({
                 /** @description Unique within a body (MANAGER_ROW_KEY_DUPLICATE). */
@@ -437,6 +445,13 @@ export interface components {
                     field: "portfolio_id" | "owner_user_id" | "alpha_id" | "stage_presence" | "current_stage" | "venue" | "health" | "source_state" | "lifecycle";
                     value: string | null;
                 }[] & (unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown);
+                attribution?: {
+                    alpha_id: string;
+                    name: string | null;
+                    owner_user_id: string | null;
+                    name_reason_code: ("GROUP_NAME_NOT_PUBLISHED" | "GROUP_NAME_AMBIGUOUS") | null;
+                    owner_reason_code: ("GROUP_OWNER_NOT_PUBLISHED" | "GROUP_OWNER_AMBIGUOUS") | null;
+                };
                 unique_row_count: number;
                 /** @constant */
                 totals_scope: "FULL_AUTHORIZED_FILTERED_QUERY";
@@ -961,7 +976,13 @@ export interface components {
             limit?: number;
             after?: string;
             before?: string;
-        } & (unknown & unknown & unknown & unknown & unknown & unknown);
+            /** @description Independent group page size, default 200; row limit does not limit the authorized group population. */
+            group_limit?: number;
+            /** @description Opaque forward group cursor; not interchangeable with the row cursor. Bound to current authority, source and query. */
+            group_after?: string;
+            /** @description Opaque backward group cursor; mutually exclusive with group_after. */
+            group_before?: string;
+        } & (unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown);
         ManagerMetric: {
             value: string | null;
             unit: string;
@@ -2999,6 +3020,9 @@ export interface operations {
                 limit?: number;
                 after?: string;
                 before?: string;
+                group_limit?: number;
+                group_after?: string;
+                group_before?: string;
             };
             header?: never;
             path?: never;
@@ -3079,6 +3103,9 @@ export interface operations {
                 limit?: number;
                 after?: string;
                 before?: string;
+                group_limit?: number;
+                group_after?: string;
+                group_before?: string;
             };
             header?: never;
             path?: never;
@@ -3159,6 +3186,9 @@ export interface operations {
                 limit?: number;
                 after?: string;
                 before?: string;
+                group_limit?: number;
+                group_after?: string;
+                group_before?: string;
             };
             header?: never;
             path: {
@@ -3241,6 +3271,9 @@ export interface operations {
                 limit?: number;
                 after?: string;
                 before?: string;
+                group_limit?: number;
+                group_after?: string;
+                group_before?: string;
             };
             header?: never;
             path: {
@@ -3323,6 +3356,9 @@ export interface operations {
                 limit?: number;
                 after?: string;
                 before?: string;
+                group_limit?: number;
+                group_after?: string;
+                group_before?: string;
             };
             header?: never;
             path: {
@@ -3405,6 +3441,9 @@ export interface operations {
                 limit?: number;
                 after?: string;
                 before?: string;
+                group_limit?: number;
+                group_after?: string;
+                group_before?: string;
             };
             header?: never;
             path: {

@@ -73,6 +73,24 @@ const read = (query: Record<string, unknown>, worlds: Partial<Record<ManagerEnvi
   queryManagerModelAll(reads(query, worlds, unavailable), { environment: "ALL", ...query }, codec(), worlds.paper?.f.principal.workspaceId ?? worlds.live!.f.principal.workspaceId);
 
 describe("FE-CAT-3 Fleet ALL lens: authorized rows across environments, no cross-environment sum", () => {
+  it("continues groups independently across ALL with exact snapshot-bound cursors and environment partitions", async () => {
+    const paper = await world("paper"), live = await world("live", { full: true });
+    const q = { group_by: ["alpha_id"], group_limit: 1, limit: 1 };
+    const first = read(q, { paper, live });
+    expect(read({ limit: 1 }, { paper, live })).not.toHaveProperty("group_page");
+    const second = read({ ...q, group_after: first.group_page!.next_cursor }, { paper, live });
+    expect(first.group_page).toMatchObject({ authorized_filtered_count: 2, returned_count: 1 });
+    expect(second.items).toEqual(first.items);
+    expect(second.snapshot_id).toBe(first.snapshot_id);
+    expect(second.capital_statements).toEqual(first.capital_statements);
+    expect(read({ ...q, group_before: second.group_page!.previous_cursor }, { paper, live }).groups).toEqual(first.groups);
+    expect(() => read({ ...q, after: first.group_page!.next_cursor }, { paper, live })).toThrow();
+    expect(() => read({ ...q, group_after: first.group_page!.next_cursor }, { paper })).toThrow();
+    for (const g of [...first.groups, ...second.groups]) {
+      expect(g.attribution?.alpha_id).toBe(g.key[0].value);
+      expect(new Set(g.economic_partitions.map(p => p.partition.economic_domain)).size).toBe(g.economic_partitions.length);
+    }
+  });
   it("authorizes each environment BEFORE counting: a hidden row is in no row, no count, no group and no statement", async () => {
     const paper = await world("paper");            // own alpha only: PEER is hidden
     const live = await world("live", { full: true }); // whole population
