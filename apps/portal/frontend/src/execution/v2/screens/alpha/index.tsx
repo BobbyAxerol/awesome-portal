@@ -47,7 +47,7 @@ import { alphaBack } from "./backLinks";
 import { Dec, Na } from "./cells";
 import { ActivityTab } from "./ActivityTab";
 import { LifecyclePanel } from "./Lifecycle";
-import { lifeEvents, regimeFit } from "./lifecycleModel";
+import { lifeEvents, regimeFit, stageSpans } from "./lifecycleModel";
 import { OrdersTab } from "./OrdersTab";
 import { PERFORMANCE_VIEWS, PerformanceTab, type PerformanceView } from "./PerformanceTab";
 import { ScopeBanner } from "./ScopeBanner";
@@ -227,7 +227,7 @@ function Alpha360({ api, alphaId, workspaceId }: AlphaScreenProps) {
   const dataset = useAlphaDataset(api, present, alphaId, env, explicitWs);
   const datasetValue = dataset.phase === "ready" ? dataset.value : null;
   // WP-C: the events and the lifecycle the dataset publishes (open `evt_*` and `life_*` partition keys); none = the lanes say Not published.
-  const life = useMemo(() => lifeEvents(datasetValue), [datasetValue]);
+  const life = useMemo(() => ({ ...lifeEvents(datasetValue), spans: stageSpans(datasetValue) }), [datasetValue]);
   const regime = useMemo(() => regimeFit(datasetValue), [datasetValue]);
   const names = view?.portfolioNameById ?? NO_NAMES;
 

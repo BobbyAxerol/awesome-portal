@@ -50,6 +50,8 @@ const ROUTES = [
   ["fleet-table", "/deployments/alphas"], ["fleet-board", "/deployments/alphas?view=board"], ["fleet-map", "/deployments/alphas?view=map"],
   ["portfolios", "/deployments/portfolios"], ["portfolio-360", "/deployments/portfolios/pf_TEST_ONLY_core"],
   ["compare", "/deployments/compare?in=pf_TEST_ONLY_core,pf_TEST_ONLY_satellite"],
+  ["compare-pair", "/deployments/compare?in=pf_TEST_ONLY_satellite,pf_scale_006"], ["compare-alphas", "/deployments/compare?kind=alpha&in=alpha_scale_001,alpha_scale_002"],
+  ["alpha-360-btc", "/deployments/alphas/alpha_btc_trend"], ["alpha-activity", "/deployments/alphas/alpha_a?tab=activity"], ["alpha-replay-btc", "/deployments/alphas/alpha_btc_trend?tab=replay"],
   ["alpha-360", "/deployments/alphas/alpha_a"], ["alpha-orders", "/deployments/alphas/alpha_a?tab=orders"],
   ["alpha-deployments", "/deployments/alphas/alpha_a?tab=deployments"], ["alpha-replay", "/deployments/alphas/alpha_a?tab=replay"],
   ["accounts", "/deployments/accounts"], ["account-360", "/deployments/accounts/acc_bnc_core"],

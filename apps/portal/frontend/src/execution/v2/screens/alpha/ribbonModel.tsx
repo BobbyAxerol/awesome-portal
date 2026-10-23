@@ -7,11 +7,12 @@
 import { useMemo, useState, type ReactNode } from "react";
 
 import type { ObservedEntry, ObservedTimeline } from "../../../api/observedTimeline";
-import { readUtcEpochMs } from "../../../screenDataContract";
+import { readUtcEpochMs, type UtcEpochMs } from "../../../screenDataContract";
 import { EventKindChips, EventRibbon, domainOfSeries, type ChartDomain, type ChartEvent, type ChartState, type EventKind } from "../../charts";
 import { EVENT_KIND_TABLE } from "../../charts/eventKinds";
 import { stageBands, ribbonEvents, type EquityPanelInput, type StagePath } from "./model";
-import type { LifeEvent } from "./lifecycleModel";
+import type { LifeEvent, StageSpan } from "./lifecycleModel";
+import { stageWord } from "./model";
 import { Np } from "./np";
 import type { PagedRead } from "./useAlphaReads";
 
@@ -28,7 +29,7 @@ export interface RibbonData {
 
 export function useRibbon(
   timeline: PagedRead<ObservedTimeline>,
-  life: { events: readonly LifeEvent[]; missing: readonly EventKind[] },
+  life: { events: readonly LifeEvent[]; missing: readonly EventKind[]; spans?: readonly StageSpan[] },
   paths: readonly StagePath[],
   lead: EquityPanelInput | null,
 ): RibbonData {
@@ -48,7 +49,12 @@ export function useRibbon(
   }, [seen, life.events]);
   const domain = seriesDomain ?? entryDomain;
   const events = useMemo<readonly ChartEvent[]>(() => [...ribbonEvents(seen), ...life.events], [seen, life.events]);
-  const bands = useMemo(() => stageBands(paths), [paths]);
+  // The published stage spans (exit instants and days) when the dataset has them; otherwise where each stage published a daily close.
+  const bands = useMemo(() => {
+    const spans = life.spans ?? [];
+    if (spans.length === 0 || domain === null) return stageBands(paths);
+    return spans.map((s) => ({ id: s.stage, kind: s.stage, label: stageWord(s.stage), from: s.from as UtcEpochMs, to: (s.to ?? domain.to) as UtcEpochMs }));
+  }, [life.spans, paths, domain]);
   const state: ChartState = timeline.read.phase === "error" ? { kind: "unavailable", copy: "Not available", reason: timeline.read.reason }
     : timeline.read.phase === "ready" && timeline.read.value[0]?.timeline.state === "PARTIAL"
       ? { kind: "partial", reason: timeline.read.value[0].timeline.reasonCode ?? "The source marked the timeline partial." }

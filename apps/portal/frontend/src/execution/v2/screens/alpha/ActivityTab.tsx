@@ -23,7 +23,7 @@ import { ChartTools, EquityPanel } from "../../charts";
 import { EventFeed, SectionPanel, type EventFeedRow } from "../../blocks";
 import { ENV_LABEL, type ExecEnv } from "../../urlState";
 import { ROW_CAP, feedKind, orderFlag, type EquityPanelInput, type StagePath } from "./model";
-import { lifeFeedRows, type LifeEvent } from "./lifecycleModel";
+import { lifeFeedRows, type LifeEvent, type StageSpan } from "./lifecycleModel";
 import { useRibbon } from "./ribbonModel";
 import { Np } from "./np";
 import type { PagedRead, SubjectBook } from "./useAlphaReads";
@@ -66,7 +66,7 @@ export interface ActivityTabProps {
   timeline: PagedRead<ObservedTimeline>;
   book: SubjectBook;
   /** The dataset's published lifecycle events (WP-C keys); empty with every kind missing when the dataset carries none. */
-  life?: { events: readonly LifeEvent[]; missing: readonly EventKind[] };
+  life?: { events: readonly LifeEvent[]; missing: readonly EventKind[]; spans?: readonly StageSpan[] };
 }
 
 const NO_LIFE = { events: [] as readonly LifeEvent[], missing: ["stage", "decision", "incident", "recall", "flow"] as readonly EventKind[] };

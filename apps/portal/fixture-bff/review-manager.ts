@@ -8,7 +8,7 @@ import { readFileSync } from "node:fs";
 import { basename, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { answerAlpha } from "../frontend/e2e/bffDoubleAlpha";
+import { ALPHA_DOUBLE_AS_OF_MS, answerAlpha } from "../frontend/e2e/bffDoubleAlpha";
 import { answerManagerFleet, answerManagerSeries } from "../frontend/e2e/bffDoubleManager";
 import { addDecimal, fixtureNowMs, scaled, type AlphaSpec, type DeploymentSpec } from "../frontend/e2e/bffScale";
 
@@ -910,8 +910,8 @@ function wpcShapeSeries(entry: Draft, metricName: string, subjectId: string, env
 /* ---- ALPHA lifecycle and events: open partition keys of each ALPHA row (register 2c-wpc). Text rides `reason_code` (the WP-A precedent). */
 const DAY_MS = 86_400_000;
 const WPC_ACTORS = ["bjones", "asmith", "lnguyen"] as const;
-/** The instant the alpha doubles state as "now" (17 Oct 12:04Z against FIXTURE_NOW 22 Oct 12:00Z): the lifecycle, the events and the equity line end here, so they share one window. */
-const wpcAnchorMs = (): number => fixtureNowMs() - 5 * DAY_MS + 4 * 60_000;
+/** The instant the alpha doubles state as "now" (17 Oct 12:04Z): the lifecycle, the events, the replay's trades and the equity line end here, so they share one window whatever FIXTURE_NOW is. */
+const wpcAnchorMs = (): number => ALPHA_DOUBLE_AS_OF_MS;
 function wpcLifecycleKeys(alphaId: string, template: Draft): Record<string, Draft> {
   const now = wpcAnchorMs();
   const seed = seedOf(alphaId, "wpc-life");

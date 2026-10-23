@@ -602,3 +602,8 @@
 .exec-alp2-preview .exec-alp2-seg {
   margin: 0;
 }
+
+/* WP-C: partition tags inside the Alpha 360 figure tables follow the table text size (the Fleet draws them smaller; here they sit in a 13px table). */
+.exec-alp2-gaptable .exec-fleet-part-tag {
+  font: inherit;
+}

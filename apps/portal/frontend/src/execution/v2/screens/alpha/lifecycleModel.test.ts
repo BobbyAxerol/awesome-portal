@@ -6,7 +6,7 @@
 import { afterEach, describe, expect, it } from "vitest";
 
 import type { ManagerDataset } from "../../readers/managerDataset";
-import { dayMonth, lifeEvents, lifeFeedRows, lifecycleFacts, regimeFit } from "./lifecycleModel";
+import { dayMonth, lifeEvents, lifeFeedRows, lifecycleFacts, regimeFit, stageSpans } from "./lifecycleModel";
 import { endPreviewLane, startPreviewLane } from "./previewLane.testbase";
 
 afterEach(endPreviewLane);
@@ -91,5 +91,21 @@ describe("regimeFit and dayMonth", () => {
   it("prints a UTC day and month", () => {
     expect(dayMonth(Date.UTC(2026, 8, 17, 23, 59))).toBe("17 Sep");
     expect(dayMonth(Date.UTC(2026, 6, 2, 0, 0))).toBe("02 Jul");
+  });
+});
+
+describe("stageSpans", () => {
+  it("a completed stage ends at its published exit and began its published days earlier; Live begins at the Canary exit and is current", async () => {
+    const dataset = await datasetOf("alpha_a");
+    const spans = stageSpans(dataset);
+    expect(spans.map((s) => s.stage)).toEqual(["paper", "sandbox", "canary", "live"]);
+    const facts = lifecycleFacts(dataset, "live")!;
+    expect(facts).not.toBeNull();
+    // Adjacent stages meet: the exit of one is the start of the next, and Live runs on.
+    expect(spans[0]!.to).toBe(spans[1]!.from);
+    expect(spans[1]!.to).toBe(spans[2]!.from);
+    expect(spans[2]!.to).toBe(spans[3]!.from);
+    expect(spans[3]!.to).toBeNull();
+    expect(stageSpans(null)).toEqual([]);
   });
 });

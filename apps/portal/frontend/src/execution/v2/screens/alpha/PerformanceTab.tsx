@@ -33,7 +33,7 @@ import { ROW_CAP, stageWord, type DeploymentRow, type EquityPanelInput, type Sta
 import { Np } from "./np";
 import type { PagedRead, Read } from "./useAlphaReads";
 import { useRibbon, type RibbonData } from "./ribbonModel";
-import type { LifeEvent } from "./lifecycleModel";
+import type { LifeEvent, StageSpan } from "./lifecycleModel";
 
 export type PerformanceView = "act" | "sim" | "oos";
 export const PERFORMANCE_VIEWS: readonly { id: PerformanceView; label: string }[] = [
@@ -60,7 +60,7 @@ export interface PerformanceTabProps {
   onView: (view: PerformanceView) => void;
   /** The observed timeline (decisions) and the dataset's lifecycle events: the ribbon pinned on the chart is the same one the Activity tab draws. */
   timeline?: PagedRead<ObservedTimeline>;
-  life?: { events: readonly LifeEvent[]; missing: readonly EventKind[] };
+  life?: { events: readonly LifeEvent[]; missing: readonly EventKind[]; spans?: readonly StageSpan[] };
 }
 
 const NO_LIFE = { events: [] as readonly LifeEvent[], missing: ["stage", "decision", "incident", "recall", "flow"] as readonly EventKind[] };

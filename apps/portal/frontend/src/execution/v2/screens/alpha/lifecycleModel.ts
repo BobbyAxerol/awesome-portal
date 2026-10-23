@@ -84,6 +84,37 @@ export function lifecycleFacts(dataset: ManagerDataset | null, current: SpineSta
   return { stages, blockedReason: text(m.get("life_blocked_reason")) };
 }
 
+export interface StageSpan {
+  readonly stage: "paper" | "sandbox" | "canary" | "live";
+  readonly from: number;
+  /** `null`: the stage is current (it runs to the end of the window). */
+  readonly to: number | null;
+}
+
+const DAY_MS = 86_400_000;
+
+/**
+ * Where each running stage sat on the time axis, from what the dataset published about it: a completed stage ends at its published exit
+ * instant and began its published whole days earlier; Live begins at the Canary exit and is current. A stage missing either number has no span.
+ */
+export function stageSpans(dataset: ManagerDataset | null): readonly StageSpan[] {
+  const m = lifeMetrics(dataset);
+  if (m === null) return [];
+  const exitOf = (stage: string): number | null => {
+    const metric = m.get(`life_${stage}_exit_ms`);
+    return metric !== undefined && metric.kind === "value" && /^\d+$/.test(metric.exact) ? Number(metric.exact) : null;
+  };
+  const spans: StageSpan[] = [];
+  for (const stage of ["paper", "sandbox", "canary"] as const) {
+    const to = exitOf(stage);
+    const days = whole(m.get(`life_${stage}_days`));
+    if (to !== null && days !== null) spans.push({ stage, from: to - days * DAY_MS, to });
+  }
+  const live = exitOf("canary");
+  if (live !== null) spans.push({ stage: "live", from: live, to: null });
+  return spans;
+}
+
 /** A tile value read as the published ratio: exact string, or the typed absence's code. */
 export function regimeFit(dataset: ManagerDataset | null): { kind: "value"; exact: string } | { kind: "absent"; code: string } | null {
   if (dataset === null) return null;
