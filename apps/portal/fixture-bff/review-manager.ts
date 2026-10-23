@@ -404,7 +404,7 @@ function capitalStatements(rows: Draft[]): Draft[] {
     for (const child of row.children) { found.accounts.add(child.account_id); found.deployments.add(child.deployment_id); }
     partitions.set(key, found);
   }
-  return [...partitions.entries()].sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0).map(([key, entry], index) => {
+  return [...partitions.entries()].sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0).map(([key, entry], index, all) => {
     const accounts = [...entry.accounts].sort();
     const members = [...entry.deployments].map(id => sources.get(id));
     const known = members.every(d => d !== undefined && d.currency === entry.partition.currency);
@@ -1888,7 +1888,7 @@ function wpPositiveSeries(body: Draft, method: string, path: string, search: URL
     for (let from = 0; from < usable.length; from += 4) {
       const chunk = usable.slice(from, from + 4);
       const built = buildPositiveManagerSeries({ lane: "FIXTURE_LAB", nav: copy({ ...nav, series: chunk.map(({ entry }) => entry) }), pointCount });
-      chunk.forEach(({ index }, k) => views.set(index, built[metricName].series[k]));
+      chunk.forEach(({ index }, k) => views.set(index, (built as Record<string, Draft>)[metricName].series[k]));
     }
   } catch {
     return body; // an input the producer refuses (duplicate subject, too small a window) keeps the generic answer
