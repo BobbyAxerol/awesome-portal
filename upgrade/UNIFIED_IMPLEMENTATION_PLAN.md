@@ -15233,8 +15233,12 @@ integrator; all code/test/docs are retained. Review corrected the Fleet ALL
 final-authority fence (130 focused synthetic tests PASS) and wired roster
 last-sign-in to successful non-preview login audit, never session issuance
 (31 focused tests PASS; isolated normal build, 388/388 selected tests and real
-PostgreSQL dump/restore/hash checks PASS; normal landing hook RUNNING).
-One final normal landing hook remains; these results do not imply landing.
+PostgreSQL dump/restore/hash checks PASS). The subsequent normal landing hook
+finished with contracts 1,664/1,664 PASS, but Control API 10,175 PASS /23 FAIL
+across eight failed suites; it is no longer RUNNING. Fixture loading and the
+six-case pooled timeout are being repaired before an isolated affected-file
+retake. Five Financial/Command/queue files have retaken 118/118 on the host;
+that is not a PostgreSQL or final landing PASS. Canonical landing remains open.
 
 The [current Core→Edge return](execution_loop/evidence/ELP2-10/CORE_TO_EDGE_CURRENT_CLOSEOUT_RETURN_2026-10-23.md)
 was actually mirrored/read back on HK, raw SHA256
@@ -15254,10 +15258,13 @@ at least185 minutes; none are newly approved or measured by this addendum.
 No load/calibration/Live/dev/main/push is authorized by a fixture or this review.
 <!-- CODEX_SIX_LANE_20261023_END -->
 
-Post-freeze Claude `d3be9ad4f`/`c9d2b717d` remains preserved, not silently
-included in the frozen gate. [Specific Portfolio review and follow-through](execution_loop/evidence/ELP2-10/CLAUDE_POST_FREEZE_REVIEW_2026-10-23.md)
-requests reversed-range validation and owning Score quality/caveat/domain
-preservation before that separate slice lands. No Codex UI redesign.
+Post-freeze Claude commits remain preserved, not silently included in the
+frozen gate. [Specific Portfolio/Fleet review and follow-through](execution_loop/evidence/ELP2-10/CLAUDE_POST_FREEZE_REVIEW_2026-10-23.md)
+requests reversed-range validation, owning Score quality/caveat/domain,
+complete economic-partition identity and scoped spark-cache invalidation before
+that separate slice lands. No Codex UI redesign. The offline reservation
+calculator has 11/11 focused tests PASS, uses the actual workload tab census
+and always returns `execution_authorized=false`; no budget/load was approved.
 
 
 ### P0 Bobby has called Edge — NEW Core-first PREPARED23Oct00:56VN

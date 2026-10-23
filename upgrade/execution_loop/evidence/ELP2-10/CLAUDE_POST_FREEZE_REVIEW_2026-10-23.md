@@ -60,3 +60,38 @@ landing hook is still RUNNING, so this is not a landing or connected PASS.
 The separate Portal-owned financial follow-through remains queue health,
 bindings figures/counts, visit baseline, authorized labels and metric coverage;
 real source finance/budget/calibration still requires the Edge return.
+
+## Addendum — subsequent Fleet cut, independent review
+
+Read-only review at `77617e379d64dedc331e12448d6dcaa91f3277c5`, range
+`c9d2b717d..77617e379`; later FE2 tip observed
+`0da0988556e64f3c3dc2327224ccb166d735f0ff` separately. No backend, contracts
+or service implementation changed after the frozen `2f9ca2dc` in that tip.
+This is not acceptance of the later frontend slice and does not move the cut.
+
+Additional CHANGE requests for Claude, preserving the approved components:
+
+1. `screens/fleet/fleetMetricsModel.ts:195` deduplicates partition choices by
+   domain/currency only, while the request also binds basis/native-profile/
+   domain-proof. Keep the complete five-field identity and distinguish labels;
+   test two Paper/USDT partitions with different owning books. Do not silently
+   retain the first partition at `screens/fleet/index.tsx:257`.
+2. `fleetMetricsModel.ts:260` must not turn every absence without an evidence
+   field into `insufficient`, including `MIXED_ECONOMIC_DOMAINS`. Preserve
+   unpublished evidence as null; only show insufficient evidence when the
+   owning reason actually states it. Test those two dispositions separately
+   through `FleetDatasetTable.tsx:207`.
+3. `screens/fleet/useFleetSparks.ts:32` must invalidate cached and in-flight
+   series when the owning dataset generation/revision changes or its scoped
+   authority is evicted. Refresh at `index.tsx:216` must not combine new dataset
+   facts with an old NAV sparkline. Add refresh/revoke/late-response tests.
+
+The earlier Portfolio range/quality/domain requests remain open at the reviewed
+cut. Codex does not rewrite the frontend in this review. Claude should return
+each corrected SHA and focused consumer receipt for a separate landing.
+
+Current gate correction: the normal backend run ended with 10,175 PASS,
+23 FAIL and seven skips (eight failed suites); it is **not RUNNING/PASS**.
+Five affected fixture/Financial/Command/queue files retook 118/118 on the host.
+The six independent optional-purpose/anchor cases retain the original timeout
+and assertions; their isolated PostgreSQL retake and final landing are pending.

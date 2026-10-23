@@ -2542,6 +2542,24 @@ Claude `c9d2b717d` stays on its branch for a separate landing; correct silent
 reversed-range removal and lost Score quality/caveats/domain before handback.
 No source/visual edits by Codex; frozen gate unchanged.
 
+### Codex integration / latest consumer review —23Oct2026, follow-through
+
+The [post-freeze review](evidence/ELP2-10/CLAUDE_POST_FREEZE_REVIEW_2026-10-23.md)
+now covers the subsequent Fleet cut as well: preserve the complete economic
+partition identity, do not invent insufficient-evidence states, and invalidate
+cached/in-flight sparks on dataset revision or scope eviction. Claude owns
+these component-preserving corrections; the `2f9ca2dc` integration cut does not
+silently absorb later frontend work. No backend/contracts changed in the
+reviewed post-freeze range through `0da098855`.
+
+Correction to old RUNNING status: the normal backend gate finished red
+(10,175 PASS,23 FAIL across eight failed suites). The five affected fixture,
+Financial/Command/queue files retook118/118 on the host; isolated PG and final
+landing remain pending. Six optional-purpose/anchor authorization cases are
+now independent tests with unchanged assertions/default timeout. The offline
+proposal calculator passed11/11 and cannot authorize execution or calibration.
+No new source connection, image install, command/Live, push or dev/main change.
+
 
 ### P0 Bobby has called Edge — NEW Core-first PREPARED23Oct00:56VN
 
