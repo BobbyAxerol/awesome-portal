@@ -53,7 +53,7 @@ import { fileURLToPath } from "node:url";
 import { scopedResourceV2 } from "./bffDoubleScopedResource";
 import { addDecimal, scaled, sumByCurrency } from "./bffScale";
 import { isPositiveMode, positiveBookOf } from "./bffPositiveMode";
-import { accountFact, ledgerSeries } from "./bffWorld";
+import { accountFact, bindingFact, ledgerSeries } from "./bffWorld";
 
 export interface BffAnswerAccount {
   status: number;
@@ -234,7 +234,10 @@ function bindingExposure(id: string): BffAnswerAccount {
     oldest_source_as_of: ACCOUNT_DOUBLE_AS_OF,
     newest_source_as_of: ACCOUNT_DOUBLE_AS_OF,
   });
-  const buckets = shared
+  const world = isPositiveMode() ? bindingFact(spec.bindingId) : null; // WORLD: the virtual sum is the allocations booked on the binding, the venue holds the sleeve ledgers
+  const buckets = world !== null
+    ? [bucket(world.currency, fromCents(world.used), fromCents(world.locked), fromCents(world.wallet - world.used), fromCents(world.equity - world.used))]
+    : shared
     ? [bucket("USDT", "197500.00", "2000.00", "213380.25", "13880.25"), bucket("USDC", "10000.00", "0.00", "12000.00", "2000.00")]
     : breached
       ? [bucket("USDT", "92400.00", "0.00", "85000.00", "-7400.00")]

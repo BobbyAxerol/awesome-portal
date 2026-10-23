@@ -351,6 +351,12 @@ if (!flag("no-ties")) {
     await c.request.post(base + "/__fixture/scenario", { data: { scenario: "positive" } });
     const { runTies } = await import(pathToFileURL(join(ROOT, "scripts/fixture-ties.mjs")).href);
     ties = await runTies(async (p) => { const r = await c.request.get(base + p); return { status: r.status(), body: await r.json().catch(() => null) }; });
+    // the same quantities as RENDERED TEXT on the screens (fixture-dom-ties.mjs)
+    const { runDomTies } = await import(pathToFileURL(join(ROOT, "scripts/fixture-dom-ties.mjs")).href);
+    const dom = await runDomTies(await c.newPage(), base);
+    ties.checked += dom.checked;
+    ties.mismatches.push(...dom.mismatches.map((m) => `DOM ${m}`));
+    ties.skipped.push(...dom.skipped.map((m) => `DOM ${m}`));
     await c.close();
   } catch (e) { ties = { checked: 0, mismatches: [`ties did not run: ${e.message}`], skipped: [] }; }
 }

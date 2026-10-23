@@ -237,3 +237,23 @@ export function ledgerSeries(accountId: string, fromMs: number, toMs: number, po
   const parts = fact.deployments.map((d) => ({ alloc: toCents(d.allocation), walk: netPnlSeries(d.id, fromMs, toMs, points, toCents(d.realized)) }));
   return Array.from({ length: points }, (_, i) => ({ t: parts[0]!.walk[i]!.t, value: fromCents(parts.reduce((n, p) => n + p.alloc + toCents(p.walk[i]!.value), 0n)) }));
 }
+
+/** A physical binding: the sleeves booked on it (each a logical account of the world) and what the venue holds for all of them. */
+export interface BindingFact {
+  bindingId: string;
+  sleeves: AccountFact[];
+  currency: string;
+  /** wallet = the sum of the sleeve ledgers; native equity = wallet + unrealized; used = the sum of the allocations (the virtual sum) */
+  wallet: bigint; equity: bigint; used: bigint; locked: bigint;
+}
+export function bindingFact(bindingId: string): BindingFact | null {
+  const ids = Object.entries(ACCOUNT_NAMES).filter(([, meta]) => meta.binding === bindingId).map(([id]) => id);
+  const sleeves = ids.map((id) => accountFact(id)).filter((fact): fact is AccountFact => fact !== null);
+  if (sleeves.length === 0) return null;
+  const wallet = sleeves.reduce((n, f) => n + f.total, 0n);
+  return { bindingId, sleeves, currency: sleeves[0]!.currency, wallet, equity: wallet + sleeves.reduce((n, f) => n + f.unrealized, 0n), used: sleeves.reduce((n, f) => n + f.allocation, 0n), locked: sleeves.reduce((n, f) => n + f.locked, 0n) };
+}
+export const bindingOfAccount = (accountId: string): BindingFact | null => {
+  const meta = ACCOUNT_NAMES[accountId];
+  return meta === undefined ? null : bindingFact(meta.binding);
+};

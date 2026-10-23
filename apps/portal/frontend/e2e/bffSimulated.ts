@@ -21,7 +21,7 @@ import { fixtureNowMs, scaled } from "./bffScale";
 // ===== WP-F3 begin: lit stage bodies (register 2f3) =====
 import { simulateStage } from "./bffSimulatedStage";
 import { isPositiveMode } from "./bffPositiveMode";
-import { accountFact, ledgerSeries } from "./bffWorld";
+import { accountFact, bindingFact, bindingOfAccount, fromCents, ledgerSeries } from "./bffWorld";
 // ===== WP-F3 end =====
 
 type Obj = Record<string, unknown>;
@@ -75,7 +75,11 @@ function overlayAccountResource(body: Obj, accountId: string): Obj {
   const sync = rows("broker_sync").filter((row) => typeof row.synced_at_ms === "number");
   const newest = sync.sort((a, b) => (b.synced_at_ms as number) - (a.synced_at_ms as number))[0];
   if (newest) {
-    if (accountId === "acc_bnc_core") {
+    const worldBinding = isPositiveMode() ? bindingOfAccount(accountId) : null; // WORLD: what the venue holds is the sum of the sleeves booked on the binding
+    if (worldBinding !== null) {
+      newest.wallet_balance = fromCents(worldBinding.wallet);
+      newest.native_equity = fromCents(worldBinding.equity);
+    } else if (accountId === "acc_bnc_core") {
       newest.wallet_balance = WALLET_BALANCE_CORE;
       newest.native_equity = NATIVE_EQUITY_CORE;
     } else if (accountId === "acc_bnc_sub") {
@@ -172,7 +176,8 @@ function overlayExposure(body: Obj): Obj {
   for (const bucket of analytics.data.buckets) {
     if (isObj(bucket) && bucket.currency === "USDT" && typeof bucket.used === "string") {
       const cents = (text: string) => BigInt(text.replace(".", ""));
-      const left = cents(NATIVE_EQUITY_CORE) - cents(bucket.used);
+      const worldBinding = isPositiveMode() && typeof analytics.data.binding_id === "string" ? bindingFact(analytics.data.binding_id) : null;
+      const left = worldBinding !== null ? worldBinding.equity - cents(bucket.used) : cents(NATIVE_EQUITY_CORE) - cents(bucket.used);
       const negative = left < 0n;
       const abs = negative ? -left : left;
       bucket.headroom = `${negative ? "-" : ""}${abs / 100n}.${(abs % 100n).toString().padStart(2, "0")}`;
@@ -433,7 +438,15 @@ function overlayBindingsList(body: Obj): Obj {
   const at = typeof out.source_as_of === "string" ? out.source_as_of : null;
   if (at === null) return out; // no observation instant to state: publish nothing rather than invent one
   for (const row of page.rows) {
-    const figures = isObj(row) && typeof row.binding_id === "string" ? LIST_FIGURES[row.binding_id] : undefined;
+    const worldBinding = isPositiveMode() && isObj(row) && typeof row.binding_id === "string" ? bindingFact(row.binding_id) : null;
+    const figures = worldBinding !== null
+      ? (at: string): Obj => ({
+        native_equity: [{ currency: worldBinding.currency, value: fromCents(worldBinding.equity), observed_at: at, coverage: "COMPLETE" }],
+        virtual_used: [{ currency: worldBinding.currency, value: fromCents(worldBinding.used), observed_at: at, coverage: "COMPLETE" }],
+        virtual_headroom: [{ currency: worldBinding.currency, value: fromCents(worldBinding.equity - worldBinding.used), observed_at: at, coverage: "COMPLETE" }],
+        sleeve_count: { count: worldBinding.sleeves.length, observed_at: at, coverage: "COMPLETE" },
+      })
+      : isObj(row) && typeof row.binding_id === "string" ? LIST_FIGURES[row.binding_id] : undefined;
     if (isObj(row) && figures) row.figures = figures(at);
     // WP-F2: every generated binding publishes figures except its dedicated fallback-only case.
     else if (isObj(row) && typeof row.binding_id === "string" && row.binding_id.startsWith("bnd_")) {

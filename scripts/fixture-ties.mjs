@@ -168,6 +168,20 @@ export async function runTies(get, options = {}) {
     eq(`T7 alpha resource allocation ${id}`, allocated, rows.reduce((n, r) => n + (metricOf(r.economic_partitions[0], "allocation") ?? 0n), 0n));
   }
 
+  // T11 the Alpha Fleet header (ALPHAS / DEPLOYMENTS / PORTFOLIOS of the Fleet read) counts the same world as the dataset reads of the three environments
+  const header = await get(`${E}/alphas?limit=1`);
+  if (header.status === 200 && header.body.summary) {
+    const alphas = new Set(), deployments = new Set(), portfolios = new Set();
+    for (const env of ENVIRONMENTS) {
+      const d = await dataset("/manager/fleet", env);
+      for (const row of d?.items ?? []) { alphas.add(row.alpha_id); portfolios.add(row.portfolio_id); for (const c of row.children) deployments.add(c.deployment_id); }
+    }
+    const s = header.body.summary;
+    eq("T11 Fleet header alphas (less research-only) = alphas of the datasets", BigInt(s.alpha_count - s.research_only_count), BigInt(alphas.size));
+    eq("T11 Fleet header deployments = deployments of the datasets", BigInt(s.deployment_count), BigInt(deployments.size));
+    eq("T11 Fleet header portfolios = portfolios of the datasets", BigInt(s.portfolio_count), BigInt(portfolios.size));
+  } else out.skipped.push("T11: the Alpha Fleet read did not answer");
+
   // T8 Fleet counts
   const all = await dataset("/manager/fleet", "ALL").catch(() => null);
   if (all) {

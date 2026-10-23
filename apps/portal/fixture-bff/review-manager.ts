@@ -371,7 +371,7 @@ function aggregate(rows: Draft[]): Draft[] {
     item.metrics.current_nav = metric(template, B, currency);
     item.metrics.return_30d_pct = pctMetric(template, A !== null && N !== null ? pct(toScaled(N), toScaled(A)) : null);
     // The seed carries the group's own rows: with the partition alone every portfolio of one currency drew the same value (all absent).
-    const salt = rows.map((row) => row.row_key).join("|");
+    const salt = (legacy() ? rows.map((row) => row.row_key) : rows.map((row) => row.row_key).sort()).join("|"); // WORLD: order-independent, so the statement of a portfolio and its group state one drawdown
     item.metrics.max_drawdown_pct = pctMetric(template, legacy() && seedOf(key, "group-drawdown", salt) % 5 === 0 ? null : drawdownOf(key, members.length, salt));
     item.metrics.concentration_hhi = pctMetric(template, hhi(members.map((metrics) => metrics.allocation?.availability === "AVAILABLE" ? metrics.allocation.value : null)));
     item.metrics.concentration_hhi.unit = "RATIO";
@@ -509,7 +509,7 @@ function capitalStatements(rows: Draft[]): Draft[] {
     const extra = {
       net_pnl: perf("net_pnl", metric(entry.template, pnl, entry.partition.currency)),
       return_30d_pct: returnMetric,
-      max_drawdown_pct: perf("max_drawdown_pct", pctMetric(entry.template, legacy() && index === 0 ? "0" : drawdownOf(key, "capital"))),
+      max_drawdown_pct: perf("max_drawdown_pct", pctMetric(entry.template, legacy() && index === 0 ? "0" : legacy() ? drawdownOf(key, "capital") : drawdownOf(key, entry.pnl.length, rows.map((row) => row.row_key).sort().join("|")))),
     };
     return { partition: copy(entry.partition), metrics: { ...money, ...extra } };
   });

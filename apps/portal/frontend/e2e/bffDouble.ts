@@ -27,7 +27,9 @@ import { answerReviewManager } from "../../fixture-bff/review-manager";
 import { answerOverview } from "./bffDoubleOverview";
 import { answerPortfolios } from "./bffDoublePortfolios";
 import { answerStage, isStageDeployment, withStageQuality } from "./bffDoubleStage";
-import { addDecimal, scaled, sumByCurrency } from "./bffScale";
+import { addDecimal, scaled, sumByCurrency, type AlphaSpec } from "./bffScale";
+import { isPositiveMode } from "./bffPositiveMode";
+import { NATIVE_ALPHAS } from "./bffWorld";
 
 const CONTRACTS = join(dirname(fileURLToPath(import.meta.url)), "../../../../packages/contracts/fixtures");
 const canonical = (name: string): unknown => JSON.parse(readFileSync(join(CONTRACTS, name), "utf8"));
@@ -247,7 +249,15 @@ export function alphaFleet(search: URLSearchParams): Answer {
     exposure: totals(deployments, "exposure"),
     health, attention_reasons: attention, updated_at: updated,
   });
-  const all: Record<string, unknown>[] = [
+  const worldRow = (a: AlphaSpec): Record<string, unknown> => row(a.id, a.label, a.version, a.owner, a.stages, a.health, a.attention,
+    a.deployments.map((d) => dep(d.id, d.stage, d.venue, d.accountId, [d.portfolioId, d.portfolioName], d.health, d.state, d.active, d.updatedAt,
+      { currency: d.currency, allocation: d.allocation, exposure: d.exposure, realized: d.realized, unrealized: d.unrealized })), a.updatedAt);
+  // WORLD (positive-like scenarios): the Alpha Fleet read counts the alphas, deployments and portfolios of the ONE world: the native books, the
+  // research idea and the generated alphas; the hand-written five of the doubles stay for the specs.
+  const worldFleet: Record<string, unknown>[] = isPositiveMode()
+    ? [...NATIVE_ALPHAS.map(worldRow), row("alpha_e", "Idea E", "0.1", null, ["RESEARCH"], "RESEARCH_ONLY", [], [], "2026-09-01T12:00:00Z")]
+    : [];
+  const all: Record<string, unknown>[] = isPositiveMode() ? [...worldFleet, ...scaled().alphas.map(worldRow)] : [
     base,
     row("alpha_b", "Basis B", "1.4", "Lan-002", ["LIVE", "CANARY"], "READY", [], [
       dep("dep_b1", "LIVE", "BINANCE", "acc_b1", PF_MAIN, "READY", "ACTIVE", true, "2026-09-01T15:10:00Z"),
