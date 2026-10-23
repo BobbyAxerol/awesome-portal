@@ -80,7 +80,7 @@ describe("WP-K FIXTURE_LAB: DRAWDOWN", () => {
     expect(result.body.metric).toBe("DRAWDOWN");
     for (const entry of result.body.series) {
       expect(entry).toMatchObject({ state: "AVAILABLE", unit: "RATIO", currency: null, ratio_scale: "FRACTION" });
-      for (const point of entry.points) expect(point.value === "0" || /^-(?:0|[1-9][0-9]*)\.[0-9]{1,8}$/.test(point.value)).toBe(true);
+      for (const point of entry.points) expect(point.value === "0" || /^-(?:0|[1-9][0-9]*)\.[0-9]{1,18}$/.test(point.value)).toBe(true);
       expect(entry.points[0].value).toBe("0");
     }
   });

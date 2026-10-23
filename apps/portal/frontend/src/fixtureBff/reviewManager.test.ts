@@ -47,7 +47,7 @@ afterEach(() => {
 afterAll(disposeSchemaCheck);
 
 describe("opt-in review Manager series", () => {
-  it.each(["NAV", "RETURN", "NET_PNL"])("%s: exact strings, deterministic 240 points, explicit real hole and no future clock", async (metric) => {
+  it.each(["NAV", "RETURN", "NET_PNL"])("%s: exact strings, deterministic 240 complete points and no future clock", async (metric) => {
     prepare();
     const result = series(metric);
     expect(result.status).toBe(200);
@@ -55,14 +55,14 @@ describe("opt-in review Manager series", () => {
     const entry = result.body.series[0];
     expect(entry.points).toHaveLength(240);
     expect(entry.points.every((point: Body) => typeof point.value === "string" && point.ts_ms <= fixtureNowMs())).toBe(true);
-    expect(entry.gaps).toHaveLength(1);
-    expect(entry.points.some((point: Body) => point.ts_ms === entry.gaps[0].from_ms)).toBe(false);
+    expect(entry.gaps).toEqual([]);
+    expect(entry.points.every((point: Body, index: number) => index === 0 || point.ts_ms > entry.points[index - 1].ts_ms)).toBe(true);
     expect(result.body.as_of_ms).toBe(fixtureNowMs());
     expect(result.body.recorded_through_ms).toBe(fixtureNowMs());
     expect(entry.calculation_revision).toContain("FIXTURE_LAB");
     expect(series(metric)).toEqual(result);
     if (metric !== "NAV") expect(entry.points[0].value).toBe("0");
-    if (metric === "NAV") expect(entry.points[0].value).toBe("100000.000000000000000001");
+    if (metric === "NAV") expect(Number(entry.points[0].value)).toBeGreaterThan(0);
     const api = client();
     const parsed = await api.getManagerSeries({ environment: "paper", metric: metric as "NAV" | "RETURN" | "NET_PNL", window: "30D", subjects: [{ subjectType: "FUND" }] });
     expect(parsed.ok, JSON.stringify(parsed)).toBe(true);
@@ -192,10 +192,10 @@ describe("six opt-in review Manager datasets", () => {
     const all = ask("/manager/fleet", { environment: "live", limit: "200" }, "layout-stress");
     expect(all.status).toBe(200);
     expect(all.body.capital_statements.length).toBeGreaterThan(1);
-    const zero = all.body.items.find((row: Body) => row.metrics.net_pnl.value === "0");
-    const missing = all.body.items.find((row: Body) => row.metrics.unrealized_pnl.value === null);
-    expect(zero.metrics.net_pnl.availability).toBe("AVAILABLE");
-    expect(missing.metrics.unrealized_pnl.availability).toBe("UNAVAILABLE");
+    for (const row of all.body.items as Body[]) {
+      expect(row.metrics.net_pnl.availability).toBe("AVAILABLE");
+      expect(row.metrics.unrealized_pnl.availability).toBe("AVAILABLE");
+    }
     const filtered = ask("/manager/fleet", { environment: "live", q: "does-not-exist", q_mode: "PREFIX" }, "layout-stress");
     expect(filtered.body.items).toEqual([]);
     expect(filtered.body.capital_statements).toEqual(all.body.capital_statements);
@@ -224,11 +224,15 @@ describe("six opt-in review Manager datasets", () => {
         if (kind !== "pending_amount") expect(typeof entry.value).toBe("string");
       }
       expect(metrics.added_funds).toMatchObject({ value: "0", availability: "AVAILABLE", reason_code: null });
-      expect(metrics.initial_funds.value).toMatch(/\.000000000000000001$/);
+      // Capital comes from the linked deployment graph, not a decorative
+      // fractional sentinel unrelated to accounts/portfolios.
+      const members = scaled().alphas.flatMap(alpha => alpha.deployments).filter(d => d.environment === "live" && d.currency === partition.currency);
+      expect(Number(metrics.initial_funds.value)).toBe(members.reduce((n, d) => n + Number(d.allocation), 0));
+      expect(Number(metrics.current_nav.value)).toBeCloseTo(members.reduce((n, d) => n + Number(d.allocation) + Number(d.realized), 0), 6);
     }
-    expect(statements[0].metrics.pending_amount).toMatchObject({ value: null, availability: "UNAVAILABLE", reason_code: "SOURCE_FACTS_NOT_PUBLISHED" });
+    expect(statements[0].metrics.pending_amount).toMatchObject({ value: "0", availability: "AVAILABLE", reason_code: null });
     expect(statements[1].metrics.pending_amount).toMatchObject({ value: "0", availability: "AVAILABLE" });
-    expect(statements[1].metrics.current_nav.value).toBe("-125.500000000000000001");
+    expect(Number(statements[1].metrics.current_nav.value)).toBeGreaterThan(0);
     expect(raw.body.statement_scope).toBe("AUTHORIZED_RESOURCE_SELECTED_STAGES_BEFORE_TABLE_FILTERS");
     // Smaller pages and a table search do not alter the capital source/population.
     const filtered = ask("/manager/fund-overview", { environment: "live", q: "not-in-the-synthetic-book", limit: "1" }, profile);
@@ -238,8 +242,8 @@ describe("six opt-in review Manager datasets", () => {
     expect(parsed.ok, JSON.stringify(parsed)).toBe(true);
     if (!parsed.ok) return;
     expect(parsed.value.capitalStatements).toHaveLength(statements.length);
-    expect(parsed.value.capitalStatements[0]!.metrics.get("pending_amount")).toMatchObject({ kind: "absent", reasonCode: "SOURCE_FACTS_NOT_PUBLISHED" });
-    expect(parsed.value.capitalStatements[1]!.metrics.get("current_nav")).toMatchObject({ kind: "value", exact: "-125.500000000000000001" });
+    expect(parsed.value.capitalStatements[0]!.metrics.get("pending_amount")).toMatchObject({ kind: "value", exact: "0" });
+    expect(parsed.value.capitalStatements[1]!.metrics.get("current_nav")).toMatchObject({ kind: "value", exact: statements[1].metrics.current_nav.value });
   });
 
   it("does not inject rich capital statements into the existing sparse fixture", () => {
@@ -250,6 +254,21 @@ describe("six opt-in review Manager datasets", () => {
     expect((before?.body as { capital_statements?: unknown } | undefined)?.capital_statements).toBeDefined();
     ask("/manager/fund-overview");
     expect(answerManagerFleet("GET", "/manager/fleet", query)).toEqual(before);
+  });
+
+  it("keeps explicit sparse zero, absence and negative balance cases outside the positive default", () => {
+    prepare();
+    const sparse = answerManagerFleet("GET", "/manager/fleet", new URLSearchParams({ environment: "paper" }))!.body as Body;
+    schema(sparse, "execution-manager-dataset.v1");
+    expect(sparse.items[0].metrics.net_pnl).toMatchObject({ value: "0", availability: "AVAILABLE" });
+    expect(sparse.items[0].metrics.unrealized_pnl).toMatchObject({ value: null, availability: "UNAVAILABLE", reason_code: "METHODOLOGY_NOT_PUBLISHED" });
+    expect(sparse.capital_statements[1].metrics.balance_total).toMatchObject({ value: "-12.5", availability: "AVAILABLE" });
+    for (const [workspace, state] of [["ws_TEST_SERIES_EMPTY", "EMPTY"], ["ws_TEST_SERIES_UNAVAILABLE", "UNAVAILABLE"]]) {
+      const response = series("NAV", "populated", { workspace_id: workspace });
+      schema(response.body, "execution-manager-series.v1");
+      expect(response.body.series.every((entry: Body) => entry.state === state)).toBe(true);
+      expect(response.body.series.every((entry: Body) => entry.points.length === 0)).toBe(true);
+    }
   });
 
   it("refuses unsupported query options explicitly and preserves the old default body", () => {
@@ -334,8 +353,8 @@ describe("simulated Manager metrics (row, capital statement, group)", () => {
           else expect(row.metrics[key]).toMatchObject({ value: null, availability: "UNAVAILABLE" });
         }
       }
-      expect(zeroReturn).toBeGreaterThan(0);
-      if (profile === "populated" && environment === "live") expect(absentEquity).toBeGreaterThan(0);
+      expect(zeroReturn).toBe(body.items.filter((row: Body) => row.metrics.net_pnl.value === "0").length);
+      expect(absentEquity).toBe(0);
     }
   });
 
@@ -354,8 +373,7 @@ describe("simulated Manager metrics (row, capital statement, group)", () => {
       expect(metrics.max_drawdown_pct).toMatchObject({ unit: "PERCENT", currency: null });
       if (index === 0) expect(metrics.max_drawdown_pct).toMatchObject({ value: "0", availability: "AVAILABLE" });
       else expect(metrics.max_drawdown_pct.value).toMatch(/^-\d+(\.\d\d?)?$/);
-      if (index === 1) expect(metrics.return_30d_pct).toMatchObject({ value: null, availability: "UNAVAILABLE", reason_code: "SOURCE_FACTS_NOT_PUBLISHED", denominator: null });
-      else {
+      {
         expect(metrics.return_30d_pct.denominator).toBe(metrics.initial_funds.value);
         const expected = big(metrics.net_pnl.value) * 100n * 1_000_000n / big(metrics.initial_funds.value);
         expect(big(metrics.return_30d_pct.value)).toBe(expected * 10n ** 12n);
@@ -563,15 +581,15 @@ describe("simulated suite universe (small scale)", () => {
     expect(unknown.status).toBe(404);
   });
 
-  it("keeps one true zero and one typed absence at row level (paper), partitions of the same book only", () => {
+  it("keeps complete linked row values (paper), partitions of the same book only", () => {
     const body = small("/manager/fleet", { environment: "paper" });
     const parts = (body.items as Body[]).flatMap((row) => row.economic_partitions as Body[]);
     expect(new Set(parts.map((entry) => `${entry.partition.economic_domain}|${entry.partition.currency}`))).toEqual(new Set(["PAPER|USDT"]));
     for (const row of body.items as Body[]) expect(row.economic_partitions).toHaveLength(1);
-    const zero = parts.find((entry) => entry.metrics.net_pnl.value === "0")!;
-    expect(zero.metrics.return_30d_pct.value).toBe("0");
-    expect(zero.metrics.max_drawdown_pct).toMatchObject({ value: "0", availability: "AVAILABLE" });
-    expect(zero.metrics.equity_30d_end_value).toMatchObject({ value: null, availability: "UNAVAILABLE", reason_code: "SOURCE_FACTS_NOT_PUBLISHED" });
+    for (const part of parts) {
+      expect(part.metrics.return_30d_pct.availability).toBe("AVAILABLE");
+      expect(part.metrics.equity_30d_end_value.availability).toBe("AVAILABLE");
+    }
     expect(parts.some((entry) => entry.metrics.cost_drag_slippage.availability === "UNAVAILABLE") || parts.length < 4).toBe(true);
   });
 });

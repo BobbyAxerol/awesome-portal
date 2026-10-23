@@ -396,27 +396,30 @@ function applyWindow(body: Draft, name: "7D" | "30D" | "90D" | "ALL", preset: Wi
  * deployments of that account do not invent another NAV/budget snapshot.
  */
 function capitalStatements(rows: Draft[]): Draft[] {
-  const partitions = new Map<string, { partition: Draft; accounts: Set<string>; template: Draft; pnl: (string | null)[] }>();
+  const sources = new Map([...SUITE_ALPHAS, ...WPC_ALPHAS, ...scaled().alphas].flatMap(a => a.deployments.map(d => [d.id, d] as const)));
+  const partitions = new Map<string, { partition: Draft; accounts: Set<string>; deployments: Set<string>; template: Draft; pnl: (string | null)[] }>();
   for (const row of rows) for (const entry of row.economic_partitions) {
     const key = JSON.stringify(entry.partition);
-    const found = partitions.get(key) ?? { partition: entry.partition, accounts: new Set<string>(), template: row.metrics.net_pnl, pnl: [] };
+    const found = partitions.get(key) ?? { partition: entry.partition, accounts: new Set<string>(), deployments: new Set<string>(), template: row.metrics.net_pnl, pnl: [] };
     // This partition's own rows only; a row's figure is never moved to another partition.
     found.pnl.push(entry.metrics.net_pnl?.availability === "AVAILABLE" ? entry.metrics.net_pnl.value : null);
-    for (const child of row.children) found.accounts.add(child.account_id);
+    for (const child of row.children) { found.accounts.add(child.account_id); found.deployments.add(child.deployment_id); }
     partitions.set(key, found);
   }
   return [...partitions.entries()].sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0).map(([key, entry], index, all) => {
     const accounts = [...entry.accounts].sort();
-    const count = BigInt(accounts.length);
-    const scale = 1_000_000_000_000_000_000n;
+    const members = [...entry.deployments].map(id => sources.get(id));
+    const known = members.every(d => d !== undefined && d.currency === entry.partition.currency);
+    const opening = known ? sum(members.map(d => d!.allocation)) : null;
+    const currentPnl = known ? sum(members.map(d => d!.realized)) : null;
     // Explicit synthetic current receipt/valuation amounts, independent of the
     // performance window. Adverse books belong to explicit negative scenarios.
     const values: Record<string, string | null> = {
-      initial_funds: decimal(count * 10_000n * scale + 1n, 18),
+      initial_funds: opening,
       added_funds: "0",
-      returned_capital: decimal(count * 125n * scale, 18),
-      current_nav: decimal(count * 11_500n * scale + 7n, 18),
-      current_budget: decimal(count * 9_000n * scale, 18),
+      returned_capital: "0",
+      current_nav: opening !== null && currentPnl !== null ? addDecimal(opening, currentPnl) : null,
+      current_budget: opening,
       pending_amount: "0",
     };
     const money = Object.fromEntries(Object.entries(values).map(([kind, value]) => {
@@ -440,7 +443,7 @@ function capitalStatements(rows: Draft[]): Draft[] {
       built.methodology_ref = built.availability === "AVAILABLE" ? "FIXTURE_LAB:synthetic-capital-performance-v1" : null;
       return built;
     };
-    const ret = pnl === null ? null : pct(toScaled(pnl), toScaled(values.initial_funds!));
+    const ret = pnl === null || opening === null ? null : pct(toScaled(pnl), toScaled(opening));
     const returnMetric = perf("return_30d_pct", pctMetric(entry.template, ret));
     returnMetric.denominator = returnMetric.availability === "AVAILABLE" ? values.initial_funds : null;
     const extra = {
@@ -882,15 +885,12 @@ function datasetAnswer(method: string, path: string, search: URLSearchParams, pr
     if (!known && !canonicalKnown && !wpcKnown(surface, id)) return problem(404, "EXECUTION_READ_NOT_AVAILABLE", "This synthetic review resource is not in the selected universe/environment.");
     rows = rows.filter((row) => surface === "PORTFOLIO" ? row.portfolio_id === id : surface === "ALPHA" ? row.alpha_id === id : row.children.some((child: Draft) => child[surface === "ACCOUNT" ? "account_id" : "deployment_id"] === id));
     if (surface === "ACCOUNT" || surface === "DEPLOYMENT") {
-      // The book metric cannot be relabelled as one child's contribution.
-      for (const row of rows) {
-        const children = row.children.filter((child: Draft) => child[surface === "ACCOUNT" ? "account_id" : "deployment_id"] === id);
-        if (children.length !== row.children.length) {
-          for (const key of Object.keys(row.metrics)) row.metrics[key] = nulled(key, row.metrics[key], row.economic_partitions[0].partition.currency);
-          row.economic_partitions[0].metrics = copy(row.metrics);
-        }
-        row.children = children;
-      }
+      // Select the source contributions BEFORE aggregating: a shared portfolio
+      // is not the account's amount, but the selected child's facts do exist.
+      const source = wpcAlphasFor(surface, id) ?? (universe.alphas.length ? universe.alphas : SUITE_ALPHAS);
+      const selected = source.map(alpha => ({ ...alpha, deployments: alpha.deployments.filter(d =>
+        d.environment === environment && (surface === "ACCOUNT" ? d.accountId === id : d.id === id)) }));
+      rows = rowsFor(environment, template, windowPreset, profile === "populated", selected);
     }
   }
   const stages = search.has("stage_filter") ? search.get("stage_filter")!.split(",") : STAGES[environment]!;
