@@ -42,6 +42,12 @@ function openerOf(page: Page): Locator {
   return page.locator("tbody tr", { hasText: "dep_TEST_ONLY_eth" }).getByRole("button", { name: /^(Review|Check original request)$/ }).first();
 }
 
+/** The lab's queue rows are older than the default 24H window: widen it, as a person would, before looking for the row. */
+async function widenWindow(page: Page) {
+  await page.getByRole("group", { name: "Window" }).getByRole("button", { name: "All time" }).click();
+  await settle(page);
+}
+
 const overflow = (page: Page) => page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
 
 /** The dock must not scroll sideways on its own either. */
@@ -61,6 +67,7 @@ for (const [label, width] of WIDTHS) {
     await settle(page);
 
     // Entry from the keyboard: focus the row's own button and press Enter.
+    await widenWindow(page);
     const opener = openerOf(page);
     await expect(opener).toBeVisible();
     await opener.focus();
@@ -161,6 +168,7 @@ test("pending-control preview · a route the lab does not answer is a typed 'did
   await page.goto("/execution/operations");
   await expect(page.locator(".exec-ops")).toBeVisible();
   await settle(page);
+  await widenWindow(page);
   const opener = openerOf(page);
   await opener.focus();
   await page.keyboard.press("Enter");
