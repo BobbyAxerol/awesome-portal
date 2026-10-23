@@ -132,11 +132,11 @@ function seriesAnswer(method: string, path: string, search: URLSearchParams, pro
     const navQuery = new URLSearchParams(search);
     navQuery.set("metric", "NAV");
     const nav = seriesAnswer(method, path, navQuery, profile);
-    if (nav?.status === 200 && (nav.body as Draft).series.every((entry: Draft) => entry.state === "AVAILABLE")) {
+    if (nav?.status === 200 && (nav.body as Draft).series.every((entry: Draft) => entry.state === "AVAILABLE" && toScaled(entry.points[0].value) > 0n && toScaled(entry.points.at(-1).value) > 0n)) {
       return { status: 200, body: buildPositiveManagerSeries({ lane: "FIXTURE_LAB", nav: nav.body, pointCount: target }).DRAWDOWN };
     }
   }
-  if (metric === "NAV" && body.series.every((entry: Draft) => entry.state === "AVAILABLE")) {
+  if (metric === "NAV" && body.series.every((entry: Draft) => entry.state === "AVAILABLE" && toScaled(entry.points[0].value) > 0n && toScaled(entry.points.at(-1).value) > 0n)) {
     return { status: 200, body: buildPositiveManagerSeries({ lane: "FIXTURE_LAB", nav: body, pointCount: target }).NAV };
   }
   return { status: 200, body };
@@ -409,15 +409,15 @@ function capitalStatements(rows: Draft[]): Draft[] {
     const accounts = [...entry.accounts].sort();
     const count = BigInt(accounts.length);
     const scale = 1_000_000_000_000_000_000n;
-    // These are explicit synthetic receipt/valuation amounts. A negative NAV
-    // is a deliberate adverse-book case, not a negative budget or missing value.
+    // Explicit synthetic current receipt/valuation amounts, independent of the
+    // performance window. Adverse books belong to explicit negative scenarios.
     const values: Record<string, string | null> = {
       initial_funds: decimal(count * 10_000n * scale + 1n, 18),
       added_funds: "0",
       returned_capital: decimal(count * 125n * scale, 18),
-      current_nav: index === 1 ? "-125.500000000000000001" : decimal(count * 11_500n * scale + 7n, 18),
+      current_nav: decimal(count * 11_500n * scale + 7n, 18),
       current_budget: decimal(count * 9_000n * scale, 18),
-      pending_amount: index === 0 ? null : "0",
+      pending_amount: "0",
     };
     const money = Object.fromEntries(Object.entries(values).map(([kind, value]) => {
       const out = metric(entry.template, value, entry.partition.currency);
@@ -441,7 +441,7 @@ function capitalStatements(rows: Draft[]): Draft[] {
       return built;
     };
     const ret = pnl === null ? null : pct(toScaled(pnl), toScaled(values.initial_funds!));
-    const returnMetric = perf("return_30d_pct", pctMetric(entry.template, index === 1 && all.length > 1 ? null : ret));
+    const returnMetric = perf("return_30d_pct", pctMetric(entry.template, ret));
     returnMetric.denominator = returnMetric.availability === "AVAILABLE" ? values.initial_funds : null;
     const extra = {
       net_pnl: perf("net_pnl", metric(entry.template, pnl, entry.partition.currency)),
@@ -509,10 +509,11 @@ function rowsFor(environment: string, template: Draft, preset: WindowPreset, com
     row.stage_lifecycle_reasons = { current_stage: row.current_stage === null ? "MULTIPLE_ACTIVE_STAGES" : null,
       entered_at_ms: "STAGE_ENTRY_TIME_NOT_PUBLISHED", days_in_stage: "STAGE_ENTRY_TIME_NOT_PUBLISHED" };
     const sourceMetric = template.items[0].metrics.net_pnl;
-    // Real zero, signed exact decimals, and a declared missing figure are all present.
+    // Preserve the shared deployment facts; row position must not invent a zero
+    // or missing value that differs from the linked detail's source.
     row.metrics = { allocation: metric(sourceMetric, sum(deployments.map((entry) => entry.allocation)), first.currency),
-      net_pnl: metric(sourceMetric, rows.length % 11 === 0 ? "0" : sum(deployments.map((entry) => entry.realized)), first.currency),
-      unrealized_pnl: metric(sourceMetric, rows.length % 7 === 0 ? null : sum(deployments.map((entry) => entry.unrealized)), first.currency) };
+      net_pnl: metric(sourceMetric, sum(deployments.map((entry) => entry.realized)), first.currency),
+      unrealized_pnl: metric(sourceMetric, sum(deployments.map((entry) => entry.unrealized)), first.currency) };
     row.economic_partitions = [{ partition: { economic_domain: domain(environment), currency: first.currency, basis: "FIXTURE_LAB:synthetic-book",
       native_profile_ref: `FIXTURE_LAB:${environment}:synthetic`, domain_proof_ref: "FIXTURE_LAB:NOT_PRODUCT_AUTHORITY" }, metrics: copy(row.metrics) }];
     rows.push(row);
