@@ -2,6 +2,23 @@
 
 ## Codex ownership — six approved backend packages, 23 October
 
+Package4 Accounts projection/fixture delivered0f0d5cc85, base b6c90263b.
+One writer for manager-lists/projection, one for opt-in fixture BFF; Codex reviews
+and owns tracking/integration. Existing FE-CAT-4 DTO is reused; no component edit.
+Latest Claude source observed b805efb217dbcef26599deefff87236cebe7eb79, including
+WP-K second-pass contract notes. No newly delivered claim for those separate items.
+Same-snapshot selected-environment counts must not grant access to other profiles.
+Source census does not establish the proposed top-level broker `native_equity`:
+it lists `balances` JSONB, `currency`, `synced_at`; exposure remains a separate
+per-binding read. Do not call N sources or replace equity with wallet to fill list.
+Exact source-input follow-up and test results go in the linked package packet.
+Final:29 focused tests verified across documented retakes; contract/linked
+fixture8/8, ledger22/22, build/migration151 PASS. No component change or installation.
+Claude uses existing figures consumer, keeps absent-key fallback for real source,
+and checks linked generated Accounts/detail/exposure fixture on1280/660. Counts
+outside the authorized selected environment stay null. DEBT-052 remains OPEN for
+qualified source batch carrier; source request written, not claimed sent/accepted.
+
 Package3 delivered8822d58f2: new `execution-visit-digest.d.ts` GET/seen operations with a
 Portal-owned durable user/workspace baseline. Claude connects existing C1 frame,
 not new UI: NO_BASELINE/READY/EMPTY, `may_mark_seen`, exact revision/version POST,

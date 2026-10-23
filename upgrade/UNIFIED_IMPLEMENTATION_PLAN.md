@@ -9363,7 +9363,11 @@ at0297c4902 (84/84 consumer,15/15 producer); package2 producer/schema delivered
 at40d3540c7. Package3 visit digest delivered8822d58f2 (Core user/workspace baseline,
 GET/explicit seen, shared-graph fixture); PG19/19+restore, final unit17/17,
 contract/HTTP7/7, ledger22/22 PASS (overlapping counts, see packet).
-Consumer timing/digest/browser review remains separate; packages4–6 QUEUED.
+Consumer timing/digest/browser review remains separate; package4 Accounts source
+0f0d5cc85 delivers same-request snapshot counts, optional figures persistence and
+linked fixture (29 focused tests across retakes, contracts8/8, ledger22/22 PASS).
+Real-source batch carrier/wiring remains OPEN; not installed/landed. Packages5–6
+QUEUED. See packet for exact verification and Claude/Edge handoff.
 No production change, push or new release gate follows this assignment.
 
 **23 October — Bobby: complete linked fixtures for UI review.**

@@ -11,7 +11,7 @@ The existing frozen integration gate is not restarted for this work.
 | 1 Linked fixtures | BFF uses shared synthetic facts; same IDs across tables/detail/charts; exact financial endpoints; contract and navigation tests | BACKEND_FIXTURE_READY 0297c4902; browser/visual and rollout not claimed |
 | 2 Fleet timing | Exact lifecycle fact binding; entered-at/days agree with as-of; ambiguous/missing transitions remain explicit; schema/producer tests | BACKEND_SOURCE_DELIVERED 40d3540c7; consumer and real transition-source acceptance pending |
 | 3 Visit digest | User/workspace baseline, snapshot revision, explicit seen transition, typed changes and safe links; authorization/isolation/replay tests plus populated fixture | BACKEND_SOURCE_DELIVERED 8822d58f2; PG/contract/fixture gates PASS; not installed/consumer accepted |
-| 4 Accounts | Authorized same-snapshot counts and list figures projection; reuse published DTO; no per-row read amplification; query/permission tests | QUEUED |
+| 4 Accounts | Authorized same-snapshot counts and list figures projection; reuse published DTO; no per-row read amplification; query/permission tests | PROJECTION_AND_FIXTURE_DELIVERED 0f0d5cc85; real-source batch carrier/wiring OPEN, browser/installation pending |
 | 5 Contributors | Authorized alpha attribution and bounded group continuation beyond 200; full-population aggregate semantics; no sum of returns/scores; pagination/security tests | QUEUED |
 | 6 Names/finance | Authorized portfolio label joins; exact grain/unit/source binding for financial DTO/fixtures; no wallet-equity substitution or cross-currency sums | QUEUED |
 
@@ -19,6 +19,145 @@ Each closeout must name code SHA, changed paths, tests actually run, contract
 generation impact, remaining real-source inputs and Claude consumer action.
 Helpers alone do not close a served route; a fixture test is not a browser receipt.
 Conversely, real Edge readiness does not block rich positive fixture acceptance.
+
+## Package4 entry — Accounts list, 23 October
+
+Base `b6c90263bb67ea3b4afbe6448587dc216222e2b1`, clean support lane above.
+Assignment: finish the existing `execution.bindings-list.v1` figures/counts path,
+not redesign Accounts or silently widen the separate scoped V2 DTO.
+Read FE-CAT-4/DEBT-UXM07-052 packet and current Claude WP-K addendum at observed
+`b805efb217dbcef26599deefff87236cebe7eb79`; WP-K group query/series proposals
+are separate from this list projection and are not marked delivered here.
+
+Task ownership: backend agent owns manager-lists/repository and focused tests;
+fixture agent owns opt-in fixture-BFF overlay/tests; Codex owns review, migration
+number reservation151, shared tracking and one integrated test run. No frontend
+component edits, no source command, remote push or preview installation.
+
+Required checks: migration/read roundtrip; figures preserve exact decimals,
+currency and null/omitted/zero; list/counts share repeatable-read snapshot before
+pagination; no unauthorized environment or per-binding source fanout; fixture
+list/detail/exposure agree. Normal hook is reserved for frozen landing (§10.10c).
+Tests that touch PostgreSQL use the existing disposable bounded gate, not live DB.
+Rollback before installation is source revert; future forward migration retains
+old data and the optional column, never destructive data rollback.
+
+### Package4 source-input follow-up — FE-CAT-4 / DEBT-UXM07-052
+
+The earlier request's `broker_account_sync_effective.native_equity` locator is
+not established by the checked-in source census. Exact locator:
+`services/portal-execution-edge-rs/contracts/maximum-data-return-v1/COLUMN_SEMANTICS_CATALOG.csv:261`.
+That relation lists `balances` JSONB, `currency`, `synced_at`, not a top-level
+native equity column. `paper-read/manager-records.ts` currently accepts scalar
+and scalar-array fields, not an arbitrary broker JSON object. Do not widen it
+to raw broker data or infer equity from wallet/buying power.
+
+Remaining real-source input owner: Edge coordinator, with TS/PM producer owners
+behind it. Required action: publish a bounded, versioned batch carrier keyed by
+workspace/profile/environment/binding/account + exact source revision, with
+qualified `native_equity`, virtual `used`/published `headroom`, unique sleeve
+population, per-currency amounts, source observation time and completeness.
+An explicit missing figure is null; a family not published is omitted. Supply
+schema + sanitized example + source locators; preserve full-grain authorization.
+Existing per-binding analytics exposure is not a batch proof and must not become
+one source call per list row. Codex then connects that carrier to the existing
+atomic `replaceBindings` input; absent input must remain absent on refresh.
+
+This is an OPEN source/wiring request, not proof that real list figures are
+already populated. The independent fixture adapter can serve complete linked
+figures now. Scoped-manager V2 keeps its existing distinct DTO/field policy;
+this package does not grant it legacy full-account figures.
+
+### Package4 implementation and consumer handoff
+
+- Additive migration151 (optional JSONB,32KiB bound, historical SQL NULL); no
+  backfill and no installation. Atomic repository replacement sanitizes existing
+  `BindingFigures`; page and binding-detail carry the same optional shape.
+- `legacyBindings` uses existing `listWithSnapshot`: page, metadata and selected
+  environment's count share a repeatable-read transaction. Count is full snapshot,
+  not page size or search result. Other environments and global all/issues stay
+  null, not zero, because this request has not authorized them. No new source
+  reads per account. Existing cursor behavior is unchanged across requests.
+- Reviewer caught JSON `null` versus SQL NULL in the new column; fixed before
+  grouped PostgreSQL verification. No broad auth or scoped-V2 fallback change.
+- Populated/layout-stress BFF uses one cached synthetic physical book per generated
+  binding plus the existing deployment allocation graph. List, binding detail,
+  Account broker facts and exposure agree per currency; wallet differs from
+  equity; internal NAV is not relabelled physical equity. Named native scenarios
+  are untouched; EXPIRED/NOT_PUBLISHED retain explicit absence scenarios.
+
+Contract unchanged: `execution-manager-lists.d.ts` / `BindingItem.figures` and
+`BindingsResponse.counts`, existing FE-CAT-4 canonical fixtures. No generator
+change needed; snapshot609files check PASS. New linked scenario test is
+`packages/contracts/test/execution-accounts-linked-fixture.spec.ts`, medium and
+large populations across all3environments and every page, through real FE readers.
+Focused contract+linked fixture8/8PASS; BFF buildPASS (agent receipt), independent
+review SQL-null finding fixed; tracking/diff checksPASS. PostgreSQL/build/restore
+result is recorded in final receipt below, not assumed here.
+
+**Claude — AWAITING_CONSUMER_REVIEW:** reuse accepted Accounts components and
+published figures reader; do not add a second client calculator. All four keys
+on positive generated rows let existing consumer skip row fallback. Missing key
+on real-source rows still needs the existing bounded fallback; null must not
+trigger substitution. Display per-environment counts only when non-null. The
+fixture's all-profile counts are valid in its full-access scenario; real selected
+profile responses deliberately do not claim an all-profile total. Review list to
+Account/exposure navigation, pagination, mixed currencies, explicit absence and
+1280/660 overflow on a rebuilt fixture preview. Browser/visual NOT_RUN here.
+
+**Remaining/backend next:** source batch carrier/wiring remains OPEN above;
+installation and normal-hook integration separate. Package5 Contributors is the
+next approved backend package, not started in this Accounts-only turn. No new
+Bobby decision is needed for fixture consumption; Edge source request is written,
+not claimed transmitted or accepted. No runtime/remote/deploy/Live changes.
+
+### Package4 verification history
+
+Initial bounded `control-api-test.sh` build and migration151 PASS. Test result:
+15PASS/2FAIL, plus one suite failed to load the schema. Two new assertions assumed
+ascending tie-break order while the default is descending; tests now request
+`binding_id:asc` explicitly. Existing figures unit spec ignored the gate's
+`PORTAL_CONTRACTS_DIR`; it now honors that mounted path. Neither fix changes
+production code. Initial log `/tmp/accounts-package4-gate.log` SHA256
+`170b6dfc485e140addf270f1714567835d40c99fafeb6754fb3c8fc2d75cd8f5`.
+
+Retake uses identical3specs on one disposable PostgreSQL1CPU/1GiB, random loopback
+port, one host Vitest worker; reuses the unchanged source build PASS instead of
+spending another full build. Exact cell `accounts-package4-retake-20261023` is
+owned by the retake script and removed on exit. This is focused verification,
+not a new full integration-hook or connected Edge acceptance claim.
+
+First retake:28/29PASS; the remaining failure was `beforeEach truncateAll` timing
+out60seconds while clearing the entire unrelated application schema. It was not
+a failed projection assertion. New suite now clears only its two owned tables;
+no timeout/SLO was relaxed. Only its4tests are retaken; the other25PASS are reused.
+Log `/tmp/accounts-package4-retake.log` SHA256
+`58e7ba16b3876909e8da2137a02bc16c8bbf9aaf77c2e01b6de2433ad48c3eca`.
+
+### Package4 final producer return — 0f0d5cc85
+
+10 code/migration/test files, +342/-24; no frontend component edits.
+Final projection-only retake4/4PASS, unchanged other specs25/25PASS reused from
+the previous run:29 distinct tests, not a claim of one all-green first run.
+Contract+linked fixture8/8PASS; ledger22/22PASS; snapshot609files, BFF build and
+tracking/diff checksPASS. Control API build and migration151 PASS from initial
+gate; no production source changes after that build (test-only corrections).
+Independent read-only review ACCEPT after SQL NULL repair and detail carry fix.
+
+Final log `/tmp/accounts-package4-final.log` SHA256
+`718714ffbfc5b5256553bb351b5f020e6f2d1c2d2fc11e54d6b08c01bc729022`.
+Retake dump/restore succeeded; projection digest matches the EMPTY final test
+state (`d41d8cd98f00b204e9800998ecf8427e`), not proof of populated financial DR.
+Official-writer roundtrip/nonempty figures are covered by the PG tests instead.
+Disposable retake cell removed by trap; no source/runtime data touched. Root
+217GiB free at entry. Dependency links/build outputs kept for reuse; no prune.
+
+Intermediate source commit uses focused-gate exception §10.10c; normal frozen
+landing hook remains pending. Markdown verification R0 §10.10d. Code is committed
+on support lane only, not pushed or landed on the common Research branch.
+Exit: storage/read and complete linked fixture delivered; DEBT-052 real batch
+financial projection remains OPEN with exact input/action above. Claude can
+consume fixture now; installation/source/browser are not silently marked PASS.
 
 ## Entry observations
 
