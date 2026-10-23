@@ -411,3 +411,11 @@ export function groupEntries(rows: readonly ManagerRow[], fields: readonly Manag
 }
 
 export const findGroup = (groups: readonly ManagerGroup[], key: ManagerGroup["key"]): ManagerGroup | null => groups.find((group) => sameKey(group.key, key)) ?? null;
+
+/** The source state as a badge kind (QA1 R2-26): Health and Source are separate typed states, both badges. An unknown word stays neutral and keeps its own words. */
+export function sourceFlagOf(state: string): { kind: FlagKind; label: string } {
+  const word = state.toUpperCase();
+  const kind: FlagKind = word === "FRESH" || word === "LIVE" || word === "CURRENT" ? "ok" : word === "STALE" ? "stale" : word === "PARTIAL" ? "partial"
+    : word === "UNAVAILABLE" || word === "MISSING" || word === "ERROR" ? "attention" : "neutral";
+  return { kind, label: humanize(state) };
+}

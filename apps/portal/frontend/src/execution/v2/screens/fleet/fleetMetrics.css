@@ -126,6 +126,11 @@
 
 /* Dataset board cards (QA1 R2-10): allocation and QBTS beside their labels; above the card-wide link so the QBTS details stay clickable. */
 .exec-fleet-card-figures { position: relative; z-index: 1; display: flex; flex-direction: column; gap: 2px; align-self: stretch; }
-.exec-fleet-card-fig { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-2); }
+.exec-fleet-card-fig { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 0 var(--space-2); }
+.exec-fleet-card-figures .exec-fleet-parts { align-items: flex-start; }
+.exec-fleet-card-figures .exec-mgr-num { white-space: nowrap; }
+.exec-fleet-card-figures .exec-fleet-qbts { flex-wrap: wrap; white-space: normal; }
 .exec-fleet-card-figlabel { font: var(--exec-font-meta); color: var(--ink-faint); }
 .exec-fleet-card-instage { font: var(--exec-font-meta); color: var(--ink-faint); }
+.exec-fleet-card-figures .exec-fleet-part { flex-wrap: wrap; justify-content: flex-start; gap: 0 var(--space-2); }
+.exec-fleet-card-fig, .exec-fleet-card-figures .exec-fleet-parts { min-width: 0; max-width: 100%; }

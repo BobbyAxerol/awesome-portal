@@ -19,7 +19,7 @@ import { Flag } from "../../Flag";
 import type { ManagerGroup, ManagerGroupField, ManagerRow, ManagerSortField } from "../../readers/managerDataset";
 import { MetricValue } from "../manager/MetricValue";
 import { FE, healthView, humanize, type UnpublishedFact } from "./fleetModel";
-import { ENVIRONMENT_LABEL, findGroup, groupEntries, groupLabel, inStageOf, lifecycleFlagOf, stageViewOf, type GroupedEntry } from "./fleetDatasetModel";
+import { ENVIRONMENT_LABEL, findGroup, groupEntries, groupLabel, inStageOf, lifecycleFlagOf, sourceFlagOf, stageViewOf, type GroupedEntry } from "./fleetDatasetModel";
 import {
   DATASET_COLUMNS, equityScalarOf, isMoneyField, qbtsOf, qbtsRows, sortFieldOf, type EquityScalar, type SortKey,
 } from "./fleetMetricsModel";
@@ -206,11 +206,11 @@ export function FleetDatasetTable({
             {view ? <Flag kind={view.kind} label={view.label} size="sm" /> : null}
             {lifecycle ? <Flag kind={lifecycle.kind} label={lifecycle.label} size="sm" /> : null}
           </span>
-          {source !== null ? <span className="exec-fleet-source-line" title={`Source state ${source}`}>{humanize(source)}</span> : null}
+          {source !== null ? <span className="exec-fleet-source-line" title={`Source state ${source}`}><Flag kind={sourceFlagOf(source).kind} label={sourceFlagOf(source).label} size="sm" /></span> : null}
         </span>
       );
     },
-    source: (row) => (row.sourceState === null ? null : humanize(row.sourceState)),
+    source: (row) => (row.sourceState === null ? null : <Flag kind={sourceFlagOf(row.sourceState).kind} label={sourceFlagOf(row.sourceState).label} size="sm" />),
     qbts: (row) => <QbtsCell row={row} carried={carried} />,
     venue: (row) => row.venue,
     lifecycle: (row) => (row.lifecycle === null ? null : humanize(row.lifecycle)),
