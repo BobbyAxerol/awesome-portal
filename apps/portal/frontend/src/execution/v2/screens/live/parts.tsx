@@ -18,6 +18,7 @@ import { useMediaQuery } from "../../useMediaQuery";
 import type { LiveSourcePanelV2, LiveSourceRecordV2 } from "../../readers/liveSourceOperations";
 import type { TypedOrderRow, TypedPositionRow } from "../../../stageFacts";
 import { PanelState } from "../../../components/states";
+import { withPaddedQuantity } from "../stage/padDecimals";
 import { cellText, lossNote, lossText, type PublishedRow } from "../../readers/publishedRows";
 import {
   OPERATIONS_PATH,
@@ -78,7 +79,7 @@ export function ContextLink({ to, children }: { to: string | null; children: str
  * wrong thing to show. With neither, the series is not published (the schema carries no points), so the
  * slot says that and names the request.
  */
-export function ChartSlot({ slot, gapAbove = false }: { slot: ChartSlotModel; gapAbove?: boolean }) {
+export function ChartSlot({ slot, gapAbove = false, deploymentId = null }: { slot: ChartSlotModel; gapAbove?: boolean; deploymentId?: string | null }) {
   switch (slot.kind) {
     case "mismatch":
       return (
@@ -100,7 +101,7 @@ export function ChartSlot({ slot, gapAbove = false }: { slot: ChartSlotModel; ga
             Gap window <CellView cell={slot.window} />
           </p>
           <p className="exec-liv-slot-links">
-            <ContextLink to={OPERATIONS_PATH}>Open operation</ContextLink>
+            <ContextLink to={deploymentId === null ? OPERATIONS_PATH : `${OPERATIONS_PATH}?target_id=${encodeURIComponent(deploymentId)}`}>Open operations for this deployment</ContextLink>
           </p>
         </section>
       );
@@ -217,13 +218,9 @@ export function v1RowsGap(rows: V1RowsPanel, what: string): GapItem | null {
 export function V1RowsSection({ title, aside, rows, what }: { title: string; aside?: string; rows: V1RowsPanel; what: string }) {
   if (rows.kind === "typed-positions" || rows.kind === "typed-orders") {
     // The server's typed rows (FE-072): exact text, no sum; the two columns the source relation lacks say so with the server's reason.
-    const shown = rows.rows.slice(0, ROW_CAP);
-    // A column no row fills (Leverage, Ack latency) is not drawn per row: its name is one `Not available` line under the table.
-    // (The source relation carries neither, so no row can fill them.)
-    const unfilled = true;
-    const dropKey = rows.kind === "typed-positions" ? "leverage" : "ack_latency_ms";
-    const dropLabel = rows.kind === "typed-positions" ? "Leverage" : "Ack latency";
-    const keep = (column: { key: string }) => !(unfilled && shown.length > 0 && column.key === dropKey);
+    // Leverage and Ack latency are the design's columns: they are drawn, each cell a typed `Not available` with the server's reason, until the source publishes them.
+    const shown = withPaddedQuantity(rows.rows.slice(0, ROW_CAP));
+    const keep = (_column: { key: string }) => true;
     return (
       <SectionPanel level={2} title={title} aside={aside}>
         {rows.line ? <p className="exec-liv-line"><span className="exec-blk-na">{rows.line}</span></p> : null}
@@ -235,7 +232,6 @@ export function V1RowsSection({ title, aside, rows, what }: { title: string; asi
         <div className="exec-liv-more">
           <span className="exec-liv-cap">{rows.caption}</span>
         </div>
-        {unfilled && shown.length > 0 ? <GapLine items={[{ label: dropLabel, id: "FE-072", reason: rows.reasons[dropKey] ?? null }]} /> : null}
       </SectionPanel>
     );
   }

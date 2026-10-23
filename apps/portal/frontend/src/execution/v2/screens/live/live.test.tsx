@@ -342,7 +342,7 @@ describe("V1 body, gap", () => {
     expect(slot.textContent).toContain("Updates are missing. Chart hidden until the gap is filled.");
     expect(slot.textContent).toContain("Gap window Not available");
     expect(whyText(slot.querySelector("[data-gap]")!)).toContain("Not published (FE-072)");
-    expect(within(slot).getByRole("link", { name: "Open operation" }).getAttribute("href")).toBe("/execution/operations");
+    expect(within(slot).getByRole("link", { name: "Open operations for this deployment" }).getAttribute("href")).toBe(`/execution/operations?target_id=${DEPLOYMENT_ID}`);
     expect(screen.getByText("A gap blocks risk-increasing actions. Protective actions stay open.")).toBeTruthy();
   });
 

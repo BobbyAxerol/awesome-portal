@@ -189,7 +189,7 @@ function LiveBody({ model, api, deploymentId, workspaceId, v2, reload }: { model
       <GapLine items={gapItems} />
       <div className="exec-liv-grid">
         <div className="exec-liv-main">
-          <ChartSlot slot={model.chart} gapAbove={v2 === null} />
+          <ChartSlot slot={model.chart} gapAbove={v2 === null} deploymentId={id} />
           <UrlTabs surface="live" tabs={TAB_LIST} label="Live sections">
             {(active) => {
               switch (active) {

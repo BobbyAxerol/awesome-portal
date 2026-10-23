@@ -223,3 +223,38 @@
   margin-left: auto;
   white-space: nowrap;
 }
+
+/* QA1 R5/R4 fixes (WP-F3). The alpha id in the sub-line is the id size, not a larger mono than its neighbours (R5-16). */
+.exec-liv-v2 .exec-stage-sub .exec-blk-num,
+.exec-liv-v2 .exec-wb-sub .exec-blk-num {
+  font: var(--exec-font-id);
+}
+/* Touch targets at phone width (R5-26): a 44px hit area for the small controls without enlarging their drawn size. */
+@media (max-width: 660px) {
+  .exec-liv-v2 :is(.exec-blk-link, .exec-dock-access, .exec-blk-btn, .exec-wb-btn, .exec-dock-btn, .exec-cny-refresh) {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+  }
+  .exec-liv-v2 .exec-blk-why-btn {
+    position: relative;
+  }
+  .exec-liv-v2 .exec-blk-why-btn::after {
+    content: "";
+    position: absolute;
+    inset: -13px;
+  }
+}
+/* Internal / Broker / Difference rows (R5-14): one line each while the columns are wide enough, else EVERY row stacks label over figure in
+ * EVERY column, so the rows keep one baseline across the three columns. */
+@media (max-width: 1360px) {
+  .exec-liv-v2 .exec-blk-triad-row {
+    display: block;
+    min-height: 0;
+    padding-bottom: var(--space-1);
+  }
+  .exec-liv-v2 .exec-blk-triad-row dd {
+    text-align: right;
+    margin-left: 0;
+  }
+}

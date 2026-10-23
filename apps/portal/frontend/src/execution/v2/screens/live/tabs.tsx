@@ -130,6 +130,9 @@ export function ExposureTab({ model, v2, paging }: TabProps) {
           {v1.ordersGap ? null : <V1RowsSection title="Orders" rows={model.v1Rows?.orders ?? { kind: "none" }} what="Open order rows" />}
         </>
       )}
+      {v2 === null && triadGap && v1.positionsGap && v1.ordersGap ? (
+        <p className="exec-liv-line"><span className="exec-blk-na">Exposure and orders are listed in the line above: the source published none of them.</span></p>
+      ) : null}
       {blotter === null ? null : (
         <p className="exec-liv-line">
           <Link className="exec-blk-link" to={blotter}>Open the full blotter for this deployment</Link>

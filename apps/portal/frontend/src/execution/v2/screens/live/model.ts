@@ -391,7 +391,7 @@ function reconciliationChipV1(live: LiveFullOperations): StageChipValue {
 function reconciliationChip(live: LiveFullOperations): StageChipValue {
   const c = live.brokerConsistency;
   if (c === null) return { state: "not-available", reason: "No broker verdict published" };
-  if (c.state === "MISMATCH") return { state: "flag", kind: "attention", label: "Mismatch" };
+  if (c.state === "MISMATCH") return { state: "flag", kind: "rejected", label: "Mismatch" };
   if (c.state === "IN_SYNC" && c.brokerValuesVisible) return { state: "flag", kind: "ok", label: "Matched" };
   // UNAVAILABLE, an unknown word, or an in-sync verdict that does not release the broker figures: not a match.
   return { state: "flag", kind: "unknown", label: "Not checked" };
@@ -479,9 +479,12 @@ function continuityV1(live: LiveFullOperations): ContinuityModel {
     {
       key: "sources",
       label: "Affected sources",
-      value: c === null || c.affectedAuthorities.length === 0
+      // A continuous feed that names no affected source says "None": the server stated both facts.
+      value: c === null
         ? na()
-        : { t: "list", items: c.affectedAuthorities.map(humanize) },
+        : c.affectedAuthorities.length === 0
+          ? gap === false ? text("None") : na()
+          : { t: "list", items: c.affectedAuthorities.map(humanize) },
     },
   ];
   const provenance: string[] = [];
