@@ -89,7 +89,18 @@ const STAGE_OF: Readonly<Record<string, DeploymentStage>> = {
 };
 /** The Canary deployment a live deployment was promoted from (its predecessor envelope is THAT deployment's). */
 const PREDECESSOR: Readonly<Record<string, string>> = { dep_live_01: "dep_canary_01", dep_btc_live: "dep_canary_01", dep_b1: "dep_b3", dep_b2: "dep_b3" };
-export const predecessorCanary = (deploymentId: string): string => PREDECESSOR[baseDeploymentId(deploymentId)] ?? baseDeploymentId(deploymentId);
+/**
+ * The canary deployment a live deployment was promoted from: in the canonical world the alpha's OWN deployment in the Canary stage; `null` when the
+ * alpha has none (its trial ended without a deployment of its own on record: no predecessor is claimed, never another alpha's).
+ */
+export function predecessorCanary(deploymentId: string): string | null {
+  const base = baseDeploymentId(deploymentId);
+  if (isPositiveMode()) {
+    const found = deploymentOf(WORLD_ALIAS[base] ?? base);
+    if (found !== null) return found.alpha.deployments.find((x) => x.stage === "CANARY")?.id ?? null;
+  }
+  return PREDECESSOR[base] ?? base;
+}
 
 /** The stage of a deployment id; an id the universe does not know is taken to be in the stage of the screen that asked. */
 export function stageOf(deploymentId: string, asked: DeploymentStage): DeploymentStage {
@@ -457,7 +468,7 @@ function canaryLit(body: Obj, deploymentId: string, variant: StageVariant): Obj 
   rb.blocker_codes = halted ? ["ROLLBACK_BLOCKED_BY_HALT"] : [];
   rb.evidence_hash = `sha256:${"c".repeat(64)}`;
   rb.items = [
-    { key: "flatten_plan", ready: avail(true), checked_at: avail(at(-34 * MIN)) },
+    { key: "flatten_plan", ready: avail(!halted), checked_at: avail(at(-34 * MIN)) },
     { key: "paper_twin", ready: avail(true), checked_at: avail(at(-5 * MIN)) },
     { key: "broker_data", ready: avail(!stale), checked_at: avail(brokerAsOf) },
     { key: "rollback_drill", ready: avail(true), checked_at: avail(at(-(6 * DAY_MS + 2 * HOUR_MS + 4 * MIN))) },
@@ -492,6 +503,7 @@ const LIVE_ORDERS: readonly OrderSpec[] = [
 ];
 
 function liveLit(body: Obj, deploymentId: string, variant: StageVariant): Obj {
+  const predecessor = predecessorCanary(deploymentId);
   const mismatch = variant === "mismatch";
   const stale = variant === "stale";
   const gap = variant === "gap";
@@ -514,7 +526,9 @@ function liveLit(body: Obj, deploymentId: string, variant: StageVariant): Obj {
     { kind: "R1_APPROVAL", state: "AVAILABLE", value: "AP-118", href: "/governance/approvals?sel=AP-118" },
     { kind: "R2_APPROVAL", state: "AVAILABLE", value: "AP-152", href: "/governance/approvals?sel=AP-152" },
     { kind: "SANDBOX_EXIT", state: "AVAILABLE", value: "SX-14", href: `/deployments/sandbox/${encodeURIComponent(baseDeploymentId(deploymentId))}` },
-    { kind: "CANARY_ENVELOPE", state: "AVAILABLE", value: "cenv_FIXTURE_LAB_1", href: `/deployments/live/${encodeURIComponent(predecessorCanary(deploymentId))}/canary` },
+    predecessor === null
+      ? { kind: "CANARY_ENVELOPE", state: "UNAVAILABLE", value: null, href: null }
+      : { kind: "CANARY_ENVELOPE", state: "AVAILABLE", value: "cenv_FIXTURE_LAB_1", href: `/deployments/live/${encodeURIComponent(predecessor)}/canary` },
     { kind: "CANARY_EXIT", state: "UNAVAILABLE", value: null, href: null },
     { kind: "LIVE_DUAL_APPROVAL", state: "AVAILABLE", value: "AP-402", href: "/governance/approvals" },
   ];
@@ -585,9 +599,12 @@ function liveLit(body: Obj, deploymentId: string, variant: StageVariant): Obj {
   );
   (body.realtime as Obj).blocker_codes = ["REALTIME_INACTIVE"];
   // The canary envelope that governed the trial before this activation: promoted, so Active for Live.
-  const predecessor = body.predecessor_canary_envelope as Obj;
-  predecessor.status = "ACTIVE";
-  predecessor.active_for_live_full = true;
+  if (predecessor === null) body.predecessor_canary_envelope = null;
+  else {
+    const envelope = body.predecessor_canary_envelope as Obj;
+    envelope.status = "ACTIVE";
+    envelope.active_for_live_full = true;
+  }
   body.open_order_footer = { envelope: panel("open-order-footer", "EXECUTION", "ready", "FRESH", AS_OF), exact_open_order_count: 2 };
   body.incidents = {
     envelope: panel("incidents", "EXECUTION", mismatch ? "ready" : "empty", "FRESH", AS_OF),
@@ -841,6 +858,9 @@ function worldStage(kind: "canary" | "live" | "sandbox" | "paper", body: Obj | n
     const compliance = body.envelope_compliance as Obj;
     compliance.consumed = { capital_cap: capConsumed, gross_notional_cap: gross, daily_loss_cap: dailyLoss, max_open_orders: String(orders.length) };
     compliance.rows = caps.map((c) => capRow(c, AS_OF));
+    // The verdict is the rows' own: any consumed figure above its approved limit is a BREACH, else every cap is proven within.
+    const above = caps.some((c) => worldToCents(c.consumed) > worldToCents(c.approved));
+    compliance.verdict = { state: above ? "BREACH" : "WITHIN_ENVELOPE", basis: "CONSUMED_NOT_ABOVE_APPROVED_PER_CAP", undetermined_caps: [] };
     body.stage_facts = stageFacts({ runtime: finished ? "STOPPED" : halted ? "HALTED" : "RUNNING", since: finished ? iso(endMs) : started, verdict: "NO_OPEN_FINDINGS", open: 0, unknownOrders: 0, asOf,
       sessions: [{ id: `session_${d.id}_canary_1`, started, ended: finished ? iso(endMs) : null, state: finished ? "COMPLETED" : halted ? "HALTED" : "RUNNING" }] });
     body.source_figures = figures(true);
@@ -852,9 +872,43 @@ function worldStage(kind: "canary" | "live" | "sandbox" | "paper", body: Obj | n
     const startMs = life.sandboxFromMs;
     const started = iso(startMs);
     withIdentityOf(body.certification);
-    body.stage_facts = stageFacts({ runtime: halted ? "HALTED" : "RUNNING", since: started, verdict: mismatch ? "OPEN_FINDINGS" : "NO_OPEN_FINDINGS", open: mismatch ? 1 : 0, unknownOrders: 0, asOf: stale ? at(-44 * MIN) : AS_OF,
-      sessions: [{ id: `session_${d.id}_sbx_1`, started, ended: null, state: halted ? "HALTED" : "RUNNING" }] });
-    body.source_figures = figures(true);
+    const cert = body.certification as Obj;
+    cert.venue = d.venue;
+    cert.created_at = iso(startMs - 2 * MIN);
+    cert.updated_at = iso(startMs + 90 * MIN);
+    // steps are checked after the certification was created and before the page's own as-of
+    (body.steps as Obj[]).forEach((step, i) => {
+      if (step.as_of !== null) {
+        step.as_of = iso(startMs + (i + 1) * MIN);
+        step.expires_at = iso(startMs + 7 * DAY_MS);
+      }
+    });
+    // ONE list of findings: the chip, the KPI, step 4 and the Difference column all read it
+    const cents = (n: bigint): string => worldCents(n);
+    const feeB = cents(worldToCents(fees) + 1n);
+    const equityB = mismatch ? cents(worldToCents(equity) + 4687n) : equity;
+    const finding = (n: number, code: string, summary: string, createdMs: number): Obj => ({ finding_id: `fnd_${d.id}_${n}`, severity: "WARNING", source_authority: "DERIVED", finding_code: code, summary, blocking: false, evidence_hash: null, as_of: null, resolved_at: null, created_at: iso(createdMs) });
+    const rows: Obj[] = [
+      ...(mismatch ? [finding(3, "EQUITY_DIFF", "Equity differs by 46.87 USDT", startMs + 60 * MIN)] : []),
+      finding(1, "FEE_DIFF", "Fee total differs by 0.01 USDT", startMs + 45 * MIN),
+      { ...finding(2, "FILL_LATE", "Fill 3 arrived 4 s late", startMs + 30 * MIN), severity: "INFO" },
+    ];
+    body.findings = { total_count: rows.length, returned_count: rows.length, truncated: false, rows };
+    body.stage_facts = stageFacts({ runtime: halted ? "HALTED" : "RUNNING", since: started, verdict: "OPEN_FINDINGS", open: rows.length, unknownOrders: 0, asOf: stale ? at(-44 * MIN) : AS_OF,
+      sessions: [{ id: `sandbox-session-1`, started, ended: null, state: halted ? "HALTED" : "RUNNING" }] });
+    body.source_figures = sourceFigures({
+      equity: { internal: equity, broker: equityB, unit: "USDT" },
+      gross_notional: { internal: gross, broker: gross, unit: "USDT" },
+      positions: { internal: String(positions.length), broker: String(positions.length), unit: "COUNT" },
+      open_orders: { internal: String(orders.length), broker: String(orders.length), unit: "COUNT" },
+      fees: { internal: fees, broker: feeB, unit: "USDT" },
+    });
+    // The workflow has not been submitted (the gate is BLOCKED): the timeline holds the creation only, by a named person; the plan is a draft made before the as-of.
+    body.timeline = { total_count: 1, returned_count: 1, truncated: false, rows: [{ event_id: `scevt_${d.id}_create`, actor_user_id: "bobby", action: "CREATE", workflow_version_before: 0, workflow_version_after: 1, created_at: iso(startMs - 2 * MIN) }] };
+    for (const plan of (body.promotion_plans as Obj[])) {
+      plan.plan_id = "PL-0412";
+      plan.created_at = iso(NOW_MS - 20 * MIN);
+    }
   } else {
     const data = body.data;
     if (!isObj(data)) return body;

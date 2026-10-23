@@ -99,10 +99,12 @@
   padding: 0;
   list-style: none;
   color: var(--ink);
-  background: var(--paper-raised);
-  border: 1px solid var(--line-strong);
+  /* seven steps in four columns: the last row is short, so the frame belongs to the steps, not to the grid (no empty eighth cell) */
+  background: transparent;
+  border: 0;
 }
 .exec-sbx-step {
+  background: var(--paper-raised);
   display: grid;
   gap: 6px;
   align-content: start;
@@ -386,9 +388,9 @@
     margin-block: -13px;
   }
 }
-/* Internal / Broker / Difference rows (R5-14): one line each while the columns are wide enough, else EVERY row stacks label over figure in
- * EVERY column, so the rows keep one baseline across the three columns. */
-@media (max-width: 1360px) {
+/* Internal / Broker / Difference rows (R5-14): EVERY row stacks label over figure in
+ * EVERY column, at every width, so the rows keep one baseline across the three columns. */
+@media all {
   .exec-sbx-v2 .exec-blk-triad-row {
     display: block;
     min-height: 0;

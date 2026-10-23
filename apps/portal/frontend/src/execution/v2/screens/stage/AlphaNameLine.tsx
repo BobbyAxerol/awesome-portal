@@ -20,9 +20,8 @@ export function AlphaNameLine({ identity }: { identity: StageIdentity }) {
   return (
     <span>
       Alpha{" "}
-      {identity.alphaId === null ? null : <span className="exec-blk-num">{identity.alphaId}</span>}
-      {identity.alphaId !== null && identity.alphaName !== null ? " · " : null}
-      {identity.alphaName === null ? null : <span>{identity.alphaName}</span>}
+      {/* The name is what the owner reads; the id is the secondary line (title) and is printed only when no name is published. */}
+      {identity.alphaName !== null ? <span title={identity.alphaId ?? undefined}>{identity.alphaName}</span> : identity.alphaId === null ? null : <span className="exec-blk-num">{identity.alphaId}</span>}
       {identity.alphaName === null ? <GapWhy name="Why the alpha name is not available" rows={[gapTitle(FE_IDENTITY, "Alpha name", identity.alphaReasonCode)]} /> : null}
     </span>
   );
