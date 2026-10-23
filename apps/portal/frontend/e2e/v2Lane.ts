@@ -18,7 +18,7 @@ export const SCREENS = [
   ["overview", "/execution", '[data-screen="overview-v2"]'],
   ["fleet", "/deployments/alphas", ".exec-fleet-v2"],
   ["operations", "/execution/operations", ".exec-ops"],
-  ["incident", "/execution/operations/incidents/inc_fixture_44", ".exec-ops"],
+  ["incident", "/execution/operations/incidents/inc_fixture_44", ".exec-opi"],
   ["cockpit", "/governance/approvals", ".exec-ck"],
   ["cockpit-r1", "/governance/approvals/AP-201/r1", ".exec-ck"],
   ["portfolios", "/deployments/portfolios", '[data-screen="portfolios-v2"]'],

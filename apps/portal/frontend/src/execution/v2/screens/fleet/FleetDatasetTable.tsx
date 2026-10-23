@@ -93,7 +93,7 @@ export function QbtsCell({ row, carried }: { row: ManagerRow; carried: boolean }
   }
   return (
     <span className="exec-fleet-qbts" data-state="value" data-band={view.band?.code}>
-      <span className="exec-mgr-num" title={`${view.exact} · policy ${view.policy ?? "not published"}`} data-zero={view.exact === "0" ? "true" : undefined}>{view.exact}</span>
+      <span className="exec-mgr-num" title={view.policy === null ? view.exact : `${view.exact} · policy ${view.policy}`} data-zero={view.exact === "0" ? "true" : undefined}>{view.exact}</span>
       {view.band ? <Flag kind={view.band.kind} label={view.band.label} size="sm" /> : <span className="exec-fleet-np" title="The dataset names no band for this score.">No band</span>}
       {view.provisional ? <Flag kind="pending" label="Provisional" size="sm" /> : null}
       <GapWhy name={`QBTS details, ${row.name ?? row.alphaId}`} rows={qbtsRows(view)} next={null} />

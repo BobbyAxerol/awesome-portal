@@ -39,6 +39,8 @@ const MAY_STAY: Readonly<Record<string, string>> = {
   "screens/blotter/index.tsx :: \"Intent and signal steps happen before the order and are not carried here.\"": "the table label of the order path; the path is read as rows",
   "screens/sandbox/Tables.tsx :: \"A plan records a refusal to promote; it does not start Canary.\"": "explains what a record means, not an absence",
   "screens/overview/index.tsx :: \"Count of alphas, from the Fleet summary. An alpha in two stages is counted in each. Alphas and deployments are different units from different reads, ": "explains a unit, not an absence",
+  "screens/fleet/FleetMetricControls.tsx :: \"The sparkline does not sort; this scalar does.\"": "explains what the control does (a sparkline is a picture, the scalar sorts), not an absence",
+  "screens/fleet/index.tsx :: {notPublished(FE.map)}": "the Map toggle is disabled with the same reason printed in the hidden line it names by aria-describedby; the title only repeats it",
   "screens/fleet/FleetDrawer.tsx :: {reason.code}": "the reason is the visible label; the title is its code (an id tooltip)",
   "shell/ContextBar.tsx :: {envLock.reason}": "the same reason is printed in the lock line and described by id",
 };
