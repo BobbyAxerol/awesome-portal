@@ -85,6 +85,21 @@
 .exec-wb-stage[data-stage="vnm"] {
   border: 1px solid var(--line-strong);
 }
+/* On the plain deployment page the VN chip is a link to the VN market variant (FE-070). */
+a.exec-wb-stage {
+  color: inherit;
+  text-decoration: none;
+}
+a.exec-wb-stage:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+/* The design's one-line question under the title: what this page is for. */
+.exec-wb-question {
+  margin: 2px 0 0;
+  font: var(--exec-font-meta);
+  color: var(--ink-faint);
+}
 .exec-wb-sub {
   display: flex;
   flex-wrap: wrap;
@@ -225,6 +240,15 @@
   font: var(--exec-font-body);
   text-align: left;
   color: var(--ink);
+}
+/* The same one body size per table as `cards.css`: a figure, its "of N" and a "Not available" in one column read as one size (13px). */
+.exec-wb-kv td {
+  --exec-font-data: 400 13px/18px var(--font-body);
+  --exec-font-meta: 400 13px/18px var(--font-body);
+  --exec-font-body: 400 13px/18px var(--font-body);
+  --exec-font-num: 400 13px/18px var(--font-mono);
+  --exec-font-id: 400 13px/18px var(--font-mono);
+  --exec-font-term: 400 13px/18px var(--font-mono);
 }
 .exec-wb-kv td {
   text-align: right;

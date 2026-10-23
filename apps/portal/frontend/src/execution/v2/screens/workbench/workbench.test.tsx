@@ -90,7 +90,8 @@ describe("screen contract", () => {
     expect(whyText(document.querySelector('.exec-wb-sub [data-gap="FE-066"]')!)).toContain("Not published (FE-066)");
     expect(screen.queryByRole("link", { name: STRATEGY })).toBeNull();
     expect(screen.queryByRole("link", { name: "← Alpha" })).toBeNull();
-    expect(text()).not.toContain("Tracking approved evidence");
+    // The design's one-line question is the page's purpose, a fixed sentence (WP-F3): it states no fact about this deployment.
+    expect(text()).toContain("Tracking approved evidence? Ready to leave Paper?");
   });
 
   it("identity published (FE-066, S3-U5): the Alpha is linked by alpha_id, never by the strategy id; the portfolio shows its name; the alpha name stays Not published with its reason", async () => {
