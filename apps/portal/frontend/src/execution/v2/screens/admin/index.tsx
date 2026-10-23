@@ -172,6 +172,7 @@ export default function AdminScreen({
   const autoOpened = useRef(false);
   const autoId = useRef<string | null>(null);
   const firstReady = tiers.flatMap((tier) => tier.rows).find((r) => r.state === "ready") ?? null;
+  const firstShown = tiers.flatMap((tier) => tier.rows)[0] ?? null;
   useEffect(() => {
     autoOpened.current = false;
     autoId.current = null;
@@ -191,10 +192,13 @@ export default function AdminScreen({
     }
     // A link named a task this catalogue does not carry: opening some other action would look like an answer.
     if (linked.cmd || linked.action) return;
-    if (mode !== "dock" || firstReady === null) return;
-    autoId.current = firstReady.id;
-    url.set({ sel: firstReady.id }, { replace: true });
-  }, [tasksLoaded, mode, selection, firstReady, url]);
+    // The pane always has something to say (what, scope, who, how, state, and why it is not live), so with no ready action the first
+    // action of the first tier opens instead: the page is never a list beside an empty column (WP-E).
+    const opening = firstReady ?? firstShown;
+    if (mode !== "dock" || opening === null) return;
+    autoId.current = opening.id;
+    url.set({ sel: opening.id }, { replace: true });
+  }, [tasksLoaded, mode, selection, firstReady, firstShown, url]);
   const pickRow = (id: string) => {
     autoId.current = null;
     select(id);
@@ -293,7 +297,8 @@ export default function AdminScreen({
     <div className="exec-adm-v2" data-screen="admin-actions-v2">
       <header className="exec-adm-head">
         <div>
-          <h1 className="exec-adm-title" title="Plan, apply and verify. Administrators only. This page plans; it does not apply.">Admin Actions</h1>
+          <h1 className="exec-adm-title">Admin Actions</h1>
+          <p className="exec-adm-sub-head" data-testid="admin-subtitle">Plan, apply and verify · Administrators only. This page plans; it does not apply.</p>
         </div>
         <div className="exec-adm-chips">
           <span className="exec-adm-fresh">
@@ -375,7 +380,7 @@ export default function AdminScreen({
             <PanelState status="empty" reason="No action is in this state." actions={<button type="button" className="exec-adm-btn" onClick={() => setFilter("all")}>Show all</button>} />
           ) : (
             tiers.map((tier) => (
-              <SectionPanel key={tier.group} title={tier.label} aside={<span title={tier.note || undefined}>{tier.ready} of {tier.total} ready</span>} flush>
+              <SectionPanel key={tier.group} title={tier.label} aside={<span data-testid="admin-tier-aside">{tier.note ? `${tier.note} · ` : ""}{tier.ready} of {tier.total} ready</span>} flush>
                 <CardsTable columns={columns} rows={tier.rows} rowKey={(r) => r.id} label={`${tier.label} actions`} selectedKey={selection} onRowOpen={(r) => pickRow(r.id)} />
               </SectionPanel>
             ))

@@ -85,6 +85,31 @@ function stepsOf(row: ActionRow): string {
   return steps.length > 0 ? steps.join(", then ") : "No plan, apply or verify path stated; treated as the full ceremony, not as none.";
 }
 
+/**
+ * Plan, Apply, Verify as the catalogue states them: required or not for this action, and where each stands on this page. A plan is
+ * the only step this page can take; Apply stays Off while the relay is disabled and Verify cannot start before an apply (WP-E).
+ */
+function CeremonyStrip({ row, plan }: { row: ActionRow; plan: CommandPlan | null }) {
+  const { task } = row;
+  const required = (value: boolean) => (value ? "Required" : "Not required");
+  const steps = [
+    { key: "plan", label: "Plan", need: required(task.planRequired), flag: plan === null ? { kind: "neutral" as const, label: "Not started" } : { kind: "pending" as const, label: "Preview" } },
+    { key: "apply", label: "Apply", need: required(task.applyRequired), flag: { kind: "paused" as const, label: "Off" } },
+    { key: "verify", label: "Verify", need: required(task.verifyRequired), flag: { kind: "neutral" as const, label: "Not started" } },
+  ];
+  return (
+    <ol className="exec-adm-pav" aria-label="Plan, apply and verify" data-testid="admin-pav">
+      {steps.map((step) => (
+        <li key={step.key} className="exec-adm-pav-item" data-step={step.key}>
+          <span className="exec-adm-pav-label">{step.label}</span>
+          <span className="exec-adm-meta">{step.need}</span>
+          <Flag kind={step.flag.kind} label={step.flag.label} size="sm" />
+        </li>
+      ))}
+    </ol>
+  );
+}
+
 /** The six-state strip. The current state is marked; the rest are the states a command can reach. */
 function CommandStrip({ plan }: { plan: CommandPlan | null }) {
   const current = commandStateOf(plan);
@@ -266,6 +291,7 @@ export function ActionPane({ row, api, activation, stale = false, workspaceId, m
       ) : (
         <div className="exec-adm-block">
           <h4 className="exec-adm-h4">1 Plan</h4>
+          <CeremonyStrip row={row} plan={currentPlan} />
           {showCommandStrip ? <CommandStrip plan={currentPlan} /> : null}
           {gate.allowed && !stale ? (
             <>

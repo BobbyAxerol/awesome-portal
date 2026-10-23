@@ -14,6 +14,8 @@
  * schema is closed), and the incident children (the same GET path answers one shape: the strict V2 root).
  */
 
+import { createHash } from "node:crypto";
+
 import { credentialView, stateView } from "../src/execution/v2/screens/account/model";
 import { scaled } from "./bffScale";
 
@@ -230,6 +232,59 @@ function overlayBindingsList(body: Obj): Obj {
   return out;
 }
 
+// ===== WP-E begin: Admin Actions, local reads connected (SIMULATED, FIXTURE_LAB; register 2d)
+/**
+ * The design's Read group has six reads that run here, one that is not offered. The published task catalogue classifies five of
+ * them SEMANTICALLY_INCOMPATIBLE and `health` SUPPORTED_BUT_INACTIVE, so on the simulated lanes only, those six READ_INSPECT tasks
+ * (never `redis-inspect`, whose Redis access is forbidden) are served CONNECTED, as local projection reads. The relay stays off and
+ * every other task keeps its published state. Switch off: the lane is not simulated.
+ */
+export const SIMULATED_CONNECTED_READS = ["health", "inspect", "capital", "performance", "sizing", "broker-read"] as const;
+
+export function overlayAdminTasks(body: Obj): Obj {
+  const out = clone(body);
+  if (!Array.isArray(out.tasks)) return out;
+  const counts = isObj(out.classification_counts) ? { ...out.classification_counts } as Record<string, number> : null;
+  for (const task of out.tasks) {
+    if (!isObj(task) || typeof task.task_id !== "string" || !(SIMULATED_CONNECTED_READS as readonly string[]).includes(task.task_id) || task.state === "CONNECTED") continue;
+    if (counts !== null && typeof task.state === "string") {
+      counts[task.state] = Math.max(0, (counts[task.state] ?? 0) - 1);
+      counts.CONNECTED = (counts.CONNECTED ?? 0) + 1;
+    }
+    task.state = "CONNECTED";
+    task.reason_code = null;
+    task.unlisted_reason = null;
+  }
+  if (counts !== null) out.classification_counts = counts;
+  return out;
+}
+
+const RUN_RESULTS: Readonly<Record<string, Obj>> = {
+  health: { services: [{ name: "projection", state: "OK" }, { name: "query", state: "OK" }, { name: "live updates", state: "STALE" }] },
+  inspect: { subject: "alpha_btc_trend", mode: "paper", state: "ACTIVE", positions: 2, working_orders: 1 },
+  capital: { portfolio: "pf_TEST_ONLY_core", rows: [{ at: "2026-10-12T09:30:00Z", movement: "TOP_UP", amount: "5000.00", currency: "USDT" }, { at: "2026-09-28T08:00:00Z", movement: "INITIAL_GRANT", amount: "50000.00", currency: "USDT" }] },
+  performance: { subject: "pf_TEST_ONLY_core", basis: "USDT", nav: "412880.25", return_30d_pct: "3.2100" },
+  sizing: { alpha: "alpha_btc_trend", symbol: "BTCUSDT", rows: [{ at: "2026-10-17T11:58:00Z", requested: "0.0400", sized: "0.0300", reason: "BUDGET_HEADROOM" }] },
+  "broker-read": { account: "acc_bnc_core", venue: "BINANCE", bindings: 1, exposure_used: "197500.00", currency: "USDT" },
+};
+
+/** The `execution.command-run-result.v1` a simulated connected read answers (no source request; a digest of the fixture's own words). */
+export function simulatedRunResult(taskId: string): Obj | null {
+  const result = RUN_RESULTS[taskId];
+  if (result === undefined) return null;
+  const digest = createHash("sha256").update(`FIXTURE_LAB:${taskId}:${JSON.stringify(result)}`).digest("hex");
+  return {
+    schema_version: "execution.command-run-result.v1",
+    task_id: taskId,
+    classification: "CONNECTED",
+    transport: "SGP_LOCAL_PROJECTION",
+    source_request_sent: false,
+    response_digest: `sha256:${digest}`,
+    result: { ...result, provenance: "FIXTURE_LAB: synthetic local read, not source data" },
+  };
+}
+// ===== WP-E end
+
 /* ── entry ──────────────────────────────────────────────────────────────── */
 
 export interface SimulatedAnswer {
@@ -249,5 +304,6 @@ export function simulate<T extends SimulatedAnswer>(method: string, path: string
   if (seg[0] === "broker-bindings" && seg[1] === "bnc_main@BINANCE" && seg[2] === "exposure" && seg.length === 3) return { ...answer, body: overlayExposure(answer.body) };
   if (path === "/screens/blotter") return { ...answer, body: overlayBlotter(answer.body) };
   if (path === "/broker-bindings") return { ...answer, body: overlayBindingsList(answer.body) };
+  if (path === "/commands/tasks") return { ...answer, body: overlayAdminTasks(answer.body) }; // WP-E
   return answer;
 }
