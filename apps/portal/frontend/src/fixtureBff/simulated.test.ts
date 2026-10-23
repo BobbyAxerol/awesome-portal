@@ -118,8 +118,9 @@ describe("blotter order row", () => {
   it("carries its deployment, average fill price and fee with the fee's own currency", () => {
     const order = readBlotter(readProfileEnvelope(ask("/screens/blotter", ON))!)!.orders[0]!;
     expect(order.deploymentId).toBe("dep_btc_live");
-    expect(order.averageFillPrice).toEqual({ kind: "value", text: "61250.40" });
-    expect(order.fee).toEqual({ kind: "value", text: "12.35" });
+    // WP-F2: the average price and the fee come from the order's own published fills (see blotterSimulated.test.ts).
+    expect(order.averageFillPrice.kind).toBe("value");
+    expect(order.fee.kind).toBe("value");
     expect(order.feeCurrency).toBe("USDT");
   });
 });

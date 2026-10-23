@@ -391,7 +391,19 @@
   font: var(--exec-font-meta);
 }
 
+/* Deployment cell: id over venue. */
+.exec-blt2-two {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
 @media (max-width: 660px) {
+  /* A placeholder sentence ("Not published for this order") wraps inside its card cell; an exact figure never does. */
+  .exec-blt2-table tbody td .exec-blt2-na {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
   .exec-blt2-panel {
     padding: var(--space-3);
   }

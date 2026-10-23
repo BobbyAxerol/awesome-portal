@@ -149,20 +149,67 @@ function overlayChart(body: Obj, metric: string): Obj {
 
 /* ── blotter (`/screens/blotter`) ───────────────────────────────────────── */
 
-/** The order row carries its deployment, average fill price and fee (with the fee's own currency). */
+// ===== WP-F2 begin: blotter order rows (FIXTURE_LAB; register 2f2) =====
+/**
+ * Every order row carries what the design's table shows. Rules (integer arithmetic on the page's own published fills, one currency):
+ *  - `deployment_id`: by alpha (btc adaptive -> dep_btc_live, carry -> dep_carry_live, grid -> dep_grid_paper); the venue is the row's own.
+ *  - `filled_quantity`: the exact sum of the order's fills on the page; "0" (a true zero) for an order that traded nothing; one order in
+ *    twenty-three leaves it out (the typed absence stays testable).
+ *  - `average_fill_price`: the quantity-weighted fill price truncated to the fills' price places (toward zero); absent without fills.
+ *  - `fee` + `fee_currency`: the sum of the fills' commissions when every fill states one in the same currency. A fill without a
+ *    commission, or fills in two currencies, leave the order without a fee: absent, never defaulted to 0 and never converted.
+ */
+const DEPLOYMENT_OF_ALPHA: Readonly<Record<string, string>> = {
+  adaptive_hma_cpp_00115m: "dep_btc_live",
+  carry_basis_v3: "dep_carry_live",
+  grid_mean_v1: "dep_grid_paper",
+};
+
+const placesOf = (text: string): number => (text.split(".")[1] ?? "").length;
+const unitsOf = (text: string, places: number): bigint => {
+  const [whole = "0", frac = ""] = text.split(".");
+  return BigInt(`${whole}${frac.padEnd(places, "0")}`);
+};
+
 function overlayBlotter(body: Obj): Obj {
   const out = clone(body);
   const data = out.data;
   if (!isObj(data) || !Array.isArray(data.orders)) return out;
+  const fills = (Array.isArray(data.fills) ? data.fills : []).filter(isObj);
   for (const order of data.orders) {
-    if (!isObj(order) || order.status !== "FILLED") continue;
-    order.deployment_id = "dep_btc_live";
-    order.average_fill_price = "61250.40";
-    order.fee = "12.35";
-    order.fee_currency = "USDT";
+    if (!isObj(order)) continue;
+    const alpha = typeof order.strategy_id === "string" ? order.strategy_id : "";
+    if (alpha in DEPLOYMENT_OF_ALPHA) order.deployment_id = DEPLOYMENT_OF_ALPHA[alpha];
+    const mine = fills.filter((fill) => typeof fill.client_order_id === "string" && fill.client_order_id === order.client_order_id);
+    const orderId = typeof order.order_id === "string" ? order.order_id : "";
+    if (hashOf(orderId) % 23 !== 0) {
+      if (mine.length === 0) order.filled_quantity = "0";
+      else {
+        const qPlaces = Math.max(...mine.map((fill) => placesOf(String(fill.quantity))));
+        order.filled_quantity = decimalOf(mine.reduce((sum, fill) => sum + unitsOf(String(fill.quantity), qPlaces), 0n), qPlaces);
+      }
+    }
+    if (mine.length === 0) continue;
+    const qPlaces = Math.max(...mine.map((fill) => placesOf(String(fill.quantity))));
+    const pPlaces = Math.max(...mine.map((fill) => placesOf(String(fill.price))));
+    let notional = 0n;
+    let quantity = 0n;
+    for (const fill of mine) {
+      const q = unitsOf(String(fill.quantity), qPlaces);
+      notional += unitsOf(String(fill.price), pPlaces) * q;
+      quantity += q;
+    }
+    if (quantity > 0n) order.average_fill_price = decimalOf(notional / quantity, pPlaces);
+    const currencies = new Set(mine.map((fill) => fill.commission_currency));
+    if (mine.every((fill) => typeof fill.commission === "string") && currencies.size === 1 && typeof [...currencies][0] === "string") {
+      const cPlaces = Math.max(...mine.map((fill) => placesOf(String(fill.commission))));
+      order.fee = decimalOf(mine.reduce((sum, fill) => sum + unitsOf(String(fill.commission), cPlaces), 0n), cPlaces);
+      order.fee_currency = [...currencies][0];
+    }
   }
   return out;
 }
+// ===== WP-F2 end =====
 
 /* ── bindings list (`/broker-bindings`): list figures and counts (FE-CAT-4) ── */
 
@@ -197,6 +244,61 @@ const LIST_FIGURES: Readonly<Record<string, (at: string) => Obj>> = {
   }),
 };
 
+// ===== WP-F2 begin: generated bindings' list figures (FE-CAT-4 lane, FIXTURE_LAB; register 2f2) =====
+/** FNV-1a of the binding id: the case and the figures are stable per binding, the same on every read. */
+function hashOf(text: string): number {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < text.length; i += 1) h = Math.imul(h ^ text.charCodeAt(i), 0x01000193) >>> 0;
+  return h;
+}
+
+/** Exact decimal text of an integer count of 10^-places units (bigint only, no float). */
+function decimalOf(units: bigint, places: number): string {
+  const negative = units < 0n;
+  const abs = negative ? -units : units;
+  const base = 10n ** BigInt(places);
+  const frac = (abs % base).toString().padStart(places, "0");
+  return `${negative ? "-" : ""}${abs / base}${places > 0 ? `.${frac}` : ""}`;
+}
+
+type Coverage = "COMPLETE" | "PARTIAL";
+const amount = (currency: string, value: string, at: string, coverage: Coverage = "COMPLETE"): Obj => ({ currency, value, observed_at: at, coverage });
+
+/**
+ * Figures of one generated binding. Cases by hash (stable per id): 1 in 16 publishes none (the capped two-read fallback, a dedicated
+ * case), 1 in 16 reports no native equity (typed null), 2 in 16 are mixed-currency (a second USDC line), 1 in 16 is over its physical
+ * equity (negative headroom, Check EXCEEDED), 1 in 16 is PARTIAL coverage, 1 in 16 uses nothing (a true "0.00"), the rest are within.
+ * Headroom = native equity less used in the equity currency (integer arithmetic; the source's number in the real lane).
+ * DERIBIT books BTC at four places, every other venue USDT at two. Nothing is summed across currencies.
+ */
+function generatedFigures(bindingId: string, at: string): Obj | null {
+  const h = hashOf(bindingId);
+  const kind = h % 16;
+  if (kind === 0) return null;
+  const venue = bindingId.split("@")[1] ?? "";
+  const [currency, places] = venue === "DERIBIT" ? (["BTC", 4] as const) : (["USDT", 2] as const);
+  const scale = 10n ** BigInt(places);
+  const equity = BigInt(40_000 + ((h >>> 4) % 900_000)) * scale; // 40,000 to 939,999 whole units
+  const pct = BigInt(18 + ((h >>> 11) % 62)); // 18..79 percent used
+  let used = (equity * pct) / 100n;
+  if (kind === 4) used = equity + (equity * BigInt(3 + ((h >>> 7) % 20))) / 100n; // over physical
+  if (kind === 5) used = 0n;
+  const coverage: Coverage = kind === 6 ? "PARTIAL" : "COMPLETE";
+  const out: Obj = {
+    native_equity: kind === 1 ? null : [amount(currency, decimalOf(equity, places), at, coverage)],
+    virtual_used: [amount(currency, decimalOf(used, places), at, coverage)],
+    virtual_headroom: [amount(currency, decimalOf(equity - used, places), at, coverage)],
+    sleeve_count: { count: 1 + ((h >>> 3) % 4), observed_at: at, coverage },
+  };
+  if (kind === 2 || kind === 3) {
+    const usdc = BigInt(2_000 + ((h >>> 9) % 20_000)) * 100n;
+    (out.virtual_used as Obj[]).unshift(amount("USDC", decimalOf(usdc, 2), at));
+    (out.virtual_headroom as Obj[]).unshift(amount("USDC", decimalOf(usdc / 5n, 2), at));
+  }
+  return out;
+}
+// ===== WP-F2 end =====
+
 /** The double's five native bindings: environment, state, credential state. Generated bindings (scale lane) are added at serve time. */
 const NATIVE_BINDINGS: readonly (readonly [string, string, string])[] = [
   ["live", "ACTIVE", "SYNC_SYNCED"], ["live", "ACTIVE", "SYNC_STALE"], ["live", "ACTIVE", "EXPIRED"],
@@ -227,6 +329,11 @@ function overlayBindingsList(body: Obj): Obj {
   for (const row of page.rows) {
     const figures = isObj(row) && typeof row.binding_id === "string" ? LIST_FIGURES[row.binding_id] : undefined;
     if (isObj(row) && figures) row.figures = figures(at);
+    // WP-F2: every generated binding publishes figures except its dedicated fallback-only case.
+    else if (isObj(row) && typeof row.binding_id === "string" && row.binding_id.startsWith("bnd_")) {
+      const generated = generatedFigures(row.binding_id, at);
+      if (generated !== null) row.figures = generated;
+    }
   }
   out.counts = listCounts(at);
   return out;

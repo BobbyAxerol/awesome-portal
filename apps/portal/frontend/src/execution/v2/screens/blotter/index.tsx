@@ -94,6 +94,11 @@ function downloadCsv(name: string, csv: string): void {
   URL.revokeObjectURL(url);
 }
 
+/** The row itself states a true zero filled quantity: there is nothing to average and no fee to charge (a published fact, not a guess). */
+function noFill(order: BlotterOrder): boolean {
+  return order.filledQuantity.kind === "value" && /^0(\.0+)?$/.test(order.filledQuantity.text);
+}
+
 /** The `from` value a link out of the Blotter carries; the destination owns what Back does with it. */
 export const FROM_BLOTTER = "blotter";
 
@@ -296,10 +301,14 @@ export default function BlotterScreen({ api, accessHref, chartHref: chartHrefPro
       case "time": return order.submittedAt ? <span className="exec-blt2-num" title={order.submittedAt}>{shortUtc(order.submittedAt)}</span> : <span className="exec-blt2-na">Not available</span>;
       case "alpha": return order.alphaId ?? <span className="exec-blt2-na">Not available</span>;
       case "account": return order.accountId ?? <span className="exec-blt2-na">Not available</span>;
-      case "deployment": return order.deploymentId ?? <NaWhy reason="The orders read carries no deployment id." className="exec-blt2-na" />;
-      case "avg": return order.averageFillPrice.kind === "absent" ? <NaWhy reason="The orders read publishes no average fill price." className="exec-blt2-na" /> : <ExactText value={order.averageFillPrice} />;
+      case "deployment": return order.deploymentId !== null
+        ? <span className="exec-blt2-two"><span className="exec-blt2-id">{order.deploymentId}</span>{order.venue ? <span className="exec-blt2-na">{order.venue}</span> : null}</span>
+        : <NaWhy reason="The orders read carries no deployment id." className="exec-blt2-na" />;
+      case "avg": return order.averageFillPrice.kind === "absent"
+        ? (noFill(order) ? <span className="exec-blt2-na" title="Nothing has traded on this order">No fill</span> : <NaWhy reason="The orders read publishes no average fill price." className="exec-blt2-na" />)
+        : <ExactText value={order.averageFillPrice} />;
       case "fee": return order.fee.kind === "absent"
-        ? <NaWhy reason="The orders read publishes no fee." className="exec-blt2-na" />
+        ? (noFill(order) ? <span className="exec-blt2-na" title="Nothing has traded on this order">No fill</span> : <NaWhy reason="The orders read publishes no fee for this order." className="exec-blt2-na" />)
         : <><ExactText value={order.fee} />{order.feeCurrency ? <span className="exec-blt2-na"> {order.feeCurrency}</span> : null}</>;
       case "venue": return order.venue ?? <span className="exec-blt2-na">Not available</span>;
       case "symbol": return order.symbol ?? <span className="exec-blt2-na">Not available</span>;
