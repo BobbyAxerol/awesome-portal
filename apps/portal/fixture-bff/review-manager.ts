@@ -885,7 +885,10 @@ function wpcTarget(environment: string, id: string, preset: WindowPreset, curren
   const rows = rowsFor(environment, wpcTemplate, preset, true, only).filter((row) => row.portfolio_id === id);
   const partition = aggregate(rows).find((entry) => entry.partition.currency === currency);
   const available = (key: string): string | null => partition?.metrics[key]?.availability === "AVAILABLE" ? partition.metrics[key].value : null;
-  const [net, nav, ret] = [available("net_pnl"), available("current_nav"), available("return_30d_pct")];
+  // NAV is the capital statement's `current_nav` of this partition (what the Compare table prints for NAV); the group's own sum is the fallback.
+  const statement = capitalStatements(rows).find((entry) => entry.partition.currency === currency)?.metrics.current_nav;
+  const statementNav = statement?.availability === "AVAILABLE" ? (statement.value as string) : null;
+  const [net, nav, ret] = [available("net_pnl"), statementNav ?? available("current_nav"), available("return_30d_pct")];
   return net === null || nav === null || ret === null ? null : { net: toScaled(net), nav: toScaled(nav), ret: toScaled(ret) / 100n };
 }
 /** Replaces the values of one series entry with a per-subject walk whose end equals the subject's dataset figure (NAV, Net PnL, Return). */

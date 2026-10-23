@@ -151,3 +151,33 @@ describe("CompareOverlay", () => {
     expect(container.querySelector(".exec-c2-xaxis")).not.toBeNull();
   });
 });
+
+describe("CompareOverlay axis and end tags for a level (WP-C)", () => {
+  const levels = [
+    { id: "a", label: "Satellite", points: series(["74000.00", "74500.00", "74901.60", "74754.00"]) },
+    { id: "b", label: "Basis Book 06", points: series(["42500.75", "42800.00", "42689.91", "42973.65"]) },
+  ];
+
+  it("a level (signed off) is scaled to its own range: the axis does not stretch down to zero", () => {
+    const { container } = render(<CompareOverlay label="NAV" basis="NAV in USDT" series={levels} unit="money" currency="USDT" signed={false} />);
+    const ticks = [...container.querySelectorAll("svg text")].map((t) => t.textContent ?? "").filter((t) => /^[\d,]+\.\d\d$/.test(t)).map((t) => Number(t.replace(/,/g, "")));
+    expect(ticks.length).toBeGreaterThan(2);
+    expect(Math.min(...ticks)).toBeGreaterThanOrEqual(30000);
+  });
+
+  it("a signed series keeps its zero line in view", () => {
+    const { container } = render(<CompareOverlay label="Net PnL" basis="Net PnL in USDT" series={levels.map((l) => ({ ...l, points: series(["10.00", "20.00", "30.00", "40.00"]) }))} unit="money" currency="USDT" signed />);
+    const ticks = [...container.querySelectorAll("svg text")].map((t) => t.textContent ?? "").filter((t) => /^[+-]?[\d,]+\.\d\d$/.test(t));
+    expect(ticks.some((t) => /^0\.00$/.test(t))).toBe(true);
+  });
+
+  it("the right margin grows to hold the longest end tag (a money tag carries its currency), so the tag is not cut off", () => {
+    const { container } = render(<CompareOverlay label="NAV" basis="NAV in USDT" series={levels} unit="money" currency="USDT" signed={false} />);
+    const svg = container.querySelector("svg.exec-c2-svg") as SVGElement;
+    const width = Number(svg.getAttribute("width"));
+    for (const box of container.querySelectorAll('[data-testid="end-tag"] rect')) {
+      const right = Number(box.getAttribute("x")) + Number(box.getAttribute("width"));
+      expect(right).toBeLessThanOrEqual(width);
+    }
+  });
+});

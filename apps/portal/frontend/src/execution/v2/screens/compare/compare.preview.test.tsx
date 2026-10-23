@@ -50,14 +50,15 @@ describe("comparable portfolios (Satellite and a generated USDT book, Real-funde
     expect(screen.getByText("Square marks the best in a row")).toBeTruthy();
   });
 
-  it("the overlay ends on the number the table prints: the Net PnL series is read for the same window and the same dataset", async () => {
+  it.each([["NAV", "NAV"], ["Net PnL", "Net PnL"]])("the overlay ends on the number the table prints: the %s series is read for the same window and the same dataset", async (button, row) => {
     mount("?in=pf_TEST_ONLY_satellite,pf_scale_006");
     await waitFor(() => expect(screen.getAllByTestId("end-tag")).toHaveLength(2), { timeout: 4000 });
-    fireEvent.click(screen.getByRole("button", { name: "Net PnL" }));
+    if (button !== "NAV") fireEvent.click(screen.getByRole("button", { name: button }));
     await waitFor(() => expect(screen.getAllByTestId("end-tag")).toHaveLength(2), { timeout: 4000 });
+    await waitFor(() => expect(rowOf(row).textContent).toMatch(/\d/), { timeout: 4000 });
     const tags = screen.getAllByTestId("end-tag").map((tag) => tag.textContent ?? "");
-    const pnl = rowOf("Net PnL");
-    const figures = [...pnl.querySelectorAll("td")].slice(1).map((td) => (td.textContent ?? "").match(/[+-]?[\d,]+\.\d+/)?.[0] ?? "");
+    const figures = [...rowOf(row).querySelectorAll("td")].slice(1).map((td) => (td.textContent ?? "").match(/[+-]?[\d,]+\.\d+/)?.[0] ?? "");
+    expect(figures.every((figure) => figure !== "")).toBe(true);
     for (const figure of figures) expect(tags.some((tag) => tag.includes(figure)), `${figure} in ${tags.join(" | ")}`).toBe(true);
   });
 });

@@ -172,7 +172,7 @@ export function EventRibbon({ label, events, domain, stages = [], enabled = {}, 
                 const a = Math.max(0, (s.from - from) / span);
                 const b = Math.min(1, (s.to - from) / span);
                 // A band narrower than its word prints no word (the title and the list name it); a clipped label was a half word.
-                const fits = (b - a) * Math.max(0, rootWidth - CHART_MARGIN.l - CHART_MARGIN.r) >= s.label.length * 7.4 + 12;
+                const fits = (b - a) * Math.max(0, rootWidth - CHART_MARGIN.l - CHART_MARGIN.r) >= s.label.length * 8.2 + 18;
                 return (
                   <li
                     key={s.id}

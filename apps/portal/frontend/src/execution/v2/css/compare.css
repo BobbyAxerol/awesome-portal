@@ -173,3 +173,28 @@
   display: inline-flex;
   align-self: flex-start;
 }
+
+/* WP-C: typed absences and partition words inside the metrics table follow the table text size (13px), like the figures beside them. */
+.exec-cmpr-v2 .exec-cards td[data-numeric="true"] .exec-pf-na,
+.exec-cmpr-v2 .exec-cards td[data-numeric="true"] .exec-mgr-na,
+.exec-cmpr-v2 .exec-cards td[data-numeric="true"] .exec-pf-unit {
+  font: var(--exec-font-meta);
+}
+.exec-cmpr-v2 .exec-cards td .exec-blk-why-btn {
+  font: inherit;
+}
+
+/* Alphas tab: one line per dataset row (an alpha version in one portfolio), figures right-aligned, never run together. */
+.exec-cmpr-lines {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+.exec-cmpr-line {
+  display: inline-flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: baseline;
+  gap: var(--space-2);
+}

@@ -64,14 +64,14 @@ function perRow(read: DatasetReadState | undefined, metricKey: string, gap: { fe
   const having = got.rows.filter((row) => row.economicPartitions.some((entry) => entry.metrics.has(metricKey)));
   if (having.length === 0) return <Absent reason={`Not published (${gap.fe}): the dataset publishes no ${metricKey} for this alpha.`} />;
   return (
-    <>
+    <span className="exec-cmpr-lines">
       {having.map((row) => (
-        <span key={row.rowKey} className="exec-alp2-fig">
+        <span key={row.rowKey} className="exec-cmpr-line">
           {got.rows.length > 1 ? <span className="exec-pf-dim">{row.portfolioId} </span> : null}
           <PartitionFigures partitions={row.economicPartitions} metricKey={metricKey} metricKeys={null} gap={gap} cell={cell} signed={signed} />
         </span>
       ))}
-    </>
+    </span>
   );
 }
 
@@ -81,17 +81,17 @@ function ScoreOf({ read }: { read: DatasetReadState | undefined }): ReactNode {
   const scored = got.rows.filter((row) => row.metrics.score !== undefined);
   if (scored.length === 0) return <NaWhy reason={`Not published (${PF_FE.score.fe}): the dataset carries no score for this alpha.`} text="Not scored" className="exec-pf-dim" />;
   return (
-    <>
+    <span className="exec-cmpr-lines">
       {scored.map((row) => {
         const metric = row.metrics.score!;
         if (metric.kind === "absent") return <NaWhy key={row.rowKey} reason={`${metric.copy}`} text="Not scored" className="exec-pf-dim" />;
         return (
-          <span key={row.rowKey} className="exec-alp2-fig" title={`${metric.exact} · ${metric.policyRevision}`}>
+          <span key={row.rowKey} className="exec-cmpr-line" title={`${metric.exact} · ${metric.policyRevision}`}>
             <span className="exec-mgr-num">{truncateDecimal(metric.exact)}</span> <ScoreBandChip band={bandOf(metric.exact)} />
           </span>
         );
       })}
-    </>
+    </span>
   );
 }
 

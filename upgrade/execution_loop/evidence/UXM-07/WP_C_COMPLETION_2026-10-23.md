@@ -57,7 +57,7 @@ State: DATA (figure or structure drawn from a published reader; FIXTURE_LAB wher
 | 31 | Manifest conditions disclosure | TYPED | disclosure drawn, content `Not published (FE-029)` |
 | 32 | "n charts not available yet" footer | DATA | |
 
-Counts: DATA 23, TYPED 7 (3, 5, 20, 29, 30, 31 and the typed part of 25 is counted DATA), BLOCKED 2. (Strictly: DATA 24 incl. 4 and 25, TYPED 6, BLOCKED 2.)
+Counts: DATA 24 (2, 4, 6-19, 21-25, 27, 28, 32), TYPED 6 (3, 5, 20, 29, 30, 31), BLOCKED 2 (1, 26).
 
 ### 2.2 Trade Replay (18 elements)
 
@@ -100,7 +100,7 @@ Counts: DATA 16, TYPED 0, BLOCKED 2.
 | 10-14 | Metrics table NAV, Net PnL, Return, Max drawdown, Score | DATA | the page window is asked, so table and chart agree |
 | 15 | Best-in-row square | DATA | exact decimal comparison |
 
-Counts: DATA 14 (rows 10-14 counted separately: 5 rows), TYPED 0, BLOCKED 1. Over the audit's 15 elements: DATA 14, BLOCKED 1.
+Counts (the audit numbers rows 10-14 one each): DATA 14, TYPED 0, BLOCKED 1 (1).
 
 ### 2.4 Totals (65 elements)
 

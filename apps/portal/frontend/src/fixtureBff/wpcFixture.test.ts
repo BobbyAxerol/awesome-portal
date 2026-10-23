@@ -75,12 +75,13 @@ describe("series for the native portfolios", () => {
     }
   });
 
-  it("each series ENDS on the figure the dataset prints for the same subject and window (NAV = current_nav, Net PnL = net_pnl)", () => {
+  it("each series ENDS on the figure the dataset prints for the same subject and window (NAV = the capital statement's current_nav, Net PnL = the group's net_pnl)", () => {
     const dataset = ask("/manager/portfolios/pf_TEST_ONLY_satellite/overview", "live", { group_by: "portfolio_id" });
     const group = dataset.body.groups[0].economic_partitions.find((entry: Body) => entry.partition.currency === "USDT");
+    const statement = dataset.body.capital_statements.find((entry: Body) => entry.partition.currency === "USDT");
     const nav = seriesOf("NAV", ["pf_TEST_ONLY_satellite", "pf_scale_006"]).body.series[0].points.at(-1).value;
     const pnl = seriesOf("NET_PNL", ["pf_TEST_ONLY_satellite", "pf_scale_006"]).body.series[0].points.at(-1).value;
-    expect(nav).toBe(group.metrics.current_nav.value);
+    expect(nav).toBe(statement.metrics.current_nav.value);
     expect(pnl).toBe(group.metrics.net_pnl.value);
   });
 

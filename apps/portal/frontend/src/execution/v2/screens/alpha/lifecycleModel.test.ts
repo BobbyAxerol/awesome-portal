@@ -79,10 +79,10 @@ describe("regimeFit and dayMonth", () => {
     const seen = new Set<string>();
     for (const alpha of ["alpha_a", "alpha_b", "alpha_c", "alpha_btc_trend"]) {
       const read = regimeFit(await datasetOf(alpha));
-      expect(read).not.toBeNull();
-      seen.add(read!.kind);
-      if (read!.kind === "value") expect(read.exact).toMatch(/^0\.\d{4}$/);
-      else expect(read!.code).toBe("INSUFFICIENT_DATA");
+      if (read === null) throw new Error(`no regime_fit key for ${alpha}`);
+      seen.add(read.kind);
+      if (read.kind === "value") expect(read.exact).toMatch(/^0\.\d{4}$/);
+      else expect(read.code).toBe("INSUFFICIENT_DATA");
     }
     expect(regimeFit(null)).toBeNull();
     expect(seen.size).toBeGreaterThan(0);
