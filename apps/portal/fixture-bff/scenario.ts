@@ -1,0 +1,57 @@
+/**
+ * Fixture scenario selector (WP-P, FIXTURE_LAB only). NOT a product flag, NOT acceptance evidence.
+ *
+ * The DEFAULT review scenario is `positive`: a complete, linked, positive synthetic world on every screen
+ * (quality COMPLETE / FRESH / VERIFIED / AVAILABLE, no degraded environment, no per-panel warning copy).
+ * Errors, partial, stale, denied, empty, missing and exact-zero are SEPARATE, selectable scenarios.
+ *
+ * Scope: only the fixture BFF reads this. A real response with an absent source still renders typed
+ * absence in the product; nothing here is shipped to the browser bundle (src/execution/productBoundary.test.ts).
+ *
+ * The selection is in-memory and per process (the doubles are module singletons too): `POST /__fixture/scenario`
+ * switches it, a reset puts back the configured scenario (`FIXTURE_SCENARIO`, default positive). No persistence.
+ */
+export const FIXTURE_SCENARIOS = ["positive", "partial", "stale", "denied", "empty", "missing", "zero", "dense"] as const;
+export type FixtureScenario = typeof FIXTURE_SCENARIOS[number];
+export const DEFAULT_SCENARIO: FixtureScenario = "positive";
+
+export const isFixtureScenario = (value: unknown): value is FixtureScenario =>
+  typeof value === "string" && (FIXTURE_SCENARIOS as readonly string[]).includes(value);
+
+/** One line per scenario for the harness page and the register (what it stands for, not how it is built). */
+export const SCENARIO_DESCRIPTIONS: Readonly<Record<FixtureScenario, string>> = Object.freeze({
+  positive: "Complete, linked, positive world: every contract-supported panel populated, quality COMPLETE/FRESH, Paper, Sandbox and Live all included.",
+  partial: "Partial coverage: Paper degraded in the All lens, panels say what is partial, one source window is short.",
+  stale: "Stale data: freshness STALE on the manager reads, the Paper environment lags, the command center and blotter say stale.",
+  denied: "Permission denial: administration, blotter and users reads answer 403; the manager reads keep answering.",
+  empty: "Empty books: no rows, no orders, no approvals; true empty, not an error.",
+  missing: "Source-dark: Sandbox NOT_CONFIGURED in the All lens, the command center feed unavailable, typed absence where a source is unpublished (the former default).",
+  zero: "Exact zero: every money and ratio figure is an exact 0 (true zero, never an absence).",
+  dense: "Dense: very long names, very large numbers; layout stress.",
+});
+
+let configured: FixtureScenario = DEFAULT_SCENARIO;
+let current: FixtureScenario = DEFAULT_SCENARIO;
+
+export const getScenario = (): FixtureScenario => current;
+export const configuredScenario = (): FixtureScenario => configured;
+
+/** Sets the process default (called once by `createFixtureServer`) and selects it. */
+export function configureScenario(scenario: FixtureScenario): void {
+  configured = scenario;
+  current = scenario;
+}
+
+export function setScenario(scenario: FixtureScenario): void {
+  current = scenario;
+}
+
+/** Deterministic reset: back to the configured scenario. */
+export function resetScenario(): FixtureScenario {
+  current = configured;
+  return current;
+}
+
+/** Predicate helpers read by the producers. */
+export const isPositive = (): boolean => current === "positive" || current === "zero" || current === "dense";
+export const degraded = (): boolean => !isPositive();

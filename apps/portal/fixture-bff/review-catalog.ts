@@ -1,3 +1,5 @@
+import { DEFAULT_SCENARIO, FIXTURE_SCENARIOS } from "./scenario";
+
 /** Server/test-only review index. It never changes app navigation or authorizes a real read. */
 export const REVIEW_PROFILES = ["sparse-realistic", "populated", "layout-stress"] as const;
 export type ReviewProfile = typeof REVIEW_PROFILES[number];
@@ -32,7 +34,7 @@ export const REVIEW_SCREENS = [
   ["admin", "/administration/actions", '[data-screen="admin-actions-v2"]'],
 ] as const;
 
-export function reviewCatalog(profile: ReviewProfile, scale: string) {
+export function reviewCatalog(profile: ReviewProfile, scale: string, scenario: string = DEFAULT_SCENARIO) {
   return {
     schema_version: "fixture.review-catalog.v1",
     lane: "FIXTURE_LAB",
@@ -40,6 +42,8 @@ export function reviewCatalog(profile: ReviewProfile, scale: string) {
     production_config: false,
     profile,
     scale,
+    scenario,
+    scenarios: FIXTURE_SCENARIOS,
     real_api_fallback: false,
     persistence: "NONE",
     commands: "NO_UPSTREAM_SIDE_EFFECTS",
@@ -69,7 +73,9 @@ const escape = (value: string): string => value.replace(/[&<>"']/g, (char) => ({
 })[char]!);
 
 /** Plain review index, NOT a replacement for any accepted Execution component. No script, forms, secret or external URL. */
-export function reviewHtml(profile: ReviewProfile, scale: string): string {
+export function reviewHtml(profile: ReviewProfile, scale: string, scenario: string = DEFAULT_SCENARIO): string {
   const links = REVIEW_SCREENS.map(([id, href]) => `<li><a href="${escape(href)}">${escape(id)}</a></li>`).join("");
-  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Execution fixture review</title></head><body><main><h1>Execution fixture review</h1><p>FIXTURE DATA · ${escape(profile)} · ${escape(scale)}. Synthetic design review only, not real Edge data or acceptance evidence.</p><p>Use a separate fixture origin. The real API is never a fallback. Writes do not persist and cannot reach upstream.</p><p><a href="/__fixture/review">Machine-readable cases and limits</a></p><ul>${links}</ul><p>Check 1280px and 660px: panel bounds, long labels, exact decimals, null versus zero, drawers, tables, charts, keyboard and back/reload. Do not re-record accepted visual baselines automatically.</p></main></body></html>`;
+  // WP-P: a no-script scenario chooser. Each entry is a plain link; the active one is marked. In-memory, lane-internal.
+  const chooser = FIXTURE_SCENARIOS.map((id) => id === scenario ? `<strong>${escape(id)} (active)</strong>` : `<a href="/__fixture/scenario?set=${escape(id)}">${escape(id)}</a>`).join(" · ");
+  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Execution fixture review</title></head><body><main><h1>Execution fixture review</h1><p>Scenario: ${chooser}. Selecting one answers JSON; come back and reload the screen. Default is positive.</p><p>FIXTURE DATA · ${escape(profile)} · ${escape(scale)}. Synthetic design review only, not real Edge data or acceptance evidence.</p><p>Use a separate fixture origin. The real API is never a fallback. Writes do not persist and cannot reach upstream.</p><p><a href="/__fixture/review">Machine-readable cases and limits</a></p><ul>${links}</ul><p>Check 1280px and 660px: panel bounds, long labels, exact decimals, null versus zero, drawers, tables, charts, keyboard and back/reload. Do not re-record accepted visual baselines automatically.</p></main></body></html>`;
 }
