@@ -10,6 +10,7 @@ import { answerReviewManager } from "../../../../../../fixture-bff/review-manage
 import { setFixtureNow, setFixtureScale } from "../../../../../e2e/bffScale";
 import { createHttpApi } from "../../../api/httpApi";
 import type { DeliveryPolicy } from "../../../profile";
+import "../../../../fixtureBff/useMissingScenario";
 import { contributorsView } from "./contributorsModel";
 
 const OPEN: DeliveryPolicy = { policyRevision: 4, queryEnabled: true, projectionIngestionEnabled: false, sseEnabled: false,
