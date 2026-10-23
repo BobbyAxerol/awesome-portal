@@ -309,6 +309,11 @@ impl ValidatedPage {
         &self.page
     }
 
+    #[must_use]
+    pub fn binding(&self) -> &ReadBinding {
+        &self.binding
+    }
+
     /// Complete visible journal groups, not a claim about every group of the
     /// enclosing source transaction. No copy of the payload is made here.
     pub fn groups(&self) -> impl Iterator<Item = &[Event]> {

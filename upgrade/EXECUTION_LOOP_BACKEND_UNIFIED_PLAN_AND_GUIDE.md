@@ -32116,3 +32116,79 @@ does not prove the cause of lifetime restarts. Edge owns quota/current-worker
 inspection with actual source/release target during01/06+08 binding; no blind
 retry, rate-limit bypass or silent restart here. Preserve peer C5journalhunk, two tracked peer returns
 and all incoming untracked files; original three peer hashes still match.
+
+<a id="epg10-backend-composition-20261023"></a>
+### Original04/05/06/07/09 — audit and finish executable backend composition
+
+**BOBBY_APPROVED / EXECUTING,23Oct08:05UTC.** Continue the owned business
+backend before Portal/TS runtime binding. The earlier289-test slice qualified
+typed adapters; it did not prove that every adapter had an executable caller.
+Audit transport→validation→durable projection/read and command ingress/egress,
+not just module presence. Preserve existing source authority and phase scope.
+
+**Guide/invariants:** original04/05/06/07/09 blocks; EDGE guide§§5–8 and
+BE guide§§6–9/12/13, linked there. Reuse report HTTP/wire, authoritative proof,
+atomic store, current-requester checks and existing scoped reads. No new
+accounting authority, SQL/CLI escape, fabricated source proof/cursor/timestamp,
+fake current grant, arbitrary source route or Live mutation. A decoder without
+its required owning composition is not a completed runtime backend.
+
+**Runnable-now scope:** inspect/complete financial report composition, native
+event handoff and command result boundary where the published semantics permit;
+fix Manager scheduler/admission safety defects independently of commissioning.
+Parallel read-only audits have isolated ownership; assign source edits only
+after reviewing the concrete seam. Root owns shared entrypoint/manifests and
+journal, one capped compiler gate, no duplicate heavy builds.
+
+**Test/exit:** focused unit/negative tests, real disposable PostgreSQL only when
+durable changes require it, existing fmt and strict Clippy. Explicitly list
+callable composed paths versus unmounted/uncommissioned ones and remaining
+owned implementation separately from genuine missing producer authority.
+Runtime routes/flags/DB/schema/trust/source grants remain unchanged. No replay
+of accepted active-revoke. No push/merge/CI;0CI minutes.
+
+**Rollback/cleanup:** source-only rollback; preserve peer C5 and incoming files.
+Inventory exact test image/cache/scratch and remove only this slice's temporary
+resources after tests; retain operational images and custody. Record tests,
+failed attempts, source pins and cleanup before each coherent Bobby commit.
+
+**08:34UTC audit refinement before further edits:** existing scoped
+query/history/export/cache/fanout algorithms are concrete and covered by real
+PG tests, but the operational entrypoint still opens legacy ungoverned stores.
+Complete the independently runnable shared executable store factory using an
+explicit versioned resource-config reference and existing ResourceEnvelope /
+storage-budget validators; no invented numeric production defaults and no
+runtime ENV change. Preserve absent-config legacy compatibility explicitly;
+new financial/native-P16 composition continues to refuse an ungoverned store.
+Current requester/provider, authenticated router mounting and source/stream
+commissioning remain Edge-owned connected assembly, not a flag-only task.
+Also reconcile stale command activation metadata: eight PM capital payloads
+are not64CLI or nine N12 capabilities. Missing command semantics cannot be
+aliased into a capital operation. Source publication is not mounted authority.
+
+**08:38UTC test checkpoint:**161 library regressions and158 projection-PG cases
+PASS, including13new native-P16 and2replica config-drift cases. First Edge
+run105PASS/4FAIL: all four failures were the new financial loopback fixture
+missing mandatory `x-pma-publication-wire`, `cache-control` and `vary` headers.
+Fixed the fixture to match the published source, not the transport validator;
+financial retake13/13PASS (96unselected in focused run, not counted again).
+The actual command Core handler→PG custody→mTLS specimen passed in the first
+run. Final full Edge/source pin gate pending. Extend the existing04runner with
+an explicit opt-in native-P16 PG target/count and safety tests, so this durable
+suite is reproducible rather than relying only on this turn's temporary driver.
+
+**Native observation slice — IMPLEMENTED / TESTED_ISOLATED:**
+`projection-store-pg::p16_history` atomically retains the39native event columns,
+exact bytes and sparse scan checkpoint, with CAS/retry receipt after SQL COMMIT.
+Migration0024 is additive and was applied ONLY to disposable PG. Native
+SEMANTIC_FACT is not current-state UPSERT; no invented occurred-at, projection
+timestamp, source ACK or complete history. Immutable selection/coverage changes
+require RESYNC. Internal history is bounded200rows/1MiB at SQL selection, exact
+keyset/cut and independently verified binding/control. Source bigint counters
+above2^53 survive append/read/checkpoint.13new actual-PG tests PASS, with existing
+bootstrap33/read45/command30/custody15/store-lib22 =158PASS/0FAIL/ignored/filtered;
+161affected library tests also PASS. No native source was called or commissioned.
+Owned raw observations are not a public browser route. Missing actual writer
+coverage/retention and source-held authority remain distinct from this local
+store, not evidence of full orders/fills/positions/corrections coverage.
+<!-- BUSINESS_COMPOSE_NATIVE_END -->

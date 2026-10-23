@@ -28,6 +28,7 @@ pub mod command_pm;
 mod d4_writer;
 mod manager_projection;
 mod manager_query_analytics;
+pub mod p16_history;
 mod query;
 mod realtime;
 mod retention;
@@ -182,6 +183,17 @@ impl PgProjectionStore {
             pool,
             resources: Some(resources),
         })
+    }
+
+    /// Requires the explicit shared envelope used by newly composed workloads.
+    /// This checks local pool governance, not source authority or measured capacity.
+    /// # Errors
+    /// Legacy pools without an envelope cannot opt into governed composition.
+    pub fn require_resource_governance(&self) -> Result<(), ResourceError> {
+        self.resources
+            .as_ref()
+            .map(|_| ())
+            .ok_or(ResourceError::Config)
     }
 
     fn admit(
