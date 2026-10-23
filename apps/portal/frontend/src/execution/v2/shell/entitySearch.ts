@@ -21,6 +21,7 @@
 import type { PortalRegistryDocument } from "../../../portal/contracts";
 import { sidebarGroups, type NavOptions } from "../../../portal/navigation";
 import type { ExecutionApi } from "../../api/ports";
+import type { EntityKind } from "../readers/entitySearch";
 import { ENV_LABEL, type ExecEnv } from "../urlState";
 import { applyV2Nav, type CommandEntry } from "./roleNav";
 
@@ -60,6 +61,8 @@ export function searchSourcesFor(registry: PortalRegistryDocument, options: NavO
 }
 
 export interface EntitySearchOutcome {
+  /** `index`: one `GET /search` answered; `reads`: the per-read fallback. Absent for a text under the minimum (nothing was asked). */
+  via?: "index" | "reads";
   entries: CommandEntry[];
   /** One honest line per kind searched: the read used, how it matched, how many were shown of how many matched. */
   notes: string[];
@@ -175,11 +178,67 @@ async function approvals(api: ExecutionApi, text: string, workspaceId: string | 
   };
 }
 
+/** The Portal's own words for a kind, in the order the bar prints them. */
+const KIND_ORDER: readonly SearchKind[] = ["alpha", "portfolio", "account", "operation", "approval"];
+const INDEX_GROUP: Readonly<Record<string, string>> = { alpha: GROUP.alpha, portfolio: GROUP.portfolio, account: GROUP.account, operation: GROUP.operation, incident: GROUP.incident, approval: GROUP.approval };
+
 /**
- * Searches every kind in `sources` with `text`. Resolves to `null` when `signal` aborted (the caller has moved on). Reads run in
- * parallel; a failing read is one note, never a thrown error and never an empty list posing as "no match".
+ * The one server search (`GET /search`, `portal.execution.entity-search.v1`): one read for every kind the rail lists, the groups and caps the contract
+ * defines (an unauthorized entity is absent; `total_matched` null = the source did not count). `null` when the port has no such method or the read
+ * is not served (any refusal or unreadable body): the caller then falls back to the per-read searches, once, and the labels say which path answered.
+ */
+async function searchByIndex(api: ExecutionApi, query: string, sources: SearchSources, workspaceId: string | undefined, signal: AbortSignal): Promise<EntitySearchOutcome | null> {
+  if (typeof api.searchEntities !== "function") return null;
+  const kinds: EntityKind[] = [...KIND_ORDER.filter((kind) => sources[kind]), ...(sources.operation ? (["incident"] as const) : [])];
+  if (kinds.length === 0) return null;
+  let result;
+  try {
+    result = await api.searchEntities({ q: query, kinds, limit: PER_KIND, ...(workspaceId ? { workspaceId } : {}) });
+  } catch {
+    return null;
+  }
+  if (signal.aborted || !result.ok) return null;
+  const entries: CommandEntry[] = [];
+  const notes: string[] = [];
+  for (const kind of kinds) {
+    const group = result.value.groups.find((g) => g.kind === kind);
+    const label = INDEX_GROUP[kind];
+    if (group === undefined) { notes.push(`${label}: entity search read, none returned`); continue; }
+    for (const hit of group.rows.slice(0, PER_KIND)) {
+      entries.push({ id: `${kind}:${hit.id}`, group: label, label: hit.label, ...(hit.detail === null ? {} : { detail: hit.detail }), href: hit.routeHint });
+    }
+    const shown = Math.min(group.rows.length, PER_KIND);
+    notes.push(group.totalMatched === null ? `${label}: entity search read, ${shown} shown, count not published` : `${label}: entity search read, ${shown} of ${group.totalMatched} shown`);
+  }
+  return { via: "index", entries, notes };
+}
+
+/**
+ * Searches every kind in `sources` with `text`: through the one server search when it is published, else through the per-read searches.
+ * Resolves to `null` when `signal` aborted. `skipIndex` is the caller's memory that `/search` is not served (no second probe per keystroke).
  */
 export async function searchEntities(
+  api: ExecutionApi,
+  text: string,
+  sources: SearchSources,
+  workspaceId: string | undefined,
+  signal: AbortSignal,
+  environment: ExecEnv = "live",
+  options: { skipIndex?: boolean } = {},
+): Promise<EntitySearchOutcome | null> {
+  const query = text.trim();
+  if (query.length < MIN_QUERY) return { entries: [], notes: [] };
+  if (options.skipIndex !== true) {
+    const indexed = await searchByIndex(api, query, sources, workspaceId, signal);
+    if (signal.aborted) return null;
+    if (indexed !== null) return indexed;
+  }
+  const outcome = await searchByReads(api, query, sources, workspaceId, signal, environment);
+  return outcome === null ? null : { via: "reads", ...outcome };
+}
+
+/** The fallback: one list read per kind, in parallel; a failing read is one note, never a thrown error and never an empty list posing as "no match". */
+async function searchByReads(
   api: ExecutionApi,
   text: string,
   sources: SearchSources,

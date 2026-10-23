@@ -34,6 +34,7 @@ import { MIN_QUERY, searchEntities, searchSourcesFor } from "./entitySearch";
 import { goToEntries, type CommandEntry } from "./roleNav";
 
 export const ENTITY_SEARCH_NOTICE = "Entity search · Not published as one index (FE-023)";
+export const ENTITY_SEARCH_INDEX_NOTICE = "Entity search · one server search (GET /search), results scoped to your access";
 export const ENTITY_SEARCH_HINT = `Type ${MIN_QUERY} or more characters to search each published list read.`;
 export const EXEC_COMMAND_PLACEHOLDER = "Search or jump to";
 /** The whole "Go to" list is short and permission-filtered; the bar default of 12 would push Execution rows out of view. */
@@ -78,7 +79,11 @@ export function ExecCommandBar({ registry, options, open, onClose, searchApi, de
   const onSelect = useCallback((entry: CommandEntry) => navigate(withContext(entry.href, search)), [navigate, search]);
 
   const [query, setQuery] = useState("");
-  const [found, setFound] = useState<{ for: string; entries: CommandEntry[]; notes: string[] }>({ for: "", entries: [], notes: [] });
+  const [found, setFound] = useState<{ for: string; entries: CommandEntry[]; notes: string[] }>({ for: "", entries: [], notes: [] })
+  // What the last search learned about `GET /search`: not asked yet, served, or not served (then the per-read fallback answers and the
+  // index is not probed again for every keystroke; a fresh mount asks again).
+  const [index, setIndex] = useState<"unknown" | "published" | "unpublished">("unknown");
+  const skipIndex = useRef(false);
   const [busy, setBusy] = useState(false);
   const anySource = sources.alpha || sources.portfolio || sources.account || sources.operation || sources.approval;
   const text = query.trim();
@@ -102,8 +107,10 @@ export function ExecCommandBar({ registry, options, open, onClose, searchApi, de
     const timer = setTimeout(() => {
       const now = latest.current;
       const api = now.searchApi ?? createHttpApi({ policy: null, signal: controller.signal });
-      void searchEntities(api, text, now.sources, now.workspaceId, controller.signal, now.environment).then((outcome) => {
+      void searchEntities(api, text, now.sources, now.workspaceId, controller.signal, now.environment, { skipIndex: skipIndex.current }).then((outcome) => {
         if (outcome === null || controller.signal.aborted) return;
+        if (outcome.via === "index") { skipIndex.current = false; setIndex("published"); }
+        else if (outcome.via === "reads") { skipIndex.current = true; setIndex("unpublished"); }
         setFound({ for: text, ...outcome });
         setBusy(false);
       });
@@ -133,7 +140,7 @@ export function ExecCommandBar({ registry, options, open, onClose, searchApi, de
       filterLocally={false}
       onQueryChange={setQuery}
       placeholder={EXEC_COMMAND_PLACEHOLDER}
-      searchNotice={anySource ? `${ENTITY_SEARCH_NOTICE}. ${ENTITY_SEARCH_HINT}` : ENTITY_SEARCH_NOTICE}
+      searchNotice={!anySource ? ENTITY_SEARCH_NOTICE : index === "published" ? ENTITY_SEARCH_INDEX_NOTICE : `${ENTITY_SEARCH_NOTICE}. ${ENTITY_SEARCH_HINT}`}
       notes={notes}
       busy={busy && entries.length === 0}
     />

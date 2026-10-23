@@ -10,7 +10,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { PortalRegistryDocument } from "../../../portal/contracts";
 import type { ExecutionApi } from "../../api/ports";
-import { ExecCommandBar } from "./ExecCommandBar";
+import { ENTITY_SEARCH_HINT, ENTITY_SEARCH_INDEX_NOTICE, ENTITY_SEARCH_NOTICE, ExecCommandBar } from "./ExecCommandBar";
 import { MIN_QUERY, PER_KIND, searchEntities, searchSourcesFor, type SearchSources } from "./entitySearch";
 import { V2_ROLE_PRESETS } from "./roleNav";
 
@@ -281,5 +281,122 @@ describe("ExecCommandBar search", () => {
     );
     expect((screen.getByRole("combobox") as HTMLInputElement).value).toBe("");
     expect(screen.queryByRole("list", { name: "Reads used" })).toBeNull();
+  });
+});
+
+const indexBody = (over: Record<string, unknown> = {}) => ({
+  workspaceId: "ws_1", readAtMs: 1, query: { q: "core", kinds: [], limit: 5 },
+  groups: [
+    { kind: "alpha", totalMatched: 14, rows: [{ kind: "alpha", id: "al_btc", label: "BTC-Trend", detail: "LIVE", routeHint: "/deployments/alphas/al_btc" }] },
+    { kind: "portfolio", totalMatched: 0, rows: [] },
+    { kind: "account", totalMatched: null, rows: [{ kind: "account", id: "acct_main", label: "acct_main", detail: null, routeHint: "/deployments/accounts/acct_main" }] },
+    { kind: "incident", totalMatched: null, rows: [{ kind: "incident", id: "inc_1", label: "inc_1", detail: "OPEN", routeHint: "/execution/operations/incidents/inc_1" }] },
+  ],
+  ...over,
+});
+
+describe("the one server search (GET /search) is the primary source", () => {
+  it("one read answers every kind the rail lists; no per-read search is made", async () => {
+    const searchSpy = vi.fn(async () => ok(indexBody()));
+    const { api, calls } = fakeApi({ searchEntities: searchSpy });
+    const out = (await searchEntities(api, "core", ALL, "ws_1", signal()))!;
+    expect(out.via).toBe("index");
+    expect(searchSpy).toHaveBeenCalledTimes(1);
+    expect(searchSpy).toHaveBeenCalledWith({ q: "core", kinds: ["alpha", "portfolio", "account", "operation", "approval", "incident"], limit: PER_KIND, workspaceId: "ws_1" });
+    expect(calls.alphas).toHaveLength(0);
+    expect(calls.portfolios).toBe(0);
+    expect(calls.bindings).toHaveLength(0);
+    expect(calls.operations).toHaveLength(0);
+    expect(calls.approvals).toHaveLength(0);
+    expect(out.entries.map((e) => [e.group, e.label, e.detail, e.href])).toEqual([
+      ["Alphas", "BTC-Trend", "LIVE", "/deployments/alphas/al_btc"],
+      ["Accounts", "acct_main", undefined, "/deployments/accounts/acct_main"],
+      ["Incidents", "inc_1", "OPEN", "/execution/operations/incidents/inc_1"],
+    ]);
+  });
+
+  it("each group says how many are shown of how many matched; a counted zero, an uncounted group and a missing group differ", async () => {
+    const { api } = fakeApi({ searchEntities: async () => ok(indexBody()) });
+    const out = (await searchEntities(api, "core", ALL, undefined, signal()))!;
+    expect(out.notes).toEqual([
+      "Alphas: entity search read, 1 of 14 shown",
+      "Portfolios: entity search read, 0 of 0 shown",
+      "Accounts: entity search read, 1 shown, count not published",
+      "Operations: entity search read, none returned",
+      "Approvals: entity search read, none returned",
+      "Incidents: entity search read, 1 shown, count not published",
+    ]);
+  });
+
+  it("asks only for the kinds the rail lists", async () => {
+    const spy = vi.fn(async () => ok(indexBody()));
+    const { api } = fakeApi({ searchEntities: spy });
+    await searchEntities(api, "core", { alpha: true, portfolio: false, account: false, operation: false, approval: true }, undefined, signal());
+    expect(spy).toHaveBeenCalledWith({ q: "core", kinds: ["alpha", "approval"], limit: PER_KIND });
+  });
+
+  it("not published (refused, unreadable, or no port method): the per-read searches answer, labelled as such", async () => {
+    for (const over of [{ searchEntities: async () => fail("not served") }, { searchEntities: async () => { throw new Error("x"); } }, {}]) {
+      const { api, calls } = fakeApi(over);
+      const out = (await searchEntities(api, "core", ALL, undefined, signal()))!;
+      expect(out.via).toBe("reads");
+      expect(calls.alphas).toHaveLength(1);
+      expect(out.notes.some((n) => n.includes("matched here"))).toBe(true);
+    }
+  });
+
+  it("skipIndex goes straight to the reads (no second probe)", async () => {
+    const spy = vi.fn(async () => ok(indexBody()));
+    const { api, calls } = fakeApi({ searchEntities: spy });
+    const out = (await searchEntities(api, "core", ALL, undefined, signal(), "live", { skipIndex: true }))!;
+    expect(spy).not.toHaveBeenCalled();
+    expect(out.via).toBe("reads");
+    expect(calls.alphas).toHaveLength(1);
+  });
+});
+
+describe("ExecCommandBar with the server search", () => {
+  const mountBar = (api: ExecutionApi) =>
+    render(
+      <MemoryRouter initialEntries={["/execution?workspace_id=ws_1"]}>
+        <ExecCommandBar registry={registry} options={MANAGER} open onClose={() => undefined} searchApi={api} debounceMs={5} />
+        <Where />
+      </MemoryRouter>,
+    );
+  const noticeText = () => document.querySelector(".exec-cmdbar-notice")?.textContent;
+
+  it("names the one read in the notice once it answered, shows its groups and navigates with the route hint", async () => {
+    const spy = vi.fn(async () => ok(indexBody()));
+    const { api, calls } = fakeApi({ searchEntities: spy });
+    mountBar(api);
+    expect(noticeText()).toBe(`${ENTITY_SEARCH_NOTICE}. ${ENTITY_SEARCH_HINT}`);
+    fireEvent.change(screen.getByRole("combobox"), { target: { value: "core" } });
+    fireEvent.click(await screen.findByRole("option", { name: /BTC-Trend/ }));
+    expect(new URL(screen.getByTestId("where").textContent ?? "", "http://x").pathname).toBe("/deployments/alphas/al_btc");
+    expect(spy).toHaveBeenCalledTimes(1);
+    expect(calls.alphas).toHaveLength(0);
+  });
+
+  it("the notice says one server search while it is the source", async () => {
+    const { api } = fakeApi({ searchEntities: async () => ok(indexBody()) });
+    mountBar(api);
+    fireEvent.change(screen.getByRole("combobox"), { target: { value: "core" } });
+    await screen.findByRole("list", { name: "Reads used" });
+    expect(noticeText()).toBe(ENTITY_SEARCH_INDEX_NOTICE);
+  });
+
+  it("unpublished: the per-read fallback answers once per query, /search is probed once and not again, the typed FE-023 notice stays", async () => {
+    const spy = vi.fn(async () => fail("404"));
+    const { api, calls } = fakeApi({ searchEntities: spy });
+    mountBar(api);
+    const input = screen.getByRole("combobox");
+    fireEvent.change(input, { target: { value: "core" } });
+    await waitFor(() => expect(calls.alphas).toHaveLength(1));
+    await screen.findByRole("list", { name: "Reads used" });
+    fireEvent.change(input, { target: { value: "cora" } });
+    await waitFor(() => expect(calls.alphas).toHaveLength(2));
+    expect(spy).toHaveBeenCalledTimes(1);
+    expect(noticeText()).toBe(`${ENTITY_SEARCH_NOTICE}. ${ENTITY_SEARCH_HINT}`);
+    expect(screen.getByRole("list", { name: "Reads used" }).textContent).toContain("matched here");
   });
 });
