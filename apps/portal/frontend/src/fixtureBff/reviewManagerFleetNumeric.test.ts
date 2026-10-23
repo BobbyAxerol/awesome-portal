@@ -4,6 +4,7 @@
  * exact decimals (never a lexical order), a null always last in both directions, a money key only inside ONE pinned economic partition.
  * Judged through the real HTTP route (the unmodified production port over the review answerer).
  */
+import "./useMissingScenario";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { answerReviewManager } from "../../../fixture-bff/review-manager";
