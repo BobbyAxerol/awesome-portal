@@ -248,8 +248,8 @@ function bindingExposure(id: string): BffAnswerAccount {
           ...data,
           binding_id: spec.bindingId,
           // The shared binding publishes 2 of its 3 sleeves: a partial population.
-          account_count: shared && !isPositiveMode() ? 2 : shared ? 3 : 1, // WP-P: the positive binding publishes all three sleeves
-          expected_account_count: shared ? 3 : 1,
+          account_count: shared ? 2 : 1, // WP-P: the positive binding publishes the sleeves that hold a book (two)
+          expected_account_count: shared ? (isPositiveMode() ? 2 : 3) : 1,
           population_completeness: shared && !isPositiveMode() ? "PARTIAL" : "COMPLETE",
           buckets,
         },
@@ -497,7 +497,7 @@ function positiveAccount(spec: AccountSpec, id: string): AccountSpec {
   const rows: Record<string, Row[]> = { ...spec.rows };
   const primary = SLEEVES.includes(id as (typeof SLEEVES)[number]) ? id : spec.id;
   const shared = SLEEVES.includes(primary as (typeof SLEEVES)[number]);
-  const owners = shared ? [...SLEEVES] : [primary];
+  const owners = shared ? SLEEVES.filter((sleeve) => sleeve === primary || positiveBookOf(sleeve) !== null) : [primary]; // WP-P: the sleeves that hold a book; the table and the drawer count the same ones
   const books = owners.map((owner) => ({ owner, book: positiveBookOf(owner) }));
   const money = (owner: string): { currency: string; total: bigint; locked: bigint; unrealized: bigint; allocation: bigint } | null => {
     const book = books.find((entry) => entry.owner === owner)?.book;

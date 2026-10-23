@@ -2,7 +2,7 @@
 /** Explicit SYNTHETIC review lane, judged by schemas AND the unmodified production HTTP port. */
 import { afterAll, afterEach, describe, expect, it, vi } from "vitest";
 
-import { answerReviewManager, type ReviewManagerProfile } from "../../../fixture-bff/review-manager";
+import { answerReviewManager, wpWorldAlphas, type ReviewManagerProfile } from "../../../fixture-bff/review-manager";
 import { answerManagerFleet, answerManagerSeries } from "../../e2e/bffDoubleManager";
 import { fixtureNowMs, scaled, setFixtureNow, setFixtureScale } from "../../e2e/bffScale";
 import { createHttpApi } from "../execution/api/httpApi";
@@ -134,7 +134,7 @@ describe("six opt-in review Manager datasets", () => {
     expect(raw.status).toBe(200);
     schema(raw.body, "execution-manager-dataset.v1");
     expect(raw.body.items.length).toBeGreaterThan(2);
-    expect(raw.body.items.every((row: Body) => scaled().alphas.some((alpha) => alpha.id === row.alpha_id))).toBe(true);
+    expect(raw.body.items.every((row: Body) => (wpWorldAlphas("FUND", undefined) ?? scaled().alphas).some((alpha) => alpha.id === row.alpha_id))).toBe(true); // WP-P: the positive world holds the native books too
     const parsed = await api.getManagerDataset({ surface: "FLEET", environment: environment as "paper" | "sandbox" | "live", limit: 200, workspaceId: "fixture-workspace" });
     expect(parsed.ok, JSON.stringify(parsed)).toBe(true);
     expect(parsed.ok && parsed.value.workspaceId).toBe("fixture-workspace");
@@ -228,7 +228,7 @@ describe("six opt-in review Manager datasets", () => {
       expect(metrics.added_funds).toMatchObject({ value: "0", availability: "AVAILABLE", reason_code: null });
       // Capital comes from the linked deployment graph, not a decorative
       // fractional sentinel unrelated to accounts/portfolios.
-      const members = scaled().alphas.flatMap(alpha => alpha.deployments).filter(d => d.environment === "live" && d.currency === partition.currency);
+      const members = (wpWorldAlphas("FUND", undefined) ?? scaled().alphas).flatMap(alpha => alpha.deployments).filter(d => d.environment === "live" && d.currency === partition.currency);
       expect(Number(metrics.initial_funds.value)).toBe(members.reduce((n, d) => n + Number(d.allocation), 0));
       expect(Number(metrics.current_nav.value)).toBeCloseTo(members.reduce((n, d) => n + Number(d.allocation) + Number(d.realized), 0), 6);
     }

@@ -27,12 +27,22 @@ export interface PositiveAccountBook {
   deployments: PositiveDeploymentBook[];
 }
 
+/** The deployments booked in one portfolio, every environment: what the Portfolios list prints as its allocation, deployment count and environments. */
+export interface PositivePortfolioBook {
+  portfolio_id: string;
+  deployments: PositiveDeploymentBook[];
+}
+
 let positive = false;
 let books: ((accountId: string) => PositiveAccountBook | null) | null = null;
+let portfolioBooks: ((portfolioId: string) => PositivePortfolioBook | null) | null = null;
 
-export const setPositiveMode = (on: boolean, provider: ((accountId: string) => PositiveAccountBook | null) | null = null): void => {
+export const setPositiveMode = (on: boolean, provider: ((accountId: string) => PositiveAccountBook | null) | null = null,
+  portfolioProvider: ((portfolioId: string) => PositivePortfolioBook | null) | null = null): void => {
   positive = on;
   books = on ? provider : null;
+  portfolioBooks = on ? portfolioProvider : null;
 };
+export const positivePortfolioBookOf = (portfolioId: string): PositivePortfolioBook | null => (positive && portfolioBooks !== null ? portfolioBooks(portfolioId) : null);
 export const isPositiveMode = (): boolean => positive;
 export const positiveBookOf = (accountId: string): PositiveAccountBook | null => (positive && books !== null ? books(accountId) : null);

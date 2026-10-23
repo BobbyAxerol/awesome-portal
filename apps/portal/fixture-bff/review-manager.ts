@@ -12,7 +12,7 @@ import { buildPositiveManagerSeries } from "../../../packages/contracts/tooling/
 import { ALPHA_DOUBLE_AS_OF_MS, answerAlpha } from "../frontend/e2e/bffDoubleAlpha";
 import { answerManagerFleet, answerManagerSeries } from "../frontend/e2e/bffDoubleManager";
 import { answerPortfolios } from "../frontend/e2e/bffDoublePortfolios";
-import type { PositiveAccountBook } from "../frontend/e2e/bffPositiveMode";
+import type { PositiveAccountBook, PositivePortfolioBook } from "../frontend/e2e/bffPositiveMode";
 import { addDecimal, fixtureNowMs, scaled, type AlphaSpec, type DeploymentSpec } from "../frontend/e2e/bffScale";
 import { legacy, traits } from "./scenario";
 
@@ -929,7 +929,7 @@ function wpF1Answer(method: string, path: string, search: URLSearchParams): Revi
 function wpF1ShapeFund(entry: Draft, metricName: string, environment: string, requested: unknown): void {
   const days = requested === "7D" ? "7D" : requested === "90D" ? "90D" : "30D";
   const template = fixture("execution-manager-dataset.partitions.synthetic.valid.json");
-  const rows = rowsFor(environment, template, WINDOW_PRESETS[days], true);
+  const rows = rowsFor(environment, template, WINDOW_PRESETS[days], true, wpWorldAlphas("FUND", undefined)); // WP-P: the same universe fund-overview serves
   const statement = capitalStatements(rows).find((e) => e.partition.currency === entry.partition.currency && e.partition.economic_domain === entry.partition.economic_domain);
   const figure = (key: string): string | null => (statement?.metrics[key]?.availability === "AVAILABLE" ? (statement.metrics[key].value as string) : null);
   const [net, nav, ret] = [figure("net_pnl"), figure("current_nav"), figure("return_30d_pct")];
@@ -986,7 +986,7 @@ function datasetAnswer(method: string, path: string, search: URLSearchParams, pr
   const surface = match[1] === "fleet" ? "FLEET" : match[1] === "fund-overview" ? "FUND" : ({ portfolios: "PORTFOLIO", alphas: "ALPHA", accounts: "ACCOUNT", deployments: "DEPLOYMENT" } as Record<string, string>)[match[1]!.split("/")[0]!]!;
   let id: string | undefined;
   try { id = match[2] === undefined ? undefined : decodeURIComponent(match[2]); } catch { return problem(400, "EXECUTION_READ_QUERY_INVALID", "The resource id is not URI text."); }
-  let rows = rowsFor(environment, template, windowPreset, profile === "populated", wpcAlphasFor(surface, id)); // WP-C: the native ids answer from their own books
+  let rows = rowsFor(environment, template, windowPreset, profile === "populated", wpWorldAlphas(surface, id)); // WP-C: the native ids answer from their own books; WP-P: the positive fleet and fund read hold them too
   const universe = scaled();
   if (id !== undefined) {
     const known = surface === "PORTFOLIO" ? universe.portfolios.some((entry) => entry.id === id) : surface === "ALPHA" ? universe.alphas.some((entry) => entry.id === id)
@@ -1117,7 +1117,7 @@ const wpcDeployment = (...args: Parameters<typeof suiteDeployment>): DeploymentS
 };
 // ===== WP-P end
 const WPC_ALPHAS: AlphaSpec[] = [
-  suiteAlpha("alpha_c", "Momentum C", "2.0", "Minh-003", "ATTENTION", [wpcDeployment("dep_c1", "alpha_c", "CANARY", "live", WPC_SAT, "15000", "0", "0", "HALTED")]),
+  suiteAlpha("alpha_c", "Momentum C", "2.0", "Minh-003", "ATTENTION", [wpcDeployment("dep_c1", "alpha_c", "CANARY", "live", WPC_SAT, "15000", "-125.4", "-18.2", "HALTED")]),
   suiteAlpha("alpha_d", "Grid D", "0.9", "Bobby-001", "READY", [
     wpcDeployment("dep_d1", "alpha_d", "SANDBOX", "sandbox", WPC_CAN, "8000", "61.2", "3"),
     wpcDeployment("dep_d2", "alpha_d", "PAPER", "paper", WPC_SAT, "10000", "-30.75", "8.4"),
@@ -1125,7 +1125,7 @@ const WPC_ALPHAS: AlphaSpec[] = [
   suiteAlpha("alpha_a", "Carry A", "1.0", "Bobby-001", "READY", [
     wpcDeployment("dep_live_01", "alpha_a", "LIVE", "live", WPC_CORE, "40000.00", "980.40", "140.40"),
     wpcDeployment("dep_paper_01", "alpha_a", "PAPER", "paper", WPC_CORE, "20000.00", "-84.20", "0"),
-    wpcDeployment("dep_sandbox_01", "alpha_a", "SANDBOX", "sandbox", WPC_CORE, "10000.00", "0", "0", "HALTED"),
+    wpcDeployment("dep_sandbox_01", "alpha_a", "SANDBOX", "sandbox", WPC_CORE, "10000.00", "-41.6", "12.3", "HALTED"),
   ]),
   suiteAlpha("alpha_btc_trend", "BTC Trend", "3.0", "Lan-002", "READY", [
     wpcDeployment("dep_btc_live", "alpha_btc_trend", "LIVE", "live", WPC_CORE, "80000", "1120.8", "55.4"),
@@ -1147,6 +1147,9 @@ function wpcAlphasFor(surface: WpcSurface, id: string | undefined): AlphaSpec[] 
   return (surface === "ALPHA" && wpcNativeAlpha(id)) || (surface === "PORTFOLIO" && wpcNativePortfolio(id)) ? WPC_ALPHAS : undefined;
 }
 const wpcKnown = (surface: WpcSurface, id: string | undefined): boolean => wpcAlphasFor(surface, id) !== undefined;
+/** WP-P: the positive world is ONE universe. The fleet and the fund read hold the native books (Core, Satellite, Canary) next to the generated ones, so the list, the groups, the statements and the series of a native portfolio come from the same rows as its detail page. `missing`/`partial` keep the two universes apart. */
+export const wpWorldAlphas = (surface: WpcSurface, id: string | undefined): AlphaSpec[] | undefined =>
+  !legacy() && id === undefined && (surface === "FLEET" || surface === "FUND") && scaled().alphas.length > 0 && scaled().alphas.length < 100 ? [...scaled().alphas, ...WPC_ALPHAS] : wpcAlphasFor(surface, id);
 /** Portfolio ids the series port may answer for beyond the scaled universe: the native books that hold at least one deployment in this environment. */
 function wpcPortfolioStubs(environment: string): { id: string; base: string }[] {
   wpcTemplate ??= fixture("execution-manager-dataset.partitions.synthetic.valid.json");
@@ -1959,6 +1962,15 @@ export function wpAlphaResource(body: unknown, alphaId: string): unknown {
  * (`WPC_ALPHAS`, one source), so the account double can state allocation + net PnL = balance. Registered with the account double by app.ts
  * when the positive mode is on. `null` for an account no native deployment is booked on.
  */
+/** The deployments booked in one native portfolio, every environment (the Portfolios list's allocation, deployment count and environments come from here). */
+export function wpPortfolioBook(portfolioId: string): PositivePortfolioBook | null {
+  const booked = WPC_ALPHAS.flatMap((alpha) => alpha.deployments.map((deployment) => ({ alpha, deployment }))).filter(({ deployment }) => deployment.portfolioId === portfolioId);
+  if (booked.length === 0) return null;
+  return { portfolio_id: portfolioId, deployments: booked.map(({ alpha, deployment }) => ({ deployment_id: deployment.id, alpha_id: alpha.id, alpha_label: alpha.label,
+    portfolio_id: deployment.portfolioId, portfolio_name: deployment.portfolioName, environment: deployment.environment, stage: deployment.stage, currency: deployment.currency,
+    allocation: deployment.allocation, realized: deployment.realized, unrealized: deployment.unrealized })) };
+}
+
 export function wpAccountBook(accountId: string): PositiveAccountBook | null {
   const booked = WPC_ALPHAS.flatMap((alpha) => alpha.deployments.map((deployment) => ({ alpha, deployment }))).filter(({ deployment }) => deployment.accountId === accountId);
   if (booked.length === 0) return null;

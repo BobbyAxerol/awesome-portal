@@ -69,7 +69,7 @@ import { fileURLToPath } from "node:url";
 import { scopedResourceV2 } from "./bffDoubleScopedResource";
 import { answerOperationsV2 } from "./bffDoubleV2";
 import { addDecimal as addExact, scaleCounts, scaled, sumByCurrency, type PortfolioSpec } from "./bffScale";
-import { isPositiveMode } from "./bffPositiveMode";
+import { isPositiveMode, positivePortfolioBookOf } from "./bffPositiveMode";
 
 export interface BffAnswerPortfolios {
   status: number;
@@ -135,6 +135,17 @@ const scaledItem = (p: PortfolioSpec) => ITEM({
   allocation_count: p.deploymentIds.length, deployment_count: p.deploymentIds.length, allocated_by_currency: p.allocatedByCurrency, updated_at: p.updatedAt,
 });
 
+/** WP-P: in the positive world a native portfolio's environments, counts and allocation are the deployments booked in it (the rows the dataset, the statements and the series are built from). */
+function positiveListItem<T extends Record<string, unknown>>(item: T): T {
+  const book = positivePortfolioBookOf(String(item.portfolio_id ?? ""));
+  if (book === null || book.deployments.length === 0) return item;
+  const currency = book.deployments[0]!.currency;
+  const total = book.deployments.reduce((sum, d) => addExact(sum, d.allocation), "0");
+  const order = ["paper", "sandbox", "live"];
+  return { ...item, environments: order.filter((env) => book.deployments.some((d) => d.environment === env)), allocation_count: book.deployments.length,
+    deployment_count: book.deployments.length, allocated_by_currency: [{ currency, value: total }] };
+}
+
 function portfolioList(): BffAnswerPortfolios {
   const extra = scaled();
   const shown = extra.portfolios.slice(0, Math.max(0, scaleCounts().portfoliosShown - LIST_ITEMS.length));
@@ -151,7 +162,7 @@ function portfolioList(): BffAnswerPortfolios {
     },
     total_portfolios: extra.portfolios.length > 0 ? extra.portfoliosTotal : isPositiveMode() ? 8 : 9,
     truncated: extra.portfolios.length > 0 ? extra.portfoliosTruncated : !isPositiveMode(),
-    items: (shown.length > 0 ? [...LIST_ITEMS, ...shown.map(scaledItem)] : LIST_ITEMS).filter((item) => !isPositiveMode() || (item as { portfolio_id?: string }).portfolio_id !== PF.unallocated), // WP-P: no UNKNOWN row in the positive world
+    items: (shown.length > 0 ? [...LIST_ITEMS, ...shown.map(scaledItem)] : LIST_ITEMS).filter((item) => !isPositiveMode() || (item as { portfolio_id?: string }).portfolio_id !== PF.unallocated).map(positiveListItem), // WP-P: no UNKNOWN row in the positive world, and a native portfolio prints its own book
   });
 }
 
@@ -455,7 +466,7 @@ function equityPayload(search: URLSearchParams): BffAnswerPortfolios {
     panel: { state: "UNAVAILABLE", reason_code: reason, retryable: false, clocks, coverage: { from_ms: null, to_ms: null, source_total: null, filtered_total: "0", returned_count: 0, truncated: false, downsampled: false, has_more: false, gaps: [] }, formula,
       data: { comparison_mode: "SINGLE_SUBJECT", scale_mode: "LINEAR", currency_policy: "PARTITIONED_BY_SOURCE_CURRENCY_NO_FX_AGGREGATE", series: [], sampling: null, retention: null, benchmark: { requested: false, state: "UNAVAILABLE", reason_code: "EDS11R4_MARKET_CONTEXT_NOT_ACTIVATED" } } },
   });
-  const build = (currency: string, label: string, start: number, count: number, startCents: number, stepCents: number, gapAsked: readonly [number, number] | null, stateAsked: "READY" | "PARTIAL"): BffAnswerPortfolios => {
+  const build = (currency: string, label: string, start: number, count: number, startCents: number, stepCents: number, gapAsked: readonly [number, number] | null, stateAsked: "READY" | "PARTIAL", endCents?: number): BffAnswerPortfolios => {
     const gap = isPositiveMode() ? null : gapAsked; // WP-P: no retained-snapshot gap in the positive world
     const state = isPositiveMode() ? "READY" : stateAsked;
     const from = Number(search.get("from_ms") ?? AS_OF_MS - (count - 1) * HOUR);
@@ -468,6 +479,7 @@ function equityPayload(search: URLSearchParams): BffAnswerPortfolios {
       // A small deterministic zig-zag over a drift, in minor units.
       points.push([t, cents(startCents + i * stepCents + (i % 5 === 0 ? -stepCents * 3 : (i % 3) * stepCents))]);
     }
+    if (endCents !== undefined && points.length > 0) points[points.length - 1] = [points[points.length - 1]![0], cents(endCents)]; // WP-P: the line ends on the NAV the Portfolio 360 statement states
     const gaps = gap === null ? [] : [{ from_ms: start + (gap[0] - 1) * HOUR, to_ms: start + gap[1] * HOUR, reason: "SOURCE_SNAPSHOT_GAP" }];
     return ok({
       ...base,
@@ -486,6 +498,16 @@ function equityPayload(search: URLSearchParams): BffAnswerPortfolios {
     });
   };
   if (kind !== "portfolio") return unavailable("SUBJECT_KIND_NOT_SERVED_BY_THIS_DOUBLE");
+  // WP-P: a native portfolio's equity line starts at its opening allocation and ends on the NAV its capital statement states (allocation + realized PnL of the
+  // deployments booked in this environment), so the chart, the NAV tile and the Compare table read one number.
+  const book = positivePortfolioBookOf(id);
+  const booked = book?.deployments.filter((d) => d.environment === environment) ?? [];
+  if (booked.length > 0) {
+    const minor = (value: string): number => { const negative = value.startsWith("-"); const [w, f = ""] = value.replace("-", "").split("."); const n = Number(w) * 100 + Number(`${f}00`.slice(0, 2)); return negative ? -n : n; };
+    const opening = booked.reduce((n, d) => n + minor(d.allocation), 0);
+    const nav = opening + booked.reduce((n, d) => n + minor(d.realized), 0);
+    return build(booked[0]!.currency, `${booked[0]!.portfolio_name} equity`, AS_OF_MS - 47 * HOUR, 48, opening, Math.trunc((nav - opening) / 49), null, "READY", nav);
+  }
   if (id === PF.core) return build("USDT", "Core equity", AS_OF_MS - 47 * HOUR, 48, 61_000_000, 12_500, [20, 28], "PARTIAL");
   if (id === PF.yen) return build("JPY", "Yen-Carry equity", AS_OF_MS - 23 * HOUR, 24, 5_200_000_000, 150_000, null, "READY");
   const generated = scaledPortfolio(id);

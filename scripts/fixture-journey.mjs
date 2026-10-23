@@ -340,7 +340,17 @@ for (const scenario of SCENARIOS) {
   log("scenario", scenario);
   try { results.push(await walk(browser, scenario)); } catch (e) { results.push({ scenario, fatal: String(e.message) }); log("fatal", scenario, e.message); }
 }
-// leave the lane in its configured default
+// cross-screen ties (scripts/fixture-ties.mjs) on the positive default, then leave the lane in its configured default
+let ties = null;
+if (!flag("no-ties")) {
+  try {
+    const c = await browser.newContext();
+    await c.request.post(base + "/__fixture/scenario", { data: { scenario: "positive" } });
+    const { runTies } = await import(pathToFileURL(join(ROOT, "scripts/fixture-ties.mjs")).href);
+    ties = await runTies(async (p) => { const r = await c.request.get(base + p); return { status: r.status(), body: await r.json().catch(() => null) }; });
+    await c.close();
+  } catch (e) { ties = { checked: 0, mismatches: [`ties did not run: ${e.message}`], skipped: [] }; }
+}
 try { const c = await browser.newContext(); await c.request.post(base + "/__fixture/scenario", { data: { reset: true } }); await c.close(); } catch { /* ignore */ }
 await browser.close();
 web?.close();
@@ -361,5 +371,10 @@ for (const r of results) {
   console.log(`total absences: ${r.screens.reduce((n, s) => n + (s.absences ?? 0), 0)}; problems: ${r.problems.length ? r.problems.join("; ") : "none"}`);
   const failed = r.sweep.filter((x) => !x.ok);
   console.log(`link sweep: ${r.sweep.length}/${r.sweepTotal} detail links followed, ${failed.length} failed${failed.length ? ": " + failed.slice(0, 12).map((x) => `${x.href} [${x.bad.join(",") || (x.notFound ? "not-found text" : "no render")}${x.firstError ? " err: " + x.firstError.slice(0, 100) : ""}] from ${x.from}`).join("; ") : ""}`);
+}
+if (ties) {
+  console.log(`\n## ties (positive): ${ties.checked} checked, ${ties.mismatches.length} mismatches, ${ties.skipped.length} skipped`);
+  for (const m of ties.mismatches) console.log("MISMATCH", m);
+  for (const s of ties.skipped) console.log("skipped", s);
 }
 process.exit(0);
