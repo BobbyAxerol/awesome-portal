@@ -369,6 +369,28 @@ export interface components {
             freshness_budget_ms?: components["schemas"]["FreshnessBudgetMs"];
             completeness: components["schemas"]["Completeness"];
         };
+        BindingDecimal: string;
+        /** @description One exact amount in ONE currency, with the instant the owning source observed it and how much of the owning population it covers. Never a conversion and never a sum across currencies. */
+        BindingAmountFigure: {
+            currency: components["schemas"]["Identifier"];
+            value: components["schemas"]["BindingDecimal"];
+            observed_at: components["schemas"]["Timestamp"];
+            coverage: components["schemas"]["Completeness"];
+        };
+        /** @description One entry per currency (currencies are distinct). A mixed-currency binding is several entries, never one summed value. */
+        BindingAmountFigures: components["schemas"]["BindingAmountFigure"][];
+        BindingSleeveFigure: {
+            count: number;
+            observed_at: components["schemas"]["Timestamp"];
+            coverage: components["schemas"]["Completeness"];
+        };
+        /** @description Optional per-row list figures. A property that is OMITTED means this producer has no owning source for it (the reader keeps its per-row fallback). A property that is null means the owning source did not report it (typed absence, not zero, no fallback). native_equity is the venue's native equity, never the wallet balance. */
+        BindingFigures: {
+            native_equity?: components["schemas"]["BindingAmountFigures"] | null;
+            virtual_used?: components["schemas"]["BindingAmountFigures"] | null;
+            virtual_headroom?: components["schemas"]["BindingAmountFigures"] | null;
+            sleeve_count?: components["schemas"]["BindingSleeveFigure"] | null;
+        };
         BindingItem: {
             binding_id: components["schemas"]["Identifier"];
             account_id: components["schemas"]["Identifier"];
@@ -376,6 +398,7 @@ export interface components {
             state: components["schemas"]["Identifier"];
             credential_state: components["schemas"]["Identifier"];
             updated_at: components["schemas"]["Timestamp"];
+            figures?: components["schemas"]["BindingFigures"];
         };
         AppliedFilter: {
             field: string;
@@ -398,6 +421,21 @@ export interface components {
             applied_filters: components["schemas"]["AppliedFilter"][];
             applied_sort: components["schemas"]["AppliedSort"][];
         };
+        BindingCount: number | null;
+        /** @description Optional per-environment counts over the SAME authorized snapshot as the page: rows and fields are authorized first, so a hidden row is in no count. A property that is null was not computable from owning facts; 0 is a counted zero. Omitted when the producer cannot compute any. */
+        BindingCounts: {
+            /** @constant */
+            basis: "AUTHORIZED_SNAPSHOT";
+            observed_at: components["schemas"]["Timestamp"];
+            coverage: components["schemas"]["Completeness"];
+            all?: components["schemas"]["BindingCount"];
+            issues?: components["schemas"]["BindingCount"];
+            by_environment?: {
+                paper?: components["schemas"]["BindingCount"];
+                sandbox?: components["schemas"]["BindingCount"];
+                live?: components["schemas"]["BindingCount"];
+            };
+        };
         BindingsResponse: components["schemas"]["EnvelopeBase"] & {
             /** @constant */
             schema_version: "execution.bindings-list.v1";
@@ -411,6 +449,7 @@ export interface components {
             freshness: unknown;
             completeness: unknown;
             page: components["schemas"]["BindingPage"];
+            counts?: components["schemas"]["BindingCounts"];
         };
         BindingDetailResponse: {
             /** @constant */

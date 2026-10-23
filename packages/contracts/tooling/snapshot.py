@@ -402,6 +402,7 @@ TRACKED = (
     "fixtures/execution-alpha-fleet-list.valid.json",
     "fixtures/execution-alpha-fleet-list.v2.valid.json",
     "fixtures/execution-bindings-list.valid.json",
+    "fixtures/execution-bindings-list.figures.synthetic.valid.json",
     "fixtures/execution-binding-detail.valid.json",
     "fixtures/governance-live-review.valid.json",
     "fixtures/execution-contract-authority.valid.json",
