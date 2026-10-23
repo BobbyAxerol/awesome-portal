@@ -10,7 +10,11 @@
  * Provenance. Rollback readiness prints "Ready" only for the server's boolean `true` that the same
  * response does not contradict (model.ts `rollbackHead`); the check dates are FE-071.
  */
+import { useId } from "react";
 import { Link, useSearchParams } from "react-router-dom";
+
+import { withoutOrigin } from "../../backTo";
+import { plainReason } from "../stage/reasons";
 
 import { BlockerList, GapLine, NaWhy, NotPublished, SectionPanel, type GapItem } from "../../blocks";
 import { DockAction } from "../../Drawer";
@@ -33,16 +37,26 @@ const DECISION_ACTION: Readonly<Record<string, StageAction>> = {
 export function DecisionPanel({ view }: { view?: CanaryView }) {
   // FE-068: the server's own reason for a decision that is off, when it published one; today's sentence otherwise. Text only.
   const reasonFor = useStageReason();
+  const reasonId = useId();
+  const [params] = useSearchParams();
   const calendar = view === undefined ? null : trialCalendar(view);
   const opens = calendar !== null && calendar.exitReviewOpens.kind === "time" ? calendar.exitReviewOpens.text : null;
   const duration = view?.durationDays ?? null;
+  const reasons = DECISIONS.map((decision) => reasonFor(DECISION_ACTION[decision.label]!, decisionReason(decision)));
+  // Closed for one reason: the reason is said ONCE, in plain words, under the four decisions. A decision the server gave its own reason keeps its own.
+  const same = reasons.every((text) => text === reasons[0]);
+  const plain = plainReason(reasons[0]!);
   return (
     <SectionPanel level={2} title="Promotion decision" aside="Via exit review">
-      <div className="exec-stage-decs" role="group" aria-label="Promotion decisions" data-grouped="false">
-        {DECISIONS.map((decision) => (
+      <div className="exec-stage-decs" role="group" aria-label="Promotion decisions" data-grouped={same ? "true" : "false"}>
+        {DECISIONS.map((decision, index) => (
           <div key={decision.label} className="exec-stage-dec exec-cny-dec">
             <p className="exec-cny-dec-hint">{decision.hint}</p>
-            <DockAction label={decision.label} reason={reasonFor(DECISION_ACTION[decision.label]!, decisionReason(decision))} accessHref={ACCESS_PATH} />
+            {same ? (
+              <button type="button" className="exec-dock-btn" disabled aria-describedby={reasonId}>{decision.label}</button>
+            ) : (
+              <DockAction label={decision.label} reason={reasons[index]!} accessHref={ACCESS_PATH} />
+            )}
             {decision.label === "Request scale" && (duration !== null || opens !== null) ? (
               <p className="exec-cny-dec-opens">
                 {duration === null ? "Opens with the exit review" : `Opens at day ${duration}`}
@@ -52,6 +66,12 @@ export function DecisionPanel({ view }: { view?: CanaryView }) {
           </div>
         ))}
       </div>
+      {same ? (
+        <div className="exec-stage-dec-why">
+          <p id={reasonId} className="exec-dock-reason">{plain.sentence}{plain.detail === null ? null : <span className="exec-blk-sr"> · {plain.detail}</span>}</p>
+          <Link className="exec-dock-access" to={withContext(ACCESS_PATH, withoutOrigin(params))} aria-label={`My access: ${DECISIONS.map((d) => d.label).join(", ")}`}>My access</Link>
+        </div>
+      ) : null}
       <details className="exec-cny-how">
         <summary>How promotion works</summary>
         <p>Every decision goes through the Canary exit review. Elapsed time alone never promotes a deployment.</p>

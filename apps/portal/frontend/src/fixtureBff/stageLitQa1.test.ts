@@ -50,16 +50,12 @@ describe("R5-07 one lifecycle record per deployment", () => {
     expect((body.kpis as Obj[]).every((k) => k.value === null)).toBe(true);
   });
 
-  it("a live deployment's Canary is a finished trial dated before its activation, declared as Live", async () => {
+  it("a live deployment's own Canary page is typed (no source carries a finished trial of its own), and its Live page links the canary deployment it was promoted from", async () => {
+    expect((await raw("/deployments/dep_live_01/canary")).source_integration_state).toBe("UNAVAILABLE");
     const live = await raw("/deployments/dep_live_01/live");
-    const canary = await raw("/deployments/dep_live_01/canary");
-    expect(canary.lifecycle.declared_stage).toBe("LIVE_FULL");
-    const trial = canary.lifecycle.trial;
-    const activated = Date.parse(live.deployment.activated_at);
-    expect(Date.parse(trial.exit_review_opens_at.value)).toBe(activated);
-    expect(Date.parse(trial.started_at.value)).toBe(activated - trial.duration_days * 86_400_000);
-    expect(canary.lifecycle.day_index).toBe(trial.duration_days);
-    expect(canary.stage_facts.runtime.runtime_state.value).toBe("STOPPED");
+    const canaryLink = (live.lineage as Obj[]).find((l) => l.kind === "CANARY_ENVELOPE")!.href;
+    expect(canaryLink).toBe("/deployments/live/dep_canary_01/canary");
+    expect((await raw("/deployments/dep_canary_01/canary")).source_integration_state).toBe("SOURCE_BACKED");
   });
 
   it("a Paper-stage deployment has no lit Sandbox, Canary or Live page; a Sandbox one has no Canary or Live", async () => {

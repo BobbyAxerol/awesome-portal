@@ -240,9 +240,10 @@ describe("the four decisions (D6, D9): drawn, disabled, explained, never enabled
     await ready();
     const panel = screen.getByRole("heading", { name: "Promotion decision" }).closest("section")!;
     // The design draws each decision with what it does, its closed button and its own reason and My access link (R5-09).
-    expect(within(panel).getAllByRole("link", { name: /My access/ })).toHaveLength(4);
-    expect(within(panel).getByRole("link", { name: "My access: Hold" }).getAttribute("href")).toContain("/administration/profile-access");
-    expect(panel.textContent?.match(new RegExp(STAGE_WHY.liveClosed, "g"))).toHaveLength(4);
+    // Closed for one reason: said once, in plain words, with one My access link (QA2 R5-07).
+    expect(within(panel).getAllByRole("link", { name: /My access/ })).toHaveLength(1);
+    expect(within(panel).getByRole("link", { name: "My access: Hold, Reduce, Rollback, Request scale" }).getAttribute("href")).toContain("/administration/profile-access");
+    expect(panel.textContent?.match(new RegExp(STAGE_WHY.liveClosed, "g"))).toHaveLength(1);
     for (const label of ["Hold", "Reduce", "Rollback", "Request scale"]) {
       const button = within(panel).getByRole("button", { name: label }) as HTMLButtonElement;
       expect(button.disabled, label).toBe(true);
@@ -725,7 +726,7 @@ describe("keyboard and focus", () => {
     const panel = screen.getByRole("heading", { name: "Promotion decision" }).closest("section")!;
     const reachable = Array.from(panel.querySelectorAll<HTMLElement>("a[href], button:not([disabled]), summary"));
     // One My access link per decision, and the disclosure; nothing else to tab to.
-    expect(reachable.map((el) => el.textContent)).toEqual(["My access", "My access", "My access", "My access", "How promotion works"]);
+    expect(reachable.map((el) => el.textContent)).toEqual(["My access", "How promotion works"]);
     await act(async () => undefined);
   });
 });

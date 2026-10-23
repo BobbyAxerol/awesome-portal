@@ -14,7 +14,7 @@ import { Flag } from "../../Flag";
 import { GapLine, NaWhy, SectionPanel, Triad, type GapItem } from "../../blocks";
 import type { LiveSourceOperationsV2 } from "../../readers/liveSourceOperations";
 import { withContext } from "../../urlState";
-import { stageWhy, type StageAction } from "../stage/reasons";
+import { plainReason, stageWhy, type StageAction } from "../stage/reasons";
 import { useStageReason } from "../stage/StageEligibility";
 import { ContextLink, KeyedTable, PanelSection, V1RowsSection, v1RowsGap } from "./parts";
 import { ACCESS_PATH, CONTINUITY_PANELS, EXPOSURE_PANELS, panelReason, panelTitle, type LiveModel } from "./model";
@@ -66,7 +66,7 @@ export function ProtectiveLadder({ model }: { model: LiveModel }) {
       </div>
       {same ? (
         <div className="exec-stage-dec-why">
-          <p id={reasonId} className="exec-dock-reason">{reasons[0]}</p>
+          <p id={reasonId} className="exec-dock-reason">{plainReason(reasons[0]!).sentence}{plainReason(reasons[0]!).detail === null ? null : <span className="exec-blk-sr"> · {plainReason(reasons[0]!).detail}</span>}</p>
           <Link className="exec-dock-access" to={withContext(ACCESS_PATH, withoutOrigin(params))} aria-label={`My access: ${model.ladder.map((rung) => rung.title).join(", ")}`}>My access</Link>
         </div>
       ) : null}
@@ -101,7 +101,7 @@ export function v1ExposureGaps(model: LiveModel) {
 
 export function ExposureTab({ model, v2, paging }: TabProps) {
   const [params] = useSearchParams();
-  const blotter = model.deploymentId === null ? null : withContext(`/deployments/blotter?deployment=${encodeURIComponent(model.deploymentId)}`, params);
+  const blotter = model.deploymentId === null ? null : withContext(`/deployments/blotter?deployment=${encodeURIComponent(model.deploymentId)}&env=live`, params);
   const v1 = v1ExposureGaps(model);
   const triadGap = v1.triadGap;
   const triadItem = v1.triadItem;

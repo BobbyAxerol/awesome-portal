@@ -467,7 +467,7 @@ describe("Orders, Fills, Positions, Sessions", () => {
     expect(rows[0].textContent).toContain("Submitted");
     expect(rows[3].textContent).toContain("Filled");
     expect(rows[1].textContent).toContain("Rejected");
-    expect(within(rows[0]).getByRole("link", { name: "Open order c-0044-0003 in the Blotter" }).getAttribute("href")).toBe(`/deployments/blotter?deployment=${DEP}&order=ord_00003`);
+    expect(within(rows[0]).getByRole("link", { name: "Open order c-0044-0003 in the Blotter" }).getAttribute("href")).toBe(`/deployments/blotter?deployment=${DEP}&env=paper&order=ord_00003`);
     expect(screen.getByTestId("Orders-cap").textContent).toBe("4 orders");
   });
 

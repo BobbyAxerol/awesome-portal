@@ -496,7 +496,9 @@ function continuityV1(live: LiveFullOperations): ContinuityModel {
 }
 
 function predecessorV1(live: LiveFullOperations, id: string | null): PredecessorModel {
-  const link = id === null ? null : canaryHref(id);
+  // The predecessor is the Canary deployment the lineage names (CANARY_ENVELOPE); only without one is it this deployment's own canary page.
+  const named = safeInternalHref(live.lineage.find((l) => l.kind === "CANARY_ENVELOPE")?.href);
+  const link = named ?? (id === null ? null : canaryHref(id));
   const p = live.predecessorEnvelope;
   if (p === null) {
     return { present: false, reason: "No predecessor Canary envelope was published for this deployment.", canaryHref: link };
@@ -669,6 +671,7 @@ export function liveModelV1(live: LiveFullOperations): LiveModel {
     if (item.kind === "R1_APPROVAL") targets.r1 = href;
     else if (item.kind === "R2_APPROVAL") targets.r2 = href;
     else if (item.kind === "SANDBOX_EXIT") targets.sandbox = href;
+    else if (item.kind === "CANARY_ENVELOPE") targets.canary = href;
   }
   const guard = guardRulesV1(live);
   const blockers = blockersV1(live, mismatch, gap);

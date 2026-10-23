@@ -12,6 +12,7 @@ import { Link, useSearchParams } from "react-router-dom";
 import { CardsTable, type CardsColumn } from "../../cardsTable";
 import { withContext } from "../../urlState";
 import { withPaddedQuantity } from "../stage/padDecimals";
+import { QtyCell } from "../stage/QtyCell";
 import { Flag } from "../../Flag";
 import { GapLine, NotPublished, SectionPanel } from "../../blocks";
 import { formatAsOf, readAsOf } from "../../boundary";
@@ -28,7 +29,7 @@ const POSITION_COLUMNS = (reasons: Readonly<Record<string, string>>): readonly C
     label: "Side",
     render: (r) => (r.side === null ? null : <Flag kind={r.side === "long" ? "ok" : "attention"} label={r.side === "long" ? "Long" : "Short"} size="sm" />),
   },
-  { key: "quantity", label: "Quantity", numeric: true, render: (r) => <ExactCell value={r.quantity} unit="qty" /> },
+  { key: "quantity", label: "Quantity", numeric: true, render: (r) => <QtyCell value={r.quantity} /> },
   { key: "entry", label: "Entry", numeric: true, render: (r) => <ExactCell value={r.entry} unit="money" /> },
   { key: "mark", label: "Mark", numeric: true, render: (r) => <ExactCell value={r.mark} unit="money" /> },
   { key: "unrealised", label: "Unrealised PnL", numeric: true, render: (r) => <ExactCell value={r.unrealised} unit="money" signed /> },
@@ -40,7 +41,7 @@ const ORDER_COLUMNS = (reasons: Readonly<Record<string, string>>): readonly Card
   { key: "symbol", label: "Symbol", render: (r) => r.symbol },
   { key: "type", label: "Type", render: (r) => r.type },
   { key: "side", label: "Side", render: (r) => (r.side === null ? null : r.side === "buy" ? "Buy" : "Sell") },
-  { key: "quantity", label: "Quantity", numeric: true, render: (r) => <ExactCell value={r.quantity} unit="qty" /> },
+  { key: "quantity", label: "Quantity", numeric: true, render: (r) => <QtyCell value={r.quantity} /> },
   { key: "price", label: "Price", numeric: true, render: (r) => <ExactCell value={r.price} unit="money" /> },
   { key: "status", label: "Status", render: (r) => r.status },
   {
@@ -150,6 +151,7 @@ export function PositionsOrdersTab({ view }: { view: CanaryView }) {
         columns={POSITION_COLUMNS}
         rowKey={(row, index) => `${row.symbol}-${index}`}
         rowsLabel="Position rows"
+        absent={{ leverage: { reason: "leverage", is: (row) => row.leverage === null } }}
       />
       <RowsPanel
         title="Open orders"
@@ -158,10 +160,11 @@ export function PositionsOrdersTab({ view }: { view: CanaryView }) {
         columns={ORDER_COLUMNS}
         rowKey={(row, index) => `${row.symbol}-${index}`}
         rowsLabel="Order rows"
+        absent={{ ack: { reason: "ack_latency_ms", is: (row) => row.ackLatencyMs === null } }}
       />
       {view.deploymentId === null ? null : (
         <p className="exec-cny-foot">
-          <Link className="exec-blk-link" to={withContext(`/deployments/blotter?deployment=${encodeURIComponent(view.deploymentId)}`, params)}>Open the full blotter for this deployment</Link>
+          <Link className="exec-blk-link" to={withContext(`/deployments/blotter?deployment=${encodeURIComponent(view.deploymentId)}&env=live`, params)}>Open the full blotter for this deployment</Link>
         </p>
       )}
     </div>

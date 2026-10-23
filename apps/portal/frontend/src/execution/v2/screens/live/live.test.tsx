@@ -159,7 +159,7 @@ describe("V1 body, matched", () => {
     expect(lines[0]!.textContent).toBe("Not available: Live net PnL series, Internal, Broker and Difference figures, Position rows, Open order rows");
     expect(whyText(lines[0]!)).toContain("Not published (FE-072)");
     expect(tab.textContent).not.toMatch(/\b0\.00\b/);
-    expect(screen.getByRole("link", { name: "Open the full blotter for this deployment" }).getAttribute("href")).toBe(`/deployments/blotter?deployment=${DEPLOYMENT_ID}`);
+    expect(screen.getByRole("link", { name: "Open the full blotter for this deployment" }).getAttribute("href")).toBe(`/deployments/blotter?deployment=${DEPLOYMENT_ID}&env=live`);
   });
 
   it("exposure & orders: the Triad rows are the server's source_figures (FE-072); every side the dark body leaves out is Not published (FE-072) with its reason in the title, and nothing is subtracted", async () => {
@@ -407,7 +407,8 @@ describe("Canary deployment (D5)", () => {
     fireEvent.click(screen.getByRole("button", { name: /^Paper,/ }));
     expect(where()).toBe(`/deployments/live/${DEPLOYMENT_ID}`);
     fireEvent.click(screen.getByRole("button", { name: /^Canary,/ }));
-    expect(where()).toBe(`/deployments/live/${DEPLOYMENT_ID}/canary`);
+    // The Canary node goes where the lineage's CANARY_ENVELOPE points: the canary deployment itself.
+    expect(where()).toBe("/deployments/live/dep_88/canary");
   });
 });
 
@@ -462,7 +463,7 @@ describe("tabs", () => {
     const table = within(panel).getByRole("table", { name: "Predecessor Canary envelope" });
     expect(within(table).getByText("5,000.00 USDT")).toBeTruthy();
     expect(within(table).getAllByText("No")).toHaveLength(3);
-    expect(within(panel).getByRole("link", { name: "Open the Canary control room" }).getAttribute("href")).toBe(`/deployments/live/${DEPLOYMENT_ID}/canary`);
+    expect(within(panel).getByRole("link", { name: "Open the Canary control room" }).getAttribute("href")).toBe("/deployments/live/dep_88/canary");
     expect(panel.textContent).not.toContain("No Live envelope is on record");
   });
 

@@ -523,8 +523,8 @@ describe("the whole model", () => {
 
   it("the default routes are the registry's canonical ones", () => {
     expect(DEFAULT_ROUTES.alpha("a b")).toBe("/deployments/alphas/a%20b");
-    expect(DEFAULT_ROUTES.blotter("d1", "o 1")).toBe("/deployments/blotter?deployment=d1&order=o%201");
-    expect(DEFAULT_ROUTES.blotter("d1")).toBe("/deployments/blotter?deployment=d1");
+    expect(DEFAULT_ROUTES.blotter("d1", "o 1")).toBe("/deployments/blotter?deployment=d1&env=paper&order=o%201");
+    expect(DEFAULT_ROUTES.blotter("d1")).toBe("/deployments/blotter?deployment=d1&env=paper");
     expect(DEFAULT_ROUTES.exitReviews).toBe("/governance/exit-reviews");
   });
 });

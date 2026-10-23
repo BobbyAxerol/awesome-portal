@@ -767,7 +767,7 @@ export const DEFAULT_ROUTES: WorkbenchRoutes = {
   alpha: (id) => `/deployments/alphas/${enc(id)}`,
   account: (id) => `/deployments/accounts/${enc(id)}`,
   portfolio: (id) => `/deployments/portfolios/${enc(id)}`,
-  blotter: (deploymentId, orderId) => `/deployments/blotter?deployment=${enc(deploymentId)}${orderId ? `&order=${enc(orderId)}` : ""}`,
+  blotter: (deploymentId, orderId) => `/deployments/blotter?deployment=${enc(deploymentId)}&env=paper${orderId ? `&order=${enc(orderId)}` : ""}`,
   operations: "/execution/operations",
   exitReviews: "/governance/exit-reviews",
   fleet: "/deployments/alphas",

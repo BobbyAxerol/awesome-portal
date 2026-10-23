@@ -269,7 +269,7 @@
 .exec-cny-v2 .exec-dock-btn:disabled {
   color: var(--ink-faint);
   background: transparent;
-  border: 1px dashed var(--line-strong);
+  border: 1px solid var(--line-strong);
 }
 .exec-cny-v2 .exec-dock-reason {
   overflow: visible;

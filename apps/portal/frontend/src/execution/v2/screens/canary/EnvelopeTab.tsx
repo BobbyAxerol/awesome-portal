@@ -93,6 +93,9 @@ export function EnvelopeTab({ view }: { view: CanaryView }) {
               ))}
             </ul>
           ) : null}
+          {rows.some((row) => row.key === "duration" && row.limit === null) ? (
+            <p className="exec-cny-foot">The duration cap has no published limit and no usage share; the day and the duration shown are the trial's own.</p>
+          ) : null}
           {notes.baseRiskProfile === null && view.envelope.status !== "DRAFT" ? null : (
             <p className="exec-cny-foot">
               {notes.baseRiskProfile === null ? null : `Base risk profile: ${notes.baseRiskProfile === "verified" ? "verified" : "not verified"}.`}

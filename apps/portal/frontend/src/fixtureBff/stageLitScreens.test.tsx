@@ -215,10 +215,8 @@ describe("Live (dep_live_01): the design's elements are data", () => {
 
   it("leverage and ack latency stay typed (no published place for them)", async () => {
     await live("dep_live_01");
-    const positions = screen.getByRole("table", { name: /positions/i });
-    expect(positions.querySelector('td[data-l="Leverage"]')!.textContent).toContain("Not available");
-    const orders = screen.getByRole("table", { name: /orders/i });
-    expect(orders.querySelector('td[data-l="Ack latency"]')!.textContent).toContain("Not available");
+    expect(text()).toMatch(/Not available:\s*Leverage/);
+    expect(text()).toMatch(/Not available:\s*Ack latency/);
   });
 });
 

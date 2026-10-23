@@ -85,6 +85,10 @@ const STAGE_OF: Readonly<Record<string, DeploymentStage>> = {
   dep_sandbox_01: "sandbox", dep_d1: "sandbox", dep_btc_sandbox: "sandbox",
   dep_paper_01: "paper", dep_d2: "paper", dep_a1: "paper", dep_btc_paper: "paper",
 };
+/** The Canary deployment a live deployment was promoted from (its predecessor envelope is THAT deployment's). */
+const PREDECESSOR: Readonly<Record<string, string>> = { dep_live_01: "dep_canary_01", dep_btc_live: "dep_canary_01", dep_b1: "dep_b3", dep_b2: "dep_b3" };
+export const predecessorCanary = (deploymentId: string): string => PREDECESSOR[baseDeploymentId(deploymentId)] ?? baseDeploymentId(deploymentId);
+
 /** The stage of a deployment id; an id the universe does not know is taken to be in the stage of the screen that asked. */
 export function stageOf(deploymentId: string, asked: DeploymentStage): DeploymentStage {
   return STAGE_OF[baseDeploymentId(deploymentId)] ?? positiveDeploymentFact(baseDeploymentId(deploymentId))?.stage ?? asked; // WP-P: every id the world emits has a lifecycle record
@@ -392,7 +396,7 @@ function canaryLit(body: Obj, deploymentId: string, variant: StageVariant): Obj 
   body.source_figures = sourceFigures({
     equity: { internal: "5112.40", broker: "5112.40", unit: "USDT" },
     gross_notional: { internal: "6100.00", broker: "6100.00", unit: "USDT" },
-    positions: { internal: "1", broker: "1", unit: "COUNT" },
+    positions: { internal: "2", broker: "2", unit: "COUNT" },
     open_orders: { internal: "1", broker: "1", unit: "COUNT" },
     fees: { internal: "4.25", broker: "4.25", unit: "USDT" },
   });
@@ -508,7 +512,7 @@ function liveLit(body: Obj, deploymentId: string, variant: StageVariant): Obj {
     { kind: "R1_APPROVAL", state: "AVAILABLE", value: "AP-118", href: "/governance/approvals?sel=AP-118" },
     { kind: "R2_APPROVAL", state: "AVAILABLE", value: "AP-152", href: "/governance/approvals?sel=AP-152" },
     { kind: "SANDBOX_EXIT", state: "AVAILABLE", value: "SX-14", href: `/deployments/sandbox/${encodeURIComponent(baseDeploymentId(deploymentId))}` },
-    { kind: "CANARY_ENVELOPE", state: "AVAILABLE", value: "cenv_FIXTURE_LAB_1", href: `/deployments/live/${encodeURIComponent(baseDeploymentId(deploymentId))}/canary` },
+    { kind: "CANARY_ENVELOPE", state: "AVAILABLE", value: "cenv_FIXTURE_LAB_1", href: `/deployments/live/${encodeURIComponent(predecessorCanary(deploymentId))}/canary` },
     { kind: "CANARY_EXIT", state: "UNAVAILABLE", value: null, href: null },
     { kind: "LIVE_DUAL_APPROVAL", state: "AVAILABLE", value: "AP-402", href: "/governance/approvals" },
   ];
@@ -724,6 +728,9 @@ export function simulateStage(path: string, answerBody: unknown): Obj | null {
   if (variant === "dark") return null;
   // A stage page the deployment has not reached is not lit: the published dark body stands (typed absence), whatever the URL says.
   if (!reached(stageOf(id, kind), kind)) return null;
+  // The Canary page of a deployment that is already Live would have to show a finished trial of ITS OWN: no world source carries one, so it is
+  // typed (the published dark body); the way to the trial is the predecessor link of the Live page, which names the canary deployment itself.
+  if (kind === "canary" && stageOf(id, kind) === "live") return null;
   const schema = answerBody.schema_version;
   const body = clone(answerBody);
   switch (kind) {

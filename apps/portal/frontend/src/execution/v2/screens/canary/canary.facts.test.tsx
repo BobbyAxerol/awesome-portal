@@ -242,16 +242,17 @@ describe("Positions & orders: typed rows when AVAILABLE", () => {
     expect(first.querySelector('td[data-l="Quantity"]')!.textContent).toBe("0.5");
     expect(first.querySelector('td[data-l="Mark"]')!.textContent).toBe("60,500.50");
     expect(first.querySelector('td[data-l="Unrealised PnL"]')!.textContent).toBe("250.25");
-    // Leverage and Ack latency are the design's columns: drawn, each cell a typed Not available whose reason is the server's.
-    const leverage = first.querySelector('td[data-l="Leverage"]')!;
-    expect(leverage.textContent).toContain("Not available");
-    expect(whyText(leverage)).toContain("POSITION_LEVERAGE_NOT_IN_SOURCE_RELATION");
+    // Leverage and Ack latency: no row fills them, so no column of empty cells; each is said once under its table, the reason in the title.
+    expect(first.querySelector('td[data-l="Leverage"]')).toBeNull();
+    const positionsGap = positions.closest("section")!.querySelector(".exec-blk-gaps")!;
+    expect(positionsGap.textContent).toBe("Not available: Leverage");
+    expect(whyText(positionsGap)).toContain("POSITION_LEVERAGE_NOT_IN_SOURCE_RELATION");
     const orders = screen.getByRole("table", { name: "Canary open orders" });
     const order = Array.from(orders.querySelectorAll("tbody tr"))[0]!;
     expect(order.querySelector('td[data-l="Type"]')!.textContent).toBe("LIMIT");
     expect(order.querySelector('td[data-l="Side"]')!.textContent).toBe("Buy");
-    expect(order.querySelector('td[data-l="Ack latency"]')!.textContent).toContain("Not available");
-    expect(whyText(order.querySelector('td[data-l="Ack latency"]')!)).toContain("ORDER_ACK_LATENCY_NOT_IN_SOURCE_RELATION");
+    expect(order.querySelector('td[data-l="Ack latency"]')).toBeNull();
+    expect(whyText(orders.closest("section")!.querySelector(".exec-blk-gaps")!)).toContain("ORDER_ACK_LATENCY_NOT_IN_SOURCE_RELATION");
     expect(screen.getByRole("tabpanel").textContent).toContain("2 of 2");
   });
 

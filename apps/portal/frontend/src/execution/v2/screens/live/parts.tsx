@@ -19,6 +19,7 @@ import type { LiveSourcePanelV2, LiveSourceRecordV2 } from "../../readers/liveSo
 import type { TypedOrderRow, TypedPositionRow } from "../../../stageFacts";
 import { PanelState } from "../../../components/states";
 import { withPaddedQuantity } from "../stage/padDecimals";
+import { QtyCell } from "../stage/QtyCell";
 import { cellText, lossNote, lossText, type PublishedRow } from "../../readers/publishedRows";
 import {
   OPERATIONS_PATH,
@@ -179,7 +180,7 @@ function unpublishedColumn<R>(key: string, label: string, reasons: Readonly<Reco
 const POSITION_COLUMNS = (reasons: Readonly<Record<string, string>>): readonly CardsColumn<TypedPositionRow>[] => [
   { key: "symbol", label: "Symbol", render: (r) => r.symbol },
   { key: "side", label: "Side", render: (r) => (r.side === null ? null : <Flag kind={r.side === "long" ? "ok" : "attention"} label={r.side === "long" ? "Long" : "Short"} size="sm" />) },
-  { key: "quantity", label: "Quantity", numeric: true, render: (r) => <ExactCell value={r.quantity} unit="qty" /> },
+  { key: "quantity", label: "Quantity", numeric: true, render: (r) => <QtyCell value={r.quantity} /> },
   { key: "entry", label: "Entry", numeric: true, render: (r) => <ExactCell value={r.entry} unit="money" /> },
   { key: "mark", label: "Mark", numeric: true, render: (r) => <ExactCell value={r.mark} unit="money" /> },
   { key: "unrealised", label: "Unrealised PnL", numeric: true, render: (r) => <ExactCell value={r.unrealised} unit="money" signed /> },
@@ -190,7 +191,7 @@ const ORDER_COLUMNS = (reasons: Readonly<Record<string, string>>): readonly Card
   { key: "symbol", label: "Symbol", render: (r) => r.symbol },
   { key: "type", label: "Type", render: (r) => r.type },
   { key: "side", label: "Side", render: (r) => (r.side === null ? null : r.side === "buy" ? "Buy" : "Sell") },
-  { key: "quantity", label: "Quantity", numeric: true, render: (r) => <ExactCell value={r.quantity} unit="qty" /> },
+  { key: "quantity", label: "Quantity", numeric: true, render: (r) => <QtyCell value={r.quantity} /> },
   { key: "price", label: "Price", numeric: true, render: (r) => <ExactCell value={r.price} unit="money" /> },
   { key: "status", label: "Status", render: (r) => r.status },
   {
@@ -218,9 +219,12 @@ export function v1RowsGap(rows: V1RowsPanel, what: string): GapItem | null {
 export function V1RowsSection({ title, aside, rows, what }: { title: string; aside?: string; rows: V1RowsPanel; what: string }) {
   if (rows.kind === "typed-positions" || rows.kind === "typed-orders") {
     // The server's typed rows (FE-072): exact text, no sum; the two columns the source relation lacks say so with the server's reason.
-    // Leverage and Ack latency are the design's columns: they are drawn, each cell a typed `Not available` with the server's reason, until the source publishes them.
     const shown = rows.rows.slice(0, ROW_CAP);
-    const keep = (_column: { key: string }) => true;
+    // A column no row fills (Leverage, Ack latency: the source relation carries neither) is not drawn as a column of empty cells: it is said ONCE
+    // under the table, with the server's reason in its title (R5-10, R5-12).
+    const dropKey = rows.kind === "typed-positions" ? "leverage" : "ack_latency_ms";
+    const dropLabel = rows.kind === "typed-positions" ? "Leverage" : "Ack latency";
+    const keep = (column: { key: string }) => !(shown.length > 0 && column.key === dropKey);
     return (
       <SectionPanel level={2} title={title} aside={aside}>
         {rows.line ? <p className="exec-liv-line"><span className="exec-blk-na">{rows.line}</span></p> : null}
@@ -232,6 +236,7 @@ export function V1RowsSection({ title, aside, rows, what }: { title: string; asi
         <div className="exec-liv-more">
           <span className="exec-liv-cap">{rows.caption}</span>
         </div>
+        {shown.length > 0 ? <GapLine items={[{ label: dropLabel, id: "FE-072", reason: rows.reasons[dropKey] ?? null }]} /> : null}
       </SectionPanel>
     );
   }
