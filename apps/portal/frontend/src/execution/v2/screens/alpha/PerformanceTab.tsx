@@ -15,6 +15,8 @@
 import type { ReactNode } from "react";
 
 import { PanelState } from "../../../components/states";
+import type { ObservedTimeline } from "../../../api/observedTimeline";
+import type { EventKind } from "../../charts";
 import type { ManagerMetricRead } from "../../readers/managerMetric";
 import type { FinancialChartPayload } from "../../../api/financialChart";
 import type { StageDrift } from "../../../hifiInsight";
@@ -29,7 +31,9 @@ import { DaysValue, RowFigure, WindowedFigures, type DatasetReadState } from "./
 const NO_NAMES: ReadonlyMap<string, string> = new Map();
 import { ROW_CAP, stageWord, type DeploymentRow, type EquityPanelInput, type StagePath } from "./model";
 import { Np } from "./np";
-import type { Read } from "./useAlphaReads";
+import type { PagedRead, Read } from "./useAlphaReads";
+import { useRibbon, type RibbonData } from "./ribbonModel";
+import type { LifeEvent } from "./lifecycleModel";
 
 export type PerformanceView = "act" | "sim" | "oos";
 export const PERFORMANCE_VIEWS: readonly { id: PerformanceView; label: string }[] = [
@@ -54,9 +58,15 @@ export interface PerformanceTabProps {
   paths: readonly StagePath[];
   view: PerformanceView;
   onView: (view: PerformanceView) => void;
+  /** The observed timeline (decisions) and the dataset's lifecycle events: the ribbon pinned on the chart is the same one the Activity tab draws. */
+  timeline?: PagedRead<ObservedTimeline>;
+  life?: { events: readonly LifeEvent[]; missing: readonly EventKind[] };
 }
 
-function ActualFacet({ env, equity, inputs, drift }: Pick<PerformanceTabProps, "env" | "equity" | "inputs" | "drift">) {
+const NO_LIFE = { events: [] as readonly LifeEvent[], missing: ["stage", "decision", "incident", "recall", "flow"] as readonly EventKind[] };
+const NO_TIMELINE: PagedRead<ObservedTimeline> = { read: { phase: "idle" }, loadingMore: false, moreError: null, hasMore: false, loadMore: () => undefined };
+
+function ActualFacet({ env, equity, inputs, drift, rb }: Pick<PerformanceTabProps, "env" | "equity" | "inputs" | "drift"> & { rb: RibbonData }) {
   const loading = equity.phase === "loading" || equity.phase === "idle" || (inputs.length === 0 && drift.phase === "loading");
   if (loading) return <PanelState status="loading" />;
   if (inputs.length === 0) {
@@ -71,8 +81,9 @@ function ActualFacet({ env, equity, inputs, drift }: Pick<PerformanceTabProps, "
   }
   return (
     <div className="exec-alp2-equity-stack">
-      {inputs.map((input) => (
+      {inputs.map((input, index) => (
         <div key={input.key} className="exec-alp2-equity">
+          {index === 0 ? rb.chips : null}
           <ChartTools
             label={`Equity, ${ENV_LABEL[env]}${input.currency ? `, ${input.currency}` : ""}`}
             columns={input.state.kind === "unavailable" ? [] : [{ key: input.key, label: input.label, points: input.points, currency: input.currency ?? undefined }]}
@@ -85,9 +96,11 @@ function ActualFacet({ env, equity, inputs, drift }: Pick<PerformanceTabProps, "
               state={input.state}
               segments={input.segments}
               height={240}
+              {...(index === 0 ? { ribbon: rb.ribbon, domain: rb.domain ?? undefined, drawdown: { kind: "absent" as const, copy: "Not published (FE-025)", reason: "The source publishes no drawdown series for this book; the windowed maximum is the tile above when it is published." } } : {})}
             />
           </ChartTools>
           {/* The book is the segmented control above, the sampling is the chart's own envelope line, and the windowed figures are the one "Not available" line of the screen. */}
+          {index === 0 && rb.gaps !== null ? <p className="exec-alp2-cap">{rb.gaps}</p> : null}
           {input.gapCount > 0 ? <p className="exec-alp2-cap"><span>{input.gapCount} {input.gapCount === 1 ? "gap" : "gaps"} the source declared</span></p> : null}
         </div>
       ))}
@@ -156,6 +169,7 @@ function Contribution({ rows, noTotals }: { rows: readonly DeploymentRow[]; noTo
 
 export function PerformanceTab(props: PerformanceTabProps) {
   const { rows, env, view, onView } = props;
+  const rb = useRibbon(props.timeline ?? NO_TIMELINE, props.life ?? NO_LIFE, props.paths, props.inputs[0] ?? null);
   // Cost drag and forward days are keys the Manager dataset may carry per row; without them the cell keeps its Not published request id.
   const fig = (metricKey: string, fallback: ReactNode, cell?: (metric: ManagerMetricRead | null) => ReactNode): ReactNode =>
     props.dataset ? <RowFigure read={props.dataset} names={props.names ?? NO_NAMES} metricKey={metricKey} fallback={fallback} cell={cell} /> : fallback;
@@ -173,7 +187,7 @@ export function PerformanceTab(props: PerformanceTabProps) {
           </span>
         }
       >
-        {view === "act" ? <ActualFacet env={env} equity={props.equity} inputs={props.inputs} drift={props.drift} /> : null}
+        {view === "act" ? <ActualFacet env={env} equity={props.equity} inputs={props.inputs} drift={props.drift} rb={rb} /> : null}
         {view === "sim" ? <SimulatedFacet paths={props.paths} drift={props.drift} /> : null}
         {view === "oos" ? <OosFacet /> : null}
       </SectionPanel>
@@ -204,6 +218,10 @@ export function PerformanceTab(props: PerformanceTabProps) {
               <tr><th scope="row">Mixed score</th><td><Np id="FE-011" /></td></tr>
             </tbody>
           </table>
+          <details className="exec-alp2-more">
+            <summary>Manifest conditions</summary>
+            <p className="exec-alp2-line"><Np id="FE-029">Continuity manifest conditions</Np></p>
+          </details>
         </SectionPanel>
       </div>
       <NotAvailableLine

@@ -585,3 +585,20 @@
   text-align: right;
   border-bottom: 1px solid var(--line-soft);
 }
+
+/* WP-C: the replay lanes under the chart and the design-preview row (hi-fi "Design preview"). */
+.exec-alp2-lanes {
+  padding: var(--space-2) var(--space-3) 0;
+}
+.exec-alp2-preview {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  margin: var(--space-3) 0;
+  padding: var(--space-2) var(--space-3);
+  border: 1px dashed var(--line-strong);
+}
+.exec-alp2-preview .exec-alp2-seg {
+  margin: 0;
+}

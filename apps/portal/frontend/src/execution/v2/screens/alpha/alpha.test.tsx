@@ -194,7 +194,9 @@ describe("Performance", () => {
     expect(view.container.textContent).toContain("24 points");
     // No "Windowed return: Not published" caption and no empty drawdown panel under the chart (UX audit A).
     expect(view.container.textContent).not.toContain("Windowed return:");
-    expect(view.container.querySelectorAll('[data-testid="drawdown"], .exec-c2-dd')).toHaveLength(0);
+    // The design's drawdown strip is drawn as a typed absence (no drawdown series is published, FE-025): one pane, never a flat line.
+    expect(view.container.querySelectorAll('[data-testid="drawdown"], .exec-c2-dd')).toHaveLength(1);
+    expect(view.container.textContent).toContain("Not published (FE-025)");
     expect(screen.getByTestId("readout-value").textContent).toBe("40,812.00 USDT");
   });
 
@@ -296,13 +298,19 @@ describe("tabs on one URL", () => {
 
   it("at phone width the strip carries every tab itself (no pinned More) and Trade Replay is the selected tab", async () => {
     vi.stubGlobal("matchMedia", (query: string) => ({ matches: query.includes("660px"), media: query, addEventListener: () => {}, removeEventListener: () => {} }));
-    mount(`/deployments/alphas/${ALPHA_DOUBLE_ID}?tab=replay`);
+    mount(`/deployments/alphas/${ALPHA_DOUBLE_ID}`);
     await ready();
     expect(tabs().getAllByRole("tab").map((t) => t.textContent)).toEqual([
       "Performance", "Deployments", "Research Evidence", "Regime Fit", "Orders & Fills", "Activity & Decisions", "Trade Replay", "Positions", "Reconciliation",
     ]);
     expect(screen.queryByRole("button", { name: "More" })).toBeNull();
-    expect(tabs().getByRole("tab", { name: "Trade Replay" }).getAttribute("aria-selected")).toBe("true");
+    // Trade Replay is a page of its own (WP-C): its tab opens that screen at the same address; Back lands on Alpha 360 again.
+    fireEvent.click(tabs().getByRole("tab", { name: "Trade Replay" }));
+    expect(search().get("tab")).toBe("replay");
+    expect(await screen.findByRole("heading", { level: 1, name: "Trade Replay" })).toBeTruthy();
+    cleanup();
+    mount(`/deployments/alphas/${ALPHA_DOUBLE_ID}`);
+    await ready();
     fireEvent.click(tabs().getByRole("tab", { name: "Positions" }));
     expect(search().get("tab")).toBe("positions");
     // The URL slugs are the same ones the wide layout writes.
@@ -315,7 +323,8 @@ describe("tabs on one URL", () => {
     ["Sessions", "activity"], ["Audit", "activity"], ["Reconciliation", "reconciliation"],
   ])("a V1 label (%s) opens %s and the URL is rewritten to the V2 key", async (label, key) => {
     mount(`/deployments/alphas/${ALPHA_DOUBLE_ID}?tab=${label}`);
-    await ready();
+    if (key === "replay") await screen.findByRole("heading", { level: 1, name: "Trade Replay" });
+    else await ready();
     await waitFor(() => expect(search().get("tab") ?? "performance").toBe(key));
     expect(screen.queryByText(/is not available\. Showing/)).toBeNull();
     if (label === "Sessions") expect(search().get("type")).toBe("session");
@@ -629,11 +638,13 @@ describe("states", () => {
     await ready();
     await screen.findByRole("group", { name: /Equity, Real-funded/ });
     expect(callsTo("/orders")).toHaveLength(0);
-    expect(callsTo("observed-timeline")).toHaveLength(0);
+    // The ribbon is pinned on the Performance chart, so the observed timeline is read there too (one read, shared with Activity).
+    await waitFor(() => expect(callsTo("observed-timeline").length).toBeGreaterThan(0));
+    const timelineReads = callsTo("observed-timeline").length;
     expect(callsTo("venue-candles")).toHaveLength(0);
     fireEvent.click(tabs().getByRole("tab", { name: "Orders & Fills" }));
     await waitFor(() => expect(callsTo("/orders").length).toBeGreaterThan(0));
-    expect(callsTo("observed-timeline")).toHaveLength(0);
+    expect(callsTo("observed-timeline")).toHaveLength(timelineReads);
   });
 });
 

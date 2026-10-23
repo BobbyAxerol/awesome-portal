@@ -8,6 +8,7 @@ import { readFileSync } from "node:fs";
 import { basename, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { answerAlpha } from "../frontend/e2e/bffDoubleAlpha";
 import { answerManagerFleet, answerManagerSeries } from "../frontend/e2e/bffDoubleManager";
 import { addDecimal, fixtureNowMs, scaled, type AlphaSpec, type DeploymentSpec } from "../frontend/e2e/bffScale";
 
@@ -89,7 +90,7 @@ function seriesAnswer(method: string, path: string, search: URLSearchParams, pro
   body.quality = { completeness: "PARTIAL", freshness: "FRESH", reasons: ["FIXTURE_LAB_SYNTHETIC", "SOURCE_GAP"] };
   body.selected_window = { requested, resolved: window, selection_basis: "EXACT_PUBLISHED_METRIC_WINDOW_ONLY", reason_code: null };
   const pinned = search.has("economic_partition") ? JSON.parse(search.get("economic_partition")!) : null;
-  const knownPortfolios = new Map(scaled().portfolios.map((portfolio) => [portfolio.id, portfolio]));
+  const knownPortfolios = new Map([...scaled().portfolios, ...wpcPortfolioStubs(body.environment)].map((portfolio) => [portfolio.id, portfolio]));
   body.series = subjects.map((subject, subjectIndex) => {
     const identity = { subject_type: subject.subject_type, subject_id: subject.subject_type === "FUND" ? body.workspace_id : subject.subject_id };
     const portfolio = knownPortfolios.get(identity.subject_id);
@@ -111,6 +112,7 @@ function seriesAnswer(method: string, path: string, search: URLSearchParams, pro
     entry.points = Array.from({ length: target + 1 }, (_, index) => index).filter((index) => index !== missing)
       .map((index) => ({ ts_ms: at(index), value: sampleValue(metric, index, subjectIndex) }));
     entry.gaps = [{ from_ms: at(missing), to_ms: at(missing), reason: "SOURCE_GAP" }];
+    wpcShapeSeries(entry, metric, identity.subject_id, body.environment, requested); // WP-C: per-subject shape that ends on the dataset's own figure
     entry.quality = copy(body.quality);
     entry.source_confidence = "PROVISIONAL";
     entry.provenance_refs = [digest(["FIXTURE_LAB_SYNTHETIC", profile, body.environment, identity, metric, window])];
@@ -463,11 +465,11 @@ const SUITE_ALPHAS: AlphaSpec[] = [
   ]),
 ];
 
-function rowsFor(environment: string, template: Draft, preset: WindowPreset, components = true): Draft[] {
+function rowsFor(environment: string, template: Draft, preset: WindowPreset, components = true, only?: AlphaSpec[]): Draft[] {
   const universe = scaled();
   // The small universe has no generated alphas: the review lane then answers with the e2e suite's own alpha ids and portfolio ids
   // (SUITE_ALPHAS), one single-book partition per row, so every screen shows real simulated figures instead of the canonical test row.
-  const alphas = universe.alphas.length === 0 ? SUITE_ALPHAS : universe.alphas;
+  const alphas = only ?? (universe.alphas.length === 0 ? SUITE_ALPHAS : universe.alphas);
   const rows: Draft[] = [];
   const make = (alpha: AlphaSpec, deployments: DeploymentSpec[]): void => {
     const first = deployments[0]!;
@@ -698,13 +700,13 @@ function datasetAnswer(method: string, path: string, search: URLSearchParams, pr
   const surface = match[1] === "fleet" ? "FLEET" : match[1] === "fund-overview" ? "FUND" : ({ portfolios: "PORTFOLIO", alphas: "ALPHA", accounts: "ACCOUNT", deployments: "DEPLOYMENT" } as Record<string, string>)[match[1]!.split("/")[0]!]!;
   let id: string | undefined;
   try { id = match[2] === undefined ? undefined : decodeURIComponent(match[2]); } catch { return problem(400, "EXECUTION_READ_QUERY_INVALID", "The resource id is not URI text."); }
-  let rows = rowsFor(environment, template, windowPreset, profile === "populated");
+  let rows = rowsFor(environment, template, windowPreset, profile === "populated", wpcAlphasFor(surface, id)); // WP-C: the native ids answer from their own books
   const universe = scaled();
   if (id !== undefined) {
     const known = surface === "PORTFOLIO" ? universe.portfolios.some((entry) => entry.id === id) : surface === "ALPHA" ? universe.alphas.some((entry) => entry.id === id)
       : surface === "ACCOUNT" ? universe.bindings.some((entry) => entry.accountId === id && entry.environment === environment) : universe.alphas.some((alpha) => alpha.deployments.some((entry) => entry.id === id && entry.environment === environment));
     const canonicalKnown = rows.some((row) => surface === "PORTFOLIO" ? row.portfolio_id === id : surface === "ALPHA" ? row.alpha_id === id : row.children.some((child: Draft) => child[surface === "ACCOUNT" ? "account_id" : "deployment_id"] === id));
-    if (!known && !canonicalKnown) return problem(404, "EXECUTION_READ_NOT_AVAILABLE", "This synthetic review resource is not in the selected universe/environment.");
+    if (!known && !canonicalKnown && !wpcKnown(surface, id)) return problem(404, "EXECUTION_READ_NOT_AVAILABLE", "This synthetic review resource is not in the selected universe/environment.");
     rows = rows.filter((row) => surface === "PORTFOLIO" ? row.portfolio_id === id : surface === "ALPHA" ? row.alpha_id === id : row.children.some((child: Draft) => child[surface === "ACCOUNT" ? "account_id" : "deployment_id"] === id));
     if (surface === "ACCOUNT" || surface === "DEPLOYMENT") {
       // The book metric cannot be relabelled as one child's contribution.
@@ -810,5 +812,219 @@ function datasetAnswer(method: string, path: string, search: URLSearchParams, pr
 
 export function answerReviewManager(method: string, path: string, search: URLSearchParams, profile: ReviewManagerProfile): ReviewManagerResponse | null {
   const normalized = path.replace(/^\/api\/v1\/execution(?=\/)/, "");
-  return seriesAnswer(method, normalized, search, profile) ?? datasetAnswer(method, normalized, search, profile);
+  return seriesAnswer(method, normalized, search, profile) ?? wpcCandles(method, normalized, search) ?? wpcEquity(method, normalized, search) ?? wpcAlphaKeys(normalized, search, datasetAnswer(method, normalized, search, profile));
 }
+
+// ===== WP-C begin (Alpha 360, Trade replay, Compare; FIXTURE_LAB, register section 2c-wpc)
+// Touches in shared functions (one expression each): seriesAnswer (knownPortfolios, one call after `entry.gaps`), rowsFor (optional 4th
+// parameter), datasetAnswer (the rowsFor call and the 404 test), answerReviewManager (one wrapper around datasetAnswer).
+type WpcSurface = string;
+let wpcTemplate: Draft | null = null;
+const WPC_CORE: [string, string] = ["pf_TEST_ONLY_core", "Core"];
+const WPC_SAT: [string, string] = ["pf_TEST_ONLY_satellite", "Satellite"];
+const WPC_CAN: [string, string] = ["pf_TEST_ONLY_canary", "Canary"];
+/** The portfolio ids the Portfolios list publishes for the native (TEST_ONLY) universe; Pilot (empty) has no members and keeps no series. */
+const WPC_PORTFOLIO_IDS = ["pf_TEST_ONLY_core", "pf_TEST_ONLY_satellite", "pf_TEST_ONLY_canary", "pf_TEST_ONLY_yen", "pf_TEST_ONLY_empty"] as const;
+/** The native alphas of the e2e suite (the ids the doubles and the audit open), booked into the TEST_ONLY portfolios. dep_*_01 are the ids the alpha resource double names. */
+// The fixture makes the FIRST row of an environment a true zero (rows.length % 11), so the halted and grid alphas come first: the default audit subjects keep their figures.
+const WPC_ALPHAS: AlphaSpec[] = [
+  suiteAlpha("alpha_c", "Momentum C", "2.0", "Minh-003", "ATTENTION", [suiteDeployment("dep_c1", "alpha_c", "CANARY", "live", WPC_SAT, "15000", "0", "0", "HALTED")]),
+  suiteAlpha("alpha_d", "Grid D", "0.9", "Bobby-001", "READY", [
+    suiteDeployment("dep_d1", "alpha_d", "SANDBOX", "sandbox", WPC_CAN, "8000", "61.2", "3"),
+    suiteDeployment("dep_d2", "alpha_d", "PAPER", "paper", WPC_SAT, "10000", "-30.75", "8.4"),
+  ]),
+  suiteAlpha("alpha_a", "Carry A", "1.0", "Bobby-001", "READY", [
+    suiteDeployment("dep_live_01", "alpha_a", "LIVE", "live", WPC_CORE, "40000.00", "980.40", "140.40"),
+    suiteDeployment("dep_paper_01", "alpha_a", "PAPER", "paper", WPC_CORE, "20000.00", "-84.20", "0"),
+    suiteDeployment("dep_sandbox_01", "alpha_a", "SANDBOX", "sandbox", WPC_CORE, "10000.00", "0", "0", "HALTED"),
+  ]),
+  suiteAlpha("alpha_btc_trend", "BTC Trend", "3.0", "Lan-002", "READY", [
+    suiteDeployment("dep_btc_live", "alpha_btc_trend", "LIVE", "live", WPC_CORE, "80000", "1120.8", "55.4"),
+    suiteDeployment("dep_btc_paper", "alpha_btc_trend", "PAPER", "paper", WPC_CORE, "50000.5", "-125.25", "40.1"),
+    suiteDeployment("dep_btc_sandbox", "alpha_btc_trend", "SANDBOX", "sandbox", WPC_CAN, "12000", "61.2", "3"),
+  ]),
+  suiteAlpha("alpha_b", "Basis B", "1.4", "Lan-002", "READY", [
+    suiteDeployment("dep_b1", "alpha_b", "LIVE", "live", WPC_CORE, "120000", "2150.75", "310.2"),
+    suiteDeployment("dep_b2", "alpha_b", "LIVE", "live", WPC_SAT, "60000", "-98.4", "21.05"),
+    suiteDeployment("dep_b3", "alpha_b", "CANARY", "live", WPC_CORE, "30000", "410.1", "-5.5"),
+  ]),
+];
+const wpcNativeAlpha = (id: string | undefined): boolean => id !== undefined && WPC_ALPHAS.some((alpha) => alpha.id === id);
+const wpcNativePortfolio = (id: string | undefined): boolean => id !== undefined && (WPC_PORTFOLIO_IDS as readonly string[]).includes(id);
+/** The native ids answer from the native books, in whatever environment is asked (an empty environment is a 200 with no rows, never a 404). */
+function wpcAlphasFor(surface: WpcSurface, id: string | undefined): AlphaSpec[] | undefined {
+  // The small scale keeps the e2e suite's own SUITE_ALPHAS (pinned by tests); medium and large have no native alphas in the generated universe.
+  if (scaled().alphas.length === 0) return undefined;
+  return (surface === "ALPHA" && wpcNativeAlpha(id)) || (surface === "PORTFOLIO" && wpcNativePortfolio(id)) ? WPC_ALPHAS : undefined;
+}
+const wpcKnown = (surface: WpcSurface, id: string | undefined): boolean => wpcAlphasFor(surface, id) !== undefined;
+/** Portfolio ids the series port may answer for beyond the scaled universe: the native books that hold at least one deployment in this environment. */
+function wpcPortfolioStubs(environment: string): { id: string; base: string }[] {
+  wpcTemplate ??= fixture("execution-manager-dataset.partitions.synthetic.valid.json");
+  const held = new Set(rowsFor(environment, wpcTemplate, WINDOW_PRESETS["30D"], true, WPC_ALPHAS).map((row) => row.portfolio_id));
+  return [...held].map((id) => ({ id, base: "USDT" }));
+}
+
+/** Deterministic integer walk of n+1 values from `start` to `end` (a bridge), step size about `amp`. Bigint only. */
+function wpcWalk(seed: number, n: number, start: bigint, end: bigint, amp: bigint): bigint[] {
+  let state = BigInt((seed % 2_147_483_646) + 1);
+  const steps = BigInt(Math.max(4, Math.round(Math.sqrt(n) * 0.8)));
+  const walk: bigint[] = [0n];
+  for (let i = 1; i <= n; i += 1) {
+    state = (state * 48_271n) % 2_147_483_647n;
+    walk.push(walk[i - 1]! + ((state % 2001n) - 1000n) * amp / (1000n * steps));
+  }
+  const total = BigInt(n);
+  return walk.map((value, i) => start + value - walk[n]! * BigInt(i) / total + (end - start) * BigInt(i) / total);
+}
+const wpcAbs = (value: bigint): bigint => (value < 0n ? -value : value);
+/** The dataset figures of one portfolio, from the SAME rows the overview read serves: the series ends on them. */
+function wpcTarget(environment: string, id: string, preset: WindowPreset, currency: string): { net: bigint; nav: bigint; ret: bigint } | null {
+  wpcTemplate ??= fixture("execution-manager-dataset.partitions.synthetic.valid.json");
+  const only = wpcAlphasFor("PORTFOLIO", id);
+  const rows = rowsFor(environment, wpcTemplate, preset, true, only).filter((row) => row.portfolio_id === id);
+  const partition = aggregate(rows).find((entry) => entry.partition.currency === currency);
+  const available = (key: string): string | null => partition?.metrics[key]?.availability === "AVAILABLE" ? partition.metrics[key].value : null;
+  const [net, nav, ret] = [available("net_pnl"), available("current_nav"), available("return_30d_pct")];
+  return net === null || nav === null || ret === null ? null : { net: toScaled(net), nav: toScaled(nav), ret: toScaled(ret) / 100n };
+}
+/** Replaces the values of one series entry with a per-subject walk whose end equals the subject's dataset figure (NAV, Net PnL, Return). */
+function wpcShapeSeries(entry: Draft, metricName: string, subjectId: string, environment: string, requested: unknown): void {
+  const days = requested === "7D" ? "7D" : requested === "90D" ? "90D" : "30D";
+  const target = wpcTarget(environment, subjectId, WINDOW_PRESETS[days], entry.partition.currency);
+  if (target === null) return;
+  const n = entry.points.length;
+  const missing = Math.floor(n / 2);
+  const seed = seedOf(subjectId, environment, metricName, "wpc-walk");
+  const nav = target.nav > 0n ? target.nav : 1n;
+  const [start, end, amp] = metricName === "NAV" ? [target.nav - target.net, target.nav, nav / 120n]
+    : metricName === "NET_PNL" ? [0n, target.net, wpcAbs(target.net) > nav / 150n ? wpcAbs(target.net) / 2n : nav / 150n]
+      : [0n, target.ret, wpcAbs(target.ret) > 5n * 10n ** 15n ? wpcAbs(target.ret) / 2n : 10n ** 16n];
+  const values = wpcWalk(seed, n, start, end, amp);
+  const indices = Array.from({ length: n + 1 }, (_, i) => i).filter((i) => i !== missing);
+  // Return is a fraction (8 places); money keeps its 18 places. The walk itself is in 18-place integers.
+  const text = (value: bigint): string => (metricName === "RETURN" ? trimmed(value / 10n ** 10n, 8) : trimmed(value, 18));
+  entry.points.forEach((point: Draft, k: number) => { point.value = text(values[indices[k]!]!); });
+}
+
+/* ---- ALPHA lifecycle and events: open partition keys of each ALPHA row (register 2c-wpc). Text rides `reason_code` (the WP-A precedent). */
+const DAY_MS = 86_400_000;
+const WPC_ACTORS = ["bjones", "asmith", "lnguyen"] as const;
+/** The instant the alpha doubles state as "now" (17 Oct 12:04Z against FIXTURE_NOW 22 Oct 12:00Z): the lifecycle, the events and the equity line end here, so they share one window. */
+const wpcAnchorMs = (): number => fixtureNowMs() - 5 * DAY_MS + 4 * 60_000;
+function wpcLifecycleKeys(alphaId: string, template: Draft): Record<string, Draft> {
+  const now = wpcAnchorMs();
+  const seed = seedOf(alphaId, "wpc-life");
+  const actor = (n: number): string => WPC_ACTORS[(seed + n) % WPC_ACTORS.length]!;
+  const liveDays = 4 + (seed % 17);
+  const canaryDays = 3 + (seed >> 3) % 5;
+  const sandboxDays = 14 + (seed >> 5) % 11;
+  const paperDays = 25 + (seed >> 7) % 20;
+  const liveFrom = now - liveDays * DAY_MS;
+  const canaryFrom = liveFrom - canaryDays * DAY_MS;
+  const sandboxFrom = canaryFrom - sandboxDays * DAY_MS;
+  const paperFrom = sandboxFrom - paperDays * DAY_MS;
+  const r2 = paperFrom - DAY_MS;
+  const r1 = r2 - (8 + (seed >> 9) % 8) * DAY_MS;
+  const out: Record<string, Draft> = {};
+  const put = (key: string, value: string, unit: string, text: string | null = null): void => {
+    const built = plainMetric(template, value, unit);
+    built.reason_code = text;
+    built.methodology_ref = "FIXTURE_LAB:lifecycle-simulation-v1";
+    out[key] = built;
+  };
+  const at = (ms: number): string => String(Math.round(ms));
+  put("life_r1_exit_ms", at(r1), "TIMESTAMP_MS", actor(0));
+  put("life_r2_exit_ms", at(r2), "TIMESTAMP_MS", actor(1));
+  put("life_paper_exit_ms", at(sandboxFrom), "TIMESTAMP_MS", actor(2));
+  put("life_sandbox_exit_ms", at(canaryFrom), "TIMESTAMP_MS", actor(0));
+  put("life_canary_exit_ms", at(liveFrom), "TIMESTAMP_MS", actor(1));
+  put("life_paper_days", String(paperDays), "DAYS");
+  put("life_sandbox_days", String(sandboxDays), "DAYS");
+  put("life_canary_days", String(canaryDays), "DAYS");
+  put("life_live_days", String(liveDays), "DAYS");
+  for (const stage of ["paper", "sandbox", "canary"]) { put(`life_${stage}_criteria_met`, "7", "COUNT"); put(`life_${stage}_criteria_total`, "7", "COUNT"); }
+  put("life_live_decider", "1", "ROLE", "Manager");
+  put("life_blocked_reason", "1", "TEXT", "Criterion 6 of 7 is not met");
+  // Events: kind, time, "Title|actor". Offsets are inside the lifecycle above, so the stage lane agrees with the spine.
+  const events: [string, number, string, string][] = [
+    ["stage", paperFrom, "Paper started", "system"], ["stage", sandboxFrom, "Sandbox started", "system"],
+    ["stage", canaryFrom, "Canary started", actor(0)], ["stage", liveFrom, "Live started", actor(1)],
+    ["decision", r1, "R1 gate approved", actor(0)], ["decision", r2, "R2 gate approved", actor(1)],
+    ["decision", sandboxFrom - DAY_MS / 2, "Sandbox exit approved", actor(2)], ["decision", canaryFrom - DAY_MS / 2, "Canary approved", actor(0)], ["decision", liveFrom - DAY_MS / 2, "Live approved", actor(1)],
+    // Events on the day the e2e doubles' trades print (the anchor), so Trade Replay's lanes have something to show.
+    ["decision", now - 20 * 3_600_000, "Position limit reviewed", actor(2)],
+    ["incident", sandboxFrom + (sandboxDays * DAY_MS) / 2, "Sandbox feed gap", "system"], ["incident", now - 2 * 3_600_000, "Broker sync diverged", "system"],
+    ["incident", now - 26 * 3_600_000, "Venue feed gap", "system"],
+    ["recall", now - DAY_MS, "Recall pending", actor(1)],
+    ["flow", liveFrom + 300_000, "Allocation added", actor(1)], ["flow", canaryFrom + 300_000, "Allocation added", actor(0)],
+  ];
+  const seen: Record<string, number> = {};
+  for (const [kind, time, title, by] of events) {
+    seen[kind] = (seen[kind] ?? 0) + 1;
+    put(`evt_${kind}_${seen[kind]}_ms`, at(time), "TIMESTAMP_MS", `${title}|${by}`);
+  }
+  // Regime fit: one alpha in three is a typed absence (insufficient data); the others publish a ratio, apart from the score.
+  if (seed % 3 === 0) { const absent = plainMetric(template, null, "RATIO"); absent.reason_code = "INSUFFICIENT_DATA"; out.regime_fit = absent; }
+  else put("regime_fit", trimmed(BigInt(5200 + (seed % 3500)), 4), "RATIO");
+  return out;
+}
+/** Adds the lifecycle/event/regime keys to an ALPHA overview answer (detail reads only; lists and groups stay as they are). */
+function wpcAlphaKeys(path: string, search: URLSearchParams, answer: ReviewManagerResponse | null): ReviewManagerResponse | null {
+  const match = /^\/manager\/alphas\/([^/]+)\/overview$/.exec(path);
+  if (match === null || answer === null || answer.status !== 200 || search.get("environment") === "ALL") return answer;
+  const body = answer.body as Draft;
+  const id = decodeURIComponent(match[1]!);
+  for (const row of body.items) {
+    const keys = wpcLifecycleKeys(row.alpha_id ?? id, row.metrics.net_pnl);
+    for (const entry of row.economic_partitions) Object.assign(entry.metrics, copy(keys));
+  }
+  return answer;
+}
+/* ---- Trade replay candles (review lane only; the e2e double and its golden are untouched). The double's venue candles drift around 67,200 while
+ * the book's trades print up to 67,411, so a fill sat 200 above its candles and stretched the axis. These bars wander (mean-reverting, integer
+ * cents, deterministic) around the band the trades print in, so a fill is on its candle and the axis is the candles' own. */
+const wpcCents = (value: number): string => `${Math.trunc(value / 100)}.${String(Math.abs(value % 100)).padStart(2, "0")}`;
+function wpcCandles(method: string, path: string, search: URLSearchParams): ReviewManagerResponse | null {
+  if (method !== "GET" || path !== "/market/venue-candles") return null;
+  const base = answerAlpha(method, path, search);
+  const body = base?.body as Draft;
+  if (base === null || base.status !== 200 || body?.state !== "READY" || !Array.isArray(body.candles) || body.candles.length === 0) return base;
+  const CENTRE = 6_730_000;
+  let close = 6_722_000;
+  body.candles = body.candles.map((candle: Draft, i: number) => {
+    const drift = ((i * 37) % 23) - 11;
+    const open = close;
+    close = open + drift * 1100 + Math.trunc((CENTRE - open) / 16);
+    const high = Math.max(open, close) + 120 + (i % 5) * 20;
+    const low = Math.min(open, close) - 110 - (i % 4) * 25;
+    return { ...candle, o: wpcCents(open), h: wpcCents(high), l: wpcCents(low), c: wpcCents(close) };
+  });
+  return { status: base.status, body };
+}
+/* ---- Alpha equity chart (review lane only): the double serves 24 hourly points, a day of a window the design shows as 90 days, so the
+ * lifecycle and the event ribbon (which span months) had no axis to sit on. Same body, same start and end values, 120 daily closes in
+ * between from a deterministic bridge walk (integer cents). The e2e double and its golden are untouched. */
+function wpcEquity(method: string, path: string, search: URLSearchParams): ReviewManagerResponse | null {
+  if (method !== "GET" || path !== "/views/equity-chart" || search.get("subject_kind") !== "alpha") return null;
+  const base = answerAlpha(method, path, search);
+  const body = base?.body as Draft;
+  const series = body?.panel?.data?.series?.[0];
+  if (base === null || base.status !== 200 || !series || !Array.isArray(series.points) || series.points.length < 2) return base;
+  const cents = (text: string): bigint => BigInt(text.replace(".", ""));
+  const first = series.points[0];
+  const last = series.points[series.points.length - 1];
+  const [from, to] = [cents(first[1] as string), cents(last[1] as string)];
+  const n = 119;
+  const end = last[0] as number;
+  const walk = wpcWalk(seedOf(search.get("subject_id"), search.get("environment"), "wpc-equity"), n, from, to, from / 160n);
+  const points = walk.map((value, i) => [end - (n - i) * DAY_MS, wpcCents(Number(value))]);
+  const start = points[0]![0] as number;
+  series.points = points;
+  const panel = body.panel;
+  panel.coverage = { ...panel.coverage, from_ms: start, to_ms: end, source_total: String(points.length), filtered_total: String(points.length), returned_count: points.length };
+  panel.data.sampling = { ...panel.data.sampling, source_rows: String(points.length), numeric_rows: String(points.length), returned_rows: points.length };
+  panel.data.retention = { ...panel.data.retention, oldest_available_ms: start, newest_available_ms: end };
+  return { status: base.status, body };
+}
+// ===== WP-C end

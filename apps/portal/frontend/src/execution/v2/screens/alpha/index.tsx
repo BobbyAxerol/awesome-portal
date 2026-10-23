@@ -43,10 +43,11 @@ import { Flag } from "../../Flag";
 import { applyTab, resolveTab } from "../../tabAliases";
 import { useMediaQuery } from "../../useMediaQuery";
 import { ENV_LABEL, serializeUrlParams, useExecUrlState, withContext, type ExecEnv } from "../../urlState";
-import { alphaBack, replayBack } from "./backLinks";
+import { alphaBack } from "./backLinks";
 import { Dec, Na } from "./cells";
 import { ActivityTab } from "./ActivityTab";
 import { LifecyclePanel } from "./Lifecycle";
+import { lifeEvents, regimeFit } from "./lifecycleModel";
 import { OrdersTab } from "./OrdersTab";
 import { PERFORMANCE_VIEWS, PerformanceTab, type PerformanceView } from "./PerformanceTab";
 import { ScopeBanner } from "./ScopeBanner";
@@ -70,7 +71,7 @@ import {
 import { Np, WhyMark } from "./np";
 import { PercentValue, ReturnFig, RowFigure, useAlphaDataset } from "./DatasetFigures";
 import { alphaViewOf } from "./view";
-import { ReplayView } from "./replay/ReplayView";
+import AlphaReplay from "./replay";
 import {
   useActivityRollup,
   useAlphaResource,
@@ -91,7 +92,6 @@ const NO_ENVS: readonly ExecEnv[] = [];
 const NO_ROWS: readonly DeploymentRow[] = [];
 const NO_POSITIONS: readonly PositionRow[] = [];
 const NO_RECON: readonly ReconRow[] = [];
-const NO_VENUE = (): null => null;
 const NO_NAMES: ReadonlyMap<string, string> = new Map();
 
 /** D9: where a reader sees which grant a disabled action lacks. */
@@ -118,7 +118,7 @@ function Fig({ label, children, basis }: { label: string; children: ReactNode; b
   );
 }
 
-export default function AlphaScreen({ api, alphaId, workspaceId }: AlphaScreenProps) {
+function Alpha360({ api, alphaId, workspaceId }: AlphaScreenProps) {
   const url = useExecUrlState();
   const [params, setParams] = useSearchParams();
   const location = useLocation();
@@ -156,7 +156,7 @@ export default function AlphaScreen({ api, alphaId, workspaceId }: AlphaScreenPr
   const drift = useStageDrift(api, alphaId, true);
   const equity = useEquityChart(api, alphaId, env, wsId, settled && (tab === "performance" || tab === "activity"));
   const rollup = useActivityRollup(api, alphaId, env, settled && tab === "orders");
-  const timeline = useObservedFeed(api, alphaId, env, settled && tab === "activity");
+  const timeline = useObservedFeed(api, alphaId, env, settled && (tab === "activity" || tab === "performance"));
   const book = useSubjectBook(api, alphaId, env, settled && (tab === "orders" || tab === "activity" || tab === "replay"), explicitWs);
 
   const current: SpineStageId | null = view?.current ?? null;
@@ -225,6 +225,10 @@ export default function AlphaScreen({ api, alphaId, workspaceId }: AlphaScreenPr
   const present = view !== null && view.present;
   // The Manager dataset for this alpha in the chosen Book: the Return tile and the windowed figures. Asked once the alpha is known; only a workspace the caller named is sent (never the body's own).
   const dataset = useAlphaDataset(api, present, alphaId, env, explicitWs);
+  const datasetValue = dataset.phase === "ready" ? dataset.value : null;
+  // WP-C: the events and the lifecycle the dataset publishes (open `evt_*` and `life_*` partition keys); none = the lanes say Not published.
+  const life = useMemo(() => lifeEvents(datasetValue), [datasetValue]);
+  const regime = useMemo(() => regimeFit(datasetValue), [datasetValue]);
   const names = view?.portfolioNameById ?? NO_NAMES;
 
   const panelId = `${uid}-panel`;
@@ -292,7 +296,7 @@ export default function AlphaScreen({ api, alphaId, workspaceId }: AlphaScreenPr
       ) : (
         <div className="exec-alp2-main" data-docked={selection === "score" && mode === "dock" ? "true" : undefined}>
           <div className="exec-alp2-body">
-            {tab === "replay" ? null : <LifecyclePanel rows={rows} current={current} selected={stagePick} onSelect={setStagePick} linkTo={linkTo} currentNote={view?.currentNote} withheld={view?.withheld} />}
+            {tab === "replay" ? null : <LifecyclePanel rows={rows} current={current} selected={stagePick} onSelect={setStagePick} linkTo={linkTo} currentNote={view?.currentNote} withheld={view?.withheld} dataset={datasetValue} />}
 
             {tab === "replay" ? null : (
             <dl className="exec-blk-kpis exec-alp2-kpis" aria-label="Current facts">
@@ -312,7 +316,10 @@ export default function AlphaScreen({ api, alphaId, workspaceId }: AlphaScreenPr
               </Fig>
               <Fig label="Return" basis="30D; methodology per source"><ReturnFig read={dataset} names={names} /></Fig>
               <Fig label="Max drawdown" basis="Window per source"><RowFigure read={dataset} names={names} metricKey="max_drawdown_pct" fallback={<Np id="FE-025" />} cell={(metric) => <PercentValue metric={metric} signed={false} />} /></Fig>
-              <Fig label="Regime fit" basis="Policy not set"><Np id="FE-011" /></Fig>
+              <Fig label="Regime fit" basis="Separate from score">
+                {regime === null ? <Np id="FE-011" /> : regime.kind === "value" ? <span className="exec-alp2-fig"><span className="exec-mgr-num" title="Share of the window the source places in the alpha's regime, as published">{regime.exact}</span> <button type="button" className="exec-blk-link" onClick={() => openTab("regime")}>Open</button></span>
+                  : <span className="exec-alp2-fig"><Flag kind="pending" label={humanize(regime.code)} size="sm" /> <button type="button" className="exec-blk-link" onClick={() => openTab("regime")}>Open</button></span>}
+              </Fig>
             </dl>
             )}
 
@@ -374,7 +381,7 @@ export default function AlphaScreen({ api, alphaId, workspaceId }: AlphaScreenPr
 
             <div role="tabpanel" id={panelId} aria-labelledby={inMore ? undefined : tabId(tab)} aria-label={inMore ? ALPHA_MORE_TABS.find((t) => t.key === tab)?.label : undefined} className="exec-alp2-panel">
               {tab === "performance" ? (
-                <PerformanceTab rows={rows} noTotals={view?.money.published === false ? view.money.reason : null} dataset={dataset} names={names} env={env} equity={equity} drift={drift} inputs={inputs} paths={paths} view={perfView} onView={(next) => url.set({ view: next === "act" ? null : next })} />
+                <PerformanceTab timeline={timeline} life={life} rows={rows} noTotals={view?.money.published === false ? view.money.reason : null} dataset={dataset} names={names} env={env} equity={equity} drift={drift} inputs={inputs} paths={paths} view={perfView} onView={(next) => url.set({ view: next === "act" ? null : next })} />
               ) : null}
               {tab === "deployments" ? (
                 <DeploymentsTab
@@ -388,20 +395,7 @@ export default function AlphaScreen({ api, alphaId, workspaceId }: AlphaScreenPr
               {tab === "evidence" ? <EvidenceTab view={view} researchReason={drift.phase === "ready" ? drift.value.researchReason : null} /> : null}
               {tab === "regime" ? <RegimeTab /> : null}
               {tab === "orders" ? <OrdersTab alphaId={alphaId} book={book} activity={rollup} focusOrder={focusOrder} linkTo={linkTo} /> : null}
-              {tab === "activity" ? <ActivityTab env={env} alphaId={alphaId} alphaLabel={label} inputs={inputs} paths={paths} timeline={timeline} book={book} /> : null}
-              {tab === "replay" ? (
-                <ReplayView
-                  api={api}
-                  alphaId={alphaId}
-                  alphaLabel={label}
-                  env={env}
-                  venueOf={view?.venueOf ?? NO_VENUE}
-                  book={book}
-                  focus={focus}
-                  ordersHref={linkTo(`/deployments/alphas/${encodeURIComponent(alphaId)}?tab=orders`)}
-                  back={replayBack(params, linkTo(`/deployments/alphas/${encodeURIComponent(alphaId)}?tab=orders`))}
-                />
-              ) : null}
+              {tab === "activity" ? <ActivityTab env={env} alphaId={alphaId} alphaLabel={label} inputs={inputs} paths={paths} timeline={timeline} book={book} life={life} /> : null}
               {tab === "positions" ? (
                 <PositionsTab rows={view?.positions ?? NO_POSITIONS} linkTo={linkTo} unplaced={view?.unplaced.positions ?? 0} withheld={view?.withheld ?? null} />
               ) : null}
@@ -414,4 +408,14 @@ export default function AlphaScreen({ api, alphaId, workspaceId }: AlphaScreenPr
       )}
     </div>
   );
+}
+
+/**
+ * One route, two screens: `?tab=replay` (and the `focus=` deep links) is Trade Replay as a page of its own with its own title,
+ * context chips and way back; every other tab is Alpha 360. The URL contract is unchanged.
+ */
+export default function AlphaScreen(props: AlphaScreenProps) {
+  const url = useExecUrlState();
+  // Only the V2 key opens the page: a V1 label (`Trade+Replay`) first goes through Alpha 360's own rewrite to the V2 key.
+  return url.value.tab === "replay" ? <AlphaReplay api={props.api} alphaId={props.alphaId} /> : <Alpha360 {...props} />;
 }

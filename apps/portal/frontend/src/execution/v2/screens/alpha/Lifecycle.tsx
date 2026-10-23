@@ -12,12 +12,14 @@
  * book it was read from. The panel then says that, and lists a Live-book deployment under both Canary and Live with the words
  * `stage not published`; it never picks one.
  */
-import { useId } from "react";
+import { useId, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 
 import { Flag } from "../../Flag";
 import { JourneySpine, SectionPanel, SPINE_STAGES, type SpineStageId } from "../../blocks";
+import type { ManagerDataset } from "../../readers/managerDataset";
 import { Dec } from "./cells";
+import { lifecycleFacts } from "./lifecycleModel";
 import { stageWord, type DeploymentRow } from "./model";
 import { Np, WhyMark } from "./np";
 
@@ -32,7 +34,16 @@ export interface LifecyclePanelProps {
   currentNote?: string | null;
   /** Set when the response is the bounded shape: the deployment rows are not in it. */
   withheld?: string | null;
+  /** The alpha's Manager dataset: days in stage, criteria, exit dates and decider per stage when it publishes them (WP-C keys `life_*`). */
+  dataset?: ManagerDataset | null;
 }
+
+type StatePick = "live" | "sandbox" | "blocked";
+const STATE_PICKS: readonly { id: StatePick; label: string }[] = [
+  { id: "live", label: "Live" },
+  { id: "sandbox", label: "In Sandbox" },
+  { id: "blocked", label: "Blocked" },
+];
 
 /** A Live-book row whose Canary-or-Live stage the body does not state. */
 const liveBookRow = (row: DeploymentRow): boolean => row.stage === null && row.env === "live";
@@ -81,12 +92,33 @@ function StageDetail({
   );
 }
 
-export function LifecyclePanel({ rows, current, selected, onSelect, linkTo, currentNote = null, withheld = null }: LifecyclePanelProps) {
+export function LifecyclePanel({ rows, current, selected, onSelect, linkTo, currentNote = null, withheld = null, dataset = null }: LifecyclePanelProps) {
   const headingId = useId();
-  const shown = selected ?? current;
+  const [preview, setPreview] = useState<StatePick | null>(null);
+  // The spine's own stage first; the three-state toggle appears only when the dataset published the lifecycle it would draw.
+  const own: StatePick | null = current === "sandbox" ? "sandbox" : current === "live" || current === "canary" ? "live" : null;
+  const pick = preview ?? own;
+  const shownCurrent: SpineStageId | null = pick === "sandbox" ? "sandbox" : current ?? (pick === "live" ? "live" : null);
+  const life = useMemo(() => lifecycleFacts(dataset, shownCurrent), [dataset, shownCurrent]);
+  const blocked = pick === "blocked" && life !== null;
+  const stages = useMemo(() => {
+    if (life === null) return undefined;
+    if (!blocked || shownCurrent === null) return life.stages;
+    return { ...life.stages, [shownCurrent]: { ...life.stages[shownCurrent], blockedReason: life.blockedReason } };
+  }, [life, blocked, shownCurrent]);
+  const shown = selected ?? shownCurrent;
+  const previewing = life !== null && preview !== null && preview !== own;
+  const toggle = life === null ? null : (
+    <span className="exec-alp2-seg" role="group" aria-label="Stage state">
+      {STATE_PICKS.map((option) => (
+        <button key={option.id} type="button" className="exec-alp2-segbtn" aria-pressed={pick === option.id} onClick={() => setPreview(option.id === own ? null : option.id)}>{option.label}</button>
+      ))}
+    </span>
+  );
   return (
-    <SectionPanel title="Lifecycle" aside={current === null ? undefined : `Now in ${stageWord(current)}`}>
-      <JourneySpine variant="full" current={current} selected={selected} onSelect={onSelect} label="Alpha lifecycle" />
+    <SectionPanel title="Lifecycle" aside={toggle ?? (current === null ? undefined : `Now in ${stageWord(current)}`)}>
+      <JourneySpine variant="full" current={shownCurrent} blocked={blocked} stages={stages} selected={selected} onSelect={onSelect} label="Alpha lifecycle" />
+      {previewing ? <p className="exec-alp2-line exec-alp2-dim" role="status">Preview of how the spine reads in this state. This alpha is {current === null ? "at a stage the source does not name" : `in ${stageWord(current)}`}.</p> : null}
       <div id={headingId} className="exec-alp2-stage-wrap" aria-live="polite">
         {shown === null ? (
           <p className="exec-alp2-line">
@@ -94,7 +126,7 @@ export function LifecyclePanel({ rows, current, selected, onSelect, linkTo, curr
             {currentNote ? <span className="exec-alp2-why">{currentNote}</span> : null}
           </p>
         ) : (
-          <StageDetail stage={shown} current={current} rows={rows} linkTo={linkTo} withheld={withheld} />
+          <StageDetail stage={shown} current={shownCurrent} rows={rows} linkTo={linkTo} withheld={withheld} />
         )}
       </div>
     </SectionPanel>
