@@ -164,8 +164,9 @@ function WaiverItem({ item, readAt }: { item: Extract<QueueItem, { kind: "waiver
       </span>
       <span className="exec-ck-qm">{row.subjectLabel} · {row.owner}</span>
       <span className="exec-ck-qf"><WaiverFlag state={row.state} /></span>
+      {/* One short line in the 268px queue (hi-fi: "lapses in 1d 21h"); the exact instant is in the Condition panel. Without a read time to count from, the instant is all there is. */}
       <span className="exec-ck-qm" data-testid="ck-waiver-clock">
-        {clock.kind === "none" ? clock.phrase : lapses ? `${clock.kind === "unanchored" ? "Lapses" : `${clock.phrase[0]!.toUpperCase()}${clock.phrase.slice(1)} ·`} ${lapses}` : "Lapse time not published"}
+        {clock.kind === "none" ? clock.phrase : clock.kind === "unanchored" ? (lapses ? `Lapses ${lapses}` : "Lapse time not published") : `${clock.phrase[0]!.toUpperCase()}${clock.phrase.slice(1)}`}
       </span>
     </>
   );

@@ -385,8 +385,7 @@ describe("the waiver lane and its runway", () => {
     expect(textOf(lines()[1]!)).toContain("1d 21h");
     expect(textOf(lines()[4]!)).toContain(`past ${RUNWAY_AXIS_DAYS} d`);
     expect(textOf(lines()[5]!)).toContain(NO_CLOCK);
-    expect(runway().textContent).toContain("Counted from the register's read time (18 Oct 12:00Z)");
-    expect(within(evidence()).getByText(`Shared axis 0 to ${RUNWAY_AXIS_DAYS} d`)).toBeTruthy();
+    expect(runway().textContent).toContain(`Shared axis 0 to ${RUNWAY_AXIS_DAYS} d, counted from the register's read time (18 Oct 12:00Z)`);
   });
 
   it("marks sit by their share of the axis, a lapse past it is held at the end, and a lapsed waiver sits at the start", async () => {
@@ -411,8 +410,8 @@ describe("the waiver lane and its runway", () => {
     expect(banner.textContent).toContain("Lapses in 1d 21h");
     expect(banner.textContent).toContain("No approver quorum");
     const item = within(queue()).getAllByTestId("ck-waiver-clock").map((n) => n.textContent ?? "");
-    expect(item.some((t) => t.startsWith("Lapses in 1d 21h · "))).toBe(true);
-    expect(item.some((t) => t.startsWith("Lapsed 3d ago · "))).toBe(true);
+    expect(item).toContain("Lapses in 1d 21h");
+    expect(item).toContain("Lapsed 3d ago");
     expect(item.some((t) => t === NO_CLOCK)).toBe(true);
   });
 

@@ -700,9 +700,10 @@
   padding: 0;
   list-style: none;
 }
+/* The third column is a fixed width: every row is its own grid, and the axis below must line up with all of their tracks. */
 .exec-ck-runway-row {
   display: grid;
-  grid-template-columns: minmax(120px, 2fr) minmax(0, 3fr) minmax(64px, auto);
+  grid-template-columns: minmax(120px, 2fr) minmax(0, 3fr) 176px;
   align-items: center;
   gap: var(--space-3);
   width: 100%;
@@ -735,8 +736,17 @@
   border: 1px solid var(--line);
 }
 .exec-ck-runway-track[data-kind="none"] {
+  height: auto;
   background: none;
   border-style: dashed;
+}
+.exec-ck-runway-note {
+  display: block;
+  padding: 0 var(--space-2);
+  font: var(--exec-font-caption);
+  color: var(--ink-faint);
+  text-align: right;
+  overflow-wrap: anywhere;
 }
 .exec-ck-runway-fill {
   position: absolute;
@@ -755,15 +765,16 @@
   background: var(--bad);
 }
 .exec-ck-runway-when {
+  min-width: 0;
   font: var(--exec-font-num);
   font-variant-numeric: tabular-nums;
   color: var(--ink-soft);
-  white-space: nowrap;
+  overflow-wrap: anywhere;
 }
 /* The axis shares the rows' three columns, so its ticks sit under the tracks. */
 .exec-ck-runway-axisrow {
   display: grid;
-  grid-template-columns: minmax(120px, 2fr) minmax(0, 3fr) minmax(64px, auto);
+  grid-template-columns: minmax(120px, 2fr) minmax(0, 3fr) 176px;
   gap: var(--space-3);
   padding: 0 var(--space-4);
 }
@@ -775,6 +786,7 @@
 }
 .exec-ck-runway-axis span {
   position: absolute;
+  white-space: nowrap;
   transform: translateX(-50%);
 }
 .exec-ck-runway-axis span:first-child {

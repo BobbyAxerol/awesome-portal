@@ -1049,7 +1049,7 @@ function Runway({ register, readAt, selectedId, onSelect }: { register: readonly
     if (own) shown[shown.length - 1] = own;
   }
   return (
-    <Panel title="Runway · what lapses when" right={`Shared axis 0 to ${RUNWAY_AXIS_DAYS} d`}>
+    <Panel title="Runway · what lapses when">
       {register.length === 0 ? (
         <div className="exec-ck-pad"><span className="exec-ck-np">The register page holds no waiver to draw.</span></div>
       ) : (
@@ -1060,7 +1060,9 @@ function Runway({ register, readAt, selectedId, onSelect }: { register: readonly
                 <button type="button" className="exec-ck-runway-row" aria-current={entry.conditionId === selectedId ? "true" : undefined} onClick={() => onSelect?.(entry.conditionId)}>
                   <span className="exec-ck-runway-name">{entry.subjectLabel} · {entry.label}</span>
                   <span className="exec-ck-runway-track" data-kind={clock.kind} role="img" aria-label={clock.phrase}>
-                    {clock.kind === "ahead" ? (
+                    {clock.kind === "none" ? (
+                      <span className="exec-ck-runway-note">{clock.phrase}</span>
+                    ) : clock.kind === "ahead" ? (
                       <>
                         <i className="exec-ck-runway-fill" style={{ width: `${clock.offsetPct}%` }} />
                         <b className="exec-ck-runway-mark" data-beyond={clock.beyond ? "true" : undefined} style={{ left: `${clock.offsetPct}%` }} />
@@ -1070,7 +1072,7 @@ function Runway({ register, readAt, selectedId, onSelect }: { register: readonly
                     ) : null}
                   </span>
                   <span className="exec-ck-runway-when">
-                    {clock.kind === "ahead" ? `${clock.beyond ? "past " : ""}${clock.beyond ? `${RUNWAY_AXIS_DAYS} d` : clock.phrase.replace(/^lapses in /, "")}` : clock.phrase}
+                    {clock.kind === "ahead" ? `${clock.beyond ? "past " : ""}${clock.beyond ? `${RUNWAY_AXIS_DAYS} d` : clock.phrase.replace(/^lapses in /, "")}` : clock.kind === "none" ? "" : clock.phrase}
                   </span>
                 </button>
               </li>
@@ -1079,12 +1081,12 @@ function Runway({ register, readAt, selectedId, onSelect }: { register: readonly
           <div className="exec-ck-runway-axisrow" aria-hidden="true">
             <span />
             <div className="exec-ck-runway-axis">
-              {RUNWAY_TICKS_DAYS.map((day) => <span key={day} style={{ left: `${(day / RUNWAY_AXIS_DAYS) * 100}%` }}>{day === 0 ? "Lapse" : `${day} d`}</span>)}
+              {RUNWAY_TICKS_DAYS.map((day) => <span key={day} style={{ left: `${(day / RUNWAY_AXIS_DAYS) * 100}%` }}>{`${day} d`}</span>)}
             </div>
             <span />
           </div>
           {ordered.length > shown.length ? <p className="exec-ck-note exec-ck-pad">Showing {shown.length} of {ordered.length} waivers loaded.</p> : null}
-          <p className="exec-ck-note exec-ck-pad">Counted from the register's read time{readAt ? ` (${instantText(readAt) ?? readAt})` : ", which this read does not state"}.</p>
+          <p className="exec-ck-note exec-ck-pad">Shared axis 0 to {RUNWAY_AXIS_DAYS} d, counted from the register's read time{readAt ? ` (${instantText(readAt) ?? readAt})` : ", which this read does not state"}.</p>
         </div>
       )}
     </Panel>

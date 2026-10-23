@@ -39,6 +39,10 @@
   font: var(--exec-font-control);
   color: var(--accent);
 }
+/* The "Open" beside a state flag is no bigger than the flag's own words (layout audit: sublabel-bigger-than-primary). */
+.exec-adm-state .exec-adm-link {
+  font: var(--exec-font-label);
+}
 .exec-adm-banner {
   display: flex;
   flex-wrap: wrap;

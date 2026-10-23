@@ -66,6 +66,21 @@ Rule: guide M03 8.1 and score spec 5.8. A score is per alpha version, so it is a
 | partition (open) | qbts_provisional | FLAG | 1 when provisional | QBTS flag | provisional marker |
 | row | balance_total | MONEY | basis `FIXTURE_LAB:INTERNAL_ACCOUNT_BALANCE` (was `synthetic-book`); still allocation + net PnL inside the partition | Fleet Account balance | internal account balance projection |
 
+## 2d. WP-E (Approvals, New request, Profile & Access, Admin Actions, Users), 23 October 2026
+Level FIXTURE_LAB. Every row is served on the simulated lanes only (`options.simulated`: the populated and layout-stress profiles), through the same route as the real read, in the published shape; no schema is widened and no component names a fixture. The sparse default is unchanged. Code lives in `e2e/bffDoubleUsers.ts`, `e2e/bffDoubleAccess.ts`, `e2e/bffSimulated.ts` and one marked POST hook in `e2e/bffDouble.ts` (all `WP-E begin/end`). Switch off: the lane is not simulated.
+
+| Level | Key | Unit | Rule | Consumer | Expected real source |
+|---|---|---|---|---|---|
+| route `GET /api/admin/accounts` (roster rows and the detail read) | `user_id` of the first account (`usr_0001`, bobby) | id | served under the session's own user id (the fixture user, `FIXTURE_USER_ID`), the detail read answered for that id; nothing else on the row changes | Users "(you)" marker and the inline "You cannot disable yourself" | the roster naturally holds the signed-in account |
+| route `GET /api/admin/profile-access` and `/activity` | `accounts[]` with `capabilities[]` (5 accounts: owner, researcher, reviewer, operator, archived former analyst) and a two-entry activity for the reviewer | account / capability | governance capabilities only (`governance.{r1,r2,canary,live}.{read,decide}`); the owner is flagged and absent from the grid by the V1 screen; reads only, a write is never answered | Profile & Access, Manage grants tab (V1 matrix) | the Control API policy read (A4-3), which the fixture BFF did not answer, so the tab said "Could not read the access policy" |
+| route `GET /commands/tasks` | `state` of six READ_INSPECT tasks (`health`, `inspect`, `capital`, `performance`, `sizing`, `broker-read`) | enum | served CONNECTED with `reason_code` and `unlisted_reason` null; `classification_counts` moved with them; `redis-inspect` and every command keep the published state; relay stays off | Admin Actions: "6 of 24 can run now", Read tier "6 of 7 ready", Run local read | the catalogue states once the local-projection read transport is wired per task |
+| route `POST /commands/tasks/{id}/run` | `execution.command-run-result.v1` for those six | receipt | `source_request_sent: false`, `transport: SGP_LOCAL_PROJECTION`, a sha256 digest of the fixture's own words, `result.provenance` = `FIXTURE_LAB: synthetic local read, not source data` | Admin Actions pane receipt | the local projection read's own receipt |
+| route `GET /governance/approvals/history` | two decisions ahead of the canonical row (`dec_fx_today_1` R1 APPROVED by minh, 25 min before the fixture clock; `dec_fx_today_2` R1 CHANGES_REQUESTED by lan, 70 min before) | decision | same row shape; instants follow the fixture clock (so the preview's `FIXTURE_REBASE_TIME=1` makes them today) | Approvals "Decided today", the decided rows and their recorded receipt | the history read |
+
+Existing fixture values used without a new key: the waiver register's `due_at` and `read_at` (`CONDITION_FIXTURES`: two lapse in days, one lapsed, three with no clock) draw the runway; the run list the New request pickers read.
+
+Typed, not simulated (no published place; each is a request in the board inbox addressed to K, see the WP-E note): Approvals prior economic history series, evidence diff, the five "still open after approval" counts, "what changes", the approvals ladder; Access role preset and business-access state; Users role preset; Approvals/New request/Access/Admin freshness as-of (the chips state the browser's receipt time or the read they rest on, never "Fresh").
+
 ## 3. Facts no published route carries yet (proposed; not served; screens keep Not published)
 From the subagent reports of 2026-10-22; each is a field to ask Codex for, with the value the fixture lane would simulate.
 

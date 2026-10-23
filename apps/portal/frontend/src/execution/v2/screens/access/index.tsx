@@ -170,11 +170,12 @@ export default function AccessSelfView({ manage, sessionWorkspaceId = null, now,
         ? <Flag kind="stale" size="sm" label="Not available yet" />
         : r.allowed
           ? (
-            <>
+            // Stacked, not side by side: two chips in a row widen the Status column until the Why column is pushed out of its panel.
+            <span className="exec-acc-flags">
               <Flag kind="ok" size="sm" label={allowedWord} />
-              {r.stepUp ? <> <Flag kind="approval" size="sm" label={r.stepUp === "ACTIVE" ? "Step-up active" : "Step-up required"} /></> : null}
-              {r.stepUpAbsent ? <> <Flag kind="unknown" size="sm" label="Step-up not stated" /></> : null}
-            </>
+              {r.stepUp ? <Flag kind="approval" size="sm" label={r.stepUp === "ACTIVE" ? "Step-up active" : "Step-up required"} /> : null}
+              {r.stepUpAbsent ? <Flag kind="unknown" size="sm" label="Step-up not stated" /> : null}
+            </span>
           )
           : <Flag kind="na" size="sm" label={deniedWord} />,
     },

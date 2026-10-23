@@ -23,6 +23,12 @@
   font: var(--exec-font-title);
   color: var(--ink);
 }
+.exec-acc-flags {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-1);
+}
 .exec-acc-sub {
   margin: 0;
   font: var(--exec-font-meta);
