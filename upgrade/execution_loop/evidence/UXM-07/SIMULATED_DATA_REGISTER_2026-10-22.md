@@ -125,7 +125,7 @@ From the subagent reports of 2026-10-22; each is a field to ask Codex for, with 
 - The yellow "FIXTURE DATA" banner stays on every page. Nothing here is acceptance evidence.
 - Build input: the approved HMD reader wheel was copied (untracked, not committed) into `vendor/hmd-reader/` of the Claude worktree to satisfy the build.
 
-## 2b. WP-B Operations and Incident (23 October 2026, `e2e/bffDoubleV2.ts` queue/operations branch; opt-in `simulated`, level FIXTURE_LAB)
+## 2b-wpb. WP-B Operations and Incident (23 October 2026, `e2e/bffDoubleV2.ts` queue/operations branch; opt-in `simulated`, level FIXTURE_LAB)
 Served on the same routes (`GET /operations`, `GET /operations/incidents/{id}`) and read by the same readers as the real Edge; every key below is a published optional field of `execution-operations.v1`, so no schema is widened. Switch off (no `simulated`) and the rows lose these keys and the screens return to their typed absences. Verified by `src/fixtureBff/queueHealthSimulated.test.ts` and `screens/operations/wpb.test.tsx`.
 
 | Key | Level | Rule | Consumer | Expected real source |
