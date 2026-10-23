@@ -1,0 +1,97 @@
+{
+  "lane": "TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT",
+  "input": {
+    "workspace_id": "ws_TEST_ONLY",
+    "fact": {
+      "id": "operation:TEST_ONLY:operation-1",
+      "kind": "OPERATION",
+      "label": "Capital request verified",
+      "value": "VERIFIED",
+      "href": "/execution/operations?operation_id=TEST_ONLY%3Aoperation-1&workspace_id=ws_TEST_ONLY",
+      "as_of": "2026-10-23T12:00:00.000Z"
+    },
+    "baseline": {
+      "version": 1,
+      "seen_at": "2026-10-23T11:00:00.000Z",
+      "snapshot_revision": "56a2f84e04be03d93ce1bbea474fbb86ba406e861289a1ec20dfba1f479230e1",
+      "fingerprints": {
+        "operation:TEST_ONLY:operation-1": "c6051f84e0afe1d40129f1cc675392c8986641294360b5da4b54c332c4bafa07"
+      }
+    }
+  },
+  "cases": {
+    "first_visit": {
+      "schema_version": "portal.execution.visit-digest.v1",
+      "workspace_id": "ws_TEST_ONLY",
+      "may_mark_seen": true,
+      "mark_seen_reason": null,
+      "snapshot_revision": "82221f8b1c4c94ab716c5ecc02de746baa1f0cdb4fc58adaebc5803eee9321b2",
+      "observed_at": "2026-10-23T12:00:00.000Z",
+      "coverage": "BOUNDED_OBSERVATIONS",
+      "state": "NO_BASELINE",
+      "reason_code": "NO_COMPARISON_BASELINE",
+      "baseline": null,
+      "items": [],
+      "unseen_count": 0,
+      "mark_seen": {
+        "snapshot_revision": "82221f8b1c4c94ab716c5ecc02de746baa1f0cdb4fc58adaebc5803eee9321b2",
+        "expected_baseline_version": 0
+      }
+    },
+    "changed": {
+      "schema_version": "portal.execution.visit-digest.v1",
+      "workspace_id": "ws_TEST_ONLY",
+      "may_mark_seen": true,
+      "mark_seen_reason": null,
+      "snapshot_revision": "82221f8b1c4c94ab716c5ecc02de746baa1f0cdb4fc58adaebc5803eee9321b2",
+      "observed_at": "2026-10-23T12:00:00.000Z",
+      "coverage": "BOUNDED_OBSERVATIONS",
+      "state": "READY",
+      "reason_code": null,
+      "baseline": {
+        "version": 1,
+        "seen_at": "2026-10-23T11:00:00.000Z",
+        "snapshot_revision": "56a2f84e04be03d93ce1bbea474fbb86ba406e861289a1ec20dfba1f479230e1"
+      },
+      "items": [
+        {
+          "id": "operation:TEST_ONLY:operation-1",
+          "kind": "OPERATION",
+          "label": "Capital request verified",
+          "value": "VERIFIED",
+          "href": "/execution/operations?operation_id=TEST_ONLY%3Aoperation-1&workspace_id=ws_TEST_ONLY",
+          "as_of": "2026-10-23T12:00:00.000Z",
+          "change": "CHANGED",
+          "seen": false
+        }
+      ],
+      "unseen_count": 1,
+      "mark_seen": {
+        "snapshot_revision": "82221f8b1c4c94ab716c5ecc02de746baa1f0cdb4fc58adaebc5803eee9321b2",
+        "expected_baseline_version": 1
+      }
+    },
+    "seen": {
+      "schema_version": "portal.execution.visit-digest.v1",
+      "workspace_id": "ws_TEST_ONLY",
+      "may_mark_seen": true,
+      "mark_seen_reason": null,
+      "snapshot_revision": "82221f8b1c4c94ab716c5ecc02de746baa1f0cdb4fc58adaebc5803eee9321b2",
+      "observed_at": "2026-10-23T12:00:00.000Z",
+      "coverage": "BOUNDED_OBSERVATIONS",
+      "state": "EMPTY",
+      "reason_code": null,
+      "baseline": {
+        "version": 2,
+        "seen_at": "2026-10-23T12:00:00.000Z",
+        "snapshot_revision": "82221f8b1c4c94ab716c5ecc02de746baa1f0cdb4fc58adaebc5803eee9321b2"
+      },
+      "items": [],
+      "unseen_count": 0,
+      "mark_seen": {
+        "snapshot_revision": "82221f8b1c4c94ab716c5ecc02de746baa1f0cdb4fc58adaebc5803eee9321b2",
+        "expected_baseline_version": 2
+      }
+    }
+  }
+}

@@ -4,14 +4,13 @@
  */
 
 export interface paths {
-    "/api/v1/execution/digest": {
+    "/api/v1/execution/visit-digest": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** @description What changed since this user last looked, in this workspace. The baseline is kept on the server per user and workspace (never in the browser): `baseline` is null before the first visit. `current_cut` is the cut the items were read at. POST /api/v1/execution/digest/baseline {cut_revision} moves the baseline to that cut (mark seen); it is defined in this contract and served by the fixture lane only. CONTRACT ONLY: no producer exists yet (Edge/Core inputs are in WP_K_CONTRACTS_2026-10-23.md), so nothing serves this route and every screen keeps its typed absence. */
         get: operations["executionVisitDigestGetV1"];
         put?: never;
         post?: never;
@@ -21,7 +20,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/execution/digest/baseline": {
+    "/api/v1/execution/visit-digest/seen": {
         parameters: {
             query?: never;
             header?: never;
@@ -30,8 +29,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description Mark seen: moves the caller's baseline for this workspace to the named cut. Idempotent for the same cut. FIXTURE ONLY today. CONTRACT ONLY. */
-        post: operations["executionVisitDigestMarkV1"];
+        post: operations["executionVisitDigestSeenV1"];
         delete?: never;
         options?: never;
         head?: never;
@@ -42,53 +40,58 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** @description Portal-owned per-user/workspace last-seen observation baseline. GET has no writes. No complete event-history claim: absent rows are never inferred as resolved/deleted. Every read reapplies current authorization. NEW_OBSERVATION may be newly visible, not newly created. Mark seen explicitly with the supplied revision/version; stale source or another-tab baseline returns 409. First visit returns NO_BASELINE until acknowledged; no fabricated history. Real producer currently covers authorized bounded command-center triage/today/source facts, not NAV deltas or lifecycle event history. */
         VisitDigest: {
             /** @constant */
             schema_version: "portal.execution.visit-digest.v1";
+            /** @enum {unknown} */
+            state: "NO_BASELINE" | "READY" | "EMPTY";
             workspace_id: string;
+            may_mark_seen: boolean;
+            /** @enum {unknown} */
+            mark_seen_reason: "READ_ONLY_PROFILE" | null;
+            /** @enum {unknown} */
+            reason_code: "NO_COMPARISON_BASELINE" | null;
+            snapshot_revision: string;
+            /** Format: date-time */
+            observed_at: string;
             /** @constant */
-            record_authority: "PORTAL_PROJECTION";
-            read_at_ms: number;
-            user_id: string;
+            coverage: "BOUNDED_OBSERVATIONS";
             baseline: {
-                set_at_ms: number;
-                set_by: string;
-                cut_revision: string;
+                version: number;
+                /** Format: date-time */
+                seen_at: string;
+                snapshot_revision: string;
             } | null;
-            current_cut: {
-                as_of_ms: number;
-                revision: string;
-            };
             items: {
-                item_id: string;
-                /** @enum {string} */
-                kind: "APPROVAL_DECIDED" | "INCIDENT_OPENED" | "OPERATION_FAILED" | "STAGE_CHANGED" | "RECALL" | "CAPITAL_COMMAND" | "ACCESS_CHANGED";
-                at_ms: number;
-                title: string;
-                subject: {
-                    /** @enum {string} */
-                    type: "ALPHA" | "PORTFOLIO" | "ACCOUNT" | "DEPLOYMENT" | "OPERATION" | "INCIDENT" | "APPROVAL";
-                    id: string;
-                };
-                since_baseline: boolean;
+                id: string;
+                /** @enum {unknown} */
+                kind: "INCIDENT" | "APPROVAL" | "OPERATION" | "RECONCILIATION" | "REVIEW_DUE" | "CONDITION_EXPIRY" | "VERIFIED_OPERATION" | "JOURNAL_COMMAND" | "SOURCE" | "STAGE";
+                label: string;
+                value: string;
+                href: string;
+                as_of: string | null;
+                /** @enum {unknown} */
+                change: "NEW_OBSERVATION" | "CHANGED";
+                /** @constant */
+                seen: false;
             }[];
-            counts_by_kind: {
-                /** @enum {string} */
-                kind: "APPROVAL_DECIDED" | "INCIDENT_OPENED" | "OPERATION_FAILED" | "STAGE_CHANGED" | "RECALL" | "CAPITAL_COMMAND" | "ACCESS_CHANGED";
-                count: number;
-            }[];
+            unseen_count: number;
+            mark_seen: {
+                snapshot_revision: string;
+                expected_baseline_version: number;
+            };
+        } & (unknown & unknown & unknown & unknown);
+        VisitDigestSeen: {
+            snapshot_revision: string;
+            expected_baseline_version: number;
         };
         VisitDigestProblem: {
             error: {
-                /** @enum {string} */
-                code: "EXECUTION_READ_NOT_AVAILABLE" | "EXECUTION_READ_QUERY_INVALID";
+                code: string;
                 message: string;
             };
             request_id: string;
-        };
-        VisitDigestMark: {
-            workspace_id: string;
-            cut_revision: string;
         };
     };
     responses: never;
@@ -110,50 +113,64 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Authorized current answer; absence stays typed */
+            /** @description Current authorized observations compared to this actor’s baseline. */
             200: {
                 headers: {
-                    "Cache-Control": "private, no-store";
+                    "Cache-Control"?: "private, no-store";
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": components["schemas"]["VisitDigest"];
                 };
             };
-            /** @description Invalid query */
+            /** @description Invalid fields; no user selector accepted. */
             400: {
                 headers: {
-                    "Cache-Control": "private, no-store";
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": components["schemas"]["VisitDigestProblem"];
                 };
             };
-            /** @description Session required */
+            /** @description Session required. */
             401: {
                 headers: {
-                    "Cache-Control": "private, no-store";
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": components["schemas"]["VisitDigestProblem"];
                 };
             };
-            /** @description Unavailable or not authorized */
+            /** @description Current permission or Origin/CSRF refusal. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VisitDigestProblem"];
+                };
+            };
+            /** @description Workspace unavailable or feature disabled. */
             404: {
                 headers: {
-                    "Cache-Control": "private, no-store";
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": components["schemas"]["VisitDigestProblem"];
                 };
             };
-            /** @description Source unavailable */
+            /** @description VISIT_DIGEST_SNAPSHOT_CHANGED / VISIT_DIGEST_BASELINE_CHANGED / authorization changed: refetch, do not blindly retry. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VisitDigestProblem"];
+                };
+            };
+            /** @description Source/store unavailable: baseline not advanced. */
             503: {
                 headers: {
-                    "Cache-Control": "private, no-store";
                     [name: string]: unknown;
                 };
                 content: {
@@ -162,63 +179,81 @@ export interface operations {
             };
         };
     };
-    executionVisitDigestMarkV1: {
+    executionVisitDigestSeenV1: {
         parameters: {
-            query?: never;
-            header?: never;
+            query?: {
+                workspace_id?: string;
+            };
+            header: {
+                "x-portal-csrf": string;
+            };
             path?: never;
             cookie?: never;
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["VisitDigestMark"];
+                "application/json": components["schemas"]["VisitDigestSeen"];
             };
         };
         responses: {
-            /** @description The answer after the baseline moved */
+            /** @description Current authorized observations compared to this actor’s baseline. */
             200: {
                 headers: {
-                    "Cache-Control": "private, no-store";
+                    "Cache-Control"?: "private, no-store";
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": components["schemas"]["VisitDigest"];
                 };
             };
-            /** @description Invalid query */
+            /** @description Invalid fields; no user selector accepted. */
             400: {
                 headers: {
-                    "Cache-Control": "private, no-store";
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": components["schemas"]["VisitDigestProblem"];
                 };
             };
-            /** @description Session required */
+            /** @description Session required. */
             401: {
                 headers: {
-                    "Cache-Control": "private, no-store";
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": components["schemas"]["VisitDigestProblem"];
                 };
             };
-            /** @description Unavailable or not authorized */
+            /** @description Current permission or Origin/CSRF refusal. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VisitDigestProblem"];
+                };
+            };
+            /** @description Workspace unavailable or feature disabled. */
             404: {
                 headers: {
-                    "Cache-Control": "private, no-store";
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": components["schemas"]["VisitDigestProblem"];
                 };
             };
-            /** @description Source unavailable */
+            /** @description VISIT_DIGEST_SNAPSHOT_CHANGED / VISIT_DIGEST_BASELINE_CHANGED / authorization changed: refetch, do not blindly retry. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VisitDigestProblem"];
+                };
+            };
+            /** @description Source/store unavailable: baseline not advanced. */
             503: {
                 headers: {
-                    "Cache-Control": "private, no-store";
                     [name: string]: unknown;
                 };
                 content: {

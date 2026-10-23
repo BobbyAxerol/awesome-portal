@@ -5,7 +5,8 @@
  * It answers the routes the doubles model, from the doubles' own code (`e2e/bffAnswerer.ts`), and
  * nothing else: an unknown path is 404 FIXTURE_ROUTE_NOT_SERVED, never a fabricated body. It reads
  * no file but the published fixtures the doubles load at start, opens no outbound connection and
- * keeps no state between requests.
+ * keeps no production state. The visit-digest adapter retains bounded per-user/workspace
+ * scenario acknowledgement state for this server's lifetime only.
  *
  * `createFixtureServer` applies the configuration to the doubles, which are module singletons, so a
  * process runs ONE fixture server (tests call `resetFixtureGlobals` between runs).
@@ -22,6 +23,7 @@ import { isReviewProfile, reviewCatalog, reviewHtml, type ReviewProfile } from "
 import { answerReviewManager } from "./review-manager";
 import { transformReviewBody } from "./review-relations";
 import { rebaseBody } from "./time-rebase";
+import { createVisitDigestFixture } from "./review-visit-digest";
 
 export const LANE_HEADER = "x-fixture-lane";
 export const DEFAULT_LANE = "FIXTURE_LAB";
@@ -226,9 +228,10 @@ function answerFor(config: FixtureConfig, request: BffRequest): BffResponse | nu
 
 export function createFixtureServer(config: FixtureConfig): Server {
   applyConfig(config);
+  const visitDigest = createVisitDigestFixture();
 
   const server = createServer((incoming, response) => {
-    void handle(config, incoming, response).catch((error: unknown) => {
+    void handle(config, incoming, response, visitDigest).catch((error: unknown) => {
       if (response.headersSent) {
         response.destroy();
         return;
@@ -246,7 +249,8 @@ export function createFixtureServer(config: FixtureConfig): Server {
   return server;
 }
 
-async function handle(config: FixtureConfig, incoming: IncomingMessage, response: ServerResponse): Promise<void> {
+async function handle(config: FixtureConfig, incoming: IncomingMessage, response: ServerResponse,
+  visitDigest: ReturnType<typeof createVisitDigestFixture>): Promise<void> {
   const method = (incoming.method ?? "GET").toUpperCase();
   let url: URL;
   try {
@@ -324,7 +328,7 @@ async function handle(config: FixtureConfig, incoming: IncomingMessage, response
     return;
   }
 
-  const answered = answerFor(config, request);
+  const answered = visitDigest(config, request) ?? answerFor(config, request);
   if (answered !== null) {
     const served = config.rebaseTime && typeof answered.body !== "string" ? rebaseBody(answered.body, OPERATIONS_V2_DOUBLE_NOW_ISO, Date.now()) : answered.body;
     send(response, config, answered.status, served, { ...answered.headers });

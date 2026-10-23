@@ -1,42 +1,63 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://schemas.primusspark.com/portal/execution-visit-digest.v1.schema.json",
   "type": "object",
   "additionalProperties": false,
   "required": [
     "schema_version",
+    "state",
     "workspace_id",
-    "record_authority",
-    "read_at_ms",
-    "user_id",
+    "may_mark_seen",
+    "mark_seen_reason",
+    "reason_code",
+    "snapshot_revision",
+    "observed_at",
+    "coverage",
     "baseline",
-    "current_cut",
     "items",
-    "counts_by_kind"
+    "unseen_count",
+    "mark_seen"
   ],
   "properties": {
     "schema_version": {
       "const": "portal.execution.visit-digest.v1"
     },
+    "state": {
+      "enum": [
+        "NO_BASELINE",
+        "READY",
+        "EMPTY"
+      ]
+    },
     "workspace_id": {
       "type": "string",
       "minLength": 1,
-      "maxLength": 256,
-      "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+      "maxLength": 96
     },
-    "record_authority": {
-      "const": "PORTAL_PROJECTION"
+    "may_mark_seen": {
+      "type": "boolean"
     },
-    "read_at_ms": {
-      "type": "integer",
-      "minimum": 0,
-      "maximum": 9007199254740991
+    "mark_seen_reason": {
+      "enum": [
+        "READ_ONLY_PROFILE",
+        null
+      ]
     },
-    "user_id": {
+    "reason_code": {
+      "enum": [
+        "NO_COMPARISON_BASELINE",
+        null
+      ]
+    },
+    "snapshot_revision": {
       "type": "string",
-      "minLength": 1,
-      "maxLength": 191,
-      "pattern": "^[A-Za-z0-9._:-]+$(?![\\s\\S])"
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "observed_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "coverage": {
+      "const": "BOUNDED_OBSERVATIONS"
     },
     "baseline": {
       "anyOf": [
@@ -44,25 +65,23 @@
           "type": "object",
           "additionalProperties": false,
           "required": [
-            "set_at_ms",
-            "set_by",
-            "cut_revision"
+            "version",
+            "seen_at",
+            "snapshot_revision"
           ],
           "properties": {
-            "set_at_ms": {
+            "version": {
               "type": "integer",
-              "minimum": 0,
-              "maximum": 9007199254740991
+              "minimum": 1,
+              "maximum": 2147483646
             },
-            "set_by": {
+            "seen_at": {
               "type": "string",
-              "minLength": 1,
-              "maxLength": 191,
-              "pattern": "^[A-Za-z0-9._:-]+$(?![\\s\\S])"
+              "format": "date-time"
             },
-            "cut_revision": {
+            "snapshot_revision": {
               "type": "string",
-              "pattern": "^sha256:[a-f0-9]{64}$(?![\\s\\S])"
+              "pattern": "^[0-9a-f]{64}$"
             }
           }
         },
@@ -71,25 +90,6 @@
         }
       ]
     },
-    "current_cut": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "as_of_ms",
-        "revision"
-      ],
-      "properties": {
-        "as_of_ms": {
-          "type": "integer",
-          "minimum": 0,
-          "maximum": 9007199254740991
-        },
-        "revision": {
-          "type": "string",
-          "pattern": "^sha256:[a-f0-9]{64}$(?![\\s\\S])"
-        }
-      }
-    },
     "items": {
       "type": "array",
       "maxItems": 200,
@@ -97,107 +97,215 @@
         "type": "object",
         "additionalProperties": false,
         "required": [
-          "item_id",
+          "id",
           "kind",
-          "at_ms",
-          "title",
-          "subject",
-          "since_baseline"
+          "label",
+          "value",
+          "href",
+          "as_of",
+          "change",
+          "seen"
         ],
         "properties": {
-          "item_id": {
+          "id": {
             "type": "string",
             "minLength": 1,
-            "maxLength": 191,
-            "pattern": "^[A-Za-z0-9._:-]+$(?![\\s\\S])"
+            "maxLength": 256
           },
           "kind": {
-            "type": "string",
             "enum": [
-              "APPROVAL_DECIDED",
-              "INCIDENT_OPENED",
-              "OPERATION_FAILED",
-              "STAGE_CHANGED",
-              "RECALL",
-              "CAPITAL_COMMAND",
-              "ACCESS_CHANGED"
+              "INCIDENT",
+              "APPROVAL",
+              "OPERATION",
+              "RECONCILIATION",
+              "REVIEW_DUE",
+              "CONDITION_EXPIRY",
+              "VERIFIED_OPERATION",
+              "JOURNAL_COMMAND",
+              "SOURCE",
+              "STAGE"
             ]
           },
-          "at_ms": {
-            "type": "integer",
-            "minimum": 0,
-            "maximum": 9007199254740991
-          },
-          "title": {
+          "label": {
             "type": "string",
             "minLength": 1,
-            "maxLength": 256,
-            "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+            "maxLength": 512
           },
-          "subject": {
-            "type": "object",
-            "additionalProperties": false,
-            "required": [
-              "type",
-              "id"
-            ],
-            "properties": {
-              "type": {
+          "value": {
+            "type": "string",
+            "maxLength": 1024
+          },
+          "href": {
+            "type": "string",
+            "pattern": "^/(?:execution|governance|deployments)(?:/|\\?|$)",
+            "maxLength": 2048
+          },
+          "as_of": {
+            "anyOf": [
+              {
                 "type": "string",
-                "enum": [
-                  "ALPHA",
-                  "PORTFOLIO",
-                  "ACCOUNT",
-                  "DEPLOYMENT",
-                  "OPERATION",
-                  "INCIDENT",
-                  "APPROVAL"
-                ]
+                "format": "date-time"
               },
-              "id": {
-                "type": "string",
-                "minLength": 1,
-                "maxLength": 191,
-                "pattern": "^[A-Za-z0-9._:-]+$(?![\\s\\S])"
+              {
+                "type": "null"
               }
-            }
+            ]
           },
-          "since_baseline": {
-            "type": "boolean"
+          "change": {
+            "enum": [
+              "NEW_OBSERVATION",
+              "CHANGED"
+            ]
+          },
+          "seen": {
+            "const": false
           }
         }
       }
     },
-    "counts_by_kind": {
-      "type": "array",
-      "maxItems": 8,
-      "items": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "kind",
-          "count"
-        ],
+    "unseen_count": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 200
+    },
+    "mark_seen": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "snapshot_revision",
+        "expected_baseline_version"
+      ],
+      "properties": {
+        "snapshot_revision": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "expected_baseline_version": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 2147483646
+        }
+      }
+    }
+  },
+  "description": "Portal-owned per-user/workspace last-seen observation baseline. GET has no writes. No complete event-history claim: absent rows are never inferred as resolved/deleted. Every read reapplies current authorization. NEW_OBSERVATION may be newly visible, not newly created. Mark seen explicitly with the supplied revision/version; stale source or another-tab baseline returns 409. First visit returns NO_BASELINE until acknowledged; no fabricated history. Real producer currently covers authorized bounded command-center triage/today/source facts, not NAV deltas or lifecycle event history.",
+  "allOf": [
+    {
+      "if": {
         "properties": {
-          "kind": {
-            "type": "string",
-            "enum": [
-              "APPROVAL_DECIDED",
-              "INCIDENT_OPENED",
-              "OPERATION_FAILED",
-              "STAGE_CHANGED",
-              "RECALL",
-              "CAPITAL_COMMAND",
-              "ACCESS_CHANGED"
-            ]
+          "may_mark_seen": {
+            "const": true
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "mark_seen_reason": {
+            "type": "null"
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "mark_seen_reason": {
+            "const": "READ_ONLY_PROFILE"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "state": {
+            "const": "NO_BASELINE"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "baseline": {
+            "type": "null"
           },
-          "count": {
-            "type": "integer",
-            "minimum": 0,
-            "maximum": 9007199254740991
+          "reason_code": {
+            "const": "NO_COMPARISON_BASELINE"
+          },
+          "items": {
+            "maxItems": 0
+          },
+          "unseen_count": {
+            "const": 0
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "baseline": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "version",
+              "seen_at",
+              "snapshot_revision"
+            ],
+            "properties": {
+              "version": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 2147483646
+              },
+              "seen_at": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "snapshot_revision": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$"
+              }
+            }
+          },
+          "reason_code": {
+            "type": "null"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "state": {
+            "const": "READY"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "items": {
+            "minItems": 1
+          },
+          "unseen_count": {
+            "minimum": 1
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "state": {
+            "const": "EMPTY"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "items": {
+            "maxItems": 0
+          },
+          "unseen_count": {
+            "const": 0
           }
         }
       }
     }
-  }
+  ]
 }

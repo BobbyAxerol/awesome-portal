@@ -5,6 +5,7 @@
   "type": "module",
   "description": "Portal canonical contract workspace (U09): schemas, fixtures, generated types",
   "scripts": {
+    "generate:execution-visit-digest": "node tooling/generate-execution-visit-digest.mjs && openapi-typescript openapi/execution-visit-digest.openapi.json -o generated/execution-visit-digest.d.ts",
     "generate:execution-incident-eligibility": "node tooling/generate-execution-incident-eligibility.mjs && openapi-typescript openapi/execution-incident-eligibility.openapi.json -o generated/execution-incident-eligibility.d.ts",
     "generate:execution-served-envelopes": "node tooling/generate-execution-served-envelopes.mjs && openapi-typescript openapi/execution-paper-read.openapi.json -o generated/execution-paper-read.d.ts && openapi-typescript openapi/execution-governance.openapi.json -o generated/execution-governance.d.ts",
     "generate:research-native-read": "node tooling/generate-research-native-read.mjs && openapi-typescript openapi/research-search.openapi.json -o generated/research-search.d.ts && openapi-typescript openapi/research-freeze.openapi.json -o generated/research-freeze.d.ts && openapi-typescript openapi/research-report.openapi.json -o generated/research-report.d.ts",

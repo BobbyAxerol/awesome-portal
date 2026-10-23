@@ -106,6 +106,9 @@ import { ExecutionProfileReadAdapterController } from "./execution/profile-read-
 import { ExecutionProfileReadAdapterService } from "./execution/profile-read-adapter.service";
 import { LocalQueryAnalyticsService } from "./execution/local-query-analytics.service";
 import { CommandCenterController } from "./command-center/command-center.controller";
+import { VisitDigestController } from "./command-center/visit-digest.controller";
+import { VisitDigestService } from "./command-center/visit-digest.service";
+import { VisitDigestStore } from "./command-center/visit-digest.store";
 import { CommandCenterRepository } from "./command-center/command-center.repository";
 import { CommandCenterService } from "./command-center/command-center.service";
 import { ExecutionOperationsRepository } from "./operations/operations.repository";
@@ -347,6 +350,7 @@ export class AppModule implements OnApplicationShutdown {
         ExecutionSubjectActivityController,
         ExecutionProfileReadAdapterController,
         CommandCenterController,
+        VisitDigestController,
         IncidentController,
         SandboxCertificationController,
         CanaryController,
@@ -568,6 +572,8 @@ export class AppModule implements OnApplicationShutdown {
         StageActionEligibilityService,
         CommandCenterRepository,
         CommandCenterService,
+        VisitDigestService,
+        VisitDigestStore,
         ExecutionOperationsRepository,
         ExecutionOperationsService,
         {provide:ExecutionF0ReadService,useFactory:(repo:ExecutionOperationsRepository,access:ExecutionAccessService,cfg:ControlApiConfig)=>{
