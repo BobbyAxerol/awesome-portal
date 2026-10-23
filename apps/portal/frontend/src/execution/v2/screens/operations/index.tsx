@@ -398,30 +398,6 @@ export default function OperationsV2({
         </KpiStrip>
       ) : null}
 
-      {ready ? (
-        <KpiStrip label="Queue counts" columns={4}>
-          <Kpi label="In scope" value={number(ready.queue.page.totalCount)} />
-          <Kpi label="Matching" value={number(ready.queue.page.filteredCount)} />
-          <Kpi label="Loaded" value={number(ready.rows.length)} basis={`of ${number(ready.queue.page.filteredCount)} matching`} />
-          <div className="exec-blk-kpi">
-            <dt className="exec-blk-kpi-label">Read</dt>
-            <dd className="exec-blk-kpi-body">
-              {/* A state word, not a figure: body role, not the 24px KPI numeral (OP-9). */}
-              <span className="exec-blk-kpi-value"><span className="exec-ops-kpi-word">{humanize(ready.queue.readTruth.state)}</span></span>
-              {ready.queue.readTruth.reasonCode ? <span className="exec-blk-kpi-note">{ready.queue.readTruth.reasonCode}</span> : null}
-            </dd>
-          </div>
-        </KpiStrip>
-      ) : null}
-
-      {ready ? (
-        <StatusCounts
-          counts={ready.queue.page.statusCounts}
-          appliedFilters={ready.queue.page.appliedFilters}
-          observed={formatAsOf(ready.queue.observedAtMs)}
-        />
-      ) : null}
-
       <details className="exec-ops-panel">
         <summary>
           Source health
@@ -542,7 +518,7 @@ export default function OperationsV2({
                     </div>
                   </div>
                   <div className="exec-ops-field">
-                    <span id="exec-ops-window-label">Window</span>
+                    <span id="exec-ops-window-label">Range</span>
                     <div className="exec-ops-seg" role="group" aria-labelledby="exec-ops-window-label">
                       {WINDOWS.map((w) => (
                         <button key={w} type="button" aria-pressed={range === w} onClick={() => commit({ range: w })}>
@@ -559,6 +535,8 @@ export default function OperationsV2({
                       <button type="button" aria-pressed={source === "journal"} onClick={() => commit({ source: "journal" })}>Admin journal</button>
                     </div>
                   </div>
+                </div>
+                <div className="exec-ops-tool" data-row="narrow">
                   <Select<TriageStateV2>
                     label="Triage"
                     value={filters.triage}
@@ -668,6 +646,7 @@ export default function OperationsV2({
                         incidentTo={incidentTo}
                         empty={emptyNode}
                       />
+                      <p className="exec-ops-scrollhint">Scroll sideways inside the table to reach Display and Next.</p>
                       <div className="exec-ops-foot">
                         <span>
                           {number(ready.rows.length)} of {number(page.filteredCount)} matching · {number(page.totalCount)} in scope
@@ -721,6 +700,30 @@ export default function OperationsV2({
           />
         ) : null}
       </div>
+
+      {ready ? (
+        <KpiStrip label="Queue counts" columns={4}>
+          <Kpi label="In scope" value={number(ready.queue.page.totalCount)} />
+          <Kpi label="Matching" value={number(ready.queue.page.filteredCount)} />
+          <Kpi label="Loaded" value={number(ready.rows.length)} basis={`of ${number(ready.queue.page.filteredCount)} matching`} />
+          <div className="exec-blk-kpi">
+            <dt className="exec-blk-kpi-label">Read</dt>
+            <dd className="exec-blk-kpi-body">
+              {/* A state word, not a figure: body role, not the 24px KPI numeral (OP-9). */}
+              <span className="exec-blk-kpi-value"><span className="exec-ops-kpi-word">{humanize(ready.queue.readTruth.state)}</span></span>
+              {ready.queue.readTruth.reasonCode ? <span className="exec-blk-kpi-note">{ready.queue.readTruth.reasonCode}</span> : null}
+            </dd>
+          </div>
+        </KpiStrip>
+      ) : null}
+
+      {ready ? (
+        <StatusCounts
+          counts={ready.queue.page.statusCounts}
+          appliedFilters={ready.queue.page.appliedFilters}
+          observed={formatAsOf(ready.queue.observedAtMs)}
+        />
+      ) : null}
     </div>
   );
 }

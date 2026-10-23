@@ -190,7 +190,8 @@ function mountIncident(id: string, api: ExecutionApi = fakeApi().api) {
 describe("incident page", () => {
   it("draws the head, the stepper and the six sections from the root and the queue links", async () => {
     mountIncident("inc_TEST_ONLY_fx_mismatch");
-    expect(await screen.findByRole("heading", { level: 1, name: /inc_TEST_ONLY_fx_mismatch/ })).toBeTruthy();
+    expect(await screen.findByRole("heading", { level: 1, name: /Critical incident on portfolio pf_TEST_ONLY_canary/ })).toBeTruthy();
+    expect(screen.getByText("inc_TEST_ONLY_fx_mismatch")).toBeTruthy();
     expect(screen.getByText(/Open · Critical/)).toBeTruthy();
     expect(screen.getByText(/Observed 22 Aug 13:00Z/)).toBeTruthy();
     expect(within(screen.getByRole("list", { name: "Workflow state steps" })).getByText("Open").getAttribute("aria-current")).toBe("step");
@@ -265,7 +266,8 @@ describe("incident page", () => {
     expect(within(rail).getByText("Resolved").getAttribute("aria-current")).toBe("step");
     cleanup();
     mountIncident("inc_NOT_FOUND");
-    expect(await screen.findByText(/HTTP 404/)).toBeTruthy();
+    expect(await screen.findByText("Incident not found")).toBeTruthy();
+    expect(screen.getByRole("link", { name: "Back to Operations" })).toBeTruthy();
     expect(screen.queryByRole("region", { name: "Resolution gates" })).toBeNull();
   });
 
@@ -349,5 +351,86 @@ describe("pure views", () => {
     expect(next.get("x")).toBe("1");
     expect(writeOpsUrl(next, { filters: read.filters, range: read.range }).get("source")).toBe("journal");
     expect(writeOpsUrl(next, { filters: read.filters, range: read.range, source: "" }).has("source")).toBe(false);
+  });
+});
+
+describe("wave 2: unknown ids, honest reads, settled rows", () => {
+  it("an id the lane does not know is a 404 from the double, a typed not-found on the page, and no children are asked for", async () => {
+    expect(incidentAnswer("inc_NOPE_nothing")).toMatchObject({ ok: false });
+    expect(incidentAnswer("inc_TEST_ONLY_fx_recall")).toMatchObject({ ok: true });
+    const children = vi.fn();
+    const api = { ...fakeApi().api, getIncidentChildren: children } as unknown as ExecutionApi;
+    mountIncident("inc_NOPE_nothing", api);
+    expect(await screen.findByText("Incident not found")).toBeTruthy();
+    expect(screen.getByText(/No incident with the id inc_NOPE_nothing/)).toBeTruthy();
+    expect(children).not.toHaveBeenCalled();
+  });
+
+  it("the Needs attention lens no longer lists settled healthy rows: every row it returns has a doubt, a pending receipt or a lagging display", async () => {
+    const result = queueAnswer({ limit: 250, triageState: "UNACKNOWLEDGED" });
+    if (!result.ok || result.value.kind !== "queue") throw new Error("queue");
+    const healthy = result.value.queue.page.rows.filter((row) => row.sourceStatus === "SUCCEEDED" && row.verificationResult === "SUCCEEDED" && row.displayState === "CURRENT");
+    expect(healthy).toEqual([]);
+    expect(result.value.queue.page.rows.length).toBeGreaterThan(5);
+    // The settled rows are still in the scope: Resolved counts them.
+    const all = queueAnswer({ limit: 250 });
+    if (!all.ok || all.value.kind !== "queue") throw new Error("queue");
+    expect(all.value.queue.page.statusCounts!.triageState.counts.RESOLVED).toBeGreaterThan(1);
+  });
+
+  it("the drawer is headed by its target, with the command and the operation id under it, and the Intent fact is named for what it asks", async () => {
+    mount("/execution/operations?lens=all&range=all&sel=op_TEST_ONLY_s01");
+    const dock = await screen.findByRole("complementary");
+    expect(within(dock).getByRole("heading", { name: "Portfolio pf_TEST_ONLY_canary" })).toBeTruthy();
+    expect(dock.textContent).toContain("Adjust target budget · op_TEST_ONLY_s01");
+    expect(within(within(dock).getByRole("region", { name: "Intent" })).getByText("Sent or previewed")).toBeTruthy();
+  });
+
+  it("the receipt cell is one badge and the delivery word; the two axes in words live in the drawer", async () => {
+    mount();
+    const t = await table();
+    expect(within(rowOf(t, /pf_TEST_ONLY_canary/)).queryByText(/Source uncertain/)).toBeNull();
+    expect(rowOf(t, /pf_TEST_ONLY_canary/).textContent).toContain("Delivery: awaiting receipt");
+  });
+
+  it("the table says it scrolls inside its panel, and the narrowing selects sit on their own row after Lens, Range and Source", async () => {
+    mount();
+    await table();
+    expect(screen.getByText("Scroll sideways inside the table to reach Display and Next.")).toBeTruthy();
+    const rows = document.querySelectorAll(".exec-ops-tool");
+    expect(rows).toHaveLength(2);
+    expect(within(rows[0] as HTMLElement).getByRole("group", { name: "Range" })).toBeTruthy();
+    expect(within(rows[0] as HTMLElement).getByRole("group", { name: "Source" })).toBeTruthy();
+    expect(within(rows[1] as HTMLElement).getByLabelText("Triage")).toBeTruthy();
+  });
+
+  it("the queue counts come after the table, the primary object first", async () => {
+    mount();
+    const t = await table();
+    const counts = screen.getByRole("group", { name: "Queue counts" });
+    expect(t.compareDocumentPosition(counts) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  function childrenApi(over: { eligible: boolean; ackedAtMs: number }) {
+    const base = fakeApi().api;
+    const published = <T,>(value: T) => ({ state: "PUBLISHED" as const, value });
+    const children = {
+      workspaceId: "ws", incidentId: "inc_TEST_ONLY_fx_mismatch", readAtMs: 0,
+      evidence: { state: "NO_SOURCE" as const }, assignedTo: { state: "NO_SOURCE" as const },
+      resolutionGate: published({ eligible: over.eligible, blockerCodes: [] }),
+      timeline: published([{ eventId: "e1", action: "ACKNOWLEDGED", actor: "bjones", versionBefore: 1, versionAfter: 2, atMs: over.ackedAtMs }]),
+      linkedOperations: { state: "NO_SOURCE" as const },
+    };
+    return { ...base, getIncidentChildren: async () => ({ ok: true, value: children }) } as unknown as ExecutionApi;
+  }
+
+  it("a gate read that says eligible against a root with no acknowledgement is shown as a disagreement, not as a verdict", async () => {
+    mountIncident("inc_TEST_ONLY_fx_mismatch", childrenApi({ eligible: true, ackedAtMs: 1_787_403_600_000 }));
+    expect((await screen.findByTestId("gate-disagreement")).textContent).toContain("The two reads disagree");
+  });
+
+  it("an event log and a root that differ on the acknowledgement time say so", async () => {
+    mountIncident("inc_TEST_ONLY_fx_recall", childrenApi({ eligible: false, ackedAtMs: 1_787_403_600_000 - 6 * 3_600_000 }));
+    expect((await screen.findByTestId("timeline-disagreement")).textContent).toContain("The event log says acknowledged");
   });
 });

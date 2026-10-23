@@ -247,9 +247,9 @@ describe("Mine, Acknowledge, Resolve are disabled with a reason", () => {
     mount(api);
     const t = await table();
     fireEvent.click(within(t).getByText(/Account acc_TEST_ONLY_operational/).closest("tr")!);
-    const dock = await screen.findByRole("complementary", { name: "Sync" });
+    const dock = await screen.findByRole("complementary", { name: "Account acc_TEST_ONLY_operational" });
     expect(screen.getByTestId("where").textContent).toContain("sel=op_01K3COMMANDPLAN000000000000");
-    expect(within(dock).getByText("op_01K3COMMANDPLAN000000000000")).toBeTruthy();
+    expect(dock.textContent).toContain("Sync · op_01K3COMMANDPLAN000000000000");
     expect(within(dock).getAllByText("Blocked").length).toBeGreaterThan(0);
     expect(within(dock).getByText("Not started")).toBeTruthy();
     for (const label of ["Acknowledge", "Resolve"]) {
@@ -288,7 +288,7 @@ describe("Mine, Acknowledge, Resolve are disabled with a reason", () => {
   it("a link that names an operation opens it; one that is not loaded says so", async () => {
     const { api } = fakeApi();
     mount(api, { requestedOperation: "op_TEST_ONLY_s01" });
-    expect(await screen.findByRole("complementary", { name: "Adjust target budget" })).toBeTruthy();
+    expect(await screen.findByRole("complementary", { name: "Portfolio pf_TEST_ONLY_canary" })).toBeTruthy();
     cleanup();
     mount(fakeApi().api, { requestedOperation: "op_missing" });
     expect(await screen.findByText("Not in the loaded rows")).toBeTruthy();
@@ -489,7 +489,7 @@ describe("local 24H window", () => {
     const t = await table();
     expect(within(t).getByText(/All 8 loaded rows are older than 24H/)).toBeTruthy();
     const calls = queue.mock.calls.length;
-    const windowGroup = screen.getByRole("group", { name: "Window" });
+    const windowGroup = screen.getByRole("group", { name: "Range" });
     fireEvent.click(within(windowGroup).getByRole("button", { name: "30D" }));
     expect(within(await table()).getAllByRole("row").length).toBeGreaterThan(2);
     expect(queue.mock.calls.length).toBe(calls);

@@ -19,7 +19,7 @@ import type { DeliveryStateV2, DisplayStateV2, OperationV2 } from "../../readers
 import { ENV_LABEL } from "../../urlState";
 import { IncidentLinks } from "./IncidentLinks";
 import { nextActionOf } from "./opsViews";
-import { axesText, commandLabel, receiptOutcome, severityWord, triageOutcome } from "./outcome";
+import { commandLabel, receiptOutcome, severityWord, triageOutcome } from "./outcome";
 import { TargetLink } from "./TargetLink";
 
 import "../../css/operations.css";
@@ -70,7 +70,7 @@ function columnsFor(onOpen: (row: OperationV2) => void, incidentTo: (incidentId:
         return (
           <span className="exec-ops-cell">
             <Flag kind={outcome.kind} label={outcome.label} size="sm" />
-            <span className="exec-ops-meta">{axesText(row.sourceStatus, row.verificationResult)}</span>
+            {/* One badge, then the delivery axis when published. The two axes behind the badge (source status, verification) are in the drawer's Receipt section, in words. */}
             {row.deliveryState ? <span className="exec-ops-meta">{DELIVERY_WORD[row.deliveryState]}</span> : null}
           </span>
         );

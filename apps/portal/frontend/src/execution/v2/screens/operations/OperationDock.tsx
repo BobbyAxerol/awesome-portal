@@ -29,7 +29,7 @@ import { NaWhy, NotAvailableLine } from "../../blocks";
 import type { FlagKind } from "../../flagKinds";
 import { IncidentLinks } from "./IncidentLinks";
 import {
-  CHECK_ORIGINAL_COPY, commandLabel, humanize, receiptOutcome, severityWord, triageOutcome,
+  CHECK_ORIGINAL_COPY, commandLabel, humanize, receiptOutcome, severityWord, TARGET_LABEL, triageOutcome,
 } from "./outcome";
 import { PendingRecallsSection, discoverable } from "./PendingRecalls";
 import { isLabWorkspace } from "./pendingControlIntent";
@@ -132,13 +132,13 @@ export function OperationDock({
   const triage = triageOutcome(row.triageState);
   const delivery = row.deliveryState ? DELIVERY_FACT[row.deliveryState] : null;
   return (
-    <Drawer title={commandLabel(row.commandKey)} subtitle={row.operationId} onClose={onClose} mode={mode} actions={actions}>
+    <Drawer title={`${TARGET_LABEL[row.targetType]} ${row.targetId}`} subtitle={`${commandLabel(row.commandKey)} · ${row.operationId}`} onClose={onClose} mode={mode} actions={actions}>
       {outcome.checkOriginal ? <p className="exec-ops-banner" data-tone="unknown">{CHECK_ORIGINAL_COPY}</p> : null}
 
       <Section name="Intent">
         <dl className="exec-ops-facts">
-          <dt>Intent</dt>
-          <dd><NaWhy reason={`Not published (${FE.intent}): whether the command was submitted or only previewed.`} /></dd>
+          <dt>Sent or previewed</dt>
+          <dd><NaWhy reason={`Not published (${FE.intent}): whether the command was sent or only previewed.`} /></dd>
           <dt>Recorded</dt>
           <dd>{instant(row.createdAt, "")}</dd>
           <dt>Command</dt>

@@ -29,7 +29,7 @@ import type { UtcEpochMs } from "../../../screenDataContract";
 import { ENV_LABEL, withContext } from "../../urlState";
 import { INCIDENT_ACTION_REASONS, railFor, STATE_FLAG } from "./IncidentRootDrawer";
 import { ACCESS_PATH, AccessLink, FE, FE_B1, notPublishedReason } from "./notPublished";
-import { commandLabel, humanize, receiptOutcome } from "./outcome";
+import { commandLabel, humanize, receiptOutcome, TARGET_LABEL } from "./outcome";
 import { TargetLink } from "./TargetLink";
 
 import "../../css/operations.css";
@@ -44,6 +44,9 @@ export const EVIDENCE_REASON = notPublishedReason(FE.events, "No evidence attach
 
 /** The four evidence sources of the hi-fi, each unpublished today (FE-031). */
 export const EVIDENCE_SOURCES = ["Findings", "Alerts", "Dead letters", "Order trace"] as const;
+
+/** The server answered "there is no such incident" (HTTP 404 or its stated code). */
+const NOT_FOUND = /NOT_FOUND|\b404\b/;
 
 type RootLoad =
   | { phase: "loading" }
@@ -123,17 +126,18 @@ function useScan(api: ExecutionApi, workspaceId: string | undefined): ScanLoad {
 }
 
 /** The scoped incident's children (WP-K `portal.execution.incident-children.v1`). A port without the read, a refusal or a throw is `null`: every section keeps its typed absence. */
-function useChildren(api: ExecutionApi, incidentId: string, workspaceId: string | undefined): IncidentChildren | null {
+function useChildren(api: ExecutionApi, incidentId: string, workspaceId: string | undefined, enabled: boolean): IncidentChildren | null {
   const [children, setChildren] = useState<IncidentChildren | null>(null);
   useEffect(() => {
     setChildren(null);
-    if (api.getIncidentChildren === undefined) return;
+    // Children are read only for an incident the root answered for: an id the server does not know has no children to ask for.
+    if (!enabled || api.getIncidentChildren === undefined) return;
     let live = true;
     let pending: ReturnType<NonNullable<ExecutionApi["getIncidentChildren"]>>;
     try { pending = api.getIncidentChildren(incidentId, workspaceId); } catch { return; }
     void pending.then((result) => { if (live && result.ok) setChildren(result.value); }, () => undefined);
     return () => { live = false; };
-  }, [api, incidentId, workspaceId]);
+  }, [api, incidentId, workspaceId, enabled]);
   return children;
 }
 const atText = (ms: UtcEpochMs) => <time dateTime={new Date(ms).toISOString()} title={new Date(ms).toISOString()}>{formatAsOf(ms)}</time>;
@@ -167,11 +171,13 @@ export default function IncidentPage({ api, incidentId, workspaceId, queuePath =
   const [params] = useSearchParams();
   const [root, setRoot] = useState<RootLoad>({ phase: "loading" });
   const scan = useScan(api, workspaceId);
-  const kids = useChildren(api, incidentId, workspaceId);
+  const [rootReady, setRootReady] = useState(false);
+  const kids = useChildren(api, incidentId, workspaceId, rootReady);
 
   useEffect(() => {
     let live = true;
     setRoot({ phase: "loading" });
+    setRootReady(false);
     api.getIncidentRootV2(incidentId, workspaceId).then(
       (result) => {
         if (!live) return;
@@ -181,6 +187,7 @@ export default function IncidentPage({ api, incidentId, workspaceId, queuePath =
         }
         const read = result.value;
         setRoot(read.kind === "incident" ? { phase: "ready", incident: read.incident } : { phase: "unsupported", schemaVersion: read.schemaVersion });
+        setRootReady(read.kind === "incident");
       },
       () => { if (live) setRoot({ phase: "failed", status: "unavailable", reason: "The incident read never reached the Portal." }); },
     );
@@ -201,7 +208,15 @@ export default function IncidentPage({ api, incidentId, workspaceId, queuePath =
         {back}
         <h1 className="exec-ops-title">Incident <span className="exec-ops-mono">{incidentId}</span></h1>
         {root.phase === "loading" ? <PanelState status="loading" /> : null}
-        {root.phase === "failed" ? <PanelState status={root.status} reason={root.reason} actions={root.status === "denied" ? <AccessLink href={accessHref} /> : undefined} /> : null}
+        {root.phase === "failed" && NOT_FOUND.test(root.reason) ? (
+          <PanelState
+            status="empty"
+            title="Incident not found"
+            reason={`No incident with the id ${incidentId} is visible in this workspace (${root.reason}). Check the id; nothing is shown in its place.`}
+            actions={<Link className="exec-ops-apply" to={withContext(queuePath, withoutPeek(params))}>Back to Operations</Link>}
+          />
+        ) : null}
+        {root.phase === "failed" && !NOT_FOUND.test(root.reason) ? <PanelState status={root.status} reason={root.reason} actions={root.status === "denied" ? <AccessLink href={accessHref} /> : undefined} /> : null}
         {root.phase === "unsupported" ? (
           <PanelState
             status="unavailable"
@@ -230,8 +245,11 @@ export default function IncidentPage({ api, incidentId, workspaceId, queuePath =
       <header className="exec-opi-head">
         <div className="exec-opi-title">
           <span className="exec-opi-tag"><Flag kind="incident" label="Incident" size="md" /></span>
-          <h1 className="exec-ops-title">Incident <span className="exec-ops-mono">{incident.incidentId}</span></h1>
+          {/* The root publishes no title (FE-031): the headline is built only from published words, severity and target. */}
+          <h1 className="exec-ops-title">{humanize(incident.severity)} incident on {TARGET_LABEL[incident.targetType].toLowerCase()} <span className="exec-ops-mono">{incident.targetId}</span></h1>
           <p className="exec-opi-sub">
+            <span className="exec-opi-idchip exec-ops-mono">{incident.incidentId}</span>
+            <span> · </span>
             <TargetLink type={incident.targetType} id={incident.targetId} environment={incident.environment} />
             <span> · {ENV_LABEL[incident.environment]} · version <span className="exec-ops-mono">{incident.workflowVersion}</span> · </span>
             <span className="exec-blk-na">No assignee published</span>
@@ -342,11 +360,25 @@ export default function IncidentPage({ api, incidentId, workspaceId, queuePath =
               {kids.resolutionGate.value.eligible ? "The server reports this incident eligible to resolve." : `The server reports this incident not yet eligible to resolve: ${kids.resolutionGate.value.blockerCodes.map(humanize).join(", ")}.`}
             </p>
           ) : null}
+          {kids !== null && kids.resolutionGate.state === "PUBLISHED" && kids.resolutionGate.value.eligible && (!incident.acknowledgedAt || !incident.mitigatedAt) ? (
+            <p className="exec-ops-banner" role="status" data-testid="gate-disagreement">
+              The two reads disagree: the gate read says eligible, while the incident root shows {!incident.acknowledgedAt ? "no acknowledgement" : "no mitigation"}. Both are shown as read; neither is corrected here.
+            </p>
+          ) : null}
           <p className="exec-ops-reason">Resolve unlocks only when every gate is met. The server enforces the gates and does not publish its verdict ({FE.eligibility}); this list mirrors the facts the incident root does publish.</p>
         </SectionPanel>
 
         {kids !== null && kids.timeline.state === "PUBLISHED" ? (
         <SectionPanel title="Timeline" level={2} aside={`${kids.timeline.value.length} ${kids.timeline.value.length === 1 ? "event" : "events"}`}>
+          {(() => {
+            const acked = kids.timeline.value.find((e) => e.action === "ACKNOWLEDGED");
+            return acked !== undefined && incident.acknowledgedAt !== null && Math.abs(acked.atMs - incident.acknowledgedAt.ms) > 60_000 ? (
+              <p className="exec-ops-banner" role="status" data-testid="timeline-disagreement">
+                The event log says acknowledged {atText(acked.atMs)}; the incident root says {instant(incident.acknowledgedAt, "")}. Both are shown as read; neither is corrected here.
+              </p>
+            ) : null;
+          })()}
+          <p className="exec-ops-reason" data-role="provenance">Source: the incident event log (children read), with its actor and version per event.</p>
           <ol className="exec-opi-timeline" aria-label="Timeline" data-testid="children-timeline">
             {kids.timeline.value.map((event) => (
               <li key={event.eventId} className="exec-opi-event">

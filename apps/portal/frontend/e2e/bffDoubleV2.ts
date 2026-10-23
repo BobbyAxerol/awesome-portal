@@ -103,11 +103,25 @@ function dataset(): Row[] {
 }
 
 let memo: { source: unknown; rows: Row[] } | null = null;
+let memoSim: { source: unknown; rows: Row[] } | null = null;
 /** Built once per scale: the generated list is a different array for each scale, so identity is the key. */
-function allRows(): Row[] {
+function allRows(simulate = false): Row[] {
   const source = scaled().operations;
   if (memo === null || memo.source !== source) memo = { source, rows: dataset() };
-  return memo.rows;
+  if (!simulate) return memo.rows;
+  if (memoSim === null || memoSim.source !== source) memoSim = { source, rows: memo.rows.map(settleHealthy) };
+  return memoSim.rows;
+}
+
+/**
+ * SIMULATED (FIXTURE_LAB, opt-in): a row whose source succeeded, whose verification succeeded and whose display is current needs nobody, so
+ * the lane has it already settled in the Portal (acknowledged and resolved when it was recorded). The default "Needs attention" lens is the
+ * published `triage_state=UNACKNOWLEDGED`, so without this it listed healthy rows beside the ones that need a person.
+ */
+function settleHealthy(row: Row): Row {
+  if (row.triage_state !== "UNACKNOWLEDGED" || row.source_status !== "SUCCEEDED" || row.verification_result !== "SUCCEEDED") return row;
+  if (simulatedAxes(row).display_state !== "CURRENT") return row;
+  return { ...row, triage_state: "RESOLVED", workflow_version: 2, acknowledged_at: row.created_at, resolved_at: row.created_at };
 }
 
 function problem(status: number, code: string, message: string): BffAnswerV2 {
@@ -310,7 +324,7 @@ function queue(search: URLSearchParams, simulate = false): BffAnswerV2 {
     if (!KNOWN.has(key)) return problem(400, "OPERATIONAL_READ_INPUT_INVALID", `Unknown query parameter ${key}.`);
   }
   const applied: { field: string; op: "eq"; value: string }[] = [];
-  const all = allRows();
+  const all = allRows(simulate);
   let rows = all;
   for (const spec of FILTERS) {
     const value = search.get(spec.param);
@@ -373,6 +387,9 @@ function queue(search: URLSearchParams, simulate = false): BffAnswerV2 {
   return { status: 200, body };
 }
 
+/** The ids besides the simulated five that the lane's roots exist for: the canonical fixture's and the two lifecycle ids the specs use. */
+const KNOWN_INCIDENT_IDS: ReadonlySet<string> = new Set([String(FIXTURE.incident.incident_id), "inc_TEST_ONLY_mitigated", "inc_TEST_ONLY_resolved"]);
+
 function incident(id: string, simulate = false): BffAnswerV2 {
   if (id === "inc_NOT_FOUND") return problem(404, "OPERATIONAL_READ_NOT_FOUND", "The incident was not found.");
   if (id === "inc_LEGACY_SHAPE") {
@@ -380,6 +397,9 @@ function incident(id: string, simulate = false): BffAnswerV2 {
   }
   const root = { ...FIXTURE.incident, incident_id: id, observed_at_ms: Date.parse(OPERATIONS_V2_DOUBLE_NOW_ISO) } as Record<string, unknown>;
   const sim = simulate ? SIM_INCIDENT_BY_ID.get(id) : undefined;
+  // The lane knows the incidents it serves: any other id is "not found", as the server answers (a lane that rendered an incident for any
+  // id read as if every typed id existed, and the command bar offered it). Off keeps the one body every id got, for the specs written on it.
+  if (simulate && sim === undefined && !KNOWN_INCIDENT_IDS.has(id)) return problem(404, "OPERATIONAL_READ_NOT_FOUND", "The incident was not found.");
   if (sim !== undefined) {
     const updated = [sim.createdAt, sim.acknowledgedAt, sim.mitigatedAt, sim.resolvedAt].filter((t): t is string => t !== null).sort().pop();
     return { status: 200, body: {

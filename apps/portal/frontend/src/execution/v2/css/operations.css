@@ -565,6 +565,28 @@ span.exec-ops-link-id {
   }
 }
 
+/* The table scrolls inside its own panel below 1300px: say so, where the reader looks for the next column (QA1 I-09). Hidden where it fits. */
+.exec-ops-scrollhint {
+  display: none;
+  margin: 0;
+  padding: var(--space-1) var(--space-3);
+  font: var(--exec-font-meta);
+  color: var(--ink-soft);
+}
+@media (max-width: 1300px) and (min-width: 661px) {
+  .exec-ops-scrollhint {
+    display: block;
+  }
+}
+/* An id breaks only when it must (at a separator), not in the middle of a token. */
+.exec-ops-target .exec-ops-id {
+  overflow-wrap: break-word;
+  word-break: normal;
+}
+.exec-ops-tool[data-row="narrow"] {
+  margin-top: var(--space-2);
+}
+
 /* A status flag in a row never breaks inside its own label (a wrapped flag read as two facts at 1024). */
 .exec-ops-cell .exec-flag {
   white-space: nowrap;
