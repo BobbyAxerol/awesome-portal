@@ -128,10 +128,10 @@ describe("binding exposure headroom", () => {
   const buckets = (options: BffDoubleOptions) =>
     ((ask("/broker-bindings/bnc_main@BINANCE/exposure", options) as { analytics: { data: { buckets: { currency: string; used: string; headroom: string }[] } } }).analytics.data.buckets);
 
-  it("the shared binding's USDT headroom is physical equity less the virtual sum, by integer arithmetic (412880.25 - 197500.00)", () => {
+  it("the shared binding's USDT headroom is native equity less the virtual sum, by integer arithmetic (414010.40 - 197500.00); the wallet balance is not the base", () => {
     const usdt = buckets(ON).find((b) => b.currency === "USDT")!;
     expect(usdt.used).toBe("197500.00");
-    expect(usdt.headroom).toBe("215380.25");
+    expect(usdt.headroom).toBe("216510.40");
     expect(buckets(ON).find((b) => b.currency === "USDC")!.headroom).toBe("2000.00");
   });
 

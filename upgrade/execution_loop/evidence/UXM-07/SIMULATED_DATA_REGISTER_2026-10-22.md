@@ -36,7 +36,7 @@ Source: `apps/portal/fixture-bff/review-manager.ts`, README section "Explicit po
 |---|---|---|---|
 | Physical equity | `GET /resources/accounts/{id}` `broker_sync.native_equity` (the wallet balance is a different figure, printed in Account 360, never a fallback; corrected 2026-10-23, `ea537a9ba`) | published string, currency of the broker row; typed absence when the venue did not report native equity | bindings list native equity |
 | Σ Virtual | `GET /broker-bindings/{id}/exposure` bucket `used` in the same currency | published string, no summing; typed absence when no bucket in that currency | bindings list virtual sum |
-| Headroom | same bucket `headroom` | simulated for `bnc_main@BINANCE` as 412880.25 - 197500.00 = 215380.25 (integer arithmetic) | bindings list headroom |
+| Headroom | same bucket `headroom` | simulated for `bnc_main@BINANCE` as native equity less used, 414010.40 - 197500.00 = 216510.40 (integer arithmetic; the wallet balance is not the base, corrected 2026-10-23) | bindings list headroom |
 | Check | exact decimal comparison, virtual vs physical, same currency | within / exceeded; "Not available" when either is absent | server verdict (BR-EX-26 aggregate) |
 | Sleeves | exposure `expected_account_count`, else `account_count` | published integer | bindings list sleeve count |
 

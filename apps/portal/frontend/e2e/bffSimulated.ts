@@ -46,6 +46,7 @@ function ratio6(value: string, peak: string): string {
 /* ── account resource (`/resources/accounts/{id}`) ──────────────────────── */
 
 const WALLET_BALANCE_CORE = "412880.25";
+const NATIVE_EQUITY_CORE = "414010.40";
 const NAMES = { portfolio: { pf_core: "Core" }, strategy: { btc_trend: "BTC Trend" }, deployment: { dep_btc_live: "BTC Trend live" } } as const;
 
 function overlayAccountResource(body: Obj, accountId: string): Obj {
@@ -69,7 +70,7 @@ function overlayAccountResource(body: Obj, accountId: string): Obj {
   if (newest) {
     if (accountId === "acc_bnc_core") {
       newest.wallet_balance = WALLET_BALANCE_CORE;
-      newest.native_equity = "414010.40";
+      newest.native_equity = NATIVE_EQUITY_CORE;
     } else if (accountId === "acc_bnc_sub") {
       newest.wallet_balance = "118050.00";
     }
@@ -95,8 +96,8 @@ function overlayAccountResource(body: Obj, accountId: string): Obj {
 /* ── binding exposure (`/broker-bindings/{id}/exposure`) ─────────────────── */
 
 /**
- * The shared binding's USDT headroom is its physical equity (the wallet balance simulated on the account) less the virtual sum
- * (`used`), by integer arithmetic in one currency: 412880.25 - 197500.00 = 215380.25. Other bindings keep the double's own figures.
+ * The shared binding's USDT headroom is its physical equity (the venue's native equity simulated on the account, never the wallet balance)
+ * less the virtual sum (`used`), by integer arithmetic in one currency: 414010.40 - 197500.00 = 216510.40. Other bindings keep the double's own figures.
  */
 function overlayExposure(body: Obj): Obj {
   const out = clone(body);
@@ -105,7 +106,7 @@ function overlayExposure(body: Obj): Obj {
   for (const bucket of analytics.data.buckets) {
     if (isObj(bucket) && bucket.currency === "USDT" && typeof bucket.used === "string") {
       const cents = (text: string) => BigInt(text.replace(".", ""));
-      const left = cents(WALLET_BALANCE_CORE) - cents(bucket.used);
+      const left = cents(NATIVE_EQUITY_CORE) - cents(bucket.used);
       const negative = left < 0n;
       const abs = negative ? -left : left;
       bucket.headroom = `${negative ? "-" : ""}${abs / 100n}.${(abs % 100n).toString().padStart(2, "0")}`;
@@ -182,7 +183,7 @@ const LIST_FIGURES: Readonly<Record<string, (at: string) => Obj>> = {
     ],
     virtual_headroom: [
       { currency: "USDC", value: "2000.00", observed_at: at, coverage: "COMPLETE" },
-      { currency: "USDT", value: "215380.25", observed_at: at, coverage: "COMPLETE" },
+      { currency: "USDT", value: "216510.40", observed_at: at, coverage: "COMPLETE" },
     ],
     sleeve_count: { count: 3, observed_at: at, coverage: "PARTIAL" },
   }),

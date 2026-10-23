@@ -160,7 +160,7 @@ describe("Accounts list", () => {
     await waitFor(() => expect(cell(rows[1]!, "Physical equity")).toContain("Not available"), SLOW);
     expect(cell(rows[1]!, "Physical equity")).not.toContain("118,050.00");
     expect(cell(rows[0]!, "Σ Virtual · Headroom")).toContain("197,500.00");
-    expect(cell(rows[0]!, "Σ Virtual · Headroom")).toContain("Headroom 215,380.25");
+    expect(cell(rows[0]!, "Σ Virtual · Headroom")).toContain("Headroom 216,510.40");
     // The expired-credential binding has no broker report: its check stays a typed absence.
     await waitFor(() => expect(cell(rows[2]!, "Check")).toContain("Not available"), SLOW);
     expect(cell(rows[2]!, "Physical equity")).toContain("Venue report not published");
