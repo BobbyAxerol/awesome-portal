@@ -32209,3 +32209,25 @@ financial publication definition, provider/route or worker is installed by this
 module. Owning runtime must supply those actual definitions and fresh independent
 proofs; this is not a complete financial ingest service merely from module presence.
 <!-- BUSINESS_COMPOSE_FINANCIAL_END -->
+
+**Command slice — IMPLEMENTED / TESTED_ISOLATED:**
+`command_gateway::handle_human` composes original decode→current requester
+check→durable original/custody→bounded PM mTLS port→safe full Core result.
+`execution.core-pm-result.v1` preserves all source presentation fields except
+explicit lossless string encoding of current-version counters; source revision
+is also a string. Local delivery, owning business state/terminal and projection
+progress remain separate; APPLIED never fabricates a projection checkpoint.
+The exact original/custody pairing is symmetric, including missing outcome on
+either side.5new codec/error cases and1real-PG/mTLS ingress case PASS. The latter
+SUBMITs once, disables sends, performs only STATUS with a distinct currently
+authorized manager, and denies revoked access before source I/O. Service recovery
+is not human STATUS. No public command route or send flag was enabled.
+The existing activation matrix now reflects the published PM two-POST source
+wire, not its obsolete UNPUBLISHED state. PM6aebbff1 source advanced during this
+round; command/report/native-reader hashes stayed unchanged from32d25c1c.
+Canonical TS668e1032 catalogue still has0/9published/Portal-reachable N12 cells.
+Eight PM capital shapes do NOT implement64legacy CLI entries or those nine N12
+operations; no capital aliases were introduced. Actual command current-requester
+issuer/target installation and unpublished private service-only recovery wire
+remain required; missing business/control semantics are not invented in Edge.
+<!-- BUSINESS_COMPOSE_COMMAND_END -->

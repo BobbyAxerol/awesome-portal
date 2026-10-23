@@ -4,6 +4,11 @@
 //! Authentication/current-authority composition supplies scope and providers;
 //! this module is not an authentication bypass or an enabled HTTP listener.
 
+use axum::{
+    http::StatusCode,
+    response::{IntoResponse, Response},
+    Json,
+};
 use command_relay::{
     authority::{AuthorityProvider, RecoveryProvider},
     durable::{CommandIntent, CommandScope},
@@ -87,6 +92,111 @@ pub fn decode_original(
 pub struct GatewayResult {
     pub record: CommandRecord,
     pub outcome: Option<PmOutcome>,
+}
+
+/// Callable HTTP composition for a server-authenticated ORIGINAL. The mounting
+/// middleware supplies scope/current provider; read assertions or body fields
+/// cannot call this on their own. This does not install a route or enable sends.
+pub async fn handle_human<A: AuthorityProvider, P: CommandPort>(
+    scope: CommandScope,
+    raw: &[u8],
+    limit: usize,
+    relay: &DurableCommandRelay<A, P>,
+    original: Option<&OriginalPmBinding>,
+) -> Response {
+    let result = match decode_original(scope, raw, limit) {
+        Err(_) => return safe_error(StatusCode::BAD_REQUEST, "ORIGINAL_INVALID"),
+        Ok(call) => execute_human(&call, relay, original)
+            .await
+            .and_then(|result| encode_result(&call.intent, &result)),
+    };
+    match result {
+        Ok(value) => private_response(StatusCode::OK, value),
+        Err(error) => {
+            use projection_store_pg::command::CommandStoreError;
+            let (status, code) = match error {
+                RelayError::Authority(_) => (StatusCode::FORBIDDEN, "ACCESS_DENIED"),
+                RelayError::Store(CommandStoreError::NotFound) => {
+                    (StatusCode::NOT_FOUND, "ORIGINAL_UNAVAILABLE")
+                }
+                RelayError::Store(CommandStoreError::Conflict) => {
+                    (StatusCode::CONFLICT, "IDEMPOTENCY_CONFLICT")
+                }
+                RelayError::Disabled => (StatusCode::SERVICE_UNAVAILABLE, "SUBMIT_DISABLED"),
+                _ => (StatusCode::SERVICE_UNAVAILABLE, "OUTCOME_UNAVAILABLE"),
+            };
+            safe_error(status, code)
+        }
+    }
+}
+
+/// Versioned lossless Core result; source presentation is preserved except that
+/// version counters are explicitly encoded as strings before any JS parse.
+/// Local delivery is not financial effect and no projection progress is inferred.
+fn encode_result(intent: &CommandIntent, result: &GatewayResult) -> Result<Value, RelayError> {
+    use projection_store_pg::command::CommandStoreError;
+    let invalid = || RelayError::Store(CommandStoreError::Fence);
+    if result.record.intent != *intent
+        || !matches!(
+            result.record.delivery.as_str(),
+            "PREPARED" | "SENDING" | "ACKNOWLEDGED" | "DELIVERY_UNKNOWN" | "FAILED_BEFORE_SEND"
+        )
+        || result.outcome.as_ref().map(|o| &o.receipt) != result.record.receipt.as_ref()
+    {
+        return Err(invalid());
+    }
+    let outcome = result.outcome.as_ref().map(|source| {
+        source.receipt.verify_for(intent).map_err(|_| invalid())?;
+        let mut presentation = source.receipt.payload().clone();
+        let versions = presentation.get_mut("current_versions")
+            .and_then(Value::as_object_mut).ok_or_else(invalid)?;
+        for version in versions.values_mut() {
+            *version = Value::String(version.as_i64().ok_or_else(invalid)?.to_string());
+        }
+        Ok::<_, RelayError>(serde_json::json!({
+            "authority_receipt": source.authority_receipt,
+            "source_intent_digest": source.source_intent_digest,
+            "source_key": [intent.scope().authority_scope_id(), intent.operation(), intent.key()],
+            "target_ref": source.target_ref,
+            "source_revision": source.receipt.revision().to_string(),
+            "presentation": presentation,
+        }))
+    }).transpose()?;
+    let receipt = result.record.receipt.as_ref();
+    let value = serde_json::json!({
+        "schema_version": "execution.core-pm-result.v1",
+        "command_id": result.record.command_id.to_string(),
+        "request_digest": intent.request_digest(), "payload_digest": intent.digest(),
+        "delivery_state": result.record.delivery,
+        "business_state": receipt.map(|r| r.state().as_str()),
+        "terminal": receipt.map(command_relay::durable::AuthorityReceipt::is_terminal),
+        "projection_state": "UNAVAILABLE", "projection_applied_checkpoint": null,
+        "outcome": outcome,
+    });
+    if serde_json::to_vec(&value).map_err(|_| invalid())?.len()
+        > command_relay::durable::MAX_RECEIPT_BYTES + 16_384
+    {
+        return Err(invalid());
+    }
+    Ok(value)
+}
+
+fn private_response(status: StatusCode, value: Value) -> Response {
+    let mut response = (status, Json(value)).into_response();
+    response
+        .headers_mut()
+        .insert("cache-control", "no-store".parse().expect("static header"));
+    response
+}
+
+fn safe_error(status: StatusCode, code: &str) -> Response {
+    private_response(
+        status,
+        serde_json::json!({
+            "schema_version": "execution.core-pm-result.v1",
+            "error": { "code": code, "retryable": false, "next_action": "QUERY_SAME_INTENT" },
+        }),
+    )
 }
 
 /// Reuse the existing durable ledger, PM custody and no-retry relay. The same

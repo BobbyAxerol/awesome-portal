@@ -208,3 +208,119 @@ fn raw_size_and_json_shape_bounds_fail_before_dispatch() {
         assert!(decode_original(scope("paper"), raw, MAX_BODY).is_err());
     }
 }
+
+fn result(delivery: &str, business: Option<(&str, &str, &str)>) -> GatewayResult {
+    use command_relay::durable::{AuthorityReceipt, BusinessState};
+    let intent = parse("paper", &wire("paper", "TOP_UP")).unwrap().intent;
+    let outcome = business.map(|(state, applied, pending)| {
+        let receipt = AuthorityReceipt::new(&intent, "TEST_ONLY-source", 9_007_199_254_740_993,
+            BusinessState::parse(state).unwrap(), json!({
+                "command_id":"TEST_ONLY-command", "state":state,
+                "amounts":{"requested":"10.000","applied":applied,"pending":pending,
+                    "cancelled":"0","rejected":"0"},
+                "currency":"USDT", "parent_receipt":"TEST_ONLY-parent", "blockers":[],
+                "before_ref":"TEST_ONLY-before", "after_ref":"TEST_ONLY-after",
+                "source_ref":"TEST_ONLY-source", "policy_ref":"TEST_ONLY-policy",
+                "binding_ref":"TEST_ONLY-binding", "current_versions":{"budget":9_007_199_254_740_993_i64},
+                "physical_transfer_performed":false, "cli_exit_code":if pending == "0" {0} else {3},
+                "next_action":if pending == "0" {"REVIEW_RECEIPT"} else {"QUERY_SAME_INTENT"}
+            })).unwrap();
+        PmOutcome { authority_receipt:"TEST_ONLY-authority-receipt".into(),
+            source_intent_digest:"a".repeat(64), target_ref:"TEST_ONLY-target".into(), receipt }
+    });
+    GatewayResult {
+        record: CommandRecord {
+            command_id: uuid::Uuid::now_v7(),
+            intent,
+            delivery: delivery.into(),
+            receipt: outcome.as_ref().map(|o| o.receipt.clone()),
+        },
+        outcome,
+    }
+}
+
+#[test]
+fn result_keeps_delivery_business_and_projection_independent() {
+    for delivery in [
+        "PREPARED",
+        "SENDING",
+        "ACKNOWLEDGED",
+        "DELIVERY_UNKNOWN",
+        "FAILED_BEFORE_SEND",
+    ] {
+        let result = result(delivery, None);
+        let value = encode_result(&result.record.intent, &result).unwrap();
+        assert_eq!(value["delivery_state"], delivery);
+        assert!(value["business_state"].is_null());
+        assert!(value["terminal"].is_null());
+        assert!(value["outcome"].is_null());
+        assert_eq!(value["projection_state"], "UNAVAILABLE");
+        assert!(value["projection_applied_checkpoint"].is_null());
+    }
+}
+
+#[test]
+fn full_result_preserves_pending_money_and_lossless_versions() {
+    let result = result(
+        "ACKNOWLEDGED",
+        Some(("PARTIALLY_APPLIED", "3.000", "7.000")),
+    );
+    let value = encode_result(&result.record.intent, &result).unwrap();
+    assert_eq!(value["business_state"], "PARTIALLY_APPLIED");
+    assert_eq!(value["terminal"], false);
+    assert_eq!(value["outcome"]["source_revision"], "9007199254740993");
+    let presentation = &value["outcome"]["presentation"];
+    assert_eq!(
+        presentation["current_versions"]["budget"],
+        "9007199254740993"
+    );
+    assert_eq!(presentation["amounts"]["applied"], "3.000");
+    assert_eq!(presentation["amounts"]["pending"], "7.000");
+    let original = result.outcome.as_ref().unwrap().receipt.payload();
+    for (field, expected) in original.as_object().unwrap() {
+        if field != "current_versions" {
+            assert_eq!(&presentation[field], expected, "{field}");
+        }
+    }
+    assert!(value.get("scope").is_none());
+    assert!(value.get("payload").is_none());
+    assert!(value["projection_applied_checkpoint"].is_null());
+}
+
+#[test]
+fn applied_receipt_is_terminal_without_claiming_projected_effect() {
+    let result = result("ACKNOWLEDGED", Some(("APPLIED", "10.000", "0")));
+    let value = encode_result(&result.record.intent, &result).unwrap();
+    assert_eq!(value["business_state"], "APPLIED");
+    assert_eq!(value["terminal"], true);
+    assert_eq!(value["projection_state"], "UNAVAILABLE");
+}
+
+#[test]
+fn result_refuses_mixed_or_reduced_custody_in_both_directions() {
+    let mut value = result("ACKNOWLEDGED", Some(("APPLIED", "10.000", "0")));
+    let original = value.record.intent.clone();
+    value.record.receipt = None;
+    assert!(encode_result(&original, &value).is_err());
+    value.record.receipt = value.outcome.as_ref().map(|o| o.receipt.clone());
+    value.outcome = None;
+    assert!(encode_result(&original, &value).is_err());
+    let mut value = result("INVENTED_SUCCESS", None);
+    assert!(encode_result(&original, &value).is_err());
+    value.record.delivery = "PREPARED".into();
+    let other = parse("live", &wire("live", "TOP_UP")).unwrap().intent;
+    assert!(encode_result(&other, &value).is_err());
+}
+
+#[tokio::test]
+async fn error_response_is_bounded_private_and_never_a_retry_instruction() {
+    let response = safe_error(StatusCode::SERVICE_UNAVAILABLE, "OUTCOME_UNAVAILABLE");
+    assert_eq!(response.headers()["cache-control"], "no-store");
+    let bytes = axum::body::to_bytes(response.into_body(), 1_024)
+        .await
+        .unwrap();
+    let value: Value = serde_json::from_slice(&bytes).unwrap();
+    assert_eq!(value["error"]["retryable"], false);
+    assert_eq!(value["error"]["next_action"], "QUERY_SAME_INTENT");
+    assert_eq!(value["error"].as_object().unwrap().len(), 3);
+}

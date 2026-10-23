@@ -90,6 +90,144 @@ fn ledger() -> String {
     format!("TEST_ONLY.pm-context.{}", uuid::Uuid::now_v7())
 }
 
+#[derive(Clone)]
+struct GatewayAuthority(Arc<AtomicBool>);
+
+impl command_relay::authority::AuthorityProvider for GatewayAuthority {
+    fn current(
+        &self,
+        intent: &CommandIntent,
+        action: command_relay::authority::Action,
+        now: i64,
+    ) -> Result<command_relay::authority::CurrentAuthority, command_relay::authority::AuthorityError>
+    {
+        use command_relay::authority::{
+            AccessState, Action, AuthorityError, CommandPermission, CurrentAuthority, Publication,
+            RevisionFence,
+        };
+        if self.0.load(Ordering::SeqCst) {
+            return Err(AuthorityError::Revoked);
+        }
+        let fence = || RevisionFence {
+            asserted: "1".into(),
+            current: "1".into(),
+        };
+        Ok(CurrentAuthority {
+            scope: intent.scope().clone(),
+            operation: intent.operation().into(),
+            key: intent.key().into(),
+            requester_actor_id: if action == Action::Submit {
+                intent.scope().actor_id().into()
+            } else {
+                "TEST_ONLY-current-status-manager".into()
+            },
+            requester_workload_id: intent.scope().workload_id().into(),
+            payload_digest: intent.digest().into(),
+            request_digest: intent.request_digest().into(),
+            issued_at_ms: now,
+            expires_at_ms: now + 30_000,
+            session: fence(),
+            membership: fence(),
+            policy: fence(),
+            access: AccessState::Current,
+            permission: if action == Action::Submit {
+                CommandPermission::SubmitAndStatus
+            } else {
+                CommandPermission::StatusOnly
+            },
+            publication: Publication::Published,
+            current_versions: serde_json::from_value(intent.payload()["expected_versions"].clone())
+                .unwrap(),
+        })
+    }
+}
+
+#[tokio::test]
+async fn composed_core_handler_uses_real_pg_mtls_and_current_status_without_resend() {
+    use projection_store_pg::command::DurableCommandRelay;
+    let db = store().await;
+    let ledger = ledger();
+    db.configure_command_ledger(&ledger, 2).await.unwrap();
+    let intent = intent();
+    let original = OriginalPmBinding::new(&intent, REFERENCE, ORIGINAL_DIGEST, TARGET).unwrap();
+    let fixture = Fixture::new(StatusCode::OK, false, 0).await;
+    let context = Arc::new(
+        PgPmCommandContext::new(db.clone(), &ledger, Arc::new(Issuer::default())).unwrap(),
+    );
+    let port = PmHttpCommandPort::new(&fixture.config(), context).unwrap();
+    let denied = Arc::new(AtomicBool::new(false));
+    let relay = DurableCommandRelay::new(
+        db.clone(),
+        &ledger,
+        GatewayAuthority(denied.clone()),
+        port,
+        1,
+        Duration::from_secs(3),
+    )
+    .unwrap();
+    relay.set_sends_enabled(true);
+    let mut raw = json!({"schema_version":"execution.core-pm-original.v1", "action":"SUBMIT",
+        "key":intent.key(), "operation":intent.operation(), "payload":intent.payload(),
+        "payload_digest":intent.digest(), "request_digest":intent.request_digest()});
+    let response = crate::command_gateway::handle_human(
+        intent.scope().clone(),
+        &serde_json::to_vec(&raw).unwrap(),
+        32_768,
+        &relay,
+        Some(&original),
+    )
+    .await;
+    assert_eq!(response.status(), StatusCode::OK);
+    assert_eq!(response.headers()["cache-control"], "no-store");
+    let body = axum::body::to_bytes(response.into_body(), 1_100_000)
+        .await
+        .unwrap();
+    let value: Value = serde_json::from_slice(&body).unwrap();
+    assert_eq!(value["business_state"], "PARTIALLY_APPLIED");
+    assert_eq!(
+        value["outcome"]["presentation"]["amounts"]["pending"],
+        "7.000"
+    );
+    assert_eq!(value["projection_state"], "UNAVAILABLE");
+    assert_eq!(fixture.state.observed.lock().unwrap().len(), 1);
+    relay.set_sends_enabled(false);
+    raw["action"] = json!("STATUS");
+    let response = crate::command_gateway::handle_human(
+        intent.scope().clone(),
+        &serde_json::to_vec(&raw).unwrap(),
+        32_768,
+        &relay,
+        None,
+    )
+    .await;
+    assert_eq!(response.status(), StatusCode::OK);
+    let paths: Vec<_> = fixture
+        .state
+        .observed
+        .lock()
+        .unwrap()
+        .iter()
+        .map(|r| r.path.clone())
+        .collect();
+    assert_eq!(paths, [SUBMIT, STATUS]);
+    denied.store(true, Ordering::SeqCst);
+    let response = crate::command_gateway::handle_human(
+        intent.scope().clone(),
+        &serde_json::to_vec(&raw).unwrap(),
+        32_768,
+        &relay,
+        None,
+    )
+    .await;
+    assert_eq!(response.status(), StatusCode::FORBIDDEN);
+    assert_eq!(fixture.state.observed.lock().unwrap().len(), 2);
+    assert_eq!(
+        db.pm_original_binding(&ledger, &intent).await.unwrap(),
+        original
+    );
+    fixture.finish().await;
+}
+
 #[tokio::test]
 async fn real_pg_and_mtls_retain_full_outcome_before_receipt_and_survive_new_pool() {
     let db = store().await;
