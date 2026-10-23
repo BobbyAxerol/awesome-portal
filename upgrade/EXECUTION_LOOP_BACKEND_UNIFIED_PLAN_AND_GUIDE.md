@@ -33018,3 +33018,151 @@ Neither adapter was written against guessed routes/grants/ACKs here; both remain
 NOT_IMPLEMENTED, new binary routes503, connected08/09NOT_MET. No runnable owned
 intake/delivery work remains; remaining producer coordination is explicit, not
 reported as adapter completion or phase closure.
+
+<a id="epg10-06-worker-oom-follow-through-20261024"></a>
+### Original06 — Paper worker OOM diagnosis and bounded SQL materialization
+
+**ISOLATED_QUALIFIED_SOURCE_ONLY_NOT_DEPLOYED; BOBBY_APPROVED; base73cae959.**
+24Oct Asia/Saigon (23Oct UTC): continue the independent worker investigation
+under original06, not a new phase or deployment. Guides: [06](upgrade_v1.2/EXECUTION_PORTAL_EDGE_UPGRADE_GUIDE_v1.2_VI.md#epg10-06-áp-resource-budgets-và-tối-ưu-hot-path),
+[health semantics§8.2](upgrade_v1.2/EXECUTION_PORTAL_EDGE_UPGRADE_GUIDE_v1.2_VI.md#82-health-phải-phản-ánh-đúng-khả-năng-phục-vụ),
+[existing materialization boundary](evidence/execution-edge-v1_2/EPG10-06/RESOURCE_ENVELOPE_AND_HOT_PATH.md#current20oct-manager-source-fact-materialization-follow-through).
+Preserve peer WIP, source truth, all profile bindings and source/receiver custody.
+
+**Observed, not inferred from a running-state flag:** read-only Docker events
+at17:25UTC show OOM then die137 for Paper worker8113bdc7/image d6aa7a51;
+kernel confirms its cgroup killed portal-executio with anonymous RSS1045932KiB
+at17:25:01UTC, with matching events at17:24:33/17:24:06. The worker is capped
+at1CPU/1GiB and restart-unless-stopped. Running-state exit0/OOMKilled=false
+resets after restart and does not refute these events. A transient HTTP429 is
+separate, not the established OOM cause. No manual restart or cap change.
+This confirms termination cause, NOT the exact allocation stack or a candidate
+OOM fix. The earlier20Oct investigation/opt-in guards remain valid and are
+not repeated or advertised as deployed.
+
+**Runnable owned slice / goal:** remove the demonstrated redundant whole-result SQL
+payload retention in `load_manager_current_tx` and the adjacent Manager-only
+`load_entities_tx`: stream rows on the SAME
+transaction/connection into the existing compact semantic-digest/feed/read-time
+map or required decoded entity vector, rather than retaining up to80001 full SQL
+payload rows alongside those decoded populations. The full-epoch vector remains
+necessary for existing digests and is not claimed to be constant-memory.
+Keep existing80000 refusal, entity ordering, canonical digests, scope, lease,
+COMMIT/rollback and previous complete cache semantics. Reuse workspace stream
+support; no new service, formula, arbitrary production budget, SQL schema/index,
+credentials or source calls. This optimization is a source candidate, not proof
+that this allocation was the dominant cause of the installed old-image OOM.
+
+**Test/exit gates:** impact-based real disposable-PG Manager regression and a
+multi-buffer large-payload refresh/correction/deletion case, affected check,
+format/strict Clippy and exact source/evidence pins. Test-only capped containers,
+isolated scratch/DB, finite deadlines, no operational data or secret transfer;
+record actual counts, failed predecessors, resources and exact cleanup. Normal
+landing/release status stays separate from source qualification. Source rollback
+only. Runtime rollout/restart/RAM/config/epoch changes are expressly OUT_OF_SCOPE.
+Full01/06 and08/read09 connected remainNOT_MET.
+
+**Implementation refinement:** the adjacent full-epoch loader has the same
+fetch-all-plus-decoded-copy pattern and is private to the SAME Manager module.
+Remove that redundant SQL row population too; do not expand into generic query
+or digest rewrites. The first frozen cell snapshot is an intermediate, not final
+qualification of this refinement; recopy exact changed inputs and rerun impacted
+gates after it terminates. Add full-epoch80001 refusal coverage in the same PG
+target. No current cache or dataset is dropped to satisfy the memory cap.
+
+**Parallel contract intake:** Core2a89e6d0/Claudebeed0225 and return941be9da
+still lack7.2. PM05f4657b now explicitly responds in owner-return§7.18,
+hash42a093be: MINIMAL_CHANGE_REQUIRED, not CONTRACT_ACCEPTED/DELIVERED;
+attestation/revalidation/receiver-APPLIED is its owned implementation after
+FIX-01→FIX-02. Exporter68577ab8/endpointbf1d421d unchanged. Do not misreport
+this as no PM reply. Either actual accepted wire makes its Edge adapter/test
+runnable immediately; neither may be guessed to bypass this boundary.
+
+**17:38UTC intermediate:** first frozen one-loader snapshot passed format,
+affected all-target check/strict Clippy and14PG Manager tests (0failed/ignored/
+filtered). Retained log15d06431; not final evidence for the second loader.
+Disposable PG/Rust containers retired before recopying the two exact inputs.
+Final frozen two-loader snapshot adds an epoch-result sentinel/recovery case.
+Reuse the same private compile cache only; no repeated unaffected suites or
+aggregated14+15 headline count. The same capped cell/finite timeout/cleanup
+trap applies.
+
+**Terminal source qualification:** [bounded public receipt](evidence/execution-edge-v1_2/EPG10-06/manager-current-stream-qualification.json)
+pins all four changed Rust/manifest inputs, matching the qualified scratch
+byte-for-byte after formatting. Final PG target: **15PASS,0FAIL/ignored/filtered**,
+including four new methods,69.55s; these are distinct tests, not14+15 runs or
+the previously reported396 tests. New cases:512 large exact-decimal payloads
+with correction/deletion/no-op, later malformed cursor row with no writes and
+same-original retry after fixture repair, and persisted row80001 refusal in
+BOTH current-map and full-epoch loaders. The latter recovers the original
+receipt after fixture-only repair. Recovery proves usable pool/rollback, not
+physical connection identity. Test rows carry TEST_ONLY provenance in the
+disposable DB; no operational data was copied.
+
+Actual commands: workspace `cargo fmt --all -- --check`; then offline/locked
+`cargo check -p projection-store-pg --all-targets`,
+`cargo clippy -p projection-store-pg --all-targets -- -D warnings`,
+`cargo test -p projection-store-pg --test epg10_06_manager -- --test-threads=1`
+and `cargo check -p edge-service --bin edge-service`: all PASS/terminal0.
+`bash scripts/execution-tracking-test.sh` and `git diff --check` PASS.
+PG logce2f74ff and Edge binary check logf0fdca49 retained with driver and
+intermediate log under `/home/bobby/secure/epg10-06-worker-stream-D3trY1vv/`
+(0700 directory/0600 files;30326 logical bytes including directory).
+No-secret hashes and exact source pins are in the public receipt. Independent
+read-only code review found no defect in the changed loaders or four tests.
+Focused source-intermediate gates follow campaign working-rules§10.10c;
+the normal monorepo landing/release gate is **NOT_RUN**, not PASS. Actual
+core.hooksPath was unset and was not changed or bypassed. No push/merge or
+hosted CI triggered; minutes used0.
+
+**Terminal cleanup:** exact owned Rust/PG/Edge-check containers removed with
+their ephemeral tmpfs, owned scratch source/target/CARGO_HOME removed
+(`/tmp/epg10-06-worker-stream-D3trY1vv`,1385762421 logical bytes), newly pulled
+unreferenced compiler e51d0265 removed. No named volume/network or SGP resource
+was created; borrowed PGcf78e766 and all operational/rollback images retained.
+Pre-cleanup root free161359626240B; post165341515776B, both69% used.
+These global free-space observations include peer activity and are NOT an
+exclusive reclaimed-byte claim. Images117→116, owned containers0 after cleanup;
+BuildKit607/51active and70.73GB unchanged and foreign, not pruned. Global
+containers95/66active and volumes100/15active reflect concurrent peers;
+no operational or peer-owned container, volume, cache or worktree was removed.
+
+**Source/release/runtime reconciliation:** canonical Portal checkout remains
+`/home/bobby/.worktrees/portal-execution-manager-v2`,
+feat/manager-v2-paper-read@54c6f5f3; this active feature checkout remains
+`/home/bobby/.worktrees/portal-execution-edge-upgrade-v1_2`,
+feat/execution-edge-upgrade-v1_2 (base73cae959; coherent local source commit,
+not pushed/merged). Other retained active worktrees are portal-eds-current-bff
+feat/eds-current-bff@bab79402, portal-eds09-owner-return-handoff
+docs/eds09-ts-owner-return-handoff@ec97c483, portal-elp210-edge-provider-candidate
+feat/portal-elp210-edge-provider-candidate@9db77811,
+portal-execution-data-activation feat/execution-data-activation@6f6503ea,
+portal-r4r5-activation deploy/r4r5-activation@d63a6501. They are not proven
+merged/abandoned and were not removed. Peer WIP/hashes and unrelated plan hunk
+preserved; only this source slice/docs/receipt are included in the commit.
+
+Observed HK release directory remains
+`/srv/primus/portal/releases/a9b10385ab6c16350555f70f4379dfa23ca6b20c/`;
+installed Edge/worker source is OCI8814cd2a, NOT inferred from directory name.
+All13 observed service/container identities and images are unchanged: Paper,
+Sandbox and Live each have Edge+Source Proxy+Manager projection worker+PG;
+plus native-manager-read. Edge/worker imaged6aa7a51, Proxyaa14e21c,
+native28ea3958 and PGcf78e766 (full digests in receipt). Paper worker config
+95e96a9b unchanged. Native config stays
+`/home/bobby/.local/share/portal-native-manager-read/runtime/v1.0.0-9e7d3455/compose.json`.
+Explicit rollback refs6180b9bf/cd79e9c6/98a191c7 retained. SGP stable/dev and
+provider28445 untouched and not requalified. Paper's autonomous restart counter
+rose11617→11671 during observations, confirming the old runtime problem is
+still present; the other12 observed containers remain restart0. No manual
+restart, deployment, cap/config, TLS/auth or operational DB mutation occurred.
+
+**Remaining work / next permitted action:** this owned optimization and isolated
+verification are complete, not an operational OOM cure, phase06 capacity exit
+or connected08/read09 acceptance. Dominant allocation stack/peak RSS and a
+reviewed release/rollout remain separate work; no deployment is implied by this
+source approval. Full01/06 needs matched real targets and approved numeric bounds.
+Core owns the missing§7.2 current-policy resolve/recheck wire; PM owns the
+explicitly acknowledged§7.18 proof/revalidation/APPLIED wire after FIX-01→02.
+Consume and implement EACH confirmed wire independently as it arrives; do not
+wait for the other or substitute JWT/mTLS for current authority. New routes
+retain503; full08/read09 connected remains **NOT_MET**. No new phase opened.

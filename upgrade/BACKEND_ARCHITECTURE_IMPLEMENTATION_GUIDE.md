@@ -650,6 +650,14 @@ deep-dive → ADR → slice → evidence discipline documented above.
 
 ### 14.1 Current backend state (tracking snapshot — 2026-08-17)
 
+**24Oct Original06 worker materialization — ISOLATED_QUALIFIED, NOT_DEPLOYED:**
+[same06 journal](EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#epg10-06-worker-oom-follow-through-20261024)
+records confirmed old-image cgroup OOM/die137 and streaming of both Manager-only
+SQL loaders without retaining redundant full SQL row populations. Same locks,
+query ordering, row validation, sentinel refusal and digest/custody semantics;
+decoded full-epoch entities remain necessary. Actual gates/cleanup in journal.
+No operational OOM-remedy or capacity claim, budget/default change or restart.
+
 **23Oct executable scoped assembly — source-only:**
 [current04/05/06/08/09 journal](EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#epg10-entrypoint-assembly-20261023)
 tracks the private router/serving entrypoints, asynchronous current-policy/custody

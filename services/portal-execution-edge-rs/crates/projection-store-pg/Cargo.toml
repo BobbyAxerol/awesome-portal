@@ -12,6 +12,7 @@ authoritative-event-core = { path = "../authoritative-event-core" }
 chrono.workspace = true
 command-relay = { path = "../command-relay" }
 execution-contracts = { path = "../execution-contracts" }
+futures-util.workspace = true
 hex.workspace = true
 home.workspace = true
 projection-core = { path = "../projection-core" }

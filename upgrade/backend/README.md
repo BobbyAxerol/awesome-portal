@@ -7,6 +7,14 @@ Chúng không thay thế phase hoặc exit gate trong
 
 ## Active deep dives
 
+- **24Oct Original06 worker materialization — ISOLATED_QUALIFIED, NOT_DEPLOYED:**
+  [same06 journal](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#epg10-06-worker-oom-follow-through-20261024)
+  records old-image OOM/die137 and removal of redundant retained SQL result
+  populations from both Manager-only loaders. Existing transaction/lease,
+  row validation,80k bounds and exact digests remain. Required decoded entities
+  are not constant-memory. Gates/cleanup are recorded in that journal; no
+  production default, RAM change, restart or operational fix is claimed.
+
 - **23Oct executable scoped backend assembly — source-only:**
   [same-phase04/05/06/08/09 journal](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#epg10-entrypoint-assembly-20261023)
   covers actual query/history/export/notification router and serving lifecycle,

@@ -1719,6 +1719,7 @@ dependencies = [
  "chrono",
  "command-relay",
  "execution-contracts",
+ "futures-util",
  "hex",
  "home",
  "projection-core",

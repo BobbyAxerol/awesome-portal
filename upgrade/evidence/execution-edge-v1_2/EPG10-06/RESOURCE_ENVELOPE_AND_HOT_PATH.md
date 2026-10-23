@@ -1,5 +1,33 @@
 # EPG10-06 resource envelope and hot path
 
+## Current24Oct Manager SQL materialization follow-through
+
+Status: **ISOLATED_QUALIFIED_SOURCE_ONLY; NOT_DEPLOYED, no operational OOM-remedy claim**.
+[Same06 journal](../../../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#epg10-06-worker-oom-follow-through-20261024)
+records fresh Docker OOM/die137 and matching kernel cgroup evidence on the old
+8814/d6aa7a51 Paper worker. Its observed1CPU/1GiB cap is unchanged; current
+running-state OOMKilled=false is not evidence about its preceding termination.
+
+Both private Manager loaders retain their existing bounded SELECT, transaction,
+lease/epoch locks, sorting and row decoder, but consume SQL rows as a stream.
+`load_manager_current_tx` retains only the existing compact digest/feed/time
+map. `load_entities_tx` must still retain decoded entities for the unchanged
+epoch digest, but no longer a second full SQL-row population. Reject row80001
+before decoding; never truncate into a false complete view. An invalid earlier
+row may now be reported before a later over-limit sentinel (both fail closed).
+No new query/schema/index, generic canonical hash algorithm or cache is added.
+SQLx/network/single-row scratch, required decoded entities, other builder/digest
+copies and allocator/RSS are NOT bounded by this change. No invented numeric
+budget/default or claim that this was the dominant installed OOM allocation.
+
+[Exact source qualification and cleanup receipt](manager-current-stream-qualification.json):
+15 distinct real disposable-PG tests PASS, including four new methods; workspace
+fmt, affected all-target check/strict Clippy, Edge binary check and tracking
+reconciliation PASS. Capped disposable cell/source/compile cache and newly
+pulled compiler image removed; operational images/rollback retained. Normal
+landing/release gate NOT_RUN (focused source-intermediate lane). This is not
+a capacity, peak-RSS, deployed OOM-remedy or connected08/read09 certificate.
+
 ## Current20Oct Manager source-fact materialization follow-through
 
 Status: **ISOLATED_QUALIFIED; not deployed or capacity accepted**. The

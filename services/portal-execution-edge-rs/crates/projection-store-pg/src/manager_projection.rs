@@ -5,6 +5,7 @@ use std::{
 
 use chrono::{DateTime, TimeDelta, Utc};
 use execution_contracts::{CanonicalId, SourceAuthority, SourceCompleteness, SourceCursor};
+use futures_util::TryStreamExt as _;
 use projection_core::{
     canonical_digest, semantic_state_digest, ProjectionEntityKey, ProjectionEntityKind,
     ProjectionObservation, ProjectionOperation, ProjectionScope, ProjectionSnapshot,
@@ -1199,36 +1200,41 @@ async fn load_manager_current_tx(
     epoch_id: Uuid,
     kind: ProjectionEntityKind,
 ) -> Result<BTreeMap<String, ManagerCurrentEntity>, StoreError> {
-    let rows = sqlx::query(
+    let mut rows = sqlx::query(
         "SELECT * FROM portal_projection.entities WHERE epoch_id=$1 AND entity_kind=$2
          ORDER BY entity_id LIMIT 80001",
     )
     .bind(epoch_id)
     .bind(kind.as_str())
-    .fetch_all(&mut **transaction)
-    .await?;
-    if rows.len() > MAXIMUM_MANAGER_RECORDS {
-        return Err(StoreError::InvalidManagerProjectionSnapshot);
+    .fetch(&mut **transaction);
+    // Keep the same query, transaction and epoch lock, but never collect all
+    // payload-bearing SQL rows alongside the incoming complete snapshot.
+    // Only the compact comparison map survives each row. SQLx/network and
+    // single-row decode/digest scratch are not a total process-memory bound.
+    let mut current = BTreeMap::new();
+    let mut row_count = 0;
+    while let Some(row) = rows.try_next().await? {
+        if row_count == MAXIMUM_MANAGER_RECORDS {
+            return Err(StoreError::InvalidManagerProjectionSnapshot);
+        }
+        row_count += 1;
+        let entity = super::row_to_entity(&row)?;
+        let digest = canonical_digest(&manager_projected_semantic_value(&entity))?;
+        let source_feed = entity
+            .payload
+            .get("source_feed")
+            .and_then(serde_json::Value::as_str)
+            .map(str::to_owned);
+        current.insert(
+            entity.entity.entity_id.as_str().to_owned(),
+            ManagerCurrentEntity {
+                semantic_digest: digest,
+                source_feed,
+                source_read_at: entity.source_read_at,
+            },
+        );
     }
-    rows.iter()
-        .map(|row| {
-            let entity = super::row_to_entity(row)?;
-            let digest = canonical_digest(&manager_projected_semantic_value(&entity))?;
-            let source_feed = entity
-                .payload
-                .get("source_feed")
-                .and_then(serde_json::Value::as_str)
-                .map(str::to_owned);
-            Ok((
-                entity.entity.entity_id.as_str().to_owned(),
-                ManagerCurrentEntity {
-                    semantic_digest: digest,
-                    source_feed,
-                    source_read_at: entity.source_read_at,
-                },
-            ))
-        })
-        .collect()
+    Ok(current)
 }
 
 fn manager_projected_semantic_value(
@@ -1654,17 +1660,23 @@ async fn load_entities_tx(
     transaction: &mut Transaction<'_, Postgres>,
     epoch_id: Uuid,
 ) -> Result<Vec<projection_core::ProjectedEntity>, StoreError> {
-    let rows = sqlx::query(
+    let mut rows = sqlx::query(
         "SELECT * FROM portal_projection.entities
          WHERE epoch_id=$1 ORDER BY entity_kind,entity_id LIMIT 80001",
     )
     .bind(epoch_id)
-    .fetch_all(&mut **transaction)
-    .await?;
-    if rows.len() > MAXIMUM_MANAGER_RECORDS {
-        return Err(StoreError::InvalidManagerProjectionSnapshot);
+    .fetch(&mut **transaction);
+    // The existing epoch digest needs decoded entities, not a second retained
+    // population of payload-bearing SQL rows. This vector is still bounded
+    // by record count; streaming is not a bound on its payload bytes or RSS.
+    let mut entities = Vec::new();
+    while let Some(row) = rows.try_next().await? {
+        if entities.len() == MAXIMUM_MANAGER_RECORDS {
+            return Err(StoreError::InvalidManagerProjectionSnapshot);
+        }
+        entities.push(super::row_to_entity(&row)?);
     }
-    rows.iter().map(super::row_to_entity).collect()
+    Ok(entities)
 }
 
 fn lease_grant(

@@ -296,6 +296,27 @@ impl Fixture {
             .await
             .unwrap()
     }
+    async fn seed_bulk_current(&self, count: i32) {
+        // Disposable TEST_ONLY epoch only; do not weaken schema constraints.
+        sqlx::query(
+            "INSERT INTO portal_projection.entities
+             (epoch_id,entity_kind,entity_id,projection_sequence,source_authority,
+              source_read_at,projected_at,source_completeness,poll_interval_ms,
+              adapter_version,capability_snapshot_id,payload_digest,payload)
+             SELECT $1,'ORDER','TEST_ONLY.bulk.'||n::text,1,'EXECUTION',$2,$2,
+                    'POLL_BOUNDED',2000,$3,$4,$5,'{}'::jsonb
+             FROM generate_series(1,$6::integer) AS n",
+        )
+        .bind(self.epoch)
+        .bind(at(0))
+        .bind(ADAPTER)
+        .bind(&self.catalogue)
+        .bind(hash(&"TEST_ONLY.bulk"))
+        .bind(count)
+        .execute(&self.pool)
+        .await
+        .unwrap();
+    }
     async fn full_refresh_reference(&self, view: &View, step: i64) -> usize {
         // Existing generic reducer, intentionally refreshing every row. This is
         // a correctness reference, NOT the old N24 already-incremental writer.
@@ -436,6 +457,184 @@ async fn manager_delete_readd_delete_does_not_reuse_historical_tombstone() {
     assert_eq!(f.commit(&full, 3).await.2, 1);
     assert_eq!(f.commit(&removed, 4).await.3, 1);
     assert_eq!(f.journal_count().await, 6);
+}
+
+#[tokio::test]
+async fn manager_large_current_rows_stream_through_correction_deletion_and_retry() {
+    let f = Fixture::new().await;
+    let mut view = rows(512);
+    // Eight MiB of TEST_ONLY payload crosses multiple SQL transport buffers.
+    // This exercises complete draining, not a production RSS/capacity claim.
+    let detail = "TEST_ONLY_DETAIL_".repeat(1024);
+    for payload in view.values_mut() {
+        payload["detail"] = json!(detail);
+        payload["exact"] = json!("9007199254740993.000000000000000001");
+    }
+    assert_eq!(f.commit(&view, 1).await.2, 512);
+    let before = f.xmin().await;
+    view.get_mut("TEST_ONLY.order.0511").unwrap()["state"] = json!("CORRECTED");
+    view.remove("TEST_ONLY.order.0256");
+    let (_, _, applied, removed) = f.commit(&view, 2).await;
+    assert_eq!((applied, removed), (1, 1));
+    let after = f.xmin().await;
+    for key in view
+        .keys()
+        .filter(|key| key.as_str() != "TEST_ONLY.order.0511")
+    {
+        assert_eq!(before.get(key), after.get(key));
+    }
+    assert_ne!(
+        before.get("TEST_ONLY.order.0511"),
+        after.get("TEST_ONLY.order.0511")
+    );
+    assert_eq!(f.journal_count().await, 514);
+    // A second complete drain must preserve durable no-op/retry semantics,
+    // including the final row and the prior deletion, without rewriting peers.
+    let (_, receipt, applied, removed) = f.commit(&view, 3).await;
+    assert!(receipt.already_durable);
+    assert_eq!((applied, removed), (0, 0));
+    assert_eq!(f.xmin().await, after);
+    assert_eq!(f.journal_count().await, 514);
+}
+
+#[tokio::test]
+async fn manager_current_stream_decode_failure_rolls_back_and_original_retry_recovers() {
+    let f = Fixture::new().await;
+    let mut view = rows(2);
+    f.commit(&view, 1).await;
+    let original_cursor: String = sqlx::query_scalar(
+        "SELECT source_event_id FROM portal_projection.entities
+         WHERE epoch_id=$1 AND entity_id='TEST_ONLY.order.0001'",
+    )
+    .bind(f.epoch)
+    .fetch_one(&f.pool)
+    .await
+    .unwrap();
+    // All cursor columns remain non-null: no SQL constraint is weakened.
+    // The second row fails the existing CanonicalId decoder after a valid row.
+    sqlx::query(
+        "UPDATE portal_projection.entities SET source_event_id=''
+         WHERE epoch_id=$1 AND entity_id='TEST_ONLY.order.0001'",
+    )
+    .bind(f.epoch)
+    .execute(&f.pool)
+    .await
+    .unwrap();
+    let before = f.xmin().await;
+    view.get_mut("TEST_ONLY.order.0000").unwrap()["state"] = json!("CORRECTED");
+    let cycle = f.resolve(&view, 2).await;
+    let input = f.snapshot(&view, &cycle, ProjectionEntityKind::Order);
+    let commits_before: i64 = sqlx::query_scalar(
+        "SELECT count(*) FROM portal_projection.manager_projection_commits WHERE epoch_id=$1",
+    )
+    .bind(f.epoch)
+    .fetch_one(&f.pool)
+    .await
+    .unwrap();
+    assert!(f
+        .store
+        .commit_manager_projection_snapshot(&f.scope, f.epoch, f.lease.proof(), &input, at(2),)
+        .await
+        .is_err());
+    assert_eq!(f.xmin().await, before);
+    assert_eq!(f.journal_count().await, 2);
+    let commits_after: i64 = sqlx::query_scalar(
+        "SELECT count(*) FROM portal_projection.manager_projection_commits WHERE epoch_id=$1",
+    )
+    .bind(f.epoch)
+    .fetch_one(&f.pool)
+    .await
+    .unwrap();
+    assert_eq!(commits_after, commits_before);
+    sqlx::query(
+        "UPDATE portal_projection.entities SET source_event_id=$2
+         WHERE epoch_id=$1 AND entity_id='TEST_ONLY.order.0001'",
+    )
+    .bind(f.epoch)
+    .bind(original_cursor)
+    .execute(&f.pool)
+    .await
+    .unwrap();
+    let recovered = f
+        .store
+        .commit_manager_projection_snapshot(&f.scope, f.epoch, f.lease.proof(), &input, at(2))
+        .await
+        .unwrap();
+    assert_eq!((recovered.applied_count, recovered.removed_count), (1, 0));
+    assert_eq!(f.commit_snapshots(&view, &cycle).await, (0, 0));
+    let receipt = f.seal(&cycle).await;
+    f.assert_oracle(&view, &receipt.state_digest).await;
+    assert_eq!(f.journal_count().await, 3);
+}
+
+#[tokio::test]
+async fn manager_current_stream_rejects_persisted_row_80001_without_partial_commit() {
+    let f = Fixture::new().await;
+    let view = View::new();
+    let cycle = f.resolve(&view, 1).await;
+    let input = f.snapshot(&view, &cycle, ProjectionEntityKind::Order);
+    // Direct TEST_ONLY fixture rows, in this disposable epoch only. Exercise
+    // the database-result sentinel, not merely an oversized incoming count.
+    f.seed_bulk_current(80001).await;
+    assert!(matches!(
+        f.store
+            .commit_manager_projection_snapshot(&f.scope, f.epoch, f.lease.proof(), &input, at(1),)
+            .await,
+        Err(StoreError::InvalidManagerProjectionSnapshot)
+    ));
+    let retained: i64 =
+        sqlx::query_scalar("SELECT count(*) FROM portal_projection.entities WHERE epoch_id=$1")
+            .bind(f.epoch)
+            .fetch_one(&f.pool)
+            .await
+            .unwrap();
+    let commits: i64 = sqlx::query_scalar(
+        "SELECT count(*) FROM portal_projection.manager_projection_commits WHERE epoch_id=$1",
+    )
+    .bind(f.epoch)
+    .fetch_one(&f.pool)
+    .await
+    .unwrap();
+    assert_eq!((retained, commits, f.journal_count().await), (80001, 0, 0));
+}
+
+#[tokio::test]
+async fn manager_epoch_stream_refuses_row_80001_and_original_receipt_recovers() {
+    let f = Fixture::new().await;
+    let view = rows(1);
+    let (first, _, _, _) = f.commit(&view, 1).await;
+    f.seed_bulk_current(80000).await;
+    let same = f.cycle(&view, 2);
+    assert!(matches!(
+        f.store
+            .manager_projection_cycle_id(&f.scope, f.epoch, f.lease.proof(), &same,)
+            .await,
+        Err(StoreError::InvalidManagerProjectionSnapshot)
+    ));
+    let retained: i64 =
+        sqlx::query_scalar("SELECT count(*) FROM portal_projection.entities WHERE epoch_id=$1")
+            .bind(f.epoch)
+            .fetch_one(&f.pool)
+            .await
+            .unwrap();
+    assert_eq!((retained, f.journal_count().await), (80001, 1));
+    // Repair only the fixture corruption and reuse the same original receipt
+    // request, proving the aborted stream did not poison the transaction pool.
+    sqlx::query(
+        "DELETE FROM portal_projection.entities
+         WHERE epoch_id=$1 AND entity_id LIKE 'TEST_ONLY.bulk.%'",
+    )
+    .bind(f.epoch)
+    .execute(&f.pool)
+    .await
+    .unwrap();
+    let recovered = f
+        .store
+        .manager_projection_cycle_id(&f.scope, f.epoch, f.lease.proof(), &same)
+        .await
+        .unwrap();
+    assert_eq!(recovered, first.cycle_id);
+    assert_eq!(f.journal_count().await, 1);
 }
 
 #[tokio::test]
