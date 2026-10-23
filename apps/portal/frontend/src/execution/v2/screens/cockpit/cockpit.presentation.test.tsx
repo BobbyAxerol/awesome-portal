@@ -281,7 +281,7 @@ describe("evidence header and verdict", () => {
 
   it("prints no verdict line when the row publishes neither count nor clock", async () => {
     const bare = { ...inbox(), rawRows: [wire("apr_a", "R1", "stan", "Alpha One", { sla: null, quorum_met: null, quorum_required: null })] } as InboxResult;
-    const rows = [row("apr_a", "R1", "Alpha One", { sla: null, quorumMet: null, quorumRequired: null })];
+    const rows = [row("apr_a", "R1", "Alpha One", { sla: undefined, quorumMet: null, quorumRequired: null })];
     bare.page = { ...bare.page, rows };
     await mount(standard({ listApprovals: () => ({ ok: true, value: bare }) }), "/execution/approvals?sel=apr_a");
     expect(within(evidence()).queryByTestId("ck-verdict-line")).toBeNull();
@@ -468,7 +468,7 @@ describe("lapseView", () => {
 /* ── the simulated history ────────────────────────────────────────────────── */
 
 describe("the simulated decisions of today (register 2d)", () => {
-  const history = (simulated: boolean, nowIso = "2026-10-17T12:04:00.000Z") =>
+  const history = (simulated: boolean) =>
     answerFixtureRequest({ method: "GET", path: "/api/v1/execution/governance/approvals/history", search: "?limit=50", headers: {}, body: null }, { ...V2_OPTIONS, simulated })!;
 
   it("the sparse default is unchanged and the simulated lane adds two decisions ahead of the canonical row, in the same shape", () => {
