@@ -31918,3 +31918,34 @@ Full workspace fmt PASS. Strict Clippy caught redundant must_use, documentation
 markup and test-literal style; corrected without suppressions. Final six-package
 all-target strict Clippy PASS. These are correctness fixtures/loopback sockets and
 real disposable PG, not commissioned native source or production capacity.
+
+**Financial source adaptation (04/05/09):** added
+`maximum-data-adapter::financial_report::PublishedFinancialReport::adapt` for
+the actual `pma.report-publication-history-item.v1` produced by PM
+`report_publication_history.py`/`report_wire.py`. Select original report/version,
+export scope+generation/schema/redaction, snapshot, persistence hash, source
+census and valuation refs explicitly; a correction selects fresh pins, never
+silently follows latest. All17 nullable columns require explicit null; decimal
+strings, UTC milliseconds plus sub-millisecond microseconds, archived accounts,
+original owner and selected history are preserved. No Rust monetary calculator,
+new report API, totals table or current-policy substitute was added.
+
+| Published fact | Meaning retained by the adapter | Forbidden substitution |
+|---|---|---|
+| rows.economics.nav | Selected account/report NAV | Wallet equity, approved budget or live native balance |
+| realized_pnl / unrealized_pnl | Exact source decimals/null, same cut/currency/basis | Capital transfers or inferred net-PnL formula |
+| fees / funding / interest | Source cost facts; null stays unknown | Null-to-zero or complete-cost claim |
+| gross_exposure / net_exposure | Source economic exposure | Invented long/short breakdown |
+| controls.nominal_budget / amount_locked / recall_pending | Allocation/control dimensions | NAV, profit or actual venue movement |
+| statements.economic_additions / economic_returns | Capital flows, separate from economics | Profit, paid fees or current wallet equity |
+| source_id / leaves / physical_ref | Exact source attribution; same-source duplicates must agree, economic leaves disjoint | Account+portfolio/native double counting |
+| native / native_snapshot | Separate venue/custody basis and original version | Additive internal-account total |
+| strategy_id / deployment_id / account_id | Existing immutable source IDs | Invented display labels/group roster |
+
+Order VWAP/original fee currency, long/short splits and distinct wallet/native
+equity are not fields of this report wire. Use an independently published
+Manager/domain source if available; otherwise retain typed absence, not a
+derived or falsely complete value. Original header quality is component quality,
+not aggregate completeness. `AS_PUBLISHED_NOT_CURRENT` and selected-history
+coverage do not imply current native financial authority. Fourteen new financial
+tests plus six existing maximum-data tests passed in the shared unit gate.
