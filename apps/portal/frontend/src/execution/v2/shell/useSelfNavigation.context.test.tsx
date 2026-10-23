@@ -95,6 +95,35 @@ describe("nothing is asked without a scope", () => {
   });
 });
 
+describe("resolvedWorkspaceId (WP-D: the Access page's workspace when the address names none)", () => {
+  it("is the resolved workspace as soon as the context says RESOLVED, even while the navigation is still loading or has failed", async () => {
+    const { port, navReads, ctxReads } = manualPort();
+    const view = mount({}, port);
+    expect(view.result.current.resolvedWorkspaceId).toBeNull(); // context still loading
+    await act(async () => ctxReads[0]!.resolve(ctxOk(context("RESOLVED_SOLE_WORKSPACE_WITH_CURRENT_GRANT_RECORD"))));
+    expect(view.result.current.resolvedWorkspaceId).toBe("ws_TEST_ONLY_shared");
+    await act(async () => navReads[0]!.resolve({ kind: "denied", status: 403, code: null, requestId: null }));
+    expect(view.result.current.phase).toBe("failed");
+    expect(view.result.current.resolvedWorkspaceId).toBe("ws_TEST_ONLY_shared");
+  });
+
+  it("is null when the address names the workspace (the address is the answer, nothing to resolve), when nothing is asked, and when the context failed", async () => {
+    const named = manualPort();
+    const a = mount({ workspaceId: "ws_a" }, named.port);
+    await act(async () => named.navReads[0]!.resolve(navOk(navigation("ws_a"))));
+    expect(a.result.current.resolvedWorkspaceId).toBeNull();
+
+    const idle = manualPort();
+    expect(mount({ enabled: false }, idle.port).result.current.resolvedWorkspaceId).toBeNull();
+
+    const failed = manualPort();
+    const f = mount({}, failed.port);
+    await act(async () => failed.ctxReads[0]!.resolve({ kind: "denied", status: 403, code: null, requestId: null }));
+    expect(f.result.current.phase).toBe("failed");
+    expect(f.result.current.resolvedWorkspaceId).toBeNull();
+  });
+});
+
 describe("RESOLVED", () => {
   it("asks the context once (session only), then the navigation for THAT workspace in the selected environment", async () => {
     const { port, navReads, ctxReads } = manualPort();
@@ -144,6 +173,8 @@ describe("AMBIGUOUS: the member chooses, nothing is guessed", () => {
     expect(view.result.current.unavailable).toBeNull();
     expect(view.result.current.gate.tokens.size).toBe(0);
     expect(view.result.current.selfEntry).toBeNull();
+    // An ambiguous context resolves no workspace for the Access page either: the member chooses.
+    expect(view.result.current.resolvedWorkspaceId).toBeNull();
     expect(navReads).toHaveLength(0);
     await act(async () => { vi.advanceTimersByTime(30_000); });
     expect(navReads).toHaveLength(0); // however long the member waits

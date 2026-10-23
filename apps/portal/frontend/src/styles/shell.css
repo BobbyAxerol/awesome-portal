@@ -2757,6 +2757,26 @@ html {
 :root[data-theme="execution-carbon"] .portal-topbar .portal-search-btn,
 :root[data-theme="execution-carbon"] .portal-topbar .portal-pref-check { display: none; }
 :root[data-theme="execution-carbon"] .portal-breadcrumbs { flex: 1; }
+/* WP-D: the V2 count badges stay on the type scale (10px is its floor); the V1 badge keeps its own 9px. */
+:root[data-theme="execution-carbon"] .portal-navbadge[data-v2-count] { font: 600 10px/14px var(--font-mono); }
+/* WP-D (audit 2026-10-23, shell): on a route the V2 command bar owns the search is a visible field ("Search or jump to", Cmd K) and
+   the signed-in user is named. Both carry a data attribute that only that route's TopBar sets, so the flag-off carbon topbar keeps
+   hiding the plain button exactly as before. */
+:root[data-theme="execution-carbon"] .portal-topbar .portal-search-btn[data-v2-search] { display: inline-flex; margin-left: auto; }
+@media (min-width: 721px) {
+  :root[data-theme="execution-carbon"] .portal-topbar .portal-search-btn[data-v2-search] { width: clamp(150px, 14vw, 200px); justify-content: flex-start; }
+  /* The field and the user chip take room from the trail, so on a V2 bar the trail wraps inside the bar (two 16px lines fit in 56px)
+     at every width, as it already does between 721px and 1279px, instead of cutting mid-word. */
+  :root[data-theme="execution-carbon"] .portal-topbar:has([data-v2-search]) .portal-breadcrumbs { flex-wrap: wrap; row-gap: 0; max-height: 32px; min-width: 0; }
+  :root[data-theme="execution-carbon"] .portal-topbar:has([data-v2-search]) .portal-breadcrumbs .portal-crumb { white-space: normal; min-width: 0; overflow-wrap: anywhere; }
+  :root[data-theme="execution-carbon"] .portal-topbar .portal-search-btn[data-v2-search] kbd { margin-left: auto; }
+}
+:root[data-theme="execution-carbon"] .portal-topbar .portal-search-btn[data-v2-search] .portal-search-label { color: var(--ink-faint); }
+:root[data-theme="execution-carbon"] .portal-topbar .portal-user-chip { display: inline-block; font: 500 10px/14px var(--font-mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-soft); background: var(--surface-2); border: 1px solid var(--line); border-radius: 0; padding: 3px 8px; white-space: nowrap; flex: 0 1 auto; min-width: 0; max-width: 260px; overflow: hidden; text-overflow: ellipsis; text-decoration: none; }
+:root[data-theme="execution-carbon"] .portal-topbar a.portal-user-chip:hover { color: var(--ink); border-color: var(--accent); }
+@media (max-width: 1279px) {
+  :root[data-theme="execution-carbon"] .portal-topbar .portal-user-chip { display: none; }
+}
 /* UXM-07 audit B #24: between the phone bar and the wide bar the trail used to clip mid-word ("dep_canary_01 · c").
    The workspace chip (one workspace, it names nothing) gives its room to the trail, and the trail wraps to a second
    line inside the same 56px bar (two 16px lines fit) instead of cutting. The words stay in the DOM for assistive tech. */

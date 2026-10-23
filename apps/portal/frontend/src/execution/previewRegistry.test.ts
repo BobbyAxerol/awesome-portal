@@ -27,7 +27,9 @@ describe("Execution integration preview registry", () => {
     const declared = registry.screens
       .map((screen) => screen.screen_id)
       .filter((screenId) => screenId.startsWith("EXECUTION_"));
-    expect(EXECUTION_PREVIEW_EXTRA_ROUTES).toEqual([]);
+    // The one extra path is the Trade Replay alias (WP-D); it names an already declared screen, so coverage stays exact.
+    expect(EXECUTION_PREVIEW_EXTRA_ROUTES).toEqual([{ path: "/deployments/alphas/:alphaId/replay", screenId: "EXECUTION_ALPHA_360_SCREEN" }]);
+    expect(declared).toContain("EXECUTION_ALPHA_360_SCREEN");
     expect([...EXECUTION_PREVIEW_SCREEN_IDS].sort()).toEqual(declared.sort());
     expect(declared.every(hasExecutionPreview)).toBe(true);
   });

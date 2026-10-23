@@ -220,3 +220,51 @@ describe("W3 · the Navigation unavailable line (notice prop)", () => {
     expect(view.container.querySelector("nav")?.firstElementChild?.className).toBe("portal-navgroup");
   });
 });
+
+describe("WP-D · V2 count badges (badges prop)", () => {
+  const badges = {
+    EXECUTION_OPERATIONS: { count: 3, tone: "bad" as const, label: "3 open exceptions (queue health, FE-CAT-2)" },
+    EXECUTION_APPROVALS: { count: 4, tone: "warn" as const, label: "4 pending approvals (approvals read)" },
+  };
+  const mountWith = (v2Shell: boolean, collapsed = false, given: Record<string, { count: number; tone: "bad" | "warn"; label: string }> | undefined = badges) =>
+    render(
+      <MemoryRouter initialEntries={["/execution"]}>
+        <Sidebar registry={registry} options={{ capabilities: [...V2_ROLE_PRESETS.manager] }} collapsed={collapsed} v2Shell={v2Shell} badges={given} />
+      </MemoryRouter>,
+    );
+  const linkOf = (view: ReturnType<typeof mountWith>, label: string) =>
+    [...view.container.querySelectorAll("a.portal-navitem")].find((a) => a.querySelector(".portal-navitem-label")?.textContent === label)!;
+
+  it("draws a count on Operations and on Approvals only, each naming its read", () => {
+    const view = mountWith(true);
+    const drawn = [...view.container.querySelectorAll("[data-v2-count]")].map((n) => [n.getAttribute("data-v2-count"), n.textContent, n.getAttribute("data-tone"), n.getAttribute("title")]);
+    expect(drawn).toEqual([
+      ["EXECUTION_OPERATIONS", "3", "bad", "3 open exceptions (queue health, FE-CAT-2)"],
+      ["EXECUTION_APPROVALS", "4", "warn", "4 pending approvals (approvals read)"],
+    ]);
+    expect(linkOf(view, "Operations").querySelector("[data-v2-count]")?.textContent).toBe("3");
+    expect(linkOf(view, "Approvals").querySelector("[data-v2-count]")?.textContent).toBe("4");
+    expect(linkOf(view, "Overview").querySelector("[data-v2-count]")).toBeNull();
+  });
+
+  it("no badge for an unpublished count: absent entries draw nothing", () => {
+    const view = mountWith(true, false, { EXECUTION_OPERATIONS: badges.EXECUTION_OPERATIONS });
+    expect(view.container.querySelectorAll("[data-v2-count]")).toHaveLength(1);
+    cleanup();
+    expect(mountWith(true, false, {}).container.querySelectorAll("[data-v2-count]")).toHaveLength(0);
+  });
+
+  it("flag off: the prop is ignored and the DOM is the one without it", () => {
+    const html = mountWith(false).container.innerHTML;
+    cleanup();
+    expect(mountWith(false, false, {}).container.innerHTML).toBe(html);
+    expect(html).not.toContain("data-v2-count");
+  });
+
+  it("the collapsed rail keeps the count for assistive tech (hidden text), not as a chip", () => {
+    const view = mountWith(true, true);
+    expect(view.container.querySelectorAll("[data-v2-count]")).toHaveLength(0);
+    expect(view.container.textContent).toContain("Operations, 3 open exceptions (queue health, FE-CAT-2)");
+    expect(view.container.textContent).toContain("Approvals, 4 pending approvals (approvals read)");
+  });
+});

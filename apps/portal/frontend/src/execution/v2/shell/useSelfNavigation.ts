@@ -77,6 +77,12 @@ export interface SelfNavigationView {
    * `null` fails closed (loading, expired, failed, denied, absent).
    */
   selfEntry: { workspaceId: string } | null;
+  /**
+   * The workspace the self-context RESOLVED because the address names none (`defaultWorkspace.state === RESOLVED`), regardless of
+   * whether the navigation projection is live. `null` when the address names one, or the context is loading, failed, expired,
+   * ambiguous, none or unavailable: a workspace is never guessed. The shell hands it to the Access page.
+   */
+  resolvedWorkspaceId: string | null;
   /** Ask again for the current scope. Joins a read already in flight; restores the one automatic expiry re-read. */
   retry(): void;
 }
@@ -240,7 +246,7 @@ export function useSelfNavigation(options: UseSelfNavigationOptions): SelfNaviga
   const nowMs = nowRef.current();
   const expired = slot !== null && slot.phase === "ready" && selfProjectionExpiry(slot.navigation, nowMs).state === "expired";
 
-  const navigationView = useMemo<Omit<SelfNavigationView, "chooser" | "selfEntry" | "retry">>(() => {
+  const navigationView = useMemo<Omit<SelfNavigationView, "chooser" | "selfEntry" | "resolvedWorkspaceId" | "retry">>(() => {
     if (scopeKey === null) return { phase: "idle", gate: NO_GATE, unavailable: null };
     if (slot === null) return { phase: "loading", gate: NO_GATE, unavailable: null };
     switch (slot.phase) {
@@ -271,7 +277,7 @@ export function useSelfNavigation(options: UseSelfNavigationOptions): SelfNaviga
   const contextValue = context.context;
   const contextFailure = context.failure;
   return useMemo<SelfNavigationView>(() => {
-    const base = { chooser: null, selfEntry: null, retry: retryBoth } as const;
+    const base = { chooser: null, selfEntry: null, resolvedWorkspaceId: null, retry: retryBoth } as const;
     // The address names a workspace (or nothing is asked): the navigation read alone, as before.
     if (addressWorkspace !== null || contextPhase === "idle") {
       const live = navigationView.phase === "live" && workspaceId !== null;
@@ -289,7 +295,7 @@ export function useSelfNavigation(options: UseSelfNavigationOptions): SelfNaviga
         switch (chosen.state) {
           case "RESOLVED": {
             const live = navigationView.phase === "live" && contextValue!.selfEntry.permission === "ALLOWED";
-            return { ...navigationView, ...base, selfEntry: live ? { workspaceId: chosen.workspaceId } : null };
+            return { ...navigationView, ...base, selfEntry: live ? { workspaceId: chosen.workspaceId } : null, resolvedWorkspaceId: chosen.workspaceId };
           }
           case "AMBIGUOUS":
             // Never auto-picked: the candidates are offered in the order published and the member chooses.

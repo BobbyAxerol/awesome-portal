@@ -1,0 +1,285 @@
+/**
+ * Entity search of the command bar (WP-D): every kind goes through the read that owns it, results are the server's rows, capped, and
+ * every group names its read. No read, no invented row.
+ */
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+import { MemoryRouter, useLocation } from "react-router-dom";
+import { afterEach, describe, expect, it, vi } from "vitest";
+
+import type { PortalRegistryDocument } from "../../../portal/contracts";
+import type { ExecutionApi } from "../../api/ports";
+import { ExecCommandBar } from "./ExecCommandBar";
+import { MIN_QUERY, PER_KIND, searchEntities, searchSourcesFor, type SearchSources } from "./entitySearch";
+import { V2_ROLE_PRESETS } from "./roleNav";
+
+afterEach(cleanup);
+
+const registry: PortalRegistryDocument = JSON.parse(readFileSync(join(process.cwd(), "../registry/fixtures/registry.public.json"), "utf8"));
+const MANAGER = { capabilities: [...V2_ROLE_PRESETS.manager] };
+const ALL: SearchSources = { alpha: true, portfolio: true, account: true, operation: true, approval: true };
+const signal = () => new AbortController().signal;
+
+const ok = <T,>(value: T) => ({ ok: true as const, value });
+const fail = (reason: string) => ({ ok: false as const, status: "unavailable" as const, reason });
+
+interface Calls {
+  alphas: unknown[];
+  bindings: unknown[];
+  portfolios: number;
+  operations: unknown[];
+  incidents: unknown[];
+  approvals: unknown[];
+}
+
+/** A port that answers the six reads the search uses, and records what it was asked. */
+function fakeApi(over: Partial<Record<keyof ExecutionApi, unknown>> = {}): { api: ExecutionApi; calls: Calls } {
+  const calls: Calls = { alphas: [], bindings: [], portfolios: 0, operations: [], incidents: [], approvals: [] };
+  const api = {
+    getAlphaFleet: async (query: unknown) => {
+      calls.alphas.push(query);
+      return ok({ page: { rows: [{ alphaId: "al_btc", alphaLabel: "BTC-Trend", version: "v3", stage: "LIVE" }, { alphaId: "al_eth", alphaLabel: "", version: "v1", stage: "PAPER" }], filteredCount: 14, totalCount: 40 } });
+    },
+    getBindings: async (query: unknown) => {
+      calls.bindings.push(query);
+      return ok({ page: { rows: [{ bindingId: "b1", accountId: "acct_main", venue: "BINANCE" }, { bindingId: "b2", accountId: "acct_main", venue: "BINANCE" }], filteredCount: 2, totalCount: 9 } });
+    },
+    listPortfolios: async () => {
+      calls.portfolios += 1;
+      return ok({ truncated: true, items: [{ portfolioId: "pf_core", name: "Core Book" }, { portfolioId: "pf_alt", name: "Alt Sleeve" }, { portfolioId: "pf_core2", name: "Other" }] });
+    },
+    listOperationalQueueV2: async (query: unknown) => {
+      calls.operations.push(query);
+      return ok({ kind: "queue", queue: { page: { filteredCount: 1, rows: [{ operationId: "op_9", commandKey: "RECALL", targetType: "PORTFOLIO", targetId: "pf_core" }] } } });
+    },
+    getIncidentRootV2: async (id: string, workspace?: string) => {
+      calls.incidents.push([id, workspace]);
+      return ok({ kind: "incident", incident: { incidentId: id, workflowState: "OPEN" } });
+    },
+    listApprovals: async (query: unknown) => {
+      calls.approvals.push(query);
+      return ok({ page: { rows: [{ id: "AP-201", gate: "R1", subject: "Carry v3.2 to PF-MAIN" }, { id: "AP-352", gate: "R2", subject: "Core budget" }] }, counts: { pending: 2, overdue: null, dueSoon: null } });
+    },
+    ...over,
+  } as unknown as ExecutionApi;
+  return { api, calls };
+}
+
+describe("searchSourcesFor: only the kinds the caller's rail lists", () => {
+  it("a manager searches all five kinds", () => {
+    expect(searchSourcesFor(registry, MANAGER)).toEqual(ALL);
+  });
+  it("a researcher (own R1 reads only) searches alphas and approvals, never portfolios, accounts or operations", () => {
+    expect(searchSourcesFor(registry, { capabilities: [...V2_ROLE_PRESETS.researcher] })).toEqual({ alpha: true, portfolio: false, account: false, operation: false, approval: true });
+  });
+  it("no capability: alphas only", () => {
+    expect(searchSourcesFor(registry, { capabilities: [] })).toEqual({ alpha: true, portfolio: false, account: false, operation: false, approval: false });
+  });
+});
+
+describe("searchEntities", () => {
+  it("searches nothing under the minimum length", async () => {
+    const { api, calls } = fakeApi();
+    const out = await searchEntities(api, "a".repeat(MIN_QUERY - 1), ALL, undefined, signal());
+    expect(out).toEqual({ entries: [], notes: [] });
+    expect(calls.alphas).toHaveLength(0);
+    expect(calls.portfolios).toBe(0);
+  });
+
+  it("alphas: the server searches by name; rows are the server's, with their read named and the match count", async () => {
+    const { api, calls } = fakeApi();
+    const out = (await searchEntities(api, "btc", { ...ALL, portfolio: false, account: false, operation: false, approval: false }, undefined, signal()))!;
+    expect(calls.alphas).toEqual([{ search: "btc", limit: PER_KIND, environment: "all" }]);
+    expect(out.entries.map((e) => [e.group, e.label, e.detail, e.href])).toEqual([
+      ["Alphas", "BTC-Trend", "LIVE · v3", "/deployments/alphas/al_btc"],
+      // No label published: the id is the label, not an invented name.
+      ["Alphas", "al_eth", "PAPER · v1", "/deployments/alphas/al_eth"],
+    ]);
+    expect(out.notes).toEqual(["Alphas: alpha fleet read, server search by name, 2 of 14 shown"]);
+  });
+
+  it("accounts: the bindings read's own search; a repeated account is listed once", async () => {
+    const { api, calls } = fakeApi();
+    const out = (await searchEntities(api, "acct", { ...ALL, alpha: false, portfolio: false, operation: false, approval: false }, undefined, signal()))!;
+    expect(calls.bindings).toEqual([{ search: "acct", limit: PER_KIND, environment: "live" }]);
+    expect(out.entries.map((e) => [e.label, e.detail, e.href])).toEqual([["acct_main", "BINANCE", "/deployments/accounts/acct_main"]]);
+    expect(out.notes[0]).toBe("Accounts: bindings read, server search in Real-funded, 1 of 2 shown");
+    // The read takes one environment: the bar's own is what is asked, and the note names it.
+    const paper = (await searchEntities(api, "acct", { ...ALL, alpha: false, portfolio: false, operation: false, approval: false }, undefined, signal(), "paper"))!;
+    expect(calls.bindings[1]).toEqual({ search: "acct", limit: PER_KIND, environment: "paper" });
+    expect(paper.notes[0]).toBe("Accounts: bindings read, server search in Paper, 1 of 2 shown");
+  });
+
+  it("portfolios: no search parameter exists, so the text is matched here and the note says so, including a truncated list", async () => {
+    const { api, calls } = fakeApi();
+    const out = (await searchEntities(api, "core", { ...ALL, alpha: false, account: false, operation: false, approval: false }, undefined, signal()))!;
+    expect(calls.portfolios).toBe(1);
+    expect(out.entries.map((e) => e.href)).toEqual(["/deployments/portfolios/pf_core", "/deployments/portfolios/pf_core2"]);
+    expect(out.notes[0]).toBe("Portfolios: portfolio list read (no search parameter), matched here in 3 loaded, list truncated by the server, 2 of 2 shown");
+  });
+
+  it("operations: the queue read by exact target id, with the workspace; an inc_ text also asks the incident read by exact id", async () => {
+    const { api, calls } = fakeApi();
+    const only = { ...ALL, alpha: false, portfolio: false, account: false, approval: false };
+    const out = (await searchEntities(api, "pf_core", only, "ws_1", signal()))!;
+    expect(calls.operations).toEqual([{ targetId: "pf_core", limit: PER_KIND, workspaceId: "ws_1" }]);
+    expect(calls.incidents).toHaveLength(0);
+    expect(out.entries[0]).toMatchObject({ group: "Operations", label: "op_9", href: "/execution/operations?operation=op_9" });
+    expect(out.notes).toEqual(["Operations: queue read, exact target id, 1 of 1 shown"]);
+
+    const inc = (await searchEntities(api, "inc_77", only, "ws_1", signal()))!;
+    expect(calls.incidents).toEqual([["inc_77", "ws_1"]]);
+    expect(inc.entries.map((e) => [e.group, e.href])).toContainEqual(["Incidents", "/execution/operations/incidents/inc_77"]);
+  });
+
+  it("an incident id that is not found says so; it is never invented", async () => {
+    const { api } = fakeApi({ getIncidentRootV2: async () => fail("not found") });
+    const out = (await searchEntities(api, "inc_404", { ...ALL, alpha: false, portfolio: false, account: false, approval: false }, undefined, signal()))!;
+    expect(out.entries.map((e) => e.group)).not.toContain("Incidents");
+    expect(out.notes).toContain("Incidents: incident read, exact id, none found");
+  });
+
+  it("approvals: no search parameter exists, so the first page is matched here by id or subject and the note says how many rows", async () => {
+    const { api, calls } = fakeApi();
+    const out = (await searchEntities(api, "carry", { ...ALL, alpha: false, portfolio: false, account: false, operation: false }, "ws_1", signal()))!;
+    expect(calls.approvals).toEqual([{ filter: "ALL", limit: 50, workspaceId: "ws_1" }]);
+    expect(out.entries.map((e) => [e.label, e.detail, e.href])).toEqual([["Carry v3.2 to PF-MAIN", "R1 · AP-201", "/governance/approvals?sel=AP-201"]]);
+    expect(out.notes[0]).toBe("Approvals: approvals read (no search parameter), matched here in the first 2 rows, 1 of 1 shown");
+    const byId = (await searchEntities(api, "ap-352", { ...ALL, alpha: false, portfolio: false, account: false, operation: false }, undefined, signal()))!;
+    expect(byId.entries.map((e) => e.href)).toEqual(["/governance/approvals?sel=AP-352"]);
+  });
+
+  it("caps every kind at PER_KIND whatever the server returns", async () => {
+    const many = Array.from({ length: 12 }, (_, i) => ({ alphaId: `al_${i}`, alphaLabel: `A${i}`, version: "v1", stage: "PAPER" }));
+    const { api } = fakeApi({ getAlphaFleet: async () => ok({ page: { rows: many, filteredCount: 12, totalCount: 12 } }) });
+    const valid = (await searchEntities(api, "al", { ...ALL, portfolio: false, account: false, operation: false, approval: false }, undefined, signal()))!;
+    expect(valid.entries).toHaveLength(PER_KIND);
+    expect(valid.notes[0]).toMatch(/5 of 12 shown/);
+  });
+
+  it("a failing read is one named note and does not hide the others; a thrown read is a note too", async () => {
+    const { api } = fakeApi({
+      getAlphaFleet: async () => fail("Alpha fleet read refused (403)"),
+      listApprovals: async () => {
+        throw new Error("boom");
+      },
+    });
+    const out = (await searchEntities(api, "core", ALL, undefined, signal()))!;
+    expect(out.notes).toContain("Alphas: not available (Alpha fleet read refused (403))");
+    expect(out.notes).toContain("Approvals: the read did not complete");
+    expect(out.entries.map((e) => e.group)).toEqual(expect.arrayContaining(["Portfolios", "Operations"]));
+  });
+
+  it("an aborted search resolves to null: a stale answer is never returned", async () => {
+    const { api } = fakeApi();
+    const controller = new AbortController();
+    const pending = searchEntities(api, "core", ALL, undefined, controller.signal);
+    controller.abort();
+    expect(await pending).toBeNull();
+  });
+});
+
+function Where() {
+  const location = useLocation();
+  return <output data-testid="where">{`${location.pathname}${location.search}`}</output>;
+}
+
+describe("ExecCommandBar search", () => {
+  function mount(api: ExecutionApi, capabilities = MANAGER.capabilities, url = "/execution?env=paper&workspace_id=ws_1") {
+    return render(
+      <MemoryRouter initialEntries={[url]}>
+        <ExecCommandBar registry={registry} options={{ capabilities }} open onClose={() => undefined} searchApi={api} debounceMs={5} />
+        <Where />
+      </MemoryRouter>,
+    );
+  }
+
+  it("debounces: a burst of keystrokes is one search, and the results are grouped under the read that answered", async () => {
+    const { api, calls } = fakeApi();
+    mount(api);
+    const input = screen.getByRole("combobox");
+    fireEvent.change(input, { target: { value: "co" } });
+    fireEvent.change(input, { target: { value: "cor" } });
+    fireEvent.change(input, { target: { value: "core" } });
+    await waitFor(() => expect(screen.getByRole("list", { name: "Reads used" })).toBeTruthy());
+    expect(calls.alphas).toHaveLength(1);
+    expect(calls.alphas[0]).toMatchObject({ search: "core" });
+    const notes = screen.getByRole("list", { name: "Reads used" }).textContent ?? "";
+    expect(notes).toContain("Alphas: alpha fleet read, server search by name");
+    expect(notes).toContain("Approvals: approvals read (no search parameter)");
+    const groups = [...document.querySelectorAll(".exec-cmdbar-group")].map((g) => g.textContent);
+    expect(groups).toEqual(expect.arrayContaining(["Alphas", "Portfolios"]));
+  });
+
+  it("choosing a result navigates to its screen and keeps the context", async () => {
+    const { api } = fakeApi();
+    mount(api);
+    fireEvent.change(screen.getByRole("combobox"), { target: { value: "btc" } });
+    const option = await screen.findByRole("option", { name: /BTC-Trend/ });
+    fireEvent.click(option);
+    const url = new URL(screen.getByTestId("where").textContent ?? "", "http://x");
+    expect(url.pathname).toBe("/deployments/alphas/al_btc");
+    expect(url.searchParams.get("env")).toBe("paper");
+    expect(url.searchParams.get("workspace_id")).toBe("ws_1");
+  });
+
+  it("passes the address's workspace to the workspace-scoped reads and its environment to the bindings read", async () => {
+    const { api, calls } = fakeApi();
+    mount(api);
+    fireEvent.change(screen.getByRole("combobox"), { target: { value: "core" } });
+    await waitFor(() => expect(calls.approvals).toHaveLength(1));
+    expect(calls.approvals[0]).toMatchObject({ workspaceId: "ws_1" });
+    expect(calls.operations[0]).toMatchObject({ workspaceId: "ws_1" });
+    expect(calls.bindings[0]).toMatchObject({ environment: "paper" });
+  });
+
+  it("a caller without the capabilities never triggers those reads", async () => {
+    const { api, calls } = fakeApi();
+    mount(api, [], "/execution");
+    fireEvent.change(screen.getByRole("combobox"), { target: { value: "core" } });
+    await waitFor(() => expect(calls.alphas).toHaveLength(1));
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 30));
+    });
+    expect(calls.portfolios).toBe(0);
+    expect(calls.bindings).toHaveLength(0);
+    expect(calls.operations).toHaveLength(0);
+    expect(calls.approvals).toHaveLength(0);
+  });
+
+  it("shorter than the minimum: no read at all, Go to rows only", async () => {
+    const spy = vi.fn();
+    const { api } = fakeApi({ getAlphaFleet: async (q: unknown) => (spy(q), ok({ page: { rows: [], filteredCount: 0, totalCount: 0 } })) });
+    mount(api);
+    fireEvent.change(screen.getByRole("combobox"), { target: { value: "a" } });
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 30));
+    });
+    expect(spy).not.toHaveBeenCalled();
+    expect(screen.queryByRole("list", { name: "Reads used" })).toBeNull();
+  });
+
+  it("closing the bar and reopening it starts from an empty search", async () => {
+    const { api } = fakeApi();
+    const view = render(
+      <MemoryRouter initialEntries={["/execution"]}>
+        <ExecCommandBar registry={registry} options={MANAGER} open onClose={() => undefined} searchApi={api} debounceMs={5} />
+      </MemoryRouter>,
+    );
+    fireEvent.change(screen.getByRole("combobox"), { target: { value: "core" } });
+    await waitFor(() => expect(screen.getByRole("list", { name: "Reads used" })).toBeTruthy());
+    view.rerender(
+      <MemoryRouter initialEntries={["/execution"]}>
+        <ExecCommandBar registry={registry} options={MANAGER} open={false} onClose={() => undefined} searchApi={api} debounceMs={5} />
+      </MemoryRouter>,
+    );
+    view.rerender(
+      <MemoryRouter initialEntries={["/execution"]}>
+        <ExecCommandBar registry={registry} options={MANAGER} open onClose={() => undefined} searchApi={api} debounceMs={5} />
+      </MemoryRouter>,
+    );
+    expect((screen.getByRole("combobox") as HTMLInputElement).value).toBe("");
+    expect(screen.queryByRole("list", { name: "Reads used" })).toBeNull();
+  });
+});

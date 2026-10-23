@@ -9,7 +9,7 @@
  * Only bootstrap routes are hard-coded (FRONTEND_HANDOFF §2): registry error,
  * not-found, and the legacy compatibility redirects.
  */
-import { Suspense, lazy, type ComponentType } from "react";
+import { Suspense, lazy, useContext, type ComponentType } from "react";
 import { Navigate, Route, Routes, useLocation, useSearchParams } from "react-router-dom";
 
 import { ResultsSkeleton, StateView } from "../components/ui";
@@ -27,7 +27,7 @@ import {
 import { screenDeliveryProfile, screenDeliveryPolicy } from "../execution/profile";
 import { isV2Screen } from "../execution/v2/flags";
 import { withContext } from "../execution/v2/urlState";
-import { SELF_ENTRY_PATH } from "./selfNavView";
+import { SELF_ENTRY_PATH, SelfWorkspaceContext } from "./selfNavView";
 
 const COMPARE_SCREEN_ID = "EXECUTION_COMPARE_SCREEN";
 
@@ -64,6 +64,11 @@ const V2Access = import.meta.env.VITE_EXECUTION_V2_SCREENS
 const V2Users = import.meta.env.VITE_EXECUTION_V2_SCREENS
   ? lazy(() => import("../execution/v2/screens/users"))
   : null;
+// WP-D: the context bar of the V2 pages mounted here (Profile & Access, Users), which sit outside the preview frame that normally draws it.
+// Same raw-env gate; drawn only while the shell flag is on AND the page's own V2 screen is the one mounted.
+const V2PageContextBar = import.meta.env.VITE_EXECUTION_V2_SCREENS
+  ? lazy(() => import("../execution/v2/shell/PageContextBar"))
+  : null;
 // UXM-08: the fixture-only scoped slice. Same raw-env gate, so a flag-off build emits no chunk for it.
 const V2Slice = import.meta.env.VITE_EXECUTION_V2_SCREENS
   ? lazy(() => import("../execution/v2/screens/slice"))
@@ -80,6 +85,10 @@ const ExecutionPreviewRoute = lazy(() =>
   })),
 );
 
+function PageBar() {
+  return V2PageContextBar !== null && isV2Screen("shell") ? <Suspense fallback={null}><V2PageContextBar /></Suspense> : null;
+}
+
 /**
  * `profile` flag on: everyone gets the self-view and owners keep the V1 matrix
  * on a second tab. Off (or the key absent from the manifest): the V1 screen,
@@ -89,11 +98,24 @@ export function UsersEntry() {
   const [search] = useSearchParams();
   if (V2Users === null || !isV2Screen("users") || search.get("view") === "legacy") return <UsersAccess />;
   // D9/D10: a denied roster links to My access, keeping the shared context (workspace_id, env, ...).
-  return <V2Users legacyHref={`${ADMIN_USERS_ROUTE}?view=legacy`} accessHref={withContext(ADMIN_PROFILE_ACCESS_ROUTE, search)} />;
+  return (
+    <>
+      <PageBar />
+      <V2Users legacyHref={`${ADMIN_USERS_ROUTE}?view=legacy`} accessHref={withContext(ADMIN_PROFILE_ACCESS_ROUTE, search)} />
+    </>
+  );
 }
 
 function ProfileAccessEntry() {
-  return V2Access !== null && isV2Screen("profile") ? <V2Access manage={<ProfileAccess />} /> : <ProfileAccess />;
+  // WP-E request: the workspace the shell's self-context resolved (only when the address names none; AMBIGUOUS/NONE stay null),
+  // so "Granted to you" shows without a workspace in the address. The page's own rule keeps the address first.
+  const sessionWorkspaceId = useContext(SelfWorkspaceContext);
+  return V2Access !== null && isV2Screen("profile") ? (
+    <>
+      <PageBar />
+      <V2Access manage={<ProfileAccess />} sessionWorkspaceId={sessionWorkspaceId} />
+    </>
+  ) : <ProfileAccess />;
 }
 
 /**
@@ -291,7 +313,7 @@ export function PortalRoutes({ registry }: { registry: PortalRegistryDocument })
             the admin policy matrix cannot be reached from here whatever the session says. The matrix stays at
             ADMIN_PROFILE_ACCESS_ROUTE behind its owner + capability guard. Mounted only with the `profile` flag; flag off the path
             is not a route (the catch-all answers). A registry feature since rev 8 (PROFILE_ACCESS_SELF: listing only; this explicit route stays the mount). */}
-        {V2Access !== null && isV2Screen("profile") ? <Route path={SELF_ENTRY_PATH} element={<V2Access />} /> : null}
+        {V2Access !== null && isV2Screen("profile") ? <Route path={SELF_ENTRY_PATH} element={<><PageBar /><V2Access /></>} /> : null}
 
         {/* Execution Loop Phase 0 fixtures: components, not a screen. */}
         <Route path={EXECUTION_FIXTURES_ROUTE} element={<ExecutionFixtures />} />

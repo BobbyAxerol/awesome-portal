@@ -7,7 +7,7 @@
  * not published render a typed unavailable state instead.
  */
 import { Fragment, Suspense, lazy, useEffect, useLayoutEffect, useMemo, type ReactNode } from "react";
-import { Navigate, useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { Navigate, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import {
   CommandCenterSnapshotContainer,
 } from "./screens/profileContainers";
@@ -234,6 +234,8 @@ export function windowLockFor(screenId: string, context: EnvLockContext = {}, is
   if (screenId === "EXECUTION_COMMAND_CENTER_SCREEN" && isV2("overview")) return null;
   // Portfolios (register and 360): the group figures, NAV series and contributors all take the bar's window, so the control is drawn.
   if (screenId === "EXECUTION_PORTFOLIO_360_SCREEN" && isV2("portfolios")) return null;
+  // Compare: the one series read takes the bar's window (getManagerSeries `window`), so the control is drawn too.
+  if (screenId === "EXECUTION_COMPARE_SCREEN" && isV2("compare")) return null;
   if (screenId === "EXECUTION_OPERATIONS_QUEUE_SCREEN" && isV2("ops")) return OPERATIONS_WINDOW_LOCK;
   if (screenId === "EXECUTION_FULL_BLOTTER_SCREEN" && isV2("blotter")) return BLOTTER_WINDOW_LOCK;
   if (context.hasDeploymentId !== true) return undefined;
@@ -257,6 +259,12 @@ export interface EnvLockContext {
   hasAlphaId?: boolean;
   /** The stage route carries a deployment id; without one it is a list (the Fleet, or the V1 overview). */
   hasDeploymentId?: boolean;
+}
+/** The canonical URL of the replay alias: the alpha's own route with `tab=replay`, every other param kept. Pure, so the mapping is testable. */
+export function alphaReplayUrl(alphaId: string, search: URLSearchParams | string, hash = ""): string {
+  const next = new URLSearchParams(typeof search === "string" ? search : search.toString());
+  next.set("tab", "replay");
+  return `/deployments/alphas/${encodeURIComponent(alphaId)}?${next.toString()}${hash}`;
 }
 export const PATH_ENV_REASON = "The path sets the environment.";
 /** The reason the S3 stage screens give once they mount: the deployment they read is in one environment. */
@@ -355,6 +363,9 @@ export function ExecutionPreviewRoute({ screenId, profile = null, policy = null,
   const params = useParams();
   const [search] = useSearchParams();
   const navigate = useNavigate();
+  const location = useLocation();
+  // `/deployments/alphas/:alphaId/replay` (WP-C): an alias of the replay tab, redirected to the canonical URL.
+  const isReplayAlias = screenId === "EXECUTION_ALPHA_360_SCREEN" && /\/replay\/?$/.test(location.pathname) && Boolean(params.alphaId);
   // N29: the preview finally owns an HTTP consumer. The registry's delivery
   // profile decides; `?api=http` forces the same-origin BFF for the browser
   // smoke (preview builds only — this route exists only behind the flag).
@@ -630,7 +641,9 @@ export function ExecutionPreviewRoute({ screenId, profile = null, policy = null,
       // The feature's canonical route (/deployments/alphas, no alphaId) is the
       // fleet list — the entry screen of WF 2a; a row opens the alpha's 360.
       // `archived` is reserved (it is the Fleet's lens, not an alpha): with the Fleet on, the old path lands on `?tab=archived`.
-      content = params.alphaId === "archived" && V2ArchivedRedirect && isV2Screen("fleet")
+      content = isReplayAlias && params.alphaId
+        ? <Navigate replace to={alphaReplayUrl(params.alphaId, search, location.hash)} />
+        : params.alphaId === "archived" && V2ArchivedRedirect && isV2Screen("fleet")
         ? <Suspense fallback={null}><V2ArchivedRedirect /></Suspense>
         : params.alphaId
         ? V2Alpha && isV2Screen("alpha")

@@ -21,7 +21,7 @@ import { applyV2Nav } from "../execution/v2/shell/roleNav";
 import { RAIL_CONTEXT_KEYS, withContext } from "../execution/v2/urlState";
 import { iconFor } from "./icons";
 import { usePresentationChrome } from "./presentation";
-import { SELF_ENTRY_PATH } from "./selfNavView";
+import { SELF_ENTRY_PATH, type NavBadges } from "./selfNavView";
 
 interface RailItem {
   feature: PortalFeatureDefinition;
@@ -120,7 +120,10 @@ export function Sidebar({
   notice,
   selfEntry = null,
   selfEntryMounted = isV2Screen("profile"),
+  badges,
 }: {
+  /** V2 count badges by feature id (Operations: open exceptions, Approvals: pending). Ignored flag off; absent = none drawn. */
+  badges?: NavBadges;
   registry: PortalRegistryDocument;
   options: NavOptions;
   collapsed: boolean;
@@ -163,6 +166,7 @@ export function Sidebar({
             {group.items.map(({ feature, label, to, end }) => {
               const presentation = maturityPresentation(feature.maturity);
               const Icon = iconFor(feature.navigation.icon_key);
+              const v2Badge = v2Shell ? badges?.[feature.id] : undefined;
               // A route the user can open RIGHT NOW as a fixture preview must
               // not say "SOON" beside itself (handoff §4.3): one truthful
               // state. Only the execution features the preview actually
@@ -191,12 +195,15 @@ export function Sidebar({
                   >
                     <Icon size={15} aria-hidden="true" className="shrink-0" />
                     {collapsed ? (
-                      <span className="sr-only">{label}</span>
+                      <span className="sr-only">{v2Badge ? `${label}, ${v2Badge.label}` : label}</span>
                     ) : (
                       <>
                         <span className="portal-navitem-label">{label}</span>
                         {badge && badge.route === feature.canonical_route && badge.count > 0 ? (
                           <span className="portal-navbadge" data-tone={badge.tone}>{badge.count}</span>
+                        ) : null}
+                        {v2Shell && v2Badge ? (
+                          <span className="portal-navbadge" data-tone={v2Badge.tone} data-v2-count={feature.id} title={v2Badge.label} aria-label={v2Badge.label}>{v2Badge.count}</span>
                         ) : null}
                         {previewMounted ? (
                           <span className="badge-maturity badge-maturity-preview">PREVIEW</span>

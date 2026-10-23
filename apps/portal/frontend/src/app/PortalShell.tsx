@@ -22,7 +22,7 @@ import { CommandPalette, useCommandPaletteShortcut } from "./CommandPalette";
 import { opensV2CommandBar, V2_SHELL_ON } from "./commandRouting";
 import { PortalContext } from "./context";
 import { PortalRoutes } from "./PortalRoutes";
-import { NO_SELF_NAV, type SelfNavShellView } from "./selfNavView";
+import { NO_NAV_BADGES, NO_SELF_NAV, SELF_ENTRY_PATH, SelfWorkspaceContext, type NavBadges, type SelfNavShellView } from "./selfNavView";
 import { Sidebar } from "./Sidebar";
 import { TopBar } from "./TopBar";
 import { usePreferences } from "./preferences";
@@ -39,6 +39,12 @@ const V2CommandBar = import.meta.env.VITE_EXECUTION_V2_SCREENS
 // lists. Same raw-env guard as above; it renders nothing, and with the shell flag off it is never mounted.
 const V2SelfNavigation = import.meta.env.VITE_EXECUTION_V2_SCREENS
   ? lazy(() => import("../execution/v2/shell/SelfNavigation"))
+  : null;
+
+// Sidebar count badges (WP-D): Operations open exceptions and Approvals pending, from reads the screens also do. Same raw-env guard;
+// renders nothing, and with the shell flag off it is never mounted.
+const V2NavCounts = import.meta.env.VITE_EXECUTION_V2_SCREENS
+  ? lazy(() => import("../execution/v2/shell/navCounts"))
   : null;
 
 export function PortalShell() {
@@ -80,6 +86,7 @@ export function PortalShell() {
   const { access } = useSession();
   // What the V2 self-navigation controller says the rail lists / why it is shut. Flag off nobody sets it: `NO_SELF_NAV`.
   const [selfNav, setSelfNav] = useState<SelfNavShellView>(NO_SELF_NAV);
+  const [navBadges, setNavBadges] = useState<NavBadges>(NO_NAV_BADGES);
 
   /*
    * A4-4 · navigation is owner-aware, from the server's answer.
@@ -92,6 +99,13 @@ export function PortalShell() {
    * refuses is worse than no entry.
    */
   const sessionCapabilities = access.kind === "ready" ? access.access.capabilities : [];
+  // Where the user chip leads: the member's own access, only where a page of it is on offer (an admin holds the Profile & Access
+  // capability; anyone else needs the live self-entry the navigation projection grants). Otherwise the chip is a statement.
+  const userAccessHref = selfNav.selfEntry
+    ? `${SELF_ENTRY_PATH}?workspace_id=${encodeURIComponent(selfNav.selfEntry.workspaceId)}`
+    : sessionCapabilities.includes("administration.profile_access.manage")
+      ? "/administration/profile-access"
+      : null;
   // A live self-navigation projection can only ADD listing tokens to what the session holds (selfNavGate); nothing is removed,
   // nothing is sent back. With no tokens (flag off, nothing read, expired, failed) this is the session list itself, as before.
   const capabilities = useMemo(
@@ -159,6 +173,7 @@ export function PortalShell() {
           breadcrumbs={breadcrumbs}
           environment={environment}
           onOpenPalette={openPalette}
+          v2={v2Route ? { userHref: userAccessHref } : undefined}
           onToggleMobileNav={() => setMobileNavOpen((open) => !open)}
           navToggleRef={navToggleRef}
         />
@@ -171,6 +186,7 @@ export function PortalShell() {
               collapsed={preferences.sidebarCollapsed}
               notice={selfNav.notice ?? undefined}
               selfEntry={selfNav.selfEntry}
+              badges={navBadges}
             />
           </div>
 
@@ -190,13 +206,16 @@ export function PortalShell() {
                   onNavigate={() => setMobileNavOpen(false)}
                   notice={selfNav.notice ?? undefined}
                   selfEntry={selfNav.selfEntry}
+                  badges={navBadges}
                 />
               </div>
             </div>
           ) : null}
 
           <main className="portal-content" id="portal-content" tabIndex={-1}>
-            <PortalRoutes registry={registry.data} />
+            <SelfWorkspaceContext.Provider value={selfNav.workspaceId}>
+              <PortalRoutes registry={registry.data} />
+            </SelfWorkspaceContext.Provider>
           </main>
         </div>
 
@@ -209,6 +228,11 @@ export function PortalShell() {
         {V2SelfNavigation && V2_SHELL_ON ? (
           <Suspense fallback={null}>
             <V2SelfNavigation onView={setSelfNav} />
+          </Suspense>
+        ) : null}
+        {V2NavCounts && v2Route ? (
+          <Suspense fallback={null}>
+            <V2NavCounts registry={registry.data} options={navOptions} onView={setNavBadges} />
           </Suspense>
         ) : null}
         {V2CommandBar && v2Route ? (

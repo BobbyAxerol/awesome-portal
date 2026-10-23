@@ -152,9 +152,10 @@ export default function SelfNavigation({ onView, enabled = EXECUTION_V2_SHELL, p
   const entryWorkspace = selfEntry?.workspaceId ?? null;
   const entry = useMemo(() => (entryWorkspace === null ? null : { workspaceId: entryWorkspace }), [entryWorkspace]);
   // Layout effects: the shell re-renders before paint, so a new scope's first frame never carries the previous scope's tokens.
+  const resolvedWorkspace = view.resolvedWorkspaceId;
   useLayoutEffect(() => {
-    onView(tokens.size === 0 && notice === null && entry === null ? NO_SELF_NAV : { tokens, notice, selfEntry: entry });
-  }, [tokens, notice, entry, onView]);
+    onView(tokens.size === 0 && notice === null && entry === null && resolvedWorkspace === null ? NO_SELF_NAV : { tokens, notice, selfEntry: entry, workspaceId: resolvedWorkspace });
+  }, [tokens, notice, entry, resolvedWorkspace, onView]);
   useLayoutEffect(() => () => onView(NO_SELF_NAV), [onView]);
   return null;
 }

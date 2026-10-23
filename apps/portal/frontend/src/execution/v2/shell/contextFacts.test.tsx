@@ -3,7 +3,7 @@ import { act, cleanup, render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { ConnectedContextBar } from "./ContextBar";
+import { BASIS_EACH_CURRENCY, ConnectedContextBar, SCOPE_EVERY_PORTFOLIO } from "./ContextBar";
 import { useContextFacts, type ContextFacts } from "./contextFacts";
 
 afterEach(cleanup);
@@ -26,43 +26,46 @@ function mount(url: string, facts: ContextFacts | null, barProps: Parameters<typ
 
 const chips = () => [...document.querySelectorAll(".exec-ctxbar-chip")].map((el) => el.textContent);
 
+/** Every route states basis and scope (WP-D): a screen's facts replace the published defaults, they are never absent. */
+const DEFAULTS = [BASIS_EACH_CURRENCY, SCOPE_EVERY_PORTFOLIO];
+
 describe("context facts", () => {
-  it("draws no scope and no currency when no screen states one", () => {
+  it("states the published defaults when no screen states a scope or a currency: each currency on its own, every portfolio you may see", () => {
     mount("/execution", null);
-    expect(chips()).toEqual([]);
+    expect(chips()).toEqual(DEFAULTS);
   });
 
   it("draws the scope a screen publishes, and drops it when the screen unmounts", () => {
     const view = mount("/execution", { scope: "Scope: Your alphas" });
-    expect(chips()).toEqual(["Scope: Your alphas"]);
+    expect(chips()).toEqual([BASIS_EACH_CURRENCY, "Scope: Your alphas"]);
     act(() => view.rerender(null));
-    expect(chips()).toEqual([]);
+    expect(chips()).toEqual(DEFAULTS);
   });
 
   it("follows a changed value without waiting for a remount", () => {
     const view = mount("/execution", { scope: "Scope: Your orders" });
     act(() => view.rerender({ scope: undefined }));
-    expect(chips()).toEqual([]);
+    expect(chips()).toEqual(DEFAULTS);
   });
 
   it("a screen that states a currency shows it without the URL carrying one", () => {
     mount("/deployments/compare", { ccy: "USDT" });
-    expect(chips()).toEqual(["USDT"]);
+    expect(chips()).toEqual(["Basis: USDT, one currency", SCOPE_EVERY_PORTFOLIO]);
   });
 
   it("a screen that states no currency hides one left in the URL by another screen", () => {
     mount("/deployments/compare?ccy=eur", { ccy: null });
-    expect(chips()).toEqual([]);
+    expect(chips()).toEqual(DEFAULTS);
   });
 
   it("a screen that publishes nothing about currency leaves the URL's ccy alone", () => {
     mount("/deployments/portfolios?ccy=eur", { scope: undefined });
-    expect(chips()).toEqual(["EUR"]);
+    expect(chips()).toEqual(["Basis: EUR, one currency", SCOPE_EVERY_PORTFOLIO]);
   });
 
   it("a scope prop on the bar wins over a published one", () => {
     mount("/execution", { scope: "Scope: Your alphas" }, { scope: "Scope: Fixed by caller" });
-    expect(chips()).toEqual(["Scope: Fixed by caller"]);
+    expect(chips()).toEqual([BASIS_EACH_CURRENCY, "Scope: Fixed by caller"]);
     expect(screen.queryByText("Scope: Your alphas")).toBeNull();
   });
 
@@ -77,8 +80,8 @@ describe("context facts", () => {
       );
     }
     const view = render(<Two first />);
-    expect(chips()).toEqual(["Scope: second"]);
+    expect(chips()).toEqual([BASIS_EACH_CURRENCY, "Scope: second"]);
     view.rerender(<Two first={false} />);
-    expect(chips()).toEqual(["Scope: second"]);
+    expect(chips()).toEqual([BASIS_EACH_CURRENCY, "Scope: second"]);
   });
 });

@@ -19,7 +19,7 @@
  * only when it knows them; the bar never derives either from a role.
  */
 import { useId } from "react";
-import { Link } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import { GapWhy } from "../blocks";
 
 import {
@@ -33,6 +33,19 @@ import {
 } from "../urlState";
 import { useContextFactsValue } from "./contextFacts";
 import "../css/shell.css";
+
+/**
+ * The published basis semantics (closeout FE-CAT-6, accepted): every figure is stated in its own currency and no screen converts
+ * between them. There is no FX or basis selector, so this is a typed fact, not a control.
+ */
+export const BASIS_EACH_CURRENCY = "Basis: each currency on its own";
+export const BASIS_EACH_CURRENCY_TITLE = "Each currency is shown on its own and never converted. No basis or FX selector is published.";
+/**
+ * Scope is whatever the server derives from the reader's access: no scope parameter is published, so the default says exactly that
+ * and the bar offers no selector. A Portfolio screen names its portfolio instead.
+ */
+export const SCOPE_EVERY_PORTFOLIO = "Scope: every portfolio you may see";
+export const SCOPE_EVERY_PORTFOLIO_TITLE = "The server applies your access. No scope parameter is published, so this cannot be narrowed here.";
 
 export const WINDOW_NOT_SERVED_REASON = "Window applies when the server supports it.";
 const WINDOW_NOT_SERVED: WindowLock = { reason: WINDOW_NOT_SERVED_REASON, unapplied: true };
@@ -81,6 +94,11 @@ export interface ContextBarProps {
   envLock?: EnvLock | null;
   /** Server-derived scope text, e.g. "Scope: Your alphas"; the bar never decides it from a role. */
   scope?: string | null;
+  /** The title of the scope chip (why it is a statement and not a selector). */
+  scopeTitle?: string;
+  /** The basis statement ("Basis: USDT, one currency", or each currency on its own). A typed fact, never a control. */
+  basis?: string | null;
+  basisTitle?: string;
   /** Plain anchor target for the "My access" link beside a locked control (D9). */
   accessHref?: string;
   /** URL params that were present but rejected (names only; D7). Empty or absent draws nothing. */
@@ -96,7 +114,7 @@ export function invalidNotice(invalid: readonly string[]): string {
   return `Ignored invalid URL ${invalid.length === 1 ? "parameter" : "parameters"}: ${names}${more}`;
 }
 
-export function ContextBar({ env, window: selectedWindow, ccy, onChange, windowLock, envLock, scope, accessHref, invalid, onDismissInvalid }: ContextBarProps) {
+export function ContextBar({ env, window: selectedWindow, ccy, onChange, windowLock, envLock, scope, scopeTitle, basis, basisTitle, accessHref, invalid, onDismissInvalid }: ContextBarProps) {
   const reasonId = useId();
   const envReasonId = useId();
   const locked = windowLock !== undefined && windowLock !== null;
@@ -164,7 +182,8 @@ export function ContextBar({ env, window: selectedWindow, ccy, onChange, windowL
         </span>
       ) : null}
       {ccy ? <span className="exec-ctxbar-chip" title="One currency basis">{ccy}</span> : null}
-      {scope ? <span className="exec-ctxbar-chip">{scope}</span> : null}
+      {basis ? <span className="exec-ctxbar-chip" data-control="basis" title={basisTitle}>{basis}</span> : null}
+      {scope ? <span className="exec-ctxbar-chip" data-control="scope" title={scopeTitle}>{scope}</span> : null}
       {invalid && invalid.length > 0 ? (
         <span role="status" className="exec-ctxbar-reason" data-notice="invalid-params">
           <span title="Defaults are shown">{invalidNotice(invalid)}</span>
@@ -191,9 +210,13 @@ export function ContextBar({ env, window: selectedWindow, ccy, onChange, windowL
 export function ConnectedContextBar(props: Omit<ContextBarProps, "env" | "window" | "ccy" | "onChange">) {
   const { value, set, invalid, clearInvalid } = useExecUrlState();
   const facts = useContextFactsValue();
+  const { portfolioId } = useParams();
   // No read accepts a window yet (FE-025), so the control starts locked; a caller that knows better passes `windowLock={null}`.
   const windowLock = props.windowLock === undefined ? WINDOW_NOT_SERVED : props.windowLock;
   const ccy = facts.ccy !== undefined ? facts.ccy : value.ccy;
-  const scope = props.scope ?? facts.scope ?? null;
-  return <ContextBar {...props} scope={scope} windowLock={windowLock} env={value.env} window={value.window} ccy={ccy} onChange={(patch) => set(patch)} invalid={invalid} onDismissInvalid={clearInvalid} />;
+  // Every route states its basis and scope (audit 2026-10-23, shell): a screen's own statement wins; a Portfolio screen names its
+  // portfolio; otherwise the published default. Never a selector, never a conversion.
+  const scope = props.scope ?? facts.scope ?? (portfolioId ? `Scope: portfolio ${portfolioId}` : SCOPE_EVERY_PORTFOLIO);
+  const basis = props.basis ?? (ccy ? `Basis: ${ccy}, one currency` : BASIS_EACH_CURRENCY);
+  return <ContextBar {...props} scope={scope} scopeTitle={props.scopeTitle ?? SCOPE_EVERY_PORTFOLIO_TITLE} basis={basis} basisTitle={props.basisTitle ?? BASIS_EACH_CURRENCY_TITLE} windowLock={windowLock} env={value.env} window={value.window} ccy={null} onChange={(patch) => set(patch)} invalid={invalid} onDismissInvalid={clearInvalid} />;
 }
