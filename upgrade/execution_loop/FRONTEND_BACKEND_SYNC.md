@@ -1,5 +1,67 @@
 # Execution Loop V2 — Sổ đồng bộ Frontend ↔ Backend (sống)
 
+## Codex round-start —24Oct2026,04:52UTC /11:52VN
+
+Bobby explicitly assigns continued Core/Edge READ/STREAM, financial publication,
+Manager trust, command qualification and resource qualification. Primary owns
+integration/public tracking; existing HK candidate
+`feat/core-current-policy-wire-20261024@fa96dc385ad3c7c07fbfe881aef581acd58c4f09`
+is the only Edge code write target for this round. Edge feature
+`8727e5303b1815d54bc2bdcb927a55457ff4da5b` has peer Markdown/untracked intake;
+preserve it. Canonical Core `16a919a6fd0ab2d0070e029123c798b3e86cf35f` and
+Claude `00e7f6cff2fadbd88b8ed461fa870b28ee88ad94` are clean; no new Claude
+committed delta since the last receipt. Current-view Core image is already
+installed; no repeated build for unchanged source. Full connected acceptance
+remains separate from health/readiness.
+
+ACT_NOW: PM has advanced to `6f474c72088f000a198a73324ad3083236f2bf5c`;
+owner-return §7.30 now describes an implemented financial publication authority
+wrapper and same-original receiver APPLIED verification. The previous absence
+statement must not be reused without reading this new wire. Edge remains the
+sole source coordination point; this is not financial/runtime acceptance.
+
+Reused agents `edge_adapter_review` and `pm_publication_coordination` first read
+disjoint source/contract inputs, then implement the separately reserved source
+provider/financial adapter files; no new agents or parallel heavy jobs. Primary
+owns review, shared composition, tests and final integration. Existing ceiling remains
+2CPU/1536MiB/300s per bounded cell, subject to source measurement locks. No
+stable/dev/main/provider28445, command/Live, peer WIP or secret transfer. Source
+rollback is the owned candidate diff; operational changes need exact validated
+source/image/config/schema pins and backups, not a stale window or grant.
+
+### Round result —24Oct2026: Edge source candidate committed
+
+[Exact implementation, tests and next-owner handoff](evidence/ELP2-10/CORE_TO_EDGE_QUALIFIED_SOURCE_AND_FINANCIAL_ADAPTER_RETURN_2026-10-24.md):
+HK candidate `0435aab1fadb646680fadd18da1ad1c56561394d`,14files,+3325/−11,
+clean after normal commit. PG source selection shares the actual governed
+reader pool, retains its metadata reservation, and rechecks exact committed
+generation/lineage/fields; CURRENT never grants other operations. PM adapter
+preserves original binding/proof/receipt and same-original ACK; independent
+review's borrowed-handle composition defect is fixed with owning Arc handles
+and final-drop regression. No public browser contract/migration/UI changes.
+
+Final strict Clippy/rustfmt PASS;115 distinct tests PASS (PG selection9,
+actual receiver COMMIT/ACK6, Edge library100). Earlier fixture assumptions,
+lint and disposable-DB startup failures are recorded, not hidden or counted
+as PASS. Owned test containers are gone. No configured HK pre-commit hook;
+normal source commit is not a claim of full landing-hook qualification.
+Core image01692fc5 stays unchanged/healthy, current-view listener OFF.
+
+PM wrapper2505a764 is now implemented but UNMOUNTED; do not repeat the old
+“wrapper missing” request. Edge is the only external counterpart: return real
+selection plus independent HISTORY/REPLAY/STREAM purposes, loaded Manager trust
+and financial-purpose verifier/receiver binding. Cumulative return§19 gives
+the exact owner/action for each lane; do not wait for unrelated command/G2.
+Claude keeps components and can continue fixture/consumer review; the earlier
+unknown-enum `readGroupAttribution` CHANGE remains its narrow follow-up.
+Delivery still AWAITING_CONSUMER_REVIEW. No push/stable/dev/main/provider28445/
+command/Live change; full08/read09/ELP2-10 NOT_MET, ELP2-11 unopened.
+
+Actual public receipt delivered/read back in Edge EPG10-08 at24Oct05:34:59UTC,
+matching SHA256 `2a99866c2e6556f008a21e21c4b35721ed988d1f9af25b16fb8ee2b989b4ca50`.
+It is source/test delivery, not Edge ACK. Markdown tracking uses approved R0;
+no unchanged Core build/hook or repeat retired native lane.
+
 ## Codex installation follow-through —23October2026,19:13UTC
 
 Owned Core slice: new current-view authority/wire/transport/finite client and

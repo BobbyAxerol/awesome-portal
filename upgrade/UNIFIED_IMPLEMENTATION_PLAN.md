@@ -9676,6 +9676,25 @@ assignment. No goal/push/dev/main/release/deploy started by this return.
 
 ### ELP2-10 — Performance, quality và coexistence
 
+**24 October — concrete Edge source and PM authority adapters:**
+[Focused source receipt and exact Edge/Claude handoff](execution_loop/evidence/ELP2-10/CORE_TO_EDGE_QUALIFIED_SOURCE_AND_FINANCIAL_ADAPTER_RETURN_2026-10-24.md).
+HK isolated candidate `0435aab1fadb646680fadd18da1ad1c56561394d` contains
+14 code/test files,+3325/−11. Fresh committed-source metadata, full entity
+lineage/payload pins, shared governed pool, PM proof-kind bridge and actual
+post-COMMIT receipt/same-original ACK recovery are implemented. Independent
+review's adapter lifetime/composition defect is repaired with an owning/drop
+regression. Strict Clippy/rustfmt and115 distinct tests PASS: PG selection9,
+actual PG receiver/ACK6, Edge library100. This is **SOURCE_ONLY**, not connected
+PM/READ/STREAM acceptance or a whole landing-hook PASS; no runtime change.
+PM2505a764 wrapper now exists under6f474c72 and is UNMOUNTED: the older
+“wrapper absent” notes below are historical, not the current dependency.
+Edge next supplies exact real qualified selection, independent operation purpose
+and loaded trust/financial verifier binding; Core can then commission each lane
+independently. Canonical cumulative return§19 owns the per-row actions; no new
+ledger, no UI redesign or repeated unchanged Core image build. ELP2-10/full08/
+read09 remain NOT_MET; ELP2-11 unopened. Claude can review existing consumers
+without a new public DTO; preserve current fixture/component work.
+
 **22 October Core support + single Edge ACK:** Codex owns the explicitly
 assigned access write-validation, Portal incident eligibility and Paper history
 measurement slice; accepted Claude components remain untouched. Source-only

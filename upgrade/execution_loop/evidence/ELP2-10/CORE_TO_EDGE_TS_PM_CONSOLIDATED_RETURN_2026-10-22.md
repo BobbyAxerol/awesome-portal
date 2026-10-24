@@ -1820,3 +1820,55 @@ ownership/wire ACK in18.2–18.3. Public-file transfer is not owner ACK.
 No retired session/grant/window reopened,no stable/dev/main/provider28445,
 command/Live or production mutation. Full08/read09/ELP2-10 remain NOT_MET for
 those producer/qualification inputs; ELP2-11 remains unopened.
+
+## 19. Concrete qualified-source and financial adapters —24Oct2026
+
+**SOURCE_IMPLEMENTED / FOCUSED_GATES_PASS / NOT_INSTALLED.**
+[Full source receipt, dependency pins and exact Edge/Claude actions](CORE_TO_EDGE_QUALIFIED_SOURCE_AND_FINANCIAL_ADAPTER_RETURN_2026-10-24.md).
+HK owned candidate `feat/core-current-policy-wire-20261024` now commits
+`0435aab1fadb646680fadd18da1ad1c56561394d`:14files,+3325/−11, clean.
+Parentfa96dc38 and peer active feature8727e530 are preserved. No Git push,
+runtime/DB/credential/grant or command/Live change.
+
+CORE-03/06 now have a real committed-PG metadata provider, exact selected
+generation/epoch/digest/full five-tuple validation and shared governed pool.
+CORE-04 now has the PM authority adapter, exact proof-kind bridge and actual
+post-COMMIT receipt/same-original ACK recovery. Independent review's lifetime
+composition CHANGE is fixed by owning Arc dependencies and a cleanup test.
+Final strict Clippy/rustfmt and115 distinct tests PASS: PG selection9, real
+disposable receiver COMMIT/ACK6, Edge library100. The source/verifier in the
+financial test is synthetic; these are not connected PM financial proofs.
+Normal source commit has no configured pre-commit hook; no full landing-hook
+or runtime acceptance claim. See linked receipt for failure history/log hashes.
+
+**PM status correction:** PM6f474c72 includes implemented wrapper2505a764,
+public return§§7.30–7.31. It remains UNMOUNTED. Earlier§7.18/“wrapper absent”
+references are historical; the remaining request is exact financial-purpose
+signing/verifier/original-receiver trust and commissioning, not duplicate code.
+
+| Existing lane | Owner/action needed next | Current delivery |
+|---|---|---|
+| CORE-03/06 CURRENT | Edge pins actual real resource/dataset/schema, binding/slot/generation/epoch, entity hashes, complete five-tuples and field map; Core binds its current human authority | Source adapter ready for owner review; no listener/source grant installed |
+| Independent HISTORY/REPLAY/EXPORT/STREAM | Edge returns physical purpose/retention/source capabilities; Core uses separate granted operation on the same original human context | CURRENT does not grant these; no old window/session reuse |
+| CORE-04 financial | Edge coordinates PM wrapper's signing-purpose/envelope/verifier + receiver APPLIED/status binding, then supplies commissioned channel | Actual PG receipt adapter tested, no invented verifier/HTTP endpoint |
+| Manager API | Edge returns loaded overlap JWKS/config/image and matching audience/profile/kid; retain existing Research certificate/key | Existing TLS proof reused only for unchanged TLS scope, not API auth PASS |
+| Command07 | Edge commissions submit/status/recovery gateway and exact original intent/custody binding | Existing Core source adapter unchanged; no command/Live enabled |
+| Qualification | Target/PM/TS owners via Edge approve numeric bounds/financial inputs/calibration and matched workload/candidate | Cell ceilings are not production budgets; coexistence/G2/browser remain open |
+
+Claude: no new public DTO or component rewrite; preserve current rich fixture
+and UI work. Consume actual source only when the exact qualified factory is
+mounted. Prior `readGroupAttribution` enum-negative CHANGE remains in18.6.
+Per-lane Edge ACCEPTED/CHANGE and source inputs can return independently in
+this cumulative channel. Public-file transfer is delivery, not owner ACK.
+Source rollback leaves the runtime and all original custody/data untouched.
+Full08/read09/ELP2-10 NOT_MET; ELP2-11 remains unopened.
+
+**Actual delivery 24Oct05:34:59UTC:** the new public source receipt was mirrored
+and read back at
+`/home/bobby/.worktrees/portal-execution-edge-upgrade-v1_2/upgrade/evidence/execution-edge-v1_2/EPG10-08/CORE_TO_EDGE_QUALIFIED_SOURCE_AND_FINANCIAL_ADAPTER_RETURN_2026-10-24.md`.
+Raw SHA256 matches SGP:
+`2a99866c2e6556f008a21e21c4b35721ed988d1f9af25b16fb8ee2b989b4ca50`.
+Edge can inspect the committed HK candidate directly; no remote Git push or
+secret transfer was needed. Delivery is not owner acceptance. Tracking-only
+verification: **R0**, diff/link/locator checks and execution-tracking reconciliation
+PASS; no repeated build, full hook, old READ or retired-window acceptance run.
