@@ -6,7 +6,8 @@ import { createHash, generateKeyPairSync, X509Certificate } from "node:crypto";
 import type { IncomingMessage } from "node:http";
 import { createServer, request, type Server } from "node:https";
 import type { Socket } from "node:net";
-import type { ConnectionOptions } from "node:tls";
+import { performance } from "node:perf_hooks";
+import { connect as connectTls, type ConnectionOptions } from "node:tls";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { CurrentHumanCandidate } from "../src/execution-v2/current-human-candidate";
 import type { CurrentHumanRecoveryAttempt } from "../src/execution-v2/current-human-mutations";
@@ -151,6 +152,28 @@ describe("ELP2-10 private current-human real TLS transport (TEST_ONLY candidate 
     await expect(post(origin, { ...source, key: Buffer.alloc(0), cert: Buffer.alloc(0) },
       JSON.stringify(enterBody), enterPath, { "x-forwarded-client-cert": source.fingerprint })).rejects.toThrow();
     expect(lane.enter).not.toHaveBeenCalled();
+  });
+  it.each(["idle", "partial headers"] as const)("bounds a pinned TLS source with %s before any DB request exists", async mode => {
+    const lane = transport({ deadline_ms: 100 }), origin = await listen(lane.server), url = new URL(origin);
+    let secured = false, securedAt = 0, elapsed = 0;
+    await new Promise<void>((resolve, reject) => {
+      const socket = connectTls({ host: url.hostname, port: Number(url.port), key: source.key, cert: source.cert, ca: core.ca,
+        rejectUnauthorized: true, minVersion: "TLSv1.3", maxVersion: "TLSv1.3" }, () => {
+        secured = true; securedAt = performance.now();
+        if (mode === "partial headers") socket.write(`POST ${enterPath} HTTP/1.1\r\nHost: localhost\r\nContent-Type: application/json\r\n`);
+      });
+      const guard = setTimeout(() => {
+        socket.destroy(); reject(new Error("TEST_ONLY_PREHEADER_DEADLINE_NOT_ENFORCED"));
+      }, 2000);
+      socket.once("error", reject);
+      socket.once("close", () => { clearTimeout(guard); elapsed = performance.now() - securedAt; resolve(); });
+    });
+    expect(secured).toBe(true); expect(elapsed).toBeLessThan(1500);
+    expect(lane.enter).not.toHaveBeenCalled(); expect(lane.resolve).not.toHaveBeenCalled();
+    expect(lane.snapshot()).toMatchObject({ in_flight: 0, accepted: 0, timed_out: 1 });
+    // A pre-header timeout owns no DB capacity and cannot poison the next call.
+    expect((await post(origin, source, JSON.stringify(enterBody))).status).toBe(200);
+    expect(lane.snapshot()).toMatchObject({ in_flight: 0, accepted: 1, timed_out: 1 });
   });
   it("rejects malformed UTF8/JSON, extra fields and duplicate keys before candidate calls", async () => {
     const lane = transport(), origin = await listen(lane.server);

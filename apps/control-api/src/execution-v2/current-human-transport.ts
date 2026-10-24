@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { createServer, type Server, type ServerOptions } from "node:https";
 import type { IncomingMessage, ServerResponse } from "node:http";
+import { performance } from "node:perf_hooks";
 import { TLSSocket } from "node:tls";
 import { z } from "zod";
 import { CurrentHumanCandidate, CurrentHumanLeaseError } from "./current-human-candidate";
@@ -38,6 +39,12 @@ export function createCurrentHumanTransport(candidate: CurrentHumanCandidate, in
     || !Number.isSafeInteger(limits.deadline_ms) || limits.deadline_ms < 1 || limits.deadline_ms > 10000)
     throw new CurrentHumanLeaseError("CURRENT_HUMAN_TRANSPORT_CONFIG_INVALID");
   const state: TransportState = { in_flight: 0, accepted: 0, denied: 0, timed_out: 0 };
+  const headerDeadlines = new WeakMap<IncomingMessage["socket"], { until: number; timer: ReturnType<typeof setTimeout> }>();
+  const takeHeaderDeadline = (socket: IncomingMessage["socket"]) => {
+    const deadline = headerDeadlines.get(socket);
+    if (deadline) { clearTimeout(deadline.timer); headerDeadlines.delete(socket); }
+    return deadline;
+  };
   const reply = (res: ServerResponse, status: number, body: unknown) => {
     if (res.destroyed || res.writableEnded) return;
     res.writeHead(status, { "content-type": "application/json", "cache-control": "no-store",
@@ -55,6 +62,10 @@ export function createCurrentHumanTransport(candidate: CurrentHumanCandidate, in
   const server = createServer({ ...input.tls, minVersion: "TLSv1.3", maxVersion: "TLSv1.3",
     requestCert: true, rejectUnauthorized: true, ALPNProtocols: ["http/1.1"], handshakeTimeout: limits.deadline_ms,
   }, (req, res) => {
+    const headerDeadline = takeHeaderDeadline(req.socket);
+    if (headerDeadline && performance.now() >= headerDeadline.until) {
+      state.timed_out++; req.socket.destroy(); return;
+    }
     if (!socketAllowed(req.socket)) { state.denied++; problem(res, 403, "CURRENT_HUMAN_WORKLOAD_NOT_AUTHENTICATED"); return; }
     const kind = req.url === "/internal/elp210/current-human/enter" ? "ENTER"
       : req.url === "/internal/elp210/current-human/resolve" ? "RESOLVE" : null;
@@ -72,6 +83,7 @@ export function createCurrentHumanTransport(candidate: CurrentHumanCandidate, in
       state.denied++; problem(res, 400, "CURRENT_HUMAN_REQUEST_INVALID"); return;
     }
     state.in_flight++;
+    const deadlineAt = headerDeadline?.until ?? performance.now() + limits.deadline_ms;
     let operationStarted = false, finished = false, bytes = 0;
     const chunks: Buffer[] = [];
     const finish = () => {
@@ -83,7 +95,7 @@ export function createCurrentHumanTransport(candidate: CurrentHumanCandidate, in
       problem(res, 504, "CURRENT_HUMAN_TRANSPORT_OUTCOME_UNCERTAIN");
       if (!operationStarted) { req.destroy(); finish(); }
       // No cancellation/TTL guesses about a started ENTER/terminal commit.
-    }, limits.deadline_ms);
+    }, Math.max(0, deadlineAt - performance.now()));
     req.on("error", () => { if (!operationStarted) finish(); });
     req.on("aborted", () => { if (!operationStarted) finish(); });
     req.on("data", (chunk: Buffer) => {
@@ -126,7 +138,16 @@ export function createCurrentHumanTransport(candidate: CurrentHumanCandidate, in
   // is disconnected before it becomes an application request, not after body
   // parsing. Never substitute a forwarded certificate header for this socket.
   server.prependListener("secureConnection", socket => {
-    if (!socketAllowed(socket)) { state.denied++; socket.destroy(); }
+    if (!socketAllowed(socket)) { state.denied++; socket.destroy(); return; }
+    // Node's HTTP header-timeout sweep is coarser than this private deadline.
+    // Own one absolute timer even when no complete request exists yet. Taking
+    // it at request start never releases a subsequently started DB operation.
+    const until = performance.now() + limits.deadline_ms;
+    const timer = setTimeout(() => {
+      headerDeadlines.delete(socket); state.timed_out++; socket.destroy();
+    }, limits.deadline_ms);
+    timer.unref(); headerDeadlines.set(socket, { until, timer });
+    socket.once("close", () => { takeHeaderDeadline(socket); });
   });
   server.headersTimeout = limits.deadline_ms;
   server.keepAliveTimeout = 1;
