@@ -1,0 +1,71 @@
+{
+  "schema_version": "portal.phase-test-dispositions.v1",
+  "tier": "R1",
+  "phase": "ELP2-10",
+  "source_base": "664433587050ab8673fa03318a5e74d8b33b146d",
+  "delivery": "INTERMEDIATE_SOURCE_AND_RETIRED_ISOLATED_RUNTIME_NOT_R2",
+  "lanes": [
+    {
+      "name": "ordinary-policy-intake",
+      "command": "vitest run test/ordinary-policy-intake.spec.ts --maxWorkers=1 --no-file-parallelism",
+      "status": "PASS",
+      "passed": 31,
+      "scope": "TEST_ONLY filesystem/schema/writer doubles; not actual policy installation"
+    },
+    {
+      "name": "full-production-typescript-attempt",
+      "command": "timeout 150 node --max-old-space-size=1024 node_modules/typescript/lib/tsc.js -p tsconfig.build.json --incremental false --noEmit",
+      "status": "TIMEOUT_NOT_PASS",
+      "exit_code": 124
+    },
+    {
+      "name": "full-production-typescript-bounded-retake",
+      "command": "timeout 300 node --max-old-space-size=1450 node_modules/typescript/lib/tsc.js -p tsconfig.build.json --incremental false --noEmit",
+      "status": "HEAP_OOM_NOT_PASS",
+      "exit_code": 134,
+      "elapsed_seconds_approx": 293
+    },
+    {
+      "name": "affected-production-module-and-transitive-dependencies-typescript",
+      "command": "timeout 300 node --max-old-space-size=1450 node_modules/typescript/lib/tsc.js -p /tmp/elp210-ordinary-intake-tsconfig-20261024.json --noEmit",
+      "status": "PASS",
+      "exit_code": 0,
+      "scope": "Strict existing production compiler options; include ordinary-policy-intake.ts and its real transitive dependencies. Not the full production project or test corpus."
+    },
+    {
+      "name": "PM-financial-output-proof-and-regressions",
+      "source_commit": "02174b3ff947dc5185c8fb641c55034329d2300d",
+      "status": "PASS",
+      "passed": 128,
+      "new_cases": 43,
+      "existing_regressions": 85,
+      "log_sha256": "8d962b4d04d3af0a9f8a10cf4a292e1e1f1c78caeaf6c9917633c81dae85b082",
+      "scope": "Isolated TEST_ONLY financial trust; not source-owner acceptance or runtime APPLIED"
+    },
+    {
+      "name": "Edge-financial-output-proof",
+      "source_commit": "8183b22e174e97ac13cb8f8661beecb3c5cfc96d",
+      "status": "PASS",
+      "passed": 11,
+      "production_clippy_lib_bins": "PASS",
+      "log_sha256": "6d215077314e3f51647e885c9d5921a9cd2499f9b3c4fde3ebc0312dd78295d3",
+      "scope": "Actual Ed25519 verification and Python/Rust golden vector; not installed financial trust"
+    },
+    {
+      "name": "actual-isolated-TLS-and-refusal-specimens",
+      "status": "PASS_TRANSPORT_NEGATIVES_ONLY",
+      "core_image": "sha256:50939bb5784b58b0bc68121c4920c703abf208da7dfba74541934fe53e48e9b2",
+      "core_to_edge": { "http_status": 404, "code": "RESOURCE_NOT_AVAILABLE" },
+      "edge_to_core": { "http_status": 400, "code": "CURRENT_VIEW_REQUEST_INVALID" },
+      "sessions_issued": 0,
+      "grants_issued": 0,
+      "positive_business_read": "NOT_PROVEN",
+      "stream": "NOT_PROVEN",
+      "cleanup": "OWNED_CONTAINERS_AND_TUNNEL_REMOVED"
+    }
+  ],
+  "full_hook": "NOT_RUN_INTERMEDIATE_R1_CAMPAIGN_10_10C",
+  "six_phase_acceptance": "OPEN",
+  "command_enabled": false,
+  "live_enabled": false
+}
