@@ -15256,6 +15256,32 @@ Command gateway is uncommissioned and remains off. Numeric proposal review
 found 28 virtual tabs, M2c 95-minute reservation, and combined proposed M2c+M5
 at least185 minutes; none are newly approved or measured by this addendum.
 No load/calibration/Live/dev/main/push is authorized by a fixture or this review.
+
+**Edge coordination intake23Oct — original08/09:** Bobby approved settling the
+two actual producer wires before Edge writes its concrete Rust consumers.
+The existing [single request,section7](execution_loop/evidence/ELP2-10/EDGE_TO_CORE_TS_PM_CONSOLIDATED_REQUEST_2026-10-22.md#7-23oct-two-executable-contracts-original0809)
+retains CORE-03/04/06, not a new phase/ledger. Core/Claude owns a bounded current
+authorized-view resolve/recheck wire with original session custody; Core/Codex
+reviews/integrates. Edge intersects it with qualified source metadata. TS/PM
+owns the existing report exporter's source-proof and receiver-APPLIED ACK/status
+wrapper, coordinated through Edge, not a direct Core-to-PM data path.
+Public packet hash79b6dc103875b36c02b4f8ba89a5bdde13da9c6fd5258d9574fe7e38ee5c7007;
+incoming delivery is metadata only, not an owner ACK or accepted contract.
+Reply ACCEPTED exact route/schema/custody/canonical vectors or minimal CHANGE
+in the existing cumulative return; do not wait for P22/image/Manager/G2 or
+schedule an expiring window. Concrete Edge adapter remains NOT_IMPLEMENTED;
+four new binary routes503 and full08/09 NOT_MET. No Core source/runtime,
+DB/grant/session/TLS/command/Live/stable/dev/provider28445 mutation is authorized.
+
+**Edge independent-contract follow-up23Oct:** Bobby requests immediate Rust
+consumer implementation per accepted7.2/7.3 wire, independently. Same request
+now includes7.5: Edgef01d925a, observed PMfb9de674; previous source/guarded
+protocols unchanged. Core/Claude owns7.2 actual current authorized-view
+resolve/recheck schema/custody or minimal compatible CHANGE; Core/Codex reviews
+the return. Publish into the EXISTING cumulative Core owner-return without
+waiting for PM/P22/image/window. This is delivered metadata, not a producer ACK,
+implemented adapter or connected PASS. No Core code/index/runtime change.
+
 <!-- CODEX_SIX_LANE_20261023_END -->
 
 Post-freeze Claude commits remain preserved, not silently included in the
