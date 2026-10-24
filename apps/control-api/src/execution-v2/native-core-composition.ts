@@ -10,7 +10,7 @@ import { accessDigest } from "./access-digest";
 import { CurrentHumanCandidate, CurrentHumanLeaseError,
   type CurrentHumanNativeHTTPConfig,type CurrentHumanNativeReadRecoveryAttempt } from "./current-human-candidate";
 import { CurrentHumanMutations, type CurrentHumanNativeReadRecoveryPort,
-  type CurrentHumanRecoveryPort } from "./current-human-mutations";
+  type CurrentHumanRecoveryPort, type CurrentHumanReverseRecoveryParticipant } from "./current-human-mutations";
 import { selectedNativeBusinessReadSelection } from "./native-business-read-selected-source";
 import { privateOwnerCommissioning, type PrivateOwnerCommissioningPin } from "./core-owner-commissioning";
 import { privateOwnerRevocation } from "./manager-domain-revoke";
@@ -107,7 +107,8 @@ function capture(value:unknown){
  * workload, whereas mutation pendingState checks ALL durable unresolved rows.
  * Other/missing custody therefore remains closed, never fabricated as settled.
  */
-export async function composeNativeCore(pool:Pool,baseTrust:AccessTrustProvider,input:NativeCoreCompositionInput){
+export async function composeNativeCore(pool:Pool,baseTrust:AccessTrustProvider,input:NativeCoreCompositionInput,
+  reverseParticipants: readonly CurrentHumanReverseRecoveryParticipant[] = []){
   const root=own(input,["expected_workload_id","selections","retained_recovery","owner_intakes","mutation_limits"]);
   if(typeof root.expected_workload_id!=="string"||!Array.isArray(root.selections)||!Array.isArray(root.retained_recovery)||
     !Array.isArray(root.owner_intakes)||root.selections.length<1||root.selections.length+root.retained_recovery.length>64||
@@ -154,7 +155,7 @@ export async function composeNativeCore(pool:Pool,baseTrust:AccessTrustProvider,
     // coordinator ignores this return and checks durable global pending state.
     return candidate.reconcileNativeRead(attempt.lease_id);
   }});
-  const mutations=new CurrentHumanMutations(pool,enumerator!,reverse,limits,native);
+  const mutations=new CurrentHumanMutations(pool,enumerator!,reverse,limits,native,reverseParticipants);
   let trust=baseTrust;
   const intakes=pins.map(pin=>{const prepared=privateOwnerCommissioning(trust,pool,pin);trust=prepared.trust;return prepared;});
   const composition=Object.freeze({

@@ -251,6 +251,8 @@ import { CurrentViewCoreComposition } from "./execution-v2/current-view-composit
 import type { PreparedCurrentViewRuntime } from "./execution-v2/current-view-runtime";
 import { withManagerCurrentPublications } from "./execution-v2/manager-current-publication";
 import { ManagerCurrentAccounts } from "./execution-v2/manager-current-accounts";
+import { FinancialSourceComposition } from "./execution-v2/financial-source-composition";
+import type { PreparedFinancialSourceApplication } from "./execution-v2/financial-source-bootstrap";
 
 /** Internal composition seam, never populated from request headers/body or
  * runtime environment flags. TEST_ONLY authority cannot enter a non-test app. */
@@ -258,6 +260,9 @@ export interface ControlApiDependencies {
   /** Explicit owner-only/hash-pinned private Research listener. Absent keeps
    * the deployed default unchanged; never populated from a public request. */
   currentViewRuntime?: PreparedCurrentViewRuntime;
+  /** Constructed by private bootstrap only, registered in the SAME coordinator
+   * before Nest starts. No configuration flag alone creates an identity. */
+  financialSource?: PreparedFinancialSourceApplication;
   executionCommandTrust?: CommandTrust;
   executionInstanceRegistrationTrust?: InstanceRegistrationTrust;
   executionPendingControlTrust?: PendingControlTrust;
@@ -302,6 +307,8 @@ export class AppModule implements OnApplicationShutdown {
       throw new Error("TEST_ONLY Execution authority requires an isolated test application.");
     if (dependencies.currentHumanMutations && !dependencies.currentHumanMutations.usesPool(pool))
       throw new Error("CURRENT_HUMAN_MUTATION_CORE_POOL_REQUIRED");
+    if(dependencies.financialSource&&(!dependencies.nativeManagerRead||!dependencies.currentHumanMutations?.hasReverseRecoveryParticipant(dependencies.financialSource.participant)))
+      throw new Error("FINANCIAL_SOURCE_SHARED_NATIVE_COMPOSITION_REQUIRED");
     const ownsExecutionPool = !executionPool && !!config.EXECUTION_DATABASE_URL;
     if (dependencies.executionManagerRuntime && (executionPool === pool || !executionPool && !config.EXECUTION_DATABASE_URL))
       throw new Error("MANAGER_RUNTIME_EXECUTION_POOL_REQUIRED");
@@ -469,6 +476,16 @@ export class AppModule implements OnApplicationShutdown {
           useFactory: (db:Pool,access:ExecutionAccessService,cfg:ControlApiConfig)=>new ExecutionReadScopes(db,access,cfg),
           inject: [CONTROL_API_POOL,ExecutionAccessService,CONTROL_API_CONFIG],
         },
+        ...(dependencies.financialSource?[{
+          provide:FinancialSourceComposition,
+          useFactory:()=>{
+            const prepared=dependencies.financialSource!,composition=prepared.composition;
+            return Object.assign(composition,{
+              onModuleInit:()=>composition.start(prepared.listeners),
+              beforeApplicationShutdown:()=>composition.shutdown(),
+            });
+          },
+        }]:[]),
         ...(dependencies.currentViewRuntime ? [{
           provide: CurrentViewCoreComposition,
           useFactory: (auth: AuthService, scopes: ExecutionReadScopes) => {

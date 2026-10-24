@@ -55,6 +55,19 @@ export interface CurrentHumanNativeReadRecoveryPort {
    * must own settlement; NC-01 installs no successful settlement operation. */
   recover(attempt: CurrentHumanNativeReadRecoveryAttempt): Promise<unknown>;
 }
+/** Explicit startup-only reverse participants. The candidate is the SAME one
+ * that issued these identities; registration is routing, never permission.
+ * The installer supplies a real authenticated source recovery port. */
+export interface CurrentHumanReverseRecoveryParticipant {
+  readonly candidate: Pick<CurrentHumanCandidate, "usesPool" | "recoverableObligations">;
+  readonly workload_id: string;
+  readonly recovery: CurrentHumanRecoveryPort;
+}
+const reverseAttempt = z.object({ lease_id: text, attempt_id: text, workspace_id: text,
+  environment: z.enum(["paper", "sandbox", "live"]), workload_id: text, request_digest: hash,
+  human_issuer: text, subject: text, session_id: text, session_revision: z.number().int().nonnegative().safe(),
+  authority_revision: z.number().int().nonnegative().safe(), expires_at: z.number().positive().finite().max(Number.MAX_SAFE_INTEGER),
+}).strict();
 export class CurrentHumanMutationPending extends CurrentHumanLeaseError {
   constructor(readonly mutation_id: string, readonly state: "DRAIN_PENDING" | "DRAIN_UNKNOWN") {
     super(state === "DRAIN_UNKNOWN" ? "CURRENT_HUMAN_MUTATION_OUTCOME_UNCERTAIN" : "CURRENT_HUMAN_MUTATION_PENDING");
@@ -106,16 +119,40 @@ function assertFence(fence: CurrentHumanMutationFence | undefined): void {
  * callbacks or secrets. Retry requires the same authorized request/key; used
  * leases are released only by actual signed source terminal proofs. */
 export class CurrentHumanMutations {
+  private readonly reverseParticipants: readonly CurrentHumanReverseRecoveryParticipant[];
+  // Scheduling only, never authority/custody. Advance even after a source
+  // failure so UNKNOWN on one original attempt cannot starve other workloads.
+  private lastRecoveryKey?: string;
   constructor(private readonly pool: Pool, private readonly candidate: CurrentHumanCandidate,
     private readonly recovery: CurrentHumanRecoveryPort,
     private readonly limits: { maximum_intents: number; maximum_recoveries_per_request: number },
-    private readonly nativeRecovery?: CurrentHumanNativeReadRecoveryPort) {
+    private readonly nativeRecovery?: CurrentHumanNativeReadRecoveryPort,
+    reverseParticipants: readonly CurrentHumanReverseRecoveryParticipant[] = []) {
     if (!candidate.usesPool(pool) || !Number.isSafeInteger(limits.maximum_intents) || limits.maximum_intents < 1 || limits.maximum_intents > 4096
       || !Number.isSafeInteger(limits.maximum_recoveries_per_request) || limits.maximum_recoveries_per_request < 1 || limits.maximum_recoveries_per_request > 16)
       throw new CurrentHumanLeaseError("CURRENT_HUMAN_MUTATION_CONFIG_INVALID");
+    if (!Array.isArray(reverseParticipants) || reverseParticipants.length > 16)
+      throw new CurrentHumanLeaseError("CURRENT_HUMAN_MUTATION_CONFIG_INVALID");
+    const workloads = new Set<string>(), candidates = new Set<unknown>([candidate]);
+    this.reverseParticipants = Object.freeze(reverseParticipants.map(participant => {
+      if (!participant || !text.safeParse(participant.workload_id).success || workloads.has(participant.workload_id) ||
+        !participant.candidate || candidates.has(participant.candidate) ||
+        typeof participant.candidate.usesPool !== "function" || !participant.candidate.usesPool(pool) ||
+        typeof participant.candidate.recoverableObligations !== "function" || typeof participant.recovery?.recover !== "function")
+        throw new CurrentHumanLeaseError("CURRENT_HUMAN_MUTATION_CONFIG_INVALID");
+      workloads.add(participant.workload_id); candidates.add(participant.candidate);
+      return Object.freeze({ candidate: participant.candidate, workload_id: participant.workload_id, recovery: participant.recovery });
+    }));
   }
 
   usesPool(pool: Pool): boolean { return this.pool === pool; }
+
+  /** Identity check for the application composition barrier. Similar workload
+   * strings or another coordinator do not prove registration of THIS issuer. */
+  hasReverseRecoveryParticipant(participant: CurrentHumanReverseRecoveryParticipant): boolean {
+    return !!participant && this.reverseParticipants.some(registered => registered.candidate === participant.candidate &&
+      registered.workload_id === participant.workload_id && registered.recovery === participant.recovery);
+  }
 
   private async transaction<T>(operation: (db: PoolClient) => Promise<T>) {
     return withTransaction(this.pool, async db => {
@@ -260,6 +297,48 @@ export class CurrentHumanMutations {
 
   private async recoverSource() {
     const attempts = await this.candidate.recoverableObligations(this.nativeRecovery ? "BOTH" : "REVERSE_ONLY");
+    if (this.reverseParticipants.length) {
+      // Capture and validate ALL registered enumeration before any source
+      // request. Preserve original attempt objects; no reconstructed JWT/body.
+      const selected = new Map<string, { family: "NATIVE_READ" | "REVERSE_HUMAN"; attempt: CurrentHumanNativeReadRecoveryAttempt | CurrentHumanRecoveryAttempt;
+        recover: (attempt: CurrentHumanNativeReadRecoveryAttempt | CurrentHumanRecoveryAttempt) => Promise<unknown>; digest: string }>();
+      if (!Array.isArray(attempts) || attempts.length > 128)
+        throw new CurrentHumanLeaseError("CURRENT_HUMAN_MUTATION_RECOVERY_INVALID");
+      const add = (family: "NATIVE_READ" | "REVERSE_HUMAN", attempt: CurrentHumanNativeReadRecoveryAttempt | CurrentHumanRecoveryAttempt,
+        recover: (attempt: CurrentHumanNativeReadRecoveryAttempt | CurrentHumanRecoveryAttempt) => Promise<unknown>, replace: boolean) => {
+        const key = `${family}:${attempt.lease_id}`, digest = accessDigest(attempt), prior = selected.get(key);
+        if (prior && prior.digest !== digest) throw new CurrentHumanLeaseError("CURRENT_HUMAN_MUTATION_RECOVERY_INVALID");
+        if (!prior || replace) selected.set(key, { family, attempt, recover, digest });
+      };
+      for (const item of attempts) {
+        if (item.family === "NATIVE_READ") {
+          if (this.nativeRecovery) add(item.family, item.attempt, attempt => this.nativeRecovery!.recover(attempt as CurrentHumanNativeReadRecoveryAttempt), false);
+        } else if (item.family === "REVERSE_HUMAN" && reverseAttempt.safeParse(item.attempt).success)
+          add(item.family, item.attempt, attempt => this.recovery.recover(attempt as CurrentHumanRecoveryAttempt), false);
+        else throw new CurrentHumanLeaseError("CURRENT_HUMAN_MUTATION_RECOVERY_INVALID");
+      }
+      for (const participant of this.reverseParticipants) {
+        const additional = await participant.candidate.recoverableObligations("REVERSE_ONLY");
+        if (!Array.isArray(additional) || additional.length > 128)
+          throw new CurrentHumanLeaseError("CURRENT_HUMAN_MUTATION_RECOVERY_INVALID");
+        for (const item of additional) {
+          if (item.family !== "REVERSE_HUMAN" || !reverseAttempt.safeParse(item.attempt).success ||
+            item.attempt.workload_id !== participant.workload_id)
+            throw new CurrentHumanLeaseError("CURRENT_HUMAN_MUTATION_RECOVERY_INVALID");
+          add(item.family, item.attempt, attempt => participant.recovery.recover(attempt as CurrentHumanRecoveryAttempt), true);
+        }
+      }
+      const keys = [...selected.keys()].sort();
+      const after = this.lastRecoveryKey === undefined ? 0 : keys.findIndex(key => key > this.lastRecoveryKey!);
+      const start = after < 0 ? 0 : after;
+      for (let calls = 0; calls < Math.min(keys.length, this.limits.maximum_recoveries_per_request); calls++) {
+        const key = keys[(start + calls) % keys.length]!, item = selected.get(key)!;
+        this.lastRecoveryKey = key;
+        try { await item.recover(item.attempt); }
+        catch { /* Real durable global state below still owns terminal/UNKNOWN. */ }
+      }
+      return;
+    }
     let calls = 0;
     for (const item of attempts) {
       if (item.family === "NATIVE_READ" && !this.nativeRecovery) continue;

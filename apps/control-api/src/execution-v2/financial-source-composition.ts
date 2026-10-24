@@ -7,6 +7,7 @@ import { z } from "zod";
 import type { AccessActor } from "./access.contract";
 import { CurrentHumanCandidate, type CurrentHumanCandidateConfig } from "./current-human-candidate";
 import { createCurrentHumanTransport, type CurrentHumanTransportConfig } from "./current-human-transport";
+import type { CurrentHumanRecoveryPort, CurrentHumanReverseRecoveryParticipant } from "./current-human-mutations";
 import { FinancialSourceAssertionAuthority, financialSourceAssertionRequest,
   type FinancialSourceAssertionSelection } from "./financial-source-assertion";
 import { createFinancialSourceAssertionTransport,
@@ -80,7 +81,7 @@ export class FinancialSourceComposition {
   private startingPending = 0;
   private stopping?: Promise<void>;
 
-  private constructor(candidate: CurrentHumanCandidate, private readonly config: FinancialSourceCompositionConfig) {
+  private constructor(private readonly candidate: CurrentHumanCandidate, private readonly config: FinancialSourceCompositionConfig) {
     this.authority = new FinancialSourceAssertionAuthority(candidate, config.assertion_limits);
     this.assertion = createFinancialSourceAssertionTransport({ issue: (context, input) => {
       if (this.state !== "RUNNING") return Promise.reject(failure("FINANCIAL_SOURCE_COMPOSITION_NOT_RUNNING"));
@@ -97,6 +98,15 @@ export class FinancialSourceComposition {
         if (this.state === "RUNNING") { this.state = "FAILED"; this.stopAdmission(); this.closeListeners(); }
       });
     }
+  }
+
+  /** Startup routing only. The existing global mutation coordinator must
+   * register this exact Candidate BEFORE a principal can issue. No transport,
+   * source request, lease, separate candidate or source ACK is synthesized. */
+  reverseRecoveryParticipant(recovery: CurrentHumanRecoveryPort): CurrentHumanReverseRecoveryParticipant {
+    if (this.state !== "CREATED" || !recovery || typeof recovery.recover !== "function")
+      throw failure("FINANCIAL_SOURCE_COMPOSITION_CONFIG_INVALID");
+    return Object.freeze({ candidate: this.candidate, workload_id: this.config.candidate.source.workload_id, recovery });
   }
 
   static async create(pool: Pool, input: FinancialSourceCompositionConfig): Promise<FinancialSourceComposition> {
