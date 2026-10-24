@@ -5,6 +5,17 @@ CORE-03/04/06 follow-through; this receipt is not a new request ledger.
 
 **Verdict: SOURCE_IMPLEMENTED / FOCUSED_GATES_PASS / NOT_INSTALLED.**
 
+**Superseding actual-source follow-through24Oct08:05UTC:**
+[current receipt / source commits / real grain census / exact remaining wiring](CORE_MANAGER_FINANCIAL_SOURCE_FOLLOWTHROUGH_2026-10-24.md),
+[cumulative§22](CORE_TO_EDGE_TS_PM_CONSOLIDATED_RETURN_2026-10-22.md#22-actual-v5-source-bytes-per-grain-projection-and-financial-worker-composition-24oct2026).
+New owned Edge candidate `7ab60fb4` implements exact v5 CURRENT and the
+financial same-call worker transport. Actual verified-TLS source probe reads
+ALL722physicalACCOUNT rows in4selections:196accounts,341balances,185policies,
+not722account documents. Bytes/hash/time verified; human-policy/BFF/SSE and
+financial APPLIED remain open. Blanket mandatory-lineage wording below is
+superseded for explicit whole-business policy only, not narrower rights.
+No persistent runtime or public DTO/UI change.
+
 **Latest24Oct follow-through:** real Manager-store CURRENT candidate
 `73711b4e21ab14d6477af83bb09673ea07b8209d`,147library+3real-PG tests,
 Clippy/build PASS; PM endpoint assembly

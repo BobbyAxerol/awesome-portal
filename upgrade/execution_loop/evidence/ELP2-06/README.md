@@ -1,5 +1,12 @@
 # ELP2-06 — Manager read models và 360 datasets
 
+**24Oct08:05UTC actual source correction:**
+[source `7ab60fb4` and verified-TLS722-row receipt](../ELP2-10/CORE_MANAGER_FINANCIAL_SOURCE_FOLLOWTHROUGH_2026-10-24.md).
+Physical ACCOUNT includes196accounts/341balances/185policies, not one grain;
+read all via4field-correct selections. Explicit whole-business CURRENT may
+use tupleless exact publications; narrow rights do not inherit that permission.
+Core publication/BFF wiring and real human/consumer acceptance remain open.
+
 **24Oct2026 source follow-through:** candidate
 `73711b4e21ab14d6477af83bb09673ea07b8209d` now reads official Manager
 epochs/cycles/entities, not bootstrap tables. Selected-ID memory bounds and

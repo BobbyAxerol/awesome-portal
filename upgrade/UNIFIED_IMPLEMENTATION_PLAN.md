@@ -9574,6 +9574,11 @@ block only dependent activation. Existing Research/Governance evidence preserved
 
 ### ELP2-05 — Nối catalogue và TS publication
 
+**24Oct source-composition correction:** [current follow-through](execution_loop/evidence/ELP2-10/CORE_MANAGER_FINANCIAL_SOURCE_FOLLOWTHROUGH_2026-10-24.md)
+adds the missing same-call financial envelope transport at the real worker
+seam. Source code/tests are distinct from commissioning the financial-purpose
+issuer/verifier and actual post-COMMIT APPLIED callback through Edge.
+
 **24Oct continuation:** PM source endpoint candidate09448820,85focused tests
 PASS; actual financial-purpose channel/verifier/COMMIT→APPLIED remains the
 Edge/PM integration gate. [Current implementation and handoff §21.2](execution_loop/evidence/ELP2-10/CORE_TO_EDGE_TS_PM_CONSOLIDATED_RETURN_2026-10-22.md#212-missing-financial-endpoint-assembly-is-now-implemented).
@@ -9593,6 +9598,12 @@ Edge/PM integration gate. [Current implementation and handoff §21.2](execution_
 
 ### ELP2-06 — Manager read models và 360 datasets
 
+**24Oct superseding scope/source review:** [current follow-through](execution_loop/evidence/ELP2-10/CORE_MANAGER_FINANCIAL_SOURCE_FOLLOWTHROUGH_2026-10-24.md)
+corrects the overbroad mandatory-lineage claim: exact tupleless population
+requires explicit current `business.read_all`, not fabricated tuples. Exact
+stored v5 CURRENT compatibility and finite source probe are separate from Core
+publication-metadata/Accounts BFF wiring, real trust and human authorization.
+
 **24Oct continuation:** actual Manager-store reader73711b4e,147library+3PG
 PASS; fixes bootstrap/storage and physical/logical workspace mismatches.
 SOURCE_ONLY, not installed/source-qualified. [Source census, trust and next owner actions §21](execution_loop/evidence/ELP2-10/CORE_TO_EDGE_TS_PM_CONSOLIDATED_RETURN_2026-10-22.md#21-manager-current-source-financial-endpoint-and-real-research-preservation-24oct2026).
@@ -9607,6 +9618,11 @@ SOURCE_ONLY, not installed/source-qualified. [Source census, trust and next owne
 <a id="elp2-07"></a>
 
 ### ELP2-07 — Trusted command và status bridge
+
+**24Oct current owner/action:** the existing submit/status/recovery gateway
+source is retained, not reimplemented or enabled. [Seven-row return](execution_loop/evidence/ELP2-10/CORE_MANAGER_FINANCIAL_SOURCE_FOLLOWTHROUGH_2026-10-24.md#4-owner-actions-and-phase-disposition)
+keeps exact Edge gateway commissioning and same-original intent acceptance
+open; source-byte or financial transport tests do not close command authority.
 
 - **Current return2026-10-16:** assigned separately on `42c390796f4bd2a7de151313944b41f1245bdbc2`; [packet / actual validation](./execution_loop/evidence/ELP2-07/README.md), [HK source pins](./execution_loop/evidence/ELP2-07/source-alignment.md), [operation matrix / recovery / Claude handoff / debt](./execution_loop/evidence/ELP2-07/coverage-and-handoff.md). Four named APIs and eight candidate capital operations have a durable Portal component, **not a source-qualified dispatch**. Default adapter and retained mutation guard remain closed. Exact source receipts, other control/profile families and UXM-09 consumer remain open; no runtime/FE work or next-phase activation assigned.
 - **Goal/dependency:** 01/02/03 contract/policy; mutation cần exact TS/PM operation, qualified Edge trust/relay và approval riêng.
@@ -9653,6 +9669,11 @@ Old entry/planning statements elsewhere are retained history, not current08.
 
 ### ELP2-09 — Realtime revocation và replay
 
+**24Oct latest:** [source follow-through and exact remaining wiring](execution_loop/evidence/ELP2-10/CORE_MANAGER_FINANCIAL_SOURCE_FOLLOWTHROUGH_2026-10-24.md)
+keep CURRENT versus STREAM/HISTORY/REPLAY independent. Source probe is not a
+current-human/SSE receipt; do not rerun retired native cases to hide the missing
+Manager publication/BFF and per-purpose source authorization.
+
 **24Oct continuation:** bounded CURRENT source reader73711b4e implemented and
 tested; STREAM/HISTORY/REPLAY remain independently commissioned, not inherited.
 [Exact real-source/trust handoff §21](execution_loop/evidence/ELP2-10/CORE_TO_EDGE_TS_PM_CONSOLIDATED_RETURN_2026-10-22.md#21-manager-current-source-financial-endpoint-and-real-research-preservation-24oct2026).
@@ -9687,6 +9708,12 @@ assignment. No goal/push/dev/main/release/deploy started by this return.
 <a id="elp2-10"></a>
 
 ### ELP2-10 — Performance, quality và coexistence
+
+**24Oct latest follow-through:** [Manager/financial/load-driver receipt and Claude handoff](execution_loop/evidence/ELP2-10/CORE_MANAGER_FINANCIAL_SOURCE_FOLLOWTHROUGH_2026-10-24.md).
+Core load-driver commit `a2f0ebefd` hard-caps dispatch, cancels active requests
+and streams response-byte accounting; no workload/SLO reduction. Source probe,
+human-policy integration, actual financial APPLIED, numeric approval, G2 and
+browser each keep their own verdict. This is not whole-phase/full-product PASS.
 
 **24Oct latest:** [§21 actual Manager reader, financial endpoint, public trust readback and real-backup preservation](execution_loop/evidence/ELP2-10/CORE_TO_EDGE_TS_PM_CONSOLIDATED_RETURN_2026-10-22.md#21-manager-current-source-financial-endpoint-and-real-research-preservation-24oct2026)
 supersedes20 only for these specific new source deliveries. Edge candidate
@@ -10282,6 +10309,11 @@ full10PASS. No FE/public fields, HK writes, push/deploy or11 start.
 <a id="elp2-11"></a>
 
 ### ELP2-11 — Migration tích hợp và bàn giao release
+
+**24Oct reuse-by-impact:** [current follow-through](execution_loop/evidence/ELP2-10/CORE_MANAGER_FINANCIAL_SOURCE_FOLLOWTHROUGH_2026-10-24.md#2-test-method-and-reuse)
+changes no Core migration/preservation helper. Reuse the exact30-relation,
+39,354-row real-backup receipt below; do not repeat restore merely for source
+or Markdown changes. Final matched-candidate/source/browser gates remain open.
 
 **24Oct preparation receipt:** [30-relation preservation packet](execution_loop/evidence/ELP2-11/README.md),
 33helper+3CLI+17focused transport/build/PGrestore PASS. A separate realResearch

@@ -1,5 +1,11 @@
 # ELP2-05 — Catalogue and TS publication
 
+**24Oct08:05UTC additive worker composition:**
+[source `7ab60fb4`, focused gates and exact remaining financial-purpose commissioning](../ELP2-10/CORE_MANAGER_FINANCIAL_SOURCE_FOLLOWTHROUGH_2026-10-24.md).
+PM envelope is unwrapped at the actual worker seam; exact same-call proofs
+and original generation/cursor survive recovery. Real issuer/verifier and
+COMMIT→APPLIED endpoint acceptance still need their actual Edge/PM binding.
+
 **24Oct2026 source follow-through:** isolated PM endpoint candidate
 `094488202c4b05b7924bc97e47e18e84d667b2f6` assembles the original financial
 authority and post-COMMIT/APPLIED custody,85focused tests PASS. SOURCE_ONLY,

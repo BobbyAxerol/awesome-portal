@@ -2213,3 +2213,53 @@ listener OFF, original bindings/audit/backups retained. Candidate binary is not
 an image digest. Source-only rollback leaves explicit routes unmounted; no old
 slot reopening, grant extension, custody deletion or artificial source record.
 Full08/read09 and ELP2-10/11 remain NOT_MET for the exact exits listed above.
+
+## 22. Actual v5 source bytes, per-grain projection and financial worker composition —24Oct2026
+
+Coordinator: Codex/Core; source/test closure checkpoint08:05UTC. Current
+[receipt, exact pins, seven-row disposition and Claude handoff](CORE_MANAGER_FINANCIAL_SOURCE_FOLLOWTHROUGH_2026-10-24.md)
+supersedes §21 only where stated; no existing failed/retired receipt is removed.
+
+- **Edge source `7ab60fb4696d10da871b7a2216b31f2831aa34b1`**:
+ 19files,+3268/−41, clean owned branch `feat/core-current-policy-wire-20261024`.
+ Exact v5 CURRENT compatibility, tupleless construction controlled by actual
+ current whole-business policy, strict verify-full DB probe and same-call
+ financial envelope→worker transport/authority are implemented. Library188,
+ runtime34, financial21focused retake, strictClippy/build and financialPG
+ feature compilation PASS. Repeated subset counts are not extra coverage.
+- **Actual source probe PASS**,24Oct08:03:00.358–08:03:01.066UTC,1CPU/512MiB,
+ no OOM, owned container removed. ALL722physicalACCOUNT rows:196account,
+ 341balance,185policy,4grain-specific selections. Earlier blanket selection
+ correctly refused absent fields; fix selection grain, not validator/DB.
+ Original v5/hash/timestamp preserved, no invented lineage or freshness.
+ Receipt `c368c8252a52d4177a7aadc9ee85ceb04d490807db8afb50f38bf0fb4d1b6227`,
+ state **SOURCE_VERIFIED_BYTES_ONLY_NOT_HUMAN_AUTHORIZED**. It is not a real
+ user/API/SSE/financial-APPLIED result or a persistent listener installation.
+- **Core source `a2f0ebefd33a9d84f8b325281cc49721dd94ad6d`**:
+ 3files,+309/−32, safe hard in-flight admission/cancel/streamed-byte load driver.
+ 12new cases and existing workload10/reservation12 PASS; sandbox subprocess
+ EPERM was diagnosed and retaken unchanged, not hidden by editing tests.
+
+**Correction to the earlier mandatory-lineage statement:** Core already
+supports tupleless exact published datasets under explicit current
+`business.read_all`, with DENY and final policy recheck. Narrower rights still
+need exact lineage. Missing source lineage is not a universal full-business
+blocker. No grant or purpose is inherited or copied from stable.
+
+**Core-owned next work, not external debt:** real publication metadata and an
+Accounts BFF adapter must call `.read()` on the actual principal. Startup
+currently forwards an unqualified publication reader and Manager BFF reads
+`alpha_fleet_overview`; raw ACCOUNT/account-balance/policy rows cannot be
+renamed Fleet. The source probe does not wire these APIs. Edge reviews/imports
+the candidate, qualifies exact sources/purposes and actual per-hop trust;
+financial-purpose issuer/verifier/APPLIED and command gateway remain separate
+explicit Core/Edge/TS-PM integration actions in the seven-row return. Do not
+make these reads wait for command/calibration or request another undefined
+window before preparation is complete.
+
+All peer Claude/Edge/PM WIP is unchanged. Five ephemeral probe DSN copies were
+removed, original source credentials/CA/keys/rows retained. Installed Core
+image01692fc5 and listenerOFF unchanged. No Git push, dev/main/stable/
+provider28445, frontend, command/Live, production budget or release change.
+Full05/06/07/09/10/11 acceptance remains distinct from these completed source
+and actual byte-read results; reuse phase11's unchanged real-backup receipt.

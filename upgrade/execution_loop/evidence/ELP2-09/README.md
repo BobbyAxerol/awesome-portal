@@ -1,5 +1,11 @@
 # ELP2-09 — Realtime revocation và replay
 
+**24Oct08:05UTC source-byte receipt, not purpose commissioning:**
+[exact v5 CURRENT/source selections and remaining Core wiring](../ELP2-10/CORE_MANAGER_FINANCIAL_SOURCE_FOLLOWTHROUGH_2026-10-24.md).
+Actual722-row verified-TLS read PASS does not grant STREAM/HISTORY/REPLAY,
+finish cache/cursor/SSE acceptance or reopen retired native cases. Keep each
+purpose's real source/current-policy and final-disclosure gates independent.
+
 **24Oct2026 actual-source reader continuation:** isolated candidate73711b4e
 implements CURRENT against official Manager storage with current Core policy,
 exact selected hashes/lineage/fields and bounded cursor reads.147library+3PG

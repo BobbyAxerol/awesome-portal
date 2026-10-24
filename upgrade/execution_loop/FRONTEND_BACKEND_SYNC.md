@@ -1,5 +1,58 @@
 # Execution Loop V2 — Sổ đồng bộ Frontend ↔ Backend (sống)
 
+## Codex round-result —24Oct2026,08:05UTC
+
+Owned Edge candidate **7ab60fb4696d10da871b7a2216b31f2831aa34b1**:
+19files,+3268/−41, exact v5/per-grain CURRENT and same-call financial worker
+transport, clean/SOURCE_ONLY. Core **a2f0ebefd33a9d84f8b325281cc49721dd94ad6d**:
+3files,+309/−32, hard admission/cancel/streamed-byte load driver. Gate details
+and safe hashes: [current receipt and Claude handoff](evidence/ELP2-10/CORE_MANAGER_FINANCIAL_SOURCE_FOLLOWTHROUGH_2026-10-24.md).
+
+Actual HK verified-TLS source probe PASS: ALL722physicalACCOUNT rows split
+196account/341balance/185policy,4selections,0.708seconds,1CPU/512MiB/noOOM.
+Original source v5/hash/time retained. Earlier field mismatch was a genuine
+grain-selection defect; no schema/validator/source row was weakened to pass.
+This is not human/API/SSE authorization or financial APPLIED acceptance.
+
+Core still owns independent publication-metadata + actual-principal Accounts
+BFF wiring; do not return that work to Edge. Account entities, balances and
+policies cannot masquerade as Fleet aggregates. Edge remains sole counterpart
+for per-purpose source/trust, financial verifier/APPLIED and command gateway.
+Seven named owner/actions remain in the receipt, no generic waiting-window row.
+
+Claude lane still clean00e7f6cf; accepted UI/linked fixtures untouched, no new
+public DTO/enum or component work. Existing unknown-attribution negative stays
+Claude-owned. Five temporary credential copies cleaned, owned probe cells
+absent; installed Core/listener unchanged. Reuse unchanged phase11 backup proof;
+no push, stable/dev/main/provider28445, command/Live or production calibration.
+
+## Codex round-start —24Oct2026,07:16UTC: remove actual composition blockers
+
+Continue Bobby's six-phase Research-only assignment from clean canonical
+`b3c818c7a`. No new Claude request at clean worktree
+`/home/bobby/portal-research-fe2@00e7f6cff2fadbd88b8ed461fa870b28ee88ad94`;
+other Claude refs are not evidence of this worktree's landing. HK feature and
+PM owner WIP remain untouched. No push, stable/dev/main/provider28445,
+command/Live or new production budget/calibration authority.
+
+Independent source review found a concrete correction to the preceding
+lineage statement: Core already supports tupleless resources under explicit
+current `business.read_all` on the entire exact published dataset, with DENY
+and final recheck. The new Edge source validator accidentally rejects that
+configuration before policy. Correct only construction; preserve all narrower
+tuple gates. Qualify actual v5 compatibility separately, never relabel v5 as v6.
+
+Disjoint delegated writes: `edge_adapter_review` owns source-selection
+validation/tests in the isolated Edge scratch; `pm_publication_coordination`
+owns a same-call financial envelope transport/tests there; `c7_capacity_review`
+owns `scripts/measure/lib/replay.mjs` and a new focused safety test on Core.
+Primary owns Manager compatibility/runtime assembly, shared docs, source
+transfer, serial bounded gates and integration. Agents do not change credentials,
+runtime, shared contracts, Git refs/commits or peer WIP. Retain the approved
+2CPU/1536MiB/300s correctness ceiling; no absolute load/connected PASS inferred
+from mocks. ACK each deliverable with exact tests/source pins and remaining
+external owner/input, rather than another undefined expiring window.
+
 ## Codex round-start —24Oct2026,06:18UTC: approved05/06/07/09/10/11 follow-through
 
 Bobby now assigns all six remaining backend phases, in order: actual qualified
