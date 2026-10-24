@@ -52,6 +52,61 @@
       "scope": "Actual Ed25519 verification and Python/Rust golden vector; not installed financial trust"
     },
     {
+      "name": "PM-financial-receiver-and-direct-regressions",
+      "source_commit": "d9d132dbcd51cb345ba0465fd03cb8df88691f40",
+      "status": "PASS",
+      "passed": 158,
+      "new_cases": 30,
+      "reused_case_count_not_additive": 128,
+      "log_sha256": "3f8c55483c1a381a238c8f332a697face5fec4630045ecbdd1a33fe17a10e1e6",
+      "scope": "TEST_ONLY receiver transport/composition; not installed trust, actual source APPLIED or durable source ACK"
+    },
+    {
+      "name": "Edge-receiver-and-command-focused-tests",
+      "source_commit": "bd2f42d1de40523f1de79575a2c4b39b35c2b34f",
+      "status": "PASS",
+      "passed": 19,
+      "command_composition": 8,
+      "financial_receiver": 6,
+      "actual_disposable_pg": 4,
+      "actual_command_constructor_pg_mtls": 1,
+      "combined_script_exit_code": 101,
+      "combined_script_disposition": "TESTS_PASS_THEN_STRICT_LINT_FAILED_NOT_OVERALL_PASS",
+      "log_sha256": "caa20f2e5e1c7027f11f6202ae488be1ef4b93f61a65fbd58d3127cdaa3a365d",
+      "scope": "Genuine isolated PG and loopback mTLS; owning source replies/current authority TEST_ONLY, not connected business/command acceptance"
+    },
+    {
+      "name": "receiver-command-initial-db-readiness",
+      "status": "FAILED_SETUP_NOT_PASS",
+      "tests_run": 0,
+      "reason": "Temporary init Unix socket went away before final service; retake waits final TCP readiness",
+      "log_sha256": "f18ee442b4cf890ac7577d29803f90a1d9c7e41b2d22bb807c482e8e2ec952a8"
+    },
+    {
+      "name": "receiver-command-initial-production-lint",
+      "status": "FAILED_NOT_PASS",
+      "reason": "Wildcard import, replacement unused import and doc backtick warning; corrected only imports/docs before final lint",
+      "intermediate_log_sha256": [
+        "798c9ca38b9a4c90d16b5740bb5bc21073a8004eae165679ef638ea7dc50795f",
+        "237ddc42ac3a495795d58a227314f8b811e010723ac8e6d66087bdd7088c31ed"
+      ]
+    },
+    {
+      "name": "receiver-command-final-production-lint",
+      "command": "cargo clippy --offline --locked -p edge-service --lib --bins -- -D warnings",
+      "status": "PASS",
+      "exit_code": 0,
+      "log_sha256": "16b22c8fea57f2af0b8b714495f8a10ed33af885d3df57830bb2f5e25576f470"
+    },
+    {
+      "name": "receiver-final-explicit-test-imports-compile",
+      "command": "cargo test --offline --locked -p projection-store-pg --lib --no-run",
+      "status": "PASS",
+      "exit_code": 0,
+      "log_sha256": "043c3b988e8901f57aa5f1fb693297895347ff1bc44213f53ae43cdee1f2f4d1",
+      "scope": "Compilation only after import correction; no duplicate database test count"
+    },
+    {
       "name": "actual-isolated-TLS-and-refusal-specimens",
       "status": "PASS_TRANSPORT_NEGATIVES_ONLY",
       "core_image": "sha256:50939bb5784b58b0bc68121c4920c703abf208da7dfba74541934fe53e48e9b2",

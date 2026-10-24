@@ -2,6 +2,15 @@
 
 ## Current direct HK implementation/runtime —2026-10-24
 
+[14:18UTC implementation follow-through](CORE_EDGE_DIRECT_COMMISSIONING_2026-10-24.md#applied-receiver-and-command-assembly-follow-through-1418utc):
+PMd9d132db/Edgebd2f42d1 deliver genuine post-COMMIT checkpoint/APPLIED reader,
+separate opt-in financial mTLS status client/receiver, and actual disabled
+PG/HTTPS command constructor.158PM/19Rust tests PASS, including real isolated
+PG/mTLS; strict production lint/import compile PASS, earlier failures retained.
+Source-only/R1, not installed financial trust/source ACK/command gateway or
+positive READ/SSE. No UI or public contract change; next actual source bridges
+and six-phase gates are explicit, not another generic wait for a window.
+
 [Latest receipt and consumer handoff](CORE_EDGE_DIRECT_COMMISSIONING_2026-10-24.md)
 supersedes historical installation/phase-entry statements only where the new
 receipt supplies an actual result. Isolated Core↔Edge TLS exercise completed

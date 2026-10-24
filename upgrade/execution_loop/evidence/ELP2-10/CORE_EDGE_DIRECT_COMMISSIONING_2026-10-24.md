@@ -182,13 +182,132 @@ or28664/28665 listener left; both owned HK source worktrees clean. Capacity
 disposition **NO_ACTION_NEEDED** for retired test cells; retained exact image,
 public evidence and finite original trust have Core ownership/expiry.
 
+## APPLIED receiver and command assembly follow-through —14:18UTC
+
+Continued direct implementation on the owned HK candidates, not another
+request-only packet. PM source **`d9d132dbcd51cb345ba0465fd03cb8df88691f40`**
+adds two files,+473/−0. Edge source
+**`bd2f42d1de40523f1de79575a2c4b39b35c2b34f`** adds/changes nine files,
++1580/−16. This follow-through is **11 source/test files,+2053/−16**, separately
+from the preceding proof/intake packages and Markdown. Both owned HK worktrees
+are clean. Intermediate R1 scoped commits follow campaign§10.10c; no push,
+shared-branch integration or final R2/hook/installation claim.
+
+### Genuine receiver checkpoint instead of an accepting APPLIED callback
+
+- `projection-store-pg/src/bootstrap/financial_receiver.rs` looks up only an
+  **existing** exact original, writer fence, manifest/limits and cursor. No
+  INSERT, `bootstrap_begin`, new generation or synthetic receipt. Even its
+  read transaction must physically COMMIT before returning the actual receipt.
+- `edge-service/src/financial_receiver.rs` composes the concrete financial
+  signature verifier with that store primitive. CONTROL purpose/window is
+  checked before and after DB I/O and before response; full raw-request digest
+  is correlated. APPLIED means receiver projection checkpoint, with
+  `business_applied:null`, not source ACK, economic application or a human grant.
+- The explicit default-off receiver uses a **separate TLS1.3/mTLS listener**,
+  PM CA plus exact PM leaf, finite bounds and concurrency/deadline/body limits.
+  Existing Core-only listener/client roles are not broadened. No listener,
+  certificate, signing key, grant or source authority was installed.
+- PM `report_publication_receiver.py` supplies actual CA/hostname/leaf-pinned
+  HTTP transport and the original-authority composition, no redirects,
+  environment proxy, permissive TLS, alternate transport or accepting default.
+  It renews the original source before the check and validates expiry after I/O.
+  Review corrected exact-clock-equality rejection; a few elapsed milliseconds
+  are now valid, while backward/future/stale time is refused.
+- The actual existing `BootstrapReceipt` serializes **generation/cursor only**;
+  internal revision has `#[serde(skip)]`. Independently verified this fact and
+  locked it with a shared Python/Rust vector, without inventing a revision DTO.
+  Current checkpoint must exactly match the requested cursor. An advanced
+  checkpoint is conservatively refused, **not historical ACK proof**.
+- `original_acknowledge` remains a distinct required source callback. Its
+  durable implementation/accepted source binding is still missing; this new
+  status client does not invent a source ACK ledger or alias APPLIED to ACK.
+
+### Actual command constructor, still new-send OFF
+
+`edge-service/src/core_command_runtime.rs` now assembles
+`PgPmCommandContext → PmHttpCommandPort → DurableCommandRelay::with_control →`
+the existing ORIGINAL handler. One process-owned admission and private OFF
+send-control are shared across requests; no public enable method, new HTTP
+wire/route/listener, migration, service-recovery impersonation or current-actor
+cache. Authenticated original scope and request-specific current command
+authority/issuer are mandatory. READ/financial trust is never a fallback.
+
+Extended the existing genuine disposable-PG/mTLS test to call this actual
+constructor for STATUS and revoke, not another manually assembled relay. It
+observed exactly the original TEST_ONLY SUBMIT then STATUS, no third HTTP after
+revoke, unchanged original custody, and OFF refusal for an entirely new
+original **before any row, issuer call or HTTP**. Source reply/current authority
+in this test are explicitly TEST_ONLY; this is not an actual PM capital command.
+The production current-command issuer, accepted Core→Edge gateway mapping and
+independent SERVICE recovery are not supplied by this constructor.
+
+### Focused gates, initial failures and reuse
+
+- PM **158/158 PASS**:30new receiver cases +128 direct proof/authority/endpoint
+  regressions. This supersedes that earlier128-case run for this retake; do not
+  sum repeated cases as new coverage. Transcript SHA256
+  `3f8c55483c1a381a238c8f332a697face5fec4630045ecbdd1a33fe17a10e1e6`.
+- Rust **19/19 PASS**:8command composition,6financial receiver,4actual-PG
+  checkpoint/restart/fencing,1actual constructor PG/mTLS STATUS/revoke/OFF
+  regression. Transcript SHA256
+  `caa20f2e5e1c7027f11f6202ae488be1ef4b93f61a65fbd58d3127cdaa3a365d`.
+  That combined script then failed strict lint; the19 tests remain PASS,
+  **the combined script exit101 is not an overall PASS**.
+- Initial DB launcher caught PostgreSQL's temporary initialization socket,
+  then found it restarting; no Rust test ran. Corrected readiness to final TCP
+  service and removed both owned cells before retake. No lowered test gate.
+- Production Clippy first caught a wildcard import, then the replacement's
+  unused import and a doc-backtick warning. All initial failures retained.
+  Corrected imports/docs only; strict `clippy --lib --bins -- -D warnings`
+  **PASS**,13.36s; final log SHA256
+  `16b22c8fea57f2af0b8b714495f8a10ed33af885d3df57830bb2f5e25576f470`.
+  Final explicit test-import compilation **PASS**,15.03s, log SHA256
+  `043c3b988e8901f57aa5f1fb693297895347ff1bc44213f53ae43cdee1f2f4d1`.
+  No repeated database/crypto suite for import/documentation-only corrections.
+- Independent source review ACCEPT; primary additionally reviewed clock,
+  serialized receipt, genuine checkpoint and command admission/custody seams.
+  All nine final local/HK Edge files compared byte-for-byte by SHA256 before
+  commit. No generated public contract/type/layout/baseline changed.
+
+Tests used existing pinned images, offline SDK/Cargo caches, serial cells.
+PG0.5CPU/256MiB + Rust1.5CPU/1280MiB remained within the combined correctness
+envelope; runtime sample (not a peak/SLO) Rust85.41%CPU/83.19MiB and
+PG50.02%CPU/85.05MiB. Production lint/import-only compile used a separate
+no-network2CPU/1536MiB cell. Each invocation bounded300s. All named test/lint
+containers removed; disposable PG tmpfs removed with its container. No key,
+session, grant, source row, shared service or volume was created/changed by
+this follow-through. Retained source cache/transcripts remain Core-owned;
+capacity SGP210GiB free/HK160GiB free, both67%used: **NO_ACTION_NEEDED**.
+
+### Remaining source implementation, not a generic window wait
+
+Ordinary Accounts still needs the actual held original membership/root bridge:
+PM `native_relations.py:428–595` checks the command/membership lineage, but its
+observation explicitly cannot authorize SERVE/COMMIT. The held business-read
+provider is a collection purpose, **not entity ROOT_SCOPE**; its SQL fence does
+not cover memberships, membership revisions and receipts. A five-table held
+dependency closure and exact Core-root/resource-census correspondence still
+need implementation/qualification. The722 raw source rows are not an
+authorized complete-population census. This investigation does not replace
+current rights with a native historical grant or an accepting callback.
+
+**Backend next:** implement/qualify that original root bridge; bind independently
+accepted financial trust and durable original source ACK, then mount/test the
+completed private receiver. Gateway current-command/service providers remain
+separate from OFF composition. Budget/calibration/coexistence/G2 and browser
+acceptance still need the appropriate actual source/configuration; no synthetic
+load bounds or source receipt is promoted. No new request was found at Claude's
+still-clean pinned worktree. **Claude next:** keep current components/fixtures;
+no new public field, enum, client regeneration or UI task in this slice.
+
 ## Phase exits and consumer handoff
 
 | Phase | Next actual exit, not an invented external wait |
 | --- | --- |
-| ELP2-05 | Accept/bind the concrete financial-purpose trust and real receiver COMMIT/checkpoint→APPLIED→same-original ACK providers; then actual publication receipt |
+| ELP2-05 | Receiver COMMIT/checkpoint→APPLIED source is now implemented/tested; accept/bind financial-purpose trust and genuine durable same-original source ACK, mount receiver and take actual publication receipt |
 | ELP2-06 | Source-held ordinary current membership/complete Accounts authority + independently approved metadata; bind Manager business certificate/audience/profile and exercise actual authorized API |
-| ELP2-07 | Commission exact Edge-only gateway submit/status/recovery; current work does not activate command/Live |
+| ELP2-07 | Actual disabled PG/HTTPS command constructor is implemented/tested; supply current-command/issuer and independent SERVICE recovery, commission accepted Edge-only gateway; do not activate command/Live |
 | ELP2-09 | Fresh independently permitted READ/STREAM and current source; positive cache/cursor/SSE/revoke/restart/recovery; separate HISTORY/REPLAY authority |
 | ELP2-10 | Freeze compatible image/config/schema, approved numeric workload/budget/calibration, matched coexistence/G2 and real browser consumer |
 | ELP2-11 | Integrate qualified source/permissions with applicable DR/rollback/restore/review; reuse unchanged verified backup rather than rerunning it |

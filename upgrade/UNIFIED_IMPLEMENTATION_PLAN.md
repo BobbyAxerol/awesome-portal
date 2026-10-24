@@ -9728,6 +9728,21 @@ assignment. No goal/push/dev/main/release/deploy started by this return.
 
 ### ELP2-10 — Performance, quality và coexistence
 
+**24Oct14:18UTC direct HK source follow-through:** [actual APPLIED/command
+implementation, gates, failures and exact remaining bridges](execution_loop/evidence/ELP2-10/CORE_EDGE_DIRECT_COMMISSIONING_2026-10-24.md#applied-receiver-and-command-assembly-follow-through-1418utc).
+Owned PM `d9d132db` + Edge `bd2f42d1`:11source/testfiles,+2053/−16; real
+existing PG checkpoint after COMMIT, separate default-off financial mTLS status
+receiver/client, actual PG→PMHTTPS→shared-OFF command relay constructor.
+158PM/19Rust PASS (including4realPG+1actualconstructor PG/mTLS), production
+strict Clippy/final test-import compilation PASS. DB readiness/lint failures
+retained; combined script101 is not relabelled PASS. Independent source ACCEPT;
+no push/install/command/Live/shared preview/UI/public contract change. R1, notR2.
+Held ordinary membership/root+census bridge and durable same-original source
+ACK remain implementation/binding work; new APPLIED reader no longer missing.
+Current-command/service issuer/gateway, actual source trust/rights, approved
+budget/calibration, matched G2/browser and final11 gates remain distinct OPEN.
+Claude clean00e7f6cf; no new committed intake or public consumer/regeneration task.
+
 **24Oct13:43UTC direct SSH/runtime result:** [actual isolated commissioning,
 source review, tests, cleanup and per-phase next actions](execution_loop/evidence/ELP2-10/CORE_EDGE_DIRECT_COMMISSIONING_2026-10-24.md).
 Core candidate image50939bb5 and exact Edge binary3e0c4e53 actually ran through

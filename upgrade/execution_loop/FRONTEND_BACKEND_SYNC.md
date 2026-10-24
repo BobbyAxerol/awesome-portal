@@ -1,5 +1,29 @@
 # Execution Loop V2 — Sổ đồng bộ Frontend ↔ Backend (sống)
 
+## Codex direct HK follow-through —24Oct2026,14:18UTC
+
+[Actual source, gates, initial failures and remaining source implementation](evidence/ELP2-10/CORE_EDGE_DIRECT_COMMISSIONING_2026-10-24.md#applied-receiver-and-command-assembly-follow-through-1418utc).
+PM `d9d132db` adds actual pinned-TLS receiver client/original composition;
+Edge `bd2f42d1` adds genuine post-COMMIT existing-checkpoint reader, separate
+default-off PM financial mTLS receiver, and actual PG/HTTPS command constructor
+with new-send OFF.11source/test files,+2053/−16 this follow-through. R1, no push,
+runtime/trust/key/grant/shared-preview/UI change; both owned HK candidates clean.
+
+158PM PASS (30new+128repeated, not additive),19Rust PASS including4actual-PG
+and1actual constructor PG/mTLS STATUS/revoke/no-new-SUBMIT; strict production
+Clippy and final explicit-test-import compile PASS. Initial DB readiness and
+lint failures retained; do not call their combined script exit101 PASS. Exact
+clock-equality refusal corrected. Receipt wire remains actual generation/cursor,
+not a newly invented revision field. Independent review ACCEPT.
+
+**Still actual backend work:** held ordinary membership/root/resource-census
+bridge, financial accepted trust plus distinct durable original ACK, production
+current-command/service providers. These are not satisfied by callable ports.
+Receiver source APPLIED is now delivered, not runtime commissioned. Workload/
+calibration/G2/browser remain separate gates. **Claude:** no public DTO/type/enum,
+regeneration or component/layout/baseline task; keep accepted fixtures/consumers.
+Rechecked clean00e7f6cf, no new committed intake or invented consumer ACK.
+
 ## Codex direct HK commissioning —24Oct2026,13:43UTC
 
 [Actual runtime, source commits, tests, cleanup and six-phase exits](evidence/ELP2-10/CORE_EDGE_DIRECT_COMMISSIONING_2026-10-24.md).
