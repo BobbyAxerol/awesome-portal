@@ -1,5 +1,31 @@
 # Execution Loop V2 — Sổ đồng bộ Frontend ↔ Backend (sống)
 
+## Codex direct HK commissioning —24Oct2026,13:43UTC
+
+[Actual runtime, source commits, tests, cleanup and six-phase exits](evidence/ELP2-10/CORE_EDGE_DIRECT_COMMISSIONING_2026-10-24.md).
+Core `bac63eec4` adds official ordinary-policy intake (31focused + strict
+affected/transitive TypeScript PASS). Owned PM `02174b3f` + Edge `8183b22e`
+add actual original-output signer/verifier/factories (128PM/11Rust + production
+Clippy PASS, independent ACCEPT).8code/test/build files,+1427/−2, not docs.
+Financial wire remains PROPOSED/source-only; authentic receiver APPLIED/ACK
+provider and source trust are not replaced by test callbacks.
+
+**Actual candidate exercise, not another request packet:** Core image50939bb5
+and Edge binary3e0c4e53 ran through SSH/mTLS in isolated cells, actual no-context
+404/invalid-context400 refused; both drained/removed with no session/grant issued.
+Positive business READ/SSE not proven. Correct actual workspace is
+`ws_06G19F61YB8CFR7TEWMS7HQ660`;13policy events/seven historical native grants
+remain, all expired. Zero rows for the old literal `research-workspace` did not
+mean the real workspace had no history. Do not reuse old grants or translate
+native Manager permissions into ordinary Accounts whole-population authority.
+
+Full-project TypeScript timeout/OOM retained, not PASS; narrow changed-source
+gate passed.11transient credential copies shredded, original trust/custody/audit
+kept. Shared healthy Research image01692 unchanged; no migration/public
+DTO/UI/push/stable/dev/main/provider28445/command/Live change. Claude clean
+00e7f6cf has no new committed intake. Keep accepted components/fixtures; real
+consumer acceptance follows each actually qualified row, not machine TLS.
+
 ## Codex commissioning source return —24Oct2026,13:02UTC
 
 [Current receipt](evidence/ELP2-10/CORE_CANDIDATE_COMMISSIONING_2026-10-24.md):

@@ -9728,6 +9728,26 @@ assignment. No goal/push/dev/main/release/deploy started by this return.
 
 ### ELP2-10 — Performance, quality và coexistence
 
+**24Oct13:43UTC direct SSH/runtime result:** [actual isolated commissioning,
+source review, tests, cleanup and per-phase next actions](execution_loop/evidence/ELP2-10/CORE_EDGE_DIRECT_COMMISSIONING_2026-10-24.md).
+Core candidate image50939bb5 and exact Edge binary3e0c4e53 actually ran through
+dedicated SSH/mTLS; unauthorized404/invalid-context400 correctly refused,
+cells drained/removed, no session/grant issued. This is not positive READ/SSE.
+Shared healthy preview image01692 remains unchanged. Actual workspace
+ws_06G19F61YB8CFR7TEWMS7HQ660 retains13policy events/seven historical native
+grants, all expired; previous zero-row literal research-workspace was not the
+actual workspace. No expired-grant reuse or ordinary authority inferred.
+New Core `bac63eec4` ordinary official-writer intake31focused/affected strict
+transitive TypeScript PASS; owned PM `02174b3f` + Edge `8183b22e` concrete
+financial-purpose signer/verifier/factories128PM/11Rust/productionClippyPASS,
+independent ACCEPT,8code/test/buildfiles,+1427/−2. Financial source wire remains
+PROPOSED, real authenticated receiver APPLIED/ACK and held current source
+permissions still require implementation/binding; no accepting callback.
+Full-project TypeScript timeout/OOM NOT_PASS retained; R1/no full R2 freeze.
+11temporary credential copies shredded; original trust/custody/history kept.
+No public contract/UI/push/stable/dev/main/provider28445/command/Live changes.
+ELP2-05/06/07/09/10/11 stay gate-specific OPEN, not window-blocked or full-PASS.
+
 **24Oct13:02UTC commissioning return:** [source/tests/private trust/phase exits
 and Claude handoff](execution_loop/evidence/ELP2-10/CORE_CANDIDATE_COMMISSIONING_2026-10-24.md).
 Core `075119b55`/`68992b037`,14code/testfiles,+1150/−16, opt-in financial

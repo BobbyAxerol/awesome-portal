@@ -1,5 +1,17 @@
 # ELP2-10 — Performance, quality và coexistence
 
+## Current direct HK implementation/runtime —2026-10-24
+
+[Latest receipt and consumer handoff](CORE_EDGE_DIRECT_COMMISSIONING_2026-10-24.md)
+supersedes historical installation/phase-entry statements only where the new
+receipt supplies an actual result. Isolated Core↔Edge TLS exercise completed
+and retired; shared preview unchanged, positive business READ/SSE not proven.
+Core ordinary intake and PM/Edge financial proof source committed with focused
+tests/review; financial protocol/trust and real APPLIED provider not commissioned.
+Full-project compiler resource failures are preserved alongside narrow PASS.
+ELP2-11 is assigned/preparation-tested, not unopened and not final COMPLETE.
+All six remaining phase exits and exact cleanup are linked above. No UI change.
+
 ## Claude reader priority batch — 2026-10-19, 14:57UTC cut
 
 [Exact producer types, fixtures, focused results and consumer checklist](claude-reader-priority-return-2026-10-19.md):
