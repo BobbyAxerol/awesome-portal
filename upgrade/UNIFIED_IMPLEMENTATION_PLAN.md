@@ -9574,6 +9574,16 @@ block only dependent activation. Existing Research/Governance evidence preserved
 
 ### ELP2-05 — Nối catalogue và TS publication
 
+**24Oct financial constructor/issuer supersession:** [current implementation
+and per-phase owner actions](execution_loop/evidence/ELP2-10/CORE_ACCOUNTS_AND_FINANCIAL_RUNTIME_RETURN_2026-10-24.md)
+records Core `6bf817f7a`: one genuine candidate for private issuer/reverse
+custody, explicit sequence/completion and real source-terminal/fresh-authority
+fences. Financial focused139/139, real disposable PG105/105 and source
+TypeScript PASS. Rust constructor/delivery retake is recorded in that packet.
+PM financial-purpose verifier/source association and APPLIED-after-COMMIT are
+still integration inputs through Edge; identity/mTLS is not financial proof.
+No new public DTO, runtime install, command/Live or full05 PASS.
+
 **24Oct source-composition correction:** [current follow-through](execution_loop/evidence/ELP2-10/CORE_MANAGER_FINANCIAL_SOURCE_FOLLOWTHROUGH_2026-10-24.md)
 adds the missing same-call financial envelope transport at the real worker
 seam. Source code/tests are distinct from commissioning the financial-purpose
@@ -9597,6 +9607,15 @@ Edge/PM integration gate. [Current implementation and handoff §21.2](execution_
 <a id="elp2-06"></a>
 
 ### ELP2-06 — Manager read models và 360 datasets
+
+**24Oct real-principal BFF supersession:** Core `95f6b6707` implements independent
+CURRENT metadata/commissioning and Account360 through the same real actor and
+current policy, with a compound final authority fence. [Receipt, exact list
+boundary and Claude handoff](execution_loop/evidence/ELP2-10/CORE_ACCOUNTS_AND_FINANCIAL_RUNTIME_RETURN_2026-10-24.md).
+Independent review ACCEPT;65metadata/BFF tests and affected regressions PASS.
+Account rows are not broker BINDINGs: `/broker-bindings` is not falsely claimed
+populated. Opt-in source commissioning and actual API/browser remain separate;
+no frontend change, native-grant widening or retained fallback on denial.
 
 **24Oct superseding scope/source review:** [current follow-through](execution_loop/evidence/ELP2-10/CORE_MANAGER_FINANCIAL_SOURCE_FOLLOWTHROUGH_2026-10-24.md)
 corrects the overbroad mandatory-lineage claim: exact tupleless population
@@ -9708,6 +9727,17 @@ assignment. No goal/push/dev/main/release/deploy started by this return.
 <a id="elp2-10"></a>
 
 ### ELP2-10 — Performance, quality và coexistence
+
+**24Oct two implementation packages closed in source:** [Accounts-principal
+and financial constructor/delivery return](execution_loop/evidence/ELP2-10/CORE_ACCOUNTS_AND_FINANCIAL_RUNTIME_RETURN_2026-10-24.md)
+pins Core `95f6b6707`/`6bf817f7a` and owned HK Edge `06d835c6`; financial
+139focused/105real-PG, Rust217library/strict production lint/build and source
+TypeScript PASS. Code totals: Core21files,+2722/−4; Edge9files,+2446/−26.
+Independent reviews ACCEPT. Opt-in/source-only/R1, no new installed image or
+whole R2/phase certificate. Exact source/trust/ordinary human scope, financial
+verifier/APPLIED, gateway, approved budget/calibration and matched G2/browser
+are the remaining integration/acceptance gates, not missing constructors.
+Claude keeps its existing components/fixture lane; no UI or public DTO changes.
 
 **24Oct latest follow-through:** [Manager/financial/load-driver receipt and Claude handoff](execution_loop/evidence/ELP2-10/CORE_MANAGER_FINANCIAL_SOURCE_FOLLOWTHROUGH_2026-10-24.md).
 Core load-driver commit `a2f0ebefd` hard-caps dispatch, cancels active requests

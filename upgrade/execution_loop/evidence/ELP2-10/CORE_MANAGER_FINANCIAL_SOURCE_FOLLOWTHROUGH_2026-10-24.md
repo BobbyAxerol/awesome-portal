@@ -1,5 +1,14 @@
 # Core → Edge / Claude — Manager source and financial composition follow-through
 
+**Additive24Oct implementation supersession:**
+[Accounts-principal / financial-constructor return](CORE_ACCOUNTS_AND_FINANCIAL_RUNTIME_RETURN_2026-10-24.md)
+records Core `95f6b6707` and `6bf817f7a`, actual focused/PG/typecheck gates and
+the new repeated-poll delivery lifecycle. The earlier statements below that
+metadata/BFF wiring and the financial constructor are absent are historical
+implementation gaps, now addressed in source. Qualified source/principal/trust,
+PM financial verifier/APPLIED, connected tests and browser gates are NOT
+retroactively marked PASS; Account360 does not fabricate broker BINDINGs.
+
 Coordinator/integrator: Codex/Core. Scope: Bobby's assigned ELP2-05/06/07/09/10/11,
 Research only. This is an additive correction to cumulative §21, not a new
 campaign or a replacement source authority. **SOURCE_COMMITTED /

@@ -1,0 +1,108 @@
+{
+  "schema_version": "portal.execution.evidence-test-results.v1",
+  "tier": "R1",
+  "status": "SOURCE_COMMITTED_FOCUSED_VERIFIED_NOT_INSTALLED",
+  "date_utc": "2026-10-24",
+  "core_branch": "docs/research-loop-plan",
+  "core_commits": [
+    "95f6b6707467309ea107135469c314743ccc48bc",
+    "6bf817f7ae36ea9a0428fe2ec1c43ea40c232120"
+  ],
+  "edge_branch": "feat/core-current-policy-wire-20261024",
+  "edge_commit": "06d835c6cb9aa0ae6225bb50c0c221f2f192d26f",
+  "review": {
+    "accounts_principal_and_metadata": "ACCEPT",
+    "genuine_terminal_helper": "ACCEPT",
+    "financial_issuer_transport_composition": "ACCEPT",
+    "rust_constructor_and_delivery_lifecycle": "ACCEPT",
+    "nonblocking_hardening": "Rust private config allows broader ASCII than the actual Core opaque 43-character context; invalid contexts are rejected by Core",
+    "scope": "SOURCE_LIFECYCLE_ONLY_NOT_CONNECTED_ACCEPTANCE"
+  },
+  "lanes": [
+    {
+      "id": "manager-current-metadata-and-accounts",
+      "result": "PASS",
+      "passed": 65,
+      "failed": 0,
+      "authority": "TEST_ONLY_SOURCE_CONTRACT_AND_BFF_DOUBLES"
+    },
+    {
+      "id": "financial-assertion-authority",
+      "result": "PASS",
+      "passed": 49,
+      "failed": 0,
+      "seconds": 1.47,
+      "authority": "TEST_ONLY_ORCHESTRATION"
+    },
+    {
+      "id": "financial-private-tls-and-composition",
+      "result": "PASS",
+      "passed": 90,
+      "failed": 0,
+      "seconds": 4.2,
+      "authority": "REAL_EPHEMERAL_LOOPBACK_TLS_TEST_ONLY_CANDIDATE_DOUBLES"
+    },
+    {
+      "id": "current-human-disposable-postgresql",
+      "result": "PASS",
+      "passed": 105,
+      "failed": 0,
+      "seconds": 70.71,
+      "authority": "REAL_ISOLATED_DB_AND_EPHEMERAL_SIGNED_SOURCE_PROOFS_NOT_PM_RUNTIME",
+      "log_sha256": "6f59edffb08940b7df6feb13c9604325e3d09b06cac237827b0153ffc47870c4",
+      "cpu_ceiling": 2,
+      "memory_ceiling_bytes": 1610612736,
+      "oom": false,
+      "cleanup": "OWNED_CONTAINERS_AND_INTERNAL_NETWORK_REMOVED"
+    },
+    {
+      "id": "core-typescript-source-incremental",
+      "result": "PASS",
+      "exit_code": 0,
+      "seconds": 68.72,
+      "files": 1431,
+      "compiler_memory_diagnostic_kib": 1328485
+    },
+    {
+      "id": "edge-service-rust-library",
+      "result": "PASS",
+      "passed": 217,
+      "failed": 0,
+      "test_execution_seconds": 0.72,
+      "authority": "SOURCE_CONTRACT_AND_TEST_ONLY_CHANNELS_NOT_CONNECTED_PROVIDER"
+    },
+    {
+      "id": "rust-production-lib-bins-clippy",
+      "result": "PASS",
+      "exit_code": 0,
+      "seconds": 9.8,
+      "all_targets_pass_claim": false
+    },
+    {
+      "id": "rust-edge-service-binary-build",
+      "result": "PASS",
+      "exit_code": 0,
+      "seconds": 21.83,
+      "binary_sha256": "c4a5480060b9c34b0cfad5c59eeb737cf081020e86c74c63cb3dcb2cf1bcbdf7",
+      "combined_log_sha256": "7e1617b864b603c613fcca374de94c8719f480cebd1a2bf27518646d450f305b",
+      "cpu_ceiling": 2,
+      "memory_ceiling_bytes": 1610612736,
+      "oom": false,
+      "cleanup": "OWNED_CONTAINER_REMOVED"
+    }
+  ],
+  "failed_attempts_preserved": [
+    "Initial loopback TLS tests denied by sandbox listen EPERM; only affected specs rerun with loopback permission",
+    "Earlier raw-revoke test fixture rejected by correct drain fence; fixture fixed to official drain-retire-revoke sequence",
+    "Earlier 180-second TypeScript deadline exceeded before successful retake",
+    "Earlier exploratory all-targets Clippy failed test-style warnings; no all-targets PASS claimed"
+  ],
+  "runtime_changed": false,
+  "frontend_changed": false,
+  "public_contract_changed": false,
+  "database_schema_changed": false,
+  "new_session_grant_or_key_created": false,
+  "full_r2": "PENDING_INTEGRATED_QUALIFIED_CANDIDATE",
+  "phase_wide_exit": "NOT_MET",
+  "receipt": "CORE_ACCOUNTS_AND_FINANCIAL_RUNTIME_RETURN_2026-10-24.md"
+}

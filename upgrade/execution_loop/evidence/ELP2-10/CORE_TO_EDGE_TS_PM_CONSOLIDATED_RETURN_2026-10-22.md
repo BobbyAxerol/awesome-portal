@@ -2263,3 +2263,34 @@ image01692fc5 and listenerOFF unchanged. No Git push, dev/main/stable/
 provider28445, frontend, command/Live, production budget or release change.
 Full05/06/07/09/10/11 acceptance remains distinct from these completed source
 and actual byte-read results; reuse phase11's unchanged real-backup receipt.
+
+## 23. Accounts principal / financial constructor source closure —24Oct2026
+
+Coordinator Codex/Core. [Exact implementation, tests, rollback and per-phase
+handoff](CORE_ACCOUNTS_AND_FINANCIAL_RUNTIME_RETURN_2026-10-24.md) supersedes
+§22's two Core-owned implementation gaps without deleting that history.
+
+| Original row | Current concrete return | Next exact action, not a generic window request |
+| --- | --- | --- |
+| CORE-01 /09 | Existing retired native results preserved; no repeated old READ or new grant | Edge/Core correlate still-missing qualified CURRENT/STREAM/cache/cursor lanes after new source binding; HISTORY/REPLAY stay independent. |
+| CORE-02 | No replacement key/certificate; existing installed image unchanged | Edge pins loaded Research/Paper client CA/audience/kid/profile to its chosen source; Core compares exact independent metadata and commissioning artifact before installing opt-in configuration. |
+| CORE-03 | Core `6bf817f7a`: genuine actor-based issuer/reverse composition; Edge candidate `06d835c6`: full financial constructor and exact-response completion lifecycle | Edge imports/reviews these isolated source changes and coordinates PM's real financial-purpose verifier and original source/transaction-group proof. Human identity signature or terminal lease receipt does not replace financial proof. |
+| CORE-04 /06 | Core `95f6b6707`: same-principal Account360+balance BFF and independent metadata; existing financial destination/builder retained | Edge returns qualified three-grain CURRENT metadata/selection and its independently pinned commissioning association; preserve actual v5/source clocks. Real broker BINDING publication remains separate. PM APPLIED/status must refer to original receiver COMMIT, not storage STORED. |
+| CORE-05 | Existing source-dark gateway adapter/custody preserved; no command or Live activation | Edge commissions the actual typed submit/status/recovery target. Core then verifies original intent/idempotency/lost-response using that gateway, never a direct PM bypass. |
+| CORE-06 | Financial delivery cannot skip pending completion even through sidecar refresh; cache memory accounting includes retained verified original response/body | Edge reviews/imports source candidate and supplies independent unaffected control selection; integrated P22/cache/cursor/SSE receipt still needs the qualified runtime, not fixture authority. |
+| CORE-07 | Existing bounded driver safety and numeric-approval distinction unchanged | Edge coordinates target, actual calibration population and accepted numeric bounds; Core runs only impacted workload once compatible source/runtime is available. Correctness2CPU/1536MiB is not production capacity. |
+
+Core sources: `95f6b6707467309ea107135469c314743ccc48bc` and
+`6bf817f7ae36ea9a0428fe2ec1c43ea40c232120`,21files,+2722/−4.
+Owned Edge candidate `06d835c6cb9aa0ae6225bb50c0c221f2f192d26f`,9files,+2446/−26,
+clean. Financial139focused/105real-PG, Rust217library/strict production
+lint/build and source TypeScript PASS. Independent source/lifecycle review
+ACCEPT; R1 only, R2 integrated/connected acceptance pending. No new public DTO
+or frontend component change. Claude can keep fixture/consumer review moving
+and use existing Account360 after the exact source is commissioned.
+
+No source-success receipt, ACK, attempt or permission was manufactured. Both
+owned correctness cells cleaned; failed logs/evidence preserved. No source
+runtime installation, new session/grant/key, push, dev/main/stable/provider28445,
+command/Live or production budget change. All six phase exits retain the
+specific remaining actions in the linked packet, not a false all-green claim.

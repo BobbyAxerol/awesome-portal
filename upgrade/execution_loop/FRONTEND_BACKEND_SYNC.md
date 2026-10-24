@@ -2994,3 +2994,39 @@ authority. Edge source selection,independent HISTORY/REPLAY and PM financial
 proof/APPLIED ownership/wire remain the exact18.2–18.3 inputs via Edge only.
 No retired grant/window reuse,command/Live or stable/dev/main/provider28445
 change. Full08/read09/ELP2-10 remain NOT_MET; ELP2-11 unopened.
+
+### Accounts / financial constructor implementation —24Oct2026
+
+Bobby assigned the next two concrete integrations, not another source-only
+inventory: independent Manager CURRENT metadata into the real-principal Account360
+BFF, and the financial runtime/identity issuer constructor. Start pin is
+`docs/research-loop-plan@bac182083b953a7bb3608bcdab9f8f9584613d00` (clean).
+Claude `claude/post-land-20261022@00e7f6cff2fadbd88b8ed461fa870b28ee88ad94`
+is preserved. Three disjoint helpers own new metadata/BFF files, the private
+issuer transport, and owned Rust scratch financial composition respectively;
+Core integrates existing files, contracts, tests and this index. No frontend
+changes, source permission minting, production/dev/main, command/Live or push.
+ACCOUNT source rows do not imply broker BINDING or human authorization. A real
+identity assertion does not substitute for PM financial proof/verifier/APPLIED.
+Focused implementation receipts and remaining commissioning inputs follow in
+the phase packet; the six phase exit gates are not changed by this assignment.
+
+### Accounts real-principal source + financial delivery freeze —24Oct2026
+
+[Current owner-return / Claude handoff](evidence/ELP2-10/CORE_ACCOUNTS_AND_FINANCIAL_RUNTIME_RETURN_2026-10-24.md)
+supersedes the old missing-BFF/constructor statements in prior returns. Core
+`95f6b6707` maps the actual Account360 principal through ordinary current
+authority; `6bf817f7a` composes the genuine financial identity/reverse candidate
+and explicit delivery sequence/completion. Financial139focused and105real-PG
+tests plus source TypeScript pass. Independent review ACCEPT; R1 source-only,
+not installed or full R2/connected acceptance. Rust final gate/pin is in the
+packet. No public DTO/generator or component change is required from Claude.
+
+Claude: preserve current component/fixture lane and existing Account360 reader.
+ACCOUNT rows are not broker BINDING data; unavailable finance/history stays
+typed. On qualified source, take actual API/browser receipt with exact workspace
+and principal, compound revoke denial and no fallback. Financial private routes
+are Core↔Edge only. Edge: review the complete source bundle, supply independent
+CURRENT selection/trust/commissioning and financial-purpose verifier/original
+COMMIT→APPLIED inputs; do not treat mTLS/human signature as financial authority.
+No retired session/window reuse, new grant, command/Live, stable/dev/main or push.
