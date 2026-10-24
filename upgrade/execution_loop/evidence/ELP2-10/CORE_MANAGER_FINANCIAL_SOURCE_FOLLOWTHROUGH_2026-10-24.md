@@ -50,7 +50,9 @@ ACTUAL_SOURCE_BYTES_VERIFIED / HUMAN_BFF_AND_CONNECTED_ACCEPTANCE_OPEN.**
 
 Financial channel remains SOURCE_ONLY until its injected real request issuer,
 financial-purpose verifier, endpoint and authenticated APPLIED/status callback
-are actually commissioned. A transport200, mTLS, current-human signature or
+are actually commissioned. The explicit financial runtime constructor is also
+still missing; §3.2 records this implementation gap, not an external pin delay.
+A transport200, mTLS, current-human signature or
 queue receipt is not financial proof. Additional bounded sidecar-cache bytes
 are logical accounting, not a measured RSS result or production budget.
 
@@ -180,6 +182,62 @@ Shortest legitimate continuation: qualified publication metadata → Accounts
 CURRENT adapter → actual-principal composition call → revoke/final-disclosure
 acceptance. Broad source-reader success alone does not complete these steps.
 
+### 3.1 Independent review: exact Accounts seam and authority conflict
+
+Read-only review refined the consumer locator above. Actual Accounts UI uses
+`manager-lists/manager-lists.service.ts:129` (`/broker-bindings`) and
+`resource-read/resource-read.service.ts:227` (`/resources/accounts/:id`), not
+only the Manager-model overview service. Keep the account, balance and policy
+grains distinct when adding a source adapter at those existing seams.
+
+The source-metadata adapter must be CURRENT-specific:
+
+- `publication-adapter.ts:93` requires a catalogue family equal to dataset ID;
+  `manager-current:ACCOUNT` is not an existing catalogue family. Do not rename
+  it to a Fleet family just to pass the parser.
+- `ExecutionReadPublicationRequest` carries no grain/resource reference. These
+  three source grains share one binding. Return one stable union census for
+  that exact binding, not whichever page/grain was queried most recently.
+  Use the source's explicit `account_id` fact, never parse an entity ID.
+- `current-view-authority.ts:339` uses entity `ExecutionReadScopes`. Native
+  `manager_domain_grants` are a separate authority. Do not cast Native Manager
+  READ into entity `whole_population`, or infer a grant from ADMIN, a private
+  source pin or the source-probe success. Authenticate the actual principal
+  before Edge I/O and keep the final revoke/disclosure fence.
+
+Focused next tests: binding/grain collision, source cutover/expiry, all three
+grain mappings, wrong workspace, explicit DENY, revoke during fetch, native
+domain-only refusal, and cursor isolation by principal/session/source. Reuse
+unchanged source/probe tests by impact; do not repeat the real DB read merely
+for this independent review.
+
+### 3.2 Independent review: financial runtime is not assembled yet
+
+At Edge candidate `7ab60fb4`, `core_scoped_runtime.rs:472–490` still supports
+only `Bootstrap` and `ManagerCurrent`; its dispatch at :654–660 does not call
+`core_scoped_entrypoint::serve_financial` (:165). The new transport is real
+source implementation, but not a configured executable financial composition.
+
+Concrete remaining implementation: one shared `Arc<FinancialEnvelopeChannel>`
+as transport and authority channel, `PmFinancialSourceAuthority::new`, existing
+`scoped_backend::FinancialSource`, then `serve_financial`. Configuration must
+bind original manifest/resume, receiver, report-key→FinancialBinding map, exact
+six operations, mTLS pins and separate proof-cache/worker bounds; proof count
+must respect PM's actual `proof_limit <= 1000`. No default accepting verifier.
+
+There is no non-test `FinancialRequestIssuer` yet. Core can reuse
+`CurrentHumanCandidate.issue` (:263–291) for an exact accepted request binding;
+the Manager-only `/business-root-read/{issue,enter}` signer is not a financial
+issuer. This requires a reviewed Edge→Core acquisition path and original
+session/custody; no direct Core→PM integration or key copying.
+
+Through Edge, PM must commission the opt-in endpoint and actual
+`FinancialAuthorityCallbacks`, plus a receiver callback authenticated against
+Edge's existing `PgProjectionStore::bootstrap_checkpoint`, not a claimed
+receipt in request JSON. PM's candidate has no production callback construction
+or new source-owner ACCEPT after §7.31 at this readback. These are named
+implementation/authority actions, not a request to reopen an expired window.
+
 ## 4. Owner actions and phase disposition
 
 | Row | Core work/state | Exact next action / owner |
@@ -187,7 +245,7 @@ acceptance. Broad source-reader success alone does not complete these steps.
 | CORE-01 | Existing retired native READ/restart/active-revoke receipts retained | Edge correlate prior terminal/custody; do not rerun completed native cases or reopen slots |
 | CORE-02 | Existing Research Manager cert/CSR/key retained; no new key | Core+Edge reconcile actual per-hop audience/profile/kid and install only the reviewed Research binding; run actual API after publication/provider wiring |
 | CORE-03 | Exact v5 CURRENT reader and bounded source probe implemented; publication/BFF wiring remains Core-owned | Edge review/import owned candidate and exact source selection; Core implement metadata and Accounts adapter above; no grant inheritance |
-| CORE-04 | PM endpoint and Edge same-call transport/worker seam source implemented | Edge coordinate PM financial-purpose issuer/verifier/canonical vectors plus real authenticated receiver APPLIED/status; mount exact wire, then positive COMMIT→APPLIED |
+| CORE-04 | PM endpoint and Edge same-call transport/worker seam source implemented; runtime constructor and real issuer still missing | Core/Edge assemble the explicit constructor in §3.2; Edge coordinate accepted request/proof wire and PM verifier plus authenticated receiver APPLIED/status; then positive COMMIT→APPLIED |
 | CORE-05 | Existing original command submit/status/recovery source remains dark | Edge commission its existing gateway/pins and Core bind same original intent; no command/Live activation or direct Core→PM path |
 | CORE-06 | CURRENT source/digest validation and driver safety improved | Core+Edge qualify each purpose separately and test cache/cursor/revoke; STREAM/HISTORY/REPLAY need their own source and rights, not CURRENT inference |
 | CORE-07 | Safe workload dispatch/cancel/streamed bytes; proposal arithmetic retained | Return numeric target/workload/calibration approval through Edge before real load. B2=28tabs, M5=90min, combined≥185min before margin; C288 audit retention cannot be pruned to pass |

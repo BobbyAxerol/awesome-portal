@@ -1,5 +1,31 @@
 # Execution Loop V2 — Sổ đồng bộ Frontend ↔ Backend (sống)
 
+## Codex delivery and independent review —24Oct2026,08:15UTC
+
+Public return committed at `e8b773694` and transferred/read back with exact
+SHA256 on HK EPG10-08. Source receipt:
+`CORE_MANAGER_FINANCIAL_SOURCE_FOLLOWTHROUGH_2026-10-24.md` initial delivered
+hash `0d2723a14f3d5488ac9f4ced976d2c6e7f9089456143a9777c7927450c614615`;
+cumulative return `28f60ebbc5bcbdb4180bdc187b3b5d40c8e378b9361bc2b8aeac6f7c75ea366f`;
+qualified-source return `7d818768c6d65eef8be9fbd549e6586d8b773fdb17d6d6528e53987557b9e1aa`.
+This is delivery, not Edge owner ACCEPT. No source feature WIP was committed.
+
+Independent follow-up reviews found concrete remaining implementation, now in
+[receipt §§3.1–3.2](evidence/ELP2-10/CORE_MANAGER_FINANCIAL_SOURCE_FOLLOWTHROUGH_2026-10-24.md#31-independent-review-exact-accounts-seam-and-authority-conflict):
+Core needs one exact CURRENT publication census for the shared three-grain
+binding, then the actual Accounts list/resource-read adapters. Native Manager
+domain READ must not become entity whole-population permission. Edge runtime
+also still lacks its financial constructor and non-test request issuer;
+same-call transport tests alone do not commission the worker. Edge coordinates
+PM's actual proof/APPLIED callback and accepted acquisition wire; Core does
+not invent an issuer or send requests directly to PM.
+
+Claude remains clean `00e7f6cff2fadbd88b8ed461fa870b28ee88ad94`; no new intake.
+Keep existing UI/linked fixtures. All extra findings here are read-only review,
+not more tests, runtime installs or financial success. The detailed receipt's
+next revision supersedes its initial delivered hash; source/test commits above
+remain unchanged. R0: tracking/link/diff checks, no repeated heavy gate.
+
 ## Codex round-result —24Oct2026,08:05UTC
 
 Owned Edge candidate **7ab60fb4696d10da871b7a2216b31f2831aa34b1**:
