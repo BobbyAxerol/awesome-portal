@@ -1627,3 +1627,46 @@ inherited wholesale. Its PG/bootstrap counts are not a current PG PASS. Edge
 normal landing gate and candidate fmt/strict-Clippy receipts remain required;
 no Git FF or Core build is substituted for those gates or for owner source
 selection. The old source-retired READ/restart/revoke originals stay retired.
+
+### 18.6 Approved unchanged Manager consumer import —24Oct02:05UTC
+
+Bobby explicitly approved importing the unchanged Claude Manager reader/tests
+from `ddd0a063c0f9fb5e252a2ae44ce6119fe8932655`, without component, layout,
+color or visual-baseline edits. The three files are `managerDataset.ts`,
+`managerDataset.groupPage.test.ts` and `managerDataset.stageTiming.test.ts`.
+Their exact test/request dependencies `managerDataset.testbase.ts` and
+`execution/api/managerDatasetQuery.ts` are also taken unchanged from that same
+source, rather than reimplemented or mocked. They cover published stage timing,
+group attribution/paging and query echo; no backend contract/schema revision.
+The request helper only encodes published group controls; it grants no access.
+
+The formerly red isolated Contributors contract now passes4/4. Four Manager
+reader/conformance files pass2562 tests with5 declared expected-fail cases;
+two existing query/ALL API files pass101/101. These are separate lanes, not a
+new all-product/real-source acceptance. Production frontend `tsc -b` passes
+after attaching the existing ignored Roadmap dependency directory; the first
+attempt failed on missing React/mermaid dependencies in that feature, not on
+the imported reader. No package/lockfile was installed or changed. One frozen
+normal landing gate is next; no failed result is overwritten above.
+The API's qualified compiled input closure remains the previously tested
+treef3d233e7 and image01692fc5; reader import does not require an API rebuild.
+
+Current actual Research API is still image `d13cef069471`; Claude has refreshed
+web to `0653eece6e61` and fixture BFF to `32aa609a675e`. Preserve those actual
+containers/images during API-only installation. Do not reinstall the older
+web/fixture bundle recorded in18.5. Canonical Unified/request WIP stays intact.
+Edge/PM checkpoint measured24Oct02:02:19UTC: their source pins and owner-return
+dispositions remain unchanged. Core can finish its approved gate/install with
+current-view listener OFF; actual provider authority still needs18.2–18.3.
+
+Independent review: **ACCEPT** the five exact source blobs, published request
+controls and unchanged UI boundary. **CHANGE requested from Claude** in
+`managerDataset.ts` / `readGroupAttribution`: an unknown non-null
+`name_reason_code` or `owner_reason_code` is normalized to null by `oneOf` and
+can pass when its associated value is present. Reject a non-null raw reason
+whose parsed enum is null; add negative cases with a present name/owner and
+an unknown reason. Existing absence negatives do not cover this combination.
+Backend `manager-model.contract.ts` already rejects unknown enums before
+serving; this is reader hardening, not missing backend authorization. Codex
+has not patched it because Bobby approved an unchanged import. Claude can fix
+this reader/test pair separately without a component or design change.

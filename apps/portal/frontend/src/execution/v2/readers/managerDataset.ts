@@ -109,6 +109,8 @@ export const CURRENT_STAGE_REASONS = ["MULTIPLE_ACTIVE_STAGES", "STAGE_FIELD_NOT
 export type CurrentStageReason = (typeof CURRENT_STAGE_REASONS)[number];
 /** The one reason `entered_at_ms` / `days_in_stage` carry today, and `stage_lifecycle.entry_time`. */
 export const STAGE_ENTRY_TIME_NOT_PUBLISHED = "STAGE_ENTRY_TIME_NOT_PUBLISHED";
+/** `stage_lifecycle.entry_time` once the producer binds exact snapshot transitions (Codex 82947ceb2): rows then carry the entry time where a transition fact binds, and keep the absence where none does. */
+export const STAGE_TIMING_PUBLISHED = "EXACT_SNAPSHOT_TRANSITION_WHEN_PUBLISHED";
 /** Milliseconds per day: `days_in_stage == floor((as_of_ms - entered_at_ms) / MS_PER_DAY)` (BE-P4, producer rule). */
 export const MS_PER_DAY = 86_400_000;
 /** Schema `days_in_stage` maximum. */
@@ -123,6 +125,8 @@ export const MANAGER_STAGE_LIFECYCLE = {
 /** Schema `items` maxItems / `page.limit` maximum / `groups` maxItems. */
 export const MAX_ITEMS = 200;
 export const MAX_GROUPS = 200;
+/** Package 5: the most groups one query can have (10k authorized rows, at most four stage memberships each). */
+export const MAX_GROUP_POPULATION = 40_000;
 /** Schema `children` maxItems per row. */
 export const MAX_CHILDREN_PER_ROW = 10_000;
 /**
@@ -242,7 +246,18 @@ export interface ManagerRow {
   economicPartitions: readonly ManagerPartitionedMetrics[];
 }
 
+/** Package 5: who an alpha group is, from the same authorized group (never a join to the row page). A null name or owner carries its reason. */
+export interface ManagerGroupAttribution {
+  alphaId: string;
+  name: string | null;
+  ownerUserId: string | null;
+  nameReasonCode: "GROUP_NAME_NOT_PUBLISHED" | "GROUP_NAME_AMBIGUOUS" | null;
+  ownerReasonCode: "GROUP_OWNER_NOT_PUBLISHED" | "GROUP_OWNER_AMBIGUOUS" | null;
+}
+
 export interface ManagerGroup {
+  /** Present only on a group keyed by alpha_id, when the producer publishes it. */
+  attribution?: ManagerGroupAttribution;
   key: readonly { field: ManagerGroupField; value: string | null }[];
   uniqueRowCount: number;
   totalsScope: "FULL_AUTHORIZED_FILTERED_QUERY";
@@ -268,7 +283,23 @@ export interface ManagerScores {
   calculationPath: "PRECOMPUTED_ONLY";
 }
 
+/** WP-K slice 6: what the server applied to the GROUPS (present only when a group sort or filter was asked). */
+export interface ManagerGroupQuery {
+  sort: readonly { metricKey: string; direction: "asc" | "desc" }[];
+  filters: readonly { metricKey: string; op: "GTE" | "LTE" | "IS_NULL"; value: string | null }[];
+  /** Which partition each group's metric was read in: the pinned one, or the group's only one (several partitions and no pin = no comparable value). */
+  partitionBasis: "PINNED_PARTITION" | "SINGLE_PARTITION_ONLY";
+  groupsBeforeFilter: number;
+  groupsReturned: number;
+}
+
 export interface ManagerDataset {
+  /** Present only when the query named a group sort or filter. */
+  groupQuery?: ManagerGroupQuery;
+  /** Package 5: where this page of groups sits in all authorized filtered groups (cursors are opaque, bound to the query). Absent = the producer does not page groups. */
+  groupPage?: ManagerPage;
+  /** True when the producer publishes stage timing (`entry_time` EXACT_SNAPSHOT_TRANSITION_WHEN_PUBLISHED): a row's `enteredAtMs` / `daysInStage` are then the snapshot-bound transition, or the typed absence on a row no fact binds. Absent = the legacy pin. */
+  stageTimingPublished?: true;
   surface: ManagerSurface;
   workspaceId: string;
   /** What `currentStage` means (constants of the response, BE-P4); print them, do not re-derive them. */
@@ -315,7 +346,7 @@ const ROOT_REQUIRED = [
   "snapshot_id", "as_of_ms", "recorded_through_ms", "facts_through_ms", "quality", "coverage", "economic_aggregation", "query_policy", "page",
   "items", "groups", "capital_statements", "statement_scope", "scores", "funding_bucket_pnl", "lineage",
 ] as const;
-const ROOT_OPTIONAL = ["score_details", "composition_details", "regime_details", "environment_coverage"] as const;
+const ROOT_OPTIONAL = ["score_details", "composition_details", "regime_details", "environment_coverage", "group_query", "group_page"] as const;
 
 const ENVIRONMENT_STAGES: Readonly<Record<ManagerEnvironment, readonly ManagerStage[]>> = {
   paper: ["PAPER"],
@@ -435,7 +466,8 @@ function readQueryOptions(raw: unknown): ManagerQueryOptions | null {
   if (!isConst(options.stage_environment, stageEnvironment)) return null;
 
   // BE-P4: `current_stage` is published; the two entry-time fields are the ones the contract cannot publish, in this order.
-  if (!Array.isArray(options.unavailable_fields) || options.unavailable_fields.length !== 2) return null;
+  // Both entry-time fields listed as unavailable (the legacy pin, and the published timing fixture), or none (a producer that states timing for every row).
+  if (!Array.isArray(options.unavailable_fields) || (options.unavailable_fields.length !== 2 && options.unavailable_fields.length !== 0)) return null;
   const unavailableFields: { field: "days_in_stage" | "entered_at_ms"; reasonCode: typeof STAGE_ENTRY_TIME_NOT_PUBLISHED }[] = [];
   const expected = [["days_in_stage", STAGE_ENTRY_TIME_NOT_PUBLISHED], ["entered_at_ms", STAGE_ENTRY_TIME_NOT_PUBLISHED]] as const;
   for (const [index, entry] of options.unavailable_fields.entries()) {
@@ -461,6 +493,39 @@ const COVERAGE_KEYS = [
 ] as const;
 
 /** One `environment_coverage` entry: INCLUDED has every fact and no reason; UNAVAILABLE has a reason and every fact null (schema `if/then/else`). */
+const GROUP_METRIC_KEY = /^[a-z][a-z0-9_]{1,63}$/;
+const GROUP_DECIMAL = /^-?(?:0|[1-9][0-9]*)(?:\.[0-9]+)?$/;
+/** GQ-1 one sort at most, eight filters at most, each operator once per metric, GTE / LTE carry an exact decimal and IS_NULL none, the counts add up. */
+function readGroupQuery(raw: unknown): ManagerGroupQuery | null {
+  const q = record(raw);
+  if (q === null || !hasOnly(q, ["sort", "filters", "partition_basis", "groups_before_filter", "groups_returned"]) || !hasAll(q, ["sort", "filters", "partition_basis", "groups_before_filter", "groups_returned"])) return null;
+  const basis = oneOf(q.partition_basis, ["PINNED_PARTITION", "SINGLE_PARTITION_ONLY"] as const);
+  const count = (v: unknown) => (typeof v === "number" && Number.isSafeInteger(v) && v >= 0 && v <= MAX_GROUP_POPULATION ? v : null);
+  const before = count(q.groups_before_filter);
+  const returned = count(q.groups_returned);
+  if (returned !== null && returned > MAX_GROUPS) return null;
+  if (basis === null || before === null || returned === null || returned > before || !Array.isArray(q.sort) || q.sort.length > 1 || !Array.isArray(q.filters) || q.filters.length > 8) return null;
+  const sort: { metricKey: string; direction: "asc" | "desc" }[] = [];
+  for (const entry of q.sort) {
+    const s = record(entry);
+    const direction = s === null ? null : oneOf(s.direction, ["asc", "desc"] as const);
+    if (s === null || !hasOnly(s, ["metric_key", "direction"]) || typeof s.metric_key !== "string" || !GROUP_METRIC_KEY.test(s.metric_key) || direction === null) return null;
+    sort.push({ metricKey: s.metric_key, direction });
+  }
+  const filters: { metricKey: string; op: "GTE" | "LTE" | "IS_NULL"; value: string | null }[] = [];
+  const seen = new Set<string>();
+  for (const entry of q.filters) {
+    const f = record(entry);
+    const op = f === null ? null : oneOf(f.op, ["GTE", "LTE", "IS_NULL"] as const);
+    if (f === null || !hasOnly(f, ["metric_key", "op", "value"]) || typeof f.metric_key !== "string" || !GROUP_METRIC_KEY.test(f.metric_key) || op === null) return null;
+    const value = op === "IS_NULL" ? (f.value === undefined ? null : undefined) : typeof f.value === "string" && GROUP_DECIMAL.test(f.value) && f.value.length <= 128 ? f.value : undefined;
+    if (value === undefined || seen.has(`${f.metric_key}:${op}`)) return null;
+    seen.add(`${f.metric_key}:${op}`);
+    filters.push({ metricKey: f.metric_key, op, value });
+  }
+  return { sort, filters, partitionBasis: basis, groupsBeforeFilter: before, groupsReturned: returned };
+}
+
 function readCoverageEntry(raw: unknown, expected: ManagerEnvironment): ManagerEnvironmentCoverage | null {
   const entry = record(raw);
   if (entry === null || !hasOnly(entry, COVERAGE_KEYS) || !hasAll(entry, COVERAGE_KEYS) || entry.environment !== expected) return null;
@@ -504,13 +569,13 @@ function readCursor(raw: unknown): string | null | undefined {
   return raw === null ? null : managerText(raw, MAX_CURSOR) ?? undefined;
 }
 
-function readPage(raw: unknown): ManagerPage | null {
+function readPage(raw: unknown, bounds: { items: number; filtered: number } = { items: MAX_ITEMS, filtered: MAX_FILTERED_COUNT }): ManagerPage | null {
   const page = record(raw);
   const keys = ["limit", "returned_count", "authorized_filtered_count", "next_cursor", "previous_cursor"] as const;
   if (page === null || !hasOnly(page, keys) || !hasAll(page, keys)) return null;
-  const limit = boundedCount(page.limit, MAX_ITEMS);
-  const returnedCount = boundedCount(page.returned_count, MAX_ITEMS);
-  const authorizedFilteredCount = boundedCount(page.authorized_filtered_count, MAX_FILTERED_COUNT);
+  const limit = boundedCount(page.limit, bounds.items);
+  const returnedCount = boundedCount(page.returned_count, bounds.items);
+  const authorizedFilteredCount = boundedCount(page.authorized_filtered_count, bounds.filtered);
   const nextCursor = readCursor(page.next_cursor);
   const previousCursor = readCursor(page.previous_cursor);
   if (limit === null || limit < 1 || returnedCount === null || authorizedFilteredCount === null || nextCursor === undefined || previousCursor === undefined) return null;
@@ -686,7 +751,7 @@ function readRow(raw: unknown, scope: ManagerEnvironmentScope, metricKeys: reado
 function readGroup(raw: unknown, groupFields: readonly ManagerGroupField[], filteredCount: number): ManagerGroup | null {
   const group = record(raw);
   const keys = ["key", "unique_row_count", "totals_scope", "economic_partitions"] as const;
-  if (group === null || !hasOnly(group, keys) || !hasAll(group, keys) || group.totals_scope !== "FULL_AUTHORIZED_FILTERED_QUERY") return null;
+  if (group === null || !hasOnly(group, [...keys, "attribution"]) || !hasAll(group, keys) || group.totals_scope !== "FULL_AUTHORIZED_FILTERED_QUERY") return null;
   if (!Array.isArray(group.key) || group.key.length > 2) return null;
   const key: { field: ManagerGroupField; value: string | null }[] = [];
   for (const entry of group.key) {
@@ -702,7 +767,29 @@ function readGroup(raw: unknown, groupFields: readonly ManagerGroupField[], filt
   const uniqueRowCount = boundedCount(group.unique_row_count, MAX_FILTERED_COUNT);
   const economicPartitions = readPartitionedMetricsList(group.economic_partitions);
   if (uniqueRowCount === null || uniqueRowCount > filteredCount || economicPartitions === null) return null;
-  return { key, uniqueRowCount, totalsScope: "FULL_AUTHORIZED_FILTERED_QUERY", economicPartitions };
+  let attribution: ManagerGroupAttribution | undefined;
+  if (Object.prototype.hasOwnProperty.call(group, "attribution")) {
+    const a = readGroupAttribution(group.attribution);
+    // The attribution is about the group's own alpha: it needs an alpha_id key, and says the same id.
+    if (a === null || key.find((part) => part.field === "alpha_id")?.value !== a.alphaId) return null;
+    attribution = a;
+  }
+  return { ...(attribution === undefined ? {} : { attribution }), key, uniqueRowCount, totalsScope: "FULL_AUTHORIZED_FILTERED_QUERY", economicPartitions };
+}
+
+function readGroupAttribution(raw: unknown): ManagerGroupAttribution | null {
+  const a = record(raw);
+  const keys = ["alpha_id", "name", "owner_user_id", "name_reason_code", "owner_reason_code"] as const;
+  if (a === null || !hasOnly(a, keys) || !hasAll(a, keys)) return null;
+  const alphaId = managerText(a.alpha_id);
+  const name = nullableText(a.name);
+  const owner = nullableText(a.owner_user_id);
+  const nameReason = a.name_reason_code === null ? null : oneOf(a.name_reason_code, ["GROUP_NAME_NOT_PUBLISHED", "GROUP_NAME_AMBIGUOUS"] as const);
+  const ownerReason = a.owner_reason_code === null ? null : oneOf(a.owner_reason_code, ["GROUP_OWNER_NOT_PUBLISHED", "GROUP_OWNER_AMBIGUOUS"] as const);
+  if (alphaId === null || name === undefined || owner === undefined) return null;
+  // A value and its reason exclude each other: a missing name or owner always says why, a present one never carries a reason.
+  if ((name === null) !== (nameReason !== null) || (owner === null) !== (ownerReason !== null)) return null;
+  return { alphaId, name, ownerUserId: owner, nameReasonCode: nameReason as ManagerGroupAttribution["nameReasonCode"], ownerReasonCode: ownerReason as ManagerGroupAttribution["ownerReasonCode"] };
 }
 
 const SLOT_STATUSES: Readonly<Record<"raw" | "composition" | "direct_nav", readonly ManagerScoreSlotStatus[]>> = {
@@ -834,7 +921,7 @@ function readDataset(root: Record<string, unknown>): ManagerDataset | null {
   if (
     stageLifecycle === null || !hasOnly(stageLifecycle, ["current_stage_rule", "covers", "entry_time"]) || !hasAll(stageLifecycle, ["current_stage_rule", "covers", "entry_time"])
     || stageLifecycle.current_stage_rule !== MANAGER_STAGE_LIFECYCLE.currentStageRule || stageLifecycle.covers !== MANAGER_STAGE_LIFECYCLE.covers
-    || stageLifecycle.entry_time !== MANAGER_STAGE_LIFECYCLE.entryTime
+    || (stageLifecycle.entry_time !== MANAGER_STAGE_LIFECYCLE.entryTime && stageLifecycle.entry_time !== STAGE_TIMING_PUBLISHED)
   ) return null;
   const queryPolicy = record(root.query_policy);
   if (
@@ -858,7 +945,14 @@ function readDataset(root: Record<string, unknown>): ManagerDataset | null {
   const queryOptions = readQueryOptions(root.query_options);
   const page = readPage(root.page);
   if (quality === null || selectedWindow === undefined || queryOptions === null || page === null) return null;
+  // Stage timing: the policy value says the producer binds exact snapshot transitions. The published fixture still lists both entry-time fields beside it and the
+  // producer may list none; the two are read independently (no tie is invented), and each ROW says whether a transition bound.
+  const stageTimingPublished = stageLifecycle.entry_time === STAGE_TIMING_PUBLISHED;
   // FE-CAT-3: the coverage list belongs to ALL and only to ALL; an ALL body carries no window (a window resolves against ONE cutoff).
+  const groupQuery = Object.prototype.hasOwnProperty.call(root, "group_query") ? readGroupQuery(root.group_query) : undefined;
+  if (groupQuery === null) return null;
+  const groupPage = Object.prototype.hasOwnProperty.call(root, "group_page") ? readPage(root.group_page, { items: MAX_GROUPS, filtered: MAX_GROUP_POPULATION }) : undefined;
+  if (groupPage === null) return null;
   const hasCoverage = Object.prototype.hasOwnProperty.call(root, "environment_coverage");
   if ((environment === MANAGER_ALL) !== hasCoverage || (environment === MANAGER_ALL && selectedWindow !== null)) return null;
   const environmentCoverage = hasCoverage ? readCoverage(root.environment_coverage) : null;
@@ -890,6 +984,11 @@ function readDataset(root: Record<string, unknown>): ManagerDataset | null {
     groups.push(group);
   }
 
+  // The page says how many groups this body carries; the group query's `groups_returned` is the same number (never a count of the whole population).
+  if (groupPage !== undefined && groupPage.returnedCount !== groups.length) return null;
+  if (groupQuery !== undefined && groupQuery.groupsReturned !== groups.length) return null;
+  if (groupPage !== undefined && groupQuery !== undefined && groupQuery.groupsBeforeFilter < groupPage.authorizedFilteredCount) return null;
+
   const capitalStatements = readPartitionedMetricsList(root.capital_statements);
   const scores = readScores(root.scores, selectedWindow);
   const fundingBucketPnl = readFundingBucket(root.funding_bucket_pnl);
@@ -905,7 +1004,7 @@ function readDataset(root: Record<string, unknown>): ManagerDataset | null {
   if (environmentCoverage !== null && !coverageAddsUp(environmentCoverage, items, page, quality)) return null;
 
   return {
-    surface, workspaceId, stageLifecycle: MANAGER_STAGE_LIFECYCLE, environment, ...(environmentCoverage === null ? {} : { environmentCoverage }), snapshotId, asOfMs, recordedThroughMs, factsThroughMs, quality, selectedWindow, queryOptions, page, items, groups,
+    surface, workspaceId, stageLifecycle: MANAGER_STAGE_LIFECYCLE, environment, ...(environmentCoverage === null ? {} : { environmentCoverage }), ...(groupQuery === undefined ? {} : { groupQuery }), ...(groupPage === undefined ? {} : { groupPage }), ...(stageTimingPublished ? { stageTimingPublished: true as const } : {}), snapshotId, asOfMs, recordedThroughMs, factsThroughMs, quality, selectedWindow, queryOptions, page, items, groups,
     capitalStatements, statementScope: MANAGER_STATEMENT_SCOPE, scores, fundingBucketPnl, lineage,
     unreadDetails: { scoreDetails, compositionDetails, regimeDetails }, hasMore: page.nextCursor !== null,
   };
