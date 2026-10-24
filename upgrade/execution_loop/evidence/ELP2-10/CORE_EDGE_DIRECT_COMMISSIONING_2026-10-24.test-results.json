@@ -3,6 +3,9 @@
   "tier": "R1",
   "phase": "ELP2-10",
   "source_base": "664433587050ab8673fa03318a5e74d8b33b146d",
+  "latest_round_core_base": "05c88880443569d995ac0a6414481e75a04d6d37",
+  "latest_round_pm_source": "d7b1bdc707829c47356cf0f8cebf85ea0a3023a2",
+  "latest_round_scope": "SOURCE_ONLY_NO_SHARED_RUNTIME_UPDATE",
   "delivery": "INTERMEDIATE_SOURCE_AND_RETIRED_ISOLATED_RUNTIME_NOT_R2",
   "lanes": [
     {
@@ -105,6 +108,72 @@
       "exit_code": 0,
       "log_sha256": "043c3b988e8901f57aa5f1fb693297895347ff1bc44213f53ae43cdee1f2f4d1",
       "scope": "Compilation only after import correction; no duplicate database test count"
+    },
+    {
+      "name": "PM-held-native-membership-and-reader-regressions",
+      "source_commit": "63e1464c50f0598a21db62e874dae04200cb70d8",
+      "status": "PASS",
+      "passed": 18,
+      "new_cases": 11,
+      "existing_regressions": 7,
+      "elapsed_seconds": 12.33,
+      "log_sha256": "e76a499f324394972504e17a36d9ca1153384c693ca4a9b74933da6ee59b8cec",
+      "scope": "Actual isolated PG dependency fences/revoke/restart/UNKNOWN; Core terminal signatures and complete-root census inputs TEST_ONLY; additive SQL UNINSTALLED",
+      "initial_16_case_run": "SUPERSEDED_NOT_ADDITIVE",
+      "heavy_lock": "FINAL_GATE_HELD; initial serial invocations omitted advisory lock, deviation retained in receipt"
+    },
+    {
+      "name": "PM-original-four-table-held-regressions",
+      "status": "PASS_REUSED_UNCHANGED_HELPER",
+      "passed": 8,
+      "elapsed_seconds": 7.03,
+      "log_sha256": "7c09cd82e4ebf0bf415d686baa9524a4b1550c0bdfaeefa4dd29ca42293bda1c",
+      "scope": "Actual isolated PG original held behavior; shared helper bytes unchanged at final membership freeze"
+    },
+    {
+      "name": "PM-held-membership-strengthened-revoke-oracle",
+      "status": "PASS_REPEATED_CASE_NOT_NEW_COVERAGE",
+      "passed": 1,
+      "elapsed_seconds": 1.45,
+      "log_sha256": "da2232e25d87016b5d5c7d6f7d59aa370262d640db2d1ef6cb88a9fd71f78505",
+      "scope": "Actual MembershipRepository revoke blocked while held, succeeds after matching terminal, original issue then denied"
+    },
+    {
+      "name": "PM-durable-original-publication-ack",
+      "source_commit": "740f313583be6f91c38dd02a359777eb02aad54a",
+      "status": "PASS",
+      "passed": 32,
+      "unit_cases": 28,
+      "actual_disposable_pg": 4,
+      "elapsed_seconds": 0.98,
+      "log_sha256": "8ad87c2fdbc812fb83ddf13887edcd94f34196a62416b1f6b9bb8ad780213540",
+      "source_sha256": "90472c64e02b5f9a82380cfb3122cab7f9468a29aa5593b64cbeaa327f41a919",
+      "scope": "Actual existing SQL receipt writer/PG durability with synthetic publication projection; uninstalled source-owner metadata-ACK purpose; not full financial source/APPLIED qualification",
+      "initial_29_case_run": "SUPERSEDED_NOT_ADDITIVE",
+      "heavy_lock": "HELD_ONLY_FOR_NAMED_ACTUAL_PG_JOB",
+      "cleanup": "BOTH_OWNED_DISPOSABLE_CONTAINERS_REMOVED"
+    },
+    {
+      "name": "PM-ack-strengthened-independent-physical-session-visibility",
+      "status": "PASS_REPEATED_CASE_NOT_NEW_COVERAGE",
+      "passed": 1,
+      "elapsed_seconds": 0.86,
+      "scope": "Fresh independent asyncpg connection with distinct PID sees committed receipt; not a 33rd unique case or network COMMIT-ack fault injection"
+    },
+    {
+      "name": "PM-concrete-durable-receiver-composition",
+      "source_commit": "d7b1bdc707829c47356cf0f8cebf85ea0a3023a2",
+      "status": "PASS",
+      "passed": 51,
+      "new_cases": 21,
+      "existing_receiver_regressions": 30,
+      "elapsed_seconds": 1.96,
+      "log_sha256": "ea0228fc5cf7e3f3a84d73e9c66eda76448b30dd4acfb8008a55772a386ccf2e",
+      "source_sha256": "69d635f69bda9300858da2939ad14fe1b0acaa5b98bd09c121cc4011879dc068",
+      "scope": "Concrete actual authority/ACK classes with TEST_ONLY network/source/SQL fixtures; not installed or connected authority",
+      "pg_retaken": false,
+      "heavy_lock": "NOT_USED_PURE_UNIT_JOB",
+      "cleanup": "OWNED_NO_NETWORK_UNIT_CELL_REMOVED"
     },
     {
       "name": "actual-isolated-TLS-and-refusal-specimens",
