@@ -82,11 +82,12 @@ fi
 
 cleanup() {
   "${DOCKER[@]}" rm -f "${NODE_CONTAINER}" "${PG_CONTAINER}" >/dev/null 2>&1 || true
+  "${DOCKER[@]}" rm -f "${NODE_CONTAINER}-preservation" >/dev/null 2>&1 || true
   "${DOCKER[@]}" network rm "${NETWORK}" >/dev/null 2>&1 || true
   rm -rf -- "${DEPS_DIR}"
 }
 # Reject occupied explicit names before registering resource cleanup.
-for test_container in "${NODE_CONTAINER}" "${PG_CONTAINER}"; do
+for test_container in "${NODE_CONTAINER}" "${NODE_CONTAINER}-preservation" "${PG_CONTAINER}"; do
   if "${DOCKER[@]}" container inspect "${test_container}" >/dev/null 2>&1; then
     printf 'Refusing occupied Control API container: %s\n' "${test_container}" >&2
     exit 1
@@ -159,6 +160,14 @@ for paper_reader_file in \
 done
 
 ln -s ../node_modules "${WORK_DIR}/node_modules"
+# The restore verifier uses the SAME installed pg dependency and a dedicated
+# read-only transaction, without exposing identity/session/custody rows.
+mkdir -p "${DEPS_DIR}/scripts/execution-v2" "${DEPS_DIR}/apps/control-api"
+cp "${ROOT_DIR}/scripts/execution-v2/migration-preservation.mjs" \
+  "${ROOT_DIR}/scripts/execution-v2/migration-preservation-cli.mjs" \
+  "${DEPS_DIR}/scripts/execution-v2/"
+cp "${APP_DIR}/package.json" "${DEPS_DIR}/apps/control-api/"
+ln -s ../../node_modules "${DEPS_DIR}/apps/control-api/node_modules"
 
 # The test cell can reach only its temporary PostgreSQL container. Source is
 # mounted read-only and all generated/runtime files live in tmpfs.
@@ -242,6 +251,23 @@ ACCESS_SIGNATURE_SQL="SELECT string_agg(name || ':' || rows || ':' || digest, ':
   UNION ALL SELECT 'events', count(*)::text, md5(COALESCE(string_agg(row_to_json(t)::text, chr(10) ORDER BY event_id),'')) FROM portal_access_policy_events t
 ) AS access_restore;"
 source_access_signature="$(${DOCKER[@]} exec "${PG_CONTAINER}" psql -U portal -d portal_control_test -Atc "${ACCESS_SIGNATURE_SQL}")"
+# A missing/partial native installation is not silently ignored: the selected
+# versioned preservation profile validates every required relation and ledger.
+preservation_profile=PORTAL_V1
+if [[ "$(${DOCKER[@]} exec "${PG_CONTAINER}" psql -U portal -d portal_control_test -Atc \
+  "SELECT to_regclass('public.portal_native_review_schema') IS NOT NULL")" == t ]]; then
+  preservation_profile=RESEARCH_CURRENT_HUMAN_V1
+fi
+capture_preservation() {
+  "${DOCKER[@]}" run --rm --name "${NODE_CONTAINER}-preservation" \
+    --network "${NETWORK}" --read-only --cpus 1 --memory 512m --pids-limit 128 \
+    -u "${CONTAINER_USER}" -v "${DEPS_DIR}:/cell" \
+    --tmpfs /tmp:rw,noexec,mode=1777,size=16m \
+    -e PGHOST="${PG_CONTAINER}" -e PGPORT=5432 -e PGUSER=portal -e PGPASSWORD=portal -e PGDATABASE="$1" \
+    "${NODE_IMAGE}" node /cell/scripts/execution-v2/migration-preservation-cli.mjs capture \
+    --profile "${preservation_profile}" --output "/cell/$2"
+}
+capture_preservation portal_control_test source-preservation.json
 "${DOCKER[@]}" exec "${PG_CONTAINER}" pg_dump -U portal -d portal_control_test \
   --format=custom --file=/tmp/portal_control_test.dump
 "${DOCKER[@]}" exec "${PG_CONTAINER}" createdb -U portal portal_control_restore
@@ -249,6 +275,10 @@ source_access_signature="$(${DOCKER[@]} exec "${PG_CONTAINER}" psql -U portal -d
   --exit-on-error /tmp/portal_control_test.dump
 restore_signature="$(${DOCKER[@]} exec "${PG_CONTAINER}" psql -U portal -d portal_control_restore -Atc "${CONTROL_SIGNATURE_SQL}")"
 restore_access_signature="$(${DOCKER[@]} exec "${PG_CONTAINER}" psql -U portal -d portal_control_restore -Atc "${ACCESS_SIGNATURE_SQL}")"
+capture_preservation portal_control_restore restored-preservation.json
+node "${ROOT_DIR}/scripts/execution-v2/migration-preservation-cli.mjs" compare \
+  --source "${DEPS_DIR}/source-preservation.json" --restored "${DEPS_DIR}/restored-preservation.json" \
+  --output "${DEPS_DIR}/preservation-comparison.json"
 [[ "${source_signature}" == "${restore_signature}" ]] || {
   printf 'Control API restore signature mismatch: source=%s restore=%s\n' \
     "${source_signature}" "${restore_signature}" >&2
@@ -270,4 +300,4 @@ if [[ -n "${QUALIFIED_OUTPUT_DIR}" ]]; then
     --gate-script-sha256 "${qualified_script_sha}" --test-command "${qualified_test_command}"
 fi
 
-printf 'Control API security/query/governance tests and PostgreSQL restore drill (including four scoped-access row digests) passed.\n'
+printf 'Control API tests and PostgreSQL restore drill (legacy counts/access digests plus versioned identity/session/command/custody preservation) passed.\n'
