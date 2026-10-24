@@ -9728,6 +9728,47 @@ assignment. No goal/push/dev/main/release/deploy started by this return.
 
 ### ELP2-10 — Performance, quality và coexistence
 
+**24Oct15:44UTC concrete ACK wiring/round closeout:** [source pin, exact tests,
+resources, all6phase next actions and Claude handoff](execution_loop/evidence/ELP2-10/CORE_EDGE_DIRECT_COMMISSIONING_2026-10-24.md#concrete-ack-factory-and-round-closeout-1544utc).
+Owned PM `d7b1bdc7` wires one actual ACK provider into unchanged checked receiver
+authority with separate private durable recovery, no public fallback/HUMAN
+bypass.2files,+265/−2;51focused PASS(21new+30receiver), independent ACCEPT.
+This round total9unique PM files,+1500/−10 incl75line receipt; executable/
+SQL/tests8files,+1425/−10 across63e1464c/740f3135/d7b1bdc7. R1source only,
+SQL/purpose/trust uninstalled, no shared preview/UI/push/dev/main/command/Live.
+Callback wiring no longer missing. Full original/root/census/provider rights,
+financial commissioning/gateway, budget/calibration/G2/browser/11 still OPEN.
+Claude no new public type/consumer mapping; preserve current components/fixtures,
+record genuine source acceptance independently. Diff/link/JSON/tracker PASS;
+no full hook/build repeated for evidence, no finalR2/integration claim.
+
+**24Oct15:40UTC durable original source ACK:** [source/test/authority/cleanup
+receipt](execution_loop/evidence/ELP2-10/CORE_EDGE_DIRECT_COMMISSIONING_2026-10-24.md#durable-original-source-ack-1540utc-source-delivery).
+Owned PM `740f3135`:2new files,+666/−0; actual existing source-change receipt
+writer, exact original/receiver/cursor uniqueness, COMMIT+pool-release before
+success and same-key metadata recovery.32PASS(28unit+4actualPG); strengthened
+independent-connection oracle is a repeat, not extra coverage. Review ACCEPT;
+caller-mutation/queue-timeout defects fixed. Synthetic publication projection
+is not real source authority; metadata-ACK purpose including bounded integrity
+SELECT+receipt INSERT is uninstalled. First ACK must still pass current-source/
+HUMAN renewal and genuine receiver APPLIED. Concrete factory wiring gets its
+own following source pin; no whole-ELP2/connected/consumer PASS, runtime or UI change.
+
+**24Oct15:34UTC held native membership source:** [implementation, gates and
+remaining original/census authority](execution_loop/evidence/ELP2-10/CORE_EDGE_DIRECT_COMMISSIONING_2026-10-24.md#held-native-membership-bridge-1534utc-source-delivery).
+Owned HK PM `63e1464c`:5files,+569/−8 (4code/test/SQL,+494/−8), actual native
+selection→same-RR dependency closure→existing physical held-fence terminal.
+Explicit READ/MUTATION; additive SQL/checksum/guard coverage, UNINSTALLED.
+18focused actual-PG/reader PASS,8legacy held PASS reused unchanged; strengthened
+revoke1case is repeated, not new coverage. Independent review ACCEPT; source R1,
+not finalR2/connected. Initial advisory-lock omission recorded; final gate locked,
+cells removed. Ordinary Core-root/policy/install/census authenticated composition
+is still required; raw722rows/Manager collection READ are not complete Accounts
+authority. Command audit identifies actual original/delivery registry, one-view
+command-issuer custody and separate HUMAN/SERVICE current-command providers,
+not a missing constructor alone. No UI/public type/runtime/push/dev/main change.
+Claude still clean00e7f6cf; no new committed intake or consumer ACK invented.
+
 **24Oct14:18UTC direct HK source follow-through:** [actual APPLIED/command
 implementation, gates, failures and exact remaining bridges](execution_loop/evidence/ELP2-10/CORE_EDGE_DIRECT_COMMISSIONING_2026-10-24.md#applied-receiver-and-command-assembly-follow-through-1418utc).
 Owned PM `d9d132db` + Edge `bd2f42d1`:11source/testfiles,+2053/−16; real

@@ -322,3 +322,264 @@ Rollback is already executed for the isolated runtime: owned processes/tunnel
 stopped, temporary private copies retired, shared healthy Research image
 `sha256:01692fc5702f21856f5c932efc0786d3f65ff47bb3ed7d1949ee18666f31458a`
 unchanged. No migration was required or claimed. **Six phase exits stay open.**
+
+## Held native membership bridge —15:34UTC source delivery
+
+This additive source delivery supersedes only the earlier statement that the
+membership fence component had not been implemented. It does **not** supersede
+the outstanding complete Core-root/census qualification or claim runtime install.
+Core base remains `05c88880443569d995ac0a6414481e75a04d6d37`; Claude remains
+clean at `00e7f6cff2fadbd88b8ed461fa870b28ee88ad94`, no new committed intake.
+Owned Edge remains clean at `bd2f42d1de40523f1de79575a2c4b39b35c2b34f`.
+Peer PM `6f474c72088f000a198a73324ad3083236f2bf5c` and Edge
+`8727e5303b1815d54bc2bdcb927a55457ff4da5b` retain their unrelated WIP.
+
+### Implementation and immutable source pin
+
+On HK, owned PM worktree
+`/home/bobby/.worktrees/pm-core-financial-assembly-20261024`, branch
+`feat/core-financial-assembly-20261024`, commit
+**`63e1464c50f0598a21db62e874dae04200cb70d8`** contains five files,+569/−8;
+four executable/test/SQL files account for **+494/−8**, source receipt75 lines:
+
+| File under PM worktree | Implemented behavior |
+| --- | --- |
+| `services/portfolio_management/native_relations_held.py` | Actual selected native lineage → same-RR dependency closure → physical epoch CAS/COMMIT → existing held-fence terminal lifecycle |
+| `services/portfolio_management/native_fence.py` | Explicit optional membership coverage; default original four-table behavior preserved |
+| `contracts/baseline/portfolio-account-v1_1/pma11-membership-relations-fence-candidate.sql` | Additive row-key namespaces and write/TRUNCATE guards for membership heads, exact revisions and original receipts; original SQL checksums unchanged |
+| `tests/integration/test_pma11_native_relations_held_pg.py` | Actual PG held writes/revoke, restart/UNKNOWN, selected lineage, operation and drift negatives |
+| `upgrade/CORE_NATIVE_MEMBERSHIP_FENCE_RETURN_2026-10-24.md` | Exact source/log/resource pins and uninstalled-source handoff |
+
+The constructor requires explicit **READ or MUTATION**; a read does not silently
+become mutation authority. Native inspection remains SELECT-only. Exact subject,
+issuer/workspace/environment/request/selection binding precedes admission. Missing
+or denied lineage, dependency overflow/collision, wrong terminal family and
+schema/function/guard drift refuse. Original acquisition/semantic revision stays
+stable through lost issue response, cancellation, restart and UNKNOWN; expiry
+does not manufacture ROLLBACK or a fresh intent. Selected native dependency
+writes remain quarantined until the matching original terminal.
+
+The additive SQL is **UNINSTALLED**. Its future function/catalogue hashes must
+be reviewed, not automatically accepted. No existing migration was rewritten,
+nor was a Core schema version applied. Component capability is explicitly
+`NATIVE_MEMBERSHIP_FENCED_NOT_CORE_QUALIFIED`: accepted Core policy/install/grant,
+mapping and complete resource-census inputs remain separate held authorities.
+The raw722 source rows are still not an authorized Accounts population. Test
+Core terminal signatures/census inputs are TEST_ONLY, not a real Core COMMIT.
+
+### Focused gate and review disposition
+
+- Final **18/18 PASS**,12.33s:11 new held-membership cases plus7 existing
+  native-reader cases. This supersedes the initial16-case run, not16+18 coverage.
+- Original four-table held regression **8/8 PASS**,7.03s; reused after the final
+  freeze because its shared production helper bytes did not change.
+- Strengthened real repository-revoke oracle **1/1 PASS**,1.45s, is a repeated
+  case, **not a nineteenth test**: revoke fails while held, succeeds after the
+  matching terminal, then the revoked original cannot issue another lease.
+- Actual SQL/transactions include COMMIT-response ambiguity/readback, restart
+  cancellation and UNKNOWN surviving expiry/restart; independent review ACCEPT.
+- Final log SHA256 `e76a499f324394972504e17a36d9ca1153384c693ca4a9b74933da6ee59b8cec`;
+  legacy `7c09cd82e4ebf0bf415d686baa9524a4b1550c0bdfaeefa4dd29ca42293bda1c`;
+  strengthened revoke `da2232e25d87016b5d5c7d6f7d59aa370262d640db2d1ef6cb88a9fd71f78505`.
+  Logs remain on HK under `/tmp/core-membership-held-*-20261024.log`.
+
+PG0.5CPU/256MiB plus runner1.5CPU/1280MiB stayed within the combined approved
+2CPU/1536MiB/300s correctness envelope, pinned SDK2.4, read-only application
+source, no host ports. All named containers/internal network removed after
+exit0, no OOM. Initial serial invocations omitted the advisory heavy-lock;
+inventory showed no competing owned gate. Final18-case gate used
+`flock -n /tmp/portal-heavy.lock`; this does not retroactively claim the initial
+invocations held it. No peer workload was stopped or modified.
+
+**Next backend:** compose this actual component with independently accepted
+Core-root/install/policy/census providers and exact original authenticated
+transport. The component is no longer missing; collection READ still cannot be
+renamed entity ROOT_SCOPE. **Claude:** no public DTO, enum, generated client,
+component or visual change; keep the accepted fixture/reader and require actual
+qualified source before claiming a positive Accounts/current-human lane.
+
+### Command provider audit — exact implementation still required
+
+Reused unchanged constructor/PG/mTLS receipts; no duplicate gate was run.
+The audit of Core `execution-v2/command.store.ts:8–15,80–82`,
+`edge-command-adapter.ts:55–65`, `edge-command-gateway-binding.ts:29–37`
+and PM `pma11-14-edge-command-transport.json:21–23,65,89–98` establishes:
+
+1. Core retains Portal intent/auth/status, not the authenticated Edge physical
+   original and exact PM wrapper bytes. A caller-provided reference/hash wrapper
+   would not repair this. Implement an owner-accepted original/delivery registry.
+2. Current-human issue commits before signing; lost issue/sign response can
+   leave a genuine lease. Add **command-specific one-view issuance custody**
+   bound to the same original/delivery/acquisition. Reissuing is not recovery.
+3. Command current permission/publication is independent of identity and
+   CURRENT/HISTORY/EXPORT/STREAM/REPLAY or financial snapshot/page/delta purposes.
+   Supply its actual command issuer/provider; never reuse READ or financial trust.
+4. Existing PM exact submit/status wire is HUMAN-only. SERVICE recovery remains
+   separately NOT_PUBLISHED, not supplied by the human identity recovery server.
+
+These are concrete source-authority gaps, not merely a scheduling/window wait.
+The genuine Edge constructor already composed under private new-send OFF stays
+unchanged. No command/Live, gateway or upstream runtime is enabled by this audit.
+
+## Durable original source ACK —15:40UTC source delivery
+
+Owned PM commit **`740f313583be6f91c38dd02a359777eb02aad54a`** adds exactly
+two files,**+666/−0**: `services/portfolio_management/report_publication_ack.py`
+(244 lines) and `tests/unit/test_pma11_report_publication_ack.py`(422).
+R1 focused source commit, independently ACCEPTED; no push, install, credential,
+schema change or economic write. Existing PM `source_change_receipts` and
+`SourceChangeJournalTransaction.claim_receipt` are reused, not a new financial
+ledger or generation. Source SHA256
+`90472c64e02b5f9a82380cfb3122cab7f9468a29aa5593b64cbeaa327f41a919`;
+test `78844f5824a016d819baef0397791355e0333edc10e53f14d6116578e797abc7`.
+
+### Persistence, ambiguity and authority boundaries
+
+- Receipt identity binds the exact receiver, original source/binding/manifest,
+  generation and complete opaque cursor; payload also binds the selected source
+  publication descriptors and resource selection. Existing cursor wire remains
+  **generation/cursor only**. Uniqueness/conflict checks use the real SQL writer.
+- Success returns only after physical transaction COMMIT **and** pool release.
+  A lost callback response retries the same key/row; restart recovery neither
+  creates a HUMAN lease/intent nor rereads publication data. Missing durable
+  metadata explicitly refuses recovery instead of asserting ACK or APPLIED.
+- The first ACK internally checks immutable publication integrity and the real
+  complete transaction-group boundary. Its separately installed source-owner
+  metadata-ACK purpose must therefore authorize **bounded internal integrity
+  SELECT plus receipt INSERT**, not just descriptor access. The constructor's
+  install pins are not source-owner approval, HUMAN authority or a runtime grant.
+  No such purpose/privilege/trust binding was commissioned by this source test.
+- Existing public `ReportPublicationAuthority.acknowledge` keeps source/HUMAN
+  renewal and genuine receiver APPLIED **before first ACK**. Metadata recovery
+  is a separate private owner-custody operation. It must run before a consumed
+  assertion could otherwise be reused; absence cannot be turned into success
+  or an accepting callback. Source ACK does not mean economic/business APPLIED.
+- Independent review found caller-owned cursor mutation across `await`; the
+  returned generation/cursor now comes from the validated pre-await identity.
+  Primary review also found unbounded semaphore admission; queue acquisition
+  now has the declared finite timeout and cancellation-safe release.
+
+### Focused proof, precise scope and cleanup
+
+Final **32/32 PASS**(28 unit +4 actual disposable PG),0.98s. A strengthened
+existing PG visibility case then **1/1 PASS**,0.86s; not a33rd unique case.
+That oracle uses a distinct physical asyncpg connection/PID to observe the
+committed receipt. Other PG cases cover same-row restart after discarded
+callback response, rejected partial-group rollback and concurrent same-key
+uniqueness. Unit doubles inject ambiguous COMMIT/release, binding/conflict,
+caller-mutation, bounded busy and cancellation paths.
+
+The PG tests use the actual existing SQL receipt writer and compatible receipt
+table constraints with **synthetic publication projection**. They do not
+qualify the full source schema/financial authority. Response-loss PG proof is
+at the callback-response boundary after COMMIT; it is **not an injected network
+COMMIT-ack loss**. Initial29-case gate was superseded by the final32 after the
+two source corrections; repeated cases are not additional coverage.
+
+Pinned existing PM image
+`sha256:28ea39588edd1b4fee1715d1e9ca6bd289effac82a573a920b217a8c350226b3`,
+PG `sha256:cf78e76683b9ca8c5733cbbdce6c9262b45b6767934dd0a95e671f9a0fc20685`,
+SDK2.4. No image was built/pulled. PG0.5CPU/384MiB plus runner1.5CPU/1152MiB,
+combined2CPU/1536MiB/300s; PG network-none and runner only its private namespace,
+no host ports. The named one-off PG job held the HK advisory heavy lock and
+released it before docs/review. Both owned disposable containers removed.
+
+Local retained log
+`/tmp/elp211-pm-financial-20261024.H8yK84fv/financial-ack-pm-focused-20261024.log`,
+SHA256 `8ad87c2fdbc812fb83ddf13887edcd94f34196a62416b1f6b9bb8ad780213540`;
+runner `/tmp/run-financial-ack-focused-20261024.sh`,
+SHA256 `b5b278fb06d40b76ed8bb9d2c32eb23a63701f592ffb2d45407888bdae31e622`.
+
+**Runtime/consumer verdict remains OPEN.** Source has a real durable ACK writer,
+not an accepting lambda, but this alone does not install financial source trust
+or prove a complete original publication over the real receiver. The concrete
+factory wiring is a separate following source slice; its final pin and test
+result must be recorded before claiming even that source composition delivered.
+No new public contract/enum/generated type/UI work is requested from Claude.
+
+## Concrete ACK factory and round closeout —15:44UTC
+
+The previously outstanding **basic callback wiring is now implemented**, not
+left for an accepting callback or a future helper. Owned HK PM commit
+**`d7b1bdc707829c47356cf0f8cebf85ea0a3023a2`**, two files,+265/−2:
+`services/portfolio_management/report_publication_receiver.py`(+79/−2) and
+`tests/unit/test_pma11_report_publication_receiver_composition.py`(+186).
+Independent final source review ACCEPT. The only post-test source change was
+the module's stale introductory docstring, not executable behavior.
+
+`compose_durable_receiver_checked_authority` creates exactly one actual
+`OriginalPublicationAcknowledgement` from the same bootstrap/intent/receiver/
+manifest and required `SourceAcknowledgementInstallation`. It passes only
+that provider's `.acknowledge` into the existing checked receiver authority.
+The typed holder contains the unchanged actual `ReportPublicationAuthority`
+plus a **separate private** durable-recovery handle. It mounts no route and
+supplies no callable fallback, synthetic assertion, default trust or grant.
+
+The public order stays current-source/HUMAN renewal → genuine receiver APPLIED
+→ durable source ACK. The owner-authenticated original custody path may recover
+an already committed exact-original ACK privately **before** trying to reuse
+a consumed assertion. Missing metadata remains explicit; any normal retry
+requires freshly valid source authority, not a new publication intent or lease
+fabricated by the recovery function. Installing this custody composition and
+its exact source-owner purpose/privileges/trust is still real commissioning
+work, not completed by a Python constructor or its fixtures.
+
+Focused **51/51 PASS**,1.96s:21 new concrete-composition cases plus30 original
+receiver regressions. Correct source→APPLIED→ACK ordering, same provider/original,
+missing pins/providers, wrong receiver/source/manifest, separate metadata-only
+recovery, no public fallback and original error propagation all covered.
+Network/SQL/source fixtures are TEST_ONLY; this suite does not claim genuine
+HTTP, HUMAN, PG or connected financial authority. The preceding actual-PG
+receipt is reused unchanged; no second PG/full gate was run for this wiring.
+
+Source SHA256 `69d635f69bda9300858da2939ad14fe1b0acaa5b98bd09c121cc4011879dc068`;
+test `cafcb3be31acdb6f508a2107f75ef46ef3c411c8c9fe564c2f2e0ebbd4d160a4`.
+Local log
+`/tmp/elp211-pm-financial-20261024.H8yK84fv/financial-receiver-composition-focused-20261024.log`,
+SHA256 `ea0228fc5cf7e3f3a84d73e9c66eda76448b30dd4acfb8008a55772a386ccf2e`;
+HK runner `/tmp/run-financial-receiver-composition-focused-20261024.sh`,
+SHA256 `a343b07215fe29737bee7b9a272cccc2f16bd78fe2045ba456bd4134c850ed67`.
+Pure-unit no-network2CPU/1536MiB/300s cell removed; no PG/heavy lock or new
+image build/pull. Resource figures in these new membership/ACK/factory lanes
+are configured **ceilings**, not measured peaks: CPU/RSS peaks NOT_MEASURED;
+no performance/coexistence/G2 conclusion is drawn from correctness timings.
+
+### Exact round inventory and current phase exits
+
+This round's PM diff `d9d132db..d7b1bdc7` is **9 unique files,+1500/−10**,
+including75 lines of PM source receipt. Executable source/SQL/tests alone are
+**8 files,+1425/−10**. It comprises63e1464c,740f3135,d7b1bdc7; do not count
+earlier APPLIED/command deliveries again. All three are **intermediate R1**
+source commits; final integration/normal-hook landing remains NOT_RUN, not R2.
+Core source/base and UI are unchanged by these commits; only this public
+receipt, its machine dispositions, Unified and sync are updated on Core.
+Core JSON evidence is R1; Markdown records are R0. JSON parse/unique-lane and
+link/anchor/diff checks PASS; `scripts/execution-tracking-test.sh` PASS.
+Core machine-evidence commit `255f12bf10b11779cced74940cf5bad7c74676cb`
+records these source-only results on `docs/research-loop-plan`.
+No full build/hook was repeated for recording evidence.
+
+Read-back at15:44UTC: owned PMd7b1bdc7 and Edgebd2f42d1 trees clean, new
+named membership/ACK cells absent. HK152GiB free/69%used; retained original
+trust, source/audit/custody, source caches and public transcripts remain intact.
+No broad cleanup, shared-preview image/config/schema update, new session/grant,
+UI change, push, stable/dev/main/provider28445, command or Live operation.
+
+| Phase | Actual delivered source versus exact next backend action |
+| --- | --- |
+| ELP2-05 | Concrete receiver/APPLIED and durable source ACK + factory exist. Install accepted financial-purpose trust, metadata ACK/integrity privileges and authenticated original custody; take actual source publication→receiver COMMIT→source ACK receipt |
+| ELP2-06 | Native selected-membership held component exists. Compose accepted Core policy/install/grant/mapping and complete resource-census authorities over exact original transport; then Manager certificate/audience/profile and authorized Accounts/Portfolio/Exposure API acceptance |
+| ELP2-07 | OFF PG/HTTPS constructor exists. Implement authenticated original/delivery registry and command-specific one-view issuer custody/current-command provider; separate SERVICE recovery contract and commissioned Edge-only gateway; do not enable command/Live |
+| ELP2-09 | Independently permitted fresh READ/STREAM and qualified source binding; actual cache/cursor/SSE/revoke/restart/recovery. HISTORY/REPLAY remain separate rights |
+| ELP2-10 | Integrate compatible source/image/config/schema only in its allowed lane; approved numeric budget/calibration, matched coexistence/G2 and real browser acceptance; no shared-preview runtime update authorized in this round |
+| ELP2-11 | Qualified cross-source permission/data migration, applicable restore/rollback/DR and final review manifest; reuse unaffected valid receipts, no release/deploy claim |
+
+**Claude handoff:** no public BFF/OpenAPI/generated type, enum or UI binding was
+changed in this source round. Keep accepted components and rich fixtures; do
+not redo them or label source-only assembly a live consumer success. Consume
+each source once independently commissioned and record actual image/config/
+schema/authority pins in the browser receipt. Claude's clean00e7f6cf remains the
+last observed source; no new request/acceptance was invented. **Backend next**
+is accepted original/root/census/provider composition plus purpose-bound source
+commissioning, not reimplementing these completed fence/ACK helpers. No extra
+Bobby decision is invented for the source implementation already approved.

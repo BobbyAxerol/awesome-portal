@@ -1,5 +1,64 @@
 # Execution Loop V2 — Sổ đồng bộ Frontend ↔ Backend (sống)
 
+## Codex concrete ACK wiring/closeout —24Oct2026,15:44UTC
+
+[Exact source stats, test scopes and updated6phase exits](evidence/ELP2-10/CORE_EDGE_DIRECT_COMMISSIONING_2026-10-24.md#concrete-ack-factory-and-round-closeout-1544utc).
+Owned PM `d7b1bdc7` now connects concrete ACK to original checked authority;
+public current-source/HUMAN→APPLIED→ACK unchanged, private same-original durable
+recovery separate.51focused PASS(21new+30receiver), independent ACCEPT, noPG
+retake. Round total9unique files,+1500/−10 inc75line source receipt; executable/
+SQL/tests8files,+1425/−10 across63e1464c/740f3135/d7b1bdc7. AllR1, no install,
+new session/grant, UI/shared-preview runtime or public type/enum change.
+**No new FE rework:** keep accepted readers/components/fixtures. Original/root/
+census acceptance, installed source trust/purpose, real gateway and qualification
+are exact next backend actions; consumer/browser needs actual independent source
+receipt, not constructor success. No invented consumer ACK at clean00e7f6cf.
+Details supersede only earlier "missing ACK callback wiring" statements; full
+six-phase exits remain OPEN. Tracking/link/diff/evidence checks PASS.
+
+## Codex durable original source ACK —24Oct2026,15:40UTC
+
+[Source, actual persistence scope and remaining commissioning](evidence/ELP2-10/CORE_EDGE_DIRECT_COMMISSIONING_2026-10-24.md#durable-original-source-ack-1540utc-source-delivery).
+Owned PM `740f3135`:2files,+666/−0; real existing receipt SQL writer, exact
+original/receiver/cursor and COMMIT+release success, metadata-only durable
+same-key recovery.32PASS(28unit+4realPG), independent physical-session oracle
+repeated only. Review ACCEPT; mutable caller cursor and unbounded admission
+fixed. First ACK retains current-source/HUMAN+receiver APPLIED; no installed
+source-owner purpose/privilege/trust or real financial connected claim. Concrete
+factory wiring follows separately, not called delivered before its own gate.
+**Claude:** no public contract/client/enum/component/layout change; keep current
+consumer/fixtures. Future real consumer receipt must name qualified source,
+not the synthetic projection used for persistence tests. Shared preview untouched.
+
+## Codex held native membership source —24Oct2026,15:34UTC
+
+[Actual implementation, review, source pins and exact remaining bridge](evidence/ELP2-10/CORE_EDGE_DIRECT_COMMISSIONING_2026-10-24.md#held-native-membership-bridge-1534utc-source-delivery).
+HK PM `63e1464c` adds actual native selected-lineage held bridge with explicit
+READ/MUTATION and additive dependency SQL;5files,+569/−8.18actual-PG/reader
+PASS plus8unchanged legacy held regressions; strengthened revoke repeat not
+extra coverage. Source R1/independent ACCEPT; SQL uninstalled, no runtime change.
+This closes the missing membership-fence **component**, not complete authorized
+Core-root/census/Accounts transport. Command audit also identifies genuine
+original/delivery/one-view current-command custody gaps; constructor remains OFF.
+**Claude next:** no public DTO/enum/client/component/layout/baseline task in this
+source slice; preserve fixtures/accepted reader. Real consumer receipt needs
+actually qualified source, not this source-only pin. Re-pinned clean00e7f6cf;
+no new committed intake, no invented ACK. Full six-phase exits remain open.
+
+## Codex source follow-through —24Oct2026,15:14UTC (round entry)
+
+Bobby assigned continuing the six open phases without changing shared preview,
+UI, stable/dev/main, command/Live or pushing. Re-pinned clean Core05c888804,
+Claude00e7f6cf, owned PMd9d132db and Edgebd2f42d1; peer PM6f474c72 and
+Edge8727e530 keep their existing WIP. No new committed Claude intake found.
+Primary owns the actual held ordinary membership/root bridge and shared
+integration/docs. Existing PM helper owns only new durable original ACK source/
+tests (schema proposal reviewed first); command helper audits the genuine
+current-command/service provider path; independent reviewer checks authority
+closure. One writer per file, serial bounded cells, focused impacted gates.
+Earlier APPLIED/constructor gates are reused only where source is unchanged.
+This is a round entry, not implementation/connected/consumer acceptance.
+
 ## Codex direct HK follow-through —24Oct2026,14:18UTC
 
 [Actual source, gates, initial failures and remaining source implementation](evidence/ELP2-10/CORE_EDGE_DIRECT_COMMISSIONING_2026-10-24.md#applied-receiver-and-command-assembly-follow-through-1418utc).
