@@ -1,0 +1,81 @@
+{
+  "schema_version": "portal.execution.evidence-test-results.v1",
+  "tier": "R1",
+  "status": "SOURCE_COMMITTED_TRUST_STAGED_NOT_CONNECTED",
+  "core_branch": "docs/research-loop-plan",
+  "core_commits": [
+    "075119b55a8ecccd3cfee2b4fe14b4679adeefd5",
+    "68992b03754099cbe79b9c41d7cd5dd5b7927031"
+  ],
+  "edge_commit": "8b010874af2237cddb3ad32c6c8083b2e0a52a56",
+  "lanes": [
+    {
+      "id": "core-focused-bootstrap-recovery-defaults",
+      "passed_unique": 82,
+      "initial_passed": 80,
+      "initial_failed": 2,
+      "retake_passed": 2,
+      "remaining_failed": 0,
+      "retake_reason": "Sandbox ancestors root and tmp exposed UID65534, euid1000; same two cases passed unchanged on actual filesystem",
+      "authority": "TEST_ONLY_SCHEMA_CANDIDATE_DOUBLES_AND_ACTUAL_NEST_FACTORY",
+      "initial_report_sha256": "f32de2e17adc019c5d7a2789aed6e6258ee41896313d02461ecd0971b63db84c",
+      "retake_report_sha256": "0d5602b3f1a2d7d56459453a92ef01a033eb8016a24c089bd99fa7cb333a3a60"
+    },
+    {
+      "id": "reverse-mtls-transport",
+      "passed": 19,
+      "failed": 0,
+      "seconds": 2.61,
+      "authority": "ACTUAL_EPHEMERAL_LOOPBACK_TLS_TEST_ONLY_CANDIDATE",
+      "source_sha256": "05e397d85564663820528b8ad739fe260ab2ece2ef67db443af1ba8f1cddec91"
+    },
+    {
+      "id": "disposable-pg-multi-source-drain",
+      "passed": 40,
+      "new_cases": 9,
+      "native_regressions": 31,
+      "failed": 0,
+      "seconds": 40.11,
+      "cpu_ceiling": 2,
+      "memory_ceiling_bytes": 1610612736,
+      "oom": false,
+      "authority": "ACTUAL_CORE_SQL_AND_EPHEMERAL_SIGNED_TEST_TERMINALS_NOT_PM_FINANCIAL_PROOF",
+      "log_sha256": "d7821d4028f8ae3710410672bb065cab206c49e7bef1bc3f28378433381c4fbd",
+      "cleanup": "OWNED_TWO_CONTAINERS_AND_INTERNAL_NETWORK_REMOVED"
+    },
+    { "id": "old-source-default-control", "status": "PASS", "default_passed": 1, "new_registration_expected_failures": 1 },
+    { "id": "production-typescript-build", "status": "PASS", "exit_code": 0 },
+    { "id": "whole-corpus-typescript", "status": "STOPPED_RESOURCE_BUDGET_NOT_PASS", "exit_code": 143 },
+    {
+      "id": "edge-private-dns-verify-full-runtime",
+      "passed": 39,
+      "failed": 0,
+      "clippy": "PASS_PRODUCTION_LIB_BINS",
+      "binary_build": "PASS",
+      "binary_sha256": "3e0c4e53a06aa99b0b336de31c43201a7b839e1f0cd4bddbdc60ee628c003b03",
+      "log_sha256": "901892a4276b8e551b2430d3bf53c16de5698421f6f33d6157b6f09237017f23",
+      "cpu_ceiling": 2,
+      "memory_ceiling_bytes": 1610612736,
+      "oom": false,
+      "cleanup": "OWNED_CONTAINER_REMOVED"
+    }
+  ],
+  "review": "ACCEPT_AFTER_FAIR_SCHEDULING_AND_PREHEADER_REPAIR",
+  "native_trust": {
+    "status": "STAGED_NOT_INSTALLED_NOT_AUTHORITY",
+    "candidate_id": "elp210-5e8e2ec5-a898-45e2-ba5d-0e8820868282",
+    "expires_at_utc": "2026-10-25T12:59:52Z",
+    "public_manifest_sha256": "95d892e9394dc71a808f722b35390b4277caebd8eb6296a1f13ca44c91f156e0",
+    "pm_files_transferred": 8,
+    "core_private_key_transferred": false,
+    "transient_ca_key_retired": true,
+    "chain_and_file_modes": "PASS"
+  },
+  "runtime_changed": false,
+  "installed_image": "sha256:01692fc5702f21856f5c932efc0786d3f65ff47bb3ed7d1949ee18666f31458a",
+  "ui_changed": false,
+  "public_contract_changed": false,
+  "pushed": false,
+  "integrated_r2": "PENDING_FROZEN_INSTALL_CANDIDATE",
+  "full_phase_verdict": "NOT_MET_SOURCE_AUTHORITY_FINANCIAL_GATEWAY_LOAD_BROWSER"
+}

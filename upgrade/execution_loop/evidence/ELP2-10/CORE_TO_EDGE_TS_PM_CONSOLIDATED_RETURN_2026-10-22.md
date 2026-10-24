@@ -2294,3 +2294,48 @@ owned correctness cells cleaned; failed logs/evidence preserved. No source
 runtime installation, new session/grant/key, push, dev/main/stable/provider28445,
 command/Live or production budget change. All six phase exits retain the
 specific remaining actions in the linked packet, not a false all-green claim.
+
+## 24. Private bootstrap, fair original recovery and trust staged —24Oct2026
+
+Coordinator Codex/Core. [Current commissioning evidence, phase dispositions,
+test hashes, cleanup and Claude handoff](CORE_CANDIDATE_COMMISSIONING_2026-10-24.md).
+[CI-01…07 exact owner/input/action return](CORE_TO_EDGE_COMMISSIONING_INPUTS_2026-10-24.md)
+is delivered to Edge, the sole TS/PM coordinator. No new short slot is armed.
+
+- Core `075119b55a8ecccd3cfee2b4fe14b4679adeefd5` +
+  `68992b03754099cbe79b9c41d7cd5dd5b7927031`:14code/testfiles,+1150/−16.
+  Absolute reverse pre-header mTLS deadline; opt-in private financial runtime
+  verifies exact schema/pool and registers its same Candidate into the existing
+  global coordinator. Fair recovery cannot starve another workload after a
+  persistent UNKNOWN/source failure. No automatic principal/context issuance.
+- Production TypeScript build PASS;82unique focused cases PASS after only the
+  two sandbox-ancestor cases were retaken unchanged;19real mTLS transport cases
+  PASS;40real disposable-PG cases PASS, including9new original signed-terminal/
+  restart/UNKNOWN cases. Old-source default PASS/new-registration expected FAIL.
+  Independent source review ACCEPT; R1 only, frozen integration R2 pending.
+- Owned Edge candidate `8b010874af2237cddb3ad32c6c8083b2e0a52a56`:
+  opt-in private DNS/verify-full source TLS,39runtime tests/Clippy/build PASS,
+  source-only. Binary/log hashes in the linked receipt; not an installed image.
+- Actual Research ordinary workspace policy/grant rows absent; no native READ
+  or owner ADMIN conversion into whole-business permission. Edge coordinates
+  TS acceptance and explicit3-grain source/metadata; Core then uses the official
+  writer. PM financial proof/production callbacks and original receiver APPLIED
+  remain real implementation/authority work, not imaginary external debt.
+- Old native trust expired23Oct. **Fresh native-only trust now prepared**:
+  candidate`elp210-5e8e2ec5-a898-45e2-ba5d-0e8820868282`, valid through
+ 25Oct12:59:52UTC.8PMfiles transferred to HK private
+ `/home/bobby/secure/edge-core-current-trust-20261024-5e8e2ec5/`,0700/0600,
+ chain verification/hash PASS. Public trust manifest SHA256
+ `95d892e9394dc71a808f722b35390b4277caebd8eb6296a1f13ca44c91f156e0`.
+ Core key not transferred, transientCAkey shredded. Existing Manager CSR/key/
+ certificate unchanged; native bundle is not Manager business authority or an
+ installed grant, source binding or acceptance window.
+
+Installed Core remains healthy image01692fc5, new listeners/config OFF. Correctness
+cells/network removed/noOOM; named private trust retained for acceptance/expiry
+under Core ownership. No UI, new public DTO, push, stable/dev/main/provider28445,
+command/Live, data/custody deletion or production budget/calibration change.
+Claude retains existing components/fixtures; real UXM gates consume each
+independently qualified API row/operation. ELP2-05/06/07/09/10/11 remain explicitly
+not full-PASS. Return prepared source/trust/authority facts separately rather
+than requiring all financial/command/G2 inputs before bounded CURRENT reads.

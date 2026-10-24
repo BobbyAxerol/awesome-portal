@@ -1,5 +1,43 @@
 # Execution Loop V2 — Sổ đồng bộ Frontend ↔ Backend (sống)
 
+## Codex commissioning source return —24Oct2026,13:02UTC
+
+[Current receipt](evidence/ELP2-10/CORE_CANDIDATE_COMMISSIONING_2026-10-24.md):
+Core `075119b55` + `68992b037`,14code/testfiles,+1150/−16; reverse absolute
+mTLS deadline and opt-in financial bootstrap share original Candidate/global
+recovery/pool. Fair bounded recovery removes UNKNOWN-source starvation; no
+automatic principal/lease.82unique focused,19loopback TLS,40real PG PASS;
+production source build PASS. R1, no full-hook/connected/install claim.
+Owned HK TLS candidate `8b010874` source-only,39focused/Clippy/build PASS.
+
+[Edge exact action packet](evidence/ELP2-10/CORE_TO_EDGE_COMMISSIONING_INPUTS_2026-10-24.md)
+already delivered via SSH. Fresh native-only trust prepared,8PMfiles delivered
+privately to HK0700/0600, chain/hash checked; Core key not transferred, Manager
+key/cert unchanged. Actual ordinary Research policy/grants are absent; official
+writer needs TS acceptance via Edge. New trust is not a grant or runtime mount.
+Financial proof/APPLIED, commissioned command gateway and numeric bounds
+remain exact per-owner inputs. No short slot is armed until preparation matches.
+
+**Claude next:** existing rich fixtures/readers unchanged; no new public
+DTO/layout/component/baseline task. Review source handoff and accept real API
+rows per independently commissioned source. Private actor config remains
+UNBOUND, not a frontend session. No new committed Claude intake at clean
+`00e7f6cf`; no acknowledgement invented. All6phase full exits remain explicit
+in the receipt. No UI/push/stable/dev/main/provider28445/command/Live change.
+
+## Codex commissioning round —24Oct2026,12:22UTC
+
+[Scope, pins, validation and results](evidence/ELP2-10/CORE_CANDIDATE_COMMISSIONING_2026-10-24.md).
+Bobby approved the next Research commissioning slice after `0d253193f`.
+Claude remains `00e7f6cff2fadbd88b8ed461fa870b28ee88ad94`, clean; compared
+again, no new committed request. Active HK Edge `8727e530`, PM `6f474c72`
+and owned source candidate `06d835c6` unchanged; peer WIP preserved. Reuse
+three existing source/financial/review helpers with read-only ownership.
+Primary handles installation/composition/shared evidence. No UI, push,
+stable/dev/main/provider28445, command/Live, inherited source rights or
+repeated unchanged source probe/full gate. Actual installation is distinct
+from existing source-only constructor acceptance.
+
 ## Codex delivery and independent review —24Oct2026,08:15UTC
 
 Public return committed at `e8b773694` and transferred/read back with exact

@@ -9728,6 +9728,22 @@ assignment. No goal/push/dev/main/release/deploy started by this return.
 
 ### ELP2-10 — Performance, quality và coexistence
 
+**24Oct13:02UTC commissioning return:** [source/tests/private trust/phase exits
+and Claude handoff](execution_loop/evidence/ELP2-10/CORE_CANDIDATE_COMMISSIONING_2026-10-24.md).
+Core `075119b55`/`68992b037`,14code/testfiles,+1150/−16, opt-in financial
+bootstrap+same-Candidate shared/fair recovery and absolute reverse mTLS
+deadline.82unique focused/19loopback/40realPG PASS, production source build
+PASS; R1, no integrated R2/installed qualification claim. Owned HK TLS fix
+`8b010874`39focused/Clippy/build PASS. Fresh native-only trust prepared and
+8PMfiles transferred privately to HK, chain/hash checked; Core key and existing
+Manager CSR/key not transferred/replaced. No config/listener/image installed.
+[Concrete CI-01…07 Edge actions](execution_loop/evidence/ELP2-10/CORE_TO_EDGE_COMMISSIONING_INPUTS_2026-10-24.md)
+separate actual missing ordinary policy/TS receipt, qualified3-grain source,
+loaded trust, financial-purpose verifier/APPLIED, command gateway and numeric
+bounds. ELP2-05/06/07/09/10/11 remain gate-specific NOT_MET, not generic
+window-blocked or full-PASS. Bounded CURRENT does not wait for financial/G2.
+No UI/public DTO/push/stable/dev/main/provider28445/command/Live change.
+
 **24Oct two implementation packages closed in source:** [Accounts-principal
 and financial constructor/delivery return](execution_loop/evidence/ELP2-10/CORE_ACCOUNTS_AND_FINANCIAL_RUNTIME_RETURN_2026-10-24.md)
 pins Core `95f6b6707`/`6bf817f7a` and owned HK Edge `06d835c6`; financial
