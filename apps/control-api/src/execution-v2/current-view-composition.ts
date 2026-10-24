@@ -2,7 +2,7 @@ import { isIP, type AddressInfo } from "node:net";
 import type { Duplex } from "node:stream";
 import { performance } from "node:perf_hooks";
 import type { AuthService } from "../auth/auth.service";
-import { CurrentViewAuthority, type CurrentViewOperation } from "./current-view-authority";
+import { CurrentViewAuthority, type CurrentViewOperation, type CurrentViewSelection } from "./current-view-authority";
 import { CurrentViewEdgeClient, type CurrentViewEdgeClientConfig, type SelectedCurrentViewEdgeRead } from "./current-view-edge-client";
 import { createCurrentViewTransport, type CurrentViewTransportConfig } from "./current-view-transport";
 import type { ExecutionReadScopes, ReadScopePrincipal } from "./read-scope";
@@ -111,6 +111,26 @@ export class CurrentViewCoreComposition {
     });
     this.reads.add(pending);
     return pending;
+  }
+  /** Compound BFF delivery fence, outside the individual grain reads. A
+   * revocation between account and balances must invalidate the ENTIRE reply,
+   * not return an earlier authorized grain beside a newer one. Same ordinary
+   * CurrentViewAuthority, same real principal, same tracked shutdown custody. */
+  deliver<T>(principal: ReadScopePrincipal, selection: CurrentViewSelection, operation: CurrentViewOperation,
+    read: () => Promise<T>): Promise<T> {
+    if (this.state !== "RUNNING") return Promise.reject(failure("CURRENT_VIEW_COMPOSITION_NOT_RUNNING"));
+    const pending = this.authority.withOriginalContext(principal, this.workload, selection, operation, async context => {
+      const request = { original_context: context.original_context, workload_id: this.workload,
+        operation, resource_ref: selection.resource_ref };
+      const decision = await this.authority.resolve(request);
+      return this.authority.deliver({ ...request, decision_digest: decision.decision_digest }, async () => {
+        if (this.state !== "RUNNING") throw failure("CURRENT_VIEW_COMPOSITION_NOT_RUNNING");
+        const result = await read();
+        if (this.state !== "RUNNING") throw failure("CURRENT_VIEW_COMPOSITION_NOT_RUNNING");
+        return result;
+      });
+    }).finally(() => { this.reads.delete(pending); });
+    this.reads.add(pending); return pending;
   }
   snapshot() {
     const address = this.transport.server.address();

@@ -9,6 +9,8 @@ import * as nativeRuntime from "../src/execution-v2/native-core-runtime";
 import { CurrentViewRuntimeError, currentViewRuntimeReference, prepareCurrentViewRuntime,
   type CurrentViewRuntimeReference } from "../src/execution-v2/current-view-runtime";
 import { commonName, testCertificate, type TestAuthority } from "./fixtures/elp210-test-certificates";
+import { accessDigest } from "../src/execution-v2/access-digest";
+import { managerCurrentMetadataDigest, type ManagerCurrentMetadata } from "../src/execution-v2/manager-current-publication";
 
 const hash = (bytes: string | Buffer) => createHash("sha256").update(bytes).digest("hex");
 type Identity = { key: Buffer; cert: Buffer };
@@ -85,6 +87,37 @@ describe("hash-pinned current-view Research/Paper runtime", () => {
     const prepared = await prepareCurrentViewRuntime(await f.manifest());
     expect(inputs).toHaveLength(7); expect(inputs.every(bytes => bytes.every(byte => byte === 0))).toBe(true);
     expect(prepared.config.transport.tls.key).toEqual(inbound.key);
+    for (const side of [prepared.config.transport, prepared.config.edge])
+      for (const bytes of Object.values(side.tls)) if (Buffer.isBuffer(bytes)) bytes.fill(0);
+  });
+  it("opts in independent hash-pinned Manager metadata and commissioning; changed bytes never reuse ACTIVE", async () => {
+    const f = await fixture(), now = Date.now();
+    const metadata: ManagerCurrentMetadata = {
+      schema_version: "portal.execution.manager-current-metadata.v1",
+      scope: { workspace_id: "TEST_ONLY-research", environment: "paper", profile_id: "TEST_ONLY-paper" },
+      binding: { dataset_id: "manager-current:ACCOUNT", source_revision: "TEST_ONLY-cycle", projection_generation: "TEST_ONLY-epoch",
+        catalogue_revision: "TEST_ONLY-catalogue", window: null },
+      source_workspace_id: "TEST_ONLY-manager", adapter_revision: "TEST_ONLY-v5", publication_revision: "TEST_ONLY-publication",
+      state: "ACTIVE", issued_at_ms: now - 1, expires_at_ms: now + 30_000, source_read_at_ms: now - 1000, observed_at_ms: now - 2,
+      receipt_pins: { source_read: "TEST_ONLY-source", transport_trust: "TEST_ONLY-mtls", privacy: "TEST_ONLY-privacy", field_policy: "TEST_ONLY-fields" },
+      grains: ["manager.account", "relation.account_balances", "relation.account_policies"].map((grain, index) => ({
+        grain: grain as ManagerCurrentMetadata["grains"][number]["grain"], source_fields: ["account_id"], fields: ["account_id"],
+        selections: [{ resource_ref: `TEST_ONLY-grain-${index}`, resource: { kind: "ACCOUNT", id: "TEST_ONLY-account" }, entity_ids: [`TEST_ONLY-row-${index}`] }],
+        entities: [{ entity_id: `TEST_ONLY-row-${index}`, account_id: "TEST_ONLY-account", payload_digest: accessDigest(index) }],
+      })),
+    };
+    const artifact = { schema_version: "portal.execution.manager-current-commissioning.v1", scope: metadata.scope, binding: metadata.binding,
+      source_workspace_id: metadata.source_workspace_id, adapter_revision: metadata.adapter_revision,
+      source_metadata_digest: managerCurrentMetadataDigest(metadata), receipt_pins: metadata.receipt_pins };
+    const raw = JSON.stringify(artifact), metadataRef = await f.leaf(JSON.stringify(metadata));
+    const manager_current = { metadata_ref: metadataRef, commissioning_ref: await f.leaf(raw),
+      approval: { artifact_sha256: `sha256:${hash(raw)}`, approval_ref: "TEST_ONLY-owner-approval", approved_at_ms: now - 1, valid_until_ms: now + 30_000 } };
+    const prepared = await prepareCurrentViewRuntime(await f.manifest({ ...f.value, manager_current }));
+    expect(prepared.managerCurrent!.request).toEqual({ ...metadata.scope, binding: metadata.binding });
+    expect(await prepared.managerCurrent!.source(prepared.managerCurrent!.request)).toEqual(metadata);
+    await writeFile(metadataRef.path, JSON.stringify({ ...metadata, state: "REVOKED" }));
+    await expect(prepared.managerCurrent!.source(prepared.managerCurrent!.request)).rejects.toThrow();
+    await refused(await f.manifest({ ...f.value, manager_current }));
     for (const side of [prepared.config.transport, prepared.config.edge])
       for (const bytes of Object.values(side.tls)) if (Buffer.isBuffer(bytes)) bytes.fill(0);
   });

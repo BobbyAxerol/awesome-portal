@@ -25,6 +25,7 @@ import { epochMsFrom, recordDetailValue } from "../execution-v2/record-detail";
 import { deploymentFinancials, identityAbsences } from "./scoped-summary-facts";
 import { scopedResourceResponseSchemas } from "./scoped-resource.contract";
 import { scopedPortfolioNames } from "./scoped-portfolio-names";
+import { ManagerCurrentAccounts } from "../execution-v2/manager-current-accounts";
 
 export const RESOURCE_KINDS = ["ALPHA", "PORTFOLIO", "ACCOUNT", "BINDING"] as const;
 export type ResourceKind = (typeof RESOURCE_KINDS)[number];
@@ -180,6 +181,7 @@ export class ResourceReadService {
     @Inject(CONTROL_API_CONFIG) private readonly config: ControlApiConfig,
     @Inject(ExecutionProfileProjectionRepository) private readonly repository: ExecutionProfileProjectionRepository,
     @Optional() @Inject(ExecutionReadScopes) private readonly readScopes?: ExecutionReadScopes,
+    @Optional() @Inject(ManagerCurrentAccounts) private readonly managerCurrentAccounts?: ManagerCurrentAccounts,
   ) {}
 
   async read(
@@ -188,6 +190,10 @@ export class ResourceReadService {
     resourceId: string,
     requestedEnvironment?: ResourceEnvironment,
   ): Promise<Record<string, unknown>> {
+    // Explicit commissioned Paper Account360 only. A refused CURRENT read
+    // must never fall through to old retained rows or broker BINDING semantics.
+    if (this.managerCurrentAccounts && kind === "ACCOUNT" && (!requestedEnvironment || requestedEnvironment === "paper"))
+      return this.managerCurrentAccounts.read(principal, resourceId, requestedEnvironment);
     const environments: readonly ResourceEnvironment[] = requestedEnvironment
       ? [requestedEnvironment] : ["paper", "sandbox", "live"];
     if (this.readScopes) return this.readWithAuthority(principal, kind, resourceId, environments.map(environment => ({

@@ -12,6 +12,7 @@ import { ResourceReadService } from "../src/resource-read/resource-read.service"
 import { ResourceReadController, ResourceReadError } from "../src/resource-read/resource-read.controller";
 import { wireStageValue } from "../src/execution/stage-screen-wire";
 import { testConfig } from "./harness";
+import type { ManagerCurrentAccounts } from "../src/execution-v2/manager-current-accounts";
 
 type Row = Record<string, ProjectionScalar>;
 
@@ -105,6 +106,31 @@ function service(relations: Record<string, ProjectionRelation>) {
 function principal() { return { user, session, workspaceId }; }
 
 describe("EDS-04 named resource BFFs", () => {
+  it("routes commissioned Paper Accounts with the original principal and never treats them as broker bindings", async () => {
+    const repository = { snapshot: vi.fn(async () => null) };
+    const current = { read: vi.fn(async (..._input: unknown[]) => ({ TEST_ONLY: "current-account" })) };
+    const reader = new ResourceReadService(config(), repository as unknown as ExecutionProfileProjectionRepository,
+      undefined, current as unknown as ManagerCurrentAccounts);
+    const actor = principal();
+    expect(await reader.read(actor, "ACCOUNT", "actual-source-account", "paper")).toEqual({ TEST_ONLY: "current-account" });
+    expect(current.read).toHaveBeenLastCalledWith(actor, "actual-source-account", "paper");
+    expect(current.read.mock.calls[0]![0]).toBe(actor);
+    expect(repository.snapshot).not.toHaveBeenCalled();
+    await reader.read(actor, "ACCOUNT", "actual-source-account");
+    expect(current.read).toHaveBeenLastCalledWith(actor, "actual-source-account", undefined);
+    current.read.mockClear();
+    for (const [kind, environment] of [["BINDING", "paper"], ["PORTFOLIO", "paper"], ["ACCOUNT", "live"]] as const)
+      await reader.read(actor, kind, "actual-source-account", environment);
+    expect(current.read).not.toHaveBeenCalled();
+  });
+  it("does not fall back to retained rows when the commissioned Account read is refused", async () => {
+    const repository = { snapshot: vi.fn(async () => null) }, failure = new Error("TEST_ONLY_AUTHORITY_REVOKED");
+    const current = { read: vi.fn(async () => { throw failure; }) };
+    const reader = new ResourceReadService(config(), repository as unknown as ExecutionProfileProjectionRepository,
+      undefined, current as unknown as ManagerCurrentAccounts);
+    await expect(reader.read(principal(), "ACCOUNT", "actual-source-account", "paper")).rejects.toBe(failure);
+    expect(repository.snapshot).not.toHaveBeenCalled();
+  });
   it("reuses only bounded DATA after a fresh snapshot load, never actor/clocks or an outage fallback", async () => {
     const fact = snapshot({ [RELATION.portfolios]: relation("portfolios", [{ portfolio_id: "pf_target", name: "Target" }]) });
     const repo = new ExecutionProfileProjectionRepository({ query: vi.fn() } as any, undefined,

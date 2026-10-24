@@ -160,6 +160,24 @@ describe("Core current-view lifecycle composition", () => {
     await expect(f.composition.read(f.principal, f.selected, "EXPORT")).rejects.toBeInstanceOf(Error);
     expect(f.hits()).toBe(0); expect(f.composition.snapshot().owned_contexts).toBe(0);
   });
+  it("fences the entire multi-grain BFF result after an in-callback grant revoke", async () => {
+    const f = await setup(); await f.start();
+    await expect(f.composition.deliver(f.principal, f.selected.authority, "CURRENT", async () => {
+      f.grants[0]!.revoked_at_ms = Date.now();
+      return { TEST_ONLY_secret: "must not leave callback" };
+    })).rejects.toBeInstanceOf(Error);
+    expect(f.hits()).toBe(0);
+    expect(f.composition.snapshot()).toMatchObject({ owned_contexts: 0, pending_reads: 0 });
+  });
+  it("tracks the compound delivery and nested finite read under the same real principal", async () => {
+    const f = await setup(); await f.start();
+    const result = await f.composition.deliver(f.principal, f.selected.authority, "CURRENT", async () => {
+      expect(f.composition.snapshot()).toMatchObject({ owned_contexts: 1, pending_reads: 1 });
+      return f.composition.read(f.principal, f.selected, "CURRENT");
+    });
+    expect(JSON.parse(result.body.toString())).toMatchObject({ TEST_ONLY: true });
+    expect(f.composition.snapshot()).toMatchObject({ owned_contexts: 0, pending_reads: 0 });
+  });
   it("shutdown releases the owned active context, aborts I/O and rejects new reads without altering source grants", async () => {
     const f = await setup({ hold: true }); await f.start(); const grants = structuredClone(f.grants);
     const pending = f.composition.read(f.principal, f.selected, "CURRENT"), rejected = expect(pending).rejects.toBeInstanceOf(Error);

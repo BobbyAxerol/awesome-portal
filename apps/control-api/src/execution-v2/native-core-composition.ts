@@ -20,6 +20,7 @@ import { NativeManagerReadConsumer, type NativeManagerRealtimeOptions } from "./
 import type { NativeCacheObserver } from "./native-cache-observation";
 import type { MaximumDataOperationService } from "../execution/maximum-data-operation.service";
 import { isManagerRuntimeTrustDelegate } from "./manager-runtime";
+import { managerCurrentPublicationBase } from "./manager-current-publication";
 
 export interface NativeCorePersonProfileSelector {
   portal_user_id:string;human_issuer:string;subject:string;workspace_id:string;
@@ -56,8 +57,9 @@ export function nativeCoreManagerReadConsumer(
   cacheObserver?:NativeCacheObserver|(()=>NativeCacheObserver),
 ):NativeManagerReadConsumer{
   const binding=managerBindings.get(composition);
+  const effectiveTrust=managerCurrentPublicationBase(dependencies.executionAccessTrust);
   if(!binding||binding.pool!==pool||
-    (binding.trust!==dependencies.executionAccessTrust&&!isManagerRuntimeTrustDelegate(dependencies.executionAccessTrust,binding.trust))||
+    (binding.trust!==effectiveTrust&&!isManagerRuntimeTrustDelegate(effectiveTrust,binding.trust))||
     binding.mutations!==dependencies.currentHumanMutations)return invalid();
   // Defer private file construction until SAME composition/pool/trust/custody
   // validation has succeeded. A rejected lookalike cannot create a key/log.

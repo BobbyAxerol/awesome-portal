@@ -6,6 +6,9 @@ import { z } from "zod";
 import type { CorePoolProfile } from "../db/pool";
 import type { CurrentViewCompositionConfig } from "./current-view-composition";
 import { readNativeRuntimeReference } from "./native-core-runtime";
+import { loadManagerCurrentCommissioning, parseManagerCurrentMetadata, qualifyManagerCurrentMetadata,
+  type ManagerCurrentCommissioning } from "./manager-current-publication";
+import type { ExecutionReadPublicationRequest } from "./read-publication";
 
 export class CurrentViewRuntimeError extends Error {
   readonly code = "CURRENT_VIEW_RUNTIME_CONFIG_INVALID";
@@ -49,11 +52,20 @@ export const currentViewRuntimeManifest = z.object({
   edge: z.object({ origin, tls, peer,
     limits: z.object({ maximum_in_flight: positive.max(16), response_bytes: positive.max(1048576), deadline_ms: positive.max(5000) }).strict() }).strict(),
   shutdown_deadline_ms: positive.max(5000),
+  manager_current: z.object({ metadata_ref: reference, commissioning_ref: reference,
+    approval: z.object({ artifact_sha256: z.string().regex(/^sha256:[a-f0-9]{64}$/u), approval_ref: text,
+      approved_at_ms: z.number().int().nonnegative().safe(), valid_until_ms: positive }).strict() }).strict().optional(),
 }).strict();
+export interface PreparedManagerCurrentSource {
+  readonly request: ExecutionReadPublicationRequest;
+  readonly commissioning: ManagerCurrentCommissioning;
+  readonly source: (request: ExecutionReadPublicationRequest) => Promise<unknown | null>;
+}
 export interface PreparedCurrentViewRuntime {
   readonly poolProfile: Readonly<CorePoolProfile>;
   readonly config: CurrentViewCompositionConfig;
   readonly listener: { readonly host: string; readonly port: number };
+  readonly managerCurrent?: PreparedManagerCurrentSource;
 }
 
 /** Opt-in pair only; partial/empty/malformed values refuse startup. No file,
@@ -107,8 +119,27 @@ export async function prepareCurrentViewRuntime(input: CurrentViewRuntimeReferen
     const inbound = await hydrate(selected.transport.tls, "serverAuth"), outbound = await hydrate(selected.edge.tls, "clientAuth");
     const config: CurrentViewCompositionConfig = { authority: { ...selected.authority }, shutdown_deadline_ms: selected.shutdown_deadline_ms,
       transport: { ...selected.transport, tls: inbound }, edge: { ...selected.edge, tls: outbound } };
+    let managerCurrent: PreparedManagerCurrentSource | undefined;
+    if (selected.manager_current) {
+      const pins = structuredClone(selected.manager_current);
+      const artifact = await readNativeRuntimeReference(pins.commissioning_ref, 65_536);
+      originals.push(artifact);
+      const commissioning = loadManagerCurrentCommissioning(artifact, pins.approval, Date.now());
+      // Read this independent private source every time. An edited/revoked,
+      // expired or mismatched file refuses, never silently keeps a cached ALLOW.
+      // No .read() recursion and no public/source JSON becomes a human grant.
+      const source = async (_request: ExecutionReadPublicationRequest) => {
+        const bytes = await readNativeRuntimeReference(pins.metadata_ref, 1_048_576);
+        try { return parseManagerCurrentMetadata(bytes); } finally { bytes.fill(0); }
+      };
+      const initial = await source({} as ExecutionReadPublicationRequest);
+      const request: ExecutionReadPublicationRequest = { ...initial.scope, binding: structuredClone(initial.binding) };
+      qualifyManagerCurrentMetadata(initial, request, { commissioning, nowMs: Date.now() });
+      managerCurrent = Object.freeze({ request: Object.freeze(request), commissioning, source });
+    }
     complete = true;
-    return Object.freeze({ config, listener: Object.freeze({ ...selected.listener }), poolProfile: Object.freeze({ ...selected.pool_profile }) });
+    return Object.freeze({ config, listener: Object.freeze({ ...selected.listener }), poolProfile: Object.freeze({ ...selected.pool_profile }),
+      ...(managerCurrent ? { managerCurrent } : {}) });
   } catch { return fail(); }
   finally { originals.forEach(bytes => bytes.fill(0)); if (!complete) outputs.forEach(bytes => bytes.fill(0)); }
 }

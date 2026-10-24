@@ -249,6 +249,8 @@ import { P22PublicationBridgeService } from "./research/p22-publication-bridge.s
 import { CurrentHumanWorkspaceProvisioner } from "./execution-v2/current-human-workspace";
 import { CurrentViewCoreComposition } from "./execution-v2/current-view-composition";
 import type { PreparedCurrentViewRuntime } from "./execution-v2/current-view-runtime";
+import { withManagerCurrentPublications } from "./execution-v2/manager-current-publication";
+import { ManagerCurrentAccounts } from "./execution-v2/manager-current-accounts";
 
 /** Internal composition seam, never populated from request headers/body or
  * runtime environment flags. TEST_ONLY authority cannot enter a non-test app. */
@@ -311,7 +313,12 @@ export class AppModule implements OnApplicationShutdown {
       return executionPoolClose ??= Promise.resolve().then(() => domainPool.end());
     }});
     const managerRuntime = new ExecutionManagerRuntime(domainPool,dependencies.executionManagerRuntime);
-    const accessTrust = managerRuntime.accessTrust(dependencies.executionAccessTrust);
+    const existingAccessTrust = managerRuntime.accessTrust(dependencies.executionAccessTrust);
+    const managerCurrent = dependencies.currentViewRuntime?.managerCurrent;
+    if (managerCurrent && !existingAccessTrust) throw new Error("MANAGER_CURRENT_IDENTITY_TRUST_REQUIRED");
+    const accessTrust = managerCurrent
+      ? withManagerCurrentPublications(existingAccessTrust!, managerCurrent.source, { commissioning: managerCurrent.commissioning })
+      : existingAccessTrust;
     const nativeManagerRead = dependencies.nativeManagerRead;
     // Check the effective provider actually injected into ExecutionAccessService,
     // not only a raw input which an installed ManagerRuntime may wrap.
@@ -482,6 +489,11 @@ export class AppModule implements OnApplicationShutdown {
             });
           },
           inject: [AuthService, ExecutionReadScopes],
+        }] : []),
+        ...(managerCurrent ? [{
+          provide: ManagerCurrentAccounts,
+          useFactory: (core: CurrentViewCoreComposition) => new ManagerCurrentAccounts({ ...managerCurrent, core }),
+          inject: [CurrentViewCoreComposition],
         }] : []),
         {
           provide: ExecutionCommandService,

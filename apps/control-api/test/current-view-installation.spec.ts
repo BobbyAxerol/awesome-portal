@@ -1,6 +1,7 @@
 /** TEST_ONLY DI/lifecycle assembly. No DB, upstream, grants or listener is
  * qualified by this test; actual TLS and SQL tests are separate files. */
 import "reflect-metadata";
+import { createHash } from "node:crypto";
 import type { FactoryProvider } from "@nestjs/common";
 import type { Pool } from "pg";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -21,6 +22,9 @@ import { AuthService } from "../src/auth/auth.service";
 import { ExecutionReadScopes } from "../src/execution-v2/read-scope";
 import { CurrentViewCoreComposition } from "../src/execution-v2/current-view-composition";
 import type { PreparedCurrentViewRuntime } from "../src/execution-v2/current-view-runtime";
+import { ManagerCurrentAccounts } from "../src/execution-v2/manager-current-accounts";
+import { unqualifiedAccessTrust } from "../src/execution-v2/access-trust";
+import { loadManagerCurrentCommissioning } from "../src/execution-v2/manager-current-publication";
 
 const config = { NODE_ENV: "test" } as ControlApiConfig, pool = {} as Pool;
 const provider = (runtime?: PreparedCurrentViewRuntime) =>
@@ -45,6 +49,37 @@ afterEach(() => { h.instances.length = 0; vi.restoreAllMocks(); });
 describe("explicit private current-view installation", () => {
   it("does not register a listener provider for the unchanged default", () => {
     expect(provider()).toBeUndefined(); expect(h.instances).toHaveLength(0);
+    expect(AppModule.register(config, pool).providers?.some(value => typeof value === "object" && value !== null &&
+      "provide" in value && value.provide === ManagerCurrentAccounts)).toBe(false);
+  });
+  it("registers Account360 only with explicit metadata and the existing identity trust", () => {
+    const selected = runtime();
+    // TEST_ONLY commissioning mechanics. Registration must not query the
+    // source; real metadata/source qualification has its separate test lane.
+    const request = { workspace_id: "TEST_ONLY-research", environment: "paper" as const, profile_id: "TEST_ONLY-paper",
+      binding: { dataset_id: "manager-current:ACCOUNT", source_revision: "TEST_ONLY-cycle",
+        projection_generation: "TEST_ONLY-generation", catalogue_revision: "TEST_ONLY-catalogue", window: null } };
+    const bytes = Buffer.from(JSON.stringify({ schema_version: "portal.execution.manager-current-commissioning.v1",
+      scope: { workspace_id: request.workspace_id, environment: request.environment, profile_id: request.profile_id },
+      binding: request.binding, source_workspace_id: "TEST_ONLY-physical", adapter_revision: "TEST_ONLY-adapter",
+      source_metadata_digest: `sha256:${"a".repeat(64)}`, receipt_pins: { source_read: "TEST_ONLY-source",
+        transport_trust: "TEST_ONLY-trust", privacy: "TEST_ONLY-privacy", field_policy: "TEST_ONLY-fields" } }));
+    const now = Date.now();
+    selected.managerCurrent = {
+      request, commissioning: loadManagerCurrentCommissioning(bytes, {
+        artifact_sha256: `sha256:${createHash("sha256").update(bytes).digest("hex")}`,
+        approval_ref: "TEST_ONLY-approval", approved_at_ms: now, valid_until_ms: now + 60_000,
+      }, now), source: vi.fn(async () => null),
+    };
+    expect(() => AppModule.register(config, pool, undefined, { currentViewRuntime: selected }))
+      .toThrow("MANAGER_CURRENT_IDENTITY_TRUST_REQUIRED");
+    const providers = AppModule.register(config, pool, undefined, { currentViewRuntime: selected,
+      executionAccessTrust: unqualifiedAccessTrust }).providers!;
+    const current = providers.find(value => typeof value === "object" && value !== null &&
+      "provide" in value && value.provide === ManagerCurrentAccounts) as FactoryProvider;
+    expect(current.inject).toEqual([CurrentViewCoreComposition]);
+    expect(current.useFactory({ read: vi.fn(), deliver: vi.fn() })).toBeInstanceOf(ManagerCurrentAccounts);
+    expect(selected.managerCurrent.source).not.toHaveBeenCalled();
   });
   it("injects the existing real identity and read-scope providers, not replacements", () => {
     expect(provider(runtime())!.inject).toEqual([AuthService, ExecutionReadScopes]);
