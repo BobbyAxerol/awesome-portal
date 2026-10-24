@@ -583,3 +583,153 @@ last observed source; no new request/acceptance was invented. **Backend next**
 is accepted original/root/census/provider composition plus purpose-bound source
 commissioning, not reimplementing these completed fence/ACK helpers. No extra
 Bobby decision is invented for the source implementation already approved.
+
+<a id="native-correspondence-financial-runtime-20261024"></a>
+
+## Registered original correspondence and configured financial runtime —16:47UTC
+
+Actual direct HK source work, not only another request packet. Core base
+`6fd7dc3410e2a731b3fc63d8d2ba39ff57e634a0`; Claude remains clean
+`00e7f6cff2fadbd88b8ed461fa870b28ee88ad94`, no new committed request or consumer
+ACK. Peer PM`6f474c72`/Edge`8727e530` retain their existing tracked/untracked WIP.
+Both owned candidates are clean after the two scoped intermediate R1 commits:
+
+| Owned source | Baseline → commit | Exact inventory |
+| --- | --- | --- |
+| HK PM `/home/bobby/.worktrees/pm-core-financial-assembly-20261024`, `feat/core-financial-assembly-20261024` | `d7b1bdc7` → **`b9dd32d16d16f43f73b671a7f7088b0359b29451`** | 8 files,+1330/−22:3 Python source(+508/−22),2 additive SQL(+114),3 tests(+708) |
+| HK Edge `/home/bobby/.worktrees/portal-core-current-policy-wire-20261024`, `feat/core-current-policy-wire-20261024` | `bd2f42d1` → **`6d44b52c5c088e2f7ada8fe3aaee94f7599d3266`** | 6 files,+623/−30:4 Rust source(+218/−4),2 tests(+405/−26) |
+
+Total **14 source/SQL/test files,+1953/−52**, excluding Core tracking/receipt.
+No public BFF/OpenAPI/generated contract, Core migration or UI change. These
+are source commits on their owned HK branches, **not landed into Core or installed**.
+
+### What the ordinary source bridge now actually does
+
+- New `services/portfolio_management/native_correspondence.py` stores and loads
+  strict, independently reviewed ORIGINAL metadata. It preserves exact native
+  acceptance bytes, immutable correspondence history, monotonic head CAS, Core
+  policy/install/grant digest pins, physical DB/source/role identity, explicit
+  ROOT population and resource→native-scope mapping. No economic join, row count
+  or Manager collection permission becomes ordinary Accounts authority.
+- A separate reviewed manifest SHA/approval reference is mandatory; computing
+  a proposed file's own hash is not source-owner approval. Metadata installation
+  returning `STORED_CURRENT` explicitly reports `native_authority_qualified=false`.
+  Unknown installation result resolves by the same original, including historical
+  `STORED_SUPERSEDED`; no overwrite, new key or invented successful receipt.
+- The existing `NativeRelationsHeldBridge.issue_registered` loads that exact
+  current version **inside the same SELECT-only RR snapshot** as genuine
+  `NativeSelectedReader`. Caller-supplied graphs are refused in registered mode.
+  It fences native receipt/lineage and registry metadata through the existing
+  source epoch CAS and durable held lifecycle. Both registry tables share one
+  correspondence-ID dependency key: even a future revision INSERT is fenced,
+  not just an UPDATE of the old head. UNKNOWN/restart keeps the original fence
+  until the same valid source terminal; expiry/disconnect is not release.
+- `native_fence.py` adds an explicit opt-in catalogue/privilege profile, leaving
+  old defaults intact. Two new SQL files under
+  `contracts/baseline/portfolio-account-v1_1/` are additive and **UNINSTALLED**;
+  existing migration checksums are unchanged. New ALWAYS triggers, complete
+  relation/function hashes and narrow physical roles require their own real
+  install pins. No roles/grants or native/Core authority were created.
+
+### What the financial runtime now actually does
+
+`core_scoped_runtime.rs`, `financial_runtime.rs` and `main.rs` now compose one
+prepared original with the concrete `FinancialProofVerifier`, through explicit
+`core-financial-trust-check` / `core-financial-serve` commands. Default startup
+and READ paths do not activate it. New `financial_runtime_trust.rs` loads strict
+private hash/ownership-pinned, purpose-specific Ed25519 public trust and separate
+source-owner acceptance bytes; it checks receiver, workspace/profile, original
+manifest/binding and finite window before and after I/O. It neither treats that
+opaque acceptance file as a new approval protocol nor borrows READ/identity/TLS
+keys or a permissive callback. Same prepared original is used once; no reread
+silently changes generation during construction.
+
+Independent review identified the real PostgreSQL TLS prerequisite; Financial
+now reuses the existing Manager `verify-full` validator/CA/hostname path.
+Bootstrap still rejects that option; no plaintext or weaker DSN fallback was
+added. This is configuration/source proof, not connected DB/TLS acceptance.
+Trust-source SHA256
+`7d25ebddec9b15df409be33995eb35fdfd710c1af04a89bf822d3c569f593e23`.
+
+### Focused gates, failures and resource cleanup
+
+| Actual lane | Result | Scope, not a broader claim |
+| --- | --- | --- |
+| PM codec + registered held PG | **40/40 PASS**,9.35s | 31 new unit +9 new genuine PG cases; native original/same-RR, ROOT population, census race, future revision quarantine, narrow role, disabled trigger, UNKNOWN/restart/same terminal |
+| PM metadata registry PG | **4/4 PASS**,0.79s | Actual metadata COMMIT/read-only load/CAS/immutable history; response discarded after actual COMMIT and same-original status, not injected network COMMIT-ack loss |
+| Existing PM membership PG | **18/18 PASS**,12.09s | Rerun because shared helper/bridge changed; not new unique coverage |
+| Existing four-table held module | **16/16 PASS**,8.85s | Default-path regression against changed helper; inherited/repeated cases not added as new coverage |
+| Edge affected runtime | **65/65 PASS**,0.23s execution /15.72s compilation | 7 new trust cases +58 existing;4 existing TLS cases strengthened, not new cases |
+| Edge production lib/bins Clippy | **PASS**,10.71s | Offline/locked,`-D warnings`; not a final image build or whole-workspace gate |
+
+PM metadata/Core policy/ROOT acceptance/census approval and Core terminal
+signatures are TEST_ONLY, while PostgreSQL/native originals/fences are genuine
+disposable source behavior. Edge positive test passes a real Ed25519 signature
+through the actual loaded verifier using TEST_ONLY keys/original. Neither lane
+qualifies business authority or READ/STREAM/financial delivery on Research.
+Initial Edge compilation failed before tests (`String` versus `CanonicalId`);
+fixed only the canonical `.as_str()` accessor and retook the affected lane.
+The failed log is retained, not silently converted to PASS. Earlier agent host
+pytest attempt had no pytest installed: NOT_RUN_ENV, no tests executed or host
+dependency installation. Final tests used pinned existing images/caches.
+
+PM: PG0.5CPU/256MiB + runner1.5CPU/1280MiB, combined2CPU/1536MiB/300s,
+internal disposable network/no host ports. Edge: no-network2CPU/1536MiB/300s
+SGP cell, existing Rust1.85.1 and offline cache, no image build/pull. Actual cell
+exit0/OOMfalse. Values are configured ceilings; CPU/RSS peaks NOT_MEASURED,
+no coexistence/G2/performance claim. Advisory lock covered each named PG job.
+**Scheduling deviation:** two pure Rust invocations unnecessarily used that
+lock; no contention was observed. This is outside the
+closed §10.10b list; subsequent pure Rust gates must not acquire it.
+
+All exact owned PG/runner containers and internal networks removed by trap;
+final read-back found none. No transient credentials created. HK149GiB free
+(70%used), SGP209GiB free(67%used): **NO_ACTION_NEEDED**, no broad cleanup.
+Shared control-api remains healthy at
+`sha256:01692fc5702f21856f5c932efc0786d3f65ff47bb3ed7d1949ee18666f31458a`.
+
+Retained local logs under `/tmp/elp211-pm-financial-20261024.H8yK84fv/`:
+held `082bf0dd602db5f7f76be5387576efdce2f21324b0a4cd86c279245d96f46c1d`;
+registry `f360318a00c884d39a97bb935d6a7b4df06c7a7eba8a03c81a01d271e4d8d51b`;
+membership `0cd55cb3cb6831051806e11907d00fa817eac5d8c4415799ffe7ae937a6e33ba`;
+legacy `2625bc256f6edbb5208a64bfc8380e6bf8798463baf67f11782421f460ff3311`.
+Final PM runner `/tmp/run-correspondence-focused-20261024.sh` hash
+`81197364d427f7831d365b969671950433f592d58a05e5fcf4133dca43959ac6`;
+only the legacy selection was appended after earlier lanes, their bodies unchanged.
+Edge scratch `/tmp/elp210-edge-source-20261024.gt6Znz8L/`: final focused log
+`fe38ab73177059aa3c8bd0b2c16e4d751dce7617b44777c4f85dbe813d78d68f`,
+initial compile `a2554e5f1d48eb786992f7d4631c866da56074e3b269e43047627423e8fb0da2`,
+runner `0d19b5211a4010f6b81f917fb4ea815af6ef81a8013cde9a9162d2b72b56059f`.
+[Machine dispositions](CORE_EDGE_DIRECT_COMMISSIONING_2026-10-24.test-results.json)
+keep failures/repeated coverage distinct. Intermediate R1 commits use focused
+campaign §10.10c gates; normal-hook R2/landing is NOT_RUN, not waived.
+Core machine-evidence commit
+`35aca2c0c69bddb0a9cf4e35fed7bdc1f5d09f93`; JSON25unique lanes,
+diff/link/anchor checks and execution tracking reconciliation PASS.
+
+### Exact remaining work and Claude return
+
+| Phase / owner | Next action; what this delivery does not close |
+| --- | --- |
+| 06/09 Core implementation via Edge | Wire the registered held provider into authenticated original/root current-human transport; independently accepted Core policy/install/grant + explicit reviewed resource census, actual same-original terminal/COMMIT lifecycle. Registry/source labels alone are not a qualified `verifyRootReceipt`; keep READ, STREAM, HISTORY and REPLAY separate |
+| 05 Core/Edge financial commissioning | Install accepted purpose-specific verifier/channel + source metadata-ACK integrity privileges and authenticated original custody; mount exact-original source→receiver COMMIT/APPLIED→durable source ACK. Concrete signer/verifier, ACK writer/factory and now configured entrypoint already exist; do not implement them again |
+| 07 Core implementation via Edge | Authenticated original/delivery custody and command-specific one-view issuer/current-command provider, then commissioned Edge gateway submit/status/recovery; separate SERVICE recovery contract. These are still owned implementation gaps, not merely an external window; command/Live remain OFF |
+| 10 Core + owner inputs/Claude | Compatible candidate/image/config/schema, approved numeric budget/calibration, matched coexistence/G2 and real browser consumer. Do not update shared Research runtime under this source-only continuation |
+| 11 Core integration | Cross-source permission/data migration, applicable DR/restore/rollback and final review manifest after qualified bindings; do not call independent R1 source commits a release or integrated PASS |
+
+Claude can keep current accepted readers/components and rich fixtures. **No new
+public field/enum/client mapping or UI task in this delivery.** Actual source
+consumer receipt must still name qualified source/image/config/schema/authority
+pins; source-only metadata is not an AVAILABLE runtime fact. Consumer ACK remains
+AWAITING_CONSUMER_REVIEW, not fabricated. Latest committed Claude intake is
+unchanged; no new request after comparison. No need for another generic Bobby
+approval to finish already-assigned source code; real operational authority
+and installation limits still apply.
+
+Delegation: existing native/financial source helpers reused with disjoint files;
+existing Edge independent reviewer reused. Previous capacity reviewer was no
+longer available, so one fresh read-only PM reviewer completed the8-file review:
+**ACCEPT**, source-only. Primary reviewed all source, owned shared helper/SQL,
+ran focused cells serially and committed/integrated tracking. No duplicated
+heavy suite, shared hook/config change, UI edit, push, stable/dev/main/provider28445
+operation or command/Live activation. All six full-phase exits remain OPEN.

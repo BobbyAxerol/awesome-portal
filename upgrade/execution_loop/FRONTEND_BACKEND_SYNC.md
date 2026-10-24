@@ -1,5 +1,58 @@
 # Execution Loop V2 — Sổ đồng bộ Frontend ↔ Backend (sống)
 
+## Codex original registry/financial source delivery —24Oct2026,16:47UTC
+
+[Actual implementation, focused results and exact remaining owners](evidence/ELP2-10/CORE_EDGE_DIRECT_COMMISSIONING_2026-10-24.md#native-correspondence-financial-runtime-20261024).
+HK PM **`b9dd32d1`**,8files,+1330/−22: strict immutable reviewed ORIGINAL/census
+registry→same-RR genuine native reader→epoch CAS/held fence, including future
+revision INSERT. Metadata SQL UNINSTALLED; no authority manufactured.40focused
+PASS(31unit+9heldPG),4registryPG and18membership/16legacy regression PASS;
+independent8-file ACCEPT. HK Edge **`6d44b52c`**,6files,+623/−30: configured
+financial verifier/explicit entrypoint, same prepared original, strict PostgreSQL
+TLS reused;65affected PASS(7new)+production Clippy PASS. Initial CanonicalId
+compile failure kept. Both source trees clean; total14files,+1953/−52, R1 only.
+
+**Claude next / request disposition:** no public OpenAPI/generated type/enum/
+UI mapping changed. Preserve current readers/components and rich fixtures.
+Source delivery does not mean real consumer available; actual browser receipt
+needs qualified source/image/config/schema/authority pins. Latest clean Claude
+`00e7f6cff2fadbd88b8ed461fa870b28ee88ad94` unchanged, no new committed request
+or consumer acceptance; handoff AWAITING_CONSUMER_REVIEW. No F5/UXM-08/09/10
+connected or whole-phase PASS is inferred.
+
+**Backend next:** authenticated registered-root/current-human provider+terminal
+composition (Core via Edge); accepted financial-purpose channel/source custody
+commissioning→APPLIED→durable ACK; command-specific original/delivery/provider
+and Edge gateway (still owned implementation, not only a missing window).
+Then matched budget/calibration/G2/browser and11integration; do not reimplement
+completed registry/fence/signer/verifier/ACK helpers. Shared preview still healthy
+on01692fc5; no install, new grant/session, UI/push/stable/dev/main/command/Live.
+PG cells/networks and no-network Rust cell removed; focused gates only, no full
+hook/image build. Over-broad advisory lock on two pure Rust invocations recorded
+as deviation; future pure Rust gates do not acquire it. Subsequent explicit
+disjoint source assignments superseded the entry map's read-only helper brief;
+one fresh independent PM reviewer replaced the unavailable capacity reviewer.
+
+## Codex original authority/provider continuation —24Oct2026,16:18UTC entry
+
+Approved continuation: six existing phases only, source candidates and isolated
+bounded correctness cells; no shared-preview runtime, UI, stable/dev/main,
+provider28445, command/Live activation or push. Core clean6fd7dc341; Claude
+clean00e7f6cf has no new committed intake. Owned HK PM cleand7b1bdc7 and Edge
+cleanbd2f42d1; peer PM6f474c72/Edge8727e530 retain their recorded WIP.
+Previously completed native fence/durable ACK/factory receipts are reused only
+where source dependencies stay unchanged; no repeated PostgreSQL/full hook.
+
+Task map: primary owns actual original/root/census composition, shared tracking,
+source changes and resource scheduling. Reuse `c7_current_owner_delta` for
+read-only native original/root/census seam audit; `c7_capacity_review` for
+read-only authenticated command original/delivery custody design against the
+existing tables/wire; `pm_publication_coordination` for read-only financial
+commissioning seam/real-provider audit. Helpers do not edit shared files, run
+tests, create branches, issue credentials, install or activate. Primary selects
+one concrete source implementation after cross-check, then assigns disjoint
+write paths and impacted tests explicitly. This is an entry record, not PASS.
+
 ## Codex concrete ACK wiring/closeout —24Oct2026,15:44UTC
 
 [Exact source stats, test scopes and updated6phase exits](evidence/ELP2-10/CORE_EDGE_DIRECT_COMMISSIONING_2026-10-24.md#concrete-ack-factory-and-round-closeout-1544utc).

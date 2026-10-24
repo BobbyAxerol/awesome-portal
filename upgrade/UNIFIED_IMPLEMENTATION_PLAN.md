@@ -9728,6 +9728,26 @@ assignment. No goal/push/dev/main/release/deploy started by this return.
 
 ### ELP2-10 — Performance, quality và coexistence
 
+**24Oct16:47UTC direct native registry/financial entrypoint:** [exact source,
+test lanes, failures, cleanup and six-phase handoff](execution_loop/evidence/ELP2-10/CORE_EDGE_DIRECT_COMMISSIONING_2026-10-24.md#native-correspondence-financial-runtime-20261024).
+Owned HK PM **`b9dd32d1`**:8files,+1330/−22; immutable reviewed ORIGINAL/census
+metadata, exact SELECT-only same-RR native loader, source epoch CAS and held
+fence covering both current head and future revision INSERT. New SQL remains
+UNINSTALLED; metadata `STORED_CURRENT` is not an entitlement.40PASS(31unit+9new
+heldPG),4metadataPG,18membership/16legacy regression PASS, independent ACCEPT.
+Owned HK Edge **`6d44b52c`**:6files,+623/−30; explicit financial entrypoint with
+real pinned source-purpose verifier, same prepared original and reused strict
+`verify-full` TLS.65affected tests(7new)+production Clippy PASS; initial accessor
+compile failure retained. Total14source/SQL/test files,+1953/−52, source R1 only,
+no Core landing/image build/shared-runtime change; both owned trees clean.
+Core/Edge still own authenticated root/provider/terminal composition, accepted
+financial commissioning/APPLIED/ACK and command original/provider/gateway, not
+only external windows.10budget/calibration/G2/browser and11integration remain
+OPEN. Claude no public DTO/UI remapping; retain accepted components/fixtures,
+await independently qualified source. No consumer ACK invented at clean00e7f6cf.
+Exact test resources/cleanup and advisory-lock deviation recorded; no push,
+stable/dev/main/provider28445, command/Live or full-phase PASS claim.
+
 **24Oct15:44UTC concrete ACK wiring/round closeout:** [source pin, exact tests,
 resources, all6phase next actions and Claude handoff](execution_loop/evidence/ELP2-10/CORE_EDGE_DIRECT_COMMISSIONING_2026-10-24.md#concrete-ack-factory-and-round-closeout-1544utc).
 Owned PM `d7b1bdc7` wires one actual ACK provider into unchanged checked receiver
