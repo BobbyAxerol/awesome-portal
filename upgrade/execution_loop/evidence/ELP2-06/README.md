@@ -1,5 +1,15 @@
 # ELP2-06 — Manager read models và 360 datasets
 
+**24Oct2026 source follow-through:** candidate
+`73711b4e21ab14d6477af83bb09673ea07b8209d` now reads official Manager
+epochs/cycles/entities, not bootstrap tables. Selected-ID memory bounds and
+explicit physical/logical workspace pins are tested:147library+3real-PG,
+Clippy/binary PASS. SOURCE_ONLY, no actual API/source qualification claim.
+Actual Paper v5/lineage census and mounted public trust pins are in
+[cumulative §21](../ELP2-10/CORE_TO_EDGE_TS_PM_CONSOLIDATED_RETURN_2026-10-22.md#21-manager-current-source-financial-endpoint-and-real-research-preservation-24oct2026).
+No accepted UI rewrite; source/trust binding and Accounts/Portfolio/Exposure
+reconciliation remain the exact real-source/Claude handoff, not absent readers.
+
 **Current continuation,2026-10-17:** [Composition dependent terminal](composition-dependent-restatement.md#composition-dependent-terminal-20261017-1717)
 landed233b217b:775contracts/APIbuild/5,722API PASS+3existing skips and scoped
 PG restore PASS; exact cleanup/source/index/eight runtime tuples preserved.

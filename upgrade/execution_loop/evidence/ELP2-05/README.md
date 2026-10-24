@@ -1,5 +1,13 @@
 # ELP2-05 — Catalogue and TS publication
 
+**24Oct2026 source follow-through:** isolated PM endpoint candidate
+`094488202c4b05b7924bc97e47e18e84d667b2f6` assembles the original financial
+authority and post-COMMIT/APPLIED custody,85focused tests PASS. SOURCE_ONLY,
+not an active PM mount or actual source proof/verifier acceptance. Exact wire
+review/Edge ownership, SDK closure correction, cleanup and next action are in
+[cumulative §21.2](../ELP2-10/CORE_TO_EDGE_TS_PM_CONSOLIDATED_RETURN_2026-10-22.md#212-missing-financial-endpoint-assembly-is-now-implemented).
+Claude keeps existing consumers; no new public DTO/UI or new acknowledgement.
+
 ## Entry / approved scope
 
 Bobby assigned ELP2-05 on 2026-10-16. Worktree `/home/bobby/portal-research`,

@@ -158,3 +158,10 @@ is covered by this one real focused build/test/restore. No default API behavior,
 public contract or UI changed. A full R2 landing/final-candidate certificate is
 NOT claimed; its owner can reuse these source-compatible receipts without
 rerunning unchanged backup/helper tests merely to add documentation.
+
+Committed source: `c46f423b7d82fe79c79ed807f130b3683c17aeb6`,8files,+898/−2
+(six implementation/test/gate scripts plus README/test-results). No runtime
+source/image changed. Process deviation: this R1 commit used a one-command
+`core.hooksPath=/dev/null` override instead of the prescribed `--no-verify`
+mechanism. No persistent Git setting changed; no normal-hook/R2 PASS is claimed.
+Subsequent Markdown closeout uses the explicit R0 mechanism after checks.

@@ -1,5 +1,88 @@
 # Execution Loop V2 — Sổ đồng bộ Frontend ↔ Backend (sống)
 
+## Codex round-start —24Oct2026,06:18UTC: approved05/06/07/09/10/11 follow-through
+
+Bobby now assigns all six remaining backend phases, in order: actual qualified
+source/trust → Research READ/STREAM → financial/gateway → qualification →11
+migration/handoff. Phase11 is assigned, not yet gate-complete. Existing scope
+still excludes stable/dev/main/provider28445, remote Git push, command/Live
+activation and signed release. Canonical starts clean at
+`eb7c2cd807fa82bd116d0df5cec8f9c64d402579`; Claude remains clean at
+`00e7f6cff2fadbd88b8ed461fa870b28ee88ad94`, no new committed request delta.
+HK Edge8727e530 retains its three tracked Markdown changes and untracked intake;
+PM6f474c72 and owned candidate616022f7 are unchanged. Preserve all peer WIP.
+
+Task map: reused `edge_adapter_review` investigates actual qualified source and
+deployable read assembly (only separately reserved adapter files if required);
+reused `pm_publication_coordination` implements the missing source-owned financial
+transport composition in an isolated candidate, not the active PM checkout;
+reused `c7_capacity_review` reviews Manager/command/qualification and prepares
+specific independent backend fixes. Primary owns shared contracts/docs, exact
+runtime configuration, integration and serial heavy gates. Agents first return
+file allowlists; no shared regeneration, credentials, runtime mutation, commits,
+new branches or heavy jobs delegated. Existing correctness ceiling remains
+2CPU/1536MiB/300s; load/calibration proposals are not approved numeric budgets.
+
+ACT_NOW: use actual committed source metadata or construct the missing official
+publisher path; no TEST_ONLY receipt/retired window becomes source authority.
+Resolve concrete financial endpoint/channel assembly rather than requesting an
+undefined window again. Manager uses existing Research key/CSR, Edge as sole
+counterpart; command remains dark while submit/status/recovery is completed.
+Prepare11 compatibility/tie-out/restore tooling independently; final acceptance
+waits only on its real prerequisites, not a historical “unopened” label.
+
+### Round result — actual source, financial assembly and preservation
+
+Three substantive source commits, not only receipts:
+
+- **Edge73711b4e21ab14d6477af83bb09673ea07b8209d:**10files,+2269/−68;
+  real Manager store reader, bounded selected-ID loading, distinct physical/
+  logical workspace binding, Core current policy/cursor/final check.147library,
+  3real-PG, strictClippy/binary PASS; owned HK candidate clean/SOURCE_ONLY.
+- **PM094488202c4b05b7924bc97e47e18e84d667b2f6:**4files,+671;
+  original-source financial endpoint/proof/renew/ACK/status assembly.85focused
+  PASS with the exact SDK closure; isolated candidate clean/SOURCE_ONLY.
+- **Corec46f423b7d82fe79c79ed807f130b3683c17aeb6:**8files,+898/−2;
+  30-relation preservation, bounded CLI and restore-gate composition.33+3unit,
+  build+17transport+PGrestore PASS; realResearch backup39,354rows preserved,
+  zero changed relation fingerprints and owned disposable resources removed.
+
+[Cumulative §21, exact pins/owner actions and Claude handoff](evidence/ELP2-10/CORE_TO_EDGE_TS_PM_CONSOLIDATED_RETURN_2026-10-22.md#21-manager-current-source-financial-endpoint-and-real-research-preservation-24oct2026),
+[phase11 actual receipt](evidence/ELP2-11/README.md). No browser contract/component
+change. Unknown attribution enum-negative CHANGE remains Claude-owned; no new
+committed consumer delta at readback. No frontend work was discarded.
+
+Actual Paper source is v5 with no complete alpha/version lineage in observed
+deployment metadata; do not fabricate the qualification map. Edge reviews/
+imports source candidates and returns exact source/trust plus independently
+permitted STREAM/HISTORY/REPLAY, financial verifier/APPLIED wire and command
+gateway. Numeric budget/calibration and matched coexistence/G2/browser remain
+their real gates, not inferred from test caps. Existing public mounted JWKS
+hashes were now read back; this is not a business API authorization PASS.
+
+No source runtime/image/config/migration installed this round; Core01692fc5 and
+listener OFF unchanged. No push, stable/dev/main/provider28445/command/Live.
+ELP2-11 now assigned/preparation-tested, not final COMPLETE. Three source commits
+are not a full R2 landing certificate; phase11 records the R1 hook-mechanism
+deviation. Markdown closeout uses R0, diff/link/tracking checks, no repeated
+full hook or unchanged engine run.
+
+Actual public handoff/readback on HK: **24Oct07:10:08UTC**, directory
+`/home/bobby/.worktrees/portal-execution-edge-upgrade-v1_2/upgrade/evidence/execution-edge-v1_2/EPG10-08/`:
+
+- Cumulative return SHA256
+  `57eb5c202b4d35294e999cd1f3589dd35aa40a36ceb18c79aa106557e050f548`.
+- Qualified-source/financial return SHA256
+  `9e610c0eafb9f39824bebbe522f4ca01806484a6ebd5ed5965f8d1eff52f1bfa`.
+- New `CORE_ELP2_11_RESEARCH_PRESERVATION_2026-10-24.md` SHA256
+  `a63a38dd87e2ebb95eaef0dc2bd41ad1c8cf4ef7eda4bbfa6aea1e0a2ae74f3c`.
+
+Prior owned return hashes checked before atomic replacement; active Edge's
+three tracked peer Markdown changes preserved. Source candidate HEADs read
+back73711b4e/09448820. This is actual delivery, **not owner ACK/installation**.
+Only sanitized public receipts/private references, no secret values transferred.
+Claude handoff is available in this shared sync and21.4, awaiting review.
+
 ## Codex continuation —24Oct2026,05:39UTC
 
 Bobby assigns continued Research-only runtime/source integration after candidate

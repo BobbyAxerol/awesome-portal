@@ -2030,3 +2030,186 @@ backups/custody/174 retained bindings are untouched. Rollback is to leave this
 explicit command unmounted or review a source revert; never down-migrate,
 reopen a retired window or delete audit/source data. No Git push, peer WIP,
 production/dev/main/stable/provider28445 or command/Live changes.
+
+## 21. Manager CURRENT source, financial endpoint and real Research preservation —24Oct2026
+
+Coordinator/integrator: Codex/Core. Bobby now assigns05/06/07/09/10/**11**;
+old “11unopened” statements above remain historical. Research-only scope,
+Edge as the single TS/PM coordination point, no Git push or stable/dev/main/
+provider28445/command/Live activation. Core entry
+`eb7c2cd807fa82bd116d0df5cec8f9c64d402579`; Claude lane
+`00e7f6cff2fadbd88b8ed461fa870b28ee88ad94` is clean with no new committed
+request delta. Active Edge8727e530 and PM6f474c72 remain unchanged; all peer
+Markdown/intake WIP preserved. Three reused agents had disjoint source/helper
+ownership, primary handled actual composition, tests, commits and delivery.
+
+### 21.1 A real Manager source reader, not an invented bootstrap import
+
+Actual source discovery found the old executable reads bootstrap tables while
+the official Manager worker writes epochs/cycles/entities. New candidate
+**`73711b4e21ab14d6477af83bb09673ea07b8209d`** on isolated
+`/home/bobby/.worktrees/portal-core-current-policy-wire-20261024`, branch
+`feat/core-current-policy-wire-20261024`, now reads the actual Manager store:
+10files,+2269/−68, clean after normal candidate commit. It is **SOURCE_ONLY**,
+not imported into the active Edge feature, image-built, mounted or connected.
+
+- `projection-store-pg/src/manager_current.rs` supplies a governed, bounded,
+  READ ONLY/REPEATABLE READ selected snapshot over an exact active epoch/latest
+  sealed cycle/kind/catalogue. Only qualified selected IDs are decoded; original
+  payload hashes must match. Missing/changed selected rows refuse, unrelated
+  partial writes outside the selection do not force a full-kind read.
+- The opt-in CURRENT provider/router composes real Core resolve/final recheck,
+  complete correlated five-tuples, field projection and HMAC continuation.
+  Its population is explicitly the qualified selection, not full physical-kind
+  parity. No source proof, lineage or source permission is invented.
+- Required `source_workspace_id` pins the physical Manager namespace, separate
+  from the logical Core/Research workspace. Both bind into source identity;
+  mismatch/tamper refuses. This fixes the actual namespace integration bug.
+- Separate `core-manager-current-check`/`core-manager-current-serve` commands
+  accept versioned Research-only private manifest/source pins, exact TLS/key/file
+  hashes and immutable expiry. Default binary/router is unchanged. CURRENT does
+  NOT grant HISTORY/REPLAY/EXPORT/**STREAM**; those purposes stay independently
+  closed until their actual source capability and current permission are bound.
+
+Final gate:147/147 edge library tests PASS, strict Clippy PASS, executable build
+PASS. Binary SHA256
+`b6b8315716f23357099780bffd4a98848d1948fb50c83e1c19a16a60b18c177d`;
+gate log SHA256
+`53f5cc189b8d166dda277e03b5db22be71c58b1848a1474e7867c06f9e3ea507`.
+Three real disposable-PG cases PASS with the official Manager writer, including
+a >1MiB physical kind and bounded selected subset, partial updates, exact cycle,
+altered/missing rows and governed admission. Final workspace fix does not alter
+the two store files (`859a74cf…`,`eebb22b9…`), so that PG receipt is reused by
+exact byte compatibility, not run or counted twice. PG log SHA256
+`43198aa51d7a3d16a5f181aaa764eaba6295a4b6a097b70f66edd17b18f3cd86`.
+Offline correctness cells2CPU/1536MiB/300s, owned containers removed; compiler
+cache and active source/binary evidence retained. No load-budget/G2 claim.
+
+Both explicit Manager CURRENT binary entrypoints also refused a missing private
+manifest with `CORE_SCOPED_RUNTIME_INVALID`, before listener/DB access. CLI log
+SHA256 `44ebd24c11aa8fca5a23e476cf1c86081d20c3de2ccbdbe712368874d4714860`.
+This is a negative executable smoke check, not a positive installed config/API.
+
+Actual Paper metadata census was READ ONLY, not seeded fixture: physical scope
+`workspace_execution_manager/paper`, active epoch
+`01a05c70-81ec-7380-801d-45c706f937c0`, adapter **runtime.v5**, last sealed cycle
+`n24-cycle-3cdb719493ade1fb79def4f57cfef2204bfb1011ab484970004fc940d0045501`,
+catalogue `sha256:0c71b72cd5d23cb21e902837d2a6c496d11da5bd09af70123dca3918cd9b1b44`.
+Source20Oct13:31UTC,12,565records:722accounts,2814events,6598fills,1973orders,
+82performance,72positions,1reconciliation,303runtime. Full account kind exceeds
+1MiB; the new selected-ID query avoids an unnecessary whole-kind allocation.
+
+**Concrete source input still required from Edge:** reviewed logical/physical
+workspace mapping, selected IDs+original hashes, exact source-owned lineage and
+field scope, and adapter compatibility/currentness disposition. Observed171
+deployment metadata_v2 objects are empty; account/deployment/allocation fields
+do not publish complete alpha/version lineage. Do not derive it from strategy
+strings, fabricate an av_, relabel v5 as v6 or call four-day-old data fresh.
+Edge can qualify a legitimate bounded selection or have its official source
+publish the missing lineage; neither requires waiting for financial/G2.
+
+### 21.2 Missing financial endpoint assembly is now implemented
+
+PM candidate **`094488202c4b05b7924bc97e47e18e84d667b2f6`**, isolated
+`/home/bobby/.worktrees/pm-core-financial-assembly-20261024`, branch
+`feat/core-financial-assembly-20261024`, based on actual PM6f474c72:
+4files,+671, normal candidate commit, clean. Active PM was not modified.
+
+New `services/portfolio_management/report_publication_authority_endpoint.py`
+assembles the original authority wrapper at six explicitly configured internal
+paths. Snapshot/page/delta preserve original wire bodies with their original
+post-COMMIT proof sidecar; no second random snapshot or unconstrained signing
+endpoint. Renew/ACK/status bind the same original manifest/generation/request
+digest; receiver APPLIED requires its independently configured authenticated
+post-COMMIT callback. Lost ACK remains UNKNOWN and retries the same original.
+Concurrency, request+whole-envelope bytes, deadline/cancel are bounded. No
+default mount, signer, accepting verifier, token/key or economic fact invented.
+
+Endpoint SHA256
+`531b81bc22d9aaad79b822e379de822be277a429af05f146f6cfe7805975fb2e`;
+tests `db6bab2fe3cce3433316d1094bbd2b5fec5bf3fd3c461ffd3fed797941b2897e`.
+**85/85 focused cases PASS** over new endpoint, original authority and original
+endpoint. Initial84/85 reproduced one original lifecycle failure on unchanged
+PM6f474c72: old image28ea3958 lacks `qdl_sdk.execution_quality`, required by
+OperatorSession's real import chain. The retake uses exact repository SDK2.4.0
+wheel `c0cb9ab2ac1075035399fa88cfa30fcbaeaedf07702cab4dd65c56041eb1db53`
+offline/--no-deps in the disposable cell; original fixture is unchanged.
+2CPU/1536MiB/300s, network disabled, source read-only; owned cell ABSENT after
+the test, no operational image/SDK install. Failure is retained, not hidden as
+a flake or counted as extra coverage.
+
+**Edge/PM action:** review/import candidate as source, freeze exact endpoint/
+envelope and financial-purpose issuer/purpose/audience/algorithm/key/preimage
+vectors plus authenticated receiver APPLIED/status transport, then implement
+and mount the real Edge channel/verifier against the original PM authority.
+Existing Core financial adapter is ready to consume that reviewed wire. Current
+human JWS/mTLS/queue success is not substitute financial proof. Status remains
+SOURCE_ONLY/PENDING_PM_AND_EDGE_REVIEW, not financial connected PASS.
+
+### 21.3 ELP2-11: actual backup preservation, not count-only claims
+
+[Phase11 packet](../ELP2-11/README.md) and its machine-readable test results
+record the new closed30-relation/four-sequence capture/compare, dedicated
+read-only snapshot, schema/ACL/RLS checks and safe disposable CLI. The existing
+Control API test runner now captures identity/session/command/native custody
+before dump and after restore, preserving its older56-count/four-digest checks.
+
+33helper+3CLI cases PASS. One actual focused Control API run built the service,
+ran17/17 transport cases and passed all migrations/legacy+new restore checks,
+exit0; log SHA256
+`92d9f4bae25cc3812b0efac5f8a5083296cc540e3bdf15e70bc3b05636fe1b17`.
+Separate real Research backup round-trip preserved30relations/39,354rows,
+22,859,559hashed row bytes. Source/restored fingerprint both
+`9f45adc07b43e0351d124498abe4262e853a863c03d8abb4d4c03caae38bf92f`.
+Exact original backup/hash, private receipts,207s interval, failed-attempt
+dispositions and zero-owned-resource cleanup are in the packet. No source
+backup, actual runtime or rollback data was overwritten. Zero trusted-command
+rows means this does **not** establish positive command recovery. It also does
+not certify old source quiescence, lease reactivation or final candidate upgrade.
+Core preservation source commit is
+**`c46f423b7d82fe79c79ed807f130b3683c17aeb6`**,8files,+898/−2.
+Focused-development verification only; the phase11 packet records the exact
+hook-mechanism deviation and does not claim normal R2 landing acceptance.
+
+### 21.4 Actual trust readback and next actionable owners
+
+Read-only hash/key-ID extraction from exact mounted **public** JWKS establishes:
+
+| Mounted target | SHA256 | Public kid |
+|---|---|---|
+| Paper Edge `/run/secrets/control-api.jwks.json` | `e52e026a2dabed206153669d6aca25379a0494cf325b7f3c26035546f330452a` | `portal-d3-b69d63fc1a88a0a4` |
+| Paper Manager `/run/secrets/jwt-jwks.json` | `dee257d895a3e382e46756c3955c5841b974aac7e006a2a9b234c256cba96db5` | `0f48ae9517a5d2c1421c207b` |
+
+These are distinct hops/trust contexts, not proof that equal key IDs are
+required. Inactive Research overlap79133170 remains unproven loaded. Existing
+Research certificate/key is not recreated; public leaf validity ends29Oct.
+Need the reviewed Research-specific audience/profile/kid chain, not modification
+of stable trust or a TLS-only probe relabeled as authorized business API.
+
+| Phase | Implemented this round / next concrete action | Remaining exit |
+|---|---|---|
+|05 financial |Source endpoint candidate09448820+85tests; Edge routes exact transport/proof review to PM and implements real verifier/channel |Actual original source→COMMIT→receiver APPLIED/status proof |
+|06 Manager/API |Real selected Manager reader73711b4e; namespace bug fixed; exact mounted public pins read |Reviewed source lineage/field map and Research trust, actual Accounts/Portfolio/Exposure reconciliation |
+|07 commands |Existing Core adapter preserved; PM descriptor `pma11-14-edge-command-transport.json` SHA83d251e8 defines `/internal/elp210/pm-command/{submit,status}` |Edge commissions current-authority/original-intent gateway, real lost-response/status recovery; no command/Live activation |
+|09 scoped reads/realtime |CURRENT provider is now executable against actual Manager store; selected-ID/cursor/last-disclosure authority tested |Independent STREAM/HISTORY/REPLAY source+grants, actual cache/cursor/SSE/revoke/restart/recovery |
+|10 qualification |All source candidates pinned/tested independently; no unmatched measurements called one candidate |Integrated installation after real source/trust binding; approved financial/budget/calibration inputs, matched coexistence/G2 and Claude browser |
+|11 preservation/handoff |Assigned; new real-backup and focused restore preservation receipt |Matched final migration/permissions/economic tie-out/recovery/browser manifest; no signing or dev/main promotion |
+
+Latest independent source checkpoint found no new PM/Edge owner acceptance,
+financial signature transport or commissioned command target after round-start;
+those are exact integration actions, not undefined “need a window” requests.
+Do not make bounded CURRENT review wait for financial, command or load budget.
+No fresh time window is requested until source/binding/config are prepared.
+
+**Claude:** no new public DTO/component rewrite. Keep rich linked fixtures and
+existing stable readers. UXM-08 can consume each independently mounted qualified
+row once actual API receipts exist; UXM-09 requires the specific commissioned
+operation; UXM-10 owns corresponding browser acceptance. Narrow18.6 unknown
+enum attribution CHANGE remains Claude-owned. This delivery is awaiting review,
+not a claim that Claude accepted it or that fixture/browser acceptance is done.
+
+Installed Core image01692fc5/source closure44338418 stays unchanged, current-view
+listener OFF, original bindings/audit/backups retained. Candidate binary is not
+an image digest. Source-only rollback leaves explicit routes unmounted; no old
+slot reopening, grant extension, custody deletion or artificial source record.
+Full08/read09 and ELP2-10/11 remain NOT_MET for the exact exits listed above.

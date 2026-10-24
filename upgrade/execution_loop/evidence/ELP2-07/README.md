@@ -1,5 +1,12 @@
 # ELP2-07 — Trusted command và status bridge
 
+**24Oct2026 current source review:** PM submit/status descriptor and original
+intent/current-authority adapter exist but are unmounted. No new source-owner
+gateway READY was observed. [Current21.4 owner/action table](../ELP2-10/CORE_TO_EDGE_TS_PM_CONSOLIDATED_RETURN_2026-10-22.md#214-actual-trust-readback-and-next-actionable-owners)
+pins the exact wire; Edge is the single coordination path. No duplicate direct
+Core→PM bridge, command/Live activation or claimed positive recovery. The new
+phase11 real-backup drill preserves empty command tables; it does not close07.
+
 **Current2026-10-18:** registration normal-hook30009 is terminalPASS and
 landedff83f176 (39files,+5683/-6;7427API/3existing skips, build/contracts/
 scopedrestore/four access digests, frozen8runtimes/ownedcleanup PASS).

@@ -4,6 +4,16 @@ Date: 2026-10-24. Coordinator/integrator: Codex/Core. Existing ELP2-10/C7,
 CORE-03/04/06 follow-through; this receipt is not a new request ledger.
 
 **Verdict: SOURCE_IMPLEMENTED / FOCUSED_GATES_PASS / NOT_INSTALLED.**
+
+**Latest24Oct follow-through:** real Manager-store CURRENT candidate
+`73711b4e21ab14d6477af83bb09673ea07b8209d`,147library+3real-PG tests,
+Clippy/build PASS; PM endpoint assembly
+`094488202c4b05b7924bc97e47e18e84d667b2f6`,85tests PASS. Both isolated/
+SOURCE_ONLY. [Cumulative §21](CORE_TO_EDGE_TS_PM_CONSOLIDATED_RETURN_2026-10-22.md#21-manager-current-source-financial-endpoint-and-real-research-preservation-24oct2026)
+contains actual source lineage/trust gaps, next Edge owner actions and the
+phase11 real-backup preservation receipt. **ELP2-11 is now assigned**; historical
+“not opened” below is superseded, not a final-exit waiver. No new image/mount,
+qualified-source, financial/gateway/SSE acceptance or browser PASS is claimed.
 **Executable follow-through:** review found the library-only composition was
 not called by the binary. Candidate `616022f79994ba6357277647cbc24beb16507815`
 now adds explicit runtime/check commands, private configuration, TLS and a

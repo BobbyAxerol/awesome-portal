@@ -1,5 +1,13 @@
 # ELP2-09 — Realtime revocation và replay
 
+**24Oct2026 actual-source reader continuation:** isolated candidate73711b4e
+implements CURRENT against official Manager storage with current Core policy,
+exact selected hashes/lineage/fields and bounded cursor reads.147library+3PG
+tests, Clippy and binary PASS; SOURCE_ONLY, no real-source/SSE acceptance.
+[§21 source/trust and independent-purpose handoff](../ELP2-10/CORE_TO_EDGE_TS_PM_CONSOLIDATED_RETURN_2026-10-22.md#21-manager-current-source-financial-endpoint-and-real-research-preservation-24oct2026)
+states exact missing source selection and separate STREAM/HISTORY/REPLAY
+capability. Do not reopen a retired slot or inherit STREAM from CURRENT.
+
 **Current2026-10-18T02:46UTC:** original frame implementation landed1b6df86e;
 [actual normal-hook terminal](native-frame-integration.md#normal-hook-terminal--2026-10-18t024603utc)
 records852contracts/6710API PASS,3existing skips, build/scopedPGrestore and

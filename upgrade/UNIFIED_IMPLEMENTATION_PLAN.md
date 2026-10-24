@@ -9574,6 +9574,10 @@ block only dependent activation. Existing Research/Governance evidence preserved
 
 ### ELP2-05 — Nối catalogue và TS publication
 
+**24Oct continuation:** PM source endpoint candidate09448820,85focused tests
+PASS; actual financial-purpose channel/verifier/COMMIT→APPLIED remains the
+Edge/PM integration gate. [Current implementation and handoff §21.2](execution_loop/evidence/ELP2-10/CORE_TO_EDGE_TS_PM_CONSOLIDATED_RETURN_2026-10-22.md#212-missing-financial-endpoint-assembly-is-now-implemented).
+
 - **Current return2026-10-16:** [packet and canonical gate/debt matrix](./execution_loop/evidence/ELP2-05/README.md),
   [read-only HK pins](./execution_loop/evidence/ELP2-05/source-alignment.md),
   [42-family/31-field inventory and Claude handoff](./execution_loop/evidence/ELP2-05/coverage-and-handoff.md).
@@ -9588,6 +9592,10 @@ block only dependent activation. Existing Research/Governance evidence preserved
 <a id="elp2-06"></a>
 
 ### ELP2-06 — Manager read models và 360 datasets
+
+**24Oct continuation:** actual Manager-store reader73711b4e,147library+3PG
+PASS; fixes bootstrap/storage and physical/logical workspace mismatches.
+SOURCE_ONLY, not installed/source-qualified. [Source census, trust and next owner actions §21](execution_loop/evidence/ELP2-10/CORE_TO_EDGE_TS_PM_CONSOLIDATED_RETURN_2026-10-22.md#21-manager-current-source-financial-endpoint-and-real-research-preservation-24oct2026).
 
 - **Current return2026-10-16:** separately assigned on `c4109ef3`; [gate / actual tests / remaining dependencies](./execution_loop/evidence/ELP2-06/README.md), [source pins](./execution_loop/evidence/ELP2-06/source-alignment.md), [generated contracts + Claude handoff](./execution_loop/evidence/ELP2-06/coverage-and-handoff.md). Technical bounded slice delivered via normal-hook commit; **full source/config/consumer exit NOT_MET**. No runtime or frontend activation;07 requires separate assignment.
 - **Goal/dependency:** 01 cho design; 02/03/04 + selected 05 cho real reads. Reuse UDB/Manager infrastructure, không thêm ledger kinh tế.
@@ -9645,6 +9653,10 @@ Old entry/planning statements elsewhere are retained history, not current08.
 
 ### ELP2-09 — Realtime revocation và replay
 
+**24Oct continuation:** bounded CURRENT source reader73711b4e implemented and
+tested; STREAM/HISTORY/REPLAY remain independently commissioned, not inherited.
+[Exact real-source/trust handoff §21](execution_loop/evidence/ELP2-10/CORE_TO_EDGE_TS_PM_CONSOLIDATED_RETURN_2026-10-22.md#21-manager-current-source-financial-endpoint-and-real-research-preservation-24oct2026).
+
 - **Goal/dependency:** selected reads 04/05/06 và relevant Edge continuity; không buộc snapshot-only endpoint mở SSE.
 - **To-do:** scoped cursors, source epoch/projection generation, atomic apply/ACK, tombstones, coverage proof, revoke caches/export/stream/queued intents; bounded reconnect/slow clients.
 - **Claude:** replay/resync/revoked/retained states theo typed facts; không auto poll Edge hoặc giả live từ cached snapshots.
@@ -9675,6 +9687,12 @@ assignment. No goal/push/dev/main/release/deploy started by this return.
 <a id="elp2-10"></a>
 
 ### ELP2-10 — Performance, quality và coexistence
+
+**24Oct latest:** [§21 actual Manager reader, financial endpoint, public trust readback and real-backup preservation](execution_loop/evidence/ELP2-10/CORE_TO_EDGE_TS_PM_CONSOLIDATED_RETURN_2026-10-22.md#21-manager-current-source-financial-endpoint-and-real-research-preservation-24oct2026)
+supersedes20 only for these specific new source deliveries. Edge candidate
+73711b4e and PM09448820 are committed in isolated owned branches, not installed
+or full connected PASS. No actual qualified lineage was fabricated; exact
+source/trust/financial/gateway/budget/browser gates remain separately listed.
 
 **24 October — executable scoped-read follow-through:**
 [Current return §20: implementation, tests, financial ownership and Edge/Claude handoff](execution_loop/evidence/ELP2-10/CORE_TO_EDGE_TS_PM_CONSOLIDATED_RETURN_2026-10-22.md#20-executable-scoped-reader-and-financial-ownership-correction-24oct2026).
@@ -10264,6 +10282,21 @@ full10PASS. No FE/public fields, HK writes, push/deploy or11 start.
 <a id="elp2-11"></a>
 
 ### ELP2-11 — Migration tích hợp và bàn giao release
+
+**24Oct preparation receipt:** [30-relation preservation packet](execution_loop/evidence/ELP2-11/README.md),
+33helper+3CLI+17focused transport/build/PGrestore PASS. A separate realResearch
+backup round-trip preserved39,354rows/schema/ACL/RLS/sequences with equal
+SHA256fingerprints and zero-owned-resource cleanup. This is not safe credential
+reactivation, positive command recovery or final matched-candidate migration.
+
+**Bobby assignment24Oct2026:** ELP2-05/06/07/09/10/11 are now explicitly
+assigned for ordered Research-only follow-through. Phase11 preparation may
+proceed independently; its final exit still requires selected mandatory
+upstream/consumer gates, not fixture or source-only substitutes. Actual
+source/trust → READ/STREAM → financial/gateway → qualification precedes final
+migration/handoff. No stable/dev/main/provider28445, remote push, command/Live,
+signed release or production deployment is authorized. Current task ownership
+and pins: [round-start sync](execution_loop/FRONTEND_BACKEND_SYNC.md).
 
 - **Goal/dependency:** selected mandatory gates 00…10 và UX integration complete; scope loại trừ phải owner-approved, không lặng lẽ bỏ gate.
 - **To-do:** expand/backfill/shadow/tie-out; identity/session/grants/financial-history preservation; real DB race/restore; exact source/image/schema/config manifest; operator runbooks; original vs restated score revisions không overwritten.
