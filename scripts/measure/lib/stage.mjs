@@ -74,7 +74,7 @@ export function stageReceipt({ measurement, window: w, stage, replay, title, lim
     windowId: selfTest ? null : w.window_id,
     workload: { stage, seed: replay.seed, planned_duration_ms: replay.planned_duration_ms, offered_peak_rps: replay.offered_peak_requests_per_s, offered_mean_rps: replay.offered_mean_requests_per_s, workload_sha256: replay.workload_sha256 },
     limits: { window_max_rps: w.max_rps, window_max_tabs: w.max_tabs, window_max_duration_ms: w.max_duration_ms, in_flight_cap: 64 },
-    stopConditions: ["STOP_429", "STOP_5XX_RATE (>2% of >=20 in trailing 30 s)", "STOP_NETWORK_RATE (>5% of >=20)", "STOP_OVERLOAD (>64 in flight)", "STOP_SIGNAL", "window end minus 5 s", "offered peak above window max_rps refuses to start"],
+    stopConditions: ["STOP_429", "STOP_5XX_RATE (>2% of >=20 in trailing 30 s)", "STOP_NETWORK_RATE (>5% of >=20)", "STOP_OVERLOAD (dispatch would exceed 64 in flight; no queued/downsampled workload)", "STOP_SIGNAL", "window end minus 5 s", "offered peak above window max_rps refuses to start"],
     results: { replay, completed_planned_duration: full },
     cleanup: { requests_in_flight_at_end: 0, session_revocation: "NOT_PERFORMED_BY_THIS_SCRIPT: the grantor revokes temporary sessions with the official revoker and reads back zero custody (Core009 runbook G5)", credential_file_digest_not_recorded: true },
     limitations, extra: { authorisation: selfTest ? { self_issued_selftest: true } : { window_id: w.window_id, granted_by: w.granted_by, authorisation_sha256: w.authorisation_sha256, starts_at_ms: w.starts_at_ms, ends_at_ms: w.ends_at_ms, base_url: w.origin, stop_rollback: w.stop_rollback }, ...extra },
