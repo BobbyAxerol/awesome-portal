@@ -291,6 +291,68 @@ export class CurrentHumanCandidate {
       .sign(this.config.private_key), lease_id: claims.jti, expires_at_ms: claims.exp * 1000, authority_revision: claims.authority_revision };
   }
 
+  /** Same-lease delivery fence for the private financial identity issuer.
+   * Does not allocate/renew a lease, enter a source transaction, or infer PM
+   * economic permission. Cached response retries must recheck CURRENT Core
+   * authority; a persisted ENTERED/UNKNOWN lease remains recovery custody. */
+  async revalidateIssue(untrustedActor: AccessActor, untrustedBinding: CurrentHumanBinding,
+    issued: { token: string; lease_id: string; expires_at_ms: number; authority_revision: number }): Promise<void> {
+    const actor = nativeActor(untrustedActor), binding = currentHumanBinding.parse(untrustedBinding);
+    this.checkInstallation(binding, true);
+    if (binding.workload_id !== this.reverseSource().workload_id)
+      throw new CurrentHumanLeaseError("CURRENT_HUMAN_WORKLOAD_MISMATCH");
+    await this.transaction(async (db, authority) => {
+      const row = (await db.query<Row & { authority_fingerprint: string }>(
+        "SELECT * FROM elp210_candidate.leases WHERE lease_id=$1 FOR SHARE", [issued.lease_id])).rows[0];
+      if (!row || authority.drain_id || row.phase !== "ISSUED" || row.authority_revision !== authority.revision ||
+        Number(row.authority_revision) !== issued.authority_revision || row.subject_id !== actor.user_id ||
+        row.session_id !== actor.session_id || Number(row.session_revision) !== actor.session_generation ||
+        row.workspace_id !== binding.workspace_id || row.environment !== binding.environment ||
+        row.workload_id !== binding.workload_id || row.request_digest !== binding.request_digest ||
+        Number(row.expires_at_ms) !== issued.expires_at_ms)
+        throw new CurrentHumanLeaseError("CURRENT_HUMAN_ENTRY_NOT_AVAILABLE");
+      const current = await captureCurrentHumanSnapshot(db, actor, binding.workspace_id);
+      this.checkInstallation(binding, true);
+      if (current.authority_fingerprint !== row.authority_fingerprint || current.now >= Number(row.expires_at_ms))
+        throw new CurrentHumanLeaseError("CURRENT_HUMAN_ENTRY_NOT_AVAILABLE");
+    });
+  }
+
+  /** Proof for the next DISTINCT financial read, never a retry/renewal of the
+   * old request. The issuer must additionally have an authenticated delivery
+   * acknowledgement for its original sequence. Terminal custody alone cannot
+   * tell whether Edge received the PM response. No expiry/retirement inference,
+   * new lease, source attempt, receipt or ACK is created here. */
+  async canReplaceResolvedIssue(untrustedActor: AccessActor, untrustedBinding: CurrentHumanBinding,
+    issued: { token: string; lease_id: string; expires_at_ms: number; authority_revision: number }): Promise<boolean> {
+    const actor = nativeActor(untrustedActor), binding = currentHumanBinding.parse(untrustedBinding);
+    this.checkInstallation(binding, true);
+    if (binding.workload_id !== this.reverseSource().workload_id)
+      throw new CurrentHumanLeaseError("CURRENT_HUMAN_WORKLOAD_MISMATCH");
+    return this.transaction(async (db, authority) => {
+      const row = (await db.query<Row & { authority_fingerprint: string }>(
+        "SELECT * FROM elp210_candidate.leases WHERE lease_id=$1 FOR SHARE", [issued.lease_id])).rows[0];
+      if (!row || authority.drain_id || row.authority_revision !== authority.revision ||
+        Number(row.authority_revision) !== issued.authority_revision || row.subject_id !== actor.user_id ||
+        row.session_id !== actor.session_id || Number(row.session_revision) !== actor.session_generation ||
+        row.workspace_id !== binding.workspace_id || row.environment !== binding.environment ||
+        row.workload_id !== binding.workload_id || row.request_digest !== binding.request_digest ||
+        Number(row.expires_at_ms) !== issued.expires_at_ms)
+        throw new CurrentHumanLeaseError("CURRENT_HUMAN_ENTRY_NOT_AVAILABLE");
+      const current = await captureCurrentHumanSnapshot(db, actor, binding.workspace_id);
+      this.checkInstallation(binding, true);
+      if (current.authority_fingerprint !== row.authority_fingerprint)
+        throw new CurrentHumanLeaseError("CURRENT_HUMAN_ENTRY_NOT_AVAILABLE");
+      if (row.phase === "ISSUED") return false;
+      // Only resolve(authenticated source proof) persists this terminal digest.
+      // Unentered source rollback retains Core phase RETIRED and cannot pass.
+      if (!["COMMITTED", "ROLLED_BACK"].includes(row.phase) || !row.attempt_id ||
+        !digest.safeParse(row.terminal_receipt_digest).success)
+        throw new CurrentHumanLeaseError("CURRENT_HUMAN_ENTRY_NOT_AVAILABLE");
+      return true;
+    });
+  }
+
 
   /** NC-01 remains custody-only: default behavior and returned carrier unchanged. */
   async admitNativeRead(untrustedActor:AccessActor,input:unknown):Promise<CurrentHumanNativeReadRecoveryAttempt>{

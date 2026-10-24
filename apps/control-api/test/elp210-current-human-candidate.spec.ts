@@ -13,6 +13,8 @@ import { captureCurrentHumanSnapshot } from "../src/execution-v2/current-human-s
 import { withTransaction } from "../src/db/pool";
 import type { AccessActor } from "../src/execution-v2/access.contract";
 import { migrateTestDatabase } from "./harness";
+import { FinancialSourceAssertionAuthority } from "../src/execution-v2/financial-source-assertion";
+import { pmHttpRequestDigest } from "../src/execution-v2/pm-http-request-binding";
 
 const database = process.env.TEST_DATABASE_URL;
 describe.skipIf(!database)("ELP2-10 unmounted authentic-human candidate, real Core DB", () => {
@@ -111,6 +113,105 @@ describe.skipIf(!database)("ELP2-10 unmounted authentic-human candidate, real Co
     expect(pool.idleCount).toBe(pool.totalCount);
     await candidate.enter(lease.token, await proof(lease.lease_id));
     expect(await phase(lease.lease_id)).toBe("ENTERED");
+  });
+  it("fences same-lease financial identity delivery without allocating a second lease", async () => {
+    const lease = await candidate.issue(actor, binding);
+    await candidate.revalidateIssue(actor, binding, lease);
+    await candidate.revalidateIssue(actor, binding, lease);
+    expect((await pool.query("SELECT count(*)::int AS n FROM elp210_candidate.leases")).rows[0].n).toBe(1);
+    await expect(candidate.revalidateIssue(actor, { ...binding, request_digest: `sha256:${"f".repeat(64)}` }, lease))
+      .rejects.toMatchObject({ code: "CURRENT_HUMAN_ENTRY_NOT_AVAILABLE" });
+    await candidate.enter(lease.token, await proof(lease.lease_id));
+    await expect(candidate.revalidateIssue(actor, binding, lease)).rejects.toMatchObject({ code: "CURRENT_HUMAN_ENTRY_NOT_AVAILABLE" });
+    expect(await phase(lease.lease_id)).toBe("ENTERED");
+  });
+  it("does not return a cached identity after real session revoke or authority drain", async () => {
+    const lease = await candidate.issue(actor, binding);
+    // Respect the actual authority writer: raw revoke is forbidden while an
+    // issued lease exists. Drain retires the unused original before mutation.
+    await expect(candidate.beginDrain("TEST_ONLY-financial-revoke")).resolves.toMatchObject({ status: "DRAIN_READY" });
+    await expect(candidate.revalidateIssue(actor, binding, lease)).rejects.toMatchObject({ code: "CURRENT_HUMAN_ENTRY_NOT_AVAILABLE" });
+    await pool.query("UPDATE auth_sessions SET state='REVOKED' WHERE session_id=$1", [actor.session_id]);
+    await candidate.endDrain("TEST_ONLY-financial-revoke", 1);
+    await expect(candidate.revalidateIssue(actor, binding, lease)).rejects.toThrow();
+    await expect(candidate.issue(actor, binding)).rejects.toMatchObject({ code: "CURRENT_ACTOR_AUTHORITY_REQUIRED" });
+    expect(await phase(lease.lease_id)).toBe("RETIRED");
+    expect((await pool.query("SELECT count(*)::int AS n FROM elp210_candidate.leases")).rows[0].n).toBe(1);
+  });
+  it.each(["COMMITTED", "ROLLED_BACK"] as const)("proves original %s custody before a distinct financial read without changing the old lease", async terminal => {
+    const lease = await candidate.issue(actor, binding);
+    expect(await candidate.canReplaceResolvedIssue(actor, binding, lease)).toBe(false);
+    await candidate.enter(lease.token, await proof(lease.lease_id));
+    await expect(candidate.canReplaceResolvedIssue(actor, binding, lease))
+      .rejects.toMatchObject({ code: "CURRENT_HUMAN_ENTRY_NOT_AVAILABLE" });
+    await candidate.resolve(await proof(lease.lease_id, "UNKNOWN"));
+    await expect(candidate.canReplaceResolvedIssue(actor, binding, lease))
+      .rejects.toMatchObject({ code: "CURRENT_HUMAN_ENTRY_NOT_AVAILABLE" });
+    await candidate.resolve(await proof(lease.lease_id, terminal));
+    const before = (await pool.query("SELECT * FROM elp210_candidate.leases WHERE lease_id=$1", [lease.lease_id])).rows[0];
+    expect(before).toMatchObject({ phase: terminal, attempt_id: `test-only-attempt-${lease.lease_id}` });
+    expect(before.terminal_receipt_digest).toMatch(/^sha256:[a-f0-9]{64}$/);
+    expect(await candidate.canReplaceResolvedIssue(actor, binding, lease)).toBe(true);
+    await expect(candidate.canReplaceResolvedIssue(actor, { ...binding, request_digest: `sha256:${"f".repeat(64)}` }, lease))
+      .rejects.toMatchObject({ code: "CURRENT_HUMAN_ENTRY_NOT_AVAILABLE" });
+    expect((await pool.query("SELECT * FROM elp210_candidate.leases WHERE lease_id=$1", [lease.lease_id])).rows[0]).toEqual(before);
+    expect((await pool.query("SELECT count(*)::int AS n FROM elp210_candidate.leases")).rows[0].n).toBe(1);
+    await candidate.beginDrain("TEST_ONLY-terminal-financial-drain");
+    await expect(candidate.canReplaceResolvedIssue(actor, binding, lease))
+      .rejects.toMatchObject({ code: "CURRENT_HUMAN_ENTRY_NOT_AVAILABLE" });
+    await pool.query("UPDATE auth_sessions SET state='REVOKED' WHERE session_id=$1", [actor.session_id]);
+    await candidate.endDrain("TEST_ONLY-terminal-financial-drain", 1);
+    await expect(candidate.canReplaceResolvedIssue(actor, binding, lease)).rejects.toThrow();
+  });
+  it("does not infer financial delivery from authenticated unentered rollback or an unused retired identity", async () => {
+    const lease = await candidate.issue(actor, binding);
+    await candidate.resolve(await proof(lease.lease_id, "ROLLED_BACK"));
+    expect(await phase(lease.lease_id)).toBe("RETIRED");
+    await expect(candidate.canReplaceResolvedIssue(actor, binding, lease))
+      .rejects.toMatchObject({ code: "CURRENT_HUMAN_ENTRY_NOT_AVAILABLE" });
+    expect((await pool.query("SELECT count(*)::int AS n FROM elp210_candidate.leases")).rows[0].n).toBe(1);
+  });
+  it("advances two identical financial Idle polls only after exact delivery completion and real source terminal proof", async () => {
+    const path = "/internal/financial/delta", body = '{"cursor":"TEST_ONLY-unchanged-idle"}';
+    binding.request_digest = pmHttpRequestDigest({ method: "POST", raw_path: Buffer.from(path),
+      query_string: Buffer.alloc(0), body: Buffer.from(body) }, { request_bytes: 1_048_576 });
+    const authority = new FinancialSourceAssertionAuthority(candidate,
+      { ttl_ms: 60_000, maximum_contexts: 1, maximum_requests_per_context: 8 });
+    const selection = { workspace_id: binding.workspace_id, environment: "paper" as const,
+      workload_id: binding.workload_id, receiver_id: "TEST_ONLY-edge", binding_digest: `sha256:${"c".repeat(64)}`,
+      paths: [path, "/internal/financial/page", "/internal/financial/snapshot", "/internal/financial/status",
+        "/internal/financial/ack", "/internal/financial/renew"] };
+    const context = authority.register(actor, selection).original_context;
+    const request = { schema_version: "portal.execution.financial-source-assertion-request.v1",
+      binding_digest: selection.binding_digest, receiver_id: selection.receiver_id, workload_id: binding.workload_id,
+      method: "POST", path, body_utf8: body, request_digest: binding.request_digest,
+      delivery_sequence: 0, previous_lease_id: null };
+    const first = await authority.issue(context, request);
+    expect((await authority.issue(context, request)).lease_id).toBe(first.lease_id);
+    await candidate.enter(first.assertion, await proof(first.lease_id));
+    await candidate.resolve(await proof(first.lease_id, "UNKNOWN"));
+    const completion = { schema_version: "portal.execution.financial-source-assertion-completion-request.v1",
+      binding_digest: selection.binding_digest, receiver_id: selection.receiver_id, workload_id: binding.workload_id,
+      delivery_sequence: 0, lease_id: first.lease_id, request_digest: binding.request_digest,
+      response_digest: `sha256:${"d".repeat(64)}` };
+    await expect(authority.complete(context, completion)).rejects.toThrow();
+    await candidate.resolve(await proof(first.lease_id, "COMMITTED"));
+    // COMMIT alone does not mean Edge received its response: the original
+    // sequence must not silently allocate a new human identity on retry.
+    await expect(authority.issue(context, request)).rejects.toThrow();
+    const nextRequest = { ...request, delivery_sequence: 1, previous_lease_id: first.lease_id };
+    await expect(authority.issue(context, nextRequest)).rejects.toThrow();
+    expect((await pool.query("SELECT count(*)::int AS n FROM elp210_candidate.leases")).rows[0].n).toBe(1);
+    expect(await authority.complete(context, completion)).toMatchObject({ completed: true, lease_id: first.lease_id });
+    // A lost completion ACK retries the SAME body; neither call mints a lease.
+    expect(await authority.complete(context, completion)).toMatchObject({ completed: true });
+    const second = await Promise.all(Array.from({ length: 8 }, () => authority.issue(context, nextRequest)));
+    expect(new Set(second.map(item => item.lease_id)).size).toBe(1);
+    expect(second[0]!.lease_id).not.toBe(first.lease_id);
+    expect((await pool.query("SELECT count(*)::int AS n FROM elp210_candidate.leases")).rows[0].n).toBe(2);
+    expect(await phase(first.lease_id)).toBe("COMMITTED");
+    expect(await phase(second[0]!.lease_id)).toBe("ISSUED");
+    authority.release(context);
   });
   it("clamps issuance to installation expiry and keeps signed terminal recovery possible after that expiry", async () => {
     const validUntil = Date.now() + 20_000;
