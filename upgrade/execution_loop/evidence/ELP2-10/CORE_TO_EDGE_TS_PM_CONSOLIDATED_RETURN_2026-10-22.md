@@ -1670,3 +1670,51 @@ Backend `manager-model.contract.ts` already rejects unknown enums before
 serving; this is reader hardening, not missing backend authorization. Codex
 has not patched it because Bobby approved an unchanged import. Claude can fix
 this reader/test pair separately without a component or design change.
+
+#### 18.6.1 Normal-gate followthrough —24Oct
+
+The first frozen normal-hook attempt stopped at N22: the private Docker-only
+sudo adapter omitted the non-secret example Compose feature flags. Exact
+N22/N23 render/rollback retakes pass after adding those allowlisted inputs;
+no product code, runtime flag or environment file changed. The next normal
+attempt passes all112 contract files /1887 tests, then correctly rejects a
+stale `generated/execution-manager-lists.d.ts`. The existing OpenAPI already
+declares PortfolioHealth and optional health/root/owner-user fields; official
+`openapi-typescript` regeneration adds20 declaration lines. No schema, JSON
+response, reader implementation or production source changes to hide this.
+The original failed logs remain alongside the focused retakes. All remaining
+official generated checks from the failed Manager-list comparison through the
+final Research window-execution type pass on the host; this is a focused
+suffix retake, not another full-suite PASS.
+The official snapshot generator updates the one declaration hash in
+`contracts-snapshot.json`; N29/EDS-12 refresh reports no changed inputs.
+
+All815 source inputs in the qualified API image receipt were rehashed against
+this candidate: zero differences, zero `.d.ts` inputs in that image closure.
+The image therefore remains01692fc5 from the actual qualified source tree;
+the generated browser declarations do not require a backend image rebuild.
+
+#### 18.6.2 Frozen landing gate and exact red-file recovery —24Oct
+
+The normal hook ran on frozen tree `a616430f8b5d6676af997ea159d19b4909a04dac`.
+Contracts112 files/1887 tests pass; Control API production build passes.
+The broad PostgreSQL suite reports520 passed files,4 skipped,1 failed;
+10582 passed tests,7 skipped,1 failed,3126.35 seconds. The original full-hook
+result remains **NOT_PASS**, with its unmodified log retained privately.
+The only failure is the old TRUNCATE assertion in
+`test/elp210-current-human-candidate.spec.ts`: migration150's new membership
+FK now rejects bare TRUNCATE before the intended authority trigger runs.
+The test now exercises `TRUNCATE workspace_members CASCADE`, still requires
+`CURRENT_HUMAN_HISTORY_IMMUTABLE`, and additionally checks membership count
+unchanged. No authority/migration implementation or expected error is weakened.
+
+The official isolated runner retakes that entire file:99/99 PASS, production
+build PASS, PostgreSQL restore PASS including all four scoped-access row
+digests. The exact unexecuted hook suffix (N29, R3-2 and tracking) also passes.
+Compared with the frozen tree, non-Markdown changes are confined to that one
+test; all unaffected broad-suite/contract results are reused under campaign
+§10.10c, not rerun or added as new coverage. **Landing verification is composed
+requalification, not a second all-suite/full-hook PASS.** Logs:
+`normal-hook-snapshot-final.log`, `current-human-fk-retake.log`,
+`landing-suffix-retake.log` under the existing private state directory.
+The API's815 source inputs remain unaffected: only a test changed.

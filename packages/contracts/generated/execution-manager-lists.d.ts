@@ -300,6 +300,21 @@ export interface components {
             currency: components["schemas"]["Identifier"];
             value: components["schemas"]["$defs-Decimal"];
         };
+        /** @description WP-K slice 6 (N3). A typed portfolio health roll-up with its source: the worst health among the portfolio's deployments, with the count of deployments in each class. The lifecycle `state` stays what it is; this is NOT it. OPTIONAL on an item: omitted = this producer has no owning source; NOT_PUBLISHED carries a reason code and no value (never a default of HEALTHY). */
+        PortfolioHealth: {
+            /** @enum {unknown} */
+            state: "PUBLISHED" | "NOT_PUBLISHED";
+            value: ("HEALTHY" | "ATTENTION" | "DEGRADED" | "HALTED") | null;
+            basis: "WORST_OF_DEPLOYMENT_HEALTH" | null;
+            deployments_by_health: {
+                HEALTHY: number;
+                ATTENTION: number;
+                DEGRADED: number;
+                HALTED: number;
+            } | null;
+            as_of: components["schemas"]["Timestamp"] | null;
+            reason_code: string | null;
+        } & unknown;
         PortfolioListItem: {
             portfolio_id: components["schemas"]["Identifier"];
             name: string;
@@ -311,6 +326,11 @@ export interface components {
             deployment_count: number;
             allocated_by_currency: components["schemas"]["$defs-CurrencyValue"][];
             updated_at: components["schemas"]["Timestamp"];
+            health?: components["schemas"]["PortfolioHealth"];
+            /** @description WP-K (GAP-17), OPTIONAL: the capital root this portfolio hangs under; omitted = this producer has no owning source. */
+            root_id?: components["schemas"]["Identifier"];
+            /** @description WP-K (GAP-19), OPTIONAL: the owner as a Portal user id (the link target); `owner` stays the display text. null = the owner has no Portal user; omitted = no owning source. */
+            owner_user_id?: components["schemas"]["Identifier"] | null;
         };
         PortfolioListResponse: {
             /** @constant */

@@ -244,7 +244,12 @@ describe.skipIf(!database)("ELP2-10 unmounted authentic-human candidate, real Co
       .rejects.toThrow("CURRENT_HUMAN_DRAIN_REQUIRED");
     await expect(pool.query(`INSERT INTO portal_access_policy_state(workspace_id,revision,policy)
       VALUES($1,'TEST_ONLY','{}'::jsonb)`, [binding.workspace_id])).rejects.toThrow("CURRENT_HUMAN_DRAIN_REQUIRED");
-    await expect(pool.query("TRUNCATE workspace_members")).rejects.toThrow("CURRENT_HUMAN_HISTORY_IMMUTABLE");
+    // Visit baselines now reference workspace_members. Exercise the actual
+    // no-TRUNCATE authority trigger rather than stopping at PostgreSQL's FK
+    // precheck; its rejection must roll back the whole cascade as well.
+    const membersBefore = (await pool.query("SELECT count(*)::int AS n FROM workspace_members")).rows[0].n;
+    await expect(pool.query("TRUNCATE workspace_members CASCADE")).rejects.toThrow("CURRENT_HUMAN_HISTORY_IMMUTABLE");
+    expect((await pool.query("SELECT count(*)::int AS n FROM workspace_members")).rows[0].n).toBe(membersBefore);
     const guarded = await pool.query(`SELECT count(*)::int AS n FROM pg_trigger WHERE tgname='elp210_authority_guard'`);
     expect(guarded.rows[0].n).toBe(11);
   });
