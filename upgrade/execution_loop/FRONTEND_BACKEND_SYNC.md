@@ -2696,3 +2696,29 @@ remain separate concrete inputs (§§18.2–18.3). No native source/trust/listen
 command/Live, stable/dev/main or provider28445 change; no push. ELP2-10/full08/
 read09 remain NOT_MET and ELP2-11 unopened. Only superseded owned build scratch
 and the unused pre151 image were cleaned; final artifacts/backups are retained.
+
+### Canonical/API installation follow-through —24Oct2026
+
+[Cumulative return18.6–18.7](evidence/ELP2-10/CORE_TO_EDGE_TS_PM_CONSOLIDATED_RETURN_2026-10-22.md#187-canonical-landing-and-actual-research-api-installation-24oct2026)
+supersedes the old pending-import/BUILT_NOT_INSTALLED statements immediately
+above, preserving their historical results. Bobby approved the unchanged
+reader/dependencies and unchanged two-file incoming Edge docs. Canonical
+`docs/research-loop-plan` now includes five candidate commits through
+`31bedf3177162bce5df3c0f26d773b8494fd14cf`; no loss of incoming docs or file
+deletions. No push. Code verification is composed requalification: original
+normal hook has one exact TRUNCATE assertion failure; corrected entire file
+99/99 plus PG/access restore and remaining N29/R3-2/tracking pass, unaffected
+results reused. Never describe that as a new whole-hook PASS.
+
+Actual Research API image01692fc5 is installed/healthy after official forward
+Core150/151 and isolated Execution135/137/138/139/151. Seven identity/access
+fingerprints and20 original retained relations unchanged; frozen131 digest
+unchanged. Current Claude web0653eece and fixture BFF32aa609a remain untouched.
+Claude can consume the landed contracts/readers without replacing components;
+the exact `readGroupAttribution` enum-negative CHANGE in18.6 remains for Claude.
+
+Current-view listener is OFF; model heads0 is actual absence,not fixture source
+authority. Edge source selection,independent HISTORY/REPLAY and PM financial
+proof/APPLIED ownership/wire remain the exact18.2–18.3 inputs via Edge only.
+No retired grant/window reuse,command/Live or stable/dev/main/provider28445
+change. Full08/read09/ELP2-10 remain NOT_MET; ELP2-11 unopened.

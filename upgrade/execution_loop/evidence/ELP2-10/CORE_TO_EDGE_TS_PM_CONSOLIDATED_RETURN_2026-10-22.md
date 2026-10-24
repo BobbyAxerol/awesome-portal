@@ -1718,3 +1718,105 @@ requalification, not a second all-suite/full-hook PASS.** Logs:
 `normal-hook-snapshot-final.log`, `current-human-fk-retake.log`,
 `landing-suffix-retake.log` under the existing private state directory.
 The API's815 source inputs remain unaffected: only a test changed.
+
+### 18.7 Canonical landing and actual Research API installation —24Oct2026
+
+**INSTALLED_UNCOMMISSIONED, not connected acceptance.** This supersedes the
+installation/consumer-permission status in18.5, not the source requests in
+18.2–18.3. Coordinator/integrator: Codex/Core.
+
+#### Source and verification
+
+- Approved unchanged two-file Edge Markdown intake: canonical R0
+  `fd057afef8fd080cd9531e78f69d39a73989ee51`,210 added lines. Unified SHA256
+  stays `ba8f9d5e1f55325c852f93541497cdea8fcbfaf7d3468adc5710a02a90833f19`;
+  request SHA256 stays `d007c0317999368c740b326d5d3897c51c2750aa94cccfe6ecdf9a5ed68aa938`.
+- Composed verification commit `7389cd81f6ddeda857437178f2394639c7e83dfa`,
+  tree `aa60376e50f4bd180a7e70324d78569d85248f1d`. Against the original
+  frozen hook tree in18.6.2, only the corrected TRUNCATE test and Markdown
+  change. Original full hook stays NOT_PASS; corrected whole file99/99,
+  production build, PG/four access-digest restore and exact remaining suffix
+  pass. Unaffected tests reused, not counted twice or called a fresh full PASS.
+- Docs-only rebase changes exactly the two approved incoming Markdown files;
+  no code/test/config/fixture differences from that requalified commit.
+  Canonical fast-forwards to `31bedf3177162bce5df3c0f26d773b8494fd14cf`,
+  tree `830cb486032127ac017181fbd5961a7a0861a728`. Five candidate commits:
+  `0024a247f`, `0520eeb87`, `96a411757`, `59d533052`, `31bedf317`.
+  Combined integration291 files,+36814/-449,zero file deletions. This includes
+  both agents' code/test/generated/fixture work, not only new Core code.
+  All five approved Claude reader/dependency blobs remain unchanged.
+- All815 qualified API source inputs match canonical; closure
+  `4433841854013cf104c4b2267d7c7cbe57686d1c4efe2841199883058d10b541`.
+  Reuse image `sha256:01692fc5702f21856f5c932efc0786d3f65ff47bb3ed7d1949ee18666f31458a`;
+  no rebuild for docs/tests/browser declarations or invented OCI revision label.
+
+Private logs under the existing state directory, exact SHA256:
+
+| Log | SHA256 | Result |
+|---|---|---|
+| `normal-hook-snapshot-final.log` | `fa16209e2c888804cd539fcfb91c5084c3b9451e9f378355d3a350455fe84da5` | NOT_PASS;520 files pass/4 skip/one assertion fails |
+| `current-human-fk-retake.log` | `5d39a937ecd627d02291f73cc0d1e4e077ca44cf0b277b1a1a0274f122fe9031` | Corrected whole file99/99,build and PG/access restore PASS |
+| `landing-suffix-retake.log` | `a43eac0cd43b98f474a193eb77c0402ae880c419ac24120ed53d0f55bad968fe` | N29/R3-2/tracking PASS |
+
+#### Actual Research-only installation
+
+Fresh custom Core/Execution backups are TOC-checked and retained owner-only in
+`/home/bobby/.core-current-view-install-20261024.vcvhODJ7/`.
+Dump SHA256: Core `cc2e0946f44f410b7bb25e19957e48531788bf78f9c99ba8f276b32de02a6429`;
+Execution `deed1ec4c85233843f85b4aad677bd8788c9c8c55299002b08ef51e9b9b3c657`.
+Two SQL fingerprint attempts hit the existing32MiB DB temp-file cap. Partial
+results remain retained; final comparison streams every row's SHA256, sorts
+hashes on the host with8MiB memory and hashes/counts the canonical stream.
+No DB limit increase, sampling, financial backfill or source-row mutation.
+
+Official helper applies Core150/151, isolated Execution135/137/138/139/151,
+then replaces only control-api, with no build. Execution131 digest remains
+`be5fd2dfbd537f582e3135b7edadf1fce0ead8ac7852ad18f5e0c5b617341347`.
+Rendered private Compose SHA256
+`ce146262a9e795dce2764aced9fe73801008658d8b422b985fe907ca3eb7a259`;
+only build metadata differs from old API environment, no new trust/config/grant.
+
+Post-install preservation/read checks PASS:
+
+- Seven identity/workspace/membership/policy/grant/proposal/event table
+  fingerprints unchanged; all20 old retained relations unchanged, excluding
+  only the new nullable `list_figures` column. Six additive domain tables.
+- Core pool=`portal_control`; Execution pool=`portal_execution`, role
+  `exec_runtime`,SELECT models/retained allowed,retained INSERT/UPDATE/DELETE
+  denied,no copied identity. Six domain migration versions; actual model
+  heads0 and original retained bindings174, not fixture-backed source data.
+- API container `f94cb2dc6b9043bc47e48a75e0052032d14a07664c197c2058d24edb985c929d`
+  runs exact qualified image,healthy; internal health/readiness and gateway
+  `127.0.0.1:8095/api/control/healthz`=200. IPs unchanged,no nginx reload.
+- Claude web `34c9a8b91a1f` / image `sha256:0653eece6e611c99e7f7fbb4bf38068ddf97ac8ddd05834a918fbe76c899c5b3`
+  and fixture BFF `af820414c2b2` / image `sha256:32aa609a675e4c938187cf98889e7c3df104d53378f1c2940fc8c1b24b0ef02a`
+  remain the exact same healthy containers/images. No UI/design/baseline edit.
+
+Backup manifest SHA256 `f0ac01bf063c885567d7907a923068dd860f2247932c1e93399c7150b0cd5360`;
+verification manifest SHA256 `33b9bf1cd0a4936fcbd4c7fad0d7ba05744780b523bb779fd8a14cc0a5bbd776`.
+Rollback: exact old API image `sha256:d13cef069471be8b34c7d6f0cda4b6df55e892812c7ea8bf0f17846256e76e6d`
+and captured private config; retain additive DDL/evidence. Never restore over
+later writes or down-migrate automatically. Previous backups remain intact.
+
+#### Cleanup and handoff
+
+Owned Node/PG test cells and one-shot migrators are gone. Exact transient Docker
+adapter deleted and empty directory removed; no image/volume/data pruning.
+Final/rollback images,backups,logs,custody retained. Disk213GiB free/66% used,
+RAM18062MiB available: capacity only,not G2. One existing agent reused read-only,
+zero new agents,no overlapping heavy gates. No remote Git push.
+
+Claude: frozen backend/contracts plus approved reader are now canonical; keep
+later UI commits/current bundle. Apply the narrow `readGroupAttribution`
+CHANGE in18.6 separately,not a component rewrite. Current-view listener stays
+OFF. Edge/PM last checked24Oct03:06:57UTC: Edge
+`8727e5303b1815d54bc2bdcb927a55457ff4da5b`,PM
+`ddb939f54ee655b380c51c31305123637b09442d`; §7.18 still
+MINIMAL_CHANGE_REQUIRED,owner-return SHA256
+`b72b20ffbc33f076bb6264740f0a8e4ecd7bc0dc573a919834a41a27e344153d`.
+Edge is the sole coordination point: return qualified source selection,
+independent HISTORY/REPLAY mapping and the exact financial proof/APPLIED
+ownership/wire ACK in18.2–18.3. Public-file transfer is not owner ACK.
+No retired session/grant/window reopened,no stable/dev/main/provider28445,
+command/Live or production mutation. Full08/read09/ELP2-10 remain NOT_MET for
+those producer/qualification inputs; ELP2-11 remains unopened.
