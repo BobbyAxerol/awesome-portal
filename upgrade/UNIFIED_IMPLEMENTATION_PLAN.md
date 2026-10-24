@@ -9676,6 +9676,24 @@ assignment. No goal/push/dev/main/release/deploy started by this return.
 
 ### ELP2-10 — Performance, quality và coexistence
 
+**24 October — executable scoped-read follow-through:**
+[Current return §20: implementation, tests, financial ownership and Edge/Claude handoff](execution_loop/evidence/ELP2-10/CORE_TO_EDGE_TS_PM_CONSOLIDATED_RETURN_2026-10-22.md#20-executable-scoped-reader-and-financial-ownership-correction-24oct2026).
+HK candidate `616022f79994ba6357277647cbc24beb16507815`,10files,+1674/−9,
+fixes a real gap in0435aab1: factories existed only in the library, with no
+executable caller. Explicit `core-scoped-check/serve` now compose the governed
+source-backed reader independently from financial; default legacy serve stays
+unchanged. Private strict/hash-pinned Research/Paper config, mandatory inbound
+mTLS CA+leaf pin and before/after-await expiry checks are implemented. No
+CURRENT→HISTORY/REPLAY/STREAM grant. Independent review ACCEPT; strict Clippy,
+128library tests, executable build and two missing-config CLI refusals PASS.
+No source grant/listener/image/runtime change: **SOURCE_ONLY**. PM wrapper is
+implemented but its endpoint assembly and real Edge channel/verifier are not;
+§20.2 splits concrete PM/Edge/Core actions instead of requesting another window.
+Edge can review source and return actual selection/purposes/trust independently.
+No new public DTO/UI work; Claude keeps accepted components/fixtures and18.6's
+narrow enum-negative follow-up. ELP2-10/full08/read09 remain NOT_MET for actual
+qualified source/trust/gateway and matched qualification/browser;11 unopened.
+
 **24 October — concrete Edge source and PM authority adapters:**
 [Focused source receipt and exact Edge/Claude handoff](execution_loop/evidence/ELP2-10/CORE_TO_EDGE_QUALIFIED_SOURCE_AND_FINANCIAL_ADAPTER_RETURN_2026-10-24.md).
 HK isolated candidate `0435aab1fadb646680fadd18da1ad1c56561394d` contains

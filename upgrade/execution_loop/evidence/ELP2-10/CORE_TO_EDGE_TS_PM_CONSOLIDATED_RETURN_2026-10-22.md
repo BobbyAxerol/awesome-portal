@@ -1872,3 +1872,161 @@ Edge can inspect the committed HK candidate directly; no remote Git push or
 secret transfer was needed. Delivery is not owner acceptance. Tracking-only
 verification: **R0**, diff/link/locator checks and execution-tracking reconciliation
 PASS; no repeated build, full hook, old READ or retired-window acceptance run.
+
+## 20. Executable scoped reader and financial ownership correction —24Oct2026
+
+**SOURCE_IMPLEMENTED / EXECUTABLE_BUILD_PASS / NOT_INSTALLED.** This follows
+§19 in the same coordination channel; it does not open ELP2-11 or declare
+Full08/read09 connected PASS. Coordinator/integrator remains Codex/Core;
+Edge remains the sole counterpart for PM/TS and source commissioning.
+
+### 20.1 Actual defect fixed, source and tests
+
+Review found a runnable implementation gap, not an external dependency:
+`0435aab1` exposed library factories but the binary never called them. Its
+default service still mounted uncommissioned 503 routes. This is now fixed in
+**`616022f79994ba6357277647cbc24beb16507815`**, parent `0435aab1`, on the
+existing isolated HK candidate
+`/home/bobby/.worktrees/portal-core-current-policy-wire-20261024`, branch
+`feat/core-current-policy-wire-20261024`. Ten code/test files,+1674/−9;
+clean after normal commit. All ten file hashes matched the source tested on
+SGP before commit. No hooks are configured in this HK checkout; normal commit
+is **not** a whole landing-hook PASS.
+
+- `main.rs` adds explicit `core-scoped-check` and `core-scoped-serve` commands.
+  Default/`serve` and the legacy router remain unchanged. No hidden enable flag,
+  source writer, DDL, session/grant creation, command or Live activation.
+- `core_scoped_runtime.rs` composes the actual governed source-backed reader,
+  Core current-human HTTP policy, shared bounded pool/cache/SSE and TLS listener.
+  READ does not wait for an unmounted financial worker. HISTORY/REPLAY/EXPORT
+  require their own current rights; durable stream additionally requires the
+  existing independent replay purpose and `stream.subscribe`, not CURRENT.
+- The strict private manifest is `portal.execution.core-scoped-runtime.v1`;
+  source pins use `portal.execution.core-scoped-source-pins.v1`. Only explicit
+  RESEARCH/paper and private numeric-IP listener/Core/DB targets are admitted.
+  Every limit is supplied, not inferred from a test budget. Window must be
+  current and bounded by the adapter's 24h safety ceiling; this is not a new
+  operational window, permission expiry extension or approved production TTL.
+- Runtime inputs use the pair `EDGE_CORE_SCOPED_RUNTIME_FILE` and
+  `EDGE_CORE_SCOPED_RUNTIME_SHA256`. Manifest and nine referenced files are
+  bounded/hash-checked, owner-only with private direct parents, no symlinks,
+  hardlinks or changed inode/content. Recursive duplicate JSON, unknown fields,
+  lossy numbers, ambiguous URLs and cross-workspace/profile source pins fail
+  before DB/listener startup. Errors expose one fixed code, never credentials.
+  Existing storage observation refresh stays separate from immutable authority.
+- Inbound TLS1.3 requires the configured CA and exact client-leaf SHA256.
+  Outbound Core uses the pinned private CA bundle, numeric-IP SAN verification
+  and TLS1.3 through the existing adapter; **not** an additional server-leaf pin.
+  TLS/config parsing alone is not certificate deployment or business API proof.
+- `connect_qualified_until` keeps original authority/custody and checks actual
+  time before AND after awaited resolve/recheck. At window expiry, final
+  disclosure checks deny even during the listener's bounded graceful drain.
+  SIGTERM/Ctrl-C/expiry use the existing shutdown path, not a new intent/ACK.
+- `validate_sources` is now usable before DB startup; checked resource bytes
+  hydrate the existing factory without reopening a mutable configuration file.
+  Fresh committed source selection is still required on every operation.
+
+Independent source review: **ACCEPT** for executable dispatch, private-file
+custody, TLS, original authority, deadline and resource isolation. Two agents
+implemented/reviewed disjoint files; a third read-only lane identified the
+financial source ownership loop. Primary integrated and ran heavy gates serially.
+
+| Actual gate on final product source | Result |
+|---|---|
+| Rustfmt on all ten owned files | PASS |
+| Strict Clippy, Edge library and binary, `-D warnings` | PASS |
+| Edge library tests | **128/128 PASS**,0fail/0skip;28 added cases versus §19's100 |
+| Actual `edge-service` executable build | PASS, unoptimized qualification artifact, not a release image |
+| Both explicit CLI commands with no private config | Expected exit1/fixed `CORE_SCOPED_RUNTIME_INVALID`; no DB/listener |
+| Existing PG selection9 / receiver COMMIT-ACK6 | Prior §19 receipts reused only for unchanged SQL/financial receiver; NOT rerun or counted as new tests |
+
+The complete private manifest positive test assembles real TEST_ONLY TLS keys,
+source pins, resource/storage observation and cursor material against a
+deliberately non-listening DB port. It proves independent startup validation,
+not a real publication, grant or connection. Other new cases cover strict
+shape/hash/custody, in-memory TLS handshakes and expiry before/during/final
+authority checks. Previously missing UUID-v4 feature use was corrected to the
+existing v7 API; two strict lint failures were repaired, not suppressed.
+
+Final source receipt directory:
+`/tmp/elp210-edge-source-20261024.gt6Znz8L/`.
+Final gate log `scoped-runtime-final-gate.log` SHA256
+`208198ce22ffa3b2ca54bb4508b94d4a1866ce52a5ab75930231789791c36b1c`.
+Earlier combined lint/test/build retake log SHA256
+`7861fabc73b833feb623d22b210b7b5d53afb969dfe123c62dce83b9585ff333`;
+initial two-lint-failure log SHA256
+`737351826d721511ec2cb48a4b08792fbe80b7d14c2872fcf844b33a41eac010`
+remains NOT_PASS. The built binary SHA256 is
+`1ec8c53203ca680ffb8e06fbdabb6f91df89c0282d87bd22a8175d056199ab3b`,
+48,986,880bytes; no image digest or installed state is inferred from it.
+Transferred ten-file archive SHA256 was
+`8d634fc624936a9cae710c19dc78624799d50ed2fc15ccb6f4cbe68cf442d7b2`.
+
+Same pinned compiler/toolchain and 2CPU/1536MiB/300s correctness cell as §19;
+network disabled, no new PostgreSQL container or fixture writes to product DB.
+Owned `--rm` test cell is absent after gates; no image build/BuildKit cache,
+new operational container, keypair or credential was created. Active compiler
+cache/binary and evidence remain for this still-open source campaign. Capacity
+snapshot:210GiB filesystem free/67% used,17,876MiB available RAM; not a G2
+measurement or numeric budget approval. No broad prune/peer cleanup.
+
+### 20.2 Financial: implementation ownership, not another window request
+
+At this round's readback PM remains
+`6f474c72088f000a198a73324ad3083236f2bf5c`; wrapper `2505a764` exists but
+is unmounted. `report_publication_authority.py:107–127,187–225` defines callbacks
+and original post-COMMIT output attestation. In contrast,
+`report_publication_endpoint.py:36–37,66–82` still accepts the exact old
+`ReportPublicationBootstrap` and returns the original body without those proofs.
+The Edge `FinancialAuthorityChannel` has only test implementations. Neither
+PM §7.30 nor the grouped return line293 commissions a financial-purpose wire.
+
+**CHANGE / IMPLEMENTATION_PENDING**, split precisely through Edge:
+
+1. **PM publication owner:** assemble its source-side wrapper and original-output
+   custody at the real authorized reader. Sign only an original authorized
+   output or revalidate that exact output; never provide an unconstrained
+   caller-bytes signing endpoint. Preserve existing snapshot/page/delta bodies
+   and source SQL/COMMIT fences.
+2. **Edge integration owner:** coordinate/freeze the transport/proof proposal
+   with PM, implement its actual Rust channel/verifier, and bind authenticated
+   receiver APPLIED to the original Edge post-COMMIT generation/checkpoint.
+   Return PM owner ACCEPT/CHANGE through this existing channel. Do not bounce
+   the same undefined protocol between “PM define it” and “Edge provide it”.
+3. **Core:** supplies current Portal identity/operation/held-lease inputs via
+   Edge, reviews accepted proof/custody and integrates the existing adapter.
+   Core does not sign economic facts, invent accepted PM semantics or connect
+   directly to PM.
+
+The next source-only return must pin the actual transport and strict operation/
+error schemas; original request digest/full binding/manifest UUID generation/
+proof kind/canonical input digest/original-output association; financial issuer,
+purpose,audience,algorithm,key acceptance and signing preimage/vectors; revoke,
+expiry and bounds; authenticated receiver/APPLIED/status and same-original
+duplicate/conflict/lost-response recovery. Existing wrapper limits are1MiB
+canonical input,4KiB proof,30s freshness and timeout≤10s, not production load
+budgets. Human-lease JWS/native terminal ACK are different purposes.
+
+### 20.3 Exact independently actionable return to Edge / Claude
+
+| Lane | Immediate owner/action | Honest current disposition |
+|---|---|---|
+| CORE-03/06 finite CURRENT | Edge review/import candidate616022f7 without losing8727e530 peer WIP; select real binding/slot/UUID generation/epoch,dataset/schema,entity hashes/full five-tuples/field map; then Core builds the integrated runtime and validates private Research manifest against those inputs | Executable ready in source; no real source pins or listener installed |
+| Independent STREAM/HISTORY/REPLAY/EXPORT | Edge supplies physical purpose/retention/source capability; Core binds separately permitted operation and current human context, then runs cache/cursor/SSE/revoke/restart/recovery | No CURRENT→STREAM inference, retired slot/grant or new window reused |
+| CORE-04 financial | Edge coordinates source assembly/proof transport/receiver trust in20.2; Core reviews concrete owner return | Pure adapter and real disposable receiver receipt delivered; actual channel/verifier still uncommissioned |
+| Manager business API | Edge returns loaded JWKS/config/image and audience/profile/kid, reconciles existing valid Research certificate against actual API binding | No key regeneration; previous TLS-only proof is not business authorization |
+| CORE-05 command07 | Edge commissions submit/status/recovery gateway and original-intent/current-authority binding for existing Core adapter | No command or Live enabled; source/test-only readiness is not gateway READY |
+| CORE-07 qualification | Edge routes exact target/numeric bounds/financial inputs/calibration owner return, freezes workload dependencies | Existing instrumentation/driver and isolated tests do not claim matched coexistence/G2/browser PASS |
+
+No new public browser contract, generated DTO or migration: **Claude keeps the
+approved components and rich linked fixtures**. The narrow unknown-enum
+`readGroupAttribution` CHANGE from18.6 remains Claude-owned. Consume a real
+source only after its row is mounted/qualified; browser acceptance is not
+provided by this source return. Later Claude branch work is unchanged.
+
+Installed Core remains image01692fc5/source closure44338418 from18.7–19;
+current-view listener OFF, no new runtime image/config/schema claim. Existing
+backups/custody/174 retained bindings are untouched. Rollback is to leave this
+explicit command unmounted or review a source revert; never down-migrate,
+reopen a retired window or delete audit/source data. No Git push, peer WIP,
+production/dev/main/stable/provider28445 or command/Live changes.

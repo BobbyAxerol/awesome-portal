@@ -1,5 +1,53 @@
 # Execution Loop V2 — Sổ đồng bộ Frontend ↔ Backend (sống)
 
+## Codex continuation —24Oct2026,05:39UTC
+
+Bobby assigns continued Research-only runtime/source integration after candidate
+`0435aab1`; no command/Live, stable/dev/main or remote Git push. Canonical Core
+`e5bf7e5f4ef53f408b0c0805fa12ba858b9b373b` starts clean. Claude lane remains
+`00e7f6cff2fadbd88b8ed461fa870b28ee88ad94`, clean; no new request/committed
+delta since the previous round. HK feature remains8727e530 with peer Markdown/
+intake WIP preserved. Existing two agents review executable assembly and PM's
+exact channel/trust publication independently; primary owns composition,
+resources, operational changes and shared docs. ACT_NOW: distinguish a usable
+runtime factory from library-only seams, then complete Portal-owned assembly
+without fabricating qualified source metadata or a financial signature format.
+Return each exact usable part to Edge; no expiring window until local readiness.
+
+### Continuation result — explicit executable, not just library seams
+
+[Cumulative return §20](evidence/ELP2-10/CORE_TO_EDGE_TS_PM_CONSOLIDATED_RETURN_2026-10-22.md#20-executable-scoped-reader-and-financial-ownership-correction-24oct2026)
+records candidate `616022f79994ba6357277647cbc24beb16507815`,10files,+1674/−9.
+Explicit runtime/check commands now reach the qualified reader; strict private
+Research/Paper manifest, mTLS inbound CA+leaf pin and immutable expiry around
+actual authority calls are implemented. Legacy default is unchanged. Independent
+review ACCEPT;128library tests, strict Clippy, binary build and missing-config
+CLI checks PASS. Whole landing hook/runtime/source acceptance are NOT claimed.
+
+PM wrapper is implemented but not mounted in its actual endpoint; Edge channel
+still has only test implementations. §20.2 assigns source assembly to PM,
+accepted transport/verifier/APPLIED custody to Edge, current-human held-lease
+and integration to Core. No invented accepted signature or direct Core→PM.
+No new browser fields/component rewrite/migration; Claude continues existing
+fixture/consumer work and the narrow18.6 enum-negative CHANGE. Actual source
+selection, independent purposes, loaded Manager trust, gateway and approved
+qualification inputs remain concrete Edge returns, not generic waiting.
+Core installed image01692fc5/listener OFF unchanged; no push/dev/main/stable/
+provider28445/command/Live or peer WIP changes. Source rollback leaves all audit,
+bindings/backups intact. ELP2-10 stays open, ELP2-11 unopened. R0 tracking-only
+closeout does not repeat builds/full hooks or an old retired READ specimen.
+
+Actual delivery/readback on HK EPG10-08: **24Oct06:02:02UTC**. Cumulative
+return SHA256 `af2c7193fa51d203ad618303f76c22f108cd4f4e20c4433b860bcefdeeaba01b`;
+updated source receipt SHA256
+`a5cabd383021e64f23ef51ccfe4203be8ed5e1fc72546557bbdc64b3d1453405`.
+Old remote hashes checked before atomic replacement; peer Unified and WIP
+untouched. Delivery is not owner ACK. Both exact transient transfer archives
+removed after committed-source/hash validation; source, binary/cache and all
+test/rollback evidence retained. Three installed Research containers read back
+healthy on their unchanged image IDs. Diff/link/locator and execution-tracking
+checks PASS, Verification:R0; no repeated full hook for these four Markdown files.
+
 ## Codex round-start —24Oct2026,04:52UTC /11:52VN
 
 Bobby explicitly assigns continued Core/Edge READ/STREAM, financial publication,

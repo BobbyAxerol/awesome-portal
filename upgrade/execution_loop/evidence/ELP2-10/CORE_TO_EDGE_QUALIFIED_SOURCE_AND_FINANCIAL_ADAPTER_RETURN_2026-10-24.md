@@ -4,6 +4,12 @@ Date: 2026-10-24. Coordinator/integrator: Codex/Core. Existing ELP2-10/C7,
 CORE-03/04/06 follow-through; this receipt is not a new request ledger.
 
 **Verdict: SOURCE_IMPLEMENTED / FOCUSED_GATES_PASS / NOT_INSTALLED.**
+**Executable follow-through:** review found the library-only composition was
+not called by the binary. Candidate `616022f79994ba6357277647cbc24beb16507815`
+now adds explicit runtime/check commands, private configuration, TLS and a
+final-disclosure expiry fence;128 library tests and executable build PASS.
+[Current source/runtime split and precise next owner actions: cumulative §20](CORE_TO_EDGE_TS_PM_CONSOLIDATED_RETURN_2026-10-22.md#20-executable-scoped-reader-and-financial-ownership-correction-24oct2026).
+The sections below remain the original0435aab1 receipt, not a runtime install.
 Full08/read09 and ELP2-10 remain NOT_MET; ELP2-11 is not opened. This return
 supersedes the old “source provider/financial adapter absent” implementation
 status, not the missing qualified-source/trust acceptance in the
