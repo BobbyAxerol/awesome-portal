@@ -124,3 +124,36 @@ READY/source selection or native acceptance is inferred from those source pins.
 The separately owned registered CURRENT/ROOT PM factory and unit tests are
 retained in a real local PM Git checkout, not vendored into Portal. They are
 pending their locked focused unit gate and are not installed or connected.
+
+## 6. Repaired focused gate and PM owning composition
+
+The [test-only repair](CORE_INTEGRATION_FIXTURE_REPAIR_2026-10-25.md) is committed
+as c8e4ac08f (`10files,+64/-16`); own receipt81bfe402c. Actual official focused
+runner10files/158tests PASS, production build and actual PostgreSQL dump/restore
+plus identity/session/command/custody preservation PASS. This is a completed
+focused correction, not relabelled whole-R2 PASS. Exact log/cleanup are linked.
+
+Conflict-free candidate merge **16f2980a1477e34d2fd40d6a85fc7d7a4c3bff21**
+preserves canonical685bc1915, Claude00e7f6cff and Core81bfe402c as ancestors.
+Independent read-only comparison finds0deleted files against each source;
+491changed files,+39,720/-1,806 against canonical (all integrated contributions,
+not new Codex authorship). Existing Core source/contracts/migrations match the
+tested cut; only one additional round-trip test is present. Four FE/BFF
+differences against Claude are route docs, an approved-copy assertion and two
+unused/blank cleanup deltas, not discarded implementation or baseline changes.
+
+One required compare-only full visual is running on that source, pinned image
+`sha256:dcc5531e97840b9b5e794f2814476b21571c5124a3fca2267d73041f56e7580e`,
+official script,2workers,3CPU/4GiB cell. No re-record or UI change. Actual image
+Node24 emits the existing package Node22 engine warning; it is retained, not
+hidden or interpreted as test PASS. Final disposition remains pending terminal
+output. No normal hook overlaps the visual.
+
+[PM runtime source and actual42-test return](PM_REGISTERED_RELATIONS_RUNTIME_RETURN_2026-10-25.md)
+now pins c9be453491d488bbbcfdec6a8c9d8b9694380053,3files,+904/-1. The owning
+CURRENT/ROOT factory is concrete and focused-tested; it remains unselected and
+not installed. Local Git bundle verification PASS is not HK delivery. Source
+upload remains subject to the unresolved exact-transfer authorization; no retry
+after the tool denial. No public DTO/enum/component or migration from this PM
+factory. Genuine original/trust/rights, financial APPLIED→ACK, STATUS original,
+budget/calibration/G2 and browser gates are unchanged. ELP2-10 remains open.

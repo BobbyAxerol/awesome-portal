@@ -1,5 +1,33 @@
 # Execution Loop V2 — Sổ đồng bộ Frontend ↔ Backend (sống)
 
+## Codex focused repair + PM owner factory —25Oct2026 continuation
+
+Round intake: canonical685bc1915 and Claude00e7f6cff remain clean/unchanged;
+no new committed Claude request/ACK. [Ten-spec repair receipt](evidence/ELP2-10/CORE_INTEGRATION_FIXTURE_REPAIR_2026-10-25.md)
+records code c8e4ac08f and official158/158 tests, production build and actual
+PostgreSQL dump/restore preservation PASS. Candidate merge16f2980a1 preserves
+both histories and that repair; it is NOT canonical ff-only landing. No public
+type, fixture payload, enum or UI remap. Old full API11,081PASS/67FAIL remains
+historical FAIL, not silently replaced by focused PASS. Compare-only full
+pinned visual is running on the unchanged source; no baseline update.
+
+[PM owning CURRENT/ROOT return](evidence/ELP2-10/PM_REGISTERED_RELATIONS_RUNTIME_RETURN_2026-10-25.md):
+local source c9be453491d488bbbcfdec6a8c9d8b9694380053,3files,+904/−1,
+42locked source-unit tests PASS. Explicit separate READ/MUTATION profiles,
+fresh original/catalogue/native preflight and retryable drain are concrete;
+no runtime selected/installed or source authority created. Git bundle verified
+on SGP; denied new-source HK transfer is not retried without exact approval.
+
+One existing helper reused,0spawned: independent PM/lifecycle/assertion and
+integration-preservation review ACCEPT. Primary alone owns shared docs,
+integration and resource scheduling. All canonical/Core/Claude SHA inputs
+are ancestors; no deleted files. ACT_NOW: finish frozen integration gates;
+NEXT_GATE: approved source delivery, genuine originals/trust and installation.
+Claude keeps accepted components/fixture graph and needs actual-source browser
+receipt after qualification, not a new remap. Financial APPLIED→ACK, real STATUS
+intent, separate rights, budget/calibration/coexistence/G2 remain independent.
+ELP2-10 open;11 not entry-ready. No push/shared preview/stable/dev/main/Live.
+
 ## Codex integrated qualification —25Oct2026 entry
 
 [Frozen scope, gates and real-source readiness](evidence/ELP2-10/CORE_INTEGRATED_QUALIFICATION_2026-10-25.md).

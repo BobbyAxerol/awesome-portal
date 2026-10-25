@@ -15852,3 +15852,25 @@ Focused ten-spec retake is running after official cleanup, before considering
 another full gate. Canonical685bc1915/Claude00e7 unchanged; no ff-only landing,
 runtime, push or source acceptance inferred. ELP2-10 remains open;11 not ready.
 
+### §14 follow-through —25Oct2026 focused repair and PM owning provider
+
+[Actual focused receipt](execution_loop/evidence/ELP2-10/CORE_INTEGRATION_FIXTURE_REPAIR_2026-10-25.md):
+code c8e4ac08f,10testpaths,+64/−16, official158/158 tests plus production build
+and actual PostgreSQL dump/restore preservation PASS. Preserved conflict-free
+candidate merge16f2980a1 is not canonical landing; old completed full API FAIL
+is retained. Full compare-only pinned visual running; full frozen R2/visual
+remain landing gates, no re-record or production guard relaxation.
+
+[PM owning runtime source/actual tests/handoff](execution_loop/evidence/ELP2-10/PM_REGISTERED_RELATIONS_RUNTIME_RETURN_2026-10-25.md):
+c9be453491d488bbbcfdec6a8c9d8b9694380053,3files,+904/−1;42locked source-unit
+tests PASS, separate explicit CURRENT READ and ROOT MUTATION, concrete bounded
+pools/readers/held bridge/listener and fresh original/catalogue/native preflight.
+No authority seed or installed caller/runtime is claimed. Durable bundle verified
+on SGP; exact HK source-transfer authorization remains unresolved after the
+earlier denial, without workaround. Actual source/config/trust and commissioning
+still required. One reused independent reviewer ACCEPT, no new agent spawned.
+Canonical685bc1915/Claude00e7f6cff preserved/unchanged. Claude needs no public
+contract/component change; actual API/browser receipt follows qualified install.
+ELP2-05/06/07/09/10 incomplete;11 not entry-ready. No push, shared-preview,
+stable/dev/main/provider28445, SUBMIT or Live change.
+
