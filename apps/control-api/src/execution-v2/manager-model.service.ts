@@ -71,11 +71,21 @@ export class ManagerModelService {
    * implement this accessor. No native path falls back to ordinary delivery. */
   hasNativeCurrentRelations(): boolean { return this.nativeAccount?.scopes.hasNativeCurrentRelations() === true; }
 
-  /** One exact public finite slice. This private composition grants no native
+  /** Closed named public finite slices. This private composition grants no native
    * authority to ALL, history, stream or other surfaces; their ordinary
    * separately configured scopes and delivery paths remain unchanged. */
   async readNativeAccount(principal: ReadScopePrincipal, raw: unknown, id: string, response: ServerResponse,
     beforeDispatch: () => void): Promise<void> {
+    return this.readNativeEntity(principal, raw, "ACCOUNT", id, response, beforeDispatch);
+  }
+
+  async readNativeAlpha(principal: ReadScopePrincipal, raw: unknown, id: string, response: ServerResponse,
+    beforeDispatch: () => void): Promise<void> {
+    return this.readNativeEntity(principal, raw, "ALPHA", id, response, beforeDispatch);
+  }
+
+  private async readNativeEntity(principal: ReadScopePrincipal, raw: unknown, surface: "ACCOUNT" | "ALPHA", id: string,
+    response: ServerResponse, beforeDispatch: () => void): Promise<void> {
     if (!this.hasNativeCurrentRelations()) throw new ExecutionReadScopeError("EXECUTION_READ_AUTHORITY_UNAVAILABLE", 503);
     if (raw && typeof raw === "object" && !Array.isArray(raw)) rejectManagerAsOf(raw as Record<string, unknown>);
     const parsed = managerModelQuery.safeParse(raw);
@@ -85,8 +95,8 @@ export class ManagerModelService {
     if (!id || id.length > 256 || q.workspace_id && q.workspace_id !== principal.workspaceId)
       throw new ExecutionReadScopeError("EXECUTION_READ_NOT_AVAILABLE", 404);
     if (q.stage_filter.some(stage => stage !== "PAPER")) throw new ExecutionReadScopeError("EXECUTION_READ_QUERY_INVALID", 400);
-    await this.readEnvironment(principal, "paper", "ACCOUNT", q, id, (scope, doc, fences) =>
-      queryManagerModel(scope, doc, q, this.codec, "ACCOUNT", id, fences.score, fences.composition, fences.regime),
+    await this.readEnvironment(principal, "paper", surface, q, id, (scope, doc, fences) =>
+      queryManagerModel(scope, doc, q, this.codec, surface, id, fences.score, fences.composition, fences.regime),
       undefined, { response, beforeDispatch }, this.nativeAccount!.scopes);
   }
 

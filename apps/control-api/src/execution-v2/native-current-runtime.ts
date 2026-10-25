@@ -1,4 +1,4 @@
-/** Private Research-only CURRENT account composition. Default OFF. Loading
+/** Private Research-only CURRENT named Account/Alpha composition. Default OFF. Loading
  * config is not a source registration, grant, policy, terminal or deployment. */
 import {createPrivateKey,X509Certificate} from "node:crypto";
 import {isAbsolute,normalize} from "node:path";
@@ -98,7 +98,7 @@ export async function prepareNativeCurrentRuntime(input:NativeCurrentRuntimeRefe
  }catch{return fail();}finally{raw.forEach(b=>b.fill(0));if(!complete)outputs.forEach(b=>b.fill(0));}
 }
 
-/** Private injection is selected only for the named Paper Account360 route.
+/** Private injection is selected only for named Paper Account360/Alpha360 routes.
  * Normal readers/mutations retain their independent provider; no global switch
  * quietly disables them and no detached DTO is labelled native SERVED. */
 export class NativeCurrentAccountScopes {

@@ -23,7 +23,8 @@ export class ManagerModelController {
   @Get("/portfolios/:id/overview") @Header("Cache-Control", "private, no-store")
   portfolio(@Req() r: ManagerRequest, @Query() q: unknown, @Param("id") id: string) { return this.read(r, q, "PORTFOLIO", id); }
   @Get("/alphas/:id/overview") @Header("Cache-Control", "private, no-store")
-  alpha(@Req() r: ManagerRequest, @Query() q: unknown, @Param("id") id: string) { return this.read(r, q, "ALPHA", id); }
+  alpha(@Req() r: ManagerRequest, @Query() q: unknown, @Param("id") id: string,
+    @Res({ passthrough: true }) reply?: FastifyReply) { return this.read(r, q, "ALPHA", id, reply); }
   @Get("/accounts/:id/overview") @Header("Cache-Control", "private, no-store")
   account(@Req() r: ManagerRequest, @Query() q: unknown, @Param("id") id: string,
     @Res({ passthrough: true }) reply?: FastifyReply) { return this.read(r, q, "ACCOUNT", id, reply); }
@@ -53,13 +54,14 @@ export class ManagerModelController {
         throw new ExecutionReadScopeError("EXECUTION_READ_NOT_AVAILABLE", 404);
       const principal = { user: r.portalUser, session: r.portalSession, workspaceId: workspace,
         viewerWorkspaceId: r.portalViewerWorkspaceId ?? r.portalWorkspaceId };
-      if (surface === "ACCOUNT" && (query.environment === undefined || query.environment === "paper") && this.models.hasNativeCurrentRelations?.()) {
-        // Only this exact finite Paper route selects the private native
+      if ((surface === "ACCOUNT" || surface === "ALPHA") && (query.environment === undefined || query.environment === "paper") && this.models.hasNativeCurrentRelations?.()) {
+        // Only these exact finite Paper routes select the private native
         // composition. Its failures never fall back to a detached DTO; other
         // surfaces keep their independent ordinary scopes unchanged.
         if (!id || !reply)
           throw new ExecutionReadScopeError("EXECUTION_READ_AUTHORITY_UNAVAILABLE", 503);
-        await this.models.readNativeAccount(principal, query, id, reply.raw, () => {
+        const readNative = surface === "ACCOUNT" ? this.models.readNativeAccount.bind(this.models) : this.models.readNativeAlpha.bind(this.models);
+        await readNative(principal, query, id, reply.raw, () => {
           if (nativeOwnsResponse) return;
           if (reply.raw.headersSent || reply.raw.writableEnded || reply.raw.destroyed)
             throw new ExecutionReadScopeError("EXECUTION_READ_AUTHORITY_UNAVAILABLE", 503);

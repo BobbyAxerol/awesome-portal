@@ -47,49 +47,63 @@ import { migrateTestDatabase, setupApp, teardownApp } from "./harness";
 const database = process.env.TEST_DATABASE_URL;
 const next = (label: string) => `TEST_ONLY:${label}:${randomUUID()}`;
 
-describe("native Account route selection and physical writer ownership (synthetic boundary doubles)", () => {
-  function fixture() {
+describe("native named Account/Alpha route selection and physical writer ownership (synthetic boundary doubles)", () => {
+  function fixture(installed = true) {
     const ordinary = vi.fn(async () => ({ TEST_ONLY: "ordinary unchanged" }));
     const native = vi.fn(async (_p: unknown, _q: unknown, _id: string, _raw: unknown, beforeDispatch: () => void) => {
       beforeDispatch(); beforeDispatch();
     });
-    const models = { hasNativeCurrentRelations: () => true, read: ordinary, readNativeAccount: native };
+    const nativeAlpha = vi.fn(async (_p: unknown, _q: unknown, _id: string, _raw: unknown, beforeDispatch: () => void) => {
+      beforeDispatch(); beforeDispatch();
+    });
+    const models = { hasNativeCurrentRelations: () => installed, read: ordinary, readNativeAccount: native, readNativeAlpha: nativeAlpha };
     const controller = new ManagerModelController(models as unknown as ManagerModelService,
       { canReadExecution: async () => true } as unknown as WorkspacesRepository);
     const req = { portalUser: { userId: "TEST_ONLY:user" }, portalSession: {}, portalWorkspaceId: "TEST_ONLY:workspace" } as any;
     const raw = { headersSent: false, writableEnded: false, destroyed: false, destroy: vi.fn() };
     const reply = { raw, sent: false, hijack: vi.fn(() => { raw.headersSent = true; }) } as unknown as FastifyReply;
-    return { controller, ordinary, native, req, raw, reply };
+    return { controller, ordinary, native, nativeAlpha, req, raw, reply };
   }
-  it("selects ONLY Paper Account, hijacks once across repeated physical permit checks, and never returns a detached body", async () => {
+  it.each(["account", "alpha"] as const)("selects ONLY named Paper %s, hijacks once across repeated physical permit checks, and never returns a detached body", async surface => {
     const f = fixture();
-    expect(await f.controller.account(f.req, { environment: "paper" }, "TEST_ONLY:account", f.reply)).toBeUndefined();
-    expect(f.native).toHaveBeenCalledOnce(); expect(f.reply.hijack).toHaveBeenCalledOnce(); expect(f.ordinary).not.toHaveBeenCalled();
+    expect(await f.controller[surface](f.req, { environment: "paper" }, "TEST_ONLY:entity", f.reply)).toBeUndefined();
+    expect(surface === "account" ? f.native : f.nativeAlpha).toHaveBeenCalledOnce();
+    expect(surface === "account" ? f.nativeAlpha : f.native).not.toHaveBeenCalled();
+    expect(f.reply.hijack).toHaveBeenCalledOnce(); expect(f.ordinary).not.toHaveBeenCalled();
   });
-  it("keeps ordinary Fleet ALL, Portfolio and non-Paper Account paths unchanged", async () => {
+  it("keeps ordinary Fleet ALL, Portfolio, non-Paper and uninstalled named routes unchanged", async () => {
     const f = fixture();
     for (const response of [await f.controller.fleet(f.req, { environment: "ALL" }),
       await f.controller.portfolio(f.req, { environment: "paper" }, "TEST_ONLY:portfolio"),
-      await f.controller.account(f.req, { environment: "sandbox" }, "TEST_ONLY:account", f.reply)])
+      await f.controller.account(f.req, { environment: "sandbox" }, "TEST_ONLY:account", f.reply),
+      await f.controller.alpha(f.req, { environment: "sandbox" }, "TEST_ONLY:alpha", f.reply),
+      await f.controller.alpha(f.req, { environment: "live" }, "TEST_ONLY:alpha", f.reply)])
       expect(response).toEqual({ TEST_ONLY: "ordinary unchanged" });
-    expect(f.ordinary).toHaveBeenCalledTimes(3); expect(f.native).not.toHaveBeenCalled(); expect(f.reply.hijack).not.toHaveBeenCalled();
+    expect(f.ordinary).toHaveBeenCalledTimes(5); expect(f.native).not.toHaveBeenCalled(); expect(f.nativeAlpha).not.toHaveBeenCalled();
+    expect(f.reply.hijack).not.toHaveBeenCalled();
+    const absent = fixture(false);
+    for (const surface of ["account", "alpha"] as const)
+      expect(await absent.controller[surface](absent.req, { environment: "paper" }, "TEST_ONLY:entity", absent.reply)).toEqual({ TEST_ONLY: "ordinary unchanged" });
+    expect(absent.native).not.toHaveBeenCalled(); expect(absent.nativeAlpha).not.toHaveBeenCalled(); expect(absent.reply.hijack).not.toHaveBeenCalled();
   });
-  it("never falls back after native refusal, sanitizes arbitrary errors, and leaves pre-send typed errors to Fastify", async () => {
-    const f = fixture(); f.native.mockRejectedValueOnce(new Error("TEST_ONLY:private-source-secret"));
-    await expect(f.controller.account(f.req, { environment: "paper" }, "TEST_ONLY:account", f.reply))
+  it.each(["account", "alpha"] as const)("never falls back after native %s refusal, sanitizes arbitrary errors, and leaves pre-send typed errors to Fastify", async surface => {
+    const f = fixture(), selected = surface === "account" ? f.native : f.nativeAlpha;
+    selected.mockRejectedValueOnce(new Error("TEST_ONLY:private-source-secret"));
+    await expect(f.controller[surface](f.req, { environment: "paper" }, "TEST_ONLY:entity", f.reply))
       .rejects.toMatchObject({ code: "EXECUTION_READ_NOT_AVAILABLE", status: 400 });
     expect(f.reply.hijack).not.toHaveBeenCalled(); expect(f.ordinary).not.toHaveBeenCalled();
-    f.native.mockRejectedValueOnce(new ExecutionReadScopeError("EXECUTION_READ_ACCESS_CHANGED", 409));
-    await expect(f.controller.account(f.req, { environment: "paper" }, "TEST_ONLY:account", f.reply))
+    selected.mockRejectedValueOnce(new ExecutionReadScopeError("EXECUTION_READ_ACCESS_CHANGED", 409));
+    await expect(f.controller[surface](f.req, { environment: "paper" }, "TEST_ONLY:entity", f.reply))
       .rejects.toMatchObject({ code: "EXECUTION_READ_ACCESS_CHANGED", status: 409 });
   });
-  it("does not attempt a second framework response after dispatch or an unsent physical abort", async () => {
-    const f = fixture();
-    f.native.mockImplementationOnce(async (_p, _q, _id, _raw, send) => { send(); throw Error("TEST_ONLY:ACK lost"); });
-    expect(await f.controller.account(f.req, { environment: "paper" }, "TEST_ONLY:account", f.reply)).toBeUndefined();
+  it.each(["account", "alpha"] as const)("does not attempt a second framework response after native %s dispatch or an unsent physical abort", async surface => {
+    const f = fixture(), selected = surface === "account" ? f.native : f.nativeAlpha;
+    selected.mockImplementationOnce(async (_p, _q, _id, _raw, send) => { send(); throw Error("TEST_ONLY:ACK lost"); });
+    expect(await f.controller[surface](f.req, { environment: "paper" }, "TEST_ONLY:entity", f.reply)).toBeUndefined();
     expect(f.raw.destroy).toHaveBeenCalledOnce(); expect(f.ordinary).not.toHaveBeenCalled();
-    const aborted = fixture(); aborted.raw.destroyed = true; aborted.native.mockRejectedValueOnce(Error("TEST_ONLY:aborted"));
-    expect(await aborted.controller.account(aborted.req, { environment: "paper" }, "TEST_ONLY:account", aborted.reply)).toBeUndefined();
+    const aborted = fixture(); aborted.raw.destroyed = true;
+    (surface === "account" ? aborted.native : aborted.nativeAlpha).mockRejectedValueOnce(Error("TEST_ONLY:aborted"));
+    expect(await aborted.controller[surface](aborted.req, { environment: "paper" }, "TEST_ONLY:entity", aborted.reply)).toBeUndefined();
     expect(aborted.raw.destroy).toHaveBeenCalledOnce(); expect(aborted.reply.hijack).not.toHaveBeenCalled();
   });
 });
@@ -136,7 +150,7 @@ describe("native finite application policy flag (TEST_ONLY port double, no datab
   });
 });
 
-describe.skipIf(!database).sequential("native named Paper Account route: actual PG + HTTP (TEST_ONLY external source)", () => {
+describe.skipIf(!database).sequential("native named Paper Account/Alpha routes: actual PG + HTTP (TEST_ONLY external source)", () => {
   let ctx: Awaited<ReturnType<typeof setupApp>>, pool: Pool, auth: AuthService;
   let owner: string, token: string;
   const endpoints: Awaited<ReturnType<typeof currentRelationsTestEndpoint>>[] = [];
@@ -175,7 +189,7 @@ describe.skipIf(!database).sequential("native named Paper Account route: actual 
   });
   afterAll(async () => { if (pool) await pool.end(); if (ctx) await teardownApp(ctx); });
 
-  async function fixture() {
+  async function fixture(surface: "ACCOUNT" | "ALPHA" = "ACCOUNT", options: { includeAlphaAction?: boolean; missingAlphaTarget?: boolean } = {}) {
     await pool.query(await readFile(join(__dirname, "../src/execution-v2/current-human-candidate.sql"), "utf8"));
     const id = randomUUID(), now = Date.now(), workspace = next("workspace"), account = next("account"), facts = rootWireFacts(now);
     await pool.query("INSERT INTO workspaces(workspace_id,name,owner_user_id) VALUES($1,'TEST_ONLY native Account',$2)", [workspace, owner]);
@@ -215,11 +229,14 @@ describe.skipIf(!database).sequential("native named Paper Account route: actual 
     const installer = new ExecutionAccessService(pool, auth, baseTrust, true);
     await installer.installReviewedPolicy(artifact);
     expect((await installer.acceptRootTsReceipt(rootReceiptInput)).receipt.outcome).toBe("TS_APPLIED");
+    const sourceRelations = options.missingAlphaTarget ? { ...relations,
+      grants: relations.grants.map(g => ({ ...g, targets: g.targets.filter(t => t.resource.kind !== "ALPHA") })) } : relations;
     const terminal = generateKeyPairSync("ed25519"), states = new Map<string, string>(), terminals: Record<string, unknown>[] = [];
     let onEnter: (() => Promise<void>) | undefined;
+    let dropResolve = false;
     const endpoint = await currentRelationsTestEndpoint(async (base, action, res, body) => {
       expect((await pool.query("SELECT 1 AS n")).rows[0].n).toBe(1); // no Core client held over source I/O
-      const key = base.binding.lease_id, reply = currentRelationsWireReply(base, action, relations);
+      const key = base.binding.lease_id, reply = currentRelationsWireReply(base, action, sourceRelations);
       if (action === "issue") states.set(key, "ISSUED");
       if (action === "enter") { states.set(key, "ENTERED"); await onEnter?.(); }
       if (action === "cancel-unentered") states.set(key, "CANCELLED");
@@ -232,6 +249,7 @@ describe.skipIf(!database).sequential("native named Paper Account route: actual 
         expect(claims).toMatchObject({ purpose: "pma.native-business-to-core-terminal.v1", operation: "READ", lease_id: key,
           attempt_id: base.binding.attempt_id, binding_digest: accessDigest(base.binding).slice(7), source_digest: "c".repeat(64) });
         terminals.push({ ...claims }); states.set(key, String(claims.phase));
+        if (dropResolve) { res.destroy(); return; }
         return { ...reply, recovery: { state: "SETTLED", phase: claims.phase, terminal_authority: true, release_permitted: true } };
       }
       return reply;
@@ -241,7 +259,8 @@ describe.skipIf(!database).sequential("native named Paper Account route: actual 
       registration: { correspondence_id: next("correspondence"), expected_version: "9007199254741001", manifest_sha256: "a".repeat(64) },
       original: { grant_id: grant.grant_id, accepted_fact_digest: accessDigest(fact) },
       correspondence: { registry_revision: accessDigest("TEST_ONLY-registry"), payload_sha256: "b".repeat(64), approval_ref: "TEST_ONLY-independent-review" },
-      allowed_actions: ["access.read", "account.read"] }], maximum_retained: 128, maximum_unresolved: 8, maximum_recoveries: 8, maximum_principals: 8,
+      allowed_actions: ["access.read", "account.read", ...(surface === "ALPHA" && options.includeAlphaAction !== false ? ["alpha.read" as const] : [])] }],
+      maximum_retained: 128, maximum_unresolved: 8, maximum_recoveries: 8, maximum_principals: 8,
       attempt_ms: 30000, terminal: { issuer: "TEST_ONLY-core-terminal", audience: "TEST_ONLY-pm-terminal", key_id: "TEST_ONLY-terminal", private_key: terminal.privateKey, ttl_seconds: 30 } };
     const provider = new NativeCurrentRelationsProvider(pool, endpoint.client,
       new NativeReadEgress({ maximum_response_bytes: 1048576, maximum_inflight: 2, send_timeout_ms: 5000, quiesce_timeout_ms: 50 }), config);
@@ -269,9 +288,11 @@ describe.skipIf(!database).sequential("native named Paper Account route: actual 
     const app = await NestFactory.create<NestFastifyApplication>(TestOnlyRouteModule, new FastifyAdapter(), { logger: false, abortOnError: false });
     applications.push(app); app.useGlobalFilters(new HttpErrorFilter()); await app.register(cookie as never); await app.listen(0, "127.0.0.1");
     const address = app.getHttpServer().address(); if (!address || typeof address === "string") throw Error("TEST_ONLY_ROUTE_ADDRESS");
-    const path = `/api/v1/execution/manager/accounts/${encodeURIComponent(account)}/overview?environment=paper&workspace_id=${encodeURIComponent(workspace)}`;
-    return { provider, endpoint, model, nativeScopes, ordinaryScopes, terminals, workspace, account, path,
+    const alpha = tuple.alpha_id, entity = surface === "ACCOUNT" ? account : alpha;
+    const path = `/api/v1/execution/manager/${surface === "ACCOUNT" ? "accounts" : "alphas"}/${encodeURIComponent(entity)}/overview?environment=paper&workspace_id=${encodeURIComponent(workspace)}`;
+    return { provider, endpoint, model, nativeScopes, ordinaryScopes, terminals, workspace, account, alpha, path,
       onEnter(hook: () => Promise<void>) { onEnter = hook; },
+      loseResolveResponse(value: boolean) { dropResolve = value; },
       rows: async () => (await pool.query("SELECT * FROM portal_native_current_read_obligations WHERE source_config_digest=$1 ORDER BY created_at,lease_id", [provider.source_config_digest])).rows,
       get: (target = path, credential = token) => new Promise<{ status: number; body: string; complete: boolean; cache?: string }>(resolve => {
         const req = request(`http://127.0.0.1:${address.port}${target}`, { agent: false, headers: credential ? { cookie: `${SESSION_COOKIE}=${credential}` } : {} }, res => {
@@ -280,36 +301,106 @@ describe.skipIf(!database).sequential("native named Paper Account route: actual 
         }); req.setTimeout(10000, () => req.destroy()); req.once("error", () => resolve({ status: 0, body: "", complete: false })); req.end();
       }) };
   }
-  it("serves the actual named route once, through native ENTER/SENDING/physical finish/terminal ACK, never ordinary delivery", async () => {
-    const f = await fixture(), fallback = vi.spyOn(f.ordinaryScopes, "deliver"), detached = vi.spyOn(f.model, "read");
+  it.each(["ACCOUNT", "ALPHA"] as const)("serves the actual named %s route once, through native ENTER/SENDING/physical finish/terminal ACK, never ordinary delivery", async surface => {
+    const f = await fixture(surface), fallback = vi.spyOn(f.ordinaryScopes, "deliver"), detached = vi.spyOn(f.model, "read");
     const result = await f.get();
     expect(result.status, JSON.stringify({ response: result, source_actions: f.endpoint.requests.map(call => call.action) })).toBe(200);
     expect(result.complete).toBe(true);
     expect(result.cache).toBe("private, no-store"); const body = managerDatasetResponse.parse(JSON.parse(result.body));
-    expect(body.surface).toBe("ACCOUNT"); expect(body.page.returned_count).toBe(1); expect(body.items[0].children[0].account_id).toBe(f.account);
+    expect(body.surface).toBe(surface); expect(body.page.returned_count).toBe(1);
+    expect(body.items[0].children[0][surface === "ACCOUNT" ? "account_id" : "alpha_id"]).toBe(surface === "ACCOUNT" ? f.account : f.alpha);
     // HTTP finish can precede the source ACK; wait on actual durable rows, not a
     // guessed delay or a fabricated source terminal.
     await vi.waitFor(async () => expect((await f.rows()).filter(r => r.phase === "SERVED")).toHaveLength(1));
     await vi.waitFor(async () => expect((await f.rows()).every(r => r.source_settled)).toBe(true));
     const sent = (await f.rows()).find(r => r.phase === "SERVED"); expect(sent.terminal_fact.observation.outcome).toBe("FINISHED");
     expect(f.terminals).toHaveLength(1); expect(f.terminals[0]).toMatchObject({ phase: "SERVED", evidence_kind: "FINAL_HTTP_SEND_COMPLETED" });
+    expect(f.endpoint.requests.filter(call => call.action === "enter")).toHaveLength(1);
+    expect(f.endpoint.requests.find(call => call.action === "enter")!.base.purpose.action).toBe(surface === "ACCOUNT" ? "account.read" : "alpha.read");
     expect(fallback).not.toHaveBeenCalled(); expect(detached).not.toHaveBeenCalled();
   });
-  it("a real projection-head change during source ENTER aborts unsent response and authenticates only ABORTED", async () => {
-    const f = await fixture(), detached = vi.spyOn(f.model, "read");
-    f.onEnter(async () => { await pool.query("UPDATE execution_manager_model_heads SET projection_generation=$2 WHERE workspace_id=$1", [f.workspace, next("replaced")]); });
+  it.each(["ACCOUNT", "ALPHA"] as const)("a real %s projection-head change during source ENTER aborts unsent response and authenticates only ABORTED", async surface => {
+    const f = await fixture(surface), detached = vi.spyOn(f.model, "read");
+    f.onEnter(async () => {
+      if (surface === "ALPHA") {
+        // An actual revoke cannot jump the native source/custody fence. Do
+        // not manufacture an authority mutation while this flight is live.
+        await expect(pool.query("DELETE FROM workspace_members WHERE workspace_id=$1 AND user_id=$2", [f.workspace, owner]))
+          .rejects.toMatchObject({ code: "P0001" });
+        expect((await pool.query("SELECT 1 FROM workspace_members WHERE workspace_id=$1 AND user_id=$2", [f.workspace, owner])).rowCount).toBe(1);
+      }
+      await pool.query("UPDATE execution_manager_model_heads SET projection_generation=$2 WHERE workspace_id=$1", [f.workspace, next("replaced")]);
+    });
     const result = await f.get();
     expect(result.complete, JSON.stringify({ response: result, source_actions: f.endpoint.requests.map(call => call.action) })).toBe(false);
     expect(result.body).toBe("");
     await vi.waitFor(async () => expect((await f.rows()).some(r => r.phase === "ABORTED" && r.source_settled)).toBe(true));
     expect(f.terminals).toHaveLength(1); expect(f.terminals[0]).toMatchObject({ phase: "ABORTED", evidence_kind: "FINAL_HTTP_ABORT_CONFIRMED" });
     expect(detached).not.toHaveBeenCalled();
+    if (surface === "ALPHA") {
+      // After authenticated ABORTED/ACK, the same real revocation is admitted
+      // and the next request cannot enter or deliver that retained projection.
+      await expect(pool.query("DELETE FROM workspace_members WHERE workspace_id=$1 AND user_id=$2", [f.workspace, owner])).resolves.toMatchObject({ rowCount: 1 });
+      const calls = f.endpoint.requests.length;
+      expect((await f.get()).status).toBe(404);
+      expect(f.endpoint.requests).toHaveLength(calls);
+    }
   });
-  it("actual SessionGuard/query/workspace refusals emit no source ENTER, no native bytes and no ordinary fallback", async () => {
-    const f = await fixture(), detached = vi.spyOn(f.model, "read");
+  it.each(["ACCOUNT", "ALPHA"] as const)("actual %s SessionGuard/query/workspace refusals emit no source ENTER, no native bytes and no ordinary fallback", async surface => {
+    const f = await fixture(surface), detached = vi.spyOn(f.model, "read");
     expect((await f.get(f.path, "")).status).toBe(401);
     expect((await f.get(`${f.path}&relation=private`)).status).toBe(400);
     expect((await f.get(f.path.replace(encodeURIComponent(f.workspace), "TEST_ONLY-foreign-workspace"))).status).toBe(404);
     expect(f.endpoint.requests).toHaveLength(0); expect(await f.rows()).toHaveLength(0); expect(detached).not.toHaveBeenCalled();
+  });
+  it("an account.read source binding does not authorize Alpha delivery or ENTER an Alpha source attempt", async () => {
+    const f = await fixture("ALPHA", { includeAlphaAction: false }), detached = vi.spyOn(f.model, "read");
+    expect((await f.get()).status).toBe(503);
+    // Advisory access.read remains its own genuine cancelled purpose; it must
+    // not become alpha.read or enter the physical source fence.
+    expect(f.endpoint.requests.every(call => call.base.purpose.action === "access.read")).toBe(true);
+    expect(f.endpoint.requests.some(call => call.action === "enter")).toBe(false);
+    expect((await f.rows()).every(row => row.phase === "CANCELLED" && row.source_settled)).toBe(true);
+    expect(detached).not.toHaveBeenCalled();
+  });
+  it("an accepted original without the exact Alpha target refuses before ENTER, never borrowing its Account/root sibling", async () => {
+    const f = await fixture("ALPHA", { missingAlphaTarget: true }), detached = vi.spyOn(f.model, "read");
+    expect([404, 503]).toContain((await f.get()).status);
+    expect(f.endpoint.requests.some(call => call.action === "enter")).toBe(false);
+    expect((await f.rows()).every(row => row.phase === "CANCELLED" && row.source_settled)).toBe(true);
+    expect(detached).not.toHaveBeenCalled();
+  });
+  it("another Alpha id and an actual removed workspace membership cannot ENTER or leak the retained projection", async () => {
+    const f = await fixture("ALPHA"), detached = vi.spyOn(f.model, "read");
+    const wrong = await f.get(f.path.replace(encodeURIComponent(f.alpha), "TEST_ONLY:unaccepted-alpha"));
+    expect([404, 503]).toContain(wrong.status);
+    expect(f.endpoint.requests.some(call => call.action === "enter")).toBe(false);
+    await pool.query("DELETE FROM workspace_members WHERE workspace_id=$1 AND user_id=$2", [f.workspace, owner]);
+    const calls = f.endpoint.requests.length;
+    expect((await f.get()).status).toBe(404);
+    expect(f.endpoint.requests).toHaveLength(calls); expect(detached).not.toHaveBeenCalled();
+  });
+  it("lost Alpha terminal ACK preserves the served original and recovers it without a second HTTP body or ordinary fallback", async () => {
+    const f = await fixture("ALPHA"), detached = vi.spyOn(f.model, "read"), selected = vi.spyOn(f.model, "readNativeAlpha");
+    f.loseResolveResponse(true);
+    const result = await f.get();
+    expect(result.status).toBe(200); expect(result.complete).toBe(true);
+    expect(managerDatasetResponse.parse(JSON.parse(result.body)).surface).toBe("ALPHA");
+    await vi.waitFor(() => expect(selected).toHaveBeenCalledOnce());
+    await expect(selected.mock.results[0].value).rejects.toBeDefined();
+    const before = (await f.rows()).find(row => row.phase === "SERVED");
+    expect(before).toMatchObject({ source_settled: false });
+    expect(before.terminal_fact.observation.outcome).toBe("FINISHED");
+    expect(detached).not.toHaveBeenCalled();
+    const calls = f.endpoint.requests.length;
+    f.loseResolveResponse(false);
+    await expect(f.provider.recover()).resolves.toEqual({ remaining: 0 });
+    const after = (await f.rows()).find(row => row.lease_id === before.lease_id);
+    expect(after).toMatchObject({ phase: "SERVED", source_settled: true, attempt_id: before.attempt_id,
+      terminal_receipt_id: before.terminal_receipt_id, terminal_receipt_digest: before.terminal_receipt_digest });
+    expect(after.terminal_fact).toEqual(before.terminal_fact);
+    expect(f.endpoint.requests.slice(calls).map(call => call.action)).toEqual(["status", "resolve"]);
+    expect(new Set(f.terminals.map(fact => String(fact.receipt_id)))).toEqual(new Set([before.terminal_receipt_id]));
+    expect(f.endpoint.requests.filter(call => call.action === "enter")).toHaveLength(1);
   });
 });
