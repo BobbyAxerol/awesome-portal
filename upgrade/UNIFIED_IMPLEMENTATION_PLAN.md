@@ -15663,3 +15663,32 @@ ELP2-10/full08/read09 remain NOT_MET; ELP2-11 unopened. Claude can review the
 published typed internal boundary without rebuilding components or treating it
 as a public browser endpoint. Integrated/actual-source acceptance is next after
 those precise producer pins, independently of unrelated campaign gates.
+
+### §14 follow-through —25Oct2026 source fixes and safe integration disposition
+
+[Owner return: source pins, actual results, cleanup and exact remaining code](execution_loop/evidence/ELP2-10/CORE_EDGE_PROVIDER_AND_SAFE_INTEGRATION_2026-10-25.md).
+PM `06e5a51547cb39fb5577045339b874cdba5d0618` fixes semantic/full grant digest
+confusion and exact ROOT census; `29022f96578b5fde5e6ed7627e4d2d613b778fa8`
+mounts financial publication/ACK and reconstructs the exact retained original
+under fresh current authority.10source/test files,+688/−17; committed, not installed.
+Public PM source bundle retained on both HK and SGP; Edge source6d44b52c also
+retained as a durable Core Git ref. No source depends solely on `/tmp`.
+
+Claude full history00e7f6cff and newer Core implementations are preserved in
+integration candidate `183872ca9aefbb283fe7be42e9ac62193883804e`,
+tree `4a92c5f40d6ff93a121ae6a3da61527e3479686c`;410files,+31,717/−1,712,
+no deleted files. Relevant PG89PASS/1conditionalSKIP and restore, two frontend
+builds, broad frontend plus exact retakes, N29/closure/tracking completed as
+recorded. Single normal-hook attempt failed on an omitted test dependency;
+five repaired suites retaken24/24PASS. Do not describe composed results as a
+new fully green whole hook. **Full landing R2/visual NOT_MET; candidate not
+landed in docs/research-loop-plan.** Canonical receives this report only;
+no blind ff/ours/theirs or claim that Claude's new pixels are already accepted.
+
+Backend next: authenticated registered-root verifier with real mutation-bound
+terminal custody, actual financial-purpose APPLIED/durable source ACK, and
+command STATUS-only production issuer/provider/transport through Edge. Existing
+PM listener/factory/registry/ACK helpers are implemented, not to be built again.
+No public contract/schema/enum changes needing Claude mapping this round.
+ELP2-05/06/07/09/10 remain incomplete; ELP2-11 not entry-ready. No push, shared
+preview, dev/main/stable/provider28445, grant/session or command/Live changes.

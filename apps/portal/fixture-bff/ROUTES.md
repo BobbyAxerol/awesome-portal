@@ -16,16 +16,19 @@ server (so it is refused, 404), unless `FIXTURE_WEB_UPSTREAM` names a real Contr
 | `location ^~ /api/v1/portal/` | `registry`, `links` and `summary` (shell bootstrap); `capabilities` and anything else under it is refused (404) |
 | `location ^~ /api/v1/execution/` | every Execution BFF read the V2 screens make |
 | `location = /api/admin/access/self` | the session capabilities, so the screens are not fail-closed |
-| `location = /api/admin/profile-access/v2/effective` | the Access screen's read (exact match: `/api/admin/profile-access` and `/activity` stay real) |
+| `location = /api/admin/profile-access`, `= /api/admin/profile-access/activity`, `= /api/admin/profile-access/v2/effective` | the Access matrix, activity and effective reads (three exact matches; no general `/api/admin/` prefix) |
 | `location = /api/admin/profile-access/v2/self-navigation`, `= .../eligibility`, `= .../eligibility/batch`, `= .../self-context` | the four advisory self reads, answered from the canonical access fixture (each an exact match) |
 | `location = /api/admin/accounts` and `location ^~ /api/admin/accounts/` | the Users roster and detail |
 | `location = /api/admin/step-up` | the Users step-up state |
 | `location = /api/v1/quantbt/runs` | the Run Library list the New request pickers read (exact match: the rest of `/api/v1/quantbt/` stays real) |
 | `location ^~ /__fixture/` | the lane marker and the health check (`/__fixture/healthz`) |
 
-(The Research preview fragment, `deploy/research-preview/nginx/fixture-bff/fixture-bff.conf`, has a dedicated
-location for every row above except the Run Library list. That one, and any other route this server answers, reaches it
-through `portal.conf`'s catch-all, because the overlay points `PORTAL_WEB_UPSTREAM` here; see `README-fixture.md`.)
+(As of the WP-E source integration, the Research preview fragment,
+`deploy/research-preview/nginx/fixture-bff/fixture-bff.conf`, has explicit locations
+for the rows above, including the exact Run Library list. Other modelled answers
+can reach this server through `portal.conf`'s catch-all when the overlay points
+`PORTAL_WEB_UPSTREAM` here; see `README-fixture.md`. This documents source routing,
+not a claim that the shared preview has been rebuilt or configured with it.)
 
 Keep `proxy_http_version 1.1`, `proxy_buffering off` and the `Host` / `X-Forwarded-*` headers the
 `/api/` block in `deploy/nginx/portal.conf` sets. The three `/stream` routes (the fleet one, `manager/fleet/stream`, is ELP2-09 `alpha_fleet_overview`: a cursor-checked finite body of `ScopedRealtimeFrame`s) send one terminal
@@ -42,7 +45,6 @@ answers them `404 {"error":"FIXTURE_ROUTE_NOT_SERVED"}` rather than invent a bod
   never shown while the fixture user is signed in)
 - `/api/v1/portal/capabilities`, `/api/v1/alphas*`
 - `/api/v1/research/*`, `/api/v1/quantbt/*` (except the exact `GET /api/v1/quantbt/runs` above), `/api/runs*`, `/api/strategies`, `/api/config/*`
-- `/api/admin/profile-access` (the legacy policy matrix), `/api/admin/profile-access/activity`
 - the other five `manager/*` dataset routes (`fund-overview` and the portfolio, alpha, account and deployment overviews): only `manager/series`, `manager/fleet` and the two ELP2-09 routes under `manager/fleet/` (`realtime-snapshot`, `stream`) are modelled
 - any other `/api/admin/*`
 

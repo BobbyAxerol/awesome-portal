@@ -1,5 +1,32 @@
 # Execution Loop V2 — Sổ đồng bộ Frontend ↔ Backend (sống)
 
+## Codex provider/financial source and preserved Claude candidate —25Oct2026
+
+[Source commits, exact tests, cleanup and next owned implementation](evidence/ELP2-10/CORE_EDGE_PROVIDER_AND_SAFE_INTEGRATION_2026-10-25.md).
+PM `06e5a515` fixes independent semantic/full grant digests and exact ROOT census;
+`29022f96` mounts financial publication/ACK in the actual lifecycle and reconstructs
+the same signed original under fresh current authority. Total10files,+688/−17;
+source committed in owned PM Git, not installed. Public source bundle is verified
+on HK and SGP; no `/tmp`-only code. Actual codec/held-PG/cross-language and financial
+focused tests pass as documented; do not add overlapping retakes as new coverage.
+
+Claude `00e7f6cff` and Core ancestry are preserved in integration `183872ca9`
+(`chore/research-source-integration-20261025`),410files,+31,717/−1,712,no deleted
+files. Frontend broad tests/retake and OFF/ON builds pass; Core isolated PG89PASS,
+1conditionalSKIP plus restore PASS; N29/closure/tracking PASS. Normal hook reached
+five missing-dependency suites: explicit `bffWorld.ts` copy fixed,24/24 retakePASS.
+Full landing R2/visual remains NOT_MET, so this candidate is NOT_LANDED; canonical
+receives Markdown only. Do not call older visual receipts acceptance of this tree.
+
+Claude next: finish the remaining frozen-candidate R2/browser/visual disposition,
+not a component rewrite. No new public DTO/schema/enum was published this round.
+Core next: real registered-root verifier and mutation-bound terminal custody;
+financial-purpose commissioning/APPLIED/durable ACK; command STATUS-only issuer,
+current requester provider and authenticated transport through Edge. These are
+owned implementation/integration gaps, not a generic waiting-window status.
+No UI redesign, source fixture used as real authority, push, shared-preview,
+stable/dev/main/provider28445 or command/Live change. ELP2-11 remains unopened.
+
 ## Codex provider/financial/command and preservation —25Oct2026,10:19ICT entry
 
 Bobby assigned continuing the three existing backend slices and checking safe
