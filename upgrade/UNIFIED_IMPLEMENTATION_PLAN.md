@@ -15693,6 +15693,75 @@ No public contract/schema/enum changes needing Claude mapping this round.
 ELP2-05/06/07/09/10 remain incomplete; ELP2-11 not entry-ready. No push, shared
 preview, dev/main/stable/provider28445, grant/session or command/Live changes.
 
+### §14 follow-through —25Oct2026 registered providers, APPLIED→ACK and STATUS
+
+[Implementation return: exact source, tests, cleanup and remaining commissioning](execution_loop/evidence/ELP2-10/CORE_PROVIDER_FINANCIAL_STATUS_IMPLEMENTATION_2026-10-25.md)
+supersedes only the missing-source implementation items in the preceding note.
+Core candidate `e8d4db696c9257b8e624d886a7dd38b799d1f620` includes four new
+ROOT/CURRENT/STATUS source and test commits; PM candidate
+`fad5e3fd876460f3aecfcf8ebd57a66610b6069c` includes three provider/ACK commits;
+Edge candidate `bc925c4c702cb8b458e7067a0073a6e41dcc3fba` includes STATUS-only
+transport. Combined69 file entries,+8,698/−50, no deleted files or frontend
+changes. All source is committed in owned worktrees and preserved in durable
+bundles; **not landed, installed or connected acceptance**.
+
+Final official Core focused gate:237/237 PASS plus production build and actual
+dump/restore PASS. PM provider/listener85 PASS and actual-PG16 PASS/18 deselected;
+financial source→Rust owning COMMIT/APPLIED→source ACK4/4 PASS plus focused ACK32
+PASS; Rust STATUS61 distinct PASS. The packet retains failed attempts and
+overlap/test-only authority limits. These are not a new whole-hook or browser
+PASS. Source fixes include the financial SELECT/INSERT-role ACK failure, genuine
+ordinary-read drain recovery and lost-cancellation-ACK recovery.
+
+Backend next: compose the exact accepted source/trust/originals through Edge,
+convert selected finite HTTP entrypoints to physical `deliverNative`, and supply
+independent qualified mutation composition; then commission financial and
+STATUS against real originals on the chosen integrated candidate. CURRENT READ
+alone must not enable STREAM/HISTORY/REPLAY/ROOT/STATUS or access mutations.
+Existing wrapper/route limitations and owners/actions are explicit in the return,
+not relabelled as an external wait. Preserve Claude00e7f6cff and prior full
+integration0d80dd1cf; its R2/visual findings remain open before safe landing.
+Claude needs no public DTO/component remap this round; keep accepted UI/fixtures
+and take exact-principal/workspace browser acceptance after qualified installation.
+ELP2-05/06/07/09/10 remain incomplete; ELP2-11 not entry-ready. No push, shared
+preview, dev/main/stable/provider28445 or command/Live changes.
+
+### §14 follow-through —25Oct2026 finite route and owning runtime composition
+
+[Exact source/tests/bundles, independent review and remaining implementation](execution_loop/evidence/ELP2-10/CORE_FINITE_RUNTIME_COMPOSITION_2026-10-25.md).
+Core `fdc1944bbf34f661f5a45b3ad7972610c2756334`:28files,+1,992/−39,
+named Paper Account360 physical native response, same-pool CURRENT recovery,
+independent financial/STATUS participants and private STATUS bootstrap/lifecycle.
+Actual Account9/9 PG/HTTP, production build and restore PASS; unchanged
+runtime/config222/222 reused.409 context mismatch corrected without qualifying
+fixtures as production authority or weakening source/projection equality.
+
+Owned Edge financial mount `79fa007e304f8e5c0853e18fc28ac5c1681f5070`,
+8files,+779/−16; native gateway/lifecycle
+`ef4945fae32abe3820b870ab893ff639dca9aef2`,11files,+2,673/−32.
+Final affected Rust51distinct PASS; strict production Clippy PASS. Source
+bundles retained on both hosts and durable Git ref. No runtime installation,
+whole-hook, browser or genuine-original connected acceptance is inferred.
+
+ROOT preparation `09a54e3bdf5534710228c98fbca6fd4a02490af4` has16/16focused
+PASS; additional full-source typecheck timed out180s/NOT_MET, not build PASS.
+Independent review CHANGE before
+mount: dedicated152 recovery/global census, opaque exact-own-fence exemption,
+authority-drain admission and active-holder/shutdown races remain Core code
+work. Do not present them as an external window wait. Other finite routes are
+not converted by this single Account path. Real accepted CURRENT/trust,
+financial original/verifier COMMIT→APPLIED→source ACK, STATUS existing original
+and integrated normal R2 remain separately required. Actual Research census
+is1policy/7grants/0command originals;152/153 absent, grant JSON lacks TS receipts.
+
+Claude: no public DTO/enum/component remap; keep accepted UI and fixture graph.
+After qualified install, take exact-principal/workspace API/browser receipt for
+each actually mounted source. Preserved Claude00e7f6cff/full integration0d80dd1cf
+are not silently landed by this docs-only report. ELP2-05/06/07/09/10 incomplete;
+11 not entry-ready. No UI, push, shared-preview/stable/dev/main/provider28445
+or command/Live changes. Next backend: resolve the specific ROOT coordinator
+review, then safe isolated install and genuine-original commissioning.
+
 ### §14 follow-through —25Oct2026 ROOT coordinator repair, source gate closed
 
 [Exact repairs, tests, preservation and next owned implementation](execution_loop/evidence/ELP2-10/CORE_ROOT_COORDINATOR_REPAIR_2026-10-25.md).
