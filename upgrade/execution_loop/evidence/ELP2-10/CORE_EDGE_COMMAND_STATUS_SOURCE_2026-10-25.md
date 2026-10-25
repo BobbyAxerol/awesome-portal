@@ -37,6 +37,12 @@ Legacy providers/default numeric SUBMIT authority remain unchanged.
 
 - Core three focused Vitest files: **87/87 PASS**, 6.23 s, one worker.
 - Production-only `tsc -p tsconfig.build.json --noEmit`: **PASS**.
+- Additional `command-source-assertion-pg.spec.ts`: **4/4 PASS** on real
+  disposable Core PostgreSQL, actual password sessions, a different current
+  reviewer, official command writer/original store, loopback pinned mTLS,
+  signed UNKNOWN recovery and coordinated logout. External source/PKI remain
+  TEST_ONLY. The mixed initial gate has unrelated CURRENT fixture failures;
+  these four passes are not described as a whole mixed-gate/restore PASS.
 - Rust authority selector: 22 PASS.
 - Rust command_status selector: 13 distinct PASS.
 - Rust pm_command_port selector: 21 PASS, including the same three completion
