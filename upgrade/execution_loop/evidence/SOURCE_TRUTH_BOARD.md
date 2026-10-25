@@ -4,6 +4,20 @@ Khởi tạo: Claude, 2026-10-18 @ `claude/fe-parity`. Codex điền **cột ngu
 
 Trạng thái: `EXISTS_MOUNTED` (đọc thật có receipt) · `SOURCE_DARK` (contract + code, chưa nguồn thật) · `SYNTHETIC_ONLY` · `MISSING` (chưa có contract/nguồn) · `UNKNOWN`.
 
+**26Oct2026 follow-through — no new EXISTS_MOUNTED claim:**
+[Exact source pins/locators and finite owner commissioning](ELP2-10/SOURCE_QUALIFICATION_FOLLOWTHROUGH_2026-10-26.md).
+Owned Edge86178d694 contains a real durable Manager-cycle notice journal and
+epoch/bounded readers. What is missing is the separately authorized scoped
+adapter for original-human Manager selections; legacy workspace realtime and
+the bootstrap-scoped stream are not substitutes. Global cycle counts/digests
+must not leak into narrow scopes. Venue calendar remains SOURCE_DARK: the
+GET blueprint/normalizer has no executable qualified source transport.
+Additional account policy columns exist in source catalogue but are not
+automatically selected/permitted; credential metadata is not a public secret.
+Financial explicit owner-context wiring is additive private Core implementation,
+not PM financial-purpose proof, economic mapping, health publisher or browser
+acceptance. Existing source/FE family rows and historical receipts are retained.
+
 **25Oct2026 source-only update — calendar / metadata:**
 [BFF implementation, source pins, tests and exact remaining qualification](ELP2-10/BACKEND_CALENDAR_METADATA_FOLLOWTHROUGH_2026-10-25.md).
 `venues.calendar` remains **SOURCE_DARK**, not EXISTS_MOUNTED. The VN Workbench

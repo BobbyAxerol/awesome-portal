@@ -1,5 +1,33 @@
 # Execution Loop V2 — Sổ đồng bộ Frontend ↔ Backend (sống)
 
+## Codex source qualification follow-through —26Oct2026 (Asia/Saigon)
+
+[Exact source findings, financial owner operation, tests and remaining owners](evidence/ELP2-10/SOURCE_QUALIFICATION_FOLLOWTHROUGH_2026-10-26.md).
+Entry Core0fb83bf21, canonical685bc1915/Claude00e7f6cff clean and unchanged;
+no new committed Claude request or consumer ACK. Owned Edge86178d694,
+peer8727e5303/PM6f474c720 repinned read-only; peer WIP preserved.
+Two existing source reviewers reused; primary owns shared code/docs and gates.
+
+ACT_NOW: explicit financial owner-context commissioning was missing despite
+prepared listeners. Preserve the configured real actor, authenticate the same
+live session/workspace in a short RC transaction, refuse active drains, then
+lend the actual context only to an explicit private owner callback. Startup
+remains inert. Cancellation stops admission, not original custody/settlement.
+The independent review found and primary fixed a bootstrap trust/listener
+mutation race; focused validation is recorded in the linked packet.
+Code4ecaa23c4,7source/test files,+592/−22.146unique focused cases after
+retakes, real disposable PG14/14 and production-source tsc PASS. Old-source
+control preserves the default and exposes the new pin-race regression. R1
+candidate only; R2/landing and installed/browser source acceptance are separate.
+
+**Source correction:** Edge Manager committed-cycle journal EXISTS in source;
+its original-human/scoped STREAM adapter is missing. Do not label the whole
+journal nonexistent or transplant global counts/digests to narrow users.
+Calendar still SOURCE_DARK (blueprint/normalizer only); NET_PNL accepted wire
+mapping and owning health publisher remain absent. Positive source/browser
+qualification remains NOT_MET. No UI/public contract, runtime, push or landing
+change is implied. Claude keeps current components and independent fixture ACK.
+
 ## Codex calendar BFF + metadata validation —25Oct2026
 
 [Exact code, source boundaries, actual tests, next owners and Claude handoff](evidence/ELP2-10/BACKEND_CALENDAR_METADATA_FOLLOWTHROUGH_2026-10-25.md).

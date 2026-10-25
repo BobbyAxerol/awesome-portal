@@ -1,5 +1,22 @@
 # ELP2-10 — Performance, quality và coexistence
 
+## 26Oct2026 — qualified-source follow-through, explicit financial owner
+
+[Implementation, source pins, validation and Claude/Edge actions](SOURCE_QUALIFICATION_FOLLOWTHROUGH_2026-10-26.md).
+Closes the missing explicit private owner-context call path; does not issue on
+startup or invent financial authority. Same-pool current-session/drain check,
+short RC transaction before callback, immutable trust/listener preparation,
+monotonic finite lifetime and joined cancellation preserve original custody.
+Code4ecaa23c4,7files,+592/−22; focused146unique cases after retakes,
+real-PG14/14, production-source tsc PASS. Exact failed setup/full-compile
+attempts are retained; no full-runner restore or pinned-Node22 tsc PASS claim.
+Independent source review ACCEPT after the preparation mutation finding was
+fixed. Actual test attempts/retakes belong to the linked packet, not a blanket
+runtime PASS. Calendar source, economic wire mapping, owning health source,
+scoped Manager notice adapter and actual connected/browser exits remain OPEN.
+No UI/public DTO, shared preview, stable/dev/main/provider28445, command/Live,
+push or canonical landing change. Existing ELP2-11 preparation is preserved.
+
 ## 25Oct2026 — Core calendar/metadata follow-through (source-only)
 
 [Exact receipt and Claude handoff](BACKEND_CALENDAR_METADATA_FOLLOWTHROUGH_2026-10-25.md).
