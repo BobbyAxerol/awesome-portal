@@ -1,9 +1,10 @@
-/** CORE-04: shared, DARK proposal input builder for dataset and series callers.
+/** CORE-04: shared strict proposal input builder for dataset and series callers.
  * No ManagerFact/account ID is converted into a trusted economic identity.
  * The caller supplies every semantic proof explicitly under BE-P21's existing
  * PROPOSAL schema. A parsed proposal is NOT accepted source mapping, current
  * app/field authority, publication qualification or permission to persist it.
- * There is deliberately no runtime/service/route import of this factory.
+ * The optional server-injected owning adapter uses this builder. Installing a
+ * producer mapping is separate authority: this factory alone remains DARK.
  */
 import { economicSourceReductionInput, MANAGER_ECONOMIC_SOURCE_STATUS,
   type EconomicSourceReductionInput } from "./manager-economic-source.contract";

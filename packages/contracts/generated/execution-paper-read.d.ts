@@ -639,6 +639,15 @@ export interface operations {
             400: components["responses"]["Problem"];
             401: components["responses"]["Problem"];
             404: components["responses"]["Problem"];
+            /** @description N33_HISTORY_ROW_TOO_LARGE or N33_HISTORY_RESPONSE_TOO_LARGE. No silent truncation; use /api/v1/execution/history/paper/{relationKey} with its advertised byte bound and continuation. */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
         };
     };
     executionPaperWorkbenchVnmV1: {
@@ -666,6 +675,15 @@ export interface operations {
             400: components["responses"]["Problem"];
             401: components["responses"]["Problem"];
             404: components["responses"]["Problem"];
+            /** @description N33_HISTORY_ROW_TOO_LARGE or N33_HISTORY_RESPONSE_TOO_LARGE. No silent truncation; use /api/v1/execution/history/paper/{relationKey} with its advertised byte bound and continuation. */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
         };
     };
     executionFullBlotterV1: {

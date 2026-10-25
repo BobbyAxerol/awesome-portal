@@ -34,6 +34,14 @@ export interface VenueCalendar {
 const CLOCK = /^(?:[01][0-9]|2[0-3]):[0-5][0-9]$/;
 const TIMEZONE = /^[A-Za-z_]+(?:\/[A-Za-z0-9_+-]+){1,2}$/;
 const DATE = /^[0-9]{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12][0-9]|3[01])$/;
+const validDate = (value: string): boolean => DATE.test(value) &&
+  new Date(`${value}T00:00:00.000Z`).toISOString().slice(0, 10) === value;
+const validName = (value: unknown, maximum: number): value is string => typeof value === "string" &&
+  value.trim().length > 0 && value.length <= maximum && !/[\u0000-\u001f\u007f]/u.test(value);
+function validTimezone(value: unknown): value is string {
+  if (typeof value !== "string" || value.length > 128 || !TIMEZONE.test(value)) return false;
+  try { new Intl.DateTimeFormat("en", { timeZone: value }); return true; } catch { return false; }
+}
 
 export function unpublishedVenueCalendar(reason: string = VENUE_CALENDAR_NOT_ACTIVE): VenueCalendar {
   return {
@@ -59,7 +67,7 @@ function kindOf(name: string): VenueWindow["kind"] {
  */
 export function venueCalendarFromSource(block: unknown, asOf: string | null): VenueCalendar {
   if (!isRecord(block)) return unpublishedVenueCalendar("SOURCE_CALENDAR_PAYLOAD_INVALID");
-  const timezone = typeof block.timezone === "string" && TIMEZONE.test(block.timezone) ? available(block.timezone) : missing<string>("SOURCE_TIMEZONE_NOT_PUBLISHED");
+  const timezone = validTimezone(block.timezone) ? available(block.timezone) : missing<string>("SOURCE_TIMEZONE_NOT_PUBLISHED");
 
   let windows: Fact<VenueWindow[]> = missing("SOURCE_SESSIONS_NOT_PUBLISHED");
   let breaks: Fact<VenueBreak[]> = missing("SOURCE_SESSIONS_NOT_PUBLISHED");
@@ -67,7 +75,7 @@ export function venueCalendarFromSource(block: unknown, asOf: string | null): Ve
     const parsed: VenueWindow[] = [];
     let valid = true;
     for (const item of block.sessions) {
-      if (!isRecord(item) || typeof item.name !== "string" || item.name.length === 0 || item.name.length > 64 ||
+      if (!isRecord(item) || !validName(item.name, 64) ||
           typeof item.open !== "string" || typeof item.close !== "string" ||
           !CLOCK.test(item.open) || !CLOCK.test(item.close) || item.open >= item.close) { valid = false; break; }
       parsed.push({ name: item.name, kind: kindOf(item.name), open: item.open, close: item.close });
@@ -93,8 +101,8 @@ export function venueCalendarFromSource(block: unknown, asOf: string | null): Ve
   if (Array.isArray(block.holidays) && block.holidays.length <= 400) {
     const list: VenueHoliday[] = [];
     for (const item of block.holidays) {
-      if (!isRecord(item) || typeof item.date !== "string" || !DATE.test(item.date)) { list.length = 0; break; }
-      list.push({ date: item.date, name: typeof item.name === "string" && item.name.length > 0 && item.name.length <= 128 ? item.name : null });
+      if (!isRecord(item) || typeof item.date !== "string" || !validDate(item.date)) { list.length = 0; break; }
+      list.push({ date: item.date, name: validName(item.name, 128) ? item.name : null });
     }
     holidays = list.length === block.holidays.length ? available(list) : missing("SOURCE_HOLIDAY_LIST_INVALID");
   }

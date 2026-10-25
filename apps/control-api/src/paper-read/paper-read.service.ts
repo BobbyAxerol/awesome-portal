@@ -13,6 +13,7 @@ import {
   ExecutionProductReadSource,
 } from "../execution/product-read-source";
 import { ExecutionProfileProjectionRepository } from "../execution/profile-projection.repository";
+import { ExecutionReadScopes, ExecutionReadScopeError } from "../execution-v2/read-scope";
 import { AnalyticsProxyError, ExecutionAnalyticsProxy } from "../execution/analytics.proxy";
 import { KeysetCursorCodec, QueryContractError } from "../query";
 import { CONTROL_API_CONFIG } from "../tokens";
@@ -24,6 +25,8 @@ import { positionsBySide } from "./positions-by-side";
 import { LocalQueryAnalyticsService } from "../execution/local-query-analytics.service";
 import { absentRelation, buildStageFacts, RelationInput } from "../execution/stage-facts";
 import { unpublishedVenueCalendar } from "../execution/venue-calendar";
+import { assertPaperResponseBytes, HistoryByteBudgetError, PAPER_HISTORY_BYTE_POLICY,
+  PAPER_HISTORY_BYTE_POLICY_TOKEN, validatePaperHistoryBytePolicy, type PaperHistoryBytePolicy } from "../execution/history-byte-budget";
 import {
   oldestStageAsOfMs,
   stagePanels,
@@ -39,6 +42,11 @@ export class PaperReadError extends Error {
   constructor(readonly code: string, message: string, readonly status: number) {
     super(message);
   }
+}
+
+function paperHistoryLimit(error: HistoryByteBudgetError): PaperReadError {
+  return new PaperReadError(error.code,
+    "This complete Paper workbench exceeds its response-byte budget. Read exact history through the paginated Execution history route.", 413);
 }
 
 interface RelationSpec {
@@ -72,6 +80,12 @@ interface PaperPrincipal {
   user: PortalUser;
   session: AuthSession;
   workspaceId: string;
+}
+
+interface PaperHistoryDepth {
+  rows: Record<string, Record<string, unknown>[]>;
+  windows: Record<string, unknown>;
+  reason: string | null;
 }
 
 const DEPLOYMENT_FIELDS = [
@@ -207,6 +221,7 @@ export class PaperReadService {
 
   private readonly projectionWorkspaceId: string | undefined;
   private readonly paperProfileId: string | undefined;
+  private readonly historyBytePolicy: Readonly<PaperHistoryBytePolicy>;
 
   constructor(
     @Inject(ExecutionProductReadSource) private readonly source: ExecutionProductReadSource,
@@ -220,6 +235,12 @@ export class PaperReadService {
     @Optional()
     @Inject(ExecutionProfileProjectionRepository)
     private readonly projection?: ExecutionProfileProjectionRepository,
+    @Optional()
+    @Inject(PAPER_HISTORY_BYTE_POLICY_TOKEN)
+    historyBytePolicy?: PaperHistoryBytePolicy,
+    @Optional()
+    @Inject(ExecutionReadScopes)
+    private readonly historyScopes?: ExecutionReadScopes,
   ) {
     this.cursors = new KeysetCursorCodec({
       activeKeyId: config.QUERY_CURSOR_ACTIVE_KEY_ID,
@@ -228,6 +249,8 @@ export class PaperReadService {
     });
     this.projectionWorkspaceId = config.EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID ?? undefined;
     this.paperProfileId = config.EXECUTION_EDGE_PAPER_PROFILE_ID ?? undefined;
+    this.historyBytePolicy = Object.freeze({ ...(historyBytePolicy ?? PAPER_HISTORY_BYTE_POLICY) });
+    validatePaperHistoryBytePolicy(this.historyBytePolicy);
   }
 
   /**
@@ -237,13 +260,49 @@ export class PaperReadService {
    * serves that full depth instead — exact rows, declared basis, no extra
    * source fan-out (the mirror is local).
    */
-  private async timeSeriesDepth(deploymentId: string): Promise<{
-    rows: Record<string, Record<string, unknown>[]>;
-    windows: Record<string, unknown>;
-  }> {
-    const depth: { rows: Record<string, Record<string, unknown>[]>; windows: Record<string, unknown> } =
-      { rows: {}, windows: {} };
-    if (!this.projection || !this.projectionWorkspaceId || !this.paperProfileId) return depth;
+  private async timeSeriesDepth(principal: PaperPrincipal, deploymentId: string): Promise<PaperHistoryDepth> {
+    const absent = (reason: string | null): PaperHistoryDepth => ({ rows: {}, windows: {}, reason });
+    if (!this.projection || !this.projectionWorkspaceId || !this.paperProfileId) return absent(null);
+    if (principal.workspaceId !== this.projectionWorkspaceId) return absent("EXECUTION_READ_NOT_AVAILABLE");
+    if (!this.historyScopes) return absent("EXECUTION_READ_AUTHORITY_UNAVAILABLE");
+    const projection = this.projection, scopes = this.historyScopes;
+    const workspace = this.projectionWorkspaceId, profile = this.paperProfileId;
+    try {
+      // A CURRENT deployment/page capability is not HISTORY authority. The
+      // legacy raw-field depth representation has no scoped HISTORY egress
+      // yet; keep its authorized bounded CURRENT series and say so explicitly.
+      if (await scopes.selectionMode(principal) !== "LEGACY_COMPATIBILITY") return absent("EXECUTION_READ_CURRENT_ONLY");
+      const metadata = await projection.snapshotMetadata(workspace, "paper", profile);
+      const scope = await scopes.authorize(principal, { environment: "paper", profileId: profile }, {
+        action: "alpha.read", resource: { kind: "DEPLOYMENT", id: deploymentId },
+        dataset: { dataset_id: "history:manager.performance:account_equity_snapshots",
+          source_revision: metadata?.payloadDigest ?? "UNQUALIFIED_SNAPSHOT_NOT_RECORDED",
+          projection_generation: metadata?.projectionEpoch ?? "UNQUALIFIED_PROJECTION_NOT_RECORDED",
+          catalogue_revision: metadata?.sourceCatalogueSha256 ?? null, window: null },
+      });
+      // Sticky activation between routing and authorization never falls
+      // through to the old representation, even if CURRENT still succeeds.
+      if (scope.mode !== "LEGACY_COMPATIBILITY") return absent("EXECUTION_READ_ACCESS_CHANGED");
+      const outcome = await scopes.deliver(scope, async () => {
+        try { return { state: "READ" as const, depth: await this.legacyTimeSeriesDepth(projection, workspace, profile, deploymentId) }; }
+        catch (error) { return { state: "REFUSED" as const, error }; }
+      });
+      // A failed read is still a delivery: final current authority wins over
+      // a held byte-limit error derived from the protected history population.
+      if (outcome.state === "REFUSED") throw outcome.error;
+      return outcome.depth;
+    } catch (error) {
+      if (error instanceof PaperReadError) throw error;
+      // Discard any assembled depth when the FINAL authority fence fails;
+      // never return rows collected before a revoke/activation as a fallback.
+      return absent(error instanceof ExecutionReadScopeError ? error.code : "EXECUTION_READ_AUTHORITY_UNAVAILABLE");
+    }
+  }
+
+  /** Called exclusively inside the independent legacy HISTORY delivery fence. */
+  private async legacyTimeSeriesDepth(projection: ExecutionProfileProjectionRepository, workspace: string,
+    profile: string, deploymentId: string): Promise<PaperHistoryDepth> {
+    const depth: PaperHistoryDepth = { rows: {}, windows: {}, reason: null };
     /*
      * Everything the mirror holds, not a 30-day slice of it (owner,
      * 2026-09-08: the analysis charts default to All).
@@ -272,12 +331,14 @@ export class PaperReadService {
       try {
         // Full-range read: bucket extrema + closing row per series on dense
         // ranges — the whole 30 days always render, never the oldest slice.
-        const page = await this.projection.timeSeriesHistoryDownsampled(
-          this.projectionWorkspaceId, "paper", this.paperProfileId,
+        const page = await projection.timeSeriesHistoryDownsampled(
+          workspace, "paper", profile,
           `manager.performance:${relation}`,
           {
             from, entity: { field: "deployment_id", value: deploymentId },
             seriesField, valueField: "equity", targetPoints: 2_000,
+            byteBudget: { maximumBytes: this.historyBytePolicy.maximum_history_bytes,
+              maximumRowBytes: this.historyBytePolicy.maximum_row_bytes },
           },
         );
         if (page.rows.length > 0) {
@@ -299,9 +360,11 @@ export class PaperReadService {
             ...(page.downsample ? { downsample: page.downsample } : {}),
           };
         }
-      } catch {
+      } catch (error) {
+        if (error instanceof HistoryByteBudgetError) throw paperHistoryLimit(error);
         // Depth is additive: on any history failure the bounded snapshot
         // rows below still serve, exactly as before this existed.
+        depth.reason = "N33_HISTORY_UNAVAILABLE";
       }
     }
     return depth;
@@ -404,8 +467,11 @@ export class PaperReadService {
           : "N22_DEPLOYMENT_NOT_AVAILABLE",
       ),
     ];
-    const depth = await this.timeSeriesDepth(deploymentId);
-    return this.envelope(
+    // A failed exact-resource lookup must never trigger an independent
+    // historical read using only a caller-supplied deployment ID.
+    const depth = resolution.state === "FOUND" ? await this.timeSeriesDepth(principal, deploymentId) : { rows: {}, windows: {}, reason: null };
+    if (depth.reason) branches.push(capability("workbench.account-equity-history", "UNAVAILABLE", ["account_equity_snapshots"], depth.reason));
+    const response = this.envelope(
       vnm ? "execution.paper-workbench-vnm.v1" : "execution.paper-workbench.v1",
       principal,
       relations,
@@ -441,6 +507,9 @@ export class PaperReadService {
       branches,
       { resource: { kind: "DEPLOYMENT", id: deploymentId } },
     );
+    try { assertPaperResponseBytes(response, this.historyBytePolicy.maximum_response_bytes); }
+    catch (error) { if (error instanceof HistoryByteBudgetError) throw paperHistoryLimit(error); throw error; }
+    return response;
   }
 
   async blotter(principal: PaperPrincipal, query: PaperBlotterQuery) {

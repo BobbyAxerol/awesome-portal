@@ -14,6 +14,7 @@ import { accessDigest } from "./access-policy";
 import { economicFacts, managerPartitionKey, managerPartitionTotals, managerTupleKey } from "./manager-model";
 import { managerPartition, type ManagerMember, type ManagerModelDocument } from "./manager-model.contract";
 import { managerScorePopulationDigest } from "./manager-score-publication";
+import type { ManagerEconomicSourceRuntime } from "./manager-economic-source-runtime";
 
 export const MANAGER_SERIES_CALCULATION_REVISION = "manager-series-materializer.v1";
 export const MANAGER_SERIES_POLICY_REVISION = "manager-series-policy.v1:exact-instant-fact-sum;no-fx;no-resample;no-carry-forward";
@@ -40,7 +41,9 @@ export interface SeriesObservation {
 }
 export interface SeriesAbsence { reason_code: string; metric: DerivedSeriesMetric | "RETURN" | null; count: number; }
 export interface SeriesRevisionMarker { revision: string; supersedes_revision: string | null; source_epoch: string; projection_generation: string;
-  as_of_ms: number; qualification: "SOURCE_VERIFIED" | "TEST_ONLY"; doc_completeness: string; doc_freshness: string; }
+  as_of_ms: number; qualification: "SOURCE_VERIFIED" | "TEST_ONLY"; doc_completeness: string; doc_freshness: string;
+  /** Internal persistence fence, never a new public financial field. */
+  calculation_revision?: string; }
 export interface DerivedSeriesRevision { marker: SeriesRevisionMarker; observations: SeriesObservation[]; observation_digest: string; absences: SeriesAbsence[]; }
 
 export const observationKey = (o: Pick<SeriesObservation, "subject_type" | "subject_id" | "metric" | "partition_key">) =>
@@ -78,22 +81,28 @@ const marker = (d: ManagerModelDocument): SeriesRevisionMarker => ({ revision: d
 const finish = (m: SeriesRevisionMarker, observations: SeriesObservation[], ledger: AbsenceLedger): DerivedSeriesRevision => {
   const sorted = [...observations].sort((a, b) => compare(observationKey(a), observationKey(b)));
   return { marker: m, observations: sorted, absences: ledger.list(),
-    observation_digest: accessDigest({ calculation: MANAGER_SERIES_CALCULATION_REVISION, marker: m, observations: sorted }) };
+    observation_digest: accessDigest({ calculation: m.calculation_revision ?? MANAGER_SERIES_CALCULATION_REVISION, marker: m, observations: sorted }) };
 };
 
 /** Never throws: a document the shared aggregator refuses (for example conflicting snapshot facts) yields a known, empty revision
  * and a typed absence. A series defect must not be able to take the financial projection down with it. */
 export function deriveSeriesObservations(doc: ManagerModelDocument): DerivedSeriesRevision {
-  try { return deriveSeriesObservationsUnsafe(doc); }
+  return deriveSeriesObservationsWithEconomicSource(doc);
+}
+
+/** Explicit owning adapter shared with dataset totals, including the identical
+ * refusal/census semantics. The one-argument legacy API remains map()-safe. */
+export function deriveSeriesObservationsWithEconomicSource(doc: ManagerModelDocument, economic?: ManagerEconomicSourceRuntime): DerivedSeriesRevision {
+  try { return deriveSeriesObservationsUnsafe(doc, economic); }
   catch {
     const ledger = new AbsenceLedger(); ledger.add("SERIES_DERIVATION_REFUSED", null);
-    return finish(marker(doc), [], ledger);
+    return finish({ ...marker(doc), ...(economic ? { calculation_revision: economic.calculation_revision } : {}) }, [], ledger);
   }
 }
 
 /** Pure, deterministic, bounded: the same document always yields the same digest (idempotence of the writer rests on this). */
-function deriveSeriesObservationsUnsafe(doc: ManagerModelDocument): DerivedSeriesRevision {
-  const m = marker(doc), ledger = new AbsenceLedger();
+function deriveSeriesObservationsUnsafe(doc: ManagerModelDocument, economic?: ManagerEconomicSourceRuntime): DerivedSeriesRevision {
+  const m = { ...marker(doc), ...(economic ? { calculation_revision: economic.calculation_revision } : {}) }, ledger = new AbsenceLedger();
   if (doc.qualification !== "SOURCE_VERIFIED") { ledger.add("SOURCE_NOT_QUALIFIED", null); return finish(m, [], ledger); }
   const documentUsable = doc.source_quality.completeness === "COMPLETE" && doc.source_quality.freshness === "FRESH";
   const observations: SeriesObservation[] = [];
@@ -102,7 +111,8 @@ function deriveSeriesObservationsUnsafe(doc: ManagerModelDocument): DerivedSerie
     const kinds: readonly string[] = DERIVED_SERIES_METRICS.map(x => SERIES_FACT_KIND[x]);
     // Canonical order: which clone of a shared economic account is kept must not depend on the order the source listed facts in.
     const facts = doc.facts.filter(f => tuples.has(managerTupleKey(f.tuple)) && kinds.includes(f.kind)).sort((a, b) => compare(a.fact_id, b.fact_id));
-    const eco = economicFacts(facts), totals = managerPartitionTotals(facts, kinds, tuples);
+    const eco = economic ? facts.filter(f => f.classification !== "CUSTODY") : economicFacts(facts);
+    const totals = managerPartitionTotals(facts, kinds, tuples, economic ? { document: doc, runtime: economic } : undefined);
     const currencies = new Set(totals.map(t => t.partition.currency));
     if (currencies.size > 1) ledger.add("FX_RATE_NOT_PUBLISHED", "NAV");
     for (const total of totals) {
@@ -128,13 +138,13 @@ function deriveSeriesObservationsUnsafe(doc: ManagerModelDocument): DerivedSerie
           // A metric the source never published for this partition has no key to keep a history for: counted, not stored.
           if (safe === "SOURCE_FACTS_NOT_PUBLISHED") continue;
           observations.push({ ...base, point_ts_ms: null, value: null, reason_code: safe, currency: null, basis: null, methodology_ref: null, origin_ms: null,
-            source_confidence: null, input_digest: accessDigest({ calculation: MANAGER_SERIES_CALCULATION_REVISION, revision: doc.revision,
+            source_confidence: null, input_digest: accessDigest({ calculation: m.calculation_revision ?? MANAGER_SERIES_CALCULATION_REVISION, revision: doc.revision,
               source_set: doc.source_set_digest, key: [base.subject_type, base.subject_id, metric, pKey], reason: safe }) });
           continue;
         }
         observations.push({ ...base, point_ts_ms: [...instants][0], value: value.value, reason_code: null, currency: value.currency, basis: value.basis,
           methodology_ref: value.methodology_ref, origin_ms: value.window?.from_ms ?? null, source_confidence: value.source_confidence,
-          input_digest: accessDigest({ calculation: MANAGER_SERIES_CALCULATION_REVISION, revision: doc.revision, source_set: doc.source_set_digest,
+          input_digest: accessDigest({ calculation: m.calculation_revision ?? MANAGER_SERIES_CALCULATION_REVISION, revision: doc.revision, source_set: doc.source_set_digest,
             key: [base.subject_type, base.subject_id, metric, pKey], provenance: value.provenance_refs }) });
       }
     }

@@ -180,13 +180,41 @@ describe("BE-P12 Live SCOPED_V2 identity", () => {
 describe("BE-P12 Live SCOPED_V2 stage facts", () => {
   const facts = async (f: Fixture) => parse(await f.read({ include: "stage_facts" })).stage_facts!;
 
-  it("runtime and sessions are typed absences with the reason a field policy cannot fix", async () => {
+  it("runtime and sessions stay typed absences when the source or reviewed fields are missing", async () => {
     const f = liveFixture(), body = await facts(f);
-    expect(body.runtime).toEqual({ runtime_state: { availability: "NOT_PUBLISHED", value: null, reason_code: "RUNTIME_STATE_FIELD_NOT_IN_READ_VOCABULARY" },
-      since: { availability: "NOT_PUBLISHED", value: null, reason_code: "RUNTIME_STATE_FIELD_NOT_IN_READ_VOCABULARY" } });
-    expect(body.sessions).toEqual({ availability: "NOT_PUBLISHED", reason_code: "SCOPED_SESSION_ROW_FIELDS_NOT_IN_READ_VOCABULARY",
+    expect(body.runtime.runtime_state.availability).toBe("NOT_PUBLISHED");
+    expect(body.runtime.since.availability).toBe("NOT_PUBLISHED");
+    expect(body.sessions).toEqual({ availability: "NOT_PUBLISHED", reason_code: "SCOPED_SESSION_FIELDS_NOT_AUTHORIZED",
       basis: "EXECUTION_SESSIONS_BOUNDED_WINDOW", rows: [], returned_count: 0, omitted_count: 0, source_complete: null });
     expect(body.reconciliation.as_of).toMatchObject({ availability: "NOT_PUBLISHED", reason_code: "SOURCE_CLOCK_NOT_SCOPED" });
+  });
+
+  it("publishes observed runtime and session instants only from exact authorized source fields", async () => {
+    const f = liveFixture({ fields: [...LIVE_FIELDS, "runtime_state", "runtime_state_since", "execution_session_id", "started_at", "completed_at"] });
+    const deployment = f.snapshot.document.relations["manager.deployments:strategy_deployments"].items
+      .find(row => row.fields.deployment_id === f.deployment.deployment_id)!;
+    Object.assign(deployment.fields, { runtime_state: "RUNNING", runtime_state_since: "2026-10-01T01:02:03Z" });
+    f.snapshot.document.relations["manager.sessions:execution_sessions"].items.push({ lineage: deployment.lineage, fields: {
+      deployment_id: f.deployment.deployment_id, strategy_id: "strategy-own", account_id: f.deployment.account_id, mode: "live", venue: "VENUE",
+      execution_session_id: "TEST_ONLY:session", started_at: "2026-10-01T01:02:03Z", completed_at: null, state: "RUNNING",
+    } } as never);
+    const body = parse(await f.read({ include: "stage_facts" }));
+    expect(body.stage_facts!.runtime.runtime_state).toEqual({ availability: "AVAILABLE", value: "RUNNING", reason_code: null });
+    expect(body.stage_facts!.runtime.since.value).toBe("2026-10-01T01:02:03.000Z");
+    expect(body.stage_facts!.sessions).toMatchObject({ availability: "AVAILABLE", source_complete: false,
+      rows: [{ id: "TEST_ONLY:session", started: "2026-10-01T01:02:03.000Z", ended: null }] });
+    expect(body.runtime.state).toBeNull(); expect(body.commands.enabled).toBe(false);
+  });
+
+  it("does not publish source runtime behind a reduced policy or turn an active flag into runtime", async () => {
+    const f = liveFixture();
+    const deployment = f.snapshot.document.relations["manager.deployments:strategy_deployments"].items
+      .find(row => row.fields.deployment_id === f.deployment.deployment_id)!;
+    Object.assign(deployment.fields, { runtime_state: "RUNNING", runtime_state_since: Number.MAX_SAFE_INTEGER, active: true });
+    const body = await facts(f);
+    expect(body.runtime.runtime_state.availability).toBe("NOT_PUBLISHED");
+    expect(body.runtime.since.availability).toBe("NOT_PUBLISHED");
+    expect(body.sessions.source_complete).toBeNull();
   });
 
   it("no visible finding in an authorized population does not prove 'no open findings'", async () => {

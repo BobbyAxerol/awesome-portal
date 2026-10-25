@@ -84,6 +84,21 @@ for (const [name, value] of Object.entries(defs)) {
   schemaText = member(schemaText, name, value, "$defs", 4);
   apiText = member(apiText, name, rewrite(value), "schemas", 6);
 }
+// Preserve hand-authored route bytes while publishing the actual bounded
+// workbench refusal. Exact history uses its existing truthful keyset pager.
+for (const description of ["Current deployment-scoped Paper workbench", "Current deployment-scoped VNM Paper workbench"]) {
+  const marker = `"description": "${description}"`;
+  const start = apiText.indexOf(marker);
+  if (start < 0) throw new Error("Missing named Paper workbench response");
+  const end = apiText.indexOf('\n', start);
+  const line = apiText.slice(start, end);
+  if (!line.includes('"413"')) {
+    const updated = line.replace('"404": { "$ref": "#/components/responses/Problem" }',
+      '"404": { "$ref": "#/components/responses/Problem" }, "413": { "description": "N33_HISTORY_ROW_TOO_LARGE or N33_HISTORY_RESPONSE_TOO_LARGE. No silent truncation; use /api/v1/execution/history/paper/{relationKey} with its advertised byte bound and continuation.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Problem" } } } }');
+    if (updated === line) throw new Error("Missing exact Paper response boundary");
+    apiText = apiText.slice(0, start) + updated + apiText.slice(end);
+  }
+}
 save(schemaName, schemaBefore, schemaText);
 save(apiName, apiBefore, apiText);
 

@@ -1,4 +1,4 @@
-import { Inject, Injectable } from "@nestjs/common";
+import { Inject, Injectable, Optional } from "@nestjs/common";
 import { Pool } from "pg";
 import { CONTROL_API_CONFIG, EXECUTION_DATA_POOL } from "../tokens";
 import { ControlApiConfig } from "../config";
@@ -9,6 +9,7 @@ import { ManagerModelRepository } from "./manager-model.store";
 import { rejectManagerAsOf } from "./manager-query-p1";
 import { managerSeriesQuery } from "./manager-series.contract";
 import { queryManagerSeries, type SeriesSubjectScope } from "./manager-series";
+import { ExecutionManagerRuntime } from "./manager-runtime";
 
 /**
  * FE-013 / FE-033 read service. It authorizes each subject on its own (a fund by
@@ -20,7 +21,8 @@ import { queryManagerSeries, type SeriesSubjectScope } from "./manager-series";
 export class ManagerSeriesService {
   private readonly repository: ManagerModelRepository;
   constructor(@Inject(EXECUTION_DATA_POOL) pool: Pool, @Inject(ExecutionReadScopes) private readonly scopes: ExecutionReadScopes,
-    @Inject(CONTROL_API_CONFIG) private readonly config: ControlApiConfig) {
+    @Inject(CONTROL_API_CONFIG) private readonly config: ControlApiConfig,
+    @Optional() @Inject(ExecutionManagerRuntime) private readonly runtime?: ExecutionManagerRuntime) {
     this.repository = new ManagerModelRepository(pool);
   }
 
@@ -57,16 +59,28 @@ export class ManagerSeriesService {
       // Nesting makes every subject's authority current BEFORE and AFTER the one document read, in a fixed bounded order.
       const deliverAll = <T>(index: number, read: () => Promise<T>): Promise<T> =>
         index >= inputs.length ? read() : this.scopes.deliver(inputs[index].scope, () => deliverAll(index + 1, read));
-      return await deliverAll(0, async () => {
+      const economic = this.runtime?.economicSourceFor({workspace_id:principal.workspaceId,environment:env,profile_id:profile});
+      const assertEconomic = () => { if (economic && !economic.isCurrent())
+        throw new ExecutionReadScopeError("EXECUTION_READ_ACCESS_CHANGED", 409); };
+      assertEconomic();
+      const response = await deliverAll(0, async () => {
         const doc = await this.repository.document(principal.workspaceId, env, profile, head!.revision);
         // TEST_ONLY documents are exercised through the pure component only, never served.
         if (!doc || doc.qualification !== "SOURCE_VERIFIED") throw new ExecutionReadScopeError("EXECUTION_READ_PUBLICATION_NOT_QUALIFIED", 503);
+        // A newly bound source mapping must not expose series calculated by
+        // the old account-hint reducer or by a different mapping revision.
+        if (doc.precomputed_series?.some(series => economic
+          ? series.provenance.calculation_revision !== economic.calculation_revision
+          : series.provenance.calculation_revision.startsWith("manager-series-economic.v1:")))
+          throw new ExecutionReadScopeError("EXECUTION_READ_PUBLICATION_NOT_QUALIFIED", 503);
         const response = queryManagerSeries(inputs, doc, q);
         const current = await this.repository.head(principal.workspaceId, env, profile);
         if (current?.payload_digest !== head!.payload_digest || current.revision !== head!.revision)
           throw new ExecutionReadScopeError("EXECUTION_READ_ACCESS_CHANGED", 409);
         return response;
       });
+      assertEconomic();
+      return response;
     } catch (error) {
       if (error instanceof ExecutionReadScopeError) throw error;
       if (error instanceof QueryContractError) throw new ExecutionReadScopeError("EXECUTION_READ_NOT_AVAILABLE", 400);

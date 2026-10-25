@@ -9,6 +9,9 @@ import { ExecutionProductReadSource } from "../src/execution/product-read-source
 import { ExecutionAnalyticsProxy } from "../src/execution/analytics.proxy";
 import { PaperReadService } from "../src/paper-read/paper-read.service";
 import { PaperBlotterQuerySchema } from "../src/paper-read/contracts";
+import { HistoryByteBudgetError, type PaperHistoryBytePolicy } from "../src/execution/history-byte-budget";
+import { ExecutionReadScopes } from "../src/execution-v2/read-scope";
+import { paperHistoryTestScopes } from "./paper-history-authority.fixture";
 
 // FE-073: validate the producer's actual envelope, not only a synthetic JSON
 // fixture. These service tests use fake source relations and are not runtime receipts.
@@ -194,13 +197,15 @@ function service(
   source: FakeCurrentSource,
   analytics?: Pick<ExecutionAnalyticsProxy, "managerQueryAnalytics">,
   projection?: { timeSeriesHistoryDownsampled: (...args: unknown[]) => Promise<unknown> },
+  historyBytePolicy?: PaperHistoryBytePolicy,
+  historyScopes?: ExecutionReadScopes | null,
 ): PaperReadService {
   const config = loadConfig({
     DATABASE_URL: "postgres://portal:portal@localhost/portal",
     PORTAL_ENV: "local",
     AUTH_MODE: "dev",
     ...(projection ? {
-      EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID: "ws_projection",
+      EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID: "ws_primary",
       EXECUTION_EDGE_PAPER_PROFILE_ID: "PAPER_BINANCE_USDM",
     } : {}),
   });
@@ -209,7 +214,9 @@ function service(
     config,
     analytics as ExecutionAnalyticsProxy | undefined,
     undefined,
-    projection as never,
+    projection ? { snapshotMetadata: async () => null, ...projection } as never : undefined,
+    historyBytePolicy,
+    historyScopes === null ? undefined : historyScopes ?? paperHistoryTestScopes(config),
   );
 }
 
@@ -496,6 +503,87 @@ describe("N22 full Paper read product BFF", () => {
     assertPaperContract(bare);
     expect(bare.data.history_windows).toBeUndefined();
     expect(bare.data.account_equity).toHaveLength(1);
+  });
+
+  it("refuses oversized whole-history representations rather than silently falling back to snapshot rows", async () => {
+    const source = new FakeCurrentSource();
+    for (const code of ["N33_HISTORY_ROW_TOO_LARGE", "N33_HISTORY_RESPONSE_TOO_LARGE"] as const) {
+      const projection = { timeSeriesHistoryDownsampled: async () => { throw new HistoryByteBudgetError(code); } };
+      await expect(service(source, undefined, projection).workbench(principal(), "dep_default", false))
+        .rejects.toMatchObject({ code, status: 413 });
+    }
+  });
+
+  it("checks the final composite response bytes even when a source double bypasses the history query guard", async () => {
+    const source = new FakeCurrentSource();
+    await expect(service(source, undefined, undefined, {
+      maximum_history_bytes: 1, maximum_row_bytes: 1, maximum_response_bytes: 1,
+    }).workbench(principal(), "dep_default", false)).rejects.toMatchObject({
+      code: "N33_HISTORY_RESPONSE_TOO_LARGE", status: 413,
+    });
+  });
+
+  it("never reads historical depth for an unresolved deployment", async () => {
+    const source = new FakeCurrentSource(); let reads = 0;
+    const projection = { timeSeriesHistoryDownsampled: async () => { reads++; return { rows: [], sourceRows: 0, downsample: null }; } };
+    const response = await service(source, undefined, projection).workbench(principal(), "TEST_ONLY-not-found", false);
+    expect(reads).toBe(0);
+    expect(response.data.deployment).toBeNull();
+    expect(response.data.history_windows).toBeUndefined();
+  });
+
+  it.each(["sticky-current-only", "authority-missing", "wrong-workspace"] as const)(
+    "does not broaden an authorized CURRENT page into raw HISTORY: %s", async scenario => {
+      const source = new FakeCurrentSource();
+      source.rows.set("account_equity_snapshots", [{ ...defaultRecord("account_equity_snapshots"), equity: "105" }]);
+      let reads = 0;
+      const projection = { timeSeriesHistoryDownsampled: async () => { reads++; throw new Error("MUST_NOT_READ_RAW_HISTORY"); } };
+      const config = loadConfig({ DATABASE_URL: "postgres://unused:unused@localhost/unused", PORTAL_ENV: "local", AUTH_MODE: "dev" });
+      const scopes = scenario === "authority-missing" ? null : paperHistoryTestScopes(config,
+        () => ({ policy_seen: scenario === "sticky-current-only" }));
+      const response = await service(source, undefined, projection, undefined, scopes)
+        .workbench(principal(scenario === "wrong-workspace" ? "ws_peer" : "ws_primary"), "dep_default", false);
+      expect(reads).toBe(0);
+      expect(response.data.account_equity).toMatchObject([{ id: 1, equity: "105" }]);
+      expect(response.data.history_windows).toBeUndefined();
+      expect(response.capabilities).toContainEqual(expect.objectContaining({
+        capability_id: "workbench.account-equity-history", state: "UNAVAILABLE",
+        reason_code: scenario === "authority-missing" ? "EXECUTION_READ_AUTHORITY_UNAVAILABLE"
+          : scenario === "wrong-workspace" ? "EXECUTION_READ_NOT_AVAILABLE" : "EXECUTION_READ_CURRENT_ONLY",
+      }));
+      assertPaperContract(response);
+    });
+
+  it.each([2, 4])("discards history when sticky policy activates at identity check %i", async activationCall => {
+    const source = new FakeCurrentSource();
+    source.rows.set("account_equity_snapshots", [{ ...defaultRecord("account_equity_snapshots"), equity: "105" }]);
+    let reads = 0;
+    const projection = { timeSeriesHistoryDownsampled: async () => { reads++; return {
+      sourceRows: 1, downsample: null, rows: [{ rowId: "TEST_ONLY-history", ts: "2026-10-01T00:00:00Z",
+        fields: { ...defaultRecord("account_equity_snapshots"), id: 999, equity: "999", ts: "2026-10-01T00:00:00Z" } }],
+    }; } };
+    const config = loadConfig({ DATABASE_URL: "postgres://unused:unused@localhost/unused", PORTAL_ENV: "local", AUTH_MODE: "dev" });
+    const scopes = paperHistoryTestScopes(config, call => ({ policy_seen: call >= activationCall }));
+    const response = await service(source, undefined, projection, undefined, scopes).workbench(principal(), "dep_default", false);
+    expect(reads).toBe(activationCall === 2 ? 0 : 1);
+    expect(response.data.account_equity).toMatchObject([{ id: 1, equity: "105" }]);
+    expect(response.data.history_windows).toBeUndefined();
+    expect(response.capabilities).toContainEqual(expect.objectContaining({
+      capability_id: "workbench.account-equity-history", state: "UNAVAILABLE", reason_code: "EXECUTION_READ_POLICY_PENDING",
+    }));
+    assertPaperContract(response);
+  });
+
+  it("final authority refusal outranks a byte-limit error derived from historical rows", async () => {
+    const source = new FakeCurrentSource();
+    const projection = { timeSeriesHistoryDownsampled: async () => { throw new HistoryByteBudgetError("N33_HISTORY_RESPONSE_TOO_LARGE"); } };
+    const config = loadConfig({ DATABASE_URL: "postgres://unused:unused@localhost/unused", PORTAL_ENV: "local", AUTH_MODE: "dev" });
+    const scopes = paperHistoryTestScopes(config, call => ({ policy_seen: call >= 4 }));
+    const response = await service(source, undefined, projection, undefined, scopes).workbench(principal(), "dep_default", false);
+    expect(response.data.history_windows).toBeUndefined();
+    expect(response.capabilities).toContainEqual(expect.objectContaining({
+      capability_id: "workbench.account-equity-history", reason_code: "EXECUTION_READ_POLICY_PENDING",
+    }));
   });
 
   it("counts lineage rejects by missing-parent class on the capability (P4-D)", async () => {

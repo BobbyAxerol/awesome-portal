@@ -34,12 +34,21 @@ describe("ELP2-04 finite source-only Live public contract",()=>{
     expect(fixture).toEqual(liveSourceFixture());
     expect(fixture).toMatchObject({lane:"TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT",runtime_qualified:false,
       production_config:false,authority_installed:false,source_publication_installed:false});
-    check(fixture.populated,true);check(fixture.unpublished,true);
+    check(fixture.populated,true);check(fixture.unpublished,true);check(fixture.with_observed_stage,true);
     // Both are source-only: parent/root/current TS acceptance are not implied.
     expect(fixture.populated.data.broker_sync).toMatchObject({state:"NOT_PUBLISHED",reason_code:"BROKER_PURPOSE_NOT_COMMISSIONED"});
     expect(fixture.populated.data.account_balances.provenance.purpose).toBe("account.read");
     expect(fixture.populated.data.orders.provenance.purpose).toBe("alpha.read");
     expect(validate(load("fixtures/execution-live-full-operations.unavailable.valid.json"))).toBe(false);
+  });
+  it("accepts authorized observed runtime/session and exact order details without asserting activation or complete sessions",()=>{
+    const body=clone(fixture.with_observed_stage);check(body,true);
+    expect(body.stage_facts.runtime.runtime_state).toMatchObject({availability:"AVAILABLE",value:"RUNNING"});
+    expect(body.stage_facts.sessions.source_complete).toBe(false);
+    expect(body.runtime).toMatchObject({state:null,reason_code:"SOURCE_RUNTIME_ACTIVATION_NOT_ASSERTED"});
+    expect(body.commands.enabled).toBe(false);
+    const complete=clone(body);complete.stage_facts.sessions.source_complete=true;check(complete,false);
+    const noAuthority=clone(body);noAuthority.data.orders.records[0].values.credentials="PRIVATE";check(noAuthority,false);
   });
   it("retains legacy success/ref, named GET, other verbs, params, security, defaults and unrelated components",()=>{
     const updated=clone(api);updateLiveSourcePath(updated);expect(updated).toEqual(api);

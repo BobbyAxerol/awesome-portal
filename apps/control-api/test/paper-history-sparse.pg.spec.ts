@@ -37,4 +37,52 @@ describe("Paper sparse history SQL population parity",()=>{
     const raw=await repository.timeSeriesHistory(workspace,"paper",profile,relation,{from,to,entity:query(3).entity,limit:10});
     expect(raw.rows).toHaveLength(6);expect(raw.rows[0].fields.equity).toBeNull();
   });
+
+  it("enforces selected-row and full-response byte bounds without deleting or silently limiting sparse/dense history",async()=>{
+    await repository.appendTimeSeriesHistory(workspace,"paper",profile,relation,[
+      {rowId:"TEST_ONLY:bytes-1",ts:from,fields:{account_id:"TEST_ONLY:account",deployment_id:"TEST_ONLY:deployment",equity:"100",payload:"x".repeat(1024)}},
+      {rowId:"TEST_ONLY:bytes-2",ts:to,fields:{account_id:"TEST_ONLY:account",deployment_id:"TEST_ONLY:deployment",equity:"100",payload:"x".repeat(1024)}},
+    ]);
+    for(const targetPoints of [1,2]){
+      await expect(repository.timeSeriesHistoryDownsampled(workspace,"paper",profile,relation,
+        {...query(targetPoints),byteBudget:{maximumBytes:4096,maximumRowBytes:64}}))
+        .rejects.toThrow("N33_HISTORY_ROW_TOO_LARGE");
+      await expect(repository.timeSeriesHistoryDownsampled(workspace,"paper",profile,relation,
+        {...query(targetPoints),byteBudget:{maximumBytes:1500,maximumRowBytes:1500}}))
+        .rejects.toThrow("N33_HISTORY_RESPONSE_TOO_LARGE");
+      const accepted=await repository.timeSeriesHistoryDownsampled(workspace,"paper",profile,relation,
+        {...query(targetPoints),byteBudget:{maximumBytes:4096,maximumRowBytes:1500}});
+      expect(accepted.sourceRows).toBe(2);
+      expect(accepted.rows.map(row=>row.rowId)).toEqual(["TEST_ONLY:bytes-1","TEST_ONLY:bytes-2"]);
+    }
+    const raw=await repository.timeSeriesHistory(workspace,"paper",profile,relation,
+      {from,to,entity:query(2).entity,limit:10});
+    expect(raw.rows).toHaveLength(2);
+    expect(raw.hasMore).toBe(false);
+  });
+
+  it("measures the real SQL selected-history path over 12000 retained rows without changing a product SLO",async()=>{
+    const start=Date.parse(from),population=12000;
+    await repository.appendTimeSeriesHistory(workspace,"paper",profile,relation,
+      Array.from({length:population},(_,index)=>({rowId:`TEST_ONLY:measure-${index.toString().padStart(5,"0")}`,
+        ts:new Date(start+index*1000).toISOString(),fields:{account_id:"TEST_ONLY:account",
+          deployment_id:"TEST_ONLY:deployment",equity:String(20000+index%137)}})));
+    const measurements=[];
+    for(const targetPoints of [100,200,400,2000]){
+      const elapsed=[],bytes=[],returned=[];
+      for(let attempt=0;attempt<3;attempt++){
+        const started=performance.now();
+        const result=await repository.timeSeriesHistoryDownsampled(workspace,"paper",profile,relation,
+          {...query(targetPoints),byteBudget:{maximumBytes:8*1024*1024,maximumRowBytes:256*1024}});
+        elapsed.push(Number((performance.now()-started).toFixed(3)));
+        expect(result.sourceRows).toBe(population);
+        expect(result.rows.length).toBeGreaterThan(0);
+        returned.push(result.rows.length);bytes.push(Buffer.byteLength(JSON.stringify(result.rows),"utf8"));
+        expect(bytes.at(-1)).toBeLessThan(8*1024*1024);
+      }
+      measurements.push({target_points:targetPoints,elapsed_ms:elapsed,returned_rows:returned,response_rows_bytes:bytes});
+    }
+    console.info("BACKEND_HISTORY_SQL_MEASUREMENT",JSON.stringify({lane:"DISPOSABLE_PG_NOT_PRODUCT_SLO",
+      population,measurements}));
+  });
 });

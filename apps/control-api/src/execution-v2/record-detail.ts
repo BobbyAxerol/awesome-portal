@@ -16,10 +16,10 @@ import { scopeAllowsDetailField } from "./read-scope";
  */
 export const LIQUIDITY_SIDES = ["MAKER", "TAKER", "UNKNOWN"] as const;
 const CONTROL = /[\u0000-\u001f\u007f]/u;
-const DECIMAL = /^-?(?:0|[1-9][0-9]*)(?:\.[0-9]+)?$/;
+const DECIMAL = /^-?(?:0|[1-9][0-9]*)(?:\.[0-9]+)?$(?![\s\S])/;
 const INTEGER_TEXT = /^(?:0|[1-9][0-9]*)$/;
 
-export type RecordDetailValue = string | number | null;
+export type RecordDetailValue = string | number | boolean | null;
 
 const text = (raw: unknown): string | undefined =>
   typeof raw === "string" && raw.length > 0 && [...raw].length <= 256 && !CONTROL.test(raw) ? raw : undefined;
@@ -63,7 +63,22 @@ export function recordDetailValue(field: string, raw: unknown): RecordDetailValu
     case "resolved_at_ms":
       return epochMsFrom(raw);
     case "commission":
+    case "filled_quantity":
+    case "average_fill_price":
+    case "trigger_price":
       return typeof raw === "string" && raw.length <= 128 && DECIMAL.test(raw) ? raw : undefined;
+    case "runtime_state":
+      return typeof raw === "string" && ["RUNNING", "PAUSED", "HALTED", "STOPPED"].includes(raw) ? raw : undefined;
+    case "runtime_state_since":
+    case "runtime_state_changed_at":
+    case "started_at":
+    case "completed_at": {
+      const ms = epochMsFrom(raw);
+      return ms === undefined || !Number.isFinite(new Date(ms).getTime()) ? undefined : new Date(ms).toISOString();
+    }
+    case "reduce_only":
+    case "post_only":
+      return typeof raw === "boolean" ? raw : undefined;
     case "liquidity_side":
       return typeof raw === "string" && (LIQUIDITY_SIDES as readonly string[]).includes(raw) ? raw : undefined;
     case "leg_sequence":

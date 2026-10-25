@@ -49,8 +49,9 @@ describe("Research native Manager closed read surface", () => {
       expect(nativeResearchReadAllowed(config,method,target,{},false,true)).toBe(false);
     expect(nativeResearchReadAllowed(config,"POST",path+"/reconcile",{workspace_id:"foreign"},false,true)).toBe(false);
   });
-  it("opens only the exact finite account route with a private composition, never by query or default",()=>{
-    const path="/api/v1/execution/manager/accounts/TEST_ONLY-account/overview";
+  it.each(["/api/v1/execution/manager/accounts/TEST_ONLY-account/overview", "/api/v1/execution/manager/alphas/TEST_ONLY-alpha/overview",
+    "/api/v1/execution/manager/portfolios/TEST_ONLY-portfolio/overview", "/api/v1/execution/manager/deployments/TEST_ONLY-deployment/overview",
+    "/api/v1/execution/manager/fund-overview", "/api/v1/execution/manager/fleet"])("opens exact finite Manager route %s only with private composition",path=>{
     expect(allowed(path)).toBe(false);
     expect(nativeResearchReadAllowed(config,"GET",path,{environment:"paper"},true)).toBe(true);
     for(const environment of ["live","sandbox","all",["paper"],null])

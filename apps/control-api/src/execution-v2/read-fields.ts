@@ -31,6 +31,12 @@ export const isBusinessReadField = (field:string):boolean => business.has(field)
 export const RECORD_DETAIL_READ_FIELDS = [
   "submitted_at_ms", "resolved_at_ms", "client_order_id", "order_type", "commission", "commission_currency",
   "liquidity_side", "finding_id", "finding_type", "leg_role", "leg_sequence",
+  // FE-050/051/052/067/072: explicit source-owned business detail only.
+  // No credential bytes, external custody identifiers or inferred runtime.
+  "runtime_state", "runtime_state_since", "runtime_state_changed_at",
+  "execution_session_id", "started_at", "completed_at", "account_type",
+  "position_side", "time_in_force", "reduce_only", "post_only",
+  "filled_quantity", "average_fill_price", "trigger_price",
 ] as const;
 const detail = new Set<string>(RECORD_DETAIL_READ_FIELDS);
 export const isRecordDetailReadField = (field:string):boolean => detail.has(field);

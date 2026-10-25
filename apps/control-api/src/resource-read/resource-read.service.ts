@@ -454,7 +454,9 @@ interface ResourceResponseInput {
 }
 
 /** Raw columns of the record-detail vocabulary that Resource360 v2 rows declare (orders, fills, reconciliation). */
-const SCOPED_DETAIL_COLUMNS = ["client_order_id", "order_type", "commission", "commission_currency", "liquidity_side", "finding_id", "finding_type"] as const;
+const SCOPED_DETAIL_COLUMNS = ["client_order_id", "order_type", "commission", "commission_currency", "liquidity_side", "finding_id", "finding_type",
+  "execution_session_id", "started_at", "completed_at", "account_type", "position_side", "time_in_force", "reduce_only", "post_only",
+  "trigger_price", "filled_quantity", "average_fill_price"] as const;
 function sanitizeRecordDetail<T extends { fields: Record<string, ProjectionScalar> }>(row: T): T {
   const fields = { ...row.fields };
   for (const column of SCOPED_DETAIL_COLUMNS) {
@@ -464,7 +466,7 @@ function sanitizeRecordDetail<T extends { fields: Record<string, ProjectionScala
   }
   return { ...row, fields };
 }
-const SCOPED_CLOCK_COLUMNS = ["ts", "created_at", "updated_at", "submitted_at", "trade_time", "mark_price_at", "resolved_at"] as const;
+const SCOPED_CLOCK_COLUMNS = ["ts", "created_at", "updated_at", "submitted_at", "trade_time", "mark_price_at", "resolved_at", "started_at", "completed_at"] as const;
 /** R-5a: the schema has always declared `<clock>_ms` beside each text clock but nothing filled it. A stated instant that parses
  * becomes UTC epoch milliseconds; one that does not stays text-only. The text member is never replaced. */
 function withClockMs(fact: Fact): Fact {
@@ -1058,6 +1060,7 @@ const RESOURCE_INTERNAL_FIELDS = new Set(["external_account_ref"]);
 function copyFact(alias: RelationAlias, row: Record<string, ProjectionScalar>, environment: ResourceEnvironment): Fact {
   const allowed = new Set([
     ...(RESOURCE_PUBLIC_FIELDS.get(alias) ?? []),
+    ...(alias === "orders" ? ["filled_quantity", "average_fill_price"] : []),
     ...RESOURCE_DERIVED_PUBLIC_FIELDS,
   ]);
   return {

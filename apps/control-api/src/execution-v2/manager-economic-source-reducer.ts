@@ -1,7 +1,7 @@
 /**
  * BE-P21 (ELP2-10 C5): the pure, strict, DARK economic-source reducer.
  *
- * STATUS: PROPOSAL_NOT_A_PRODUCER_MAPPING; NOT WIRED into any runtime (see manager-economic-source.contract.ts). It implements PM's
+ * STATUS: PROPOSAL_NOT_A_PRODUCER_MAPPING; the optional owning adapter must separately bind a source mapping before use. It implements PM's
  * returned rule set (PM_OWNER_ACK_AND_NET_PNL_RETURN_2026-10-21, C5) and nothing else, over exact decimals (BigInt through
  * `sumExactDecimals`), with no float, no FX, no rebase, no interpolation and no carry-forward.
  *
@@ -22,7 +22,7 @@
  * Why a cumulative snapshot can never be summed across time: the expectation holds exactly one cut and every row must equal it, so a
  * row from another cut is a REFUSED mismatch. A caller needing a history calls once per cut and keeps the answers apart.
  *
- * HOW A DATASET AND A SERIES BOTH CALL IT (design only; neither is edited by this change):
+ * HOW A DATASET AND A SERIES BOTH CALL IT (manager-economic-source-runtime.ts):
  *   - dataset reader (`managerPartitionTotals`): per (subject population, economic partition, metric) build ONE input whose
  *     expectation is the document cut + the partition's currency/basis, whose rows are the SOURCE_VERIFIED facts of that population,
  *     and whose census is the producer's expected population for that cut; map the output onto the metric (`COMPLETE` -> AVAILABLE
@@ -32,8 +32,8 @@
  *     can fold `economic_set_digest`. Because both sides call this one function through one input builder, the economic set of a
  *     stored point and of the value the reader serves cannot diverge; `economic_set_digest` is the cheap parity check between them.
  *   - the output is never summed across calls, and never turned into a zero.
- * Integration needs (a) the accepted producer mapping, (b) one-writer scheduling for manager-model.ts / manager-series-*.ts, and
- * (c) a contract change only if the output is published (then the generators run). None exists yet.
+ * Commissioning still needs the accepted producer mapping. Pure reducer output
+ * stays internal; dataset/series publish their existing metric/absence shapes.
  */
 import { accessDigest } from "./access-digest";
 import { sumExactDecimals } from "../research/exact-decimal";

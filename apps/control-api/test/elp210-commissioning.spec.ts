@@ -478,7 +478,7 @@ describe("ELP2-10 private commissioning and real registered constructors (synthe
     expect(read().scores.raw).toEqual({value:null,status:"partial_costs"});
     expect(read().items[0].metrics.score).toMatchObject({value:null,availability:"UNAVAILABLE",reason_code:"REQUIRED_COSTS_NOT_COMPLETE"});
     d.document.precomputed_scores=[s];
-    const runtime={scoreFence:{accepts:()=>active},recalculationFor:()=>undefined} as unknown as ExecutionManagerRuntime;
+    const runtime={scoreFence:{accepts:()=>active},recalculationFor:()=>undefined,economicSourceFor:()=>undefined} as unknown as ExecutionManagerRuntime;
     const service=new ManagerModelService({} as Pool,f.scopes,f.config,runtime),repo=(service as any).repository;
     vi.spyOn(repo,"head").mockResolvedValue({revision:d.document.revision,projection_generation:d.document.projection_generation,catalogue_digest:catalogue,payload_digest:hash("doc")});
     vi.spyOn(repo,"document").mockResolvedValue(d.document);

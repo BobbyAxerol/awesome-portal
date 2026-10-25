@@ -16,11 +16,12 @@
  */
 import { accessDigest } from "./access-policy";
 import type { ManagerModelDocument } from "./manager-model.contract";
+import type { ManagerEconomicSourceRuntime } from "./manager-economic-source-runtime";
 import { resolveManagerWindow } from "./manager-query-p1";
 import { MAX_SERIES_GAPS, MAX_SERIES_POINTS, managerSeriesPublication, seriesStagesFor, validateManagerSeriesPublications,
   type ManagerSeriesPublication } from "./manager-series-publication.contract";
 import { AbsenceLedger, DERIVED_SERIES_METRICS, MANAGER_SERIES_CALCULATION_REVISION, MANAGER_SERIES_POLICY_REVISION, RETURN_INPUT_ABSENCES,
-  deriveSeriesObservations, observationKey, seriesPopulations, type DerivedSeriesRevision, type SeriesAbsence, type SeriesConfidence,
+  deriveSeriesObservationsWithEconomicSource, observationKey, seriesPopulations, type DerivedSeriesRevision, type SeriesAbsence, type SeriesConfidence,
   type SeriesObservation, type SeriesRevisionMarker } from "./manager-series-observation";
 
 export const SERIES_WINDOW_PRESETS = ["7D", "30D", "90D"] as const;
@@ -57,8 +58,9 @@ function sameDecimal(a: string, b: string): boolean {
   return x.neg === y.neg && BigInt(x.w) === BigInt(y.w) && x.f === y.f;
 }
 
-export function materializeManagerSeries(doc: ManagerModelDocument, history: SeriesHistory, config: ManagerSeriesConfig): MaterializedSeries {
-  const cfg = validateSeriesConfig(config), current = deriveSeriesObservations(doc), ledger = new AbsenceLedger();
+export function materializeManagerSeries(doc: ManagerModelDocument, history: SeriesHistory, config: ManagerSeriesConfig,
+  economic?: ManagerEconomicSourceRuntime): MaterializedSeries {
+  const cfg = validateSeriesConfig(config), current = deriveSeriesObservationsWithEconomicSource(doc, economic), ledger = new AbsenceLedger();
   ledger.merge(current.absences);
   const result = (publications: ManagerSeriesPublication[]): MaterializedSeries => ({ publications, absences: ledger.list(), current });
   const populations = seriesPopulations(doc);
@@ -70,6 +72,18 @@ export function materializeManagerSeries(doc: ManagerModelDocument, history: Ser
     return result([]);
   }
   if (history.observations.length > cfg.maximum_history_rows) { ledger.add("SERIES_HISTORY_BOUND", null); return result([]); }
+  // Fence in BOTH directions: installing/changing an owning mapping, and
+  // removing it/rolling back to legacy. Older in-memory markers lacking this
+  // field mean legacy v1, not a wildcard that can admit economic observations.
+  {
+    const expected = economic?.calculation_revision ?? MANAGER_SERIES_CALCULATION_REVISION;
+    const revisions = history.revisions.filter(r => (r.calculation_revision ?? MANAGER_SERIES_CALCULATION_REVISION) === expected);
+    const compatible = new Set(revisions.map(r => r.revision));
+    const observations = history.observations.filter(o => compatible.has(o.revision));
+    if (revisions.length !== history.revisions.length || observations.length !== history.observations.length)
+      ledger.add("ECONOMIC_SOURCE_HISTORY_MAPPING_CHANGED", null);
+    history = { revisions, observations };
+  }
 
   // The revision chain, oldest first, with the revision being published as its end.
   const chain = [...history.revisions.filter(r => r.revision !== doc.revision), current.marker]
@@ -159,7 +173,8 @@ export function materializeManagerSeries(doc: ManagerModelDocument, history: Ser
         const otherPopulation = rows.some(o => o.population_digest !== cur.population_digest && o.as_of_ms >= window.from_ms);
         if (otherPopulation) reasons.push("POPULATION_CHANGED_IN_WINDOW");
         const confidence = sameBasis.reduce<SeriesConfidence>((worst, o) => o.source_confidence !== null && rank[o.source_confidence] < rank[worst] ? o.source_confidence : worst, "VERIFIED");
-        const inputDigest = accessDigest({ calculation: MANAGER_SERIES_CALCULATION_REVISION, policy: MANAGER_SERIES_POLICY_REVISION,
+        const calculation = economic?.calculation_revision ?? MANAGER_SERIES_CALCULATION_REVISION;
+        const inputDigest = accessDigest({ calculation, policy: MANAGER_SERIES_POLICY_REVISION,
           window, key: observationKey(cur), inputs: sameBasis.map(o => o.input_digest).sort(), gaps });
         const publication: ManagerSeriesPublication = { binding: { subject_type: population.subject_type, subject_id: population.subject_id,
           tuple_population_digest: population.population_digest, stage_filter: seriesStagesFor(doc.environment), metric, partition: cur.partition,
@@ -170,7 +185,7 @@ export function materializeManagerSeries(doc: ManagerModelDocument, history: Ser
         source_confidence: confidence,
         provenance: { scope: { workspace_id: doc.workspace_id, environment: doc.environment, profile_id: doc.profile_id, catalogue_digest: doc.catalogue_digest },
           source_revision: doc.revision, source_set_digest: doc.source_set_digest, source_qualification: "SOURCE_VERIFIED", input_digest: inputDigest,
-          calculation_revision: MANAGER_SERIES_CALCULATION_REVISION, policy_revision: MANAGER_SERIES_POLICY_REVISION, source_as_of_ms: doc.as_of_ms } };
+          calculation_revision: calculation, policy_revision: MANAGER_SERIES_POLICY_REVISION, source_as_of_ms: doc.as_of_ms } };
         const parsed = managerSeriesPublication.safeParse(publication);
         if (!parsed.success) { ledger.add("SERIES_PUBLICATION_INVALID", metric); continue; }
         publications.push(parsed.data); totalPoints += ordered.length;

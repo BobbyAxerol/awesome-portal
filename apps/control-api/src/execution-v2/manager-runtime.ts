@@ -32,6 +32,7 @@ import { ManagerScoreRecalculation, type ManagerScoreRecalculationConfig,
 import { ManagerScoreRestatement, type ManagerScoreDependentComposition } from "./manager-score-restatement";
 import { captureManagerScoreOriginalInputs } from "./manager-score-original-custody";
 import type { ManagerSeriesRuntime } from "./manager-series-runtime";
+import type { ManagerEconomicSourceRuntime } from "./manager-economic-source-runtime";
 import { ManagerOriginalCustodyLifecycle,type ManagerOriginalCustodyCaps,
   type ManagerOriginalCustodyOmission,type ManagerOriginalIdleDelegate } from "./manager-original-custody-lifecycle";
 
@@ -53,6 +54,9 @@ export interface ManagerRuntimePartition {
   /** BE-P16 opt-in: bounded NAV / NET_PNL series writer derived from this partition's retained facts only. Independent of
    * Score/Composition/Regime (no policy, no task slots), rides the same tick, lease and transaction. */
   series?: { runtime: ManagerSeriesRuntime };
+  /** Explicit owning mapping only. No implicit account-id/census/default bridge.
+   * If series exists it must hold this identical instance. */
+  economicSource?: ManagerEconomicSourceRuntime;
   regime?: { runtime: ManagerRegimeRuntime; maximum_tasks_per_revision: number;
     /** Independent explicit ORIGINAL custody opt-in; no Score policy/default. */
     original_custody?:ManagerOriginalCustodyCaps;
@@ -131,6 +135,11 @@ export class ExecutionManagerRuntime implements OnModuleInit, BeforeApplicationS
           config:Object.freeze({...p.regime.historical.config})})}:{})})}:{})}));
     this.consumers = this.partitions.map(p=> {
       if (!publicationCommissioningCurrent(p.commissioning,p.scope,Date.now())) throw new Error("MANAGER_RUNTIME_COMMISSIONING_REQUIRED");
+      if(p.economicSource && (!p.economicSource.matchesScope(p.scope) || !p.economicSource.isCurrent()))
+        throw new Error("MANAGER_ECONOMIC_SOURCE_MAPPING_REQUIRED");
+      if(p.series && (p.economicSource ? !p.series.runtime.usesEconomicSource?.(p.economicSource) :
+        p.series.runtime.usesEconomicSource?.(undefined) === false))
+        throw new Error("MANAGER_ECONOMIC_SOURCE_SERIES_BINDING_INVALID");
       if(p.score && (!Number.isSafeInteger(p.score.maximum_tasks_per_revision)||p.score.maximum_tasks_per_revision<1||p.score.maximum_tasks_per_revision>128))
         throw new Error("MANAGER_SCORE_TASK_BOUND");
       if(p.composition&&(!Number.isSafeInteger(p.composition.maximum_tasks_per_revision)||p.composition.maximum_tasks_per_revision<1||
@@ -179,6 +188,9 @@ export class ExecutionManagerRuntime implements OnModuleInit, BeforeApplicationS
   restatementFor(scope:ManagerLeaseScope):ManagerScoreRestatement|undefined{return this.restatements.get(key(scope));}
   originalCustodyFor(scope:ManagerLeaseScope):ManagerOriginalCustodyLifecycle|undefined{return this.originalCustodies.get(key(scope));}
   regimeRestatementFor(scope:ManagerLeaseScope):ManagerRegimeRestatement|undefined{return this.regimeRestatements.get(key(scope));}
+  economicSourceFor(scope:ManagerLeaseScope):ManagerEconomicSourceRuntime|undefined {
+    return this.partitions.find(p=>key(p.scope)===key(scope))?.economicSource;
+  }
   accessTrust(base?: AccessTrustProvider): AccessTrustProvider | undefined {
     if (!this.installation) return base;
     if (base && base !== this.installedTrust) throw new Error("MANAGER_RUNTIME_TRUST_CONFLICT");
@@ -266,6 +278,7 @@ export class ExecutionManagerRuntime implements OnModuleInit, BeforeApplicationS
   private materializingSource(p: ManagerRuntimePartition,recalculation?:ManagerScoreRecalculation,
     restatement?:ManagerScoreRestatement,originalCustody?:ManagerOriginalCustodyLifecycle): ManagerProjectionSource {
     return {read:async input=>{
+      if(p.economicSource && !p.economicSource.isCurrent())throw new Error("MANAGER_ECONOMIC_SOURCE_MAPPING_CHANGED");
       const raw=await p.source.read(input);if(!raw)return null;
       if(Buffer.byteLength(JSON.stringify(raw.document))>p.bounds.maximum_document_bytes)throw new Error("MANAGER_PROJECTION_LIMIT");
       const delivery=structuredClone(raw);
@@ -444,6 +457,13 @@ export class ExecutionManagerRuntime implements OnModuleInit, BeforeApplicationS
         else originalCustody.attach(result,originals??[],compositionCaptures,regimeCaptures);
       }
       return result;
-    },recheck:i=>p.source.recheck(i),acknowledge:(r,s)=>p.source.acknowledge(r,s)};
+    },recheck:async i=>{
+      if(p.economicSource && !p.economicSource.isCurrent())throw new Error("MANAGER_ECONOMIC_SOURCE_MAPPING_CHANGED");
+      const current=await p.source.recheck(i);
+      return {assertCurrent:()=>{
+        current.assertCurrent?.();
+        if(p.economicSource && !p.economicSource.isCurrent())throw new Error("MANAGER_ECONOMIC_SOURCE_MAPPING_CHANGED");
+      }};
+    },acknowledge:(r,s)=>p.source.acknowledge(r,s)};
   }
 }

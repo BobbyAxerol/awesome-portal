@@ -26,12 +26,22 @@ export interface StreamRevocationHintDiagnostics {
   listeners: number; delivered: number; listener_failures: number; dropped_ids: number; refused_subscriptions: number;
 }
 
+/** Optional cross-process accelerator. It is installed only by the owning
+ * application lifecycle; it never authorizes a read or participates in the
+ * revoking transaction. Implementations must bound admission and settlement. */
+export interface StreamRevocationHintPublisher {
+  publish(kind: "SESSION_ENDED" | "USER_AUTHORITY_CHANGED", subjectId: string): void;
+}
+
 export class StreamRevocationHints {
   private readonly listeners = new Set<StreamRevocationListener>();
   private delivered = 0;
   private listenerFailures = 0;
   private droppedIds = 0;
   private refusedSubscriptions = 0;
+  private publisher: StreamRevocationHintPublisher | undefined;
+
+  setPublisher(publisher: StreamRevocationHintPublisher | undefined): void { this.publisher = publisher; }
 
   /** Returns the unsubscribe function. Over the bound the subscription is refused (counted) and the returned function is a no-op. */
   subscribe(listener: StreamRevocationListener): () => void {
@@ -43,12 +53,25 @@ export class StreamRevocationHints {
     return () => { this.listeners.delete(listener); };
   }
 
-  sessionEnded(sessionId: unknown): void { this.fan("sessionEnded", sessionId); }
-  userAuthorityChanged(userId: unknown): void { this.fan("userAuthorityChanged", userId); }
+  sessionEnded(sessionId: unknown): void { this.emit("SESSION_ENDED", "sessionEnded", sessionId); }
+  userAuthorityChanged(userId: unknown): void { this.emit("USER_AUTHORITY_CHANGED", "userAuthorityChanged", userId); }
+
+  /** A remote accelerator calls the same local fanout without re-publishing
+   * the notification. Duplicate and lost hints are harmless; current policy
+   * and the final-write fences remain the only authority. */
+  receive(kind: "SESSION_ENDED" | "USER_AUTHORITY_CHANGED", subjectId: string): void {
+    this.fan(kind === "SESSION_ENDED" ? "sessionEnded" : "userAuthorityChanged", subjectId);
+  }
 
   diagnostics(): StreamRevocationHintDiagnostics {
     return { listeners: this.listeners.size, delivered: this.delivered, listener_failures: this.listenerFailures,
       dropped_ids: this.droppedIds, refused_subscriptions: this.refusedSubscriptions };
+  }
+
+  private emit(kind: "SESSION_ENDED" | "USER_AUTHORITY_CHANGED", method: keyof StreamRevocationListener, id: unknown): void {
+    this.fan(method, id);
+    if (typeof id !== "string" || id.length === 0 || id.length > STREAM_HINT_MAX_ID_LENGTH) return;
+    try { this.publisher?.publish(kind, id); } catch { /* an accelerator can never fail a committed revoke */ }
   }
 
   private fan(method: keyof StreamRevocationListener, id: unknown): void {

@@ -17,14 +17,14 @@
       "get": {
         "operationId": "executionPaperWorkbenchV1",
         "parameters": [{ "$ref": "#/components/parameters/DeploymentId" }, { "$ref": "#/components/parameters/WorkspaceId" }],
-        "responses": { "200": { "description": "Current deployment-scoped Paper workbench", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/PaperReadResponse" } } } }, "400": { "$ref": "#/components/responses/Problem" }, "401": { "$ref": "#/components/responses/Problem" }, "404": { "$ref": "#/components/responses/Problem" } }
+        "responses": { "200": { "description": "Current deployment-scoped Paper workbench", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/PaperReadResponse" } } } }, "400": { "$ref": "#/components/responses/Problem" }, "401": { "$ref": "#/components/responses/Problem" }, "404": { "$ref": "#/components/responses/Problem" }, "413": { "description": "N33_HISTORY_ROW_TOO_LARGE or N33_HISTORY_RESPONSE_TOO_LARGE. No silent truncation; use /api/v1/execution/history/paper/{relationKey} with its advertised byte bound and continuation.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Problem" } } } } }
       }
     },
     "/api/v1/execution/screens/paper/{deployment_id}/vn-market": {
       "get": {
         "operationId": "executionPaperWorkbenchVnmV1",
         "parameters": [{ "$ref": "#/components/parameters/DeploymentId" }, { "$ref": "#/components/parameters/WorkspaceId" }],
-        "responses": { "200": { "description": "Current deployment-scoped VNM Paper workbench", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/PaperReadResponse" } } } }, "400": { "$ref": "#/components/responses/Problem" }, "401": { "$ref": "#/components/responses/Problem" }, "404": { "$ref": "#/components/responses/Problem" } }
+        "responses": { "200": { "description": "Current deployment-scoped VNM Paper workbench", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/PaperReadResponse" } } } }, "400": { "$ref": "#/components/responses/Problem" }, "401": { "$ref": "#/components/responses/Problem" }, "404": { "$ref": "#/components/responses/Problem" }, "413": { "description": "N33_HISTORY_ROW_TOO_LARGE or N33_HISTORY_RESPONSE_TOO_LARGE. No silent truncation; use /api/v1/execution/history/paper/{relationKey} with its advertised byte bound and continuation.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Problem" } } } } }
       }
     },
     "/api/v1/execution/screens/blotter": {

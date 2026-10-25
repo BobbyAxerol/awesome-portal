@@ -74,4 +74,16 @@ describe("FE-070 VN market calendar", () => {
     expect(rejectsPublishedSchema(FAMILY, "VenueCalendar", { ...calendar, is_open: { availability: "NOT_PUBLISHED", value: false, reason_code: "X_Y" } })).toBe(true);
     expect(rejectsPublishedSchema(FAMILY, "VenueCalendar", { ...calendar, market: "CRYPTO" })).toBe(true);
   });
+
+  it("rejects calendar-looking strings that are not actual dates/zones and never invents a holiday", () => {
+    for (const date of ["2026-02-29", "2026-02-30", "2026-04-31"]) {
+      expect(venueCalendarFromSource({ ...block, holidays: [{ date }] }, null).holidays.reason_code)
+        .toBe("SOURCE_HOLIDAY_LIST_INVALID");
+    }
+    expect(venueCalendarFromSource({ ...block, holidays: [{ date: "2028-02-29" }] }, null).holidays.value)
+      .toEqual([{ date: "2028-02-29", name: null }]);
+    expect(venueCalendarFromSource({ ...block, timezone: "Mars/Not_A_Zone" }, null).timezone.availability).toBe("NOT_PUBLISHED");
+    expect(venueCalendarFromSource({ ...block, sessions: [{ name: " ", open: "09:00", close: "10:00" }] }, null)
+      .windows.availability).toBe("NOT_PUBLISHED");
+  });
 });

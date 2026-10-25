@@ -5,13 +5,15 @@ import type {DeploymentResourceScope} from "../execution/product-read-source";
 import type {ProfileProjectionSnapshot,ProjectionRelation,ProjectionScalar} from "../execution/profile-projection.repository";
 import {ExecutionReadScopes,ExecutionReadScopeError,scopeReadPopulation,scopeAllowsField,type AuthorizedExecutionReadScope} from "../execution-v2/read-scope";
 import {projectionRowVisible} from "../execution-v2/read-projection";
-import {authorizeRetainedRelation,retainedFieldAllowed} from "../execution/retained-operation-page";
+import {authorizeRetainedRelation,retainedFieldAllowed,retainedDetailFieldAllowed} from "../execution/retained-operation-page";
+import {recordDetailValue} from "../execution-v2/record-detail";
 import {namedRetainedBusinessResourceId,joinRetainedFindingSessionRows,namedRetainedFindingNeedsSession} from "../execution/retained-business-aliases";
 import {managerTimestamp} from "../execution/manager-timestamp";
 import {LIVE_SOURCE_PANELS,liveSourcePanelGrain,liveSourceOperationsRead,liveSourceValues,parseLiveSourceInclude,
   type LiveSourceReadQuery,type LiveSourceOperationsRead,type LiveSourcePanel} from "../live/live-source.contract";
 import {deploymentIdentityFromRetained,identityFields} from "../execution/deployment-identity";
-import {scopedLiveStageFacts,type ScopedReconciliationInput} from "../execution/scoped-stage-facts";
+import {scopedLiveStageFacts,type ScopedReconciliationInput,type ScopedStageObservation} from "../execution/scoped-stage-facts";
+import {absentRelation} from "../execution/stage-facts";
 import {SCOPED_IDENTITY_BASIS} from "../execution/scoped-stage-wire.contract";
 
 // Only the ProductRead owner passes its EXISTING lps2 functions. These pure
@@ -26,18 +28,22 @@ type Spec={key:Exclude<keyof LiveSourceOperationsRead["data"],"broker_sync">;sou
 // family. In particular account/reconciliation fields are NOT Alpha authority.
 export const SCOPED_LIVE_SPECS:readonly Spec[]=Object.freeze([
   {key:"deployments",source:"manager.deployments",relation:"strategy_deployments",purpose:"alpha.read",
-    fields:["deployment_id","strategy_id","account_id","portfolio_id","mode","venue","currency","state","created_at","updated_at"]},
+    fields:["deployment_id","strategy_id","account_id","portfolio_id","mode","venue","currency","state","created_at","updated_at",
+      "runtime_state","runtime_state_since","runtime_state_changed_at"]},
   {key:"positions",source:"manager.positions",relation:"positions_v2",purpose:"alpha.read",
     fields:["position_id","strategy_id","account_id","mode","venue","instrument_id","side","signed_qty","quantity",
       "avg_px_open","avg_px_close","mark_price","notional","realized_pnl","unrealized_pnl","updated_at"]},
   {key:"sessions",source:"manager.sessions",relation:"execution_sessions",purpose:"alpha.read",
-    fields:["strategy_id","account_id","mode","venue","state","submitted_count","risk_rejected_count","broker_rejected_count","filled_count","updated_at"]},
+    fields:["strategy_id","account_id","mode","venue","state","submitted_count","risk_rejected_count","broker_rejected_count","filled_count","updated_at",
+      "execution_session_id","started_at","completed_at"]},
   {key:"orders",source:"manager.orders",relation:"orders",purpose:"alpha.read",
-    fields:["order_id","strategy_id","account_id","mode","venue","instrument_id","side","quantity","price","status","submitted_at","updated_at"]},
+    fields:["order_id","strategy_id","account_id","mode","venue","instrument_id","side","quantity","price","status","submitted_at","updated_at",
+      "client_order_id","order_type","position_side","time_in_force","reduce_only","post_only","trigger_price","filled_quantity","average_fill_price"]},
   {key:"fills",source:"manager.fills",relation:"fills",purpose:"alpha.read",
-    fields:["fill_id","strategy_id","account_id","mode","venue","instrument_id","side","price","quantity","realized_pnl","trade_time"]},
+    fields:["fill_id","strategy_id","account_id","mode","venue","instrument_id","side","price","quantity","realized_pnl","trade_time",
+      "client_order_id","commission","commission_currency","liquidity_side"]},
   {key:"accounts",source:"manager.accounts",relation:"accounts",purpose:"account.read",
-    fields:["account_id","strategy_id","mode","venue","base_currency","created_at","updated_at"]},
+    fields:["account_id","strategy_id","mode","venue","base_currency","created_at","updated_at","account_type"]},
   {key:"account_balances",source:"manager.accounts",relation:"account_balances",purpose:"account.read",
     fields:["account_id","currency","total","locked","free","updated_at"]},
   {key:"margin_balances",source:"manager.accounts",relation:"margin_balances",purpose:"account.read",
@@ -121,6 +127,7 @@ export async function scopedLiveSource(config:ControlApiConfig,scopes:ExecutionR
     throw new ExecutionReadScopeError("EXECUTION_READ_QUERY_INVALID",400);
   const include=parseLiveSourceInclude(query.include)!;
   let reconciliation:ScopedReconciliationInput={kind:"UNAVAILABLE",reason:"SOURCE_PANEL_NOT_CAPTURED"};
+  const stageObservation:{deployment?:ScopedStageObservation["deployment"];sessions?:ScopedStageObservation["sessions"]}={};
   const scopeProof=SCOPED_LIVE_SPECS.map(spec=>[spec.key,issued.get(spec.key)!.fingerprint]);
   const keys=querySigningKeys(config),key=keys[config.QUERY_CURSOR_ACTIVE_KEY_ID];
   if(!key)return fail();
@@ -172,6 +179,24 @@ export async function scopedLiveSource(config:ControlApiConfig,scopes:ExecutionR
       spec.relation==="strategy_deployments"||Object.hasOwn(f,"deployment_id")?f.deployment_id===deploymentId:
         target.tupleUnique&&f.strategy_id===target.strategyId&&f.account_id===target.accountId&&f.mode===environment&&f.venue===target.venue);
     if(rows.length>10000)return fail();
+    const detail=(fields:Readonly<Record<string,unknown>>,names:readonly string[])=>Object.fromEntries(names.flatMap(field=>{
+      if(!retainedDetailFieldAllowed(scope,field)||!Object.hasOwn(fields,field))return [];
+      const raw=fields[field],value=recordDetailValue(field,field==="execution_session_id"&&typeof raw==="number"&&Number.isSafeInteger(raw)?String(raw):raw);
+      return value===undefined?[]:[[field,value]];
+    }));
+    if(include.has("stage_facts")&&spec.key==="deployments"){
+      for(const row of rows)lineage(row);
+      stageObservation.deployment=detail(original,["runtime_state","runtime_state_since","runtime_state_changed_at"]);
+    }
+    if(include.has("stage_facts")&&spec.key==="sessions"){
+      const permitted=["execution_session_id","started_at"].every(field=>retainedDetailFieldAllowed(scope,field));
+      const observed:Record<string,unknown>[]=permitted?rows.map(row=>{lineage(row);return {...detail(row.fields,["execution_session_id","started_at","completed_at"]),
+        ...(retainedFieldAllowed(scope,"state")?{state:row.fields.state}:{})};}):[];
+      stageObservation.sessions=!permitted?absentRelation("SCOPED_SESSION_FIELDS_NOT_AUTHORIZED"):
+        observed.some(row=>typeof row.execution_session_id!=="string"||typeof row.started_at!=="string")?
+          absentRelation("SCOPED_SESSION_FIELDS_NOT_PUBLISHED"):
+          {present:true,state:"PARTIAL",reasonCode:"AUTHORIZED_POPULATION_ONLY",rows:observed,absentReason:"SOURCE_PANEL_NOT_CAPTURED"};
+    }
     if(spec.key==="reconciliation")reconciliation=!retainedFieldAllowed(scope,"status")?
       {kind:"UNAVAILABLE",reason:"FINDING_STATUS_NOT_AUTHORIZED"}:
       {kind:"ROWS",rows:rows.map(row=>({status:row.fields.status}))};
@@ -183,9 +208,14 @@ export async function scopedLiveSource(config:ControlApiConfig,scopes:ExecutionR
         // Permission precedes scalar validation; a hidden corrupt value cannot
         // turn this finite reader into a private-field existence oracle.
         const alias=publicField[field];
-        if(alias?!scopeAllowsField(scope,alias):!retainedFieldAllowed(scope,field))continue;
+        if(alias?!scopeAllowsField(scope,alias):!retainedFieldAllowed(scope,field)&&!retainedDetailFieldAllowed(scope,field))continue;
         if(!Object.hasOwn(row.fields,field))continue;
         const raw=row.fields[field];
+        if(retainedDetailFieldAllowed(scope,field)){
+          const value=detail(row.fields,[field])[field];
+          if(value!==undefined)values[field]=value;
+          continue;
+        }
         // The established Manager INTEGER decoder preserves safe integers as
         // numbers and large integers as strings. Never Number() a decimal or
         // accept an unsafe numeric identity/count. Exact strings stay intact.
@@ -225,7 +255,7 @@ export async function scopedLiveSource(config:ControlApiConfig,scopes:ExecutionR
     optional.identity={basis:SCOPED_IDENTITY_BASIS,...identityFields(deploymentIdentityFromRetained({
       scope:deploymentScope,deploymentId,deploymentFields:original,portfolios}))};
   }
-  if(include.has("stage_facts"))optional.stage_facts=scopedLiveStageFacts(reconciliation);
+  if(include.has("stage_facts"))optional.stage_facts=scopedLiveStageFacts(reconciliation,stageObservation);
   return liveSourceOperationsRead.parse({schema_version:"portal.execution.live-source-operations.v2",
     workspace_id:principal.workspaceId,environment,profile_id:profile,deployment_id:deploymentId,
     record_authority:"PORTAL_RETAINED_OBSERVATION",source_verdict:"NOT_ASSERTED",visibility:"SCOPED",coverage:"AUTHORIZED_ONLY",

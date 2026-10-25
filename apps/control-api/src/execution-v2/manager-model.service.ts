@@ -22,6 +22,7 @@ import type { ManagerScorePublication } from "./manager-score-publication.contra
 import type { ManagerCompositionPublication } from "./manager-composition-publication.contract";
 import type { ManagerRegimePublication } from "./manager-regime-publication.contract";
 import { NativeCurrentAccountScopes } from "./native-current-runtime";
+import type { ManagerEconomicSourceRuntime } from "./manager-economic-source-runtime";
 
 interface ManagerReadObligation {
   scope: AuthorizedExecutionReadScope;
@@ -63,7 +64,7 @@ export class ManagerModelService {
       throw new ExecutionReadScopeError("EXECUTION_READ_QUERY_INVALID", 400);
     if (q.workspace_id && q.workspace_id !== principal.workspaceId) throw new ExecutionReadScopeError("EXECUTION_READ_NOT_AVAILABLE", 404);
     return this.readEnvironment(principal, env, surface, q, id, (scope, doc, fences) =>
-      queryManagerModel(scope, doc, q, this.codec, surface, id, fences.score, fences.composition, fences.regime));
+      queryManagerModel(scope, doc, q, this.codec, surface, id, fences.score, fences.composition, fences.regime, fences.economic));
   }
 
   /** Actual installed composition, never a browser/profile flag. Optional
@@ -71,9 +72,8 @@ export class ManagerModelService {
    * implement this accessor. No native path falls back to ordinary delivery. */
   hasNativeCurrentRelations(): boolean { return this.nativeAccount?.scopes.hasNativeCurrentRelations() === true; }
 
-  /** Closed named public finite slices. This private composition grants no native
-   * authority to ALL, history, stream or other surfaces; their ordinary
-   * separately configured scopes and delivery paths remain unchanged. */
+  /** Closed named public finite slices. Ordinary per-surface requirements still
+   * select the exact resource and action; CURRENT never grants ALL/history/STREAM. */
   async readNativeAccount(principal: ReadScopePrincipal, raw: unknown, id: string, response: ServerResponse,
     beforeDispatch: () => void): Promise<void> {
     return this.readNativeEntity(principal, raw, "ACCOUNT", id, response, beforeDispatch);
@@ -84,7 +84,13 @@ export class ManagerModelService {
     return this.readNativeEntity(principal, raw, "ALPHA", id, response, beforeDispatch);
   }
 
-  private async readNativeEntity(principal: ReadScopePrincipal, raw: unknown, surface: "ACCOUNT" | "ALPHA", id: string,
+  async readNativeManager(principal: ReadScopePrincipal, raw: unknown,
+    surface: "FUND" | "FLEET" | "PORTFOLIO" | "DEPLOYMENT", id: string | undefined,
+    response: ServerResponse, beforeDispatch: () => void): Promise<void> {
+    return this.readNativeEntity(principal, raw, surface, id, response, beforeDispatch);
+  }
+
+  private async readNativeEntity(principal: ReadScopePrincipal, raw: unknown, surface: ManagerSurface, id: string | undefined,
     response: ServerResponse, beforeDispatch: () => void): Promise<void> {
     if (!this.hasNativeCurrentRelations()) throw new ExecutionReadScopeError("EXECUTION_READ_AUTHORITY_UNAVAILABLE", 503);
     if (raw && typeof raw === "object" && !Array.isArray(raw)) rejectManagerAsOf(raw as Record<string, unknown>);
@@ -92,11 +98,12 @@ export class ManagerModelService {
     if (!parsed.success) throw new ExecutionReadScopeError("EXECUTION_READ_NOT_AVAILABLE", 400);
     const q = parsed.data;
     if (q.environment !== "paper") throw new ExecutionReadScopeError("EXECUTION_READ_CURRENT_ONLY", 503);
-    if (!id || id.length > 256 || q.workspace_id && q.workspace_id !== principal.workspaceId)
+    if ((["ACCOUNT", "ALPHA", "PORTFOLIO", "DEPLOYMENT"].includes(surface) && !id) ||
+      id !== undefined && (!id || id.length > 256) || q.workspace_id && q.workspace_id !== principal.workspaceId)
       throw new ExecutionReadScopeError("EXECUTION_READ_NOT_AVAILABLE", 404);
     if (q.stage_filter.some(stage => stage !== "PAPER")) throw new ExecutionReadScopeError("EXECUTION_READ_QUERY_INVALID", 400);
     await this.readEnvironment(principal, "paper", surface, q, id, (scope, doc, fences) =>
-      queryManagerModel(scope, doc, q, this.codec, surface, id, fences.score, fences.composition, fences.regime),
+      queryManagerModel(scope, doc, q, this.codec, surface, id, fences.score, fences.composition, fences.regime, fences.economic),
       undefined, { response, beforeDispatch }, this.nativeAccount!.scopes);
   }
 
@@ -116,7 +123,7 @@ export class ManagerModelService {
       if (!this.profileFor(environment)) { reads.push({ environment, unavailable: "NOT_CONFIGURED" }); continue; }
       try {
         const collected = await this.readEnvironment(principal, environment, "FLEET", q, undefined, (scope, doc, fences) =>
-          collectManagerRows(scope, doc, managerAllEnvironmentQuery(q, environment), "FLEET", undefined, fences.score, fences.composition, fences.regime),
+          collectManagerRows(scope, doc, managerAllEnvironmentQuery(q, environment), "FLEET", undefined, fences.score, fences.composition, fences.regime, fences.economic),
         obligation => obligations.push(obligation));
         reads.push({ environment, collected });
       } catch (error) { reads.push({ environment, unavailable: managerAllReasonOf(error) }); }
@@ -136,7 +143,8 @@ export class ManagerModelService {
    * that the head, the recalculation and every accepted publication are still current when the answer is returned. */
   private async readEnvironment<T>(principal: ReadScopePrincipal, env: ManagerEnvironmentName, surface: ManagerSurface, q: { workspace_id?: string },
     id: string | undefined, compute: (scope: AuthorizedExecutionReadScope, doc: ManagerModelDocument,
-      fences: { score?: ManagerScoreReadFence; composition?: ManagerCompositionReadFence; regime?: ManagerRegimeReadFence }) => T,
+      fences: { score?: ManagerScoreReadFence; composition?: ManagerCompositionReadFence; regime?: ManagerRegimeReadFence;
+        economic?: ManagerEconomicSourceRuntime }) => T,
     retain?: (obligation: ManagerReadObligation) => void, native?: NativeManagerDelivery,
     scopes: ExecutionReadScopes = this.scopes): Promise<T> {
     const profile = this.profileFor(env);
@@ -164,12 +172,13 @@ export class ManagerModelService {
       if (surface === "DEPLOYMENT" && !scopeReadPopulation(scope).allowedTuples.some(t => t.deployment_id === id))
         throw new ExecutionReadScopeError("EXECUTION_READ_NOT_AVAILABLE", 404);
       const acceptedScores: ManagerScorePublication[]=[];
+      const economicSource = this.runtime?.economicSourceFor({workspace_id:principal.workspaceId,environment:env,profile_id:profile});
       const acceptedRegimes: ManagerRegimePublication[] = [];
       const regimeCurrent = () => acceptedRegimes.every(value => this.runtime?.regimeFence.accepts(value));
       const acceptedCompositions:Array<{publication:ManagerCompositionPublication;rawScores:ManagerScorePublication[];members:readonly Pick<ManagerMember,"tuple"|"stage">[]|undefined}>=[];
       const compositionCurrent=()=>acceptedCompositions.every(item=>this.runtime?.compositionFence.accepts(item.publication,item.rawScores,item.members));
       const validatePublications = () => {
-        if (acceptedScores.some(score => !this.runtime?.scoreFence.accepts(score)) || !compositionCurrent() || !regimeCurrent())
+        if (economicSource && !economicSource.isCurrent() || acceptedScores.some(score => !this.runtime?.scoreFence.accepts(score)) || !compositionCurrent() || !regimeCurrent())
           throw new ExecutionReadScopeError("EXECUTION_READ_ACCESS_CHANGED", 409);
       };
       let validateSnapshot: (() => Promise<void>) | undefined;
@@ -182,6 +191,7 @@ export class ManagerModelService {
         const derived=recalculation?await recalculation.snapshot(original):null;
         const doc=derived?.document??original;
         const response = compute(scope, doc, {
+          economic: economicSource,
           score: this.runtime ? {accepts:score=>{
             if(!this.runtime!.scoreFence.accepts(score))return false;
             acceptedScores.push(score);return true;

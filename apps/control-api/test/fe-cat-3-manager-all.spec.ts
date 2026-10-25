@@ -370,7 +370,7 @@ describe("FE-CAT-3 service fan-out (mocked repository, no database)", () => {
 
   it("retains the earlier recalculation dependency until the whole read is ready", async () => {
     let changed = false;
-    const runtime = { recalculationFor: () => ({
+    const runtime = { economicSourceFor: () => undefined, recalculationFor: () => ({
       snapshot: async (document: ManagerModelDocument) => ({ document, key: "TEST_ONLY:calculation" }),
       unchanged: async (document: ManagerModelDocument) => document.environment !== "paper" || !changed,
     }) } as unknown as ExecutionManagerRuntime;
@@ -387,7 +387,7 @@ describe("FE-CAT-3 service fan-out (mocked repository, no database)", () => {
   it("rechecks an earlier numeric Score after later awaits and the final Core confirmation", async () => {
     let active = true;
     const accepts = vi.fn(() => active);
-    const runtime = { scoreFence: { accepts }, recalculationFor: () => undefined } as unknown as ExecutionManagerRuntime;
+    const runtime = { scoreFence: { accepts }, recalculationFor: () => undefined, economicSourceFor: () => undefined } as unknown as ExecutionManagerRuntime;
     const s = service(runtime);
     s.docSpy.mockImplementation((async (_w: string, environment: ManagerEnvironmentName) => {
       const document = s.doc(environment) as ManagerModelDocument;

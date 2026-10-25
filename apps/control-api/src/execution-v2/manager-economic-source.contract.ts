@@ -7,8 +7,11 @@
  * proposal; none is a producer column, a wire name or a claim about what PM / TS / Edge publish. The producer mapping is owed by
  * PM/Edge (see the BE-P21 receipt) and nothing here may be read as accepted, qualified or commissioned.
  *
- * NOT WIRED: no runtime, service, route, OpenAPI or generated file imports this module. It is exercised only by
- * `test/manager-economic-source-reducer.spec.ts`, on TEST_ONLY synthetic rows.
+ * OPTIONAL OWNING ADAPTER: manager-economic-source-runtime.ts binds these
+ * shapes to actual dataset/series callers only when an accepted server-side
+ * producer mapping is explicitly installed. No such mapping is inferred from
+ * existing account IDs or fixtures; WIRE_MAPPING_OPEN remains a source gate.
+ * Pure reducer tests and the integration tests use TEST_ONLY synthetic rows.
  *
  * The rule set it carries is PM's returned rule (PM_OWNER_ACK_AND_NET_PNL_RETURN_2026-10-21, C5), and nothing else:
  *   1. equal rows with the same TRUSTED source id count once;      2. changed content under that identity is a conflict;

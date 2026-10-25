@@ -23,6 +23,7 @@ import type { AuthSession, PortalUser } from "../src/domain";
 import type { ExecutionProductReadSource } from "../src/execution/product-read-source";
 import { ExecutionProfileProjectionRepository } from "../src/execution/profile-projection.repository";
 import { PaperReadService } from "../src/paper-read/paper-read.service";
+import { paperHistoryTestScopes } from "./paper-history-authority.fixture";
 import { readPaperWorkbenchProfile } from "../../portal/frontend/src/execution/v2/readers/paperRead";
 import { buildWorkbench } from "../../portal/frontend/src/execution/v2/screens/workbench/model";
 import { buildSeries, runsOf } from "../../portal/frontend/src/execution/v2/charts/model";
@@ -124,6 +125,7 @@ function producer(rows: HistoryRow[], sourceRows = rows.length,
   const source = syntheticSource(rows.at(-1)!.fields);
   let historyReads = 0;
   const projection = {
+    async snapshotMetadata() { return null; },
     async timeSeriesHistoryDownsampled(workspace: string, environment: string, profile: string,
       relation: string, query: Record<string, unknown>) {
       historyReads += 1;
@@ -137,11 +139,19 @@ function producer(rows: HistoryRow[], sourceRows = rows.length,
       return { rows, sourceRows, downsample };
     },
   };
-  const service = new PaperReadService(source as unknown as ExecutionProductReadSource, loadConfig({
+  const config = loadConfig({
     DATABASE_URL: "postgres://unused:unused@localhost/unused", PORTAL_ENV: "local", AUTH_MODE: "dev",
     EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID: principal.workspaceId,
     EXECUTION_EDGE_PAPER_PROFILE_ID: "PAPER_BINANCE_USDM",
-  }), undefined, undefined, projection as never);
+  });
+  const service = new PaperReadService(source as unknown as ExecutionProductReadSource, config,
+    undefined, undefined, projection as never, {
+    // This deliberately un-downsampled adapter measures 32k rows (~17MiB),
+    // NOT the bounded real SQL response or the default candidate byte policy.
+    // Keep that opt-in measurement distinct from default-policy refusal tests.
+    maximum_history_bytes: 32 * 1024 * 1024, maximum_row_bytes: 256 * 1024,
+    maximum_response_bytes: 64 * 1024 * 1024,
+  }, paperHistoryTestScopes(config));
   return { service, source, historyReads: () => historyReads };
 }
 

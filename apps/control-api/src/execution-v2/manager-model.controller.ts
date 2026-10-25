@@ -17,11 +17,12 @@ export class ManagerModelController {
   constructor(@Inject(ManagerModelService) private readonly models: ManagerModelService,
     @Inject(WorkspacesRepository) private readonly workspaces: WorkspacesRepository) {}
   @Get("/fund-overview") @Header("Cache-Control", "private, no-store")
-  fund(@Req() r: ManagerRequest, @Query() q: unknown) { return this.read(r, q, "FUND"); }
+  fund(@Req() r: ManagerRequest, @Query() q: unknown, @Res({ passthrough: true }) reply?: FastifyReply) { return this.read(r, q, "FUND", undefined, reply); }
   @Get("/fleet") @Header("Cache-Control", "private, no-store")
-  fleet(@Req() r: ManagerRequest, @Query() q: unknown) { return this.read(r, q, "FLEET"); }
+  fleet(@Req() r: ManagerRequest, @Query() q: unknown, @Res({ passthrough: true }) reply?: FastifyReply) { return this.read(r, q, "FLEET", undefined, reply); }
   @Get("/portfolios/:id/overview") @Header("Cache-Control", "private, no-store")
-  portfolio(@Req() r: ManagerRequest, @Query() q: unknown, @Param("id") id: string) { return this.read(r, q, "PORTFOLIO", id); }
+  portfolio(@Req() r: ManagerRequest, @Query() q: unknown, @Param("id") id: string,
+    @Res({ passthrough: true }) reply?: FastifyReply) { return this.read(r, q, "PORTFOLIO", id, reply); }
   @Get("/alphas/:id/overview") @Header("Cache-Control", "private, no-store")
   alpha(@Req() r: ManagerRequest, @Query() q: unknown, @Param("id") id: string,
     @Res({ passthrough: true }) reply?: FastifyReply) { return this.read(r, q, "ALPHA", id, reply); }
@@ -29,7 +30,8 @@ export class ManagerModelController {
   account(@Req() r: ManagerRequest, @Query() q: unknown, @Param("id") id: string,
     @Res({ passthrough: true }) reply?: FastifyReply) { return this.read(r, q, "ACCOUNT", id, reply); }
   @Get("/deployments/:id/overview") @Header("Cache-Control", "private, no-store")
-  deployment(@Req() r: ManagerRequest, @Query() q: unknown, @Param("id") id: string) { return this.read(r, q, "DEPLOYMENT", id); }
+  deployment(@Req() r: ManagerRequest, @Query() q: unknown, @Param("id") id: string,
+    @Res({ passthrough: true }) reply?: FastifyReply) { return this.read(r, q, "DEPLOYMENT", id, reply); }
 
   private async read(r: ManagerRequest, raw: unknown, surface: ManagerSurface, id?: string, reply?: FastifyReply) {
     let nativeOwnsResponse = false;
@@ -54,14 +56,13 @@ export class ManagerModelController {
         throw new ExecutionReadScopeError("EXECUTION_READ_NOT_AVAILABLE", 404);
       const principal = { user: r.portalUser, session: r.portalSession, workspaceId: workspace,
         viewerWorkspaceId: r.portalViewerWorkspaceId ?? r.portalWorkspaceId };
-      if ((surface === "ACCOUNT" || surface === "ALPHA") && (query.environment === undefined || query.environment === "paper") && this.models.hasNativeCurrentRelations?.()) {
-        // Only these exact finite Paper routes select the private native
-        // composition. Its failures never fall back to a detached DTO; other
-        // surfaces keep their independent ordinary scopes unchanged.
-        if (!id || !reply)
+      if ((query.environment === undefined || query.environment === "paper") && this.models.hasNativeCurrentRelations?.()) {
+        // Every named finite Paper dataset uses its own ordinary requirement
+        // inside the native final-authority / physical-delivery boundary. This
+        // does not enable ALL, another environment, STREAM or a mutation.
+        if (!reply || ["ACCOUNT", "ALPHA", "PORTFOLIO", "DEPLOYMENT"].includes(surface) && !id)
           throw new ExecutionReadScopeError("EXECUTION_READ_AUTHORITY_UNAVAILABLE", 503);
-        const readNative = surface === "ACCOUNT" ? this.models.readNativeAccount.bind(this.models) : this.models.readNativeAlpha.bind(this.models);
-        await readNative(principal, query, id, reply.raw, () => {
+        const beforeDispatch = () => {
           if (nativeOwnsResponse) return;
           if (reply.raw.headersSent || reply.raw.writableEnded || reply.raw.destroyed)
             throw new ExecutionReadScopeError("EXECUTION_READ_AUTHORITY_UNAVAILABLE", 503);
@@ -69,7 +70,10 @@ export class ManagerModelController {
           // final Core COMMIT. No bytes or Fastify writer precede that boundary.
           reply.hijack();
           nativeOwnsResponse = true;
-        });
+        };
+        if (surface === "ACCOUNT") await this.models.readNativeAccount(principal, query, id!, reply.raw, beforeDispatch);
+        else if (surface === "ALPHA") await this.models.readNativeAlpha(principal, query, id!, reply.raw, beforeDispatch);
+        else await this.models.readNativeManager(principal, query, surface, id, reply.raw, beforeDispatch);
         return;
       }
       return await this.models.read(principal, surface, query, id);

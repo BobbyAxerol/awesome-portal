@@ -56,13 +56,16 @@ describe("native named Account/Alpha route selection and physical writer ownersh
     const nativeAlpha = vi.fn(async (_p: unknown, _q: unknown, _id: string, _raw: unknown, beforeDispatch: () => void) => {
       beforeDispatch(); beforeDispatch();
     });
-    const models = { hasNativeCurrentRelations: () => installed, read: ordinary, readNativeAccount: native, readNativeAlpha: nativeAlpha };
+    const nativeManager = vi.fn(async (_p: unknown, _q: unknown, _surface: string, _id: string | undefined,
+      _raw: unknown, beforeDispatch: () => void) => { beforeDispatch(); beforeDispatch(); });
+    const models = { hasNativeCurrentRelations: () => installed, read: ordinary, readNativeAccount: native,
+      readNativeAlpha: nativeAlpha, readNativeManager: nativeManager };
     const controller = new ManagerModelController(models as unknown as ManagerModelService,
       { canReadExecution: async () => true } as unknown as WorkspacesRepository);
     const req = { portalUser: { userId: "TEST_ONLY:user" }, portalSession: {}, portalWorkspaceId: "TEST_ONLY:workspace" } as any;
     const raw = { headersSent: false, writableEnded: false, destroyed: false, destroy: vi.fn() };
     const reply = { raw, sent: false, hijack: vi.fn(() => { raw.headersSent = true; }) } as unknown as FastifyReply;
-    return { controller, ordinary, native, nativeAlpha, req, raw, reply };
+    return { controller, ordinary, native, nativeAlpha, nativeManager, req, raw, reply };
   }
   it.each(["account", "alpha"] as const)("selects ONLY named Paper %s, hijacks once across repeated physical permit checks, and never returns a detached body", async surface => {
     const f = fixture();
@@ -71,10 +74,25 @@ describe("native named Account/Alpha route selection and physical writer ownersh
     expect(surface === "account" ? f.nativeAlpha : f.native).not.toHaveBeenCalled();
     expect(f.reply.hijack).toHaveBeenCalledOnce(); expect(f.ordinary).not.toHaveBeenCalled();
   });
-  it("keeps ordinary Fleet ALL, Portfolio, non-Paper and uninstalled named routes unchanged", async () => {
+  it.each(["fund", "fleet", "portfolio", "deployment"] as const)("selects finite native Paper %s with exact surface and entity", async surface => {
+    const f = fixture();
+    const id = surface === "portfolio" || surface === "deployment" ? "TEST_ONLY:entity" : undefined;
+    const value = id ? await f.controller[surface as "portfolio"](f.req, { environment: "paper" }, id, f.reply)
+      : await f.controller[surface as "fund"](f.req, {}, f.reply);
+    expect(value).toBeUndefined();
+    expect(f.nativeManager).toHaveBeenCalledWith(expect.anything(), expect.anything(), surface.toUpperCase(), id, f.raw, expect.any(Function));
+    expect(f.reply.hijack).toHaveBeenCalledOnce(); expect(f.ordinary).not.toHaveBeenCalled();
+  });
+  it("never falls back after a finite native Fleet refusal", async () => {
+    const f = fixture();
+    f.nativeManager.mockRejectedValueOnce(new ExecutionReadScopeError("EXECUTION_READ_ACCESS_CHANGED", 409));
+    await expect(f.controller.fleet(f.req, { environment: "paper" }, f.reply)).rejects.toMatchObject({ status: 409 });
+    expect(f.ordinary).not.toHaveBeenCalled(); expect(f.reply.hijack).not.toHaveBeenCalled();
+  });
+  it("keeps ordinary Fleet ALL, non-Paper and uninstalled named routes unchanged", async () => {
     const f = fixture();
     for (const response of [await f.controller.fleet(f.req, { environment: "ALL" }),
-      await f.controller.portfolio(f.req, { environment: "paper" }, "TEST_ONLY:portfolio"),
+      await f.controller.portfolio(f.req, { environment: "sandbox" }, "TEST_ONLY:portfolio"),
       await f.controller.account(f.req, { environment: "sandbox" }, "TEST_ONLY:account", f.reply),
       await f.controller.alpha(f.req, { environment: "sandbox" }, "TEST_ONLY:alpha", f.reply),
       await f.controller.alpha(f.req, { environment: "live" }, "TEST_ONLY:alpha", f.reply)])
@@ -189,7 +207,7 @@ describe.skipIf(!database).sequential("native named Paper Account/Alpha routes: 
   });
   afterAll(async () => { if (pool) await pool.end(); if (ctx) await teardownApp(ctx); });
 
-  async function fixture(surface: "ACCOUNT" | "ALPHA" = "ACCOUNT", options: { includeAlphaAction?: boolean; missingAlphaTarget?: boolean } = {}) {
+  async function fixture(surface: "ACCOUNT" | "ALPHA" | "FUND" | "FLEET" | "PORTFOLIO" | "DEPLOYMENT" = "ACCOUNT", options: { includeAlphaAction?: boolean; missingAlphaTarget?: boolean } = {}) {
     await pool.query(await readFile(join(__dirname, "../src/execution-v2/current-human-candidate.sql"), "utf8"));
     const id = randomUUID(), now = Date.now(), workspace = next("workspace"), account = next("account"), facts = rootWireFacts(now);
     await pool.query("INSERT INTO workspaces(workspace_id,name,owner_user_id) VALUES($1,'TEST_ONLY native Account',$2)", [workspace, owner]);
@@ -259,7 +277,10 @@ describe.skipIf(!database).sequential("native named Paper Account/Alpha routes: 
       registration: { correspondence_id: next("correspondence"), expected_version: "9007199254741001", manifest_sha256: "a".repeat(64) },
       original: { grant_id: grant.grant_id, accepted_fact_digest: accessDigest(fact) },
       correspondence: { registry_revision: accessDigest("TEST_ONLY-registry"), payload_sha256: "b".repeat(64), approval_ref: "TEST_ONLY-independent-review" },
-      allowed_actions: ["access.read", "account.read", ...(surface === "ALPHA" && options.includeAlphaAction !== false ? ["alpha.read" as const] : [])] }],
+      allowed_actions: ["access.read", "account.read",
+        ...(surface === "FUND" ? ["business.read_all" as const] : []),
+        ...(surface === "PORTFOLIO" ? ["portfolio.read" as const] : []),
+        ...(["ALPHA", "FLEET", "DEPLOYMENT"].includes(surface) && options.includeAlphaAction !== false ? ["alpha.read" as const] : [])] }],
       maximum_retained: 128, maximum_unresolved: 8, maximum_recoveries: 8, maximum_principals: 8,
       attempt_ms: 30000, terminal: { issuer: "TEST_ONLY-core-terminal", audience: "TEST_ONLY-pm-terminal", key_id: "TEST_ONLY-terminal", private_key: terminal.privateKey, ttl_seconds: 30 } };
     const provider = new NativeCurrentRelationsProvider(pool, endpoint.client,
@@ -288,8 +309,13 @@ describe.skipIf(!database).sequential("native named Paper Account/Alpha routes: 
     const app = await NestFactory.create<NestFastifyApplication>(TestOnlyRouteModule, new FastifyAdapter(), { logger: false, abortOnError: false });
     applications.push(app); app.useGlobalFilters(new HttpErrorFilter()); await app.register(cookie as never); await app.listen(0, "127.0.0.1");
     const address = app.getHttpServer().address(); if (!address || typeof address === "string") throw Error("TEST_ONLY_ROUTE_ADDRESS");
-    const alpha = tuple.alpha_id, entity = surface === "ACCOUNT" ? account : alpha;
-    const path = `/api/v1/execution/manager/${surface === "ACCOUNT" ? "accounts" : "alphas"}/${encodeURIComponent(entity)}/overview?environment=paper&workspace_id=${encodeURIComponent(workspace)}`;
+    const alpha = tuple.alpha_id;
+    const route = surface === "ACCOUNT" ? `accounts/${encodeURIComponent(account)}/overview` :
+      surface === "ALPHA" ? `alphas/${encodeURIComponent(alpha)}/overview` :
+      surface === "PORTFOLIO" ? `portfolios/${encodeURIComponent(tuple.portfolio_id)}/overview` :
+      surface === "DEPLOYMENT" ? `deployments/${encodeURIComponent(tuple.deployment_id)}/overview` :
+      surface === "FUND" ? "fund-overview" : "fleet";
+    const path = `/api/v1/execution/manager/${route}?environment=paper&workspace_id=${encodeURIComponent(workspace)}`;
     return { provider, endpoint, model, nativeScopes, ordinaryScopes, terminals, workspace, account, alpha, path,
       onEnter(hook: () => Promise<void>) { onEnter = hook; },
       loseResolveResponse(value: boolean) { dropResolve = value; },
@@ -301,7 +327,7 @@ describe.skipIf(!database).sequential("native named Paper Account/Alpha routes: 
         }); req.setTimeout(10000, () => req.destroy()); req.once("error", () => resolve({ status: 0, body: "", complete: false })); req.end();
       }) };
   }
-  it.each(["ACCOUNT", "ALPHA"] as const)("serves the actual named %s route once, through native ENTER/SENDING/physical finish/terminal ACK, never ordinary delivery", async surface => {
+  it.each(["ACCOUNT", "ALPHA", "FUND", "FLEET", "PORTFOLIO", "DEPLOYMENT"] as const)("serves the actual named %s route once, through native ENTER/SENDING/physical finish/terminal ACK, never ordinary delivery", async surface => {
     const f = await fixture(surface), fallback = vi.spyOn(f.ordinaryScopes, "deliver"), detached = vi.spyOn(f.model, "read");
     const result = await f.get();
     expect(result.status, JSON.stringify({ response: result, source_actions: f.endpoint.requests.map(call => call.action) })).toBe(200);
@@ -316,7 +342,8 @@ describe.skipIf(!database).sequential("native named Paper Account/Alpha routes: 
     const sent = (await f.rows()).find(r => r.phase === "SERVED"); expect(sent.terminal_fact.observation.outcome).toBe("FINISHED");
     expect(f.terminals).toHaveLength(1); expect(f.terminals[0]).toMatchObject({ phase: "SERVED", evidence_kind: "FINAL_HTTP_SEND_COMPLETED" });
     expect(f.endpoint.requests.filter(call => call.action === "enter")).toHaveLength(1);
-    expect(f.endpoint.requests.find(call => call.action === "enter")!.base.purpose.action).toBe(surface === "ACCOUNT" ? "account.read" : "alpha.read");
+    expect(f.endpoint.requests.find(call => call.action === "enter")!.base.purpose.action).toBe(
+      surface === "ACCOUNT" ? "account.read" : surface === "FUND" ? "business.read_all" : surface === "PORTFOLIO" ? "portfolio.read" : "alpha.read");
     expect(fallback).not.toHaveBeenCalled(); expect(detached).not.toHaveBeenCalled();
   });
   it.each(["ACCOUNT", "ALPHA"] as const)("a real %s projection-head change during source ENTER aborts unsent response and authenticates only ABORTED", async surface => {

@@ -29,6 +29,10 @@ import { ScopedReplayCursorCodec } from "./execution-v2/scoped-replay-cursor";
 import type { ScopedReplayLimits } from "./execution-v2/realtime";
 import { ExecutionReadScopes } from "./execution-v2/read-scope";
 import { AuthService } from "./auth/auth.service";
+import { StreamRevocationRuntime } from "./auth/stream-revocation-runtime";
+import { BINDING_FINANCIAL_BATCH_SOURCE, BINDING_FINANCIAL_REFRESH_SOURCE, createRetainedBindingFinancialBatchSource,
+  type BindingFinancialBatchSource, type BindingFinancialRefreshSource } from "./manager-lists/binding-financial-batch";
+import { OPERATIONAL_QUEUE_HEALTH_SOURCE, type OperationalQueueHealthSource } from "./operations/operational-health-source";
 import { Argon2CredentialService } from "./auth/argon";
 import { AdminService } from "./admin/admin.service";
 import { AdminGuard } from "./admin/rbac.guard";
@@ -263,6 +267,12 @@ import { unqualifiedCommandTrust } from "./execution-v2/command-trust";
 /** Internal composition seam, never populated from request headers/body or
  * runtime environment flags. TEST_ONLY authority cannot enter a non-test app. */
 export interface ControlApiDependencies {
+  /** Owning server composition only; never sourced from a browser selector. */
+  bindingFinancialBatch?: BindingFinancialBatchSource;
+  bindingFinancialRefresh?: BindingFinancialRefreshSource;
+  operationalQueueHealth?: OperationalQueueHealthSource;
+  /** Pure/test constructors default off; actual applications default on. */
+  streamRevocationHints?: boolean;
   /** Explicit owner-only/hash-pinned private Research listener. Absent keeps
    * the deployed default unchanged; never populated from a public request. */
   currentViewRuntime?: PreparedCurrentViewRuntime;
@@ -443,6 +453,12 @@ export class AppModule implements OnApplicationShutdown {
         ResearchAlphaVersionPublicationController,
       ],
       providers: [
+        { provide: BINDING_FINANCIAL_BATCH_SOURCE, useValue: dependencies.bindingFinancialBatch ?? createRetainedBindingFinancialBatchSource() },
+        ...(dependencies.bindingFinancialRefresh ? [{ provide: BINDING_FINANCIAL_REFRESH_SOURCE, useValue: dependencies.bindingFinancialRefresh }] : []),
+        ...(dependencies.operationalQueueHealth ? [{ provide: OPERATIONAL_QUEUE_HEALTH_SOURCE, useValue: dependencies.operationalQueueHealth }] : []),
+        { provide: StreamRevocationRuntime, useFactory: (db: Pool, auth: AuthService) =>
+          new StreamRevocationRuntime(db, auth, dependencies.streamRevocationHints ?? config.NODE_ENV !== "test"),
+          inject: [CONTROL_API_POOL, AuthService] },
         { provide: ExecutionManagerRuntime, useValue: managerRuntime },
         ExecutionLocalReadAuthority,
         { provide: CONTROL_API_CONFIG, useValue: config },

@@ -14,6 +14,7 @@ import type { AuthSession, PortalUser } from "../src/domain";
 import type { ExecutionProductReadSource } from "../src/execution/product-read-source";
 import { ExecutionProfileProjectionRepository } from "../src/execution/profile-projection.repository";
 import { PaperReadService } from "../src/paper-read/paper-read.service";
+import { paperHistoryTestScopes } from "./paper-history-authority.fixture";
 
 export const AS_OF = "2026-10-21T00:00:00.000Z";
 export const PROFILE = "PAPER_BINANCE_USDM";
@@ -91,9 +92,11 @@ export function emulatedPool(all: MirrorRow[]) {
     return all.filter(r => Date.parse(r.ts) >= from && String(r.fields[ef]) === ev
       && NUMERIC.test(String(r.fields[vf] ?? "")));
   };
-  return {
-    log,
-    async query(text: string, values: unknown[]) {
+  const query = async (statement: string | { text: string; values: unknown[] }, bound: unknown[] = []) => {
+      const text = typeof statement === "string" ? statement : statement.text;
+      const values = typeof statement === "string" ? bound : statement.values;
+      // Synthetic transaction/metadata boundaries, not a PostgreSQL proof.
+      if (/^(?:BEGIN|COMMIT|ROLLBACK|SET )/u.test(text) || text.includes("FROM execution_profile_projection_snapshots")) return { rows: [] };
       const rows = eligible(values);
       if (/SELECT count\(\*\)/.test(text)) {
         const sf = String(values[8]);
@@ -105,6 +108,7 @@ export function emulatedPool(all: MirrorRow[]) {
       }
       if (!/row_number\(\)/.test(text)) {
         const out = rows.slice().sort(cmpRow);
+        if (text.includes("AS total_bytes")) return byteCensus(out);
         log.push({ kind: "exact", text, values, returned: out.length });
         return { rows: out.map(r => ({ row_id: r.rowId, ts: r.ts, fields: r.fields })) };
       }
@@ -122,10 +126,19 @@ export function emulatedPool(all: MirrorRow[]) {
         picked.add(g.slice().sort((a, b) => -cmpRow(a, b))[0]);                              // rn_last = 1
       }
       const out = [...picked].sort(cmpRow);
+      if (text.includes("AS total_bytes")) return byteCensus(out);
       log.push({ kind: "bucket", text, values, returned: out.length });
       return { rows: out.map(r => ({ row_id: r.rowId, ts: r.ts, fields: r.fields })) };
-    },
   };
+  return { log, query, async connect() { return { query, release() { /* synthetic transaction only */ } }; } };
+}
+
+function byteCensus(rows: MirrorRow[]) {
+  // JSON wire estimate for this synthetic adapter only. Actual jsonb::text
+  // census/refusal is covered separately by paper-history-sparse.pg.spec.ts.
+  const sizes = rows.map(row => Buffer.byteLength(JSON.stringify(row.fields), "utf8"));
+  return { rows: [{ total_bytes: String(sizes.reduce((sum, value) => sum + value, 0)),
+    largest_row_bytes: String(sizes.reduce((largest, value) => Math.max(largest, value), 0)) }] };
 }
 
 export function tagged(value: Row[string]) {
@@ -179,7 +192,7 @@ export function realProducer(rows: MirrorRow[]) {
   const pool = emulatedPool(rows);
   const repository = new ExecutionProfileProjectionRepository(pool as never);
   const service = new PaperReadService(currentSource(rows.at(-1)!.fields) as unknown as ExecutionProductReadSource,
-    config(), undefined, undefined, repository);
+    config(), undefined, undefined, repository, undefined, paperHistoryTestScopes(config()));
   return { pool, repository, service };
 }
 

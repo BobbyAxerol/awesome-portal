@@ -76,16 +76,13 @@ export type ScopedStageFacts = z.infer<typeof scopedStageFacts>;
 
 /**
  * What a SCOPED_V2 Live read is allowed to state, as a contract and not only as producer behaviour:
- * the rows are the viewer's authorized population, so no runtime, no session list, no "no open
- * findings" and no count may appear AVAILABLE (see scoped-stage-facts.ts). A future source that can
- * prove more needs a reviewed revision of this object.
+ * Runtime/session facts can be stated from the exact deployment's authorized
+ * source fields. They do not prove global findings completeness or activation.
  */
 export const liveScopedStageFacts = scopedStageFacts.superRefine((value, context) => {
   const bad = (path: (string | number)[]) => context.addIssue({ code: z.ZodIssueCode.custom, path, message: "SCOPED_STAGE_FACT_NOT_PROVABLE" });
-  if (value.runtime.runtime_state.availability !== "NOT_PUBLISHED") bad(["runtime", "runtime_state"]);
-  if (value.runtime.since.availability !== "NOT_PUBLISHED") bad(["runtime", "since"]);
   if (value.reconciliation.verdict.value === "NO_OPEN_FINDINGS") bad(["reconciliation", "verdict"]);
   if (value.reconciliation.open_finding_count.availability !== "NOT_PUBLISHED") bad(["reconciliation", "open_finding_count"]);
   if (value.reconciliation.unknown_order_count.availability !== "NOT_PUBLISHED") bad(["reconciliation", "unknown_order_count"]);
-  if (value.sessions.availability !== "NOT_PUBLISHED") bad(["sessions"]);
+  if (value.sessions.source_complete === true) bad(["sessions", "source_complete"]);
 });

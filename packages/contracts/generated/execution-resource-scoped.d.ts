@@ -158,6 +158,7 @@ export interface components {
             created_at_ms?: number;
             updated_at?: (string | number) | null;
             updated_at_ms?: number;
+            account_type?: string | null;
             deployment_id?: string | null;
         };
         AccountsScopedRowPanel: {
@@ -246,6 +247,8 @@ export interface components {
             account_id?: string | null;
             instrument_id?: string | null;
             currency?: string | null;
+            initial?: string | null;
+            maintenance?: string | null;
             updated_at?: (string | number) | null;
             updated_at_ms?: number;
             deployment_id?: string | null;
@@ -589,6 +592,11 @@ export interface components {
             broker_rejected_count?: (number | string) | null;
             updated_at?: (string | number) | null;
             updated_at_ms?: number;
+            execution_session_id?: string | null;
+            started_at?: (string | number) | null;
+            started_at_ms?: number;
+            completed_at?: (string | number) | null;
+            completed_at_ms?: number;
             deployment_id?: string | null;
         };
         SessionsScopedRowPanel: {
@@ -631,6 +639,7 @@ export interface components {
             order_id?: string | null;
             strategy_id?: string | null;
             account_id?: string | null;
+            execution_session_id?: string | null;
             mode?: ("paper" | "sandbox" | "live") | null;
             venue?: string | null;
             instrument_id?: string | null;
@@ -646,6 +655,13 @@ export interface components {
             risk_grant_id?: string | null;
             client_order_id?: string | null;
             order_type?: string | null;
+            position_side?: string | null;
+            time_in_force?: string | null;
+            reduce_only?: boolean | null;
+            post_only?: boolean | null;
+            trigger_price?: string | null;
+            filled_quantity?: string | null;
+            average_fill_price?: string | null;
             deployment_id?: string | null;
         };
         OrdersScopedRowPanel: {
@@ -690,6 +706,7 @@ export interface components {
             trade_time_ms?: number;
             strategy_id?: string | null;
             account_id?: string | null;
+            execution_session_id?: string | null;
             mode?: ("paper" | "sandbox" | "live") | null;
             venue?: string | null;
             instrument_id?: string | null;
@@ -864,6 +881,7 @@ export interface components {
             profile_environment: "paper" | "sandbox" | "live";
             account_id?: string | null;
             strategy_id?: string | null;
+            execution_session_id?: string | null;
             mode?: ("paper" | "sandbox" | "live") | null;
             venue?: string | null;
             status?: string | null;

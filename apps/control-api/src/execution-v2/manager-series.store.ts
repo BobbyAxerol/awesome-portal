@@ -23,10 +23,11 @@ import type { Pool, PoolClient } from "pg";
 import { accessDigest } from "./access-policy";
 import { fenceManagerProjection, ManagerProjectionLeases, type ManagerLeaseScope, type ManagerProjectionLease } from "./manager-lease";
 import { managerModelDocument, managerPartition } from "./manager-model.contract";
-import { deriveSeriesObservations, MANAGER_SERIES_CALCULATION_REVISION, type DerivedSeriesRevision, type SeriesAbsence, type SeriesConfidence,
+import { deriveSeriesObservationsWithEconomicSource, MANAGER_SERIES_CALCULATION_REVISION, type DerivedSeriesRevision, type SeriesAbsence, type SeriesConfidence,
   type SeriesObservation, type SeriesRevisionMarker, type SeriesSubjectType, type DerivedSeriesMetric } from "./manager-series-observation";
 import type { SeriesHistory } from "./manager-series-materializer";
 import { parseRepairEntries, refuse, SERIES_REPAIR_ATTEMPTS, type RepairEntry } from "./manager-series-repair";
+import type { ManagerEconomicSourceRuntime } from "./manager-economic-source-runtime";
 
 export { SERIES_REPAIR_ATTEMPTS };
 
@@ -53,7 +54,7 @@ export interface SeriesCheckpoint { head_revision: string | null; head_as_of_ms:
 
 export class ManagerSeriesStore {
   private readonly leases: ManagerProjectionLeases;
-  constructor(private readonly pool: Pool) { this.leases = new ManagerProjectionLeases(pool); }
+  constructor(private readonly pool: Pool, private readonly economic?: ManagerEconomicSourceRuntime) { this.leases = new ManagerProjectionLeases(pool); }
 
   /** Caller owns the transaction (and has fenced the lease). Idempotent on (scope, revision). */
   async recordRevision(client: PoolClient, scope: ManagerLeaseScope, derived: DerivedSeriesRevision): Promise<SeriesRecordState> {
@@ -68,7 +69,7 @@ export class ManagerSeriesStore {
       VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,
         (SELECT fencing_token FROM execution_manager_consumer_fences WHERE workspace_id=$1 AND environment=$2 AND profile_id=$3))`,
     [...key, m.revision, m.supersedes_revision, m.source_epoch, m.projection_generation, m.as_of_ms, m.qualification, m.doc_completeness, m.doc_freshness,
-      derived.observations.length, derived.observation_digest, MANAGER_SERIES_CALCULATION_REVISION]);
+      derived.observations.length, derived.observation_digest, m.calculation_revision ?? MANAGER_SERIES_CALCULATION_REVISION]);
     if (derived.observations.length) await client.query(`INSERT INTO execution_manager_series_observations
       (workspace_id,environment,profile_id,revision,subject_type,subject_id,metric,partition_key,economic_partition,population_digest,as_of_ms,point_ts_ms,value,
        reason_code,currency,basis,methodology_ref,origin_ms,source_confidence,input_digest)
@@ -126,10 +127,10 @@ export class ManagerSeriesStore {
    * sees the overflow and publishes nothing rather than a truncated history. */
   async history(scope: ManagerLeaseScope, input: { floor_ms: number; to_ms: number; exclude_revision: string; maximum_rows: number }): Promise<SeriesHistory> {
     const key = keyOf(scope), cap = input.maximum_rows + 1;
-    const revisions = await this.pool.query(`(SELECT revision,supersedes_revision,source_epoch,projection_generation,as_of_ms::text,qualification,doc_completeness,doc_freshness
+    const revisions = await this.pool.query(`(SELECT revision,supersedes_revision,source_epoch,projection_generation,as_of_ms::text,qualification,doc_completeness,doc_freshness,calculation_revision
         FROM execution_manager_series_revisions WHERE workspace_id=$1 AND environment=$2 AND profile_id=$3 AND as_of_ms<$4 AND revision<>$6
         ORDER BY as_of_ms DESC,revision DESC LIMIT 1)
-      UNION ALL (SELECT revision,supersedes_revision,source_epoch,projection_generation,as_of_ms::text,qualification,doc_completeness,doc_freshness
+      UNION ALL (SELECT revision,supersedes_revision,source_epoch,projection_generation,as_of_ms::text,qualification,doc_completeness,doc_freshness,calculation_revision
         FROM execution_manager_series_revisions WHERE workspace_id=$1 AND environment=$2 AND profile_id=$3 AND as_of_ms>=$4 AND as_of_ms<=$5 AND revision<>$6
         ORDER BY as_of_ms,revision LIMIT $7)`, [...key, input.floor_ms, input.to_ms, input.exclude_revision, cap]);
     const rows = await this.pool.query(`SELECT revision,subject_type,subject_id,metric,partition_key,economic_partition,population_digest,as_of_ms::text,point_ts_ms::text,value,
@@ -141,7 +142,9 @@ export class ManagerSeriesStore {
     return {
       revisions: revisions.rows.map((r): SeriesRevisionMarker => ({ revision: r.revision, supersedes_revision: r.supersedes_revision, source_epoch: r.source_epoch,
         projection_generation: r.projection_generation, as_of_ms: num(r.as_of_ms)!, qualification: r.qualification, doc_completeness: r.doc_completeness,
-        doc_freshness: r.doc_freshness })),
+        // Preserve the stored calculator even when the CURRENT runtime has no
+        // mapper: stripping it would relabel old economic points as legacy.
+        doc_freshness: r.doc_freshness, calculation_revision: r.calculation_revision ?? MANAGER_SERIES_CALCULATION_REVISION })),
       observations: rows.rows.map((r): SeriesObservation => ({ revision: r.revision, subject_type: r.subject_type as SeriesSubjectType, subject_id: r.subject_id,
         metric: r.metric as DerivedSeriesMetric, partition_key: r.partition_key, partition: managerPartition.parse(r.economic_partition), population_digest: r.population_digest,
         as_of_ms: num(r.as_of_ms)!, point_ts_ms: num(r.point_ts_ms), value: r.value, reason_code: r.reason_code, currency: r.currency, basis: r.basis,
@@ -176,7 +179,8 @@ export class ManagerSeriesStore {
       let failure: string | null = null, derived: DerivedSeriesRevision | null = null;
       try { // deterministic refusals: the same bytes would be refused again, so the revision becomes a stated gap at once
         const doc = managerModelDocument.parse(row.payload);
-        if (accessDigest(doc) !== row.payload_digest) failure = "SERIES_PAYLOAD_DIGEST_MISMATCH"; else derived = deriveSeriesObservations(doc);
+        if (accessDigest(doc) !== row.payload_digest) failure = "SERIES_PAYLOAD_DIGEST_MISMATCH";
+        else derived = deriveSeriesObservationsWithEconomicSource(doc, this.economic);
       } catch { failure = "SERIES_REPLAY_REFUSED"; }
       let state: SeriesRecordState | null = null;
       if (derived) {

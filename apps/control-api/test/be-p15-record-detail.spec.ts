@@ -76,6 +76,12 @@ describe("BE-P15 recordDetailValue never coerces", () => {
     ["submitted_at_ms", "2026-10-01T00:00:00.123Z", 1790812800123], ["submitted_at_ms", 1790812800123, 1790812800123], ["submitted_at_ms", "not a time", undefined],
     ["submitted_at_ms", -5, undefined], ["resolved_at_ms", "2026-10-01T00:05:00Z", 1790813100000],
     ["not_in_vocabulary", "x", undefined], ["physical_balance", "1", undefined],
+    ["runtime_state", "RUNNING", "RUNNING"], ["runtime_state", "ACTIVE", undefined],
+    ["started_at", "2026-10-01T07:00:00+07:00", "2026-10-01T00:00:00.000Z"],
+    ["started_at", Number.MAX_SAFE_INTEGER, undefined], ["completed_at", null, null],
+    ["average_fill_price", "123.000000001", "123.000000001"], ["filled_quantity", "0", "0"],
+    ["average_fill_price", "1\n", undefined], ["trigger_price", 1.2, undefined],
+    ["reduce_only", false, false], ["post_only", true, true], ["post_only", "true", undefined],
   ])("%s %j -> %j", (field, raw, expected) => {
     expect(recordDetailValue(field, raw)).toBe(expected);
   });
@@ -286,7 +292,7 @@ describe("BE-P15 Resource360 v2 (RV-11 R-6, R-7, R-8, R-9)", () => {
       "manager.fills:fills": { name: "fills", rows: options.fills === false ? [] : [{ ...OWN, fill_id: "f1", side: "BUY", price: "100.1234567890123456789", quantity: "10.5",
         trade_time: "2026-10-01T00:00:01.456Z", client_order_id: "client-entry", commission: "0.0000000000000000001", commission_currency: "USDT", liquidity_side: "MAKER", trade_id: "NEVER_RETURN" }] },
       "manager.reconciliation:reconciliation_findings": { name: "reconciliation_findings", rows: [{ ...OWN, finding_id: "fi1", finding_type: "RAW_TYPE_TEXT", status: "RESOLVED",
-        created_at: "2026-10-01T00:00:00Z", resolved_at: "2026-10-01T00:05:00Z", execution_session_id: "NEVER_RETURN" }] },
+        created_at: "2026-10-01T00:00:00Z", resolved_at: "2026-10-01T00:05:00Z", execution_session_id: "TEST_ONLY-visible-session" }] },
       "manager.performance:account_equity_snapshots": { name: "account_equity_snapshots", rows: options.equity ?? [] },
     });
     f.snapshot.document.relations["manager.orders:orders"].items[0].fields.client_order_id = "client-entry";
@@ -306,7 +312,8 @@ describe("BE-P15 Resource360 v2 (RV-11 R-6, R-7, R-8, R-9)", () => {
       liquidity_side: "MAKER", trade_time_ms: 1790812801456 });
     expect(body.data.reconciliation[0]).toMatchObject({ finding_id: "fi1", finding_type: "RAW_TYPE_TEXT", resolved_at: "2026-10-01T00:05:00Z", resolved_at_ms: 1790812800000 + 300000 });
     expect(body.capabilities.find((c: any) => c.capability_id === "resource.alpha.fills").state).not.toBe("UNAVAILABLE");
-    expect(JSON.stringify(body)).not.toMatch(/NEVER_RETURN|trade_id|execution_session_id/);
+    expect(body.data.reconciliation[0].execution_session_id).toBe("TEST_ONLY-visible-session");
+    expect(JSON.stringify(body)).not.toMatch(/NEVER_RETURN|trade_id/);
   });
   it("a researcher without the detail names: fills stay a typed FIELD_POLICY_PENDING absence (the fee is an unapproved protected value), orders drop the detail", async () => {
     const { read } = resources({ full: false });

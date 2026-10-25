@@ -1,4 +1,4 @@
-import { Inject, Injectable } from "@nestjs/common";
+import { Inject, Injectable, Optional } from "@nestjs/common";
 import type { QueryResultRow } from "pg";
 import type { z } from "zod";
 import { ControlApiConfig, querySigningKeys } from "../config";
@@ -15,6 +15,7 @@ import { OPERATIONAL_INCIDENT_LINK_BOUND, operationalDeliveryStates, operational
   type OperationalQueueItem, type OperationalStatusCountDimension, type OperationalStatusCounts, type OperationalWorkflow,
   type OperationalIncident, type OperationalQueueHealth } from "./operational-read.contract";
 import { OperationalReadRepository } from "./operational-read.repository";
+import { OPERATIONAL_QUEUE_HEALTH_SOURCE, type OperationalQueueHealthSource } from "./operational-health-source";
 
 const columns = ["operation_id", "operation_kind", "command_key", "target_type", "target_id", "environment",
   "risk_tier", "severity", "source_authority", "source_status", "verification_result", "triage_state", "workflow_version",
@@ -84,6 +85,8 @@ function axisCount(field: keyof typeof axisDomain, wanted: string, groups: Reado
   let sum = 0;
   for (const [value, n] of groups) {
     if (value !== QUEUE_NOT_REPORTED) axisValue(field, value);
+    if (!Number.isSafeInteger(n) || n < 0 || !Number.isSafeInteger(sum + n))
+      throw new OperationalReadError("OPERATIONAL_READ_UNAVAILABLE");
     sum += n;
   }
   if (sum !== filteredCount) throw new OperationalReadError("OPERATIONAL_READ_UNAVAILABLE");
@@ -188,7 +191,10 @@ export class OperationalReadService {
   constructor(@Inject(OperationalReadRepository) private readonly repository: OperationalReadRepository,
     @Inject(ExecutionAccessService) access: ExecutionAccessService,
     @Inject(ExecutionReadScopes) private readonly readScopes: ExecutionReadScopes,
-    @Inject(CONTROL_API_CONFIG) private readonly config: ControlApiConfig) { this.flights = new CurrentOperationalReads(access); }
+    @Inject(CONTROL_API_CONFIG) private readonly config: ControlApiConfig,
+    @Optional() @Inject(OPERATIONAL_QUEUE_HEALTH_SOURCE) private readonly healthSource?: OperationalQueueHealthSource) {
+    this.flights = new CurrentOperationalReads(access);
+  }
 
   mode(principal: ReadScopePrincipal) { return this.readScopes.coreSelectionMode(principal); }
   finish<T, R = T>(handle: PreparedOperationalRead<T>, project?: (body: T) => R): Promise<R> {
@@ -206,11 +212,14 @@ export class OperationalReadService {
       if (!keys[this.config.QUERY_CURSOR_ACTIVE_KEY_ID]) throw new OperationalReadError("OPERATIONAL_READ_NOT_CONFIGURED");
       const engine = new ControlPlaneQueryService(this.repository.pool, new KeysetCursorCodec({
         activeKeyId: this.config.QUERY_CURSOR_ACTIVE_KEY_ID, keys, ttlSeconds: this.config.QUERY_CURSOR_TTL_SECONDS }));
+      const healthBinding = this.healthSource?.select(cohort, query);
+      const healthPlan = healthBinding?.plan ?? this.healthPlan;
       // One repeatable-read snapshot: total, filtered, page rows, incident links and every status count
       // are read in the SAME transaction under the SAME minted scope, never page rows or extra calls.
       const { page, snapshot } = await queueSnapshotPage(engine, this.repository,
         { actorId: principal.user.userId, workspaceId: principal.workspaceId, role: principal.user.role },
-        cohort.scope, query, defaultLimit, this.healthPlan ? queueHealthResource(this.healthPlan) : {}, this.healthPlan);
+        cohort.scope, query, defaultLimit, { ...(healthPlan ? queueHealthResource(healthPlan) : {}),
+          ...(healthBinding ? { table: healthBinding.table, resourceId: healthBinding.resourceId } : {}) }, healthPlan);
       const rows = page.rows.map(row => ({ ...row, incident_links: snapshot.links.get(row.operation_id) ?? noLinks(),
         ...snapshot.axes?.get(row.operation_id) }));
       const observedAtMs = Math.max(cohort.context.now_ms, Date.now());

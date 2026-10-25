@@ -22,7 +22,8 @@ export function nativeResearchReadAllowed(config: {EXECUTION_LOCAL_PROJECTION_WO
   if(method!=="GET")return false;
   // Private provider presence widens only these named finite Paper routes. It is not
   // a public flag or a grant; the provider still fences the physical send.
-  if(nativeCurrentAccount&&/^\/api\/v1\/execution\/manager\/(?:accounts|alphas)\/[A-Za-z0-9][A-Za-z0-9._:-]{0,255}\/overview$(?![\s\S])/u.test(path))return true;
+  if(nativeCurrentAccount&&(/^\/api\/v1\/execution\/manager\/(?:accounts|alphas|portfolios|deployments)\/[A-Za-z0-9][A-Za-z0-9._:-]{0,255}\/overview$(?![\s\S])/u.test(path)||
+    ["/api/v1/execution/manager/fund-overview","/api/v1/execution/manager/fleet"].includes(path)))return true;
   if (["/api/v1/execution/manager/deployments", "/api/v1/execution/manager/operations",
     "/api/v1/execution/profiles/paper/realtime-snapshot", "/api/v1/execution/profiles/paper/stream"].includes(path)) return true;
   const match = /^\/api\/v1\/execution\/manager\/current\/([a-z][a-z0-9-]{1,127})(?![\s\S])/u.exec(path);

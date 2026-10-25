@@ -649,11 +649,15 @@ export function liveSourceCurrentSchemas(){
   // Deliberately no required values: hidden/missing is omission, not null or0.
   const values={type:"object",additionalProperties:false,properties:{}};
   for(const key of ["deployment_id","strategy_id","account_id","portfolio_id","position_id","order_id","fill_id",
-    "instrument_id","venue","currency","base_currency","state","status","side"])
+    "instrument_id","venue","currency","base_currency","state","status","side","runtime_state_since","runtime_state_changed_at",
+    "execution_session_id","started_at","completed_at","account_type","position_side","time_in_force","client_order_id","order_type","commission_currency"])
     values.properties[key]=nullable(scalarText);
+  values.properties.runtime_state=nullable(enumeration(["RUNNING","PAUSED","HALTED","STOPPED"]));
+  values.properties.liquidity_side=nullable(enumeration(["MAKER","TAKER","UNKNOWN"]));
+  for(const key of ["reduce_only","post_only"])values.properties[key]=nullable({type:"boolean"});
   values.properties.mode=nullable({const:"live"});
   for(const key of ["signed_qty","quantity","price","avg_px_open","avg_px_close","mark_price","notional",
-    "realized_pnl","unrealized_pnl","total","locked","free","initial","maintenance"])
+    "realized_pnl","unrealized_pnl","total","locked","free","initial","maintenance","trigger_price","filled_quantity","average_fill_price","commission"])
     values.properties[key]=nullable(decimal);
   for(const key of ["submitted_count","risk_rejected_count","broker_rejected_count","filled_count"])
     values.properties[key]=nullable(integerString);
@@ -699,11 +703,10 @@ export function liveSourceCurrentSchemas(){
   LiveSourceOperationsReadV2.properties.stage_facts={allOf:[{$ref:"execution-stage-facts.v1.schema.json#/$defs/StageFacts"},
     // The honesty rule as contract: nothing a resource-bound scope cannot prove may be AVAILABLE here.
     shape({
-      runtime:shape({runtime_state:notPublished,since:notPublished}),
       reconciliation:shape({verdict:shape({value:{not:{const:"NO_OPEN_FINDINGS"}}}),
         open_finding_count:notPublished,unknown_order_count:notPublished}),
-      sessions:notPublished})],
-    description:"BE-P12, present only when the request asks for include=stage_facts. The V1 fact vocabulary over the AUTHORIZED population only: OPEN_FINDINGS is stated when an authorized open finding exists; NO_OPEN_FINDINGS and exact counts are never stated (a resource-bound scope cannot prove it holds the whole population: AUTHORIZED_POPULATION_ONLY / AUTHORIZED_POPULATION_COUNT_NOT_EXACT). runtime and sessions are NOT_PUBLISHED because runtime_state and a session's id/started/completed instants are not in the reviewed read-field vocabulary."};
+      sessions:shape({source_complete:{not:{const:true}}})})],
+    description:"FE-067/072: optional authorized runtime/session observations from exact deployment source fields, never inferred activation or global completeness. OPEN_FINDINGS is monotone; NO_OPEN_FINDINGS and exact population counts remain refused. Sessions are bounded authorized rows, source_complete never true. Missing/hidden source fields retain typed absence."};
   return {LiveSourceOperationsReadV2};
 }
 
@@ -788,7 +791,20 @@ export function liveSourceFixture(){
     with_members:{...body,identity:scopedIdentityExamples().named,
       stage_facts:stageFacts({availability:"AVAILABLE",value:"OPEN_FINDINGS",reason_code:null})},
     with_members_hidden:{...body,identity:scopedIdentityExamples().hidden,
-      stage_facts:stageFacts(gone("AUTHORIZED_POPULATION_ONLY"))}};
+      stage_facts:stageFacts(gone("AUTHORIZED_POPULATION_ONLY"))},
+    with_observed_stage:{...body,identity:scopedIdentityExamples().named,
+      stage_facts:{...stageFacts(gone("AUTHORIZED_POPULATION_ONLY")),
+        runtime:{runtime_state:{availability:"AVAILABLE",value:"RUNNING",reason_code:null},
+          since:{availability:"AVAILABLE",value:"2026-10-18T00:00:00.000Z",reason_code:null}},
+        sessions:{availability:"AVAILABLE",reason_code:null,basis:"EXECUTION_SESSIONS_BOUNDED_WINDOW",
+          rows:[{id:"session_TEST_ONLY",started:"2026-10-18T00:00:00.000Z",ended:null,state:"RUNNING"}],
+          returned_count:1,omitted_count:0,source_complete:false}},
+      data:{...data,accounts:{...data.accounts,records:[{...data.accounts.records[0],values:{...data.accounts.records[0].values,account_type:"FUTURES"}}]},
+        orders:{...data.orders,records:[{...data.orders.records[0],values:{...data.orders.records[0].values,
+          position_side:"LONG",order_type:"LIMIT",time_in_force:"GTC",reduce_only:false,post_only:true,
+          filled_quantity:"0",average_fill_price:null,trigger_price:null}}]},
+        fills:{...data.fills,records:[{...data.fills.records[0],values:{...data.fills.records[0].values,
+          commission:"0.00000001",commission_currency:"TEST_ONLY:USD",liquidity_side:"MAKER"}}]}}}};
 }
 
 /** Existing GET only, preserving its operationId/parameters/other verbs and

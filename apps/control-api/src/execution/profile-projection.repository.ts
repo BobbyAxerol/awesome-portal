@@ -22,6 +22,7 @@ import { withTransaction } from "../db/pool";
 import { projectionScopeSql } from "../execution-v2/read-projection";
 import { assertExecutionReadScope, ExecutionReadScopeError, scopeReadPopulation, scopeAllowsQueryField,
   type AuthorizedExecutionReadScope } from "../execution-v2/read-scope";
+import { assertHistorySelectionBytes, validateHistoryByteBudget, type HistoryByteBudget } from "./history-byte-budget";
 
 export type ProjectionEnvironment = "paper" | "sandbox" | "live";
 export type ProjectionCompleteness = "COMPLETE" | "PARTIAL" | "UNKNOWN";
@@ -500,6 +501,9 @@ export class ExecutionProfileProjectionRepository {
       valueField: string;
       targetPoints: number;
       scope?: AuthorizedExecutionReadScope;
+      /** Internal representation safety budget. Never a row-count/history
+       * ceiling and never accepted from browser input. */
+      byteBudget?: HistoryByteBudget;
     },
     reader?: PoolClient,
   ): Promise<{
@@ -513,7 +517,8 @@ export class ExecutionProfileProjectionRepository {
       output_rows: number;
     } | null;
   }> {
-    if (query.scope && !reader) return withTransaction(this.pool, async client => {
+    if (query.byteBudget) validateHistoryByteBudget(query.byteBudget);
+    if ((query.scope || query.byteBudget) && !reader) return withTransaction(this.pool, async client => {
       await client.query("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ, READ ONLY");
       await client.query("SET LOCAL statement_timeout = '5s'");
       return this.timeSeriesHistoryDownsampled(workspaceId, environment, profileId, relationKey, query, client);
@@ -556,6 +561,10 @@ export class ExecutionProfileProjectionRepository {
       // Keep exactly the same eligibility/scope/range predicates as the count
       // and dense branch. The target is not a history ceiling: a legacy
       // non-transactional append between queries must not silently lose rows.
+      const exactSql = `SELECT row_id, ts, fields FROM ${this.historyTable()}
+          WHERE ${base.join(" AND ")}`;
+      if (query.byteBudget) await this.historySelectionBudget(reader ?? this.pool, exactSql,
+        values.slice(0, valueParam), query.byteBudget);
       const exact = await (reader ?? this.pool).query<{
         row_id: string; ts: string; fields: Record<string, ProjectionScalar>;
       }>(
@@ -577,6 +586,17 @@ export class ExecutionProfileProjectionRepository {
     const bucketSeconds = Math.max(1, Math.ceil(spanSeconds / bucketsPerSeries));
     values.push(bucketSeconds);
     const bucketParam = values.length;
+    const denseSelection = `SELECT row_id, ts, fields FROM (
+         SELECT row_id, ts, fields,
+                row_number() OVER (PARTITION BY fields->>($${seriesParam}), floor(extract(epoch FROM ts) / $${bucketParam})
+                                   ORDER BY (fields->>($${valueParam}))::numeric ASC, ts, row_id) AS rn_min,
+                row_number() OVER (PARTITION BY fields->>($${seriesParam}), floor(extract(epoch FROM ts) / $${bucketParam})
+                                   ORDER BY (fields->>($${valueParam}))::numeric DESC, ts, row_id) AS rn_max,
+                row_number() OVER (PARTITION BY fields->>($${seriesParam}), floor(extract(epoch FROM ts) / $${bucketParam})
+                                   ORDER BY ts DESC, row_id DESC) AS rn_last
+           FROM ${this.historyTable()} WHERE ${base.join(" AND ")}
+       ) ranked WHERE rn_min = 1 OR rn_max = 1 OR rn_last = 1`;
+    if (query.byteBudget) await this.historySelectionBudget(reader ?? this.pool, denseSelection, values, query.byteBudget);
     const result = await (reader ?? this.pool).query<{ row_id: string; ts: string; fields: Record<string, ProjectionScalar> }>(
       `SELECT row_id, to_char(ts AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS ts, fields FROM (
          SELECT row_id, ts, fields,
@@ -603,6 +623,18 @@ export class ExecutionProfileProjectionRepository {
         output_rows: result.rows.length,
       },
     };
+  }
+
+  private async historySelectionBudget(reader: Pool | PoolClient, selectedSql: string, values: readonly unknown[],
+    budget: HistoryByteBudget): Promise<void> {
+    // Stats and delivery run on the caller's same repeatable-read transaction;
+    // reject before fetching oversized JSON into the Node process. No LIMIT
+    // hides series and no source row is deleted or compacted by this guard.
+    const stats = await reader.query<{ total_bytes: string; largest_row_bytes: string }>(
+      `SELECT coalesce(sum(octet_length(fields::text)),0)::text AS total_bytes,
+              coalesce(max(octet_length(fields::text)),0)::text AS largest_row_bytes
+         FROM (${selectedSql}) history_selected`, [...values]);
+    assertHistorySelectionBytes(stats.rows[0]?.total_bytes, stats.rows[0]?.largest_row_bytes, budget);
   }
 
   /** Exact successor: inspect the latest row even when its value is malformed;

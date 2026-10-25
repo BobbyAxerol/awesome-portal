@@ -15,31 +15,31 @@ const bool = { type: 'boolean' };
 const environment = { enum: ['paper', 'sandbox', 'live'] };
 const reason = nullable(text);
 const states = { enum: ['AVAILABLE', 'EMPTY', 'PARTIAL', 'UNAVAILABLE'] };
-const money = new Set(('total free locked signed_qty quantity avg_px_open avg_px_close mark_price realized_pnl unrealized_pnl notional allocated_capital equity drawdown gross_pnl net_pnl fee_total funding_pnl margin_initial margin_maintenance exposure_long exposure_short price trigger_price commission').split(' '));
+const money = new Set(('total free locked signed_qty quantity avg_px_open avg_px_close mark_price realized_pnl unrealized_pnl notional allocated_capital equity drawdown gross_pnl net_pnl fee_total funding_pnl margin_initial margin_maintenance exposure_long exposure_short price trigger_price commission initial maintenance filled_quantity average_fill_price').split(' '));
 const counts = new Set(['submitted_count', 'risk_rejected_count', 'broker_rejected_count', 'filled_count']);
-const clocks = new Set(['ts', 'created_at', 'updated_at', 'submitted_at', 'trade_time', 'mark_price_at', 'resolved_at']);
+const clocks = new Set(['ts', 'created_at', 'updated_at', 'submitted_at', 'trade_time', 'mark_price_at', 'resolved_at', 'started_at', 'completed_at']);
 // Closed per-relation public vocabulary. This is not a grant: the runtime
 // intersects these raw names with reviewed BUSINESS_READ_FIELDS first.
 // Physical custody, external account IDs, errors and source cursors are absent.
 const fields = {
   strategies: 'strategy_id alpha_id name version state stage created_at updated_at',
   deployments: 'deployment_id strategy_id account_id mode venue currency portfolio_id state created_at updated_at',
-  accounts: 'account_id strategy_id mode venue base_currency state created_at updated_at',
+  accounts: 'account_id strategy_id mode venue base_currency state created_at updated_at account_type',
   account_balances: 'account_id currency total locked free updated_at',
-  margin_balances: 'account_id instrument_id currency updated_at',
+  margin_balances: 'account_id instrument_id currency initial maintenance updated_at',
   account_sync: 'account_id mode venue status currency created_at',
   broker_sync: '',
   venue_accounts: 'binding_id account_id mode venue state status created_at updated_at',
   portfolios: 'portfolio_id name owner base_currency state created_at updated_at',
   portfolio_allocations: 'portfolio_id strategy_id deployment_id account_id mode venue currency allocated_capital state created_at updated_at',
   positions: 'position_id strategy_id account_id mode venue instrument_id side signed_qty quantity avg_px_open avg_px_close realized_pnl unrealized_pnl mark_price notional updated_at',
-  sessions: 'strategy_id account_id mode venue state submitted_count risk_rejected_count filled_count broker_rejected_count updated_at',
-  orders: 'order_id strategy_id account_id mode venue instrument_id symbol side quantity price status submitted_at updated_at risk_grant_id client_order_id order_type',
-  fills: 'fill_id trade_time strategy_id account_id mode venue instrument_id side price quantity realized_pnl client_order_id commission commission_currency liquidity_side',
+  sessions: 'strategy_id account_id mode venue state submitted_count risk_rejected_count filled_count broker_rejected_count updated_at execution_session_id started_at completed_at',
+  orders: 'order_id strategy_id account_id execution_session_id mode venue instrument_id symbol side quantity price status submitted_at updated_at risk_grant_id client_order_id order_type position_side time_in_force reduce_only post_only trigger_price filled_quantity average_fill_price',
+  fills: 'fill_id trade_time strategy_id account_id execution_session_id mode venue instrument_id side price quantity realized_pnl client_order_id commission commission_currency liquidity_side',
   performance: 'ts deployment_id strategy_id account_id mode venue instrument_id symbol currency position_qty signed_qty avg_px_open mark_price notional exposure_long exposure_short realized_pnl unrealized_pnl fee_total funding_pnl gross_pnl net_pnl equity created_at',
   account_equity: 'ts deployment_id strategy_id account_id mode venue currency margin_initial margin_maintenance realized_pnl unrealized_pnl fee_total funding_pnl gross_pnl net_pnl equity drawdown created_at',
   portfolio_equity: 'ts portfolio_id currency allocated_capital margin_initial margin_maintenance realized_pnl unrealized_pnl fee_total funding_pnl gross_pnl net_pnl equity drawdown created_at',
-  reconciliation: 'account_id strategy_id mode venue status created_at finding_id finding_type resolved_at',
+  reconciliation: 'account_id strategy_id execution_session_id mode venue status created_at finding_id finding_type resolved_at',
   journal: 'mode venue alpha_id account_id state updated_at',
 };
 const common = 'deployments accounts account_balances margin_balances account_sync broker_sync venue_accounts portfolios portfolio_allocations positions sessions orders fills performance account_equity reconciliation strategies'.split(' ');
@@ -49,7 +49,7 @@ const defs = {};
 for (const [alias, keys] of Object.entries(fields)) {
   const properties = { profile_environment: environment };
   for (const key of keys.split(' ').filter(Boolean)) {
-    properties[key] = nullable(key === 'liquidity_side' ? { enum: ['MAKER', 'TAKER', 'UNKNOWN'] } : money.has(key) || ['position_qty'].includes(key) ? decimal : counts.has(key) ? { anyOf: [integer, { type: 'string', pattern: '^(?:0|[1-9][0-9]*)$(?![\\s\\S])' }] } : clocks.has(key) ? { anyOf: [text, integer] } : key === 'mode' ? environment : text);
+    properties[key] = nullable(['reduce_only','post_only'].includes(key) ? bool : key === 'liquidity_side' ? { enum: ['MAKER', 'TAKER', 'UNKNOWN'] } : money.has(key) || ['position_qty'].includes(key) ? decimal : counts.has(key) ? { anyOf: [integer, { type: 'string', pattern: '^(?:0|[1-9][0-9]*)$(?![\\s\\S])' }] } : clocks.has(key) ? { anyOf: [text, integer] } : key === 'mode' ? environment : text);
     if (clocks.has(key)) properties[`${key}_ms`] = integer;
   }
   // Resource linkage may add deployment_id only after qualified unique tuple

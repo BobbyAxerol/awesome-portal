@@ -16,15 +16,13 @@
  *   - a count over an authorized subset is a lower bound, not the count: it is a
  *     typed absence too.
  *
- * Runtime and sessions stay typed absences: `runtime_state` is not part of the
- * reviewed read-field vocabulary (execution-v2/read-fields.ts) and neither are
- * a session's id / started / completed instants, so no field policy can allow
- * them. Both need a reviewed vocabulary addition plus the source field
- * (BE-P12 design note), never a guess.
+ * Runtime/session inputs must already belong to the exact authorized deployment
+ * and reviewed detail vocabulary. Their presence is observation, not activation.
  */
 import {
-  absentRelation, buildStageFacts, missing, type StageFacts,
+  absentRelation, buildStageFacts, missing, type StageFacts, type RelationInput,
 } from "./stage-facts";
+import { recordDetailValue } from "../execution-v2/record-detail";
 
 export const SCOPED_RUNTIME_REASON = "RUNTIME_STATE_FIELD_NOT_IN_READ_VOCABULARY";
 export const SCOPED_SESSIONS_REASON = "SCOPED_SESSION_ROW_FIELDS_NOT_IN_READ_VOCABULARY";
@@ -38,9 +36,25 @@ export type ScopedReconciliationInput =
   /** Rows after row policy, tuple scoping and the finding-to-session join; only the `status` of each is read. */
   | { readonly kind: "ROWS"; readonly rows: readonly Record<string, unknown>[] };
 
-export function scopedLiveStageFacts(input: ScopedReconciliationInput): StageFacts {
-  const sessions = absentRelation(SCOPED_SESSIONS_REASON);
-  const runtime = { runtime_state: missing<never>(SCOPED_RUNTIME_REASON), since: missing<string>(SCOPED_RUNTIME_REASON) };
+export interface ScopedStageObservation {
+  readonly deployment?: Readonly<Record<string, unknown>>;
+  readonly sessions?: RelationInput;
+}
+export function scopedLiveStageFacts(input: ScopedReconciliationInput, observation?: ScopedStageObservation): StageFacts {
+  const deployment = observation?.deployment ? Object.fromEntries(
+    ["runtime_state", "runtime_state_since", "runtime_state_changed_at"].flatMap(field => {
+      const value = recordDetailValue(field, observation.deployment![field]);
+      return value === undefined ? [] : [[field, value]];
+    })) : null;
+  const sessions = observation?.sessions ? { ...observation.sessions, state: "PARTIAL" as const,
+    rows: observation.sessions.rows.map(row => Object.fromEntries(
+      ["execution_session_id", "started_at", "completed_at", "state"].flatMap(field => {
+        const value = field === "state" ? row.state : recordDetailValue(field, row[field]);
+        return value === undefined ? [] : [[field, value]];
+      }))) } : absentRelation(SCOPED_SESSIONS_REASON);
+  const runtime = observation?.deployment ? buildStageFacts({ deployment, sessions,
+    reconciliation: absentRelation(SCOPED_AS_OF_REASON), reconciliationAsOf: null }).runtime :
+    { runtime_state: missing<never>(SCOPED_RUNTIME_REASON), since: missing<string>(SCOPED_RUNTIME_REASON) };
   if (input.kind === "UNAVAILABLE") {
     return { ...buildStageFacts({ deployment: null, sessions, reconciliation: absentRelation(input.reason), reconciliationAsOf: null }), runtime };
   }

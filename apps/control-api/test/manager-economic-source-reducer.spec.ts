@@ -383,12 +383,16 @@ describe("BE-P21 contract: closed shapes, dark by construction", () => {
     expect(economicProvenRow.safeParse({ ...A(), amount: "1e3" }).success).toBe(false);
     expect(economicProvenRow.safeParse({ ...A(), amount: 14 }).success).toBe(false);
   });
-  it("is not wired: no other source file imports the contract or the reducer", () => {
+  it("has only explicit server adapter integration, never route/HTTP/ENV activation", () => {
     const root = resolve(__dirname, "../src"), hits: string[] = [];
     const walk = (dir: string) => { for (const name of readdirSync(dir)) { const p = join(dir, name);
       if (statSync(p).isDirectory()) walk(p); else if (/\.ts$/.test(name) && !/manager-economic-source/.test(name) && /manager-economic-source/.test(readFileSync(p, "utf8"))) hits.push(p); } };
     walk(root);
-    expect(hits).toEqual([]);
+    const allowed = ["manager-model.ts", "manager-series-materializer.ts", "manager-series-observation.ts",
+      "manager-series-runtime.ts", "manager-series.store.ts", "manager-runtime.ts", "manager-model.service.ts"];
+    expect(hits.filter(p => !allowed.some(name => p.endsWith(`/execution-v2/${name}`)))).toEqual([]);
+    const adapter = readFileSync(resolve(root, "execution-v2/manager-economic-source-runtime.ts"), "utf8");
+    expect(adapter).not.toMatch(/process\.env|@Controller|@Get|@Post|account_id\s*[:=]\s*.*economic_account_ref/);
   });
   it("uses no float, no FX and no clock", () => {
     const code = readFileSync(resolve(__dirname, "../src/execution-v2/manager-economic-source-reducer.ts"), "utf8").replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "");

@@ -16,7 +16,11 @@ import {
   AlphaFleetEnvironment, AlphaFleetQuery, BindingItem, BindingsQuery,
   MANAGER_LIST_ENVIRONMENTS, ManagerListEnvironment, PortfolioListItem, PortfolioListQuery,
   alphaFleetResource, bindingsRawQuery, bindingsResource, fleetRawQuery,
+  mapBindingRow,
 } from "./contracts";
+import { BINDING_FINANCIAL_BATCH_SOURCE, BINDING_FINANCIAL_REFRESH_SOURCE, bindingFinancialRequest,
+  bindingFinancialRefreshRequest, readBindingFinancialBatch, readBindingFinancialRefresh,
+  type BindingFinancialBatchSource, type BindingFinancialRefreshSource, type BindingFinancialRefreshPage } from "./binding-financial-batch";
 import {
   AlphaProjectionRecord, BindingProjectionRecord, ManagerListsRepository,
   ProjectionKind, ProjectionSnapshot,
@@ -96,6 +100,8 @@ export class ManagerListsService {
     @Inject(CONTROL_API_CONFIG) private readonly config: ControlApiConfig,
     @Optional() @Inject(ExecutionReadScopes) private readonly readScopes?: ExecutionReadScopes,
     @Optional() @Inject(ExecutionProfileProjectionRepository) private readonly profiles?: ExecutionProfileProjectionRepository,
+    @Optional() @Inject(BINDING_FINANCIAL_BATCH_SOURCE) private readonly bindingFinancialSource?: BindingFinancialBatchSource,
+    @Optional() @Inject(BINDING_FINANCIAL_REFRESH_SOURCE) private readonly bindingFinancialRefreshSource?: BindingFinancialRefreshSource,
   ) {
     this.query = new ControlPlaneQueryService(
       repository.pool,
@@ -135,13 +141,27 @@ export class ManagerListsService {
   private async legacyBindings(principal: ManagerListPrincipal, query: BindingsQuery) {
     await this.ensureSnapshot(principal, query.environment, "BINDINGS", !query.after && !query.before);
     const { page, snapshot: retained } = await this.query.listWithSnapshot(
-      bindingsResource(),
+      { ...bindingsResource(), ...(this.bindingFinancialSource ? { selectColumns: [...bindingsResource().selectColumns,
+        "source_as_of", "projection_refreshed_at"] } : {}) },
       { actorId: principal.user.userId, workspaceId: scope(principal.workspaceId, query.environment), role: principal.user.role },
       bindingsRawQuery(query),
-      reader => this.repository.bindingListSnapshot(reader, principal.workspaceId, query.environment),
+      async reader => {
+        const retained = await this.repository.bindingListSnapshot(reader, principal.workspaceId, query.environment);
+        if (!retained) return null;
+        if (!this.bindingFinancialSource) return { ...retained, figures: undefined };
+        try {
+          const request = bindingFinancialRequest({ workspaceId: principal.workspaceId, environment: query.environment,
+            userId: principal.user.userId, sessionId: principal.session.sessionId, sessionGeneration: principal.session.sessionVersion,
+            snapshot: retained.snapshot, rows: reader.rows.map(mapBindingRow) });
+          const figures = await readBindingFinancialBatch(this.bindingFinancialSource, request, reader);
+          return { ...retained, figures };
+        } catch { throw new ManagerListsError("BR72_BINDING_FINANCIAL_BATCH_INVALID", 503); }
+      },
     );
     if (!retained) throw new ManagerListsError("BR72_BINDINGS_SNAPSHOT_NOT_RECORDED", 503);
-    return { ...envelope("execution.bindings-list.v1", principal, query.environment, retained.snapshot, page,
+    const enriched = retained.figures ? { ...page,
+      rows: page.rows.map(row => retained.figures!.has(row.binding_id) ? { ...row, figures: retained.figures!.get(row.binding_id) } : row) } : page;
+    return { ...envelope("execution.bindings-list.v1", principal, query.environment, retained.snapshot, enriched,
       projectionFreshnessBudget(this.config)), ...(retained.counts ? { counts: retained.counts } : {}) };
   }
 
@@ -509,11 +529,20 @@ export class ManagerListsService {
   }
 
   private async refreshBindings(principal: ManagerListPrincipal, environment: ManagerListEnvironment) {
+    // Capture identity before the first source await. The optional owning
+    // ingress must answer this exact actor/session and original refresh, not
+    // reselect a profile-wide population after the source pages were read.
+    const refreshPrincipal = Object.freeze({ ...principal, user: Object.freeze({ ...principal.user }), session: Object.freeze({ ...principal.session }) });
+    const originalPages: BindingFinancialRefreshPage[] = [];
+    const capture = (relation: BindingFinancialRefreshPage["relation"]) =>
+      (page: ManagerPage, pageIndex: number, inputCursor: string | null) => {
+        if (this.bindingFinancialRefreshSource) originalPages.push({ relation, page_index: pageIndex, input_cursor: inputCursor, page: structuredClone(page) });
+      };
     const context = readContext(environment);
     const [accounts, venueAccounts, brokerSync] = await Promise.all([
-      this.drain(principal, environment, "EXECUTION_ACCOUNTS_BINDINGS_LIST_SCREEN", "manager.accounts", "accounts", ACCOUNT_FIELDS, context),
-      this.drain(principal, environment, "EXECUTION_ACCOUNTS_BINDINGS_LIST_SCREEN", "manager.venue-accounts", "venue_accounts", VENUE_ACCOUNT_FIELDS, context),
-      this.drain(principal, environment, "EXECUTION_ACCOUNTS_BINDINGS_LIST_SCREEN", "manager.accounts", "broker_account_sync_effective", BROKER_SYNC_FIELDS, context),
+      this.drain(refreshPrincipal, environment, "EXECUTION_ACCOUNTS_BINDINGS_LIST_SCREEN", "manager.accounts", "accounts", ACCOUNT_FIELDS, context, capture("accounts")),
+      this.drain(refreshPrincipal, environment, "EXECUTION_ACCOUNTS_BINDINGS_LIST_SCREEN", "manager.venue-accounts", "venue_accounts", VENUE_ACCOUNT_FIELDS, context, capture("venue_accounts")),
+      this.drain(refreshPrincipal, environment, "EXECUTION_ACCOUNTS_BINDINGS_LIST_SCREEN", "manager.accounts", "broker_account_sync_effective", BROKER_SYNC_FIELDS, context, capture("broker_account_sync_effective")),
     ]);
     const isolated = enforceProfileLineage([
       lineage("accounts", accounts), lineage("venue_accounts", venueAccounts),
@@ -526,11 +555,24 @@ export class ManagerListsService {
       page("broker_sync").items,
     );
     const sourceAsOf = oldestDate(accounts.asOf, venueAccounts.asOf, brokerSync.asOf);
+    const financialCutUsable = sourceAsOf && !Number.isNaN(sourceAsOf.valueOf()) && originalPages.every(original =>
+      original.page.asOf !== null && Number.isFinite(Date.parse(original.page.asOf)));
+    if (this.bindingFinancialRefreshSource && rows.length && financialCutUsable) {
+      try {
+        const request = bindingFinancialRefreshRequest({ workspaceId: refreshPrincipal.workspaceId, environment,
+          userId: refreshPrincipal.user.userId, sessionId: refreshPrincipal.session.sessionId,
+          sessionGeneration: refreshPrincipal.session.sessionVersion, sourceAsOf: sourceAsOf!, pages: originalPages,
+          rows: rows.map(row => ({ binding_id: row.bindingId, account_id: row.accountId, venue: row.venue })) });
+        const figures = await readBindingFinancialRefresh(this.bindingFinancialRefreshSource, request,
+          { timeout_ms: this.config.EXECUTION_EDGE_CURRENT_SOURCE_REQUEST_TIMEOUT_MS });
+        if (figures) for (const row of rows) if (figures.has(row.bindingId)) row.listFigures = figures.get(row.bindingId);
+      } catch { throw new ManagerListsError("BR72_BINDING_FINANCIAL_BATCH_INVALID", 503); }
+    }
     await this.repository.replaceBindings({
-      workspaceId: principal.workspaceId, environment, sourceAsOf,
+      workspaceId: refreshPrincipal.workspaceId, environment, sourceAsOf,
       completeness: completeness(accounts, venueAccounts, brokerSync), rows,
     });
-    return requiredSnapshot(this.repository, principal.workspaceId, environment, "BINDINGS");
+    return requiredSnapshot(this.repository, refreshPrincipal.workspaceId, environment, "BINDINGS");
   }
 
   private async drain(
@@ -541,6 +583,7 @@ export class ManagerListsService {
     relation: string,
     fields: readonly string[],
     context: ManagerReadContext,
+    capturePage?: (page: ManagerPage, pageIndex: number, inputCursor: string | null) => void,
   ): Promise<ManagerPage> {
     const items: ManagerPage["items"] = [];
     const cursors = new Set<string>();
@@ -554,6 +597,7 @@ export class ManagerListsService {
         { limit: SOURCE_PAGE_LIMIT, ...(cursor ? { cursor } : {}) },
       );
       const page = managerPage(response, relation, fields, context);
+      capturePage?.(page, index, cursor ?? null);
       items.push(...page.items);
       // Paired with `worstFreshness` below: the oldest page, not the newest.
       asOf = oldestString(asOf, page.asOf);

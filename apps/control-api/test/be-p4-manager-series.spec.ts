@@ -424,6 +424,13 @@ describe("service + controller (synthetic adapters, no PostgreSQL)", () => {
     const s = await service(); s.repository.document.mockResolvedValue({ ...s.doc, qualification: "TEST_ONLY" });
     await expect(s.controller.read(s.request, query([A]))).rejects.toMatchObject({ code: "EXECUTION_READ_PUBLICATION_NOT_QUALIFIED", status: 503 });
   });
+  it("never serves an internal economic mapping's retained series after that mapper is removed", async () => {
+    const s = await service(), publication = s.publication(SHARED);
+    publication.provenance.calculation_revision = `manager-series-economic.v1:sha256:${"a".repeat(64)}`;
+    s.doc.precomputed_series = [publication];
+    await expect(s.controller.read(s.request, query([A], { window: JSON.stringify(WINDOW) })))
+      .rejects.toMatchObject({code:"EXECUTION_READ_PUBLICATION_NOT_QUALIFIED",status:503});
+  });
   it("closed query is checked before any source metadata is read", async () => {
     const s = await service();
     for (const bad of [{ environment: "paper" }, query([]), query([A, A]), query([A], { metric: "SHARPE" }), query([A], { sql: "x" }),

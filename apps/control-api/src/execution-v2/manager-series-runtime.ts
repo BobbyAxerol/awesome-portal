@@ -18,7 +18,8 @@ import type { Pool, PoolClient } from "pg";
 import type { ManagerConsumerDelivery, ManagerCalculationLifecycle } from "./manager-consumer";
 import type { ManagerLeaseScope } from "./manager-lease";
 import type { ManagerModelDocument } from "./manager-model.contract";
-import { AbsenceLedger, deriveSeriesObservations } from "./manager-series-observation";
+import { AbsenceLedger, deriveSeriesObservationsWithEconomicSource } from "./manager-series-observation";
+import type { ManagerEconomicSourceRuntime } from "./manager-economic-source-runtime";
 import { materializeManagerSeries, validateSeriesConfig, type ManagerSeriesConfig, type MaterializedSeries } from "./manager-series-materializer";
 import { ManagerSeriesStore } from "./manager-series.store";
 
@@ -33,14 +34,17 @@ export class ManagerSeriesRuntime {
   readonly store: ManagerSeriesStore;
   private readonly config: ManagerSeriesConfig;
   private readonly backfill: number;
-  constructor(pool: Pool, installation: ManagerSeriesInstallation) {
+  constructor(pool: Pool, installation: ManagerSeriesInstallation, private readonly economic?: ManagerEconomicSourceRuntime) {
     const { maximum_backfill_revisions, ...config } = installation;
     this.config = validateSeriesConfig(config);
     if (!Number.isSafeInteger(maximum_backfill_revisions) || maximum_backfill_revisions < 1 || maximum_backfill_revisions > 16)
       throw new Error("MANAGER_SERIES_CONFIG_INVALID");
     this.backfill = maximum_backfill_revisions;
-    this.store = new ManagerSeriesStore(pool);
+    this.store = new ManagerSeriesStore(pool, economic);
   }
+  /** Dataset/writer must use the same owning mapping object, not equal-looking
+   * JSON or an independently configured interpretation of source identities. */
+  usesEconomicSource(source: ManagerEconomicSourceRuntime | undefined): boolean { return this.economic === source; }
 
   /** Never throws on data or infrastructure (only on cancellation): the worst answer is an empty, explained publication list. */
   async materialize(document: ManagerModelDocument, signal: AbortSignal): Promise<MaterializedSeries> {
@@ -51,11 +55,11 @@ export class ManagerSeriesRuntime {
       const history = await this.store.history(scope, { floor_ms: Math.max(0, document.as_of_ms - widest * DAY), to_ms: document.as_of_ms,
         exclude_revision: document.revision, maximum_rows: this.config.maximum_history_rows });
       if (signal.aborted) throw signal.reason ?? new Error("MANAGER_SERIES_ABORTED");
-      return materializeManagerSeries(document, history, this.config);
+      return materializeManagerSeries(document, history, this.config, this.economic);
     } catch (error) {
       if (signal.aborted) throw signal.reason ?? error;
       const ledger = new AbsenceLedger(); ledger.add("SERIES_MATERIALIZATION_FAILED", null);
-      return { publications: [], absences: ledger.list(), current: deriveSeriesObservations(document) };
+      return { publications: [], absences: ledger.list(), current: deriveSeriesObservationsWithEconomicSource(document, this.economic) };
     }
   }
 

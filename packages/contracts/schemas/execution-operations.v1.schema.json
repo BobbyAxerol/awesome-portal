@@ -2240,6 +2240,222 @@
                               }
                             ]
                           },
+                          "runtime_state_since": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 4096,
+                                "not": {
+                                  "pattern": "[\\u0000-\\u001f\\u007f]"
+                                }
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "runtime_state_changed_at": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 4096,
+                                "not": {
+                                  "pattern": "[\\u0000-\\u001f\\u007f]"
+                                }
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "execution_session_id": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 4096,
+                                "not": {
+                                  "pattern": "[\\u0000-\\u001f\\u007f]"
+                                }
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "started_at": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 4096,
+                                "not": {
+                                  "pattern": "[\\u0000-\\u001f\\u007f]"
+                                }
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "completed_at": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 4096,
+                                "not": {
+                                  "pattern": "[\\u0000-\\u001f\\u007f]"
+                                }
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "account_type": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 4096,
+                                "not": {
+                                  "pattern": "[\\u0000-\\u001f\\u007f]"
+                                }
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "position_side": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 4096,
+                                "not": {
+                                  "pattern": "[\\u0000-\\u001f\\u007f]"
+                                }
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "time_in_force": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 4096,
+                                "not": {
+                                  "pattern": "[\\u0000-\\u001f\\u007f]"
+                                }
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "client_order_id": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 4096,
+                                "not": {
+                                  "pattern": "[\\u0000-\\u001f\\u007f]"
+                                }
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "order_type": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 4096,
+                                "not": {
+                                  "pattern": "[\\u0000-\\u001f\\u007f]"
+                                }
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "commission_currency": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 4096,
+                                "not": {
+                                  "pattern": "[\\u0000-\\u001f\\u007f]"
+                                }
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "runtime_state": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "RUNNING",
+                                  "PAUSED",
+                                  "HALTED",
+                                  "STOPPED"
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "liquidity_side": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "MAKER",
+                                  "TAKER",
+                                  "UNKNOWN"
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "reduce_only": {
+                            "anyOf": [
+                              {
+                                "type": "boolean"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "post_only": {
+                            "anyOf": [
+                              {
+                                "type": "boolean"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
                           "mode": {
                             "anyOf": [
                               {
@@ -2407,6 +2623,54 @@
                             ]
                           },
                           "maintenance": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "maxLength": 96,
+                                "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$(?![\\s\\S])"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "trigger_price": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "maxLength": 96,
+                                "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$(?![\\s\\S])"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "filled_quantity": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "maxLength": 96,
+                                "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$(?![\\s\\S])"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "average_fill_price": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "maxLength": 96,
+                                "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$(?![\\s\\S])"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "commission": {
                             "anyOf": [
                               {
                                 "type": "string",
@@ -2961,6 +3225,222 @@
                               }
                             ]
                           },
+                          "runtime_state_since": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 4096,
+                                "not": {
+                                  "pattern": "[\\u0000-\\u001f\\u007f]"
+                                }
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "runtime_state_changed_at": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 4096,
+                                "not": {
+                                  "pattern": "[\\u0000-\\u001f\\u007f]"
+                                }
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "execution_session_id": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 4096,
+                                "not": {
+                                  "pattern": "[\\u0000-\\u001f\\u007f]"
+                                }
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "started_at": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 4096,
+                                "not": {
+                                  "pattern": "[\\u0000-\\u001f\\u007f]"
+                                }
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "completed_at": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 4096,
+                                "not": {
+                                  "pattern": "[\\u0000-\\u001f\\u007f]"
+                                }
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "account_type": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 4096,
+                                "not": {
+                                  "pattern": "[\\u0000-\\u001f\\u007f]"
+                                }
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "position_side": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 4096,
+                                "not": {
+                                  "pattern": "[\\u0000-\\u001f\\u007f]"
+                                }
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "time_in_force": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 4096,
+                                "not": {
+                                  "pattern": "[\\u0000-\\u001f\\u007f]"
+                                }
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "client_order_id": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 4096,
+                                "not": {
+                                  "pattern": "[\\u0000-\\u001f\\u007f]"
+                                }
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "order_type": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 4096,
+                                "not": {
+                                  "pattern": "[\\u0000-\\u001f\\u007f]"
+                                }
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "commission_currency": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 4096,
+                                "not": {
+                                  "pattern": "[\\u0000-\\u001f\\u007f]"
+                                }
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "runtime_state": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "RUNNING",
+                                  "PAUSED",
+                                  "HALTED",
+                                  "STOPPED"
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "liquidity_side": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "MAKER",
+                                  "TAKER",
+                                  "UNKNOWN"
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "reduce_only": {
+                            "anyOf": [
+                              {
+                                "type": "boolean"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "post_only": {
+                            "anyOf": [
+                              {
+                                "type": "boolean"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
                           "mode": {
                             "anyOf": [
                               {
@@ -3128,6 +3608,54 @@
                             ]
                           },
                           "maintenance": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "maxLength": 96,
+                                "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$(?![\\s\\S])"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "trigger_price": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "maxLength": 96,
+                                "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$(?![\\s\\S])"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "filled_quantity": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "maxLength": 96,
+                                "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$(?![\\s\\S])"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "average_fill_price": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "maxLength": 96,
+                                "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$(?![\\s\\S])"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "commission": {
                             "anyOf": [
                               {
                                 "type": "string",
@@ -3682,6 +4210,222 @@
                               }
                             ]
                           },
+                          "runtime_state_since": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 4096,
+                                "not": {
+                                  "pattern": "[\\u0000-\\u001f\\u007f]"
+                                }
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "runtime_state_changed_at": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 4096,
+                                "not": {
+                                  "pattern": "[\\u0000-\\u001f\\u007f]"
+                                }
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "execution_session_id": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 4096,
+                                "not": {
+                                  "pattern": "[\\u0000-\\u001f\\u007f]"
+                                }
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "started_at": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 4096,
+                                "not": {
+                                  "pattern": "[\\u0000-\\u001f\\u007f]"
+                                }
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "completed_at": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 4096,
+                                "not": {
+                                  "pattern": "[\\u0000-\\u001f\\u007f]"
+                                }
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "account_type": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 4096,
+                                "not": {
+                                  "pattern": "[\\u0000-\\u001f\\u007f]"
+                                }
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "position_side": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 4096,
+                                "not": {
+                                  "pattern": "[\\u0000-\\u001f\\u007f]"
+                                }
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "time_in_force": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 4096,
+                                "not": {
+                                  "pattern": "[\\u0000-\\u001f\\u007f]"
+                                }
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "client_order_id": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 4096,
+                                "not": {
+                                  "pattern": "[\\u0000-\\u001f\\u007f]"
+                                }
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "order_type": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 4096,
+                                "not": {
+                                  "pattern": "[\\u0000-\\u001f\\u007f]"
+                                }
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "commission_currency": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 4096,
+                                "not": {
+                                  "pattern": "[\\u0000-\\u001f\\u007f]"
+                                }
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "runtime_state": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "RUNNING",
+                                  "PAUSED",
+                                  "HALTED",
+                                  "STOPPED"
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "liquidity_side": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "MAKER",
+                                  "TAKER",
+                                  "UNKNOWN"
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "reduce_only": {
+                            "anyOf": [
+                              {
+                                "type": "boolean"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "post_only": {
+                            "anyOf": [
+                              {
+                                "type": "boolean"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
                           "mode": {
                             "anyOf": [
                               {
@@ -3849,6 +4593,54 @@
                             ]
                           },
                           "maintenance": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "maxLength": 96,
+                                "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$(?![\\s\\S])"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "trigger_price": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "maxLength": 96,
+                                "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$(?![\\s\\S])"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "filled_quantity": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "maxLength": 96,
+                                "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$(?![\\s\\S])"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "average_fill_price": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "maxLength": 96,
+                                "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$(?![\\s\\S])"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "commission": {
                             "anyOf": [
                               {
                                 "type": "string",
@@ -4403,6 +5195,222 @@
                               }
                             ]
                           },
+                          "runtime_state_since": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 4096,
+                                "not": {
+                                  "pattern": "[\\u0000-\\u001f\\u007f]"
+                                }
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "runtime_state_changed_at": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 4096,
+                                "not": {
+                                  "pattern": "[\\u0000-\\u001f\\u007f]"
+                                }
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "execution_session_id": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 4096,
+                                "not": {
+                                  "pattern": "[\\u0000-\\u001f\\u007f]"
+                                }
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "started_at": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 4096,
+                                "not": {
+                                  "pattern": "[\\u0000-\\u001f\\u007f]"
+                                }
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "completed_at": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 4096,
+                                "not": {
+                                  "pattern": "[\\u0000-\\u001f\\u007f]"
+                                }
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "account_type": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 4096,
+                                "not": {
+                                  "pattern": "[\\u0000-\\u001f\\u007f]"
+                                }
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "position_side": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 4096,
+                                "not": {
+                                  "pattern": "[\\u0000-\\u001f\\u007f]"
+                                }
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "time_in_force": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 4096,
+                                "not": {
+                                  "pattern": "[\\u0000-\\u001f\\u007f]"
+                                }
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "client_order_id": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 4096,
+                                "not": {
+                                  "pattern": "[\\u0000-\\u001f\\u007f]"
+                                }
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "order_type": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 4096,
+                                "not": {
+                                  "pattern": "[\\u0000-\\u001f\\u007f]"
+                                }
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "commission_currency": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 4096,
+                                "not": {
+                                  "pattern": "[\\u0000-\\u001f\\u007f]"
+                                }
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "runtime_state": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "RUNNING",
+                                  "PAUSED",
+                                  "HALTED",
+                                  "STOPPED"
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "liquidity_side": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "MAKER",
+                                  "TAKER",
+                                  "UNKNOWN"
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "reduce_only": {
+                            "anyOf": [
+                              {
+                                "type": "boolean"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "post_only": {
+                            "anyOf": [
+                              {
+                                "type": "boolean"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
                           "mode": {
                             "anyOf": [
                               {
@@ -4570,6 +5578,54 @@
                             ]
                           },
                           "maintenance": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "maxLength": 96,
+                                "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$(?![\\s\\S])"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "trigger_price": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "maxLength": 96,
+                                "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$(?![\\s\\S])"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "filled_quantity": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "maxLength": 96,
+                                "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$(?![\\s\\S])"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "average_fill_price": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "maxLength": 96,
+                                "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$(?![\\s\\S])"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "commission": {
                             "anyOf": [
                               {
                                 "type": "string",
@@ -5124,6 +6180,222 @@
                               }
                             ]
                           },
+                          "runtime_state_since": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 4096,
+                                "not": {
+                                  "pattern": "[\\u0000-\\u001f\\u007f]"
+                                }
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "runtime_state_changed_at": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 4096,
+                                "not": {
+                                  "pattern": "[\\u0000-\\u001f\\u007f]"
+                                }
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "execution_session_id": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 4096,
+                                "not": {
+                                  "pattern": "[\\u0000-\\u001f\\u007f]"
+                                }
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "started_at": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 4096,
+                                "not": {
+                                  "pattern": "[\\u0000-\\u001f\\u007f]"
+                                }
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "completed_at": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 4096,
+                                "not": {
+                                  "pattern": "[\\u0000-\\u001f\\u007f]"
+                                }
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "account_type": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 4096,
+                                "not": {
+                                  "pattern": "[\\u0000-\\u001f\\u007f]"
+                                }
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "position_side": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 4096,
+                                "not": {
+                                  "pattern": "[\\u0000-\\u001f\\u007f]"
+                                }
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "time_in_force": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 4096,
+                                "not": {
+                                  "pattern": "[\\u0000-\\u001f\\u007f]"
+                                }
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "client_order_id": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 4096,
+                                "not": {
+                                  "pattern": "[\\u0000-\\u001f\\u007f]"
+                                }
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "order_type": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 4096,
+                                "not": {
+                                  "pattern": "[\\u0000-\\u001f\\u007f]"
+                                }
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "commission_currency": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 4096,
+                                "not": {
+                                  "pattern": "[\\u0000-\\u001f\\u007f]"
+                                }
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "runtime_state": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "RUNNING",
+                                  "PAUSED",
+                                  "HALTED",
+                                  "STOPPED"
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "liquidity_side": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "MAKER",
+                                  "TAKER",
+                                  "UNKNOWN"
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "reduce_only": {
+                            "anyOf": [
+                              {
+                                "type": "boolean"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "post_only": {
+                            "anyOf": [
+                              {
+                                "type": "boolean"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
                           "mode": {
                             "anyOf": [
                               {
@@ -5291,6 +6563,54 @@
                             ]
                           },
                           "maintenance": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "maxLength": 96,
+                                "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$(?![\\s\\S])"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "trigger_price": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "maxLength": 96,
+                                "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$(?![\\s\\S])"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "filled_quantity": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "maxLength": 96,
+                                "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$(?![\\s\\S])"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "average_fill_price": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "maxLength": 96,
+                                "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$(?![\\s\\S])"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "commission": {
                             "anyOf": [
                               {
                                 "type": "string",
@@ -5845,6 +7165,222 @@
                               }
                             ]
                           },
+                          "runtime_state_since": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 4096,
+                                "not": {
+                                  "pattern": "[\\u0000-\\u001f\\u007f]"
+                                }
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "runtime_state_changed_at": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 4096,
+                                "not": {
+                                  "pattern": "[\\u0000-\\u001f\\u007f]"
+                                }
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "execution_session_id": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 4096,
+                                "not": {
+                                  "pattern": "[\\u0000-\\u001f\\u007f]"
+                                }
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "started_at": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 4096,
+                                "not": {
+                                  "pattern": "[\\u0000-\\u001f\\u007f]"
+                                }
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "completed_at": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 4096,
+                                "not": {
+                                  "pattern": "[\\u0000-\\u001f\\u007f]"
+                                }
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "account_type": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 4096,
+                                "not": {
+                                  "pattern": "[\\u0000-\\u001f\\u007f]"
+                                }
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "position_side": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 4096,
+                                "not": {
+                                  "pattern": "[\\u0000-\\u001f\\u007f]"
+                                }
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "time_in_force": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 4096,
+                                "not": {
+                                  "pattern": "[\\u0000-\\u001f\\u007f]"
+                                }
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "client_order_id": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 4096,
+                                "not": {
+                                  "pattern": "[\\u0000-\\u001f\\u007f]"
+                                }
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "order_type": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 4096,
+                                "not": {
+                                  "pattern": "[\\u0000-\\u001f\\u007f]"
+                                }
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "commission_currency": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 4096,
+                                "not": {
+                                  "pattern": "[\\u0000-\\u001f\\u007f]"
+                                }
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "runtime_state": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "RUNNING",
+                                  "PAUSED",
+                                  "HALTED",
+                                  "STOPPED"
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "liquidity_side": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "MAKER",
+                                  "TAKER",
+                                  "UNKNOWN"
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "reduce_only": {
+                            "anyOf": [
+                              {
+                                "type": "boolean"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "post_only": {
+                            "anyOf": [
+                              {
+                                "type": "boolean"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
                           "mode": {
                             "anyOf": [
                               {
@@ -6012,6 +7548,54 @@
                             ]
                           },
                           "maintenance": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "maxLength": 96,
+                                "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$(?![\\s\\S])"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "trigger_price": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "maxLength": 96,
+                                "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$(?![\\s\\S])"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "filled_quantity": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "maxLength": 96,
+                                "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$(?![\\s\\S])"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "average_fill_price": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "maxLength": 96,
+                                "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$(?![\\s\\S])"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "commission": {
                             "anyOf": [
                               {
                                 "type": "string",
@@ -6566,6 +8150,222 @@
                               }
                             ]
                           },
+                          "runtime_state_since": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 4096,
+                                "not": {
+                                  "pattern": "[\\u0000-\\u001f\\u007f]"
+                                }
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "runtime_state_changed_at": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 4096,
+                                "not": {
+                                  "pattern": "[\\u0000-\\u001f\\u007f]"
+                                }
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "execution_session_id": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 4096,
+                                "not": {
+                                  "pattern": "[\\u0000-\\u001f\\u007f]"
+                                }
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "started_at": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 4096,
+                                "not": {
+                                  "pattern": "[\\u0000-\\u001f\\u007f]"
+                                }
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "completed_at": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 4096,
+                                "not": {
+                                  "pattern": "[\\u0000-\\u001f\\u007f]"
+                                }
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "account_type": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 4096,
+                                "not": {
+                                  "pattern": "[\\u0000-\\u001f\\u007f]"
+                                }
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "position_side": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 4096,
+                                "not": {
+                                  "pattern": "[\\u0000-\\u001f\\u007f]"
+                                }
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "time_in_force": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 4096,
+                                "not": {
+                                  "pattern": "[\\u0000-\\u001f\\u007f]"
+                                }
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "client_order_id": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 4096,
+                                "not": {
+                                  "pattern": "[\\u0000-\\u001f\\u007f]"
+                                }
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "order_type": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 4096,
+                                "not": {
+                                  "pattern": "[\\u0000-\\u001f\\u007f]"
+                                }
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "commission_currency": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 4096,
+                                "not": {
+                                  "pattern": "[\\u0000-\\u001f\\u007f]"
+                                }
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "runtime_state": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "RUNNING",
+                                  "PAUSED",
+                                  "HALTED",
+                                  "STOPPED"
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "liquidity_side": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "MAKER",
+                                  "TAKER",
+                                  "UNKNOWN"
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "reduce_only": {
+                            "anyOf": [
+                              {
+                                "type": "boolean"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "post_only": {
+                            "anyOf": [
+                              {
+                                "type": "boolean"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
                           "mode": {
                             "anyOf": [
                               {
@@ -6733,6 +8533,54 @@
                             ]
                           },
                           "maintenance": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "maxLength": 96,
+                                "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$(?![\\s\\S])"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "trigger_price": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "maxLength": 96,
+                                "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$(?![\\s\\S])"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "filled_quantity": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "maxLength": 96,
+                                "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$(?![\\s\\S])"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "average_fill_price": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "maxLength": 96,
+                                "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$(?![\\s\\S])"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "commission": {
                             "anyOf": [
                               {
                                 "type": "string",
@@ -7287,6 +9135,222 @@
                               }
                             ]
                           },
+                          "runtime_state_since": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 4096,
+                                "not": {
+                                  "pattern": "[\\u0000-\\u001f\\u007f]"
+                                }
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "runtime_state_changed_at": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 4096,
+                                "not": {
+                                  "pattern": "[\\u0000-\\u001f\\u007f]"
+                                }
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "execution_session_id": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 4096,
+                                "not": {
+                                  "pattern": "[\\u0000-\\u001f\\u007f]"
+                                }
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "started_at": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 4096,
+                                "not": {
+                                  "pattern": "[\\u0000-\\u001f\\u007f]"
+                                }
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "completed_at": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 4096,
+                                "not": {
+                                  "pattern": "[\\u0000-\\u001f\\u007f]"
+                                }
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "account_type": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 4096,
+                                "not": {
+                                  "pattern": "[\\u0000-\\u001f\\u007f]"
+                                }
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "position_side": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 4096,
+                                "not": {
+                                  "pattern": "[\\u0000-\\u001f\\u007f]"
+                                }
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "time_in_force": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 4096,
+                                "not": {
+                                  "pattern": "[\\u0000-\\u001f\\u007f]"
+                                }
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "client_order_id": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 4096,
+                                "not": {
+                                  "pattern": "[\\u0000-\\u001f\\u007f]"
+                                }
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "order_type": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 4096,
+                                "not": {
+                                  "pattern": "[\\u0000-\\u001f\\u007f]"
+                                }
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "commission_currency": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 4096,
+                                "not": {
+                                  "pattern": "[\\u0000-\\u001f\\u007f]"
+                                }
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "runtime_state": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "RUNNING",
+                                  "PAUSED",
+                                  "HALTED",
+                                  "STOPPED"
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "liquidity_side": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "MAKER",
+                                  "TAKER",
+                                  "UNKNOWN"
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "reduce_only": {
+                            "anyOf": [
+                              {
+                                "type": "boolean"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "post_only": {
+                            "anyOf": [
+                              {
+                                "type": "boolean"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
                           "mode": {
                             "anyOf": [
                               {
@@ -7454,6 +9518,54 @@
                             ]
                           },
                           "maintenance": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "maxLength": 96,
+                                "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$(?![\\s\\S])"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "trigger_price": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "maxLength": 96,
+                                "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$(?![\\s\\S])"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "filled_quantity": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "maxLength": 96,
+                                "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$(?![\\s\\S])"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "average_fill_price": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "maxLength": 96,
+                                "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$(?![\\s\\S])"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "commission": {
                             "anyOf": [
                               {
                                 "type": "string",
@@ -8008,6 +10120,222 @@
                               }
                             ]
                           },
+                          "runtime_state_since": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 4096,
+                                "not": {
+                                  "pattern": "[\\u0000-\\u001f\\u007f]"
+                                }
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "runtime_state_changed_at": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 4096,
+                                "not": {
+                                  "pattern": "[\\u0000-\\u001f\\u007f]"
+                                }
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "execution_session_id": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 4096,
+                                "not": {
+                                  "pattern": "[\\u0000-\\u001f\\u007f]"
+                                }
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "started_at": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 4096,
+                                "not": {
+                                  "pattern": "[\\u0000-\\u001f\\u007f]"
+                                }
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "completed_at": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 4096,
+                                "not": {
+                                  "pattern": "[\\u0000-\\u001f\\u007f]"
+                                }
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "account_type": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 4096,
+                                "not": {
+                                  "pattern": "[\\u0000-\\u001f\\u007f]"
+                                }
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "position_side": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 4096,
+                                "not": {
+                                  "pattern": "[\\u0000-\\u001f\\u007f]"
+                                }
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "time_in_force": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 4096,
+                                "not": {
+                                  "pattern": "[\\u0000-\\u001f\\u007f]"
+                                }
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "client_order_id": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 4096,
+                                "not": {
+                                  "pattern": "[\\u0000-\\u001f\\u007f]"
+                                }
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "order_type": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 4096,
+                                "not": {
+                                  "pattern": "[\\u0000-\\u001f\\u007f]"
+                                }
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "commission_currency": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 4096,
+                                "not": {
+                                  "pattern": "[\\u0000-\\u001f\\u007f]"
+                                }
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "runtime_state": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "RUNNING",
+                                  "PAUSED",
+                                  "HALTED",
+                                  "STOPPED"
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "liquidity_side": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "MAKER",
+                                  "TAKER",
+                                  "UNKNOWN"
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "reduce_only": {
+                            "anyOf": [
+                              {
+                                "type": "boolean"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "post_only": {
+                            "anyOf": [
+                              {
+                                "type": "boolean"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
                           "mode": {
                             "anyOf": [
                               {
@@ -8175,6 +10503,54 @@
                             ]
                           },
                           "maintenance": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "maxLength": 96,
+                                "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$(?![\\s\\S])"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "trigger_price": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "maxLength": 96,
+                                "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$(?![\\s\\S])"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "filled_quantity": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "maxLength": 96,
+                                "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$(?![\\s\\S])"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "average_fill_price": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "maxLength": 96,
+                                "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$(?![\\s\\S])"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "commission": {
                             "anyOf": [
                               {
                                 "type": "string",
@@ -8729,6 +11105,222 @@
                               }
                             ]
                           },
+                          "runtime_state_since": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 4096,
+                                "not": {
+                                  "pattern": "[\\u0000-\\u001f\\u007f]"
+                                }
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "runtime_state_changed_at": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 4096,
+                                "not": {
+                                  "pattern": "[\\u0000-\\u001f\\u007f]"
+                                }
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "execution_session_id": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 4096,
+                                "not": {
+                                  "pattern": "[\\u0000-\\u001f\\u007f]"
+                                }
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "started_at": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 4096,
+                                "not": {
+                                  "pattern": "[\\u0000-\\u001f\\u007f]"
+                                }
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "completed_at": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 4096,
+                                "not": {
+                                  "pattern": "[\\u0000-\\u001f\\u007f]"
+                                }
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "account_type": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 4096,
+                                "not": {
+                                  "pattern": "[\\u0000-\\u001f\\u007f]"
+                                }
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "position_side": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 4096,
+                                "not": {
+                                  "pattern": "[\\u0000-\\u001f\\u007f]"
+                                }
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "time_in_force": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 4096,
+                                "not": {
+                                  "pattern": "[\\u0000-\\u001f\\u007f]"
+                                }
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "client_order_id": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 4096,
+                                "not": {
+                                  "pattern": "[\\u0000-\\u001f\\u007f]"
+                                }
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "order_type": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 4096,
+                                "not": {
+                                  "pattern": "[\\u0000-\\u001f\\u007f]"
+                                }
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "commission_currency": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 4096,
+                                "not": {
+                                  "pattern": "[\\u0000-\\u001f\\u007f]"
+                                }
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "runtime_state": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "RUNNING",
+                                  "PAUSED",
+                                  "HALTED",
+                                  "STOPPED"
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "liquidity_side": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "MAKER",
+                                  "TAKER",
+                                  "UNKNOWN"
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "reduce_only": {
+                            "anyOf": [
+                              {
+                                "type": "boolean"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "post_only": {
+                            "anyOf": [
+                              {
+                                "type": "boolean"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
                           "mode": {
                             "anyOf": [
                               {
@@ -8896,6 +11488,54 @@
                             ]
                           },
                           "maintenance": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "maxLength": 96,
+                                "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$(?![\\s\\S])"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "trigger_price": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "maxLength": 96,
+                                "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$(?![\\s\\S])"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "filled_quantity": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "maxLength": 96,
+                                "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$(?![\\s\\S])"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "average_fill_price": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "maxLength": 96,
+                                "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$(?![\\s\\S])"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "commission": {
                             "anyOf": [
                               {
                                 "type": "string",
@@ -9450,6 +12090,222 @@
                               }
                             ]
                           },
+                          "runtime_state_since": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 4096,
+                                "not": {
+                                  "pattern": "[\\u0000-\\u001f\\u007f]"
+                                }
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "runtime_state_changed_at": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 4096,
+                                "not": {
+                                  "pattern": "[\\u0000-\\u001f\\u007f]"
+                                }
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "execution_session_id": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 4096,
+                                "not": {
+                                  "pattern": "[\\u0000-\\u001f\\u007f]"
+                                }
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "started_at": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 4096,
+                                "not": {
+                                  "pattern": "[\\u0000-\\u001f\\u007f]"
+                                }
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "completed_at": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 4096,
+                                "not": {
+                                  "pattern": "[\\u0000-\\u001f\\u007f]"
+                                }
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "account_type": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 4096,
+                                "not": {
+                                  "pattern": "[\\u0000-\\u001f\\u007f]"
+                                }
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "position_side": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 4096,
+                                "not": {
+                                  "pattern": "[\\u0000-\\u001f\\u007f]"
+                                }
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "time_in_force": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 4096,
+                                "not": {
+                                  "pattern": "[\\u0000-\\u001f\\u007f]"
+                                }
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "client_order_id": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 4096,
+                                "not": {
+                                  "pattern": "[\\u0000-\\u001f\\u007f]"
+                                }
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "order_type": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 4096,
+                                "not": {
+                                  "pattern": "[\\u0000-\\u001f\\u007f]"
+                                }
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "commission_currency": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 4096,
+                                "not": {
+                                  "pattern": "[\\u0000-\\u001f\\u007f]"
+                                }
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "runtime_state": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "RUNNING",
+                                  "PAUSED",
+                                  "HALTED",
+                                  "STOPPED"
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "liquidity_side": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "MAKER",
+                                  "TAKER",
+                                  "UNKNOWN"
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "reduce_only": {
+                            "anyOf": [
+                              {
+                                "type": "boolean"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "post_only": {
+                            "anyOf": [
+                              {
+                                "type": "boolean"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
                           "mode": {
                             "anyOf": [
                               {
@@ -9617,6 +12473,54 @@
                             ]
                           },
                           "maintenance": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "maxLength": 96,
+                                "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$(?![\\s\\S])"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "trigger_price": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "maxLength": 96,
+                                "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$(?![\\s\\S])"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "filled_quantity": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "maxLength": 96,
+                                "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$(?![\\s\\S])"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "average_fill_price": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "maxLength": 96,
+                                "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$(?![\\s\\S])"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "commission": {
                             "anyOf": [
                               {
                                 "type": "string",
@@ -9969,27 +12873,6 @@
             {
               "type": "object",
               "properties": {
-                "runtime": {
-                  "type": "object",
-                  "properties": {
-                    "runtime_state": {
-                      "type": "object",
-                      "properties": {
-                        "availability": {
-                          "const": "NOT_PUBLISHED"
-                        }
-                      }
-                    },
-                    "since": {
-                      "type": "object",
-                      "properties": {
-                        "availability": {
-                          "const": "NOT_PUBLISHED"
-                        }
-                      }
-                    }
-                  }
-                },
                 "reconciliation": {
                   "type": "object",
                   "properties": {
@@ -10024,15 +12907,17 @@
                 "sessions": {
                   "type": "object",
                   "properties": {
-                    "availability": {
-                      "const": "NOT_PUBLISHED"
+                    "source_complete": {
+                      "not": {
+                        "const": true
+                      }
                     }
                   }
                 }
               }
             }
           ],
-          "description": "BE-P12, present only when the request asks for include=stage_facts. The V1 fact vocabulary over the AUTHORIZED population only: OPEN_FINDINGS is stated when an authorized open finding exists; NO_OPEN_FINDINGS and exact counts are never stated (a resource-bound scope cannot prove it holds the whole population: AUTHORIZED_POPULATION_ONLY / AUTHORIZED_POPULATION_COUNT_NOT_EXACT). runtime and sessions are NOT_PUBLISHED because runtime_state and a session's id/started/completed instants are not in the reviewed read-field vocabulary."
+          "description": "FE-067/072: optional authorized runtime/session observations from exact deployment source fields, never inferred activation or global completeness. OPEN_FINDINGS is monotone; NO_OPEN_FINDINGS and exact population counts remain refused. Sessions are bounded authorized rows, source_complete never true. Missing/hidden source fields retain typed absence."
         }
       },
       "description": "Source-only finite Live deployment read; NEVER approval/root/captured lineage, current broker verdict, source completeness, runtime activation, stream or command permission. Legacy LiveFullOperations remains a separate version. Alpha and Account original purposes and reviewed field permissions are independently enforced by the runtime before rows/counts/fields; THIS SCHEMA DOES NOT AUTHORIZE. Portal observed time is not source freshness. Runtime also applies a1MiB encoded body bound and combined current-authority/fresh-source/LAST-Core fence. These are proposed implementation bounds, not measured performance qualification."
