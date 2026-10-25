@@ -11,5 +11,6 @@ export interface NativeCurrentRelationsPort {
     action:AccessAction;resource_digest:string}):Promise<ReadonlyMap<string,AccessRelations>>;
   sendFinite(input:{actor:AccessActor;workspace_id:string;action:AccessAction;resources:readonly AccessResource[];
     response:ServerResponse;build:(context:AccessEvaluationContext)=>Promise<Buffer>;
+    afterEnter?:()=>Promise<void>;beforeDispatch?:()=>void;
     assertAllowed:(context:AccessEvaluationContext)=>void}):Promise<void>;
 }

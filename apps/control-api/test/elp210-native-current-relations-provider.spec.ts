@@ -130,6 +130,47 @@ describe.skipIf(!url)("ordinary native CURRENT actual custody/finite egress, TES
   });await f.observe();
   await expect(pool.query("UPDATE auth_sessions SET state='REVOKED' WHERE session_id=$1",[f.actor.session_id])).resolves.toBeDefined();
  });
+ it("publication validation runs after actual ENTER without a Core client and before physical SENDING/dispatch",async()=>{
+  const f=await fixture(),order:string[]=[];
+  const result=await http(res=>f.provider.sendFinite({actor:f.actor,workspace_id:f.workspace,action:"portfolio.read",
+   resources:[{kind:"PORTFOLIO",id:"TEST_ONLY-portfolio"}],response:res,
+   build:async()=>{order.push("body");expect(f.endpoint.requests.map(r=>r.action)).toEqual(["issue"]);return Buffer.from('{}');},
+   afterEnter:async()=>{order.push("entered");expect(f.endpoint.requests.at(-1)?.action).toBe("enter");
+    expect((await f.rows())[0].phase).toBe("ENTERED");expect((await pool.query("SELECT 1 AS n")).rows[0].n).toBe(1);},
+   assertAllowed:()=>{order.push("policy");},beforeDispatch:()=>{if(!order.includes("dispatch"))expect(res.headersSent).toBe(false);order.push("dispatch");}}));
+  expect(result.completion.error).toBeUndefined();expect(order.slice(0,4)).toEqual(["body","entered","policy","dispatch"]);
+  expect((await f.rows())[0]).toMatchObject({phase:"SERVED",source_settled:true});
+ });
+ it("failed publication check after ENTER sends zero bytes and settles actual ABORTED, not SERVED",async()=>{
+  const f=await fixture();let dispatched=false;
+  const result=await http(res=>f.provider.sendFinite({actor:f.actor,workspace_id:f.workspace,action:"portfolio.read",
+   resources:[{kind:"PORTFOLIO",id:"TEST_ONLY-portfolio"}],response:res,build:async()=>Buffer.from('{}'),
+   afterEnter:async()=>{throw Error("TEST_ONLY-head-changed");},assertAllowed:()=>{},beforeDispatch:()=>{dispatched=true;}}));
+  expect(result.completion.error).toBeDefined();expect(result.received.body).toHaveLength(0);expect(dispatched).toBe(false);
+  expect((await f.rows())[0]).toMatchObject({phase:"ABORTED",source_settled:true});expect(f.terminals[0].phase).toBe("ABORTED");
+ });
+ it("physical dispatch refusal closes the reserved socket and never publishes SERVED",async()=>{
+  const f=await fixture();let dispatchChecks=0;
+  const result=await http(res=>f.provider.sendFinite({actor:f.actor,workspace_id:f.workspace,action:"portfolio.read",
+   resources:[{kind:"PORTFOLIO",id:"TEST_ONLY-portfolio"}],response:res,build:async()=>Buffer.from('{}'),
+   assertAllowed:()=>{},beforeDispatch:()=>{dispatchChecks++;throw Error("TEST_ONLY-publication-expired");}}));
+  // The physical writer reports its genuine ABORTED witness rather than
+  // leaking a callback exception. Successful settlement is not SERVED.
+  expect(result.completion.error).toBeUndefined();expect(dispatchChecks).toBe(1);expect(result.received.body).toHaveLength(0);
+  expect((await f.rows())[0]).toMatchObject({phase:"ABORTED",source_settled:true});
+  expect(f.terminals[0].phase).toBe("ABORTED");
+ });
+ it("shutdown joins the actual in-flight source call, refuses new work and keeps real custody",async()=>{
+  const f=await fixture();let release!:()=>void,entered!:()=>void;
+  const enteredSource=new Promise<void>(resolve=>{entered=resolve;}),held=new Promise<void>(resolve=>{release=resolve;});
+  f.onIssue(async()=>{entered();await held;});
+  const operation=f.observe();await enteredSource;
+  let closed=false;const closing=f.provider.shutdown(5000).then(()=>{closed=true;});
+  await new Promise(resolve=>setTimeout(resolve,10));expect(closed).toBe(false);
+  await expect(f.observe()).rejects.toMatchObject({code:"NATIVE_CURRENT_RECOVERY_REQUIRED"});
+  release();await operation;await closing;expect(closed).toBe(true);
+  expect((await f.rows())[0]).toMatchObject({phase:"CANCELLED",source_settled:true});expect(f.terminals).toEqual([]);
+ });
  it("lost ISSUE response retires same frozen attempt without ENTER/new identity or terminal",async()=>{
   const f=await fixture();f.loseIssue();await expect(f.observe()).rejects.toBeDefined();
   const row=(await f.rows())[0];expect(row).toMatchObject({phase:"CANCELLED",source_settled:true});

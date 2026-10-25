@@ -27,6 +27,8 @@ const settings=z.object({bindings:z.array(cut).min(1).max(64),maximum_retained:z
  maximum_unresolved:z.number().int().min(1).max(64),maximum_recoveries:z.number().int().min(1).max(64),
  attempt_ms:z.number().int().min(1).max(60000),maximum_principals:z.number().int().min(1).max(64)}).strict();
 const terminalSettings=z.object({issuer:text,audience:text,key_id:text,ttl_seconds:z.number().int().min(1).max(60)}).strict();
+export const nativeCurrentRelationsSettings=settings;
+export const nativeCurrentRelationsTerminalSettings=terminalSettings;
 export interface NativeCurrentRelationsProviderConfig extends z.infer<typeof settings> {
  terminal:z.infer<typeof terminalSettings>&{private_key:KeyObject};
 }
@@ -56,6 +58,8 @@ export class NativeCurrentRelationsProvider implements NativeCurrentRelationsPor
  readonly source_config_digest:string;
  private readonly reservations=new Map<string,{reservation:NativeReadEgressReservation;binding:NativeReadEgressBinding}>();
  private readonly activeFlights=new Set<string>();
+ private readonly pending=new Set<Promise<unknown>>();
+ private stopping=false;
  constructor(private readonly pool:Pool,private readonly client:NativeCurrentRelationsSourceClient,
   private readonly egress:NativeReadEgress,input:NativeCurrentRelationsProviderConfig) {
   try {
@@ -168,7 +172,25 @@ export class NativeCurrentRelationsProvider implements NativeCurrentRelationsPor
    WHERE lease_id=$1 AND phase IN ('PREPARED','ISSUE_REQUESTED','ISSUED','CANCELLED') AND NOT source_settled RETURNING *`,[base.binding.lease_id,proof.response_sha256]));
   if(changed.rowCount!==1){const row=await this.row(base.binding.lease_id);if(!row.source_settled||row.phase!=="CANCELLED")return fail("NATIVE_CURRENT_CUSTODY_CONFLICT");}
  }
- async observe(input:Parameters<NativeCurrentRelationsPort["observe"]>[0]):Promise<ReadonlyMap<string,AccessRelations>>{
+ private tracked<T>(operation:()=>Promise<T>):Promise<T>{
+  if(this.stopping)return Promise.reject(new NativeCurrentRelationsProviderError("NATIVE_CURRENT_RECOVERY_REQUIRED"));
+  const result=Promise.resolve().then(operation);this.pending.add(result);
+  void result.finally(()=>this.pending.delete(result)).catch(()=>undefined);return result;
+ }
+ /** Stop admission, join real requests/settlement, then permit pool teardown.
+  * Timeout is NOT a source terminal and never clears UNKNOWN custody. */
+ async shutdown(deadlineMs:number):Promise<void>{
+  if(!Number.isSafeInteger(deadlineMs)||deadlineMs<1||deadlineMs>10000)return fail("NATIVE_CURRENT_CONFIG_INVALID");
+  this.stopping=true;const until=performance.now()+deadlineMs;
+  while(this.pending.size||this.client.snapshot().in_flight){
+   if(performance.now()>=until)return fail("NATIVE_CURRENT_RECOVERY_REQUIRED");
+   await new Promise<void>(resolve=>setTimeout(resolve,5));
+  }
+ }
+ observe(input:Parameters<NativeCurrentRelationsPort["observe"]>[0]):Promise<ReadonlyMap<string,AccessRelations>>{
+  return this.tracked(()=>this.observeOwned(input));
+ }
+ private async observeOwned(input:Parameters<NativeCurrentRelationsPort["observe"]>[0]):Promise<ReadonlyMap<string,AccessRelations>>{
   const request=this.capture(input),ids=[...input.principal_ids];await this.recoverForAdmission();const before=await this.snapshot(request.actor,request.workspace_id),
    bases=await this.reserve(request,ids,before),map=new Map<string,AccessRelations>();
   try{for(const base of bases){const held=await this.issue(request,base);map.set(base.purpose.principal_id,held.relations);}
@@ -200,11 +222,14 @@ export class NativeCurrentRelationsProvider implements NativeCurrentRelationsPor
    for(const target of grant.targets)if(target.environment==="paper"){transition(target.valid_from_ms);transition(target.valid_until_ms);}}
   if(!Number.isSafeInteger(until)||until<=Math.max(snapshot.now,Date.now()))return fail("NATIVE_CURRENT_AUTHORITY_CHANGED");return until;
  }
- async sendFinite(input:Parameters<NativeCurrentRelationsPort["sendFinite"]>[0]):Promise<void>{
+ sendFinite(input:Parameters<NativeCurrentRelationsPort["sendFinite"]>[0]):Promise<void>{
+  return this.tracked(()=>this.sendFiniteOwned(input));
+ }
+ private async sendFiniteOwned(input:Parameters<NativeCurrentRelationsPort["sendFinite"]>[0]):Promise<void>{
   const resources=JSON.parse(nativeCurrentRelationsCanonical(input.resources)) as AccessResource[];
   if(resources.length<1||resources.length>200||!resources.every(r=>accessResource.safeParse(r).success)||input.action==="stream.subscribe")return fail("NATIVE_CURRENT_FINITE_ONLY");
   const request=this.capture({...input,resource_digest:accessDigest(resources)}),response:ServerResponse=input.response;
-  const build=input.build,assertAllowed=input.assertAllowed;
+  const build=input.build,assertAllowed=input.assertAllowed,afterEnter=input.afterEnter,beforeDispatch=input.beforeDispatch;
   await this.recoverForAdmission();const before=await this.snapshot(request.actor,request.workspace_id),bases=await this.reserve(request,before.ids,before),held:Held[]=[];
   let reservation:NativeReadEgressReservation|undefined,binding:NativeReadEgressBinding|undefined;
   try{
@@ -221,6 +246,10 @@ export class NativeCurrentRelationsProvider implements NativeCurrentRelationsPor
    for(const base of bases){await this.transition(base,["ISSUED"],"ENTERING");const entered=await this.call(base,"enter");
     if(entered.result.state!=="ENTERED")return fail();await this.transition(base,["ENTERING"],"ENTERED");}
    const assertCurrent=()=>{if(Date.now()>=until||performance.now()-issuedMono>=until-issuedWall)return fail("NATIVE_CURRENT_AUTHORITY_CHANGED");};
+   // Publication/head checks may await only here: actual source fences are
+   // ENTERED, but no Core connection/transaction is retained. The prepared
+   // physical reservation already owns the exact immutable response bytes.
+   assertCurrent();await afterEnter?.();assertCurrent();
    await this.transaction(async db=>{
     const final=await lockCurrentHumanSnapshot(db,request.actor,request.workspace_id);
     if(final.authority_fingerprint!==before.authority_fingerprint)return fail("NATIVE_CURRENT_AUTHORITY_CHANGED");
@@ -231,7 +260,13 @@ export class NativeCurrentRelationsProvider implements NativeCurrentRelationsPor
      await db.query("UPDATE portal_native_current_read_obligations SET phase='SENDING',body_digest=$2 WHERE lease_id=$1",[base.binding.lease_id,binding!.body_digest]);}
     assertCurrent();
    }); // physical Core COMMIT + pool release precedes dispatch.
-   const witness=await this.egress.dispatch(reservation,{binding,assertCurrent}),observation=this.egress.consumeReserved(witness,reservation);
+   const dispatchCurrent=()=>{assertCurrent();const result:unknown=beforeDispatch?.();
+    if(result!==undefined){if(result&&typeof (result as {then?:unknown}).then==="function")void Promise.resolve(result).catch(()=>undefined);
+     return fail("NATIVE_CURRENT_NOT_QUALIFIED");}assertCurrent();};
+   // Synchronous only: publication expiry and Fastify transport ownership are
+   // checked at dispatch as well as while the physical writer remains active.
+   // A failed check closes this reservation and retains real ABORTED/UNKNOWN.
+   const witness=await this.egress.dispatch(reservation,{binding,assertCurrent:dispatchCurrent}),observation=this.egress.consumeReserved(witness,reservation);
    for(const base of bases)await this.recordObservation(base,observation);
    for(const base of bases)await this.recoverOne(base.binding.lease_id);
   }catch(error){
@@ -271,7 +306,8 @@ export class NativeCurrentRelationsProvider implements NativeCurrentRelationsPor
    [this.source_config_digest,[...this.activeFlights]])).rows[0].n;
   if(remaining>0)return fail("NATIVE_CURRENT_RECOVERY_REQUIRED");
  }
- async recover():Promise<{remaining:number}>{
+ recover():Promise<{remaining:number}>{return this.tracked(()=>this.recoverOwned());}
+ private async recoverOwned():Promise<{remaining:number}>{
   const rows=(await this.pool.query<Row>("SELECT * FROM portal_native_current_read_obligations WHERE NOT source_settled AND source_config_digest=$1 ORDER BY created_at,lease_id LIMIT $2",
    [this.source_config_digest,this.config.maximum_recoveries])).rows;
   for(const row of rows)if(!this.activeFlights.has(row.flight_id))await this.recoverOne(row.lease_id);

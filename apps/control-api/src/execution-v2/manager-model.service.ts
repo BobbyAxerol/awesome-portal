@@ -1,6 +1,7 @@
 import { rejectManagerAsOf } from "./manager-query-p1";
 import { Inject, Injectable, Optional } from "@nestjs/common";
 import { Pool } from "pg";
+import type { ServerResponse } from "node:http";
 import { CONTROL_API_CONFIG, EXECUTION_DATA_POOL } from "../tokens";
 import { ControlApiConfig, querySigningKeys } from "../config";
 import { KeysetCursorCodec } from "../query/cursor";
@@ -20,11 +21,16 @@ import { ExecutionManagerRuntime } from "./manager-runtime";
 import type { ManagerScorePublication } from "./manager-score-publication.contract";
 import type { ManagerCompositionPublication } from "./manager-composition-publication.contract";
 import type { ManagerRegimePublication } from "./manager-regime-publication.contract";
+import { NativeCurrentAccountScopes } from "./native-current-runtime";
 
 interface ManagerReadObligation {
   scope: AuthorizedExecutionReadScope;
   validateSnapshot: () => Promise<void>;
   validatePublications: () => void;
+}
+interface NativeManagerDelivery {
+  response: ServerResponse;
+  beforeDispatch: () => void;
 }
 
 @Injectable()
@@ -34,7 +40,8 @@ export class ManagerModelService {
   constructor(@Inject(EXECUTION_DATA_POOL) pool: Pool,
     @Inject(ExecutionReadScopes) private readonly scopes: ExecutionReadScopes,
     @Inject(CONTROL_API_CONFIG) private readonly config: ControlApiConfig,
-    @Optional() @Inject(ExecutionManagerRuntime) private readonly runtime?: ExecutionManagerRuntime) {
+    @Optional() @Inject(ExecutionManagerRuntime) private readonly runtime?: ExecutionManagerRuntime,
+    @Optional() @Inject(NativeCurrentAccountScopes) private readonly nativeAccount?: NativeCurrentAccountScopes) {
     this.repository = new ManagerModelRepository(pool);
     this.codec = new KeysetCursorCodec({ activeKeyId: config.QUERY_CURSOR_ACTIVE_KEY_ID,
       keys: querySigningKeys(config), ttlSeconds: config.QUERY_CURSOR_TTL_SECONDS });
@@ -57,6 +64,30 @@ export class ManagerModelService {
     if (q.workspace_id && q.workspace_id !== principal.workspaceId) throw new ExecutionReadScopeError("EXECUTION_READ_NOT_AVAILABLE", 404);
     return this.readEnvironment(principal, env, surface, q, id, (scope, doc, fences) =>
       queryManagerModel(scope, doc, q, this.codec, surface, id, fences.score, fences.composition, fences.regime));
+  }
+
+  /** Actual installed composition, never a browser/profile flag. Optional
+   * invocation keeps old explicit test doubles compatible; real scopes always
+   * implement this accessor. No native path falls back to ordinary delivery. */
+  hasNativeCurrentRelations(): boolean { return this.nativeAccount?.scopes.hasNativeCurrentRelations() === true; }
+
+  /** One exact public finite slice. This private composition grants no native
+   * authority to ALL, history, stream or other surfaces; their ordinary
+   * separately configured scopes and delivery paths remain unchanged. */
+  async readNativeAccount(principal: ReadScopePrincipal, raw: unknown, id: string, response: ServerResponse,
+    beforeDispatch: () => void): Promise<void> {
+    if (!this.hasNativeCurrentRelations()) throw new ExecutionReadScopeError("EXECUTION_READ_AUTHORITY_UNAVAILABLE", 503);
+    if (raw && typeof raw === "object" && !Array.isArray(raw)) rejectManagerAsOf(raw as Record<string, unknown>);
+    const parsed = managerModelQuery.safeParse(raw);
+    if (!parsed.success) throw new ExecutionReadScopeError("EXECUTION_READ_NOT_AVAILABLE", 400);
+    const q = parsed.data;
+    if (q.environment !== "paper") throw new ExecutionReadScopeError("EXECUTION_READ_CURRENT_ONLY", 503);
+    if (!id || id.length > 256 || q.workspace_id && q.workspace_id !== principal.workspaceId)
+      throw new ExecutionReadScopeError("EXECUTION_READ_NOT_AVAILABLE", 404);
+    if (q.stage_filter.some(stage => stage !== "PAPER")) throw new ExecutionReadScopeError("EXECUTION_READ_QUERY_INVALID", 400);
+    await this.readEnvironment(principal, "paper", "ACCOUNT", q, id, (scope, doc, fences) =>
+      queryManagerModel(scope, doc, q, this.codec, "ACCOUNT", id, fences.score, fences.composition, fences.regime),
+      undefined, { response, beforeDispatch }, this.nativeAccount!.scopes);
   }
 
   private profileFor(env: ManagerEnvironmentName) {
@@ -96,7 +127,8 @@ export class ManagerModelService {
   private async readEnvironment<T>(principal: ReadScopePrincipal, env: ManagerEnvironmentName, surface: ManagerSurface, q: { workspace_id?: string },
     id: string | undefined, compute: (scope: AuthorizedExecutionReadScope, doc: ManagerModelDocument,
       fences: { score?: ManagerScoreReadFence; composition?: ManagerCompositionReadFence; regime?: ManagerRegimeReadFence }) => T,
-    retain?: (obligation: ManagerReadObligation) => void): Promise<T> {
+    retain?: (obligation: ManagerReadObligation) => void, native?: NativeManagerDelivery,
+    scopes: ExecutionReadScopes = this.scopes): Promise<T> {
     const profile = this.profileFor(env);
     if (!profile) throw new ExecutionReadScopeError("EXECUTION_READ_AUTHORITY_UNAVAILABLE", 503);
     try {
@@ -113,10 +145,10 @@ export class ManagerModelService {
       const requirement: ReadScopeRequirement = surface === "FLEET" && resource === undefined ? fleetReadRequirement(dataset) :
         { action, resource: surface === "DEPLOYMENT" ? undefined : resource, requireWholePopulation: surface === "FUND", dataset };
       let scope;
-      try { scope = await this.scopes.authorize(principal, { environment: env, profileId: profile }, requirement); }
+      try { scope = await scopes.authorize(principal, { environment: env, profileId: profile }, requirement); }
       catch (error) {
         if (surface !== "PORTFOLIO" || !(error instanceof ExecutionReadScopeError) || error.code !== "EXECUTION_READ_NOT_AVAILABLE") throw error;
-        scope = await this.scopes.authorize(principal, { environment: env, profileId: profile }, { ...requirement, action: "portfolio.read_restricted" });
+        scope = await scopes.authorize(principal, { environment: env, profileId: profile }, { ...requirement, action: "portfolio.read_restricted" });
       }
       if (scope.mode !== "SCOPED_V2" || !head) throw new ExecutionReadScopeError("EXECUTION_READ_PUBLICATION_NOT_QUALIFIED", 503);
       if (surface === "DEPLOYMENT" && !scopeReadPopulation(scope).allowedTuples.some(t => t.deployment_id === id))
@@ -131,7 +163,7 @@ export class ManagerModelService {
           throw new ExecutionReadScopeError("EXECUTION_READ_ACCESS_CHANGED", 409);
       };
       let validateSnapshot: (() => Promise<void>) | undefined;
-      const result = await this.scopes.deliver(scope, async () => {
+      const read = async () => {
         const original = await this.repository.document(principal.workspaceId, env, profile, head.revision);
         // TEST_ONLY rows can be exercised through the pure component in a
         // disposable cell, never served by a product constructor/environment flag.
@@ -163,10 +195,32 @@ export class ManagerModelService {
         await validateSnapshot();
         validatePublications();
         return response;
-      });
+      };
+      let result: T;
+      if (native) {
+        let prepared: { value: T } | undefined;
+        await scopes.deliverNative(scope, native.response, async () => {
+          const value = await read();
+          prepared = { value };
+          return Buffer.from(JSON.stringify(value), "utf8");
+        }, {
+          // Recheck the same immutable projection after all source ENTER I/O,
+          // without holding a Core transaction across the data query.
+          validateAfterEnter: async () => {
+            if (!validateSnapshot) throw new ExecutionReadScopeError("EXECUTION_READ_AUTHORITY_UNAVAILABLE", 503);
+            await validateSnapshot();
+            validatePublications();
+          },
+          // Final synchronous accepted-publication check follows Core COMMIT
+          // and pool release, immediately before the sole physical send.
+          validateBeforeDispatch: () => { validatePublications(); native.beforeDispatch(); },
+        });
+        if (!prepared) throw new ExecutionReadScopeError("EXECUTION_READ_AUTHORITY_UNAVAILABLE", 503);
+        result = prepared.value;
+      } else result = await scopes.deliver(scope, read);
       // deliver itself awaits the final current authority publication. A policy
       // expiry/revoke during that I/O must not return an earlier numeric score.
-      validatePublications();
+      if (!native) validatePublications();
       if (retain && validateSnapshot) retain({ scope, validateSnapshot, validatePublications });
       return result;
     } catch (error) {

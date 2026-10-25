@@ -253,6 +253,10 @@ import { withManagerCurrentPublications } from "./execution-v2/manager-current-p
 import { ManagerCurrentAccounts } from "./execution-v2/manager-current-accounts";
 import { FinancialSourceComposition } from "./execution-v2/financial-source-composition";
 import type { PreparedFinancialSourceApplication } from "./execution-v2/financial-source-bootstrap";
+import { NativeCurrentAccountScopes, type PreparedNativeCurrentApplication } from "./execution-v2/native-current-runtime";
+import { CommandStatusComposition } from "./execution-v2/command-status-composition";
+import type { PreparedCommandStatusApplication } from "./execution-v2/command-status-bootstrap";
+import { unqualifiedCommandTrust } from "./execution-v2/command-trust";
 
 /** Internal composition seam, never populated from request headers/body or
  * runtime environment flags. TEST_ONLY authority cannot enter a non-test app. */
@@ -263,6 +267,10 @@ export interface ControlApiDependencies {
   /** Constructed by private bootstrap only, registered in the SAME coordinator
    * before Nest starts. No configuration flag alone creates an identity. */
   financialSource?: PreparedFinancialSourceApplication;
+  /** Exact finite account provider; never replaces mutation/ordinary readers. */
+  nativeCurrent?: PreparedNativeCurrentApplication;
+  /** Independent current-requester STATUS; never mounts command SUBMIT. */
+  commandStatus?:PreparedCommandStatusApplication;
   executionCommandTrust?: CommandTrust;
   executionInstanceRegistrationTrust?: InstanceRegistrationTrust;
   executionPendingControlTrust?: PendingControlTrust;
@@ -309,6 +317,14 @@ export class AppModule implements OnApplicationShutdown {
       throw new Error("CURRENT_HUMAN_MUTATION_CORE_POOL_REQUIRED");
     if(dependencies.financialSource&&(!dependencies.nativeManagerRead||!dependencies.currentHumanMutations?.hasReverseRecoveryParticipant(dependencies.financialSource.participant)))
       throw new Error("FINANCIAL_SOURCE_SHARED_NATIVE_COMPOSITION_REQUIRED");
+    if(dependencies.nativeCurrent&&(!nativeResearchReview(config)||!dependencies.nativeManagerRead||
+      !dependencies.nativeCurrent.provider.usesPool(pool)||
+      !dependencies.currentHumanMutations?.hasCurrentReadRecoveryParticipant(dependencies.nativeCurrent.provider)))
+      throw new Error("NATIVE_CURRENT_SHARED_RESEARCH_COMPOSITION_REQUIRED");
+    if(dependencies.commandStatus&&(!nativeResearchReview(config)||!dependencies.nativeManagerRead||
+      !dependencies.commandStatus.composition.usesPool(pool)||
+      !dependencies.currentHumanMutations?.hasReverseRecoveryParticipant(dependencies.commandStatus.participant)))
+      throw new Error("COMMAND_STATUS_SHARED_RESEARCH_COMPOSITION_REQUIRED");
     const ownsExecutionPool = !executionPool && !!config.EXECUTION_DATABASE_URL;
     if (dependencies.executionManagerRuntime && (executionPool === pool || !executionPool && !config.EXECUTION_DATABASE_URL))
       throw new Error("MANAGER_RUNTIME_EXECUTION_POOL_REQUIRED");
@@ -476,6 +492,23 @@ export class AppModule implements OnApplicationShutdown {
           useFactory: (db:Pool,access:ExecutionAccessService,cfg:ControlApiConfig)=>new ExecutionReadScopes(db,access,cfg),
           inject: [CONTROL_API_POOL,ExecutionAccessService,CONTROL_API_CONFIG],
         },
+        ...(dependencies.nativeCurrent?[{
+          provide:NativeCurrentAccountScopes,
+          useFactory:(auth:AuthService)=>{
+            if(!accessTrust)throw new Error("NATIVE_CURRENT_IDENTITY_TRUST_REQUIRED");
+            const prepared=dependencies.nativeCurrent!,scopes=prepared.createScopes(auth,accessTrust,config);
+            return Object.assign(scopes,{beforeApplicationShutdown:()=>prepared.shutdown()});
+          },
+          inject:[AuthService],
+        }]:[]),
+        ...(dependencies.commandStatus?[{
+          provide:CommandStatusComposition,
+          useFactory:()=>{
+            const prepared=dependencies.commandStatus!,composition=prepared.composition;
+            return Object.assign(composition,{onModuleInit:()=>composition.start(prepared.listeners),
+              beforeApplicationShutdown:()=>composition.shutdown()});
+          },
+        }]:[]),
         ...(dependencies.financialSource?[{
           provide:FinancialSourceComposition,
           useFactory:()=>{
@@ -515,7 +548,9 @@ export class AppModule implements OnApplicationShutdown {
         {
           provide: ExecutionCommandService,
           useFactory: (db:Pool,access:ExecutionAccessService,cfg:ControlApiConfig)=>new ExecutionCommandService(db,access,
-            dependencies.executionCommandTrust,dependencies.allowTestOnlyExecutionAccess===true,
+            dependencies.commandStatus?dependencies.commandStatus.composition.statusTrust(access,
+              dependencies.executionCommandTrust??unqualifiedCommandTrust,dependencies.currentHumanMutations!):dependencies.executionCommandTrust,
+            dependencies.allowTestOnlyExecutionAccess===true,
             {activeKeyId:cfg.QUERY_CURSOR_ACTIVE_KEY_ID,keys:querySigningKeys(cfg),ttlSeconds:cfg.QUERY_CURSOR_TTL_SECONDS}),
           inject:[CONTROL_API_POOL,ExecutionAccessService,CONTROL_API_CONFIG],
         },

@@ -68,6 +68,7 @@ export class NativeRootReceiptProvider {
   compose(base:AccessTrustProvider):AccessTrustProvider {
     return {verifyPolicy:base.verifyPolicy.bind(base),verifyReceipt:base.verifyReceipt.bind(base),
       relations:base.relations.bind(base),verifiedHumanMapping:base.verifiedHumanMapping.bind(base),
+      ...(base.currentRelations?{currentRelations:base.currentRelations}:{}),
       ...(base.qualifyDelegatedReceipt?{qualifyDelegatedReceipt:base.qualifyDelegatedReceipt.bind(base)}:{}),
       ...(base.readPublication?{readPublication:base.readPublication.bind(base)}:{}),
       verifyRootReceipt:(input,context)=>this.verify(input,context)};

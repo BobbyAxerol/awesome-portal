@@ -9,6 +9,9 @@ import { assertRegisteredResearchCurrentHumanSchema } from "./execution-v2/curre
 import { currentViewRuntimeReference, prepareCurrentViewRuntime } from "./execution-v2/current-view-runtime";
 import { financialSourceRuntimeReference, prepareFinancialSourceRuntime } from "./execution-v2/financial-source-runtime";
 import { prepareFinancialSourceApplication, selectPrivateCorePoolProfile } from "./execution-v2/financial-source-bootstrap";
+import { nativeCurrentRuntimeReference, prepareNativeCurrentRuntime, prepareNativeCurrentApplication } from "./execution-v2/native-current-runtime";
+import { commandStatusRuntimeReference, prepareCommandStatusRuntime } from "./execution-v2/command-status-runtime";
+import { prepareCommandStatusApplication } from "./execution-v2/command-status-bootstrap";
 
 async function bootstrap(): Promise<void> {
   const config = loadConfig();
@@ -18,19 +21,31 @@ async function bootstrap(): Promise<void> {
   const currentViewRuntime = currentViewReference ? await prepareCurrentViewRuntime(currentViewReference) : undefined;
   const financialReference=financialSourceRuntimeReference();
   const financialRuntime=financialReference?await prepareFinancialSourceRuntime(financialReference):undefined;
+  const finiteReference=nativeCurrentRuntimeReference();
+  const finiteRuntime=finiteReference?await prepareNativeCurrentRuntime(finiteReference):undefined;
+  if(finiteRuntime&&!nativeResearchReview(config))throw new Error("NATIVE_CURRENT_RESEARCH_TARGET_REQUIRED");
+  const statusReference=commandStatusRuntimeReference();
+  const statusRuntime=statusReference?await prepareCommandStatusRuntime(statusReference):undefined;
+  if(statusRuntime&&!nativeResearchReview(config))throw new Error("COMMAND_STATUS_RESEARCH_TARGET_REQUIRED");
   const reviewTarget=nativeResearchReview(config)
     ? native?.researchReviewTarget(config.EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID!) : undefined;
   if(nativeResearchReview(config)&&!reviewTarget)throw new Error("NATIVE_RESEARCH_REVIEW_COMPOSITION_REQUIRED");
-  const pool = buildPool(config.DATABASE_URL, selectPrivateCorePoolProfile(native,currentViewRuntime,financialRuntime));
+  const pool = buildPool(config.DATABASE_URL, selectPrivateCorePoolProfile(native,currentViewRuntime,financialRuntime,finiteRuntime,statusRuntime));
   let financialSource: Awaited<ReturnType<typeof prepareFinancialSourceApplication>> | undefined;
+  let nativeCurrent: Awaited<ReturnType<typeof prepareNativeCurrentApplication>> | undefined;
+  let commandStatus: Awaited<ReturnType<typeof prepareCommandStatusApplication>> | undefined;
   const nativeDependencies = native ? await composeOwnedNativeCoreRuntime({compose:async ownedPool=>{
     if(reviewTarget)await assertRegisteredResearchCurrentHumanSchema(ownedPool,reviewTarget);
     // Both factories finish before any listener starts. A failed schema or
     // financial preparation belongs to the same bootstrap-owned pool cleanup.
     financialSource=financialRuntime?await prepareFinancialSourceApplication(ownedPool,financialRuntime):undefined;
-    return native.compose(ownedPool,financialSource?[financialSource.participant]:[]);
+    nativeCurrent=finiteRuntime?await prepareNativeCurrentApplication(ownedPool,finiteRuntime):undefined;
+    commandStatus=statusRuntime?await prepareCommandStatusApplication(ownedPool,statusRuntime):undefined;
+    return native.compose(ownedPool,[...(financialSource?[financialSource.participant]:[]),
+      ...(commandStatus?[commandStatus.participant]:[])],nativeCurrent?.provider);
   }}, pool) : undefined;
-  const dependencies = { ...nativeDependencies,...(currentViewRuntime?{currentViewRuntime}:{}),...(financialSource?{financialSource}:{}) };
+  const dependencies = { ...nativeDependencies,...(currentViewRuntime?{currentViewRuntime}:{}),...(financialSource?{financialSource}:{}),
+    ...(nativeCurrent?{nativeCurrent}:{}),...(commandStatus?{commandStatus}:{}) };
   const owner = native ? new NativeCoreApplicationOwner(pool) : undefined;
   try {
     const app = await createControlApiApp(config, pool, undefined, dependencies, owner);

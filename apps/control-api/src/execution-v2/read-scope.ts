@@ -1248,6 +1248,8 @@ export class ExecutionReadScopes {
     return result as T;
   }
 
+  hasNativeCurrentRelations():boolean{return this.access.hasNativeCurrentRelations();}
+
   async deliver<T>(scope:AuthorizedExecutionReadScope,read:()=>Promise<T>):Promise<T> {
     // A returned DTO is NOT the physical final HTTP boundary. Native CURRENT
     // composition must use deliverNative; never silently fall back detached.
@@ -1265,7 +1267,7 @@ export class ExecutionReadScopes {
    * retains exact publication/resource proof. No history window, manager-wide
    * notice, STREAM or Root intake is promoted to this native READ purpose. */
   async deliverNative(scope:AuthorizedExecutionReadScope,response:ServerResponse,
-    read:()=>Promise<Buffer>):Promise<void>{
+    read:()=>Promise<Buffer>,validation?:{validateAfterEnter?:()=>Promise<void>;validateBeforeDispatch?:()=>void}):Promise<void>{
     assertExecutionReadScope(scope);const state=minted.get(scope)!;
     if(state.issuer!==this||scope.mode!=="SCOPED_V2"||scope.environment!=="paper"||!state.context||
       state.requirement.action==="stream.subscribe"||state.requirement.dataset?.window!=null)
@@ -1285,7 +1287,8 @@ export class ExecutionReadScopes {
       if(!policyReady(context))fail("EXECUTION_READ_POLICY_PENDING",503);
     };
     await this.access.deliverNativeCurrent(actor,scope.workspaceId,action,resources,response,
-      async context=>{check(context);return read();},check);
+      async context=>{check(context);return read();},check,
+      {afterEnter:validation?.validateAfterEnter,beforeDispatch:validation?.validateBeforeDispatch});
   }
 
   /** Notice-only V2 bridge; no route/adapter is commissioned by calling this.

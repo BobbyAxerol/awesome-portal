@@ -1,5 +1,5 @@
-import { Controller, Get, Header, Inject, Param, Query, Req, UseGuards } from "@nestjs/common";
-import { FastifyRequest } from "fastify";
+import { Controller, Get, Header, Inject, Param, Query, Req, Res, UseGuards } from "@nestjs/common";
+import { FastifyRequest, type FastifyReply } from "fastify";
 import { AuthSession, PortalUser } from "../domain";
 import { SessionGuard } from "../facade/session.guard";
 import { WorkspacesRepository } from "../repos/workspaces";
@@ -25,11 +25,13 @@ export class ManagerModelController {
   @Get("/alphas/:id/overview") @Header("Cache-Control", "private, no-store")
   alpha(@Req() r: ManagerRequest, @Query() q: unknown, @Param("id") id: string) { return this.read(r, q, "ALPHA", id); }
   @Get("/accounts/:id/overview") @Header("Cache-Control", "private, no-store")
-  account(@Req() r: ManagerRequest, @Query() q: unknown, @Param("id") id: string) { return this.read(r, q, "ACCOUNT", id); }
+  account(@Req() r: ManagerRequest, @Query() q: unknown, @Param("id") id: string,
+    @Res({ passthrough: true }) reply?: FastifyReply) { return this.read(r, q, "ACCOUNT", id, reply); }
   @Get("/deployments/:id/overview") @Header("Cache-Control", "private, no-store")
   deployment(@Req() r: ManagerRequest, @Query() q: unknown, @Param("id") id: string) { return this.read(r, q, "DEPLOYMENT", id); }
 
-  private async read(r: ManagerRequest, raw: unknown, surface: ManagerSurface, id?: string) {
+  private async read(r: ManagerRequest, raw: unknown, surface: ManagerSurface, id?: string, reply?: FastifyReply) {
+    let nativeOwnsResponse = false;
     try {
       if (!raw || typeof raw !== "object" || Array.isArray(raw) || id !== undefined && (!id || id.length > 256))
         throw new Error("INVALID_QUERY");
@@ -49,9 +51,33 @@ export class ManagerModelController {
       const workspace = typeof query.workspace_id === "string" ? query.workspace_id : r.portalWorkspaceId;
       if (!(await this.workspaces.canReadExecution(workspace, r.portalUser.userId)))
         throw new ExecutionReadScopeError("EXECUTION_READ_NOT_AVAILABLE", 404);
-      return await this.models.read({ user: r.portalUser, session: r.portalSession, workspaceId: workspace,
-        viewerWorkspaceId: r.portalViewerWorkspaceId ?? r.portalWorkspaceId }, surface, query, id);
+      const principal = { user: r.portalUser, session: r.portalSession, workspaceId: workspace,
+        viewerWorkspaceId: r.portalViewerWorkspaceId ?? r.portalWorkspaceId };
+      if (surface === "ACCOUNT" && (query.environment === undefined || query.environment === "paper") && this.models.hasNativeCurrentRelations?.()) {
+        // Only this exact finite Paper route selects the private native
+        // composition. Its failures never fall back to a detached DTO; other
+        // surfaces keep their independent ordinary scopes unchanged.
+        if (!id || !reply)
+          throw new ExecutionReadScopeError("EXECUTION_READ_AUTHORITY_UNAVAILABLE", 503);
+        await this.models.readNativeAccount(principal, query, id, reply.raw, () => {
+          if (nativeOwnsResponse) return;
+          if (reply.raw.headersSent || reply.raw.writableEnded || reply.raw.destroyed)
+            throw new ExecutionReadScopeError("EXECUTION_READ_AUTHORITY_UNAVAILABLE", 503);
+          // This callback runs only after reservation, source ENTER and the
+          // final Core COMMIT. No bytes or Fastify writer precede that boundary.
+          reply.hijack();
+          nativeOwnsResponse = true;
+        });
+        return;
+      }
+      return await this.models.read(principal, surface, query, id);
     } catch (error) {
+      // Once the native egress owns the response, a later source ACK failure
+      // cannot trigger a second framework response or a fallback body.
+      if (reply && (nativeOwnsResponse || reply.raw.headersSent || reply.raw.destroyed || reply.sent)) {
+        reply.raw.destroy();
+        return;
+      }
       if (error instanceof ExecutionReadScopeError) throw error;
       throw new ExecutionReadScopeError("EXECUTION_READ_NOT_AVAILABLE", 400);
     }

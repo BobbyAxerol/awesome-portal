@@ -16,7 +16,7 @@ import { composeNativeCore, type NativeCoreSelection, type NativeCoreComposition
 import { unqualifiedAccessTrust } from "./access-trust";
 import { nativeCoreSchemaTarget, type NativeCoreSchemaTarget } from "./current-human-schema";
 import { planBGrantWindow, type PlanBGrantWindow } from "./core-owner-commissioning";
-import type { CurrentHumanReverseRecoveryParticipant } from "./current-human-mutations";
+import type { CurrentHumanReverseRecoveryParticipant, CurrentHumanCurrentReadRecoveryPort } from "./current-human-mutations";
 
 export class NativeCoreRuntimeError extends Error {
   readonly code="CURRENT_HUMAN_NATIVE_RUNTIME_CONFIG_INVALID";
@@ -190,7 +190,8 @@ export interface PreparedNativeCoreRuntime {
   /** Plan B caps pinned for the workspace's single owner intake. Throws (fail
    * closed) when the manifest does not carry them. Used by the offline installer. */
   researchGrantWindow(workspaceId:string):Readonly<PlanBGrantWindow>;
-  compose(pool:Pool, reverseParticipants?:readonly CurrentHumanReverseRecoveryParticipant[]):Promise<ControlApiDependencies>;
+  compose(pool:Pool, reverseParticipants?:readonly CurrentHumanReverseRecoveryParticipant[],
+    currentReadRecovery?:CurrentHumanCurrentReadRecoveryPort):Promise<ControlApiDependencies>;
 }
 export async function prepareNativeCoreRuntime(input:NativeCoreRuntimeReference):Promise<PreparedNativeCoreRuntime>{
   try{
@@ -218,9 +219,10 @@ export async function prepareNativeCoreRuntime(input:NativeCoreRuntimeReference)
         nativeCoreResearchReviewTarget(parsed,workspaceId);
         const window=parsed.composition.owner_intakes[0]!.grant_window;
         return window?Object.freeze({...window}):fail();
-      },compose:async(pool:Pool,reverseParticipants:readonly CurrentHumanReverseRecoveryParticipant[]=[])=>{
+      },compose:async(pool:Pool,reverseParticipants:readonly CurrentHumanReverseRecoveryParticipant[]=[],
+        currentReadRecovery?:CurrentHumanCurrentReadRecoveryPort)=>{
       try{
-        const composed=await composeNativeCore(pool,unqualifiedAccessTrust,compositionInput,reverseParticipants);
+        const composed=await composeNativeCore(pool,unqualifiedAccessTrust,compositionInput,reverseParticipants,currentReadRecovery);
         // Constructors above validate the SAME already-bounded pool. Target
         // metadata is not proof of where this connection actually points.
         const actual=await pool.query<{database_name:string;role_name:string;session_role_name:string;database_system_identifier:string}>(

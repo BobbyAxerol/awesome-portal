@@ -37,6 +37,29 @@ describe("Research native Manager profile classification", () => {
 });
 
 describe("Research native Manager closed read surface", () => {
+  it("private STATUS opens exact original lookup/reconcile, never submit/preview or arbitrary command",()=>{
+    const path="/api/v1/execution/capital-commands/ecm_"+"a".repeat(32);
+    for(const [method,target] of [["GET",path],["GET",path+"/workflow"],["POST",path+"/reconcile"]]){
+      expect(nativeResearchReadAllowed(config,method,target,{},false,false)).toBe(false);
+      expect(nativeResearchReadAllowed(config,method,target,{},false,true)).toBe(true);
+    }
+    for(const [method,target] of [["POST",path],["POST","/api/v1/execution/capital-commands"],
+      ["POST","/api/v1/execution/capital-commands/preview"],["GET",path+"/reconcile"],
+      ["GET","/api/v1/execution/capital-commands/not-an-original"],["GET",path+"/extra"]])
+      expect(nativeResearchReadAllowed(config,method,target,{},false,true)).toBe(false);
+    expect(nativeResearchReadAllowed(config,"POST",path+"/reconcile",{workspace_id:"foreign"},false,true)).toBe(false);
+  });
+  it("opens only the exact finite account route with a private composition, never by query or default",()=>{
+    const path="/api/v1/execution/manager/accounts/TEST_ONLY-account/overview";
+    expect(allowed(path)).toBe(false);
+    expect(nativeResearchReadAllowed(config,"GET",path,{environment:"paper"},true)).toBe(true);
+    for(const environment of ["live","sandbox","all",["paper"],null])
+      expect(nativeResearchReadAllowed(config,"GET",path,{environment},true)).toBe(false);
+    for(const suffix of ["/","\n","/extra","?environment=paper"])
+      expect(nativeResearchReadAllowed(config,"GET",path+suffix,{},true)).toBe(false);
+    expect(nativeResearchReadAllowed(config,"POST",path,{},true)).toBe(false);
+    expect(nativeResearchReadAllowed(config,"GET",path,{workspace_id:"foreign"},true)).toBe(false);
+  });
   it.each(allowedRoutes)("accepts only the checked-in GET surface: %s", path => {
     expect(allowed(path)).toBe(true);
     expect(allowed(path, { environment: "paper", workspace_id: workspace })).toBe(true);

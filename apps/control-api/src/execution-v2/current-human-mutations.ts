@@ -169,6 +169,12 @@ export class CurrentHumanMutations {
 
   usesPool(pool: Pool): boolean { return this.pool === pool; }
 
+  /** Application assembly checks object identity, not a matching class/name.
+   * The read provider whose custody is admitted must be the one drained. */
+  hasCurrentReadRecoveryParticipant(provider: CurrentHumanCurrentReadRecoveryPort): boolean {
+    return !!provider && this.currentReadRecovery === provider;
+  }
+
   /** Identity check for the application composition barrier. Similar workload
    * strings or another coordinator do not prove registration of THIS issuer. */
   hasReverseRecoveryParticipant(participant: CurrentHumanReverseRecoveryParticipant): boolean {

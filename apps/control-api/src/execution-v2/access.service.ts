@@ -58,9 +58,18 @@ export class ExecutionAccessService {
    * issuer, not request JSON. Ordinary DTO return/ROOT/STREAM/command paths
    * cannot borrow this physical READ terminal. */
   async deliverNativeCurrent(actor:AccessActor,workspace:string,action:AccessAction,resources:readonly AccessResource[],
-    response:ServerResponse,build:(context:AccessEvaluationContext)=>Promise<Buffer>,assertAllowed:(context:AccessEvaluationContext)=>void):Promise<void>{
+    response:ServerResponse,build:(context:AccessEvaluationContext)=>Promise<Buffer>,assertAllowed:(context:AccessEvaluationContext)=>void,
+    validation?:{afterEnter?:()=>Promise<void>;beforeDispatch?:()=>void}):Promise<void>{
     if(!this.trust.currentRelations)throw new AccessPolicyError("SOURCE_RELATION_NOT_QUALIFIED",503);
-    return this.trust.currentRelations.sendFinite({actor,workspace_id:workspace,action,resources,response,build,assertAllowed});
+    // The application boundary owns this private constructor flag, just as it
+    // does for readContext. Never inherit it from a source/provider context or
+    // request. Production always forces false; disposable TEST_ONLY callers
+    // must not change policy semantics between authorize and physical send.
+    const applicationContext=(context:AccessEvaluationContext):AccessEvaluationContext=>
+      ({...context,allow_test_only:this.allowTestOnly});
+    return this.trust.currentRelations.sendFinite({actor,workspace_id:workspace,action,resources,response,
+      build:context=>build(applicationContext(context)),assertAllowed:context=>assertAllowed(applicationContext(context)),
+      ...(validation?.afterEnter?{afterEnter:validation.afterEnter}:{}),...(validation?.beforeDispatch?{beforeDispatch:validation.beforeDispatch}:{})});
   }
 
   /** Short consistent capture; no adapter I/O or mutation locks. */
