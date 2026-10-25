@@ -1,5 +1,28 @@
 # Execution Loop V2 — Sổ đồng bộ Frontend ↔ Backend (sống)
 
+## Codex ROOT coordinator repair —25Oct2026 result
+
+[Source commit, actual gates and commissioning handoff](evidence/ELP2-10/CORE_ROOT_COORDINATOR_REPAIR_2026-10-25.md).
+Core90585527bed09c0f6fb67530ddcfbfadd06bc9be,16files,+710/−55:
+ROOT152 census/recovery, exact own-COMMIT fence, admission/restart/replay and
+shutdown repairs accepted by independent source review. Official280/280 PG
+plus build/migration/restore PASS; runtime/bootstrap56unique and client10PASS.
+Focused intermediate source only; not landed/installed/connected. Canonical
+input538b934a9 and Claude00e7f6cff unchanged/clean at intake; no new committed
+Claude request. No public contract/UI remap or consumer ACK inferred.
+
+Round-end:3existing helpers reused,0spawned. pm_publication_coordination owns
+provider/client/fence; correspondence_final_review read-only review ACCEPT;
+c7_commission_path completed runtime wiring/interface then identified actual
+Edge STATUS bootstrap gap. Its next candidate-only source task owns minimal
+STATUS loader/check/serve/lifecycle files, no runtime/build/peer WIP changes.
+Primary owns shared docs, integration and one serialized affected gate.
+ACT_NOW: finish that concrete code and frozen integration/source commissioning;
+NEXT_GATE: normal R2 before ff-only; actual originals/trust and browser remain
+separate. Preserve source/Claude history and all UNKNOWN custody. No push,
+shared-preview/stable/dev/main/provider28445, SUBMIT or Live change.
+
+
 ## Codex provider/financial source and preserved Claude candidate —25Oct2026
 
 [Source commits, exact tests, cleanup and next owned implementation](evidence/ELP2-10/CORE_EDGE_PROVIDER_AND_SAFE_INTEGRATION_2026-10-25.md).
