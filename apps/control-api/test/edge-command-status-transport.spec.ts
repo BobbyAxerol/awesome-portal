@@ -15,7 +15,8 @@ import { EdgeCommandStatusTransport, COMMAND_STATUS_ORIGINAL_PATH, createAuthent
 import { pmHttpRequestDigest } from "../src/execution-v2/pm-http-request-binding";
 import { commonName,testCertificate,type TestAuthority } from "./fixtures/elp210-test-certificates";
 
-const fixture=JSON.parse(readFileSync(resolve(__dirname,"../../../packages/contracts/fixtures/execution-trusted-commands.synthetic.valid.json"),"utf8"));
+const contractsDir=process.env.PORTAL_CONTRACTS_DIR ?? resolve(__dirname,"../../../packages/contracts");
+const fixture=JSON.parse(readFileSync(resolve(contractsDir,"fixtures/execution-trusted-commands.synthetic.valid.json"),"utf8"));
 const actor={user_id:"TEST_ONLY:current-reviewer",session_id:"TEST_ONLY:session",session_generation:3};
 const intent=commandIntent.parse(fixture.intent);
 const authorization=commandAuthorization.parse({qualification:"OWNER_VERIFIED",reference:"TEST_ONLY:authorization",authority_ref:"TEST_ONLY:source",

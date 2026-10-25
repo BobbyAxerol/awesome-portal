@@ -2,15 +2,22 @@
  * a fake (no database, listener, file, key or Nest container). Proves WHICH path
  * main takes: config absent keeps the ordinary boot unchanged; config present
  * runs prepareNativeCoreRuntime -> bootstrap-owned compose -> createControlApiApp
- * with the SAME Pool object and the exact dependencies compose returned, and
+ * with the SAME Pool object and unchanged dependency members compose returned, and
  * never falls back to the legacy boot. The AppModule consumer's own
- * pool/trust/coordinator/registry binding is proven by native-core-bootstrap.spec.ts. */
+ * pool/trust/coordinator/registry binding is proven by native-core-bootstrap.spec.ts.
+ * Optional runtimes are explicitly absent; these unit doubles do not qualify
+ * private manifest parsing, pool-profile validation or connected composition. */
 import type { Pool } from "pg";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { NativeCoreApplicationOwner } from "../src/execution-v2/native-core-bootstrap";
 
 const h = vi.hoisted(() => ({
   loadConfig: vi.fn(), buildPool: vi.fn(), createApp: vi.fn(), reference: vi.fn(), prepare: vi.fn(), assertSchema: vi.fn(),
+  currentViewReference: vi.fn(), prepareCurrentView: vi.fn(),
+  financialReference: vi.fn(), prepareFinancial: vi.fn(), prepareFinancialApplication: vi.fn(), selectPoolProfile: vi.fn(),
+  currentReference: vi.fn(), prepareCurrent: vi.fn(), prepareCurrentApplication: vi.fn(),
+  statusReference: vi.fn(), prepareStatus: vi.fn(), prepareStatusApplication: vi.fn(),
+  rootReference: vi.fn(), prepareRoot: vi.fn(), prepareRootApplication: vi.fn(),
 }));
 vi.mock("../src/config", () => ({ loadConfig: h.loadConfig }));
 vi.mock("../src/db/pool", () => ({ buildPool: h.buildPool }));
@@ -18,6 +25,23 @@ vi.mock("../src/app", () => ({ createControlApiApp: h.createApp }));
 vi.mock("../src/execution-v2/native-core-runtime", () => ({
   nativeCoreRuntimeReference: h.reference, prepareNativeCoreRuntime: h.prepare }));
 vi.mock("../src/execution-v2/current-human-schema", () => ({ assertRegisteredResearchCurrentHumanSchema: h.assertSchema }));
+vi.mock("../src/execution-v2/current-view-runtime", () => ({
+  currentViewRuntimeReference: h.currentViewReference, prepareCurrentViewRuntime: h.prepareCurrentView }));
+vi.mock("../src/execution-v2/financial-source-runtime", () => ({
+  financialSourceRuntimeReference: h.financialReference, prepareFinancialSourceRuntime: h.prepareFinancial }));
+vi.mock("../src/execution-v2/financial-source-bootstrap", () => ({
+  prepareFinancialSourceApplication: h.prepareFinancialApplication, selectPrivateCorePoolProfile: h.selectPoolProfile }));
+vi.mock("../src/execution-v2/native-current-runtime", () => ({ nativeCurrentRuntimeReference: h.currentReference,
+  prepareNativeCurrentRuntime: h.prepareCurrent, prepareNativeCurrentApplication: h.prepareCurrentApplication }));
+vi.mock("../src/execution-v2/command-status-runtime", () => ({
+  commandStatusRuntimeReference: h.statusReference, prepareCommandStatusRuntime: h.prepareStatus }));
+vi.mock("../src/execution-v2/command-status-bootstrap", () => ({ prepareCommandStatusApplication: h.prepareStatusApplication }));
+vi.mock("../src/execution-v2/native-root-runtime", () => ({ nativeRootRuntimeReference: h.rootReference,
+  prepareNativeRootRuntime: h.prepareRoot, prepareNativeRootApplication: h.prepareRootApplication }));
+
+const optionalReferences = () => [h.currentViewReference, h.financialReference, h.currentReference, h.statusReference, h.rootReference];
+const optionalPreparers = () => [h.prepareCurrentView, h.prepareFinancial, h.prepareFinancialApplication,
+  h.prepareCurrent, h.prepareCurrentApplication, h.prepareStatus, h.prepareStatusApplication, h.prepareRoot, h.prepareRootApplication];
 
 const REF = { path: "/TEST_ONLY/runtime.json", sha256: "a".repeat(64) };
 const WORKSPACE = "TEST_ONLY-workspace";
@@ -51,11 +75,18 @@ beforeEach(() => {
   h.reference.mockReset().mockReturnValue(undefined);
   h.prepare.mockReset();
   h.assertSchema.mockReset().mockResolvedValue(undefined);
+  for (const reference of optionalReferences()) reference.mockReset().mockReturnValue(undefined);
+  for (const prepare of optionalPreparers()) prepare.mockReset().mockRejectedValue(new Error("TEST_ONLY_UNSELECTED_RUNTIME"));
+  h.selectPoolProfile.mockReset().mockImplementation((native?: { poolProfile: unknown }) => native?.poolProfile);
   vi.spyOn(process, "exit").mockImplementation(((code?: number) => { exits.push(code); settle(); }) as never);
   vi.spyOn(process.stderr, "write").mockImplementation(((text: string) => { stderr.push(String(text)); return true; }) as never);
   vi.spyOn(process, "once").mockImplementation(((event: string) => { signals.push(event); return process; }) as never);
 });
-afterEach(() => { vi.restoreAllMocks(); });
+afterEach(() => {
+  try {
+    for (const prepare of optionalPreparers()) expect(prepare).not.toHaveBeenCalled();
+  } finally { vi.restoreAllMocks(); }
+});
 
 describe("TEST_ONLY main.ts with the native selection ABSENT (ordinary boot, unchanged)", () => {
   it("builds the default pool and app with no native dependency and installs the ordinary shutdown hooks", async () => {
@@ -64,7 +95,9 @@ describe("TEST_ONLY main.ts with the native selection ABSENT (ordinary boot, unc
     expect(h.buildPool).toHaveBeenCalledOnce();
     expect(h.buildPool.mock.calls[0]).toEqual([ordinary.DATABASE_URL, undefined]);
     expect(h.createApp.mock.calls[0]).toHaveLength(5);
-    expect(h.createApp.mock.calls[0]).toEqual([ordinary, pool, undefined, undefined, undefined]);
+    expect(h.createApp.mock.calls[0]).toEqual([ordinary, pool, undefined, {}, undefined]);
+    for (const reference of optionalReferences()) expect(reference).toHaveBeenCalledOnce();
+    expect(h.selectPoolProfile).toHaveBeenCalledExactlyOnceWith(undefined, undefined, undefined, undefined, undefined, undefined);
     expect(app.listen).toHaveBeenCalledWith(4000, "0.0.0.0");
     expect(app.enableShutdownHooks).toHaveBeenCalledOnce();
     expect(signals).toEqual([]); expect(exits).toEqual([]);
@@ -78,7 +111,7 @@ describe("TEST_ONLY main.ts with the native selection ABSENT (ordinary boot, unc
 });
 
 describe("TEST_ONLY main.ts with the native selection PRESENT (standard composition)", () => {
-  it("prepare -> compose -> app share ONE Pool object and the exact compose result; the bootstrap owner owns that pool", async () => {
+  it("prepare -> compose -> app share ONE Pool and unchanged dependency members; the bootstrap owner owns that pool", async () => {
     const native = prepared();
     h.reference.mockReturnValue(REF); h.prepare.mockResolvedValue(native);
     await boot();
@@ -88,7 +121,9 @@ describe("TEST_ONLY main.ts with the native selection PRESENT (standard composit
     expect((native.compose.mock.calls as unknown[][])[0]![0]).toBe(pool);
     const [config, appPool, executionPool, deps, owner] = h.createApp.mock.calls[0]!;
     expect(config).toBe(ordinary); expect(appPool).toBe(pool); expect(executionPool).toBeUndefined();
-    expect(deps).toBe(dependencies); // not copied, not wrapped, nothing added
+    expect(deps).toEqual(dependencies);
+    for (const [name, dependency] of Object.entries(dependencies)) expect(deps[name]).toBe(dependency);
+    expect(h.selectPoolProfile).toHaveBeenCalledExactlyOnceWith(native, undefined, undefined, undefined, undefined, undefined);
     expect((owner as object).constructor.name).toBe("NativeCoreApplicationOwner"); // module reset: compare by name
     expect((owner as NativeCoreApplicationOwner).usesPool(pool as unknown as Pool)).toBe(true);
     expect((owner as NativeCoreApplicationOwner).usesPool({ end: vi.fn() } as unknown as Pool)).toBe(false);
@@ -104,7 +139,9 @@ describe("TEST_ONLY main.ts with the native selection PRESENT (standard composit
     expect(native.researchReviewTarget).toHaveBeenCalledWith(WORKSPACE);
     expect(h.assertSchema).toHaveBeenCalledWith(pool, target);
     expect(h.assertSchema.mock.invocationCallOrder[0]).toBeLessThan(native.compose.mock.invocationCallOrder[0]!);
-    expect(h.createApp.mock.calls[0]![3]).toBe(dependencies);
+    const deps = h.createApp.mock.calls[0]![3];
+    expect(deps).toEqual(dependencies);
+    for (const [name, dependency] of Object.entries(dependencies)) expect(deps[name]).toBe(dependency);
     expect(h.buildPool).toHaveBeenCalledOnce();
   });
   it.each([

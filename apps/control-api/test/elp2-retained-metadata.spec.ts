@@ -54,7 +54,8 @@ function fixture(options: { legacy?: boolean; noPublication?: boolean } = {}) {
       selector: { kind: "PORTFOLIO_MEMBERSHIP", portfolio_ids: [own.portfolio_id] } }],
     active_principals: new Set([USER, OWNER]), relationsFor: () => ({ qualified: true, revision: "TEST_ONLY-relations",
       own_alpha_ids: [own.alpha_id], member_portfolio_ids: [own.portfolio_id], roots: {}, membership }) };
-  const access = { readContext: async () => context, confirmReadContext: async () => context,
+  const access = { hasNativeCurrentRelations: () => false,
+    readContext: async () => context, confirmReadContext: async () => context,
     readPublication: async (r: ExecutionReadPublicationRequest) => options.noPublication ? null : ({
       workspace_id: WORKSPACE, environment: r.environment, profile_id: r.profile_id, binding: r.binding,
       qualification: "TEST_ONLY", publication_revision: "TEST_ONLY-publication", population_coverage: "COMPLETE_FOR_DATASET_WINDOW",

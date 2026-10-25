@@ -69,7 +69,8 @@ function fixture(options: { legacy?: boolean; omitEquity?: boolean } = {}) {
       ] }, current_linkage: { qualification: "TEST_ONLY", revision: "TEST_ONLY-links", provenance_ref: "TEST_ONLY-not-source-proof",
       pairs: tuples.map(t => ({ alpha_id: t.alpha_id, portfolio_id: t.portfolio_id })) },
   }));
-  const access = { readContext: async () => context, confirmReadContext: async () => context,
+  const access = { hasNativeCurrentRelations: () => false,
+    readContext: async () => context, confirmReadContext: async () => context,
     readPublication: publication } as unknown as ExecutionAccessService;
   const pool = { query: vi.fn(async () => ({ rows: [{ role: "USER", session_version: 1,
     policy: options.legacy ? null : policy, policy_seen: !options.legacy, policy_revision: policy.revision,

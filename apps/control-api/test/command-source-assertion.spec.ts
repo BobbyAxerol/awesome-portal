@@ -14,7 +14,8 @@ import { CommandSourceAssertionAuthority, COMMAND_STATUS_PM_PATH, COMMAND_STATUS
   type CommandStatusInput, type CommandSourceAssertionResponse } from "../src/execution-v2/command-source-assertion";
 import { pmHttpRequestDigest } from "../src/execution-v2/pm-http-request-binding";
 
-const fixture=JSON.parse(readFileSync(resolve(__dirname,"../../../packages/contracts/fixtures/execution-trusted-commands.synthetic.valid.json"),"utf8"));
+const contractsDir=process.env.PORTAL_CONTRACTS_DIR ?? resolve(__dirname,"../../../packages/contracts");
+const fixture=JSON.parse(readFileSync(resolve(contractsDir,"fixtures/execution-trusted-commands.synthetic.valid.json"),"utf8"));
 const NOW=1_792_100_000_000,owner="TEST_ONLY:owner";
 const actor={user_id:"TEST_ONLY:reviewer",session_id:"TEST_ONLY:session",session_generation:3};
 const hex=(v:string)=>accessDigest(v).slice(7);

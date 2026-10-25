@@ -47,7 +47,8 @@ function fixture() {
   mounted = { bytes, uid: 0, mode: 0o100600, ino: 7 };
   const pool = { connect: vi.fn(), end: vi.fn() } as unknown as Pool;
   const auth = {} as AuthService;
-  const mutations = { usesPool: vi.fn((other: Pool) => other === pool) } as unknown as CurrentHumanMutations;
+  const mutations = { usesPool: vi.fn((other: Pool) => other === pool),
+    recoverSettledRootDrain: vi.fn(async () => undefined) } as unknown as CurrentHumanMutations;
   const base: AccessTrustProvider = { ...unqualifiedAccessTrust, verifyRootReceipt: vi.fn(async () => null) };
   return { document, pin, pool, auth, mutations, base };
 }
@@ -168,6 +169,8 @@ describe("official ordinary-policy writer composition, TEST_ONLY adapters", () =
     const f = fixture(), intake = composeOrdinaryPolicyIntake(f.pool, f.auth, f.base, f.mutations, f.pin, scope, () => NOW);
     const access = new ExecutionAccessService(f.pool, f.auth, intake.dependencies.executionAccessTrust, false, f.mutations);
     await expect(access.acceptRootTsReceipt({ role: "ADMIN" })).rejects.toMatchObject({ code: "RECEIPT_NOT_QUALIFIED" });
+    expect(f.mutations.recoverSettledRootDrain).toHaveBeenCalledOnce();
+    expect(f.base.verifyRootReceipt).toHaveBeenCalledWith({ role: "ADMIN" }, { phase: "QUALIFY" });
     expect(f.pool.connect).not.toHaveBeenCalled();
     const artifact = await readPinnedOrdinaryPolicyArtifact(f.pin, NOW), grant = artifact.root_grants[0]!;
     expect(grantCurrent(grant, { principal_id: grant.subject_user_id, workspace_id: grant.workspace_id, now_ms: NOW,

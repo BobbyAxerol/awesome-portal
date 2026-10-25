@@ -79,7 +79,8 @@ function fixture(options: { capacity?: number; ttl?: number; tuples?: number } =
       retained: [] }], rowCount: 1 };
   });
   const pool = { query } as unknown as Pool;
-  const access = { readContext: vi.fn(async () => context()), confirmReadContext: vi.fn(async () => context()),
+  const access = { hasNativeCurrentRelations: () => false,
+    readContext: vi.fn(async () => context()), confirmReadContext: vi.fn(async () => context()),
     readPublication: vi.fn(async () => {
       if (sourceFailure) throw new Error("TEST_ONLY private source detail must not escape");
       return structuredClone(publication);

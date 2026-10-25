@@ -95,7 +95,8 @@ export function makeReader(world: World, options: Options, workspaceId = world.w
       strategy_lineage: { qualification: "TEST_ONLY", revision: "TEST_ONLY-strategies", provenance_ref: "TEST_ONLY-strategies", pairs: world.strategy_pairs },
       binding_lineage: world.bindings.length ? { qualification: "TEST_ONLY", revision: "TEST_ONLY-bindings", provenance_ref: "TEST_ONLY-bindings", bindings: world.bindings } : null };
   };
-  const access = { readContext: vi.fn(async () => context()), confirmReadContext: vi.fn(async () => context()), readPublication: vi.fn(async (request: ExecutionReadPublicationRequest) => publish(request)) };
+  const access = { hasNativeCurrentRelations: () => false,
+    readContext: vi.fn(async () => context()), confirmReadContext: vi.fn(async () => context()), readPublication: vi.fn(async (request: ExecutionReadPublicationRequest) => publish(request)) };
   const pool = { query: vi.fn(async () => ({ rows: [{ role: "USER", session_version: 1, policy, policy_revision: policy.revision, policy_seen: true,
     workspace_exists: true, member: true, owner: false, retained: [] }] })) };
   const scopes = new ExecutionReadScopes(pool as unknown as Pool, access as unknown as ExecutionAccessService, config);
