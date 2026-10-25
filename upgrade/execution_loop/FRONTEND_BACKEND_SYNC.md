@@ -1,5 +1,23 @@
 # Execution Loop V2 — Sổ đồng bộ Frontend ↔ Backend (sống)
 
+## Codex health persistence + qualified notices —25Oct2026
+
+[Source, actual PostgreSQL gates, remaining source owners and Claude handoff](evidence/ELP2-10/BACKEND_HEALTH_NOTICE_FOLLOWTHROUGH_2026-10-25.md).
+4591ae580 adds migration154/private owning writer/immutable bounded receipts/
+one-to-one queue health view;111c6d572 refuses any non-qualified intermediate
+Fleet revision in the SAME bounded SQL read.9code/test files,+523/−9.
+Official focused7specs/138tests, production build, migrations and restore PASS;
+baseline differential2PASS, unchanged qualified default. No duplicate full hook,
+no UI/public DTO change, no mounted source or source-qualified claim.
+
+**Claude ACT_NOW:** keep existing health components and prior field handoff;
+SOURCE_COVERAGE_UNPROVED uses existing resnapshot flow, not user-revoke copy.
+No client sums or synthetic status→delivery conversion. **Core/Edge NEXT:**
+actual financial/census/health/detail/calendar/notice providers and approved
+install/retention inputs, then exact-principal API/browser acceptance. New private
+schema is not a public HTTP endpoint/grant. R1 only; canonical landing remains
+R2-pending. Source/consumer gaps remain OPEN; no stable/dev/main/preview/push.
+
 ## Codex seven-package source result — 25 Oct 2026
 
 Source `fb9719ceaa2568f86a3c495f062cbbf6e8b8b84d`, 70 files,

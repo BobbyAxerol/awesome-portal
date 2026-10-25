@@ -217,3 +217,37 @@ cleanup. No daemon setting or credential changed. Root filesystem: 68% used,
 None of these rows is a claim that all seven source/consumer acceptance gates
 are closed. No frontend files were modified; Claude keeps component/design
 ownership and can consume the additive contract and positive fixtures now.
+
+### 9. Follow-through assignment — writer and qualified notices
+
+Bobby requested continuation without frontend/runtime changes. Rechecked Core,
+Claude and HK source pins: no newer committed source mapping or Claude ACK.
+PM's owning NET_PNL return still explicitly leaves the wire mapping open;
+Edge's venue-calendar registry remains SOURCE_DARK. Do not manufacture either.
+
+Next owned implementation: persistent Operations health ingress and its exact
+one-to-one queue view (reserve migration154 after checking canonical, Claude
+and integration migration directories); original queue/statuses stay untouched.
+Use explicit source axes, immutable bounded receipts, contiguous source cursor,
+same-target/workflow fencing, retry/conflict handling and retirement/expiry.
+No automatic commissioning/provider or public mutation route. Validate with
+real disposable PostgreSQL, including rollback and existing queue preservation.
+
+Also audit Fleet notice qualification across every revision in a batch, not
+only the initial snapshot. No SOURCE_VERIFIED relabel of TEST_ONLY revisions,
+no skipping a rejected ordinal and no per-notice SQL fan-out.
+
+Exit for this slice is focused source/build/PG proof and a committed handoff,
+not upstream qualification, browser acceptance, canonical landing or ELP2-10
+closure. Reuse unchanged prior gates; run one affected official batch, not a
+full hook/visual campaign. Rollback keeps the candidate uninstalled; additive
+health receipts must remain preserved even when its view is not mounted.
+
+Implemented at4591ae580 and111c6d572:9code/test/fixture/migration files,
++523/−9; official affected7specs/138tests, production build, migration154 and
+runner restore PASS. [Detailed source pins, tests, cleanup, qualified-source
+requirements and Claude handoff](BACKEND_HEALTH_NOTICE_FOLLOWTHROUGH_2026-10-25.md).
+The initial broad host test-typecheck was deliberately stopped, not reported
+PASS. The required production build is the actual passed check. This source
+slice does not install a publisher, make calendar/Edge notices available or
+close the external financial/economic/metadata/source/browser gaps in§5/§8.
