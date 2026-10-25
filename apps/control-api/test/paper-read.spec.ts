@@ -12,6 +12,7 @@ import { PaperBlotterQuerySchema } from "../src/paper-read/contracts";
 import { HistoryByteBudgetError, type PaperHistoryBytePolicy } from "../src/execution/history-byte-budget";
 import { ExecutionReadScopes } from "../src/execution-v2/read-scope";
 import { paperHistoryTestScopes } from "./paper-history-authority.fixture";
+import { createPaperVenueCalendarSource, type PaperVenueCalendarSource, type VenueCalendarSourceSnapshot } from "../src/execution/venue-calendar-source";
 
 // FE-073: validate the producer's actual envelope, not only a synthetic JSON
 // fixture. These service tests use fake source relations and are not runtime receipts.
@@ -199,12 +200,13 @@ function service(
   projection?: { timeSeriesHistoryDownsampled: (...args: unknown[]) => Promise<unknown> },
   historyBytePolicy?: PaperHistoryBytePolicy,
   historyScopes?: ExecutionReadScopes | null,
+  venueCalendar?: PaperVenueCalendarSource,
 ): PaperReadService {
   const config = loadConfig({
     DATABASE_URL: "postgres://portal:portal@localhost/portal",
     PORTAL_ENV: "local",
     AUTH_MODE: "dev",
-    ...(projection ? {
+    ...(projection || venueCalendar ? {
       EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID: "ws_primary",
       EXECUTION_EDGE_PAPER_PROFILE_ID: "PAPER_BINANCE_USDM",
     } : {}),
@@ -217,6 +219,7 @@ function service(
     projection ? { snapshotMetadata: async () => null, ...projection } as never : undefined,
     historyBytePolicy,
     historyScopes === null ? undefined : historyScopes ?? paperHistoryTestScopes(config),
+    venueCalendar,
   );
 }
 
@@ -1024,5 +1027,58 @@ describe("N22 full Paper read product BFF", () => {
     }
     const plain = await service(source).workbench(principal(), "dep_1", false) as Record<string, any>;
     expect(plain.data.venue_calendar).toBeUndefined();
+  });
+
+  function calendarFixture() {
+    const source = new FakeCurrentSource();
+    source.rows.set("strategy_deployments", [
+      { deployment_id: "dep_calendar", strategy_id: "str_1", account_id: "acc_1", mode: "paper", venue: "SYNTHETIC_VN" },
+    ]);
+    const snapshot = JSON.parse(readFileSync(resolve(__dirname, "fixtures/paper-venue-calendar.synthetic.json"), "utf8")) as VenueCalendarSourceSnapshot;
+    snapshot.workspace_id = "ws_primary"; snapshot.profile_id = "PAPER_BINANCE_USDM";
+    let calls = 0, revoked = false;
+    const calendar = createPaperVenueCalendarSource({ ...snapshot, async withVerifiedSnapshot(actor, context, use) {
+      calls++; expect(actor).toEqual(principal());
+      expect(context).toEqual({ environment: "paper", profile_id: "PAPER_BINANCE_USDM", deployment_id: "dep_calendar", venue: "SYNTHETIC_VN" });
+      return use({ snapshot, async assertCurrent() { if (revoked) throw new Error("secret upstream details"); } });
+    } }, () => snapshot.observed_at_ms + 1000);
+    return { source, snapshot, calendar, calls: () => calls, revoke: () => { revoked = true; },
+      service: () => service(source, undefined, undefined, undefined, undefined, calendar) };
+  }
+
+  it("FE-070 wires an exact-resource verified source into the actual VN workbench and capability", async () => {
+    const f = calendarFixture();
+    const result = await f.service().workbench(principal(), "dep_calendar", true) as any;
+    expect(result.data.venue_calendar.windows.value).toHaveLength(4);
+    expect(result.data.venue_calendar.is_open.value).toBe(false);
+    expect(result.capabilities).toContainEqual({ capability_id: "venue.calendar", state: "AVAILABLE",
+      relations: ["session_shading"], reason_code: null, retryable: false });
+    expect(f.calls()).toBe(1);
+    assertPaperContract(result);
+  });
+  it("FE-070 publishes partial/invalid source facts without falsely advertising full calendar coverage", async () => {
+    const f = calendarFixture(); delete (f.snapshot.payload as any).holidays;
+    const partial = await f.service().workbench(principal(), "dep_calendar", true) as any;
+    expect(partial.capabilities).toContainEqual(expect.objectContaining({ capability_id: "venue.calendar", state: "PARTIAL",
+      reason_code: "SOURCE_HOLIDAY_LIST_NOT_PUBLISHED" }));
+    f.snapshot.payload = null;
+    const absent = await f.service().workbench(principal(), "dep_calendar", true) as any;
+    expect(absent.capabilities).toContainEqual(expect.objectContaining({ capability_id: "venue.calendar", state: "UNAVAILABLE",
+      reason_code: "SOURCE_CALENDAR_PAYLOAD_INVALID" }));
+    expect(absent.data.venue_calendar.is_open.value).toBeNull();
+  });
+  it.each(["plain", "not-found", "wrong-venue"])("FE-070 does not read calendar for %s scope", async problem => {
+    const f = calendarFixture();
+    if (problem === "wrong-venue") f.source.rows.get("strategy_deployments")![0]!.venue = "OTHER_VENUE";
+    const result = await f.service().workbench(principal(), problem === "not-found" ? "missing" : "dep_calendar", problem !== "plain") as any;
+    expect(f.calls()).toBe(0);
+    if (problem === "plain") expect(result.data.venue_calendar).toBeUndefined();
+    else expect(result.data.venue_calendar.windows.value).toBeNull();
+  });
+  it("FE-070 stops a source revoked while the workbench builds and sanitizes the typed refusal", async () => {
+    const f = calendarFixture(), relation = f.source.relation.bind(f.source);
+    f.source.relation = async (...args: Parameters<typeof relation>) => { const result = await relation(...args); f.revoke(); return result; };
+    await expect(f.service().workbench(principal(), "dep_calendar", true)).rejects.toMatchObject({
+      code: "SOURCE_CALENDAR_ACCESS_CHANGED", status: 503, message: "The venue calendar could not be verified for this read." });
   });
 });

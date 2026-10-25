@@ -143,6 +143,7 @@ import { ScreenBffController } from "./screen-bff/screen-bff.controller";
 import { ScreenBffService } from "./screen-bff/screen-bff.service";
 import { PaperReadController } from "./paper-read/paper-read.controller";
 import { PaperReadService } from "./paper-read/paper-read.service";
+import { PAPER_VENUE_CALENDAR_SOURCE, type PaperVenueCalendarSource } from "./execution/venue-calendar-source";
 import { ProfileReadController } from "./profile-read/profile-read.controller";
 import { ProfileReadService } from "./profile-read/profile-read.service";
 import { ManagerListsController } from "./manager-lists/manager-lists.controller";
@@ -271,6 +272,8 @@ export interface ControlApiDependencies {
   bindingFinancialBatch?: BindingFinancialBatchSource;
   bindingFinancialRefresh?: BindingFinancialRefreshSource;
   operationalQueueHealth?: OperationalQueueHealthSource;
+  /** Explicit authenticated Edge calendar composition, never a direct DL URL. */
+  paperVenueCalendar?: PaperVenueCalendarSource;
   /** Pure/test constructors default off; actual applications default on. */
   streamRevocationHints?: boolean;
   /** Explicit owner-only/hash-pinned private Research listener. Absent keeps
@@ -456,6 +459,7 @@ export class AppModule implements OnApplicationShutdown {
         { provide: BINDING_FINANCIAL_BATCH_SOURCE, useValue: dependencies.bindingFinancialBatch ?? createRetainedBindingFinancialBatchSource() },
         ...(dependencies.bindingFinancialRefresh ? [{ provide: BINDING_FINANCIAL_REFRESH_SOURCE, useValue: dependencies.bindingFinancialRefresh }] : []),
         ...(dependencies.operationalQueueHealth ? [{ provide: OPERATIONAL_QUEUE_HEALTH_SOURCE, useValue: dependencies.operationalQueueHealth }] : []),
+        ...(dependencies.paperVenueCalendar ? [{ provide: PAPER_VENUE_CALENDAR_SOURCE, useValue: dependencies.paperVenueCalendar }] : []),
         { provide: StreamRevocationRuntime, useFactory: (db: Pool, auth: AuthService) =>
           new StreamRevocationRuntime(db, auth, dependencies.streamRevocationHints ?? config.NODE_ENV !== "test"),
           inject: [CONTROL_API_POOL, AuthService] },

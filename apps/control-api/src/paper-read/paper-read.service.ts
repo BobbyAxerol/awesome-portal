@@ -24,7 +24,8 @@ import { IDENTITY_NOT_READ, identityFields } from "../execution/deployment-ident
 import { positionsBySide } from "./positions-by-side";
 import { LocalQueryAnalyticsService } from "../execution/local-query-analytics.service";
 import { absentRelation, buildStageFacts, RelationInput } from "../execution/stage-facts";
-import { unpublishedVenueCalendar } from "../execution/venue-calendar";
+import { unpublishedVenueCalendar, type VenueCalendar } from "../execution/venue-calendar";
+import { PAPER_VENUE_CALENDAR_SOURCE, VenueCalendarSourceError, type PaperVenueCalendarSource } from "../execution/venue-calendar-source";
 import { assertPaperResponseBytes, HistoryByteBudgetError, PAPER_HISTORY_BYTE_POLICY,
   PAPER_HISTORY_BYTE_POLICY_TOKEN, validatePaperHistoryBytePolicy, type PaperHistoryBytePolicy } from "../execution/history-byte-budget";
 import {
@@ -241,6 +242,9 @@ export class PaperReadService {
     @Optional()
     @Inject(ExecutionReadScopes)
     private readonly historyScopes?: ExecutionReadScopes,
+    @Optional()
+    @Inject(PAPER_VENUE_CALENDAR_SOURCE)
+    private readonly venueCalendarSource?: PaperVenueCalendarSource,
   ) {
     this.cursors = new KeysetCursorCodec({
       activeKeyId: config.QUERY_CURSOR_ACTIVE_KEY_ID,
@@ -394,6 +398,23 @@ export class PaperReadService {
     const resolution = await this.source.resolveDeploymentScope(
       principal as CurrentSourcePrincipal, "paper", screenId, deploymentId,
     );
+    if (vnm && resolution.state === "FOUND" && this.venueCalendarSource) {
+      try {
+        return await this.venueCalendarSource.withCalendar(principal,
+          { environment: "paper", profile_id: this.paperProfileId ?? null,
+            deployment_id: resolution.scope.deploymentId, venue: resolution.scope.venue },
+          calendar => this.workbenchFromScope(principal, deploymentId, vnm, screenId, resolution, calendar));
+      } catch (error) {
+        if (error instanceof VenueCalendarSourceError)
+          throw new PaperReadError(error.code, "The venue calendar could not be verified for this read.", 503);
+        throw error;
+      }
+    }
+    return this.workbenchFromScope(principal, deploymentId, vnm, screenId, resolution, unpublishedVenueCalendar());
+  }
+
+  private async workbenchFromScope(principal: PaperPrincipal, deploymentId: string, vnm: boolean,
+    screenId: string, resolution: DeploymentScopeResolution, venueCalendar: VenueCalendar) {
     const relations = resolution.state === "FOUND"
       ? await this.fetch(principal, screenId, WORKBENCH_SPECS, resolution.scope)
       : unresolvedRelations(WORKBENCH_SPECS, resolution);
@@ -450,7 +471,7 @@ export class PaperReadService {
         queryAnalytics === null ? analyticsReason : null,
       ),
       ...(vnm
-        ? [capability("venue.calendar", "UNAVAILABLE", ["session_shading"], "N28_VENUE_CALENDAR_NOT_ACTIVE")]
+        ? [venueCalendarCapability(venueCalendar)]
         : []),
       ...(resolution.state === "FOUND" ? [] : [capability(
         "deployment.lookup",
@@ -497,9 +518,9 @@ export class PaperReadService {
           reconciliation: paperRelationInput(relations, "reconciliation"),
           reconciliationAsOf: relations.find((item) => item.spec.key === "reconciliation")?.page?.asOf ?? null,
         }),
-        // FE-070: the VN market variant carries the session calendar as typed facts. No calendar
-        // source of truth is wired (capability venue.calendar stays UNAVAILABLE), so each is NOT_PUBLISHED.
-        ...(vnm ? { venue_calendar: unpublishedVenueCalendar() } : {}),
+        // FE-070: no calendar is inferred from local time or another market.
+        // A configured source holds its final authority fence over this response.
+        ...(vnm ? { venue_calendar: venueCalendar } : {}),
         ...scoped,
         ...depth.rows,
         ...(Object.keys(depth.windows).length > 0 ? { history_windows: depth.windows } : {}),
@@ -1157,6 +1178,14 @@ function unavailableBlotterExactQuery(
       coverage: null,
     },
   };
+}
+
+function venueCalendarCapability(calendar: VenueCalendar) {
+  const facts = [calendar.timezone, calendar.windows, calendar.breaks, calendar.holidays, calendar.is_open, calendar.as_of];
+  const missingFacts = facts.filter(fact => fact.availability !== "AVAILABLE");
+  return capability("venue.calendar", missingFacts.length === 0 ? "AVAILABLE" :
+    missingFacts.length === facts.length ? "UNAVAILABLE" : "PARTIAL", ["session_shading"],
+    missingFacts[0]?.reason_code ?? null);
 }
 
 function capability(
