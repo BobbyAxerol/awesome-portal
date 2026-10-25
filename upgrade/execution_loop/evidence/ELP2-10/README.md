@@ -17,6 +17,12 @@ scoped Manager notice adapter and actual connected/browser exits remain OPEN.
 No UI/public DTO, shared preview, stable/dev/main/provider28445, command/Live,
 push or canonical landing change. Existing ELP2-11 preparation is preserved.
 
+Public sanitized return mirrored and hash-verified on HK2026-10-25T18:40:33Z:
+`/home/bobby/.worktrees/portal-execution-edge-upgrade-v1_2/upgrade/evidence/execution-edge-v1_2/EPG10-08/CORE_SOURCE_QUALIFICATION_FOLLOWTHROUGH_2026-10-26.md`;
+SHA256`55365490266c7c28f55b26e729883d3d9e0ed2928732b65ff792ea4b181916e6`.
+Companion public test-results JSON included. No source bundle/secret or runtime
+change; Edge has not yet returned an acceptance for this packet.
+
 ## 25Oct2026 — Core calendar/metadata follow-through (source-only)
 
 [Exact receipt and Claude handoff](BACKEND_CALENDAR_METADATA_FOLLOWTHROUGH_2026-10-25.md).

@@ -28,6 +28,14 @@ mapping and owning health publisher remain absent. Positive source/browser
 qualification remains NOT_MET. No UI/public contract, runtime, push or landing
 change is implied. Claude keeps current components and independent fixture ACK.
 
+Public handoff delivered to HK at2026-10-25T18:40:33Z: Edge EPG10-08/
+`CORE_SOURCE_QUALIFICATION_FOLLOWTHROUGH_2026-10-26.md`, SHA256
+`55365490266c7c28f55b26e729883d3d9e0ed2928732b65ff792ea4b181916e6`.
+Companion test-results JSON also copied, SHA256
+`ac6abad0ede581ad0ee71bac3ce98aac002e46db94b1891c2e8d7bd580187d85`;
+both remote hashes match local. Public evidence only, not source-code bundle,
+private input transfer, installed runtime or Edge acceptance/ACK.
+
 ## Codex calendar BFF + metadata validation —25Oct2026
 
 [Exact code, source boundaries, actual tests, next owners and Claude handoff](evidence/ELP2-10/BACKEND_CALENDAR_METADATA_FOLLOWTHROUGH_2026-10-25.md).
