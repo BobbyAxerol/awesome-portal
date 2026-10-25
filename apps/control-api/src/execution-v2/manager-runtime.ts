@@ -184,7 +184,7 @@ export class ExecutionManagerRuntime implements OnModuleInit, BeforeApplicationS
     if (base && base !== this.installedTrust) throw new Error("MANAGER_RUNTIME_TRUST_CONFLICT");
     const trust = this.installedTrust!;
     const delegate = Object.freeze<AccessTrustProvider>({ verifyPolicy:i=>trust.verifyPolicy(i),verifyReceipt:i=>trust.verifyReceipt(i),
-      verifyRootReceipt:i=>trust.verifyRootReceipt?.(i) ?? Promise.resolve(null),
+      verifyRootReceipt:(i,c)=>trust.verifyRootReceipt?.(i,c) ?? Promise.resolve(null),
       qualifyDelegatedReceipt:(i,s)=>trust.qualifyDelegatedReceipt?.(i,s) ?? Promise.resolve(null),
       relations:(u,w)=>trust.relations(u,w),verifiedHumanMapping:(u,w)=>trust.verifiedHumanMapping(u,w),
       readPublication:async request=>{

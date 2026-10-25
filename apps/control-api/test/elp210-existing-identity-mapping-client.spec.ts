@@ -357,7 +357,7 @@ describe("ELP2-10 existing identity mapping client (TEST_ONLY real loopback mTLS
     const selected = withExistingIdentityMapping(base, client(lane.origin)), input = { TEST_ONLY: true };
     expect(await selected.verifyPolicy(input)).toBeNull(); expect(base.verifyPolicy).toHaveBeenCalledExactlyOnceWith(input);
     expect(await selected.verifyReceipt(input)).toBeNull(); expect(base.verifyReceipt).toHaveBeenCalledExactlyOnceWith(input);
-    expect(await selected.verifyRootReceipt!(input)).toBeNull(); expect(base.verifyRootReceipt).toHaveBeenCalledExactlyOnceWith(input);
+    expect(await selected.verifyRootReceipt!(input,{phase:"QUALIFY"})).toBeNull(); expect(base.verifyRootReceipt).toHaveBeenCalledExactlyOnceWith(input,{phase:"QUALIFY"});
     const delegatedScope = { workspace_id: selection.workspace_id, subject_user_id: subject, principal_ids: [subject] };
     expect(await selected.qualifyDelegatedReceipt!(input, delegatedScope)).toBeNull();
     expect(base.qualifyDelegatedReceipt).toHaveBeenCalledExactlyOnceWith(input, delegatedScope);

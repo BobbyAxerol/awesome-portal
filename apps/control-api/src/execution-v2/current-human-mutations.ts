@@ -96,11 +96,24 @@ export interface CurrentHumanMutationFence {
   /** Must be synchronous; the provider holds this proof through Core outcome. */
   assertCurrent(): void;
   release(): Promise<void>;
+  /** Optional purpose-specific owning-transaction custody. External I/O is
+   * forbidden; the same DB transaction owns application and terminal truth. */
+  beforeApply?(db: PoolClient): Promise<void>;
+  afterApply?(db: PoolClient, terminal: ReturnType<CurrentHumanMutationHooks<unknown>["terminal"]>): Promise<void>;
+}
+/** Persisted coordinator identity, never an adapter's replacement intent. */
+export interface CurrentHumanMutationFenceContext {
+  readonly mutation_id: string;
+  readonly binding_digest: string;
+  readonly key_digest: string;
+  readonly request_digest: string;
+  readonly family: string;
+  readonly target_id: string | null;
 }
 export interface CurrentHumanVerifiedMutationHooks<T> extends CurrentHumanMutationHooks<T> {
   /** Resolve source I/O AFTER drain recovery, outside every Core transaction.
    * Never hold a provider fence while recovery needs that same provider. */
-  acquire_fence?(): Promise<CurrentHumanMutationFence>;
+  acquire_fence?(context: Readonly<CurrentHumanMutationFenceContext>): Promise<CurrentHumanMutationFence>;
 }
 
 function assertFence(fence: CurrentHumanMutationFence | undefined): void {
@@ -231,7 +244,11 @@ export class CurrentHumanMutations {
         const pending = await this.pendingState(db);
         if (pending) throw new CurrentHumanMutationPending(intent.mutation_id, pending);
       });
-      fence = await hooks.acquire_fence?.();
+      if (hooks.acquire_fence && intent.state !== "FINISHED" && intent.binding_digest !== bindingDigest)
+        throw new CurrentHumanLeaseError("CURRENT_HUMAN_MUTATION_KEY_CONFLICT");
+      fence = await hooks.acquire_fence?.(Object.freeze({ mutation_id: intent.mutation_id,
+        binding_digest: intent.binding_digest, key_digest: binding.key_digest,
+        request_digest: binding.request_digest, family: binding.family, target_id: binding.target_id }));
       if (hooks.acquire_fence && (!fence || typeof fence.assertCurrent !== "function" || typeof fence.release !== "function"))
         throw new CurrentHumanLeaseError("CURRENT_HUMAN_MUTATION_FENCE_INVALID");
       assertFence(fence);
@@ -243,7 +260,9 @@ export class CurrentHumanMutations {
           // Recovery can establish COMMIT, not recover bearer/CSRF secrets.
           // Do not even call authorize/apply to reconstruct a login response.
           if (oneView) throw new CurrentHumanLeaseError("CURRENT_HUMAN_ISSUANCE_ALREADY_COMMITTED");
+          await fence?.beforeApply?.(db);
           const replayed = await this.replay(db, row, hooks);
+          await fence?.afterApply?.(db, hooks.terminal(replayed));
           assertFence(fence);
           return replayed;
         }
@@ -254,8 +273,11 @@ export class CurrentHumanMutations {
         if (pending) throw new CurrentHumanMutationPending(intent.mutation_id, pending);
         await hooks.authorize(db);
         await db.query("SELECT set_config('elp210_candidate.mutation_id',$1,true)", [intent.mutation_id]);
+        await fence?.beforeApply?.(db);
         const result = await hooks.apply(db);
-        const terminal = accessDigest(hooks.terminal(result));
+        const terminalFact = hooks.terminal(result);
+        await fence?.afterApply?.(db, terminalFact);
+        const terminal = accessDigest(terminalFact);
         await db.query(`UPDATE elp210_candidate.mutations SET state='FINISHED',terminal_digest=$2,finished_at=clock_timestamp()
           WHERE mutation_id=$1`, [intent.mutation_id, terminal]);
         await db.query("UPDATE elp210_candidate.authority SET drain_id=NULL WHERE singleton");

@@ -1,7 +1,7 @@
 import { ReviewedAccessPolicy, ScopedAccessGrant, TsMembershipAcceptance, type ManagerDomainGrant } from "./access.contract";
 import { AccessRelations, unqualifiedAccessRelations } from "./access-policy";
 import type { ExecutionReadPublication, ExecutionReadPublicationRequest } from "./read-publication";
-import type { QualifiedRootMembershipReceipt } from "./access-root-receipt";
+import type { RootReceiptVerifier } from "./access-root-receipt";
 import type { DelegatedReceiptScope, QualifiedDelegatedMembershipReceipt } from "./access-delegated-receipt";
 
 export interface ReviewedPolicyArtifact {
@@ -23,7 +23,7 @@ export interface AccessTrustProvider {
   /** Private reviewed-root intake, not an ordinary delegation or a TS wire.
    * The verifier resolves source I/O before Core locks and holds its current
    * mapping/membership revocation fence until release after COMMIT. */
-  verifyRootReceipt?(input:unknown):Promise<QualifiedRootMembershipReceipt|null>;
+  verifyRootReceipt?: RootReceiptVerifier;
   /** Ordinary asynchronous receipt authority, NOT the requester's old login.
    * All exact Core principal relations/mapping are reacquired outside Core
    * after drain recovery, then fenced through physical COMMIT/ROLLBACK. This

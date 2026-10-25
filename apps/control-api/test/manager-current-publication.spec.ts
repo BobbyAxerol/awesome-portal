@@ -91,7 +91,7 @@ describe("Manager CURRENT exact source publication (synthetic private adapter me
     expect(base.relations).not.toHaveBeenCalled();
     expect(await trust.verifyPolicy({ a: 1 })).toBeNull();
     expect(await trust.verifyReceipt({ a: 2 })).toBeNull();
-    expect(await trust.verifyRootReceipt!({ a: 3 })).toBeNull();
+    expect(await trust.verifyRootReceipt!({ a: 3 }, { phase: "QUALIFY" })).toBeNull();
     expect(await trust.verifiedHumanMapping("real-user", "research")).toBeNull();
     expect(await trust.relations("real-user", "research")).toEqual(await unqualifiedAccessTrust.relations("real-user", "research"));
     expect(base.verifiedHumanMapping).toHaveBeenCalledWith("real-user", "research");

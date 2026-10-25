@@ -18,6 +18,7 @@ export const TEST_TABLES = [
   "execution_trusted_commands",
   "execution_manager_model_heads",
   "execution_manager_model_revisions",
+  "portal_native_root_obligations",
   "portal_access_policy_events",
   "portal_access_proposals",
   "portal_access_grants_v2",
