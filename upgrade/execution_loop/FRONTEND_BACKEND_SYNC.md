@@ -1,5 +1,30 @@
 # Execution Loop V2 — Sổ đồng bộ Frontend ↔ Backend (sống)
 
+## Codex provider/financial/command and preservation —25Oct2026,10:19ICT entry
+
+Bobby assigned continuing the three existing backend slices and checking safe
+integration into `docs/research-loop-plan`, without UI edits, shared-preview
+runtime, push, stable/dev/main or command/Live activation. Core clean
+`88a0d140c288aac1b4ca7cf2a0b0199847a6d1c3`; Claude clean
+`00e7f6cff2fadbd88b8ed461fa870b28ee88ad94`, unchanged committed intake.
+Branches diverge55Core/163Claude commits; no blanket ff-only or ours/theirs
+resolution is safe. Owned HK PM cleanb9dd32d1 and Edge clean6d44b52c; peer
+PM6f474c72/Edge8727e530 retain their WIP. `/tmp` mirrors are not the sole
+source: implementations/tests are committed in those owned HK Git branches.
+PM remains its separate source repository; do not vendor its business Python
+or rewrite its authority into Portal just to call the handoff merged.
+
+Task map before delegation: primary owns source fetch/preservation, shared
+docs/contracts, staging integration worktree, code changes and serialized gates.
+Reuse integration helper for read-only Claude/Core/Edge ancestry, conflict and
+required-source inventory; reuse financial helper for read-only exact financial
+APPLIED/ACK and command runtime remaining-composition review; reuse independent
+native reviewer for the registered-provider transport seam. No helper edits,
+tests, credentials, branch/commit/merge/push or runtime operations until a named
+disjoint source task is explicitly assigned. Correctness cells retain2CPU/
+1536MiB/300s bounds; frozen landing requires its actual normal gate. Do not
+copy external source/data/grants into fixture authority. Entry only, not PASS.
+
 ## Codex original registry/financial source delivery —24Oct2026,16:47UTC
 
 [Actual implementation, focused results and exact remaining owners](evidence/ELP2-10/CORE_EDGE_DIRECT_COMMISSIONING_2026-10-24.md#native-correspondence-financial-runtime-20261024).
