@@ -65,7 +65,8 @@ function coreFixture() {
     actor_role: user.role, actor_lease_until_ms: session.absoluteExpiresAt.valueOf(), actor_member: true, policy, grants, active_principals: new Set([owner, user.userId]),
     authority_fingerprint: accessDigest({ user: user.userId, generation: user.sessionVersion, grants, policy }),
     relationsFor: () => ({ qualified: true, revision: membership.revision, own_alpha_ids: [], member_portfolio_ids: [], roots: { [root.id]: resources }, membership }), allow_test_only: true });
-  const access = { readContext: vi.fn(async () => context()), confirmReadContext: vi.fn(async () => context()),
+  const access = { hasNativeCurrentRelations: () => false,
+    readContext: vi.fn(async () => context()), confirmReadContext: vi.fn(async () => context()),
     readPublication: vi.fn(async () => structuredClone(publication)) } as unknown as ExecutionAccessService;
   const config = { AUTH_MODE: "dev" } as ControlApiConfig;
   const auth = new AuthService(pool, config, new Argon2CredentialService({ memoryKib: 8192, iterations: 1, parallelism: 1 }));

@@ -39,7 +39,8 @@ function fixture(options: { coreV2?: boolean; sourceV2?: boolean; sourceDenied?:
     policy: state.deletedPolicy ? null : policy, grants: [grant], active_principals: new Set([USER, OWNER]),
     relationsFor: () => ({ qualified: true, revision: "TEST_ONLY-relations", own_alpha_ids: [], member_portfolio_ids: [],
       roots: { root: resources }, membership }) });
-  const access = { readContext: vi.fn(async () => context()), confirmReadContext: vi.fn(async () => context()),
+  const access = { hasNativeCurrentRelations: () => false,
+    readContext: vi.fn(async () => context()), confirmReadContext: vi.fn(async () => context()),
     readPublication: vi.fn(async (r: ExecutionReadPublicationRequest) => ({ workspace_id: SOURCE, environment: r.environment,
       profile_id: r.profile_id, binding: r.binding, qualification: "TEST_ONLY", publication_revision: "TEST_ONLY-publication",
       population_coverage: "COMPLETE_FOR_DATASET_WINDOW", provenance_ref: "TEST_ONLY", resources, tuples: [tuple],
