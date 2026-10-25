@@ -1,5 +1,20 @@
 # Execution Loop V2 — Sổ đồng bộ Frontend ↔ Backend (sống)
 
+## Codex integrated qualification —25Oct2026 entry
+
+[Frozen scope, gates and real-source readiness](evidence/ELP2-10/CORE_INTEGRATED_QUALIFICATION_2026-10-25.md).
+Canonical685bc1915/Claude00e7f6cff clean at intake; no new committed Claude
+request/ACK. Integration98c7226a preserves both histories; documentation-only
+merge59a2c1c68 also preserves canonical receipt685bc1915 without conflict.
+ACT_NOW: complete required normal R2 on a frozen source, then official full
+compare-only visual before ff-only; unchanged focused source receipts reused.
+No weakening test/authority/SLO limits or baseline update. Two existing helpers
+reused read-only: gate impact and HK actual-source inventory; primary owns
+shared files, formal review, integration and serialized heavy gate. Source
+originals/trust/rights, financial APPLIED→ACK, approved calibration/budget/G2
+and actual-source browser remain separate gates, not fixture acceptance.
+No UI/push/shared-preview/stable/dev/main/provider28445 or command/Live change.
+
 ## Codex STATUS bootstrap / named Alpha continuation —25Oct2026
 
 [Exact source, actual gate results, preservation and owner actions](evidence/ELP2-10/CORE_STATUS_BOOTSTRAP_AND_NATIVE_ALPHA_RETURN_2026-10-25.md).
@@ -3548,4 +3563,16 @@ Claude: preserve accepted components, source00e7f6cff and full integration
 API/browser receipts for the named route; do not reroute every reader or treat
 synthetic TLS/DB tests as source acceptance. No new UI task or backend decision
 is delegated to Bobby. ELP2-05/06/07/09/10 incomplete;11 not entry-ready.
+
+### 25Oct2026 — integrated normal gate terminal, fixture repair in progress
+
+[Qualification record §5](evidence/ELP2-10/CORE_INTEGRATED_QUALIFICATION_2026-10-25.md#5-normal-gate-terminal-result-and-bounded-repair):
+contracts1,887/build PASS; complete API11,081PASS/67FAIL/8SKIP, ten failed files.
+Actual stacks identify stale TEST_ONLY doubles, fixture mount paths and the old
+main-bootstrap harness. The production guards remain unchanged. Codex owns
+one focused ten-spec retake after old cells cleaned; no duplicate heavy gate.
+No canonical landing/runtime/push, and no new public DTO, enum or Claude UI
+mapping from this repair. Claude00e7f6cff is unchanged and preserved. Full R2
+and compare-only visual remain NOT_MET; real-source/current rights, financial
+APPLIED-to-ACK, STATUS original, budget/calibration/G2/browser are separate gates.
 

@@ -15826,3 +15826,29 @@ commissioning, financial APPLIED→ACK, STATUS existing-original and separate
 budget/calibration/coexistence/G2/browser gates remain open. No UI/push/shared
 preview/stable/dev/main/provider28445 or command SUBMIT/Live changes;11 unopened.
 
+### §14 follow-through —25Oct2026 integrated qualification entry
+
+[Frozen source, gate matrix and real-source readiness](execution_loop/evidence/ELP2-10/CORE_INTEGRATED_QUALIFICATION_2026-10-25.md).
+Bobby assigned continuing ELP2-10 qualification/source acceptance. Canonical
+685bc1915 and Claude00e7f6cff clean; no new committed consumer request/ACK.
+Source integration98c7226a plus docs-only canonical merge59a2c1c68 preserve
+both histories. One required normal R2 on the frozen candidate, then full
+pinned-image compare-only visual; no re-record, UI change or relaxed threshold.
+At entry both gates pending; previous1500s operator timeout remains NOT_MET,
+not a completed suite FAIL. Source-matched focused receipts remain reusable.
+Two existing agents read-only review gate impact and HK source readiness;
+primary owns files/integration/heavy scheduling. Genuine originals, independent
+rights/trust, financial APPLIED→ACK, approved budget/calibration/coexistence/G2
+and source browser acceptance remain separate. ELP2-05/06/07/09/10 incomplete;
+11 not entry-ready. No push/shared-preview/stable/dev/main/provider28445,
+command SUBMIT or Live activation follows.
+
+**Terminal normal-gate update:** [actual result and bounded repair](execution_loop/evidence/ELP2-10/CORE_INTEGRATED_QUALIFICATION_2026-10-25.md#5-normal-gate-terminal-result-and-bounded-repair).
+Contracts1,887/APIbuild PASS; full API11,081PASS/67FAIL/8SKIP, ten failed files
+(including two collection failures), not integrated R2 PASS. Following restore
+was NOT_RUN in this failed attempt. All observed failure families have narrow
+test-only repairs in the owned Core lane; production guards/UI unchanged.
+Focused ten-spec retake is running after official cleanup, before considering
+another full gate. Canonical685bc1915/Claude00e7 unchanged; no ff-only landing,
+runtime, push or source acceptance inferred. ELP2-10 remains open;11 not ready.
+
