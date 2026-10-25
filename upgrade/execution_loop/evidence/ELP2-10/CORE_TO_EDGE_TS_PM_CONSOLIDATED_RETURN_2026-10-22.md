@@ -2339,3 +2339,27 @@ Claude retains existing components/fixtures; real UXM gates consume each
 independently qualified API row/operation. ELP2-05/06/07/09/10/11 remain explicitly
 not full-PASS. Return prepared source/trust/authority facts separately rather
 than requiring all financial/command/G2 inputs before bounded CURRENT reads.
+
+## 25. Finite route, owning financial/gateway runtime and exact mutation review —25Oct2026
+
+Coordinator Codex/Core. [Current source/tests/bundles, cleanup and next gates](CORE_FINITE_RUNTIME_COMPOSITION_2026-10-25.md).
+Core source `fdc1944bbf34f661f5a45b3ad7972610c2756334`; owned Edge financial
+`79fa007e304f8e5c0853e18fc28ac5c1681f5070` and gateway
+`ef4945fae32abe3820b870ab893ff639dca9aef2`. Exact source archives/bundles
+are verified on both hosts. **SOURCE_ONLY; not installed/READY/connected PASS**.
+
+| Surface | Delivered / actual result | Next exact owner/action |
+| --- | --- | --- |
+| Core finite Paper Account | Named authenticated route uses actual native reservation/ENTER/final publication/physical writer;9/9 PG/HTTP PASS, build/restore PASS | Core closes recorded integration R2, backs up isolated target and installs only qualified refs/source; other routes are not implicitly converted |
+| Core mutation composition | CURRENT recovery plus financial and independent STATUS registered on one coordinator/pool; unchanged222runtime tests reused | Core closes ROOT152 census/recovery/opaque own-fence/admission/shutdown review before mounting ROOT; not an Edge blocker |
+| Edge native gateway | Twelve exact ROOT/CURRENT mTLS paths, fixed source/original matching, bounded body/deadline/inflight and drain; final51distinct Rust tests and strict Clippy PASS | Edge coordinates real native registration/original acceptance and exact TLS/source selection; no synthetic response promoted to authority |
+| Financial APPLIED | Receiver now belongs to configured owning runtime and shares actual verifier/store/original | Core/Edge bind real financial-purpose original/verifier/transaction group and take COMMIT→APPLIED→durable source ACK; current synthetic21tests are source proof only |
+| STATUS | Private source/runtime/startup/shutdown wired; no SUBMIT or original generation | Edge supplies independently authorized existing original/current requester/source selection. Real Research DB has0command originals; do not generate one to manufacture a positive STATUS receipt |
+
+Claude keeps current components/fixtures; no new public DTO/enum mapping. Exact
+actual-principal/workspace API/browser acceptance follows independently qualified
+installation. Existing policy/grants do not prove native original acceptance;
+HISTORY/REPLAY/STREAM remain separately authorized. No runtime/image/schema was
+installed, no short slot armed, no new Bobby decision requested. Full08/read09
+and ELP2-10 remain NOT_MET;11 not entry-ready. No UI, push, protected runtime,
+command/Live or production budget/calibration changes.

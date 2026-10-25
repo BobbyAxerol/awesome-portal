@@ -3309,3 +3309,38 @@ mutations. Core owns composition/integration; Edge remains the only source-owner
 coordination point. No new Bobby decision is requested. ELP2-05/06/07/09/10
 incomplete, ELP2-11 not entry-ready; no UI, push, shared preview/stable/dev/main/
 provider28445 or command/Live changes.
+
+
+### Finite CURRENT, independent STATUS and owning Edge mounts —25Oct2026
+
+[Exact implementation, tests, preservation and remaining commissioning](evidence/ELP2-10/CORE_FINITE_RUNTIME_COMPOSITION_2026-10-25.md).
+Core `fdc1944bbf34f661f5a45b3ad7972610c2756334` commits28files,+1,992/−39:
+actual named Paper Account360 physical egress, final authority/projection check,
+same-pool CURRENT recovery plus independent financial/STATUS participants and
+private STATUS startup/listener/shutdown. Actual-PG/HTTP Account9/9, build and
+restore PASS; runtime/config222/222 reused on unchanged source. The actual409
+private TEST_ONLY-context mismatch is fixed; production false still overrides
+provider true. No public DTO/enum/component remap.
+
+Owned Edge `79fa007e` mounts financial APPLIED in its owning lifecycle;
+`ef4945fae32abe3820b870ab893ff639dca9aef2` mounts twelve exact native ROOT/
+CURRENT gateway paths with bounded mTLS/body/deadline/drain. Final affected
+Rust51 distinct PASS and production Clippy `--bins -- -D warnings` PASS.
+Both sides have verified durable source bundles; no source depends on /tmp.
+No runtime/config/schema was installed and the shared preview image is unchanged.
+
+Independent ROOT preparation `09a54e3bd` has16focused tests PASS; its additional
+full-source typecheck timed out180s and remains NOT_MET, not a new build PASS.
+**CHANGE before mount:**
+close dedicated ROOT152 recovery/census, exact own-fence exemption, serialized
+admission and active-holder/shutdown races. Loader tests do not close those
+Core-owned issues. Other finite routes are not implicitly converted by Account.
+Real CURRENT/original source acceptance, financial COMMIT→APPLIED→source ACK,
+STATUS existing original and integrated normal landing R2 remain distinct.
+
+Claude: preserve accepted components, source00e7f6cff and full integration
+0d80dd1cf. After a qualified install, take exact-principal/workspace actual
+API/browser receipts for the named route; do not reroute every reader or treat
+synthetic TLS/DB tests as source acceptance. No new UI task or backend decision
+is delegated to Bobby. ELP2-05/06/07/09/10 incomplete;11 not entry-ready.
+

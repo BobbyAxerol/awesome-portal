@@ -15688,3 +15688,39 @@ Claude needs no public DTO/component remap this round; keep accepted UI/fixtures
 and take exact-principal/workspace browser acceptance after qualified installation.
 ELP2-05/06/07/09/10 remain incomplete; ELP2-11 not entry-ready. No push, shared
 preview, dev/main/stable/provider28445 or command/Live changes.
+
+### §14 follow-through —25Oct2026 finite route and owning runtime composition
+
+[Exact source/tests/bundles, independent review and remaining implementation](execution_loop/evidence/ELP2-10/CORE_FINITE_RUNTIME_COMPOSITION_2026-10-25.md).
+Core `fdc1944bbf34f661f5a45b3ad7972610c2756334`:28files,+1,992/−39,
+named Paper Account360 physical native response, same-pool CURRENT recovery,
+independent financial/STATUS participants and private STATUS bootstrap/lifecycle.
+Actual Account9/9 PG/HTTP, production build and restore PASS; unchanged
+runtime/config222/222 reused.409 context mismatch corrected without qualifying
+fixtures as production authority or weakening source/projection equality.
+
+Owned Edge financial mount `79fa007e304f8e5c0853e18fc28ac5c1681f5070`,
+8files,+779/−16; native gateway/lifecycle
+`ef4945fae32abe3820b870ab893ff639dca9aef2`,11files,+2,673/−32.
+Final affected Rust51distinct PASS; strict production Clippy PASS. Source
+bundles retained on both hosts and durable Git ref. No runtime installation,
+whole-hook, browser or genuine-original connected acceptance is inferred.
+
+ROOT preparation `09a54e3bdf5534710228c98fbca6fd4a02490af4` has16/16focused
+PASS; additional full-source typecheck timed out180s/NOT_MET, not build PASS.
+Independent review CHANGE before
+mount: dedicated152 recovery/global census, opaque exact-own-fence exemption,
+authority-drain admission and active-holder/shutdown races remain Core code
+work. Do not present them as an external window wait. Other finite routes are
+not converted by this single Account path. Real accepted CURRENT/trust,
+financial original/verifier COMMIT→APPLIED→source ACK, STATUS existing original
+and integrated normal R2 remain separately required. Actual Research census
+is1policy/7grants/0command originals;152/153 absent, grant JSON lacks TS receipts.
+
+Claude: no public DTO/enum/component remap; keep accepted UI and fixture graph.
+After qualified install, take exact-principal/workspace API/browser receipt for
+each actually mounted source. Preserved Claude00e7f6cff/full integration0d80dd1cf
+are not silently landed by this docs-only report. ELP2-05/06/07/09/10 incomplete;
+11 not entry-ready. No UI, push, shared-preview/stable/dev/main/provider28445
+or command/Live changes. Next backend: resolve the specific ROOT coordinator
+review, then safe isolated install and genuine-original commissioning.
