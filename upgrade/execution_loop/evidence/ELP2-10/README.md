@@ -1,5 +1,18 @@
 # ELP2-10 — Performance, quality và coexistence
 
+## 25Oct2026 — Core calendar/metadata follow-through (source-only)
+
+[Exact receipt and Claude handoff](BACKEND_CALENDAR_METADATA_FOLLOWTHROUGH_2026-10-25.md).
+`dc3c9015b` fixes normalized invalid Manager timestamps; `42c64cd74` wires a
+private qualified calendar lease into the actual VN Workbench.8source/test/
+fixture files,+372/−10; affected148unique cases, production-source tsc and
+baseline/default controls PASS (distinct runs recorded, no duplicate counting).
+The existing public calendar contract/fixture is unchanged; external carrier,
+source authority and connected/browser acceptance are not commissioned here.
+Financial/economic/health qualification and the remaining exact metadata/
+Edge notices stay OPEN. R1 candidate only, not landed/installed/pushed.
+ELP2-10 still NOT_MET; preserve existing ELP2-11 preparation/assignments below.
+
 ## Current direct HK implementation/runtime —2026-10-24
 
 [14:18UTC implementation follow-through](CORE_EDGE_DIRECT_COMMISSIONING_2026-10-24.md#applied-receiver-and-command-assembly-follow-through-1418utc):

@@ -15949,3 +15949,22 @@ inputs, not values inferred by Portal. ELP2-05/06/07/09/10 stay OPEN;
 ELP2-11 not entry-ready. Claude retains accepted components and receives the
 linked handoff; this source delivery is not consumer acceptance.
 
+### 25Oct2026 — Calendar BFF wiring and exact source metadata timestamps
+
+[Implementation, remaining source owners, test disposition and Claude handoff](execution_loop/evidence/ELP2-10/BACKEND_CALENDAR_METADATA_FOLLOWTHROUGH_2026-10-25.md).
+Metadata `dc3c9015b` rejects invalid dates normalized by JavaScript. Calendar
+`42c64cd74` connects the existing mapper to the actual VN Workbench using an
+optional authenticated Edge lease, exact original principal/scope, source
+timestamps/expiry and final revoke checks.8source/test/fixture files,+372/−10.
+Existing public calendar contract, fixture and frontend reader remain unchanged;
+no source is activated automatically. Affected147PASS plus a one-case canonical
+addition (30-case retake; union148unique cases), production-source tsc, baseline
+controls, integrity and tracking PASS. Full R2/landing is still pending.
+
+Financial/economic/health qualification, remaining exact-grain source metadata,
+calendar/Edge notice providers and real connected/browser acceptance remain
+OPEN, with owner/action in the packet. No frontend edit, runtime/source install,
+canonical/Claude mutation, push, dev/main/stable/provider28445/command/Live change.
+ELP2-10 is not closed. Existing assigned/preparation work for ELP2-11 is preserved;
+its integrated exit is not achieved or newly started by this source slice.
+

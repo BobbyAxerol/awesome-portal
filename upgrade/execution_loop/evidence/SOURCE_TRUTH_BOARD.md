@@ -4,6 +4,15 @@ Khởi tạo: Claude, 2026-10-18 @ `claude/fe-parity`. Codex điền **cột ngu
 
 Trạng thái: `EXISTS_MOUNTED` (đọc thật có receipt) · `SOURCE_DARK` (contract + code, chưa nguồn thật) · `SYNTHETIC_ONLY` · `MISSING` (chưa có contract/nguồn) · `UNKNOWN`.
 
+**25Oct2026 source-only update — calendar / metadata:**
+[BFF implementation, source pins, tests and exact remaining qualification](ELP2-10/BACKEND_CALENDAR_METADATA_FOLLOWTHROUGH_2026-10-25.md).
+`venues.calendar` remains **SOURCE_DARK**, not EXISTS_MOUNTED. The VN Workbench
+now has an optional verified-source composition; default remains absent, source
+carrier still not installed. Existing public synthetic fixture already has a
+frontend reader; round-trip producer parity is tested, not connected UI proof.
+Manager source timestamp validation now rejects impossible dates. No existing
+12-row source/FE ownership or runtime acceptance is overwritten by this note.
+
 Research commissioning update2026-10-19: Bobby approved a distinct exact-identity
 Paper READ/STREAM installation. Official readonly PM mapping observation at
 06:50:22UTC returned **NO_ACTIVE_MAPPING** for Research Bobby, whose subject

@@ -1,5 +1,30 @@
 # Execution Loop V2 — Sổ đồng bộ Frontend ↔ Backend (sống)
 
+## Codex calendar BFF + metadata validation —25Oct2026
+
+[Exact code, source boundaries, actual tests, next owners and Claude handoff](evidence/ELP2-10/BACKEND_CALENDAR_METADATA_FOLLOWTHROUGH_2026-10-25.md).
+Metadata `dc3c9015b` rejects impossible timestamps instead of letting JS normalize
+them; calendar `42c64cd74` connects the existing mapper to the actual VN Paper
+BFF through an optional original-principal/current-authority Edge source lease.
+Closed source scope,262,144-byte bound, source clocks/expiry and final revoke
+checks; no direct DL access or default source activation.8source/test/fixture
+files,+372/−10. R1 only; canonical landing still needs the integration gate.
+
+Focused147PASS plus one new canonical round-trip case (30-case module retake;
+compatible union148unique cases), production-source tsc PASS. Default workbench
+byte-preservation2PASS; original metadata composition1PASS while four new
+date-rejection cases expose the bug on old code. No public schema/type/route
+or frontend change. Existing public calendar fixture/reader reused unchanged.
+
+**Claude ACT_NOW:** consume existing `data.venue_calendar` Facts/capability and
+`execution-venue-calendar.synthetic.valid.json.value`, not the private carrier.
+Keep approved components; return fixture ACK separately from qualified-source
+API/browser ACK. Source calendar remains SOURCE_DARK. **Core/Edge NEXT:** real
+financial/economic/health and remaining metadata, authenticated calendar/notice
+provider then finite/cache/cursor/SSE/revoke/recovery on the installed candidate.
+No source qualification or browser PASS inferred. ELP2-10 OPEN; no UI/runtime/
+shared-preview/dev/main/stable/provider28445/command/Live/push change.
+
 ## Codex health persistence + qualified notices —25Oct2026
 
 [Source, actual PostgreSQL gates, remaining source owners and Claude handoff](evidence/ELP2-10/BACKEND_HEALTH_NOTICE_FOLLOWTHROUGH_2026-10-25.md).
