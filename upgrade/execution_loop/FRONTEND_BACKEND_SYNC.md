@@ -3282,3 +3282,30 @@ are Core↔Edge only. Edge: review the complete source bundle, supply independen
 CURRENT selection/trust/commissioning and financial-purpose verifier/original
 COMMIT→APPLIED inputs; do not treat mTLS/human signature as financial authority.
 No retired session/window reuse, new grant, command/Live, stable/dev/main or push.
+
+### Core provider / financial / STATUS source return —25Oct2026
+
+[Current implementation return](evidence/ELP2-10/CORE_PROVIDER_FINANCIAL_STATUS_IMPLEMENTATION_2026-10-25.md)
+records Core `e8d4db696`, PM `fad5e3fd8` and Edge `bc925c4c7` in their owned
+source candidates. ROOT/current READ providers, physical-send custody, actual
+financial receiver COMMIT/APPLIED→source ACK and STATUS-only issuer/transport
+are committed and focused-tested; no new runtime/image/schema/trust installed.
+Core final actual-PG237/237 plus build/restore PASS; financial chain4/4 and ACK32
+PASS; PM85 component/16 PG PASS; Rust61 distinct STATUS PASS. TEST_ONLY source
+registrations/PKI and earlier failed attempts remain explicit in the return.
+No whole-hook, browser or connected acceptance is inferred from these selectors.
+
+**For Claude:** no public generated DTO/enum change or component remap. Preserve
+the current UI/fixture graph and unchanged00e7f6cff history. The existing full
+integration0d80dd1cf is still separately preserved, R2/visual NOT_MET; do not
+claim the newly committed Core source is landed there. After the qualified
+composition/install, take actual-principal/workspace/revoke browser receipts.
+
+**For Core/Edge:** explicit finite-route `deliverNative` conversion, independent
+mutation composition, accepted CURRENT source/trust, real financial original/
+verifier and STATUS original/requester/gateway commissioning remain required.
+The new CURRENT port does not authorize STREAM/HISTORY/REPLAY/ROOT/STATUS or
+mutations. Core owns composition/integration; Edge remains the only source-owner
+coordination point. No new Bobby decision is requested. ELP2-05/06/07/09/10
+incomplete, ELP2-11 not entry-ready; no UI, push, shared preview/stable/dev/main/
+provider28445 or command/Live changes.

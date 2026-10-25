@@ -15655,3 +15655,36 @@ PM listener/factory/registry/ACK helpers are implemented, not to be built again.
 No public contract/schema/enum changes needing Claude mapping this round.
 ELP2-05/06/07/09/10 remain incomplete; ELP2-11 not entry-ready. No push, shared
 preview, dev/main/stable/provider28445, grant/session or command/Live changes.
+
+### §14 follow-through —25Oct2026 registered providers, APPLIED→ACK and STATUS
+
+[Implementation return: exact source, tests, cleanup and remaining commissioning](execution_loop/evidence/ELP2-10/CORE_PROVIDER_FINANCIAL_STATUS_IMPLEMENTATION_2026-10-25.md)
+supersedes only the missing-source implementation items in the preceding note.
+Core candidate `e8d4db696c9257b8e624d886a7dd38b799d1f620` includes four new
+ROOT/CURRENT/STATUS source and test commits; PM candidate
+`fad5e3fd876460f3aecfcf8ebd57a66610b6069c` includes three provider/ACK commits;
+Edge candidate `bc925c4c702cb8b458e7067a0073a6e41dcc3fba` includes STATUS-only
+transport. Combined69 file entries,+8,698/−50, no deleted files or frontend
+changes. All source is committed in owned worktrees and preserved in durable
+bundles; **not landed, installed or connected acceptance**.
+
+Final official Core focused gate:237/237 PASS plus production build and actual
+dump/restore PASS. PM provider/listener85 PASS and actual-PG16 PASS/18 deselected;
+financial source→Rust owning COMMIT/APPLIED→source ACK4/4 PASS plus focused ACK32
+PASS; Rust STATUS61 distinct PASS. The packet retains failed attempts and
+overlap/test-only authority limits. These are not a new whole-hook or browser
+PASS. Source fixes include the financial SELECT/INSERT-role ACK failure, genuine
+ordinary-read drain recovery and lost-cancellation-ACK recovery.
+
+Backend next: compose the exact accepted source/trust/originals through Edge,
+convert selected finite HTTP entrypoints to physical `deliverNative`, and supply
+independent qualified mutation composition; then commission financial and
+STATUS against real originals on the chosen integrated candidate. CURRENT READ
+alone must not enable STREAM/HISTORY/REPLAY/ROOT/STATUS or access mutations.
+Existing wrapper/route limitations and owners/actions are explicit in the return,
+not relabelled as an external wait. Preserve Claude00e7f6cff and prior full
+integration0d80dd1cf; its R2/visual findings remain open before safe landing.
+Claude needs no public DTO/component remap this round; keep accepted UI/fixtures
+and take exact-principal/workspace browser acceptance after qualified installation.
+ELP2-05/06/07/09/10 remain incomplete; ELP2-11 not entry-ready. No push, shared
+preview, dev/main/stable/provider28445 or command/Live changes.
