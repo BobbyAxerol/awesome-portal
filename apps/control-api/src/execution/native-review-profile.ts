@@ -11,10 +11,18 @@ export function nativeResearchReview(config?: {EXECUTION_READ_PROFILE?: string})
  * This is a routing ceiling, NOT a grant: current Core and PM still authorize
  * the exact actor/workspace/Paper domain at the physical delivery boundary. */
 export function nativeResearchReadAllowed(config: {EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID?: string},
-  method: string, path: string, query: Record<string, unknown>): boolean {
-  if (method !== "GET" || !config.EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID ||
+  method: string, path: string, query: Record<string, unknown>, nativeCurrentAccount=false, commandStatus=false): boolean {
+  if (!config.EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID ||
     query.environment !== undefined && query.environment !== "paper" ||
     query.workspace_id !== undefined && query.workspace_id !== config.EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID) return false;
+  // STATUS reconciliation is an authenticated lookup of an EXISTING original,
+  // not command submit/preview. Controller still requires CSRF/idempotency.
+  if(commandStatus&&((method==="GET"&&/^\/api\/v1\/execution\/capital-commands\/ecm_[a-f0-9]{32}(?:\/workflow)?$(?![\s\S])/u.test(path))||
+    (method==="POST"&&/^\/api\/v1\/execution\/capital-commands\/ecm_[a-f0-9]{32}\/reconcile$(?![\s\S])/u.test(path))))return true;
+  if(method!=="GET")return false;
+  // Private provider presence widens only this finite Paper route. It is not
+  // a public flag or a grant; the provider still fences the physical send.
+  if(nativeCurrentAccount&&/^\/api\/v1\/execution\/manager\/accounts\/[A-Za-z0-9][A-Za-z0-9._:-]{0,255}\/overview$(?![\s\S])/u.test(path))return true;
   if (["/api/v1/execution/manager/deployments", "/api/v1/execution/manager/operations",
     "/api/v1/execution/profiles/paper/realtime-snapshot", "/api/v1/execution/profiles/paper/stream"].includes(path)) return true;
   const match = /^\/api\/v1\/execution\/manager\/current\/([a-z][a-z0-9-]{1,127})(?![\s\S])/u.exec(path);

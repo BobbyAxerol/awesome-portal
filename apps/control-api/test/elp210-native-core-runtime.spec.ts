@@ -9,6 +9,7 @@ import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { nativeCoreRuntimeReference, prepareNativeCoreRuntime } from "../src/execution-v2/native-core-runtime";
 import { composeNativeCore } from "../src/execution-v2/native-core-composition";
 import { unqualifiedAccessTrust } from "../src/execution-v2/access-trust";
+import type {NativeRootReceiptProvider} from "../src/execution-v2/native-root-provider";
 vi.mock("node:fs/promises", async original => ({ ...await original<typeof import("node:fs/promises")>(), lstat: vi.fn(), open: vi.fn() }));
 vi.mock("../src/execution-v2/native-core-composition", () => ({ composeNativeCore: vi.fn() }));
 const sha = (bytes: Buffer) => createHash("sha256").update(bytes).digest("hex"), raw = (c: string) => c.repeat(64);
@@ -169,6 +170,14 @@ describe("TEST_ONLY native runtime private reference loader", () => {
     expect(deps).not.toHaveProperty("nativeManagerCacheObservation"); expect(composed.installOwnerPolicies).not.toHaveBeenCalled();
     expect(opened).not.toContain("/root/TEST_ONLY-OFFLINE-owner-artifact.json");
     expect(new Set(opened)).toEqual(new Set(["/TEST_ONLY/native-runtime/config.json", f.caRef.path, f.certRef.path, f.tlsKeyRef.path, f.keyRef.path, f.terminalRef.path]));
+  });
+  it("forwards ROOT separately and by exact identity into genuine composition, never as CURRENT or reverse participant",async()=>{
+    const f=fixture(),prepared=await prepareNativeCoreRuntime(f.pin()),actual=runtimePool();
+    const root={marker:"TEST_ONLY-forwarding-not-source-authority"} as unknown as NativeRootReceiptProvider;
+    await prepared.compose(actual.pool,[],undefined,root);
+    const call=vi.mocked(composeNativeCore).mock.calls[0]!;
+    expect(call[0]).toBe(actual.pool);expect(call[3]).toEqual([]);expect(call[4]).toBeUndefined();expect(call[5]).toBe(root);
+    expect(actual.pool.connect).not.toHaveBeenCalled();
   });
   it("captures explicit RT bounds but does not activate SSE or invoke policy installation", async () => {
     const f = fixture(), limits = { maximumClients: 2, maximumEntriesPerClient: 4, maximumFrameBytes: 32768, maximumClientBytes: 65536,

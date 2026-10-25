@@ -1,4 +1,5 @@
 import { Pool, PoolClient } from "pg";
+import type {ServerResponse} from "node:http";
 import { AuthService } from "../auth/auth.service";
 import { hintUserAuthorityChanged } from "../auth/stream-revocation-hints";
 import { withTransaction } from "../db/pool";
@@ -46,10 +47,30 @@ export class ExecutionAccessService {
   constructor(private readonly pool:Pool,private readonly auth:AuthService,
     private readonly trust:AccessTrustProvider=unqualifiedAccessTrust,
     private readonly allowTestOnly=false,private readonly authorityMutations?:CurrentHumanMutations) {
-    if(authorityMutations&&!authorityMutations.usesPool(pool))throw new CurrentHumanLeaseError("CURRENT_HUMAN_MUTATION_CONFIG_INVALID");
+    if(authorityMutations&&!authorityMutations.usesPool(pool)||trust.currentRelations&&!trust.currentRelations.usesPool(pool))
+      throw new CurrentHumanLeaseError("CURRENT_HUMAN_MUTATION_CONFIG_INVALID");
   }
 
   usesPool(pool:Pool):boolean{return this.pool===pool;}
+  hasNativeCurrentRelations():boolean{return this.trust.currentRelations!==undefined;}
+
+  /** Purpose-specific finite boundary. The caller is the actual scoped read
+   * issuer, not request JSON. Ordinary DTO return/ROOT/STREAM/command paths
+   * cannot borrow this physical READ terminal. */
+  async deliverNativeCurrent(actor:AccessActor,workspace:string,action:AccessAction,resources:readonly AccessResource[],
+    response:ServerResponse,build:(context:AccessEvaluationContext)=>Promise<Buffer>,assertAllowed:(context:AccessEvaluationContext)=>void,
+    validation?:{afterEnter?:()=>Promise<void>;beforeDispatch?:()=>void}):Promise<void>{
+    if(!this.trust.currentRelations)throw new AccessPolicyError("SOURCE_RELATION_NOT_QUALIFIED",503);
+    // The application boundary owns this private constructor flag, just as it
+    // does for readContext. Never inherit it from a source/provider context or
+    // request. Production always forces false; disposable TEST_ONLY callers
+    // must not change policy semantics between authorize and physical send.
+    const applicationContext=(context:AccessEvaluationContext):AccessEvaluationContext=>
+      ({...context,allow_test_only:this.allowTestOnly});
+    return this.trust.currentRelations.sendFinite({actor,workspace_id:workspace,action,resources,response,
+      build:context=>build(applicationContext(context)),assertAllowed:context=>assertAllowed(applicationContext(context)),
+      ...(validation?.afterEnter?{afterEnter:validation.afterEnter}:{}),...(validation?.beforeDispatch?{beforeDispatch:validation.beforeDispatch}:{})});
+  }
 
   /** Short consistent capture; no adapter I/O or mutation locks. */
   private async captureReadContext(actor:AccessActor,workspace:string) {
@@ -95,8 +116,13 @@ export class ExecutionAccessService {
     // Qualified relations may come from an adapter. All DB locks/connections
     // above have been released before awaiting it.
     const relationMap=new Map<string,AccessRelations>();
-    for(const id of new Set([...captured.ids,...extraPrincipals]))
-      relationMap.set(id,structuredClone(await this.trust.relations(id,workspace)));
+    const ids=[...new Set([...captured.ids,...extraPrincipals])];
+    if(this.trust.currentRelations){
+      const observed=await this.trust.currentRelations.observe({actor,workspace_id:workspace,principal_ids:ids,
+        action:"access.read",resource_digest:accessDigest({kind:"CURRENT_POLICY_CONTEXT"})});
+      for(const id of ids){const fact=observed.get(id);if(!fact)throw new AccessPolicyError("SOURCE_RELATION_NOT_QUALIFIED",503);
+        relationMap.set(id,structuredClone(fact));}
+    }else for(const id of ids)relationMap.set(id,structuredClone(await this.trust.relations(id,workspace)));
     const current=await this.captureReadContext(actor,workspace);
     if(current.authority_fingerprint!==captured.authority_fingerprint)
       throw new AccessPolicyError("ACCESS_RETRY_REQUIRED",409);
@@ -144,7 +170,12 @@ export class ExecutionAccessService {
       // Complete the count/closure check BEFORE calling any provider. Overflow
       // produces a held typed refusal, never a partial/first-64 authority graph.
       ids=selfProjectionPrincipalIds(contextFor(captured),environment,actions);
-      for(const id of ids)relations.set(id,structuredClone(await this.trust.relations(id,workspace)));
+      if(this.trust.currentRelations){
+        const observed=await this.trust.currentRelations.observe({actor,workspace_id:workspace,principal_ids:ids,
+          action:"access.read",resource_digest:accessDigest({kind:"SELF_ELIGIBILITY",environment,actions})});
+        for(const id of ids){const fact=observed.get(id);if(!fact)throw new AccessPolicyError("SOURCE_RELATION_NOT_QUALIFIED",503);
+          relations.set(id,structuredClone(fact));}
+      }else for(const id of ids)relations.set(id,structuredClone(await this.trust.relations(id,workspace)));
     } catch(error) { failure={error}; }
     const current=await this.captureSelfProjectionContext(actor,workspace);
     // Same O(1) terminal actor check for a held SOURCE error as for a body.
@@ -258,6 +289,9 @@ export class ExecutionAccessService {
   /** `stepUp`: false = none; true = the access-admin proof (historical); or the exact proof families accepted. */
   private async transaction<T>(workspace:string,actor:AccessActor,stepUp:boolean|readonly StepUpFamily[],fn:(tx:Tx)=>Promise<T>,extraPrincipals:string[]=[],
     captured?:AccessEvaluationContext,mutation?:AuthorityMutation<T>):Promise<T> {
+    // Ordinary CURRENT READ observation is not a native MUTATION fence. A
+    // separately qualified mutation adapter must be composed for this path.
+    if(this.trust.currentRelations)throw new AccessPolicyError("SOURCE_RELATION_NOT_QUALIFIED",503);
     const proofs:readonly StepUpFamily[]|null=stepUp===false?null:stepUp===true?ACCESS_STEP_UP_PROOFS:stepUp;
     try {
       const prepared=captured??await this.readContextWithPrincipals(actor,workspace,extraPrincipals);

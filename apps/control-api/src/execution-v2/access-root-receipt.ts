@@ -6,9 +6,10 @@ import { AccessPolicyError, reviewedAccessPolicy, scopedAccessGrant,
 import { accessDigest, canonicalSelector, type AccessRelations } from "./access-policy";
 import { AccessRepository, type AccessEvent, type AccessReceipt } from "./access.repository";
 import { CurrentHumanLeaseError } from "./current-human-candidate";
-import type { CurrentHumanMutations } from "./current-human-mutations";
+import type { CurrentHumanMutations, CurrentHumanMutationFenceContext, CurrentHumanMutationFence } from "./current-human-mutations";
 import { currentAcceptanceMatches, currentAccessRelations, type CurrentAccessRelations } from "./access-current-relations";
 import { reviewedParentAuditRoot } from "./parent-read-fields";
+import { carryNativeRootFenceIdentity } from "./native-root-fence";
 
 /** Private normalized verifier output, NOT a declaration of an existing TS wire.
  * A policy artifact cannot qualify this fact or copy an ordinary proposal receipt. */
@@ -17,7 +18,12 @@ export { tsRootMembershipAcceptance, type TsRootMembershipAcceptance } from "./a
 /** The provider resolves all I/O before returning, and holds the current human
  * mapping/membership fence through Core COMMIT. Guards inside Core are sync only.
  * release must settle in the provider's bounded lifetime, including on failures. */
-export interface QualifiedRootMembershipReceipt {
+export type RootReceiptVerificationContext = Readonly<{ phase: "QUALIFY" }> |
+  Readonly<{ phase: "COMMIT"; mutation: Readonly<CurrentHumanMutationFenceContext> }>;
+export type RootReceiptVerifier = (input: unknown, context: RootReceiptVerificationContext) => Promise<QualifiedRootMembershipReceipt | null>;
+export interface QualifiedRootMembershipReceipt extends CurrentHumanMutationFence {
+  /** Real entered native MUTATION cannot use the legacy uncoordinated path. */
+  requiresCoordinatedCommit?: true;
   fact: TsRootMembershipAcceptance;
   mapping: { ts_user_id: string; revision: string };
   membership: AccessRelations["membership"];
@@ -54,17 +60,22 @@ function isRootReplay(prior: AccessEvent, fact: TsRootMembershipAcceptance, proo
 /** Initial-only root receipt intake. No HTTP route, owner recovery, grant seed,
  * ordinary proposal bypass, external calls inside transactions, or source enable. */
 export async function acceptRootMembershipReceipt(pool: Pool,
-  verify: ((input: unknown) => Promise<QualifiedRootMembershipReceipt | null>) | undefined,
+  verify: RootReceiptVerifier | undefined,
   input: unknown, allowTestOnly = false,
   authorityMutations?: CurrentHumanMutations): Promise<{ receipt: AccessReceipt; replayed: boolean }> {
   if (authorityMutations && !authorityMutations.usesPool(pool)) throw notQualified();
   if (!verify) throw notQualified();
+  // A previous process may have settled a rolled-back native attempt but
+  // died before detaching its drain. Recovery is not qualification or ACK;
+  // preserve the same intent and obtain a fresh source fence below.
+  if (authorityMutations) await authorityMutations.recoverSettledRootDrain();
   let lease: QualifiedRootMembershipReceipt | null;
-  try { lease = await verify(input); } catch { throw notQualified(); }
+  try { lease = await verify(input, Object.freeze({ phase: "QUALIFY" })); } catch { throw notQualified(); }
   if (!lease || typeof lease.release !== "function") throw notQualified();
   const release = lease.release.bind(lease);
   let initialLeaseHeld = true;
   try {
+    if (lease.requiresCoordinatedCommit && !authorityMutations) throw notQualified();
     if (typeof lease.assertCurrent !== "function") throw notQualified();
     const guard = lease.assertCurrent.bind(lease);
     const parsed = tsRootMembershipAcceptance.safeParse(lease.fact);
@@ -199,9 +210,9 @@ export async function acceptRootMembershipReceipt(pool: Pool,
         target_id: fact.workspace_id }, {
         retain_after_application_rollback: true,
         authorize: async db => { await processRoot(db, false); },
-        acquire_fence: async () => {
+        acquire_fence: async mutation => {
           let fresh: QualifiedRootMembershipReceipt | null;
-          try { fresh = await verify(input); } catch { throw notQualified(); }
+          try { fresh = await verify(input, Object.freeze({ phase: "COMMIT", mutation })); } catch { throw notQualified(); }
           if (!fresh || typeof fresh.release !== "function") throw notQualified();
           const freshLease = fresh;
           try {
@@ -214,9 +225,14 @@ export async function acceptRootMembershipReceipt(pool: Pool,
             const assertCurrent = freshLease.assertCurrent.bind(freshLease);
             guardNow(assertCurrent);
             currentGuard = assertCurrent;
-            return { assertCurrent: () => guardNow(assertCurrent), release: async () => {
+            const wrapped: CurrentHumanMutationFence = { assertCurrent: () => guardNow(assertCurrent),
+              ...(freshLease.beforeApply ? { beforeApply: freshLease.beforeApply.bind(freshLease) } : {}),
+              ...(freshLease.afterApply ? { afterApply: freshLease.afterApply.bind(freshLease) } : {}),
+              release: async () => {
               try { await freshLease.release(); } catch { throw new AccessPolicyError("ACCESS_RETRY_REQUIRED", 503); }
             } };
+            carryNativeRootFenceIdentity(freshLease, wrapped);
+            return wrapped;
           } catch (error) {
             try { await freshLease.release(); } catch { throw new AccessPolicyError("ACCESS_RETRY_REQUIRED", 503); }
             throw error;
@@ -225,6 +241,13 @@ export async function acceptRootMembershipReceipt(pool: Pool,
         apply: db => {
           if (!currentGuard) throw notQualified();
           return apply(db, currentGuard);
+        },
+        replay: async db => {
+          // FINISHED is historical receipt readback, never another held ENTER.
+          // Do not write a missing receipt or restore revoked authority.
+          const prior = await new AccessRepository(db).sourceEvent(fact.source, fact.receipt_id);
+          if (!prior || !isRootReplay(prior, fact, proofDigest)) throw refusal();
+          return { receipt: prior.receipt, replayed: true };
         },
         terminal: result => ({ outcome: "APPLIED", receipt_ref: result.receipt.operation_id, reason_code: null }),
       });

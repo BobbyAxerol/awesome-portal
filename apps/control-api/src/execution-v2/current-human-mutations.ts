@@ -55,6 +55,21 @@ export interface CurrentHumanNativeReadRecoveryPort {
    * must own settlement; NC-01 installs no successful settlement operation. */
   recover(attempt: CurrentHumanNativeReadRecoveryAttempt): Promise<unknown>;
 }
+/** Separate purpose-specific ordinary CURRENT READ participant. Durable state
+ * is reread by the coordinator; a returned promise value is never an ACK. */
+export interface CurrentHumanCurrentReadRecoveryPort {
+  usesPool(pool:unknown):boolean;
+  recover():Promise<unknown>;
+}
+/** Independent ROOT custody. Only the registered provider can recognize its
+ * opaque own COMMIT fence. Validation locks the exact durable row in THIS
+ * transaction; a mutation id/boolean is never a census exemption. */
+export interface CurrentHumanRootRecoveryPort {
+  usesPool(pool: Pool): boolean;
+  recover(): Promise<unknown>;
+  validateOwnCommitFence(db: PoolClient, context: Readonly<CurrentHumanMutationFenceContext>,
+    fence: CurrentHumanMutationFence): Promise<string | null>;
+}
 /** Explicit startup-only reverse participants. The candidate is the SAME one
  * that issued these identities; registration is routing, never permission.
  * The installer supplies a real authenticated source recovery port. */
@@ -96,11 +111,27 @@ export interface CurrentHumanMutationFence {
   /** Must be synchronous; the provider holds this proof through Core outcome. */
   assertCurrent(): void;
   release(): Promise<void>;
+  /** Optional purpose-specific owning-transaction custody. External I/O is
+   * forbidden; the same DB transaction owns application and terminal truth. */
+  beforeApply?(db: PoolClient): Promise<void>;
+  afterApply?(db: PoolClient, terminal: ReturnType<CurrentHumanMutationHooks<unknown>["terminal"]>): Promise<void>;
+}
+/** Persisted coordinator identity, never an adapter's replacement intent. */
+export interface CurrentHumanMutationFenceContext {
+  readonly mutation_id: string;
+  readonly binding_digest: string;
+  readonly key_digest: string;
+  readonly request_digest: string;
+  readonly family: string;
+  readonly target_id: string | null;
 }
 export interface CurrentHumanVerifiedMutationHooks<T> extends CurrentHumanMutationHooks<T> {
   /** Resolve source I/O AFTER drain recovery, outside every Core transaction.
    * Never hold a provider fence while recovery needs that same provider. */
-  acquire_fence?(): Promise<CurrentHumanMutationFence>;
+  acquire_fence?(context: Readonly<CurrentHumanMutationFenceContext>): Promise<CurrentHumanMutationFence>;
+  /** Exact immutable historical outcome only, not a new source COMMIT fence.
+   * A finished ROOT retry must not reacquire ENTER or reconstruct authority. */
+  replay?(db: PoolClient): Promise<T>;
 }
 
 function assertFence(fence: CurrentHumanMutationFence | undefined): void {
@@ -127,11 +158,18 @@ export class CurrentHumanMutations {
     private readonly recovery: CurrentHumanRecoveryPort,
     private readonly limits: { maximum_intents: number; maximum_recoveries_per_request: number },
     private readonly nativeRecovery?: CurrentHumanNativeReadRecoveryPort,
-    reverseParticipants: readonly CurrentHumanReverseRecoveryParticipant[] = []) {
+    reverseParticipants: readonly CurrentHumanReverseRecoveryParticipant[] = [],
+    private readonly currentReadRecovery?:CurrentHumanCurrentReadRecoveryPort,
+    private readonly rootRecovery?:CurrentHumanRootRecoveryPort) {
     if (!candidate.usesPool(pool) || !Number.isSafeInteger(limits.maximum_intents) || limits.maximum_intents < 1 || limits.maximum_intents > 4096
       || !Number.isSafeInteger(limits.maximum_recoveries_per_request) || limits.maximum_recoveries_per_request < 1 || limits.maximum_recoveries_per_request > 16)
       throw new CurrentHumanLeaseError("CURRENT_HUMAN_MUTATION_CONFIG_INVALID");
     if (!Array.isArray(reverseParticipants) || reverseParticipants.length > 16)
+      throw new CurrentHumanLeaseError("CURRENT_HUMAN_MUTATION_CONFIG_INVALID");
+    if(currentReadRecovery&&(!currentReadRecovery.usesPool(pool)||typeof currentReadRecovery.recover!=="function"))
+      throw new CurrentHumanLeaseError("CURRENT_HUMAN_MUTATION_CONFIG_INVALID");
+    if(rootRecovery&&(!rootRecovery.usesPool(pool)||typeof rootRecovery.recover!=="function"||
+      typeof rootRecovery.validateOwnCommitFence!=="function"))
       throw new CurrentHumanLeaseError("CURRENT_HUMAN_MUTATION_CONFIG_INVALID");
     const workloads = new Set<string>(), candidates = new Set<unknown>([candidate]);
     this.reverseParticipants = Object.freeze(reverseParticipants.map(participant => {
@@ -146,6 +184,16 @@ export class CurrentHumanMutations {
   }
 
   usesPool(pool: Pool): boolean { return this.pool === pool; }
+
+  /** Application assembly checks object identity, not a matching class/name.
+   * The read provider whose custody is admitted must be the one drained. */
+  hasCurrentReadRecoveryParticipant(provider: CurrentHumanCurrentReadRecoveryPort): boolean {
+    return !!provider && this.currentReadRecovery === provider;
+  }
+
+  hasRootRecoveryParticipant(provider: CurrentHumanRootRecoveryPort): boolean {
+    return !!provider && this.rootRecovery === provider;
+  }
 
   /** Identity check for the application composition barrier. Similar workload
    * strings or another coordinator do not prove registration of THIS issuer. */
@@ -193,6 +241,20 @@ export class CurrentHumanMutations {
         if (oneView && prior.state === "FINISHED")
           throw new CurrentHumanLeaseError("CURRENT_HUMAN_ISSUANCE_ALREADY_COMMITTED");
         if (oneView) await hooks.authorize(db);
+        // A failed ROOT application may have physically rolled back and
+        // settled every source obligation. Its SAME intent can be suspended
+        // so a fresh QUALIFY is not deadlocked by the old drain. Resume only
+        // under this serialized lock and after a full no-exemption census.
+        if (prior.state === "PENDING" && binding.family === "QUALIFIED_ROOT_RECEIPT") {
+          const authority = (await db.query("SELECT drain_id FROM elp210_candidate.authority WHERE singleton")).rows[0];
+          if (authority.drain_id !== prior.mutation_id) {
+            if (authority.drain_id) throw new CurrentHumanLeaseError("CURRENT_HUMAN_DRAIN_CONFLICT");
+            const pending = await this.pendingState(db);
+            if (pending) throw new CurrentHumanMutationPending(prior.mutation_id, pending);
+            await db.query("UPDATE elp210_candidate.authority SET drain_id=$1 WHERE singleton", [prior.mutation_id]);
+            await db.query("UPDATE elp210_candidate.leases SET phase='RETIRED' WHERE phase='ISSUED'");
+          }
+        }
         return prior;
       }
       if (oneView) await hooks.authorize(db);
@@ -223,16 +285,24 @@ export class CurrentHumanMutations {
     // No Core client/transaction survives the call into the real source.
     if (intent.state !== "FINISHED") await this.recoverSource();
     let fence: CurrentHumanMutationFence | undefined;
+    let applicationFailed = false;
+    const fenceContext = Object.freeze({ mutation_id: intent.mutation_id,
+      binding_digest: intent.binding_digest, key_digest: binding.key_digest,
+      request_digest: binding.request_digest, family: binding.family, target_id: binding.target_id });
     try {
-      if (hooks.acquire_fence && intent.state !== "FINISHED") await this.transaction(async db => {
+      let needsFence = !!hooks.acquire_fence && intent.state !== "FINISHED";
+      if (needsFence) needsFence = await this.transaction(async db => {
         const row = (await db.query<Intent>("SELECT * FROM elp210_candidate.mutations WHERE mutation_id=$1", [intent.mutation_id])).rows[0];
-        if (row.state === "FINISHED") return;
+        if (row.state === "FINISHED") return false;
         if (row.state !== "PENDING") throw new CurrentHumanLeaseError("CURRENT_HUMAN_MUTATION_PREVIOUSLY_REFUSED");
         const pending = await this.pendingState(db);
         if (pending) throw new CurrentHumanMutationPending(intent.mutation_id, pending);
+        return true;
       });
-      fence = await hooks.acquire_fence?.();
-      if (hooks.acquire_fence && (!fence || typeof fence.assertCurrent !== "function" || typeof fence.release !== "function"))
+      if (needsFence && intent.binding_digest !== bindingDigest)
+        throw new CurrentHumanLeaseError("CURRENT_HUMAN_MUTATION_KEY_CONFLICT");
+      if (needsFence) fence = await hooks.acquire_fence!(fenceContext);
+      if (needsFence && (!fence || typeof fence.assertCurrent !== "function" || typeof fence.release !== "function"))
         throw new CurrentHumanLeaseError("CURRENT_HUMAN_MUTATION_FENCE_INVALID");
       assertFence(fence);
       const result = await this.transaction(async db => {
@@ -243,19 +313,26 @@ export class CurrentHumanMutations {
           // Recovery can establish COMMIT, not recover bearer/CSRF secrets.
           // Do not even call authorize/apply to reconstruct a login response.
           if (oneView) throw new CurrentHumanLeaseError("CURRENT_HUMAN_ISSUANCE_ALREADY_COMMITTED");
+          await fence?.beforeApply?.(db);
           const replayed = await this.replay(db, row, hooks);
+          await fence?.afterApply?.(db, hooks.terminal(replayed));
           assertFence(fence);
           return replayed;
         }
         if (row.state !== "PENDING") throw new CurrentHumanLeaseError("CURRENT_HUMAN_MUTATION_PREVIOUSLY_REFUSED");
         const authority = (await db.query("SELECT drain_id FROM elp210_candidate.authority WHERE singleton")).rows[0];
         if (authority.drain_id !== intent.mutation_id) throw new CurrentHumanLeaseError("CURRENT_HUMAN_DRAIN_CONFLICT");
-        const pending = await this.pendingState(db);
+        const ownRoot = fence && binding.family === "QUALIFIED_ROOT_RECEIPT" && this.rootRecovery
+          ? await this.rootRecovery.validateOwnCommitFence(db, fenceContext, fence) : null;
+        const pending = await this.pendingState(db, ownRoot);
         if (pending) throw new CurrentHumanMutationPending(intent.mutation_id, pending);
         await hooks.authorize(db);
         await db.query("SELECT set_config('elp210_candidate.mutation_id',$1,true)", [intent.mutation_id]);
+        await fence?.beforeApply?.(db);
         const result = await hooks.apply(db);
-        const terminal = accessDigest(hooks.terminal(result));
+        const terminalFact = hooks.terminal(result);
+        await fence?.afterApply?.(db, terminalFact);
+        const terminal = accessDigest(terminalFact);
         await db.query(`UPDATE elp210_candidate.mutations SET state='FINISHED',terminal_digest=$2,finished_at=clock_timestamp()
           WHERE mutation_id=$1`, [intent.mutation_id, terminal]);
         await db.query("UPDATE elp210_candidate.authority SET drain_id=NULL WHERE singleton");
@@ -265,13 +342,14 @@ export class CurrentHumanMutations {
       assertFence(fence);
       return result;
     } catch (error) {
+      applicationFailed = true;
       // Fresh serialized read follows a possible lost COMMIT ACK. A FINISHED
       // intent must never be recast as REFUSED or cause callback re-execution.
       try {
         await this.transaction(async db => {
           const row = (await db.query<Intent>("SELECT * FROM elp210_candidate.mutations WHERE mutation_id=$1 FOR UPDATE", [intent.mutation_id])).rows[0];
           if (row.state !== "PENDING") return;
-          if ((await db.query("SELECT 1 FROM elp210_candidate.obligations WHERE unresolved LIMIT 1")).rowCount) return;
+          if (await this.pendingState(db)) return;
           if (hooks.retain_after_application_rollback) return;
           await db.query(`UPDATE elp210_candidate.mutations SET state='REFUSED',terminal_digest=$2,finished_at=clock_timestamp()
             WHERE mutation_id=$1`, [intent.mutation_id, accessDigest({ outcome: "REFUSED", reason_code: "APPLICATION_NOT_COMMITTED" })]);
@@ -283,19 +361,56 @@ export class CurrentHumanMutations {
       // Core COMMIT/ROLLBACK and pool release have settled first. A failed
       // source release/guard is an uncertain ACK, not permission to reapply.
       if (fence && typeof fence.release === "function") await fence.release();
+      if (applicationFailed && binding.family === "QUALIFIED_ROOT_RECEIPT" && hooks.retain_after_application_rollback) {
+        try { await this.suspendSettledRootRetry(intent.mutation_id, bindingDigest); }
+        catch { /* No serialized proof: leave the original drain closed. */ }
+      }
     }
   }
 
-  private async replay<T>(db: PoolClient, intent: Intent, hooks: CurrentHumanMutationHooks<T>): Promise<T> {
+  private async suspendSettledRootRetry(mutationId: string, bindingDigest: string): Promise<void> {
+    await this.transaction(async db => {
+      const row = (await db.query<Intent & { family: string }>(
+        "SELECT * FROM elp210_candidate.mutations WHERE mutation_id=$1 FOR UPDATE", [mutationId])).rows[0];
+      if (!row || row.state !== "PENDING" || row.family !== "QUALIFIED_ROOT_RECEIPT" || row.binding_digest !== bindingDigest) return;
+      // A returned release/TTL is insufficient. Full durable census includes
+      // current, manager, old ROOT configs and COMMITTED-but-unACKed custody.
+      if (await this.pendingState(db)) return;
+      await db.query("UPDATE elp210_candidate.authority SET drain_id=NULL WHERE singleton AND drain_id=$1", [mutationId]);
+    });
+  }
+
+  /** Private ROOT intake preflight, including after process restart. Source
+   * recovery retains exact originals; only a serialized no-obligation census
+   * can suspend an uncommitted ROOT drain. It cannot apply, replay, ACK, abort
+   * or replace an intent, and never detaches another authority family. */
+  async recoverSettledRootDrain(): Promise<void> {
+    if (!this.rootRecovery) return;
+    await this.recoverSource();
+    await this.transaction(async db => {
+      const authority = (await db.query("SELECT drain_id FROM elp210_candidate.authority WHERE singleton")).rows[0];
+      if (!authority.drain_id) return;
+      const row = (await db.query<Intent & {family:string}>(
+        "SELECT * FROM elp210_candidate.mutations WHERE mutation_id=$1 FOR UPDATE", [authority.drain_id])).rows[0];
+      if (!row || row.state !== "PENDING" || row.family !== "QUALIFIED_ROOT_RECEIPT" || await this.pendingState(db)) return;
+      await db.query("UPDATE elp210_candidate.authority SET drain_id=NULL WHERE singleton AND drain_id=$1", [row.mutation_id]);
+    });
+  }
+
+  private async replay<T>(db: PoolClient, intent: Intent, hooks: CurrentHumanVerifiedMutationHooks<T>): Promise<T> {
     await db.query("SELECT set_config('elp210_candidate.replay_only','on',true)");
     await hooks.authorize(db);
-    const result = await hooks.apply(db);
+    const result = await (hooks.replay ? hooks.replay(db) : hooks.apply(db));
     if (accessDigest(hooks.terminal(result)) !== intent.terminal_digest)
       throw new CurrentHumanLeaseError("CURRENT_HUMAN_MUTATION_RECEIPT_MISMATCH");
     return result;
   }
 
   private async recoverSource() {
+    // Actual adapter recovery is outside Core transactions and cannot clear
+    // custody by returning a value. pendingState rereads durable source ACK.
+    if(this.currentReadRecovery)try{await this.currentReadRecovery.recover();}catch{/* same original remains pending/UNKNOWN */}
+    if(this.rootRecovery)try{await this.rootRecovery.recover();}catch{/* Global152 census, not this return, owns settlement. */}
     const attempts = await this.candidate.recoverableObligations(this.nativeRecovery ? "BOTH" : "REVERSE_ONLY");
     if (this.reverseParticipants.length) {
       // Capture and validate ALL registered enumeration before any source
@@ -352,11 +467,29 @@ export class CurrentHumanMutations {
     }
   }
 
-  private async pendingState(db: PoolClient): Promise<"DRAIN_PENDING" | "DRAIN_UNKNOWN" | null> {
+  private async pendingState(db: PoolClient, ownRootLease: string | null = null): Promise<"DRAIN_PENDING" | "DRAIN_UNKNOWN" | null> {
     const row = (await db.query(`SELECT count(*)::int AS n,
       count(*) FILTER(WHERE phase='UNKNOWN' OR expires_at_ms<=floor(extract(epoch FROM clock_timestamp())*1000))::int AS unknown
       FROM elp210_candidate.obligations WHERE unresolved`)).rows[0];
-    return row.unknown > 0 ? "DRAIN_UNKNOWN" : row.n > 0 ? "DRAIN_PENDING" : null;
+    // Additive migration153 may be installed without commissioning a source.
+    // Census the real custody table even if its adapter is absent: missing
+    // recovery composition must NOT allow a revoke to skip an old obligation.
+    const installed=(await db.query("SELECT to_regclass('public.portal_native_current_read_obligations') AS relation")).rows[0]?.relation;
+    const ordinary=installed?(await db.query(`SELECT count(*)::int AS n,
+      count(*) FILTER(WHERE phase='UNKNOWN' OR source_expires_at IS NOT NULL AND
+        source_expires_at::timestamptz<=clock_timestamp())::int AS unknown
+      FROM portal_native_current_read_obligations WHERE NOT source_settled`)).rows[0]:{n:0,unknown:0};
+    // ROOT152 is an independent source purpose, including unresolved rows from
+    // old configurations or a now-absent provider. Only final apply passes an
+    // exact row id after the registered provider has validated/locked it.
+    const rootInstalled=(await db.query("SELECT to_regclass('public.portal_native_root_obligations') AS relation")).rows[0]?.relation;
+    const roots=rootInstalled?(await db.query(`SELECT count(*)::int AS n,
+      count(*) FILTER(WHERE phase='UNKNOWN' OR source_expires_at IS NOT NULL AND
+        source_expires_at::timestamptz<=clock_timestamp())::int AS unknown
+      FROM portal_native_root_obligations WHERE NOT source_settled
+        AND ($1::uuid IS NULL OR lease_id<>$1::uuid)`,[ownRootLease])).rows[0]:{n:0,unknown:0};
+    return row.unknown > 0||ordinary.unknown>0||roots.unknown>0 ? "DRAIN_UNKNOWN"
+      : row.n > 0||ordinary.n>0||roots.n>0 ? "DRAIN_PENDING" : null;
   }
 
   /** Private, abort-only recovery capability for an abandoned/revoked caller.
@@ -370,12 +503,13 @@ export class CurrentHumanMutations {
     if (prior.state !== "PENDING") return { state: "ALREADY_TERMINAL" };
     await this.recoverSource();
     return this.transaction(async db => {
-      const row = (await db.query<Intent>("SELECT * FROM elp210_candidate.mutations WHERE mutation_id=$1 FOR UPDATE", [mutationId])).rows[0];
+      const row = (await db.query<Intent & {family:string}>("SELECT * FROM elp210_candidate.mutations WHERE mutation_id=$1 FOR UPDATE", [mutationId])).rows[0];
       if (row.state !== "PENDING") return { state: "ALREADY_TERMINAL" as const };
       const pending = await this.pendingState(db);
       if (pending) return { state: pending };
       const authority = (await db.query("SELECT drain_id FROM elp210_candidate.authority WHERE singleton")).rows[0];
-      if (authority.drain_id !== mutationId) throw new CurrentHumanLeaseError("CURRENT_HUMAN_DRAIN_CONFLICT");
+      if (authority.drain_id !== mutationId && !(authority.drain_id === null && row.family === "QUALIFIED_ROOT_RECEIPT"))
+        throw new CurrentHumanLeaseError("CURRENT_HUMAN_DRAIN_CONFLICT");
       await db.query(`UPDATE elp210_candidate.mutations SET state='REFUSED',terminal_digest=$2,finished_at=clock_timestamp()
         WHERE mutation_id=$1`, [mutationId, accessDigest({ outcome: "REFUSED", reason_code: "ABANDONED_REQUEST_NOT_APPLIED" })]);
       await db.query("UPDATE elp210_candidate.authority SET drain_id=NULL WHERE singleton AND drain_id=$1", [mutationId]);

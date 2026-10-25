@@ -9,11 +9,12 @@ import { FinancialSourceComposition } from "./financial-source-composition";
 import type { PreparedFinancialSourceRuntime } from "./financial-source-runtime";
 
 export function selectPrivateCorePoolProfile(native?: {poolProfile:CorePoolProfile}, current?: {poolProfile:CorePoolProfile},
-  financial?: PreparedFinancialSourceRuntime): CorePoolProfile | undefined {
+  financial?: PreparedFinancialSourceRuntime, ...additional: ({poolProfile:CorePoolProfile}|undefined)[]): CorePoolProfile | undefined {
   // Reverse-only operation is not independently commissioned by this loader.
   // Require the existing native application's owner/trust/mutation composition.
   if (financial && !native) throw new Error("FINANCIAL_SOURCE_SHARED_NATIVE_COMPOSITION_REQUIRED");
-  const profiles = [native?.poolProfile,current?.poolProfile,financial?.poolProfile].filter((x):x is CorePoolProfile=>!!x);
+  if (additional.some(Boolean) && !native) throw new Error("PRIVATE_RUNTIME_SHARED_NATIVE_COMPOSITION_REQUIRED");
+  const profiles = [native?.poolProfile,current?.poolProfile,financial?.poolProfile,...additional.map(p=>p?.poolProfile)].filter((x):x is CorePoolProfile=>!!x);
   const first=profiles[0];
   if(first && profiles.some(p=>Object.keys(first).some(key=>p[key as keyof CorePoolProfile]!==first[key as keyof CorePoolProfile])))
     throw new Error("PRIVATE_RUNTIME_CORE_POOL_PROFILE_MISMATCH");

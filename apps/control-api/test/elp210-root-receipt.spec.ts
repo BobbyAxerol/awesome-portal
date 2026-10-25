@@ -72,6 +72,12 @@ describe("ELP2-10 private root receipt qualification", () => {
       .rejects.toMatchObject({ code: "RECEIPT_NOT_QUALIFIED" });
     expect(connect).not.toHaveBeenCalled(); expect(lease.release).toHaveBeenCalledOnce();
   });
+  it("a real native root verifier cannot bypass its durable coordinator",async()=>{
+    const lease={...proof(),requiresCoordinatedCommit:true as const},connect=vi.fn();
+    await expect(acceptRootMembershipReceipt({connect} as unknown as Pool,async()=>lease,{}))
+      .rejects.toMatchObject({code:"RECEIPT_NOT_QUALIFIED"});
+    expect(connect).not.toHaveBeenCalled();expect(lease.release).toHaveBeenCalledOnce();
+  });
   it.each(["mapping", "membership"] as const)("refuses unbound %s before Core", async key => {
     const lease = proof(), connect = vi.fn();
     if (key === "mapping") lease.mapping.revision = "TEST_ONLY-other-mapping";
@@ -292,7 +298,7 @@ describe.skipIf(!DATABASE_URL)("ELP2-10 exact root receipt through reviewed poli
     const verify = vi.spyOn(trust, "verifyRootReceipt");
     const service = new ExecutionAccessService(ctx.pool, auth, trust, true);
     expect((await service.acceptRootTsReceipt(f.token)).receipt.outcome).toBe("TS_APPLIED");
-    expect(verify).toHaveBeenCalledWith(f.token); expect((await f.stored())!.ts_receipt?.receipt_id).toBe(f.fact.receipt_id);
+    expect(verify).toHaveBeenCalledWith(f.token,{phase:"QUALIFY"}); expect((await f.stored())!.ts_receipt?.receipt_id).toBe(f.fact.receipt_id);
     expect(f.lease.release).toHaveBeenCalledOnce(); expect(await f.events()).toBe(1);
   });
   it("accepts distinct reviewed-root current targets without requiring a fictitious singleton native receipt",async()=>{

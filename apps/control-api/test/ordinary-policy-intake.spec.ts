@@ -127,8 +127,8 @@ describe("official ordinary-policy writer composition, TEST_ONLY adapters", () =
     expect(f.pool.connect).not.toHaveBeenCalled(); expect(lstat).not.toHaveBeenCalled();
     expect(schema.assertRegisteredResearchCurrentHumanSchema).not.toHaveBeenCalled();
     expect(intake.dependencies.currentHumanMutations).toBe(f.mutations);
-    await intake.dependencies.executionAccessTrust.verifyRootReceipt!({ TEST_ONLY: true });
-    expect(f.base.verifyRootReceipt).toHaveBeenCalledWith({ TEST_ONLY: true });
+    await intake.dependencies.executionAccessTrust.verifyRootReceipt!({ TEST_ONLY: true }, { phase: "QUALIFY" });
+    expect(f.base.verifyRootReceipt).toHaveBeenCalledWith({ TEST_ONLY: true }, { phase: "QUALIFY" });
     expect(f.base.verifyRootReceipt).toHaveBeenCalledOnce();
   });
   it("uses the registered actual target and official writer, returning only pending-policy ACK", async () => {

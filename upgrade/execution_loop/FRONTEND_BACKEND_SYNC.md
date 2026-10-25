@@ -1,5 +1,73 @@
 # Execution Loop V2 — Sổ đồng bộ Frontend ↔ Backend (sống)
 
+## Codex ROOT coordinator repair —25Oct2026 result
+
+[Source commit, actual gates and commissioning handoff](evidence/ELP2-10/CORE_ROOT_COORDINATOR_REPAIR_2026-10-25.md).
+Core90585527bed09c0f6fb67530ddcfbfadd06bc9be,16files,+710/−55:
+ROOT152 census/recovery, exact own-COMMIT fence, admission/restart/replay and
+shutdown repairs accepted by independent source review. Official280/280 PG
+plus build/migration/restore PASS; runtime/bootstrap56unique and client10PASS.
+Focused intermediate source only; not landed/installed/connected. Canonical
+input538b934a9 and Claude00e7f6cff unchanged/clean at intake; no new committed
+Claude request. No public contract/UI remap or consumer ACK inferred.
+
+Round-end:3existing helpers reused,0spawned. pm_publication_coordination owns
+provider/client/fence; correspondence_final_review read-only review ACCEPT;
+c7_commission_path completed runtime wiring/interface then identified actual
+Edge STATUS bootstrap gap. Its next candidate-only source task owns minimal
+STATUS loader/check/serve/lifecycle files, no runtime/build/peer WIP changes.
+Primary owns shared docs, integration and one serialized affected gate.
+ACT_NOW: finish that concrete code and frozen integration/source commissioning;
+NEXT_GATE: normal R2 before ff-only; actual originals/trust and browser remain
+separate. Preserve source/Claude history and all UNKNOWN custody. No push,
+shared-preview/stable/dev/main/provider28445, SUBMIT or Live change.
+
+
+## Codex ROOT coordinator safety —25Oct2026 entry
+
+Continue the recorded Core-owned ROOT review, not a new phase or runtime
+permission. Source candidate clean `d7e890d04c63658390948a46477a9507ce20fae3`;
+canonical clean `538b934a934f9c71639e5f9f6067ae401d9f5641`;
+Claude clean `00e7f6cff2fadbd88b8ed461fa870b28ee88ad94`, unchanged. No new
+committed Claude request since the previous intake. ACT_NOW: ROOT152 global
+census/recovery, exact private own-COMMIT exemption, drain admission and live
+holder/shutdown races. NEXT_GATE: private runtime composition after its PG
+tests, then frozen normal integration gate; no source installation inferred.
+
+One-writer task map: primary owns coordinator/access wrapper and shared
+composition/tracking; reused `pm_publication_coordination` owns ROOT provider,
+source-client and opaque-fence helper plus their focused specs;
+`c7_commission_path` reads runtime wiring/typecheck cause only. No helper
+Docker/PG/build/commit or runtime writes. Primary runs affected PG tests once
+after source freeze. Existing unchanged Rust and Account route receipts are
+reused, not rerun to inflate coverage. No UI, push, shared preview,
+stable/dev/main/provider28445, command/Live or fabricated source original.
+
+## Codex finite runtime follow-through —25Oct2026,07:02UTC entry
+
+Bobby asks to continue real finite-route/provider and mutation composition,
+then genuine-original commissioning. Source lane is
+`chore/core-provider-assembly-20261025@e8d4db696c9257b8e624d886a7dd38b799d1f620`;
+canonical remains clean `e00f194e8532eb6f3b2c97cf13f394b642fec20c`.
+Claude `claude/post-land-20261022@00e7f6cff2fadbd88b8ed461fa870b28ee88ad94`
+is clean and unchanged: no new committed request or consumer ACK after that pin.
+Peer Edge8727e530/PM6f474c72 stay unchanged; owned Edge candidate has financial
+runtime commit79fa007e, gateway source not yet committed. No peer WIP touched.
+
+ACT_NOW: diagnose/fix actual named Account HTTP409 in disposable-PG route gate;
+preserve policy/source equality, source-terminal/UNKNOWN fences and physical
+send ownership. NEXT_GATE: warning-free final gateway production check,
+coherent source commits/bundles and integrated normal landing gate. INFO:
+Research read-only census is1policy/7grants/0command originals; migrations152/153
+not installed and grant JSON has no TS receipts. This census is not authority.
+
+Reuse helpers `c7_commission_path` (one owned Account spec),
+`pm_publication_coordination` (independent read-only policy/production review)
+and `correspondence_final_review` (gateway review); no new agent spawned.
+Primary owns shared source/docs, staging and serialized Docker/PG gates. No
+UI, push, shared-preview/stable/dev/main/provider28445 or SUBMIT/Live changes.
+Source delivery and synthetic socket/DB tests do not establish connected PASS.
+
 ## Codex provider/financial source and preserved Claude candidate —25Oct2026
 
 [Source commits, exact tests, cleanup and next owned implementation](evidence/ELP2-10/CORE_EDGE_PROVIDER_AND_SAFE_INTEGRATION_2026-10-25.md).
@@ -3380,3 +3448,38 @@ are Core↔Edge only. Edge: review the complete source bundle, supply independen
 CURRENT selection/trust/commissioning and financial-purpose verifier/original
 COMMIT→APPLIED inputs; do not treat mTLS/human signature as financial authority.
 No retired session/window reuse, new grant, command/Live, stable/dev/main or push.
+
+
+### Finite CURRENT, independent STATUS and owning Edge mounts —25Oct2026
+
+[Exact implementation, tests, preservation and remaining commissioning](evidence/ELP2-10/CORE_FINITE_RUNTIME_COMPOSITION_2026-10-25.md).
+Core `fdc1944bbf34f661f5a45b3ad7972610c2756334` commits28files,+1,992/−39:
+actual named Paper Account360 physical egress, final authority/projection check,
+same-pool CURRENT recovery plus independent financial/STATUS participants and
+private STATUS startup/listener/shutdown. Actual-PG/HTTP Account9/9, build and
+restore PASS; runtime/config222/222 reused on unchanged source. The actual409
+private TEST_ONLY-context mismatch is fixed; production false still overrides
+provider true. No public DTO/enum/component remap.
+
+Owned Edge `79fa007e` mounts financial APPLIED in its owning lifecycle;
+`ef4945fae32abe3820b870ab893ff639dca9aef2` mounts twelve exact native ROOT/
+CURRENT gateway paths with bounded mTLS/body/deadline/drain. Final affected
+Rust51 distinct PASS and production Clippy `--bins -- -D warnings` PASS.
+Both sides have verified durable source bundles; no source depends on /tmp.
+No runtime/config/schema was installed and the shared preview image is unchanged.
+
+Independent ROOT preparation `09a54e3bd` has16focused tests PASS; its additional
+full-source typecheck timed out180s and remains NOT_MET, not a new build PASS.
+**CHANGE before mount:**
+close dedicated ROOT152 recovery/census, exact own-fence exemption, serialized
+admission and active-holder/shutdown races. Loader tests do not close those
+Core-owned issues. Other finite routes are not implicitly converted by Account.
+Real CURRENT/original source acceptance, financial COMMIT→APPLIED→source ACK,
+STATUS existing original and integrated normal landing R2 remain distinct.
+
+Claude: preserve accepted components, source00e7f6cff and full integration
+0d80dd1cf. After a qualified install, take exact-principal/workspace actual
+API/browser receipts for the named route; do not reroute every reader or treat
+synthetic TLS/DB tests as source acceptance. No new UI task or backend decision
+is delegated to Bobby. ELP2-05/06/07/09/10 incomplete;11 not entry-ready.
+

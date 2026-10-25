@@ -60,7 +60,7 @@ export function productReadFixture(options: { full?: boolean; legacy?: boolean; 
       grant("account.read", { kind: "EXPLICIT_RESOURCE_SET", resource_kind: "ACCOUNT", ids: [PRIVATE.account_id] }),
       grant("portfolio.read_restricted", { kind: "PORTFOLIO_MEMBERSHIP", portfolio_ids: relations.member_portfolio_ids }),
     ] };
-  const access = { readContext: vi.fn(async () => context), confirmReadContext: vi.fn(async () => context),
+  const access = { hasNativeCurrentRelations:()=>false, readContext: vi.fn(async () => context), confirmReadContext: vi.fn(async () => context),
     readPublication: vi.fn(async (request: ExecutionReadPublicationRequest) => ({ ...request, qualification: "TEST_ONLY",
       publication_revision: "TEST_ONLY-publication", population_coverage: "COMPLETE_FOR_DATASET_WINDOW", provenance_ref: "TEST_ONLY-no-source-proof",
       resources, tuples, current_linkage: { qualification: "TEST_ONLY", revision: "TEST_ONLY-links", provenance_ref: "TEST_ONLY-links",
