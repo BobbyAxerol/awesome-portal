@@ -1,5 +1,48 @@
 # Execution Loop V2 — Sổ đồng bộ Frontend ↔ Backend (sống)
 
+## Codex ROOT coordinator repair —25Oct2026 result
+
+[Source commit, actual gates and commissioning handoff](evidence/ELP2-10/CORE_ROOT_COORDINATOR_REPAIR_2026-10-25.md).
+Core90585527bed09c0f6fb67530ddcfbfadd06bc9be,16files,+710/−55:
+ROOT152 census/recovery, exact own-COMMIT fence, admission/restart/replay and
+shutdown repairs accepted by independent source review. Official280/280 PG
+plus build/migration/restore PASS; runtime/bootstrap56unique and client10PASS.
+Focused intermediate source only; not landed/installed/connected. Canonical
+input538b934a9 and Claude00e7f6cff unchanged/clean at intake; no new committed
+Claude request. No public contract/UI remap or consumer ACK inferred.
+
+Round-end:3existing helpers reused,0spawned. pm_publication_coordination owns
+provider/client/fence; correspondence_final_review read-only review ACCEPT;
+c7_commission_path completed runtime wiring/interface then identified actual
+Edge STATUS bootstrap gap. Its next candidate-only source task owns minimal
+STATUS loader/check/serve/lifecycle files, no runtime/build/peer WIP changes.
+Primary owns shared docs, integration and one serialized affected gate.
+ACT_NOW: finish that concrete code and frozen integration/source commissioning;
+NEXT_GATE: normal R2 before ff-only; actual originals/trust and browser remain
+separate. Preserve source/Claude history and all UNKNOWN custody. No push,
+shared-preview/stable/dev/main/provider28445, SUBMIT or Live change.
+
+
+## Codex ROOT coordinator safety —25Oct2026 entry
+
+Continue the recorded Core-owned ROOT review, not a new phase or runtime
+permission. Source candidate clean `d7e890d04c63658390948a46477a9507ce20fae3`;
+canonical clean `538b934a934f9c71639e5f9f6067ae401d9f5641`;
+Claude clean `00e7f6cff2fadbd88b8ed461fa870b28ee88ad94`, unchanged. No new
+committed Claude request since the previous intake. ACT_NOW: ROOT152 global
+census/recovery, exact private own-COMMIT exemption, drain admission and live
+holder/shutdown races. NEXT_GATE: private runtime composition after its PG
+tests, then frozen normal integration gate; no source installation inferred.
+
+One-writer task map: primary owns coordinator/access wrapper and shared
+composition/tracking; reused `pm_publication_coordination` owns ROOT provider,
+source-client and opaque-fence helper plus their focused specs;
+`c7_commission_path` reads runtime wiring/typecheck cause only. No helper
+Docker/PG/build/commit or runtime writes. Primary runs affected PG tests once
+after source freeze. Existing unchanged Rust and Account route receipts are
+reused, not rerun to inflate coverage. No UI, push, shared preview,
+stable/dev/main/provider28445, command/Live or fabricated source original.
+
 ## Codex finite runtime follow-through —25Oct2026,07:02UTC entry
 
 Bobby asks to continue real finite-route/provider and mutation composition,

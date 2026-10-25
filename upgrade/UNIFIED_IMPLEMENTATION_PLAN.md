@@ -15655,3 +15655,32 @@ PM listener/factory/registry/ACK helpers are implemented, not to be built again.
 No public contract/schema/enum changes needing Claude mapping this round.
 ELP2-05/06/07/09/10 remain incomplete; ELP2-11 not entry-ready. No push, shared
 preview, dev/main/stable/provider28445, grant/session or command/Live changes.
+
+### §14 follow-through —25Oct2026 ROOT coordinator repair, source gate closed
+
+[Exact repairs, tests, preservation and next owned implementation](execution_loop/evidence/ELP2-10/CORE_ROOT_COORDINATOR_REPAIR_2026-10-25.md).
+Core source90585527bed09c0f6fb67530ddcfbfadd06bc9be:16code/test files,+710/−55.
+This supersedes the concrete ROOT source-review CHANGE in the finite-runtime
+return, not its separate installed/source/browser requirements. Global152
+census/recovery, genuine opaque own-COMMIT exemption, authority-first drain
+admission, FINISHED replay, same-intent restart and physical shutdown are now
+implemented; independent review ACCEPT.
+
+Official affected gate280/280PASS plus production build/additive migrations
+through153 and actual dump/restore/identity-session-command-custody preservation
+PASS. Separate runtime/bootstrap56unique and client10PASS; failed sandbox,
+operator-stopped build and120s trace attempts remain recorded. No duplicated
+retake counts or fixture-to-native authority claim. Owned cells/network cleaned;
+N29/EDS-12 integrity unchanged/PASS. Intermediate source commit under10.10c,
+bundle retained; full integrated normal R2 remains NOT_MET before ff-only landing.
+
+Concrete next code: Edge CommandStatusServer lacked private loader/CLI at
+ef4945fa; source-only STATUS check/serve/lifecycle wiring is underway separately,
+not an external window wait. Then preserve the selected Claude cut and qualify
+the integrated candidate before isolated installation/genuine originals.
+Financial COMMIT→APPLIED→source ACK, exact-source trust/rights, STATUS existing
+original, budget/calibration, coexistence/G2 and browser acceptance remain open.
+Claude needs no public DTO/enum/component remap; actual-source consumer receipt
+follows qualified install. ELP2-05/06/07/09/10 incomplete;11 not entry-ready.
+No UI, push, shared-preview/stable/dev/main/provider28445 or SUBMIT/Live changes.
+
