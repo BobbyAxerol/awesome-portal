@@ -15753,3 +15753,39 @@ Claude needs no public DTO/enum/component remap; actual-source consumer receipt
 follows qualified install. ELP2-05/06/07/09/10 incomplete;11 not entry-ready.
 No UI, push, shared-preview/stable/dev/main/provider28445 or SUBMIT/Live changes.
 
+### §14 follow-through —25Oct2026 STATUS bootstrap and finite Alpha continuation
+
+[Current source pins, real tests, integration disposition and Edge/Claude handoff](execution_loop/evidence/ELP2-10/CORE_STATUS_BOOTSTRAP_AND_NATIVE_ALPHA_RETURN_2026-10-25.md).
+Owned Edge86178d694abf156453cdf450553fa80bdd9becab closes the missing private
+STATUS loader/check/serve/lifecycle:6files,+1422/−57; Rust27/27 and production
+Clippy PASS, independent source review ACCEPT. Source bundle is retained and
+verified on SGP/HK. No runtime/config/schema installed; no existing original
+or source authority created. Local empty custody is not global Core ACK proof.
+
+Frozen integration19f0c17af/tree050a965f preserves canonical15fab, Core905 and
+all Claude00e7 history:482files,+39284/−1791,no deleted files. Actual normal
+hook hit its1500s operator timeout: contracts1887/build PASS;20Core files1488
+PASS, then interrupted F0. No final whole-Core/restore result in that attempt.
+Full R2/required pinned visual remain NOT_MET before ff-only; old valid source
+receipts stay separately reusable, not relabelled whole-hook PASS. Owned orphan
+cells/network cleaned; the brief first Rust overlap is disclosed in the return.
+
+Named Paper Alpha360 source is now committed as
+f9b816cd5d4e8417e89d2e554ac6ebd89f913b13:6files,+156/−49, independent
+alpha.read/exact target, no Account-permission implication or ALL/history/
+STREAM widening. Official focused197/197PG/HTTP, production build/migrations153
+and actual dump/restore PASS; no ordinary fallback or duplicated ENTER/body on
+lost ACK. Independent review ACCEPT; source only, not installed/connected.
+Conflict-free preservation successor98c7226a9d96a9f19e3489275a7d407a774bc992,
+tree d807058539fd79ad0e5af27f5e528fd90c9eeca0, keeps canonical/Core/Claude
+ancestry and tested source bytes:482files,+39392/−1792,no deleted files.
+The19f0 interrupted hook is not whole-R2 PASS for this successor. New source
+bundles are verified on SGP; their HK transfer was denied by the security tool
+pending exact source-transfer authorization, without a workaround. Public
+sanitized handoff is separate. Next gate remains frozen integrated R2/visual
+before ff-only; other finite Manager paths are not implicitly converted.
+Claude keeps accepted UI/fixtures; no public DTO/enum remap. Genuine-source
+commissioning, financial APPLIED→ACK, STATUS existing-original and separate
+budget/calibration/coexistence/G2/browser gates remain open. No UI/push/shared
+preview/stable/dev/main/provider28445 or command SUBMIT/Live changes;11 unopened.
+

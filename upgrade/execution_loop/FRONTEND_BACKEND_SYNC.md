@@ -1,5 +1,45 @@
 # Execution Loop V2 — Sổ đồng bộ Frontend ↔ Backend (sống)
 
+## Codex STATUS bootstrap / named Alpha continuation —25Oct2026
+
+[Exact source, actual gate results, preservation and owner actions](evidence/ELP2-10/CORE_STATUS_BOOTSTRAP_AND_NATIVE_ALPHA_RETURN_2026-10-25.md).
+Round intake: canonical15fab12bf and Claude00e7f6cff clean; Claude has no new
+committed request/consumer ACK. Edge8727e530 and PM6f474c72 peer WIP preserved.
+Two helpers reused,0spawned: STATUS writer / independent source-integration
+review; now disjoint Alpha writer / independent Alpha review. Primary owns
+shared docs, gates, commit and integration. No UI/public DTO/enum remap.
+
+Owned Edge86178d694abf156453cdf450553fa80bdd9becab:6files,+1422/−57,
+private pinned STATUS check/serve and owning finite shutdown. Final Rust27/27
+and production Clippy PASS, independent review ACCEPT; durable source bundle
+verified on SGP/HK. No original seeding/SUBMIT or runtime installation. External
+Core custody remains explicitly NOT_VERIFIED even after empty local restart.
+
+Integration19f0c17af preserves canonical, Core905 and Claude00e7 ancestry:
+482files,+39284/−1791,no deleted files. Normal hook was interrupted at1500s,
+exit124: contracts1887/build PASS,20Core files1488PASS, then interrupted F0;
+not whole-R2/restore PASS. Exact orphan cells/network cleaned; brief initial
+Rust overlap is recorded. R2/compare-only visual remain mandatory before ff.
+
+Named Alpha sourcef9b816cd5d4e8417e89d2e554ac6ebd89f913b13 is now committed:
+6files,+156/−49; exact ALPHA target/alpha.read, no Account permission inference,
+physical send with no ordinary fallback. Official focused PG/HTTP197/197,
+production build/migrations153/actual restore PASS; same-original ACK recovery
+and custody/revoke negatives covered. Independent review ACCEPT. Not installed.
+Successor integration98c7226a9d96a9f19e3489275a7d407a774bc992 preserves the
+tested six paths and all ancestry,482files,+39392/−1792,no deleted files.
+Full R2/visual is still pending; the interrupted19f0 result is not its full PASS.
+New Alpha/integration bundles verified on SGP; security reviewer denied copying
+those source bundles to HK without exact transfer authorization. No workaround;
+public sanitized return proceeds independently. Prior STATUS/ROOT/19f0 bundles
+remain preserved on both hosts.
+
+ACT_NOW/NEXT_GATE: select the integrated freeze and finish actual landing
+R2/visual before ff-only, without rerunning focused gates merely for docs.
+Other finite Manager paths are not implicitly converted. Genuine originals,
+source trust/rights, financial APPLIED→ACK, STATUS originals and G2/browser
+remain separate. No push/shared-preview/stable/dev/main/provider28445 or Live.
+
 ## Codex ROOT coordinator repair —25Oct2026 result
 
 [Source commit, actual gates and commissioning handoff](evidence/ELP2-10/CORE_ROOT_COORDINATOR_REPAIR_2026-10-25.md).
