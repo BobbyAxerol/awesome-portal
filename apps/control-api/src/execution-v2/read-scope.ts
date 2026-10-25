@@ -7,6 +7,7 @@ import type { ExecutionAccessService } from "./access.service";
 import type { ControlApiConfig } from "../config";
 import type { AuthSession, PortalUser } from "../domain";
 import type { Pool,PoolClient } from "pg";
+import type {ServerResponse} from "node:http";
 import { createHash } from "node:crypto";
 import { types } from "node:util";
 import { lockCurrentHumanSnapshot,evaluateManagerDomainStream } from "./current-human-snapshot";
@@ -1160,6 +1161,7 @@ export class ExecutionReadScopes {
   private async deliverReadComposition<T>(initial:readonly AuthorizedExecutionReadScope[],
     read:(retain:(scope:AuthorizedExecutionReadScope)=>void)=>Promise<T>,
     validateBeforeRelease:(()=>void)|undefined,actorKey:(state:ScopeState)=>string):Promise<T>{
+    if(this.access.hasNativeCurrentRelations())fail("EXECUTION_READ_AUTHORITY_UNAVAILABLE",503);
     if(!Array.isArray(initial)||!initial.length||initial.length>16)fail("EXECUTION_READ_SCOPE_REQUIRED");
     const original:AuthorizedExecutionReadScope[]=[],states:ScopeState[]=[];
     let expected:string|undefined;
@@ -1247,6 +1249,9 @@ export class ExecutionReadScopes {
   }
 
   async deliver<T>(scope:AuthorizedExecutionReadScope,read:()=>Promise<T>):Promise<T> {
+    // A returned DTO is NOT the physical final HTTP boundary. Native CURRENT
+    // composition must use deliverNative; never silently fall back detached.
+    if(this.access.hasNativeCurrentRelations())fail("EXECUTION_READ_AUTHORITY_UNAVAILABLE",503);
     assertExecutionReadScope(scope);
     if(minted.get(scope)!.issuer!==this)fail("EXECUTION_READ_SCOPE_REQUIRED");
     // Fences cover cache HIT, follower and miss equally; no cached entitlement.
@@ -1256,9 +1261,37 @@ export class ExecutionReadScopes {
     return result;
   }
 
+  /** Opt-in real finite CURRENT egress. Uses this issuer's genuine scope and
+   * retains exact publication/resource proof. No history window, manager-wide
+   * notice, STREAM or Root intake is promoted to this native READ purpose. */
+  async deliverNative(scope:AuthorizedExecutionReadScope,response:ServerResponse,
+    read:()=>Promise<Buffer>):Promise<void>{
+    assertExecutionReadScope(scope);const state=minted.get(scope)!;
+    if(state.issuer!==this||scope.mode!=="SCOPED_V2"||scope.environment!=="paper"||!state.context||
+      state.requirement.action==="stream.subscribe"||state.requirement.dataset?.window!=null)
+      fail("EXECUTION_READ_CURRENT_ONLY",503);
+    const resources=[...new Map([...state.resources,...(state.requirement.resource?[state.requirement.resource]:[])]
+      .map(r=>[exactKey(r),r])).values()];
+    if(!resources.length)fail("EXECUTION_READ_SCOPE_REQUIRED");
+    const expected=state.context,action=state.requirement.action;
+    const actor={user_id:state.principal.user.userId,session_id:state.principal.session.sessionId,
+      session_generation:state.principal.session.sessionVersion};
+    const check=(context:AccessEvaluationContext)=>{
+      if(context.authority_fingerprint!==expected.authority_fingerprint||
+        accessDigest(contextProof(context,scope.environment,resources))!==
+        accessDigest(contextProof(expected,scope.environment,resources)))fail("EXECUTION_READ_ACCESS_CHANGED",409);
+      // Existing scope's field/publication/purpose proof must still be exact;
+      // the fresh native cut cannot invent a broader or replacement scope.
+      if(!policyReady(context))fail("EXECUTION_READ_POLICY_PENDING",503);
+    };
+    await this.access.deliverNativeCurrent(actor,scope.workspaceId,action,resources,response,
+      async context=>{check(context);return read();},check);
+  }
+
   /** Notice-only V2 bridge; no route/adapter is commissioned by calling this.
    * Requires BOTH the minted business read scope and exact stream capability. */
   async deliverRealtime<T>(scope:AuthorizedExecutionReadScope,resource:AccessResource,write:()=>T):Promise<T> {
+    if(this.access.hasNativeCurrentRelations())fail("EXECUTION_SCOPED_STREAM_NOT_COMMISSIONED",503);
     assertExecutionReadScope(scope);const state=minted.get(scope)!;
     if(state.issuer!==this||scope.mode!=="SCOPED_V2"||!businessReads.has(state.requirement.action)||!state.requirement.dataset)
       fail("EXECUTION_SCOPED_STREAM_NOT_COMMISSIONED",503);

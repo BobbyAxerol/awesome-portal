@@ -85,6 +85,15 @@
       "reached_via": "execution-v2/access.controller.ts, ExecutionAccessService internal qualified ports; cli/execution-native-revoke -> ExecutionAccessService.revokeReviewedManagerDomainGrants"
     },
     {
+      "table": "portal_native_current_read_obligations",
+      "writer_owner": "PORTAL_WORKFLOW", "ingress": "INTERNAL_QUALIFIED_NATIVE_CURRENT_READ_PROVIDER",
+      "verbs": {"insert": 1, "update": 1, "delete": 0, "read": 1}, "readers": 1,
+      "rows_dev": null, "rows_stable": null,
+      "retention": "IMMUTABLE_ORIGINAL_AND_PHYSICAL_EGRESS_TERMINAL_SOURCE_CUSTODY", "disposal_decision": "NO_AUTOMATIC_DELETE",
+      "note": "ELP2-10 migration153 bounds independently registered ordinary CURRENT READ cuts. Original/terminal custody is immutable; actual Core authority writers drain unresolved reads. Physical HTTP completion or abort is required for a genuine source terminal; restart, expiry or DTO return is not a terminal. No default source binding, STREAM/HISTORY grant or runtime activation.",
+      "reached_via": "execution-v2/native-current-relations-provider.ts; explicit finite HTTP egress composition and CurrentHumanMutations same-original recovery"
+    },
+    {
       "table": "portal_native_root_obligations",
       "writer_owner": "PORTAL_WORKFLOW", "ingress": "INTERNAL_QUALIFIED_NATIVE_ROOT_PROVIDER",
       "verbs": {"insert": 1, "update": 1, "delete": 0, "read": 1}, "readers": 1,

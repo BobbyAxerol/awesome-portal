@@ -3,6 +3,7 @@ import { AccessRelations, unqualifiedAccessRelations } from "./access-policy";
 import type { ExecutionReadPublication, ExecutionReadPublicationRequest } from "./read-publication";
 import type { RootReceiptVerifier } from "./access-root-receipt";
 import type { DelegatedReceiptScope, QualifiedDelegatedMembershipReceipt } from "./access-delegated-receipt";
+import type { NativeCurrentRelationsPort } from "./native-current-relations-port";
 
 export interface ReviewedPolicyArtifact {
   policy:ReviewedAccessPolicy;
@@ -18,6 +19,9 @@ export interface ReviewedPolicyArtifact {
 /** Internal provider port. Authentication/signature/profile binding happens in a qualified adapter,
  * never by trusting JSON, a browser boolean or a fixture constant. No HTTP acceptance route exists. */
 export interface AccessTrustProvider {
+  /** Real ordinary CURRENT native READ lifetime, distinct from ROOT intake,
+   * detached relations(), STREAM, HISTORY and command authority. Opt-in only. */
+  currentRelations?:NativeCurrentRelationsPort;
   verifyPolicy(input:unknown):Promise<ReviewedPolicyArtifact|null>;
   verifyReceipt(input:unknown):Promise<TsMembershipAcceptance|null>;
   /** Private reviewed-root intake, not an ordinary delegation or a TS wire.

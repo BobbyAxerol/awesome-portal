@@ -55,6 +55,12 @@ export interface CurrentHumanNativeReadRecoveryPort {
    * must own settlement; NC-01 installs no successful settlement operation. */
   recover(attempt: CurrentHumanNativeReadRecoveryAttempt): Promise<unknown>;
 }
+/** Separate purpose-specific ordinary CURRENT READ participant. Durable state
+ * is reread by the coordinator; a returned promise value is never an ACK. */
+export interface CurrentHumanCurrentReadRecoveryPort {
+  usesPool(pool:unknown):boolean;
+  recover():Promise<unknown>;
+}
 /** Explicit startup-only reverse participants. The candidate is the SAME one
  * that issued these identities; registration is routing, never permission.
  * The installer supplies a real authenticated source recovery port. */
@@ -140,11 +146,14 @@ export class CurrentHumanMutations {
     private readonly recovery: CurrentHumanRecoveryPort,
     private readonly limits: { maximum_intents: number; maximum_recoveries_per_request: number },
     private readonly nativeRecovery?: CurrentHumanNativeReadRecoveryPort,
-    reverseParticipants: readonly CurrentHumanReverseRecoveryParticipant[] = []) {
+    reverseParticipants: readonly CurrentHumanReverseRecoveryParticipant[] = [],
+    private readonly currentReadRecovery?:CurrentHumanCurrentReadRecoveryPort) {
     if (!candidate.usesPool(pool) || !Number.isSafeInteger(limits.maximum_intents) || limits.maximum_intents < 1 || limits.maximum_intents > 4096
       || !Number.isSafeInteger(limits.maximum_recoveries_per_request) || limits.maximum_recoveries_per_request < 1 || limits.maximum_recoveries_per_request > 16)
       throw new CurrentHumanLeaseError("CURRENT_HUMAN_MUTATION_CONFIG_INVALID");
     if (!Array.isArray(reverseParticipants) || reverseParticipants.length > 16)
+      throw new CurrentHumanLeaseError("CURRENT_HUMAN_MUTATION_CONFIG_INVALID");
+    if(currentReadRecovery&&(!currentReadRecovery.usesPool(pool)||typeof currentReadRecovery.recover!=="function"))
       throw new CurrentHumanLeaseError("CURRENT_HUMAN_MUTATION_CONFIG_INVALID");
     const workloads = new Set<string>(), candidates = new Set<unknown>([candidate]);
     this.reverseParticipants = Object.freeze(reverseParticipants.map(participant => {
@@ -293,7 +302,7 @@ export class CurrentHumanMutations {
         await this.transaction(async db => {
           const row = (await db.query<Intent>("SELECT * FROM elp210_candidate.mutations WHERE mutation_id=$1 FOR UPDATE", [intent.mutation_id])).rows[0];
           if (row.state !== "PENDING") return;
-          if ((await db.query("SELECT 1 FROM elp210_candidate.obligations WHERE unresolved LIMIT 1")).rowCount) return;
+          if (await this.pendingState(db)) return;
           if (hooks.retain_after_application_rollback) return;
           await db.query(`UPDATE elp210_candidate.mutations SET state='REFUSED',terminal_digest=$2,finished_at=clock_timestamp()
             WHERE mutation_id=$1`, [intent.mutation_id, accessDigest({ outcome: "REFUSED", reason_code: "APPLICATION_NOT_COMMITTED" })]);
@@ -318,6 +327,9 @@ export class CurrentHumanMutations {
   }
 
   private async recoverSource() {
+    // Actual adapter recovery is outside Core transactions and cannot clear
+    // custody by returning a value. pendingState rereads durable source ACK.
+    if(this.currentReadRecovery)try{await this.currentReadRecovery.recover();}catch{/* same original remains pending/UNKNOWN */}
     const attempts = await this.candidate.recoverableObligations(this.nativeRecovery ? "BOTH" : "REVERSE_ONLY");
     if (this.reverseParticipants.length) {
       // Capture and validate ALL registered enumeration before any source
@@ -378,7 +390,15 @@ export class CurrentHumanMutations {
     const row = (await db.query(`SELECT count(*)::int AS n,
       count(*) FILTER(WHERE phase='UNKNOWN' OR expires_at_ms<=floor(extract(epoch FROM clock_timestamp())*1000))::int AS unknown
       FROM elp210_candidate.obligations WHERE unresolved`)).rows[0];
-    return row.unknown > 0 ? "DRAIN_UNKNOWN" : row.n > 0 ? "DRAIN_PENDING" : null;
+    // Additive migration153 may be installed without commissioning a source.
+    // Census the real custody table even if its adapter is absent: missing
+    // recovery composition must NOT allow a revoke to skip an old obligation.
+    const installed=(await db.query("SELECT to_regclass('public.portal_native_current_read_obligations') AS relation")).rows[0]?.relation;
+    const ordinary=installed?(await db.query(`SELECT count(*)::int AS n,
+      count(*) FILTER(WHERE phase='UNKNOWN' OR source_expires_at IS NOT NULL AND
+        source_expires_at::timestamptz<=clock_timestamp())::int AS unknown
+      FROM portal_native_current_read_obligations WHERE NOT source_settled`)).rows[0]:{n:0,unknown:0};
+    return row.unknown > 0||ordinary.unknown>0 ? "DRAIN_UNKNOWN" : row.n > 0||ordinary.n>0 ? "DRAIN_PENDING" : null;
   }
 
   /** Private, abort-only recovery capability for an abandoned/revoked caller.
