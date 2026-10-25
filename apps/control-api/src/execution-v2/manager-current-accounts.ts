@@ -51,8 +51,13 @@ function decode(field: string, input: unknown): string | null {
   if (scalar.kind !== expected) return refuse();
   if (expected === "DECIMAL") return decimal.parse(scalar.value);
   const text = accessText.parse(scalar.value);
-  if (expected === "TIMESTAMP" && (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,9})?Z$/u.test(text) || !Number.isFinite(Date.parse(text))))
-    return refuse();
+  if (expected === "TIMESTAMP") {
+    const at = Date.parse(text);
+    // Date.parse normalizes February 30 and 24:00 into a different day.
+    // Preserve valid source nanoseconds as text, but never repair bad dates.
+    if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,9})?Z$/u.test(text) ||
+      !Number.isFinite(at) || new Date(at).toISOString().slice(0, 19) !== text.slice(0, 19)) return refuse();
+  }
   return text;
 }
 

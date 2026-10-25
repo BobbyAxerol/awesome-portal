@@ -36,8 +36,8 @@ const principal = (): ResourceReadPrincipal => ({ workspaceId: "research", viewe
   session: { sessionId: "actual-session", userId: "actual-user", state: "ACTIVE", sessionVersion: 3,
     authenticationTime: new Date(500), idleExpiresAt: new Date(10000), absoluteExpiresAt: new Date(10000) } });
 
-function fixture() {
-  let source = fixtureMetadata(), now = 2000, sourceCalls = 0, denied = false;
+function fixture(metadata = fixtureMetadata()) {
+  let source = metadata, now = 2000, sourceCalls = 0, denied = false;
   const artifact = { schema_version: "portal.execution.manager-current-commissioning.v1", scope: source.scope, binding: source.binding,
     source_workspace_id: source.source_workspace_id, adapter_revision: source.adapter_revision,
     source_metadata_digest: managerCurrentMetadataDigest(source), receipt_pins: source.receipt_pins };
@@ -171,6 +171,19 @@ describe("Manager CURRENT Account360 (synthetic source/real adapter; not connect
     expect(result.data.account_balances[0]).toMatchObject({ free: "0", locked: null });
     expect(result.data.account).not.toHaveProperty("equity");
   });
+  it.each(["2026-02-30T00:00:00Z", "2026-02-29T00:00:00Z", "2026-04-31T12:00:00Z", "2026-01-01T24:00:00Z"])(
+    "rejects normalized source metadata timestamp %s", async value => {
+      const metadata = fixtureMetadata(); metadata.grains[0]!.source_fields.push("created_at"); metadata.grains[0]!.fields.push("created_at");
+      const f = fixture(metadata); f.payloads["account-target"]!.created_at = { kind: "TIMESTAMP", value };
+      await expect(f.service.read(f.principal, "target-account", "paper")).rejects.toMatchObject({ code: "EXECUTION_READ_PUBLICATION_NOT_QUALIFIED" });
+    });
+  it.each(["2028-02-29T23:59:59Z", "2026-01-01T00:00:00.123456789Z"])(
+    "preserves valid source metadata timestamp %s without rounding the DTO", async value => {
+      const metadata = fixtureMetadata(); metadata.grains[0]!.source_fields.push("created_at"); metadata.grains[0]!.fields.push("created_at");
+      const f = fixture(metadata); f.payloads["account-target"]!.created_at = { kind: "TIMESTAMP", value };
+      const result = await f.service.read(f.principal, "target-account", "paper") as any;
+      expect(result.data.accounts[0].created_at).toBe(value);
+    });
   it("rejects duplicate JSON keys and raw text/objects even if another parser could accept them", async () => {
     const f = fixture(), original = f.core.read.bind(f.core);
     vi.spyOn(f.core, "read").mockImplementation(async (...args) => {
