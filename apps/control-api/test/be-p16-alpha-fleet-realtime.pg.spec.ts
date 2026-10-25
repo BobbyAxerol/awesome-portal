@@ -57,7 +57,8 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)("BE-P16 alpha_fleet_overview not
     await revision("6", { epoch: "TEST_ONLY:epoch-2" }); await revision("6", { generation: "TEST_ONLY:g2" });
     const rows = await repository.revisionMetadataAfter(WS, ENV, PROFILE, EPOCH, GEN, "2", 2);
     expect(rows.map(r => r.source_sequence)).toEqual(["3", "4"]);
-    expect(Object.keys(rows[0]).sort()).toEqual(["created_at_ms", "revision", "source_sequence"]);
+    expect(Object.keys(rows[0]).sort()).toEqual(["created_at_ms", "qualification", "revision", "source_sequence"]);
+    expect(rows[0].qualification).toBe("SOURCE_VERIFIED");
     expect(JSON.stringify(rows)).not.toContain("NEVER_PROJECTED");
     expect(rows[0].created_at_ms).toBe(Date.parse("2026-10-20T00:00:00.123Z"));
     expect((await repository.revisionMetadataAfter(WS, ENV, PROFILE, EPOCH, GEN, "5", 10))).toEqual([]);
@@ -106,6 +107,15 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)("BE-P16 alpha_fleet_overview not
       const { binding, cursor, source } = await start();
       await revision("4"); await revision("5"); await head("TEST_ONLY:fleet-r5", "5");
       await pool.query("DELETE FROM execution_manager_model_revisions WHERE source_sequence=4");
+      await expect(source.read(binding, cursor, 50)).rejects.toMatchObject({ code: "SOURCE_COVERAGE_UNPROVED" });
+    });
+    it("a TEST_ONLY middle publication cannot be skipped under a later verified head", async () => {
+      await seed(3);
+      const { binding, cursor, source } = await start();
+      await revision("4", { qualification: "TEST_ONLY" });
+      await revision("5"); await head("TEST_ONLY:fleet-r5", "5");
+      expect((await repository.revisionMetadataAfter(WS, ENV, PROFILE, EPOCH, GEN, "3", 50)).map(row => row.qualification))
+        .toEqual(["TEST_ONLY", "SOURCE_VERIFIED"]);
       await expect(source.read(binding, cursor, 50)).rejects.toMatchObject({ code: "SOURCE_COVERAGE_UNPROVED" });
     });
     it("a new epoch or generation is GENERATION_CHANGED; a head behind the cursor is SOURCE_COVERAGE_UNPROVED", async () => {

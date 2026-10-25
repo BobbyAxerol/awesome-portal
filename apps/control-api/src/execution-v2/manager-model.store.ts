@@ -122,14 +122,16 @@ export class ManagerModelRepository {
   /** ELP2-09 `alpha_fleet_overview` notice source: revision METADATA (never the payload) after a checkpoint, inside exactly one
    * (epoch, generation). Ascending, bounded by `limit` (<=200); the unique key makes the ordinals a dense, indexed range. */
   async revisionMetadataAfter(workspace: string, environment: string, profile: string, epoch: string, generation: string,
-    after: string, limit: number): Promise<Array<{ revision: string; source_sequence: string; created_at_ms: number }>> {
+    after: string, limit: number): Promise<Array<{ revision: string; source_sequence: string; created_at_ms: number; qualification: string | null }>> {
     if (!Number.isSafeInteger(limit) || limit < 1 || limit > 200 || !/^(?:0|[1-9][0-9]{0,18})$/.test(after)) throw new Error("MANAGER_NOTICE_BOUND_INVALID");
-    const rows = (await this.pool.query<{ revision: string; source_sequence: string; created_at_ms: string }>(
-      `SELECT revision,source_sequence::text,(floor(extract(epoch FROM created_at)*1000))::bigint::text AS created_at_ms
+    const rows = (await this.pool.query<{ revision: string; source_sequence: string; created_at_ms: string; qualification: string | null }>(
+      `SELECT revision,source_sequence::text,(floor(extract(epoch FROM created_at)*1000))::bigint::text AS created_at_ms,
+         payload->>'qualification' AS qualification
        FROM execution_manager_model_revisions
        WHERE workspace_id=$1 AND environment=$2 AND profile_id=$3 AND source_epoch=$4 AND projection_generation=$5 AND source_sequence>$6::numeric
        ORDER BY source_sequence ASC LIMIT $7`, [workspace, environment, profile, epoch, generation, after, limit])).rows;
-    return rows.map(row => ({ revision: row.revision, source_sequence: row.source_sequence, created_at_ms: Number(row.created_at_ms) }));
+    return rows.map(row => ({ revision: row.revision, source_sequence: row.source_sequence,
+      created_at_ms: Number(row.created_at_ms), qualification: row.qualification }));
   }
   /** Scalar qualification of one stored revision (`SOURCE_VERIFIED` | `TEST_ONLY`) without loading its payload document. */
   async revisionQualification(workspace: string, environment: string, profile: string, revision: string): Promise<string | null> {

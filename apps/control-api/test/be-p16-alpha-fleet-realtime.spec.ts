@@ -29,7 +29,7 @@ class Log implements FleetRevisionLog {
   qualification: string | null = "SOURCE_VERIFIED";
   headCalls = 0; rowCalls = 0; gate: Promise<void> | null = null; gone = false;
   constructor(count = 7) { for (let i = 1; i <= count; i++) this.publish(); }
-  publish() { const n = this.rows.length + 1; this.rows.push({ revision: `TEST_ONLY:fleet-r${n}`, source_sequence: String(n), created_at_ms: 1_800_000_000_000 + n }); }
+  publish() { const n = this.rows.length + 1; this.rows.push({ revision: `TEST_ONLY:fleet-r${n}`, source_sequence: String(n), created_at_ms: 1_800_000_000_000 + n, qualification: "SOURCE_VERIFIED" }); }
   async head(): Promise<FleetHead | null> {
     this.headCalls++;
     if (this.gate) await this.gate;
@@ -366,6 +366,18 @@ describe("BE-P16 revoke recheck: current authority before every read and every w
 
 /* ═══════════════════════════ caps and product-wide eviction ═══════════════════════════ */
 describe("BE-P16 caps: every bound is enforced and every exit releases everything", () => {
+  it.each(["TEST_ONLY", null, "UNKNOWN"])("does not stream across an unqualified intermediate revision (%s)", async qualification => {
+    const h = harness();
+    const sink = await h.open(await h.cursorOf());
+    sink.chunks.length = 0;
+    h.log.publish(); h.log.rows.at(-1)!.qualification = qualification;
+    h.log.publish();
+    h.log.rowCalls = 0;
+    await h.service.pollOnce();
+    expect(sink.events.map(e => [e.event, e.frame.reason_code])).toEqual([["resync_required", "SOURCE_COVERAGE_UNPROVED"]]);
+    expect(h.log.rowCalls).toBe(1);
+    expect(h.service.diagnostics()).toMatchObject({ clients: 0, sessions: 0, timer: false });
+  });
   it("streams per session: the next open is a terminal RECONNECT_LIMIT, and a closed stream frees its slot", async () => {
     const h = harness({ streamsPerSession: 2 });
     const a = await h.open(await h.cursorOf()), b = await h.open(await h.cursorOf());

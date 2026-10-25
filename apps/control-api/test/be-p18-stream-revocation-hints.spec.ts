@@ -34,7 +34,7 @@ class Log implements FleetRevisionLog {
   rows: FleetRevisionRow[] = [];
   gate: Promise<void> | null = null;
   constructor(count = 3) { for (let i = 1; i <= count; i++) this.publish(); }
-  publish() { const n = this.rows.length + 1; this.rows.push({ revision: `TEST_ONLY:fleet-r${n}`, source_sequence: String(n), created_at_ms: 1_800_000_000_000 + n }); }
+  publish() { const n = this.rows.length + 1; this.rows.push({ revision: `TEST_ONLY:fleet-r${n}`, source_sequence: String(n), created_at_ms: 1_800_000_000_000 + n, qualification: "SOURCE_VERIFIED" }); }
   async head(): Promise<FleetHead | null> {
     if (this.gate) await this.gate;
     const last = this.rows.at(-1)!;

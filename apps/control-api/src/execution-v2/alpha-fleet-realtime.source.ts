@@ -23,7 +23,7 @@ export interface FleetHead {
   revision: string; source_epoch: string; source_sequence: string; projection_generation: string;
   payload_digest: string; catalogue_digest: string;
 }
-export interface FleetRevisionRow { revision: string; source_sequence: string; created_at_ms: number; }
+export interface FleetRevisionRow { revision: string; source_sequence: string; created_at_ms: number; qualification: string | null; }
 /** The two reads the source needs. `ManagerModelRepository` implements it; a unit test supplies a plain object. */
 export interface FleetRevisionLog {
   head(workspace: string, environment: string, profile: string): Promise<FleetHead | null>;
@@ -123,7 +123,11 @@ export class ManagerFleetNoticeSource implements ScopedNoticeSource {
       // The writer refuses a skipped ordinal, so a short or gapped prefix is retention loss or corruption: never skip, never re-baseline silently.
       if (rows.length !== count) return invalid("SOURCE_COVERAGE_UNPROVED");
       const notices = rows.map((row, index) => {
-        if (!ordinalText.safeParse(row.source_sequence).success || BigInt(row.source_sequence) !== afterOrdinal + BigInt(index + 1) ||
+        // Qualification belongs to EACH persisted publication, not the head
+        // alone. An unverified intermediate revision is a gap: never skip it
+        // or expose even a revision notice under a SOURCE_VERIFIED baseline.
+        if (row.qualification !== "SOURCE_VERIFIED" ||
+          !ordinalText.safeParse(row.source_sequence).success || BigInt(row.source_sequence) !== afterOrdinal + BigInt(index + 1) ||
           !Number.isSafeInteger(row.created_at_ms) || row.created_at_ms < 0) return invalid("SOURCE_COVERAGE_UNPROVED");
         return {
           resume_cursor: encodeFleetCoordinate({ ...c, after_ordinal: row.source_sequence }),
