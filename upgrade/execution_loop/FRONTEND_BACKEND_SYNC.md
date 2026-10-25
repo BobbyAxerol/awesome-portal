@@ -1,5 +1,25 @@
 # Execution Loop V2 — Sổ đồng bộ Frontend ↔ Backend (sống)
 
+## Codex backend residual review —25Oct2026,21:52VN
+
+[Verified phase/request inventory](evidence/ELP2-10/REMAINING_BACKEND_AND_CLAUDE_REQUESTS_2026-10-25.md).
+Canonical685bc1915, Claude00e7f6cff and integrationd28274831 clean at intake;
+no new committed Claude request/ACK. Read-only review, one existing independent
+helper reused, no new test/build/runtime or UI change. Six backend support
+packages and newer Contributors consumer are delivered source, not new work.
+Actual code residuals include Accounts batch→listFigures, remaining native
+finite routes, scoped runtime/session and account/order metadata, DARK NET_PNL
+integration and unconnected Operations health. Source/calendar/notices and
+financial semantics remain exact Edge-coordinated inputs, not fixture truth.
+
+ACT_NOW: current official visual has emitted failures (including400/501 in
+coexistence requests); terminal result pending, never PASS. Triage exact
+contract/fixture/source causes before ownership or baseline decisions. Full
+repaired R2 remains NOT_STARTED and must not overlap. NEXT_GATE: finite
+composition/Accounts projection/scoped fields, then source commissioning.
+ELP2-05/06/07/09/10 open;11 not entry-ready. No new delivered DTO/enum or
+Claude component remap in this report. No push/shared-preview/dev/main/Live.
+
 ## Codex focused repair + PM owner factory —25Oct2026 continuation
 
 **Current gate checkpoint:** [actual attempt/retake](evidence/ELP2-10/CORE_INTEGRATED_QUALIFICATION_2026-10-25.md#61-actual-visual-entry-failure--bounded-retake-and-edge-delivery).

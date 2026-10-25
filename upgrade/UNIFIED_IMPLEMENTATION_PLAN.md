@@ -15882,3 +15882,17 @@ runner prepared but NOT_STARTED, no overlapping heavy job. Public PM handoff
 mirrored/readback on HK with matching SHA2563787e7a5ad29…; no source upload,
 runtime install, canonical landing or connected acceptance inferred.
 
+### 25Oct2026 — verified remaining backend and Claude requests
+
+[Source-backed residual inventory and next owners](execution_loop/evidence/ELP2-10/REMAINING_BACKEND_AND_CLAUDE_REQUESTS_2026-10-25.md).
+Review-only at canonical685bc1915 /Claude00e7f6cff /integrationd28274831;
+no new committed Claude request. Stale OPEN rows do not reopen six delivered
+support packages, group continuation, last-sign-in or lookup work. Concrete
+residuals: Accounts financial batch→projection, remaining native finite routes,
+scoped runtime/session/account/order fields, economic NET_PNL runtime mapping
+and Operations health wiring; actual source inputs remain separately listed.
+Current compare-only visual has emitted failures and is not PASS; terminal
+outcome pending, repaired full R2 NOT_STARTED. No weakened assertions or
+baseline re-record. ELP2-05/06/07/09/10 remain open,11 not entry-ready.
+No new code/runtime/UI/source transfer/push or phase authority in this inventory.
+
