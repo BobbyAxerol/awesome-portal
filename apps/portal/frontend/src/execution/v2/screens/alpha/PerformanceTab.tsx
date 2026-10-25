@@ -5,9 +5,11 @@
  * Three facets, as in the hi-fi, and they never share an axis:
  *  - Actual: the book's own equity series, exact decimals, per currency
  *    partition. Paper and Sandbox books are drawn hatched and worded as
- *    simulated. Windowed return and drawdown are not published (FE-006,
- *    FE-025), so the panel prints the words, not a figure derived from the
- *    line.
+ *    simulated. Windowed return is not published (FE-006), so the panel
+ *    prints the words, not a figure derived from the line. The drawdown pane
+ *    under the chart is the published DRAWDOWN series of the alpha (WP-K,
+ *    FE-025), a ratio at or below zero in the source's own scale; while the
+ *    source does not publish it the pane keeps the typed absence.
  *  - Forward simulated: each stage's own daily closes (stage drift), one row
  *    each, "never stitched into actual". Returns per stage are FE-006.
  *  - Research OOS: the bound run is not published (FE-029).
@@ -15,6 +17,8 @@
 import type { ReactNode } from "react";
 
 import { PanelState } from "../../../components/states";
+import type { ObservedTimeline } from "../../../api/observedTimeline";
+import type { EventKind } from "../../charts";
 import type { ManagerMetricRead } from "../../readers/managerMetric";
 import type { FinancialChartPayload } from "../../../api/financialChart";
 import type { StageDrift } from "../../../hifiInsight";
@@ -23,13 +27,21 @@ import { Flag } from "../../Flag";
 import { NaWhy, NotAvailableLine, SectionPanel } from "../../blocks";
 import { ChartTools, DivBars, EquityPanel, Spark, type DivBarRow } from "../../charts";
 import { ENV_LABEL, type ExecEnv } from "../../urlState";
+import { chartPointsOf, seriesCaptionShort, unavailableChart } from "../series/seriesModel";
+import type { SeriesReadState } from "../series/useManagerSeries";
+import type { DrawdownInput } from "../../charts/EquityPanel";
+import type { EvidenceSection } from "../../readers/approvalEvidence";
+import type { LifecycleVenuePnl } from "../../readers/alphaLifecycle";
+import { showDecimal } from "../../charts";
 import { Na } from "./cells";
 import { DaysValue, RowFigure, WindowedFigures, type DatasetReadState } from "./DatasetFigures";
 
 const NO_NAMES: ReadonlyMap<string, string> = new Map();
 import { ROW_CAP, stageWord, type DeploymentRow, type EquityPanelInput, type StagePath } from "./model";
 import { Np } from "./np";
-import type { Read } from "./useAlphaReads";
+import type { PagedRead, Read } from "./useAlphaReads";
+import { useRibbon, type RibbonData } from "./ribbonModel";
+import type { LifeEvent, StageSpan } from "./lifecycleModel";
 
 export type PerformanceView = "act" | "sim" | "oos";
 export const PERFORMANCE_VIEWS: readonly { id: PerformanceView; label: string }[] = [
@@ -54,9 +66,40 @@ export interface PerformanceTabProps {
   paths: readonly StagePath[];
   view: PerformanceView;
   onView: (view: PerformanceView) => void;
+  /** The observed timeline (decisions) and the dataset's lifecycle events: the ribbon pinned on the chart is the same one the Activity tab draws. */
+  timeline?: PagedRead<ObservedTimeline>;
+  /** The alpha's DRAWDOWN series read (`execution-manager-series.v1`, subject ALPHA). Absent when the caller does not ask for it: the pane keeps its typed absence. */
+  drawdown?: SeriesReadState;
+  /** Net PnL per venue from the lifecycle read (WP-K); `null`/absent keeps the section off. */
+  venues?: EvidenceSection<readonly LifecycleVenuePnl[]> | null;
+  life?: { events: readonly LifeEvent[]; missing: readonly EventKind[]; spans?: readonly StageSpan[]; future?: number };
 }
 
-function ActualFacet({ env, equity, inputs, drift }: Pick<PerformanceTabProps, "env" | "equity" | "inputs" | "drift">) {
+const NO_LIFE = { events: [] as readonly LifeEvent[], missing: ["stage", "decision", "incident", "recall", "flow"] as readonly EventKind[] };
+const NO_TIMELINE: PagedRead<ObservedTimeline> = { read: { phase: "idle" }, loadingMore: false, moreError: null, hasMore: false, loadMore: () => undefined };
+
+const NO_DRAWDOWN: DrawdownInput = { kind: "absent", copy: "Not published (FE-025)", reason: "The source publishes no drawdown series for this book; the windowed maximum is the tile above when it is published." };
+
+/** The pane under the chart and the caption under it, by what the DRAWDOWN read said. Nothing is derived from the equity line. */
+function drawdownOf(read: SeriesReadState | undefined): { input: DrawdownInput; caption: string | null } {
+  if (read === undefined) return { input: NO_DRAWDOWN, caption: null };
+  const series = read.phase === "ready" ? read.value : read.phase === "loading" || read.phase === "error" ? read.last : null;
+  if (series === null) {
+    return read.phase === "error"
+      ? { input: { kind: "absent", copy: "Not available", reason: `The drawdown series could not be read (${read.reason}). Nothing is drawn.` }, caption: null }
+      : { input: { kind: "absent", copy: "Loading the drawdown" }, caption: null };
+  }
+  const entry = series.series[0]!;
+  if (entry.state === "UNAVAILABLE") {
+    const { copy, reason } = unavailableChart(entry, "FE-025");
+    return { input: { kind: "absent", copy, reason }, caption: null };
+  }
+  if (entry.state === "EMPTY") return { input: { kind: "absent", copy: "No points in this window", reason: "The source published a drawdown series with no point in the window." }, caption: seriesCaptionShort(series.metric, entry) };
+  return { input: { kind: "series", points: chartPointsOf(entry) }, caption: seriesCaptionShort(series.metric, entry) };
+}
+
+function ActualFacet({ env, equity, inputs, drift, rb, drawdown }: Pick<PerformanceTabProps, "env" | "equity" | "inputs" | "drift" | "drawdown"> & { rb: RibbonData }) {
+  const dd = drawdownOf(drawdown);
   const loading = equity.phase === "loading" || equity.phase === "idle" || (inputs.length === 0 && drift.phase === "loading");
   if (loading) return <PanelState status="loading" />;
   if (inputs.length === 0) {
@@ -71,8 +114,9 @@ function ActualFacet({ env, equity, inputs, drift }: Pick<PerformanceTabProps, "
   }
   return (
     <div className="exec-alp2-equity-stack">
-      {inputs.map((input) => (
+      {inputs.map((input, index) => (
         <div key={input.key} className="exec-alp2-equity">
+          {index === 0 ? rb.chips : null}
           <ChartTools
             label={`Equity, ${ENV_LABEL[env]}${input.currency ? `, ${input.currency}` : ""}`}
             columns={input.state.kind === "unavailable" ? [] : [{ key: input.key, label: input.label, points: input.points, currency: input.currency ?? undefined }]}
@@ -85,9 +129,12 @@ function ActualFacet({ env, equity, inputs, drift }: Pick<PerformanceTabProps, "
               state={input.state}
               segments={input.segments}
               height={240}
+              {...(index === 0 ? { ribbon: rb.ribbon, domain: rb.domain ?? undefined, drawdown: dd.input } : {})}
             />
           </ChartTools>
           {/* The book is the segmented control above, the sampling is the chart's own envelope line, and the windowed figures are the one "Not available" line of the screen. */}
+          {index === 0 && rb.gaps !== null ? <p className="exec-alp2-cap">{rb.gaps}</p> : null}
+          {index === 0 && dd.caption !== null ? <p className="exec-alp2-cap" data-testid="drawdown-caption"><span>{dd.caption}</span></p> : null}
           {input.gapCount > 0 ? <p className="exec-alp2-cap"><span>{input.gapCount} {input.gapCount === 1 ? "gap" : "gaps"} the source declared</span></p> : null}
         </div>
       ))}
@@ -154,8 +201,29 @@ function Contribution({ rows, noTotals }: { rows: readonly DeploymentRow[]; noTo
   );
 }
 
+/** Net PnL by venue as the source states it: one row per venue, book and currency; nothing is added across venues or currencies. */
+function VenueContribution({ venues }: { venues: readonly LifecycleVenuePnl[] }) {
+  return (
+    <SectionPanel title="Contribution by venue" aside="Per venue, never summed">
+      {venues.length === 0 ? <Na why="No venue figure is published." /> : (
+        <table className="exec-alp2-gaptable" aria-label="Net PnL by venue" data-testid="venue-pnl">
+          <tbody>
+            {venues.map((v) => (
+              <tr key={`${v.venue}|${v.economicDomain}|${v.currency}`}>
+                <th scope="row">{v.venue}<span className="exec-alp2-why"> {v.economicDomain === "ACTUAL" ? "Real-funded" : "Simulated"}</span></th>
+                <td><span className="exec-mgr-num" title={`${v.exact} ${v.currency}`}>{showDecimal(v.exact, { unit: "money", currency: v.currency, signed: true })}</span></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+    </SectionPanel>
+  );
+}
+
 export function PerformanceTab(props: PerformanceTabProps) {
   const { rows, env, view, onView } = props;
+  const rb = useRibbon(props.timeline ?? NO_TIMELINE, props.life ?? NO_LIFE, props.paths, props.inputs[0] ?? null);
   // Cost drag and forward days are keys the Manager dataset may carry per row; without them the cell keeps its Not published request id.
   const fig = (metricKey: string, fallback: ReactNode, cell?: (metric: ManagerMetricRead | null) => ReactNode): ReactNode =>
     props.dataset ? <RowFigure read={props.dataset} names={props.names ?? NO_NAMES} metricKey={metricKey} fallback={fallback} cell={cell} /> : fallback;
@@ -173,7 +241,7 @@ export function PerformanceTab(props: PerformanceTabProps) {
           </span>
         }
       >
-        {view === "act" ? <ActualFacet env={env} equity={props.equity} inputs={props.inputs} drift={props.drift} /> : null}
+        {view === "act" ? <ActualFacet env={env} equity={props.equity} inputs={props.inputs} drift={props.drift} rb={rb} drawdown={props.drawdown} /> : null}
         {view === "sim" ? <SimulatedFacet paths={props.paths} drift={props.drift} /> : null}
         {view === "oos" ? <OosFacet /> : null}
       </SectionPanel>
@@ -181,6 +249,8 @@ export function PerformanceTab(props: PerformanceTabProps) {
       <SectionPanel title="Contribution" aside="Current">
         <Contribution rows={rows} noTotals={props.noTotals ?? null} />
       </SectionPanel>
+
+      {props.venues && props.venues.state === "PUBLISHED" ? <VenueContribution venues={props.venues.value} /> : null}
 
       {props.dataset ? <WindowedFigures read={props.dataset} names={props.names ?? NO_NAMES} /> : null}
 
@@ -195,7 +265,7 @@ export function PerformanceTab(props: PerformanceTabProps) {
             </tbody>
           </table>
         </SectionPanel>
-        <SectionPanel title="Forward observation" aside="Not an actual track record">
+        <SectionPanel title="Forward observation" aside={<Flag kind="partial" label="Not an actual track record" size="sm" />}>
           <table className="exec-alp2-gaptable" aria-label="Forward observation">
             <tbody>
               <tr><th scope="row">Forward days</th><td>{fig("forward_observation_days", <Np id="FE-029" />, (metric) => <DaysValue metric={metric} />)}</td></tr>
@@ -204,6 +274,10 @@ export function PerformanceTab(props: PerformanceTabProps) {
               <tr><th scope="row">Mixed score</th><td><Np id="FE-011" /></td></tr>
             </tbody>
           </table>
+          <details className="exec-alp2-more">
+            <summary>Manifest conditions</summary>
+            <p className="exec-alp2-line"><Np id="FE-029">Continuity manifest conditions</Np></p>
+          </details>
         </SectionPanel>
       </div>
       <NotAvailableLine

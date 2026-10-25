@@ -1,6 +1,6 @@
 /**
  * Users V2: the optional roster `last_sign_in_at` (FE-CAT-8), through the real client against the e2e double.
- * A published instant prints as received, null is "Never signed in", an omitted field keeps the typed gap, a malformed value
+ * A published instant prints as received, an omitted field or a bare null keeps the typed gap (no "Never signed in": no coverage statement is published), a malformed value
  * refuses the roster, and the field changes nothing about authority (the role preset stays an unpublished gap).
  */
 import { cleanup, render, screen, within } from "@testing-library/react";
@@ -34,10 +34,10 @@ const row = (extra: Record<string, unknown> = {}) => ({
 const page = (accounts: unknown[]) => ({ accounts });
 
 describe("the reader", () => {
-  it("keeps omitted omitted, null as never, and a UTC instant as received", () => {
+  it("keeps omitted omitted, reads a bare null as unknown too (never 'never signed in'), and a UTC instant as received", () => {
     const [omitted] = readRoster(page([row()]));
     expect(Object.hasOwn(omitted!, "lastSignInAt")).toBe(false);
-    expect(readRoster(page([row({ last_sign_in_at: null })]))[0]!.lastSignInAt).toBeNull();
+    expect(Object.hasOwn(readRoster(page([row({ last_sign_in_at: null })]))[0]!, "lastSignInAt")).toBe(false);
     expect(readRoster(page([row({ last_sign_in_at: "2026-10-17T09:14:00Z" })]))[0]!.lastSignInAt).toBe("2026-10-17T09:14:00Z");
   });
 
@@ -65,14 +65,51 @@ describe("the Last seen column", () => {
     }
   });
 
-  it("with it, a published instant prints, an account that never signed in says so, and Role preset stays a gap", async () => {
+  it("with it, most rows print the instant, the rows whose history is unknown keep the typed gap (never 'Never signed in'), and Role preset stays a gap", async () => {
     setUsersDoubleLastSignIn(true);
     mount();
     await screen.findByRole("table", { name: "Accounts" });
     const texts = rowsOf().map((r) => cell(r, "Last seen (UTC)"));
-    expect(texts.some((t) => t.includes("Never signed in"))).toBe(true); // the INVITED accounts
+    expect(texts.every((t) => !t.includes("Never signed in"))).toBe(true);
     expect(texts.some((t) => /\b\d{1,2} Oct\b/.test(t) || t.includes("2026"))).toBe(true);
-    expect(texts.every((t) => !t.includes("Not available"))).toBe(true);
+    // The INVITED accounts and every seventh one are omitted by the double, and read as unknown.
+    const unknown = texts.filter((t) => t.includes("Not available"));
+    expect(unknown.length).toBeGreaterThan(0);
+    expect(unknown.length).toBeLessThan(texts.length / 2);
+  });
+
+  it("a bare null from the producer reads as unknown, not as never", async () => {
+    const original = globalThis.fetch;
+    globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = new URL(String(input), "http://portal.test");
+      const answer = answerUsers(init?.method ?? "GET", url.pathname, url.searchParams)!;
+      const body = answer.body as { accounts?: Record<string, unknown>[] };
+      // Every roster row carries a bare null, as a producer that wrote null for unknown history would.
+      if (Array.isArray(body.accounts)) body.accounts = body.accounts.map((a) => ({ ...a, last_sign_in_at: null }));
+      return new Response(JSON.stringify(body), { status: answer.status, headers: { "Content-Type": "application/json" } });
+    }) as unknown as typeof fetch;
+    try {
+      mount();
+      await screen.findByRole("table", { name: "Accounts" });
+      for (const r of rowsOf()) expect(cell(r, "Last seen (UTC)")).toContain("Not available");
+      expect(document.body.textContent).not.toContain("Never signed in");
+    } finally {
+      globalThis.fetch = original;
+    }
+  });
+
+  it("the double never serves null: every row either carries an instant or omits the key", () => {
+    setUsersDoubleLastSignIn(true);
+    const body = answerUsers("GET", "/api/admin/accounts", new URLSearchParams({ limit: "50" }))!.body as { accounts: Record<string, unknown>[] };
+    for (const a of body.accounts) expect("last_sign_in_at" in a ? typeof a.last_sign_in_at : "omitted").toMatch(/^(string|omitted)$/);
+    expect(body.accounts.some((a) => !("last_sign_in_at" in a))).toBe(true);
+    expect(body.accounts.some((a) => "last_sign_in_at" in a)).toBe(true);
+  });
+
+  it("Role preset stays a gap beside the instants", async () => {
+    setUsersDoubleLastSignIn(true);
+    mount();
+    await screen.findByRole("table", { name: "Accounts" });
     for (const r of rowsOf()) expect(cell(r, "Role preset")).toContain("Not available");
   });
 });

@@ -133,12 +133,21 @@ export function CompareOverlay({ label, series, notComparable = [], basis, unit 
 
   const x0 = (domain ? domain.from : Math.min(...plotted.map((p) => p.model.obs[0].t))) as number;
   const x1 = (domain ? domain.to : Math.max(...plotted.map((p) => p.model.obs[p.model.obs.length - 1].t))) as number;
-  const frame: Frame = { W, ml: CHART_MARGIN.l, mr: 150, top: 16, bottom: height - 28 };
+  // The end tags are the plot's right margin: wide enough for the longest "name  value unit" of this chart (a money series carries its currency), never more than 38% of the width.
+  const showEnd = (s: string) => showDecimal(s, { unit, signed, currency });
+  const clipName = (name: string) => (name.length > 16 ? `${name.slice(0, 15)}…` : name);
+  const tagChars = Math.max(0, ...plotted.map((p) => {
+    let i = p.model.obs.length - 1;
+    while (i > 0 && p.model.obs[i].s === null) i -= 1;
+    return `${clipName(p.c.label)}  ${showEnd(p.model.obs[i].s as string)}`.length;
+  }));
+  const frame: Frame = { W, ml: CHART_MARGIN.l, mr: Math.min(Math.round(W * 0.38), Math.max(150, Math.ceil(tagChars * 6.8) + 40)), top: 16, bottom: height - 28 };
   const iw = W - frame.ml - frame.mr;
   const x = linear(x0, x1, frame.ml, frame.ml + iw);
 
-  let lo = 0;
-  let hi = 0;
+  // A signed series (a return, a PnL) keeps its zero line in view; a level (NAV) is scaled to its own range so it is not squashed against zero.
+  let lo = signed ? 0 : Number.POSITIVE_INFINITY;
+  let hi = signed ? 0 : Number.NEGATIVE_INFINITY;
   for (const p of plotted) {
     lo = Math.min(lo, p.model.min as number);
     hi = Math.max(hi, p.model.max as number);

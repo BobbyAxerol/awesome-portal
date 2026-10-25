@@ -7,13 +7,13 @@
  * events silently: events that fall in the same time bucket become one counted
  * mark whose card lists them, and events outside the window are counted.
  */
-import { useMemo, useState, type CSSProperties } from "react";
+import { useMemo, useRef, useState, type CSSProperties } from "react";
 
 import "../css/charts.css";
 import { formatAsOf } from "../boundary";
 import { ChartStateFlags, ChartUnavailable } from "./ChartStateView";
 import { EVENT_KIND_TABLE, EVENT_KINDS } from "./eventKinds";
-import { CHART_MARGIN } from "./hooks";
+import { CHART_MARGIN, useElementWidth } from "./hooks";
 import type { ChartDomain, ChartEvent, ChartState, EventKind, UtcEpochMs } from "./types";
 
 export interface StageBand {
@@ -68,6 +68,8 @@ interface Cluster {
 
 export function EventRibbon({ label, events, domain, stages = [], enabled = {}, kinds = EVENT_KINDS, state = { kind: "ready" }, buckets = 80 }: EventRibbonProps) {
   const [focus, setFocus] = useState<string | null>(null);
+  const rootRef = useRef<HTMLDivElement | null>(null);
+  const rootWidth = useElementWidth(rootRef);
   const from = domain.from as number;
   const to = domain.to as number;
   const span = to - from;
@@ -111,7 +113,7 @@ export function EventRibbon({ label, events, domain, stages = [], enabled = {}, 
   const active = clusters.find((c) => c.key === focus) ?? null;
 
   return (
-    <div className="exec-ribbon" role="group" aria-label={label} style={marginVars} data-state={state.kind}>
+    <div ref={rootRef} className="exec-ribbon" role="group" aria-label={label} style={marginVars} data-state={state.kind}>
       {state.kind !== "ready" ? <div className="exec-c2-head"><ChartStateFlags state={state} /></div> : null}
       {empty ? (
         <p className="exec-c2-envelope" data-testid="ribbon-empty">No events or stages in this window.</p>
@@ -169,6 +171,8 @@ export function EventRibbon({ label, events, domain, stages = [], enabled = {}, 
               {stageBands.map((s) => {
                 const a = Math.max(0, (s.from - from) / span);
                 const b = Math.min(1, (s.to - from) / span);
+                // A band narrower than its word prints no word (the title and the list name it); a clipped label was a half word.
+                const fits = (b - a) * Math.max(0, rootWidth - CHART_MARGIN.l - CHART_MARGIN.r) >= s.label.length * 8.2 + 18;
                 return (
                   <li
                     key={s.id}
@@ -178,7 +182,7 @@ export function EventRibbon({ label, events, domain, stages = [], enabled = {}, 
                     style={{ ...leftAt(a), width: `calc((100% - var(--exec-chart-ml) - var(--exec-chart-mr)) * ${(b - a).toFixed(5)})` }}
                     title={`${s.label}, ${timeOf(s.from)} to ${timeOf(s.to)}`}
                   >
-                    <span>{s.label}</span>
+                    {fits ? <span>{s.label}</span> : <span className="exec-c2-sr">{s.label}</span>}
                   </li>
                 );
               })}

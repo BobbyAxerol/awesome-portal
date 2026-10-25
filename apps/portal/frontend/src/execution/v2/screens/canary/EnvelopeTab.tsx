@@ -54,7 +54,12 @@ export function EnvelopeTab({ view }: { view: CanaryView }) {
               ),
           },
         ]),
-    ...(noUsed ? [] : [{ key: "used", label: "Used", render: (row: LimitRow) => (row.usedRatio === undefined ? <NotPublished id={FE.envelope} titleReason={row.usedReason} /> : <CapGauge ratio={row.usedRatio} label={row.label} />) }]),
+    ...(noUsed ? [] : [{ key: "used", label: "Used", render: (row: LimitRow) => {
+          if (row.usedRatio !== undefined) return <CapGauge ratio={row.usedRatio} label={row.label} />;
+          // The duration cap has no ratio (a request to the contracts lane): the published day and the envelope's own duration are the facts, no bar.
+          if (row.key === "duration" && row.consumed?.kind === "value" && row.value?.kind === "value") return <span className="exec-blk-num">Day {row.consumed.decimal.display} of {row.value.decimal.display}</span>;
+          return <NotPublished id={FE.envelope} titleReason={row.usedReason} />;
+        } }]),
   ];
 
   return (
@@ -87,6 +92,9 @@ export function EnvelopeTab({ view }: { view: CanaryView }) {
                 </li>
               ))}
             </ul>
+          ) : null}
+          {rows.some((row) => row.key === "duration" && row.limit === null) ? (
+            <p className="exec-cny-foot">The duration cap has no published limit and no usage share; the day and the duration shown are the trial's own.</p>
           ) : null}
           {notes.baseRiskProfile === null && view.envelope.status !== "DRAFT" ? null : (
             <p className="exec-cny-foot">

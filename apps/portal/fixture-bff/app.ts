@@ -24,7 +24,7 @@ import { answerReviewManager, wpAccountBook, wpAlphaResource, wpDeploymentFact, 
 import { setPositiveMode } from "../frontend/e2e/bffPositiveMode";
 import { commandStoryRoute } from "./command-story";
 import { applyScenarioBody, resetFixtureTransitions, scenarioRequest, scenarioVariants } from "./scenario-apply";
-import { healsDoubles, configuredScenario, configureScenario, DEFAULT_SCENARIO, type FixtureScenario, FIXTURE_SCENARIOS, getScenario, isFixtureScenario, resetScenario, SCENARIO_DESCRIPTIONS, setScenario } from "./scenario";
+import { onScenarioChange, healsDoubles, configuredScenario, configureScenario, DEFAULT_SCENARIO, type FixtureScenario, FIXTURE_SCENARIOS, getScenario, isFixtureScenario, resetScenario, SCENARIO_DESCRIPTIONS, setScenario } from "./scenario";
 import { transformReviewBody } from "./review-relations";
 import { rebaseBody } from "./time-rebase";
 import { createVisitDigestFixture } from "./review-visit-digest";
@@ -138,6 +138,7 @@ export function loadConfig(env: Record<string, string | undefined>): FixtureConf
 
 /** Puts the doubles back to what the specs expect (tests; a server never needs it). */
 export function resetFixtureGlobals(): void {
+  onScenarioChange(null);
   setFixtureScale("small");
   setOverviewPlanMode("sequence");
   resetOverviewDouble();
@@ -154,6 +155,7 @@ function applyConfig(config: FixtureConfig): void {
   setOverviewPlanMode("blocked");
   configureScenario(config.scenario);
   applyScenarioToDoubles(config);
+  onScenarioChange(() => applyScenarioToDoubles(config));
   // SIMULATED (FE-CAT-8): the roster's last sign-in, only on the populated and layout-stress profiles like the other overlays.
   setUsersDoubleLastSignIn(config.reviewProfile !== "sparse-realistic");
 }

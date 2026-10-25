@@ -40,6 +40,7 @@ import { formatAsOf } from "../../boundary";
 import { resolveTab } from "../../tabAliases";
 import { withContext } from "../../urlState";
 import { stageIdentity } from "../stage/identity";
+import { spineHistory, useStageCriteria, useStageLifecycle } from "../stage/useStageLifecycle";
 import { FillsTab } from "./FillsTab";
 import { Header, LOADING_CHIPS, LifecyclePanel, UNREAD_CHIPS, chipsOf } from "./Header";
 import { OrdersTab } from "./OrdersTab";
@@ -47,7 +48,7 @@ import { OverviewTab } from "./OverviewTab";
 import { PositionsTab } from "./PositionsTab";
 import { SessionsTab } from "./SessionsTab";
 import { StickySummary } from "./StickySummary";
-import { DEFAULT_ACCESS_HREF, DEFAULT_ROUTES, WB_TABS, WORKBENCH_SCREEN_KEY, buildWorkbench, envelopeReadAt, type OrderRow, type WorkbenchRoutes } from "./model";
+import { DEFAULT_ACCESS_HREF, DEFAULT_ROUTES, WB_TABS, WORKBENCH_SCREEN_KEY, buildWorkbench, envelopeReadAt, exitReviewReason, type OrderRow, type WorkbenchRoutes } from "./model";
 import { useWorkbenchReads } from "./useWorkbenchReads";
 
 import "../../css/workbench.css";
@@ -92,7 +93,10 @@ export default function PaperWorkbenchScreen({ api, deploymentId, variant = "pap
   // The Alpha is linked ONLY when the profile published `alpha_id` (FE-066, S3-U5): a strategy id is never promoted to an alpha id.
   const identity = model?.identity ?? stageIdentity(null);
   const alphaHref = identity.alphaId === null ? null : ctx(r.alpha(identity.alphaId));
-  const name = strategyId ?? deploymentId;
+  const name = identity.alphaName ?? strategyId ?? deploymentId;
+  // The stages the alpha has completed (FE-027): the ticks of the spine, from the alpha's Manager dataset when it publishes them.
+  const history = spineHistory(useStageLifecycle(api, identity.alphaId, "paper", "paper", params.get("workspace_id")));
+  const criteria = useStageCriteria(api, identity.alphaId, "PAPER", "paper", params.get("workspace_id"));
 
   const profileFailure = reads.profile.phase === "ready" ? reads.profile.refreshFailure : null;
   const qualityFailure = reads.quality.phase === "ready" ? reads.quality.refreshFailure : null;
@@ -127,7 +131,7 @@ export default function PaperWorkbenchScreen({ api, deploymentId, variant = "pap
             {model.page.nq.reasons.length > 0 ? <GapWhy name="Why the source is not qualified" rows={[model.page.nq.reasons.join(" · ")]} /> : null}
           </div>
         ) : null}
-        <LifecyclePanel gate={model.gate} accessHref={accessHref} />
+        <LifecyclePanel gate={model.gate} accessHref={accessHref} history={history} criteria={criteria} exitReason={exitReviewReason(model.gate)} />
         <UrlTabs surface="paper" tabs={WB_TABS} label="Paper deployment sections">
           {(active) => {
             switch (active) {
@@ -169,6 +173,7 @@ export default function PaperWorkbenchScreen({ api, deploymentId, variant = "pap
           portfolio: deployment?.portfolioId ? ctx(r.portfolio(deployment.portfolioId)) : null,
           account: deployment?.accountId ? ctx(r.account(deployment.accountId)) : null,
           operations: ctx(r.operations),
+          vnMarket: variant === "paper" && model?.calendar ? ctx(`/deployments/paper/${encodeURIComponent(dep)}/vn-market`) : null,
         }}
         read={{ atLabel: readAtMs === null ? null : formatAsOf(readAtMs), refreshing: reads.refreshing, failure: failure === null ? null : failure.reason, onRefresh: reads.refresh }}
       />

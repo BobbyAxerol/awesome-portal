@@ -241,6 +241,19 @@ describe("EquityPanel · layers", () => {
     expect(screen.getByTestId("readout-ghost").textContent).toBe("1,000.00");
   });
 
+  it("keeps the drawdown Low label inside its pane (below the x tick row) even when the published drawdown has positive points (QA1 I14)", () => {
+    const dd = series(["0.0020", "0.0010", "-0.0069", "0.0005"]);
+    const { container } = render(<EquityPanel label="Equity" points={BASIC} drawdown={{ kind: "series", points: dd }} />);
+    const label = container.querySelector('[data-testid="drawdown-pane"] .exec-c2-dd-min text') as SVGTextElement;
+    const pane = container.querySelector('[data-testid="drawdown-pane"] line.exec-c2-grid') as SVGLineElement;
+    const top = Number(pane.getAttribute("y1"));
+    const y = Number(label.getAttribute("y"));
+    expect(y).toBeGreaterThanOrEqual(top + 12);
+    // The x tick labels sit above the pane's top line, so a label at or below top + 12 cannot touch them.
+    const tickBottom = Math.max(...[...container.querySelectorAll("text.exec-c2-tick")].map((t) => Number(t.getAttribute("y"))));
+    expect(y).toBeGreaterThan(tickBottom);
+  });
+
   it("shows the published drawdown, its worst point, and reads it at the cursor", () => {
     const dd = series(["0.00", "0.00", "-2.5000", "-1.2500"]);
     const { container } = render(<EquityPanel label="Equity" points={BASIC} drawdown={{ kind: "series", points: dd }} />);

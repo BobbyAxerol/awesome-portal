@@ -53,7 +53,11 @@ export function PartitionFigures({ partitions, metricKey, metricKeys, gap, signe
         return (
           <span key={`${entry.partition.economicDomain}|${entry.partition.currency}|${entry.partition.basis}|${entry.partition.nativeProfileRef}`}
             className="exec-fleet-part" data-domain={entry.partition.economicDomain} data-testid={`part-${metricKey}`}>
-            <span className="exec-fleet-part-tag" title={partitionTitle(entry)}>{partitionTag(entry)}</span>
+            <span className="exec-fleet-part-tag" title={partitionTitle(entry)}>
+              {DOMAIN_LABEL[entry.partition.economicDomain]}
+              {/* The currency is the figure's own suffix; it stays in the tag for assistive technology and in the text, not on screen twice. */}
+              <span className="exec-fleet-sr"> · {entry.partition.currency}</span>
+            </span>
             {cell ? cell(metric) : <MetricValue metric={metric} signed={signed} />}
           </span>
         );

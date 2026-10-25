@@ -158,11 +158,17 @@ describe("shell flag on", () => {
     expect(withSome).not.toContain("Operations");
   });
 
-  it("entity search stays disabled with its reason", async () => {
+  it("entity search says there is no single index (FE-023) and what it searches instead", async () => {
     await mount("/execution", ON);
     ctrlK();
     const dialog = await screen.findByRole("dialog", { name: "Command bar" });
-    expect(within(dialog).getByText(/Not published \(FE-023\)/)).toBeTruthy();
+    expect(within(dialog).getByText(/Not published as one index \(FE-023\)/)).toBeTruthy();
+    expect(within(dialog).getByText(/search each published list read/)).toBeTruthy();
+  });
+
+  it("the top bar's search button says it searches and jumps on an Execution route", async () => {
+    await mount("/execution", ON);
+    expect(screen.getByRole("button", { name: /Search or jump to/ })).toBeTruthy();
   });
 
   it("choosing a row navigates and closes the bar", async () => {

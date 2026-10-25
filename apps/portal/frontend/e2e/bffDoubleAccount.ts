@@ -53,6 +53,7 @@ import { fileURLToPath } from "node:url";
 import { scopedResourceV2 } from "./bffDoubleScopedResource";
 import { addDecimal, scaled, sumByCurrency } from "./bffScale";
 import { isPositiveMode, positiveBookOf } from "./bffPositiveMode";
+import { accountFact, bindingFact, ledgerSeries } from "./bffWorld";
 
 export interface BffAnswerAccount {
   status: number;
@@ -109,7 +110,11 @@ const BINDINGS: readonly BindingSpec[] = [
 
 /** The five bindings the double holds, plus the generated ones (empty unless the standalone server runs at a larger scale). */
 const allBindings = (): readonly BindingSpec[] => {
-  if (isPositiveMode()) return [...BINDINGS, ...scaled().bindings].map((b) => ({ ...b, state: "ACTIVE", credentialState: "SYNC_SYNCED" })); // WP-P: no stale, expired or suspended binding in the positive world
+  if (isPositiveMode()) {
+    // WP-P: no stale, expired or suspended binding in the positive world, each updated within the last three hours of the read
+    return [...BINDINGS, ...scaled().bindings].map((b) => ({ ...b, state: "ACTIVE", credentialState: "SYNC_SYNCED",
+      updatedAt: new Date(Date.parse(ACCOUNT_DOUBLE_AS_OF) - (Array.from(b.bindingId).reduce((h, c) => (h * 31 + c.charCodeAt(0)) % 170, 7) + 5) * 60_000).toISOString() }));
+  }
   const extra = scaled().bindings;
   return extra.length === 0 ? BINDINGS : [...BINDINGS, ...extra];
 };
@@ -233,7 +238,10 @@ function bindingExposure(id: string): BffAnswerAccount {
     oldest_source_as_of: ACCOUNT_DOUBLE_AS_OF,
     newest_source_as_of: ACCOUNT_DOUBLE_AS_OF,
   });
-  const buckets = shared
+  const world = isPositiveMode() ? bindingFact(spec.bindingId) : null; // WORLD: the virtual sum is the allocations booked on the binding, the venue holds the sleeve ledgers
+  const buckets = world !== null
+    ? [bucket(world.currency, fromCents(world.used), fromCents(world.locked), fromCents(world.wallet - world.used), fromCents(world.equity - world.used))]
+    : shared
     ? [bucket("USDT", "197500.00", "2000.00", "213380.25", "13880.25"), bucket("USDC", "10000.00", "0.00", "12000.00", "2000.00")]
     : breached
       ? [bucket("USDT", "92400.00", "0.00", "85000.00", "-7400.00")]
@@ -288,6 +296,15 @@ const balance = (accountId: string, currency: string, total: string, free: strin
 const margin = (accountId: string, currency: string, initial: string, maintenance: string): Row => ({
   account_id: accountId, currency, initial, maintenance, updated_at: ACCOUNT_DOUBLE_AS_OF, updated_at_ms: AS_OF_MS,
 });
+
+/** A sleeve's display label. The two named Binance sleeves keep the design's names; any other owner is named from its own id, never from a position (QA2 R4-03: a missing letter printed "undefined"). */
+function sleeveLabel(owner: string, position: number): string {
+  if (owner === "acc_bnc_core") return "Binance-02 sleeve";
+  const letter = "bc"[position - 1];
+  if (/^acc_bnc_/.test(owner) && letter !== undefined) return `Binance-02${letter} sleeve`;
+  const words = owner.replace(/^acc_/, "").split("_").filter((w) => w !== "").map((w) => w.charAt(0).toUpperCase() + w.slice(1));
+  return `${words.join(" ") || owner} sleeve`;
+}
 
 function sleeveRows(accountId: string, label: string, portfolio: string, deployment: string, bindingId: string): Record<string, Row[]> {
   return {
@@ -510,7 +527,7 @@ function positiveAccount(spec: AccountSpec, id: string): AccountSpec {
   const own = money(primary);
   const currency = own?.currency ?? (rows.account_balances?.[0]?.currency as string | undefined) ?? "USDT";
   if (shared || own) {
-    rows.accounts = owners.map((owner, n) => ({ account_id: owner, label: owner === "acc_bnc_core" ? "Binance-02 sleeve" : `Binance-02${"bc"[n - 1]} sleeve`, strategy_id: books.find((b) => b.owner === owner)?.book?.deployments[0]?.alpha_id ?? null,
+    rows.accounts = owners.map((owner, n) => ({ account_id: owner, label: accountFact(owner)?.name ?? sleeveLabel(owner, n), strategy_id: books.find((b) => b.owner === owner)?.book?.deployments[0]?.alpha_id ?? null,
       mode: spec.environment, venue: "BINANCE", base_currency: currency, account_type: "CROSS", state: "ACTIVE" }));
     rows.deployments = books.flatMap(({ owner, book }) => (book?.deployments ?? []).map((d) => ({ deployment_id: d.deployment_id, account_id: owner, strategy_id: d.alpha_id, portfolio_id: d.portfolio_id, mode: d.environment, stage: d.stage.toLowerCase(), venue: "BINANCE", state: "RUNNING" })));
     rows.venue_accounts = owners.map((owner) => ({ binding_id: spec.bindingId, account_id: owner, mode: spec.environment, venue: "BINANCE", state: "ACTIVE" }));
@@ -680,10 +697,11 @@ function equityChart(search: URLSearchParams): BffAnswerAccount | null {
   const spec = specOf(subjectId);
   if (!spec) return problem(404, "ACCOUNT_NOT_FOUND", `no account ${subjectId}`);
   const environment = spec.environment;
-  const has = subjectId === "acc_bnc_core";
-  const step = 30 * 60_000;
-  const t0 = AS_OF_MS - 5 * step;
-  const points: [number, string | null][] = [
+  const world = isPositiveMode() ? accountFact(subjectId) : null; // WORLD: the equity line ends on the ledger the account states
+  const has = world !== null || subjectId === "acc_bnc_core";
+  const step = world !== null ? 60 * 60_000 : 30 * 60_000;
+  const t0 = AS_OF_MS - (world !== null ? 47 : 5) * step;
+  const points: [number, string | null][] = world !== null ? ledgerSeries(subjectId, t0, AS_OF_MS, 48).map((p): [number, string | null] => [p.t, p.value]) : [
     [t0, "87500.00"], [t0 + step, "87620.40"], [t0 + 2 * step, null], [t0 + 3 * step, "88010.10"], [t0 + 4 * step, "88150.00"], [t0 + 5 * step, "88200.00"],
   ];
   return {
@@ -706,14 +724,14 @@ function equityChart(search: URLSearchParams): BffAnswerAccount | null {
         coverage: {
           from_ms: t0, to_ms: AS_OF_MS, source_total: null, filtered_total: has ? String(points.length) : "0", returned_count: has ? points.length : 0,
           truncated: false, downsampled: false, has_more: false,
-          gaps: has ? [{ from_ms: t0 + step + 1, to_ms: t0 + 3 * step - 1, reason: "SOURCE_GAP" }] : [],
+          gaps: has && world === null ? [{ from_ms: t0 + step + 1, to_ms: t0 + 3 * step - 1, reason: "SOURCE_GAP" }] : [],
         },
         formula: { formula_id: "account-double.equity.v1", formula_version: "v1", input_digest: "sha256:" + "0".repeat(64), input_revision: `account-double-${environment}:1` },
         data: {
           comparison_mode: "SINGLE_SUBJECT",
           scale_mode: "LINEAR",
           currency_policy: "PARTITIONED_BY_SOURCE_CURRENCY_NO_FX_AGGREGATE",
-          series: has ? [{ id: `account:${subjectId}:equity`, label: `${subjectId} equity`, account_id: subjectId, currency: "USDT", points }] : [],
+          series: has ? [{ id: `account:${subjectId}:equity`, label: `${world?.name ?? subjectId} equity`, account_id: subjectId, currency: "USDT", points }] : [],
           sampling: {
             algorithm: "IDENTITY_CURRENT_OBSERVATION_V1", source_rows: String(points.length), numeric_rows: String(points.length - 1), rejected_rows: "0", returned_rows: points.length,
             target_points: 256, bucket_seconds: null, preserves_extrema: true, preserves_first_last: true, preserves_gaps: true, gap_semantics: "GAP_IS_NULL", marker_semantics: "NONE",

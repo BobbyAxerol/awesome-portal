@@ -64,7 +64,8 @@ export const FE = {
   export: { fe: "FE-016", what: "Export" },
 } as const satisfies Record<string, UnpublishedFact>;
 
-export const notPublished = (fact: UnpublishedFact): string => `Not published (${fact.fe})`;
+/** The words, never a ticket id: the id stays in the fact (and the gap attribute) for the team, not in what a manager reads. */
+export const notPublished = (_fact: UnpublishedFact): string => "Not published";
 
 /** The sentence a disabled control carries. */
 export const notPublishedReason = (fact: UnpublishedFact, because: string): string => `${notPublished(fact)}. ${because}`;
@@ -417,6 +418,8 @@ export interface BalanceFacts {
 }
 
 export interface MarginFacts {
+  /** The account-level row's own `margin_ratio` in percent (`undefined` = the row publishes none: A360-2 stays typed). */
+  ratio: Metric | null | undefined;
   initial: Metric | null | undefined;
   maintenance: Metric | null | undefined;
   /** Several instrument rows and no account row: no account total is published. */
@@ -467,6 +470,8 @@ export interface AllocationFacts {
   deployment: string | null;
   portfolio: string | null;
   mode: string | null;
+  /** The stage the source publishes for the allocation (a canary trial is stage canary under mode live); the link goes to its own control room. */
+  stage: string | null;
   allocation: Metric | null | undefined;
   /** The allocation row's own PM budget (`budget_used` / `budget_approved`) and exposure (`exposure_gross` / `_long` / `_short`). */
   budgetUsed: Metric | null | undefined;
@@ -483,6 +488,9 @@ export interface SyncEntry {
   at: UtcEpochMs | null;
   status: { kind: FlagKind; label: string };
   detail: Metric | null | undefined;
+  /** The row's own `check` word (Balance, Positions, Open orders) and `duration_ms`, when the source publishes them (QA1 R4 I13). */
+  check: string | null;
+  durationMs: number | null;
 }
 
 export interface AccountIdentity {
@@ -493,6 +501,11 @@ export interface AccountIdentity {
   state: string | null;
   /** Published `account_type` / margin mode word, when there is one. */
   marginMode: string | null;
+  /** The account row's own `product` word (for example "USDT-M futures · hedge"), when it publishes one (A360-4). */
+  product: string | null;
+  /** The account row's `network` word (MAINNET, TESTNET) and the instant that network was last proven (`network_proof_at_ms`). */
+  network: string | null;
+  networkProofAt: UtcEpochMs | null;
   portfolios: readonly string[];
   environment: BindingEnv | null;
   bindingId: string | null;
@@ -505,6 +518,8 @@ export interface AccountIdentity {
  */
 export interface DisplayNames {
   portfolios: Readonly<Record<string, string>>;
+  /** Why a portfolio has no name here (`portfolio_name_reason_code`), by id; only for an id no row names. A reason never implies a right. */
+  portfolioReasons: Readonly<Record<string, string>>;
   deployments: Readonly<Record<string, string>>;
   alphas: Readonly<Record<string, string>>;
 }
@@ -525,6 +540,7 @@ export interface AccountView {
 
 function displayNames(deployments: readonly Row[], allocations: readonly Row[]): DisplayNames {
   const portfolios: Record<string, string> = {};
+  const portfolioReasons: Record<string, string> = {};
   const deploymentNames: Record<string, string> = {};
   const alphas: Record<string, string> = {};
   const put = (into: Record<string, string>, id: string | null, name: string | null) => {
@@ -532,10 +548,31 @@ function displayNames(deployments: readonly Row[], allocations: readonly Row[]):
   };
   for (const row of [...deployments, ...allocations]) {
     put(portfolios, text(row.portfolio_id), text(row.portfolio_name));
+    const reason = text(row.portfolio_name_reason_code);
+    const pf = text(row.portfolio_id);
+    if (pf !== null && reason !== null && text(row.portfolio_name) === null && portfolioReasons[pf] === undefined) portfolioReasons[pf] = reason;
     put(alphas, text(row.strategy_id), text(row.strategy_name) ?? text(row.alpha_name));
     put(deploymentNames, text(row.deployment_id), text(row.deployment_name) ?? text(row.display_name) ?? text(row.label) ?? text(row.name));
   }
-  return { portfolios, deployments: deploymentNames, alphas };
+  // A name published by any row wins over a reason on another row; the reason only explains an id that stays unnamed.
+  for (const id of Object.keys(portfolios)) delete portfolioReasons[id];
+  return { portfolios, portfolioReasons, deployments: deploymentNames, alphas };
+}
+
+/** The sentence for a `portfolio_name_reason_code`; an unknown code is said as published. */
+export function portfolioReasonText(code: string): string {
+  switch (code) {
+    case "PORTFOLIO_NAME_NOT_READ": return "The source did not read the portfolio name for this row.";
+    case "PORTFOLIO_NAME_NOT_PUBLISHED": return "The source publishes no name for this portfolio.";
+    case "PORTFOLIO_NAME_NOT_AUTHORIZED": return "The portfolio name is outside what your access shows. The id is shown; this says nothing about rights.";
+    case "PORTFOLIO_NAME_AMBIGUOUS": return "More than one name matches this portfolio id, so none is shown.";
+    default: return `No portfolio name (${code}).`;
+  }
+}
+
+/** A published word that does not look like a secret; anything that does is not shown. */
+function safeWord(word: string | null): string | null {
+  return word !== null && !SENSITIVE.test(word.toLowerCase()) ? word : null;
 }
 
 const SENSITIVE = /(^|_)(secret|credential|password|token|dsn|external_account_ref|raw)(_|$)/;
@@ -608,6 +645,7 @@ export function readAccountView(profile: ProfileEnvelope, accountId: string): Ac
       deployment: text(row.deployment_id),
       portfolio: text(row.portfolio_id),
       mode: text(row.mode),
+      stage: text(row.stage),
       allocation: metricOf(row.allocated_capital, "money"),
       budgetUsed: metricOf(row.budget_used, "money"),
       budgetApproved: metricOf(row.budget_approved, "money"),
@@ -628,6 +666,8 @@ export function readAccountView(profile: ProfileEnvelope, accountId: string): Ac
       at: timeOf(row, "synced_at") ?? timeOf(row, "created_at"),
       status: syncView(text(row.status)),
       detail: metricOf(row.buying_power, "money"),
+      check: safeWord(text(row.check)),
+      durationMs: typeof row.duration_ms === "number" && Number.isSafeInteger(row.duration_ms) && row.duration_ms >= 0 ? row.duration_ms : null,
     }))
     // Newest first; a row with no published time sorts last and says so.
     .sort((a, b) => (b.at ?? -1) - (a.at ?? -1))
@@ -649,6 +689,9 @@ export function readAccountView(profile: ProfileEnvelope, accountId: string): Ac
       baseCurrency: account ? text(account.base_currency) : null,
       state: account ? text(account.state) : null,
       marginMode: typeWord && !SENSITIVE.test(typeWord.toLowerCase()) ? typeWord : null,
+      product: safeWord(account ? text(account.product) : null),
+      network: safeWord(account ? text(account.network) : null),
+      networkProofAt: account ? timeOf(account, "network_proof_at") : null,
       portfolios: [...new Set(deployments.flatMap((row) => {
         const pf = text(row.portfolio_id);
         return pf ? [pf] : [];
@@ -709,8 +752,8 @@ export function marginFacts(profile: ProfileEnvelope, accountId: string, currenc
   if (rows.length === 0) return null;
   const accountLevel = rows.filter((row) => text(row.instrument_id) === null);
   const pick = accountLevel.length > 0 ? latestBy(accountLevel, "updated_at") : rows.length === 1 ? rows[0]! : null;
-  if (pick === null) return { initial: undefined, maintenance: undefined, perInstrumentOnly: true };
-  return { initial: metricOf(pick.initial, "money"), maintenance: metricOf(pick.maintenance, "money"), perInstrumentOnly: false };
+  if (pick === null) return { ratio: undefined, initial: undefined, maintenance: undefined, perInstrumentOnly: true };
+  return { ratio: metricOf(pick.margin_ratio, "pct"), initial: metricOf(pick.initial, "money"), maintenance: metricOf(pick.maintenance, "money"), perInstrumentOnly: false };
 }
 
 export function headroomFacts(profile: ProfileEnvelope, currency: string | null): HeadroomFacts | null {
@@ -787,12 +830,13 @@ export function triadModel(profile: ProfileEnvelope, accountId: string, currency
       label: "Free cash / buying power",
       suffix: currency ?? undefined,
       internal: pick(diff?.internal, bal?.free),
-      // A whole-account buying power next to one sleeve's free cash is the wrong
-      // scope: on a shared binding the broker side of this row is not computed.
-      broker: diff !== null ? diff.broker : shared ? SHARED : broker?.buyingPower,
+      // The broker column is the venue's own whole-account report, so its published buying power is drawn there; it is NOT compared with
+      // one sleeve's free cash: on a shared binding the difference is not computed (QA1 R4 I13).
+      broker: diff !== null ? diff.broker : broker?.buyingPower,
       difference: diff !== null ? diff.delta : sharedCell(),
     },
-    { key: "total", label: "Account balance", suffix: currency ?? undefined, internal: bal?.total, broker: sharedCell(), difference: sharedCell() },
+    // The venue's wallet balance covers the whole account: drawn on the broker side when it is published, never set against one sleeve.
+    { key: "total", label: "Account balance", suffix: currency ?? undefined, internal: bal?.total, broker: broker?.walletBalance ?? sharedCell(), difference: sharedCell() },
     { key: "locked", label: "Cash locked", suffix: currency ?? undefined, internal: bal?.locked },
     { key: "initial", label: "Initial margin", suffix: currency ?? undefined, internal: margin?.initial, broker: sharedCell(), difference: sharedCell() },
     { key: "maintenance", label: "Maintenance", suffix: currency ?? undefined, internal: margin?.maintenance, broker: sharedCell(), difference: sharedCell() },

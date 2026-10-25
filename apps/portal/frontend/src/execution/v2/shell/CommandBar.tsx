@@ -35,6 +35,13 @@ export interface CommandBarProps {
   placeholder?: string;
   /** Says why a kind of result is absent (e.g. "Not published (FE-023)"); read out with the input. */
   searchNotice?: string;
+  /**
+   * One honest line per searched kind (the read used, how it matched, how many shown of how many): drawn under the notice, read out
+   * with the status. Empty or absent draws nothing.
+   */
+  notes?: readonly string[];
+  /** A server search is in flight: the status says so, and an empty list is not yet "No result". */
+  busy?: boolean;
 }
 
 const DEFAULT_LIMIT = 12;
@@ -66,6 +73,8 @@ export function CommandBar({
   onQueryChange,
   placeholder = DEFAULT_PLACEHOLDER,
   searchNotice,
+  notes,
+  busy = false,
 }: CommandBarProps) {
   const base = useId();
   const listId = `${base}-list`;
@@ -140,7 +149,7 @@ export function CommandBar({
   };
 
   const total = matched.length;
-  const status = shown.length === 0 ? "No result" : `${shown.length} of ${total} results`;
+  const status = busy ? "Searching" : shown.length === 0 ? "No result" : `${shown.length} of ${total} results`;
   let index = -1;
 
   return (
@@ -177,6 +186,13 @@ export function CommandBar({
             {searchNotice}
           </div>
         ) : null}
+        {notes && notes.length > 0 ? (
+          <ul className="exec-cmdbar-notes" aria-label="Reads used">
+            {notes.map((note) => (
+              <li key={note}>{note}</li>
+            ))}
+          </ul>
+        ) : null}
         {shown.length > 0 ? (
           <div id={listId} className="exec-cmdbar-list" role="listbox" aria-label="Results">
             {groups.map((group, groupIndex) => (
@@ -206,7 +222,7 @@ export function CommandBar({
             ))}
           </div>
         ) : (
-          <div className="exec-cmdbar-empty">No result</div>
+          <div className="exec-cmdbar-empty">{busy ? "Searching" : "No result"}</div>
         )}
         <div className="exec-cmdbar-foot">
           <span>

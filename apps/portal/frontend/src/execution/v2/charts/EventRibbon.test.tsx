@@ -179,3 +179,19 @@ describe("EventRibbon kinds (only the lanes a screen has a source for)", () => {
     expect(buttons[0]!.textContent).toContain("1");
   });
 });
+
+describe("EventRibbon stage bands (WP-C)", () => {
+  it("prints a band's word only when the band is wide enough to hold it; a narrow band keeps the title and a screen-reader word, never a clipped half word", () => {
+    const stages = [
+      { id: "paper", kind: "paper" as const, label: "Paper", from: at("2026-10-01T00:00:00Z"), to: at("2026-10-09T00:00:00Z") },
+      { id: "live", kind: "live" as const, label: "Live", from: at("2026-10-09T00:00:00Z"), to: at("2026-10-09T06:00:00Z") },
+    ];
+    const { container } = render(<EventRibbon label="Events" events={[]} domain={domain} stages={stages} />);
+    const bands = [...container.querySelectorAll('[data-testid="ribbon-stage"]')];
+    expect(bands).toHaveLength(2);
+    expect(bands[0]!.querySelector("span")?.className ?? "").not.toContain("exec-c2-sr");
+    expect(bands[1]!.querySelector("span")?.className).toContain("exec-c2-sr");
+    expect(bands[1]!.textContent).toBe("Live");
+    expect(bands[1]!.getAttribute("title")).toMatch(/^Live, /);
+  });
+});

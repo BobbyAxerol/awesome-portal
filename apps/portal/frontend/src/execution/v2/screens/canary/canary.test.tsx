@@ -239,7 +239,8 @@ describe("the four decisions (D6, D9): drawn, disabled, explained, never enabled
     mount(canaryPort(answering(v1Body())));
     await ready();
     const panel = screen.getByRole("heading", { name: "Promotion decision" }).closest("section")!;
-    // One reason and one My access link for the four decisions that are off for the same reason.
+    // The design draws each decision with what it does, its closed button and its own reason and My access link (R5-09).
+    // Closed for one reason: said once, in plain words, with one My access link (QA2 R5-07).
     expect(within(panel).getAllByRole("link", { name: /My access/ })).toHaveLength(1);
     expect(within(panel).getByRole("link", { name: "My access: Hold, Reduce, Rollback, Request scale" }).getAttribute("href")).toContain("/administration/profile-access");
     expect(panel.textContent?.match(new RegExp(STAGE_WHY.liveClosed, "g"))).toHaveLength(1);
@@ -251,10 +252,10 @@ describe("the four decisions (D6, D9): drawn, disabled, explained, never enabled
       expect(document.getElementById(reasonId!)?.textContent, label).toBe(STAGE_WHY.liveClosed);
       fireEvent.click(button);
     }
-    // What each does is the button's title, not a printed sentence; the "How promotion works" disclosure is gone.
-    expect(within(panel).getByRole("button", { name: "Hold" }).getAttribute("title")).toBe("Keep the envelope unchanged.");
-    expect(panel.textContent).not.toContain("Keep the envelope unchanged");
-    expect(within(panel).queryByText("How promotion works")).toBeNull();
+    // What each does is printed above its button, and the disclosure says how promotion works.
+    expect(panel.textContent).toContain("Keep the envelope unchanged.");
+    expect(panel.textContent).toContain("Return to Paper and close positions.");
+    expect(within(panel).getByText("How promotion works")).toBeTruthy();
     expect(where()).toBe(`/deployments/live/${DEP}/canary`);
   });
 
@@ -549,8 +550,11 @@ describe("tabs and navigation", () => {
   it("the spine's Live node goes to /deployments/live/:id and carries the workspace", async () => {
     mount(canaryPort(answering(v1Body())), `/deployments/live/${DEP}/canary?workspace_id=ws_TEST_ONLY`);
     await ready();
-    fireEvent.click(within(screen.getByRole("list", { name: "Lifecycle" })).getByRole("button", { name: /Live/ }));
-    expect(where()).toContain(`/deployments/live/${DEP}`);
+    // Live is a stage this deployment has not reached: its node is not a link (R5-07); Paper still is.
+    const lifecycle = within(screen.getByRole("list", { name: "Lifecycle" }));
+    expect(lifecycle.queryByRole("button", { name: /Live/ })).toBeNull();
+    fireEvent.click(lifecycle.getByRole("button", { name: /Paper/ }));
+    expect(where()).toContain(`/deployments/paper/${DEP}`);
     expect(where()).toContain("workspace_id=ws_TEST_ONLY");
   });
 
@@ -579,7 +583,7 @@ describe("components against typed rows and published ratios (FIXTURE_LAB, view-
   const positions = (n: number): PositionRow[] =>
     Array.from({ length: n }, (_, i) => ({ symbol: `SYM${i}`, side: i % 2 === 0 ? "long" : "short", quantity: "1.2000", entry: "3412.50", mark: "3421.10", unrealised: i % 2 === 0 ? "10.32" : "-4.55", leverage: "1.1" }));
   const orders = (n: number): OrderRow[] =>
-    Array.from({ length: n }, (_, i) => ({ symbol: `ORD${i}`, type: "Limit", side: "buy", quantity: "0.4000", price: "3380.00", sinceMs: Date.UTC(2026, 9, 17, 11, 58), ackLatencyMs: "212" }));
+    Array.from({ length: n }, (_, i) => ({ symbol: `ORD${i}`, type: "Limit", side: "buy", quantity: "0.4000", price: "3380.00", sinceMs: Date.UTC(2026, 9, 17, 11, 58), status: "ACCEPTED", ackLatencyMs: "212" }));
 
   it("Positions & orders: 250 loaded rows draw 200 and say '200 of 5,000'; the hi-fi columns are all there", () => {
     const view = viewOf(v1Body());
@@ -689,7 +693,8 @@ describe("a lit V1 body: rows under the source's own names, compliance figures, 
     await ready();
     const table = screen.getByRole("table", { name: "Canary envelope caps" });
     const cells = (label: string) => Array.from(table.querySelectorAll("tbody tr")).map((row) => row.querySelector(`td[data-l="${label}"]`)?.textContent?.replace(/^Not available$/, "NP"));
-    expect(cells("Consumed")).toEqual(["3,820.00", "NP", "NP", "1", "NP"]);
+    // The duration cap has no compliance row: its consumed figure is the published trial day (6 of 14); its Used stays Not published.
+    expect(cells("Consumed")).toEqual(["3,820.00", "NP", "NP", "1", "6"]);
     const other = screen.getByRole("list", { name: "Other published figures" });
     expect(other.textContent).toContain("Headroom, capital cap 1,180.00");
     expect(other.textContent).toContain("Consumed, fees paid 4.25");
@@ -720,8 +725,8 @@ describe("keyboard and focus", () => {
     await ready();
     const panel = screen.getByRole("heading", { name: "Promotion decision" }).closest("section")!;
     const reachable = Array.from(panel.querySelectorAll<HTMLElement>("a[href], button:not([disabled]), summary"));
-    // One My access link for the four decisions that share one reason; nothing else to tab to.
-    expect(reachable.map((el) => el.textContent)).toEqual(["My access"]);
+    // One My access link per decision, and the disclosure; nothing else to tab to.
+    expect(reachable.map((el) => el.textContent)).toEqual(["My access", "How promotion works"]);
     await act(async () => undefined);
   });
 });

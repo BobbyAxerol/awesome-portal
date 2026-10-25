@@ -109,11 +109,12 @@
 .exec-ov-grid3 {
   display: grid;
   /* the third panel (Contributors) is a five-column figure table: it gets the wider share so no figure has to break */
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.9fr);
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 2.1fr);
   gap: var(--space-5);
 }
-/* below 1400px the figure table (the last panel) takes a full row, so Needs attention and Since last visit keep a readable width */
-@media (max-width: 1400px) {
+/* below 1500px (WP-F1: the Contributors table with its bars needs 640px; at 1440 the panel is 580px wide) the figure table (the last panel) takes a
+ * full row, so Needs attention and Since last visit keep a readable width and nothing scrolls inside Contributors */
+@media (max-width: 1500px) {
   .exec-ov-grid3 {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -348,3 +349,61 @@ a.exec-ov-what-title {
   text-align: right;
   font-variant-numeric: tabular-nums;
 }
+
+/* WP-F1: Performance panel aside, SLA state stripe, digest frame, contributors bars */
+.exec-ov-markers { font: var(--exec-font-caption); color: var(--ink-faint); }
+.exec-ov-markers .exec-blk-why-btn { font: var(--exec-font-caption); }
+/* A STATE stripe, not a progress bar: no elapsed time is published, so its length says nothing; only its colour (and the text line above) does. */
+.exec-ov-sla-stripe { display: block; height: 2px; margin-top: 6px; background: var(--line-soft); }
+.exec-ov-sla-stripe[data-sla="OVERDUE"] { background: var(--bad); }
+.exec-ov-sla-stripe[data-sla="DUE_SOON"] { background: var(--warn); }
+.exec-ov-sla-stripe[data-sla="ON_TRACK"] { background: var(--good); }
+/* The digest frame (hi-fi "Since your last visit"): the lines are drawn as hatched placeholders because no baseline is published. */
+.exec-ov-digest { display: flex; flex-direction: column; gap: var(--space-3); margin: var(--space-3) 0 0; padding: 0; list-style: none; }
+.exec-ov-digest li { display: flex; align-items: center; gap: var(--space-3); padding-bottom: var(--space-3); border-bottom: 1px solid var(--line-soft); }
+.exec-ov-digest li:last-child { border-bottom: 0; }
+.exec-ov-digest-line { flex: 1; height: 8px; background: repeating-linear-gradient(135deg, var(--line-soft) 0 2px, transparent 2px 6px); }
+/* Contributors: a drawn bar beside the published amount, scaled inside one partition only. */
+.exec-ov-contrib-wrap { overflow-x: auto; }
+.exec-ov-bar-track { display: block; height: 4px; margin-top: 3px; background: var(--surface-2); }
+.exec-ov-bar { display: block; height: 100%; background: var(--series); }
+.exec-ov-bar[data-neg="true"] { background: var(--series-dd); }
+.exec-ov-linkbtn { padding: 0; font: var(--exec-font-caption); color: var(--accent); background: none; border: 0; cursor: pointer; text-decoration: underline; }
+.exec-ov-contrib .exec-ov-contrib-part { white-space: nowrap; overflow-wrap: normal; }
+
+/* WP-F1: table body text follows the cards.css rule (every role 13px inside a table body, face and colour kept) for the tables that are not
+ * `.exec-cards`: contributors, the capital tables. Set through the role tokens, never a size. */
+.exec-ov-contrib tbody td,
+.exec-ov-contrib tbody th,
+.exec-ov-cap td,
+.exec-ov-cap th {
+  --exec-font-data: 400 13px/18px var(--font-body);
+  --exec-font-meta: 400 13px/18px var(--font-body);
+  --exec-font-body: 400 13px/18px var(--font-body);
+  --exec-font-num: 400 13px/18px var(--font-mono);
+  --exec-font-id: 400 13px/18px var(--font-mono);
+  --exec-font-term: 400 13px/18px var(--font-mono);
+}
+/* WP-F1 (QA1 OV-01): one KPI figure size across the strip. Single figures (NAV, a one-partition tile) are the KPI size; the words around a count are captions. */
+.exec-ov-kpi-count { display: inline-flex; align-items: baseline; gap: var(--space-1); flex-wrap: wrap; }
+.exec-ov-kpi-words { font: var(--exec-font-caption); color: var(--ink-faint); }
+.exec-ov-kpis .exec-blk-kpi-value > .exec-ov-num { font: var(--exec-font-kpi); font-variant-numeric: tabular-nums; }
+/* WP-F1 (QA1 P3-07): an id reads as published in the contributors (no capitals), like the concentration legend beside it */
+.exec-ov-contrib tbody th { text-transform: none; letter-spacing: normal; }
+
+/* Visit digest (Codex package 3): bounded observations since the last "Mark as seen". */
+.exec-ov-vd { display: flex; flex-direction: column; gap: var(--space-3); }
+.exec-ov-vd-line { margin: 0; }
+.exec-ov-vd-items { display: flex; flex-direction: column; gap: var(--space-3); margin: 0; padding: 0; list-style: none; }
+.exec-ov-vd-item { display: flex; flex-direction: column; gap: var(--space-1); padding-bottom: var(--space-3); border-bottom: 1px solid var(--line-soft); }
+.exec-ov-vd-item:last-child { border-bottom: 0; }
+.exec-ov-vd-head { display: flex; align-items: center; gap: var(--space-2); min-width: 0; }
+.exec-ov-vd-actions { display: flex; align-items: center; gap: var(--space-3); margin: 0; flex-wrap: wrap; }
+
+.exec-ov-contrib-who, .exec-ov-contrib-id { display: block; font-weight: 400; }
+.exec-ov-pager { display: flex; gap: var(--space-2); }
+
+/* A figure is never broken across lines; its unit is a small suffix (QA2 R1-04). */
+.exec-ov-fig { white-space: nowrap; overflow-wrap: normal; }
+.exec-ov-unit { margin-left: var(--space-1); font: var(--exec-font-caption); color: var(--ink-faint); white-space: nowrap; }
+.exec-ov-kpis .exec-blk-kpi-value > .exec-ov-num { overflow-wrap: normal; }

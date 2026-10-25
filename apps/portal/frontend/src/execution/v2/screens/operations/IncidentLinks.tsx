@@ -35,7 +35,7 @@ const stopActivation = (event: KeyboardEvent) => {
   if (event.key === "Enter" || event.key === " ") event.stopPropagation();
 };
 
-function LinkItem({ link, operationId, to }: { link: IncidentLinkV2; operationId: string; to(incidentId: string): To }) {
+function LinkItem({ link, operationId, to, peekTo }: { link: IncidentLinkV2; operationId: string; to(incidentId: string): To; peekTo?(incidentId: string): To }) {
   if (link.state === "NOT_ATTESTED") {
     return (
       <li className="exec-ops-link" onClick={stop} onKeyDown={stopActivation}>
@@ -57,6 +57,17 @@ function LinkItem({ link, operationId, to }: { link: IncidentLinkV2; operationId
       <span className="exec-ops-meta">
         {humanize(link.relationship)} · {humanize(link.incident.workflowState)} · {severityWord(link.incident.severity)}
       </span>
+      {peekTo ? (
+        <Link
+          className="exec-ops-link-peek"
+          to={peekTo(link.incidentId)}
+          aria-label={`Peek at incident ${link.incidentId} beside the queue`}
+          onClick={stop}
+          onKeyDown={stopActivation}
+        >
+          Peek
+        </Link>
+      ) : null}
     </li>
   );
 }
@@ -67,9 +78,11 @@ export interface IncidentLinksProps {
   links: IncidentLinksV2 | undefined;
   /** The incident drawer route for an id. */
   to(incidentId: string): To;
+  /** When given, each linked incident also offers "Peek": the same incident in the drawer beside the queue (the page stays the deep link). */
+  peekTo?(incidentId: string): To;
 }
 
-export function IncidentLinks({ operationId, links, to }: IncidentLinksProps) {
+export function IncidentLinks({ operationId, links, to, peekTo }: IncidentLinksProps) {
   const label = `Incident links for operation ${operationId}`;
   if (links === undefined) {
     return (
@@ -95,6 +108,7 @@ export function IncidentLinks({ operationId, links, to }: IncidentLinksProps) {
             link={link}
             operationId={operationId}
             to={to}
+            peekTo={peekTo}
           />
         ))}
       </ul>

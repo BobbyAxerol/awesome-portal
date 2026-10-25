@@ -49,7 +49,9 @@ const ROUTES = [
   ["overview", "/execution"],
   ["fleet-table", "/deployments/alphas"], ["fleet-board", "/deployments/alphas?view=board"], ["fleet-map", "/deployments/alphas?view=map"],
   ["portfolios", "/deployments/portfolios"], ["portfolio-360", "/deployments/portfolios/pf_TEST_ONLY_core"],
-  ["compare", "/deployments/compare?in=pf_TEST_ONLY_core,pf_TEST_ONLY_satellite"],
+  ["compare", "/deployments/compare?in=pf_scale_001,pf_scale_006"], ["compare-mixed", "/deployments/compare?in=pf_TEST_ONLY_core,pf_TEST_ONLY_satellite"],
+  ["compare-alphas", "/deployments/compare?kind=alpha&in=alpha_scale_001,alpha_scale_006"],
+  ["alpha-360-btc", "/deployments/alphas/alpha_btc_trend"], ["alpha-activity", "/deployments/alphas/alpha_a?tab=activity"], ["alpha-replay-btc", "/deployments/alphas/alpha_btc_trend?tab=replay"],
   ["alpha-360", "/deployments/alphas/alpha_a"], ["alpha-orders", "/deployments/alphas/alpha_a?tab=orders"],
   ["alpha-deployments", "/deployments/alphas/alpha_a?tab=deployments"], ["alpha-replay", "/deployments/alphas/alpha_a?tab=replay"],
   ["accounts", "/deployments/accounts"], ["account-360", "/deployments/accounts/acc_bnc_core"],
@@ -58,6 +60,19 @@ const ROUTES = [
   ["operations", "/execution/operations"], ["blotter", "/deployments/blotter"],
   ["approvals", "/governance/approvals"], ["new-approval", "/governance/approvals/new"],
   ["profile-access", "/administration/profile-access"], ["admin-actions", "/administration/actions"], ["users", "/administration/users"],
+  // WP-F3: the other tabs and the states a deployment id reaches (bffSimulatedStage.ts: `_mismatch`, `_stale`, `_gap`, `_breach`, `_halted`, `_dark`)
+  ["paper-orders", "/deployments/paper/dep_paper_01?tab=orders"], ["paper-fills", "/deployments/paper/dep_paper_01?tab=fills"],
+  ["paper-positions", "/deployments/paper/dep_paper_01?tab=positions"], ["paper-sessions", "/deployments/paper/dep_paper_01?tab=sessions"],
+  ["paper-dark", "/deployments/paper/dep_paper_01_dark"],
+  ["sandbox-steps", "/deployments/sandbox/dep_sandbox_01?tab=steps"], ["sandbox-plans", "/deployments/sandbox/dep_sandbox_01?tab=promotion-plans"],
+  ["sandbox-timeline", "/deployments/sandbox/dep_sandbox_01?tab=timeline"], ["sandbox-mismatch", "/deployments/sandbox/dep_sandbox_01_mismatch"],
+  ["sandbox-dark", "/deployments/sandbox/dep_sandbox_01_dark"],
+  ["canary-positions", "/deployments/live/dep_canary_01/canary?tab=positions-orders"], ["canary-reconciliation", "/deployments/live/dep_canary_01/canary?tab=reconciliation"],
+  ["canary-guard", "/deployments/live/dep_canary_01/canary?tab=guard-rule"], ["canary-stale", "/deployments/live/dep_canary_01_stale/canary"],
+  ["canary-breach", "/deployments/live/dep_canary_01_breach/canary"], ["canary-halted", "/deployments/live/dep_c1/canary"], ["canary-dark", "/deployments/live/dep_canary_01_dark/canary"],
+  ["live-mismatch", "/deployments/live/dep_live_01_mismatch"], ["live-gap", "/deployments/live/dep_live_01_gap"], ["live-stale", "/deployments/live/dep_live_01_stale"],
+  ["live-continuity", "/deployments/live/dep_live_01?tab=continuity"], ["live-predecessor", "/deployments/live/dep_live_01?tab=predecessor-envelope"],
+  ["live-guard", "/deployments/live/dep_live_01?tab=guard-rules"], ["live-dark", "/deployments/live/dep_live_01_dark"],
 ];
 const only = opt("only", null)?.split(",");
 const routes = only ? ROUTES.filter(([, p]) => only.includes(p.split("?")[0]) || only.includes(p)) : ROUTES;

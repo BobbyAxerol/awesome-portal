@@ -181,9 +181,9 @@ describe("L1 · matrix A · envelope states", () => {
       await waitFor(() => expect(container.querySelector(".exec-pf-fresh")).not.toBeNull(), { timeout: 10_000 });
       await waitFor(() => expect(container.querySelector(".exec-pf-fresh")!.textContent).not.toBe(""), { timeout: 10_000 });
       expect(performance.now() - started).toBeLessThan(BUDGET_STATE_MS);
-      // A FRESH read prints no chip (the as-of line says it); every other tier keeps its chip, because it changes what the reader trusts.
+      // The chip is always drawn (hi-fi "Fresh"); a tier that is not fresh wears its own word, because it changes what the reader trusts.
       const flag = container.querySelector(".exec-pf-fresh .exec-flag");
-      if (d.freshness === "FRESH") expect(flag).toBeNull();
+      if (d.freshness === "FRESH") expect(flag!.textContent).toContain("Fresh");
       else {
         expect(flag!.getAttribute("data-k")).toBe("stale");
         expect(flag!.textContent).toContain(d.freshness === "STALE" ? "Stale" : "Aging");
@@ -271,7 +271,7 @@ describe("L1 · matrix B · row states", () => {
   it("the screen prints each pairwise row with its own words and exact strings", async () => {
     const items = pairs.map((s, i) => Object.assign(structuredClone(s.value) as Draft, { portfolio_id: `pf_b_${pad(i)}`, name: `Row ${pad(i)}` }));
     const body = { ...structuredClone(canonical), items, total_portfolios: items.length, truncated: false };
-    const { container } = mount(makeApi((_m, path) => (path === "/portfolios" ? { status: 200, body } : undefined)).api, "/deployments/portfolios?sort=name");
+    const { container } = mount(makeApi((_m, path) => (path === "/portfolios" ? { status: 200, body } : undefined)).api, "/deployments/portfolios?sort=name&hide=none");
     await loaded();
     const dom = bodyRows();
     expect(dom).toHaveLength(items.length);
@@ -281,10 +281,11 @@ describe("L1 · matrix B · row states", () => {
       if (tr === undefined) { problems.push(`${it.name}: row missing`); return; }
       const money = cellOf(tr, "Allocated capital");
       if (it.allocated_by_currency.length === 0 && money !== "Not available · no allocation published") problems.push(`${it.name}: empty allocation says "${money}"`);
-      for (const entry of it.allocated_by_currency as Draft[]) if (!money.includes(entry.currency)) problems.push(`${it.name}: ${entry.currency} missing`);
-      if (cellOf(tr, "Owner") !== (it.owner ?? "Not available · owner not published")) problems.push(`${it.name}: owner "${cellOf(tr, "Owner")}"`);
+      // A figure in the row's own base currency prints bare (the identity cell names the base); any other currency keeps its unit.
+      for (const entry of it.allocated_by_currency as Draft[]) if (entry.currency !== it.base_currency && !money.includes(entry.currency)) problems.push(`${it.name}: ${entry.currency} missing`);
+      if (cellOf(tr, "Manager") !== (it.owner ?? "Not available · owner not published")) problems.push(`${it.name}: owner "${cellOf(tr, "Manager")}"`);
       if (domainOf(it.environments) === "mixed" && it.allocated_by_currency.length > 0 && !money.includes("books together")) problems.push(`${it.name}: mixed flag missing`);
-      if (it.state !== "ACTIVE" && cellOf(tr, "State").includes("Active")) problems.push(`${it.name}: ${it.state} drawn as Active`);
+      if (it.state !== "ACTIVE" && cellOf(tr, "Health").includes("Active")) problems.push(`${it.name}: ${it.state} drawn as Active`);
       if (cellOf(tr, "Allocations") !== String(it.allocation_count)) problems.push(`${it.name}: count`);
     });
     expect(problems).toEqual([]);

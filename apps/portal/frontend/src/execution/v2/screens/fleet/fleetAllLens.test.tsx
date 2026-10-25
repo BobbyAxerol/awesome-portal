@@ -58,9 +58,11 @@ function Where() {
   const { pathname, search } = useLocation();
   return <output data-testid="where">{pathname + search}</output>;
 }
+const ALL_COLUMNS = "cols=owner,in-stage,unrealized,balance,equity,source,select,environment";
+const withAllColumns = (entry: string): string => `${entry}${entry.includes("?") ? "&" : "?"}${ALL_COLUMNS}`;
 const mount = (api: ExecutionApi, entry: string) =>
   render(
-    <MemoryRouter initialEntries={[entry]}>
+    <MemoryRouter initialEntries={[withAllColumns(entry)]}>
       <FleetScreen api={api} />
       <Where />
     </MemoryRouter>,
@@ -69,7 +71,7 @@ const where = () => screen.getByTestId("where").textContent ?? "";
 const search = () => new URLSearchParams(where().split("?")[1] ?? "");
 const table = () => screen.getByRole("table", { name: "Alpha fleet" });
 const loaded = async () => screen.findByRole("table", { name: "Alpha fleet" }, SLOW);
-const dataRows = () => within(table()).getAllByRole("row").slice(1);
+const dataRows = () => within(table()).getAllByRole("row").slice(1).filter((row) => !row.classList.contains("exec-cards-group"));
 const cell = (row: HTMLElement, label: string) => row.querySelector(`td[data-l='${label}']`)?.textContent ?? "";
 const isDatasetTable = () => [...table().querySelectorAll("th")].some((th) => th.textContent === "In stage");
 const isLegacyTable = () => [...table().querySelectorAll("th")].some((th) => th.textContent === "Deployments");
@@ -111,23 +113,23 @@ describe("the All lens reads the dataset in ALL mode when it is offered", () => 
     const paper = rowOf("Alpha b-1").find((row) => cell(row, "Environment") === "Paper")!;
     const live = rowOf("Alpha b-1").find((row) => cell(row, "Environment") === "Real-funded")!;
     const sandbox = rowOf("Alpha s-1")[0]!;
-    expect(cell(paper, "Net PnL")).toContain("Paper · USDT");
-    expect(cell(paper, "Net PnL")).toContain("11.5");
-    expect(cell(paper, "Allocation")).toContain("1,000");
-    expect(cell(live, "Net PnL")).toContain("Real-funded · USDT");
-    expect(cell(live, "Net PnL")).toContain("900.125");
-    expect(cell(live, "Net PnL")).not.toContain("Paper");
-    expect(cell(sandbox, "Net PnL")).toContain("Sandbox · USDT");
-    expect(cell(sandbox, "Net PnL")).toContain("3.25");
+    expect(cell(paper, "PNL Amount")).toContain("Paper · USDT");
+    expect(cell(paper, "PNL Amount")).toContain("11.5");
+    expect(cell(paper, "Alloc")).toContain("1,000");
+    expect(cell(live, "PNL Amount")).toContain("Real-funded · USDT");
+    expect(cell(live, "PNL Amount")).toContain("900.125");
+    expect(cell(live, "PNL Amount")).not.toContain("Paper");
+    expect(cell(sandbox, "PNL Amount")).toContain("Sandbox · USDT");
+    expect(cell(sandbox, "PNL Amount")).toContain("3.25");
     // a true zero is printed as zero; an alpha with no allocation says so, it is not a 0
     const zero = rowOf("Alpha l-2")[0]!;
-    expect(cell(zero, "Net PnL")).toMatch(/Real-funded · USDT\s*0/);
-    expect(cell(zero, "Allocation")).toContain("Not available");
+    expect(cell(zero, "PNL Amount")).toMatch(/Real-funded · USDT\s*0/);
+    expect(cell(zero, "Alloc")).toContain("Not available");
     // no figure on the screen is a sum over environments or over the one currency
     const text = document.body.textContent ?? "";
     for (const sum of ["908.375", "911.625", "21,500", "21500", "20,500", "1,500"]) expect(text).not.toContain(sum);
     // the partition tag names the basis and the profile on its title, so a cell can be traced
-    const tag = paper.querySelector("td[data-l='Net PnL'] .exec-fleet-part-tag") as HTMLElement;
+    const tag = paper.querySelector("td[data-l='PNL Amount'] .exec-fleet-part-tag") as HTMLElement;
     expect(tag.title).toContain("PAPER");
     expect(tag.title).toContain("TEST_ONLY:net-ledger");
     expect(tag.title).toContain("TEST_ONLY:paper-ledger");
@@ -189,7 +191,7 @@ describe("the All lens reads the dataset in ALL mode when it is offered", () => 
     cleanup();
     const archived = harness(POPULATION);
     mount(archived.api, "/execution/fleet?tab=archived");
-    await screen.findByText(/Not published \(FE-034\)/);
+    await screen.findByText(/Not published: archived list/);
     expect(archived.state.calls).toEqual([]);
   });
 
@@ -237,7 +239,7 @@ describe("FE-CAT-7 · the money columns say where they come from", () => {
     for (const line of ["Real-funded · USDT: basis TEST_ONLY:net-ledger; profile TEST_ONLY:live-ledger", "Paper · USDT: basis TEST_ONLY:net-ledger; profile TEST_ONLY:paper-ledger",
       "Sandbox · USDT: basis TEST_ONLY:net-ledger; profile TEST_ONLY:sandbox-ledger"]) expect(text).toContain(line);
     expect(text).toContain("Allocation: 1 of 1 loaded rows publish a figure");
-    expect(text).toContain("Ownership: not published (FE-CAT-7)");
+    expect(text).toContain("Ownership: not published");
     expect(text).toContain("three figures");
   });
 
@@ -248,7 +250,7 @@ describe("FE-CAT-7 · the money columns say where they come from", () => {
     expect(screen.queryByTestId("env-coverage")).toBeNull();
     expect(screen.queryByText("Environment", { selector: "th" })).toBeNull();
     fireEvent.click(within(screen.getByTestId("money-provenance")).getByRole("button", { name: "Where the money columns come from" }));
-    expect(screen.getByTestId("money-provenance").textContent).toContain("Ownership: not published (FE-CAT-7)");
+    expect(screen.getByTestId("money-provenance").textContent).toContain("Ownership: not published");
   });
 });
 
@@ -257,7 +259,7 @@ describe("the Map over ALL: one partition at a time, environments never on one m
     const { api } = harness(POPULATION);
     mount(api, "/execution/fleet?view=map");
     const map = await screen.findByTestId("fleet-map", {}, SLOW);
-    const buttons = within(map).getAllByRole("button").filter((button) => button.className.includes("segbtn")).map((button) => button.textContent);
+    const buttons = within(within(map).getByRole("group", { name: "Map partition" })).getAllByRole("button").map((button) => button.textContent);
     expect(buttons.sort()).toEqual(["Paper · USDT", "Real-funded · USDT", "Sandbox · USDT"]);
     const tiles = () => within(map).getAllByRole("listitem").filter((item) => item.className.includes("exec-fleet-tile")).length;
     // Real-funded first (published order): only the live alpha with an allocation is drawn; the other 3 rows are of other environments
@@ -288,7 +290,7 @@ describe("when the dataset does not answer ALL, nothing is faked", () => {
     expect(document.querySelector("[data-source='fleet']")?.textContent).toBe("Fleet read · alphas");
     expect(screen.queryByTestId("env-coverage")).toBeNull();
     expect(screen.queryByTestId("money-provenance")).toBeNull();
-    expect(screen.queryByRole("button", { name: "Map" })).toBeNull();
+    expect((screen.getByRole("button", { name: "Map" }) as HTMLButtonElement).disabled).toBe(true);
   });
 
   it("a page answered with another environment's rows is refused, not drawn", async () => {

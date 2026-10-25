@@ -92,7 +92,8 @@ describe("flag off", () => {
     expect(source).toMatch(/const V2Access = import\.meta\.env\.VITE_EXECUTION_V2_SCREENS\s*\?\s*lazy\(\(\) => import\("\.\.\/execution\/v2\/screens\/access"\)\)\s*:\s*null;/);
     expect(source.match(/execution\/v2\/screens\/access/g)).toHaveLength(1);
     expect(source).toMatch(/PROFILE_ACCESS: \{ component: V2Access !== null \? ProfileAccessEntry : ProfileAccess \}/);
-    expect(source).toMatch(/V2Access !== null && isV2Screen\("profile"\) \? <V2Access manage=\{<ProfileAccess \/>\} \/> : <ProfileAccess \/>/);
+    // WP-D passes the shell's resolved default workspace as a prop (`sessionWorkspaceId`), so the element may carry props after `manage`.
+    expect(source).toMatch(/V2Access !== null && isV2Screen\("profile"\) \?\s*\(\s*<>\s*<PageBar \/>\s*<V2Access manage=\{<ProfileAccess \/>\}[^>]*\/>\s*<\/>\s*\) : <ProfileAccess \/>/);
   });
 });
 

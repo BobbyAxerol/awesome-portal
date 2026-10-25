@@ -721,6 +721,34 @@ B1/B2. Addendum này thắng các giới hạn phân vai cũ trong §10.11 và �
   cần Bobby; làm việc độc lập tiếp khi một input nguồn chưa có. Không mở ELP2-11/release bằng
   cách thay định nghĩa gate hoặc đổi người giữ việc.
 
+### 10.14 Complete positive review fixtures (Bobby, 2026-10-23)
+
+Development UI/journey acceptance must not wait for real Edge commissioning.
+This directive supersedes any older instruction that makes a positive fixture
+inherit source-dark/UNMOUNTED status or repeat technical warnings on every panel.
+
+- Default review profile: richly populated, linked data using the complete TS/PM
+  capability catalogue and existing served contracts, not only today's mounted APIs.
+  Synthetic `AVAILABLE`/`COMPLETE`/`FRESH`/`VERIFIED` describe that scenario.
+- Keep fixture origin in the harness/receipt; at most one unobtrusive review
+  indicator if useful. Do not cover the UI with duplicate fixture warnings.
+- Missing/denied/stale/empty/zero/recovery states remain separate explicit test
+  profiles. Never turn real absent facts into fabricated values in the real adapter.
+- One shared identity/economic graph must drive tables, charts, detail pages,
+  back-links and workflow transitions. Use exact arithmetic for financial tie-outs.
+- Fixture and real adapters share DTO validation and consumer ports; source switching
+  must not require rewriting approved components. Fake workflow transitions stay
+  in the fixture adapter, never real command transport.
+- Add typed contracts for true schema gaps; runtime unavailability alone does not
+  justify blank fixtures. Track all catalogue families, even not yet rendered,
+  without claiming their browser acceptance before testing.
+- Density, long text, numbers, chart points, pagination, drawers and narrow widths
+  need browser receipts. Source qualification and production calibration are
+  separate from fixture UI acceptance; neither blocks the other unnecessarily.
+
+Current producer delivery, exact catalogue and Claude assignment:
+[complete positive fixture support](evidence/ELP2-10/COMPLETE_POSITIVE_FIXTURE_SUPPORT_2026-10-23.md).
+
 ### 10.10d R0 Markdown cho Codex (Bobby, 2026-10-21)
 
 Trước khi ghép với Claude, ngoại lệ R0 này được ghi là §10.10c trong các

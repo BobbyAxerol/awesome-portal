@@ -280,9 +280,11 @@ describe("L1 · matrix M · metric x unit x currency x ratio_scale (the metric f
     }))),
   ];
   const states = cartesian(POPULATED, DIMS).map((s) => ({ ...s, value: withComparison(s.value) }));
-  const accept = (p: Record<string, string>) => (p.metric === "RETURN" ? p.unit === "RATIO/null/FRACTION" || p.unit === "RATIO/null/PERCENT" : p.unit === "MONEY/USDT/-");
+  // WP-K: DRAWDOWN is a ratio too, but this base carries positive points (a NAV), which a drawdown never has: no DRAWDOWN shape is accepted here
+  // (the accepted drawdown shapes are judged on their own fixture in managerSeries.wpk.test.ts).
+  const accept = (p: Record<string, string>) => (p.metric === "DRAWDOWN" ? false : p.metric === "RETURN" ? p.unit === "RATIO/null/FRACTION" || p.unit === "RATIO/null/PERCENT" : p.unit === "MONEY/USDT/-");
   it("prints the matrix size", () => {
-    expect(states).toHaveLength(3 * SHAPES.length);
+    expect(states).toHaveLength(4 * SHAPES.length);
     expect(states.filter((s) => accept(s.picks))).toHaveLength(2 + 1 + 1);
   });
   it.each(states.map((s) => [s.name, s] as const))("%s", (_name, state) => {

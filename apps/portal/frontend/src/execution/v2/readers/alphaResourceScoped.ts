@@ -39,15 +39,17 @@ export type ScopedRelation = (typeof ALPHA_SCOPED_RELATIONS)[number];
  * epoch-ms integer (never null), `C` a count (integer OR exact counter string), `L` a liquidity word (MAKER, TAKER or UNKNOWN).
  * Every kind but `I` also admits `null`.
  */
-type Kind = "T" | "D" | "M" | "S" | "I" | "C" | "L";
+type Kind = "T" | "D" | "M" | "S" | "I" | "C" | "L" | "N";
 const LIQUIDITY_SIDES = ["MAKER", "TAKER", "UNKNOWN"] as const;
+/** Package 6: why a scoped row has no `portfolio_name` (a display label joined from the same authorized snapshot; never an access grant). */
+const PORTFOLIO_NAME_REASONS = ["PORTFOLIO_NAME_NOT_READ", "PORTFOLIO_NAME_NOT_PUBLISHED", "PORTFOLIO_NAME_NOT_AUTHORIZED", "PORTFOLIO_NAME_AMBIGUOUS"] as const;
 
 const stamps = (prefix: string, withMs = true): Record<string, Kind> => ({ [prefix]: "S", ...(withMs ? { [`${prefix}_ms`]: "I" } : {}) });
 
 /** The members each relation's row may carry (all optional, all nullable except `I`). `profile_environment` is required on every row. */
 export const SCOPED_ROW_FIELDS: Readonly<Record<ScopedRelation, Readonly<Record<string, Kind>>>> = {
   strategies: { strategy_id: "T", alpha_id: "T", name: "T", version: "T", state: "T", stage: "T", ...stamps("created_at"), ...stamps("updated_at"), deployment_id: "T" },
-  deployments: { deployment_id: "T", strategy_id: "T", account_id: "T", mode: "M", venue: "T", currency: "T", portfolio_id: "T", state: "T", ...stamps("created_at"), ...stamps("updated_at") },
+  deployments: { deployment_id: "T", strategy_id: "T", account_id: "T", mode: "M", venue: "T", currency: "T", portfolio_id: "T", portfolio_name: "T", portfolio_name_reason_code: "N", state: "T", ...stamps("created_at"), ...stamps("updated_at") },
   accounts: { account_id: "T", strategy_id: "T", mode: "M", venue: "T", base_currency: "T", state: "T", ...stamps("created_at"), ...stamps("updated_at"), deployment_id: "T" },
   account_balances: { account_id: "T", currency: "T", total: "D", locked: "D", free: "D", ...stamps("updated_at"), deployment_id: "T" },
   margin_balances: { account_id: "T", instrument_id: "T", currency: "T", ...stamps("updated_at"), deployment_id: "T" },
@@ -55,7 +57,7 @@ export const SCOPED_ROW_FIELDS: Readonly<Record<ScopedRelation, Readonly<Record<
   broker_sync: {},
   venue_accounts: { binding_id: "T", account_id: "T", mode: "M", venue: "T", state: "T", status: "T", ...stamps("created_at"), ...stamps("updated_at"), deployment_id: "T" },
   portfolios: { portfolio_id: "T", name: "T", owner: "T", base_currency: "T", state: "T", ...stamps("created_at"), ...stamps("updated_at"), deployment_id: "T" },
-  portfolio_allocations: { portfolio_id: "T", strategy_id: "T", deployment_id: "T", account_id: "T", mode: "M", venue: "T", currency: "T", allocated_capital: "D", state: "T", ...stamps("created_at"), ...stamps("updated_at") },
+  portfolio_allocations: { portfolio_id: "T", portfolio_name: "T", portfolio_name_reason_code: "N", strategy_id: "T", deployment_id: "T", account_id: "T", mode: "M", venue: "T", currency: "T", allocated_capital: "D", state: "T", ...stamps("created_at"), ...stamps("updated_at") },
   positions: {
     position_id: "T", strategy_id: "T", account_id: "T", mode: "M", venue: "T", instrument_id: "T", side: "T", signed_qty: "D", quantity: "D", avg_px_open: "D",
     avg_px_close: "D", realized_pnl: "D", unrealized_pnl: "D", mark_price: "D", notional: "D", ...stamps("updated_at"), deployment_id: "T",
@@ -287,6 +289,7 @@ function readCell(kind: Kind, value: unknown): ScopedCell | null {
       return n === null ? null : { kind: "integer", value: n };
     }
     case "L": return oneOf(value, LIQUIDITY_SIDES) === null ? null : { kind: "text", text: value as string };
+    case "N": return oneOf(value, PORTFOLIO_NAME_REASONS) === null ? null : { kind: "text", text: value as string };
     case "C": {
       if (typeof value === "string") return value.length <= 20 && COUNTER.test(value) ? { kind: "counter", exact: value } : null;
       const n = integer(value);
@@ -307,6 +310,9 @@ function readRow(relation: ScopedRelation, value: unknown): ScopedRow | null {
     if (cell === null) return null;
     cells[key] = cell;
   }
+  // Package 6: a stated portfolio name carries no reason, and a name that is stated absent says why (a legacy row states neither key).
+  const name = cells.portfolio_name, reason = cells.portfolio_name_reason_code;
+  if (name !== undefined && reason !== undefined && (name.kind === "text") === (reason.kind === "text")) return null;
   return { book: rowBook, cells };
 }
 

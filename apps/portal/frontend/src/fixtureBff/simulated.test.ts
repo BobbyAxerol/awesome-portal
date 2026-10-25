@@ -93,7 +93,7 @@ describe("account 360 resource", () => {
 
   it("display names ride the rows that already name the ids", () => {
     const view = readAccountView(core, "acc_bnc_core");
-    expect(view.names.portfolios).toEqual({ pf_core: "Core" });
+    expect(view.names.portfolios).toEqual({ pf_core: "Core", pf_satellite: "Satellite", pf_canary: "Canary" }); // WP-F2 names the two other sleeves' portfolios
     expect(view.names.deployments).toEqual({ dep_btc_live: "BTC Trend live" });
     expect(view.names.alphas).toEqual({ btc_trend: "BTC Trend" });
   });
@@ -108,7 +108,13 @@ describe("account drawdown series", () => {
     expect(drawdown.metric).toBe("drawdown");
     const series = drawdown.series[0]!;
     expect(series.currency).toBeNull();
-    expect(series.points.map(([, v]) => v)).toEqual(["0.000000", "0.000000", null, "0.000000", "-0.006932", "0.000000"]);
+    // WP-F2: a 90-day daily series. The first point is its own peak (a true zero), day 41 is a published gap, a dip is negative, and no value is positive.
+    const values = series.points.map(([, v]) => v);
+    expect(values).toHaveLength(90);
+    expect(values[0]).toBe("0.000000");
+    expect(values[41]).toBeNull();
+    expect(values.filter((v) => v !== null && v.startsWith("-")).length).toBeGreaterThan(10);
+    expect(values.every((v) => v === null || /^-?\d+\.\d{6}$/.test(v))).toBe(true);
     expect(series.points.map(([t]) => t)).toEqual(equity.map(([t]) => t));
     expect(equity.at(-1)![1]).toBe("88200.00");
   });
@@ -117,9 +123,10 @@ describe("account drawdown series", () => {
 describe("blotter order row", () => {
   it("carries its deployment, average fill price and fee with the fee's own currency", () => {
     const order = readBlotter(readProfileEnvelope(ask("/screens/blotter", ON))!)!.orders[0]!;
-    expect(order.deploymentId).toBe("dep_btc_live");
-    expect(order.averageFillPrice).toEqual({ kind: "value", text: "61250.40" });
-    expect(order.fee).toEqual({ kind: "value", text: "12.35" });
+    expect(order.deploymentId).toBe("dep_btc_paper");
+    // WP-F2: the average price and the fee come from the order's own published fills (see blotterSimulated.test.ts).
+    expect(order.averageFillPrice.kind).toBe("value");
+    expect(order.fee.kind).toBe("value");
     expect(order.feeCurrency).toBe("USDT");
   });
 });

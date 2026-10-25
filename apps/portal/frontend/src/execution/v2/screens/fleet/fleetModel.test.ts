@@ -61,7 +61,7 @@ describe("fixture to model", () => {
   it("derives the KPI strip from the summary counts only", () => {
     const kpis = fleetKpis(envelope.summary!);
     expect(kpis.map((k) => [k.id, k.value])).toEqual([
-      ["alphas", 1], ["deployments", 1], ["portfolios", 1], ["attention", 0], ["research", 0],
+      ["alphas", 1], ["deployments", 1], ["portfolios", 1], ["attention", 0], ["exit-review", null], ["archive", null], ["research", 0],
     ]);
     expect(JSON.stringify(kpis)).not.toMatch(/USDT|pnl|alloc/i);
   });
@@ -115,13 +115,13 @@ describe("words", () => {
     expect(stageLabel("LIVE_CANARY")).toBe("Live canary");
     expect(humanize("SOURCE_LATEST_WINDOW")).toBe("Source latest window");
   });
-  it("Not published always names the FE id", () => {
-    expect(notPublished(FE.compare)).toBe("Not published (FE-033)");
-    expect(notPublished(FE.archived)).toBe("Not published (FE-034)");
-    expect(notPublished(FE.window)).toBe("Not published (FE-025)");
-    expect(notPublished(FE.map)).toBe("Not published (FE-035)");
-    expect(notPublished(FE.group)).toBe("Not published (FE-012)");
-    expect(notPublished(FE.readiness)).toBe("Not published (FE-027, FE-028)");
+  it("Not published names the fact in words, never a ticket id", () => {
+    expect(notPublished(FE.compare)).toBe("Not published: compare");
+    expect(notPublished(FE.archived)).toBe("Not published: archived list");
+    expect(notPublished(FE.window)).toBe("Not published: window");
+    expect(notPublished(FE.map)).toBe("Not published: map");
+    expect(notPublished(FE.group)).toBe("Not published: group by");
+    expect(notPublished(FE.readiness)).toBe("Not published: readiness");
   });
 });
 
@@ -243,7 +243,7 @@ describe("boardColumns", () => {
     expect(boardColumns(rows, null, ["paper"]).map((c) => c.code)).toEqual(["PAPER"]);
   });
 
-  it("states the readiness gap as FE-027", () => {
-    expect(notPublished(BOARD_READINESS)).toBe("Not published (FE-027)");
+  it("states the readiness gap in words", () => {
+    expect(notPublished(BOARD_READINESS)).toBe("Not published: readiness");
   });
 });

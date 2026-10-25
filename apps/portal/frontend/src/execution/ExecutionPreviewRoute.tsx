@@ -7,7 +7,7 @@
  * not published render a typed unavailable state instead.
  */
 import { Fragment, Suspense, lazy, useEffect, useLayoutEffect, useMemo, type ReactNode } from "react";
-import { Navigate, useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { Navigate, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import {
   CommandCenterSnapshotContainer,
 } from "./screens/profileContainers";
@@ -66,6 +66,8 @@ const V2ExitReviewsRedirect = import.meta.env.VITE_EXECUTION_V2_SCREENS
   : null;
 const V2Cockpit = import.meta.env.VITE_EXECUTION_V2_SCREENS ? lazy(() => import("./v2/screens/cockpit")) : null;
 const V2Operations = import.meta.env.VITE_EXECUTION_V2_SCREENS ? lazy(() => import("./v2/screens/operations")) : null;
+// WP-B: the routed incident page. The drawer over the queue (`?peek=1`) stays the in-queue peek; the bare route is the page.
+const V2Incident = import.meta.env.VITE_EXECUTION_V2_SCREENS ? lazy(() => import("./v2/screens/operations/IncidentPage")) : null;
 const V2Overview = import.meta.env.VITE_EXECUTION_V2_SCREENS ? lazy(() => import("./v2/screens/overview")) : null;
 const V2Blotter = import.meta.env.VITE_EXECUTION_V2_SCREENS ? lazy(() => import("./v2/screens/blotter")) : null;
 const V2Admin = import.meta.env.VITE_EXECUTION_V2_SCREENS ? lazy(() => import("./v2/screens/admin")) : null;
@@ -210,15 +212,15 @@ export function cockpitClearSearch(search: URLSearchParams | string): string {
   return query === "" ? "" : `?${query}`;
 }
 // The V2 Blotter's orders read has no environment filter (Not published, FE-052): the bar says so instead of looking live.
-const BLOTTER_ENV_LOCK = { reason: "Not published (FE-052). The orders read has no environment filter.", unapplied: true };
+const BLOTTER_ENV_LOCK = { reason: "The orders read has no environment filter.", unapplied: true };
 // The V2 Blotter's orders read takes no window either (FE-025); the screen itself says what it covers
 // ("Current retained window"), so the bar prints that as the fixed window.
-const BLOTTER_WINDOW_LOCK = { reason: "Not published (FE-025). The orders read takes no window.", short: null, effective: "Current retained window" };
+const BLOTTER_WINDOW_LOCK = { reason: "The orders read takes no window.", short: null, effective: "Current retained window" };
 // Operations carries its own Range control and the server takes no window (FE-025): the bar's window says so.
 // No `effective`: a fixed chip would lie once the local Range changes.
-const OPERATIONS_WINDOW_LOCK = { reason: "Operations has its own Range control below. The server takes no window (FE-025).", short: "Own range below" };
+const OPERATIONS_WINDOW_LOCK = { reason: "Operations has its own Range control below. The server takes no window.", short: "Own range below" };
 // The S3 stage screens read one deployment, and none of those reads takes the bar's window: each says what it covers instead.
-const WORKBENCH_WINDOW_LOCK = { reason: "Not published (FE-025). The deployment read takes no window.", short: null, effective: "Published window" };
+const WORKBENCH_WINDOW_LOCK = { reason: "The deployment read takes no window.", short: null, effective: "Published window" };
 const SANDBOX_WINDOW_LOCK = { reason: "The certification run fixes the window", short: null, effective: "Certification run" };
 const CANARY_WINDOW_LOCK = { reason: "The Canary trial fixes the window.", short: null, effective: "Trial window" };
 const LIVE_WINDOW_LOCK = { reason: "Live operations reads from activation.", short: null, effective: "Since activation" };
@@ -230,6 +232,10 @@ export function windowLockFor(screenId: string, context: EnvLockContext = {}, is
   // Overview: its fund series reads (NAV, Net PnL, Return) take the bar's window, so the control is drawn and pressed means followed.
   // `null` is "no lock"; `undefined` would keep the bar's generic "server takes no window" lock.
   if (screenId === "EXECUTION_COMMAND_CENTER_SCREEN" && isV2("overview")) return null;
+  // Portfolios (register and 360): the group figures, NAV series and contributors all take the bar's window, so the control is drawn.
+  if (screenId === "EXECUTION_PORTFOLIO_360_SCREEN" && isV2("portfolios")) return null;
+  // Compare: the one series read takes the bar's window (getManagerSeries `window`), so the control is drawn too.
+  if (screenId === "EXECUTION_COMPARE_SCREEN" && isV2("compare")) return null;
   if (screenId === "EXECUTION_OPERATIONS_QUEUE_SCREEN" && isV2("ops")) return OPERATIONS_WINDOW_LOCK;
   if (screenId === "EXECUTION_FULL_BLOTTER_SCREEN" && isV2("blotter")) return BLOTTER_WINDOW_LOCK;
   if (context.hasDeploymentId !== true) return undefined;
@@ -253,6 +259,12 @@ export interface EnvLockContext {
   hasAlphaId?: boolean;
   /** The stage route carries a deployment id; without one it is a list (the Fleet, or the V1 overview). */
   hasDeploymentId?: boolean;
+}
+/** The canonical URL of the replay alias: the alpha's own route with `tab=replay`, every other param kept. Pure, so the mapping is testable. */
+export function alphaReplayUrl(alphaId: string, search: URLSearchParams | string, hash = ""): string {
+  const next = new URLSearchParams(typeof search === "string" ? search : search.toString());
+  next.set("tab", "replay");
+  return `/deployments/alphas/${encodeURIComponent(alphaId)}?${next.toString()}${hash}`;
 }
 export const PATH_ENV_REASON = "The path sets the environment.";
 /** The reason the S3 stage screens give once they mount: the deployment they read is in one environment. */
@@ -351,6 +363,9 @@ export function ExecutionPreviewRoute({ screenId, profile = null, policy = null,
   const params = useParams();
   const [search] = useSearchParams();
   const navigate = useNavigate();
+  const location = useLocation();
+  // `/deployments/alphas/:alphaId/replay` (WP-C): an alias of the replay tab, redirected to the canonical URL.
+  const isReplayAlias = screenId === "EXECUTION_ALPHA_360_SCREEN" && /\/replay\/?$/.test(location.pathname) && Boolean(params.alphaId);
   // N29: the preview finally owns an HTTP consumer. The registry's delivery
   // profile decides; `?api=http` forces the same-origin BFF for the browser
   // smoke (preview builds only — this route exists only behind the flag).
@@ -535,8 +550,10 @@ export function ExecutionPreviewRoute({ screenId, profile = null, policy = null,
         : <OperationsQueueContainer api={api} requestedOperation={search.get("operation")} />;
       break;
     case "EXECUTION_INCIDENT_DETAIL_SCREEN":
-      content = V2Operations && isV2Screen("ops")
-        ? <Suspense fallback={null}><V2Operations api={api} workspaceId={routeWorkspaceId} incidentId={incidentId} /></Suspense>
+      content = V2Operations && V2Incident && isV2Screen("ops")
+        ? search.get("peek") === "1" || !incidentId
+          ? <Suspense fallback={null}><V2Operations api={api} workspaceId={routeWorkspaceId} incidentId={incidentId} /></Suspense>
+          : <Suspense fallback={null}><V2Incident api={api} workspaceId={routeWorkspaceId} incidentId={incidentId} accessHref={accessHref} /></Suspense>
         : <IncidentDetailContainer api={api} incidentId={incidentId} workspaceId={routeWorkspaceId} />;
       break;
     case "EXECUTION_APPROVAL_INBOX_SCREEN":
@@ -624,7 +641,9 @@ export function ExecutionPreviewRoute({ screenId, profile = null, policy = null,
       // The feature's canonical route (/deployments/alphas, no alphaId) is the
       // fleet list — the entry screen of WF 2a; a row opens the alpha's 360.
       // `archived` is reserved (it is the Fleet's lens, not an alpha): with the Fleet on, the old path lands on `?tab=archived`.
-      content = params.alphaId === "archived" && V2ArchivedRedirect && isV2Screen("fleet")
+      content = isReplayAlias && params.alphaId
+        ? <Navigate replace to={alphaReplayUrl(params.alphaId, search, location.hash)} />
+        : params.alphaId === "archived" && V2ArchivedRedirect && isV2Screen("fleet")
         ? <Suspense fallback={null}><V2ArchivedRedirect /></Suspense>
         : params.alphaId
         ? V2Alpha && isV2Screen("alpha")

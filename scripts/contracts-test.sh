@@ -312,6 +312,7 @@ for input in \
   apps/portal/frontend/e2e/bffScale.ts \
   apps/portal/frontend/e2e/bffSimulated.ts \
   apps/portal/frontend/e2e/bffSimulatedStage.ts \
+  apps/portal/frontend/e2e/bffWorld.ts \
   apps/portal/frontend/src/execution/adapter.ts \
   apps/portal/frontend/src/execution/adminCatalog.fixtures.ts \
   apps/portal/frontend/src/execution/analytics.presentation.fixtures.ts \

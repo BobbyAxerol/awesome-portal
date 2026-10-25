@@ -14,6 +14,7 @@ import { answerManagerFleet, answerManagerSeries } from "../frontend/e2e/bffDoub
 import { answerPortfolios } from "../frontend/e2e/bffDoublePortfolios";
 import type { PositiveAccountBook, PositiveDeploymentFact, PositivePortfolioBook, PositiveRecall } from "../frontend/e2e/bffPositiveMode";
 import { addDecimal, fixtureNowMs, scaled, type AlphaSpec, type DeploymentSpec } from "../frontend/e2e/bffScale";
+import { incidentChildrenBody, lifecycleOf, MARKS, NATIVE_ALPHAS, positionsOf, stageDays, WORLD_ACTORS } from "../frontend/e2e/bffWorld";
 import { legacy, traits } from "./scenario";
 
 // Mutable copies of published JSON templates, confined to this server-only fixture module.
@@ -370,7 +371,7 @@ function aggregate(rows: Draft[]): Draft[] {
     item.metrics.current_nav = metric(template, B, currency);
     item.metrics.return_30d_pct = pctMetric(template, A !== null && N !== null ? pct(toScaled(N), toScaled(A)) : null);
     // The seed carries the group's own rows: with the partition alone every portfolio of one currency drew the same value (all absent).
-    const salt = rows.map((row) => row.row_key).join("|");
+    const salt = (legacy() ? rows.map((row) => row.row_key) : rows.map((row) => row.row_key).sort()).join("|"); // WORLD: order-independent, so the statement of a portfolio and its group state one drawdown
     item.metrics.max_drawdown_pct = pctMetric(template, legacy() && seedOf(key, "group-drawdown", salt) % 5 === 0 ? null : drawdownOf(key, members.length, salt));
     item.metrics.concentration_hhi = pctMetric(template, hhi(members.map((metrics) => metrics.allocation?.availability === "AVAILABLE" ? metrics.allocation.value : null)));
     item.metrics.concentration_hhi.unit = "RATIO";
@@ -508,7 +509,7 @@ function capitalStatements(rows: Draft[]): Draft[] {
     const extra = {
       net_pnl: perf("net_pnl", metric(entry.template, pnl, entry.partition.currency)),
       return_30d_pct: returnMetric,
-      max_drawdown_pct: perf("max_drawdown_pct", pctMetric(entry.template, legacy() && index === 0 ? "0" : drawdownOf(key, "capital"))),
+      max_drawdown_pct: perf("max_drawdown_pct", pctMetric(entry.template, legacy() && index === 0 ? "0" : legacy() ? drawdownOf(key, "capital") : drawdownOf(key, entry.pnl.length, rows.map((row) => row.row_key).sort().join("|")))),
     };
     return { partition: copy(entry.partition), metrics: { ...money, ...extra } };
   });
@@ -1178,46 +1179,16 @@ export function answerReviewManager(method: string, path: string, search: URLSea
 // parameter), datasetAnswer (the rowsFor call and the 404 test), answerReviewManager (one wrapper around datasetAnswer).
 type WpcSurface = string;
 let wpcTemplate: Draft | null = null;
-const WPC_CORE: [string, string] = ["pf_TEST_ONLY_core", "Core"];
-const WPC_SAT: [string, string] = ["pf_TEST_ONLY_satellite", "Satellite"];
-const WPC_CAN: [string, string] = ["pf_TEST_ONLY_canary", "Canary"];
 /** The portfolio ids the Portfolios list publishes for the native (TEST_ONLY) universe; Pilot (empty) has no members and keeps no series. */
 const WPC_PORTFOLIO_IDS = ["pf_TEST_ONLY_core", "pf_TEST_ONLY_satellite", "pf_TEST_ONLY_canary", "pf_TEST_ONLY_yen", "pf_TEST_ONLY_empty"] as const;
 /** The native alphas of the e2e suite (the ids the doubles and the audit open), booked into the TEST_ONLY portfolios. dep_*_01 are the ids the alpha resource double names. */
 // The fixture makes the FIRST row of an environment a true zero (rows.length % 11), so the halted and grid alphas come first: the default audit subjects keep their figures.
 // ===== WP-P begin (linked sleeves: a native deployment is booked on the account its environment and portfolio name)
 /** Live deployments sit on the sleeve of their portfolio (the three sleeves of the shared binding bnc_main@BINANCE); Paper on the paper simulator; Sandbox on the testnet account. */
-const WP_SLEEVE_OF_PORTFOLIO: Readonly<Record<string, string>> = { pf_TEST_ONLY_core: "acc_bnc_core", pf_TEST_ONLY_satellite: "acc_bnc_sat", pf_TEST_ONLY_canary: "acc_bnc_can" };
 const WP_SLEEVE_BINDING = "bnc_main@BINANCE";
 const WP_BINDING_OF_ACCOUNT: Readonly<Record<string, string>> = { acc_bnc_core: WP_SLEEVE_BINDING, acc_bnc_sat: WP_SLEEVE_BINDING, acc_bnc_can: WP_SLEEVE_BINDING, acc_pap_sim: "pap_sim@BINANCE", acc_tn_bnc: "tn_bnc@BINANCE" };
-const wpcDeployment = (...args: Parameters<typeof suiteDeployment>): DeploymentSpec => {
-  const deployment = suiteDeployment(...args);
-  const accountId = deployment.environment === "paper" ? "acc_pap_sim" : deployment.environment === "sandbox" ? "acc_tn_bnc" : WP_SLEEVE_OF_PORTFOLIO[deployment.portfolioId] ?? deployment.accountId;
-  return { ...deployment, accountId };
-};
-// ===== WP-P end
-const WPC_ALPHAS: AlphaSpec[] = [
-  suiteAlpha("alpha_c", "Momentum C", "2.0", "Minh-003", "ATTENTION", [wpcDeployment("dep_c1", "alpha_c", "CANARY", "live", WPC_SAT, "15000", "-125.4", "-18.2", "HALTED")]),
-  suiteAlpha("alpha_d", "Grid D", "0.9", "Bobby-001", "READY", [
-    wpcDeployment("dep_d1", "alpha_d", "SANDBOX", "sandbox", WPC_CAN, "8000", "61.2", "3"),
-    wpcDeployment("dep_d2", "alpha_d", "PAPER", "paper", WPC_SAT, "10000", "-30.75", "8.4"),
-  ]),
-  suiteAlpha("alpha_a", "Carry A", "1.0", "Bobby-001", "READY", [
-    wpcDeployment("dep_live_01", "alpha_a", "LIVE", "live", WPC_CORE, "40000.00", "980.40", "140.40"),
-    wpcDeployment("dep_paper_01", "alpha_a", "PAPER", "paper", WPC_CORE, "20000.00", "-84.20", "0"),
-    wpcDeployment("dep_sandbox_01", "alpha_a", "SANDBOX", "sandbox", WPC_CORE, "10000.00", "-41.6", "12.3", "HALTED"),
-  ]),
-  suiteAlpha("alpha_btc_trend", "BTC Trend", "3.0", "Lan-002", "READY", [
-    wpcDeployment("dep_btc_live", "alpha_btc_trend", "LIVE", "live", WPC_CORE, "80000", "1120.8", "55.4"),
-    wpcDeployment("dep_btc_paper", "alpha_btc_trend", "PAPER", "paper", WPC_CORE, "50000.5", "-125.25", "40.1"),
-    wpcDeployment("dep_btc_sandbox", "alpha_btc_trend", "SANDBOX", "sandbox", WPC_CAN, "12000", "61.2", "3"),
-  ]),
-  suiteAlpha("alpha_b", "Basis B", "1.4", "Lan-002", "READY", [
-    wpcDeployment("dep_b1", "alpha_b", "LIVE", "live", WPC_CORE, "120000", "2150.75", "310.2"),
-    wpcDeployment("dep_b2", "alpha_b", "LIVE", "live", WPC_SAT, "60000", "-98.4", "21.05"),
-    wpcDeployment("dep_b3", "alpha_b", "CANARY", "live", WPC_CORE, "30000", "410.1", "-5.5"),
-  ]),
-];
+/** The native books are the world's (e2e/bffWorld.ts): one source for the deployments, their accounts, their dates and their prices. */
+const WPC_ALPHAS: AlphaSpec[] = NATIVE_ALPHAS;
 const wpcNativeAlpha = (id: string | undefined): boolean => id !== undefined && WPC_ALPHAS.some((alpha) => alpha.id === id);
 const wpcNativePortfolio = (id: string | undefined): boolean => id !== undefined && (WPC_PORTFOLIO_IDS as readonly string[]).includes(id);
 /** The native ids answer from the native books, in whatever environment is asked (an empty environment is a 200 with no rows, never a 404). */
@@ -1286,23 +1257,17 @@ function wpcShapeSeries(entry: Draft, metricName: string, subjectId: string, env
 
 /* ---- ALPHA lifecycle and events: open partition keys of each ALPHA row (register 2c-wpc). Text rides `reason_code` (the WP-A precedent). */
 const DAY_MS = 86_400_000;
-const WPC_ACTORS = ["bjones", "asmith", "lnguyen"] as const;
+const WPC_ACTORS_OLD = ["bjones", "asmith", "lnguyen"] as const;
+const wpcActors = (): readonly string[] => (legacy() ? WPC_ACTORS_OLD : WORLD_ACTORS); // WORLD: the actors are people of the roster
 /** The instant the alpha doubles state as "now" (17 Oct 12:04Z): the lifecycle, the events, the replay's trades and the equity line end here, so they share one window whatever FIXTURE_NOW is. */
 const wpcAnchorMs = (): number => ALPHA_DOUBLE_AS_OF_MS;
 function wpcLifecycleKeys(alphaId: string, template: Draft): Record<string, Draft> {
   const now = wpcAnchorMs();
   const seed = seedOf(alphaId, "wpc-life");
-  const actor = (n: number): string => WPC_ACTORS[(seed + n) % WPC_ACTORS.length]!;
-  const liveDays = 4 + (seed % 17);
-  const canaryDays = 3 + (seed >> 3) % 5;
-  const sandboxDays = 14 + (seed >> 5) % 11;
-  const paperDays = 25 + (seed >> 7) % 20;
-  const liveFrom = now - liveDays * DAY_MS;
-  const canaryFrom = liveFrom - canaryDays * DAY_MS;
-  const sandboxFrom = canaryFrom - sandboxDays * DAY_MS;
-  const paperFrom = sandboxFrom - paperDays * DAY_MS;
-  const r2 = paperFrom - DAY_MS;
-  const r1 = r2 - (8 + (seed >> 9) % 8) * DAY_MS;
+  const actor = (n: number): string => wpcActors()[(seed + n) % wpcActors().length]!;
+  const L = lifecycleOf(alphaId); // WORLD: one stage history per alpha (Fleet days in stage, the stage screens' start dates and this spine read it)
+  const { liveDays, canaryDays, sandboxDays, paperDays } = L;
+  const liveFrom = L.liveFromMs, canaryFrom = L.canaryFromMs, sandboxFrom = L.sandboxFromMs, paperFrom = L.paperFromMs, r2 = L.r2Ms, r1 = L.r1Ms;
   const out: Record<string, Draft> = {};
   const put = (key: string, value: string, unit: string, text: string | null = null): void => {
     const built = plainMetric(template, value, unit);
@@ -1354,11 +1319,30 @@ function wpcAlphaKeys(path: string, search: URLSearchParams, answer: ReviewManag
   if (match === null || answer === null || answer.status !== 200 || search.get("environment") === "ALL") return answer;
   const body = answer.body as Draft;
   const id = decodeURIComponent(match[1]!);
+  // QA2 R2-04: the Max drawdown tile and the drawdown pane are one figure: the tile is the worst point of the alpha's DRAWDOWN series of the same window and book.
+  const worst = wpcWorstDrawdownPercent(id, search);
   for (const row of body.items) {
     const keys = wpcLifecycleKeys(row.alpha_id ?? id, row.metrics.net_pnl);
-    for (const entry of row.economic_partitions) Object.assign(entry.metrics, copy(keys));
+    for (const entry of row.economic_partitions) {
+      Object.assign(entry.metrics, copy(keys));
+      const tile = entry.metrics.max_drawdown_pct;
+      if (worst !== null && tile?.availability === "AVAILABLE") tile.value = worst;
+    }
   }
   return answer;
+}
+/** The lowest point of the alpha's DRAWDOWN series for the window and book of this read, as a percent string (6 places); `null` when the series is not served. */
+function wpcWorstDrawdownPercent(alphaId: string, search: URLSearchParams): string | null {
+  const environment = search.get("environment");
+  const window = search.get("window");
+  if (environment === null || environment === "ALL" || window === JSON.stringify("ALL") || window === "ALL") return null;
+  const query = new URLSearchParams({ environment, metric: "DRAWDOWN", window: window === null ? JSON.stringify("30D") : window.startsWith('"') ? window : JSON.stringify(window),
+    subjects: JSON.stringify([{ subject_type: "ALPHA", subject_id: alphaId }]) });
+  const answer = seriesAnswer("GET", "/manager/series", query, "populated");
+  const entry = answer?.status === 200 ? (answer.body as Draft).series?.[0] : undefined;
+  if (!entry || entry.state !== "AVAILABLE" || !Array.isArray(entry.points) || entry.points.length === 0) return null;
+  const lowest = entry.points.reduce((low: bigint, point: Draft) => { const v = toScaled(point.value); return v < low ? v : low; }, 0n);
+  return lowest === 0n ? "0" : trimmed(lowest / 10n ** 10n, 6);
 }
 /* ---- Trade replay candles (review lane only; the e2e double and its golden are untouched). The double's venue candles drift around 67,200 while
  * the book's trades print up to 67,411, so a fill sat 200 above its candles and stretched the axis. These bars wander (mean-reverting, integer
@@ -1369,8 +1353,8 @@ function wpcCandles(method: string, path: string, search: URLSearchParams): Revi
   const base = answerAlpha(method, path, search);
   const body = base?.body as Draft;
   if (base === null || base.status !== 200 || body?.state !== "READY" || !Array.isArray(body.candles) || body.candles.length === 0) return base;
-  const CENTRE = 6_730_000;
-  let close = 6_722_000;
+  const CENTRE = legacy() ? 6_730_000 : Math.round(Number(MARKS.BTCUSDT) * 100); // WORLD: the candles wander around the one mark of the symbol
+  let close = CENTRE - 8_000;
   body.candles = body.candles.map((candle: Draft, i: number) => {
     const drift = ((i * 37) % 23) - 11;
     const open = close;
@@ -1593,7 +1577,8 @@ function wpkAlphaLifecycle(method: string, path: string, search: URLSearchParams
 /* ---- Operations extras (slice 3): `GET /operations/incidents/{id}/children` and `GET /operations/audit`, FIXTURE_LAB. Deterministic per id (FNV digest).
  * The audit rows are the loaded universe's operations: created at the operation's own time, acknowledged and resolved at stated offsets after it (the
  * triage state decides which exist), by one of three actors from the digest; every acknowledgement and resolution carries `FIXTURE_LAB:receipt-...`. */
-const WPK_ACTORS = ["bjones", "asmith", "lnguyen"] as const;
+const WPK_ACTORS_OLD = ["bjones", "asmith", "lnguyen"] as const;
+const wpkActors = (): readonly string[] => (legacy() ? WPK_ACTORS_OLD : WORLD_ACTORS);
 function wpkOperationsExtras(method: string, path: string, search: URLSearchParams): ReviewManagerResponse | null {
   if (method !== "GET") return null;
   const now = fixtureNowMs();
@@ -1601,6 +1586,12 @@ function wpkOperationsExtras(method: string, path: string, search: URLSearchPara
   const children = /^\/operations\/incidents\/([A-Za-z0-9._:-]{1,191})\/children$/.exec(path);
   if (children !== null) {
     const incidentId = children[1]!;
+    // ===== WP-B begin: the children of an incident are the world's record (e2e/bffWorld.ts), the same one the root and the row links read; an id the world does not hold is not found.
+    if (!legacy()) {
+      const world = incidentChildrenBody(incidentId, workspace);
+      return world === null ? problem(404, "OPERATIONAL_READ_NOT_FOUND", "The incident was not found.") : { status: 200, body: world };
+    }
+    // ===== WP-B end
     const seed = seedOf(incidentId, "wpk-children");
     const body: Draft = { schema_version: "portal.execution.incident-children.v1", workspace_id: workspace, incident_id: incidentId, record_authority: "PORTAL_PROJECTION", read_at_ms: now };
     const mode = legacy() ? seed % 6 : 2 + (seed % 4); // 0: not read (null); 1: no owning source (omitted); else published
@@ -1609,11 +1600,11 @@ function wpkOperationsExtras(method: string, path: string, search: URLSearchPara
     const hour = 3_600_000;
     const sources = ["FINDING", "ALERT", "DEAD_LETTER", "ORDER_TRACE"] as const;
     body.evidence = sources.flatMap((source, i) => Array.from({ length: (seed >>> (i * 3)) % 3 }, (_, n) => ({ source, digest: digest([incidentId, source, n]), label: `${source.replace("_", " ").toLowerCase()} ${n + 1}`, added_at_ms: now - (6 - i + n) * hour })));
-    body.assigned_to = !legacy() || seed % 2 === 0 ? { actor: WPK_ACTORS[seed % 3], assigned_at_ms: now - 5 * hour } : null;
+    body.assigned_to = !legacy() || seed % 2 === 0 ? { actor: wpkActors()[seed % 3], assigned_at_ms: now - 5 * hour } : null;
     const blockers = [...(body.evidence.some((e: Draft) => e.source === "DEAD_LETTER") ? ["OPEN_DEAD_LETTER"] : []), ...(seed % 5 === 0 ? ["UNVERIFIED_ORDER_TRACE"] : [])];
     body.resolution_gate = { eligible: blockers.length === 0, blocker_codes: blockers };
     body.timeline = [{ event_id: `FIXTURE_LAB:${incidentId}:1`, action: "OPENED", actor: null, version_before: null, version_after: 1, at_ms: now - 8 * hour },
-      { event_id: `FIXTURE_LAB:${incidentId}:2`, action: "ACKNOWLEDGED", actor: WPK_ACTORS[(seed >>> 4) % 3], version_before: 1, version_after: 2, at_ms: now - 7 * hour }];
+      { event_id: `FIXTURE_LAB:${incidentId}:2`, action: "ACKNOWLEDGED", actor: wpkActors()[(seed >>> 4) % 3], version_before: 1, version_after: 2, at_ms: now - 7 * hour }];
     const ops = scaled().operations;
     body.linked_operations = ops.length === 0 ? [] : Array.from({ length: 1 + (seed % 3) }, (_, n) => ops[(seed + n * 7) % ops.length]!).filter((op, i, all) => all.findIndex((x) => x.id === op.id) === i)
       .map((op, n) => ({ operation_id: op.id, original_target: legacy() && n % 4 === 3 ? null : { type: op.target[0], id: op.target[1] } }));
@@ -1630,7 +1621,7 @@ function wpkOperationsExtras(method: string, path: string, search: URLSearchPara
       if (incident !== null && seedOf(incident, op.id) % 4 !== 0) continue;
       const created = Date.parse(op.at);
       if (!Number.isFinite(created)) continue;
-      const actor = WPK_ACTORS[seedOf(op.id, "actor") % 3]!;
+      const actor = wpkActors()[seedOf(op.id, "actor") % 3]!;
       const subject = { type: "OPERATION", id: op.id };
       rows.push({ audit_id: `FIXTURE_LAB:${op.id}:created`, at_ms: created, actor, action: "CREATED", subject, receipt_ref: null });
       if (op.triage !== "UNACKNOWLEDGED") rows.push({ audit_id: `FIXTURE_LAB:${op.id}:ack`, at_ms: created + 5 * 60_000, actor, action: "ACKNOWLEDGED", subject, receipt_ref: `FIXTURE_LAB:receipt-${op.id}-ack`, policy_revision: "FIXTURE_LAB:policy-4" });
@@ -1809,7 +1800,7 @@ function wpkSiblings(method: string, path: string, search: URLSearchParams, _req
     const state = (["APPLIED", "VERIFIED", "VERIFIED", "DENIED"] as const)[seed % 4]!;
     const body: Draft = { ...head("command-receipt"), operation_id: operationId, command_key: "allocation/increase", request_key: `FIXTURE_LAB:req-${operationId}`, state,
       side_effect: state === "DENIED" ? { source_request_sent: false, relay: "DISABLED" } : { source_request_sent: true, relay: "RELAYED" } };
-    if (state !== "DENIED") body.receipt = { receipt_ref: `FIXTURE_LAB:receipt-${operationId}`, content_hash: digest(["FIXTURE_LAB:receipt", operationId]), issued_at_ms: T(2), issued_by: WPK_ACTORS[seed % 3]!,
+    if (state !== "DENIED") body.receipt = { receipt_ref: `FIXTURE_LAB:receipt-${operationId}`, content_hash: digest(["FIXTURE_LAB:receipt", operationId]), issued_at_ms: T(2), issued_by: wpkActors()[seed % 3]!,
       what_changes: "Allocation changes as the request stated; nothing else.", verification: state === "VERIFIED" ? { result: "SUCCEEDED", verified_at_ms: T(1) } : { result: "PENDING", verified_at_ms: null } };
     return ok(body);
   }
@@ -1821,10 +1812,10 @@ function wpkSiblings(method: string, path: string, search: URLSearchParams, _req
     const seed = seedOf(type, id, "wpk-controls"), m = mode(type, id);
     return ok(sections(head("controls"), ["locks", "trading_state"], m, () => {
       const locks = Array.from({ length: seed % 3 }, (_, i) => ({ lock_id: `FIXTURE_LAB:lock-${id}-${i + 1}`, scope: { type, id }, revision: 1 + (seed >>> (i + 3)) % 5, state: i === 0 ? "ACTIVE" : "RELEASED",
-        set_at_ms: T(30 + i * 20), set_by: WPK_ACTORS[(seed + i) % 3]!, reason_code: i === 0 ? "RISK_REVIEW" : null }));
+        set_at_ms: T(30 + i * 20), set_by: wpkActors()[(seed + i) % 3]!, reason_code: i === 0 ? "RISK_REVIEW" : null }));
       const reducing = seed % 4 === 0;
       return { locks, trading_state: { state: reducing ? "REDUCING" : "ACTIVE", since_ms: T(reducing ? 3 : 48),
-        history: reducing ? [{ state: "REDUCING", at_ms: T(3), actor: WPK_ACTORS[seed % 3]!, reason_code: "LIMIT_WARN" }, { state: "ACTIVE", at_ms: T(48), actor: null, reason_code: null }] : [{ state: "ACTIVE", at_ms: T(48), actor: null, reason_code: null }] } };
+        history: reducing ? [{ state: "REDUCING", at_ms: T(3), actor: wpkActors()[seed % 3]!, reason_code: "LIMIT_WARN" }, { state: "ACTIVE", at_ms: T(48), actor: null, reason_code: null }] : [{ state: "ACTIVE", at_ms: T(48), actor: null, reason_code: null }] } };
     }));
   }
   if (path === "/obligations") {
@@ -1906,7 +1897,7 @@ function wpkSiblings(method: string, path: string, search: URLSearchParams, _req
     const seed = seedOf(sub.type, sub.id, "wpk-report"), m = mode(sub.type, sub.id);
     return ok(sections({ ...head("report-snapshots"), subject: sub }, ["items"], m, () => ({ items: Array.from({ length: seed % 4 }, (_, i) => ({
       report_id: `FIXTURE_LAB:rep-${sub.id}-${i + 1}`, content_hash: digest(["FIXTURE_LAB:report", sub.id, i]), source_cut: { as_of_ms: T(24 * (i + 1)), revision: digest(["FIXTURE_LAB:cut", sub.id, i]) },
-      created_at_ms: T(24 * (i + 1)) + 5000, created_by: i % 2 === 0 ? WPK_ACTORS[seed % 3]! : null })) })));
+      created_at_ms: T(24 * (i + 1)) + 5000, created_by: i % 2 === 0 ? wpkActors()[seed % 3]! : null })) })));
   }
   if (path === "/recovery-events") {
     const sub = subject("INCIDENT", "inc_fixture"); if (sub === null) return invalid;
@@ -1941,8 +1932,11 @@ function wpkStageEntry(body: Draft): void {
     if (row.current_stage === null || row.current_stage === undefined) { row.stage_lifecycle_reasons = { ...reasons, entered_at_ms: "STAGE_ENTRY_TIME_NOT_PUBLISHED", days_in_stage: "STAGE_ENTRY_TIME_NOT_PUBLISHED" }; continue; }
     const seed = seedOf(row.row_key, "wpk-stage-entry");
     if (legacy() && seed % 9 === 0) { row.entered_at_ms = null; row.days_in_stage = null; row.stage_lifecycle_reasons = { ...reasons, entered_at_ms: "STAGE_ENTRY_TIME_NOT_PUBLISHED", days_in_stage: "STAGE_ENTRY_TIME_NOT_PUBLISHED" }; continue; }
-    const days = 1 + (seed % 45);
-    row.entered_at_ms = body.as_of_ms - days * day - ((seed >>> 8) % day);
+    // WORLD: the days in the current stage are the alpha's own stage history (the spine of Alpha 360 and the stage screens read the same record)
+    const stageKey = String(row.current_stage).toLowerCase();
+    const known = ["paper", "sandbox", "canary", "live"].includes(stageKey) && !legacy();
+    const days = known ? stageDays(String(row.alpha_id), stageKey as "live") : 1 + (seed % 45);
+    row.entered_at_ms = body.as_of_ms - days * day - (known ? 0 : (seed >>> 8) % day);
     row.days_in_stage = days;
     row.stage_lifecycle_reasons = { ...reasons, entered_at_ms: null, days_in_stage: null };
   }
@@ -2027,12 +2021,12 @@ export function wpAlphaResource(body: unknown, alphaId: string): unknown {
   out.data.portfolio_allocations = own.map((deployment) => ({ ...first(data.portfolio_allocations), portfolio_id: deployment.portfolioId, strategy_id: alphaId, deployment_id: deployment.id,
     account_id: deployment.accountId, allocated_capital: deployment.allocation, currency: deployment.currency, ...profile }));
   const allocation = own.reduce((sum, deployment) => sum + cents(deployment.allocation), 0n);
-  const unrealized = own.reduce((sum, deployment) => sum + cents(deployment.unrealized), 0n);
-  const long = unrealized * 7n / 10n;
+  void allocation;
   const lead = own[0]!;
-  const position = (id: string, instrument: string, side: string, quantity: string, notional: bigint, pnl: bigint): Draft => ({ ...first(data.positions), position_id: id, strategy_id: alphaId, deployment_id: lead.id,
-    account_id: lead.accountId, mode: environment, venue: lead.venue, instrument_id: instrument, side, quantity, signed_qty: side === "SHORT" ? `-${quantity}` : quantity, notional: text(notional), unrealized_pnl: text(pnl), currency: lead.currency, ...profile });
-  out.data.positions = [position(`pos_${alphaId}_btc`, "BTCUSDT", "LONG", "0.91", allocation * 55n / 100n, long), position(`pos_${alphaId}_eth`, "ETHUSDT", "SHORT", "12.5", allocation * 30n / 100n, unrealized - long)];
+  // WORLD: the positions are the deployments' own, at the one mark per symbol, adding up to each deployment's unrealized PnL
+  out.data.positions = own.flatMap((deployment) => positionsOf(deployment.id).map((p): Draft => ({ ...first(data.positions), position_id: p.id, strategy_id: alphaId, deployment_id: deployment.id,
+    account_id: deployment.accountId, mode: environment, venue: deployment.venue, instrument_id: p.symbol, side: p.side.toUpperCase(), quantity: p.quantity, signed_qty: p.side === "short" ? `-${p.quantity}` : p.quantity,
+    avg_px_open: p.entry, mark_price: p.mark, notional: p.notional, unrealized_pnl: p.unrealised, currency: deployment.currency, ...profile })));
   out.data.reconciliation = (Array.isArray(data.reconciliation) ? data.reconciliation : []).map((row: Draft) => ({ ...row, deployment_id: lead.id, account_id: lead.accountId }));
   if (out.data.alpha && typeof out.data.alpha === "object") {
     Object.assign(out.data.alpha, { alpha_id: alphaId, alpha_label: spec.label, version: spec.version, owner: spec.owner, portfolios: portfolios.map(([id, name]) => ({ portfolio_id: id, name, base_currency: own[0]!.currency })) });

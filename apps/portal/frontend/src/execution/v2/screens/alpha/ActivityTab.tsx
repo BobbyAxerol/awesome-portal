@@ -12,20 +12,22 @@
  * feed carries no actor column. Stage bands are where each stage published a
  * daily close, not a lifecycle history.
  */
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 
 import { PanelState } from "../../../components/states";
 import type { ObservedEntry, ObservedTimeline } from "../../../api/observedTimeline";
 import { readUtcEpochMs } from "../../../screenDataContract";
 import { readDecimal } from "../../boundary";
-import { ChartTools, EquityPanel, EventKindChips, EventRibbon, domainOfSeries, type ChartDomain, type EventKind } from "../../charts";
+import { ChartTools, EquityPanel } from "../../charts";
 import { EventFeed, SectionPanel, type EventFeedRow } from "../../blocks";
 import { ENV_LABEL, type ExecEnv } from "../../urlState";
-import { ROW_CAP, feedKind, orderFlag, ribbonEvents, stageBands, type EquityPanelInput, type StagePath } from "./model";
+import { ROW_CAP, feedKind, orderFlag, type EquityPanelInput, type StagePath } from "./model";
+import { lifeFeedRows, type LifeEvent, type StageSpan } from "./lifecycleModel";
+import { useRibbon } from "./ribbonModel";
 import { Np } from "./np";
 import type { PagedRead, SubjectBook } from "./useAlphaReads";
-import type { UtcEpochMs } from "../../../screenDataContract";
+import type { EventKind } from "../../charts";
 
 /** `type=` values the legacy Sessions and Audit tabs map to (`tabAliases.ts`). */
 const TYPE_FILTERS = [
@@ -63,40 +65,24 @@ export interface ActivityTabProps {
   paths: readonly StagePath[];
   timeline: PagedRead<ObservedTimeline>;
   book: SubjectBook;
+  /** The dataset's published lifecycle events (WP-C keys); empty with every kind missing when the dataset carries none. */
+  life?: { events: readonly LifeEvent[]; missing: readonly EventKind[]; spans?: readonly StageSpan[]; future?: number };
 }
 
-export function ActivityTab({ env, alphaLabel, inputs, paths, timeline, book }: ActivityTabProps) {
+const NO_LIFE = { events: [] as readonly LifeEvent[], missing: ["stage", "decision", "incident", "recall", "flow"] as readonly EventKind[] };
+
+export function ActivityTab({ env, alphaLabel, inputs, paths, timeline, book, life = NO_LIFE }: ActivityTabProps) {
   const [params, setParams] = useSearchParams();
   const typeId = params.get("type") ?? "all";
   const filter = TYPE_FILTERS.find((f) => f.id === typeId) ?? TYPE_FILTERS[0];
-  const [lanes, setLanes] = useState<Partial<Record<EventKind, boolean>>>({});
-
-  const entries: readonly ObservedEntry[] = useMemo(
-    () => (timeline.read.phase === "ready" ? timeline.read.value.flatMap((page) => page.timeline.entries) : []),
-    [timeline.read],
-  );
-  const seen = useMemo(() => {
-    const keys = new Set<string>();
-    return entries.filter((e) => (keys.has(e.key) ? false : (keys.add(e.key), true)));
-  }, [entries]);
-
   const lead = inputs[0] ?? null;
-  const seriesDomain = lead === null ? null : domainOfSeries(lead.points);
-  const entryDomain: ChartDomain | null = useMemo(() => {
-    const times = seen.map((e) => readUtcEpochMs(e.observedAtMs)).filter((t): t is UtcEpochMs => t !== null);
-    return times.length < 2 ? null : { from: times.reduce((a, b) => (b < a ? b : a)), to: times.reduce((a, b) => (b > a ? b : a)) };
-  }, [seen]);
-  const domain = seriesDomain ?? entryDomain;
-  const events = useMemo(() => ribbonEvents(seen), [seen]);
-  const bands = useMemo(() => stageBands(paths), [paths]);
-  const ribbonState = timeline.read.phase === "error" ? ({ kind: "unavailable", copy: "Not available", reason: timeline.read.reason } as const)
-    : timeline.read.phase === "ready" && timeline.read.value[0]?.timeline.state === "PARTIAL"
-      ? ({ kind: "partial", reason: timeline.read.value[0].timeline.reasonCode ?? "The source marked the timeline partial." } as const)
-      : ({ kind: "ready" } as const);
+  const rb = useRibbon(timeline, life, paths, lead);
+  const seen = rb.seen;
+  const domain = rb.domain;
 
   const rows: EventFeedRow[] = useMemo(() => {
     const filtered = seen.filter((e) => filter.match === null || e.observationType === filter.match);
-    return [...filtered]
+    const observed = [...filtered]
       .sort((a, b) => b.observedAtMs - a.observedAtMs || a.key.localeCompare(b.key))
       .slice(0, ROW_CAP)
       .flatMap((entry): EventFeedRow[] => {
@@ -112,20 +98,19 @@ export function ActivityTab({ env, alphaLabel, inputs, paths, timeline, book }: 
           outcome: outcomeOf(entry, book),
         }];
       });
-  }, [seen, filter, book, alphaLabel]);
+    // The dataset's lifecycle events (stage moves, decisions, incidents, recalls, capital flows) sit beside the observed rows under All, newest first, with the actor as published.
+    const published = filter.match === null ? lifeFeedRows(rb.lifeEvents, alphaLabel) : [];
+    return [...published, ...observed].sort((a, b) => b.at - a.at || a.id.localeCompare(b.id)).slice(0, ROW_CAP);
+  }, [seen, filter, book, alphaLabel, rb.lifeEvents]);
   const filteredTotal = seen.filter((e) => filter.match === null || e.observationType === filter.match).length;
 
   const loading = timeline.read.phase === "loading" || timeline.read.phase === "idle";
-  const ribbon = domain === null ? null : (
-    <EventRibbon label="Events and stages" events={events} domain={domain} stages={bands} enabled={lanes} state={ribbonState} />
-  );
+  const ribbon = rb.ribbon;
 
   return (
     <div className="exec-alp2-stack">
       <SectionPanel title="Equity path" aside={`${ENV_LABEL[env]} book`}>
-        {domain !== null ? (
-          <EventKindChips events={events} domain={domain} enabled={lanes} onToggle={(kind) => setLanes((prev) => ({ ...prev, [kind]: prev[kind] === false }))} />
-        ) : null}
+        {rb.chips}
         {lead === null ? (
           <>
             <PanelState status="unavailable" reason="No equity series is published for this book, so the events have no axis to sit on." />
@@ -152,7 +137,7 @@ export function ActivityTab({ env, alphaLabel, inputs, paths, timeline, book }: 
         <p className="exec-alp2-cap">
           <span>Hatched is simulated, solid is actual</span>
           <span>Stage bands show where each stage published a daily close</span>
-          <span>Stage moves, approvals, incidents, recalls and capital flows: <Np id="FE-031" /></span>
+          {rb.gaps}
         </p>
       </SectionPanel>
 

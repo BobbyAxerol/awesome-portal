@@ -26,7 +26,9 @@
  * asserted by the suite, absence is a typed `NOT_PUBLISHED` fact with a reason code, never a zero.
  */
 
-import { positiveDeploymentFact } from "./bffPositiveMode";
+import { blotterBookOf } from "./bffDoubleOverview";
+import { isPositiveMode, positiveDeploymentFact } from "./bffPositiveMode";
+import { DAY_MS as WORLD_DAY_MS, deploymentOf, fromCents as worldCents, grossNotional, lifecycleOf, netPnlOf, netPnlSeries, positionsOf, toCents as worldToCents, workingOrdersOf, WORLD_NOW_MS } from "./bffWorld";
 
 type Obj = Record<string, unknown>;
 const isObj = (value: unknown): value is Obj => typeof value === "object" && value !== null && !Array.isArray(value);
@@ -85,6 +87,21 @@ const STAGE_OF: Readonly<Record<string, DeploymentStage>> = {
   dep_sandbox_01: "sandbox", dep_d1: "sandbox", dep_btc_sandbox: "sandbox",
   dep_paper_01: "paper", dep_d2: "paper", dep_a1: "paper", dep_btc_paper: "paper",
 };
+/** The Canary deployment a live deployment was promoted from (its predecessor envelope is THAT deployment's). */
+const PREDECESSOR: Readonly<Record<string, string>> = { dep_live_01: "dep_canary_01", dep_btc_live: "dep_canary_01", dep_b1: "dep_b3", dep_b2: "dep_b3" };
+/**
+ * The canary deployment a live deployment was promoted from: in the canonical world the alpha's OWN deployment in the Canary stage; `null` when the
+ * alpha has none (its trial ended without a deployment of its own on record: no predecessor is claimed, never another alpha's).
+ */
+export function predecessorCanary(deploymentId: string): string | null {
+  const base = baseDeploymentId(deploymentId);
+  if (isPositiveMode()) {
+    const found = deploymentOf(WORLD_ALIAS[base] ?? base);
+    if (found !== null) return found.alpha.deployments.find((x) => x.stage === "CANARY")?.id ?? null;
+  }
+  return PREDECESSOR[base] ?? base;
+}
+
 /** The stage of a deployment id; an id the universe does not know is taken to be in the stage of the screen that asked. */
 export function stageOf(deploymentId: string, asked: DeploymentStage): DeploymentStage {
   return STAGE_OF[baseDeploymentId(deploymentId)] ?? positiveDeploymentFact(baseDeploymentId(deploymentId))?.stage ?? asked; // WP-P: every id the world emits has a lifecycle record
@@ -392,7 +409,7 @@ function canaryLit(body: Obj, deploymentId: string, variant: StageVariant): Obj 
   body.source_figures = sourceFigures({
     equity: { internal: "5112.40", broker: "5112.40", unit: "USDT" },
     gross_notional: { internal: "6100.00", broker: "6100.00", unit: "USDT" },
-    positions: { internal: "1", broker: "1", unit: "COUNT" },
+    positions: { internal: "2", broker: "2", unit: "COUNT" },
     open_orders: { internal: "1", broker: "1", unit: "COUNT" },
     fees: { internal: "4.25", broker: "4.25", unit: "USDT" },
   });
@@ -451,7 +468,7 @@ function canaryLit(body: Obj, deploymentId: string, variant: StageVariant): Obj 
   rb.blocker_codes = halted ? ["ROLLBACK_BLOCKED_BY_HALT"] : [];
   rb.evidence_hash = `sha256:${"c".repeat(64)}`;
   rb.items = [
-    { key: "flatten_plan", ready: avail(true), checked_at: avail(at(-34 * MIN)) },
+    { key: "flatten_plan", ready: avail(!halted), checked_at: avail(at(-34 * MIN)) },
     { key: "paper_twin", ready: avail(true), checked_at: avail(at(-5 * MIN)) },
     { key: "broker_data", ready: avail(!stale), checked_at: avail(brokerAsOf) },
     { key: "rollback_drill", ready: avail(true), checked_at: avail(at(-(6 * DAY_MS + 2 * HOUR_MS + 4 * MIN))) },
@@ -486,6 +503,7 @@ const LIVE_ORDERS: readonly OrderSpec[] = [
 ];
 
 function liveLit(body: Obj, deploymentId: string, variant: StageVariant): Obj {
+  const predecessor = predecessorCanary(deploymentId);
   const mismatch = variant === "mismatch";
   const stale = variant === "stale";
   const gap = variant === "gap";
@@ -508,7 +526,9 @@ function liveLit(body: Obj, deploymentId: string, variant: StageVariant): Obj {
     { kind: "R1_APPROVAL", state: "AVAILABLE", value: "AP-118", href: "/governance/approvals?sel=AP-118" },
     { kind: "R2_APPROVAL", state: "AVAILABLE", value: "AP-152", href: "/governance/approvals?sel=AP-152" },
     { kind: "SANDBOX_EXIT", state: "AVAILABLE", value: "SX-14", href: `/deployments/sandbox/${encodeURIComponent(baseDeploymentId(deploymentId))}` },
-    { kind: "CANARY_ENVELOPE", state: "AVAILABLE", value: "cenv_FIXTURE_LAB_1", href: `/deployments/live/${encodeURIComponent(baseDeploymentId(deploymentId))}/canary` },
+    predecessor === null
+      ? { kind: "CANARY_ENVELOPE", state: "UNAVAILABLE", value: null, href: null }
+      : { kind: "CANARY_ENVELOPE", state: "AVAILABLE", value: "cenv_FIXTURE_LAB_1", href: `/deployments/live/${encodeURIComponent(predecessor)}/canary` },
     { kind: "CANARY_EXIT", state: "UNAVAILABLE", value: null, href: null },
     { kind: "LIVE_DUAL_APPROVAL", state: "AVAILABLE", value: "AP-402", href: "/governance/approvals" },
   ];
@@ -579,9 +599,12 @@ function liveLit(body: Obj, deploymentId: string, variant: StageVariant): Obj {
   );
   (body.realtime as Obj).blocker_codes = ["REALTIME_INACTIVE"];
   // The canary envelope that governed the trial before this activation: promoted, so Active for Live.
-  const predecessor = body.predecessor_canary_envelope as Obj;
-  predecessor.status = "ACTIVE";
-  predecessor.active_for_live_full = true;
+  if (predecessor === null) body.predecessor_canary_envelope = null;
+  else {
+    const envelope = body.predecessor_canary_envelope as Obj;
+    envelope.status = "ACTIVE";
+    envelope.active_for_live_full = true;
+  }
   body.open_order_footer = { envelope: panel("open-order-footer", "EXECUTION", "ready", "FRESH", AS_OF), exact_open_order_count: 2 };
   body.incidents = {
     envelope: panel("incidents", "EXECUTION", mismatch ? "ready" : "empty", "FRESH", AS_OF),
@@ -724,16 +747,193 @@ export function simulateStage(path: string, answerBody: unknown): Obj | null {
   if (variant === "dark") return null;
   // A stage page the deployment has not reached is not lit: the published dark body stands (typed absence), whatever the URL says.
   if (!reached(stageOf(id, kind), kind)) return null;
+  // The Canary page of a deployment that is already Live would have to show a finished trial of ITS OWN: no world source carries one, so it is
+  // typed (the published dark body); the way to the trial is the predecessor link of the Live page, which names the canary deployment itself.
+  if (kind === "canary" && stageOf(id, kind) === "live") return null;
   const schema = answerBody.schema_version;
   const body = clone(answerBody);
   switch (kind) {
     case "canary":
-      return schema === "execution.canary-control-room.v1" ? canaryLit(body, id, variant) : null;
+      return schema === "execution.canary-control-room.v1" ? worldStage(kind, canaryLit(body, id, variant), id, variant) : null;
     case "live":
-      return schema === "execution.live-full-operations.v1" ? liveLit(body, id, variant) : null;
+      return schema === "execution.live-full-operations.v1" ? worldStage(kind, liveLit(body, id, variant), id, variant) : null;
     case "sandbox":
-      return schema === "governance.sandbox-certification.v1" ? sandboxLit(body, id, variant) : null;
+      return schema === "governance.sandbox-certification.v1" ? worldStage(kind, sandboxLit(body, id, variant), id, variant) : null;
     case "paper":
-      return paperLit(body, id, variant, seg[3] === "vn-market");
+      return worldStage(kind, paperLit(body, id, variant, seg[3] === "vn-market"), id, variant);
   }
 }
+
+// ===== WP-P begin (the stage bodies state the WORLD's facts: ONE account, allocation, dates, positions at one mark, orders, series per deployment)
+/**
+ * In the positive-like scenarios the lit bodies above keep their structure, variants and typed absences, and the FACTS in them are replaced by the
+ * world's (e2e/bffWorld.ts): the account the deployment is booked on, its allocation (Capital), the dates of its stage, the positions it holds at the
+ * one mark per symbol, its working orders, the gross notional that is the sum of those positions, the equity that is allocation + realized + unrealized,
+ * and a net PnL series that ends on realized + unrealized. A deployment the world does not hold keeps the body as it was.
+ */
+function worldStage(kind: "canary" | "live" | "sandbox" | "paper", body: Obj | null, deploymentId: string, variant: StageVariant): Obj | null {
+  if (body === null || !isPositiveMode()) return body;
+  const found = deploymentOf(WORLD_ALIAS[baseDeploymentId(deploymentId)] ?? baseDeploymentId(deploymentId));
+  if (found === null) return body;
+  const { alpha, deployment: d } = found;
+  const life = lifecycleOf(alpha.id);
+  const stale = variant === "stale";
+  const mismatch = variant === "mismatch";
+  const halted = variant === "halted";
+  const asOf = stale ? AS_OF_STALE : AS_OF;
+  const iso = (ms: number): string => new Date(ms).toISOString();
+  const alloc = worldToCents(d.allocation);
+  const net = netPnlOf(d);
+  const equity = worldCents(alloc + net);
+  const trialEnded = kind === "canary" && stageOf(deploymentId, "canary") === "live"; // the Canary page of a deployment that is Live now: a finished trial holds nothing open
+  const gross = trialEnded ? "0.00" : grossNotional(d.id);
+  const positions = (trialEnded ? [] : positionsOf(d.id)).map((p) => ({ id: p.id, symbol: p.symbol, side: p.side, quantity: p.quantity, entry: p.entry, mark: p.mark, unrealised: p.unrealised })) as PositionSpec[];
+  const orders = (trialEnded ? [] : workingOrdersOf(d.id)).map((o) => ({ id: o.id, symbol: o.symbol, type: o.type, side: o.side, quantity: o.quantity, price: o.price, status: o.status, since: iso(o.sinceMs) })) as OrderSpec[];
+  const fees = worldCents(alloc * 10n / 10_000n);
+  const figures = (brokerEquity: boolean) => sourceFigures({
+    equity: { internal: equity, broker: brokerEquity ? equity : null, unit: "USDT" },
+    gross_notional: { internal: gross, broker: brokerEquity ? gross : null, unit: "USDT" },
+    positions: { internal: String(positions.length), broker: brokerEquity ? String(positions.length) : null, unit: "COUNT" },
+    open_orders: { internal: String(orders.length), broker: brokerEquity ? String(orders.length) : null, unit: "COUNT" },
+    fees: { internal: fees, broker: brokerEquity ? fees : null, unit: "USDT" },
+  });
+  const seriesTo = stale ? Date.parse(AS_OF_STALE) : NOW_MS - 4 * MIN;
+  const dailyOf = (values: { value: string }[], back: number): string => canonicalDecimal(worldCents(worldToCents(values[values.length - 1]!.value) - worldToCents(values[Math.max(0, values.length - 1 - back)]!.value)));
+  const setKpis = (values: Record<string, string | null>): void => {
+    body.kpis = (body.kpis as Obj[]).map((k) => ({ ...k, value: values[String(k.key)] ?? null }));
+  };
+  const withIdentityOf = (target: unknown): void => {
+    if (!isObj(target)) return;
+    target.account_id = d.accountId;
+    if ("external_account_ref" in target) target.external_account_ref = d.accountId;
+    if (isObj(target.account_binding)) { target.account_binding.account_id = d.accountId; if ("external_account_ref" in target.account_binding) target.account_binding.external_account_ref = d.accountId; }
+    target.alpha_id = alpha.id;
+    target.alpha_name = alpha.label;
+    target.portfolio_id = d.portfolioId;
+    target.portfolio_name = d.portfolioName;
+  };
+
+  if (kind === "live") {
+    const started = iso(life.liveFromMs);
+    const dep = body.deployment as Obj;
+    withIdentityOf(dep);
+    dep.activated_at = started;
+    (body.lifecycle as Obj).activated_at = started;
+    const series = netPnlSeries(d.id, life.liveFromMs, seriesTo, Math.max(8, life.liveDays + 1));
+    body.stage_facts = stageFacts({ runtime: halted ? "HALTED" : "RUNNING", since: started, verdict: mismatch ? "OPEN_FINDINGS" : "NO_OPEN_FINDINGS", open: mismatch ? 1 : 0, unknownOrders: 0, asOf,
+      sessions: [{ id: `session_${d.id}_live_1`, started, ended: null, state: halted ? "HALTED" : "RUNNING" }] });
+    body.source_figures = figures(!mismatch);
+    setKpis({ capital: worldCents(alloc), gross_notional: gross, daily_pnl: dailyOf(series, 1), open_orders: String(orders.length), broker_equity: mismatch ? null : equity });
+    body.positions = collection("positions", "EXECUTION", "ready", "FRESH", AS_OF, typedPositions(positions), positions.map((p) => ({ instrument: p.symbol, side: p.side.toUpperCase(), qty: p.quantity, entry_px: p.entry })));
+    body.orders = collection("orders", "EXECUTION", "ready", "FRESH", AS_OF, typedOrders(orders), orders.map((o) => ({ order_id: o.id, instrument: o.symbol, price: o.price, state: o.status })));
+    (body.open_order_footer as Obj).exact_open_order_count = orders.length;
+    body.series = { envelope: panel("series", "DERIVED", "ready", "FRESH", AS_OF), ...seriesMembers(started, WORLD_DAY_MS, "1d", series.map((point) => point.value), "USDT", iso(series[series.length - 1]!.t)) };
+  } else if (kind === "canary") {
+    const finished = stageOf(deploymentId, "canary") === "live";
+    const startMs = finished ? life.canaryFromMs : WORLD_NOW_MS - life.canaryDays * WORLD_DAY_MS;
+    const endMs = finished ? life.liveFromMs : startMs + 14 * WORLD_DAY_MS;
+    const started = iso(startMs);
+    withIdentityOf(body.deployment);
+    const lifecycle = body.lifecycle as Obj;
+    lifecycle.day_index = finished ? 14 : life.canaryDays;
+    lifecycle.trial = { basis: "STARTED_AT_PLUS_DURATION_DAYS", duration_days: 14, started_at: avail(started), exit_review_opens_at: avail(iso(endMs)) };
+    const points = Math.max(8, Math.floor(((finished ? endMs : seriesTo) - startMs) / (4 * HOUR_MS)) + 1);
+    const series = netPnlSeries(d.id, startMs, finished ? endMs : seriesTo, points);
+    // approved caps from the book: capital = the allocation, gross = 1.5x, daily loss = 1% of it; consumed from the same positions and series
+    const breach = variant === "breach";
+    const capApproved = worldCents(alloc);
+    const grossApproved = worldCents(alloc * 3n / 2n);
+    const lossApproved = worldCents(alloc / 100n);
+    const dailyPnl = dailyOf(series, 6);
+    const dailyLoss = worldToCents(dailyPnl) < 0n ? worldCents(-worldToCents(dailyPnl)) : "0.00";
+    const capConsumed = breach ? worldCents(alloc * 11n / 10n) : worldCents(alloc);
+    const caps: Omit<CapSpec, "ratio">[] = [
+      { cap: "capital", unit: "USDT", limit: worldCents(alloc * 2n), approved: capApproved, consumed: capConsumed },
+      { cap: "gross_notional", unit: "USDT", limit: worldCents(alloc * 3n), approved: grossApproved, consumed: gross },
+      { cap: "daily_loss", unit: "USDT", limit: worldCents(alloc / 50n), approved: lossApproved, consumed: dailyLoss },
+      { cap: "open_orders", unit: "COUNT", limit: "40", approved: "20", consumed: String(orders.length) },
+    ];
+    const env = body.envelope as Obj;
+    env.limits = { capital_cap: capApproved, gross_notional_cap: grossApproved, daily_loss_cap: lossApproved, max_open_orders: 20, duration_days: 14 };
+    const compliance = body.envelope_compliance as Obj;
+    compliance.consumed = { capital_cap: capConsumed, gross_notional_cap: gross, daily_loss_cap: dailyLoss, max_open_orders: String(orders.length) };
+    compliance.rows = caps.map((c) => capRow(c, AS_OF));
+    // The verdict is the rows' own: any consumed figure above its approved limit is a BREACH, else every cap is proven within.
+    const above = caps.some((c) => worldToCents(c.consumed) > worldToCents(c.approved));
+    compliance.verdict = { state: above ? "BREACH" : "WITHIN_ENVELOPE", basis: "CONSUMED_NOT_ABOVE_APPROVED_PER_CAP", undetermined_caps: [] };
+    body.stage_facts = stageFacts({ runtime: finished ? "STOPPED" : halted ? "HALTED" : "RUNNING", since: finished ? iso(endMs) : started, verdict: "NO_OPEN_FINDINGS", open: 0, unknownOrders: 0, asOf,
+      sessions: [{ id: `session_${d.id}_canary_1`, started, ended: finished ? iso(endMs) : null, state: finished ? "COMPLETED" : halted ? "HALTED" : "RUNNING" }] });
+    body.source_figures = figures(true);
+    setKpis({ capital_consumed: capConsumed, gross_notional: gross, daily_pnl: dailyPnl, open_orders: String(orders.length), broker_equity: equity });
+    body.positions = collection("positions", "EXECUTION", "ready", stale ? "STALE" : "FRESH", asOf, typedPositions(positions), positions.map((p) => ({ symbol: p.symbol, side: p.side.toUpperCase(), qty: p.quantity, entry_price: p.entry })));
+    body.blotter = collection("blotter", "EXECUTION", "ready", stale ? "STALE" : "FRESH", asOf, typedOrders(orders), orders.map((o) => ({ order_id: o.id, price: o.price, type: o.type })));
+    body.series = { envelope: panel("series", "DERIVED", "ready", "FRESH", AS_OF), ...seriesMembers(started, 4 * HOUR_MS, "4h", series.map((point) => point.value)) };
+  } else if (kind === "sandbox") {
+    const startMs = life.sandboxFromMs;
+    const started = iso(startMs);
+    withIdentityOf(body.certification);
+    const cert = body.certification as Obj;
+    cert.venue = d.venue;
+    cert.created_at = iso(startMs - 2 * MIN);
+    cert.updated_at = iso(startMs + 90 * MIN);
+    // steps are checked after the certification was created and before the page's own as-of
+    (body.steps as Obj[]).forEach((step, i) => {
+      if (step.as_of !== null) {
+        step.as_of = iso(startMs + (i + 1) * MIN);
+        step.expires_at = iso(startMs + 7 * DAY_MS);
+      }
+    });
+    // ONE list of findings: the chip, the KPI, step 4 and the Difference column all read it
+    const cents = (n: bigint): string => worldCents(n);
+    const feeB = cents(worldToCents(fees) + 1n);
+    const equityB = mismatch ? cents(worldToCents(equity) + 4687n) : equity;
+    const finding = (n: number, code: string, summary: string, createdMs: number): Obj => ({ finding_id: `fnd_${d.id}_${n}`, severity: "WARNING", source_authority: "DERIVED", finding_code: code, summary, blocking: false, evidence_hash: null, as_of: null, resolved_at: null, created_at: iso(createdMs) });
+    const rows: Obj[] = [
+      ...(mismatch ? [finding(3, "EQUITY_DIFF", "Equity differs by 46.87 USDT", startMs + 60 * MIN)] : []),
+      finding(1, "FEE_DIFF", "Fee total differs by 0.01 USDT", startMs + 45 * MIN),
+      { ...finding(2, "FILL_LATE", "Fill 3 arrived 4 s late", startMs + 30 * MIN), severity: "INFO" },
+    ];
+    body.findings = { total_count: rows.length, returned_count: rows.length, truncated: false, rows };
+    body.stage_facts = stageFacts({ runtime: halted ? "HALTED" : "RUNNING", since: started, verdict: "OPEN_FINDINGS", open: rows.length, unknownOrders: 0, asOf: stale ? at(-44 * MIN) : AS_OF,
+      sessions: [{ id: `sandbox-session-1`, started, ended: null, state: halted ? "HALTED" : "RUNNING" }] });
+    body.source_figures = sourceFigures({
+      equity: { internal: equity, broker: equityB, unit: "USDT" },
+      gross_notional: { internal: gross, broker: gross, unit: "USDT" },
+      positions: { internal: String(positions.length), broker: String(positions.length), unit: "COUNT" },
+      open_orders: { internal: String(orders.length), broker: String(orders.length), unit: "COUNT" },
+      fees: { internal: fees, broker: feeB, unit: "USDT" },
+    });
+    // The workflow has not been submitted (the gate is BLOCKED): the timeline holds the creation only, by a named person; the plan is a draft made before the as-of.
+    body.timeline = { total_count: 1, returned_count: 1, truncated: false, rows: [{ event_id: `scevt_${d.id}_create`, actor_user_id: "bobby", action: "CREATE", workflow_version_before: 0, workflow_version_after: 1, created_at: iso(startMs - 2 * MIN) }] };
+    for (const plan of (body.promotion_plans as Obj[])) {
+      plan.plan_id = "PL-0412";
+      plan.created_at = iso(NOW_MS - 20 * MIN);
+    }
+  } else {
+    const data = body.data;
+    if (!isObj(data)) return body;
+    const started = iso(life.paperFromMs);
+    if (isObj(data.deployment)) withIdentityOf(data.deployment);
+    if (Array.isArray(data.deployments)) for (const row of data.deployments) withIdentityOf(row);
+    const book = blotterBookOf(d.id);
+    data.positions = positions.map((p) => ({ instrument_id: p.symbol, side: p.side.toUpperCase(), quantity: p.quantity, avg_px_open: p.entry, mark_price: p.mark, unrealized_pnl: p.unrealised, updated_at: AS_OF }));
+    data.orders = book.orders.map((o) => ({ order_id: o.order_id, client_order_id: o.client_order_id, instrument_id: o.symbol, side: o.side, status: o.status, quantity: o.quantity, price: o.price, submitted_at: o.submitted_at }));
+    data.fills = book.fills.map((f) => ({ fill_id: f.fill_id, client_order_id: f.client_order_id, order_id: String(f.client_order_id).replace(/^cl-/, "ord_"), quantity: f.quantity, price: f.price, commission: f.commission, commission_currency: f.commission_currency, trade_time: f.trade_time }));
+    // the equity line of the paper account: allocation plus the cumulative net PnL of this deployment, ending on allocation + realized + unrealized
+    const equityPoints = netPnlSeries(d.id, NOW_MS - 199 * HOUR_MS, NOW_MS - 4 * MIN, 200);
+    let peak = 0n;
+    data.account_equity = equityPoints.map((pt, i) => {
+      const eq = alloc + worldToCents(pt.value);
+      if (eq > peak) peak = eq;
+      return { ts: new Date(pt.t).toISOString(), currency: "USDT", equity: worldCents(eq), net_pnl: pt.value, fee_total: worldCents(BigInt(i + 1) * alloc / 1_000_000n), funding_pnl: null,
+        cash_free: worldCents(eq - alloc / 10n), cash_locked: worldCents(alloc / 10n), total_fills: Math.min(i + 1, book.fills.length), state_digest: "9c1e04b7a2f1ffff", snapshot_reason: "PERIODIC", source: `paper-${d.id}`,
+        drawdown: eq === peak ? "0" : canonicalDecimal(((Number(eq - peak) / Number(peak))).toFixed(4)) };
+    });
+    data.stage_facts = stageFacts({ runtime: halted ? "HALTED" : "RUNNING", since: started, verdict: "NO_OPEN_FINDINGS", open: 0, unknownOrders: 0, asOf: PAPER_AS_OF,
+      sessions: [{ id: `session_${d.id}_pap_1`, started, ended: null, state: halted ? "HALTED" : "RUNNING" }] });
+  }
+  return body;
+}
+/** Harness ids that stand for a world deployment (the review index and the audit link dep_canary_01: the canary rollout of Basis B). */
+const WORLD_ALIAS: Readonly<Record<string, string>> = { dep_canary_01: "dep_b3" };
+// ===== WP-P end

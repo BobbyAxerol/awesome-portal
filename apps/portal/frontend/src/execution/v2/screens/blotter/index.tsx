@@ -45,8 +45,8 @@ import { withOrigin } from "../../backTo";
 import { withContext } from "../../urlState";
 import { ExactText, OrderDetail, type FunnelRead } from "./OrderDetail";
 import {
-  CHIPS, COLUMNS, DEFAULT_COLUMNS, GROUP_CAP, NOT_IN_READ, NOT_IN_READ_REQUEST, NARROW_PAGE_LIMIT, NO_SCOPE, PAGE_LIMIT, applyScope, blotterCsv, blotterCsvName, blotterQuery, chipCounts, filtersKey, unchippedStatusCounts,
-  fillsFor, groupExact, humanize, isBucket, legsFor, scopeActive, shortUtc, statusView, type BlotterOrder, type ColumnId, type Scope, type ServerFilters,
+  CHIPS, COLUMNS, DEFAULT_COLUMNS, GROUP_CAP, NOT_IN_READ, NARROW_PAGE_LIMIT, NO_SCOPE, PAGE_LIMIT, applyScope, blotterCsv, blotterCsvName, blotterQuery, chipCounts, filtersKey, unchippedStatusCounts,
+  fillsFor, groupExact, humanize, isBucket, pageFunnel, legsFor, scopeActive, shortUtc, statusView, type BlotterOrder, type ColumnId, type Scope, type ServerFilters,
 } from "./blotterModel";
 import { useBlotterRead } from "./useBlotterRead";
 
@@ -92,6 +92,11 @@ function downloadCsv(name: string, csv: string): void {
   link.click();
   link.remove();
   URL.revokeObjectURL(url);
+}
+
+/** The row itself states a true zero filled quantity: there is nothing to average and no fee to charge (a published fact, not a guess). */
+function noFill(order: BlotterOrder): boolean {
+  return order.filledQuantity.kind === "value" && /^0(\.0+)?$/.test(order.filledQuantity.text);
 }
 
 /** The `from` value a link out of the Blotter carries; the destination owns what Back does with it. */
@@ -267,6 +272,12 @@ export default function BlotterScreen({ api, accessHref, chartHref: chartHrefPro
   const rows = scoped ? scoped.rows : [];
   const counts = useMemo(() => (read ? chipCounts(read) : null), [read]);
   const unchipped = useMemo(() => (read ? unchippedStatusCounts(read) : []), [read]);
+  // Scopes that can still be added: the distinct deployments, accounts and alphas on the loaded page (they narrow the loaded rows only).
+  const scopeChoices = useMemo(() => (["deployment", "account", "alpha"] as const).flatMap((key) => {
+    if (scope[key] !== null || !read) return [];
+    const values = [...new Set(read.orders.flatMap((o) => { const v = key === "deployment" ? o.deploymentId : key === "account" ? o.accountId : o.alphaId; return v ? [v] : []; }))].sort();
+    return values.length > 0 ? [{ key, values }] : [];
+  }), [read, scope]);
   const venues = useMemo(() => [...new Set([...(read?.orders.flatMap((o) => (o.venue ? [o.venue] : [])) ?? []), ...Object.keys(read?.venueCounts ?? {}), ...(filters.venue ? [filters.venue] : [])])].sort(), [read, filters.venue]);
 
   // A link that names an order or a fill opens that row once, when its page is loaded.
@@ -296,17 +307,25 @@ export default function BlotterScreen({ api, accessHref, chartHref: chartHrefPro
       case "time": return order.submittedAt ? <span className="exec-blt2-num" title={order.submittedAt}>{shortUtc(order.submittedAt)}</span> : <span className="exec-blt2-na">Not available</span>;
       case "alpha": return order.alphaId ?? <span className="exec-blt2-na">Not available</span>;
       case "account": return order.accountId ?? <span className="exec-blt2-na">Not available</span>;
-      case "deployment": return order.deploymentId ?? <NaWhy reason="The orders read carries no deployment id." className="exec-blt2-na" />;
-      case "avg": return order.averageFillPrice.kind === "absent" ? <NaWhy reason="The orders read publishes no average fill price." className="exec-blt2-na" /> : <ExactText value={order.averageFillPrice} />;
+      case "deployment": return order.deploymentId !== null
+        ? <span className="exec-blt2-two"><span className="exec-blt2-id">{order.deploymentId}</span>{order.venue ? <span className="exec-blt2-na">{order.venue}</span> : null}</span>
+        : <NaWhy reason="The orders read carries no deployment id." className="exec-blt2-na" />;
+      case "avg": return order.averageFillPrice.kind === "absent"
+        ? (noFill(order) ? <span className="exec-blt2-na" title="Nothing has traded on this order">No fill</span> : <NaWhy reason="The orders read publishes no average fill price." className="exec-blt2-na" />)
+        : <ExactText value={order.averageFillPrice} />;
       case "fee": return order.fee.kind === "absent"
-        ? <NaWhy reason="The orders read publishes no fee." className="exec-blt2-na" />
-        : <><ExactText value={order.fee} />{order.feeCurrency ? <span className="exec-blt2-na"> {order.feeCurrency}</span> : null}</>;
+        ? (noFill(order) ? <span className="exec-blt2-na" title="Nothing has traded on this order">No fill</span> : <NaWhy reason="The orders read publishes no fee for this order." className="exec-blt2-na" />)
+        : <span className="exec-blt2-two exec-blt2-fee"><ExactText value={order.fee} />{order.feeCurrency ? <span className="exec-blt2-na"> {order.feeCurrency}</span> : null}</span>;
       case "venue": return order.venue ?? <span className="exec-blt2-na">Not available</span>;
       case "symbol": return order.symbol ?? <span className="exec-blt2-na">Not available</span>;
-      case "side": return <>{order.side ? humanize(order.side) : "Side not stated"} <span className="exec-blt2-na">{order.orderType ? humanize(order.orderType) : ""}</span></>;
+      // Side over type on every row, so every row is two lines tall like the deployment and fee cells (QA2 R4-12: no alternating heights).
+      case "side": return <span className="exec-blt2-two"><span>{order.side ? humanize(order.side) : "Side not stated"}</span> <span className="exec-blt2-na">{order.orderType ? humanize(order.orderType) : ""}</span></span>;
       case "tif": return order.timeInForce ?? <span className="exec-blt2-na">Not available</span>;
       case "price": return <ExactText value={order.price} absent="At market" />;
       case "trigger": return <ExactText value={order.triggerPrice} absent="No trigger" />;
+      case "fillqty": return (
+        <span className="exec-blt2-fq"><ExactText value={order.filledQuantity} absent="Not published" /> <span className="exec-blt2-na">/</span> <ExactText value={order.quantity} /></span>
+      );
       case "qty": return <ExactText value={order.quantity} />;
       case "filled": return <ExactText value={order.filledQuantity} absent="Not published for this order" />;
       case "client": return order.clientOrderId ? <span className="exec-blt2-id">{order.clientOrderId}</span> : <span className="exec-blt2-na">Not available</span>;
@@ -373,9 +392,10 @@ export default function BlotterScreen({ api, accessHref, chartHref: chartHrefPro
       <header className="exec-blt2-head">
         <div>
           <h1 className="exec-blt2-title">{heading}</h1>
+          <p className="exec-blt2-sub">Orders and fills, newest first</p>
         </div>
         <div className="exec-blt2-fresh">
-          {fresh === "FRESH" ? null : <Flag kind={fresh === "STALE" ? "stale" : "unknown"} label={fresh === "STALE" ? "Stale" : page.freshness ? humanize(page.freshness) : "Freshness not stated"} size="sm" />}
+          {fresh === "FRESH" ? <Flag kind="ok" label="Fresh" size="sm" /> : <Flag kind={fresh === "STALE" ? "stale" : "unknown"} label={fresh === "STALE" ? "Stale" : page.freshness ? humanize(page.freshness) : "Freshness not stated"} size="sm" />}
           {page.asOf ? <span className="exec-blt2-meta">As of {shortUtc(page.asOf)}</span> : <span className="exec-blt2-meta">Source time not published</span>}
         </div>
       </header>
@@ -406,6 +426,19 @@ export default function BlotterScreen({ api, accessHref, chartHref: chartHrefPro
               </span>
             ) : null,
           )}
+          {scopeChoices.length > 0 ? (
+            <label className="exec-blt2-field">
+              <span className="exec-blt2-sr">Add scope</span>
+              <select className="exec-blt2-input" value="" onChange={(event) => { const [key, ...rest] = event.target.value.split("|"); if (key) setParam(key, rest.join("|")); }}>
+                <option value="">Add scope…</option>
+                {scopeChoices.map((group) => (
+                  <optgroup key={group.key} label={SCOPE_LABEL[group.key]}>
+                    {group.values.map((value) => <option key={value} value={`${group.key}|${value}`}>{value}</option>)}
+                  </optgroup>
+                ))}
+              </select>
+            </label>
+          ) : null}
           {scopeActive(scope) ? <button type="button" className="exec-blt2-btn" onClick={() => clearScope(["deployment", "account", "alpha", "order", "fill"])}>Clear scope</button> : null}
         </div>
         {scopeActive(scope) ? (
@@ -416,7 +449,7 @@ export default function BlotterScreen({ api, accessHref, chartHref: chartHrefPro
 
         {/* The chips above carry the short form; the full sentence stays for assistive tech (and in the chips' titles). */}
         <p className="exec-blt2-sr" id={`${noteId}-ctx`}>
-          Environment and window come from this read, not from the context bar: the orders read has no environment or window filter yet (Not published, FE-052, FE-025, FE-041). The environment highlighted in the context bar does not change these rows.
+          Environment and window come from this read, not from the context bar: the orders read has no environment or window filter yet. The environment highlighted in the context bar does not change these rows.
         </p>
 
         <div className="exec-blt2-tool">
@@ -518,7 +551,7 @@ export default function BlotterScreen({ api, accessHref, chartHref: chartHrefPro
             <table className="exec-cards exec-blt2-table" aria-label="Orders">
               <thead>
                 <tr>
-                  {visibleColumns.map((c) => <th key={c.id} scope="col" data-numeric={c.numeric ? "true" : undefined}>{c.label}</th>)}
+                  {visibleColumns.map((c) => <th key={c.id} scope="col" data-col={c.id} data-numeric={c.numeric ? "true" : undefined}>{c.label}</th>)}
                 </tr>
               </thead>
               <tbody>
@@ -535,7 +568,7 @@ export default function BlotterScreen({ api, accessHref, chartHref: chartHrefPro
                     <Fragment key={order.orderId}>
                       <tr data-selected={focused ? "true" : undefined} aria-current={focused ? "true" : undefined}>
                         {visibleColumns.map((c) => (
-                          <td key={c.id} data-l={c.label} data-numeric={c.numeric ? "true" : undefined}>
+                          <td key={c.id} data-l={c.label} data-col={c.id} data-numeric={c.numeric ? "true" : undefined}>
                             {c.id === "order" ? (
                               <span className="exec-blt2-ordercell">
                                 <button type="button" className="exec-blt2-x" aria-expanded={isOpen} aria-label={`${isOpen ? "Hide" : "Show"} legs and fills for order ${order.orderId}`} onClick={() => toggle(order.orderId)}>{isOpen ? "\u2212" : "+"}</button>
@@ -545,7 +578,8 @@ export default function BlotterScreen({ api, accessHref, chartHref: chartHrefPro
                                   <span className="exec-blt2-id">{order.orderId}</span>
                                 )}
                                 {legs.some((leg) => (leg.state ?? "").toUpperCase() === "ARMED") ? <span className="exec-blt2-na" title="Bracket legs armed">{"\u25c7"}</span> : null}
-                                {legs.length > 0 ? <span className="exec-blt2-na" title="Part of a bracket or conditional group"> bracket</span> : null}
+                                {legs.length > 0 ? <span className="exec-blt2-na" title="Part of a bracket or conditional group" aria-hidden="true">{"\u25a3"}</span> : null}
+                                {legs.length > 0 ? <span className="exec-blt2-sr"> bracket</span> : null}
                               </span>
                             ) : (
                               cell(order, c.id)
@@ -568,20 +602,35 @@ export default function BlotterScreen({ api, accessHref, chartHref: chartHrefPro
           </div>
         )}
 
+        {emptyPage ? null : <p className="exec-blt2-note exec-blt2-scrollhint">Scroll sideways for the other columns. The order and the status stay in view.</p>}
         {narrow ? null : pager}
         <details className="exec-blt2-how">
           <summary>How to read</summary>
           <p className="exec-blt2-note">
-            Rows are newest first. Numbers are exact and never shortened. A fee is in its venue currency. Orders with bracket legs, fills and an order path expand in place. Not in this read: {notInRead.join(", ").toLowerCase()} (Not published, {NOT_IN_READ_REQUEST}).
+            Rows are newest first. Numbers are exact and never shortened. A fee is in its venue currency. Orders with bracket legs, fills and an order path expand in place. Not in this read: {notInRead.join(", ").toLowerCase()} (the source does not publish them yet).
           </p>
         </details>
       </section>
 
       <FoldPanel
         title="Order funnel"
-        aside={lastOpened ? `Order ${lastOpened}` : undefined}
+        aside={lastOpened ? `Order ${lastOpened}` : "On the loaded orders"}
         defaultOpen
       >
+        {emptyPage ? null : (
+          <>
+            <div className="exec-blt2-funnel" role="group" aria-label="Order path over the loaded orders">
+              {pageFunnel(page.orders).map((step) => (
+                <div key={step.id} className="exec-blt2-fstep">
+                  <span className="exec-blt2-fk">{step.label}</span>
+                  <span className="exec-blt2-fv">{step.count}</span>
+                  <span className="exec-blt2-na">{step.percent !== null ? `${step.percent}%` : ""}{step.id === "submitted" ? " of the loaded orders" : " of submitted"}</span>
+                </div>
+              ))}
+            </div>
+            <p className="exec-blt2-note">Counted over the {page.orders.length} loaded orders. The server publishes no scope-level funnel yet; intent and signal steps happen before the order and are not carried here.</p>
+          </>
+        )}
         {lastOpened === null ? (
           <p className="exec-blt2-na" title="Expand an order to read its path: submitted, risk grant, venue acknowledged, fill.">Open an order to see its path</p>
         ) : (funnels[lastOpened]?.phase ?? "loading") === "loading" ? (

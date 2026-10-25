@@ -169,6 +169,8 @@ const PROXIED_LOCATIONS = [
   '^~ /api/v1/portal/',
   '^~ /api/v1/execution/',
   '= /api/admin/access/self',
+  '= /api/admin/profile-access',
+  '= /api/admin/profile-access/activity',
   '= /api/admin/profile-access/v2/effective',
   '= /api/admin/profile-access/v2/self-navigation',
   '= /api/admin/profile-access/v2/eligibility',
@@ -176,6 +178,7 @@ const PROXIED_LOCATIONS = [
   '= /api/admin/profile-access/v2/self-context',
   '= /api/admin/accounts',
   '^~ /api/admin/accounts/',
+  '= /api/v1/quantbt/runs',
   '= /api/admin/step-up',
   '^~ /__fixture/',
 ];
@@ -215,11 +218,11 @@ test('fragment: no location duplicates one portal.conf already owns (nginx refus
   assert(owned.includes('= /api/health') && owned.includes('= /api/ready'));
 });
 
-test('fragment: nothing else of the real services (research, QuantBT, runs, health, Planning) reaches the fixture server', () => {
+test('fragment: only the exact review-library list is synthetic; other Research/QuantBT and service routes stay real', () => {
   assert.match(proxyInc, /^proxy_pass http:\/\/portal-fixture-bff:4100;$/m);
   assert.match(proxyInc, /^add_header X-Fixture-Overlay on always;$/m);
   const withoutComments = fragment.replace(/^\s*#.*$/gm, '');
-  for (const real of ['/api/v1/research', '/api/v1/quantbt', '/api/v1/alphas', '/api/runs', '/api/strategies', '/api/health',
+  for (const real of ['/api/v1/research', '/api/v1/alphas', '/api/runs', '/api/strategies', '/api/health',
     '/api/ready', '/api/control', '/api/config', '/roadmap-task-board']) {
     assert(!withoutComments.includes(real), `${real} must stay on the real services`);
   }
@@ -228,9 +231,13 @@ test('fragment: nothing else of the real services (research, QuantBT, runs, heal
   assert.deepEqual(authLines.map((line) => line.trim()), AUTH_ROUTES.map((route) => `location = ${route} {`));
   assert.deepEqual(withoutComments.split('\n').filter((line) => line.includes('/api/v1/portal')).map((line) => line.trim()),
     ['location ^~ /api/v1/portal/ {']);
+  // WP-E's accepted populated review world needs the exact library picker.
+  // No QuantBT prefix, run detail, creation, export or sibling endpoint is proxied.
+  assert.deepEqual(withoutComments.split('\n').filter((line) => line.includes('/api/v1/quantbt')).map((line) => line.trim()),
+    ['location = /api/v1/quantbt/runs {']);
   assert.doesNotMatch(withoutComments, /location (?:~\*? |\/ |\/api\/ )/, 'no regex, root or /api/ catch-all location');
   assert.doesNotMatch(withoutComments, /proxy_pass/, 'proxy_pass lives only in the shared include');
-  // The profile-access matches are exact, so the legacy matrix and /activity are not caught.
+  // The populated review's matrix/activity matches are exact, never an admin catch-all.
   assert(!/location \^~ \/api\/admin\/profile-access/.test(fragment));
   assert(!/location \^~ \/api\/admin\/ \{/.test(fragment));
 });

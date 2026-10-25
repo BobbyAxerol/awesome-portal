@@ -1,11 +1,11 @@
 /**
- * The Performance panel's measure switch (Net PnL / Return).
+ * The Performance panel's measure switch (Net PnL / Return / NAV: the hi-fi's "Equity" tab is the fund NAV series, said as NAV).
  *
  * Net PnL and Return are enabled only when the fund series is SERVED: the series port answered the fund's NAV with a published
- * source (`serves`), so asking the same port for the metric `NET_PNL` or `RETURN` is a real question. Until then (no series
- * source published, a read that failed, a read still pending) they stay off and say why. Pressing the pressed measure goes back
- * to the NAV line, which is what the panel shows when nothing is pressed. There is no Equity button: the fund's equity is not NAV
- * and no equity series is published (retained equity is not a certified NAV, FE-025), and a button that is never enabled is a dead control.
+ * source (`serves`), so asking the same port for the metric `NET_PNL`, `RETURN` or `NAV` is a real question. Until then (no series
+ * source published, a read that failed, a read still pending) Net PnL and Return stay off and say why, and there is no NAV button:
+ * the NAV line is simply what the panel shows. Once served, a press selects that measure (Net PnL is the hi-fi default). The fund's
+ * retained equity is not a certified NAV (FE-025), so the third button is named NAV and never Equity.
  *
  * Nothing is computed here: the switch only says which metric the panel asks the port for.
  */
@@ -20,6 +20,7 @@ export type FundMeasure = "NAV" | "NET_PNL" | "RETURN";
 const MEASURES = [
   { label: "Net PnL", metric: "NET_PNL" },
   { label: "Return", metric: "RETURN" },
+  { label: "NAV", metric: "NAV" },
 ] as const;
 
 export interface MeasureSegProps {
@@ -37,7 +38,7 @@ export function MeasureSeg({ serves = false, selected = "NAV", onSelect, offReas
   const reason = offReason ?? notPublishedText("FE-025");
   return (
     <span className="exec-ov-seg" role="group" aria-label="Performance measure">
-      {MEASURES.map(({ label, metric }) => {
+      {MEASURES.filter(({ metric }) => serves || metric !== "NAV").map(({ label, metric }) => {
         const on = serves;
         const pressed = on && selected === metric;
         return (
@@ -49,7 +50,7 @@ export function MeasureSeg({ serves = false, selected = "NAV", onSelect, offReas
             disabled={!on}
             title={on ? `Show the fund's ${label} series` : `${reason}. ${label} has no published fund series.`}
             aria-describedby={on ? undefined : reasonId}
-            onClick={on && onSelect ? () => onSelect(pressed ? "NAV" : metric) : undefined}
+            onClick={on && onSelect ? () => onSelect(metric) : undefined}
           >
             {label}
           </button>

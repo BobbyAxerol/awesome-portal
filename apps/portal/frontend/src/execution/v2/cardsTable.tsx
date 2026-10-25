@@ -19,7 +19,7 @@
  * (it overflows AND holds no link, button or focusable row) the wrap becomes a named, focusable region. Otherwise it is a
  * plain div and adds no Tab stop.
  */
-import type { KeyboardEvent, ReactNode } from "react";
+import { Fragment, type KeyboardEvent, type ReactNode } from "react";
 
 import "./css/cards.css";
 import { useKeyboardScroll } from "./useKeyboardScroll";
@@ -56,10 +56,14 @@ export interface CardsTableProps<Row> {
   empty?: ReactNode;
   /** The order the caller applied; marks the matching `sortKey` header. */
   sort?: CardsSort | null;
+  /** Several keys at once (multi-sort): each marked header shows its priority (1, 2, 3) when there is more than one. Wins over `sort`. */
+  sorts?: readonly CardsSort[];
   /** A sortable header was activated. The caller decides direction. */
   onSort?(key: string): void;
   /** A screen's own class on the table, for a card layout of its own (the Alpha 360 orders and fills). */
   className?: string;
+  /** A group header row before this row (it starts a group), or `null`. The rows arrive already ordered by group. */
+  groupBefore?(row: Row, index: number): ReactNode;
 }
 
 /** A cell that rendered nothing says so; it is never a dash and never 0. */
@@ -67,7 +71,7 @@ function present(content: ReactNode): boolean {
   return content !== null && content !== undefined && content !== false && content !== "";
 }
 
-export function CardsTable<Row>({ columns, rows, rowKey, label, selectedKey, onRowOpen, empty, sort, onSort, className }: CardsTableProps<Row>) {
+export function CardsTable<Row>({ columns, rows, rowKey, label, selectedKey, onRowOpen, empty, sort, sorts, onSort, className, groupBefore }: CardsTableProps<Row>) {
   const open = (row: Row) => (event: KeyboardEvent) => {
     // Space is prevented so the page does not scroll from under the row.
     if (event.key === "Enter" || event.key === " ") {
@@ -83,7 +87,9 @@ export function CardsTable<Row>({ columns, rows, rowKey, label, selectedKey, onR
           <tr>
             {columns.map((c) => {
               const sortable = onSort !== undefined && c.sortKey !== undefined;
-              const active = sortable && sort?.key === c.sortKey ? (sort?.dir ?? null) : null;
+              const ranked = sortable && sorts !== undefined ? sorts.findIndex((entry) => entry.key === c.sortKey) : -1;
+              const active = sortable && sorts !== undefined ? (ranked >= 0 ? sorts[ranked]!.dir : null)
+                : sortable && sort?.key === c.sortKey ? (sort?.dir ?? null) : null;
               const head = c.head ? <span className="exec-cards-head" aria-hidden="true">{c.head}</span> : null;
               return (
                 <th
@@ -97,6 +103,7 @@ export function CardsTable<Row>({ columns, rows, rowKey, label, selectedKey, onR
                   {sortable ? (
                     <button type="button" className="exec-cards-sort" data-dir={active ?? undefined} onClick={() => onSort(c.sortKey!)}>
                       {head}{c.label}
+                      {ranked >= 0 && sorts !== undefined && sorts.length > 1 ? <span className="exec-cards-rank" aria-label={`sort priority ${ranked + 1}`}>{ranked + 1}</span> : null}
                     </button>
                   ) : (
                     <>{head}{c.label}</>
@@ -112,11 +119,13 @@ export function CardsTable<Row>({ columns, rows, rowKey, label, selectedKey, onR
               <td colSpan={columns.length}>{empty}</td>
             </tr>
           ) : null}
-          {rows.map((row) => {
+          {rows.map((row, index) => {
             const key = rowKey(row);
+            const header = groupBefore === undefined ? null : groupBefore(row, index);
             return (
+              <Fragment key={key}>
+              {header !== null && header !== undefined ? <tr className="exec-cards-group"><th scope="rowgroup" colSpan={columns.length}>{header}</th></tr> : null}
               <tr
-                key={key}
                 data-selected={key === selectedKey ? "true" : undefined}
                 aria-current={key === selectedKey ? "true" : undefined}
                 data-interactive={onRowOpen ? "true" : undefined}
@@ -135,6 +144,7 @@ export function CardsTable<Row>({ columns, rows, rowKey, label, selectedKey, onR
                   );
                 })}
               </tr>
+              </Fragment>
             );
           })}
         </tbody>

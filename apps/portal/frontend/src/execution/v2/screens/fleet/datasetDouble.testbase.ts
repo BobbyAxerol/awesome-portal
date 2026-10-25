@@ -25,7 +25,9 @@ export interface DoubleAlpha {
   venue?: string | null;
   sourceState?: string | null;
   /** ALL reads only: the money this alpha holds in ITS environment, one partition (USDT in every environment: the trap a sum would fall into). */
-  money?: { allocation?: string | null; netPnl?: string | null; currency?: string };
+  money?: { allocation?: string | null; netPnl?: string | null; unrealized?: string | null; balance?: string | null; equity?: string | null; returnPct?: string | null; currency?: string };
+  /** `rich` reads only: the QBTS as published (value, the band code, evidence word, components). `value: null` is a typed absence (reason). */
+  qbts?: { value: string | null; band?: string; evidence?: "eligible" | "provisional" | "insufficient"; p?: string; r?: string; b?: string; reason?: string; noEvidence?: boolean };
 }
 
 export type DatasetVariant =
@@ -71,6 +73,8 @@ export interface DatasetDoubleState {
   total?: (honest: number) => number;
   /** FE-CAT-3: answer `environment=ALL` (the authorized rows of every environment, each labelled, with coverage). Off: ALL is refused (400). */
   offersAll?: boolean;
+  /** Alpha Fleet metrics: rows carry balance_total, equity_30d_end_value, return_30d_pct and score (+ the open qbts_* keys) and the dataset offers them. */
+  rich?: boolean;
   /** ALL only: an environment that contributes nothing, with the closed reason of the contract. */
   unavailable?: Partial<Record<"paper" | "sandbox" | "live", string>>;
   /** ALL only: an included environment that is degraded (its own quality). */
@@ -124,7 +128,8 @@ function textOf(c: Computed, field: string): string | null {
   }
 }
 
-function rowOf(template: Draft, c: Computed, environment: string): Draft {
+const RICH_KEYS = ["balance_total", "equity_30d_end_value", "return_30d_pct", "score"] as const;
+function rowOf(template: Draft, c: Computed, environment: string, rich = false): Draft {
   const a = c.alpha;
   const row = clone(template);
   const version = a.version ?? "av-1";
@@ -153,17 +158,41 @@ function rowOf(template: Draft, c: Computed, environment: string): Draft {
   row.children = lexical(c.visible).map((stage, index) => ({
     ...clone(child), alpha_id: a.id, alpha_version_id: version, portfolio_id: portfolio, deployment_id: `${a.id}-${environment}-d${index}`, account_id: `${a.id}-${environment}-acct${index}`, stage,
   }));
-  if (c.environment !== undefined) {
-    // An ALL row holds the money of its own environment: one partition of its own economic domain, USDT in every environment.
+  if (c.environment !== undefined || rich) {
+    // A row holds the money of its own environment: one partition of its own economic domain, USDT in every environment.
+    const env = (c.environment ?? environment) as "paper" | "sandbox" | "live";
     const money = a.money ?? {};
-    const partition = { economic_domain: DOMAIN_OF[c.environment], currency: money.currency ?? "USDT", basis: "TEST_ONLY:net-ledger",
-      native_profile_ref: `TEST_ONLY:${c.environment}-ledger`, domain_proof_ref: "TEST_ONLY:not-economic-authority" };
+    const partition = { economic_domain: DOMAIN_OF[env], currency: money.currency ?? "USDT", basis: "TEST_ONLY:net-ledger",
+      native_profile_ref: `TEST_ONLY:${env}-ledger`, domain_proof_ref: "TEST_ONLY:not-economic-authority" };
     const figure = (value: string | null | undefined) => (value === undefined || value === null ? absentMetric() : moneyMetric({ value, currency: partition.currency }));
     const metrics: Draft = {};
-    if (money.netPnl !== undefined && money.netPnl !== null) metrics.net_pnl = figure(money.netPnl);
-    if (money.allocation !== undefined && money.allocation !== null) metrics.allocation = figure(money.allocation);
+    const put = (key: string, value: string | null | undefined) => { if (value !== undefined && value !== null) metrics[key] = figure(value); };
+    put("net_pnl", money.netPnl);
+    put("allocation", money.allocation);
+    if (rich) {
+      put("unrealized_pnl", money.unrealized);
+      put("balance_total", money.balance);
+      put("equity_30d_end_value", money.equity);
+      if (money.returnPct !== undefined && money.returnPct !== null) metrics.return_30d_pct = moneyMetric({ value: money.returnPct, unit: "PERCENT", currency: null });
+      const q = a.qbts;
+      if (q !== undefined) {
+        const plain = (value: string | null, unit: string, extra: Draft = {}) => (value === null
+          ? absentMetric({ unit, reason_code: q.reason ?? "INSUFFICIENT_EVIDENCE", ...extra })
+          : moneyMetric({ value, unit, currency: null, basis: "FIXTURE_LAB:qbts-comparable-basis", policy_revision: "FIXTURE_LAB", ...extra }));
+        metrics.score = plain(q.value, "SCORE");
+        if (q.value !== null) {
+          metrics.qbts_p = plain(q.p ?? null, "SCORE");
+          metrics.qbts_r = plain(q.r ?? null, "SCORE");
+          metrics.qbts_b = plain(q.b ?? null, "SCORE");
+          if (q.band) metrics.qbts_band = plain("2", "BAND_ORDINAL", { reason_code: q.band });
+          metrics.qbts_evidence = plain(q.evidence === "provisional" ? "1" : "2", "EVIDENCE_STATE", { reason_code: q.evidence ?? "eligible" });
+          metrics.qbts_provisional = plain(q.evidence === "provisional" ? "1" : "0", "FLAG");
+        } else if (q.noEvidence !== true) metrics.qbts_evidence = plain("0", "EVIDENCE_STATE", { reason_code: "insufficient" });
+      }
+    }
     row.economic_partitions = Object.keys(metrics).length === 0 ? [] : [{ partition, metrics }];
     for (const key of Object.keys(row.metrics)) row.metrics[key] = metrics[key] !== undefined ? clone(metrics[key]) : absentMetric();
+    if (rich) for (const key of RICH_KEYS) row.metrics[key] = metrics[key] !== undefined ? clone(metrics[key]) : absentMetric();
   }
   return row;
 }
@@ -268,7 +297,15 @@ export function datasetAnswer(path: string, params: URLSearchParams, state: Data
   body.environment = environment;
   body.workspace_id = params.get("workspace_id") ?? body.workspace_id;
   body.snapshot_id = state.snapshot;
-  body.items = page.map((c) => rowOf(template, c, c.environment ?? environment));
+  body.items = page.map((c) => rowOf(template, c, c.environment ?? environment, state.rich === true));
+  if (state.rich) {
+    for (const key of RICH_KEYS) {
+      if (!body.query_options.metric_keys.includes(key)) body.query_options.metric_keys.push(key);
+      if (!body.query_options.sort_fields.includes(key)) body.query_options.sort_fields.push(key);
+    }
+    body.query_options.economic_partition_required_for = ["allocation", "net_pnl", "unrealized_pnl", "balance_total", "equity_30d_end_value"].filter((key) => body.query_options.metric_keys.includes(key));
+    body.query_options.window.independent_metrics = ["allocation", "balance_total", "unrealized_pnl"].filter((key) => body.query_options.metric_keys.includes(key));
+  }
   const honestTotal = sorted.length;
   const total = state.total ? state.total(honestTotal) : honestTotal;
   if (all) body.environment = "ALL";

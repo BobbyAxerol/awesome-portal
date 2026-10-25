@@ -52,8 +52,8 @@ describe("header", () => {
     expect(document.body.textContent).toContain(PF.core);
     expect(document.body.textContent).toContain("M. Tran");
     expect(screen.getByText("Active")).toBeTruthy();
-    // FRESH prints no chip; the as-of line says it. Score is on the Overview's one 'Not available' line.
-    expect(screen.queryByText("Fresh")).toBeNull();
+    // The freshness chip is always drawn (hi-fi "Fresh"), beside the as-of line. Score is on the Overview's one 'Not available' line.
+    expect(screen.getAllByText("Fresh").length).toBeGreaterThan(0);
     expect(screen.getByText(/As of 17 Oct/)).toBeTruthy();
     expect(screen.queryByText(/Score: Not published/)).toBeNull();
     expect(screen.getByTestId("not-available-line").textContent).toContain("Score");
@@ -105,9 +105,10 @@ describe("Overview", () => {
     expect(tile("Deployments")).toContain("4 alphas");
     expect(tile("Deployments")).toContain("4 accounts");
     expect(tile("Deployments")).toContain("5 holdings");
-    expect(tile("Allocated (current)")).toContain("540,000.00");
-    expect(tile("Allocated (current)")).toContain("USDT");
-    expect(tile("Allocated (current)")).not.toContain("not a window");
+    // Without a published capital statement the KPI is the resource's own all-books figure and says so (QA1 P3-01).
+    expect(tile("Allocated, all books")).toContain("540,000.00");
+    expect(tile("Allocated, all books")).toContain("USDT");
+    expect(tile("Allocated, all books")).not.toContain("not a window");
   });
 
   it("keeps NAV, Net PnL, Return and Drawdown as tiles and Capital and Concentration as panels, each Not published with its id; one line names Funding source, lanes and Score", async () => {
@@ -142,13 +143,18 @@ describe("Overview", () => {
     expect(document.querySelectorAll(".exec-c2-svg").length).toBeGreaterThan(0);
   });
 
-  it("has no disabled Net PnL, Return or Export beside the equity chart: only the retained equity is published", async () => {
+  it("the Performance tabs are Net PnL and Return, off with their reason while the series port does not serve the portfolio; Export and Report pack are sentences, never dead buttons", async () => {
     mount(makeApi().api);
     await ready();
-    expect(screen.queryByRole("group", { name: "Series" })).toBeNull();
-    expect(screen.queryByRole("button", { name: "Net PnL" })).toBeNull();
-    expect(screen.queryByRole("button", { name: "Return" })).toBeNull();
-    expect(screen.queryAllByRole("button", { name: /Export|Report pack/ })).toHaveLength(0);
+    const group = screen.getByRole("group", { name: "Performance measure" });
+    const buttons = within(group).getAllByRole("button") as HTMLButtonElement[];
+    expect(buttons.map((b) => b.textContent)).toEqual(["Net PnL", "Return"]);
+    expect(buttons.every((b) => b.disabled && b.title.includes("Not published (FE-025)"))).toBe(true);
+    // Both are disclosures (a button that opens the reason, `aria-expanded`), not commands.
+    const words = screen.queryAllByRole("button", { name: /Export|Report pack/ });
+    expect(words).toHaveLength(2);
+    expect(words.every((b) => b.getAttribute("aria-expanded") === "false" && !(b as HTMLButtonElement).disabled)).toBe(true);
+    expect(screen.getByTestId("report-pack").textContent).toContain("Report pack: not available yet");
   });
 
   it("asks the chart for a width from the window it is drawn in", async () => {
@@ -181,8 +187,9 @@ describe("Overview", () => {
     const statements = screen.getByRole("table", { name: "Capital statements" });
     const rows = [...statements.querySelectorAll("tr")].map((tr) => tr.textContent);
     expect(rows).toEqual([
-      "Initial fundsNot published (FE-017)", "Added fundsNot published (FE-017)", "ReturnedNot published (FE-017)", "Net external flowsNot published (FE-017)",
-      "Approved budgetNot published (FE-017)", "RecallingNot published (FE-017)", "HeadroomNot published (FE-017)",
+      "Cash flows", "Initial fundsNot published (FE-017)", "Added fundsNot published (FE-017)", "ReturnedNot published (FE-017)", "Net external flowsNot published (FE-017)",
+      "Net PnLNot published (FE-017)", "NAVNot published (FE-013)",
+      "Budget, not cash", "ApprovedNot published (FE-017)", "AllocatedNot published (FE-017)", "RecallingNot published (FE-017)", "HeadroomNot published (FE-017)",
     ]);
     await goto("Allocations");
     const live = screen.getByRole("region", { name: "Capital in Live" });
@@ -202,7 +209,7 @@ describe("Overview", () => {
   it("says on the Overview that Simulated capital is never added to Real-funded figures", async () => {
     mount(makeApi().api);
     await ready();
-    expect(screen.getByText("Simulated capital. It is never added to Real-funded figures.")).toBeTruthy();
+    expect(screen.getByText("Part of this portfolio is simulated capital (Paper and Sandbox). That part is never added to the Real-funded figures.")).toBeTruthy();
   });
 
   it("lists what the projection reports as not ready: deployments and accounts", async () => {
@@ -228,7 +235,8 @@ describe("NAV (FE-013, BE-P4 manager series)", () => {
   const serving = (variant: SeriesVariant): Override => (_method, path, search) => (path === "/manager/series"
     ? variant.startsWith("status:") ? { status: Number(variant.slice(7)), body: { error: { code: "REFUSED", message: "refused" } } } : { status: 200, body: seriesBodyFor(search, variant) }
     : undefined);
-  const navPanel = () => screen.getByRole("region", { name: "NAV" });
+  // The Performance card holds the NAV line (the NAV tab once the port serves the portfolio; Net PnL is the default tab then).
+  const navPanel = () => screen.getByRole("region", { name: "Performance" });
   const kpiNav = () => within(screen.getByRole("group", { name: "Portfolio identity" })).getByText("NAV").closest("div")!;
 
   it("asks for ONE portfolio's NAV in the selected environment and the page window, through the port", async () => {
@@ -244,7 +252,8 @@ describe("NAV (FE-013, BE-P4 manager series)", () => {
   it("AVAILABLE draws the line with its methodology and window, and the NAV cells are the latest point as sent", async () => {
     mount(makeApi(serving("populated")).api);
     await ready();
-    await waitFor(() => expect(navPanel().querySelector("[data-testid='series-caption']")).not.toBeNull());
+    fireEvent.click(await screen.findByRole("button", { name: "NAV" }));
+    await waitFor(() => expect(navPanel().querySelector("[data-testid='series-caption']")?.textContent).toContain("NAV in USDT"));
     const caption = navPanel().querySelector("[data-testid='series-caption']")!.textContent!;
     expect(caption).toContain("NAV in USDT");
     expect(navPanel().querySelector("[data-testid='series-caption']")!.getAttribute("title")).toContain("methodology TEST_ONLY:nav-twr.v1");
@@ -327,13 +336,13 @@ describe("Allocations", () => {
     expect(within(simulated).queryByRole("region", { name: "Capital in Live" })).toBeNull();
   });
 
-  it("says once that the capital flow and the receipts are not available, and draws no empty diagram (UX audit A)", async () => {
+  it("says once that the ledger receipts are not available; with no statement published there is no flow, and no empty diagram (UX audit A)", async () => {
     mount(makeApi().api);
     await ready();
     await goto("Allocations");
     expect(document.querySelectorAll("figure.exec-flow")).toHaveLength(0);
     const line = screen.getByTestId("not-available-line");
-    expect(line.textContent).toContain("Not available: Capital flow, Ledger receipts");
+    expect(line.textContent).toContain("Not available: Ledger receipts");
     expect(line.textContent).toContain("FE-032");
     expect(document.body.textContent).not.toContain("Hover or focus a node");
   });
@@ -483,7 +492,8 @@ describe("Risk and Health", () => {
     const recon = rowsOf("Reconciliation by account");
     expect(cell(recon.find((r) => cell(r, "Account") === "Binance-02")!, "Open findings")).toBe("1");
     expect(cell(recon.find((r) => cell(r, "Account") === "OKX-01")!, "Open findings")).toBe("0");
-    expect(panel().textContent).toContain("Drawdown now and max");
+    expect(panel().textContent).toContain("Drawdown, max in window");
+    expect(panel().textContent).toContain("Drawdown now");
     expect(panel().textContent).toContain("Not published (FE-013, FE-025)");
     expect(panel().textContent).toContain("Exposure cap");
     expect(panel().textContent).toContain("Not available · no cap published");
@@ -743,7 +753,7 @@ describe("states", () => {
     await ready();
     expect(whyText(screen.getByText("Some relations may be missing").parentElement)).toBe("The resource is partial");
     const strip = screen.getByRole("group", { name: "Portfolio identity" });
-    expect(within(strip).getByText("Allocated (current)").closest("div")!.textContent).toContain("Not available · no allocation published");
+    expect(within(strip).getByText("Allocated, all books").closest("div")!.textContent).toContain("Not available · no allocation published");
     await goto("Alphas");
     expect(screen.getByText("The resource published no deployment for this portfolio.")).toBeTruthy();
     await goto("Accounts");

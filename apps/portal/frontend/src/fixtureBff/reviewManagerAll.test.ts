@@ -1,5 +1,6 @@
 // @vitest-environment node
 /** FE-CAT-3 on the explicit SYNTHETIC review lane (FIXTURE_LAB): `environment=ALL`, judged by the schema AND the unmodified production HTTP port. */
+import "./useMissingScenario";
 import { afterAll, afterEach, describe, expect, it, vi } from "vitest";
 
 import { answerReviewManager, type ReviewManagerProfile } from "../../../fixture-bff/review-manager";

@@ -90,7 +90,8 @@ describe("screen contract", () => {
     expect(whyText(document.querySelector('.exec-wb-sub [data-gap="FE-066"]')!)).toContain("Not published (FE-066)");
     expect(screen.queryByRole("link", { name: STRATEGY })).toBeNull();
     expect(screen.queryByRole("link", { name: "← Alpha" })).toBeNull();
-    expect(text()).not.toContain("Tracking approved evidence");
+    // The design's one-line question is the page's purpose, a fixed sentence (WP-F3): it states no fact about this deployment.
+    expect(text()).toContain("Tracking approved evidence? Ready to leave Paper?");
   });
 
   it("identity published (FE-066, S3-U5): the Alpha is linked by alpha_id, never by the strategy id; the portfolio shows its name; the alpha name stays Not published with its reason", async () => {
@@ -229,11 +230,13 @@ describe("the lifecycle spine will not infer (D13b)", () => {
   });
 });
 
-describe("the exit review request has one control, in the exit gate", () => {
-  it("the lifecycle panel no longer repeats it", async () => {
+describe("the exit review request: one working control in the exit gate, a closed statement in the lifecycle panel", () => {
+  it("the lifecycle panel draws the design's Request exit review as a disabled button with its reason (QA1 I16); it never acts", async () => {
     mount();
     await ready();
-    expect(screen.queryByRole("button", { name: "Request exit review" })).toBeNull();
+    const closed = screen.getByRole("button", { name: "Request exit review" }) as HTMLButtonElement;
+    expect(closed.disabled).toBe(true);
+    expect(closed.getAttribute("aria-describedby")).toBeTruthy();
     expect(screen.getAllByRole("button", { name: /request review/i }).length).toBeLessThanOrEqual(1);
   });
 });
@@ -464,7 +467,7 @@ describe("Orders, Fills, Positions, Sessions", () => {
     expect(rows[0].textContent).toContain("Submitted");
     expect(rows[3].textContent).toContain("Filled");
     expect(rows[1].textContent).toContain("Rejected");
-    expect(within(rows[0]).getByRole("link", { name: "Open order c-0044-0003 in the Blotter" }).getAttribute("href")).toBe(`/deployments/blotter?deployment=${DEP}&order=ord_00003`);
+    expect(within(rows[0]).getByRole("link", { name: "Open order c-0044-0003 in the Blotter" }).getAttribute("href")).toBe(`/deployments/blotter?deployment=${DEP}&env=paper&order=ord_00003`);
     expect(screen.getByTestId("Orders-cap").textContent).toBe("4 orders");
   });
 

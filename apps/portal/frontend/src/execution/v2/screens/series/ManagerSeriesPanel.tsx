@@ -11,7 +11,7 @@
  * Nothing is computed here and no figure is made up: the points are the server's exact strings.
  */
 import { PanelSkeleton } from "../../../components/states";
-import { ChartTools, EquityPanel, domainOfSeries } from "../../charts";
+import { ChartTools, EquityPanel, domainOfSeries, type DrawdownInput, type FlowPin } from "../../charts";
 import { Flag } from "../../Flag";
 import type { ManagerSeries } from "../../readers/managerSeries";
 import type { SeriesReadState } from "./useManagerSeries";
@@ -30,9 +30,13 @@ export interface ManagerSeriesPanelProps {
   height?: number;
   /** Offer Table and Expand (`ChartTools`) around a drawn series, over the same points. Default off. */
   tools?: boolean;
+  /** Drawdown pane under the plot (WP-F1): `absent` prints the caller's typed copy; a series is only ever a PUBLISHED drawdown. Omit for no pane. */
+  drawdown?: DrawdownInput;
+  /** Capital movements as signed pins on the plot (WP-F1), from a published ledger. */
+  flows?: readonly FlowPin[];
 }
 
-export function ManagerSeriesPanel({ label, read, gapCopy = "Not published (FE-013)", height = 240, tools = false }: ManagerSeriesPanelProps) {
+export function ManagerSeriesPanel({ label, read, gapCopy = "Not published (FE-013)", height = 240, tools = false, drawdown, flows }: ManagerSeriesPanelProps) {
   const series: ManagerSeries | null = read.phase === "ready" ? read.value : read.phase === "loading" || read.phase === "error" ? read.last : null;
   if (series === null) {
     if (read.phase === "loading") return <PanelSkeleton label={`Loading ${label.toLowerCase()}`} />;
@@ -79,6 +83,8 @@ export function ManagerSeriesPanel({ label, read, gapCopy = "Not published (FE-0
       state={chartStateOf(entry)}
       domain={domainOfSeries(points) ?? undefined}
       height={height}
+      {...(drawdown !== undefined ? { drawdown } : {})}
+      {...(flows !== undefined ? { flows } : {})}
     />
   );
   return (

@@ -99,7 +99,25 @@ export interface CapabilityRow {
   absent?: { fe: string; what: string };
   /** Set on an advisory eligibility row: the step-up fact the batch states for the allowed commands. */
   stepUp?: "REQUIRED" | "ACTIVE";
+  /**
+   * An allowed row whose step-up requirement no read states (governance decide: the action's `stepUpRequired` is null, and the plan
+   * decides). The status draws a typed "Step-up not stated" chip, never a guessed "required" and never nothing (WP-E, A8).
+   */
+  stepUpAbsent?: boolean;
+  /** One more published sentence beside the reason (the Live gate: the build does not record Live decisions). */
+  note?: string;
+  /**
+   * The capability allows it, but the build does not offer it (Live decisions): the status reads "Not available yet", never "Allowed" beside a sentence
+   * that says it is closed. `allowed` stays the capability fact; the reason column keeps the capability and adds the closed sentence.
+   */
+  closed?: true;
 }
+
+/** The words the Live gate row adds: the cockpit's own sentence (Rail, `DECISIONS.live`), so the two screens say one thing. */
+export const LIVE_CLOSED_NOTE = "Live decisions are closed on this build";
+
+/** What the step-up read said about the owner's own grant changes (`GET /api/admin/step-up`); `null` when it was not read. */
+export type ManageStepUpState = "REQUIRED" | "ACTIVE" | null;
 
 function row(id: string, label: string, capabilities: ReadonlySet<string>, need: CapabilityNeed | undefined, openWord: string): CapabilityRow {
   const allowed = holds(capabilities, need);
@@ -184,6 +202,12 @@ export function capitalRow(view: CapitalEligibilityView): CapabilityRow {
   }
 }
 
+/** "Manage grants": the capability, and the owner step-up state when the step-up read answered (every grant change needs one). */
+function manageGrantsRow(capabilities: ReadonlySet<string>, step: ManageStepUpState): CapabilityRow {
+  const base = row("manage:grants", "Manage grants", capabilities, { allOf: [ADMIN_CAPABILITY.profileAccessManage] }, "No capability needed");
+  return base.allowed && step !== null ? { ...base, stepUp: step } : base;
+}
+
 /**
  * What the caller can do, in the design's order. Three kinds of row, never mixed:
  *  - a capability the server names (the four gate decisions, Manage grants, Manage users);
@@ -191,9 +215,18 @@ export function capitalRow(view: CapitalEligibilityView): CapabilityRow {
  *  - a row no published read answers: "Not available yet" with the reason and its request id (FE-015, FE-016). Nothing is
  *    inferred from a role name, a preset or a neighbour's capability.
  */
-export function doRows(capabilities: ReadonlySet<string>, capital: CapitalEligibilityView = { phase: "idle", reason: "Not asked." }): CapabilityRow[] {
-  const decide = GATES.map((gate) =>
-    row(`decide:${gate.id}`, `Decide at ${gate.label.replace(" gate", "")} gate`, capabilities, { allOf: [gate.decide] }, "No capability needed"));
+export function doRows(
+  capabilities: ReadonlySet<string>,
+  capital: CapitalEligibilityView = { phase: "idle", reason: "Not asked." },
+  manageStepUp: ManageStepUpState = null,
+): CapabilityRow[] {
+  const decide = GATES.map((gate) => {
+    const base = row(`decide:${gate.id}`, `Decide at ${gate.label.replace(" gate", "")} gate`, capabilities, { allOf: [gate.decide] }, "No capability needed");
+    // R2 decisions ask for a step-up in the design; no read states it for a gate decision (`stepUpRequired` is null), so it is typed.
+    if (gate.id === "r2" && base.allowed) return { ...base, stepUpAbsent: true };
+    if (gate.id === "live" && base.allowed) return { ...base, note: LIVE_CLOSED_NOTE, closed: true as const };
+    return base;
+  });
   return [
     ...decide,
     absentRow("do:archive-approve", "Approve archive and reactivation", "FE-015", "Per-action eligibility", ARCHIVE_WHY),
@@ -201,7 +234,7 @@ export function doRows(capabilities: ReadonlySet<string>, capital: CapitalEligib
     absentRow("do:reactivation", "Start a reactivation review", "FE-015", "Per-action eligibility", ARCHIVE_WHY),
     capitalRow(capital),
     absentRow("do:operations", "Acknowledge and resolve operations", "FE-015", "Per-action eligibility", "The eligibility vocabulary has no action for acknowledging or resolving an operation."),
-    row("manage:grants", "Manage grants", capabilities, { allOf: [ADMIN_CAPABILITY.profileAccessManage] }, "No capability needed"),
+    manageGrantsRow(capabilities, manageStepUp),
     row("manage:users", "Manage users", capabilities, { allOf: [ADMIN_CAPABILITY.usersManage] }, "No capability needed"),
     absentRow("do:own-admin", "Change your own admin rights", "FE-015", "Per-action eligibility", "No read says whether you may change your own admin rights."),
     absentRow("do:export", "Export tables", ACCESS_FE.exportTables, "Export", "Export is not available yet."),

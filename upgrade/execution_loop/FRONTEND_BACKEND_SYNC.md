@@ -574,6 +574,104 @@ PM client or native authority port is added to a product adapter.
 Next checkpoint12:20UTC or immediately on actual READY. No heavy hook/build
 during the native slot; independent source-only tests are bounded. No push,
 production/dev/main/provider28445/command/Live activation.
+## 24October — outstanding handoffs consolidated before new backend
+
+[Claude integration handoff](evidence/ELP2-10/CLAUDE_SIX_PACKAGES_INTEGRATION_HANDOFF_2026-10-24.md).
+Inspected Claude beed0225e: packages1–4 have implementation progress (especially
+timing reader,83667ac73 digest,7bdbbf07e counts), do not assign them from scratch.
+Packages5/6 require new reader/fixture integration; all browser acceptance must
+be individually evidenced. Diverged lanes require semantic reconciliation, no
+wholesale overwrite. Packet written, no new Claude ACK claimed; no new backend
+package or runtime action in this docs-only round.
+
+## Codex ownership — six approved backend packages, 23 October
+
+Package6 Names/finance (24October Asia/Saigon) delivered `37bbecf92`. Scoped
+Resource360 deployments/allocations gain optional portfolio_name/reason, same
+authorized snapshot and name field policy, no extra source read. Claude extends
+closed reader before rollout; no accepted component redesign. Positive fixtures
+use existing open ProfileRead financial keys, shared account book and deployment
+graph. Repaired200-order/100-fill truncation via bounded complete fixture pages;
+tail and filters tested on1500orders. Wallet/equity, capital/risk budget and mixed
+currencies remain distinct. Edge financial batch definitions/publication still
+OPEN, no runtime allowlist widening or claimed connected acceptance. Exact
+fields/methods/source inputs in the sequential packet. Backend31/contract33/
+financial-Accounts8PASS; Control API/BFF build and snapshot611PASS.14code/fixture/
+generated files,+1958/-7. No frontend edit; closeout source-only, not installed.
+
+Package5 Contributors source/fixture delivered `ace3547ca` on the support lane.
+New optional Manager query group_limit/group_after/group_before and group_page
+separate group continuation from row pagination. Alpha attribution comes from the
+full authorized group, not page items. Claude should consume attribution and
+group_page rather than treating groups.length>=200 as truncation; preserve the
+existing component. Large rich fixture pages can hit the unchanged1MiB budget:
+request a smaller group_limit, not drop groups or loosen the budget. No source
+Return/Score aggregate was invented; consolidated method/publication remains an
+Edge source input. Exact consumer contract, fixtures/tests and code pin go into
+the sequential packet. FE2 inspected beed0225ebe141157b81cb1e3c14a04c9c9a08b0;
+FE-CAT-5 §4 accepted for implementation. Consumer/browser not claimed.
+Before grouped producer/BFF rollout, Claude must extend its closed reader
+allowlists and validate group_page/attribution. Old grouped reader currently
+rejects these fields; generated types do not fix it. Ungrouped responses retain
+their old shape. This is consumer wiring, not a component/design change.
+Gates: backend108/108 + controller14/14; contract72/72; fixture4/4;
+regressions27/27; Visit Digest7/7; Control API/BFF build and snapshot610 PASS.
+Final bare-read compatibility retake2/2 overlaps backend suite, not extra coverage.
+19source/generated/test files,+1401/-24; no install/push/landing/browser claim.
+
+Package4 Accounts projection/fixture delivered0f0d5cc85, base b6c90263b.
+One writer for manager-lists/projection, one for opt-in fixture BFF; Codex reviews
+and owns tracking/integration. Existing FE-CAT-4 DTO is reused; no component edit.
+Latest Claude source observed b805efb217dbcef26599deefff87236cebe7eb79, including
+WP-K second-pass contract notes. No newly delivered claim for those separate items.
+Same-snapshot selected-environment counts must not grant access to other profiles.
+Source census does not establish the proposed top-level broker `native_equity`:
+it lists `balances` JSONB, `currency`, `synced_at`; exposure remains a separate
+per-binding read. Do not call N sources or replace equity with wallet to fill list.
+Exact source-input follow-up and test results go in the linked package packet.
+Final:29 focused tests verified across documented retakes; contract/linked
+fixture8/8, ledger22/22, build/migration151 PASS. No component change or installation.
+Claude uses existing figures consumer, keeps absent-key fallback for real source,
+and checks linked generated Accounts/detail/exposure fixture on1280/660. Counts
+outside the authorized selected environment stay null. DEBT-052 remains OPEN for
+qualified source batch carrier; source request written, not claimed sent/accepted.
+
+Package3 delivered8822d58f2: new `execution-visit-digest.d.ts` GET/seen operations with a
+Portal-owned durable user/workspace baseline. Claude connects existing C1 frame,
+not new UI: NO_BASELINE/READY/EMPTY, `may_mark_seen`, exact revision/version POST,
+workspace-pinned hrefs. Real coverage is bounded authorized observations, not a
+complete event feed. Rich linked fixture is available independently of Edge.
+Migration150 + isolated PG19/19/restore PASS; final unit17/17, contract/HTTP7/7
+and ledger22/22 PASS (overlap; exact receipt in package packet). No preview installation
+or native-manager allowlist widening. AWAITING_CONSUMER_REVIEW.
+
+Closeout update:0297c4902 links scoped account/deployment contributions and capital
+to the common graph; affected consumer84/84 and producer15/15 PASS, BFF buildPASS.
+Package1 backend fixture ready; Claude browser/rollout not claimed. Package2
+40d3540c7 publishes timing, with separate new fixture to preserve old readers.
+Claude accepts new lifecycle policy enum and empty unavailable-fields option
+before opting in. No component redesign or production/remote change.
+
+[Sequential implementation ledger](evidence/ELP2-10/SIX_BACKEND_SUPPORT_PACKAGES_2026-10-23.md).
+Codex owns isolated BFF positive-series wiring, lifecycle fact helper and subsequent
+backend contracts/projections; Claude keeps accepted component design and its own
+checkout. Do not overwrite `review-manager.ts` from the support lane wholesale:
+integrate its focused diff against any newer Claude edits. No frontend source edits
+are part of this package. Helpers now present on Claude at c059d9844 are reused,
+not counted as a second delivery.
+
+## Codex → Claude — complete positive fixture support, 23 October
+
+[Delivery, catalogue pins, integration tasks and remaining contract gaps](evidence/ELP2-10/COMPLETE_POSITIVE_FIXTURE_SUPPORT_2026-10-23.md).
+Two new producers in `packages/contracts/tooling/`: positive Manager series and
+linked world; 10/10 focused tests PASS, existing DTO/schema unchanged. Source lane
+`chore/complete-fixture-review-20261023`, based on Claude `1229059`.
+Claude: wire into owned fixture BFF, reuse your sibling contracts, make complete
+positive the review default and keep absence/error scenarios separate. No repeated
+warning copy, no dependency on real Edge readiness for synthetic UI review.
+Track all 42 catalogue families with linked IDs and browser density/flow receipts.
+Fleet stage timing and Digest baseline remain specific contract follow-ups, not
+reasons to leave other panels blank. No UI edits or runtime changes by Codex.
 
 ## Core consolidated ACK —22Oct2026,11:05UTC
 

@@ -320,6 +320,8 @@ export function NewRequestForm({ state, variant, accessHref }: NewRequestFormPro
               {SUBMIT_LABEL}
             </button>
             {advice !== null ? <span className="exec-rq-why" role="status">{advice}</span> : null}
+            {/* The hint under the button (hi-fi: "Fill the missing fields first"): the gate's own words, only while the fields are what is missing. */}
+            {!gate.open && gate.kind === "incomplete" ? <span className="exec-rq-why" data-testid="rq-submit-hint">{gate.reason}</span> : null}
           </div>
         </div>
       )}

@@ -57,9 +57,11 @@ function Where() {
   const { pathname, search } = useLocation();
   return <output data-testid="where">{pathname + search}</output>;
 }
+const ALL_COLUMNS = "cols=owner,in-stage,unrealized,balance,equity,source,select";
+const withAllColumns = (entry: string): string => `${entry}${entry.includes("?") ? "&" : "?"}${ALL_COLUMNS}`;
 const mount = (api: ExecutionApi, entry: string) =>
   render(
-    <MemoryRouter initialEntries={[entry]}>
+    <MemoryRouter initialEntries={[withAllColumns(entry)]}>
       <FleetScreen api={api} />
       <Where />
     </MemoryRouter>,
@@ -67,7 +69,7 @@ const mount = (api: ExecutionApi, entry: string) =>
 const search = () => new URLSearchParams((screen.getByTestId("where").textContent ?? "").split("?")[1] ?? "");
 const table = () => screen.getByRole("table", { name: "Alpha fleet" });
 const loaded = async () => screen.findByRole("table", { name: "Alpha fleet" });
-const dataRows = () => within(table()).getAllByRole("row").slice(1);
+const dataRows = () => within(table()).getAllByRole("row").slice(1).filter((row) => !row.classList.contains("exec-cards-group"));
 const cell = (row: HTMLElement, label: string) => row.querySelector(`td[data-l='${label}']`)?.textContent ?? "";
 const kpis = () =>
   Object.fromEntries([...document.querySelectorAll(".exec-blk-kpi")].map((k) => [k.querySelector("dt")?.textContent ?? "", k.querySelector("dd")?.textContent ?? ""]));
@@ -83,7 +85,10 @@ describe("the KPI strip and the lens counts stay on a dataset table (Bobby 2026-
     await loaded();
     expect(document.querySelector("[data-source='dataset']")).not.toBeNull();
     await waitFor(() => expect(kpis()["Alphas"]).toBe("5"));
-    expect(kpis()).toEqual({ Alphas: "5", Deployments: "7", Portfolios: "2", "Need attention": "1", "Research only": "1" });
+    expect(kpis()).toEqual({
+      Alphas: "5", Deployments: "7", Portfolios: "2", "Need attention": "1", "Research only": "1",
+      "Ready for exit review": "Not available" + "Not published: readiness", "Archive in progress": "Not available" + "Not published: archived list",
+    });
     // the fleet read made exactly one request: one row, nothing narrowed, no lens, no search
     expect(legacy).toEqual([{ limit: 1 }]);
     // and the tabs carry the fleet read's alpha counts (Real-funded is an upper bound: an alpha in Canary and Live counts in each)
@@ -126,15 +131,15 @@ describe("the KPI strip and the lens counts stay on a dataset table (Bobby 2026-
     const { api } = harness(MIXED, "ok", () => ({ ok: false, status: "unavailable", reason: "HTTP_503" }));
     mount(api, LIVE_URL);
     await loaded();
-    await waitFor(() => expect(Object.keys(kpis())).toHaveLength(5));
-    for (const value of Object.values(kpis())) expect(value).toBe("Not available");
+    await waitFor(() => expect(Object.keys(kpis())).toHaveLength(7));
+    for (const value of Object.values(kpis())) expect(value).toMatch(/^Not available/);
     expect(tabText(/^All/)).not.toMatch(/\d/);
     // the population line stays: it still says what the table is and that the counts are the fleet read's
     expect(screen.getByTestId("counts-source")).toBeTruthy();
     expect(dataRows()).toHaveLength(6);
   });
 
-  it("where the fleet read IS the table (the All lens, the board) there is no second population to state", async () => {
+  it("where the fleet read IS the table (the All lens) there is no second population to state; the board over a dataset states it", async () => {
     const first = harness(MIXED);
     const view = mount(first.api, "/execution/fleet");
     await loaded();
@@ -142,11 +147,11 @@ describe("the KPI strip and the lens counts stay on a dataset table (Bobby 2026-
     expect(screen.queryByTestId("counts-source")).toBeNull();
     expect(first.legacy.every((query) => query.limit === 50)).toBe(true);
     view.unmount();
+    // the board over a published dataset is a dataset view (QA1 R2-10): it states the second population like the table does
     const second = harness(MIXED);
     mount(second.api, "/execution/fleet?stage=canary,live&view=board");
     await waitFor(() => expect(kpis()["Alphas"]).toBe("5"));
-    expect(screen.queryByTestId("counts-source")).toBeNull();
-    expect(second.legacy.every((query) => query.limit === 50)).toBe(true);
+    expect(screen.getByTestId("counts-source")).toBeTruthy();
   });
 
   it("the Archived lens has no strip and no counts read", async () => {
@@ -216,13 +221,13 @@ describe("dataset rows: the mini spine, the lifecycle flag, the peek", () => {
     expect(within(drawer).getByText("Alpha a-000")).toBeTruthy();
     expect(within(drawer).getByText("Version av-1")).toBeTruthy();
     const facts = Object.fromEntries([...drawer.querySelectorAll(".exec-fleet-fact")].map((f) => [f.querySelector("dt")!.textContent, f.querySelector("dd")!.textContent]));
-    expect(facts).toMatchObject({ "Alpha id": "a-000", Portfolio: "pf-1", "Current stage": "Live", "In stage": "Not published (FE-027)" });
+    expect(facts).toMatchObject({ "Alpha id": "a-000", Portfolio: "pf-1", "Current stage": "Live", "In stage": "Not published" });
     // no money, no invented history
     expect(drawer.textContent).not.toMatch(/\bUSDT\b|\bdays?\b/);
     const open = within(drawer).getByRole("link", { name: "Open Alpha 360" });
     expect(open.getAttribute("href")).toMatch(/^\/deployments\/alphas\/a-000/);
     // Compare is disabled with its request id, never hidden
-    expect(drawer.textContent).toContain("Not published (FE-033)");
+    expect(drawer.textContent).toContain("Not published: compare");
     expect(first.getAttribute("aria-current")).toBe("true");
     fireEvent.keyDown(document, { key: "Escape" });
     await waitFor(() => expect(search().get("sel")).toBeNull());
@@ -255,7 +260,7 @@ describe("group choices (guide 8.2): portfolio, stage, owner, health, each only 
     mount(api, LIVE_URL);
     await loaded();
     const group = screen.getByRole("combobox", { name: "Group by" }) as HTMLSelectElement;
-    expect([...group.options].map((option) => option.textContent)).toEqual(["Group: none", "Group: Portfolio", "Group: Current stage", "Group: Owner", "Group: Health"]);
+    expect([...group.options].map((option) => option.textContent)).toEqual(["Group: none", "Group: Portfolio", "Group: Current stage", "Group: Stage presence", "Group: Owner", "Group: Alpha", "Group: Venue", "Group: Health", "Group: Source state", "Group: Lifecycle"]);
     fireEvent.change(group, { target: { value: "owner_user_id" } });
     await waitFor(() => expect(search().get("group")).toBe("owner_user_id"));
     const groups = await screen.findByTestId("dataset-groups");
@@ -281,7 +286,7 @@ describe("group choices (guide 8.2): portfolio, stage, owner, health, each only 
     mount(api, `${LIVE_URL}&group=owner_user_id`);
     await loaded();
     const group = screen.getByRole("combobox", { name: "Group by" }) as HTMLSelectElement;
-    expect([...group.options].map((option) => option.textContent)).toEqual(["Group: none", "Group: Current stage"]);
+    expect([...group.options].map((option) => option.textContent)).toEqual(["Group: none", "Group: Current stage", "Group: Stage presence", "Group: Alpha", "Group: Venue", "Group: Source state", "Group: Lifecycle"]);
     expect(group.value).toBe("");
     expect(screen.queryByTestId("dataset-groups")).toBeNull();
   });

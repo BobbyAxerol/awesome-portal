@@ -99,10 +99,12 @@
   padding: 0;
   list-style: none;
   color: var(--ink);
-  background: var(--paper-raised);
-  border: 1px solid var(--line-strong);
+  /* seven steps in four columns: the last row is short, so the frame belongs to the steps, not to the grid (no empty eighth cell) */
+  background: transparent;
+  border: 0;
 }
 .exec-sbx-step {
+  background: var(--paper-raised);
   display: grid;
   gap: 6px;
   align-content: start;
@@ -171,6 +173,7 @@
   font: var(--exec-font-id);
   color: var(--ink-soft);
   overflow-wrap: anywhere;
+  white-space: normal;
 }
 
 /* lineage */
@@ -352,5 +355,49 @@
   }
   .exec-sbx-denied {
     padding: var(--space-4);
+  }
+}
+
+/* A figure and its unit stay on one line in the Internal / Broker / Difference rows; a long label wraps by word instead. */
+.exec-sbx-v2 .exec-blk-triad-row {
+  flex-wrap: wrap;
+}
+.exec-sbx-v2 .exec-blk-triad-row dd {
+  flex: none;
+  margin-left: auto;
+  white-space: nowrap;
+}
+
+/* QA1 R5/R4 fixes (WP-F3). The alpha id in the sub-line is the id size, not a larger mono than its neighbours (R5-16). */
+.exec-sbx-v2 .exec-stage-sub .exec-blk-num,
+.exec-sbx-v2 .exec-wb-sub .exec-blk-num {
+  font: var(--exec-font-id);
+}
+/* Touch targets at phone width (R5-26): a 44px hit area for the small controls without enlarging their drawn size. */
+@media (max-width: 660px) {
+  .exec-sbx-v2 :is(.exec-blk-link, .exec-dock-access, .exec-blk-btn, .exec-wb-btn, .exec-dock-btn, .exec-cny-refresh) {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+  }
+  .exec-sbx-v2 .exec-blk-why-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    margin-block: -13px;
+  }
+}
+/* Internal / Broker / Difference rows (R5-14): EVERY row stacks label over figure in
+ * EVERY column, at every width, so the rows keep one baseline across the three columns. */
+@media all {
+  .exec-sbx-v2 .exec-blk-triad-row {
+    display: block;
+    min-height: 0;
+    padding-bottom: var(--space-1);
+  }
+  .exec-sbx-v2 .exec-blk-triad-row dd {
+    text-align: right;
+    margin-left: 0;
   }
 }

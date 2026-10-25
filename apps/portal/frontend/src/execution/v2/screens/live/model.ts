@@ -28,7 +28,7 @@ import { readUtcEpochMs, type UtcEpochMs } from "../../../screenDataContract";
 import type { LiveFullOperations, LivePanel } from "../../../liveFull";
 import type { RowCollection } from "../../../certification";
 import { publishedRowsOf, type PublishedRows } from "../../readers/publishedRows";
-import { figureRowsOf, reconciliationFactOf, runtimeFactOf } from "../../readers/stageFactViews";
+import { figureRowsOf, reconciliationFactOf, runtimeFactOf, type FigureRow } from "../../readers/stageFactViews";
 import type { GapRange, TypedOrderRow, TypedPositionRow, TypedRows } from "../../../stageFacts";
 import { reconciliationChipFrom, runtimeChipFrom } from "../stage/factChips";
 import { stageIdentity, type StageIdentity } from "../stage/identity";
@@ -391,13 +391,25 @@ function reconciliationChipV1(live: LiveFullOperations): StageChipValue {
 function reconciliationChip(live: LiveFullOperations): StageChipValue {
   const c = live.brokerConsistency;
   if (c === null) return { state: "not-available", reason: "No broker verdict published" };
-  if (c.state === "MISMATCH") return { state: "flag", kind: "attention", label: "Mismatch" };
+  if (c.state === "MISMATCH") return { state: "flag", kind: "rejected", label: "Mismatch" };
   if (c.state === "IN_SYNC" && c.brokerValuesVisible) return { state: "flag", kind: "ok", label: "Matched" };
   // UNAVAILABLE, an unknown word, or an in-sync verdict that does not release the broker figures: not a match.
   return { state: "flag", kind: "unknown", label: "Not checked" };
 }
 
-function kpiCellV1(slot: (typeof KPI_SLOTS)[number], live: LiveFullOperations, mismatch: boolean): KpiCell {
+/**
+ * The caption under Broker equity once the broker side is visible: the SERVER's equity difference (`source_figures`, internal minus
+ * broker), worded. Exactly zero is "Matches internal"; any other published difference is printed as the server wrote it; none
+ * published = no caption of ours.
+ */
+function brokerEquityBasis(figures: readonly FigureRow[] | null): string | undefined {
+  const difference = figures?.find((f) => f.key === "equity")?.difference ?? null;
+  if (difference === null || difference.kind !== "value" || difference.value.kind !== "value") return undefined;
+  const { decimal } = difference.value;
+  return decimal.zero ? "Matches internal" : `Internal differs by ${decimal.display}`;
+}
+
+function kpiCellV1(slot: (typeof KPI_SLOTS)[number], live: LiveFullOperations, mismatch: boolean, figures: readonly FigureRow[] | null): KpiCell {
   const kpi = live.kpis.find((k) => k.key === slot.key);
   if (kpi === undefined) return { key: slot.key, label: slot.label, kind: "not-published" };
   const label = kpi.label || slot.label;
@@ -409,7 +421,7 @@ function kpiCellV1(slot: (typeof KPI_SLOTS)[number], live: LiveFullOperations, m
   if (kpi.value === null) return { key: slot.key, label, kind: "not-published" };
   const isCount = (kpi.unit ?? "").toUpperCase() === "COUNT";
   const metric = readMetric({ state: "AVAILABLE", value: kpi.value }, { unit: isCount ? "count" : "money" });
-  const basis = kpi.authority === null ? undefined : AUTHORITY_WORD[kpi.authority];
+  const basis = (slot.key === "broker_equity" ? brokerEquityBasis(figures) : undefined) ?? (kpi.authority === null ? undefined : AUTHORITY_WORD[kpi.authority]);
   return {
     key: slot.key,
     label,
@@ -467,9 +479,12 @@ function continuityV1(live: LiveFullOperations): ContinuityModel {
     {
       key: "sources",
       label: "Affected sources",
-      value: c === null || c.affectedAuthorities.length === 0
+      // A continuous feed that names no affected source says "None": the server stated both facts.
+      value: c === null
         ? na()
-        : { t: "list", items: c.affectedAuthorities.map(humanize) },
+        : c.affectedAuthorities.length === 0
+          ? gap === false ? text("None") : na()
+          : { t: "list", items: c.affectedAuthorities.map(humanize) },
     },
   ];
   const provenance: string[] = [];
@@ -481,7 +496,9 @@ function continuityV1(live: LiveFullOperations): ContinuityModel {
 }
 
 function predecessorV1(live: LiveFullOperations, id: string | null): PredecessorModel {
-  const link = id === null ? null : canaryHref(id);
+  // The predecessor is the Canary deployment the lineage names (CANARY_ENVELOPE); only without one is it this deployment's own canary page.
+  const named = safeInternalHref(live.lineage.find((l) => l.kind === "CANARY_ENVELOPE")?.href);
+  const link = named ?? (id === null ? null : canaryHref(id));
   const p = live.predecessorEnvelope;
   if (p === null) {
     return { present: false, reason: "No predecessor Canary envelope was published for this deployment.", canaryHref: link };
@@ -562,8 +579,10 @@ function blockersV1(live: LiveFullOperations, mismatch: boolean, gap: boolean | 
     items.push({ key: `code:${code}`, text: blockerSentence(code), code });
   };
   if (!live.productionCommandActive) addCode("PRODUCTION_COMMAND_INACTIVE");
-  if (mismatch) items.push({ key: "mismatch", text: "Internal and broker figures disagree." });
   const r4 = live.commandPolicy?.riskIncreasing ?? null;
+  if (mismatch) items.push({ key: "mismatch", text: "Internal and broker figures disagree." });
+  // The guard semantics the body publishes (BROKER_MISMATCH_SUPPRESSES_VALUES_AND_SOURCE_GAP_BLOCKS_R4): the flag is the server's.
+  if (mismatch && r4?.sourceGapBlocks === true) items.push({ key: "mismatch-r4", text: "Risk-increasing actions are blocked until the figures match." });
   if (gap === true && r4?.sourceGapBlocks === true) items.push({ key: "gap", text: "Risk-increasing actions are blocked until the gap closes." });
   for (const code of live.lifecycleBlockers) addCode(code);
   for (const code of live.brokerConsistency?.blockerCodes ?? []) addCode(code);
@@ -652,6 +671,7 @@ export function liveModelV1(live: LiveFullOperations): LiveModel {
     if (item.kind === "R1_APPROVAL") targets.r1 = href;
     else if (item.kind === "R2_APPROVAL") targets.r2 = href;
     else if (item.kind === "SANDBOX_EXIT") targets.sandbox = href;
+    else if (item.kind === "CANARY_ENVELOPE") targets.canary = href;
   }
   const guard = guardRulesV1(live);
   const blockers = blockersV1(live, mismatch, gap);
@@ -670,7 +690,7 @@ export function liveModelV1(live: LiveFullOperations): LiveModel {
     spineBlocked: mismatch || gap === true,
     chips: { runtime: runtimeChipV1(live), freshness: freshnessChip(live.panels.internal ?? live.panels.broker), reconciliation: reconciliationChipV1(live) },
     notice: noticeV1(live, mismatch),
-    kpis: KPI_SLOTS.map((slot) => kpiCellV1(slot, live, mismatch)),
+    kpis: KPI_SLOTS.map((slot) => kpiCellV1(slot, live, mismatch, figures)),
     chart: mismatch
       ? { kind: "mismatch", findingHref: safeInternalHref(c?.findingHref), reconcileHref: safeInternalHref(c?.dryRunReconcileHref) }
       : gap === true

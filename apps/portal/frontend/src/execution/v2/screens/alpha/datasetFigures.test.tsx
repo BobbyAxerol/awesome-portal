@@ -99,8 +99,8 @@ describe("Performance: windowed figures", () => {
     expect(cell(rows[0]!, "Net PnL")).toBe("Real-funded · USDT0.00 USDT");
     // allocation is a published key but this partition publishes none: a typed absence, not zero.
     expect(cell(rows[0]!, "Allocation")).toBe("Real-funded · USDTNot available");
-    // equity_30d_end_value is not in the dataset's metric set: Not published with its request id.
-    expect(cell(rows[0]!, "Equity, 30D end")).toBe("Not published (FE-013)");
+    // The missing equity key stays absent; the approved copy names the fact, not an internal ticket.
+    expect(cell(rows[0]!, "Equity, 30D end")).toBe("Not published: equity");
     expect(cell(rows[0]!, "Return, 30D")).toBe("-3.25%");
     expect(cell(rows[1]!, "Return, 30D")).toBe("0.00%");
     expect(table.textContent).not.toMatch(/Paper|Sandbox/);
@@ -122,8 +122,8 @@ describe("review lane rows for the suite's alpha (simulated keys through the por
     await waitFor(() => expect(facts.textContent).toMatch(/\d%/));
     // Max drawdown: a published negative percent of the same partition, not Not published.
     const drawdown = (await tile("Max drawdown")).querySelector(".exec-mgr-num")!;
-    expect(drawdown.textContent).toMatch(/^-\d+(\.\d\d?)?%$/);
-    expect(drawdown.getAttribute("title")).toMatch(/^-\d+(\.\d\d?)? · /);
+    expect(drawdown.textContent).toMatch(/^-\d+(\.\d+)?%$/); // the worst point of the same window's DRAWDOWN series (QA2 R2-04), so its places are the series'
+    expect(drawdown.getAttribute("title")).toMatch(/^-\d+(\.\d+)? · /);
     const table = await screen.findByRole("table", { name: "Windowed figures by portfolio" });
     const row = within(table).getAllByRole("row")[1]!;
     // The id pf_core is printed by the name the alpha body states for it.

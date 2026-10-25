@@ -1,5 +1,7 @@
 # FE-CAT-8 and FE-CAT-9: additive facts, owning contract by owning contract (2026-10-23)
 
+> **CORRECTED IN PART (2026-10-23, Codex review): last sign-in semantics and the SQL suggestion. See the section 'Corrections' at the end. The original text below is kept as history.**
+
 Level: R0 note. One fact is delivered end to end at fixture level (Users `last_sign_in_at`); every other fact is ACCEPTED_FOR_IMPLEMENTATION because the repository shows no identifiable owning source for it. Rule applied: where the source is not identifiable the Portal adds no field and no allowlist entry (a field with no source is an invented fact); the exact Edge/Core input is recorded here instead.
 
 ## 1. How the repository was read (what "published" means here)
@@ -42,3 +44,8 @@ Common rules (same as FE-CAT-4): exact decimal strings, one currency per figure,
 ## 3. Pins and effects
 - `contracts-snapshot.json`: one added line (the new roster fixture). `portal-account-lifecycle.openapi.json` and its d.ts are not snapshot-tracked, so no hash changes. The N29 product acceptance pins `br72_*` (manager-lists) only; nothing here needs an N29 re-pin.
 - The Users double and `fixture-bff/app.ts` gained an opt-in flag (additive); populated-profile Users visual baselines will differ (the Last seen column now has times). Not re-recorded.
+
+## Corrections (2026-10-23, after Codex review CODEX_NUMERIC_AND_FINANCIAL_REVIEW_2026-10-23.md and CLAUDE_POST_FREEZE_REVIEW_2026-10-23.md)
+
+- **Semantics.** Codex: absent history means omitted/unknown, NOT `null` / "Never signed in", unless lifetime coverage is independently established; no production purge was found in the inspected source, which alone does not prove lifetime coverage. Our reader and cell treated `null` as "Never signed in": changed by WP-E (Users): omitted and `null` both read as unknown unless a published coverage statement exists; "Never signed in" is no longer printed from a bare `null`.
+- **Source.** The session-maximum suggestion (`max(auth_sessions.created_at)`) is retired: a session is not necessarily a successful human sign-in (preview auto-login, acceptance sessions recorded as `research_acceptance_session_issued`, `last_seen_at` is activity). Codex implemented the producer from `auth_audit_events` `login_succeeded` (excluding `PREVIEW_AUTO_LOGIN`, acceptance sessions, failures and other actors), `users.ts`, `account-roster-page.ts`, `account-lifecycle.service.ts`, tests `users-last-sign-in.spec.ts`; unknown history is omitted.

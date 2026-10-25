@@ -18,6 +18,8 @@ import { useMediaQuery } from "../../useMediaQuery";
 import type { LiveSourcePanelV2, LiveSourceRecordV2 } from "../../readers/liveSourceOperations";
 import type { TypedOrderRow, TypedPositionRow } from "../../../stageFacts";
 import { PanelState } from "../../../components/states";
+import { withPaddedQuantity } from "../stage/padDecimals";
+import { QtyCell } from "../stage/QtyCell";
 import { cellText, lossNote, lossText, type PublishedRow } from "../../readers/publishedRows";
 import {
   OPERATIONS_PATH,
@@ -78,7 +80,7 @@ export function ContextLink({ to, children }: { to: string | null; children: str
  * wrong thing to show. With neither, the series is not published (the schema carries no points), so the
  * slot says that and names the request.
  */
-export function ChartSlot({ slot, gapAbove = false }: { slot: ChartSlotModel; gapAbove?: boolean }) {
+export function ChartSlot({ slot, gapAbove = false, deploymentId = null }: { slot: ChartSlotModel; gapAbove?: boolean; deploymentId?: string | null }) {
   switch (slot.kind) {
     case "mismatch":
       return (
@@ -100,7 +102,7 @@ export function ChartSlot({ slot, gapAbove = false }: { slot: ChartSlotModel; ga
             Gap window <CellView cell={slot.window} />
           </p>
           <p className="exec-liv-slot-links">
-            <ContextLink to={OPERATIONS_PATH}>Open operation</ContextLink>
+            <ContextLink to={deploymentId === null ? OPERATIONS_PATH : `${OPERATIONS_PATH}?target_id=${encodeURIComponent(deploymentId)}`}>Open operations for this deployment</ContextLink>
           </p>
         </section>
       );
@@ -178,7 +180,7 @@ function unpublishedColumn<R>(key: string, label: string, reasons: Readonly<Reco
 const POSITION_COLUMNS = (reasons: Readonly<Record<string, string>>): readonly CardsColumn<TypedPositionRow>[] => [
   { key: "symbol", label: "Symbol", render: (r) => r.symbol },
   { key: "side", label: "Side", render: (r) => (r.side === null ? null : <Flag kind={r.side === "long" ? "ok" : "attention"} label={r.side === "long" ? "Long" : "Short"} size="sm" />) },
-  { key: "quantity", label: "Quantity", numeric: true, render: (r) => <ExactCell value={r.quantity} unit="qty" /> },
+  { key: "quantity", label: "Quantity", numeric: true, render: (r) => <QtyCell value={r.quantity} /> },
   { key: "entry", label: "Entry", numeric: true, render: (r) => <ExactCell value={r.entry} unit="money" /> },
   { key: "mark", label: "Mark", numeric: true, render: (r) => <ExactCell value={r.mark} unit="money" /> },
   { key: "unrealised", label: "Unrealised PnL", numeric: true, render: (r) => <ExactCell value={r.unrealised} unit="money" signed /> },
@@ -189,7 +191,7 @@ const ORDER_COLUMNS = (reasons: Readonly<Record<string, string>>): readonly Card
   { key: "symbol", label: "Symbol", render: (r) => r.symbol },
   { key: "type", label: "Type", render: (r) => r.type },
   { key: "side", label: "Side", render: (r) => (r.side === null ? null : r.side === "buy" ? "Buy" : "Sell") },
-  { key: "quantity", label: "Quantity", numeric: true, render: (r) => <ExactCell value={r.quantity} unit="qty" /> },
+  { key: "quantity", label: "Quantity", numeric: true, render: (r) => <QtyCell value={r.quantity} /> },
   { key: "price", label: "Price", numeric: true, render: (r) => <ExactCell value={r.price} unit="money" /> },
   { key: "status", label: "Status", render: (r) => r.status },
   {
@@ -218,24 +220,23 @@ export function V1RowsSection({ title, aside, rows, what }: { title: string; asi
   if (rows.kind === "typed-positions" || rows.kind === "typed-orders") {
     // The server's typed rows (FE-072): exact text, no sum; the two columns the source relation lacks say so with the server's reason.
     const shown = rows.rows.slice(0, ROW_CAP);
-    // A column no row fills (Leverage, Ack latency) is not drawn per row: its name is one `Not available` line under the table.
-    // (The source relation carries neither, so no row can fill them.)
-    const unfilled = true;
+    // A column no row fills (Leverage, Ack latency: the source relation carries neither) is not drawn as a column of empty cells: it is said ONCE
+    // under the table, with the server's reason in its title (R5-10, R5-12).
     const dropKey = rows.kind === "typed-positions" ? "leverage" : "ack_latency_ms";
     const dropLabel = rows.kind === "typed-positions" ? "Leverage" : "Ack latency";
-    const keep = (column: { key: string }) => !(unfilled && shown.length > 0 && column.key === dropKey);
+    const keep = (column: { key: string }) => !(shown.length > 0 && column.key === dropKey);
     return (
       <SectionPanel level={2} title={title} aside={aside}>
         {rows.line ? <p className="exec-liv-line"><span className="exec-blk-na">{rows.line}</span></p> : null}
         {rows.kind === "typed-positions" ? (
-          <CardsTable columns={POSITION_COLUMNS(rows.reasons).filter(keep)} rows={shown as TypedPositionRow[]} rowKey={(row) => `${row.id ?? row.symbol}`} label={title} empty="The source reported none." />
+          <CardsTable columns={POSITION_COLUMNS(rows.reasons).filter(keep)} rows={withPaddedQuantity(shown as TypedPositionRow[])} rowKey={(row) => `${row.id ?? row.symbol}`} label={title} empty="The source reported none." />
         ) : (
-          <CardsTable columns={ORDER_COLUMNS(rows.reasons).filter(keep)} rows={shown as TypedOrderRow[]} rowKey={(row) => `${row.id ?? row.symbol}`} label={title} empty="The source reported none." />
+          <CardsTable columns={ORDER_COLUMNS(rows.reasons).filter(keep)} rows={withPaddedQuantity(shown as unknown as TypedOrderRow[])} rowKey={(row) => `${row.id ?? row.symbol}`} label={title} empty="The source reported none." />
         )}
         <div className="exec-liv-more">
           <span className="exec-liv-cap">{rows.caption}</span>
         </div>
-        {unfilled && shown.length > 0 ? <GapLine items={[{ label: dropLabel, id: "FE-072", reason: rows.reasons[dropKey] ?? null }]} /> : null}
+        {shown.length > 0 ? <GapLine items={[{ label: dropLabel, id: "FE-072", reason: rows.reasons[dropKey] ?? null }]} /> : null}
       </SectionPanel>
     );
   }

@@ -12,6 +12,7 @@ import { SectionPanel } from "../../../blocks";
 import { CardsTable, type CardsColumn } from "../../../cardsTable";
 import { Flag } from "../../../Flag";
 import { PF_FE } from "../fe";
+import { PartitionFigures, figureSource } from "../PartitionFigures";
 import { Absent, Money, Np } from "../format";
 import type { TabCtx } from "./ctx";
 import { contributionByCurrency, type AccountView, type DeploymentView } from "./model";
@@ -21,6 +22,10 @@ import "../../../css/portfolios.css";
 import { formatInstant } from "../../../boundary";
 
 export function RiskTab({ ctx }: { ctx: TabCtx }) {
+  // The window's maximum drawdown is the dataset's own published figure; the current drawdown needs the NAV series' drawdown, which is not published.
+  const read = ctx.reads.dataset;
+  const dataset = read.phase === "ready" ? read.value : read.phase === "loading" || read.phase === "error" ? read.last : null;
+  const maxDrawdown = figureSource(dataset, "max_drawdown_pct", ctx.portfolioId);
   const exposureColumns: CardsColumn<DeploymentView>[] = [
     { key: "deployment", label: "Deployment", render: (d) => <InternalLink to={ctx.routes.deployment(d.deploymentId, d.stage)} search={ctx.search}>{d.deploymentId}</InternalLink> },
     { key: "alpha", label: "Alpha", render: (d) => d.alphaLabel },
@@ -51,12 +56,13 @@ export function RiskTab({ ctx }: { ctx: TabCtx }) {
   ];
   const currencies = contributionByCurrency(ctx.deployments).map((g) => g.currency);
   return (
-    <div className="exec-pf-grid2">
+    <div className="exec-pf-grid2 exec-pf-grid2--tables">
       <div className="exec-pf-stack">
         <SectionPanel title="Exposure" aside="Current, per deployment">
           <table className="exec-pf-statements" aria-label="Exposure facts">
             <tbody>
-              <tr><th scope="row">Drawdown now and max</th><td><Np fact={PF_FE.drawdown} /></td></tr>
+              <tr><th scope="row">Drawdown, max in window</th><td>{maxDrawdown !== null ? <PartitionFigures list={maxDrawdown} metricKey="max_drawdown_pct" signed labels="several" /> : <Np fact={PF_FE.drawdown} />}</td></tr>
+              <tr><th scope="row">Drawdown now</th><td><Np fact={PF_FE.drawdown} /></td></tr>
               <tr><th scope="row">Portfolio gross exposure</th><td><Absent reason={currencies.length > 1 ? `not published; ${currencies.join(" and ")} figures are never added` : "not published; it is not worked out here"} /></td></tr>
               <tr><th scope="row">Exposure cap</th><td><Absent reason="no cap published" /></td></tr>
             </tbody>

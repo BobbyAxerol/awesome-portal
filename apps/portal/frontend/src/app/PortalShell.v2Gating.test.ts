@@ -26,8 +26,9 @@ describe("V2 command bar gating", () => {
   it("the only route into the V2 bar is a lazy import behind the raw env string", () => {
     const guarded = /const V2CommandBar = import\.meta\.env\.VITE_EXECUTION_V2_SCREENS\s*\?\s*lazy\(\(\) => import\("\.\.\/execution\/v2\/shell\/ExecCommandBar"\)/;
     expect(shell).toMatch(guarded);
-    // Two lazy V2 mounts, each behind the raw env string: the command bar above and the self-navigation controller (W3).
-    expect([...shell.matchAll(/import\("[^"]*execution\/v2[^"]*"\)/g)]).toHaveLength(2);
+    // Three lazy V2 mounts, each behind the raw env string: the command bar above, the self-navigation controller (W3) and the
+    // sidebar count badges (WP-D).
+    expect([...shell.matchAll(/import\("[^"]*execution\/v2[^"]*"\)/g)]).toHaveLength(3);
   });
 
   it("the self-navigation controller is a lazy import behind the same raw env string, and the shell holds only its types-free view module", () => {
@@ -37,6 +38,12 @@ describe("V2 command bar gating", () => {
     expect(imports(read("selfNavView.ts"))).toEqual(["react"]);
     // Mounted only with the shell flag on, so a manifest without `shell` does not even load the chunk.
     expect(shell).toMatch(/V2SelfNavigation && V2_SHELL_ON/);
+  });
+
+  it("the count badges are a lazy import behind the same raw env string, mounted only on an Execution route the V2 bar owns", () => {
+    const guarded = /const V2NavCounts = import\.meta\.env\.VITE_EXECUTION_V2_SCREENS\s*\?\s*lazy\(\(\) => import\("\.\.\/execution\/v2\/shell\/navCounts"\)\)\s*:\s*null;/;
+    expect(shell).toMatch(guarded);
+    expect(shell).toMatch(/V2NavCounts && v2Route/);
   });
 
   it("the routing helper pulls in only the flag constants and the shell's own classifier", () => {

@@ -27,6 +27,8 @@ import type { FlagKind } from "../../flagKinds";
 export const FE_MONEY = "FE-005/006/013/025";
 export const FE_CAPITAL = "FE-017";
 export const FE_DIGEST = "FE-024";
+/** Fund-level capital events (added, returned) for markers on the performance chart: no published place (the ledger is per portfolio). */
+export const FE_CAPITAL_EVENTS = "FE-017";
 export const FE_CONTRIBUTORS = "FE-025";
 export const FE_RESEARCHER = "FE-026";
 
@@ -102,6 +104,15 @@ export function comparableAge(item: Pick<TriageItem, "ageSeconds" | "asOf">, rea
   return ageLabel(item.ageSeconds);
 }
 
+/** Where a deadline sits against the server's reference instant; `null` when either is missing or unreadable. */
+export function deadlineRelation(due: string | null, reference: string | null): "before" | "after" | null {
+  if (due === null || reference === null) return null;
+  const d = Date.parse(due);
+  const r = Date.parse(reference);
+  if (!Number.isFinite(d) || !Number.isFinite(r) || d === r) return null;
+  return d < r ? "before" : "after";
+}
+
 export function triageRows(panel: NeedsYouPanel | null, stamp: (iso: string) => string, readAt: string | null): TriageView[] {
   if (panel === null) return [];
   // Order is the server's. See commandCenter.ts, rule 1.
@@ -112,14 +123,21 @@ export function triageRows(panel: NeedsYouPanel | null, stamp: (iso: string) => 
       ? item.slaState === "OVERDUE" ? ` since ${shortInstant(item.slaDueAt)}` : item.slaState === "DUE_SOON" ? `, by ${shortInstant(item.slaDueAt)}` : `, due ${shortInstant(item.slaDueAt)}`
       : "";
     const age = comparableAge(item, readAt);
+    // The relation of the deadline to "now" is judged against the SERVER's own read time (or the item's as-of), never the browser clock.
+    // A state word that the dates contradict ("Due soon" for a date before the read) is not repeated as a fact: the date and its relation are shown.
+    const relation = deadlineRelation(item.slaDueAt, readAt ?? item.asOf);
+    const contradicted = relation !== null && ((item.slaState === "DUE_SOON" || item.slaState === "ON_TRACK") && relation === "before" || item.slaState === "OVERDUE" && relation === "after");
+    const slaShortDate = contradicted && item.slaDueAt
+      ? `Deadline ${shortInstant(item.slaDueAt)}, ${relation === "before" ? "before" : "after"} the read time`
+      : null;
     return {
       id: item.id,
       kind: item.kind,
       title: item.title,
       summary: item.summary,
       severity: item.severity,
-      sla: `${word}${due}${age === null && item.ageSeconds !== null ? ". Age not shown: its as-of time is not comparable with the read time" : ""}`,
-      slaShort: `${word}${shortDue}${age ? `, age ${age}` : ""}`,
+      sla: `${contradicted && item.slaDueAt ? `Deadline ${stamp(item.slaDueAt)}, ${relation === "before" ? "before" : "after"} the read time; the server's state word is ${word}` : `${word}${due}`}${age === null && item.ageSeconds !== null ? ". Age not shown: its as-of time is not comparable with the read time" : ""}`,
+      slaShort: `${slaShortDate ?? `${word}${shortDue}`}${age ? `, age ${age}` : ""}`,
       slaState: item.slaState,
       rank: item.rank,
       href: item.href,

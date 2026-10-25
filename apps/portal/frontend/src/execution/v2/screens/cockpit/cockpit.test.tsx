@@ -8,6 +8,7 @@ import type { ExecutionApi, InboxResult } from "../../../api/ports";
 import { readLiveReview } from "../../../api/profileRead";
 import { readConditionsPage, readGateR1Detail, readGateR2Detail, readPaperExitDetail } from "../../../api/rows";
 import type { ApprovalRow, DecidedRow } from "../../../screens/ApprovalInbox";
+import { readApprovalEvidenceV1 } from "../../readers/approvalEvidence";
 import { v1GovernanceParent, type GovernanceParentKind } from "../../readers/dispatch";
 import { V2_ROLE_PRESETS } from "../../shell/roleNav";
 import Cockpit, { type CockpitProps } from "./index";
@@ -38,7 +39,7 @@ const WRITES = [
   "planCommand", "runOperatorTask", "acknowledgeOperation", "resolveOperation",
 ] as const;
 const READS = [
-  "listApprovals", "getApprovalHistory", "getGateR1", "getGateR2", "getLiveReview", "getGovernanceParent", "getPaperExit", "getWaivers", "getReviewCaptureCapabilities",
+  "listApprovals", "getApprovalHistory", "getGateR1", "getGateR2", "getLiveReview", "getGovernanceParent", "getPaperExit", "getWaivers", "getReviewCaptureCapabilities", "getApprovalEvidence",
 ] as const;
 
 type Handler = (...args: never[]) => unknown;
@@ -636,7 +637,10 @@ describe("evidence frame", () => {
     const evidence = screen.getByRole("region", { name: "Evidence" });
     expect(within(evidence).getByRole("heading", { name: "Alpha One" })).toBeTruthy();
     const checklist = within(evidence).getByRole("region", { name: "Checklist findings" });
-    expect(npCells(checklist, "Not published (FE-028)").length).toBe(3);
+    // QA1 I-16: the same absence on every row is one line under the table, not a column of three placeholders.
+    expect(within(checklist).queryByRole("columnheader", { name: "Observed and limit" })).toBeNull();
+    expect(npCells(checklist, "Not published (FE-028)").length).toBe(1);
+    expect(within(checklist).getByTestId("ck-observed-absent").textContent).toContain("for every finding");
     expect(within(checklist).getByText("Capacity evidence covers the top 3 symbols only")).toBeTruthy();
     expect(within(checklist).getByText("Approve with a condition")).toBeTruthy();
     expect(within(checklist).getByText("Watch")).toBeTruthy();
@@ -815,12 +819,18 @@ describe("decision rail", () => {
   it("ladder, call and receipt ref are one 'Not available' line (FE-030 behind its disclosure); the receipt is a preview", async () => {
     await mount(standardPort(), "/execution/approvals?sel=apr_a");
     const receipt = within(rail()).getByRole("region", { name: "Receipt" });
-    for (const label of ["Ladder", "Call", "Receipt ref", "What changes"]) expect(within(receipt).queryByRole("rowheader", { name: label }), label).toBeNull();
+    for (const label of ["Ladder", "Call", "Receipt ref"]) expect(within(receipt).queryByRole("rowheader", { name: label }), label).toBeNull();
     const line = within(receipt).getByTestId("not-available-line");
-    expect(line.textContent).toContain("Not available: Ladder, Call, Receipt ref, What changes");
+    expect(line.textContent).toContain("Not available: Ladder, Call, Receipt ref");
     expect(line.hasAttribute("title")).toBe(false);
     expect(whyText(line)).toContain("Receipt ref: Not published (FE-030)");
-    expect(within(receipt).getByRole("rowheader", { name: "Decision" }).nextElementSibling?.textContent).toBe("None recorded");
+    // The hi-fi's preview rows: nothing chosen, the request and its title, the signed-in person, what an approval would count as, what changes.
+    expect(within(receipt).getByRole("heading", { name: "Preview · not recorded" })).toBeTruthy();
+    expect(within(receipt).getByRole("rowheader", { name: "Decision" }).nextElementSibling?.textContent).toBe("None chosen");
+    expect(within(receipt).getByRole("rowheader", { name: "Request" }).nextElementSibling?.textContent).toBe("apr_a · Alpha One");
+    expect(within(receipt).getByRole("rowheader", { name: "You" }).nextElementSibling?.textContent).toBe("bobby");
+    expect(within(receipt).getByRole("rowheader", { name: "Counts as" }).nextElementSibling?.textContent).toBe("If approved: 1 of 1 approvals"); // the evidence read's own quorum (1) wins over the queue row's (2)
+    expect(within(receipt).getByRole("rowheader", { name: "What changes" }).nextElementSibling?.textContent).toContain("Not published");
     // UXM07-048/6: the preview reason is each control's description (hidden text) and the page banner says it once; the rail draws none
     expect(rail().querySelectorAll(".exec-dock-reason")).toHaveLength(0);
     expect(within(rail()).getAllByText(PREVIEW).length).toBeGreaterThan(0);
@@ -916,7 +926,9 @@ describe("waiver lane", () => {
     await settle();
     const evidence = screen.getByRole("region", { name: "Evidence" });
     expect(within(evidence).getByRole("region", { name: "Condition" }).textContent).toContain("Keep paper exposure below the certified envelope.");
-    expect(npCells(evidence, "Not published (FE-029)").length).toBeGreaterThan(0);
+    // The runway is drawn from the register page (it was a typed absence before WP-E): one line for the open waiver, on the shared axis.
+    expect(within(evidence).getByTestId("ck-runway")).toBeTruthy();
+    expect(within(evidence).getByTestId("ck-waiver-banner").textContent).toContain("Expiring");
     // The "?" reason disclosures (GapWhy) are buttons too; this is about the decision controls.
     const buttons = (within(rail()).getAllByRole("button") as HTMLButtonElement[]).filter((b) => !b.hasAttribute("aria-expanded"));
     expect(buttons.map((b) => b.textContent)).toEqual(["Extend 14 days", "Other decisions"]);
@@ -1379,5 +1391,46 @@ describe("the New request drawer", () => {
       expect(where()).toContain("compose=request");
       expect(drawer()).not.toBeNull();
     });
+  });
+});
+
+/* ── WP-K slice 2: the approval evidence read (history, diff, obligations, receipt preview) ─────────────── */
+describe("approval evidence (WP-K)", () => {
+  const evidenceOf = (name: string) => {
+    const read = readApprovalEvidenceV1((fixture(`execution-approval-evidence.${name}.synthetic.valid.json`) as { value: unknown }).value);
+    if (read === null || read.kind !== "approval_evidence") throw new Error("evidence fixture unreadable");
+    return read.evidence;
+  };
+  const withEvidence = (name: string) => standardPort({ getApprovalEvidence: () => ({ ok: true, value: evidenceOf(name) }) } as never);
+  const openExit = async (p: Port) => {
+    await mount(p, "/execution/approvals", { workspaceId: "ws_x" });
+    fireEvent.click(rowButton(/Gamma Exit/));
+    await settle();
+  };
+  const evidencePane = () => screen.getByRole("region", { name: "Evidence" });
+
+  it("a published read fills the history chart, the diff, the five counts (a true zero is a number) and the claim; the rail says what changes", async () => {
+    await openExit(withEvidence("published"));
+    const pane = within(evidencePane());
+    expect(pane.getByTestId("ck-history-caption").textContent).toMatch(/portfolio TEST_ONLY:portfolio-a · NAV in USDT · methodology TEST_ONLY:nav-twr\.v1/);
+    expect(pane.getByTestId("ck-evidence-diff").textContent).toMatch(/Requested capital10,000\.00 \u2192 15,000\.00/);
+    expect(pane.getByTestId("ck-open-openPositions").textContent).toBe("2");
+    expect(pane.getByTestId("ck-open-workingOrders").textContent).toBe("0");
+    expect(pane.getByTestId("ck-obligations-fact").textContent).toBe("3 obligations stay open after approval");
+    expect(within(rail()).getByTestId("ck-what-changes").textContent).toMatch(/Allocation to portfolio A rises by 5000\.00 USDT/);
+  });
+  it.each(["not-read", "no-source"])("%s keeps every panel on its typed absence and makes no claim", async (name) => {
+    await openExit(withEvidence(name));
+    const pane = within(evidencePane());
+    expect(pane.queryByTestId("ck-obligations-fact")).toBeNull();
+    expect(pane.queryByTestId("ck-open-workingOrders")).toBeNull();
+    expect(pane.queryByTestId("ck-history-caption")).toBeNull();
+    expect(within(rail()).queryByTestId("ck-what-changes")).toBeNull();
+    expect(pane.getByText("Still open after approval")).toBeTruthy();
+  });
+  it("a refused or unthrowable read is the same typed absence", async () => {
+    await openExit(standardPort({ getApprovalEvidence: () => ({ ok: false, status: "unavailable", reason: "The approval evidence never reached the Portal." }) } as never));
+    expect(within(evidencePane()).queryByTestId("ck-obligations-fact")).toBeNull();
+    expect(within(evidencePane()).getByText("Still open after approval")).toBeTruthy();
   });
 });

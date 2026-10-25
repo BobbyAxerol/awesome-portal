@@ -186,7 +186,9 @@ describe("the Triad rows", () => {
     const model = triadModel(p, "acc_bnc_core", "USDT", true);
     for (const key of ["free", "total", "initial", "maintenance"]) {
       const row = model.rows.find((r) => r.key === key)!;
-      expect(row.broker, key).toEqual({ kind: "not-computed", reason: "SHARED_BINDING" });
+      // The venue's published buying power is drawn on the broker side (whole account); every other broker cell and every difference is not computed.
+      if (key === "free") expect(row.broker, key).toMatchObject({ decimal: { full: "301100.00" } });
+      else expect(row.broker, key).toEqual({ kind: "not-computed", reason: "SHARED_BINDING" });
       expect(row.difference, key).toEqual({ kind: "not-computed", reason: "SHARED_BINDING" });
     }
     expect(model.rows.find((r) => r.key === "free")!.internal).toMatchObject({ decimal: { full: "80000.00" } });
@@ -398,10 +400,13 @@ describe("tabs, views, links, copy", () => {
     expect(deploymentHref("d1", "paper", "PAPER")).toBe("/deployments/paper/d1");
   });
 
-  it("every Not published sentence carries its request id", () => {
-    expect(notPublished(FE.budget)).toBe("Not published (FE-017)");
-    expect(notPublishedReason(FE.command, "None.")).toBe("Not published (FE-020). None.");
-    for (const fact of Object.values(FE)) expect(notPublished(fact)).toMatch(/^Not published \((FE|A360|ELP2-REQ-FE)-[\w-]+\)$/);
+  it("every Not published sentence is plain words; the request id stays on the fact, never in the sentence", () => {
+    expect(notPublished(FE.budget)).toBe("Not published");
+    expect(notPublishedReason(FE.command, "None.")).toBe("Not published. None.");
+    for (const fact of Object.values(FE)) {
+      expect(notPublished(fact)).toBe("Not published");
+      expect(fact.fe).toMatch(/^(FE|A360|ELP2-REQ-FE)-[\w-]+$/); // the id is still named for the team
+    }
   });
 
   it("ages come from two published instants, not from a clock", () => {
@@ -636,7 +641,7 @@ describe("display names the read publishes (FE-066)", () => {
     expect(named.names.alphas).toEqual({ btc_trend: "BTC Trend" });
     expect(named.sleeves[0]!.portfolio).toBe("Core");
     const plain = readAccountView(profile("acc_bnc_core"), "acc_bnc_core");
-    expect(plain.names).toEqual({ portfolios: {}, deployments: {}, alphas: {} });
+    expect(plain.names).toEqual({ portfolios: {}, portfolioReasons: {}, deployments: {}, alphas: {} });
     expect(plain.sleeves[0]!.portfolio).toBe("pf_core");
   });
 

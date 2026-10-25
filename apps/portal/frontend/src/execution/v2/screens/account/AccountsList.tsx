@@ -17,7 +17,7 @@
  * rows already loaded, and the count line says so.
  */
 import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, useLocation, useSearchParams } from "react-router-dom";
 
 import type { ExecutionApi } from "../../../api/ports";
 import { PanelState } from "../../../components/states";
@@ -32,7 +32,7 @@ import { StateFlag, CredentialFlag, Na, Updated, Value } from "./parts";
 import { factKey, useBindingPages, useRowFacts } from "./reads";
 import {
   ACCESS_PATH, CREDENTIAL_FILTERS, ENV_TABS, ROW_CAP, ROW_FACTS_CAP, accountHref, checkOf, freshnessFlag, humanize, inScope, matchesCredential,
-  readCredentialFilter, timeOf, toBindingRow, type BindingEnv, type BindingRow, type ListRowFacts,
+  readCredentialFilter, timeOf, toBindingRow, updatedAgo, type BindingEnv, type BindingRow, type ListRowFacts,
 } from "./model";
 import { GapWhy } from "../../blocks";
 
@@ -57,6 +57,7 @@ const BEYOND_REST = `Physical and virtual figures the list does not publish are 
 export function AccountsList({ api, binding = null, capabilities }: AccountsListProps) {
   const url = useExecUrlState();
   const [params, setParams] = useSearchParams();
+  const location = useLocation();
   const { selection, select, close } = useDockSelection();
   const mode = useDockMode();
   const panelId = useId();
@@ -155,15 +156,29 @@ export function AccountsList({ api, binding = null, capabilities }: AccountsList
   // behind the cursor mean the count is a floor, so it carries a plus.
   const issueCountText = pages.state.phase === "ready" ? `${issueCount}${pages.nextCursor !== null ? "+" : ""}` : null;
 
-  // The selected tab counts what this read returned. The others show the count the server published for that environment from
-  // the same authorized snapshot (FE-CAT-4); without one, or when the server could not compute it (`null`), nothing is shown, never 0.
-  const published = envelope?.counts?.byEnvironment ?? null;
-  const tabCount = (id: BindingEnv): number | null => {
-    if (env === id) return envelope !== null ? envelope.page.filteredCount : null;
+  // Tab counts come from the server's published counts block, from the same authorized snapshot as the page (FE-CAT-4). The selected
+  // tab uses its published count; without one it uses this read's own authorized total (the page's total_count), never the filtered
+  // count, so no filter moves a tab. Another environment's count is a number when published, a typed absence ("n/a", reason in the
+  // note under the strip) when the block exists and says null, and nothing when the producer publishes no block at all. Never 0.
+  const block = envelope?.counts ?? null;
+  const published = block?.byEnvironment ?? null;
+  type TabCount = { kind: "number"; value: number } | { kind: "absent" } | null;
+  const tabCount = (id: BindingEnv): TabCount => {
     const count = published === null ? undefined : published[id];
-    return typeof count === "number" ? count : null;
+    if (typeof count === "number") return { kind: "number", value: count };
+    if (env === id) return envelope !== null ? { kind: "number", value: envelope.page.totalCount } : null;
+    return block !== null ? { kind: "absent" } : null;
   };
-  const issuesEverywhere = envelope?.counts?.issues;
+  const issuesEverywhere = block?.issues;
+  const issuesCount: TabCount = typeof issuesEverywhere === "number" ? { kind: "number", value: issuesEverywhere } : block !== null ? { kind: "absent" } : null;
+  const countNode = (count: TabCount) => (count === null ? null
+    : count.kind === "number" ? <span className="exec-acct-tab-count">{count.value}</span>
+      : <span className="exec-acct-tab-count" data-state="absent" aria-label="Count not published">n/a</span>);
+  const someAbsent = [...ENV_TABS.map((id) => tabCount(id)), issuesCount].some((count) => count?.kind === "absent");
+
+  // The freshness chip speaks for the read; a binding the source last updated long before that read is not fresh because the read was.
+  // Counted over the loaded rows, with the same age rule the Updated column uses.
+  const staleLoaded = readAtMs === null ? 0 : all.filter((row) => updatedAgo(row.updatedAt, readAtMs)?.stale === true).length;
 
   const columns: CardsColumn<BindingRow>[] = [
     {
@@ -208,6 +223,7 @@ export function AccountsList({ api, binding = null, capabilities }: AccountsList
               <Value metric={line.physical} suffix={line.currency ?? undefined} />
             )}
             {line.physical === undefined && line.physicalWhy === undefined ? <span className="exec-acct-sub">{state.accountFailed ? "Account read failed" : "Venue report not published"}</span> : null}
+            {line.physical != null && line.physical.kind === "absent" ? <span className="exec-acct-sub">Venue report not published</span> : null}
             {line.partial === true ? <span className="exec-acct-sub">Partial coverage</span> : null}
           </>
         ));
@@ -254,7 +270,7 @@ export function AccountsList({ api, binding = null, capabilities }: AccountsList
         };
         // One currency: the flag as before. Several: each line names its currency, and no line speaks for another.
         if (state.facts.more === undefined) return flagOf(state.facts);
-        return linesOf(state.facts, (line) => <><span className="exec-acct-sub">{line.currency}</span>{flagOf(line)}</>);
+        return linesOf(state.facts, (line) => <><span className="exec-acct-ccy">{line.currency}</span>{flagOf(line)}</>);
       },
     },
     {
@@ -307,6 +323,7 @@ export function AccountsList({ api, binding = null, capabilities }: AccountsList
         </div>
         <div className="exec-acct-fresh">
           {fresh ? <Flag kind={fresh.kind} label={fresh.label} size="sm" /> : null}
+          {staleLoaded > 0 ? <Flag kind="stale" label={`${staleLoaded} of ${all.length} loaded bindings stale`} size="sm" /> : null}
           {envelope ? (
             <span>
               {sourceAsOf !== null ? `As of ${formatAsOf(sourceAsOf)}` : "Source time not published"}
@@ -325,6 +342,7 @@ export function AccountsList({ api, binding = null, capabilities }: AccountsList
 
       <div className="exec-acct-main" data-docked={selection !== null && mode === "dock" ? "true" : undefined}>
         <div className="exec-acct-body">
+          <div className="exec-acct-tabrow">
           <div className="exec-acct-tabs" role="tablist" aria-label="Environment" onKeyDown={envKeys}>
             {ENV_TABS.map((id) => (
               <button
@@ -339,10 +357,23 @@ export function AccountsList({ api, binding = null, capabilities }: AccountsList
                 onClick={() => pickEnv(id)}
               >
                 {ENV_LABEL[id]}
-                {tabCount(id) !== null ? <span className="exec-acct-tab-count">{tabCount(id)}</span> : null}
+                {countNode(tabCount(id))}
               </button>
             ))}
           </div>
+          {/* The Issues lens sits in the strip like the design's Issues tab; it is a toggle on the loaded rows (the server does not filter on it). */}
+          <button type="button" className="exec-acct-tab" aria-pressed={issuesOnly}
+              aria-label={issueCountText === null ? "Issues only, count shown once the rows are read" : `Issues only, ${issueCountText} in the ${all.length} loaded rows`}
+              title={issueCountText === null
+                ? "The count appears once the rows are read. The server does not filter on this."
+                : `${issueCountText} of the ${all.length} loaded rows need attention. The server does not filter on this.${typeof issuesEverywhere === "number" ? ` ${issuesEverywhere} across all environments.` : ""}`}
+              onClick={() => setLocal("issues", issuesOnly ? "" : "1")}
+            >
+              Issues{countNode(issuesCount)}
+            </button>
+          </div>
+
+          {someAbsent ? <p className="exec-acct-note">n/a: the server did not publish that count from this snapshot, so none is shown.</p> : null}
 
           <div className="exec-acct-tool" role="search">
             <label className="exec-acct-field">
@@ -372,21 +403,18 @@ export function AccountsList({ api, binding = null, capabilities }: AccountsList
                 {CREDENTIAL_FILTERS.map((id) => <option key={id} value={id}>{id === "ok" ? "Synced" : "Needs attention"}</option>)}
               </select>
             </label>
-            <button type="button" className="exec-acct-btn" aria-pressed={issuesOnly}
-              aria-label={issueCountText === null ? "Issues only, count shown once the rows are read" : `Issues only, ${issueCountText} in the ${all.length} loaded rows`}
-              title={issueCountText === null
-                ? "The count appears once the rows are read. The server does not filter on this."
-                : `${issueCountText} of the ${all.length} loaded rows need attention. The server does not filter on this.${typeof issuesEverywhere === "number" ? ` ${issuesEverywhere} across all environments.` : ""}`}
-              onClick={() => setLocal("issues", issuesOnly ? "" : "1")}
-            >
-              Issues only{issueCountText !== null ? <span className="exec-acct-tab-count">{issueCountText}</span> : null}
-            </button>
             {filtered ? <button type="button" className="exec-acct-btn" onClick={clearFilters}>Clear all</button> : null}
             <span className="exec-acct-export">
               <button type="button" className="exec-acct-btn" disabled aria-describedby={`${panelId}-export`}>Export</button>
               <span id={`${panelId}-export`} className="exec-acct-note">Export is not available yet · <Link className="exec-acct-link" to={withContext(ACCESS_PATH, params)}>My access</Link></span>
             </span>
           </div>
+
+          {/* The scope of this view is the address: the same link opens the same list (audit 8 #9). */}
+          <details className="exec-acct-url">
+            <summary>URL</summary>
+            <p className="exec-acct-mono">{location.pathname}{location.search}</p>
+          </details>
 
           {chips.length > 0 ? (
             <div className="exec-acct-chips" aria-label="Active filters">
@@ -423,6 +451,7 @@ export function AccountsList({ api, binding = null, capabilities }: AccountsList
                       {pages.loadingMore ? "Loading" : "Load more"}
                     </button>
                   ) : null}
+                  <span className="exec-acct-note exec-acct-scrollhint">Scroll sideways for the other columns</span>
                   {factsCapped ? <span className="exec-acct-note">{beyond}</span> : null}
                   {pages.nextCursor && capped ? <span className="exec-acct-note">Showing the first {ROW_CAP} rows. Narrow the filters to see the rest.</span> : null}
                 </div>

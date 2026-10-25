@@ -130,13 +130,13 @@ function OperationsPanel({ ctx }: { ctx: TabCtx }) {
 export function PeopleTab({ ctx }: { ctx: TabCtx }) {
   return (
     <div className="exec-pf-stack">
-      <div className="exec-pf-grid2">
+      <div className="exec-pf-grid2 exec-pf-grid2--tables">
         <SectionPanel title="Activity" aside="Receipt and display are separate">
           <p className="exec-pf-note"><Np fact={PF_FE.activity}>There is no feed of what happened to this portfolio yet.</Np></p>
         </SectionPanel>
         <Attribution ctx={ctx} />
       </div>
-      <div className="exec-pf-grid2">
+      <div className="exec-pf-grid2 exec-pf-grid2--tables">
         <SectionPanel title="Approvals" aside={<InternalLink to={ctx.routes.approvals} search={ctx.search}>All approvals</InternalLink>}>
           <div id="approvals">
             <p className="exec-pf-note"><Absent reason="the approvals read cannot be limited to one portfolio" /></p>

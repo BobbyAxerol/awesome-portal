@@ -79,6 +79,15 @@ function rowSentence(row: BatchEligibilityRow): string {
 }
 
 /**
+ * True when the caller's own eligibility ALLOWS one of the actions the control stands for (advisory, `ready` only). It lets the rail offer
+ * a REVIEW of published figures; it is never a permit and never enables a command: the rail has no submit (FE-020).
+ */
+export function railControlEligible(control: RailControlId, view: RailEligibilityView): boolean {
+  if (view.phase !== "ready") return false;
+  return RAIL_ELIGIBILITY_MAP[control].actions.some((action) => view.rows.get(action)?.permission === "ALLOWED");
+}
+
+/**
  * The sentence under one control. Never empty: the control stays off in every phase, so there is always a reason to print.
  */
 export function railControlReason(control: RailControlId, view: RailEligibilityView): string {

@@ -58,6 +58,13 @@ import type { StageActionEligibilityRead } from "../v2/readers/stageActionEligib
 import type { PaperExitParentQuery, PaperExitParentRead } from "../v2/readers/paperExitParent";
 import type { AccessEligibilityBatchRead, EligibilityBatchRequest } from "../v2/readers/accessSelfBatch";
 import type { AccessStepUpInput, SessionStepUpOutcome } from "../v2/readers/accessStepUp";
+import type { VisitDigestMarkResult, VisitDigestRead, VisitDigestSeenBody } from "../v2/readers/visitDigest";
+import type { AlphaLifecycle } from "../v2/readers/alphaLifecycle";
+import type { EntityKind, EntitySearch } from "../v2/readers/entitySearch";
+import type { Out } from "../v2/readers/strictRead";
+import type { SIBLINGS, SiblingId } from "../v2/readers/siblings.generated";
+import type { IncidentChildren, OperationsAuditPage } from "../v2/readers/incidentChildren";
+import type { ApprovalEvidence } from "../v2/readers/approvalEvidence";
 import type { AccessSelfContextRead } from "../v2/readers/accessSelfContext";import type { ApprovalRequestLookupQuery, ApprovalRequestLookupRead } from "../v2/readers/approvalRequestLookup";
 import type { CanaryControlRoom, SandboxCertification } from "../certification";
 import type { LiveFullOperations } from "../liveFull";
@@ -304,6 +311,8 @@ export interface WaiverQuery {
 }
 
 export interface ManagerListQuery {
+  /** `workspace_id`: the workspace the list is read in. Absent means the caller's HOME workspace (the server's fallback). */
+  workspace_id?: string;
   environment?: "all" | "paper" | "sandbox" | "live";
   after?: string;
   before?: string;
@@ -455,7 +464,7 @@ export interface ExecutionApi {
   /** `GET /alphas` — BR-EX-72 bounded Fleet projection. */
   getAlphaFleet(query?: AlphaFleetQuery): Promise<Result<ManagerListEnvelope<AlphaFleetItem>>>;
   /** `GET /portfolios` — BR-EX-76 all-profile portfolio identity list. */
-  listPortfolios(): Promise<Result<PortfolioListEnvelope>>;
+  listPortfolios(query?: { workspaceId?: string }): Promise<Result<PortfolioListEnvelope>>;
   /** `GET /broker-bindings` — BR-EX-72 bounded binding projection. */
   getBindings(query?: BindingListQuery): Promise<Result<ManagerListEnvelope<BindingItem>>>;
   /** `GET /broker-bindings/{id}` — narrow, non-secret binding detail. */
@@ -605,6 +614,20 @@ export interface ExecutionApi {
    */
   getSelfEligibilityBatch(request: EligibilityBatchRequest): Promise<Result<AccessEligibilityBatchRead>>;
   /**
+   * `GET /api/v1/execution/visit-digest?workspace_id=` (Codex package 3, `portal.execution.visit-digest.v1`): the Portal's own
+   * last-seen OBSERVATION baseline of this user in this workspace compared with the current authorized command-center slice.
+   * A GET never writes. `NO_BASELINE` is a first visit; `coverage` is bounded observations, never an event history. A body for another
+   * workspace than the one asked is `unavailable`. Not polled: it is read on open and on an explicit Refresh.
+   */
+  getVisitDigest(workspaceId?: string): Promise<Result<VisitDigestRead>>;
+  /**
+   * `POST /api/v1/execution/visit-digest/seen?workspace_id=` with `x-portal-csrf`: acknowledges the digest the user is looking at, with
+   * the `mark_seen` body of that GET (snapshot revision and expected baseline version). Only an explicit user action calls it, and only when
+   * `may_mark_seen`. A 409 (another tab acknowledged, or the source moved) is `conflict`: read again and let the user act again. A 503 or a
+   * failure to read the answer is `unavailable` and changes nothing the screen already shows.
+   */
+  markVisitDigestSeen(workspaceId: string | undefined, body: VisitDigestSeenBody): Promise<VisitDigestMarkResult>;
+  /**
    * `POST /api/admin/profile-access/v2/step-up` (FE-015/060, BE-P7): the caller re-enters their OWN password to open THIS session's
    * step-up for one proof family (`portal.access-step-up.v1`). The body always names the family. CSRF and a fresh idempotency key
    * travel as headers; the browser adds `Origin`. The password is an argument of this call only: the adapter puts it in the JSON
@@ -622,6 +645,41 @@ export interface ExecutionApi {
    * own requests (`governance.approval-request-lookup.v1`). A read: it writes nothing and creates nothing.
    */
   lookupApprovalRequest(query: ApprovalRequestLookupQuery): Promise<Result<ApprovalRequestLookupRead>>;
+  /**
+   * `GET /api/v1/execution/governance/approvals/{approval_id}/evidence` (WP-K, `portal.execution.approval-evidence.v1`): the evidence beside one
+   * request (prior economic history, evidence diff, obligations still open, receipt preview, the Portal's evaluation time). Optional: a port
+   * that does not offer it, or a route nothing serves yet, leaves the cockpit panels on their typed absence.
+   */
+  getApprovalEvidence?(approvalId: string, workspaceId?: string): Promise<Result<ApprovalEvidence>>;
+  /**
+   * `GET /api/v1/execution/alphas/{alpha_id}/lifecycle` (WP-K, `portal.execution.alpha-lifecycle.v1`): stage transitions with criteria, decider, actor
+   * and receipt; the unified event feed; the regime fit apart from the score; Net PnL per venue. Optional, like the approval evidence: a port or a
+   * route that does not offer it leaves Alpha 360 on what it read before.
+   */
+  getAlphaLifecycle?(alphaId: string, environment?: "paper" | "sandbox" | "live", workspaceId?: string): Promise<Result<AlphaLifecycle>>;
+  /**
+   * `GET /api/v1/execution/operations/incidents/{incident_id}/children` (WP-K, `portal.execution.incident-children.v1`): the evidence, assignee, resolution gate,
+   * timeline and original targets of a scoped incident, which the V2 root does not carry. Optional: absent leaves the incident page on its typed absences.
+   */
+  getIncidentChildren?(incidentId: string, workspaceId?: string): Promise<Result<IncidentChildren>>;
+  /**
+   * `GET /api/v1/execution/operations/audit` (WP-K, `portal.execution.operations-audit.v1`): actor, action, subject, time and receipt of the operations
+   * workflow, newest first, keyset paged. Optional: absent leaves the Audit tab on the workflow record of the loaded rows.
+   */
+  getOperationsAudit?(query?: { workspaceId?: string; limit?: number; after?: string; incidentId?: string }): Promise<Result<OperationsAuditPage>>;
+  /**
+   * `GET /api/v1/execution/search` (WP-K, `portal.execution.entity-search.v1`): the command bar's cross-entity search, per kind at most `limit` rows already
+   * scoped to the caller (an unauthorized entity is absent). Optional: absent leaves the bar fanning out to the list reads.
+   */
+  searchEntities?(query: { q: string; kinds?: readonly EntityKind[]; limit?: number; workspaceId?: string }): Promise<Result<EntitySearch>>;
+  /**
+   * WP-K second pass: one of the small sibling reads (visit digest, controls, obligations, portfolio members, account profile, readiness, reconciliation,
+   * limits, cost events, report snapshots, recovery events, grants), strictly read by the reader GENERATED from the same definition as its schema
+   * (`siblings.generated.ts`). Optional: a port or a route that does not offer it leaves the screen on its typed absence. `params` are the path and
+   * query values the definition names (`portfolio_id`, `workspace_id`, `subject_type`, ...).
+   */
+  getSibling?<K extends SiblingId>(id: K, params?: Readonly<Record<string, string>>): Promise<Result<SiblingBody<K>>>;
+  /** `POST /api/v1/execution/digest/baseline` (WP-K, GAP-7): move this user's digest baseline for the workspace to the named cut (mark seen). Fixture-served only today. */
   /**
    * `POST /api/v1/execution/commands/plans` with the EXECUTION_COMMAND body.
    *
@@ -809,3 +867,6 @@ export function unavailable(reason: string): Result<never> {
 export function denied(reason: string): Result<never> {
   return { ok: false, status: "denied", reason };
 }
+
+/** The typed body of one sibling read (the wire names, snake_case; a section is NO_SOURCE / NOT_READ / PUBLISHED). */
+export type SiblingBody<K extends SiblingId> = Out<(typeof SIBLINGS)[K]["read"]>;

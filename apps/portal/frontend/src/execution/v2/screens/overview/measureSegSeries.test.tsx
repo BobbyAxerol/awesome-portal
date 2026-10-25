@@ -4,7 +4,8 @@
  * a source acceptance: `REAL_READ_QUALIFIED` is NOT_RUN (the financial series source is MISSING on the producer).
  *
  * Net PnL and Return are enabled only when the port serves the fund (the NAV read says its source is published). RETURN prints as
- * the series reader prints a ratio (a plain ratio, no `%`) until the server publishes a scale. There is no Equity button.
+ * the series reader prints a ratio (a plain ratio, no `%`) until the server publishes a scale. The third tab is NAV (never Equity);
+ * Net PnL is the default measure once the port serves the fund.
  */
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
@@ -78,18 +79,20 @@ describe("the fund series is served (source published)", () => {
     return group;
   };
 
-  it("enables Net PnL and Return; there is no Equity button; nothing is pressed (the NAV line is shown)", async () => {
+  it("enables Net PnL, Return and NAV; there is no Equity button; Net PnL is pressed and drawn first", async () => {
     const group = await ready();
-    expect(button(group, "Net PnL").getAttribute("aria-pressed")).toBe("false");
+    expect(within(group).getAllByRole("button").map((b) => b.textContent)).toEqual(["Net PnL", "Return", "NAV"]);
+    expect(button(group, "Net PnL").getAttribute("aria-pressed")).toBe("true");
+    expect(button(group, "NAV").getAttribute("aria-pressed")).toBe("false");
     expect(button(group, "Return").disabled).toBe(false);
     expect(within(group).queryByRole("button", { name: "Equity" })).toBeNull();
-    expect(performance().querySelector("[data-testid='series-caption']")!.textContent).toContain("NAV in USDT");
+    expect(performance().querySelector("[data-testid='series-caption']")!.textContent).toContain("Net PnL in USDT");
   });
 
   it("Net PnL asks the port for NET_PNL on the FUND over the same environment and window, and draws it in its currency", async () => {
     const group = await ready();
     fireEvent.click(button(group, "Net PnL"));
-    await waitFor(() => expect(askedOnce()).toEqual(["NAV", "NET_PNL", "RETURN"]));
+    await waitFor(() => expect(askedOnce()).toEqual(["DRAWDOWN", "NAV", "NET_PNL", "RETURN"]));
     expect(series.calls.find((c) => c.metric === "NET_PNL")).toEqual({ environment: "paper", metric: "NET_PNL", subjects: [{ subject_type: "FUND" }], window: "30D", partition: null });
     await waitFor(() => expect(performance().querySelector("[data-testid='series-caption']")?.textContent).toContain("Net PnL in USDT"));
     expect(button(group, "Net PnL").getAttribute("aria-pressed")).toBe("true");
@@ -102,37 +105,48 @@ describe("the fund series is served (source published)", () => {
   it("Return asks the port for RETURN on the FUND, with no currency on a ratio, drawn by the shared series panel", async () => {
     const group = await ready();
     fireEvent.click(button(group, "Return"));
-    await waitFor(() => expect(askedOnce()).toEqual(["NAV", "NET_PNL", "RETURN"]));
+    await waitFor(() => expect(askedOnce()).toEqual(["DRAWDOWN", "NAV", "NET_PNL", "RETURN"]));
     await waitFor(() => expect(performance().querySelector("[data-testid='series-caption']")?.textContent).toContain("Return"));
     expect(performance().textContent).not.toMatch(/USDT/);
     expect(performance().querySelector(".exec-ser")).not.toBeNull();
     expect(button(group, "Return").getAttribute("aria-pressed")).toBe("true");
   });
 
-  it("pressing the pressed measure returns to the NAV line without asking for the NAV again", async () => {
+  it("the NAV button shows the NAV line without asking for the NAV again, and Net PnL comes back without a new request", async () => {
     const group = await ready();
-    fireEvent.click(button(group, "Net PnL"));
-    await waitFor(() => expect(askedOnce()).toEqual(["NAV", "NET_PNL", "RETURN"]));
-    await waitFor(() => expect(performance().querySelector("[data-testid='series-caption']")?.textContent).toContain("Net PnL in USDT"));
-    fireEvent.click(button(group, "Net PnL"));
+    fireEvent.click(button(group, "NAV"));
     await waitFor(() => expect(performance().querySelector("[data-testid='series-caption']")?.textContent).toContain("NAV in USDT"));
+    expect(button(group, "NAV").getAttribute("aria-pressed")).toBe("true");
     expect(button(group, "Net PnL").getAttribute("aria-pressed")).toBe("false");
+    fireEvent.click(button(group, "Net PnL"));
+    await waitFor(() => expect(performance().querySelector("[data-testid='series-caption']")?.textContent).toContain("Net PnL in USDT"));
     expect(metricsAsked().filter((m) => m === "NAV")).toHaveLength(1);
+    expect(metricsAsked().filter((m) => m === "NET_PNL")).toHaveLength(1);
   });
 
-  it("a measure the port then refuses is a typed 'Not available', never a flat line, and the other measures stay reachable", async () => {
+  it("the drawn measure carries the drawdown strip from the port's DRAWDOWN series of the same fund, environment and window, never a line worked out from NAV", async () => {
+    await ready();
+    await waitFor(() => expect(performance().querySelector("[data-testid='drawdown-pane']")?.textContent).toContain("-3.00%"));
+    const asked = series.calls.find((c) => c.metric === "DRAWDOWN");
+    expect(asked).toEqual({ environment: "paper", metric: "DRAWDOWN", subjects: [{ subject_type: "FUND" }], window: "30D", partition: null });
+    expect(performance().querySelector("[data-testid='drawdown-pane']")!.textContent).not.toContain("Not published");
+    expect(performance().querySelectorAll("[data-testid='flow-pin']")).toHaveLength(0);
+    expect(performance().textContent).toContain("Capital markers: Not published");
+  });
+
+  it("a refresh the port then refuses is a typed 'Not available', never a flat line, and the switch goes off with the series", async () => {
     const group = await ready();
     series.variant = "status:503";
-    fireEvent.click(button(group, "Return"));
+    fireEvent.click(screen.getByRole("button", { name: "Refresh" }));
     await waitFor(() => expect(performance().textContent).toContain("The series could not be read"));
     expect(performance().querySelector("svg path[data-main]")).toBeNull();
-    expect(button(group, "Net PnL").disabled).toBe(false);
+    expect(["Net PnL", "Return"].every((name) => button(group, name).disabled)).toBe(true);
   });
 
-  it("a measure the port answers UNAVAILABLE keeps the typed reason", async () => {
-    const group = await ready();
+  it("a refresh the port answers UNAVAILABLE keeps the typed reason, not a line", async () => {
+    await ready();
     series.variant = "unavailable";
-    fireEvent.click(button(group, "Net PnL"));
+    fireEvent.click(screen.getByRole("button", { name: "Refresh" }));
     await waitFor(() => expect(performance().textContent).toContain("SERIES_SOURCE_NOT_PUBLISHED"));
     expect(performance().querySelector("svg path[data-main]")).toBeNull();
   });

@@ -43,12 +43,15 @@ import { Flag } from "../../Flag";
 import { applyTab, resolveTab } from "../../tabAliases";
 import { useMediaQuery } from "../../useMediaQuery";
 import { ENV_LABEL, serializeUrlParams, useExecUrlState, withContext, type ExecEnv } from "../../urlState";
-import { alphaBack, replayBack } from "./backLinks";
-import { Dec, Na } from "./cells";
+import { alphaBack } from "./backLinks";
+import { Na } from "./cells";
 import { ActivityTab } from "./ActivityTab";
 import { LifecyclePanel } from "./Lifecycle";
+import { dayMonth, lifeEvents, lifeEventsOfRead, regimeFit, regimeFitOfRead, runIdentity, stageSpans, stageSpansOfRead } from "./lifecycleModel";
 import { OrdersTab } from "./OrdersTab";
 import { PERFORMANCE_VIEWS, PerformanceTab, type PerformanceView } from "./PerformanceTab";
+import type { ManagerSeriesQuery } from "../../readers/managerSeries";
+import { useManagerSeries } from "../series/useManagerSeries";
 import { ScopeBanner } from "./ScopeBanner";
 import { ScoreDrawer } from "./ScoreDrawer";
 import { DeploymentsTab, EvidenceTab, PositionsTab, ReconciliationTab, RegimeTab } from "./TableTabs";
@@ -69,9 +72,12 @@ import {
 } from "./model";
 import { Np, WhyMark } from "./np";
 import { PercentValue, ReturnFig, RowFigure, useAlphaDataset } from "./DatasetFigures";
+import { QbtsCell } from "../fleet/FleetDatasetTable";
+import { BookFigures } from "./BookFigures";
+import { qbtsOf } from "../fleet/fleetMetricsModel";
 import { alphaViewOf } from "./view";
-import { ReplayView } from "./replay/ReplayView";
-import {
+import AlphaReplay from "./replay";
+import { useAlphaLifecycle,
   useActivityRollup,
   useAlphaResource,
   useEquityChart,
@@ -91,7 +97,6 @@ const NO_ENVS: readonly ExecEnv[] = [];
 const NO_ROWS: readonly DeploymentRow[] = [];
 const NO_POSITIONS: readonly PositionRow[] = [];
 const NO_RECON: readonly ReconRow[] = [];
-const NO_VENUE = (): null => null;
 const NO_NAMES: ReadonlyMap<string, string> = new Map();
 
 /** D9: where a reader sees which grant a disabled action lacks. */
@@ -118,7 +123,7 @@ function Fig({ label, children, basis }: { label: string; children: ReactNode; b
   );
 }
 
-export default function AlphaScreen({ api, alphaId, workspaceId }: AlphaScreenProps) {
+function Alpha360({ api, alphaId, workspaceId }: AlphaScreenProps) {
   const url = useExecUrlState();
   const [params, setParams] = useSearchParams();
   const location = useLocation();
@@ -156,8 +161,14 @@ export default function AlphaScreen({ api, alphaId, workspaceId }: AlphaScreenPr
   const drift = useStageDrift(api, alphaId, true);
   const equity = useEquityChart(api, alphaId, env, wsId, settled && (tab === "performance" || tab === "activity"));
   const rollup = useActivityRollup(api, alphaId, env, settled && tab === "orders");
-  const timeline = useObservedFeed(api, alphaId, env, settled && tab === "activity");
+  const timeline = useObservedFeed(api, alphaId, env, settled && (tab === "activity" || tab === "performance"));
   const book = useSubjectBook(api, alphaId, env, settled && (tab === "orders" || tab === "activity" || tab === "replay"), explicitWs);
+  // WP-K: the alpha's published DRAWDOWN series (FE-025) for the pane under the equity chart. Asked only on the Performance tab, over the page's window: the Max drawdown tile reads the same window, so the tile and the pane state one figure (QA2 R2-04).
+  const drawdownQuery = useMemo<ManagerSeriesQuery>(
+    () => ({ environment: env, metric: "DRAWDOWN", window: url.value.window, subjects: [{ subjectType: "ALPHA", subjectId: alphaId }], ...(explicitWs ? { workspaceId: explicitWs } : {}) }),
+    [env, alphaId, explicitWs, url.value.window],
+  );
+  const drawdown = useManagerSeries(api, settled && tab === "performance", drawdownQuery);
 
   const current: SpineStageId | null = view?.current ?? null;
   const [stagePick, setStagePick] = useState<SpineStageId | null>(null);
@@ -225,6 +236,25 @@ export default function AlphaScreen({ api, alphaId, workspaceId }: AlphaScreenPr
   const present = view !== null && view.present;
   // The Manager dataset for this alpha in the chosen Book: the Return tile and the windowed figures. Asked once the alpha is known; only a workspace the caller named is sent (never the body's own).
   const dataset = useAlphaDataset(api, present, alphaId, env, explicitWs);
+  const datasetValue = dataset.phase === "ready" ? dataset.value : null;
+  // WP-C: the events and the lifecycle the dataset publishes (open `evt_*` and `life_*` partition keys); none = the lanes say Not published.
+  // WP-K: the published lifecycle read (stages with criteria, decider and receipt; the unified feed; regime fit; Net PnL per venue) wins over the open keys.
+  const lifecycle = useAlphaLifecycle(api, present, alphaId, env, explicitWs);
+  const life = useMemo(() => {
+    const read = lifeEventsOfRead(lifecycle);
+    const spans = stageSpansOfRead(lifecycle);
+    const all = read ?? lifeEvents(datasetValue);
+    // QA2 R2-05: an event dated after the read's own as-of time cannot have happened yet; it is not drawn or listed, and the count is said.
+    const asOf = view?.asOfMs ?? null;
+    const events = asOf === null ? all.events : all.events.filter((event) => event.t <= asOf);
+    return { ...all, events, future: all.events.length - events.length, spans: spans.length > 0 ? spans : stageSpans(datasetValue) };
+  }, [datasetValue, lifecycle, view?.asOfMs]);
+  const regime = useMemo(() => regimeFitOfRead(lifecycle) ?? regimeFit(datasetValue), [datasetValue, lifecycle]);
+  // Run date and evidence revision: open dataset keys (FIXTURE_LAB); absent keys keep the typed line.
+  const run = useMemo(() => runIdentity(datasetValue), [datasetValue]);
+  // The QBTS the dataset publishes (row key `score` plus the open `qbts_*` partition keys): one per alpha version, so the first row speaks for it.
+  const qbtsRow = datasetValue?.items[0] ?? null;
+  const qbts = useMemo(() => (qbtsRow === null ? null : qbtsOf(qbtsRow)), [qbtsRow]);
   const names = view?.portfolioNameById ?? NO_NAMES;
 
   const panelId = `${uid}-panel`;
@@ -241,7 +271,7 @@ export default function AlphaScreen({ api, alphaId, workspaceId }: AlphaScreenPr
             {view?.present && view.version !== null ? <span className="exec-alp2-version">v{view.version}</span> : null}
             {present ? (
               <button type="button" className="exec-alp2-scorechip" aria-haspopup="dialog" onClick={() => select("score")}>
-                <Flag kind="pending" label="Not scored · policy not set" size="sm" />
+                {qbts !== null && qbts.kind === "value" ? <Flag kind={qbts.band?.kind ?? "neutral"} label={`QBTS ${qbts.exact}${qbts.band ? ` · ${qbts.band.label}` : ""}`} size="sm" /> : <Flag kind="pending" label="Not scored · policy not set" size="sm" />}
               </button>
             ) : null}
           </h1>
@@ -249,6 +279,8 @@ export default function AlphaScreen({ api, alphaId, workspaceId }: AlphaScreenPr
             <>
               <p className="exec-alp2-meta">
                 {view.owner.kind === "not-published" ? null : <span>Owner <b>{view.owner.kind === "value" ? view.owner.value : "Not available"}</b></span>}
+                {run.runMs !== null ? <span>Run <b>{dayMonth(run.runMs)}</b></span> : null}
+                {run.evidenceRevision !== null ? <span>Evidence revision <b>{run.evidenceRevision}</b></span> : null}
                 {view.portfolioNames.length > 0 ? <span>{view.portfolioNames.join(", ")}</span> : null}
               </p>
               {/* The gaps of the header (name, version, owner, run, evidence) are ONE line, not a "Not published" per fact. */}
@@ -257,8 +289,8 @@ export default function AlphaScreen({ api, alphaId, workspaceId }: AlphaScreenPr
                   ...(view.name === null ? [{ label: "Name", id: "FE-066" as const, why: view.nameReason }] : []),
                   ...(view.version === null ? [{ label: "Version", id: "FE-066" as const, why: view.versionReason }] : []),
                   ...(view.owner.kind === "not-published" ? [{ label: "Owner", id: view.owner.id, why: view.owner.reason }] : []),
-                  { label: "Run", id: "FE-029" as const },
-                  { label: "Evidence", id: "FE-029" as const },
+                  ...(run.runMs === null ? [{ label: "Run", id: "FE-029" as const }] : []),
+                  ...(run.evidenceRevision === null ? [{ label: "Evidence", id: "FE-029" as const }] : []),
                 ]}
               />
             </>
@@ -292,27 +324,30 @@ export default function AlphaScreen({ api, alphaId, workspaceId }: AlphaScreenPr
       ) : (
         <div className="exec-alp2-main" data-docked={selection === "score" && mode === "dock" ? "true" : undefined}>
           <div className="exec-alp2-body">
-            {tab === "replay" ? null : <LifecyclePanel rows={rows} current={current} selected={stagePick} onSelect={setStagePick} linkTo={linkTo} currentNote={view?.currentNote} withheld={view?.withheld} />}
+            {tab === "replay" ? null : <LifecyclePanel rows={rows} current={current} selected={stagePick} onSelect={setStagePick} linkTo={linkTo} currentNote={view?.currentNote} withheld={view?.withheld} dataset={datasetValue} lifecycle={lifecycle} />}
 
             {tab === "replay" ? null : (
             <dl className="exec-blk-kpis exec-alp2-kpis" aria-label="Current facts">
-              <Fig label="Net PnL, current" basis="All stages, current facts">
+              {/* QA2 R2-02: the headline is the book in view, deployment by deployment; the other books (Paper and Sandbox are simulated, Canary and Live Real-funded) are listed apart and never added to it. */}
+              <Fig label="Net PnL, current" basis={`${ENV_LABEL[env]} book, current facts. Other books apart, never added`}>
                 {view?.money.published === false
                   ? <span><Np id="FE-005" /><WhyMark name="Money, reason" reason={view.money.reason} /></span>
-                  : view?.money.published && view.money.netPnl.length > 0
-                    ? view.money.netPnl.map((p) => <span key={p.currency} className="exec-alp2-fig"><Dec value={p.value} currency={p.currency} signed /></span>)
-                    : <Na />}
+                  : rows.length > 0 ? <BookFigures rows={rows} book={env} metric="netPnl" /> : <Na />}
               </Fig>
-              <Fig label="Exposure, current" basis="All stages, current facts">
+              <Fig label="Exposure, current" basis={`${ENV_LABEL[env]} book, current facts. Other books apart, never added`}>
                 {view?.money.published === false
                   ? <span><Np id="FE-005" /><WhyMark name="Money, reason" reason={view.money.reason} /></span>
-                  : view?.money.published && view.money.exposure.length > 0
-                    ? view.money.exposure.map((e) => <span key={e.currency} className="exec-alp2-fig"><Dec value={e.value} currency={e.currency} /></span>)
-                    : <Na />}
+                  : rows.length > 0 ? <BookFigures rows={rows} book={env} metric="exposure" /> : <Na />}
               </Fig>
               <Fig label="Return" basis="30D; methodology per source"><ReturnFig read={dataset} names={names} /></Fig>
               <Fig label="Max drawdown" basis="Window per source"><RowFigure read={dataset} names={names} metricKey="max_drawdown_pct" fallback={<Np id="FE-025" />} cell={(metric) => <PercentValue metric={metric} signed={false} />} /></Fig>
-              <Fig label="Regime fit" basis="Policy not set"><Np id="FE-011" /></Fig>
+              <Fig label="QBTS" basis="Per alpha version; the dataset's own score">
+                {qbtsRow === null ? <Np id="FE-011" /> : <QbtsCell row={qbtsRow} carried />}
+              </Fig>
+              <Fig label="Regime fit" basis="Separate from score">
+                {regime === null ? <Np id="FE-011" /> : regime.kind === "value" ? <span className="exec-alp2-fig"><span className="exec-mgr-num" title="Share of the window the source places in the alpha's regime, as published">{regime.exact}</span> <button type="button" className="exec-blk-link" onClick={() => openTab("regime")}>Open</button></span>
+                  : <span className="exec-alp2-fig"><Flag kind="pending" label={humanize(regime.code)} size="sm" /> <button type="button" className="exec-blk-link" onClick={() => openTab("regime")}>Open</button></span>}
+              </Fig>
             </dl>
             )}
 
@@ -374,7 +409,7 @@ export default function AlphaScreen({ api, alphaId, workspaceId }: AlphaScreenPr
 
             <div role="tabpanel" id={panelId} aria-labelledby={inMore ? undefined : tabId(tab)} aria-label={inMore ? ALPHA_MORE_TABS.find((t) => t.key === tab)?.label : undefined} className="exec-alp2-panel">
               {tab === "performance" ? (
-                <PerformanceTab rows={rows} noTotals={view?.money.published === false ? view.money.reason : null} dataset={dataset} names={names} env={env} equity={equity} drift={drift} inputs={inputs} paths={paths} view={perfView} onView={(next) => url.set({ view: next === "act" ? null : next })} />
+                <PerformanceTab timeline={timeline} drawdown={drawdown} venues={lifecycle?.venueNetPnl ?? null} life={life} rows={rows} noTotals={view?.money.published === false ? view.money.reason : null} dataset={dataset} names={names} env={env} equity={equity} drift={drift} inputs={inputs} paths={paths} view={perfView} onView={(next) => url.set({ view: next === "act" ? null : next })} />
               ) : null}
               {tab === "deployments" ? (
                 <DeploymentsTab
@@ -388,20 +423,7 @@ export default function AlphaScreen({ api, alphaId, workspaceId }: AlphaScreenPr
               {tab === "evidence" ? <EvidenceTab view={view} researchReason={drift.phase === "ready" ? drift.value.researchReason : null} /> : null}
               {tab === "regime" ? <RegimeTab /> : null}
               {tab === "orders" ? <OrdersTab alphaId={alphaId} book={book} activity={rollup} focusOrder={focusOrder} linkTo={linkTo} /> : null}
-              {tab === "activity" ? <ActivityTab env={env} alphaId={alphaId} alphaLabel={label} inputs={inputs} paths={paths} timeline={timeline} book={book} /> : null}
-              {tab === "replay" ? (
-                <ReplayView
-                  api={api}
-                  alphaId={alphaId}
-                  alphaLabel={label}
-                  env={env}
-                  venueOf={view?.venueOf ?? NO_VENUE}
-                  book={book}
-                  focus={focus}
-                  ordersHref={linkTo(`/deployments/alphas/${encodeURIComponent(alphaId)}?tab=orders`)}
-                  back={replayBack(params, linkTo(`/deployments/alphas/${encodeURIComponent(alphaId)}?tab=orders`))}
-                />
-              ) : null}
+              {tab === "activity" ? <ActivityTab env={env} alphaId={alphaId} alphaLabel={label} inputs={inputs} paths={paths} timeline={timeline} book={book} life={life} /> : null}
               {tab === "positions" ? (
                 <PositionsTab rows={view?.positions ?? NO_POSITIONS} linkTo={linkTo} unplaced={view?.unplaced.positions ?? 0} withheld={view?.withheld ?? null} />
               ) : null}
@@ -409,9 +431,19 @@ export default function AlphaScreen({ api, alphaId, workspaceId }: AlphaScreenPr
             </div>
           </div>
 
-          {selection === "score" ? <ScoreDrawer view={view} mode={mode} onClose={close} /> : null}
+          {selection === "score" ? <ScoreDrawer view={view} mode={mode} onClose={close} qbts={qbts} /> : null}
         </div>
       )}
     </div>
   );
+}
+
+/**
+ * One route, two screens: `?tab=replay` (and the `focus=` deep links) is Trade Replay as a page of its own with its own title,
+ * context chips and way back; every other tab is Alpha 360. The URL contract is unchanged.
+ */
+export default function AlphaScreen(props: AlphaScreenProps) {
+  const url = useExecUrlState();
+  // Only the V2 key opens the page: a V1 label (`Trade+Replay`) first goes through Alpha 360's own rewrite to the V2 key.
+  return url.value.tab === "replay" ? <AlphaReplay api={props.api} alphaId={props.alphaId} /> : <Alpha360 {...props} />;
 }

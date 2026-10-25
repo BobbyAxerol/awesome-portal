@@ -25,7 +25,7 @@ import { withOrigin } from "../../backTo";
 import { ENV_LABEL, withContext } from "../../urlState";
 import { useBindingDetail, useBindingExposure } from "./reads";
 import {
-  ENV_TABS, accountHref, capitalRows, humanize, rotateCredential, stateView, timeOf, toBindingRow,
+  ENV_TABS, accountHref, capitalRows, credentialView, humanize, rotateCredential, stateView, timeOf, toBindingRow,
   type BindingEnv, type BindingRow,
 } from "./model";
 import { useAccountOperations } from "./useAccountOperations";
@@ -75,11 +75,11 @@ export function CapitalInvariant({ exposure }: { exposure: BindingExposure }) {
             {rows.map((row) => (
               <tr key={row.currency}>
                 <th scope="row">{row.currency}</th>
-                <td><Value metric={row.used} /></td>
-                <td><Value metric={row.reserved} /></td>
-                <td><Value metric={row.available} /></td>
-                <td><Value metric={row.headroom} signed /></td>
-                <td>
+                <td data-l="Used"><Value metric={row.used} /></td>
+                <td data-l="Reserved"><Value metric={row.reserved} /></td>
+                <td data-l="Available"><Value metric={row.available} /></td>
+                <td data-l="Headroom"><Value metric={row.headroom} signed /></td>
+                <td data-l="Check">
                   {row.withinPhysical === null ? <Na />
                     : row.withinPhysical ? <Flag kind="ok" size="sm" label="Within physical" />
                       : <Flag kind="rejected" size="sm" label="Exceeded" />}
@@ -151,9 +151,9 @@ export function BindingDrawer({ api, bindingId, row, environment, mode, onClose 
             <Fact label="Venue">{shown?.venue ?? <Na />}</Fact>
             <Fact label="State">{shown ? stateView(shown.stateWord).label : <Na />}</Fact>
             <Fact label="Environment">{read?.environment ? envWord(read.environment) : <Na />}</Fact>
-            <Fact label="Delivery profile">{read?.deliveryProfile ?? <Na />}</Fact>
+            <Fact label="Delivery profile">{read?.deliveryProfile ? humanize(read.deliveryProfile) : <Na />}</Fact>
             <Fact label="Sleeves on it">
-              {exposure.phase === "ready" && exposure.value.accountCount !== null ? String(exposure.value.accountCount) : <Na />}
+              {exposure.phase === "ready" && (exposure.value.expectedAccountCount ?? exposure.value.accountCount) !== null ? String(exposure.value.expectedAccountCount ?? exposure.value.accountCount) : <Na />}
             </Fact>
           </dl>
         </Section>
@@ -166,7 +166,7 @@ export function BindingDrawer({ api, bindingId, row, environment, mode, onClose 
 
         <Section title="Sync">
           <dl className="exec-acct-facts">
-            <Fact label="Credential state">{shown?.credentialWord ?? <Na />}</Fact>
+            <Fact label="Credential state">{shown?.credentialWord ? credentialView(shown.credentialWord).label : <Na />}</Fact>
             <Fact label="Source published"><When at={sourceAsOf} /></Fact>
             <Fact label="Projection read"><When at={readAt} /></Fact>
             <Fact label="Binding updated"><When at={shown?.updatedAt ?? null} /></Fact>

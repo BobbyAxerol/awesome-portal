@@ -36,6 +36,12 @@ export interface PublishedOptions {
 
 const LOADED_ONLY: PublishedOptions = { basis: "loaded", values: [], complete: false };
 
+/** Package 5: `group_page` says whether this is every group. Without it the answer stays the cautious one (below the group bound), never a claim. */
+function groupsAreComplete(dataset: ManagerDataset): boolean {
+  const page = dataset.groupPage;
+  return page === undefined ? dataset.groups.length < MAX_GROUPS : page.nextCursor === null && page.previousCursor === null && page.authorizedFilteredCount === page.returnedCount;
+}
+
 /** The distinct, non-null values of the first key part of every group. Pure. */
 export function optionsFromGroups(dataset: ManagerDataset, field: OptionField): PublishedOptions {
   const values = new Set<string>();
@@ -43,7 +49,7 @@ export function optionsFromGroups(dataset: ManagerDataset, field: OptionField): 
     const part = group.key[0];
     if (part !== undefined && part.field === field && part.value !== null) values.add(part.value);
   }
-  return { basis: "published", values: [...values].sort((a, b) => a.localeCompare(b)), complete: dataset.groups.length < MAX_GROUPS };
+  return { basis: "published", values: [...values].sort((a, b) => a.localeCompare(b)), complete: groupsAreComplete(dataset) };
 }
 
 function useFieldOptions(

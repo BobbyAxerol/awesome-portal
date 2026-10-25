@@ -369,6 +369,50 @@ export function actorText(id: string, isViewer: boolean | null): string {
   return isViewer ? `${id} (you)` : id;
 }
 
+/* ── decided today, lapse clocks, the runway (WP-E) ───────────────────────── */
+
+/** `true` when the decision's UTC calendar day is the UTC day of `nowMs`. A decided_at that is not an instant is not "today". */
+export function isDecidedToday(decidedAt: string, nowMs: number): boolean {
+  const at = Date.parse(decidedAt);
+  if (!Number.isFinite(at) || !Number.isFinite(nowMs)) return false;
+  return new Date(at).toISOString().slice(0, 10) === new Date(nowMs).toISOString().slice(0, 10);
+}
+
+/** The decisions of the history read that were made today (UTC), in the order the server sent them (newest first). */
+export function decidedToday(rows: readonly DecidedRow[], nowMs: number): DecidedRow[] {
+  return rows.filter((row) => isDecidedToday(row.decidedAt, nowMs));
+}
+
+/** The runway's shared axis, in days. A drawing scale (the hi-fi's "0 to 45 d"), not a measure: a lapse past it is drawn at the end and says so. */
+export const RUNWAY_AXIS_DAYS = 45;
+export const RUNWAY_TICKS_DAYS: readonly number[] = [0, 7, 14, 30, 45];
+const MINUTES_PER_DAY = 1440;
+
+/**
+ * Where a waiver stands against its lapse clock. The anchor is the register's own read time (`read_at`, "the anchor every due
+ * display counts from"), never the browser clock. A waiver with no `due_at` closes by an event, and says so; it is not "never".
+ */
+export type LapseView =
+  | { kind: "none"; phrase: string }
+  | { kind: "unanchored"; phrase: string }
+  | { kind: "lapsed"; minutes: number; phrase: string }
+  | { kind: "ahead"; minutes: number; phrase: string; /** Share of the axis, 0..100; a lapse past the axis is 100 with `beyond`. */ offsetPct: number; beyond: boolean };
+
+export const NO_CLOCK = "No clock · closes by event";
+
+export function lapseView(dueAt: string | null, readAt: string | null): LapseView {
+  if (dueAt === null) return { kind: "none", phrase: NO_CLOCK };
+  const due = Date.parse(dueAt);
+  const read = readAt === null ? Number.NaN : Date.parse(readAt);
+  if (!Number.isFinite(due)) return { kind: "unanchored", phrase: "Lapse time is not a time this read can state" };
+  if (!Number.isFinite(read)) return { kind: "unanchored", phrase: "Lapse time not counted: the read states no time" };
+  const minutes = Math.trunc((due - read) / 60_000);
+  if (minutes < 0) return { kind: "lapsed", minutes: -minutes, phrase: `lapsed ${formatMinutes(-minutes)} ago` };
+  if (minutes === 0) return { kind: "ahead", minutes, phrase: "lapses now", offsetPct: 0, beyond: false };
+  const axis = RUNWAY_AXIS_DAYS * MINUTES_PER_DAY;
+  return { kind: "ahead", minutes, phrase: `lapses in ${formatMinutes(minutes)}`, offsetPct: Math.min(100, (minutes / axis) * 100), beyond: minutes > axis };
+}
+
 /* ── keys ─────────────────────────────────────────────────────────────────── */
 
 /** J moves down, K moves up; nothing selected starts at the first or last row. Out of range stays put. */

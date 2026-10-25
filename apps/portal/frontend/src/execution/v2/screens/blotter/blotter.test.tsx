@@ -121,10 +121,10 @@ describe("exact numbers", () => {
     await loaded();
     const rows = bodyRows();
     const btc = rows.find((r) => cellOf(r, "Symbol") === "BTCUSDT")!;
-    expect(cellOf(btc, "Quantity")).toBe("0.0400");
+    expect(cellOf(btc, "Filled / Qty")).toMatch(/\/ 0\.0400$/);
     expect(cellOf(btc, "Price")).toMatch(/^6\d,\d{3}\.\d{2}$/);
     const doge = rows.find((r) => cellOf(r, "Symbol") === "DOGEUSDT")!;
-    expect(cellOf(doge, "Quantity")).toBe("1,250");
+    expect(cellOf(doge, "Filled / Qty")).toMatch(/\/ 1,250$/);
     expect(rows.some((r) => cellOf(r, "Price") === "At market")).toBe(true);
     const text = table().textContent ?? "";
     expect(text).not.toMatch(/\b\d+(\.\d+)?\s?[kKmMbB]\b/);
@@ -491,16 +491,17 @@ describe("column chooser", () => {
     mount();
     await loaded();
     const heads = within(table()).getAllByRole("columnheader").map((h) => h.textContent);
-    expect(heads).toEqual(["Time (UTC)", "Order", "Deployment", "Symbol", "Side and type", "Price", "Quantity", "Filled", "Avg price", "Fee", "Status"]);
+    expect(heads).toEqual(["Time (UTC)", "Order", "Deployment", "Symbol", "Side and type", "Price", "Filled / Qty", "Avg price", "Fee", "Status"]);
     expect(cellOf(bodyRows()[0]!, "Time (UTC)")).toMatch(/^\d{2} [A-Z][a-z]{2} \d{2}:\d{2}:\d{2}Z$/);
   });
 
-  it("states that environment and window come from this read, and cites FE-052 for what the read lacks (BLT-A5, BLT-B5)", async () => {
+  it("states that environment and window come from this read, and says in words what the read lacks, with no ticket id (BLT-A5, BLT-B5)", async () => {
     mount();
     await loaded();
     expect(screen.getByText(/Environment and window come from this read, not from the context bar/)).toBeTruthy();
     const body = document.body.textContent ?? "";
-    expect(body).toContain("(Not published, FE-052)");
+    expect(body).toContain("(the source does not publish them yet)");
+    expect(body).not.toMatch(/FE-0\d+/);
     expect(body).not.toMatch(/no request id/i);
   });
 
@@ -540,10 +541,10 @@ describe("Export (the HiFi control, on served data)", () => {
     fireEvent.click(button);
     const lines = (await saved.text()).split("\r\n");
     saved.restore();
-    expect(lines[0]).toBe("Time (UTC),Order,Deployment,Symbol,Side and type,Price,Quantity,Filled,Avg price,Fee,Status");
+    expect(lines[0]).toBe("Time (UTC),Order,Deployment,Symbol,Side and type,Price,Filled / Qty,Avg price,Fee,Status");
     expect(lines).toHaveLength(52);
     const btc = lines.find((l) => l.includes(",BTCUSDT,"))!;
-    expect(btc).toMatch(/^\d{2} [A-Z][a-z]{2} \d{2}:\d{2}:\d{2}Z,ord_\d+,,BTCUSDT,[A-Za-z]+ [A-Za-z ]+,6\d{4}\.\d{2},0\.0400,/);
+    expect(btc).toMatch(/^\d{2} [A-Z][a-z]{2} \d{2}:\d{2}:\d{2}Z,ord_\d+,,BTCUSDT,[A-Za-z]+ [A-Za-z ]+,6\d{4}\.\d{2},[0-9.,A-Za-z]* \/ 0\.0400,/);
     expect(saved.names[0]).toMatch(/^blotter-paper-\d{8}T\d{6}Z\.csv$/);
     expect(calls.length).toBe(before);
   });

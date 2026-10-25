@@ -20,7 +20,7 @@ import { ENV_LABEL } from "../../urlState";
 import type { ReadState } from "./reads";
 import { CapitalInvariant } from "./BindingDrawer";
 import { FE, humanize, notPublishedReason, timeOf, type AccountView, type RotateCredential } from "./model";
-import { CredentialFlag, Fact, Na, Np, StateFlag, When, WITHHELD } from "./parts";
+import { CredentialFlag, EnvironmentWord, Fact, Na, Np, ProductWord, StateFlag, When, WITHHELD } from "./parts";
 
 export interface PhysicalBindingProps {
   view: AccountView;
@@ -49,9 +49,9 @@ export function PhysicalBinding({ view, detail, exposure, rotate }: PhysicalBind
           <Fact label="Binding">{identity.bindingId ?? <Na why="The account resource names no binding" />}</Fact>
           <Fact label="Venue">{identity.venue ?? item?.venue ?? <Na />}</Fact>
           <Fact label="Native account"><span className="exec-acct-withheld"><GapWhy text="Withheld" name="Withheld, reason" rows={[WITHHELD]} next={null} /></span></Fact>
-          <Fact label="Product"><Np fact={FE.product} /></Fact>
+          <Fact label="Product"><ProductWord product={identity.product} /></Fact>
           <Fact label="Margin mode">{identity.marginMode ?? <Np fact={FE.product} />}</Fact>
-          <Fact label="Environment">{environment ?? <Na />}</Fact>
+          <Fact label="Environment"><EnvironmentWord environment={environment} network={identity.network} proofAt={identity.networkProofAt} /></Fact>
           <Fact label="Delivery profile">{read?.deliveryProfile ?? <Na />}</Fact>
           <Fact label="State">{item ? <StateFlag word={item.state} /> : detail.phase === "loading" ? "Loading" : <Na />}</Fact>
           <Fact label="Credential">

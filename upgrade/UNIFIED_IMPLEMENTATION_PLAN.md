@@ -9354,6 +9354,43 @@ No remote push, dev/main merge, signed release or production/source activation.
 
 # 14. Execution Loop Portal V2 — guide onboarding và authority alignment
 
+**Approved 23 October: six backend support packages, sequential acceptance.**
+[24October consolidated Claude handoff](./execution_loop/evidence/ELP2-10/CLAUDE_SIX_PACKAGES_INTEGRATION_HANDOFF_2026-10-24.md):
+integrate packages5/6 first, verify existing1–4 consumer progress without redoing
+it; exact lanes/pins/conflict and acceptance instructions included. No new backend
+package starts before this integration review; Claude ACK/browser still distinct.
+[Live package status and ownership](./execution_loop/evidence/ELP2-10/SIX_BACKEND_SUPPORT_PACKAGES_2026-10-23.md):
+linked fixtures → Fleet timing → user/workspace visit digest → Accounts list →
+Contributors → authorized names/financial fields. Codex implementation in isolated
+support lane; Claude keeps components/design. Package1 backend fixture ready
+at0297c4902 (84/84 consumer,15/15 producer); package2 producer/schema delivered
+at40d3540c7. Package3 visit digest delivered8822d58f2 (Core user/workspace baseline,
+GET/explicit seen, shared-graph fixture); PG19/19+restore, final unit17/17,
+contract/HTTP7/7, ledger22/22 PASS (overlapping counts, see packet).
+Consumer timing/digest/browser review remains separate; package4 Accounts source
+0f0d5cc85 delivers same-request snapshot counts, optional figures persistence and
+linked fixture (29 focused tests across retakes, contracts8/8, ledger22/22 PASS).
+Real-source batch carrier/wiring remains OPEN; not installed/landed. Package5
+Contributors source/fixture delivered ace3547ca: authorized attribution + independent group
+continuation; backend108/108, controller14/14, contract72/72, linked fixture4/4,
+regressions27/27 and builds PASS. Claude must update closed grouped reader before
+rollout; real consolidated Return/Score source remains OPEN. Package6 Names/finance
+delivered37bbecf92: same-authorized-snapshot portfolio labels, linked synthetic
+budget/exposure and complete order summary fixtures; no invented real financial
+source. Backend31/contract33/fixture8/buildsPASS. All six support source/fixture
+packages delivered on isolated lane, not landed/runtime/browser accepted; Claude
+reader updates precede integration. See packet for exact verification and Claude/Edge handoff.
+No production change, push or new release gate follows this assignment.
+
+**23 October — Bobby: complete linked fixtures for UI review.**
+[Producer delivery + 42-family coverage/handoff](./execution_loop/evidence/ELP2-10/COMPLETE_POSITIVE_FIXTURE_SUPPORT_2026-10-23.md):
+Codex delivered positive financial-series and linked account/portfolio/alpha world
+helpers, focused schema/Zod/arithmetic tests 10/10 PASS. Claude owns BFF integration
+and browser acceptance; neither is claimed complete here. Positive fixture defaults
+must not inherit real-source absence; negative scenarios remain separately selectable.
+Rules §10.14 applies. Existing frozen integration and real Edge commissioning are
+unchanged. This is an isolated support lane, not yet canonical/installed.
+
 Bobby giao ngày2026-10-15: đọc toàn bộ bundle mới, đối chiếu đúng source
 worktrees trên AWS HK và thêm rules cho Claude nâng cấp UI/UX manager-first.
 Prompt B/C/D và bổ sung authority của Bobby được áp dụng trong

@@ -6,7 +6,7 @@
  * Lightweight Charts™) draws venue public klines with the trades on them
  * (OR-4 / OR-5). Every number printed is the server's string.
  */
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
 import { MARKET_CANDLE_INTERVALS, type MarketCandleInterval, type MarketCandlesPayload } from "../api/marketCandles";
 import type { PanelStatus } from "../contracts";
@@ -64,6 +64,10 @@ export interface TradeReplayEventsProps {
    * V1 panel unchanged.
    */
   plain?: boolean;
+  /** Drawn right under the chart (V2: the STAGE / DECISION / INCIDENT lanes of the same window). */
+  lanes?: ReactNode;
+  /** V2: the order id of a log row as a link to that order (the caller owns the router); absent keeps the plain id. */
+  orderLink?: (orderId: string) => ReactNode;
 }
 
 const HEIGHT = { compact: 420, tall: 620 } as const;
@@ -120,7 +124,7 @@ export function sentence(text: string): string {
   return /[.!?]$/.test(text.trimEnd()) ? text.trimEnd() : `${text.trimEnd()}.`;
 }
 
-export function TradeReplayEvents({ orders, fills, candles, asOf, accounts = [], market = null, marketTransport = "loading", marketReason = null, interval = "1h", onIntervalChange, intervalNote = null, symbol: controlledSymbol, onSymbolChange, onRangeEdge, paging = null, focusId = null, page = null, subjectLabel = null, groups = EMPTY_GROUPS, source = null, plain = false }: TradeReplayEventsProps) {
+export function TradeReplayEvents({ orders, fills, candles, asOf, accounts = [], market = null, marketTransport = "loading", marketReason = null, interval = "1h", onIntervalChange, intervalNote = null, symbol: controlledSymbol, onSymbolChange, onRangeEdge, paging = null, focusId = null, page = null, subjectLabel = null, groups = EMPTY_GROUPS, source = null, plain = false, lanes = null, orderLink }: TradeReplayEventsProps) {
   const symbols = useMemo(() => Array.from(new Set([...fills.map((f) => f.symbol), ...orders.map((o) => o.symbol)].filter((s): s is string => !!s))).sort(), [fills, orders]);
   const [ownSymbol, setOwnSymbol] = useState<string | null>(null);
   const symbol = controlledSymbol !== undefined ? controlledSymbol : ownSymbol;
@@ -293,6 +297,7 @@ export function TradeReplayEvents({ orders, fills, candles, asOf, accounts = [],
             hostRole={plain ? "group" : "img"}
           />
         </div>
+        {lanes}
         <div className="exec-rp-legend">
           <span><b data-side="long">▲</b> long entry · <b data-side="long">▽</b> long exit (hollow; label = realized_pnl)</span>
           <span><b data-side="short">▼</b> short entry · <b data-side="short">△</b> short exit</span>
@@ -335,7 +340,7 @@ export function TradeReplayEvents({ orders, fills, candles, asOf, accounts = [],
                   tabIndex={sceneId ? 0 : undefined}
                   onKeyDown={sceneId ? (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); select(sceneId, false); } } : undefined}
                 >
-                  {plain ? <PlainCells row={r} /> : (
+                  {plain ? <PlainCells row={r} orderLink={orderLink} /> : (
                   <>
                   <td className="exec-rp-dim">{r.time}</td>
                   <td><span className="exec-rp-ev" data-tone={r.eventTone}>{r.event}</span></td>
@@ -365,7 +370,7 @@ export function TradeReplayEvents({ orders, fills, candles, asOf, accounts = [],
 }
 
 /** The nine cells of one log row in the V2 reading. The raw codes ride on `title` or in a muted chip; none is dropped. */
-function PlainCells({ row }: { row: LogRow }) {
+function PlainCells({ row, orderLink }: { row: LogRow; orderLink?: (orderId: string) => ReactNode }) {
   const p = plainRow(row);
   const parent = row.event === "FILL" ? row.orderId : row.ref;
   return (
@@ -374,7 +379,7 @@ function PlainCells({ row }: { row: LogRow }) {
       <td data-l="Event"><span className="exec-rp-ev" data-tone={row.eventTone} title={p.eventCode}>{p.event}</span></td>
       <td data-l="Order">
         <span>
-          <span className="exec-num" title={row.event === "FILL" ? `Fill ${row.ref}` : undefined}>{parent}</span>
+          {orderLink ? <span className="exec-num" title={row.event === "FILL" ? `Fill ${row.ref}` : undefined}>{orderLink(parent)}</span> : <span className="exec-num" title={row.event === "FILL" ? `Fill ${row.ref}` : undefined}>{parent}</span>}
           {row.event === "FILL" ? <small className="exec-rp-mute"> fill {row.ref}</small> : null}
         </span>
       </td>

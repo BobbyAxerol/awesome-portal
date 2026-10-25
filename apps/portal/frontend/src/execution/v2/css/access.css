@@ -23,6 +23,62 @@
   font: var(--exec-font-title);
   color: var(--ink);
 }
+/* Tables in this page keep to their panel (QA1 I-29): tighter cell padding, so the Why and Trading system columns are not pushed out of it. */
+.exec-acc-panel .exec-cards thead th,
+.exec-acc-panel .exec-cards tbody td {
+  padding-inline: var(--space-2);
+}
+/* Where a table is still wider than its panel (the Granted table at 1024px), the grant's name stays put while the rest scrolls under the fade. */
+@media (min-width: 661px) {
+  .exec-acc-panel .exec-cards tbody td:first-child {
+    position: sticky;
+    left: 0;
+    z-index: 1;
+    background: var(--paper-raised);
+  }
+  .exec-acc-panel .exec-cards thead th:first-child {
+    position: sticky;
+    left: 0;
+    z-index: 2;
+  }
+}
+.exec-acc-flags {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-1);
+}
+.exec-acc-sub {
+  margin: 0;
+  font: var(--exec-font-meta);
+  color: var(--ink-soft);
+  overflow-wrap: anywhere;
+}
+.exec-acc-manage {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  color: var(--ink);
+  background: var(--paper-raised);
+  border: 1px solid var(--line-strong);
+}
+.exec-acc-manage-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+.exec-acc-manage-title {
+  margin: 0;
+  font: var(--exec-font-label);
+  color: var(--ink-soft);
+}
+.exec-acc-manage-line {
+  margin: 0;
+  font: var(--exec-font-meta);
+  color: var(--ink-soft);
+}
 .exec-acc-chips {
   display: flex;
   flex-wrap: wrap;
@@ -169,7 +225,8 @@
   display: grid;
   grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
   gap: var(--space-4);
-  align-items: start;
+  /* Stretch: the two panels are one pair of equal height, not a short table beside a long one (QA2 R3-17). */
+  align-items: stretch;
 }
 @media (max-width: 1100px) {
   .exec-acc-two {

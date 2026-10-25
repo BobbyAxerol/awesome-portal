@@ -1,0 +1,186 @@
+/* Incident page (WP-B, hi-fi `incident`). Layout and type only: colour through carbon tokens, type only through the
+ * --exec-font-* roles, no uppercase here (the panel heads come from blocks.css). Names are `exec-opi-*` because `exec-inc-*`
+ * belongs to the V1 incident screen. */
+
+.exec-opi {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-width: 0;
+  color: var(--ink);
+}
+.exec-opi-back {
+  margin: 0;
+  font: var(--exec-font-meta);
+  color: var(--ink-soft);
+}
+.exec-opi-back a {
+  color: var(--accent);
+}
+.exec-opi-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+.exec-opi-title {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+.exec-opi-tag {
+  display: inline-flex;
+}
+.exec-opi-sub {
+  margin: 0;
+  font: var(--exec-font-body);
+  color: var(--ink-soft);
+  overflow-wrap: anywhere;
+}
+.exec-opi-sub a {
+  color: var(--accent);
+}
+.exec-opi-chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+.exec-opi-rail {
+  padding: var(--space-3) var(--space-4);
+  color: var(--ink);
+  background: var(--paper-raised);
+  border: 1px solid var(--line-strong);
+}
+.exec-opi-rail .exec-ops-rail {
+  margin-bottom: var(--space-2);
+}
+.exec-opi-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-4);
+  align-items: start;
+}
+@media (max-width: 1024px) {
+  .exec-opi-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* Evidence sources: a dashed chip per source, the shape of the hi-fi's "not available" chips. */
+.exec-opi-chiplist {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-3);
+  padding: 0;
+  list-style: none;
+}
+.exec-opi-gapchip {
+  padding: 2px var(--space-2);
+  font: var(--exec-font-data);
+  color: var(--ink-soft);
+  background: var(--paper);
+  border: 1px dashed var(--line-strong);
+}
+
+/* Operations taken. */
+.exec-opi-ops {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0 0 var(--space-3);
+  padding: 0;
+  list-style: none;
+}
+.exec-opi-op {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--line);
+}
+.exec-opi-op:last-child {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+.exec-opi-op-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+.exec-opi-op .exec-ops-meta a {
+  color: var(--accent);
+  overflow-wrap: anywhere;
+}
+
+/* Resolution gates. */
+.exec-opi-gates {
+  display: grid;
+  margin: 0 0 var(--space-3);
+  padding: 0;
+  list-style: none;
+}
+.exec-opi-gate {
+  display: flex;
+  gap: var(--space-3);
+  align-items: flex-start;
+  padding: var(--space-2) 0;
+  border-bottom: 1px solid var(--line);
+}
+.exec-opi-gate-mark {
+  flex: 0 0 auto;
+  font: var(--exec-font-control);
+  color: var(--ink-soft);
+}
+.exec-opi-gate[data-state="open"] .exec-opi-gate-mark {
+  color: var(--f-rejected);
+}
+.exec-opi-gate[data-state="met"] .exec-opi-gate-mark {
+  color: var(--f-ok);
+}
+.exec-opi-gate-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.exec-opi-gate-label {
+  font: var(--exec-font-body);
+  color: var(--ink);
+}
+
+/* Timeline. */
+.exec-opi-timeline {
+  display: grid;
+  margin: 0 0 var(--space-3);
+  padding: 0;
+  list-style: none;
+}
+.exec-opi-event {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  padding: var(--space-2) 0;
+  border-bottom: 1px solid var(--line);
+}
+.exec-opi-event-time {
+  flex: 0 0 auto;
+  min-width: 132px;
+  font: var(--exec-font-id);
+  color: var(--ink-soft);
+}
+.exec-opi-event-word {
+  font: var(--exec-font-body);
+  color: var(--ink);
+}
+
+.exec-opi-idchip {
+  padding: 0 var(--space-2);
+  color: var(--ink);
+  background: var(--paper-sunken);
+  border: 1px solid var(--line-strong);
+}

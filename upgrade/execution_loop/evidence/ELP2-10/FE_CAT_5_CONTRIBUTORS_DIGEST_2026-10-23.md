@@ -1,5 +1,7 @@
 # FE-CAT-5: Overview Contributors and the "Since your last visit" digest (2026-10-23)
 
+> **CORRECTED IN PART (2026-10-23, Codex review): the group cap is a refusal, not a silent truncation. See the section 'Corrections' at the end. The original text below is kept as history.**
+
 Level: R0 note. FRONTEND and FIXTURE only: no schema, generated file or control-api change. Approved by the Codex closeout of 2026-10-23, section 5 (FE-CAT-5). Nothing here connects a real source.
 
 Closeout text: "Contributors: server-side alpha grouping inside the named FUND partition/window, with attribution and complete authorized population. Visit digest: explicit persisted/user-scoped baseline and current source facts, not heuristic 'since last visit' from fixture dates. Return absence until the comparison baseline exists."
@@ -30,3 +32,7 @@ Closeout text: "Contributors: server-side alpha grouping inside the named FUND p
 ## 3. Not verified here
 - No Playwright, visual recording, docker or full hook was run. The Overview visual baseline WILL differ (Contributors panel body, the digest note, new table rules); it was not recorded and must be re-recorded by the visual lane.
 - The populated lane's `group_by=alpha_id` answer was judged by the production reader in vitest, not in a browser.
+
+## Corrections (2026-10-23, after Codex review CODEX_NUMERIC_AND_FINANCIAL_REVIEW_2026-10-23.md and CLAUDE_POST_FREEZE_REVIEW_2026-10-23.md)
+
+- Codex (`manager-model.ts:391,553`): the producer refuses more than 200 groups with `EXECUTION_READ_SCOPE_LIMIT`; it does not silently truncate. Continuation beyond 200 groups is a scalability addition (Codex fixture-support package 5), not the repair of an existing silent-total bug. The request in item 2 above is reworded accordingly: ask for bounded continuation, not for a truncation signal on a body that already refuses.

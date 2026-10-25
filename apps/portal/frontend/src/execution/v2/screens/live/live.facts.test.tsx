@@ -106,7 +106,7 @@ describe("Exposure & orders", () => {
     const positions = screen.getByRole("table", { name: "Positions" });
     const first = Array.from(positions.querySelectorAll("tbody tr"))[0]!;
     expect(Array.from(first.querySelectorAll("td")).slice(0, 6).map((td) => td.textContent)).toEqual(["BTCUSDT", expect.stringContaining("Long"), "0.5", "60,000.00", "60,500.50", "250.25"]);
-    // Leverage and Ack latency are no column (no row fills them): each is named once under its table, the reason in the title.
+    // Leverage and Ack latency: no row fills them, so no column of empty cells; each is said once under its table, the reason in the title.
     expect(first.querySelector('td[data-l="Leverage"]')).toBeNull();
     expect(screen.getByRole("region", { name: "Positions" }).querySelector(".exec-blk-gaps")!.textContent).toBe("Not available: Leverage");
     expect(whyText(screen.getByRole("region", { name: "Positions" }).querySelector(".exec-blk-gaps")!)).toContain("POSITION_LEVERAGE_NOT_IN_SOURCE_RELATION");

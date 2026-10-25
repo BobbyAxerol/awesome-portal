@@ -1,6 +1,6 @@
 /**
  * The commands table, in the hi-fi column order: Time, Target and operation, Intent, Receipt, Display, Next.
- * Intent (FE-020) and Display (FE-032) have no source, so each cell says "Not available" and the request id is behind its disclosure.
+ * Intent (FE-020) has no published field, so it is said once above the table (a column of identical placeholders told the reader nothing); Display (FE-032) is a cell per row.
  *
  * Time is `created_at`; Target + operation is the target and `command_key`;
  * Receipt is `source_status` with `verification_result`; Next is
@@ -15,21 +15,16 @@ import { NaWhy } from "../../blocks";
 import { Flag } from "../../Flag";
 import { formatAsOf } from "../../boundary";
 import type { FlagKind } from "../../flagKinds";
-import type { DeliveryStateV2, DisplayStateV2, OperationV2 } from "../../readers/operationalQueue";
+import type { DisplayStateV2, OperationV2 } from "../../readers/operationalQueue";
 import { ENV_LABEL } from "../../urlState";
 import { IncidentLinks } from "./IncidentLinks";
-import { axesText, commandLabel, receiptOutcome, severityWord, triageOutcome } from "./outcome";
+import { nextActionOf } from "./opsViews";
+import { commandLabel, receiptOutcome, severityWord, triageOutcome } from "./outcome";
 import { TargetLink } from "./TargetLink";
 
 import "../../css/operations.css";
 
 /** FE-CAT-2 axis words. A word is a published value restated; nothing here is derived from other fields. */
-const DELIVERY_WORD: Readonly<Record<DeliveryStateV2, string>> = {
-  NOT_APPLICABLE: "Delivery: no receipt expected",
-  AWAITING_RECEIPT: "Delivery: awaiting receipt",
-  RECEIPT_CONFIRMED: "Delivery: receipt confirmed",
-  RECEIPT_FAILED: "Delivery: receipt failed",
-};
 const DISPLAY_WORD: Readonly<Record<DisplayStateV2, { kind: FlagKind; label: string }>> = {
   CURRENT: { kind: "ok", label: "Current" },
   CATCHING_UP: { kind: "pending", label: "Catching up" },
@@ -57,11 +52,6 @@ function columnsFor(onOpen: (row: OperationV2) => void, incidentTo: (incidentId:
       ),
     },
     {
-      key: "intent",
-      label: "Intent",
-      render: () => <NaWhy reason="Not published (FE-020): whether the command was only previewed." />,
-    },
-    {
       key: "receipt",
       label: "Receipt",
       render: (row) => {
@@ -69,8 +59,7 @@ function columnsFor(onOpen: (row: OperationV2) => void, incidentTo: (incidentId:
         return (
           <span className="exec-ops-cell">
             <Flag kind={outcome.kind} label={outcome.label} size="sm" />
-            <span className="exec-ops-meta">{axesText(row.sourceStatus, row.verificationResult)}</span>
-            {row.deliveryState ? <span className="exec-ops-meta">{DELIVERY_WORD[row.deliveryState]}</span> : null}
+            {/* One badge, then the delivery axis when published. The two axes behind the badge (source status, verification) are in the drawer's Receipt section, in words. */}
           </span>
         );
       },
@@ -91,7 +80,7 @@ function columnsFor(onOpen: (row: OperationV2) => void, incidentTo: (incidentId:
       label: "Next",
       render: (row) => {
         const triage = triageOutcome(row.triageState);
-        const outcome = receiptOutcome(row.sourceStatus, row.verificationResult);
+        const action = nextActionOf(row);
         // Next is an action. The queue's default lens is already UNACKNOWLEDGED, so repeating that flag on
         // every row says nothing; the triage flag appears only when a person has already acted on the row.
         const acted = row.triageState !== "UNACKNOWLEDGED";
@@ -102,14 +91,18 @@ function columnsFor(onOpen: (row: OperationV2) => void, incidentTo: (incidentId:
         return (
           <span className="exec-ops-cell">
             {acted ? <Flag kind={triage.kind} label={triage.label} size="sm" /> : null}
-            {outcome.checkOriginal ? (
+            {action === "check-original" ? (
               <>
                 <button type="button" className="exec-ops-apply exec-ops-next" data-variant="primary" onClick={open}>Check original request</button>
                 <span className="exec-ops-meta">Do not send it again.</span>
               </>
-            ) : acted ? null : (
-              <button type="button" className="exec-ops-apply exec-ops-next" onClick={open}>Review</button>
-            )}
+            ) : null}
+            {/* The axis is published as CATCHING_UP: the figures are on their way and there is nothing for a person to do yet. */}
+            {action === "display-updating" ? <span className="exec-ops-next-text">Display updating</span> : null}
+            {action === "open-obligations" ? (
+              <TargetLink className="exec-ops-id exec-ops-next-link" type={row.targetType} id={row.targetId} environment={row.environment} label="Open obligations" />
+            ) : null}
+            {action === "review" && !acted ? <button type="button" className="exec-ops-apply exec-ops-next" onClick={open}>Review</button> : null}
           </span>
         );
       },

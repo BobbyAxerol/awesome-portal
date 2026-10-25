@@ -64,28 +64,28 @@ export interface MoneyProps {
   absent?: ReactNode;
 }
 
-export function Money({ value, currency, signed = false, absent }: MoneyProps) {
+export function Money({ value, currency, signed = false, absent, omitCurrency = false }: MoneyProps & { omitCurrency?: boolean }) {
   if (value === null || value === undefined) return <>{absent ?? <Absent />}</>;
   const decimal = readDecimal(value, { unit: "money" });
   if (decimal === null) return <Absent reason="unreadable value" />;
   return (
     <span className="exec-pf-money">
-      <span className="exec-pf-num" data-full={decimal.full} data-tone={signed && decimal.tone !== "neutral" ? decimal.tone : undefined} title={decimal.full}>
+      <span className="exec-pf-num" data-full={decimal.full} data-tone={signed && decimal.tone !== "neutral" ? decimal.tone : undefined} title={omitCurrency && currency ? `${decimal.full} ${currency}` : decimal.full}>
         {decimal.display}
       </span>
-      {currency ? <small className="exec-pf-unit"> {currency}</small> : null}
+      {currency && !omitCurrency ? <small className="exec-pf-unit"> {currency}</small> : null}
     </span>
   );
 }
 
-export function MoneyList({ entries, empty, signed = false }: { entries: readonly CurrencyValue[]; empty?: ReactNode; signed?: boolean }) {
+export function MoneyList({ entries, empty, signed = false, omitUnit = null }: { entries: readonly CurrencyValue[]; empty?: ReactNode; signed?: boolean; omitUnit?: string | null }) {
   if (entries.length === 0) return <>{empty ?? <Absent />}</>;
   return (
     <span className="exec-pf-ccylist">
       {entries.map((entry, index) => (
         // Two lines for one currency are both shown, as published; the index keeps their keys apart (DEBT-UXM07-013).
         <Fragment key={`${entry.currency}#${index}`}>
-          <Money value={entry.value} currency={entry.currency} signed={signed} />
+          <Money value={entry.value} currency={entry.currency} signed={signed} omitCurrency={omitUnit !== null && entry.currency === omitUnit} />
         </Fragment>
       ))}
     </span>

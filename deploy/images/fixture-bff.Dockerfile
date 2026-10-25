@@ -22,6 +22,10 @@ COPY apps/portal/frontend/e2e apps/portal/frontend/e2e
 # fixtures; the bundler inlines them, so the runtime image does not need this directory.
 COPY apps/portal/registry/fixtures/registry.public.json apps/portal/registry/fixtures/links.public.json apps/portal/registry/fixtures/summary.healthy.json apps/portal/registry/fixtures/
 COPY apps/portal/fixture-bff apps/portal/fixture-bff
+# Two modules outside the fixture BFF that it imports at build time: Codex's positive Manager series helper (pure, node:crypto only)
+# and the visit-digest composer (type imports of ./contracts are erased by the bundler).
+COPY packages/contracts/tooling/execution-manager-positive-series-fixtures.mjs packages/contracts/tooling/execution-manager-positive-series-fixtures.mjs
+COPY apps/control-api/src/command-center/visit-digest.ts apps/control-api/src/command-center/visit-digest.ts
 RUN cd apps/portal/fixture-bff && node build.mjs
 
 FROM node:22.23.2-alpine3.24@sha256:c610fcdfb1d5b4740dd70c284ed3cb16bb857e0f7166196e36a5501df7a3aa32

@@ -67,7 +67,14 @@ import { readStageActionEligibilityV1, stageActionEligibilityUrl } from "../v2/r
 import { paperExitParentAnswers, paperExitParentUrl, readPaperExitParentV1 } from "../v2/readers/paperExitParent";
 import { accessEligibilityBatchUrl, eligibilityBatchAnswers, readAccessEligibilityBatch } from "../v2/readers/accessSelfBatch";
 import { ACCESS_SELF_CONTEXT_PATH, readAccessSelfContext } from "../v2/readers/accessSelfContext";
+import { VISIT_DIGEST_PATH, VISIT_DIGEST_SEEN_PATH, readVisitDigest, visitDigestAnswers, visitDigestQuery } from "../v2/readers/visitDigest";
 import { ACCESS_STEP_UP_PATH, accessStepUpAnswers, accessStepUpBody, readAccessStepUp } from "../v2/readers/accessStepUp";
+import { incidentChildrenAnswers, incidentChildrenPath, operationsAuditPath, readIncidentChildrenV1, readOperationsAuditV1 } from "../v2/readers/incidentChildren";
+import { run } from "../v2/readers/strictRead";
+import { SIBLINGS, type SiblingId } from "../v2/readers/siblings.generated";
+import { entitySearchAnswers, entitySearchPath, readEntitySearchV1 } from "../v2/readers/entitySearch";
+import { alphaLifecycleAnswers, alphaLifecyclePath, readAlphaLifecycleV1 } from "../v2/readers/alphaLifecycle";
+import { approvalEvidenceAnswers, approvalEvidencePath, readApprovalEvidenceV1 } from "../v2/readers/approvalEvidence";
 import { approvalRequestLookupAnswers, approvalRequestLookupUrl, readApprovalRequestLookupV1 } from "../v2/readers/approvalRequestLookup";
 import { readCanaryControlRoom, readSandboxCertification } from "../certification";
 import { readLiveFullOperations } from "../liveFull";
@@ -99,7 +106,7 @@ import type {
 } from "./ports";
 import { isPaperExitDecision, PAPER_EXIT_EXTENSION_DAYS, unavailable, type DecisionKind, type PlanAuthority } from "./ports";
 import { DECISION_COMMANDS } from "./governanceContext";
-import type { ApprovalCreateInput, ApprovalCreateOutcome, ConditionsPage, WaiverQuery } from "./ports";
+import type { ApprovalCreateInput, ApprovalCreateOutcome, ConditionsPage, SiblingBody, WaiverQuery } from "./ports";
 import type { StageDrift } from "../hifiInsight";
 import { readOperationalComposition, type CompositionName, type OperationalComposition } from "../operationalComposition";
 import type { AlphaFleetQuery, BindingListQuery, BlotterQuery } from "./ports";
@@ -690,8 +697,8 @@ export function createHttpApi({ policy, signal, readScope = {} }: HttpApiOptions
   };
   const getAlphaFleet = (query: AlphaFleetQuery = {}): Promise<Result<ManagerListEnvelope<AlphaFleetItem>>> =>
     readGet(`/alphas${listParameters(query)}`, readAlphaFleet, "The Alpha Fleet");
-  const listPortfolios = (): Promise<Result<PortfolioListEnvelope>> =>
-    readGet("/portfolios", readPortfolioList, "The portfolio register");
+  const listPortfolios = (query: { workspaceId?: string } = {}): Promise<Result<PortfolioListEnvelope>> =>
+    readGet(query.workspaceId ? `/portfolios?workspace_id=${encodeURIComponent(query.workspaceId)}` : "/portfolios", readPortfolioList, "The portfolio register");
   const getBindings = (query: BindingListQuery = {}): Promise<Result<ManagerListEnvelope<BindingItem>>> =>
     readGet(`/broker-bindings${listParameters(query)}`, readBindings, "The bindings register");
   const getBindingDetail = (bindingId: string, environment: "paper" | "sandbox" | "live" = "paper"): Promise<Result<BindingDetailRead>> =>
@@ -1177,6 +1184,43 @@ export function createHttpApi({ policy, signal, readScope = {} }: HttpApiOptions
       return result;
     },
 
+    async getVisitDigest(workspaceId) {
+      const query = visitDigestQuery(workspaceId);
+      if (query === null) return unavailable("The visit digest query is not one the Portal accepts.");
+      const result = await readGetAt(`${BASE}${VISIT_DIGEST_PATH}${query}`, readVisitDigest, "The visit digest");
+      if (result.ok && result.value.kind === "digest" && !visitDigestAnswers(result.value.digest, workspaceId)) {
+        return unavailable("The visit digest answered another workspace than the one asked, so it is not shown.");
+      }
+      if (result.ok && result.value.kind === "unsupported_shape") return unavailable("The visit digest is a shape this build does not read, so it is not shown.");
+      return result;
+    },
+
+    async markVisitDigestSeen(workspaceId, body) {
+      const query = visitDigestQuery(workspaceId);
+      if (query === null) return { kind: "unavailable", reason: "The visit digest query is not one the Portal accepts, so nothing was sent." };
+      // No session token, no request: the route would answer 403 and the 403 would read as "your token is wrong".
+      if (csrfToken() === null) return { kind: "unavailable", reason: "The session token is missing, so nothing was sent. Sign in again." };
+      let response: Response;
+      try {
+        response = await post(`${VISIT_DIGEST_SEEN_PATH}${query}`, { snapshot_revision: body.snapshot_revision, expected_baseline_version: body.expected_baseline_version }, signal);
+      } catch {
+        return { kind: "unavailable", reason: "The acknowledgement never reached the Portal. Nothing changed." };
+      }
+      let answer: unknown = null;
+      try { answer = await response.json(); } catch { /* the status alone still types the answer */ }
+      if (!response.ok) {
+        const code = readProblem(answer, response.status).code;
+        const typed = /^[A-Z][A-Z0-9_]{2,63}$/.test(code) && code !== `HTTP_${response.status}` ? code : null;
+        if (response.status === 409) return { kind: "conflict", code: typed };
+        if (response.status === 503) return { kind: "unavailable", reason: "The Portal could not store the acknowledgement. Nothing changed." };
+        return { kind: "refused", status: response.status, code: typed };
+      }
+      const read = readVisitDigest(answer);
+      if (read === null || read.kind !== "digest") return { kind: "unavailable", reason: "The acknowledgement answer could not be read, so it is not used." };
+      if (!visitDigestAnswers(read.digest, workspaceId)) return { kind: "unavailable", reason: "The acknowledgement answered another workspace than the one asked, so it is not used." };
+      return { kind: "ok", digest: read.digest };
+    },
+
     async getSelfContext() {
       const result = await readGetAt(ACCESS_SELF_CONTEXT_PATH, readAccessSelfContext, "The self context");
       // Another schema is not a context: it is a typed unavailable, so a caller never has a "default workspace" it did not read.
@@ -1236,6 +1280,60 @@ export function createHttpApi({ policy, signal, readScope = {} }: HttpApiOptions
         return unavailable("The request lookup answered another question than the one asked, so it is not shown.");
       }
       return result;
+    },
+
+    async getIncidentChildren(incidentId, workspaceId) {
+      const path = incidentChildrenPath(incidentId, workspaceId);
+      if (path === null) return unavailable("The incident id is not one the Portal accepts, so its children were not requested.");
+      return readGet(
+        path,
+        (raw) => { const read = readIncidentChildrenV1(raw); return read !== null && read.kind === "incident_children" && incidentChildrenAnswers(read.children, incidentId) ? read.children : null; },
+        "The incident children",
+      );
+    },
+
+    async getOperationsAudit(query = {}) {
+      const path = operationsAuditPath(query);
+      if (path === null) return unavailable("The audit request was not valid, so it was not sent.");
+      return readGet(path, (raw) => { const read = readOperationsAuditV1(raw); return read !== null && read.kind === "operations_audit" ? read.page : null; }, "The operations audit");
+    },
+
+    async getSibling<K extends SiblingId>(id: K, params: Readonly<Record<string, string>> = {}): Promise<Result<SiblingBody<K>>> {
+      const spec = SIBLINGS[id] as { path: (p: Readonly<Record<string, string>>) => string | null; read: (raw: unknown) => unknown };
+      const path = spec.path(params);
+      if (path === null) return unavailable(`The ${id} request was not valid (an id the Portal accepts is required), so it was not sent.`);
+      return readGet(path, (raw) => run(spec.read as never, raw) as SiblingBody<K> | null, `The ${id} read`) as Promise<Result<SiblingBody<K>>>;
+    },
+
+    async searchEntities(query) {
+      const path = entitySearchPath(query);
+      if (path === null) return unavailable("The search text was not one the Portal accepts, so it was not sent.");
+      const asked = query.q.trim();
+      return readGet(
+        path,
+        (raw) => { const read = readEntitySearchV1(raw); return read !== null && read.kind === "entity_search" && entitySearchAnswers(read.search, asked) ? read.search : null; },
+        "The entity search",
+      );
+    },
+
+    async getAlphaLifecycle(alphaId, environment, workspaceId) {
+      const path = alphaLifecyclePath(alphaId, environment, workspaceId);
+      if (path === null) return unavailable("The alpha id is not one the Portal accepts, so the lifecycle was not requested.");
+      return readGet(
+        path,
+        (raw) => { const read = readAlphaLifecycleV1(raw); return read !== null && read.kind === "alpha_lifecycle" && alphaLifecycleAnswers(read.lifecycle, alphaId) ? read.lifecycle : null; },
+        "The alpha lifecycle",
+      );
+    },
+
+    async getApprovalEvidence(approvalId, workspaceId) {
+      const path = approvalEvidencePath(approvalId, workspaceId);
+      if (path === null) return unavailable("The approval id is not one the Portal accepts, so the evidence was not requested.");
+      return readGet(
+        path,
+        (raw) => { const read = readApprovalEvidenceV1(raw); return read !== null && read.kind === "approval_evidence" && approvalEvidenceAnswers(read.evidence, approvalId) ? read.evidence : null; },
+        "The approval evidence",
+      );
     },
 
     async planCommand(input) {

@@ -114,7 +114,9 @@ export function CommandPalette({
 export function useCommandPaletteShortcut(onOpen: () => void) {
   useEffect(() => {
     const handler = (event: KeyboardEvent) => {
-      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
+      // `key` is absent on the synthetic keydown that browser autofill and some automation dispatch: a handler that throws on it
+      // is an uncaught error on every such event, so the shortcut ignores anything that is not a named key.
+      if ((event.metaKey || event.ctrlKey) && typeof event.key === "string" && event.key.toLowerCase() === "k") {
         event.preventDefault();
         onOpen();
       }

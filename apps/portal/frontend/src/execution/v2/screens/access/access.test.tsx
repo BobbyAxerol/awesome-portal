@@ -83,8 +83,9 @@ describe("identity strip", () => {
     const strip = document.querySelector('[aria-label="Who you are signed in as"]') as HTMLElement;
     expect(within(strip).getByText("Signed in as").nextElementSibling?.textContent).toBe("stan");
     expect(within(strip).getByText("usr_me")).toBeTruthy();
-    expect(within(strip).getByText("Owner").nextElementSibling?.textContent).toBe("Not an owner");
-    expect(within(strip).getByText("Capabilities held").nextElementSibling?.textContent).toBe("1");
+    // Four tiles, as the design has them. The owner state and the capability count are published facts and ride on the Role preset tile's note.
+    expect(strip.querySelectorAll(".exec-acc-kpi")).toHaveLength(4);
+    expect(within(strip).getByTestId("acc-owner-note").textContent).toBe("Not an owner · 1 capability held");
     // Role preset keeps its tile (hi-fi) and says Not available: no preset name is invented from the capabilities.
     expect(within(strip).getByText("Role preset").nextElementSibling?.textContent).toBe("Not available");
     // "Researcher field policy" is a published policy field, not a preset name.
@@ -98,12 +99,12 @@ describe("identity strip", () => {
     signIn({ owner: true });
     mount();
     await granted();
-    expect(screen.getByText("Owner", { selector: ".exec-acc-kpi-value" })).toBeTruthy();
+    expect(screen.getByTestId("acc-owner-note").textContent).toMatch(/^Owner · 0 capabilities held$/);
     cleanup();
     signIn({ ownerState: "OWNER_ANCHOR_UNCLAIMED" });
     mount();
     await granted();
-    expect(screen.getByText("Owner anchor unclaimed")).toBeTruthy();
+    expect(screen.getByTestId("acc-owner-note").textContent).toMatch(/^Owner anchor unclaimed/);
   });
 });
 
@@ -147,11 +148,12 @@ describe("AVAILABLE with grants", () => {
     const first = rows[0];
     expect(cell(first, "Access").textContent).toContain("portfolio.read");
     expect(cell(first, "Access").textContent).toContain("Allow");
-    expect(cell(first, "Scope").textContent).toBe("Portfolio: pf_TEST_ONLY_core, pf_TEST_ONLY_satellite");
-    expect(cell(first, "Environments").textContent).toBe("Paper, Sandbox");
+    expect(cell(first, "Scope").textContent).toContain("Portfolio: pf_TEST_ONLY_core, pf_TEST_ONLY_satellite");
+    // Environments and Revision ride under Scope and Access (QA1 I-29: eight columns did not fit the panel at 1024).
+    expect(within(cell(first, "Scope")).getByTestId("acc-grant-env").textContent).toBe("Paper, Sandbox");
     expect(cell(first, "Since").textContent).toBe("1 Sep 09:14Z");
     expect(cell(first, "Expires").textContent).toBe("No end date");
-    expect(cell(first, "Revision").textContent).toBe("r3_TEST_ONLY");
+    expect(within(cell(first, "Access")).getByTestId("acc-grant-rev").textContent).toBe("Revision r3_TEST_ONLY");
     expect(cell(first, "State").querySelector(".exec-flag")?.getAttribute("data-k")).toBe("ok");
     expect(cell(first, "State").textContent).toContain("Current");
     expect(cell(first, "Trading system").textContent).toContain("Not required");
@@ -340,7 +342,8 @@ describe("what you can see and do come from capabilities alone", () => {
     signIn({ capabilities: V2_ROLE_PRESETS[preset] });
     mount();
     const doTable = await screen.findByRole("table", { name: "What you can do" });
-    for (const label of allowed) expect(statusOf(doTable, label), label).toContain("Allowed");
+    // The Live gate is held by the capability but closed on this build: "Not available yet" (QA2 R3-15), never "Allowed" beside the closed sentence.
+    for (const label of allowed) expect(statusOf(doTable, label), label).toContain(label === "Decide at Live gate" ? "Not available yet" : "Allowed");
     for (const label of blocked) expect(statusOf(doTable, label), label).toContain("Not allowed");
   });
 
@@ -571,7 +574,7 @@ describe("L2 · grants over the DOM cap", () => {
     expect(screen.getByTestId("exec-acc-grants-cap-label").textContent).toBe("Showing 200 of 201 grants");
     expect(capLabel()!.textContent).toContain("The other 1 are not drawn here");
     // The first 200 in the order the server sent them; the 201st is not drawn.
-    expect(cell(rows[0], "Revision").textContent).toBe("r3_TEST_ONLY");
+    expect(within(cell(rows[0], "Access")).getByTestId("acc-grant-rev").textContent).toBe("Revision r3_TEST_ONLY");
     expect(screen.queryByText("acg_scale_0200")).toBeNull();
   });
 

@@ -42,13 +42,19 @@ export function configureScenario(scenario: FixtureScenario): void {
   current = scenario;
 }
 
+/** The server registers how the doubles follow a change of scenario, so a direct `setScenario` (a test, the harness) moves them too. */
+let onChange: (() => void) | null = null;
+export const onScenarioChange = (listener: (() => void) | null): void => { onChange = listener; };
+
 export function setScenario(scenario: FixtureScenario): void {
   current = scenario;
+  onChange?.();
 }
 
 /** Deterministic reset: back to the configured scenario. */
 export function resetScenario(): FixtureScenario {
   current = configured;
+  onChange?.();
   return current;
 }
 

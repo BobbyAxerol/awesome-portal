@@ -203,7 +203,8 @@ describe("L1 · the V1 state matrix", () => {
     expect(model(populatedV1({ stage: "CANARY" }))).toMatchObject({ stage: "canary", inCanary: true });
     expect(model(populatedV1({ stage: "PAPER" }))).toMatchObject({ stage: null, inCanary: false });
     expect(canaryHref("dep_TEST_ONLY_live")).toBe("/deployments/live/dep_TEST_ONLY_live/canary");
-    expect(model(populatedV1()).spineTargets.canary).toBe("/deployments/live/dep_TEST_ONLY_live/canary");
+    // The lineage names the canary deployment (dep_88 in the canonical body): the node goes there, not to this deployment's own canary page.
+    expect(model(populatedV1()).spineTargets.canary).toBe("/deployments/live/dep_88/canary");
   });
 
   it("runtime (a body WITHOUT stage_facts): only a published word becomes a chip; ACTIVE is a neutral Active (activation is not liveness), RUNNING is Running, HALTED is Halted, a stranger stays Unknown-worded", () => {
@@ -326,7 +327,7 @@ describe("L1 · the V1 state matrix", () => {
   it("spine links: Canary always; R1, R2 and Sandbox only where the lineage links them with an in-app path", () => {
     const m = model(populatedV1());
     expect(m.spineTargets).toEqual({
-      canary: "/deployments/live/dep_TEST_ONLY_live/canary", r1: "/governance/approvals/AP-118/r1", r2: "/governance/approvals/AP-152/r2", sandbox: "/deployments/sandbox/dep_88",
+      canary: "/deployments/live/dep_88/canary", r1: "/governance/approvals/AP-118/r1", r2: "/governance/approvals/AP-152/r2", sandbox: "/deployments/sandbox/dep_88",
     });
     const raw = populatedV1();
     raw.lineage[1].href = "https://elsewhere.example/x";

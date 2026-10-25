@@ -57,22 +57,31 @@ describe("page", () => {
     await loaded();
     expect(screen.getByRole("heading", { level: 1, name: "Compare" })).toBeTruthy();
     expect(screen.queryByText(/identity, scalars and aligned series/)).toBeNull();
-    // FRESH prints no chip; the as-of line says it.
-    expect(screen.queryByText("Fresh")).toBeNull();
+    // The hi-fi freshness chip is drawn for a FRESH read too, beside the as-of line.
+    expect(document.body.textContent).toContain("Fresh");
   });
 
-  it("has no Alphas control: the gap is said once, and only when the address asks for alphas", async () => {
+  it("has the Portfolios / Alphas subject tabs: Portfolios is on by default and nothing says alphas are unavailable", async () => {
     mount(makeApi().api);
     await loaded();
-    expect(screen.queryByRole("button", { name: "Alphas" })).toBeNull();
-    expect(screen.queryByRole("group", { name: "Compare" })).toBeNull();
-    expect(screen.queryByText("Comparing alphas is not available. Showing portfolios.")).toBeNull();
+    const tabs = screen.getByRole("group", { name: "Compare" });
+    expect(within(tabs).getByRole("button", { name: "Portfolios" }).getAttribute("aria-pressed")).toBe("true");
+    expect(within(tabs).getByRole("button", { name: "Alphas" }).getAttribute("aria-pressed")).toBe("false");
+    expect(screen.queryByText(/Comparing .* is not available/)).toBeNull();
   });
 
-  it("says alphas are not comparable when the address asks for them, and shows portfolios", async () => {
-    mount(makeApi().api, "?kind=alpha");
+  it("the Alphas tab is the address `kind=alpha`; switching clears the picks of the other kind; an unknown kind still shows portfolios and says so", async () => {
+    const base = makeApi().api;
+    const api = { ...base, getAlphaFleet: async () => ({ ok: false as const, status: "unavailable" as const, reason: "no fleet in this harness" }) } as unknown as ExecutionApi;
+    const view = mount(api, `?in=${PF.satellite},${PF.canary}`);
     await loaded();
-    expect(whyText(screen.getByText("Comparing alphas is not available. Showing portfolios."))).toBe("Not published (FE-033)");
+    fireEvent.click(within(screen.getByRole("group", { name: "Compare" })).getByRole("button", { name: "Alphas" }));
+    await waitFor(() => expect(search().get("kind")).toBe("alpha"));
+    expect(search().get("in")).toBeNull();
+    view.unmount();
+    mount(makeApi().api, "?kind=widgets");
+    await loaded();
+    expect(screen.getByText("Comparing that kind is not available. Showing portfolios.")).toBeTruthy();
   });
 
   it("points Back where the link came from", async () => {
@@ -313,7 +322,9 @@ describe("series (FE-013/033, BE-P4 manager series)", () => {
     const { api, calls } = makeApi();
     const { container } = mount(api, pick(PF.satellite, PF.canary));
     await loaded();
-    expect(overlay(container).textContent).toContain("Pick two comparable portfolios");
+    // Two picked, fewer than two on one basis: the headline says so, and the left-out pick's reason is beside it (QA1 CM-01).
+    expect(overlay(container).textContent).toContain("Fewer than two picks share one basis");
+    expect(overlay(container).textContent).not.toContain("Pick two comparable portfolios");
     expect(overlay(container).textContent).not.toContain("Not published");
     expect(overlay(container).querySelectorAll("svg")).toHaveLength(0);
     expect(screen.getByTestId("basis-caption").textContent).toBe("Basis: No aligned series: the common basis is not established");
@@ -556,18 +567,18 @@ describe("metric table", () => {
       const cells = [...row!.querySelectorAll("td")].slice(1);
       expect(cells.length, label).toBeGreaterThanOrEqual(2);
       for (const td of cells) {
-        expect(td.textContent, label).toContain("Not available");
+        await waitFor(() => expect(td.textContent, label).toContain("Not available"));
         expect(td.textContent, label).toContain(`Not published (${id})`);
       }
     }
     expect(screen.queryByTestId("not-available-line")).toBeNull();
   });
 
-  it("marks no best in a row: a mark would need a value it does not have", async () => {
+  it("marks no best in a row while no value is published for two comparable picks", async () => {
     mount(makeApi().api, pick(PF.satellite, PF.canary));
     await loaded();
-    expect(document.querySelector('[title="Best in row"]')).toBeNull();
-    expect(document.body.textContent).not.toMatch(/best in/i);
+    await waitFor(() => expect(cell(row("NAV"), "Satellite")).toContain("Not available"));
+    expect(document.querySelector('[title="Best in this row"]')).toBeNull();
   });
 
   it("carries a missing owner and an empty allocation as statements", async () => {

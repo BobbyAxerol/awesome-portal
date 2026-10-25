@@ -60,8 +60,10 @@ describe("tiers", () => {
     await loaded();
     const heads = screen.getAllByRole("heading", { level: 3 }).map((h) => h.textContent);
     expect(heads).toEqual(["Read", "Portfolio capital", "Deployment risk", "Account", "Sync and reconciliation", "Emergency"]);
-    expect(screen.getByText("0 of 7 ready").getAttribute("title")).toBe("Look only. Nothing changes.");
-    expect(screen.getByText("0 of 3 ready").getAttribute("title")).toBe("Needs a second approver and a security key.");
+    // The tier's own sentence is printed beside its count (the hi-fi's "Look only. Nothing changes. · 6 of 7 ready"), not a tooltip.
+    const asides = screen.getAllByTestId("admin-tier-aside").map((n) => n.textContent);
+    expect(asides[0]).toBe("Look only. Nothing changes. · 0 of 7 ready");
+    expect(asides[5]).toBe("Needs a second approver and a security key. · 0 of 3 ready");
     expect(screen.getByText("0 of 24 can run now")).toBeTruthy();
   });
 
@@ -469,7 +471,8 @@ describe("the auto-open is once, filter-aware and does not take focus", () => {
     let matches = initialOverlay;
     const listeners = new Set<() => void>();
     vi.stubGlobal("matchMedia", (query: string) => ({
-      get matches() { return matches; },
+      // The page's own wide query (`min-width`) is the opposite of the overlay query (`max-width`): overlay means not wide.
+      get matches() { return query.includes("min-width") ? !matches : matches; },
       media: query,
       addEventListener: (_: string, fn: () => void) => listeners.add(fn),
       removeEventListener: (_: string, fn: () => void) => listeners.delete(fn),
@@ -493,14 +496,16 @@ describe("the auto-open is once, filter-aware and does not take focus", () => {
     expect(search().get("sel")).toBeNull();
   });
 
-  it("opens only a ready row the active state filter shows; with none visible it opens nothing", async () => {
+  it("opens a ready row the active state filter shows; with none ready it opens the first row shown, once", async () => {
     setOverviewDoubleVariants({ admin: "connected-read" });
     mount("/administration/actions?state=not-enabled");
     await loaded();
-    await new Promise((resolve) => setTimeout(resolve, 30));
-    expect(screen.queryByRole("complementary")).toBeNull();
-    expect(search().get("sel")).toBeNull();
-    // Showing everything afterwards does not open it either: the one chance was the first load.
+    // No ready row is visible under this filter: the pane opens on the first row shown (WP-E: never a list beside an empty column).
+    const first = await dock();
+    expect(within(first).getByRole("heading", { name: "Capital history" })).toBeTruthy();
+    // Closing it and showing everything afterwards does not open another: the one chance was the first load.
+    fireEvent.click(within(first).getByRole("button", { name: "Close" }));
+    await waitFor(() => expect(screen.queryByRole("complementary")).toBeNull(), SLOW);
     fireEvent.click(screen.getByRole("button", { name: /^All \d+$/ }));
     await waitFor(() => expect(search().get("state")).toBeNull(), SLOW);
     await new Promise((resolve) => setTimeout(resolve, 30));

@@ -1,5 +1,30 @@
 # FE-CAT-4 / DEBT-UXM07-052: figures and counts on the bindings list (2026-10-23)
 
+## Later Codex package4 addendum (source support lane)
+
+Historical status below is preserved. Migration151 now supplies the optional
+column; `replaceBindings`, list and binding-detail preserve the published figures.
+The list uses one repeatable-read transaction for page, metadata and the selected
+environment's full count. Unrequested environments and all/issues remain null:
+reading one profile does not grant access to all profiles. This guarantee is per
+request; existing keyset cursors do not freeze a source revision across requests.
+
+Source refresh still needs a qualified batch financial carrier. The earlier
+top-level `broker_account_sync_effective.native_equity` locator below was a
+requested input, NOT verified by the checked-in catalogue (which lists balances
+JSONB, currency and synced_at). No raw parser widening or per-binding network
+fanout was added. DEBT-052 therefore stays OPEN for real-source wiring; do not
+remove the frontend fallback for rows whose figure keys remain absent.
+
+Opt-in populated/layout-stress fixture now ties generated list, binding detail,
+Account broker facts and exposure to one shared synthetic book. Native wallet
+and equity differ; economic allocation and physical source are separate. Existing
+named/adverse scenarios remain. Actual FE readers are exercised by the focused
+contract tests. No component or visual baseline was changed.
+
+Exact tests, source SHA and Claude handoff:
+[six-package packet](SIX_BACKEND_SUPPORT_PACKAGES_2026-10-23.md).
+
 Level: R0 note, contract SOURCE_ONLY (additive, optional), FE and fixture lane FIXTURE_VERIFIED. Nothing here connects a real source. Approved by the Codex closeout of 2026-10-23, section 5 (FE-CAT-4 / DEBT-052). Replaces the capped two-read fallback for every row whose producer publishes the figures; the fallback stays for rows without them.
 
 ## 1. Decision in one paragraph

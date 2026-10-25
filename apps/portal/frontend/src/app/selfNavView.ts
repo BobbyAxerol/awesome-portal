@@ -6,7 +6,7 @@
  * The controller is the only producer; the shell only adds `tokens` to the session's capabilities for LISTING and hands
  * `notice` to the rail. Flag off, nobody produces it and `NO_SELF_NAV` is the value for ever.
  */
-import type { ReactNode } from "react";
+import { createContext, type ReactNode } from "react";
 
 export interface SelfNavShellView {
   /** Rail tokens a LIVE projection lists. Empty unless inside the session ceiling. Added to listing only, never to authority. */
@@ -18,6 +18,8 @@ export interface SelfNavShellView {
    * rail lists it for a member who has no Profile & Access entry of their own. `null` fails closed. Listing only, never authority.
    */
   selfEntry: { workspaceId: string } | null;
+  /** The workspace the self-context RESOLVED when the address names none (WP-D / WP-E request), else `null`. Not an authority. */
+  workspaceId: string | null;
 }
 
 /**
@@ -28,4 +30,24 @@ export interface SelfNavShellView {
  */
 export const SELF_ENTRY_PATH = "/administration/my-access";
 
-export const NO_SELF_NAV: SelfNavShellView = { tokens: new Set<string>(), notice: null, selfEntry: null };
+export const NO_SELF_NAV: SelfNavShellView = { tokens: new Set<string>(), notice: null, selfEntry: null, workspaceId: null };
+
+/**
+ * Sidebar count badges of the V2 shell (WP-D). Keyed by registry feature id. An entry exists ONLY for a count the owning read
+ * published; an unpublished or failed count has no entry, so the rail shows no number it cannot stand behind. `label` is the
+ * accessible/hover sentence naming the read.
+ */
+export interface NavBadge {
+  count: number;
+  tone: "warn" | "bad";
+  label: string;
+}
+export type NavBadges = Readonly<Record<string, NavBadge>>;
+export const NO_NAV_BADGES: NavBadges = Object.freeze({});
+
+/**
+ * The workspace the shell's self-context resolved for this member when the address names none (`defaultWorkspace.state ===
+ * RESOLVED`), or `null`. The Access page reads it so "Granted to you" shows without a workspace in the address. Never a guess:
+ * AMBIGUOUS, NONE, UNAVAILABLE and a failed read all stay `null`.
+ */
+export const SelfWorkspaceContext = createContext<string | null>(null);

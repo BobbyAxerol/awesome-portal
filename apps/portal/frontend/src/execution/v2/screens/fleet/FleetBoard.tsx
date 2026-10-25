@@ -91,10 +91,13 @@ function Column({ column, headingId, selectedKey, hrefFor, onOpen }: {
   // Today the fleet read publishes no readiness for any alpha, so every card in a lane carries the same gap: it is
   // stated once at the lane head, never dropped.
   const sharedGap = n > 0;
+  const domain = column.code === "PAPER" || column.code === "SANDBOX" ? "simulated" : column.code === "CANARY" || column.code === "LIVE" ? "real" : null;
   return (
-    <section className="exec-fleet-lane" data-stage={column.code} aria-labelledby={headingId}>
+    <section className="exec-fleet-lane" data-stage={column.code} data-domain={domain} aria-labelledby={headingId}>
       <header className="exec-fleet-lane-head">
         <h3 id={headingId} className="exec-fleet-lane-title">{column.label}</h3>
+        {/* The economic domain of the lane, in words (a hatched lane is simulated; a framed one holds real money). Never a colour alone. */}
+        {domain === null ? null : <span className="exec-fleet-lane-tag" data-domain={domain}>{domain === "simulated" ? "SIMULATED" : "REAL-FUNDED"}</span>}
         <span className="exec-fleet-lane-count">{n} loaded</span>
         <span className="exec-fleet-lane-pub" title="Counted over your whole scope, not only the loaded alphas">In your scope: {column.published}</span>
         {/* Readiness is named once on the toolbar line ("Not available: ... Readiness"); here it stays for assistive tech only. */}

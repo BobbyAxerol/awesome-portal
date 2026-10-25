@@ -16,6 +16,7 @@ import { operationalQueueSearch, readOperationalQueueV2, type OperationalQueueQu
 import { sourceHealthSummary } from "./useSourceHealth";
 import OperationsV2, { MINE_REASON, PAGE_LIMIT, queryFor, ROW_CAP, type OperationsV2Props } from "./index";
 import { receiptOutcome, triageOutcome } from "./outcome";
+import type { UtcEpochMs } from "../../../screenDataContract";
 import { whyText } from "../../gapWhyTestUtil";
 
 afterEach(() => {
@@ -106,11 +107,11 @@ describe("loaded queue", () => {
     expect(screen.getByRole("button", { name: "Needs attention" }).getAttribute("aria-pressed")).toBe("true");
   });
 
-  it("renders the six hi-fi columns: Time, Target and operation, Intent, Receipt, Display, Next; Intent and Display are Not available per row (OP-6)", async () => {
+  it("renders five columns: Time, Target and operation, Receipt, Display, Next; Intent is said once above the table, Display is Not available per row (OP-6)", async () => {
     const { api } = fakeApi();
     mount(api);
     const t = await table();
-    expect(within(t).getAllByRole("columnheader").map((h) => h.textContent)).toEqual(["Time", "Target and operation", "Intent", "Receipt", "Display", "Next"]);
+    expect(within(t).getAllByRole("columnheader").map((h) => h.textContent)).toEqual(["Time", "Target and operation", "Receipt", "Display", "Next"]);
     const row = within(t).getByText(/Account acc_TEST_ONLY_operational/).closest("tr") as HTMLElement;
     expect(within(row).getByText("22 Aug 12:00Z")).toBeTruthy();
     expect(within(row).getByText(/Sync · Paper · Warning/)).toBeTruthy();
@@ -118,14 +119,13 @@ describe("loaded queue", () => {
     // Next is an action, not a repeat of the lens: the default lens is all UNACKNOWLEDGED.
     expect(within(row).queryByText("Unacknowledged")).toBeNull();
     expect(within(row).getByRole("button", { name: "Review" })).toBeTruthy();
-    // Intent and Display have no source yet: each cell says Not available and the request id is behind its disclosure.
-    for (const [label, fe] of [["Intent", "FE-020"], ["Display", "FE-032"]] as const) {
-      const cell = row.querySelector(`td[data-l='${label}']`);
-      expect(cell?.textContent, label).toContain("Not available");
-      expect(whyText(cell ?? null), label).toContain(`Not published (${fe})`);
-    }
-    // The queue no longer carries a one-line "Not available: Intent, Display" under its filters.
-    expect(document.querySelector(".exec-ops-na-line")?.textContent ?? "").not.toContain("Intent");
+    // Display has no source on this read: the cell says Not available with the request id behind its disclosure.
+    const display = row.querySelector("td[data-l='Display']");
+    expect(display?.textContent).toContain("Not available");
+    expect(whyText(display ?? null)).toContain("Not published (FE-032)");
+    // Intent has no published field at all: one line above the table says so, not a placeholder per row.
+    expect(row.querySelector("td[data-l='Intent']")).toBeNull();
+    expect(document.querySelector(".exec-ops-na-line")?.textContent ?? "").toContain("Intent");
   });
 
   it("prints no dash, no N/A, and says Not published with the request ids", async () => {
@@ -135,7 +135,7 @@ describe("loaded queue", () => {
     const text = document.body.textContent ?? "";
     expect(text).not.toMatch(/[—–]/);
     expect(text).not.toContain("N/A");
-    const reasons = [...document.querySelectorAll("td[data-l='Intent'], td[data-l='Display']")].map((cell) => whyText(cell)).join("\n");
+    const reasons = [...document.querySelectorAll("td[data-l='Display'], .exec-ops-na-line")].map((cell) => whyText(cell)).join("\n");
     expect(reasons).toContain("Not published (FE-020)");
     expect(reasons).toContain("Not published (FE-032)");
     fireEvent.click(screen.getByRole("tab", { name: "Audit" }));
@@ -246,9 +246,9 @@ describe("Mine, Acknowledge, Resolve are disabled with a reason", () => {
     mount(api);
     const t = await table();
     fireEvent.click(within(t).getByText(/Account acc_TEST_ONLY_operational/).closest("tr")!);
-    const dock = await screen.findByRole("complementary", { name: "Sync" });
+    const dock = await screen.findByRole("complementary", { name: "Account acc_TEST_ONLY_operational" });
     expect(screen.getByTestId("where").textContent).toContain("sel=op_01K3COMMANDPLAN000000000000");
-    expect(within(dock).getByText("op_01K3COMMANDPLAN000000000000")).toBeTruthy();
+    expect(dock.textContent).toContain("Sync · op_01K3COMMANDPLAN000000000000");
     expect(within(dock).getAllByText("Blocked").length).toBeGreaterThan(0);
     expect(within(dock).getByText("Not started")).toBeTruthy();
     for (const label of ["Acknowledge", "Resolve"]) {
@@ -258,10 +258,14 @@ describe("Mine, Acknowledge, Resolve are disabled with a reason", () => {
       expect(why?.textContent).toMatch(/^Not published \(FE-015\)/);
     }
     const gaps = within(dock).getByTestId("not-available-line");
-    expect(gaps.textContent).toContain("Not available: Intent axis, Display axis, Amounts, Who acknowledged or resolved it");
-    expect(whyText(gaps)).toContain("Intent axis: Not published (FE-020)");
-    expect(whyText(gaps).match(/Not published \(FE-032\)/g)).toHaveLength(2);
+    expect(gaps.textContent).toContain("Not available: Amounts, Who acknowledged or resolved it");
+    expect(whyText(gaps)).toContain("Amounts: Not published (FE-032)");
     expect(whyText(gaps)).toContain("Who acknowledged or resolved it: Not published (FE-021)");
+    // Intent and Display are their own sections, each with its own typed reason (they are not one merged line any more).
+    const intent = within(dock).getByRole("region", { name: "Intent" });
+    expect(whyText(intent)).toContain("Not published (FE-020)");
+    const display = within(dock).getByRole("region", { name: "Display" });
+    expect(whyText(display)).toContain("Not published (FE-032)");
     expect(dock.textContent).not.toMatch(/[—–]/);
     fireEvent.click(within(dock).getByText("Close"));
     expect(screen.queryByRole("complementary")).toBeNull();
@@ -283,7 +287,7 @@ describe("Mine, Acknowledge, Resolve are disabled with a reason", () => {
   it("a link that names an operation opens it; one that is not loaded says so", async () => {
     const { api } = fakeApi();
     mount(api, { requestedOperation: "op_TEST_ONLY_s01" });
-    expect(await screen.findByRole("complementary", { name: "Adjust target budget" })).toBeTruthy();
+    expect(await screen.findByRole("complementary", { name: "Portfolio pf_TEST_ONLY_canary" })).toBeTruthy();
     cleanup();
     mount(fakeApi().api, { requestedOperation: "op_missing" });
     expect(await screen.findByText("Not in the loaded rows")).toBeTruthy();
@@ -364,7 +368,7 @@ describe("filters are forwarded to the read", () => {
     expect(calls.at(-1)?.after).toBeUndefined();
     // Choosing a triage state leaves the lens on neither segment.
     expect(screen.getByRole("button", { name: "Needs attention" }).getAttribute("aria-pressed")).toBe("false");
-    expect(screen.getByRole("button", { name: "All" }).getAttribute("aria-pressed")).toBe("false");
+    expect(within(screen.getByRole("group", { name: "Lens" })).getByRole("button", { name: "All" }).getAttribute("aria-pressed")).toBe("false");
   });
 
   it("command key is applied on submit, not per keystroke", async () => {
@@ -382,7 +386,7 @@ describe("filters are forwarded to the read", () => {
     const { api, calls } = fakeApi();
     mount(api);
     await table();
-    fireEvent.click(screen.getByRole("button", { name: "All" }));
+    fireEvent.click(within(screen.getByRole("group", { name: "Lens" })).getByRole("button", { name: "All" }));
     await waitFor(() => expect(calls.at(-1)?.triageState).toBeUndefined());
     expect(await screen.findByText(/12 of 12 matching/)).toBeTruthy();
   });
@@ -461,9 +465,16 @@ describe("keyset paging", () => {
   });
 });
 
+/** The double's body with the instant the read was taken moved: a range counts back from the read, not from the reader's clock. */
+const readAt = (iso: string) => (query: OperationalQueueQueryV2): Result<OperationalQueueReadV2> => {
+  const result = fromDouble(query);
+  if (!result.ok || result.value.kind !== "queue") return result;
+  return { ok: true, value: { kind: "queue", queue: { ...result.value.queue, observedAtMs: Date.parse(iso) as UtcEpochMs } } };
+};
+
 describe("local 24H window", () => {
   it("hides loaded rows older than the window and says how many", async () => {
-    const { api } = fakeApi();
+    const { api } = fakeApi({ queue: readAt("2026-08-23T09:00:00Z") });
     mount(api, { now: new Date("2026-08-23T09:00:00Z") });
     const t = await table();
     expect(within(t).getByText(/Account acc_TEST_ONLY_operational/)).toBeTruthy();
@@ -472,15 +483,42 @@ describe("local 24H window", () => {
   });
 
   it("widening the window shows them again; nothing is refetched", async () => {
-    const { api, queue } = fakeApi();
+    const { api, queue } = fakeApi({ queue: readAt("2026-08-30T00:00:00Z") });
     mount(api, { now: new Date("2026-08-30T00:00:00Z") });
     const t = await table();
     expect(within(t).getByText(/All 8 loaded rows are older than 24H/)).toBeTruthy();
     const calls = queue.mock.calls.length;
-    const windowGroup = screen.getByRole("group", { name: "Window" });
+    const windowGroup = screen.getByRole("group", { name: "Range" });
     fireEvent.click(within(windowGroup).getByRole("button", { name: "30D" }));
     expect(within(await table()).getAllByRole("row").length).toBeGreaterThan(2);
     expect(queue.mock.calls.length).toBe(calls);
+  });
+});
+
+describe("the range counts back from the read (WP-B)", () => {
+  it("a read taken weeks before the reader's clock still shows its own 24H, and says the read is old", async () => {
+    const { api } = fakeApi();
+    // The double's read was taken 22 Aug 13:00Z; the reader's clock is two months later (a fixture served unrebased, a late snapshot).
+    mount(api, { now: new Date("2026-10-23T09:00:00Z") });
+    const t = await table();
+    expect(within(t).getByText(/Account acc_TEST_ONLY_operational/)).toBeTruthy();
+    expect(within(t).queryByText(/older than 24H/)).toBeNull();
+    const note = screen.getByText(/This read was observed .*more than a day ago\. Ranges count back from that read, not from now\./);
+    expect(note.getAttribute("role")).toBe("status");
+  });
+
+  it("a fresh read says nothing about its age", async () => {
+    const { api } = fakeApi();
+    mount(api);
+    await table();
+    expect(screen.queryByText(/more than a day ago/)).toBeNull();
+  });
+
+  it("a read that states no instant falls back to the reader's clock", async () => {
+    const { api } = fakeApi({ queue: readAt("1970-01-01T00:00:00Z") });
+    mount(api, { now: new Date("2026-08-30T00:00:00Z") });
+    expect(within(await table()).getByText(/All 8 loaded rows are older than 24H/)).toBeTruthy();
+    expect(screen.queryByText(/more than a day ago/)).toBeNull();
   });
 });
 

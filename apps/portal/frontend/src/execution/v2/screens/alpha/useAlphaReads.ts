@@ -28,6 +28,7 @@ import type { SubjectActivityPage } from "../../../api/subjectActivity";
 import type { PanelStatus } from "../../../contracts";
 import { readReplayFills, readReplayOrders, type ReplayFill, type ReplayOrder } from "../../../components/tradeReplayModel";
 import type { StageDrift } from "../../../hifiInsight";
+import type { AlphaLifecycle } from "../../readers/alphaLifecycle";
 import { unsupportedText } from "../../readers/dispatch";
 import { EVICTED_REASON, useScopedCacheEviction } from "../../scopedEviction";
 import type { ExecEnv } from "../../urlState";
@@ -298,4 +299,19 @@ export function useReplayCandles(api: ExecutionApi, query: ReplayCandleQuery | n
       : scoped.getMarketContextCandles({ environment: query.env, venue: query.venue, instrument: query.symbol, interval: query.interval, fromMs: query.fromMs, toMs: query.toMs, pointLimit: Math.min(2000, query.limit) }),
   );
   return { venue, context };
+}
+
+/** The alpha's published lifecycle (WP-K). A port without the read, or a route nothing serves yet, is `null`: the screen keeps what it read before. */
+export function useAlphaLifecycle(api: ExecutionApi, enabled: boolean, alphaId: string, env: "paper" | "sandbox" | "live", workspaceId: string | null): AlphaLifecycle | null {
+  const [lifecycle, setLifecycle] = useState<AlphaLifecycle | null>(null);
+  useEffect(() => {
+    setLifecycle(null);
+    if (!enabled || api.getAlphaLifecycle === undefined) return;
+    let cancelled = false;
+    let pending: ReturnType<NonNullable<ExecutionApi["getAlphaLifecycle"]>>;
+    try { pending = api.getAlphaLifecycle(alphaId, env, workspaceId ?? undefined); } catch { return; }
+    void pending.then((result) => { if (!cancelled && result.ok) setLifecycle(result.value); }, () => undefined);
+    return () => { cancelled = true; };
+  }, [api, enabled, alphaId, env, workspaceId]);
+  return lifecycle;
 }

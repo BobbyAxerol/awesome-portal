@@ -20,16 +20,25 @@ import { useRunLabelRead } from "../research/useRunLabelRead";
 import { workspaceNamedHref } from "../research/ResearchScopedLink";
 import { researchRunCrumb, useRunUnknown } from "./researchRunCrumb";
 import { ADMIN_USERS_ROUTE } from "./PortalRoutes";
+import { usePortalContext } from "./context";
+import { v2Crumbs } from "../execution/v2/shell/roleNav";
 import { usePreferences, type PreferencesContextValue } from "./preferences";
 import { usePresentation } from "./presentation";
 
 export function TopBar({
-  breadcrumbs,
+  breadcrumbs: trail,
   environment,
   onOpenPalette,
   onToggleMobileNav,
   navToggleRef,
+  v2,
 }: {
+  /**
+   * V2 shell chrome (WP-D), present only on a route the V2 command bar owns: the search button becomes the "Search or jump to" field
+   * (the carbon topbar hides the plain button) and the signed-in user is named. `userHref` is where the chip leads (the member's own
+   * access page) or `null` when no such page is on offer: then it is a plain statement, never a dead link.
+   */
+  v2?: { userHref: string | null };
   breadcrumbs: Breadcrumb[];
   environment: PortalEnvironment | null;
   onOpenPalette: () => void;
@@ -37,8 +46,11 @@ export function TopBar({
   navToggleRef?: Ref<HTMLButtonElement>;
 }) {
   const preferences = usePreferences();
+  const { registry } = usePortalContext();
+  // On a V2 route the trail reads as the design writes it ("Execution / Overview"), from the same labels the rail uses.
+  const breadcrumbs = v2 && registry ? v2Crumbs(trail, registry.features) : trail;
   const { mode: presentationMode, entityLabel, chrome } = usePresentation();
-  const { access } = useSession();
+  const { access, principal } = useSession();
   const location = useLocation();
   const workspaceId = new URLSearchParams(location.search).get("workspace_id") || undefined;
   /*
@@ -85,7 +97,17 @@ export function TopBar({
         Default Workspace
       </span>
 
-      {environment ? <EnvironmentBadge environment={environment} /> : null}
+      {environment ? (
+        v2 ? (
+          // The summary's environment is the PORTAL deployment's, not an Execution mode; on an Execution screen it says so.
+          <span className="portal-env-wrap" title="The Portal deployment's environment, from the summary. It is not an Execution environment: that is in the context bar.">
+            <span className="portal-env-prefix">Portal</span>
+            <EnvironmentBadge environment={environment} />
+          </span>
+        ) : (
+          <EnvironmentBadge environment={environment} />
+        )
+      ) : null}
       <RetainedPill />
 
       <nav aria-label="Breadcrumb" className={runCrumb ? "portal-breadcrumbs portal-breadcrumbs--run" : "portal-breadcrumbs"}>
@@ -134,11 +156,12 @@ export function TopBar({
           {chrome.price.symbol} <b data-tone={chrome.price.up ? "good" : "bad"}>{chrome.price.value}</b> <span data-tone={chrome.price.up ? "good" : "bad"}>{chrome.price.up ? "▲" : "▼"}</span>
         </span>
       ) : null}
-      <button type="button" className="portal-search-btn" onClick={onOpenPalette}>
+      <button type="button" className="portal-search-btn" onClick={onOpenPalette} data-v2-search={v2 ? "" : undefined} title={v2 ? "Search or jump to (Ctrl K)" : undefined}>
         <Search size={13} aria-hidden="true" />
-        <span className="portal-search-label">Search</span>
+        <span className="portal-search-label">{v2 ? "Search or jump to" : "Search"}</span>
         <kbd className="mono">⌘K</kbd>
       </button>
+      {v2 && principal ? <UserChip username={principal.username} role={principal.role} href={v2.userHref} /> : null}
 
       <ThemeControl preferences={preferences} presentationMode={presentationMode} />
 
@@ -173,6 +196,21 @@ export function TopBar({
         showUsersLink={isOwnerAccess(access)}
       />
     </header>
+  );
+}
+
+/**
+ * The signed-in user (design: "BOBBY · MANAGER"). The words are the session's own: the username and the role the principal
+ * carries, shown as a statement; what the member may do comes from their grants, which the title says. A link only when the shell
+ * has a page of the member's own access to lead to.
+ */
+export function UserChip({ username, role, href }: { username: string; role: string; href: string | null }) {
+  const text = `${username} · ${role}`;
+  const title = "Signed-in user and session role. Display only: access comes from your grants.";
+  return href === null ? (
+    <span className="portal-user-chip" data-v2-user title={title}>{text}</span>
+  ) : (
+    <Link className="portal-user-chip" data-v2-user to={href} title={`${title} Opens your access.`}>{text}</Link>
   );
 }
 

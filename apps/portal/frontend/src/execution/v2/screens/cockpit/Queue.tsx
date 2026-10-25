@@ -11,11 +11,13 @@ import { useEffect, useRef } from "react";
 import type { WaiverStateCode } from "../../../api/ports";
 import { PanelSkeleton, PanelState } from "../../../components/states";
 import type { PanelStatus } from "../../../contracts";
+import type { DecidedRow } from "../../../screens/ApprovalInbox";
 import { Flag } from "../../Flag";
 import { WaiverFlag } from "./EvidenceFrame";
 import type { InboxRowV2 } from "./inboxRowV2";
 import {
   instantText,
+  lapseView,
   isClosedRow,
   statusClassOf,
   isYours,
@@ -76,6 +78,10 @@ export interface QueueProps {
   principal: Principal;
   /** The `Closed` lens reads the decision history; this says it could not. */
   historyNote: string | null;
+  /** The decisions made today (UTC) from that same history read; `note` is set when the read failed. Absent: no disclosure. */
+  decidedToday?: { rows: readonly DecidedRow[]; note: string | null };
+  /** The waiver register's own read time: the anchor of every lapse clock in the waiver lane. */
+  waiverReadAt?: string | null;
 }
 
 function GateFlags({ row, principal }: { row: InboxRowV2; principal: Principal }) {
@@ -146,9 +152,10 @@ function DecidedItem({ item }: { item: Extract<QueueItem, { kind: "decided" }> }
   );
 }
 
-function WaiverItem({ item }: { item: Extract<QueueItem, { kind: "waiver" }> }) {
+function WaiverItem({ item, readAt }: { item: Extract<QueueItem, { kind: "waiver" }>; readAt: string | null }) {
   const row = item.row;
   const lapses = instantText(row.dueAt);
+  const clock = lapseView(row.dueAt, readAt);
   return (
     <>
       <span className="exec-ck-qt">
@@ -157,8 +164,35 @@ function WaiverItem({ item }: { item: Extract<QueueItem, { kind: "waiver" }> }) 
       </span>
       <span className="exec-ck-qm">{row.subjectLabel} · {row.owner}</span>
       <span className="exec-ck-qf"><WaiverFlag state={row.state} /></span>
-      <span className="exec-ck-qm">{lapses ? `Lapses ${lapses}` : "Lapse time not published"}</span>
+      {/* One short line in the 268px queue (hi-fi: "lapses in 1d 21h"); the exact instant is in the Condition panel. Without a read time to count from, the instant is all there is. */}
+      <span className="exec-ck-qm" data-testid="ck-waiver-clock">
+        {clock.kind === "none" ? clock.phrase : clock.kind === "unanchored" ? (lapses ? `Lapses ${lapses}` : "Lapse time not published") : `${clock.phrase[0]!.toUpperCase()}${clock.phrase.slice(1)}`}
+      </span>
     </>
+  );
+}
+
+/** "Decided today · N": the decisions of the history read whose UTC day is today, a disclosure under the list (hi-fi). */
+function DecidedToday({ rows, note, onSelect, selectedKey }: { rows: readonly DecidedRow[]; note: string | null; onSelect(key: string): void; selectedKey: string | null }) {
+  return (
+    <details className="exec-ck-decided" data-testid="ck-decided-today">
+      <summary>Decided today · {note !== null ? "not read" : rows.length}</summary>
+      {note !== null ? (
+        <p className="exec-ck-note exec-ck-pad">The history read failed, so today's decisions are not counted.</p>
+      ) : rows.length === 0 ? (
+        <p className="exec-ck-note exec-ck-pad">No decision was recorded today in the history read.</p>
+      ) : (
+        <ul className="exec-ck-list" aria-label="Decided today">
+          {rows.map((row) => (
+            <li key={row.id}>
+              <button type="button" className="exec-ck-qi" data-kind="decided" aria-current={row.id === selectedKey ? "true" : undefined} onClick={() => onSelect(row.id)}>
+                <DecidedItem item={{ kind: "decided", key: row.id, row }} />
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </details>
   );
 }
 
@@ -166,6 +200,7 @@ export function Queue(props: QueueProps) {
   const {
     lane, onLane, family = null, onFamily, lens, onLens, waiverFilter, onWaiverFilter, items, selectedKey, onSelect, loading, failure, partialNote,
     lensCounts, laneCounts = null, laneCountsAtLeast = false, onHelp, moreAvailable, onMore, moreBusy, moreError, footer, principal, historyNote,
+    decidedToday: decided, waiverReadAt = null,
   } = props;
   const shown = items.slice(0, MAX_QUEUE_DOM);
   const selected = useRef<HTMLButtonElement | null>(null);
@@ -237,12 +272,14 @@ export function Queue(props: QueueProps) {
               ref={item.key === selectedKey ? selected : undefined}
               onClick={() => onSelect(item.key)}
             >
-              {item.kind === "gate" ? <GateItem row={item.row} principal={principal} /> : item.kind === "decided" ? <DecidedItem item={item} /> : <WaiverItem item={item} />}
+              {item.kind === "gate" ? <GateItem row={item.row} principal={principal} /> : item.kind === "decided" ? <DecidedItem item={item} /> : <WaiverItem item={item} readAt={waiverReadAt} />}
             </button>
           </li>
         ))}
       </ul>
       )}
+
+      {family === null && lane !== "waiver" && decided !== undefined ? <DecidedToday rows={decided.rows} note={decided.note} onSelect={onSelect} selectedKey={selectedKey} /> : null}
 
       <div className="exec-ck-foot" hidden={family !== null}>
         <span>{footer}{items.length > MAX_QUEUE_DOM ? ` · top ${MAX_QUEUE_DOM} of ${items.length} shown` : ""}</span>

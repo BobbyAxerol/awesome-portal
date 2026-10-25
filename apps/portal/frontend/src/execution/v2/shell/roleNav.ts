@@ -98,8 +98,8 @@ interface V2NavRule {
 }
 
 /**
- * Seven rail entries for a manager (Overview, Portfolios, Alpha Fleet, Accounts,
- * Operations, Approvals, Profile & Access), Blotter by command bar only.
+ * Eight rail entries for a manager (Overview, Portfolios, Alpha Fleet, Accounts,
+ * Operations, Approvals, Blotter, Profile & Access); the registry lists Blotter, so the rail does (QA2 R4-01).
  * Waivers and Exit Reviews live inside Approvals; Admin Actions is unlisted;
  * Paper/Sandbox/Live became stage filters on Fleet (07 C-2).
  */
@@ -110,7 +110,7 @@ export const V2_NAV_RULES: readonly V2NavRule[] = [
   { featureId: "EXECUTION_ACCOUNTS_BINDINGS", surface: "nav", label: "Accounts", order: 40, home: "execution", needs: { allOf: [V2_NAV_TOKEN.accounts] } },
   { featureId: "EXECUTION_OPERATIONS", surface: "nav", label: "Operations", order: 50, home: "execution", needs: { allOf: [V2_NAV_TOKEN.operations] } },
   { featureId: "EXECUTION_APPROVALS", surface: "nav", label: "Approvals", order: 60, home: "execution", needs: ANY_APPROVAL_READ },
-  { featureId: "EXECUTION_BLOTTER", surface: "link-only", label: "Blotter", order: 70, home: "execution", needs: { allOf: [V2_NAV_TOKEN.blotter] } },
+  { featureId: "EXECUTION_BLOTTER", surface: "nav", label: "Blotter", order: 70, home: "execution", needs: { allOf: [V2_NAV_TOKEN.blotter] } },
   { featureId: "PROFILE_ACCESS", surface: "nav", label: "Profile & Access", home: "registry" },
   { featureId: "EXECUTION_WAIVERS", surface: "hidden" },
   { featureId: "EXECUTION_EXIT_REVIEWS", surface: "hidden" },
@@ -199,6 +199,20 @@ export function applyV2Nav(groups: readonly NavGroup[], capabilities: ReadonlySe
     out.splice(executionAt, 0, { id: EXECUTION_NAV_GROUP_ID, label: "Execution", items });
   }
   return out;
+}
+
+/**
+ * The trail of an Execution screen as the design writes it ("Execution / Overview"): the registry's group word for the five Execution
+ * entries (Command, Deployments, Governance) and the registry's feature label become the rail's group and label. Any other trail
+ * (Research, Planning, Administration, an entity tail) is returned as it was. Pure.
+ */
+export function v2Crumbs<T extends { label: string; route: string | null }>(trail: readonly T[], features: readonly PortalFeatureDefinition[]): T[] {
+  const last = trail[trail.length - 1];
+  if (last === undefined || last.route === null || trail.length !== 2) return [...trail];
+  const feature = features.find((entry) => entry.canonical_route === last.route && RULE_BY_FEATURE.get(entry.id)?.home === "execution");
+  const rule = feature === undefined ? undefined : RULE_BY_FEATURE.get(feature.id);
+  if (rule === undefined || rule.label === undefined) return [...trail];
+  return [{ ...trail[0]!, label: "Execution", route: null }, { ...last, label: rule.label }];
 }
 
 /** One row of the command bar. `href` is a plain path; the caller carries context onto it. */

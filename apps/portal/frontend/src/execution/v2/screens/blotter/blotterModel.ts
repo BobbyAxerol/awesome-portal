@@ -503,7 +503,7 @@ export function filtersKey(filters: ServerFilters): string {
 /* ── columns ───────────────────────────────────────────────────────────── */
 
 export type ColumnId =
-  | "time" | "order" | "alpha" | "account" | "deployment" | "venue" | "symbol" | "side" | "tif" | "price" | "trigger" | "qty" | "filled"
+  | "time" | "order" | "alpha" | "account" | "deployment" | "venue" | "symbol" | "side" | "tif" | "price" | "trigger" | "fillqty" | "qty" | "filled"
   | "avg" | "fee" | "client" | "venueOrder" | "session" | "risk" | "updated" | "status";
 
 export interface ColumnSpec {
@@ -529,8 +529,10 @@ export const COLUMNS: readonly ColumnSpec[] = [
   { id: "tif", label: "TIF", dflt: false },
   { id: "price", label: "Price", numeric: true, dflt: true },
   { id: "trigger", label: "Trigger", numeric: true, dflt: false },
-  { id: "qty", label: "Quantity", numeric: true, dflt: true },
-  { id: "filled", label: "Filled", numeric: true, dflt: true },
+  // One default column, as the design has (FILLED / QTY): the two figures it joins stay separate, optional columns (QA1 R4 I7).
+  { id: "fillqty", label: "Filled / Qty", numeric: true, dflt: true },
+  { id: "qty", label: "Quantity", numeric: true, dflt: false },
+  { id: "filled", label: "Filled", numeric: true, dflt: false },
   { id: "avg", label: "Avg price", numeric: true, dflt: true },
   { id: "fee", label: "Fee", numeric: true, dflt: true },
   { id: "client", label: "Client ID", dflt: false },
@@ -587,6 +589,7 @@ export function csvCell(order: BlotterOrder, id: ColumnId): string {
     case "tif": return order.timeInForce ?? "";
     case "price": return exactCsv(order.price);
     case "trigger": return exactCsv(order.triggerPrice);
+    case "fillqty": return `${exactCsv(order.filledQuantity)} / ${exactCsv(order.quantity)}`;
     case "qty": return exactCsv(order.quantity);
     case "filled": return exactCsv(order.filledQuantity);
     case "client": return order.clientOrderId ?? "";
@@ -615,4 +618,43 @@ export function blotterCsv(rows: readonly BlotterOrder[], columns: readonly Colu
 export function blotterCsvName(environment: string, asOf: string | null): string {
   const stamp = asOf ? asOf.replace(/[^0-9A-Za-z]/g, "") : "";
   return `blotter-${environment.toLowerCase()}-${stamp === "" ? "asof-not-published" : stamp}.csv`;
+}
+
+
+/* ── funnel over the loaded page ───────────────────────────────────────── */
+
+export interface FunnelStep {
+  id: "submitted" | "risk" | "venue" | "filled";
+  label: string;
+  count: number;
+  /** Percent of the submitted orders to one place, by integer arithmetic (rounded half up); null when nothing was submitted. */
+  percent: string | null;
+}
+
+const isZero = (value: Exact): boolean => value.kind === "value" && /^0(\.0+)?$/.test(value.text);
+
+/**
+ * The order path counted over the orders the page loaded: submitted (all), risk grant (the row names a grant), venue acknowledged
+ * (the row names a venue order id) and filled (the row states a non-zero filled quantity). Every count is a published row fact; the
+ * server publishes no scope-level funnel, so the caption says these are the loaded rows only.
+ */
+export function pageFunnel(orders: readonly BlotterOrder[]): readonly FunnelStep[] {
+  const total = orders.length;
+  const counts = {
+    submitted: total,
+    risk: orders.filter((o) => o.riskGrantId !== null).length,
+    venue: orders.filter((o) => o.venueOrderId !== null).length,
+    filled: orders.filter((o) => o.filledQuantity.kind === "value" && !isZero(o.filledQuantity)).length,
+  };
+  const percent = (n: number): string | null => {
+    if (total === 0) return null;
+    const tenths = Math.floor((n * 1000 * 2 + total) / (total * 2));
+    return `${Math.floor(tenths / 10)}.${tenths % 10}`;
+  };
+  return [
+    { id: "submitted", label: "Submitted", count: counts.submitted, percent: percent(counts.submitted) },
+    { id: "risk", label: "Risk grant", count: counts.risk, percent: percent(counts.risk) },
+    { id: "venue", label: "Venue acknowledged", count: counts.venue, percent: percent(counts.venue) },
+    { id: "filled", label: "Filled", count: counts.filled, percent: percent(counts.filled) },
+  ];
 }

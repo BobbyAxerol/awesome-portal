@@ -85,6 +85,31 @@ function stepsOf(row: ActionRow): string {
   return steps.length > 0 ? steps.join(", then ") : "No plan, apply or verify path stated; treated as the full ceremony, not as none.";
 }
 
+/**
+ * Plan, Apply, Verify as the catalogue states them: required or not for this action, and where each stands on this page. A plan is
+ * the only step this page can take; Apply stays Off while the relay is disabled and Verify cannot start before an apply (WP-E).
+ */
+function CeremonyStrip({ row, plan }: { row: ActionRow; plan: CommandPlan | null }) {
+  const { task } = row;
+  const required = (value: boolean) => (value ? "Required" : "Not required");
+  const steps = [
+    { key: "plan", label: "Plan", need: required(task.planRequired), flag: plan === null ? { kind: "neutral" as const, label: "Not started" } : { kind: "pending" as const, label: "Preview" } },
+    { key: "apply", label: "Apply", need: required(task.applyRequired), flag: { kind: "paused" as const, label: "Off" } },
+    { key: "verify", label: "Verify", need: required(task.verifyRequired), flag: { kind: "neutral" as const, label: "Not started" } },
+  ];
+  return (
+    <ol className="exec-adm-pav" aria-label="Plan, apply and verify" data-testid="admin-pav">
+      {steps.map((step) => (
+        <li key={step.key} className="exec-adm-pav-item" data-step={step.key}>
+          <span className="exec-adm-pav-label">{step.label}</span>
+          <span className="exec-adm-meta">{step.need}</span>
+          <Flag kind={step.flag.kind} label={step.flag.label} size="sm" />
+        </li>
+      ))}
+    </ol>
+  );
+}
+
 /** The six-state strip. The current state is marked; the rest are the states a command can reach. */
 function CommandStrip({ plan }: { plan: CommandPlan | null }) {
   const current = commandStateOf(plan);
@@ -209,13 +234,15 @@ export function ActionPane({ row, api, activation, stale = false, workspaceId, m
         <Fact term="How">{row.kind === "read" ? "Runs here as a local read. Nothing is sent to the trading system." : stepsOf(row)}</Fact>
         <Fact term="State"><Flag kind={state.kind} label={state.label} size="sm" /></Fact>
         <Fact term="Not live because">
-          {first.code ?? first.sentence ? (
+          {row.state === "ready" ? (
+            "Nothing: the server classifies this action as connected, a local read."
+          ) : first.code ?? first.sentence ? (
             <>
               {first.code ? <CodeName code={first.code} /> : null}
               {first.code && first.sentence ? " " : null}
               {first.sentence ?? null}
             </>
-          ) : row.state === "ready" ? "Nothing: the server classifies this action as connected." : "No reason was published."}
+          ) : "No reason was published."}
         </Fact>
       </dl>
 
@@ -240,6 +267,8 @@ export function ActionPane({ row, api, activation, stale = false, workspaceId, m
                       value={readParams[p.key] ?? ""}
                       onChange={(event) => setReadParams((current) => ({ ...current, [p.key]: event.target.value }))}
                     />
+                    {/* The value comes from a server registry no read lists yet (request to K): the box says so instead of pretending to be free text. */}
+                    {p.sourceRegistry ? <span className="exec-adm-note" data-testid="admin-param-registry">Value from the server's {p.sourceRegistry} registry; no read lists it yet, so type it.</span> : null}
                   </label>
                 ))}
                 <button type="button" className="exec-adm-btn" data-variant="primary" disabled={run.phase === "busy" || missingRead} aria-describedby={missingRead ? ids.note : undefined} onClick={() => void runRead()}>
@@ -266,6 +295,7 @@ export function ActionPane({ row, api, activation, stale = false, workspaceId, m
       ) : (
         <div className="exec-adm-block">
           <h4 className="exec-adm-h4">1 Plan</h4>
+          <CeremonyStrip row={row} plan={currentPlan} />
           {showCommandStrip ? <CommandStrip plan={currentPlan} /> : null}
           {gate.allowed && !stale ? (
             <>

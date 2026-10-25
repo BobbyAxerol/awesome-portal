@@ -1,0 +1,150 @@
+/* Alpha Fleet metrics (guide M03): metric cells, sticky identity columns, density, the control rows. Tokens only; a table body is 13px in
+ * every role (cards.css), so nothing here names a size. */
+
+/* A long name truncates with its full text on the title; a figure never does. */
+.exec-fleet-trunc {
+  display: inline-block;
+  max-width: 22ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: bottom;
+}
+.exec-fleet-portfolio { display: inline-flex; flex-direction: column; align-items: flex-start; gap: 0; white-space: nowrap; }
+.exec-fleet-portfolio-line { display: inline-flex; align-items: baseline; gap: var(--space-2); }
+.exec-fleet-owner-line,
+.exec-fleet-source-line { font: var(--exec-font-meta); color: var(--ink-faint); }
+.exec-fleet-healthcell { display: inline-flex; flex-direction: column; align-items: flex-start; gap: 0; white-space: nowrap; }
+.exec-fleet-badge {
+  box-sizing: border-box;
+  min-width: 20px;
+  padding: 0 6px;
+  font: var(--exec-font-label);
+  text-align: center;
+  color: var(--ink-faint);
+  border: 1px solid var(--line-strong);
+}
+.exec-fleet-qbts { display: inline-flex; align-items: center; gap: var(--space-1); white-space: nowrap; }
+.exec-fleet-qbts-why { font: var(--exec-font-meta); color: var(--ink-faint); }
+.exec-fleet-equity { display: inline-flex; flex-direction: column; align-items: flex-end; gap: 2px; min-width: max-content; }
+.exec-fleet-spark { display: inline-flex; align-items: center; }
+
+/* Sticky identity columns (guide 8.3): the alpha stays while the metrics scroll. With the Select column, both stay. */
+.exec-fleet-dataset thead th:first-child,
+.exec-fleet-dataset tbody td:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: var(--paper);
+}
+.exec-fleet-dataset thead th:first-child { background: var(--paper-sunken); z-index: 2; }
+.exec-fleet-dataset.exec-fleet-sel thead th:nth-child(2),
+.exec-fleet-dataset.exec-fleet-sel tbody td:nth-child(2) {
+  position: sticky;
+  left: 72px;
+  z-index: 1;
+  background: var(--paper);
+}
+.exec-fleet-dataset.exec-fleet-sel thead th:nth-child(2) { background: var(--paper-sunken); z-index: 2; }
+.exec-fleet-dataset.exec-fleet-sel thead th:first-child,
+.exec-fleet-dataset.exec-fleet-sel tbody td:first-child { width: 72px; min-width: 72px; max-width: 72px; }
+.exec-fleet-dataset tbody tr[data-selected="true"] td:first-child,
+.exec-fleet-dataset.exec-fleet-sel tbody tr[data-selected="true"] td:nth-child(2) { background: var(--accent-soft); }
+@media (max-width: 660px) {
+  /* Cards: nothing is pinned. */
+  .exec-fleet-dataset thead th:first-child,
+  .exec-fleet-dataset tbody td:first-child,
+  .exec-fleet-dataset.exec-fleet-sel thead th:nth-child(2),
+  .exec-fleet-dataset.exec-fleet-sel tbody td:nth-child(2) { position: static; background: transparent; width: auto; min-width: 0; max-width: none; }
+}
+
+/* One line wide: the default columns must fit 1440. The alpha stacks its version under the name, cells pack tighter, content centres vertically
+ * so a one-line figure beside a two-line stage is not padded with empty space. */
+.exec-fleet-dataset .exec-fleet-alpha { flex-direction: column; align-items: flex-start; gap: 0; }
+.exec-fleet-dataset .exec-fleet-trunc { max-width: 12ch; }
+.exec-fleet-dataset thead th,
+.exec-fleet-dataset tbody td { padding-inline: var(--space-2); }
+.exec-fleet-dataset tbody td { vertical-align: middle; }
+/* A flag is one line: a squeezed column must widen, never break "NEEDS ATTENTION" letter by letter into a tall row. */
+.exec-fleet-dataset .exec-flag,
+.exec-fleet-dataset .exec-fleet-stagecell { white-space: nowrap; }
+@media (max-width: 660px) { .exec-fleet-dataset .exec-fleet-alpha { flex-direction: row; align-items: baseline; gap: var(--space-2); } }
+
+/* Density (guide 8.3): compact trims the row height and the cell padding; the figures keep their size. */
+.exec-fleet-compact .exec-cards tbody td { height: 24px; padding-block: 2px; }
+.exec-fleet-compact .exec-cards thead th { padding-block: 3px; }
+
+/* The second toolbar row (metric filters) and the range popover. */
+.exec-fleet-tool2 { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
+.exec-fleet-rangemenu { min-width: 440px; max-width: min(520px, 92vw); }
+.exec-fleet-rangeactions { position: sticky; bottom: 0; background: var(--paper-raised); padding-top: var(--space-1); }
+.exec-fleet-range { display: grid; grid-template-columns: minmax(16ch, max-content) 96px 96px; gap: var(--space-2); align-items: center; }
+.exec-fleet-range-label { font: var(--exec-font-meta); color: var(--ink); white-space: nowrap; }
+.exec-fleet-range-unit { grid-column: 1 / -1; font: var(--exec-font-meta); color: var(--ink-faint); }
+.exec-fleet-range input { width: 100%; box-sizing: border-box; }
+.exec-fleet-sortbar { display: inline-flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); font: var(--exec-font-meta); color: var(--ink-faint); }
+
+/* The economic-domain tag is ALWAYS visible (environment does not imply economic domain). In this table it sits in the label voice above its
+ * figure, so it costs no width (the default columns still fit 1440) and no row height (the stage cell beside it is two lines tall). */
+.exec-fleet-dataset .exec-fleet-part { flex-direction: column; align-items: flex-end; gap: 0; }
+.exec-fleet-dataset .exec-fleet-part-tag { font: var(--exec-font-meta); }
+
+/* Group header rows (QA1 R2-07): the group, its rows over the whole filtered query, and its money per partition. */
+.exec-fleet-dataset .exec-cards-group th {
+  position: static;
+  padding: var(--space-1) var(--space-3);
+  text-align: left;
+  background: var(--paper-sunken);
+  border-top: 1px solid var(--line-strong);
+}
+.exec-fleet-grouphead { display: inline-flex; flex-wrap: wrap; align-items: baseline; gap: var(--space-3); font: var(--exec-font-body); }
+.exec-fleet-groupcount { font: var(--exec-font-meta); color: var(--ink-faint); }
+.exec-fleet-groupmoney { display: inline-flex; flex-wrap: wrap; gap: var(--space-3); font: var(--exec-font-meta); color: var(--ink-faint); }
+.exec-fleet-groupmoney-part { display: inline-flex; align-items: baseline; gap: var(--space-1); white-space: nowrap; }
+
+/* The alpha name wraps to two lines before it clips (QA1 R2-08): "Reversion 06 · synthetic review" must stay distinguishable from its siblings. */
+.exec-fleet-dataset .exec-fleet-name.exec-fleet-trunc {
+  display: -webkit-box;
+  max-width: 24ch;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+@media (max-width: 660px) {
+  .exec-fleet-dataset .exec-fleet-name.exec-fleet-trunc,
+  .exec-fleet-dataset .exec-fleet-trunc { display: inline; max-width: none; overflow: visible; white-space: normal; }
+}
+
+/* The QBTS details mark shows on hover or focus of its row (25 permanent "?" icons were noise); it stays in the tab order and opens as before. */
+.exec-fleet-dataset tbody tr:not(:hover):not(:focus-within) .exec-fleet-qbts .exec-blk-why-btn[aria-expanded="false"] { opacity: 0; }
+
+/* Seven counts in four columns left the eighth cell empty, and the 1px-gap background showed through it as a grey block (QA1 R2-23): the last tile spans the rest of its row. */
+@media (min-width: 1001px) {
+  .exec-fleet-v2 .exec-blk-kpis > .exec-blk-kpi:last-child:nth-child(4n+3) { grid-column: span 2; }
+}
+
+/* Dataset board cards (QA1 R2-10): allocation and QBTS beside their labels; above the card-wide link so the QBTS details stay clickable. */
+.exec-fleet-card-figures { position: relative; z-index: 1; display: flex; flex-direction: column; gap: 2px; align-self: stretch; }
+.exec-fleet-card-fig { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 0 var(--space-2); }
+.exec-fleet-card-figures .exec-fleet-parts { align-items: flex-start; }
+.exec-fleet-card-figures .exec-mgr-num { white-space: nowrap; }
+.exec-fleet-card-figures .exec-fleet-qbts { flex-wrap: wrap; white-space: normal; }
+.exec-fleet-card-figlabel { font: var(--exec-font-meta); color: var(--ink-faint); }
+.exec-fleet-card-instage { font: var(--exec-font-meta); color: var(--ink-faint); }
+.exec-fleet-card-figures .exec-fleet-part { flex-wrap: wrap; justify-content: flex-start; gap: 0 var(--space-2); }
+.exec-fleet-card-fig, .exec-fleet-card-figures .exec-fleet-parts { min-width: 0; max-width: 100%; }
+
+/* A table wider than the screen says so (QA2: hidden columns at 1024). */
+.exec-fleet-scrollhint { margin: 0; font: var(--exec-font-meta); color: var(--ink-faint); }
+@media (min-width: 1900px) { .exec-fleet-scrollhint { display: none; } }
+.exec-fleet-lane-tag { white-space: nowrap; }
+.exec-fleet-board .exec-fleet-lane { min-width: 240px; }
+.exec-fleet-dataset .exec-fleet-portfolio-line .exec-fleet-trunc { max-width: 22ch; }
+.exec-fleet-dataset .exec-cards-group th, .exec-fleet-pf-head { text-transform: none; letter-spacing: normal; }
+
+/* The pinned Alpha column is opaque and above every positioned cell beside it (QA3 R2-28). */
+.exec-fleet-dataset tbody td:first-child { z-index: 3; background-color: var(--paper); }
+.exec-fleet-dataset thead th:first-child { z-index: 4; }
+/* A tag never breaks inside its word ("Real-/funded"). */
+.exec-fleet-card .exec-fleet-env-tag, .exec-fleet-card .exec-fleet-lane-tag, .exec-fleet-card .exec-fleet-version, .exec-fleet-lane-tag { white-space: nowrap; hyphens: none; }

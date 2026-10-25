@@ -77,3 +77,37 @@
 .exec-fleet-env-tag[data-environment="paper"]::before,
 .exec-fleet-env-tag[data-environment="sandbox"]::before { background: var(--ink-faint); }
 .exec-fleet-env-tag[data-environment="live"]::before { background: var(--ink); }
+
+/* Fleet Map as nested boxes (QA1 R2-11): one box per portfolio, its tiles inside; the colour mode is the reader's, the legend names it. */
+.exec-fleet-pfs { display: flex; flex-wrap: wrap; gap: var(--space-3); align-items: stretch; }
+.exec-fleet-pf { display: flex; flex: 1 1 280px; flex-direction: column; gap: var(--space-2); min-width: 0; padding: var(--space-2); border: 1px solid var(--line-strong); }
+.exec-fleet-pf-head { display: flex; align-items: baseline; gap: var(--space-3); }
+.exec-fleet-legend { display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-4); margin: 0; padding: 0; list-style: none; font: var(--exec-font-meta); color: var(--ink-faint); }
+.exec-fleet-legend-item { display: inline-flex; align-items: center; gap: var(--space-1); }
+.exec-fleet-legend-swatch { display: inline-block; width: 12px; height: 12px; border: 1px solid var(--line-strong); }
+.exec-fleet-legend-swatch[data-tone="ok"], .exec-fleet-tile[data-tone="ok"] { background: var(--f-ok-bg); border-left-color: var(--f-ok); }
+.exec-fleet-legend-swatch[data-tone="attention"], .exec-fleet-tile[data-tone="attention"] { background: var(--f-attention-bg); border-left-color: var(--f-attention); }
+.exec-fleet-legend-swatch[data-tone="neutral"], .exec-fleet-tile[data-tone="neutral"] { background: var(--f-neutral-bg); border-left-color: var(--f-neutral); }
+.exec-fleet-legend-swatch[data-tone="unknown"], .exec-fleet-tile[data-tone="unknown"] { background: var(--f-unknown-bg); border-left-color: var(--f-unknown); }
+.exec-fleet-legend-swatch[data-tone="stage-paper"], .exec-fleet-tile[data-tone="stage-paper"] { background: var(--surface-2); border-left-color: var(--env-paper); }
+.exec-fleet-legend-swatch[data-tone="stage-sandbox"], .exec-fleet-tile[data-tone="stage-sandbox"] { background: var(--surface-2); border-left-color: var(--env-sandbox); }
+.exec-fleet-legend-swatch[data-tone="stage-canary"], .exec-fleet-tile[data-tone="stage-canary"] { background: var(--surface-2); border-left-color: var(--env-live); border-left-style: dashed; }
+.exec-fleet-legend-swatch[data-tone="stage-live"], .exec-fleet-tile[data-tone="stage-live"] { background: var(--surface-2); border-left-color: var(--env-live); }
+
+/* Treemap (QA2 R2-10): rectangles by area, left/top/width/height in percent of the parent; a tile that is too small clips its text and keeps it on the title. */
+.exec-fleet-treemap { position: relative; width: 100%; height: 640px; }
+.exec-fleet-treemap .exec-fleet-pf { position: absolute; box-sizing: border-box; display: block; min-width: 0; padding: 0; overflow: hidden; }
+.exec-fleet-treemap .exec-fleet-pf-head { position: absolute; inset: 0 0 auto 0; height: 22px; padding: 0 var(--space-2); overflow: hidden; white-space: nowrap; }
+.exec-fleet-treemap .exec-fleet-tiles { position: absolute; inset: 22px 0 0 0; display: block; }
+.exec-fleet-treemap .exec-fleet-tile { position: absolute; box-sizing: border-box; display: flex; flex: none; min-width: 0; gap: 0; padding: 4px 6px; overflow: hidden; border: 1px solid var(--paper); border-left-width: 4px; }
+.exec-fleet-treemap .exec-fleet-tile .exec-fleet-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
+.exec-fleet-treemap .exec-fleet-tile[data-simulated="true"] { background-image: repeating-linear-gradient(45deg, transparent 0 6px, var(--line-strong) 6px 7px); }
+.exec-fleet-legend-swatch[data-tone="simulated"] { background-image: repeating-linear-gradient(45deg, transparent 0 3px, var(--line-strong) 3px 4px); }
+@media (max-width: 660px) { .exec-fleet-treemap { height: 1100px; } }
+
+/* Small tiles keep what identifies them (QA3 R2-15): by the tile's own size, the detail drops away and the name stays, with the full line on the tile's title. */
+.exec-fleet-treemap .exec-fleet-tile { container-type: size; }
+@container (max-height: 96px) { .exec-fleet-tile .exec-flag, .exec-fleet-tile .exec-fleet-link, .exec-fleet-tile .exec-fleet-version:last-of-type { display: none; } }
+@container (max-height: 62px) { .exec-fleet-tile .exec-fleet-version, .exec-fleet-tile .exec-fleet-np { display: none; } }
+@container (max-height: 40px) { .exec-fleet-tile .exec-mgr-num { display: none; } }
+@container (max-width: 90px) { .exec-fleet-tile .exec-mgr-num, .exec-fleet-tile .exec-fleet-version { display: none; } }

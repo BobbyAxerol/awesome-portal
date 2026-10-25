@@ -1,5 +1,7 @@
 # ELP2-10 — Claude numeric proposal packet (M5 / M7 / M2c / calibration / independent control domain)
 
+> **CORRECTED IN PART (2026-10-23, Codex review): B2 tab census, M2c time per cell, the window envelope and the H+273 capacity line. See the section 'Corrections' at the end. The original text below is kept as history.**
+
 Date 2026-10-23. Author: Claude. Verification tier: **R0** (Markdown only; no code, test, docker, runtime or network was used).
 Assignment: [Codex approved closeout §4, last bullet](CODEX_TO_CLAUDE_APPROVED_CLOSEOUT_2026-10-23.md) (source `S1`).
 Base: `claude/post-land-20261022` (contains `3ed9a2f71`).
@@ -357,3 +359,11 @@ Paths: `S1–S14` are in `/home/bobby/portal-research/upgrade/execution_loop/evi
 | Any already-commissioned independent economic domain | `S13`, `S5`, `S8`, `S12`, `S19` |
 | Minimum count of independent calibration anchors | `S16 §7`; Score spec itself not opened |
 | Reload read count for M2c | `S11`, `S10-M2c` |
+
+## Corrections (2026-10-23, after Codex review CODEX_NUMERIC_AND_FINANCIAL_REVIEW_2026-10-23.md and CLAUDE_POST_FREEZE_REVIEW_2026-10-23.md)
+
+- **N-12 (`max_tabs`)**: B2 is **28** virtual tabs, not 16: `scripts/measure/lib/stage.mjs:35-58` defines the total as the SUM of the entries (8 + 10 x 2 = 28), `measure.test.mjs:134-157`. The "conflict to resolve" is closed in favour of 28; the `max_tabs: 16` in the template is the M2c browser-tab figure only. Quoting the earlier row: "Template shows max_tabs: 16 ... but B2 declares 28 virtual tabs ... I did not find the driver rule".
+- **N-21 / N-22**: M2c is **19 minutes per cell** (600 s visible + 300 s hidden + 240 s allowance, `m2-tab-amplification.mjs:34-36`), **95 minutes for five cells**; the earlier "~16 min" and "5 x 16 = 80 min + 20 min margin = 100 min" are superseded.
+- **N-09 / envelope**: M5 is 90 minutes before margin; M2c + M5 together need **at least 185 minutes** (not the 120-minute envelope, which holds only for B2 alone). Request windows accordingly.
+- **Capacity**: the historical full suite is **H21**, so `H + 273 = 294`, which exceeds **C288**; the specimen formula `H16 + 244 + 2 + 20 = 282 <= 288` applies only to the missing-only native specimen. Do not apply C288 to the full suite.
+- **Header wording**: the line "no code, test, docker, runtime or network was used" is accurate for this document's authoring but is not a verification of the numbers: they are R0 arithmetic over cited source lines, SOURCE_ONLY/PROPOSAL, and the final numeric approval is the source or target owner's.

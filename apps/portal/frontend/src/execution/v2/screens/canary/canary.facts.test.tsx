@@ -156,7 +156,7 @@ describe("the Envelope tab: the server's rows, ratio, verdict", () => {
     expect(verdictLine(viewOf(within))).toMatchObject({ flag: "ok", label: "Within envelope" });
     const breach = published();
     breach.envelope_compliance.verdict = { state: "BREACH", basis: "CONSUMED_NOT_ABOVE_APPROVED_PER_CAP", undetermined_caps: ["daily_loss"] };
-    expect(verdictLine(viewOf(breach))).toMatchObject({ flag: "attention", label: "Breach" });
+    expect(verdictLine(viewOf(breach))).toMatchObject({ flag: "rejected", label: "Breach" });
     expect(verdictLine(viewOf(legacyV1Body()))).toBeNull();
   });
 
@@ -242,7 +242,7 @@ describe("Positions & orders: typed rows when AVAILABLE", () => {
     expect(first.querySelector('td[data-l="Quantity"]')!.textContent).toBe("0.5");
     expect(first.querySelector('td[data-l="Mark"]')!.textContent).toBe("60,500.50");
     expect(first.querySelector('td[data-l="Unrealised PnL"]')!.textContent).toBe("250.25");
-    // Leverage and Ack latency are no column: no row fills them, so each is named once under its table, the reason in the title.
+    // Leverage and Ack latency: no row fills them, so no column of empty cells; each is said once under its table, the reason in the title.
     expect(first.querySelector('td[data-l="Leverage"]')).toBeNull();
     const positionsGap = positions.closest("section")!.querySelector(".exec-blk-gaps")!;
     expect(positionsGap.textContent).toBe("Not available: Leverage");

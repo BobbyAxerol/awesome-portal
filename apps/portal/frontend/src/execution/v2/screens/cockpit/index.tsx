@@ -38,16 +38,19 @@ import { useSession } from "../../../../auth/session";
 import { PanelSkeleton, PanelState } from "../../../components/states";
 import type { PanelStatus } from "../../../contracts";
 import { reviewRouteFor, type DecidedRow } from "../../../screens/ApprovalInbox";
+import { formatAsOf, readAsOf } from "../../boundary";
 import { CardsTable, type CardsColumn } from "../../cardsTable";
 import { useDockMode } from "../../Drawer";
 import { Flag } from "../../Flag";
 import { useExecUrlState, withContext } from "../../urlState";
 import { RequestDrawer } from "../request/RequestDrawer";
 import "../../css/cockpit.css";
+import { useApprovalEvidence } from "./evidenceExtra";
 import { EvidenceFrame, useEvidenceRead, WaiverEvidence, type EvidenceHeader, type EvidenceTarget } from "./EvidenceFrame";
 import { mergeInboxRows, readRawRows, type InboxRowV2 } from "./inboxRowV2";
 import {
   DECISION_KEYS,
+  decidedToday as decidedTodayOf,
   deriveAccess,
   gateItems,
   kindOfGate,
@@ -90,6 +93,8 @@ export interface CockpitProps {
   writeBlockedReason?: string | null;
   /** The port the New request drawer posts through: bound to the New-request screen's delivery policy (the inbox's own policy refuses writes). Falls back to `api`. */
   requestApi?: ExecutionApi;
+  /** The clock for the freshness chip and "Decided today" (UTC epoch ms); injected so a test is not a race with the minute. */
+  now?: () => number;
 }
 
 export const PAGE_SIZE = 50;
@@ -117,16 +122,20 @@ interface InboxLoad {
   moreError: string | null;
   /** The read this state belongs to (`inboxScope`); null before any read. A render right after the view or workspace changes still holds the previous one's state. */
   scope: string | null;
+  /** The browser's clock when the first page arrived (the freshness chip's time): the Portal publishes no as-of for the inbox. */
+  receivedAt: number | null;
 }
 
 /** What one inbox read is for: the server view and the workspace. */
 const inboxScope = (view: string | null, workspaceId: string | undefined): string | null => (view === null ? null : `${view}\u0000${workspaceId ?? ""}`);
 
 const IDLE_INBOX: InboxLoad = {
-  status: "idle", failure: null, rows: [], warnings: [], counts: null, totalCount: null, filteredCount: null, hasMore: false, nextCursor: null, moreBusy: false, moreError: null, scope: null,
+  status: "idle", failure: null, rows: [], warnings: [], counts: null, totalCount: null, filteredCount: null, hasMore: false, nextCursor: null, moreBusy: false, moreError: null, scope: null, receivedAt: null,
 };
 
-function useInbox(api: ExecutionApi, view: string | null, workspaceId: string | undefined): InboxLoad & { loadMore(): void } {
+function useInbox(api: ExecutionApi, view: string | null, workspaceId: string | undefined, now: () => number = Date.now): InboxLoad & { loadMore(): void } {
+  const clock = useRef(now);
+  clock.current = now;
   const [state, setState] = useState<InboxLoad>(IDLE_INBOX);
   const latest = useRef(state);
   latest.current = state;
@@ -153,6 +162,7 @@ function useInbox(api: ExecutionApi, view: string | null, workspaceId: string | 
           ...IDLE_INBOX,
           status: "ready",
           scope,
+          receivedAt: clock.current(),
           rows: mergeInboxRows(page.rows, readRawRows(result.value)),
           warnings: [...(result.warnings ?? [])],
           counts: result.value.counts,
@@ -230,26 +240,28 @@ interface WaiverLoad {
   rows: readonly ConditionRow[];
   total: number | null;
   hasMore: boolean;
+  /** The register's own read time (`read_at`): the anchor of every lapse clock. `null` when the read states none. */
+  readAt: string | null;
 }
 
 function useWaivers(api: ExecutionApi, enabled: boolean, filter: WaiverFilter): WaiverLoad {
-  const [state, setState] = useState<WaiverLoad>({ status: "idle", failure: null, rows: [], total: null, hasMore: false });
+  const [state, setState] = useState<WaiverLoad>({ status: "idle", failure: null, rows: [], total: null, hasMore: false, readAt: null });
   useEffect(() => {
     if (!enabled) return;
     let cancelled = false;
-    setState({ status: "loading", failure: null, rows: [], total: null, hasMore: false });
+    setState({ status: "loading", failure: null, rows: [], total: null, hasMore: false, readAt: null });
     void api
       .getWaivers({ limit: PAGE_SIZE, ...(filter === "ALL" ? {} : { state: filter }) })
       .then((result) => {
         if (cancelled) return;
         setState(
           result.ok
-            ? { status: "ready", failure: null, rows: result.value.rows, total: result.value.filteredCount ?? result.value.totalCount, hasMore: result.value.hasMore }
-            : { status: "failed", failure: { panel: settledPanel(result.status), reason: result.reason }, rows: [], total: null, hasMore: false },
+            ? { status: "ready", failure: null, rows: result.value.rows, total: result.value.filteredCount ?? result.value.totalCount, hasMore: result.value.hasMore, readAt: result.value.readAt }
+            : { status: "failed", failure: { panel: settledPanel(result.status), reason: result.reason }, rows: [], total: null, hasMore: false, readAt: null },
         );
       })
       .catch(() => {
-        if (!cancelled) setState({ status: "failed", failure: { panel: "unavailable", reason: "The waiver register read did not complete." }, rows: [], total: null, hasMore: false });
+        if (!cancelled) setState({ status: "failed", failure: { panel: "unavailable", reason: "The waiver register read did not complete." }, rows: [], total: null, hasMore: false, readAt: null });
       });
     return () => {
       cancelled = true;
@@ -321,6 +333,7 @@ function OwnRequests({
   const refused = wanted !== null && inbox.status === "ready" && onPage !== undefined && !isOwn;
   const evidenceTarget: EvidenceTarget | null = wanted !== null && settled && !refused ? { kind: wanted.kind, id: wanted.id } : null;
   const evidence = useEvidenceRead(api, evidenceTarget, workspaceId);
+  const extra = useApprovalEvidence(api, evidenceTarget === null ? null : evidenceTarget.id, workspaceId);
   const header: EvidenceHeader | null =
     wanted === null || evidenceTarget === null
       ? null
@@ -387,7 +400,7 @@ function OwnRequests({
           ) : null}
           {evidenceTarget !== null ? (
             <section className="exec-ck-main" aria-label="Evidence">
-              <EvidenceFrame kind={evidenceTarget.kind} header={header} evidence={evidence} />
+              <EvidenceFrame kind={evidenceTarget.kind} header={header} evidence={evidence} extra={extra} />
             </section>
           ) : null}
         </DockRow>
@@ -435,7 +448,18 @@ function itemHeader(item: QueueItem): EvidenceHeader | null {
   if (item.kind === "waiver") return null;
   const row = item.row;
   const context = item.kind === "gate" ? [item.row.target, item.row.releaseCandidate].filter((part) => part !== null).join(" · ") : "";
-  return { id: row.id, title: row.subject, context: context || null, gate: row.gate };
+  if (item.kind !== "gate") return { id: row.id, title: row.subject, context: context || null, gate: row.gate, requestedBy: null, quorum: null, left: null };
+  // The queue row publishes who asked, the approver count and the review clock; the evidence header says them again (hi-fi).
+  const asked = item.row.requester ?? item.row.creator;
+  return {
+    id: row.id,
+    title: row.subject,
+    context: context || null,
+    gate: row.gate,
+    requestedBy: asked === null ? null : asked.username ?? asked.userId,
+    quorum: item.row.quorumMet !== null && item.row.quorumRequired !== null ? { met: item.row.quorumMet, required: item.row.quorumRequired } : null,
+    left: slaView(item.row.sla)?.phrase ?? null,
+  };
 }
 
 /**
@@ -454,7 +478,21 @@ function DockRow({ open, drawer, children }: { open: boolean; drawer: ReactNode;
   );
 }
 
-function DecisionCockpit({ api, workspaceId, pathSelection, onClearPathSelection, writeBlockedReason, requestApi, principal }: CockpitProps & { principal: Principal }) {
+/**
+ * The freshness chip. The Portal publishes no as-of for the inbox, so the time is the browser's receipt time of the first page, said
+ * as such ("Queue read 12:04Z"); it is never "Fresh". While the read is out, or when it failed, the chip says that instead.
+ */
+function FreshnessChip({ status, receivedAt }: { status: InboxLoad["status"]; receivedAt: number | null }) {
+  const at = receivedAt === null ? null : readAsOf(receivedAt);
+  const text = status === "failed" ? "Queue not read" : status === "ready" && at !== null ? `Queue read ${formatAsOf(at)}` : "Reading the queue";
+  return (
+    <span className="exec-ck-fresh" data-testid="ck-fresh" data-state={status === "ready" ? "read" : status === "failed" ? "failed" : "reading"} title={status === "ready" ? "The time this browser received the queue. The Portal publishes no as-of for it." : undefined}>
+      {text}
+    </span>
+  );
+}
+
+function DecisionCockpit({ api, workspaceId, pathSelection, onClearPathSelection, writeBlockedReason, requestApi, principal, now = Date.now }: CockpitProps & { principal: Principal }) {
   const url = useExecUrlState();
   // The New request drawer (`?compose=request`) owns the keyboard while it is open: j/k/n/Esc inside it do not drive the queue.
   const composing = url.value.compose === "request";
@@ -480,9 +518,12 @@ function DecisionCockpit({ api, workspaceId, pathSelection, onClearPathSelection
   const [helpOpen, setHelpOpen] = useState(false);
 
   // The waiver lane keeps the gate queue loaded (all gates) so the header counts and any selected gate stay honest.
-  const inbox = useInbox(api, serverViewFor(lane === "waiver" ? "all" : lane), workspaceId);
+  const inbox = useInbox(api, serverViewFor(lane === "waiver" ? "all" : lane), workspaceId, now);
   const decided = useDecided(api, true, workspaceId);
   const waivers = useWaivers(api, lane === "waiver", waiverFilter);
+  // The decisions of the history read made today (UTC), counted at the clock of the page. Re-read with the history, never polled.
+  const decidedNow = now();
+  const decidedTodayRows = useMemo(() => decidedTodayOf(decided.rows, decidedNow), [decided.rows, decidedNow]);
 
   const items: QueueItem[] = useMemo(
     () =>
@@ -546,6 +587,7 @@ function DecisionCockpit({ api, workspaceId, pathSelection, onClearPathSelection
     }
   }
   const evidence = useEvidenceRead(api, evidenceTarget, workspaceId);
+  const extra = useApprovalEvidence(api, evidenceTarget === null ? null : evidenceTarget.id, workspaceId);
 
   const target = evidenceTarget;
   const railTarget: RailTarget | null =
@@ -598,15 +640,21 @@ function DecisionCockpit({ api, workspaceId, pathSelection, onClearPathSelection
   }, [urlSet, onClearPathSelection]);
 
   // Stacked, the evidence sits below the whole queue: bring it into view when a request is picked.
+  // The scroll waits for the new selection to be in the page (the evidence column re-renders), then brings the detail to the top: a tap on a
+  // card changes what the reader sees (QA1 I-23). Wide, the detail is already beside the queue and nothing scrolls.
+  const wantDetail = useRef(false);
   const select = useCallback(
     (key: string) => {
       urlSet({ sel: key });
-      if (typeof window.matchMedia === "function" && window.matchMedia(STACKED_QUERY).matches) {
-        requestAnimationFrame(() => document.querySelector(".exec-ck-main")?.scrollIntoView?.({ block: "start" }));
-      }
+      if (typeof window.matchMedia === "function" && window.matchMedia(STACKED_QUERY).matches) wantDetail.current = true;
     },
     [urlSet],
   );
+  useEffect(() => {
+    if (!wantDetail.current || selectedKey === null) return;
+    wantDetail.current = false;
+    requestAnimationFrame(() => document.querySelector(".exec-ck-main")?.scrollIntoView?.({ block: "start" }));
+  }, [selectedKey]);
 
   // First load on a wide screen opens the request that most needs the reader, so the evidence and the decision
   // rail are not an empty page (HIFI selects one). Once per mount: Esc still clears, and a link's `sel` wins.
@@ -638,9 +686,11 @@ function DecisionCockpit({ api, workspaceId, pathSelection, onClearPathSelection
       <div className="exec-ck-mast">
         <div>
           <h1 className="exec-ck-h">Approvals</h1>
+          <p className="exec-ck-sub" data-testid="ck-subtitle">Every decision, sorted by SLA</p>
         </div>
         <div className="exec-ck-ctrls">
           <CountLine counts={inbox.counts} status={inbox.status} />
+          <FreshnessChip status={inbox.status} receivedAt={inbox.receivedAt} />
           <button type="button" className="exec-ck-btn" aria-haspopup="dialog" onClick={() => setHelpOpen(true)}>
             <kbd>?</kbd> Keys
           </button>
@@ -684,21 +734,29 @@ function DecisionCockpit({ api, workspaceId, pathSelection, onClearPathSelection
           footer={footer}
           principal={principal}
           historyNote={decided.note}
+          decidedToday={{ rows: decidedTodayRows, note: decided.note }}
+          waiverReadAt={waivers.readAt}
         />
         <section className="exec-ck-main" aria-label="Evidence">
+          {/* Where the panes stack the decision is below the evidence: two jumps, up to the queue and down to the decision (QA1 I-19). */}
+          <div className="exec-ck-jumps">
+            <button type="button" className="exec-ck-backq" onClick={() => document.querySelector(".exec-ck-q")?.scrollIntoView?.({ block: "start" })}>Back to the queue</button>
+            {/* With nothing selected there is no decision to go to (QA2 R3-25). */}
+            {selectedKey !== null && family === null ? <button type="button" className="exec-ck-backq" onClick={() => document.querySelector(".exec-ck-rail")?.scrollIntoView?.({ block: "start" })}>Go to the decision</button> : null}
+          </div>
           {family !== null ? (
             <FamilyPanel family={family} />
           ) : selected?.kind === "waiver" ? (
-            <WaiverEvidence row={selected.row} />
+            <WaiverEvidence row={selected.row} register={waivers.rows} readAt={waivers.readAt} onSelect={select} />
           ) : (
-            <EvidenceFrame kind={evidenceTarget?.kind ?? null} header={header} evidence={evidence} unknownReason={unknownReason} />
+            <EvidenceFrame kind={evidenceTarget?.kind ?? null} header={header} evidence={evidence} unknownReason={unknownReason} extra={extra} />
           )}
         </section>
         <aside className="exec-ck-rail" aria-label="Decision">
           {family !== null ? (
             <FamilyRail family={family} />
           ) : (
-            <Rail api={api} target={railTarget} evidence={evidence} principal={principal} workspaceId={workspaceId} />
+            <Rail api={api} target={railTarget} evidence={evidence} principal={principal} workspaceId={workspaceId} extra={extra} />
           )}
         </aside>
       </div>

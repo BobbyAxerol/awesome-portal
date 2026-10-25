@@ -1,9 +1,17 @@
 /**
- * Small, static parts of New request: the three-step bar and the collapsed "What happens next" disclosure.
- * The disclosure says what the server does; the Digest line is there because the form never carries a digest (N29 section 3).
- * The three steps keep their longer sentence in the step's title, so the bar is three short words.
+ * Small, static parts of New request: the three-step bar with its captions, the "What happens next" side panel (and its folded
+ * disclosure for the drawer), the Route page / Drawer toggle, the freshness chip and the "Preview the result states" disclosure.
+ *
+ * Nothing here reads or sends anything. The side panel says what the server does; the Digest line is there because the form never
+ * carries a digest (N29 section 3). The result preview lists the words of the five answers the page can show; it is a legend, not a
+ * request, and it creates, sends and records nothing.
  */
-import { useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
+
+import { Flag } from "../../Flag";
+import type { FlagKind } from "../../flagKinds";
+import { withContext, withoutParams } from "../../urlState";
+import { NEW_REQUEST_HREF, QUEUE_HREF } from "./model";
 
 import "../../css/request.css";
 
@@ -20,24 +28,133 @@ export function WorkspaceNote() {
   return <p className="exec-rq-note" data-notice="own-workspace">{OWN_WORKSPACE_NOTE}</p>;
 }
 
+/** The subtitle under the title (hi-fi: "Research → R1 gate · when it did not start in Research"). */
+export const SUBTITLE = "Research → R1 gate · when it did not start in Research";
+
+/** The three steps and who acts at each (hi-fi captions): the reader now, a reviewer who is not them, capital only after R1. */
+export const STEPS = [
+  { id: "declare", label: "1 · Declare", caption: "you, now", state: "current" },
+  { id: "r1", label: "2 · R1", caption: "a quant reviewer, not you", state: "ahead" },
+  { id: "r2", label: "3 · R2", caption: "capital, only after R1", state: "ahead" },
+] as const;
+
 export function StepBar() {
   return (
     <nav className="exec-rq-steps" aria-label="Where this request sits in the loop">
       <ol>
-        <li data-state="current" aria-current="step" title="You, now">1 · Declare</li>
-        <li data-state="ahead" title="A quant reviewer decides, not you">2 · R1</li>
-        <li data-state="ahead" title="Capital, only after R1">3 · R2</li>
+        {STEPS.map((step) => (
+          <li key={step.id} data-state={step.state} aria-current={step.state === "current" ? "step" : undefined}>
+            {step.label}
+            <span className="exec-rq-cap"> · {step.caption}</span>
+          </li>
+        ))}
       </ol>
     </nav>
   );
 }
 
-/** The three lines, folded into one disclosure under the form. */
+/**
+ * Route page | Drawer from the queue. The current frame is plain text marked `aria-current`; the other is a link that opens in a new tab,
+ * because navigating away in this one would silently lose what was typed (the same rule as the Run Library link).
+ */
+export function FrameToggle({ current }: { current: "page" | "drawer" }) {
+  const [params] = useSearchParams();
+  // Ids typed in the form are not carried over; only the page's context (environment, window) is, never the workspace the request cannot use.
+  const here = withoutParams(params, ["workspace_id", "alpha", "run", "claim", "compose"]);
+  const segment = (id: "page" | "drawer", label: string, href: string) =>
+    current === id ? (
+      <span key={id} className="exec-rq-seg" data-on="true" aria-current="page">{label}</span>
+    ) : (
+      <Link key={id} className="exec-rq-seg" to={withContext(href, here)} target="_blank" rel="noopener noreferrer">
+        {label}<span className="exec-rq-sr"> (opens in a new tab)</span>
+      </Link>
+    );
+  return (
+    <div className="exec-rq-toggle" role="group" aria-label="Where this form opens" data-testid="rq-frame-toggle">
+      {segment("page", "Route page", NEW_REQUEST_HREF)}
+      {segment("drawer", "Drawer from the queue", `${QUEUE_HREF}?compose=request`)}
+    </div>
+  );
+}
+
+/** What the freshness chip can say: the Run Library read the pickers rest on, in the words of its state. No clock is claimed. */
+export type FreshState = "reading" | "read" | "unavailable";
+
+const FRESH_FLAG: Readonly<Record<FreshState, { kind: FlagKind; label: string }>> = {
+  reading: { kind: "pending", label: "Reading the Run Library" },
+  read: { kind: "ok", label: "Run Library read" },
+  unavailable: { kind: "unknown", label: "Run Library not available" },
+};
+
+export function FreshChip({ state }: { state: FreshState }) {
+  const spec = FRESH_FLAG[state];
+  return (
+    <span className="exec-rq-fresh" data-testid="rq-fresh" data-state={state}>
+      <Flag kind={spec.kind} label={spec.label} size="sm" />
+    </span>
+  );
+}
+
+/** The three things the server does, once each. */
+export const NEXT_ITEMS = [
+  { n: "1", term: "Digest", text: "Pinned on the server from the run registry." },
+  { n: "2", term: "Reviewer", text: "A quant reviewer decides, never you. The SLA clock starts at submit." },
+  { n: "3", term: "Duplicates", text: "Open work for the same alpha and run is refused with its request." },
+] as const;
+
+/** The side panel of the route page (hi-fi "What happens next"). */
+export function NextPanel() {
+  return (
+    <aside className="exec-rq-next" aria-label="What happens next">
+      <div className="exec-rq-next-head">What happens next</div>
+      <ol className="exec-rq-next-list">
+        {NEXT_ITEMS.map((item) => (
+          <li key={item.n}>
+            <b>{item.n} · {item.term}</b>
+            <span>{item.text}</span>
+          </li>
+        ))}
+      </ol>
+    </aside>
+  );
+}
+
+/** The three lines, folded into one disclosure under the drawer's form (the drawer has no room for a column). */
 export function WhatNextDisclosure() {
   return (
     <details className="exec-rq-disclosure">
       <summary>What happens next</summary>
       <p className="exec-rq-meta">Digest pinned on the server · a quant reviewer decides, never you · duplicates are refused with the existing request.</p>
+    </details>
+  );
+}
+
+interface PreviewRow {
+  id: string;
+  /** One sentence: the answer's word, then what it means. One text node, so it never reads as the answer itself being on screen. */
+  says: string;
+}
+
+/** The five answers the page can show, with the sentence each one carries. The words are the ones `OutcomePanel` prints. */
+export const RESULT_STATES: readonly PreviewRow[] = [
+  { id: "created", says: "If created: the request is opened for R1 review and its id is shown, with Open request." },
+  { id: "replayed", says: "If already created: an earlier submit of this same request landed; its request is shown and nothing new is made." },
+  { id: "duplicate", says: "If a duplicate: open work for this alpha and run already exists; its id is shown and nothing was created." },
+  { id: "refused", says: "If refused: the server gives its reason, and the fields are kept so they can be changed." },
+  { id: "uncertain", says: "If uncertain: the answer never arrived and the request may exist. The fields lock until you check, retry under the same key, or discard." },
+];
+
+/** "Preview the result states": a legend of the answers, collapsed. It is not a request and sends nothing. */
+export function ResultPreview() {
+  return (
+    <details className="exec-rq-disclosure exec-rq-preview" data-testid="rq-result-preview">
+      <summary>Preview the result states</summary>
+      <p className="exec-rq-meta">Preview only. These are the answers this page can show; nothing here was sent.</p>
+      <ul className="exec-rq-preview-list">
+        {RESULT_STATES.map((row) => (
+          <li key={row.id} data-state={row.id}>{row.says}</li>
+        ))}
+      </ul>
     </details>
   );
 }

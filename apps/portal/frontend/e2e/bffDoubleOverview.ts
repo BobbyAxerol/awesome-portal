@@ -55,7 +55,9 @@ import { COMMAND_CATALOGUE_FIXTURE, COMMAND_PLAN_FIXTURE } from "../src/executio
 import { BLOTTER_BUCKET } from "../src/execution/contracts";
 import { ACTIVATION_CAPABILITIES, SOURCE_HEALTH_READ } from "../src/execution/derivedReads.fixtures";
 import { answerOperationsV2 } from "./bffDoubleV2";
-import { scaleCounts } from "./bffScale";
+import { scaleCounts, scaled } from "./bffScale";
+import { isPositiveMode } from "./bffPositiveMode";
+import { MARKS, positionsOf, worldAlphas } from "./bffWorld";
 
 export interface OverviewAnswer {
   status: number;
@@ -292,12 +294,31 @@ function toUnits(text: string, dp: number): bigint {
 
 interface Row { order: Record<string, unknown>; fills: Record<string, unknown>[]; legs: Record<string, unknown>[]; group: Record<string, unknown> | null; status: string; symbol: string; venue: string; side: string }
 
+
+// ===== WP-P begin (blotter of the world: every order belongs to a deployment of the world, at the world's one mark per symbol)
+interface WorldBook { deployment: string; alpha: string; account: string; venue: string; mode: string; inst: Instrument }
+const WORLD_INSTRUMENTS: Readonly<Record<string, Omit<Instrument, "price">>> = {
+  BTCUSDT: { symbol: "BTCUSDT", priceDp: 2, qty: "0.0400", qtyDp: 4 }, ETHUSDT: { symbol: "ETHUSDT", priceDp: 2, qty: "1.250", qtyDp: 3 },
+  SOLUSDT: { symbol: "SOLUSDT", priceDp: 2, qty: "12.00", qtyDp: 2 }, BNBUSDT: { symbol: "BNBUSDT", priceDp: 2, qty: "3.500", qtyDp: 3 },
+};
+/** The deployments the blotter draws its orders from: the native books first, then the generated ones, each at the symbol its first position holds. */
+function worldBlotterBooks(): WorldBook[] {
+  const books: WorldBook[] = [];
+  for (const alpha of worldAlphas()) for (const d of alpha.deployments) {
+    const symbol = positionsOf(d.id)[0]?.symbol ?? "BTCUSDT";
+    books.push({ deployment: d.id, alpha: alpha.id, account: d.accountId, venue: d.venue, mode: d.environment, inst: { ...WORLD_INSTRUMENTS[symbol]!, price: MARKS[symbol]! } });
+  }
+  return books;
+}
+// ===== WP-P end
 function buildRows(partial: boolean, count: number): Row[] {
   const rows: Row[] = [];
+  const worldBooks = isPositiveMode() ? worldBlotterBooks() : null;
   // A larger book (the standalone server's FIXTURE_SCALE) also leaves some commissions unpublished.
   const larger = count !== BLOTTER_DOUBLE_COUNT;
   for (let i = 0; i < count; i += 1) {
-    const inst = INSTRUMENTS[i % 3]!;
+    const w = worldBooks === null ? null : worldBooks[i % worldBooks.length]!; // WORLD: every order belongs to a deployment of the world (one account, one mark)
+    const inst = w === null ? INSTRUMENTS[i % 3]! : w.inst;
     const k = i % 3;
     const status = STATUS_PATTERN[i % 10]!;
     const side = i % 2 === 0 ? "BUY" : "SELL";
@@ -312,12 +333,12 @@ function buildRows(partial: boolean, count: number): Row[] {
       order_id: orderId,
       client_order_id: client,
       venue_order_id: status === "REJECTED" ? null : `v-${pad(number * 7, 7)}`,
-      strategy_id: ALPHAS[k],
-      account_id: ACCOUNTS[k],
+      strategy_id: (w?.alpha ?? ALPHAS[k]),
+      account_id: (w?.account ?? ACCOUNTS[k]),
       execution_session_id: `sess_${k + 1}`,
-      mode: "paper",
-      venue: VENUES[k],
-      instrument_id: `${inst.symbol}.${VENUES[k]}`,
+      mode: w?.mode ?? "paper",
+      venue: (w?.venue ?? VENUES[k]),
+      instrument_id: `${inst.symbol}.${(w?.venue ?? VENUES[k])}`,
       symbol: inst.symbol,
       side,
       order_type: market ? "MARKET" : stop ? "STOP_LIMIT" : "LIMIT",
@@ -332,6 +353,7 @@ function buildRows(partial: boolean, count: number): Row[] {
       updated_at: iso(t + 2000),
       error_code: status === "REJECTED" ? (i % 2 === 0 ? "RISK_ORDER_SIZE_CAP" : "VENUE_PRICE_BAND") : null,
       error_message: status === "REJECTED" ? (i % 2 === 0 ? "The order size was above the deployment cap." : "The venue refused the price because it was outside the allowed band.") : null,
+      ...(w === null ? {} : { deployment_id: w.deployment }),
       risk_grant_id: status === "REJECTED" && i % 2 === 0 ? null : `grant_${pad(number)}`,
     };
     // Fills: only orders that traded. Quantities split exactly; the last piece takes the remainder.
@@ -353,11 +375,11 @@ function buildRows(partial: boolean, count: number): Row[] {
           trade_id: `tr_${pad(number)}_${n}`,
           client_order_id: client,
           venue_order_id: order.venue_order_id,
-          strategy_id: ALPHAS[k],
-          account_id: ACCOUNTS[k],
+          strategy_id: (w?.alpha ?? ALPHAS[k]),
+          account_id: (w?.account ?? ACCOUNTS[k]),
           execution_session_id: `sess_${k + 1}`,
-          mode: "paper",
-          venue: VENUES[k],
+          mode: w?.mode ?? "paper",
+          venue: (w?.venue ?? VENUES[k]),
           instrument_id: order.instrument_id,
           side,
           price: fromUnits(priceUnits - BigInt(p), inst.priceDp),
@@ -390,13 +412,13 @@ function buildRows(partial: boolean, count: number): Row[] {
         exit("STOP_LOSS", "3", priceUnits - 6n * 10n ** BigInt(inst.priceDp), "ARMED"),
       ];
       group = {
-        group_id: gid, strategy_id: ALPHAS[k], account_id: ACCOUNTS[k], execution_session_id: `sess_${k + 1}`, mode: "paper", venue: VENUES[k],
+        group_id: gid, strategy_id: (w?.alpha ?? ALPHAS[k]), account_id: (w?.account ?? ACCOUNTS[k]), execution_session_id: `sess_${k + 1}`, mode: w?.mode ?? "paper", venue: (w?.venue ?? VENUES[k]),
         instrument_id: order.instrument_id, symbol: inst.symbol, position_side: "BOTH", contingency_type: "OUO", activation_policy: "ON_ENTRY_FILL",
         state: "ACTIVE", winner_leg_id: null, target_quantity: inst.qty, filled_quantity: inst.qty, open_quantity: "0", excess_quantity: "0",
         version: 1, created_at: iso(t), updated_at: iso(t + 3000),
       };
     }
-    rows.push({ order, fills, legs, group, status, symbol: inst.symbol, venue: VENUES[k], side });
+    rows.push({ order, fills, legs, group, status, symbol: inst.symbol, venue: (w?.venue ?? VENUES[k]), side });
   }
   return rows;
 }
@@ -405,13 +427,19 @@ function buildRows(partial: boolean, count: number): Row[] {
 const built = new Map<string, Row[]>();
 function rowsFor(partial: boolean): Row[] {
   const count = scaleCounts().blotterOrders;
-  const key = `${partial ? "partial" : "full"}:${count}`;
+  const key = `${partial ? "partial" : "full"}:${count}:${isPositiveMode() ? `world:${scaled().alphas.length}` : "doubles"}`;
   let rows = built.get(key);
   if (!rows) {
     rows = buildRows(partial, count);
     built.set(key, rows);
   }
   return rows;
+}
+
+/** The orders and fills the blotter holds for one deployment of the world: the Paper workbench's Orders and Fills tabs list the SAME rows (same ids), so a link to the blotter finds its order. */
+export function blotterBookOf(deploymentId: string): { orders: Record<string, unknown>[]; fills: Record<string, unknown>[] } {
+  const mine = rowsFor(false).filter((row) => (row.order as unknown as Record<string, unknown>).deployment_id === deploymentId);
+  return { orders: mine.map((row) => row.order as unknown as Record<string, unknown>), fills: mine.flatMap((row) => row.fills as unknown as Record<string, unknown>[]) };
 }
 
 function encodeCursor(index: number, signature: string): string {

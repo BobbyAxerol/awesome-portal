@@ -114,3 +114,13 @@ export function sessionStepUpText(eligibility: StageActionEligibility | null | u
 
 /** Re-exported so a screen imports the action names from the same place as the reasons. */
 export type { StageAction };
+
+/**
+ * The owner's words for a closed state: the server's eligibility reason can carry its own bookkeeping after the sentence
+ * ("Not offered in the portal yet · Basis: none published · Step-up: not determined"). The sentence is what the owner reads; the bookkeeping
+ * (basis, step-up) stays in the title. Nothing is added or invented: the text is only split at the first " · Basis:".
+ */
+export function plainReason(reason: string): { sentence: string; detail: string | null } {
+  const at = reason.indexOf(" · Basis:");
+  return at < 0 ? { sentence: reason, detail: null } : { sentence: reason.slice(0, at), detail: reason.slice(at + 3) };
+}

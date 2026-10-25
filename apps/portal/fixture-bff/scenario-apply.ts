@@ -124,6 +124,9 @@ export const ID_ALIASES: Readonly<Record<string, string>> = Object.freeze({
   pf_satellite: "pf_TEST_ONLY_satellite",
   pf_canary: "pf_TEST_ONLY_canary",
   inc_44: "inc_TEST_ONLY_fx_budget",
+  // WORLD: the people of the roster (e2e/bffWorld.ts PEOPLE); the doubles print other namings of the same few people
+  "fixture-requester": "hoa", "FIXTURE_LAB:user-2": "lan", "FIXTURE_LAB:user-4": "stan", "FIXTURE_LAB:user-5": "hoa", asmith: "lan",
+  "H. Pham": "Hoa Nguyen", "L. Nguyen": "Lan Tran", "S. Mori": "Stan Le", "I. Novak": "Tuan Do", "M. Tran": "Minh Pham", Lan: "Lan Tran", Minh: "Minh Pham", Stan: "Stan Le",
 });
 function aliasIds(value: unknown, depth = 0): unknown {
   if (depth > 12) return value;

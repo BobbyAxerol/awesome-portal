@@ -60,7 +60,7 @@
     {
       "id": "n29_acceptance",
       "file": "services/portal-execution-edge-rs/contracts/n29-product-acceptance-v1/product-acceptance.v1.json",
-      "sha256": "sha256:f90e95d00f133275db20a5363907deba96a5a0c2a728b0e49de41acf2b6b2583"
+      "sha256": "sha256:0e8c3dff308a7e22853c68149ef164a3f62d88d023a3842ec37cd8a7e78d7627"
     },
     {
       "id": "n29_debt",
@@ -160,12 +160,12 @@
     {
       "id": "frontend_execution_route",
       "file": "apps/portal/frontend/src/execution/ExecutionPreviewRoute.tsx",
-      "sha256": "sha256:7a0166d88bd4cce3356c417d9998b745dc3d71a384ecef093e16814fd38f769b"
+      "sha256": "sha256:50ed786cc695105a9b967b3b7d87cefde71f6aec20711a7a3e7dfb4b2969cd88"
     },
     {
       "id": "frontend_product_boundary",
       "file": "apps/portal/frontend/src/execution/productBoundary.test.ts",
-      "sha256": "sha256:e628c6514064fb6cf1cc42a6bb65ff5e7ff1f9559598474c1257a63c50276a08"
+      "sha256": "sha256:ebbfe819c8860d21d3ac157a0475c69cf89edf697020ef95692ea338613d809d"
     },
     {
       "id": "subject_activity_bff",

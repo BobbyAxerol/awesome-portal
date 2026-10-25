@@ -19,7 +19,7 @@ import { Link, useLocation } from "react-router-dom";
 import { useSession } from "../../../../auth/session";
 import { SELF_ENTRY_PATH } from "../../../../app/selfNavView";
 import type { UtcEpochMs } from "../../../screenDataContract";
-import { formatAsOf } from "../../boundary";
+import { formatAsOf, readAsOf } from "../../boundary";
 import { CodeName, GapWhy, NotAvailableLine, PanelHead, gapTitle } from "../../blocks";
 import { CardsTable, type CardsColumn } from "../../cardsTable";
 import { ExecutionSurface } from "../../../ExecutionSurface";
@@ -48,8 +48,10 @@ import {
 } from "./model";
 import { useAccessEffective } from "./useAccessEffective";
 import { useRootCapitalEligibility } from "./useRootCapitalEligibility";
-
+import { useManageStepUp, type ReadStepUp } from "./useManageStepUp";
+import { breakable } from "../cockpit/breakable";
 import "../../css/access.css";
+import "./manageGrid.css";
 
 /** This screen's own route; the "My access" link of a disabled control lands here. */
 export const ACCESS_PATH = "/administration/profile-access";
@@ -77,6 +79,8 @@ export interface AccessSelfViewProps {
    * `portal.self-eligibility-batch.v2`). Without it the row says it was not asked; nothing is guessed.
    */
   api?: Pick<ExecutionApi, "getSelfEligibilityBatch">;
+  /** Test seam for the owner step-up read (`GET /api/admin/step-up`); defaults to the account client's. */
+  readStepUp?: ReadStepUp;
 }
 
 /** Longest value that still reads at the 24/32 mono kpi size; a longer one (a long username) takes the 12/16 mono id role. */
@@ -99,7 +103,7 @@ type GrantsView =
   | { phase: "unavailable"; reason: string; code: string | null; requestId: string | null }
   | { phase: "ready"; effective: AccessEffective; readAt: UtcEpochMs | null; stale: { reason: string; requestId: string | null } | null };
 
-export default function AccessSelfView({ manage, sessionWorkspaceId = null, now, fetchImpl, api }: AccessSelfViewProps) {
+export default function AccessSelfView({ manage, sessionWorkspaceId = null, now, fetchImpl, api, readStepUp }: AccessSelfViewProps) {
   const { principal, access } = useSession();
   const url = useExecUrlState();
   const location = useLocation();
@@ -117,6 +121,8 @@ export default function AccessSelfView({ manage, sessionWorkspaceId = null, now,
   // surface exists unless the route's mount passes one.
   const canManage = manage !== undefined && session?.isOwner === true && holds(capabilities, { allOf: [ADMIN_CAPABILITY.profileAccessManage] });
   const tab: Tab = canManage && url.value.view === "manage" ? "manage" : "self";
+  // Owner step-up for grant changes: asked only where the Manage grants tab exists (the read is owner-only).
+  const manageStep = useManageStepUp(canManage, readStepUp);
 
   // The body must be for the user who is signed in; a body for anyone else is never shown as theirs.
   const grants: GrantsView = useMemo(() => {
@@ -145,6 +151,12 @@ export default function AccessSelfView({ manage, sessionWorkspaceId = null, now,
   // On the self-only page the "My access" link of a disabled control stays on that page (BE-P7); everywhere else it is the bare access path.
   const myAccessHref = withContext(location.pathname === SELF_ENTRY_PATH ? SELF_ENTRY_PATH : ACCESS_PATH, location.search);
 
+  // The session's own expiry (`exp`, epoch seconds on the auth context), printed as the absolute time it says; never a countdown.
+  const sessionEnd = principal && principal.exp > 0 ? readAsOf(principal.exp * 1000) : null;
+  const sessionEndNote = principal === null || principal === undefined
+    ? "From the sign-in read"
+    : sessionEnd !== null ? `Session ends ${formatAsOf(sessionEnd)}` : "Session end not published";
+
   const ownerWord = access.kind !== "ready"
     ? null
     : session?.ownerState === "OWNER_ANCHOR_UNCLAIMED"
@@ -156,14 +168,16 @@ export default function AccessSelfView({ manage, sessionWorkspaceId = null, now,
     {
       key: "status",
       label: "Status",
-      render: (r) => r.absent
+      render: (r) => r.absent || r.closed
         ? <Flag kind="stale" size="sm" label="Not available yet" />
         : r.allowed
           ? (
-            <>
+            // Stacked, not side by side: two chips in a row widen the Status column until the Why column is pushed out of its panel.
+            <span className="exec-acc-flags">
               <Flag kind="ok" size="sm" label={allowedWord} />
-              {r.stepUp ? <> <Flag kind="approval" size="sm" label={r.stepUp === "ACTIVE" ? "Step-up active" : "Step-up required"} /></> : null}
-            </>
+              {r.stepUp ? <Flag kind="approval" size="sm" label={r.stepUp === "ACTIVE" ? "Step-up active" : "Step-up required"} /> : null}
+              {r.stepUpAbsent ? <Flag kind="unknown" size="sm" label="Step-up not stated" /> : null}
+            </span>
           )
           : <Flag kind="na" size="sm" label={deniedWord} />,
     },
@@ -172,7 +186,8 @@ export default function AccessSelfView({ manage, sessionWorkspaceId = null, now,
       label: reasonLabel,
       render: (r) => (
         <span className="exec-acc-why">
-          {r.reason}
+          {breakable(r.reason)}
+          {r.note ? <> · <span data-testid="acc-row-note">{r.note}</span></> : null}
           {r.absent ? <GapWhy name={`Why ${r.label} is not available yet`} rows={[gapTitle(r.absent.fe, r.absent.what)]} /> : null}
           {withLink && !r.allowed && !r.absent ? <> · <Link className="exec-acc-link" to={myAccessHref}>My access</Link></> : null}
         </span>
@@ -190,6 +205,7 @@ export default function AccessSelfView({ manage, sessionWorkspaceId = null, now,
         <span className="exec-acc-cell">
           <span className="exec-acc-id">{g.action}</span>
           <span className="exec-acc-effect" data-effect={g.effect}>{g.effect === "ALLOW" ? "Allow" : "Deny"}</span>
+          <span className="exec-acc-meta" data-testid="acc-grant-rev">Revision <span className="exec-acc-id">{g.revision}</span></span>
         </span>
       ),
     },
@@ -198,13 +214,16 @@ export default function AccessSelfView({ manage, sessionWorkspaceId = null, now,
       label: "Scope",
       render: (g) => {
         const all = selectorAllIds(g.selector);
-        return <span className="exec-acc-why" title={all.length > 0 ? all.join(", ") : undefined}>{selectorText(g.selector)}</span>;
+        return (
+          <span className="exec-acc-cell">
+            <span className="exec-acc-why" title={all.length > 0 ? all.join(", ") : undefined}>{selectorText(g.selector)}</span>
+            <span className="exec-acc-meta" data-testid="acc-grant-env">{environmentsText(g)}</span>
+          </span>
+        );
       },
     },
-    { key: "env", label: "Environments", render: (g) => environmentsText(g) },
     { key: "from", label: "Since", render: (g) => <span className="exec-acc-id">{validFromText(g)}</span> },
     { key: "until", label: "Expires", render: (g) => <span className="exec-acc-id">{validUntilText(g)}</span> },
-    { key: "rev", label: "Revision", render: (g) => <span className="exec-acc-id">{g.revision}</span> },
     {
       key: "current",
       label: "State",
@@ -255,17 +274,18 @@ export default function AccessSelfView({ manage, sessionWorkspaceId = null, now,
           <dd className="exec-acc-kpi-note exec-acc-code">{session?.userId ? session.userId : "User id not available"}</dd>
         </div>
         <div className="exec-acc-kpi">
-          <dt>Owner</dt>
-          <KpiValue text={ownerWord ?? (access.kind === "loading" ? "Loading" : "Not available")} absent={!ownerWord} />
-        </div>
-        <div className="exec-acc-kpi">
           <dt>Role preset</dt>
           <KpiValue text="Not available" absent />
           <dd className="exec-acc-kpi-note">Access is shown by capability (FE-015)</dd>
+          <dd className="exec-acc-kpi-note" data-testid="acc-owner-note">
+            {ownerWord ?? (access.kind === "loading" ? "Loading" : "Owner state not available")}
+            {session ? ` · ${session.capabilities.length} ${session.capabilities.length === 1 ? "capability" : "capabilities"} held` : ""}
+          </dd>
         </div>
         <div className="exec-acc-kpi">
-          <dt>Capabilities held</dt>
-          <KpiValue text={session ? String(session.capabilities.length) : access.kind === "loading" ? "Loading" : "Not available"} absent={!session} />
+          <dt>App sign-in</dt>
+          <KpiValue text={principal ? "Active" : access.kind === "loading" ? "Loading" : "Not available"} absent={!principal} />
+          <dd className="exec-acc-kpi-note" data-testid="acc-session-end">{sessionEndNote}</dd>
         </div>
         <div className="exec-acc-kpi">
           <dt>Access policy</dt>
@@ -305,7 +325,7 @@ export default function AccessSelfView({ manage, sessionWorkspaceId = null, now,
           <PanelHead level={2} id={`${headingId}-do`} title="What you can do" />
           {sessionState ?? (
             <>
-              <CardsTable columns={doColumns} rows={doRows(capabilities, capital.view)} rowKey={(r) => r.id} label="What you can do" />
+              <CardsTable columns={doColumns} rows={doRows(capabilities, capital.view, manageStep)} rowKey={(r) => r.id} label="What you can do" />
               {/*
                 Per-action eligibility (FE-015/068): asked per resource (readers/accessSelf.ts, accessSelfBatch.ts). This page has no
                 resource id, so it asks the one question that needs none: capital commands at the ROOT the caller's own grants name
@@ -358,9 +378,15 @@ export default function AccessSelfView({ manage, sessionWorkspaceId = null, now,
               rows={grantView.rows}
               rowKey={(g) => g.grantId}
               label="Granted to you"
-              empty={effective.availability === "POLICY_PENDING"
-                ? "No grants are listed while the access policy is pending."
-                : "No grants are published for you in this workspace."}
+              empty={(
+                <>
+                  <span>{effective.availability === "POLICY_PENDING"
+                    ? "No grants are listed while the access policy is pending."
+                    : "No grants are published for you in this workspace."}</span>
+                  {/* An owner's authority is the anchor, not a grant (the V1 matrix says the same): one sentence, so an empty table does not read as no access. */}
+                  {session?.isOwner === true ? <span data-testid="acc-owner-anchor"> You hold every capability through the owner anchor, not through a grant.</span> : null}
+                </>
+              )}
             />
             {grantView.label !== null ? (
               <p className="exec-acc-foot" role="status" data-testid="exec-acc-grants-cap">
@@ -426,16 +452,26 @@ export default function AccessSelfView({ manage, sessionWorkspaceId = null, now,
           <div className="exec-acc-head">
             <div>
               <h1 className="exec-acc-title">Profile &amp; Access</h1>
+              <p className="exec-acc-sub" data-testid="acc-subtitle">
+                {principal?.username ? principal.username : "Signed-in person not named"}
+                {ownerWord ? ` · ${ownerWord}` : ""}
+              </p>
             </div>
             <div className="exec-acc-chips">
+              {/* The freshness chip: the browser's receipt time of the grants read, said as such; the Portal publishes no as-of. */}
               {grants.phase === "ready" && grants.readAt !== null ? (
                 <span
                   className="exec-acc-chip"
+                  data-testid="acc-fresh"
                   title="The time this browser received the answer. The Portal publishes no as-of for this read."
                 >
                   Read {formatAsOf(grants.readAt)}
                 </span>
-              ) : null}
+              ) : (
+                <span className="exec-acc-chip" data-testid="acc-fresh" data-state="none">
+                  Freshness not published
+                </span>
+              )}
               {workspaceId !== null ? (
                 <button type="button" className="exec-acc-btn" onClick={reload} disabled={refreshing} title={refreshing ? "A refresh is already running." : undefined}>
                   {refreshing ? "Refreshing" : "Refresh"}
@@ -464,6 +500,35 @@ export default function AccessSelfView({ manage, sessionWorkspaceId = null, now,
             </div>
           ) : null}
 
+          {tab === "manage" ? (
+            <section className="exec-acc-manage" aria-label="Manage grants" data-testid="acc-manage-head">
+              <div className="exec-acc-manage-head">
+                <h2 className="exec-acc-manage-title">Manage grants</h2>
+                {manageStep === "REQUIRED" ? <Flag kind="approval" size="sm" label="Step-up required" /> : null}
+                {manageStep === "ACTIVE" ? <Flag kind="approval" size="sm" label="Step-up active" /> : null}
+                {manageStep === null ? <Flag kind="unknown" size="sm" label="Step-up state not read" /> : null}
+              </div>
+              <p className="exec-acc-manage-line" data-testid="acc-manage-presets">
+                Role preset: Not available
+                <GapWhy name="Why role presets are not available" rows={[gapTitle(ACCESS_FE.reasons, "Role preset")]} next={null} />
+                <span> · Access is granted per gate below: see and decide, one account at a time.</span>
+              </p>
+              <p className="exec-acc-manage-line" data-testid="acc-manage-intro">
+                Who may see a Governance gate, and who may record its Portal decision. Granting a capability here changes nothing outside the Portal: it records no command and moves no capital.
+              </p>
+              {workspaceId !== null ? (
+                <p className="exec-acc-manage-line" data-testid="acc-manage-workspace">
+                  This page reads workspace <span className="exec-acc-code">{workspaceId}</span>. The grants below are portal-wide: their read takes no workspace, so the address does not change them.
+                </p>
+              ) : null}
+            </section>
+          ) : null}
+
+          {/* The matrix sits in the page's own flow (it used to render after the surface's full-height box, leaving an empty band). */}
+          {tab === "manage" ? (
+            <div id="exec-acc-panel" role="tabpanel" aria-labelledby="exec-acc-tab-manage" className="exec-acc-manage-body">{manage}</div>
+          ) : null}
+
           {tab === "self" ? (
             canManage ? (
               <div id="exec-acc-panel" role="tabpanel" aria-labelledby="exec-acc-tab-self" className="exec-acc">{body}</div>
@@ -471,9 +536,6 @@ export default function AccessSelfView({ manage, sessionWorkspaceId = null, now,
           ) : null}
         </div>
       </ExecutionSurface>
-      {tab === "manage" ? (
-        <div id="exec-acc-panel" role="tabpanel" aria-labelledby="exec-acc-tab-manage">{manage}</div>
-      ) : null}
     </>
   );
 }

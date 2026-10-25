@@ -15,6 +15,7 @@
  * |---|---|---|---|---|---|
  * | up to 200 orders and 200 fills per page, keyset `Load more` | thousands of markers: unreadable chart | the V1 log shows 200 rows at a time, newest first; the chart still draws every loaded trade | `/resources/alphas/{id}/orders|fills` cursor, `maximum_page_rows` | every price and quantity is the server's string; candles only when the venue says READY | first paint on the log, candles after; chart code loads lazily |
  */
+import { useMemo } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 
 import { PanelState } from "../../../../components/states";
@@ -25,6 +26,8 @@ import { ENV_LABEL, useExecUrlState, withContext } from "../../../urlState";
 import { replayBack } from "../backLinks";
 import { chooseEnv, freshnessFlag } from "../model";
 import { useAlphaResource, useSubjectBook } from "../useAlphaReads";
+import { useAlphaDataset } from "../DatasetFigures";
+import { lifeEvents } from "../lifecycleModel";
 import { alphaViewOf } from "../view";
 import { ReplayView } from "./ReplayView";
 
@@ -46,7 +49,14 @@ export interface AlphaReplayProps {
 
 export default function AlphaReplay({ api, alphaId, focus }: AlphaReplayProps) {
   const url = useExecUrlState();
-  const [params] = useSearchParams();
+  const [params, setParams] = useSearchParams();
+  // Design preview (hi-fi "Candles available / Candles not available"): `candles=none` skips the venue read and shows the typed absence.
+  const candlesOff = params.get("candles") === "none";
+  const setCandles = (off: boolean) => {
+    const next = new URLSearchParams(params);
+    if (off) next.set("candles", "none"); else next.delete("candles");
+    setParams(next, { replace: true });
+  };
   // The page's own `from` is its Back; the chips onward start fresh.
   const linkTo = (href: string) => withContext(href, withoutOrigin(params));
   const ordersHref = linkTo(`/deployments/alphas/${encodeURIComponent(alphaId)}?tab=orders`);
@@ -64,6 +74,10 @@ export default function AlphaReplay({ api, alphaId, focus }: AlphaReplayProps) {
   const deployment = rows.find((row) => (row.env !== undefined ? row.env === env : row.stage !== null && ENV_STAGES[env].includes(row.stage))) ?? rows[0] ?? null;
   const accountId = book.orders[0]?.accountId ?? book.fills[0]?.accountId ?? deployment?.accountId ?? null;
   const fresh = view ? freshnessFlag(view.freshness) : null;
+  // The STAGE / DECISION / INCIDENT lanes read the alpha's Manager dataset (open `evt_*` keys); none published = named gaps.
+  const dataset = useAlphaDataset(api, view !== null && view.present, alphaId, env, explicitWs);
+  const datasetValue = dataset.phase === "ready" ? dataset.value : null;
+  const events = useMemo(() => lifeEvents(datasetValue), [datasetValue]);
 
   return (
     <div className="exec-alp2-v2" data-screen="trade-replay-v2">
@@ -81,6 +95,13 @@ export default function AlphaReplay({ api, alphaId, focus }: AlphaReplayProps) {
           {fresh ? <Flag kind={fresh.kind} label={fresh.label} size="sm" /> : null}
         </div>
       </header>
+      <div className="exec-alp2-preview" role="group" aria-label="Design preview">
+        <span className="exec-alp2-dim">Design preview</span>
+        <span className="exec-alp2-seg" role="group" aria-label="Candles">
+          <button type="button" className="exec-alp2-segbtn" aria-pressed={!candlesOff} onClick={() => setCandles(false)}>Candles available</button>
+          <button type="button" className="exec-alp2-segbtn" aria-pressed={candlesOff} onClick={() => setCandles(true)}>Candles not available</button>
+        </span>
+      </div>
       {resource.phase === "error" && resource.status === "denied" ? (
         <PanelState status={resource.status} reason={resource.reason} />
       ) : (
@@ -94,6 +115,8 @@ export default function AlphaReplay({ api, alphaId, focus }: AlphaReplayProps) {
           focus={focus ?? params.get("focus")}
           ordersHref={ordersHref}
           back={back}
+          events={events}
+          candlesOff={candlesOff}
         />
       )}
     </div>

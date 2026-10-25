@@ -1,6 +1,7 @@
 /* Admin Actions, plan only (UXM-07 S2). Tokens and type roles only; no
  * uppercase, no raw colour. Text/fill pairs repeat ones proven by fleet.css. */
 .exec-adm-v2 {
+  --exec-topbar-h: 56px;
   display: flex;
   flex-direction: column;
   gap: var(--space-5);
@@ -38,6 +39,10 @@
 .exec-adm-link {
   font: var(--exec-font-control);
   color: var(--accent);
+}
+/* The "Open" beside a state flag is no bigger than the flag's own words (layout audit: sublabel-bigger-than-primary). */
+.exec-adm-state .exec-adm-link {
+  font: var(--exec-font-label);
 }
 .exec-adm-banner {
   display: flex;
@@ -145,6 +150,13 @@
 .exec-adm-main[data-docked="true"] {
   grid-template-columns: minmax(0, 1fr) 400px;
 }
+/* The pane stays in view while the tiers scroll (QA1 I-35), under the top bar. */
+.exec-adm-main[data-docked="true"] > .exec-dock {
+  position: sticky;
+  top: calc(var(--exec-topbar-h) + var(--space-3));
+  max-height: calc(100vh - var(--exec-topbar-h) - 2 * var(--space-3));
+  overflow-y: auto;
+}
 .exec-adm-tiers {
   display: flex;
   flex-direction: column;
@@ -162,7 +174,7 @@
   color: var(--ink);
 }
 .exec-adm-sub {
-  font: var(--exec-font-id);
+  font: var(--exec-font-meta);
   color: var(--ink-faint);
 }
 .exec-adm-state {
@@ -262,6 +274,24 @@
   padding: 0;
   list-style: none;
 }
+.exec-adm-pav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin: 0 0 var(--space-2);
+  padding: 0;
+  list-style: none;
+}
+.exec-adm-pav-item {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+.exec-adm-pav-label {
+  font: var(--exec-font-control);
+  color: var(--ink);
+}
 .exec-adm-strip-item {
   opacity: 0.55;
 }
@@ -297,4 +327,11 @@
   .exec-adm-facts {
     grid-template-columns: minmax(0, 1fr);
   }
+}
+
+/* The provenance table's reasons are long sentences with codes: they wrap inside the panel instead of widening it (QA2 R3-23, 1024px). */
+.exec-adm-prov .exec-cards tbody td,
+.exec-adm-prov .exec-cards tbody td * {
+  white-space: normal;
+  overflow-wrap: anywhere;
 }

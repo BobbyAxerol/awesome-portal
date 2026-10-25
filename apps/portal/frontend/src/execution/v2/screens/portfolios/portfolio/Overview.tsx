@@ -17,18 +17,25 @@ import { GapWhy, NotAvailableLine, SectionPanel, type UnavailableFact } from "..
 import { Flag } from "../../../Flag";
 import { formatAsOf, formatInstant } from "../../../boundary";
 import { readUtcEpochMs } from "../../../../screenDataContract";
-import { PF_FE, npText } from "../fe";
+import { PF_FE } from "../fe";
 import type { ManagerPartitionedMetrics } from "../../../readers/managerMetric";
+import type { ManagerGroup } from "../../../readers/managerDataset";
 import { PartitionFigures, figureSource, publishes } from "../PartitionFigures";
-import { ManagerSeriesPanel } from "../../series/ManagerSeriesPanel";
+import { ScoreList } from "../ScoreCell";
+import { SCORE_KEYS } from "../registerMetrics";
+import { ContributorsBody } from "../../overview/Contributors";
+import { contributorsView } from "../../overview/contributorsModel";
 import { isDescribed, latestPoint, seriesValueText, UNAVAILABLE_SENTENCE } from "../../series/seriesModel";
 import { Absent, MoneyList, Np } from "../format";
+import { BudgetBar, ShareBar } from "../CapitalBlocks";
+import { PerformanceCard } from "./Performance";
 import type { TabCtx } from "./ctx";
 import { FlowRibbonChips, FlowRibbonLanes, FlowRibbonNotes, useRibbonLanes } from "./FlowRibbon";
 import { chartState, equitySeries, serverEnvelope } from "./model";
 import { InternalLink, PfKpi, PfKpiStrip, ReadGate } from "./parts";
 
 import "../../../css/portfolios.css";
+import "../../../css/overview.css";
 
 /**
  * The NAV figure: the latest point of the portfolio's published NAV series, exactly as sent, with its methodology. EMPTY is `No points
@@ -46,17 +53,10 @@ function NavFigure({ ctx, withNote = true }: { ctx: TabCtx; withNote?: boolean }
   if (last === null) return <span className="exec-pf-dim">No points in this window</span>;
   return (
     <span title={last.exact}>
-      {seriesValueText(entry, last.exact)}
+      {seriesValueText({ ...entry, currency: null }, last.exact)}
+      {entry.currency ? <small className="exec-pf-unit">{entry.currency}</small> : null}
       {withNote ? <small className="exec-pf-dim exec-pf-stamp">{formatInstant(last.tsMs)}</small> : null}
     </span>
-  );
-}
-
-function NavCard({ ctx }: { ctx: TabCtx }) {
-  return (
-    <SectionPanel title="NAV" aside={ctx.window === "ALL" ? "All history" : `Last ${ctx.window}`}>
-      <ManagerSeriesPanel label="Portfolio NAV" read={ctx.reads.nav} gapCopy={npText(PF_FE.nav)} height={220} tools />
-    </SectionPanel>
   );
 }
 
@@ -75,7 +75,12 @@ function EquityCard({ ctx }: { ctx: TabCtx }) {
           const state = chartState(payload);
           const label = shown ? `${shown.label}${shown.currency ? ` · ${shown.currency}` : ""}` : "Portfolio equity";
           // One window for the equity and the ribbon: the chart's own coverage, else the drawn series' extent.
-          const axis: ChartDomain | null = from !== null && to !== null ? { from, to } : shown ? domainOfSeries(shown.points) : null;
+          const stated: ChartDomain | null = from !== null && to !== null ? { from, to } : null;
+          // QA2 R1-11: points that all lie outside the stated coverage would draw no line under an axis that does not hold them, while the readout names
+          // their own dates. The axis then follows the points that were published, and the page says the coverage does not hold them.
+          const own = shown ? domainOfSeries(shown.points) : null;
+          const outside = stated !== null && own !== null && shown !== undefined && shown.points.length > 0 && shown.points.every((point) => point.t < stated.from || point.t > stated.to);
+          const axis: ChartDomain | null = outside ? own : stated ?? own;
           const ribbon = <FlowRibbonLanes ctx={ctx} domain={axis} lanes={lanes} />;
           return (
             <div className="exec-pf-chart" data-stale={stale ? "true" : undefined}>
@@ -114,6 +119,7 @@ function EquityCard({ ctx }: { ctx: TabCtx }) {
                   />
                 </ChartTools>
               )}
+              {outside ? <p className="exec-pf-note" data-testid="equity-outside-coverage">The published points lie outside the coverage window the read states, so the axis follows the points.</p> : null}
               {shown && shown.unreadable > 0 ? <p className="exec-pf-note">{shown.unreadable} points could not be read and were not drawn.</p> : null}
               <FlowRibbonNotes ctx={ctx} />
               <div className="exec-pf-caption">
@@ -135,21 +141,30 @@ const UNPUBLISHED_OVERVIEW: readonly UnavailableFact[] = [
   { label: "Stage, decision, incident and recall lanes", id: "FE-031", why: "No source is published (FE-032 as well); the chart draws the Flow lane only" },
   { label: "Score", id: "FE-011", why: "Policy not set" },
 ];
+const OTHER_GAPS: readonly UnavailableFact[] = UNPUBLISHED_OVERVIEW.filter((fact) => fact.label !== "Score");
 
-/** Capital statements (hi-fi right column): every row stays; none is published (FE-017), so each says so. Nothing is summed from the allocation. */
-const CAPITAL_ROWS: readonly { label: string; key?: string }[] = [
+/**
+ * Capital statements (hi-fi right column): "Cash flows" (initial, added, returned, net external flows, Net PnL, NAV) and "Budget, not cash"
+ * (approved, allocated, recalling, headroom), one line per economic partition and never totalled; then the allocation bar. A row no
+ * partition publishes says so with its id (FE-017); nothing is summed or derived from another figure here.
+ */
+const CASH_ROWS: readonly { label: string; key?: string; nav?: true; total?: true; signed?: true }[] = [
   { label: "Initial funds", key: "initial_funds" },
   { label: "Added funds", key: "added_funds" },
   { label: "Returned", key: "returned_capital" },
-  { label: "Net external flows" },
-  { label: "Approved budget", key: "current_budget" },
-  { label: "Recalling" },
-  { label: "Headroom" },
+  { label: "Net external flows", key: "net_external_flows", total: true },
+  { label: "Net PnL", key: "net_pnl", signed: true },
+  { label: "NAV", nav: true, total: true },
 ];
-/** Capital-statement keys the dataset publishes, each with a row of its own (one line per economic partition, never totalled). */
+const BUDGET_ROWS: readonly { label: string; key: string }[] = [
+  { label: "Approved", key: "current_budget" },
+  { label: "Allocated", key: "allocation" },
+  { label: "Recalling", key: "recalling" },
+  { label: "Headroom", key: "headroom" },
+];
+/** Statement keys the dataset publishes beyond the hi-fi rows, each with a row of its own (one line per economic partition, never totalled). */
 const STATEMENT_ROWS: readonly { key: string; label: string }[] = [
   { key: "balance_total", label: "Balance total" },
-  { key: "allocation", label: "Allocated" },
 ];
 
 /** The portfolio's dataset: the last good read while a refresh runs; `null` until one answered (or when the surface is not served). */
@@ -160,37 +175,40 @@ const datasetOf = (ctx: TabCtx) => {
 
 function CapitalCard({ ctx }: { ctx: TabCtx }) {
   const statements = datasetOf(ctx)?.capitalStatements ?? [];
+  const row = (label: string, key: string | undefined, nav: boolean, total: boolean, signed: boolean) => (
+    <tr key={label} data-total={total ? "true" : undefined}>
+      <th scope="row">{label}</th>
+      <td>{nav ? <NavFigure ctx={ctx} withNote={false} /> : key !== undefined && publishes(statements, key) ? <PartitionFigures list={statements} metricKey={key} signed={signed} labels="several" unit="caption" /> : <Np fact={PF_FE.statements} />}</td>
+    </tr>
+  );
   return (
     <SectionPanel title="Capital" aside="Statements">
-      <table className="exec-pf-captable" aria-label="Capital statements">
+      <table className="exec-pf-captable exec-pf-statements" aria-label="Capital statements">
         <tbody>
-          {STATEMENT_ROWS.filter((row) => publishes(statements, row.key)).map((row) => (
-            <tr key={row.key}><th scope="row">{row.label}</th><td><PartitionFigures list={statements} metricKey={row.key} /></td></tr>
-          ))}
-          {CAPITAL_ROWS.map((row) => (
-            <tr key={row.label}>
-              <th scope="row">{row.label}</th>
-              <td>{row.key !== undefined && publishes(statements, row.key) ? <PartitionFigures list={statements} metricKey={row.key} /> : <Np fact={PF_FE.statements} />}</td>
-            </tr>
-          ))}
+          <tr className="exec-pf-grp"><th scope="colgroup" colSpan={2}>Cash flows</th></tr>
+          {CASH_ROWS.map((r) => row(r.label, r.key, r.nav === true, r.total === true, r.signed === true))}
+          {STATEMENT_ROWS.filter((r) => publishes(statements, r.key)).map((r) => row(r.label, r.key, false, false, false))}
+          <tr className="exec-pf-grp"><th scope="colgroup" colSpan={2}>Budget, not cash</th></tr>
+          {BUDGET_ROWS.map((r) => row(r.label, r.key, false, false, false))}
         </tbody>
       </table>
+      <BudgetBar list={statements} title="Allocated of approved budget" />
+      <p className="exec-pf-note exec-pf-source">
+        By funding source: <GapWhy className="exec-blk-np-word" gap="FE-032" text="Not published" name="Not published, reason (funding source)" rows={["No per-source attribution is published for the portfolio's capital (FE-032)."]} />
+      </p>
     </SectionPanel>
   );
 }
 
-/** Concentration (HHI) keeps its panel; shares need the Manager grouping, so no share is drawn or worked out here. */
-function ConcentrationCard({ list }: { list: readonly ManagerPartitionedMetrics[] | null }) {
+/**
+ * Concentration: the HHI the dataset publishes, and the stacked bar of the alpha shares the server publishes
+ * (`allocation_share_pct` of the groups by `alpha_id`; a width is that published number, never a share worked out here).
+ */
+function ConcentrationCard({ list, groups }: { list: readonly ManagerPartitionedMetrics[] | null; groups: readonly ManagerGroup[] }) {
   return (
     <SectionPanel title="Concentration" aside="HHI">
-      {list !== null ? (
-        <PartitionFigures list={list} metricKey="concentration_hhi" />
-      ) : (
-        <>
-          <p className="exec-pf-note"><Np fact={PF_FE.concentration} /></p>
-          <p className="exec-pf-note">Shares need the Manager grouping, so none is drawn or worked out here.</p>
-        </>
-      )}
+      {list !== null ? <PartitionFigures list={list} metricKey="concentration_hhi" /> : <p className="exec-pf-note"><Np fact={PF_FE.concentration} /></p>}
+      {groups.length > 0 ? <ShareBar groups={groups} /> : <p className="exec-pf-note">Alpha shares are not published for this portfolio, so no bar is drawn.</p>}
     </SectionPanel>
   );
 }
@@ -236,34 +254,55 @@ export function Overview({ ctx }: { ctx: TabCtx }) {
   const returnList = figureSource(datasetOf(ctx), "return_30d_pct", identity.portfolioId);
   const drawdownList = figureSource(datasetOf(ctx), "max_drawdown_pct", identity.portfolioId);
   const hhiList = figureSource(datasetOf(ctx), "concentration_hhi", identity.portfolioId);
+  const scoreList = figureSource(datasetOf(ctx), SCORE_KEYS.score, identity.portfolioId);
+  const contributorsRead = ctx.reads.contributors;
+  const contributorGroups = (contributorsRead.phase === "ready" ? contributorsRead.value : contributorsRead.phase === "loading" || contributorsRead.phase === "error" ? contributorsRead.last : null)?.groups ?? [];
+  const contributors = contributorsView({
+    served: ctx.reads.dataset.phase !== "idle",
+    fundRead: ctx.reads.dataset,
+    fund: datasetOf(ctx),
+    grouped: contributorsRead,
+  });
   return (
     <div className="exec-pf-stack">
-      {simulated ? <p className="exec-pf-banner" data-tone="info">Simulated capital. It is never added to Real-funded figures.</p> : null}
+      {simulated ? <p className="exec-pf-banner" data-tone="info">Part of this portfolio is simulated capital (Paper and Sandbox). That part is never added to the Real-funded figures.</p> : null}
       <PfKpiStrip label="Portfolio identity">
         <PfKpi label="NAV"><NavFigure ctx={ctx} /></PfKpi>
         <PfKpi label="Net PnL" note={netPnlList !== null ? `Window ${ctx.window}` : "Windowed; needs the window"}>
-          {netPnlList !== null ? <PartitionFigures list={netPnlList} metricKey="net_pnl" signed /> : <Np fact={PF_FE.netPnl} />}
+          {netPnlList !== null ? <PartitionFigures list={netPnlList} metricKey="net_pnl" signed unit="caption" /> : <Np fact={PF_FE.netPnl} />}
         </PfKpi>
         <PfKpi label="Return" note={returnList !== null ? `Window ${ctx.window}` : "Windowed; methodology per source"}>
-          {returnList !== null ? <PartitionFigures list={returnList} metricKey="return_30d_pct" signed /> : <Np fact={PF_FE.ret} />}
+          {returnList !== null ? <PartitionFigures list={returnList} metricKey="return_30d_pct" signed unit="caption" /> : <Np fact={PF_FE.ret} />}
         </PfKpi>
         <PfKpi label="Drawdown" note={drawdownList !== null ? `Max, window ${ctx.window}` : "Needs the NAV series"}>
-          {drawdownList !== null ? <PartitionFigures list={drawdownList} metricKey="max_drawdown_pct" signed /> : <Np fact={PF_FE.drawdown} />}
+          {drawdownList !== null ? <PartitionFigures list={drawdownList} metricKey="max_drawdown_pct" signed unit="caption" /> : <Np fact={PF_FE.drawdown} />}
         </PfKpi>
-        <PfKpi label="Allocated (current)">
-          <MoneyList entries={identity.allocationByCurrency} empty={<Absent reason="no allocation published" />} />
+        <PfKpi label="Portfolio score" note={scoreList !== null ? `Direct from NAV, window ${ctx.window}` : "Direct from the portfolio NAV"}>
+          {scoreList !== null ? <span className="exec-pf-kpi-score"><ScoreList list={scoreList} full /></span> : <Np fact={PF_FE.score} />}
         </PfKpi>
+        {publishes(datasetOf(ctx)?.capitalStatements ?? [], "allocation") ? (
+          <PfKpi label="Allocated (current)" note="Of the approved budget · same statement as Capital">
+            <PartitionFigures list={datasetOf(ctx)?.capitalStatements ?? []} metricKey="allocation" labels="several" unit="caption" />
+          </PfKpi>
+        ) : (
+          <PfKpi label="Allocated, all books" note="Real-funded and Simulated together: the resource's own figure">
+            <MoneyList entries={identity.allocationByCurrency} empty={<Absent reason="no allocation published" />} />
+          </PfKpi>
+        )}
         <PfKpi label="Deployments" note={`${alphaCount} ${alphaCount === 1 ? "alpha" : "alphas"} · ${accounts.length} ${accounts.length === 1 ? "account" : "accounts"}${identity.holdingsCount !== null ? ` · ${identity.holdingsCount} holdings` : ""}`}>{deployments.length}</PfKpi>
       </PfKpiStrip>
-      <NotAvailableLine facts={UNPUBLISHED_OVERVIEW} className="exec-pf-na-line" />
+      <NotAvailableLine facts={scoreList !== null ? OTHER_GAPS : UNPUBLISHED_OVERVIEW} className="exec-pf-na-line" />
       <div className="exec-pf-grid2">
-        <NavCard ctx={ctx} />
+        <PerformanceCard ctx={ctx} />
         <CapitalCard ctx={ctx} />
       </div>
       <EquityCard ctx={ctx} />
+      <SectionPanel title="Contributors" aside={contributors.kind === "ready" ? `By alpha \u00b7 window ${ctx.window}` : "Amount \u00b7 Return \u00b7 Score"}>
+        <ContributorsBody view={contributors} />
+      </SectionPanel>
       <div className="exec-pf-grid2">
         <Attention ctx={ctx} />
-        <ConcentrationCard list={hhiList} />
+        <ConcentrationCard list={hhiList} groups={contributorGroups} />
       </div>
     </div>
   );

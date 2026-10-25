@@ -22,6 +22,12 @@
   border-bottom: 1px solid var(--line-strong);
 }
 
+/* The bar of the pages mounted outside the preview frame (PageContextBar): its own surface must take only the bar's height, or the
+ * page's surface below it would be pushed down by a second `min-height: 100%`. Two classes beat `.exec-surface` in any load order. */
+.exec-page-ctxbar.exec-surface {
+  min-height: 0;
+}
+
 .exec-ctxbar-label {
   font: var(--exec-font-label);
   letter-spacing: 0.12em;
@@ -198,6 +204,15 @@
 .exec-cmdbar-notice {
   font: var(--exec-font-meta);
   padding: var(--space-2) var(--space-4);
+  color: var(--ink-faint);
+  border-bottom: 1px solid var(--line);
+}
+
+.exec-cmdbar-notes {
+  list-style: none;
+  margin: 0;
+  padding: var(--space-2) var(--space-4);
+  font: var(--exec-font-meta);
   color: var(--ink-faint);
   border-bottom: 1px solid var(--line);
 }

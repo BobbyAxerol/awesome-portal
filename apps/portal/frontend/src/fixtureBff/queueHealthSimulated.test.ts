@@ -6,7 +6,7 @@
 import { describe, expect, it } from "vitest";
 
 import { answerExecutionBff, type BffDoubleOptions } from "../../e2e/bffDouble";
-import { readOperationalQueueV2 } from "../execution/v2/readers/operationalQueue";
+import { readIncidentRootV2, readOperationalQueueV2 } from "../execution/v2/readers/operationalQueue";
 
 const OFF: BffDoubleOptions = { operationsV2: true, screensV2: true };
 const ON: BffDoubleOptions = { operationsV2: true, screensV2: true, simulated: true };
@@ -40,25 +40,66 @@ describe("on", () => {
 
   it("a filter narrows the counts with the set (same snapshot, same filters)", () => {
     const succeeded = queue(ON, { limit: "250", source_status: "SUCCEEDED" });
-    expect(succeeded.health!.pendingReceipt!.count).toBe(0);
-    expect(succeeded.rows.every((row) => row.deliveryState === "RECEIPT_CONFIRMED")).toBe(true);
+    const awaiting = succeeded.rows.filter((row) => row.deliveryState === "AWAITING_RECEIPT").length;
+    expect(succeeded.health!.pendingReceipt!.count).toBe(awaiting);
+    expect(awaiting).toBeLessThan(queue(ON, { limit: "250" }).health!.pendingReceipt!.count!);
   });
 
-  it("serves a counted zero (display lag), a floor and an exact zero, and a typed null (exceptions)", () => {
+  it("serves display lag as counted over the filtered set, a floor while some row did not report, and an exact count once none is missing", () => {
     const all = queue(ON, { limit: "250" });
-    const hasBlocked = all.rows.some((row) => row.sourceStatus === "BLOCKED");
-    expect(all.health!.displayLag!.count).toBe(0);
-    expect(all.health!.displayLag!.coverage).toBe(hasBlocked ? "PARTIAL" : "COMPLETE");
-    // No BLOCKED row in the set: every row reported its display, so the zero is exact.
-    const exact = queue(ON, { limit: "250", source_status: "SUCCEEDED" });
-    expect(exact.health!.displayLag).toMatchObject({ count: 0, coverage: "COMPLETE" });
-    expect(all.health!.openException).toEqual({ count: null, observedAt: null, coverage: "UNKNOWN" });
+    const hasBlocked = all.rows.some((row) => row.displayState === null);
+    const catching = all.rows.filter((row) => row.displayState === "CATCHING_UP").length;
+    expect(catching).toBeGreaterThanOrEqual(3);
+    expect(all.health!.displayLag).toMatchObject({ count: catching, coverage: hasBlocked ? "PARTIAL" : "COMPLETE" });
+    const confirmed = queue(ON, { limit: "250", source_status: "PENDING" });
+    expect(confirmed.health!.displayLag!.count).toBe(confirmed.rows.filter((row) => row.displayState === "CATCHING_UP").length);
   });
 
-  it("a BLOCKED row's display axis is null (the source did not report it), the others are CURRENT", () => {
+  it("a row with no reported display carries null (the source did not report it); the named rows show every badge", () => {
     const blocked = queue(ON, { limit: "250", source_status: "BLOCKED" });
-    if (blocked.rows.length > 0) expect(blocked.rows.every((row) => row.displayState === null && row.deliveryState === "NOT_APPLICABLE")).toBe(true);
-    const others = queue(ON, { limit: "250", source_status: "SUCCEEDED" });
-    expect(others.rows.every((row) => row.displayState === "CURRENT")).toBe(true);
+    expect(blocked.rows.length).toBeGreaterThan(0);
+    expect(blocked.rows.every((row) => row.displayState === null && row.deliveryState === "NOT_APPLICABLE")).toBe(true);
+    const all = queue(ON, { limit: "250" });
+    const displays = new Set(all.rows.map((row) => row.displayState));
+    const deliveries = new Set(all.rows.map((row) => row.deliveryState));
+    expect([...displays].sort()).toEqual([null, "CATCHING_UP", "CURRENT", "STALE"].sort());
+    expect([...deliveries].sort()).toEqual(["AWAITING_RECEIPT", "NOT_APPLICABLE", "RECEIPT_CONFIRMED", "RECEIPT_FAILED"]);
+  });
+});
+
+describe("on: incident links and open exceptions (WP-B, FE-042)", () => {
+  it("rows carry links that agree with the incident root the route answers", () => {
+    const all = queue(ON, { limit: "250" });
+    const linked = all.rows.filter((row) => (row.incidentLinks?.items.length ?? 0) > 0);
+    expect(linked.length).toBeGreaterThanOrEqual(6);
+    const one = linked.flatMap((row) => row.incidentLinks!.items).find((item) => item.state === "LINKED");
+    expect(one).toBeDefined();
+    if (one?.state !== "LINKED") return;
+    const root = readIncidentRootV2(answerExecutionBff("GET", `/api/v1/execution/operations/incidents/${one.incidentId}`, new URLSearchParams(), ON).body);
+    expect(root?.kind).toBe("incident");
+    if (root?.kind !== "incident") return;
+    expect(root.incident).toMatchObject({ targetType: one.incident.targetType, targetId: one.incident.targetId, severity: one.incident.severity, workflowState: one.incident.workflowState });
+  });
+
+  it("is many to many: an incident is linked from two operations and an operation names two incidents", () => {
+    const rows = queue(ON, { limit: "250" }).rows;
+    const byIncident = new Map<string, number>();
+    for (const row of rows) for (const link of row.incidentLinks?.items ?? []) if (link.state === "LINKED") byIncident.set(link.incidentId, (byIncident.get(link.incidentId) ?? 0) + 1);
+    expect(Math.max(...byIncident.values())).toBeGreaterThanOrEqual(2);
+    expect(rows.some((row) => (row.incidentLinks?.authorizedLinkCount ?? 0) >= 2)).toBe(true);
+  });
+
+  it("open exceptions are counted from the OPEN incidents of the filtered set (a true zero stays 0), complete", () => {
+    expect(queue(ON, { limit: "250" }).health!.openException).toMatchObject({ count: 3, coverage: "COMPLETE" });
+    expect(queue(ON, { limit: "250", target_id: "acc_TEST_ONLY_binance02" }).health!.openException).toMatchObject({ count: 0, coverage: "COMPLETE" });
+  });
+
+  it("off: no links, and the unchanged incident root for a simulated id", () => {
+    const rows = (ask(OFF) as { page: { rows: Record<string, unknown>[] } }).page.rows;
+    expect(rows.every((row) => !("incident_links" in row))).toBe(true);
+    const root = answerExecutionBff("GET", "/api/v1/execution/operations/incidents/inc_TEST_ONLY_fx_recall", new URLSearchParams(), OFF).body as Record<string, unknown>;
+    expect(root.severity).toBe("WARNING");
+    expect(root.workflow_state).toBe("OPEN");
+    expect(root.target).toEqual({ type: "ACCOUNT", id: "acc_TEST_ONLY_operational" });
   });
 });

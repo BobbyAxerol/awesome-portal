@@ -526,6 +526,9 @@ a.exec-fleet-open {
 /* Lanes share the row: 192px floor (the kit's 220px does not fit five lanes beside two slim gate strips at 1440), growing
  * with the room. Only when they still do not fit does the board scroll, inside itself. */
 .exec-fleet-board {
+  /* The absolutely positioned screen-reader text of a lane (.exec-fleet-sr) needs this scroller as its containing block: otherwise it
+   * escapes the board's own horizontal scroll and widens the page by the board's overhang (layout audit: fleet-board 1024, 86px). */
+  position: relative;
   display: flex;
   gap: var(--space-3);
   align-items: flex-start;
@@ -583,6 +586,25 @@ a.exec-fleet-open {
 }
 .exec-fleet-lane[data-stage="LIVE"] > .exec-fleet-lane-head {
   border-top-color: var(--env-live);
+}
+/* Lane domain (audit A3): the tag says it in words; simulated lanes are hatched, real-funded lanes are framed. */
+.exec-fleet-lane-tag {
+  align-self: flex-start;
+  padding: 0 6px;
+  font: var(--exec-font-label);
+  color: var(--ink-faint);
+  border: 1px solid var(--line-strong);
+}
+.exec-fleet-lane-tag[data-domain="real"] {
+  color: var(--ink);
+  border-color: var(--env-live);
+}
+.exec-fleet-lane[data-domain="simulated"] > .exec-fleet-lane-cards,
+.exec-fleet-lane[data-domain="simulated"] > .exec-fleet-lane-empty {
+  background-image: repeating-linear-gradient(135deg, transparent 0 7px, var(--line) 7px 8px);
+}
+.exec-fleet-lane[data-domain="real"] {
+  border-color: var(--env-live);
 }
 .exec-fleet-lane-title {
   margin: 0;

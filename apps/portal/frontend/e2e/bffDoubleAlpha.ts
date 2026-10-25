@@ -69,6 +69,10 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { blotterBookOf } from "./bffDoubleOverview";
+import { isPositiveMode } from "./bffPositiveMode";
+import { accountFact, ledgerSeries, worldAlphas } from "./bffWorld";
+
 export interface BffAnswerAlpha {
   status: number;
   body: unknown;
@@ -303,12 +307,24 @@ export const ALPHA_DOUBLE_FILLS: readonly Rec[] = [
 /** Portal-signed keyset cursors are `kc1.` tokens; the double mints one fixed token per relation and never parses it. */
 const ORDERS_CURSOR = "kc1.double-k1.eyJkaXJlY3Rpb24iOiJhZnRlciIsInJlc291cmNlIjoib3JkZXJzIn0.RG91YmxlLU5PVC1BLVJFQUwtU0lHTkFUVVJF";
 
+const ORDER_KEYS = Object.keys(order(0, "BTCUSDT", "BUY", "LIMIT", "NEW", "1", null, 0));
+const FILL_KEYS = Object.keys(fill(0, 0, "BTCUSDT", "BUY", "1", "1", 0, null));
+const pick = (source: Rec, keys: readonly string[], extra: readonly string[] = []): Rec => Object.fromEntries([...keys, ...extra].filter((key) => key in source).map((key) => [key, source[key]]));
+
 function subjectPage(id: string, relation: "orders" | "fills", search: URLSearchParams): BffAnswerAlpha {
   const environment = validEnv(search.get("environment")) ? search.get("environment")! : "live";
   const after = search.get("after");
   let rows: readonly Rec[];
   let nextCursor: string | null = null;
-  if (relation === "orders") {
+  // WORLD: an alpha's orders and fills are the rows of ITS OWN deployments in the blotter (same ids, same accounts, same marks), not the double's one book
+  const own = isPositiveMode() ? worldAlphas().find((alpha) => alpha.id === id) : undefined;
+  const ownDeployments = own?.deployments.filter((deployment) => deployment.environment === environment) ?? [];
+  if (own !== undefined && ownDeployments.length > 0) {
+    const books = ownDeployments.map((deployment) => blotterBookOf(deployment.id));
+    rows = relation === "orders"
+      ? books.flatMap((book) => book.orders).map((row) => pick(row, ORDER_KEYS, ["trigger_price", "error_code", "error_message", "deployment_id"])).sort((a, b) => String(b.submitted_at).localeCompare(String(a.submitted_at)))
+      : books.flatMap((book) => book.fills).map((row) => pick(row, FILL_KEYS)).sort((a, b) => String(b.trade_time).localeCompare(String(a.trade_time)));
+  } else if (relation === "orders") {
     if (after === ORDERS_CURSOR) rows = ALPHA_DOUBLE_ORDERS_P2;
     else {
       rows = ALPHA_DOUBLE_ORDERS_P1;
@@ -325,7 +341,7 @@ function subjectPage(id: string, relation: "orders" | "fills", search: URLSearch
     timeframe: { value: "1h", provenance: "DERIVED_STRATEGY_ID_SUFFIX", source_field: null },
     source_health: { availability: "AVAILABLE", freshness: "FRESH", completeness: "COMPLETE", as_of_ms: ALPHA_DOUBLE_AS_OF_MS },
     coverage: {
-      retained_row_count: relation === "orders" ? ALPHA_DOUBLE_ORDERS_P1.length + ALPHA_DOUBLE_ORDERS_P2.length : ALPHA_DOUBLE_FILLS.length,
+      retained_row_count: own !== undefined && ownDeployments.length > 0 ? rows.length : relation === "orders" ? ALPHA_DOUBLE_ORDERS_P1.length + ALPHA_DOUBLE_ORDERS_P2.length : ALPHA_DOUBLE_FILLS.length,
       oldest_observed_at_ms: T0,
       newest_observed_at_ms: ALPHA_DOUBLE_AS_OF_MS,
       source_completeness: "COMPLETE",
@@ -645,8 +661,12 @@ function equityChart(id: string, search: URLSearchParams): BffAnswerAlpha {
   const end = ALPHA_DOUBLE_AS_OF_MS;
   const start = end - 23 * HOUR;
   const steps = [0, 4200, 9100, 7600, 14300, 21050, 18800, 26100, 31400, 29700, 35200, 40100, 38800, 45200, 52100, 49900, 58300, 61000, 59400, 66200, 70100, 68800, 75400, 81200];
-  const points: [number, string][] = steps.map((s, i) => [start + i * HOUR, cents(base + s)]);
-  const account = environment === "paper" ? "acct_paper_sim_01" : "acct_binance_02";
+  // WORLD: the equity of an alpha is the ledger of the accounts its deployments are booked on, one line per account, ending on the account's own total
+  const own = isPositiveMode() ? worldAlphas().find((alpha) => alpha.id === id) : undefined;
+  const accounts = [...new Set(own?.deployments.filter((d) => d.environment === environment).map((d) => d.accountId) ?? [])];
+  const ledgerLines = accounts.map((accountId) => ({ accountId, fact: accountFact(accountId) })).filter((entry) => entry.fact !== null);
+  const points: [number, string][] = ledgerLines.length > 0 ? ledgerSeries(ledgerLines[0]!.accountId, start, end, 24).map((p): [number, string] => [p.t, p.value]) : steps.map((s, i) => [start + i * HOUR, cents(base + s)]);
+  const account = ledgerLines.length > 0 ? ledgerLines[0]!.accountId : environment === "paper" ? "acct_paper_sim_01" : "acct_binance_02";
   const body = canonicalCase("execution-financial-chart.synthetic.valid.json", "deployment_equity_ready");
   body.environment = environment;
   body.profile_id = ENV_PROFILE[environment];
@@ -655,7 +675,12 @@ function equityChart(id: string, search: URLSearchParams): BffAnswerAlpha {
   const panel = body.panel as Json;
   panel.clocks = { ...panel.clocks, event_time_ms: end, source_published_at_ms: end, as_of_ms: end, read_at_ms: ALPHA_DOUBLE_READ_AT_MS };
   panel.coverage = { ...panel.coverage, from_ms: start, to_ms: end, source_total: String(points.length), filtered_total: String(points.length), returned_count: points.length };
-  panel.data.series = [{ id: `account:${account}:currency:USDT`, label: `Account ${account} \u00b7 USDT`, account_id: account, currency: "USDT", points }];
+  panel.data.series = ledgerLines.length > 0
+    ? ledgerLines.map(({ accountId, fact }) => {
+      const line = ledgerSeries(accountId, start, end, 24).map((p): [number, string] => [p.t, p.value]);
+      return { id: `account:${accountId}:currency:USDT`, label: `Account ${fact!.name} \u00b7 USDT`, account_id: accountId, currency: "USDT", points: line };
+    })
+    : [{ id: `account:${account}:currency:USDT`, label: `Account ${account} \u00b7 USDT`, account_id: account, currency: "USDT", points }];
   panel.data.sampling = { ...panel.data.sampling, source_rows: String(points.length), numeric_rows: String(points.length), rejected_rows: "0", returned_rows: points.length };
   panel.data.retention = { ...panel.data.retention, oldest_available_ms: start, newest_available_ms: end };
   return ok(body);

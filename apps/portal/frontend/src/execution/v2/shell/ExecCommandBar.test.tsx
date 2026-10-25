@@ -11,7 +11,7 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import type { PortalRegistryDocument } from "../../../portal/contracts";
 import type { NavOptions } from "../../../portal/navigation";
-import { ENTITY_SEARCH_NOTICE, EXEC_COMMAND_PLACEHOLDER, ExecCommandBar, execGoToEntries } from "./ExecCommandBar";
+import { ENTITY_SEARCH_HINT, ENTITY_SEARCH_NOTICE, EXEC_COMMAND_PLACEHOLDER, ExecCommandBar, execGoToEntries } from "./ExecCommandBar";
 import { V2_CAPABILITY, V2_NAV_TOKEN, V2_ROLE_PRESETS } from "./roleNav";
 
 afterEach(cleanup);
@@ -111,8 +111,9 @@ describe("ExecCommandBar rendering", () => {
     expect(dialog.getAttribute("aria-modal")).toBe("true");
     expect(input.getAttribute("placeholder")).toBe(EXEC_COMMAND_PLACEHOLDER);
     const notice = document.getElementById(input.getAttribute("aria-describedby") ?? "");
-    expect(notice?.textContent).toBe(ENTITY_SEARCH_NOTICE);
-    expect(ENTITY_SEARCH_NOTICE).toContain("Not published (FE-023)");
+    // With a published list read the notice still says there is no single index (FE-023) and what to type.
+    expect(notice?.textContent).toBe(`${ENTITY_SEARCH_NOTICE}. ${ENTITY_SEARCH_HINT}`);
+    expect(ENTITY_SEARCH_NOTICE).toContain("Not published as one index (FE-023)");
     expect(screen.queryByText(/Search alphas/)).toBeNull();
     expect(document.activeElement).toBe(input);
   });
@@ -129,7 +130,8 @@ describe("ExecCommandBar rendering", () => {
     const { input } = openBar([V2_NAV_TOKEN.accounts]);
     fireEvent.change(input, { target: { value: "operations" } });
     expect(screen.queryAllByRole("option")).toHaveLength(0);
-    expect(screen.getAllByText("No result").length).toBeGreaterThan(0);
+    // The Go to rows are filtered here; the server search is still debouncing, so the bar says it is searching, not that nothing matched.
+    expect(screen.getAllByText("Searching").length).toBeGreaterThan(0);
   });
 });
 

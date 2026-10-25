@@ -49,7 +49,7 @@ const alphaOf = (raw: unknown): AlphaResourceScoped | null => readAlphaResourceS
 
 /* ── a rich, schema-valid body: every relation carries one row with every member the table names ── */
 
-const SAMPLE: Record<string, unknown> = { T: "text_value", D: "123.456789012345678901234567890123", M: "paper", S: "2026-10-17T12:00:00Z", I: 1_790_812_800_000, C: "9007199254740993", L: "TAKER" };
+const SAMPLE: Record<string, unknown> = { T: "text_value", D: "123.456789012345678901234567890123", M: "paper", S: "2026-10-17T12:00:00Z", I: 1_790_812_800_000, C: "9007199254740993", L: "TAKER", N: null };
 const richRow = (relation: ScopedRelation, book: string = "paper"): Draft => {
   const row: Draft = { profile_environment: book };
   for (const [key, kind] of Object.entries(SCOPED_ROW_FIELDS[relation])) row[key] = SAMPLE[kind];
@@ -206,7 +206,7 @@ describe("L0 · canonical, verbatim", () => {
       const nullable = alts.some((a) => a.type === "null");
       const base = alts.filter((a) => a.type !== "null");
       const one = base.length === 1 ? base[0] : { anyOf: base };
-      if (Array.isArray(one.enum)) return one.enum.join("|") === "MAKER|TAKER|UNKNOWN" ? "L" : "M";
+      if (Array.isArray(one.enum)) return one.enum.join("|") === "MAKER|TAKER|UNKNOWN" ? "L" : one.enum.join("|") === "PORTFOLIO_NAME_NOT_READ|PORTFOLIO_NAME_NOT_PUBLISHED|PORTFOLIO_NAME_NOT_AUTHORIZED|PORTFOLIO_NAME_AMBIGUOUS" ? "N" : "M";
       if (one.type === "string" && isText(one)) return "T";
       if (one.type === "string" && one.maxLength === 128) return "D";
       if (one.type === "integer") return nullable ? "N?" : "I";
@@ -312,15 +312,18 @@ describe("L1 · state matrices (schema as oracle)", () => {
     T: ["x", "a".repeat(512), "ünïcode ✓"], D: ["0", "-1.5", "123456789012345678901234567890.123456789", "0.000000000000000001"],
     M: ["paper", "sandbox", "live"], S: ["2026-10-17T12:00:00Z", 0, 1_790_812_800_000], I: [0, 1_790_812_800_000], C: ["0", "9007199254740993", 0, 7],
     L: ["MAKER", "TAKER", "UNKNOWN"],
+    // Package 6: a reason beside a stated name is refused by the reader (see the portfolio-name block); only null is legal beside the rich row's name.
+    N: [],
   };
   const ILLEGAL: Record<string, unknown[]> = {
     T: ["", "a".repeat(513), "tab\there", 7, true, {}, []], D: [7, 1.5, "1e5", "01", "1.", ".5", "NaN", "a".repeat(129), {}], M: ["Paper", "backtest", "", 7],
     S: [-1, 1.5, "", true, {}], I: [null, -1, 1.5, "5", true, {}], C: [-1, 1.5, "01", "-1", "1.5", {}],
     L: ["maker", "OTHER", "", 7, true, {}, []],
+    N: ["PORTFOLIO_NAME_UNKNOWN", "portfolio_name_not_published", "", 7, true, {}, []],
   };
   it(`C · ${MEMBER_CASES.length} members x legal values: schema-valid and read exactly; null is absent (except epoch-ms members)`, () => {
     for (const { relation, key, kind } of MEMBER_CASES) {
-      for (const value of [...LEGAL[kind]!, ...(kind === "I" ? [] : [null])]) {
+      for (const value of [...LEGAL[kind]!, ...(kind === "I" || key === "portfolio_name" ? [] : [null])]) { // a null portfolio_name beside a null reason is an unexplained gap (package 6): refused, see its block
         const body = clone(RICH);
         body.data[relation][0][key] = value;
         expect(violations(body), `${relation}.${key}=${JSON.stringify(value)}`).toEqual([]);
@@ -595,5 +598,39 @@ describe("L3 · negative", () => {
   it("a value of the schema that is legal and the reader keeps whole: an int64 counter and a 34 digit decimal", () => {
     expect(getPath(RICH, ["data", "sessions", 0, "submitted_count"])).toBe("9007199254740993");
     expect(alphaOf(RICH)!.rows!.sessions[0]!.cells.submitted_count).toEqual({ kind: "counter", exact: "9007199254740993" });
+  });
+});
+
+/* ── Package 6 (Codex 37bbecf92): the portfolio label on a deployment or an allocation row ── */
+
+describe("scoped rows: portfolio_name and portfolio_name_reason_code", () => {
+  const edit = (change: (row: Draft, relation: string) => void) => {
+    const body = clone(RICH);
+    for (const relation of ["deployments", "portfolio_allocations"]) { change(body.data[relation][0], relation); if (body.panels?.[relation]?.data) body.panels[relation].data = { rows: body.data[relation] }; }
+    return body;
+  };
+  const cells = (body: Draft, relation: "deployments" | "portfolio_allocations") => alphaOf(body)!.rows![relation][0]!.cells;
+  it("a stated name has no reason; an absent name says why; every reason word reads and is schema-valid", () => {
+    const withName = edit((row) => { row.portfolio_name = "TEST_ONLY Multi-currency portfolio"; row.portfolio_name_reason_code = null; });
+    expect(violations(withName)).toEqual([]);
+    for (const relation of ["deployments", "portfolio_allocations"] as const)
+      expect(cells(withName, relation)).toMatchObject({ portfolio_name: { kind: "text", text: "TEST_ONLY Multi-currency portfolio" }, portfolio_name_reason_code: { kind: "absent" } });
+    for (const reason of ["PORTFOLIO_NAME_NOT_READ", "PORTFOLIO_NAME_NOT_PUBLISHED", "PORTFOLIO_NAME_NOT_AUTHORIZED", "PORTFOLIO_NAME_AMBIGUOUS"]) {
+      const without = edit((row) => { row.portfolio_name = null; row.portfolio_name_reason_code = reason; });
+      expect(violations(without), reason).toEqual([]);
+      expect(cells(without, "deployments"), reason).toMatchObject({ portfolio_name: { kind: "absent" }, portfolio_name_reason_code: { kind: "text", text: reason } });
+    }
+  });
+  it("a legacy row (neither key) still reads and keeps the portfolio_id cell for the id fallback", () => {
+    const legacy = edit((row) => { delete row.portfolio_name; delete row.portfolio_name_reason_code; });
+    expect(violations(legacy)).toEqual([]);
+    expect(cells(legacy, "deployments")).not.toHaveProperty("portfolio_name");
+    expect(cells(legacy, "deployments").portfolio_id).toEqual({ kind: "text", text: "text_value" });
+  });
+  it("refuses a name AND a reason, neither (both stated null), an unknown reason, and an invented key", () => {
+    expect(alphaOf(edit((row) => { row.portfolio_name = "x"; row.portfolio_name_reason_code = "PORTFOLIO_NAME_NOT_PUBLISHED"; }))).toBeNull();
+    expect(alphaOf(edit((row) => { row.portfolio_name = null; row.portfolio_name_reason_code = null; }))).toBeNull();
+    expect(alphaOf(edit((row) => { row.portfolio_name = null; row.portfolio_name_reason_code = "NOPE"; }))).toBeNull();
+    expect(alphaOf(edit((row) => { row.portfolio_label = "x"; }))).toBeNull();
   });
 });

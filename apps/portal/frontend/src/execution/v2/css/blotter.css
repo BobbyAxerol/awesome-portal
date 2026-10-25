@@ -220,7 +220,7 @@
 }
 /* The order id is a link to the chart (hi-fi a.chipx.mono). */
 .exec-blt2-idlink {
-  padding: 0 var(--space-2);
+  padding: 0 var(--space-1);
   font: var(--exec-font-id);
   color: var(--accent);
   background: var(--paper-sunken);
@@ -268,6 +268,38 @@
   font: var(--exec-font-id);
   font-variant-numeric: tabular-nums;
 }
+/* Tighter cell padding so the ten default columns fit the 1440 panel without a sideways scroll (QA1 R4 I7); the Order column keeps the
+ * row identity in view when a narrower width does scroll (the status column sticks to the other edge). */
+.exec-blt2-table thead th,
+.exec-blt2-table tbody tr:not(.exec-blt2-kid):not(.exec-cards-empty) td {
+  padding-left: var(--space-1);
+  padding-right: var(--space-1);
+}
+/* A placeholder sentence inside a figure cell wraps; the figures never do. */
+.exec-blt2-fq .exec-blt2-na {
+  display: inline-block;
+  max-width: 7ch;
+  white-space: normal;
+  vertical-align: top;
+}
+/* Side and type: the header and the cell may take two lines, so the column is as wide as its words, not its label. */
+.exec-blt2-table thead th[data-col="side"] {
+  white-space: normal;
+  min-width: 0;
+}
+.exec-blt2-table thead th[data-col="side"] {
+  max-width: 8ch;
+}
+.exec-blt2-fee {
+  align-items: flex-end;
+}
+.exec-blt2-table thead th:nth-child(2),
+.exec-blt2-table tbody tr:not(.exec-blt2-kid):not(.exec-cards-empty) td:nth-child(2) {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: var(--paper-raised);
+}
 /* Status stays in view at any width (hi-fi .stk): the last column sticks to the right edge of the scrolling box. */
 .exec-blt2-table thead th:last-child,
 .exec-blt2-table tbody tr:not(.exec-blt2-kid):not(.exec-cards-empty) td:last-child {
@@ -283,7 +315,11 @@
 .exec-blt2-ordercell {
   display: inline-flex;
   align-items: center;
-  gap: var(--space-2);
+  gap: var(--space-1);
+}
+/* The expander and its id/marker sit on one line of one size: the expander glyph follows the id's role (audit: sublabel-bigger on 50 rows). */
+.exec-blt2-ordercell .exec-blt2-x {
+  font: var(--exec-font-id);
 }
 .exec-blt2-kid > td {
   height: auto;
@@ -391,7 +427,25 @@
   font: var(--exec-font-meta);
 }
 
+/* Deployment cell: id over venue. */
+.exec-blt2-two {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
 @media (max-width: 660px) {
+  /* A placeholder sentence ("Not published for this order") wraps inside its card cell; an exact figure never does. */
+  .exec-blt2-table tbody tr:not(.exec-blt2-kid):not(.exec-cards-empty) td {
+    height: auto;
+  }
+  .exec-blt2-table tbody tr:not(.exec-blt2-kid):not(.exec-cards-empty) td:nth-child(2) {
+    position: static;
+  }
+  .exec-blt2-table tbody td .exec-blt2-na {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
   .exec-blt2-panel {
     padding: var(--space-3);
   }
@@ -430,5 +484,45 @@
     position: static;
     box-shadow: none;
     background: transparent;
+  }
+}
+
+/* Order path over the loaded orders: four steps, each a figure with its share of the submitted orders. */
+.exec-blt2-funnel {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1px;
+  background: var(--line);
+  border: 1px solid var(--line);
+}
+.exec-blt2-fstep {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-3);
+  background: var(--paper-raised);
+}
+.exec-blt2-fk {
+  font: var(--exec-font-label);
+  letter-spacing: 0.08em;
+  color: var(--ink-faint);
+}
+.exec-blt2-fv {
+  font: var(--exec-font-num);
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+@media (max-width: 660px) {
+  .exec-blt2-funnel {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.exec-blt2-scrollhint {
+  display: none;
+}
+@media (max-width: 1300px) and (min-width: 661px) {
+  .exec-blt2-scrollhint {
+    display: block;
   }
 }

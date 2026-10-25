@@ -138,11 +138,11 @@ describe("identity table", () => {
       // The only buttons in a row are the reason disclosures of the three kept money columns.
       expect(row.querySelector("td:not([data-l='Allocation']):not([data-l='Net PnL']):not([data-l='Equity']) button")).toBeNull();
     }
-    expect(document.body.textContent).toContain("Readiness (FE-027, FE-028)");
+    expect(document.body.textContent).toContain("Readiness");
     // One line names Compare and Window; the toolbar draws no dead button for them (UX audit A).
     expect(screen.queryByRole("button", { name: "Compare" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Window" })).toBeNull();
-    expect(document.querySelector(".exec-fleet-unpub")?.textContent).toContain("Compare (FE-033)");
+    expect(document.querySelector(".exec-fleet-unpub")?.textContent).toContain("Compare");
   });
 
   it("draws the stage hue and a mini spine from the published current stage alone", async () => {
@@ -163,10 +163,13 @@ describe("identity table", () => {
     const { api, getAlphaFleet } = makeApi();
     mount(api, "/execution/fleet?view=map");
     // The Map segment is gone (the gap is one word on the "Not available:" line); the deep link still names itself once.
-    expect(screen.getAllByText("Map")).toHaveLength(1);
-    expect(screen.getAllByText("Not published (FE-035)").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Map").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText("Not published: map").length).toBeGreaterThan(0);
     expect(getAlphaFleet).not.toHaveBeenCalled();
-    expect(screen.queryByRole("button", { name: "Map" })).toBeNull();
+    // The Map toggle is typed: present, disabled, with its reason (audit A3), not a control that does nothing silently.
+    const toggle = screen.getByRole("button", { name: "Map" }) as HTMLButtonElement;
+    expect(toggle.disabled).toBe(true);
+    expect(document.getElementById(toggle.getAttribute("aria-describedby")!)?.textContent).toContain("Not published: map");
     fireEvent.click(screen.getByRole("button", { name: "Back to Table" }));
     await loaded();
     expect(where()).toBe("/execution/fleet");
@@ -224,13 +227,13 @@ describe("lens tabs", () => {
     expect(where()).toBe("/execution/fleet");
   });
 
-  it("Archived says Not published (FE-034) and never calls the API", async () => {
+  it("Archived says Not published: archived list and never calls the API", async () => {
     const { api, getAlphaFleet } = makeApi();
     mount(api);
     await loaded();
     const before = getAlphaFleet.mock.calls.length;
     fireEvent.click(screen.getByRole("tab", { name: /^Archived/ }));
-    expect(await screen.findByText(/Not published \(FE-034\)/)).toBeTruthy();
+    expect(await screen.findByText(/Not published: archived list/)).toBeTruthy();
     expect(search().get("tab")).toBe("archived");
     expect(screen.queryByRole("table", { name: "Alpha fleet" })).toBeNull();
     expect(screen.queryByRole("group", { name: "Fleet counts" })).toBeNull();
@@ -244,7 +247,7 @@ describe("lens tabs", () => {
   it("opening on the Archived lens makes no request at all", () => {
     const { api, getAlphaFleet } = makeApi();
     mount(api, "/execution/fleet?tab=archived");
-    expect(screen.getByText(/Not published \(FE-034\)/)).toBeTruthy();
+    expect(screen.getByText(/Not published: archived list/)).toBeTruthy();
     expect(getAlphaFleet).not.toHaveBeenCalled();
   });
 
@@ -452,10 +455,10 @@ describe("Columns menu (FL-7)", () => {
     for (const name of ["Owner", "Portfolios", "Stage", "Allocation", "Net PnL", "Equity", "Health", "Deployments"]) {
       expect((within(menu).getByRole("checkbox", { name: new RegExp(`^${name}`) }) as HTMLInputElement).checked, name).toBe(true);
     }
-    for (const [name, fe] of [["Readiness", "FE-027, FE-028"]] as const) {
+    for (const [name, fe] of [["Readiness", "readiness"]] as const) {
       const box = within(menu).getByRole("checkbox", { name: new RegExp(`^${name}`) }) as HTMLInputElement;
       expect(box.disabled, name).toBe(true);
-      expect(box.closest("label")?.textContent, name).toContain(`Not published (${fe})`);
+      expect(box.closest("label")?.textContent, name).toContain(`Not published: ${fe}`);
     }
   });
 
@@ -707,7 +710,7 @@ describe("drawer", () => {
     const drawer = await screen.findByRole("complementary", { name: "Carry A" });
     const compare = within(drawer).getByRole("button", { name: "Compare" }) as HTMLButtonElement;
     expect(compare.disabled).toBe(true);
-    expect(document.getElementById(compare.getAttribute("aria-describedby")!)?.textContent).toBe("Not published (FE-033)");
+    expect(document.getElementById(compare.getAttribute("aria-describedby")!)?.textContent).toBe("Not published: compare");
     const href = within(drawer).getByRole("link", { name: "Open Alpha 360" }).getAttribute("href")!;
     expect(href.startsWith("/deployments/alphas/alpha_a?")).toBe(true);
     expect(href).toContain("window=30d");
@@ -756,7 +759,7 @@ describe("drawer", () => {
     const drawer = await screen.findByRole("complementary", { name: "Idea E" });
     await waitFor(() => expect(within(drawer).getByText("Not available")).toBeTruthy(), SLOW);
     expect(within(drawer).getByText("No deployment. This alpha is in research.")).toBeTruthy();
-    expect(within(drawer).getByText("Not published (FE-027, FE-028)")).toBeTruthy();
+    expect(within(drawer).getByText("Not published: readiness")).toBeTruthy();
   });
 });
 
@@ -875,14 +878,14 @@ describe("board view", () => {
     };
   };
 
-  it("the Board button is a real toggle that writes view=board, and Table clears it; there is no Map segment", async () => {
+  it("the Board button is a real toggle that writes view=board, and Table clears it; the Map toggle is typed (disabled, with its reason) while the dataset is not published", async () => {
     const { api } = makeApi();
     mount(api);
     await loaded();
     const boardBtn = screen.getByRole("button", { name: "Board" });
     expect(boardBtn.getAttribute("aria-pressed")).toBe("false");
     expect(boardBtn.hasAttribute("disabled")).toBe(false);
-    expect(screen.queryByRole("button", { name: "Map" })).toBeNull();
+    expect((screen.getByRole("button", { name: "Map" }) as HTMLButtonElement).disabled).toBe(true);
     fireEvent.click(boardBtn);
     await board();
     expect(search().get("view")).toBe("board");
@@ -958,7 +961,7 @@ describe("board view", () => {
     expect(carry.textContent).not.toContain("Readiness");
     const paperGap = lane("Paper").querySelectorAll(".exec-fleet-lane-head .exec-fleet-lane-gap");
     expect(paperGap).toHaveLength(1);
-    expect(paperGap[0]!.textContent).toBe("Readiness: Not published (FE-027) for every alpha here");
+    expect(paperGap[0]!.textContent).toBe("Readiness: Not published: readiness for every alpha here");
     expect(lane("Paper").querySelectorAll(".exec-fleet-card-ready")).toHaveLength(0);
     const nodes = [...carry.querySelectorAll(".exec-blk-spine-mini i")].map((i) => i.getAttribute("data-s"));
     expect(nodes).toEqual(["unknown", "unknown", "cur", "ahead", "ahead", "ahead"]);
@@ -1125,7 +1128,7 @@ describe("board view", () => {
   it("the Archived lens draws no board and makes no request, as the table", async () => {
     const { api, getAlphaFleet } = makeApi();
     mount(api, "/execution/fleet?view=board&tab=archived");
-    expect(screen.getAllByText(/Not published \(FE-034\)/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Not published: archived list/).length).toBeGreaterThan(0);
     expect(screen.queryByRole("group", { name: "Alpha fleet board" })).toBeNull();
     expect(getAlphaFleet).not.toHaveBeenCalled();
   });

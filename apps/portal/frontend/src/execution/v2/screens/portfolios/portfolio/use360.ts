@@ -7,7 +7,10 @@
  * | the portfolio resource | `getPortfolio360Resource` | always |
  * | capital, per environment | `getPortfolioCapital` x3 | always (a separate book per environment, never folded) |
  * | equity series | `getFinancialChart` (portfolio, equity) | once the resource names its environment |
+ * | contributors | `getManagerDataset` (PORTFOLIO, `group_by=alpha_id`, the page window, the selected environment) | once the portfolio dataset offers `alpha_id` |
  * | NAV series | `getManagerSeries` (one PORTFOLIO subject, metric NAV, the page window, the selected environment) | once the resource names its environment |
+ * | Net PnL and Return series | `getManagerSeries` (same subject, window and environment, metric NET_PNL / RETURN) | once the NAV read says the series source is published (Performance card tabs) |
+ * | capital flow, per environment | `getManagerDataset` x2 (PORTFOLIO, `group_by=portfolio_id` for the statements and `group_by=alpha_id` for the alpha nodes) | the Allocations tab has been opened and the portfolio has a book in that environment |
  * | capital ledger, per environment | `getCapitalLedger` | the Allocations tab has been opened; the selected environment's also from the start (the Overview's event ribbon sits on the equity) |
  * | correlation | `getCorrelation` | the Risk tab has been opened |
  * | operations on this portfolio | `listOperationalQueueV2` | the People tab has been opened |
@@ -26,6 +29,7 @@ import { useRead } from "../useRead";
 import type { ManagerDatasetQuery } from "../../../../api/managerDatasetQuery";
 import { useManagerDataset } from "../../manager/useManagerDataset";
 import { servesDataset } from "../PartitionFigures";
+import { alphaGroupOffered } from "../../overview/contributorsModel";
 import type { ManagerSeriesQuery } from "../../../readers/managerSeries";
 import { useManagerSeries } from "../../series/useManagerSeries";
 
@@ -79,6 +83,15 @@ export function usePortfolioReads(api: ExecutionApi, portfolioId: string, enable
     [selected, navWindow, portfolioId, ready?.workspaceId],
   );
   const nav = useManagerSeries(api, enabled && ready !== null, navQuery);
+  // Net PnL and Return of the same portfolio, once the NAV read says the series port serves it (WP-F1): the Performance card's tabs.
+  const navBody = nav.phase === "ready" ? nav.value : nav.phase === "loading" || nav.phase === "error" ? nav.last : null;
+  const served = navBody !== null && navBody.seriesSource.state === "PUBLISHED";
+  const pnlQuery = useMemo<ManagerSeriesQuery | null>(() => (navQuery === null ? null : { ...navQuery, metric: "NET_PNL" }), [navQuery]);
+  const returnQuery = useMemo<ManagerSeriesQuery | null>(() => (navQuery === null ? null : { ...navQuery, metric: "RETURN" }), [navQuery]);
+  const pnl = useManagerSeries(api, enabled && ready !== null && served, pnlQuery);
+  const ret = useManagerSeries(api, enabled && ready !== null && served, returnQuery);
+  const drawdownQuery = useMemo<ManagerSeriesQuery | null>(() => (navQuery === null ? null : { ...navQuery, metric: "DRAWDOWN" }), [navQuery]);
+  const drawdown = useManagerSeries(api, enabled && ready !== null && served, drawdownQuery);
 
   // The portfolio's Manager dataset (PORTFOLIO surface, grouped by portfolio so its own totals come as a group) for the selected
   // environment and the page window: capital statements and Net PnL per economic partition. Same port as everything else.
@@ -90,6 +103,28 @@ export function usePortfolioReads(api: ExecutionApi, portfolioId: string, enable
     [selected, navWindow, portfolioId, ready?.workspaceId],
   );
   const dataset = useManagerDataset(api, enabled && ready !== null && servesDataset(api), datasetQuery);
+  // Contributors: the same portfolio, environment and window grouped by alpha_id by the server (Net PnL, Return, Score per alpha).
+  // Asked once the dataset above has said it offers alpha_id as a group field.
+  const contributorsQuery = useMemo<ManagerDatasetQuery | null>(
+    () => (datasetQuery === null ? null : { ...datasetQuery, groupBy: ["alpha_id"] }),
+    [datasetQuery],
+  );
+  const datasetValue = dataset.phase === "ready" ? dataset.value : null;
+  const contributors = useManagerDataset(api, enabled && ready !== null && servesDataset(api) && datasetValue !== null && alphaGroupOffered(datasetValue) === true, contributorsQuery);
+
+  // The capital flow of the Allocations tab (WP-F1), one basis per environment: that environment's statements (group by portfolio, so the
+  // portfolio's own totals come as a group) and its alpha groups. Asked once the tab has been opened and the portfolio has a book there.
+  const flowQuery = (environment: Environment, groupBy: "portfolio_id" | "alpha_id"): ManagerDatasetQuery | null =>
+    navWindow === null ? null : {
+      surface: "PORTFOLIO", id: portfolioId, environment, window: navWindow, groupBy: [groupBy], limit: 1,
+      ...(ready?.workspaceId ? { workspaceId: ready.workspaceId } : {}),
+    };
+  const flowOn = (environment: Environment): boolean => enabled && visited.allocations && ready !== null && servesDataset(api) && present.includes(environment);
+  const flows = {
+    live: { statements: useManagerDataset(api, flowOn("live"), flowQuery("live", "portfolio_id")), alphas: useManagerDataset(api, flowOn("live"), flowQuery("live", "alpha_id")) },
+    paper: { statements: useManagerDataset(api, flowOn("paper"), flowQuery("paper", "portfolio_id")), alphas: useManagerDataset(api, flowOn("paper"), flowQuery("paper", "alpha_id")) },
+    sandbox: { statements: useManagerDataset(api, flowOn("sandbox"), flowQuery("sandbox", "portfolio_id")), alphas: useManagerDataset(api, flowOn("sandbox"), flowQuery("sandbox", "alpha_id")) },
+  };
 
   const ledgers = {
     live: useRead(api, enabled && (visited.allocations || selected === "live") && present.includes("live"), `ledger|${portfolioId}|live`, (scoped) => scoped.getCapitalLedger(portfolioId, "live")),
@@ -111,7 +146,7 @@ export function usePortfolioReads(api: ExecutionApi, portfolioId: string, enable
     (scoped) => scoped.listOperationalQueueV2({ targetType: "PORTFOLIO", targetId: portfolioId, limit: 10 }),
   );
 
-  return { resource, capital, chart, nav, dataset, ledgers, correlation, operations, selected, range, present };
+  return { resource, capital, chart, nav, pnl, ret, drawdown, served, flows, dataset, contributors, ledgers, correlation, operations, selected, range, present };
 }
 
 export type PortfolioReads = ReturnType<typeof usePortfolioReads>;

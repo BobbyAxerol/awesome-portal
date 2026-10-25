@@ -68,11 +68,11 @@
     "n28_registry_sha256": "sha256:639388b2cad4285388f82e1db8e697bda4502e9cfcf14b0d027a2176c434e071",
     "n28_owner_request_sha256": "sha256:d194aa076443121b2028adaacbfee389e987fd68a75d330ba33bb4781d7cf300",
     "screen_bff_catalogue_sha256": "sha256:8cf2a5f0a6f6c8d5c9ceb264dbf4a0a111a1c38e8189d491d364b80c32362e3e",
-    "frontend_product_route_sha256": "sha256:7a0166d88bd4cce3356c417d9998b745dc3d71a384ecef093e16814fd38f769b",
-    "frontend_product_boundary_test_sha256": "sha256:e628c6514064fb6cf1cc42a6bb65ff5e7ff1f9559598474c1257a63c50276a08",
+    "frontend_product_route_sha256": "sha256:50ed786cc695105a9b967b3b7d87cefde71f6aec20711a7a3e7dfb4b2969cd88",
+    "frontend_product_boundary_test_sha256": "sha256:ebbfe819c8860d21d3ac157a0475c69cf89edf697020ef95692ea338613d809d",
     "frontend_consumer_return_packet_sha256": "sha256:dd566764d0980bd1453aa831914eae6f366c85973f3e2ed3ac379d19a38f5dc8",
     "frontend_consumer_evidence_sha256": "sha256:05509658533aff6460b9ddc152200515a9d7ece2d52a7f863bd13eb8fc666785",
-    "frontend_same_origin_bff_double_sha256": "sha256:2458cebabbff9e00e3a8036d9eda909f9f4be38d1385c78167a8866d58406a48",
+    "frontend_same_origin_bff_double_sha256": "sha256:deeeec766739f49b1d2e3de6e89f9e517bd4935263377681178a7524b9f86d7f",
     "frontend_same_origin_bff_contract_test_sha256": "sha256:1159c8525b83811f7939f09c352981675583c64a6dbd6cbddb153e2fd59452ed",
     "frontend_execution_journeys_sha256": "sha256:423648a72951414a8376e78d9e18131534bb7d80404d3600eb2e29d2271b5f16",
     "n17b_real_paper_acceptance_sha256": "sha256:1edb878b3330227a5ae7f34119980916e8eed78f31b592dfabd876e0d4281065",
@@ -102,7 +102,7 @@
     "br72_frontend_containers_sha256": "sha256:a78b235bf75762ca2136be20e0ac457af774cc8eea020bbeaa9701a9384c12eb",
     "br72_frontend_alpha_fleet_sha256": "sha256:9155452a2d22d81867b699450c6b4218bad167081377a3427a98107da5e0fe29",
     "br72_frontend_recompose_sha256": "sha256:99c0c3f4587f9d6daba1dd61c2358ce70d29e155b1fcccf05d130cbc9bc0e69f",
-    "br72_frontend_registry_sha256": "sha256:91a04942ca7a66f708f14e134821df5cc5418629feec3e4d662bbf1f2fcece83"
+    "br72_frontend_registry_sha256": "sha256:692b284dfa8800dd23d0d5d0a79cbbcfbfce3a0f55ee7619cef7261e7c11d92c"
   },
   "rehearsals": {
     "multi_replica_admission": "PASS_N21",

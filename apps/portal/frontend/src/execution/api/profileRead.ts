@@ -890,6 +890,43 @@ export interface PortfolioListItem {
   deploymentCount: number;
   allocatedByCurrency: readonly CurrencyValue[];
   updatedAt: string;
+  /** WP-K slice 6 (N3). Absent = this producer has no owning source. A published roll-up is the worst class among the deployments, with the counts. */
+  health?: PortfolioHealthRead;
+  /** WP-K (GAP-17): the capital root; absent = no owning source. */
+  rootId?: string;
+  /** WP-K (GAP-19): the owner as a Portal user id (a link target); `null` = the owner has none; absent = no owning source. `owner` stays the display text. */
+  ownerUserId?: string | null;
+}
+
+export const PORTFOLIO_HEALTH_CLASSES = ["HEALTHY", "ATTENTION", "DEGRADED", "HALTED"] as const;
+export type PortfolioHealthClass = (typeof PORTFOLIO_HEALTH_CLASSES)[number];
+export type PortfolioHealthRead =
+  | { state: "PUBLISHED"; value: PortfolioHealthClass; deploymentsByHealth: Readonly<Record<PortfolioHealthClass, number>>; asOf: string }
+  | { state: "NOT_PUBLISHED"; reasonCode: string };
+
+/** PH-1: a published roll-up is the WORST class that has a deployment, at least one deployment counted, and never more than the portfolio has. */
+function readPortfolioHealth(raw: unknown, deploymentCount: number): PortfolioHealthRead | null {
+  const h = obj(raw);
+  if (!h || Object.keys(h).sort().join(",") !== "as_of,basis,deployments_by_health,reason_code,state,value") return null;
+  if (h.state === "NOT_PUBLISHED") {
+    const reasonCode = str(h.reason_code);
+    return reasonCode && /^[A-Z][A-Z0-9_]{1,63}$/.test(reasonCode) && h.value === null && h.basis === null && h.deployments_by_health === null && h.as_of === null ? { state: "NOT_PUBLISHED", reasonCode } : null;
+  }
+  const counts = obj(h.deployments_by_health);
+  const asOf = str(h.as_of);
+  if (h.state !== "PUBLISHED" || !counts || !asOf || h.basis !== "WORST_OF_DEPLOYMENT_HEALTH" || h.reason_code !== null
+    || Object.keys(counts).sort().join(",") !== [...PORTFOLIO_HEALTH_CLASSES].sort().join(",")) return null;
+  const parsed = {} as Record<PortfolioHealthClass, number>;
+  let total = 0;
+  for (const key of PORTFOLIO_HEALTH_CLASSES) {
+    const n = counts[key];
+    if (typeof n !== "number" || !Number.isSafeInteger(n) || n < 0) return null;
+    parsed[key] = n;
+    total += n;
+  }
+  const worst = [...PORTFOLIO_HEALTH_CLASSES].reverse().find((key) => parsed[key] > 0);
+  if (worst === undefined || total > deploymentCount || h.value !== worst) return null;
+  return { state: "PUBLISHED", value: worst, deploymentsByHealth: parsed, asOf };
 }
 
 export interface PortfolioListEnvelope {
@@ -926,9 +963,16 @@ function readPortfolioItem(raw: unknown): PortfolioListItem | null {
   if (!portfolioId || !name || !state || !baseCurrency || !updatedAt
     || allocationCount === null || deploymentCount === null || !allocatedByCurrency
     || environments.length !== root.environments.length || environments.length === 0) return null;
+  const health = Object.prototype.hasOwnProperty.call(root, "health") ? readPortfolioHealth(root.health, deploymentCount) : undefined;
+  if (health === null) return null;
+  const idText = (v: unknown): string | null => (typeof v === "string" && /^[A-Za-z0-9._:-]{1,191}$/.test(v) ? v : null);
+  const rootId = Object.prototype.hasOwnProperty.call(root, "root_id") ? idText(root.root_id) : undefined;
+  const ownerUserId = Object.prototype.hasOwnProperty.call(root, "owner_user_id") ? (root.owner_user_id === null ? null : idText(root.owner_user_id)) : undefined;
+  if (rootId === null || (ownerUserId === null && root.owner_user_id !== null)) return null;
   return {
     portfolioId, name, owner: str(root.owner), state, baseCurrency, environments,
-    allocationCount, deploymentCount, allocatedByCurrency, updatedAt,
+    allocationCount, deploymentCount, allocatedByCurrency, updatedAt, ...(health === undefined ? {} : { health }),
+    ...(rootId === undefined ? {} : { rootId }), ...(ownerUserId === undefined ? {} : { ownerUserId }),
   };
 }
 

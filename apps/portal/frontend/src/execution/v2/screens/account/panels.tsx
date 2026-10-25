@@ -19,11 +19,11 @@ import { GapWhy, KpiStrip, Kpi, NotAvailableLine, SectionPanel, Triad } from "..
 import { withoutOrigin } from "../../backTo";
 import { withContext } from "../../urlState";
 import {
-  FE, SYNC_SHOWN, alphaHref, balanceFacts, brokerFacts, coverageFlag, deploymentHref, diffFacts, headroomFacts,
+  FE, SYNC_SHOWN, humanize, alphaHref, balanceFacts, brokerFacts, coverageFlag, deploymentHref, diffFacts, headroomFacts,
   ledgerPnl, marginFacts, portfolioHref, sleeveRows, stageWord, triadModel,
   type AccountView, type AllocationFacts, type PositionFacts, type Population, type SleeveRow, type SyncEntry,
 } from "./model";
-import { Fact, Na, Np, Value, When } from "./parts";
+import { Fact, Na, Np, PortfolioName, Value, When } from "./parts";
 
 export interface PanelContext {
   profile: ProfileEnvelope;
@@ -109,6 +109,18 @@ export function SleevesPanel({ ctx }: { ctx: PanelContext }) {
     },
     { key: "portfolio", label: "Portfolio", render: (row) => (row.portfolio === null ? <Na /> : row.portfolio) },
     { key: "internal", label: "Internal balance", numeric: true, render: (row) => <Value metric={row.internal} suffix={ctx.currency ?? undefined} /> },
+    // The venue reports the whole account; no source splits native balance among sleeves. A typed state (not a zero, not a blank).
+    {
+      key: "native",
+      label: "Native attribution",
+      numeric: true,
+      render: () => (
+        <span className="exec-acct-cell" data-state="no-source">
+          <Na />
+          <span className="exec-acct-sub">No source</span>
+        </span>
+      ),
+    },
   ];
   return (
     <SectionPanel title="Sleeves on this binding" aside="Physical" flush>
@@ -116,6 +128,7 @@ export function SleevesPanel({ ctx }: { ctx: PanelContext }) {
       <p className="exec-acct-cap">
         Not totalled: native balance is not split among sleeves
         {population.partial ? `. ${population.published} of ${population.expected} sleeves are published here` : ""}
+        <GapWhy name="Why native attribution has no source" rows={["The venue reports native balance for the whole account. No source attributes it to a sleeve, so the column is a typed absence, not a zero and not a share."]} next={null} />
       </p>
     </SectionPanel>
   );
@@ -132,7 +145,7 @@ export function MarginPanel({ ctx }: { ctx: PanelContext }) {
   return (
     <SectionPanel title="Margin" aside="Whole account">
       <dl className="exec-acct-facts">
-        <Fact label="Margin ratio"><Np fact={FE.marginRatio} /></Fact>
+        <Fact label="Margin ratio">{margin?.ratio !== undefined ? <Value metric={margin.ratio} suffix="%" /> : <Np fact={FE.marginRatio} />}</Fact>
         <Fact label="Initial margin">
           {margin?.perInstrumentOnly ? <Na why="Published per instrument only" /> : <Value metric={margin?.initial} suffix={currency ?? undefined} />}
         </Fact>
@@ -206,13 +219,13 @@ export function AllocationsPanel({ ctx }: { ctx: PanelContext }) {
     {
       key: "deployment",
       label: "Deployment",
-      render: (row) => row.deployment === null ? <Na /> : <Link className="exec-acct-link" to={withContext(deploymentHref(row.deployment, row.mode), withoutOrigin(params))}>{ctx.view.names.deployments[row.deployment] ?? row.deployment}</Link>,
+      render: (row) => row.deployment === null ? <Na /> : <Link className="exec-acct-link" to={withContext(deploymentHref(row.deployment, row.mode, row.stage), withoutOrigin(params))}>{ctx.view.names.deployments[row.deployment] ?? row.deployment}</Link>,
     },
     { key: "stage", label: "Stage", render: (row) => stageWord(row.mode) },
     {
       key: "portfolio",
       label: "Portfolio",
-      render: (row) => row.portfolio === null ? <Na /> : <Link className="exec-acct-link" to={withContext(portfolioHref(row.portfolio), withoutOrigin(params))}>{ctx.view.names.portfolios[row.portfolio] ?? row.portfolio}</Link>,
+      render: (row) => row.portfolio === null ? <Na /> : <PortfolioName id={row.portfolio} name={ctx.view.names.portfolios[row.portfolio] ?? null} reason={ctx.view.names.portfolioReasons[row.portfolio] ?? null} to={withContext(portfolioHref(row.portfolio), withoutOrigin(params))} />,
     },
     { key: "allocation", label: "Allocation", numeric: true, render: (row) => <Value metric={row.allocation} suffix={row.currency ?? undefined} /> },
   ];
@@ -236,7 +249,7 @@ export function FeesPanel({ ctx }: { ctx: PanelContext }) {
   const pnl = ledgerPnl(ctx.profile, ctx.accountId, ctx.currency);
   return (
     <SectionPanel title="Fees & funding" aside="This sleeve">
-      <NotAvailableLine className="exec-acct-cap" facts={[{ label: "Fees, funding and borrow over a window", id: "FE-025" }]} />
+      <NotAvailableLine className="exec-acct-cap" facts={[{ label: "Fees, funding and borrow over a window", id: null, why: "The source publishes no window total yet." }]} />
       <h3 className="exec-acct-h" title="What the latest ledger row states. Not a window, and not summed.">Current</h3>
       <dl className="exec-acct-facts">
         <Fact label="Fees, current"><Value metric={pnl?.fees} suffix={ctx.currency ?? undefined} /></Fact>
@@ -275,12 +288,22 @@ export function ReconciliationPanel({ ctx, exposure }: { ctx: PanelContext; expo
   );
 }
 
+/** `1.2 s`, `14 min`: the published milliseconds as words, by integer arithmetic. */
+function durationText(ms: number): string {
+  if (ms < 1000) return `${ms} ms`;
+  if (ms < 60_000) return `${Math.floor(ms / 1000)}.${Math.floor((ms % 1000) / 100)} s`;
+  return `${Math.floor(ms / 60_000)} min`;
+}
+
 export function SyncHistory({ entries }: { entries: readonly SyncEntry[] }) {
+  const [params] = useSearchParams();
   const shown = entries.slice(0, SYNC_SHOWN);
   const columns: CardsColumn<SyncEntry>[] = [
     { key: "when", label: "When (UTC)", render: (row) => (row.at === null ? <Na why="Time not published" /> : <When at={row.at} />) },
     { key: "source", label: "Source", render: (row) => row.source },
+    { key: "check", label: "Check", render: (row) => (row.check === null ? <Na why="The source names no check for this sync" /> : humanize(row.check)) },
     { key: "result", label: "Result", render: (row) => <Flag kind={row.status.kind} label={row.status.label} size="sm" /> },
+    { key: "duration", label: "Duration", numeric: true, render: (row) => (row.durationMs === null ? <Na why="The source states no duration for this sync" /> : durationText(row.durationMs)) },
     { key: "bp", label: "Buying power", numeric: true, render: (row) => (row.source === "BROKER" ? <Value metric={row.detail} /> : <Na why="Broker rows only" />) },
   ];
   return (
@@ -292,6 +315,7 @@ export function SyncHistory({ entries }: { entries: readonly SyncEntry[] }) {
         label="Sync history"
         empty={<span className="exec-acct-note">No sync row is published for this account.</span>}
       />
+      <p className="exec-acct-cap"><Link className="exec-acct-link" to={withContext("/execution/operations?view=exceptions", params)}>Open findings in Operations</Link></p>
       {entries.length > shown.length ? <p className="exec-acct-cap">Showing the newest {shown.length} of {entries.length}<GapWhy name="Why gaps in time are not filled" rows={["Rows are listed as the source gave them; gaps in time are not filled."]} next={null} /></p> : null}
     </SectionPanel>
   );

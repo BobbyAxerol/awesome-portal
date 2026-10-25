@@ -1,10 +1,21 @@
 {
   "portfolios": {
-    "offered": 39,
+    "offered": 52,
     "unread": [
       "delivery_profile",
       "freshness_budget_ms.fresh",
       "freshness_budget_ms.stale",
+      "items[].health.as_of",
+      "items[].health.basis",
+      "items[].health.deployments_by_health.ATTENTION",
+      "items[].health.deployments_by_health.DEGRADED",
+      "items[].health.deployments_by_health.HALTED",
+      "items[].health.deployments_by_health.HEALTHY",
+      "items[].health.reason_code",
+      "items[].health.state",
+      "items[].health.value",
+      "items[].owner_user_id",
+      "items[].root_id",
       "matching_portfolios",
       "workspace_id"
     ],

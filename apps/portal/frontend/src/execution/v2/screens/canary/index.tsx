@@ -39,6 +39,7 @@ import type { SeriesPoint as ChartPoint } from "../../charts/types";
 import { readAsOf } from "../../boundary";
 import { AlphaNameLine } from "../stage/AlphaNameLine";
 import { alphaCrumb, portfolioLabel, stageIdentity } from "../stage/identity";
+import { spineHistory, useStageLifecycle } from "../stage/useStageLifecycle";
 import { useContextFacts } from "../../shell/contextFacts";
 import { safeInternalHref } from "../../safeHref";
 import { useExecUrlState, withContext } from "../../urlState";
@@ -143,6 +144,8 @@ function CanaryBody({ api, deploymentId, workspaceId }: CanaryScreenProps) {
   // body published `alpha_id` (FE-066): never a link built from a strategy id or a guess.
   const identity = stageIdentity(view?.identity ?? null);
   const alpha = alphaCrumb(identity);
+  // The stages the alpha has completed (FE-027): the ticks of the spine, from the alpha's Manager dataset when it publishes them.
+  const history = spineHistory(useStageLifecycle(api, identity.alphaId, "canary", "live", wsId ?? null));
   const crumb: readonly StageCrumb[] = [
     { label: "Alpha Fleet", to: linkTo("/deployments/alphas") },
     ...(alpha === null ? [] : [{ label: alpha.label, to: linkTo(alpha.to) }]),
@@ -210,7 +213,7 @@ function CanaryBody({ api, deploymentId, workspaceId }: CanaryScreenProps) {
         )
       }
       chips={chips}
-      spine={{ current: "canary", onSelect: spineSelect }}
+      spine={{ current: "canary", onSelect: spineSelect, stages: history, lockAhead: true }}
       extra={current === null ? undefined : <TrialStrip trial={trialOf(current)} calendar={trialCalendar(current)} />}
       renderLink={(to, children) => <Link to={to}>{children}</Link>}
     />
@@ -258,7 +261,7 @@ function CanaryBody({ api, deploymentId, workspaceId }: CanaryScreenProps) {
       {header(chipsOf(result.view), result.view)}
 
       {banners.map((banner) => (
-        <div key={banner.key} className="exec-blk-banner" role={banner.key === "untrusted" ? "alert" : "status"} data-banner={banner.key}>
+        <div key={banner.key} className="exec-blk-banner" role={banner.tone === "bad" ? "alert" : "status"} data-banner={banner.key} data-tone={banner.tone}>
           {banner.text}
         </div>
       ))}
@@ -296,7 +299,7 @@ function CanaryBody({ api, deploymentId, workspaceId }: CanaryScreenProps) {
           </UrlTabs>
         </div>
         <div className="exec-cny-rail">
-          <DecisionPanel />
+          <DecisionPanel view={result.view} />
           <BeforeScaleUp view={result.view} />
           <RollbackPanel view={result.view} />
         </div>

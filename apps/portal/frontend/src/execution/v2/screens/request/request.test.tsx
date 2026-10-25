@@ -146,25 +146,41 @@ describe("the page: what it shows", () => {
     expect(REQUEST_SCREEN_KEY).toBe("request");
   });
 
-  it("has the hi-fi's sections and none of its design tools", async () => {
-    const { api } = port(() => CREATED);
+  it("has the hi-fi's sections, the frame switch, the side panel and the result preview", async () => {
+    const { api, createApprovalRequest } = port(() => CREATED);
     mountPage(api);
     await loaded();
     expect(document.querySelector('[data-screen="new-request-v2"]')).toBeTruthy();
     expect(screen.getByRole("heading", { level: 1, name: "New approval request" })).toBeTruthy();
-    expect(screen.getByRole("heading", { level: 1 }).getAttribute("title")).toBe("Research to R1 gate, for a request that did not start in Research");
-    expect(screen.queryByText("Research → R1 gate · when it did not start in Research")).toBeNull();
+    // WP-E (owner directive 2026-10-23): the subtitle, the captions, the side panel, the frame switch, the chip and the preview are drawn.
+    expect(screen.getByTestId("rq-subtitle").textContent).toBe("Research → R1 gate · when it did not start in Research");
     const steps = screen.getByRole("navigation", { name: "Where this request sits in the loop" });
-    expect(within(steps).getAllByRole("listitem").map((li) => li.textContent)).toEqual(["1 · Declare", "2 · R1", "3 · R2"]);
-    expect(within(steps).getAllByRole("listitem").map((li) => li.getAttribute("title"))).toEqual(["You, now", "A quant reviewer decides, not you", "Capital, only after R1"]);
-    expect(within(steps).getByText("1 · Declare").getAttribute("aria-current")).toBe("step");
-    expect(screen.getByText("What happens next")).toBeTruthy();
-    expect(document.querySelector("details.exec-rq-disclosure")!.textContent).toContain("Digest pinned on the server");
-    // D13f and D8d: no switch, no preview, no Fresh chip, no scope label without a source.
-    expect(screen.queryByText(/Route page/)).toBeNull();
-    expect(screen.queryByText(/Drawer from the queue/)).toBeNull();
-    expect(screen.queryByText(/Preview the result states/)).toBeNull();
-    expect(screen.queryByText(/Fresh/)).toBeNull();
+    expect(within(steps).getAllByRole("listitem").map((li) => li.textContent)).toEqual([
+      "1 · Declare · you, now", "2 · R1 · a quant reviewer, not you", "3 · R2 · capital, only after R1",
+    ]);
+    expect(within(steps).getAllByRole("listitem").map((li) => li.getAttribute("aria-current"))).toEqual(["step", null, null]);
+    const next = screen.getByRole("complementary", { name: "What happens next" });
+    expect(within(next).getAllByRole("listitem").map((li) => li.textContent)).toEqual([
+      "1 · DigestPinned on the server from the run registry.",
+      "2 · ReviewerA quant reviewer decides, never you. The SLA clock starts at submit.",
+      "3 · DuplicatesOpen work for the same alpha and run is refused with its request.",
+    ]);
+    // Route page | Drawer from the queue: the current frame is text, the other a new-tab link into the cockpit's drawer.
+    const toggle = screen.getByTestId("rq-frame-toggle");
+    expect(within(toggle).getByText("Route page").getAttribute("aria-current")).toBe("page");
+    const drawerLink = within(toggle).getByRole("link", { name: /^Drawer from the queue/ });
+    expect(drawerLink.getAttribute("href")).toBe("/governance/approvals?compose=request");
+    expect(drawerLink.getAttribute("target")).toBe("_blank");
+    expect(drawerLink.getAttribute("rel")).toBe("noopener noreferrer");
+    // The chip says what the pickers rest on, with no clock and no "Fresh" claim.
+    expect(screen.getByTestId("rq-fresh").textContent).toMatch(/Run Library/);
+    expect(screen.queryByText(/\bFresh\b/)).toBeNull();
+    // The preview is a closed legend that sends nothing.
+    const preview = screen.getByTestId("rq-result-preview") as HTMLDetailsElement;
+    expect(preview.open).toBe(false);
+    expect(preview.querySelector("summary")!.textContent).toBe("Preview the result states");
+    expect(within(preview).getAllByRole("listitem").map((li) => li.getAttribute("data-state"))).toEqual(["created", "replayed", "duplicate", "refused", "uncertain"]);
+    expect(createApprovalRequest).not.toHaveBeenCalled();
     expect(screen.queryByText(/All authorized|Your alphas/i)).toBeNull();
     expect(screen.getByRole("link", { name: /^Run Library/ }).getAttribute("href")).toBe("/research/quantbt/runs");
   });
@@ -1033,7 +1049,7 @@ describe("accessibility (structure)", () => {
     await loaded();
     expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
     expect(screen.getByRole("group", { name: "Request fields" })).toBeTruthy();
-    expect(document.querySelector("details.exec-rq-disclosure > summary")!.textContent).toBe("What happens next");
+    expect(screen.getByRole("complementary", { name: "What happens next" })).toBeTruthy();
     expect(screen.getByRole("form", { name: "New approval request" })).toBeTruthy();
   });
 
@@ -1449,6 +1465,76 @@ describe("M3: result links open the caller's own workspace record", () => {
     // The queue link is in the discard question; it keeps the context but not the page's workspace_id.
     fireEvent.click(within(unc).getByRole("button", { name: "Discard" }));
     expect(within(await screen.findByRole("alertdialog", { name: "Discard this uncertain request?" })).getByRole("link", { name: "Check the queue" }).getAttribute("href")).toBe("/governance/approvals");
+  });
+});
+
+describe("WP-E: the chip, the frame switch and the hint under Submit", () => {
+  it("the chip follows the Run Library read: reading, read, and not available; it never claims Fresh or a clock", async () => {
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => { release = resolve; });
+    vi.stubGlobal("fetch", async () => {
+      await gate;
+      return runsAnswer();
+    });
+    mountPage(port(() => CREATED).api);
+    expect(screen.getByTestId("rq-fresh").getAttribute("data-state")).toBe("reading");
+    expect(screen.getByTestId("rq-fresh").textContent).toContain("Reading the Run Library");
+    release();
+    await loaded();
+    expect(screen.getByTestId("rq-fresh").getAttribute("data-state")).toBe("read");
+    expect(screen.getByTestId("rq-fresh").textContent).toContain("Run Library read");
+    cleanup();
+    runsAnswer = () => new Response("{}", { status: 503, headers: { "content-type": "application/json" } });
+    vi.stubGlobal("fetch", async () => runsAnswer());
+    mountPage(port(() => CREATED).api);
+    await waitFor(() => expect(screen.getByTestId("rq-fresh").getAttribute("data-state")).toBe("unavailable"));
+    expect(screen.getByTestId("rq-fresh").textContent).toContain("Run Library not available");
+    expect(screen.getByTestId("rq-fresh").textContent).not.toMatch(/\d{1,2}:\d{2}Z/);
+  });
+
+  it("the page's link to the drawer keeps the context, drops the workspace and the typed ids, and does not navigate this tab", async () => {
+    mountPage(port(() => CREATED).api, "/governance/approvals/new?env=paper&workspace_id=ws_x&alpha=alpha_TEST_ONLY_a");
+    await loaded();
+    const link = within(screen.getByTestId("rq-frame-toggle")).getByRole("link", { name: /^Drawer from the queue/ });
+    const href = link.getAttribute("href") ?? "";
+    expect(href.startsWith("/governance/approvals?")).toBe(true);
+    expect(href).toContain("compose=request");
+    expect(href).toContain("env=paper");
+    expect(href).not.toContain("workspace_id");
+    expect(href).not.toContain("alpha=");
+    fireEvent.click(link);
+    expect(screen.getByTestId("where").textContent).toContain("/governance/approvals/new");
+  });
+
+  it("the drawer carries the same switch with the drawer as the current frame and a new-tab link to the route page", async () => {
+    mountDrawer(port(() => CREATED).api, "/governance/approvals?compose=request&env=paper");
+    await loaded();
+    const drawer = () => screen.getByRole("complementary", { name: "New approval request" });
+    const toggle = within(drawer()).getByTestId("rq-frame-toggle");
+    expect(within(toggle).getByText("Drawer from the queue").getAttribute("aria-current")).toBe("page");
+    const link = within(toggle).getByRole("link", { name: /^Route page/ });
+    expect(link.getAttribute("href")).toContain("/governance/approvals/new");
+    expect(link.getAttribute("href")).not.toContain("compose");
+    expect(link.getAttribute("target")).toBe("_blank");
+    // The drawer keeps no step bar, no side panel and no preview: it has no room for them.
+    expect(within(drawer()).queryByRole("navigation", { name: "Where this request sits in the loop" })).toBeNull();
+    expect(within(drawer()).queryByTestId("rq-result-preview")).toBeNull();
+  });
+
+  it("says Fill the missing fields first under the button while fields are missing, and not once they are filled", async () => {
+    mountPage(port(() => CREATED).api);
+    await loaded();
+    expect(screen.getByTestId("rq-submit-hint").textContent).toBe("Fill the missing fields first.");
+    await fillValid();
+    expect(screen.queryByTestId("rq-submit-hint")).toBeNull();
+    expect(down(submitBtn())).toBe(false);
+  });
+
+  it("does not print that hint when the delivery policy is what shuts Submit", async () => {
+    mountPage(port(() => CREATED).api, "/governance/approvals/new", { writeBlockedReason: "Writes are off for this build." });
+    await loaded();
+    expect(screen.queryByTestId("rq-submit-hint")).toBeNull();
+    expect(needText()).toBe("Writes are off for this build.");
   });
 });
 

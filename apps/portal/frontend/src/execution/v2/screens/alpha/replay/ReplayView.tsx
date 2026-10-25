@@ -17,7 +17,12 @@ import type { ExecutionApi } from "../../../../api/ports";
 import type { TradeReplayEventsProps } from "../../../../components/TradeReplayEvents";
 import { ReplayPanel, type ReplayChip } from "../../../blocks";
 import { ENV_LABEL, type ExecEnv } from "../../../urlState";
+import { ms } from "../../../../components/tradeReplayModel";
 import { focusTarget } from "../model";
+import type { EventKind } from "../../../charts";
+import type { UtcEpochMs } from "../../../../screenDataContract";
+import type { LifeEvent } from "../lifecycleModel";
+import { ReplayLanes } from "./ReplayLanes";
 import { useReplayCandles, type SubjectBook } from "../useAlphaReads";
 import { MAX_LOADED_RECORDS, auditBook, auditSentences, candleVerdict, candleWindow, canLoadMore, countUntimed, preferredInterval, replayRange, replayState, symbolsOf, type RelationAudit } from "./model";
 
@@ -35,9 +40,13 @@ export interface ReplayViewProps {
   ordersHref: string;
   /** The list the reader came from (the Blotter with `from=blotter`); absent means the Orders & Fills tab. */
   back?: { label: string; to: string };
+  /** The alpha's published events for the STAGE / DECISION / INCIDENT lanes under the chart; absent draws no lanes. */
+  events?: { events: readonly LifeEvent[]; missing: readonly EventKind[] };
+  /** Design preview: the venue read is skipped and candles are typed unavailable (hi-fi "Candles not available"). */
+  candlesOff?: boolean;
 }
 
-export function ReplayView({ api, alphaId, alphaLabel, env, venueOf, book, focus, ordersHref, back }: ReplayViewProps) {
+export function ReplayView({ api, alphaId, alphaLabel, env, venueOf, book, focus, ordersHref, back, events, candlesOff = false }: ReplayViewProps) {
   const target = focusTarget(focus);
   const symbols = useMemo(() => symbolsOf(book.orders, book.fills), [book.orders, book.fills]);
   const focusSymbol = useMemo(() => {
@@ -54,11 +63,11 @@ export function ReplayView({ api, alphaId, alphaLabel, env, venueOf, book, focus
   const range = useMemo(() => replayRange(book.orders, book.fills, symbol), [book.orders, book.fills, symbol]);
   const venue = venueOf(env);
   const window = range === null ? null : candleWindow(range, wanted);
-  const query = symbol !== null && venue !== null && window !== null
+  const query = !candlesOff && symbol !== null && venue !== null && window !== null
     ? { env, symbol, venue, interval: window.interval, fromMs: window.fromMs, toMs: window.toMs, limit: window.limit }
     : null;
   const candles = useReplayCandles(api, query);
-  const verdict = candleVerdict(symbol, query === null && symbol !== null ? { phase: "error", status: "unavailable", reason: venue === null ? "The Portal reads no public klines for this alpha's venue" : "No timed trade to place candles around" } : candles.venue, candles.context);
+  const verdict = candleVerdict(symbol, query === null && symbol !== null ? { phase: "error", status: "unavailable", reason: candlesOff ? "Design preview: candles are switched off" : venue === null ? "The Portal reads no public klines for this alpha's venue" : "No timed trade to place candles around" } : candles.venue, candles.context);
 
   // Building the log to count untimed records is the costly part; it moves only when the records do.
   const untimed = useMemo(() => countUntimed(book.orders, book.fills), [book.orders, book.fills]);
@@ -79,6 +88,20 @@ export function ReplayView({ api, alphaId, alphaLabel, env, venueOf, book, focus
     ...(book.scoped ? [{ label: "Read", value: "Scoped: authorized rows only" }] : []),
   ];
 
+  // The lanes share the window of the loaded candles; with none, the span of the trades they sit under.
+  const laneDomain = useMemo(() => {
+    const bars = candles.venue.phase === "ready" && candles.venue.value.state === "READY" ? candles.venue.value.candles : [];
+    const first = bars[0]?.t;
+    const last = bars.length > 0 ? bars[bars.length - 1]!.t : undefined;
+    if (!candlesOff && first !== undefined && last !== undefined && last > first) return { from: first as UtcEpochMs, to: last as UtcEpochMs };
+    return range === null ? null : { from: range.lo as UtcEpochMs, to: range.hi as UtcEpochMs };
+  }, [candles.venue, candlesOff, range]);
+  // "14 of 14 fills in this window": the fills of the symbol on show against the loaded ones, exact counts of what was read.
+  const fillsInWindow = useMemo(() => {
+    const mine = book.fills.filter((f) => symbol === null || f.symbol === symbol);
+    if (laneDomain === null) return null;
+    return { inWindow: mine.filter((f) => { const t = ms(f.tradeTime); return t !== null && t >= laneDomain.from && t <= laneDomain.to; }).length, loaded: mine.length };
+  }, [book.fills, symbol, laneDomain]);
   const venuePayload = candles.venue.phase === "ready" ? candles.venue.value : null;
   const replay: TradeReplayEventsProps = {
     orders: book.orders,
@@ -104,6 +127,9 @@ export function ReplayView({ api, alphaId, alphaLabel, env, venueOf, book, focus
     },
     subjectLabel: alphaLabel,
     plain: true,
+    // The order id of a log row opens that order on Orders & Fills (`focus=order:<id>`), the way the deep link already does.
+    orderLink: (orderId) => <Link className="exec-blk-link" to={`${ordersHref}${ordersHref.includes("?") ? "&" : "?"}focus=${encodeURIComponent(`order:${orderId}`)}`} onClick={(event) => event.stopPropagation()}>{orderId}</Link>,
+    lanes: events === undefined || range === null ? null : <ReplayLanes events={events} domain={laneDomain} fills={fillsInWindow} />,
   };
 
   // The log and chart hold what was loaded and read. Say how far that is from what the Portal holds, in exact counts.

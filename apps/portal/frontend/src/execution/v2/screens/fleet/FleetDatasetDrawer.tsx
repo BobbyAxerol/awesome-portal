@@ -16,6 +16,8 @@ import { Flag } from "../../Flag";
 import type { ManagerRow } from "../../readers/managerDataset";
 import { withContext } from "../../urlState";
 import { ENVIRONMENT_LABEL, inStageOf, lifecycleFlagOf, stageViewOf } from "./fleetDatasetModel";
+import { QbtsCell } from "./FleetDatasetTable";
+import { PartitionFigures } from "./PartitionFigures";
 import { alphaHref, FE, healthView, humanize, notPublished } from "./fleetModel";
 import { spineStage } from "./FleetTable";
 import { formatInstant } from "../../boundary";
@@ -95,6 +97,18 @@ export function FleetDatasetDrawer({ rowKey, row, loading, mode, onClose }: Flee
             <JourneySpine variant="compact" current={spine} label={`${name} lifecycle`} />
           </section>
         ) : null}
+
+        <section aria-label="Figures">
+          <h3 className="exec-fleet-h">Figures</h3>
+          <dl className="exec-fleet-facts">
+            <Fact label="QBTS"><QbtsCell row={row} carried={row.metrics.score !== undefined} /></Fact>
+            {([["Alloc", "allocation"], ["PNL Amount", "net_pnl"], ["Unrealized PNL", "unrealized_pnl"], ["Account balance", "balance_total"], ["Equity 30D", "equity_30d_end_value"]] as const).map(([label, key]) => (
+              <Fact key={key} label={label}>
+                <PartitionFigures partitions={row.economicPartitions} metricKey={key} metricKeys={null} gap={{ fe: "FE-CAT-7", what: label }} signed={key === "net_pnl" || key === "unrealized_pnl"} />
+              </Fact>
+            ))}
+          </dl>
+        </section>
 
         <section aria-label="Identity">
           <h3 className="exec-fleet-h">Identity</h3>

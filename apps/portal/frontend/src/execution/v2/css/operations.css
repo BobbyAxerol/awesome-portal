@@ -564,3 +564,93 @@ span.exec-ops-link-id {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
+
+/* The table scrolls inside its own panel below 1300px: say so, where the reader looks for the next column (QA1 I-09). Hidden where it fits. */
+.exec-ops-scrollhint {
+  display: none;
+  margin: 0;
+  padding: var(--space-1) var(--space-3);
+  font: var(--exec-font-meta);
+  color: var(--ink-soft);
+}
+@media (max-width: 1300px) and (min-width: 661px) {
+  .exec-ops-scrollhint {
+    display: block;
+  }
+}
+/* Where the table scrolls sideways the action column stays pinned at the right edge, so Next is never the column that is cut (QA2 R3-23). */
+@media (max-width: 1300px) and (min-width: 661px) {
+  .exec-ops-table .exec-cards th:last-child,
+  .exec-ops-table .exec-cards td:last-child {
+    position: sticky;
+    right: 0;
+    background: var(--paper-raised);
+    box-shadow: -1px 0 0 var(--line-strong);
+  }
+}
+/* An id breaks only when it must (at a separator), not in the middle of a token. */
+.exec-ops-target .exec-ops-id {
+  overflow-wrap: break-word;
+  word-break: normal;
+}
+.exec-ops-tool[data-row="narrow"] {
+  margin-top: var(--space-2);
+}
+
+/* A status flag in a row never breaks inside its own label (a wrapped flag read as two facts at 1024). */
+.exec-ops-cell .exec-flag {
+  white-space: nowrap;
+}
+
+/* ---- WP-B: tabs count, source segment, next cell, peek, journal ---------- */
+
+.exec-ops-tab-count {
+  margin-left: var(--space-2);
+  font: var(--exec-font-id);
+  color: var(--ink-soft);
+}
+.exec-ops-tab[aria-selected="true"] .exec-ops-tab-count {
+  color: var(--ink);
+}
+.exec-ops-subtitle {
+  margin: 0;
+  font: var(--exec-font-subtitle);
+  color: var(--ink-soft);
+}
+.exec-ops-linkbtn {
+  padding: 0;
+  font: var(--exec-font-id);
+  color: var(--accent);
+  text-align: left;
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+.exec-ops-linkbtn:hover {
+  text-decoration: underline;
+}
+.exec-ops-linkbtn:focus-visible,
+.exec-ops-link-peek:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+.exec-ops-next-text {
+  font: var(--exec-font-body);
+  color: var(--ink-soft);
+}
+a.exec-ops-next-link {
+  font: var(--exec-font-body);
+  color: var(--accent);
+}
+.exec-ops-link-peek {
+  font: var(--exec-font-meta);
+  color: var(--accent);
+}
+.exec-ops-link-peek:hover {
+  text-decoration: underline;
+}
+.exec-ops-journal {
+  padding: var(--space-4);
+  color: var(--ink);
+  background: var(--paper-raised);
+}

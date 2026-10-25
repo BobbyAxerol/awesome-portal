@@ -370,7 +370,7 @@ describe("Orders & Fills on subject-records.v2", () => {
 describe("Trade Replay on subject-records.v2", () => {
   it("reads both candle sources and never merges them; the book says it is a scoped read", async () => {
     const { callsTo } = mount(`${SCOPED_ENTRY}&tab=replay`);
-    await ready();
+    await screen.findByRole("heading", { level: 1, name: "Trade Replay" });
     await waitFor(() => expect(callsTo("/market/venue-candles").length).toBeGreaterThan(0));
     await waitFor(() => expect(callsTo("/market/candles").length).toBeGreaterThan(0));
     expect(await screen.findByText("Scoped: authorized rows only")).toBeTruthy();

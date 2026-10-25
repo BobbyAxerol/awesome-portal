@@ -167,11 +167,24 @@ describe("the tab strip counts", () => {
     expect(tabs()).toEqual(["Real-funded1", "Paper4", "Sandbox2"]);
   });
 
-  it("prints no number for an environment the server could not count (null), never 0", async () => {
-    stubFetch(() => listBody((body) => { body.counts.by_environment.live = null; }));
+  it("the selected tab (Paper here) falls back to this read's own authorized total when its count is null; another environment's null is a typed n/a, never 0", async () => {
+    stubFetch(() => listBody((body) => { body.counts.by_environment.paper = null; body.counts.by_environment.live = null; }));
     mount();
     await loaded();
-    expect(tabs()).toEqual(["Real-funded", "Paper4", "Sandbox2"]);
+    const shown = tabs();
+    expect(shown[0]).toBe("Real-fundedn/a");
+    expect(shown[1]).toMatch(/^Paper\d+$/);
+    expect(shown[2]).toBe("Sandbox2");
+    expect(screen.getByRole("tab", { name: /^Real-funded/ }).querySelector("[aria-label='Count not published']")?.textContent).toBe("n/a");
+    expect(screen.getByText(/n\/a: the server did not publish that count from this snapshot/)).toBeTruthy();
+  });
+
+  it("the producer's shape today (only the selected environment exact; the others, all and issues null) prints n/a on those tabs and on Issues", async () => {
+    stubFetch(() => listBody((body) => { body.counts.by_environment = { live: null, paper: 4, sandbox: null }; body.counts.all = null; body.counts.issues = null; }));
+    mount();
+    await loaded();
+    expect(tabs()).toEqual(["Real-fundedn/a", "Paper4", "Sandboxn/a"]);
+    expect(screen.getByRole("button", { name: /^Issues only/ }).textContent).toBe("Issuesn/a");
   });
 
   it("keeps a counted zero as 0", async () => {
@@ -189,14 +202,15 @@ describe("the tab strip counts", () => {
     expect(screen.getByRole("button", { name: /^Issues only/ }).getAttribute("title")).not.toContain("across all environments");
   });
 
-  it("states the all-environment issue count only in the Issues control's title, and the loaded count stays the visible one", async () => {
+  it("shows the published all-environment issue count on the Issues control (a stable total), and the loaded count stays in its label and title", async () => {
     stubFetch(() => listBody());
     mount();
     await loaded();
     const button = screen.getByRole("button", { name: /^Issues only/ });
     expect(button.getAttribute("title")).toContain("3 across all environments");
-    // Loaded rows: okx_mixed (sync delayed) and gate_legacy (suspended) need attention.
-    expect(button.querySelector(".exec-acct-tab-count")?.textContent).toBe("2");
+    // The visible number is the published total; the loaded rows (okx_mixed sync delayed, gate_legacy suspended) are in the label.
+    expect(button.querySelector(".exec-acct-tab-count")?.textContent).toBe("3");
+    expect(button.getAttribute("aria-label")).toContain("2 in the");
     fireEvent.click(screen.getByRole("tab", { name: /^Sandbox/ }));
   });
 
