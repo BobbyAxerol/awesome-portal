@@ -43,7 +43,9 @@ function fixture() {
       protected_owner_user_id: "TEST_ONLY-owner", workspace_id: "TEST_ONLY-workspace",
       principal_workspace_pins: [{ user_id: "TEST_ONLY-owner", workspace_id: "TEST_ONLY-workspace" }] },
     listeners: { assertion: { host: "127.0.0.1", port: 29450 }, reverse: { host: "127.0.0.1", port: 29451 } },
-    config: { assertion_transport: { tls: tls("assertion") }, current_human_transport: { tls: tls("reverse") } },
+    config: { assertion_transport: { tls: tls("assertion") }, current_human_transport: { tls: tls("reverse") },
+      candidate: { installation_scope: { workspace_id: "TEST_ONLY-workspace", environment: "paper", valid_until_ms: Date.now()+300_000 } },
+      source_selection: { workspace_id: "TEST_ONLY-workspace", environment: "paper" }, assertion_limits: { ttl_ms: 60_000 } },
     recovery: { origin: "https://127.0.0.1:29452", tls: tls("recovery"), source_certificate_sha256: `sha256:${"a".repeat(64)}`,
       deadline_ms: 5000, response_bytes: 32768 },
   } as PreparedFinancialSourceRuntime;
@@ -58,15 +60,17 @@ describe("private financial bootstrap", () => {
   it("asserts the actual pool/schema target before composition and performs no listener/context/issuance", async () => {
     const f = fixture(), order: string[] = [];
     f.assertSchema.mockImplementation(async (pool, target) => {
-      expect(pool).toBe(f.pool); expect(target).toBe(f.runtime.schemaTarget); order.push("schema");
+      expect(pool).toBe(f.pool); expect(target).toEqual(f.runtime.schemaTarget); order.push("schema");
       return { schema_version: "TEST_ONLY-schema", schema_sha256: "TEST_ONLY-source", catalogue_sha256: "TEST_ONLY-catalogue", installed: false };
     });
     f.create.mockImplementation(async (pool, config) => {
-      expect(pool).toBe(f.pool); expect(config).toBe(f.runtime.config); order.push("composition"); return f.composition;
+      expect(pool).toBe(f.pool); expect(config).toMatchObject(f.runtime.config); order.push("composition"); return f.composition;
     });
     const prepared = await prepareFinancialSourceApplication(f.pool, f.runtime);
     expect(order).toEqual(["schema", "composition"]); expect(prepared.composition).toBe(f.composition);
-    expect(prepared.listeners).toBe(f.runtime.listeners); expect(prepared.participant.candidate).toBe(f.candidate);
+    expect(prepared.listeners).toEqual(f.runtime.listeners); expect(prepared.listeners).not.toBe(f.runtime.listeners);
+    expect(prepared.participant.candidate).toBe(f.candidate);
+    expect(prepared.owner.withOwnerContext).toBeTypeOf("function");
     expect(prepared.participant.recovery).toBeInstanceOf((await import("../src/execution-v2/current-human-recovery-client")).CurrentHumanRecoveryClient);
     expect(f.start).not.toHaveBeenCalled(); expect(f.withPrincipal).not.toHaveBeenCalled();
     expect(f.candidate.recoverableObligations).not.toHaveBeenCalled(); expect(f.pool.connect).not.toHaveBeenCalled(); expect(f.pool.end).not.toHaveBeenCalled();
@@ -81,6 +85,33 @@ describe("private financial bootstrap", () => {
     }
     for (const selected of [f.runtime.config.assertion_transport.tls, f.runtime.config.current_human_transport.tls])
       for (const bytes of [selected.key, selected.cert, selected.ca]) expect((bytes as Buffer).every(byte => byte === 0)).toBe(true);
+  });
+  it("holds one detached actor/source/trust/recovery/listener selection across the asynchronous schema preflight", async () => {
+    const f = fixture();
+    f.runtime.config.assertion_transport.peer = { certificate_sha256: `sha256:${"b".repeat(64)}`,
+      dns_name: "test-only.invalid", workload_id: "TEST_ONLY-original-workload" };
+    let proceed!: () => void;
+    f.assertSchema.mockImplementationOnce(() => new Promise(resolve => { proceed=()=>resolve({
+      schema_version:"TEST_ONLY-schema",schema_sha256:"TEST_ONLY-source",catalogue_sha256:"TEST_ONLY-catalogue",installed:false }); }));
+    const before = structuredClone({ actor:f.runtime.actor,config:f.runtime.config,recovery:f.runtime.recovery,listeners:f.runtime.listeners });
+    let received: unknown;
+    f.create.mockImplementationOnce(async (_pool,config) => { received=structuredClone(config);return f.composition; });
+    const pending = prepareFinancialSourceApplication(f.pool,f.runtime);
+    Reflect.set(f.runtime.actor,"user_id","TEST_ONLY-replacement-actor");
+    f.runtime.config.assertion_transport.peer.workload_id="TEST_ONLY-replacement-workload";
+    f.runtime.config.assertion_transport.peer.certificate_sha256=`sha256:${"c".repeat(64)}`;
+    (f.runtime.config.assertion_transport.tls.key as Buffer).fill(5);
+    f.runtime.recovery.origin="https://127.0.0.1:29999";
+    f.runtime.recovery.source_certificate_sha256=`sha256:${"d".repeat(64)}`;
+    (f.runtime.recovery.tls.cert as Buffer).fill(6);
+    Reflect.set(f.runtime.listeners.assertion,"port",29998);
+    proceed(); const prepared=await pending;
+    expect(received).toEqual(before.config);
+    // structuredClone normalizes Buffer to Uint8Array; compare both snapshots
+    // without changing any byte/pin assertion for the recovered selection.
+    expect(structuredClone(observed.recoveryInputs[0])).toEqual(before.recovery);
+    expect(prepared.listeners).toEqual(before.listeners); expect(Object.isFrozen(prepared.listeners.assertion)).toBe(true);
+    expect(f.withPrincipal).not.toHaveBeenCalled(); expect(f.start).not.toHaveBeenCalled();
   });
   it("preserves independent recovery copies and erases input bytes when composition construction fails", async () => {
     const f = fixture(), failure = Error("TEST_ONLY-create-refused"), expected = Buffer.from(f.runtime.recovery.tls.key as Buffer);

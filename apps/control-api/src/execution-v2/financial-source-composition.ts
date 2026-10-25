@@ -26,7 +26,8 @@ export type FinancialSourceListenerTargets = { assertion: FinancialSourceListene
 type State = "CREATED" | "STARTING" | "RUNNING" | "STOPPING" | "STOPPED" | "FAILED";
 export class FinancialSourceCompositionError extends Error {
   constructor(readonly code: "FINANCIAL_SOURCE_COMPOSITION_CONFIG_INVALID" | "FINANCIAL_SOURCE_COMPOSITION_NOT_RUNNING" |
-    "FINANCIAL_SOURCE_COMPOSITION_START_FAILED" | "FINANCIAL_SOURCE_COMPOSITION_SHUTDOWN_PENDING") {
+    "FINANCIAL_SOURCE_COMPOSITION_START_FAILED" | "FINANCIAL_SOURCE_COMPOSITION_SHUTDOWN_PENDING" |
+    "FINANCIAL_SOURCE_COMPOSITION_CANCELLED") {
     super("The private financial source composition is unavailable.");
   }
 }
@@ -157,19 +158,35 @@ export class FinancialSourceComposition {
     }
   }
 
-  withPrincipal<T>(actor: AccessActor, use: (originalContext: string) => T | Promise<T>): Promise<T> {
+  /** Explicit server-owner use only; normal startup remains UNBOUND. Aborting
+   * retires admission immediately, but NEVER releases pending callback/source
+   * ownership or closes the reverse listener needed for original settlement. */
+  withPrincipal<T>(actor: AccessActor,
+    use: (originalContext: string, registration: Readonly<{ expires_at_ms: number }>) => T | Promise<T>,
+    options: { signal?: AbortSignal } = {}): Promise<T> {
     if (this.state !== "RUNNING" || typeof use !== "function") return Promise.reject(failure("FINANCIAL_SOURCE_COMPOSITION_NOT_RUNNING"));
-    let context: string;
-    try { context = this.authority.register(actor, this.config.source_selection).original_context; }
+    const signal = options.signal;
+    if (signal !== undefined && !(signal instanceof AbortSignal)) return Promise.reject(failure("FINANCIAL_SOURCE_COMPOSITION_CONFIG_INVALID"));
+    if (signal?.aborted) return Promise.reject(failure("FINANCIAL_SOURCE_COMPOSITION_CANCELLED"));
+    let context: string, registration: Readonly<{ expires_at_ms: number }>;
+    try {
+      const selected = this.authority.register(actor, this.config.source_selection);
+      context = selected.original_context;
+      registration = Object.freeze({ expires_at_ms: selected.expires_at_ms });
+    }
     catch (error) { return Promise.reject(error); }
     this.contexts.add(context);
+    const retire = () => { this.authority.release(context); this.contexts.delete(context); };
+    signal?.addEventListener("abort", retire, { once: true });
     const pending = Promise.resolve().then(() => {
+      if (signal?.aborted) throw failure("FINANCIAL_SOURCE_COMPOSITION_CANCELLED");
       if (this.state !== "RUNNING") throw failure("FINANCIAL_SOURCE_COMPOSITION_NOT_RUNNING");
-      return use(context);
+      return use(context, registration);
     }).then(result => {
+      if (signal?.aborted) throw failure("FINANCIAL_SOURCE_COMPOSITION_CANCELLED");
       if (this.state !== "RUNNING") throw failure("FINANCIAL_SOURCE_COMPOSITION_NOT_RUNNING");
       return result;
-    }).finally(() => { this.authority.release(context); this.contexts.delete(context); this.uses.delete(pending); });
+    }).finally(() => { signal?.removeEventListener("abort", retire); retire(); this.uses.delete(pending); });
     this.uses.add(pending);
     return pending;
   }

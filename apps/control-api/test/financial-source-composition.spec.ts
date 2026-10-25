@@ -163,6 +163,66 @@ describe("private financial source Core composition (TEST_ONLY lifecycle)", () =
     await expect(f.composition.withPrincipal({ ...actor, role: "ADMIN" } as typeof actor, use)).rejects.toThrow();
     expect(use).not.toHaveBeenCalled(); expect(f.candidate.issue).not.toHaveBeenCalled();
   });
+  it("returns the actual immutable registration expiry to the explicit owner callback", async () => {
+    const c = config(), f = await setup(c); await f.composition.start(targets);
+    const before = Date.now();
+    await f.composition.withPrincipal(actor, (_context, registration) => {
+      expect(Object.isFrozen(registration)).toBe(true);
+      expect(registration.expires_at_ms).toBeGreaterThanOrEqual(before + c.assertion_limits.ttl_ms);
+      expect(registration.expires_at_ms).toBeLessThanOrEqual(Date.now() + c.assertion_limits.ttl_ms);
+    });
+    expect(f.candidate.issue).not.toHaveBeenCalled();
+  });
+  it("does not register or invoke a use for an already aborted owner signal", async () => {
+    const f = await setup(); await f.composition.start(targets);
+    const controller = new AbortController(); controller.abort(); const use = vi.fn();
+    await expect(f.composition.withPrincipal(actor, use, { signal: controller.signal }))
+      .rejects.toMatchObject({ code: "FINANCIAL_SOURCE_COMPOSITION_CANCELLED" });
+    expect(use).not.toHaveBeenCalled(); expect(f.candidate.issue).not.toHaveBeenCalled();
+    expect(f.composition.snapshot()).toMatchObject({ owned_contexts: 0, pending_uses: 0 });
+  });
+  it("aborting before callback dispatch retires admission without dispatching the callback", async () => {
+    const f = await setup(); await f.composition.start(targets);
+    const controller = new AbortController(), use = vi.fn();
+    const result = f.composition.withPrincipal(actor, use, { signal: controller.signal });
+    controller.abort();
+    expect(f.composition.snapshot()).toMatchObject({ owned_contexts: 0, pending_uses: 1 });
+    await expect(result).rejects.toMatchObject({ code: "FINANCIAL_SOURCE_COMPOSITION_CANCELLED" });
+    expect(use).not.toHaveBeenCalled();
+  });
+  it("retires aborted context admission but retains callback ownership and reverse settlement until joined", async () => {
+    const c = config(), f = await setup(c); await f.composition.start(targets);
+    const controller = new AbortController(), held = deferred<string>(); let token = "", settled = false;
+    const result = f.composition.withPrincipal(actor, context => {
+      token = context; return held.promise;
+    }, { signal: controller.signal }).catch(error => error).finally(() => { settled = true; });
+    await vi.waitFor(() => expect(token).not.toBe("")); controller.abort();
+    expect(f.composition.snapshot()).toMatchObject({ state: "RUNNING", owned_contexts: 0, pending_uses: 1 });
+    expect(f.reverse.server.listening).toBe(true); expect(settled).toBe(false);
+    await expect(f.issue(token, compactRequest(c))).rejects.toMatchObject({ code: "FINANCIAL_ASSERTION_CONTEXT_REQUIRED" });
+    expect(f.candidate.issue).not.toHaveBeenCalled();
+    held.resolve("TEST_ONLY-worker-stopped");
+    expect(await result).toMatchObject({ code: "FINANCIAL_SOURCE_COMPOSITION_CANCELLED" });
+    expect(f.composition.snapshot()).toMatchObject({ state: "RUNNING", pending_uses: 0 });
+    expect(f.reverse.server.listening).toBe(true); expect(f.end).not.toHaveBeenCalled();
+  });
+  it("aborting an in-flight issue does not discard its original pending promise or report a drain", async () => {
+    const c = config(), f = await setup(c), held = deferred<Awaited<ReturnType<typeof f.candidate.issue>>>();
+    const original = f.candidate.issue.getMockImplementation()!;
+    f.candidate.issue.mockImplementationOnce(() => held.promise); await f.composition.start(targets);
+    const controller = new AbortController();
+    const result = f.composition.withPrincipal(actor, context => f.issue(context, compactRequest(c)),
+      { signal: controller.signal }).catch(error => error);
+    await vi.waitFor(() => expect(f.candidate.issue).toHaveBeenCalledOnce()); controller.abort();
+    expect(f.composition.snapshot()).toMatchObject({ state: "RUNNING", pending_uses: 1,
+      authority: { pending: 1 }, assertion: { in_flight: 1 } });
+    expect(f.reverse.server.listening).toBe(true);
+    held.resolve(await original(actor, { workspace_id: c.source_selection.workspace_id, environment: "paper",
+      workload_id: c.source_selection.workload_id, request_digest: compactRequest(c).request_digest }));
+    await result;
+    expect(f.composition.snapshot()).toMatchObject({ pending_uses: 0, authority: { pending: 0 } });
+    expect(f.candidate.issue).toHaveBeenCalledOnce(); expect(f.end).not.toHaveBeenCalled();
+  });
   const invalid: [string, (c: FinancialSourceCompositionConfig) => void][] = [
     ["missing Paper installation", c => { delete c.candidate.installation_scope; }],
     ["non-Paper installation", c => { Reflect.set(c.candidate.installation_scope!, "environment", "live"); }],

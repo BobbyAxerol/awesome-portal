@@ -9,10 +9,13 @@ import { Pool, type PoolClient } from "pg";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import type { AccessActor } from "../src/execution-v2/access.contract";
 import { accessDigest } from "../src/execution-v2/access-policy";
-import { CurrentHumanCandidate, type CurrentHumanBinding, type CurrentHumanCandidateConfig } from "../src/execution-v2/current-human-candidate";
+import { CurrentHumanCandidate, CurrentHumanLeaseError, type CurrentHumanBinding, type CurrentHumanCandidateConfig } from "../src/execution-v2/current-human-candidate";
 import { CurrentHumanMutations, type CurrentHumanRecoveryAttempt, type CurrentHumanRecoveryPort,
   type CurrentHumanReverseRecoveryParticipant } from "../src/execution-v2/current-human-mutations";
 import { migrateTestDatabase } from "./harness";
+import { createFinancialSourceOwnerCommissioning } from "../src/execution-v2/financial-source-commissioning";
+import type { PreparedFinancialSourceRuntime } from "../src/execution-v2/financial-source-runtime";
+import type { FinancialSourceComposition } from "../src/execution-v2/financial-source-composition";
 
 const database = process.env.TEST_DATABASE_URL;
 type Fixture = { candidate: CurrentHumanCandidate; config: CurrentHumanCandidateConfig; binding: CurrentHumanBinding;
@@ -130,6 +133,60 @@ describe.skipIf(!database).sequential("financial reverse participant shares the 
     await pool.query("DELETE FROM portal_users WHERE user_id=$1", [actor.user_id]);
   });
   afterAll(async () => { await pool?.end(); });
+
+  // Only the current-authority preflight uses real PG here. This explicit
+  // context port is TEST_ONLY, not a PM publication context/source receipt.
+  const ownerFixture = () => {
+    const runtime = { actor: { ...actor }, schemaTarget: { workspace_id: financial.binding.workspace_id,
+      principal_workspace_pins: [{ user_id: actor.user_id, workspace_id: financial.binding.workspace_id }] },
+      config: { candidate: { installation_scope: { workspace_id: financial.binding.workspace_id,
+        environment: "paper", valid_until_ms: Date.now()+60_000 } },
+      source_selection: { workspace_id: financial.binding.workspace_id, environment: "paper" },
+      assertion_limits: { ttl_ms: 60_000 } } } as PreparedFinancialSourceRuntime;
+    const withPrincipal = vi.fn(async (_actor: AccessActor, use: (context: string, metadata: {expires_at_ms: number}) => unknown) =>
+      use("TEST_ONLY-not-a-real-context", { expires_at_ms: Date.now()+60_000 }));
+    const composition = { withPrincipal, snapshot: () => ({ state: "RUNNING" }) } as unknown as FinancialSourceComposition;
+    return { owner: createFinancialSourceOwnerCommissioning(pool, runtime, composition), withPrincipal };
+  };
+  it("authenticates an owner context against the real current session and releases the SQL transaction before external work", async () => {
+    const f = ownerFixture();
+    const result = await f.owner.withOwnerContext(async context => {
+      expect(context.original_context).toBe("TEST_ONLY-not-a-real-context");
+      expect(pool.idleCount).toBe(pool.totalCount);
+      expect((await pool.query("SELECT count(*)::int n FROM elp210_candidate.leases")).rows[0].n).toBe(0);
+      return "TEST_ONLY-owner-callback";
+    }, { deadline_ms: 5000 });
+    expect(result).toBe("TEST_ONLY-owner-callback");
+    expect(f.withPrincipal.mock.calls[0][0]).toEqual(actor);
+  });
+  it.each(["REVOKED", "EXPIRED"])("does not export a context for a real %s session", async condition => {
+    const f = ownerFixture(), use = vi.fn();
+    if (condition === "REVOKED") await pool.query("UPDATE auth_sessions SET state='REVOKED' WHERE session_id=$1", [actor.session_id]);
+    else await pool.query("UPDATE auth_sessions SET idle_expires_at=clock_timestamp()-interval '1 second' WHERE session_id=$1", [actor.session_id]);
+    await expect(f.owner.withOwnerContext(use, { deadline_ms: 5000 })).rejects.toMatchObject({ code: "CURRENT_ACTOR_AUTHORITY_REQUIRED" });
+    expect(use).not.toHaveBeenCalled(); expect(f.withPrincipal).not.toHaveBeenCalled();
+    expect(pool.idleCount).toBe(pool.totalCount);
+  });
+  it("does not export a context when the real shared authority is draining", async () => {
+    const f = ownerFixture(), use = vi.fn();
+    await pool.query("UPDATE elp210_candidate.authority SET drain_id=$1 WHERE singleton", ["TEST_ONLY-active-drain"]);
+    await expect(f.owner.withOwnerContext(use, { deadline_ms: 5000 })).rejects.toThrow();
+    expect(use).not.toHaveBeenCalled(); expect(f.withPrincipal).not.toHaveBeenCalled();
+    expect((await state()).drain_id).toBe("TEST_ONLY-active-drain");
+  });
+  it("does not manufacture terminal custody or retry after an original real ISSUE and lost worker response", async () => {
+    const f = ownerFixture(), failure = new CurrentHumanLeaseError("TEST_ONLY_RESPONSE_LOST");
+    let original: Awaited<ReturnType<CurrentHumanCandidate["issue"]>> | undefined;
+    await expect(f.owner.withOwnerContext(async () => {
+      expect(pool.idleCount).toBe(pool.totalCount);
+      original = await financial.candidate.issue(actor, financial.binding); throw failure;
+    }, { deadline_ms: 5000 })).rejects.toBe(failure);
+    expect(f.withPrincipal).toHaveBeenCalledOnce();
+    expect(await leaseRow(original!.lease_id)).toMatchObject({ phase: "ISSUED", attempt_id: null, terminal_receipt_digest: null });
+    expect((await pool.query("SELECT count(*)::int n FROM elp210_candidate.obligations WHERE unresolved")).rows[0].n).toBe(1);
+    expect((await pool.query("SELECT count(*)::int n FROM elp210_candidate.leases")).rows[0].n).toBe(1);
+    expect(await sessionState()).toBe("ACTIVE");
+  });
 
   it.each(["COMMITTED", "ROLLED_BACK"] as const)("releases both source workloads only after signed original %s is durable", async phase => {
     const n = await enter(native), f = await enter(financial), before = await leaseRow(f.lease_id);
