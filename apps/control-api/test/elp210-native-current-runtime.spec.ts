@@ -254,13 +254,17 @@ describe("native CURRENT actual private bootstrap/AppModule factory (explicit sy
     expect(() => AppModule.register(config, f.pool, undefined, { ...deps, nativeCurrent: wrong })).toThrow("NATIVE_CURRENT_SHARED_RESEARCH_COMPOSITION_REQUIRED");
     expect(f.pool.connect).not.toHaveBeenCalled(); expect(f.pool.end).not.toHaveBeenCalled();
   });
-  it("does not widen public route ceiling without actual private Account scopes; no ALL, mutation, history or wildcard", () => {
-    const route = "/api/v1/execution/manager/accounts/account-test/overview", scope = { EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID: workspace };
+  it.each(["accounts", "alphas"])("keeps the exact %s route ceiling private and Paper-only; no ALL, mutation, history or wildcard", family => {
+    const route = `/api/v1/execution/manager/${family}/entity-test/overview`, scope = { EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID: workspace };
     expect(nativeResearchReadAllowed(scope, "GET", route, { environment: "paper" })).toBe(false);
     expect(nativeResearchReadAllowed(scope, "GET", route, { environment: "paper" }, true)).toBe(true);
+    expect(nativeResearchReadAllowed(scope, "GET", route, {}, true)).toBe(true);
     for (const [method, path, query] of [["POST", route, { environment: "paper" }], ["GET", route, { environment: "ALL" }],
+      ["GET", route, { environment: "sandbox" }], ["GET", route, { environment: "live" }],
       ["GET", route, { environment: "paper", workspace_id: "TEST_ONLY-other" }],
-      ["GET", "/api/v1/execution/manager/fleet", { environment: "paper" }], ["GET", route + "/history", { environment: "paper" }]] as const)
+      ["GET", "/api/v1/execution/manager/fleet", { environment: "paper" }],
+      ["GET", "/api/v1/execution/manager/portfolios/entity-test/overview", { environment: "paper" }],
+      ["GET", route + "/history", { environment: "paper" }], ["GET", route + "/extra", { environment: "paper" }]] as const)
       expect(nativeResearchReadAllowed(scope, method, path, query, true)).toBe(false);
   });
 });
