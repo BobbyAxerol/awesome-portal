@@ -12,6 +12,8 @@ import { prepareFinancialSourceApplication, selectPrivateCorePoolProfile } from 
 import { nativeCurrentRuntimeReference, prepareNativeCurrentRuntime, prepareNativeCurrentApplication } from "./execution-v2/native-current-runtime";
 import { commandStatusRuntimeReference, prepareCommandStatusRuntime } from "./execution-v2/command-status-runtime";
 import { prepareCommandStatusApplication } from "./execution-v2/command-status-bootstrap";
+import { nativeRootRuntimeReference, prepareNativeRootRuntime, prepareNativeRootApplication } from "./execution-v2/native-root-runtime";
+import { accessDigest } from "./execution-v2/access-digest";
 
 async function bootstrap(): Promise<void> {
   const config = loadConfig();
@@ -27,13 +29,18 @@ async function bootstrap(): Promise<void> {
   const statusReference=commandStatusRuntimeReference();
   const statusRuntime=statusReference?await prepareCommandStatusRuntime(statusReference):undefined;
   if(statusRuntime&&!nativeResearchReview(config))throw new Error("COMMAND_STATUS_RESEARCH_TARGET_REQUIRED");
+  const rootReference=nativeRootRuntimeReference();
+  const rootRuntime=rootReference?await prepareNativeRootRuntime(rootReference):undefined;
   const reviewTarget=nativeResearchReview(config)
     ? native?.researchReviewTarget(config.EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID!) : undefined;
   if(nativeResearchReview(config)&&!reviewTarget)throw new Error("NATIVE_RESEARCH_REVIEW_COMPOSITION_REQUIRED");
-  const pool = buildPool(config.DATABASE_URL, selectPrivateCorePoolProfile(native,currentViewRuntime,financialRuntime,finiteRuntime,statusRuntime));
+  if(rootRuntime&&(!nativeResearchReview(config)||!reviewTarget||accessDigest(rootRuntime.schemaTarget)!==accessDigest(reviewTarget)))
+    throw new Error("NATIVE_ROOT_RESEARCH_TARGET_REQUIRED");
+  const pool = buildPool(config.DATABASE_URL, selectPrivateCorePoolProfile(native,currentViewRuntime,financialRuntime,finiteRuntime,statusRuntime,rootRuntime));
   let financialSource: Awaited<ReturnType<typeof prepareFinancialSourceApplication>> | undefined;
   let nativeCurrent: Awaited<ReturnType<typeof prepareNativeCurrentApplication>> | undefined;
   let commandStatus: Awaited<ReturnType<typeof prepareCommandStatusApplication>> | undefined;
+  let nativeRoot: Awaited<ReturnType<typeof prepareNativeRootApplication>> | undefined;
   const nativeDependencies = native ? await composeOwnedNativeCoreRuntime({compose:async ownedPool=>{
     if(reviewTarget)await assertRegisteredResearchCurrentHumanSchema(ownedPool,reviewTarget);
     // Both factories finish before any listener starts. A failed schema or
@@ -41,11 +48,12 @@ async function bootstrap(): Promise<void> {
     financialSource=financialRuntime?await prepareFinancialSourceApplication(ownedPool,financialRuntime):undefined;
     nativeCurrent=finiteRuntime?await prepareNativeCurrentApplication(ownedPool,finiteRuntime):undefined;
     commandStatus=statusRuntime?await prepareCommandStatusApplication(ownedPool,statusRuntime):undefined;
+    nativeRoot=rootRuntime?await prepareNativeRootApplication(ownedPool,rootRuntime):undefined;
     return native.compose(ownedPool,[...(financialSource?[financialSource.participant]:[]),
-      ...(commandStatus?[commandStatus.participant]:[])],nativeCurrent?.provider);
+      ...(commandStatus?[commandStatus.participant]:[])],nativeCurrent?.provider,nativeRoot?.provider);
   }}, pool) : undefined;
   const dependencies = { ...nativeDependencies,...(currentViewRuntime?{currentViewRuntime}:{}),...(financialSource?{financialSource}:{}),
-    ...(nativeCurrent?{nativeCurrent}:{}),...(commandStatus?{commandStatus}:{}) };
+    ...(nativeCurrent?{nativeCurrent}:{}),...(commandStatus?{commandStatus}:{}),...(nativeRoot?{nativeRoot}:{}) };
   const owner = native ? new NativeCoreApplicationOwner(pool) : undefined;
   try {
     const app = await createControlApiApp(config, pool, undefined, dependencies, owner);

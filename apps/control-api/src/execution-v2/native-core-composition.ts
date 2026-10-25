@@ -19,6 +19,7 @@ import type { AccessTrustProvider } from "./access-trust";
 import type { ExecutionAccessService } from "./access.service";
 import { NativeManagerReadConsumer, type NativeManagerRealtimeOptions } from "./native-manager-consumer";
 import type { NativeCacheObserver } from "./native-cache-observation";
+import type { NativeRootReceiptProvider } from "./native-root-provider";
 import type { MaximumDataOperationService } from "../execution/maximum-data-operation.service";
 import { isManagerRuntimeTrustDelegate } from "./manager-runtime";
 import { managerCurrentPublicationBase } from "./manager-current-publication";
@@ -110,7 +111,7 @@ function capture(value:unknown){
  */
 export async function composeNativeCore(pool:Pool,baseTrust:AccessTrustProvider,input:NativeCoreCompositionInput,
   reverseParticipants: readonly CurrentHumanReverseRecoveryParticipant[] = [],
-  currentReadRecovery?:CurrentHumanCurrentReadRecoveryPort){
+  currentReadRecovery?:CurrentHumanCurrentReadRecoveryPort,rootProvider?:NativeRootReceiptProvider){
   const root=own(input,["expected_workload_id","selections","retained_recovery","owner_intakes","mutation_limits"]);
   if(typeof root.expected_workload_id!=="string"||!Array.isArray(root.selections)||!Array.isArray(root.retained_recovery)||
     !Array.isArray(root.owner_intakes)||root.selections.length<1||root.selections.length+root.retained_recovery.length>64||
@@ -157,8 +158,11 @@ export async function composeNativeCore(pool:Pool,baseTrust:AccessTrustProvider,
     // coordinator ignores this return and checks durable global pending state.
     return candidate.reconcileNativeRead(attempt.lease_id);
   }});
-  const mutations=new CurrentHumanMutations(pool,enumerator!,reverse,limits,native,reverseParticipants,currentReadRecovery);
-  let trust=baseTrust;
+  const mutations=new CurrentHumanMutations(pool,enumerator!,reverse,limits,native,reverseParticipants,currentReadRecovery,rootProvider);
+  // ROOT is a separate held MUTATION authority, not ordinary CURRENT. Compose
+  // before the owner intake and WeakMap capture so every consumer sees THIS
+  // exact trust/coordinator pair. No source request or receipt intake occurs.
+  let trust=rootProvider?rootProvider.compose(baseTrust):baseTrust;
   const intakes=pins.map(pin=>{const prepared=privateOwnerCommissioning(trust,pool,pin);trust=prepared.trust;return prepared;});
   const composition=Object.freeze({
     dependencies:Object.freeze({executionAccessTrust:trust,currentHumanMutations:mutations}),

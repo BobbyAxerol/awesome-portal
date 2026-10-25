@@ -59,6 +59,12 @@ export interface PreparedNativeRootRuntime {
  readonly poolProfile:Readonly<CorePoolProfile>;readonly schemaTarget:Readonly<NativeCoreSchemaTarget>;
  readonly provider:NativeRootProviderConfig;readonly transport:NativeRootSourceClientConfig;
 }
+export interface PreparedNativeRootApplication {
+ readonly provider:NativeRootReceiptProvider;
+ composeTrust(base:AccessTrustProvider):AccessTrustProvider;
+ recover():Promise<{remaining:number}>;
+ shutdown():Promise<void>;
+}
 /** Environment selection does not read files or enable another native surface. */
 export function nativeRootRuntimeReference(env:NodeJS.ProcessEnv=process.env):NativeRootRuntimeReference|undefined {
  const path=env.CONTROL_API_NATIVE_ROOT_CONFIG_FILE,sha256=env.CONTROL_API_NATIVE_ROOT_CONFIG_SHA256;
@@ -99,7 +105,7 @@ export async function prepareNativeRootRuntime(input:NativeRootRuntimeReference)
 /** Existing schema/migration only; no automatic DDL, source ISSUE, acceptance
  * or listener. The parent application MUST register this exact provider with
  * its shared mutation recovery/drain before exposing composeTrust. */
-export async function prepareNativeRootApplication(pool:Pool,runtime:PreparedNativeRootRuntime){
+export async function prepareNativeRootApplication(pool:Pool,runtime:PreparedNativeRootRuntime):Promise<PreparedNativeRootApplication>{
  try{
   await assertRegisteredResearchCurrentHumanSchema(pool,runtime.schemaTarget);
   const schema=await pool.query(`SELECT to_regclass('public.portal_native_root_obligations') AS custody,
@@ -113,7 +119,6 @@ export async function prepareNativeRootApplication(pool:Pool,runtime:PreparedNat
   if(migration.rows.length!==1)return fail();
   const client=new NativeRootSourceClient(runtime.transport),provider=new NativeRootReceiptProvider(pool,client,runtime.provider);
   return Object.freeze({provider,composeTrust:(base:AccessTrustProvider)=>provider.compose(base),
-   recover:()=>provider.recover()});
+   recover:()=>provider.recover(),shutdown:()=>provider.shutdown()});
  }catch{return fail();}finally{for(const bytes of Object.values(runtime.transport.tls))if(Buffer.isBuffer(bytes))bytes.fill(0);}
 }
-export type PreparedNativeRootApplication=Awaited<ReturnType<typeof prepareNativeRootApplication>>;

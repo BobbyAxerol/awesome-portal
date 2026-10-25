@@ -8,7 +8,7 @@ import { accessDigest } from "./access-digest";
 import { tsRootMembershipAcceptance,type TsRootMembershipAcceptance } from "./access.contract";
 import type { AccessTrustProvider } from "./access-trust";
 import type { QualifiedRootMembershipReceipt,RootReceiptVerificationContext } from "./access-root-receipt";
-import type { CurrentHumanMutationHooks } from "./current-human-mutations";
+import type { CurrentHumanMutationFence,CurrentHumanMutationFenceContext,CurrentHumanMutationHooks } from "./current-human-mutations";
 import { nativeRootBase,nativeRootCanonical,nativeRootDecode,nativeRootMutation,nativeRootOriginal,nativeRootRegistration,
   prepareNativeRootSourceRequest,type NativeRootSourceBase,type NativeRootSourceAction,type NativeRootSourceIssued } from "./native-root-codec";
 import { NativeRootSourceClient,nativeRootSourceAuthenticatedResult,type AuthenticatedNativeRootSourceResult } from "./native-root-source-client";
@@ -46,9 +46,26 @@ const configSchema=z.object({source:z.object({human_issuer:text,subject:text,wor
 const terminalSchema=z.object({issuer:text,audience:text,key_id:text,ttl_seconds:z.number().int().min(1).max(60)}).strict();
 type TerminalFact={schema_version:"portal.native-root-terminal.v1";phase:"COMMITTED"|"ROLLED_BACK";
   source_base_digest:string;mutation_id:string;mutation_binding_digest:string;accepted_fact_digest:string;receipt_ref:string|null;};
+type FenceIdentity={provider:NativeRootReceiptProvider;base:Readonly<NativeRootSourceBase>;assertCurrent:()=>void};
+// Only an actual successful verify(COMMIT) creates an entry. A wrapper may
+// carry an existing identity, but cannot mint one or supply its own guard.
+const commitFences=new WeakMap<object,Readonly<FenceIdentity>>();
+export function carryNativeRootFenceIdentity(from:object,to:object):void {
+  const identity=commitFences.get(from);if(!identity)return;
+  const prior=commitFences.get(to);
+  if(prior&&prior!==identity)return fail("NATIVE_ROOT_CUSTODY_CONFLICT");
+  commitFences.set(to,identity);
+}
 
 export class NativeRootReceiptProvider {
   private readonly config:Readonly<NativeRootProviderConfig>;
+  private closing=false;
+  private verificationInProgress=false;
+  private shutdownPromise?:Promise<void>;
+  private readonly operations=new Set<Promise<unknown>>();
+  private readonly liveLeases=new Set<string>();
+  private readonly holders=new Map<string,()=>Promise<void>>();
+  private readonly recoveries=new Map<string,Promise<void>>();
   readonly source_config_digest:string;
   constructor(private readonly pool:Pool,private readonly client:NativeRootSourceClient,input:NativeRootProviderConfig) {
     try {
@@ -63,6 +80,54 @@ export class NativeRootReceiptProvider {
     } catch {throw new NativeRootProviderError("NATIVE_ROOT_CONFIG_INVALID");}
   }
   usesPool(pool:Pool):boolean{return this.pool===pool;}
+  snapshot():Readonly<{closing:boolean;active_operations:number;live_holders:number;recoveries:number}> {
+    return Object.freeze({closing:this.closing,active_operations:this.operations.size,
+      live_holders:this.holders.size,recoveries:this.recoveries.size});
+  }
+  private track<T>(job:Promise<T>):Promise<T> {
+    this.operations.add(job);const done=()=>{this.operations.delete(job);};void job.then(done,done);return job;
+  }
+  /** Stop admission first. The same held identities are retired/resolved only
+   * after serialized Core outcome readback; successful return also joins the
+   * client's physical request closure. A failed drain is not safe disposal. */
+  shutdown():Promise<void> {
+    if(this.shutdownPromise)return this.shutdownPromise;
+    this.closing=true;
+    this.shutdownPromise=this.finishShutdown();return this.shutdownPromise;
+  }
+  private async finishShutdown():Promise<void> {
+    while(this.operations.size)await Promise.allSettled([...this.operations]);
+    const releases=await Promise.allSettled([...this.holders.values()].map(release=>release()));
+    while(this.operations.size)await Promise.allSettled([...this.operations]);
+    const failed=releases.find((result):result is PromiseRejectedResult=>result.status==="rejected");
+    if(failed)throw failed.reason;
+    await this.recoverAvailable();
+    while(this.operations.size)await Promise.allSettled([...this.operations]);
+    await this.client.shutdown();
+  }
+  /** The coordinator alone calls this inside its owning transaction. A flag,
+   * matching JSON or another provider is not an exemption from global census. */
+  async validateOwnCommitFence(db:PoolClient,context:CurrentHumanMutationFenceContext,
+    fence:CurrentHumanMutationFence):Promise<string|null> {
+    const identity=commitFences.get(fence);
+    if(!identity||identity.provider!==this)return null;
+    const mutation=nativeRootMutation.safeParse(context);
+    if(!mutation.success||identity.base.phase!=="COMMIT"||
+      accessDigest(identity.base.mutation)!==accessDigest(mutation.data))return fail("NATIVE_ROOT_CUSTODY_CONFLICT");
+    identity.assertCurrent();
+    const {row,base}=this.checkRow((await db.query<Row>(
+      "SELECT * FROM portal_native_root_obligations WHERE lease_id=$1 FOR UPDATE",[identity.base.binding.lease_id])).rows[0]);
+    if(row.phase!=="ENTERED"||row.source_settled||row.purpose!=="COMMIT"||
+      nativeRootCanonical(base)!==nativeRootCanonical(identity.base)||
+      row.attempt_id!==identity.base.binding.attempt_id||row.mutation_id!==context.mutation_id)
+      return fail("NATIVE_ROOT_CUSTODY_CONFLICT");
+    const current=(await db.query(`SELECT m.*,a.drain_id FROM elp210_candidate.mutations m
+      CROSS JOIN elp210_candidate.authority a WHERE m.mutation_id=$1 AND a.singleton`,[context.mutation_id])).rows[0];
+    if(!current||current.state!=="PENDING"||current.drain_id!==context.mutation_id||
+      current.binding_digest!==context.binding_digest||current.key_digest!==context.key_digest||current.family!==context.family)
+      return fail("NATIVE_ROOT_CUSTODY_CONFLICT");
+    identity.assertCurrent();return row.lease_id;
+  }
   /** Actual production composition, preserving every other independent trust
    * surface. READ/STREAM/HISTORY remain with their own providers and grants. */
   compose(base:AccessTrustProvider):AccessTrustProvider {
@@ -102,20 +167,25 @@ export class NativeRootReceiptProvider {
     // The exact wire digest excludes schema_version and action, not a second
     // request identity or replacement attempt during recovery.
     const base=nativeRootBase({...body,binding:{...binding,request_digest:accessDigest({phase:body.phase,registration,original,mutation,deadline:body.deadline,binding}).slice(7)}});
-    await this.transaction(async db=>{
+    this.liveLeases.add(binding.lease_id);
+    try {await this.transaction(async db=>{
+      // SAME first lock as every Core mutation. No QUALIFY can be inserted
+      // between the coordinator's drain census and final authority mutation.
+      const authority=(await db.query("SELECT drain_id FROM elp210_candidate.authority WHERE singleton FOR UPDATE")).rows[0];
+      if(!authority)return fail("NATIVE_ROOT_CUSTODY_CONFLICT");
       await db.query("SELECT pg_advisory_xact_lock(hashtextextended('portal-native-root-capacity-v1',0))");
       if(mutation) {
         const m=(await db.query("SELECT * FROM elp210_candidate.mutations WHERE mutation_id=$1 FOR UPDATE",[mutation.mutation_id])).rows[0];
         if(!m||m.binding_digest!==mutation.binding_digest||m.key_digest!==mutation.key_digest||m.family!==mutation.family||
-          !["PENDING","FINISHED"].includes(m.state))return fail("NATIVE_ROOT_CUSTODY_CONFLICT");
-      }
+          m.state!=="PENDING"||authority.drain_id!==mutation.mutation_id)return fail("NATIVE_ROOT_CUSTODY_CONFLICT");
+      } else if(authority.drain_id!==null)return fail("NATIVE_ROOT_CUSTODY_CONFLICT");
       const counts=(await db.query("SELECT count(*)::int AS retained,count(*) FILTER (WHERE NOT source_settled)::int AS unresolved FROM portal_native_root_obligations")).rows[0];
       if(counts.retained>=this.config.maximum_retained||counts.unresolved>=this.config.maximum_unresolved)return fail("NATIVE_ROOT_CAPACITY_EXHAUSTED");
       await db.query(`INSERT INTO portal_native_root_obligations
         (lease_id,attempt_id,mutation_id,purpose,source_config_digest,base_digest,base_body,phase)
         VALUES($1,$2,$3,$4,$5,$6,$7,'PREPARED')`,[binding.lease_id,binding.attempt_id,mutation?.mutation_id??null,
         context.phase,this.source_config_digest,accessDigest(base),nativeRootCanonical(base)]);
-    });return base;
+    });}catch(error){this.liveLeases.delete(binding.lease_id);throw error;}return base;
   }
   private async transition(base:Readonly<NativeRootSourceBase>,from:readonly Phase[],to:Phase):Promise<void> {
     const r=await this.transaction(db=>db.query("UPDATE portal_native_root_obligations SET phase=$2 WHERE lease_id=$1 AND phase=ANY($3::text[]) AND NOT source_settled RETURNING *",[base.binding.lease_id,to,from]));
@@ -135,12 +205,19 @@ export class NativeRootReceiptProvider {
           request_digest:base.original.accepted_fact_digest,target_id:fact.workspace_id}))return fail("NATIVE_ROOT_CUSTODY_CONFLICT");}
     return fact;
   }
-  async verify(input:unknown,context:RootReceiptVerificationContext):Promise<QualifiedRootMembershipReceipt|null> {
+  verify(input:unknown,context:RootReceiptVerificationContext):Promise<QualifiedRootMembershipReceipt|null> {
+    if(this.closing||this.verificationInProgress||this.liveLeases.size)
+      return Promise.reject(new NativeRootProviderError("NATIVE_ROOT_RECOVERY_REQUIRED"));
+    this.verificationInProgress=true;
+    const job=this.track(this.verifyAvailable(input,context));
+    const done=()=>{this.verificationInProgress=false;};void job.then(done,done);return job;
+  }
+  private async verifyAvailable(input:unknown,context:RootReceiptVerificationContext):Promise<QualifiedRootMembershipReceipt|null> {
     const original=nativeRootOriginal.safeParse(input);
     if(!original.success||accessDigest(original.data)!==accessDigest(this.config.original))return fail("NATIVE_ROOT_ORIGINAL_CHANGED");
     // Recovery is same-original only and never returns authority; a NEW native
     // held ISSUE below is mandatory after every resolved/retired observation.
-    await this.recover();
+    await this.recoverAvailable();
     const base=await this.reserve(context);
     try {
       await this.transition(base,["PREPARED"],"ISSUE_REQUESTED");
@@ -157,19 +234,29 @@ export class NativeRootReceiptProvider {
         await this.transition(base,["ENTERING"],"ENTERED");
       }
       const expires=Number(nativeBusinessReadUtcMicroseconds(issued.lease.expires_at)/1000n),issuedWall=Date.now(),issuedMono=performance.now();
-      let released=false;
+      let released=false,releasePromise:Promise<void>|undefined;
       const assertCurrent=()=>{if(released||Date.now()>=expires||performance.now()-issuedMono>=expires-issuedWall)return fail();};
       assertCurrent();
-      return {fact,mapping:{ts_user_id:issued.relations.ts_user_id,revision:issued.relations.mapping_revision},
+      const release=():Promise<void>=>{
+        released=true;if(releasePromise)return releasePromise;
+        const job=this.track(this.recoverOne(base.binding.lease_id,true));releasePromise=job;
+        const done=()=>{this.liveLeases.delete(base.binding.lease_id);this.holders.delete(base.binding.lease_id);};
+        void job.then(done,()=>{done();if(releasePromise===job)releasePromise=undefined;});return job;
+      };
+      const fence:QualifiedRootMembershipReceipt={fact,mapping:{ts_user_id:issued.relations.ts_user_id,revision:issued.relations.mapping_revision},
         membership:{revision:fact.membership_revision,receipt_id:fact.receipt_id,mapping_revision:fact.mapping_revision},
         current_authority:structuredClone(issued.relations),requiresCoordinatedCommit:true,assertCurrent,
         ...(context.phase==="COMMIT"?{beforeApply:(db:PoolClient)=>this.beforeApply(db,base,assertCurrent),
           afterApply:(db:PoolClient,terminal:ReturnType<CurrentHumanMutationHooks<unknown>["terminal"]>)=>this.afterApply(db,base,fact,terminal)}:{}),
-        release:async()=>{released=true;await this.recoverOne(base.binding.lease_id);}};
+        release};
+      this.holders.set(base.binding.lease_id,release);
+      if(context.phase==="COMMIT")commitFences.set(fence,Object.freeze({provider:this,base,assertCurrent}));
+      return fence;
     } catch(error) {
       // A lost ISSUE/ENTER response keeps exact frozen custody; never mint a
       // substitute held object, ACK, source receipt or attempt to hide UNKNOWN.
-      try{await this.recoverOne(base.binding.lease_id);}catch{/* Same unresolved original is retained. */}
+      try{await this.recoverOne(base.binding.lease_id,true);}catch{/* Same unresolved original is retained. */}
+      finally{this.liveLeases.delete(base.binding.lease_id);}
       throw error;
     }
   }
@@ -197,13 +284,24 @@ export class NativeRootReceiptProvider {
   }
   /** Recovery has no root/policy/application callback and cannot create or
    * reactivate a grant. A physical serialized tombstone blocks the old apply. */
-  async recover():Promise<{remaining:number}> {
+  recover():Promise<{remaining:number}> {
+    if(this.closing)return Promise.reject(new NativeRootProviderError("NATIVE_ROOT_RECOVERY_REQUIRED"));
+    return this.track(this.recoverAvailable());
+  }
+  private async recoverAvailable():Promise<{remaining:number}> {
     const rows=(await this.pool.query<Row>("SELECT * FROM portal_native_root_obligations WHERE NOT source_settled AND source_config_digest=$1 ORDER BY created_at,lease_id LIMIT $2",[this.source_config_digest,this.config.maximum_recoveries])).rows;
-    for(const row of rows)await this.recoverOne(row.lease_id);
+    for(const row of rows)if(!this.liveLeases.has(row.lease_id))await this.recoverOne(row.lease_id);
     const remaining=Number((await this.pool.query("SELECT count(*)::int AS n FROM portal_native_root_obligations WHERE NOT source_settled AND source_config_digest=$1",[this.source_config_digest])).rows[0].n);
     if(remaining)return fail("NATIVE_ROOT_RECOVERY_REQUIRED");return{remaining};
   }
-  private async recoverOne(leaseId:string):Promise<void> {
+  private recoverOne(leaseId:string,ownRelease=false):Promise<void> {
+    if(this.liveLeases.has(leaseId)&&!ownRelease)return Promise.resolve();
+    const prior=this.recoveries.get(leaseId);if(prior)return prior;
+    const job=this.track(this.recoverOriginal(leaseId));this.recoveries.set(leaseId,job);
+    const done=()=>{if(this.recoveries.get(leaseId)===job)this.recoveries.delete(leaseId);};
+    void job.then(done,done);return job;
+  }
+  private async recoverOriginal(leaseId:string):Promise<void> {
     let {row,base}=this.checkRow((await this.pool.query<Row>("SELECT * FROM portal_native_root_obligations WHERE lease_id=$1",[leaseId])).rows[0]);
     if(row.source_settled)return;
     if(["PREPARED","ISSUE_REQUESTED","ISSUED","CANCELLED"].includes(row.phase)) {

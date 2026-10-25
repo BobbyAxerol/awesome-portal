@@ -19,6 +19,7 @@ import { unqualifiedAccessTrust,type ReviewedPolicyArtifact } from "../src/execu
 import { CurrentHumanCandidate } from "../src/execution-v2/current-human-candidate";
 import { CurrentHumanMutations } from "../src/execution-v2/current-human-mutations";
 import { NativeRootReceiptProvider,type NativeRootProviderConfig } from "../src/execution-v2/native-root-provider";
+import { carryNativeRootFenceIdentity } from "../src/execution-v2/native-root-fence";
 import type { NativeRootSourceBase } from "../src/execution-v2/native-root-codec";
 import { setupApp,teardownApp,migrateTestDatabase } from "./harness";
 import { rootWireFacts,rootWireReply } from "./fixtures/elp210-native-root-wire";
@@ -36,7 +37,8 @@ describe.skipIf(!DATABASE_URL)("registered native ROOT real coordinator/custody,
     await new OwnerAccessRepository(pool).claimOwner({userId:owner,claimedBy:"TEST_ONLY_NATIVE_ROOT_COMPONENT"});
   });
   afterEach(async()=>{for(const endpoint of endpoints.splice(0))await endpoint.close();
-    if(pool)await pool.query("DROP SCHEMA IF EXISTS elp210_candidate CASCADE");});
+    if(pool){await pool.query("TRUNCATE public.portal_native_root_obligations");
+      await pool.query("DROP SCHEMA IF EXISTS elp210_candidate CASCADE");}});
   afterAll(async()=>{if(pool)await pool.end();if(ctx)await teardownApp(ctx);});
   async function fixture(){
     await pool.query(await readFile(join(__dirname,"../src/execution-v2/current-human-candidate.sql"),"utf8"));
@@ -60,7 +62,6 @@ describe.skipIf(!DATABASE_URL)("registered native ROOT real coordinator/custody,
     const candidate=await CurrentHumanCandidate.create(pool,{issuer:"TEST_ONLY-core",audience:"TEST_ONLY-pm",key_id:"TEST_ONLY-human",
       private_key:human.privateKey,source:{issuer:"TEST_ONLY-pm",audience:"TEST_ONLY-core",key_id:"TEST_ONLY-source",public_key:source.publicKey,
         workload_id:"TEST_ONLY-native-root"},limits:{ttl_ms:30000,maximum_unresolved:4,maximum_retained:100}});
-    const coordinator=new CurrentHumanMutations(pool,candidate,{recover:async()=>{}},{maximum_intents:32,maximum_recoveries_per_request:4});
     const states=new Map<string,"ISSUED"|"ENTERED"|"COMMITTED"|"ROLLED_BACK"|"CANCELLED">(),terminals:Array<Record<string,unknown>>=[];
     let dropIssue=false,dropEnter=false,dropEnterBefore=false,dropResolve=false;
     const endpoint=await rootTestEndpoint(async(base,action,res,body)=>{
@@ -91,12 +92,24 @@ describe.skipIf(!DATABASE_URL)("registered native ROOT real coordinator/custody,
       maximum_retained:256,maximum_unresolved:8,maximum_recoveries:8,attempt_ms:30000,
       terminal:{issuer:"TEST_ONLY-core-terminal",audience:"TEST_ONLY-pm-terminal",key_id:"TEST_ONLY-terminal",private_key:terminal.privateKey,ttl_seconds:30}};
     const provider=new NativeRootReceiptProvider(pool,endpoint.client,config),trust=provider.compose(baseTrust);
+    const coordinator=new CurrentHumanMutations(pool,candidate,{recover:async()=>{}},
+      {maximum_intents:32,maximum_recoveries_per_request:4},undefined,[],undefined,provider);
     const accept=()=>acceptRootMembershipReceipt(pool,trust.verifyRootReceipt,config.original,true,coordinator);
     const rows=async()=> (await pool.query("SELECT * FROM portal_native_root_obligations WHERE source_config_digest=$1 ORDER BY created_at,lease_id",[provider.source_config_digest])).rows;
     const stored=async()=> (await pool.query("SELECT grant_fact FROM portal_access_grants_v2 WHERE grant_id=$1",[grant.grant_id])).rows[0].grant_fact;
-    return{pool,provider,coordinator,endpoint,trust,config,grant,fact,relations,accept,rows,stored,terminals,
+    return{pool,provider,coordinator,candidate,endpoint,trust,config,grant,fact,relations,accept,rows,stored,terminals,
       loseIssue(){dropIssue=true;},loseEnter(){dropEnter=true;},loseEnterBefore(){dropEnterBefore=true;},loseResolve(){dropResolve=true;},
       async waitTransport(){await expect.poll(()=>endpoint.client.snapshot().in_flight).toBe(0);}};
+  }
+  async function owningMutation(f:Awaited<ReturnType<typeof fixture>>) {
+    const mutation_id=randomUUID(),key_digest=accessDigest(["ROOT_RECEIPT",f.fact.source,f.fact.receipt_id]),
+      request_digest=accessDigest(f.fact),binding={family:"QUALIFIED_ROOT_RECEIPT" as const,operation:"ROOT_RECEIPT",
+        key_digest,request_digest,target_id:f.fact.workspace_id};
+    const context={mutation_id,binding_digest:accessDigest(binding),key_digest,request_digest,
+      family:"QUALIFIED_ROOT_RECEIPT" as const,target_id:f.fact.workspace_id};
+    await pool.query(`INSERT INTO elp210_candidate.mutations(mutation_id,key_digest,binding_digest,replay_digest,family)
+      VALUES($1,$2,$3,$3,'QUALIFIED_ROOT_RECEIPT')`,[mutation_id,key_digest,context.binding_digest]);
+    await pool.query("UPDATE elp210_candidate.authority SET drain_id=$1 WHERE singleton",[mutation_id]);return context;
   }
   it("qualifies/cancels unentered, reacquires exact persisted mutation, physically COMMITs, then source ACKs",async()=>{
     const f=await fixture(),result=await f.accept();expect(result.replayed).toBe(false);expect((await f.stored()).ts_receipt.receipt_id).toBe(f.fact.receipt_id);
@@ -138,6 +151,20 @@ describe.skipIf(!DATABASE_URL)("registered native ROOT real coordinator/custody,
       receipt_id:f.terminals[0].receipt_id,receipt_digest:f.terminals[0].receipt_digest,phase:"COMMITTED"});
     expect(Number((await pool.query("SELECT count(*) AS n FROM portal_access_policy_events WHERE workspace_id=$1 AND operation='TS_RECEIPT'",[f.fact.workspace_id])).rows[0].n)).toBe(1);
   });
+  it("new provider/coordinator instances resume the same pending root after lost ENTER",async()=>{
+    const f=await fixture();f.loseEnter();await expect(f.accept()).rejects.toBeDefined();await f.waitTransport();
+    const failed=(await f.rows()).find(r=>r.purpose==="COMMIT")!;
+    const restarted=new NativeRootReceiptProvider(pool,f.endpoint.client,f.config),
+      coordinator=new CurrentHumanMutations(pool,f.candidate,{recover:async()=>{}},
+        {maximum_intents:32,maximum_recoveries_per_request:4},undefined,[],undefined,restarted);
+    const result=await acceptRootMembershipReceipt(pool,restarted.compose(f.trust).verifyRootReceipt,f.config.original,true,coordinator);
+    expect(result.replayed).toBe(false);
+    const rows=await f.rows(),old=rows.find(r=>r.lease_id===failed.lease_id)!,committed=rows.find(r=>r.phase==="COMMITTED")!;
+    expect(old).toMatchObject({base_body:failed.base_body,base_digest:failed.base_digest,phase:"ROLLED_BACK",source_settled:true});
+    expect(committed.mutation_id).toBe(failed.mutation_id);expect(committed.lease_id).not.toBe(failed.lease_id);
+    expect(Number((await pool.query("SELECT count(*) AS n FROM elp210_candidate.mutations")).rows[0].n)).toBe(1);
+    expect(Number((await pool.query("SELECT count(*) AS n FROM portal_access_policy_events WHERE workspace_id=$1 AND operation='TS_RECEIPT'",[f.fact.workspace_id])).rows[0].n)).toBe(1);
+  });
   it("an ENTER which never reached native transition uses serialized cancellation, never fake source ENTER/terminal",async()=>{
     const f=await fixture();f.loseEnterBefore();await expect(f.accept()).rejects.toBeDefined();await f.waitTransport();await f.provider.recover();
     const failed=(await f.rows()).find(r=>r.purpose==="COMMIT")!;expect(failed).toMatchObject({phase:"ROLLED_BACK",source_settled:true});
@@ -145,16 +172,73 @@ describe.skipIf(!DATABASE_URL)("registered native ROOT real coordinator/custody,
     expect(source.map(r=>r.action)).toEqual(["issue","enter","status","cancel-unentered"]);
     expect(f.terminals).toHaveLength(0);expect((await f.stored()).ts_receipt).toBeNull();
   });
-  it("serialized rollback tombstone prevents the old entered holder from applying after recovery",async()=>{
-    const f=await fixture(),mutation_id=randomUUID(),key=accessDigest(["ROOT_RECEIPT",f.fact.source,f.fact.receipt_id]),request=accessDigest(f.fact);
-    const binding={family:"QUALIFIED_ROOT_RECEIPT" as const,operation:"ROOT_RECEIPT",key_digest:key,request_digest:request,target_id:f.fact.workspace_id};
-    await pool.query(`INSERT INTO elp210_candidate.mutations(mutation_id,key_digest,binding_digest,replay_digest,family)
-      VALUES($1,$2,$3,$3,'QUALIFIED_ROOT_RECEIPT')`,[mutation_id,key,accessDigest(binding)]);
-    const lease=await f.provider.verify(f.config.original,{phase:"COMMIT",mutation:{mutation_id,binding_digest:accessDigest(binding),key_digest:key,
-      request_digest:request,family:"QUALIFIED_ROOT_RECEIPT",target_id:f.fact.workspace_id}});
-    expect(lease!.beforeApply).toBeTypeOf("function");await f.provider.recover();
+  it("restart recovery serializes a rollback tombstone before the old entered holder can apply",async()=>{
+    const f=await fixture(),context=await owningMutation(f);
+    const lease=await f.provider.verify(f.config.original,{phase:"COMMIT",mutation:context});
+    expect(lease!.beforeApply).toBeTypeOf("function");
+    // The recovery actor represents an abandoned process; retain the old
+    // object ONLY to assert a late apply is refused after real tombstoning.
+    // No custody is cleared manually and no terminal is fabricated.
+    const restarted=new NativeRootReceiptProvider(pool,f.endpoint.client,f.config);await restarted.recover();
     await expect(withTransaction(pool,db=>lease!.beforeApply!(db))).rejects.toMatchObject({code:"NATIVE_ROOT_CUSTODY_CONFLICT"});
     await lease!.release();expect((await f.stored()).ts_receipt).toBeNull();expect((await f.rows())[0]).toMatchObject({phase:"ROLLED_BACK",source_settled:true});
+  });
+  it("only a genuine carried own COMMIT fence exempts its exact locked custody row",async()=>{
+    const f=await fixture(),context=await owningMutation(f),lease=await f.provider.verify(f.config.original,{phase:"COMMIT",mutation:context});
+    const row=(await f.rows())[0],wrapped={assertCurrent:()=>{},release:async()=>{}};
+    expect(await withTransaction(pool,db=>f.provider.validateOwnCommitFence(db,context,wrapped))).toBeNull();
+    carryNativeRootFenceIdentity({...lease!},wrapped);
+    expect(await withTransaction(pool,db=>f.provider.validateOwnCommitFence(db,context,wrapped))).toBeNull();
+    carryNativeRootFenceIdentity(lease!,wrapped);
+    expect(await withTransaction(pool,db=>f.provider.validateOwnCommitFence(db,context,wrapped))).toBe(row.lease_id);
+    const foreign=new NativeRootReceiptProvider(pool,f.endpoint.client,f.config);
+    expect(await withTransaction(pool,db=>foreign.validateOwnCommitFence(db,context,wrapped))).toBeNull();
+    await expect(withTransaction(pool,db=>f.provider.validateOwnCommitFence(db,{...context,request_digest:accessDigest("TEST_ONLY-changed")},wrapped)))
+      .rejects.toMatchObject({code:"NATIVE_ROOT_CUSTODY_CONFLICT"});
+    await lease!.release();
+    await expect(withTransaction(pool,db=>f.provider.validateOwnCommitFence(db,context,wrapped))).rejects.toBeDefined();
+  });
+  it("live COMMIT recovery and recoverAbandoned stay pending without tombstoning the active owner",async()=>{
+    const f=await fixture(),context=await owningMutation(f),lease=await f.provider.verify(f.config.original,{phase:"COMMIT",mutation:context});
+    const before=await f.rows(),requests=f.endpoint.requests.length;
+    await expect(f.provider.recover()).rejects.toMatchObject({code:"NATIVE_ROOT_RECOVERY_REQUIRED"});
+    expect(await f.coordinator.recoverAbandoned(context.mutation_id)).toEqual({state:"DRAIN_PENDING"});
+    expect(await f.rows()).toEqual(before);expect(f.endpoint.requests).toHaveLength(requests);
+    expect((await f.rows())[0]).toMatchObject({phase:"ENTERED",source_settled:false});
+    await lease!.release();expect(await f.coordinator.recoverAbandoned(context.mutation_id)).toEqual({state:"ABORTED"});
+  });
+  it("QUALIFY cannot reserve after a foreign drain or create a second concurrent live holder",async()=>{
+    const f=await fixture();await pool.query("UPDATE elp210_candidate.authority SET drain_id=$1 WHERE singleton",[randomUUID()]);
+    await expect(f.provider.verify(f.config.original,{phase:"QUALIFY"})).rejects.toMatchObject({code:"NATIVE_ROOT_CUSTODY_CONFLICT"});
+    expect(await f.rows()).toEqual([]);expect(f.endpoint.requests).toEqual([]);
+    await pool.query("UPDATE elp210_candidate.authority SET drain_id=NULL WHERE singleton");
+    const first=f.provider.verify(f.config.original,{phase:"QUALIFY"});
+    await expect(f.provider.verify(f.config.original,{phase:"QUALIFY"})).rejects.toMatchObject({code:"NATIVE_ROOT_RECOVERY_REQUIRED"});
+    const held=await first;await expect(f.provider.recover()).rejects.toMatchObject({code:"NATIVE_ROOT_RECOVERY_REQUIRED"});
+    await Promise.all([held!.release(),held!.release()]);
+    expect(f.endpoint.requests.map(r=>r.action)).toEqual(["issue","cancel-unentered"]);
+    expect((await f.rows())[0]).toMatchObject({phase:"CANCELLED",source_settled:true});
+  });
+  it("COMMIT rejects mismatched drain and FINISHED mutations without any source attempt",async()=>{
+    const f=await fixture(),context=await owningMutation(f);
+    await pool.query("UPDATE elp210_candidate.authority SET drain_id=NULL WHERE singleton");
+    await expect(f.provider.verify(f.config.original,{phase:"COMMIT",mutation:context})).rejects.toMatchObject({code:"NATIVE_ROOT_CUSTODY_CONFLICT"});
+    await pool.query(`UPDATE elp210_candidate.mutations SET state='FINISHED',terminal_digest=$2,finished_at=clock_timestamp()
+      WHERE mutation_id=$1`,[context.mutation_id,accessDigest("TEST_ONLY-finished")]);
+    await pool.query("UPDATE elp210_candidate.authority SET drain_id=$1 WHERE singleton",[context.mutation_id]);
+    await expect(f.provider.verify(f.config.original,{phase:"COMMIT",mutation:context})).rejects.toMatchObject({code:"NATIVE_ROOT_CUSTODY_CONFLICT"});
+    expect(await f.rows()).toEqual([]);expect(f.endpoint.requests).toEqual([]);
+  });
+  it("shutdown retires the same held qualification and joins transport before returning",async()=>{
+    const f=await fixture(),held=await f.provider.verify(f.config.original,{phase:"QUALIFY"}),before=(await f.rows())[0];
+    const closing=f.provider.shutdown();expect(f.provider.shutdown()).toBe(closing);
+    await expect(f.provider.verify(f.config.original,{phase:"QUALIFY"})).rejects.toMatchObject({code:"NATIVE_ROOT_RECOVERY_REQUIRED"});
+    await closing;await held!.release();
+    expect(f.provider.snapshot()).toEqual({closing:true,active_operations:0,live_holders:0,recoveries:0});
+    expect(f.endpoint.client.snapshot().in_flight).toBe(0);
+    expect((await f.rows())[0]).toMatchObject({lease_id:before.lease_id,base_body:before.base_body,phase:"CANCELLED",source_settled:true});
+    expect(f.endpoint.requests.map(r=>r.action)).toEqual(["issue","cancel-unentered"]);
+    expect((await pool.query("SELECT 1 AS pool_still_owned_by_caller")).rows[0].pool_still_owned_by_caller).toBe(1);
   });
   it("immutable custody rejects editing originals, terminal identity or deleting retained attempts",async()=>{
     const f=await fixture();await f.accept();const row=(await f.rows()).find(r=>r.phase==="COMMITTED")!;

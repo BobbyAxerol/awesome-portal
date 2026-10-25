@@ -4,11 +4,17 @@ import {createHash,generateKeyPairSync} from "node:crypto";
 import {chmod,mkdtemp,rm,stat,symlink,writeFile} from "node:fs/promises";
 import {tmpdir} from "node:os";
 import {join} from "node:path";
+import type {FactoryProvider} from "@nestjs/common";
 import type {Pool} from "pg";
 import {afterEach,beforeAll,describe,expect,it,vi} from "vitest";
+import {AppModule,type ControlApiDependencies} from "../src/app.module";
+import type {ControlApiConfig} from "../src/config";
 import type {AccessTrustProvider} from "../src/execution-v2/access-trust";
 import {unqualifiedAccessTrust} from "../src/execution-v2/access-trust";
 import * as schema from "../src/execution-v2/current-human-schema";
+import type {CurrentHumanCandidate} from "../src/execution-v2/current-human-candidate";
+import {CurrentHumanMutations} from "../src/execution-v2/current-human-mutations";
+import {selectPrivateCorePoolProfile} from "../src/execution-v2/financial-source-bootstrap";
 import * as coreRuntime from "../src/execution-v2/native-core-runtime";
 import {nativeRootCanonical} from "../src/execution-v2/native-root-codec";
 import {NativeRootReceiptProvider} from "../src/execution-v2/native-root-provider";
@@ -216,5 +222,58 @@ describe("inert ROOT application factory (schema/ledger TEST_ONLY doubles)",()=>
   await expect(prepared.recover()).resolves.toEqual({remaining:0});expect(recover).toHaveBeenCalledOnce();
   const error=Error("TEST_ONLY-unresolved-original");recover.mockRejectedValueOnce(error);
   await expect(prepared.recover()).rejects.toBe(error);expect(f.pool.end).not.toHaveBeenCalled();
+ });
+ function dependencies(pool:Pool,prepared:Awaited<ReturnType<typeof prepareNativeRootApplication>>):ControlApiDependencies{
+  const candidate={usesPool:(selected:Pool)=>selected===pool} as CurrentHumanCandidate;
+  return{nativeRoot:prepared,nativeManagerRead:{} as NonNullable<ControlApiDependencies["nativeManagerRead"]>,
+   executionAccessTrust:prepared.composeTrust(unqualifiedAccessTrust),nativeManagerRealtimeLimits:{maximumClients:2,maximumEntriesPerClient:4,
+    maximumFrameBytes:32768,maximumClientBytes:65536,maximumTotalBytes:131072,maximumNoticesPerRead:8,readTimeoutMs:1000},
+   currentHumanMutations:new CurrentHumanMutations(pool,candidate,{recover:vi.fn()},
+    {maximum_intents:16,maximum_recoveries_per_request:2},undefined,[],undefined,prepared.provider)};
+ }
+ const config={NODE_ENV:"test",EXECUTION_READ_PROFILE:"native_manager_review_v1",
+  EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID:workspace} as ControlApiConfig;
+ function lifecycle(module:ReturnType<typeof AppModule.register>):FactoryProvider{
+  const found=module.providers?.find((value):value is FactoryProvider=>typeof value==="object"&&value!==null&&
+   "provide" in value&&value.provide===NativeRootReceiptProvider&&"useFactory" in value);
+  if(!found)throw Error("TEST_ONLY-root-lifecycle-missing");return found;
+ }
+ it("keeps no-opt-in ordinary runtime unchanged and requires exact shared native profile",async()=>{
+  const f=await application(),prepared=await prepareNativeRootApplication(f.pool,f.runtime);
+  const absent=AppModule.register({NODE_ENV:"test"} as ControlApiConfig,f.pool);
+  expect(absent.providers?.some(value=>typeof value==="object"&&value!==null&&"provide" in value&&value.provide===NativeRootReceiptProvider)).toBe(false);
+  expect(()=>selectPrivateCorePoolProfile(undefined,undefined,undefined,f.runtime)).toThrow("PRIVATE_RUNTIME_SHARED_NATIVE_COMPOSITION_REQUIRED");
+  expect(selectPrivateCorePoolProfile({poolProfile:f.runtime.poolProfile},undefined,undefined,f.runtime)).toBe(f.runtime.poolProfile);
+  expect(()=>selectPrivateCorePoolProfile({poolProfile:{...f.runtime.poolProfile,max:4}},undefined,undefined,f.runtime))
+   .toThrow("PRIVATE_RUNTIME_CORE_POOL_PROFILE_MISMATCH");
+  expect(prepared.provider.usesPool(f.pool)).toBe(true);expect(f.pool.connect).not.toHaveBeenCalled();
+ });
+ it("refuses foreign pool, non-Research, unregistered/structural-copy or another actual ROOT provider",async()=>{
+  const f=await application(),prepared=await prepareNativeRootApplication(f.pool,f.runtime),deps=dependencies(f.pool,prepared);
+  expect(()=>AppModule.register({NODE_ENV:"test"} as ControlApiConfig,f.pool,undefined,deps)).toThrow("NATIVE_ROOT_SHARED_RESEARCH_COMPOSITION_REQUIRED");
+  const candidate={usesPool:(selected:Pool)=>selected===f.pool} as CurrentHumanCandidate;
+  const withoutRoot=new CurrentHumanMutations(f.pool,candidate,{recover:vi.fn()},{maximum_intents:16,maximum_recoveries_per_request:2});
+  expect(()=>AppModule.register(config,f.pool,undefined,{...deps,currentHumanMutations:withoutRoot})).toThrow("NATIVE_ROOT_SHARED_RESEARCH_COMPOSITION_REQUIRED");
+  const cloned={...prepared,provider:{usesPool:()=>true} as NativeRootReceiptProvider};
+  expect(()=>AppModule.register(config,f.pool,undefined,{...deps,nativeRoot:cloned})).toThrow("NATIVE_ROOT_SHARED_RESEARCH_COMPOSITION_REQUIRED");
+  const other=await application(),otherPrepared=await prepareNativeRootApplication(other.pool,other.runtime);
+  expect(()=>AppModule.register(config,f.pool,undefined,{...deps,nativeRoot:otherPrepared})).toThrow("NATIVE_ROOT_SHARED_RESEARCH_COMPOSITION_REQUIRED");
+  expect(()=>AppModule.register(config,f.pool,undefined,{...deps,nativeManagerRead:undefined})).toThrow("NATIVE_RESEARCH_REVIEW_COMPOSITION_REQUIRED");
+  expect(f.pool.end).not.toHaveBeenCalled();expect(other.pool.end).not.toHaveBeenCalled();
+ });
+ it("mounts SAME provider only, never startup ISSUE/intake; shutdown joins before disposal and propagates failure",async()=>{
+  const f=await application(),prepared=await prepareNativeRootApplication(f.pool,f.runtime),deps=dependencies(f.pool,prepared);
+  const call=vi.spyOn(NativeRootSourceClient.prototype,"call"),verify=vi.spyOn(prepared.provider,"verify"),recover=vi.spyOn(prepared.provider,"recover");
+  const stop=vi.spyOn(prepared.provider,"shutdown");
+  let finish!:()=>void;stop.mockImplementationOnce(()=>new Promise<void>(resolve=>{finish=resolve;}));
+  const mounted=lifecycle(AppModule.register(config,f.pool,undefined,deps)).useFactory() as NativeRootReceiptProvider&{beforeApplicationShutdown():Promise<void>};
+  expect(mounted).toBe(prepared.provider);expect(mounted).not.toHaveProperty("onModuleInit");
+  expect(deps.currentHumanMutations?.hasRootRecoveryParticipant(prepared.provider)).toBe(true);
+  expect(call).not.toHaveBeenCalled();expect(verify).not.toHaveBeenCalled();expect(recover).not.toHaveBeenCalled();
+  let joined=false;const closing=mounted.beforeApplicationShutdown().then(()=>{joined=true;});
+  expect(stop).toHaveBeenCalledOnce();expect(joined).toBe(false);expect(f.pool.end).not.toHaveBeenCalled();
+  finish();await closing;expect(joined).toBe(true);
+  const failure=Error("TEST_ONLY-ROOT-UNKNOWN");stop.mockRejectedValueOnce(failure);
+  await expect(mounted.beforeApplicationShutdown()).rejects.toBe(failure);expect(f.pool.end).not.toHaveBeenCalled();
  });
 });

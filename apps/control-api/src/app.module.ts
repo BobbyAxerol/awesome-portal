@@ -256,6 +256,8 @@ import type { PreparedFinancialSourceApplication } from "./execution-v2/financia
 import { NativeCurrentAccountScopes, type PreparedNativeCurrentApplication } from "./execution-v2/native-current-runtime";
 import { CommandStatusComposition } from "./execution-v2/command-status-composition";
 import type { PreparedCommandStatusApplication } from "./execution-v2/command-status-bootstrap";
+import { NativeRootReceiptProvider } from "./execution-v2/native-root-provider";
+import type { PreparedNativeRootApplication } from "./execution-v2/native-root-runtime";
 import { unqualifiedCommandTrust } from "./execution-v2/command-trust";
 
 /** Internal composition seam, never populated from request headers/body or
@@ -271,6 +273,8 @@ export interface ControlApiDependencies {
   nativeCurrent?: PreparedNativeCurrentApplication;
   /** Independent current-requester STATUS; never mounts command SUBMIT. */
   commandStatus?:PreparedCommandStatusApplication;
+  /** Independent ROOT original/held COMMIT, same pool/coordinator as writers. */
+  nativeRoot?:PreparedNativeRootApplication;
   executionCommandTrust?: CommandTrust;
   executionInstanceRegistrationTrust?: InstanceRegistrationTrust;
   executionPendingControlTrust?: PendingControlTrust;
@@ -325,6 +329,10 @@ export class AppModule implements OnApplicationShutdown {
       !dependencies.commandStatus.composition.usesPool(pool)||
       !dependencies.currentHumanMutations?.hasReverseRecoveryParticipant(dependencies.commandStatus.participant)))
       throw new Error("COMMAND_STATUS_SHARED_RESEARCH_COMPOSITION_REQUIRED");
+    if(dependencies.nativeRoot&&(!nativeResearchReview(config)||!dependencies.nativeManagerRead||
+      !(dependencies.nativeRoot.provider instanceof NativeRootReceiptProvider)||!dependencies.nativeRoot.provider.usesPool(pool)||
+      !dependencies.currentHumanMutations?.hasRootRecoveryParticipant(dependencies.nativeRoot.provider)))
+      throw new Error("NATIVE_ROOT_SHARED_RESEARCH_COMPOSITION_REQUIRED");
     const ownsExecutionPool = !executionPool && !!config.EXECUTION_DATABASE_URL;
     if (dependencies.executionManagerRuntime && (executionPool === pool || !executionPool && !config.EXECUTION_DATABASE_URL))
       throw new Error("MANAGER_RUNTIME_EXECUTION_POOL_REQUIRED");
@@ -507,6 +515,15 @@ export class AppModule implements OnApplicationShutdown {
             const prepared=dependencies.commandStatus!,composition=prepared.composition;
             return Object.assign(composition,{onModuleInit:()=>composition.start(prepared.listeners),
               beforeApplicationShutdown:()=>composition.shutdown()});
+          },
+        }]:[]),
+        ...(dependencies.nativeRoot?[{
+          provide:NativeRootReceiptProvider,
+          useFactory:()=>{
+            const prepared=dependencies.nativeRoot!;
+            // No init/ISSUE/intake hook. This exact provider rejects new work,
+            // joins holders and physical transport before pool disposal.
+            return Object.assign(prepared.provider,{beforeApplicationShutdown:()=>prepared.shutdown()});
           },
         }]:[]),
         ...(dependencies.financialSource?[{

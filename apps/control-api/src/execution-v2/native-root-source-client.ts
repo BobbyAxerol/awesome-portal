@@ -103,6 +103,9 @@ export class NativeRootSourceClient {
   private readonly hostname: string;
   private readonly config: Config;
   private inFlight = 0;
+  private closing = false;
+  private shutdownPromise?: Promise<void>;
+  private finishShutdown?: () => void;
   constructor(input: NativeRootSourceClientConfig) {
     try {
       const data = own(input, ["origin", "tls", "edge_leaf_sha256", "workload_id", "deadline_ms",
@@ -125,12 +128,27 @@ export class NativeRootSourceClient {
     } catch { throw error("NATIVE_ROOT_SOURCE_CONFIG_INVALID"); }
   }
   snapshot(): Readonly<{ in_flight: number }> { return Object.freeze({ in_flight: this.inFlight }); }
+  /** No new request after shutdown starts. In-flight admission is retained
+   * until actual ClientRequest close, not merely a rejected/result promise. */
+  shutdown(): Promise<void> {
+    if (this.shutdownPromise) return this.shutdownPromise;
+    this.closing = true;
+    this.shutdownPromise = new Promise<void>(resolve => { this.finishShutdown = resolve; });
+    this.completeShutdown();
+    return this.shutdownPromise;
+  }
+  private completeShutdown(): void {
+    if (!this.closing || this.inFlight || !this.finishShutdown) return;
+    this.config.tls.key.fill(0);
+    const finish = this.finishShutdown; this.finishShutdown = undefined; finish();
+  }
   /** Public pins only; no PEM/key bytes or inferred commissioning authority. */
   provenance() { return Object.freeze({ origin:this.origin,edge_leaf_sha256:this.config.edge_leaf_sha256,
     workload_id:this.config.workload_id,deadline_ms:this.config.deadline_ms,
     request_bytes:this.config.request_bytes,response_bytes:this.config.response_bytes,max_inflight:this.config.max_inflight }); }
 
   call(prepared: PreparedNativeRootSourceRequest): Promise<NativeRootSourceResult> {
+    if (this.closing) return Promise.reject(error("NATIVE_ROOT_SOURCE_UNAVAILABLE"));
     let body: Buffer, path: string;
     let correlation: ReturnType<typeof nativeRootSourceTransportRequest>;
     try {
@@ -151,7 +169,7 @@ export class NativeRootSourceClient {
       let deadline: ReturnType<typeof setTimeout> | undefined;
       const release = () => {
         if (released) return;
-        released = true; clearTimeout(deadline); this.inFlight--;
+        released = true; clearTimeout(deadline); this.inFlight--; this.completeShutdown();
       };
       const abort = (code: NativeRootSourceClientCode = "NATIVE_ROOT_SOURCE_UNAVAILABLE") => {
         if (!settled) { settled = true; reject(error(code, sent)); }

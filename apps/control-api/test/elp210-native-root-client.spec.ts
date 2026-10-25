@@ -34,4 +34,22 @@ describe("private ROOT transport actual mTLS/provenance",()=>{
     expect(result.state).toBe("OBSERVATION");expect(endpoint.requests.map(r=>r.action)).toEqual(["issue","status"]);
     expect(endpoint.requests[0].base).toEqual(endpoint.requests[1].base);
   });
+  it("shutdown refuses new sends and waits for the admitted physical request to close",async()=>{
+    let entered!:()=>void,finish!:()=>void;
+    const started=new Promise<void>(resolve=>{entered=resolve;}),gate=new Promise<void>(resolve=>{finish=resolve;});
+    const endpoint=await rootTestEndpoint(async(base,action)=>{entered();await gate;return rootWireReply(base,action);});allocations.push(endpoint);
+    const request=prepareNativeRootSourceRequest(rootWireBase(),"issue"),sending=endpoint.client.call(request);
+    await started;expect(endpoint.client.snapshot().in_flight).toBe(1);
+    const closing=endpoint.client.shutdown();expect(endpoint.client.shutdown()).toBe(closing);
+    let closed=false;void closing.then(()=>{closed=true;});await Promise.resolve();expect(closed).toBe(false);
+    await expect(endpoint.client.call(request)).rejects.toMatchObject({code:"NATIVE_ROOT_SOURCE_UNAVAILABLE",http_delivery:"NOT_ATTEMPTED"});
+    expect(endpoint.requests).toHaveLength(1);finish();await sending;await closing;
+    expect(closed).toBe(true);expect(endpoint.client.snapshot().in_flight).toBe(0);
+  });
+  it("idle shutdown is repeatable and never opens an application request",async()=>{
+    const endpoint=await rootTestEndpoint((base,action)=>rootWireReply(base,action));allocations.push(endpoint);
+    const closing=endpoint.client.shutdown();expect(endpoint.client.shutdown()).toBe(closing);await closing;
+    await expect(endpoint.client.call(prepareNativeRootSourceRequest(rootWireBase(),"issue")))
+      .rejects.toMatchObject({http_delivery:"NOT_ATTEMPTED"});expect(endpoint.requests).toEqual([]);
+  });
 });

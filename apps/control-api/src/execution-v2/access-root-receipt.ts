@@ -9,6 +9,7 @@ import { CurrentHumanLeaseError } from "./current-human-candidate";
 import type { CurrentHumanMutations, CurrentHumanMutationFenceContext, CurrentHumanMutationFence } from "./current-human-mutations";
 import { currentAcceptanceMatches, currentAccessRelations, type CurrentAccessRelations } from "./access-current-relations";
 import { reviewedParentAuditRoot } from "./parent-read-fields";
+import { carryNativeRootFenceIdentity } from "./native-root-fence";
 
 /** Private normalized verifier output, NOT a declaration of an existing TS wire.
  * A policy artifact cannot qualify this fact or copy an ordinary proposal receipt. */
@@ -64,6 +65,10 @@ export async function acceptRootMembershipReceipt(pool: Pool,
   authorityMutations?: CurrentHumanMutations): Promise<{ receipt: AccessReceipt; replayed: boolean }> {
   if (authorityMutations && !authorityMutations.usesPool(pool)) throw notQualified();
   if (!verify) throw notQualified();
+  // A previous process may have settled a rolled-back native attempt but
+  // died before detaching its drain. Recovery is not qualification or ACK;
+  // preserve the same intent and obtain a fresh source fence below.
+  if (authorityMutations) await authorityMutations.recoverSettledRootDrain();
   let lease: QualifiedRootMembershipReceipt | null;
   try { lease = await verify(input, Object.freeze({ phase: "QUALIFY" })); } catch { throw notQualified(); }
   if (!lease || typeof lease.release !== "function") throw notQualified();
@@ -220,12 +225,14 @@ export async function acceptRootMembershipReceipt(pool: Pool,
             const assertCurrent = freshLease.assertCurrent.bind(freshLease);
             guardNow(assertCurrent);
             currentGuard = assertCurrent;
-            return { assertCurrent: () => guardNow(assertCurrent),
+            const wrapped: CurrentHumanMutationFence = { assertCurrent: () => guardNow(assertCurrent),
               ...(freshLease.beforeApply ? { beforeApply: freshLease.beforeApply.bind(freshLease) } : {}),
               ...(freshLease.afterApply ? { afterApply: freshLease.afterApply.bind(freshLease) } : {}),
               release: async () => {
               try { await freshLease.release(); } catch { throw new AccessPolicyError("ACCESS_RETRY_REQUIRED", 503); }
             } };
+            carryNativeRootFenceIdentity(freshLease, wrapped);
+            return wrapped;
           } catch (error) {
             try { await freshLease.release(); } catch { throw new AccessPolicyError("ACCESS_RETRY_REQUIRED", 503); }
             throw error;
@@ -234,6 +241,13 @@ export async function acceptRootMembershipReceipt(pool: Pool,
         apply: db => {
           if (!currentGuard) throw notQualified();
           return apply(db, currentGuard);
+        },
+        replay: async db => {
+          // FINISHED is historical receipt readback, never another held ENTER.
+          // Do not write a missing receipt or restore revoked authority.
+          const prior = await new AccessRepository(db).sourceEvent(fact.source, fact.receipt_id);
+          if (!prior || !isRootReplay(prior, fact, proofDigest)) throw refusal();
+          return { receipt: prior.receipt, replayed: true };
         },
         terminal: result => ({ outcome: "APPLIED", receipt_ref: result.receipt.operation_id, reason_code: null }),
       });

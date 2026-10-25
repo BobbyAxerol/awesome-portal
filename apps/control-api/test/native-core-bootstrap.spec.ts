@@ -5,7 +5,7 @@
  * Uses the actual private loader/finite composition and compose helper.
  */
 import "reflect-metadata";
-import { createHash } from "node:crypto";
+import { createHash,createPrivateKey } from "node:crypto";
 import { mkdtemp, writeFile, chmod, symlink, rm, readFile, readdir, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -31,6 +31,8 @@ import { MAXIMUM_DATA_DEPLOYMENT_OPERATION } from "../src/execution/maximum-data
 import { loadConfig } from "../src/config";
 import {ExecutionProfileProjectionWorker} from "../src/execution/profile-projection.worker";
 import * as cacheObservation from "../src/execution-v2/native-cache-observation";
+import {NativeRootReceiptProvider} from "../src/execution-v2/native-root-provider";
+import {NativeRootSourceClient} from "../src/execution-v2/native-root-source-client";
 
 const raw = (s: string) => s.repeat(64);
 const digest = (s: string) => createHash("sha256").update(s).digest("hex");
@@ -226,6 +228,27 @@ describe("TEST_ONLY private bootstrap real leaf / real signing-key checks", () =
     expect(db.connect).not.toHaveBeenCalled(); expect(db.end).not.toHaveBeenCalled();
     // No owner file exists. Success therefore cannot have read/installed it.
     expect(deps.nativeManagerRealtimeLimits).toBeUndefined();
+  });
+  it("composes ROOT before owner intake and authentic Manager trust capture using the SAME shared provider/coordinator",async()=>{
+    const f=await fixture(),db=poolFixture(f.target),prepared=await prepareNativeCoreRuntime(await f.manifest());
+    const client=new NativeRootSourceClient({origin:"https://10.70.0.2:29455",tls:{ca:"TEST_ONLY-no-socket-CA",cert:"TEST_ONLY-no-socket-CERT",key:"TEST_ONLY-no-socket-KEY"},
+      edge_leaf_sha256:"sha256:"+raw("f"),workload_id:"TEST_ONLY-independent-ROOT",deadline_ms:1000,request_bytes:32768,response_bytes:65536,max_inflight:2});
+    const root=new NativeRootReceiptProvider(db.pool,client,{source:{human_issuer:"TEST_ONLY-core",subject:f.target.protected_owner_user_id,
+      workspace_id:f.workspace,environment:"paper",workload_id:"TEST_ONLY-independent-ROOT"},
+      registration:{correspondence_id:"TEST_ONLY-ROOT-correspondence",expected_version:"1",manifest_sha256:raw("a")},
+      original:{grant_id:"TEST_ONLY-ROOT",accepted_fact_digest:"sha256:"+raw("b")},
+      correspondence:{registry_revision:"sha256:"+raw("c"),payload_sha256:raw("d"),approval_ref:"TEST_ONLY-unapproved"},
+      maximum_retained:32,maximum_unresolved:4,maximum_recoveries:4,attempt_ms:10000,
+      terminal:{issuer:"TEST_ONLY-root-terminal",audience:"TEST_ONLY-pm",key_id:"TEST_ONLY-terminal",ttl_seconds:30,private_key:createPrivateKey(edPem)}});
+    const call=vi.spyOn(client,"call"),verify=vi.spyOn(root,"verify").mockResolvedValue(null),compose=vi.spyOn(root,"compose");
+    const deps=await prepared.compose(db.pool,[],undefined,root);
+    expect(compose).toHaveBeenCalledOnce();expect(deps.currentHumanMutations?.hasRootRecoveryParticipant(root)).toBe(true);
+    await deps.executionAccessTrust!.verifyRootReceipt!({grant_id:"TEST_ONLY-ROOT",accepted_fact_digest:"sha256:"+raw("b")},{phase:"QUALIFY"});
+    expect(verify).toHaveBeenCalledOnce();expect(call).not.toHaveBeenCalled();expect(db.connect).not.toHaveBeenCalled();
+    const operations={} as MaximumDataOperationService;
+    const context=await instantiate(consumerProvider(db.pool,deps),operations);
+    try{expect(context.get(NativeManagerReadConsumer)).toBeInstanceOf(NativeManagerReadConsumer);}finally{await context.close();}
+    expect(db.end).not.toHaveBeenCalled();
   });
 });
 
