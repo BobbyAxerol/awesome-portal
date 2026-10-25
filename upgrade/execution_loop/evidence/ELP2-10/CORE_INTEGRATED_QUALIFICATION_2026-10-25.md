@@ -215,3 +215,24 @@ checkpoint. Verification: R0 for these Markdown updates only. The active
 compare-only visual remains the sole heavy job; full repaired normal R2 is
 not started or claimed. No source, UI, baseline, credential or shared service
 changes while the visual uses the frozen candidate.
+
+## 6.2 Terminal visual result and independent backend work
+
+The compare-only retake is terminal: **703 cases,474 PASS /213 FAIL /16 SKIP**,
+duration53.1minutes. It is FAIL, not browser acceptance. Exact retained log:
+`/home/bobby/.local/state/portal-integrations/20261025/integrated-visual-heap-retake-20261025.log`,
+SHA256 `15d1f1c92796197b550d7a7e1d3a34dfeb0c79197a349b56772dc3db91e88542`.
+Observed failure classes include Fleet query400, unsupported501 fixture reads,
+quoted window query, command fixture/network assertions and visual mismatches.
+Those are triage categories, not a claim that every failure has one root cause.
+Do not re-record the baseline, weaken permission/query guards or declare all
+these failures flaky. Claude owns component/fixture visual triage; Core owns
+actual contract/backend defects identified by exact request and response.
+
+No source edit was made on that frozen visual worktree. Bobby's subsequent
+seven-package backend assignment proceeds in a separate source lane from
+712994377, with its own [implementation and consumer handoff](BACKEND_RESIDUAL_IMPLEMENTATION_2026-10-25.md).
+The affected Node/PostgreSQL/build gate is not a retake of the full R2 or the
+703-case browser matrix. Full repaired R2/visual landing acceptance remains
+open; canonical685bc1915 and Claude00e7f6cff are preserved. No runtime install,
+push, dev/main/stable or source acceptance is inferred.

@@ -1,5 +1,43 @@
 # Execution Loop V2 — Sổ đồng bộ Frontend ↔ Backend (sống)
 
+## Codex seven-package source result — 25 Oct 2026
+
+Source `fb9719ceaa2568f86a3c495f062cbbf6e8b8b84d`, 70 files,
++6,525/−334, **R1 only; R2 landing/consumer acceptance pending**.
+[Exact implementation, request dispositions, tests, measurements and Claude handoff](evidence/ELP2-10/BACKEND_RESIDUAL_IMPLEMENTATION_2026-10-25.md).
+Accounts owning batch→refresh→`listFigures`; all six finite Manager surfaces;
+scoped runtime/session and account/order fields; shared economic dataset/series
+mapping; Operations health injection; bounded history plus cross-process revoke
+hints are concrete source changes, not just new fixtures. No UI files changed.
+
+Affected test union: 29 specs / 1,044 tests PASS after preserving the initial
+929/930 result and correcting the one Fund fixture URL; focused retake 142/142,
+production build/migrations/actual PG dump/restore PASS. Contract generators,
+snapshot/integrity and tracking checks PASS. No overlapping heavy gate or
+full hook for an intermediate source commit (§10.10c).
+
+**Claude ACT_NOW:** consume §4 of the packet using accepted components. Accept
+positive observed stage/session data and the optional closed Resource360 fields;
+preserve exact zero/false/null/absence and typed history 413. No per-account
+fetch or client economic sum. Fixture consumer/browser ACK is still OPEN.
+**Core NEXT:** integrate the exact qualified Edge financial/census/health/detail
+and separately authorized history/stream inputs from §5. They are not installed
+or source-accepted by these tests. Old full visual remains FAIL (474/213/16),
+not repaired by this focused backend lane; canonical ff-only is not performed.
+Canonical `685bc1915` and Claude `00e7f6cff` remain clean/unchanged. No push,
+shared-preview/dev/main/stable/provider28445 or command/Live change.
+
+## Codex seven-package implementation entry —25Oct2026
+
+Bobby assigned all seven residual packages. [Owned files, dependency and test map](evidence/ELP2-10/BACKEND_RESIDUAL_IMPLEMENTATION_2026-10-25.md).
+Input712994377, canonical685bc1915/Claude00e7f6cff clean/unchanged; no new
+committed Claude request/ACK. New owned backend-residuals lane preserves the
+ongoing visual's frozen source. ACT_NOW: Accounts + finite composition +
+scoped fields; independent economic and bounded history/realtime work proceeds
+in disjoint files. Primary alone writes shared contracts/generated/tracking,
+owns migration IDs, tests/resource schedule and integration. No UI, runtime,
+push, command/Live, dev/main/stable/provider28445 change. No PASS at entry.
+
 ## Codex backend residual review —25Oct2026,21:52VN
 
 [Verified phase/request inventory](evidence/ELP2-10/REMAINING_BACKEND_AND_CLAUDE_REQUESTS_2026-10-25.md).

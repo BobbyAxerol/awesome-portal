@@ -1,0 +1,197 @@
+{
+  "schema_version": "portal.execution.backend-residual-verification.v1",
+  "date": "2026-10-25",
+  "tier": "R1",
+  "status": "AFFECTED_SOURCE_TESTS_PASSED_NOT_LANDED",
+  "source_commit": "fb9719ceaa2568f86a3c495f062cbbf6e8b8b84d",
+  "source_tree": "4e8a94ed45766b9a67cb4e5fa77c09cf4002e2d3",
+  "base_commit": "7129943770e695e61825876bdf1936c191ccbf92",
+  "source_diff": {
+    "files": 70,
+    "insertions": 6525,
+    "deletions": 334
+  },
+  "runner": {
+    "path": "scripts/control-api-test.sh",
+    "sha256": "969abe7a7b43d7361fcfe0555a4254a75d7312e29eb815cb0c82b673261bf322",
+    "node_image": "sha256:c610fcdfb1d5b4740dd70c284ed3cb16bb857e0f7166196e36a5501df7a3aa32",
+    "postgres_image": "sha256:44c4ee9810eff91f7eab4d822642e01115b1a9eccce4bcbdde7604752d68eac6"
+  },
+  "attempts": [
+    {
+      "id": "affected-batch",
+      "exit_code": 1,
+      "files": 28,
+      "tests_passed": 929,
+      "tests_failed": 1,
+      "build": "PASS",
+      "restore": "NOT_REACHED",
+      "failure": "Fund fixture used nonexistent fund/overview instead of existing fund-overview; no source ENTER.",
+      "log": "/home/bobby/.local/state/portal-backend-residuals/20261025/affected-api-pg-build.log",
+      "log_sha256": "b81ddd064249e5df068d8e21d5193bf9fcd27b6966acebf85f47164dddff1770"
+    },
+    {
+      "id": "focused-retake",
+      "exit_code": 0,
+      "specs": [
+        "test/elp210-native-current-manager-account.spec.ts",
+        "test/elp210-commissioning.spec.ts"
+      ],
+      "files": 2,
+      "tests_passed": 142,
+      "tests_failed": 0,
+      "build": "PASS",
+      "migrations_through": 153,
+      "restore": "PASS",
+      "versioned_identity_session_command_custody_preservation": "PASS",
+      "log": "/home/bobby/.local/state/portal-backend-residuals/20261025/native-fund-retake-build-restore.log",
+      "log_sha256": "a7cdd31ba321f24467a86485f40773e8e5241641d44a34641afa6f7783dd7dac"
+    }
+  ],
+  "affected_union": {
+    "specs": 29,
+    "tests": 1044,
+    "unchanged_passing_cases_reused": 902,
+    "retake_cases": 142,
+    "qualification": "COMPATIBLE_SOURCE_EVIDENCE_NOT_SINGLE_EXECUTION_NOT_FULL_SUITE",
+    "compatibility": "Only the Fund URL fixture and commissioning test-double changed after initial batch; other 27 specs and production source unchanged."
+  },
+  "contracts": {
+    "five_affected_suites_before_final_additive_session_field": {
+      "passed": 238,
+      "failed": 0
+    },
+    "final_affected_resource_and_live_retake": {
+      "passed": 16,
+      "failed": 0
+    },
+    "duplicate_tests_not_summed": true,
+    "generators_check": "PASS",
+    "snapshot_check": "PASS",
+    "snapshot_file_count": 709,
+    "integrity_check": "PASS",
+    "runtime_effect": "NONE"
+  },
+  "other_checks": {
+    "typescript_no_emit": "PASS",
+    "pure_scalar_baseline_differential": {
+      "unchanged_controls": 11,
+      "new_positive_cases": 4,
+      "business_vocabulary_unchanged": true,
+      "authority_test": false,
+      "status": "PASS"
+    },
+    "tracking": "PASS",
+    "diff_check": "PASS"
+  },
+  "history_sql_measurement": {
+    "lane": "DISPOSABLE_PG_NOT_PRODUCT_SLO",
+    "population": 12000,
+    "measurements": [
+      {
+        "target_points": 100,
+        "elapsed_ms": [
+          235.542,
+          220.219,
+          254.233
+        ],
+        "returned_rows": [
+          102,
+          102,
+          102
+        ],
+        "response_rows_bytes": [
+          17137,
+          17137,
+          17137
+        ]
+      },
+      {
+        "target_points": 200,
+        "elapsed_ms": [
+          240.204,
+          230.493,
+          225.864
+        ],
+        "returned_rows": [
+          200,
+          200,
+          200
+        ],
+        "response_rows_bytes": [
+          33601,
+          33601,
+          33601
+        ]
+      },
+      {
+        "target_points": 400,
+        "elapsed_ms": [
+          261.295,
+          280.592,
+          307.909
+        ],
+        "returned_rows": [
+          351,
+          351,
+          351
+        ],
+        "response_rows_bytes": [
+          58969,
+          58969,
+          58969
+        ]
+      },
+      {
+        "target_points": 2000,
+        "elapsed_ms": [
+          248.876,
+          309.537,
+          262.383
+        ],
+        "returned_rows": [
+          1342,
+          1342,
+          1342
+        ],
+        "response_rows_bytes": [
+          225457,
+          225457,
+          225457
+        ]
+      }
+    ]
+  },
+  "cleanup": {
+    "remaining_control_api_test_containers": 0,
+    "remaining_control_api_test_networks": 0,
+    "root_used_percent": 68,
+    "available_gib": 204,
+    "decision": "NO_ACTION_NEEDED"
+  },
+  "not_claimed": [
+    "canonical landing",
+    "installed runtime",
+    "connected source acceptance",
+    "full integration R2 PASS",
+    "old visual repaired",
+    "frontend consumer/browser acceptance",
+    "ELP2-10 complete",
+    "ELP2-11 entry-ready"
+  ],
+  "remaining_inputs": [
+    "Qualified owning financial batch and economic identity/leaves/census/cut mapping via Edge",
+    "Owning Operations delivery/display/exception source",
+    "Authoritative optional account/order/runtime/session source details",
+    "Independent HISTORY/REPLAY/STREAM source rights and connected acceptance",
+    "Venue calendar and Edge notices when supported"
+  ],
+  "restrictions_preserved": {
+    "frontend_files_changed": 0,
+    "migrations_added": 0,
+    "push": false,
+    "shared_preview_changed": false,
+    "dev_main_stable_changed": false,
+    "commands_or_live_enabled": false
+  }
+}
