@@ -2,6 +2,14 @@
 
 ## Codex focused repair + PM owner factory —25Oct2026 continuation
 
+**Current gate checkpoint:** [actual attempt/retake](evidence/ELP2-10/CORE_INTEGRATED_QUALIFICATION_2026-10-25.md#61-actual-visual-entry-failure--bounded-retake-and-edge-delivery).
+Visual first failed at default2GiB V8 heap before browser. Private invocation
+now uses3GiB heap INSIDE unchanged4GiB cell; builds passed and703-case compare
+is running, not703PASS. Full repaired normal R2 NOT_STARTED, no heavy overlap.
+No baseline/timeout/authority relaxation. PM public return was actually copied
+to HK EPG10-08 and remote SHA2563787e7a5ad29… matches; no source code transfer,
+installed-provider READY or consumer ACK is inferred. Canonical/Claude unchanged.
+
 Round intake: canonical685bc1915 and Claude00e7f6cff remain clean/unchanged;
 no new committed Claude request/ACK. [Ten-spec repair receipt](evidence/ELP2-10/CORE_INTEGRATION_FIXTURE_REPAIR_2026-10-25.md)
 records code c8e4ac08f and official158/158 tests, production build and actual

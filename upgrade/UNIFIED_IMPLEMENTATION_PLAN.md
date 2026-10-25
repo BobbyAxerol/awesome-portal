@@ -15874,3 +15874,11 @@ contract/component change; actual API/browser receipt follows qualified install.
 ELP2-05/06/07/09/10 incomplete;11 not entry-ready. No push, shared-preview,
 stable/dev/main/provider28445, SUBMIT or Live change.
 
+**Qualification continuation checkpoint:** [visual attempt, bounded retake and actual public delivery](execution_loop/evidence/ELP2-10/CORE_INTEGRATED_QUALIFICATION_2026-10-25.md#61-actual-visual-entry-failure--bounded-retake-and-edge-delivery).
+First visual failed at default2GiB heap before browser; private invocation now
+uses3GiB heap within unchanged4GiB cell. Builds passed;703-case comparison is
+running, not a final PASS. No re-record/test-timeout change; repaired full R2
+runner prepared but NOT_STARTED, no overlapping heavy job. Public PM handoff
+mirrored/readback on HK with matching SHA2563787e7a5ad29…; no source upload,
+runtime install, canonical landing or connected acceptance inferred.
+

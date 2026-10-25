@@ -28,7 +28,7 @@ continue ELP2-10 integrated qualification and genuine-source acceptance.
 | --- | --- | --- |
 | Source preservation | Canonical/Core/Claude ancestry, exact tested Alpha source bytes, no deleted files; documentation merge only after98c722 | SOURCE_CONFIRMED; source return contains exact comparisons |
 | Integrated normal R2 | One normal pre-commit on the frozen integration; approved disposable runner, one heavy-lock command; realistic5400s operator ceiling, unchanged test/SLO/authority thresholds | PENDING actual terminal outcome |
-| Full visual comparison | Official pinned-image `RESEARCH_LOOP_VISUAL=1 scripts/portal-web-visual.sh`, compare only, after R2; no re-record or UI fix by Codex | NOT_RUN; required before ff-only landing |
+| Full visual comparison | Official pinned-image `RESEARCH_LOOP_VISUAL=1 scripts/portal-web-visual.sh`, compare only, serialized with R2; no re-record or UI fix by Codex | See §6 actual attempt/retake; required before ff-only landing |
 | Focused source correctness | Existing ROOT280/build/restore, Alpha197/build/restore and EdgeSTATUS27/Clippy are source-matched; retain failures/limitations | Reuse unchanged source receipts; not integrated whole-R2 or connected PASS |
 | Genuine CURRENT/STREAM/financial/STATUS | Review actual current source originals, rights, purpose trust/config/issuer, source COMMIT→APPLIED→durable ACK and independent permissions | NOT_MET; inventory/actions will be recorded, never seed originals/grants or manufacture authority |
 | Calibration/budget/coexistence/G2 | Accepted artifacts and matched workload/candidate/target before load | NOT_RUN absent approved complete inputs; ordinary correctness gate is not G2 |
@@ -157,3 +157,61 @@ upload remains subject to the unresolved exact-transfer authorization; no retry
 after the tool denial. No public DTO/enum/component or migration from this PM
 factory. Genuine original/trust/rights, financial APPLIED→ACK, STATUS original,
 budget/calibration/G2 and browser gates are unchanged. ELP2-10 remains open.
+
+### 6.1 Actual visual entry failure / bounded retake and Edge delivery
+
+First visual attempt failed BEFORE browser tests: production-build Node reached
+its default2GiB V8 heap and exited134. It is not a screenshot regression or a
+passing visual run. Log SHA256
+`a1d413f84903d164762d8a9fd822b85fbecb7a45f7661a9b5f2b853ef56b34e7`.
+The exact owned cell self-cleaned. Only the private invocation supplies
+`NODE_OPTIONS=--max-old-space-size=3072`; the container stays3CPU/4GiB, official
+script/config/timeouts/image/test assertions and committed baselines unchanged.
+
+The retake passed the production builds and began **703 tests /2workers**.
+It is IN_PROGRESS, not a final703PASS. Private log:
+`/home/bobby/.local/state/portal-integrations/20261025/integrated-visual-heap-retake-20261025.log`.
+One sample before the heap adjustment was2.282GiB/4GiB and299.69%CPU, not a
+peak or G2 measurement. Disk67%used/205GiBfree; no cleanup/prune needed.
+No second heavy job, R2 or build starts during this visual. A repaired normal
+hook runner is prepared with a fresh exact disposable suffix, but NOT_STARTED;
+the independent visual is first to expose any consumer/baseline issue before
+spending another full integration gate. Both are mandatory before canonical ff.
+The source remains candidate16f2980a1; later commits are Markdown only.
+
+Public PM return was actually mirrored to HK:
+`/home/bobby/.worktrees/portal-execution-edge-upgrade-v1_2/upgrade/evidence/execution-edge-v1_2/EPG10-08/PM_REGISTERED_RELATIONS_RUNTIME_RETURN_2026-10-25.md`.
+Local AND remote SHA256:
+`3787e7a5ad29326c2d18e8a718eb1bebfade99b62f77d32806838cbd8fb85342`.
+This proves public handoff delivery, not Edge acknowledgement, code delivery,
+private-input installation or connected READY. Fresh read-only peer Edge pin
+remains8727e5303b1815d54bc2bdcb927a55457ff4da5b; its WIP remains preserved.
+No new source-code upload was attempted after the earlier denial. Canonical
+and Claude remain unchanged/clean; no hasty landing on a nonterminal gate.
+
+### 6.2 Preserved artifacts and next authorized action
+
+`git bundle verify` PASS on the current Portal candidate artifact:
+`/home/bobby/.local/state/portal-integrations/20261025/core-integration-d9fda258f.bundle`
+(1.6MiB), SHA256
+`4c4c8306ebc7f334a43ce8596042831f5aa75b9ffd1602024e10e832b2f099ef`.
+It contains d9fda258f206a026fdca29bf75a6aa76dc45746a (source16f2980a1 plus
+Markdown); the verifier names six prerequisites, NOT just canonical685bc1915:
+2f9ca2dc,2a89e6d0,0fae408e,b6d63cf1,685bc1915,15fab12bf.
+The first attempted raw-SHA range had no named exported ref and Git refused an
+empty bundle; no artifact was created or transferred by that failed command.
+The HEAD-based bundle above is actually verified. The separate16KiB PM bundle
+and its exact single-parent requirement are in the PM return.
+
+New-source upload to HK has NOT been retried. The bounded next transfer request
+is exactly those two public bundles to
+`/home/bobby/.local/state/portal-integrations/20261025/` on HK for preservation/
+review, not an install, authority import, key transfer or source activation.
+Existing public Markdown handoff delivery is already proven independently.
+
+Read-only N29/EDS-12 release-integrity `--check` PASS (`changed:false`,
+`runtime_effect:NONE`), and execution tracking reconciliation PASS after this
+checkpoint. Verification: R0 for these Markdown updates only. The active
+compare-only visual remains the sole heavy job; full repaired normal R2 is
+not started or claimed. No source, UI, baseline, credential or shared service
+changes while the visual uses the frozen candidate.
