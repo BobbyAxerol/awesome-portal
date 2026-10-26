@@ -1,0 +1,69 @@
+{
+  "schema_version": "portal.execution.source-binding-followthrough.v1",
+  "date": "2026-10-26",
+  "tier": "R1_ONLY_BUILD_GATE_OPEN",
+  "status": "SOURCE_ONLY_NOT_INSTALLED",
+  "phase": "ELP2-10",
+  "phase_exit": "NOT_MET",
+  "core_source_commit": "4e7deab1901539be64bfaf782746fc2d6dd53f5f",
+  "core_source_tree": "1b5522988118fc6ae34e8ee0c96c6e40b2c8eaaa",
+  "edge_source_commit": "91c31b993becd4a97fb86f5285ead18359f4eb34",
+  "edge_docs_commit": "151f55afc",
+  "source_diff": { "files": 15, "insertions": 940, "deletions": 51 },
+  "contract_impact": "PRIVATE_TRANSPORT_ONLY_NO_PUBLIC_DTO_CHANGE",
+  "generated_contracts": "UNCHANGED_NOT_REQUIRED",
+  "core_tests": {
+    "first_attempt": { "passed": 294, "failed": 2, "post_test_harness_error": true },
+    "affected_retake": { "passed": 54, "failed": 0 },
+    "unchanged_reused": 250,
+    "distinct_final_passed": 304,
+    "fresh_single_full_run": false,
+    "old_source_control": { "compatibility_passed": 8, "expected_new_control_failed": 1, "filtered_not_coverage": 103 }
+  },
+  "rust_tests": {
+    "first_attempt": { "passed": 23, "failed": 1 },
+    "affected_retake": { "passed": 1, "failed": 0 },
+    "distinct_final_passed": 24,
+    "old_parser_expected_negative_failures": 2,
+    "fresh_single_full_run": false,
+    "rustfmt": "PASS",
+    "production_clippy": "PASS"
+  },
+  "compiler": {
+    "whole_project": "FAILED_RESOURCE_LIMIT_NOT_PASS",
+    "all_transitive_scoped": "FAILED_RESOURCE_LIMIT_NOT_PASS",
+    "node_heap_mib": 1280,
+    "changed_unit_strict_semantics": "PASS_AFTER_TS7006_ANNOTATION_FIX",
+    "changed_units": 7,
+    "loaded_source_files": 1309,
+    "diagnostics": 0,
+    "all_imported_units_checked": false,
+    "full_build_gate_satisfied": false
+  },
+  "normal_hook": "NOT_RUN_INTERMEDIATE_10_10C",
+  "canonical_landing": "NOT_READY_BUILD_AND_EXISTING_R2_VISUAL_OPEN",
+  "independent_core_review": "ACCEPT",
+  "integrity_ledger": "PASS_UNCHANGED_RUNTIME_EFFECT_NONE",
+  "qualification_data": "TEST_ONLY_NOT_REAL_SOURCE_ACCEPTANCE",
+  "remaining_actual_inputs": [
+    "CANONICAL_SOURCE_OWNERSHIP_FIVE_TUPLE",
+    "FINANCIAL_ORIGINAL_PROOF_AND_APPLIED_AFTER_COMMIT_ACK",
+    "ECONOMIC_NAMESPACE_CENSUS_AND_PARTITION_WIRE",
+    "OWNING_HEALTH_OBSERVATIONS_AND_BOUNDS",
+    "METADATA_SOURCE_FIELDS_AND_PRIOR_CLAUDE_CONSUMER_ACK",
+    "CONNECTED_BROWSER_ACCEPTANCE",
+    "APPROVED_BUDGET_CALIBRATION_COEXISTENCE_G2"
+  ],
+  "calendar": "SOURCE_DARK",
+  "resource_ceiling": { "cpus": 2, "memory_mib": 1536, "gate_deadline_seconds": 300 },
+  "cleanup": { "owned_cells_removed": true, "persistent_db_volumes_created": false, "public_ports_created": false, "decision": "NO_ACTION_NEEDED" },
+  "preserved": {
+    "canonical_commit": "685bc1915db51c7869254c1fdfa68991d7e4aae4",
+    "claude_commit": "00e7f6cff2fadbd88b8ed461fa870b28ee88ad94",
+    "ui_edited": false,
+    "pushed": false,
+    "shared_runtime_installed": false,
+    "command_or_live_enabled": false
+  },
+  "receipt": "SOURCE_BINDING_FOLLOWTHROUGH_2026-10-26.md"
+}

@@ -650,6 +650,15 @@ deep-dive → ADR → slice → evidence discipline documented above.
 
 ### 14.1 Current backend state (tracking snapshot — 2026-08-17)
 
+**26Oct Manager transport-boundary follow-through — SOURCE_ONLY:** native
+Series selects the actual registered optional scopes, admits only its exact
+Paper finite route and holds every subject's own cut through one physical
+response/terminal. Official Manager tagged ownership accepts only canonical
+TEXT/string tuples, no aliases. Public query/DTO/budgets unchanged; no UI or
+runtime install. Core4e7deab19/Edge91c31b993 source committed; focused tests
+and changed-unit strict diagnostics pass, full build still OPEN after heap
+limit; no canonical landing or phase closure. [Source, gates, source-owner inputs and Claude handoff](execution_loop/evidence/ELP2-10/SOURCE_BINDING_FOLLOWTHROUGH_2026-10-26.md).
+
 **Delivered since the runway note above** (commits on
 `chore/v1.1-roadmap-taskboard`):
 

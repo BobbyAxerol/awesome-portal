@@ -1,5 +1,28 @@
 # Execution Loop V2 — Sổ đồng bộ Frontend ↔ Backend (sống)
 
+## Codex source binding follow-through —26Oct2026, source-only implementation
+
+Core4e7deab19(11files,+588/−49) and Edge91c31b993(4files,+352/−2)
+committed. **304distinct focused Core cases PASS** via250unchanged +54retake;
+Rust24distinct via23unchanged +1retake. Seven changed production units strict
+semantic diagnostics PASS after a type-only fix. **Whole-project/transitive
+tsc exceeded the approved heap; full build gate remains OPEN.** No normal
+hook/landing or full-phase claim. Existing integration R2/visual RED unchanged.
+Private transport wiring only: Claude keeps current Series client/components,
+no public DTO regeneration. Qualified-source/browser receipt still required;
+earlier metadata consumer ACK remains open. Edge public tagged-ownership
+MD/JSON mirrored/hash-checked on HK; no source/runtime/authority installed.
+
+[Scope, exact entry pins, reviewer tasks and exit](evidence/ELP2-10/SOURCE_BINDING_FOLLOWTHROUGH_2026-10-26.md).
+Core20758f7b1/Edge31f7cc8a7 clean candidates; canonical685bc1915 and
+Claude00e7f6cff clean/unchanged, no new committed request/consumer ACK.
+SSH repin: owned Edge86178d694, peer8727e5303, owned PMfad5e3fd8;
+peer WIP preserved. Primary owns mutation and focused gates; two existing
+reviewers audit financial/health and actual ownership/metadata read-only.
+ACT_NOW: fix a real source binding/composition gap, not duplicate delivered
+adapters or treat missing originals as qualified. No UI/push/shared runtime/
+source upload/command/Live change. Calendar SOURCE_DARK, ELP2-10 OPEN.
+
 ## Codex narrow Manager scope —26Oct2026, source implementation complete
 
 Public MD/JSON handoff delivered to HK Edge EPG10-08 at2026-10-26T06:59:40Z,

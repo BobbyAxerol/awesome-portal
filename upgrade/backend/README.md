@@ -1,5 +1,14 @@
 # Backend Architecture Deep Dives
 
+26Oct2026 — [Manager native Series composition and official ownership boundary](../execution_loop/evidence/ELP2-10/SOURCE_BINDING_FOLLOWTHROUGH_2026-10-26.md):
+actual optional-token/finite-route wiring; per-subject purpose cuts held through
+one physical send, same-original recovery, publication and authority checks.
+Official tagged TEXT ownership retains exact canonical guards. Source-only
+candidate Core4e7deab19/Edge91c31b993; focused Core304/Rust24distinct cases
+accounted PASS, seven changed units strict diagnostics PASS; required whole
+build exceeded the approved heap and remains OPEN. No normal landing gate
+claim; financial/economic/health/source/browser acceptance remains open.
+
 Các tài liệu trong thư mục này triển khai chi tiết từng `BAR-*` slice của
 [Backend Architecture Implementation Guide](../BACKEND_ARCHITECTURE_IMPLEMENTATION_GUIDE.md).
 Chúng không thay thế phase hoặc exit gate trong
