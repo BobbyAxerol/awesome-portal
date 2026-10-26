@@ -16274,3 +16274,55 @@ present. Finalconfirmation isMD-only onResearch;work continues there,split
 lanes again onlywhenconcurrentClaude resumes. Exact3hygieneFAIL/prior213visual
 FAIL/fullR2/connectedacceptance remain explicit. No push/runtime/dev/main.
 
+### 26Oct2026 — Accounts CURRENT: actual source, authority and trust follow-through
+
+[Scope, direct runtime/source observations, implementation, tests and precise next actions](execution_loop/evidence/ELP2-10/ACCOUNTS_CURRENT_COMMISSIONING_2026-10-26.md).
+Bobby assigns Accounts CURRENT first, without waiting for financial/Score/Calendar.
+Canonical entry `c2f1b19b6760cfb4cbc9ead7aa6c9ec5cd41f918`; all committed Claude
+and backend are already contained. Core owns integration/shared docs; one helper
+initially audits read-only, then owns only the three new private operator files.
+No frontend/public-contract, push, protected target or command/Live change.
+
+Actual Research still serves retained-review image `01692fc5…`; native Core,
+ROOT, CURRENT and current-view references are UNSET, current custody absent.
+Basic Account360 (`manager-current:ACCOUNT`, ordinary whole-population
+`business.read_all`) is distinct from broader Manager account overview
+(`alpha_fleet_overview`, `account.read`). Direct Edge projection confirms
+196 accounts +341 balance rows +185 policy rows, not722distinct accounts;
+latest seal20Oct13:31:29Z, not a new live observation. Existing compatible
+byte/source receipts remain byte-only, not a fresh human grant. Native trust
+expired25Oct; no expired trust/source window is reused.
+
+Confirmed repair: local current-view TLS bundles now verify intermediate CA,
+issuer and signature links while preserving independent peer CAs. Eight new
+regressions; combined focused runtime/publication/Account360 **91PASS**, production
+no-emit typecheck PASS before the new operator addition; source review ACCEPT.
+No connected/API/browser PASS inferred. Confirmed **Core implementation debt**:
+ordinary policy/ROOT writers had no operational caller. Implement/test a private
+explicit `install-policy`/`accept-root` caller around the existing same-pool,
+same-provider/coordinator engine; no SQL seed, startup install or fake receipt.
+
+Source commit `022a0b4ac1dca36f91be47591172984c765a7c9b` (10 files, +527/−10).
+**Operator/source repairs complete (focused only):** explicit private policy/ROOT
+CLI, exact original and same pool/provider/coordinator, artifact/config-only
+dry-run and real drain ordering; no auto-install or fake source fact. Found/fixed
+the additional routing defect and actual AppModule SessionGuard factory dropping
+finite/status/Accounts dependencies. Actual provider-factory regression included.
+Final five-suite **252 unique PASS**, final production no-emit tsc and tracking
+PASS; source reviewers ACCEPT. Prior counts overlap, not additive coverage.
+
+**Further Core implementation remains:** basic three-grain CurrentView still
+uses ordinary scope delivery; native source scope delivery deliberately refuses
+that detached DTO path. Root acceptance alone does not solve it. Complete the
+BFF's genuine finite source-custody/final-HTTP composition; do not strip the native
+marker or weaken the existing fence. This is Core-owned work, not missing Bobby
+approval or solely an Edge input. See exact source locators in the linked packet.
+
+Next exact sequence: finite BFF composition → real registered root/original and
+Research identity/source binding through Edge → valid native trust/config and
+safe Research installation → CURRENT API/final-egress negatives → independent
+STREAM/revoke/recovery → Claude browser. No new Bobby decision requested.
+**Connected NOT_MET; ELP2-10 open, ELP2-11 not entered.** Actual final operator
+tests/commit and source/image impact are recorded in the linked packet. R1
+intermediate only, no full hook, image/runtime installation or connected claim.
+

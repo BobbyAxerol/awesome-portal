@@ -1,5 +1,36 @@
 # Execution Loop V2 — Sổ đồng bộ Frontend ↔ Backend (sống)
 
+## 26Oct2026 — Accounts CURRENT commissioning, after local consolidation
+
+[Scope, exact entry pins, task ownership and actual return](evidence/ELP2-10/ACCOUNTS_CURRENT_COMMISSIONING_2026-10-26.md).
+Canonical c2f1b19b6 contains committed Claude and backend. Primary owns source,
+rights/trust and integration; one read-only agent audits the precise CURRENT
+route and official writer. Start basic Accounts independently of financial,
+Score or Calendar; native domain grants do not manufacture entity/source roots.
+READ and STREAM remain independent. No UI, push, protected runtime or command
+change. Earlier local-merge exception is not an installation gate waiver.
+
+Direct target check: retained-review image01692fc5…, all four native/current
+references UNSET; Edge three-grain population196/341/185, latestseal20Oct,
+native trust expired25Oct. Actual CURRENT not installed. Corrected local TLS
+intermediate-chain preflight (independent peer CA preserved):91focusedPASS,
+production no-emit tscPASS before operator addition; reviewerACCEPT.
+**Core gap, not just missing Edge input:** ordinary-policy and ROOT writers had
+only test callers. A private explicit operator is being implemented/tested;
+same real pool/provider/coordinator, no startup install or arbitrary ACCEPTED
+receipt. Final results/commit in packet. Claude keeps published contracts and
+UI/fixtures; no component rewrite or positive connected/browser claim yet.
+
+Source commit `022a0b4ac1dca36f91be47591172984c765a7c9b` (10 files, +527/−10).
+Final source package: operator implemented; exact basic Accounts route opened
+only by its private composer, and actual AppModule factory now forwards optional
+finite/status/Accounts dependencies. **252 unique focused PASS**, final production
+no-emit tsc/tracking PASS; reviewers ACCEPT. No source/runtime commissioning.
+NEXT Core implementation: three-grain BFF with genuine native finite custody and
+physical HTTP delivery; accepting Root or swapping scopes alone is insufficient.
+Existing native/detached-delivery safety fence remains intact. No new public
+field/generator/consumer rewrite; Claude should not retake F5 on old image.
+
 ## 26Oct2026 — Bobby-approved local source consolidation
 
 [Exact assignment, owner exception, task map and actual return](evidence/ELP2-10/LOCAL_CONSOLIDATION_2026-10-26.md).
