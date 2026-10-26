@@ -1,5 +1,27 @@
 # Execution Loop V2 — Sổ đồng bộ Frontend ↔ Backend (sống)
 
+## Codex Manager original-human notice provider —26Oct2026
+
+[Implementation, test/log hashes, source/CLI/migration and remaining inputs](evidence/ELP2-10/MANAGER_SCOPED_NOTICE_PROVIDER_2026-10-26.md).
+Edge source1fef487dacf41ccaa147c927e2f2274859c61b79,14files,+2960/−75;
+144distinct focused PASS (22actual-PG), strict lib/bin Clippy and independent
+review ACCEPT.28new cases; no duplicate retake coverage. Actual Manager journal,
+all initial/catch-up/coordinator paths, opaque UUIDv4 cursor and shared quota,
+explicit private check/serve with monotonic5min ceiling. SOURCE_ONLY, not
+installed/source/browser acceptance; no full hook or clearing previous R2 RED.
+
+**Claude ACT_NOW:** existing notice DTO/components/refetch/RESYNC behavior;
+no public type/remap/design change. Earlier metadata consumer ACK remains due.
+**Edge ACT_NOW:** separately accepted WHOLE physical Paper source interval/
+epoch/catalogue/adapter and Research trust plus exact logical ROOT/dataset/
+independent original REPLAY+STREAM authority. CURRENT does not authorize this.
+Narrow users get no global hint without affected-entity membership. Apply0025
+before any reader from the new build, then actual reconnect/revoke/recovery/
+browser receipt. Financial/economic/health source inputs and exact-grain metadata
+remain in packet table; calendar SOURCE_DARK. ELP2-10 OPEN;11 final exit not met.
+Canonical685bc1915/Claude00e7f6cff unchanged. No UI/source upload/shared runtime/
+push/stable/dev/main/provider28445/command/Live change.
+
 ## Codex scoped-source continuation —26Oct2026
 
 [Task ownership, current pins and implementation/acceptance return](evidence/ELP2-10/SCOPED_SOURCE_CONTINUATION_2026-10-26.md).

@@ -16035,3 +16035,29 @@ same `SCOPED_SOURCE_CONTINUATION_2026-10-26` basenames. SHA256 MD
 `2b969f0a4a85732da1d07a0a4e4ae79a7de12d357d61184c5f107b23a6166b91`;
 remote/local match, no installed source or Edge ACK inferred.
 
+### 26Oct2026 — Manager scoped notice provider, original-human source composition
+
+[Owned code, executable/schema, actual gates, cleanup and Claude/Edge handoff](execution_loop/evidence/ELP2-10/MANAGER_SCOPED_NOTICE_PROVIDER_2026-10-26.md).
+Code1fef487dacf41ccaa147c927e2f2274859c61b79 in the local owned Edge candidate,
+14files,+2960/−75;144distinct focused PASS (22actual-PG), strict lib/bin Clippy
+PASS and independent source review ACCEPT.28new cases, no inflated retakes.
+Actual sealed-cycle journal now serves all three notice paths through Core
+original-human policy; UUIDv4 cursor state, shared quotas, final lineage/expiry
+fences and a schema-separated private executable with monotonic5min deadline.
+
+Only separately qualified whole physical Paper profiles with exact ROOT/dataset
+and independent Core REPLAY/STREAM are supported. Narrow global hints remain
+denied until affected-entity membership exists. Migration0025 is additive and
+required before any reader from this build; not installed. No code depends on
+/tmp, no source upload or whole divergent Edge-history merge into Core.
+
+Claude keeps accepted DTO/components/refetch/RESYNC behavior and returns prior
+metadata consumer ACK. Next actual connected/browser receipt needs current
+Research trust and accepted source/authority pins. Financial original/verifier/
+source ACK, accepted economic census, owning health observations and exact-grain
+remaining metadata are separately Edge-coordinated inputs. Calendar SOURCE_DARK;
+budget/calibration/coexistence/G2 and ELP2-10 remain OPEN;11 final exit not met.
+Prior integrated R2/visual RED remains, no canonical ff-landing inferred.
+Canonical685bc1915 and Claude00e7f6cff unchanged; no UI/push/runtime or
+stable/dev/main/provider28445/command/Live changes.
+
