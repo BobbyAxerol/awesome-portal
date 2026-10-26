@@ -16265,3 +16265,12 @@ verified full440refbundle, originalrefs/WIP kept;60exacthistoricalPNGs and
 2originaluntrackedClaudeMDreceipts rescued separately. Evidencecommit and
 ff-only landing follow; this is sourceconsolidation, not ELP2-10/11closure.
 
+**Actual landing completed:**`eabdc5894d4ec107f80343fbe037623b50f18ca9` received
+by canonicalResearch viaff-only from685bc1915,214commits,677files,
++55,055/−2,225lines,0tracked-filedeletions. EntryResearch andbothClaudeheads
+are ancestors;all440heads retained,438otherrefs unchanged;canonicalclean.
+Full/incremental bundles verified;92historicalPNGs and3originalreceipt hashes
+present. Finalconfirmation isMD-only onResearch;work continues there,split
+lanes again onlywhenconcurrentClaude resumes. Exact3hygieneFAIL/prior213visual
+FAIL/fullR2/connectedacceptance remain explicit. No push/runtime/dev/main.
+

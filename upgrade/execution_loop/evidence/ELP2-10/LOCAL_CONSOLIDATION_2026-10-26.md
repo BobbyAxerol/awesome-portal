@@ -155,6 +155,8 @@ clean; older Claude3tracked/8untrackedWIP unchanged. No remote fetch/push.
 Focused tests used existing peer dependency installations via ignored symlinks
 in the owned candidate only, a private config changing **cacheDir/cache only**,
 Node20.20.2/Vitest4.1.11, three workers. No npm install or peer source write.
+The two owned ignored dependency symlinks were removed after validation;
+peer dependencies and WIP were not removed or modified.
 This is focused development evidence, **not the repo's pinned Node22/full-R2
 acceptance**. Docker permission denied even after escalation; no Docker test
 resources/runtime created. No mutation of test assertions to hide product FAIL.
@@ -179,5 +181,33 @@ Continue on canonical after ff-only; split worktrees again when Claude resumes.
 
 ### Landing result
 
-PENDING_FINAL_COMMIT_AND_FF_ONLY. Final SHA/ref/clean/ancestry checks will be
-recorded after execution, not pre-labelled COMPLETE.
+**COMPLETE_LOCAL_SOURCE_CONSOLIDATION**, not full phase/product acceptance.
+
+- Evidence commit`eabdc5894d4ec107f80343fbe037623b50f18ca9` followed repair
+  `12ffc4bf7729e92202ce5c9de26a48c295f6867d`; canonical was rechecked clean,
+  exact685bc1915and ancestor immediately before `git merge --ff-only --quiet`.
+  Actual landing succeeded to eabdc5894; clean index/worktree afterwards.
+- Received214commits versus entry canonical. Combined diff677files,
+  +55,055/−2,225lines; **zero tracked-file deletions**. Both originalResearch
+  and latest/olderClaude00e7f6cff/3aaf24f4e are verified ancestors.
+- All440heads retained;438otherrefs unchanged, only owned candidate and
+  canonical advanced. Main/dev stay533162635f56584d630e3d971d77d50860595f15.
+  LatestClaude/candidate clean; olderClaude WIP unchanged. Historical RustEdge
+  and other reviewed/superseded/out-of-scope refs were **not blindly merged**.
+-92historicalPNGpaths now present (32existingflat +60restored), exact3receipt
+  hashes rechecked on canonical. No stale debt-register/baseline replacement.
+- Incremental final-cut bundle also verified at
+  `/home/bobby/.local/state/portal-consolidation-20261026.ZcC5SBSx/local-consolidation-final.bundle`,
+  SHA256`3e1c18399b5f178acc19ce46844933fa6b35d715c4c5ee47e5b8c3a4602f5ee0`.
+  First literal-SHA range invocation refused an empty bundle; corrected to
+  named candidate ref, verified successfully before merge. Full earlier bundle
+  preserves the prerequisite history. Neither bundle uploaded.
+- Follow-up commit is **Markdown-only landing confirmation on canonical**;
+  no code gate repeated because the application tree did not change.
+  Candidate remains an ancestor if canonical gains this docs-only receipt.
+
+Next working checkout is `/home/bobby/portal-research`, branch
+`docs/research-loop-plan`. Claude should start from current canonical, read
+this packet plus census/WIP locators, and resolve LC-FE-01…04 without copying
+old snapshots over newer code. Full R2/connected source/browser/release remain
+open. No push, runtime install, DB/authority mutation or dev/main merge occurred.
