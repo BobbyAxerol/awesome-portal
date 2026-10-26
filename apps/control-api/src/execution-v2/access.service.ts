@@ -36,6 +36,7 @@ import { ManagerRevokeError, MANAGER_REVOKE_EVENT_SOURCE, MANAGER_REVOKE_RECEIPT
 import { MANAGER_SUCCESSOR_SCHEMA, ManagerSuccessorError, verifiedManagerSuccessor,
   managerSuccessorKey, managerSuccessorDigest, planManagerSuccessor, assertSuccessorWindow,
   type ManagerSuccessorDocument, type ManagerSuccessorPin } from "./manager-domain-successor";
+import type {NativeCurrentRelationsPurpose} from "./native-current-relations-port";
 
 type Tx={db:PoolClient;repo:AccessRepository;context:AccessEvaluationContext;recheck:(check:()=>void)=>void};
 type OperationResult={receipt:AccessReceipt;replayed:boolean};
@@ -69,6 +70,21 @@ export class ExecutionAccessService {
       ({...context,allow_test_only:this.allowTestOnly});
     return this.trust.currentRelations.sendFinite({actor,workspace_id:workspace,action,resources,response,
       build:context=>build(applicationContext(context)),assertAllowed:context=>assertAllowed(applicationContext(context)),
+      ...(validation?.afterEnter?{afterEnter:validation.afterEnter}:{}),...(validation?.beforeDispatch?{beforeDispatch:validation.beforeDispatch}:{})});
+  }
+
+  /** All purposes retain their own source cut through one physical send. The
+   * optional private port is not emulated by several independent responses. */
+  async deliverNativeCurrentComposition(actor:AccessActor,workspace:string,purposes:readonly NativeCurrentRelationsPurpose[],
+    scopeDigest:string,response:ServerResponse,build:(contexts:readonly AccessEvaluationContext[])=>Promise<Buffer>,
+    assertAllowed:(contexts:readonly AccessEvaluationContext[])=>void,
+    validation?:{afterEnter?:()=>Promise<void>;beforeDispatch?:()=>void}):Promise<void>{
+    const provider=this.trust.currentRelations;
+    if(!provider?.sendFiniteComposition)throw new AccessPolicyError("SOURCE_RELATION_NOT_QUALIFIED",503);
+    const applicationContexts=(contexts:readonly AccessEvaluationContext[])=>
+      contexts.map(context=>({...context,allow_test_only:this.allowTestOnly}));
+    return provider.sendFiniteComposition({actor,workspace_id:workspace,purposes,scope_digest:scopeDigest,response,
+      build:contexts=>build(applicationContexts(contexts)),assertAllowed:contexts=>assertAllowed(applicationContexts(contexts)),
       ...(validation?.afterEnter?{afterEnter:validation.afterEnter}:{}),...(validation?.beforeDispatch?{beforeDispatch:validation.beforeDispatch}:{})});
   }
 

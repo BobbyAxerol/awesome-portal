@@ -1,5 +1,6 @@
 import { Inject, Injectable, Optional } from "@nestjs/common";
 import { Pool } from "pg";
+import type {ServerResponse} from "node:http";
 import { CONTROL_API_CONFIG, EXECUTION_DATA_POOL } from "../tokens";
 import { ControlApiConfig } from "../config";
 import { QueryContractError } from "../query/contracts";
@@ -10,6 +11,10 @@ import { rejectManagerAsOf } from "./manager-query-p1";
 import { managerSeriesQuery } from "./manager-series.contract";
 import { queryManagerSeries, type SeriesSubjectScope } from "./manager-series";
 import { ExecutionManagerRuntime } from "./manager-runtime";
+import {NativeCurrentAccountScopes} from "./native-current-runtime";
+
+type SeriesResponse=ReturnType<typeof queryManagerSeries>;
+type NativeDelivery={response:ServerResponse;beforeDispatch?:()=>void};
 
 /**
  * FE-013 / FE-033 read service. It authorizes each subject on its own (a fund by
@@ -22,19 +27,35 @@ export class ManagerSeriesService {
   private readonly repository: ManagerModelRepository;
   constructor(@Inject(EXECUTION_DATA_POOL) pool: Pool, @Inject(ExecutionReadScopes) private readonly scopes: ExecutionReadScopes,
     @Inject(CONTROL_API_CONFIG) private readonly config: ControlApiConfig,
-    @Optional() @Inject(ExecutionManagerRuntime) private readonly runtime?: ExecutionManagerRuntime) {
+    @Optional() @Inject(ExecutionManagerRuntime) private readonly runtime?: ExecutionManagerRuntime,
+    @Optional() @Inject(NativeCurrentAccountScopes) private readonly nativeAccount?:NativeCurrentAccountScopes) {
     this.repository = new ManagerModelRepository(pool);
   }
 
-  async read(principal: ReadScopePrincipal, raw: unknown) {
+  hasNativeCurrentRelations():boolean{return this.nativeAccount?.scopes.hasNativeCurrentRelations()===true;}
+
+  read(principal:ReadScopePrincipal,raw:unknown):Promise<SeriesResponse>{return this.readPrepared(principal,raw);}
+
+  readNative(principal:ReadScopePrincipal,raw:unknown,response:ServerResponse,beforeDispatch?:()=>void):Promise<void>{
+    if(!this.hasNativeCurrentRelations())return Promise.reject(new ExecutionReadScopeError("EXECUTION_READ_AUTHORITY_UNAVAILABLE",503));
+    return this.readPrepared(principal,raw,{response,beforeDispatch});
+  }
+
+  private readPrepared(principal:ReadScopePrincipal,raw:unknown):Promise<SeriesResponse>;
+  private readPrepared(principal:ReadScopePrincipal,raw:unknown,native:NativeDelivery):Promise<void>;
+  private async readPrepared(principal:ReadScopePrincipal,raw:unknown,native?:NativeDelivery):Promise<SeriesResponse|void> {
     if (raw && typeof raw === "object" && !Array.isArray(raw)) rejectManagerAsOf(raw as Record<string, unknown>);
     const parsed = managerSeriesQuery.safeParse(raw);
     if (!parsed.success) throw new ExecutionReadScopeError("EXECUTION_READ_NOT_AVAILABLE", 400);
     const q = parsed.data, env = q.environment;
+    if(native&&env!=="paper")throw new ExecutionReadScopeError("EXECUTION_READ_CURRENT_ONLY",503);
+    if(!native&&env==="paper"&&this.hasNativeCurrentRelations())
+      throw new ExecutionReadScopeError("EXECUTION_READ_AUTHORITY_UNAVAILABLE",503);
     if (q.workspace_id && q.workspace_id !== principal.workspaceId) throw new ExecutionReadScopeError("EXECUTION_READ_NOT_AVAILABLE", 404);
     const profile = env === "paper" ? this.config.EXECUTION_EDGE_PAPER_PROFILE_ID : env === "sandbox" ?
       this.config.EXECUTION_EDGE_SANDBOX_PROFILE_ID : this.config.EXECUTION_EDGE_LIVE_PROFILE_ID;
     if (!profile) throw new ExecutionReadScopeError("EXECUTION_READ_AUTHORITY_UNAVAILABLE", 503);
+    const scopes=native?this.nativeAccount!.scopes:this.scopes;
     try {
       const head = await this.repository.head(principal.workspaceId, env, profile);
       const dataset = { dataset_id: "alpha_fleet_overview", source_revision: head?.revision ?? "NOT_PUBLISHED",
@@ -46,24 +67,27 @@ export class ManagerSeriesService {
         const requirement: ReadScopeRequirement = { action: fund ? "business.read_all" : alpha ? "alpha.read" : "portfolio.read", dataset,
           ...(fund ? { requireWholePopulation: true } : { resource: { kind: alpha ? "ALPHA" as const : "PORTFOLIO" as const, id: subject.subject_id! } }) };
         let scope: AuthorizedExecutionReadScope;
-        try { scope = await this.scopes.authorize(principal, { environment: env, profileId: profile }, requirement); }
+        try { scope = await scopes.authorize(principal, { environment: env, profileId: profile }, requirement); }
         catch (error) {
           // A restricted portfolio viewer is still a viewer: the subject is answered, as a typed "not authorized as a whole".
           if (fund || alpha || !(error instanceof ExecutionReadScopeError) || error.code !== "EXECUTION_READ_NOT_AVAILABLE") throw error;
-          scope = await this.scopes.authorize(principal, { environment: env, profileId: profile }, { ...requirement, action: "portfolio.read_restricted" });
+          scope = await scopes.authorize(principal, { environment: env, profileId: profile }, { ...requirement, action: "portfolio.read_restricted" });
         }
         if (scope.mode !== "SCOPED_V2" || !head) throw new ExecutionReadScopeError("EXECUTION_READ_PUBLICATION_NOT_QUALIFIED", 503);
         inputs.push({ subject, scope });
       }
-      // Ordinary reads fence each scope with `deliver` (the realtime-oriented `deliverScopedTogether` needs a stream lease).
-      // Nesting makes every subject's authority current BEFORE and AFTER the one document read, in a fixed bounded order.
-      const deliverAll = <T>(index: number, read: () => Promise<T>): Promise<T> =>
-        index >= inputs.length ? read() : this.scopes.deliver(inputs[index].scope, () => deliverAll(index + 1, read));
       const economic = this.runtime?.economicSourceFor({workspace_id:principal.workspaceId,environment:env,profile_id:profile});
       const assertEconomic = () => { if (economic && !economic.isCurrent())
         throw new ExecutionReadScopeError("EXECUTION_READ_ACCESS_CHANGED", 409); };
       assertEconomic();
-      const response = await deliverAll(0, async () => {
+      const checkHead=async()=>{
+        const current=await this.repository.head(principal.workspaceId,env,profile);
+        if(current?.payload_digest!==head!.payload_digest||current.revision!==head!.revision||
+          current.projection_generation!==head!.projection_generation)
+          throw new ExecutionReadScopeError("EXECUTION_READ_ACCESS_CHANGED",409);
+        assertEconomic();
+      };
+      const build=async()=>{
         const doc = await this.repository.document(principal.workspaceId, env, profile, head!.revision);
         // TEST_ONLY documents are exercised through the pure component only, never served.
         if (!doc || doc.qualification !== "SOURCE_VERIFIED") throw new ExecutionReadScopeError("EXECUTION_READ_PUBLICATION_NOT_QUALIFIED", 503);
@@ -74,11 +98,25 @@ export class ManagerSeriesService {
           : series.provenance.calculation_revision.startsWith("manager-series-economic.v1:")))
           throw new ExecutionReadScopeError("EXECUTION_READ_PUBLICATION_NOT_QUALIFIED", 503);
         const response = queryManagerSeries(inputs, doc, q);
-        const current = await this.repository.head(principal.workspaceId, env, profile);
-        if (current?.payload_digest !== head!.payload_digest || current.revision !== head!.revision)
-          throw new ExecutionReadScopeError("EXECUTION_READ_ACCESS_CHANGED", 409);
+        await checkHead();
         return response;
-      });
+      };
+      if(native){
+        // The scopes retain separate source purposes even for a mixed
+        // fund/portfolio/alpha batch. Only this writer owns physical HTTP.
+        await scopes.deliverNativeTogether(inputs.map(input=>input.scope),native.response,
+          async()=>Buffer.from(JSON.stringify(await build())),{validateAfterEnter:checkHead,
+            validateBeforeDispatch:()=>{assertEconomic();const checked:unknown=native.beforeDispatch?.();
+              if(checked!==undefined){if(checked&&typeof (checked as {then?:unknown}).then==="function")
+                void Promise.resolve(checked).catch(()=>undefined);
+                throw new ExecutionReadScopeError("EXECUTION_READ_AUTHORITY_UNAVAILABLE",503);}}});
+        return;
+      }
+      // Ordinary compatibility path is unchanged. A native installation still
+      // refuses detached delivery rather than silently losing its source fence.
+      const deliverAll=<T>(index:number,read:()=>Promise<T>):Promise<T>=>
+        index>=inputs.length?read():scopes.deliver(inputs[index].scope,()=>deliverAll(index+1,read));
+      const response=await deliverAll(0,build);
       assertEconomic();
       return response;
     } catch (error) {

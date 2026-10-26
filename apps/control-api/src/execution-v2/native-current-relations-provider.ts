@@ -9,7 +9,7 @@ import {accessAction,accessResource,type AccessActor,type AccessAction,type Acce
 import {accessDigest,type AccessRelations,type AccessEvaluationContext} from "./access-policy";
 import type {AccessTrustProvider} from "./access-trust";
 import {captureCurrentHumanSnapshot,lockCurrentHumanSnapshot} from "./current-human-snapshot";
-import type {NativeCurrentRelationsPort} from "./native-current-relations-port";
+import type {NativeCurrentRelationsPort,NativeCurrentRelationsComposition} from "./native-current-relations-port";
 import {nativeCurrentRelationsBase,nativeCurrentRelationsCanonical,nativeCurrentRelationsDecode,
  nativeCurrentRelationsRegistration,nativeCurrentRelationsOriginal,prepareNativeCurrentRelationsSourceRequest,
  type NativeCurrentRelationsSourceBase,type NativeCurrentRelationsSourceAction,type NativeCurrentRelationsSourceIssued} from "./native-current-relations-codec";
@@ -123,11 +123,17 @@ export class NativeCurrentRelationsProvider implements NativeCurrentRelationsPor
    [base.binding.lease_id,to,from]));if(changed.rowCount!==1)return fail("NATIVE_CURRENT_CUSTODY_CONFLICT");this.checkRow(changed.rows[0]);
  }
  private async reserve(input:Input,principals:readonly string[],snapshot:Snapshot):Promise<Readonly<NativeCurrentRelationsSourceBase>[]> {
+  return this.reservePurposes([input],principals,snapshot);
+ }
+ private async reservePurposes(inputs:readonly Input[],principals:readonly string[],snapshot:Snapshot):Promise<Readonly<NativeCurrentRelationsSourceBase>[]> {
   const ids=[...new Set(principals)].sort();if(ids.length<1||ids.length>this.config.maximum_principals)return fail("NATIVE_CURRENT_CAPACITY_EXHAUSTED");
   // Resolve the complete configured closure BEFORE any source call. Never ask
-  // the actual caller's mapping to impersonate a missing grant issuer.
-  const cuts=ids.map(id=>this.configured(input,id)),flight=randomUUID(),now=Date.now();
-  const bases=cuts.map(b=>{const binding={lease_id:randomUUID(),attempt_id:randomUUID(),...b.source,operation:"READ" as const},
+  // the actual caller's mapping to impersonate a missing grant issuer, nor use
+  // the first subject's allowed_actions for a later purpose in a batch.
+  const input=inputs[0];
+  if(!input||inputs.length>4||inputs.some(v=>accessDigest(v.actor)!==accessDigest(input.actor)||v.workspace_id!==input.workspace_id))return fail();
+  const cuts=inputs.flatMap(purpose=>ids.map(id=>({input:purpose,cut:this.configured(purpose,id)}))),flight=randomUUID(),now=Date.now();
+  const bases=cuts.map(({input,cut:b})=>{const binding={lease_id:randomUUID(),attempt_id:randomUUID(),...b.source,operation:"READ" as const},
    purpose={kind:"CURRENT_POLICY" as const,actor_id:input.actor.user_id,principal_id:b.principal_id,workspace_id:input.workspace_id,
     environment:"paper" as const,action:input.action,resource_digest:input.resource_digest,flight_id:flight},
    values={registration:b.registration,original:b.original,purpose,deadline:new Date(now+this.config.attempt_ms).toISOString()};
@@ -225,21 +231,54 @@ export class NativeCurrentRelationsProvider implements NativeCurrentRelationsPor
  sendFinite(input:Parameters<NativeCurrentRelationsPort["sendFinite"]>[0]):Promise<void>{
   return this.tracked(()=>this.sendFiniteOwned(input));
  }
+ sendFiniteComposition(input:NativeCurrentRelationsComposition):Promise<void>{
+  return this.tracked(()=>this.sendFiniteCompositionOwned(input));
+ }
  private async sendFiniteOwned(input:Parameters<NativeCurrentRelationsPort["sendFinite"]>[0]):Promise<void>{
   const resources=JSON.parse(nativeCurrentRelationsCanonical(input.resources)) as AccessResource[];
   if(resources.length<1||resources.length>200||!resources.every(r=>accessResource.safeParse(r).success)||input.action==="stream.subscribe")return fail("NATIVE_CURRENT_FINITE_ONLY");
   const request=this.capture({...input,resource_digest:accessDigest(resources)}),response:ServerResponse=input.response;
   const build=input.build,assertAllowed=input.assertAllowed,afterEnter=input.afterEnter,beforeDispatch=input.beforeDispatch;
-  await this.recoverForAdmission();const before=await this.snapshot(request.actor,request.workspace_id),bases=await this.reserve(request,before.ids,before),held:Held[]=[];
+  return this.sendFinitePurposes([request],response,contexts=>build(contexts[0]),contexts=>assertAllowed(contexts[0]),afterEnter,beforeDispatch);
+ }
+ private async sendFiniteCompositionOwned(input:NativeCurrentRelationsComposition):Promise<void>{
+  // Capture the complete bounded composition before any await. The source
+  // still receives its existing one-purpose wire; its resource digest binds
+  // that purpose AND the full response composition, never a first-scope alias.
+  const purposes=JSON.parse(nativeCurrentRelationsCanonical(input.purposes)) as NativeCurrentRelationsComposition["purposes"];
+  if(!Array.isArray(purposes)||purposes.length<1||purposes.length>4||purposes.some(p=>
+    !p||Object.keys(p).sort().join(",")!=="action,resources"||!accessAction.safeParse(p.action).success||
+    p.action==="stream.subscribe"||!Array.isArray(p.resources)||p.resources.length<1||p.resources.length>200||
+    !p.resources.every((r:unknown)=>accessResource.safeParse(r).success))||
+    new Set(purposes.map(p=>accessDigest(p))).size!==purposes.length)return fail("NATIVE_CURRENT_FINITE_ONLY");
+  const identity=this.capture({actor:input.actor,workspace_id:input.workspace_id,action:purposes[0].action,resource_digest:accessDigest(purposes)});
+  const composition=accessDigest({actor:identity.actor,workspace_id:identity.workspace_id,purposes,scope_digest:digest.parse(input.scope_digest)});
+  const requests=purposes.map((purpose,index)=>this.capture({actor:identity.actor,workspace_id:identity.workspace_id,action:purpose.action,
+    resource_digest:accessDigest({composition,purpose_index:index,action:purpose.action,resources:purpose.resources})}));
+  return this.sendFinitePurposes(requests,input.response,input.build,input.assertAllowed,input.afterEnter,input.beforeDispatch,composition);
+ }
+ private async sendFinitePurposes(requests:readonly Input[],response:ServerResponse,
+  build:(contexts:readonly AccessEvaluationContext[])=>Promise<Buffer>,assertAllowed:(contexts:readonly AccessEvaluationContext[])=>void,
+  afterEnter?:()=>Promise<void>,beforeDispatch?:()=>void,composition?:string):Promise<void>{
+  const request=requests[0];
+  await this.recoverForAdmission();const before=await this.snapshot(request.actor,request.workspace_id),
+   bases=await this.reservePurposes(requests,before.ids,before),held:Held[]=[];
+  // Each context contains ONLY the cuts issued for its own purpose. Sources
+  // may legitimately return different relations for the same principal on two
+  // actions/resources; merging by principal would silently borrow authority.
+  const contexts=(snapshot:Snapshot)=>requests.map(purpose=>this.context(snapshot,purpose,held.filter(h=>
+   h.base.purpose.action===purpose.action&&h.base.purpose.resource_digest===purpose.resource_digest)));
   let reservation:NativeReadEgressReservation|undefined,binding:NativeReadEgressBinding|undefined;
   try{
-   for(const base of bases)held.push(await this.issue(request,base));
-   const body=await build(this.context(before,request,held));if(!Buffer.isBuffer(body))return fail();
+   for(const base of bases){const purpose=requests.find(p=>p.action===base.purpose.action&&p.resource_digest===base.purpose.resource_digest);
+    if(!purpose)return fail("NATIVE_CURRENT_CUSTODY_CONFLICT");held.push(await this.issue(purpose,base));}
+   const body=await build(contexts(before));if(!Buffer.isBuffer(body))return fail();
    const until=this.validUntil(before,held);
    const first=held[0],issuedWall=Date.now(),issuedMono=performance.now();
    binding={lease_id:first.base.binding.lease_id,attempt_id:first.base.binding.attempt_id,binding_digest:accessDigest(first.base.binding).slice(7),
     source_digest:accessDigest(held.map(h=>h.issued.lease.source_digest)).slice(7),scope_digest:accessDigest({authority:before.authority_fingerprint,
-     request:request.resource_digest,bases:bases.map(b=>accessDigest(b))}),body_digest:`sha256:${createHash("sha256").update(body).digest("hex")}`,valid_until_ms:until};
+     ...(composition?{composition,requests:requests.map(p=>({action:p.action,resource_digest:p.resource_digest}))}:{request:request.resource_digest}),
+     bases:bases.map(b=>accessDigest(b))}),body_digest:`sha256:${createHash("sha256").update(body).digest("hex")}`,valid_until_ms:until};
    // Actual transport ownership BEFORE source ENTER. No send has happened.
    reservation=this.egress.reserveFinite(response,body,binding);
    const own={reservation,binding};for(const base of bases)this.reservations.set(base.binding.lease_id,own);
@@ -253,7 +292,7 @@ export class NativeCurrentRelationsProvider implements NativeCurrentRelationsPor
    await this.transaction(async db=>{
     const final=await lockCurrentHumanSnapshot(db,request.actor,request.workspace_id);
     if(final.authority_fingerprint!==before.authority_fingerprint)return fail("NATIVE_CURRENT_AUTHORITY_CHANGED");
-    const context=this.context(final,request,held),checked:unknown=assertAllowed(context);
+    const checked:unknown=assertAllowed(contexts(final));
     if(checked!==undefined)return fail("NATIVE_CURRENT_NOT_QUALIFIED");assertCurrent();
     for(const base of bases){const row=this.checkRow((await db.query<Row>("SELECT * FROM portal_native_current_read_obligations WHERE lease_id=$1 FOR UPDATE",[base.binding.lease_id])).rows[0]).row;
      if(row.phase!=="ENTERED"||row.source_settled||row.authority_fingerprint!==before.authority_fingerprint)return fail("NATIVE_CURRENT_CUSTODY_CONFLICT");

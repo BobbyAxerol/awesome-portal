@@ -1291,6 +1291,48 @@ export class ExecutionReadScopes {
       {afterEnter:validation?.validateAfterEnter,beforeDispatch:validation?.validateBeforeDispatch});
   }
 
+  /** One response for1–4 genuine entity scopes, not the first scope expanded
+   * to the other subjects. Every purpose has its own native source context,
+   * all held through ENTER, final Core COMMIT and the same physical egress. */
+  async deliverNativeTogether(scopes:readonly AuthorizedExecutionReadScope[],response:ServerResponse,
+    read:()=>Promise<Buffer>,validation?:{validateAfterEnter?:()=>Promise<void>;validateBeforeDispatch?:()=>void}):Promise<void>{
+    if(scopes.length<1||scopes.length>4)fail("EXECUTION_READ_SCOPE_LIMIT",503);
+    const captured=[...scopes],states=captured.map(scope=>{assertExecutionReadScope(scope);const state=minted.get(scope)!;
+      if(state.issuer!==this||scope.mode!=="SCOPED_V2"||scope.environment!=="paper"||!state.context||
+        state.requirement.action==="stream.subscribe"||state.requirement.dataset?.window!=null)
+        fail("EXECUTION_READ_CURRENT_ONLY",503);
+      return state;});
+    const first=states[0],scope=captured[0],actor={user_id:first.principal.user.userId,
+      session_id:first.principal.session.sessionId,session_generation:first.principal.session.sessionVersion};
+    const identity=(state:ScopeState)=>({actor:{user_id:state.principal.user.userId,session_id:state.principal.session.sessionId,
+      session_generation:state.principal.session.sessionVersion},role:state.principal.user.role,
+      session_user_id:state.principal.session.userId,workspace:state.principal.workspaceId,
+      viewer_workspace:state.principal.viewerWorkspaceId??state.principal.workspaceId,binding:state.binding,
+      dataset:state.requirement.dataset??null,authority:state.context!.authority_fingerprint});
+    const shared=accessDigest(identity(first));
+    if(states.some(state=>accessDigest(identity(state))!==shared))fail("EXECUTION_READ_ACCESS_CHANGED",409);
+    const purposes=states.map(state=>({action:state.requirement.action,resources:[...new Map(
+      [...state.resources,...(state.requirement.resource?[state.requirement.resource]:[])].map(r=>[exactKey(r),r])).values()]}));
+    if(purposes.some(p=>!p.resources.length))fail("EXECUTION_READ_SCOPE_REQUIRED");
+    if(new Set(purposes.map(p=>accessDigest(p))).size!==purposes.length)fail("EXECUTION_READ_SCOPE_REQUIRED");
+    const proof=accessDigest({identity:identity(first),purposes:purposes.map((purpose,index)=>({
+      ...purpose,fingerprint:captured[index].fingerprint,requirement:states[index].requirement}))});
+    const check=(contexts:readonly AccessEvaluationContext[])=>{
+      if(contexts.length!==states.length)fail("EXECUTION_READ_AUTHORITY_UNAVAILABLE",503);
+      for(let index=0;index<states.length;index++){
+        const context=contexts[index],expected=states[index].context!,resources=purposes[index].resources;
+        if(context.principal_id!==actor.user_id||context.workspace_id!==scope.workspaceId||
+          context.authority_fingerprint!==expected.authority_fingerprint||
+          accessDigest(contextProof(context,scope.environment,resources))!==
+          accessDigest(contextProof(expected,scope.environment,resources)))fail("EXECUTION_READ_ACCESS_CHANGED",409);
+        if(!policyReady(context))fail("EXECUTION_READ_POLICY_PENDING",503);
+      }
+    };
+    await this.access.deliverNativeCurrentComposition(actor,scope.workspaceId,purposes,proof,response,
+      async contexts=>{check(contexts);return read();},check,
+      {afterEnter:validation?.validateAfterEnter,beforeDispatch:validation?.validateBeforeDispatch});
+  }
+
   /** Notice-only V2 bridge; no route/adapter is commissioned by calling this.
    * Requires BOTH the minted business read scope and exact stream capability. */
   async deliverRealtime<T>(scope:AuthorizedExecutionReadScope,resource:AccessResource,write:()=>T):Promise<T> {

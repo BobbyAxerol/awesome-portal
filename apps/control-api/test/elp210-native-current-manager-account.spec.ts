@@ -30,6 +30,10 @@ import { policyReady, type AccessEvaluationContext } from "../src/execution-v2/a
 import { unqualifiedAccessTrust, type ReviewedPolicyArtifact } from "../src/execution-v2/access-trust";
 import { ManagerModelController } from "../src/execution-v2/manager-model.controller";
 import { ManagerModelService } from "../src/execution-v2/manager-model.service";
+import {ManagerSeriesController} from "../src/execution-v2/manager-series.controller";
+import {ManagerSeriesService} from "../src/execution-v2/manager-series.service";
+import {managerSeriesResponse} from "../src/execution-v2/manager-series.contract";
+import {managerScorePopulationDigest} from "../src/execution-v2/manager-score-publication";
 import { managerDatasetResponse, type ManagerModelDocument } from "../src/execution-v2/manager-model.contract";
 import { NativeCurrentAccountScopes } from "../src/execution-v2/native-current-runtime";
 import { NativeCurrentRelationsProvider, type NativeCurrentRelationsProviderConfig } from "../src/execution-v2/native-current-relations-provider";
@@ -207,7 +211,8 @@ describe.skipIf(!database).sequential("native named Paper Account/Alpha routes: 
   });
   afterAll(async () => { if (pool) await pool.end(); if (ctx) await teardownApp(ctx); });
 
-  async function fixture(surface: "ACCOUNT" | "ALPHA" | "FUND" | "FLEET" | "PORTFOLIO" | "DEPLOYMENT" = "ACCOUNT", options: { includeAlphaAction?: boolean; missingAlphaTarget?: boolean } = {}) {
+  async function fixture(surface: "ACCOUNT" | "ALPHA" | "FUND" | "FLEET" | "PORTFOLIO" | "DEPLOYMENT" | "SERIES" = "ACCOUNT",
+    options: { includeAlphaAction?: boolean; missingAlphaTarget?: boolean; nativeToken?:boolean } = {}) {
     await pool.query(await readFile(join(__dirname, "../src/execution-v2/current-human-candidate.sql"), "utf8"));
     const id = randomUUID(), now = Date.now(), workspace = next("workspace"), account = next("account"), facts = rootWireFacts(now);
     await pool.query("INSERT INTO workspaces(workspace_id,name,owner_user_id) VALUES($1,'TEST_ONLY native Account',$2)", [workspace, owner]);
@@ -278,16 +283,20 @@ describe.skipIf(!database).sequential("native named Paper Account/Alpha routes: 
       original: { grant_id: grant.grant_id, accepted_fact_digest: accessDigest(fact) },
       correspondence: { registry_revision: accessDigest("TEST_ONLY-registry"), payload_sha256: "b".repeat(64), approval_ref: "TEST_ONLY-independent-review" },
       allowed_actions: ["access.read", "account.read",
-        ...(surface === "FUND" ? ["business.read_all" as const] : []),
-        ...(surface === "PORTFOLIO" ? ["portfolio.read" as const] : []),
-        ...(["ALPHA", "FLEET", "DEPLOYMENT"].includes(surface) && options.includeAlphaAction !== false ? ["alpha.read" as const] : [])] }],
+        ...(["FUND","SERIES"].includes(surface) ? ["business.read_all" as const] : []),
+        ...(["PORTFOLIO","SERIES"].includes(surface) ? ["portfolio.read" as const] : []),
+        ...(["ALPHA", "FLEET", "DEPLOYMENT","SERIES"].includes(surface) && options.includeAlphaAction !== false ? ["alpha.read" as const] : [])] }],
       maximum_retained: 128, maximum_unresolved: 8, maximum_recoveries: 8, maximum_principals: 8,
       attempt_ms: 30000, terminal: { issuer: "TEST_ONLY-core-terminal", audience: "TEST_ONLY-pm-terminal", key_id: "TEST_ONLY-terminal", private_key: terminal.privateKey, ttl_seconds: 30 } };
     const provider = new NativeCurrentRelationsProvider(pool, endpoint.client,
       new NativeReadEgress({ maximum_response_bytes: 1048576, maximum_inflight: 2, send_timeout_ms: 5000, quiesce_timeout_ms: 50 }), config);
-    const nativeScopes = new ExecutionReadScopes(pool, new ExecutionAccessService(pool, auth, provider.compose(baseTrust), true), ctx.config);
-    const ordinaryScopes = new ExecutionReadScopes(pool, new ExecutionAccessService(pool, auth, baseTrust, true), ctx.config);
-    const model = new ManagerModelService(pool, ordinaryScopes, ctx.config, undefined, new NativeCurrentAccountScopes(nativeScopes));
+    const routeConfig=surface==="SERIES"?{...ctx.config,EXECUTION_READ_PROFILE:"native_manager_review_v1" as const,
+      EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID:workspace}:ctx.config;
+    const nativeScopes = new ExecutionReadScopes(pool, new ExecutionAccessService(pool, auth, provider.compose(baseTrust), true), routeConfig);
+    const ordinaryScopes = new ExecutionReadScopes(pool, new ExecutionAccessService(pool, auth, baseTrust, true), routeConfig);
+    const nativeToken=options.nativeToken===false?undefined:new NativeCurrentAccountScopes(nativeScopes);
+    const model = new ManagerModelService(pool, ordinaryScopes, routeConfig, undefined, nativeToken);
+    const series=new ManagerSeriesService(pool,ordinaryScopes,routeConfig,undefined,nativeToken);
     const doc: ManagerModelDocument = { schema_version: "portal.execution.manager-model-input.v1", workspace_id: workspace,
       environment: "paper", profile_id: "PAPER_BINANCE_USDM", qualification: "SOURCE_VERIFIED", family_id: "alpha_fleet_overview",
       revision: next("projection"), supersedes_revision: null, source_epoch: next("epoch"), source_sequence: "1", projection_generation: next("generation"),
@@ -296,6 +305,23 @@ describe.skipIf(!database).sequential("native named Paper Account/Alpha routes: 
       source_quality: { completeness: "COMPLETE", freshness: "FRESH", reasons: [] }, members: [{ tuple, stage: "PAPER", name: "TEST_ONLY native Account",
         owner_user_id: owner, lifecycle: "ACTIVE", venue: "TEST_ONLY", health: null, source_state: null, binding_ref: null,
         assignment_revision: "TEST_ONLY:r1", owner_revision: "TEST_ONLY:r1", binding_revision: "TEST_ONLY:r1", valid_from_ms: now - 1000, valid_to_ms: null }], facts: [] };
+    if(surface==="SERIES"){
+      const partition={economic_domain:"PAPER" as const,currency:"USDT",basis:"TEST_ONLY:nav-ledger",
+        native_profile_ref:"TEST_ONLY:ledger",domain_proof_ref:"TEST_ONLY:domain-proof"};
+      const from=now-30*86_400_000;
+      // Explicit qualified-shaped synthetic financial originals. This proves
+      // source→scope→physical HTTP composition, not financial commissioning.
+      doc.precomputed_series=(["manager_book","portfolio","alpha"] as const).map(type=>({
+        binding:{subject_type:type,subject_id:type==="manager_book"?workspace:type==="portfolio"?tuple.portfolio_id:tuple.alpha_id,
+          tuple_population_digest:managerScorePopulationDigest(doc.members),stage_filter:["PAPER"],metric:"NAV",partition,
+          window_start_ms:from,window_end_ms:now},
+        series:{unit:"MONEY",currency:"USDT",ratio_scale:null,basis:partition.basis,methodology_ref:"TEST_ONLY:source-nav.v1",
+          points:[{ts_ms:from,value:"100.000000000000000001"},{ts_ms:now-86_400_000,value:"101.25"}],gaps:[]},
+        quality:{completeness:"COMPLETE",freshness:"FRESH",reasons:[]},source_confidence:"VERIFIED",
+        provenance:{scope:{workspace_id:workspace,environment:"paper",profile_id:doc.profile_id,catalogue_digest:doc.catalogue_digest},
+          source_revision:doc.revision,source_set_digest:doc.source_set_digest,source_qualification:"SOURCE_VERIFIED",
+          input_digest:accessDigest(["TEST_ONLY:series-input",type]),calculation_revision:"TEST_ONLY:source-calc",policy_revision:policy.revision,source_as_of_ms:now}}));
+    }
     // Explicit disposable projection fixture, not persistManagerProjection and
     // not source qualification. Reader receives real hash-checked PG bytes.
     const digest = accessDigest(doc);
@@ -303,9 +329,10 @@ describe.skipIf(!database).sequential("native named Paper Account/Alpha routes: 
       VALUES($1,'paper',$2,$3,$4,1,$5,$6,$7::jsonb)`, [workspace, doc.profile_id, doc.revision, doc.source_epoch, doc.projection_generation, digest, JSON.stringify(doc)]);
     await pool.query(`INSERT INTO execution_manager_model_heads(workspace_id,environment,profile_id,revision,source_epoch,source_sequence,projection_generation,payload_digest,catalogue_digest)
       VALUES($1,'paper',$2,$3,$4,1,$5,$6,$7)`, [workspace, doc.profile_id, doc.revision, doc.source_epoch, doc.projection_generation, digest, doc.catalogue_digest]);
-    @Module({ controllers: [ManagerModelController], providers: [{ provide: ManagerModelService, useValue: model },
-      { provide: WorkspacesRepository, useValue: new WorkspacesRepository(pool, ctx.config) }, { provide: AuthService, useValue: auth },
-      { provide: CONTROL_API_CONFIG, useValue: ctx.config }, SessionGuard] }) class TestOnlyRouteModule {}
+    @Module({ controllers: [ManagerModelController,ManagerSeriesController], providers: [{ provide: ManagerModelService, useValue: model },
+      {provide:ManagerSeriesService,useValue:series},...(nativeToken?[{provide:NativeCurrentAccountScopes,useValue:nativeToken}]:[]),
+      { provide: WorkspacesRepository, useValue: new WorkspacesRepository(pool, routeConfig) }, { provide: AuthService, useValue: auth },
+      { provide: CONTROL_API_CONFIG, useValue: routeConfig }, SessionGuard] }) class TestOnlyRouteModule {}
     const app = await NestFactory.create<NestFastifyApplication>(TestOnlyRouteModule, new FastifyAdapter(), { logger: false, abortOnError: false });
     applications.push(app); app.useGlobalFilters(new HttpErrorFilter()); await app.register(cookie as never); await app.listen(0, "127.0.0.1");
     const address = app.getHttpServer().address(); if (!address || typeof address === "string") throw Error("TEST_ONLY_ROUTE_ADDRESS");
@@ -314,9 +341,11 @@ describe.skipIf(!database).sequential("native named Paper Account/Alpha routes: 
       surface === "ALPHA" ? `alphas/${encodeURIComponent(alpha)}/overview` :
       surface === "PORTFOLIO" ? `portfolios/${encodeURIComponent(tuple.portfolio_id)}/overview` :
       surface === "DEPLOYMENT" ? `deployments/${encodeURIComponent(tuple.deployment_id)}/overview` :
-      surface === "FUND" ? "fund-overview" : "fleet";
-    const path = `/api/v1/execution/manager/${route}?environment=paper&workspace_id=${encodeURIComponent(workspace)}`;
-    return { provider, endpoint, model, nativeScopes, ordinaryScopes, terminals, workspace, account, alpha, path,
+      surface === "FUND" ? "fund-overview" : surface==="SERIES"?"series":"fleet";
+    const subjects=[{subject_type:"FUND"},{subject_type:"PORTFOLIO",subject_id:tuple.portfolio_id},{subject_type:"ALPHA",subject_id:alpha}];
+    const path = `/api/v1/execution/manager/${route}?environment=paper&workspace_id=${encodeURIComponent(workspace)}`+
+      (surface==="SERIES"?`&metric=NAV&window=30D&subjects=${encodeURIComponent(JSON.stringify(subjects))}`:"");
+    return { provider, endpoint, model, series,nativeScopes, ordinaryScopes, terminals, workspace, account, alpha, path,
       onEnter(hook: () => Promise<void>) { onEnter = hook; },
       loseResolveResponse(value: boolean) { dropResolve = value; },
       rows: async () => (await pool.query("SELECT * FROM portal_native_current_read_obligations WHERE source_config_digest=$1 ORDER BY created_at,lease_id", [provider.source_config_digest])).rows,
@@ -327,6 +356,40 @@ describe.skipIf(!database).sequential("native named Paper Account/Alpha routes: 
         }); req.setTimeout(10000, () => req.destroy()); req.once("error", () => resolve({ status: 0, body: "", complete: false })); req.end();
       }) };
   }
+  it("native_review SessionGuard admits the exact Series route only with its real native token, holding mixed purposes through ONE HTTP send",async()=>{
+    const f=await fixture("SERIES"),fallback=vi.spyOn(f.ordinaryScopes,"deliver"),detached=vi.spyOn(f.series,"read");
+    const result=await f.get();
+    expect(result.status,JSON.stringify({response:result,source_actions:f.endpoint.requests.map(call=>call.action)})).toBe(200);
+    expect(result.complete).toBe(true);expect(result.cache).toBe("private, no-store");
+    const body=managerSeriesResponse.parse(JSON.parse(result.body));
+    expect(body.series.map(entry=>entry.subject.subject_type)).toEqual(["FUND","PORTFOLIO","ALPHA"]);
+    for(const entry of body.series){expect(entry.state).toBe("AVAILABLE");expect(entry.points.map(point=>point.value)).toEqual(["100.000000000000000001","101.25"]);}
+    expect(body.comparison.state).toBe("ALIGNED");
+    await vi.waitFor(async()=>expect((await f.rows()).filter(row=>row.phase==="SERVED")).toHaveLength(3));
+    await vi.waitFor(async()=>expect((await f.rows()).every(row=>row.source_settled)).toBe(true));
+    const served=(await f.rows()).filter(row=>row.phase==="SERVED"),entered=f.endpoint.requests.filter(call=>call.action==="enter");
+    expect(entered.map(call=>call.base.purpose.action)).toEqual(["business.read_all","portfolio.read","alpha.read"]);
+    expect(new Set(served.map(row=>row.flight_id)).size).toBe(1);
+    expect(new Set(served.map(row=>row.terminal_fact.observation.binding.lease_id)).size).toBe(1);
+    expect(new Set(served.map(row=>row.terminal_fact.observation.binding.scope_digest)).size).toBe(1);
+    expect(new Set(served.map(row=>row.lease_id)).size).toBe(3);expect(f.terminals).toHaveLength(3);
+    for(const row of served)expect(row.terminal_fact.observation).toMatchObject({outcome:"FINISHED",bytes:Buffer.byteLength(result.body)});
+    expect(fallback).not.toHaveBeenCalled();expect(detached).not.toHaveBeenCalled();
+  });
+  it("native_review Series rejects the missing native token at SessionGuard, without source I/O or an ordinary fallback",async()=>{
+    const f=await fixture("SERIES",{nativeToken:false}),detached=vi.spyOn(f.series,"read");
+    expect((await f.get()).status).toBe(403);expect(f.endpoint.requests).toHaveLength(0);expect(await f.rows()).toHaveLength(0);
+    expect(detached).not.toHaveBeenCalled();
+  });
+  it("native_review Series projection generation changing during ENTER aborts ALL mixed-purpose originals with zero bytes",async()=>{
+    const f=await fixture("SERIES"),detached=vi.spyOn(f.series,"read");
+    f.onEnter(async()=>{await pool.query("UPDATE execution_manager_model_heads SET projection_generation=$2 WHERE workspace_id=$1",[f.workspace,next("series-replaced")]);});
+    const result=await f.get();expect(result.complete).toBe(false);expect(result.body).toBe("");
+    await vi.waitFor(async()=>expect((await f.rows()).filter(row=>row.phase==="ABORTED"&&row.source_settled)).toHaveLength(3));
+    expect((await f.rows()).some(row=>row.phase==="SERVED")).toBe(false);
+    expect(f.terminals).toHaveLength(3);for(const terminal of f.terminals)expect(terminal).toMatchObject({phase:"ABORTED",evidence_kind:"FINAL_HTTP_ABORT_CONFIRMED"});
+    expect(f.endpoint.requests.filter(call=>call.action==="enter")).toHaveLength(3);expect(detached).not.toHaveBeenCalled();
+  });
   it.each(["ACCOUNT", "ALPHA", "FUND", "FLEET", "PORTFOLIO", "DEPLOYMENT"] as const)("serves the actual named %s route once, through native ENTER/SENDING/physical finish/terminal ACK, never ordinary delivery", async surface => {
     const f = await fixture(surface), fallback = vi.spyOn(f.ordinaryScopes, "deliver"), detached = vi.spyOn(f.model, "read");
     const result = await f.get();

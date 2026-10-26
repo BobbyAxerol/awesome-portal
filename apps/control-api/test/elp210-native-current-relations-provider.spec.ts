@@ -12,7 +12,10 @@ import {AuthService} from "../src/auth/auth.service";
 import {OwnerAccessRepository} from "../src/repos/owner-access";
 import {ExecutionAccessService} from "../src/execution-v2/access.service";
 import {accessDigest} from "../src/execution-v2/access-digest";
-import {grantBindingDigest} from "../src/execution-v2/access-current-relations";
+import {grantBindingDigest,type CurrentAccessRelations} from "../src/execution-v2/access-current-relations";
+import type {AccessAction} from "../src/execution-v2/access.contract";
+import type {NativeCurrentRelationsSourceBase} from "../src/execution-v2/native-current-relations-codec";
+import type {NativeCurrentRelationsPurpose} from "../src/execution-v2/native-current-relations-port";
 import {unqualifiedAccessTrust,type ReviewedPolicyArtifact} from "../src/execution-v2/access-trust";
 import {NativeReadEgress} from "../src/execution-v2/native-read-egress";
 import {CurrentHumanCandidate} from "../src/execution-v2/current-human-candidate";
@@ -34,7 +37,8 @@ describe.skipIf(!url)("ordinary native CURRENT actual custody/finite egress, TES
  afterEach(async()=>{for(const endpoint of endpoints.splice(0))await endpoint.close();
   if(pool){await pool.query("TRUNCATE portal_native_current_read_obligations");await pool.query("DROP SCHEMA IF EXISTS elp210_candidate CASCADE");}});
  afterAll(async()=>{if(pool)await pool.end();if(ctx)await teardownApp(ctx);});
- async function fixture(futureTransition=false){
+ async function fixture(futureTransition=false,options:{actions?:AccessAction[];maximum_unresolved?:number;
+  relationsForPurpose?:(purpose:NativeCurrentRelationsSourceBase["purpose"],relations:CurrentAccessRelations)=>CurrentAccessRelations}={}){
   await pool.query(await readFile(join(__dirname,"../src/execution-v2/current-human-candidate.sql"),"utf8"));
   const id=randomUUID(),now=Date.now(),workspace=`TEST_ONLY-current-${id}`,session=`TEST_ONLY-current-session-${id}`;
   await pool.query("INSERT INTO workspaces(workspace_id,name,owner_user_id) VALUES($1,'TEST_ONLY Current',$2)",[workspace,owner]);
@@ -58,7 +62,8 @@ describe.skipIf(!url)("ordinary native CURRENT actual custody/finite egress, TES
   const endpoint=await currentRelationsTestEndpoint(async(base,action,res,body)=>{
    // Pool1 proves no source network wait retains Core's client.
    expect((await pool.query("SELECT 1 AS n")).rows[0].n).toBe(1);
-   const lease=base.binding.lease_id,reply=currentRelationsWireReply(base,action,relations),state=states.get(lease);
+   const lease=base.binding.lease_id,reply=currentRelationsWireReply(base,action,
+    options.relationsForPurpose?.(base.purpose,relations)??relations),state=states.get(lease);
    if(action==="issue"){expect(state).toBeUndefined();states.set(lease,"ISSUED");if(onIssue)await onIssue();if(loseIssue){loseIssue=false;res.destroy();}}
    else if(action==="enter"){expect(state).toBe("ISSUED");if(loseEnterBefore){loseEnterBefore=false;res.destroy();return null;}states.set(lease,"ENTERED");}
    else if(action==="unknown"){expect(["ENTERED","UNKNOWN"]).toContain(state);states.set(lease,"UNKNOWN");}
@@ -78,7 +83,8 @@ describe.skipIf(!url)("ordinary native CURRENT actual custody/finite egress, TES
    source:{human_issuer:"TEST_ONLY-core",subject:"TEST_ONLY-independent-native-human",workspace_id:workspace,environment:"paper",workload_id:"TEST_ONLY-native-current"},
    registration:{correspondence_id:`TEST_ONLY-correspondence-${id}`,expected_version:"9007199254741001",manifest_sha256:"a".repeat(64)},
    original:{grant_id:grant.grant_id,accepted_fact_digest:accessDigest(fact)},correspondence:{registry_revision:accessDigest("TEST_ONLY-registry"),payload_sha256:"b".repeat(64),approval_ref:"TEST_ONLY-independent-review"},
-   allowed_actions:["access.read","portfolio.read"]}],maximum_retained:128,maximum_unresolved:8,maximum_recoveries:8,maximum_principals:8,attempt_ms:30000,
+   allowed_actions:options.actions??["access.read","portfolio.read"]}],maximum_retained:128,
+   maximum_unresolved:options.maximum_unresolved??8,maximum_recoveries:8,maximum_principals:Math.min(8,options.maximum_unresolved??8),attempt_ms:30000,
    terminal:{issuer:"TEST_ONLY-core-terminal",audience:"TEST_ONLY-pm-terminal",key_id:"TEST_ONLY-terminal",private_key:terminal.privateKey,ttl_seconds:30}};
   const egress=new NativeReadEgress({maximum_response_bytes:65536,maximum_inflight:2,send_timeout_ms:5000,quiesce_timeout_ms:50}),
    provider=new NativeCurrentRelationsProvider(pool,endpoint.client,egress,config),access=new ExecutionAccessService(pool,ctx.app.get(AuthService),provider.compose(baseTrust),true),
@@ -122,6 +128,73 @@ describe.skipIf(!url)("ordinary native CURRENT actual custody/finite egress, TES
   const row=(await f.rows())[0];expect(row).toMatchObject({phase:"SERVED",source_settled:true});expect(row.terminal_fact.observation.outcome).toBe("FINISHED");
   expect(f.endpoint.requests.map(r=>r.action)).toEqual(["issue","enter","status","resolve"]);expect(f.terminals[0].phase).toBe("SERVED");
   await expect(pool.query("UPDATE portal_users SET session_version=session_version+1 WHERE user_id=$1",[owner])).resolves.toBeDefined();
+ });
+ const seriesPurposes:NativeCurrentRelationsPurpose[]=[
+  {action:"business.read_all",resources:[{kind:"ROOT",id:"TEST_ONLY-root"}]},
+  {action:"portfolio.read",resources:[{kind:"PORTFOLIO",id:"TEST_ONLY-portfolio-a"}]},
+  {action:"portfolio.read",resources:[{kind:"PORTFOLIO",id:"TEST_ONLY-portfolio-b"}]},
+  {action:"alpha.read",resources:[{kind:"ALPHA",id:"TEST_ONLY-alpha"}]},
+ ];
+ const scopeDigest=accessDigest("TEST_ONLY-four-genuine-scope-proofs");
+ it("mixed four-purpose composition reserves ALL original cuts before source I/O, then uses ONE HTTP observation to settle every cut",async()=>{
+  const f=await fixture(false,{actions:["access.read","business.read_all","portfolio.read","alpha.read"]}),body=Buffer.from('{"TEST_ONLY":"all-four-subjects"}');
+  let inspected=false;
+  f.onIssue(async()=>{if(!inspected){inspected=true;const prepared=await f.rows();expect(prepared).toHaveLength(4);
+   expect(prepared.filter(r=>r.phase==="PREPARED")).toHaveLength(3);expect(prepared.filter(r=>r.phase==="ISSUE_REQUESTED")).toHaveLength(1);}});
+  const result=await http(res=>f.provider.sendFiniteComposition({actor:f.actor,workspace_id:f.workspace,purposes:seriesPurposes,
+   scope_digest:scopeDigest,response:res,build:async contexts=>{expect(contexts).toHaveLength(4);return body;},assertAllowed:contexts=>{expect(contexts).toHaveLength(4);}}));
+  expect(result.completion.error).toBeUndefined();expect(result.received).toEqual({body,complete:true});expect(inspected).toBe(true);
+  const rows=await f.rows(),issued=f.endpoint.requests.filter(r=>r.action==="issue");
+  expect(rows).toHaveLength(4);expect(new Set(rows.map(r=>r.flight_id)).size).toBe(1);expect(new Set(rows.map(r=>r.lease_id)).size).toBe(4);
+  expect(issued.map(r=>r.base.purpose.action)).toEqual(seriesPurposes.map(p=>p.action));
+  const composition=accessDigest({actor:f.actor,workspace_id:f.workspace,purposes:seriesPurposes,scope_digest:scopeDigest});
+  issued.forEach((request,index)=>expect(request.base.purpose.resource_digest).toBe(accessDigest({composition,purpose_index:index,
+   action:seriesPurposes[index].action,resources:seriesPurposes[index].resources})));
+  expect(new Set(rows.map(r=>r.terminal_fact.observation.binding.scope_digest)).size).toBe(1);
+  expect(new Set(rows.map(r=>r.terminal_fact.observation.binding.lease_id)).size).toBe(1);
+  for(const row of rows){expect(row).toMatchObject({phase:"SERVED",source_settled:true});
+   expect(row.terminal_fact.observation).toMatchObject({outcome:"FINISHED",bytes:body.length});}
+  expect(f.terminals).toHaveLength(4);expect(new Set(f.terminals.map(t=>t.lease_id)).size).toBe(4);
+ });
+ it("a later action lacking its own configured source permission refuses BEFORE any source call or partial custody",async()=>{
+  const f=await fixture();const result=await http(res=>f.provider.sendFiniteComposition({actor:f.actor,workspace_id:f.workspace,
+   purposes:seriesPurposes.slice(1),scope_digest:scopeDigest,response:res,build:async()=>Buffer.from('{}'),assertAllowed:()=>{}}));
+  expect(result.completion.error).toMatchObject({code:"NATIVE_CURRENT_NOT_QUALIFIED"});
+  expect(result.received.body).toHaveLength(0);expect(f.endpoint.requests).toHaveLength(0);expect(await f.rows()).toHaveLength(0);
+ });
+ it("capacity counts every purpose/principal cut atomically, not just the first subject",async()=>{
+  const f=await fixture(false,{maximum_unresolved:1});const result=await http(res=>f.provider.sendFiniteComposition({actor:f.actor,workspace_id:f.workspace,
+   purposes:seriesPurposes.slice(1,3),scope_digest:scopeDigest,response:res,build:async()=>Buffer.from('{}'),assertAllowed:()=>{}}));
+  expect(result.completion.error).toMatchObject({code:"NATIVE_CURRENT_CAPACITY_EXHAUSTED"});
+  expect(result.received.body).toHaveLength(0);expect(f.endpoint.requests).toHaveLength(0);expect(await f.rows()).toHaveLength(0);
+ });
+ it("a later purpose keeps its OWN source relation cut and cannot borrow the first cut at final policy check",async()=>{
+  const f=await fixture(false,{actions:["portfolio.read","alpha.read"],relationsForPurpose:(purpose,relations)=>
+   purpose.action==="alpha.read"?{...relations,grants:relations.grants.map(grant=>({...grant,targets:[]}))}:relations});
+  const targets=(contexts:readonly import("../src/execution-v2/access-policy").AccessEvaluationContext[])=>
+   contexts.map(context=>context.relationsFor(owner).current_authority!.grants[0].targets.length);
+  const result=await http(res=>f.provider.sendFiniteComposition({actor:f.actor,workspace_id:f.workspace,
+   purposes:[seriesPurposes[1],seriesPurposes[3]],scope_digest:scopeDigest,response:res,
+   build:async contexts=>{expect(targets(contexts)[0]).toBeGreaterThan(0);expect(targets(contexts)[1]).toBe(0);return Buffer.from('{"TEST_ONLY":"unsent"}');},
+   assertAllowed:contexts=>{expect(targets(contexts)[0]).toBeGreaterThan(0);if(targets(contexts)[1]===0)throw Error("TEST_ONLY-later-purpose-refused");}}));
+  expect(result.completion.error).toBeDefined();expect(result.received.body).toHaveLength(0);
+  for(const row of await f.rows())expect(row).toMatchObject({phase:"ABORTED",source_settled:true});
+  expect(f.terminals.map(t=>t.phase)).toEqual(["ABORTED","ABORTED"]);
+ });
+ it("lost mixed-purpose terminal ACK recovers each SAME original without a second response or replacement lease",async()=>{
+  const f=await fixture();f.loseResolve();const body=Buffer.from('{"TEST_ONLY":"sent-once"}');
+  const result=await http(res=>f.provider.sendFiniteComposition({actor:f.actor,workspace_id:f.workspace,purposes:seriesPurposes.slice(1,3),
+   scope_digest:scopeDigest,response:res,build:async()=>body,assertAllowed:()=>{}}));
+  expect(result.received).toEqual({body,complete:true});const before=await f.rows();await f.provider.recover();const after=await f.rows();
+  expect(f.endpoint.requests.filter(r=>r.action==="issue")).toHaveLength(2);expect(after).toHaveLength(2);
+  expect(after.map(r=>[r.base_body,r.terminal_receipt_id,r.terminal_receipt_digest])).toEqual(before.map(r=>[r.base_body,r.terminal_receipt_id,r.terminal_receipt_digest]));
+  for(const row of after)expect(row).toMatchObject({phase:"SERVED",source_settled:true});
+ });
+ it("mixed-purpose final dispatch remains synchronous: an async callback aborts all originals with zero bytes",async()=>{
+  const f=await fixture(),result=await http(res=>f.provider.sendFiniteComposition({actor:f.actor,workspace_id:f.workspace,
+   purposes:seriesPurposes.slice(1,3),scope_digest:scopeDigest,response:res,build:async()=>Buffer.from('{}'),assertAllowed:()=>{},
+   beforeDispatch:(async()=>{}) as unknown as ()=>void}));
+  expect(result.received.body).toHaveLength(0);for(const row of await f.rows())expect(row).toMatchObject({phase:"ABORTED",source_settled:true});
  });
  it("Core revoke is actually fenced during native source I/O, then allowed only after authenticated settlement",async()=>{
   const f=await fixture();f.onIssue(async()=>{
