@@ -2,6 +2,13 @@
 
 ## Codex narrow Manager scope —26Oct2026, source implementation complete
 
+Public MD/JSON handoff delivered to HK Edge EPG10-08 at2026-10-26T06:59:40Z,
+same `MANAGER_NARROW_NOTICE_SCOPE_2026-10-26` basenames. Remote/local SHA256
+match: MD `074fbed6ce51baba2e0e032f1ac5da41adc68d216eaef2fb74bf3e19b2acb3c8`,
+JSON `8dba8d33520deb946b65dc29b0d0849698c274c7b6a2b79349b8f478cc9c69fa`.
+Core docs161923bc0; Edge source8981f3c38/docs31f7cc8a7. Public evidence only;
+source bundle stays local, no installed runtime or Edge acceptance inferred.
+
 [Source proof, gates, rollback and exact owner/actions](evidence/ELP2-10/MANAGER_NARROW_NOTICE_SCOPE_2026-10-26.md).
 Source8981f3c38/tree0d5525609:14files,+1534/−109,137distinct focused PASS
 (36actual disposable-PG), strict production Clippy PASS; independent review

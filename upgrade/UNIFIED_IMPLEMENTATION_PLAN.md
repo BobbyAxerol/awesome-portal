@@ -16096,3 +16096,10 @@ No source upload, runtime/push/stable/dev/main/provider28445/command/Live
 change. Canonical685bc1915/Claude00e7f6cff clean/unchanged; prior integrated
 R2/visual RED remains, no canonical ff-landing inferred.
 
+Public narrow-scope MD/JSON delivered to HK Edge EPG10-08 at2026-10-26T06:59:40Z,
+same `MANAGER_NARROW_NOTICE_SCOPE_2026-10-26` basenames. SHA256 MD
+`074fbed6ce51baba2e0e032f1ac5da41adc68d216eaef2fb74bf3e19b2acb3c8`, JSON
+`8dba8d33520deb946b65dc29b0d0849698c274c7b6a2b79349b8f478cc9c69fa`;
+remote/local match. Core docs161923bc0; Edge source8981f3c38/docs31f7cc8a7.
+No source bundle upload, private input, runtime installation or Edge ACK implied.
+
