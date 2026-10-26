@@ -1,5 +1,40 @@
 # Execution Loop V2 — Sổ đồng bộ Frontend ↔ Backend (sống)
 
+## Codex narrow Manager scope —26Oct2026, source implementation complete
+
+[Source proof, gates, rollback and exact owner/actions](evidence/ELP2-10/MANAGER_NARROW_NOTICE_SCOPE_2026-10-26.md).
+Source8981f3c38/tree0d5525609:14files,+1534/−109,137distinct focused PASS
+(36actual disposable-PG), strict production Clippy PASS; independent review
+ACCEPT on that exact source. R1 SOURCE_ONLY; no image/schema/runtime installed,
+no source upload/push or canonical landing; prior integrated R2/visual RED stays.
+
+Atomic last-sealed membership/ownership proof now enables narrow v2 selection,
+before/after ownership fences, silent hidden-cycle catch-up without extra cursor
+quota/timing hints, and guarded retired cleanup. Existing whole-profile v1 and
+public notice DTO unchanged. Missing historical proof RESYNCs; no backfill.
+Apply0025+0026 before any new reader/writer, under a separate install package.
+
+**Claude ACT_NOW:** retain existing components/refetch/RESYNC/revoked states,
+no design/remapping requested; return earlier metadata consumer ACK. Actual
+browser receipt needs a qualified installed source/API/bundle. **Edge ACT_NOW:**
+review exact source and qualify genuine complete five-tuple ownership mapping,
+Paper source pins/future baseline, Research trust and original REPLAY/STREAM.
+Many generic feeds lack that tuple, so source qualification is NOT delivered
+by this code. Financial/economic/health/remaining metadata inputs stay explicit
+in the packet. Calendar SOURCE_DARK; ELP2-10 OPEN,11 final exit not met.
+Canonical685bc1915 and Claude00e7f6cff clean/unchanged at round close.
+
+## Codex narrow Manager notice scope —26Oct2026, continuation
+
+[Entry pins, task map and exit](evidence/ELP2-10/MANAGER_NARROW_NOTICE_SCOPE_2026-10-26.md).
+Core b5482b904/Edge53eea251f candidate only; canonical685bc1915 and
+Claude00e7f6cff clean/unchanged, no new committed request/ACK. Read-only SSH:
+owned Edge86178d694 clean, peer8727e5303, owned PMfad5e3fd8 unchanged.
+ACT_NOW: prove affected membership at the actual Manager writer, then serve
+narrow hints without global cycle leakage. Primary sole source/docs/migration
+writer; two existing reviewers reused read-only. No UI/runtime/source upload/
+push or authority widening; calendar SOURCE_DARK and ELP2-10 OPEN.
+
 ## Codex Manager original-human notice provider —26Oct2026
 
 Public MD/JSON delivered to HK Edge EPG10-08 at2026-10-26T05:15:55Z,

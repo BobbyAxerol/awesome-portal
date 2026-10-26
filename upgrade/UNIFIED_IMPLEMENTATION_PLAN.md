@@ -16067,3 +16067,32 @@ Prior integrated R2/visual RED remains, no canonical ff-landing inferred.
 Canonical685bc1915 and Claude00e7f6cff unchanged; no UI/push/runtime or
 stable/dev/main/provider28445/command/Live changes.
 
+### 26Oct2026 — Narrow Manager notices, atomic membership and ownership proof
+
+[Exact source, tests, cleanup, rollback and Claude/Edge actions](execution_loop/evidence/ELP2-10/MANAGER_NARROW_NOTICE_SCOPE_2026-10-26.md).
+Local Edge source8981f3c38daf9572d62d06a4cebd45aa23d72065,
+tree0d55256097ec2530f72dce1bfaba678553eebc6a:14files,+1534/−109.
+137distinct focused PASS (36actual disposable-PG),18new tests, strict
+production Clippy and independent exact-source review ACCEPT.26unchanged
+Core policy/mTLS cases reused separately, not new connected evidence.
+
+Additive0026 captures last-sealed semantic membership/ownership proof in the
+existing Paper cycle transaction; narrow v2 checks before/after/current owner,
+with deletion/interrupted-cycle recovery, opaque bounded scans, no hidden-cycle
+count/digest/cadence/cursor-quota leaks and restore-verified retired cleanup.
+Old proof-less history RESYNCs; no invented backfill. Whole-profile v1 and
+public notice DTO remain unchanged; independent REPLAY/STREAM still required.
+
+SOURCE_ONLY, NOT_BUILT/NOT_INSTALLED. Apply0025+0026 before any new reader or
+writer only in the approved install package. Generic feeds without genuine
+complete canonical five-tuple ownership cannot yet qualify for narrow v2.
+Edge/source owner must provide accepted exact mapping/source/trust/future
+baseline; then connected initial/catch-up/revoke/restart/recovery and Claude
+browser acceptance. Claude keeps accepted components and returns prior
+metadata consumer ACK; no UI changes requested. Financial/economic/health,
+remaining metadata, calendar SOURCE_DARK, budget/calibration/coexistence/G2
+and ELP2-10 remain OPEN. ELP2-11 final integrated exit not met.
+No source upload, runtime/push/stable/dev/main/provider28445/command/Live
+change. Canonical685bc1915/Claude00e7f6cff clean/unchanged; prior integrated
+R2/visual RED remains, no canonical ff-landing inferred.
+
