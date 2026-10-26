@@ -1,5 +1,11 @@
 # Backend Architecture Deep Dives
 
+26Oct2026 — [ELP2-10 whole compiler PASS and final gates](../execution_loop/evidence/ELP2-10/FINAL_GATE_LEDGER_2026-10-26.md):
+full production-source build1459files/229.95s PASS under the existing local
+3CPU/3GiB build profile, source unchanged4e7deab19. Supersedes the prior compiler
+OPEN below. Actual source/budget/calibration/connected/browser remain unmet;
+no duplicate adapter, UI, runtime or canonical/Claude change.
+
 26Oct2026 — [Manager native Series composition and official ownership boundary](../execution_loop/evidence/ELP2-10/SOURCE_BINDING_FOLLOWTHROUGH_2026-10-26.md):
 actual optional-token/finite-route wiring; per-subject purpose cuts held through
 one physical send, same-original recovery, publication and authority checks.
