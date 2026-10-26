@@ -16401,3 +16401,18 @@ Delivery evidence: public packet mirrored to HK EPG10-08, identical SHA256
 and independent bounded evidence ACCEPT. No full-R2 or connected acceptance
 inferred. Correctness cells removed; retained backups/rollback images preserved.
 
+### 26Oct follow-through — exact membership-aware source reader
+
+[Core/Edge source discovery and exact owner action](execution_loop/evidence/ELP2-10/CORE_EDGE_MEMBERSHIP_READER_DISCOVERY_2026-10-26.md)
+is mirrored to HK EPG10-08, SHA256
+`524de8d0b5513135882152efaf5cead26ad8647f1881af06e18ed0766977f05a`.
+HK metadata establishes the real existing source DB/system, legacy native reader,
+and historical Research issuer/subject; protected credential directory is not
+readable by the SSH user and was not bypassed. The reviewed legacy installer
+does not itself grant membership heads/revisions/receipts; actual extra privileges
+were not queried. Edge/PM owner must select a separately authorized membership-aware
+Research reader and inspect the real current original; do not infer absence,
+reuse an expired acceptance or seed/grant SQL. Source/rights/trust, independent
+STREAM and ELP2-10 gates remain NOT_MET. No UI, runtime, database or credential
+change in this discovery.
+

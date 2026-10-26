@@ -1,5 +1,19 @@
 # Execution Loop V2 — Sổ đồng bộ Frontend ↔ Backend (sống)
 
+## 26Oct — exact source-reader follow-through, no FE rewrite
+
+[Core/Edge membership-reader discovery](evidence/ELP2-10/CORE_EDGE_MEMBERSHIP_READER_DISCOVERY_2026-10-26.md)
+was mirrored to HK EPG10-08 with SHA256
+`524de8d0b5513135882152efaf5cead26ad8647f1881af06e18ed0766977f05a`.
+Existing source DB/legacy reader and historical Research identity are pinned;
+the legacy installer's reviewed grants do not include membership heads/revisions/
+receipts, and protected credentials were not accessed. Extra DB privileges and
+current originals remain unverified, not declared absent. Edge must provide the
+exact separately qualified Research reader/original via its owning source;
+Core retains policy/writer/held-egress responsibility. Claude can continue
+fixture consumer/visual work; no new public DTO or design change in this result.
+Actual source/API/browser READ and independent STREAM remain NOT_MET.
+
 ## 27Oct packet / observed26Oct18:45–19:14UTC — Accounts installed, PM operators delivered
 
 [Exact source, image, migration failures/repair and commissioning handoff](evidence/ELP2-10/ACCOUNTS_RUNTIME_COMMISSIONING_2026-10-27.md).
