@@ -89,8 +89,9 @@ export async function prepareNativeRootRuntime(input:NativeRootRuntimeReference)
   if(leaf.ca||roots.some(root=>!root.ca)||!leaf.keyUsage?.includes("1.3.6.1.5.5.7.3.2"))return fail();
   for(let i=0;i<chain.length-1;i++){const child=chain[i]!,issuer=chain[i+1]!;
    if(!issuer.ca||!child.checkIssued(issuer)||!child.verify(issuer.publicKey))return fail();}
-  const last=chain[chain.length-1]!;
-  if(!roots.some(root=>last.checkIssued(root)&&last.verify(root.publicKey)))return fail();
+  // `ca` authenticates the REMOTE peer, not our local issuing root. Core and
+  // Edge may use independent CAs; the local bundle still must be ordered and
+  // cryptographically linked above. Actual peer trust/pin is checked per TLS.
   const privateKey=createPrivateKey(await read(parsed.terminal.private_key_ref,16384)),tlsKey=createPrivateKey(key);
   if(privateKey.asymmetricKeyType!=="ed25519"||!leaf.checkPrivateKey(tlsKey)||
    createPublicKey(privateKey).export({type:"spki",format:"der"}).equals(leaf.publicKey.export({type:"spki",format:"der"})))return fail();

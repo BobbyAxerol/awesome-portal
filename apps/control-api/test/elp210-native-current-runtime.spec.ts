@@ -73,6 +73,15 @@ async function refused(pin: NativeCurrentRuntimeReference) {
   expect(error).toMatchObject({ code: "NATIVE_CURRENT_RUNTIME_CONFIG_INVALID", message: "The private current read composition is not available." });
   expect(error.message).not.toContain(pin.path); expect(error.message).not.toContain("PRIVATE KEY");
 }
+function authority(label: string, issuer?: TestAuthority, isCA = true): TestAuthority {
+  const pair = generateKeyPairSync("ec", { namedCurve: "prime256v1" }), name = commonName(label);
+  return { key: pair.privateKey, name, certificate: testCertificate(name, pair, issuer ?? { name, key: pair.privateKey }, isCA) };
+}
+function localIdentity(issuer: TestAuthority) {
+  const pair = generateKeyPairSync("ec", { namedCurve: "prime256v1" });
+  return { key: Buffer.from(pair.privateKey.export({ type: "pkcs8", format: "pem" })),
+    cert: testCertificate(commonName("TEST_ONLY-current-chain-client"), pair, issuer, false, "core.research.test") };
+}
 
 describe("private native CURRENT Research loader", () => {
   it("is OFF with no refs and refuses every partial/noncanonical env selection before I/O", () => {
@@ -159,7 +168,7 @@ describe("private native CURRENT Research loader", () => {
       const value = structuredClone(f.value); change(value); await refused(await f.manifest(value));
     }
   });
-  it("rejects non-Ed25519 terminal key, TLS key mismatch, non-CA roots, unrelated CA and malformed PEM", async () => {
+  it("rejects non-Ed25519 terminal key, TLS key mismatch, non-CA peer roots and malformed PEM", async () => {
     const f = await fixture(), original = structuredClone(f.value.transport.tls);
     f.value.terminal.private_key_ref = await f.leaf(key); await refused(await f.manifest());
     f.value.terminal.private_key_ref = await f.leaf(terminal);
@@ -167,9 +176,33 @@ describe("private native CURRENT Research loader", () => {
       { ...original, cert_ref: await f.leaf(ca) }, { ...original, ca_ref: await f.leaf("TEST_ONLY-malformed-CA") }]) {
       f.value.transport.tls = tls; await refused(await f.manifest());
     }
-    const pair = generateKeyPairSync("ec", { namedCurve: "prime256v1" }), name = commonName("TEST_ONLY-foreign-ca");
-    f.value.transport.tls = { ...original, ca_ref: await f.leaf(testCertificate(name, pair, { name, key: pair.privateKey }, true)) };
-    await refused(await f.manifest());
+  });
+  it("accepts an independent remote trust CA without claiming local-client issuance by it", async () => {
+    const f = await fixture(), peer = authority("TEST_ONLY-independent-current-peer-ca");
+    f.value.transport.tls.ca_ref = await f.leaf(peer.certificate);
+    const prepared = await prepareNativeCurrentRuntime(await f.manifest());
+    expect(prepared.transport.tls).toEqual({ key, cert, ca: peer.certificate });
+    for (const bytes of Object.values(prepared.transport.tls)) if (Buffer.isBuffer(bytes)) bytes.fill(0);
+  });
+  it("accepts a complete valid local chain while retaining a DIFFERENT remote trust CA", async () => {
+    const f = await fixture(), root = authority("TEST_ONLY-local-root"), intermediate = authority("TEST_ONLY-intermediate", root);
+    const identity = localIdentity(intermediate), bundle = Buffer.concat([identity.cert, intermediate.certificate, root.certificate]);
+    f.value.transport.tls.key_ref = await f.leaf(identity.key); f.value.transport.tls.cert_ref = await f.leaf(bundle);
+    const prepared = await prepareNativeCurrentRuntime(await f.manifest());
+    expect(prepared.transport.tls.cert).toEqual(bundle); expect(prepared.transport.tls.ca).toEqual(ca);
+    for (const bytes of Object.values(prepared.transport.tls)) if (Buffer.isBuffer(bytes)) bytes.fill(0);
+  });
+  it.each(["wrong-signing-key", "non-ca-issuer", "wrong-order"] as const)("rejects local %s even with an independent peer CA", async fault => {
+    const f = await fixture(), root = authority("TEST_ONLY-local-root"), intermediate = authority("TEST_ONLY-intermediate", root, fault !== "non-ca-issuer");
+    const identity = localIdentity(intermediate), issuer = fault === "wrong-signing-key" ? authority("TEST_ONLY-intermediate", root) : intermediate;
+    const bundle = fault === "wrong-order" ? [identity.cert, root.certificate, issuer.certificate] : [identity.cert, issuer.certificate, root.certificate];
+    f.value.transport.tls.key_ref = await f.leaf(identity.key); f.value.transport.tls.cert_ref = await f.leaf(Buffer.concat(bundle));
+    const actual = nativeRuntime.readNativeRuntimeReference, inputs: Buffer[] = [];
+    vi.spyOn(nativeRuntime, "readNativeRuntimeReference").mockImplementation(async (...args) => {
+      const bytes = await actual(...args); inputs.push(bytes); return bytes;
+    });
+    await refused(await f.manifest()); expect(inputs.length).toBeGreaterThan(1);
+    expect(inputs.every(bytes => bytes.every(byte => byte === 0))).toBe(true);
   });
   it("refuses expired or not-yet-valid local TLS material without a synthetic refresh", async () => {
     const f = await fixture(), pin = await f.manifest(), now = Date.now();
