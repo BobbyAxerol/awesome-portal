@@ -28,6 +28,7 @@ const scalar = (cell: ScopedCell): RelationScalar => {
     case "stamp-text": return cell.text;
     case "counter": return cell.exact;
     case "integer": return cell.value;
+    case "boolean": return cell.value;
     case "book": return cell.book;
   }
 };

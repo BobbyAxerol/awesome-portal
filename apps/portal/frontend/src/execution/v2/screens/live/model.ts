@@ -817,6 +817,8 @@ export function panelCell(field: string, value: LiveSourceValueV2 | undefined): 
       return { kind: "metric", metric: readMetric({ state: "AVAILABLE", value: value.exact }, { unit: QUANTITY_FIELDS.has(field) ? "qty" : "money" }) };
     case "counter":
       return { kind: "metric", metric: readMetric({ state: "AVAILABLE", value: value.exact }, { unit: "count" }) };
+    case "boolean":
+      return { kind: "text", text: String(value.value) };
     case "instant":
       return { kind: "instant", label: formatAsOf(value.at) };
   }

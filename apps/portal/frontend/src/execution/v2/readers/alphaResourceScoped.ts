@@ -36,10 +36,11 @@ export type ScopedRelation = (typeof ALPHA_SCOPED_RELATIONS)[number];
 
 /**
  * Member kinds of a row. `T` text, `D` exact decimal, `M` book word, `S` a stamp that is text OR an integer, `I` an
- * epoch-ms integer (never null), `C` a count (integer OR exact counter string), `L` a liquidity word (MAKER, TAKER or UNKNOWN).
+ * epoch-ms integer (never null), `C` a count (integer OR exact counter string), `L` a liquidity word (MAKER, TAKER or UNKNOWN),
+ * `B` a boolean (including a stated `false`, never coerced from text or a number).
  * Every kind but `I` also admits `null`.
  */
-type Kind = "T" | "D" | "M" | "S" | "I" | "C" | "L" | "N";
+type Kind = "T" | "D" | "M" | "S" | "I" | "C" | "L" | "N" | "B";
 const LIQUIDITY_SIDES = ["MAKER", "TAKER", "UNKNOWN"] as const;
 /** Package 6: why a scoped row has no `portfolio_name` (a display label joined from the same authorized snapshot; never an access grant). */
 const PORTFOLIO_NAME_REASONS = ["PORTFOLIO_NAME_NOT_READ", "PORTFOLIO_NAME_NOT_PUBLISHED", "PORTFOLIO_NAME_NOT_AUTHORIZED", "PORTFOLIO_NAME_AMBIGUOUS"] as const;
@@ -50,9 +51,9 @@ const stamps = (prefix: string, withMs = true): Record<string, Kind> => ({ [pref
 export const SCOPED_ROW_FIELDS: Readonly<Record<ScopedRelation, Readonly<Record<string, Kind>>>> = {
   strategies: { strategy_id: "T", alpha_id: "T", name: "T", version: "T", state: "T", stage: "T", ...stamps("created_at"), ...stamps("updated_at"), deployment_id: "T" },
   deployments: { deployment_id: "T", strategy_id: "T", account_id: "T", mode: "M", venue: "T", currency: "T", portfolio_id: "T", portfolio_name: "T", portfolio_name_reason_code: "N", state: "T", ...stamps("created_at"), ...stamps("updated_at") },
-  accounts: { account_id: "T", strategy_id: "T", mode: "M", venue: "T", base_currency: "T", state: "T", ...stamps("created_at"), ...stamps("updated_at"), deployment_id: "T" },
+  accounts: { account_id: "T", strategy_id: "T", mode: "M", venue: "T", base_currency: "T", state: "T", ...stamps("created_at"), ...stamps("updated_at"), account_type: "T", deployment_id: "T" },
   account_balances: { account_id: "T", currency: "T", total: "D", locked: "D", free: "D", ...stamps("updated_at"), deployment_id: "T" },
-  margin_balances: { account_id: "T", instrument_id: "T", currency: "T", ...stamps("updated_at"), deployment_id: "T" },
+  margin_balances: { account_id: "T", instrument_id: "T", currency: "T", initial: "D", maintenance: "D", ...stamps("updated_at"), deployment_id: "T" },
   account_sync: { account_id: "T", mode: "M", venue: "T", status: "T", currency: "T", ...stamps("created_at"), deployment_id: "T" },
   broker_sync: {},
   venue_accounts: { binding_id: "T", account_id: "T", mode: "M", venue: "T", state: "T", status: "T", ...stamps("created_at"), ...stamps("updated_at"), deployment_id: "T" },
@@ -64,15 +65,16 @@ export const SCOPED_ROW_FIELDS: Readonly<Record<ScopedRelation, Readonly<Record<
   },
   sessions: {
     strategy_id: "T", account_id: "T", mode: "M", venue: "T", state: "T", submitted_count: "C", risk_rejected_count: "C", filled_count: "C", broker_rejected_count: "C",
-    ...stamps("updated_at"), deployment_id: "T",
+    ...stamps("updated_at"), execution_session_id: "T", ...stamps("started_at"), ...stamps("completed_at"), deployment_id: "T",
   },
   orders: {
     order_id: "T", strategy_id: "T", account_id: "T", mode: "M", venue: "T", instrument_id: "T", symbol: "T", side: "T", quantity: "D", price: "D", status: "T",
-    ...stamps("submitted_at"), ...stamps("updated_at"), risk_grant_id: "T", client_order_id: "T", order_type: "T", deployment_id: "T",
+    ...stamps("submitted_at"), ...stamps("updated_at"), risk_grant_id: "T", client_order_id: "T", order_type: "T", execution_session_id: "T",
+    position_side: "T", time_in_force: "T", reduce_only: "B", post_only: "B", trigger_price: "D", filled_quantity: "D", average_fill_price: "D", deployment_id: "T",
   },
   fills: {
     fill_id: "T", ...stamps("trade_time"), strategy_id: "T", account_id: "T", mode: "M", venue: "T", instrument_id: "T", side: "T", price: "D", quantity: "D",
-    realized_pnl: "D", client_order_id: "T", commission: "D", commission_currency: "T", liquidity_side: "L", deployment_id: "T",
+    realized_pnl: "D", client_order_id: "T", commission: "D", commission_currency: "T", liquidity_side: "L", execution_session_id: "T", deployment_id: "T",
   },
   performance: {
     ...stamps("ts"), deployment_id: "T", strategy_id: "T", account_id: "T", mode: "M", venue: "T", instrument_id: "T", symbol: "T", currency: "T", position_qty: "D",
@@ -84,7 +86,7 @@ export const SCOPED_ROW_FIELDS: Readonly<Record<ScopedRelation, Readonly<Record<
     realized_pnl: "D", unrealized_pnl: "D", fee_total: "D", funding_pnl: "D", gross_pnl: "D", net_pnl: "D", equity: "D", drawdown: "D", ...stamps("created_at"),
   },
   reconciliation: {
-    account_id: "T", strategy_id: "T", mode: "M", venue: "T", status: "T", ...stamps("created_at"), finding_id: "T", finding_type: "T", ...stamps("resolved_at"), deployment_id: "T",
+    account_id: "T", strategy_id: "T", execution_session_id: "T", mode: "M", venue: "T", status: "T", ...stamps("created_at"), finding_id: "T", finding_type: "T", ...stamps("resolved_at"), deployment_id: "T",
   },
   journal: { mode: "M", venue: "T", alpha_id: "T", account_id: "T", state: "T", ...stamps("updated_at"), deployment_id: "T" },
 };
@@ -111,6 +113,8 @@ export type ScopedCell =
   /** The exact decimal string; display unit and precision belong to the screen that knows the field. */
   | { kind: "decimal"; exact: string }
   | { kind: "book"; book: ScopedEnvironment }
+  /** An actual wire boolean: false is a value, distinct from null and an omitted member. */
+  | { kind: "boolean"; value: boolean }
   /** A stamp the source wrote as text (not parsed here). */
   | { kind: "stamp-text"; text: string }
   /** A non-negative integer: a stamp the source wrote as a number, or an epoch-ms member. */
@@ -282,6 +286,7 @@ function readCell(kind: Kind, value: unknown): ScopedCell | null {
     case "T": { const t = text(value); return t === null ? null : { kind: "text", text: t }; }
     case "D": { const d = decimal(value); return d === null ? null : { kind: "decimal", exact: d }; }
     case "M": { const b = book(value); return b === null ? null : { kind: "book", book: b }; }
+    case "B": return typeof value === "boolean" ? { kind: "boolean", value } : null;
     case "I": { const n = integer(value); return n === null ? null : { kind: "integer", value: n }; }
     case "S": {
       if (typeof value === "string") { const t = text(value); return t === null ? null : { kind: "stamp-text", text: t }; }

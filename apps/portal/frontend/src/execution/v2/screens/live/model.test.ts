@@ -470,6 +470,9 @@ describe("retained values", () => {
     expect(panelCell("side", { kind: "text", text: "LONG" })).toEqual({ kind: "side", label: "Long" });
     expect(panelCell("status", { kind: "text", text: "PARTIALLY_FILLED" })).toEqual({ kind: "text", text: "Partially filled" });
     expect(panelCell("instrument_id", { kind: "text", text: "TEST_ONLY:BTC-USDT" })).toEqual({ kind: "text", text: "TEST_ONLY:BTC-USDT" });
+    expect(panelCell("reduce_only", { kind: "boolean", value: false })).toEqual({ kind: "text", text: "false" });
+    expect(panelCell("post_only", { kind: "boolean", value: true })).toEqual({ kind: "text", text: "true" });
+    expect(panelCell("post_only", { kind: "absent" })).toEqual({ kind: "absent" });
   });
 });
 

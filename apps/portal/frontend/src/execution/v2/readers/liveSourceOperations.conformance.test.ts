@@ -26,7 +26,7 @@
  */
 import { afterAll, describe, expect, it } from "vitest";
 
-import { canonicalDigest, loadCanonical, schemaEnum } from "../testkit/loadCanonical";
+import { canonicalDigest, loadCanonical, loadSchema, schemaEnum } from "../testkit/loadCanonical";
 import { cartesian, coverage, describeCoverage, dimension, dimensionOf, getPath, setPath, type Draft } from "../testkit/matrix";
 import {
   arrayCases, decimalCases, enumCases, integerCases, leaked, pollutionCases, prototypeIsClean, requiredCases, rootCases, schemaVersionCases, stringCases,
@@ -145,7 +145,7 @@ describe("L0 · canonical, verbatim", () => {
 describe("L0 · the opt-in members (BE-P12), verbatim", () => {
   it("every object in the file is a covered body", () => {
     const objects = Object.keys(canonical).filter((key) => typeof canonical[key] === "object");
-    expect(objects.sort()).toEqual(["populated", "unpublished", "with_members", "with_members_hidden"]);
+    expect(objects.sort()).toEqual(["populated", "unpublished", "with_members", "with_members_hidden", "with_observed_stage"]);
   });
 
   it("with_members and with_members_hidden pass the published schema and read", () => {
@@ -186,6 +186,46 @@ describe("L0 · the opt-in members (BE-P12), verbatim", () => {
     const read = liveOf(WITH_HIDDEN)!;
     expect(read.identity).toMatchObject({ alphaId: null, portfolioName: null, alphaReasonCode: "ALPHA_IDENTITY_NOT_AUTHORIZED", portfolioNameReasonCode: "PORTFOLIO_NAME_NOT_AUTHORIZED" });
     expect(read.stageFacts!.reconciliation.verdict).toEqual({ availability: "NOT_PUBLISHED", reasonCode: "AUTHORIZED_POPULATION_ONLY" });
+  });
+
+  it("with_observed_stage: scoped runtime, since and bounded sessions are observations, never activation or stream/command authority", () => {
+    const body = canonical.with_observed_stage;
+    expect(violations(body)).toEqual([]);
+    const read = liveOf(body)!;
+    expect(read).not.toBeNull();
+    expect(read.stageFacts!.runtime.state).toEqual({ availability: "AVAILABLE", value: body.stage_facts.runtime.runtime_state.value });
+    expect(read.stageFacts!.runtime.since).toEqual({ availability: "AVAILABLE", value: body.stage_facts.runtime.since.value });
+    expect(read.stageFacts!.sessions).toEqual({
+      availability: "AVAILABLE", reasonCode: null, rows: body.stage_facts.sessions.rows,
+      returnedCount: body.stage_facts.sessions.returned_count, omittedCount: body.stage_facts.sessions.omitted_count, sourceComplete: false,
+    });
+    expect(read).toMatchObject({ runtimeReasonCode: "SOURCE_RUNTIME_ACTIVATION_NOT_ASSERTED", realtimeActive: false, commandsEnabled: false });
+    expect(body.source_verdict).toBe("NOT_ASSERTED");
+    expect(body.runtime.state).toBeNull();
+    expect(readLiveFullByVersion(body)).toMatchObject({ kind: "v2", value: read });
+  });
+
+  it("observed stage facts remain closed and cannot assert session completeness, global counts, a clean population or activation", () => {
+    const edits: [readonly (string | number)[], unknown][] = [
+      [["stage_facts", "sessions", "source_complete"], true],
+      [["stage_facts", "sessions", "rows", 0, "extra"], "not published"],
+      [["stage_facts", "runtime", "runtime_state", "value"], "ACTIVE"],
+      [["stage_facts", "runtime", "since", "value"], 1792281600000],
+      [["stage_facts", "reconciliation", "verdict"], { availability: "AVAILABLE", value: "NO_OPEN_FINDINGS", reason_code: null }],
+      [["stage_facts", "reconciliation", "open_finding_count"], { availability: "AVAILABLE", value: 0, reason_code: null }],
+      [["stage_facts", "reconciliation", "unknown_order_count"], { availability: "AVAILABLE", value: 0, reason_code: null }],
+      [["runtime", "state"], "RUNNING"], [["realtime", "active"], true], [["commands", "enabled"], true],
+    ];
+    for (const [path, value] of edits) {
+      const body = clone(canonical.with_observed_stage);
+      setPath(body, path, value);
+      expect(violations(body).length, path.join(".")).toBeGreaterThan(0);
+      expect(liveOf(body), path.join(".")).toBeNull();
+    }
+    // The small schema checker does not validate format-only date-time schemas; the production reader still does.
+    const badTimestamp = clone(canonical.with_observed_stage);
+    badTimestamp.stage_facts.sessions.rows[0].started = "yesterday";
+    expect(liveOf(badTimestamp)).toBeNull();
   });
 
   it("the dispatcher reads the same body as v2, with the members", () => {
@@ -273,6 +313,42 @@ describe("L1 · matrix B · a panel's grain is the published one", () => {
 });
 
 describe("L1 · matrix C · value family x value form", () => {
+  it("every published panel-value field is read without dropping metadata, booleans or exact decimal strings", () => {
+    const schema = loadSchema(SCHEMA) as Draft;
+    const properties = schema.$defs.LiveSourceOperationsReadV2.properties.data.properties.orders.properties.records.items.properties.values.properties;
+    for (const [field, definition] of Object.entries(properties)) {
+      const base = (definition as Draft).anyOf.find((part: Draft) => part.type !== "null");
+      const sample = base.const ?? base.enum?.[0] ?? (base.type === "boolean" ? false : base.type === "integer" ? 0 : base.maxLength === 96 ? "0" : "source_value");
+      const body = clone(POPULATED);
+      body.data.orders.records[0].values = { [field]: sample };
+      expect(violations(body), field).toEqual([]);
+      const cell = liveOf(body)?.panels.orders.records[0]!.values[field];
+      const expected = base.type === "boolean" ? { kind: "boolean", value: sample }
+        : base.type === "integer" ? { kind: "instant", at: sample }
+          : base.maxLength === 96 ? { kind: field.endsWith("_count") ? "counter" : "decimal", exact: sample }
+            : { kind: "text", text: sample };
+      expect(cell, field).toEqual(expected);
+      body.data.orders.records[0].values[field] = null;
+      expect(liveOf(body)?.panels.orders.records[0]!.values[field], `${field}=null`).toEqual({ kind: "absent" });
+    }
+  });
+
+  it("boolean flags and observed enum words keep exact types, without accepting string/number substitutes or unknown words", () => {
+    for (const field of ["reduce_only", "post_only"]) {
+      for (const value of [false, true, "false", "true", 0, 1, {}, []]) {
+        const body = clone(POPULATED);
+        body.data.orders.records[0].values = { [field]: value };
+        expect(liveOf(body) !== null, `${field}=${JSON.stringify(value)}`).toBe(typeof value === "boolean");
+        if (typeof value === "boolean") expect(liveOf(body)!.panels.orders.records[0]!.values[field]).toEqual({ kind: "boolean", value });
+      }
+    }
+    for (const [field, value] of [["runtime_state", "ACTIVE"], ["liquidity_side", "maker"]]) {
+      const body = clone(POPULATED);
+      body.data.orders.records[0].values = { [field!]: value };
+      expect(violations(body).length).toBeGreaterThan(0);
+      expect(liveOf(body)).toBeNull();
+    }
+  });
   /** One field per family; the grammar each family reads, written from the header and the schema. */
   const FIELDS: Record<string, { family: string; ok: (v: unknown) => boolean }> = {
     venue: { family: "text", ok: (v) => typeof v === "string" && v.length >= 1 && v.length <= 4096 && !/[\u0000-\u001f\u007f]/.test(v) },
@@ -500,14 +576,15 @@ describe("L1 · matrix G · stage_facts: what an authorized population can prove
     ]),
     dimensionOf("sessions", [
       { label: "not-published", apply: () => undefined },
+      { label: "available-bounded", apply: (d: Draft) => { d.stage_facts.sessions = { availability: "AVAILABLE", reason_code: null, basis: "EXECUTION_SESSIONS_BOUNDED_WINDOW", rows: [], returned_count: 0, omitted_count: 0, source_complete: false }; } },
       { label: "available-empty", apply: (d: Draft) => { d.stage_facts.sessions = { availability: "AVAILABLE", reason_code: null, basis: "EXECUTION_SESSIONS_BOUNDED_WINDOW", rows: [], returned_count: 0, omitted_count: 0, source_complete: true }; } },
     ]),
   ];
   const states = cartesian(WITH, DIMS);
-  /** The contract stated in prose: only OPEN_FINDINGS (or a reasoned absence) can be AVAILABLE; as_of is the one free clock. */
+  /** Observed runtime/since and bounded sessions are allowed, but not exact global reconciliation or complete sessions. */
   const accepts = (p: Record<string, string>) =>
-    p.runtime_state === "not-published" && p.since === "not-published" && (p.verdict === "not-published" || p.verdict === "OPEN_FINDINGS")
-    && p.open_finding_count === "not-published" && p.unknown_order_count === "not-published" && p.sessions === "not-published";
+    p.runtime_state !== "unknown-word" && (p.verdict === "not-published" || p.verdict === "OPEN_FINDINGS")
+    && p.open_finding_count === "not-published" && p.unknown_order_count === "not-published" && p.sessions !== "available-empty";
 
   it("prints the matrix size; the reader is never looser than the schema, and never stricter", () => {
     console.info(describeCoverage("liveSource G (stage_facts) cartesian", coverage(DIMS, states)));
@@ -516,19 +593,21 @@ describe("L1 · matrix G · stage_facts: what an authorized population can prove
     expect({ looser }).toEqual({ looser: [] });
     expect({ stricter }).toEqual({ stricter: [] });
     expect(FACTS).toEqual(["stage_facts"]);
-    expect(states).toHaveLength(3 * 2 * 4 * 3 * 2 * 2 * 2);
+    expect(states).toHaveLength(3 * 2 * 4 * 3 * 2 * 2 * 3);
   });
 
   it.each(states.map((s) => [s.name, s] as const))("%s", (_name, state) => {
     const read = liveOf(state.value);
     expect(read !== null).toBe(accepts(state.picks));
     if (read === null) return;
-    // Whatever was read: no count, no NO_OPEN_FINDINGS, no runtime word, no session, anywhere in the result.
+    // Scoped observations never become global counts, a clean population, complete sessions or activation.
     const facts = read.stageFacts!;
-    expect(facts.runtime.state.availability).toBe("NOT_PUBLISHED");
+    expect(facts.runtime.state.availability).toBe(state.picks.runtime_state === "not-published" ? "NOT_PUBLISHED" : "AVAILABLE");
     expect(facts.reconciliation.openFindingCount.availability).toBe("NOT_PUBLISHED");
     expect(facts.reconciliation.unknownOrderCount.availability).toBe("NOT_PUBLISHED");
-    expect(facts.sessions).toMatchObject({ availability: "NOT_PUBLISHED", rows: [], returnedCount: 0 });
+    expect(facts.sessions).toMatchObject({ availability: state.picks.sessions === "not-published" ? "NOT_PUBLISHED" : "AVAILABLE", rows: [], returnedCount: 0 });
+    expect(facts.sessions.sourceComplete).not.toBe(true);
+    expect(read).toMatchObject({ realtimeActive: false, commandsEnabled: false, runtimeReasonCode: "SOURCE_RUNTIME_ACTIVATION_NOT_ASSERTED" });
     expect(JSON.stringify(facts)).not.toContain("NO_OPEN_FINDINGS");
     if (facts.reconciliation.verdict.availability === "AVAILABLE") expect(facts.reconciliation.verdict.value).toBe("OPEN_FINDINGS");
   });
@@ -742,7 +821,7 @@ const MEMBER_NEG: Case[] = [
   ...memberEnums(["stage_facts", "schema_version"], ["execution.stage-facts.v1"]),
   ...memberEnums(["stage_facts", "reconciliation", "basis"], ["FINDINGS_RELATION_NOT_A_RECONCILIATION_RUN"]),
   ...memberEnums(["stage_facts", "reconciliation", "verdict", "availability"], ["NOT_PUBLISHED", "AVAILABLE"]),
-  ...memberEnums(["stage_facts", "sessions", "availability"], ["NOT_PUBLISHED"]),
+  ...memberEnums(["stage_facts", "sessions", "availability"], ["NOT_PUBLISHED", "AVAILABLE"]),
   ...memberEnums(["stage_facts", "sessions", "basis"], ["EXECUTION_SESSIONS_BOUNDED_WINDOW"]),
   ...stringCases(WITH, ["identity", "alpha_id"]),
   ...stringCases(WITH, ["identity", "portfolio_name"]),

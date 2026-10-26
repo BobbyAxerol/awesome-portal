@@ -45,6 +45,13 @@ export function rebaseTimes(value: unknown, deltaMs: number, key = ""): unknown 
   if (typeof value === "number") {
     return key.endsWith("_ms") && Number.isInteger(value) && value >= EPOCH_MS_MIN && value <= EPOCH_MS_MAX ? value + Math.round(deltaMs) : value;
   }
+  // WP-F2: a published series is `points: [[epoch_ms, value], ...]`; its instants move with the clock like every other time, so a chart ends on
+  // the page's own "now" and not on the day the double was written (QA3 R4-08). Only a pair whose first element is a plausible epoch moves.
+  if (Array.isArray(value) && key === "points") {
+    return value.map((item) => (Array.isArray(item) && item.length >= 2 && typeof item[0] === "number" && Number.isInteger(item[0]) && item[0] >= EPOCH_MS_MIN && item[0] <= EPOCH_MS_MAX
+      ? [item[0] + Math.round(deltaMs), ...item.slice(1).map((rest) => rebaseTimes(rest, deltaMs, key))]
+      : rebaseTimes(item, deltaMs, key)));
+  }
   if (Array.isArray(value)) return value.map((item) => rebaseTimes(item, deltaMs, key));
   if (value !== null && typeof value === "object") {
     const out: Record<string, unknown> = {};

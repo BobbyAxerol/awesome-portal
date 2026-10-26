@@ -10,8 +10,8 @@
  * submission instant (`submitted_at_ms`) and conditional-leg identity, each admitted per scope: a member the scope does not admit or
  * the source did not state is absent (never zero), and a record with no order/trade instant says why in `timeReason`. The page states
  * its own clock: `time_unit` UTC epoch milliseconds, and `observed_at_basis` (what `observed_at_ms` and the page order mean; a Portal
- * window order, never a venue event sequence). Session id, venue order id, trade id and error text stay absent: nothing here is
- * derived from a neighbouring member.
+ * window order, never a venue event sequence). Optional runtime/session/account/order metadata comes only from its own
+ * published member. Venue order id, trade id and error text stay absent: nothing is derived from a neighbouring member.
  *
  * Closed: an unknown key, a `values` member outside `ScopedRecordFields`, a wrong type or word refuses the WHOLE page. A
  * cursor is an opaque Portal token: only its spelling (`^[A-Za-z0-9._-]+$`, at most 4096) is checked, it is never split.
@@ -26,8 +26,9 @@ export type ScopedOperation = (typeof SCOPED_OPERATIONS)[number];
 export const SCOPED_RECORDS_REASON = "SCOPED_RETAINED_WINDOW_NOT_TOTAL_HISTORY";
 export const SCOPED_RECORDS_HISTORY = "RETAINED_PORTAL_CURRENT_WINDOW_NOT_AUTHORITATIVE_REPLAY";
 
-type Kind = "T" | "D" | "I" | "L";
+type Kind = "T" | "D" | "I" | "L" | "R" | "S" | "B";
 const LIQUIDITY_SIDES = ["MAKER", "TAKER", "UNKNOWN"] as const;
+const RUNTIME_STATES = ["RUNNING", "PAUSED", "HALTED", "STOPPED"] as const;
 export const TIME_REASONS = ["SUBMITTED_AT_NOT_IN_POLICY", "OCCURRED_AT_NOT_IN_POLICY", "SOURCE_TIME_NOT_PUBLISHED", "SOURCE_TIME_UNPARSEABLE"] as const;
 export type TimeReason = (typeof TIME_REASONS)[number];
 export const OBSERVED_AT_BASES = ["ORDER_UPDATED_AT", "FILL_TRADE_TIME"] as const;
@@ -41,6 +42,9 @@ export const SCOPED_RECORD_FIELDS: Readonly<Record<string, Kind>> = {
   // BE-P15 record detail.
   submitted_at_ms: "I", resolved_at_ms: "I", leg_sequence: "I", client_order_id: "T", order_type: "T", commission_currency: "T", finding_id: "T",
   finding_type: "T", group_id: "T", leg_id: "T", leg_role: "T", commission: "D", liquidity_side: "L",
+  runtime_state: "R", runtime_state_since: "S", runtime_state_changed_at: "S", started_at: "S", completed_at: "S",
+  execution_session_id: "T", account_type: "T", position_side: "T", time_in_force: "T", reduce_only: "B", post_only: "B",
+  filled_quantity: "D", average_fill_price: "D", trigger_price: "D",
 };
 
 export interface ScopedRecord {
@@ -94,12 +98,16 @@ const instant = (value: unknown): UtcEpochMs | null => {
   return at !== null && at >= 0 ? at : null;
 };
 const CURSOR = /^[A-Za-z0-9._-]+$/;
+const UTC_TIMESTAMP = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z$(?![\s\S])/;
 
 function readValue(kind: Kind, value: unknown): ScopedCell | null {
   if (value === null) return { kind: "absent" };
   if (kind === "T") { const t = text(value); return t === null ? null : { kind: "text", text: t }; }
   if (kind === "D") { const d = decimal(value); return d === null ? null : { kind: "decimal", exact: d }; }
   if (kind === "L") return typeof value === "string" && (LIQUIDITY_SIDES as readonly string[]).includes(value) ? { kind: "text", text: value } : null;
+  if (kind === "R") return typeof value === "string" && (RUNTIME_STATES as readonly string[]).includes(value) ? { kind: "text", text: value } : null;
+  if (kind === "S") return typeof value === "string" && UTC_TIMESTAMP.test(value) ? { kind: "stamp-text", text: value } : null;
+  if (kind === "B") return typeof value === "boolean" ? { kind: "boolean", value } : null;
   const n = integer(value);
   return n === null ? null : { kind: "integer", value: n };
 }

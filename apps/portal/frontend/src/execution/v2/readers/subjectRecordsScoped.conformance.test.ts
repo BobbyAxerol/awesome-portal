@@ -36,7 +36,10 @@ const violations = (value: unknown) => validateAgainst(OPENAPI, POINTER, value);
 const clone = <T,>(value: T): T => structuredClone(value);
 const pageOf = (raw: unknown): SubjectRecordsScoped | null => readSubjectRecordsScoped(raw);
 
-const SAMPLE: Record<string, unknown> = { T: "text_value", D: "123.456789012345678901234567890123", I: 1_790_812_800_000, L: "MAKER" };
+const SAMPLE: Record<string, unknown> = {
+  T: "text_value", D: "123.456789012345678901234567890123", I: 1_790_812_800_000, L: "MAKER", R: "RUNNING",
+  S: "2026-10-18T00:00:00.000Z", B: false,
+};
 function rich(): Draft {
   const body = clone(BASE);
   const values: Draft = {};
@@ -78,7 +81,10 @@ describe("L0 · canonical, verbatim", () => {
   it("the rich page: every record member round-trips exactly", () => {
     const record = pageOf(RICH)!.records[0]!;
     for (const [key, kind] of Object.entries(SCOPED_RECORD_FIELDS)) {
-      expect(record.values[key], key).toEqual(kind === "T" ? { kind: "text", text: SAMPLE.T } : kind === "D" ? { kind: "decimal", exact: SAMPLE.D } : kind === "L" ? { kind: "text", text: SAMPLE.L } : { kind: "integer", value: SAMPLE.I });
+      expect(record.values[key], key).toEqual(kind === "D" ? { kind: "decimal", exact: SAMPLE.D }
+        : kind === "I" ? { kind: "integer", value: SAMPLE.I }
+          : kind === "B" ? { kind: "boolean", value: SAMPLE.B }
+            : kind === "S" ? { kind: "stamp-text", text: SAMPLE.S } : { kind: "text", text: SAMPLE[kind] });
     }
   });
 
@@ -88,7 +94,10 @@ describe("L0 · canonical, verbatim", () => {
     const kindOf = (prop: Draft): string => {
       const base = (prop.anyOf as Draft[]).find((a) => a.type !== "null")!;
       if (base.type === "integer") return "I";
-      if (Array.isArray(base.enum)) return base.enum.join("|") === "MAKER|TAKER|UNKNOWN" ? "L" : `?${JSON.stringify(base)}`;
+      if (base.type === "boolean") return "B";
+      if (base.format === "date-time") return "S";
+      if (Array.isArray(base.enum)) return base.enum.join("|") === "MAKER|TAKER|UNKNOWN" ? "L"
+        : base.enum.join("|") === "RUNNING|PAUSED|HALTED|STOPPED" ? "R" : `?${JSON.stringify(base)}`;
       if (base.pattern?.startsWith("^[^\\u0000") && base.maxLength === 256) return "T";
       if (base.type === "string" && base.maxLength === 128) return "D";
       return `?${JSON.stringify(base)}`;
@@ -134,10 +143,17 @@ describe("L1 · state matrices (schema as oracle)", () => {
   });
 
   const MEMBERS = Object.entries(SCOPED_RECORD_FIELDS);
-  const LEGAL: Record<string, unknown[]> = { T: ["x", "a".repeat(256), "ünïcode ✓"], D: ["0", "-1.5", "123456789012345678901234567890.123456789"], I: [0, 1_790_812_800_000], L: ["MAKER", "TAKER", "UNKNOWN"] };
+  const LEGAL: Record<string, unknown[]> = {
+    T: ["x", "a".repeat(256), "ünïcode ✓"], D: ["0", "-1.5", "123456789012345678901234567890.123456789"], I: [0, 1_790_812_800_000],
+    L: ["MAKER", "TAKER", "UNKNOWN"], R: ["RUNNING", "PAUSED", "HALTED", "STOPPED"],
+    S: ["2026-10-18T00:00:00Z", "2026-10-18T00:00:00.123456Z"], B: [false, true],
+  };
   const ILLEGAL: Record<string, unknown[]> = {
     T: ["", "a".repeat(257), "tab\there", 7, true, {}, []], D: [7, 1.5, "1e5", "01", "1.", ".5", "NaN", "a".repeat(129), {}], I: [-1, 1.5, "5", "", true, {}],
     L: ["maker", "OTHER", "", 7, true, {}, []],
+    R: ["running", "ACTIVE", "", 7, true, {}, []],
+    S: ["", "yesterday", "2026-10-18", "2026-10-18T00:00:00+07:00", "2026-10-18T00:00:00Z\n", 0, true, {}, []],
+    B: ["false", "true", 0, 1, "", {}, []],
   };
   it(`B · ${MEMBERS.length} record members x legal values (null is absent): schema-valid and read exactly`, () => {
     for (const [key, kind] of MEMBERS) {
@@ -164,8 +180,8 @@ describe("L1 · state matrices (schema as oracle)", () => {
     }
     expect(checked).toBeGreaterThan(200);
   });
-  it("B · a member outside ScopedRecordFields is refused (a symbol, a raw clock column, a session id, a venue order id, a trade id, an error text)", () => {
-    for (const key of ["symbol", "submitted_at", "trade_time", "resolved_at", "execution_session_id", "venue_order_id", "trade_id", "error_message", "role", "sequence"]) {
+  it("B · a member outside ScopedRecordFields is refused (a symbol, a raw clock column, a venue order id, a trade id, an error text)", () => {
+    for (const key of ["symbol", "submitted_at", "trade_time", "resolved_at", "venue_order_id", "trade_id", "error_message", "role", "sequence"]) {
       const body = clone(RICH);
       body.records[0].values[key] = "x";
       expect(violations(body).length, key).toBeGreaterThan(0);
@@ -218,6 +234,20 @@ describe("L1 · state matrices (schema as oracle)", () => {
     expect(orders.observedAtBasis).toBe("ORDER_UPDATED_AT");
     expect(orders.records.map((r) => r.timeReason)).toEqual([null, "SUBMITTED_AT_NOT_IN_POLICY", "SOURCE_TIME_NOT_PUBLISHED"]);
     expect(orders.records[2]!.values.submitted_at_ms).toEqual({ kind: "absent" });
+  });
+
+  it("published order metadata preserves false, true, exact zero, null and omission as different facts", () => {
+    const source = canonical.cases.find((c) => c.type === "ScopedSubjectRecordsResponse" && c.value.logical_operation_id === "executionAccountOrdersV1")!.value;
+    expect(violations(source)).toEqual([]);
+    const record = pageOf(source)!.records[0]!;
+    expect(record.values.reduce_only).toEqual({ kind: "boolean", value: false });
+    expect(record.values.post_only).toEqual({ kind: "boolean", value: true });
+    expect(record.values.filled_quantity).toEqual({ kind: "decimal", exact: "0" });
+    expect(record.values.average_fill_price).toEqual({ kind: "absent" });
+    expect(record.values.position_side).toEqual({ kind: "text", text: source.records[0].values.position_side });
+    expect(record.values.time_in_force).toEqual({ kind: "text", text: source.records[0].values.time_in_force });
+    expect(record.values.trigger_price).toEqual({ kind: "decimal", exact: source.records[0].values.trigger_price });
+    expect(Object.hasOwn(record.values, "execution_session_id")).toBe(false);
   });
 
   it("C · the constants: each flipped member refuses the page, and the schema agrees", () => {

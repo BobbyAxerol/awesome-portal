@@ -67,6 +67,27 @@ describe("positive series: four views of one NAV book", () => {
     }
   });
 
+  it("current balances do not change with the performance window; young books have equal 30D/90D PnL and budget above actual allocation", () => {
+    const read = (window: string): Body => dataset("/manager/fund-overview", "live", { window: JSON.stringify(window) }).body;
+    const [week, month, quarter] = ["7D", "30D", "90D"].map(read);
+    const current = (body: Body): Body => body.items.map((row: Body) => row.economic_partitions.map((entry: Body) => ({
+      partition: entry.partition,
+      balance: entry.metrics.balance_total.value,
+      equity: entry.metrics.equity_30d_end_value.value,
+    })));
+    expect(current(week)).toEqual(current(month));
+    expect(current(quarter)).toEqual(current(month));
+    const pnl = (body: Body): string[] => body.items.flatMap((row: Body) => row.economic_partitions.map((entry: Body) => entry.metrics.net_pnl.value));
+    expect(pnl(quarter)).toEqual(pnl(month));
+    expect(pnl(week)).not.toEqual(pnl(month));
+    for (const statement of month.capital_statements) {
+      const m = statement.metrics;
+      expect(units(m.allocation.value)).toBe(units(m.initial_funds.value));
+      expect(units(m.current_budget.value)).toBeGreaterThan(units(m.allocation.value));
+      expect(units(m.headroom.value)).toBe(units(m.current_budget.value) - units(m.allocation.value));
+    }
+  });
+
   it("a portfolio book ties the same way: its NAV series ends on the group's current NAV", () => {
     const grouped = dataset("/manager/fund-overview", "live", { group_by: "portfolio_id" }).body;
     const group = grouped.groups.find((entry: Body) => entry.key[0].value === "pf_TEST_ONLY_core") ?? grouped.groups[0];

@@ -382,17 +382,35 @@ function aggregate(rows: Draft[]): Draft[] {
   });
 }
 
-/* SIMULATED window presets. The base data is the 30D answer; 7D and 90D scale net PnL (and so balance, equity, return) by an exact
- * fraction, with bigint math. `ALL` is a typed gap (ALL_HISTORY_WINDOW_NOT_PUBLISHED), never a 400 and never a number. */
+/* SIMULATED window presets. Current balances/equity are window-independent in the WORLD lane; only PnL and return are windowed.
+ * Legacy scenarios retain their former scaling. `ALL` is a typed gap (ALL_HISTORY_WINDOW_NOT_PUBLISHED), never a 400 or a number. */
 interface WindowPreset { days: number; num: bigint; den: bigint }
 const WINDOW_PRESETS: Record<"7D" | "30D" | "90D", WindowPreset> = {
-  "7D": { days: 7, num: 1n, den: 4n }, "30D": { days: 30, num: 1n, den: 1n }, "90D": { days: 90, num: 5n, den: 2n },
+  "7D": { days: 7, num: 1n, den: 4n }, "30D": { days: 30, num: 1n, den: 1n }, "90D": { days: 90, get num() { return legacy() ? 5n : 1n; }, get den() { return legacy() ? 2n : 1n; } },
 };
 const WINDOWED_KEYS = ["net_pnl", "return_30d_pct", "max_drawdown_pct", "equity_30d_end_value", "cost_drag_fees", "cost_drag_funding", "cost_drag_slippage"];
 const ALL_GAP = "ALL_HISTORY_WINDOW_NOT_PUBLISHED";
 const scaleBy = (value: string, preset: WindowPreset): string => trimmed(toScaled(value) * preset.num / preset.den, SCALE);
 
 /** Net PnL of a row for the preset, before the derived keys are computed from it. A true zero stays "0"; an absence stays one. */
+function windowAfter(row: Draft, preset: WindowPreset): Draft {
+  if (preset.num === preset.den) return row;
+  for (const entry of row.economic_partitions) {
+    const m = entry.metrics;
+    const n = m.net_pnl;
+    if (n?.availability !== "AVAILABLE" || toScaled(n.value) === 0n) continue;
+    n.value = scaleBy(n.value, preset);
+    const allocation = m.allocation?.availability === "AVAILABLE" ? m.allocation.value : null;
+    const ret = allocation === null ? null : pct(toScaled(n.value), toScaled(allocation));
+    if (ret !== null && m.return_30d_pct) m.return_30d_pct.value = ret;
+  }
+  if (row.economic_partitions.length === 1) {
+    row.metrics.net_pnl = copy(row.economic_partitions[0].metrics.net_pnl);
+    if (row.economic_partitions[0].metrics.return_30d_pct) row.metrics.return_30d_pct = copy(row.economic_partitions[0].metrics.return_30d_pct);
+  }
+  return row;
+}
+
 function windowedRow(row: Draft, preset: WindowPreset): Draft {
   if (preset.num === preset.den) return row;
   for (const entry of row.economic_partitions) {
@@ -478,7 +496,8 @@ function capitalStatements(rows: Draft[]): Draft[] {
       added_funds: "0",
       returned_capital: "0",
       current_nav: opening !== null && currentPnl !== null ? addDecimal(opening, currentPnl) : null,
-      current_budget: opening,
+      // The WORLD budget is a limit above allocated capital, rounded up to the next ten thousand.
+      current_budget: opening === null ? null : trimmed(((toScaled(opening) * 5n / 4n / (10_000n * 10n ** 18n)) + 1n) * 10_000n * 10n ** 18n, SCALE),
       pending_amount: "0",
     };
     const money = Object.fromEntries(Object.entries(values).map(([kind, value]) => {
@@ -589,6 +608,8 @@ function rowsFor(environment: string, template: Draft, preset: WindowPreset, com
     }
     for (const deployments of books.values()) make(alpha, deployments);
   }
+  // Derive current balances from cumulative PnL before applying a performance window.
+  if (!legacy()) return rows.map((row) => windowAfter(enrichRow(row, preset, components), preset));
   return rows.map((row) => enrichRow(windowedRow(row, preset), preset, components));
 }
 
@@ -871,7 +892,7 @@ function addWpF1(body: Draft, groupFields: string[]): void {
     const key = JSON.stringify(entry.partition);
     const [initial, added, returned, budget] = ["initial_funds", "added_funds", "returned_capital", "current_budget"].map((name) => wpF1Value(entry, name));
     const net = initial !== null && added !== null && returned !== null ? trimmed(toScaled(initial) + toScaled(added) - toScaled(returned), SCALE) : null;
-    const allocation = budget === null ? null : wpF1Part(budget, 55n + BigInt(seedOf(key, "allocation") % 36));
+    const allocation = budget === null ? null : !legacy() && initial !== null ? initial : wpF1Part(budget, 55n + BigInt(seedOf(key, "allocation") % 36));
     const room = budget !== null && allocation !== null ? trimmed(toScaled(budget) - toScaled(allocation), SCALE) : null;
     const recall = budget === null ? null : legacy() && seedOf(key, "recalling") % 3 === 0 ? "0" : wpF1Part(budget, 1n + BigInt(seedOf(key, "recall-pct") % 4));
     entry.metrics.allocation = wpF1Money(template, allocation, currency, "allocation");

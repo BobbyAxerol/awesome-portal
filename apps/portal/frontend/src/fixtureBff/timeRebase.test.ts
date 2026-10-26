@@ -70,6 +70,19 @@ describe("preview clock anchor: each body is shifted by its own read time", () =
     expect(alpha.read_at).toBe("2026-10-22T12:04:00Z");
   });
 
+  it("a published series moves with the clock: points [epoch_ms, value] end on the page's own now; values and other arrays stay (WP-F2, QA3 R4-08)", () => {
+    const at = Date.parse("2026-10-17T09:00:00Z");
+    const body = { read_at: "2026-10-17T09:00:00Z", panel: { data: { series: [{ points: [[at - 86_400_000, "1.00"], [at, "2.00"], [5, "x"], [at, null]], other: [[at, "3"]] }] } } };
+    const out = rebaseBody(body, OPS_NOW, NOW) as { read_at: string; panel: { data: { series: { points: [number, string | null][]; other: [number, string][] }[] } } };
+    const delta = Date.parse(out.read_at) - at;
+    expect(delta).toBeGreaterThan(0);
+    expect(out.panel.data.series[0]!.points[1]![0]).toBe(at + delta);
+    expect(out.panel.data.series[0]!.points[0]![0]).toBe(at - 86_400_000 + delta);
+    expect(out.panel.data.series[0]!.points.map((p) => p[1])).toEqual(["1.00", "2.00", "x", null]);
+    expect(out.panel.data.series[0]!.points[2]![0]).toBe(5);
+    expect(out.panel.data.series[0]!.other[0]![0]).toBe(at);
+  });
+
   it("a body without a read time falls back to the doubles' common instant, and read_at_ms alone also anchors", () => {
     const plain = rebaseBody({ at: "2026-08-22T13:00:00Z" }, OPS_NOW, NOW) as { at: string };
     expect(plain.at).toBe("2026-10-22T12:04:00Z");

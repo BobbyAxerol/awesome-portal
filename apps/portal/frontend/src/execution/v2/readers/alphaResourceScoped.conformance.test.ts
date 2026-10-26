@@ -49,7 +49,7 @@ const alphaOf = (raw: unknown): AlphaResourceScoped | null => readAlphaResourceS
 
 /* ── a rich, schema-valid body: every relation carries one row with every member the table names ── */
 
-const SAMPLE: Record<string, unknown> = { T: "text_value", D: "123.456789012345678901234567890123", M: "paper", S: "2026-10-17T12:00:00Z", I: 1_790_812_800_000, C: "9007199254740993", L: "TAKER", N: null };
+const SAMPLE: Record<string, unknown> = { T: "text_value", D: "123.456789012345678901234567890123", M: "paper", S: "2026-10-17T12:00:00Z", I: 1_790_812_800_000, C: "9007199254740993", L: "TAKER", N: null, B: false };
 const richRow = (relation: ScopedRelation, book: string = "paper"): Draft => {
   const row: Draft = { profile_environment: book };
   for (const [key, kind] of Object.entries(SCOPED_ROW_FIELDS[relation])) row[key] = SAMPLE[kind];
@@ -184,11 +184,70 @@ describe("L0 · canonical, verbatim", () => {
         if (kind === "M") expect(cell, `${relation}.${key}`).toEqual({ kind: "book", book: "paper" });
         if (kind === "S") expect(cell, `${relation}.${key}`).toEqual({ kind: "stamp-text", text: SAMPLE.S });
         if (kind === "L") expect(cell, `${relation}.${key}`).toEqual({ kind: "text", text: SAMPLE.L });
+        if (kind === "B") expect(cell, `${relation}.${key}`).toEqual({ kind: "boolean", value: SAMPLE.B });
       }
     }
     expect(cellDecimal(read.rows!.account_balances[0]!, "total")).toBe(SAMPLE.D);
     expect(read.summary).toMatchObject({ id: "alpha_TEST_ONLY", name: "Alpha name", displayName: "Alpha display name" });
     expect(read.summary!.portfolios).toEqual([{ portfolioId: "pf_1", name: "Core", displayName: "Core fund" }]);
+  });
+
+  it("published account, margin, session and order metadata round-trips without coercing exact amounts, zero clocks or false flags", () => {
+    const body = clone(RICH);
+    const metadata: Partial<Record<ScopedRelation, Draft>> = {
+      accounts: { account_type: "CROSS_MARGIN" },
+      margin_balances: { initial: "0", maintenance: "0.0000000000000000001" },
+      sessions: { execution_session_id: "session_TEST_ONLY", started_at: 0, started_at_ms: 0, completed_at: "2026-10-17T12:00:00Z", completed_at_ms: 1_790_812_800_000 },
+      orders: {
+        execution_session_id: "session_TEST_ONLY", position_side: "LONG", time_in_force: "GTC", reduce_only: false, post_only: true,
+        trigger_price: "0", filled_quantity: "9007199254740993.0000000001", average_fill_price: "0.0000000000000000001",
+      },
+      fills: { execution_session_id: "session_TEST_ONLY" },
+      reconciliation: { execution_session_id: "session_TEST_ONLY" },
+    };
+    for (const [relation, fields] of Object.entries(metadata)) {
+      Object.assign(body.data[relation][0], fields);
+      Object.assign(body.panels[relation].data.rows[0], fields);
+    }
+    expect(violations(body)).toEqual([]);
+    const read = alphaOf(body)!;
+    expect(read).not.toBeNull();
+    expect(read.rows!.accounts[0]!.cells.account_type).toEqual({ kind: "text", text: "CROSS_MARGIN" });
+    expect(read.rows!.margin_balances[0]!.cells).toMatchObject({ initial: { kind: "decimal", exact: "0" }, maintenance: { kind: "decimal", exact: "0.0000000000000000001" } });
+    expect(read.rows!.sessions[0]!.cells).toMatchObject({
+      execution_session_id: { kind: "text", text: "session_TEST_ONLY" }, started_at: { kind: "integer", value: 0 }, started_at_ms: { kind: "integer", value: 0 },
+      completed_at: { kind: "stamp-text", text: "2026-10-17T12:00:00Z" }, completed_at_ms: { kind: "integer", value: 1_790_812_800_000 },
+    });
+    expect(read.rows!.orders[0]!.cells).toMatchObject({
+      execution_session_id: { kind: "text", text: "session_TEST_ONLY" }, position_side: { kind: "text", text: "LONG" }, time_in_force: { kind: "text", text: "GTC" },
+      reduce_only: { kind: "boolean", value: false }, post_only: { kind: "boolean", value: true }, trigger_price: { kind: "decimal", exact: "0" },
+      filled_quantity: { kind: "decimal", exact: "9007199254740993.0000000001" }, average_fill_price: { kind: "decimal", exact: "0.0000000000000000001" },
+    });
+    for (const relation of ["fills", "reconciliation"] as const) expect(read.rows![relation][0]!.cells.execution_session_id).toEqual({ kind: "text", text: "session_TEST_ONLY" });
+  });
+
+  it("order flags distinguish false, true, stated null and omission in data and panel rows; boolean-like values remain malformed", () => {
+    for (const key of ["reduce_only", "post_only"]) {
+      for (const value of [false, true, null, undefined]) {
+        const body = clone(RICH);
+        for (const row of [body.data.orders[0], body.panels.orders.data.rows[0]]) {
+          if (value === undefined) delete row[key];
+          else row[key] = value;
+        }
+        expect(violations(body), `${key}=${String(value)}`).toEqual([]);
+        const read = alphaOf(body)!;
+        expect(read, `${key}=${String(value)}`).not.toBeNull();
+        expect(read.rows!.orders[0]!.cells[key]).toEqual(value === undefined ? undefined : value === null ? { kind: "absent" } : { kind: "boolean", value });
+      }
+      for (const value of ["false", "true", 0, 1, {}, []]) {
+        for (const panel of [false, true]) {
+          const body = clone(RICH);
+          (panel ? body.panels.orders.data.rows[0] : body.data.orders[0])[key] = value;
+          expect(violations(body).length, `${panel ? "panel" : "data"}.${key}=${JSON.stringify(value)}`).toBeGreaterThan(0);
+          expect(alphaOf(body)).toBeNull();
+        }
+      }
+    }
   });
 
   it("the field tables the reader holds are the schema's row definitions, member by member and kind by kind", () => {
@@ -209,6 +268,7 @@ describe("L0 · canonical, verbatim", () => {
       if (Array.isArray(one.enum)) return one.enum.join("|") === "MAKER|TAKER|UNKNOWN" ? "L" : one.enum.join("|") === "PORTFOLIO_NAME_NOT_READ|PORTFOLIO_NAME_NOT_PUBLISHED|PORTFOLIO_NAME_NOT_AUTHORIZED|PORTFOLIO_NAME_AMBIGUOUS" ? "N" : "M";
       if (one.type === "string" && isText(one)) return "T";
       if (one.type === "string" && one.maxLength === 128) return "D";
+      if (one.type === "boolean") return "B";
       if (one.type === "integer") return nullable ? "N?" : "I";
       if (one.anyOf) {
         const kinds = (one.anyOf as Draft[]).map((a) => (a.type === "integer" ? "int" : isText(a) ? "text" : a.type === "string" ? "counter" : "?")).sort().join("+");
@@ -311,7 +371,7 @@ describe("L1 · state matrices (schema as oracle)", () => {
   const LEGAL: Record<string, unknown[]> = {
     T: ["x", "a".repeat(512), "ünïcode ✓"], D: ["0", "-1.5", "123456789012345678901234567890.123456789", "0.000000000000000001"],
     M: ["paper", "sandbox", "live"], S: ["2026-10-17T12:00:00Z", 0, 1_790_812_800_000], I: [0, 1_790_812_800_000], C: ["0", "9007199254740993", 0, 7],
-    L: ["MAKER", "TAKER", "UNKNOWN"],
+    L: ["MAKER", "TAKER", "UNKNOWN"], B: [false, true],
     // Package 6: a reason beside a stated name is refused by the reader (see the portfolio-name block); only null is legal beside the rich row's name.
     N: [],
   };
@@ -319,6 +379,7 @@ describe("L1 · state matrices (schema as oracle)", () => {
     T: ["", "a".repeat(513), "tab\there", 7, true, {}, []], D: [7, 1.5, "1e5", "01", "1.", ".5", "NaN", "a".repeat(129), {}], M: ["Paper", "backtest", "", 7],
     S: [-1, 1.5, "", true, {}], I: [null, -1, 1.5, "5", true, {}], C: [-1, 1.5, "01", "-1", "1.5", {}],
     L: ["maker", "OTHER", "", 7, true, {}, []],
+    B: ["false", "true", 0, 1, {}, []],
     N: ["PORTFOLIO_NAME_UNKNOWN", "portfolio_name_not_published", "", 7, true, {}, []],
   };
   it(`C · ${MEMBER_CASES.length} members x legal values: schema-valid and read exactly; null is absent (except epoch-ms members)`, () => {

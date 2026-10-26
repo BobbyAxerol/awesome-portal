@@ -24,10 +24,9 @@
  *
  * - `identity` (`scopedIdentity.ts`): alpha id, portfolio name and the reasons a part is withheld;
  * - `stage_facts` (`execution.stage-facts.v1`): over the viewer's AUTHORIZED population only. The schema allows
- *   what that population can prove and nothing else, and so does this reader: the only AVAILABLE statement is
- *   `reconciliation.verdict = OPEN_FINDINGS` (an authorized open finding exists); `NO_OPEN_FINDINGS`, an open-finding
- *   count, an unknown-order count, a runtime word, its `since` and a sessions list are NOT_PUBLISHED with a reason or
- *   the whole read is refused. An absent member is `null` (the original body); a present member that breaks the
+ *   what that population can prove and nothing else, and so does this reader: runtime/session observations may be
+ *   AVAILABLE without asserting activation. `reconciliation.verdict = OPEN_FINDINGS` is monotone; `NO_OPEN_FINDINGS`,
+ *   exact finding/order counts and session completeness remain refused. An absent member is `null` (the original body); a present member that breaks the
  *   schema voids the read, as a malformed panel does.
  */
 import { readUtcEpochMs, type UtcEpochMs } from "../../screenDataContract";
@@ -55,14 +54,23 @@ const GRAINS: Readonly<Record<LiveSourcePanelName, "DEPLOYMENT" | "ACCOUNT" | "N
 const TEXT_FIELDS = [
   "deployment_id", "strategy_id", "account_id", "portfolio_id", "position_id", "order_id", "fill_id", "instrument_id",
   "venue", "currency", "base_currency", "state", "status", "side",
+  "runtime_state_since", "runtime_state_changed_at", "execution_session_id", "started_at", "completed_at", "account_type",
+  "position_side", "time_in_force", "client_order_id", "order_type", "commission_currency",
 ] as const;
 const DECIMAL_FIELDS = [
   "signed_qty", "quantity", "price", "avg_px_open", "avg_px_close", "mark_price", "notional", "realized_pnl",
   "unrealized_pnl", "total", "locked", "free", "initial", "maintenance",
+  "trigger_price", "filled_quantity", "average_fill_price", "commission",
 ] as const;
 const COUNTER_FIELDS = ["submitted_count", "risk_rejected_count", "broker_rejected_count", "filled_count"] as const;
 const INSTANT_FIELDS = ["created_at_ms", "updated_at_ms", "trade_time_ms"] as const;
-const VALUE_FIELDS: ReadonlySet<string> = new Set([...TEXT_FIELDS, ...DECIMAL_FIELDS, ...COUNTER_FIELDS, ...INSTANT_FIELDS, "mode"]);
+const BOOLEAN_FIELDS = ["reduce_only", "post_only"] as const;
+const ENUM_FIELDS: Readonly<Record<string, readonly string[]>> = {
+  runtime_state: ["RUNNING", "PAUSED", "HALTED", "STOPPED"], liquidity_side: ["MAKER", "TAKER", "UNKNOWN"],
+};
+const VALUE_FIELDS: ReadonlySet<string> = new Set([
+  ...TEXT_FIELDS, ...DECIMAL_FIELDS, ...COUNTER_FIELDS, ...INSTANT_FIELDS, ...BOOLEAN_FIELDS, ...Object.keys(ENUM_FIELDS), "mode",
+]);
 
 /** One published value. `null` on the wire is `absent`: the source did not say, which is not zero. */
 export type LiveSourceValueV2 =
@@ -72,6 +80,7 @@ export type LiveSourceValueV2 =
   | { kind: "decimal"; exact: string }
   /** An int64 counter as the exact string; never a JS number. */
   | { kind: "counter"; exact: string }
+  | { kind: "boolean"; value: boolean }
   | { kind: "instant"; at: UtcEpochMs };
 
 export interface LiveSourceRecordV2 {
@@ -116,7 +125,7 @@ export interface LiveSourceOperationsV2 {
   panels: Readonly<Record<LiveSourcePanelName, LiveSourcePanelV2>>;
   /** `null` = the body carries none (the original body, or `include=identity` was not asked). */
   identity: ScopedIdentityV2 | null;
-  /** `null` = the body carries none. Never a count, never `NO_OPEN_FINDINGS`, never a runtime word or a session. */
+  /** `null` = the body carries none. Scoped observations, never activation, global counts or complete sessions. */
   stageFacts: StageFacts | null;
 }
 
@@ -159,6 +168,8 @@ function cursor(value: unknown): string | null | undefined {
 function readValue(field: string, value: unknown): LiveSourceValueV2 | null {
   if (value === null) return { kind: "absent" };
   if (field === "mode") return value === "live" ? { kind: "text", text: "live" } : null;
+  if ((BOOLEAN_FIELDS as readonly string[]).includes(field)) return typeof value === "boolean" ? { kind: "boolean", value } : null;
+  if (Object.hasOwn(ENUM_FIELDS, field)) return typeof value === "string" && ENUM_FIELDS[field]!.includes(value) ? { kind: "text", text: value } : null;
   if ((TEXT_FIELDS as readonly string[]).includes(field)) {
     const t = text(value);
     return t === null ? null : { kind: "text", text: t };
@@ -240,17 +251,16 @@ function readPanel(name: LiveSourcePanelName, value: unknown): LiveSourcePanelV2
 
 /**
  * `stage_facts` of the schema (`execution-operations.v1` LiveSourceOperationsReadV2): the V1 fact vocabulary, closed, with
- * what the authorized population cannot prove forced to NOT_PUBLISHED. `null` = refused.
+ * scoped observations allowed, but global counts, NO_OPEN_FINDINGS and session completeness refused. `null` = refused.
  */
 export function readLiveStageFactsV2(raw: unknown): StageFacts | null {
   const facts = readStageFacts(raw);
   if (facts === null) return null;
-  const { runtime, reconciliation, sessions } = facts;
+  const { reconciliation, sessions } = facts;
   if (
-    runtime.state.availability !== "NOT_PUBLISHED" || runtime.since.availability !== "NOT_PUBLISHED"
-    || (reconciliation.verdict.availability === "AVAILABLE" && reconciliation.verdict.value === "NO_OPEN_FINDINGS")
+    (reconciliation.verdict.availability === "AVAILABLE" && reconciliation.verdict.value === "NO_OPEN_FINDINGS")
     || reconciliation.openFindingCount.availability !== "NOT_PUBLISHED" || reconciliation.unknownOrderCount.availability !== "NOT_PUBLISHED"
-    || sessions.availability !== "NOT_PUBLISHED"
+    || sessions.sourceComplete === true
   ) return null;
   return facts;
 }
