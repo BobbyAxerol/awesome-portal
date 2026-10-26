@@ -38,6 +38,18 @@ claim, push/dev/main/stable/provider28445 or command/Live change.
 **ELP2-10 OPEN; ELP2-11 not entered.** Separate financial/calibration/G2 and
 consumer/full-gate debts remain; finite Accounts does not waive them.
 
+Delivery confirmed after documentation commit `cbe7b20cb`: the public packet
+was mirrored to HK Edge `upgrade/evidence/execution-edge-v1_2/EPG10-08/` with
+identical SHA256 `e5207edc810b5f92fa0cfb49276223ab071786833f155e975403c68fa25fb423`.
+[Machine-readable bounded results](evidence/ELP2-10/accounts-runtime-commissioning-20261027.test-results.json)
+keep R1, failed attempts, code installation and connected NOT_MET separate.
+Independent evidence review ACCEPTS19/19-at-postmigration versus later18/19 and
+final install67→67; not app RLS/connected/full-phase acceptance. Owned correctness
+cell census empty; local disk68%used/~202GiB free, backups/rollback images kept.
+Genuine source-original discovery remains Core-owned: existing safe lookup and
+selected-reader require an exact approved source login/role and Research identity;
+no generic recovery probe or SQL grant seed was run to create that evidence.
+
 ## 27Oct2026 — Accounts native BFF to HTTP: implemented, not installed
 
 [Exact source/tests, current runtime/source observations and next actions](evidence/ELP2-10/ACCOUNTS_NATIVE_EGRESS_2026-10-27.md).

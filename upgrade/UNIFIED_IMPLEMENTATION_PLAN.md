@@ -16395,3 +16395,9 @@ Independent STREAM and financial/budget/calibration/G2/browser remain mandatory.
 **ELP2-10 OPEN, connected NOT_MET; ELP2-11 not entered.** No push or protected
 runtime/command/Live change. See packet for real pins, failures and rollback.
 
+Delivery evidence: public packet mirrored to HK EPG10-08, identical SHA256
+`e5207edc810b5f92fa0cfb49276223ab071786833f155e975403c68fa25fb423`;
+[R1 machine-readable results](execution_loop/evidence/ELP2-10/accounts-runtime-commissioning-20261027.test-results.json)
+and independent bounded evidence ACCEPT. No full-R2 or connected acceptance
+inferred. Correctness cells removed; retained backups/rollback images preserved.
+
