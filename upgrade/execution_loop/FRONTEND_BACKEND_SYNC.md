@@ -1,5 +1,36 @@
 # Execution Loop V2 — Sổ đồng bộ Frontend ↔ Backend (sống)
 
+## 26Oct2026 — Accounts CURRENT plus complete backend landing census
+
+[Approved round scope, readonly task map and actual census/landing return](evidence/ELP2-10/ACCOUNTS_CURRENT_AND_BACKEND_LANDING_CENSUS_2026-10-26.md).
+Entry Core2aae8cbaf and canonical685bc1915 clean. ACT_NOW: enumerate all
+worktrees/refs, distinguish ancestry/patch coverage and preserve peer WIP;
+refresh Claude/Edge input before commissioning or frozen integration gate.
+Primary owns shared files, source decisions, gate scheduling and ff-only landing.
+No blanket source qualification, phase PASS or canonical/runtime change inferred.
+
+**Round result:** all440local heads/46worktrees inspected, including three clean
+`/tmp` worktrees. Candidate contains all current Claude00e7f6cff; canonical is
+0/211behind at source2aae8cbaf.605files,+52,867/−2,182 is the combined source,
+not Codex-only authorship;349paths are FE. One collided realtime receipt restored
+byte-for-byte under a distinct filename; one missing fixture patch and60review
+PNGs remain explicitly owned by Claude/source refs, not silently imported.
+Peer dirty WIP and separate143-commit Rust Edge lane preserved; no blanket merge.
+
+**Claude ACT_NOW:** [exact backend intake and parity requests](evidence/ELP2-10/CLAUDE_BACKEND_INTAKE_AND_LANDING_2026-10-26.md).
+ELP2-REV-20261026-01: closed Alpha reader missing18published metadata fields;
+02: Live reader rejects positive scoped runtime/session fixture. Static review,
+not newly run tests or source-qualified fields. Retain component/design and
+authority constants. Triage prior213visualFAIL before a frozen normal R2;
+do not repeat unchanged53-minute run or blanket re-record. No final landing yet.
+
+Accounts CURRENT remains independent of financial/Score/Calendar. Fresh public
+Edge review has no current source-registration/trust/READY after09:31mirror;
+Core image70e6217f and clone152–154 remain ready locally, not shared-installed.
+Exact source-owner/install/actions are in census§3. No new credential/grant or
+fake original. R0 doc checks only this round; no UI/push/runtime/protected-source
+change. ELP2-10 NOT_MET;11 not entered.
+
 ## 26Oct2026 — real historical CURRENT source found; actual install still missing
 
 [Direct runtime/schema checks and independent commissioning actions](evidence/ELP2-10/CURRENT_SOURCE_REUSE_AND_COMMISSIONING_BLOCKERS_2026-10-26.md).

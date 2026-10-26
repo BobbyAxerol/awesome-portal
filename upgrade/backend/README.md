@@ -1,5 +1,15 @@
 # Backend Architecture Deep Dives
 
+26Oct2026 — [Accounts CURRENT and complete backend landing census](../execution_loop/evidence/ELP2-10/ACCOUNTS_CURRENT_AND_BACKEND_LANDING_CENSUS_2026-10-26.md):
+440heads/46worktrees inspected; candidate contains allClaude00e7f6cff and is
+211commits beyond canonical at source snapshot2aae8cbaf. Combined605files
+include349FEpaths; no claim this is backend-only or already landed. Restored
+one exact collided realtime receipt; missing fixture patch/60PNGs and dirty WIP
+explicitly preserved for scoped intake. Two concrete closed-reader mismatches
+go to Claude; full visual/R2 still block integrated landing. CURRENT does not
+wait for financial/Score; exact new source authority/trust and installation/
+connected acceptance still absent. R0 only; no runtime/UI/push or new test claim.
+
 26Oct2026 — [ELP2-10 actual CURRENT source baseline and installation blockers](../execution_loop/evidence/ELP2-10/CURRENT_SOURCE_REUSE_AND_COMMISSIONING_BLOCKERS_2026-10-26.md):
 real E6/E7 basic Accounts acceptance exists; ordinary Manager image/catalogue/
 policy match directly. CURRENT need not wait for financial APPLIED/Score/narrow
