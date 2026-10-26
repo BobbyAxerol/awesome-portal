@@ -1,5 +1,36 @@
 # Execution Loop V2 — Sổ đồng bộ Frontend ↔ Backend (sống)
 
+## 26Oct2026 — real historical CURRENT source found; actual install still missing
+
+[Direct runtime/schema checks and independent commissioning actions](evidence/ELP2-10/CURRENT_SOURCE_REUSE_AND_COMMISSIONING_BLOCKERS_2026-10-26.md).
+Official E6/E7 did qualify basic Paper Accounts CURRENT. Actual ordinary Manager
+image/catalogue/serving-policy still match; do not block this lane on financial
+APPLIED, Score or narrow-notice alpha-version tuples. This is historical-source
+reuse eligibility, not a new human/API/browser PASS. Current Edge differs; native
+Manager has a protected source overlay, so base image equality alone is not proof.
+
+Actual Research still has the old Core/web images, seven stored native domain
+grants (zero interval-current/unrevoked), zero ordinary grant rows and no migration153 CURRENT custody
+table. Core owns the pending image/schema/official-authority commissioning;
+Claude must not be asked to accept the new adapter on that old runtime. Edge
+supplies the selected current lane and genuine correspondence; STREAM remains
+independent. No new consumer schema/design change or committed Claude request.
+Two read-only agents: one audit plus narrow restore review ACCEPT, one partial
+triage then capacity error; primary verified pins. Actual local image70e6217f…
+now built from4e7deab19: emitting compiler1459files/239.80s, image hygiene and
+genuine Research backup→clone→migrations152–154/idempotency PASS. All190old
+table counts, selected19authority/custody table hashes and policy definitions
+unchanged; original ACL/effective RLS NOT_TESTED. Shared Research stays151,
+candidate uninstalled; no unchanged full hook/API/Rust suites, UI/push/landing
+or shared runtime change. Exact hashes/failed attempts/cleanup in packet.
+Calendar SOURCE_DARK and full ELP2-10 NOT_MET.
+
+Public packet delivered2026-10-26T09:31:10Z to HK EPG10-08 under the same
+`CURRENT_SOURCE_REUSE_AND_COMMISSIONING_BLOCKERS_2026-10-26.md` basename;
+SHA256 `b2481ced4204c002fffd6e0dd159c5c9070ef9488c024b7eb758bf0e34bda0ce`
+matches local/remote. LOCAL_CORE_PACKAGE_READY;CONNECTED_NOT_READY, not a short
+window ACK. R0 diff/link/tracking PASS; no source bundle, backup or secret sent.
+
 ## ELP2-10 full-build gate closed —26Oct2026
 
 [Actual full compiler receipt and exact final source/owner gates](evidence/ELP2-10/FINAL_GATE_LEDGER_2026-10-26.md).

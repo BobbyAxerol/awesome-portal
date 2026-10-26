@@ -650,6 +650,16 @@ deep-dive → ADR → slice → evidence discipline documented above.
 
 ### 14.1 Current backend state (tracking snapshot — 2026-08-17)
 
+**26Oct CURRENT qualification refinement:** real historical E6/E7 acceptance
+exists for basic Paper Accounts; ordinary Manager image/catalogue/policy match
+directly. Do not require financial/Score/narrow STREAM lineage for that lane.
+Actual Research candidate/schema/authority installation is still Core-owned
+and absent: old image, zero current stored grants, no migration153 custody.
+Local image70e6217f… now built/hygiene PASS; real Research backup→clone→official
+migrations152–154/repeat PASS,190old table counts/selected authority-custody
+hashes/policy definitions unchanged. Original ACL/effective RLS NOT_TESTED.
+No shared install or human/API/browser acceptance claim. [Verified pins and exact commissioning actions](execution_loop/evidence/ELP2-10/CURRENT_SOURCE_REUSE_AND_COMMISSIONING_BLOCKERS_2026-10-26.md).
+
 **26Oct ELP2-10 final-gate follow-through:** whole production tsc now PASS on
 unchanged4e7deab19,1459files/229.95s using the existing3CPU/3GiB local build
 profile; supersedes the prior compiler OPEN below, no runtime cap change.

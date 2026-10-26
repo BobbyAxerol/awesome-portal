@@ -1,5 +1,21 @@
 # ELP2-10 — Performance, quality và coexistence
 
+## 26Oct2026 — CURRENT source baseline reused independently, installation not claimed
+
+[Fresh source/runtime/schema investigation and exact owner actions](CURRENT_SOURCE_REUSE_AND_COMMISSIONING_BLOCKERS_2026-10-26.md).
+Basic Paper Accounts CURRENT has genuine E6/E7 historical acceptance; current
+ordinary Manager image/catalogue/policy match. Financial/Score/narrow STREAM
+dependencies must not block that independent lane. Actual new Edge/native
+overlay, Research rights, migration153 and candidate image are not installed/
+accepted by this observation. Current preview lacks the native CURRENT custody
+table and has zero current stored grants in the inspected exact workspace.
+Follow-through now built local image70e6217f… from4e7deab19; emitting compiler
+and image hygiene PASS. Genuine Research backup→isolated restore→official
+migrations152–154/repeat PASS,190old table counts/selected19authority-custody
+table hashes/policy definitions unchanged. Original ACL/effective RLS NOT_TESTED.
+Shared target stays151; no UI/canonical/install change. Full ELP2-10 remains
+NOT_MET, calendar SOURCE_DARK. Package/clone pins and failed attempts in packet.
+
 ## 26Oct2026 — whole production compiler PASS, remaining final gates
 
 [Actual build and exact source-owner actions](FINAL_GATE_LEDGER_2026-10-26.md).

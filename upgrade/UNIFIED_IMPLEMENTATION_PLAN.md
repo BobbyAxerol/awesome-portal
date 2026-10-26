@@ -16170,3 +16170,37 @@ match: MD`a63eae0a4fcfe3fa307998300f263abcca21a5b8c850ac5cd20b8f7c85e56e10`,
 JSON`16cb3e91791e22816d81a19ffa874e1f26b092cdf86b25161b3e5aafdba7a31c`.
 Delivery is not Edge source acceptance/READY or runtime installation.
 
+### 26Oct2026 — Real CURRENT baseline, no blanket source-dark dependency
+
+[Verified historical acceptance, current runtime/schema and exact ordered actions](execution_loop/evidence/ELP2-10/CURRENT_SOURCE_REUSE_AND_COMMISSIONING_BLOCKERS_2026-10-26.md).
+Official E6/E7 includes real Paper Accounts/balance/margin CURRENT acceptance;
+ordinary Manager image/catalogue/policy still match by direct read-only HK check.
+This independent current lane need not wait for financial APPLIED, Score or the
+canonical tuple required by narrower notices. It is not new human/API/browser
+acceptance: actual Edge differs and native Manager has an additional protected
+source overlay. No source/authority equivalence is inferred from image equality.
+
+Actual Research old Core/web images remain installed; seven native grants are
+not interval-current/unrevoked, ordinary entity grants absent and migration153
+CURRENT custody table absent. **Core owns** reviewed candidate image/schema/
+official-writer commissioning, not Edge; Edge owns genuine selected source and
+correspondence. Claude accepts only the actually installed API, not a source
+bundle. Subsequent local packaging produced actual image70e6217f… from
+unchanged production4e7deab19: emitting tsc1459files/239.80s and image hygiene
+PASS. Genuine Research backup→isolated clone→official migrations152–154 and
+repeat PASS;190old table counts, selected19authority/custody table hashes and
+policy definitions unchanged. Original ACL/effective RLS NOT_TESTED. Shared
+DB stays151; candidate remains uninstalled. Exact image/log/harness hashes,
+preserved failed attempts and owned teardown are in the packet; no repeated
+full hook/API/Rust suites or public DTO/UI change. Calendar
+SOURCE_DARK; financial/economic/health/metadata, budget/calibration/coexistence/G2,
+STREAM/connected/browser and final R2/visual gates remain explicit. ELP2-10
+NOT_MET. No UI, canonical/Claude, push, shared-runtime or protected-target change.
+
+Sanitized current-package/source return delivered to HK EPG10-08 at
+2026-10-26T09:31:10Z under the same packet basename. SHA256
+`b2481ced4204c002fffd6e0dd159c5c9070ef9488c024b7eb758bf0e34bda0ce`
+matches remote/local. Delivery is not Edge acceptance or a connected READY.
+Documentation R0 diff/link checks and execution tracking reconciliation PASS;
+no full hook repeated for Markdown. Source bundles/private inputs not sent.
+

@@ -1,5 +1,15 @@
 # Backend Architecture Deep Dives
 
+26Oct2026 — [ELP2-10 actual CURRENT source baseline and installation blockers](../execution_loop/evidence/ELP2-10/CURRENT_SOURCE_REUSE_AND_COMMISSIONING_BLOCKERS_2026-10-26.md):
+real E6/E7 basic Accounts acceptance exists; ordinary Manager image/catalogue/
+policy match directly. CURRENT need not wait for financial APPLIED/Score/narrow
+STREAM lineage. Actual Research still lacks migration153 custody/current rights
+and the installed candidate image. Local image70e6217f… now built/hygiene PASS;
+real Research backup→clone→migrations152–154/repeat PASS with unchanged190old
+table counts/selected authority-custody hashes/policy definitions. Original
+ACL/effective RLS NOT_TESTED; shared target unchanged. No phase-PASS or public
+DTO/UI change, calendar SOURCE_DARK. Exact evidence and cleanup in packet.
+
 26Oct2026 — [ELP2-10 whole compiler PASS and final gates](../execution_loop/evidence/ELP2-10/FINAL_GATE_LEDGER_2026-10-26.md):
 full production-source build1459files/229.95s PASS under the existing local
 3CPU/3GiB build profile, source unchanged4e7deab19. Supersedes the prior compiler
