@@ -147,8 +147,10 @@ export async function prepareFinancialSourceRuntime(input: FinancialSourceRuntim
         const child = chain[i]!, issuer = chain[i + 1]!;
         if (!issuer.ca || !child.checkIssued(issuer) || !child.verify(issuer.publicKey)) return fail();
       }
-      const last = chain[chain.length - 1]!;
-      if (!roots.some(root => last.checkIssued(root) && last.verify(root.publicKey))) return fail();
+      // `ca` authenticates the REMOTE peer (Edge clients for either listener,
+      // Edge servers for recovery), not the issuer of this local identity.
+      // Independent Core/Edge CAs are valid. Local key/EKU/name/chain checks
+      // above stay independent of actual peer CA/leaf checks at connection time.
       createSecureContext({ key, cert, ca, minVersion: "TLSv1.3", maxVersion: "TLSv1.3" });
       return { key, cert, ca };
     };

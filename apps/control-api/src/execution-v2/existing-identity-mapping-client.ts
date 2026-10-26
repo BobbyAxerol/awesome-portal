@@ -161,6 +161,7 @@ export function withExistingIdentityMapping(base: AccessTrustProvider, client: E
     verifyReceipt: base.verifyReceipt.bind(base),
     ...(base.verifyRootReceipt ? { verifyRootReceipt: base.verifyRootReceipt.bind(base) } : {}),
     ...(base.qualifyDelegatedReceipt ? { qualifyDelegatedReceipt: base.qualifyDelegatedReceipt.bind(base) } : {}),
+    ...(base.currentRelations ? { currentRelations: base.currentRelations } : {}),
     relations: base.relations.bind(base),
     verifiedHumanMapping: (subject, workspaceId) => client.lookup(subject, workspaceId),
     ...(base.readPublication ? { readPublication: base.readPublication.bind(base) } : {}),

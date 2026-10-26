@@ -11,6 +11,17 @@ import { FinancialSourceRuntimeError, financialSourceRuntimeReference, prepareFi
 import { commonName, testCertificate, type TestAuthority } from "./fixtures/elp210-test-certificates";
 
 const hash = (raw: string | Buffer) => createHash("sha256").update(raw).digest("hex");
+const tlsPorts = ["assertion_transport", "current_human_transport", "recovery"] as const;
+function authority(label: string, issuer?: TestAuthority, isCa = true): TestAuthority {
+  const pair = generateKeyPairSync("ec", { namedCurve: "prime256v1" }), name = commonName(label);
+  return { key: pair.privateKey, name, certificate: testCertificate(name, pair,
+    issuer ?? { name, key: pair.privateKey }, isCa) };
+}
+function localIdentity(issuer: TestAuthority) {
+  const pair = generateKeyPairSync("ec", { namedCurve: "prime256v1" });
+  return { key: Buffer.from(pair.privateKey.export({ type: "pkcs8", format: "pem" })),
+    cert: testCertificate(commonName("TEST_ONLY-financial-chain-leaf"), pair, issuer, false, "core.research.test") };
+}
 describe("private financial Research runtime loader", () => {
   const roots = new Set<string>();
   let ca: Buffer, serverKey: Buffer, serverCert: Buffer, issuerKey: Buffer, sourceKey: Buffer, issuerPublic: Buffer;
@@ -166,15 +177,46 @@ describe("private financial Research runtime loader", () => {
     f.value.candidate.private_key_ref = await f.leaf(issuerKey); f.value.candidate.source.public_key_ref = await f.leaf(issuerKey); await refused(await f.manifest());
     f.value.candidate.source.public_key_ref = await f.leaf(issuerPublic); await refused(await f.manifest());
   });
-  it("refuses local TLS key mismatch, non-CA roots, wrong SAN, unrelated CA and expired certificates", async () => {
+  it.each(tlsPorts)("accepts an independent remote trust CA for %s without asserting local issuance", async port => {
+    const f = await fixture(), peer = authority("TEST_ONLY-independent-financial-peer-ca");
+    f.value[port].tls.ca_ref = await f.leaf(peer.certificate);
+    const prepared = await prepareFinancialSourceRuntime(await f.manifest());
+    const tls = port === "recovery" ? prepared.recovery.tls : prepared.config[port].tls;
+    expect(tls).toEqual({ key: serverKey, cert: serverCert, ca: peer.certificate });
+  });
+  it.each(tlsPorts)("accepts a complete local chain with an independent remote CA for %s", async port => {
+    const f = await fixture(), root = authority("TEST_ONLY-financial-local-root"),
+      intermediate = authority("TEST_ONLY-financial-intermediate", root), identity = localIdentity(intermediate),
+      bundle = Buffer.concat([identity.cert, intermediate.certificate, root.certificate]);
+    f.value[port].tls.key_ref = await f.leaf(identity.key);
+    f.value[port].tls.cert_ref = await f.leaf(bundle);
+    const prepared = await prepareFinancialSourceRuntime(await f.manifest());
+    const tls = port === "recovery" ? prepared.recovery.tls : prepared.config[port].tls;
+    expect(tls.cert).toEqual(bundle); expect(tls.ca).toEqual(ca);
+  });
+  it.each(tlsPorts.flatMap(port => (["wrong-signing-key", "non-ca-issuer", "wrong-order"] as const)
+    .map(fault => ({ port, fault }))))("rejects local $fault on $port even with an independent peer CA", async ({ port, fault }) => {
+    const f = await fixture(), root = authority("TEST_ONLY-financial-local-root"),
+      intermediate = authority("TEST_ONLY-financial-intermediate", root, fault !== "non-ca-issuer"),
+      identity = localIdentity(intermediate), issuer = fault === "wrong-signing-key"
+        ? authority("TEST_ONLY-financial-intermediate", root) : intermediate;
+    const bundle = fault === "wrong-order" ? [identity.cert, root.certificate, issuer.certificate]
+      : [identity.cert, issuer.certificate, root.certificate];
+    f.value[port].tls.key_ref = await f.leaf(identity.key);
+    f.value[port].tls.cert_ref = await f.leaf(Buffer.concat(bundle));
+    const actual = nativeRuntime.readNativeRuntimeReference, inputs: Buffer[] = [];
+    vi.spyOn(nativeRuntime, "readNativeRuntimeReference").mockImplementation(async (...args) => {
+      const bytes = await actual(...args); inputs.push(bytes); return bytes;
+    });
+    await refused(await f.manifest()); expect(inputs.length).toBeGreaterThan(1);
+    expect(inputs.every(bytes => bytes.every(byte => byte === 0))).toBe(true);
+  });
+  it("refuses local TLS key mismatch, non-CA roots, wrong SAN and expired certificates", async () => {
     const f = await fixture(), original = structuredClone(f.value.assertion_transport.tls);
     for (const tls of [ { ...original, key_ref: await f.leaf(issuerKey) }, { ...original, ca_ref: await f.leaf(serverCert) },
       { ...original, server_name: "wrong.research.test" } ]) {
       f.value.assertion_transport.tls = tls; await refused(await f.manifest());
     }
-    const pair = generateKeyPairSync("ec", { namedCurve: "prime256v1" }), name = commonName("TEST_ONLY-other-ca");
-    const unrelated = testCertificate(name, pair, { name, key: pair.privateKey }, true);
-    f.value.assertion_transport.tls = { ...original, ca_ref: await f.leaf(unrelated) }; await refused(await f.manifest());
     f.value.assertion_transport.tls = original;
     const ref = await f.manifest(), now = Date.now(); vi.spyOn(Date, "now").mockReturnValue(now + 2 * 86_400_000); await refused(ref);
     vi.mocked(Date.now).mockReturnValue(now - 2 * 86_400_000); await refused(ref);

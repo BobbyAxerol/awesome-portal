@@ -344,8 +344,10 @@ describe("ELP2-10 existing identity mapping client (TEST_ONLY real loopback mTLS
   it("forwards every base callback with its original receiver, replacing only mapping", async () => {
     const lane = await peer();
     let base: AccessTrustProvider;
+    const custody = {} as NonNullable<AccessTrustProvider["currentRelations"]>;
     const check = () => expect(base).toBeDefined();
     base = {
+      currentRelations: custody,
       verifyPolicy: vi.fn(async function (this: AccessTrustProvider) { check(); expect(this).toBe(base); return null; }),
       verifyReceipt: vi.fn(async function (this: AccessTrustProvider) { expect(this).toBe(base); return null; }),
       verifyRootReceipt: vi.fn(async function (this: AccessTrustProvider) { expect(this).toBe(base); return null; }),
@@ -355,6 +357,7 @@ describe("ELP2-10 existing identity mapping client (TEST_ONLY real loopback mTLS
       verifiedHumanMapping: vi.fn(async () => null),
     };
     const selected = withExistingIdentityMapping(base, client(lane.origin)), input = { TEST_ONLY: true };
+    expect(selected.currentRelations).toBe(custody);
     expect(await selected.verifyPolicy(input)).toBeNull(); expect(base.verifyPolicy).toHaveBeenCalledExactlyOnceWith(input);
     expect(await selected.verifyReceipt(input)).toBeNull(); expect(base.verifyReceipt).toHaveBeenCalledExactlyOnceWith(input);
     expect(await selected.verifyRootReceipt!(input,{phase:"QUALIFY"})).toBeNull(); expect(base.verifyRootReceipt).toHaveBeenCalledExactlyOnceWith(input,{phase:"QUALIFY"});
@@ -376,6 +379,7 @@ describe("ELP2-10 existing identity mapping client (TEST_ONLY real loopback mTLS
     const selected = withExistingIdentityMapping(base, client(lane.origin));
     expect(selected.verifyRootReceipt).toBeUndefined(); expect(selected.qualifyDelegatedReceipt).toBeUndefined();
     expect(selected.readPublication).toBeUndefined();
+    expect(selected.currentRelations).toBeUndefined();
     await expect(selected.verifiedHumanMapping(subject, selection.workspace_id)).rejects.toMatchObject(unavailable);
     expect(fallback).not.toHaveBeenCalled();
   });
