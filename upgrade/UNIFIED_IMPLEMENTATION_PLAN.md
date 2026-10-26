@@ -16326,3 +16326,40 @@ STREAM/revoke/recovery → Claude browser. No new Bobby decision requested.
 tests/commit and source/image impact are recorded in the linked packet. R1
 intermediate only, no full hook, image/runtime installation or connected claim.
 
+### 27Oct2026 — Accounts native BFF through final HTTP: source implemented
+
+[Implementation, independent review, test/counterfactual receipts and exact remaining installation work](execution_loop/evidence/ELP2-10/ACCOUNTS_NATIVE_EGRESS_2026-10-27.md).
+Explicit Bobby assignment continues on canonical Research, entryc7b7137a7 clean.
+Code **6964b48640a180f564c45592e02009837255355f**,15files,+935/−50
+(8productionfiles,+269/−40;6testfiles,+601/−10;compactresultJSON,+65).
+The preceding paragraph's BFF implementation debt is **superseded for source**:
+real held-scope ticket permits provisional reverse CURRENT callbacks without
+ordinary detached delivery, with exact principal/session/authentication time,
+workspace/dataset/resource/field checks. Requested ACCOUNT plus each source
+pin remain held through the single native physical response. After ENTER,
+recheck metadata; final synchronous expiry/lifecycle/ownership check and late
+Fastify hijack, no fallback/double-send. Existing ENTER→Core COMMIT→send→terminal/
+ACK engine and same-original UNKNOWN recovery unchanged. Actual AppModule
+factory now selects installed native scopes; READ never implies STREAM.
+
+Independent reviewACCEPT, fixed Date authentication-time digest collapse locally.
+**321unique focused tests PASS**, final production no-emit tsc/tracking/diffPASS.
+Old-source counterfactual9defaultPASS and newpositiveexpectedFAIL; no new engine,
+PG, installed-source or browser acceptance inferred. R1intermediate under
+§10.10c, fullR2and preexisting hygiene/visual qualification debts unchanged.
+No UI/public-contract/generated changes, remote push or runtime mutations.
+
+Fresh direct Researchimage01692fc5… remains retained_review_v1, actual4native/
+ROOT/CURRENT/current-view referencesUNSET. HK8727e5303 and owned86178d694 unchanged;
+public source factory/qualification still not proof of a valid real ordinary
+ROOT/CURRENT registration; old native trustexpired25Oct. Core coordinator still
+owns selecting/installing that exact source original through Edge, fresh trust,
+one integrated image, backup/forward152–154/schema assertions and actual official
+policy/ROOT writer+CURRENT API/final-egress acceptance. These are operational
+implementation tasks, not a new Bobby decision or an unspecified Edge wait.
+Independent STREAM/revoke/restart/cache/cursor/SSE then Claude browser remain.
+Claude keeps accepted basic Account360 consumer/fixtures, no layout rewrite;
+do not retake real F5 on oldimage or label broader Manager overview converted.
+**ELP2-10 OPEN / connected NOT_MET; ELP2-11 not entered.** Next backend-ready:
+ROOT/CURRENT source+Research installation independently of financial/Score/Calendar.
+

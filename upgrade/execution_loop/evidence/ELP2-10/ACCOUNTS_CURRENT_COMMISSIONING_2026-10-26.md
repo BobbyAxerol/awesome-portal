@@ -1,5 +1,10 @@
 # Accounts CURRENT commissioning — 26 October 2026
 
+**Later source follow-through:** [27-Oct native BFF implementation and tests](ACCOUNTS_NATIVE_EGRESS_2026-10-27.md)
+at `6964b48640a180f564c45592e02009837255355f` closes the BFF source gap identified
+below. This historical investigation remains intact; actual source/trust/runtime
+READ/STREAM and browser acceptance are not implied by that implementation.
+
 ## Approved scope and entry pins
 
 Bobby assigned: Accounts CURRENT → actual source/rights/trust binding → READ

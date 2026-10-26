@@ -1,5 +1,30 @@
 # Execution Loop V2 — Sổ đồng bộ Frontend ↔ Backend (sống)
 
+## 27Oct2026 — Accounts native BFF to HTTP: implemented, not installed
+
+[Exact source/tests, current runtime/source observations and next actions](evidence/ELP2-10/ACCOUNTS_NATIVE_EGRESS_2026-10-27.md).
+Code `6964b48640a180f564c45592e02009837255355f`:15files,+935/−50,
+including8productionfiles,+269/−40. The previously Core-owned native BFF gap
+is implemented: genuine held ticket for provisional reverse callbacks, target
+ACCOUNT plus each source pin, one final native HTTP response, late hijack and
+no detached fallback/double-write. Source ENTER→Core COMMIT→send→same-original
+terminal/ACK remains the existing engine's responsibility. Independent review
+ACCEPT; fixed Date authentication-time digest mismatch without global change.
+321unique affected tests PASS +finalproductiontsc/tracking/diff PASS; source
+counterfactual9defaultPASS/newpositiveexpectedFAIL on entry code. R1only,
+fullR2pending, not a new actual-provider/PG/connected/browser PASS.
+
+Actual Research still image01692fc5…/retained_review_v1; all4actual native/Core/
+ROOT/CURRENT/current-view config references UNSET. HK source pins8727e5303 / 
+86178d694 unchanged; no fresh genuine ROOT/CURRENT original/trust READY evidenced
+in inspected public inputs. Core owns exact private source selection/factory
+installation, fresh compatible trust, one integrated image/backup/migrations/
+reference install and actual official writer/API acceptance—not merely wait
+for Edge. STREAM remains an independent grant/acceptance lane. No UI, public DTO,
+push/protected target or command change. Claude needs no component rewrite;
+wait for exact installed basic Account360 target before F5 real-API/browser.
+ELP2-10open/11notentered; other qualification debts unchanged.
+
 ## 26Oct2026 — Accounts CURRENT commissioning, after local consolidation
 
 [Scope, exact entry pins, task ownership and actual return](evidence/ELP2-10/ACCOUNTS_CURRENT_COMMISSIONING_2026-10-26.md).
