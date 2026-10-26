@@ -812,9 +812,16 @@ export class AppModule implements OnApplicationShutdown {
         },
         {
           provide: SessionGuard,
-          useFactory: (auth: AuthService, workspaces: WorkspacesRepository, config: ControlApiConfig) =>
-            new SessionGuard(auth, workspaces, config, workspaceProvisioner),
-          inject: [AuthService, WorkspacesRepository, CONTROL_API_CONFIG],
+          useFactory: (auth: AuthService, workspaces: WorkspacesRepository, config: ControlApiConfig,
+            finite?: NativeCurrentAccountScopes, status?: CommandStatusComposition, accounts?: ManagerCurrentAccounts) =>
+            new SessionGuard(auth, workspaces, config, workspaceProvisioner, finite, status, accounts),
+          // Explicit factories do not receive constructor @Optional injections
+          // automatically. Forward the installed PRIVATE compositions; absent
+          // providers leave every corresponding routing ceiling closed.
+          inject: [AuthService, WorkspacesRepository, CONTROL_API_CONFIG,
+            { token: NativeCurrentAccountScopes, optional: true },
+            { token: CommandStatusComposition, optional: true },
+            { token: ManagerCurrentAccounts, optional: true }],
         },
         AdminGuard,
         OwnerAccessGuard,

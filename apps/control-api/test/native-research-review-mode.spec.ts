@@ -1,8 +1,10 @@
 /** TEST_ONLY: pure routing ceiling and mocked guard composition. These are not
  * source-provider, financial, membership-database or runtime qualification. */
-import type { ExecutionContext } from "@nestjs/common";
+import type { ExecutionContext, FactoryProvider } from "@nestjs/common";
+import type { Pool } from "pg";
+import { AppModule } from "../src/app.module";
 import { describe, expect, it, vi } from "vitest";
-import type { AuthService } from "../src/auth/auth.service";
+import { AuthService } from "../src/auth/auth.service";
 import { SESSION_COOKIE } from "../src/auth/cookies";
 import type { ControlApiConfig } from "../src/config";
 import type { CurrentHumanWorkspaceProvisioner } from "../src/execution-v2/current-human-workspace";
@@ -10,7 +12,11 @@ import { EDS11R_MANAGER_RELATION_OPERATION_REGISTRY } from "../src/execution/eds
 import { nativeResearchReadAllowed, nativeResearchReview } from "../src/execution/native-review-profile";
 import { retainedReview } from "../src/execution/retained-read-profile";
 import { SessionGuard } from "../src/facade/session.guard";
-import type { WorkspacesRepository } from "../src/repos/workspaces";
+import { ManagerCurrentAccounts } from "../src/execution-v2/manager-current-accounts";
+import { NativeCurrentAccountScopes } from "../src/execution-v2/native-current-runtime";
+import { CommandStatusComposition } from "../src/execution-v2/command-status-composition";
+import { CONTROL_API_CONFIG } from "../src/tokens";
+import { WorkspacesRepository } from "../src/repos/workspaces";
 
 const workspace = "TEST_ONLY-native-workspace";
 const config = { EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID: workspace };
@@ -37,6 +43,26 @@ describe("Research native Manager profile classification", () => {
 });
 
 describe("Research native Manager closed read surface", () => {
+  it("opens only the separately commissioned basic CURRENT Account360 route", () => {
+    const route = "/api/v1/execution/resources/accounts/TEST_ONLY-account:1";
+    const current = (path = route, query: Record<string, unknown> = {}, method = "GET") =>
+      nativeResearchReadAllowed(config, method, path, query, false, false, true);
+    expect(allowed(route)).toBe(false);
+    // The broader Manager-native composition cannot enable this by accident.
+    expect(nativeResearchReadAllowed(config, "GET", route, {}, true, true)).toBe(false);
+    expect(current()).toBe(true);
+    expect(current(route, { environment: "paper", workspace_id: workspace })).toBe(true);
+    for (const environment of ["sandbox", "live", "all", ["paper"], null])
+      expect(current(route, { environment })).toBe(false);
+    expect(current(route, { workspace_id: "TEST_ONLY-foreign" })).toBe(false);
+    for (const method of ["POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"])
+      expect(current(route, {}, method)).toBe(false);
+    for (const path of [route + "/", route + "\n", route + "/orders", route + "?environment=paper",
+      "/api/v1/execution/resources/accounts/", "/api/v1/execution/resources/accounts/" + "a".repeat(161),
+      "/api/v1/execution/resources/alphas/TEST_ONLY-alpha", "/api/v1/execution/resources/bindings/TEST_ONLY-binding",
+      "/api/v1/execution/manager/accounts/TEST_ONLY-account/overview"])
+      expect(current(path)).toBe(false);
+  });
   it("private STATUS opens exact original lookup/reconcile, never submit/preview or arbitrary command",()=>{
     const path="/api/v1/execution/capital-commands/ecm_"+"a".repeat(32);
     for(const [method,target] of [["GET",path],["GET",path+"/workflow"],["POST",path+"/reconcile"]]){
@@ -111,7 +137,7 @@ describe("Research native Manager closed read surface", () => {
   });
 });
 
-function guardFixture(path = fixedRoutes[0]!, query: Record<string, unknown> = {}) {
+function guardFixture(path = fixedRoutes[0]!, query: Record<string, unknown> = {}, account360 = false) {
   const user = { userId: "TEST_ONLY-native-human", username: "TEST_ONLY-native-name", status: "ACTIVE", mustChangePassword: false };
   const session = { userId: user.userId, sessionId: "TEST_ONLY-native-session", sessionVersion: 3, state: "ACTIVE" };
   const sessionFromToken = vi.fn().mockResolvedValue(session), findById = vi.fn().mockResolvedValue(user);
@@ -124,11 +150,52 @@ function guardFixture(path = fixedRoutes[0]!, query: Record<string, unknown> = {
   const guard = new SessionGuard({ sessionFromToken, users: { findById } } as unknown as AuthService,
     { ensurePersonal, personalWorkspace, canReadExecution } as unknown as WorkspacesRepository,
     { ...config, EXECUTION_READ_PROFILE: "native_manager_review_v1" } as ControlApiConfig,
-    { ensure } as unknown as CurrentHumanWorkspaceProvisioner);
+    { ensure } as unknown as CurrentHumanWorkspaceProvisioner, undefined, undefined,
+    account360 ? {} as ManagerCurrentAccounts : undefined);
   return { user, session, ensure, ensurePersonal, personalWorkspace, canReadExecution, header, request, context, guard, findById, sessionFromToken };
 }
 
 describe("Research native SessionGuard authority composition", () => {
+  it("the actual AppModule factory forwards optional installed compositions to its guard", async () => {
+    // This inspects/calls the actual registered factory without constructing an
+    // app/listener or source authority. Manual new SessionGuard alone missed
+    // the old factory dropping all optional commissioning dependencies.
+    const db = { end: vi.fn() } as unknown as Pool;
+    const module = AppModule.register({ NODE_ENV: "test" } as ControlApiConfig, db);
+    const factory = module.providers!.find(provider => typeof provider === "object" && provider !== null &&
+      "provide" in provider && provider.provide === SessionGuard) as FactoryProvider;
+    expect(factory.inject).toEqual([AuthService, WorkspacesRepository, CONTROL_API_CONFIG,
+      { token: NativeCurrentAccountScopes, optional: true }, { token: CommandStatusComposition, optional: true },
+      { token: ManagerCurrentAccounts, optional: true }]);
+    const path = "/api/v1/execution/resources/accounts/TEST_ONLY-account", f = guardFixture(path);
+    const auth = { sessionFromToken: f.sessionFromToken, users: { findById: f.findById } };
+    const workspaces = { canReadExecution: f.canReadExecution, personalWorkspace: f.personalWorkspace, ensurePersonal: f.ensurePersonal };
+    const cfg = { ...config, EXECUTION_READ_PROFILE: "native_manager_review_v1" };
+    const absent = factory.useFactory(auth, workspaces, cfg) as SessionGuard;
+    await expect(absent.canActivate(f.context)).rejects.toMatchObject({ status: 403 });
+    const installed = factory.useFactory(auth, workspaces, cfg, undefined, undefined, {}) as SessionGuard;
+    await expect(installed.canActivate(f.context)).resolves.toBe(true);
+    f.request.url = "/api/v1/execution/manager/accounts/TEST_ONLY-account/overview";
+    await expect(installed.canActivate(f.context)).rejects.toMatchObject({ status: 403 });
+    const finite = factory.useFactory(auth, workspaces, cfg, {}) as SessionGuard;
+    await expect(finite.canActivate(f.context)).resolves.toBe(true);
+    expect(db.end).not.toHaveBeenCalled();
+    expect(f.ensure).not.toHaveBeenCalled(); expect(f.ensurePersonal).not.toHaveBeenCalled();
+  });
+  it("uses installed basic Account360 presence independently of native Manager and never provisions a workspace", async () => {
+    const path = "/api/v1/execution/resources/accounts/TEST_ONLY-account";
+    const absent = guardFixture(path);
+    await expect(absent.guard.canActivate(absent.context)).rejects.toMatchObject({ status: 403 });
+    expect(absent.canReadExecution).not.toHaveBeenCalled();
+    const installed = guardFixture(path, { workspace_id: workspace, environment: "paper" }, true);
+    await expect(installed.guard.canActivate(installed.context)).resolves.toBe(true);
+    expect(installed.canReadExecution).toHaveBeenCalledWith(workspace, installed.user.userId, "paper");
+    expect(installed.ensure).not.toHaveBeenCalled(); expect(installed.ensurePersonal).not.toHaveBeenCalled();
+    expect(installed.request.portalWorkspaceId).toBe(workspace);
+    expect(installed.header).toHaveBeenCalledWith("Cache-Control", "private, no-store");
+    // This guard checks routing/session/workspace only. The real CURRENT
+    // composer, not this TEST_ONLY presence marker, owns business authorization.
+  });
   it("rejects an uncommissioned route before provisioning or membership lookup", async () => {
     const f = guardFixture("/api/v1/execution/command-center");
     await expect(f.guard.canActivate(f.context)).rejects.toMatchObject({ status: 403 });

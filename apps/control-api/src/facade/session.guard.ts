@@ -20,6 +20,7 @@ import { CurrentHumanWorkspaceProvisioner } from "../execution-v2/current-human-
 import { nativeResearchReview, nativeResearchReadAllowed } from "../execution/native-review-profile";
 import { NativeCurrentAccountScopes } from "../execution-v2/native-current-runtime";
 import { CommandStatusComposition } from "../execution-v2/command-status-composition";
+import { ManagerCurrentAccounts } from "../execution-v2/manager-current-accounts";
 
 /**
  * Authenticated-session guard for façade routes. Attaches the portal user
@@ -38,6 +39,8 @@ export class SessionGuard implements CanActivate {
     private readonly nativeCurrentAccount?:NativeCurrentAccountScopes,
     @Optional() @Inject(CommandStatusComposition)
     private readonly commandStatus?:CommandStatusComposition,
+    @Optional() @Inject(ManagerCurrentAccounts)
+    private readonly managerCurrentAccount?:ManagerCurrentAccounts,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -72,7 +75,8 @@ export class SessionGuard implements CanActivate {
     }
     const nativeReview = nativeResearchReview(this.config) && executionRead;
     if (nativeReview && !nativeResearchReadAllowed(this.config!, request.method,
-      request.url.split("?")[0], (request.query ?? {}) as Record<string, unknown>,!!this.nativeCurrentAccount,!!this.commandStatus))
+      request.url.split("?")[0], (request.query ?? {}) as Record<string, unknown>,!!this.nativeCurrentAccount,!!this.commandStatus,
+      !!this.managerCurrentAccount))
       throw new ForbiddenException("NATIVE_RESEARCH_REVIEW_ROUTE_NOT_COMMISSIONED");
     let workspaceId:string;
     if(nativeReview){

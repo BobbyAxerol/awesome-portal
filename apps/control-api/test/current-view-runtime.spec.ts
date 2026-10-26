@@ -79,6 +79,48 @@ describe("hash-pinned current-view Research/Paper runtime", () => {
     for (const side of [prepared.config.transport, prepared.config.edge])
       for (const bytes of Object.values(side.tls)) if (Buffer.isBuffer(bytes)) bytes.fill(0);
   });
+  const authority = (label: string, issuer?: TestAuthority, isCA = true): TestAuthority => {
+    const keys = generateKeyPairSync("ec", { namedCurve: "prime256v1" }), name = commonName(label);
+    return { key: keys.privateKey, name,
+      certificate: testCertificate(name, keys, issuer ?? { name, key: keys.privateKey }, isCA) };
+  };
+  const signedIdentity = (issuer: TestAuthority): Identity => {
+    const keys = generateKeyPairSync("ec", { namedCurve: "prime256v1" });
+    return { key: Buffer.from(keys.privateKey.export({ type: "pkcs8", format: "pem" })),
+      cert: testCertificate(commonName("TEST_ONLY-chain-leaf"), keys, issuer, false) };
+  };
+  it.each(["transport", "edge"] as const)("accepts a valid %s local chain with an independent peer CA", async side => {
+    const f = await fixture(), root = authority("TEST_ONLY-local-root"), intermediate = authority("TEST_ONLY-intermediate", root);
+    const identity = signedIdentity(intermediate), bundle = Buffer.concat([identity.cert, intermediate.certificate, root.certificate]);
+    f.value[side].tls.key_ref = await f.leaf(identity.key);
+    f.value[side].tls.cert_ref = await f.leaf(bundle);
+    // fixture().ca_ref still trusts the DIFFERENT peer CA. Do not require our
+    // local certificate to anchor to that peer trust store.
+    const prepared = await prepareCurrentViewRuntime(await f.manifest());
+    expect(prepared.config[side === "transport" ? "transport" : "edge"].tls.cert).toEqual(bundle);
+    for (const transport of [prepared.config.transport, prepared.config.edge])
+      for (const bytes of Object.values(transport.tls)) if (Buffer.isBuffer(bytes)) bytes.fill(0);
+  });
+  it.each([
+    ["transport", "wrong-signing-key"], ["edge", "wrong-signing-key"],
+    ["transport", "non-ca-issuer"], ["edge", "non-ca-issuer"],
+    ["transport", "wrong-order"], ["edge", "wrong-order"],
+  ] as const)("refuses %s %s before admitting a private runtime", async (side, fault) => {
+    const f = await fixture(), root = authority("TEST_ONLY-local-root"), intermediate = authority("TEST_ONLY-intermediate", root, fault !== "non-ca-issuer");
+    const identity = signedIdentity(intermediate);
+    const issuer = fault === "wrong-signing-key" ? authority("TEST_ONLY-intermediate", root) : intermediate;
+    const bundle = fault === "wrong-order" ? [identity.cert, root.certificate, issuer.certificate]
+      : [identity.cert, issuer.certificate, root.certificate];
+    f.value[side].tls.key_ref = await f.leaf(identity.key);
+    f.value[side].tls.cert_ref = await f.leaf(Buffer.concat(bundle));
+    const actual = nativeRuntime.readNativeRuntimeReference, inputs: Buffer[] = [];
+    vi.spyOn(nativeRuntime, "readNativeRuntimeReference").mockImplementation(async (...args) => {
+      const bytes = await actual(...args); inputs.push(bytes); return bytes;
+    });
+    await refused(await f.manifest());
+    expect(inputs.length).toBeGreaterThan(1);
+    expect(inputs.every(bytes => bytes.every(byte => byte === 0))).toBe(true);
+  });
   it("wipes every private input buffer after parse/copy without destroying returned TLS copies", async () => {
     const f = await fixture(), actual = nativeRuntime.readNativeRuntimeReference, inputs: Buffer[] = [];
     vi.spyOn(nativeRuntime, "readNativeRuntimeReference").mockImplementation(async (...args) => {

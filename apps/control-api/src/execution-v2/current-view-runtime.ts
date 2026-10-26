@@ -111,6 +111,15 @@ export async function prepareCurrentViewRuntime(input: CurrentViewRuntimeReferen
       const key = await read(pins.key_ref), cert = await read(pins.cert_ref), ca = await read(pins.ca_ref);
       const chain = certificates(cert), roots = certificates(ca), leaf = chain[0]!;
       if (leaf.ca || roots.some(root => !root.ca) || !leaf.keyUsage?.includes(usage === "serverAuth" ? "1.3.6.1.5.5.7.3.1" : "1.3.6.1.5.5.7.3.2")) return fail();
+      // OpenSSL parses a local certificate bundle without verifying that its
+      // supplied intermediates actually issue the previous certificate. Catch
+      // a broken/reordered local chain before admitting the runtime. `ca` is
+      // the REMOTE peer trust store, not necessarily our own issuing root:
+      // independent Core and Edge CAs are valid and must remain supported.
+      for (let i = 0; i < chain.length - 1; i++) {
+        const child = chain[i]!, issuer = chain[i + 1]!;
+        if (!issuer.ca || !child.checkIssued(issuer) || !child.verify(issuer.publicKey)) return fail();
+      }
       // Real PEM parse/key match; peer SAN/leaf pin remain checked at EACH
       // TLS connection, not asserted from this configuration declaration.
       createSecureContext({ key, cert, ca, minVersion: "TLSv1.3", maxVersion: "TLSv1.3" });

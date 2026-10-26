@@ -1,0 +1,44 @@
+{
+  "schema_version": "portal.execution.phase-test-results.v1",
+  "phase": "ELP2-10",
+  "slice": "accounts-current-commissioning-20261026",
+  "tier": "R1",
+  "entry_source_sha": "c2f1b19b6760cfb4cbc9ead7aa6c9ec5cd41f918",
+  "source_state": "INTERMEDIATE_FOCUSED_VERIFICATION",
+  "checks": [
+    {
+      "name": "current-runtime-publication-accounts-routing-operator",
+      "kind": "focused-vitest",
+      "files": [
+        "test/current-view-runtime.spec.ts",
+        "test/manager-current-publication.spec.ts",
+        "test/manager-current-accounts.spec.ts",
+        "test/native-research-review-mode.spec.ts",
+        "test/ordinary-policy-operator.spec.ts"
+      ],
+      "passed": 252,
+      "failed": 0,
+      "duration_seconds": 20.41,
+      "state": "PASS",
+      "limits": "one worker; no PostgreSQL, listener or external source",
+      "evidence_scope": "TEST_ONLY component/orchestration, not connected commissioning"
+    },
+    {
+      "name": "production-no-emit-typecheck-final",
+      "state": "PASS"
+    },
+    {
+      "name": "execution-tracking-reconciliation",
+      "state": "PASS"
+    }
+  ],
+  "reused_receipts": "Compatible historical source bytes and unchanged engine internals only; see paired Markdown for source/image/scope pins",
+  "runtime_installed": false,
+  "source_authority_created": false,
+  "connected_current": "NOT_MET",
+  "connected_stream": "NOT_MET",
+  "browser_acceptance": "NOT_RUN",
+  "full_R2": "PENDING_PREEXISTING_INTEGRATION_FAILURES_NOT_WAIVED",
+  "command_live_enabled": false,
+  "push_performed": false
+}
