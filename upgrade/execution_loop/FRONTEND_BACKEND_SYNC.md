@@ -5,6 +5,8 @@
 [Receipt](evidence/ELP2-10/STREAM_NATIVE_PG_SSE_ISOLATED_2026-10-26.md):
 52/52 PASS on real Core PG/mTLS/SSE with TEST_ONLY PM; this is not a genuine
 Edge STREAM grant or a browser receipt. No DTO or UI change.
+Public receipt mirrored to Edge EPG10-08, SHA256
+`9b2bdbb8624a9a9fa49fe2e7fbf901d52be0d30e8b0d3440ad9546fd2805a267`.
 
 ## 26Oct — native Accounts isolated PG/HTTP retake
 

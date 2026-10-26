@@ -16442,4 +16442,6 @@ Public receipt mirrored to HK EPG10-08, matching SHA256
 52/52 PASS with actual Core PG/mTLS/SSE and a TEST_ONLY synthetic PM source.
 READ cannot substitute STREAM permission. Actual source, independent grant,
 revoke/recovery, browser and remaining ELP2-10 gates are not thereby closed.
+Public receipt mirrored to HK EPG10-08 with matching SHA256
+`9b2bdbb8624a9a9fa49fe2e7fbf901d52be0d30e8b0d3440ad9546fd2805a267`.
 
