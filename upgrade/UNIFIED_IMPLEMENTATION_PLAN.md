@@ -16240,3 +16240,28 @@ separate STREAM, budget/calibration/coexistence/G2 and final connected/browser
 remain open. **ELP2-10 NOT_MET;ELP2-11 not entered.** R0 preservation/tracking
 only; no shared source landing/runtime, UI, push or protected-source mutation.
 
+### 26Oct2026 — Bobby-approved local source consolidation before UI review
+
+[Scope, exhaustive branch topology, preservation and final handoff](execution_loop/evidence/ELP2-10/LOCAL_CONSOLIDATION_2026-10-26.md).
+Latest owner explicitly directs checking all branches, preserving commits/docs/
+evidence, fixing quick non-design frontend errors, and merging locally while
+recording any unresolved FE gates for Claude tomorrow. **One-off exception to
+pre-landing all-green for this local source consolidation only**: no hook/test
+changes, no hidden FAIL, no phase/source/runtime/browser/release qualification,
+push/dev/main/stable/install or command/Live. Original gate receipts stay.
+Entry canonical685bc1915 and candidatea19112ecc clean; entire committedClaude
+already contained. Dirty owner WIP is inspected/preserved, not blindly staged.
+Primary integrates; three independent writers handle full census and exact
+Alpha/Live reader parity. Record actual final SHA/tests/debt before report.
+
+**Repair committed12ffc4bf7729e92202ce5c9de26a48c295f6867d:**13files,+306/−45,
+reader metadata/observed-stage parity and two boolean scalar adapters only,
+fixture financial/clock rescue; no design/schema/backend authority change.
+4727unique affectedtests nowPASS, tsc/integrity/trackingPASS;254additional
+hygienePASS/3FAIL retained forClaude (ScoreCellabsencecopy; generatedDENIED
+scanner). Prior213visualFAIL/fullR2 stillpending. All440heads/46worktrees
+enumerated in [full census](execution_loop/evidence/ELP2-10/ALL_LOCAL_BRANCHES_2026-10-26.md);
+verified full440refbundle, originalrefs/WIP kept;60exacthistoricalPNGs and
+2originaluntrackedClaudeMDreceipts rescued separately. Evidencecommit and
+ff-only landing follow; this is sourceconsolidation, not ELP2-10/11closure.
+

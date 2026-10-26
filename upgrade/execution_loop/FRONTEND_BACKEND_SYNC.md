@@ -1,5 +1,27 @@
 # Execution Loop V2 — Sổ đồng bộ Frontend ↔ Backend (sống)
 
+## 26Oct2026 — Bobby-approved local source consolidation
+
+[Exact assignment, owner exception, task map and actual return](evidence/ELP2-10/LOCAL_CONSOLIDATION_2026-10-26.md).
+Canonical685bc1915 and candidatea19112ecc clean at entry. Latest owner directs
+ALL-branch/topology/preservation check, quick non-design reader/fixture repairs,
+then local Research consolidation with remaining FE/full-gate failures explicit
+for Claude tomorrow. This overrides pre-landing all-green only for this local
+source integration; no hook/test/authority change or runtime/push/dev/main.
+Three independent writers own census/AlphaReader/LiveReader; primary alone owns
+shared tracking, backup/rescue, combined validation, commits and finalff-only.
+
+**Actual repair12ffc4bf7:** Alpha18metadata,Live19/scopedRecords14metadata,
+scoped observed runtime/session and exact boolean adapters; no design change.
+Restored fixture financial semantics +clock tuple fix.4727unique focusedtests
+PASS after targeted rerun; tsc/integrity/tracking PASS. Additional hygiene
+254PASS/3FAIL are explicit:ScoreCelln/a and generated-DENIED safety scanner.
+Prior213visualFAIL/fullR2 remain pending, not waived as acceptance. Census
+enumerates440heads/46worktrees; full440refbundle verified; original refs kept.
+60exacthistoricalPNGs plus2untrackedoriginalClaudeMDreceipts preserved, not
+baseline updates. [Claude next actions and local-only exception](evidence/ELP2-10/LOCAL_CONSOLIDATION_2026-10-26.md#claude-tomorrow--exact-remaining-frontendfull-gate-debt).
+Pending final evidence commit/ff-only; no phase/runtime/release PASS inferred.
+
 ## 26Oct2026 — Accounts CURRENT plus complete backend landing census
 
 [Approved round scope, readonly task map and actual census/landing return](evidence/ELP2-10/ACCOUNTS_CURRENT_AND_BACKEND_LANDING_CENSUS_2026-10-26.md).
