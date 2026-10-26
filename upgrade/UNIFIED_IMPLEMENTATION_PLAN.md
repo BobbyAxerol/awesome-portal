@@ -16416,3 +16416,13 @@ reuse an expired acceptance or seed/grant SQL. Source/rights/trust, independent
 STREAM and ELP2-10 gates remain NOT_MET. No UI, runtime, database or credential
 change in this discovery.
 
+### 26Oct follow-through — composition and financial TLS safety
+
+[Focused Core fixes and acceptance boundaries](execution_loop/evidence/ELP2-10/CORE_INDEPENDENT_COMPOSITION_TLS_FIXES_2026-10-26.md):
+preserve native CURRENT custody when layering identity mapping and allow
+independent peer/local certificate issuers without weakening peer verification.
+Code `3d0ee663f`: focused backend tests and bounded emitting build passed;
+no public contract or frontend change. These
+changes are source-only pending integration and installation; connected
+READ/STREAM, financial source, ELP2-10 and browser acceptance remain open.
+

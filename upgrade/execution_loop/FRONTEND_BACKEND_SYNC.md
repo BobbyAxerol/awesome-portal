@@ -1,5 +1,15 @@
 # Execution Loop V2 — Sổ đồng bộ Frontend ↔ Backend (sống)
 
+## 26Oct — internal composition/TLS repair, source only
+
+[Core receipt](evidence/ELP2-10/CORE_INDEPENDENT_COMPOSITION_TLS_FIXES_2026-10-26.md)
+records preservation of CURRENT custody across the optional identity mapping
+wrapper and independent peer/local CAs for financial TLS (`3d0ee663f`). No public DTO,
+fixture or UI change is required. Source is not installed; real Accounts,
+STREAM and financial proof still require the source-specific qualification.
+Claude can continue fixture/visual work without treating these focused tests
+as API or browser acceptance.
+
 ## 26Oct — exact source-reader follow-through, no FE rewrite
 
 [Core/Edge membership-reader discovery](evidence/ELP2-10/CORE_EDGE_MEMBERSHIP_READER_DISCOVERY_2026-10-26.md)
