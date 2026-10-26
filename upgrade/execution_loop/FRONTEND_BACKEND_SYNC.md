@@ -1,5 +1,39 @@
 # Execution Loop V2 — Sổ đồng bộ Frontend ↔ Backend (sống)
 
+## Codex scoped-source continuation —26Oct2026
+
+[Task ownership, current pins and implementation/acceptance return](evidence/ELP2-10/SCOPED_SOURCE_CONTINUATION_2026-10-26.md).
+Entry89d5e7a6d; canonical685bc1915/Claude00e7f6cff unchanged and clean.
+Owned Edge86178d694 clean; peer8727e5303/PM6f474c720 unchanged source pins,
+existing WIP preserved. No new committed Claude request/ACK. Reuse financial
+and metadata source reviewers read-only; primary owns scoped notices and shared
+contracts/docs/gates. SOURCE_DARK is not changed by a source-only patch.
+
+Result: source `c0466d59d`,18files,+710/−32. Fixed14already-admitted detail
+fields dropped by copier/strict response; health rollback no longer masks the
+original error; both Portal notice sources fence final lineage after journal
+I/O.335unique backend cases,39contract cases and focused PG42/42(33SQL+9schema)
+PASS; source tsc/generator/snapshot/integrity/tracking PASS. Independent notice
+review ACCEPT. Exact old-source control:242PASS/32expected regressions FAIL.
+No repeated full hook, no landing; prior integrated R2/visual RED is unchanged.
+
+**Claude ACT_NOW:** consume generated `ScopedRecordFields` and the two appended
+canonical fixtures per packet §2; retain false/null/omission/exact decimals,
+UTC ISO detail clocks versus existing epoch-ms integers, and reviewed field
+policy. Use existing components; no redesign requested. Return consumer ACK;
+source browser remains OPEN. **Edge ACT_NOW:** packet §4 lists exact originals,
+namespace/census, operation binding and all3notice provider paths. Journal
+exists; original-human scoped adapter is still missing. No CURRENT→STREAM,
+no narrow-scope global cycle data. Financial/economic/health source qualification
+and calendar SOURCE_DARK are not resolved by these source fixes. ELP2-10 OPEN.
+
+Public return and test-results mirrored to HK Edge EPG10-08 at
+2026-10-26T02:00:06Z, same `SCOPED_SOURCE_CONTINUATION_2026-10-26` basenames.
+SHA256 MD `d444bdd49f7c1d797e4d868911c1d85061a2ce2c3f1d820ab0b1c2f4240e1775`;
+JSON `2b969f0a4a85732da1d07a0a4e4ae79a7de12d357d61184c5f107b23a6166b91`.
+Remote/local hashes match. Public evidence only; no source-code bundle,
+private input or runtime installed; no Edge acceptance/ACK inferred.
+
 ## Codex source qualification follow-through —26Oct2026 (Asia/Saigon)
 
 [Exact source findings, financial owner operation, tests and remaining owners](evidence/ELP2-10/SOURCE_QUALIFICATION_FOLLOWTHROUGH_2026-10-26.md).

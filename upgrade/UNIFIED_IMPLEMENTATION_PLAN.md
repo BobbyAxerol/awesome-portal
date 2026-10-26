@@ -15997,3 +15997,41 @@ ELP2-11 preparation preserved, no final acceptance inferred. Candidate only:
 canonical/Claude unchanged, no UI/public DTO/migration/runtime install, source
 bundle upload, push, stable/dev/main/provider28445 or command/Live change.
 
+### 26Oct2026 — Scoped metadata, health failure ownership and notice lineage
+
+[Exact source repairs, tests, source dispositions and Claude/Edge handoff](execution_loop/evidence/ELP2-10/SCOPED_SOURCE_CONTINUATION_2026-10-26.md).
+Code `c0466d59d84f76f21b1c43840474b74251f130b3`:18files,+710/−32,
+**IMPLEMENTED_R1**, not landed/installed/source-accepted. Copier and strict
+scoped response now preserve14existing authorized detail members; health
+publication preserves the original transaction failure and discards a broken
+client; existing Portal observation/Fleet notices recheck scalar lineage after
+awaited journal I/O, refuse replacement/rollback/rewrite, retain the original
+baseline and keep draining valid same-lineage appends. No new pool/timer/scan,
+no public route/migration/role/business vocabulary or authority widening.
+
+335unique backend cases PASS after fixing one new fixture's required timestamp
+policy;39contract PASS; disposable PG42/42(33SQL+9schema), production-source
+tsc/generator/snapshot709/integrity/tracking PASS. Independent notice review
+ACCEPT. Exact old-source control242PASS/32intended regression failures;
+no duplicate coverage from retakes. Cell2CPU/1536MiB/300s, own resources cleaned.
+No full hook repeated for intermediate R1; prior integrated R2/visual RED
+remains and this is not a canonical ff-landing.
+
+Claude next: generated `ScopedRecordFields`, existing components and appended
+canonical metadata fixtures; return consumer/browser ACK. Source qualification
+still needs Edge-coordinated financial original/receiver/trust/APPLIED→ACK,
+accepted economic ownership/census wire, owning operation health observations,
+exact-grain remaining metadata and original-human Manager STREAM adapter at
+initial/catch-up/coordinator paths. Manager journal EXISTS; local Portal notices
+are not Edge events. Calendar remains SOURCE_DARK. Real connected/browser,
+budget/calibration/coexistence/G2 disposition and ELP2-10 exit remain OPEN;
+ELP2-11 preparation preserved, no integrated exit claimed. Canonical/Claude
+unchanged; no UI, runtime/source install, push, stable/dev/main/provider28445 or
+command/Live change. No retry of the prior unapproved source-code upload.
+
+Public packet/test-results delivered to HK Edge EPG10-08 at2026-10-26T02:00:06Z,
+same `SCOPED_SOURCE_CONTINUATION_2026-10-26` basenames. SHA256 MD
+`d444bdd49f7c1d797e4d868911c1d85061a2ce2c3f1d820ab0b1c2f4240e1775`, JSON
+`2b969f0a4a85732da1d07a0a4e4ae79a7de12d357d61184c5f107b23a6166b91`;
+remote/local match, no installed source or Edge ACK inferred.
+

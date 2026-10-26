@@ -1,0 +1,109 @@
+{
+  "schema_version": "portal.elp210.scoped-source-continuation.v1",
+  "tier": "R1",
+  "status": "IMPLEMENTED_R1_NOT_INSTALLED_NOT_SOURCE_ACCEPTED",
+  "entry_commit": "89d5e7a6d",
+  "source_commit": "c0466d59d84f76f21b1c43840474b74251f130b3",
+  "source_tree": "3a9ca45435f2b4a0c60bdb70379c0d013a53a84a",
+  "source_diff": { "files": 18, "insertions": 710, "deletions": 32 },
+  "source_diff_breakdown": {
+    "production": { "files": 5, "insertions": 49, "deletions": 21 },
+    "tests": { "files": 7, "insertions": 336, "deletions": 3 },
+    "contracts_generated_fixtures_snapshot": { "files": 6, "insertions": 325, "deletions": 8 }
+  },
+  "source_pins": {
+    "owned_edge": "86178d694abf156453cdf450553fa80bdd9becab",
+    "peer_edge": "8727e5303b1815d54bc2bdcb927a55457ff4da5b",
+    "peer_pm": "6f474c72088f000a198a73324ad3083236f2bf5c",
+    "owned_financial_pm_candidate_not_installed": "fad5e3fd876460f3aecfcf8ebd57a66610b6069c"
+  },
+  "lanes": [
+    {
+      "name": "backend-unit-source",
+      "passed": 136,
+      "failed": 0,
+      "specs": ["manager-observation-source.spec.ts", "be-p16-alpha-fleet-realtime.spec.ts", "scoped-metadata-detail.spec.ts", "operational-health-publication.spec.ts"],
+      "workers": 1,
+      "report_sha256": "1c9b1b73873afbead27473fa80dcc2210726ff9fd20ff1d0a644f069f1a8962d"
+    },
+    {
+      "name": "serving-related-readers-first-attempt",
+      "passed": 198,
+      "failed": 1,
+      "reason": "NEW_TEST_FIXTURE_OMITTED_REQUIRED_TIMESTAMP_FIELD_POLICY",
+      "report_sha256": "2891e4f36bb6af17df54360cce0dbc0191f3d2a986589a9edc4f6231c1e2dffd"
+    },
+    {
+      "name": "serving-related-readers-final-disposition",
+      "passed_unique": 199,
+      "failed_unresolved": 0,
+      "affected_file_retake": { "spec": "be-p15-record-detail.spec.ts", "passed": 138, "failed": 0 },
+      "unchanged_reused": { "specs": ["be-p17-fleet-pairing.spec.ts", "elp2-profile-adapter-reads.spec.ts", "manager-observation-resume.spec.ts", "subject-activity.spec.ts"], "passed": 61, "failed": 0 },
+      "production_authority_relaxed": false,
+      "retake_report_sha256": "61f7d75bae624ee37733d1925185a48bba392a775e5bcc9d6adb37410190394e"
+    },
+    {
+      "name": "scoped-record-contract",
+      "spec": "packages/contracts/test/execution-scoped-records.spec.ts",
+      "passed": 39,
+      "failed": 0,
+      "report_sha256": "a6284f3417e79aa91e34aa248b6de407e11f3a12070c73d8de870f483b46e9e1"
+    },
+    {
+      "name": "isolated-postgresql-focused",
+      "passed": 42,
+      "failed": 0,
+      "sql_cases": 33,
+      "pure_schema_cases": 9,
+      "spec_counts": { "operational-health-publication.pg.spec.ts": 30, "be-p16-alpha-fleet-realtime.pg.spec.ts": 10, "be-p15-record-detail.pg.spec.ts": 2 },
+      "suite_seconds": 24.88,
+      "aggregate_hard_cpu": 2,
+      "aggregate_hard_memory_mib": 1536,
+      "hard_timeout_seconds": 300,
+      "node_image": "sha256:c610fcdfb1d5b4740dd70c284ed3cb16bb857e0f7166196e36a5501df7a3aa32",
+      "postgres_image": "sha256:44c4ee9810eff91f7eab4d822642e01115b1a9eccce4bcbdde7604752d68eac6",
+      "node_cpu": 1.5,
+      "node_memory_mib": 1280,
+      "postgres_cpu": 0.5,
+      "postgres_memory_mib": 256,
+      "oom": false,
+      "published_ports": 0,
+      "source_authority": "TEST_ONLY_DOUBLE_NOT_EDGE_QUALIFICATION",
+      "cleanup_verified": true,
+      "preflight_sandbox_sudo_denied_before_creation": true,
+      "bounded_authorized_retry_exit": 0,
+      "combined_official_build_restore_gate": false
+    },
+    {
+      "name": "production-source-typecheck",
+      "command": "NODE_OPTIONS=--max-old-space-size=3072 npx --no-install tsc --noEmit -p tsconfig.build.json",
+      "exit": 0
+    },
+    {
+      "name": "exact-old-source-regression-control",
+      "source": "89d5e7a6d",
+      "control_passed": 242,
+      "new_regressions_failed_as_expected": 32,
+      "product_acceptance": false,
+      "temporary_staging_cleaned": true,
+      "report_sha256": "02f943788aa6614c63dabc2a2369b8cd5e96563ffbe91ba2b85314753dcbf956"
+    }
+  ],
+  "unique_backend_final_pass": 335,
+  "generator_check": "PASS",
+  "contracts_snapshot_check": { "status": "PASS", "tracked_files": 709, "initial_unsupported_write_option_corrected": true },
+  "release_integrity_check": "PASS_UNCHANGED_RUNTIME_NONE",
+  "tracking_check": "PASS",
+  "diff_check": "PASS",
+  "independent_notice_review": "ACCEPT_SOURCE_ONLY",
+  "full_hook": "NOT_REPEATED_INTERMEDIATE_R1_RULE_10_10C",
+  "prior_integration_r2_visual": "RED_NOT_CLEARED_BY_FOCUSED_TESTS",
+  "phase_exit": "ELP2_10_OPEN_NOT_MET",
+  "source_qualification": "NOT_MET_FINANCIAL_ECONOMIC_HEALTH_METADATA_EDGE_NOTICES_CALENDAR",
+  "calendar": "SOURCE_DARK",
+  "runtime_installed": false,
+  "consumer_browser_ack": "OPEN",
+  "frontend_edited": false,
+  "landed": false,
+  "pushed": false
+}
