@@ -1,5 +1,43 @@
 # Execution Loop V2 — Sổ đồng bộ Frontend ↔ Backend (sống)
 
+## 27Oct packet / observed26Oct18:45–19:14UTC — Accounts installed, PM operators delivered
+
+[Exact source, image, migration failures/repair and commissioning handoff](evidence/ELP2-10/ACCOUNTS_RUNTIME_COMMISSIONING_2026-10-27.md).
+Round entry1ce829bd6, canonicalResearch; Claude committed00e7f6cff and historical
+claude/fe-parity d58361eaf remain contained, peer dirty work preserved. No new
+committed Claude request found in the read branch/packet. Primary owns deployment
+and shared tracking; three reused agents own disjoint PM operators/source audit,
+Core overlay and independent lifecycle/migration review. No new agents spawned.
+
+Core c1fecde97 adds explicit private ROOT/CURRENT/CurrentView Research config
+selection,18focused orchestration tests +3source-stamp tests PASS. Checked code
+image05b6cd3f… was installed, then independent-CA defect repaired in05ab40990
+(52focusedPASS, checked emit220.17s, independentACCEPT). Final image d65e7786…
+source05ab40990 is **actually installed/healthy**; healthz/readyz200, web/fixture/
+migrate/bootstrap unchanged. Migrations152–154 applied after a fresh30MiB backup.
+Two post-check failures automatically restored oldimage, preserving forward DDL;
+the actual cause was a bad harness assertion contradicting migration037's
+permitted portal_users lookup. Corrected protected auth_sessions denial and
+idempotent migrations PASS. Real original-backup restore and captured actual
+postmigration/pre-image-start snapshot match19critical hashes; counts/oldledger/
+RLS policy unchanged. Later diagnostic Compose-start dependency replays advanced
+only authority64→67, live18/19 exact, users/rights unchanged; repaired no-deps
+cleanup. Final API install counters/start times unchanged. Actual application
+role is superuser, not app RLS proof. Final-image startup-race attempt safely
+rolled back; bounded-health-wait retakePASS.
+
+Native config remains OFF pending genuine source original/registration/trust.
+PM local c8871acf3 includes factory plus two explicit operators,62focusedPASS,
+independent source review ACCEPT. Exact29KB public bundle transfer/owned-candidate
+ff explicitly approved by Bobby and completed, hash verified; HK owned PM is
+c8871acf3, clean. **Cold source only**, no provider/runtime/config/registration
+or entitlement installed there. Prior denial not bypassed; no new credential
+transfer. Core continues actual originals/registration/private runtime work.
+No publicDTO/generated/Claude component change; no positive READ/STREAM/browser
+claim, push/dev/main/stable/provider28445 or command/Live change.
+**ELP2-10 OPEN; ELP2-11 not entered.** Separate financial/calibration/G2 and
+consumer/full-gate debts remain; finite Accounts does not waive them.
+
 ## 27Oct2026 — Accounts native BFF to HTTP: implemented, not installed
 
 [Exact source/tests, current runtime/source observations and next actions](evidence/ELP2-10/ACCOUNTS_NATIVE_EGRESS_2026-10-27.md).

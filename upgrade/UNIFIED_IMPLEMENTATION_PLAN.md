@@ -16363,3 +16363,35 @@ do not retake real F5 on oldimage or label broader Manager overview converted.
 **ELP2-10 OPEN / connected NOT_MET; ELP2-11 not entered.** Next backend-ready:
 ROOT/CURRENT source+Research installation independently of financial/Score/Calendar.
 
+### 27Oct packet / actual26Oct18:45–19:14UTC — Accounts code installed, source operators delivered
+
+[Exact implementation, image, failed-postcheck repair, backup scope and source/operator next actions](execution_loop/evidence/ELP2-10/ACCOUNTS_RUNTIME_COMMISSIONING_2026-10-27.md).
+Core c1fecde97 adds explicit Research-only ROOT/CURRENT/CurrentView config
+selection,18focused +3stamp tests PASS. Core05ab40990 also repairs independent
+local/remote CA validation:52focused PASS, checked production emit220.17s,
+independent reviewACCEPT. Exact final image d65e7786… is **actually installed/
+healthy** on Research, healthz/readyz200; web/fixture/migrate/bootstrap unchanged.
+Official migrations152–154 applied with backup; two failed post-checks returned
+to oldimage without reverting forwardDDL. Diagnostic confirmed a bad harness
+assertion contradicting migration037's legitimate identity lookup; corrected
+protected-session denial and repeated migration checks PASS. Real restored
+original backup matches all19 critical hashes at the actual postmigration,
+pre-image-start observation;189 original non-ledger counts/migration rows/RLS
+policy hash preserved. Later diagnostic Compose-start bootstrap replays advanced
+only authority revision64→67: live18/19 exact, users/owner/rights unchanged.
+Cleanup repaired to no-deps and final install verified unchanged counters/start
+times. No app-role RLS claim from the actual superuser login. Final-image first
+health check raced startup and safely rolled back; bounded-wait retakePASS.
+No native configuration/grant activated.
+
+PM c8871acf3 adds two explicit source operators around the existing registered
+factory,62focused PASS and independentACCEPT. Bobby approved the exact29KB
+public bundle/hash/destination; transferred and hash-verified on HK, owned PM
+candidate fast-forwarded fad5e3fd→c8871acf3, clean. **Cold source, not source
+runtime/config/entitlement installation.** Core continues genuine originals,
+registration and source/authority/trust integration, not merely waiting for Edge. Claude
+keeps accepted basicAccounts reader/fixture; no publicDTO or UI rewrite here.
+Independent STREAM and financial/budget/calibration/G2/browser remain mandatory.
+**ELP2-10 OPEN, connected NOT_MET; ELP2-11 not entered.** No push or protected
+runtime/command/Live change. See packet for real pins, failures and rollback.
+
