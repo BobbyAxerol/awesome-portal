@@ -16436,3 +16436,10 @@ The first read-only Vite cache failure and tmpfs-only repair are recorded.
 Public receipt mirrored to HK EPG10-08, matching SHA256
 `60e398e715a12e78da5a703861eb2ef521324cb27c0ae66d346a0013199357db`.
 
+### 26Oct follow-through — native STREAM PG/mTLS/SSE isolated retake
+
+[Scope and cleanup receipt](execution_loop/evidence/ELP2-10/STREAM_NATIVE_PG_SSE_ISOLATED_2026-10-26.md):
+52/52 PASS with actual Core PG/mTLS/SSE and a TEST_ONLY synthetic PM source.
+READ cannot substitute STREAM permission. Actual source, independent grant,
+revoke/recovery, browser and remaining ELP2-10 gates are not thereby closed.
+

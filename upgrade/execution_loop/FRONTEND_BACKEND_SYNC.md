@@ -1,5 +1,11 @@
 # Execution Loop V2 — Sổ đồng bộ Frontend ↔ Backend (sống)
 
+## 26Oct — native STREAM PG/mTLS/SSE isolated retake
+
+[Receipt](evidence/ELP2-10/STREAM_NATIVE_PG_SSE_ISOLATED_2026-10-26.md):
+52/52 PASS on real Core PG/mTLS/SSE with TEST_ONLY PM; this is not a genuine
+Edge STREAM grant or a browser receipt. No DTO or UI change.
+
 ## 26Oct — native Accounts isolated PG/HTTP retake
 
 [Receipt](evidence/ELP2-10/ACCOUNTS_NATIVE_PG_HTTP_ISOLATED_2026-10-26.md):
