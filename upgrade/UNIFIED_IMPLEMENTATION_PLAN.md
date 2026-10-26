@@ -16426,3 +16426,11 @@ no public contract or frontend change. These
 changes are source-only pending integration and installation; connected
 READ/STREAM, financial source, ELP2-10 and browser acceptance remain open.
 
+### 26Oct follow-through — native Accounts PostgreSQL/HTTP isolated retake
+
+[Retake and cleanup receipt](execution_loop/evidence/ELP2-10/ACCOUNTS_NATIVE_PG_HTTP_ISOLATED_2026-10-26.md):
+31/31 PASS on an isolated real PostgreSQL and HTTP cell with a TEST_ONLY
+external source, including the 17 cases previously skipped without PG.
+This does not qualify Edge/source/rights or independently authorized STREAM.
+The first read-only Vite cache failure and tmpfs-only repair are recorded.
+

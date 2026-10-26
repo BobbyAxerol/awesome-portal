@@ -1,5 +1,12 @@
 # Execution Loop V2 — Sổ đồng bộ Frontend ↔ Backend (sống)
 
+## 26Oct — native Accounts isolated PG/HTTP retake
+
+[Receipt](evidence/ELP2-10/ACCOUNTS_NATIVE_PG_HTTP_ISOLATED_2026-10-26.md):
+31/31 PASS including 17 formerly skipped PG cases, with real Core HTTP and a
+TEST_ONLY external source. No DTO or UI change; actual Edge source, independent
+STREAM and browser acceptance remain open.
+
 ## 26Oct — internal composition/TLS repair, source only
 
 [Core receipt](evidence/ELP2-10/CORE_INDEPENDENT_COMPOSITION_TLS_FIXES_2026-10-26.md)
