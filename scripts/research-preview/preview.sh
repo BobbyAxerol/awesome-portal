@@ -27,6 +27,7 @@ IDENTITY_FILE="$ENV_DIR/identity.json"
 FORBIDDEN_PORTS=" 8080 8081 8090 18081 "
 
 FIXTURE_MARKER="$ENV_DIR/fixture-bff.enabled"
+NATIVE_CURRENT_MARKER="$ENV_DIR/execution-native-current.enabled"
 # Fixture BFF switch (FIXTURE_LAB lane, not acceptance evidence): only a marker file. It never runs
 # docker; the operator applies it with `build` + `up`. See deploy/research-preview/README-fixture.md.
 cmd_fixture() {
@@ -107,6 +108,18 @@ compose() {
     # Last overlay overrides retained flags deliberately. The retained marker
     # stays available for rollback; it is not an auto-restoration of grants.
     domain_overlay+=(-f "$ROOT/deploy/research-preview/compose.native-review.yaml")
+  fi
+  if [[ -e "$NATIVE_CURRENT_MARKER" || -L "$NATIVE_CURRENT_MARKER" ]]; then
+    [[ "$ENV_DIR" == /home/bobby/.config/portal-research-preview &&
+      -f "$ENV_DIR/execution-native.enabled" && -f "$ENV_DIR/execution-store.enabled" ]] || {
+      echo 'preview: native CURRENT requires the fixed isolated Research native review and Execution store' >&2; return 1; }
+    [[ -f "$NATIVE_CURRENT_MARKER" && ! -L "$NATIVE_CURRENT_MARKER" &&
+      "$(stat -c '%a' "$NATIVE_CURRENT_MARKER")" == 600 &&
+      "$(stat -c '%u' "$NATIVE_CURRENT_MARKER")" == "$(id -u)" ]] || {
+      echo 'preview: native CURRENT requires its owner-only regular Research opt-in marker' >&2; return 1; }
+    # Separate opt-in: the existing native review alone must not select ROOT,
+    # CURRENT or CurrentView providers. runtime.env was validated above.
+    domain_overlay+=(-f "$ROOT/deploy/research-preview/compose.native-current.yaml")
   fi
   if [[ -f "$FIXTURE_MARKER" ]]; then
     # Fixture BFF (FIXTURE_LAB lane): one private service plus an nginx variant and a banner on

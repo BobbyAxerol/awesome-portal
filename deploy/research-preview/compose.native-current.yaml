@@ -1,0 +1,12 @@
+# Separate, explicit Research CURRENT opt-in; selected only after native-review
+# and before the optional fixture overlay. Reuses its private read-only mount.
+# File loading is not source qualification, a grant or a command/STREAM switch.
+services:
+  control-api:
+    environment:
+      CONTROL_API_NATIVE_ROOT_CONFIG_FILE: /run/secrets/research-native/root-runtime.json
+      CONTROL_API_NATIVE_ROOT_CONFIG_SHA256: ${RESEARCH_NATIVE_ROOT_CONFIG_SHA256:?Pinned Research ROOT manifest is required}
+      CONTROL_API_NATIVE_CURRENT_CONFIG_FILE: /run/secrets/research-native/current-runtime.json
+      CONTROL_API_NATIVE_CURRENT_CONFIG_SHA256: ${RESEARCH_NATIVE_CURRENT_CONFIG_SHA256:?Pinned Research CURRENT manifest is required}
+      CONTROL_API_CURRENT_VIEW_CONFIG_FILE: /run/secrets/research-native/current-view-runtime.json
+      CONTROL_API_CURRENT_VIEW_CONFIG_SHA256: ${RESEARCH_NATIVE_CURRENT_VIEW_CONFIG_SHA256:?Pinned Research CurrentView manifest is required}
