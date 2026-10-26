@@ -16433,4 +16433,6 @@ READ/STREAM, financial source, ELP2-10 and browser acceptance remain open.
 external source, including the 17 cases previously skipped without PG.
 This does not qualify Edge/source/rights or independently authorized STREAM.
 The first read-only Vite cache failure and tmpfs-only repair are recorded.
+Public receipt mirrored to HK EPG10-08, matching SHA256
+`60e398e715a12e78da5a703861eb2ef521324cb27c0ae66d346a0013199357db`.
 

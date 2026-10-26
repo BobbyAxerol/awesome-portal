@@ -6,6 +6,8 @@
 31/31 PASS including 17 formerly skipped PG cases, with real Core HTTP and a
 TEST_ONLY external source. No DTO or UI change; actual Edge source, independent
 STREAM and browser acceptance remain open.
+Public receipt mirrored to Edge EPG10-08; SHA256
+`60e398e715a12e78da5a703861eb2ef521324cb27c0ae66d346a0013199357db`.
 
 ## 26Oct — internal composition/TLS repair, source only
 
