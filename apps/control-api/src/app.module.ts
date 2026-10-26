@@ -558,10 +558,10 @@ export class AppModule implements OnApplicationShutdown {
         }]:[]),
         ...(dependencies.currentViewRuntime ? [{
           provide: CurrentViewCoreComposition,
-          useFactory: (auth: AuthService, scopes: ExecutionReadScopes) => {
+          useFactory: (auth: AuthService, scopes: ExecutionReadScopes, finite?: NativeCurrentAccountScopes) => {
             const runtime = dependencies.currentViewRuntime!;
             let composition: CurrentViewCoreComposition;
-            try { composition = new CurrentViewCoreComposition(auth, scopes, runtime.config); }
+            try { composition = new CurrentViewCoreComposition(auth, finite?.scopes ?? scopes, runtime.config); }
             finally {
               // Constructors retain private copies; erase loader-owned PEM
               // bytes on success AND error, without logging their contents.
@@ -575,7 +575,7 @@ export class AppModule implements OnApplicationShutdown {
               beforeApplicationShutdown: () => composition.shutdown(),
             });
           },
-          inject: [AuthService, ExecutionReadScopes],
+          inject: [AuthService, ExecutionReadScopes, { token: NativeCurrentAccountScopes, optional: true }],
         }] : []),
         ...(managerCurrent ? [{
           provide: ManagerCurrentAccounts,

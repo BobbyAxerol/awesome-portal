@@ -21,6 +21,7 @@ import type { ControlApiConfig } from "../src/config";
 import { AuthService } from "../src/auth/auth.service";
 import { ExecutionReadScopes } from "../src/execution-v2/read-scope";
 import { CurrentViewCoreComposition } from "../src/execution-v2/current-view-composition";
+import { NativeCurrentAccountScopes } from "../src/execution-v2/native-current-runtime";
 import type { PreparedCurrentViewRuntime } from "../src/execution-v2/current-view-runtime";
 import { ManagerCurrentAccounts } from "../src/execution-v2/manager-current-accounts";
 import { unqualifiedAccessTrust } from "../src/execution-v2/access-trust";
@@ -82,7 +83,8 @@ describe("explicit private current-view installation", () => {
     expect(selected.managerCurrent.source).not.toHaveBeenCalled();
   });
   it("injects the existing real identity and read-scope providers, not replacements", () => {
-    expect(provider(runtime())!.inject).toEqual([AuthService, ExecutionReadScopes]);
+    expect(provider(runtime())!.inject).toEqual([AuthService, ExecutionReadScopes,
+      { token: NativeCurrentAccountScopes, optional: true }]);
   });
   it("starts only at module init and drains in the pre-pool shutdown lifecycle", async () => {
     const selected = runtime(), identity = {} as AuthService, scopes = {} as ExecutionReadScopes;

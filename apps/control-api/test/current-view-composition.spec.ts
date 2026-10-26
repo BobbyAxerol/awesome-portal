@@ -4,6 +4,7 @@
 import { createHash, generateKeyPairSync, X509Certificate } from "node:crypto";
 import { createServer, request, type Server } from "node:https";
 import type { Duplex } from "node:stream";
+import type { ServerResponse } from "node:http";
 import type { Pool } from "pg";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { AuthService } from "../src/auth/auth.service";
@@ -21,7 +22,7 @@ import { commonName, testCertificate, type TestAuthority } from "./fixtures/elp2
 
 type Identity = { key: Buffer; cert: Buffer; ca: Buffer; pin: string };
 const id = (part: string) => `TEST_ONLY-composition-${part}`;
-function coreFixture() {
+function coreFixture(native = false) {
   const now = Date.now(), workspace = id("workspace"), owner = id("owner"), profile = id("profile");
   const user: PortalUser = { userId: id("user"), username: id("user"), displayName: "TEST_ONLY User", role: "USER", status: "ACTIVE",
     mustChangePassword: false, failedLoginCount: 0, lockedUntil: null, sessionVersion: 7, createdAt: new Date(now - 1000),
@@ -65,15 +66,31 @@ function coreFixture() {
     actor_role: user.role, actor_lease_until_ms: session.absoluteExpiresAt.valueOf(), actor_member: true, policy, grants, active_principals: new Set([owner, user.userId]),
     authority_fingerprint: accessDigest({ user: user.userId, generation: user.sessionVersion, grants, policy }),
     relationsFor: () => ({ qualified: true, revision: membership.revision, own_alpha_ids: [], member_portfolio_ids: [], roots: { [root.id]: resources }, membership }), allow_test_only: true });
-  const access = { hasNativeCurrentRelations: () => false,
+  const sent: Buffer[] = [], stages: string[] = [];
+  let enterHook: (() => Promise<void>) | undefined, dispatchHook: (() => void) | undefined;
+  const nativeDeliver = vi.fn(async (...args: Parameters<ExecutionAccessService["deliverNativeCurrentComposition"]>) => {
+    const [, , purposes, , , build, assertAllowed, validation] = args;
+    // Explicit TEST_ONLY source/egress port. The reverse callback below uses
+    // real mTLS + Core auth/scopes, but does NOT prove actual source custody.
+    stages.push("PRIVATE_BUILD");
+    const bytes = await build(purposes.map(() => context()));
+    stages.push("ENTER_DOUBLE"); await enterHook?.(); await validation?.afterEnter?.();
+    assertAllowed(purposes.map(() => context()));
+    stages.push("CORE_FINAL_DOUBLE"); dispatchHook?.(); validation?.beforeDispatch?.();
+    sent.push(bytes); stages.push("SEND_DOUBLE");
+  });
+  const access = { hasNativeCurrentRelations: () => native,
     readContext: vi.fn(async () => context()), confirmReadContext: vi.fn(async () => context()),
-    readPublication: vi.fn(async () => structuredClone(publication)) } as unknown as ExecutionAccessService;
+    readPublication: vi.fn(async () => structuredClone(publication)), deliverNativeCurrentComposition: nativeDeliver } as unknown as ExecutionAccessService;
   const config = { AUTH_MODE: "dev" } as ControlApiConfig;
   const auth = new AuthService(pool, config, new Argon2CredentialService({ memoryKib: 8192, iterations: 1, parallelism: 1 }));
   const scopes = new ExecutionReadScopes(pool, access, config);
   const selected: SelectedCurrentViewEdgeRead = { resource: "accounts", authority: { resource_ref: "accounts", binding: { environment: "paper", profileId: profile },
     read_requirement: { action: "business.read_all", resource: root, dataset }, fields: ["equity"] }, query: { limit: 200, max_bytes: 4096 } };
-  return { auth, scopes, principal, selected, query, end, grants, onIdentity: (callback: () => Promise<void>) => { beforeIdentity = callback; } };
+  return { auth, scopes, principal, selected, query, end, grants, tuple, nativeDeliver, sent, stages,
+    afterEnter: (callback: () => Promise<void>) => { enterHook = callback; },
+    beforeDispatch: (callback: () => void) => { dispatchHook = callback; },
+    onIdentity: (callback: () => Promise<void>) => { beforeIdentity = callback; } };
 }
 
 describe("Core current-view lifecycle composition", () => {
@@ -96,9 +113,9 @@ describe("Core current-view lifecycle composition", () => {
       if (server.listening) await new Promise<void>(resolve => server.close(() => resolve()));
     }
   });
-  const policyRead = (origin: string, original_context: string) => new Promise<{ status: number; body: Record<string, unknown> }>((resolve, reject) => {
+  const policyRead = (origin: string, original_context: string, resource_ref = "accounts") => new Promise<{ status: number; body: Record<string, unknown> }>((resolve, reject) => {
     const body = JSON.stringify({ schema_version: "portal.execution.current-view-resolve.v1", original_context,
-      workload_id: id("workload"), operation: "CURRENT", resource_ref: "accounts" });
+      workload_id: id("workload"), operation: "CURRENT", resource_ref });
     const req = request(`${origin}/internal/elp210/current-view/resolve`, { ...edge, method: "POST", agent: false,
       rejectUnauthorized: true, minVersion: "TLSv1.3", maxVersion: "TLSv1.3", headers: { "content-type": "application/json", "content-length": Buffer.byteLength(body) } }, res => {
       const chunks: Buffer[] = []; res.on("data", chunk => chunks.push(chunk)); res.on("error", reject);
@@ -106,12 +123,13 @@ describe("Core current-view lifecycle composition", () => {
     });
     req.on("error", reject); req.end(body);
   });
-  async function setup(options: { hold?: boolean; shutdownMs?: number } = {}) {
-    const fixture = coreFixture(), captured: { token?: string; policy?: { status: number; body: Record<string, unknown> } } = {};
+  async function setup(options: { hold?: boolean; shutdownMs?: number; native?: boolean } = {}) {
+    const fixture = coreFixture(options.native), captured: { token?: string; policy?: { status: number; body: Record<string, unknown> } } = {};
     let origin = "", hits = 0;
     const server = createServer({ ...edge, requestCert: true, rejectUnauthorized: true, minVersion: "TLSv1.3", maxVersion: "TLSv1.3" }, (req, res) => {
       hits++; captured.token = req.headers.authorization?.slice(7);
-      void policyRead(origin, captured.token!).then(policy => {
+      const resource = new URL(req.url!, "https://localhost").pathname.split("/").at(-2)!;
+      void policyRead(origin, captured.token!, resource).then(policy => {
         captured.policy = policy;
         if (options.hold) return;
         const body = JSON.stringify({ equity: "123.45", TEST_ONLY: true });
@@ -204,5 +222,77 @@ describe("Core current-view lifecycle composition", () => {
     const f = await setup(); const starting = f.start(), refused = expect(starting).rejects.toBeInstanceOf(Error);
     await f.composition.shutdown(); await refused;
     expect(f.composition.snapshot()).toMatchObject({ state: "STOPPED", listener: null, owned_contexts: 0 });
+  });
+  it("keeps target + source purposes through two actual mTLS reads and one synthetic native final egress", async () => {
+    const f = await setup({ native: true }); await f.start();
+    const balances = structuredClone(f.selected); balances.resource = "balances"; balances.authority.resource_ref = "balances";
+    const target = structuredClone(f.selected.authority);
+    target.read_requirement.resource = { kind: "ACCOUNT", id: f.tuple.account_id };
+    const after = vi.fn(async () => { expect(f.sent).toHaveLength(0); expect(f.hits()).toBe(2); });
+    const before = vi.fn(() => { expect(f.sent).toHaveLength(0); });
+    await f.composition.deliverNative(f.principal, [target, f.selected.authority, balances.authority], {} as ServerResponse,
+      async read => {
+        const a = await read(f.selected), b = await read(balances);
+        expect(f.sent).toHaveLength(0); expect(f.composition.snapshot().pending_reads).toBe(1);
+        return Buffer.from(JSON.stringify({ account: JSON.parse(a.body.toString()), balance: JSON.parse(b.body.toString()) }));
+      }, { validateAfterEnter: after, validateBeforeDispatch: before });
+    expect(f.nativeDeliver).toHaveBeenCalledTimes(1);
+    expect(f.nativeDeliver.mock.calls[0]![2]).toHaveLength(2);
+    expect(f.sent).toHaveLength(1); expect(JSON.parse(f.sent[0]!.toString())).toMatchObject({ account: { TEST_ONLY: true }, balance: { TEST_ONLY: true } });
+    expect(f.stages).toEqual(["PRIVATE_BUILD", "ENTER_DOUBLE", "CORE_FINAL_DOUBLE", "SEND_DOUBLE"]);
+    expect(after).toHaveBeenCalledTimes(1); expect(before).toHaveBeenCalledTimes(1);
+    expect(f.composition.snapshot()).toMatchObject({ pending_reads: 0, owned_contexts: 0, edge_in_flight: 0 });
+    expect((await policyRead(f.origin(), f.captured.token!, "balances")).status).toBe(403);
+  });
+  it("native installation cannot use the detached ordinary read or deliver path", async () => {
+    const f = await setup({ native: true }); await f.start();
+    await expect(f.composition.read(f.principal, f.selected, "CURRENT")).rejects.toBeInstanceOf(Error);
+    await expect(f.composition.deliver(f.principal, f.selected.authority, "CURRENT", async () => Buffer.from("private"))).rejects.toBeInstanceOf(Error);
+    expect(f.hits()).toBe(0); expect(f.nativeDeliver).not.toHaveBeenCalled(); expect(f.sent).toHaveLength(0);
+  });
+  it("refuses a retargeted native query before network even under the same held source purpose", async () => {
+    const f = await setup({ native: true }); await f.start();
+    const wrong = structuredClone(f.selected); wrong.authority.resource_ref = "balances"; wrong.resource = "balances";
+    await expect(f.composition.deliverNative(f.principal, [f.selected.authority], {} as ServerResponse, async read =>
+      (await read(wrong)).body)).rejects.toMatchObject({ code: "EXECUTION_READ_SCOPE_REQUIRED" });
+    expect(f.hits()).toBe(0); expect(f.sent).toHaveLength(0);
+    expect(f.composition.snapshot()).toMatchObject({ pending_reads: 0, owned_contexts: 0 });
+  });
+  it("a revoke after private mTLS build and source ENTER prevents the entire final response", async () => {
+    const f = await setup({ native: true }); await f.start();
+    f.afterEnter(async () => { f.grants[0]!.revoked_at_ms = Date.now(); });
+    await expect(f.composition.deliverNative(f.principal, [f.selected.authority], {} as ServerResponse, async read =>
+      (await read(f.selected)).body)).rejects.toMatchObject({ code: "EXECUTION_READ_ACCESS_CHANGED" });
+    expect(f.hits()).toBe(1); expect(f.sent).toHaveLength(0); expect(f.stages).toEqual(["PRIVATE_BUILD", "ENTER_DOUBLE"]);
+  });
+  it("metadata validation failure after ENTER cannot send a body or fall back to an ordinary reply", async () => {
+    const f = await setup({ native: true }); await f.start();
+    await expect(f.composition.deliverNative(f.principal, [f.selected.authority], {} as ServerResponse, async read =>
+      (await read(f.selected)).body, { validateAfterEnter: async () => { throw new Error("TEST_ONLY metadata changed"); } })).rejects.toThrow("TEST_ONLY metadata changed");
+    expect(f.sent).toHaveLength(0); expect(f.nativeDeliver).toHaveBeenCalledTimes(1); expect(f.hits()).toBe(1);
+  });
+  it("rejects an asynchronous pre-dispatch validator rather than sending between awaits", async () => {
+    const f = await setup({ native: true }); await f.start();
+    await expect(f.composition.deliverNative(f.principal, [f.selected.authority], {} as ServerResponse, async read =>
+      (await read(f.selected)).body, { validateBeforeDispatch: async () => undefined })).rejects.toMatchObject({ code: "EXECUTION_READ_AUTHORITY_UNAVAILABLE" });
+    expect(f.sent).toHaveLength(0); expect(f.hits()).toBe(1);
+  });
+  it("rejects five distinct purposes before authority or source admission instead of silently dropping one", async () => {
+    const f = await setup({ native: true }); await f.start(); const before = f.query.mock.calls.length;
+    const selected = Array.from({ length: 5 }, (_, index) => ({ ...structuredClone(f.selected.authority),
+      read_requirement: { ...structuredClone(f.selected.authority.read_requirement), resource: { kind: "ACCOUNT" as const, id: id(`account-${index}`) } } }));
+    await expect(f.composition.deliverNative(f.principal, selected, {} as ServerResponse, async () => Buffer.from("private")))
+      .rejects.toMatchObject({ code: "EXECUTION_READ_SCOPE_LIMIT" });
+    expect(f.query.mock.calls.length).toBe(before); expect(f.nativeDeliver).not.toHaveBeenCalled(); expect(f.hits()).toBe(0); expect(f.sent).toHaveLength(0);
+  });
+  it("a revoke between source grains invalidates the complete BFF, including the first private body", async () => {
+    const f = await setup({ native: true }); await f.start();
+    const balance = structuredClone(f.selected); balance.resource = "balances"; balance.authority.resource_ref = "balances";
+    await expect(f.composition.deliverNative(f.principal, [f.selected.authority, balance.authority], {} as ServerResponse, async read => {
+      const first = await read(f.selected); expect(first.status).toBe(200); expect(f.sent).toHaveLength(0);
+      f.grants[0]!.revoked_at_ms = Date.now(); return (await read(balance)).body;
+    })).rejects.toBeInstanceOf(Error);
+    expect(f.hits()).toBe(1); expect(f.sent).toHaveLength(0); expect(f.stages).toEqual(["PRIVATE_BUILD"]);
+    expect(f.composition.snapshot()).toMatchObject({ pending_reads: 0, owned_contexts: 0 });
   });
 });

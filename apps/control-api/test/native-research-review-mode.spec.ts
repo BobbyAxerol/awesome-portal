@@ -2,6 +2,16 @@
  * source-provider, financial, membership-database or runtime qualification. */
 import type { ExecutionContext, FactoryProvider } from "@nestjs/common";
 import type { Pool } from "pg";
+// TEST_ONLY constructor interception: exercise the actual AppModule provider
+// selection without creating TLS listeners, authority, grants or DB state.
+const currentViewInstances = vi.hoisted(() => [] as { inputs: unknown[];
+  start: ReturnType<typeof vi.fn>; shutdown: ReturnType<typeof vi.fn> }[]);
+vi.mock("../src/execution-v2/current-view-composition", () => ({
+  CurrentViewCoreComposition: class {
+    start = vi.fn(); shutdown = vi.fn(); inputs: unknown[];
+    constructor(...inputs: unknown[]) { this.inputs = inputs; currentViewInstances.push(this); }
+  },
+}));
 import { AppModule } from "../src/app.module";
 import { describe, expect, it, vi } from "vitest";
 import { AuthService } from "../src/auth/auth.service";
@@ -15,6 +25,9 @@ import { SessionGuard } from "../src/facade/session.guard";
 import { ManagerCurrentAccounts } from "../src/execution-v2/manager-current-accounts";
 import { NativeCurrentAccountScopes } from "../src/execution-v2/native-current-runtime";
 import { CommandStatusComposition } from "../src/execution-v2/command-status-composition";
+import { CurrentViewCoreComposition } from "../src/execution-v2/current-view-composition";
+import type { PreparedCurrentViewRuntime } from "../src/execution-v2/current-view-runtime";
+import { ExecutionReadScopes } from "../src/execution-v2/read-scope";
 import { CONTROL_API_CONFIG } from "../src/tokens";
 import { WorkspacesRepository } from "../src/repos/workspaces";
 
@@ -156,6 +169,37 @@ function guardFixture(path = fixedRoutes[0]!, query: Record<string, unknown> = {
 }
 
 describe("Research native SessionGuard authority composition", () => {
+  it("the actual CurrentView factory uses installed native scopes, otherwise ordinary scopes, without starting runtime", () => {
+    const db = { end: vi.fn(), query: vi.fn() } as unknown as Pool;
+    const cfg = { NODE_ENV: "test" } as ControlApiConfig;
+    const findFactory = (module: ReturnType<typeof AppModule.register>) => module.providers!.find(provider =>
+      typeof provider === "object" && provider !== null && "provide" in provider &&
+      provider.provide === CurrentViewCoreComposition) as FactoryProvider | undefined;
+    expect(findFactory(AppModule.register(cfg, db))).toBeUndefined();
+    const ordinary = {} as ExecutionReadScopes, native = {} as ExecutionReadScopes, identity = {} as AuthService;
+    const installed = { scopes: native } as NativeCurrentAccountScopes;
+    for (const optional of [undefined, installed]) {
+      const transportTls = { key: Buffer.from("TEST_ONLY-key"), cert: Buffer.from("TEST_ONLY-cert"), ca: Buffer.from("TEST_ONLY-ca") };
+      const edgeTls = { key: Buffer.from("TEST_ONLY-edge-key"), cert: Buffer.from("TEST_ONLY-edge-cert"), ca: Buffer.from("TEST_ONLY-edge-ca") };
+      // Only the mocked constructor receives this fixture. These are neither
+      // valid credentials nor a commissioned current-view configuration.
+      const runtime = { config: { transport: { tls: transportTls }, edge: { tls: edgeTls } },
+        listener: { host: "127.0.0.1", port: 0 } } as PreparedCurrentViewRuntime;
+      const factory = findFactory(AppModule.register(cfg, db, undefined, { currentViewRuntime: runtime }))!;
+      expect(factory.inject).toEqual([AuthService, ExecutionReadScopes,
+        { token: NativeCurrentAccountScopes, optional: true }]);
+      const service = factory.useFactory(identity, ordinary, optional);
+      const instance = currentViewInstances.at(-1)!;
+      expect(instance.inputs).toEqual([identity, optional ? native : ordinary, runtime.config]);
+      expect(instance.inputs[1]).toBe(optional ? native : ordinary);
+      expect(service).toBe(instance);
+      expect(instance.start).not.toHaveBeenCalled(); expect(instance.shutdown).not.toHaveBeenCalled();
+      for (const tls of [transportTls, edgeTls])
+        for (const bytes of [tls.key, tls.cert, tls.ca]) expect(bytes.every(value => value === 0)).toBe(true);
+    }
+    expect(db.query).not.toHaveBeenCalled(); expect(db.end).not.toHaveBeenCalled();
+    currentViewInstances.length = 0;
+  });
   it("the actual AppModule factory forwards optional installed compositions to its guard", async () => {
     // This inspects/calls the actual registered factory without constructing an
     // app/listener or source authority. Manual new SessionGuard alone missed

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { ServerResponse } from "node:http";
 import type { ResourceEnvironment, ResourceReadPrincipal } from "../resource-read/resource-read.service";
 import { scopedResourceResponseSchemas, scopedResourceRowSchemas } from "../resource-read/scoped-resource.contract";
 import { accessText } from "./access.contract";
@@ -16,7 +17,8 @@ export interface ManagerCurrentAccountsOptions {
   request: ExecutionReadPublicationRequest;
   commissioning: ManagerCurrentCommissioning;
   source: (request: ExecutionReadPublicationRequest) => Promise<unknown | null>;
-  core: Pick<CurrentViewCoreComposition, "read" | "deliver">;
+  core: Pick<CurrentViewCoreComposition, "read" | "deliver"> &
+    Partial<Pick<CurrentViewCoreComposition, "hasNativeCurrentRelations" | "deliverNative">>;
   now?: () => number;
 }
 const digest = z.string().regex(/^sha256:[a-f0-9]{64}$/u);
@@ -36,6 +38,9 @@ const aliases = ["deployments", "accounts", "account_balances", "margin_balances
   "account_equity", "reconciliation", "strategies"] as const;
 type Row = Record<string, string | null>;
 type Selection = ReturnType<typeof managerCurrentSelectionCatalogue>[number];
+type ReadCurrentPage = (selection: SelectedCurrentViewEdgeRead) => Promise<{ status: 200; body: Buffer }>;
+type PreparedAccount = { actor: ResourceReadPrincipal; accountId: string; environment?: ResourceEnvironment;
+  metadata: ManagerCurrentMetadata; relevant: Selection[]; outer: CurrentViewSelection };
 const refuse = (code: ConstructorParameters<typeof ExecutionReadScopeError>[0] = "EXECUTION_READ_PUBLICATION_NOT_QUALIFIED", status = 503): never => {
   throw new ExecutionReadScopeError(code, status);
 };
@@ -89,7 +94,8 @@ export class ManagerCurrentAccounts {
     if (input === null) return refuse();
     return qualifyManagerCurrentMetadata(input, this.request, { commissioning: this.commissioning, nowMs: this.now() });
   }
-  async read(principal: ResourceReadPrincipal, resourceId: string, environment?: ResourceEnvironment): Promise<Record<string, unknown>> {
+  hasNativeCurrentRelations(): boolean { return this.core.hasNativeCurrentRelations?.() === true; }
+  private async prepare(principal: ResourceReadPrincipal, resourceId: string, environment?: ResourceEnvironment): Promise<PreparedAccount> {
     const actor = structuredClone(principal), accountId = accessText.parse(resourceId);
     if (actor.workspaceId !== this.request.workspace_id || this.request.environment !== "paper" || environment && environment !== "paper")
       return refuse("EXECUTION_READ_NOT_AVAILABLE", 404);
@@ -102,7 +108,42 @@ export class ManagerCurrentAccounts {
     const fields = [...new Set(relevant.flatMap(selection => selection.fields))].sort();
     const baseSelection = selected(metadata, relevant[0]!, fields), outer = { ...baseSelection,
       read_requirement: { ...baseSelection.read_requirement, resource: { kind: "ACCOUNT" as const, id: accountId } } };
-    return this.core.deliver(actor, outer, "CURRENT", async () => {
+    return { actor, accountId, environment, metadata, relevant, outer };
+  }
+  private async confirm(metadata: ManagerCurrentMetadata): Promise<void> {
+    const confirmed = await this.metadata();
+    if (managerCurrentMetadataDigest(confirmed) !== managerCurrentMetadataDigest(metadata))
+      return refuse("EXECUTION_READ_ACCESS_CHANGED", 409);
+  }
+  /** No detached native DTO: physical egress remains the sole native owner. */
+  async read(principal: ResourceReadPrincipal, resourceId: string, environment?: ResourceEnvironment): Promise<Record<string, unknown>> {
+    if (this.hasNativeCurrentRelations()) return refuse("EXECUTION_READ_AUTHORITY_UNAVAILABLE", 503);
+    const prepared = await this.prepare(principal, resourceId, environment);
+    return this.core.deliver(prepared.actor, prepared.outer, "CURRENT", () =>
+      this.build(prepared, input => this.core.read(prepared.actor, input, "CURRENT")));
+  }
+  async readNative(principal: ResourceReadPrincipal, resourceId: string, environment: ResourceEnvironment | undefined,
+    response: ServerResponse, beforeDispatch: () => void): Promise<void> {
+    if (!this.hasNativeCurrentRelations() || !this.core.deliverNative)
+      return refuse("EXECUTION_READ_AUTHORITY_UNAVAILABLE", 503);
+    const prepared = await this.prepare(principal, resourceId, environment);
+    // Keep requested account AND every source-selection resource. A source pin
+    // may name another account; neither scope may stand in for the other.
+    const selections = [prepared.outer, ...prepared.relevant.map(source => selected(prepared.metadata, source))];
+    await this.core.deliverNative(prepared.actor, selections, response,
+      async read => Buffer.from(JSON.stringify(await this.build(prepared, read)), "utf8"), {
+        validateAfterEnter: () => this.confirm(prepared.metadata),
+        validateBeforeDispatch: () => {
+          // PURE expiry/commissioning recheck after final Core COMMIT. No
+          // source await may separate this check from physical dispatch.
+          qualifyManagerCurrentMetadata(prepared.metadata, this.request,
+            { commissioning: this.commissioning, nowMs: this.now() });
+          beforeDispatch();
+        },
+      });
+  }
+  private async build(prepared: PreparedAccount, read: ReadCurrentPage): Promise<Record<string, unknown>> {
+      const { actor, accountId, environment, metadata, relevant } = prepared;
       const rows: Record<"accounts" | "account_balances", Row[]> = { accounts: [], account_balances: [] };
       let truncated = false;
       for (const selection of relevant) {
@@ -111,7 +152,7 @@ export class ManagerCurrentAccounts {
           if (rows[alias].length >= 200) { truncated = true; continue; }
           const input: SelectedCurrentViewEdgeRead = { authority: selected(metadata, selection),
             resource: selection.resource_ref, query: { limit: 1, max_bytes: 65_536, entity_id: entity.entity_id } };
-          const response = await this.core.read(actor, input, "CURRENT");
+          const response = await read(input);
           try {
             if (response.status !== 200 || response.body.byteLength > 65_536) return refuse();
             const parsed: unknown = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(response.body));
@@ -130,10 +171,8 @@ export class ManagerCurrentAccounts {
         }
       }
       if (new Set(rows.account_balances.map(row => row.currency)).size !== rows.account_balances.length) return refuse();
-      const confirmed = await this.metadata();
-      if (managerCurrentMetadataDigest(confirmed) !== managerCurrentMetadataDigest(metadata)) return refuse("EXECUTION_READ_ACCESS_CHANGED", 409);
+      await this.confirm(metadata);
       return this.response(actor, accountId, environment, metadata, rows, truncated);
-    });
   }
   private response(principal: ResourceReadPrincipal, accountId: string, environment: ResourceEnvironment | undefined,
     metadata: ManagerCurrentMetadata, rows: Record<"accounts" | "account_balances", Row[]>, truncated: boolean): Record<string, unknown> {

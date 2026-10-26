@@ -5,7 +5,7 @@ import { performance } from "node:perf_hooks";
 import { TLSSocket } from "node:tls";
 import { CurrentViewAuthority, CurrentViewAuthorityError, type CurrentViewOperation,
   type CurrentViewSelection } from "./current-view-authority";
-import { ExecutionReadScopeError, type ReadScopePrincipal } from "./read-scope";
+import { ExecutionReadScopeError, type ReadScopePrincipal, type HeldNativeReadScopes } from "./read-scope";
 
 export interface CurrentViewEdgeClientConfig {
   origin: string;
@@ -55,7 +55,7 @@ export class CurrentViewEdgeClient {
   snapshot() { return Object.freeze({ in_flight: this.inFlight }); }
 
   async read(principal: ReadScopePrincipal, workloadId: string, input: SelectedCurrentViewEdgeRead,
-    operation: CurrentViewOperation, signal?: AbortSignal): Promise<{ status: 200; body: Buffer }> {
+    operation: CurrentViewOperation, signal?: AbortSignal, native?: HeldNativeReadScopes): Promise<{ status: 200; body: Buffer }> {
     if (!["CURRENT", "HISTORY", "EXPORT"].includes(operation)) throw error("CURRENT_VIEW_EDGE_OPERATION_NOT_FINITE");
     let selected: SelectedCurrentViewEdgeRead, query: URLSearchParams;
     try {
@@ -103,7 +103,7 @@ export class CurrentViewEdgeClient {
         check();
         if (!final.ok) throw final.failure;
         return { status: 200 as const, body: final.body };
-      });
+      }, native);
     } catch (failure) {
       if (failure instanceof CurrentViewEdgeClientError || failure instanceof CurrentViewAuthorityError || failure instanceof ExecutionReadScopeError) throw failure;
       throw error("CURRENT_VIEW_EDGE_UNAVAILABLE");

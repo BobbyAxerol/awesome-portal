@@ -1,0 +1,65 @@
+{
+  "schema_version": "portal.execution.phase-test-results.v1",
+  "phase": "ELP2-10",
+  "slice": "accounts-native-egress-20261027",
+  "tier": "R1",
+  "entry_source_sha": "c7b7137a7d06ab3338e8e988afeed46ed30d2be3",
+  "source_state": "INTERMEDIATE_FOCUSED_VERIFICATION",
+  "checks": [
+    {
+      "name": "accounts-held-native-egress-integrated",
+      "kind": "focused-vitest",
+      "state": "PASS",
+      "passed": 321,
+      "failed": 0,
+      "skipped": 0,
+      "duration_seconds": 36.77,
+      "workers": 1,
+      "files": {
+        "current-view-authority.spec.ts": 34,
+        "current-view-composition.spec.ts": 17,
+        "current-view-edge-client.spec.ts": 16,
+        "current-view-held-native.spec.ts": 30,
+        "current-view-installation.spec.ts": 5,
+        "elp210-native-current-manager-series.spec.ts": 22,
+        "manager-current-accounts.spec.ts": 40,
+        "native-research-review-mode.spec.ts": 130,
+        "resource-read.spec.ts": 27
+      },
+      "evidence_scope": "actual Core evaluator and loopback mTLS; explicit TEST_ONLY DB/source/physical-egress port; not real Edge/native custody commissioning",
+      "raw_sha256": "0fe20f290f0bdaf5d4f6261bf6d3aa9dc1e26db74b7c07ab623e7c5b4ddb457a",
+      "raw_local_path": "/home/bobby/.local/state/portal-execution-accounts-native-egress-20261027/vitest.raw.json"
+    },
+    {
+      "name": "production-no-emit-typecheck-final",
+      "state": "PASS"
+    },
+    {
+      "name": "execution-tracking-reconciliation",
+      "state": "PASS"
+    },
+    {
+      "name": "unchanged-default-on-entry-code",
+      "state": "PASS",
+      "passed": 9,
+      "skipped": 8,
+      "duration_seconds": 1.91
+    },
+    {
+      "name": "positive-native-regression-on-entry-code",
+      "state": "EXPECTED_FAIL",
+      "failed": 1,
+      "skipped": 16,
+      "duration_seconds": 1.42,
+      "reason": "deliverNative is not a function on entry c7b7137a7; same positive regression passes on new source"
+    }
+  ],
+  "runtime_installed": false,
+  "source_authority_created": false,
+  "connected_current": "NOT_MET",
+  "connected_stream": "NOT_MET",
+  "browser_acceptance": "NOT_RUN",
+  "full_R2": "PENDING_PREEXISTING_INTEGRATION_FAILURES_NOT_WAIVED",
+  "command_live_enabled": false,
+  "push_performed": false
+}

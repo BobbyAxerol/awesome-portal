@@ -8,7 +8,7 @@ import { BUSINESS_READ_FIELDS, RECORD_DETAIL_READ_FIELDS } from "./read-fields";
 import { readDatasetBinding, type ReadDatasetBinding } from "./read-publication";
 import { assertExecutionReadScope, ExecutionReadScopeError, ExecutionReadScopes, scopeAllowsDetailField, scopeAllowsField,
   scopeReadPopulation, scopeResources, type AuthorizedExecutionReadScope,
-  type ReadScopeBinding, type ReadScopePrincipal, type ReadScopeRequirement } from "./read-scope";
+  type ReadScopeBinding, type ReadScopePrincipal, type ReadScopeRequirement, type HeldNativeReadScopes } from "./read-scope";
 
 export type CurrentViewOperation = "CURRENT" | "HISTORY" | "EXPORT" | "STREAM" | "REPLAY";
 type BusinessReadAction = "business.read_all" | "alpha.read" | "portfolio.read" |
@@ -92,6 +92,7 @@ type Context = {
   scopes: readonly AuthorizedExecutionReadScope[];
   decisionDigest: string;
   released: boolean;
+  native?: HeldNativeReadScopes;
 };
 type IdentityRow = {
   user_id: string; username: string; display_name: string; role: PortalUser["role"];
@@ -135,17 +136,33 @@ export class CurrentViewAuthority {
       throw new Error("CURRENT_VIEW_BOUNDS_INVALID");
   }
 
+  /** Prepare a genuine original scope before finite source admission. The
+   * result is advisory until deliverNativeTogether holds and checks its own
+   * source cuts; it cannot register a reverse context or deliver a DTO. */
+  async prepareNativeCurrent(principal: ReadScopePrincipal, selection: CurrentViewSelection): Promise<AuthorizedExecutionReadScope> {
+    const original = structuredClone(principal), selected = structuredClone(selection);
+    this.validateSelection(selected, "CURRENT");
+    if (!this.scopes.hasNativeCurrentRelations() || selected.binding.environment !== "paper" || selected.read_requirement.dataset.window !== null)
+      fail("CURRENT_VIEW_OPERATION_NOT_COMMISSIONED", 503);
+    const current = await this.currentPrincipal(original), [scope] = await this.authorize(current, selected, "CURRENT");
+    if (selected.fields.some(field => !scopeAllowsField(scope, field))) fail("CURRENT_VIEW_AUTHORITY_CHANGED", 409);
+    return scope;
+  }
+
   async register(principal: ReadScopePrincipal, workloadId: string, selection: CurrentViewSelection,
-    operation: CurrentViewOperation): Promise<CurrentViewRegistration> {
+    operation: CurrentViewOperation, native?: HeldNativeReadScopes): Promise<CurrentViewRegistration> {
     if (!text(workloadId) || !operations.has(operation)) fail("CURRENT_VIEW_BINDING_MISMATCH", 400);
     // Snapshot every caller-owned input BEFORE the first await. No later
     // caller mutation can retarget an authorized flight or its original user.
     const original = structuredClone(principal), selected = structuredClone(selection);
     this.validateSelection(selected, operation);
+    if (native && (operation !== "CURRENT" || selected.binding.environment !== "paper" || selected.read_requirement.dataset.window !== null))
+      fail("CURRENT_VIEW_OPERATION_NOT_COMMISSIONED", 503);
     this.sweep();
     if (this.contexts.size >= this.capacity) fail("CURRENT_VIEW_CAPACITY", 503);
     const current = await this.currentPrincipal(original);
-    const scopes = await this.authorize(current, selected, operation);
+    const scopes = native ? [await this.scopes.heldNativeScope(native, current, selected.binding, selected.read_requirement)] :
+      await this.authorize(current, selected, operation);
     const until = Math.min(this.clock() + this.ttl, current.session.idleExpiresAt.valueOf(), current.session.absoluteExpiresAt.valueOf());
     if (until <= this.clock()) fail("CURRENT_VIEW_CONTEXT_EXPIRED", 409);
     const token = randomBytes(32).toString("base64url");
@@ -153,17 +170,24 @@ export class CurrentViewAuthority {
       contextDigest: accessDigest({ schema: "portal.current-view-original-context.v1", nonce: token,
         actor: [current.user.userId, current.session.sessionId, current.session.sessionVersion],
         workspace: current.workspaceId, viewer: current.viewerWorkspaceId, workload: workloadId,
-        operation, selection: selected, expires_at_ms: until }), decisionDigest: "", released: false };
+      operation, selection: selected, expires_at_ms: until }), decisionDigest: "", released: false, ...(native ? { native } : {}) };
     context.decisionDigest = this.decision(context, scopes).decision_digest;
     // Same short actual DB authority fence used by normal readers. No
     // source/identity await may follow this fence before custody is installed.
     try {
-      await this.scopes.deliverScopedTogether(scopes, async () => undefined, () => {
+      const install = () => {
         this.assertAlive(context);
         this.sweep();
         if (this.contexts.size >= this.capacity) fail("CURRENT_VIEW_CAPACITY", 503);
         this.contexts.set(token, context);
-      });
+      };
+      if (native) {
+        // This is provisional Edge query authority inside an already-held
+        // finite build, not an ordinary detached delivery or a send receipt.
+        const confirmed = await this.scopes.heldNativeScope(native, current, selected.binding, selected.read_requirement);
+        if (confirmed !== scopes[0]) fail("CURRENT_VIEW_AUTHORITY_CHANGED", 409);
+        install();
+      } else await this.scopes.deliverScopedTogether(scopes, async () => undefined, install);
       return { original_context: token, context_digest: context.contextDigest, expires_at_ms: until };
     } catch (error) {
       context.released = true;
@@ -177,8 +201,8 @@ export class CurrentViewAuthority {
    * actor/token, mutates a grant or settles a source receipt. Upstream drivers
    * must propagate cancellation as rejection so their normal finally runs. */
   async withOriginalContext<T>(principal: ReadScopePrincipal, workloadId: string, selection: CurrentViewSelection,
-    operation: CurrentViewOperation, use: (context: CurrentViewRegistration) => Promise<T>): Promise<T> {
-    const registered = await this.register(principal, workloadId, selection, operation);
+    operation: CurrentViewOperation, use: (context: CurrentViewRegistration) => Promise<T>, native?: HeldNativeReadScopes): Promise<T> {
+    const registered = await this.register(principal, workloadId, selection, operation, native);
     try { return await use(registered); }
     finally { this.release(registered.original_context); }
   }
@@ -256,6 +280,7 @@ export class CurrentViewAuthority {
   private assertAlive(context: Context): void {
     if (context.released) fail("CURRENT_VIEW_CONTEXT_REQUIRED");
     if (context.until <= this.clock()) fail("CURRENT_VIEW_CONTEXT_EXPIRED", 409);
+    if (context.native) this.scopes.assertHeldNativeScopes(context.native);
   }
   private context(request: CurrentViewRequest): Context {
     if (typeof request.original_context !== "string" || !/^[A-Za-z0-9_-]{43}$/.test(request.original_context))
@@ -358,7 +383,9 @@ export class CurrentViewAuthority {
     if (current.user.role !== context.principal.user.role ||
       current.session.authenticationTime.valueOf() !== context.principal.session.authenticationTime.valueOf())
       fail("CURRENT_VIEW_AUTHORITY_CHANGED", 409);
-    const scopes = await this.authorize(current, context.selection, context.operation);
+    const scopes = context.native ? [await this.scopes.heldNativeScope(context.native, current,
+      context.selection.binding, context.selection.read_requirement)] :
+      await this.authorize(current, context.selection, context.operation);
     if (scopes.length !== context.scopes.length || scopes.some((scope, index) => scope.fingerprint !== context.scopes[index].fingerprint))
       fail("CURRENT_VIEW_AUTHORITY_CHANGED", 409);
     this.assertAlive(context);
@@ -366,6 +393,16 @@ export class CurrentViewAuthority {
   }
   private async withCurrent<T>(context: Context, read: (scopes: readonly AuthorizedExecutionReadScope[]) => Promise<T>): Promise<T> {
     const scopes = await this.refresh(context);
+    if (context.native) {
+      let result: T | undefined, failed = false, held: unknown;
+      try { result = await read(scopes); } catch (error) { failed = true; held = error; }
+      // Same original purpose and real current Core DB after the last awaited
+      // provisional read, including held upstream errors. Never re-observe or
+      // replace a source cut; real native ENTER/COMMIT/send still follow.
+      await this.refresh(context);
+      if (failed) throw held;
+      return result as T;
+    }
     let terminalRefusal: CurrentViewAuthorityError | undefined;
     try {
       return await this.scopes.deliverScopedTogether(scopes, () => read(scopes), () => {

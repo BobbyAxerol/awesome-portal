@@ -1,11 +1,13 @@
 import { isIP, type AddressInfo } from "node:net";
 import type { Duplex } from "node:stream";
 import { performance } from "node:perf_hooks";
+import type { ServerResponse } from "node:http";
 import type { AuthService } from "../auth/auth.service";
 import { CurrentViewAuthority, type CurrentViewOperation, type CurrentViewSelection } from "./current-view-authority";
 import { CurrentViewEdgeClient, type CurrentViewEdgeClientConfig, type SelectedCurrentViewEdgeRead } from "./current-view-edge-client";
 import { createCurrentViewTransport, type CurrentViewTransportConfig } from "./current-view-transport";
-import type { ExecutionReadScopes, ReadScopePrincipal } from "./read-scope";
+import { ExecutionReadScopeError, type ExecutionReadScopes, type ReadScopePrincipal, type HeldNativeReadScopes } from "./read-scope";
+import { accessDigest } from "./access-digest";
 
 export interface CurrentViewCompositionConfig {
   authority: { ttl_ms: number; maximum_contexts: number };
@@ -63,7 +65,7 @@ export class CurrentViewCoreComposition {
   private starting?: Promise<AddressInfo>;
   private startingPending = false;
   private stopping?: Promise<void>;
-  constructor(auth: AuthService, scopes: ExecutionReadScopes, config: CurrentViewCompositionConfig) {
+  constructor(auth: AuthService, private readonly scopes: ExecutionReadScopes, config: CurrentViewCompositionConfig) {
     if (!Number.isSafeInteger(config.shutdown_deadline_ms) || config.shutdown_deadline_ms < 1 || config.shutdown_deadline_ms > 5000)
       throw failure("CURRENT_VIEW_COMPOSITION_CONFIG_INVALID");
     this.shutdownMs = config.shutdown_deadline_ms;
@@ -101,12 +103,12 @@ export class CurrentViewCoreComposition {
     return this.starting;
   }
   read(principal: ReadScopePrincipal, selection: SelectedCurrentViewEdgeRead, operation: CurrentViewOperation,
-    signal?: AbortSignal): Promise<{ status: 200; body: Buffer }> {
+    signal?: AbortSignal, native?: HeldNativeReadScopes): Promise<{ status: 200; body: Buffer }> {
     if (this.state !== "RUNNING") return Promise.reject(failure("CURRENT_VIEW_COMPOSITION_NOT_RUNNING"));
     const abort = new AbortController(), cancel = () => abort.abort();
     this.aborts.add(abort); signal?.addEventListener("abort", cancel, { once: true });
     if (signal?.aborted) cancel();
-    const pending = this.client.read(principal, this.workload, selection, operation, abort.signal).finally(() => {
+    const pending = this.client.read(principal, this.workload, selection, operation, abort.signal, native).finally(() => {
       this.reads.delete(pending); this.aborts.delete(abort); signal?.removeEventListener("abort", cancel);
     });
     this.reads.add(pending);
@@ -130,6 +132,58 @@ export class CurrentViewCoreComposition {
         return result;
       });
     }).finally(() => { this.reads.delete(pending); });
+    this.reads.add(pending); return pending;
+  }
+  hasNativeCurrentRelations(): boolean { return this.scopes.hasNativeCurrentRelations(); }
+
+  /** One native physical response for the complete BFF. Exact requirements
+   * deduplicate, not source resources/datasets/field proofs. An internal query
+   * callback can read only a selection supplied before native admission. */
+  deliverNative(principal: ReadScopePrincipal, selections: readonly CurrentViewSelection[], response: ServerResponse,
+    build: (read: (selection: SelectedCurrentViewEdgeRead) => Promise<{ status: 200; body: Buffer }>) => Promise<Buffer>,
+    validation?: { validateAfterEnter?: () => Promise<void>; validateBeforeDispatch?: () => void }): Promise<void> {
+    const active = () => { if (this.state !== "RUNNING") throw failure("CURRENT_VIEW_COMPOSITION_NOT_RUNNING"); };
+    active();
+    if (!this.hasNativeCurrentRelations()) return Promise.reject(new ExecutionReadScopeError("EXECUTION_READ_AUTHORITY_UNAVAILABLE", 503));
+    const actor = structuredClone(principal), selected = structuredClone(selections);
+    const pending = (async () => {
+      if (!Array.isArray(selected) || selected.length < 1 || selected.length > 128)
+        throw new ExecutionReadScopeError("EXECUTION_READ_SCOPE_LIMIT", 503);
+      const originals = new Map<string, CurrentViewSelection>();
+      for (const item of selected) {
+        if (!Array.isArray(item.fields)) throw new ExecutionReadScopeError("EXECUTION_READ_SCOPE_REQUIRED");
+        const key = accessDigest({ binding: item.binding, requirement: item.read_requirement });
+        const previous = originals.get(key);
+        if (previous) originals.set(key, { ...previous, fields: [...new Set([...previous.fields, ...item.fields])] });
+        else originals.set(key, structuredClone(item));
+      }
+      if (originals.size > 4) throw new ExecutionReadScopeError("EXECUTION_READ_SCOPE_LIMIT", 503);
+      const scopes = [];
+      for (const item of originals.values()) { active(); scopes.push(await this.authority.prepareNativeCurrent(actor, item)); }
+      active();
+      const allowed = new Set(selected.map(item => accessDigest(item)));
+      await this.scopes.deliverNativeTogether(scopes, response, async ticket => {
+        active();
+        const bytes = await build(async input => {
+          const captured = structuredClone(input);
+          if (!allowed.has(accessDigest(captured.authority))) throw new ExecutionReadScopeError("EXECUTION_READ_SCOPE_REQUIRED");
+          active();
+          return this.read(actor, captured, "CURRENT", undefined, ticket);
+        });
+        active(); return bytes;
+      }, {
+        validateAfterEnter: async () => { active(); await validation?.validateAfterEnter?.(); active(); },
+        validateBeforeDispatch: () => {
+          active();
+          const result: unknown = validation?.validateBeforeDispatch?.();
+          if (result !== undefined) {
+            if (result && typeof (result as { then?: unknown }).then === "function") void Promise.resolve(result).catch(() => undefined);
+            throw new ExecutionReadScopeError("EXECUTION_READ_AUTHORITY_UNAVAILABLE", 503);
+          }
+          active();
+        },
+      });
+    })().finally(() => { this.reads.delete(pending); });
     this.reads.add(pending); return pending;
   }
   snapshot() {

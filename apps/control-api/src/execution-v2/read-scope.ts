@@ -78,6 +78,14 @@ type ScopeState={kind:"ENTITY"|"MANAGER";manager?:ManagerNativeState;issuer:Exec
   strategyPairs:readonly {strategy_id:string;alpha_id:string}[];
   bindingPairs:readonly {binding_id:string;account_id:string}[];};
 const minted=new WeakMap<object,ScopeState>();
+declare const heldNativeReadBrand:unique symbol;
+/** Provisional PRIVATE query context during a genuine native finite build.
+ * Not a send permit/terminal: source ENTER and the physical egress still own
+ * delivery. A clone/JSON/cast has no entry and build exit kills the ticket. */
+export interface HeldNativeReadScopes {readonly [heldNativeReadBrand]:true;}
+type HeldNativeReadState={issuer:ExecutionReadScopes;scopes:readonly AuthorizedExecutionReadScope[];
+  states:readonly ScopeState[];contexts:readonly AccessEvaluationContext[];active:boolean;};
+const heldNativeReads=new WeakMap<object,HeldNativeReadState>();
 const businessReads=new Set<AccessAction>(["business.read_all","alpha.read","portfolio.read","portfolio.read_restricted",
   "portfolio.discover_linked","account.read","binding.read"]);
 const exactKey=(r:AccessResource)=>JSON.stringify([r.kind,r.id]);
@@ -1250,6 +1258,55 @@ export class ExecutionReadScopes {
 
   hasNativeCurrentRelations():boolean{return this.access.hasNativeCurrentRelations();}
 
+  /** Pure lifetime check only. This neither settles source custody nor claims
+   * that the later physical HTTP boundary has been crossed. */
+  assertHeldNativeScopes(ticket:HeldNativeReadScopes):void{
+    const held=ticket&&typeof ticket==="object"?heldNativeReads.get(ticket):undefined;
+    if(!held||held.issuer!==this||!held.active)fail("EXECUTION_READ_SCOPE_REQUIRED");
+    const now=Date.now();
+    for(const context of held.contexts){
+      const lease=context.actor_lease_until_ms;
+      if(typeof lease!=="number"||!Number.isSafeInteger(lease)||now>=nativeNoticeValidUntil(context,"paper",lease))
+        fail("EXECUTION_READ_ACCESS_CHANGED",409);
+    }
+  }
+
+  /** Exact original purpose only, checked against the source contexts actually
+   * held by deliverNativeTogether. This DB-only fence neither observes another
+   * source nor manufactures a replacement scope or ordinary detached ALLOW. */
+  async heldNativeScope(ticket:HeldNativeReadScopes,principal:ReadScopePrincipal,
+    binding:ReadScopeBinding,requirement:ReadScopeRequirement):Promise<AuthorizedExecutionReadScope>{
+    const {p,b,r}=captureReadScopeInputs(structuredClone(principal),binding,requirement);
+    const held=ticket&&typeof ticket==="object"?heldNativeReads.get(ticket):undefined;
+    if(!held||held.issuer!==this||!held.active||!this.hasNativeCurrentRelations())fail("EXECUTION_READ_SCOPE_REQUIRED");
+    this.assertHeldNativeScopes(ticket);
+    if(b.environment!=="paper"||r.action==="stream.subscribe"||r.dataset?.window!=null)
+      fail("EXECUTION_READ_CURRENT_ONLY",503);
+    const identity=(actor:ReadScopePrincipal)=>({user:actor.user.userId,role:actor.user.role,
+      session_user:actor.session.userId,session:actor.session.sessionId,generation:actor.session.sessionVersion,
+      authentication_time:actor.session.authenticationTime.valueOf(),workspace:actor.workspaceId,
+      viewer:actor.viewerWorkspaceId??actor.workspaceId});
+    const index=held.states.findIndex(state=>accessDigest(identity(state.principal))===accessDigest(identity(p))&&
+      accessDigest(state.binding)===accessDigest(b)&&accessDigest(state.requirement)===accessDigest(r));
+    if(index<0)fail("EXECUTION_READ_SCOPE_REQUIRED");
+    const expected=held.contexts[index];
+    let confirmed:AccessEvaluationContext;
+    try{confirmed=await this.access.confirmReadContext({user_id:p.user.userId,session_id:p.session.sessionId,
+      session_generation:p.session.sessionVersion},p.workspaceId,expected);}catch(error){return rethrowReadScopeError(error);}
+    this.assertHeldNativeScopes(ticket);
+    const now=Math.max(Date.now(),confirmed.now_ms),lease=confirmed.actor_lease_until_ms;
+    if(!Number.isSafeInteger(now)||!Number.isSafeInteger(lease)||!confirmed.actor_current||
+      confirmed.principal_id!==p.user.userId||confirmed.workspace_id!==p.workspaceId||confirmed.actor_role!==p.user.role||
+      confirmed.authority_fingerprint!==expected.authority_fingerprint)
+      fail("EXECUTION_READ_ACCESS_CHANGED",409);
+    if(typeof lease!=="number"||now>=Math.min(lease,p.session.idleExpiresAt.valueOf(),p.session.absoluteExpiresAt.valueOf()))
+      fail("EXECUTION_READ_NOT_AVAILABLE",404);
+    if(!policyReady({...confirmed,now_ms:now}))fail("EXECUTION_READ_POLICY_PENDING",503);
+    if(now>=nativeNoticeValidUntil(expected,"paper",Math.min(lease!,p.session.idleExpiresAt.valueOf(),p.session.absoluteExpiresAt.valueOf())))
+      fail("EXECUTION_READ_ACCESS_CHANGED",409);
+    return held.scopes[index];
+  }
+
   async deliver<T>(scope:AuthorizedExecutionReadScope,read:()=>Promise<T>):Promise<T> {
     // A returned DTO is NOT the physical final HTTP boundary. Native CURRENT
     // composition must use deliverNative; never silently fall back detached.
@@ -1295,7 +1352,7 @@ export class ExecutionReadScopes {
    * to the other subjects. Every purpose has its own native source context,
    * all held through ENTER, final Core COMMIT and the same physical egress. */
   async deliverNativeTogether(scopes:readonly AuthorizedExecutionReadScope[],response:ServerResponse,
-    read:()=>Promise<Buffer>,validation?:{validateAfterEnter?:()=>Promise<void>;validateBeforeDispatch?:()=>void}):Promise<void>{
+    read:(ticket:HeldNativeReadScopes)=>Promise<Buffer>,validation?:{validateAfterEnter?:()=>Promise<void>;validateBeforeDispatch?:()=>void}):Promise<void>{
     if(scopes.length<1||scopes.length>4)fail("EXECUTION_READ_SCOPE_LIMIT",503);
     const captured=[...scopes],states=captured.map(scope=>{assertExecutionReadScope(scope);const state=minted.get(scope)!;
       if(state.issuer!==this||scope.mode!=="SCOPED_V2"||scope.environment!=="paper"||!state.context||
@@ -1329,7 +1386,14 @@ export class ExecutionReadScopes {
       }
     };
     await this.access.deliverNativeCurrentComposition(actor,scope.workspaceId,purposes,proof,response,
-      async contexts=>{check(contexts);return read();},check,
+      async contexts=>{
+        check(contexts);
+        if(!this.hasNativeCurrentRelations())fail("EXECUTION_READ_AUTHORITY_UNAVAILABLE",503);
+        const ticket=Object.freeze(Object.create(null)) as HeldNativeReadScopes;
+        const held:HeldNativeReadState={issuer:this,scopes:captured,states,contexts:[...contexts],active:true};
+        heldNativeReads.set(ticket,held);
+        try{return await read(ticket);}finally{held.active=false;heldNativeReads.delete(ticket);}
+      },check,
       {afterEnter:validation?.validateAfterEnter,beforeDispatch:validation?.validateBeforeDispatch});
   }
 

@@ -106,6 +106,36 @@ function service(relations: Record<string, ProjectionRelation>) {
 function principal() { return { user, session, workspaceId }; }
 
 describe("EDS-04 named resource BFFs", () => {
+  it("selects native Accounts explicitly and preserves the real principal/response without retained projection reads", async () => {
+    const repository = { snapshot: vi.fn() }, response = {} as never, beforeDispatch = vi.fn();
+    const current = { hasNativeCurrentRelations: () => true, readNative: vi.fn(async () => {}), read: vi.fn() };
+    const reader = new ResourceReadService(config(), repository as unknown as ExecutionProfileProjectionRepository,
+      undefined, current as unknown as ManagerCurrentAccounts), actor = principal();
+    expect(reader.hasNativeCurrentAccount()).toBe(true);
+    await reader.readNativeAccount(actor, "actual-account", "paper", response, beforeDispatch);
+    expect(current.readNative).toHaveBeenCalledWith(actor, "actual-account", "paper", response, beforeDispatch);
+    expect(current.read).not.toHaveBeenCalled(); expect(repository.snapshot).not.toHaveBeenCalled();
+  });
+  it("does not native-deliver without the installed composer or for another environment", async () => {
+    const repository = { snapshot: vi.fn() }, current = { hasNativeCurrentRelations: () => true, readNative: vi.fn() };
+    const uninstalled = new ResourceReadService(config(), repository as unknown as ExecutionProfileProjectionRepository);
+    expect(uninstalled.hasNativeCurrentAccount()).toBe(false);
+    await expect(uninstalled.readNativeAccount(principal(), "actual-account", "paper", {} as never, vi.fn()))
+      .rejects.toMatchObject({ code: "EXECUTION_READ_AUTHORITY_UNAVAILABLE", status: 503 });
+    const installed = new ResourceReadService(config(), repository as unknown as ExecutionProfileProjectionRepository,
+      undefined, current as unknown as ManagerCurrentAccounts);
+    await expect(installed.readNativeAccount(principal(), "actual-account", "live", {} as never, vi.fn()))
+      .rejects.toMatchObject({ code: "EXECUTION_READ_AUTHORITY_UNAVAILABLE", status: 503 });
+    expect(current.readNative).not.toHaveBeenCalled(); expect(repository.snapshot).not.toHaveBeenCalled();
+  });
+  it("propagates native Accounts refusal instead of trying a retained/ordinary reader", async () => {
+    const repository = { snapshot: vi.fn() }, failure = new Error("TEST_ONLY_NATIVE_UNKNOWN");
+    const current = { hasNativeCurrentRelations: () => true, readNative: vi.fn(async () => { throw failure; }), read: vi.fn() };
+    const reader = new ResourceReadService(config(), repository as unknown as ExecutionProfileProjectionRepository,
+      undefined, current as unknown as ManagerCurrentAccounts);
+    await expect(reader.readNativeAccount(principal(), "actual-account", "paper", {} as never, vi.fn())).rejects.toBe(failure);
+    expect(current.read).not.toHaveBeenCalled(); expect(repository.snapshot).not.toHaveBeenCalled();
+  });
   it("routes commissioned Paper Accounts with the original principal and never treats them as broker bindings", async () => {
     const repository = { snapshot: vi.fn(async () => null) };
     const current = { read: vi.fn(async (..._input: unknown[]) => ({ TEST_ONLY: "current-account" })) };
@@ -413,5 +443,62 @@ describe("EDS-04 named resource BFFs", () => {
     expect(value.panels.positions.coverage).toMatchObject({ truncated: true, has_more: true, next_cursor: null, source_total: "200" });
     expect(value.data.positions.length).toBeLessThan(200);
     expect(Buffer.byteLength(JSON.stringify(value), "utf8")).toBeLessThanOrEqual(1024 * 1024);
+  });
+});
+
+describe("Account360 native controller ownership (synthetic port, no actual custody)", () => {
+  function nativeController() {
+    const read = vi.fn(), canReadExecution = vi.fn(async () => true);
+    const readNativeAccount = vi.fn(async (..._args: unknown[]) => {});
+    const controller = new ResourceReadController({ read, readNativeAccount, hasNativeCurrentAccount: () => true } as unknown as ResourceReadService,
+      { canReadExecution } as never, config());
+    const request = { portalUser: user, portalWorkspaceId: "personal-workspace", portalViewerWorkspaceId: "viewer-workspace",
+      portalSession: session } as never;
+    const raw = { headersSent: false, writableEnded: false, destroyed: false, destroy: vi.fn() };
+    const reply = { raw, sent: false, hijack: vi.fn() };
+    return { controller, read, readNativeAccount, canReadExecution, request, raw, reply };
+  }
+  it("does not hijack before the actual native beforeDispatch callback and never returns a DTO", async () => {
+    const f = nativeController();
+    f.readNativeAccount.mockImplementation(async (...args) => {
+      expect(f.reply.hijack).not.toHaveBeenCalled();
+      expect(args.slice(0, 4)).toEqual([{ user, session, workspaceId, viewerWorkspaceId: "viewer-workspace" },
+        "actual-account", "paper", f.raw]);
+      (args[4] as () => void)(); (args[4] as () => void)();
+    });
+    await expect(f.controller.account(f.request, "actual-account", { environment: "paper" }, f.reply as never)).resolves.toBeUndefined();
+    expect(f.reply.hijack).toHaveBeenCalledTimes(1); expect(f.raw.destroy).not.toHaveBeenCalled(); expect(f.read).not.toHaveBeenCalled();
+  });
+  it("preserves ordinary typed errors before physical response ownership", async () => {
+    const f = nativeController(), error = Object.assign(new Error("TEST_ONLY_REVOKED"), { code: "EXECUTION_READ_ACCESS_CHANGED", status: 409 });
+    f.readNativeAccount.mockRejectedValue(error);
+    await expect(f.controller.account(f.request, "actual-account", {}, f.reply as never)).rejects.toBe(error);
+    expect(f.reply.hijack).not.toHaveBeenCalled(); expect(f.raw.destroy).not.toHaveBeenCalled(); expect(f.read).not.toHaveBeenCalled();
+  });
+  it("destroys after native ownership/ACK failure without a second framework response", async () => {
+    const f = nativeController();
+    f.readNativeAccount.mockImplementation(async (...args) => { (args[4] as () => void)(); throw new Error("TEST_ONLY_ACK_UNKNOWN"); });
+    await expect(f.controller.account(f.request, "actual-account", {}, f.reply as never)).resolves.toBeUndefined();
+    expect(f.reply.hijack).toHaveBeenCalledTimes(1); expect(f.raw.destroy).toHaveBeenCalledTimes(1); expect(f.read).not.toHaveBeenCalled();
+  });
+  it.each(["headersSent", "writableEnded", "destroyed"] as const)("refuses competing response ownership (%s)", async flag => {
+    const f = nativeController(); f.raw[flag] = true;
+    f.readNativeAccount.mockImplementation(async (...args) => { (args[4] as () => void)(); });
+    const call = f.controller.account(f.request, "actual-account", {}, f.reply as never);
+    if (flag === "writableEnded") await expect(call).rejects.toMatchObject({ code: "EXECUTION_READ_AUTHORITY_UNAVAILABLE", status: 503 });
+    else await expect(call).resolves.toBeUndefined();
+    expect(f.reply.hijack).not.toHaveBeenCalled(); expect(f.read).not.toHaveBeenCalled();
+  });
+  it("requires an actual response rather than silently falling back to an ordinary DTO", async () => {
+    const f = nativeController();
+    await expect(f.controller.account(f.request, "actual-account", {}))
+      .rejects.toMatchObject({ code: "EXECUTION_READ_AUTHORITY_UNAVAILABLE", status: 503 });
+    expect(f.readNativeAccount).not.toHaveBeenCalled(); expect(f.read).not.toHaveBeenCalled();
+  });
+  it("checks workspace membership before entering native response ownership", async () => {
+    const f = nativeController(); f.canReadExecution.mockResolvedValue(false);
+    await expect(f.controller.account(f.request, "actual-account", {}, f.reply as never))
+      .rejects.toMatchObject({ code: "WORKSPACE_NOT_FOUND", status: 404 });
+    expect(f.readNativeAccount).not.toHaveBeenCalled(); expect(f.reply.hijack).not.toHaveBeenCalled();
   });
 });

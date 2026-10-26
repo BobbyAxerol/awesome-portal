@@ -7,6 +7,7 @@ import { loadManagerCurrentCommissioning, managerCurrentMetadataDigest, type Man
 import type { CurrentViewOperation, CurrentViewSelection } from "../src/execution-v2/current-view-authority";
 import type { SelectedCurrentViewEdgeRead } from "../src/execution-v2/current-view-edge-client";
 import type { ReadScopePrincipal } from "../src/execution-v2/read-scope";
+import type { CurrentViewCoreComposition } from "../src/execution-v2/current-view-composition";
 
 const hash = (value: string) => `sha256:${createHash("sha256").update(value).digest("hex")}`;
 const text = (value: string) => ({ kind: "TEXT", value });
@@ -77,7 +78,88 @@ function fixture(metadata = fixtureMetadata()) {
     setNow(value: number) { now = value; }, deny() { denied = true; }, sourceCalls: () => sourceCalls };
 }
 
+/** Adapter orchestration only; this fake port is NOT native custody, a source
+ * terminal or physical HTTP acceptance. Primary separately tests that engine. */
+function nativeFixture() {
+  const f = fixture(), delivered: Buffer[] = [], supplied: CurrentViewSelection[][] = [];
+  let afterBuild = () => {}, afterEnter = () => {};
+  const native: Pick<CurrentViewCoreComposition, "hasNativeCurrentRelations" | "deliverNative"> = {
+    hasNativeCurrentRelations: () => true,
+    deliverNative: vi.fn(async (actor, selections, _response, build, validation) => {
+      supplied.push(structuredClone([...selections]));
+      const bytes = await build(input => f.core.read(actor, input, "CURRENT"));
+      afterBuild();
+      await validation?.validateAfterEnter?.();
+      afterEnter();
+      validation?.validateBeforeDispatch?.();
+      delivered.push(bytes);
+    }),
+  };
+  Object.assign(f.core, native);
+  return { ...f, native, delivered, supplied,
+    afterBuild(run: () => void) { afterBuild = run; }, afterEnter(run: () => void) { afterEnter = run; } };
+}
+
 describe("Manager CURRENT Account360 (synthetic source/real adapter; not connected acceptance)", () => {
+  it("keeps the exact Account360 DTO while providing requested account plus every source pin to native delivery", async () => {
+    const f = nativeFixture(), beforeDispatch = vi.fn(), detached = vi.spyOn(f.core, "deliver");
+    await expect(f.service.readNative(f.principal, "target-account", "paper", {} as never, beforeDispatch)).resolves.toBeUndefined();
+    expect(detached).not.toHaveBeenCalled();
+    expect(f.supplied[0]).toHaveLength(3);
+    expect(f.supplied[0]![0]!.read_requirement.resource).toEqual({ kind: "ACCOUNT", id: "target-account" });
+    expect(f.supplied[0]!.slice(1).map(item => item.read_requirement.resource))
+      .toEqual([{ kind: "ACCOUNT", id: "source-pin-account" }, { kind: "ACCOUNT", id: "source-pin-account" }]);
+    expect(f.supplied[0]!.map(item => item.resource_ref)).toEqual(["accounts", "accounts", "balances"]);
+    expect(f.native.deliverNative).toHaveBeenCalledWith(f.principal, expect.any(Array), expect.any(Object),
+      expect.any(Function), expect.objectContaining({ validateAfterEnter: expect.any(Function), validateBeforeDispatch: expect.any(Function) }));
+    expect(f.delivered).toHaveLength(1);
+    const value = JSON.parse(f.delivered[0]!.toString("utf8"));
+    expect(scopedResourceResponseSchemas.ACCOUNT.safeParse(value).success).toBe(true);
+    expect(value.data.account_balances[0]).toMatchObject({ total: "100.500", free: "0" });
+    expect(value.data.accounts[0].account_id).toBe("target-account");
+    expect(value.panels.orders.state).toBe("UNAVAILABLE");
+    expect(f.sourceCalls()).toBe(3); // initial, after all grains, after ENTER
+    expect(beforeDispatch).toHaveBeenCalledTimes(1);
+  });
+  it("never exposes a detached native DTO or performs source reads on that forbidden path", async () => {
+    const f = nativeFixture();
+    await expect(f.service.read(f.principal, "target-account", "paper"))
+      .rejects.toMatchObject({ code: "EXECUTION_READ_AUTHORITY_UNAVAILABLE", status: 503 });
+    expect(f.sourceRead).not.toHaveBeenCalled(); expect(f.calls).toHaveLength(0);
+  });
+  it("refuses native delivery when no native composition is installed", async () => {
+    const f = fixture();
+    await expect(f.service.readNative(f.principal, "target-account", "paper", {} as never, vi.fn()))
+      .rejects.toMatchObject({ code: "EXECUTION_READ_AUTHORITY_UNAVAILABLE", status: 503 });
+    expect(f.sourceRead).not.toHaveBeenCalled();
+  });
+  it.each(["workspace", "environment"])("does not send native data for wrong %s", async variant => {
+    const f = nativeFixture();
+    await expect(f.service.readNative(variant === "workspace" ? { ...f.principal, workspaceId: "other" } : f.principal,
+      "target-account", variant === "environment" ? "live" : "paper", {} as never, vi.fn()))
+      .rejects.toMatchObject({ code: "EXECUTION_READ_NOT_AVAILABLE", status: 404 });
+    expect(f.native.deliverNative).not.toHaveBeenCalled(); expect(f.sourceRead).not.toHaveBeenCalled();
+  });
+  it.each(["revision", "approval-expiry", "draining"])("rechecks metadata after ENTER and refuses %s without dispatch", async variant => {
+    const f = nativeFixture(), beforeDispatch = vi.fn();
+    f.afterBuild(() => {
+      if (variant === "approval-expiry") f.setNow(8000);
+      else f.setSource({ ...f.getSource(), ...(variant === "revision" ? { publication_revision: "changed" } : { state: "DRAINING" as const }) });
+    });
+    await expect(f.service.readNative(f.principal, "target-account", "paper", {} as never, beforeDispatch)).rejects.toThrow();
+    expect(f.delivered).toHaveLength(0); expect(beforeDispatch).not.toHaveBeenCalled();
+  });
+  it("rechecks commissioning expiry synchronously after final source validation, before native dispatch", async () => {
+    const f = nativeFixture(), beforeDispatch = vi.fn(); f.afterEnter(() => f.setNow(8000));
+    await expect(f.service.readNative(f.principal, "target-account", undefined, {} as never, beforeDispatch)).rejects.toThrow();
+    expect(f.sourceCalls()).toBe(3);
+    expect(f.delivered).toHaveLength(0); expect(beforeDispatch).not.toHaveBeenCalled();
+  });
+  it("propagates native response ownership refusal without a detached fallback", async () => {
+    const f = nativeFixture(), detached = vi.spyOn(f.core, "deliver"), failure = new Error("TEST_ONLY_RESPONSE_ALREADY_OWNED");
+    await expect(f.service.readNative(f.principal, "target-account", "paper", {} as never, () => { throw failure; })).rejects.toBe(failure);
+    expect(f.delivered).toHaveLength(0); expect(detached).not.toHaveBeenCalled();
+  });
   it("composes the existing closed Account360 DTO from exact account and balance rows", async () => {
     const f = fixture(), result = await f.service.read(f.principal, "target-account", "paper") as any;
     expect(scopedResourceResponseSchemas.ACCOUNT.safeParse(result).success).toBe(true);

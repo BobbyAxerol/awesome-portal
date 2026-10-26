@@ -1,5 +1,6 @@
 import { Inject, Injectable, Optional } from "@nestjs/common";
 import { createHash } from "node:crypto";
+import type { ServerResponse } from "node:http";
 import { ControlApiConfig } from "../config";
 import { utcEpochMs } from "../execution/contract-authority";
 import { projectionExpired, retainedReview } from "../execution/retained-read-profile";
@@ -183,6 +184,18 @@ export class ResourceReadService {
     @Optional() @Inject(ExecutionReadScopes) private readonly readScopes?: ExecutionReadScopes,
     @Optional() @Inject(ManagerCurrentAccounts) private readonly managerCurrentAccounts?: ManagerCurrentAccounts,
   ) {}
+
+  hasNativeCurrentAccount(): boolean {
+    return this.managerCurrentAccounts?.hasNativeCurrentRelations?.() === true;
+  }
+
+  async readNativeAccount(principal: ResourceReadPrincipal, resourceId: string,
+    requestedEnvironment: ResourceEnvironment | undefined, response: ServerResponse, beforeDispatch: () => void): Promise<void> {
+    if (!this.hasNativeCurrentAccount() || !this.managerCurrentAccounts ||
+      requestedEnvironment !== undefined && requestedEnvironment !== "paper")
+      throw new ExecutionReadScopeError("EXECUTION_READ_AUTHORITY_UNAVAILABLE", 503);
+    await this.managerCurrentAccounts.readNative(principal, resourceId, requestedEnvironment, response, beforeDispatch);
+  }
 
   async read(
     principal: ResourceReadPrincipal,
