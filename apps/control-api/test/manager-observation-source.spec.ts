@@ -93,6 +93,44 @@ describe("Existing Portal observation source, not TS Events",()=>{
     f.repository.journalMetadataAfter.mockImplementationOnce(async()=>{controller.abort();return [f.row(11)];});
     await expect(f.source.read(f.binding,f.baseline.source_cursor,1,controller.signal)).rejects.toMatchObject({code:"SOURCE_UNAVAILABLE"});
   });
+  it.each([
+    [{projectionEpoch:"TEST_ONLY-replaced-generation"},"GENERATION_CHANGED"],
+    [{sourceEpoch:"TEST_ONLY-replaced-source"},"SCOPE_CHANGED"],
+    [{sourceCatalogueSha256:hash("f")},"SCOPE_CHANGED"],
+    [{sourceContractRevision:"TEST_ONLY-replaced-contract"},"SCOPE_CHANGED"],
+    [{projectionSequence:10},"SOURCE_COVERAGE_UNPROVED"],
+    [{projectionSequence:NaN},"SOURCE_COVERAGE_UNPROVED"],
+    [{payloadDigest:hash("f")},"SOURCE_COVERAGE_UNPROVED"],
+  ] as const)("discards a batch if the head changes during journal I/O: %j",async(changed,code)=>{
+    const f=fixture();f.setHead({...f.getHead(),projectionSequence:11});
+    f.repository.journalMetadataAfter.mockImplementationOnce(async()=>{
+      f.setHead({...f.getHead(),...changed});return [f.row(11)];
+    });
+    await expect(f.source.read(f.binding,f.baseline.source_cursor)).rejects.toMatchObject({code});
+    expect(f.repository.snapshotMetadata).toHaveBeenCalledTimes(2);
+    expect(f.repository.journalMetadataAfter).toHaveBeenCalledOnce();
+  });
+  it("a removed source during journal I/O is unavailable, not a successful notice",async()=>{
+    const f=fixture();f.setHead({...f.getHead(),projectionSequence:11});
+    f.repository.journalMetadataAfter.mockImplementationOnce(async()=>{f.setHead(null);return [f.row(11)];});
+    await expect(f.source.read(f.binding,f.baseline.source_cursor)).rejects.toMatchObject({code:"SOURCE_UNAVAILABLE"});
+  });
+  it("same-lineage append during I/O preserves the original cursor and keeps the Hub draining",async()=>{
+    const f=fixture();f.setHead({...f.getHead(),projectionSequence:11});
+    f.repository.journalMetadataAfter.mockImplementationOnce(async()=>{
+      f.setHead({...f.getHead(),projectionSequence:12,payloadDigest:hash("f")});f.setRows([f.row(12)]);return [f.row(11)];
+    });
+    const first=await f.source.read(f.binding,f.baseline.source_cursor);
+    expect(first.caught_up).toBe(false);
+    expect(decodeManagerObservationCoordinate(first.next_cursor!)).toMatchObject({original_snapshot_id:f.baseline.snapshot_id,after_sequence:11});
+    const next=await f.source.read(f.binding,first.next_cursor!);
+    expect(next.caught_up).toBe(true);expect(decodeManagerObservationCoordinate(next.next_cursor!).after_sequence).toBe(12);
+  });
+  it("cancellation at the final scalar check discards the entire batch",async()=>{
+    const f=fixture(),controller=new AbortController();f.setHead({...f.getHead(),projectionSequence:11});f.setRows([f.row(11)]);
+    f.repository.snapshotMetadata.mockImplementationOnce(async()=>f.getHead()).mockImplementationOnce(async()=>{controller.abort();return f.getHead();});
+    await expect(f.source.read(f.binding,f.baseline.source_cursor,1,controller.signal)).rejects.toMatchObject({code:"SOURCE_UNAVAILABLE"});
+  });
   it("unchanged scalar head avoids reading journal or inventing a new cursor",async()=>{
     const f=fixture(),result=await f.source.read(f.binding,f.baseline.source_cursor);
     expect(result).toEqual({notices:[],next_cursor:f.baseline.source_cursor,caught_up:true});expect(f.repository.journalMetadataAfter).not.toHaveBeenCalled();

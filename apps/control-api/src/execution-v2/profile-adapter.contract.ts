@@ -29,6 +29,18 @@ export const scopedAdapterFieldsSchema = z.object({
   finding_id: adapterText.nullable().optional(), finding_type: adapterText.nullable().optional(),
   group_id: adapterText.nullable().optional(), leg_id: adapterText.nullable().optional(),
   leg_role: adapterText.nullable().optional(), leg_sequence: adapterTime.nullable().optional(),
+  // Existing admitted detail vocabulary must survive BOTH scoped record readers.
+  // These source ISO instants are normalized by recordDetailValue; *_ms and
+  // existing created_at/updated_at remain integer UTC epoch milliseconds.
+  runtime_state: z.enum(["RUNNING", "PAUSED", "HALTED", "STOPPED"]).nullable().optional(),
+  runtime_state_since: z.string().datetime().nullable().optional(),
+  runtime_state_changed_at: z.string().datetime().nullable().optional(),
+  execution_session_id: adapterText.nullable().optional(),
+  started_at: z.string().datetime().nullable().optional(), completed_at: z.string().datetime().nullable().optional(),
+  account_type: adapterText.nullable().optional(), position_side: adapterText.nullable().optional(),
+  time_in_force: adapterText.nullable().optional(), reduce_only: z.boolean().nullable().optional(),
+  post_only: z.boolean().nullable().optional(), filled_quantity: adapterDecimal.nullable().optional(),
+  average_fill_price: adapterDecimal.nullable().optional(), trigger_price: adapterDecimal.nullable().optional(),
 }).strict();
 export const scopedAdapterGroupSchema = z.object({ state: z.enum(["PARTIAL", "EMPTY", "UNAVAILABLE"]), completeness: z.literal("PARTIAL"),
   freshness: z.literal("UNKNOWN"), as_of_ms: z.null(), returned_count: z.number().int().min(0).max(200), truncated: z.boolean(),

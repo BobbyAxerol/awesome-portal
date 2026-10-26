@@ -25,7 +25,7 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)("BE-P15 subject records through 
   // A researcher scope: the SQL tuple predicate then admits ONLY the own tuple, so the peer rows prove the predicate, and the reviewed artifact
   // lists exactly the detail names this test expects to see.
   const f = productReadFixture({ fields: [...FIELDS, "timestamp_ms", "occurred_at_ms", "price", "submitted_at_ms", "client_order_id", "order_type",
-    "commission", "commission_currency", "liquidity_side"] });
+    "commission", "commission_currency", "liquidity_side", "execution_session_id", "position_side", "time_in_force", "reduce_only", "post_only", "trigger_price"] });
   const WS = f.config.EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID!, PROFILE = f.config.EXECUTION_EDGE_PAPER_PROFILE_ID!;
   const insert = (relation: string, rowId: string, ts: string, fields: Record<string, unknown>) => domain.query(
     `INSERT INTO execution_timeseries_history(workspace_id,environment,profile_id,relation_key,row_id,ts,fields,first_seen_at)
@@ -39,7 +39,8 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)("BE-P15 subject records through 
     const tuple = { ...OWN, strategy_id: "strategy-own" };
     await insert("manager.orders:orders", "o-own", "2026-10-01T00:00:02.123456Z", { ...tuple, order_id: "o-own", status: "FILLED", side: "BUY", quantity: "10.5",
       price: "100.1234567890123456789", submitted_at: "2026-10-01T00:00:00.123456Z", updated_at: "2026-10-01T00:00:02.123456Z", client_order_id: "client-entry",
-      order_type: "LIMIT", venue_order_id: "NEVER_RETURN", error_message: "NEVER_RETURN" });
+      order_type: "LIMIT",execution_session_id:"TEST_ONLY-session",position_side:"LONG",time_in_force:"GTC",
+      reduce_only:false,post_only:true,trigger_price:"100.1234567890123456789",venue_order_id: "NEVER_RETURN", error_message: "NEVER_RETURN" });
     await insert("manager.orders:orders", "o-peer", "2026-10-01T00:00:03Z", { ...PEER, strategy_id: "strategy-peer", order_id: "o-peer", client_order_id: "PEER_HIDDEN", submitted_at: "2026-10-01T00:00:00Z" });
     await insert("manager.fills:fills", "f-own", "2026-10-01T00:00:01.456Z", { ...tuple, fill_id: "f-own", side: "BUY", price: "100.1234567890123456789", quantity: "10.5",
       trade_time: "2026-10-01T00:00:01.456Z", client_order_id: "client-entry", commission: "0.0000000000000000001", commission_currency: "USDT", liquidity_side: "MAKER", trade_id: "NEVER_RETURN" });
@@ -67,7 +68,10 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)("BE-P15 subject records through 
     expect(page.observed_at_basis).toBe("ORDER_UPDATED_AT");
     expect(page.records).toHaveLength(1);
     expect(page.records[0].values).toMatchObject({ order_id: "o-own", client_order_id: "client-entry", order_type: "LIMIT", submitted_at_ms: 1790812800123,
-      updated_at: 1790812802123, price: "100.1234567890123456789" });
+      updated_at: 1790812802123, price: "100.1234567890123456789",execution_session_id:"TEST_ONLY-session",
+      position_side:"LONG",time_in_force:"GTC",reduce_only:false,post_only:true,trigger_price:"100.1234567890123456789" });
+    expect(page.records[0].values).not.toHaveProperty("filled_quantity");
+    expect(page.records[0].values).not.toHaveProperty("average_fill_price");
     expect(JSON.stringify(page)).not.toMatch(/PEER_HIDDEN|NEVER_RETURN/);
     expect(scopedSubjectActivitySchema.safeParse(page).success).toBe(true);
   });

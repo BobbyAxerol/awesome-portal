@@ -573,6 +573,42 @@ describe("BE-P16 notice source and coordinate", () => {
     expect(rest.notices).toHaveLength(2); expect(rest.caught_up).toBe(true);
     expect(decodeFleetCoordinate(rest.next_cursor!)).toMatchObject({ baseline_ordinal: "7", after_ordinal: "12" });
   });
+  it.each([
+    ["source epoch", (l: Log) => { l.epoch = "TEST_ONLY:replacement"; }, "GENERATION_CHANGED"],
+    ["projection generation", (l: Log) => { l.generation = "TEST_ONLY:replacement"; }, "GENERATION_CHANGED"],
+    ["catalogue", (l: Log) => { l.catalogue = "sha256:" + "f".repeat(64); }, "GENERATION_CHANGED"],
+    ["rollback", (l: Log) => { l.rows.pop(); }, "SOURCE_COVERAGE_UNPROVED"],
+    ["rewrite at same ordinal", (l: Log) => { l.rows.at(-1)!.revision = "TEST_ONLY:rewritten"; }, "SOURCE_COVERAGE_UNPROVED"],
+    ["missing source", (l: Log) => { l.gone = true; }, "SOURCE_UNAVAILABLE"],
+  ] as const)("fences %s that changes during revision I/O", async (_name, change, code) => {
+    const log = new Log(), source = new ManagerFleetNoticeSource(log), { binding, cursor } = await bindingOf(log);
+    log.publish();
+    const read = log.revisionMetadataAfter.bind(log);
+    vi.spyOn(log, "revisionMetadataAfter").mockImplementationOnce(async (...args) => {
+      const rows = structuredClone(await read(...args)); change(log); return rows;
+    });
+    await expect(source.read(binding, cursor)).rejects.toMatchObject({ code });
+    expect(log.headCalls).toBe(3); // original baseline + two scalar source checks
+    expect(log.rowCalls).toBe(1);
+  });
+  it("same-lineage append during I/O keeps a bounded batch and drains from the same baseline", async () => {
+    const log = new Log(), source = new ManagerFleetNoticeSource(log), { binding, cursor } = await bindingOf(log);
+    log.publish(); const read = log.revisionMetadataAfter.bind(log);
+    vi.spyOn(log, "revisionMetadataAfter").mockImplementationOnce(async (...args) => {
+      const rows = await read(...args); log.publish(); return rows;
+    });
+    const first = await source.read(binding, cursor);
+    expect(first.notices).toHaveLength(1); expect(first.caught_up).toBe(false);
+    const rest = await source.read(binding, first.next_cursor!);
+    expect(rest.notices).toHaveLength(1); expect(rest.caught_up).toBe(true);
+    expect(decodeFleetCoordinate(rest.next_cursor!)).toMatchObject({ baseline_ordinal: "7", after_ordinal: "9" });
+  });
+  it("aborts at the final scalar fence without returning a notice", async () => {
+    const log = new Log(), source = new ManagerFleetNoticeSource(log), { binding, cursor } = await bindingOf(log), abort = new AbortController();
+    log.publish(); const head = log.head.bind(log);
+    vi.spyOn(log, "head").mockImplementationOnce(head).mockImplementationOnce(async () => { abort.abort(); return head(); });
+    await expect(source.read(binding, cursor, 1, abort.signal)).rejects.toMatchObject({ code: "SOURCE_UNAVAILABLE" });
+  });
   it("refuses a binding that does not belong to the coordinate or the dataset (never answers across scopes)", async () => {
     const log = new Log(), source = new ManagerFleetNoticeSource(log), { binding, cursor } = await bindingOf(log);
     for (const patch of [{ dataset: "execution_profile_observation" as const }, { model_revision: "other" }, { snapshot_id: "sha256:" + "0f".repeat(32) },

@@ -5,11 +5,30 @@ import {scopedAdapterFieldsSchema,scopedAdapterResponseSchema} from '../../../ap
 import {scopedSubjectActivitySchema} from '../../../apps/control-api/src/execution-v2/subject-activity.contract';
 import {executionScopedRuntimeManifestSchema,technicalDiagnosticsSchema,technicalHealthSchema} from '../../../apps/control-api/src/execution-v2/technical-read.contract';
 import {serviceHeartbeatsPageSchema} from '../../../apps/control-api/src/execution-v2/service-heartbeats.contract';
+import {RECORD_DETAIL_READ_FIELDS} from '../../../apps/control-api/src/execution-v2/read-fields';
 const spec=JSON.parse(readFileSync(new URL('../openapi/execution-scoped-records.openapi.json',import.meta.url),'utf8'));
 const fixtures=JSON.parse(readFileSync(new URL('../fixtures/execution-scoped-records.synthetic.valid.json',import.meta.url),'utf8'));
 const ajv=new Ajv2020({strict:false,allErrors:true});ajv.addSchema(spec,'scoped');
 const validators=Object.fromEntries(Object.keys(spec.components.schemas).map(name=>[name,ajv.getSchema(`scoped#/components/schemas/${name}`)!]));
 describe('ELP2-04 closed scoped record DTOs',()=>{
+  it('publishes every admitted detail member at both strict boundaries',()=>{
+    for(const field of RECORD_DETAIL_READ_FIELDS){
+      expect(Object.hasOwn(scopedAdapterFieldsSchema.shape,field),field).toBe(true);
+      expect(Object.hasOwn(spec.components.schemas.ScopedRecordFields.properties,field),field).toBe(true);
+    }
+    const fixture={runtime_state:'RUNNING',runtime_state_since:'2026-10-01T00:00:00.000Z',
+      runtime_state_changed_at:null,execution_session_id:'session_TEST_ONLY',started_at:'2026-10-01T00:00:00.000Z',
+      completed_at:null,account_type:'INTERNAL',position_side:'LONG',time_in_force:'GTC',reduce_only:false,
+      post_only:true,filled_quantity:'0',average_fill_price:null,trigger_price:'100.1234567890123456789'};
+    expect(validators.ScopedRecordFields(fixture)).toBe(true);
+    expect(scopedAdapterFieldsSchema.parse(fixture)).toEqual(fixture);
+  });
+  it.each([{runtime_state:'HEALTHY'},{started_at:1790812800000},{reduce_only:'false'},
+    {average_fill_price:0},{trigger_price:'1e3'},{execution_session_id:'private\nvalue'},
+    {runtime_state_since:'2026-10-01T00:00:00'}])('refuses malformed detail without widening source authority %#',value=>{
+    expect(validators.ScopedRecordFields(value)).toBe(false);
+    expect(scopedAdapterFieldsSchema.safeParse(value).success).toBe(false);
+  });
   it.each(fixtures.cases)('matches generated and runtime schema $type',({type,value})=>{
     expect(fixtures.lane).toBe('TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT');
     expect(validators[type](value),ajv.errorsText(validators[type].errors)).toBe(true);

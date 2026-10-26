@@ -111,6 +111,7 @@ export class ManagerFleetNoticeSource implements ScopedNoticeSource {
       if (digestOf("epoch", head.source_epoch) !== c.epoch_digest || digestOf("generation", head.projection_generation) !== c.generation_digest ||
         head.source_epoch !== binding.source_continuity_epoch || head.projection_generation !== binding.projection_generation ||
         fleetSourceSetDigest(selection, head) !== binding.source_set_digest) return invalid("GENERATION_CHANGED");
+      if (!ordinalText.safeParse(head.source_sequence).success) return invalid("SOURCE_COVERAGE_UNPROVED");
       const headOrdinal = BigInt(head.source_sequence), afterOrdinal = BigInt(c.after_ordinal);
       // The head moving BACKWARDS is a rollback or a corrupt checkpoint, never "nothing new".
       if (headOrdinal < afterOrdinal) return invalid("SOURCE_COVERAGE_UNPROVED");
@@ -141,8 +142,19 @@ export class ManagerFleetNoticeSource implements ScopedNoticeSource {
           },
         };
       });
+      // A source replacement during revision I/O invalidates this batch even
+      // when the initial head matched. The Hub separately fences current
+      // human/field authority; this scalar recheck protects source lineage.
+      const current = await this.log.head(selection.workspace_id, selection.environment, selection.profile_id);
+      if (signal?.aborted || !current) return invalid("SOURCE_UNAVAILABLE");
+      if (current.source_epoch !== head.source_epoch || current.projection_generation !== head.projection_generation ||
+        fleetSourceSetDigest(selection, current) !== binding.source_set_digest) return invalid("GENERATION_CHANGED");
+      if (!ordinalText.safeParse(current.source_sequence).success || BigInt(current.source_sequence) < headOrdinal ||
+        (current.source_sequence === head.source_sequence &&
+          (current.revision !== head.revision || current.payload_digest !== head.payload_digest)))
+        return invalid("SOURCE_COVERAGE_UNPROVED");
       return edgeScopedNoticeBatch.parse({ notices, next_cursor: notices[notices.length - 1]!.resume_cursor,
-        caught_up: BigInt(rows[rows.length - 1]!.source_sequence) === headOrdinal });
+        caught_up: rows[rows.length - 1]!.source_sequence === current.source_sequence });
     } catch (error) { if (error instanceof ScopedReplayError) throw error; return invalid("SOURCE_UNAVAILABLE"); }
   }
 }

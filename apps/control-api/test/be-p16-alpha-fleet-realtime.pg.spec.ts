@@ -102,6 +102,34 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)("BE-P16 alpha_fleet_overview not
       expect(batch.caught_up).toBe(true);
       expect((await source.read(binding, cursor, 1)).caught_up).toBe(false);
     });
+    it("discards persisted revisions when an independent committed head changes generation during the read",async()=>{
+      await seed(3);const {binding,cursor}=await start();await revision("4");await head("TEST_ONLY:fleet-r4","4");
+      const source=new ManagerFleetNoticeSource({
+        head:repository.head.bind(repository),revisionQualification:repository.revisionQualification.bind(repository),
+        revisionMetadataAfter:async(...args)=>{
+          const rows=await repository.revisionMetadataAfter(...args);
+          await revision("1",{generation:"TEST_ONLY:g2"});
+          await head("TEST_ONLY:fleet-rTEST_ONLY:g21","1",{generation:"TEST_ONLY:g2"});
+          return rows;
+        },
+      });
+      await expect(source.read(binding,cursor,10)).rejects.toMatchObject({code:"GENERATION_CHANGED"});
+    });
+    it("same-lineage concurrent SQL append preserves baseline and signals another bounded drain",async()=>{
+      await seed(3);const {binding,cursor,source:ordinary}=await start();await revision("4");await head("TEST_ONLY:fleet-r4","4");
+      const source=new ManagerFleetNoticeSource({
+        head:repository.head.bind(repository),revisionQualification:repository.revisionQualification.bind(repository),
+        revisionMetadataAfter:async(...args)=>{
+          const rows=await repository.revisionMetadataAfter(...args);
+          await revision("5");await head("TEST_ONLY:fleet-r5","5");return rows;
+        },
+      });
+      const first=await source.read(binding,cursor,10);
+      expect(first.caught_up).toBe(false);expect(first.notices).toHaveLength(1);
+      const rest=await ordinary.read(binding,first.next_cursor!,10);
+      expect(rest.caught_up).toBe(true);expect(rest.notices).toHaveLength(1);
+      expect(decodeFleetCoordinate(rest.next_cursor!)).toMatchObject({baseline_ordinal:"3",after_ordinal:"5"});
+    });
     it("a missing ordinal (retention loss) is SOURCE_COVERAGE_UNPROVED, never a skipped revision", async () => {
       await seed(3);
       const { binding, cursor, source } = await start();

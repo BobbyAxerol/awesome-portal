@@ -127,7 +127,7 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
-        /** @description Closed per-record vocabulary. Time members are UTC epoch milliseconds. submitted_at_ms is the order submission instant and occurred_at_ms the fill trade instant (source columns submitted_at / trade_time); resolved_at_ms is a reconciliation finding resolution instant. client_order_id, order_type, finding_id, finding_type, leg_role are raw source text (the Portal does not classify; no finding_type vocabulary is published). commission is an exact decimal on fills only; orders carry no fee column. liquidity_side is MAKER|TAKER|UNKNOWN. group_id, leg_id, leg_role and leg_sequence identify a conditional-order leg: match legs to orders by exact client_order_id equality, never by suffix. Admission is per scope (field policy); an omitted member is not a zero. */
+        /** @description Closed per-record vocabulary. Integer instants (*_ms, created_at, updated_at) are UTC epoch milliseconds; runtime_state_since, runtime_state_changed_at, started_at and completed_at are normalized UTC ISO date-time strings. submitted_at_ms is the order submission instant and occurred_at_ms the fill trade instant (source columns submitted_at / trade_time); resolved_at_ms is a reconciliation finding resolution instant. client_order_id, order_type, finding_id, finding_type, leg_role are raw source text (the Portal does not classify; no finding_type vocabulary is published). commission is an exact decimal on fills only; orders carry no fee column. liquidity_side is MAKER|TAKER|UNKNOWN. group_id, leg_id, leg_role and leg_sequence identify a conditional-order leg: match legs to orders by exact client_order_id equality, never by suffix. Runtime/session/account/order detail requires explicit field policy and stated source values; RUNNING is not inferred from a healthy process. Admission is per scope; omitted, null, false and exact zero remain different. */
         ScopedRecordFields: {
             alpha_id?: string | null;
             alpha_version_id?: string | null;
@@ -176,6 +176,20 @@ export interface components {
             leg_role?: string | null;
             commission?: string | null;
             liquidity_side?: ("MAKER" | "TAKER" | "UNKNOWN") | null;
+            runtime_state?: ("RUNNING" | "PAUSED" | "HALTED" | "STOPPED") | null;
+            runtime_state_since?: string | null;
+            runtime_state_changed_at?: string | null;
+            started_at?: string | null;
+            completed_at?: string | null;
+            execution_session_id?: string | null;
+            account_type?: string | null;
+            position_side?: string | null;
+            time_in_force?: string | null;
+            reduce_only?: boolean | null;
+            post_only?: boolean | null;
+            filled_quantity?: string | null;
+            average_fill_price?: string | null;
+            trigger_price?: string | null;
         };
         ScopedAdapterGroup: {
             /** @enum {unknown} */

@@ -1,4 +1,4 @@
-import { isRecordDetailReadField } from "./read-fields";
+import { isRecordDetailReadField, RECORD_DETAIL_READ_FIELDS } from "./read-fields";
 import type { AuthorizedExecutionReadScope } from "./read-scope";
 import { scopeAllowsDetailField } from "./read-scope";
 
@@ -96,8 +96,7 @@ export function recordDetailValue(field: string, raw: unknown): RecordDetailValu
 /** Add every admitted, well-formed detail member of `source` to `target`. `from` maps a detail member to its raw column. */
 export function addRecordDetail(scope: AuthorizedExecutionReadScope, source: Readonly<Record<string, unknown>>,
   target: Record<string, unknown>, from: Readonly<Record<string, string>> = {}): void {
-  for (const field of ["submitted_at_ms", "resolved_at_ms", "client_order_id", "order_type", "commission", "commission_currency",
-    "liquidity_side", "finding_id", "finding_type", "leg_role", "leg_sequence"]) {
+  for (const field of RECORD_DETAIL_READ_FIELDS) {
     if (!scopeAllowsDetailField(scope, field)) continue;
     const column = from[field] ?? field;
     if (!Object.hasOwn(source, column)) continue;

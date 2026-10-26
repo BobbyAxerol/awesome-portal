@@ -7,6 +7,7 @@ const nullable=s=>({anyOf:[s,{type:'null'}]});
 const text={type:'string',minLength:1,maxLength:256,pattern:'^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])'};
 const decimal={type:'string',maxLength:128,pattern:'^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$(?![\\s\\S])'};
 const count={type:'integer',minimum:0,maximum:Number.MAX_SAFE_INTEGER};
+const instant={type:'string',format:'date-time',pattern:'^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?Z$(?![\\s\\S])'};
 const cursor=nullable({type:'string',minLength:1,maxLength:4096,pattern:'^[A-Za-z0-9._-]+$(?![\\s\\S])'});
 const ref=n=>({$ref:`#/components/schemas/${n}`});
 const fields=obj({
@@ -16,8 +17,13 @@ const fields=obj({
   // BE-P15 record detail (RV-11 R-5..R-9): optional + nullable like every member; omitted = not admitted by the scope or not stated by the source.
   ...Object.fromEntries(['submitted_at_ms','resolved_at_ms','leg_sequence'].map(k=>[k,nullable(count)])),
   ...Object.fromEntries(['client_order_id','order_type','commission_currency','finding_id','finding_type','group_id','leg_id','leg_role'].map(k=>[k,nullable(text)])),
-  commission:nullable(decimal),liquidity_side:nullable({enum:['MAKER','TAKER','UNKNOWN']})},[]);
-fields.description='Closed per-record vocabulary. Time members are UTC epoch milliseconds. submitted_at_ms is the order submission instant and occurred_at_ms the fill trade instant (source columns submitted_at / trade_time); resolved_at_ms is a reconciliation finding resolution instant. client_order_id, order_type, finding_id, finding_type, leg_role are raw source text (the Portal does not classify; no finding_type vocabulary is published). commission is an exact decimal on fills only; orders carry no fee column. liquidity_side is MAKER|TAKER|UNKNOWN. group_id, leg_id, leg_role and leg_sequence identify a conditional-order leg: match legs to orders by exact client_order_id equality, never by suffix. Admission is per scope (field policy); an omitted member is not a zero.';
+  commission:nullable(decimal),liquidity_side:nullable({enum:['MAKER','TAKER','UNKNOWN']}),
+  runtime_state:nullable({enum:['RUNNING','PAUSED','HALTED','STOPPED']}),
+  ...Object.fromEntries(['runtime_state_since','runtime_state_changed_at','started_at','completed_at'].map(k=>[k,nullable(instant)])),
+  ...Object.fromEntries(['execution_session_id','account_type','position_side','time_in_force'].map(k=>[k,nullable(text)])),
+  ...Object.fromEntries(['reduce_only','post_only'].map(k=>[k,nullable({type:'boolean'})])),
+  ...Object.fromEntries(['filled_quantity','average_fill_price','trigger_price'].map(k=>[k,nullable(decimal)]))},[]);
+fields.description='Closed per-record vocabulary. Integer instants (*_ms, created_at, updated_at) are UTC epoch milliseconds; runtime_state_since, runtime_state_changed_at, started_at and completed_at are normalized UTC ISO date-time strings. submitted_at_ms is the order submission instant and occurred_at_ms the fill trade instant (source columns submitted_at / trade_time); resolved_at_ms is a reconciliation finding resolution instant. client_order_id, order_type, finding_id, finding_type, leg_role are raw source text (the Portal does not classify; no finding_type vocabulary is published). commission is an exact decimal on fills only; orders carry no fee column. liquidity_side is MAKER|TAKER|UNKNOWN. group_id, leg_id, leg_role and leg_sequence identify a conditional-order leg: match legs to orders by exact client_order_id equality, never by suffix. Runtime/session/account/order detail requires explicit field policy and stated source values; RUNNING is not inferred from a healthy process. Admission is per scope; omitted, null, false and exact zero remain different.';
 const group=obj({state:{enum:['PARTIAL','EMPTY','UNAVAILABLE']},completeness:{const:'PARTIAL'},freshness:{const:'UNKNOWN'},as_of_ms:{type:'null'},
   returned_count:{type:'integer',minimum:0,maximum:200},truncated:{type:'boolean'},reason_code:{enum:['AUTHORIZED_RETAINED_FACTS','RETAINED_FACTS_NOT_PUBLISHED']},items:{type:'array',maxItems:200,items:ref('ScopedRecordFields')}});
 const groups=['strategies','deployments','accounts','positions','reconciliation','performance','account_equity','portfolio_equity','balances','margin','account_sync','broker_sync','venue_accounts','orders','fills','sessions','command_journal','conditional_order_groups','conditional_order_group_legs'];
@@ -128,6 +134,17 @@ fixtures.cases.push(
       {group_id:'group_TEST_ONLY',leg_id:'leg_TEST_ONLY_stop',leg_role:'STOP',leg_sequence:1,client_order_id:'client_TEST_ONLY_stop',order_type:'STOP_MARKET',side:'SELL',quantity:'10.5',price:null}]},
     reconciliation:{state:'PARTIAL',completeness:'PARTIAL',freshness:'UNKNOWN',as_of_ms:null,returned_count:1,truncated:false,reason_code:'AUTHORIZED_RETAINED_FACTS',items:[
       {account_id:'account_TEST_ONLY',status:'RESOLVED',finding_id:'finding_TEST_ONLY',finding_type:'TEST_ONLY_TYPE',created_at:detailAt-300000,resolved_at_ms:detailAt}]}}}});
+// Additive metadata cases: preserve earlier canonical cases and their order.
+const detailGroup=items=>({state:'PARTIAL',completeness:'PARTIAL',freshness:'UNKNOWN',as_of_ms:null,
+  returned_count:items.length,truncated:false,reason_code:'AUTHORIZED_RETAINED_FACTS',items});
+fixtures.cases.push({type:'ScopedAdapterResponse',value:{...adapterValue,relations:{
+  accounts:detailGroup([{account_id:'account_TEST_ONLY',account_type:'INTERNAL',runtime_state:'RUNNING',
+    runtime_state_since:'2026-10-01T00:00:00.000Z',runtime_state_changed_at:null,
+    execution_session_id:'session_TEST_ONLY',started_at:'2026-10-01T00:00:00.000Z',completed_at:null}])}}},
+  {type:'ScopedSubjectRecordsResponse',value:detailPage('executionAccountOrdersV1','ORDER_UPDATED_AT','account',[
+    {record_id:'order_TEST_ONLY_metadata',observed_at_ms:detailAt,values:{order_id:'order_TEST_ONLY_metadata',
+      submitted_at_ms:detailAt-1000,position_side:'LONG',time_in_force:'GTC',reduce_only:false,post_only:true,
+      filled_quantity:'0',average_fill_price:null,trigger_price:'100.1234567890123456789'}}])});
 for(const [file,data] of Object.entries({'openapi/execution-scoped-records.openapi.json':document,'fixtures/execution-scoped-records.synthetic.valid.json':fixtures})){
   const path=resolve(root,file),bytes=JSON.stringify(data,null,2)+'\n';
   if(process.argv.includes('--check')){if(readFileSync(path,'utf8')!==bytes)throw new Error(`Generated drift: ${file}`);}

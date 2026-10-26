@@ -467,6 +467,102 @@
           }
         }
       }
+    },
+    {
+      "type": "ScopedAdapterResponse",
+      "value": {
+        "schema_version": "portal.execution.profile-read-adapter.v2",
+        "time_unit": "UTC_EPOCH_MS",
+        "capability_id": "admin.inspect",
+        "authority": "PORTAL_SGP_PROJECTION",
+        "workspace_id": "workspace_TEST_ONLY",
+        "environment": "paper",
+        "profile_id": "profile_TEST_ONLY",
+        "visibility": "SCOPED",
+        "coverage": "AUTHORIZED_ONLY",
+        "policy_revision": "TEST_ONLY-policy",
+        "bounds": {
+          "maximum_rows_per_relation": 200,
+          "maximum_response_bytes": 1048576
+        },
+        "relations": {
+          "accounts": {
+            "state": "PARTIAL",
+            "completeness": "PARTIAL",
+            "freshness": "UNKNOWN",
+            "as_of_ms": null,
+            "returned_count": 1,
+            "truncated": false,
+            "reason_code": "AUTHORIZED_RETAINED_FACTS",
+            "items": [
+              {
+                "account_id": "account_TEST_ONLY",
+                "account_type": "INTERNAL",
+                "runtime_state": "RUNNING",
+                "runtime_state_since": "2026-10-01T00:00:00.000Z",
+                "runtime_state_changed_at": null,
+                "execution_session_id": "session_TEST_ONLY",
+                "started_at": "2026-10-01T00:00:00.000Z",
+                "completed_at": null
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "type": "ScopedSubjectRecordsResponse",
+      "value": {
+        "schema_version": "portal.execution.subject-records.v2",
+        "time_unit": "UTC_EPOCH_MS",
+        "observed_at_basis": "ORDER_UPDATED_AT",
+        "logical_operation_id": "executionAccountOrdersV1",
+        "authority": "PORTAL_SGP_RETAINED_CURRENT_WINDOW",
+        "source_authority": "TRADING_SYSTEM_CURRENT_SOURCE",
+        "history_semantics": "RETAINED_PORTAL_CURRENT_WINDOW_NOT_AUTHORITATIVE_REPLAY",
+        "environment": "paper",
+        "profile_id": "profile_TEST_ONLY",
+        "resource": {
+          "kind": "account",
+          "id": "account_TEST_ONLY"
+        },
+        "read_scope": {
+          "visibility": "SCOPED",
+          "coverage": "AUTHORIZED_ONLY",
+          "policy_revision": "TEST_ONLY-policy"
+        },
+        "state": "PARTIAL",
+        "reason_code": "SCOPED_RETAINED_WINDOW_NOT_TOTAL_HISTORY",
+        "coverage": {
+          "retained_row_count": 1,
+          "oldest_observed_at_ms": 1790812800123,
+          "newest_observed_at_ms": 1790812800123
+        },
+        "page": {
+          "limit": 200,
+          "maximum_page_rows": 500,
+          "returned_count": 1,
+          "has_more": false,
+          "next_cursor": null
+        },
+        "records": [
+          {
+            "record_id": "order_TEST_ONLY_metadata",
+            "observed_at_ms": 1790812800123,
+            "values": {
+              "order_id": "order_TEST_ONLY_metadata",
+              "submitted_at_ms": 1790812799123,
+              "position_side": "LONG",
+              "time_in_force": "GTC",
+              "reduce_only": false,
+              "post_only": true,
+              "filled_quantity": "0",
+              "average_fill_price": null,
+              "trigger_price": "100.1234567890123456789"
+            }
+          }
+        ]
+      }
     }
   ]
 }

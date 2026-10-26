@@ -108,9 +108,20 @@ export class ManagerObservationNoticeSource implements ScopedNoticeSource {
             confidence:row.completeness==="UNKNOWN"?"UNKNOWN" as const:"PROVISIONAL" as const,
             reasons:["PORTAL_OBSERVATION_NOT_TS_EVENT","CURRENT_PAGE_ONLY","SOURCE_FRESHNESS_NOT_ATTESTED"]}};
       });
+      // Journal I/O can overlap a source replacement. The initial check is
+      // not a delivery fence: recheck scalar lineage after that await, without
+      // recapturing the baseline, scanning payloads or granting STREAM.
+      const current=await this.repository.snapshotMetadata(s.workspace_id,s.environment,s.profile_id);
+      if(signal?.aborted||!current)return invalid("SOURCE_UNAVAILABLE");
+      if(current.projectionEpoch!==c.projection_epoch)return invalid("GENERATION_CHANGED");
+      if(managerObservationSourceSetDigest(s,current)!==binding.source_set_digest)return invalid("SCOPE_CHANGED");
+      if(!Number.isSafeInteger(current.projectionSequence)||current.projectionSequence<head.projectionSequence||
+        (current.projectionSequence===head.projectionSequence&&hash(current.payloadDigest)!==hash(head.payloadDigest)))
+        return invalid("SOURCE_COVERAGE_UNPROVED");
       return edgeScopedNoticeBatch.parse({notices,next_cursor:notices[notices.length-1]!.resume_cursor,
-        // Caught up to this captured Portal head, not global TS completeness.
-        caught_up:rows[rows.length-1]!.projectionSequence===head.projectionSequence});
+        // A same-lineage append is valid, but the Hub has more to drain.
+        // This is still only a Portal head, not global TS completeness.
+        caught_up:rows[rows.length-1]!.projectionSequence===current.projectionSequence});
     }catch(error){if(error instanceof ScopedReplayError)throw error;return invalid("SOURCE_UNAVAILABLE");}
   }
 }

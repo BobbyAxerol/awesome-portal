@@ -170,6 +170,20 @@ describe("BE-P15 subject records (RV-11 R-5, R-9)", () => {
     expect(JSON.stringify(page)).not.toMatch(/NEVER_RETURN|venue_order_id|error_message|trade_id/);
     expect(scopedSubjectActivitySchema.safeParse(page).success).toBe(true);
   });
+  it.each([true,false])("order metadata survives the real serving mapper with full=%s",async full=>{
+    const detail={execution_session_id:"TEST_ONLY-session",position_side:"LONG",time_in_force:"GTC",
+      reduce_only:false,post_only:true,trigger_price:"100.1234567890123456789"};
+    const {read}=subject({full,fields:[...FIELDS,"timestamp_ms","execution_session_id","reduce_only"],orders:[order(detail)]});
+    const page=await read("orders"),values=page.records[0].values;
+    expect(scopedSubjectActivitySchema.safeParse(page).success).toBe(true);
+    if(full)expect(values).toMatchObject(detail);
+    else{
+      expect(values).toMatchObject({execution_session_id:detail.execution_session_id,reduce_only:false});
+      for(const field of ["position_side","time_in_force","post_only","trigger_price"])expect(values).not.toHaveProperty(field);
+    }
+    // A field the order source does not state is not a synthesized aggregate.
+    expect(values).not.toHaveProperty("average_fill_price");expect(values).not.toHaveProperty("filled_quantity");
+  });
   it("full-business read of fills: exact fee, fee currency, liquidity, trade instant; basis FILL_TRADE_TIME", async () => {
     const { read } = subject({ full: true, fills: [fill()] });
     const page = await read("fills");
@@ -246,6 +260,25 @@ describe("BE-P15 subject records (RV-11 R-5, R-9)", () => {
 });
 
 describe("BE-P15 scoped adapter (RV-11 R-8, R-9 legs)", () => {
+  it("preserves source runtime/account metadata through the complete authorized adapter and strict response",async()=>{
+    const f=productReadFixture({full:true});
+    const detail={runtime_state:"RUNNING",runtime_state_since:"2026-10-01T07:00:00+07:00",
+      runtime_state_changed_at:null,execution_session_id:"TEST_ONLY-session",started_at:"2026-10-01T00:00:00Z",completed_at:null};
+    addRelations(f,{
+      "manager.deployments:strategy_deployments":{name:"strategy_deployments",rows:[{...OWN,strategy_id:"strategy-own",...detail}]},
+      "manager.accounts:accounts":{name:"accounts",rows:[{...OWN,account_type:"FUTURES",private_key:"NEVER_RETURN"}]},
+    });
+    const lineage={workspace_id:f.config.EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID!,profile_id:f.config.EXECUTION_EDGE_PAPER_PROFILE_ID!,source_contract_revision:"TEST_ONLY"};
+    for(const relation of Object.values(f.snapshot.document.relations))for(const item of relation.items)(item as {lineage?:unknown}).lineage??=lineage;
+    const repository={...f.repository,pool:{connect:async()=>({release(){/* TEST_ONLY */}})}};
+    const adapter=new ExecutionProfileReadAdapterService(f.config,repository as unknown as ExecutionProfileProjectionRepository,f.scopes);
+    const response=await adapter.readAuthorized(f.principal,"paper","admin.inspect",{}) as any;
+    expect(response.relations.deployments.items[0]).toMatchObject({...detail,
+      runtime_state_since:"2026-10-01T00:00:00.000Z",started_at:"2026-10-01T00:00:00.000Z"});
+    expect(response.relations.accounts.items[0]).toMatchObject({account_type:"FUTURES"});
+    expect(scopedAdapterResponseSchema.safeParse(response).success).toBe(true);
+    expect(JSON.stringify(response)).not.toContain("NEVER_RETURN");
+  });
   it("publishes conditional-order leg identity and reconciliation finding identity by exact member, with the unit stated; a peer's legs stay hidden", async () => {
     const f = productReadFixture({ fields: [...FIELDS, "timestamp_ms", "group_id", "leg_id", "price", "client_order_id", "order_type", "leg_role", "leg_sequence",
       "finding_id", "finding_type", "resolved_at_ms"] });

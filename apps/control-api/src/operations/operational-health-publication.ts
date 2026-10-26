@@ -1,5 +1,6 @@
 import type { Pool } from "pg";
 import { z } from "zod";
+import { withTransaction } from "../db/pool";
 import { accessDigest } from "../execution-v2/access-digest";
 import { operationalDeliveryStates, operationalDisplayStates, operationalTargets } from "./operational-read.contract";
 
@@ -77,10 +78,8 @@ export class OperationalHealthPublicationRepository {
     const receipt = accessDigest(p);
     // Pass a detached object to the source verifier. Its mutation cannot
     // change the captured data/digest ultimately written to PostgreSQL.
-    return b.withVerifiedSource(structuredClone(p), async () => {
-      const db = await this.pool.connect();
-      try {
-        await db.query("BEGIN");
+    return b.withVerifiedSource(structuredClone(p), () =>
+      withTransaction(this.pool, async db => {
         await db.query("SET LOCAL statement_timeout='2000ms'");
         await db.query("SET LOCAL lock_timeout='1000ms'");
         await db.query("SELECT pg_advisory_xact_lock(hashtextextended($1,0))",
@@ -98,7 +97,7 @@ export class OperationalHealthPublicationRepository {
           [p.workspace_id, p.source_ref, p.source_revision])).rows[0];
         if (existing) {
           if (existing.payload_digest !== receipt) return fail("OPERATIONAL_HEALTH_RECEIPT_CONFLICT");
-          validTime(); await db.query("COMMIT");
+          validTime();
           return { state: "REPLAY" as const, receipt_digest: receipt };
         }
         if (head ? p.previous_revision !== head.source_revision || BigInt(p.source_sequence) !== BigInt(head.source_sequence) + 1n ||
@@ -145,19 +144,16 @@ export class OperationalHealthPublicationRepository {
           VALUES($1,$2,$3,$4,$5,$6) ON CONFLICT(workspace_id,source_ref) DO UPDATE SET
           source_sequence=EXCLUDED.source_sequence,source_revision=EXCLUDED.source_revision,source_as_of=EXCLUDED.source_as_of`,
         [p.workspace_id, p.source_ref, p.source_epoch, p.source_sequence, p.source_revision, p.source_as_of]);
-        validTime(); await db.query("COMMIT");
+        validTime();
         return { state: "COMMITTED" as const, receipt_digest: receipt };
-      } catch (error) { await db.query("ROLLBACK"); throw error; }
-      finally { db.release(); }
-    });
+      }));
   }
 
   /** Owning-source retirement, not a user/grant revocation. Existing queue
    * visibility still has its independent current-authority/final-send fence. */
   async retire(): Promise<void> {
-    const b = this.binding, db = await this.pool.connect();
-    try {
-      await db.query("BEGIN");
+    const b = this.binding;
+    await withTransaction(this.pool, async db => {
       await db.query("SET LOCAL statement_timeout='2000ms'");
       await db.query("SET LOCAL lock_timeout='1000ms'");
       await db.query("SELECT pg_advisory_xact_lock(hashtextextended($1,0))", [JSON.stringify([b.workspaceId, b.sourceRef])]);
@@ -165,8 +161,6 @@ export class OperationalHealthPublicationRepository {
         VALUES($1,$2,$3,true) ON CONFLICT(workspace_id,source_ref) DO UPDATE SET retired=true
         WHERE execution_operation_health_heads.source_epoch=EXCLUDED.source_epoch`, [b.workspaceId, b.sourceRef, b.sourceEpoch]);
       if (retired.rowCount !== 1) return fail("OPERATIONAL_HEALTH_SOURCE_CHANGED");
-      await db.query("COMMIT");
-    } catch (error) { await db.query("ROLLBACK"); throw error; }
-    finally { db.release(); }
+    });
   }
 }
