@@ -16037,6 +16037,12 @@ remote/local match, no installed source or Edge ACK inferred.
 
 ### 26Oct2026 — Manager scoped notice provider, original-human source composition
 
+Public packet+test-results mirrored to HK Edge EPG10-08 at2026-10-26T05:15:55Z,
+same `MANAGER_SCOPED_NOTICE_PROVIDER_2026-10-26` basenames. MD SHA256
+`caa38b5c7468e99764f5382ad7f4803cb8f114272f53658b1c81b7c1a1a73581`, JSON
+`b5cc981624811e531c6a07756284d47a1acfcc649eca53b8fad5a0d2133580a0`;
+remote/local match. No source upload, installed runtime or Edge ACK inferred.
+
 [Owned code, executable/schema, actual gates, cleanup and Claude/Edge handoff](execution_loop/evidence/ELP2-10/MANAGER_SCOPED_NOTICE_PROVIDER_2026-10-26.md).
 Code1fef487dacf41ccaa147c927e2f2274859c61b79 in the local owned Edge candidate,
 14files,+2960/−75;144distinct focused PASS (22actual-PG), strict lib/bin Clippy
