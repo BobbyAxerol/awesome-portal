@@ -16138,3 +16138,10 @@ Core source review ACCEPT. Public Edge receipt MD/JSON mirrored and hashes
 matched; no source upload/runtime install or ACK inferred. Handoff/cleanup and
 machine-readable source-only disposition are in the packet. ELP2-10 not closed.
 
+**Public delivery2026-10-26T08:00:53Z:** Core receipt a7dc3a9a3 MD/JSON
+copied to HK EPG10-08 under the same`SOURCE_BINDING_FOLLOWTHROUGH_2026-10-26`
+basenames. SHA256 MD`d8becf9653dccef91c1c739f6be6768c78d82af0f4513c20e565d37c64533875`,
+JSON`959d56f558f6687d240c0c5042640dddcdf2ff0963dab5ce8afc8e95d9339049`
+match remote/local. Verified local preservation bundles cover Corea7dc3a9a3
+and Edge151f55afc; not uploaded. No runtime install, READY or source ACK inferred.
+

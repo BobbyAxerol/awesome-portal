@@ -13,6 +13,14 @@ no public DTO regeneration. Qualified-source/browser receipt still required;
 earlier metadata consumer ACK remains open. Edge public tagged-ownership
 MD/JSON mirrored/hash-checked on HK; no source/runtime/authority installed.
 
+Core source return a7dc3a9a3 public MD/JSON mirrored to HK EPG10-08 at
+2026-10-26T08:00:53Z; SHA256 MD
+`d8becf9653dccef91c1c739f6be6768c78d82af0f4513c20e565d37c64533875`,
+JSON`959d56f558f6687d240c0c5042640dddcdf2ff0963dab5ce8afc8e95d9339049`
+match local. Source bundles verified locally only: Corea7dc3a9a3 and
+Edge151f55afc retained under the private26Oct gate-state directory. No source
+bundle upload, private input, installation, READY or Edge custody ACK inferred.
+
 [Scope, exact entry pins, reviewer tasks and exit](evidence/ELP2-10/SOURCE_BINDING_FOLLOWTHROUGH_2026-10-26.md).
 Core20758f7b1/Edge31f7cc8a7 clean candidates; canonical685bc1915 and
 Claude00e7f6cff clean/unchanged, no new committed request/consumer ACK.
