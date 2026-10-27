@@ -115,9 +115,14 @@ export function overlayInboxSubjects(body: Obj): Obj {
   const page = out.page;
   if (!isObj(page) || !Array.isArray(page.rows)) return out;
   for (const row of page.rows) {
-    if (!isObj(row) || typeof row.approval_id !== "string") continue;
+    const id = isObj(row) ? (typeof row.id === "string" ? row.id : row.approval_id) : null;
+    if (!isObj(row) || typeof id !== "string") continue;
     for (const key of ["subject", "subject_label"] as const) {
-      if (typeof row[key] === "string" && (row[key] as string).includes("PF-MAIN")) row[key] = restateTarget(row[key] as string, approvalRecord(row.approval_id));
+      if (typeof row[key] === "string" && (row[key] as string).includes("PF-MAIN")) {
+        const record = approvalRecord(id);
+        row[key] = restateTarget(row[key] as string, record);
+        if ("portfolio_id" in row) row.portfolio_id = record.portfolioId;
+      }
     }
   }
   return out;
@@ -194,7 +199,7 @@ export function evidenceFromRecord(approvalId: string): { portfolioId: string; c
   return {
     portfolioId: record.portfolioId,
     changes: [
-      { label: "Requested capital", before: record.current, after: record.after, unit: "MONEY" },
+      { label: "Allocated capital", before: record.current, after: record.after, unit: "MONEY" },
       { label: "Criteria met", before: String(record.criteriaMet), after: String(record.criteriaTotal), unit: "COUNT" },
       { label: "Reviewer note", before: null, after: "Added", unit: "TEXT" },
     ],

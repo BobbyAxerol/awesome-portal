@@ -126,3 +126,13 @@ Same method as section 8 (local stack, probes at 1440/1024/660). Measured at 102
 | R3-18, R3-24, R3-26 | WP-P / WP-D | Relay-off scenario, search ellipsis, context bar. |
 
 Tests: cockpit presentation 38, access 121 + 1, admin 114, users 281 (the 200-row search test now waits with SLOW, as the other large renders do: it failed at machine load above 15). tsc clean. `disabledReason.test.ts` fails on two buttons in `overview/Contributors.tsx` (WP-F1, not E).
+
+## 10. QA3 round 4 (R3-02, R3-04, roster, ticket ids)
+
+| QA3 | Status | What changed |
+|---|---|---|
+| R3-04 BLOCKER (one approval, three capital figures and two targets) | FIXED | `e2e/bffApprovalWorld.ts`: ONE record per approval id (portfolio id and name from the world's three native portfolios, the world's exact allocation as "current", a stated requested step, after = current + requested, 1-place weight, criteria 7 total / 5 or 6 met now / 7 after, quorum from the inbox row). The inbox title and `portfolio_id`, the R2 review (target, requested amount, capital rows, candidates), the capital preview, the evidence diff ("Allocated capital", "Criteria met"), the receipt-preview sentence, the evidence history subject and the history subjects all read it (`bffSimulated.ts` and a `// ===== WP-E` block in `review-manager.ts` `wpkApprovalEvidence`). The R2 Criteria panel states the counted criteria ("Criterion rows are not published. The evidence read counts 5 met now and 7 after approval.") instead of Not published beside a count. Registered in section 2d. Unit test `src/fixtureBff/approvalRecord.test.ts`. |
+| R3-02 BLOCKER (Queue read / Read follow the wall clock) | FIXED | The Approvals chip prints the inbox envelope's own `read_at` (new `InboxResult.readAt`, parsed in `httpApi.listApprovals`; the preview's rebase layer sets it to the world clock), "Queue read time not published" without one; Decided today counts at that instant. The Profile & Access chip is now "Freshness not published" (the Access read publishes no time) and the stale-read line no longer prints a browser time. No `Date.now()` is used in a double body of mine. |
+| People roster | FIXED (Manage grants) | In the positive world `policyAccounts` lists `PEOPLE` (bobby the owner, lan, minh, stan, hoa, tuan), the Users roster's people; the activity read answers for minh's world id. |
+| Ticket ids FE-nnn in copy | FIXED in cockpit and Access tiles; PARTIAL elsewhere | `NOT_PUBLISHED`, `notPublishedFor`, FamilyPanel and the separation-of-duty line print "Not published" with no ticket id; the Access tile note lost "(FE-015)". Ids that remain sit in the shared `gapTitle` / `GapWhy` disclosures and visually hidden text (blocks, not mine). |
+| Cmd K ('canary', 'Hoa', GET /search, FE-023) | WP-D | Not mine. |

@@ -179,10 +179,10 @@ describe("AVAILABLE with grants", () => {
     expect(init).toMatchObject({ credentials: "same-origin", cache: "no-store" });
   });
 
-  it("states a read time from the browser clock and offers Refresh", async () => {
+  it("states no browser-clock read time (the Portal publishes none) and offers Refresh", async () => {
     mount({}, workspace("available"));
     await granted();
-    expect(screen.getByText("Read 18 Oct 12:04Z")).toBeTruthy();
+    expect(screen.getByText("Freshness not published")).toBeTruthy();
     expect(screen.getByRole("button", { name: "Refresh" })).toBeTruthy();
   });
 

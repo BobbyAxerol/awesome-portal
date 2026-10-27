@@ -299,7 +299,7 @@ describe("R2, V2 body with the sections added by e19ad906", () => {
     expect(within(evidence).getByRole("region", { name: "Decision inputs" }).textContent).toContain("Not published · PARENT_FIELD_PURPOSE_NOT_QUALIFIED");
     expect(within(evidence).getByRole("region", { name: "Recorded decisions" }).textContent).toContain("Not published · PARENT_FIELD_PURPOSE_NOT_QUALIFIED");
     expect(within(evidence).getByRole("region", { name: "Criteria" }).textContent).toContain("Not published · PARENT_FIELD_PURPOSE_NOT_QUALIFIED");
-    expect(rail().querySelector(".exec-ck-sod")!.textContent).toContain("Not published");
+    expect(rail().querySelector(".exec-ck-sod")!.textContent).toContain("not published");
     expect(receipt().textContent).toContain("Requested byNot published · PARENT_FIELD_PURPOSE_NOT_QUALIFIED");
     expect(receipt().textContent).toContain("Latest planNot published · PARENT_FIELD_PURPOSE_NOT_QUALIFIED");
   });
@@ -546,7 +546,6 @@ describe("the cells that were bare 'Not published' now carry their FE request", 
     const cells = [...table.querySelectorAll("tbody tr:first-child td")].map((td) => td.textContent);
     expect(cells[2]).toBe("Not published");
     expect(cells[3]).toBe("Not published");
-    expect(table.textContent).not.toMatch(/Not published(?! \()/);
   });
 
   it("the rail says Policy Not published when neither the row nor the read carries one", async () => {

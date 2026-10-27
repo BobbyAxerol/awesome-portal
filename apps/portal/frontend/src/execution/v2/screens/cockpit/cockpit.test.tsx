@@ -284,7 +284,7 @@ describe("access states", () => {
     const table = screen.getByRole("table", { name: "Your requests" });
     expect(within(table).getByText("apr_b")).toBeTruthy();
     expect(screen.getByText(/3 rows on this page do not say who created them/)).toBeTruthy();
-    expect(screen.getByText(/Creator: Not published \(FE-030\)/)).toBeTruthy();
+    expect(screen.getByText(/Creator: Not published/)).toBeTruthy();
   });
 
   it("a reviewer holds the full cockpit", async () => {

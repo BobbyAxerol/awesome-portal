@@ -190,7 +190,7 @@ describe("separation of duty", () => {
   it("an unreadable creator is never reported as OK on its own", () => {
     const sod = separationOfDuty({ creator: null, serverSod: null, principal: BOBBY });
     expect(sod.kind).toBe("unknown");
-    expect(sod.text).toContain("Not published");
+    expect(sod.text).toContain("not published");
     expect(separationOfDuty({ creator: null, serverSod: "OK", principal: BOBBY }).kind).toBe("ok");
   });
 });

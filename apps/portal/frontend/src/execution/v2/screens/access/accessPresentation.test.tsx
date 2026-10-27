@@ -107,12 +107,12 @@ describe("the four tiles", () => {
     expect(screen.getByTestId("acc-session-end").textContent).toBe("Session end not published");
   });
 
-  it("Role preset stays Not available with its request id in the note", async () => {
+  it("Role preset stays Not available", async () => {
     mount();
     await granted();
     const tile = screen.getByText("Role preset").closest(".exec-acc-kpi") as HTMLElement;
     expect(tile.querySelector(".exec-acc-kpi-value")?.textContent).toBe("Not available");
-    expect(tile.textContent).toContain("FE-015");
+    expect(tile.textContent).not.toMatch(/FE-\d{3}/);
   });
 });
 
