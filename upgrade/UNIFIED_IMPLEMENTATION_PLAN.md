@@ -16599,3 +16599,10 @@ The public receipt was delivered to the Edge EPG10-08 mailbox on HK at
 `5fe248834740551372c4717bd38ad7fefd5b57831ffda4b4c22198a429705a85`.
 Delivery is not an Edge acknowledgement or evidence of a calendar provider.
 
+27Oct PM source update: new Paper committed-outcome adapter candidate
+`pm/s2-fix02-paper-adapter@c76a6aea2a98d0e3b8f5a292eab00856175e16c6`
+exists and reports isolated tests, but remains uninstalled and does not by
+itself deliver financial carrier/authority. [Core intake and exact Edge actions](execution_loop/evidence/ELP2-10/PM_S2_PAPER_SOURCE_INTAKE_2026-10-27.md)
+supersede the blanket assertion that no Paper adapter source exists; they do
+not close source, connected or ELP2-10 gates.
+
