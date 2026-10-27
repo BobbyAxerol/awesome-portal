@@ -40,6 +40,8 @@ import "../../css/operationsIncident.css";
 export const SCAN_PAGE_ROWS = 250;
 export const SCAN_PAGES = 4;
 
+/** An incident that already has an assignee is not "without an assignee": the reason says what is true (assigning is a write that is not offered yet). */
+export const ASSIGN_OFFERED_REASON = notPublishedReason(FE.eligibility, "Already assigned; changing the assignee is an ADMIN-only write, not offered yet.");
 export const EXPOSURE_REASON = notPublishedReason(FE.eligibility, "ADMIN-only write with evidence, not offered yet.");
 export const EVIDENCE_REASON = notPublishedReason(FE.events, "No evidence attach route is published.");
 
@@ -354,11 +356,11 @@ function IncidentInner({ api, incidentId, workspaceId, queuePath = "/execution/o
             </Gate>
             {kids !== null && kids.assignedTo.state === "PUBLISHED"
               ? <Gate label="This incident has an assignee" state="met">Assigned to {kids.assignedTo.value.actor} {atText(kids.assignedTo.value.assignedAtMs)}</Gate>
-              : <Gate label="This incident has an assignee" state="not-published">Not available<span className="exec-blk-sr"> ({FE.assignee})</span></Gate>}
+              : <Gate label="This incident has an assignee" state="not-published">Not available</Gate>}
             <Gate label="Exposure is recorded as mitigated" state={incident.mitigatedAt ? "met" : "open"}>
               {incident.mitigatedAt ? <>Mitigated {instant(incident.mitigatedAt, "")}</> : "Not mitigated"}
             </Gate>
-            <Gate label="A clean dry-run evidence reference is attached" state="not-published">Not available<span className="exec-blk-sr"> ({FE.events})</span></Gate>
+            <Gate label="A clean dry-run evidence reference is attached" state="not-published">Not available</Gate>
           </ul>
           {kids !== null && kids.resolutionGate.state === "PUBLISHED" ? (
             <p className="exec-ops-reason" data-testid="children-gate">
@@ -439,7 +441,7 @@ function IncidentInner({ api, incidentId, workspaceId, queuePath = "/execution/o
       <SectionPanel title="Actions" level={2}>
         <div className="exec-ops-actions" role="group" aria-label="Incident actions">
           <DockAction label="Acknowledge" reason={INCIDENT_ACTION_REASONS.acknowledge} accessHref={accessHref} />
-          <DockAction label="Assign to me" reason={INCIDENT_ACTION_REASONS.assign} accessHref={accessHref} />
+          <DockAction label="Assign to me" reason={kids !== null && kids.assignedTo.state === "PUBLISHED" ? ASSIGN_OFFERED_REASON : INCIDENT_ACTION_REASONS.assign} accessHref={accessHref} />
           <DockAction label="Record exposure mitigated" reason={EXPOSURE_REASON} accessHref={accessHref} />
           <DockAction label="Attach dry-run evidence" reason={EVIDENCE_REASON} accessHref={accessHref} />
           <DockAction label="Mark mitigated" reason={INCIDENT_ACTION_REASONS.mitigate} accessHref={accessHref} />

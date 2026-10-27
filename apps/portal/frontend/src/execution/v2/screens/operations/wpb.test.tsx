@@ -3,6 +3,9 @@
  * Rows visible, Intent / Receipt / Display as three facts, Next actions, Source segment, Exceptions and Audit tabs, the ops drawer
  * sections, the peek, the incident page (sections, many-to-many operations, typed gaps, deep links) and the pure views.
  */
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -239,7 +242,7 @@ describe("incident page", () => {
     expect(items[0].getAttribute("data-state")).toBe("met");
     expect(items[0].textContent).toContain("Acknowledged");
     expect(items[1].getAttribute("data-state")).toBe("not-published");
-    expect(items[1].textContent).toContain("FE-030");
+    expect(items[1].textContent).not.toMatch(/FE-\d{3}/);
     expect(items[2].getAttribute("data-state")).toBe("open");
     expect(items[3].getAttribute("data-state")).toBe("not-published");
     expect(screen.getByText("Server verdict not published")).toBeTruthy();
@@ -517,5 +520,66 @@ describe("round 4: one incident record", () => {
     await screen.findByRole("list", { name: "Resolution gates" });
     const visible = [...document.querySelectorAll(".exec-opi *")].filter((el) => el.children.length === 0 && !el.closest(".exec-blk-sr")).map((el) => el.textContent ?? "").join(" ");
     expect(visible).not.toMatch(/FE-\d{3}/);
+  });
+});
+
+describe("round 5: deep link by id, complete incident records, cards below 1100", () => {
+  it("an operation that is not on the loaded page opens from its own record (found), and says Not found only on a 404", async () => {
+    const own = vi.fn(async (id: string) => (id === "op_ELSEWHERE_1"
+      ? { ok: true as const, value: { status: "PENDING", verificationRaw: "PENDING", blockers: ["COMMAND_RELAY_DISABLED"], relayReceipt: null, sourceSideEffectRequested: false } }
+      : { ok: false as const, status: "unavailable" as const, reason: "OPERATIONAL_READ_NOT_FOUND: HTTP 404" }));
+    const base = fakeApi().api;
+    const api = { ...base, pollOperation: own } as unknown as ExecutionApi;
+    render(
+      <MemoryRouter initialEntries={["/execution/operations?lens=all&range=all&sel=op_ELSEWHERE_1"]}>
+        <OperationsV2 api={api} now={NOW} />
+      </MemoryRouter>,
+    );
+    const dock = await screen.findByRole("complementary");
+    expect(await within(dock).findByText(/This is its own record/)).toBeTruthy();
+    expect(dock.textContent).toContain("Pending");
+    expect(dock.textContent).toContain("Command relay disabled");
+    cleanup();
+    render(
+      <MemoryRouter initialEntries={["/execution/operations?lens=all&range=all&sel=op_NOPE_9"]}>
+        <OperationsV2 api={api} now={NOW} />
+      </MemoryRouter>,
+    );
+    expect(await screen.findByText("Operation not found")).toBeTruthy();
+  });
+
+  it("the lane's double answers one operation by id for every operation of its list and 404s an op id it does not hold", () => {
+    expect(answerOperationsV2("GET", "/operations/op_TEST_ONLY_s01", new URLSearchParams(), true)).toMatchObject({ status: 200 });
+    expect(answerOperationsV2("GET", "/operations/op_NOT_HERE", new URLSearchParams(), true)).toMatchObject({ status: 404 });
+    expect(answerOperationsV2("GET", "/operations/op_NOT_HERE", new URLSearchParams(), false)).toBeNull();
+  });
+
+  it("every world incident renders a complete record: one acknowledgement, one assignee, its children and the operations in the table", async () => {
+    const { WORLD_INCIDENTS, incidentEvents } = await import("../../../../../e2e/bffWorld");
+    for (const incident of WORLD_INCIDENTS) {
+      mountIncident(incident.id, await childrenFromWorld(incident.id));
+      await screen.findByTestId("children-timeline");
+      const head = screen.getByTestId("head-assignee").textContent;
+      expect(head).toBe(incident.assigned ? `Assigned to ${incident.assigned.actor}` : "No assignee published");
+      const gates = within(screen.getByRole("list", { name: "Resolution gates" })).getAllByRole("listitem");
+      expect(gates[1]!.textContent).toContain(incident.assigned ? `Assigned to ${incident.assigned.actor}` : "Not available");
+      // acknowledged once in the gate and once in the timeline, and the two agree (no disagreement notice)
+      expect(screen.queryByTestId("timeline-disagreement")).toBeNull();
+      expect(screen.queryByTestId("gate-disagreement")).toBeNull();
+      expect(screen.getByTestId("children-timeline").querySelectorAll("li")).toHaveLength(incidentEvents(incident).length);
+      expect(screen.getByRole("list", { name: "Linked operations" }).querySelectorAll("li")).toHaveLength(incident.links.length);
+      expect(screen.getByTestId("children-linked").querySelectorAll("li")).toHaveLength(incident.links.length);
+      // the Actions block does not call an assigned incident unassigned
+      const actions = screen.getByRole("group", { name: "Incident actions" }).textContent ?? "";
+      if (incident.assigned) expect(actions).not.toContain("No assignee is published");
+      cleanup();
+    }
+  });
+
+  it("below 1100px the queue's tables are cards, and between 1101 and 1300 the action column is pinned with a hint", () => {
+    const css = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "../../css/operations.css"), "utf8");
+    expect(css).toMatch(/@media \(max-width: 1100px\) and \(min-width: 661px\)[\s\S]*?\.exec-ops-table \.exec-cards tbody tr \{\s*display: grid/);
+    expect(css).toMatch(/@media \(max-width: 1300px\) and \(min-width: 1101px\)[\s\S]*?position: sticky/);
+    expect(css).not.toMatch(/text-transform:\s*uppercase[^}]*\}\s*\n\s*\.exec-ops-table \.exec-cards td\[data-l\]::before/);
   });
 });

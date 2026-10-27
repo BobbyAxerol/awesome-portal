@@ -573,13 +573,13 @@ span.exec-ops-link-id {
   font: var(--exec-font-meta);
   color: var(--ink-soft);
 }
-@media (max-width: 1300px) and (min-width: 661px) {
+@media (max-width: 1300px) and (min-width: 1101px) {
   .exec-ops-scrollhint {
     display: block;
   }
 }
 /* Where the table scrolls sideways the action column stays pinned at the right edge, so Next is never the column that is cut (QA2 R3-23). */
-@media (max-width: 1300px) and (min-width: 661px) {
+@media (max-width: 1300px) and (min-width: 1101px) {
   .exec-ops-table .exec-cards th:last-child,
   .exec-ops-table .exec-cards td:last-child {
     position: sticky;
@@ -653,4 +653,49 @@ a.exec-ops-next-link {
   padding: var(--space-4);
   color: var(--ink);
   background: var(--paper-raised);
+}
+
+/* Below 1100px the queue is cards, as it is at 660: six columns of ids, badges and a button do not fit beside the sidebar, and a table
+ * that scrolls sideways hides the column a person acts in (QA4 R3-13). The shared card rule (cards.css) starts at 660; this is the same
+ * layout for the queue's own tables from 661 to 1100, with the label sentence-cased (the uppercase allowlist is the shared selector). */
+@media (max-width: 1100px) and (min-width: 661px) {
+  .exec-ops-table .exec-cards thead {
+    display: none;
+  }
+  .exec-ops-table .exec-cards,
+  .exec-ops-table .exec-cards tbody {
+    display: block;
+  }
+  .exec-ops-table .exec-cards tbody tr {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-1) var(--space-4);
+    padding: var(--space-2) var(--space-3);
+    border-bottom: 1px solid var(--line-strong);
+  }
+  .exec-ops-table .exec-cards tbody td {
+    display: flex;
+    justify-content: space-between;
+    gap: var(--space-3);
+    height: auto;
+    padding: 3px 0;
+    border: 0;
+    white-space: normal;
+  }
+  .exec-ops-table .exec-cards tbody td[data-l] {
+    justify-content: flex-start;
+    gap: var(--space-3);
+  }
+  .exec-ops-table .exec-cards td[data-l]::before {
+    content: attr(data-l);
+    flex: none;
+    min-width: 72px;
+    font: var(--exec-font-label);
+    color: var(--ink-faint);
+  }
+  /* The target and the action take the full card width: they are the two things a person reads and presses. */
+  .exec-ops-table .exec-cards tbody td[data-l="Target and operation"],
+  .exec-ops-table .exec-cards tbody td[data-l="Next"] {
+    grid-column: 1 / -1;
+  }
 }

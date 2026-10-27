@@ -12,7 +12,7 @@
  *            the time the Portal counted display lag is printed when the queue published it.
  * Acknowledge / Resolve stay disabled with a reason (D9). Triage is a Portal record, so nothing here claims the source was touched.
  */
-import type { ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import type { To } from "react-router-dom";
 
 import type { ExecutionApi } from "../../../api/ports";
@@ -89,6 +89,31 @@ export interface OperationDockProps {
   peekTo?(incidentId: string): To;
 }
 
+/** The server said there is no such operation (HTTP 404 or its code). */
+const NOT_FOUND = /NOT_FOUND|\b404\b/;
+
+type Own = { phase: "loading" } | { phase: "found"; status: string | null; verification: string | null; blockers: readonly string[]; receipt: string | null } | { phase: "missing" } | { phase: "unread" };
+
+/** An operation that is not on the loaded pages is read by its id (the operation record), so a deep link opens it; only a 404 says it does not exist. */
+function useOwnRecord(api: ExecutionApi | undefined, operationId: string, enabled: boolean): Own {
+  const [own, setOwn] = useState<Own>({ phase: "loading" });
+  useEffect(() => {
+    if (!enabled || api === undefined || typeof api.pollOperation !== "function") { setOwn({ phase: "unread" }); return; }
+    let live = true;
+    setOwn({ phase: "loading" });
+    api.pollOperation(operationId).then(
+      (result) => {
+        if (!live) return;
+        if (result.ok) setOwn({ phase: "found", status: result.value.status, verification: result.value.verificationRaw, blockers: result.value.blockers, receipt: result.value.relayReceipt });
+        else setOwn(NOT_FOUND.test(result.reason) ? { phase: "missing" } : { phase: "unread" });
+      },
+      () => { if (live) setOwn({ phase: "unread" }); },
+    );
+    return () => { live = false; };
+  }, [api, operationId, enabled]);
+  return own;
+}
+
 export const SEND_AGAIN_REASON = "Blocked until the outcome is known.";
 
 function Section({ name, children }: { name: string; children: ReactNode }) {
@@ -106,6 +131,7 @@ export function OperationDock({
   // DEBT-048 item 9: the preview form is a FIXTURE LAB mount. It needs the `pending-preview` key (never named by a product build) AND an
   // explicit TEST_ONLY workspace; neither the `command` key nor a real workspace turns it on.
   const labPreview = isV2Screen("pending-preview") && isLabWorkspace(workspaceId);
+  const own = useOwnRecord(api, operationId, row === null && !loading);
   const outcomeUnknown = row !== null && receiptOutcome(row.sourceStatus, row.verificationResult).checkOriginal;
   const actions = (
     <>
@@ -117,13 +143,29 @@ export function OperationDock({
   if (row === null) {
     return (
       <Drawer title="Operation" subtitle={operationId} onClose={onClose} mode={mode} actions={actions}>
-        {loading ? (
+        {loading || own.phase === "loading" ? (
           <PanelState status="loading" />
+        ) : own.phase === "found" ? (
+          <>
+            <p className="exec-ops-banner" data-tone="info">This operation is not on the pages loaded for the current filters. This is its own record; load more or clear a filter to see it in the queue.</p>
+            <dl className="exec-ops-facts" data-section="Operation record">
+              <dt>Status</dt>
+              <dd>{own.status === null ? "Not stated" : humanize(own.status)}</dd>
+              <dt>Verification</dt>
+              <dd>{own.verification === null ? "Not stated" : humanize(own.verification)}</dd>
+              <dt>Blocked by</dt>
+              <dd>{own.blockers.length === 0 ? "Nothing" : own.blockers.map(humanize).join(", ")}</dd>
+              <dt>Relay receipt</dt>
+              <dd>{own.receipt ?? "None"}</dd>
+            </dl>
+          </>
+        ) : own.phase === "missing" ? (
+          <PanelState status="empty" title="Operation not found" reason={`No operation with the id ${operationId} exists in this workspace. Check the id.`} />
         ) : (
           <PanelState
             status="empty"
             title="Not in the loaded rows"
-            reason="This operation is not on the pages loaded for the current filters. Load more or clear a filter."
+            reason="This operation is not on the pages loaded for the current filters, and its own record could not be read. Load more or clear a filter."
           />
         )}
       </Drawer>

@@ -372,5 +372,16 @@ export function answerOperationsV2(method: string, path: string, search: URLSear
   if (path === "/operations") return queue(search, simulate);
   const seg = path.split("/").filter(Boolean);
   if (seg[0] === "operations" && seg[1] === "incidents" && seg.length === 3) return incident(decodeURIComponent(seg[2]), simulate);
+  // One operation by its id (`GET /operations/{id}`, the command operation record): the lane answers for every operation of its own list, so a
+  // deep link to an operation that is not on the loaded queue page opens it; an `op_` id the list does not hold is "not found", not a made-up record.
+  if (simulate && seg[0] === "operations" && seg.length === 2 && /^op_/.test(seg[1]!) && seg[1] !== "audit") {
+    const id = decodeURIComponent(seg[1]!);
+    const row = allRows(true).find((r) => r.operation_id === id);
+    if (row === undefined) return problem(404, "OPERATIONAL_READ_NOT_FOUND", "The operation was not found.");
+    const status = String(row.source_status);
+    const raw = JSON.parse(readFileSync(join(CONTRACTS, "execution-command-operation.valid.json"), "utf8")) as Record<string, unknown>;
+    return { status: 200, body: { ...raw, operation_id: id, command_key: row.command_key, status: status === "SUCCEEDED" || status === "EXPIRED" || status === "BLOCKED" ? status : status === "FAILED" ? "FAILED" : "PENDING",
+      verification_result: row.verification_result, blockers: status === "BLOCKED" ? ["COMMAND_RELAY_DISABLED"] : [], created_at: row.created_at, updated_at: row.updated_at } };
+  }
   return null;
 }

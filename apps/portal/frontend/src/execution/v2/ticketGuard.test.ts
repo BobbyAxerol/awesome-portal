@@ -16,6 +16,8 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 const CODE = "(?:FE-\\d{2,3}(?:/\\d{2,3})*|FE-CAT-\\d+|BQ-[A-Z][A-Z-]+)";
 const IN_PARENS = new RegExp(`\\(\\s*${CODE}`);
 const TEMPLATE_ID = /Not published \((?:\$)?\{/;
+/** A request id interpolated into parentheses, in any text: `({FE.assignee})`, `(${FE_B1.links})`, `(${id})` after a name. The id is a code; the words come from the renderer (QA4 R3-12). */
+const INTERPOLATED_ID = /\(\s*\$?\{\s*(?:FE|FE_[A-Z0-9]+)\./;
 
 function walk(dir: string, out: string[] = []): string[] {
   for (const name of readdirSync(dir)) {
@@ -47,7 +49,7 @@ describe("no request id in parentheses in display strings", () => {
       const v2 = path.includes(`${join("execution", "v2")}`);
       const lines = withoutComments(readFileSync(path, "utf8")).split("\n");
       lines.forEach((line, index) => {
-        if ((v2 ? IN_PARENS : /\(\s*FE-\d{2,3}/).test(line) || TEMPLATE_ID.test(line)) found.push(`${relative(ROOT, path)}:${index + 1}: ${line.trim().slice(0, 140)}`);
+        if ((v2 ? IN_PARENS : /\(\s*FE-\d{2,3}/).test(line) || TEMPLATE_ID.test(line) || INTERPOLATED_ID.test(line)) found.push(`${relative(ROOT, path)}:${index + 1}: ${line.trim().slice(0, 140)}`);
       });
     }
     expect(found).toEqual([]);
