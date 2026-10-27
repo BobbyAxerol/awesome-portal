@@ -33,7 +33,7 @@ const cents = (text: string): bigint => {
 };
 
 describe("R4-01 Sandbox: one findings list", () => {
-  for (const [id, mismatch] of [["dep_sandbox_01", false], ["dep_sandbox_01_mismatch", true]] as const) {
+  for (const [id, mismatch] of [["dep_d1", false], ["dep_d1_mismatch", true]] as const) {
     it(`${id}: the open-finding count of the chip is the list's, and the Difference column shows exactly what the findings say`, async () => {
       const body = await raw(`/deployments/${id}/certification`);
       const rows = body.findings.rows as Obj[];
@@ -54,7 +54,7 @@ describe("R4-01 Sandbox: one findings list", () => {
   }
 
   it("the timeline does not say it was submitted while the gate is blocked, names a person, and nothing is dated after the as-of or before its cause", async () => {
-    const body = await raw("/deployments/dep_sandbox_01/certification");
+    const body = await raw("/deployments/dep_d1/certification");
     expect((body.timeline.rows as Obj[]).map((r) => r.action)).toEqual(["CREATE"]);
     expect(body.timeline.rows[0].actor_user_id).toBe("bobby");
     const asOf = Date.parse(body.stage_facts.reconciliation.as_of.value);
@@ -65,7 +65,7 @@ describe("R4-01 Sandbox: one findings list", () => {
   });
 
   it("the venue is the account's: a Binance account is not an OKX certification", async () => {
-    const body = await raw("/deployments/dep_sandbox_01/certification");
+    const body = await raw("/deployments/dep_d1/certification");
     expect(body.certification.venue).toBe("BINANCE");
   });
 });
@@ -84,7 +84,7 @@ describe("R5-04 the envelope verdict is the rows' own", () => {
 describe("R5-05 the predecessor is the alpha's own canary, or none", () => {
   it("Basis B's live deployments link its own canary; Carry A has none and claims none", async () => {
     const b = await raw("/deployments/dep_b1/live");
-    expect((b.lineage as Obj[]).find((l) => l.kind === "CANARY_ENVELOPE")!.href).toBe("/deployments/live/dep_b3/canary");
+    expect((b.lineage as Obj[]).find((l) => l.kind === "CANARY_ENVELOPE")!.href).toBe("/deployments/live/dep_canary_01/canary");
     const a = await raw("/deployments/dep_live_01/live");
     const item = (a.lineage as Obj[]).find((l) => l.kind === "CANARY_ENVELOPE")!;
     expect(item).toMatchObject({ state: "UNAVAILABLE", href: null });

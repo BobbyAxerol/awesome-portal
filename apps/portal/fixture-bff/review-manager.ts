@@ -555,7 +555,7 @@ const SUITE_ALPHAS: AlphaSpec[] = [
   suiteAlpha("alpha_b", "Basis B", "1.4", "Lan-002", "READY", [
     suiteDeployment("dep_b1", "alpha_b", "LIVE", "live", MAIN, "120000", "2150.75", "310.2"),
     suiteDeployment("dep_b2", "alpha_b", "LIVE", "live", SAT, "60000", "-98.4", "21.05"),
-    suiteDeployment("dep_b3", "alpha_b", "CANARY", "live", MAIN, "30000", "410.1", "-5.5"),
+    suiteDeployment("dep_canary_01", "alpha_b", "CANARY", "live", MAIN, "30000", "410.1", "-5.5"),
   ]),
   suiteAlpha("alpha_c", "Momentum C", "2.0", "Minh-003", "ATTENTION", [suiteDeployment("dep_c1", "alpha_c", "CANARY", "live", SAT, "15000", "0", "0", "HALTED")]),
   suiteAlpha("alpha_d", "Grid D", "0.9", "Bobby-001", "READY", [

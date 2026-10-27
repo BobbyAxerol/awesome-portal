@@ -96,7 +96,7 @@ export const NATIVE_ALPHAS: AlphaSpec[] = [
   alpha("alpha_b", "Basis B", "1.4", "Lan Tran", "READY", [
     deployment("dep_b1", "alpha_b", "LIVE", "live", CORE, "120000", "2150.75", "310.2"),
     deployment("dep_b2", "alpha_b", "LIVE", "live", SAT, "60000", "-98.4", "21.05"),
-    deployment("dep_b3", "alpha_b", "CANARY", "live", CORE, "30000", "410.1", "-5.5"),
+    deployment("dep_canary_01", "alpha_b", "CANARY", "live", CORE, "30000", "410.1", "-5.5"),
   ]),
 ];
 
@@ -116,21 +116,47 @@ export type StageName = "paper" | "sandbox" | "canary" | "live";
 export interface Lifecycle {
   paperDays: number; sandboxDays: number; canaryDays: number; liveDays: number;
   r1Ms: number; r2Ms: number; paperFromMs: number; sandboxFromMs: number; canaryFromMs: number; liveFromMs: number;
+  /** the furthest stage the alpha has reached (its spine's current stage) */
+  reached: StageName;
 }
 /** The stage history of an alpha, anchored on WORLD_NOW: Live began `liveDays` ago, the Canary trial before it, and so on. Alpha 360's spine, Fleet's days in stage and the stage screens' start dates all read this. */
 export function lifecycleOf(alphaId: string): Lifecycle {
   const seed = seedOf(alphaId, "wpc-life");
-  const liveDays = 4 + (seed % 17);
-  const canaryDays = 3 + ((seed >>> 3) % 5);
-  const sandboxDays = 14 + ((seed >>> 5) % 11);
-  const paperDays = 25 + ((seed >>> 7) % 20);
-  const liveFromMs = WORLD_NOW_MS - liveDays * DAY_MS;
-  const canaryFromMs = liveFromMs - canaryDays * DAY_MS;
-  const sandboxFromMs = canaryFromMs - sandboxDays * DAY_MS;
-  const paperFromMs = sandboxFromMs - paperDays * DAY_MS;
+  const reached = furthestStage(alphaId);
+  const rank = STAGE_RANK[reached];
+  // The stage an alpha is IN has run for its current age (under its gate's minimum for Paper and Sandbox, so the gate is still open); every stage before it is a completed record of its own length; a stage after it has not begun.
+  const completed = { paper: 25 + ((seed >>> 7) % 20), sandbox: 14 + ((seed >>> 5) % 11), canary: 3 + ((seed >>> 3) % 5), live: 4 + (seed % 17) };
+  const current = { paper: 6 + ((seed >>> 11) % 7), sandbox: 5 + ((seed >>> 13) % 8), canary: 3 + ((seed >>> 3) % 5), live: 4 + (seed % 17) };
+  const days = (stage: StageName): number => (STAGE_RANK[stage] > rank ? 0 : STAGE_RANK[stage] === rank ? current[stage] : completed[stage]);
+  const [paperDays, sandboxDays, canaryDays, liveDays] = [days("paper"), days("sandbox"), days("canary"), days("live")];
+  // chain back from the stage the alpha is in: it began `days` ago, each earlier stage ended where the next began
+  const starts: Record<StageName, number> = { paper: WORLD_NOW_MS, sandbox: WORLD_NOW_MS, canary: WORLD_NOW_MS, live: WORLD_NOW_MS };
+  starts[reached] = WORLD_NOW_MS - days(reached) * DAY_MS;
+  for (let r = rank - 1; r >= 0; r -= 1) starts[STAGES_IN_ORDER[r]!] = starts[STAGES_IN_ORDER[r + 1]!] - days(STAGES_IN_ORDER[r]!) * DAY_MS;
+  const paperFromMs = starts.paper;
   const r2Ms = paperFromMs - DAY_MS;
   const r1Ms = r2Ms - (8 + ((seed >>> 9) % 8)) * DAY_MS;
-  return { paperDays, sandboxDays, canaryDays, liveDays, r1Ms, r2Ms, paperFromMs, sandboxFromMs, canaryFromMs, liveFromMs };
+  return { paperDays, sandboxDays, canaryDays, liveDays, r1Ms, r2Ms, paperFromMs, sandboxFromMs: starts.sandbox, canaryFromMs: starts.canary, liveFromMs: starts.live, reached };
+}
+const STAGES_IN_ORDER: readonly StageName[] = ["paper", "sandbox", "canary", "live"];
+const STAGE_RANK: Readonly<Record<StageName, number>> = { paper: 0, sandbox: 1, canary: 2, live: 3 };
+/** The furthest stage any deployment of the alpha has reached (research and paper count as Paper). One answer for the spine, the Fleet days and every stage page. */
+export function furthestStage(alphaId: string): StageName {
+  const alpha = worldAlphas().find((a) => a.id === alphaId);
+  let rank = 0;
+  for (const d of alpha?.deployments ?? []) rank = Math.max(rank, d.stage === "LIVE" ? 3 : d.stage === "CANARY" ? 2 : d.stage === "SANDBOX" ? 1 : 0);
+  return STAGES_IN_ORDER[rank]!;
+}
+/** The record of one stage of an alpha: `completed` (its gate passed, with dates and 7 of 7 criteria), `current` (in progress) or `none` (not begun). */
+export function stageRecord(alphaId: string, stage: StageName): { status: "completed" | "current" | "none"; fromMs: number; toMs: number | null; days: number } {
+  const life = lifecycleOf(alphaId);
+  const rank = STAGE_RANK[life.reached];
+  const mine = STAGE_RANK[stage];
+  const fromMs = life[`${stage}FromMs` as "liveFromMs"];
+  const days = life[`${stage}Days` as "liveDays"];
+  if (mine > rank) return { status: "none", fromMs: WORLD_NOW_MS, toMs: null, days: 0 };
+  if (mine === rank) return { status: "current", fromMs, toMs: null, days };
+  return { status: "completed", fromMs, toMs: life[`${STAGES_IN_ORDER[mine + 1]!}FromMs` as "liveFromMs"], days };
 }
 export const stageDays = (alphaId: string, stage: StageName): number => lifecycleOf(alphaId)[`${stage}Days` as "liveDays"];
 export const stageFromMs = (alphaId: string, stage: StageName): number => lifecycleOf(alphaId)[`${stage}FromMs` as "liveFromMs"];

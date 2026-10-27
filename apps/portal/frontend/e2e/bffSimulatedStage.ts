@@ -28,7 +28,7 @@
 
 import { blotterBookOf } from "./bffDoubleOverview";
 import { isPositiveMode, positiveDeploymentFact } from "./bffPositiveMode";
-import { DAY_MS as WORLD_DAY_MS, deploymentOf, fromCents as worldCents, grossNotional, lifecycleOf, netPnlOf, netPnlSeries, positionsOf, toCents as worldToCents, workingOrdersOf, WORLD_NOW_MS } from "./bffWorld";
+import { DAY_MS as WORLD_DAY_MS, deploymentOf, fromCents as worldCents, grossNotional, lifecycleOf, netPnlOf, stageRecord, netPnlSeries, positionsOf, toCents as worldToCents, workingOrdersOf, WORLD_NOW_MS } from "./bffWorld";
 
 type Obj = Record<string, unknown>;
 const isObj = (value: unknown): value is Obj => typeof value === "object" && value !== null && !Array.isArray(value);
@@ -68,7 +68,6 @@ const IDENTITY: Readonly<Record<string, Identity>> = {
   dep_btc_sandbox: { alphaId: "alpha_btc_trend", alphaName: "BTC Trend", ...CAN },
   dep_b1: { alphaId: "alpha_b", alphaName: "Basis B", ...CORE },
   dep_b2: { alphaId: "alpha_b", alphaName: "Basis B", ...SAT },
-  dep_b3: { alphaId: "alpha_b", alphaName: "Basis B", ...CORE },
   dep_c1: { alphaId: "alpha_c", alphaName: "Momentum C", ...SAT },
   dep_d1: { alphaId: "alpha_d", alphaName: "Grid D", ...CAN },
   dep_d2: { alphaId: "alpha_d", alphaName: "Grid D", ...SAT },
@@ -83,12 +82,12 @@ export type DeploymentStage = "paper" | "sandbox" | "canary" | "live";
 const STAGE_ORDER: readonly DeploymentStage[] = ["paper", "sandbox", "canary", "live"];
 const STAGE_OF: Readonly<Record<string, DeploymentStage>> = {
   dep_live_01: "live", dep_b1: "live", dep_b2: "live", dep_btc_live: "live",
-  dep_canary_01: "canary", dep_b3: "canary", dep_c1: "canary",
+  dep_canary_01: "canary", dep_c1: "canary",
   dep_sandbox_01: "sandbox", dep_d1: "sandbox", dep_btc_sandbox: "sandbox",
   dep_paper_01: "paper", dep_d2: "paper", dep_a1: "paper", dep_btc_paper: "paper",
 };
 /** The Canary deployment a live deployment was promoted from (its predecessor envelope is THAT deployment's). */
-const PREDECESSOR: Readonly<Record<string, string>> = { dep_live_01: "dep_canary_01", dep_btc_live: "dep_canary_01", dep_b1: "dep_b3", dep_b2: "dep_b3" };
+const PREDECESSOR: Readonly<Record<string, string>> = { dep_live_01: "dep_canary_01", dep_btc_live: "dep_canary_01", dep_b1: "dep_canary_01", dep_b2: "dep_canary_01" };
 /**
  * The canary deployment a live deployment was promoted from: in the canonical world the alpha's OWN deployment in the Canary stage; `null` when the
  * alpha has none (its trial ended without a deployment of its own on record: no predecessor is claimed, never another alpha's).
@@ -930,6 +929,43 @@ function worldStage(kind: "canary" | "live" | "sandbox" | "paper", body: Obj | n
       plan.plan_id = "PL-0412";
       plan.created_at = iso(NOW_MS - 20 * MIN);
     }
+    // WORLD: the alpha has ONE stage history. A sandbox the alpha has left is a COMPLETED record (seven of seven steps passed, approved on the day the next stage began, nothing open);
+    // the sandbox the alpha is in is IN PROGRESS (steps passed so far by the days run, none failed).
+    const record = stageRecord(alpha.id, "sandbox");
+    const steps = body.steps as Obj[];
+    const progress = body.progress as Obj;
+    const passedTo = record.status === "completed" ? steps.length : Math.min(steps.length - 1, Math.floor(record.days / 2));
+    steps.forEach((step, i) => {
+      step.strip_state = i < passedTo ? "DONE" : i === passedTo ? "CURRENT" : "PENDING";
+      step.evaluation_state = i < passedTo ? "PASS" : "UNAVAILABLE";
+      step.blocker_code = i < passedTo ? null : `SANDBOX_STEP_${String(step.step_key)}_PENDING`;
+      step.as_of = i < passedTo ? iso(startMs + (i + 1) * MIN * 90) : null;
+      step.expires_at = i < passedTo ? iso(startMs + 7 * DAY_MS + i * MIN) : null;
+      step.summary = i < passedTo ? `Step ${i + 1} evidence accepted.` : step.summary;
+    });
+    progress.passed_count = passedTo;
+    progress.total_count = steps.length;
+    progress.eligible = passedTo === steps.length;
+    progress.blocker_codes = steps.filter((step) => step.blocker_code !== null).map((step) => String(step.blocker_code));
+    if (record.status === "completed") {
+      const endMs = record.toMs ?? startMs;
+      cert.workflow_state = "APPROVED";
+      cert.submitted_at = iso(endMs - 3 * HOUR_MS);
+      cert.submitted_by_user_id = "usr_0002";
+      cert.decided_at = iso(endMs);
+      cert.decided_by_user_id = "usr_0001";
+      cert.decision_reason = "All seven steps passed; no open finding.";
+      cert.updated_at = iso(endMs);
+      body.findings = { total_count: 0, returned_count: 0, truncated: false, rows: [] };
+      body.stage_facts = stageFacts({ runtime: "STOPPED", since: iso(endMs), verdict: "NO_OPEN_FINDINGS", open: 0, unknownOrders: 0, asOf: stale ? at(-44 * MIN) : AS_OF,
+        sessions: [{ id: `sandbox-session-1`, started, ended: iso(endMs), state: "COMPLETED" }] });
+      body.timeline = { total_count: 3, returned_count: 3, truncated: false, rows: [
+        { event_id: `scevt_${d.id}_create`, actor_user_id: "bobby", action: "CREATE", workflow_version_before: 0, workflow_version_after: 1, created_at: iso(startMs - 2 * MIN) },
+        { event_id: `scevt_${d.id}_submit`, actor_user_id: "lan", action: "SUBMIT", workflow_version_before: 1, workflow_version_after: 2, created_at: iso(endMs - 3 * HOUR_MS) },
+        { event_id: `scevt_${d.id}_approve`, actor_user_id: "bobby", action: "APPROVE", workflow_version_before: 2, workflow_version_after: 3, created_at: iso(endMs) },
+      ] };
+      body.promotion_plans = [];
+    }
   } else {
     const data = body.data;
     if (!isObj(data)) return body;
@@ -950,11 +986,20 @@ function worldStage(kind: "canary" | "live" | "sandbox" | "paper", body: Obj | n
         cash_free: worldCents(eq - alloc / 10n), cash_locked: worldCents(alloc / 10n), total_fills: Math.min(i + 1, book.fills.length), state_digest: "9c1e04b7a2f1ffff", snapshot_reason: "PERIODIC", source: `paper-${d.id}`,
         drawdown: eq === peak ? "0" : canonicalDecimal(((Number(eq - peak) / Number(peak))).toFixed(4)) };
     });
-    data.stage_facts = stageFacts({ runtime: halted ? "HALTED" : "RUNNING", since: started, verdict: "NO_OPEN_FINDINGS", open: 0, unknownOrders: 0, asOf: PAPER_AS_OF,
-      sessions: [{ id: `session_${d.id}_pap_1`, started, ended: null, state: halted ? "HALTED" : "RUNNING" }] });
+    // WORLD: ONE stage history. A Paper stage the alpha has left is a COMPLETED record (gate met, days and trades over the minimum, the session closed on the day Sandbox began);
+    // the Paper stage the alpha is in is in progress, its observed days the days since it began.
+    const paperRecord = stageRecord(alpha.id, "paper");
+    const gate = data.observation_gate as Obj;
+    const paperEnd = paperRecord.toMs === null ? null : iso(paperRecord.toMs);
+    gate.observed_days = paperRecord.days;
+    gate.trade_count = paperRecord.status === "completed" ? Math.max(60, paperRecord.days * 4) : (data.fills as unknown[]).length;
+    gate.state = paperRecord.status === "completed" ? "MET" : "PARTIAL";
+    gate.reason_code = paperRecord.status === "completed" ? null : "OBSERVATION_WINDOW_OPEN";
+    data.stage_facts = stageFacts({ runtime: paperEnd !== null ? "STOPPED" : halted ? "HALTED" : "RUNNING", since: paperEnd ?? started, verdict: "NO_OPEN_FINDINGS", open: 0, unknownOrders: 0, asOf: PAPER_AS_OF,
+      sessions: [{ id: `session_${d.id}_pap_1`, started, ended: paperEnd, state: paperEnd !== null ? "COMPLETED" : halted ? "HALTED" : "RUNNING" }] });
   }
   return body;
 }
 /** Harness ids that stand for a world deployment (the review index and the audit link dep_canary_01: the canary rollout of Basis B). */
-const WORLD_ALIAS: Readonly<Record<string, string>> = { dep_canary_01: "dep_b3" };
+const WORLD_ALIAS: Readonly<Record<string, string>> = {}; // WORLD: one id per deployment; the canary rollout of Basis B is dep_canary_01 everywhere
 // ===== WP-P end

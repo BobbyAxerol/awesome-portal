@@ -313,11 +313,14 @@ function worldBlotterBooks(): WorldBook[] {
 // ===== WP-P end
 /** WORLD: the open orders (accepted, submitted, partly filled) the blotter holds for one deployment: the Live page, the Canary room and Alpha 360 read these very rows. */
 let openBook: Map<string, WorldOpenOrder[]> | null = null;
+let openBookSource: Row[] | null = null;
 export interface WorldOpenOrder { id: string; symbol: string; side: "buy" | "sell"; type: string; quantity: string; price: string; status: string; sinceMs: number }
 export function worldOpenOrders(deploymentId: string): WorldOpenOrder[] {
-  if (openBook === null) {
+  const source = rowsFor(false);
+  if (openBook === null || openBookSource !== source) {
     openBook = new Map();
-    for (const row of buildRows(false, BLOTTER_DOUBLE_COUNT)) {
+    openBookSource = source;
+    for (const row of source) {
       const o = row.order;
       if (!["ACCEPTED", "SUBMITTED", "PARTIALLY_FILLED"].includes(String(o.status)) || typeof o.deployment_id !== "string" || o.price === null) continue;
       const list = openBook.get(o.deployment_id) ?? [];

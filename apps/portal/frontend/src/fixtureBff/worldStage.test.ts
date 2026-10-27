@@ -60,17 +60,17 @@ describe("a deployment is ONE thing on every screen", () => {
     expect(live.deployment.account_id).toBe(row.account_id);
   });
 
-  it("the Canary page of a canary rollout (dep_b3, and its harness id dep_canary_01) states the same book; caps follow the allocation", async () => {
-    const a = await get(`${E}/deployments/dep_b3/canary`);
+  it("the Canary page of a canary rollout (dep_canary_01, and its harness id dep_canary_01) states the same book; caps follow the allocation", async () => {
+    const a = await get(`${E}/deployments/dep_canary_01/canary`);
     const b = await get(`${E}/deployments/dep_canary_01/canary`);
     for (const page of [a, b]) {
       expect(page.deployment.account_id).toBe("acc_bnc_core");
-      expect(kpi(page, "gross_notional")).toBe(grossNotional("dep_b3"));
+      expect(kpi(page, "gross_notional")).toBe(grossNotional("dep_canary_01"));
       const rows = page.envelope_compliance.rows as Body[];
       const gross = rows.find((r) => r.cap === "gross_notional");
-      expect(gross.consumed.value).toBe(grossNotional("dep_b3").replace(/\.?0+$/, "") || "0");
+      expect(gross.consumed.value).toBe(grossNotional("dep_canary_01").replace(/\.?0+$/, "") || "0");
       expect(toCents(page.envelope.limits.capital_cap)).toBe(toCents("30000"));
-      expect(Number(rows.find((r) => r.cap === "gross_notional").approved)).toBeGreaterThanOrEqual(Number(grossNotional("dep_b3")));
+      expect(Number(rows.find((r) => r.cap === "gross_notional").approved)).toBeGreaterThanOrEqual(Number(grossNotional("dep_canary_01")));
     }
   });
 
