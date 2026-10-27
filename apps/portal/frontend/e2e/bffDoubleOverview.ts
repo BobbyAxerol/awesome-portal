@@ -315,6 +315,12 @@ function worldBlotterBooks(): WorldBook[] {
 let openBook: Map<string, WorldOpenOrder[]> | null = null;
 let openBookSource: Row[] | null = null;
 export interface WorldOpenOrder { id: string; symbol: string; side: "buy" | "sell"; type: string; quantity: string; price: string; status: string; sinceMs: number }
+/** WORLD: the blotter summary of a scope is COUNTED from the blotter's own rows (environment, optionally one deployment), so its chips and funnel equal the rows the screen lists. */
+export function worldBlotterCounts(environment: string, deploymentId: string | null): { submitted: number; filled: number; partial: number; working: number; cancelled: number; rejected: number } {
+  const rows = rowsFor(false).map((r) => r.order as unknown as Record<string, unknown>).filter((o) => o.mode === environment && (deploymentId === null || o.deployment_id === deploymentId));
+  const count = (...states: string[]): number => rows.filter((o) => states.includes(String(o.status))).length;
+  return { submitted: rows.length, filled: count("FILLED"), partial: count("PARTIALLY_FILLED"), working: count("ACCEPTED", "SUBMITTED"), cancelled: count("CANCELED"), rejected: count("REJECTED") };
+}
 export function worldOpenOrders(deploymentId: string): WorldOpenOrder[] {
   const source = rowsFor(false);
   if (openBook === null || openBookSource !== source) {

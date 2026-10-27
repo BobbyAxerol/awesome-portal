@@ -12,6 +12,7 @@ import { buildPositiveManagerSeries } from "../../../packages/contracts/tooling/
 import { ALPHA_DOUBLE_AS_OF_MS, answerAlpha } from "../frontend/e2e/bffDoubleAlpha";
 import { answerManagerFleet, answerManagerSeries } from "../frontend/e2e/bffDoubleManager";
 import { answerPortfolios } from "../frontend/e2e/bffDoublePortfolios";
+import { worldBlotterCounts } from "../frontend/e2e/bffDoubleOverview";
 import type { PositiveAccountBook, PositiveDeploymentFact, PositivePortfolioBook, PositiveRecall } from "../frontend/e2e/bffPositiveMode";
 import { addDecimal, fixtureNowMs, scaled, type AlphaSpec, type DeploymentSpec } from "../frontend/e2e/bffScale";
 import { grossNotional, incidentChildrenBody, lifecycleOf, MARKS, NATIVE_ALPHAS, positionsOf, stageDays, WORLD_ACTORS } from "../frontend/e2e/bffWorld";
@@ -1829,7 +1830,13 @@ function wpkSiblings(method: string, path: string, search: URLSearchParams, _req
     if (scope !== "all" && !ID.test(scope)) return invalid;
     const seed = seedOf(environment, scope, "wpk-blotter"), m = mode(environment, scope);
     const body: Draft = { ...head("blotter-summary"), environment };
-    return ok(sections(body, ["status_buckets", "funnel"], m, () => {
+    return ok(sections(body, ["status_buckets", "funnel"], legacy() ? m : "ok", () => {
+      if (!legacy()) {
+        // WORLD: counted from the blotter's own rows of this scope
+        const c = worldBlotterCounts(environment, scope === "all" ? null : scope);
+        return { funnel: { submitted: c.submitted, risk_granted: c.submitted - c.rejected, venue_acknowledged: c.submitted - c.rejected, filled: c.filled },
+          status_buckets: [{ bucket: "WORKING", count: c.working }, { bucket: "CONDITIONAL", count: 0 }, { bucket: "PARTIAL", count: c.partial }, { bucket: "CANCELLED", count: c.cancelled }, { bucket: "REJECTED", count: c.rejected }, { bucket: "FILLED", count: c.filled }] };
+      }
       const submitted = 40 + seed % 400, granted = submitted - seed % 7, acknowledged = granted - (seed >>> 3) % 5, filled = acknowledged - (seed >>> 6) % 30;
       const rest = acknowledged - filled;
       return { funnel: { submitted, risk_granted: granted, venue_acknowledged: acknowledged, filled },
