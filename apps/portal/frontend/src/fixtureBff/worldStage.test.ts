@@ -40,7 +40,8 @@ describe("a deployment is ONE thing on every screen", () => {
     expect(toCents(fig(live, "equity"))).toBe(toCents(d.allocation) + netPnlOf(d));
     expect(live.lifecycle.activated_at).toBe(new Date(lifecycleOf("alpha_a").liveFromMs).toISOString());
     // every position is at the world's mark of its symbol, and their unrealised amounts add up to the deployment's
-    for (const row of live.positions.typed.rows) expect(row.mark).toBe(MARKS[row.symbol]);
+    // the wire states canonical decimals (a trailing zero is refused whole by the reader), so the mark is compared as a value
+    for (const row of live.positions.typed.rows) expect(toCents(row.mark)).toBe(toCents(MARKS[row.symbol]!));
     const unrealised = live.positions.typed.rows.reduce((n: bigint, r: Body) => n + toCents(r.unrealised), 0n);
     expect(unrealised).toBe(toCents(d.unrealized));
     expect(live.positions.typed.rows.map((r: Body) => r.id)).toEqual(positionsOf("dep_live_01").map((p) => p.id));

@@ -76,14 +76,14 @@ describe("derived figures are exact", () => {
     expect(canonicalDecimal("4630.00")).toBe("4630");
     expect(canonicalDecimal("-0.00")).toBe("0");
   });
-  it("the used ratio is consumed / approved at six places, half up", () => {
+  it("the used ratio is consumed / approved at four places, half up", () => {
     expect(usedRatio("3820.00", "5000")).toBe("0.764");
-    expect(usedRatio("6120.40", "10000")).toBe("0.61204");
+    expect(usedRatio("6120.40", "10000")).toBe("0.612");
     expect(usedRatio("38.60", "250")).toBe("0.1544");
     expect(usedRatio("1", "20")).toBe("0.05");
     expect(usedRatio("5210.00", "5000")).toBe("1.042");
-    expect(usedRatio("1", "3")).toBe("0.333333");
-    expect(usedRatio("2", "3")).toBe("0.666667");
+    expect(usedRatio("1", "3")).toBe("0.3333");
+    expect(usedRatio("2", "3")).toBe("0.6667");
   });
   it("a difference is internal minus broker, exactly", () => {
     expect(difference("10184.20", "10184.21")).toBe("-0.01");

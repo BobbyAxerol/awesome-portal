@@ -335,7 +335,7 @@ const tenths = (t: number): string => canonicalDecimal(`${t < 0 ? "-" : ""}${Mat
 export const CANARY_PNL: readonly string[] = CANARY_TENTHS.map(tenths);
 
 interface CapSpec { cap: string; unit: string; limit: string; approved: string; consumed: string; ratio: string }
-/** consumed / approved at six places, ROUND_HALF_UP, canonical: the SERVER's string. */
+/** consumed / approved at four places (the fixture's one precision rule), ROUND_HALF_UP, canonical. */
 export function usedRatio(consumed: string, approved: string): string {
   const scale = (text: string): bigint => {
     const [w, f = ""] = text.split(".");
@@ -343,8 +343,9 @@ export function usedRatio(consumed: string, approved: string): string {
   };
   const c = scale(consumed);
   const a = scale(approved);
-  const q = (c * 1_000_000n * 2n + a) / (a * 2n);
-  return canonicalDecimal(`${q / 1_000_000n}.${(q % 1_000_000n).toString().padStart(6, "0")}`);
+  // four places, ROUND_HALF_UP: the fixture's one precision rule, so every readout has two places in percent (QA R5-13)
+  const q = (c * 10_000n * 2n + a) / (a * 2n);
+  return canonicalDecimal(`${q / 10_000n}.${(q % 10_000n).toString().padStart(4, "0")}`);
 }
 const capRow = (spec: Omit<CapSpec, "ratio">, asOf: string): Obj => ({
   cap: spec.cap,
