@@ -40,6 +40,8 @@ export interface CommandBarProps {
    * with the status. Empty or absent draws nothing.
    */
   notes?: readonly string[];
+  /** What an empty answer says (plain words naming what was searched); default "No result". */
+  emptyText?: string;
   /** A server search is in flight: the status says so, and an empty list is not yet "No result". */
   busy?: boolean;
 }
@@ -74,6 +76,7 @@ export function CommandBar({
   placeholder = DEFAULT_PLACEHOLDER,
   searchNotice,
   notes,
+  emptyText = "No result",
   busy = false,
 }: CommandBarProps) {
   const base = useId();
@@ -149,7 +152,7 @@ export function CommandBar({
   };
 
   const total = matched.length;
-  const status = busy ? "Searching" : shown.length === 0 ? "No result" : `${shown.length} of ${total} results`;
+  const status = busy ? "Searching" : shown.length === 0 ? emptyText : `${shown.length} of ${total} results`;
   let index = -1;
 
   return (
@@ -187,11 +190,15 @@ export function CommandBar({
           </div>
         ) : null}
         {notes && notes.length > 0 ? (
-          <ul className="exec-cmdbar-notes" aria-label="Reads used">
-            {notes.map((note) => (
-              <li key={note}>{note}</li>
-            ))}
-          </ul>
+          // The diagnostic detail (which list answered, how many matched) is one click away, not above the results.
+          <details className="exec-cmdbar-details">
+            <summary>Details</summary>
+            <ul className="exec-cmdbar-notes" aria-label="Reads used">
+              {notes.map((note) => (
+                <li key={note}>{note}</li>
+              ))}
+            </ul>
+          </details>
         ) : null}
         {shown.length > 0 ? (
           <div id={listId} className="exec-cmdbar-list" role="listbox" aria-label="Results">
@@ -222,7 +229,7 @@ export function CommandBar({
             ))}
           </div>
         ) : (
-          <div className="exec-cmdbar-empty">{busy ? "Searching" : "No result"}</div>
+          <div className="exec-cmdbar-empty">{busy ? "Searching" : emptyText}</div>
         )}
         <div className="exec-cmdbar-foot">
           <span>

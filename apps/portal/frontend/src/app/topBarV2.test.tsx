@@ -102,6 +102,21 @@ describe("V2 breadcrumbs and the Portal environment badge (QA1 OV-06, R2-18, R2-
     },
   );
 
+  it("Compare names itself: Execution / Portfolios / Compare", () => {
+    render(
+      <MemoryRouter initialEntries={["/deployments/compare"]}>
+        <PortalContext.Provider value={{ registry: registryDoc, environment: null }}>
+          <PreferencesProvider>
+            <PortalPresentationProvider registry={null}>
+              <TopBar breadcrumbs={trailFor("/deployments/portfolios")} environment={null} onOpenPalette={() => undefined} onToggleMobileNav={() => undefined} v2={{ userHref: null }} />
+            </PortalPresentationProvider>
+          </PreferencesProvider>
+        </PortalContext.Provider>
+      </MemoryRouter>,
+    );
+    expect(text()).toEqual(["Execution", "Portfolios", "Compare"]);
+  });
+
   it("without the v2 prop the registry's own trail is untouched", () => {
     mount(undefined, undefined, { breadcrumbs: trailFor("/execution") });
     expect(text()[0]).not.toBe("Execution");

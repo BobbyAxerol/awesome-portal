@@ -310,15 +310,17 @@ describe("the one server search (GET /search) is the primary source", () => {
     expect(searchSpy).toHaveBeenCalledTimes(1);
     expect(searchSpy).toHaveBeenCalledWith({ q: "core", kinds: ["alpha", "portfolio", "account", "operation", "approval", "incident"], limit: PER_KIND, workspaceId: "ws_1" });
     expect(calls.alphas).toHaveLength(0);
-    expect(calls.portfolios).toBe(0);
+    // The index returned no portfolio, so the portfolio list is asked too (a name on screen the index does not know); nothing else is.
+    expect(calls.portfolios).toBe(1);
     expect(calls.bindings).toHaveLength(0);
     expect(calls.operations).toHaveLength(0);
     expect(calls.approvals).toHaveLength(0);
-    expect(out.entries.map((e) => [e.group, e.label, e.detail, e.href])).toEqual([
+    expect(out.entries.filter((e) => e.group !== "Portfolios").map((e) => [e.group, e.label, e.detail, e.href])).toEqual([
       ["Alphas", "BTC-Trend", "LIVE", "/deployments/alphas/al_btc"],
       ["Accounts", "acct_main", undefined, "/deployments/accounts/acct_main"],
       ["Incidents", "inc_1", "OPEN", "/execution/operations/incidents/inc_1"],
     ]);
+    expect(out.entries.filter((e) => e.group === "Portfolios").map((e) => e.label)).toEqual(["Core Book", "Other"]);
   });
 
   it("each group says how many are shown of how many matched; a counted zero, an uncounted group and a missing group differ", async () => {
@@ -326,11 +328,12 @@ describe("the one server search (GET /search) is the primary source", () => {
     const out = (await searchEntities(api, "core", ALL, undefined, signal()))!;
     expect(out.notes).toEqual([
       "Alphas: entity search read, 1 of 14 shown",
-      "Portfolios: entity search read, 0 of 0 shown",
       "Accounts: entity search read, 1 shown, count not published",
       "Operations: entity search read, none returned",
       "Approvals: entity search read, none returned",
       "Incidents: entity search read, 1 shown, count not published",
+      // The index counted zero portfolios, so the portfolio list was asked as well and its answer replaces the index's empty line.
+      "Portfolios: portfolio list read (no search parameter), matched here in 3 loaded, list truncated by the server, 2 of 2 shown",
     ]);
   });
 
@@ -383,12 +386,12 @@ describe("ExecCommandBar with the server search", () => {
     expect(calls.alphas).toHaveLength(0);
   });
 
-  it("the notice says one server search while it is the source", async () => {
+  it("the notice says the search looks in every kind you may see while the one search is the source", async () => {
     const { api } = fakeApi({ searchEntities: async () => ok(indexBody()) });
     mountBar(api);
     fireEvent.change(screen.getByRole("combobox"), { target: { value: "core" } });
     await screen.findByRole("list", { name: "Reads used" });
-    expect(noticeText()).toBe(ENTITY_SEARCH_INDEX_NOTICE);
+    expect(noticeText()).toBe(`${ENTITY_SEARCH_INDEX_NOTICE}. ${ENTITY_SEARCH_HINT}`);
   });
 
   it("unpublished: the per-read fallback answers once per query, /search is probed once and not again, the typed FE-023 notice stays", async () => {
@@ -602,5 +605,53 @@ describe("incidents are found by prefix as well as by exact id (QA2 R3-22)", () 
     const out = (await searchEntities(api, "inc", ALL, undefined, signal()))!;
     expect(out.via).toBe("index");
     expect(out.entries.filter((e) => e.group === "Incidents").map((e) => e.label)).toEqual(["inc_TEST_ONLY_fx_a", "inc_TEST_ONLY_fx_b"]);
+  });
+});
+
+describe("people and portfolios are found by NAME (QA3 R3-23, R1-22)", () => {
+  const roster = vi.fn(async (q: { limit: number; q: string }) => ({
+    accounts: [{ userId: "usr_9", username: "hoa", displayName: "Hoa Nguyen", role: "USER", accountState: "ACTIVE" }],
+    counts: { matching: 1 },
+    asked: q,
+  }));
+  const withPeople = { ...ALL, person: true };
+
+  it("a person is found through the roster read by name, and opens the Users screen on that account", async () => {
+    const { api } = fakeApi({ searchEntities: async () => ok(indexBody()) });
+    const out = (await searchEntities(api, "Hoa", withPeople, "ws_1", signal(), "live", { readPeople: roster }))!;
+    expect(roster).toHaveBeenCalledWith({ limit: PER_KIND, q: "Hoa" });
+    expect(out.entries.filter((e) => e.group === "People").map((e) => [e.label, e.detail, e.href])).toEqual([["Hoa Nguyen", "hoa · user · active", "/administration/users?sel=usr_9&q=hoa"]]);
+    expect(out.notes).toContain("People: account roster, server search by name and username, 1 of 1 shown");
+  });
+
+  it("the same through the per-list fallback", async () => {
+    const { api } = fakeApi();
+    const out = (await searchEntities(api, "Hoa", withPeople, undefined, signal(), "live", { skipIndex: true, readPeople: roster }))!;
+    expect(out.entries.some((e) => e.group === "People" && e.label === "Hoa Nguyen")).toBe(true);
+  });
+
+  it("no people source (not an administrator): the roster is not read", async () => {
+    const reader = vi.fn(async () => ({ accounts: [], counts: { matching: 0 } }));
+    const { api } = fakeApi();
+    await searchEntities(api, "Hoa", ALL, undefined, signal(), "live", { skipIndex: true, readPeople: reader });
+    expect(reader).not.toHaveBeenCalled();
+  });
+
+  it("a refused roster read is one named note, not a failure of the search", async () => {
+    const { api } = fakeApi();
+    const out = (await searchEntities(api, "Hoa", withPeople, undefined, signal(), "live", { skipIndex: true, readPeople: async () => { throw new Error("403"); } }))!;
+    expect(out.notes).toContain("People: the read did not complete");
+    expect(out.entries.length).toBeGreaterThanOrEqual(0);
+  });
+
+  it("a portfolio the index does not know ('Core', 'Canary') is found by its name in the portfolio list", async () => {
+    const { api } = fakeApi({
+      searchEntities: async () => ok(indexBody({ groups: [{ kind: "portfolio", totalMatched: 0, rows: [] }] })),
+      listPortfolios: async () => ok({ truncated: false, items: [{ portfolioId: "pf_TEST_ONLY_core", name: "Core" }, { portfolioId: "pf_TEST_ONLY_canary", name: "Canary" }] }),
+    });
+    const core = (await searchEntities(api, "Core", ALL, undefined, signal()))!;
+    expect(core.entries.filter((e) => e.group === "Portfolios").map((e) => [e.label, e.href])).toEqual([["Core", "/deployments/portfolios/pf_TEST_ONLY_core"]]);
+    const canary = (await searchEntities(api, "canary", ALL, undefined, signal()))!;
+    expect(canary.entries.filter((e) => e.group === "Portfolios").map((e) => e.label)).toEqual(["Canary"]);
   });
 });

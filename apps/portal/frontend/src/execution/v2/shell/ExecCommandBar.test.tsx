@@ -113,7 +113,7 @@ describe("ExecCommandBar rendering", () => {
     const notice = document.getElementById(input.getAttribute("aria-describedby") ?? "");
     // With a published list read the notice still says there is no single index (FE-023) and what to type.
     expect(notice?.textContent).toBe(`${ENTITY_SEARCH_NOTICE}. ${ENTITY_SEARCH_HINT}`);
-    expect(ENTITY_SEARCH_NOTICE).toContain("Not published as one index (FE-023)");
+    expect(ENTITY_SEARCH_NOTICE).not.toMatch(/FE-\d+|GET \//);
     expect(screen.queryByText(/Search alphas/)).toBeNull();
     expect(document.activeElement).toBe(input);
   });

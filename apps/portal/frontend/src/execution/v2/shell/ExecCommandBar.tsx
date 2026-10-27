@@ -29,13 +29,17 @@ import { isNavigable, sidebarGroups, type NavOptions } from "../../../portal/nav
 import { createHttpApi } from "../../api/httpApi";
 import type { ExecutionApi } from "../../api/ports";
 import { parseUrlParams, withContext } from "../urlState";
+import { useSession } from "../../../auth/session";
 import { CommandBar } from "./CommandBar";
-import { MIN_QUERY, searchEntities, searchSourcesFor } from "./entitySearch";
+import { MIN_QUERY, searchEntities, searchSourcesFor, type PeopleReader } from "./entitySearch";
 import { goToEntries, type CommandEntry } from "./roleNav";
 
-export const ENTITY_SEARCH_NOTICE = "Entity search · Not published as one index (FE-023)";
-export const ENTITY_SEARCH_INDEX_NOTICE = "Entity search · one server search (GET /search), results scoped to your access";
-export const ENTITY_SEARCH_HINT = `Type ${MIN_QUERY} or more characters to search each published list read.`;
+// Plain words for the palette: no HTTP verbs, no paths, no ticket numbers. Which list answered is under "Details".
+export const ENTITY_SEARCH_NOTICE = "Search looks in alphas, portfolios, accounts, operations, approvals and incidents, one list at a time";
+export const ENTITY_SEARCH_INDEX_NOTICE = "Search looks in alphas, portfolios, accounts, operations, approvals and incidents you may see";
+export const ENTITY_SEARCH_NONE = "Search is not available for your access yet";
+export const ENTITY_SEARCH_HINT = `Type ${MIN_QUERY} or more characters.`;
+export const PEOPLE_NOT_SEARCHED = "People are searched for administrators only.";
 export const EXEC_COMMAND_PLACEHOLDER = "Search or jump to";
 /** The whole "Go to" list is short and permission-filtered; the bar default of 12 would push Execution rows out of view. */
 const GO_TO_LIMIT = 50;
@@ -52,6 +56,8 @@ export interface ExecCommandBarProps {
   searchApi?: ExecutionApi;
   /** Test seam. */
   debounceMs?: number;
+  /** Test seam: the roster read behind the People group (default: the Users screen's reader). */
+  peopleReader?: PeopleReader;
 }
 
 /** The "Go to" rows for this registry and caller; pure, so it can be tested without a router. */
@@ -75,20 +81,25 @@ function matches(entry: CommandEntry, needle: string): boolean {
   return `${entry.group} ${entry.label} ${entry.detail ?? ""}`.toLowerCase().includes(needle);
 }
 
-export function ExecCommandBar({ registry, options, open, onClose, searchApi, debounceMs = SEARCH_DEBOUNCE_MS }: ExecCommandBarProps) {
+export function ExecCommandBar({ registry, options, open, onClose, searchApi, debounceMs = SEARCH_DEBOUNCE_MS, peopleReader: peopleReaderProp }: ExecCommandBarProps) {
   const navigate = useNavigate();
   const { search } = useLocation();
+  // The roster reader is loaded only when a search for people actually runs, so the palette chunk stays small.
+  const peopleReader: PeopleReader = peopleReaderProp ?? ((query) => import("../screens/users/rosterReader").then((m) => m.readRosterPageFromServer(query)));
   const goTo = useMemo(() => execGoToEntries(registry, options), [registry, options]);
   const sources = useMemo(() => searchSourcesFor(registry, options), [registry, options]);
   const { workspaceId, environment } = useMemo(() => {
     const value = parseUrlParams(search).value;
     return { workspaceId: value.workspace_id ?? undefined, environment: value.env };
   }, [search]);
+  const { access } = useSession();
+  const owner = access?.kind === "ready" && access.access?.isOwner === true;
+  const searchSources = useMemo(() => ({ ...sources, person: owner }), [sources, owner]);
   // The owning scope of every search result: workspace, environment, the caller's capabilities (and so the kinds searched). A result belongs
   // to exactly one scope; when any part changes the old results are dropped on the same render and the search runs again.
   const scope = useMemo(
-    () => JSON.stringify([workspaceId ?? null, environment, [...(options.capabilities ?? [])].sort(), sources]),
-    [workspaceId, environment, options.capabilities, sources],
+    () => JSON.stringify([workspaceId ?? null, environment, [...(options.capabilities ?? [])].sort(), searchSources]),
+    [workspaceId, environment, options.capabilities, searchSources],
   );
 
   const [query, setQuery] = useState("");
@@ -98,7 +109,7 @@ export function ExecCommandBar({ registry, options, open, onClose, searchApi, de
   const [index, setIndex] = useState<"unknown" | "published" | "unpublished">("unknown");
   const skipIndex = useRef(false);
   const [busy, setBusy] = useState(false);
-  const anySource = sources.alpha || sources.portfolio || sources.account || sources.operation || sources.approval;
+  const anySource = searchSources.alpha || searchSources.portfolio || searchSources.account || searchSources.operation || searchSources.approval || owner;
   const text = query.trim();
   const searching = open && anySource && text.length >= MIN_QUERY;
 
@@ -109,8 +120,8 @@ export function ExecCommandBar({ registry, options, open, onClose, searchApi, de
 
   // The routes the app owns: a server route hint outside them is not followed (it would land on "No feature claims this route").
   const routes = useMemo(() => registry.features.map((feature) => feature.canonical_route), [registry]);
-  const latest = useRef({ searchApi, sources, workspaceId, environment });
-  latest.current = { searchApi, sources, workspaceId, environment };
+  const latest = useRef({ searchApi, sources: searchSources, workspaceId, environment });
+  latest.current = { searchApi, sources: searchSources, workspaceId, environment };
   // Whether /search is served is learned per scope: another workspace or permission asks again.
   const learnedFor = useRef(scope);
   if (learnedFor.current !== scope) {
@@ -128,7 +139,7 @@ export function ExecCommandBar({ registry, options, open, onClose, searchApi, de
     const timer = setTimeout(() => {
       const now = latest.current;
       const api = now.searchApi ?? createHttpApi({ policy: null, signal: controller.signal });
-      void searchEntities(api, text, now.sources, now.workspaceId, controller.signal, now.environment, { skipIndex: skipIndex.current, routes }).then((outcome) => {
+      void searchEntities(api, text, now.sources, now.workspaceId, controller.signal, now.environment, { skipIndex: skipIndex.current, routes, readPeople: peopleReader }).then((outcome) => {
         if (outcome === null || controller.signal.aborted) return;
         // A late answer for another scope never lands: the effect aborts on a scope change, and this guard is the second fence.
         if (learnedFor.current !== scope) return;
@@ -154,6 +165,10 @@ export function ExecCommandBar({ registry, options, open, onClose, searchApi, de
     return current ? [...jump, ...found.entries] : jump;
   }, [goTo, text, found, current]);
   const notes = current ? compactNotes(found.notes) : [];
+  // An empty answer names what was searched, and once says what is not searched for this caller, instead of a bare "No result".
+  const emptyText = current && found.entries.length === 0 && !busy
+    ? `Nothing matched “${text}”.${owner ? "" : ` ${PEOPLE_NOT_SEARCHED}`}`
+    : "No result";
   // Choosing a row navigates with the CURRENT context; a result of another scope cannot be chosen, because it is no longer in the list.
   const chosen = useMemo(() => new Set<CommandEntry>(entries), [entries]);
   const onSelect = useCallback(
@@ -174,7 +189,8 @@ export function ExecCommandBar({ registry, options, open, onClose, searchApi, de
       filterLocally={false}
       onQueryChange={setQuery}
       placeholder={EXEC_COMMAND_PLACEHOLDER}
-      searchNotice={!anySource ? ENTITY_SEARCH_NOTICE : index === "published" ? ENTITY_SEARCH_INDEX_NOTICE : `${ENTITY_SEARCH_NOTICE}. ${ENTITY_SEARCH_HINT}`}
+      searchNotice={!anySource ? ENTITY_SEARCH_NONE : `${index === "published" ? ENTITY_SEARCH_INDEX_NOTICE : ENTITY_SEARCH_NOTICE}. ${ENTITY_SEARCH_HINT}`}
+      emptyText={emptyText}
       notes={notes}
       busy={busy && entries.length === 0}
     />

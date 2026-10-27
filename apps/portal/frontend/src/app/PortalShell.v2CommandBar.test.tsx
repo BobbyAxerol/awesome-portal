@@ -158,12 +158,12 @@ describe("shell flag on", () => {
     expect(withSome).not.toContain("Operations");
   });
 
-  it("entity search says there is no single index (FE-023) and what it searches instead", async () => {
+  it("the palette says in plain words what it searches, with no ticket number", async () => {
     await mount("/execution", ON);
     ctrlK();
     const dialog = await screen.findByRole("dialog", { name: "Command bar" });
-    expect(within(dialog).getByText(/Not published as one index \(FE-023\)/)).toBeTruthy();
-    expect(within(dialog).getByText(/search each published list read/)).toBeTruthy();
+    expect(within(dialog).getByText(/Search looks in alphas, portfolios, accounts, operations, approvals and incidents/)).toBeTruthy();
+    expect(within(dialog).queryByText(/FE-\d+|GET \//)).toBeNull();
   });
 
   it("the top bar's search button says it searches and jumps on an Execution route", async () => {

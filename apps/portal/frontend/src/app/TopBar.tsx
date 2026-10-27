@@ -46,12 +46,15 @@ export function TopBar({
   navToggleRef?: Ref<HTMLButtonElement>;
 }) {
   const preferences = usePreferences();
-  const { registry } = usePortalContext();
-  // On a V2 route the trail reads as the design writes it ("Execution / Overview"), from the same labels the rail uses.
-  const breadcrumbs = v2 && registry ? v2Crumbs(trail, registry.features) : trail;
   const { mode: presentationMode, entityLabel, chrome } = usePresentation();
   const { access, principal } = useSession();
   const location = useLocation();
+  const { registry } = usePortalContext();
+  // On a V2 route the trail reads as the design writes it ("Execution / Overview"), from the same labels the rail uses.
+  const v2Trail = v2 && registry ? v2Crumbs(trail, registry.features) : trail;
+  // Compare is a screen of the Portfolios feature: its trail names it ("Execution / Portfolios / Compare"), as the design does.
+  const onCompare = v2 !== undefined && /^\/deployments\/compare\/?$/.test(location.pathname);
+  const breadcrumbs = onCompare ? [...v2Trail, { label: "Compare", route: null }] : v2Trail;
   const workspaceId = new URLSearchParams(location.search).get("workspace_id") || undefined;
   /*
    * D1 / audit X1 and X-1: a run-scoped Research address extends the trail to

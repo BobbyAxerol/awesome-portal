@@ -38,7 +38,12 @@ export interface SearchSources {
   account: boolean;
   operation: boolean;
   approval: boolean;
+  /** People (the account roster): only for a caller who may read it (the owner); the shell decides, the server refuses regardless. */
+  person?: boolean;
 }
+
+/** Reads one page of the roster for a text (server search by username and display name). */
+export type PeopleReader = (query: { limit: number; q: string }) => Promise<{ accounts: readonly { userId: string; username: string; displayName: string; role: string; accountState: string }[]; counts: { matching: number } }>;
 
 const FEATURE_OF: Readonly<Record<SearchKind, string>> = {
   alpha: "EXECUTION_ALPHA_FLEET",
@@ -69,6 +74,7 @@ export interface EntitySearchOutcome {
 }
 
 const GROUP = {
+  person: "People",
   alpha: "Alphas",
   portfolio: "Portfolios",
   account: "Accounts",
@@ -169,6 +175,16 @@ async function operations(api: ExecutionApi, text: string, workspaceId: string |
   return out;
 }
 
+async function people(read: PeopleReader, text: string): Promise<Settled> {
+  const label = GROUP.person;
+  const page = await read({ limit: PER_KIND, q: text });
+  const rows = page.accounts.slice(0, PER_KIND);
+  return {
+    entries: rows.map((row) => ({ id: `person:${row.userId}`, group: label, label: row.displayName.trim() !== "" ? row.displayName : row.username, detail: `${row.username} · ${row.role.toLowerCase()} · ${row.accountState.toLowerCase()}`, href: `/administration/users?sel=${enc(row.userId)}&q=${enc(row.username)}` })),
+    note: capNote(label, rows.length, page.counts.matching, "account roster, server search by name and username"),
+  };
+}
+
 /** One incident by its exact id, or null when the read does not find it. */
 /**
  * Incidents whose id contains `text`, from the incident links the queue read publishes on its rows (the only list of incident ids there is). Matched
@@ -254,7 +270,7 @@ const INDEX_GROUP: Readonly<Record<string, string>> = { alpha: GROUP.alpha, port
  * defines (an unauthorized entity is absent; `total_matched` null = the source did not count). `null` when the port has no such method or the read
  * is not served (any refusal or unreadable body): the caller then falls back to the per-read searches, once, and the labels say which path answered.
  */
-async function searchByIndex(api: ExecutionApi, query: string, sources: SearchSources, workspaceId: string | undefined, signal: AbortSignal, environment: ExecEnv, routes: readonly string[] | undefined): Promise<EntitySearchOutcome | null> {
+async function searchByIndex(api: ExecutionApi, query: string, sources: SearchSources, workspaceId: string | undefined, signal: AbortSignal, environment: ExecEnv, routes: readonly string[] | undefined, readPeople: PeopleReader | undefined): Promise<EntitySearchOutcome | null> {
   if (typeof api.searchEntities !== "function") return null;
   const kinds: EntityKind[] = [...KIND_ORDER.filter((kind) => sources[kind]), ...(sources.operation ? (["incident"] as const) : [])];
   if (kinds.length === 0) return null;
@@ -284,6 +300,9 @@ async function searchByIndex(api: ExecutionApi, query: string, sources: SearchSo
     return group === undefined || (group.totalMatched === null && group.rows.length === 0);
   };
   const extra: Promise<Settled | Settled[] | null>[] = [];
+  // The index may not know a portfolio the list read does (a name on screen): when it returned none, the portfolio list is asked too.
+  if (sources.portfolio && (result.value.groups.find((g) => g.kind === "portfolio")?.rows.length ?? 0) === 0) extra.push(guard(GROUP.portfolio, () => portfolios(api, query, workspaceId), signal));
+  if (sources.person && readPeople !== undefined) extra.push(guard(GROUP.person, () => people(readPeople, query), signal));
   if (sources.account && uncovered("account")) extra.push(guard(GROUP.account, () => accounts(api, query, environment, workspaceId), signal));
   if (sources.operation && /^inc/i.test(query) && uncovered("incident")) extra.push(guard(GROUP.incident, () => incidentsWithExact(api, query, workspaceId), signal));
   if (extra.length > 0) {
@@ -307,16 +326,16 @@ export async function searchEntities(
   workspaceId: string | undefined,
   signal: AbortSignal,
   environment: ExecEnv = "live",
-  options: { skipIndex?: boolean; routes?: readonly string[] } = {},
+  options: { skipIndex?: boolean; routes?: readonly string[]; readPeople?: PeopleReader } = {},
 ): Promise<EntitySearchOutcome | null> {
   const query = text.trim();
   if (query.length < MIN_QUERY) return { entries: [], notes: [] };
   if (options.skipIndex !== true) {
-    const indexed = await searchByIndex(api, query, sources, workspaceId, signal, environment, options.routes);
+    const indexed = await searchByIndex(api, query, sources, workspaceId, signal, environment, options.routes, options.readPeople);
     if (signal.aborted) return null;
     if (indexed !== null) return indexed;
   }
-  const outcome = await searchByReads(api, query, sources, workspaceId, signal, environment);
+  const outcome = await searchByReads(api, query, sources, workspaceId, signal, environment, options.readPeople);
   return outcome === null ? null : { via: "reads", ...outcome };
 }
 
@@ -328,6 +347,7 @@ async function searchByReads(
   workspaceId: string | undefined,
   signal: AbortSignal,
   environment: ExecEnv = "live",
+  readPeople?: PeopleReader,
 ): Promise<EntitySearchOutcome | null> {
   const query = text.trim();
   if (query.length < MIN_QUERY) return { entries: [], notes: [] };
@@ -348,6 +368,7 @@ async function searchByReads(
     );
   }
   if (sources.approval) jobs.push(guard(GROUP.approval, () => approvals(api, query, workspaceId), signal));
+  if (sources.person && readPeople !== undefined) jobs.push(guard(GROUP.person, () => people(readPeople, query), signal));
   const done = await Promise.all(jobs);
   if (signal.aborted) return null;
   const settled = done.flatMap((item) => (item === null ? [] : Array.isArray(item) ? item : [item]));
