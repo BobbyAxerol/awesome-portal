@@ -659,6 +659,9 @@ is explicitly pinned; actual-source guard PASS, no shared-ACL change or new
 metadata grant. Application data remains accessor-only. Current Core binding/
 workload/deadline still pending. REAL_INSTALL_NOT_READY, no operational role/
 function/credential/listener or source row changed; no grant/connected PASS.
+09:42UTC continuation: bounded private catalogue backup READY (owner-only,
+hash/path in the same return); current Core tuple/workload/deadline still absent.
+No new DB objects installed; prior test evidence inherited, not rerun.
 
 **24Oct Original06 worker materialization — ISOLATED_QUALIFIED, NOT_DEPLOYED:**
 [same06 journal](EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#epg10-06-worker-oom-follow-through-20261024)

@@ -353,3 +353,41 @@ All independently runnable owned code/tests/metadata review are finished.
 **Next:** Core returns the selected fixed tuple/workload/deadline above; Edge
 installs/verifies the approved exact delta in this same08 task. This Markdown
 delivery is not a consumer ACK, runtime install or connected PASS.
+
+## 09:42UTC continuation — private backup ready, binding still absent
+
+Bobby requested continuation through backup/install/verify in the same08 scope.
+Rechecked both public mailboxes, current Core source and accessible relevant
+private manifest filenames. Core remains eabe5de3; no current discovery binding/
+workload/finite validity returned. Old inaccessible/retired session directories
+were not elevated into or reused. No historical tuple is treated as current.
+
+Owned independent step finished: source catalogue-only backup at HK
+`/home/bobby/secure/edge-research-reader-20261027-iaecH4H5/manifest.json`.
+Manifest SHA256 `aa8965b8a22ef2b50aecc0c5110ad41af14f11045776c417ff8e5cab20830778`.
+Directory0700/files0600, Bobby-owned. `catalogue-backup.json.gz.b64` is20917bytes
+ASCII/15686bytes compressed; verified decompressed snapshot203485bytes/SHA256
+`d2a5e1193fd0c6d98bb5fea7a85952b80e7e4117bf6e721c48f62a97d35bf3b9`.
+Retain for install-review audit, not disposable test garbage. No secret/password,
+identity/membership/policy/receipt/config-history rows or large data dump.
+Includes five-relation definitions/ACL/RLS, reviewed PUBLIC metadata, relevant
+role attributes/memberships, DB ACL and proposed-name absence. No private backup
+bytes copied to SGP or Git. It is explicitly UNBOUND/NOT_INSTALLED and must be
+revalidated immediately before any eventual apply; it is not a release manifest.
+
+Fresh bounded READ ONLY/RR source checks preserve cataloguefd4a84a9 and exact
+52-object metadata6635b6ba. New roles0/schema0/functions0, source6343bdc8/restart0.
+First metadata admission+backup attempt hit the2s statement timeout and produced
+no file or mutation. One retake with transaction-local JIT off passed within the
+same statement2s/lock250ms bounds. Shared settings unchanged; no latency/capacity
+or production-readiness claim. Read-only transactions ended/rolled back normally;
+no installed reader, credential, listener, runtime change or new source tests.
+Prior139/86/77 PASS remain inherited unmodified-source evidence, not rerun here.
+
+**Core action still required:** return the exact block above now, confirming
+current values or selecting NEW_SELECTED tuple/workload/deadline. This is NOT a
+request for new owner approval or another DB design. Sourcefb9a7ce7 and the exact
+approved two-role mechanism already exist; Edge owns backup/apply/verify after
+that input. Return into this existing ELP2-10 mailbox and mirror to HK EPG10-08.
+Do not mark READY from filename delivery, reuse retired session credentials,
+or interpret discovery as membership/READ/STREAM. Full08/read09 still NOT_MET.

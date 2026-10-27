@@ -14,6 +14,8 @@ Chúng không thay thế phase hoặc exit gate trong
   Exact existing52-object metadata exception pinned; actual-source guardPASS,
   no shared ACL change/new metadata grant. Core current tuple/workload/deadline
   is the only external real-install input. Not installed; no connected acceptance.
+  09:42UTC: private catalogue backup ready/hash-verified, owner-only outside Git;
+  Core binding still absent. No new roles, listener or source mutation.
 
 - **24Oct Original06 worker materialization — ISOLATED_QUALIFIED, NOT_DEPLOYED:**
   [same06 journal](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#epg10-06-worker-oom-follow-through-20261024)

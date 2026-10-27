@@ -33445,3 +33445,64 @@ Local/remote SHA256 both cf2fb5af5cec482be1d88a75e3364d08f2e55ebdcc4fd7577cd80b8
 read back successfully. Core source still eabe5de3. No Core-owned source/plan/
 sync overwrite, secret/data/code transfer or assumed consumer ACK. Recommend
 Core return that file's exact binding block, then install/verify in original08.
+
+### 27Oct — real reader install intake and private catalogue backup
+
+BOBBY_CONTINUE_APPROVED / IN_PROGRESS. Same08 scope/sourcePMfb9a7ce7 and Edge4437b2f9;
+guide: [approved exact delta, backup and rollback](evidence/execution-edge-v1_2/EPG10-08/EDGE_RESEARCH_READER_DB_SCOPE_PROPOSAL_2026-10-27.md#6-backupaudit-installation-and-exact-rollback),
+[current source/test/binding return](evidence/execution-edge-v1_2/EPG10-08/EDGE_RESEARCH_READER_APPROVED_IMPLEMENTATION_2026-10-27.md#remaining-input-one-owneraction).
+Goal: take bounded owner-only metadata backup, then fixed-binding render/apply/
+verify when actual current Core input is available. No source-table rows/data
+dump, old ACL/RLS/authority changes, credential reuse, protected service restart
+or connected acceptance inference. Preserve peer WIP and all live/rollback assets.
+Exit: exact source/pins/absence, private backup hash, approved fixed binding and
+finite deadline, additive transaction and original-baseline/new-grant verification;
+otherwise retain NOT_INSTALLED and one concrete owner action. Rollback remains
+only new admission/EXECUTE/NOLOGIN, retaining custody/objects and active sessions.
+
+Intake09:38UTC: Core still eabe5de3, no new binding in HK/SGP public mailbox.
+No new accessible Research discovery manifest located; permission-denied old
+retired session directories were not escalated/read or reused. DB source still
+08df6d6d79e3/6343bdc87ca1/restart0. Independent allowed work now: capture private
+catalogue-only snapshot and verify its hashes/metadata admission; never render
+an install against invented workload or historical entitlement. Backup must be
+revalidated immediately before any eventual apply; it alone is not installation.
+
+Owned independent result09:42UTC: PRIVATE_CATALOGUE_BACKUP_READY /
+REAL_INSTALL_NOT_READY. Exact source remains system7674585245102796834/OID16384,
+source image6343bdc8/restart0. Snapshot203485bytes, decompressedSHA256
+d2a5e1193fd0c6d98bb5fea7a85952b80e7e4117bf6e721c48f62a97d35bf3b9;
+private manifest `/home/bobby/secure/edge-research-reader-20261027-iaecH4H5/manifest.json`,
+SHA aa8965b8a22ef2b50aecc0c5110ad41af14f11045776c417ff8e5cab20830778.
+Directory0700/files0600/Bobby; compressed metadata-only backup retained for
+install audit, not a runtime config. No secret/source business rows or data dump.
+Backup revalidation also preserves old cataloguefd4a84a9 and exact52-object
+Timescale metadata6635b6ba; new roles0/schema0/functions0. First2s metadata guard
+timed out/no mutation, one retake with transaction-local JIT off passed at the
+same2s/250ms bounds. No shared setting or timeout widened, no capacity claim.
+Current Core binding still absent; do not render/apply an invented tuple. No
+new source/test changes, previous139/86/77 evidence inherited/not rerun. No
+pytest/cargo/container/image/cache/CI jobs or disposable resources created;
+retained only22185bytes of bounded private backup/manifest, not a runtime credential.
+Final retention byte count, delivery/readback and runtime reconciliation follow.
+
+Final09:45UTC: BACKUP_VERIFIED / WAITING_CORE_CURRENT_BINDING / NOT_INSTALLED.
+No new matching Core return appeared; do not claim installation or connected
+receipt. Cumulative public return refreshed on SGP at the exact existingELP2-10
+path; local/remote SHA f15ccd4cdcfd881a363d3777abdd7547653aaefd6a664eddb725b92c16027c15
+read back matching. No Core-owned source/plan/sync or private material changed.
+Only external input to real install remains Core's current or explicit
+NEW_SELECTED issuer/subject/workspace/workload/finite deadline block. No repeated
+owner approval needed; next step is exact SQL/apply/verify in original08 after
+fresh backup/hash/absence revalidation. Original08/read09 remainOPEN/NOT_MET.
+
+C4 cleanup NO_ACTION_NEEDED: no disposable job/container/network/image/cache
+created. Retain only audit backup/manifest22185filebytes/32768allocatedbytes at
+the0700private directory above, with0600files; no secret material to shred.
+Disk available entry58866462720B→final58590076928B under shared activity (not a
+reclaimed-space attribution); no pruning/source/data deletion. Source6343,
+native28ea, three Edge profilesd6aa/Proxyaa14 retain prior full digests/restart0.
+CanonicalTS668e/Portal54c6 and active PMfb9a7ce7/current-policy68344dad unchanged;
+Edge active branchfeat/execution-edge-upgrade-v1_2 advances docs only. Stable
+releasea9b10385 and named rollback6180/cd79/98a1 remain unchanged. Existing three
+peer tracked WIP and untracked Core source preserved; no push/merge/CI minutes.
