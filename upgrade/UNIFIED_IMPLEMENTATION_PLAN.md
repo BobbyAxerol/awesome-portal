@@ -16504,3 +16504,10 @@ the distinction between application filters and database-enforced scope, is in
 [HK reader follow-through](execution_loop/evidence/ELP2-10/RESEARCH_READER_HK_FOLLOWTHROUGH_2026-10-27.md).
 The source reader/trust and connected acceptance are still open.
 
+27Oct Core binding: Edge's approved implementation and metadata continuation
+supersede the older reader scope-decision note; Core selected the exact Paper
+tuple/workload and finite deadline in [binding return](execution_loop/evidence/ELP2-10/CORE_TO_EDGE_RESEARCH_READER_BINDING_2026-10-27.md).
+This is NEW_SELECTED, not evidence of an active mapping, grant or installed
+provider. Edge owns the previously approved install/revalidation, Core owns
+fresh private trust/manifest and connected checks. Full08/read09 remain NOT_MET.
+
