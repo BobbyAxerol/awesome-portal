@@ -9771,8 +9771,10 @@ The same observation-cut check now covers both refresh and retained Accounts
 batch reads; public DTO/UI is unchanged. Other source qualification, financial
 mapping, health, calibration, calendar, command and connected/browser gates
 remain open. The source change remains staged, not committed or installed:
-the normal hook retake passed contracts then hit the Control API Node heap
-limit. This is not a full ELP2-10 PASS or installed-runtime claim.
+the first normal hook retake passed contracts then hit the Control API Node heap
+limit; a bounded heap fix passed the isolated build/test, while the later full
+suite was interrupted after almost seven minutes without a completed suite.
+This is not a full ELP2-10 PASS or installed-runtime claim.
 
 **24Oct16:47UTC direct native registry/financial entrypoint:** [exact source,
 test lanes, failures, cleanup and six-phase handoff](execution_loop/evidence/ELP2-10/CORE_EDGE_DIRECT_COMMISSIONING_2026-10-24.md#native-correspondence-financial-runtime-20261024).
@@ -16546,4 +16548,10 @@ The previously created distinct Research trust candidates now have public leaf,
 CA, expiry and proposed hop assignments in [trust pin return](execution_loop/evidence/ELP2-10/CORE_RESEARCH_DISCOVERY_TRUST_PINS_2026-10-27.md).
 They remain uninstalled/untransferred; matching endpoint/SAN and source transport
 are required before commissioning.
+
+27Oct Core returned [exact two-hop private-reference selection, public PEM/DER
+pins, validation, expiry and independent discovery action](execution_loop/evidence/ELP2-10/CORE_TO_EDGE_DISCOVERY_TRUST_BINDING_2026-10-27.md).
+The original pin packet was already mirrored to Edge with matching SHA256;
+material delivery and matched secure transport remain required. Discovery does
+not wait for membership; READ/STREAM do require distinct native authority.
 

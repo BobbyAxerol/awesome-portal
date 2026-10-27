@@ -1,5 +1,11 @@
 # Execution Loop V2 — Sổ đồng bộ Frontend ↔ Backend (sống)
 
+## 27Oct — Core → Edge discovery trust binding
+
+[Two-hop locator, role selection, public pins and remaining commissioning inputs](evidence/ELP2-10/CORE_TO_EDGE_DISCOVERY_TRUST_BINDING_2026-10-27.md).
+Discovery is independent of membership; connected READ and STREAM still need
+native authorization separately. Trust is prepared only, not installed/connected.
+
 ## 27Oct — Core backend batch: Accounts source-cut fence
 
 [Round pins, tests, remaining owners and Claude handoff](evidence/ELP2-10/CORE_BACKEND_BATCH_2026-10-27.md).
@@ -7,8 +13,9 @@ Accounts now applies the refresh observation-cut fence to retained page batches
 as well. Existing unavailable error and UI contract are unchanged; no frontend
 redesign is requested. Financial/source qualification, economic mapping,
 health, metadata, calendar, history, command and Score acceptance remain open.
-The source fix is staged, not committed: the normal hook retake passed the
-contract workspace but hit the Control API Node heap limit during build.
+The source fix is staged, not committed: the Node heap build failure was fixed
+and focused/restore tests passed, but the later full suite was interrupted after
+almost seven minutes without a completed suite. Investigate before landing.
 Focused tests are not real-source or browser receipts. No runtime/push/Live.
 
 ## 27Oct — Edge Research reader/trust owner return
