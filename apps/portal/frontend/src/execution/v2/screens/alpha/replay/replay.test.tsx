@@ -103,7 +103,7 @@ describe("candles are qualified by the venue source, per symbol", () => {
     await waitFor(() => expect(props().symbol).toBe("ETHUSDT"));
     const note = screen.getByRole("note");
     expect(note.textContent).toContain("No candles are drawn until the market-data source is qualified. Fills and the trade log stay.");
-    await waitFor(() => expect(note.textContent).toContain("ETHUSDT: venue candles unavailable (MARKET_CANDLES_FEATURE_DISABLED)"));
+    await waitFor(() => expect(note.textContent).toContain("ETHUSDT: venue candles unavailable (market candles feature disabled)"));
     expect(props().market).toBeNull();
     expect(props().orders.length).toBeGreaterThan(0);
   });

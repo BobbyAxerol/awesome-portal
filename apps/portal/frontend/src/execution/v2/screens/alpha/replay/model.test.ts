@@ -60,7 +60,7 @@ describe("candleVerdict: venue read x Trading System read", () => {
   });
 
   it("the banner reason names the symbol and the source's code", () => {
-    expect(candleVerdict("ETHUSDT", ready(payload("UNAVAILABLE")), failed("x")).reason).toContain("ETHUSDT: venue candles unavailable (E5_MARKET_CANDLES_NOT_PUBLISHED)");
+    expect(candleVerdict("ETHUSDT", ready(payload("UNAVAILABLE")), failed("x")).reason).toContain("ETHUSDT: venue candles unavailable (e5 market candles not published)");
   });
 });
 

@@ -58,6 +58,11 @@ export function humanize(code: string): string {
   return words === "" ? code : words.charAt(0).toUpperCase() + words.slice(1);
 }
 
+/** A source's reason code (`MARKET_CANDLES_FEATURE_DISABLED`) as lower-case words; text that holds no code is returned as it came. */
+export function plainReason(text: string): string {
+  return text.replace(/\b[A-Z][A-Z0-9]*(?:_[A-Z0-9]+)+\b/g, (code) => humanize(code).toLowerCase());
+}
+
 /* ── stages ───────────────────────────────────────────────────────────────── */
 
 /** A published stage word (`PAPER`, `LIVE_CANARY`, `CANARY`, `LIVE_FULL`) to a spine stage. */

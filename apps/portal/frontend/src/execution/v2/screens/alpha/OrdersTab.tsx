@@ -114,6 +114,7 @@ export function OrdersTab({ alphaId, book, activity, focusOrder, linkTo }: Order
   const orderColumns: CardsColumn<ReplayOrder>[] = [
     { key: "at", label: "Time (UTC)", render: (o) => (scoped ? <Moment iso={o.submittedAt} detail={orderDetail.get(o.orderId)} /> : <At iso={o.submittedAt} />) },
     { key: "order", label: "Order", render: (o) => <span className="exec-blk-id">{o.orderId}</span> },
+    { key: "replay", label: "Replay", render: (o) => <Link className="exec-blk-link" to={linkTo(replayHref(alphaId, `order:${o.orderId}`))} aria-label={`Open ${o.orderId} in Trade Replay`}>Open</Link> },
     { key: "client", label: "Client order", render: (o) => stated(o.clientOrderId, orderDetail.get(o.orderId), scoped) },
     { key: "symbol", label: "Symbol", render: (o) => o.symbol },
     { key: "kind", label: "Type", render: (o) => sideType(o.side, o.type) },
@@ -134,7 +135,6 @@ export function OrdersTab({ alphaId, book, activity, focusOrder, linkTo }: Order
         );
       },
     },
-    { key: "replay", label: "Replay", render: (o) => <Link className="exec-blk-link" to={linkTo(replayHref(alphaId, `order:${o.orderId}`))} aria-label={`Open ${o.orderId} in Trade Replay`}>Open</Link> },
   ];
   const fillColumns: CardsColumn<ReplayFill>[] = [
     { key: "at", label: "Time (UTC)", render: (f) => <At iso={f.tradeTime} /> },

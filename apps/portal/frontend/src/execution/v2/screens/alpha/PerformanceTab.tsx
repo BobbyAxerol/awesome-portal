@@ -276,7 +276,7 @@ export function PerformanceTab(props: PerformanceTabProps) {
 
       {/* Hi-fi keeps Cost drag and Forward observation as panels; every row says Not published. The four charts with no source stay on one line. */}
       <div className="exec-alp2-pair">
-        <SectionPanel title="Cost drag" aside="Window">
+        <SectionPanel title="Cost drag" aside="Dataset window; a deployment page totals its own period">
           <table className="exec-alp2-gaptable" aria-label="Cost drag">
             <tbody>
               <tr><th scope="row">Fees</th><td>{fig("cost_drag_fees", <Np id="FE-025" />)}</td></tr>

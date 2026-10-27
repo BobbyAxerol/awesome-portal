@@ -22,7 +22,7 @@ import type { PanelStatus } from "../../../../contracts";
 import type { ReplayFill, ReplayOrder } from "../../../../components/tradeReplayModel";
 import { buildLog, ms } from "../../../../components/tradeReplayModel";
 import type { ExecEnv } from "../../../urlState";
-import { envOfStage, humanize, spineStageOf } from "../model";
+import { envOfStage, humanize, plainReason, spineStageOf } from "../model";
 import type { Read, SubjectBook } from "../useAlphaReads";
 
 /** Padding either side of the first and last trade, so the candles show what led in and out. */
@@ -135,14 +135,14 @@ export function candleVerdict(
     : { state: null, reason: null };
   const trading = context.phase === "ready"
     ? `Trading System candles ${humanize(context.value.state ?? "published").toLowerCase()}.`
-    : context.phase === "error" ? `Trading System candles are not published (${context.reason}).`
+    : context.phase === "error" ? `Trading System candles are not published (${plainReason(context.reason)}).`
     : "";
   if (symbol === null) return { qualified: false, reason: "There is no symbol to read candles for.", context: contextState };
   if (venue.phase === "loading" || venue.phase === "idle") return { qualified: false, reason: `Reading ${symbol} candles.`, context: contextState };
-  if (venue.phase === "error") return { qualified: false, reason: `${symbol}: venue candles unavailable (${venue.reason}). ${trading}`.trim(), context: contextState };
+  if (venue.phase === "error") return { qualified: false, reason: `${symbol}: venue candles unavailable (${plainReason(venue.reason)}). ${trading}`.trim(), context: contextState };
   const payload = venue.value;
   if (payload.state !== "READY") {
-    return { qualified: false, reason: `${symbol}: venue candles ${payload.state.toLowerCase()}${payload.reasonCode ? ` (${payload.reasonCode})` : ""}. ${trading}`.trim(), context: contextState };
+    return { qualified: false, reason: `${symbol}: venue candles ${payload.state.toLowerCase()}${payload.reasonCode ? ` (${plainReason(payload.reasonCode)})` : ""}. ${trading}`.trim(), context: contextState };
   }
   if (payload.symbol !== null && payload.symbol !== symbol) return { qualified: false, reason: `The candles read are for ${payload.symbol}, not ${symbol}.`, context: contextState };
   if (payload.candles.length === 0) return { qualified: false, reason: `${symbol}: the venue returned no candle for this window.`, context: contextState };
