@@ -9765,6 +9765,15 @@ assignment. No goal/push/dev/main/release/deploy started by this return.
 
 ### ELP2-10 — Performance, quality và coexistence
 
+**27Oct Core backend continuation:** [Accounts cut-fence implementation,
+focused tests, source repin and eight-area disposition](execution_loop/evidence/ELP2-10/CORE_BACKEND_BATCH_2026-10-27.md).
+The same observation-cut check now covers both refresh and retained Accounts
+batch reads; public DTO/UI is unchanged. Other source qualification, financial
+mapping, health, calibration, calendar, command and connected/browser gates
+remain open. The source change remains staged, not committed or installed:
+the normal hook retake passed contracts then hit the Control API Node heap
+limit. This is not a full ELP2-10 PASS or installed-runtime claim.
+
 **24Oct16:47UTC direct native registry/financial entrypoint:** [exact source,
 test lanes, failures, cleanup and six-phase handoff](execution_loop/evidence/ELP2-10/CORE_EDGE_DIRECT_COMMISSIONING_2026-10-24.md#native-correspondence-financial-runtime-20261024).
 Owned HK PM **`b9dd32d1`**:8files,+1330/−22; immutable reviewed ORIGINAL/census

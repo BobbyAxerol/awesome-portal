@@ -1,5 +1,16 @@
 # Execution Loop V2 — Sổ đồng bộ Frontend ↔ Backend (sống)
 
+## 27Oct — Core backend batch: Accounts source-cut fence
+
+[Round pins, tests, remaining owners and Claude handoff](evidence/ELP2-10/CORE_BACKEND_BATCH_2026-10-27.md).
+Accounts now applies the refresh observation-cut fence to retained page batches
+as well. Existing unavailable error and UI contract are unchanged; no frontend
+redesign is requested. Financial/source qualification, economic mapping,
+health, metadata, calendar, history, command and Score acceptance remain open.
+The source fix is staged, not committed: the normal hook retake passed the
+contract workspace but hit the Control API Node heap limit during build.
+Focused tests are not real-source or browser receipts. No runtime/push/Live.
+
 ## 27Oct — Edge Research reader/trust owner return
 
 [Disposition and owner actions](evidence/ELP2-10/EDGE_RESEARCH_READER_OWNER_RETURN_2026-10-27.md):
