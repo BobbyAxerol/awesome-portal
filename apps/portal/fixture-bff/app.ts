@@ -24,10 +24,10 @@ import { answerReviewManager, wpAccountBook, wpAlphaResource, wpDeploymentFact, 
 import { setPositiveMode } from "../frontend/e2e/bffPositiveMode";
 import { commandStoryRoute } from "./command-story";
 import { applyScenarioBody, resetFixtureTransitions, scenarioRequest, scenarioVariants } from "./scenario-apply";
-import { rosterNames } from "./roster-names";
+import { approvalCapital, rosterNames } from "./roster-names";
 import { onScenarioChange, healsDoubles, configuredScenario, configureScenario, DEFAULT_SCENARIO, type FixtureScenario, FIXTURE_SCENARIOS, getScenario, isFixtureScenario, resetScenario, SCENARIO_DESCRIPTIONS, setScenario } from "./scenario";
 import { transformReviewBody } from "./review-relations";
-import { rebaseBody } from "./time-rebase";
+import { rebaseBody, worldClockNow } from "./time-rebase";
 import { createVisitDigestFixture } from "./review-visit-digest";
 
 export const LANE_HEADER = "x-fixture-lane";
@@ -261,8 +261,14 @@ function answerFor(config: FixtureConfig, rawRequest: BffRequest): BffResponse |
   // WP-P (R2-02): every alpha resource is derived from that alpha's own deployments in the positive-like scenarios, not cloned from the double's one alpha.
   const alphaResource = healsDoubles(getScenario()) ? /^\/api\/v1\/execution\/resources\/alphas\/([^/]+)$/.exec(request.path) : null;
   if (alphaResource !== null) shaped = wpAlphaResource(shaped, decodeURIComponent(alphaResource[1]!));
+  // WORLD: the signed-in person is a person of the roster (Bobby Vu, the Users list's "(you)"), and the session runs from the world clock, not to a date in 2033
+  if (request.path === "/api/auth/context" && healsDoubles(getScenario()) && typeof shaped === "object" && shaped !== null && "principal" in shaped) {
+    const now = worldClockNow(Date.now());
+    const principal = (shaped as { principal: Record<string, unknown> }).principal;
+    shaped = { ...shaped, principal: { ...principal, username: "Bobby Vu", issuedAt: new Date(now - 3 * 3_600_000).toISOString(), exp: Math.floor((now + 5 * 3_600_000) / 1000) } };
+  }
   const scenarioBody = applyScenarioBody(getScenario(), request.path, shaped);
-  return { ...answered, body: healsDoubles(getScenario()) && typeof scenarioBody !== "string" ? rosterNames(scenarioBody) : scenarioBody }; // WORLD: one roster of people
+  return { ...answered, body: healsDoubles(getScenario()) && typeof scenarioBody !== "string" ? rosterNames(approvalCapital(request.path, scenarioBody)) : scenarioBody }; // WORLD: one roster of people
 }
 
 export function createFixtureServer(config: FixtureConfig): Server {
