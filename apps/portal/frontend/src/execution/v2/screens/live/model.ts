@@ -495,10 +495,11 @@ function continuityV1(live: LiveFullOperations): ContinuityModel {
   return { flag: flagOf(), rows, provenance };
 }
 
-function predecessorV1(live: LiveFullOperations, id: string | null): PredecessorModel {
+function predecessorV1(live: LiveFullOperations, _id: string | null): PredecessorModel {
   // The predecessor is the Canary deployment the lineage names (CANARY_ENVELOPE); only without one is it this deployment's own canary page.
   const named = safeInternalHref(live.lineage.find((l) => l.kind === "CANARY_ENVELOPE")?.href);
-  const link = named ?? (id === null ? null : canaryHref(id));
+  // No fallback to this deployment's own canary page: a link that lands in a source-unavailable room is worse than none.
+  const link = named;
   const p = live.predecessorEnvelope;
   if (p === null) {
     return { present: false, reason: "No predecessor Canary envelope was published for this deployment.", canaryHref: link };

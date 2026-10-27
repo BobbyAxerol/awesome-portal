@@ -20,6 +20,7 @@ import type { TypedOrderRow, TypedPositionRow } from "../../../stageFacts";
 import { PanelState } from "../../../components/states";
 import { withPaddedQuantity } from "../stage/padDecimals";
 import { QtyCell } from "../stage/QtyCell";
+import { sentenceWord } from "../stage/words";
 import { cellText, lossNote, lossText, type PublishedRow } from "../../readers/publishedRows";
 import {
   OPERATIONS_PATH,
@@ -189,11 +190,11 @@ const POSITION_COLUMNS = (reasons: Readonly<Record<string, string>>): readonly C
 
 const ORDER_COLUMNS = (reasons: Readonly<Record<string, string>>): readonly CardsColumn<TypedOrderRow>[] => [
   { key: "symbol", label: "Symbol", render: (r) => r.symbol },
-  { key: "type", label: "Type", render: (r) => r.type },
+  { key: "type", label: "Type", render: (r) => <span title={r.type ?? undefined}>{sentenceWord(r.type)}</span> },
   { key: "side", label: "Side", render: (r) => (r.side === null ? null : r.side === "buy" ? "Buy" : "Sell") },
   { key: "quantity", label: "Quantity", numeric: true, render: (r) => <QtyCell value={r.quantity} /> },
   { key: "price", label: "Price", numeric: true, render: (r) => <ExactCell value={r.price} unit="money" /> },
-  { key: "status", label: "Status", render: (r) => r.status },
+  { key: "status", label: "Status", render: (r) => <span title={r.status ?? undefined}>{sentenceWord(r.status)}</span> },
   {
     key: "since",
     label: "Since",

@@ -13,6 +13,7 @@ import { CardsTable, type CardsColumn } from "../../cardsTable";
 import { withContext } from "../../urlState";
 import { withPaddedQuantity } from "../stage/padDecimals";
 import { QtyCell } from "../stage/QtyCell";
+import { sentenceWord } from "../stage/words";
 import { Flag } from "../../Flag";
 import { GapLine, NotPublished, SectionPanel } from "../../blocks";
 import { formatAsOf, readAsOf } from "../../boundary";
@@ -39,11 +40,11 @@ const POSITION_COLUMNS = (reasons: Readonly<Record<string, string>>): readonly C
 
 const ORDER_COLUMNS = (reasons: Readonly<Record<string, string>>): readonly CardsColumn<OrderRow>[] => [
   { key: "symbol", label: "Symbol", render: (r) => r.symbol },
-  { key: "type", label: "Type", render: (r) => r.type },
+  { key: "type", label: "Type", render: (r) => <span title={r.type ?? undefined}>{sentenceWord(r.type)}</span> },
   { key: "side", label: "Side", render: (r) => (r.side === null ? null : r.side === "buy" ? "Buy" : "Sell") },
   { key: "quantity", label: "Quantity", numeric: true, render: (r) => <QtyCell value={r.quantity} /> },
   { key: "price", label: "Price", numeric: true, render: (r) => <ExactCell value={r.price} unit="money" /> },
-  { key: "status", label: "Status", render: (r) => r.status },
+  { key: "status", label: "Status", render: (r) => <span title={r.status ?? undefined}>{sentenceWord(r.status)}</span> },
   {
     key: "since",
     label: "Since",

@@ -26,6 +26,7 @@
  * asserted by the suite, absence is a typed `NOT_PUBLISHED` fact with a reason code, never a zero.
  */
 
+import { createHash } from "node:crypto";
 import { blotterBookOf } from "./bffDoubleOverview";
 import { isPositiveMode, positiveDeploymentFact } from "./bffPositiveMode";
 import { DAY_MS as WORLD_DAY_MS, deploymentOf, fromCents as worldCents, grossNotional, lifecycleOf, netPnlOf, stageRecord, netPnlSeries, positionsOf, toCents as worldToCents, workingOrdersOf, WORLD_NOW_MS } from "./bffWorld";
@@ -131,6 +132,9 @@ function withIdentity(deployment: Obj, deploymentId: string): void {
   deployment.portfolio_name_reason_code = null;
   if (typeof deployment.portfolio_id === "string" || deployment.portfolio_id === undefined) deployment.portfolio_id = who.portfolioId;
 }
+
+/** A stable digest of a label: provenance never shows a placeholder run of one letter. */
+const digestOf = (label: string): string => `sha256:${createHash("sha256").update(label).digest("hex")}`;
 
 /* ── small builders ────────────────────────────────────────────────────────── */
 
@@ -281,7 +285,7 @@ function typedPositions(rows: readonly PositionSpec[]): Obj {
     kind: "positions",
     availability: "AVAILABLE",
     reason_code: null,
-    rows: rows.map((r) => ({ id: r.id, symbol: r.symbol, side: r.side, quantity: r.quantity, entry: r.entry, mark: r.mark, unrealised: r.unrealised, leverage: null })),
+    rows: rows.map((r) => ({ id: r.id, symbol: r.symbol, side: r.side, quantity: canonicalDecimal(r.quantity), entry: canonicalDecimal(r.entry), mark: canonicalDecimal(r.mark), unrealised: canonicalDecimal(r.unrealised), leverage: null })),
     returned_count: rows.length,
     omitted_count: 0,
     source_complete: true,
@@ -295,7 +299,7 @@ function typedOrders(rows: readonly OrderSpec[]): Obj {
     kind: "orders",
     availability: "AVAILABLE",
     reason_code: null,
-    rows: rows.map((r) => ({ id: r.id, symbol: r.symbol, type: r.type, side: r.side, quantity: r.quantity, price: r.price, status: r.status, since: r.since, ack_latency_ms: null })),
+    rows: rows.map((r) => ({ id: r.id, symbol: r.symbol, type: r.type, side: r.side, quantity: canonicalDecimal(r.quantity), price: canonicalDecimal(r.price), status: r.status, since: r.since, ack_latency_ms: null })),
     returned_count: rows.length,
     omitted_count: 0,
     source_complete: true,
@@ -345,8 +349,8 @@ export function usedRatio(consumed: string, approved: string): string {
 const capRow = (spec: Omit<CapSpec, "ratio">, asOf: string): Obj => ({
   cap: spec.cap,
   unit: spec.unit,
-  policy_limit: avail(spec.limit),
-  approved: spec.approved,
+  policy_limit: avail(canonicalDecimal(spec.limit)),
+  approved: canonicalDecimal(spec.approved),
   consumed: avail(canonicalDecimal(spec.consumed)),
   used_ratio: avail(usedRatio(spec.consumed, spec.approved)),
   as_of: avail(asOf),
@@ -366,7 +370,7 @@ function canaryLit(body: Obj, deploymentId: string, variant: StageVariant): Obj 
   body.source_integration_state = "SOURCE_BACKED";
   body.delivery_profile = "LIVE_BINANCE_USDM";
   body.lineage = [
-    { kind: "ARTIFACT", value: `sha256:${"a".repeat(64)}`, href: null },
+    { kind: "ARTIFACT", value: digestOf(`artifact:${baseDeploymentId(deploymentId)}`), href: null },
     { kind: "R1_APPROVAL", value: "AP-118", href: "/governance/approvals?sel=AP-118" },
     { kind: "R2_APPROVAL", value: "AP-152", href: "/governance/approvals?sel=AP-152" },
     { kind: "SANDBOX_EXIT", value: "SX-14", href: `/deployments/sandbox/${encodeURIComponent(baseDeploymentId(deploymentId))}` },
@@ -518,17 +522,17 @@ function liveLit(body: Obj, deploymentId: string, variant: StageVariant): Obj {
   const life = body.lifecycle as Obj;
   life.declared_stage = "LIVE_FULL";
   life.activated_at = LIVE_ACTIVATED;
-  life.blocker_codes = ["PRODUCTION_COMMAND_INACTIVE", "CANARY_EXIT_EVIDENCE_UNAVAILABLE"];
+  life.blocker_codes = ["PRODUCTION_COMMAND_INACTIVE"];
 
   body.lineage = [
-    { kind: "ARTIFACT", state: "AVAILABLE", value: `sha256:${"a".repeat(64)}`, href: null },
+    { kind: "ARTIFACT", state: "AVAILABLE", value: digestOf(`artifact:${baseDeploymentId(deploymentId)}`), href: null },
     { kind: "R1_APPROVAL", state: "AVAILABLE", value: "AP-118", href: "/governance/approvals?sel=AP-118" },
     { kind: "R2_APPROVAL", state: "AVAILABLE", value: "AP-152", href: "/governance/approvals?sel=AP-152" },
     { kind: "SANDBOX_EXIT", state: "AVAILABLE", value: "SX-14", href: `/deployments/sandbox/${encodeURIComponent(baseDeploymentId(deploymentId))}` },
     predecessor === null
       ? { kind: "CANARY_ENVELOPE", state: "UNAVAILABLE", value: null, href: null }
       : { kind: "CANARY_ENVELOPE", state: "AVAILABLE", value: "cenv_FIXTURE_LAB_1", href: `/deployments/live/${encodeURIComponent(predecessor)}/canary` },
-    { kind: "CANARY_EXIT", state: "UNAVAILABLE", value: null, href: null },
+    { kind: "CANARY_EXIT", state: "AVAILABLE", value: "Canary exit review", href: null },
     { kind: "LIVE_DUAL_APPROVAL", state: "AVAILABLE", value: "AP-402", href: "/governance/approvals" },
   ];
 
@@ -721,6 +725,28 @@ function paperLit(body: Obj, deploymentId: string, variant: StageVariant, vnRout
   return body;
 }
 
+function qualityOfBook(body: Obj, deploymentId: string): Obj | null {
+  const found = deploymentOf(WORLD_ALIAS[baseDeploymentId(deploymentId)] ?? baseDeploymentId(deploymentId));
+  if (found === null || !isObj(body.data)) return null;
+  const book = blotterBookOf(found.deployment.id);
+  const orders = book.orders.length;
+  const rejected = book.orders.filter((o) => String(o.status).toUpperCase() === "REJECTED").length;
+  const filled = book.orders.filter((o) => String(o.status).toUpperCase().includes("FILLED")).length;
+  body.data = {
+    ...body.data,
+    execution_session_population: "1",
+    order_population: String(orders),
+    fill_population: String(book.fills.length),
+    submitted_count: String(orders),
+    risk_rejected_count: "0",
+    broker_rejected_count: String(rejected),
+    filled_count: String(filled),
+    rejected_count: String(rejected),
+    reject_rate: { numerator: String(rejected), denominator: String(orders) },
+  };
+  return body;
+}
+
 /* ── entry ─────────────────────────────────────────────────────────────────── */
 
 const LEGACY_DEPLOYMENT = /^dep_(?:\d+|a|vnm)$/;
@@ -732,6 +758,8 @@ const LEGACY_DEPLOYMENT = /^dep_(?:\d+|a|vnm)$/;
 export function simulateStage(path: string, answerBody: unknown): Obj | null {
   if (!isObj(answerBody)) return null;
   const seg = path.split("/").filter(Boolean).map((part) => decodeURIComponent(part));
+  // The execution-quality derivation of a world deployment counts the SAME book the Paper tabs list (orders, fills, rejected), never its own constants.
+  if (seg[0] === "derivations" && seg[1] === "deployments" && seg[3] === "execution-quality" && seg.length === 4 && isPositiveMode() && !LEGACY_DEPLOYMENT.test(seg[2]!)) return qualityOfBook(clone(answerBody), seg[2]!);
   let id: string | undefined;
   let kind: "canary" | "live" | "sandbox" | "paper" | null = null;
   if (seg[0] === "deployments" && seg.length === 3) {
@@ -876,6 +904,8 @@ function worldStage(kind: "canary" | "live" | "sandbox" | "paper", body: Obj | n
     const env = body.envelope as Obj;
     env.limits = { capital_cap: capApproved, gross_notional_cap: grossApproved, daily_loss_cap: lossApproved, max_open_orders: 20, duration_days: 14 };
     const compliance = body.envelope_compliance as Obj;
+    // the legacy limits member is the APPROVED caps too (never the draft proposal the dark body carries)
+    compliance.limits = { capital_cap: capApproved, gross_notional_cap: grossApproved, daily_loss_cap: lossApproved, max_open_orders: 20 };
     compliance.consumed = { capital_cap: capConsumed, gross_notional_cap: gross, daily_loss_cap: dailyLoss, max_open_orders: String(orders.length) };
     compliance.rows = caps.map((c) => capRow(c, AS_OF));
     // The verdict is the rows' own: any consumed figure above its approved limit is a BREACH, else every cap is proven within.
@@ -900,7 +930,7 @@ function worldStage(kind: "canary" | "live" | "sandbox" | "paper", body: Obj | n
     (body.steps as Obj[]).forEach((step, i) => {
       if (step.as_of !== null) {
         step.as_of = iso(startMs + (i + 1) * MIN);
-        step.expires_at = iso(startMs + 7 * DAY_MS);
+        step.expires_at = iso(NOW_MS + 5 * DAY_MS);
       }
     });
     // ONE list of findings: the chip, the KPI, step 4 and the Difference column all read it
@@ -986,6 +1016,9 @@ function worldStage(kind: "canary" | "live" | "sandbox" | "paper", body: Obj | n
         cash_free: worldCents(eq - alloc / 10n), cash_locked: worldCents(alloc / 10n), total_fills: Math.min(i + 1, book.fills.length), state_digest: "9c1e04b7a2f1ffff", snapshot_reason: "PERIODIC", source: `paper-${d.id}`,
         drawdown: eq === peak ? "0" : canonicalDecimal(((Number(eq - peak) / Number(peak))).toFixed(4)) };
     });
+    // ONE clock: the page's own as-of is the world's now, so nothing on it is dated after it.
+    body.as_of = AS_OF;
+    body.read_at = at(2_000);
     // WORLD: ONE stage history. A Paper stage the alpha has left is a COMPLETED record (gate met, days and trades over the minimum, the session closed on the day Sandbox began);
     // the Paper stage the alpha is in is in progress, its observed days the days since it began.
     const paperRecord = stageRecord(alpha.id, "paper");
@@ -995,8 +1028,8 @@ function worldStage(kind: "canary" | "live" | "sandbox" | "paper", body: Obj | n
     gate.trade_count = paperRecord.status === "completed" ? Math.max(60, paperRecord.days * 4) : (data.fills as unknown[]).length;
     gate.state = paperRecord.status === "completed" ? "MET" : "PARTIAL";
     gate.reason_code = paperRecord.status === "completed" ? null : "OBSERVATION_WINDOW_OPEN";
-    data.stage_facts = stageFacts({ runtime: paperEnd !== null ? "STOPPED" : halted ? "HALTED" : "RUNNING", since: paperEnd ?? started, verdict: "NO_OPEN_FINDINGS", open: 0, unknownOrders: 0, asOf: PAPER_AS_OF,
-      sessions: [{ id: `session_${d.id}_pap_1`, started, ended: paperEnd, state: paperEnd !== null ? "COMPLETED" : halted ? "HALTED" : "RUNNING" }] });
+    data.stage_facts = stageFacts({ runtime: paperEnd !== null ? "STOPPED" : halted ? "HALTED" : "RUNNING", since: paperEnd ?? started, verdict: "NO_OPEN_FINDINGS", open: 0, unknownOrders: 0, asOf: AS_OF,
+      sessions: [{ id: "paper-session-1", started, ended: paperEnd, state: paperEnd !== null ? "COMPLETED" : halted ? "HALTED" : "RUNNING" }] });
   }
   return body;
 }

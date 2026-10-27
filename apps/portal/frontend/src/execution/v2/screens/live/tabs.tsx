@@ -211,13 +211,20 @@ export function PredecessorTab({ model }: { model: LiveModel }) {
           />
         </>
       ) : (
+        <>
         <p className="exec-liv-line">
           <NaWhy reason={p.reason} />
         </p>
+        <p className="exec-liv-line">
+          <span className="exec-blk-na">{p.canaryHref === null ? "No predecessor Canary envelope is on record, and there is no Canary deployment of this alpha to link." : "No predecessor Canary envelope is on record."}</span>
+        </p>
+        </>
       )}
-      <p className="exec-liv-line">
-        <ContextLink to={p.canaryHref}>Open the Canary control room</ContextLink>
-      </p>
+      {p.canaryHref === null ? null : (
+        <p className="exec-liv-line">
+          <ContextLink to={p.canaryHref}>Open the Canary control room</ContextLink>
+        </p>
+      )}
     </SectionPanel>
   );
 }

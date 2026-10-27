@@ -249,7 +249,7 @@ describe("Positions & orders: typed rows when AVAILABLE", () => {
     expect(whyText(positionsGap)).toContain("POSITION_LEVERAGE_NOT_IN_SOURCE_RELATION");
     const orders = screen.getByRole("table", { name: "Canary open orders" });
     const order = Array.from(orders.querySelectorAll("tbody tr"))[0]!;
-    expect(order.querySelector('td[data-l="Type"]')!.textContent).toBe("LIMIT");
+    expect(order.querySelector('td[data-l="Type"]')!.textContent).toBe("Limit");
     expect(order.querySelector('td[data-l="Side"]')!.textContent).toBe("Buy");
     expect(order.querySelector('td[data-l="Ack latency"]')).toBeNull();
     expect(whyText(orders.closest("section")!.querySelector(".exec-blk-gaps")!)).toContain("ORDER_ACK_LATENCY_NOT_IN_SOURCE_RELATION");

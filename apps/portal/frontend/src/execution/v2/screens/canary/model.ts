@@ -198,6 +198,14 @@ function absentWhy(panel: PanelFact): string {
   }
 }
 
+/** Capital consumed and Gross notional read red when the SERVER's verdict is BREACH and that cap's own used ratio is above 1 (no comparison of ours). */
+function breachTone(metric: Metric | null, view: CanaryView, key: KpiKey): Metric | null {
+  if (metric === null || metric.kind !== "value" || view.verdict?.state !== "BREACH") return metric;
+  const limit: LimitKey | null = key === "capital_consumed" ? "capital" : key === "gross_notional" ? "grossNotional" : null;
+  const ratio = limit === null ? undefined : view.envelope?.limits.find((l) => l.key === limit)?.usedRatio;
+  return ratio !== undefined && Number(ratio) > 1 ? { ...metric, tone: "negative" } : metric;
+}
+
 function decimalMetric(fact: DecimalFact, partial: boolean): Metric | null {
   if (fact.kind === "unreadable") return null;
   const { decimal } = fact;
@@ -260,7 +268,7 @@ export function kpiCells(view: CanaryView): readonly KpiCell[] {
       key,
       label,
       kind: "metric",
-      metric: decimalMetric(fact.value, fact.panel.state === "partial"),
+      metric: breachTone(decimalMetric(fact.value, fact.panel.state === "partial"), view, key),
       suffix: fact.currency ?? undefined,
       signed: key === "daily_pnl",
       basis: kpiBasis(view, key, fact.panel),

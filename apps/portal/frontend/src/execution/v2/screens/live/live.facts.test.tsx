@@ -113,7 +113,7 @@ describe("Exposure & orders", () => {
     expect(screen.getByRole("region", { name: "Positions" }).textContent).toContain("2 of 2");
     const orders = screen.getByRole("table", { name: "Orders" });
     const order = Array.from(orders.querySelectorAll("tbody tr"))[0]!;
-    expect(order.querySelector('td[data-l="Status"]')!.textContent).toBe("ACCEPTED");
+    expect(order.querySelector('td[data-l="Status"]')!.textContent).toBe("Accepted");
     expect(order.querySelector('td[data-l="Ack latency"]')).toBeNull();
     expect(whyText(screen.getByRole("region", { name: "Orders" }).querySelector(".exec-blk-gaps")!)).toContain("ORDER_ACK_LATENCY_NOT_IN_SOURCE_RELATION");
   });
