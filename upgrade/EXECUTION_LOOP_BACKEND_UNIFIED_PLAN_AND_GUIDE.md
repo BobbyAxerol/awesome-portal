@@ -33276,3 +33276,90 @@ not staged/committed by Edge and not consumer-ACKed. Remote root/project and
 campaign instructions were read before copying; Core-owned Unified/sync were
 not overwritten. Consumer action is proposal review/current binding return,
 not installation or an instruction to expose a credential.
+
+### 27Oct — approved Research reader implementation and additive installation
+
+**BOBBY_APPROVED / IMPLEMENTATION_IN_PROGRESS.** Bobby explicitly approved the
+two new roles, private `elp210_research_discovery` schema and execute-only
+`observe()` accessor in the preceding proposal. No repeated DB/phase approval
+is needed for that exact delta. Source target remains live_data_executor/system
+7674585245102796834; no source membership/user/policy/receipt data or existing
+role/ACL/RLS changes, no stable/dev/provider28445 restart or deployment.
+Implement and qualify in the clean existing PM candidate0853ffe4, preserving
+the Core-owned source candidates and existing business validation/wire defaults.
+One writer per file: primary owns runtime/discovery integration and both main
+plans; delegated independent SQL/installer and focused security-test slices
+have disjoint new files. Review their output before integration/installation.
+
+Goal: database-enforced fixed Research/Paper row envelope, matching restricted
+source adapter/preflight, real isolated PostgreSQL privilege/parity/failure tests,
+catalogue backup and target revalidation, then qualified additive installation
+and new private credential references. Core must confirm current identity/
+workload binding; absent confirmation blocks only the actual source installation,
+not implementation/tests. Reuse the existing native `_leg`/history validator,
+default-off mapping listener and closed public discovery wire; observation is
+not authority or an accepted original/ROOT/CURRENT/STREAM grant.
+
+Provisional test ceiling: one disposable PostgreSQL container1CPU/512MiB,
+one Python test process1CPU/700MiB, tmpfs/internal network, no public host port,
+reuse pinned images/dependencies and remove exactly owned test resources.
+No disk-heavy image build: root free59.1GB/89%used at entry. Correctness lane,
+no capacity claim or measurement lock. Exit requires actual denial/lineage/
+drift/deadline/release tests and source/legacy compatibility, exact install hashes,
+private backup/audit/rollback and verified unchanged baseline/restarts. If source
+binding/trust is missing, keep admission closed and report its owner/action;
+finish all independent code/tests/publication rather than waiting for Core.
+
+**Final slice status: SOURCE_IMPLEMENTED / ISOLATED_QUALIFIED /
+REAL_INSTALL_NOT_READY; full08/read09/ELP2-10 OPEN.**
+[Single current Core return and install disposition](evidence/execution-edge-v1_2/EPG10-08/EDGE_RESEARCH_READER_APPROVED_IMPLEMENTATION_2026-10-27.md)
+contains exact code pins, commands/provenance, rollback/cleanup and each pending
+owner action. PM source committed normally as
+c2668cfa8d7435889cac0adf5575b0c985acb1ab,10files/+2043/-49, clean existing
+feat/core-financial-assembly-20261024 worktree; no source push/merge/CI run.
+Two delegates owned SQL/installer and focused-test files; primary integrated
+and executed all tests, no competing source writer or peer WIP staged.
+
+Final focused six modules130PASS/0FAIL/0SKIP in4.76s, plus actual disposable
+PostgreSQL15 source-image binary61PASS/0FAIL in TEMPLATE template0 unextended
+DB. Native _leg validator is inherited, not reimplemented. Actual privilege,
+history/parity, timeout/cancel, COMMIT/release-failure nondisclosure, expiry and
+first-stage revoke on old/new sessions are tested. Same-image default Timescale
+fixture and real metadata-only preflight both refuse PUBLIC_DATA_UNSAFE; never
+count the unextended fixture as real Timescale/connected acceptance. Earlier
+test/dependency/parser/OID-lookup failures and fixes recorded in source plan
+and current return; no failed attempt erased or relabelled PASS.
+
+Real source remains system7674585245102796834/OID16384. Catalogue27924bytes,
+SHA256 fd4a84a99e8e04e9ef18afb2d708e75dfaf65a83ea8306cf921965527f3b1266.
+New metadata discovery:52 existing PUBLIC SELECT ACL entries on Timescale
+metadata relations/sequences/views, including job/config metadata. The login
+would inherit these; PostgreSQL has no per-role DENY against PUBLIC. Exact
+approved delta does not authorize changing old ACLs or accepting that extra
+surface. Keep installer closed, no implicit schema-prefix allowlist. Core still
+must confirm current Research tuple/workload/manifest/finite validity; none
+arrived at final pinned-SSH recheck, Coreeabe5de3. These two actual external
+inputs are separated from finished owned source/test work; no new phase opened.
+
+No operational roles/schema/function/password/secret/listener or source rows
+were created/observed. No protected provider28445/stable/dev/command/Live change,
+no old credential reused or retired specimen repeated. Scope is this approved
+Research/Paper discovery helper, not a reduction of Manager all-mode contracts.
+Exact labelled test containers/network absent; no persistent test volumes,
+image builds/pulls or BuildKit artifacts. Retain existing active/explicit rollback
+images and all peer resources; no broad prune. Entry free59106344960B; posttest
+59448823808B (shared-host changes, not claimed reclaimed). Removed only own
+34929-byte installer pyc; immediate available59828736000→59828772864B.
+Source/native/Edge/Proxy retain prior images/start times and restart0. Canonical
+source/release/worktree and retained rollback refs are reconciled in the return.
+No SGP test/runtime/resource changes; only this public return is mirrored there.
+
+Actual final delivery27Oct: replaced only Edge's own public return on SGP at
+`/home/bobby/portal-research/upgrade/execution_loop/evidence/ELP2-10/EDGE_RESEARCH_READER_APPROVED_IMPLEMENTATION_2026-10-27.md`.
+Local/remote SHA256 both
+62b3d9669abf95afb459e6362c6d2051eb60be32d1df5c863ec89d8cb7eb4f58.
+Transfer completed and remote bytes read back; not Core consumer ACK/commit.
+Core-owned plans/sync/source and private material untouched. No new owner-return
+arrived at last check. Next is exact Timescale inherited-surface decision plus
+current Core binding, then fresh bounded backup/apply/verify/observation in this
+same08 task; no source reimplementation or repeated phase approval needed.

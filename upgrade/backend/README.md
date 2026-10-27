@@ -7,11 +7,12 @@ Chúng không thay thế phase hoặc exit gate trong
 
 ## Active deep dives
 
-- **27Oct Research membership reader — catalogue verified, proposal pending:**
+- **27Oct Research membership reader — approved, SOURCE_ISOLATED_QUALIFIED:**
   [same08/read09 journal](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#epg10-08-research-reader-db-scope-20261027)
-  records exact protected DB/ACL/RLS, source candidates and the minimal
-  execute-only Research/Paper reader proposal. Actual membership remains
-  unobserved; no new grant/function/listener or connected acceptance.
+  and [current source/test/install return](../evidence/execution-edge-v1_2/EPG10-08/EDGE_RESEARCH_READER_APPROVED_IMPLEMENTATION_2026-10-27.md)
+  record PMc2668cfa,130 focused/61 disposable PG15 PASS. Real Timescale source
+  refuses inherited PUBLIC metadata SELECT; current Core binding also missing.
+  No silent exception, source ACL/data change, install or connected acceptance.
 
 - **24Oct Original06 worker materialization — ISOLATED_QUALIFIED, NOT_DEPLOYED:**
   [same06 journal](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#epg10-06-worker-oom-follow-through-20261024)
