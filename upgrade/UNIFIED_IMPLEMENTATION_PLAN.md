@@ -16611,3 +16611,8 @@ integrity and an explicit terminal fill-class semantic/quantity disposition.
 [Independent probes and Edge → PM/TS actions](execution_loop/evidence/ELP2-10/PM_S2_PAPER_CANDIDATE_CORE_REVIEW_2026-10-27.md).
 No live source tampering, connected acceptance or financial carrier is asserted.
 
+27Oct economic fallback follow-through: source inspection and 83 focused local
+tests confirm that the optional mapping does not itself fence the pre-existing
+legacy NET_PNL aggregate. [Exact risk, implementation and Edge/Claude actions](execution_loop/evidence/ELP2-10/CORE_FINANCIAL_FALLBACK_REVIEW_2026-10-27.md).
+No source-backed double count or connected qualification is asserted.
+
