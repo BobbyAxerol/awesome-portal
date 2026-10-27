@@ -402,12 +402,13 @@ describe("the stored publication refuses to enter a document unless it is what t
 describe("service + controller (synthetic adapters, no PostgreSQL)", () => {
   const head = { revision: "TEST_ONLY:model-r1", source_epoch: "TEST_ONLY:epoch", source_sequence: "1", projection_generation: "TEST_ONLY:g1",
     payload_digest: "sha256:" + "0".repeat(64), catalogue_digest: EXECUTION_PUBLICATION_CATALOGUE.source_catalogue_digest };
-  async function service(full = true) {
+  async function service(full = true, economic?: { calculation_revision: string; isCurrent: () => boolean }) {
     const t = await fixture({ full });
     // A fund reads on business.read_all; a portfolio subject reads on portfolio.read (exactly the dataset service's rule).
     if (full) t.f.context.grants.push({ ...t.f.context.grants[0], grant_id: "TEST_ONLY-portfolio-read", action: "portfolio.read",
       selector: { kind: "EXPLICIT_RESOURCE_SET", resource_kind: "PORTFOLIO", ids: [SHARED, SOLO] } });
-    const service = new ManagerSeriesService({} as Pool, t.f.scopes, t.f.config);
+    const runtime = economic ? { economicSourceFor: () => economic } : undefined;
+    const service = new ManagerSeriesService({} as Pool, t.f.scopes, t.f.config, runtime as any);
     const repository = (service as any).repository;
     vi.spyOn(repository, "head").mockResolvedValue(head);
     vi.spyOn(repository, "document").mockResolvedValue(t.doc);
@@ -448,6 +449,32 @@ describe("service + controller (synthetic adapters, no PostgreSQL)", () => {
     s.doc.precomputed_series = [publication];
     await expect(s.controller.read(s.request, query([A], { window: JSON.stringify(WINDOW) })))
       .rejects.toMatchObject({code:"EXECUTION_READ_PUBLICATION_NOT_QUALIFIED",status:503});
+  });
+  it("does not block an independently valid NAV read because retained NET_PNL uses a removed mapper", async () => {
+    const s = await service(), nav = s.publication(SHARED), pnl = s.publication(SHARED, { metric: "NET_PNL" });
+    pnl.provenance.calculation_revision = `manager-series-economic.v1:sha256:${"a".repeat(64)}`;
+    s.doc.precomputed_series = [nav, pnl];
+    const before = JSON.stringify(s.doc);
+    const response = await s.controller.read(s.request, query([A], { window: JSON.stringify(WINDOW) }));
+    expect(response.series[0].state).toBe("AVAILABLE");
+    await expect(s.controller.read(s.request, query([A], { metric: "NET_PNL", window: JSON.stringify(WINDOW) })))
+      .rejects.toMatchObject({ code: "EXECUTION_READ_PUBLICATION_NOT_QUALIFIED", status: 503 });
+    expect(JSON.stringify(s.doc)).toBe(before);
+  });
+  it("with an installed mapper, ignores another metric's stale revision while still fencing that metric", async () => {
+    const revision = `manager-series-economic.v1:sha256:${"a".repeat(64)}`;
+    let current = true;
+    const s = await service(true, { calculation_revision: revision, isCurrent: () => current });
+    const nav = s.publication(SHARED), pnl = s.publication(SHARED, { metric: "NET_PNL" });
+    nav.provenance.calculation_revision = revision;
+    pnl.provenance.calculation_revision = `manager-series-economic.v1:sha256:${"b".repeat(64)}`;
+    s.doc.precomputed_series = [nav, pnl];
+    expect((await s.controller.read(s.request, query([A], { window: JSON.stringify(WINDOW) }))).series[0].state).toBe("AVAILABLE");
+    await expect(s.controller.read(s.request, query([A], { metric: "NET_PNL", window: JSON.stringify(WINDOW) })))
+      .rejects.toMatchObject({ code: "EXECUTION_READ_PUBLICATION_NOT_QUALIFIED", status: 503 });
+    current = false;
+    await expect(s.controller.read(s.request, query([A], { window: JSON.stringify(WINDOW) })))
+      .rejects.toMatchObject({ code: "EXECUTION_READ_ACCESS_CHANGED", status: 409 });
   });
   it("closed query is checked before any source metadata is read", async () => {
     const s = await service();

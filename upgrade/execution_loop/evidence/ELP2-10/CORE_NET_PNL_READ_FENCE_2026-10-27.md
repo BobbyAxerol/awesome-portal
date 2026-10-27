@@ -52,3 +52,29 @@ state was changed. Prior untracked Edge documents are untouched.
   scenario remains independent; record real API and browser evidence separately.
 - ELP2-10 remains open; this change does not close READ/STREAM, gateway,
   Calendar, calibration, coexistence/G2 or release/browser acceptance.
+
+## Follow-through: unrelated metric must not block the requested series
+
+The service previously rejected the entire document when *any* retained
+series had an incompatible economic calculation revision. A stale NET_PNL
+publication could therefore make an otherwise independently valid NAV request
+fail, even though the NET_PNL publication was not in that response. The
+revision fence now considers publications for the requested metric; it still
+refuses that metric if its revision is incompatible, and still checks mapper
+revocation before and after the scoped read. This is not a source proof or a
+change to historical data, external contract, UI, or economic methodology.
+
+Focused synthetic tests exercise both an absent and an installed mapping,
+including unrelated stale NET_PNL, valid NAV, requested stale NET_PNL refusal,
+revocation and unchanged retained input. The fence remains conservative within
+the requested metric; this change does not claim per-subject isolation or
+connected-source acceptance. Claude can use the existing reader; no new field
+or component request is introduced.
+
+Focused Vitest: `be-p4-manager-series` and
+`manager-economic-source-runtime`, **2 files / 122 tests PASS**. Control API
+`tsc --noEmit -p tsconfig.build.json`, execution tracking reconciliation and
+`git diff --check` PASS. This is a separate
+intermediate focused gate under §10.10c; the final frozen integration SHA
+still requires the normal full hook. These counts overlap the earlier 166-test
+run and must not be added to it.

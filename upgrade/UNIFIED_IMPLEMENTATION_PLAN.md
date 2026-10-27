@@ -16621,3 +16621,9 @@ source ownership mapping is not installed; old cursor and retained series are
 fenced without overwriting data. [Scope, focused tests and remaining source/Claude handoff](execution_loop/evidence/ELP2-10/CORE_NET_PNL_READ_FENCE_2026-10-27.md).
 Source commissioning, connected/browser acceptance and ELP2-10 remain open.
 
+27Oct Manager series availability follow-through: validate calculation revision
+for the requested metric instead of letting unrelated retained series block it;
+requested stale series and revoked mappings remain fenced. See the same
+[NET_PNL receipt](execution_loop/evidence/ELP2-10/CORE_NET_PNL_READ_FENCE_2026-10-27.md)
+for focused verification and limitations; this is not source qualification.
+
