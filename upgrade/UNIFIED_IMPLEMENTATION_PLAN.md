@@ -16525,3 +16525,11 @@ rejected by the execution environment and was not run; it is not a source
 read or a test result. Use a separately reviewed encrypted/private transport,
 not an indirect retry of that rejected probe.
 
+27Oct Paper-authority follow-through: bounded source queries show the Research
+profile `PAPER_BINANCE_USDM` revision is REVOKED, no Paper membership roots exist
+in the inspected source snapshot, and the existing writer cannot bootstrap the
+first protected root. No portfolio is inferred from the revoked profile. Secure
+transport alternatives and exact Edge/PM authority inputs are recorded in
+[Paper authority and transport receipt](execution_loop/evidence/ELP2-10/PAPER_AUTHORITY_AND_SOURCE_TRANSPORT_2026-10-27.md).
+No grant, source TLS change or connected PASS is claimed.
+
