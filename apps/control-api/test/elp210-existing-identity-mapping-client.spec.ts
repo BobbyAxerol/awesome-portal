@@ -5,6 +5,9 @@
 import { createHash, createPublicKey, generateKeyPairSync, randomBytes, randomUUID, sign, X509Certificate,
   type KeyObject, type KeyPairKeyObjectResult } from "node:crypto";
 import type { IncomingMessage } from "node:http";
+import { chmod, mkdtemp, readFile, rmdir, stat, symlink, unlink, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { createServer, type Server } from "node:https";
 import type { Socket } from "node:net";
 import type { TLSSocket } from "node:tls";
@@ -13,6 +16,11 @@ import { unqualifiedAccessRelations } from "../src/execution-v2/access-policy";
 import type { AccessTrustProvider } from "../src/execution-v2/access-trust";
 import { ExistingIdentityMappingClient, withExistingIdentityMapping,
   type ExistingIdentityMappingClientConfig } from "../src/execution-v2/existing-identity-mapping-client";
+import { ResearchMembershipDiscoveryClient } from "../src/execution-v2/research-membership-discovery-client";
+import { prepareResearchMembershipDiscovery } from "../src/execution-v2/research-membership-discovery-runtime";
+import { nativeRootCanonical } from "../src/execution-v2/native-root-codec";
+import { runResearchMembershipDiscovery } from "../src/execution-v2/research-membership-discovery-operator";
+import { parseResearchDiscoveryArgs } from "../src/cli/execution-research-membership-discovery";
 
 type Certificate = { key: Buffer; cert: Buffer; ca: Buffer; fingerprint: string };
 type TestAuthority = { key: KeyObject; name: Buffer; certificate: Buffer };
@@ -126,6 +134,146 @@ describe("ELP2-10 existing identity mapping client (TEST_ONLY real loopback mTLS
     }
   });
   afterAll(() => { for (const identity of [core, source, otherSource, foreignCore, foreignSource, wrongHost]) identity?.key.fill(0); });
+
+  const discovery = (origin: string, changes: Record<string, unknown> = {}) =>
+    new ResearchMembershipDiscoveryClient({ origin, tls: { key: core.key, cert: core.cert, ca: core.ca },
+      source_certificate_sha256: source.fingerprint, human_issuer: selection.human_issuer, subject,
+      workspace_id: selection.workspace_id, workload_id: selection.workload_id, deadline_ms: 1000,
+      response_bytes: 32768, max_inflight: 2, installation_expires_at_utc_ms: Date.now() + 60_000, ...changes });
+  const discoveryReply = (body: Record<string, unknown>, observation: Record<string, unknown>) => JSON.stringify({
+    ...body, schema_version: "pma.research-membership-discovery-result.v1", observation });
+  const absent = { schema_version: "pma.research-membership-observation.v1", state: "MAPPING_NOT_FOUND", candidates: [] };
+
+  it("sends an exact Paper discovery request over pinned TLS and preserves typed absence", async () => {
+    const lane = await peer(source, (req, body) => {
+      expect(req.url).toBe("/internal/elp210/current-human/membership-discovery");
+      expect(body).toMatchObject({ schema_version: "pma.research-membership-discovery.v1", subject, ...selection });
+      expect((req.socket as TLSSocket).authorized).toBe(true);
+      return { body: discoveryReply(body, absent) };
+    });
+    expect(await discovery(lane.origin).observe()).toEqual(absent);
+    expect(lane.requests()).toBe(1);
+  });
+  it("accepts a native evidence observation without treating it as a grant", async () => {
+    const reference = { command_id: "fixture", membership_id: "child", version: 1,
+      scope: { portfolio_id: "portfolio", environment: "paper" }, policy_revision: 1, requester: userId,
+      after_digest: "a".repeat(64), before_digest: "b".repeat(64), intent_digest: "c".repeat(64),
+      effective_at: "2026-01-01T00:00:00+00:00", evaluated_memberships: [["root", 1]] };
+    const observation = { schema_version: "pma.research-membership-observation.v1", state: "OBSERVED_NOT_AUTHORIZED",
+      mapping_revision: `ts-user:${userId}:1`, policy_revision: 1, candidates: [{ membership_id: "child", version: 1,
+        state: "NATIVE_RECEIPT_AND_CURRENT_LINEAGE_OBSERVED", reference,
+        current_lineage: [{ membership_id: "child", version: 1 }] }] };
+    const lane = await peer(source, (_req, body) => ({ body: discoveryReply(body, observation) }));
+    expect(await discovery(lane.origin).observe()).toEqual(observation);
+  });
+  it.each(["correlation", "extra", "duplicate", "wrong-state", "invalid-pin"])(
+    "fails closed for discovery wire or TLS %s", async variant => {
+      const lane = await peer(source, (_req, body) => {
+        const raw = discoveryReply({ ...body, ...(variant === "correlation" ? { subject: "OTHER" } : {}) },
+          { ...absent, ...(variant === "extra" ? { grant: true } : {}),
+            ...(variant === "wrong-state" ? { state: "AUTHORIZED" } : {}) });
+        return { body: variant === "duplicate" ? raw.replace('"state":"MAPPING_NOT_FOUND"',
+          '"state":"AUTHORIZED","state":"MAPPING_NOT_FOUND"') : raw };
+      });
+      const changed = variant === "invalid-pin" ? { source_certificate_sha256: otherSource.fingerprint } : {};
+      await expect(discovery(lane.origin, changed).observe()).rejects.toMatchObject({ code: "RESEARCH_DISCOVERY_UNAVAILABLE" });
+    });
+  it("denies invalid discovery configuration and expired installation", () => {
+    expect(() => discovery("https://127.0.0.1", { installation_expires_at_utc_ms: Date.now() - 1 }))
+      .toThrow(expect.objectContaining({ code: "RESEARCH_DISCOVERY_CONFIG_INVALID" }));
+    expect(() => discovery("http://localhost"))
+      .toThrow(expect.objectContaining({ code: "RESEARCH_DISCOVERY_CONFIG_INVALID" }));
+    expect(() => discovery("https://127.0.0.1", { subject: "界".repeat(86) }))
+      .toThrow(expect.objectContaining({ code: "RESEARCH_DISCOVERY_CONFIG_INVALID" }));
+    expect(() => discovery("https://8.8.8.8"))
+      .toThrow(expect.objectContaining({ code: "RESEARCH_DISCOVERY_CONFIG_INVALID" }));
+  });
+  it("fails closed on unsafe native revision and source timeout", async () => {
+    const unsafe = { schema_version: "pma.research-membership-observation.v1", state: "OBSERVED_NOT_AUTHORIZED",
+      mapping_revision: `ts-user:${userId}:1`, policy_revision: 9007199254740992, candidates: [] };
+    const lane = await peer(source, (_req, body) => ({ body: discoveryReply(body, unsafe) }));
+    await expect(discovery(lane.origin).observe()).rejects.toMatchObject({ code: "RESEARCH_DISCOVERY_UNAVAILABLE" });
+    const waiting = await peer(source, () => ({ neverReply: true }));
+    const client = discovery(waiting.origin, { deadline_ms: 75 });
+    await expect(client.observe()).rejects.toMatchObject({ code: "RESEARCH_DISCOVERY_UNAVAILABLE" });
+  });
+  it("hydrates exact pinned Research runtime privately and wipes material on disposal", async () => {
+    const lane = await peer(source, (_req, body) => ({ body: discoveryReply(body, absent) }));
+    const dir = await mkdtemp(join(tmpdir(), "research-discovery-test-")), paths: string[] = [];
+    const file = async (name: string, bytes: Buffer) => {
+      const path = join(dir, name); await writeFile(path, bytes, { mode: 0o600, flag: "wx" }); paths.push(path);
+      return { path, sha256: createHash("sha256").update(bytes).digest("hex") };
+    };
+    try {
+      const manifest = { schema_version: "portal.research-membership-discovery-runtime.v1",
+        target: { kind: "RESEARCH", ...selection, subject },
+        transport: { origin: lane.origin, edge_leaf_sha256: source.fingerprint,
+          key_ref: await file("key", core.key), cert_ref: await file("cert", core.cert), ca_ref: await file("ca", core.ca),
+          deadline_ms: 1000, response_bytes: 32768, max_inflight: 1 },
+        not_before_utc_ms: Date.now() - 1000, expires_at_utc_ms: Date.now() + 60_000 };
+      const ref = await file("manifest", Buffer.from(nativeRootCanonical(manifest)));
+      const expected = { human_issuer: selection.human_issuer, subject, workspace_id: selection.workspace_id };
+      await expect(prepareResearchMembershipDiscovery(ref, { ...expected, workspace_id: "other" }))
+        .rejects.toMatchObject({ code: "RESEARCH_DISCOVERY_RUNTIME_INVALID" });
+      const prepared = await prepareResearchMembershipDiscovery(ref, expected);
+      expect(await prepared.client.observe()).toEqual(absent);
+      prepared.dispose(); prepared.dispose();
+      await expect(prepared.client.observe()).rejects.toMatchObject({ code: "RESEARCH_DISCOVERY_UNAVAILABLE" });
+    } finally {
+      for (const path of paths) await unlink(path);
+      await rmdir(dir);
+    }
+  });
+  it("writes one private scoped observation artifact, never an accepted grant", async () => {
+    const lane = await peer(source, (_req, body) => ({ body: discoveryReply(body, absent) }));
+    const dir = await mkdtemp(join(tmpdir(), "research-discovery-operator-")), paths: string[] = [];
+    const file = async (name: string, bytes: Buffer) => {
+      const path = join(dir, name); await writeFile(path, bytes, { mode: 0o600, flag: "wx" }); paths.push(path);
+      return { path, sha256: createHash("sha256").update(bytes).digest("hex") };
+    };
+    try {
+      const manifest = { schema_version: "portal.research-membership-discovery-runtime.v1",
+        target: { kind: "RESEARCH", ...selection, subject },
+        transport: { origin: lane.origin, edge_leaf_sha256: source.fingerprint,
+          key_ref: await file("key", core.key), cert_ref: await file("cert", core.cert), ca_ref: await file("ca", core.ca),
+          deadline_ms: 1000, response_bytes: 32768, max_inflight: 1 },
+        not_before_utc_ms: Date.now() - 1000, expires_at_utc_ms: Date.now() + 60_000 };
+      const manifestRef = await file("manifest", Buffer.from(nativeRootCanonical(manifest)));
+      const bindingRef = await file("binding", Buffer.from(nativeRootCanonical({
+        schema_version: "portal.research-membership-discovery-binding.v1", human_issuer: selection.human_issuer,
+        subject, workspace_id: selection.workspace_id })));
+      const result = await runResearchMembershipDiscovery({ manifest: manifestRef, binding: bindingRef, outputDirectory: dir });
+      paths.push(result.path);
+      expect((await stat(result.path)).mode & 0o777).toBe(0o600);
+      const bytes = await readFile(result.path);
+      expect(createHash("sha256").update(bytes).digest("hex")).toBe(result.sha256);
+      expect(JSON.parse(bytes.toString("utf8"))).toEqual({ schema_version: "portal.research-membership-observation-artifact.v1",
+        manifest_sha256: manifestRef.sha256, binding_sha256: bindingRef.sha256, observation: absent });
+      await expect(runResearchMembershipDiscovery({ manifest: manifestRef, binding: manifestRef, outputDirectory: dir }))
+        .rejects.toMatchObject({ code: "RESEARCH_DISCOVERY_OPERATOR_FAILED" });
+      await chmod(dir, 0o755);
+      await expect(runResearchMembershipDiscovery({ manifest: manifestRef, binding: bindingRef, outputDirectory: dir }))
+        .rejects.toMatchObject({ code: "RESEARCH_DISCOVERY_OPERATOR_FAILED" });
+      expect(lane.requests()).toBe(1);
+      await chmod(dir, 0o700);
+      const link = join(dir, "fake-output-dir");
+      await symlink(dir, link); paths.push(link);
+      await expect(runResearchMembershipDiscovery({ manifest: manifestRef, binding: bindingRef, outputDirectory: link }))
+        .rejects.toMatchObject({ code: "RESEARCH_DISCOVERY_OPERATOR_FAILED" });
+      expect(lane.requests()).toBe(1);
+    } finally {
+      for (const path of paths) await unlink(path);
+      await rmdir(dir);
+    }
+  });
+  it("requires explicit operator pins with no duplicate or extra CLI options", () => {
+    const args = ["--manifest", "/private/manifest", "--manifest-sha256", "a".repeat(64),
+      "--binding", "/private/binding", "--binding-sha256", "b".repeat(64), "--out-dir", "/private/out"];
+    expect(parseResearchDiscoveryArgs(args)).toEqual({ manifest: { path: "/private/manifest", sha256: "a".repeat(64) },
+      binding: { path: "/private/binding", sha256: "b".repeat(64) }, outputDirectory: "/private/out" });
+    for (const bad of [args.slice(0, -1), [...args, "--out-dir", "/other"], [...args, "--unknown", "value"]])
+      expect(() => parseResearchDiscoveryArgs(bad)).toThrow("RESEARCH_DISCOVERY_USAGE");
+  });
 
   it("sends only the exact fixed token-free mapping query after TLS1.3/mTLS and correlates the result", async () => {
     const lane = await peer(source, (req, body) => {
