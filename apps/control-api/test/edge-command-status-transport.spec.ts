@@ -12,6 +12,7 @@ import { commandIntent } from "../src/execution-v2/command.contract";
 import { CommandSourceAssertionAuthority, COMMAND_STATUS_EDGE_PATH, type CommandStatusInput } from "../src/execution-v2/command-source-assertion";
 import { EdgeCommandStatusTransport, COMMAND_STATUS_ORIGINAL_PATH, createAuthenticatedEdgeCurrentRequesterStatus,
   type EdgeCommandStatusTransportConfig } from "../src/execution-v2/edge-command-status-transport";
+import type { CommandStatusOriginalFingerprint,CommandStatusOriginalFingerprints } from "../src/execution-v2/command-status-original-fingerprints";
 import { pmHttpRequestDigest } from "../src/execution-v2/pm-http-request-binding";
 import { commonName,testCertificate,type TestAuthority } from "./fixtures/elp210-test-certificates";
 
@@ -54,7 +55,7 @@ describe("concrete explicitly selected command STATUS Edge port",()=>{
         const body=JSON.parse(Buffer.concat(chunks).toString());requests.push({path:req.url!,body,authorization:req.headers.authorization});
         const value=req.url===COMMAND_STATUS_ORIGINAL_PATH?{schema_version:"execution.core-command-original-response.v1",original,
           status_request_utf8:JSON.stringify(coreRequest),pm_status_request_digest:accessDigest("TEST_ONLY:actual-pm-http-bytes")}:
-          {schema_version:"execution.core-command-status-response.v1",original_digest:accessDigest(original),call_digest:body.call_digest,
+          {schema_version:"execution.core-command-status-response.v1",original_digest:accessDigest(body.original),call_digest:body.call_digest,
             delivered_request_digest:pmHttpRequestDigest({method:"POST",raw_path:Buffer.from(COMMAND_STATUS_EDGE_PATH),query_string:Buffer.alloc(0),body:Buffer.from(JSON.stringify(body))},
               {request_bytes:131072}),full_outcome_custody:{reference:"TEST_ONLY:durable-full-outcome",digest:accessDigest("TEST_ONLY:full-source-outcome")},
             result:{authority_ref:authorization.authority_ref,profile_ref:authorization.profile_ref,workspace_id:intent.workspace_id,environment:"paper",
@@ -80,10 +81,16 @@ describe("concrete explicitly selected command STATUS Edge port",()=>{
           delivered_request_digest:pmHttpRequestDigest({method:"POST",raw_path:Buffer.from(COMMAND_STATUS_EDGE_PATH),query_string:Buffer.alloc(0),body:Buffer.from(body)},
             {request_bytes:131072})}};
     }),check:vi.fn(async()=>undefined),acknowledgeRetainedRead:vi.fn(async()=>undefined)};
-    const port=new EdgeCommandStatusTransport(authority as unknown as CommandSourceAssertionAuthority,config);
+    const pins=new Map<string,CommandStatusOriginalFingerprint>();
+    const fingerprints:CommandStatusOriginalFingerprints={pin:async value=>{
+      const old=pins.get(value.binding_digest);
+      if(old&&JSON.stringify(old)!==JSON.stringify(value))throw new Error("COMMAND_STATUS_ORIGINAL_CHANGED");
+      pins.set(value.binding_digest,value);
+    }};
+    const port=new EdgeCommandStatusTransport(authority as unknown as CommandSourceAssertionAuthority,config,fingerprints);
     const input:CommandStatusInput={actor,authorization,intent,original,action:"STATUS",call_digest:accessDigest("TEST_ONLY:call"),
       contract:{reference:"TEST_ONLY:contract",sha256:"a".repeat(64),edge_source_revision:"TEST_ONLY:source"},signal:new AbortController().signal};
-    return {port,authority,input,requests,config,mutate:(fn:typeof responseMutation)=>{responseMutation=fn;}};
+    return {port,authority,input,requests,config,fingerprints,pins,mutate:(fn:typeof responseMutation)=>{responseMutation=fn;}};
   }
   it("sends only fixed original/status routes with current-purpose token and exact source codec",async()=>{
     const f=await setup();expect(await f.port.original(f.input)).toEqual(original);
@@ -96,18 +103,61 @@ describe("concrete explicitly selected command STATUS Edge port",()=>{
   });
   it("never starts HTTP for an unpinned but CA-valid Edge peer",async()=>{
     const f=await setup(),port=new EdgeCommandStatusTransport(f.authority as unknown as CommandSourceAssertionAuthority,
-      {...f.config,peer:{...f.config.peer,certificate_sha256:foreign.pin}});
+      {...f.config,peer:{...f.config.peer,certificate_sha256:foreign.pin}},f.fingerprints);
     await expect(port.original(f.input)).rejects.toThrow();expect(f.requests).toEqual([]);expect(f.authority.prepare).not.toHaveBeenCalled();
   });
   it("requires source original readback before prepare and refuses substituted original correlation",async()=>{
-    const f=await setup();await expect(f.port.prepareStatus(f.input)).rejects.toThrow();
+    const f=await setup();
     f.mutate(v=>({...v,original:{...original,authorization_digest:accessDigest("wrong")}}));
+    await expect(f.port.prepareStatus(f.input)).rejects.toThrow();
     await expect(f.port.original(f.input)).rejects.toThrow();expect(f.authority.prepare).not.toHaveBeenCalled();
+  });
+  it("rejects a source status string that cannot be represented as exact UTF-8 bytes",async()=>{
+    const f=await setup();
+    f.mutate(v=>({...v,status_request_utf8:JSON.stringify(coreRequest).replace("owning source mapping","\ud800")}));
+    await expect(f.port.original(f.input)).rejects.toMatchObject({code:"COMMAND_STATUS_ORIGINAL_INVALID"});
+    expect(f.pins.size).toBe(0);expect(f.authority.prepare).not.toHaveBeenCalled();
   });
   it("rejoins same delivery and never repeats the Edge request or source issue",async()=>{
     const f=await setup();await f.port.original(f.input);const p=await f.port.prepareStatus(f.input);
     const replies=await Promise.all(Array.from({length:4},()=>f.port.status({...f.input,prepared:p.prepared})));
     expect(replies).toHaveLength(4);expect(f.requests.filter(r=>r.path===COMMAND_STATUS_EDGE_PATH)).toHaveLength(1);
+  });
+  it("handles 140 source originals, preserves pending preparation, and detects changes after cache eviction and restart",async()=>{
+    const f=await setup();
+    f.mutate(v=>{
+      if(!("original" in v))return v;
+      const sent=f.requests.at(-1)!.body.authorization as typeof authorization;
+      return {...v,original:{...original,reference:sent.reference,authorization_digest:accessDigest(sent)}};
+    });
+    const first=await f.port.original(f.input);expect(first).not.toBeNull();
+    const prepared=await f.port.prepareStatus({...f.input,original:first!});
+    for(let n=0;n<140;n++)await f.port.original({...f.input,authorization:{...authorization,reference:`TEST_ONLY:auth-${n}`}});
+    expect(f.port.snapshot()).toMatchObject({originals:4,prepared:1});
+    const result=await f.port.status({...f.input,original:first!,prepared:prepared.prepared});
+    expect(result.result.business.state).toBe("APPLIED");
+    const restarted=new EdgeCommandStatusTransport(f.authority as unknown as CommandSourceAssertionAuthority,f.config,f.fingerprints);
+    expect(await restarted.original(f.input)).toEqual(first);
+    f.mutate(v=>({...v,status_request_utf8:JSON.stringify({...coreRequest,payload:{TEST_ONLY:"changed"}})}));
+    await expect(restarted.original(f.input)).rejects.toThrow("COMMAND_STATUS_ORIGINAL_CHANGED");
+    expect(f.pins.size).toBe(141);
+  },30000);
+  it("keeps the exact UNKNOWN delivery across original-cache eviction",async()=>{
+    const f=await setup();
+    f.mutate(v=>{
+      if("original" in v){const sent=f.requests.at(-1)!.body.authorization as typeof authorization;
+        return {...v,original:{...original,reference:sent.reference,authorization_digest:accessDigest(sent)}};}
+      const result=v.result as Record<string,unknown>;
+      return {...v,full_outcome_custody:null,result:{...result,delivery:"DELIVERY_UNKNOWN",business:{state:"UNKNOWN",
+        receipt_ref:null,source_event_ref:null,revision:null,amounts:null}}};
+    });
+    const first=(await f.port.original(f.input))!,call={...f.input,original:first};
+    const prepared=await f.port.prepareStatus(call);
+    expect((await f.port.status({...call,prepared:prepared.prepared})).result.business.state).toBe("UNKNOWN");
+    for(let n=0;n<6;n++)await f.port.original({...f.input,authorization:{...authorization,reference:`TEST_ONLY:unknown-${n}`}});
+    expect((await f.port.status({...call,prepared:prepared.prepared})).result.business.state).toBe("UNKNOWN");
+    expect(f.requests.filter(r=>r.path===COMMAND_STATUS_EDGE_PATH)).toHaveLength(1);
+    expect(f.authority.acknowledgeRetainedRead).not.toHaveBeenCalled();
   });
   it("refuses a new preparation at capacity before issuing its source assertion",async()=>{
     const f=await setup();await f.port.original(f.input);
@@ -179,11 +229,11 @@ describe("concrete explicitly selected command STATUS Edge port",()=>{
   });
   it.each(["enable_live","pm_url","allow_submit"])("rejects extra configuration authority %s",async field=>{
     const f=await setup();expect(()=>new EdgeCommandStatusTransport(f.authority as unknown as CommandSourceAssertionAuthority,
-      {...f.config,[field]:true})).toThrow();
+      {...f.config,[field]:true},f.fingerprints)).toThrow();
   });
   it("actual factory refuses UNBOUND/Sandbox/Live before constructing a source port",async()=>{
     const f=await setup();const base={prepare:vi.fn(),send:vi.fn(),lookup:vi.fn()};
     expect(()=>createAuthenticatedEdgeCurrentRequesterStatus({requester_status:"UNCOMMISSIONED"} as never,base,
-      f.authority as unknown as CommandSourceAssertionAuthority,f.config)).toThrow();expect(base.send).not.toHaveBeenCalled();
+      f.authority as unknown as CommandSourceAssertionAuthority,f.config,f.fingerprints)).toThrow();expect(base.send).not.toHaveBeenCalled();
   });
 });

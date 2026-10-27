@@ -13,6 +13,7 @@ import { bindEdgeCurrentRequesterStatus, type EdgeCommandGatewayBinding,
   type EdgeCurrentRequesterStatusPort } from "./edge-command-gateway-binding";
 import type { EdgeCommandExchange, EdgeCommandPreparedCall } from "./edge-command-adapter";
 import { parseCompactJson } from "./private-root-file";
+import type { CommandStatusOriginalFingerprints } from "./command-status-original-fingerprints";
 
 const text=z.string().min(1).max(256),digest=z.string().regex(/^sha256:[a-f0-9]{64}$/u);
 export const commandStatusOriginal = z.object({gateway_ref:text,reference:text,authorization_digest:digest,
@@ -48,17 +49,20 @@ type Prepared={input:Omit<CommandStatusInput,"signal">;body:string;token:string;
  * Construction stays OFF unless an owner explicitly gives all trust inputs. */
 export class EdgeCommandStatusTransport implements EdgeCurrentRequesterStatusPort {
   private readonly config:EdgeCommandStatusTransportConfig;
+  /** Bounded disposable byte cache only: durable comparison is in PG, and
+   * issued/UNKNOWN contexts retain their own exact body in `prepared`. */
   private readonly originals=new Map<string,{status:string;pm_digest:string}>();
   private readonly prepared=new Map<string,Prepared>();
   /** Reserve before issuing an assertion. Concurrent identical preparation
    * shares one reservation, just as the authority shares its pending call. */
   private readonly preparing=new Set<string>();
   private inFlight=0;
-  constructor(private readonly authority:CommandSourceAssertionAuthority,input:EdgeCommandStatusTransportConfig) {
+  constructor(private readonly authority:CommandSourceAssertionAuthority,input:EdgeCommandStatusTransportConfig,
+    private readonly fingerprints:CommandStatusOriginalFingerprints) {
     try {
       const origin=new URL(input.origin),l=input.limits;
       if(Object.keys(input).some(k=>!["mode","origin","gateway_ref","tls","peer","limits"].includes(k))||
-        input.mode!=="EXPLICIT_CURRENT_REQUESTER_STATUS_ONLY"||!/^https:\/\/[^/?#\\\s]+\/?$/u.test(input.origin)||
+        input.mode!=="EXPLICIT_CURRENT_REQUESTER_STATUS_ONLY"||!fingerprints||typeof fingerprints.pin!=="function"||!/^https:\/\/[^/?#\\\s]+\/?$/u.test(input.origin)||
         origin.username||origin.password||origin.pathname!=="/"||origin.search||origin.hash||
         !text.safeParse(input.gateway_ref).success||!input.tls.key||!input.tls.cert||!input.tls.ca||
         !digest.safeParse(input.peer.certificate_sha256).success||
@@ -71,6 +75,10 @@ export class EdgeCommandStatusTransport implements EdgeCurrentRequesterStatusPor
   }
   snapshot(){return Object.freeze({in_flight:this.inFlight,originals:this.originals.size,prepared:this.prepared.size});}
   async original(input:OriginalInput) {
+    const result=await this.readOriginal(input);
+    return result?structuredClone(result.original):null;
+  }
+  private async readOriginal(input:OriginalInput) {
     const a=commandAuthorization.parse(input.authorization),i=commandIntent.parse(input.intent);
     if(i.environment!=="paper"||a.qualification!=="OWNER_VERIFIED"||a.workspace_id!==i.workspace_id||
       a.intent_hash!==accessDigest({actor_user_id:a.actor_id,intent:i}))return fail("COMMAND_STATUS_ORIGINAL_INVALID",403);
@@ -81,20 +89,33 @@ export class EdgeCommandStatusTransport implements EdgeCurrentRequesterStatusPor
     const o=response.original;
     if(!response.status_request_utf8||!response.pm_status_request_digest||o.gateway_ref!==this.config.gateway_ref||o.authorization_digest!==accessDigest(a)||
       o.intent_hash!==a.intent_hash||o.source_intent_digest!==a.source_intent_digest)return fail("COMMAND_STATUS_ORIGINAL_INVALID");
-    const raw=originalWire.parse(parseCompactJson(Buffer.from(response.status_request_utf8)));
+    const statusBytes=Buffer.from(response.status_request_utf8,"utf8");
+    if(statusBytes.toString("utf8")!==response.status_request_utf8)return fail("COMMAND_STATUS_ORIGINAL_INVALID");
+    const raw=originalWire.parse(parseCompactJson(statusBytes));
     const sameHash=(value:string,expected:string)=>value===expected||`sha256:${value}`===expected;
     if(raw.key!==o.source_key[2]||raw.operation!==o.source_key[1]||
       !sameHash(raw.payload_digest,o.transport_payload_digest)||!sameHash(raw.request_digest,o.request_digest))
       return fail("COMMAND_STATUS_ORIGINAL_INVALID");
-    const key=accessDigest(o),old=this.originals.get(key);
-    if(old&&(old.status!==response.status_request_utf8||old.pm_digest!==response.pm_status_request_digest))return fail("COMMAND_STATUS_ORIGINAL_CHANGED",409);
-    if(!old&&this.originals.size>=this.config.limits.maximum_originals)return fail("COMMAND_STATUS_EDGE_CAPACITY",429);
-    this.originals.set(key,{status:response.status_request_utf8,pm_digest:response.pm_status_request_digest});return structuredClone(o);
+    await this.fingerprints.pin({binding_digest:accessDigest({gateway_ref:o.gateway_ref,authorization_digest:o.authorization_digest,
+      intent_hash:o.intent_hash,source_intent_digest:o.source_intent_digest}),original_digest:accessDigest(o),
+      status_bytes_digest:`sha256:${createHash("sha256").update(statusBytes).digest("hex")}`,
+      pm_status_request_digest:response.pm_status_request_digest,workspace_id:i.workspace_id,
+      key_hash:accessDigest(i.business_payload.idempotency_key),intent_hash:a.intent_hash,intent_digest:accessDigest(i),
+      authorization_digest:accessDigest(a),actor_id:a.actor_id});
+    const key=accessDigest(o);
+    this.originals.delete(key);
+    while(this.originals.size>=this.config.limits.maximum_originals)this.originals.delete(this.originals.keys().next().value!);
+    this.originals.set(key,{status:response.status_request_utf8,pm_digest:response.pm_status_request_digest});
+    return {original:o,status:response.status_request_utf8,pm_digest:response.pm_status_request_digest};
   }
   async prepareStatus(input:CommandStatusInput) {
     for(const [key,old]of this.prepared)if(old.finished&&old.prepared.expires_at_ms<=Date.now())this.prepared.delete(key);
-    const status=this.originals.get(accessDigest(input.original));
-    if(!status)return fail("COMMAND_STATUS_ORIGINAL_REQUIRED",409);
+    // A cache miss is refetched from source, never reconstructed from the
+    // fingerprint. Pending/UNKNOWN prepared bodies are not evicted.
+    let status=this.originals.get(accessDigest(input.original));
+    if(!status){const fresh=await this.readOriginal(input);
+      if(!fresh||accessDigest(fresh.original)!==accessDigest(input.original))return fail("COMMAND_STATUS_ORIGINAL_REQUIRED",409);
+      status=fresh;}
     // Source codec is decoded/re-encoded only as its JSON value. Its ORIGINAL
     // payload mapping and both independent digests remain exactly source-owned.
     const body=JSON.stringify({schema_version:"execution.core-command-status-request.v1",original:input.original,
@@ -207,10 +228,10 @@ export class EdgeCommandStatusTransport implements EdgeCurrentRequesterStatusPor
 /** Actual optional factory entrypoint, not an injected fake source port. No
  * AppModule registration/default-on flag or submit authority is introduced. */
 export function createAuthenticatedEdgeCurrentRequesterStatus(binding:EdgeCommandGatewayBinding,base:CommandTrust,
-  authority:CommandSourceAssertionAuthority,config:EdgeCommandStatusTransportConfig) {
+  authority:CommandSourceAssertionAuthority,config:EdgeCommandStatusTransportConfig,fingerprints:CommandStatusOriginalFingerprints) {
   if(binding.requester_status!=="FRESH_CURRENT_HUMAN"||binding.selection.gateway_ref!==config.gateway_ref||
     binding.scope.environment!=="paper"||binding.selection.qualification!=="OWNER_VERIFIED"||binding.edge_contract===null)
     return fail("COMMAND_STATUS_EDGE_BINDING_INVALID",400);
-  const port=new EdgeCommandStatusTransport(authority,config);
+  const port=new EdgeCommandStatusTransport(authority,config,fingerprints);
   return {port,trust:bindEdgeCurrentRequesterStatus(binding,base,port)};
 }

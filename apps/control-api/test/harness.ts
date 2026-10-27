@@ -7,6 +7,7 @@ import { createControlApiApp } from "../src/app";
 import { ControlApiConfig } from "../src/config";
 
 export const TEST_TABLES = [
+  "execution_command_status_original_fingerprints",
   "execution_pending_recall_events",
   "execution_pending_recall_commands",
   "execution_instance_registration_events",

@@ -12,6 +12,7 @@ import { CommandSourceAssertionAuthority,type CommandStatusAuthorityConfig } fro
 import { createCommandSourceAssertionTransport,type CommandSourceAssertionTransportConfig } from "./command-source-assertion-transport";
 import { createAuthenticatedEdgeCurrentRequesterStatus,type EdgeCommandStatusTransportConfig } from "./edge-command-status-transport";
 import { inspectEdgeCommandGatewayBinding,type EdgeCommandGatewayBinding } from "./edge-command-gateway-binding";
+import { PgCommandStatusOriginalFingerprints } from "./command-status-original-fingerprints";
 
 export interface CommandStatusCompositionConfig {
   candidate:CurrentHumanCandidateConfig;
@@ -127,7 +128,8 @@ export class CommandStatusComposition {
       throw failure("COMMAND_STATUS_COMPOSITION_RECOVERY_NOT_REGISTERED");
     const authority=new CommandSourceAssertionAuthority(this.pool,access,this.candidate,this.config.authority);
     try {
-      const status=createAuthenticatedEdgeCurrentRequesterStatus(this.config.gateway_binding,base,authority,this.config.edge_transport);
+      const status=createAuthenticatedEdgeCurrentRequesterStatus(this.config.gateway_binding,base,authority,this.config.edge_transport,
+        new PgCommandStatusOriginalFingerprints(this.pool));
       const assertion=createCommandSourceAssertionTransport({issue:(context,input)=>{
         if(this.state!=="RUNNING")return Promise.reject(failure("COMMAND_STATUS_COMPOSITION_NOT_RUNNING"));
         return authority.issue(context,input);

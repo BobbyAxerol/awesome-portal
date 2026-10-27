@@ -16570,3 +16570,14 @@ FE-069 run-alpha facet, remaining STATUS original capacity risk and next gates.
 Claude's consumer handoff is in the packet. This does not alter ELP2-10
 or ELP2-11 acceptance or qualify Edge data, command/Live or calibration.
 
+27Oct FE-069 integration reminder: the delivered backend SHA is not yet an
+ancestor of Claude's inspected worktree. The exact generated operation,
+pagination, isolation and acceptance actions are in the
+[Claude consumer handoff](execution_loop/evidence/ELP2-10/CLAUDE_FE069_PAGINATION_HANDOFF_2026-10-27.md).
+It remains a consumer task, not evidence of a UI or browser pass.
+
+27Oct STATUS lifetime-cap repair passed a focused disposable PostgreSQL cell,
+including 45 tests and restore; normal hook/commit and connected gate remain
+open: see [source/fingerprint custody packet](execution_loop/evidence/ELP2-10/COMMAND_STATUS_FINGERPRINT_CUSTODY_2026-10-27.md).
+Keep original UNKNOWN/source custody and the existing commissioning gates.
+
