@@ -16533,3 +16533,8 @@ transport alternatives and exact Edge/PM authority inputs are recorded in
 [Paper authority and transport receipt](execution_loop/evidence/ELP2-10/PAPER_AUTHORITY_AND_SOURCE_TRANSPORT_2026-10-27.md).
 No grant, source TLS change or connected PASS is claimed.
 
+The previously created distinct Research trust candidates now have public leaf,
+CA, expiry and proposed hop assignments in [trust pin return](execution_loop/evidence/ELP2-10/CORE_RESEARCH_DISCOVERY_TRUST_PINS_2026-10-27.md).
+They remain uninstalled/untransferred; matching endpoint/SAN and source transport
+are required before commissioning.
+
