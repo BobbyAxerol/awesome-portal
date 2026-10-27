@@ -81,3 +81,17 @@ describe("small parsers", () => {
     expect(equityScalarOf("sparkline").id).toBe("value");
   });
 });
+
+describe("fixedDecimals (QA4 R2-21): one decimal rule per column, exact arithmetic", () => {
+  it("rounds half away from zero on the exact string", async () => {
+    const { fixedDecimals } = await import("./fleetMetricsModel");
+    expect(fixedDecimals("74.955", 2)).toBe("74.96");
+    expect(fixedDecimals("57.54", 2)).toBe("57.54");
+    expect(fixedDecimals("86.4", 2)).toBe("86.40");
+    expect(fixedDecimals("0", 2)).toBe("0.00");
+    expect(fixedDecimals("-1.5746", 2)).toBe("-1.57");
+    expect(fixedDecimals("-0.001", 2)).toBe("0.00");
+    expect(fixedDecimals("1.7072", 2)).toBe("1.71");
+    expect(fixedDecimals("not a number", 2)).toBe("not a number");
+  });
+});

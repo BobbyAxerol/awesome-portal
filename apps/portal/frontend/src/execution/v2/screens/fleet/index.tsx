@@ -195,7 +195,7 @@ export default function FleetScreen({ api, workspaceId, streamFlag = FLEET_STREA
   const basis = useMemo(() => basisOf(basisId, seenBasis), [basisId, seenBasis]);
   const datasetFilters = useMemo<DatasetFilters | null>(() => {
     if (scope === null) return null;
-    const field = groupFieldOf(params.get("group"));
+    const field = boardView && groupOptions.some((option) => option.field === "stage_presence") ? "stage_presence" as const : groupFieldOf(params.get("group"));
     const group = field !== null && groupOptions.some((option) => option.field === field) ? field : null;
     const second = groupFieldOf(params.get("then"));
     return {
@@ -205,7 +205,7 @@ export default function FleetScreen({ api, workspaceId, streamFlag = FLEET_STREA
       sorts, ranges, basis, portfolios, venues, sources, version, lifecycle: lifecycleFilter, evidence,
       ...(workspaceId ? { workspaceId } : {}),
     };
-  }, [scope, q, owner, healths, sort, params, groupOptions, workspaceId, sorts, ranges, basis, portfolios, venues, sources, version, lifecycleFilter, evidence]);
+  }, [scope, q, owner, healths, sort, params, groupOptions, boardView, workspaceId, sorts, ranges, basis, portfolios, venues, sources, version, lifecycleFilter, evidence]);
   const offeredSorts = offered === null ? null : offered.sortFields;
   const [datasetNonce, setDatasetNonce] = useState(0);
   const dataset = useFleetDataset(
@@ -233,6 +233,15 @@ export default function FleetScreen({ api, workspaceId, streamFlag = FLEET_STREA
   const loaded = useMemo(() => read.items.map(toFleetRow), [read.items]);
   const visible = useMemo(() => loaded.filter((row) => inStages(row, stage)).slice(0, ROW_CAP), [loaded, stage]);
   const datasetRows = useMemo(() => dataset.rows.slice(0, ROW_CAP), [dataset.rows]);
+  // Rows per stage over the whole filtered query, from the server's stage_presence groups (board lanes state their total, never 0 for "not loaded").
+  const laneTotals = useMemo(() => {
+    const out: Record<string, number> = {};
+    for (const group of dataset.last === null ? [] : dataset.last.groups) {
+      const part = group.key.length === 1 ? group.key[0]! : null;
+      if (part !== null && part.field === "stage_presence" && part.value !== null) out[part.value] = group.uniqueRowCount;
+    }
+    return Object.keys(out).length === 0 ? undefined : out;
+  }, [dataset.last]);
   const selected = selection === null ? null : loaded.find((row) => row.alphaId === selection) ?? null;
   const datasetSelected = selection === null ? null : dataset.rows.find((row) => row.rowKey === selection) ?? null;
   // The lens counts and the KPI strip are the fleet read's summary (the whole scope, whatever the filters): never the dataset's.
@@ -605,7 +614,7 @@ export default function FleetScreen({ api, workspaceId, streamFlag = FLEET_STREA
       ) : null}
       {!archived && datasetMode ? (
         <p className="exec-fleet-counts-src" data-testid="counts-source" title={countsRead.envelope?.sourceAsOf ? `${COUNTS_SOURCE_TITLE} Counts as of ${formatInstant(countsRead.envelope.sourceAsOf)}.` : COUNTS_SOURCE_TITLE}>
-          Counts: Fleet read, alphas in your whole scope. Table: Manager dataset, alpha versions in {scopeWords}.
+          Counts: Fleet read, alphas in your whole scope. Table: Manager dataset, alpha versions in {scopeWords}.{dataset.total === null || dataset.total === undefined ? "" : ` ${dataset.total} rows match, one per alpha version in a portfolio. Alphas (tabs), deployments (header) and rows (table) are three units: none has to equal another.`}
           <GapWhy name="How these counts relate" next={null} rows={[
             "Alphas, Deployments, Portfolios and the stage tabs are the Fleet read over your whole scope: the unit is an alpha (Deployments: running deployments).",
             "An alpha in two stages is counted in each of its tabs, so the stage tabs do not add up to Alphas, and Real-funded (Canary + Live) is an upper bound.",
@@ -882,6 +891,7 @@ export default function FleetScreen({ api, workspaceId, streamFlag = FLEET_STREA
                         selectedKey={selection}
                         hrefFor={(row) => withContext(withOrigin(alphaHref(row.alphaId), { kind: "fleet" }, params), params)}
                         onOpen={(row) => { if (row.rowKey.length <= SEL_MAX) select(row.rowKey); }}
+                        laneTotals={laneTotals}
                         hasMore={dataset.nextCursor !== null}
                         loadingMore={dataset.loadingMore}
                         onLoadMore={datasetCapped ? undefined : dataset.loadMore}

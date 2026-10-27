@@ -44,6 +44,8 @@ export interface FleetDatasetBoardProps {
   hrefFor(row: ManagerRow): string;
   onOpen(row: ManagerRow): void;
   /** More rows exist on the server than are loaded: a lane without a loaded card is "not loaded", never 0. */
+  /** Rows per stage over the whole filtered query (the server's stage_presence groups), when published. */
+  laneTotals?: Readonly<Record<string, number>>;
   hasMore?: boolean;
   loadingMore?: boolean;
   onLoadMore?(): void;
@@ -88,12 +90,14 @@ function Card({ row, lane, selected, href, onOpen, metricKeys, showEnvironment }
   );
 }
 
-export function FleetDatasetBoard({ rows, stages = [], metricKeys, showEnvironment = false, selectedKey, hrefFor, onOpen, hasMore = false, loadingMore = false, onLoadMore }: FleetDatasetBoardProps) {
+export function FleetDatasetBoard({ rows, stages = [], metricKeys, showEnvironment = false, selectedKey, hrefFor, onOpen, hasMore = false, loadingMore = false, onLoadMore, laneTotals }: FleetDatasetBoardProps) {
   const wanted = stages.length === 0 ? MANAGER_STAGES : MANAGER_STAGES.filter((lane) => stages.some((stage) => stage.toUpperCase() === lane));
   return (
     <div className="exec-fleet-board" role="group" aria-label="Alpha fleet board">
       {wanted.map((lane) => {
         const cards = rows.filter((row) => row.stagePresence.includes(lane));
+        const laneTotal = laneTotals?.[lane];
+        const laneHasMore = laneTotal === undefined ? hasMore : laneTotal > cards.length;
         const domain = SIMULATED.includes(lane) ? "simulated" : "real";
         const headingId = `exec-fleet-lane-${lane.toLowerCase()}`;
         return (
@@ -101,13 +105,13 @@ export function FleetDatasetBoard({ rows, stages = [], metricKeys, showEnvironme
             <header className="exec-fleet-lane-head">
               <h3 id={headingId} className="exec-fleet-lane-title">{LANE_LABEL[lane]}</h3>
               <span className="exec-fleet-lane-tag" data-domain={domain}>{domain === "simulated" ? "SIMULATED" : "REAL-FUNDED"}</span>
-              <span className="exec-fleet-lane-count">{cards.length} loaded{hasMore ? ", more not loaded" : ""}</span>
+              <span className="exec-fleet-lane-count">{laneTotals?.[lane] !== undefined ? `${cards.length} of ${laneTotals[lane]} rows loaded` : `${cards.length} loaded${hasMore ? ", more not loaded" : ""}`}</span>
               <span className="exec-fleet-sr exec-fleet-lane-gap">Readiness: {notPublished(BOARD_READINESS)} for every alpha here. Exit review: {notPublished(EXIT_REVIEW_GAP)}.</span>
             </header>
             {cards.length === 0 ? (
-              hasMore ? (
+              laneHasMore ? (
                 <p className="exec-fleet-lane-empty" data-testid="lane-not-loaded">
-                  Not loaded: the loaded rows hold none in this stage, but more rows exist.{" "}
+                  Not loaded: {laneTotal === undefined ? "the loaded rows hold none in this stage, but more rows exist." : `${laneTotal} rows in this stage are not on screen yet.`}{" "}
                   {onLoadMore ? <button type="button" className="exec-fleet-btn" disabled={loadingMore} onClick={onLoadMore}>{loadingMore ? "Loading" : "Load more"}</button> : null}
                 </p>
               ) : <p className="exec-fleet-lane-empty">No alpha in this stage.</p>

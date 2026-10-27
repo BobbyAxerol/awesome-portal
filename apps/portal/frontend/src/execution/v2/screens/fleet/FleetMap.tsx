@@ -24,6 +24,7 @@ import { ENVIRONMENT_DOMAIN, type ManagerRow } from "../../readers/managerDatase
 import type { ManagerPartition, ManagerPartitionedMetrics } from "../../readers/managerMetric";
 import { MetricValue } from "../manager/MetricValue";
 import { DOMAIN_LABEL } from "./PartitionFigures";
+import { fixedDecimals } from "./fleetMetricsModel";
 import { healthView, notPublished, stageLabel, type UnpublishedFact } from "./fleetModel";
 
 import "./partitionFigures.css";
@@ -210,7 +211,7 @@ export function FleetMap({ rows, metricKeys, hrefFor, selectedKey, onOpen }: Fle
                     <Link className="exec-fleet-name" title={row.name ?? row.alphaId} to={hrefFor(row)}>{row.name ?? row.alphaId}</Link>
                     <span className="exec-fleet-version">{row.alphaVersionId} · {row.currentStage === null ? "No single stage" : stageLabel(row.currentStage)}</span>
                     <MetricValue metric={metric} />
-                    <span className="exec-fleet-version">Return 30D <MetricValue metric={figure ?? null} signed /></span>
+                    <span className="exec-fleet-version">Return 30D {figure !== undefined && figure.kind === "value" ? <span className="exec-mgr-num" title={figure.exact}>{figure.exact.startsWith("-") || /^0(\.0+)?$/.test(figure.exact) ? "" : "+"}{fixedDecimals(figure.exact, 2)}%</span> : <MetricValue metric={figure ?? null} />}</span>
                     {health ? <Flag kind={health.kind} label={health.label} size="sm" /> : <NaWhy className="exec-fleet-np" reason="The dataset published no health for this row." />}
                     {onOpen ? <button type="button" className="exec-fleet-link" onClick={() => onOpen(row)}>Peek</button> : null}
                   </li>

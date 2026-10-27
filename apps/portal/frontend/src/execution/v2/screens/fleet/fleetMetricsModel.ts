@@ -28,6 +28,22 @@ export interface SortKey { field: ManagerSortField; dir: SortDir }
 export const MONEY_FIELDS: readonly ManagerSortField[] = ["allocation", "net_pnl", "unrealized_pnl", "balance_total", "equity_30d_end_value"];
 export const isMoneyField = (field: ManagerSortField): boolean => MONEY_FIELDS.includes(field);
 
+/**
+ * One decimal rule per column (QA4 R2-21): the exact published string rounded half away from zero to `places` for display only; the exact
+ * string stays on the title. Pure string/BigInt arithmetic, never a float. A non-decimal input is returned unchanged.
+ */
+export function fixedDecimals(exact: string, places: number): string {
+  const m = /^(-?)(\d+)(?:\.(\d+))?$/.exec(exact);
+  if (m === null) return exact;
+  const [, sign, whole, frac = ""] = m;
+  const padded = frac.padEnd(places + 1, "0");
+  let scaled = BigInt(whole + padded.slice(0, places)) * 10n + BigInt(padded[places] ?? "0");
+  scaled = (scaled + 5n) / 10n;
+  const text = scaled.toString().padStart(places + 1, "0");
+  const out = places === 0 ? text : `${text.slice(0, -places)}.${text.slice(-places)}`;
+  return sign === "-" && /[1-9]/.test(out) ? `-${out}` : out;
+}
+
 /* ── columns ───────────────────────────────────────────────────────────── */
 
 export interface DatasetColumnSpec {

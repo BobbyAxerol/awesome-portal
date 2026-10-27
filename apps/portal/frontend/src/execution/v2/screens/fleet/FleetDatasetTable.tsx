@@ -21,7 +21,7 @@ import { MetricValue } from "../manager/MetricValue";
 import { FE, healthView, humanize, type UnpublishedFact } from "./fleetModel";
 import { ENVIRONMENT_LABEL, findGroup, groupEntries, groupLabel, inStageOf, lifecycleFlagOf, sourceFlagOf, stageViewOf, type GroupedEntry } from "./fleetDatasetModel";
 import {
-  DATASET_COLUMNS, equityScalarOf, isMoneyField, qbtsOf, qbtsRows, sortFieldOf, type EquityScalar, type SortKey,
+  DATASET_COLUMNS, equityScalarOf, fixedDecimals, isMoneyField, qbtsOf, qbtsRows, sortFieldOf, type EquityScalar, type SortKey,
 } from "./fleetMetricsModel";
 import { DOMAIN_LABEL, PartitionFigures, partitionTag } from "./PartitionFigures";
 import { spineStage } from "./FleetTable";
@@ -72,7 +72,7 @@ function PortfolioCell({ row, owner }: { row: ManagerRow; owner: boolean }) {
   return (
     <span className="exec-fleet-portfolio">
       <span className="exec-fleet-portfolio-line">
-        <span className="exec-fleet-trunc" title={row.portfolioId}>{row.portfolioId}</span>
+        <Link className="exec-fleet-trunc" title={`Portfolio ${row.portfolioId}`} to={`/deployments/portfolios/${encodeURIComponent(row.portfolioId)}`} onClick={(event) => event.stopPropagation()}>{row.portfolioId}</Link>
         {n > 1 ? (
           <span className="exec-fleet-badge" title={`${n} deployments: ${row.children.map((child) => `${child.deploymentId} (${child.stage})`).join(", ")}`}>{n}</span>
         ) : null}
@@ -101,7 +101,7 @@ export function QbtsCell({ row, carried }: { row: ManagerRow; carried: boolean }
   }
   return (
     <span className="exec-fleet-qbts" data-state="value" data-band={view.band?.code}>
-      <span className="exec-mgr-num" title={`${view.exact === "0" ? "A published score of zero (a missing score reads Not available) · " : ""}${view.policy === null ? (view.exact ?? "") : `${view.exact} · policy ${view.policy}`}`} data-zero={view.exact === "0" ? "true" : undefined}>{view.exact}</span>
+      <span className="exec-mgr-num" title={`${view.exact === "0" ? "A published score of zero (a missing score reads Not available) · " : ""}${view.policy === null ? (view.exact ?? "") : `${view.exact} · policy ${view.policy}`}`} data-zero={view.exact === "0" ? "true" : undefined}>{view.exact === null ? null : fixedDecimals(view.exact, 2)}</span>
       {view.band ? <Flag kind={view.band.kind} label={view.band.label} size="sm" /> : <span className="exec-fleet-np" title="The dataset names no band for this score.">No band</span>}
       {view.provisional ? <Flag kind="pending" label="Provisional" size="sm" /> : null}
       <GapWhy name={`QBTS details, ${row.name ?? row.alphaId}`} rows={qbtsRows(view)} next={null} />

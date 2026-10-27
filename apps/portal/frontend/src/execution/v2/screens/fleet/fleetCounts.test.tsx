@@ -105,7 +105,7 @@ describe("the KPI strip and the lens counts stay on a dataset table (Bobby 2026-
     mount(api, LIVE_URL);
     await loaded();
     const line = await screen.findByTestId("counts-source");
-    expect(line.textContent).toBe("Counts: Fleet read, alphas in your whole scope. Table: Manager dataset, alpha versions in Real-funded.");
+    expect(line.textContent).toMatch(/^Counts: Fleet read, alphas in your whole scope\. Table: Manager dataset, alpha versions in Real-funded\. \d+ rows match, one per alpha version in a portfolio\. Alphas \(tabs\), deployments \(header\) and rows \(table\) are three units: none has to equal another\.$/);
     expect(line.title).toContain("not narrowed by the lens or the filters");
     expect(line.title).toMatch(/Counts as of \d{1,2} [A-Z][a-z]{2} \d{2}:\d{2}Z/);
     expect(line.title).toContain("one row per alpha version in a portfolio");
