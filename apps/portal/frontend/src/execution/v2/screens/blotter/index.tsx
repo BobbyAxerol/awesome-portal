@@ -629,7 +629,7 @@ export default function BlotterScreen({ api, accessHref, chartHref: chartHrefPro
                       {isOpen ? (
                         <tr className="exec-blt2-kid">
                           <td colSpan={visibleColumns.length}>
-                            <OrderDetail order={order} legs={legs} fills={fills} loadedFills={page.fills.length} funnel={funnels[order.orderId] ?? { phase: "loading" }} chartHref={orderChart} />
+                            <OrderDetail order={order} legs={legs} fills={fills} loadedFills={page.fills.length} asOf={page.asOf} funnel={funnels[order.orderId] ?? { phase: "loading" }} chartHref={orderChart} />
                           </td>
                         </tr>
                       ) : null}

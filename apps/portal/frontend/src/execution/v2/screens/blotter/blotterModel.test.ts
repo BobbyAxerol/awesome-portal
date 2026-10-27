@@ -7,6 +7,7 @@
  * L3  hostile decimals, enums, ids, roots and prototype pollution never throw,
  *     never leak and never turn into a success.
  */
+import { pathTimeProblem } from "./OrderDetail";
 import { describe, expect, it } from "vitest";
 
 import { readProfileEnvelope } from "../../../api/profileRead";
@@ -339,5 +340,24 @@ describe("CSV export of the loaded rows", () => {
   it("names the file for the environment and the read's as-of", () => {
     expect(blotterCsvName("Paper", "2026-10-21T10:42:01Z")).toBe("blotter-paper-20261021T104201Z.csv");
     expect(blotterCsvName("Paper", null)).toBe("blotter-paper-asof-not-published.csv");
+  });
+});
+
+describe("an order path never shows a time that cannot belong to the order (QA4 R4-01)", () => {
+  const stage = (name: string) => ({ name, state: "OBSERVED", events: [], eventCount: 1, truncated: false } as unknown as Parameters<typeof pathTimeProblem>[0]);
+  const order = { submittedAt: "2026-10-27T11:35:53Z" };
+
+  it("a hop later than the page's as-of is not shown", () => {
+    expect(pathTimeProblem(stage("FILL"), "2026-10-27T12:04:00Z", order, "2026-10-27T12:03:57Z")).toBe(true);
+    expect(pathTimeProblem(stage("FILL"), "2026-10-27T11:35:54Z", order, "2026-10-27T12:03:57Z")).toBe(false);
+  });
+
+  it("a submitted time that is not the order's own is not shown; the order's own is", () => {
+    expect(pathTimeProblem(stage("SUBMIT"), "2026-10-27T12:03:58Z", order, null)).toBe(true);
+    expect(pathTimeProblem(stage("SUBMIT"), "2026-10-27T11:35:53Z", order, null)).toBe(false);
+  });
+
+  it("no time, no problem", () => {
+    expect(pathTimeProblem(stage("SUBMIT"), null, order, "2026-10-27T12:03:57Z")).toBe(false);
   });
 });

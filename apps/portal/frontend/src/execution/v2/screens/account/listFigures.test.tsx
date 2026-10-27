@@ -184,7 +184,7 @@ describe("the tab strip counts", () => {
     mount();
     await loaded();
     expect(tabs()).toEqual(["Real-fundedn/a", "Paper4", "Sandboxn/a"]);
-    expect(screen.getByRole("button", { name: /^Issues only/ }).textContent).toBe("Issuesn/a");
+    expect(screen.getByRole("button", { name: /^Issues only/ }).textContent).toBe("Issues2"); // the lens counts the loaded rows by the rules the rows show
   });
 
   it("keeps a counted zero as 0", async () => {
@@ -202,14 +202,14 @@ describe("the tab strip counts", () => {
     expect(screen.getByRole("button", { name: /^Issues only/ }).getAttribute("title")).not.toContain("across all environments");
   });
 
-  it("shows the published all-environment issue count on the Issues control (a stable total), and the loaded count stays in its label and title", async () => {
+  it("counts the loaded rows by the rules the rows show on the Issues control; the server total is in its title", async () => {
     stubFetch(() => listBody());
     mount();
     await loaded();
     const button = screen.getByRole("button", { name: /^Issues only/ });
     expect(button.getAttribute("title")).toContain("3 across all environments");
-    // The visible number is the published total; the loaded rows (okx_mixed sync delayed, gate_legacy suspended) are in the label.
-    expect(button.querySelector(".exec-acct-tab-count")?.textContent).toBe("3");
+    // The visible number counts the loaded rows (okx_mixed sync delayed, gate_legacy suspended); the server total is in the title.
+    expect(button.querySelector(".exec-acct-tab-count")?.textContent).toBe("2");
     expect(button.getAttribute("aria-label")).toContain("2 in the");
     fireEvent.click(screen.getByRole("tab", { name: /^Sandbox/ }));
   });

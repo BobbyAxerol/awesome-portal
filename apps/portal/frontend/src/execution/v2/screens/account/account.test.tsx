@@ -1141,8 +1141,7 @@ describe("Accounts list: the Issues only count", () => {
     await loadedList();
     const button = issuesButton();
     // Page one holds bnc_sub (stale) and bnc_main (ok): one issue so far, more behind the cursor.
-    // The visible number is the server's published total (none in this double); the loaded count is in the label.
-    expect(button.querySelector(".exec-acct-tab-count")).toBeNull();
+    expect(button.querySelector(".exec-acct-tab-count")?.textContent).toBe("1+");
     expect(button.getAttribute("aria-label")).toBe("Issues only, 1+ in the 2 loaded rows");
     expect(button.getAttribute("title")).toContain("The server does not filter on this");
     fireEvent.click(screen.getByRole("button", { name: "Load more" }));
@@ -1406,6 +1405,8 @@ describe("Account 360 and Accounts: rendered text hygiene", () => {
     mount("/deployments/accounts");
     await loadedList();
     expect(document.querySelector(".exec-acct-fresh")?.textContent).toMatch(/\d+ of 3 last updated over 30 min before the read/);
+    // One chip for the worst of what is loaded: never Fresh beside stale bindings (QA4 R4-04).
+    expect(document.querySelector(".exec-acct-fresh")?.textContent).not.toMatch(/Fresh/);
   });
 
   it("Account 360 says so when the binding's published headroom is below zero, as the Accounts list does (QA3 R4-11)", async () => {

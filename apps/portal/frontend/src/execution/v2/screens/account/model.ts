@@ -324,7 +324,19 @@ export function matchesCredential(row: BindingRow, filter: CredentialFilter | nu
 
 /** The Issues toggle, applied to loaded rows only. */
 export function inScope(row: BindingRow, issuesOnly: boolean): boolean {
-  return issuesOnly ? row.issue : true;
+  return issuesOnly ? rowIsIssue(row) : true;
+}
+
+/**
+ * What the Issues lens counts, the same rules the row itself shows: a state or credential word the source calls wrong, OR a published
+ * capital check that is EXCEEDED (virtual above physical, in any currency line). A row whose figures are read later (the capped
+ * fallback) is judged by the words alone until its check exists.
+ */
+export function rowIsIssue(row: BindingRow): boolean {
+  if (row.issue) return true;
+  const facts = row.listFacts;
+  if (facts === null || facts === undefined) return false;
+  return [facts, ...(facts.more ?? [])].some((line) => checkOf(line.physical, line.virtual).kind === "exceeded");
 }
 
 /** Keyset merge: a later page never repeats a row the reader already has. */
@@ -588,7 +600,10 @@ export function readAccountView(profile: ProfileEnvelope, accountId: string): Ac
 
   const names = displayNames(rowsOf(profile, "deployments"), rowsOf(profile, "portfolio_allocations"));
   const portfolioOf = (id: string): string | null => {
-    const shown = [...new Set(rowsOf(profile, "deployments").filter((row) => text(row.account_id) === id).flatMap((row) => {
+    // The same record the Logical sleeve box reads: the sleeve's deployment rows, else its allocation rows (one rule, table and box agree).
+    const own = rowsOf(profile, "deployments").filter((row) => text(row.account_id) === id);
+    const from = own.length > 0 ? own : rowsOf(profile, "portfolio_allocations").filter((row) => text(row.account_id) === id);
+    const shown = [...new Set(from.flatMap((row) => {
       const pf = text(row.portfolio_id);
       return pf ? [names.portfolios[pf] ?? pf] : [];
     }))];

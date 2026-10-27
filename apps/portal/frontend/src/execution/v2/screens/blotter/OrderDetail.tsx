@@ -63,20 +63,33 @@ function elapsed(from: string | null, to: string | null): string | null {
   return ms < 10_000 ? `+${ms} ms` : `+${(ms / 1000).toFixed(1)} s`;
 }
 
-function PathRows({ stages }: { stages: readonly FunnelStage[] }) {
+/**
+ * A hop time that cannot belong to this order is not printed: one later than the page's own as-of, or a Submitted time that is not the
+ * order's own submitted time (QA4 R4-01). The row says it instead, so a path is never drawn from "now".
+ */
+export function pathTimeProblem(stage: FunnelStage, at: string | null, order: { submittedAt: string | null }, asOf: string | null): boolean {
+  if (at === null) return false;
+  const t = Date.parse(at);
+  if (Number.isNaN(t)) return false;
+  if (asOf !== null && !Number.isNaN(Date.parse(asOf)) && t > Date.parse(asOf)) return true;
+  return stage.name === "SUBMIT" && order.submittedAt !== null && !Number.isNaN(Date.parse(order.submittedAt)) && Math.abs(t - Date.parse(order.submittedAt)) > 60_000;
+}
+
+function PathRows({ stages, order, asOf }: { stages: readonly FunnelStage[]; order: { submittedAt: string | null }; asOf: string | null }) {
   let previous: string | null = null;
   return (
     <>
       {stages.map((stage) => {
         const first = stage.events[0] ?? null;
         const at = first?.occurredAt ?? null;
-        const gap = elapsed(previous, at);
-        if (at !== null) previous = at;
+        const problem = pathTimeProblem(stage, at, order, asOf);
+        const gap = problem ? null : elapsed(previous, at);
+        if (at !== null && !problem) previous = at;
         return (
           <tr key={stage.name}>
             <td>{STAGE_LABEL[stage.name] ?? humanize(stage.name)}</td>
             <td>
-              {at !== null ? <span className="exec-blt2-num">{shortUtc(at)}</span> : <Flag kind={STAGE_KIND[stage.state] ?? "unknown"} label={stage.state === "MISSING" ? "Not reached" : humanize(stage.state)} size="sm" />}
+              {problem ? <Flag kind="na" label="Time not shown" size="sm" /> : at !== null ? <span className="exec-blt2-num">{shortUtc(at)}</span> : <Flag kind={STAGE_KIND[stage.state] ?? "unknown"} label={stage.state === "MISSING" ? "Not reached" : humanize(stage.state)} size="sm" />}
             </td>
             <td className="exec-blt2-na">{gap ?? ""}</td>
             <td className="exec-blt2-na">
@@ -90,12 +103,14 @@ function PathRows({ stages }: { stages: readonly FunnelStage[] }) {
 }
 
 export function OrderDetail({
-  order, legs, fills, funnel, chartHref, loadedFills,
+  order, legs, fills, funnel, chartHref, loadedFills, asOf = null,
 }: {
   order: BlotterOrder;
   legs: readonly BlotterLeg[];
   fills: readonly BlotterFill[];
   funnel: FunnelRead;
+  /** The page's own as-of: no hop may be later than it. */
+  asOf?: string | null;
   chartHref: string | null;
   /** The fills page this order's fills came from has more rows than it carried. */
   loadedFills: number;
@@ -162,8 +177,9 @@ export function OrderDetail({
         ) : (
           <>
             <table className="exec-blt2-inner">
-              <tbody><PathRows stages={funnel.funnel.stages} /></tbody>
+              <tbody><PathRows stages={funnel.funnel.stages} order={order} asOf={asOf} /></tbody>
             </table>
+            {funnel.funnel.stages.some((stage) => pathTimeProblem(stage, stage.events[0]?.occurredAt ?? null, order, asOf)) ? <p className="exec-blt2-note">A hop time is not shown where it is later than this page's as-of, or where the submitted time is not the order's own. It is not guessed.</p> : null}
             {funnel.funnel.incomplete ? <p className="exec-blt2-note">At least one hop was not observed. It is shown as not reached, not inferred from the hops after it.</p> : null}
           </>
         )}

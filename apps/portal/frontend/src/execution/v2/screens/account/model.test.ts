@@ -21,7 +21,7 @@ import {
   ACCOUNT_CAPABILITY, ACCOUNT_NEEDS, FE, PAGE_LIMIT, ROW_CAP, absentCodeFor, accountHref, activityRows, ageAtRead, updatedAgo, balanceFacts, bindingQuery, branchOf, brokerFacts,
   capitalRows, chooseCurrency, countMetric, coverageFlag, credentialView, deploymentHref, diffFacts, equityModel, freshnessFlag, headroomFacts,
   isNegative, ledgerPnl, marginFacts, matchesCredential, mergeBindings, metricOf, notPublished, notPublishedReason, populationOf, readAccountView,
-  readCredentialFilter, readTab, readViewMode, resourceReason, resourceStatus, sleeveRows, stateView, syncView, timeOf, toBindingRow, triadModel,
+  readCredentialFilter, readTab, rowIsIssue, readViewMode, resourceReason, resourceStatus, sleeveRows, stateView, syncView, timeOf, toBindingRow, triadModel,
   checkOf, compareDecimals, inScope, ROTATE_FALLBACK_REASON, rotateCredential, type AccountView,
 } from "./model";
 import { NOT_COMMISSIONED_WHY } from "../stage/reasons";
@@ -683,8 +683,11 @@ describe("the sleeve's portfolio and deployments when the read carries no deploy
   it("come from the allocation rows of the same read, never invented", () => {
     const view = readAccountView(readProfileEnvelope(raw({
       accounts: [{ account_id: "acc_x", label: "X sleeve", venue: "BINANCE", state: "ACTIVE" }],
-      portfolio_allocations: [{ account_id: "acc_x", deployment_id: "dep_x1", portfolio_id: "pf_x", mode: "live", currency: "USDT", allocated_capital: "25000.00" }],
+      venue_accounts: [{ binding_id: "b_x@BINANCE", account_id: "acc_x" }],
+      portfolio_allocations: [{ account_id: "acc_x", deployment_id: "dep_x1", portfolio_id: "pf_x", portfolio_name: "Funding Book", mode: "live", currency: "USDT", allocated_capital: "25000.00" }],
     }))!, "acc_x");
+    // The sleeves table reads the same record as the Logical sleeve box.
+    expect(view.sleeves.map((sleeve) => sleeve.portfolio)).toEqual(["Funding Book"]);
     expect(view.identity.portfolios).toEqual(["pf_x"]);
     expect(view.deployments).toEqual([{ id: "dep_x1", mode: "live", stage: null }]);
   });
@@ -693,5 +696,24 @@ describe("the sleeve's portfolio and deployments when the read carries no deploy
     const view = readAccountView(readProfileEnvelope(raw({ accounts: [{ account_id: "acc_y", label: "Y" }] }))!, "acc_y");
     expect(view.identity.portfolios).toEqual([]);
     expect(view.deployments).toEqual([]);
+  });
+});
+
+describe("what the Issues lens counts (QA4 R4-04)", () => {
+  const at = "2026-10-17T09:00:00.000Z";
+  const amount = (value: string) => [{ currency: "USDT", value, observedAt: at, coverage: "COMPLETE" }];
+  const item = (equity: string, used: string): BindingItem => ({
+    bindingId: "b1@BINANCE", accountId: "acc_b1", venue: "BINANCE", state: "ACTIVE", credentialState: "SYNC_SYNCED", updatedAt: at,
+    figures: { nativeEquity: amount(equity), virtualUsed: amount(used), virtualHeadroom: amount("0.00"), sleeveCount: { count: 1, observedAt: at, coverage: "COMPLETE" } },
+  } as unknown as BindingItem);
+
+  it("a binding whose virtual sum is above its physical equity is an issue, though its words are fine", () => {
+    expect(rowIsIssue(toBindingRow(item("79815.20", "80000.50")))).toBe(true);
+    expect(inScope(toBindingRow(item("79815.20", "80000.50")), true)).toBe(true);
+  });
+
+  it("within physical, with fine words, is not an issue; a wrong word still is", () => {
+    expect(rowIsIssue(toBindingRow(item("100000.00", "80000.50")))).toBe(false);
+    expect(rowIsIssue(toBindingRow({ ...item("100000.00", "80000.50"), credentialState: "EXPIRED" }))).toBe(true);
   });
 });

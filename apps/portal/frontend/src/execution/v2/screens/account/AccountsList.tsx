@@ -170,7 +170,7 @@ export function AccountsList({ api, binding = null, capabilities }: AccountsList
     return block !== null ? { kind: "absent" } : null;
   };
   const issuesEverywhere = block?.issues;
-  const issuesCount: TabCount = typeof issuesEverywhere === "number" ? { kind: "number", value: issuesEverywhere } : block !== null ? { kind: "absent" } : null;
+  const issuesCount: TabCount = null; // the Issues control counts the loaded rows by the rules the rows show; the server's total is in its title
   const countNode = (count: TabCount) => (count === null ? null
     : count.kind === "number" ? <span className="exec-acct-tab-count">{count.value}</span>
       : <span className="exec-acct-tab-count" data-state="absent" aria-label="Count not published">n/a</span>);
@@ -324,7 +324,8 @@ export function AccountsList({ api, binding = null, capabilities }: AccountsList
           <p className="exec-acct-subtitle">Venue bindings and the sleeves on them</p>
         </div>
         <div className="exec-acct-fresh">
-          {fresh ? <Flag kind={fresh.kind} label={fresh.label} size="sm" /> : null}
+          {/* One chip for the worst of what is loaded: a fresh read never sits beside stale bindings (QA4 R4-04). */}
+          {fresh && !(fresh.kind === "ok" && staleLoaded > 0) ? <Flag kind={fresh.kind} label={fresh.label} size="sm" /> : null}
           {staleLoaded > 0 ? <Flag kind="stale" label={`${staleLoaded} of ${all.length} last updated over ${UPDATED_STALE_MINUTES} min before the read`} size="sm" /> : null}
           {envelope ? (
             <span>
@@ -368,10 +369,10 @@ export function AccountsList({ api, binding = null, capabilities }: AccountsList
               aria-label={issueCountText === null ? "Issues only, count shown once the rows are read" : `Issues only, ${issueCountText} in the ${all.length} loaded rows`}
               title={issueCountText === null
                 ? "The count appears once the rows are read. The server does not filter on this."
-                : `${issueCountText} of the ${all.length} loaded rows need attention. The server does not filter on this.${typeof issuesEverywhere === "number" ? ` ${issuesEverywhere} across all environments.` : ""}`}
+                : `${issueCountText} of the ${all.length} loaded rows need attention: a wrong state or credential, or virtual capital above the physical equity. The server does not filter on this.${typeof issuesEverywhere === "number" ? ` ${issuesEverywhere} across all environments.` : ""}`}
               onClick={() => setLocal("issues", issuesOnly ? "" : "1")}
             >
-              Issues{countNode(issuesCount)}
+              Issues{issueCountText !== null ? <span className="exec-acct-tab-count">{issueCountText}</span> : null}
             </button>
           </div>
 
