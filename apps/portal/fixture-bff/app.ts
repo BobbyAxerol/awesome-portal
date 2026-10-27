@@ -24,6 +24,7 @@ import { answerReviewManager, wpAccountBook, wpAlphaResource, wpDeploymentFact, 
 import { setPositiveMode } from "../frontend/e2e/bffPositiveMode";
 import { commandStoryRoute } from "./command-story";
 import { applyScenarioBody, resetFixtureTransitions, scenarioRequest, scenarioVariants } from "./scenario-apply";
+import { rosterNames } from "./roster-names";
 import { onScenarioChange, healsDoubles, configuredScenario, configureScenario, DEFAULT_SCENARIO, type FixtureScenario, FIXTURE_SCENARIOS, getScenario, isFixtureScenario, resetScenario, SCENARIO_DESCRIPTIONS, setScenario } from "./scenario";
 import { transformReviewBody } from "./review-relations";
 import { rebaseBody } from "./time-rebase";
@@ -260,7 +261,8 @@ function answerFor(config: FixtureConfig, rawRequest: BffRequest): BffResponse |
   // WP-P (R2-02): every alpha resource is derived from that alpha's own deployments in the positive-like scenarios, not cloned from the double's one alpha.
   const alphaResource = healsDoubles(getScenario()) ? /^\/api\/v1\/execution\/resources\/alphas\/([^/]+)$/.exec(request.path) : null;
   if (alphaResource !== null) shaped = wpAlphaResource(shaped, decodeURIComponent(alphaResource[1]!));
-  return { ...answered, body: applyScenarioBody(getScenario(), request.path, shaped) };
+  const scenarioBody = applyScenarioBody(getScenario(), request.path, shaped);
+  return { ...answered, body: healsDoubles(getScenario()) && typeof scenarioBody !== "string" ? rosterNames(scenarioBody) : scenarioBody }; // WORLD: one roster of people
 }
 
 export function createFixtureServer(config: FixtureConfig): Server {
