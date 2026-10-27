@@ -4,6 +4,7 @@
  * series use this SAME adapter only after the source owner supplies a mapping.
  */
 import { accessDigest } from "./access-policy";
+import { sumExactDecimals } from "../research/exact-decimal";
 import { buildManagerEconomicSourceInput, prepareManagerEconomicSourceFactory } from "./manager-economic-source-input";
 import type { EconomicSourceReduction } from "./manager-economic-source.contract";
 import type { ManagerFact, ManagerModelDocument } from "./manager-model.contract";
@@ -33,6 +34,14 @@ const text = (v: unknown): v is string => typeof v === "string" && v.length > 0 
 const tupleKey = (f: ManagerFact) => JSON.stringify([f.tuple.alpha_id, f.tuple.alpha_version_id, f.tuple.portfolio_id,
   f.tuple.deployment_id, f.tuple.account_id]);
 const sorted = (values: readonly string[]) => [...new Set(values)].sort();
+// Bind amounts by exact numeric value, not formatting. The reducer already
+// canonicalizes decimals when identifying identical immutable source rows.
+// Never coerce to Number: that could hide a meaningful small difference.
+const sameExactAmount = (left: string, right: string | null): boolean => {
+  if (right === null) return false;
+  const canonical = sumExactDecimals([left]);
+  return canonical !== null && canonical === sumExactDecimals([right]);
+};
 function detached<T>(value: T): T {
   const copy: T = JSON.parse(JSON.stringify(value));
   const freeze = (v: unknown): void => { if (v && typeof v === "object") { Object.values(v).forEach(freeze); Object.freeze(v); } };
@@ -136,7 +145,7 @@ export class ManagerEconomicSourceRuntime {
       const seen = new Set<string>();
       for (const row of input.rows) {
         const f = byId.get(row.portal_fact_id);
-        if (row.evidence !== "PROVEN_SOURCE_ROW" || !f || seen.has(row.portal_fact_id) || row.amount !== f.metric.value ||
+        if (row.evidence !== "PROVEN_SOURCE_ROW" || !f || seen.has(row.portal_fact_id) || !sameExactAmount(row.amount, f.metric.value) ||
           row.cut.effective_at_ms !== f.effective_at_ms || row.cut.recorded_through_ms < f.recorded_at_ms ||
           row.ownership !== null && (row.ownership.economic_account_ref.state !== "PROVIDED" ||
           row.ownership.ownership_partition_ref.state !== "PROVIDED" ||

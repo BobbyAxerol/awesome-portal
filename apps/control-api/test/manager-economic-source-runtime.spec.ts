@@ -94,6 +94,29 @@ describe("owning economic source: actual dataset and series path", () => {
     expect(r.reduce(doc, PARTITION, "NET_PNL", doc.facts, tupleSet(doc)).reduction).toMatchObject({ status: "PROPOSAL_NOT_A_PRODUCER_MAPPING", collapsed_duplicate_count: 1 });
   });
 
+  it("binds numerically identical exact decimals without accepting a changed amount", () => {
+    const doc = document();
+    const equivalent = runtime(doc, { resolve: req => {
+      const m = mapped(req);
+      m.rows[0].amount = "14.000";
+      return m;
+    } });
+    expect(totals(doc, equivalent)).toMatchObject({ value: "28", availability: "AVAILABLE" });
+    expect(deriveSeriesObservationsWithEconomicSource(doc, equivalent).observations
+      .find(o => o.subject_id === doc.workspace_id && o.metric === "NET_PNL"))
+      .toMatchObject({ value: "28", reason_code: null });
+
+    const changed = runtime(doc, { resolve: req => {
+      const m = mapped(req);
+      m.rows[0].amount = "14.000000000000000001";
+      return m;
+    } });
+    expect(totals(doc, changed)).toMatchObject({ value: null, reason_code: "ECONOMIC_SOURCE_FACTS_NOT_BOUND" });
+    expect(deriveSeriesObservationsWithEconomicSource(doc, changed).observations
+      .find(o => o.subject_id === doc.workspace_id && o.metric === "NET_PNL"))
+      .toMatchObject({ value: null, reason_code: "ECONOMIC_SOURCE_FACTS_NOT_BOUND" });
+  });
+
   it.each([
     ["changed same-source content", (m: ReturnType<typeof mapped>) => { m.rows[1].cost_layers.included = ["TEST_ONLY:different-content"]; }, "REPORT_SOURCE_CONFLICT"],
     ["overlapping distinct sources", (m: ReturnType<typeof mapped>) => { m.rows[2].leaves = m.rows[0].leaves; }, "REPORT_SOURCE_OVERLAP"],

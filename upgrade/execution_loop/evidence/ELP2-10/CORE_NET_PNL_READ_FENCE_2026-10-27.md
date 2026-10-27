@@ -101,3 +101,25 @@ earlier test counts and is not evidence of Edge-connected or browser success.
 Control API `tsc --noEmit -p tsconfig.build.json`, execution tracking and
 `git diff --check` PASS. As an intermediate slice, §10.10c uses the focused
 gate; the final frozen integration still requires its normal full hook.
+
+## Follow-through: exact-value binding of financial proof
+
+The source mapper must bind each proven row to its authorized Portal fact.
+Previously the runtime compared the decimal strings byte-for-byte, so a
+source row `14.000` was rejected against fact `14` despite the reducer already
+canonicalizing those exact values as identical. This made an otherwise valid
+dataset and its series unavailable. The binding now compares canonical exact
+decimal values using the existing BigInt-based helper, without IEEE-754 or
+rounding. Fact identity, accepted-source mapping, cut, ownership, census and
+all other fences are unchanged; an amount differing by `0.000000000000000001`
+still fails with `ECONOMIC_SOURCE_FACTS_NOT_BOUND` in both paths.
+
+The new regression failed against the prior code (1 failed / 28 passed) and
+passes with this change. Focused synthetic Vitest on runtime, reducer and input:
+**3 files / 111 tests PASS**; Control API build typecheck, execution tracking
+reconciliation and `git diff --check` PASS. These overlap prior totals and do not qualify a
+real financial carrier, ownership/census, Edge connectivity or browser UI.
+No schema, API, frontend, installed runtime or historical receipt changes;
+Claude needs no new field or component. Source mapping and real tie-out remain
+open. This is an intermediate focused slice under §10.10c; a final frozen
+integration still requires the normal full hook.

@@ -16652,3 +16652,8 @@ Public copy delivered to Edge EPG10-08 as
 `f178c2104b5a2fb560df9bdb0e2576fe1b7b00c920e764186d457f8d40f4812e`.
 Delivery is not owner acceptance or a connected result.
 
+27Oct economic-source binding: equivalent exact decimal representations now
+bind without IEEE-754 while materially different values still fail closed in
+both dataset and series. [Regression and remaining real-source gates](execution_loop/evidence/ELP2-10/CORE_NET_PNL_READ_FENCE_2026-10-27.md).
+No frontend contract or source qualification changed.
+
