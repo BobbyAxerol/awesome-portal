@@ -744,12 +744,12 @@ export function simulateStage(path: string, answerBody: unknown): Obj | null {
   }
   if (kind === null || id === undefined || LEGACY_DEPLOYMENT.test(id)) return null;
   const variant = variantOf(id);
-  if (variant === "dark") return null;
+  if (variant === "dark") return darkOfWorld(answerBody, id);
   // A stage page the deployment has not reached is not lit: the published dark body stands (typed absence), whatever the URL says.
-  if (!reached(stageOf(id, kind), kind)) return null;
+  if (!reached(stageOf(id, kind), kind)) return darkOfWorld(answerBody, id);
   // The Canary page of a deployment that is already Live would have to show a finished trial of ITS OWN: no world source carries one, so it is
   // typed (the published dark body); the way to the trial is the predecessor link of the Live page, which names the canary deployment itself.
-  if (kind === "canary" && stageOf(id, kind) === "live") return null;
+  if (kind === "canary" && stageOf(id, kind) === "live") return darkOfWorld(answerBody, id);
   const schema = answerBody.schema_version;
   const body = clone(answerBody);
   switch (kind) {
@@ -762,6 +762,27 @@ export function simulateStage(path: string, answerBody: unknown): Obj | null {
     case "paper":
       return worldStage(kind, paperLit(body, id, variant, seg[3] === "vn-market"), id, variant);
   }
+}
+
+/**
+ * WORLD: a dark stage page (typed absences) of a deployment the world holds keeps the typed absences but NOT the published fixture's identity (dep_88, pf_crypto,
+ * acct_*_grid): the portfolio, the account and the venue it links to are the deployment's own, so no breadcrumb of a dark room is a dead end (QA3 R5-06).
+ */
+function darkOfWorld(answerBody: Obj, requestedId: string): Obj | null {
+  if (!isPositiveMode() || !isObj(answerBody.deployment)) return null;
+  const found = deploymentOf(WORLD_ALIAS[baseDeploymentId(requestedId)] ?? baseDeploymentId(requestedId));
+  if (found === null) return null;
+  const body = clone(answerBody);
+  const deployment = body.deployment as Obj;
+  const { alpha, deployment: d } = found;
+  deployment.deployment_id = requestedId;
+  deployment.portfolio_id = d.portfolioId;
+  deployment.portfolio_name = d.portfolioName;
+  deployment.alpha_id = alpha.id;
+  deployment.alpha_name = alpha.label;
+  deployment.account_id = d.accountId;
+  deployment.venue = d.venue;
+  return body;
 }
 
 // ===== WP-P begin (the stage bodies state the WORLD's facts: ONE account, allocation, dates, positions at one mark, orders, series per deployment)
