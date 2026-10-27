@@ -16606,3 +16606,8 @@ itself deliver financial carrier/authority. [Core intake and exact Edge actions]
 supersede the blanket assertion that no Paper adapter source exists; they do
 not close source, connected or ELP2-10 gates.
 
+27Oct Core review of PM S2: **CHANGES_REQUESTED** for lookback payload
+integrity and an explicit terminal fill-class semantic/quantity disposition.
+[Independent probes and Edge → PM/TS actions](execution_loop/evidence/ELP2-10/PM_S2_PAPER_CANDIDATE_CORE_REVIEW_2026-10-27.md).
+No live source tampering, connected acceptance or financial carrier is asserted.
+
