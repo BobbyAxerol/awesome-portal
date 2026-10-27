@@ -10,9 +10,10 @@ Chúng không thay thế phase hoặc exit gate trong
 - **27Oct Research membership reader — approved, SOURCE_ISOLATED_QUALIFIED:**
   [same08/read09 journal](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#epg10-08-research-reader-db-scope-20261027)
   and [current source/test/install return](../evidence/execution-edge-v1_2/EPG10-08/EDGE_RESEARCH_READER_APPROVED_IMPLEMENTATION_2026-10-27.md)
-  record PMc2668cfa,130 focused/61 disposable PG15 PASS. Real Timescale source
-  refuses inherited PUBLIC metadata SELECT; current Core binding also missing.
-  No silent exception, source ACL/data change, install or connected acceptance.
+  record PMfb9a7ce7,139focused/86full-Timescale PG15/77strict legacyPASS.
+  Exact existing52-object metadata exception pinned; actual-source guardPASS,
+  no shared ACL change/new metadata grant. Core current tuple/workload/deadline
+  is the only external real-install input. Not installed; no connected acceptance.
 
 - **24Oct Original06 worker materialization — ISOLATED_QUALIFIED, NOT_DEPLOYED:**
   [same06 journal](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#epg10-06-worker-oom-follow-through-20261024)

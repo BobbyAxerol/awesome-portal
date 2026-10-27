@@ -6,6 +6,13 @@ This is not another approval request for that delta. **SOURCE_IMPLEMENTED /
 ISOLATED_QUALIFIED / REAL_INSTALL_NOT_READY.** PM sourcec2668cfa is committed
 and clean; no source DB mutation or membership observation has occurred.
 
+**Latest continuation supersedes the earlier pending metadata decision below:**
+the exact existing Timescale metadata exception is implemented and its actual
+source admission guard PASS. No shared ACL was changed. See
+[current continuation result](#continuation-result--exact-metadata-gap-closed).
+Only Core's current/explicit NEW_SELECTED tuple/workload/deadline remains external
+before real installation; historical tuples are not installation authority.
+
 ## Core input needed for the real fixed binding
 
 Core's requested follow-through requires a fixed current Research/Paper tuple.
@@ -214,3 +221,135 @@ Core: read this single final return rather than reusing the proposal's pending
 approval status. Return the exact missing current binding and route the newly
 observed metadata scope decision to Bobby. Do not repeat retired specimens or
 claim source install/connected PASS from source qualification or file delivery.
+
+## Continuation approved27Oct — metadata decision taken; Core input still needed
+
+Bobby requested immediate continuation after the concrete two-input return.
+Edge chose the additive/no-shared-ACL-change option: explicitly admit only the
+exact currently reviewed Timescale extension metadata PUBLIC SELECT set under
+a separately pinned object/definition/ACL/extension digest. Do not call that
+absolute execute-only DB access. This exception gives no new grant, allows no
+application table/column read, DML, prefix exemption or native authority. New or
+changed metadata/privileges must refuse until separately reviewed. The old strict
+behavior remains default without the explicit private source metadata pin.
+Implementation/full-Timescale isolated qualification is IN_PROGRESS from
+c2668cfa; previous test counts above remain previous qualified-source evidence,
+not these new cases. No real installation has occurred.
+
+**Core priority action now, independent of that test:** return these public
+binding fields and private-reference hashes in this existing mailbox/owner-return:
+
+```text
+CORE_BINDING_STATUS=CONFIRMED_CURRENT or NEW_SELECTED
+HUMAN_ISSUER=<confirm/change historical intended issuer above>
+SUBJECT=<confirm/change stable Portal ID above>
+WORKSPACE_ID=<confirm/change workspace above>
+ENVIRONMENT=paper
+WORKLOAD_ID=<the exact Research discovery service identity to commission>
+VALID_UNTIL=<viable finite future UTC deadline, not an expired slot>
+PRIVATE_MANIFEST_REF=<owner-only locator, or NEW_SELECTED pending creation>
+PRIVATE_MANIFEST_SHA256=<actual bytes when created, never a fixture hash>
+```
+
+NEW_SELECTED is allowed when no runtime manifest exists: Core selects the new
+discovery workload/target explicitly; it does not assert that an old runtime is
+configured or that a user already has a membership/grant. No secret value is
+requested. Edge then pins the new source accessor/config and provisions only
+the approved two-role mechanism; current trust/connected authority is qualified
+separately. Do not send a generic READY/health or repeat that Edge must propose
+the DB mechanism: Bobby already approved it and sourcec2668cfa exists.
+
+## Continuation result — exact metadata gap closed
+
+The earlier metadata-decision blocker is **RESOLVED**, not still awaiting Bobby.
+The chosen additive option preserves existing shared ACLs: optional private
+`source.public_metadata_sha256` admits only the exact reviewed PUBLIC SELECT
+Timescale extension-member objects; no pin retains strict rejection. Installer,
+post-install verifier and every restricted observation use the same catalogue
+definition. No schema-prefix exception or install-time auto-adoption. Additional
+objects, changed definitions/ACLs/extension version, column/DML/sequence USAGE or
+UPDATE and callable native authority still refuse. Direct application-table
+SELECT remains unavailable to the new login; owner receives only the approved
+five SELECT grants. Temporary tables remain allowed by existing PUBLIC TEMPORARY,
+not falsely called a persistent data/DDL grant.
+
+### Actual source metadata evidence
+
+Only catalogue metadata, bounded READ ONLY/2s statement/250ms lock transactions,
+ROLLBACK. Exact source still system7674585245102796834/OID16384/live_data_executor.
+Reviewed52 Timescale2.28.3 objects:25tables,19views,8sequences. Canonical numeric
+snapshot149964bytes, SHA256
+`6635b6bad6a117d8ae995909456f4475a9b26a32dcbab325eea38807096b6308`.
+Pins cover OIDs/namespace/owner, complete ACLs/columns/view parse-tree hashes,
+constraints/indexes/options/sequence definitions and extension identity/version.
+No config/job-history/identity/membership/receipt row contents were selected.
+
+The exact opt-in admission guard and existing PUBLIC safety checks both PASS
+on the real source. Five-application-relation catalogue remains27924bytes, SHA
+`fd4a84a99e8e04e9ef18afb2d708e75dfaf65a83ea8306cf921965527f3b1266`.
+New roles0/schema0; no function/credential/listener installed. These hashes are
+observations, not a private pre-install backup or runtime membership acceptance.
+
+### Remaining input, one owner/action
+
+**Core:** return the `CORE_BINDING_STATUS` through `PRIVATE_MANIFEST_SHA256`
+fields in the preceding continuation section. Confirm current values or select
+a fresh stable Research discovery workload/tuple explicitly as NEW_SELECTED,
+with a viable finite deadline. No old runtime credential/session required.
+Edge can then take the bounded private backup, render/review the exact SQL,
+apply only the approved two-role/schema/accessor delta and verify actual hashes;
+trust/listener/discovery acceptance follows matched composition separately.
+No repeated generic phase/DB approval, historical entitlement or fake receipt.
+Full08/read09/ELP2-10 remain OPEN/NOT_MET. Discovery never grants READ or STREAM.
+
+### Final source, qualification and cleanup
+
+PM source commit **fb9a7ce759fac3bbea58d4d9886c8ed6fd30fe5f**, same
+`feat/core-financial-assembly-20261024` checkout above, clean normal Bobby commit:
+8files/+824/-29 including mandatory PM plan. No push/merge/image build or CI.
+Earlier c2668cfa is the predecessor, not the final metadata-capable installer.
+
+| Changed source/test relative to PM checkout | SHA256 |
+| --- | --- |
+| services/portfolio_management/research_reader_metadata.py | 9772931d2cfcbad96664ce568949e7137e384b7dc26082b07eeca23523c3583d |
+| services/portfolio_management/research_reader_install.py | 0e9caf90e1900fc52fddec764c089594dfa983c2e39ce8c2c7f41f37692fa0b1 |
+| services/portfolio_management/research_reader_source.py | a2ee6af783ac976f0c08a18cc8edfef03271cb259353c465f66c6c0e1167b92b |
+| services/portfolio_management/identity_mapping_runtime.py | fc5ee763a3cbb49dc5bf2d3fd3e2d20ee249d52a8c5ce95fb7cbed909f5839b6 |
+| tests/unit/test_research_reader_source.py | 71a2b2823a8fed0dfd2f98f8c5360b33fd869f227a15515bdbef43a4683282fd |
+| tests/unit/test_research_reader_install.py | 0c62b9e94789c48726a391a3b02c6961f4efda82a695fff3190eda65a9b09d8d |
+| scripts/research_reader_isolated_test.py | c2a60ad1635ef4c3a6b1d7469ecdde9552ab6bb7634aae82394518d0dc223518 |
+
+Final139focusedPASS/0FAIL/0SKIP,4.83s; same six-module command/image089658 above.
+Actual PG15 source-image6343bdc8 **86PASS/0FAIL with Timescale2.28.3** and
+**77PASS/0FAIL without extension, strict legacy path**. Each independently
+provenanced TEST_ONLY disposable fixture, not a real source identity/membership,
+capacity or connected acceptance. Run the fixed-target script with mandatory
+`RESEARCH_READER_TEST_ONLY=YES_ISOLATED_DISPOSABLE`; add exactly
+`USE_TIMESCALE_TEMPLATE=YES` only for the extension-bearing cell.
+Script cannot target an operational host/database through flags or DSN overrides.
+
+New actual PG cases cover metadata stale pin/extra member/definition/ACL drift;
+pgXapp literal-prefix audit;9hidden/direct table/column/function/sequence/owner/
+schema/database overgrants; positive verifier with retained TEMP objects; original
+native validation, lock/cancel, post-COMMIT/release nondisclosure, expiry and
+revoke old session/new authentication all still pass. First attempts caught a
+strict-fixture field mismatch, PG15 OID JSON serialization and overstrict TEMP
+owner audit. Fixed before final passes, no red result called external debt.
+
+Exact labelled disposable cells/network absent after both final runs; no host
+port/volume/source row/credential retained. Existing images reused, no test image
+or BuildKit artifact created. Shared inventory226images/50active/92.89GB and
+BuildKit1307/63active/132GB retained (peer-owned/active+rollback), no broad prune.
+Root free entry59573633024B/pretest58934382592B/final59586035712B; shared-host
+changes are not claimed reclaimed space. No SGP test resources created.
+Source/native and three existing Edge/Proxy profiles retain exact previously
+recorded digests/start times/restart0. Source/config revision unchanged; protected
+stable/dev/provider28445, all-mode Manager, command/Live and rollback custody
+untouched. Canonical checkouts/active features/stable/rollback locations remain
+the prior reconciliation above; only PM source pin advances to fb9a7ce7.
+
+Final Core intake check09:24UTC27Oct: sourceeabe5de3, no new binding return.
+All independently runnable owned code/tests/metadata review are finished.
+**Next:** Core returns the selected fixed tuple/workload/deadline above; Edge
+installs/verifies the approved exact delta in this same08 task. This Markdown
+delivery is not a consumer ACK, runtime install or connected PASS.

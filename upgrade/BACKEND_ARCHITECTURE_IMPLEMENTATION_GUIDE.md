@@ -653,11 +653,12 @@ deep-dive → ADR → slice → evidence discipline documented above.
 **27Oct Research membership reader — approved, SOURCE_ISOLATED_QUALIFIED:**
 [same08/read09 journal](EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#epg10-08-research-reader-db-scope-20261027)
 and [current source/test/install return](evidence/execution-edge-v1_2/EPG10-08/EDGE_RESEARCH_READER_APPROVED_IMPLEMENTATION_2026-10-27.md)
-pin PMc2668cfa, fixed execute-only accessor/adapter,130 focused and61 disposable
-PG15 cases. Real Timescale preflight refuses52 inherited PUBLIC metadata SELECT
-entries; no silent exception or shared-ACL change. Current Core binding/workload
-also pending. REAL_INSTALL_NOT_READY, no role/function/credential/listener or
-source row changed; no membership absence, grant or connected PASS inferred.
+pin PMfb9a7ce7 (successor c2668cfa):139focused,86full-Timescale PG15 and77strict
+legacy casesPASS. Exact existing52-object Timescale metadata SELECT exception
+is explicitly pinned; actual-source guard PASS, no shared-ACL change or new
+metadata grant. Application data remains accessor-only. Current Core binding/
+workload/deadline still pending. REAL_INSTALL_NOT_READY, no operational role/
+function/credential/listener or source row changed; no grant/connected PASS.
 
 **24Oct Original06 worker materialization — ISOLATED_QUALIFIED, NOT_DEPLOYED:**
 [same06 journal](EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#epg10-06-worker-oom-follow-through-20261024)

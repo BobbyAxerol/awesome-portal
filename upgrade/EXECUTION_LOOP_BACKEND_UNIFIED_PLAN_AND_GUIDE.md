@@ -33363,3 +33363,85 @@ Core-owned plans/sync/source and private material untouched. No new owner-return
 arrived at last check. Next is exact Timescale inherited-surface decision plus
 current Core binding, then fresh bounded backup/apply/verify/observation in this
 same08 task; no source reimplementation or repeated phase approval needed.
+
+### 27Oct — continued reader installation, pinned Timescale metadata exception
+
+BOBBY_CONTINUE_APPROVED / IN_PROGRESS. Continue from sourcec2668cfa/docsb5209ae8,
+in the same08 task. Decision: no shared ACL hardening; preserve only the exact
+existing Timescale extension metadata PUBLIC SELECT surface under a separately
+reviewed catalogue digest (objects/definitions/ACL/extension version). No prefix
+exemption, no application table SELECT to the login, no new metadata grant.
+Call this existing metadata exception truthfully, not absolute execute-only DB
+access. Reject altered/additional metadata, unsafe grants and authority surfaces;
+strict no-exception behavior remains default for old configurations.
+
+Source/installer/manifest tests and actual full-Timescale isolated qualification
+run independently while rechecking Core's current binding/workload return.
+Primary owns source/runtime integration, both plans and Core intake; disjoint
+delegates own shared metadata/installer and tests. Core confirmation is not an
+invented grant or permission to reuse historical/retired tuples. Before applying
+the approved two-role delta: exact source/absence/catalogue revalidation, bounded
+private backup, qualified SQL/function hashes and finite validity. Stop on any
+new decision outside this scope; no protected stable/dev/provider28445 restart,
+business writes, old ACL change or command/Live activation. Scope rollback and
+resource caps/cleanup remain those of the approved proposal/current return.
+
+Tested continuation slice:139focusedPASS/0FAIL/0SKIP4.83s,75actual full-Timescale
+PG15 casesPASS and66strict/no-extension legacy PG casesPASS. New fixture/OID
+serialization and legitimate TEMP-owner audit defects were fixed before these
+passes; initial failures remain in PM journal. Completing narrow extra negative
+verifier coverage before publication. All test rows TEST_ONLY/disposable, never
+source grant/membership/runtime/latency evidence.
+
+Actual bounded READ ONLY source guard now PASS with reviewed52Timescale2.28.3
+metadata objects (25tables/19views/8sequences),149964bytes, exact canonicalSHA
+6635b6bad6a117d8ae995909456f4475a9b26a32dcbab325eea38807096b6308.
+Five-relation catalogue still fd4a84a99e8e04e9ef18afb2d708e75dfaf65a83ea8306cf921965527f3b1266;
+new roles0/schema0; no source row access/install/secret/listener. This closes the
+Timescale metadata decision/preflight gap without old ACL mutations. Remaining
+real-install input is Core's current or explicit NEW_SELECTED tuple/workload and
+finite deadline, not a repeat Bobby approval. Request delivered/read back on SGP,
+SHA e37a4c35792421bdf8f7393a253d6aaa4aab7a2de00d190e21ff56e24bf5a98e;
+Core still eabe5de3/no fresh binding at last check. Original08/read09 remainOPEN.
+
+Final continuation source **PMfb9a7ce759fac3bbea58d4d9886c8ed6fd30fe5f**,
+feat/core-financial-assembly-20261024, clean normal Bobby commit8files/+824/-29.
+Final139focusedPASS/0FAIL/0SKIP4.83s;86actual full-Timescale PG15 casesPASS and
+77strict/unextended legacy casesPASS. Extra9hidden explicit-grant probes assert
+actual42501 and exact restoration, positive verifier with retained TEMP remains
+PASS. Tests include metadata/role/definition/source drift, bounds/native parity,
+lock/cancel/COMMIT/release failure nondisclosure, expiry/revoke/recovery. Existing
+SQL template/business validation/default path retained; optional metadata pin is
+the only extension exception, no generic table allowlist. Actual source-scope
+guardPASS above is catalogue-only, not source membership/authority acceptance.
+All owned runnable code/tests/metadata review complete; no in-scope red tests.
+Final source pins/commands/failures/one Core input are in the existing cumulative
+approved-implementation return. Header/tracking supersede old metadata-blocker
+status; prior counts retained as history, not falsely aggregated acceptance.
+
+Cleanup DONE: exact task-labelled PG/Python cells/internal networks absent,
+tmpfs removed, no persistent volume/host port; no source rows/secrets/listener or
+SGP test resources created. No image build/pull or BuildKit writes. Existing test
+089658/source6343 images reused, no task-created artifact to prune. Shared
+inventory226images/50active/92.89GB; BuildKit1307/63active/132GB protected/peer-owned,
+not broadly pruned. Root entry59573633024B/pretest58934382592B/final59586035712B;
+concurrent changes not attributed reclaimed space. Source/native/three Edge and
+Proxy profiles retain prior exact digests/start times/restart0. CanonicalTS668e,
+Portal54c6, current-policy68344dad, stablea9b10385 and rollback6180/cd79/98a1
+retained; active PM feature advances only sourcefb9a7ce7. No peer WIP staged,
+branch/worktree removal, merge/push/remote CI (0minutes) or operational change.
+Only public cumulative return is delivered to Core; final hash/readback below.
+
+Status METADATA_SCOPE_RESOLVED / SOURCE_ISOLATED_QUALIFIED / REAL_INSTALL_NOT_READY.
+As of09:24UTC Core remains eabe5de3 with no fresh binding/workload return. Exact
+next owner/action: Core confirm current or explicit NEW_SELECTED tuple/workload/
+finite deadline; Edge then fresh bounded private backup, pinned SQL/apply/verify
+in this same08, no repeated Bobby approval. No historical entitlement/fixture
+substitution or retired specimen. Full08/read09/ELP2-10 remainOPEN/NOT_MET.
+
+Final delivery verified: replaced only own cumulative public return on SGP
+`/home/bobby/portal-research/upgrade/execution_loop/evidence/ELP2-10/EDGE_RESEARCH_READER_APPROVED_IMPLEMENTATION_2026-10-27.md`.
+Local/remote SHA256 both cf2fb5af5cec482be1d88a75e3364d08f2e55ebdcc4fd7577cd80b824aba5d50,
+read back successfully. Core source still eabe5de3. No Core-owned source/plan/
+sync overwrite, secret/data/code transfer or assumed consumer ACK. Recommend
+Core return that file's exact binding block, then install/verify in original08.
