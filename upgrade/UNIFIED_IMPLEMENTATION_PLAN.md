@@ -16657,3 +16657,9 @@ bind without IEEE-754 while materially different values still fail closed in
 both dataset and series. [Regression and remaining real-source gates](execution_loop/evidence/ELP2-10/CORE_NET_PNL_READ_FENCE_2026-10-27.md).
 No frontend contract or source qualification changed.
 
+27Oct PM S6A candidate intake: the one-tradable-account-per-pool admission
+rule is not economic ownership/census; optional capital budget and governance
+v2 references are source-only and S2 attribution remains open. [Source pins,
+Core implications and exact Edge follow-up](execution_loop/evidence/ELP2-10/PM_S6A_FINANCIAL_AUTHORITY_INTAKE_2026-10-27.md).
+No financial source, command, runtime or connected gate is qualified by this intake.
+
