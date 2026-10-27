@@ -92,6 +92,14 @@ export async function runTies(get, options = {}) {
         const line = chart.status === 200 ? chart.body.panel?.data?.series?.[0] : null;
         if (line?.points?.length && line.currency === partition.partition.currency) eq(`T9 Equity chart end = NAV ${id} ${env}`, toUnits(line.points.at(-1)[1]), metricOf(statement, "current_nav"));
         else out.skipped.push(`T9 ${id} ${env}: no equity line in ${partition.partition.currency}`);
+        // T11 the Max drawdown tile of the statement = the worst point of the DRAWDOWN series of the same portfolio, window and book (QA4 R1-04)
+        const ddTile = metricOf(statement, "max_drawdown_pct");
+        const ddSeries = await get(`${E}/manager/series?environment=${env}&metric=DRAWDOWN&window=${encodeURIComponent('"30D"')}&subjects=${encodeURIComponent(JSON.stringify([{ subject_type: "PORTFOLIO", subject_id: id }]))}`);
+        const ddEntry = ddSeries.status === 200 ? ddSeries.body.series?.find((x) => x.state === "AVAILABLE" && x.partition?.currency === partition.partition.currency) : null;
+        if (ddTile !== null && ddEntry?.points?.length) {
+          const lowest = ddEntry.points.reduce((low, point) => { const v = toUnits(point.value); return v < low ? v : low; }, 0n);
+          eq(`T11 drawdown tile = series minimum ${id} ${env}`, ddTile / 10n ** 12n, lowest / 10n ** 10n);
+        } else out.skipped.push(`T11 ${id} ${env}: no drawdown tile or series`);
         // T10 the Recalling row = the sum of the pending amounts of the open recalls of the same portfolio, environment and currency
         const recalling = metricOf(statement, "recalling");
         const recalls = await get(`${E}/pending-recalls?workspace_id=ws_fixture&resource_kind=PORTFOLIO&resource_id=${id}&environment=${env}`);

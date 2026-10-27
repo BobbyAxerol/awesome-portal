@@ -231,7 +231,8 @@ const hhi = (allocations: (string | null)[]): string | null => {
 };
 const seedOf = (...parts: unknown[]): number => parseInt(digest(parts).slice(7, 15), 16);
 /** A deterministic negative percent between -2.00 and -19.99. */
-const drawdownOf = (...parts: unknown[]): string => trimmed(-(200n + BigInt(seedOf(...parts) % 1800)), 2);
+// WORLD: a book that is up has a shallow drawdown (0.5 to 3 percent); the legacy lane keeps its 2 to 20 percent
+const drawdownOf = (...parts: unknown[]): string => trimmed(legacy() ? -(200n + BigInt(seedOf(...parts) % 1800)) : -(50n + BigInt(seedOf(...parts) % 250)), 2);
 const plainMetric = (template: Draft, value: string | null, unit: string): Draft => {
   const out = metric(template, value, "X");
   out.currency = null;
@@ -1204,6 +1205,9 @@ function datasetAnswer(method: string, path: string, search: URLSearchParams, pr
 
 export function answerReviewManager(method: string, path: string, search: URLSearchParams, profile: ReviewManagerProfile, requestBody: unknown = null): ReviewManagerResponse | null {
   const normalized = path.replace(/^\/api\/v1\/execution(?=\/)/, "");
+  return wpDrawdownPass(normalized, search, wpChain(method, normalized, search, profile, requestBody));
+}
+function wpChain(method: string, normalized: string, search: URLSearchParams, profile: ReviewManagerProfile, requestBody: unknown): ReviewManagerResponse | null {
   return seriesAnswer(method, normalized, search, profile) ?? wpkApprovalEvidence(method, normalized, search, profile) ?? wpkAlphaLifecycle(method, normalized, search) ?? wpkOperationsExtras(method, normalized, search) ?? wpkEntitySearch(method, normalized, search) ?? wpkPortfolioHealth(method, normalized, search) ?? wpkSiblings(method, normalized, search, requestBody) ?? wpcCandles(method, normalized, search) ?? wpcEquity(method, normalized, search) ?? wpcAlphaResource(method, normalized, search) ?? wpF1Answer(method, normalized, search) ?? wpcAlphaKeys(normalized, search, datasetAnswer(method, normalized, search, profile));
 }
 
@@ -1278,7 +1282,9 @@ function wpcShapeSeries(entry: Draft, metricName: string, subjectId: string, env
   const n = entry.points.length;
   const seed = seedOf(subjectId, environment, metricName, "wpc-walk");
   const nav = target.nav > 0n ? target.nav : 1n;
-  const [start, end, amp] = metricName === "NAV" ? [target.nav - target.net, target.nav, nav / 120n]
+  // WORLD: every subject has its own depth of path (a quarter to a full percent of NAV per leg), so two books never share one drawdown
+  const depth = legacy() ? 100n : 25n + BigInt(seedOf(subjectId, environment, "wpc-depth") % 76);
+  const [start, end, amp] = metricName === "NAV" ? [target.nav - target.net, target.nav, legacy() ? nav / 120n : nav * depth / 10_000n]
     : metricName === "NET_PNL" ? [0n, target.net, wpcAbs(target.net) > nav / 150n ? wpcAbs(target.net) / 2n : nav / 150n]
       : [0n, target.ret, wpcAbs(target.ret) > 5n * 10n ** 15n ? wpcAbs(target.ret) / 2n : 10n ** 16n];
   const values = wpcWalk(seed, n - 1, start, end, amp);
@@ -1364,6 +1370,56 @@ function wpcAlphaKeys(path: string, search: URLSearchParams, answer: ReviewManag
   }
   return answer;
 }
+/**
+ * WORLD (QA4 R1-04, R2-04): a max drawdown tile and the drawdown pane of the same subject, window and book are ONE figure: the tile of every capital statement and every
+ * alpha / portfolio group is the worst point of that subject's DRAWDOWN series. Rows (one alpha in one portfolio) have no pane and keep their own shallow figure.
+ */
+const worstCache = new Map<string, string | null>();
+function wpWorstDrawdown(subjectType: "ALPHA" | "PORTFOLIO" | "FUND", subjectId: string, environment: string, windowName: string, currency: string): string | null {
+  const key = [subjectType, subjectId, environment, windowName, currency, scaled().alphas.length].join("|");
+  if (worstCache.has(key)) return worstCache.get(key) ?? null;
+  const query = new URLSearchParams({ environment, metric: "DRAWDOWN", window: JSON.stringify(windowName), subjects: JSON.stringify([{ subject_type: subjectType, subject_id: subjectId }]) });
+  const answer = seriesAnswer("GET", "/manager/series", query, "populated");
+  const entries = answer?.status === 200 ? ((answer.body as Draft).series as Draft[]).filter((entry) => entry.state === "AVAILABLE" && Array.isArray(entry.points) && entry.points.length > 0) : [];
+  const entry = entries.find((candidate) => candidate.partition?.currency === currency) ?? null;
+  let out: string | null = null;
+  if (entry !== null) {
+    const lowest = entry.points.reduce((low: bigint, point: Draft) => { const v = toScaled(point.value); return v < low ? v : low; }, 0n);
+    out = lowest === 0n ? "0" : trimmed(lowest / 10n ** 10n, 6);
+  }
+  worstCache.set(key, out);
+  return out;
+}
+function wpDrawdownPass(path: string, search: URLSearchParams, answer: ReviewManagerResponse | null): ReviewManagerResponse | null {
+  if (legacy() || answer === null || answer.status !== 200) return answer;
+  const match = /^\/manager\/(fund-overview|fleet|portfolios\/([^/]+)\/overview)$/.exec(path);
+  const environment = search.get("environment");
+  if (match === null || environment === null || environment === "ALL") return answer;
+  const raw = search.get("window");
+  const windowName = raw === null ? "30D" : raw.startsWith('"') ? raw.slice(1, -1) : raw;
+  if (windowName === "ALL" || !["7D", "30D", "90D"].includes(windowName)) return answer;
+  const body = answer.body as Draft;
+  const apply = (metrics: Draft | undefined, type: "ALPHA" | "PORTFOLIO" | "FUND", id: string, currency: string): void => {
+    const tile = metrics?.max_drawdown_pct;
+    if (tile?.availability !== "AVAILABLE") return;
+    const worst = wpWorstDrawdown(type, id, environment, windowName, currency);
+    if (worst !== null) tile.value = worst;
+  };
+  if (Array.isArray(body.capital_statements) && match[1] !== "fleet") {
+    for (const statement of body.capital_statements as Draft[]) apply(statement.metrics, match[1] === "fund-overview" ? "FUND" : "PORTFOLIO", match[1] === "fund-overview" ? "fund" : match[2]!, statement.partition?.currency);
+  }
+  let groupBy: string | null = null;
+  try { const parsed = JSON.parse(search.get("group_by") ?? "null") as unknown; groupBy = Array.isArray(parsed) && parsed.length === 1 ? String(parsed[0]) : null; } catch { groupBy = null; }
+  if (Array.isArray(body.groups) && (groupBy === "portfolio_id" || groupBy === "alpha_id") && body.groups.length <= 60) {
+    for (const group of body.groups as Draft[]) {
+      const id = group.key?.[0]?.value;
+      if (typeof id !== "string") continue;
+      for (const entry of group.economic_partitions ?? []) apply(entry.metrics, groupBy === "alpha_id" ? "ALPHA" : "PORTFOLIO", id, entry.partition?.currency);
+    }
+  }
+  return answer;
+}
+
 /** The lowest point of the alpha's DRAWDOWN series for the window and book of this read, as a percent string (6 places); `null` when the series is not served. */
 function wpcWorstDrawdownPercent(alphaId: string, search: URLSearchParams): string | null {
   const environment = search.get("environment");
