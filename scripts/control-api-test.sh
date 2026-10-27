@@ -218,7 +218,10 @@ fi
   -e CONTROL_API_CAPTURE_QUALIFIED="$([[ -n "${QUALIFIED_OUTPUT_DIR}" ]] && printf 1 || printf 0)" \
   "${NODE_IMAGE}" sh -c '
     set -e
-    npm run build
+    # Keep the existing 3 GiB container ceiling, while giving the compiler
+    # enough V8 old-space for this workspace. Node otherwise derives a roughly
+    # 1.5 GiB heap and can abort before the bounded container is full.
+    NODE_OPTIONS=--max-old-space-size=2304 npm run build
     # A focused pure spec may never initialize PostgreSQL itself. Prepare the
     # same disposable database before tests, never repair their post-test state
     # before the unchanged restore drill. No-argument full suites are unchanged.

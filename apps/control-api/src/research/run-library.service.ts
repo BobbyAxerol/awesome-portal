@@ -18,12 +18,15 @@ import { ResearchRequestedSpecSchema, type ResearchRequestedSpec } from "./prefl
 import { sha256ResearchJson } from "./preflight.service";
 import { enrichedAvailability } from "./enriched-analysis.contract";
 import {
+  AlphaIdSchema,
   ResearchRunIdSchema,
+  ResearchRunLibraryAlphaCatalogueResponseSchema,
   ResearchRunLibraryItemSchema,
   ResearchRunMethodologyClaimSchema,
   ResearchRunLibraryResponseSchema,
   ResearchRunLibrarySparklineResponseSchema,
   type ResearchRunLibraryItem,
+  type ResearchRunLibraryAlphaCatalogueQuery,
   type ResearchRunLibraryQuery,
   type ResearchRunLibraryResponse,
 } from "./run-library.contract";
@@ -113,6 +116,8 @@ export function retainedCardFacts(row: RunLibraryRetainedFacts): RetainedCardFac
 }
 
 const RESOURCE_ID = "research.run-library.v1";
+const ALPHA_CATALOGUE_RESOURCE_ID = "research.run-library-alpha-catalogue.v1";
+const ALPHA_CATALOGUE_ORDER: readonly AppliedSort[] = [{ field: "alpha_id", direction: "asc" }];
 // mapRow validates each card once, also for the P19 consumer. Validate the
 // envelope separately instead of cloning/validating the same cards again.
 // This is not a data/auth cache or a weaker public contract: both schemas
@@ -519,6 +524,35 @@ export class ResearchRunLibraryService {
       );
     }
     return { ...parsed.data, items: validatedItems };
+  }
+
+  async alphaCatalogue(scope: ResearchScope, query: ResearchRunLibraryAlphaCatalogueQuery) {
+    this.requireEnabled();
+    const fingerprint = queryFingerprint({ resourceId: ALPHA_CATALOGUE_RESOURCE_ID, limit: query.limit,
+      filters: [], sort: ALPHA_CATALOGUE_ORDER });
+    let after: string | null = null;
+    if (query.cursor) {
+      try {
+        const values = this.cursors.decode(query.cursor, { resourceId: ALPHA_CATALOGUE_RESOURCE_ID,
+          workspaceId: scope.workspaceId, direction: "after", queryFingerprint: fingerprint, boundarySize: 1 });
+        after = AlphaIdSchema.parse(values[0]);
+      } catch {
+        throw new ResearchRunLibraryError("RESEARCH_RUN_LIBRARY_CURSOR_INVALID", "Alpha catalogue cursor is invalid or expired; reload the catalogue.", 400);
+      }
+    }
+    const result = await this.repository.alphaCatalogue(scope, after, query.limit);
+    const last = result.items.at(-1);
+    if (result.hasMore && !last) throw new ResearchRunLibraryError("RESEARCH_RUN_LIBRARY_UNAVAILABLE", "Alpha catalogue page is incompatible.", 503);
+    const next = result.hasMore && last ? this.cursors.encode({ resource_id: ALPHA_CATALOGUE_RESOURCE_ID,
+      workspace_id: scope.workspaceId, direction: "after", query_fingerprint: fingerprint, boundary: [last.alphaId] }) : null;
+    const response = ResearchRunLibraryAlphaCatalogueResponseSchema.safeParse({
+      schema_version: ALPHA_CATALOGUE_RESOURCE_ID, read_authority: "PORTAL_PERSISTED_RESEARCH",
+      items: result.items.map(item => ({ alpha_id: item.alphaId, alpha_name: item.alphaName })),
+      page: { limit: query.limit, has_more: result.hasMore, next_cursor: next, order: "ALPHA_ID_ASC" },
+      as_of_utc_ms: result.asOfUtcMs,
+    });
+    if (!response.success) throw new ResearchRunLibraryError("RESEARCH_RUN_LIBRARY_UNAVAILABLE", "Alpha catalogue page is incompatible.", 503);
+    return response.data;
   }
 
   async sparkline(scope: ResearchScope, runId: string) {

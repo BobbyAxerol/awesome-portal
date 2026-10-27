@@ -1,0 +1,7 @@
+{
+  "schema_version": "research.run-library-alpha-catalogue.v1",
+  "read_authority": "PORTAL_PERSISTED_RESEARCH",
+  "items": [{ "alpha_id": "alpha-delta", "alpha_name": "Delta RSI" }],
+  "page": { "limit": 100, "has_more": false, "next_cursor": null, "order": "ALPHA_ID_ASC" },
+  "as_of_utc_ms": 1793113200000
+}

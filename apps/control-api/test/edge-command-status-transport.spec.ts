@@ -109,6 +109,64 @@ describe("concrete explicitly selected command STATUS Edge port",()=>{
     const replies=await Promise.all(Array.from({length:4},()=>f.port.status({...f.input,prepared:p.prepared})));
     expect(replies).toHaveLength(4);expect(f.requests.filter(r=>r.path===COMMAND_STATUS_EDGE_PATH)).toHaveLength(1);
   });
+  it("refuses a new preparation at capacity before issuing its source assertion",async()=>{
+    const f=await setup();await f.port.original(f.input);
+    for(let i=0;i<4;i++)await f.port.prepareStatus({...f.input,call_digest:accessDigest(`TEST_ONLY:call-${i}`)});
+    expect(f.authority.prepare).toHaveBeenCalledTimes(4);
+    await expect(f.port.prepareStatus({...f.input,call_digest:accessDigest("TEST_ONLY:overflow")}))
+      .rejects.toMatchObject({code:"COMMAND_STATUS_EDGE_CAPACITY"});
+    expect(f.authority.prepare).toHaveBeenCalledTimes(4);
+    expect(f.port.snapshot().prepared).toBe(4);
+  });
+  it("reserves capacity across concurrently pending distinct preparations",async()=>{
+    const f=await setup();await f.port.original(f.input);
+    const prepare=f.authority.prepare.getMockImplementation()!;
+    let release!:()=>void;
+    const barrier=new Promise<void>(resolve=>{release=resolve;});
+    f.authority.prepare.mockImplementation(async(input,body)=>{await barrier;return prepare(input,body);});
+    const pending=Array.from({length:4},(_,i)=>f.port.prepareStatus({...f.input,call_digest:accessDigest(`TEST_ONLY:concurrent-${i}`)}));
+    await expect(f.port.prepareStatus({...f.input,call_digest:accessDigest("TEST_ONLY:overflow")}))
+      .rejects.toMatchObject({code:"COMMAND_STATUS_EDGE_CAPACITY"});
+    expect(f.authority.prepare).toHaveBeenCalledTimes(4);
+    release();await Promise.all(pending);expect(f.port.snapshot().prepared).toBe(4);
+  });
+  it("releases a failed reservation, without evicting existing preparations",async()=>{
+    const f=await setup();await f.port.original(f.input);
+    f.authority.prepare.mockRejectedValueOnce(new Error("TEST_ONLY:authority refused"));
+    await expect(f.port.prepareStatus(f.input)).rejects.toThrow("authority refused");
+    for(let i=0;i<4;i++)await f.port.prepareStatus({...f.input,call_digest:accessDigest(`TEST_ONLY:retry-${i}`)});
+    expect(f.port.snapshot().prepared).toBe(4);
+  });
+  it("allows an existing exact unresolved preparation to be retried at capacity",async()=>{
+    const f=await setup();await f.port.original(f.input);
+    const prepare=f.authority.prepare.getMockImplementation()!;
+    const issued=new Map<string,Awaited<ReturnType<typeof prepare>>>();
+    f.authority.prepare.mockImplementation(async(input,body)=>{
+      const key=accessDigest({input:{...input,signal:undefined},body});
+      const old=issued.get(key);if(old)return old;
+      const next=await prepare(input,body);issued.set(key,next);return next;
+    });
+    const calls=Array.from({length:4},(_,i)=>({...f.input,call_digest:accessDigest(`TEST_ONLY:retry-same-${i}`)}));
+    const first=await f.port.prepareStatus(calls[0]);
+    for(const call of calls.slice(1))await f.port.prepareStatus(call);
+    expect(await f.port.prepareStatus(calls[0])).toEqual(first);
+    expect(f.port.snapshot().prepared).toBe(4);
+  });
+  it("coalesces capacity for identical concurrent preparations",async()=>{
+    const f=await setup();await f.port.original(f.input);
+    const prepare=f.authority.prepare.getMockImplementation()!;
+    let release!:()=>void;
+    const barrier=new Promise<void>(resolve=>{release=resolve;});
+    let shared:ReturnType<typeof prepare>|undefined;
+    f.authority.prepare.mockImplementation((input,body)=>{
+      shared??=barrier.then(()=>prepare(input,body));return shared;
+    });
+    const identical=Array.from({length:8},()=>f.port.prepareStatus(f.input));
+    release();
+    const results=await Promise.all(identical);
+    expect(results.every(result=>result.prepared.assertion_ref===results[0].prepared.assertion_ref)).toBe(true);
+    expect(f.port.snapshot().prepared).toBe(1);
+  });
   it("final current-authority revoke hides held full source result",async()=>{
     const f=await setup();await f.port.original(f.input);const p=await f.port.prepareStatus(f.input);
     f.authority.check.mockResolvedValueOnce(undefined).mockRejectedValueOnce(new Error("TEST_ONLY:revoked"));

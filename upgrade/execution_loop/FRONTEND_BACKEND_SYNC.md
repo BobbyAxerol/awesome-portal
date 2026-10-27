@@ -4173,3 +4173,17 @@ mapping from this repair. Claude00e7f6cff is unchanged and preserved. Full R2
 and compare-only visual remain NOT_MET; real-source/current rights, financial
 APPLIED-to-ACK, STATUS original, budget/calibration/G2/browser are separate gates.
 
+### 27Oct independent backend batch — work in progress
+
+[Working evidence and exact boundaries](evidence/ELP2-10/CORE_INDEPENDENT_BACKEND_2026-10-27.md).
+FE-069's old alpha facet is silently limited to 200; the existing run pagination
+does not make that facet complete. Core has prepared a separate paginated,
+workspace-authorized Library alpha catalogue and generated type
+`RunLibraryAlphaCatalogueResponse`; 405-alpha isolated PostgreSQL traversal and
+membership-revocation tests passed. Once committed, Claude can follow the exact
+consumer handoff in the linked packet. The catalogue lists alphas in recorded
+runs, not the registry or create permissions; each page is a fresh snapshot.
+This contract, the STATUS capacity fix and FE-068 grant ordering are local
+pending the final integration gate and commit, not installed or released. No
+frontend implementation has been changed by Core.
+

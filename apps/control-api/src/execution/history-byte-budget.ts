@@ -46,8 +46,12 @@ export function assertHistorySelectionBytes(total: unknown, largest: unknown, bu
     if (typeof value !== "string" || !/^(?:0|[1-9][0-9]*)$/u.test(value)) throw new Error("HISTORY_BYTE_CENSUS_INVALID");
     return BigInt(value);
   };
-  if (parse(largest) > BigInt(budget.maximumRowBytes)) throw new HistoryByteBudgetError("N33_HISTORY_ROW_TOO_LARGE");
-  if (parse(total) > BigInt(budget.maximumBytes)) throw new HistoryByteBudgetError("N33_HISTORY_RESPONSE_TOO_LARGE");
+  const totalBytes = parse(total), largestRowBytes = parse(largest);
+  // A row is part of the selected population, so it cannot exceed its sum.
+  // Refuse an inconsistent census instead of trusting an underestimated total.
+  if (largestRowBytes > totalBytes) throw new Error("HISTORY_BYTE_CENSUS_INVALID");
+  if (largestRowBytes > BigInt(budget.maximumRowBytes)) throw new HistoryByteBudgetError("N33_HISTORY_ROW_TOO_LARGE");
+  if (totalBytes > BigInt(budget.maximumBytes)) throw new HistoryByteBudgetError("N33_HISTORY_RESPONSE_TOO_LARGE");
 }
 
 export function assertPaperResponseBytes(body: unknown, maximumBytes = PAPER_HISTORY_BYTE_POLICY.maximum_response_bytes): void {

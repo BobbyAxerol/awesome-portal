@@ -325,6 +325,33 @@ export class ResearchRunLibraryRepository {
 
   constructor(@Inject(CONTROL_API_POOL) private readonly pool: Pool) {}
 
+  /** Workspace run alpha facets, independently keyset-paged. The query and
+   * membership fence share one repeatable-read snapshot. Names come from the
+   * same max(recorded name) rule as the original Library facet. */
+  async alphaCatalogue(scope: ResearchScope, after: string | null, limit: number): Promise<{
+    items: Array<{ alphaId: string; alphaName: string }>; hasMore: boolean; asOfUtcMs: number;
+  }> {
+    this.assertScope(scope);
+    return this.withScopedRead(scope, async client => {
+      const result = await client.query<{ as_of_utc_ms: string | number; items: AlphaFacetRow[] }>({
+        ...this.preparedRead(`SELECT floor(extract(epoch FROM transaction_timestamp()) * 1000)::bigint AS as_of_utc_ms,
+          COALESCE((SELECT jsonb_agg(facet ORDER BY facet.alpha_id COLLATE "C") FROM (
+            SELECT alpha_id, max(alpha_name) AS alpha_name
+              FROM research.run_library_rows_v1
+             WHERE workspace_id = $1 AND alpha_id IS NOT NULL AND alpha_name IS NOT NULL
+               AND ($2::text IS NULL OR alpha_id COLLATE "C" > $2::text COLLATE "C")
+             GROUP BY alpha_id ORDER BY alpha_id COLLATE "C" LIMIT $3
+          ) facet), '[]'::jsonb) AS items`, [scope.workspaceId, after, limit + 1]),
+      });
+      const row = result.rows[0];
+      if (!row || !Array.isArray(row.items) || row.items.length > limit + 1) {
+        throw new ResearchRunLibraryError("RESEARCH_RUN_LIBRARY_UNAVAILABLE", "Alpha catalogue is incompatible with its persisted read model.", 503);
+      }
+      return { items: row.items.slice(0, limit).map(item => ({ alphaId: item.alpha_id, alphaName: item.alpha_name })),
+        hasMore: row.items.length > limit, asOfUtcMs: asNonNegativeInteger(row.as_of_utc_ms, "alpha catalogue snapshot") };
+    });
+  }
+
   async list(
     scope: ResearchScope, query: ResearchRunLibraryQuery, boundary: RunLibraryBoundary | null,
   ): Promise<RunLibraryPage> {

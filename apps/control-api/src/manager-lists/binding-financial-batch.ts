@@ -108,7 +108,40 @@ export function bindingFinancialRequest(input: { workspaceId: string; environmen
 export function mapBindingFinancialBatch(request: BindingFinancialBatchRequest, raw: unknown): ReadonlyMap<string, BindingFigures> {
   const parsed = batch.safeParse(raw);
   if (!parsed.success) throw new BindingFinancialBatchError();
+  // The page and its figures must not advertise observations from after the
+  // selected source cut. The refresh ingress already enforces this; apply the
+  // same fence when a batch is read directly from a retained snapshot.
+  if (request.source_as_of !== null) validateObservationCut(parsed.data.rows, request.source_as_of);
   return financialRows(request, parsed.data);
+}
+
+function validateObservationCut(rows: readonly z.infer<typeof financialRow>[], sourceAsOf: string): void {
+  const cutoff = Date.parse(sourceAsOf);
+  if (!at.safeParse(sourceAsOf).success || !Number.isFinite(cutoff)) throw new BindingFinancialBatchError();
+  // Date.parse truncates fractional seconds beyond milliseconds. Compare the
+  // remaining digits when the instants have the same millisecond, including
+  // equivalent UTC-offset representations. Never round an observation back
+  // onto the selected snapshot cut.
+  const submillisecond = (value: string) => (value.match(/\.(\d+)(?:Z|[+-]\d{2}:\d{2})$/u)?.[1] ?? "")
+    .slice(3).replace(/0+$/u, "");
+  const cutoffTail = submillisecond(sourceAsOf);
+  const afterCut = (value: string): boolean => {
+    const instant = Date.parse(value);
+    if (!Number.isFinite(instant)) throw new BindingFinancialBatchError();
+    if (instant !== cutoff) return instant > cutoff;
+    const tail = submillisecond(value);
+    for (let n = 0; n < Math.max(tail.length, cutoffTail.length); n++) {
+      const digit = tail[n] ?? "0", limit = cutoffTail[n] ?? "0";
+      if (digit !== limit) return digit > limit;
+    }
+    return false;
+  };
+  for (const row of rows) {
+    for (const entries of [row.figures.native_equity, row.figures.virtual_used, row.figures.virtual_headroom])
+      if (entries?.some(entry => afterCut(entry.observed_at))) throw new BindingFinancialBatchError();
+    if (row.figures.sleeve_count && afterCut(row.figures.sleeve_count.observed_at))
+      throw new BindingFinancialBatchError();
+  }
 }
 
 function financialRows(request: Pick<BindingFinancialBatchRequest, "request_digest" | "source_snapshot_ref" | "bindings">,
@@ -194,12 +227,7 @@ export async function readBindingFinancialRefresh(source: BindingFinancialRefres
     if (value.workspace_id !== request.workspace_id || value.environment !== request.environment ||
       digest(value.principal) !== digest(request.principal) || value.source_as_of !== request.source_as_of)
       throw new BindingFinancialBatchError();
-    for (const row of value.rows) {
-      for (const entries of [row.figures.native_equity, row.figures.virtual_used, row.figures.virtual_headroom])
-        if (entries?.some(entry => Date.parse(entry.observed_at) > Date.parse(request.source_as_of))) throw new BindingFinancialBatchError();
-      if (row.figures.sleeve_count && Date.parse(row.figures.sleeve_count.observed_at) > Date.parse(request.source_as_of))
-        throw new BindingFinancialBatchError();
-    }
+    validateObservationCut(value.rows, request.source_as_of);
     return financialRows(request, value);
   } catch { throw new BindingFinancialBatchError(); }
   finally { if (timeout) clearTimeout(timeout); if (abort) controller.signal.removeEventListener("abort", abort); }

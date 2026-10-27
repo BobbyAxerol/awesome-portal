@@ -37,6 +37,39 @@ describe("same-authorized-snapshot binding financial batch", () => {
     raw.rows[0].figures.native_equity = [amount("1"), amount("2")];
     expect(() => mapBindingFinancialBatch(request(), raw)).toThrow("not available");
   });
+  it.each(["native_equity", "virtual_used", "virtual_headroom", "sleeve_count"] as const)(
+    "refuses a retained %s observation after the selected source cut", field => {
+      const raw = structuredClone(response());
+      if (field === "sleeve_count") raw.rows[0].figures.sleeve_count!.observed_at = "2026-10-25T12:00:01.000Z";
+      else raw.rows[0].figures[field]![0].observed_at = "2026-10-25T12:00:01.000Z";
+      expect(() => mapBindingFinancialBatch(request(), raw)).toThrow("not available");
+    });
+  it.each(["native_equity", "virtual_used", "virtual_headroom", "sleeve_count"] as const)(
+    "refuses a sub-millisecond future %s observation at the selected source cut", field => {
+      const raw = structuredClone(response());
+      const future = "2026-10-25T19:00:00.000000001+07:00";
+      if (field === "sleeve_count") raw.rows[0].figures.sleeve_count!.observed_at = future;
+      else raw.rows[0].figures[field]![0].observed_at = future;
+      expect(() => mapBindingFinancialBatch(request(), raw)).toThrow("not available");
+    });
+  it("accepts equal instants with different offsets and zero fractional tails", () => {
+    const raw = structuredClone(response());
+    raw.rows[0].figures.native_equity![0].observed_at = "2026-10-25T19:00:00.000000000+07:00";
+    expect(mapBindingFinancialBatch(request(), raw).get("bind_a")!.native_equity![0].value).toBe("100.25");
+  });
+  it("compares fractional tails exactly when both cut and observation have sub-millisecond precision", () => {
+    const req = { ...request(), source_as_of: "2026-10-25T12:00:00.000009Z" };
+    const raw = response(req);
+    raw.rows[0].figures.native_equity![0].observed_at = "2026-10-25T12:00:00.000008999Z";
+    expect(mapBindingFinancialBatch(req, raw).get("bind_a")!.native_equity![0].value).toBe("100.25");
+    raw.rows[0].figures.native_equity![0].observed_at = "2026-10-25T12:00:00.000009001Z";
+    expect(() => mapBindingFinancialBatch(req, raw)).toThrow("not available");
+  });
+  it("does not invent a cut when the retained snapshot has no source timestamp", () => {
+    const unknown = bindingFinancialRequest({ workspaceId: "ws_a", environment: "paper", userId: "usr_a",
+      sessionId: "ses_a", sessionGeneration: 1, snapshot: { ...projection, sourceAsOf: null }, rows: ids });
+    expect(mapBindingFinancialBatch(unknown, response(unknown)).get("bind_a")!.native_equity![0].value).toBe("100.25");
+  });
   it.each(["account", "binding", "venue", "snapshot", "request", "duplicate", "missing", "authority", "wallet", "decimal", "coverage"])("rejects mismatched or unsound %s", kind => {
     const raw = structuredClone(response());
     if (kind === "account") raw.rows[0].account_id = "hidden";
@@ -84,6 +117,14 @@ describe("same-authorized-snapshot binding financial batch", () => {
     expect(await readBindingFinancialBatch(source, request(), actual)).toBeUndefined();
     rows[0].projection_refreshed_at = new Date("2026-10-25T12:01:00Z");
     await expect(readBindingFinancialBatch(source, request(), actual)).rejects.toThrow();
+  });
+  it("refuses future-dated retained figures even when the row and snapshot metadata agree", async () => {
+    const rows = response().rows.map(row => ({ ...row, scope_id: "ws_a:paper", source_as_of: new Date(at),
+      projection_refreshed_at: new Date(at), list_figures: structuredClone(row.figures) }));
+    rows[0].list_figures.native_equity![0].observed_at = "2026-10-25T12:00:01.000Z";
+    const actual = { ...lent, rows } as unknown as PostgresSnapshotReader<BindingRow>;
+    await expect(readBindingFinancialBatch(createRetainedBindingFinancialBatchSource(), request(), actual))
+      .rejects.toThrow("The authorized account figures are not available.");
   });
   it("sanitizes source errors and does not silently fall back on a malformed answer", async () => {
     await expect(readBindingFinancialBatch({ read: async () => { throw new Error("private source detail"); } }, request(), lent))
@@ -209,7 +250,7 @@ describe("owning financial refresh → persistence → retained Accounts list", 
   });
 
   it.each(["source-cut", "source-as-of", "actor", "session", "generation", "workspace", "environment", "binding", "account", "venue",
-    "qualification", "population", "incomplete-census", "duplicate", "future-figure", "decimal", "currency", "unknown-field"])(
+    "qualification", "population", "incomplete-census", "duplicate", "future-figure", "future-submillisecond", "decimal", "currency", "unknown-field"])(
     "rejects mismatched %s before the persistence transaction", async kind => {
       const f = fixture(raw => {
         if (kind === "source-cut") raw.source_snapshot_ref = `sha256:${"d".repeat(64)}`;
@@ -227,6 +268,7 @@ describe("owning financial refresh → persistence → retained Accounts list", 
         if (kind === "incomplete-census") raw.rows.pop();
         if (kind === "duplicate") raw.rows[1] = raw.rows[0];
         if (kind === "future-figure") raw.rows[0].figures.native_equity![0].observed_at = "2026-10-25T12:00:01.000Z";
+        if (kind === "future-submillisecond") raw.rows[0].figures.native_equity![0].observed_at = "2026-10-25T12:00:00.000000001Z";
         if (kind === "decimal") raw.rows[0].figures.native_equity![0].value = "100\n";
         if (kind === "currency") raw.rows[0].figures.native_equity = [amount("1"), amount("2")];
         if (kind === "unknown-field") Object.assign(raw.rows[0].figures, { wallet_equity: "100" });

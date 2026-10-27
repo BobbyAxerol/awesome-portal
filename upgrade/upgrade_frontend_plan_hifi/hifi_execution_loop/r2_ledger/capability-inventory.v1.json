@@ -1941,6 +1941,16 @@
    "test_owner": "codex"
   },
   {
+   "route": "GET /api/v1/quantbt/runs/alpha-catalogue",
+   "controller": "research/run-library.controller.ts",
+   "interaction_class": "INTERACTION_READ",
+   "consumer": "TYPED_FRONTEND_PORT",
+   "unused_capability": true,
+   "evidence": "FE-069 workspace run-alpha catalogue: authorized repeatable-read pages, bounded size, signed workspace/page-size cursor, no artifact reads. Consumer integration and browser evidence remain Claude's work.",
+   "owner": "codex",
+   "test_owner": "codex"
+  },
+  {
    "route": "GET /api/v1/quantbt/runs/:runId/sparkline",
    "controller": "research/run-library.controller.ts",
    "interaction_class": "INTERACTION_READ",

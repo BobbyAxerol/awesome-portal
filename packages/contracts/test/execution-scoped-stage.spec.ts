@@ -105,8 +105,6 @@ describe("BE-P12 Live stage_facts: only what an authorized population can prove"
     expect(facts("with_members_hidden").reconciliation.verdict).toMatchObject({availability:"NOT_PUBLISHED",reason_code:"AUTHORIZED_POPULATION_ONLY"});
   });
   it.each([
-    ["an AVAILABLE runtime state",(f:any)=>{f.runtime.runtime_state={availability:"AVAILABLE",value:"RUNNING",reason_code:null};}],
-    ["an AVAILABLE runtime since",(f:any)=>{f.runtime.since={availability:"AVAILABLE",value:"2026-10-12T08:00:00.000Z",reason_code:null};}],
     ["NO_OPEN_FINDINGS",(f:any)=>{f.reconciliation.verdict={availability:"AVAILABLE",value:"NO_OPEN_FINDINGS",reason_code:null};}],
     ["an exact open-finding count",(f:any)=>{f.reconciliation.open_finding_count={availability:"AVAILABLE",value:1,reason_code:null};}],
     ["an exact zero unknown-order count",(f:any)=>{f.reconciliation.unknown_order_count={availability:"AVAILABLE",value:0,reason_code:null};}],
@@ -117,6 +115,14 @@ describe("BE-P12 Live stage_facts: only what an authorized population can prove"
     ["a lower-case reason",(f:any)=>{f.runtime.since.reason_code="because";}],
   ])("refuses %s on a SCOPED_V2 Live body, in both validators",(_label,mutate)=>{
     const changed=clone(live.with_members);mutate(changed.stage_facts);check("live",changed,false);
+  });
+  it("accepts a source-observed scoped runtime state and time without asserting activation",()=>{
+    const changed=clone(live.with_members);
+    changed.stage_facts.runtime.runtime_state={availability:"AVAILABLE",value:"RUNNING",reason_code:null};
+    changed.stage_facts.runtime.since={availability:"AVAILABLE",value:"2026-10-12T08:00:00.000Z",reason_code:null};
+    check("live",changed,true);
+    expect(changed.stage_facts.reconciliation.open_finding_count.availability).toBe("NOT_PUBLISHED");
+    expect(changed.stage_facts.sessions.availability).toBe("NOT_PUBLISHED");
   });
   it("the same facts are legal on the V1 body family (the rule is the scoped read's, not the vocabulary's)",()=>{
     const v1=load("schemas/execution-stage-facts.v1.schema.json");

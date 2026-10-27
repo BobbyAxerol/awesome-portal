@@ -27,6 +27,10 @@ describe("history byte budgets preserve the selected population", () => {
     }
     expect(() => validatePaperHistoryBytePolicy({ maximum_history_bytes: 10, maximum_row_bytes: 1,
       maximum_response_bytes: 9 })).toThrow("HISTORY_BYTE_BUDGET_INVALID");
+    expect(() => assertHistorySelectionBytes("0", "1", { maximumBytes: 100, maximumRowBytes: 40 }))
+      .toThrow("HISTORY_BYTE_CENSUS_INVALID");
+    expect(() => assertHistorySelectionBytes("39", "40", { maximumBytes: 100, maximumRowBytes: 40 }))
+      .toThrow("HISTORY_BYTE_CENSUS_INVALID");
   });
   it("checks the complete UTF8 JSON envelope, not JavaScript character count", () => {
     const body = { note: "ệ😀" }, bytes = Buffer.byteLength(JSON.stringify(body), "utf8");
@@ -58,5 +62,24 @@ describe("history byte budgets preserve the selected population", () => {
     expect(sql.some(statement => /\bLIMIT\b/.test(statement))).toBe(false);
     expect(client.release).toHaveBeenCalledOnce();
     expect(pool.query).not.toHaveBeenCalled();
+  });
+  it("rolls back before fetching when the same-cut byte census is inconsistent", async () => {
+    const sql: string[] = [];
+    const client = { release: vi.fn(), query: vi.fn(async (statement: string) => {
+      sql.push(statement);
+      if (statement.includes("count(*)::text AS n")) return { rows: [{ n: "1", k: "1",
+        t0: "2026-10-01T00:00:00Z", t1: "2026-10-02T00:00:00Z" }] };
+      if (statement.includes("AS total_bytes")) return { rows: [{ total_bytes: "1", largest_row_bytes: "2" }] };
+      return { rows: [] };
+    }) };
+    const repository = new ExecutionProfileProjectionRepository({ connect: vi.fn(async () => client) } as unknown as Pool);
+    await expect(repository.timeSeriesHistoryDownsampled("TEST_ONLY-ws", "paper", "TEST_ONLY-profile",
+      "manager.performance:account_equity_snapshots", { from: "2026-10-01T00:00:00Z",
+        seriesField: "account_id", valueField: "equity", targetPoints: 2,
+        byteBudget: { maximumBytes: 100, maximumRowBytes: 40 } }))
+      .rejects.toThrow("HISTORY_BYTE_CENSUS_INVALID");
+    expect(sql.at(-1)).toBe("ROLLBACK");
+    expect(sql.some(statement => statement.includes("ORDER BY ts ASC, row_id ASC"))).toBe(false);
+    expect(client.release).toHaveBeenCalledOnce();
   });
 });

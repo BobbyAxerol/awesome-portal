@@ -50,6 +50,9 @@ export class EdgeCommandStatusTransport implements EdgeCurrentRequesterStatusPor
   private readonly config:EdgeCommandStatusTransportConfig;
   private readonly originals=new Map<string,{status:string;pm_digest:string}>();
   private readonly prepared=new Map<string,Prepared>();
+  /** Reserve before issuing an assertion. Concurrent identical preparation
+   * shares one reservation, just as the authority shares its pending call. */
+  private readonly preparing=new Set<string>();
   private inFlight=0;
   constructor(private readonly authority:CommandSourceAssertionAuthority,input:EdgeCommandStatusTransportConfig) {
     try {
@@ -96,15 +99,25 @@ export class EdgeCommandStatusTransport implements EdgeCurrentRequesterStatusPor
     // payload mapping and both independent digests remain exactly source-owned.
     const body=JSON.stringify({schema_version:"execution.core-command-status-request.v1",original:input.original,
       call_digest:input.call_digest,pm_status_request_digest:status.pm_digest,core_request:parseCompactJson(Buffer.from(status.status))});
-    const issued=await this.authority.prepare(input,body),key=issued.prepared.assertion_ref;
-    const old=this.prepared.get(key);
-    if(old&&(old.body!==body||accessDigest(old.prepared)!==accessDigest(issued.prepared)))return fail("COMMAND_STATUS_PREPARED_CHANGED",409);
-    if(!old){
-      if(this.prepared.size>=this.config.limits.maximum_originals)return fail("COMMAND_STATUS_EDGE_CAPACITY",429);
-      const {signal:_signal,...captured}=input;
-      this.prepared.set(key,{input:structuredClone(captured),body,token:issued.token,prepared:issued.prepared});
-    }
-    return {requester_digest:accessDigest(input.actor),prepared:{...issued.prepared}};
+    const {signal:_signal,...captured}=input;
+    const admission=accessDigest({input:captured,body});
+    const existing=[...this.prepared.values()].some(p=>!p.finished&&p.body===body&&accessDigest(p.input)===accessDigest(captured));
+    if(!existing&&!this.preparing.has(admission)&&this.prepared.size+this.preparing.size>=this.config.limits.maximum_originals)
+      return fail("COMMAND_STATUS_EDGE_CAPACITY",429);
+    const reserved=!existing&&!this.preparing.has(admission);
+    if(reserved)this.preparing.add(admission);
+    try {
+      const issued=await this.authority.prepare(input,body),key=issued.prepared.assertion_ref;
+      const old=this.prepared.get(key);
+      if(old&&(old.body!==body||accessDigest(old.prepared)!==accessDigest(issued.prepared)))return fail("COMMAND_STATUS_PREPARED_CHANGED",409);
+      if(!old){
+        // Defensive check if an authority returns a new context for an
+        // existing delivery: never evict an unresolved original/context.
+        if(this.prepared.size>=this.config.limits.maximum_originals)return fail("COMMAND_STATUS_EDGE_CAPACITY",429);
+        this.prepared.set(key,{input:structuredClone(captured),body,token:issued.token,prepared:issued.prepared});
+      }
+      return {requester_digest:accessDigest(input.actor),prepared:{...issued.prepared}};
+    } finally { if(reserved)this.preparing.delete(admission); }
   }
   async status(input:CommandStatusInput & {prepared:EdgeCommandPreparedCall}) {
     const flight=this.prepared.get(input.prepared.assertion_ref),{prepared:_prepared,signal:_signal,...captured}=input;

@@ -24,6 +24,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/quantbt/runs/alpha-catalogue": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Page through the distinct alpha facet of workspace runs
+         * @description At most 200 alpha ids per page, ordered by alpha id in bytewise ascending order. Includes the same recorded workspace-run alpha population as filter_catalog, not the alpha registry or caller create authority. Every page is a fresh authorized snapshot; when runs change during paging, restart for a fresh consistent traversal. Cursor is opaque, signed, workspace- and page-size-bound and expires. The original filter_catalog is only a bounded convenience subset, not a complete catalogue.
+         */
+        get: operations["researchRunLibraryAlphaCatalogueV1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/quantbt/runs/{runId}/sparkline": {
         parameters: {
             query?: never;
@@ -898,6 +918,24 @@ export interface components {
             methodology_claims?: components["schemas"]["RunMethodologyClaim"][] | null;
             methodology_claims_availability?: components["schemas"]["Availability"];
         };
+        RunLibraryAlphaCatalogueResponse: {
+            /** @constant */
+            schema_version: "research.run-library-alpha-catalogue.v1";
+            /** @constant */
+            read_authority: "PORTAL_PERSISTED_RESEARCH";
+            items: {
+                alpha_id: components["schemas"]["AlphaId"];
+                alpha_name: string;
+            }[];
+            page: {
+                limit: number;
+                has_more: boolean;
+                next_cursor: string | null;
+                /** @constant */
+                order: "ALPHA_ID_ASC";
+            };
+            as_of_utc_ms: components["schemas"]["UtcMilliseconds"];
+        };
         RunLibraryResponse: {
             /** @constant */
             schema_version: "research.run-library.v1";
@@ -1050,6 +1088,35 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RunLibraryResponse"];
+                };
+            };
+            400: components["responses"]["Problem"];
+            401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            503: components["responses"]["Problem"];
+        };
+    };
+    researchRunLibraryAlphaCatalogueV1: {
+        parameters: {
+            query?: {
+                workspace_id?: components["parameters"]["WorkspaceId"];
+                cursor?: string;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description One authorized catalogue page */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RunLibraryAlphaCatalogueResponse"];
                 };
             };
             400: components["responses"]["Problem"];

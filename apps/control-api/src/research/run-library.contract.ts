@@ -13,7 +13,7 @@ import { ResearchRetainedAnalyticsV2Last30dSchema } from "./retained-analytics-v
 
 const WorkspaceIdSchema = z.string().regex(/^[A-Za-z0-9._-]{1,128}$/);
 export const ResearchRunIdSchema = z.string().regex(/^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/);
-const AlphaIdSchema = z.string().regex(/^[a-z][a-z0-9-]{2,63}$/);
+export const AlphaIdSchema = z.string().regex(/^[a-z][a-z0-9-]{2,63}$/);
 const RunLibraryQueryTextSchema = z.string().trim().min(1).max(96);
 const UtcMsSchema = z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER);
 
@@ -52,6 +52,29 @@ const WireQuerySchema = z.object({
 export const ResearchRunLibraryWorkspaceQuerySchema = z.object({
   workspace_id: WorkspaceIdSchema.optional(),
 }).strict();
+
+/** Independent continuation for the workspace alpha facet; the run cursor is
+ * not a cursor over this population. Each request rechecks membership. */
+export const ResearchRunLibraryAlphaCatalogueQuerySchema = z.object({
+  workspace_id: WorkspaceIdSchema.optional(),
+  cursor: z.string().min(1).max(4096).optional(),
+  limit: z.coerce.number().int().min(1).max(200).default(100),
+}).strict();
+export type ResearchRunLibraryAlphaCatalogueQuery = z.infer<typeof ResearchRunLibraryAlphaCatalogueQuerySchema>;
+export const ResearchRunLibraryAlphaCatalogueResponseSchema = z.object({
+  schema_version: z.literal("research.run-library-alpha-catalogue.v1"),
+  read_authority: z.literal("PORTAL_PERSISTED_RESEARCH"),
+  items: z.array(z.object({ alpha_id: AlphaIdSchema, alpha_name: z.string().min(1).max(240) }).strict()).max(200),
+  page: z.object({ limit: z.number().int().min(1).max(200), has_more: z.boolean(), next_cursor: z.string().min(1).max(4096).nullable(),
+    order: z.literal("ALPHA_ID_ASC") }).strict(),
+  as_of_utc_ms: UtcMsSchema,
+}).strict().superRefine((result, context) => {
+  if (result.items.length > result.page.limit || result.page.has_more !== (result.page.next_cursor !== null) ||
+      result.page.has_more && result.items.length !== result.page.limit ||
+      result.items.some((item, index) => index > 0 && result.items[index - 1]!.alpha_id >= item.alpha_id)) {
+    context.addIssue({ code: z.ZodIssueCode.custom, message: "Inconsistent alpha catalogue page." });
+  }
+});
 
 function mergeUnique(values: readonly string[] | undefined, compatibility: readonly string[] | undefined): string[] {
   return [...new Set([...(values ?? []), ...(compatibility ?? [])])].sort();

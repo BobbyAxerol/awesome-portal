@@ -43,13 +43,19 @@ describe("§56 generated optional Governance sources", () => {
     expect(required).not.toContain("methodology_claims");
     expect(required).not.toContain("eligible_methodology_claim_ids");
   });
-  it("exposes typed source metadata on existing operations only", () => {
+  it("exposes typed source metadata on the existing read and keeps the library surface read-only", () => {
     const governanceTypes = readFileSync(join(root, "generated/execution-governance.d.ts"), "utf8");
     const libraryTypes = readFileSync(join(root, "generated/research-run-library.d.ts"), "utf8");
     expect(governanceTypes).toContain("R1EvidenceReference:");
     expect(governanceTypes).toContain("evidence_ref_reason?");
     expect(libraryTypes).toContain("RunMethodologyClaim:");
     expect(libraryTypes).toContain("eligible_methodology_claim_ids?");
-    expect(Object.keys(library.paths)).toHaveLength(2);
+    expect(Object.keys(library.paths).sort()).toEqual([
+      "/api/v1/quantbt/runs",
+      "/api/v1/quantbt/runs/alpha-catalogue",
+      "/api/v1/quantbt/runs/{runId}/sparkline",
+    ].sort());
+    for (const path of Object.values(library.paths) as Array<Record<string, unknown>>)
+      expect(Object.keys(path)).toEqual(["get"]);
   });
 });

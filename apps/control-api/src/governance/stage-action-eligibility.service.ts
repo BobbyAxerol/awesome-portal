@@ -28,10 +28,13 @@ export class StageActionEligibilityService {
 
   async read(user: PortalUser, session: AuthSession, workspaceId: string): Promise<StageActionEligibility> {
     await assertGovernanceReadSession(this.pool, user, session, workspaceId);
-    const access = await this.ownerAccess.effectiveAccess(user.userId);
     // The step-up fact the command mutations recheck (a capital or an access-admin proof, whichever is live): THIS session only,
     // never another browser's. No row of this read depends on it (every stage action here is step-up false or undetermined).
     const stepUpUntil = await new AccountLifecycleRepository(this.pool).activeStepUpExpiry(session.sessionId, COMMAND_STEP_UP_PROOFS);
+    // Read the grant after the unrelated step-up I/O: a revocation while that
+    // query is in flight must not be presented as an eligible Paper action.
+    // The result remains advisory and the mutation rechecks its own authority.
+    const access = await this.ownerAccess.effectiveAccess(user.userId);
     const config = this.config;
     const result = projectStageActionEligibility({
       workspace_id: workspaceId, role: user.role, access,

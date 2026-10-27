@@ -90,3 +90,22 @@ runtime, browser, deployment or release success is claimed.
   is to revert the two Core files and the two contract-test/runner fixes if
   desired; retain source/audit data and all prior receipts. No remote push,
   dev/main change or activation.
+
+## Later source check and standalone gate attempt
+
+- A subsequent read-only SSH check found Edge still at
+  `9ae6f128144e8a17919d21ce7b12654c42d9ded4`; the newest EPG10-08 packet
+  remained the discovery-trust binding. The existing Edge WIP was not modified.
+  This is not a new financial, calendar or command source qualification.
+- One standalone full Control API cell was started with the existing resource
+  limits. Its TypeScript build completed, and Vitest started. The operator then
+  stopped the disposable Node container because the 567-file full suite is a
+  final integration gate, not a prerequisite for resolving the still-missing
+  external source authority. The script exited 137 after this deliberate stop;
+  **the suite and restore drill are INTERRUPTED, not PASS or a test failure**.
+  The exact test Node and PostgreSQL containers were confirmed absent after
+  script cleanup. The previous focused results and contract receipt remain as
+  previously stated. No code was changed or committed in this later check.
+- Seven previously staged source/test/runner paths still require the normal
+  commit hook before landing; do not confuse a standalone build with hook PASS.
+  The two untracked Edge-supplied documents remain untouched.

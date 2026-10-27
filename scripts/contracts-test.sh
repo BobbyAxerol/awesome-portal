@@ -138,6 +138,7 @@ cp -a "${ROOT_DIR}/apps/control-api/src/execution-v2/foundation.contract.ts" \
   "${ROOT_DIR}/apps/control-api/src/execution-v2/access-policy.ts" \
   "${ROOT_DIR}/apps/control-api/src/execution-v2/access-current-relations.ts" \
   "${ROOT_DIR}/apps/control-api/src/execution-v2/current-audit-read.ts" \
+  "${ROOT_DIR}/apps/control-api/src/execution-v2/read-fields.ts" \
   "${ROOT_DIR}/apps/control-api/src/execution-v2/parent-read-fields.ts" \
   "${ROOT_DIR}/apps/control-api/src/execution-v2/history.contract.ts" \
   "${ROOT_DIR}/apps/control-api/src/execution-v2/profile-adapter.contract.ts" \

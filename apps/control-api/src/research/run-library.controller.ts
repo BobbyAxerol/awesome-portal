@@ -8,6 +8,7 @@ import { SessionGuard } from "../facade/session.guard";
 import { WorkspacesRepository } from "../repos/workspaces";
 import {
   ResearchRunIdSchema,
+  ResearchRunLibraryAlphaCatalogueQuerySchema,
   ResearchRunLibraryQuerySchema,
   ResearchRunLibraryWorkspaceQuerySchema,
 } from "./run-library.contract";
@@ -46,6 +47,15 @@ export class ResearchRunLibraryController {
       { workspaceId, actorUserId: request.portalUser.userId },
       { ...query.data, workspace_id: workspaceId },
     );
+  }
+
+  @Get("alpha-catalogue")
+  @Header("Cache-Control", "private, no-store")
+  async alphaCatalogue(@Req() request: RunLibraryRequest, @Query() rawQuery: unknown) {
+    const query = ResearchRunLibraryAlphaCatalogueQuerySchema.safeParse(rawQuery);
+    if (!query.success) this.invalid();
+    const workspaceId = await this.workspace(request, query.data.workspace_id);
+    return this.service.alphaCatalogue({ workspaceId, actorUserId: request.portalUser.userId }, query.data);
   }
 
   @Get(":runId/sparkline")
