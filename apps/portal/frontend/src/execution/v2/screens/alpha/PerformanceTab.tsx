@@ -32,7 +32,7 @@ import type { SeriesReadState } from "../series/useManagerSeries";
 import type { DrawdownInput } from "../../charts/EquityPanel";
 import type { EvidenceSection } from "../../readers/approvalEvidence";
 import type { LifecycleVenuePnl } from "../../readers/alphaLifecycle";
-import { showDecimal } from "../../charts";
+import { compareDecimal, showDecimal } from "../../charts";
 import { Na } from "./cells";
 import { DaysValue, RowFigure, WindowedFigures, type DatasetReadState } from "./DatasetFigures";
 
@@ -96,6 +96,19 @@ function drawdownOf(read: SeriesReadState | undefined): { input: DrawdownInput; 
   }
   if (entry.state === "EMPTY") return { input: { kind: "absent", copy: "No points in this window", reason: "The source published a drawdown series with no point in the window." }, caption: seriesCaptionShort(series.metric, entry) };
   return { input: { kind: "series", points: chartPointsOf(entry) }, caption: seriesCaptionShort(series.metric, entry) };
+}
+
+/** The lowest point of the published DRAWDOWN series, as the pane draws it; `null` when the series is not ready or has no readable point. */
+export function drawdownLowOf(read: SeriesReadState | undefined): string | null {
+  if (read === undefined || read.phase !== "ready") return null;
+  const entry = read.value.series[0];
+  if (entry === undefined || entry.state !== "AVAILABLE") return null;
+  let low: string | null = null;
+  for (const point of chartPointsOf(entry)) {
+    if (point.v === null) continue;
+    if (low === null || compareDecimal(point.v, low) < 0) low = point.v;
+  }
+  return low;
 }
 
 function ActualFacet({ env, equity, inputs, drift, rb, drawdown }: Pick<PerformanceTabProps, "env" | "equity" | "inputs" | "drift" | "drawdown"> & { rb: RibbonData }) {
@@ -206,6 +219,12 @@ function VenueContribution({ venues }: { venues: readonly LifecycleVenuePnl[] })
   return (
     <SectionPanel title="Contribution by venue" aside="Per venue, never summed">
       {venues.length === 0 ? <Na why="No venue figure is published." /> : (
+        <>
+        {/* One bar chart per book and currency (never one axis across currencies); the table below is the same figures, exact. */}
+        {[...new Set(venues.map((v) => `${v.economicDomain}|${v.currency}`))].sort().map((group) => {
+          const mine = venues.filter((v) => `${v.economicDomain}|${v.currency}` === group);
+          return <DivBars key={group} label={`Net PnL by venue, ${mine[0]!.economicDomain === "ACTUAL" ? "Real-funded" : "Simulated"}, ${mine[0]!.currency}`} rows={mine.map((v) => ({ id: v.venue, label: v.venue, value: v.exact }))} currency={mine[0]!.currency} />;
+        })}
         <table className="exec-alp2-gaptable" aria-label="Net PnL by venue" data-testid="venue-pnl">
           <tbody>
             {venues.map((v) => (
@@ -216,6 +235,7 @@ function VenueContribution({ venues }: { venues: readonly LifecycleVenuePnl[] })
             ))}
           </tbody>
         </table>
+        </>
       )}
     </SectionPanel>
   );

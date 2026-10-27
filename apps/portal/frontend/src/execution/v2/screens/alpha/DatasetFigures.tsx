@@ -71,7 +71,7 @@ export function ReturnFig({ read, names }: { read: DatasetReadState; names: Read
 /** The Performance tab panel: the dataset rows with their windowed figures. */
 export function WindowedFigures({ read, names }: { read: DatasetReadState; names: ReadonlyMap<string, string> }) {
   return (
-    <SectionPanel title="Windowed figures" aside="Manager dataset, one cell per partition">
+    <SectionPanel title="Windowed figures" aside="Manager dataset, one cell per partition. Net PnL and return exclude unrealized; Equity includes it">
       <WindowedBody read={read} names={names} />
     </SectionPanel>
   );
@@ -86,7 +86,7 @@ function WindowedBody({ read, names }: { read: DatasetReadState; names: Readonly
   const columns: CardsColumn<ManagerRow>[] = [
     { key: "portfolio", label: "Portfolio", render: (row) => rowLabel(row, names) },
     { key: "allocation", label: "Allocation", numeric: true, render: (row) => <PartitionFigures partitions={row.economicPartitions} metricKey="allocation" metricKeys={keys} gap={{ fe: "BQ-FLEET-ALLOC", what: "Allocation" }} /> },
-    { key: "pnl", label: "Net PnL", numeric: true, render: (row) => <PartitionFigures partitions={row.economicPartitions} metricKey="net_pnl" metricKeys={keys} gap={{ fe: "FE-025", what: "Net PnL" }} signed /> },
+    { key: "pnl", label: "Net PnL, realized", numeric: true, render: (row) => <PartitionFigures partitions={row.economicPartitions} metricKey="net_pnl" metricKeys={keys} gap={{ fe: "FE-025", what: "Net PnL" }} signed /> },
     { key: "equity", label: "Equity, 30D end", numeric: true, render: (row) => <PartitionFigures partitions={row.economicPartitions} metricKey="equity_30d_end_value" metricKeys={keys} gap={{ fe: "FE-013", what: "Equity" }} /> },
     { key: "return", label: "Return, 30D", numeric: true, render: (row) => (keys.includes(RETURN_KEY) ? <PercentValue metric={row.metrics.return_30d_pct} /> : <Np id="FE-006" />) },
   ];

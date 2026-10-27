@@ -43,12 +43,14 @@ function windowed<T>(rows: readonly T[], phone: { phone: boolean; rows: number }
   return phone.phone ? capped.slice(0, Math.max(phone.rows, must + 1)) : capped;
 }
 
-function MoreRow({ page, noun, loaded, shown, undrawn, onDraw }: { page: PagedRead<SubjectActivityPage>; noun: string; loaded: number; shown: number; undrawn: boolean; onDraw: () => void }) {
+function MoreRow({ page, noun, loaded, shown, undrawn, onDraw, population }: { page: PagedRead<SubjectActivityPage>; noun: string; loaded: number; shown: number; undrawn: boolean; onDraw: () => void; population?: number | null }) {
+  // "The whole retained window" is said only when the rollup's population agrees with the rows; otherwise the caption states both numbers.
+  const disagrees = !page.hasMore && population != null && population !== loaded;
   return (
     <div className="exec-alp2-more">
       <span className="exec-alp2-cap">
         {shown < loaded ? `Top ${shown} of ${loaded} ${noun} loaded` : `${loaded} ${noun} loaded`}
-        {page.hasMore ? ", more in the retained window" : ", the whole retained window"}
+        {page.hasMore ? ", more in the retained window" : disagrees ? `, of ${population} in the rollup` : ", the whole retained window"}
       </span>
       {undrawn || page.hasMore ? (
         <button
@@ -105,7 +107,6 @@ export interface OrdersTabProps {
 export function OrdersTab({ alphaId, book, activity, focusOrder, linkTo }: OrdersTabProps) {
   const data = activity.phase === "ready" ? activity.value.data : null;
   const absent = activity.phase === "error" ? activity.reason : activity.phase === "ready" ? undefined : "Reading the rollup";
-  const statusCounts = data ? Object.entries(data.orderStatusCounts) : [];
 
   const scoped = book.scoped;
   const orderDetail = detailIndex(pagesOf(book.ordersState), "order_id");
@@ -168,6 +169,20 @@ export function OrdersTab({ alphaId, book, activity, focusOrder, linkTo }: Order
   // Why the fills that did not become a row have no time: the page's own reasons, once each.
   const shownFills = new Set(fills.map((f) => f.fillId));
   const fillWhy = [...new Set([...fillDetail].filter(([id]) => !shownFills.has(id)).flatMap(([, d]) => timeReasonText(d.timeReason) ?? []))];
+  // The strip and the state chips are computed from the rows loaded, so they cannot contradict the table under them; the rollup's
+  // population is named as "N of M" where it is larger or smaller than what is loaded.
+  const ordersReady = book.ordersState.phase === "ready";
+  const fillsReady = book.fillsState.phase === "ready";
+  const rollupOrders = data?.orderPopulation != null && /^\d+$/.test(data.orderPopulation) ? Number(data.orderPopulation) : null;
+  const rollupFills = data?.fillPopulation != null && /^\d+$/.test(data.fillPopulation) ? Number(data.fillPopulation) : null;
+  const scopeOf = (loaded: number, rollup: number | null, more: boolean) =>
+    rollup !== null && rollup !== loaded ? `${loaded} of ${rollup} in the rollup loaded` : more ? "Loaded so far, more in the window" : "Retained window";
+  const stateCounts = new Map<string, number>();
+  for (const o of orders) {
+    const label = orderFlag(o.status).label;
+    stateCounts.set(label, (stateCounts.get(label) ?? 0) + 1);
+  }
+  const rejectedLoaded = orders.filter((o) => orderFlag(o.status).kind === "rejected").length;
   const head = pagesOf(book.ordersState)[0] ?? pagesOf(book.fillsState)[0];
   const basis = head?.clock === undefined ? null : BASIS_TEXT[head.clock.observedAtBasis] ?? null;
 
@@ -179,20 +194,21 @@ export function OrdersTab({ alphaId, book, activity, focusOrder, linkTo }: Order
         </p>
       ) : null}
       <KpiStrip label="Orders and fills" columns={4} phoneColumns={2}>
-        <Kpi label="Orders" metric={count(data?.orderPopulation ?? undefined)} absentReason={absent} basis="Retained window" />
-        <Kpi label="Fills" metric={count(data?.fillPopulation ?? undefined)} absentReason={absent} basis="Retained window" />
+        <Kpi label="Orders" metric={ordersReady ? count(String(orders.length)) : count(data?.orderPopulation ?? undefined)} absentReason={absent} basis={ordersReady ? scopeOf(orders.length, rollupOrders, book.ordersMore.hasMore) : "Retained window"} />
+        <Kpi label="Fills" metric={fillsReady ? count(String(fills.length)) : count(data?.fillPopulation ?? undefined)} absentReason={absent} basis={fillsReady ? scopeOf(fills.length, rollupFills, book.fillsMore.hasMore) : "Retained window"} />
         <Kpi
           label="Rejected"
-          metric={count(data?.orderStatusCounts.REJECTED)}
+          metric={ordersReady ? count(String(rejectedLoaded)) : count(data?.orderStatusCounts.REJECTED)}
           absentReason={absent ?? "The rollup lists no rejected bucket"}
-          basis={data?.orderPopulation ? `Of ${data.orderPopulation} orders` : undefined}
+          basis={ordersReady ? `Of ${orders.length} orders loaded` : data?.orderPopulation ? `Of ${data.orderPopulation} orders` : undefined}
         />
         <Kpi label="Latency" absentReason="Broker timestamps not published" />
       </KpiStrip>
 
-      {statusCounts.length > 0 ? (
+      {stateCounts.size > 0 ? (
         <p className="exec-alp2-cap" aria-label="Orders by status">
-          {statusCounts.map(([status, n]) => <span key={status}>{orderFlag(status).label} {n}</span>)}
+          <span>Of the {orders.length} loaded:</span>{" "}
+          {[...stateCounts].map(([label, n]) => <span key={label}>{label} {n}</span>)}
         </p>
       ) : null}
 
@@ -210,7 +226,7 @@ export function OrdersTab({ alphaId, book, activity, focusOrder, linkTo }: Order
               className="exec-alp2-cardgrid"
               empty={<PanelState status="empty" reason="No order is present for this alpha in the retained projection window." />}
             />
-            <MoreRow page={book.ordersMore} noun="orders" loaded={orders.length} shown={orderRows.length} undrawn={orderRows.length < Math.min(orders.length, ROW_CAP)} onDraw={orderPhone.grow} />
+            <MoreRow page={book.ordersMore} noun="orders" loaded={orders.length} shown={orderRows.length} undrawn={orderRows.length < Math.min(orders.length, ROW_CAP)} onDraw={orderPhone.grow} population={rollupOrders} />
             {orderGap > 0 ? <p className="exec-alp2-cap" role="note"><span>{orderGap} {orderGap === 1 ? "record was" : "records were"} returned and not shown: no order id.</span></p> : null}
           </>
         ) : null}
@@ -229,7 +245,7 @@ export function OrdersTab({ alphaId, book, activity, focusOrder, linkTo }: Order
               className="exec-alp2-cardgrid"
               empty={<PanelState status="empty" reason="No fill is present for this alpha in the retained projection window." />}
             />
-            <MoreRow page={book.fillsMore} noun="fills" loaded={fills.length} shown={fillRows.length} undrawn={fillRows.length < Math.min(fills.length, ROW_CAP)} onDraw={fillPhone.grow} />
+            <MoreRow page={book.fillsMore} noun="fills" loaded={fills.length} shown={fillRows.length} undrawn={fillRows.length < Math.min(fills.length, ROW_CAP)} onDraw={fillPhone.grow} population={rollupFills} />
             {fillGap > 0 ? (
               <p className="exec-alp2-cap" role="note">
                 <span>{fillGap} {fillGap === 1 ? "record was" : "records were"} returned and not shown: no fill id, price or trade time.</span>

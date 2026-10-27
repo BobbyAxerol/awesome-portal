@@ -5,7 +5,7 @@
  * not in the published string, or draw a plot when there is nothing to plot.
  * See the barrel (`index.ts`) for the prop contract.
  */
-import { useContext, useMemo, useRef, useState, type KeyboardEvent, type MouseEvent, type ReactNode, type TouchEvent } from "react";
+import { useContext, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent, type MouseEvent, type ReactNode, type TouchEvent } from "react";
 
 import "../css/charts.css";
 import type { ExactUnit } from "../../formatExact";
@@ -238,10 +238,12 @@ export function EquityPanel(props: EquityPanelProps) {
   const idx = cursor ?? last;
   const o = model.obs[idx];
   const dd = ddModel && sameTime(ddModel, o.t) >= 0 ? ddModel.obs[sameTime(ddModel, o.t)] : null;
+  // The drawdown pane is its own series: when it has no point at the cursor's instant, the readout names its latest point before it (with that point's time), not "No published value".
+  const ddBefore = ddModel && dd === null ? [...ddModel.obs].reverse().find((ob) => ob.t <= o.t && ob.s !== null) ?? null : null;
   const gh = ghostModel && sameTime(ghostModel, o.t) >= 0 ? ghostModel.obs[sameTime(ghostModel, o.t)] : null;
   const readoutValue = o.s !== null ? show(o.s) : o.bad ? "Unreadable value" : "No published value at this time";
   const change = o.s !== null && first >= 0 && model.obs[first].s !== null ? show(subtractDecimal(o.s, model.obs[first].s as string), true) : null;
-  const ddText = drawdown === undefined ? null : drawdown.kind === "absent" ? drawdown.copy : dd?.s ? showDecimal(dd.s, { unit: "pct" }) : "No published value at this time";
+  const ddText = drawdown === undefined ? null : drawdown.kind === "absent" ? drawdown.copy : dd?.s ? showDecimal(dd.s, { unit: "pct" }) : ddBefore?.s ? `${showDecimal(ddBefore.s, { unit: "pct" })} as of ${timeOf(ddBefore.t)}` : "No drawdown point up to this time";
   const ghostText = ghost === undefined ? null : gh?.s ? show(gh.s) : "No point at this time";
 
   const sayPoint = (at: SeriesModel["obs"][number]) => `${timeOf(at.t)}, ${at.s !== null ? show(at.s) : "no published value"}`;
@@ -329,7 +331,7 @@ export function EquityPanel(props: EquityPanelProps) {
   const loneSeries = label.toLowerCase().includes(seriesName.toLowerCase()) && !ghost && !bandOk && spans.length === 0 && !segments.some((s) => s.kind === "simulated" || s.kind === "retained");
 
   return (
-    <figure className="exec-chart exec-eq2" data-state={state.kind} data-reduced={envelope.reduced ? "true" : "false"}>
+    <figure className="exec-chart exec-eq2" style={{ "--exec-plot-mr": `${frame.mr}px` } as CSSProperties} data-state={state.kind} data-reduced={envelope.reduced ? "true" : "false"}>
       <figcaption className="exec-c2-head">
         <span className="exec-c2-title">{label}</span>
         <ChartStateFlags state={state} />
@@ -504,6 +506,8 @@ export function EquityPanel(props: EquityPanelProps) {
         {hiddenEvs > 0 ? ` · ${hiddenEvs} more ${hiddenEvs === 1 ? "event" : "events"} not drawn here` : ""}
         {serverEnvelope && !serverEnvelope.keepsExtrema ? <> <ChartStateFlags state={{ kind: "partial", reason: "server reduction does not guarantee extrema" }} /></> : null}
       </p>
+
+      <p className="exec-c2-envelope" data-testid="axis-span">{`Axis ${timeOf(x0)} to ${timeOf(x1)}`}</p>
 
       <div className="exec-c2-sr" id={summaryId}>
         <p>{summary}</p>

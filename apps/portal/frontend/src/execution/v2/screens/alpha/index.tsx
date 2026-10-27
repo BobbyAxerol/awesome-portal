@@ -48,8 +48,9 @@ import { Na } from "./cells";
 import { ActivityTab } from "./ActivityTab";
 import { LifecyclePanel } from "./Lifecycle";
 import { dayMonth, lifeEvents, lifeEventsOfRead, regimeFit, regimeFitOfRead, runIdentity, stageSpans, stageSpansOfRead } from "./lifecycleModel";
+import { showDecimal } from "../../charts";
 import { OrdersTab } from "./OrdersTab";
-import { PERFORMANCE_VIEWS, PerformanceTab, type PerformanceView } from "./PerformanceTab";
+import { PERFORMANCE_VIEWS, PerformanceTab, drawdownLowOf, type PerformanceView } from "./PerformanceTab";
 import type { ManagerSeriesQuery } from "../../readers/managerSeries";
 import { useManagerSeries } from "../series/useManagerSeries";
 import { ScopeBanner } from "./ScopeBanner";
@@ -169,6 +170,8 @@ function Alpha360({ api, alphaId, workspaceId }: AlphaScreenProps) {
     [env, alphaId, explicitWs, url.value.window],
   );
   const drawdown = useManagerSeries(api, settled && tab === "performance", drawdownQuery);
+  // R2-04: when the pane has a series, the tile is that series' lowest point, so the tile and the strip cannot state two figures.
+  const ddLow = drawdownLowOf(drawdown);
 
   const current: SpineStageId | null = view?.current ?? null;
   const [stagePick, setStagePick] = useState<SpineStageId | null>(null);
@@ -329,7 +332,7 @@ function Alpha360({ api, alphaId, workspaceId }: AlphaScreenProps) {
             {tab === "replay" ? null : (
             <dl className="exec-blk-kpis exec-alp2-kpis" aria-label="Current facts">
               {/* QA2 R2-02: the headline is the book in view, deployment by deployment; the other books (Paper and Sandbox are simulated, Canary and Live Real-funded) are listed apart and never added to it. */}
-              <Fig label="Net PnL, current" basis={`${ENV_LABEL[env]} book, current facts, unrealized included. Other books apart, never added`}>
+              <Fig label="Net PnL, current" basis={`${ENV_LABEL[env]} book, current facts, realized and unrealized. Other books apart, never added`}>
                 {view?.money.published === false
                   ? <span><Np id="FE-005" /><WhyMark name="Money, reason" reason={view.money.reason} /></span>
                   : rows.length > 0 ? <BookFigures rows={rows} book={env} metric="netPnl" /> : <Na />}
@@ -339,8 +342,8 @@ function Alpha360({ api, alphaId, workspaceId }: AlphaScreenProps) {
                   ? <span><Np id="FE-005" /><WhyMark name="Money, reason" reason={view.money.reason} /></span>
                   : rows.length > 0 ? <BookFigures rows={rows} book={env} metric="exposure" /> : <Na />}
               </Fig>
-              <Fig label="Return" basis="30D; methodology per source"><ReturnFig read={dataset} names={names} /></Fig>
-              <Fig label="Max drawdown" basis="Window per source"><RowFigure read={dataset} names={names} metricKey="max_drawdown_pct" fallback={<Np id="FE-025" />} cell={(metric) => <PercentValue metric={metric} signed={false} />} /></Fig>
+              <Fig label="Return" basis="30D, on the realized net PnL above; not the equity change"><ReturnFig read={dataset} names={names} /></Fig>
+              <Fig label="Max drawdown" basis={ddLow !== null ? "Lowest point of the drawdown series below" : "Window per source"}>{ddLow !== null ? <span className="exec-mgr-num" data-testid="max-drawdown-series" title={ddLow}>{showDecimal(ddLow, { unit: "pct" })}</span> : <RowFigure read={dataset} names={names} metricKey="max_drawdown_pct" fallback={<Np id="FE-025" />} cell={(metric) => <PercentValue metric={metric} signed={false} />} />}</Fig>
               <Fig label="QBTS" basis="Per alpha version; the dataset's own score">
                 {qbtsRow === null ? <Np id="FE-011" /> : <QbtsCell row={qbtsRow} carried />}
               </Fig>

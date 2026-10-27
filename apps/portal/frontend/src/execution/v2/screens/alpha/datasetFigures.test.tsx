@@ -98,7 +98,7 @@ describe("Performance: windowed figures", () => {
     expect(rows).toHaveLength(2);
     const cell = (row: HTMLElement, label: string) => row.querySelector(`td[data-l='${label}']`)?.textContent ?? "";
     // net_pnl "0" in an ACTUAL USDT partition: a figure, with the domain and currency beside it.
-    expect(cell(rows[0]!, "Net PnL")).toBe("Real-funded · USDT0.00 USDT");
+    expect(cell(rows[0]!, "Net PnL, realized")).toBe("Real-funded · USDT0.00 USDT");
     // allocation is a published key but this partition publishes none: a typed absence, not zero.
     expect(cell(rows[0]!, "Allocation")).toBe("Real-funded · USDTNot available");
     // The missing equity key stays absent; the approved copy names the fact, not an internal ticket.
@@ -131,7 +131,7 @@ describe("review lane rows for the suite's alpha (simulated keys through the por
     // The id pf_core is printed by the name the alpha body states for it.
     expect(row.querySelector("td[data-l='Portfolio']")?.textContent).toBe("Core");
     expect(row.querySelector("td[data-l='Allocation']")?.textContent).toBe("Real-funded · USDT80,000.00 USDT");
-    expect(row.querySelector("td[data-l='Net PnL']")?.textContent).toBe("Real-funded · USDT+1,120.80 USDT");
+    expect(row.querySelector("td[data-l='Net PnL, realized']")?.textContent).toBe("Real-funded · USDT+1,120.80 USDT");
     expect(row.querySelector("td[data-l='Equity, 30D end']")?.textContent).toBe("Real-funded · USDT81,176.20 USDT");
     const cost = screen.getByRole("table", { name: "Cost drag" });
     const cell = (label: string) => [...cost.querySelectorAll("tr")].find((tr) => tr.querySelector("th")?.textContent === label)!.querySelector("td")!;

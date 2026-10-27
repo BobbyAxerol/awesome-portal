@@ -469,6 +469,8 @@ describe("Orders & Fills", () => {
   it("pages by keyset: Load more appends the second page and the loaded count follows", async () => {
     const { table } = await open();
     expect(screen.getByText(/6 orders loaded, more in the retained window/)).toBeTruthy();
+    // R2-02: the chips count the rows under them, not the rollup.
+    expect(screen.getByLabelText("Orders by status").textContent).toContain("Of the 6 loaded");
     fireEvent.click(screen.getAllByRole("button", { name: "Load more" })[0]);
     await waitFor(() => expect(within(table).getAllByRole("row")).toHaveLength(9));
     expect(screen.getByText(/8 orders loaded, the whole retained window/)).toBeTruthy();

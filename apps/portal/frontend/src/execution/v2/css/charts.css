@@ -460,6 +460,8 @@
 .exec-flow-pick:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
 /* event ribbon */
+/* The ribbon takes the plot's own right margin (widened for the latest-value callout) so marks and stage bands sit on the plot's x scale. */
+.exec-eq2 .exec-ribbon { --exec-chart-mr: var(--exec-plot-mr, 78px) !important; }
 .exec-ribbon {
   position: relative;
   min-width: 0;

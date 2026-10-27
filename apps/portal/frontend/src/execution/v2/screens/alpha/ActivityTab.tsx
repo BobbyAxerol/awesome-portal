@@ -136,6 +136,7 @@ export function ActivityTab({ env, alphaLabel, inputs, paths, timeline, book, li
         )}
         <p className="exec-alp2-cap">
           <span>Hatched is simulated, solid is actual</span>
+          {life.events.length > 0 ? <span data-testid="lifecycle-scope">Events and stages are the alpha's whole lifecycle in every book; the equity, orders and fills follow the {ENV_LABEL[env]} book</span> : null}
           <span>Stage bands show where each stage published a daily close</span>
           {rb.gaps}
         </p>
