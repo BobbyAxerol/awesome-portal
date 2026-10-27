@@ -289,6 +289,8 @@ const worldResource = (id: string, name: string, owner: string | null, base: str
   return ok(resourceFor(id, deps, { name, owner, base, environments: order.filter((env) => deps.some((d) => d.mode === env)) }));
 };
 
+const toCentsOf = (value: string): bigint => { const neg = value.startsWith("-"); const [w, f = ""] = value.replace("-", "").split("."); const n = BigInt(w || "0") * 100n + BigInt(`${f}00`.slice(0, 2)); return neg ? -n : n; };
+
 function portfolioResource(id: string): BffAnswerPortfolios {
   if (isPositiveMode()) {
     const item = LIST_ITEMS.find((entry) => (entry as { portfolio_id?: string }).portfolio_id === id) as { name?: string; owner?: string | null; base_currency?: string } | undefined;
@@ -355,6 +357,23 @@ function derivation(id: string, environment: Env, data: Row, stateAsked: "READY"
 
 function portfolioCapital(id: string, environment: Env): BffAnswerPortfolios {
   const portfolio = (name: string, base: string) => ({ name, base_currency: base, state: "ACTIVE", created_at: "2026-07-02T08:00:00Z", updated_at: AS_OF });
+  // WORLD: a native portfolio's capital in one environment is the world's own: Σ allocation of its deployments there, the approved budget above it, and the balance
+  // of the accounts they sit on (each account counted once), so the Capital panel, the tiles and the account pages state one number.
+  const worldBook = isPositiveMode() ? worldDeps(id)?.filter((d) => d.mode === environment) ?? [] : [];
+  if (worldBook.length > 0) {
+    const item = LIST_ITEMS.find((entry) => (entry as { portfolio_id?: string }).portfolio_id === id) as { name?: string; base_currency?: string } | undefined;
+    const ccy = worldBook[0]!.ccy;
+    const allocated = worldBook.reduce((acc, d) => addExact(acc, d.allocation), "0");
+    const budget = fromCents(((toCentsOf(allocated) * 5n / 4n / 1_000_000n) + 1n) * 1_000_000n);
+    const accounts = [...new Set(worldBook.map((d) => d.account))].filter((a) => BALANCES[a] !== undefined);
+    const sum = (field: "total" | "free" | "locked") => accounts.reduce((acc, a) => addExact(acc, BALANCES[a]![field]), "0");
+    return ok(derivation(id, environment, {
+      portfolio: portfolio(item?.name ?? id, item?.base_currency ?? ccy),
+      allocation_by_currency: [{ currency: ccy, population: String(worldBook.length), allocated_capital: allocated, max_capital: budget }],
+      account_balance_by_currency: [{ currency: ccy, population: String(accounts.length), total: sum("total"), free: sum("free"), locked: sum("locked") }],
+      unpublished_inputs: [],
+    }, "READY", null));
+  }
   if (id === PF.core && environment === "live") {
     return ok(derivation(id, environment, {
       portfolio: portfolio("Core", "USDT"),
