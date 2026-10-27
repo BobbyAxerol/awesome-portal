@@ -128,7 +128,9 @@ export function answerFixtureRequest(request: BffRequest, options: FixtureAnswer
 
   // The shell bootstrap: who is signed in (a synthetic fixture reviewer), the registry, the links, the summary.
   if (SHELL_PATHS.includes(path)) {
-    const answer = answerShell(method, path, { userId: options.userId ?? ACCESS_DOUBLE_DEFAULT_USER });
+    // ===== WP-E begin: on the simulated lanes the signed-in person is the world person the Users roster aliases (bobby), one person across Profile and Users
+    const answer = answerShell(method, path, { userId: options.userId ?? ACCESS_DOUBLE_DEFAULT_USER, ...(options.simulated === true ? { username: "bobby" } : {}) });
+    // ===== WP-E end
     return answer === null ? null : respond(answer);
   }
 

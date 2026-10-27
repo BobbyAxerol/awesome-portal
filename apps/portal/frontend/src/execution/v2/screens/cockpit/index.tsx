@@ -555,7 +555,9 @@ function DecisionCockpit({ api, workspaceId, pathSelection, onClearPathSelection
     return { all: open("all"), r1: open("r1"), r2: open("r2"), exit: open("exit"), live: open("live") };
   }, [allPage, principal]);
 
-  const selectedKey = url.value.sel ?? pathSelection?.id ?? null;
+  // A link that interpolated a missing id (`?sel=undefined`) names nothing: it is no selection, and the page never prints the word.
+  const rawSel = url.value.sel;
+  const selectedKey = (rawSel !== null && rawSel !== "undefined" && rawSel !== "null" && rawSel.trim() !== "" ? rawSel : null) ?? pathSelection?.id ?? null;
 
   // The selection is found among everything loaded, not only what the lens shows, so changing lens keeps the evidence open.
   const selected: QueueItem | null = useMemo(() => {

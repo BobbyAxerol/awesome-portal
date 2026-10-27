@@ -45,12 +45,12 @@ export const FIXTURE_REVIEWER_NAME = "Fixture reviewer";
 export const FIXTURE_SESSION_LABEL = "fixture-lab-no-session";
 
 /** What `/api/auth/context` says. Pure: the same user id always gives the same bytes. */
-export function fixtureAuthContext(userId: string): Record<string, unknown> {
+export function fixtureAuthContext(userId: string, username: string = FIXTURE_REVIEWER_NAME): Record<string, unknown> { // WP-E: `username` is the world person on the simulated lanes
   return {
     state: "AUTHENTICATED",
     principal: {
       principalId: userId,
-      username: FIXTURE_REVIEWER_NAME,
+      username,
       role: "FIXTURE_LAB",
       sessionId: FIXTURE_SESSION_LABEL,
       mustChangePassword: false,
@@ -67,11 +67,11 @@ export function fixtureAuthContext(userId: string): Record<string, unknown> {
   };
 }
 
-export function answerShell(method: string, path: string, options: { userId: string }): ShellAnswer | null {
+export function answerShell(method: string, path: string, options: { userId: string; username?: string }): ShellAnswer | null {
   if (method !== "GET") return null;
   switch (path) {
     case AUTH_CONTEXT_PATH:
-      return { status: 200, body: fixtureAuthContext(options.userId) };
+      return { status: 200, body: fixtureAuthContext(options.userId, options.username) };
     case PORTAL_REGISTRY_PATH:
       return { status: 200, body: registry };
     case PORTAL_LINKS_PATH:

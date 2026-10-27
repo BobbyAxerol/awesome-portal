@@ -15,7 +15,8 @@ import { answerPortfolios } from "../frontend/e2e/bffDoublePortfolios";
 import type { PositiveAccountBook, PositiveDeploymentFact, PositivePortfolioBook, PositiveRecall } from "../frontend/e2e/bffPositiveMode";
 import { addDecimal, fixtureNowMs, scaled, type AlphaSpec, type DeploymentSpec } from "../frontend/e2e/bffScale";
 import { grossNotional, incidentChildrenBody, lifecycleOf, MARKS, NATIVE_ALPHAS, positionsOf, stageDays, WORLD_ACTORS } from "../frontend/e2e/bffWorld";
-import { evidenceFromRecord } from "../frontend/e2e/bffApprovalWorld"; // WP-E
+import { APPROVAL_ROWS } from "../frontend/src/execution/api/fixtureData"; // WP-E
+import { approvalRecord, evidenceFromRecord, restateTarget } from "../frontend/e2e/bffApprovalWorld"; // WP-E
 import { legacy, traits } from "./scenario";
 
 // Mutable copies of published JSON templates, confined to this server-only fixture module.
@@ -1694,7 +1695,9 @@ function wpkEntitySearch(method: string, path: string, search: URLSearchParams):
     alpha: [...universe.alphas, ...WPC_ALPHAS].map((a) => ({ id: a.id, label: a.label, detail: `v${a.version}`, route: `/deployments/alphas/${encodeURIComponent(a.id)}` })),
     portfolio: universe.portfolios.map((p) => ({ id: p.id, label: p.name, detail: p.base, route: `/deployments/portfolios/${encodeURIComponent(p.id)}` })),
     operation: universe.operations.map((o) => ({ id: o.id, label: o.command, detail: o.env, route: `/operations?operation=${encodeURIComponent(o.id)}` })),
-    approval: universe.approvals.map((a: Draft) => ({ id: String(a.id), label: String(a.subject ?? a.id), detail: a.gate ? String(a.gate) : null, route: `/approvals?sel=${encodeURIComponent(String(a.id))}` })),
+    // ===== WP-E begin: the inbox rows are keyed `approval_id` (the generated ones carry no `id`, which printed `?sel=undefined`), and the native rows (AP-352 ...) are in the index too
+    approval: [...APPROVAL_ROWS, ...universe.approvals].map((a: Draft) => ({ id: String(a.approval_id ?? a.id), label: restateTarget(String(a.subject ?? a.approval_id ?? a.id), approvalRecord(String(a.approval_id ?? a.id))), detail: a.gate ? String(a.gate) : null, route: `/approvals?sel=${encodeURIComponent(String(a.approval_id ?? a.id))}` })),
+    // ===== WP-E end
     account: null, incident: null,
   };
   const groups = kinds.map((kind) => {

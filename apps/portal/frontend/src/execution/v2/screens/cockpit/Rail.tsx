@@ -23,6 +23,7 @@ import type { InboxRowV2 } from "./inboxRowV2";
 import {
   actorText,
   instantText,
+  isClosedRow,
   isYours,
   NOT_PUBLISHED,
   PREVIEW_REASON,
@@ -205,6 +206,11 @@ export function Rail({ api, target, evidence, principal, workspaceId, stepUp, ex
       ? { outcome: summary.decided.outcome, by: summary.decided.by, at: instantText(summary.decided.at) ?? summary.decided.at, policy }
       : null;
 
+  // A request that is already decided offers no decision: the panel shows the recorded outcome, never a live Approve (QA4 R3-04).
+  const closed = !waiver && (target.decided !== null || (row !== null && isClosedRow(row)));
+  const closedOutcome = decided?.outcome ?? row?.status ?? null;
+  const closedWords = closedOutcome === null ? "closed" : closedOutcome.replace(/_/g, " ").toLowerCase();
+
   // The receipt preview's rows (hi-fi `.rc`): the title of the request, the signed-in person, and what an approval would count as.
   const requestTitle = target.row?.subject ?? target.waiver?.label ?? null;
   const youText = principal.username ?? principal.userIds[0] ?? "Not named by the session";
@@ -239,13 +245,17 @@ export function Rail({ api, target, evidence, principal, workspaceId, stepUp, ex
               Waiver owner {waiver.owner}
               {principal.username !== null && waiver.owner === principal.username ? " (you)" : ""}. A waiver has no approver quorum.
             </div>
+          ) : closed ? (
+            <div className="exec-ck-sod" data-state="info" data-testid="ck-closed-outcome">
+              Closed: {closedWords}{decided?.by ? ` by ${decided.by}` : ""}{decided?.at ? `, ${decided.at}` : ""}. No decision is offered on a closed request.
+            </div>
           ) : (
             <div className="exec-ck-sod" data-state={sod.kind}>{sod.text}</div>
           )}
 
           {waiver ? null : (
             <div className="exec-ck-quorum">
-              <span>Quorum</span>
+              <span>{closed ? "Quorum at close" : "Quorum"}</span>
               {cells.length > 0 ? (
                 <span className="exec-ck-cells" aria-hidden="true">
                   {cells.map((filled, index) => <i key={index} data-filled={filled ? "true" : undefined} />)}
@@ -255,7 +265,7 @@ export function Rail({ api, target, evidence, principal, workspaceId, stepUp, ex
             </div>
           )}
 
-          {spec.stepUp && stepUp !== undefined ? (
+          {closed ? null : spec.stepUp && stepUp !== undefined ? (
             <StepUpBlock api={api} {...stepUp} />
           ) : spec.stepUp ? (
             <div className="exec-ck-stepup" role="group" aria-label="Step-up confirmation">
@@ -264,15 +274,15 @@ export function Rail({ api, target, evidence, principal, workspaceId, stepUp, ex
             </div>
           ) : null}
 
-          <div>
+          {closed ? null : <div>
             <label className="exec-ck-label" htmlFor={noteId}>Note</label>
             <textarea id={noteId} className="exec-ck-textarea" rows={2} disabled aria-describedby={noteReasonId} placeholder="Recorded with the decision" />
             <p id={noteReasonId} className="exec-blk-sr">{PREVIEW_REASON}</p>
-          </div>
+          </div>}
 
-          {spec.note ? <p className="exec-ck-note">{spec.note}</p> : null}
+          {spec.note && !closed ? <p className="exec-ck-note">{spec.note}</p> : null}
 
-          <div className="exec-ck-actions">
+          {closed ? null : <div className="exec-ck-actions">
             {/* The one reason every decision control is off, said beside them (the buttons keep it as their description too). */}
             <p className="exec-ck-note" data-testid="ck-preview-note">{PREVIEW_REASON}</p>
             <DockAction label={spec.primary} variant="primary" reason={PREVIEW_REASON} quietReason keyHint="A" />
@@ -283,7 +293,7 @@ export function Rail({ api, target, evidence, principal, workspaceId, stepUp, ex
               </>
             ) : null}
             {own && !waiver ? <DockAction label="Withdraw" reason={PREVIEW_REASON} quietReason /> : null}
-          </div>
+          </div>}
         </div>
       </section>
 

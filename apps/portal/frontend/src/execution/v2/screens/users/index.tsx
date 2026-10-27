@@ -455,7 +455,7 @@ export default function UsersScreen({ client = DEFAULT_CLIENT, legacyHref, acces
                 <p className="exec-usr-note">{counts.awaitingFirstPassword} {counts.awaitingFirstPassword === 1 ? "account is" : "accounts are"} awaiting a first password.</p>
               ) : null}
 
-              <SectionPanel title="Accounts" aside={counts.matching === counts.total ? `${counts.matching} of ${counts.total}` : `${counts.matching} matching of ${counts.total}`} flush>
+              <SectionPanel title="Accounts" aside={visible.length < counts.matching ? `${visible.length} shown of ${counts.matching}` : counts.matching === counts.total ? `${counts.matching} of ${counts.total}` : `${counts.matching} matching of ${counts.total}`} flush>
                 <CardsTable
                   columns={columns}
                   rows={visible}
@@ -542,7 +542,7 @@ export default function UsersScreen({ client = DEFAULT_CLIENT, legacyHref, acces
                           size="sm"
                         />
                         {entry.reasonCode ? <span className="exec-usr-meta">{entry.reasonCode}</span> : null}
-                        {entry.rollbackDescription ? <span className="exec-usr-meta">{entry.rollbackDescription}</span> : null}
+                        {entry.rollbackDescription ? <span className="exec-usr-meta">Undo: {entry.rollbackDescription}</span> : null}
                       </li>
                     ))}
                   </ol>

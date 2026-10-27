@@ -52,6 +52,14 @@ export function instantText(iso: string | null | undefined): string | null {
   return at === null ? iso : formatAsOf(at);
 }
 
+/** `4 Oct 2026 00:00Z`: the same instant with its year, for the dates a lineage prints beside dated ones (an expiry months away must say which year). */
+export function instantWithYear(iso: string | null | undefined): string | null {
+  const text = instantText(iso);
+  if (text === null || typeof iso !== "string") return text;
+  const year = new Date(Date.parse(iso)).getUTCFullYear();
+  return Number.isFinite(year) ? text.replace(/^(\d{1,2} [A-Za-z]{3}) /, `$1 ${year} `) : text;
+}
+
 /** A failed read is never "loading"; a port answer that says so is shown as unavailable. */
 export function settledPanel(status: Exclude<PanelStatus, "ok">): Exclude<PanelStatus, "ok" | "loading"> {
   return status === "loading" ? "unavailable" : status;

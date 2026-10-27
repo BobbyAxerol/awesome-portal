@@ -673,16 +673,26 @@ describe("evidence frame", () => {
     expect(verdict().textContent).toContain("0 insufficient");
   });
 
-  it("the evidence frame keeps the V1 review URLs, with the context params carried", async () => {
+  it("there is no Open full review link: the review routes render this same screen, so the link went nowhere new (QA4 R3-08)", async () => {
     await mount(standardPort(), "/execution/approvals?workspace_id=ws_x&sel=apr_a");
     const evidence = screen.getByRole("region", { name: "Evidence" });
-    expect(within(evidence).getByRole("link", { name: "Open full review" }).getAttribute("href")).toBe("/governance/approvals/apr_a/r1?workspace_id=ws_x");
+    expect(within(evidence).queryByRole("link", { name: "Open full review" })).toBeNull();
     fireEvent.click(rowButton(/Beta Two/));
-    expect(within(evidence).getByRole("link", { name: "Open full review" }).getAttribute("href")).toBe("/governance/approvals/apr_b/r2?workspace_id=ws_x");
-    fireEvent.click(rowButton(/Gamma Exit/));
-    expect(within(evidence).getByRole("link", { name: "Open full review" }).getAttribute("href")).toBe("/governance/exit-reviews/apr_c?workspace_id=ws_x");
-    fireEvent.click(rowButton(/Delta Live/));
-    expect(within(evidence).getByRole("link", { name: "Open full review" }).getAttribute("href")).toBe("/governance/approvals/apr_d/live?workspace_id=ws_x");
+    expect(within(evidence).queryByRole("link", { name: "Open full review" })).toBeNull();
+    await settle();
+  });
+
+  it("a decided request offers no decision: the rail shows the recorded outcome and no Approve (QA4 R3-04)", async () => {
+    await mount(standardPort(), "/execution/approvals?sel=dec_old");
+    const rail = screen.getByRole("complementary", { name: "Decision" });
+    expect(within(rail).getByTestId("ck-closed-outcome").textContent).toContain("Closed: approved by minh");
+    expect(within(rail).queryByRole("button", { name: /Approve/ })).toBeNull();
+    await settle();
+  });
+
+  it("a ?sel=undefined link (a search result built from a missing id) is no selection and the page never prints the word (QA4 R3-01)", async () => {
+    await mount(standardPort(), "/execution/approvals?sel=undefined");
+    expect(document.body.textContent).not.toMatch(/undefined/);
     await settle();
   });
 
@@ -740,7 +750,7 @@ describe("evidence frame", () => {
     expect(p.called("getGateR2")).toEqual([["apr_off", undefined]]);
     const evidence = screen.getByRole("region", { name: "Evidence" });
     expect(within(evidence).getByText("apr_off")).toBeTruthy();
-    expect(within(evidence).getByRole("link", { name: "Open full review" }).getAttribute("href")).toBe("/governance/approvals/apr_off/r2");
+    expect(within(evidence).queryByRole("link", { name: "Open full review" })).toBeNull();
   });
 });
 

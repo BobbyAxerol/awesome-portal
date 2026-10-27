@@ -10,7 +10,6 @@
  * (FE-029). Nothing here writes, plans or applies.
  */
 import { useEffect, useState, type ReactNode } from "react";
-import { Link, useSearchParams } from "react-router-dom";
 
 import { groupExact } from "../blotter/blotterModel";
 import { breakable } from "./breakable";
@@ -21,7 +20,7 @@ import type { LiveReviewPayload } from "../../../api/profileRead";
 import { readGateR2Detail } from "../../../api/rows";
 import type { GateR1Detail, GateR2Detail, PaperExitDetail } from "../../../api/rows";
 import { PanelSkeleton, PanelState } from "../../../components/states";
-import { reviewRouteFor, type ApprovalGate } from "../../../screens/ApprovalInbox";
+import { type ApprovalGate } from "../../../screens/ApprovalInbox";
 import { QuietIdsWhy } from "../../blocks";
 import { formatAsOf } from "../../boundary";
 import { EvidenceExtraContext, IDLE_EXTRA, OBLIGATION_ROWS, HistoryChart, historyCaption, obligationTotal, sectionOf, useEvidenceExtra, type ExtraState } from "./evidenceExtra";
@@ -33,9 +32,8 @@ import type {
   AbsentSectionV2, ApprovalV2, DecisionContextV2, ExitCriterionV2, ExitFindingV2, ExitPanelV2, LiveParentV2, PaperExitLabelKeyV2, PaperExitParentV2,
   R2ParentV2, RecordedActivityV2, RecordedVerdictsV2, ScalarV2, SectionV2,
 } from "../../readers/governanceParents";
-import { withContext } from "../../urlState";
 import {
-  instantText, KIND_TAG, lapseView, NOT_PUBLISHED, notPublishedFor, RUNWAY_AXIS_DAYS, RUNWAY_TICKS_DAYS, settledPanel, summarizeEvidence,
+  instantText, instantWithYear, KIND_TAG, lapseView, NOT_PUBLISHED, notPublishedFor, RUNWAY_AXIS_DAYS, RUNWAY_TICKS_DAYS, settledPanel, summarizeEvidence,
   type EvidenceData, type EvidenceKind,
 } from "./laneModel";
 
@@ -394,8 +392,8 @@ function R2Body({ detail, heading = "R2 review" }: { detail: GateR2Detail; headi
               { label: "R1 state", value: stateWords(detail.r1State) },
               { label: "R1 request", value: <Word value={detail.r1Id} fe="FE-028" /> },
               { label: "Decided by", value: <Word value={detail.r1DecidedBy} fe="FE-030" /> },
-              { label: "Decided at", value: <Word value={instantText(detail.r1DecidedAt)} fe="FE-030" /> },
-              { label: "Expires", value: <Word value={instantText(detail.r1Expiry)} fe="FE-028" /> },
+              { label: "Decided at", value: <Word value={instantWithYear(detail.r1DecidedAt)} fe="FE-030" /> },
+              { label: "Expires", value: <Word value={instantWithYear(detail.r1Expiry)} fe="FE-028" /> },
             ]}
           />
         ) : (
@@ -1000,7 +998,6 @@ export interface EvidenceFrameProps {
 }
 
 export function EvidenceFrame({ kind, header, evidence, unknownReason, extra = IDLE_EXTRA }: EvidenceFrameProps) {
-  const [params] = useSearchParams();
 
   if (header === null) {
     return (
@@ -1032,7 +1029,6 @@ export function EvidenceFrame({ kind, header, evidence, unknownReason, extra = I
           {header.context ? <span>{header.context}</span> : null}
           {header.requestedBy ? <span data-testid="ck-requested-by">Requested by {header.requestedBy}</span> : <span data-testid="ck-requested-by">Requested by: <NotPublished text={NOT_PUBLISHED.decisionCall} /></span>}
           <span>Ladder: <NotPublished text={NOT_PUBLISHED.decisionCall} /></span>
-          {gate ? <Link className="exec-ck-link" to={withContext(reviewRouteFor({ id: header.id, gate }), params)}>Open full review</Link> : null}
         </div>
       </div>
 
