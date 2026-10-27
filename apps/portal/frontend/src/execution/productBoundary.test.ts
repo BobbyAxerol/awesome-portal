@@ -19,13 +19,13 @@ const ROOT = resolve(__dirname, "..");
 const ENTRY = resolve(__dirname, "ExecutionPreviewRoute.tsx");
 
 // V2 modules load through `lazy(() => import())`, which IMPORT_RE cannot see,
-// so every non-test V2 source file is its own entry. `*.testbase.ts` is test support (never imported by a
-// product module, only by test files), so it is not an entry either.
+// so every non-test V2 source file is its own entry. `*.testbase.ts` and `testApi.ts` are test support (never
+// imported by a product module, only by test files), so they are not entries either.
 function v2Entries(dir = resolve(__dirname, "v2")): string[] {
   return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
     const path = join(dir, entry.name);
     if (entry.isDirectory()) return v2Entries(path);
-    return /\.tsx?$/.test(entry.name) && !/\.test(base)?\.tsx?$/.test(entry.name) ? [path] : [];
+    return /\.tsx?$/.test(entry.name) && !/\.test(base)?\.tsx?$|^testApi\.tsx?$/.test(entry.name) ? [path] : [];
   });
 }
 
