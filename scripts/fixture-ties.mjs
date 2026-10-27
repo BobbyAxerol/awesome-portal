@@ -1,7 +1,7 @@
 /**
  * Cross-screen TIES (WP-P). FIXTURE_LAB. Reads the SAME quantity through every read that a screen shows it from and fails on a mismatch:
  *
- *   T1  Portfolios list "allocated" (list item, every environment)  = sum of the dataset allocation of that portfolio over paper + sandbox + live
+ *   T1  Portfolios list "allocated" (list item)  = the dataset allocation of the environment the 360 opens on (live, else the first held)
  *   T2  Portfolio 360 capital statement NAV (portfolio overview)    = the group's current NAV in the fund read (Portfolios list / Compare / Overview source)
  *   T3  NAV series end (Portfolio 360 / Compare / Overview chart)   = statement NAV;  NET_PNL series end = statement net PnL
  *   T4  fund statement NAV                                          = sum of the portfolio groups' current NAV (per environment and currency)
@@ -64,7 +64,9 @@ export async function runTies(get, options = {}) {
     for (const { currency, value } of item.allocated_by_currency) {
       let sum = 0n;
       let any = false;
-      for (const env of ENVIRONMENTS) {
+      // the allocated capital of a row is the one of the environment its 360 opens on: live when the portfolio has a live book, else the first one it holds
+      const selected = ENVIRONMENTS.includes("live") && groupOf("live", id) ? "live" : ENVIRONMENTS.find((env) => groupOf(env, id));
+      for (const env of selected ? [selected] : []) {
         const partition = groupOf(env, id)?.economic_partitions?.find((p) => p.partition.currency === currency);
         const a = metricOf(partition, "allocation");
         if (a !== null) { sum += a; any = true; }

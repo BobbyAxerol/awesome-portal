@@ -46,9 +46,10 @@ async function registerRow(page, id) {
 }
 
 export async function runDomTies(page, base) {
-  const out = { checked: 0, mismatches: [], skipped: [] };
+  const out = { checked: 0, mismatches: [], skipped: [], pairs: [] };
   const eq = (name, a, b, where = "") => {
     out.checked += 1;
+    out.pairs.push(`${name}: ${a} | ${b}`);
     if (a === null || b === null || a !== b) out.mismatches.push(`${name}: "${a}" vs "${b}" ${where}`.trim());
   };
 
@@ -68,7 +69,13 @@ export async function runDomTies(page, base) {
     const ret360 = num(after(t, "Return", 1));
     const dd360 = num(after(t, "Drawdown", 1));
     const capital = /Net external flows \| ([\d,.]+) [A-Z]+ \| Net PnL \| ([+-][\d,.]+) [A-Z]+ \| NAV ([\d,.]+)/.exec(t);
-    if (col("ECONOMIC CAPITAL") !== null) eq(`P1 NAV ${id}`, num(col("ECONOMIC CAPITAL")), nav360, "(register vs 360 tile)");
+    // a register column or 360 tile the tie cannot find is a SKIP that is said, never a silent pass
+    for (const [label, header, value] of [["NAV", "NAV", nav360], ["allocated", "ALLOCATED CAPITAL", num(after(t, "Allocated (current)"))], ["net PnL", "NET PNL", pnl360], ["return", "RETURN", ret360], ["drawdown", "DRAWDOWN", dd360]]) {
+      if (col(header) === null) out.skipped.push(`P1 ${label} ${id}: register column ${header} not found (headers: ${Object.keys(row).join(" / ").slice(0, 160)})`);
+      else if (value === null) out.skipped.push(`P1 ${label} ${id}: 360 tile not found (page text: ${t.slice(0, 260)})`);
+    }
+    if (col("NAV") !== null) eq(`P1 NAV ${id}`, num(col("NAV")), nav360, "(register vs 360 tile)");
+    if (col("ALLOCATED CAPITAL") !== null) eq(`P1 allocated ${id}`, num(col("ALLOCATED CAPITAL")), num(after(t, "Allocated (current)")), "(register vs 360 tile)");
     if (col("NET PNL") !== null && /\d/.test(col("NET PNL"))) eq(`P1 net PnL ${id}`, num(col("NET PNL")), pnl360, "(register vs 360 tile)");
     if (col("RETURN") !== null && /\d/.test(col("RETURN"))) eq(`P1 return ${id}`, num(col("RETURN")), ret360, "(register vs 360 tile)");
     if (col("DRAWDOWN") !== null && /\d/.test(col("DRAWDOWN"))) eq(`P1 drawdown ${id}`, num(col("DRAWDOWN")), dd360, "(register vs 360 tile)");

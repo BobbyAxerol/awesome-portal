@@ -408,6 +408,7 @@ if (!flag("no-ties")) {
     ties.checked += dom.checked;
     ties.mismatches.push(...dom.mismatches.map((m) => `DOM ${m}`));
     ties.skipped.push(...dom.skipped.map((m) => `DOM ${m}`));
+    ties.pairs = dom.pairs;
     await c.close();
   } catch (e) { ties = { checked: 0, mismatches: [`ties did not run: ${e.message}`], skipped: [] }; }
 }
@@ -449,5 +450,6 @@ if (ties) {
   console.log(`\n## ties (positive): ${ties.checked} checked, ${ties.mismatches.length} mismatches, ${ties.skipped.length} skipped`);
   for (const m of ties.mismatches) console.log("MISMATCH", m);
   for (const s of ties.skipped) console.log("skipped", s);
+  for (const pair of ties.pairs ?? []) console.log("pair", pair);
 }
 process.exit(0);

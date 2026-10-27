@@ -131,9 +131,18 @@ const LIST_ITEMS = [
 /** Generated portfolios (empty unless the standalone server runs at a larger scale, e2e/bffScale.ts). */
 const scaledPortfolio = (id: string): PortfolioSpec | undefined => scaled().portfolios.find((p) => p.id === id);
 
+/** WORLD: a generated row prints the capital of the environment its 360 opens on (live when it has a live book, else the first one it holds), like a native row. */
+function selectedAllocation(p: PortfolioSpec): PortfolioSpec["allocatedByCurrency"] {
+  if (!isPositiveMode()) return p.allocatedByCurrency;
+  const mine = scaled().alphas.flatMap((a) => a.deployments).filter((d) => d.portfolioId === p.id);
+  if (mine.length === 0) return p.allocatedByCurrency;
+  const selected = mine.some((d) => d.environment === "live") ? "live" : mine[0]!.environment;
+  return sumByCurrency(mine.filter((d) => d.environment === selected).map((d) => ({ currency: d.currency, value: d.allocation }))).map(({ currency, value }) => ({ currency, value }));
+}
+
 const scaledItem = (p: PortfolioSpec) => ITEM({
   portfolio_id: p.id, name: p.name, owner: p.owner, state: p.state, base_currency: p.base, environments: p.environments,
-  allocation_count: p.deploymentIds.length, deployment_count: p.deploymentIds.length, allocated_by_currency: p.allocatedByCurrency, updated_at: p.updatedAt,
+  allocation_count: p.deploymentIds.length, deployment_count: p.deploymentIds.length, allocated_by_currency: selectedAllocation(p), updated_at: p.updatedAt,
 });
 
 /** WP-P: in the positive world a native portfolio's environments, counts and allocation are the deployments booked in it (the rows the dataset, the statements and the series are built from). */
@@ -141,7 +150,9 @@ function positiveListItem<T extends Record<string, unknown>>(item: T): T {
   const book = positivePortfolioBookOf(String(item.portfolio_id ?? ""));
   if (book === null || book.deployments.length === 0) return item;
   const currency = book.deployments[0]!.currency;
-  const total = book.deployments.reduce((sum, d) => addExact(sum, d.allocation), "0");
+  // WORLD: the allocated capital a row prints is the one the 360 opens on (its selected environment: live when it has one, else its first): never a sum across environments
+  const selected = book.deployments.some((d) => d.environment === "live") ? "live" : book.deployments[0]!.environment;
+  const total = book.deployments.filter((d) => d.environment === selected).reduce((sum, d) => addExact(sum, d.allocation), "0");
   const order = ["paper", "sandbox", "live"];
   return { ...item, environments: order.filter((env) => book.deployments.some((d) => d.environment === env)), allocation_count: book.deployments.length,
     deployment_count: book.deployments.length, allocated_by_currency: [{ currency, value: total }] };
