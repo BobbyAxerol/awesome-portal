@@ -276,6 +276,8 @@ for (const [name, path] of routes) {
   page.on("response", (r) => { if (r.url().includes("/api/") && r.status() >= 400) bad.push(r.status() + " " + new URL(r.url()).pathname); });
   try {
     await page.goto(base + path, { waitUntil: "networkidle", timeout: 45000 });
+    // The Blotter shows a skeleton until its first read answers: wait for the Orders table, not a fixed delay (QA3/QA4 captures were skeletons).
+    if (path.startsWith("/deployments/blotter")) await page.waitForSelector('[data-screen="blotter-v2"] table[aria-label="Orders"]', { timeout: 20000 }).catch(() => undefined);
     await page.waitForTimeout(1200);
   } catch (e) { results.push({ name, path, width: 0, error: String(e.message).slice(0, 120) }); await page.close(); continue; }
   for (const width of WIDTHS) {
