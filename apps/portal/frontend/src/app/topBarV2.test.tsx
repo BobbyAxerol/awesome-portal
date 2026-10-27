@@ -117,6 +117,21 @@ describe("V2 breadcrumbs and the Portal environment badge (QA1 OV-06, R2-18, R2-
     expect(text()).toEqual(["Execution", "Portfolios", "Compare"]);
   });
 
+  it("Users (no registry feature) is named: Administration / Users", () => {
+    render(
+      <MemoryRouter initialEntries={["/administration/users"]}>
+        <PortalContext.Provider value={{ registry: registryDoc, environment: null }}>
+          <PreferencesProvider>
+            <PortalPresentationProvider registry={null}>
+              <TopBar breadcrumbs={[]} environment={null} onOpenPalette={() => undefined} onToggleMobileNav={() => undefined} v2={{ userHref: null }} />
+            </PortalPresentationProvider>
+          </PreferencesProvider>
+        </PortalContext.Provider>
+      </MemoryRouter>,
+    );
+    expect(text()).toEqual(["Administration", "Users"]);
+  });
+
   it("without the v2 prop the registry's own trail is untouched", () => {
     mount(undefined, undefined, { breadcrumbs: trailFor("/execution") });
     expect(text()[0]).not.toBe("Execution");

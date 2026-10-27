@@ -54,7 +54,9 @@ export function TopBar({
   const v2Trail = v2 && registry ? v2Crumbs(trail, registry.features) : trail;
   // Compare is a screen of the Portfolios feature: its trail names it ("Execution / Portfolios / Compare"), as the design does.
   const onCompare = v2 !== undefined && /^\/deployments\/compare\/?$/.test(location.pathname);
-  const breadcrumbs = onCompare ? [...v2Trail, { label: "Compare", route: null }] : v2Trail;
+  // Users is session-scoped (no registry feature): its trail is named here, as the other Administration screens' are.
+  const onUsers = v2 !== undefined && v2Trail.length === 0 && /^\/administration\/users\/?$/.test(location.pathname);
+  const breadcrumbs = onCompare ? [...v2Trail, { label: "Compare", route: null }] : onUsers ? [{ label: "Administration", route: null }, { label: "Users", route: "/administration/users" }] : v2Trail;
   const workspaceId = new URLSearchParams(location.search).get("workspace_id") || undefined;
   /*
    * D1 / audit X1 and X-1: a run-scoped Research address extends the trail to

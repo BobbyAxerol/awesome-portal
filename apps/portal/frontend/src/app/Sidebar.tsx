@@ -79,6 +79,27 @@ export function withSelfEntry(
 }
 
 /**
+ * The owner-only Administration entries of the V2 rail (QA4 R3-19): Admin Actions (a registry feature that is not in the registry's own
+ * sidebar) and Users (a session-scoped screen with no registry feature). Both screens refuse anyone but the owner, so they are listed only
+ * while the session's own read says the caller is the owner: no entry that always refuses. Listing only, never an authority.
+ */
+export function withOwnerEntries(groups: RailGroup[], registry: PortalRegistryDocument, on: boolean, search: string): RailGroup[] {
+  if (!on) return groups;
+  const profile = registry.features.find((feature) => feature.id === "PROFILE_ACCESS");
+  if (profile === undefined) return groups;
+  const actions = registry.features.find((feature) => feature.id === "EXECUTION_ADMIN_ACTIONS");
+  const items: RailItem[] = [
+    ...(actions === undefined ? [] : [{ feature: actions, label: "Admin Actions", to: withContext(actions.canonical_route, search, RAIL_CONTEXT_KEYS), end: true }]),
+    { feature: { ...profile, id: "ADMIN_USERS", canonical_route: "/administration/users", label: "Users" }, label: "Users", to: withContext("/administration/users", search, RAIL_CONTEXT_KEYS), end: true },
+  ];
+  const at = groups.findIndex((group) => group.id === profile.group);
+  const fresh = (group: RailGroup) => items.filter((item) => !group.items.some((x) => x.to.split("?")[0] === item.to.split("?")[0]));
+  if (at >= 0) return groups.map((group, index) => (index === at ? { ...group, items: [...group.items, ...fresh(group)] } : group));
+  const def = registry.feature_groups.find((group) => group.id === profile.group);
+  return [...groups, { id: profile.group, label: def?.label ?? profile.group, items }];
+}
+
+/**
  * What the rail lists. Flag off: the registry's groups, untouched. Shell flag on (UXM-07 D1): the same
  * groups through the V2 overlay (V2 labels and order, capability-filtered, the old APPROVALS stub dropped
  * for its scoped replacement), and Execution links carry the shared context like the command bar does.
@@ -121,7 +142,10 @@ export function Sidebar({
   selfEntry = null,
   selfEntryMounted = isV2Screen("profile"),
   badges,
+  ownerEntries = false,
 }: {
+  /** The session's own read says the caller is the owner: the V2 rail also lists Users and Admin Actions. Ignored flag off. */
+  ownerEntries?: boolean;
   /** V2 count badges by feature id (Operations: open exceptions, Approvals: pending). Ignored flag off; absent = none drawn. */
   badges?: NavBadges;
   registry: PortalRegistryDocument;
@@ -149,7 +173,8 @@ export function Sidebar({
   // A path only a registry screen claims (Compare, `/deployments/compare`) keeps its feature's rail entry current.
   // Paths a feature route already covers are decided by NavLink alone, as before.
   const screenOwnerId = featureByRoutePrefix(registry, pathname) === null ? featureForScreenRoute(registry, pathname)?.id ?? null : null;
-  const groups = v2Shell && selfEntryMounted ? withSelfEntry(base, registry, selfEntry, search) : base;
+  const withSelf = v2Shell && selfEntryMounted ? withSelfEntry(base, registry, selfEntry, search) : base;
+  const groups = v2Shell ? withOwnerEntries(withSelf, registry, ownerEntries, search) : withSelf;
   const badge = usePresentationChrome()?.chrome.navBadge ?? null;
 
   return (

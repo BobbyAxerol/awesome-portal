@@ -11,7 +11,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { PortalRegistryDocument } from "../../../portal/contracts";
 import type { ExecutionApi } from "../../api/ports";
 import { ENTITY_SEARCH_HINT, ENTITY_SEARCH_INDEX_NOTICE, ENTITY_SEARCH_NOTICE, ExecCommandBar, compactNotes } from "./ExecCommandBar";
-import { MIN_QUERY, PER_KIND, hrefFor, searchEntities, searchSourcesFor, type SearchSources } from "./entitySearch";
+import { MIN_QUERY, PER_KIND, hrefFor, isRealId, searchEntities, searchSourcesFor, type SearchSources } from "./entitySearch";
 import { V2_ROLE_PRESETS } from "./roleNav";
 
 afterEach(cleanup);
@@ -314,8 +314,9 @@ describe("the one server search (GET /search) is the primary source", () => {
     expect(calls.portfolios).toBe(1);
     expect(calls.bindings).toHaveLength(0);
     expect(calls.operations).toHaveLength(0);
-    expect(calls.approvals).toHaveLength(0);
-    expect(out.entries.filter((e) => e.group !== "Portfolios").map((e) => [e.group, e.label, e.detail, e.href])).toEqual([
+    // The approvals list is matched too (the index filled less than the cap): the request at the top of the queue is found by id or subject.
+    expect(calls.approvals).toHaveLength(1);
+    expect(out.entries.filter((e) => e.group !== "Portfolios" && e.group !== "Approvals").map((e) => [e.group, e.label, e.detail, e.href])).toEqual([
       ["Alphas", "BTC-Trend", "LIVE", "/deployments/alphas/al_btc"],
       ["Accounts", "acct_main", undefined, "/deployments/accounts/acct_main"],
       ["Incidents", "inc_1", "OPEN", "/execution/operations/incidents/inc_1"],
@@ -330,10 +331,10 @@ describe("the one server search (GET /search) is the primary source", () => {
       "Alphas: entity search read, 1 of 14 shown",
       "Accounts: entity search read, 1 shown, count not published",
       "Operations: entity search read, none returned",
-      "Approvals: entity search read, none returned",
       "Incidents: entity search read, 1 shown, count not published",
       // The index counted zero portfolios, so the portfolio list was asked as well and its answer replaces the index's empty line.
       "Portfolios: portfolio list read (no search parameter), matched here in 3 loaded, list truncated by the server, 2 of 2 shown",
+      "Approvals: approvals read (no search parameter), matched here in the first 2 rows, 1 of 1 shown",
     ]);
   });
 
@@ -653,5 +654,48 @@ describe("people and portfolios are found by NAME (QA3 R3-23, R1-22)", () => {
     expect(core.entries.filter((e) => e.group === "Portfolios").map((e) => [e.label, e.href])).toEqual([["Core", "/deployments/portfolios/pf_TEST_ONLY_core"]]);
     const canary = (await searchEntities(api, "canary", ALL, undefined, signal()))!;
     expect(canary.entries.filter((e) => e.group === "Portfolios").map((e) => e.label)).toEqual(["Canary"]);
+  });
+});
+
+describe("approvals are found by request id and by subject; no result carries a missing id (QA4 R3-01)", () => {
+  const onlyApprovals = { ...ALL, alpha: false, portfolio: false, account: false, operation: false };
+  const approvalRows = [
+    { id: "AP-352", gate: "R2", subject: "Carry v3.2 -> Core" },
+    { id: "AP-201", gate: "R1", subject: "RSI v1.7 -> Satellite" },
+  ];
+  const api = (rows: unknown[], over: Record<string, unknown> = {}) => fakeApi({ listApprovals: async () => ok({ page: { rows }, counts: null }), ...over }).api;
+
+  it("AP-352 by its id and 'Carry v3' by its subject, through the approvals list, with the index empty", async () => {
+    const a = api(approvalRows, { searchEntities: async () => ok(indexBody({ groups: [{ kind: "approval", totalMatched: 0, rows: [] }] })) });
+    const byId = (await searchEntities(a, "AP-352", onlyApprovals, undefined, signal()))!;
+    expect(byId.entries.map((e) => [e.label, e.href])).toEqual([["Carry v3.2 -> Core", "/governance/approvals?sel=AP-352"]]);
+    const bySubject = (await searchEntities(a, "Carry v3", onlyApprovals, undefined, signal()))!;
+    expect(bySubject.entries.map((e) => e.href)).toEqual(["/governance/approvals?sel=AP-352"]);
+  });
+
+  it("an index hit with no real id ('undefined') is not offered, and the real request is", async () => {
+    const bad = { kind: "approval", id: "undefined", label: "Carry v1.9 · dep_75", detail: "R1", routeHint: "/approvals?sel=undefined" };
+    const a = api(approvalRows, { searchEntities: async () => ok(indexBody({ groups: [{ kind: "approval", totalMatched: 1, rows: [bad] }] })) });
+    const out = (await searchEntities(a, "Carry", onlyApprovals, undefined, signal(), "live", { routes: ["/governance/approvals"] }))!;
+    expect(out.entries.map((e) => e.label)).toEqual(["Carry v3.2 -> Core"]);
+    for (const entry of out.entries) expect(entry.href).not.toMatch(/undefined|null|NaN/);
+  });
+
+  it("per-list fallback: a row without an id is skipped, never printed as sel=undefined", async () => {
+    const a = api([{ id: undefined, gate: "R1", subject: "Carry ghost" }, ...approvalRows]);
+    const out = (await searchEntities(a, "Carry", onlyApprovals, undefined, signal(), "live", { skipIndex: true }))!;
+    expect(out.entries.map((e) => e.label)).toEqual(["Carry v3.2 -> Core"]);
+  });
+
+  it("isRealId", () => {
+    for (const bad of ["", " ", "undefined", "Null", "NaN", undefined, null, 5]) expect(isRealId(bad), String(bad)).toBe(false);
+    for (const good of ["AP-352", "al_1", "inc_TEST_ONLY_fx_a"]) expect(isRealId(good)).toBe(true);
+  });
+
+  it("index and list rows of one request are listed once", async () => {
+    const hit = { kind: "approval", id: "AP-352", label: "Carry v3.2 -> Core", detail: "R2", routeHint: "/governance/approvals?sel=AP-352" };
+    const a = api(approvalRows, { searchEntities: async () => ok(indexBody({ groups: [{ kind: "approval", totalMatched: 1, rows: [hit] }] })) });
+    const out = (await searchEntities(a, "Carry", onlyApprovals, undefined, signal(), "live", { routes: ["/governance/approvals"] }))!;
+    expect(out.entries.filter((e) => e.id === "approval:AP-352")).toHaveLength(1);
   });
 });

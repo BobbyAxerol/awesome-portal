@@ -112,6 +112,15 @@ describe("the palette speaks plain words", () => {
   });
 });
 
+describe("no palette result links to a missing id", () => {
+  it("a result list built from rows with missing ids carries no 'undefined' in any option, label or link", async () => {
+    const bad = { kind: "approval", id: "undefined", label: "Carry v1.9", detail: null, routeHint: "/approvals?sel=undefined" };
+    await openPalette(listApi({ searchEntities: async () => ok({ ...indexBody, groups: [{ kind: "approval", totalMatched: 1, rows: [bad] }] }), listApprovals: async () => ok({ page: { rows: [{ id: undefined, gate: "R1", subject: "Carry ghost" }] }, counts: null }) }), "carry");
+    await waitFor(() => expect(document.querySelector(".exec-cmdbar-notice")).not.toBeNull());
+    expect(document.body.textContent).not.toMatch(/undefined/);
+  });
+});
+
 describe("the context bar of every V2 route speaks plain words", () => {
   const SCREENS = [
     "EXECUTION_COMMAND_CENTER_SCREEN", "EXECUTION_ALPHA_FLEET_LIST_SCREEN", "EXECUTION_ALPHA_360_SCREEN", "EXECUTION_PORTFOLIO_360_SCREEN", "EXECUTION_COMPARE_SCREEN",

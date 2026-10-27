@@ -84,6 +84,9 @@ const GROUP = {
 } as const;
 
 const enc = encodeURIComponent;
+
+/** An id that is a real id: not empty and not the word a missing value turns into when it is interpolated ("undefined", "null", "NaN"). */
+export const isRealId = (id: unknown): id is string => typeof id === "string" && id.trim() !== "" && !/^(?:undefined|null|nan)$/i.test(id.trim());
 const contains = (text: string, needle: string): boolean => text.toLowerCase().includes(needle);
 
 function capNote(label: string, shown: number, matched: number | null, how: string): string {
@@ -253,7 +256,7 @@ async function approvals(api: ExecutionApi, text: string, workspaceId: string | 
   if (!result.ok) return failed(label, result.reason);
   const needle = text.toLowerCase();
   const rows = result.value.page.rows;
-  const matched = rows.filter((row) => contains(String(row.id), needle) || contains(row.subject, needle));
+  const matched = rows.filter((row) => isRealId(row.id) && (contains(String(row.id), needle) || contains(row.subject, needle)));
   const shown = matched.slice(0, PER_KIND);
   return {
     entries: shown.map((row) => ({ id: `approval:${row.id}`, group: label, label: row.subject || String(row.id), detail: `${row.gate} · ${String(row.id)}`, href: `/governance/approvals?sel=${enc(String(row.id))}` })),
@@ -287,10 +290,11 @@ async function searchByIndex(api: ExecutionApi, query: string, sources: SearchSo
     const group = result.value.groups.find((g) => g.kind === kind);
     const label = INDEX_GROUP[kind];
     if (group === undefined) { notes.push(`${label}: entity search read, none returned`); continue; }
-    for (const hit of group.rows.slice(0, PER_KIND)) {
+    // A hit without a real id is not offered: opening it would land on "sel=undefined" (QA4 R3-01).
+    for (const hit of group.rows.filter((row) => isRealId(row.id) && !/\bundefined\b/.test(row.routeHint)).slice(0, PER_KIND)) {
       entries.push({ id: `${kind}:${hit.id}`, group: label, label: hit.label, ...(hit.detail === null ? {} : { detail: hit.detail }), href: hrefFor(kind, hit.id, hit.routeHint, routes) });
     }
-    const shown = Math.min(group.rows.length, PER_KIND);
+    const shown = entries.filter((e) => e.id.startsWith(`${kind}:`)).length;
     notes.push(group.totalMatched === null ? `${label}: entity search read, ${shown} shown, count not published` : `${label}: entity search read, ${shown} of ${group.totalMatched} shown`);
   }
   // A kind the index could not count and returned nothing for (its source has no list in the index) is asked of its own read, so an id on
@@ -302,6 +306,9 @@ async function searchByIndex(api: ExecutionApi, query: string, sources: SearchSo
   const extra: Promise<Settled | Settled[] | null>[] = [];
   // The index may not know a portfolio the list read does (a name on screen): when it returned none, the portfolio list is asked too.
   if (sources.portfolio && (result.value.groups.find((g) => g.kind === "portfolio")?.rows.length ?? 0) === 0) extra.push(guard(GROUP.portfolio, () => portfolios(api, query, workspaceId), signal));
+  // Approvals: the index may not hold the request a person sees at the top of the queue (an id like AP-352, or its subject); the approvals list is
+  // matched too when the index filled less than the cap, and its rows join the index's, one per id.
+  if (sources.approval && entries.filter((e) => e.group === GROUP.approval).length < PER_KIND) extra.push(guard(GROUP.approval, () => approvals(api, query, workspaceId), signal));
   if (sources.person && readPeople !== undefined) extra.push(guard(GROUP.person, () => people(readPeople, query), signal));
   if (sources.account && uncovered("account")) extra.push(guard(GROUP.account, () => accounts(api, query, environment, workspaceId), signal));
   if (sources.operation && /^inc/i.test(query) && uncovered("incident")) extra.push(guard(GROUP.incident, () => incidentsWithExact(api, query, workspaceId), signal));
@@ -310,7 +317,12 @@ async function searchByIndex(api: ExecutionApi, query: string, sources: SearchSo
     if (signal.aborted) return null;
     const replaced = new Set(done.map((item) => item.note.split(":")[0]));
     const kept = notes.filter((note) => !replaced.has(note.split(":")[0]!) );
-    return { via: "index", entries: [...entries.filter((e) => !replaced.has(e.group)), ...done.flatMap((item) => item.entries)], notes: [...kept, ...done.map((item) => item.note)] };
+    const fresh = done.flatMap((item) => item.entries);
+    const have = new Set(fresh.map((e) => e.id));
+    // The index's own rows of a group stay (one per id); the list read's rows are added after them.
+    const indexRows = entries.filter((e) => replaced.has(e.group) && !have.has(e.id));
+    const merged = [...entries.filter((e) => !replaced.has(e.group)), ...indexRows, ...fresh].filter((e, i, all) => all.findIndex((x) => x.id === e.id) === i);
+    return { via: "index", entries: merged, notes: [...kept, ...done.map((item) => item.note)] };
   }
   return { via: "index", entries, notes };
 }

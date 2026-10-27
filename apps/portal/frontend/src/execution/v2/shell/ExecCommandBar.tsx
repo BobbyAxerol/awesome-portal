@@ -86,7 +86,7 @@ export function ExecCommandBar({ registry, options, open, onClose, searchApi, de
   const { search } = useLocation();
   // The roster reader is loaded only when a search for people actually runs, so the palette chunk stays small.
   const peopleReader: PeopleReader = peopleReaderProp ?? ((query) => import("../screens/users/rosterReader").then((m) => m.readRosterPageFromServer(query)));
-  const goTo = useMemo(() => execGoToEntries(registry, options), [registry, options]);
+  const goToBase = useMemo(() => execGoToEntries(registry, options), [registry, options]);
   const sources = useMemo(() => searchSourcesFor(registry, options), [registry, options]);
   const { workspaceId, environment } = useMemo(() => {
     const value = parseUrlParams(search).value;
@@ -95,6 +95,11 @@ export function ExecCommandBar({ registry, options, open, onClose, searchApi, de
   const { access } = useSession();
   const owner = access?.kind === "ready" && access.access?.isOwner === true;
   const searchSources = useMemo(() => ({ ...sources, person: owner }), [sources, owner]);
+  // The owner's Administration screens are also "Go to" rows (the rail lists them for the owner, from the session's own read).
+  const goTo = useMemo(
+    () => (owner ? [...goToBase, { id: "go:ADMIN_USERS", group: "Go to", label: "Users", href: "/administration/users" }, { id: "go:EXECUTION_ADMIN_ACTIONS", group: "Go to", label: "Admin Actions", href: "/administration/actions" }].filter((row, i, all) => all.findIndex((x) => x.label === row.label) === i) : goToBase),
+    [goToBase, owner],
+  );
   // The owning scope of every search result: workspace, environment, the caller's capabilities (and so the kinds searched). A result belongs
   // to exactly one scope; when any part changes the old results are dropped on the same render and the search runs again.
   const scope = useMemo(

@@ -99,6 +99,8 @@ export function PortalShell() {
    * refuses is worse than no entry.
    */
   const sessionCapabilities = access.kind === "ready" ? access.access.capabilities : [];
+  // The session's own read says the caller is the owner (never the role in the principal): the V2 rail lists Users and Admin Actions for them.
+  const ownerAccess = access?.kind === "ready" && access.access?.isOwner === true;
   // Where the user chip leads: the member's own access, only where a page of it is on offer (an admin holds the Profile & Access
   // capability; anyone else needs the live self-entry the navigation projection grants). Otherwise the chip is a statement.
   const userAccessHref = selfNav.selfEntry
@@ -187,6 +189,7 @@ export function PortalShell() {
               notice={selfNav.notice ?? undefined}
               selfEntry={selfNav.selfEntry}
               badges={navBadges}
+              ownerEntries={ownerAccess}
             />
           </div>
 
@@ -207,6 +210,7 @@ export function PortalShell() {
                   notice={selfNav.notice ?? undefined}
                   selfEntry={selfNav.selfEntry}
                   badges={navBadges}
+                  ownerEntries={ownerAccess}
                 />
               </div>
             </div>

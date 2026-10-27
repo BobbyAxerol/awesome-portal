@@ -269,3 +269,35 @@ describe("WP-D · V2 count badges (badges prop)", () => {
     expect(view.container.textContent).toContain("Approvals, 4 pending approvals (approvals read)");
   });
 });
+
+describe("QA4 R3-19 · owner entries (Users, Admin Actions) in the V2 rail", () => {
+  const rail = (ownerEntries: boolean, v2Shell = true, url = "/administration/users") =>
+    render(
+      <MemoryRouter initialEntries={[url]}>
+        <Sidebar registry={registry} options={{ capabilities: [...V2_ROLE_PRESETS.manager, PROFILE] }} collapsed={false} v2Shell={v2Shell} ownerEntries={ownerEntries} />
+      </MemoryRouter>,
+    );
+  const admin = (view: ReturnType<typeof rail>) =>
+    [...view.container.querySelectorAll(".portal-navgroup")].find((g) => g.querySelector(".portal-navgroup-label")?.textContent === "Administration");
+  const names = (view: ReturnType<typeof rail>) => [...(admin(view)?.querySelectorAll("a.portal-navitem .portal-navitem-label") ?? [])].map((n) => n.textContent);
+
+  it("the owner sees Profile & Access, Admin Actions and Users, from the registry's own group", () => {
+    expect(names(rail(true))).toEqual(["Profile & Access", "Admin Actions", "Users"]);
+  });
+
+  it("anyone the session does not call the owner sees neither (no entry that always refuses)", () => {
+    expect(names(rail(false))).toEqual(["Profile & Access"]);
+  });
+
+  it("the entry for the open screen is current, and links carry the context", () => {
+    const view = rail(true);
+    const users = [...view.container.querySelectorAll("a.portal-navitem")].find((a) => a.textContent?.includes("Users"))!;
+    expect(users.className).toContain("portal-navitem-active");
+    expect(users.getAttribute("href")).toBe("/administration/users");
+  });
+
+  it("flag off: the prop is ignored", () => {
+    const names2 = names(rail(true, false));
+    expect(names2).not.toContain("Users");
+  });
+});
