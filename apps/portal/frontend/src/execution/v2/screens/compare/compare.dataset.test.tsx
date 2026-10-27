@@ -128,7 +128,7 @@ describe("metric rows from the Manager dataset", () => {
     await settled();
     expect(cell("Score", "Satellite").textContent).toBe("Policy pending");
     expect(cell("Score", "Satellite").textContent).not.toMatch(/\d/);
-    for (const [label, id] of [["Return", "FE-006, FE-025"], ["Max drawdown", "FE-013, FE-025"]] as const) {
+    for (const [label] of [["Return", "FE-006, FE-025"], ["Max drawdown", "FE-013, FE-025"]] as const) {
       for (const column of ["Satellite", "Orbit"]) {
         expect(cell(label, column).textContent, label).toContain("Not available");
         expect(cell(label, column).textContent, label).toContain("Not published");
@@ -139,7 +139,7 @@ describe("metric rows from the Manager dataset", () => {
   it("when the dataset read fails every dataset cell is Not available with its request id and the failure; no figure is invented", async () => {
     mount(datasetApi({ fail: true }).api, `?in=${PF.satellite},${ORBIT}`);
     await settled();
-    for (const [label, id] of [["NAV", "FE-013"], ["Net PnL", "FE-005, FE-025"], ["Score", "FE-011"]] as const) {
+    for (const [label] of [["NAV", "FE-013"], ["Net PnL", "FE-005, FE-025"], ["Score", "FE-011"]] as const) {
       const td = cell(label, "Satellite");
       expect(td.textContent, label).toContain("Not available");
       expect(td.textContent, label).toContain("Not published");

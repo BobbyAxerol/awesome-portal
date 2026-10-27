@@ -561,7 +561,7 @@ describe("metric table", () => {
     await loaded();
     const ids: Record<string, string> = { NAV: "FE-013", "Net PnL": "FE-005, FE-025", Return: "FE-006, FE-025", "Max drawdown": "FE-013, FE-025", Score: "FE-011" };
     const table = screen.getByRole("table", { name: "Metrics" });
-    for (const [label, id] of Object.entries(ids)) {
+    for (const [label] of Object.entries(ids)) {
       const row = [...table.querySelectorAll("tr")].find((tr) => tr.querySelector("td[data-l='Metric']")?.textContent === label);
       expect(row, label).toBeDefined();
       const cells = [...row!.querySelectorAll("td")].slice(1);
