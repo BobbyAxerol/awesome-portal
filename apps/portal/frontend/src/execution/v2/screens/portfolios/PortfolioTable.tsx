@@ -232,11 +232,14 @@ const GROUP_KEY: Readonly<Partial<Record<ColumnId, { key: string; signed: boolea
   hhi: { key: "concentration_hhi", signed: false },
 };
 
+/** The fact a figure column stands for, for the visible "Not published: <what>". */
+const WHAT: Partial<Record<ColumnId, string>> = { nav: "NAV", pnl: "Net PnL", ret: "Return", dd: "Drawdown", hhi: "Concentration", score: "Score" };
+
 function cell(id: ColumnId, row: PortfolioRow, figures: PortfolioFigures | null) {
   if (id === "score" && figures !== null) {
-    if (row.unallocated) return <Absent reason="The source publishes no score for capital that no portfolio holds" />;
+    if (row.unallocated) return <Absent what={WHAT.score} reason="The source publishes no score for capital that no portfolio holds" />;
     const group = figures.groups.get(row.portfolioId);
-    if (group === undefined) return <Absent reason={`No ${figures.environment} figures are published for this portfolio`} />;
+    if (group === undefined) return <Absent what={WHAT.score} reason={`No ${figures.environment} figures are published for this portfolio`} />;
     if (publishes(group, SCORE_KEYS.score)) return <ScoreList list={group} />;
   }
   if (id === "alphas") {
@@ -247,14 +250,14 @@ function cell(id: ColumnId, row: PortfolioRow, figures: PortfolioFigures | null)
   }
   const source = GROUP_KEY[id];
   if (source !== undefined && figures !== null) {
-    if (row.unallocated) return <Absent reason="The source publishes no figure for capital that no portfolio holds" />;
+    if (row.unallocated) return <Absent what={WHAT[id]} reason="The source publishes no figure for capital that no portfolio holds" />;
     const group = figures.groups.get(row.portfolioId);
-    if (group === undefined) return <Absent reason={`No ${figures.environment} figures are published for this portfolio`} />;
+    if (group === undefined) return <Absent what={WHAT[id]} reason={`No ${figures.environment} figures are published for this portfolio`} />;
     // A group that does not publish this key keeps the column's own Not published (the contract has not spoken for it).
     if (publishes(group, source.key)) return <PartitionFigures list={group} metricKey={source.key} signed={source.signed} labels="several" omitUnit={row.baseCurrency} />;
   }
   const fact = UNPUBLISHED[id];
-  if (fact) return <Absent reason={`${npText(fact)}: ${fact.what}`} />;
+  if (fact) return <Absent what={WHAT[id] ?? fact.what} reason={`${npText(fact)}: ${fact.what}`} />;
   switch (id) {
     case "owner":
       return row.owner ?? <Absent reason="owner not published" />;

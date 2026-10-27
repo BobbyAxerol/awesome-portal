@@ -18,7 +18,7 @@ describe("deadline labels", () => {
   });
   it("does not print 'Due soon, by <date before the read>': it shows the date and its relation", () => {
     const [row] = triageRows(panel("DUE_SOON", "2026-08-28T18:28:00Z"), stamp, READ);
-    expect(row!.slaShort).toBe("Deadline 28 Aug 18:28Z, before the read time");
+    expect(row!.slaShort).toBe("Deadline 28 Aug 18:28Z, 56 days before the read time");
     expect(row!.slaShort).not.toMatch(/Due soon/);
     expect(row!.sla).toContain("the server's state word is Due soon");
   });
@@ -30,6 +30,6 @@ describe("deadline labels", () => {
   });
   it("an overdue state with a date after the read is contradicted too", () => {
     const [row] = triageRows(panel("OVERDUE", "2026-10-25T00:00:00Z"), stamp, READ);
-    expect(row!.slaShort).toBe("Deadline 25 Oct 00:00Z, after the read time");
+    expect(row!.slaShort).toBe("Deadline 25 Oct 00:00Z, 1 day after the read time");
   });
 });

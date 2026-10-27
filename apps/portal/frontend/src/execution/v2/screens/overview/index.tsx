@@ -451,7 +451,7 @@ export default function OverviewScreen({ api, workspaceId, sseFactory, accessHre
           <SeriesCell label="Return" read={returnRead} window={url.value.window} gapIds="FE-006, FE-025" />
         )}
         {drawdownList !== null ? (
-          <Cell label="Drawdown" note={<span title={`Fund dataset, window ${url.value.window}`}>Max, window {url.value.window}</span>}><PartitionFigures list={drawdownList} metricKey="max_drawdown_pct" signed unit="caption" /></Cell>
+          <Cell label="Drawdown" note={<span title={`Fund dataset, window ${url.value.window}`}>Dataset max, window {url.value.window} (the chart draws its own series)</span>}><PartitionFigures list={drawdownList} metricKey="max_drawdown_pct" signed unit="caption" /></Cell>
         ) : (
           <Cell label="Drawdown" note="Needs a NAV series"><Gap ids="FE-013, FE-025" /></Cell>
         )}

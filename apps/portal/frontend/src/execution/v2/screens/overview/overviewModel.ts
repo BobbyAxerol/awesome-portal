@@ -113,6 +113,19 @@ export function deadlineRelation(due: string | null, reference: string | null): 
   return d < r ? "before" : "after";
 }
 
+/** How far a deadline is from the server's reference instant, in words ("56 days", "3 hours", "12 minutes"); `null` when unreadable. */
+export function deadlineGap(due: string | null, reference: string | null): string | null {
+  if (due === null || reference === null) return null;
+  const d = Date.parse(due);
+  const r = Date.parse(reference);
+  if (!Number.isFinite(d) || !Number.isFinite(r)) return null;
+  const minutes = Math.round(Math.abs(d - r) / 60000);
+  const plural = (n: number, unit: string) => `${n} ${unit}${n === 1 ? "" : "s"}`;
+  if (minutes >= 1440) return plural(Math.round(minutes / 1440), "day");
+  if (minutes >= 60) return plural(Math.round(minutes / 60), "hour");
+  return plural(Math.max(1, minutes), "minute");
+}
+
 export function triageRows(panel: NeedsYouPanel | null, stamp: (iso: string) => string, readAt: string | null): TriageView[] {
   if (panel === null) return [];
   // Order is the server's. See commandCenter.ts, rule 1.
@@ -127,8 +140,9 @@ export function triageRows(panel: NeedsYouPanel | null, stamp: (iso: string) => 
     // A state word that the dates contradict ("Due soon" for a date before the read) is not repeated as a fact: the date and its relation are shown.
     const relation = deadlineRelation(item.slaDueAt, readAt ?? item.asOf);
     const contradicted = relation !== null && ((item.slaState === "DUE_SOON" || item.slaState === "ON_TRACK") && relation === "before" || item.slaState === "OVERDUE" && relation === "after");
+    const gap = deadlineGap(item.slaDueAt, readAt ?? item.asOf);
     const slaShortDate = contradicted && item.slaDueAt
-      ? `Deadline ${shortInstant(item.slaDueAt)}, ${relation === "before" ? "before" : "after"} the read time`
+      ? `Deadline ${shortInstant(item.slaDueAt)}, ${gap} ${relation === "before" ? "before" : "after"} the read time`
       : null;
     return {
       id: item.id,
@@ -136,7 +150,7 @@ export function triageRows(panel: NeedsYouPanel | null, stamp: (iso: string) => 
       title: item.title,
       summary: item.summary,
       severity: item.severity,
-      sla: `${contradicted && item.slaDueAt ? `Deadline ${stamp(item.slaDueAt)}, ${relation === "before" ? "before" : "after"} the read time; the server's state word is ${word}` : `${word}${due}`}${age === null && item.ageSeconds !== null ? ". Age not shown: its as-of time is not comparable with the read time" : ""}`,
+      sla: `${contradicted && item.slaDueAt ? `Deadline ${stamp(item.slaDueAt)}, ${gap} ${relation === "before" ? "before" : "after"} the read time; the server's state word is ${word}` : `${word}${due}`}${age === null && item.ageSeconds !== null ? ". Age not shown: its as-of time is not comparable with the read time" : ""}`,
       slaShort: `${slaShortDate ?? `${word}${shortDue}`}${age ? `, age ${age}` : ""}`,
       slaState: item.slaState,
       rank: item.rank,

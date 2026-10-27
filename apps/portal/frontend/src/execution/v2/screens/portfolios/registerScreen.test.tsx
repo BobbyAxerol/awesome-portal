@@ -114,7 +114,7 @@ describe("Portfolio score column", () => {
     expect(yen).toContain("0.00");
     expect(yen).toContain("Weak");
     expect(cellOf("Pilot", "Portfolio score")).toContain("No paper figures are published for this portfolio");
-    expect(cellOf("Unallocated", "Portfolio score")).toContain("Not available");
+    expect(cellOf("Unallocated", "Portfolio score")).toContain("Not published: Score");
     // The exact string rides the title; the page computes nothing.
     expect(table().querySelector(".exec-pf-score-val[title^='82.8 ']")).not.toBeNull();
     expect(document.body.textContent).not.toMatch(/NaN|undefined/);

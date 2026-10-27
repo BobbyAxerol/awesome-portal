@@ -107,7 +107,7 @@ describe("register", () => {
       for (const [label, _id] of Object.entries(ids)) {
         const td = row.querySelector(`td[data-l="${label}"], td[data-l^="${label} \u00b7 "]`);
         expect(td, label).not.toBeNull();
-        expect(td?.textContent, label).toContain("Not available");
+        expect(td?.textContent, label).toContain("Not published");
         expect(td?.textContent, label).toContain("Not published");
       }
     }
@@ -224,7 +224,7 @@ describe("header, banners and footer", () => {
     mount(makeApi().api);
     await loaded();
     expect(screen.queryByText(/Total NAV/)).toBeNull();
-    for (const row of bodyRows()) expect(cell(row, "NAV")).toContain("Not available");
+    for (const row of bodyRows()) expect(cell(row, "NAV")).toContain("Not published: NAV");
   });
 
   it("switches to a compact table from the toolbar and the URL", async () => {

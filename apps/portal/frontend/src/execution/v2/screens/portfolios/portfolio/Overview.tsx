@@ -220,7 +220,7 @@ function Attention({ ctx }: { ctx: TabCtx }) {
   return (
     <SectionPanel title="Needs attention" aside={<InternalLink to={ctx.routes.operations} search={ctx.search}>Operations</InternalLink>}>
       {deployments.length === 0 && accounts.length === 0 ? (
-        <p className="exec-pf-note" title="Every deployment reports Ready and every account Synced in the projection. This is the published state, not a guarantee.">Nothing needs attention</p>
+        <p className="exec-pf-note" title="Every deployment reports Ready and every account Synced in the projection. This is the published state, not a guarantee.">No deployment or account is flagged in the projection. Incidents linked to this portfolio's operations are on the People tab.</p>
       ) : (
         <ul className="exec-pf-attn">
           {deployments.map((d) => (
@@ -275,7 +275,7 @@ export function Overview({ ctx }: { ctx: TabCtx }) {
         <PfKpi label="Return" note={returnList !== null ? `Window ${ctx.window}` : "Windowed; methodology per source"}>
           {returnList !== null ? <PartitionFigures list={returnList} metricKey="return_30d_pct" signed unit="caption" /> : <Np fact={PF_FE.ret} />}
         </PfKpi>
-        <PfKpi label="Drawdown" note={drawdownList !== null ? `Max, window ${ctx.window}` : "Needs the NAV series"}>
+        <PfKpi label="Drawdown" note={drawdownList !== null ? `Dataset max, window ${ctx.window} (the chart draws its own series)` : "Needs the NAV series"}>
           {drawdownList !== null ? <PartitionFigures list={drawdownList} metricKey="max_drawdown_pct" signed unit="caption" /> : <Np fact={PF_FE.drawdown} />}
         </PfKpi>
         <PfKpi label="Portfolio score" note={scoreList !== null ? `Direct from NAV, window ${ctx.window}` : "Direct from the portfolio NAV"}>
