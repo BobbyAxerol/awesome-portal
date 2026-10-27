@@ -33506,3 +33506,96 @@ CanonicalTS668e/Portal54c6 and active PMfb9a7ce7/current-policy68344dad unchange
 Edge active branchfeat/execution-edge-upgrade-v1_2 advances docs only. Stable
 releasea9b10385 and named rollback6180/cd79/98a1 remain unchanged. Existing three
 peer tracked WIP and untracked Core source preserved; no push/merge/CI minutes.
+
+### 27Oct — reconcile Core-installed Research reader and secure transport
+
+BOBBY_CONTINUE_APPROVED / IN_PROGRESS, original08/read09. Core receipt supersedes
+the09:45UTC NOT_INSTALLED/binding-pending snapshot above; do not install twice.
+Guide: [approved delta/verification/rollback](evidence/execution-edge-v1_2/EPG10-08/EDGE_RESEARCH_READER_DB_SCOPE_PROPOSAL_2026-10-27.md#6-backupaudit-installation-and-exact-rollback),
+[actual Core install receipt](evidence/execution-edge-v1_2/EPG10-08/RESEARCH_READER_INSTALL_OBSERVATION_2026-10-27.md),
+[NEW_SELECTED binding](evidence/execution-edge-v1_2/EPG10-08/CORE_TO_EDGE_RESEARCH_READER_BINDING_2026-10-27.md).
+Goal: reconcile installed roles/accessor against PMfb9a7ce7, actual source and
+the retained backup; validate observation provenance without dumping source
+rows; prepare the existing bounded mapping/discovery composition's secure
+transport and exact remaining owner action. No duplicate installation, old ACL/
+business-row/authority write, shared TLS/HBA change, source namespace sharing,
+plaintext nonloopback workaround, protected restart or connected PASS inference.
+Tests: metadata-only READ ONLY verifier/function/role/old-baseline checks;
+private artifact hash/tuple/source/count checks; impact-based configuration or
+transport tests if source changes. Existing139/86/77 evidence is inherited,
+not rerun or aggregated as new acceptance. Exit: real installed state/pins and
+runnable preparation complete, remaining input scoped by owner/action. Rollback
+remains only new admission/EXECUTE/NOLOGIN with custody retained; this intake
+does not execute rollback. Preserve peer WIP and all operational/rollback assets.
+
+Intake10:49UTC: pinned SSH Core docs/research-loop-plan@f50c4ea7268e0ef2630c4cec214c98f8e53faca4
+includes1f4109cc4/a060b485b/f50c4ea72. Local/SGP receipt hashes match
+ed3bb85e89f884db8af813608ff497bd5b422bcd5b2e4c71c0625ceeead0f5cb;
+binding hashes match08330ba14b88fe4ae3f2aba3536fb0c4d052ccaa4cf62390e563873180effdcd.
+Core reports actual installation and ACTIVE mapping/zero Paper heads/receipts;
+verify before promotion. This is not a missing binding or membership grant.
+
+Reconciliation result: INSTALLED_BY_CORE / EDGE_METADATA_VERIFIED /
+SOURCE_OBSERVED / CONNECTED_NOT_MET. Source PMfb9a7ce7 SQL49a8514e matches the
+approved fixed binding/deadline2026-10-28T09:30:00Z. Independent READ ONLY/RR
+render_verify PASS: roles/grants/owner/ACL, original cataloguefd4a84a9 and
+Timescale metadata6635b6ba unchanged. Actual definitiona2c1d878/body42b4f531
+match Core; full pins in cumulative return. Initial diagnostic with2s wrapped
+around the whole verifier failed without retained detailed error; not PASS.
+Retake used existing verify_install8s metadata bound/JIT off/lock250ms; no
+runtime query2s/statement2000ms/overall8s bound changed, no capacity inference.
+Private retained Core observation12f052c9 hash/tuple/source/schema/modes PASS:
+ACTIVE, zero scoped heads/receipts; mapped user is not protected owner. No new
+business read, duplicate install, credential, source data or authority mutation.
+Original backup manifestaa8965b8 still hash-verifies0700/0600/Bobby. PM source
+plan reconciliation committed9d114cea5f3e6b95bff299cee04bf6b7203e2382, docs only.
+
+Owned independent preparation: reviewed existing PM MappingConfiguration/
+identity_mapping_operator and Rust native_relations_gateway_runtime concrete
+loaders/operators. Restricted tuple/function/metadata, separate inbound/outbound
+keys, config/acceptance/registration hashes and finite window remain mandatory.
+Prepared topology is mTLS on both Core→Edge→PM hops and separately reviewed
+host-local/encrypted source transport, NOT a commissioned/config-ready route.
+Actual source publishes127.0.0.1:7654/SSLoff; new login password not provisioned
+(boolean-only metadata, no secret read). Do not reuse stable secrets, retry the
+denied plaintext nonloopback probe indirectly, share source network namespace
+or change shared PG TLS/HBA. Isolated loopback candidate ports28461/28462 were
+unbound at inspection, not reserved/READY; initial unprivileged ss was denied,
+privileged read-only check succeeded. No listener/config/secret was installed.
+
+Remaining scoped actions, no new phase: Core returns actual two new trust
+candidate locators/public hashes/DER pins/hop-custody and finite matching
+window; existing receipt only says prepared. Edge then provisions only the new
+login credential in that reviewed private/local composition, pins/checks
+config and runs actual PM→Edge→Core discovery. Empty-head discovery does NOT
+wait for PM membership. PM/TS authority owner with Core separately selects
+official portfolio/parent/current-authority SET_MEMBERSHIP or owner bootstrap
+path and genuine committed receipt/original; no hand-inserted fixture/grant.
+That gates ROOT/CURRENT/READ, STREAM independently, not discovery preparation.
+No available source implementation defect is relabelled external debt; owned
+commissioning remains explicitly unfinished pending actual trust/composition.
+Full08/read09/ELP2-10 stayOPEN/NOT_MET; no new phase/release/traffic promotion.
+
+C4 cleanupNO_ACTION_NEEDED: no task job/container/network/image/build/cache/CI
+or temporary key created; exact task-labelled containers/networks absent. Keep
+private catalogue backup/observation and Core's trust custody. Fresh shared
+inventory230images/51active/93.03GB, BuildKit1307/63active/132GB; none created by
+this slice, no broad prune. Root available57132859392→57451786240B under shared
+activity, not claimed reclaimed. Source6343/native28ea/three Edged6aa/Proxyaa14
+full digests match prior inventory/restart0; operational config unchanged by us.
+CanonicalTS668e1032 and Portal54c6f5f3/common source
+/home/bobby/.worktrees/portal-execution-manager-v2 retained. Active Edge feature
+feat/execution-edge-upgrade-v1_2, PM featurefeat/core-financial-assembly-20261024
+and current-policy68344dad retained; no merged/abandoned worktree to remove.
+SGP canonical/home/bobby/portal-research/docs/research-loop-plan@f50c4ea72
+unchanged by Edge; only own public return is delivered. Stable releasea9b10385
+and named rollback6180b9bf/cd79e9c6/98a191c7 were not modified; fresh release
+directory inventory denied by existing permissions, not escalated into content.
+All peer WIP preserved; no push/merge/remote CI0minutes. Delivery/hash follows.
+
+Delivery complete: replaced only own existing cumulative public return in SGP
+ELP2-10/EDGE_RESEARCH_READER_APPROVED_IMPLEMENTATION_2026-10-27.md.
+HK/SGP SHA256 bothab345cdc5c322d3bc7de06eee4f2d1a2ad831adeedc07ce1121daba57716b245,
+read back matching; CoreHEAD stillf50c4ea72. Contains actual installed/source
+pins, secure transport proposal and three concrete owner actions above; no
+private bytes copied. Delivery is not Core ACK, listener READY or connectedPASS.

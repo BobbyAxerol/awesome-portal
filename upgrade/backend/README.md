@@ -7,15 +7,18 @@ Chúng không thay thế phase hoặc exit gate trong
 
 ## Active deep dives
 
-- **27Oct Research membership reader — approved, SOURCE_ISOLATED_QUALIFIED:**
+- **27Oct Research membership reader — INSTALLED / EDGE_METADATA_VERIFIED:**
   [same08/read09 journal](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#epg10-08-research-reader-db-scope-20261027)
   and [current source/test/install return](../evidence/execution-edge-v1_2/EPG10-08/EDGE_RESEARCH_READER_APPROVED_IMPLEMENTATION_2026-10-27.md)
   record PMfb9a7ce7,139focused/86full-Timescale PG15/77strict legacyPASS.
   Exact existing52-object metadata exception pinned; actual-source guardPASS,
-  no shared ACL change/new metadata grant. Core current tuple/workload/deadline
-  is the only external real-install input. Not installed; no connected acceptance.
-  09:42UTC: private catalogue backup ready/hash-verified, owner-only outside Git;
-  Core binding still absent. No new roles, listener or source mutation.
+  no shared ACL change/new metadata grant. Core installed approved roles/accessor;
+  Edge independently verified actual grants/function/old catalogue and retained
+  observation: ACTIVE mapping, zero scoped Paper heads/receipts. No duplicate
+  install/new business observation or grant. Secure PM→Edge→Core discovery
+  composition is next; actual trust pins/custody and reviewed DB transport remain
+  to bind. Membership/original gates READ, not discovery. Full08/read09NOT_MET;
+  current Coref50c4ea72 and actual pins/owners in the linked return.
 
 - **24Oct Original06 worker materialization — ISOLATED_QUALIFIED, NOT_DEPLOYED:**
   [same06 journal](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#epg10-06-worker-oom-follow-through-20261024)

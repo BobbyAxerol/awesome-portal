@@ -2,39 +2,38 @@
 
 27Oct2026. Bobby approved the exact two-role/private-schema/execute-only
 observe() delta in EDGE_RESEARCH_READER_DB_SCOPE_PROPOSAL_2026-10-27.md.
-This is not another approval request for that delta. **SOURCE_IMPLEMENTED /
-ISOLATED_QUALIFIED / REAL_INSTALL_NOT_READY.** PM sourcec2668cfa is committed
-and clean; no source DB mutation or membership observation has occurred.
+This is not another approval request for that delta. **INSTALLED_BY_CORE /
+EDGE_METADATA_VERIFIED / SOURCE_OBSERVED / CONNECTED_NOT_MET.** Current source
+is PMfb9a7ce7, not the earlier c2668cfa baseline. No duplicate installation.
 
-**Latest continuation supersedes the earlier pending metadata decision below:**
-the exact existing Timescale metadata exception is implemented and its actual
-source admission guard PASS. No shared ACL was changed. See
-[current continuation result](#continuation-result--exact-metadata-gap-closed).
-Only Core's current/explicit NEW_SELECTED tuple/workload/deadline remains external
-before real installation; historical tuples are not installation authority.
+**Current27Oct status supersedes historical uninstalled/binding-pending text:**
+[Core receipt](RESEARCH_READER_INSTALL_OBSERVATION_2026-10-27.md) and
+[selected binding](CORE_TO_EDGE_RESEARCH_READER_BINDING_2026-10-27.md) match
+SGP bytes. Edge independently verified the installed roles/accessor/old catalogue
+and retained observation. ACTIVE mapping, zero Paper heads/receipts: not a grant.
+See [current reconciliation and next action](#installed-reader-reconciliation--27oct).
+Source DB reader installation is finished; secure PM→Edge→Core discovery
+composition is not commissioned. READ/STREAM/native originals remain separate.
 
-## Core input needed for the real fixed binding
+## Historical input request — satisfied by Core NEW_SELECTED binding
 
-Core's requested follow-through requires a fixed current Research/Paper tuple.
-The public packets contain only the HISTORICAL target below, not a currently
-confirmed workload/private discovery manifest. Source implementation/testing
-continues independently; do not fabricate the missing workload or an entitlement.
+Core's requested follow-through required a fixed current Research/Paper tuple.
+The initial historical-only request is now satisfied by the linked NEW_SELECTED
+binding. Current selection (not an entitlement or connected runtime manifest):
 
 - human issuer: portal-control-api.native-manager-read
 - subject: usr_5a38d5dfb08b44748f5776fbe04a1434
 - workspace: ws_06G19F61YB8CFR7TEWMS7HQ660
 - environment: paper
-- intended workload ID: CORE_TO_CONFIRM
-- current private manifest/config reference and hash: CORE_TO_RETURN
-- viable finite binding validity: CORE_TO_RETURN (not a reused expired slot)
+- workload ID: portal-research-membership-discovery-paper-v1
+- current private runtime manifest/config: not created; depends on matched composition
+- selected binding validity: 2026-10-28T09:30:00Z (not a reused expired slot)
 
-**Core action:** confirm/change the intended target above and return the exact
-workload and current private manifest locator/hash (not secrets). These pin a
-new observation reader, not READ/STREAM or an accepted original. If no discovery
-manifest exists yet, Core may explicitly select the new stable workload ID and
-target for this commissioning operation; label it NEW_SELECTED, not observed
-runtime authority. Fresh separate Research trust follows the existing approved
-procedure; no old/stable private credential or expired certificate is reused.
+**Binding action satisfied:** Core supplied NEW_SELECTED and installed the
+reader. Do not ask for the same selection or reinstallation again. Remaining
+trust/composition/native-authority actions are listed in the latest section.
+Fresh Research trust follows the existing approved procedure; no old/stable
+private credential or expired certificate is reused.
 
 ## Qualified source implementation
 
@@ -49,7 +48,8 @@ one fails closed without changing shared ACLs.
 Source DB remains live_data_executor/system7674585245102796834; source data,
 old roles, stable/dev/provider28445 and command/Live are untouched. Full
 08/read09/ELP2-10 remain OPEN. Actual tests/source pins/install/cleanup are
-recorded below; this return does not claim installed or connected PASS.
+recorded below. Initial source-only evidence is historical; current installation
+is verified in the latest section, not connected PASS.
 
 ## Final source pin and owning boundaries
 
@@ -77,7 +77,8 @@ source fingerprint and finite validity. SQL is password-free, transactionally
 refuses drift/name reuse/unsafe PUBLIC surfaces, creates only approved objects,
 then verifies the old baseline and new exact grants. `function_pins()` reports
 the actual PostgreSQL definition/body hashes after a real install; those live
-pins are **NOT_AVAILABLE** now, never replaced with fixture hashes. Existing
+pins were unavailable at this initial source snapshot and are now recorded in
+the current reconciliation below, never replaced with fixture hashes. Existing
 PUBLIC TEMPORARY and safe fingerprint introspection stay as observed, not falsely
 reported denied. No explicit fingerprint-function grant is added to the login.
 
@@ -391,3 +392,129 @@ approved two-role mechanism already exist; Edge owns backup/apply/verify after
 that input. Return into this existing ELP2-10 mailbox and mirror to HK EPG10-08.
 Do not mark READY from filename delivery, reuse retired session credentials,
 or interpret discovery as membership/READ/STREAM. Full08/read09 still NOT_MET.
+
+## Installed reader reconciliation — 27Oct
+
+Core source `docs/research-loop-plan@f50c4ea7268e0ef2630c4cec214c98f8e53faca4`
+contains1f4109cc4/a060b485b/f50c4ea72. Pinned SSH readback matches HK mailbox:
+
+| Input | SHA256 |
+| --- | --- |
+| RESEARCH_READER_INSTALL_OBSERVATION_2026-10-27.md | ed3bb85e89f884db8af813608ff497bd5b422bcd5b2e4c71c0625ceeead0f5cb |
+| CORE_TO_EDGE_RESEARCH_READER_BINDING_2026-10-27.md | 08330ba14b88fe4ae3f2aba3536fb0c4d052ccaa4cf62390e563873180effdcd |
+
+Selection is workload `portal-research-membership-discovery-paper-v1`, the
+issuer/subject/workspace above, valid until2026-10-28T09:30:00Z. It is not a
+session, grant or authority extension. Core installed PMfb9a7ce7's exact SQL
+`49a8514ebaeb68aadea6ecaae93c675b4737f90f57ad416c524e4eecf8a59f1b`
+against the retained private backup above. Do not run render_install again:
+the intentional name-reuse refusal is not an idempotent reinstall operation.
+
+Edge independently ran render_verify from that source in READ ONLY/RR with
+ROLLBACK, transaction-local JIT off/lock250ms and the existing metadata verifier
+API's8s bound. Exact installed role attributes/memberships, explicit/effective
+grants, accessor owner/body/ACL, old five-relation cataloguefd4a84a9 and exact
+52-object Timescale metadata6635b6ba PASS. No shared setting or data changed.
+Actual function definition SHA256:
+`a2c1d8785313b34e033d53ae2609d166ffd505812fc0daf46a72e58f35291fc2`.
+Actual body SHA256:
+`42b4f53114414c89d63e3fa87480e6ce2f6bf2c2aee65b1e6a23dc87383609f2`.
+The first diagnostic imposed2s on the entire catalogue verifier and failed
+without a retained detailed error; it is NOT PASS or a measured2s qualification.
+One retake used the existing8s verifier contract, not a source/runtime timeout
+increase. Runtime query<=2s/statement<=2000ms/overall8s remain unchanged and
+unqualified as a connected latency/capacity claim. No pytest/cargo/build rerun;
+unchanged-source139focused/86Timescale/77strict evidence is inherited only.
+
+Retained Core observation was hash/tuple/source/schema/status/count checked,
+without printing private rows or making another business observation:
+`/home/bobby/secure/core-research-observation-20261027-IDReX1uc/research-source-observation-36a05caf-bdfa-4728-adfe-718e76f1fa80.json`,
+SHA256 `12f052c9a0f41fc075b6d4b6d00208c831afca6df8ab2744c8821965afa9f4a4`.
+Result: mapping ACTIVE, Paper heads0, matching receipts0. This observed selector
+does not prove that every membership in the DB is absent. No original/grant,
+ROOT/CURRENT/READ/STREAM/Manager or full08/read09 acceptance follows.
+
+### Secure composition prepared; no listener or workaround commissioned
+
+Actual DB stays image6343bdc87ca1/restart0 and publishes only127.0.0.1:7654.
+PG SSL is off. The new login has no password provisioned (boolean-only owner
+catalogue check; no password value read). Source-local peer observation is not
+an asyncpg network credential. Existing source roles/secrets must not substitute.
+
+Smallest proposed commissioning topology reuses the current operator/gateway:
+Core/SGP → separately pinned TLS1.3/mTLS Rust gateway/HK → separately pinned
+TLS1.3/mTLS PM mapping/discovery/HK → reviewed host-local numeric-loopback DB
+connection. No plaintext nonloopback retry, source-container network namespace,
+shared PG TLS/HBA alteration, public DB port or stable credential. A host-local
+deployment/secure tunnel and new-role-only SCRAM credential must be matched and
+reviewed before activation, not assumed safe from the port string alone.
+Core's denied plaintext probe is not retried indirectly. No new credential,
+private-key transfer, host-network container or listener was started in this slice.
+
+Existing concrete entrypoints, not another framework:
+
+- PM: `services.portfolio_management.identity_mapping_operator config-check`
+  then `serve`, with exact config SHA/material root/workspace. Restricted
+  source pins the actual function/metadata above, one binding, pool<=2,
+  inflight1, statement<=2000ms/lock<=250ms/query<=2s/overall8s.
+- Rust: `edge-service core-native-relations-check` then
+  `core-native-relations-serve`, using `EDGE_NATIVE_RELATIONS_GATEWAY_FILE`
+  and `EDGE_NATIVE_RELATIONS_GATEWAY_SHA256`. Pin owner acceptance, bounded
+  window, all material hashes and actual DER peer fingerprints. Configure
+  only the selected mapping/discovery scopes; ROOT/CURRENT registrations
+  remain empty. Edge inbound and Edge→PM private keys must be distinct.
+- Only after exact source/config/trust/window ACK: commission those isolated
+  candidates, observe mapping/discovery once through both hops, correlate real
+  response/receipt, then stop/drain exactly the new listeners/tunnel. Discovery
+  with zero heads is valid and need not wait for a native membership grant.
+
+### Remaining owner/action — original08, not a new phase
+
+1. **Core:** return the two new Research candidate trust-bundle locators,
+   public hashes/DER leaf/CA pins, intended party/hop assignment and finite
+   validity/window. Receipt says prepared, but supplies none of those actual
+   locators/pins. Do not transfer Core signer/client keys to HK or silently
+   reuse older approved private-file packets. Return exact new private-material
+   custody/delivery selection for the HK-serving parties via the private channel.
+2. **Edge:** after that matched composition review, provision only the new
+   login's private SCRAM reference, pin config/materials, run existing config
+   checks and bounded secure transport/discovery qualification; retain audit/
+   recovery and revoke/retire only owned temporary resources. This is owned
+   commissioning work, not external debt or an unfinished adapter implementation.
+3. **PM/TS authority owner with Core:** identify the official existing Paper
+   membership/delegation path and intended portfolio scope for this actual
+   mapped user. MembershipRepository.set_membership requires an authorized
+   parent/current-authority transaction, rejects protected-owner changes and
+   self-elevation, and does not bootstrap roots. Return a genuinely committed
+   native receipt/original, or the precise missing official bootstrap contract.
+   Do not fabricate SQL memberships/receipts or call this request permission
+   to create a grant. This gates ROOT/CURRENT/READ; STREAM remains independent.
+
+No new Bobby phase approval needed for the already approved scope. Full08/
+read09 stayOPEN/NOT_MET; this receipt closes source-reader installation and
+verification only. Manager all-mode product scope is unchanged: this one
+Research/Paper discovery selection is not a Paper-only Manager limitation.
+
+### Current slice cleanup and source publication
+
+No pytest/cargo/build/image/container/network/tunnel/listener/private key or
+credential created in this reconciliation. Exact task-labelled cells/networks
+absent; C4NO_ACTION_NEEDED, no task-created artifact to prune. Retain bounded
+private catalogue backup and Core observation for audit; do not delete Core's
+trust/custody. Shared inventory230images/51active/93.03GB and
+BuildKit1307/63active/132GB retained (not ours). Root available57132859392→
+57451786240B under shared activity, not reclaimed-space evidence. Source6343,
+native28ea, three Edged6aa/Proxyaa14 exact images unchanged/restart0. No SGP
+runtime/DB/config/restart or Core source/plan/sync change by Edge.
+
+Source-only docs reconciliation PM9d114cea5f3e6b95bff299cee04bf6b7203e2382;
+installed implementation remains PMfb9a7ce7. Canonical HK source is still
+`/home/bobby/.worktrees/portal-execution-manager-v2`@54c6f5f3; TS canonical
+`/home/bobby/trading_system`@668e1032. Active Edge owner feature stays
+`/home/bobby/.worktrees/portal-execution-edge-upgrade-v1_2`, branch
+`feat/execution-edge-upgrade-v1_2`; current-policy candidate68344dad clean.
+SGP `/home/bobby/portal-research` docs/research-loop-plan remainsf50c4ea72;
+stablea9b10385 and named rollback6180/cd79/98a1 not modified. Fresh privileged
+release inventory was not claimed after the existing directory permission
+denial. No worktree removal, unrelated WIP stage, push/merge or CI minutes.
+This existing public return is mirrored to Core ELP2-10; delivery is not ACK.

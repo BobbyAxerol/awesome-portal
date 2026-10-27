@@ -650,18 +650,21 @@ deep-dive → ADR → slice → evidence discipline documented above.
 
 ### 14.1 Current backend state (tracking snapshot — 2026-08-17)
 
-**27Oct Research membership reader — approved, SOURCE_ISOLATED_QUALIFIED:**
+**27Oct Research membership reader — INSTALLED / EDGE_METADATA_VERIFIED:**
 [same08/read09 journal](EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#epg10-08-research-reader-db-scope-20261027)
 and [current source/test/install return](evidence/execution-edge-v1_2/EPG10-08/EDGE_RESEARCH_READER_APPROVED_IMPLEMENTATION_2026-10-27.md)
 pin PMfb9a7ce7 (successor c2668cfa):139focused,86full-Timescale PG15 and77strict
 legacy casesPASS. Exact existing52-object Timescale metadata SELECT exception
 is explicitly pinned; actual-source guard PASS, no shared-ACL change or new
-metadata grant. Application data remains accessor-only. Current Core binding/
-workload/deadline still pending. REAL_INSTALL_NOT_READY, no operational role/
-function/credential/listener or source row changed; no grant/connected PASS.
-09:42UTC continuation: bounded private catalogue backup READY (owner-only,
-hash/path in the same return); current Core tuple/workload/deadline still absent.
-No new DB objects installed; prior test evidence inherited, not rerun.
+metadata grant. Core installed the approved two roles/private accessor using
+the retained backup and NEW_SELECTED binding; Edge independently verified the
+exact grants/function/old catalogue. Retained observation hash/tuple/source
+matches: ACTIVE mapping, zero scoped Paper heads/receipts, not an entitlement.
+No duplicate install or new business observation. Secure PM→Edge→Core discovery
+composition/trust remains uncommissioned; actual new trust pins/custody and
+reviewed local/encrypted DB transport are next. Native membership/original
+gates READ, not zero-head discovery. Full08/read09 remainNOT_MET. Core source
+f50c4ea72; actual pins/evidence/next owners in the linked current return.
 
 **24Oct Original06 worker materialization — ISOLATED_QUALIFIED, NOT_DEPLOYED:**
 [same06 journal](EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#epg10-06-worker-oom-follow-through-20261024)
