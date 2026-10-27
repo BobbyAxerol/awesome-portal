@@ -64,7 +64,7 @@ export class ManagerModelService {
       throw new ExecutionReadScopeError("EXECUTION_READ_QUERY_INVALID", 400);
     if (q.workspace_id && q.workspace_id !== principal.workspaceId) throw new ExecutionReadScopeError("EXECUTION_READ_NOT_AVAILABLE", 404);
     return this.readEnvironment(principal, env, surface, q, id, (scope, doc, fences) =>
-      queryManagerModel(scope, doc, q, this.codec, surface, id, fences.score, fences.composition, fences.regime, fences.economic));
+      queryManagerModel(scope, doc, q, this.codec, surface, id, fences.score, fences.composition, fences.regime, fences.economic, true));
   }
 
   /** Actual installed composition, never a browser/profile flag. Optional
@@ -103,7 +103,7 @@ export class ManagerModelService {
       throw new ExecutionReadScopeError("EXECUTION_READ_NOT_AVAILABLE", 404);
     if (q.stage_filter.some(stage => stage !== "PAPER")) throw new ExecutionReadScopeError("EXECUTION_READ_QUERY_INVALID", 400);
     await this.readEnvironment(principal, "paper", surface, q, id, (scope, doc, fences) =>
-      queryManagerModel(scope, doc, q, this.codec, surface, id, fences.score, fences.composition, fences.regime, fences.economic),
+      queryManagerModel(scope, doc, q, this.codec, surface, id, fences.score, fences.composition, fences.regime, fences.economic, true),
       undefined, { response, beforeDispatch }, this.nativeAccount!.scopes);
   }
 
@@ -123,7 +123,7 @@ export class ManagerModelService {
       if (!this.profileFor(environment)) { reads.push({ environment, unavailable: "NOT_CONFIGURED" }); continue; }
       try {
         const collected = await this.readEnvironment(principal, environment, "FLEET", q, undefined, (scope, doc, fences) =>
-          collectManagerRows(scope, doc, managerAllEnvironmentQuery(q, environment), "FLEET", undefined, fences.score, fences.composition, fences.regime, fences.economic),
+          collectManagerRows(scope, doc, managerAllEnvironmentQuery(q, environment), "FLEET", undefined, fences.score, fences.composition, fences.regime, fences.economic, true),
         obligation => obligations.push(obligation));
         reads.push({ environment, collected });
       } catch (error) { reads.push({ environment, unavailable: managerAllReasonOf(error) }); }

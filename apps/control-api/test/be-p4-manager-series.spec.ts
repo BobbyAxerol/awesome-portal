@@ -71,6 +71,16 @@ const A = { subject_type: "PORTFOLIO" as const, subject_id: SHARED }, B = { subj
 const FUND = { subject_type: "FUND" as const };
 
 describe("BE-P4 FE-013: nothing is invented when the source is missing", () => {
+  it("service proof fence withholds retained NET_PNL while leaving NAV and source bytes unchanged", async () => {
+    const t = await fixture(); t.doc.precomputed_series = [t.publication(SHARED), t.publication(SHARED, { metric: "NET_PNL" })];
+    const before = JSON.stringify(t.doc), subjects = [A], inputs = subjects.map(subject => ({ subject, scope: t.scope }));
+    const read = (metric: "NAV" | "NET_PNL", strict: boolean) => queryManagerSeries(inputs, t.doc,
+      { environment: "paper", metric, window: "30D", subjects }, strict);
+    expect(read("NET_PNL", true).series[0]).toMatchObject({ state: "UNAVAILABLE", reason_code: "SOURCE_NOT_QUALIFIED", points: [] });
+    expect(read("NAV", true).series[0].state).toBe("AVAILABLE");
+    expect(read("NET_PNL", false).series[0].state).toBe("AVAILABLE");
+    expect(JSON.stringify(t.doc)).toBe(before);
+  });
   it("every subject is a typed UNAVAILABLE and the profile says its series source is not published", async () => {
     const t = await fixture();
     const r = t.read([FUND, A, B]);
@@ -419,6 +429,14 @@ describe("service + controller (synthetic adapters, no PostgreSQL)", () => {
     const s = await service(); s.doc.precomputed_series = [s.publication(SHARED)];
     const r = await s.controller.read(s.request, query([A], { window: JSON.stringify(WINDOW) }));
     expect(r.series[0].state).toBe("AVAILABLE");
+  });
+  it("controller withholds old NET_PNL when no economic source mapping is installed, without changing NAV", async () => {
+    const s = await service(); s.doc.precomputed_series = [s.publication(SHARED), s.publication(SHARED, { metric: "NET_PNL" })];
+    const before = JSON.stringify(s.doc);
+    const pnl = await s.controller.read(s.request, query([A], { metric: "NET_PNL" }));
+    expect(pnl.series[0]).toMatchObject({ state: "UNAVAILABLE", reason_code: "SOURCE_NOT_QUALIFIED", points: [] });
+    expect((await s.controller.read(s.request, query([A]))).series[0].state).toBe("AVAILABLE");
+    expect(JSON.stringify(s.doc)).toBe(before);
   });
   it("never serves a TEST_ONLY document", async () => {
     const s = await service(); s.repository.document.mockResolvedValue({ ...s.doc, qualification: "TEST_ONLY" });

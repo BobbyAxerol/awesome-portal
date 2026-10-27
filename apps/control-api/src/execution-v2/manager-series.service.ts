@@ -97,7 +97,7 @@ export class ManagerSeriesService {
           ? series.provenance.calculation_revision !== economic.calculation_revision
           : series.provenance.calculation_revision.startsWith("manager-series-economic.v1:")))
           throw new ExecutionReadScopeError("EXECUTION_READ_PUBLICATION_NOT_QUALIFIED", 503);
-        const response = queryManagerSeries(inputs, doc, q);
+        const response = queryManagerSeries(inputs, doc, q, !economic);
         await checkHead();
         return response;
       };

@@ -12,6 +12,7 @@ import { materializeManagerSeries } from "../src/execution-v2/manager-series-mat
 import { ManagerSeriesStore } from "../src/execution-v2/manager-series.store";
 import { ManagerSeriesRuntime } from "../src/execution-v2/manager-series-runtime";
 import { ExecutionManagerRuntime } from "../src/execution-v2/manager-runtime";
+import { ManagerModelService } from "../src/execution-v2/manager-model.service";
 import { loadPublicationCommissioning } from "../src/execution-v2/publication-adapter";
 import { unqualifiedAccessTrust } from "../src/execution-v2/access-trust";
 import { BUSINESS_READ_FIELDS } from "../src/execution-v2/read-fields";
@@ -75,6 +76,15 @@ const totals = (doc: ManagerModelDocument, r?: ManagerEconomicSourceRuntime) => 
   r ? { document: doc, runtime: r } : undefined)[0].metrics.net_pnl;
 
 describe("owning economic source: actual dataset and series path", () => {
+  it("fences source-qualified NET_PNL without a mapping while preserving independently sourced fields", () => {
+    const doc = document(), facts = doc.facts, tuples = tupleSet(doc);
+    const strict = managerPartitionTotals(facts, ["net_pnl", "current_nav"], tuples, undefined, true)[0].metrics;
+    expect(strict.net_pnl).toMatchObject({ value: null, availability: "UNAVAILABLE", reason_code: "ECONOMIC_SOURCE_MAPPING_NOT_PUBLISHED" });
+    expect(strict.current_nav).toMatchObject({ value: null, reason_code: "SOURCE_FACTS_NOT_PUBLISHED" });
+    const qualified = managerPartitionTotals(facts, ["net_pnl"], tuples, { document: doc, runtime: runtime(doc) }, true)[0].metrics.net_pnl;
+    expect(qualified).toMatchObject({ value: "28", availability: "AVAILABLE" });
+    expect(managerPartitionTotals([], ["net_pnl"], tuples, undefined, true)).toEqual([]);
+  });
   it("changes neither legacy default nor proposal status; proof-aware shared source counts once in both real callers", () => {
     const doc = document(), r = runtime(doc), legacy = totals(doc), dataset = totals(doc, r);
     expect(legacy.value).toBe("42"); expect(dataset.value).toBe("28");
@@ -137,6 +147,46 @@ describe("owning economic source: actual dataset and series path", () => {
     expect(result.items.length).toBeGreaterThan(0); expect(seen.length).toBeGreaterThan(0);
     expect(seen.flatMap(s => s.facts).every(fact => fact.tuple.alpha_id === OWN.alpha_id)).toBe(true);
     expect(seen.every(s => s.binding_digest.startsWith("sha256:"))).toBe(true);
+  });
+
+  it("strict authorized Fleet rows and groups cannot expose legacy NET_PNL without the owning mapping", async () => {
+    const f = productReadFixture({ full: true, fields: [...BUSINESS_READ_FIELDS] }), doc = document(f.principal.workspaceId);
+    const scope = await f.scopes.authorize(f.principal, { environment: "paper", profileId: doc.profile_id }, { action: "business.read_all",
+      dataset: { dataset_id: doc.family_id, source_revision: doc.revision, projection_generation: doc.projection_generation,
+        catalogue_revision: doc.catalogue_digest, window: null } });
+    const codec = new KeysetCursorCodec({ activeKeyId: "test", keys: { test: "TEST_ONLY-manager-cursor-key-32bytes-not-prod" }, now: () => T / 1000 });
+    const read = (r?: ManagerEconomicSourceRuntime) => queryManagerModel(scope, doc, { environment: "paper", group_by: ["portfolio_id"] }, codec,
+      "FLEET", undefined, undefined, undefined, undefined, r, true);
+    const blocked = read();
+    expect(blocked.items.length).toBeGreaterThan(0);
+    for (const row of blocked.items) expect(row.metrics.net_pnl).toMatchObject({ value: null, reason_code: "ECONOMIC_SOURCE_MAPPING_NOT_PUBLISHED" });
+    for (const group of blocked.groups) for (const partition of group.economic_partitions)
+      expect(partition.metrics.net_pnl).toMatchObject({ value: null, reason_code: "ECONOMIC_SOURCE_MAPPING_NOT_PUBLISHED" });
+    const allowed = read(runtime(doc));
+    expect(allowed.items.some(row => row.metrics.net_pnl.value !== null)).toBe(true);
+    const base = { environment: "paper", limit: 1, group_by: ["portfolio_id"], group_limit: 1 };
+    const first = queryManagerModel(scope, doc, base, codec, "FLEET");
+    expect(first.page.next_cursor).toBeTruthy();
+    expect(first.group_page?.next_cursor).toBeTruthy();
+    expect(() => queryManagerModel(scope, doc, { ...base, after: first.page.next_cursor }, codec,
+      "FLEET", undefined, undefined, undefined, undefined, undefined, true)).toThrow(/Query cursor does not match/);
+    expect(() => queryManagerModel(scope, doc, { ...base, group_after: first.group_page!.next_cursor }, codec,
+      "FLEET", undefined, undefined, undefined, undefined, undefined, true)).toThrow(/Query cursor does not match/);
+  });
+
+  it("actual Fleet service applies the proof fence when the optional runtime is absent", async () => {
+    const f = productReadFixture({ full: true, fields: [...BUSINESS_READ_FIELDS] }), doc = document(f.principal.workspaceId);
+    const service = new ManagerModelService({} as Pool, f.scopes, f.config);
+    const repository = (service as any).repository;
+    const head = { revision: doc.revision, projection_generation: doc.projection_generation,
+      catalogue_digest: doc.catalogue_digest, payload_digest: `sha256:${"b".repeat(64)}` };
+    vi.spyOn(repository, "head").mockResolvedValue(head);
+    vi.spyOn(repository, "document").mockResolvedValue(doc);
+    const result = await service.read(f.principal, "FLEET", { environment: "paper", group_by: ["portfolio_id"] });
+    expect(result.items.length).toBeGreaterThan(0);
+    for (const row of result.items) expect(row.metrics.net_pnl).toMatchObject({ value: null, reason_code: "ECONOMIC_SOURCE_MAPPING_NOT_PUBLISHED" });
+    for (const group of result.groups) for (const partition of group.economic_partitions)
+      expect(partition.metrics.net_pnl).toMatchObject({ value: null, reason_code: "ECONOMIC_SOURCE_MAPPING_NOT_PUBLISHED" });
   });
 
   it("one request-local context resolves a binding once, freezes proof and rechecks revoke before cached reads", () => {

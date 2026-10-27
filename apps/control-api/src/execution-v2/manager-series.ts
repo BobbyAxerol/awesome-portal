@@ -36,7 +36,7 @@ const subjectKey = (s: Subject, workspaceId: string) => s.subject_type === "FUND
   { subject_type: s.subject_type, subject_id: s.subject_id! };
 
 function entryFor(input: SeriesSubjectScope, doc: ManagerModelDocument, query: ManagerSeriesQuery,
-  window: { from_ms: number; to_ms: number } | null): ManagerSeriesEntry {
+  window: { from_ms: number; to_ms: number } | null, requireEconomicNetPnl = false): ManagerSeriesEntry {
   const { scope, subject } = input, id = subjectKey(subject, scope.workspaceId);
   const portfolioId = subject.subject_type === "PORTFOLIO" ? subject.subject_id : undefined;
   const alphaId = subject.subject_type === "ALPHA" ? subject.subject_id : undefined; // WP-K: an alpha is authorized as a whole like a portfolio
@@ -48,6 +48,9 @@ function entryFor(input: SeriesSubjectScope, doc: ManagerModelDocument, query: M
     projectionRowVisible(scope, m.tuple) && (portfolioId === undefined || m.tuple.portfolio_id === portfolioId) &&
     (alphaId === undefined || m.tuple.alpha_id === alphaId));
   if (!members.length) return unavailable(id, "SUBJECT_HAS_NO_ACTIVE_MEMBERS");
+  // Legacy precomputed PnL may predate a source ownership/census mapping.
+  // Do not relabel or serve it as qualified merely because it is retained.
+  if (requireEconomicNetPnl && query.metric === "NET_PNL") return unavailable(id, "SOURCE_NOT_QUALIFIED");
   // 2. Then the source: nothing published, or published but not qualified, is not a series.
   if (doc.precomputed_series === undefined) return unavailable(id, "SERIES_SOURCE_NOT_PUBLISHED");
   if (doc.qualification !== "SOURCE_VERIFIED" || doc.source_quality.freshness !== "FRESH" || doc.source_quality.completeness !== "COMPLETE")
@@ -87,7 +90,7 @@ function servedEntry(id: ManagerSeriesEntry["subject"], p: ManagerSeriesPublicat
 }
 
 /** Bounded read-side query. Requires `scopes.deliverScopedTogether` at the service boundary. */
-export function queryManagerSeries(inputs: readonly SeriesSubjectScope[], input: unknown, rawQuery: unknown) {
+export function queryManagerSeries(inputs: readonly SeriesSubjectScope[], input: unknown, rawQuery: unknown, requireEconomicNetPnl = false) {
   if (!inputs.length) fail("EXECUTION_READ_SCOPE_REQUIRED");
   const doc = managerModelDocument.parse(input), query = managerSeriesQuery.parse(rawQuery);
   if (inputs.length !== query.subjects.length) fail("EXECUTION_READ_SCOPE_REQUIRED");
@@ -106,7 +109,7 @@ export function queryManagerSeries(inputs: readonly SeriesSubjectScope[], input:
   const selectedWindow = resolveManagerWindow(doc.as_of_ms, query.window)!;
   const series = inputs.map((input, index) => {
     if (JSON.stringify(input.subject) !== JSON.stringify(query.subjects[index])) fail("EXECUTION_READ_SCOPE_REQUIRED");
-    return entryFor(input, doc, query, selectedWindow.resolved);
+    return entryFor(input, doc, query, selectedWindow.resolved, requireEconomicNetPnl);
   });
   const response = { schema_version: "portal.execution.manager-series.v1" as const, workspace_id: first.workspaceId,
     environment: first.environment, record_authority: "PORTAL_PROJECTION" as const, source_authority: "TRADING_SYSTEM" as const,

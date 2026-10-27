@@ -65,18 +65,30 @@ type World = Awaited<ReturnType<typeof world>>;
 
 /** What the service does: collect every environment under its own scope; a missing one carries its typed reason. */
 function reads(query: Record<string, unknown>, worlds: Partial<Record<ManagerEnvironmentName, World>>,
-  unavailable: Partial<Record<ManagerEnvironmentName, Parameters<typeof managerAllReasonOf>[0]>> = {}): ManagerAllRead[] {
+  unavailable: Partial<Record<ManagerEnvironmentName, Parameters<typeof managerAllReasonOf>[0]>> = {}, strictNetPnl = false): ManagerAllRead[] {
   const all = managerModelQuery.parse({ environment: "ALL", ...query });
   return MANAGER_ALL_ENVIRONMENTS.map((environment): ManagerAllRead => {
     const w = worlds[environment];
     if (!w) return { environment, unavailable: managerAllReasonOf(unavailable[environment] ?? new ExecutionReadScopeError("EXECUTION_READ_NOT_AVAILABLE", 404)) };
-    return { environment, collected: collectManagerRows(w.scope, w.doc, managerAllEnvironmentQuery(all, environment)) };
+    return { environment, collected: collectManagerRows(w.scope, w.doc, managerAllEnvironmentQuery(all, environment),
+      "FLEET", undefined, undefined, undefined, undefined, undefined, strictNetPnl) };
   });
 }
 const read = (query: Record<string, unknown>, worlds: Partial<Record<ManagerEnvironmentName, World>>, unavailable = {}) =>
   queryManagerModelAll(reads(query, worlds, unavailable), { environment: "ALL", ...query }, codec(), worlds.paper?.f.principal.workspaceId ?? worlds.live!.f.principal.workspaceId);
 
 describe("FE-CAT-3 Fleet ALL lens: authorized rows across environments, no cross-environment sum", () => {
+  it("rejects legacy ALL row and group cursors after enabling the NET_PNL proof fence", async () => {
+    const paper = await world("paper"), live = await world("live", { full: true });
+    const worlds = { paper, live }, q = { group_by: ["alpha_id"], group_limit: 1, limit: 1 };
+    const first = read(q, worlds);
+    expect(first.page.next_cursor).toBeTruthy();
+    expect(first.group_page?.next_cursor).toBeTruthy();
+    const strict = (query: Record<string, unknown>) => queryManagerModelAll(reads(query, worlds, {}, true),
+      { environment: "ALL", ...query }, codec(), paper.f.principal.workspaceId);
+    expect(() => strict({ ...q, after: first.page.next_cursor })).toThrow(/Query cursor does not match/);
+    expect(() => strict({ ...q, group_after: first.group_page!.next_cursor })).toThrow(/Query cursor does not match/);
+  });
   it("continues groups independently across ALL with exact snapshot-bound cursors and environment partitions", async () => {
     const paper = await world("paper"), live = await world("live", { full: true });
     const q = { group_by: ["alpha_id"], group_limit: 1, limit: 1 };

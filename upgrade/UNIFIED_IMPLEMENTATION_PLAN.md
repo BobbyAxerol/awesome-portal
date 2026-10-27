@@ -16616,3 +16616,8 @@ tests confirm that the optional mapping does not itself fence the pre-existing
 legacy NET_PNL aggregate. [Exact risk, implementation and Edge/Claude actions](execution_loop/evidence/ELP2-10/CORE_FINANCIAL_FALLBACK_REVIEW_2026-10-27.md).
 No source-backed double count or connected qualification is asserted.
 
+27Oct NET_PNL service follow-through: dataset and series fail closed when the
+source ownership mapping is not installed; old cursor and retained series are
+fenced without overwriting data. [Scope, focused tests and remaining source/Claude handoff](execution_loop/evidence/ELP2-10/CORE_NET_PNL_READ_FENCE_2026-10-27.md).
+Source commissioning, connected/browser acceptance and ELP2-10 remain open.
+

@@ -124,7 +124,8 @@ export function economicFacts(facts: ManagerFact[]) {
   }
   return output;
 }
-export function managerPartitionTotals(facts: ManagerFact[], keys: readonly string[], expectedTuples: Set<string>, economic?: ManagerEconomicSourceContext) {
+export function managerPartitionTotals(facts: ManagerFact[], keys: readonly string[], expectedTuples: Set<string>, economic?: ManagerEconomicSourceContext,
+  requireEconomicNetPnl = false) {
   const groups = new Map<string, ManagerFact[]>(), rawGroups = new Map<string, ManagerFact[]>();
   const knownTuples = new Set<string>();
   for (const f of facts.filter(f => f.classification !== "CUSTODY")) {
@@ -146,6 +147,12 @@ export function managerPartitionTotals(facts: ManagerFact[], keys: readonly stri
     const raw = rawGroups.get(partitionKey)!;
     const expected = new Set([...unknownTuples, ...raw.map(f => managerTupleKey(f.tuple))]);
     const metricValues = Object.fromEntries(keys.map(key => {
+      // On the real service boundary a missing producer mapping is not proof
+      // that account-scoped PnL facts are disjoint. Retain legacy pure callers
+      // for fixture/replay compatibility, but never publish their aggregate as
+      // a source-qualified value without ownership/census evidence.
+      if (requireEconomicNetPnl && !economic && key === "net_pnl" && raw.some(f => f.kind === key))
+        return [key, absent("ECONOMIC_SOURCE_MAPPING_NOT_PUBLISHED", raw.find(f => f.kind === key)?.metric)];
       if (economic && ["current_nav", "net_pnl"].includes(key)) {
         const metricFacts = raw.filter(f => f.kind === key), first = metricFacts[0]?.metric;
         const result = economic.runtime.reduce(economic.document, rows[0].partition, key === "current_nav" ? "NAV" : "NET_PNL", metricFacts, expected);
@@ -174,7 +181,8 @@ export function managerPartitionTotals(facts: ManagerFact[], keys: readonly stri
 const DEFAULT_METRICS = [...managerMoneyFields, "return_30d_pct", "score"];
 const nullableConsensus = (values: Array<string | null>) => new Set(values).size === 1 ? values[0] : null;
 function rowsFor(members: ManagerMember[], facts: ManagerFact[], query: ManagerModelQuery, scope: AuthorizedExecutionReadScope,
-  lifecycleStages: ReadonlyMap<string, ManagerMember["stage"][]>, doc: ManagerModelDocument, economic?: ManagerEconomicSourceContext) {
+  lifecycleStages: ReadonlyMap<string, ManagerMember["stage"][]>, doc: ManagerModelDocument, economic?: ManagerEconomicSourceContext,
+  requireEconomicNetPnl = false) {
   const groups = new Map<string, ManagerMember[]>();
   // A transition belongs to the complete logical row, not a visible deployment.
   // Withhold timing when another current member of that row is unauthorized.
@@ -191,7 +199,7 @@ function rowsFor(members: ManagerMember[], facts: ManagerFact[], query: ManagerM
   return [...groups].map(([row_key, group]): ManagerDatasetRow => {
     const keys = new Set(group.map(m => managerTupleKey(m.tuple)));
     const ownFacts = [...keys].flatMap(key => byTuple.get(key) ?? []);
-    const economic_partitions = managerPartitionTotals(ownFacts, DEFAULT_METRICS.filter(f => scopeAllowsField(scope, fieldPolicy(f))), keys, economic);
+    const economic_partitions = managerPartitionTotals(ownFacts, DEFAULT_METRICS.filter(f => scopeAllowsField(scope, fieldPolicy(f))), keys, economic, requireEconomicNetPnl);
     const selected = query.economic_partition ? economic_partitions.find(p => managerPartitionKey(p.partition) === managerPartitionKey(query.economic_partition!)) :
       economic_partitions.length === 1 ? economic_partitions[0] : undefined;
     const metricValues = Object.fromEntries(DEFAULT_METRICS.filter(f => scopeAllowsField(scope, fieldPolicy(f))).map(key => [key,
@@ -307,7 +315,8 @@ export type ManagerEnvQuery = Omit<ManagerModelQuery, "environment"> & { environ
  */
 export function collectManagerRows(scope: AuthorizedExecutionReadScope, input: unknown, query: ManagerEnvQuery,
   surface: ManagerSurface = "FLEET", resourceId?: string, scoreFence?: ManagerScoreReadFence,
-  compositionFence?:ManagerCompositionReadFence, regimeFence?: ManagerRegimeReadFence, economicRuntime?: ManagerEconomicSourceRuntime) {
+  compositionFence?:ManagerCompositionReadFence, regimeFence?: ManagerRegimeReadFence, economicRuntime?: ManagerEconomicSourceRuntime,
+  requireEconomicNetPnl = false) {
   assertExecutionReadScope(scope);
   if (scope.mode !== "SCOPED_V2") fail("EXECUTION_READ_PUBLICATION_NOT_QUALIFIED");
   const doc = managerModelDocument.parse(input);
@@ -339,7 +348,7 @@ export function collectManagerRows(scope: AuthorizedExecutionReadScope, input: u
   if (facts.length && ["currency", "profile_id", "provenance_ref"].some(field => !scopeAllowsField(scope, field)))
     fail("EXECUTION_READ_FIELD_POLICY_PENDING");
   const selectedFacts = managerFactsForWindow(facts, selectedWindow);
-  const allRows = rowsFor(members, selectedFacts, query, scope, lifecycleStages, doc, economic);
+  const allRows = rowsFor(members, selectedFacts, query, scope, lifecycleStages, doc, economic, requireEconomicNetPnl);
   // No score computation on this read path. Exact authorized population and
   // economic partition must match a separately precomputed, current-policy result.
   if (scopeAllowsField(scope, "score")) for (const row of allRows) {
@@ -392,7 +401,7 @@ export function collectManagerRows(scope: AuthorizedExecutionReadScope, input: u
   const subjectRegime = (surface === "ALPHA" || surface === "DEPLOYMENT") && regimes.length === 1 ? regimes[0] : null;
   const rows = allRows.filter(row => matchesManagerName(row, query) && filtered(row, query));
   rows.sort(rowOrder(query));
-  return { scope, doc, query, surface, resourceId, selectedWindow, members, facts, selectedFacts, allRows, rows, details, acceptedDetails, economic,
+  return { scope, doc, query, surface, resourceId, selectedWindow, members, facts, selectedFacts, allRows, rows, details, acceptedDetails, economic, requireEconomicNetPnl,
     compositions, acceptedCompositions, regimes, subjectRegime };
 }
 export type ManagerCollected = ReturnType<typeof collectManagerRows>;
@@ -401,10 +410,10 @@ export type ManagerCollected = ReturnType<typeof collectManagerRows>;
 function partitionTotalsOf(c: ManagerCollected, rowKeys: ReadonlySet<string>) {
   const tuples = new Set(c.members.filter(m => rowKeys.has(managerRowKey(m))).map(m => managerTupleKey(m.tuple)));
   return managerPartitionTotals(c.selectedFacts.filter(f => tuples.has(managerTupleKey(f.tuple))),
-    managerMoneyFields.filter(f => scopeAllowsField(c.scope, f)), tuples, c.economic);
+    managerMoneyFields.filter(f => scopeAllowsField(c.scope, f)), tuples, c.economic, c.requireEconomicNetPnl);
 }
 const statementOf = (c: ManagerCollected) => managerPartitionTotals(rootFlows(c.facts, c.surface),
-  managerStatementFields.filter(f => scopeAllowsField(c.scope, f)), new Set(c.members.map(m => managerTupleKey(m.tuple))), c.economic);
+  managerStatementFields.filter(f => scopeAllowsField(c.scope, f)), new Set(c.members.map(m => managerTupleKey(m.tuple))), c.economic, c.requireEconomicNetPnl);
 
 /** One keyset page of already authorized, filtered and sorted rows; the cursor is signed over the query fingerprint. */
 function pageOfRows<R extends { row_key: string }>(rows: readonly R[], query: { limit: number; after?: string; before?: string },
@@ -447,13 +456,14 @@ function pageOfGroups<G>(groups: Map<string, G>, query: ManagerModelQuery, codec
 
 export function queryManagerModel(scope: AuthorizedExecutionReadScope, input: unknown, rawQuery: unknown,
   codec: KeysetCursorCodec, surface: ManagerSurface = "FLEET", resourceId?: string, scoreFence?: ManagerScoreReadFence,
-  compositionFence?:ManagerCompositionReadFence, regimeFence?: ManagerRegimeReadFence, economicRuntime?: ManagerEconomicSourceRuntime) {
+  compositionFence?:ManagerCompositionReadFence, regimeFence?: ManagerRegimeReadFence, economicRuntime?: ManagerEconomicSourceRuntime,
+  requireEconomicNetPnl = false) {
   assertExecutionReadScope(scope);
   if (scope.mode !== "SCOPED_V2") fail("EXECUTION_READ_PUBLICATION_NOT_QUALIFIED");
   const parsed = managerModelQuery.parse(rawQuery);
   // ALL is a separate fan-out read over several scopes (`queryManagerModelAll`); one scope can never answer it.
   if (parsed.environment === "ALL") fail("EXECUTION_READ_NOT_AVAILABLE", 400);
-  const collected = collectManagerRows(scope, input, parsed as ManagerEnvQuery, surface, resourceId, scoreFence, compositionFence, regimeFence, economicRuntime);
+  const collected = collectManagerRows(scope, input, parsed as ManagerEnvQuery, surface, resourceId, scoreFence, compositionFence, regimeFence, economicRuntime, requireEconomicNetPnl);
   const { doc, query, selectedWindow, members, facts, selectedFacts, allRows, rows, details, acceptedDetails, compositions,
     acceptedCompositions, regimes, subjectRegime } = collected;
   const summary = (slot:"RAW"|"DIRECT_NAV") => {
@@ -484,6 +494,7 @@ export function queryManagerModel(scope: AuthorizedExecutionReadScope, input: un
   const economicStatement = collected.economic ? statementOf(collected) : undefined;
   const outputOf = (group: Parameters<typeof groupOf>[0]) => economicGroups?.get(group) ?? groupOf(group);
   const queryId = accessDigest({ scope: scope.fingerprint, source: doc.revision, generation: doc.projection_generation,
+    ...(collected.requireEconomicNetPnl ? { net_pnl_proof_fence: "required.v1" } : {}),
     ...(collected.economic ? { economic_source: { mapping: collected.economic.runtime.mapping_digest,
       proof_snapshot: collected.economic.runtime.proofSnapshotDigest(),
       rows: allRows.map(row => [row.row_key, row.metrics, row.economic_partitions]),
@@ -681,6 +692,7 @@ export function queryManagerModelAll(reads: readonly ManagerAllRead[], rawQuery:
   const economicStatements = hasEconomic ? included.flatMap(({ collected }) => statementOf(collected)) : undefined;
   const queryId = accessDigest({ environments: included.map(({ environment, collected: c }) => [environment, c.scope.fingerprint, c.doc.revision, c.doc.projection_generation,
       accessDigest({ details: c.details, compositions: c.compositions, regimes: c.regimes, rows: c.allRows.map(r => r.metrics.score),
+        ...(c.requireEconomicNetPnl ? { net_pnl_proof_fence: "required.v1" } : {}),
         ...(c.economic ? { economic_source: { mapping: c.economic.runtime.mapping_digest,
           proof_snapshot: c.economic.runtime.proofSnapshotDigest(),
           rows: c.allRows.map(row => [row.row_key, row.metrics, row.economic_partitions]) } } : {}) })]),
