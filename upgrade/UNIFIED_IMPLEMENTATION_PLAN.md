@@ -16520,5 +16520,8 @@ ROOT/CURRENT and connected READ/STREAM remain open. Do not call the observed
 identity a membership or grant. The private observation operator was subsequently
 hardened against directory replacement and inactive mappings in `1f4109cc4`;
 three focused tests pass. The receipt retains the actual earlier executed script
-hash, not the later source hash.
+hash, not the later source hash. A proposed direct plaintext network probe was
+rejected by the execution environment and was not run; it is not a source
+read or a test result. Use a separately reviewed encrypted/private transport,
+not an indirect retry of that rejected probe.
 
