@@ -9765,6 +9765,11 @@ assignment. No goal/push/dev/main/release/deploy started by this return.
 
 ### ELP2-10 — Performance, quality và coexistence
 
+**27Oct History hardening:** [selected-byte census consistency and focused
+regression](execution_loop/evidence/ELP2-10/HISTORY_CENSUS_CONSISTENCY_2026-10-27.md).
+Code remains uncommitted; real-source pagination, separate HISTORY/REPLAY
+authority, revoke/recovery and browser qualification remain open.
+
 **27Oct Core backend continuation:** [Accounts cut-fence implementation,
 focused tests, source repin and eight-area disposition](execution_loop/evidence/ELP2-10/CORE_BACKEND_BATCH_2026-10-27.md).
 The same observation-cut check now covers both refresh and retained Accounts

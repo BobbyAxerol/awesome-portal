@@ -79,9 +79,10 @@ runtime, browser, deployment or release success is claimed.
   1,897 tests** and the Control API build, but its single-worker full Control
   API suite produced no completed suite for almost seven minutes while using
   CPU. The integrator deliberately stopped that run to bound resource use; it
-  is **INTERRUPTED, not PASS or a diagnosed test failure**. The named test
-  containers and network were confirmed absent afterwards. Investigate the
-  full-suite stall and retake the normal gate before landing; all five source,
+  is **INTERRUPTED, not PASS or a diagnosed test failure**; a long first suite
+  has not been proven to be a stall. The named test containers and network
+  were confirmed absent afterwards. Diagnose duration and retake the normal
+  gate before landing; all five source,
   test and gate-runner files remain staged, not committed.
 - The normal hook created disposable test containers and a disposable test
   database through the repository scripts. No business database, listener,

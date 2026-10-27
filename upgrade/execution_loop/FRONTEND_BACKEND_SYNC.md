@@ -1,5 +1,12 @@
 # Execution Loop V2 — Sổ đồng bộ Frontend ↔ Backend (sống)
 
+## 27Oct — History census consistency
+
+[Core hardening and test boundaries](evidence/ELP2-10/HISTORY_CENSUS_CONSISTENCY_2026-10-27.md):
+the selected-history byte census rejects a largest row greater than its total
+before loading fields. This source/test change is not committed or installed;
+there is no DTO/UI change. Connected HISTORY/REPLAY and browser acceptance stay open.
+
 ## 27Oct — Core → Edge discovery trust binding
 
 [Two-hop locator, role selection, public pins and remaining commissioning inputs](evidence/ELP2-10/CORE_TO_EDGE_DISCOVERY_TRUST_BINDING_2026-10-27.md).
