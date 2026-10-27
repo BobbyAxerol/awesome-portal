@@ -140,6 +140,28 @@ describe("the screen", () => {
     expect(head.textContent).toMatch(/As of 17 Oct 12:00:00Z/);
   });
 
+  it("an order link to an old order walks older pages until the order is found, and says so while it looks", async () => {
+    render(<MemoryRouter initialEntries={["/execution/blotter?order=ord_00005"]}><BlotterScreen api={httpApi()} /></MemoryRouter>);
+    await waitFor(() => expect(screen.getByText(/Opened at order/)).toBeTruthy(), { timeout: 8000 });
+    expect(screen.getByText("ord_00005", { selector: ".exec-blt2-id" })).toBeTruthy();
+  });
+
+  it("env in the link narrows the loaded rows by each order's own mode and names that environment in the chip; without it the chip names what the loaded orders say", async () => {
+    const first = await firstPage();
+    const modes = [...new Set(first.orders.map((o) => o.mode))];
+    expect(modes.length).toBeGreaterThan(0);
+    const { unmount } = render(<MemoryRouter initialEntries={["/execution/blotter"]}><BlotterScreen api={httpApi()} /></MemoryRouter>);
+    const table = await screen.findByRole("table", { name: "Orders" });
+    const chip = document.querySelector(".exec-blt2-scope .exec-blt2-chip")!;
+    for (const mode of modes) if (mode) expect(chip.textContent).toContain(mode.charAt(0).toUpperCase() + mode.slice(1));
+    expect(table).toBeTruthy();
+    unmount();
+    render(<MemoryRouter initialEntries={["/execution/blotter?env=live"]}><BlotterScreen api={httpApi()} /></MemoryRouter>);
+    await screen.findByRole("table", { name: "Orders" });
+    expect(screen.getByRole("button", { name: "Remove environment scope" })).toBeTruthy();
+    expect(document.querySelector(".exec-blt2-scope .exec-blt2-chip")!.textContent).toContain("Live");
+  });
+
   it("Add scope offers the deployments on the page; choosing one narrows the loaded rows and shows a removable chip (scope in the URL)", async () => {
     render(<MemoryRouter initialEntries={["/execution/blotter"]}><BlotterScreen api={httpApi()} /><Where /></MemoryRouter>);
     const table = await screen.findByRole("table", { name: "Orders" });

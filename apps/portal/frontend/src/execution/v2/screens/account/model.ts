@@ -692,19 +692,20 @@ export function readAccountView(profile: ProfileEnvelope, accountId: string): Ac
       product: safeWord(account ? text(account.product) : null),
       network: safeWord(account ? text(account.network) : null),
       networkProofAt: account ? timeOf(account, "network_proof_at") : null,
-      portfolios: [...new Set(deployments.flatMap((row) => {
-        const pf = text(row.portfolio_id);
-        return pf ? [pf] : [];
-      }))],
+      // The sleeve's portfolios come from its deployment rows; with none, from the allocation rows the same read publishes for it.
+      portfolios: [...new Set([...(deployments.length > 0 ? deployments.map((row) => text(row.portfolio_id)) : allocations.map((row) => row.portfolio))].flatMap((pf) => (pf ? [pf] : [])))],
       environment,
       bindingId,
     },
     currencies,
     sleeves,
-    deployments: deployments.flatMap((row) => {
-      const id = text(row.deployment_id);
-      return id ? [{ id, mode: text(row.mode), stage: text(row.stage) }] : [];
-    }).slice(0, ROW_CAP),
+    deployments: (deployments.length > 0
+      ? deployments.flatMap((row) => {
+        const id = text(row.deployment_id);
+        return id ? [{ id, mode: text(row.mode), stage: text(row.stage) }] : [];
+      })
+      // No deployment rows: the allocation rows name the deployments this sleeve is booked on.
+      : [...new Map(allocations.flatMap((row) => (row.deployment ? [[row.deployment, { id: row.deployment, mode: row.mode, stage: row.stage }] as const] : []))).values()]).slice(0, ROW_CAP),
     positions,
     allocations,
     sync,

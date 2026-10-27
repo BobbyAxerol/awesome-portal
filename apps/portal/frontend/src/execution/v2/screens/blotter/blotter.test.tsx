@@ -460,10 +460,10 @@ describe("scope from other screens (loaded pages only)", () => {
     expect(link.searchParams.get("tab")).toBe("Trade Replay");
   });
 
-  it("an order that is not on the loaded page says so instead of opening something else", async () => {
-    mount("/execution/blotter?order=ord_00001");
+  it("an order that no page holds says so instead of opening something else", async () => {
+    mount("/execution/blotter?order=ord_99999");
     await loaded();
-    expect(screen.getByText(/That order is not on the loaded page/)).toBeTruthy();
+    await waitFor(() => expect(screen.getByText(/That order is not on the loaded page/)).toBeTruthy(), { timeout: 8000 });
     expect(document.querySelector(".exec-blt2-kid")).toBeNull();
   });
 });

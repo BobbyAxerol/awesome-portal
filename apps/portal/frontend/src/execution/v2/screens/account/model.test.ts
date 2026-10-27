@@ -676,3 +676,22 @@ describe("Accounts list check (exact comparison only)", () => {
     expect(checkOf(null, null)).toMatchObject({ kind: "unavailable" });
   });
 });
+
+describe("the sleeve's portfolio and deployments when the read carries no deployment rows (QA3 R4-09)", () => {
+  const raw = (data: Record<string, unknown>) => ({ schema_version: "execution.account-resource.v2", state: "ready", data });
+
+  it("come from the allocation rows of the same read, never invented", () => {
+    const view = readAccountView(readProfileEnvelope(raw({
+      accounts: [{ account_id: "acc_x", label: "X sleeve", venue: "BINANCE", state: "ACTIVE" }],
+      portfolio_allocations: [{ account_id: "acc_x", deployment_id: "dep_x1", portfolio_id: "pf_x", mode: "live", currency: "USDT", allocated_capital: "25000.00" }],
+    }))!, "acc_x");
+    expect(view.identity.portfolios).toEqual(["pf_x"]);
+    expect(view.deployments).toEqual([{ id: "dep_x1", mode: "live", stage: null }]);
+  });
+
+  it("stay empty when neither relation names them", () => {
+    const view = readAccountView(readProfileEnvelope(raw({ accounts: [{ account_id: "acc_y", label: "Y" }] }))!, "acc_y");
+    expect(view.identity.portfolios).toEqual([]);
+    expect(view.deployments).toEqual([]);
+  });
+});

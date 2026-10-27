@@ -77,6 +77,10 @@ export interface BlotterOrder {
   accountId: string | null;
   /** Not in the orders relation today; read if a later revision adds it. */
   deploymentId: string | null;
+  /** `deployment_name`, when the row names its deployment; the id stays the identity and the export keeps it. */
+  deploymentName: string | null;
+  /** `mode`: the environment the order was placed in (paper, sandbox, live), when the row states it. */
+  mode: string | null;
   sessionId: string | null;
   venue: string | null;
   symbol: string | null;
@@ -161,6 +165,8 @@ function orderOf(row: Record<string, unknown>): BlotterOrder | null {
     alphaId: text(row.strategy_id),
     accountId: text(row.account_id),
     deploymentId: text(row.deployment_id),
+    deploymentName: text(row.deployment_name),
+    mode: (() => { const word = text(row.mode)?.toLowerCase() ?? null; return word === "paper" || word === "sandbox" || word === "live" ? word : null; })(),
     sessionId: text(row.execution_session_id),
     venue: text(row.venue),
     symbol: text(row.symbol),
@@ -435,9 +441,11 @@ export interface Scope {
   alpha: string | null;
   order: string | null;
   fill: string | null;
+  /** The environment a link came from (`env=live`); narrows the loaded rows by the order's own `mode`. */
+  env: "paper" | "sandbox" | "live" | null;
 }
 
-export const NO_SCOPE: Scope = { deployment: null, account: null, alpha: null, order: null, fill: null };
+export const NO_SCOPE: Scope = { deployment: null, account: null, alpha: null, order: null, fill: null, env: null };
 
 export interface ScopeResult {
   rows: readonly BlotterOrder[];
@@ -453,6 +461,8 @@ export function applyScope(orders: readonly BlotterOrder[], fills: readonly Blot
   let rows = orders;
   const deploymentNotApplied = scope.deployment !== null && !orders.some((o) => o.deploymentId !== null);
   if (scope.deployment !== null && !deploymentNotApplied) rows = rows.filter((o) => o.deploymentId === scope.deployment);
+  // An order that does not state its mode is kept: the scope cannot judge it, and nothing is dropped on a guess.
+  if (scope.env !== null) rows = rows.filter((o) => o.mode === null || o.mode === scope.env);
   if (scope.account !== null) rows = rows.filter((o) => o.accountId === scope.account);
   if (scope.alpha !== null) rows = rows.filter((o) => o.alphaId === scope.alpha);
   let focusOrderId: string | null = null;
@@ -471,7 +481,7 @@ export function applyScope(orders: readonly BlotterOrder[], fills: readonly Blot
 }
 
 export function scopeActive(scope: Scope): boolean {
-  return scope.deployment !== null || scope.account !== null || scope.alpha !== null;
+  return scope.deployment !== null || scope.account !== null || scope.alpha !== null || scope.env !== null;
 }
 
 /* ── query ─────────────────────────────────────────────────────────────── */

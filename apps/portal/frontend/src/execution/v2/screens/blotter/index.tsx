@@ -111,9 +111,12 @@ function defaultChartHref(order: BlotterOrder, origin: URLSearchParams): string 
   return withOrigin(`/deployments/alphas/${encodeURIComponent(order.alphaId)}?tab=Trade%20Replay&focus=order:${encodeURIComponent(order.orderId)}`, { kind: "blotter" }, origin);
 }
 
-const SCOPE_KEYS = ["deployment", "account", "alpha", "order", "fill"] as const;
+const SCOPE_KEYS = ["deployment", "account", "alpha", "order", "fill", "env"] as const;
 type ScopeKey = (typeof SCOPE_KEYS)[number];
-const SCOPE_LABEL: Readonly<Record<ScopeKey, string>> = { deployment: "Deployment", account: "Account", alpha: "Alpha", order: "Order", fill: "Fill" };
+const SCOPE_LABEL: Readonly<Record<ScopeKey, string>> = { deployment: "Deployment", account: "Account", alpha: "Alpha", order: "Order", fill: "Fill", env: "Environment" };
+/** Pages the Blotter walks on its own to find a scope the first page does not hold. */
+const SEEK_PAGES = 12;
+const ENV_WORD = { paper: "Paper", sandbox: "Sandbox", live: "Live" } as const;
 
 type GroupRead =
   | { phase: "idle" }
@@ -143,7 +146,8 @@ export default function BlotterScreen({ api, accessHref, chartHref: chartHrefPro
   );
   const scope: Scope = useMemo(() => {
     const read = (key: ScopeKey) => params.get(key)?.trim() || null;
-    return { ...NO_SCOPE, deployment: read("deployment"), account: read("account"), alpha: read("alpha"), order: read("order"), fill: read("fill") };
+    const envWord = params.get("env")?.trim().toLowerCase() ?? "";
+    return { ...NO_SCOPE, deployment: read("deployment"), account: read("account"), alpha: read("alpha"), order: read("order"), fill: read("fill"), env: envWord === "paper" || envWord === "sandbox" || envWord === "live" ? envWord : null };
   }, [params]);
   const fk = filtersKey(filters);
 
@@ -197,6 +201,8 @@ export default function BlotterScreen({ api, accessHref, chartHref: chartHrefPro
   const live = cursor !== null && cursor.fk === fk ? cursor : null;
   const [reloadTick, setReloadTick] = useState(0);
   const realtime = useProfileRealtime("paper", "EXECUTION_FULL_BLOTTER_SCREEN");
+  // A link that names a deployment, account, alpha, order or fill cannot be filtered by the server: it is looked for page by page.
+  const seeking = scope.deployment !== null || scope.account !== null || scope.alpha !== null || scope.order !== null || scope.fill !== null;
   const limit = narrow ? NARROW_PAGE_LIMIT : PAGE_LIMIT;
   const query = useMemo(() => blotterQuery(filters, live, limit), [filters, live, limit]);
   const state = useBlotterRead(api, query, `${fk}|${live ? `${live.dir}:${live.value}` : ""}|${limit}`, realtime.refreshKey, reloadTick);
@@ -270,6 +276,20 @@ export default function BlotterScreen({ api, accessHref, chartHref: chartHrefPro
     [read, scope],
   );
   const rows = scoped ? scoped.rows : [];
+
+  // The server cannot filter by deployment, account, alpha, order or fill, so a link that names one is looked for in the next older
+  // pages until it is found or SEEK_PAGES pages were read; the page in the DOM is still one page. The sentence says so while it looks.
+  const [hops, setHops] = useState(0);
+  const seekKey = `${fk}|${scope.deployment}|${scope.account}|${scope.alpha}|${scope.order}|${scope.fill}`;
+  useEffect(() => setHops(0), [seekKey]);
+  const missing = seeking && scoped !== null && (scope.order !== null || scope.fill !== null ? scoped.focusMissing : rows.length === 0);
+  const nextOlder = read?.nextCursor ?? null;
+  useEffect(() => {
+    if (!missing || nextOlder === null || hops >= SEEK_PAGES) return;
+    setHops((n) => n + 1);
+    setCursor({ fk, dir: "after", value: nextOlder });
+  }, [missing, nextOlder, hops, fk]);
+  const searching = missing && nextOlder !== null && hops < SEEK_PAGES;
   const counts = useMemo(() => (read ? chipCounts(read) : null), [read]);
   const unchipped = useMemo(() => (read ? unchippedStatusCounts(read) : []), [read]);
   // Scopes that can still be added: the distinct deployments, accounts and alphas on the loaded page (they narrow the loaded rows only).
@@ -278,6 +298,12 @@ export default function BlotterScreen({ api, accessHref, chartHref: chartHrefPro
     const values = [...new Set(read.orders.flatMap((o) => { const v = key === "deployment" ? o.deploymentId : key === "account" ? o.accountId : o.alphaId; return v ? [v] : []; }))].sort();
     return values.length > 0 ? [{ key, values }] : [];
   }), [read, scope]);
+  // With no environment in the link the chip says what the loaded orders themselves say (their own `mode`), never a fixed word.
+  const readEnvironment = useMemo(() => {
+    // The orders in scope (a deployment link names one deployment, so its own mode), else the loaded ones.
+    const modes = [...new Set((scopeActive(scope) ? rows : read?.orders ?? []).flatMap((o) => (o.mode === null ? [] : [o.mode])))].sort();
+    return modes.length === 0 ? (scopeActive(scope) ? "Not stated" : "Paper") : modes.map((m) => ENV_WORD[m as keyof typeof ENV_WORD]).join(" · ");
+  }, [read, rows, scope]);
   const venues = useMemo(() => [...new Set([...(read?.orders.flatMap((o) => (o.venue ? [o.venue] : [])) ?? []), ...Object.keys(read?.venueCounts ?? {}), ...(filters.venue ? [filters.venue] : [])])].sort(), [read, filters.venue]);
 
   // A link that names an order or a fill opens that row once, when its page is loaded.
@@ -308,7 +334,12 @@ export default function BlotterScreen({ api, accessHref, chartHref: chartHrefPro
       case "alpha": return order.alphaId ?? <span className="exec-blt2-na">Not available</span>;
       case "account": return order.accountId ?? <span className="exec-blt2-na">Not available</span>;
       case "deployment": return order.deploymentId !== null
-        ? <span className="exec-blt2-two"><span className="exec-blt2-id">{order.deploymentId}</span>{order.venue ? <span className="exec-blt2-na">{order.venue}</span> : null}</span>
+        ? (
+          <span className="exec-blt2-two">
+            {order.deploymentName !== null ? <span>{order.deploymentName}<span className="exec-blt2-sr"> ({order.deploymentId})</span></span> : <span className="exec-blt2-id">{order.deploymentId}</span>}
+            {order.venue ? <span className="exec-blt2-na">{order.venue}</span> : null}
+          </span>
+        )
         : <NaWhy reason="The orders read carries no deployment id." className="exec-blt2-na" />;
       case "avg": return order.averageFillPrice.kind === "absent"
         ? (noFill(order) ? <span className="exec-blt2-na" title="Nothing has traded on this order">No fill</span> : <NaWhy reason="The orders read publishes no average fill price." className="exec-blt2-na" />)
@@ -417,7 +448,14 @@ export default function BlotterScreen({ api, accessHref, chartHref: chartHrefPro
 
       <section className="exec-blt2-panel" aria-label="Filters">
         <div className="exec-blt2-scope">
-          <span className="exec-blt2-chip" data-lock="read" title="Set by this read, not by the context bar"><span className="exec-blt2-chip-k">environment</span>Paper</span>
+          {scope.env !== null ? (
+            <span className="exec-blt2-chip">
+              <span className="exec-blt2-chip-k">environment</span>{ENV_WORD[scope.env]}
+              <button type="button" className="exec-blt2-x" aria-label="Remove environment scope" onClick={() => clearScope(["env"])}>Remove</button>
+            </span>
+          ) : (
+            <span className="exec-blt2-chip" data-lock="read" title="What the loaded orders say, not a setting of the context bar"><span className="exec-blt2-chip-k">environment</span>{readEnvironment}</span>
+          )}
           {(["deployment", "account", "alpha"] as const).map((key) =>
             scope[key] !== null ? (
               <span className="exec-blt2-chip" key={key}>
@@ -439,7 +477,7 @@ export default function BlotterScreen({ api, accessHref, chartHref: chartHrefPro
               </select>
             </label>
           ) : null}
-          {scopeActive(scope) ? <button type="button" className="exec-blt2-btn" onClick={() => clearScope(["deployment", "account", "alpha", "order", "fill"])}>Clear scope</button> : null}
+          {scopeActive(scope) ? <button type="button" className="exec-blt2-btn" onClick={() => clearScope(["deployment", "account", "alpha", "order", "fill", "env"])}>Clear scope</button> : null}
         </div>
         {scopeActive(scope) ? (
           <p className="exec-blt2-note" id={noteId}>
@@ -535,6 +573,7 @@ export default function BlotterScreen({ api, accessHref, chartHref: chartHrefPro
           </div>
         </div>
 
+        {searching ? <p className="exec-blt2-note" role="status">Looking for this scope in older orders ({hops} of {SEEK_PAGES} pages read).</p> : null}
         <p className="exec-blt2-count-line" role="status" aria-live="polite">
           {emptyPage
             ? "No orders on this page"

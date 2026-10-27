@@ -774,7 +774,8 @@ describe("Account 360: the physical binding view", () => {
     stubFetch();
     account("acc_okx_main");
     await loaded360("OKX main");
-    const banner = await screen.findByRole("alert");
+    // The binding is also over its physical equity in the double, which is a second, separate alert.
+    const banner = (await screen.findAllByRole("alert")).find((node) => /needs attention/.test(node.textContent ?? ""))!;
     expect(banner.textContent).toContain("needs attention (EXPIRED)");
     expect(banner.querySelector(".exec-flag")?.getAttribute("data-k")).toBe("attention");
   });
@@ -1404,7 +1405,23 @@ describe("Account 360 and Accounts: rendered text hygiene", () => {
     stubFetch();
     mount("/deployments/accounts");
     await loadedList();
-    expect(document.querySelector(".exec-acct-fresh")?.textContent).toMatch(/\d+ of 3 loaded bindings stale/);
+    expect(document.querySelector(".exec-acct-fresh")?.textContent).toMatch(/\d+ of 3 last updated over 30 min before the read/);
+  });
+
+  it("Account 360 says so when the binding's published headroom is below zero, as the Accounts list does (QA3 R4-11)", async () => {
+    stubFetch({
+      answer: (url) => {
+        const answer = answerAccount("GET", url.pathname, url.searchParams);
+        if (answer === null || !url.pathname.endsWith("/exposure")) return answer;
+        const body = JSON.parse(JSON.stringify(answer.body)) as { analytics: { data: { buckets: { currency: string; headroom: string }[] } } };
+        for (const bucket of body.analytics.data.buckets) if (bucket.currency === "USDT") bucket.headroom = "-185.30";
+        return { status: answer.status, body };
+      },
+    });
+    account("acc_bnc_core");
+    await loaded360();
+    const banner = await screen.findByText(/exceed its physical equity in USDT/, {}, SLOW);
+    expect(banner.closest("[role='alert']")?.textContent).toContain("Exceeded");
   });
 
   it("the Accounts list prints no request or ticket id", async () => {

@@ -32,7 +32,7 @@ import { StateFlag, CredentialFlag, Na, Updated, Value } from "./parts";
 import { factKey, useBindingPages, useRowFacts } from "./reads";
 import {
   ACCESS_PATH, CREDENTIAL_FILTERS, ENV_TABS, ROW_CAP, ROW_FACTS_CAP, accountHref, checkOf, freshnessFlag, humanize, inScope, matchesCredential,
-  readCredentialFilter, timeOf, toBindingRow, updatedAgo, type BindingEnv, type BindingRow, type ListRowFacts,
+  readCredentialFilter, timeOf, toBindingRow, updatedAgo, UPDATED_STALE_MINUTES, type BindingEnv, type BindingRow, type ListRowFacts,
 } from "./model";
 import { GapWhy } from "../../blocks";
 
@@ -242,6 +242,8 @@ export function AccountsList({ api, binding = null, capabilities }: AccountsList
             <Value metric={virtual} suffix={currency ?? undefined} />
             {virtual === undefined ? (
               <span className="exec-acct-sub">{state.exposureFailed ? "Exposure read failed" : currency === null ? "No physical currency to match" : "No virtual sum in this currency"}</span>
+            ) : virtual !== null && virtual.kind === "absent" ? (
+              <span className="exec-acct-sub">The source reported no virtual sum</span>
             ) : (
               <span className="exec-acct-sub">Headroom <Value metric={headroom} /></span>
             )}
@@ -323,7 +325,7 @@ export function AccountsList({ api, binding = null, capabilities }: AccountsList
         </div>
         <div className="exec-acct-fresh">
           {fresh ? <Flag kind={fresh.kind} label={fresh.label} size="sm" /> : null}
-          {staleLoaded > 0 ? <Flag kind="stale" label={`${staleLoaded} of ${all.length} loaded bindings stale`} size="sm" /> : null}
+          {staleLoaded > 0 ? <Flag kind="stale" label={`${staleLoaded} of ${all.length} last updated over ${UPDATED_STALE_MINUTES} min before the read`} size="sm" /> : null}
           {envelope ? (
             <span>
               {sourceAsOf !== null ? `As of ${formatAsOf(sourceAsOf)}` : "Source time not published"}

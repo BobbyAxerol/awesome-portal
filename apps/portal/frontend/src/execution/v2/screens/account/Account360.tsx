@@ -28,7 +28,7 @@ import { AllocationsPanel, AuthorityKpis, FeesPanel, MarginPanel, PositionsPanel
 import { EnvironmentWord, Fact, Na, PhysicalProvenance, PortfolioName, ProductWord, StateFlag, WITHHELD } from "./parts";
 import { useAccountResource, useBindingDetail, useBindingExposure } from "./reads";
 import {
-  RELATION_LABEL, TABS, ageAtRead, chooseCurrency, credentialView, deploymentHref, freshnessFlag, humanize,
+  RELATION_LABEL, capitalRows, TABS, ageAtRead, chooseCurrency, credentialView, deploymentHref, freshnessFlag, humanize,
   populationOf, portfolioHref, readAccountView, readTab, readViewMode, resourceReason, resourceStatus, rotateCredential, timeOf, type TabId,
 } from "./model";
 import { useAccountOperations } from "./useAccountOperations";
@@ -121,6 +121,8 @@ function Loaded({ api, accountId, profile, staleReason, refreshing, reload, back
   const environment = identity.environment;
   const exposure = useBindingExposure(api, identity.bindingId);
   const detail = useBindingDetail(api, identity.bindingId, environment === null ? ["paper", "sandbox", "live"] : [environment]);
+  // The binding's own capital check (the one the Accounts list prints): any currency whose published headroom is below zero.
+  const exceeded = exposure.state.phase === "ready" ? capitalRows(exposure.state.value).filter((row) => row.withinPhysical === false).map((row) => row.currency) : [];
   const population = populationOf(view, exposure.state.phase === "ready" ? exposure.state.value : null);
   const mode = readViewMode(url.value.view);
   const resolved = readTab(url.value.tab);
@@ -297,6 +299,12 @@ function Loaded({ api, accountId, profile, staleReason, refreshing, reload, back
         <div className="exec-acct-banner" role="status">
           <Flag kind="stale" size="sm" />
           <span>Showing the last good read</span><GapWhy name="Why the read is stale" rows={[`The last refresh failed (${staleReason}).`]} next={null} />
+        </div>
+      ) : null}
+      {exceeded.length > 0 ? (
+        <div className="exec-acct-banner" data-tone="attention" role="alert">
+          <Flag kind="attention" label="Exceeded" size="sm" />
+          <span>Virtual allocations on this binding exceed its physical equity in {exceeded.join(", ")}. The Accounts list shows the same check.</span>
         </div>
       ) : null}
       {population.shared ? (

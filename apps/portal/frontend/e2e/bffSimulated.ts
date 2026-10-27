@@ -22,7 +22,7 @@ import { fixtureNowMs, scaled } from "./bffScale";
 import { overlayCapitalPreview, overlayHistorySubjects, overlayInboxSubjects, overlayR2Review } from "./bffApprovalWorld"; // WP-E
 import { simulateStage } from "./bffSimulatedStage";
 import { isPositiveMode } from "./bffPositiveMode";
-import { accountFact, bindingFact, bindingOfAccount, fromCents, ledgerSeries } from "./bffWorld";
+import { accountFact, bindingFact, bindingOfAccount, deploymentOf, fromCents, ledgerSeries, worldAlphas } from "./bffWorld";
 // ===== WP-F3 end =====
 
 type Obj = Record<string, unknown>;
@@ -120,7 +120,8 @@ function overlayAccountF2(data: Obj, accountId: string): void {
   for (const account of rows("accounts")) {
     if (account.venue === "BINANCE") account.product = "USDT-M futures · hedge";
     else if (typeof account.venue === "string") account.product = "Perpetual swap · net";
-    account.network = "MAINNET";
+    // The network follows the environment the account is in (a testnet account is never proven as mainnet).
+    account.network = account.mode === "sandbox" ? "TESTNET" : account.mode === "paper" ? "SIMULATED" : "MAINNET";
     if (newest) account.network_proof_at_ms = (newest.synced_at_ms as number) - 120_000;
   }
   // The sync history states which check each sync was and how long it took (open keys on the broker sync rows).
@@ -133,9 +134,20 @@ function overlayAccountF2(data: Obj, accountId: string): void {
   for (const margin of rows("margin_balances")) {
     if (margin.account_id === accountId && margin.currency === "USDT" && margin.instrument_id === undefined) margin.margin_ratio = "5.10";
   }
-  for (const row of rows("deployments")) {
+  // WORLD: names where the rows carry ids. A deployment of the world is named by its alpha and its environment, an alpha by its label, a
+  // portfolio id of the test book by its last word (pf_TEST_ONLY_core = Core). Rows that already carry a name keep it; the ids stay on the rows.
+  const alphaLabels = new Map(worldAlphas().map((alpha) => [alpha.id, alpha.label] as const));
+  for (const row of [...rows("deployments"), ...rows("portfolio_allocations")]) {
     const pf = typeof row.portfolio_id === "string" ? row.portfolio_id : "";
-    if (pf in PORTFOLIO_NAMES_F2) row.portfolio_name = PORTFOLIO_NAMES_F2[pf];
+    if (row.portfolio_name === undefined) {
+      const named = PORTFOLIO_NAMES_F2[pf] ?? /^pf_TEST_ONLY_(.+)$/.exec(pf)?.[1]?.split("_").map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
+      if (named !== undefined) row.portfolio_name = named;
+    }
+    if (!isPositiveMode()) continue;
+    const owner = typeof row.deployment_id === "string" ? deploymentOf(row.deployment_id) : null;
+    if (row.deployment_name === undefined && owner !== null) row.deployment_name = `${owner.alpha.label} · ${owner.deployment.environment}`;
+    const alphaLabel = typeof row.strategy_id === "string" ? alphaLabels.get(row.strategy_id) : undefined;
+    if (row.strategy_name === undefined && alphaLabel !== undefined) row.strategy_name = alphaLabel;
   }
 }
 
@@ -291,6 +303,9 @@ function overlayBlotter(body: Obj): Obj {
     }
     const alpha = typeof order.strategy_id === "string" ? order.strategy_id : "";
     if (alpha in DEPLOYMENT_OF_ALPHA && order.deployment_id === undefined) order.deployment_id = DEPLOYMENT_OF_ALPHA[alpha];
+    // WORLD: a deployment of the world is named by its alpha and its environment, the id staying the identity.
+    const owner = isPositiveMode() && typeof order.deployment_id === "string" ? deploymentOf(order.deployment_id) : null;
+    if (owner !== null) order.deployment_name = `${owner.alpha.label} · ${owner.deployment.environment}`;
     const mine = fills.filter((fill) => typeof fill.client_order_id === "string" && fill.client_order_id === order.client_order_id);
     const orderId = typeof order.order_id === "string" ? order.order_id : "";
     // A traded order always states what was filled; a typed absence stays on a canceled order in five (what filled before the cancel is unknown).
@@ -427,7 +442,9 @@ function listCounts(at: string): Obj {
   let issues = 0;
   for (const [environment, state, credential] of all) {
     byEnvironment[environment]! += 1;
-    if (stateView(state).issue || credentialView(credential).issue) issues += 1;
+    // The positive world serves every binding ACTIVE and synced (bffDoubleAccount allBindings), so no served row is an issue there.
+    const served: readonly [string, string] = isPositiveMode() ? ["ACTIVE", "SYNC_SYNCED"] : [state, credential];
+    if (stateView(served[0]).issue || credentialView(served[1]).issue) issues += 1;
   }
   return { basis: "AUTHORIZED_SNAPSHOT", observed_at: at, coverage: "COMPLETE", all: all.length, issues, by_environment: byEnvironment };
 }

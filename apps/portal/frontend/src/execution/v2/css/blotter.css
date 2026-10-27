@@ -154,6 +154,8 @@
   flex-direction: column;
   gap: 2px;
   min-width: 230px;
+  max-height: 60vh;
+  overflow-y: auto;
   margin-top: 4px;
   padding: var(--space-2) var(--space-3);
   color: var(--ink);
@@ -435,6 +437,12 @@
 }
 
 @media (max-width: 660px) {
+  /* The Columns button sits at the left on a phone: the menu opens from its left edge, not off the screen (QA3 not-checked item). */
+  .exec-blt2-menu {
+    right: auto;
+    left: 0;
+    max-width: calc(100vw - 2 * var(--space-4));
+  }
   /* A placeholder sentence ("Not published for this order") wraps inside its card cell; an exact figure never does. */
   .exec-blt2-table tbody tr:not(.exec-blt2-kid):not(.exec-cards-empty) td {
     height: auto;
