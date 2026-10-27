@@ -7,6 +7,12 @@ Chúng không thay thế phase hoặc exit gate trong
 
 ## Active deep dives
 
+- **27Oct Research membership reader — catalogue verified, proposal pending:**
+  [same08/read09 journal](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#epg10-08-research-reader-db-scope-20261027)
+  records exact protected DB/ACL/RLS, source candidates and the minimal
+  execute-only Research/Paper reader proposal. Actual membership remains
+  unobserved; no new grant/function/listener or connected acceptance.
+
 - **24Oct Original06 worker materialization — ISOLATED_QUALIFIED, NOT_DEPLOYED:**
   [same06 journal](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#epg10-06-worker-oom-follow-through-20261024)
   records old-image OOM/die137 and removal of redundant retained SQL result

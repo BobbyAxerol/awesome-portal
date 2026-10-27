@@ -650,6 +650,13 @@ deep-dive → ADR → slice → evidence discipline documented above.
 
 ### 14.1 Current backend state (tracking snapshot — 2026-08-17)
 
+**27Oct Research membership reader — catalogue verified, DB proposal pending:**
+[same08/read09 journal](EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#epg10-08-research-reader-db-scope-20261027)
+pins actual DB/system/ACL/RLS and the newer PM/Edge discovery candidates.
+Existing source tests do not certify database row isolation. Additive execute-only
+reader proposal requires exact protected-DB approval; no role, grant, source data,
+listener or stable credential changed. No claim that membership rows are absent.
+
 **24Oct Original06 worker materialization — ISOLATED_QUALIFIED, NOT_DEPLOYED:**
 [same06 journal](EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#epg10-06-worker-oom-follow-through-20261024)
 records confirmed old-image cgroup OOM/die137 and streaming of both Manager-only

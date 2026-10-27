@@ -33166,3 +33166,113 @@ explicitly acknowledged§7.18 proof/revalidation/APPLIED wire after FIX-01→02.
 Consume and implement EACH confirmed wire independently as it arrives; do not
 wait for the other or substitute JWT/mTLS for current authority. New routes
 retain503; full08/read09 connected remains **NOT_MET**. No new phase opened.
+
+<a id="epg10-08-research-reader-db-scope-20261027"></a>
+### Original08/read09 — Research reader DB-scope follow-through,27Oct
+
+**CATALOGUE_VERIFIED / PROPOSAL_READY / EXACT_DB_DELTA_APPROVAL_REQUIRED.**
+Read the requested SGP `RESEARCH_READER_HK_FOLLOWTHROUGH_2026-10-27.md` in
+`/home/bobby/portal-research/upgrade/execution_loop/evidence/ELP2-10/` completely,
+SHA256c7c702edd9137e032ebcac6a1148bead342eb0ddde01ce04372a2a69e1eaa305,
+and its linked87-line membership-discovery implementation/qualification record.
+Core actual eabe5de3 on docs/research-loop-plan; no stale23Oct source-only
+contract gap is substituted for its now-implemented discovery client/wire.
+
+**Goal/scope before change:** close the source-owner diagnostic and exact
+approval proposal in the SAME08/read09, without creating a role/grant/function,
+reading stable credentials or actual membership rows, starting/restarting a
+listener or promoting a source candidate. Governing [08 plan](#epg10-08-plan)
+and [guide§8.1](upgrade_v1.2/EXECUTION_PORTAL_EDGE_UPGRADE_GUIDE_v1.2_VI.md#81-transport-và-secret-boundary)
+apply together with the requested follow-through's explicit separate source-DB
+approval boundary. Reuse PM/Edge candidates, native lineage validation and
+Core's existing observation wire; no second authority/ledger or global RLS.
+
+**Actual metadata-only target verification:** container08df6d6d79e3/
+live_data_executor/image6343bdc8, DB live_data_executor/OID16384/system
+7674585245102796834. Canonical `native_fence.source_fingerprint` is
+5a67e653003f91ce95d364284cfc2ab6259dee322804f630caee0244f7ac79da.
+All source catalogue calls used READ ONLY transactions, statement2s/lock250ms,
+and ROLLBACK. Local peer metadata login was configured owner bobby; the default
+postgres-role probe failed because that DB role does not exist. No password,
+DSN, private key, membership row or protected source-role credential was read.
+Native source/maintenance grants cover identity/policy, not the three membership
+tables. All five requested base relations have RLS=false/no policies. A bounded
+all119-non-system-role catalogue aggregation found membership read rights only
+for owner bobby and two existing SUPERUSER/BYPASSRLS service logins; none is
+an admissible Research reader. The NOLOGIN ts_portal_research_identity has no
+base-table SELECT or membership parents. No approved Research reader/private
+binding has been established; this is NOT a claim of missing business rows.
+
+**Runnable owned preparation:** produce one
+[exact DB-scope approval proposal](evidence/execution-edge-v1_2/EPG10-08/EDGE_RESEARCH_READER_DB_SCOPE_PROPOSAL_2026-10-27.md),
+with fixed DB target, additive object names, source/transport binding, least
+privilege, backup/audit/rollback, focused qualification and Core's next action.
+Independent read-only review confirms existing nonsuperuser checks and isolated
+tests do not enforce DB row scope; do not broaden their grant template. No PM
+or candidate code edits are authorized by this diagnostic/approval proposal.
+
+**Decision/test boundary:** a new source DB reader mechanism requires the
+packet's exact Bobby approval before protected role/function/ACL mutation.
+Proposed source changes must receive focused isolated security/PG/parity tests
+before any installation; no such test or installed/connected PASS is claimed
+here. R0 tracking/link/diff/source-pin checks, peer-WIP preservation and hash-
+verified public delivery are the exit of THIS diagnostic slice only. Full
+ELP2-10/08/read09 remains OPEN/NOT_MET; no new phase or generic phase reapproval.
+No test resource created; no broad cleanup or active/rollback removal.
+
+**Coherent diagnostic result:** proposed only two new roles, one private schema
+and one fixed Research/Paper observation accessor; no broad membership SELECT,
+global RLS or shared-role changes. Actual PUBLIC ACLs retain database TEMPORARY
+and CONNECT, public-schema USAGE and no grants on the five base relations. The
+proposal explicitly distinguishes inherited temporary-object capability from
+source read/DDL privileges; qualification must reject substitution/escalation,
+not falsely claim every DDL/function is denied. One read-only independent agent
+reviewed source/privilege semantics; primary verified its key findings. No new
+framework or source patch was made before the access-mechanism decision.
+
+**Verification:** `git diff --check` PASS; `timeout 60 bash
+scripts/execution-tracking-test.sh` PASS (Execution tracking reconciliation).
+R0 Markdown/link/source-pin lane only, under the scoped Codex Markdown exception;
+no hook/build/product/PG-fixture/capacity/connected test was run or inherited as
+new acceptance. CI minutes0; no push/merge/deploy. PM/Edge candidate checkouts
+remain clean and unchanged; pre-existing72 main-plan lines, two peer tracked
+packets and all peer untracked files are excluded from this owned slice.
+
+**Source/release/runtime/resource reconciliation:** canonical Portal checkout
+`/home/bobby/.worktrees/portal-execution-manager-v2` remains
+feat/manager-v2-paper-read@54c6f5f3; active source-owner feature checkout is
+feat/execution-edge-upgrade-v1_2@8727e530 before this documentation commit.
+PM/Edge source candidates and Core SGP pins are recorded in the proposal; no
+branch switch, merge, worktree or runtime promotion. Actual source DB image
+6343bdc8 and protected native image28ea3958 retain restart0. Edge image d6aa7a51
+and Source Proxy aa14e21c retain restart0; the existing worker on d6aa7a51 has
+restart22354 at the read-only snapshot, NOT a healthy-worker acceptance claim.
+Previously registered stable release a9b10385, worker config95e96a9b and named
+rollback references6180b9bf/cd79e9c6/98a191c7 were not changed; no fresh full
+configuration attestation is claimed. Retained active worktrees include
+portal-eds-current-bff@bab79402, portal-eds09-owner-return-handoff@ec97c483,
+portal-elp210-edge-provider-candidate@9db77811,
+portal-execution-data-activation@6f6503ea and portal-r4r5-activation@d63a6501;
+their branches and purpose remain unchanged, not cleanup targets of this slice.
+Read-only Docker inventory: images221/50active/92.56GB; containers140/67active/
+2.443GB; volumes269/28active/90.09GB; BuildKit1307/63active/132GB. Root free
+60,969,725,952bytes,89%used. No image/cache/container/volume/temp resource was
+created; cleanup NO_ACTION_NEEDED. Shared peer resources are not pruned.
+
+**Remaining exact action:** Bobby decides the proposal's protected-DB mechanism;
+Core confirms current Research identity/workspace/workload/private binding and
+separate fresh trust. Then Edge coordinates the qualified PM source-port patch,
+isolated privilege/parity/security tests, exact additive install and one genuine
+observation. No role, credential, function, source row, listener or certificate
+has been created. No previous observation/revoke specimen is repeated; full
+08/read09/ELP2-10 remain OPEN/NOT_READY. No new frontend work requested.
+
+**Actual public delivery:** copied only the new224-line proposal to SGP
+`/home/bobby/portal-research/upgrade/execution_loop/evidence/ELP2-10/EDGE_RESEARCH_READER_DB_SCOPE_PROPOSAL_2026-10-27.md`.
+Local/remote readback SHA256 both
+12bcf4e87d21f1a71a87a01637c2f4391ca01c286f5a9d6387e3f39148eac87d.
+Core HEAD rechecked eabe5de3; receipt is a new untracked mailbox file there,
+not staged/committed by Edge and not consumer-ACKed. Remote root/project and
+campaign instructions were read before copying; Core-owned Unified/sync were
+not overwritten. Consumer action is proposal review/current binding return,
+not installation or an instruction to expose a credential.
