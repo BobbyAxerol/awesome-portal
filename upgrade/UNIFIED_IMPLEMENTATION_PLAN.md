@@ -16445,3 +16445,14 @@ revoke/recovery, browser and remaining ELP2-10 gates are not thereby closed.
 Public receipt mirrored to HK EPG10-08 with matching SHA256
 `9b2bdbb8624a9a9fa49fe2e7fbf901d52be0d30e8b0d3440ad9546fd2805a267`.
 
+### 27Oct — Edge source-reader owner return
+
+[Research reader/trust disposition](execution_loop/evidence/ELP2-10/EDGE_RESEARCH_READER_OWNER_RETURN_2026-10-27.md):
+the delivered PM operator requires pre-existing qualified source/roles/original;
+it cannot create them. Historical Research trust certificates expired23Oct.
+Owner action and safe fresh-trust sequence are explicit; no source privilege or
+runtime was altered. An observed TS P184 cell is active. Connected READ/STREAM
+and ELP2-10 remain NOT_READY; no frontend contract changed.
+Public return mirrored to HK EPG10-08 with matching SHA256
+`1364ee79c3d9fded5272375a4d42be9e0d40311dea6846d02d54792abde4cb6c`.
+

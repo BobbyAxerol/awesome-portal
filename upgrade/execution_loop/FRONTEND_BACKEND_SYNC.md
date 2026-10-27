@@ -1,5 +1,14 @@
 # Execution Loop V2 — Sổ đồng bộ Frontend ↔ Backend (sống)
 
+## 27Oct — Edge Research reader/trust owner return
+
+[Disposition and owner actions](evidence/ELP2-10/EDGE_RESEARCH_READER_OWNER_RETURN_2026-10-27.md):
+PM Research reader/original are not yet verified; previous public trust certs
+are expired. No DTO/UI change or connected-source PASS; Claude can continue
+independent fixture/browser preparation.
+Public return mirrored to HK EPG10-08, SHA256
+`1364ee79c3d9fded5272375a4d42be9e0d40311dea6846d02d54792abde4cb6c`.
+
 ## 26Oct — native STREAM PG/mTLS/SSE isolated retake
 
 [Receipt](evidence/ELP2-10/STREAM_NATIVE_PG_SSE_ISOLATED_2026-10-26.md):
