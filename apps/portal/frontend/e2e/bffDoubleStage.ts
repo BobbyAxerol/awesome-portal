@@ -77,10 +77,10 @@ const safeId = (id: string): string => id.replace(SAFE_ID, "_").slice(0, 120);
 
 const ORDER_COUNT = 40;
 const EQUITY_ROWS = 200;
-const AS_OF = "2026-10-17T09:14:00Z";
-const READ_AT = "2026-10-17T09:14:02Z";
+const AS_OF = "2026-10-17T12:03:00Z"; // WORLD: the world clock (12:04Z), so no order or point of this page is later than its own as-of
+const READ_AT = "2026-10-17T12:04:00Z";
 const HOUR = 3_600_000;
-const END_MS = Date.UTC(2026, 9, 17, 9, 0, 0);
+const END_MS = Date.UTC(2026, 9, 17, 12, 0, 0);
 
 const pad = (n: number, width = 5): string => String(n).padStart(width, "0");
 const iso = (ms: number): string => new Date(ms).toISOString();

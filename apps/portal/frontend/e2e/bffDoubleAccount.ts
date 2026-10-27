@@ -53,7 +53,7 @@ import { fileURLToPath } from "node:url";
 import { scopedResourceV2 } from "./bffDoubleScopedResource";
 import { addDecimal, scaled, sumByCurrency } from "./bffScale";
 import { isPositiveMode, positiveBookOf } from "./bffPositiveMode";
-import { accountFact, bindingFact, ledgerSeries } from "./bffWorld";
+import { accountFact, bindingFact, ledgerSeries, workingOrdersOf } from "./bffWorld";
 
 export interface BffAnswerAccount {
   status: number;
@@ -650,7 +650,12 @@ function subjectRecords(accountId: string, relation: "orders" | "fills", search:
   const limitRaw = search.get("limit");
   const limit = limitRaw === null ? 200 : Number(limitRaw);
   if (!Number.isInteger(limit) || limit < 1 || limit > 500) return problem(400, "SUBJECT_READ_INPUT_INVALID", "limit must be 1 to 500");
-  const all = accountId === "acc_bnc_core" ? (relation === "orders" ? ORDERS : FILLS) : [];
+  // WORLD: an account's orders are the open orders of the deployments booked on it (one order book: the blotter's, the Live page's, Alpha 360's), at the world's marks
+  const worldFact = isPositiveMode() ? accountFact(accountId) : null;
+  const worldRows: Row[] = worldFact === null ? [] : worldFact.deployments.flatMap((d) => workingOrdersOf(d.id).filter((o) => o.sinceMs <= AS_OF_MS).map((o): Row => ({
+    order_id: o.id, account_id: accountId, deployment_id: d.id, instrument_id: o.symbol, symbol: o.symbol, side: o.side.toUpperCase(), status: o.status, price: o.price, quantity: o.quantity, submitted_at: iso(o.sinceMs),
+  }))).sort((a, b) => String(b.submitted_at).localeCompare(String(a.submitted_at)));
+  const all = isPositiveMode() ? (relation === "orders" ? worldRows : []) : accountId === "acc_bnc_core" ? (relation === "orders" ? ORDERS : FILLS) : [];
   const after = search.get("after");
   let start = 0;
   if (after !== null) {
