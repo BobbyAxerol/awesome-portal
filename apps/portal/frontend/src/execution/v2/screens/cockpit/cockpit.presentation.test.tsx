@@ -95,6 +95,7 @@ const RAW = [
   wire("apr_e", "R1", "bobby", "Echo Mine", { inert: "SELF" }),
 ];
 const inbox = (): InboxResult => ({
+  readAt: Date.parse("2026-10-18T12:04:00Z"),
   page: { rows: ROWS, totalCount: ROWS.length, filteredCount: ROWS.length, hasMore: false, nextCursor: null },
   counts: { pending: ROWS.length, overdue: 0, dueSoon: null },
   ...{ rawRows: RAW },
@@ -178,13 +179,18 @@ afterEach(() => {
 /* ── header ───────────────────────────────────────────────────────────────── */
 
 describe("subtitle and freshness chip", () => {
-  it("prints the subtitle, and a chip that says when this browser received the queue, never Fresh", async () => {
+  it("prints the subtitle, and a chip that prints the instant the Portal published for the read, never Fresh", async () => {
     await mount(standard());
     expect(screen.getByTestId("ck-subtitle").textContent).toBe("Every decision, sorted by SLA");
     const chip = screen.getByTestId("ck-fresh");
     expect(chip.textContent).toBe("Queue read 18 Oct 12:04Z");
     expect(chip.getAttribute("data-state")).toBe("read");
     expect(document.body.textContent).not.toMatch(/\bFresh\b/);
+  });
+
+  it("a queue read that publishes no read_at says so rather than print this browser's clock", async () => {
+    await mount(standard({ listApprovals: () => ({ ok: true, value: { ...inbox(), readAt: null } }) }));
+    expect(screen.getByTestId("ck-fresh").textContent).toBe("Queue read time not published");
   });
 
   it("while the queue is out the chip says so, and when it fails it says Queue not read", async () => {
@@ -502,10 +508,10 @@ describe("the simulated decisions of today (register 2d)", () => {
 describe("QA1 I-18: codes and flags keep their words whole", () => {
   it("breakable puts a break opportunity after each separator of a long code and leaves the text as it was", () => {
     const code = "N23_GATE_POLICY_EVALUATION_NOT_PUBLISHED";
-    const { container } = render(<p>{breakable(`Not published (FE-028) · ${code}`)}</p>);
-    expect(container.textContent).toBe(`Not published (FE-028) · ${code}`);
+    const { container } = render(<p>{breakable(`Not published · ${code}`)}</p>);
+    expect(container.textContent).toBe(`Not published · ${code}`);
     expect(container.querySelectorAll("wbr").length).toBe(code.split("_").length - 1);
-    const plain = render(<p>{breakable("Not published (FE-028) and AP-352")}</p>);
+    const plain = render(<p>{breakable("Not published and AP-352")}</p>);
     expect(plain.container.querySelectorAll("wbr")).toHaveLength(0);
     expect(breakable("Within")).toBe("Within");
     const key = render(<p>{breakable("administration.profile_access.manage")}</p>);
@@ -521,7 +527,7 @@ describe("QA1 I-18: codes and flags keep their words whole", () => {
     const flags = [...table.querySelectorAll(".exec-flag")].map((f) => f.textContent ?? "");
     expect(flags.some((t) => /Within/.test(t))).toBe(true);
     expect(flags.some((t) => /Insufficient/.test(t))).toBe(true);
-    expect(within(table).getByTestId("ck-observed-absent").textContent).toContain("Not published (FE-028)");
+    expect(within(table).getByTestId("ck-observed-absent").textContent).toContain("Not published");
   });
 
   it("a Live branch row names its state in words, not as the raw enum", async () => {

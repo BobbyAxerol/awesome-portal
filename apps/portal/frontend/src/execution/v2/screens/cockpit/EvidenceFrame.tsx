@@ -375,10 +375,17 @@ function R1Body({ detail }: { detail: GateR1Detail }) {
 }
 
 function R2Body({ detail, heading = "R2 review" }: { detail: GateR2Detail; heading?: string }) {
+  // The criterion rows are not published, but the evidence read counts them ("Criteria met 6 → 7"): say that count here, so the page never
+  // says "Not published" beside a published count of the same thing.
+  const diff = sectionOf(useEvidenceExtra(), (e) => e.diff);
+  const counted = diff !== null && diff.kind === "value" ? diff.value.changes.find((change) => /^criteria met$/i.test(change.label)) : undefined;
   return (
     <>
       <Panel title="Criteria" right={heading}>
-        <div className="exec-ck-pad"><NotPublished text={NOT_PUBLISHED.criteria} /></div>
+        <div className="exec-ck-pad" data-testid="ck-r2-criteria">
+          <NotPublished text={counted ? "Criterion rows are not published" : NOT_PUBLISHED.criteria} />
+          {counted ? <p className="exec-ck-note" data-testid="ck-r2-criteria-count">The evidence read counts <span className="exec-ck-num">{shown(counted.before)}</span> met now and <span className="exec-ck-num">{shown(counted.after)}</span> after approval.</p> : null}
+        </div>
       </Panel>
       <Panel title="R1 lineage">
         {detail.r1LineagePublished ? (

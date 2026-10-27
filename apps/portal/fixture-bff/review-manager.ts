@@ -15,6 +15,7 @@ import { answerPortfolios } from "../frontend/e2e/bffDoublePortfolios";
 import type { PositiveAccountBook, PositiveDeploymentFact, PositivePortfolioBook, PositiveRecall } from "../frontend/e2e/bffPositiveMode";
 import { addDecimal, fixtureNowMs, scaled, type AlphaSpec, type DeploymentSpec } from "../frontend/e2e/bffScale";
 import { incidentChildrenBody, lifecycleOf, MARKS, NATIVE_ALPHAS, positionsOf, stageDays, WORLD_ACTORS } from "../frontend/e2e/bffWorld";
+import { evidenceFromRecord } from "../frontend/e2e/bffApprovalWorld"; // WP-E
 import { legacy, traits } from "./scenario";
 
 // Mutable copies of published JSON templates, confined to this server-only fixture module.
@@ -1521,7 +1522,8 @@ function wpkApprovalEvidence(method: string, path: string, search: URLSearchPara
     Object.assign(body, { prior_economic_history: null, evidence_diff: null, obligations_after_approval: null, receipt_preview: null });
     return { status: 200, body };
   }
-  const subject = ["pf_TEST_ONLY_satellite", "pf_TEST_ONLY_core"][seed % 2]!;
+  const record = evidenceFromRecord(approvalId); // WP-E: the history is of the portfolio the approval names
+  const subject = record.portfolioId;
   const environment = subject === "pf_TEST_ONLY_core" ? "live" : "paper";
   const query = new URLSearchParams({ environment, metric: "NAV", window: JSON.stringify("90D"), subjects: JSON.stringify([{ subject_type: "PORTFOLIO", subject_id: subject }]) });
   const series = seriesAnswer("GET", "/manager/series", query, profile);
@@ -1529,14 +1531,14 @@ function wpkApprovalEvidence(method: string, path: string, search: URLSearchPara
   body.prior_economic_history = entry && entry.state === "AVAILABLE" ? { subject: { subject_type: "PORTFOLIO", subject_id: subject }, metric: "NAV", unit: entry.unit,
     currency: entry.currency, ratio_scale: null, window: entry.window, methodology_ref: entry.methodology_ref, points: entry.points, as_of_ms: (series!.body as Draft).as_of_ms } : null;
   const n = (k: number, max: number): number => (seed >>> k) % max; // small integers; a true 0 is common
-  body.evidence_diff = { previous_revision: `FIXTURE_LAB:revision-${1 + n(3, 6)}`, changes: [
-    { label: "Requested capital", before: `${10_000 + n(5, 5) * 1000}.00`, after: `${16_000 + n(7, 5) * 1000}.00`, unit: "MONEY" },
-    { label: "Criteria met", before: String(5 + n(9, 2)), after: "7", unit: "COUNT" },
-    { label: "Reviewer note", before: null, after: "Added", unit: "TEXT" }] };
+  // ===== WP-E begin: the diff, the preview and the criteria count are the approval's ONE record (e2e/bffApprovalWorld.ts), not random per id
+  body.evidence_diff = { previous_revision: `FIXTURE_LAB:revision-${1 + n(3, 6)}`, changes: record.changes };
+  // ===== WP-E end
   body.obligations_after_approval = { open_positions: n(2, 4), working_orders: n(4, 3) === 2 ? 0 : n(4, 3), reservations: n(6, 2), unknown_outcomes: 0, settlement_pending: n(8, 3) === 0 ? 1 : 0 };
   const total = Object.values(body.obligations_after_approval as Record<string, number>).reduce((sum, value) => sum + value, 0);
-  body.receipt_preview = { what_changes: `Allocation changes on ${subject}; the gate counts 7 of 7 criteria as met after approval. ${total === 0 ? "Nothing stays open." : `${total} obligations stay open.`}`,
-    counts_as: { met_after: 7, required: 7 } };
+  // ===== WP-E begin
+  body.receipt_preview = { what_changes: record.whatChanges(total), counts_as: record.countsAs };
+  // ===== WP-E end
   return { status: 200, body };
 }
 

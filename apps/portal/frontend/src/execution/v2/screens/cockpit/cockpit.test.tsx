@@ -452,7 +452,7 @@ describe("queue, lanes and lenses", () => {
     it("says what the contract publishes, and only that: typed absences, no invented rows", async () => {
       await mount(standardPort(), "/execution/approvals?view=archive");
       const panel = screen.getByRole("region", { name: "Archive" });
-      expect(within(panel).getAllByText("Not published (FE-034)").length).toBeGreaterThanOrEqual(3);
+      expect(within(panel).getAllByText("Not published").length).toBeGreaterThanOrEqual(3);
       expect(within(queue()).queryAllByRole("listitem")).toHaveLength(0);
       expect(within(queue()).getByText(/No rows: the contract publishes no list for this family/)).toBeTruthy();
     });
@@ -627,7 +627,7 @@ describe("evidence frame", () => {
     expect(screen.getByText("Nothing selected")).toBeTruthy();
   });
 
-  it("selecting a row writes ?sel=, reads the R1 review, and shows the checklist with Not published (FE-028) cells", async () => {
+  it("selecting a row writes ?sel=, reads the R1 review, and shows the checklist with Not published cells", async () => {
     const p = standardPort();
     await mount(p, "/execution/approvals?workspace_id=ws_x", { workspaceId: "ws_x" });
     fireEvent.click(rowButton(/Alpha One/));
@@ -639,12 +639,12 @@ describe("evidence frame", () => {
     const checklist = within(evidence).getByRole("region", { name: "Checklist findings" });
     // QA1 I-16: the same absence on every row is one line under the table, not a column of three placeholders.
     expect(within(checklist).queryByRole("columnheader", { name: "Observed and limit" })).toBeNull();
-    expect(npCells(checklist, "Not published (FE-028)").length).toBe(1);
+    expect(npCells(checklist, "Not published").length).toBe(1);
     expect(within(checklist).getByTestId("ck-observed-absent").textContent).toContain("for every finding");
     expect(within(checklist).getByText("Capacity evidence covers the top 3 symbols only")).toBeTruthy();
     expect(within(checklist).getByText("Approve with a condition")).toBeTruthy();
     expect(within(checklist).getByText("Watch")).toBeTruthy();
-    expect(npCells(evidence, "Not published (FE-029)").length).toBeGreaterThan(0);
+    expect(npCells(evidence, "Not published").length).toBeGreaterThan(0);
     expect(within(evidence).getByRole("region", { name: "Artifact passport" })).toBeTruthy();
   });
 
@@ -686,12 +686,12 @@ describe("evidence frame", () => {
     await settle();
   });
 
-  it("R2 shows the capital preview and the published readiness; criteria are Not published (FE-028)", async () => {
+  it("R2 shows the capital preview and the published readiness; criteria are Not published", async () => {
     const p = standardPort();
     await mount(p, "/execution/approvals?sel=apr_b");
     expect(p.called("getGateR2")).toHaveLength(1);
     const evidence = screen.getByRole("region", { name: "Evidence" });
-    expect(within(evidence).getByRole("region", { name: "Criteria" }).textContent).toContain("Not published (FE-028)");
+    expect(within(evidence).getByRole("region", { name: "Criteria" }).textContent).toContain("Not published");
     expect(within(evidence).getByRole("region", { name: "Capital change preview" })).toBeTruthy();
     expect(within(evidence).getByRole("region", { name: "R1 lineage" })).toBeTruthy();
   });
@@ -717,7 +717,7 @@ describe("evidence frame", () => {
     expect(within(evidence).getByRole("region", { name: "Current source · live facts" })).toBeTruthy();
     const criteria = within(evidence).getByRole("region", { name: "Criteria" });
     expect(criteria.textContent).toContain("Governance backbone");
-    expect(criteria.textContent).toContain("Not published (FE-028)");
+    expect(criteria.textContent).toContain("Not published");
   });
 
   it("a failed review read is its own state, and the queue stays", async () => {
@@ -848,7 +848,7 @@ describe("decision rail", () => {
   it("step-up is informational on R2 and live, absent on R1 and exit, and never has a control", async () => {
     await mount(standardPort(), "/execution/approvals?sel=apr_b");
     const stepUp = within(rail()).getByLabelText("Step-up confirmation");
-    expect(stepUp.textContent).toContain("Not published (FE-015)");
+    expect(stepUp.textContent).toContain("Not published");
     expect(stepUp.textContent).not.toContain("Informational only");
     // The "?" disclosure of the absence is a button too; there is no decision control.
     expect(within(stepUp).queryAllByRole("button").filter((b) => !b.hasAttribute("aria-expanded"))).toHaveLength(0);

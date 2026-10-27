@@ -71,10 +71,10 @@ describe("header", () => {
     expect(screen.getByTestId("acc-subtitle").textContent).toBe("Signed-in person not named · Not an owner");
   });
 
-  it("always draws a freshness chip: the browser's receipt time when the grants were read, else Freshness not published", async () => {
+  it("always draws a freshness chip, and it says Freshness not published rather than print this browser's clock", async () => {
     mount();
     await granted();
-    expect(screen.getByTestId("acc-fresh").textContent).toBe("Read 18 Oct 12:04Z");
+    expect(screen.getByTestId("acc-fresh").textContent).toBe("Freshness not published");
     cleanup();
     mount({}, ACCESS_PATH);
     expect(screen.getByTestId("acc-fresh").textContent).toBe("Freshness not published");

@@ -924,6 +924,7 @@ export function createHttpApi({ policy, signal, readScope = {} }: HttpApiOptions
                   dueSoon: typeof counts.due_soon === "number" ? counts.due_soon : null,
                 }
               : null,
+          readAt: typeof body.read_at === "string" && Number.isFinite(Date.parse(body.read_at)) ? Date.parse(body.read_at) : null,
           // Its own query when the endpoint offers one; absent is not empty.
           decided: null,
           rawRows: Array.isArray((body.page as Record<string, unknown> | undefined)?.rows)

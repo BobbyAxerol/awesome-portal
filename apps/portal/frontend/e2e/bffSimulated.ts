@@ -19,6 +19,7 @@ import { createHash } from "node:crypto";
 import { credentialView, stateView } from "../src/execution/v2/screens/account/model";
 import { fixtureNowMs, scaled } from "./bffScale";
 // ===== WP-F3 begin: lit stage bodies (register 2f3) =====
+import { overlayCapitalPreview, overlayHistorySubjects, overlayInboxSubjects, overlayR2Review } from "./bffApprovalWorld"; // WP-E
 import { simulateStage } from "./bffSimulatedStage";
 import { isPositiveMode } from "./bffPositiveMode";
 import { accountFact, bindingFact, bindingOfAccount, fromCents, ledgerSeries } from "./bffWorld";
@@ -570,6 +571,11 @@ export function simulate<T extends SimulatedAnswer>(method: string, path: string
   if (path === "/screens/blotter") return { ...answer, body: overlayBlotter(answer.body) };
   if (path === "/broker-bindings") return { ...answer, body: overlayBindingsList(answer.body) };
   if (path === "/commands/tasks") return { ...answer, body: overlayAdminTasks(answer.body) }; // WP-E
-  if (path === "/governance/approvals/history") return { ...answer, body: overlayApprovalHistory(answer.body, fixtureNowMs()) }; // WP-E
+  // ===== WP-E begin: ONE approval record per request (bffApprovalWorld): inbox titles, review, capital preview and history subjects agree
+  if (path === "/governance/approvals") return { ...answer, body: overlayInboxSubjects(answer.body) };
+  if (path === "/governance/approvals/history") return { ...answer, body: overlayHistorySubjects(overlayApprovalHistory(answer.body, fixtureNowMs())) };
+  if (seg[0] === "governance" && seg[1] === "approvals" && seg[3] === "r2" && seg.length === 4) return { ...answer, body: overlayR2Review(answer.body, seg[2]!) };
+  if (seg[0] === "approvals" && seg[2] === "capital-preview" && seg.length === 3) return { ...answer, body: overlayCapitalPreview(answer.body, seg[1]!) };
+  // ===== WP-E end
   return answer;
 }

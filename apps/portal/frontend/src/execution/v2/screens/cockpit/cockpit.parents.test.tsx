@@ -8,7 +8,7 @@
  * - a V2 R2 body whose lineage is AVAILABLE never prints "The response carried
  *   no R1 lineage" or "No capital rows published";
  * - a V2 Paper Exit body shows its findings as published (outcome, blocking,
- *   required) and says "Gate verdict: Not published (FE-028)" instead of
+ *   required) and says "Gate verdict: Not published" instead of
  *   "Gate not met" for a verdict the body does not carry;
  * - since Codex e19ad906 the same bodies can carry stored actor ids, the latest
  *   recorded plan, the R2 decision inputs, the R2 recorded verdicts, the
@@ -120,11 +120,11 @@ describe("R2, V2 body", () => {
 
   it("names what the body does not carry with its FE request", async () => {
     const evidence = await open(portAnswering((kind) => okRead(kind, parent().r2)), "apr_r2");
-    expect(within(evidence).getByRole("region", { name: "Criteria" }).textContent).toContain("Not published (FE-028)");
-    expect(within(evidence).getByRole("region", { name: "Capital change preview" }).textContent).toContain("Not published (FE-030)");
+    expect(within(evidence).getByRole("region", { name: "Criteria" }).textContent).toContain("Not published");
+    expect(within(evidence).getByRole("region", { name: "Capital change preview" }).textContent).toContain("Not published");
     const lineage = within(evidence).getByRole("region", { name: "R1 lineage" });
-    expect(lineage.textContent).toContain("Not published (FE-028)");
-    expect(lineage.textContent).toContain("Not published (FE-030)");
+    expect(lineage.textContent).toContain("Not published");
+    expect(lineage.textContent).toContain("Not published");
   });
 
   it("prints the approval row from the body: quorum, policy and the Portal clocks", async () => {
@@ -148,7 +148,7 @@ describe("R2, V2 body", () => {
     await open(portAnswering((kind) => okRead(kind, parent().r2)), "apr_r2");
     const rail = screen.getByRole("complementary", { name: "Decision" });
     expect(rail.textContent).toContain("Policy TEST_ONLY:policy-v1");
-    expect(rail.textContent).toContain("Not published (FE-030)");
+    expect(rail.textContent).toContain("Not published");
   });
 });
 
@@ -165,10 +165,10 @@ describe("Paper Exit, V2 body", () => {
     const drift = within(evidence).getByRole("region", { name: "Drift" });
     expect(drift.textContent).toContain("Insufficient");
     expect(drift.textContent).toContain("Blocking");
-    expect(drift.textContent).toContain("Not published (FE-028)");
+    expect(drift.textContent).toContain("Not published");
     expect(within(evidence).getByRole("heading", { name: "Findings 1 of 4 pass" })).toBeTruthy();
     expect(evidence.textContent).toContain("3 blocking");
-    expect(evidence.textContent).toContain("Gate verdict: Not published (FE-028)");
+    expect(evidence.textContent).toContain("Gate verdict: Not published");
     expect(evidence.textContent).not.toContain("Gate not met");
     expect(evidence.textContent).not.toContain("Gate met");
   });
@@ -250,7 +250,7 @@ describe("R2, V2 body with the sections added by e19ad906", () => {
     expect(inputs.textContent).toContain("Not evaluated · CURRENT_DECISION_ADMISSION_REQUIRES_PLAN");
     expect(inputs.textContent).not.toMatch(/READY|Ready|eligible/);
     // There are still no capital rows on any body.
-    expect(within(evidence).getByRole("region", { name: "Capital change preview" }).textContent).toContain("Not published (FE-030)");
+    expect(within(evidence).getByRole("region", { name: "Capital change preview" }).textContent).toContain("Not published");
   });
 
   it("r2_followthrough_hashes_absent: more than 128 hashes is an absence with its reason, not an empty list", async () => {
@@ -266,7 +266,7 @@ describe("R2, V2 body with the sections added by e19ad906", () => {
     for (const word of ["Within", "Watch", "Blocker", "Insufficient"]) expect(criteria.textContent).toContain(word);
     for (let i = 0; i < 4; i += 1) expect(criteria.textContent).toContain(`finding_TEST_ONLY_r2_${i}`);
     expect(criteria.textContent).toContain("Blocking · Evaluated");
-    expect(criteria.textContent).toContain("Not published (FE-028) · SOURCE_STRUCTURED_CRITERION_NOT_RECORDED");
+    expect(criteria.textContent).toContain("Not published · SOURCE_STRUCTURED_CRITERION_NOT_RECORDED");
     expect(criteria.textContent).toContain("Stored verdicts, not current gate readiness.");
     expect(criteria.textContent).toContain("4 recorded");
     // No number is invented for a value the source never recorded.
@@ -294,14 +294,14 @@ describe("R2, V2 body with the sections added by e19ad906", () => {
     expect(text).toContain("Latest planop_TEST_ONLY_R2_APPLIED · stored applied");
   });
 
-  it("the plain r2 body keeps every new section as the server's reason, and the rail says Not published (FE-030) for the people", async () => {
+  it("the plain r2 body keeps every new section as the server's reason, and the rail says Not published for the people", async () => {
     const evidence = await open(withBareRows(portAnswering((kind) => okRead(kind, parent().r2))), "apr_r2");
-    expect(within(evidence).getByRole("region", { name: "Decision inputs" }).textContent).toContain("Not published (FE-030) · PARENT_FIELD_PURPOSE_NOT_QUALIFIED");
-    expect(within(evidence).getByRole("region", { name: "Recorded decisions" }).textContent).toContain("Not published (FE-030) · PARENT_FIELD_PURPOSE_NOT_QUALIFIED");
-    expect(within(evidence).getByRole("region", { name: "Criteria" }).textContent).toContain("Not published (FE-028) · PARENT_FIELD_PURPOSE_NOT_QUALIFIED");
-    expect(rail().querySelector(".exec-ck-sod")!.textContent).toContain("Not published (FE-030)");
-    expect(receipt().textContent).toContain("Requested byNot published (FE-030) · PARENT_FIELD_PURPOSE_NOT_QUALIFIED");
-    expect(receipt().textContent).toContain("Latest planNot published (FE-030) · PARENT_FIELD_PURPOSE_NOT_QUALIFIED");
+    expect(within(evidence).getByRole("region", { name: "Decision inputs" }).textContent).toContain("Not published · PARENT_FIELD_PURPOSE_NOT_QUALIFIED");
+    expect(within(evidence).getByRole("region", { name: "Recorded decisions" }).textContent).toContain("Not published · PARENT_FIELD_PURPOSE_NOT_QUALIFIED");
+    expect(within(evidence).getByRole("region", { name: "Criteria" }).textContent).toContain("Not published · PARENT_FIELD_PURPOSE_NOT_QUALIFIED");
+    expect(rail().querySelector(".exec-ck-sod")!.textContent).toContain("Not published");
+    expect(receipt().textContent).toContain("Requested byNot published · PARENT_FIELD_PURPOSE_NOT_QUALIFIED");
+    expect(receipt().textContent).toContain("Latest planNot published · PARENT_FIELD_PURPOSE_NOT_QUALIFIED");
   });
 
   it("a latest plan the server says does not exist is 'None recorded', not a missing field", async () => {
@@ -320,30 +320,30 @@ describe("Paper Exit, V2 body with the sections added by e19ad906", () => {
     expect(coverage.textContent).toContain("Observed 1842.000000000000000001");
     expect(coverage.textContent).toContain("Limit 6.00");
     expect(coverage.textContent).toContain("Unit CURRENCY USDC");
-    expect(coverage.textContent).toContain("Comparator Not published (FE-028) · SOURCE_COMPARATOR_FIELD_NOT_RECORDED");
+    expect(coverage.textContent).toContain("Comparator Not published · SOURCE_COMPARATOR_FIELD_NOT_RECORDED");
     expect(coverage.textContent).toContain("finding_TEST_ONLY_0");
     expect(coverage.textContent).toContain(`Evidence sha256:${"4".repeat(64)}`);
     expect(coverage.textContent).toContain("Source time");
     // A published "0" is a value; a limit never recorded is an absence with its reason.
     const drift = within(evidence).getByRole("region", { name: "Drift" });
     expect(drift.textContent).toContain("Observed 0");
-    expect(drift.textContent).toContain("Limit Not published (FE-028) · SOURCE_VALUE_NOT_RECORDED");
-    expect(drift.textContent).toContain("Unit Not published (FE-028) · SOURCE_TEXT_NOT_RECORDED");
+    expect(drift.textContent).toContain("Limit Not published · SOURCE_VALUE_NOT_RECORDED");
+    expect(drift.textContent).toContain("Unit Not published · SOURCE_TEXT_NOT_RECORDED");
     const limits = within(evidence).getByRole("region", { name: "Limits health" });
-    expect(limits.textContent).toContain("Observed Not published (FE-028) · SOURCE_VALUE_NOT_RECORDED");
+    expect(limits.textContent).toContain("Observed Not published · SOURCE_VALUE_NOT_RECORDED");
     expect(limits.textContent).not.toMatch(/Observed \d/);
     // The gate verdict is still not a thing the body has.
-    expect(evidence.textContent).toContain("Gate verdict: Not published (FE-028)");
+    expect(evidence.textContent).toContain("Gate verdict: Not published");
     expect(evidence.textContent).not.toContain("Gate not met");
     expect(within(evidence).getByRole("heading", { name: "Findings 1 of 4 pass" })).toBeTruthy();
     // The criteria section is there, so the absence panel for it is not.
     expect(within(evidence).queryByRole("region", { name: "Criteria detail" })).toBeNull();
   });
 
-  it("paper_exit (no criteria section): the cells keep Not published (FE-028) and a panel gives the server's reason", async () => {
+  it("paper_exit (no criteria section): the cells keep Not published and a panel gives the server's reason", async () => {
     const evidence = await open(portAnswering((kind) => okRead(kind, parent().paper_exit)), "apr_exit");
-    expect(within(evidence).getByRole("region", { name: "Criteria detail" }).textContent).toContain("Not published (FE-028) · PARENT_FIELD_PURPOSE_NOT_QUALIFIED");
-    expect(within(evidence).getByRole("region", { name: "Drift" }).textContent).toContain("Not published (FE-028)");
+    expect(within(evidence).getByRole("region", { name: "Criteria detail" }).textContent).toContain("Not published · PARENT_FIELD_PURPOSE_NOT_QUALIFIED");
+    expect(within(evidence).getByRole("region", { name: "Drift" }).textContent).toContain("Not published");
     expect(within(evidence).getByRole("region", { name: "Drift" }).querySelector("tbody")!.textContent).not.toMatch(/Observed|Comparator/);
   });
 
@@ -365,10 +365,10 @@ describe("Paper Exit, V2 body with the sections added by e19ad906", () => {
     expect(rows[0]!.slice(1)).toEqual(["reject", "1 to 2", "op_TEST_ONLY_PAPER_EXIT_APPLIED"]);
   });
 
-  it("a Live body has no actors or plan section: the rail says Not published (FE-030) for them", async () => {
+  it("a Live body has no actors or plan section: the rail says Not published for them", async () => {
     await open(withBareRows(portAnswering((kind) => okRead(kind, parent().live))), "apr_live");
-    expect(receipt().textContent).toContain("Requested byNot published (FE-030)");
-    expect(receipt().textContent).toContain("Latest planNot published (FE-030)");
+    expect(receipt().textContent).toContain("Requested byNot published");
+    expect(receipt().textContent).toContain("Latest planNot published");
   });
 });
 
@@ -406,7 +406,7 @@ describe("Paper Exit, findings at the pane (scale)", () => {
     expect(rowsIn(evidence)).toHaveLength(count);
     // Nothing is paged or capped, so no phrase may suggest it was.
     expect(evidence.textContent).not.toMatch(/showing \d+ of|top \d+|more not shown|truncated/i);
-    expect(evidence.textContent).toContain("Gate verdict: Not published (FE-028)");
+    expect(evidence.textContent).toContain("Gate verdict: Not published");
   });
 
   it("256 findings stay under the DOM budget, with one meter segment per finding", async () => {
@@ -457,9 +457,9 @@ describe("Live, V2 body", () => {
   it("shows the approval and Not published (FE-xxx) for the backbone, branches and live facts", async () => {
     const evidence = await open(portAnswering((kind) => okRead(kind, parent().live)), "apr_live");
     expect(within(evidence).getByRole("region", { name: "Approval" }).textContent).toContain("Pending");
-    expect(within(evidence).getByRole("region", { name: "Governance backbone" }).textContent).toContain("Not published (FE-028)");
-    expect(within(evidence).getByRole("region", { name: "Canary evidence branches" }).textContent).toContain("Not published (FE-029)");
-    expect(within(evidence).getByRole("region", { name: "Current source · live facts" }).textContent).toContain("Not published (FE-029)");
+    expect(within(evidence).getByRole("region", { name: "Governance backbone" }).textContent).toContain("Not published");
+    expect(within(evidence).getByRole("region", { name: "Canary evidence branches" }).textContent).toContain("Not published");
+    expect(within(evidence).getByRole("region", { name: "Current source · live facts" }).textContent).toContain("Not published");
     expect(within(evidence).getByRole("heading", { name: /Evidence ready · Live decisions are closed/ })).toBeTruthy();
   });
 });
@@ -544,15 +544,15 @@ describe("the cells that were bare 'Not published' now carry their FE request", 
     for (let i = 0; i < 5; i += 1) await act(async () => { await new Promise((done) => setTimeout(done, 0)); });
     const table = screen.getByRole("table", { name: "Your requests" });
     const cells = [...table.querySelectorAll("tbody tr:first-child td")].map((td) => td.textContent);
-    expect(cells[2]).toBe("Not published (FE-030)");
-    expect(cells[3]).toBe("Not published (FE-030)");
+    expect(cells[2]).toBe("Not published");
+    expect(cells[3]).toBe("Not published");
     expect(table.textContent).not.toMatch(/Not published(?! \()/);
   });
 
-  it("the rail says Policy Not published (FE-030) when neither the row nor the read carries one", async () => {
+  it("the rail says Policy Not published when neither the row nor the read carries one", async () => {
     const p = portAnswering(() => ({ ok: false, status: "unavailable", reason: "not under test" }));
     await open(p, "apr_r2");
     const rail = screen.getByRole("complementary", { name: "Decision" });
-    expect(rail.textContent).toContain("Policy Not published (FE-030)");
+    expect(rail.textContent).toContain("Policy Not published");
   });
 });

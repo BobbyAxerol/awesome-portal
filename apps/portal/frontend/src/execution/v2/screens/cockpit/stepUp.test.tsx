@@ -335,7 +335,7 @@ describe("Rail · the step-up block is mounted only when a target is given", () 
   it("without a target the rail keeps today's informational block and asks nothing", () => {
     const fake = fakeApi(() => batchRead("STEP_UP_REQUIRED_NOT_ACTIVE"));
     render(<MemoryRouter><Rail api={railApi(fake)} target={target} evidence={{ status: "idle" }} principal={NO_PRINCIPAL} /></MemoryRouter>);
-    expect(screen.getByRole("group", { name: "Step-up confirmation" }).textContent).toContain("Not published (FE-015)");
+    expect(screen.getByRole("group", { name: "Step-up confirmation" }).textContent).toContain("Not published");
     expect(screen.queryByRole("button", { name: /Confirm/ })).toBeNull();
     expect(fake.batch).not.toHaveBeenCalled();
   });
@@ -344,6 +344,6 @@ describe("Rail · the step-up block is mounted only when a target is given", () 
     const fake = fakeApi(() => batchRead("STEP_UP_REQUIRED_NOT_ACTIVE"));
     render(<MemoryRouter><Rail api={railApi(fake)} target={target} evidence={{ status: "idle" }} principal={NO_PRINCIPAL} stepUp={QUESTION} /></MemoryRouter>);
     await waitFor(() => expect(screen.getByLabelText(STEP_UP_COPY.passwordLabel)).toBeTruthy());
-    expect(screen.getByRole("group", { name: "Step-up confirmation" }).textContent).not.toContain("Not published (FE-015)");
+    expect(screen.getByRole("group", { name: "Step-up confirmation" }).textContent).not.toContain("Not published");
   });
 });

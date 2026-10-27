@@ -162,7 +162,7 @@ function useInbox(api: ExecutionApi, view: string | null, workspaceId: string | 
           ...IDLE_INBOX,
           status: "ready",
           scope,
-          receivedAt: clock.current(),
+          receivedAt: result.value.readAt ?? null,
           rows: mergeInboxRows(page.rows, readRawRows(result.value)),
           warnings: [...(result.warnings ?? [])],
           counts: result.value.counts,
@@ -479,14 +479,14 @@ function DockRow({ open, drawer, children }: { open: boolean; drawer: ReactNode;
 }
 
 /**
- * The freshness chip. The Portal publishes no as-of for the inbox, so the time is the browser's receipt time of the first page, said
- * as such ("Queue read 12:04Z"); it is never "Fresh". While the read is out, or when it failed, the chip says that instead.
+ * The freshness chip. The time is the instant the Portal published for the read (`read_at`), never this browser's clock; when the
+ * Portal publishes none the chip says so. It is never "Fresh". While the read is out, or when it failed, the chip says that instead.
  */
 function FreshnessChip({ status, receivedAt }: { status: InboxLoad["status"]; receivedAt: number | null }) {
   const at = receivedAt === null ? null : readAsOf(receivedAt);
-  const text = status === "failed" ? "Queue not read" : status === "ready" && at !== null ? `Queue read ${formatAsOf(at)}` : "Reading the queue";
+  const text = status === "failed" ? "Queue not read" : status === "ready" ? (at !== null ? `Queue read ${formatAsOf(at)}` : "Queue read time not published") : "Reading the queue";
   return (
-    <span className="exec-ck-fresh" data-testid="ck-fresh" data-state={status === "ready" ? "read" : status === "failed" ? "failed" : "reading"} title={status === "ready" ? "The time this browser received the queue. The Portal publishes no as-of for it." : undefined}>
+    <span className="exec-ck-fresh" data-testid="ck-fresh" data-state={status === "ready" ? "read" : status === "failed" ? "failed" : "reading"} title={status === "ready" ? "The instant the Portal states it read the queue." : undefined}>
       {text}
     </span>
   );
@@ -522,7 +522,7 @@ function DecisionCockpit({ api, workspaceId, pathSelection, onClearPathSelection
   const decided = useDecided(api, true, workspaceId);
   const waivers = useWaivers(api, lane === "waiver", waiverFilter);
   // The decisions of the history read made today (UTC), counted at the clock of the page. Re-read with the history, never polled.
-  const decidedNow = now();
+  const decidedNow = inbox.receivedAt ?? now();
   const decidedTodayRows = useMemo(() => decidedTodayOf(decided.rows, decidedNow), [decided.rows, decidedNow]);
 
   const items: QueueItem[] = useMemo(

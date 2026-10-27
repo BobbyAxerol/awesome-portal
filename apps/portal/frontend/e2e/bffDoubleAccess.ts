@@ -45,6 +45,9 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { isPositiveMode } from "./bffPositiveMode"; // WP-E
+import { PEOPLE } from "./bffWorld"; // WP-E
+
 export interface BffAnswerAccess {
   status: number;
   body: unknown;
@@ -217,6 +220,16 @@ const both = (user: string, gate: string) => [grant(user, `governance.${gate}.re
 
 /** The five accounts of the design's matrix: an owner (absent from the grid), a researcher, a reviewer, an operator, a former analyst. */
 export function policyAccounts(ownerUserId: string): Record<string, unknown>[] {
+  // ===== WP-E begin: in the positive world the grant matrix lists the world's own people (the Users roster's), not a private cast of five
+  if (isPositiveMode()) {
+    return PEOPLE.map((person) => ({
+      user_id: person.username === "bobby" ? ownerUserId : person.id, username: person.username, display_name: person.name,
+      is_owner: person.username === "bobby", account_state: "ACTIVE",
+      capabilities: person.username === "stan" ? [grant("stan", "governance.r1.read")]
+        : person.username === "minh" ? [...both("minh", "r1"), ...both("minh", "r2"), ...both("minh", "canary"), grant("minh", "governance.live.read")] : [],
+    }));
+  }
+  // ===== WP-E end
   return [
     { user_id: ownerUserId, username: "bobby", display_name: "Bobby Vu", is_owner: true, account_state: "ACTIVE", capabilities: [] },
     { user_id: "usr_fx_stan", username: "stan", display_name: "Stan", is_owner: false, account_state: "ACTIVE", capabilities: [grant("stan", "governance.r1.read")] },
@@ -245,7 +258,7 @@ export function answerProfileAccessPolicy(method: string, pathname: string, sear
     return {
       status: 200,
       body: {
-        activity: grantee === "usr_fx_minh"
+        activity: grantee === "usr_fx_minh" || grantee === PEOPLE.find((person) => person.username === "minh")!.id
           ? [
               { event_id: "evt_fx_1", action: "GRANT", capability: "governance.r2.decide", outcome: "APPLIED", reason_code: null, step_up_used: true, occurred_at: "2026-10-12T09:30:00.000Z" },
               { event_id: "evt_fx_2", action: "GRANT", capability: "governance.r1.decide", outcome: "APPLIED", reason_code: null, step_up_used: true, occurred_at: "2026-10-01T08:00:00.000Z" },

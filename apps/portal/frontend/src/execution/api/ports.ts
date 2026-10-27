@@ -126,6 +126,8 @@ export interface InboxQuery {
 }
 
 export interface InboxResult {
+  /** The instant the Portal says it read the queue (the envelope's `read_at`), epoch ms; absent when it publishes none. */
+  readAt?: number | null;
   page: KeysetPage<ApprovalRow>;
   counts: { pending: number; overdue: number | null; dueSoon: number | null; mine?: number | null } | null;
   /** Server-counted over the whole filter. See `ApprovalInbox.inertCount`. */

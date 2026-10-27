@@ -276,7 +276,7 @@ export default function AccessSelfView({ manage, sessionWorkspaceId = null, now,
         <div className="exec-acc-kpi">
           <dt>Role preset</dt>
           <KpiValue text="Not available" absent />
-          <dd className="exec-acc-kpi-note">Access is shown by capability (FE-015)</dd>
+          <dd className="exec-acc-kpi-note">Access is shown by capability</dd>
           <dd className="exec-acc-kpi-note" data-testid="acc-owner-note">
             {ownerWord ?? (access.kind === "loading" ? "Loading" : "Owner state not available")}
             {session ? ` · ${session.capabilities.length} ${session.capabilities.length === 1 ? "capability" : "capabilities"} held` : ""}
@@ -309,7 +309,7 @@ export default function AccessSelfView({ manage, sessionWorkspaceId = null, now,
 
       {grants.phase === "ready" && grants.stale ? (
         <p className="exec-acc-banner" role="status" data-tone="stale">
-          <Flag kind="stale" size="sm" /> Showing the last good read{grants.readAt !== null ? <> from {formatAsOf(grants.readAt)}</> : null}. The refresh failed: {grants.stale.reason}
+          <Flag kind="stale" size="sm" /> Showing the last good read. The refresh failed: {grants.stale.reason}
           {grants.stale.requestId ? <> Request <span className="exec-acc-code">{grants.stale.requestId}</span>.</> : null}
         </p>
       ) : null}
@@ -458,20 +458,10 @@ export default function AccessSelfView({ manage, sessionWorkspaceId = null, now,
               </p>
             </div>
             <div className="exec-acc-chips">
-              {/* The freshness chip: the browser's receipt time of the grants read, said as such; the Portal publishes no as-of. */}
-              {grants.phase === "ready" && grants.readAt !== null ? (
-                <span
-                  className="exec-acc-chip"
-                  data-testid="acc-fresh"
-                  title="The time this browser received the answer. The Portal publishes no as-of for this read."
-                >
-                  Read {formatAsOf(grants.readAt)}
-                </span>
-              ) : (
-                <span className="exec-acc-chip" data-testid="acc-fresh" data-state="none">
-                  Freshness not published
-                </span>
-              )}
+              {/* The Portal publishes no as-of for this read, and this browser's clock is not the world's: the chip says so rather than print a wall-clock time. */}
+              <span className="exec-acc-chip" data-testid="acc-fresh" data-state="none" title="The Portal publishes no as-of for this read.">
+                Freshness not published
+              </span>
               {workspaceId !== null ? (
                 <button type="button" className="exec-acc-btn" onClick={reload} disabled={refreshing} title={refreshing ? "A refresh is already running." : undefined}>
                   {refreshing ? "Refreshing" : "Refresh"}

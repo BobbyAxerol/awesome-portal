@@ -303,7 +303,7 @@ describe("refusals and failures are distinct states", () => {
     fireEvent.click(screen.getByRole("button", { name: "Refresh" }));
     const banner = await screen.findByText(/The refresh failed/);
     expect(banner.closest("p")?.textContent).toContain("Stale");
-    expect(banner.closest("p")?.textContent).toContain("Showing the last good read from 18 Oct 12:04Z");
+    expect(banner.closest("p")?.textContent).toContain("Showing the last good read.");
     expect(banner.closest("p")?.textContent).toContain("req_stale_1");
     expect(rowsOf(screen.getByRole("table", { name: "Granted to you" }))).toHaveLength(4);
   });

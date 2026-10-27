@@ -18,7 +18,7 @@ import { NOT_COMMISSIONED_WHY, STAGE_WHY } from "../stage/reasons";
 import type { FamilyLane } from "./laneModel";
 
 const OPERATIONS = "/execution/operations";
-const NP = "Not published (FE-034)";
+const NP = "Not published";
 
 interface FamilySpec {
   title: string;

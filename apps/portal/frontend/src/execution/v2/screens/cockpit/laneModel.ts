@@ -24,24 +24,25 @@ export { STEP_UP_COPY, stepUpOffer, stepUpRefusalText, type StepUpOffer } from "
 export const PREVIEW_REASON = "Preview · not recorded";
 
 export const NOT_PUBLISHED = {
-  criteria: "Not published (FE-028)",
-  chart: "Not published (FE-029)",
-  decisionCall: "Not published (FE-030)",
-  lane: "Not published (FE-034)",
-  stepUp: "Not published (FE-015)",
+  criteria: "Not published",
+  chart: "Not published",
+  decisionCall: "Not published",
+  lane: "Not published",
+  stepUp: "Not published",
   /** The approver count and ladder: the queue row adds them with `creator`, `ladder` and `sla_due_at` (FE-030). */
-  approvers: "Not published (FE-030)",
+  approvers: "Not published",
   /** The review clock (`sla_due_at`) on a row that has no SLA (FE-030). */
-  clock: "Not published (FE-030)",
+  clock: "Not published",
   /** The policy version of a request whose read did not carry one (FE-030, with the decision call). */
-  policy: "Not published (FE-030)",
+  policy: "Not published",
   /** The capital rows of an R2 review: no V2 parent carries them (FE-030, "what changes"). */
-  capital: "Not published (FE-030)",
+  capital: "Not published",
 } as const;
 
 /** `Not published (FE-xxx)` for a datum, from the id a V2 parent names for it. */
 export function notPublishedFor(fe: string): string {
-  return `Not published (${fe})`;
+  void fe; // the request id is not copy; it stays with the code that asks for the datum
+  return "Not published";
 }
 
 /** `17 Oct 09:14Z` (UTC) for an RFC3339 instant; the text as sent when it is not one; `null` when there is none. */
@@ -343,7 +344,7 @@ export function separationOfDuty(input: { creator: InboxActor | null; serverSod:
     return { kind: "ok", text: `Separation of duty OK · created by ${actorLabel(creator)}, you are ${me}` };
   }
   if (serverSod === "OK") return { kind: "ok", text: "Separation of duty OK (server statement); the creator is not published." };
-  return { kind: "unknown", text: "Separation of duty: creator Not published (FE-030)." };
+  return { kind: "unknown", text: "Separation of duty: creator not published." };
 }
 
 /**
@@ -355,7 +356,7 @@ export function separationOfDuty(input: { creator: InboxActor | null; serverSod:
  */
 export function separationOfDutyV2(actors: SectionV2<ActorsV2> | null): SodState {
   if (actors === null || actors.availability !== "AVAILABLE") {
-    return { kind: "unknown", text: "Separation of duty: creator Not published (FE-030)." };
+    return { kind: "unknown", text: "Separation of duty: creator not published." };
   }
   const you = (flag: boolean | null) => (flag ? " (you)" : "");
   return {

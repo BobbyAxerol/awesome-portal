@@ -190,7 +190,7 @@ describe("separation of duty", () => {
   it("an unreadable creator is never reported as OK on its own", () => {
     const sod = separationOfDuty({ creator: null, serverSod: null, principal: BOBBY });
     expect(sod.kind).toBe("unknown");
-    expect(sod.text).toContain("Not published (FE-030)");
+    expect(sod.text).toContain("Not published");
     expect(separationOfDuty({ creator: null, serverSod: "OK", principal: BOBBY }).kind).toBe("ok");
   });
 });
@@ -301,8 +301,8 @@ describe("V2 parent actors (Codex e19ad906)", () => {
     expect(sod.text).not.toMatch(/\bOK\b|cannot decide|may not/);
   });
 
-  it("without the actors section the creator is Not published (FE-030), as before", () => {
-    expect(separationOfDutyV2(r2("r2").actors).text).toBe("Separation of duty: creator Not published (FE-030).");
+  it("without the actors section the creator is Not published, as before", () => {
+    expect(separationOfDutyV2(r2("r2").actors).text).toBe("Separation of duty: creator not published.");
     expect(separationOfDutyV2(null).kind).toBe("unknown");
   });
 
@@ -314,7 +314,7 @@ describe("V2 parent actors (Codex e19ad906)", () => {
     // The same status with the actors withheld: the decider is the not-published word, never a guess.
     const withheld = structuredClone(fixture.r2_recorded);
     withheld.actors = { availability: "NOT_PUBLISHED", reason_code: "PARENT_FIELD_PURPOSE_NOT_QUALIFIED" };
-    expect(summarizeEvidence({ kind: "r2v2", parent: readR2ParentV2(withheld)! }).decided).toMatchObject({ outcome: "DENIED", by: "Not published (FE-030)" });
+    expect(summarizeEvidence({ kind: "r2v2", parent: readR2ParentV2(withheld)! }).decided).toMatchObject({ outcome: "DENIED", by: "Not published" });
     const mine = summarizeEvidence({ kind: "exitv2", parent: exit("paper_exit_followthrough") });
     expect(mine.decided?.by).toBe("user_TEST_ONLY_reviewer (you)");
     expect(summarizeEvidence({ kind: "livev2", parent: readLiveParentV2(fixture.live)! }).actors).toBeNull();
