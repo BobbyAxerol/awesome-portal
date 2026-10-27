@@ -127,6 +127,23 @@ export async function runDomTies(page, base) {
     else out.skipped.push(`P5: no comparable days (fleet ${days}, stage ${stageCell})`);
   } else out.skipped.push("P5: alpha_a not in the Fleet page");
 
+  // P7: ONE stage history. Carry A is Live on its spine, so its Paper and Sandbox pages are COMPLETED records: no open observation gate, no failed step, no "Blocked"
+  for (const [path, bad] of [["/deployments/paper/dep_paper_01", /Observation gate\s*\|?\s*PARTIAL|observation gate is partial|Request exit review/i], ["/deployments/sandbox/dep_sandbox_01", /Step \d failed|EXIT REVIEW\s*\|?\s*BLOCKED|Blocked until every step passes/i]]) {
+    await load(page, base, path);
+    const text = norm(await flat(page));
+    out.checked += 1;
+    if (bad.test(text)) out.mismatches.push(`P7 ${path} is an unfinished stage record for an alpha that is Live (${bad.exec(text)?.[0]})`);
+  }
+
+  // P8: the open orders of the Live page are the rows of the blotter the page links to
+  await load(page, base, "/deployments/live/dep_live_01");
+  const liveText = norm(await flat(page));
+  const liveOrders = [...new Set(liveText.match(/\bord_\d{5}\b/g) ?? [])];
+  await load(page, base, "/deployments/blotter?deployment=dep_live_01&env=live");
+  const blotterText = norm(await flat(page));
+  if (liveOrders.length === 0) out.skipped.push("P8: the Live page lists no order id");
+  for (const orderId of liveOrders) eq(`P8 order ${orderId} of the Live page is in its blotter`, blotterText.includes(orderId) ? "yes" : "no", "yes");
+
   // P6: a blotter scoped to a deployment is not empty by construction
   await load(page, base, "/deployments/blotter?deployment=dep_live_01");
   const blotter = norm(await flat(page));

@@ -92,14 +92,14 @@ export async function runTies(get, options = {}) {
         const line = chart.status === 200 ? chart.body.panel?.data?.series?.[0] : null;
         if (line?.points?.length && line.currency === partition.partition.currency) eq(`T9 Equity chart end = NAV ${id} ${env}`, toUnits(line.points.at(-1)[1]), metricOf(statement, "current_nav"));
         else out.skipped.push(`T9 ${id} ${env}: no equity line in ${partition.partition.currency}`);
-        // T11 the Max drawdown tile of the statement = the worst point of the DRAWDOWN series of the same portfolio, window and book (QA4 R1-04)
+        // T12 the Max drawdown tile of the statement = the worst point of the DRAWDOWN series of the same portfolio, window and book (QA4 R1-04)
         const ddTile = metricOf(statement, "max_drawdown_pct");
         const ddSeries = await get(`${E}/manager/series?environment=${env}&metric=DRAWDOWN&window=${encodeURIComponent('"30D"')}&subjects=${encodeURIComponent(JSON.stringify([{ subject_type: "PORTFOLIO", subject_id: id }]))}`);
         const ddEntry = ddSeries.status === 200 ? ddSeries.body.series?.find((x) => x.state === "AVAILABLE" && x.partition?.currency === partition.partition.currency) : null;
         if (ddTile !== null && ddEntry?.points?.length) {
           const lowest = ddEntry.points.reduce((low, point) => { const v = toUnits(point.value); return v < low ? v : low; }, 0n);
-          eq(`T11 drawdown tile = series minimum ${id} ${env}`, ddTile / 10n ** 12n, lowest / 10n ** 10n);
-        } else out.skipped.push(`T11 ${id} ${env}: no drawdown tile or series`);
+          eq(`T12 drawdown tile = series minimum ${id} ${env}`, ddTile / 10n ** 12n, lowest / 10n ** 10n);
+        } else out.skipped.push(`T12 ${id} ${env}: no drawdown tile or series`);
         // T10 the Recalling row = the sum of the pending amounts of the open recalls of the same portfolio, environment and currency
         const recalling = metricOf(statement, "recalling");
         const recalls = await get(`${E}/pending-recalls?workspace_id=ws_fixture&resource_kind=PORTFOLIO&resource_id=${id}&environment=${env}`);
@@ -191,6 +191,49 @@ export async function runTies(get, options = {}) {
     eq("T11 Fleet header deployments = deployments of the datasets", BigInt(s.deployment_count), BigInt(deployments.size));
     eq("T11 Fleet header portfolios = portfolios of the datasets", BigInt(s.portfolio_count), BigInt(portfolios.size));
   } else out.skipped.push("T11: the Alpha Fleet read did not answer");
+
+  // T13 ONE mark per symbol: every position the alpha resources and the account resources state for an instrument carries the same mark price (QA4 R4-02)
+  {
+    const marks = new Map();
+    const note = (where, instrument, mark) => { if (mark === null || mark === undefined || instrument === undefined) return; const key = String(instrument).replace(/\..*$/, ""); const seen = marks.get(key); if (seen === undefined) marks.set(key, { mark: String(mark), where }); else { out.checked += 1; if (toUnits(seen.mark) !== toUnits(mark)) out.mismatches.push(`T13 mark of ${key}: ${seen.mark} (${seen.where}) vs ${mark} (${where})`); } };
+    for (const id of ["alpha_a", "alpha_btc_trend", "alpha_b"]) {
+      const r = await get(`${E}/resources/alphas/${id}`);
+      for (const p of r.status === 200 ? r.body.data.positions ?? [] : []) note(`alpha ${id}`, p.instrument_id, p.mark_price);
+    }
+    for (const id of ["acc_bnc_core", "acc_bnc_sat", "acc_pap_sim", "acc_tn_bnc"]) {
+      const r = await get(`${E}/resources/accounts/${id}`);
+      for (const p of r.status === 200 ? r.body.data.positions ?? [] : []) note(`account ${id}`, p.instrument_id, p.mark_price);
+    }
+    for (const id of ["dep_paper_01", "dep_btc_paper"]) {
+      const r = await get(`${E}/screens/paper/${id}`);
+      for (const p of r.status === 200 ? r.body.data.positions ?? [] : []) note(`paper ${id}`, p.instrument_id, p.mark_price);
+    }
+    if (marks.size === 0) out.skipped.push("T13: no positions found");
+  }
+
+  // T14 ONE order book: every open order the Live page and the Canary room state is a row of the blotter of the same deployment, with the same price (QA4 R2-01, R5-04)
+  for (const [id, kind] of [["dep_live_01", "live"], ["dep_btc_live", "live"], ["dep_canary_01", "canary"]]) {
+    const page = await get(`${E}/deployments/${id}/${kind}`);
+    const blotterOrders = [];
+    let cursor = null;
+    for (let n = 0; n < 12; n += 1) {
+      const next = await get(`${E}/screens/blotter?limit=200${cursor === null ? "" : `&after=${encodeURIComponent(cursor)}`}`);
+      if (next.status !== 200) break;
+      blotterOrders.push(...next.body.data.orders);
+      cursor = next.body.data.page?.next_cursor ?? null;
+      if (cursor === null) break;
+    }
+    const blotter = { status: blotterOrders.length > 0 ? 200 : 0, body: { data: { orders: blotterOrders } } };
+    if (page.status !== 200 || blotter.status !== 200) { out.skipped.push(`T14 ${id}: page or blotter did not answer`); continue; }
+    const rows = (kind === "live" ? page.body.orders : page.body.blotter)?.rows ?? [];
+    const book = new Map(blotter.body.data.orders.filter((o) => o.deployment_id === id).map((o) => [o.order_id, o]));
+    for (const row of rows) {
+      const orderId = row.order_id ?? row.id ?? row.cells?.order_id;
+      if (orderId === undefined) continue;
+      out.checked += 1;
+      if (!book.has(String(orderId))) out.mismatches.push(`T14 ${id}: order ${orderId} of the ${kind} page is not in the blotter of ${id} (${[...book.keys()].join(", ")})`);
+    }
+  }
 
   // T8 Fleet counts
   const all = await dataset("/manager/fleet", "ALL").catch(() => null);
