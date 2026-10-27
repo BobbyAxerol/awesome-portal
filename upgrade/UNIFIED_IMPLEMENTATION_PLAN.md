@@ -16511,3 +16511,14 @@ This is NEW_SELECTED, not evidence of an active mapping, grant or installed
 provider. Edge owns the previously approved install/revalidation, Core owns
 fresh private trust/manifest and connected checks. Full08/read09 remain NOT_MET.
 
+27Oct actual Research reader install/source observation: the approved additive
+reader was installed and independently verified; the exact scoped source
+observation returned ACTIVE mapping but zero Paper heads/receipts. See
+[actual receipt](execution_loop/evidence/ELP2-10/RESEARCH_READER_INSTALL_OBSERVATION_2026-10-27.md).
+New trust is prepared only; the PM network path, source authority/original,
+ROOT/CURRENT and connected READ/STREAM remain open. Do not call the observed
+identity a membership or grant. The private observation operator was subsequently
+hardened against directory replacement and inactive mappings in `1f4109cc4`;
+three focused tests pass. The receipt retains the actual earlier executed script
+hash, not the later source hash.
+
