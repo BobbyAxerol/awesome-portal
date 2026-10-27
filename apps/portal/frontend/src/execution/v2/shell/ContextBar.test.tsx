@@ -74,13 +74,13 @@ describe("ContextBar", () => {
   });
 
   it("envLock without effective draws no environment buttons and presses nothing (the Blotter pattern)", () => {
-    const { container } = render(<ContextBar env="live" window="90D" onChange={noop} windowLock={null} envLock={{ reason: "Not published (FE-052). No environment filter.", unapplied: true }} />);
+    const { container } = render(<ContextBar env="live" window="90D" onChange={noop} windowLock={null} envLock={{ reason: "Not published. No environment filter.", unapplied: true }} />);
     expect(screen.queryByRole("group", { name: "Environment" })).toBeNull();
     for (const name of ["Real-funded", "Paper", "Sandbox"]) expect(screen.queryByRole("button", { name }), name).toBeNull();
     expect(container.querySelector('[aria-pressed="true"]')?.closest('[data-control="env"]')).toBeNull();
     expect(container.querySelector('[data-control="env"]')).toBeNull();
     expect(document.querySelector('[data-notice="lock"]')?.textContent).toBe("Not applied: Environment");
-    expect(container.textContent).toContain("Not published (FE-052). No environment filter.");
+    expect(container.textContent).toContain("Not published. No environment filter.");
   });
 
   it("the window control still works beside a locked environment", () => {

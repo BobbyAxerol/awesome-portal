@@ -18,7 +18,7 @@ const REAL: FlowBlock = {
     { id: "bud", label: "Approved budget", column: 2, value: "700000.00", note: "A limit set by the manager, not cash" },
     { id: "btc", label: "BTC-Trend v3", column: 3, value: "200000.00" },
     { id: "head", label: "Headroom", column: 3, value: "160000.00", hatched: true },
-    { id: "src", label: "By funding source", column: 0, value: null, absent: "Not published (FE-071)" },
+    { id: "src", label: "By funding source", column: 0, value: null, absent: "Not published: canary envelope compliance, rollback checks and trial calendar" },
   ],
   edges: [
     { id: "e1", from: "init", to: "nav", value: "500000.00" },
@@ -98,7 +98,7 @@ describe("CapitalFlow", () => {
     const values = [...container.querySelectorAll(".exec-flow-val")].map((v) => v.textContent);
     expect(values).toContain("612,480.40");
     expect(values).toContain("+12,480.40");
-    expect(values).toContain("Not published (FE-071)");
+    expect(values).toContain("Not published: canary envelope compliance, rollback checks and trial calendar");
     expect(container.textContent).not.toMatch(/[—–]/);
   });
 
@@ -106,7 +106,7 @@ describe("CapitalFlow", () => {
     const { container } = render(<CapitalFlow label="Capital flow" blocks={[REAL]} basis={BASIS} />);
     const node = [...container.querySelectorAll('[data-testid="flow-node"]')].find((n) => n.getAttribute("data-id") === "src")!;
     expect(node.querySelector(".exec-flow-rect")!.getAttribute("data-hatch")).toBe("true");
-    expect(node.textContent).toContain("Not published (FE-071)");
+    expect(node.textContent).toContain("Not published: canary envelope compliance, rollback checks and trial calendar");
   });
 
   it("draws simulated and real as separate blocks, never summed, simulated hatched", () => {
@@ -144,7 +144,7 @@ describe("CapitalFlow", () => {
     fireEvent.click(pick);
     expect(onSelect).toHaveBeenCalledWith("bud");
     expect(table.getByText("Not cash")).toBeTruthy();
-    expect(table.getAllByText("Not published (FE-071)").length).toBeGreaterThan(0);
+    expect(table.getAllByText("Not published: canary envelope compliance, rollback checks and trial calendar").length).toBeGreaterThan(0);
   });
 
   it("is an explicit unavailable state, with or without the structure", () => {

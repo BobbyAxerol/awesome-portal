@@ -68,8 +68,8 @@ describe("flowBlocks", () => {
   it("an unpublished figure is an ABSENT node with its request id, never a made-up amount; no headroom node without a published headroom", () => {
     const [model] = flowBlocks("live", statementsOf({ initial_funds: money("20000.00"), current_budget: absentMetric({ reason_code: "SOURCE_FACTS_NOT_PUBLISHED", unit: "MONEY", currency: "USDT" }) }), null, []);
     const byId = new Map(model!.block.nodes.map((n) => [n.id, n]));
-    expect(byId.get("budget")).toMatchObject({ value: null, absent: "Not published (FE-017)" });
-    expect(byId.get("nav")).toMatchObject({ value: null, absent: "Not published (FE-017)" });
+    expect(byId.get("budget")).toMatchObject({ value: null, absent: "Not published: capital statements" });
+    expect(byId.get("nav")).toMatchObject({ value: null, absent: "Not published: capital statements" });
     expect(byId.has("headroom")).toBe(false);
     expect(model!.block.edges.find((e) => e.id === "e-limit")!.value).toBeNull();
   });
@@ -78,7 +78,7 @@ describe("flowBlocks", () => {
     const [model] = flowBlocks("live", statementsOf(FULL), alphasOf([["alpha_a", null]]), [dep("dep_1", "alpha_a", "10.00")]);
     const alpha = model!.block.nodes.find((n) => n.id === "alpha:alpha_a")!;
     expect(alpha.value).toBeNull();
-    expect(alpha.absent).toBe("Not published (FE-017)");
+    expect(alpha.absent).toBe("Not published: capital statements");
     expect(model!.block.nodes.find((n) => n.id === "dep:dep_1")!.value).toBe("10.00");
   });
 

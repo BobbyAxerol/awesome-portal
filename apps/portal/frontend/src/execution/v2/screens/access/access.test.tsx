@@ -123,7 +123,7 @@ describe("POLICY_PENDING", () => {
     // UXM07-048: the undecided policy is the plain words "Not decided"; its request id is in the disclosure, not on the line
     const policy = within(facts).getByText(/Not decided/).closest("dd") as HTMLElement;
     expect(policy.textContent).not.toContain("FE-026");
-    expect(whyText(policy)).toContain("Not published (FE-026)");
+    expect(whyText(policy)).toContain("Not published: researcher field policy");
     expect(within(facts).getByText("OWNER_RECOVERY_NOT_APPROVED")).toBeTruthy();
     expect(within(facts).getByText("Off")).toBeTruthy();
   });
@@ -135,7 +135,7 @@ describe("POLICY_PENDING", () => {
     expect(document.body.textContent).not.toMatch(/Granted by\b(?! each)/);
     const gaps = screen.getByTestId("not-available-line");
     expect(gaps.textContent).toContain("Who granted each item");
-    expect(whyText(gaps)).toContain("Who granted each item: Not published (FE-015)");
+    expect(whyText(gaps)).toContain("Who granted each item: Not published: per-row eligibility and the reason a control is off");
   });
 });
 
@@ -388,7 +388,7 @@ describe("what you can see and do come from capabilities alone", () => {
     expect(document.body.textContent).not.toMatch(/execution\.(portfolios|accounts|operations)\.read|blotter\.read|Provisional capability/);
     const gaps = screen.getByTestId("not-available-line");
     expect(gaps.textContent).toContain("Per-action eligibility");
-    expect(whyText(gaps)).toContain("Per-action eligibility: Not published (FE-015)");
+    expect(whyText(gaps)).toContain("Per-action eligibility: Not published: per-row eligibility and the reason a control is off");
   });
 
   it("lists a session capability no row names instead of dropping it", async () => {

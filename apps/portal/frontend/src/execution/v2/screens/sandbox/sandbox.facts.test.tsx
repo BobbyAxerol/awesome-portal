@@ -89,7 +89,7 @@ describe("chips and identity", () => {
     expect(chipsOf(viewOf(body)).reconciliation).toMatchObject({ state: "flag", label: "2 open" });
   });
 
-  it("the crumb links the Alpha only because alpha_id is published, the portfolio shows its name, the alpha name is Not published (FE-066) with its reason", async () => {
+  it("the crumb links the Alpha only because alpha_id is published, the portfolio shows its name, the alpha name is Not published: alpha and portfolio names on a deployment with its reason", async () => {
     mount(published());
     await ready();
     const crumb = within(screen.getByRole("navigation", { name: "Breadcrumb" }));
@@ -165,7 +165,7 @@ describe("findings and plans", () => {
     expect(screen.getByRole("tabpanel").textContent).not.toContain("(FE-072)");
     expect(whyText(screen.getByRole("tabpanel").querySelector(".exec-blk-gaps")!)).toContain("ENVELOPE_LOOKUP_NOT_AVAILABLE");
     expect(rowsOf[1]!.querySelector('td[data-l="Author"]')!.textContent).toBe("Not available");
-    expect(whyText(rowsOf[1]!.querySelector('td[data-l="Author"] [data-gap]')!)).toContain("Not published (FE-072)");
+    expect(whyText(rowsOf[1]!.querySelector('td[data-l="Author"] [data-gap]')!)).toContain("Not published: typed stage rows, series and reconciliation figures");
     // Columns that still have a value stay; no note explaining the gaps is printed.
     expect(screen.getByRole("tabpanel").textContent).not.toContain("Typed plan fields");
   });

@@ -68,10 +68,10 @@ describe("Return tile (return_30d_pct)", () => {
     expect(figures.map((node) => node.textContent)).toEqual(["-3.25%", "0.00%"]);
     expect(figures.map((node) => (node.getAttribute("title") ?? "").split(" · ")[0])).toEqual(["-3.25", "0"]);
     expect(figures[1]!.getAttribute("data-zero")).toBe("true");
-    expect((await tile("Return")).textContent).not.toContain("Not published (FE-006)");
+    expect((await tile("Return")).textContent).not.toContain("Not published: return (methodology per source)");
   });
 
-  it("stays Not published (FE-006) when the dataset does not carry the key, and says so", async () => {
+  it("stays Not published: return (methodology per source) when the dataset does not carry the key, and says so", async () => {
     mount(serving({ status: 200, body: alphaBody(false) }));
     await waitFor(() => expect(document.querySelector("[aria-label='Current facts']")).not.toBeNull());
     const tileNode = await tile("Return");
@@ -81,7 +81,7 @@ describe("Return tile (return_30d_pct)", () => {
     expect(whyText([...tileNode.querySelectorAll("button[aria-expanded]")].at(-1) ?? null)).toContain("does not carry return_30d_pct");
   });
 
-  it("stays Not published (FE-006) when the dataset read is refused; Max drawdown has no key at all (FE-025)", async () => {
+  it("stays Not published: return (methodology per source) when the dataset read is refused; Max drawdown has no key at all (FE-025)", async () => {
     mount(serving({ status: 503, body: { error: { code: "EXECUTION_READ_UNAVAILABLE", message: "down" } } }));
     const tileNode = await tile("Return");
     await waitFor(() => expect(tileNode.textContent).toContain("Not available"));

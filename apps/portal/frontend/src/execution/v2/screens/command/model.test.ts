@@ -78,7 +78,7 @@ const capitalPlan = (options: { allowed?: boolean } = {}): PlanView => {
 const filled = { reason: "Month-end top-up agreed with treasury.", confirmWord: "account/sync", impactAck: true };
 
 describe("the plan view is the plan, and cost and impact are never computed", () => {
-  it("F0: exact facts from the published plan; the payload is a hash only; cost and impact are Not published (FE-020)", () => {
+  it("F0: exact facts from the published plan; the payload is a hash only; cost and impact are Not published: command preview (the Preview only intent axis)", () => {
     const view = f0Plan();
     expect(view.impact).toEqual({ kind: "not_published", request: "FE-020" });
     expect(view.facts.find((f) => f.label === "Command")?.value).toBe("account/sync");
@@ -484,7 +484,7 @@ describe("every operation that is not sendable carries its exact reason, and a c
     expect(enablingCapability(entry("ops/emergency-close"))).toMatchObject({ kind: "none_published", because: expect.stringContaining("route itself") });
     // A read has no COMMAND_R0 capability: nothing is invented for it.
     const read = catalogue.entries.find((e) => e.riskTier === "R0_READ" && e.blockedReason === "COMMAND_RELAY_DISABLED")!;
-    expect(enablingCapability(read)).toMatchObject({ kind: "none_published", because: expect.stringContaining("Not published (FE-015)") });
+    expect(enablingCapability(read)).toMatchObject({ kind: "none_published", because: expect.stringContaining("Not published: per-row eligibility and the reason a control is off") });
     // A route the source does not publish is not unlocked by any capability.
     const ambiguous = catalogue.entries.find((e) => e.blockedReason === "SOURCE_ROUTE_MAPPING_AMBIGUOUS")!;
     expect(enablingCapability(ambiguous)).toMatchObject({ kind: "none_published", because: expect.stringContaining("route itself") });

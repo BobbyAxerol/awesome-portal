@@ -124,10 +124,10 @@ describe("StageHeader · the three chips", () => {
     expect(gaps.textContent).not.toContain("(FE-");
     expect(gaps.getAttribute("title")).toBeNull();
     const title = whyText(gaps);
-    expect(title).toContain("Runtime: Not published (FE-067)");
+    expect(title).toContain("Runtime: Not published: Runtime state (Paper, Sandbox, Canary, Live), reconciliation and sessions");
     expect(title).toContain("Source flag: active");
-    expect(title).toContain("Display freshness: Not published (FE-027)");
-    expect(title).toContain("Reconciliation: Not published (FE-067)");
+    expect(title).toContain("Display freshness: Not published: Stage lifecycle");
+    expect(title).toContain("Reconciliation: Not published: Runtime state (Paper, Sandbox, Canary, Live), reconciliation and sessions");
     expect(container.querySelector(".exec-flag")).toBeNull();
     expect(container.textContent).not.toMatch(/Running|Reconciling/);
     for (const id of ["FE-027", "FE-067"] as const) expect(FE_REQUEST_LABEL[id]).toBeTruthy();
@@ -169,10 +169,10 @@ describe("StageHeader · the three chips", () => {
 });
 
 describe("StageHeader · compact spine slot", () => {
-  it("is a compact JourneySpine; with nothing published the lifecycle says Not published (FE-027/028)", () => {
+  it("is a compact JourneySpine; with nothing published the lifecycle says Not published: stage lifecycle and gate criteria", () => {
     const { container } = render(header());
     expect(container.querySelector('.exec-blk-spine[data-variant="compact"]')).toBeTruthy();
-    expect(container.querySelector(".exec-stage-spine")?.textContent).toContain("(FE-027/028)");
+    expect(container.querySelector(".exec-stage-spine [data-gap=\"FE-027/028\"]")).not.toBeNull();
   });
 
   it("onSelect turns the nodes into buttons and reports the stage id; the current node is marked", () => {
@@ -416,8 +416,8 @@ describe("CapGauge · one printing of a request id per panel", () => {
       </SectionPanel>,
     );
     const cells = [...document.querySelectorAll<HTMLElement>(".exec-gauge-wrap")];
-    expect(cells.map((c) => c.textContent)).toEqual(["Not published (FE-071) Used", "Not published Used", "Not published (FE-072) Used"]);
-    expect(cells[1]!.querySelector(".exec-blk-np")!.getAttribute("title")).toBe(`Not published (FE-071): ${FE_REQUEST_LABEL["FE-071"]}`);
+    expect(cells.map((c) => c.textContent)).toEqual(["Not published: canary envelope compliance, rollback checks and trial calendar Used", "Not published Used", "Not published: typed stage rows, series and reconciliation figures Used"]);
+    expect(cells[1]!.querySelector(".exec-blk-np")!.getAttribute("title")).toBe("Not published: canary envelope compliance, rollback checks and trial calendar");
     // The gap is still on every cell as a words-first statement, never a dash or a zero.
     expect(document.body.textContent).not.toMatch(DASHES);
   });
@@ -429,22 +429,22 @@ describe("CapGauge · one printing of a request id per panel", () => {
         <CapGauge label="Gross" />
       </>,
     );
-    expect([...document.querySelectorAll(".exec-gauge-wrap")].map((c) => c.textContent)).toEqual(["Not published (FE-071) Used", "Not published (FE-071) Used"]);
+    expect([...document.querySelectorAll(".exec-gauge-wrap")].map((c) => c.textContent)).toEqual(["Not published: canary envelope compliance, rollback checks and trial calendar Used", "Not published: canary envelope compliance, rollback checks and trial calendar Used"]);
   });
 });
 
 describe("CapGauge · D7: only a server-published ratio draws a bar", () => {
-  it("with no ratio it says Not published (FE-071) and draws nothing", () => {
+  it("with no ratio it says Not published: canary envelope compliance, rollback checks and trial calendar and draws nothing", () => {
     const { container } = render(<CapGauge label="Capital" />);
     expect(container.textContent).toContain("Not published");
-    expect(container.textContent).toContain("(FE-071)");
+    expect(container.textContent).toContain("Not published: canary envelope compliance");
     expect(screen.queryByRole("img")).toBeNull();
     expect(container.querySelector(".exec-gauge")).toBeNull();
   });
 
   it("carries another request id when asked", () => {
     const { container } = render(<CapGauge label="Gross" fe="FE-072" />);
-    expect(container.textContent).toContain("(FE-072)");
+    expect(container.textContent).toContain("Not published: typed stage rows");
   });
 
   it.each([null, "", "abc", "-0.1", "1e-1", ".5", "01", "0.", "76%", " 0.5"])("%j is unreadable, not a bar and not 0", (ratio) => {

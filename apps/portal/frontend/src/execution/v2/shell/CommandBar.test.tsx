@@ -205,10 +205,10 @@ describe("CommandBar hint and notice", () => {
 
   it("takes its own placeholder and describes the input with the notice", () => {
     render(
-      <CommandBar open onClose={() => undefined} entries={ENTRIES} onSelect={() => undefined} placeholder="Jump to a screen" searchNotice="Not published (FE-023)" />,
+      <CommandBar open onClose={() => undefined} entries={ENTRIES} onSelect={() => undefined} placeholder="Jump to a screen" searchNotice="Not published" />,
     );
     const input = screen.getByRole("combobox");
     expect(input.getAttribute("placeholder")).toBe("Jump to a screen");
-    expect(document.getElementById(input.getAttribute("aria-describedby") ?? "")?.textContent).toBe("Not published (FE-023)");
+    expect(document.getElementById(input.getAttribute("aria-describedby") ?? "")?.textContent).toBe("Not published");
   });
 });

@@ -404,7 +404,7 @@ describe("series (FE-013/033, BE-P4 manager series)", () => {
     expect(screen.getByTestId("basis-caption").textContent).toBe("Basis: No aligned series: the common basis is not established");
   });
 
-  it("UNAVAILABLE for a source that is not published keeps Not published (FE-013/033) and names the code per subject", async () => {
+  it("UNAVAILABLE for a source that is not published keeps Not published and names the code per subject", async () => {
     const { container } = mount(makeApi(serving("unavailable")).api, pick(A, B, C));
     await settled(container);
     await waitFor(() => expect(overlay(container).textContent).toContain("SERIES_SOURCE_NOT_PUBLISHED"));
@@ -418,7 +418,7 @@ describe("series (FE-013/033, BE-P4 manager series)", () => {
     await settled(container);
     await waitFor(() => expect(overlay(container).textContent).toContain("ALL_HISTORY_WINDOW_NOT_PUBLISHED"));
     expect(overlay(container).textContent).toContain("Not available");
-    expect(overlay(container).textContent).not.toContain("Not published (FE-013/033)");
+    expect(overlay(container).textContent).not.toContain("Not published");
   });
 
   it("an EMPTY subject means the picks are not aligned: nothing is drawn from the other one", async () => {
@@ -516,7 +516,7 @@ describe("series (FE-013/033, BE-P4 manager series)", () => {
       expect([...seen].some((text) => text.includes("1.23%"))).toBe(true);
     });
 
-    it("a pick whose source states no scale is 'Not published (FE-013/033)' with the typed reason; nothing is drawn from the other pick", async () => {
+    it("a pick whose source states no scale is 'Not published' with the typed reason; nothing is drawn from the other pick", async () => {
       const { container } = mount(makeApi(returns((body) => {
         const template = seriesBodyFor(new URLSearchParams({ environment: "paper", metric: "RETURN", subjects: JSON.stringify([{ subject_type: "PORTFOLIO", subject_id: B }]), window: JSON.stringify("30D") }), "unavailable").series[0];
         body.series[1] = { ...template, subject: body.series[1].subject, reason_code: "RATIO_SCALE_NOT_PUBLISHED", quality: { ...template.quality, reasons: ["RATIO_SCALE_NOT_PUBLISHED"] } };

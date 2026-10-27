@@ -50,6 +50,7 @@ import { TargetNamesProvider } from "./targetNames";
 import { sourceHealthSummary, useSourceHealth } from "./useSourceHealth";
 
 import "../../css/operations.css";
+import { notPublishedText } from "../../blocks";
 
 export const PAGE_LIMIT = 50;
 /** DOM budget (S1 card): more than this and the reader narrows the filters instead. */
@@ -113,7 +114,7 @@ const CURSOR_GONE = /OPERATIONAL_READ_(CHANGED|CURSOR_INVALID)/;
  * is a floor. `null` (the owning source did not report it) is "Not published", never 0; an omitted key never reaches here.
  */
 function HealthKpi({ label, entry, id, basis }: { label: string; entry: HealthCountV2; id: FeId; basis: string }) {
-  if (entry.count === null) return <Kpi label={label} absentReason={`Not published (${id}): the source did not report it.`} />;
+  if (entry.count === null) return <Kpi label={label} absentReason={`${notPublishedText(id)}: the source did not report it.`} />;
   return <Kpi label={label} value={entry.count.toLocaleString("en-US")} basis={entry.coverage === "PARTIAL" ? `${basis} · at least: some rows did not report` : basis} />;
 }
 
@@ -385,7 +386,7 @@ function OperationsInner({
           {/* Unknown outcomes: the server's UNCERTAIN verification bucket, printed as received (FE-043). */}
           {ready.queue.page.statusCounts
             ? <Kpi label="Unknown outcomes" value={number(ready.queue.page.statusCounts.verificationResult.counts.UNCERTAIN)} basis="Verification uncertain" />
-            : <Kpi label="Unknown outcomes" absentReason={`Not published (${FE_B1.counts}): the server sent no status counts.`} />}
+            : <Kpi label="Unknown outcomes" absentReason={`${notPublishedText(FE_B1.counts)}: the server sent no status counts.`} />}
           {/* FE-CAT-2: counted by the server over the whole filtered set, never from the loaded rows. Without them the old gaps stay. */}
           {ready.queue.page.health?.pendingReceipt
             ? <HealthKpi label="Pending receipts" entry={ready.queue.page.health.pendingReceipt} id={FE.receipts} basis="Awaiting a receipt" />

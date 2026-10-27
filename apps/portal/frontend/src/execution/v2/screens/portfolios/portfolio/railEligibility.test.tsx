@@ -8,7 +8,7 @@
  * What the rail may and may not do, each pinned:
  * - ask only while it is open and the address names a workspace, exactly one question, never polled;
  * - word the server's rows (ALLOWED / UNAVAILABLE reason classes) and NEVER enable a control, whatever the rows say;
- * - keep "Not published (FE-015)" for the three controls with no action in the vocabulary, naming the missing item;
+ * - keep "Not published: per-row eligibility and the reason a control is off" for the three controls with no action in the vocabulary, naming the missing item;
  * - show nothing of an old scope, a refused read, a body for another question, a shape it does not read or an expired body;
  * - retry only on the user's word.
  */
@@ -153,7 +153,7 @@ describe("when it asks", () => {
     expect(none).not.toHaveBeenCalled();
     // The three controls with a mapping say what happened; the three without keep their typed absence.
     for (const name of ["Grant budget", "Recall budget", "Set target budget"]) expect(reasonOf(name)).toMatch(/names no workspace/);
-    for (const name of ["Return capital", "Lock allocation", "Deploy version"]) expect(reasonOf(name)).toContain("Not published (FE-015)");
+    for (const name of ["Return capital", "Lock allocation", "Deploy version"]) expect(reasonOf(name)).toContain("Not published: per-row eligibility and the reason a control is off");
   });
 
   it("asks one question when the rail opens, with the page's workspace and environment, and does not poll", async () => {
@@ -216,7 +216,7 @@ describe("what it says", () => {
     expect(within(rail()).queryByRole("button", { name: /Submit|Apply|Reserve|Confirm|Send|Preview$/ })).toBeNull();
   });
 
-  it("Review opens a PREVIEW, NOT RECORDED: the published figures now, the result as Not published (FE-020), no computed 'after'; Close review closes it", async () => {
+  it("Review opens a PREVIEW, NOT RECORDED: the published figures now, the result as Not published: command preview (the Preview only intent axis), no computed 'after'; Close review closes it", async () => {
     mount(vi.fn(async () => read(body({ answers: { "capital.initial_grant": "ALLOWED" } }))));
     await openedRail();
     await settled("Grant budget", /you hold a current grant/);
@@ -225,17 +225,17 @@ describe("what it says", () => {
     expect(review.textContent).toContain("Preview · not recorded");
     expect(review.textContent).toContain("Nothing is applied, reserved or recorded. Sending is not enabled.");
     // The test page's dataset is not served, so no figure is published: the panel says so and still names the missing result.
-    expect(review.textContent).toContain("Not published (FE-020)");
+    expect(review.textContent).toContain("Not published: command preview (the Preview only intent axis)");
     expect(control("Grant budget").getAttribute("aria-expanded")).toBe("true");
     fireEvent.click(within(review).getByRole("button", { name: "Close review" }));
     expect(screen.queryByTestId("rail-review")).toBeNull();
   });
 
-  it("the three controls with no action keep Not published (FE-015) and name what is missing, whatever the batch says", async () => {
+  it("the three controls with no action keep Not published: per-row eligibility and the reason a control is off and name what is missing, whatever the batch says", async () => {
     mount(vi.fn(async () => read(body({ answers: { "capital.initial_grant": "ALLOWED" } }))));
     await openedRail();
     await settled("Grant budget", /you hold a current grant/);
-    expect(reasonOf("Return capital")).toBe("Not published (FE-015). The eligibility vocabulary has no action for returning capital.");
+    expect(reasonOf("Return capital")).toBe("Not published: per-row eligibility and the reason a control is off. The eligibility vocabulary has no action for returning capital.");
     expect(reasonOf("Lock allocation")).toContain("locking an allocation");
     expect(reasonOf("Deploy version")).toContain("deployment.register registers an instance");
   });

@@ -122,7 +122,7 @@ describe("loaded queue", () => {
     // Display has no source on this read: the cell says Not available with the request id behind its disclosure.
     const display = row.querySelector("td[data-l='Display']");
     expect(display?.textContent).toContain("Not available");
-    expect(whyText(display ?? null)).toContain("Not published (FE-032)");
+    expect(whyText(display ?? null)).toContain("Not published: receipt state and amounts");
     // Intent has no published field at all: one line above the table says so, not a placeholder per row.
     expect(row.querySelector("td[data-l='Intent']")).toBeNull();
     expect(document.querySelector(".exec-ops-na-line")?.textContent ?? "").toContain("Intent");
@@ -136,19 +136,19 @@ describe("loaded queue", () => {
     expect(text).not.toMatch(/[—–]/);
     expect(text).not.toContain("N/A");
     const reasons = [...document.querySelectorAll("td[data-l='Display'], .exec-ops-na-line")].map((cell) => whyText(cell)).join("\n");
-    expect(reasons).toContain("Not published (FE-020)");
-    expect(reasons).toContain("Not published (FE-032)");
+    expect(reasons).toContain("Not published: command preview (the Preview only intent axis)");
+    expect(reasons).toContain("Not published: receipt state and amounts");
     fireEvent.click(screen.getByRole("tab", { name: "Audit" }));
-    expect(document.body.textContent).toContain("Not published (FE-021)");
+    expect(document.body.textContent).toContain("Not published: audit source: who did what");
     fireEvent.click(screen.getByRole("tab", { name: "Exceptions" }));
-    expect(document.body.textContent).toContain("Not published (FE-031)");
+    expect(document.body.textContent).toContain("Not published: event feed");
   });
 
   it("source health is a Not published panel with the integration state", async () => {
     const { api } = fakeApi();
     mount(api);
     await table();
-    expect(document.querySelector("details")?.textContent).toContain("Not published (FE-021)");
+    expect(document.querySelector("details")?.textContent).toContain("Not published: audit source: who did what");
     expect(document.querySelector("details")?.textContent).toContain("unavailable");
   });
 });
@@ -173,7 +173,7 @@ describe("Source health summary (OP-7)", () => {
       "Real-funded Binance USDM◐Partial",
     ]);
     // The journal sentence stays: it is about the journal, not the profiles.
-    expect(document.querySelector("details")?.textContent).toContain("Not published (FE-021)");
+    expect(document.querySelector("details")?.textContent).toContain("Not published: audit source: who did what");
   });
 
   it("counts only PARTIAL profiles as partial and names every other non-available state in its own words", async () => {
@@ -238,7 +238,7 @@ describe("Mine, Acknowledge, Resolve are disabled with a reason", () => {
     expect(mine.disabled).toBe(true);
     const reason = document.getElementById(mine.getAttribute("aria-describedby") ?? "");
     expect(reason?.textContent).toContain(MINE_REASON);
-    expect(MINE_REASON).toContain("Not published (FE-030)");
+    expect(MINE_REASON).toContain("Not published: creator, ladder, SLA and needs-you");
   });
 
   it("opening a row shows the fields and disabled Acknowledge and Resolve with reasons", async () => {
@@ -255,17 +255,17 @@ describe("Mine, Acknowledge, Resolve are disabled with a reason", () => {
       const button = within(dock).getByRole("button", { name: label }) as HTMLButtonElement;
       expect(button.disabled).toBe(true);
       const why = document.getElementById(button.getAttribute("aria-describedby") ?? "");
-      expect(why?.textContent).toMatch(/^Not published \(FE-015\)/);
+      expect(why?.textContent).toMatch(/^Not published: per-row eligibility and the reason a control is off/);
     }
     const gaps = within(dock).getByTestId("not-available-line");
     expect(gaps.textContent).toContain("Not available: Amounts, Who acknowledged or resolved it");
-    expect(whyText(gaps)).toContain("Amounts: Not published (FE-032)");
-    expect(whyText(gaps)).toContain("Who acknowledged or resolved it: Not published (FE-021)");
+    expect(whyText(gaps)).toContain("Amounts: Not published: receipt state and amounts");
+    expect(whyText(gaps)).toContain("Who acknowledged or resolved it: Not published: audit source: who did what");
     // Intent and Display are their own sections, each with its own typed reason (they are not one merged line any more).
     const intent = within(dock).getByRole("region", { name: "Intent" });
-    expect(whyText(intent)).toContain("Not published (FE-020)");
+    expect(whyText(intent)).toContain("Not published: command preview (the Preview only intent axis)");
     const display = within(dock).getByRole("region", { name: "Display" });
-    expect(whyText(display)).toContain("Not published (FE-032)");
+    expect(whyText(display)).toContain("Not published: receipt state and amounts");
     expect(dock.textContent).not.toMatch(/[—–]/);
     fireEvent.click(within(dock).getByText("Close"));
     expect(screen.queryByRole("complementary")).toBeNull();

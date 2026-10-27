@@ -125,8 +125,8 @@ describe("the V2 following-parent body", () => {
     // Chips that say nothing are ONE `Not available` chip (FE-067 / FE-072 in its title); freshness keeps its own reason.
     expect(chip("runtime")).toBeNull();
     expect(chip("gaps").textContent).toBe("Not availableRuntime, Reconciliation");
-    expect(whyText(chip("gaps"))).toContain("Runtime: Not published (FE-067)");
-    expect(whyText(chip("gaps"))).toContain("Reconciliation: Not published (FE-072)");
+    expect(whyText(chip("gaps"))).toContain("Runtime: Not published: runtime state (Paper, Sandbox, Canary, Live), reconciliation and sessions");
+    expect(whyText(chip("gaps"))).toContain("Reconciliation: Not published: typed stage rows, series and reconciliation figures");
     expect(chip("gaps").textContent).not.toMatch(/Running|Halted/);
     expect(chip("freshness").textContent).toContain("Not available");
     const spine = within(header as HTMLElement).getByRole("list", { name: "Lifecycle" });
@@ -161,15 +161,15 @@ describe("the V2 following-parent body", () => {
     await ready();
     const gaps = document.querySelector(".exec-sbx-body > .exec-blk-gaps")!;
     expect(gaps.textContent).toBe("Not available: Steps passed, Open findings, Critical open, Promotion plans, Gate");
-    expect(whyText(gaps)).toContain("Steps passed: Not published (FE-028)");
-    expect(whyText(gaps)).toContain("Open findings: Not published (FE-072)");
-    expect(whyText(gaps)).toContain("Gate: Not published (FE-028)");
+    expect(whyText(gaps)).toContain("Steps passed: Not published: gate criteria");
+    expect(whyText(gaps)).toContain("Open findings: Not published: typed stage rows, series and reconciliation figures");
+    expect(whyText(gaps)).toContain("Gate: Not published: gate criteria");
     // No strip of empty tiles and no number anywhere in the facts.
     expect(screen.queryByRole("group", { name: "Certification facts" })).toBeNull();
     expect(document.querySelector(".exec-sbx-body .exec-blk-num")).toBeNull();
     const banner = screen.getByText(/Stored certification and step evaluations only/).closest(".exec-blk-banner")!;
     expect(banner.hasAttribute("title")).toBe(false);
-    expect(whyText(banner)).toContain("Not published (FE-072)");
+    expect(whyText(banner)).toContain("Not published: typed stage rows, series and reconciliation figures");
   });
 
   it("the Steps tab shows the seven stored evaluations in order: Pass, Fail, Stale, Unavailable and three Not recorded", async () => {
@@ -187,7 +187,7 @@ describe("the V2 following-parent body", () => {
     // The explanation of a step is not in a V2 body: one `Not available` line under the grid, the request in its title.
     const gap = screen.getByText("Step explanations", { exact: false }).closest(".exec-blk-gaps")!;
     expect(gap.textContent).toBe("Not available: Step explanations");
-    expect(whyText(gap)).toContain("Not published (FE-028)");
+    expect(whyText(gap)).toContain("Not published: gate criteria");
     expect(cells[0]!.querySelector(".exec-sbx-step-why")).toBeNull();
     // Lineage: the R1 and R2 approvals link to their reviews.
     const lineage = screen.getByRole("list", { name: "Lineage" });
@@ -211,12 +211,12 @@ describe("the V2 following-parent body", () => {
     await ready();
     const gapOf = (heading: string) => screen.getByRole("heading", { name: heading }).closest("section")!.querySelector(".exec-blk-gaps")!;
     expect(gapOf("Findings").textContent).toBe("Not available: Reconciliation findings");
-    expect(whyText(gapOf("Findings"))).toContain("Not published (FE-072)");
+    expect(whyText(gapOf("Findings"))).toContain("Not published: typed stage rows, series and reconciliation figures");
     expect(screen.queryByRole("table")).toBeNull();
     fireEvent.click(tabs().getByRole("tab", { name: "Promotion plans" }));
-    expect(whyText(gapOf("Promotion plans"))).toContain("Not published (FE-072)");
+    expect(whyText(gapOf("Promotion plans"))).toContain("Not published: typed stage rows, series and reconciliation figures");
     fireEvent.click(tabs().getByRole("tab", { name: "Timeline" }));
-    expect(whyText(gapOf("Timeline"))).toContain("Not published (FE-072)");
+    expect(whyText(gapOf("Timeline"))).toContain("Not published: typed stage rows, series and reconciliation figures");
     expect(screen.queryByRole("table")).toBeNull();
   });
 });
@@ -240,10 +240,10 @@ describe("the V1 certification body", () => {
     expect(whyText(chip("gaps"))).toContain("SANDBOX_SOURCE_UNAVAILABLE");
     expect(screen.getByText(/not a clean result/)).toBeTruthy();
     expect(screen.getByText(/Source panels did not report/)).toBeTruthy();
-    // The dark body carries `source_figures`, every cell the server's `Not published (FE-072)`: ONE line instead of fifteen cells, the reason in its title.
+    // The dark body carries `source_figures`, every cell the server's `Not published: typed stage rows, series and reconciliation figures`: ONE line instead of fifteen cells, the reason in its title.
     expect(screen.queryByRole("group", { name: "Reconciliation" })).toBeNull();
     const figures = Array.from(document.querySelectorAll(".exec-blk-gaps")).find((n) => n.textContent === "Not available: Internal, Broker and Difference figures")!;
-    expect(whyText(figures)).toContain("Not published (FE-072)");
+    expect(whyText(figures)).toContain("Not published: typed stage rows, series and reconciliation figures");
     expect(document.body.textContent).not.toMatch(/\b0\.00\b/);
     expect(screen.getByRole("list", { name: "Source panels" }).textContent).toContain("Execution · Unavailable");
   });
@@ -439,7 +439,7 @@ describe("the V1 certification body", () => {
     expect(within(table).getAllByRole("columnheader").map((h) => h.textContent)).toEqual(["Plan", "Target", "Created (UTC)", "Status", "Blockers"]);
     const gap = screen.getByRole("heading", { name: "Promotion plans" }).closest("section")!.querySelector(".exec-blk-gaps")!;
     expect(gap.textContent).toBe("Not available: Envelope, Author");
-    expect(whyText(gap)).toContain("Not published (FE-072)");
+    expect(whyText(gap)).toContain("Not published: typed stage rows, series and reconciliation figures");
     expect(screen.queryByText(/A plan records a refusal to promote/)).toBeNull();
     expect(kpi("Promotion plans").textContent).toContain("1");
   });

@@ -42,6 +42,9 @@ export const FE_REQUEST_LABEL = {
   "FE-033": "Compare",
   "FE-034": "Archived list",
   "FE-035": "Map",
+  "FE-037": "Portal grant name",
+  "FE-042": "Incident links on a queue row",
+  "FE-043": "Status counts over the whole query",
   // S3 stage screens (plan s8, 2026-10-19). OPEN requests; the ledger rows are in FRONTEND_BACKEND_SYNC.md §6 and the cards in
   // evidence/UXM-07/backend-requests.md. Not yet sent to Codex (D9).
   "FE-066": "Alpha and portfolio names on a deployment",
@@ -67,14 +70,27 @@ export function feLabel(id: NotPublishedId): string {
   return FE_REQUEST_LABEL[id];
 }
 
-/** `Not published (FE-021)` as plain text, for a table cell or a title. */
-export function notPublishedText(id: NotPublishedId): string {
-  return `${NOT_PUBLISHED} (${id})`;
+/** A label in running words: the first letter goes lower-case unless the word is an acronym ("NAV and drawdown" stays). */
+const lcFirst = (text: string): string => (/^[A-Z][a-z]/.test(text) ? `${text.charAt(0).toLowerCase()}${text.slice(1)}` : text);
+
+/**
+ * What a request asks for, in words: `what` when the caller names the fact, else the request's label from `FE_REQUEST_LABEL`, else nothing.
+ * The request id itself is NEVER part of the words: it travels in a `data-gap` attribute and in code (QA3 R2-04).
+ */
+export function gapWords(id: string, what?: string | null): string | null {
+  const label = what ?? (Object.hasOwn(FE_REQUEST_LABEL, id) ? FE_REQUEST_LABEL[id as NotPublishedId] : null);
+  return label ? lcFirst(label) : null;
+}
+
+/** `Not published: windowed totals and concentration` as plain text, for a table cell or a title. No request id. */
+export function notPublishedText(id: string, what?: string | null): string {
+  const words = gapWords(id, what);
+  return words === null ? NOT_PUBLISHED : `${NOT_PUBLISHED}: ${words}`;
 }
 
 /** The sentence a disabled control carries (same shape the Operations screen uses). */
-export function notPublishedReason(id: NotPublishedId, because: string): string {
-  return `${NOT_PUBLISHED} (${id}). ${because}`;
+export function notPublishedReason(id: string, because: string, what?: string | null): string {
+  return `${notPublishedText(id, what)}. ${because}`;
 }
 
 /* ── the two legacy shapes, kept so the screens can repoint without rewording ── */
@@ -114,8 +130,8 @@ export const FE_FLEET = {
   archived: { fe: "FE-034", what: "Archived list" },
 } as const satisfies Record<string, UnpublishedFact>;
 
-/** `Not published (FE-012, FE-027)` for a Fleet fact. */
-export const notPublishedFact = (fact: UnpublishedFact): string => notPublishedText(fact.fe);
+/** `Not published: group by` for a Fleet fact (the fact's own words; its request id stays in code). */
+export const notPublishedFact = (fact: UnpublishedFact): string => notPublishedText(fact.fe, fact.what);
 
 /**
  * One panel, one printing of a request id. A panel (`SectionPanel`, `KpiStrip`) opens a scope; the cells that opt in
@@ -193,10 +209,11 @@ export function CompactGaps({ children }: { children: ReactNode }) {
   return <CompactGapsContext.Provider value={true}>{children}</CompactGapsContext.Provider>;
 }
 
-/** What one gap says when asked: `Not published (FE-067): Alpha name · Runtime state ... · REASON_CODE`. */
+/** What one gap says when asked: `Not published: Alpha name · Runtime state ... · REASON_CODE`. The request id is not in the words (it is the gap's `data-gap`). */
 export function gapTitle(id: string, what?: string | null, reason?: string | null): string {
-  const label = Object.hasOwn(FE_REQUEST_LABEL, id) ? FE_REQUEST_LABEL[id as NotPublishedId] : null;
-  return `${NOT_PUBLISHED} (${id}): ${[what, label, reason].filter(Boolean).join(" · ")}`;
+  const label = Object.hasOwn(FE_REQUEST_LABEL, id) ? lcFirst(FE_REQUEST_LABEL[id as NotPublishedId]) : null;
+  const parts = [what, label, reason].filter(Boolean);
+  return parts.length === 0 ? NOT_PUBLISHED : `${NOT_PUBLISHED}: ${parts.join(" · ")}`;
 }
 
 /** The one next-action line of every disclosure: a reader cannot make the source publish, so the line says what will happen. */
@@ -297,7 +314,7 @@ export function GapLine({ items, because }: { items: readonly GapItem[]; because
   const labels = items.map((item) => item.label).join(", ");
   const rows = items.map((item) => `${item.label}: ${item.id ? gapTitle(item.id, null, item.reason) : `${NOT_PUBLISHED}${item.reason ? ` · ${item.reason}` : ""}`}`);
   return (
-    <p className="exec-blk-gaps">
+    <p className="exec-blk-gaps" data-gap={items.flatMap((item) => (item.id ? [item.id] : [])).join(" ") || undefined}>
       <span className="exec-blk-gaps-lead">Not available:</span> {labels}
       {because ? <span className="exec-blk-gaps-why"> · {because}</span> : null}
       <GapWhy name={`Why not available: ${labels}`} rows={rows} />
@@ -318,6 +335,7 @@ export function NotPublished({ id, reasonCode, titleReason, children, compact = 
     return () => scope.release(id, owner);
   }, [tracked, scope, id, owner]);
   const why = titleReason ? ` · ${titleReason}` : "";
+  const words = notPublishedText(id);
   if (compactGaps) {
     return (
       <GapWhy
@@ -330,19 +348,18 @@ export function NotPublished({ id, reasonCode, titleReason, children, compact = 
     );
   }
   const code = reasonCode ? ` · ${reasonCode}` : "";
-  // The id and the reason code are for whoever asks, not for the reader scanning the page: they stay in the text for assistive
-  // tech and copy (visually hidden) and in the tooltip, and the visible part is the word and what is missing.
+  // What is missing is said in words (visually hidden after the visible word, for assistive tech and copy); the request id is the `data-gap`
+  // attribute, never a word on the page, and the reason code stays for whoever asks why.
+  const label = words === NOT_PUBLISHED ? "" : words.slice(NOT_PUBLISHED.length);
   const hidden = (
     <span className="exec-blk-sr">
-      {" ("}
-      <span className="exec-blk-np-id">{id}</span>
-      {")"}
+      {label}
       {reasonCode ? <span className="exec-blk-np-reason">{reasonCode}</span> : null}
     </span>
   );
   if (!first) {
     return (
-      <span className="exec-blk-np" data-repeat="true" title={`${NOT_PUBLISHED} (${id}): ${feLabel(id)}${why}${code}`}>
+      <span className="exec-blk-np" data-gap={id} data-repeat="true" title={`${words}${why}${code}`}>
         <span className="exec-blk-np-word">{NOT_PUBLISHED}</span>
         {children ? <> {children}</> : null}
         {reasonCode ? <span className="exec-blk-sr"><span className="exec-blk-np-reason">{reasonCode}</span></span> : null}
@@ -351,15 +368,15 @@ export function NotPublished({ id, reasonCode, titleReason, children, compact = 
   }
   if (compact) {
     return (
-      <span className="exec-blk-np" data-compact="true" title={`${NOT_PUBLISHED} (${id}): ${feLabel(id)}${why}${code}`}>
-        <span className="exec-blk-sr">{notPublishedText(id)} </span>
+      <span className="exec-blk-np" data-gap={id} data-compact="true" title={`${words}${why}${code}`}>
+        <span className="exec-blk-sr">{words} </span>
         <span className="exec-blk-np-short">{children ?? NOT_PUBLISHED}</span>
         {reasonCode ? <span className="exec-blk-sr"><span className="exec-blk-np-reason">{reasonCode}</span></span> : null}
       </span>
     );
   }
   return (
-    <span className="exec-blk-np" title={`${id} · ${feLabel(id)}${why}${code}`}>
+    <span className="exec-blk-np" data-gap={id} title={`${words}${why}${code}`}>
       <span className="exec-blk-np-word">{NOT_PUBLISHED}</span>
       {hidden}
       {children ? <> {children}</> : null}

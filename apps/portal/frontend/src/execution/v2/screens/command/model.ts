@@ -705,7 +705,7 @@ export type EnablingCapability =
   | { kind: "none_published"; because: string };
 
 /** Provisional, FE-037: the Portal grant a person would need has no published name; none is invented. */
-export const GRANT_NAME_NOTE = "Portal grant name: not published, provisional (FE-037).";
+export const GRANT_NAME_NOTE = "Portal grant name: not published, provisional.";
 
 export function enablingCapability(entry: Pick<CatalogueEntryView, "blockedReason" | "riskTier">): EnablingCapability {
   if (entry.blockedReason !== "COMMAND_RELAY_DISABLED") {
@@ -835,19 +835,19 @@ export const CERTIFICATION_FLOWS: readonly CertificationFlow[] = [
     id: "archive-live",
     label: "Archive an alpha that holds Live positions or working orders",
     cases: ["UX-F14"],
-    why: "Positions and working orders need a pending disposition. The Portal does not fake a flat book or return funds. The archive lifecycle read and commands are not published (FE-034).",
+    why: "Positions and working orders need a pending disposition. The Portal does not fake a flat book or return funds. The archive lifecycle read and commands are not published.",
   },
   {
     id: "archived-monitor",
     label: "Provision or resume the paper monitor of an archived alpha",
     cases: ["UX-F15"],
-    why: "A monitor that is not provisioned, stale or quota-stopped shows its last observation, never invented paper evidence. Monitor commands are not published (FE-034).",
+    why: "A monitor that is not provisioned, stale or quota-stopped shows its last observation, never invented paper evidence. Monitor commands are not published.",
   },
   {
     id: "reactivate",
     label: "Reactivate a reviewed archived alpha",
     cases: ["UX-F16"],
-    why: "Review is not certification. Reactivation never goes live or sends funds by itself, and its action stays gated until certified (FE-034).",
+    why: "Review is not certification. Reactivation never goes live or sends funds by itself, and its action stays gated until certified.",
   },
   {
     id: "live-protective",

@@ -32,6 +32,7 @@ import { ScoreBandChip } from "../portfolios/ScoreCell";
 import { bandOf, truncateDecimal } from "../portfolios/registerMetrics";
 import { useRead } from "../portfolios/useRead";
 import { COMPARE_MAX } from "../portfolios/selection";
+import { notPublishedText } from "../../blocks";
 
 const TONES = ["series", "series-2", "series-3", "series-4"] as const;
 const GLYPHS = ["circle", "square", "diamond", "triangle"] as const;
@@ -67,7 +68,7 @@ function perRow(read: DatasetReadState | undefined, metricKey: string, gap: { fe
   const got = rowsOf(read);
   if (!isRows(got)) return got;
   const having = got.rows.filter((row) => row.economicPartitions.some((entry) => entry.metrics.has(metricKey)));
-  if (having.length === 0) return <Absent reason={`Not published (${gap.fe}): the dataset publishes no ${metricKey} for this alpha.`} />;
+  if (having.length === 0) return <Absent reason={`${notPublishedText(gap.fe, gap.what)}: the dataset publishes no ${metricKey} for this alpha.`} />;
   return (
     <span className="exec-cmpr-lines">
       {having.map((row) => (
@@ -84,7 +85,7 @@ function ScoreOf({ read }: { read: DatasetReadState | undefined }): ReactNode {
   const got = rowsOf(read);
   if (!isRows(got)) return got;
   const scored = got.rows.filter((row) => row.metrics.score !== undefined);
-  if (scored.length === 0) return <NaWhy reason={`Not published (${PF_FE.score.fe}): the dataset carries no score for this alpha.`} text="Not scored" className="exec-pf-dim" />;
+  if (scored.length === 0) return <NaWhy reason={`${notPublishedText(PF_FE.score.fe, PF_FE.score.what)}: the dataset carries no score for this alpha.`} text="Not scored" className="exec-pf-dim" />;
   return (
     <span className="exec-cmpr-lines">
       {scored.map((row) => {

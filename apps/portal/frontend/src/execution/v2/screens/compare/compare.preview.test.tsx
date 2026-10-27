@@ -111,7 +111,7 @@ describe("the Alphas tab", () => {
     fireEvent.click(chips[0]!);
     fireEvent.click(chips[1]!);
     await waitFor(() => expect(screen.getAllByTestId("compare-line")).toHaveLength(2), { timeout: 4000 });
-    expect(screen.queryByText("Not published (FE-033)")).toBeNull();
+    expect(screen.queryByText("Not published: compare")).toBeNull();
     const table = within(await screen.findByRole("table", { name: "Alpha metrics" }));
     await waitFor(() => expect(table.getAllByText(/USDT/).length).toBeGreaterThan(0), { timeout: 4000 });
     for (const label of ["Net PnL", "Return", "Max drawdown", "Score", "Allocation"]) expect(table.getByText(label, { selector: "td[data-l='Metric'] *, td[data-l='Metric']" })).toBeTruthy();

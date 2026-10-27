@@ -163,7 +163,7 @@ describe("series, gap window, identity", () => {
     expect(model(published({ state: "MISMATCH", visible: false })).chart.kind).toBe("mismatch");
   });
 
-  it("the gap window is the server's ranges, or Not published (FE-072) with its reason", () => {
+  it("the gap window is the server's ranges, or Not published: typed stage rows, series and reconciliation figures with its reason", () => {
     const gap = model(published({ gap: true }));
     expect(gap.chart).toMatchObject({ kind: "gap", window: { t: "list", items: ["12 Oct 11:52Z to 12 Oct 12:04Z"] } });
     expect(gap.continuity.rows.find((r) => r.key === "window")!.value).toMatchObject({ t: "list" });
@@ -173,7 +173,7 @@ describe("series, gap window, identity", () => {
     expect(model(dark).chart).toMatchObject({ kind: "gap", window: { t: "np", fe: "FE-072", reason: "PROJECTION_GAP_WINDOW_NOT_RECORDED" } });
   });
 
-  it("the Alpha is linked only because alpha_id is published; the alpha name is Not published (FE-066) with its reason", async () => {
+  it("the Alpha is linked only because alpha_id is published; the alpha name is Not published: alpha and portfolio names on a deployment with its reason", async () => {
     mount(published());
     await loaded();
     const crumb = within(screen.getByRole("navigation", { name: "Breadcrumb" }));
@@ -204,7 +204,7 @@ describe("closed, and the live-source v2 body", () => {
     expect(model(body).kpis).toHaveLength(5);
   });
 
-  it("gap_ranges: a malformed range refuses only the window: the gap is still a gap, the window is Not published (FE-072) with no reason", () => {
+  it("gap_ranges: a malformed range refuses only the window: the gap is still a gap, the window is Not published: typed stage rows, series and reconciliation figures with no reason", () => {
     const body = published({ gap: true });
     body.projection_continuity.gap_ranges = { availability: "AVAILABLE", value: [{ from: "noon", to: "12:04" }], reason_code: null };
     const m = model(body);

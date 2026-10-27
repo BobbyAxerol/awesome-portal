@@ -69,7 +69,7 @@ function oracle(s: State) {
     mismatch,
     chart: mismatch ? "mismatch" : s.gap === true ? "gap" : "unavailable",
     // MISMATCH and a visible IN_SYNC verdict keep their broker words; with neither, the published `stage_facts` speak: the dark
-    // canonical states `Not published (FE-067)` with its reason (LIVE_SOURCE_UNAVAILABLE), no longer the FE's own "Not checked".
+    // canonical states `Not published: runtime state (Paper, Sandbox, Canary, Live), reconciliation and sessions` with its reason (LIVE_SOURCE_UNAVAILABLE), no longer the FE's own "Not checked".
     reconciliation: mismatch ? "Mismatch" : s.state === "IN_SYNC" && s.visible ? "Matched" : null,
     blocked: mismatch || s.gap === true,
     notice: !s.sourceBacked ? "unqualified" : s.freshness === "STALE" ? "stale" : !s.visible && !mismatch ? "partial" : null,
@@ -119,7 +119,7 @@ describe("L1 · the V1 state matrix", () => {
     expect(m.chart.kind).toBe("unavailable");
   });
 
-  it("a gap says so, withholds the window as Not published (FE-072) and blocks risk-increasing actions only", () => {
+  it("a gap says so, withholds the window as Not published: typed stage rows, series and reconciliation figures and blocks risk-increasing actions only", () => {
     // `populatedV1` rebuilds `projection_continuity` without `gap_ranges`: a body without the member is typed absence, no reason to show.
     const m = model(populatedV1({ gap: true }));
     expect(m.continuity.rows.find((r) => r.key === "window")!.value).toEqual({ t: "np", fe: "FE-072", what: "Gap window" });
@@ -219,7 +219,7 @@ describe("L1 · the V1 state matrix", () => {
     expect(model(populatedV1({ runtimeState: "SOMETHING_NEW" })).chips.runtime).toMatchObject({ kind: "unknown", label: "Something new" });
   });
 
-  it("the published dark body: nothing is a number, Runtime is Not published (FE-067), the source is not qualified", () => {
+  it("the published dark body: nothing is a number, Runtime is Not published: runtime state (Paper, Sandbox, Canary, Live), reconciliation and sessions, the source is not qualified", () => {
     const m = model(v1Raw());
     expect(m.notice).toEqual({ kind: "unqualified", text: "Source not qualified." });
     expect(m.kpis.map((k) => [k.key, k.kind])).toEqual([

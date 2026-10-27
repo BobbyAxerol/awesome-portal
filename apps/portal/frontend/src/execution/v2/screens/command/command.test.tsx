@@ -137,14 +137,14 @@ describe("the plan", () => {
     expect(details.textContent).toContain("LIVE_FULL");
   });
 
-  it("F0: the published plan, its blocker in words, and cost and impact Not published (FE-020), never a number", async () => {
+  it("F0: the published plan, its blocker in words, and cost and impact Not published: command preview (the Preview only intent axis), never a number", async () => {
     const { fake } = mount("f0-denied");
     await readPlan();
     expect(fake.calls.map((c) => c.method)).toEqual(["plan"]);
     const plan = screen.getByLabelText(/^Plan: /);
     expect(within(plan).getByText("COMMAND_RELAY_DISABLED")).toBeTruthy();
     expect(within(plan).getByText(/command relay is off/)).toBeTruthy();
-    expect(within(plan).getByText(/Not published \(FE-020\)/)).toBeTruthy();
+    expect(within(plan).getByText(/Not published: command preview (the Preview only intent axis)/)).toBeTruthy();
     expect(within(plan).getByText(/none is computed on this page/)).toBeTruthy();
     expect(within(plan).getByText("sha256:2222222222222222222222222222222222222222222222222222222222222222")).toBeTruthy();
     expect(within(plan).getByText(/No request to the Trading System was made by this plan/)).toBeTruthy();
@@ -159,7 +159,7 @@ describe("the plan", () => {
     expect(within(plan).getByText("9007199254740993")).toBeTruthy();
     expect(within(plan).getByText("CAPITAL")).toBeTruthy();
     expect(within(plan).getByText("TEST_ONLY:policy1")).toBeTruthy();
-    expect(within(plan).getByText(/Not published \(FE-020\)/)).toBeTruthy();
+    expect(within(plan).getByText(/Not published: command preview (the Preview only intent axis)/)).toBeTruthy();
   });
 
   it("a replayed plan says the server already knew the key", async () => {
@@ -350,7 +350,7 @@ describe("ACCEPTED (four independent answers)", () => {
     expect(within(panel).getAllByText("100.000000000000000001 USDT").length).toBeGreaterThanOrEqual(2);
     const fillLine = within(rows[3]!).getByText("Fill: not published");
     expect(fillLine.getAttribute("data-state")).toBe("not_published");
-    expect(whyText(fillLine)).toMatch(/Not published \(FE-032\)/);
+    expect(whyText(fillLine)).toMatch(/Not published: receipt state and amounts/);
     expect(within(rows[1]!).getByText("Reason: not applicable").getAttribute("data-state")).toBe("not_applicable");
     expect(within(panel).getByText("9007199254740994")).toBeTruthy();
     expect(within(panel).getAllByText(COMMAND_ID_APPLIED).length).toBeGreaterThan(0);
@@ -396,7 +396,7 @@ describe("REJECTED (typed)", () => {
     const panel = await screen.findByLabelText("Rejected");
     const reason = within(panel).getByText("Reason: not published");
     expect(reason.getAttribute("data-absence")).toBe("rejection");
-    expect(whyText(reason)).toMatch(/Not published \(FE-032\)/);
+    expect(whyText(reason)).toMatch(/Not published: receipt state and amounts/);
     expect(panel.textContent).not.toMatch(/FE-032/);
     expect(within(panel).getByText("None published")).toBeTruthy();
     expect(within(panel).queryByRole("button", { name: "Change the request" })).toBeNull();
@@ -999,7 +999,7 @@ describe("operations that are not sendable", () => {
     expect(within(ambiguous).getByText(/route itself is not available/)).toBeTruthy();
     expect(ambiguous.textContent).not.toMatch(/COMMAND_R\d/);
     const read = document.querySelector('[data-op="account/state"]') as HTMLElement;
-    expect(read.textContent).toMatch(/Not published \(FE-015\)/);
+    expect(read.textContent).toMatch(/Not published: per-row eligibility and the reason a control is off/);
     expect(read.textContent).not.toMatch(/COMMAND_R\d/);
   });
 

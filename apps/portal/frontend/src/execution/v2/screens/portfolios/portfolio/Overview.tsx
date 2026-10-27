@@ -139,7 +139,7 @@ function EquityCard({ ctx }: { ctx: TabCtx }) {
 /** What the Overview does not carry and has no tile or panel for, said once (ids and reasons in the line's title). */
 const UNPUBLISHED_OVERVIEW: readonly UnavailableFact[] = [
   { label: "Funding source", id: "FE-032", why: "No per-source attribution" },
-  { label: "Stage, decision, incident and recall lanes", id: "FE-031", why: "No source is published (FE-032 as well); the chart draws the Flow lane only" },
+  { label: "Stage, decision, incident and recall lanes", id: "FE-031", why: "No source is published (receipt state and amounts as well); the chart draws the Flow lane only" },
   { label: "Score", id: "FE-011", why: "Policy not set" },
 ];
 const OTHER_GAPS: readonly UnavailableFact[] = UNPUBLISHED_OVERVIEW.filter((fact) => fact.label !== "Score");
@@ -195,7 +195,7 @@ function CapitalCard({ ctx }: { ctx: TabCtx }) {
       </table>
       <BudgetBar list={statements} title="Allocated of approved budget" />
       <p className="exec-pf-note exec-pf-source">
-        By funding source: <GapWhy className="exec-blk-np-word" gap="FE-032" text="Not published" name="Not published, reason (funding source)" rows={["No per-source attribution is published for the portfolio's capital (FE-032)."]} />
+        By funding source: <GapWhy className="exec-blk-np-word" gap="FE-032" text="Not published" name="Not published, reason (funding source)" rows={["No per-source attribution is published for the portfolio's capital."]} />
       </p>
     </SectionPanel>
   );

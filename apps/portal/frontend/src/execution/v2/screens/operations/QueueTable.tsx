@@ -23,6 +23,7 @@ import { commandLabel, receiptOutcome, severityWord, triageOutcome } from "./out
 import { TargetLink } from "./TargetLink";
 
 import "../../css/operations.css";
+import { notPublishedText } from "../../blocks";
 
 /** FE-CAT-2 axis words. A word is a published value restated; nothing here is derived from other fields. */
 const DISPLAY_WORD: Readonly<Record<DisplayStateV2, { kind: FlagKind; label: string }>> = {
@@ -69,8 +70,8 @@ function columnsFor(onOpen: (row: OperationV2) => void, incidentTo: (incidentId:
       label: "Display",
       render: (row) => {
         // FE-CAT-2: the row's display axis. Omitted (no owning source) and null (the source did not report it) stay typed gaps.
-        if (row.displayState === undefined) return <NaWhy reason="Not published (FE-032): whether the figures shown have caught up." />;
-        if (row.displayState === null) return <NaWhy reason="Not published (FE-032): the source did not report whether the figures shown have caught up for this row." />;
+        if (row.displayState === undefined) return <NaWhy reason={`${notPublishedText("FE-032")}: whether the figures shown have caught up.`} />;
+        if (row.displayState === null) return <NaWhy reason={`${notPublishedText("FE-032")}: the source did not report whether the figures shown have caught up for this row.`} />;
         const word = DISPLAY_WORD[row.displayState];
         return <Flag kind={word.kind} label={word.label} size="sm" />;
       },

@@ -74,7 +74,7 @@ export const RAIL_PREVIEW_NOTE = "Preview is not available here, so nothing can 
 
 function rowSentence(row: BatchEligibilityRow): string {
   const word = ACTION_WORD[row.action] ?? row.action;
-  if (row.permission === "ALLOWED") return `${word}: you hold a current grant. ${RAIL_PREVIEW_NOTE} (${PF_FE.preview.fe})`;
+  if (row.permission === "ALLOWED") return `${word}: you hold a current grant. ${RAIL_PREVIEW_NOTE}`;
   return `${word}: ${ELIGIBILITY_REASON_COPY[row.reasonClass]}`;
 }
 

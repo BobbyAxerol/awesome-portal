@@ -15,8 +15,9 @@ import type { ManagerDataset, ManagerGroup } from "../../../readers/managerDatas
 import type { ManagerMetricRead, ManagerPartition, ManagerPartitionedMetrics } from "../../../readers/managerMetric";
 import { DOMAIN_WORD } from "../PartitionFigures";
 import type { AccountView, DeploymentView, Environment } from "./model";
+import { notPublishedText } from "../../../blocks";
 
-const GAP = "Not published (FE-017)";
+const GAP = notPublishedText("FE-017");
 const exact = (metric: ManagerMetricRead | undefined): string | null => (metric !== undefined && metric.kind === "value" ? metric.exact : null);
 const partitionKey = (p: ManagerPartition): string => `${p.economicDomain}|${p.currency}|${p.basis}|${p.nativeProfileRef}`;
 const sameBook = (a: ManagerPartition, b: ManagerPartition): boolean => partitionKey(a) === partitionKey(b);

@@ -172,7 +172,7 @@ describe("the event ribbon is pinned on the Performance chart", () => {
     const caption = await screen.findByTestId("drawdown-caption", {}, { timeout: 4000 });
     expect(caption.textContent).toMatch(/^Drawdown, a ratio stated as a fraction \(1\.0 is 100%\), shown in % · /);
     expect(await screen.findByTestId("drawdown-pane")).toBeTruthy();
-    expect(document.body.textContent).not.toContain("Not published (FE-025)");
+    expect(document.body.textContent).not.toContain("Not published: window");
     // Every kind has a source in the dataset, so the gap line is not printed on this chart.
     expect(document.querySelector(".exec-alp2-cap")?.textContent ?? "").not.toMatch(/Incident, Recall/);
   });

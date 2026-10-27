@@ -210,7 +210,7 @@ describe("the exit blockers read as sentences; codes stay out of them", () => {
 });
 
 describe("the three chips never invent a state", () => {
-  it("runtime is Not published (FE-067) while the source states none; a legacy word on a body without stage facts is shown unstyled", () => {
+  it("runtime is Not published: runtime state (Paper, Sandbox, Canary, Live), reconciliation and sessions while the source states none; a legacy word on a body without stage facts is shown unstyled", () => {
     expect(chipsOf(v1()).runtime).toEqual({ state: "not-published", id: "FE-067" });
     expect(chipsOf(v2()).runtime).toEqual({ state: "not-published", id: "FE-067" });
     expect(chipsOf(v1({ runtimeState: "RUNNING" })).runtime).toEqual({ state: "dot", tone: "mute", text: "Running" });

@@ -75,7 +75,7 @@ describe("ribbon under the equity", () => {
     expect(within(chips).getAllByRole("button").map((b) => b.textContent)).toHaveLength(1);
     expect(within(chips).getByRole("button", { name: /Flow/ })).toBeTruthy();
     // The ids are on the one line under the chart, in its title.
-    expect(whyText(screen.getByTestId("not-available-line"))).toContain("Not published (FE-031)");
+    expect(whyText(screen.getByTestId("not-available-line"))).toContain("Not published: event feed");
     expect(lane(group, "flow").querySelector(".exec-ribbon-lane-axis")).not.toBeNull();
   });
 

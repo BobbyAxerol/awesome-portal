@@ -146,7 +146,7 @@ describe("Operations with the lane's rows", () => {
     const intent = within(dock).getByRole("region", { name: "Intent" });
     const receipt = within(dock).getByRole("region", { name: "Receipt" });
     const display = within(dock).getByRole("region", { name: "Display" });
-    expect(whyText(intent)).toContain("Not published (FE-020)");
+    expect(whyText(intent)).toContain("Not published: command preview (the Preview only intent axis)");
     expect(within(receipt).getByText("Unknown outcome")).toBeTruthy();
     expect(within(receipt).getByText("Awaiting receipt")).toBeTruthy();
     expect(receipt.textContent).toContain("Read at");
@@ -450,7 +450,7 @@ describe("round 3 (QA2 R3): one Intent absence, no sub-line, counts that tie", (
     const t = await table();
     expect(within(t).queryByRole("columnheader", { name: "Intent" })).toBeNull();
     const line = screen.getAllByTestId("not-available-line").find((el) => el.textContent?.includes("Intent"))!;
-    expect(whyText(line)).toContain("Intent: Not published (FE-020)");
+    expect(whyText(line)).toContain("Intent: Not published: command preview (the Preview only intent axis)");
     expect(within(t).queryAllByText("Not available").length).toBeLessThan(within(t).getAllByRole("row").length);
   });
 

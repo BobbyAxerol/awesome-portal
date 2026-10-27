@@ -7,10 +7,11 @@ import type { DrawdownInput } from "../../charts";
 import { ticketFree } from "../../ticketText";
 import { chartPointsOf, unavailableChart } from "./seriesModel";
 import type { SeriesReadState } from "./useManagerSeries";
+import { notPublishedText } from "../../blocks";
 
 export const DRAWDOWN_NOT_ASKED: DrawdownInput = {
   kind: "absent",
-  copy: "Not published (FE-013, FE-025)",
+  copy: notPublishedText("FE-013, FE-025", "NAV and drawdown"),
   reason: "The series port does not serve this subject, so no drawdown series is asked for; a drawdown is never worked out from the line above.",
 };
 

@@ -115,7 +115,7 @@ describe("page", () => {
 /* ═════════════════════════ V1 ═════════════════════════ */
 
 describe("V1 body, matched", () => {
-  it("prints the published figures exactly, the chips the body supports and Runtime as Not published (FE-067)", async () => {
+  it("prints the published figures exactly, the chips the body supports and Runtime as Not published: runtime state (Paper, Sandbox, Canary, Live), reconciliation and sessions", async () => {
     mount(() => ok(v1Read(populatedV1())));
     await loaded();
     const strip = screen.getByRole("group", { name: "Live figures" });
@@ -128,7 +128,7 @@ describe("V1 body, matched", () => {
     // Runtime is not published: it is in the one `Not available` chip, FE-067 in its title.
     expect(chip("runtime")).toBe("");
     expect(chip("gaps")).toContain("Runtime");
-    expect(whyText(document.querySelector('[data-chip="gaps"]')!)).toContain("Runtime: Not published (FE-067)");
+    expect(whyText(document.querySelector('[data-chip="gaps"]')!)).toContain("Runtime: Not published: runtime state (Paper, Sandbox, Canary, Live), reconciliation and sessions");
     expect(chip("gaps")).not.toContain("Running");
   });
 
@@ -138,7 +138,7 @@ describe("V1 body, matched", () => {
     expect(screen.queryByRole("region", { name: "Live net PnL" })).toBeNull();
     const gap = document.querySelector(".exec-liv-v2 > .exec-blk-gaps")!;
     expect(gap.textContent).toContain("Live net PnL series");
-    expect(whyText(gap)).toContain("Not published (FE-013)");
+    expect(whyText(gap)).toContain("Not published: NAV and drawdown");
     expect(gap.textContent).not.toContain("(FE-013)");
     expect(document.querySelector("svg[role='img']")).toBeNull();
   });
@@ -157,12 +157,12 @@ describe("V1 body, matched", () => {
     const lines = document.querySelectorAll(".exec-liv-v2 .exec-blk-gaps");
     expect(lines).toHaveLength(1);
     expect(lines[0]!.textContent).toBe("Not available: Live net PnL series, Internal, Broker and Difference figures, Position rows, Open order rows");
-    expect(whyText(lines[0]!)).toContain("Not published (FE-072)");
+    expect(whyText(lines[0]!)).toContain("Not published: typed stage rows, series and reconciliation figures");
     expect(tab.textContent).not.toMatch(/\b0\.00\b/);
     expect(screen.getByRole("link", { name: "Open the full blotter for this deployment" }).getAttribute("href")).toBe(`/deployments/blotter?deployment=${DEPLOYMENT_ID}&env=live`);
   });
 
-  it("exposure & orders: the Triad rows are the server's source_figures (FE-072); every side the dark body leaves out is Not published (FE-072) with its reason in the title, and nothing is subtracted", async () => {
+  it("exposure & orders: the Triad rows are the server's source_figures (FE-072); every side the dark body leaves out is Not published: typed stage rows, series and reconciliation figures with its reason in the title, and nothing is subtracted", async () => {
     mount(() => ok(v1Read(populatedV1())));
     await loaded();
     // Every cell of the published figures is the server's NOT_PUBLISHED: ONE line instead of fifteen cells, every reason in its title.
@@ -170,14 +170,14 @@ describe("V1 body, matched", () => {
     const stack = screen.getByRole("link", { name: "Open the full blotter for this deployment" }).closest(".exec-liv-stack")!;
     const gap = document.querySelector(".exec-liv-v2 > .exec-blk-gaps")!;
     expect(gap.textContent).toBe("Not available: Live net PnL series, Internal, Broker and Difference figures, Position rows, Open order rows");
-    expect(whyText(gap)).toContain("Not published (FE-072)");
+    expect(whyText(gap)).toContain("Not published: typed stage rows, series and reconciliation figures");
     expect(whyText(gap)).toContain("DIFFERENCE_REQUIRES_BOTH_SIDES");
     expect(whyText(gap)).toContain("BROKER_EQUITY_FIELD_NOT_PUBLISHED");
     expect(stack.textContent).not.toMatch(/\b0\.00\b/);
     expect(screen.queryByText(/The Difference is the server's and is never worked out here\./)).toBeNull();
   });
 
-  it("a V1 body that carries rows draws positions and orders under the source's own names; the typed columns stay Not published (FE-072)", async () => {
+  it("a V1 body that carries rows draws positions and orders under the source's own names; the typed columns stay Not published: typed stage rows, series and reconciliation figures", async () => {
     mount(() => ok(v1Read(withV1Rows(populatedV1()))));
     await loaded();
     const table = screen.getByRole("table", { name: "Positions" });
@@ -189,7 +189,7 @@ describe("V1 body, matched", () => {
     expect(table.closest("div[title]")!.getAttribute("title")).toBe("Columns are the source's own field names.");
     expect(screen.getByRole("region", { name: "Positions" }).textContent).not.toContain("Columns are the source's own field names");
     expect(screen.getByRole("region", { name: "Positions" }).querySelector(".exec-blk-gaps")!.textContent).toBe("Not available: Typed position rows");
-    expect(whyText(screen.getByRole("region", { name: "Positions" }).querySelector(".exec-blk-gaps")!)).toContain("Not published (FE-072)");
+    expect(whyText(screen.getByRole("region", { name: "Positions" }).querySelector(".exec-blk-gaps")!)).toContain("Not published: typed stage rows, series and reconciliation figures");
     const orders = screen.getByRole("table", { name: "Orders" });
     expect(orders.textContent).toContain("63990.00");
     expect(orders.textContent).not.toMatch(/(^|\s)[-–—](\s|$)|N\/A/);
@@ -314,7 +314,7 @@ describe("V1 body, broker not verified (UNAVAILABLE) is not a mismatch", () => {
     await loaded();
     // The published stage facts speak for Runtime and Reconciliation: not published, the request and the reason in the chip's title.
     expect(chip("gaps")).toContain("Runtime, Reconciliation");
-    expect(whyText(document.querySelector('[data-chip="gaps"]')!)).toContain("Runtime: Not published (FE-067)");
+    expect(whyText(document.querySelector('[data-chip="gaps"]')!)).toContain("Runtime: Not published: runtime state (Paper, Sandbox, Canary, Live), reconciliation and sessions");
     expect(whyText(document.querySelector('[data-chip="gaps"]')!)).toContain("LIVE_SOURCE_UNAVAILABLE");
     expect(chip("freshness")).toContain("Not available");
     expect(screen.getByText("Source not qualified.")).toBeTruthy();
@@ -322,7 +322,7 @@ describe("V1 body, broker not verified (UNAVAILABLE) is not a mismatch", () => {
     expect(screen.queryByRole("group", { name: "Live figures" })).toBeNull();
     const gap = document.querySelector(".exec-liv-v2 > .exec-blk-gaps")!;
     expect(gap.textContent).toBe("Not available: Capital, Gross notional, Daily P&L, Open orders, Broker equity, Live net PnL series, Internal, Broker and Difference figures, Position rows, Open order rows");
-    expect(whyText(gap)).toContain("Capital: Not published (FE-072)");
+    expect(whyText(gap)).toContain("Capital: Not published: typed stage rows, series and reconciliation figures");
     expect(whyText(gap)).toContain("Broker equity: Not published · Broker state not available");
     const strip = document.body;
     expect(within(strip).queryByText("Hidden")).toBeNull();
@@ -341,7 +341,7 @@ describe("V1 body, gap", () => {
     const slot = screen.getByRole("alert", { name: "Live net PnL" });
     expect(slot.textContent).toContain("Updates are missing. Chart hidden until the gap is filled.");
     expect(slot.textContent).toContain("Gap window Not available");
-    expect(whyText(slot.querySelector("[data-gap]")!)).toContain("Not published (FE-072)");
+    expect(whyText(slot.querySelector("[data-gap]")!)).toContain("Not published: typed stage rows, series and reconciliation figures");
     expect(within(slot).getByRole("link", { name: "Open operations for this deployment" }).getAttribute("href")).toBe(`/execution/operations?target_id=${DEPLOYMENT_ID}`);
     expect(screen.getByText("A gap blocks risk-increasing actions. Protective actions stay open.")).toBeTruthy();
   });
@@ -352,7 +352,7 @@ describe("V1 body, gap", () => {
     const table = screen.getByRole("table", { name: "Display continuity" });
     expect(table.textContent).toContain("Gap in updates");
     expect(within(table).getAllByText("Gap window")[0]!.closest("tr")!.textContent).toContain("Not available");
-    expect(whyText(within(table).getAllByText("Gap window")[0]!.closest("tr")!.querySelector("[data-gap]")!)).toContain("Not published (FE-072)");
+    expect(whyText(within(table).getAllByText("Gap window")[0]!.closest("tr")!.querySelector("[data-gap]")!)).toContain("Not published: typed stage rows, series and reconciliation figures");
     expect(within(table).getByText("Broker")).toBeTruthy();
     expect(within(table).getByText("Derived")).toBeTruthy();
     expect(screen.getByRole("region", { name: "Display continuity" }).querySelector("details")!.textContent).toContain("Epoch 41 · sequence 88240");
@@ -542,13 +542,13 @@ describe("V2 body (retained observations)", () => {
     mount(() => ok(v2Read(v2Populated())));
     await loaded();
     expect(chip("gaps")).toBe("Not availableRuntime");
-    expect(whyText(document.querySelector('[data-chip="gaps"]')!)).toContain("Runtime: Not published (FE-067)");
+    expect(whyText(document.querySelector('[data-chip="gaps"]')!)).toContain("Runtime: Not published: runtime state (Paper, Sandbox, Canary, Live), reconciliation and sessions");
     expect(chip("freshness")).toContain("Not available · Source clock is not scoped");
     expect(chip("reconciliation")).toContain("Not available · Source verdict not asserted");
     expect(screen.getByText("Retained observations only.")).toBeTruthy();
     // The five figures are one line (FE-072 in its title), not five tiles.
     expect(screen.queryByRole("group", { name: "Live figures" })).toBeNull();
-    expect(whyText(document.querySelector(".exec-liv-v2 > .exec-blk-gaps")!).match(/Not published \(FE-072\)/g)).toHaveLength(5);
+    expect(whyText(document.querySelector(".exec-liv-v2 > .exec-blk-gaps")!).match(/Not published: typed stage rows, series and reconciliation figures/g)).toHaveLength(5);
     // No per-figure rows exist in this body, so no Triad is drawn at all (a Triad of twelve "Not available" would say nothing).
     expect(screen.queryByRole("group", { name: "Reconciliation" })).toBeNull();
     expect(screen.getByRole("region", { name: "Reconciliation" })).toBeTruthy();
@@ -570,7 +570,7 @@ describe("V2 body (retained observations)", () => {
     mount(() => ok(v2Read(v2Populated())));
     await loaded();
     for (const name of ["Orders", "Fills", "Account balances", "Margin balances"]) expect(screen.getByRole("table", { name }), name).toBeTruthy();
-    expect(whyText(screen.getByRole("region", { name: "Reconciliation" }).querySelector(".exec-blk-gaps")!)).toContain("Not published (FE-072)");
+    expect(whyText(screen.getByRole("region", { name: "Reconciliation" }).querySelector(".exec-blk-gaps")!)).toContain("Not published: typed stage rows, series and reconciliation figures");
   });
 
   it("continuity: the read does not assert continuity; a coverage table lists all eleven panels; broker_sync is Not published", async () => {

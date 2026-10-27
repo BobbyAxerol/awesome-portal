@@ -125,7 +125,7 @@ describe("the More menu", () => {
 });
 
 describe("the lifecycle spine", () => {
-  it("marks only the named stage as now; no stage is Done, and history is Not published (FE-027/028)", async () => {
+  it("marks only the named stage as now; no stage is Done, and history is Not published: stage lifecycle and gate criteria", async () => {
     mount();
     await ready();
     const spine = screen.getByRole("list", { name: "Alpha lifecycle" });
@@ -220,7 +220,7 @@ describe("Performance", () => {
     expect(screen.getByText("Never stitched into actual")).toBeTruthy();
   });
 
-  it("Research OOS names the bound run as Not published (FE-029)", async () => {
+  it("Research OOS names the bound run as Not published: evidence, baseline and run linkage", async () => {
     mount(`/deployments/alphas/${ALPHA_DOUBLE_ID}?view=oos`);
     await ready();
     const lines = screen.getAllByTestId("not-available-line").map((line) => line.textContent ?? "");
@@ -408,7 +408,7 @@ describe("Deployments", () => {
 });
 
 describe("Evidence, Regime, Reconciliation", () => {
-  it("Evidence names the run binding as Not published (FE-029) and shows the source's binding reason", async () => {
+  it("Evidence names the run binding as Not published: evidence, baseline and run linkage and shows the source's binding reason", async () => {
     mount(`/deployments/alphas/${ALPHA_DOUBLE_ID}?tab=evidence`);
     await ready();
     const panel = await screen.findByRole("region", { name: "Research Evidence" });
@@ -560,7 +560,7 @@ describe("Activity & Decisions", () => {
     return { ...served, feed };
   }
 
-  it("draws the ribbon on the equity axis: the journal rows on the Decision lane, stage bands, the rest Not published (FE-031)", async () => {
+  it("draws the ribbon on the equity axis: the journal rows on the Decision lane, stage bands, the rest Not published: event feed", async () => {
     await open();
     const ribbon = await screen.findByRole("group", { name: "Events and stages" });
     expect(within(ribbon).getAllByTestId("ribbon-event").length).toBeGreaterThanOrEqual(1);
@@ -655,7 +655,7 @@ describe("states", () => {
 });
 
 describe("Score drawer", () => {
-  it("opens from the chip, shows every score row as Not published (FE-011), and the raw economics as current", async () => {
+  it("opens from the chip, shows every score row as Not published: score, and the raw economics as current", async () => {
     mount();
     const h1 = await ready();
     fireEvent.click(within(h1).getByRole("button", { name: /Not scored/ }));

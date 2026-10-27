@@ -321,7 +321,7 @@ describe("planning", () => {
     });
     await waitFor(() => expect(within(pane).getByRole("list", { name: "Command state" }).querySelector("[aria-current='step']")?.textContent).toContain("Accepted"), SLOW);
     expect(pane.textContent).toContain("op_DOUBLE_PLAN_ACCEPTED");
-    expect(pane.textContent).toContain("Not published (FE-020)");
+    expect(pane.textContent).toContain("Not published: command preview (the Preview only intent axis)");
 
     // The same inputs again are a retry: same request key. An edit is a new intent: a new key.
     const firstKey = (posts()[0]!.body as { request_key: string }).request_key;

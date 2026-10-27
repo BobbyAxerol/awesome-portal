@@ -36,6 +36,7 @@ import { isLabWorkspace } from "./pendingControlIntent";
 import { TargetLink } from "./TargetLink";
 
 import "../../css/operations.css";
+import { notPublishedText } from "../../blocks";
 
 export const ACK_REASON = notPublishedReason(
   FE.eligibility,
@@ -138,7 +139,7 @@ export function OperationDock({
       <Section name="Intent">
         <dl className="exec-ops-facts">
           <dt>Sent or previewed</dt>
-          <dd><NaWhy reason={`Not published (${FE.intent}): whether the command was sent or only previewed.`} /></dd>
+          <dd><NaWhy reason={`${notPublishedText(FE.intent)}: whether the command was sent or only previewed.`} /></dd>
           <dt>Recorded</dt>
           <dd>{instant(row.createdAt, "")}</dd>
           <dt>Command</dt>
@@ -157,8 +158,8 @@ export function OperationDock({
           <dd>{humanize(row.verificationResult)}</dd>
           <dt>Delivery</dt>
           <dd>
-            {row.deliveryState === undefined ? <NaWhy reason={`Not published (${FE.receipts}): whether a receipt has arrived for this row.`} />
-              : row.deliveryState === null ? <NaWhy reason={`Not published (${FE.receipts}): the source did not report a receipt state for this row.`} />
+            {row.deliveryState === undefined ? <NaWhy reason={`${notPublishedText(FE.receipts)}: whether a receipt has arrived for this row.`} />
+              : row.deliveryState === null ? <NaWhy reason={`${notPublishedText(FE.receipts)}: the source did not report a receipt state for this row.`} />
               : <Flag kind={delivery!.kind} label={delivery!.label} size="sm" />}
           </dd>
           <dt>Authority</dt>
@@ -175,7 +176,7 @@ export function OperationDock({
         <dl className="exec-ops-facts">
           <dt>Display</dt>
           <dd>
-            {row.displayState === undefined ? <NaWhy reason={`Not published (${FE.receipts}): whether the figures shown have caught up.`} />
+            {row.displayState === undefined ? <NaWhy reason={`${notPublishedText(FE.receipts)}: whether the figures shown have caught up.`} />
               : row.displayState === null ? <NaWhy reason={`Not published (${FE.receipts}): the source did not report whether the figures shown have caught up for this row.`} />
               : <Flag kind={DISPLAY_FACT[row.displayState].kind} label={DISPLAY_FACT[row.displayState].label} size="sm" />}
           </dd>

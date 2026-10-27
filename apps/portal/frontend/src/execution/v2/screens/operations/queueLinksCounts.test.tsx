@@ -174,13 +174,13 @@ describe("FE-042 incident links in the queue row", () => {
     expect(group.textContent).not.toMatch(/more not shown|hidden|forbidden|denied|1 of/i);
   });
 
-  it("an absent field is 'Not published (FE-042)', not 'none' and not zero", async () => {
+  it("an absent field is 'Not published: incident links on a queue row', not 'none' and not zero", async () => {
     mount(queueBody((q) => {
       delete q.page.rows[0].incident_links;
     }));
     await table();
     const group = linksOf("op_TEST_ONLY_links_a");
-    expect(group.textContent).toBe("Not published (FE-042)");
+    expect(group.textContent).toBe("Not published: incident links on a queue row");
     expect(group.getAttribute("data-state")).toBe("absent");
     // The other rows still publish theirs.
     expect(linksOf("op_TEST_ONLY_links_c").textContent).toBe("No readable incident links");
@@ -194,7 +194,7 @@ describe("FE-042 incident links in the queue row", () => {
     await table();
     const groups = screen.getAllByRole("group", { name: /^Incident links for operation / });
     expect(groups).toHaveLength(3);
-    for (const group of groups) expect(group.textContent).toBe("Not published (FE-042)");
+    for (const group of groups) expect(group.textContent).toBe("Not published: incident links on a queue row");
   });
 
   it("keeps the six columns: the links live in the Target and operation cell", async () => {
@@ -360,7 +360,7 @@ describe("FE-043 counts by status", () => {
     const region = screen.getByRole("region", { name: "Counts by status" });
     const line = within(region).getByTestId("not-available-line");
     expect(line.textContent).toContain("Not available: Triage, Verification, Source status, Severity counts");
-    expect(whyText(line)).toContain("Triage: Not published (FE-043)");
+    expect(whyText(line)).toContain("Triage: Not published: status counts over the whole query");
     expect(region.querySelectorAll("li")).toHaveLength(0);
     // There is no snapshot claim without counts.
     expect(region.textContent).not.toContain("Same server snapshot");

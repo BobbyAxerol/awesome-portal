@@ -147,6 +147,6 @@ describe("Allocations: the capital flow", () => {
     await ready();
     const flow = await screen.findByRole("region", { name: "Capital flow · Live" });
     fireEvent.click(within(flow).getByText("Table view"));
-    expect(flow.textContent).toContain("Not published (FE-017)");
+    expect(flow.textContent).toContain("Not published: capital statements");
   });
 });

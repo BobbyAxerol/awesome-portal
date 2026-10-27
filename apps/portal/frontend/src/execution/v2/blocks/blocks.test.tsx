@@ -58,10 +58,12 @@ describe("NotPublished and the one FE table", () => {
   it("prints the word, the id and the label", () => {
     render(<NotPublished id="FE-021" reasonCode="AUDIT_UNQUALIFIED">Who did what</NotPublished>);
     expect(screen.getByText("Not published")).toBeTruthy();
-    expect(document.body.textContent).toContain("(FE-021)");
+    expect(document.querySelector('[data-gap="FE-021"]')).not.toBeNull();
+    expect(document.body.textContent).not.toMatch(/FE-021/);
+    expect(document.body.textContent).toContain("Not published: audit source");
     expect(document.body.textContent).toContain("Who did what");
     expect(screen.getByText("AUDIT_UNQUALIFIED")).toBeTruthy();
-    expect(notPublishedText("FE-027/028")).toBe("Not published (FE-027/028)");
+    expect(notPublishedText("FE-027/028")).toBe("Not published: stage lifecycle and gate criteria");
   });
 
   it("holds exactly the ids and wording of the two tables it replaces", () => {
@@ -87,7 +89,7 @@ describe("NotPublished and the one FE table", () => {
 describe("CompactGaps and GapLine (stage screens)", () => {
   it("outside CompactGaps a gap prints its request id; inside it prints `Not available` and the id sits in its disclosure", () => {
     const outside = render(<NotPublished id="FE-071">Used ratio</NotPublished>);
-    expect(outside.container.textContent).toContain("Not published (FE-071)");
+    expect(outside.container.textContent).toContain("Not published: canary envelope compliance, rollback checks and trial calendar");
     cleanup();
     const inside = render(
       <CompactGaps>
@@ -97,7 +99,7 @@ describe("CompactGaps and GapLine (stage screens)", () => {
     expect(inside.container.textContent).toBe("Not available");
     const gap = inside.container.querySelector("[data-gap]")!;
     expect(gap.getAttribute("title")).toBeNull();
-    expect(whyText(gap)).toBe(`Not published (FE-071): Used ratio · ${FE_REQUEST_LABEL["FE-071"]} · SOME_CODE`);
+    expect(whyText(gap)).toBe(`Not published: Used ratio · ${FE_REQUEST_LABEL["FE-071"]} · SOME_CODE`);
   });
 
   it("GapLine is one line of the missing facts with every id and reason in its disclosure, and nothing for an empty list", () => {
@@ -108,7 +110,7 @@ describe("CompactGaps and GapLine (stage screens)", () => {
     expect(line.textContent).toBe("Not available: Limit, Latency · Source unavailable");
     expect(line.getAttribute("title")).toBeNull();
     const title = whyText(line);
-    expect(title).toContain("Limit: Not published (FE-071)");
+    expect(title).toContain(`Limit: Not published: ${FE_REQUEST_LABEL["FE-071"]}`);
     expect(title).toContain("Latency: Not published · CODE_X");
     cleanup();
     expect(render(<GapLine items={[]} />).container.textContent).toBe("");
@@ -136,7 +138,7 @@ describe("GapWhy · the reason is reachable by keyboard and touch, not only by h
     fireEvent.click(button);
     expect(button.getAttribute("aria-expanded")).toBe("true");
     const body = document.getElementById(button.getAttribute("aria-controls")!)!;
-    expect(body.textContent).toContain(`Limit: Not published (FE-071): ${FE_REQUEST_LABEL["FE-071"]} · CODE_X`);
+    expect(body.textContent).toContain(`Limit: Not published: ${FE_REQUEST_LABEL["FE-071"]} · CODE_X`);
     expect(body.textContent).toContain(GAP_NEXT);
     fireEvent.click(button);
     expect(button.getAttribute("aria-expanded")).toBe("false");
@@ -216,9 +218,9 @@ describe("Kpi", () => {
       </KpiStrip>,
     );
     const values = [...document.querySelectorAll(".exec-blk-kpi-value")].map((v) => v.textContent);
-    expect(values).toEqual(["Not published (FE-072)", "Not published", "Not published", "Not published (FE-067)"]);
+    expect(values).toEqual(["Not published: typed stage rows, series and reconciliation figures", "Not published", "Not published", "Not published: runtime state (Paper, Sandbox, Canary, Live), reconciliation and sessions"]);
     const tips = [...document.querySelectorAll(".exec-blk-kpi-value .exec-blk-np")].map((n) => n.getAttribute("title"));
-    expect(tips[1]).toBe(`Not published (FE-072): ${FE_REQUEST_LABEL["FE-072"]}`);
+    expect(tips[1]).toBe("Not published: typed stage rows, series and reconciliation figures");
     // Every term keeps its own label, so a distinct gap is never merged.
     expect([...document.querySelectorAll("dt")].map((t) => t.textContent)).toEqual(["Equity", "Net PnL", "Fills", "Runtime"]);
   });
@@ -231,9 +233,9 @@ describe("Kpi", () => {
       </KpiStrip>
     );
     const { rerender } = render(view(true));
-    expect([...document.querySelectorAll(".exec-blk-kpi-value")].map((v) => v.textContent)).toEqual(["Not published (FE-072)", "Not published"]);
+    expect([...document.querySelectorAll(".exec-blk-kpi-value")].map((v) => v.textContent)).toEqual(["Not published: typed stage rows, series and reconciliation figures", "Not published"]);
     rerender(view(false));
-    expect([...document.querySelectorAll(".exec-blk-kpi-value")].map((v) => v.textContent)).toEqual(["Not published (FE-072)"]);
+    expect([...document.querySelectorAll(".exec-blk-kpi-value")].map((v) => v.textContent)).toEqual(["Not published: typed stage rows, series and reconciliation figures"]);
   });
 
   it("a Kpi outside any strip or panel prints its id", () => {
@@ -243,7 +245,7 @@ describe("Kpi", () => {
         <Kpi label="B" notPublished="FE-072" />
       </dl>,
     );
-    expect([...document.querySelectorAll(".exec-blk-kpi-value")].map((v) => v.textContent)).toEqual(["Not published (FE-072)", "Not published (FE-072)"]);
+    expect([...document.querySelectorAll(".exec-blk-kpi-value")].map((v) => v.textContent)).toEqual(["Not published: typed stage rows, series and reconciliation figures", "Not published: typed stage rows, series and reconciliation figures"]);
   });
 
   it("keeps a 29-digit decimal exact: float digits never appear, the original rides on title", () => {
@@ -284,14 +286,15 @@ describe("Kpi", () => {
 
   it("keeps a Not published id in one unbreakable span", () => {
     render(<NotPublished id="FE-027/028" />);
-    expect(document.querySelector(".exec-blk-np-id")?.textContent).toBe("FE-027/028");
-    expect(document.body.textContent).toContain("Not published (FE-027/028)");
+    expect(document.querySelector("[data-gap]")?.getAttribute("data-gap")).toBe("FE-027/028");
+    expect(document.body.textContent).toContain("Not published: stage lifecycle and gate criteria");
   });
 
   it("prints Not published (FE-xxx) and it wins over a metric", () => {
     render(<Kpi label="Window return" notPublished="FE-025" metric={metric("1.00")} />);
     expect(document.body.textContent).toContain("Not published");
-    expect(document.body.textContent).toContain("(FE-025)");
+    expect(document.body.textContent).toContain("Not published: window");
+    expect(document.querySelector('[data-gap="FE-025"]')).not.toBeNull();
     expect(document.querySelector(".exec-blk-num")).toBeNull();
   });
 
@@ -465,10 +468,10 @@ describe("EventFeed", () => {
     expect(screen.getByText("No reason was published.")).toBeTruthy();
   });
 
-  it("a feed with no source is Not published (FE-031)", () => {
+  it("a feed with no source is Not published: event feed", () => {
     renderFeed(<EventFeed scope="INC-44" rows={ROWS} notPublished="FE-031" />);
     expect(document.body.textContent).toContain("Not published");
-    expect(document.body.textContent).toContain("(FE-031)");
+    expect(document.body.textContent).toContain("Not published: event feed");
     expect(screen.queryByRole("table")).toBeNull();
   });
 
@@ -777,7 +780,7 @@ describe("NaWhy and NotAvailableLine · the reason is in the DOM behind a button
     expect(line.textContent).toContain("Not available: Fees, Funding");
     expect(line.textContent).not.toContain("WINDOW_NOT_OFFERED");
     const text = whyText(line);
-    expect(text).toContain(`Fees: Not published (FE-025) ${FE_REQUEST_LABEL["FE-025"]} · WINDOW_NOT_OFFERED`);
+    expect(text).toContain(`Fees: Not published: ${FE_REQUEST_LABEL["FE-025"]} · WINDOW_NOT_OFFERED`);
     expect(text).toContain("Funding: Counted separately");
   });
 });
@@ -812,7 +815,7 @@ describe("JourneySpine gap note (L-B2)", () => {
     // one note for the whole spine: no current-stage note here, only the gap note
     expect(notes).toHaveLength(1);
     expect(visible).toHaveLength(1);
-    expect(notes[0].textContent).toContain("Not published (FE-027/028)");
+    expect(notes[0].textContent).toContain("Not published: stage lifecycle and gate criteria");
     expect(notes[0].nextElementSibling).toBeNull();
     expect(list.nextElementSibling).toBe(notes[0]);
     // UXM07-048/3: no card carries a gap word of its own (compact or hidden); the note under the list is the one statement

@@ -84,8 +84,8 @@ describe("units, state and captions", () => {
     expect(sourceNotPublished(unavailable)).toBe(true);
     const entry = unavailable.series[0]!;
     if (entry.state !== "UNAVAILABLE") throw new Error("expected UNAVAILABLE");
-    expect(unavailableChart(entry)).toMatchObject({ copy: "Not published (FE-013)", reason: expect.stringContaining("SERIES_SOURCE_NOT_PUBLISHED") });
-    expect(unavailableChart(entry, "FE-013/033").copy).toBe("Not published (FE-013/033)");
+    expect(unavailableChart(entry)).toMatchObject({ copy: "Not published: NAV and drawdown", reason: expect.stringContaining("SERIES_SOURCE_NOT_PUBLISHED") });
+    expect(unavailableChart(entry, "FE-013/033").copy).toBe("Not published");
     expect(unavailableChart({ ...entry, reasonCode: "SOURCE_NOT_QUALIFIED" })).toMatchObject({ copy: "Not available", reason: expect.stringContaining("SOURCE_NOT_QUALIFIED") });
     expect(sourceNotPublished(read(fixtureValue(FIXTURE_MIXED)))).toBe(false);
   });
@@ -147,16 +147,16 @@ describe("FE-013 ratio scale: the print is a decimal-STRING shift, never a float
     expect(seriesCaption("RETURN", available(read(withComparison(percentBody))))).toMatch(/^Return, a ratio stated as percent \(100 is 100%\) · /);
   });
 
-  it("a return whose source states no scale is the typed cell 'Not published (FE-013)' with its reason, not a number", () => {
+  it("a return whose source states no scale is the typed cell 'Not published: NAV and drawdown' with its reason, not a number", () => {
     const series = read(fixtureValue(FIXTURE_RETURN_UNSCALED));
     const entry = series.series[0]!;
     if (entry.state !== "UNAVAILABLE") throw new Error("expected UNAVAILABLE");
     expect(unavailableChart(entry)).toEqual({
-      copy: "Not published (FE-013)",
+      copy: "Not published: NAV and drawdown",
       reason: `${UNAVAILABLE_SENTENCE.RATIO_SCALE_NOT_PUBLISHED} (RATIO_SCALE_NOT_PUBLISHED). Nothing is drawn from client arithmetic.`,
     });
     expect(UNAVAILABLE_SENTENCE.RATIO_SCALE_NOT_PUBLISHED).toMatch(/states no ratio scale/);
-    expect(unavailableChart(entry, "FE-013/033").copy).toBe("Not published (FE-013/033)");
+    expect(unavailableChart(entry, "FE-013/033").copy).toBe("Not published");
     // A published source with a missing scale is not "the source is not published": that flag stays false.
     expect(sourceNotPublished(series)).toBe(false);
   });

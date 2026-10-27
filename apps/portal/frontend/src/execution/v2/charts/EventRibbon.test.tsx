@@ -118,8 +118,8 @@ describe("EventRibbon", () => {
   });
 
   it("prints the caller's copy when unavailable and flags partial or stale", () => {
-    render(<EventRibbon label="Events" events={EVENTS} domain={domain} state={{ kind: "unavailable", copy: "Not published (FE-081)", reason: "Event feed not connected" }} />);
-    expect(screen.getByText("Not published (FE-081)")).toBeTruthy();
+    render(<EventRibbon label="Events" events={EVENTS} domain={domain} state={{ kind: "unavailable", copy: "Not published", reason: "Event feed not connected" }} />);
+    expect(screen.getByText("Not published")).toBeTruthy();
     expect(screen.queryAllByTestId("ribbon-event")).toHaveLength(0);
     cleanup();
     const { container } = render(<EventRibbon label="Events" events={EVENTS} domain={domain} state={{ kind: "stale", reason: "Feed behind by 3 hours" }} />);

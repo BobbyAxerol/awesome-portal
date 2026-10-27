@@ -21,7 +21,7 @@ describe("drawdownInputOf", () => {
   it("not asked (undefined or idle) keeps the typed pane and names the request ids", () => {
     expect(drawdownInputOf(undefined)).toEqual({ ...DRAWDOWN_NOT_ASKED, copy: "Not published" });
     expect(drawdownInputOf({ phase: "idle" })).toEqual({ ...DRAWDOWN_NOT_ASKED, copy: "Not published" });
-    expect(DRAWDOWN_NOT_ASKED).toMatchObject({ kind: "absent", copy: "Not published (FE-013, FE-025)" });
+    expect(DRAWDOWN_NOT_ASKED).toMatchObject({ kind: "absent", copy: "Not published" });
   });
 
   it("a published series is drawn, as the server's points moved to percent (FRACTION), a true zero first", () => {

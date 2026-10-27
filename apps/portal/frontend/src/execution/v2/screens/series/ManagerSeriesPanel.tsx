@@ -20,6 +20,7 @@ import { METRIC_WORD, chartPointsOf, chartStateOf, chartUnit, emptyCaption, isSi
 
 import "../../css/series.css";
 import { GapWhy } from "../../blocks";
+import { notPublishedText } from "../../blocks";
 
 export interface ManagerSeriesPanelProps {
   /** Accessible name of the chart. */
@@ -37,7 +38,7 @@ export interface ManagerSeriesPanelProps {
   flows?: readonly FlowPin[];
 }
 
-export function ManagerSeriesPanel({ label, read, gapCopy = "Not published (FE-013)", height = 240, tools = false, drawdown, flows }: ManagerSeriesPanelProps) {
+export function ManagerSeriesPanel({ label, read, gapCopy = notPublishedText("FE-013"), height = 240, tools = false, drawdown, flows }: ManagerSeriesPanelProps) {
   const series: ManagerSeries | null = read.phase === "ready" ? read.value : read.phase === "loading" || read.phase === "error" ? read.last : null;
   if (series === null) {
     if (read.phase === "loading") return <PanelSkeleton label={`Loading ${label.toLowerCase()}`} />;

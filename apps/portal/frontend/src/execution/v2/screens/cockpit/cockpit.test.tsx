@@ -823,7 +823,7 @@ describe("decision rail", () => {
     const line = within(receipt).getByTestId("not-available-line");
     expect(line.textContent).toContain("Not available: Ladder, Call, Receipt ref");
     expect(line.hasAttribute("title")).toBe(false);
-    expect(whyText(line)).toContain("Receipt ref: Not published (FE-030)");
+    expect(whyText(line)).toContain("Receipt ref: Not published: creator, ladder, SLA and needs-you");
     // The hi-fi's preview rows: nothing chosen, the request and its title, the signed-in person, what an approval would count as, what changes.
     expect(within(receipt).getByRole("heading", { name: "Preview · not recorded" })).toBeTruthy();
     expect(within(receipt).getByRole("rowheader", { name: "Decision" }).nextElementSibling?.textContent).toBe("None chosen");

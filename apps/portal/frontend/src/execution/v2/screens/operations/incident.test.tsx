@@ -168,11 +168,11 @@ describe("root content", () => {
       const line = within(section).getByTestId("not-available-line");
       expect(line.textContent).toContain(`Not available: ${name}`);
       const why = whyText(line);
-      expect(why, name).toContain(`${name}: Not published (FE-031)`);
+      expect(why, name).toContain(`${name}: Not published: event feed`);
       expect(why, name).toContain("ORIGINAL_INCIDENT_TARGET_NOT_ATTESTED");
     }
     const priority = drawer.querySelector(".exec-dock-priority") as HTMLElement;
-    expect(whyText(within(priority).getByTestId("not-available-line"))).toContain("Assignee: Not published (FE-030)");
+    expect(whyText(within(priority).getByTestId("not-available-line"))).toContain("Assignee: Not published: creator, ladder, SLA and needs-you");
     // No timeline is drawn from nothing: no list of events, no gate verdicts.
     expect(drawer.textContent).not.toMatch(/gates are not met|0 references|2 events|eligible to resolve/);
     expect(drawer.textContent).not.toMatch(/[\u2014\u2013]/);

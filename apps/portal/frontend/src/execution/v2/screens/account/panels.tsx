@@ -192,7 +192,7 @@ export function PositionsPanel({ ctx, scope, onScope }: { ctx: PanelContext; sco
         <div className="exec-acct-pad"><Na why="No source attributes native positions to sleeves" /></div>
       ) : (
         <>
-          <NotAvailableLine className="exec-acct-cap" facts={[{ label: "Long, short and gross notional", id: null, why: `${FE.gross.what} (${FE.gross.fe}); totals by side are not added up here` }]} />
+          <NotAvailableLine className="exec-acct-cap" facts={[{ label: "Long, short and gross notional", id: null, why: `${FE.gross.what}; totals by side are not added up here` }]} />
           <CardsTable
             columns={columns}
             rows={rows}

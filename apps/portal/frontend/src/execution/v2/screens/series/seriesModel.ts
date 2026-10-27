@@ -28,6 +28,7 @@ import type {
   SeriesUnavailableReason,
 } from "../../readers/managerSeries";
 import { formatInstant } from "../../boundary";
+import { notPublishedText } from "../../blocks";
 
 export const METRIC_WORD: Readonly<Record<ManagerSeriesMetric, string>> = { NAV: "NAV", NET_PNL: "Net PnL", RETURN: "Return", DRAWDOWN: "Drawdown" };
 
@@ -122,7 +123,7 @@ export const isDescribed = (entry: ManagerSeriesEntry): entry is ManagerSeriesAv
  */
 export function unavailableChart(entry: ManagerSeriesUnavailable, fe: string = SERIES_FE): { copy: string; reason: string } {
   return {
-    copy: entry.reasonCode === "SERIES_SOURCE_NOT_PUBLISHED" || entry.reasonCode === "RATIO_SCALE_NOT_PUBLISHED" ? `Not published (${fe})` : "Not available",
+    copy: entry.reasonCode === "SERIES_SOURCE_NOT_PUBLISHED" || entry.reasonCode === "RATIO_SCALE_NOT_PUBLISHED" ? notPublishedText(fe) : "Not available",
     reason: `${UNAVAILABLE_SENTENCE[entry.reasonCode]} (${entry.reasonCode}). Nothing is drawn from client arithmetic.`,
   };
 }

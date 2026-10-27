@@ -24,10 +24,10 @@ describe("Spark", () => {
   });
 
   it("is a hatched box with the word, never a flat line, when nothing is drawable", () => {
-    const { container } = render(<Spark label="PnL" values={[null, null]} unavailable="Not published (FE-044)" />);
+    const { container } = render(<Spark label="PnL" values={[null, null]} unavailable="Not published" />);
     expect(container.querySelector("path")).toBeNull();
-    expect(screen.getByRole("img").getAttribute("aria-label")).toBe("PnL: Not published (FE-044)");
-    expect(container.textContent).toBe("Not published (FE-044)");
+    expect(screen.getByRole("img").getAttribute("aria-label")).toBe("PnL: Not published");
+    expect(container.textContent).toBe("Not published");
     cleanup();
     const empty = render(<Spark label="PnL" values={[]} />);
     expect(empty.container.querySelector("path")).toBeNull();
@@ -65,7 +65,7 @@ describe("DivBars", () => {
   const rows = [
     { id: "a", label: "BTC-Trend", value: "5420.10" },
     { id: "b", label: "Funding-Carry", value: "-410.00" },
-    { id: "c", label: "AVAX-Rev", value: null, absent: "Not published (FE-061)" },
+    { id: "c", label: "AVAX-Rev", value: null, absent: "Not published" },
     { id: "d", label: "Flat", value: "0.00" },
   ];
 
@@ -73,7 +73,7 @@ describe("DivBars", () => {
     const { container } = render(<DivBars label="Contributors" rows={rows} />);
     expect(screen.getByRole("img", { name: "Contributors" })).toBeTruthy();
     const values = [...container.querySelectorAll(".exec-div-value")].map((v) => v.textContent);
-    expect(values).toEqual(["+5,420.10", "-410.00", "Not published (FE-061)", "0.00"]);
+    expect(values).toEqual(["+5,420.10", "-410.00", "Not published", "0.00"]);
     const bars = [...container.querySelectorAll(".exec-div-bar")];
     expect(bars.map((b) => b.getAttribute("data-neg"))).toEqual(["false", "true", "false"]);
     const pos = bars[0];
@@ -89,7 +89,7 @@ describe("DivBars", () => {
     const { container } = render(<DivBars label="Contributors" rows={rows} />);
     const row = container.querySelector('[data-absent="true"]')!;
     expect(row.querySelector(".exec-div-bar")).toBeNull();
-    expect(row.textContent).toContain("Not published (FE-061)");
+    expect(row.textContent).toContain("Not published");
   });
 
   it("has a text alternative table", () => {
@@ -108,7 +108,7 @@ describe("DivBars", () => {
   });
 
   it("renders the unavailable and empty states instead of an empty plot", () => {
-    const { container } = render(<DivBars label="Contributors" rows={rows} state={{ kind: "unavailable", copy: "Not published (FE-061)", reason: "No attribution source" }} />);
+    const { container } = render(<DivBars label="Contributors" rows={rows} state={{ kind: "unavailable", copy: "Not published", reason: "No attribution source" }} />);
     expect(container.querySelector(".exec-div-bar")).toBeNull();
     expect(screen.getByText("No attribution source")).toBeTruthy();
     cleanup();

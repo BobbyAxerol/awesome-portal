@@ -41,14 +41,14 @@ function viewOf(raw: unknown): CanaryView {
 }
 
 describe("header chips (D13): a source that does not publish is a request id, never a green word", () => {
-  it("dark V1: Runtime and Reconciliation are the stage facts' Not published (FE-067) with the server's reason, freshness not available", () => {
+  it("dark V1: Runtime and Reconciliation are the stage facts' Not published: runtime state (Paper, Sandbox, Canary, Live), reconciliation and sessions with the server's reason, freshness not available", () => {
     const chips = chipsOf(viewOf(v1Body()));
     expect(chips.runtime).toEqual({ state: "not-published", id: "FE-067", reasonCode: "LIVE_SOURCE_UNAVAILABLE" });
     expect(chips.reconciliation).toEqual({ state: "not-published", id: "FE-067", reasonCode: "LIVE_SOURCE_UNAVAILABLE" });
     expect(chips.freshness).toEqual({ state: "not-available", reason: "Broker source unavailable" });
   });
 
-  it("a body from before BE-P2 (no stage_facts): both chips are Not published (FE-067) without a reason", () => {
+  it("a body from before BE-P2 (no stage_facts): both chips are Not published: runtime state (Paper, Sandbox, Canary, Live), reconciliation and sessions without a reason", () => {
     const chips = chipsOf(viewOf(legacyV1Body()));
     expect(chips.runtime).toEqual({ state: "not-published", id: "FE-067" });
     expect(chips.reconciliation).toEqual({ state: "not-published", id: "FE-067" });
@@ -175,7 +175,7 @@ describe("KPI cells", () => {
     expect(kpiCells(viewOf(body))[0]).toMatchObject({ basis: "Proposed cap 5,000.00 · Stale · as of 17 Oct 12:04Z" });
   });
 
-  it("V2 body: all five are Not published (FE-072)", () => {
+  it("V2 body: all five are Not published: typed stage rows, series and reconciliation figures", () => {
     for (const cell of kpiCells(viewOf(parentBody()))) expect(cell).toMatchObject({ kind: "not-published", fe: "FE-072" });
   });
 });
@@ -234,7 +234,7 @@ describe("decisions (D6, D9): all four, none enabled, one reason from the dictio
 });
 
 describe("rollback readiness", () => {
-  it("four items; only broker data is a stated fact, the other three are Not published (FE-071)", () => {
+  it("four items; only broker data is a stated fact, the other three are Not published: canary envelope compliance, rollback checks and trial calendar", () => {
     const items = rollbackItems(viewOf(populatedV1()));
     expect(items.map((i) => i.label)).toEqual(["Flatten plan prepared", "Paper twin running", "Broker data fresh", "Last rollback drill"]);
     expect(items.filter((i) => i.status.kind === "not-published").map((i) => i.key)).toEqual(["flatten", "twin", "drill"]);
@@ -247,7 +247,7 @@ describe("rollback readiness", () => {
     expect(rollbackItems(viewOf(legacyV1Body()))[2]).toMatchObject({ status: { kind: "flag", flag: "na", label: "Not available" }, checked: null });
   });
 
-  it("the dark body's four items are the server's Not published (FE-071) facts, each with its own reason", () => {
+  it("the dark body's four items are the server's Not published: canary envelope compliance, rollback checks and trial calendar facts, each with its own reason", () => {
     const items = rollbackItems(viewOf(v1Body()));
     expect(items.map((i) => [i.key, i.status])).toEqual([
       ["flatten", { kind: "not-published", reasonCode: "FLATTEN_PLAN_NOT_RECORDED" }],

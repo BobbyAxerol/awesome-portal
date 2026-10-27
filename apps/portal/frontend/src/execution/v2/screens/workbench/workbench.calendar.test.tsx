@@ -72,7 +72,7 @@ describe("VN market calendar", () => {
     const head = document.querySelector(".exec-wb-sub")!;
     const gap = head.querySelector('[data-gap="FE-070"]')!;
     expect(gap.textContent).toBe("Not available");
-    expect(whyText(gap)).toContain("Not published (FE-070)");
+    expect(whyText(gap)).toContain("Not published: VN market session calendar");
     expect(whyText(gap)).toContain("N28_VENUE_CALENDAR_NOT_ACTIVE");
     const panel = screen.getByRole("heading", { name: "VN market sessions" }).closest("section")!;
     const line = panel.querySelector(".exec-blk-gaps")!;
@@ -84,7 +84,7 @@ describe("VN market calendar", () => {
   it("a profile without the calendar says Not available (FE-070 in the title) without a reason and draws no sessions panel", async () => {
     await mount(vnm(undefined));
     expect(document.querySelector(".exec-wb-sub")!.textContent).toContain("VN market calendar: Not available");
-    expect(whyText(document.querySelector('.exec-wb-sub [data-gap="FE-070"]')!)).toBe("Not published (FE-070): VN market session calendar");
+    expect(whyText(document.querySelector('.exec-wb-sub [data-gap="FE-070"]')!)).toBe("Not published: VN market session calendar");
     expect(screen.queryByRole("heading", { name: "VN market sessions" })).toBeNull();
   });
 

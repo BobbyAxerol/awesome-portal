@@ -1,3 +1,4 @@
+import { notPublishedText } from "../../blocks";
 /**
  * What the backend has not published for Portfolios, Portfolio 360 and Compare,
  * said once, with the request id (FRONTEND_BACKEND_SYNC.md, review2/04).
@@ -40,8 +41,8 @@ export const PF_FE = {
   share: { fe: "FE-005, FE-025", what: "Share of PnL in a window" },
 } as const satisfies Record<string, Unpublished>;
 
-/** `Not published (FE-013)` as plain text, for a title, a reason or a table cell. */
-export const npText = (fact: Unpublished): string => `${NOT_PUBLISHED_WORD} (${fact.fe})`;
+/** `Not published: nav` as plain text, for a title, a reason or a table cell (the request id stays in code and in `data-gap`). */
+export const npText = (fact: Unpublished): string => notPublishedText(fact.fe, fact.what);
 
 /** The sentence a disabled control carries. */
 export const npReason = (fact: Unpublished, because: string): string => `${npText(fact)}. ${because}`;

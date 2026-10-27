@@ -347,14 +347,14 @@ describe("priority slot and footer", () => {
   it("draws the priority block before the children, and nothing when it is absent", () => {
     const { container } = render(
       <MemoryRouter>
-        <Drawer onClose={() => {}} title="Incident" priority={<p>Not published (FE-031)</p>}>
+        <Drawer onClose={() => {}} title="Incident" priority={<p>Not published: event feed</p>}>
           <p>Facts table</p>
         </Drawer>
       </MemoryRouter>,
     );
     const body = container.querySelector(".exec-dock-body")!;
     expect(body.firstElementChild?.className).toBe("exec-dock-priority");
-    expect(body.firstElementChild?.textContent).toBe("Not published (FE-031)");
+    expect(body.firstElementChild?.textContent).toBe("Not published: event feed");
     expect(body.children[1]?.textContent).toBe("Facts table");
     cleanup();
     const bare = render(
@@ -375,8 +375,8 @@ describe("priority slot and footer", () => {
           title="Incident"
           actions={
             <>
-              <DockAction label="Acknowledge" reason="Not published (FE-015). Acknowledging is an ADMIN-only write." />
-              <DockAction label="Assign to me" reason="Not published (FE-020). Nobody to assign." />
+              <DockAction label="Acknowledge" reason="Not published: per-row eligibility and the reason a control is off. Acknowledging is an ADMIN-only write." />
+              <DockAction label="Assign to me" reason="Not published: command preview (the Preview only intent axis). Nobody to assign." />
             </>
           }
         >

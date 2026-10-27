@@ -163,11 +163,11 @@ describe("EquityPanel · gaps are gaps", () => {
 describe("EquityPanel · absent, partial, stale, refused", () => {
   it("prints the caller's copy and reason, and draws no series", () => {
     const { container } = render(
-      <EquityPanel label="Net equity" points={BASIC} state={{ kind: "unavailable", copy: "Not published (FE-044)", reason: "Source has not published equity" }} />,
+      <EquityPanel label="Net equity" points={BASIC} state={{ kind: "unavailable", copy: "Not published", reason: "Source has not published equity" }} />,
     );
-    expect(screen.getByText("Not published (FE-044)")).toBeTruthy();
+    expect(screen.getByText("Not published")).toBeTruthy();
     expect(screen.getByText("Source has not published equity")).toBeTruthy();
-    expect(screen.getByRole("img", { name: "Net equity: Not published (FE-044). Source has not published equity" })).toBeTruthy();
+    expect(screen.getByRole("img", { name: "Net equity: Not published. Source has not published equity" })).toBeTruthy();
     expect(container.querySelector('[data-testid="series-line"]')).toBeNull();
     expect(container.querySelector("path")).toBeNull();
   });
@@ -264,9 +264,9 @@ describe("EquityPanel · layers", () => {
   });
 
   it("says drawdown is not published rather than deriving or zeroing it", () => {
-    const { container } = render(<EquityPanel label="Equity" points={BASIC} drawdown={{ kind: "absent", copy: "Not published (FE-051)" }} />);
-    expect(container.querySelector('[data-testid="drawdown-pane"] .exec-c2-dd-absent text')!.textContent).toBe("Not published (FE-051)");
-    expect(screen.getByTestId("readout-drawdown").textContent).toBe("Not published (FE-051)");
+    const { container } = render(<EquityPanel label="Equity" points={BASIC} drawdown={{ kind: "absent", copy: "Not published" }} />);
+    expect(container.querySelector('[data-testid="drawdown-pane"] .exec-c2-dd-absent text')!.textContent).toBe("Not published");
+    expect(screen.getByTestId("readout-drawdown").textContent).toBe("Not published");
     expect(container.querySelector(".exec-c2-dd-area")).toBeNull();
   });
 
@@ -319,7 +319,7 @@ describe("EquityPanel · axes and a11y", () => {
   });
 
   it("prints no dash standing in for a value", () => {
-    const { container } = render(<EquityPanel label="Net equity" points={series(["1.00", null, "3.00"])} drawdown={{ kind: "absent", copy: "Not published (FE-051)" }} />);
+    const { container } = render(<EquityPanel label="Net equity" points={series(["1.00", null, "3.00"])} drawdown={{ kind: "absent", copy: "Not published" }} />);
     const text = container.textContent ?? "";
     expect(text).not.toMatch(/[—–]/);
     expect(text).not.toMatch(/(^|\s)-(\s|$)/);
@@ -353,7 +353,7 @@ describe("EquityPanel · scale", () => {
     const r = rng(11);
     const values = walk(5000, 4).map((v) => (r() < 0.7 ? null : v));
     const pts = series(values, "2026-01-01T00:00:00Z", 60_000);
-    const { container } = render(<EquityPanel label="Equity" points={pts} drawdown={{ kind: "absent", copy: "Not published (FE-051)" }} />);
+    const { container } = render(<EquityPanel label="Equity" points={pts} drawdown={{ kind: "absent", copy: "Not published" }} />);
     expect(container.querySelectorAll("*").length).toBeLessThan(150);
     expect(container.querySelector('[data-testid="gaps"]')).not.toBeNull();
     expect(screen.getByTestId("envelope").textContent).toMatch(/gaps drawn as gaps, not joined/);
@@ -390,11 +390,11 @@ describe("EquityPanel · scale", () => {
 });
 
 describe("wrapLines", () => {
-  const COPY = "Not published (FE-051) · portfolio drawdown is not in the contract yet";
+  const COPY = "Not published · portfolio drawdown is not in the contract yet";
 
   it("splits on the separator first, then on words, and concatenates back to the copy", () => {
     expect(wrapLines(COPY, 200).join("")).toBe(COPY);
-    expect(wrapLines(COPY, 200)).toEqual(["Not published (FE-051) · ", "portfolio drawdown is not in the contract yet"]);
+    expect(wrapLines(COPY, 200)).toEqual(["Not published · ", "portfolio drawdown is not in the contract yet"]);
     for (const n of [1, 5, 12, 20, 33, 80]) expect(wrapLines(COPY, n).join("")).toBe(COPY);
   });
 
@@ -414,7 +414,7 @@ describe("wrapLines", () => {
 });
 
 describe("EquityPanel · phone width (390px viewport, 340px plot)", () => {
-  const COPY = "Not published (FE-051)";
+  const COPY = "Not published";
   const REASON = "portfolio drawdown is not part of the equity contract yet, so the pane stays empty rather than derive one from the curve";
 
   function atWidth(w: number, run: () => void) {

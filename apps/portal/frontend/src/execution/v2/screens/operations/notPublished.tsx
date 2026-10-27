@@ -9,7 +9,7 @@
 import type { ReactNode } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 
-import { GapWhy, NOT_PUBLISHED, gapTitle } from "../../blocks";
+import { GapWhy, NOT_PUBLISHED, gapTitle, notPublishedText } from "../../blocks";
 import "../../css/blocks.css";
 import { withContext } from "../../urlState";
 
@@ -48,7 +48,7 @@ export type FeId = (typeof FE)[keyof typeof FE] | (typeof FE_B1)[keyof typeof FE
 
 /** The sentence a disabled control carries. */
 export function notPublishedReason(id: FeId, because: string): string {
-  return `Not published (${id}). ${because}`;
+  return `${notPublishedText(id)}. ${because}`;
 }
 
 export interface NotPublishedProps {
@@ -61,9 +61,9 @@ export interface NotPublishedProps {
 /** Inline: "Not published (FE-021)" plus what it means. */
 export function NotPublished({ id, reasonCode, children }: NotPublishedProps) {
   return (
-    <span className="exec-ops-np">
+    <span className="exec-ops-np" data-gap={id}>
       <GapWhy className="exec-ops-np-word" gap={id} text={NOT_PUBLISHED} name="Not published, reason" rows={[gapTitle(id, null, reasonCode)]} />
-      <span className="exec-blk-sr"> ({id})</span>
+      <span className="exec-blk-sr">{notPublishedText(id).slice(NOT_PUBLISHED.length)}</span>
       {children ? <> {children}</> : null}
       {reasonCode ? <span className="exec-blk-sr"><span className="exec-ops-np-reason">{reasonCode}</span></span> : null}
     </span>

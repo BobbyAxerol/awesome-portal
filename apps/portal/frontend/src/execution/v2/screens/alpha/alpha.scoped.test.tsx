@@ -144,7 +144,7 @@ describe("the header and the authority label", () => {
 });
 
 describe("the same sections, from the scoped facts", () => {
-  it("current facts: net PnL and exposure are Not published (FE-005) with the body's reason; nothing is summed from a row", async () => {
+  it("current facts: net PnL and exposure are Not published: windowed totals and concentration with the body's reason; nothing is summed from a row", async () => {
     mount();
     await ready();
     const facts = screen.getByLabelText("Current facts");
@@ -233,7 +233,7 @@ describe("the same sections, from the scoped facts", () => {
     expect(resolved.querySelector("td[data-l='Resolved'] time")!.getAttribute("datetime")).toBe(new Date(Date.UTC(2026, 9, 17, 9, 48)).toISOString());
     expect(open.textContent).toContain("BALANCE_MISMATCH");
     expect(open.querySelector("td[data-l='Resolved']")!.textContent).toContain("Not resolved");
-    expect(document.body.textContent).not.toContain("Not published (FE-072)");
+    expect(document.body.textContent).not.toContain("Not published: typed stage rows, series and reconciliation figures");
   });
 
   it("Research Evidence: no second name-and-version gap (the header says it once), the alpha id is the one the body names", async () => {
@@ -244,7 +244,7 @@ describe("the same sections, from the scoped facts", () => {
     expect(panel.textContent).toContain(ALPHA_DOUBLE_ID);
   });
 
-  it("the Score drawer shows the net PnL as Not published (FE-005), not an empty cell", async () => {
+  it("the Score drawer shows the net PnL as Not published: windowed totals and concentration, not an empty cell", async () => {
     mount();
     await ready();
     fireEvent.click(screen.getByRole("button", { name: /Not scored · policy not set/ }));

@@ -160,7 +160,7 @@ describe("the Envelope tab: the server's rows, ratio, verdict", () => {
     expect(verdictLine(viewOf(legacyV1Body()))).toBeNull();
   });
 
-  it("the screen draws a gauge for the two published ratios, a published zero as 0.00% used, and Not published (FE-071) with the reason for the rest", async () => {
+  it("the screen draws a gauge for the two published ratios, a published zero as 0.00% used, and Not published: canary envelope compliance, rollback checks and trial calendar with the reason for the rest", async () => {
     mount(published());
     await ready();
     const table = screen.getByRole("table", { name: "Canary envelope caps" });
@@ -209,7 +209,7 @@ describe("rollback checks and the trial calendar", () => {
     const trial = screen.getByRole("group", { name: "Trial schedule" });
     // The day is not stated: it is one `Not available` line (FE-071 in its title), not a sentence.
     expect(trial.textContent).toContain("Not available: Trial day");
-    expect(whyText(trial.querySelector(".exec-blk-gaps")!)).toContain("Trial day: Not published (FE-071)");
+    expect(whyText(trial.querySelector(".exec-blk-gaps")!)).toContain("Trial day: Not published: canary envelope compliance, rollback checks and trial calendar");
     expect(trial.textContent).toContain("Started 12 Oct 08:00Z");
     expect(trial.textContent).toContain("Exit review opens 26 Oct 08:00Z");
     expect(trial.textContent).not.toMatch(/days left|day 0|in \d+ days/);
@@ -270,7 +270,7 @@ describe("Positions & orders: typed rows when AVAILABLE", () => {
 });
 
 describe("Reconciliation: the server's figures", () => {
-  it("Internal, Broker and the SERVER's Difference per figure; a side it did not publish is Not published (FE-072) with its reason", async () => {
+  it("Internal, Broker and the SERVER's Difference per figure; a side it did not publish is Not published: typed stage rows, series and reconciliation figures with its reason", async () => {
     mount(published());
     await ready();
     await openTab("Reconciliation");
@@ -293,7 +293,7 @@ describe("Reconciliation: the server's figures", () => {
 });
 
 describe("series and identity", () => {
-  it("the published series is drawn as published (exact points, its methodology); Paper and Backtest stay Not published (FE-029)", async () => {
+  it("the published series is drawn as published (exact points, its methodology); Paper and Backtest stay Not published: evidence, baseline and run linkage", async () => {
     mount(published());
     await ready();
     const panel = screen.getByRole("heading", { name: "Live vs Paper vs Backtest" }).closest("section")!;
@@ -304,10 +304,10 @@ describe("series and identity", () => {
     expect(panel.querySelector("div[title]")!.getAttribute("title")).toBe("Methodology portal.net-pnl.TEST_ONLY.v1");
     expect(panel.textContent).not.toContain("Methodology");
     expect(panel.querySelector(".exec-blk-gaps")!.textContent).toBe("Not available: Paper and Backtest series");
-    expect(whyText(panel.querySelector(".exec-blk-gaps")!)).toContain("Not published (FE-029)");
+    expect(whyText(panel.querySelector(".exec-blk-gaps")!)).toContain("Not published: evidence, baseline and run linkage");
   });
 
-  it("the Alpha is linked only because alpha_id is published, the portfolio shows its name, the alpha name is Not published (FE-066) with its reason", async () => {
+  it("the Alpha is linked only because alpha_id is published, the portfolio shows its name, the alpha name is Not published: alpha and portfolio names on a deployment with its reason", async () => {
     mount(published());
     await ready();
     const crumb = within(screen.getByRole("navigation", { name: "Breadcrumb" }));
