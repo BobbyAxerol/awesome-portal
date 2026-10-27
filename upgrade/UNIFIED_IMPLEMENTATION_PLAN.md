@@ -16590,3 +16590,8 @@ The [History receipt](execution_loop/evidence/ELP2-10/HISTORY_PAGINATION_REVOKE_
 records synthetic source, concurrent host activity and remaining actual Edge
 HISTORY qualification; it does not close ELP2-10 or assert a production SLO.
 
+27Oct calendar source/consumer review: the source example carries a session
+date but the current public projection and consumer do not disclose its date;
+`source_as_of` is not a substitute. The exact [gap and Edge/Core/Claude actions](execution_loop/evidence/ELP2-10/CALENDAR_SESSION_DATE_GAP_2026-10-27.md)
+do not change `SOURCE_DARK` or claim connected/browser qualification.
+
