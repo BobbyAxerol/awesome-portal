@@ -16594,4 +16594,8 @@ HISTORY qualification; it does not close ELP2-10 or assert a production SLO.
 date but the current public projection and consumer do not disclose its date;
 `source_as_of` is not a substitute. The exact [gap and Edge/Core/Claude actions](execution_loop/evidence/ELP2-10/CALENDAR_SESSION_DATE_GAP_2026-10-27.md)
 do not change `SOURCE_DARK` or claim connected/browser qualification.
+The public receipt was delivered to the Edge EPG10-08 mailbox on HK at
+`CALENDAR_SESSION_DATE_GAP_2026-10-27.md`; SHA256 on both hosts is
+`5fe248834740551372c4717bd38ad7fefd5b57831ffda4b4c22198a429705a85`.
+Delivery is not an Edge acknowledgement or evidence of a calendar provider.
 
