@@ -1,6 +1,6 @@
 # Command STATUS source fingerprint custody — 27 October 2026
 
-Status: **IMPLEMENTATION IN VALIDATION; NOT CONNECTED QUALIFICATION**.
+Status: **SOURCE LANDED; NOT CONNECTED QUALIFICATION**.
 This source slice does not commission a gateway, activate commands/Live, or
 create/resolve/ACK an Edge attempt. Edge remains owner of original wire bytes
 and full outcome custody; Core remains owner of its existing command records.
@@ -51,7 +51,15 @@ current-human revocation, outcome ACK or recovery protocol.
 - The first normal hook was interrupted before completion to harden exact UTF-8
   validation found during review. Its initial PASS checks are not a complete
   hook receipt. The added UTF-8 check passed in the final focused retake above.
-- Normal commit hook, source commit and runtime installation: **NOT YET**.
+- The final normal hook passed and source landed at
+  `4e3199bd009b4d7205ab6865acf9b545fa0a3c53`: contract suite **1,898
+  passed**, Control API **11,681 passed / 8 skipped** (567 passed / 4
+  skipped files), monorepo verification and tracking passed. The final
+  source ran both the fingerprint PostgreSQL spec (**2/2**) and transport
+  spec (**18/18**) inside that same cell; these overlap the focused tests
+  above. The full hook took 4,164 seconds for Control API; no skipped test is
+  counted as a pass.
+- Runtime installation and connected qualification: **NOT YET**.
 
 Rollback: leave the optional STATUS composition unmounted or revert code only;
 preserve fingerprint rows, the immutable command, unresolved source custody
