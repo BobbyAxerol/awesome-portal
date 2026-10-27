@@ -16643,3 +16643,12 @@ Public copy delivered to HK Edge EPG10-08 as
 `fb6cc5fa1be2423f3e1b3d5780b6a1a17f9598ecef21782d5a6681267563ba6e`.
 Delivery is not an Edge response or source qualification.
 
+27Oct PM integration source intake: `pm-integration@91f2d722` contains S2 and
+S3, but the Paper outcome blob remains unchanged from the reviewed S2 candidate
+and S3 still has no root bootstrap. [Pinned source observation and Edge actions](execution_loop/evidence/ELP2-10/PM_S3_INTEGRATION_INTAKE_2026-10-27.md).
+No deployment, real financial carrier or connected qualification is implied.
+Public copy delivered to Edge EPG10-08 as
+`PM_S3_INTEGRATION_INTAKE_2026-10-27_f178c210.md`; both SHA256
+`f178c2104b5a2fb560df9bdb0e2576fe1b7b00c920e764186d457f8d40f4812e`.
+Delivery is not owner acceptance or a connected result.
+
