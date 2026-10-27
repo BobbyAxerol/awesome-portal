@@ -70,6 +70,7 @@ import { scopedResourceV2 } from "./bffDoubleScopedResource";
 import { answerOperationsV2 } from "./bffDoubleV2";
 import { addDecimal as addExact, scaleCounts, scaled, sumByCurrency, type PortfolioSpec } from "./bffScale";
 import { isPositiveMode, positivePortfolioBookOf } from "./bffPositiveMode";
+import { accountFact, deploymentOf, fromCents, grossNotional } from "./bffWorld";
 
 export interface BffAnswerPortfolios {
   status: number;
@@ -263,7 +264,37 @@ function addDecimal(a: string, b: string): string {
   return scale === 0 ? sum : `${sum.slice(0, -scale)}.${sum.slice(-scale)}`;
 }
 
+/**
+ * WORLD: in the positive world a native portfolio is exactly the deployments the world books into it: the world's deployment ids, accounts, venues, allocations and
+ * net PnL, the balance each account states (allocation + realized), the sync SYNCED. Nothing here is typed by hand, so the register, the 360, the Capital panel and
+ * Compare read the same deployments (QA3 R1-01..06).
+ */
+function worldDeps(id: string): Dep[] | null {
+  const book = positivePortfolioBookOf(id);
+  if (book === null || book.deployments.length === 0) return null;
+  return book.deployments.map((entry) => {
+    const found = deploymentOf(entry.deployment_id);
+    const account = found?.deployment.accountId ?? `acct_${entry.deployment_id}`;
+    const fact = accountFact(account);
+    STRATEGIES[entry.alpha_id] ??= { strategy_id: entry.alpha_id, alpha_id: entry.alpha_id, label: entry.alpha_label, version: `v${found?.alpha.version ?? "1"}`, trader_id: found?.alpha.owner ?? null };
+    if (fact !== null) BALANCES[account] = { ccy: fact.currency, total: fromCents(fact.total), free: fromCents(fact.free), locked: fromCents(fact.locked) };
+    const pnl = addExact(entry.realized, entry.unrealized);
+    return { id: entry.deployment_id, strategy: entry.alpha_id, mode: entry.environment, venue: found?.deployment.venue ?? "BINANCE", account, ccy: entry.currency, allocation: entry.allocation, pnl, exposure: grossNotional(entry.deployment_id), health: "READY" as const };
+  });
+}
+const worldResource = (id: string, name: string, owner: string | null, base: string): BffAnswerPortfolios | null => {
+  const deps = worldDeps(id);
+  if (deps === null) return null;
+  const order: Env[] = ["live", "paper", "sandbox"];
+  return ok(resourceFor(id, deps, { name, owner, base, environments: order.filter((env) => deps.some((d) => d.mode === env)) }));
+};
+
 function portfolioResource(id: string): BffAnswerPortfolios {
+  if (isPositiveMode()) {
+    const item = LIST_ITEMS.find((entry) => (entry as { portfolio_id?: string }).portfolio_id === id) as { name?: string; owner?: string | null; base_currency?: string } | undefined;
+    const positive = item === undefined ? null : worldResource(id, item.name ?? id, item.owner ?? null, item.base_currency ?? "USDT");
+    if (positive !== null) return positive;
+  }
   switch (id) {
     case PF.core: return ok(resourceFor(PF.core, CORE_DEPS, { name: "Core", owner: "M. Tran", base: "USDT", environments: ["live", "paper"] }));
     case PF.satellite: return ok(resourceFor(PF.satellite, SATELLITE_DEPS, { name: "Satellite", owner: "L. Nguyen", base: "USDT", environments: ["live"] }));
@@ -286,7 +317,9 @@ function scaledDeps(p: PortfolioSpec): Dep[] {
     STRATEGIES[a.id] ??= { strategy_id: a.id, alpha_id: a.id, label: a.label, version: `v${a.version}`, trader_id: a.owner };
     // A balance is published for an account that syncs; the others stay unpublished (null), never zero.
     const binding = scaled().bindings.find((b) => b.accountId === d.accountId);
-    if (binding && binding.credentialState !== "NOT_PUBLISHED" && binding.credentialState !== "EXPIRED") {
+    const world = isPositiveMode() ? accountFact(d.accountId) : null;
+    if (world !== null) BALANCES[d.accountId] = { ccy: world.currency, total: fromCents(world.total), free: fromCents(world.free), locked: fromCents(world.locked) };
+    else if (binding && binding.credentialState !== "NOT_PUBLISHED" && binding.credentialState !== "EXPIRED") {
       BALANCES[d.accountId] ??= { ccy: d.currency, total: addExact(d.allocation, d.allocation), free: d.allocation, locked: d.allocation };
     }
     return { id: d.id, strategy: a.id, mode: d.environment, venue: d.venue, account: d.accountId, ccy: d.currency, allocation: d.allocation, pnl: addExact(d.realized, d.unrealized), exposure: d.exposure, health: d.health };
