@@ -57,7 +57,7 @@ import { ACTIVATION_CAPABILITIES, SOURCE_HEALTH_READ } from "../src/execution/de
 import { answerOperationsV2 } from "./bffDoubleV2";
 import { scaleCounts, scaled } from "./bffScale";
 import { isPositiveMode } from "./bffPositiveMode";
-import { MARKS, positionsOf, worldAlphas } from "./bffWorld";
+import { MARKS, positionsOf, setOpenOrderProvider, worldAlphas } from "./bffWorld";
 
 export interface OverviewAnswer {
   status: number;
@@ -311,6 +311,23 @@ function worldBlotterBooks(): WorldBook[] {
   return books;
 }
 // ===== WP-P end
+/** WORLD: the open orders (accepted, submitted, partly filled) the blotter holds for one deployment: the Live page, the Canary room and Alpha 360 read these very rows. */
+let openBook: Map<string, WorldOpenOrder[]> | null = null;
+export interface WorldOpenOrder { id: string; symbol: string; side: "buy" | "sell"; type: string; quantity: string; price: string; status: string; sinceMs: number }
+export function worldOpenOrders(deploymentId: string): WorldOpenOrder[] {
+  if (openBook === null) {
+    openBook = new Map();
+    for (const row of buildRows(false, BLOTTER_DOUBLE_COUNT)) {
+      const o = row.order;
+      if (!["ACCEPTED", "SUBMITTED", "PARTIALLY_FILLED"].includes(String(o.status)) || typeof o.deployment_id !== "string" || o.price === null) continue;
+      const list = openBook.get(o.deployment_id) ?? [];
+      list.push({ id: String(o.order_id), symbol: String(o.symbol), side: String(o.side).toLowerCase() === "buy" ? "buy" : "sell", type: String(o.order_type), quantity: String(o.quantity), price: String(o.price), status: String(o.status), sinceMs: Date.parse(String(o.submitted_at)) });
+      openBook.set(o.deployment_id, list);
+    }
+  }
+  return openBook.get(deploymentId) ?? [];
+}
+setOpenOrderProvider(worldOpenOrders);
 function buildRows(partial: boolean, count: number): Row[] {
   const rows: Row[] = [];
   const worldBooks = isPositiveMode() ? worldBlotterBooks() : null;

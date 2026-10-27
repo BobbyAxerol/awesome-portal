@@ -71,7 +71,7 @@ import { fileURLToPath } from "node:url";
 
 import { blotterBookOf } from "./bffDoubleOverview";
 import { isPositiveMode } from "./bffPositiveMode";
-import { accountFact, ledgerSeries, worldAlphas } from "./bffWorld";
+import { accountFact, ledgerSeries, workingOrdersOf, worldAlphas } from "./bffWorld";
 
 export interface BffAnswerAlpha {
   status: number;
@@ -595,7 +595,7 @@ function stageDriftExact(id: string): BffAnswerAlpha {
 
 const TIMELINE_CURSOR = "kc1.double-k1.eyJkaXJlY3Rpb24iOiJhZnRlciIsInJlc291cmNlIjoidGltZWxpbmUifQ.RG91YmxlLU5PVC1BLVJFQUwtU0lHTkFUVVJF";
 
-type Obs = { at: number; clock: string; type: string; kind: string; id: string; instrument: string; price: string | null; qty: string | null; pnl: string | null };
+type Obs = { at: number; clock: string; type: string; kind: string; id: string; instrument: string; price: string | null; qty: string | null; pnl: string | null; deployment?: string; account?: string };
 const OBSERVATIONS: readonly Obs[] = [
   { at: T0, clock: "ORDER_UPDATED_AT", type: "ORDER_OBSERVED", kind: "ORDER", id: "ord_001", instrument: "BTCUSDT", price: "67200.50", qty: "0.40", pnl: null },
   { at: T0 + 12_000, clock: "FILL_TRADE_TIME", type: "FILL_OBSERVED", kind: "FILL", id: "fill_001", instrument: "BTCUSDT", price: "67200.50", qty: "0.40", pnl: "0" },
@@ -614,8 +614,14 @@ const OBSERVATIONS: readonly Obs[] = [
 function observedTimeline(id: string, search: URLSearchParams): BffAnswerAlpha {
   const environment = validEnv(search.get("environment")) ? search.get("environment")! : "live";
   const after = search.get("after");
-  const secondPage = after === TIMELINE_CURSOR;
-  const entries = secondPage ? OBSERVATIONS.slice(8) : OBSERVATIONS.slice(0, 8);
+  // WORLD: the orders an alpha's timeline observes are the open orders of its deployments in this environment (the very rows of the blotter, the Live page and the stage rooms), oldest first
+  const world = isPositiveMode() ? worldAlphas().find((alpha) => alpha.id === id) : undefined;
+  const worldObs: Obs[] = world === undefined ? [] : world.deployments.filter((d) => d.environment === environment).flatMap((d) => workingOrdersOf(d.id).map((o): Obs => ({
+    at: o.sinceMs, clock: "ORDER_UPDATED_AT", type: "ORDER_OBSERVED", kind: "ORDER", id: o.id, instrument: o.symbol, price: o.price, qty: o.quantity, pnl: null, deployment: d.id, account: d.accountId,
+  }))).sort((a, b) => a.at - b.at);
+  const observations: readonly Obs[] = world === undefined ? OBSERVATIONS : worldObs;
+  const secondPage = world === undefined && after === TIMELINE_CURSOR;
+  const entries = secondPage ? observations.slice(8) : observations.slice(0, 8);
   const body = canonicalCase("execution-observed-timeline.v1.synthetic.valid.json", "first_page_has_more");
   body.environment = environment;
   body.profile_id = ENV_PROFILE[environment];
@@ -625,13 +631,13 @@ function observedTimeline(id: string, search: URLSearchParams): BffAnswerAlpha {
   panel.clocks = { ...panel.clocks, source_published_at_ms: ALPHA_DOUBLE_AS_OF_MS, as_of_ms: ALPHA_DOUBLE_AS_OF_MS, read_at_ms: ALPHA_DOUBLE_READ_AT_MS, received_at_ms: ALPHA_DOUBLE_READ_AT_MS - 500 };
   panel.coverage = {
     ...panel.coverage,
-    from_ms: entries[0]!.at,
-    to_ms: entries[entries.length - 1]!.at,
-    source_total: String(OBSERVATIONS.length),
-    filtered_total: String(OBSERVATIONS.length),
+    from_ms: entries[0]?.at ?? ALPHA_DOUBLE_AS_OF_MS,
+    to_ms: entries[entries.length - 1]?.at ?? ALPHA_DOUBLE_AS_OF_MS,
+    source_total: String(observations.length),
+    filtered_total: String(observations.length),
     returned_count: entries.length,
-    truncated: !secondPage,
-    has_more: !secondPage,
+    truncated: !secondPage && observations.length > 8,
+    has_more: !secondPage && observations.length > 8,
   };
   panel.data = {
     ...panel.data,
@@ -642,13 +648,13 @@ function observedTimeline(id: string, search: URLSearchParams): BffAnswerAlpha {
       source_clock: o.clock,
       observation_type: o.type,
       source_record: { kind: o.kind, id: o.id },
-      resource: { deployment_id: "dep_live_01", strategy_id: id, account_id: "acct_binance_02", portfolio_id: null, execution_session_id: o.kind === "SESSION" ? o.id : null, instrument_id: o.instrument },
+      resource: { deployment_id: o.deployment ?? "dep_live_01", strategy_id: id, account_id: o.account ?? "acct_binance_02", portfolio_id: null, execution_session_id: o.kind === "SESSION" ? o.id : null, instrument_id: o.instrument },
       values: { price: o.price, quantity: o.qty, realized_pnl: o.pnl },
       rejected_exact_value_fields: [],
     })),
   };
   body.mark_context = { ...body.mark_context, clocks: { ...body.mark_context.clocks, as_of_ms: ALPHA_DOUBLE_AS_OF_MS, read_at_ms: ALPHA_DOUBLE_READ_AT_MS } };
-  body.page = { limit: 8, has_more: !secondPage, next_cursor: secondPage ? null : TIMELINE_CURSOR };
+  body.page = { limit: 8, has_more: !secondPage && observations.length > 8, next_cursor: secondPage || observations.length <= 8 ? null : TIMELINE_CURSOR };
   return ok(body);
 }
 

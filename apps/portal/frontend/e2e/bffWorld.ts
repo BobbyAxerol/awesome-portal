@@ -13,6 +13,7 @@
 import { createHash } from "node:crypto";
 
 import { scaled, type AlphaSpec, type DeploymentSpec } from "./bffScale";
+import { isPositiveMode } from "./bffPositiveMode";
 
 /* ── clock ──────────────────────────────────────────────────────────────── */
 
@@ -77,7 +78,7 @@ const alpha = (id: string, label: string, version: string, owner: string | null,
 
 /** The native alphas of the e2e suite (the ids the doubles and the audit open), booked into the TEST_ONLY portfolios. */
 export const NATIVE_ALPHAS: AlphaSpec[] = [
-  alpha("alpha_c", "Momentum C", "2.0", "Minh Pham", "ATTENTION", [deployment("dep_c1", "alpha_c", "CANARY", "live", SAT, "15000", "-125.4", "-18.2", "HALTED")]),
+  alpha("alpha_c", "Momentum C", "2.0", "Minh Pham", "ATTENTION", [deployment("dep_c1", "alpha_c", "CANARY", "live", SAT, "15000", "-125.4", "-18.2")]),
   alpha("alpha_d", "Grid D", "0.9", "Bobby Vu", "READY", [
     deployment("dep_d1", "alpha_d", "SANDBOX", "sandbox", CAN, "8000", "61.2", "3"),
     deployment("dep_d2", "alpha_d", "PAPER", "paper", SAT, "10000", "-30.75", "8.4"),
@@ -85,7 +86,7 @@ export const NATIVE_ALPHAS: AlphaSpec[] = [
   alpha("alpha_a", "Carry A", "1.0", "Bobby Vu", "READY", [
     deployment("dep_live_01", "alpha_a", "LIVE", "live", CORE, "40000.00", "980.40", "140.40"),
     deployment("dep_paper_01", "alpha_a", "PAPER", "paper", CORE, "20000.00", "-84.20", "6.40"),
-    deployment("dep_sandbox_01", "alpha_a", "SANDBOX", "sandbox", CORE, "10000.00", "-41.6", "12.3", "HALTED"),
+    deployment("dep_sandbox_01", "alpha_a", "SANDBOX", "sandbox", CORE, "10000.00", "-41.6", "12.3"),
   ]),
   alpha("alpha_btc_trend", "BTC Trend", "3.0", "Lan Tran", "READY", [
     deployment("dep_btc_live", "alpha_btc_trend", "LIVE", "live", CORE, "80000", "1120.8", "55.4"),
@@ -137,7 +138,7 @@ export const stageFromMs = (alphaId: string, stage: StageName): number => lifecy
 /* ── a deployment: positions, orders, series ────────────────────────────── */
 
 export interface WorldPosition { id: string; symbol: string; side: "long" | "short"; quantity: string; entry: string; mark: string; notional: string; unrealised: string }
-export interface WorldOrder { id: string; symbol: string; side: "buy" | "sell"; type: "LIMIT"; quantity: string; price: string; status: "ACCEPTED"; sinceMs: number }
+export interface WorldOrder { id: string; symbol: string; side: "buy" | "sell"; type: string; quantity: string; price: string; status: string; sinceMs: number }
 const QTYS = [8n, 4n, 2n, 1n]; // in units of 0.25 (so entry prices keep four places)
 const units4 = (value: string): bigint => { const [w = "0", f = ""] = value.split("."); return BigInt(w + `${f}0000`.slice(0, 4)); };
 const text4 = (v: bigint): string => { const abs = v < 0n ? -v : v; return `${v < 0n ? "-" : ""}${abs / 10_000n}.${String(abs % 10_000n).padStart(4, "0")}`.replace(/(\.\d*?)0+$/, "$1").replace(/\.$/, ""); };
@@ -167,7 +168,12 @@ export function positionsOf(deploymentId: string): WorldPosition[] {
 export const grossNotional = (deploymentId: string): string => fromCents(positionsOf(deploymentId).reduce((sum, p) => sum + toCents(p.notional), 0n));
 
 /** Two working limit orders around the mark of the first position's symbol. */
+let openOrders: ((deploymentId: string) => WorldOrder[]) | null = null;
+/** The blotter double registers its book of open orders here (a registry, not an import, so the two modules never form a cycle). */
+export const setOpenOrderProvider = (provider: (deploymentId: string) => WorldOrder[]): void => { openOrders = provider; };
 export function workingOrdersOf(deploymentId: string): WorldOrder[] {
+  // ONE order book per deployment: in the positive world the open orders of a deployment are the open rows of the blotter's own book of it (same ids, quantities, prices, statuses)
+  if (isPositiveMode() && openOrders !== null) return openOrders(deploymentId);
   const pos = positionsOf(deploymentId);
   if (pos.length === 0) return [];
   const symbol = pos[0]!.symbol;
@@ -400,3 +406,6 @@ export function incidentChildrenBody(incidentId: string, workspaceId: string): R
   };
 }
 // ===== WP-B end
+
+/** WORLD: a native deployment's exposure IS the gross notional of its own positions (QA3 R2-01: a running 40,000 deployment with two positions never states exposure 0). */
+for (const alphaSpec of NATIVE_ALPHAS) for (const spec of alphaSpec.deployments) spec.exposure = grossNotional(spec.id);
