@@ -91,14 +91,9 @@ export class ManagerSeriesService {
         const doc = await this.repository.document(principal.workspaceId, env, profile, head!.revision);
         // TEST_ONLY documents are exercised through the pure component only, never served.
         if (!doc || doc.qualification !== "SOURCE_VERIFIED") throw new ExecutionReadScopeError("EXECUTION_READ_PUBLICATION_NOT_QUALIFIED", 503);
-        // A newly bound source mapping must not expose the requested metric
-        // calculated by the old reducer or a different mapping revision. An
-        // unrelated metric's retained history is not part of this response.
-        if (doc.precomputed_series?.some(series => series.binding.metric === q.metric && (economic
-          ? series.provenance.calculation_revision !== economic.calculation_revision
-          : series.provenance.calculation_revision.startsWith("manager-series-economic.v1:"))))
-          throw new ExecutionReadScopeError("EXECUTION_READ_PUBLICATION_NOT_QUALIFIED", 503);
-        const response = queryManagerSeries(inputs, doc, q, !economic);
+        // Revision qualification occurs after subject authorization and exact
+        // publication selection, not on other subjects' retained history.
+        const response = queryManagerSeries(inputs, doc, q, !economic, economic?.calculation_revision ?? null);
         await checkHead();
         return response;
       };

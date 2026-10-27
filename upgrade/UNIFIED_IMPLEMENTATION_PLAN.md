@@ -16627,3 +16627,9 @@ requested stale series and revoked mappings remain fenced. See the same
 [NET_PNL receipt](execution_loop/evidence/ELP2-10/CORE_NET_PNL_READ_FENCE_2026-10-27.md)
 for focused verification and limitations; this is not source qualification.
 
+27Oct scoped Manager series qualification: after authorization, validate only
+the selected subject's exact publication. An incompatible selected revision
+returns existing typed `SOURCE_NOT_QUALIFIED`; another subject's history cannot
+force a whole-request 503. [Receipt, tests and Claude note](execution_loop/evidence/ELP2-10/CORE_NET_PNL_READ_FENCE_2026-10-27.md).
+This does not certify connected financial publication or ELP2-10.
+

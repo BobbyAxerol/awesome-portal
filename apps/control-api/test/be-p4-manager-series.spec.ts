@@ -447,8 +447,8 @@ describe("service + controller (synthetic adapters, no PostgreSQL)", () => {
     const s = await service(), publication = s.publication(SHARED);
     publication.provenance.calculation_revision = `manager-series-economic.v1:sha256:${"a".repeat(64)}`;
     s.doc.precomputed_series = [publication];
-    await expect(s.controller.read(s.request, query([A], { window: JSON.stringify(WINDOW) })))
-      .rejects.toMatchObject({code:"EXECUTION_READ_PUBLICATION_NOT_QUALIFIED",status:503});
+    expect((await s.controller.read(s.request, query([A], { window: JSON.stringify(WINDOW) }))).series[0])
+      .toMatchObject({ state: "UNAVAILABLE", reason_code: "SOURCE_NOT_QUALIFIED", points: [] });
   });
   it("does not block an independently valid NAV read because retained NET_PNL uses a removed mapper", async () => {
     const s = await service(), nav = s.publication(SHARED), pnl = s.publication(SHARED, { metric: "NET_PNL" });
@@ -457,8 +457,8 @@ describe("service + controller (synthetic adapters, no PostgreSQL)", () => {
     const before = JSON.stringify(s.doc);
     const response = await s.controller.read(s.request, query([A], { window: JSON.stringify(WINDOW) }));
     expect(response.series[0].state).toBe("AVAILABLE");
-    await expect(s.controller.read(s.request, query([A], { metric: "NET_PNL", window: JSON.stringify(WINDOW) })))
-      .rejects.toMatchObject({ code: "EXECUTION_READ_PUBLICATION_NOT_QUALIFIED", status: 503 });
+    expect((await s.controller.read(s.request, query([A], { metric: "NET_PNL", window: JSON.stringify(WINDOW) }))).series[0])
+      .toMatchObject({ state: "UNAVAILABLE", reason_code: "SOURCE_NOT_QUALIFIED", points: [] });
     expect(JSON.stringify(s.doc)).toBe(before);
   });
   it("with an installed mapper, ignores another metric's stale revision while still fencing that metric", async () => {
@@ -470,11 +470,24 @@ describe("service + controller (synthetic adapters, no PostgreSQL)", () => {
     pnl.provenance.calculation_revision = `manager-series-economic.v1:sha256:${"b".repeat(64)}`;
     s.doc.precomputed_series = [nav, pnl];
     expect((await s.controller.read(s.request, query([A], { window: JSON.stringify(WINDOW) }))).series[0].state).toBe("AVAILABLE");
-    await expect(s.controller.read(s.request, query([A], { metric: "NET_PNL", window: JSON.stringify(WINDOW) })))
-      .rejects.toMatchObject({ code: "EXECUTION_READ_PUBLICATION_NOT_QUALIFIED", status: 503 });
+    expect((await s.controller.read(s.request, query([A], { metric: "NET_PNL", window: JSON.stringify(WINDOW) }))).series[0])
+      .toMatchObject({ state: "UNAVAILABLE", reason_code: "SOURCE_NOT_QUALIFIED", points: [] });
     current = false;
     await expect(s.controller.read(s.request, query([A], { window: JSON.stringify(WINDOW) })))
       .rejects.toMatchObject({ code: "EXECUTION_READ_ACCESS_CHANGED", status: 409 });
+  });
+  it("isolates different subjects of the same metric and returns only the requested subject's qualification", async () => {
+    const revision = `manager-series-economic.v1:sha256:${"a".repeat(64)}`;
+    const s = await service(true, { calculation_revision: revision, isCurrent: () => true });
+    const own = s.publication(SHARED), other = s.publication(SOLO);
+    own.provenance.calculation_revision = revision;
+    other.provenance.calculation_revision = `manager-series-economic.v1:sha256:${"b".repeat(64)}`;
+    s.doc.precomputed_series = [own, other];
+    const result = await s.controller.read(s.request, query([A, B], { window: JSON.stringify(WINDOW) }));
+    expect(result.series[0].state).toBe("AVAILABLE");
+    expect(result.series[1]).toMatchObject({ state: "UNAVAILABLE", reason_code: "SOURCE_NOT_QUALIFIED", points: [] });
+    expect(result.comparison).toMatchObject({ state: "UNAVAILABLE", reason_code: "SUBJECT_SERIES_UNAVAILABLE" });
+    expect((await s.controller.read(s.request, query([A], { window: JSON.stringify(WINDOW) }))).series[0].state).toBe("AVAILABLE");
   });
   it("closed query is checked before any source metadata is read", async () => {
     const s = await service();

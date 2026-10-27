@@ -78,3 +78,26 @@ Focused Vitest: `be-p4-manager-series` and
 intermediate focused gate under §10.10c; the final frozen integration SHA
 still requires the normal full hook. These counts overlap the earlier 166-test
 run and must not be added to it.
+
+## Follow-through: subject-local revision qualification
+
+The metric-level fence still examined publications for *other* subjects. One
+portfolio's stale revision could therefore make another authorized portfolio's
+same-metric request fail and disclose that some unrelated publication was
+incompatible. The service now passes its current revision into the query;
+only after subject authorization and exact publication selection is that
+publication checked. An incompatible selected publication produces the
+existing per-subject `UNAVAILABLE / SOURCE_NOT_QUALIFIED` response with no
+points instead of a whole-request 503. Mixed-subject comparisons remain
+unavailable; an invalid or revoked current mapping still fails the existing
+authority fence. No stored data or public schema was changed. Claude should
+use the existing typed absence, not zero or an inferred cross-subject value.
+
+Focused Vitest on synthetic sources: `be-p4-manager-series`,
+`manager-economic-source-runtime` and `elp210-native-current-manager-series`,
+**3 files / 145 tests PASS**, including two subjects with different revisions,
+mapping absence, current mapping, revocation and native custody. This overlaps
+earlier test counts and is not evidence of Edge-connected or browser success.
+Control API `tsc --noEmit -p tsconfig.build.json`, execution tracking and
+`git diff --check` PASS. As an intermediate slice, §10.10c uses the focused
+gate; the final frozen integration still requires its normal full hook.

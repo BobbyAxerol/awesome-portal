@@ -36,7 +36,8 @@ const subjectKey = (s: Subject, workspaceId: string) => s.subject_type === "FUND
   { subject_type: s.subject_type, subject_id: s.subject_id! };
 
 function entryFor(input: SeriesSubjectScope, doc: ManagerModelDocument, query: ManagerSeriesQuery,
-  window: { from_ms: number; to_ms: number } | null, requireEconomicNetPnl = false): ManagerSeriesEntry {
+  window: { from_ms: number; to_ms: number } | null, requireEconomicNetPnl = false,
+  calculationRevisionFence?: string | null): ManagerSeriesEntry {
   const { scope, subject } = input, id = subjectKey(subject, scope.workspaceId);
   const portfolioId = subject.subject_type === "PORTFOLIO" ? subject.subject_id : undefined;
   const alphaId = subject.subject_type === "ALPHA" ? subject.subject_id : undefined; // WP-K: an alpha is authorized as a whole like a portfolio
@@ -75,6 +76,12 @@ function entryFor(input: SeriesSubjectScope, doc: ManagerModelDocument, query: M
   const exact = inPartition.filter(p => p.binding.window_start_ms === window.from_ms && p.binding.window_end_ms === window.to_ms);
   if (!exact.length) return unavailable(id, "EXACT_METRIC_WINDOW_NOT_PUBLISHED");
   if (exact.length > 1) return unavailable(id, "AMBIGUOUS_SERIES_PUBLICATION");
+  // Check only the publication that this authorized subject would receive.
+  // Other subjects must not affect this result or reveal their existence.
+  const revision = exact[0].provenance.calculation_revision;
+  if (calculationRevisionFence !== undefined && (calculationRevisionFence === null
+    ? revision.startsWith("manager-series-economic.v1:") : revision !== calculationRevisionFence))
+    return unavailable(id, "SOURCE_NOT_QUALIFIED");
   // FE-013: a ratio whose scale the source does not state is a typed absence, never a number the reader must guess the meaning of.
   if (exact[0].series.unit === "RATIO" && exact[0].series.ratio_scale === null) return unavailable(id, "RATIO_SCALE_NOT_PUBLISHED");
   return servedEntry(id, exact[0]);
@@ -90,7 +97,8 @@ function servedEntry(id: ManagerSeriesEntry["subject"], p: ManagerSeriesPublicat
 }
 
 /** Bounded read-side query. Requires `scopes.deliverScopedTogether` at the service boundary. */
-export function queryManagerSeries(inputs: readonly SeriesSubjectScope[], input: unknown, rawQuery: unknown, requireEconomicNetPnl = false) {
+export function queryManagerSeries(inputs: readonly SeriesSubjectScope[], input: unknown, rawQuery: unknown, requireEconomicNetPnl = false,
+  calculationRevisionFence?: string | null) {
   if (!inputs.length) fail("EXECUTION_READ_SCOPE_REQUIRED");
   const doc = managerModelDocument.parse(input), query = managerSeriesQuery.parse(rawQuery);
   if (inputs.length !== query.subjects.length) fail("EXECUTION_READ_SCOPE_REQUIRED");
@@ -109,7 +117,7 @@ export function queryManagerSeries(inputs: readonly SeriesSubjectScope[], input:
   const selectedWindow = resolveManagerWindow(doc.as_of_ms, query.window)!;
   const series = inputs.map((input, index) => {
     if (JSON.stringify(input.subject) !== JSON.stringify(query.subjects[index])) fail("EXECUTION_READ_SCOPE_REQUIRED");
-    return entryFor(input, doc, query, selectedWindow.resolved, requireEconomicNetPnl);
+    return entryFor(input, doc, query, selectedWindow.resolved, requireEconomicNetPnl, calculationRevisionFence);
   });
   const response = { schema_version: "portal.execution.manager-series.v1" as const, workspace_id: first.workspaceId,
     environment: first.environment, record_authority: "PORTAL_PROJECTION" as const, source_authority: "TRADING_SYSTEM" as const,
