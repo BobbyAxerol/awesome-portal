@@ -16456,3 +16456,26 @@ and ELP2-10 remain NOT_READY; no frontend contract changed.
 Public return mirrored to HK EPG10-08 with matching SHA256
 `1364ee79c3d9fded5272375a4d42be9e0d40311dea6846d02d54792abde4cb6c`.
 
+### 27Oct — Research identity-discovery path (IN PROGRESS)
+
+Scope: implement an explicit, default-off Paper Research identity observation
+path across the owned Edge and PM candidates, separately from registered
+ROOT/CURRENT originals. Pin the permitted Core peer, issuer, subject, workspace
+and workload; retain TLS, source-reader identity, byte/deadline bounds and
+fail-closed behavior. Mapping observes an existing identity only: it is not
+membership, a grant or an authorization to read/stream. Test positive, wrong
+subject/scope, disabled, source error and cleanup paths; no stable, production,
+existing credential, authority, source row, command or Live mutation. Rollback
+is the candidate revision; originals and custody remain untouched. Actual
+reader, source qualification and connected acceptance remain separate gates.
+
+Source implementation receipt: [Research identity discovery candidate](execution_loop/evidence/ELP2-10/RESEARCH_IDENTITY_DISCOVERY_IMPLEMENTATION_2026-10-27.md).
+PM candidate `aed2122fba35bed165d7c9e50605412a1baaa1ba` and Edge candidate
+`b271e85939d7c051e1f4ebeca12290aa2c5ce0cb` are committed on HK, not installed.
+49 PM unit tests, 20 Edge tests (one ignored), clippy and isolated PostgreSQL
+reader checks passed; these do not qualify the source or prove original,
+connected READ/STREAM, or browser acceptance. ELP2-10 remains OPEN. Next:
+commission a separately authorized Research reader and current trust, observe
+the real mapping and actual original with provenance, then bind ROOT/CURRENT;
+do not infer a membership grant from the identity observation.
+
