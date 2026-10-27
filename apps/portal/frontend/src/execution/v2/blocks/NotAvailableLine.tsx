@@ -49,7 +49,7 @@ export function NotAvailableLine({ facts, className, note }: NotAvailableLinePro
       <GapWhy name={`Why not available: ${facts.map((fact) => fact.label).join(", ")}`} rows={unavailableRows(facts)} />
       <span className="exec-blk-sr">
         {" ("}
-        {facts.map((fact) => (fact.id ? `${NOT_PUBLISHED} ${fact.id}` : fact.label)).join(", ")}
+        {facts.map((fact) => (fact.id ? `${NOT_PUBLISHED}: ${fact.label}` : fact.label)).join(", ")}
         {")"}
       </span>
     </p>

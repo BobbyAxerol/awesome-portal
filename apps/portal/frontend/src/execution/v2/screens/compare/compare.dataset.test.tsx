@@ -131,7 +131,7 @@ describe("metric rows from the Manager dataset", () => {
     for (const [label, id] of [["Return", "FE-006, FE-025"], ["Max drawdown", "FE-013, FE-025"]] as const) {
       for (const column of ["Satellite", "Orbit"]) {
         expect(cell(label, column).textContent, label).toContain("Not available");
-        expect(cell(label, column).textContent, label).toContain(`Not published (${id})`);
+        expect(cell(label, column).textContent, label).toContain("Not published");
       }
     }
   });
@@ -142,7 +142,7 @@ describe("metric rows from the Manager dataset", () => {
     for (const [label, id] of [["NAV", "FE-013"], ["Net PnL", "FE-005, FE-025"], ["Score", "FE-011"]] as const) {
       const td = cell(label, "Satellite");
       expect(td.textContent, label).toContain("Not available");
-      expect(td.textContent, label).toContain(`Not published (${id})`);
+      expect(td.textContent, label).toContain("Not published");
       expect(td.textContent, label).toContain("PORTAL_READ_FAILED");
       expect(td.querySelector(".exec-mgr-num"), label).toBeNull();
     }

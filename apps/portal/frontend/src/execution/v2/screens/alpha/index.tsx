@@ -37,7 +37,7 @@ import type { ExecutionApi } from "../../../api/ports";
 import { PanelState } from "../../../components/states";
 import { useDockMode, useDockSelection } from "../../Drawer";
 import { withoutOrigin } from "../../backTo";
-import { NOT_PUBLISHED, NotAvailableLine } from "../../blocks";
+import { CompactGaps, NOT_PUBLISHED, NotAvailableLine } from "../../blocks";
 import { DecisionGroup } from "../stage/DecisionGroup";
 import { Flag } from "../../Flag";
 import { applyTab, resolveTab } from "../../tabAliases";
@@ -102,7 +102,7 @@ const NO_NAMES: ReadonlyMap<string, string> = new Map();
 /** D9: where a reader sees which grant a disabled action lacks. */
 const ACCESS_PATH = "/administration/profile-access";
 /** Both requests are off for one reason (neither is recorded yet): it is printed once, with one My access link. */
-const REQUESTS_OFF = `${NOT_PUBLISHED} (FE-034, FE-020). Requests cannot be recorded yet.`;
+const REQUESTS_OFF = `${NOT_PUBLISHED}. Requests cannot be recorded yet.`;
 
 export interface AlphaScreenProps {
   api: ExecutionApi;
@@ -329,7 +329,7 @@ function Alpha360({ api, alphaId, workspaceId }: AlphaScreenProps) {
             {tab === "replay" ? null : (
             <dl className="exec-blk-kpis exec-alp2-kpis" aria-label="Current facts">
               {/* QA2 R2-02: the headline is the book in view, deployment by deployment; the other books (Paper and Sandbox are simulated, Canary and Live Real-funded) are listed apart and never added to it. */}
-              <Fig label="Net PnL, current" basis={`${ENV_LABEL[env]} book, current facts. Other books apart, never added`}>
+              <Fig label="Net PnL, current" basis={`${ENV_LABEL[env]} book, current facts, unrealized included. Other books apart, never added`}>
                 {view?.money.published === false
                   ? <span><Np id="FE-005" /><WhyMark name="Money, reason" reason={view.money.reason} /></span>
                   : rows.length > 0 ? <BookFigures rows={rows} book={env} metric="netPnl" /> : <Na />}
@@ -445,5 +445,6 @@ function Alpha360({ api, alphaId, workspaceId }: AlphaScreenProps) {
 export default function AlphaScreen(props: AlphaScreenProps) {
   const url = useExecUrlState();
   // Only the V2 key opens the page: a V1 label (`Trade+Replay`) first goes through Alpha 360's own rewrite to the V2 key.
-  return url.value.tab === "replay" ? <AlphaReplay api={props.api} alphaId={props.alphaId} /> : <Alpha360 {...props} />;
+  // QA3 R2-04: a gap is the words "Not available" with its reason and request id behind a disclosure, never a ticket id on the page.
+  return <CompactGaps>{url.value.tab === "replay" ? <AlphaReplay api={props.api} alphaId={props.alphaId} /> : <Alpha360 {...props} />}</CompactGaps>;
 }

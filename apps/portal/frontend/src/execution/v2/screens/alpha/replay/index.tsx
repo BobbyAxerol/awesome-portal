@@ -95,6 +95,8 @@ export default function AlphaReplay({ api, alphaId, focus }: AlphaReplayProps) {
           {fresh ? <Flag kind={fresh.kind} label={fresh.label} size="sm" /> : null}
         </div>
       </header>
+      {/* The design aid is not part of the product page (QA3 R2-21/33): it shows with `?preview=1`; `candles=none` still opens the honest no-candles state. */}
+      {params.get("preview") === "1" || candlesOff ? (
       <div className="exec-alp2-preview" role="group" aria-label="Design preview">
         <span className="exec-alp2-dim">Design preview</span>
         <span className="exec-alp2-seg" role="group" aria-label="Candles">
@@ -102,6 +104,7 @@ export default function AlphaReplay({ api, alphaId, focus }: AlphaReplayProps) {
           <button type="button" className="exec-alp2-segbtn" aria-pressed={candlesOff} onClick={() => setCandles(true)}>Candles not available</button>
         </span>
       </div>
+      ) : null}
       {resource.phase === "error" && resource.status === "denied" ? (
         <PanelState status={resource.status} reason={resource.reason} />
       ) : (
@@ -116,6 +119,7 @@ export default function AlphaReplay({ api, alphaId, focus }: AlphaReplayProps) {
           ordersHref={ordersHref}
           back={back}
           events={events}
+          asOfMs={view?.asOfMs ?? null}
           candlesOff={candlesOff}
         />
       )}

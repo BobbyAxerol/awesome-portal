@@ -78,7 +78,7 @@ export interface PerformanceTabProps {
 const NO_LIFE = { events: [] as readonly LifeEvent[], missing: ["stage", "decision", "incident", "recall", "flow"] as readonly EventKind[] };
 const NO_TIMELINE: PagedRead<ObservedTimeline> = { read: { phase: "idle" }, loadingMore: false, moreError: null, hasMore: false, loadMore: () => undefined };
 
-const NO_DRAWDOWN: DrawdownInput = { kind: "absent", copy: "Not published (FE-025)", reason: "The source publishes no drawdown series for this book; the windowed maximum is the tile above when it is published." };
+const NO_DRAWDOWN: DrawdownInput = { kind: "absent", copy: "Not available", reason: "The source publishes no drawdown series for this book; the windowed maximum is the tile above when it is published." };
 
 /** The pane under the chart and the caption under it, by what the DRAWDOWN read said. Nothing is derived from the equity line. */
 function drawdownOf(read: SeriesReadState | undefined): { input: DrawdownInput; caption: string | null } {

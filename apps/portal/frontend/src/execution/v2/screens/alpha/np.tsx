@@ -24,7 +24,7 @@ export type AlphaFeId = NotPublishedId | LocalFeId;
 const isLocal = (id: AlphaFeId): id is LocalFeId => Object.hasOwn(LOCAL_FE, id);
 
 /** Plain text, for a title or a disabled control's reason. */
-export const npText = (id: AlphaFeId): string => `${NOT_PUBLISHED} (${id})`;
+export const npText = (_id: AlphaFeId): string => NOT_PUBLISHED;
 
 /** Inline: `Not published (FE-011)` plus what is missing. */
 export function Np({ id, children }: { id: AlphaFeId; children?: ReactNode }) {
@@ -32,8 +32,7 @@ export function Np({ id, children }: { id: AlphaFeId; children?: ReactNode }) {
   return (
     // Same words as the shared block: the id is for whoever asks (disclosure, hidden text), not for the reader scanning the page.
     <span className="exec-blk-np">
-      <GapWhy className="exec-blk-np-word" gap={id} text={NOT_PUBLISHED} name="Not published, reason" rows={[gapTitle(id, LOCAL_FE[id])]} />
-      <span className="exec-blk-sr">{` (${id})`}</span>
+      <GapWhy className="exec-blk-np-word" gap={id} text="Not available" name="Not available, reason" rows={[gapTitle(id, LOCAL_FE[id])]} />
       {children ? <> {children}</> : null}
     </span>
   );

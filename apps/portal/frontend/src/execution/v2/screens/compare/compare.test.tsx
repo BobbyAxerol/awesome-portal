@@ -408,7 +408,7 @@ describe("series (FE-013/033, BE-P4 manager series)", () => {
     const { container } = mount(makeApi(serving("unavailable")).api, pick(A, B, C));
     await settled(container);
     await waitFor(() => expect(overlay(container).textContent).toContain("SERIES_SOURCE_NOT_PUBLISHED"));
-    expect(overlay(container).textContent).toContain("Not published (FE-013/033)");
+    expect(overlay(container).textContent).toContain("Not available");
     expect(overlay(container).querySelectorAll("svg")).toHaveLength(0);
     expect(within(overlay(container)).getAllByTestId("not-comparable")).toHaveLength(3);
   });
@@ -523,7 +523,7 @@ describe("series (FE-013/033, BE-P4 manager series)", () => {
       })).api, pick(A, B));
       await openReturn(container);
       await waitFor(() => expect(overlay(container).textContent).toContain("RATIO_SCALE_NOT_PUBLISHED"));
-      expect(overlay(container).textContent).toContain("Not published (FE-013/033)");
+      expect(overlay(container).textContent).toContain("Not available");
       expect(overlay(container).textContent).toContain("states no ratio scale");
       expect(overlay(container).querySelectorAll("svg")).toHaveLength(0);
     });
@@ -568,7 +568,7 @@ describe("metric table", () => {
       expect(cells.length, label).toBeGreaterThanOrEqual(2);
       for (const td of cells) {
         await waitFor(() => expect(td.textContent, label).toContain("Not available"));
-        expect(td.textContent, label).toContain(`Not published (${id})`);
+        expect(td.textContent, label).toContain("Not published");
       }
     }
     expect(screen.queryByTestId("not-available-line")).toBeNull();

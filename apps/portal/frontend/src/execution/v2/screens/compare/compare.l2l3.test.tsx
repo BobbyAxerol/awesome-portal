@@ -98,7 +98,7 @@ describe("L2 · scale", () => {
     const { api, calls } = makeApi(serve(many(500)));
     const { container } = mount(api, `?in=pf_scale_00001,pf_scale_00002`);
     await loaded();
-    await waitFor(() => expect(container.textContent).toContain("Not published (FE-013/033)"));
+    await waitFor(() => expect(container.textContent).toContain("Not available"));
     expect(calls.filter((c) => c === "GET /portfolios")).toHaveLength(1);
     expect(calls.filter((c) => c.startsWith("GET /manager/series"))).toHaveLength(1);
     expect(calls).toHaveLength(2);

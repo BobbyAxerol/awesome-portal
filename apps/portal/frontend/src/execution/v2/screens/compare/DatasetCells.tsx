@@ -20,7 +20,10 @@ import { NaWhy } from "../../blocks";
 import { PartitionFigures, partitionTag } from "../fleet/PartitionFigures";
 import { humanize } from "../fleet/fleetModel";
 import type { DatasetReadState } from "../manager/useManagerDataset";
-import { PF_FE, npText, type Unpublished } from "../portfolios/fe";
+import { PF_FE, type Unpublished } from "../portfolios/fe";
+
+/** The words of a gap, without its request id (QA3 R2-04: a ticket id is never printed where a reader looks; the id stays in `data-gap` and the disclosure). */
+const npText = (_gap: Unpublished): string => "Not published";
 import { Absent } from "../portfolios/format";
 import { ScoreList } from "../portfolios/ScoreCell";
 import { SCORE_KEYS } from "../portfolios/registerMetrics";

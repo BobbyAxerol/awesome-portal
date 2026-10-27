@@ -142,6 +142,10 @@ describe("Net PnL and Exposure are the book in view, never all books added (QA2 
     // No figure on the tile is a sum of the three: 980.40 + 140.40 (live) - 84.20 (paper) + 0 = 1,036.60.
     expect(pnl.textContent).not.toContain("1,036.60");
     expect(tile("Net PnL, current").textContent).toContain("Real-funded book, current facts");
+    // QA3 R2-01: a running deployment with open positions never reads 0.00 exposure: the tile prints the deployment's own gross notional.
+    const exposure = tile("Exposure, current");
+    expect(within(exposure).getByTestId("book-here").textContent).toContain("7,370.68");
+    expect(within(exposure).getByTestId("book-apart").textContent).not.toMatch(/dep_paper_01 0\.00/);
     cleanup();
     endPreviewLane();
     mount("/deployments/alphas/alpha_a?env=paper", "alpha_a");
@@ -203,6 +207,12 @@ describe("Trade Replay is its own screen", () => {
     expect(lanes.textContent).toMatch(/\d+ events? in this window/);
   });
 
+  it("the design-preview switch is not part of the product page: absent by default, present with preview=1 (QA3 R2-21)", async () => {
+    mount("/deployments/alphas/alpha_btc_trend?tab=replay", "alpha_btc_trend");
+    await screen.findByTestId("v1-replay");
+    expect(screen.queryByRole("group", { name: "Design preview" })).toBeNull();
+  });
+
   it("hands the replay log an order link: an order id opens that order on Orders & Fills with focus=order:<id>", async () => {
     mount("/deployments/alphas/alpha_btc_trend?tab=replay", "alpha_btc_trend");
     await screen.findByTestId("v1-replay");
@@ -214,8 +224,21 @@ describe("Trade Replay is its own screen", () => {
     expect(anchor.getAttribute("href")).toContain("focus=order%3Aord_007");
   });
 
+  it("the lane window ends at or before the read's own as-of time and, when the alpha has events, shows them (QA3 R2-06)", async () => {
+    mount("/deployments/alphas/alpha_btc_trend?tab=replay", "alpha_btc_trend");
+    const lanes = await screen.findByTestId("replay-lanes");
+    const text = lanes.textContent ?? "";
+    const events = Number(/(\d+) events? in this window/.exec(text)?.[1] ?? "0");
+    expect(events).toBeGreaterThan(0);
+    // The window's end is not after the double's as-of (17 Oct 12:04Z).
+    const end = /to (\d+) (\w{3}) (\d\d):(\d\d)Z\)/.exec(text);
+    expect(end).not.toBeNull();
+    const month = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"].indexOf(end![2]!);
+    expect(Date.UTC(2026, month, Number(end![1]), Number(end![3]), Number(end![4]))).toBeLessThanOrEqual(Date.UTC(2026, 9, 17, 12, 4));
+  });
+
   it("reaches the honest 'candles not available' state from the design-preview toggle: the venue read is skipped, the log and the lanes stay", async () => {
-    const lane = mount("/deployments/alphas/alpha_btc_trend?tab=replay", "alpha_btc_trend");
+    const lane = mount("/deployments/alphas/alpha_btc_trend?tab=replay&preview=1", "alpha_btc_trend");
     await screen.findByTestId("v1-replay");
     await waitFor(() => expect(lane.callsTo("/market/venue-candles").length).toBeGreaterThan(0));
     const before = lane.callsTo("/market/venue-candles").length;

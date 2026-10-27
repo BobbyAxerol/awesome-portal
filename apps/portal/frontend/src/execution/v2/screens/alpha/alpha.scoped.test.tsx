@@ -102,7 +102,7 @@ describe("the header and the authority label", () => {
     const meta = document.querySelector(".exec-alp2-meta")!;
     const line = meta.parentElement!.querySelector("[data-testid='not-available-line']")!;
     expect(line.textContent).toContain("Not available: Name, Version, Owner, Run, Evidence");
-    expect(line.textContent).toContain("Not published FE-030");
+    expect(line.textContent).toContain("Not published: Owner");
     fireEvent.click(within(line as HTMLElement).getByRole("button", { name: "Why not available: Name, Version, Owner, Run, Evidence" }));
     const rows = Array.from(line.querySelectorAll(".exec-blk-why-row")).map((row) => row.textContent ?? "");
     expect(rows.find((row) => row.startsWith("Name:"))).toContain("The source has no alpha name");
@@ -149,10 +149,10 @@ describe("the same sections, from the scoped facts", () => {
     await ready();
     const facts = screen.getByLabelText("Current facts");
     // The Return, Max drawdown and Regime fit tiles carry their own disclosures; only the two money tiles carry the body's reason.
-    const whys = Array.from(facts.querySelectorAll(".exec-blk-why")).filter((node) => (node.previousElementSibling?.textContent ?? "").includes("(FE-005)"));
+    const whys = Array.from(facts.querySelectorAll(".exec-blk-why")).filter((node) => node.previousElementSibling?.getAttribute("data-gap") === "FE-005");
     expect(whys.length).toBe(2);
     for (const node of whys) {
-      expect(node.previousElementSibling?.textContent).toContain("Not published (FE-005)");
+      expect(node.previousElementSibling?.textContent).toContain("Not available");
       expect(whyText(node)).toBe("SCOPED_RAW_FACTS_ONLY_NO_IMPLIED_TOTALS");
     }
     expect(facts.querySelector('[title="SCOPED_RAW_FACTS_ONLY_NO_IMPLIED_TOTALS"]')).toBeNull();
@@ -192,7 +192,7 @@ describe("the same sections, from the scoped facts", () => {
     expect(live.querySelector("td[data-l='Equity']")!.textContent).toBe("Not available");
     const paper = rows.find((r) => r.textContent?.includes("dep_paper_01"))!;
     expect(paper.textContent).toContain("Paper");
-    expect(paper.querySelector("td[data-l='Allocated, current']")!.textContent).toContain("Not published (FE-005)");
+    expect(paper.querySelector("td[data-l='Allocated, current']")!.textContent).toContain("Not available");
     // Paper states one snapshot row: exact digits, the currency, the row's own instant (UTC), and nothing is added across rows.
     const paperNet = paper.querySelector("td[data-l='Net PnL, current'] .exec-blk-num")!;
     expect(paperNet.getAttribute("data-full")).toBe("184.2000");
@@ -250,7 +250,8 @@ describe("the same sections, from the scoped facts", () => {
     fireEvent.click(screen.getByRole("button", { name: /Not scored · policy not set/ }));
     const drawer = await screen.findByRole("complementary");
     expect(drawer.textContent).toContain("Net PnL");
-    expect(drawer.textContent).toContain("Not published (FE-005)");
+    expect(drawer.textContent).toContain("Not available");
+    expect(drawer.querySelector('[data-gap="FE-005"]')).not.toBeNull();
   });
 
   it("prints no dash and no N/A on any tab, and none of the legacy-only figures", async () => {

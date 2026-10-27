@@ -42,11 +42,13 @@ export interface ReplayViewProps {
   back?: { label: string; to: string };
   /** The alpha's published events for the STAGE / DECISION / INCIDENT lanes under the chart; absent draws no lanes. */
   events?: { events: readonly LifeEvent[]; missing: readonly EventKind[] };
+  /** The read's own as-of time: the lanes never run past it and never show an event dated after it (QA3 R2-06). */
+  asOfMs?: number | null;
   /** Design preview: the venue read is skipped and candles are typed unavailable (hi-fi "Candles not available"). */
   candlesOff?: boolean;
 }
 
-export function ReplayView({ api, alphaId, alphaLabel, env, venueOf, book, focus, ordersHref, back, events, candlesOff = false }: ReplayViewProps) {
+export function ReplayView({ api, alphaId, alphaLabel, env, venueOf, book, focus, ordersHref, back, events, asOfMs = null, candlesOff = false }: ReplayViewProps) {
   const target = focusTarget(focus);
   const symbols = useMemo(() => symbolsOf(book.orders, book.fills), [book.orders, book.fills]);
   const focusSymbol = useMemo(() => {
@@ -88,14 +90,23 @@ export function ReplayView({ api, alphaId, alphaLabel, env, venueOf, book, focus
     ...(book.scoped ? [{ label: "Read", value: "Scoped: authorized rows only" }] : []),
   ];
 
-  // The lanes share the window of the loaded candles; with none, the span of the trades they sit under.
+  // The events the lanes may show: none dated after the read's as-of time.
+  const laneEvents = useMemo(() => (events === undefined ? undefined : { ...events, events: asOfMs === null ? events.events : events.events.filter((e) => e.t <= asOfMs) }), [events, asOfMs]);
+  // The lanes share the window of the loaded candles, else the span of the trades they sit under; the window never ends after the read's as-of time (QA3 R2-06).
+  // When that window holds none of the alpha's events but the alpha has some, the window widens to the events' own span, up to as-of, so the lanes show them.
   const laneDomain = useMemo(() => {
     const bars = candles.venue.phase === "ready" && candles.venue.value.state === "READY" ? candles.venue.value.candles : [];
     const first = bars[0]?.t;
     const last = bars.length > 0 ? bars[bars.length - 1]!.t : undefined;
-    if (!candlesOff && first !== undefined && last !== undefined && last > first) return { from: first as UtcEpochMs, to: last as UtcEpochMs };
-    return range === null ? null : { from: range.lo as UtcEpochMs, to: range.hi as UtcEpochMs };
-  }, [candles.venue, candlesOff, range]);
+    const base = !candlesOff && first !== undefined && last !== undefined && last > first ? { from: first as number, to: last as number } : range === null ? null : { from: range.lo, to: range.hi };
+    if (base === null) return null;
+    const capped = asOfMs === null ? base : { from: Math.min(base.from, asOfMs), to: Math.min(base.to, asOfMs) };
+    const times = (laneEvents?.events ?? []).map((e) => e.t as number);
+    if (times.length > 0 && !times.some((t) => t >= capped.from && t <= capped.to)) {
+      return { from: Math.min(...times) as UtcEpochMs, to: (asOfMs ?? Math.max(...times, capped.to)) as UtcEpochMs };
+    }
+    return { from: capped.from as UtcEpochMs, to: capped.to as UtcEpochMs };
+  }, [candles.venue, candlesOff, range, asOfMs, laneEvents]);
   // "14 of 14 fills in this window": the fills of the symbol on show against the loaded ones, exact counts of what was read.
   const fillsInWindow = useMemo(() => {
     const mine = book.fills.filter((f) => symbol === null || f.symbol === symbol);
@@ -129,7 +140,7 @@ export function ReplayView({ api, alphaId, alphaLabel, env, venueOf, book, focus
     plain: true,
     // The order id of a log row opens that order on Orders & Fills (`focus=order:<id>`), the way the deep link already does.
     orderLink: (orderId) => <Link className="exec-blk-link" to={`${ordersHref}${ordersHref.includes("?") ? "&" : "?"}focus=${encodeURIComponent(`order:${orderId}`)}`} onClick={(event) => event.stopPropagation()}>{orderId}</Link>,
-    lanes: events === undefined || range === null ? null : <ReplayLanes events={events} domain={laneDomain} fills={fillsInWindow} />,
+    lanes: laneEvents === undefined || range === null ? null : <ReplayLanes events={laneEvents} domain={laneDomain} fills={fillsInWindow} />,
   };
 
   // The log and chart hold what was loaded and read. Say how far that is from what the Portal holds, in exact counts.

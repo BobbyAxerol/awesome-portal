@@ -173,7 +173,8 @@ export function ActivityTab({ env, alphaLabel, inputs, paths, timeline, book, li
         />
       )}
       <p className="exec-alp2-cap">
-        <span>{rows.length < filteredTotal ? `Top ${rows.length} of ${filteredTotal} observations loaded` : `${filteredTotal} observations loaded`}</span>
+        {/* QA3 R2-26: the list holds the published events and the observed rows together; the count says both. */}
+        <span>{`${rows.length} listed: ${rb.lifeEvents.length > 0 && filter.match === null ? `${rb.lifeEvents.length} published events and ` : ""}${rows.length < filteredTotal ? `top ${Math.min(rows.length, filteredTotal)} of ${filteredTotal}` : filteredTotal} observed rows loaded`}</span>
         <span>Observed timeline: a Portal observation of the current page, not an event replay</span>
         <span>Actor and receipt: <Np id="FE-021" /></span>
       </p>

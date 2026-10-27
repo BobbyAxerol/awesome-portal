@@ -14,7 +14,7 @@ import { answerManagerFleet, answerManagerSeries } from "../frontend/e2e/bffDoub
 import { answerPortfolios } from "../frontend/e2e/bffDoublePortfolios";
 import type { PositiveAccountBook, PositiveDeploymentFact, PositivePortfolioBook, PositiveRecall } from "../frontend/e2e/bffPositiveMode";
 import { addDecimal, fixtureNowMs, scaled, type AlphaSpec, type DeploymentSpec } from "../frontend/e2e/bffScale";
-import { incidentChildrenBody, lifecycleOf, MARKS, NATIVE_ALPHAS, positionsOf, stageDays, WORLD_ACTORS } from "../frontend/e2e/bffWorld";
+import { grossNotional, incidentChildrenBody, lifecycleOf, MARKS, NATIVE_ALPHAS, positionsOf, stageDays, WORLD_ACTORS } from "../frontend/e2e/bffWorld";
 import { evidenceFromRecord } from "../frontend/e2e/bffApprovalWorld"; // WP-E
 import { legacy, traits } from "./scenario";
 
@@ -1425,12 +1425,21 @@ function wpcEquity(method: string, path: string, search: URLSearchParams): Revie
  * version, owner, health) and its own deployments, with the money fields summed per currency from those deployments (exact decimals, never across currencies).
  * Orders, fills, positions and the equity path keep the double's single book (a request to the fixture world, not invented here). */
 const WPC_STAGE_ORDER = ["LIVE", "CANARY", "SANDBOX", "PAPER"] as const;
+/** Gross notional of a native running deployment (the suite specs carry "0"): the live deployments the Live page prints 7,370.68 for keep that figure; any other running one is 10 to 34 percent of its allocation; an ended one is a true zero. */
+function wpcGross(d: DeploymentSpec): string {
+  if (d.exposure !== "0" || !d.active) return d.exposure;
+  // The world's own gross notional of the deployment's open positions (the Live page prints the same figure); a deployment with no positions falls to a share of its allocation.
+  const world = grossNotional(d.id);
+  if (/^\d/.test(world) && toScaled(world) !== 0n) return world;
+  return trimmed(toScaled(d.allocation) * BigInt(10 + (seedOf(d.id, "wpc-gross") % 25)) / 100n, 2);
+}
 function wpcAlphaResource(method: string, path: string, search: URLSearchParams): ReviewManagerResponse | null {
   const match = /^\/resources\/alphas\/([^/]+)$/.exec(path);
   if (method !== "GET" || match === null || search.has("workspace_id") || scaled().alphas.length === 0) return null;
   const id = decodeURIComponent(match[1]!);
   const spec = [...WPC_ALPHAS, ...scaled().alphas].find((alpha) => alpha.id === id);
-  if (spec === undefined) return null;
+  // QA3 R2-05: an id nobody published is a 404, not a real alpha under another name (the double's own refusal ids keep their answers).
+  if (spec === undefined) return /^alpha_(denied|down|empty|bounded)$/.test(id) ? null : problem(404, "EXECUTION_READ_NOT_AVAILABLE", "This alpha is not in the selected universe.");
   const base = answerAlpha(method, path, search);
   const body = base?.body as Draft;
   const alpha = body?.data?.alpha;
@@ -1450,13 +1459,13 @@ function wpcAlphaResource(method: string, path: string, search: URLSearchParams)
     const net = addDecimal(d.realized, d.unrealized);
     return { ...copy(template), deployment_id: d.id, strategy_id: id, stage: d.stage, venue: d.venue, account_id: d.accountId, portfolio_id: d.portfolioId, currency: d.currency,
       allocation: d.allocation, balance_total: addDecimal(d.allocation, net), balance_free: addDecimal(d.allocation, net), balance_locked: "0", realized_pnl: d.realized,
-      unrealized_pnl: d.unrealized, net_pnl: net, exposure: d.exposure, state: d.active ? "ACTIVE" : "ENDED", active: d.active, health: d.health };
+      unrealized_pnl: d.unrealized, net_pnl: net, exposure: wpcGross(d), state: d.active ? "ACTIVE" : "ENDED", active: d.active, health: d.health };
   });
   const per = (pick: (d: DeploymentSpec) => string, currency: string): string => sum(spec.deployments.filter((d) => d.currency === currency).map(pick));
   alpha.allocations = currencies.map((currency) => ({ currency, value: per((d) => d.allocation, currency) }));
   alpha.balances = currencies.map((currency) => ({ currency, total: per((d) => addDecimal(d.allocation, addDecimal(d.realized, d.unrealized)), currency), free: per((d) => addDecimal(d.allocation, addDecimal(d.realized, d.unrealized)), currency), locked: "0" }));
   alpha.position_pnl = currencies.map((currency) => ({ currency, realized: per((d) => d.realized, currency), unrealized: per((d) => d.unrealized, currency), net: per((d) => addDecimal(d.realized, d.unrealized), currency) }));
-  alpha.exposure = currencies.map((currency) => ({ currency, value: per((d) => d.exposure, currency) }));
+  alpha.exposure = currencies.map((currency) => ({ currency, value: per(wpcGross, currency) }));
   body.resource = { ...body.resource, label: spec.label };
   const rows = spec.deployments.map((d) => ({ deployment_id: d.id, strategy_id: id, account_id: d.accountId, mode: mode[d.environment], venue: d.venue, currency: d.currency, portfolio_id: d.portfolioId,
     state: d.active ? "ACTIVE" : "ENDED", active: d.active, updated_at: alpha.updated_at, updated_at_ms: alpha.updated_at_ms, profile_environment: d.environment }));

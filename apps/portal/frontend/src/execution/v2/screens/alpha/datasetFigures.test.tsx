@@ -75,7 +75,8 @@ describe("Return tile (return_30d_pct)", () => {
     mount(serving({ status: 200, body: alphaBody(false) }));
     await waitFor(() => expect(document.querySelector("[aria-label='Current facts']")).not.toBeNull());
     const tileNode = await tile("Return");
-    await waitFor(() => expect(tileNode.textContent).toContain("Not published (FE-006)"));
+    await waitFor(() => expect(tileNode.textContent).toContain("Not available"));
+    expect(tileNode.querySelector('[data-gap="FE-006"]')).not.toBeNull();
     // Two disclosures: the request id (FE-006), then the dataset's own reason.
     expect(whyText([...tileNode.querySelectorAll("button[aria-expanded]")].at(-1) ?? null)).toContain("does not carry return_30d_pct");
   });
@@ -83,8 +84,9 @@ describe("Return tile (return_30d_pct)", () => {
   it("stays Not published (FE-006) when the dataset read is refused; Max drawdown has no key at all (FE-025)", async () => {
     mount(serving({ status: 503, body: { error: { code: "EXECUTION_READ_UNAVAILABLE", message: "down" } } }));
     const tileNode = await tile("Return");
-    await waitFor(() => expect(tileNode.textContent).toContain("Not published (FE-006)"));
-    expect((await tile("Max drawdown")).textContent).toContain("Not published (FE-025)");
+    await waitFor(() => expect(tileNode.textContent).toContain("Not available"));
+    expect(tileNode.querySelector('[data-gap="FE-006"]')).not.toBeNull();
+    expect((await tile("Max drawdown")).querySelector('[data-gap="FE-025"]')).not.toBeNull();
   });
 });
 
@@ -141,7 +143,7 @@ describe("review lane rows for the suite's alpha (simulated keys through the por
     expect(days.textContent).toMatch(/^Real-funded · USDT\d+ days?$/);
     for (const label of ["Actual days", "Mixed return", "Mixed score"]) {
       const td = [...forward.querySelectorAll("tr")].find((tr) => tr.querySelector("th")?.textContent === label)!.querySelector("td")!;
-      expect(td.textContent, label).toContain("Not published");
+      expect(td.textContent, label).toContain("Not available");
     }
   });
 });

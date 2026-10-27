@@ -197,7 +197,7 @@ export function AlphaCompare({ api, enabled, env, picks, onPicks, windowLabel, w
         {seriesQuery === null ? (
           <ChartUnavailable
             label="Alpha comparison"
-            copy={window === undefined ? "Not published (FE-033)" : "Pick two alphas"}
+            copy={window === undefined ? "Not available" : "Pick two alphas"}
             reason={window === undefined ? "The series window is not known here. Nothing is drawn from other data, and nothing is rebased or added here." : "An aligned series needs two to four alphas. Nothing is rebased or worked out here."}
             height={160}
           />
@@ -254,7 +254,7 @@ function AlphaOverlay({ seriesRead, measure, labelOf }: { seriesRead: ReturnType
   if (comparison.state === "INCOMPARABLE") return none("Not comparable", `${MISMATCH_SENTENCE[comparison.reasonCode]} (${comparison.reasonCode}). Each series is listed apart; none is converted, rebased or combined.`);
   const missing = series.series.find((entry) => entry.state === "UNAVAILABLE");
   return none(
-    sourceNotPublished(series) || (missing !== undefined && missing.state === "UNAVAILABLE" && missing.reasonCode === "RATIO_SCALE_NOT_PUBLISHED") ? "Not published (FE-013/033)" : "Not available",
+    sourceNotPublished(series) || (missing !== undefined && missing.state === "UNAVAILABLE" && missing.reasonCode === "RATIO_SCALE_NOT_PUBLISHED") ? "Not available" : "Not available",
     missing !== undefined && missing.state === "UNAVAILABLE"
       ? `At least one pick has no series: ${UNAVAILABLE_SENTENCE[missing.reasonCode]} (${missing.reasonCode}). Nothing is drawn from the rest.`
       : "At least one pick has no points in this window, so the picks are not aligned. Nothing is drawn from the rest.",

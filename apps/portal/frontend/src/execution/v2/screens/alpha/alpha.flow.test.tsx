@@ -64,7 +64,7 @@ describe("Request archive and Request gate review (flow audit #7)", () => {
       const button = screen.getByRole("button", { name: label }) as HTMLButtonElement;
       expect(button.disabled).toBe(true);
       const reason = document.getElementById(button.getAttribute("aria-describedby") ?? "");
-      expect(reason?.textContent).toContain("Not published (FE-034, FE-020)");
+      expect(reason?.textContent).toContain("Not published. Requests cannot be recorded yet");
       reasons.add(reason!.id);
     }
     expect(reasons.size).toBe(1);

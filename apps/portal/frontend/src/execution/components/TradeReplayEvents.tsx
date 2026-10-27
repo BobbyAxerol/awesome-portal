@@ -70,7 +70,7 @@ export interface TradeReplayEventsProps {
   orderLink?: (orderId: string) => ReactNode;
 }
 
-const HEIGHT = { compact: 420, tall: 620 } as const;
+const HEIGHT = { compact: 420, tall: 620, bare: 240 } as const;
 
 /** The scene object a log row stands for (the same ids the chart primitive uses). */
 export function sceneIdOfRow(row: LogRow, orders: readonly ReplayOrder[]): string | null {
@@ -214,7 +214,8 @@ export function TradeReplayEvents({ orders, fills, candles, asOf, accounts = [],
     : marketTransport !== "ok" && marketTransport !== "loading" ? `venue klines ${marketTransport}${marketReason ? ` · ${marketReason}` : ""}`
     : marketTransport === "loading" && !market ? "venue klines loading" : null;
   const notice = bars.length > 0 ? null : `${klinesWord ?? "venue klines not requested"} · Trading System candles: ${soonReason(candles.reason) ?? "Soon · BR-EX-50"} — no candles: the time axis is indexed by the events themselves`;
-  const height = tall ? HEIGHT.tall : HEIGHT.compact;
+  // With no candles the chart has only the trades' own marks to hold: a short band, not 400px of empty plot (QA3 R2-20).
+  const height = tall ? HEIGHT.tall : bars.length === 0 ? HEIGHT.bare : HEIGHT.compact;
   const brackets = scopedFills.filter((f) => !trips.some((tr) => tr.exit.fillId === f.fillId)).length;
 
   const provenance = (

@@ -40,7 +40,7 @@ import { Link, useSearchParams } from "react-router-dom";
 
 import type { ExecutionApi } from "../../../api/ports";
 import { PanelSkeleton, PanelState } from "../../../components/states";
-import { GapWhy, SectionPanel } from "../../blocks";
+import { CompactGaps, GapWhy, SectionPanel } from "../../blocks";
 import { CardsTable, type CardsColumn } from "../../cardsTable";
 import { ChartTools, CompareOverlay, type CompareSeries, type NotComparable } from "../../charts";
 import { Flag } from "../../Flag";
@@ -50,7 +50,9 @@ import type { ManagerSeriesMetric, ManagerSeriesQuery } from "../../readers/mana
 import { METRIC_WORD, MISMATCH_SENTENCE, UNAVAILABLE_SENTENCE, chartPointsOf, chartStateOf, chartUnit, commonCaption, isSigned, sourceNotPublished } from "../series/seriesModel";
 import { useManagerSeries } from "../series/useManagerSeries";
 import { useExecUrlState, withContext } from "../../urlState";
-import { PF_FE, npText } from "../portfolios/fe";
+import { PF_FE, type Unpublished } from "../portfolios/fe";
+
+const npText = (_gap: Unpublished): string => "Not published";
 import { Absent, MoneyList, freshnessFlag } from "../portfolios/format";
 import { toRows, type PortfolioRow } from "../portfolios/listModel";
 import { DEFAULT_ROUTES, type PortfolioRoutes } from "../portfolios/routes";
@@ -110,7 +112,11 @@ const METRICS: readonly MetricRow[] = [
   { id: "allocated", label: "Allocated capital", cell: (r) => <MoneyList entries={r.allocated} empty={<Absent reason="no allocation published" />} /> },
 ];
 
-export default function CompareScreen({ api, portfolioId, capabilities, routes = DEFAULT_ROUTES }: CompareScreenProps) {
+export default function CompareScreen(props: CompareScreenProps) {
+  return <CompactGaps><CompareBody {...props} /></CompactGaps>;
+}
+
+function CompareBody({ api, portfolioId, capabilities, routes = DEFAULT_ROUTES }: CompareScreenProps) {
   const url = useExecUrlState();
   const [params, setParams] = useSearchParams();
   const partsId = useId();
@@ -245,7 +251,7 @@ export default function CompareScreen({ api, portfolioId, capabilities, routes =
     const missing = series.series.find((entry) => entry.state === "UNAVAILABLE");
     return none(
       // FE-013: a return whose source states no scale is a request id too (the source has not published what a return needs).
-      sourceNotPublished(series) || (missing !== undefined && missing.state === "UNAVAILABLE" && missing.reasonCode === "RATIO_SCALE_NOT_PUBLISHED") ? "Not published (FE-013/033)" : "Not available",
+      sourceNotPublished(series) || (missing !== undefined && missing.state === "UNAVAILABLE" && missing.reasonCode === "RATIO_SCALE_NOT_PUBLISHED") ? "Not available" : "Not available",
       missing !== undefined && missing.state === "UNAVAILABLE"
         ? `At least one pick has no series: ${UNAVAILABLE_SENTENCE[missing.reasonCode]} (${missing.reasonCode}). Nothing is drawn from the rest.`
         : "At least one pick has no points in this window, so the picks are not aligned. Nothing is drawn from the rest.",

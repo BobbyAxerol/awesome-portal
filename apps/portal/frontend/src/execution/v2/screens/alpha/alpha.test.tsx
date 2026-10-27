@@ -89,7 +89,7 @@ describe("screen contract", () => {
     expect(within(h1).getByRole("button", { name: /Not scored · policy not set/ })).toBeTruthy();
     const line = h1.parentElement!.querySelector("[data-testid='not-available-line']")!;
     expect(line.textContent).toContain("Run, Evidence");
-    expect(line.textContent).toContain("Not published FE-029");
+    expect(line.textContent).toContain("Not published: Run");
   });
 
   it("prints no dash and no N/A anywhere on any tab", async () => {
@@ -137,7 +137,7 @@ describe("the lifecycle spine", () => {
     expect(spine.textContent).not.toContain("Done");
     // UXM07-048/3: the cards print only published facts; the one note under the list names the gap
     expect(spine.textContent).not.toContain("Not published");
-    expect(spine.parentElement!.textContent).toContain("Not published (FE-027/028)");
+    expect(spine.parentElement!.querySelector('[data-gap="FE-027/028"]')).not.toBeNull();
     expect(spine.textContent).toContain("Real-funded domain");
   });
 
@@ -150,7 +150,7 @@ describe("the lifecycle spine", () => {
     // The stage detail no longer repeats the spine's "days in stage, criteria, decider" gap (UX audit A); a gate still names its own.
     expect(detail.textContent).not.toContain("Not published");
     fireEvent.click(within(screen.getByRole("list", { name: "Alpha lifecycle" })).getByRole("button", { name: /R1 gate/ }));
-    expect(document.querySelector('.exec-alp2-stage-detail[data-stage="r1"]')!.textContent).toContain("Not published (FE-027/028)");
+    expect(document.querySelector('.exec-alp2-stage-detail[data-stage="r1"]')!.querySelector('[data-gap="FE-027/028"]')).not.toBeNull();
   });
 
   it("with no stage named, every node is Unknown and the panel says the lifecycle is not published", async () => {
@@ -165,7 +165,7 @@ describe("the lifecycle spine", () => {
     await ready();
     const spine = screen.getByRole("list", { name: "Alpha lifecycle" });
     expect(within(spine).getAllByText("Unknown")).toHaveLength(6);
-    expect(spine.closest("section")!.textContent).toContain("Current stage");
+    expect(spine.closest("section")!.querySelector('[data-gap="FE-027/028"]')).not.toBeNull();
   });
 });
 
@@ -182,7 +182,8 @@ describe("current facts", () => {
     // The windowed figures keep their tiles (hi-fi), each Not published with its id.
     for (const [label, id] of [["Return", "FE-006"], ["Max drawdown", "FE-025"], ["Regime fit", "FE-011"]] as const) {
       const tile = within(facts).getByText(label).closest("div")!;
-      expect(tile.textContent, label).toContain(`Not published (${id})`);
+      expect(tile.querySelector(`[data-gap="${id}"]`), label).not.toBeNull();
+      expect(tile.textContent, label).toContain("Not available");
     }
   });
 });
@@ -199,7 +200,7 @@ describe("Performance", () => {
     expect(view.container.textContent).not.toContain("Windowed return:");
     // The design's drawdown strip is drawn as a typed absence (no drawdown series is published, FE-025): one pane, never a flat line.
     expect(view.container.querySelectorAll('[data-testid="drawdown"], .exec-c2-dd')).toHaveLength(1);
-    expect(view.container.textContent).toContain("Not published (FE-025)");
+    expect(view.container.textContent).toContain("Not available");
     expect(screen.getByTestId("readout-value").textContent).toBe("40,812.00 USDT");
   });
 
@@ -413,6 +414,7 @@ describe("Evidence, Regime, Reconciliation", () => {
     const panel = await screen.findByRole("region", { name: "Research Evidence" });
     // The run binding and its five siblings are ONE "Not available" line; the name and version gap is the header's.
     expect(within(panel).getByTestId("not-available-line").textContent).toContain("Not available: Bound research run, Parameters, Parameter bundle, Evidence, Provenance, Artifact available");
+    fireEvent.click(within(panel).getByRole("button", { name: /^Why not available/ }));
     expect(panel.textContent).toContain("FE-029");
     expect(panel.textContent).not.toMatch(/Unnamed alpha|UNVERSIONED/);
     expect(await within(panel).findByText("RESEARCH_RUN_NOT_BOUND")).toBeTruthy();
@@ -424,6 +426,7 @@ describe("Evidence, Regime, Reconciliation", () => {
     const panel = await screen.findByRole("region", { name: "Regime fit" });
     expect(within(panel).getByTestId("not-available-line").textContent).toContain("Not available: Volatility, Trend, Liquidity, Outcome by stage");
     expect(within(panel).queryAllByText("Not published")).toHaveLength(0);
+    fireEvent.click(within(panel).getByRole("button", { name: /^Why not available/ }));
     expect(panel.textContent).toContain("FE-011");
     expect(panel.textContent).toContain("Historical support, not a forecast");
   });
@@ -562,8 +565,8 @@ describe("Activity & Decisions", () => {
     const ribbon = await screen.findByRole("group", { name: "Events and stages" });
     expect(within(ribbon).getAllByTestId("ribbon-event").length).toBeGreaterThanOrEqual(1);
     expect(within(ribbon).getAllByTestId("ribbon-stage").length).toBeGreaterThanOrEqual(1);
-    expect(document.body.textContent).toContain("Not published (FE-031)");
-    expect(document.body.textContent).toContain("Not published (FE-021)");
+    expect(document.querySelector('[data-gap="FE-031"]')).not.toBeNull();
+    expect(document.querySelector('[data-gap="FE-021"]')).not.toBeNull();
   });
 
   it("lists the observed rows newest first, pages by keyset, and says it is not an event replay", async () => {
@@ -659,7 +662,7 @@ describe("Score drawer", () => {
     expect(search().get("sel")).toBe("score");
     const drawer = await screen.findByRole("complementary");
     expect(within(drawer).getByRole("heading", { name: "Score" })).toBeTruthy();
-    expect(within(drawer).getAllByText("Not published").length).toBeGreaterThanOrEqual(8);
+    expect(within(drawer).getAllByText("Not available").length).toBeGreaterThanOrEqual(8);
     expect(drawer.textContent).toContain("Raw economics, current");
     expect(within(drawer).getByText("+1,120.80")).toBeTruthy();
     fireEvent.click(within(drawer).getByRole("button", { name: "Close" }));

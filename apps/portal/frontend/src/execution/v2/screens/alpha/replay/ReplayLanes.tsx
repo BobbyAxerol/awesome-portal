@@ -26,6 +26,17 @@ export function ReplayLanes({ events, domain, fills = null }: ReplayLanesProps) 
   if (domain === null) return null;
   const inWindow = events.events.filter((e) => LANES.includes(e.kind) && e.t >= domain.from && e.t <= domain.to);
   const gaps = events.missing.filter((kind) => LANES.includes(kind));
+  // No stage, decision or incident event at all: one sentence, not an empty band of three lanes.
+  if (!events.events.some((e) => LANES.includes(e.kind))) {
+    return (
+      <div className="exec-alp2-lanes" data-testid="replay-lanes">
+        <p className="exec-alp2-cap" data-testid="replay-lanes-none">
+          {fills === null ? null : <span>{fills.inWindow.toLocaleString("en-US")} of {fills.loaded.toLocaleString("en-US")} fills in this window</span>}
+          <span>No stage, decision or incident event is published for this alpha up to the read's as-of time.</span>
+        </p>
+      </div>
+    );
+  }
   return (
     <div className="exec-alp2-lanes" data-testid="replay-lanes">
       <EventRibbon label="Stage, decision and incident events" events={events.events} domain={domain} kinds={LANES} />
