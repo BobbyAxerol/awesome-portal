@@ -16497,3 +16497,10 @@ source reader/trust and matching accepted original remain to be commissioned
 before ROOT/CURRENT and READ/STREAM.
 ELP2-10 remains OPEN; no UI contract was delivered.
 
+27Oct follow-through: SSH rechecked the two committed HK candidates and source
+owner's NOT_READY reader return; no protected credentials, source rows or
+runtime were changed. The exact least-privilege/source-owner action, including
+the distinction between application filters and database-enforced scope, is in
+[HK reader follow-through](execution_loop/evidence/ELP2-10/RESEARCH_READER_HK_FOLLOWTHROUGH_2026-10-27.md).
+The source reader/trust and connected acceptance are still open.
+
