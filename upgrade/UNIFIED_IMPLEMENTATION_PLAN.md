@@ -16479,3 +16479,21 @@ commission a separately authorized Research reader and current trust, observe
 the real mapping and actual original with provenance, then bind ROOT/CURRENT;
 do not infer a membership grant from the identity observation.
 
+### 27Oct — bounded membership discovery source (SOURCE_ONLY)
+
+PM candidate `0853ffe4157cdbcabff64e8e5a440967fe760f81` adds a
+default-off scoped listener and one read-only repeatable-read observation of
+identity, membership heads/revisions, matching native receipt and lineage.
+Edge candidate `68344dad9042860f561c11873096314b9a9b2f73` adds a separately
+scoped private gateway and response validation. The observed record is NOT a
+Core accepted original or an authorization. Focused PM53, isolated PostgreSQL
+and Edge22 (one ignored), clippy passed; see
+[membership discovery receipt](execution_loop/evidence/ELP2-10/RESEARCH_MEMBERSHIP_DISCOVERY_2026-10-27.md).
+Both candidates remain uninstalled and not landed in their shared worktrees.
+The Core private caller, pinned runtime and one-shot observation operator are
+committed at `0f5fe5f56` (98 focused tests and project typecheck passed); they
+remain uninstalled and full integration acceptance is pending. An authorized real
+source reader/trust and matching accepted original remain to be commissioned
+before ROOT/CURRENT and READ/STREAM.
+ELP2-10 remains OPEN; no UI contract was delivered.
+
