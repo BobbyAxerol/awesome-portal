@@ -1409,7 +1409,8 @@ function wpDrawdownPass(path: string, search: URLSearchParams, answer: ReviewMan
     for (const statement of body.capital_statements as Draft[]) apply(statement.metrics, match[1] === "fund-overview" ? "FUND" : "PORTFOLIO", match[1] === "fund-overview" ? "fund" : match[2]!, statement.partition?.currency);
   }
   let groupBy: string | null = null;
-  try { const parsed = JSON.parse(search.get("group_by") ?? "null") as unknown; groupBy = Array.isArray(parsed) && parsed.length === 1 ? String(parsed[0]) : null; } catch { groupBy = null; }
+  const fields = search.get("group_by")?.split(",") ?? [];
+  groupBy = fields.length === 1 ? fields[0]! : null;
   if (Array.isArray(body.groups) && (groupBy === "portfolio_id" || groupBy === "alpha_id") && body.groups.length <= 60) {
     for (const group of body.groups as Draft[]) {
       const id = group.key?.[0]?.value;

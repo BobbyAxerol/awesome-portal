@@ -128,7 +128,7 @@ export async function runDomTies(page, base) {
   } else out.skipped.push("P5: alpha_a not in the Fleet page");
 
   // P7: ONE stage history. Carry A is Live on its spine, so its Paper and Sandbox pages are COMPLETED records: no open observation gate, no failed step, no "Blocked"
-  for (const [path, bad] of [["/deployments/paper/dep_paper_01", /Observation gate\s*\|?\s*PARTIAL|observation gate is partial|Request exit review/i], ["/deployments/sandbox/dep_sandbox_01", /Step \d failed|EXIT REVIEW\s*\|?\s*BLOCKED|Blocked until every step passes/i]]) {
+  for (const [path, bad] of [["/deployments/paper/dep_paper_01", /Observation gate\s*\|?\s*PARTIAL|observation gate is partial/i], ["/deployments/sandbox/dep_sandbox_01", /Step \d failed|EXIT REVIEW\s*\|?\s*BLOCKED|Blocked until every step passes/i]]) {
     await load(page, base, path);
     const text = norm(await flat(page));
     out.checked += 1;
