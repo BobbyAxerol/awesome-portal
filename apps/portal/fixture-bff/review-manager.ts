@@ -275,7 +275,10 @@ function qbtsMetric(template: Draft, value: string | null, unit: string, reason:
   }
   return out;
 }
-function addQbts(m: Draft, template: Draft, rowKey: string, components: boolean): void {
+/** WORLD: in the positive world an alpha has ONE score (its 30D QBTS), whichever portfolio row, Overview contributor, Alpha 360 header or Compare column prints it: the seed is the alpha id. */
+const alphaKeyOf = (rowKey: string): string => { try { const parsed = JSON.parse(rowKey) as unknown; return Array.isArray(parsed) && typeof parsed[0] === "string" ? parsed[0] : rowKey; } catch { return rowKey; } };
+function addQbts(m: Draft, template: Draft, rowKeyAsked: string, components: boolean): void {
+  const rowKey = legacy() ? rowKeyAsked : alphaKeyOf(rowKeyAsked);
   const seed = seedOf(rowKey, "qbts");
   // WP-P: the positive world has no insufficient-evidence, zero or provisional score (buckets 0..3 are the legacy variety).
   const bucket = legacy() ? seed % 10 : 4 + seed % 6;
@@ -843,6 +846,12 @@ function portfolioScoreMetrics(template: Draft, id: string, partition: Draft, wi
 }
 /** The raw alpha score q_i under the key `score` of each group by alpha_id: same rule, never summed across alphas. */
 function alphaScoreMetric(template: Draft, id: string, partition: Draft, windowName: string, window: Draft | null): Draft {
+  if (!legacy() && windowName !== "ALL") {
+    // WORLD: the alpha's one score, the very QBTS the Fleet rows and the Alpha 360 header state
+    const one: Draft = {};
+    addQbts(one, template, JSON.stringify([id]), true);
+    if (one.score !== undefined) return { ...one.score, window };
+  }
   const kind = scoreCaseOf(id, partition.economic_domain);
   const gap = windowName === "ALL";
   const absent = gap || kind === "insufficient";

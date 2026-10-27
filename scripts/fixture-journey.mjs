@@ -90,6 +90,31 @@ const { chromium } = await import(pathToFileURL(join(FE, "node_modules/playwrigh
 
 /** Runs in the page: typed-absence cells (leaf elements whose own text is a typed absence) + overflow. */
 function inPage() {
+  /** WP-P round 4 DOM GUARDS, computed on the rendered text of one screen (runs in the page, so it is self-contained). */
+  function guardsInPage(text) {
+    const flat = text.replace(/\s+/g, " ");
+    // 1. internal requirement / ticket ids leaking into the product text
+    const jargon = [...new Set(flat.match(/\bFE-\d{2,3}\b|BR-EX-[A-Za-z0-9-]*|A360-[A-Za-z0-9-]+|ELP2-REQ-[A-Za-z0-9-]+/g) ?? [])];
+    // 2. read stamps ("Queue read 23 Oct 21:24Z", "Read 12:04Z"): every one is returned for the walker to compare with the world clock
+    const stamps = [...flat.matchAll(/\b(?:Queue read|Read)\s+((?:\d{1,2} [A-Z][a-z]{2}\s+)?\d{2}:\d{2}Z)/g)].map((m) => m[1]);
+    // 3. instants later than the page's own stated as-of (same-day clock times only; a dated time is compared by the walker through its date)
+    const asOf = /\bas of\s+((?:\d{1,2} [A-Z][a-z]{2}\s+)?(\d{2}):(\d{2})Z)/i.exec(flat);
+    const later = [];
+    if (asOf) {
+      const limit = Number(asOf[2]) * 60 + Number(asOf[3]);
+      for (const m of flat.matchAll(/(?<![\w:])(\d{2}):(\d{2})Z\b/g)) {
+        const at = Number(m[1]) * 60 + Number(m[2]);
+        const before = flat.slice(Math.max(0, m.index - 12), m.index);
+        if (at > limit && !/\d{1,2} [A-Z][a-z]{2}\s*$/.test(before) && !/(next|due|expires?|until|opens?|review|scheduled|window|to|-|–)\s*$/i.test(before)) later.push(m[0]);
+      }
+    }
+    // 4. one entity spelled two ways on one page
+    const idPairs = [["dep_b3", "dep_canary_01"], ["acct_canary_grid", "acc_tn_bnc"]];
+    const dual = idPairs.filter(([a, b]) => new RegExp(`\\b${a}\\b`).test(flat) && new RegExp(`\\b${b}\\b`).test(flat)).map(([a, b]) => `${a}+${b}`);
+    // 5. dead-end states
+    const dead = (flat.match(/not present in the projected resource population|ACCOUNT_NOT_FOUND|0 of \d+ rows match|All "Not available"/gi) ?? []).slice(0, 3);
+    return { jargon, stamps, asOfText: asOf ? asOf[1] : null, laterThanAsOf: [...new Set(later)].slice(0, 6), dualIds: dual, deadEnd: dead };
+  }
   const ABSENCE = /^(Not published|Not available|Unavailable|Not reported|Not applied|Not in source|Not read|Not configured|No source|Source not published)\b/i;
   const root = document.querySelector("main") ?? document.body;
   const texts = [];
@@ -113,8 +138,10 @@ function inPage() {
     // text that says a link target does not exist, a scoped list is empty by construction, or a value was never filled in
     badText: [...new Set((root.innerText.match(/ACCOUNT_NOT_FOUND|not in the projected population|No loaded order matches|\bundefined\b|\bNaN\b|\[object Object\]|PORTFOLIO_NOT_FOUND|ALPHA_NOT_FOUND|DEPLOYMENT_NOT_FOUND|EXECUTION_READ_NOT_AVAILABLE/g)) ?? [])],
     textLength: root.innerText.length,
+    ...guardsInPage(root.innerText),
   };
 }
+
 
 /** Degradation markers inside one JSON body: where a value says PARTIAL, STALE, UNAVAILABLE, NOT_CONFIGURED, DENIED ... */
 const DEGRADED_VALUES = new Set(["PARTIAL", "STALE", "UNAVAILABLE", "NOT_CONFIGURED", "DEGRADED", "DENIED", "MISSING", "FAILED", "ERROR", "UNKNOWN", "INCOMPLETE", "UNVERIFIED", "NOT_QUALIFIED", "BLOCKED"]);
@@ -261,7 +288,27 @@ async function findAndFollow(page, step) {
   return { found: true, href: hit.href, via };
 }
 
+/** WP-P round 4: counts per guard class, offenders listed by screen. */
+const GUARD = { jargon: new Map(), stamps: new Map(), later: new Map(), dual: new Map(), dead: new Map() };
+let worldClockIso = null;
+function noteGuards(where, g, problems) {
+  if (!g) return;
+  const put = (map, list) => { if (list?.length) map.set(where, [...(map.get(where) ?? []), ...list]); };
+  put(GUARD.jargon, g.jargon);
+  put(GUARD.later, g.laterThanAsOf);
+  put(GUARD.dual, g.dualIds);
+  put(GUARD.dead, g.deadEnd);
+  if (g.stamps?.length && worldClockIso) {
+    const world = new Date(worldClockIso);
+    const hhmm = `${String(world.getUTCHours()).padStart(2, "0")}:${String(world.getUTCMinutes()).padStart(2, "0")}Z`;
+    const day = `${world.getUTCDate()} ${world.toLocaleString("en-GB", { month: "short", timeZone: "UTC" })}`;
+    put(GUARD.stamps, g.stamps.filter((st) => !st.endsWith(hhmm) || (/^\d/.test(st) && !st.startsWith(day))));
+  }
+}
+
 async function walk(browser, scenario) {
+  for (const map of Object.values(GUARD)) map.clear();
+  try { worldClockIso = (await (await fetch(base + "/api/v1/execution/portfolios")).json()).read_at ?? null; } catch { worldClockIso = null; }
   const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 } });
   const page = await ctx.newPage();
   const tracker = newTracker(page, scenario === "denied");
@@ -279,6 +326,7 @@ async function walk(browser, scenario) {
     const unexpected = bad.filter((r) => !(scenario === "denied" && r.status === 403));
     const rec = { id, url: stripOrigin(page.url()), ...extra, screen: m.screen, heading: m.heading, absences: m.absences, absenceTexts: m.absenceTexts,
       overflow1280: m.overflow1280, overflow660: m.overflow660, notFound: m.notFound, badText: m.badText,
+      guards: { jargon: m.jargon, stamps: m.stamps, laterThanAsOf: m.laterThanAsOf, dualIds: m.dualIds, deadEnd: m.deadEnd },
       apiBad: unexpected.map((r) => `${r.status} ${r.method} ${r.path}`), apiDenied: bad.length - unexpected.length,
       consoleErrors: d.consoleErrors, pageErrors: d.pageErrors,
       future: d.future.slice(0, 6),
@@ -298,6 +346,7 @@ async function walk(browser, scenario) {
     if (!res.found) { problems.push(`${step.id}: NO_LINK_FOUND (after ${previous})`); screens.push({ id: step.id, missing: true }); continue; }
     const rec = await record(step.id, res.href, { via: res.via, from: previous });
     if (rec.badText?.length) problems.push(`${step.id}: page text says ${rec.badText.join(", ")}`);
+    noteGuards(step.id, rec.guards, problems);
     // the back-link: history back must land on a rendering screen (the page we came from when we clicked on it)
     if (res.via === "page" && !res.href.startsWith("(tab")) {
       await page.goBack({ waitUntil: "domcontentloaded" }).catch(() => {});
@@ -331,10 +380,12 @@ async function walk(browser, scenario) {
     let r = await visit(href);
     // a lazy chunk aborted by the previous navigation is a harness race, not a broken link: look again once
     if (!r.ok && r.bad.length === 0 && /dynamically imported|preload CSS/.test(r.firstError ?? "")) r = await visit(href);
+    noteGuards(`sweep ${href}`, { jargon: r.m.jargon, stamps: r.m.stamps, laterThanAsOf: r.m.laterThanAsOf, dualIds: r.m.dualIds, deadEnd: r.m.deadEnd }, problems);
     sweep.push({ href, from: seenHrefs.get(href), ok: r.ok && r.m.badText.length === 0, badText: r.m.badText, bad: r.bad.map((x) => `${x.status} ${x.path}`).slice(0, 3), notFound: r.m.notFound, errors: r.d.consoleErrors.length + r.d.pageErrors.length, firstError: r.firstError });
   }
   await ctx.close();
-  return { scenario, screens, problems, sweep, sweepTotal: detail.length };
+  const guards = Object.fromEntries(Object.entries(GUARD).map(([k, map]) => [k, { offences: [...map.values()].reduce((n, l) => n + l.length, 0), screens: Object.fromEntries([...map.entries()].map(([w, l]) => [w, [...new Set(l)].slice(0, 4)])) }]));
+  return { scenario, screens, problems, sweep, sweepTotal: detail.length, guards, worldClockIso };
 }
 
 const browser = await chromium.launch();
@@ -378,6 +429,19 @@ for (const r of results) {
     console.log(`| ${s.id} | ${s.url.slice(0, 60)} | ${s.absences} | ${s.overflow1280} | ${s.overflow660} | ${s.apiBad.length ? s.apiBad.slice(0, 2).join("; ") : "0"}${s.apiDenied ? ` (+${s.apiDenied} denied)` : ""} | ${s.consoleErrors.length + s.pageErrors.length} | ${s.backLink ?? ""} | ${s.future.length} | ${s.degraded.length} |`);
   }
   console.log(`total absences: ${r.screens.reduce((n, s) => n + (s.absences ?? 0), 0)}; problems: ${r.problems.length ? r.problems.join("; ") : "none"}`);
+  console.log(`DOM GUARDS (world clock ${r.worldClockIso}): ` + Object.entries(r.guards ?? {}).map(([k, v]) => `${k}=${v.offences}`).join(", "));
+  // offenders listed by SCREEN: a swept detail route is folded to its pattern (ids -> :id, query dropped) with the number of pages that offend
+  for (const [k, v] of Object.entries(r.guards ?? {})) {
+    const byScreen = new Map();
+    for (const [w, l] of Object.entries(v.screens)) {
+      const name = w.startsWith("sweep ") ? "sweep " + w.slice(6).split("?")[0].replace(/\/(alphas|portfolios|accounts|paper|sandbox|live|incidents|approvals)\/[^/]+/, "/$1/:id").replace(/\/(r\d)$/, "/:review") : w;
+      const entry = byScreen.get(name) ?? { pages: 0, hits: new Set() };
+      entry.pages += 1;
+      for (const hit of l) entry.hits.add(hit);
+      byScreen.set(name, entry);
+    }
+    for (const [name, e] of byScreen) console.log(`  guard ${k} @ ${name} (${e.pages} page${e.pages === 1 ? "" : "s"}): ${[...e.hits].slice(0, 6).join(" | ")}`);
+  }
   const failed = r.sweep.filter((x) => !x.ok);
   console.log(`link sweep: ${r.sweep.length}/${r.sweepTotal} detail links followed, ${failed.length} failed${failed.length ? ": " + failed.slice(0, 12).map((x) => `${x.href} [${x.bad.join(",") || (x.badText?.length ? "text: " + x.badText.join("|") : x.notFound ? "not-found text" : "no render")}${x.firstError ? " err: " + x.firstError.slice(0, 100) : ""}] from ${x.from}`).join("; ") : ""}`);
 }
