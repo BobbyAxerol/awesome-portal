@@ -236,6 +236,41 @@ describe.skipIf(!DATABASE_URL)("ELP2-04 mounted history read authorization, TEST
     expect(third.json().page).toMatchObject({ has_more: false, next_cursor: null });
   });
 
+  it("paginates a larger authorized history exactly and rejects a continuation after revocation", async () => {
+    const f = await fixture();
+    // One SQL insert into the disposable Execution database; the source and
+    // authority in this test remain explicitly TEST_ONLY.
+    await domain.query(`INSERT INTO execution_timeseries_history
+      (workspace_id,environment,profile_id,relation_key,row_id,ts,fields)
+      SELECT $1,'paper',$2,$3,'bulk-' || n,
+        '2026-10-01T00:00:00Z'::timestamptz + n * interval '1 minute',
+        $4::jsonb || jsonb_build_object('equity', n::text, 'currency', 'USDT')
+      FROM generate_series(1,2500) AS n`, [f.workspace, PROFILE, KEY, JSON.stringify(OWN)]);
+
+    const seen: string[] = [], cursors = new Set<string>();
+    let cursor: string | null = null, firstCursor: string | null = null, pages = 0;
+    do {
+      const response = await f.get({ limit: 500, ...(cursor ? { cursor } : {}) });
+      expect(response.statusCode, response.body).toBe(200);
+      expect(Buffer.byteLength(response.body, "utf8")).toBeLessThanOrEqual(1024 * 1024);
+      const body = response.json();
+      expect(body.coverage.row_count).toBe(2503);
+      seen.push(...body.items.map((item: { equity: string }) => item.equity));
+      cursor = body.page.next_cursor;
+      if (!firstCursor) firstCursor = cursor;
+      if (cursor) { expect(cursors.has(cursor)).toBe(false); cursors.add(cursor); }
+      pages++;
+      expect(pages).toBeLessThanOrEqual(6);
+    } while (cursor);
+    expect(pages).toBe(6);
+    expect(seen).toEqual([EQUITY, "102", "103", ...Array.from({ length: 2500 }, (_, i) => String(i + 1))]);
+
+    await new AccessRepository(core).saveGrant({ ...f.ownGrant!, revoked_at_ms: Date.now(), revision: next("revoked") });
+    const denied = await f.get({ limit: 500, cursor: firstCursor! });
+    expect([403, 404, 409]).toContain(denied.statusCode);
+    expect(denied.json()).not.toHaveProperty("items");
+  }, 60_000);
+
   it("T04-03 the trusted publication binds the selected history and exact requested UTC window", async () => {
     const f = await fixture();
     const response = await f.get({ from: OWN_TIMES[1], to: OWN_TIMES[2], limit: 20 });
