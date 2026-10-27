@@ -82,7 +82,7 @@ describe("BUSY", () => {
     expect(nav?.textContent).toBe(MONEY_GAP);
     expect((nav?.textContent ?? "").replace(/\(FE-[\d/]+\)/, "")).not.toMatch(/\d/);
     // The visible word is "Not published"; the ids are in its title and in hidden text.
-    expect(whyText(nav?.querySelector(".exec-blk-np") ?? null)).toContain("FE-005/006/013/025");
+    expect(nav?.querySelector("[data-gap]")?.getAttribute("data-gap")).toBe("FE-005/006/013/025");
     const ids: Record<string, string> = { "Net PnL": "FE-005, FE-025", Return: "FE-006, FE-025", Drawdown: "FE-013, FE-025" };
     for (const [label, _id] of Object.entries(ids)) {
       const tile = kpi(label);

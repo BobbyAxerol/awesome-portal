@@ -420,7 +420,7 @@ describe("the four answers of a capital status are never merged", () => {
     const naButNp = { ...rejectedBusinessStatus(), venue_fill: { state: "NOT_PUBLISHED", reason: "SOURCE_RESULT_HAS_NO_FILL_QUANTITIES", quantities: null } };
     const [rejection, fill] = abs(naButNp);
     expect(fill).toMatchObject({ field: "fill", state: "NOT_PUBLISHED", text: "Fill: not published" });
-    expect(fill!.title).toMatch(/FE-032/);
+    expect(fill!.title).toMatch(/Not published: receipt state and amounts/);
     expect(rejection).toMatchObject({ field: "rejection", state: "NOT_PUBLISHED", text: "Reason: not published" });
     // The not-applicable and not-published lines never share words.
     expect(new Set([abs(pendingButNa)[1]!.text, fill!.text]).size).toBe(2);

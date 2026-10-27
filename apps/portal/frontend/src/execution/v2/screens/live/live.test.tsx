@@ -341,7 +341,7 @@ describe("V1 body, gap", () => {
     const slot = screen.getByRole("alert", { name: "Live net PnL" });
     expect(slot.textContent).toContain("Updates are missing. Chart hidden until the gap is filled.");
     expect(slot.textContent).toContain("Gap window Not available");
-    expect(whyText(slot.querySelector("[data-gap]")!)).toContain("Not published: typed stage rows, series and reconciliation figures");
+    expect(whyText(slot.querySelector("[data-gap]")!)).toContain("Not published: Gap window · typed stage rows, series and reconciliation figures");
     expect(within(slot).getByRole("link", { name: "Open operations for this deployment" }).getAttribute("href")).toBe(`/execution/operations?target_id=${DEPLOYMENT_ID}`);
     expect(screen.getByText("A gap blocks risk-increasing actions. Protective actions stay open.")).toBeTruthy();
   });
@@ -352,7 +352,7 @@ describe("V1 body, gap", () => {
     const table = screen.getByRole("table", { name: "Display continuity" });
     expect(table.textContent).toContain("Gap in updates");
     expect(within(table).getAllByText("Gap window")[0]!.closest("tr")!.textContent).toContain("Not available");
-    expect(whyText(within(table).getAllByText("Gap window")[0]!.closest("tr")!.querySelector("[data-gap]")!)).toContain("Not published: typed stage rows, series and reconciliation figures");
+    expect(whyText(within(table).getAllByText("Gap window")[0]!.closest("tr")!.querySelector("[data-gap]")!)).toContain("Not published: Gap window · typed stage rows, series and reconciliation figures");
     expect(within(table).getByText("Broker")).toBeTruthy();
     expect(within(table).getByText("Derived")).toBeTruthy();
     expect(screen.getByRole("region", { name: "Display continuity" }).querySelector("details")!.textContent).toContain("Epoch 41 · sequence 88240");

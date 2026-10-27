@@ -101,8 +101,8 @@ describe("roster", () => {
     const dock = await screen.findByRole("complementary");
     expect(dock.textContent).not.toContain("Not available");
     const why = whyText(note.querySelector(".exec-blk-nal"));
-    expect(why).toContain("FE-015, FE-026, FE-037, FE-038");
-    expect(why).toContain("FE-053");
+    expect(why).not.toMatch(/FE-\d/);
+    expect(note.querySelector(".exec-blk-nal")!.getAttribute("data-gap") ?? note.querySelector("[data-gap]")?.getAttribute("data-gap") ?? "").toMatch(/FE-/);
   });
 
   it("keeps Role preset and Last seen as typed absences with their FE ids, and every row's action off with a reason", async () => {
@@ -113,10 +113,12 @@ describe("roster", () => {
       const preset = row.querySelector("td[data-l='Role preset']")!;
       expect(preset.textContent).toContain("Not available");
       expect(preset.querySelector("[data-gap='FE-015']")).not.toBeNull();
-      expect(whyText(preset.querySelector(".exec-blk-why"))).toContain("FE-015, FE-026, FE-037, FE-038");
+      expect(whyText(preset.querySelector(".exec-blk-why"))).toContain("Not published: Role preset");
+      expect(whyText(preset.querySelector(".exec-blk-why"))).not.toMatch(/FE-\d/);
       const seen = row.querySelector("td[data-l='Last seen (UTC)']")!;
       expect(seen.textContent).toContain("Not available");
-      expect(whyText(seen.querySelector(".exec-blk-why"))).toContain("FE-053");
+      expect(whyText(seen.querySelector(".exec-blk-why"))).toContain("Not published: Last sign-in");
+      expect(whyText(seen.querySelector(".exec-blk-why"))).not.toMatch(/FE-\d/);
       const action = row.querySelector("td[data-l='Actions']")!;
       const button = action.querySelector("button[disabled]") as HTMLButtonElement | null;
       if (button) expect(["Enable", "Disable"]).toContain(button.textContent);

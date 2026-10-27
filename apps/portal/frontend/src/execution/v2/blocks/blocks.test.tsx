@@ -54,6 +54,9 @@ const at = (ms: number): UtcEpochMs => {
 };
 const DASHES = /[—–]|\bN\/A\b|\bNaN\b/;
 
+/** A request's label in running words, as the gap titles print it (first letter lower-case unless an acronym). */
+const words = (label: string): string => (/^[A-Z][a-z]/.test(label) ? label.charAt(0).toLowerCase() + label.slice(1) : label);
+
 describe("NotPublished and the one FE table", () => {
   it("prints the word, the id and the label", () => {
     render(<NotPublished id="FE-021" reasonCode="AUDIT_UNQUALIFIED">Who did what</NotPublished>);
@@ -99,7 +102,7 @@ describe("CompactGaps and GapLine (stage screens)", () => {
     expect(inside.container.textContent).toBe("Not available");
     const gap = inside.container.querySelector("[data-gap]")!;
     expect(gap.getAttribute("title")).toBeNull();
-    expect(whyText(gap)).toBe(`Not published: Used ratio · ${FE_REQUEST_LABEL["FE-071"]} · SOME_CODE`);
+    expect(whyText(gap)).toBe(`Not published: Used ratio · ${words(FE_REQUEST_LABEL["FE-071"])} · SOME_CODE`);
   });
 
   it("GapLine is one line of the missing facts with every id and reason in its disclosure, and nothing for an empty list", () => {
@@ -110,7 +113,7 @@ describe("CompactGaps and GapLine (stage screens)", () => {
     expect(line.textContent).toBe("Not available: Limit, Latency · Source unavailable");
     expect(line.getAttribute("title")).toBeNull();
     const title = whyText(line);
-    expect(title).toContain(`Limit: Not published: ${FE_REQUEST_LABEL["FE-071"]}`);
+    expect(title).toContain(`Limit: Not published: ${words(FE_REQUEST_LABEL["FE-071"])}`);
     expect(title).toContain("Latency: Not published · CODE_X");
     cleanup();
     expect(render(<GapLine items={[]} />).container.textContent).toBe("");
@@ -138,7 +141,7 @@ describe("GapWhy · the reason is reachable by keyboard and touch, not only by h
     fireEvent.click(button);
     expect(button.getAttribute("aria-expanded")).toBe("true");
     const body = document.getElementById(button.getAttribute("aria-controls")!)!;
-    expect(body.textContent).toContain(`Limit: Not published: ${FE_REQUEST_LABEL["FE-071"]} · CODE_X`);
+    expect(body.textContent).toContain(`Limit: Not published: ${words(FE_REQUEST_LABEL["FE-071"])} · CODE_X`);
     expect(body.textContent).toContain(GAP_NEXT);
     fireEvent.click(button);
     expect(button.getAttribute("aria-expanded")).toBe("false");
@@ -780,7 +783,7 @@ describe("NaWhy and NotAvailableLine · the reason is in the DOM behind a button
     expect(line.textContent).toContain("Not available: Fees, Funding");
     expect(line.textContent).not.toContain("WINDOW_NOT_OFFERED");
     const text = whyText(line);
-    expect(text).toContain(`Fees: Not published: ${FE_REQUEST_LABEL["FE-025"]} · WINDOW_NOT_OFFERED`);
+    expect(text).toContain(`Fees: Not published: ${words(FE_REQUEST_LABEL["FE-025"])} · WINDOW_NOT_OFFERED`);
     expect(text).toContain("Funding: Counted separately");
   });
 });

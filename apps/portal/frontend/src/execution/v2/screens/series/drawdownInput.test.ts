@@ -19,9 +19,9 @@ const ready = (variant: "populated" | "empty" | "unavailable"): SeriesReadState 
 
 describe("drawdownInputOf", () => {
   it("not asked (undefined or idle) keeps the typed pane and names the request ids", () => {
-    expect(drawdownInputOf(undefined)).toEqual({ ...DRAWDOWN_NOT_ASKED, copy: "Not published" });
-    expect(drawdownInputOf({ phase: "idle" })).toEqual({ ...DRAWDOWN_NOT_ASKED, copy: "Not published" });
-    expect(DRAWDOWN_NOT_ASKED).toMatchObject({ kind: "absent", copy: "Not published" });
+    expect(drawdownInputOf(undefined)).toEqual(DRAWDOWN_NOT_ASKED);
+    expect(drawdownInputOf({ phase: "idle" })).toEqual(DRAWDOWN_NOT_ASKED);
+    expect(DRAWDOWN_NOT_ASKED).toMatchObject({ kind: "absent", copy: "Not published: NAV and drawdown" });
   });
 
   it("a published series is drawn, as the server's points moved to percent (FRACTION), a true zero first", () => {

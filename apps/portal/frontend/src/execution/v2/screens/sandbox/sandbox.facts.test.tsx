@@ -100,7 +100,7 @@ describe("chips and identity", () => {
     // The name is not announced a second time: the id stands alone and the request and reason are in its disclosure.
     expect(sub.textContent).not.toContain("Alpha name");
     expect(whyText(sub.querySelector(".exec-blk-why"))).toContain("ALPHA_NAME_NOT_PUBLISHED");
-    expect(whyText(sub.querySelector(".exec-blk-why"))).toContain("FE-066");
+    expect(whyText(sub.querySelector(".exec-blk-why"))).toContain("alpha and portfolio names on a deployment");
     expect(chip("runtime").textContent).toContain("Running");
   });
 

@@ -125,7 +125,7 @@ describe("Overview", () => {
     const line = screen.getByTestId("not-available-line");
     expect(line.textContent).toContain("Not available: Funding source, Stage, decision, incident and recall lanes, Score");
     const title = whyText(line);
-    for (const id of ["FE-032", "FE-031", "FE-011"]) expect(title, id).toContain(`Not published (${id})`);
+    for (const label of ["receipt state and amounts", "event feed", "score"]) expect(title, label).toContain(`Not published: ${label}`);
   });
 
   it("draws the retained equity series with its gap, its envelope, a retained-snapshot pill and no drawdown", async () => {

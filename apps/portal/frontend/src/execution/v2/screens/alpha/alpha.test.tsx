@@ -415,7 +415,8 @@ describe("Evidence, Regime, Reconciliation", () => {
     // The run binding and its five siblings are ONE "Not available" line; the name and version gap is the header's.
     expect(within(panel).getByTestId("not-available-line").textContent).toContain("Not available: Bound research run, Parameters, Parameter bundle, Evidence, Provenance, Artifact available");
     fireEvent.click(within(panel).getByRole("button", { name: /^Why not available/ }));
-    expect(panel.textContent).toContain("FE-029");
+    expect(panel.querySelector('[data-gap~="FE-029"]')).not.toBeNull();
+    expect(panel.textContent).not.toMatch(/FE-029/);
     expect(panel.textContent).not.toMatch(/Unnamed alpha|UNVERSIONED/);
     expect(await within(panel).findByText("RESEARCH_RUN_NOT_BOUND")).toBeTruthy();
   });
@@ -427,7 +428,8 @@ describe("Evidence, Regime, Reconciliation", () => {
     expect(within(panel).getByTestId("not-available-line").textContent).toContain("Not available: Volatility, Trend, Liquidity, Outcome by stage");
     expect(within(panel).queryAllByText("Not published")).toHaveLength(0);
     fireEvent.click(within(panel).getByRole("button", { name: /^Why not available/ }));
-    expect(panel.textContent).toContain("FE-011");
+    expect(panel.querySelector('[data-gap~="FE-011"]')).not.toBeNull();
+    expect(panel.textContent).not.toMatch(/FE-011/);
     expect(panel.textContent).toContain("Historical support, not a forecast");
   });
 

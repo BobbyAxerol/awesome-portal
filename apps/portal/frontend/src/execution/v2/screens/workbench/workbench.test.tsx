@@ -87,7 +87,7 @@ describe("screen contract", () => {
     // No identity keys in this profile: the alpha is `Alpha Not available` (FE-066 in the title), no alpha id is shown, and the strategy id is NOT linked as an alpha.
     expect(text()).toContain("Alpha Not available");
     expect(text()).not.toContain("(FE-066)");
-    expect(whyText(document.querySelector('.exec-wb-sub [data-gap="FE-066"]')!)).toContain("Not published: alpha and portfolio names on a deployment");
+    expect(whyText(document.querySelector('.exec-wb-sub [data-gap="FE-066"]')!)).toContain("Not published: Alpha name · alpha and portfolio names on a deployment");
     expect(screen.queryByRole("link", { name: STRATEGY })).toBeNull();
     expect(screen.queryByRole("link", { name: "← Alpha" })).toBeNull();
     // The design's one-line question is the page's purpose, a fixed sentence (WP-F3): it states no fact about this deployment.
@@ -108,7 +108,7 @@ describe("screen contract", () => {
     expect(text()).not.toContain("ALPHA_NAME_NOT_PUBLISHED");
     const why = whyText(gap);
     expect(why).toContain("ALPHA_NAME_NOT_PUBLISHED");
-    expect(why).toContain("FE-066");
+    expect(why).toContain("alpha and portfolio names on a deployment");
   });
 
   it("identity keys that break the schema's rules (a name without its id; some of the five missing) are refused whole: no link, no name", async () => {
@@ -336,7 +336,7 @@ describe("Overview", () => {
     // One line for the three unpublished facts; each request id is in its title.
     const gaps = screen.getByRole("heading", { name: "Equity vs approved band" }).closest("section")!.querySelector(".exec-blk-gaps")!;
     expect(gaps.textContent).toBe("Not available: Drawdown, Approved band, Window");
-    for (const id of ["FE-013", "FE-029", "FE-025"]) expect(whyText(gaps)).toContain(`Not published (${id})`);
+    for (const label of ["NAV and drawdown", "evidence, baseline and run linkage", "window"]) expect(whyText(gaps)).toContain(`Not published: ${label}`);
     expect(text()).not.toContain("snapshots published");
   });
 

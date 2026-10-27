@@ -475,10 +475,12 @@ describe("Operations health tiles (design: Unknown outcomes, Pending receipts, D
     expect(cell("Unknown outcomes").querySelector(".exec-blk-kpi-value")?.textContent).toBe("1");
     expect(cell("Unknown outcomes").textContent).toContain("Verification uncertain");
     expect(cell("Pending receipts").textContent).toContain("Not published");
-    expect(cell("Pending receipts").textContent).toContain("FE-032");
+    expect(cell("Pending receipts").textContent).toContain("receipt state and amounts");
+    expect(cell("Pending receipts").textContent).not.toContain("FE-032");
     expect(cell("Display catching up").textContent).toContain("Not available");
     expect(cell("Display catching up").textContent).toContain("publishes no projection display state");
-    expect(cell("Open exceptions").textContent).toContain("FE-031");
+    expect(cell("Open exceptions").textContent).toContain("event feed");
+    expect(cell("Open exceptions").textContent).not.toContain("FE-031");
     expect(health().textContent).not.toMatch(/[—–]|N\/A/);
   });
 
@@ -499,7 +501,8 @@ describe("Operations health tiles (design: Unknown outcomes, Pending receipts, D
     await table();
     const unknown = cell("Unknown outcomes");
     expect(unknown.textContent).toContain("Not available");
-    expect(unknown.textContent).toContain("FE-043");
+    expect(unknown.textContent).toContain("status counts");
+    expect(unknown.textContent).not.toContain("FE-043");
     expect(unknown.querySelector(".exec-blk-kpi-value")?.textContent).not.toMatch(/^\d/);
   });
 });

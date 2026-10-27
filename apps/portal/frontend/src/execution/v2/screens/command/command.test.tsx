@@ -144,7 +144,7 @@ describe("the plan", () => {
     const plan = screen.getByLabelText(/^Plan: /);
     expect(within(plan).getByText("COMMAND_RELAY_DISABLED")).toBeTruthy();
     expect(within(plan).getByText(/command relay is off/)).toBeTruthy();
-    expect(within(plan).getByText(/Not published: command preview (the Preview only intent axis)/)).toBeTruthy();
+    expect(within(plan).getByText(/Not published: command preview/)).toBeTruthy();
     expect(within(plan).getByText(/none is computed on this page/)).toBeTruthy();
     expect(within(plan).getByText("sha256:2222222222222222222222222222222222222222222222222222222222222222")).toBeTruthy();
     expect(within(plan).getByText(/No request to the Trading System was made by this plan/)).toBeTruthy();
@@ -159,7 +159,7 @@ describe("the plan", () => {
     expect(within(plan).getByText("9007199254740993")).toBeTruthy();
     expect(within(plan).getByText("CAPITAL")).toBeTruthy();
     expect(within(plan).getByText("TEST_ONLY:policy1")).toBeTruthy();
-    expect(within(plan).getByText(/Not published: command preview (the Preview only intent axis)/)).toBeTruthy();
+    expect(within(plan).getByText(/Not published: command preview/)).toBeTruthy();
   });
 
   it("a replayed plan says the server already knew the key", async () => {
@@ -987,7 +987,7 @@ describe("operations that are not sendable", () => {
     // The row says "Needs COMMAND_R2"; the staged-activation sentence and the provisional grant name (FE-037) are its title.
     const need = row.querySelector("[data-capability]")!;
     expect(need.textContent).toBe("Needs COMMAND_R2");
-    expect(need.getAttribute("title")).toMatch(/Portal grant name: not published, provisional \(FE-037\)/);
+    expect(need.getAttribute("title")).toMatch(/Portal grant name: not published, provisional\./);
     expect(within(row).getByText("R2 · sandbox")).toBeTruthy();
   });
 

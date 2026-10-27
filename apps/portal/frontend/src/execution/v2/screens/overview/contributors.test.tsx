@@ -224,6 +224,7 @@ describe("Since your last visit", () => {
     expect(why).toContain("persisted, user-scoped baseline");
     expect(why).toContain("current source facts");
     expect(why).toContain("fixture dates");
-    expect(why).toContain("FE-024");
+    expect(why).toContain("since your last visit");
+    expect(why).not.toContain("FE-024");
   });
 });

@@ -124,10 +124,10 @@ describe("StageHeader · the three chips", () => {
     expect(gaps.textContent).not.toContain("(FE-");
     expect(gaps.getAttribute("title")).toBeNull();
     const title = whyText(gaps);
-    expect(title).toContain("Runtime: Not published: Runtime state (Paper, Sandbox, Canary, Live), reconciliation and sessions");
+    expect(title).toContain("Runtime: Not published: runtime state (Paper, Sandbox, Canary, Live), reconciliation and sessions");
     expect(title).toContain("Source flag: active");
-    expect(title).toContain("Display freshness: Not published: Stage lifecycle");
-    expect(title).toContain("Reconciliation: Not published: Runtime state (Paper, Sandbox, Canary, Live), reconciliation and sessions");
+    expect(title).toContain("Display freshness: Not published: stage lifecycle");
+    expect(title).toContain("Reconciliation: Not published: runtime state (Paper, Sandbox, Canary, Live), reconciliation and sessions");
     expect(container.querySelector(".exec-flag")).toBeNull();
     expect(container.textContent).not.toMatch(/Running|Reconciling/);
     for (const id of ["FE-027", "FE-067"] as const) expect(FE_REQUEST_LABEL[id]).toBeTruthy();

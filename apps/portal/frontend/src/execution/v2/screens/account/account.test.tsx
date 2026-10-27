@@ -937,7 +937,7 @@ describe("Account 360: tabs", () => {
     expect(cell(rows[1]!, "Unrealized PnL")).toContain("120.50");
     const gap = within(panel).getByTestId("not-available-line");
     expect(gap.textContent).toContain("Not available: Long, short and gross notional");
-    expect(whyText(gap)).toContain("A360-1");
+    expect(whyText(gap)).not.toContain("A360-1");
     fireEvent.click(within(panel).getByRole("button", { name: "Whole account" }));
     const sleeves = panel.querySelector(".exec-acct-pad .exec-acct-na")!;
     expect(sleeves.textContent).toBe("Not available");

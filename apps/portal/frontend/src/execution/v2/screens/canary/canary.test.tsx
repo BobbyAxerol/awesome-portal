@@ -565,7 +565,7 @@ describe("tabs and navigation", () => {
     expect(within(crumb).getByRole("link", { name: "Alpha Fleet" }).getAttribute("href")).toBe("/deployments/alphas");
     expect(crumb.textContent).toContain(DEP);
     expect(document.querySelector(".exec-stage-sub")!.textContent).toBe("BINANCE · Alpha Not available");
-    expect(whyText(document.querySelector('.exec-stage-sub [data-gap="FE-066"]')!)).toContain("Not published: alpha and portfolio names on a deployment");
+    expect(whyText(document.querySelector('.exec-stage-sub [data-gap="FE-066"]')!)).toContain("Not published: Alpha name · alpha and portfolio names on a deployment");
   });
 
   it("the crumb links the portfolio and the account the read published; there is no Alpha link (the alpha id is not in the read)", async () => {

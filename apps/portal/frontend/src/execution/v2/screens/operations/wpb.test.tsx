@@ -254,7 +254,7 @@ describe("incident page", () => {
     const timeline = within(screen.getByRole("list", { name: "Timeline" })).getAllByRole("listitem");
     expect(timeline.map((li) => li.querySelector(".exec-opi-event-word")?.textContent)).toEqual(["Created", "Acknowledged", "Mitigated"]);
     const gaps = screen.getAllByTestId("not-available-line");
-    expect(gaps.some((g) => g.textContent?.includes("Actor") && whyText(g).includes("FE-021"))).toBe(true);
+    expect(gaps.some((g) => g.textContent?.includes("Actor") && whyText(g).includes("audit source"))).toBe(true);
     expect(screen.getAllByRole("listitem", { name: "" }).length).toBeGreaterThan(0);
   });
 
@@ -265,7 +265,7 @@ describe("incident page", () => {
     for (const label of labels) {
       const button = within(group).getByRole("button", { name: label }) as HTMLButtonElement;
       expect(button.disabled).toBe(true);
-      expect(document.getElementById(button.getAttribute("aria-describedby") ?? "")?.textContent).toMatch(/^Not published \(FE-\d+\)/);
+      expect(document.getElementById(button.getAttribute("aria-describedby") ?? "")?.textContent).toMatch(/^Not published: /);
     }
   });
 

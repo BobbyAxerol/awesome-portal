@@ -191,7 +191,7 @@ describe("what it says", () => {
     mount(batch);
     await openedRail();
     await settled("Grant budget", /Initial grant: you hold a current grant/);
-    expect(reasonOf("Grant budget")).toContain(`${RAIL_PREVIEW_NOTE} (FE-020)`);
+    expect(reasonOf("Grant budget")).toContain(RAIL_PREVIEW_NOTE);
     expect(reasonOf("Grant budget")).toContain(`Top up: ${ELIGIBILITY_REASON_COPY.NO_CURRENT_PERMISSION}`);
     expect(reasonOf("Recall budget")).toBe(`Partial recall: ${ELIGIBILITY_REASON_COPY.POLICY_PENDING} · Full recall: ${ELIGIBILITY_REASON_COPY.FIELD_POLICY_PENDING}`);
     expect(reasonOf("Set target budget")).toContain("Target budget: you hold a current grant");
@@ -206,7 +206,7 @@ describe("what it says", () => {
       expect(within(item(name)).getByText("Review available"), name).toBeTruthy();
       expect(control(name).textContent, name).toBe(review);
       expect(control(name).disabled, name).toBe(false);
-      expect(reasonOf(name), name).toContain(`${RAIL_PREVIEW_NOTE} (FE-020)`);
+      expect(reasonOf(name), name).toContain(RAIL_PREVIEW_NOTE);
     }
     for (const name of ["Return capital", "Lock allocation", "Deploy version"] as const) {
       expect(control(name).disabled, name).toBe(true);
@@ -225,7 +225,7 @@ describe("what it says", () => {
     expect(review.textContent).toContain("Preview · not recorded");
     expect(review.textContent).toContain("Nothing is applied, reserved or recorded. Sending is not enabled.");
     // The test page's dataset is not served, so no figure is published: the panel says so and still names the missing result.
-    expect(review.textContent).toContain("Not published: command preview (the Preview only intent axis)");
+    expect(review.textContent).toContain("Not published: command preview");
     expect(control("Grant budget").getAttribute("aria-expanded")).toBe("true");
     fireEvent.click(within(review).getByRole("button", { name: "Close review" }));
     expect(screen.queryByTestId("rail-review")).toBeNull();

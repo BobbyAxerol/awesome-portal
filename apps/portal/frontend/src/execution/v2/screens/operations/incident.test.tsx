@@ -244,7 +244,8 @@ describe("root content", () => {
       const button = within(drawer).getByRole("button", { name: label }) as HTMLButtonElement;
       expect(button.disabled, label).toBe(true);
       expect(document.getElementById(button.getAttribute("aria-describedby") ?? "")?.textContent, label).toBe(reason);
-      expect(reason).toMatch(/^Not published \(FE-0\d\d\)/);
+      expect(reason).toMatch(/^Not published: /);
+      expect(reason).not.toMatch(/FE-\d/);
     }
   });
 });

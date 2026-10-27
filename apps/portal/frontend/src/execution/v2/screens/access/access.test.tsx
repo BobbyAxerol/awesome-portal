@@ -123,7 +123,7 @@ describe("POLICY_PENDING", () => {
     // UXM07-048: the undecided policy is the plain words "Not decided"; its request id is in the disclosure, not on the line
     const policy = within(facts).getByText(/Not decided/).closest("dd") as HTMLElement;
     expect(policy.textContent).not.toContain("FE-026");
-    expect(whyText(policy)).toContain("Not published: researcher field policy");
+    expect(whyText(policy)).toContain("Not published: Researcher field policy");
     expect(within(facts).getByText("OWNER_RECOVERY_NOT_APPROVED")).toBeTruthy();
     expect(within(facts).getByText("Off")).toBeTruthy();
   });
@@ -666,7 +666,8 @@ describe("send capital commands comes from the self-eligibility batch asked abou
     }
     const exportRow = rowsOf(table).find((x) => cell(x, "Action").textContent?.startsWith("Export tables")) as HTMLElement;
     fireEvent.click(within(cell(exportRow, "Why")).getByRole("button"));
-    expect(whyText(cell(exportRow, "Why"))).toContain("FE-016");
+    expect(whyText(cell(exportRow, "Why"))).toContain("Not published: Export");
+    expect(whyText(cell(exportRow, "Why"))).not.toContain("FE-016");
   });
 
   it("asks once, about ROOT and the eight root capital actions, and prints Allowed with the step-up fact", async () => {

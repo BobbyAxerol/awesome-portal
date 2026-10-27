@@ -101,7 +101,8 @@ describe("live: the banner and the three links", () => {
   it("gaps are sentences with their request, never a dash or N/A", async () => {
     await mount();
     expect(screen.getAllByText(/Not published/).length).toBeGreaterThan(0);
-    expect(text()).toContain("(FE-066)");
+    expect(document.querySelector('[data-gap="FE-066"]')).not.toBeNull();
+    expect(text()).not.toMatch(/FE-066/);
     expect(text()).not.toMatch(/—|\bN\/A\b|\bn\/a\b/);
   });
 
