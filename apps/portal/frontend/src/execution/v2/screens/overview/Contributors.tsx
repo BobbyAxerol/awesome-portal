@@ -154,8 +154,8 @@ export function ContributorsBody({ view, linkOf, pager }: { view: ContributorsVi
       <Population population={view.population} />
       {pager !== undefined && (pager.hasPrevious || pager.hasNext) ? (
         <p className="exec-ov-note exec-ov-pager" data-testid="contributors-pager">
-          <button type="button" className="exec-ov-btn" disabled={!pager.hasPrevious || pager.busy} onClick={pager.onPrevious}>Previous page</button>{" "}
-          <button type="button" className="exec-ov-btn" disabled={!pager.hasNext || pager.busy} onClick={pager.onNext}>Next page</button>
+          <button type="button" className="exec-ov-btn" disabled={!pager.hasPrevious || pager.busy} title={pager.busy ? "Reading the page" : pager.hasPrevious ? "Show the previous page of groups" : "This is the first page of groups"} onClick={pager.onPrevious}>Previous page</button>{" "}
+          <button type="button" className="exec-ov-btn" disabled={!pager.hasNext || pager.busy} title={pager.busy ? "Reading the page" : pager.hasNext ? "Show the next page of groups" : "This is the last page of groups"} onClick={pager.onNext}>Next page</button>
         </p>
       ) : null}
       {!view.showReturn || !view.showScore ? (

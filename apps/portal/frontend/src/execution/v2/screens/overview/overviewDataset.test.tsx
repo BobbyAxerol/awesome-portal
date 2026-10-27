@@ -66,8 +66,8 @@ describe("Overview from the FUND dataset", () => {
     expect(row("Allocated").querySelector("[data-zero='true']")?.getAttribute("title")).toMatch(/^0 · /);
     expect(allocated[2]).toContain("Not available");
     expect(whyText(row("Allocated").querySelectorAll(".exec-part-line")[2]!)).toContain("SOURCE_FACTS_NOT_PUBLISHED");
-    for (const label of ["Initial funds", "Added funds", "Returned", "Budget"]) expect(row(label).textContent, label).toBe(`${label}Not published (FE-017)`);
-    expect(row("NAV").textContent).toBe("NAVNot published (FE-013)");
+    for (const label of ["Initial funds", "Added funds", "Returned", "Budget"]) expect(row(label).textContent, label).toBe(`${label}Not published`);
+    expect(row("NAV").textContent).toBe("NAVNot published");
     expect(asked[0]).toMatchObject({ surface: "FUND", environment: "paper", window: "30D" });
   });
 
@@ -99,8 +99,8 @@ describe("Overview from the FUND dataset", () => {
     await waitFor(() => expect(kpi("Net PnL").querySelector(".exec-part")).not.toBeNull());
     expect(lines(kpi("Net PnL"))).toEqual(["Real-funded · USDT0.00 USDT", "Paper · USDT+100.25 USDT", "Paper · EUR-12.50 EUR"]);
     expect(kpi("Net PnL").textContent).toContain("Window 30D");
-    expect(kpi("Return").querySelector(".exec-blk-kpi-value")?.textContent).toBe("Not published (FE-006, FE-025)");
-    expect(kpi("Drawdown").querySelector(".exec-blk-kpi-value")?.textContent).toBe("Not published (FE-013, FE-025)");
+    expect(kpi("Return").querySelector(".exec-blk-kpi-value")?.textContent).toBe("Not published");
+    expect(kpi("Drawdown").querySelector(".exec-blk-kpi-value")?.textContent).toBe("Not published");
   });
 
   it("a partition added by the contract is its own line, never folded into another (same currency, other domain)", async () => {
@@ -120,7 +120,7 @@ describe("Overview from the FUND dataset", () => {
     mount(withDataset(httpApi(), () => datasetFor("FUND", "unused")));
     await loaded();
     await waitFor(() => expect(document.querySelector(".exec-part")).not.toBeNull());
-    expect(kpi("Net PnL").querySelector(".exec-blk-kpi-value")?.textContent).toBe("Not published (FE-005, FE-025)");
+    expect(kpi("Net PnL").querySelector(".exec-blk-kpi-value")?.textContent).toBe("Not published");
   });
 
   it("a dataset that is not served leaves the Capital panel exactly as before", async () => {
@@ -128,7 +128,7 @@ describe("Overview from the FUND dataset", () => {
     await loaded();
     const table = screen.getByRole("table", { name: "Capital" });
     expect([...table.querySelectorAll("tr")].map((tr) => tr.textContent)).toEqual([
-      "Initial fundsNot published (FE-017)", "Added fundsNot published (FE-017)", "ReturnedNot published (FE-017)", "NAVNot published (FE-013)", "BudgetNot published (FE-017)",
+      "Initial fundsNot published", "Added fundsNot published", "ReturnedNot published", "NAVNot published", "BudgetNot published",
     ]);
     expect(document.querySelector(".exec-part")).toBeNull();
   });

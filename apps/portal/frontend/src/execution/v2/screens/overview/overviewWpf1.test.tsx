@@ -179,7 +179,7 @@ describe("Since your last visit: the frame", () => {
     await loaded();
     const digest = screen.getByRole("region", { name: "Since your last visit" });
     expect(digest.textContent).toContain("No baseline");
-    expect(digest.textContent).toContain("Not published (FE-024)");
+    expect(digest.textContent).toContain("Not published");
     const frame = digest.querySelector("ul[aria-label='What the digest will list']")!;
     expect(frame.querySelectorAll("li")).toHaveLength(3);
     expect(frame.querySelectorAll(".exec-ov-digest-line")).toHaveLength(3);

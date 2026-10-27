@@ -10,6 +10,7 @@
  *
  * Nothing is computed here and no figure is made up: the points are the server's exact strings.
  */
+import { ticketFree } from "../../ticketText";
 import { PanelSkeleton } from "../../../components/states";
 import { ChartTools, EquityPanel, domainOfSeries, type DrawdownInput, type FlowPin } from "../../charts";
 import { Flag } from "../../Flag";
@@ -45,7 +46,7 @@ export function ManagerSeriesPanel({ label, read, gapCopy = "Not published (FE-0
         label={label}
         points={[]}
         height={height}
-        state={{ kind: "unavailable", copy: read.phase === "error" ? "Not available" : gapCopy, reason: read.phase === "error" ? `The series could not be read (${read.reason}). Nothing is drawn.` : "The series is read once the subject resolves." }}
+        state={{ kind: "unavailable", copy: read.phase === "error" ? "Not available" : ticketFree(gapCopy), reason: read.phase === "error" ? `The series could not be read (${read.reason}). Nothing is drawn.` : "The series is read once the subject resolves." }}
       />
     );
   }
@@ -58,7 +59,7 @@ export function ManagerSeriesPanel({ label, read, gapCopy = "Not published (FE-0
     return (
       <div className="exec-ser" data-state="UNAVAILABLE">
         {banner}
-        <EquityPanel label={label} points={[]} height={height} state={{ kind: "unavailable", copy: entry.reasonCode === "SERIES_SOURCE_NOT_PUBLISHED" ? gapCopy : copy, reason }} />
+        <EquityPanel label={label} points={[]} height={height} state={{ kind: "unavailable", copy: ticketFree(entry.reasonCode === "SERIES_SOURCE_NOT_PUBLISHED" ? gapCopy : copy), reason }} />
       </div>
     );
   }

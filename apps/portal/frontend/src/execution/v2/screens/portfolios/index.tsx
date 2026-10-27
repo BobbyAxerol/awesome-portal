@@ -31,7 +31,8 @@ import { Link, useSearchParams } from "react-router-dom";
 
 import type { ExecutionApi } from "../../../api/ports";
 import { PanelState } from "../../../components/states";
-import { GapWhy, NotAvailableLine, type UnavailableFact } from "../../blocks";
+import { GapWhy, type UnavailableFact } from "../../blocks";
+import { PfNotAvailableLine } from "./PfNotAvailableLine";
 import { Flag } from "../../Flag";
 import { holds, V2_NAV_TOKEN } from "../../shell/roleNav";
 import { useExecUrlState, withContext } from "../../urlState";
@@ -328,7 +329,7 @@ export default function PortfolioListScreen({ api, capabilities, routes = DEFAUL
         </div>
       </header>
 
-      {scorePublished ? null : <NotAvailableLine facts={UNPUBLISHED_MEASURES} className="exec-pf-na-line" />}
+      {scorePublished ? null : <PfNotAvailableLine facts={UNPUBLISHED_MEASURES} className="exec-pf-na-line" />}
       {(incomplete && envelope) || degraded.length > 0 ? (
         <div className="exec-pf-banner" role="status">
           {/* One banner: a degraded branch already says what is missing, so the generic partial line is only for a partial read with no named branch. */}

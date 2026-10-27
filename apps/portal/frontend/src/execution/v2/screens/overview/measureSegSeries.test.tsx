@@ -43,7 +43,7 @@ const metricsAsked = () => series.calls.map((call) => call.metric);
 const askedOnce = () => [...new Set(metricsAsked().map((m) => m ?? ""))].sort((a, b) => ["NAV", "NET_PNL", "RETURN"].indexOf(a) - ["NAV", "NET_PNL", "RETURN"].indexOf(b));
 
 describe("the fund series is not served: the switch is off, with its reason, and asks for nothing", () => {
-  it("source NOT_PUBLISHED: Net PnL and Return are disabled 'Not published (FE-025)' and only the NAV is asked", async () => {
+  it("source NOT_PUBLISHED: Net PnL and Return are disabled 'Not published' and only the NAV is asked", async () => {
     series.variant = "unavailable";
     mount();
     const group = await seg();
@@ -51,8 +51,8 @@ describe("the fund series is not served: the switch is off, with its reason, and
     for (const name of ["Net PnL", "Return"]) {
       const b = button(group, name);
       expect(b.disabled, name).toBe(true);
-      expect(b.title, name).toContain("Not published (FE-025)");
-      expect(document.getElementById(b.getAttribute("aria-describedby") ?? "")?.textContent, name).toBe("Not published (FE-025)");
+      expect(b.title, name).toContain("Not published");
+      expect(document.getElementById(b.getAttribute("aria-describedby") ?? "")?.textContent, name).toBe("Not published: the fund series for Net PnL and Return is not served");
     }
     fireEvent.click(button(group, "Return"));
     await new Promise((resolve) => setTimeout(resolve, 20));

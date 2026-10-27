@@ -68,7 +68,7 @@ const loaded = async () => {
 const kpis = () => screen.getByLabelText("Fund figures");
 const kpi = (label: string) => [...kpis().querySelectorAll(".exec-blk-kpi")].find((n) => n.querySelector("dt")?.textContent === label) as HTMLElement;
 const panel = (title: string) => screen.getByRole("region", { name: title });
-const MONEY_GAP = "Not published (FE-005/006/013/025)";
+const MONEY_GAP = "Not published";
 
 describe("BUSY", () => {
   it("is the overview flag's screen", () => {
@@ -84,10 +84,10 @@ describe("BUSY", () => {
     // The visible word is "Not published"; the ids are in its title and in hidden text.
     expect(whyText(nav?.querySelector(".exec-blk-np") ?? null)).toContain("FE-005/006/013/025");
     const ids: Record<string, string> = { "Net PnL": "FE-005, FE-025", Return: "FE-006, FE-025", Drawdown: "FE-013, FE-025" };
-    for (const [label, id] of Object.entries(ids)) {
+    for (const [label, _id] of Object.entries(ids)) {
       const tile = kpi(label);
       expect(tile, label).toBeDefined();
-      expect(tile!.querySelector(".exec-blk-kpi-value")?.textContent, label).toBe(`Not published (${id})`);
+      expect(tile!.querySelector(".exec-blk-kpi-value")?.textContent, label).toBe("Not published");
       expect((tile!.querySelector(".exec-blk-kpi-value")?.textContent ?? "").replace(/\(FE-[^)]*\)/, "")).not.toMatch(/\d/);
     }
     expect(screen.queryByTestId("not-available-line")).toBeNull();
@@ -101,10 +101,10 @@ describe("BUSY", () => {
     const capital = screen.getByRole("table", { name: "Capital" });
     const rows = [...capital.querySelectorAll("tr")].map((tr) => tr.textContent);
     expect(rows).toEqual([
-      "Initial fundsNot published (FE-017)", "Added fundsNot published (FE-017)", "ReturnedNot published (FE-017)", "NAVNot published (FE-013)", "BudgetNot published (FE-017)",
+      "Initial fundsNot published", "Added fundsNot published", "ReturnedNot published", "NAVNot published", "BudgetNot published",
     ]);
-    expect(panel("Since your last visit").textContent).toContain("Not published (FE-024)");
-    expect(panel("Contributors").textContent).toContain("Not published (FE-025)");
+    expect(panel("Since your last visit").textContent).toContain("Not published");
+    expect(panel("Contributors").textContent).toContain("Not published");
   });
 
   it("lists the ranked triage in the server's order with rank, kind, deadline and a canonical link", async () => {
@@ -385,7 +385,7 @@ describe("the stream gate", () => {
     await waitFor(() => expect(document.querySelector(".exec-ov-stream")?.getAttribute("data-stream")).toBe("live"));
     expect(screen.getAllByRole("row").length).toBe(before);
     expect(kpi("Needs attention").textContent).toBe(needs);
-    expect(panel("Since your last visit").textContent).toContain("Not published (FE-024)");
+    expect(panel("Since your last visit").textContent).toContain("Not published");
   });
 
   async function publishedStream() {

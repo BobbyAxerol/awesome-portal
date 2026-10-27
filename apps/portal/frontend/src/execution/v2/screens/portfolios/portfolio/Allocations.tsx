@@ -10,7 +10,8 @@
  * and after, each the published string. Receipts are FE-032.
  */
 import type { CapitalLedger } from "../../../../analytics";
-import { NotAvailableLine, SectionPanel } from "../../../blocks";
+import { SectionPanel } from "../../../blocks";
+import { PfNotAvailableLine } from "../PfNotAvailableLine";
 import { CardsTable, type CardsColumn } from "../../../cardsTable";
 import { PF_FE } from "../fe";
 import { Money, envWord } from "../format";
@@ -117,7 +118,7 @@ export function Allocations({ ctx }: { ctx: TabCtx }) {
   return (
     <div className="exec-pf-stack">
       {simulated ? <p className="exec-pf-banner" data-tone="info">Simulated capital. It is never added to Real-funded figures.</p> : null}
-      <NotAvailableLine facts={[{ label: "Ledger receipts", id: PF_FE.flowEdges.fe }]} />
+      <PfNotAvailableLine facts={[{ label: "Ledger receipts", id: PF_FE.flowEdges.fe }]} />
       <Block domain="real" ctx={ctx} />
       <Block domain="simulated" ctx={ctx} />
     </div>

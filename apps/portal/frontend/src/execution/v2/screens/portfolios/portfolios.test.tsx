@@ -104,17 +104,17 @@ describe("register", () => {
       "NAV": "FE-013", "Net PnL": "FE-005, FE-025", Return: "FE-006, FE-025", Drawdown: "FE-013, FE-025", HHI: "FE-005", "Portfolio score": "FE-011",
     };
     for (const row of bodyRows()) {
-      for (const [label, id] of Object.entries(ids)) {
+      for (const [label, _id] of Object.entries(ids)) {
         const td = row.querySelector(`td[data-l="${label}"], td[data-l^="${label} \u00b7 "]`);
         expect(td, label).not.toBeNull();
         expect(td?.textContent, label).toContain("Not available");
-        expect(td?.textContent, label).toContain(`Not published (${id})`);
+        expect(td?.textContent, label).toContain("Not published");
       }
     }
     const line = screen.getByTestId("not-available-line");
     expect(screen.getAllByTestId("not-available-line")).toHaveLength(1);
     expect(line.textContent).toContain("Not available: Score");
-    expect(whyText(line)).toContain("Not published (FE-011)");
+    expect(whyText(line)).toContain("Not published");
   });
 
   it("treats Unallocated as a bucket: not linked, not selectable, every figure Not published", async () => {

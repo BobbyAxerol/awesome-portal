@@ -81,10 +81,10 @@ describe("Portfolio score tile", () => {
     expect(tile("Portfolio score").textContent).toContain("Good");
   });
 
-  it("with no served dataset the tile keeps Not published (FE-011) and the line names Score", async () => {
+  it("with no served dataset the tile keeps Not published and the line names Score", async () => {
     mount360(withDataset(makeApi().api, null));
     await screen.findByRole("tablist", { name: "Portfolio sections" }, { timeout: 5000 });
-    await waitFor(() => expect(tile("Portfolio score").textContent).toContain("Not published (FE-011)"));
+    await waitFor(() => expect(tile("Portfolio score").textContent).toContain("Not published"));
     expect(screen.getByTestId("not-available-line").textContent).toContain("Score");
   });
 });

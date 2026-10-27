@@ -39,11 +39,11 @@ describe("ManagerSeriesPanel · RETURN", () => {
     expect(container.textContent).toContain("%");
   });
 
-  it("a source that states no scale is the typed cell 'Not published (FE-013)' with the reason, and nothing is drawn", () => {
+  it("a source that states no scale is the typed cell 'Not published' with the reason, and nothing is drawn", () => {
     const value = readSeries(fixtureValue(FIXTURE_RETURN_UNSCALED));
     const { container } = render(<ManagerSeriesPanel label="Portfolio return" read={{ phase: "ready", value, warnings: [] }} />);
     expect(container.querySelector("[data-state='UNAVAILABLE']")).not.toBeNull();
-    expect(container.textContent).toContain("Not published (FE-013)");
+    expect(container.textContent).toContain("Not published");
     expect(container.textContent).toContain("RATIO_SCALE_NOT_PUBLISHED");
     expect(container.textContent).toContain("states no ratio scale");
     expect(container.querySelectorAll("svg path")).toHaveLength(0);

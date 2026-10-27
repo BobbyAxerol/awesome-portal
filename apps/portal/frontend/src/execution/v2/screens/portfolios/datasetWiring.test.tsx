@@ -64,8 +64,8 @@ describe("Portfolios list: Net PnL column from the FLEET dataset grouped by port
     const table = await screen.findByRole("table", { name: "Portfolios" }, { timeout: 5000 });
     await waitFor(() => expect(table.querySelector("td[data-l^='Net PnL'] .exec-part")).not.toBeNull());
     const row = [...table.querySelectorAll("tbody tr")].find((tr) => tr.textContent?.includes(PF.core)) as HTMLElement;
-    for (const [label, id] of [["NAV", "FE-013"], ["Return", "FE-006, FE-025"], ["Drawdown", "FE-013, FE-025"], ["HHI", "FE-005"]] as const) {
-      expect(row.querySelector(`td[data-l^='${label}']`)?.textContent, label).toContain(`Not published (${id})`);
+    for (const [label, _id] of [["NAV", "FE-013"], ["Return", "FE-006, FE-025"], ["Drawdown", "FE-013, FE-025"], ["HHI", "FE-005"]] as const) {
+      expect(row.querySelector(`td[data-l^='${label}']`)?.textContent, label).toContain("Not published");
     }
   });
 
@@ -88,12 +88,12 @@ describe("Portfolios list: Net PnL column from the FLEET dataset grouped by port
     expect(row.querySelector("td[data-l='HHI']")?.textContent).toContain("0.2850");
   });
 
-  it("keeps Not published (FE-005, FE-025) when the dataset is not served", async () => {
+  it("keeps Not published when the dataset is not served", async () => {
     mountList(withDataset(makeApi().api, null));
     const table = await screen.findByRole("table", { name: "Portfolios" }, { timeout: 5000 });
     await settle();
     const row = [...table.querySelectorAll("tbody tr")].find((tr) => tr.textContent?.includes(PF.core)) as HTMLElement;
-    expect(row.querySelector("td[data-l^='Net PnL']")?.textContent).toContain("Not published (FE-005, FE-025)");
+    expect(row.querySelector("td[data-l^='Net PnL']")?.textContent).toContain("Not published");
   });
 });
 
@@ -107,8 +107,8 @@ describe("Portfolio 360: KPI and Capital panel from the PORTFOLIO dataset", () =
     await waitFor(() => expect(strip.querySelector(".exec-part")).not.toBeNull());
     expect(lines(tile("Net PnL"))).toEqual(["Paper · USDT+100.25 USDT", "Paper · EUR-12.50 EUR", "Real-funded · USDT0.00 USDT"]);
     expect(tile("Net PnL").textContent).toContain("Window 90D");
-    for (const [label, id] of [["Return", "FE-006, FE-025"], ["Drawdown", "FE-013, FE-025"]] as const) expect(tile(label).textContent, label).toContain(`Not published (${id})`);
-    expect(screen.getByRole("region", { name: "Concentration" }).textContent).toContain("Not published (FE-005)");
+    for (const [label, _id] of [["Return", "FE-006, FE-025"], ["Drawdown", "FE-013, FE-025"]] as const) expect(tile(label).textContent, label).toContain("Not published");
+    expect(screen.getByRole("region", { name: "Concentration" }).textContent).toContain("Not published");
     expect(asked[0]).toMatchObject({ surface: "PORTFOLIO", id: PF.core, environment: "live", window: "90D", groupBy: ["portfolio_id"] });
   });
 
@@ -131,7 +131,7 @@ describe("Portfolio 360: KPI and Capital panel from the PORTFOLIO dataset", () =
     expect(allocated[2]).toContain("Not available");
     expect(whyText(row("Allocated").querySelectorAll(".exec-part-line")[2]!)).toContain("SOURCE_FACTS_NOT_PUBLISHED");
     for (const label of ["Initial funds", "Added funds", "Returned", "Net external flows", "Approved", "Recalling", "Headroom"]) {
-      expect(row(label).textContent, label).toContain("Not published (FE-017)");
+      expect(row(label).textContent, label).toContain("Not published");
     }
   });
 
@@ -144,7 +144,7 @@ describe("Portfolio 360: KPI and Capital panel from the PORTFOLIO dataset", () =
     // Every statement row keeps its own id (FE-017); the NAV row is the NAV series' own gap (FE-013); the two group heads are not rows of facts.
     const factRows = [...table.querySelectorAll("tr")].filter((tr) => !tr.classList.contains("exec-pf-grp"));
     expect(factRows.length).toBeGreaterThan(8);
-    expect(factRows.every((tr) => /Not published \(FE-0(17|13)\)/.test(tr.textContent ?? ""))).toBe(true);
-    expect(screen.getByLabelText("Portfolio identity").textContent).toContain("Not published (FE-005, FE-025)");
+    expect(factRows.every((tr) => /Not published/.test(tr.textContent ?? ""))).toBe(true);
+    expect(screen.getByLabelText("Portfolio identity").textContent).toContain("Not published");
   });
 });

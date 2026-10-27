@@ -146,7 +146,7 @@ function SeriesCell({ label, read, window, gapIds }: { label: string; read: Seri
 function FigureUnit({ text }: { text: string }) {
   const match = /^(.*\S) ([A-Z][A-Z0-9]{1,5})$/.exec(text);
   if (match === null) return <span className="exec-ov-fig">{text}</span>;
-  return <><span className="exec-ov-fig">{match[1]}</span><span className="exec-ov-unit">{match[2]}</span></>;
+  return <><span className="exec-ov-fig" data-long={match[1].length > 10 ? "true" : undefined}>{match[1]}</span><span className="exec-ov-unit">{match[2]}</span></>;
 }
 
 /** The Capital panel's NAV row: the same latest published NAV point as the NAV tile, or the same gap. Nothing is computed. */
@@ -539,7 +539,7 @@ export default function OverviewScreen({ api, workspaceId, sseFactory, accessHre
         </SectionPanel>
       </div>
 
-      <SectionPanel title="Current by currency" flush>
+      <SectionPanel title="Current by currency" aside="Fleet summary, current, not narrowed by the environment or window above" flush>
         {reads.fleet.phase === "loading" ? (
           <PanelSkeleton label="Loading the fleet register" />
         ) : reads.fleet.phase === "error" ? (

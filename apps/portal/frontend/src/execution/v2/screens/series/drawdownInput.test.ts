@@ -19,8 +19,8 @@ const ready = (variant: "populated" | "empty" | "unavailable"): SeriesReadState 
 
 describe("drawdownInputOf", () => {
   it("not asked (undefined or idle) keeps the typed pane and names the request ids", () => {
-    expect(drawdownInputOf(undefined)).toBe(DRAWDOWN_NOT_ASKED);
-    expect(drawdownInputOf({ phase: "idle" })).toBe(DRAWDOWN_NOT_ASKED);
+    expect(drawdownInputOf(undefined)).toEqual({ ...DRAWDOWN_NOT_ASKED, copy: "Not published" });
+    expect(drawdownInputOf({ phase: "idle" })).toEqual({ ...DRAWDOWN_NOT_ASKED, copy: "Not published" });
     expect(DRAWDOWN_NOT_ASKED).toMatchObject({ kind: "absent", copy: "Not published (FE-013, FE-025)" });
   });
 

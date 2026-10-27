@@ -2,7 +2,7 @@
  * Ticket codes (FE-nnn, BR-EX-nn, A360-n) are for the tooltip, never for the words a reader or a screen reader gets (QA3 R1-10).
  * `ticketFree("Not published (FE-013, FE-025)")` is `"Not published"`; `ticketCodes(...)` is the codes, for a `title`.
  */
-const CODE = "(?:FE-\\d{2,3}(?:/\\d{2,3})?|BR-EX-\\d+|A360-\\d+)";
+const CODE = "(?:FE-\\d{2,3}(?:/\\d{2,3})*|BR-EX-\\d+|A360-\\d+)";
 const GROUP = new RegExp(`\\s*\\(\\s*${CODE}(?:\\s*[,/]\\s*${CODE})*\\s*\\)`, "g");
 const BARE = new RegExp(`\\s*\\b${CODE}(?:\\s*[,/]\\s*${CODE})*`, "g");
 

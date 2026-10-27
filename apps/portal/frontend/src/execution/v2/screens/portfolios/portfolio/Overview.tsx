@@ -13,7 +13,8 @@
 import { useState } from "react";
 
 import { ChartTools, EquityPanel, domainOfSeries, type ChartDomain } from "../../../charts";
-import { GapWhy, NotAvailableLine, SectionPanel, type UnavailableFact } from "../../../blocks";
+import { GapWhy, SectionPanel, type UnavailableFact } from "../../../blocks";
+import { PfNotAvailableLine } from "../PfNotAvailableLine";
 import { Flag } from "../../../Flag";
 import { formatAsOf, formatInstant } from "../../../boundary";
 import { readUtcEpochMs } from "../../../../screenDataContract";
@@ -291,7 +292,7 @@ export function Overview({ ctx }: { ctx: TabCtx }) {
         )}
         <PfKpi label="Deployments" note={`${alphaCount} ${alphaCount === 1 ? "alpha" : "alphas"} · ${accounts.length} ${accounts.length === 1 ? "account" : "accounts"}${identity.holdingsCount !== null ? ` · ${identity.holdingsCount} holdings` : ""}`}>{deployments.length}</PfKpi>
       </PfKpiStrip>
-      <NotAvailableLine facts={scoreList !== null ? OTHER_GAPS : UNPUBLISHED_OVERVIEW} className="exec-pf-na-line" />
+      <PfNotAvailableLine facts={scoreList !== null ? OTHER_GAPS : UNPUBLISHED_OVERVIEW} className="exec-pf-na-line" />
       <div className="exec-pf-grid2">
         <PerformanceCard ctx={ctx} />
         <CapitalCard ctx={ctx} />

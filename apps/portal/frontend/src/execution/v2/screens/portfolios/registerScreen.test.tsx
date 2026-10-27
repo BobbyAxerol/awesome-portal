@@ -240,7 +240,7 @@ describe("filters: ranges, missing score, chips", () => {
     expect(within(menu).queryByRole("checkbox", { name: /Score missing/ })).toBeNull();
     expect(within(menu).getByRole("textbox", { name: "Return minimum" })).toBeTruthy();
     // The column keeps its honest Not published, and the one-line absence returns.
-    expect(cellOf("Core", "Portfolio score")).toContain("Not published (FE-011)");
+    expect(cellOf("Core", "Portfolio score")).toContain("Not published");
     expect(screen.getByTestId("not-available-line").textContent).toContain("Score");
   });
 });

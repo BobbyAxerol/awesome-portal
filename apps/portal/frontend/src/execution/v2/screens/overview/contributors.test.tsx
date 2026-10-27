@@ -165,7 +165,7 @@ describe("Contributors: typed absence", () => {
   const absent = async (code: string) => {
     await settled();
     expect(panel().querySelector("table")).toBeNull();
-    expect(panel().textContent).toContain("Not published (FE-025)");
+    expect(panel().textContent).toContain("Not published");
     expect(panel().querySelector("[data-contributors-absence]")?.getAttribute("data-contributors-absence")).toBe(code);
     expect(panel().textContent).not.toMatch(/(^|\s)0(\.0+)?\s/);
   };
@@ -194,7 +194,7 @@ describe("Contributors: typed absence", () => {
     mount(withDataset(httpApi(), (query) => datasetFor("FUND", "unused", (body: Body) => { body.groups = []; if (query.groupBy) limitOne(body, 0); })));
     await settled();
     expect(panel().textContent).toContain("No alpha is in this population.");
-    expect(panel().textContent).not.toContain("Not published (FE-025)");
+    expect(panel().textContent).not.toContain("Not published");
   });
 
   it("a dataset that is not served (sparse profile) keeps the panel on its id with the reason", async () => {
@@ -214,7 +214,7 @@ describe("Since your last visit", () => {
     mount(withDataset(httpApi(), grouped()));
     await settled();
     const digest = screen.getByRole("region", { name: "Since your last visit" });
-    expect(digest.textContent).toContain("Not published (FE-024)");
+    expect(digest.textContent).toContain("Not published");
     expect(digest.textContent).toContain("No comparison baseline is published yet.");
     // The frame of the hi-fi digest is drawn (three kinds of line, hatched placeholders) but no digest line is: nothing is listed.
     const frame = digest.querySelector("ul[aria-label='What the digest will list']")!;

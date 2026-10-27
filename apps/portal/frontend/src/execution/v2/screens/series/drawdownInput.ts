@@ -4,6 +4,7 @@
  * Nothing is derived from the line above: a drawdown is never worked out here.
  */
 import type { DrawdownInput } from "../../charts";
+import { ticketFree } from "../../ticketText";
 import { chartPointsOf, unavailableChart } from "./seriesModel";
 import type { SeriesReadState } from "./useManagerSeries";
 
@@ -13,7 +14,13 @@ export const DRAWDOWN_NOT_ASKED: DrawdownInput = {
   reason: "The series port does not serve this subject, so no drawdown series is asked for; a drawdown is never worked out from the line above.",
 };
 
+/** The pane copy never carries a ticket code in its words (QA3 R1-10); the typed reason stays. */
 export function drawdownInputOf(read: SeriesReadState | undefined): DrawdownInput {
+  const input = drawdownInputRaw(read);
+  return input.kind === "absent" ? { ...input, copy: ticketFree(input.copy) } : input;
+}
+
+function drawdownInputRaw(read: SeriesReadState | undefined): DrawdownInput {
   if (read === undefined || read.phase === "idle") return DRAWDOWN_NOT_ASKED;
   const series = read.phase === "ready" ? read.value : read.phase === "loading" || read.phase === "error" ? read.last : null;
   if (series === null) {

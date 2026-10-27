@@ -175,3 +175,9 @@ NOT FIXED, with the owner: OV-02 and P3-02 (dates in the future, the world clock
 - R1-11: when every equity point lies outside the stated coverage the axis follows the points and a note says so (the line and the caption dates then share one axis). Fixture coverage vs points is WP-P data.
 - R1-19 (segment chips hint), R1-20 (banner names the simulated part).
 - Not done in this round: R1-07, R1-08, R1-12 to R1-18, R1-23, R1-25, R1-26; world items (R1-01, 02, 03, 09, 10) wait for WORLD-V1.
+
+## 14. Round 4 (QA3 R1, presentation and copy)
+
+- R1-10: no FE-nnn / BR-EX- / A360- in the rendered text of Overview, Portfolios or Portfolio 360 (any tab). Codes ride tooltips (`title`) or the opened GapWhy. Hygiene test `screens/ticketCodes.test.tsx` walks every text node of the three screens and every 360 tab. Local `PfNotAvailableLine` replaces the shared line (its hidden text carried the ids); the shared `blocks/*` and `charts/*` renderers are untouched (serial step later). `ticketText.ts` strips codes from the copy a screen hands a chart.
+- R1-07: "Current by currency" is labelled "Fleet summary, current, not narrowed by the environment or window above"; the Capital panel is labelled with its environment; the Portfolios line reads "Scope statement, not a sum of the rows above". The figure disagreements (JPY drawdown -36.025% vs -46.90%, allocation 2,120,005.00 vs 961,877.63) are different bases on one page (fleet summary vs selected environment) and are data for WP-P if they still differ per basis.
+- R1-14 (NAV spill): figures never wrap; long figures take the table-number size; the unit wraps below. R1-18: grids no longer stretch panels to equal height. Contributors paging buttons carry reasons.

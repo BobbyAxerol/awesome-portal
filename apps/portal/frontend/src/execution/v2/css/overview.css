@@ -412,5 +412,6 @@ a.exec-ov-what-title {
 .exec-ov-grid2, .exec-ov-grid3 { align-items: start; }
 /* QA3 R1-14: the KPI figure never breaks and never spills its cell; the unit wraps below it when the cell is narrow. */
 .exec-ov-kpis .exec-blk-kpi-value > .exec-ov-num { display: flex; flex-wrap: wrap; align-items: baseline; column-gap: var(--space-1); min-width: 0; }
-.exec-ov-kpis .exec-ov-fig { font-size: clamp(1.125rem, 1.45vw, 1.875rem); }
+/* A long figure takes the table-number size so it never outgrows a narrow cell. */
+.exec-ov-kpis .exec-ov-fig[data-long="true"] { font: var(--exec-font-num); font-variant-numeric: tabular-nums; }
 .exec-ov-kpis .exec-ov-unit { margin-left: 0; }
