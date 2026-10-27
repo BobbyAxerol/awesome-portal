@@ -43,9 +43,8 @@ function Absence({ code, reason }: { code: string; reason: string }) {
   return (
     <>
       <p className="exec-ov-na">
-        <span className="exec-blk-np">
+        <span className="exec-blk-np" title={FE_CONTRIBUTORS}>
           <GapWhy className="exec-blk-np-word" gap={FE_CONTRIBUTORS} text="Not published" name="Not published, reason" rows={[gapTitle(FE_CONTRIBUTORS, null, code), reason]} />
-          <span className="exec-blk-sr"> ({FE_CONTRIBUTORS})</span>
         </span>
       </p>
       <p className="exec-ov-note" data-contributors-absence={code}>Per-alpha contribution over a window is not shown: {reason}</p>

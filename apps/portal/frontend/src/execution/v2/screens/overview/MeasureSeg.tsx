@@ -35,7 +35,9 @@ export interface MeasureSegProps {
 
 export function MeasureSeg({ serves = false, selected = "NAV", onSelect, offReason }: MeasureSegProps) {
   const reasonId = useId();
-  const reason = offReason ?? notPublishedText("FE-025");
+  // The request id rides the tooltip of the buttons only; the words (and the text a screen reader gets) never carry a ticket code.
+  const reason = offReason ?? "Not published: the fund series for Net PnL and Return is not served";
+  const code = notPublishedText("FE-025");
   return (
     <span className="exec-ov-seg" role="group" aria-label="Performance measure">
       {MEASURES.filter(({ metric }) => serves || metric !== "NAV").map(({ label, metric }) => {
@@ -48,7 +50,7 @@ export function MeasureSeg({ serves = false, selected = "NAV", onSelect, offReas
             className="exec-ov-segbtn"
             aria-pressed={pressed ? "true" : "false"}
             disabled={!on}
-            title={on ? `Show the fund's ${label} series` : `${reason}. ${label} has no published fund series.`}
+            title={on ? `Show the fund's ${label} series` : `${reason} (${code}). ${label} has no published fund series.`}
             aria-describedby={on ? undefined : reasonId}
             onClick={on && onSelect ? () => onSelect(metric) : undefined}
           >
@@ -56,9 +58,7 @@ export function MeasureSeg({ serves = false, selected = "NAV", onSelect, offReas
           </button>
         );
       })}
-      <span id={reasonId} className="exec-blk-sr">
-        {serves ? notPublishedText("FE-025") : reason}
-      </span>
+      {serves ? null : <span id={reasonId} className="exec-blk-sr">{reason}</span>}
     </span>
   );
 }

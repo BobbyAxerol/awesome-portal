@@ -12,6 +12,7 @@ import { Fragment, type ReactNode } from "react";
 
 import type { CurrencyValue } from "../../../api/profileRead";
 import { readDecimal } from "../../boundary";
+import { ticketFree } from "../../ticketText";
 import { GapWhy, NaWhy, gapTitle } from "../../blocks";
 import type { FlagKind } from "../../flagKinds";
 import { NOT_PUBLISHED_WORD, type Unpublished } from "./fe";
@@ -20,26 +21,10 @@ import "../../css/portfolios.css";
 
 export function Np({ fact, children }: { fact: Unpublished; children?: ReactNode }) {
   return (
-    <span className="exec-pf-np">
+    <span className="exec-pf-np" title={fact.fe}>
       <GapWhy gap={fact.fe} text={NOT_PUBLISHED_WORD} name="Not published, reason" rows={[gapTitle(fact.fe, fact.what)]} />
-      <span className="exec-blk-sr"> <FeIds fe={fact.fe} /></span>
       {children ? <> {children}</> : null}
     </span>
-  );
-}
-
-/** `(FE-005, FE-025)`, each id kept whole: a narrow cell breaks between ids, never inside one. Reads as the same text. */
-function FeIds({ fe }: { fe: string }) {
-  const ids = fe.split(", ");
-  return (
-    <>
-      {ids.map((id, i) => (
-        <Fragment key={id}>
-          {i > 0 ? " " : null}
-          <span className="exec-pf-fe">{i === 0 ? "(" : ""}{id}{i === ids.length - 1 ? ")" : ","}</span>
-        </Fragment>
-      ))}
-    </>
   );
 }
 
@@ -49,7 +34,7 @@ export function Absent({ reason }: { reason?: string }) {
   return (
     <span className="exec-pf-na">
       <NaWhy reason={reason} className="" />
-      {reason ? <span className="exec-blk-sr"> · {reason}</span> : null}
+      {reason ? <span className="exec-blk-sr"> · {ticketFree(reason)}</span> : null}
     </span>
   );
 }

@@ -407,3 +407,10 @@ a.exec-ov-what-title {
 .exec-ov-fig { white-space: nowrap; overflow-wrap: normal; }
 .exec-ov-unit { margin-left: var(--space-1); font: var(--exec-font-caption); color: var(--ink-faint); white-space: nowrap; }
 .exec-ov-kpis .exec-blk-kpi-value > .exec-ov-num { overflow-wrap: normal; }
+
+/* QA3 R1-18: panels are sized to their content (no orphan empty bands under a short panel). */
+.exec-ov-grid2, .exec-ov-grid3 { align-items: start; }
+/* QA3 R1-14: the KPI figure never breaks and never spills its cell; the unit wraps below it when the cell is narrow. */
+.exec-ov-kpis .exec-blk-kpi-value > .exec-ov-num { display: flex; flex-wrap: wrap; align-items: baseline; column-gap: var(--space-1); min-width: 0; }
+.exec-ov-kpis .exec-ov-fig { font-size: clamp(1.125rem, 1.45vw, 1.875rem); }
+.exec-ov-kpis .exec-ov-unit { margin-left: 0; }

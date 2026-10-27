@@ -88,12 +88,11 @@ export interface OverviewScreenProps {
   accessHref?: string;
 }
 
-/** `Not published`, the request ids in the tooltip and in hidden text. Blocks' table does not carry these composites yet. */
+/** `Not published`, the request ids in the tooltip only (never in the text). Blocks' table does not carry these composites yet. */
 function Gap({ ids, children }: { ids: string; children?: string }) {
   return (
-    <span className="exec-blk-np">
+    <span className="exec-blk-np" title={ids}>
       <GapWhy className="exec-blk-np-word" gap={ids} text="Not published" name="Not published, reason" rows={[gapTitle(ids)]} />
-      <span className="exec-blk-sr"> ({ids})</span>
       {children ? <> {children}</> : null}
     </span>
   );
