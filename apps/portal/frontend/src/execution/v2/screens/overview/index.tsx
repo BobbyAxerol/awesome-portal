@@ -45,7 +45,7 @@ import { streamGate } from "../../../commandCenter";
 import { canonicalHref } from "../../../links";
 import { PanelSkeleton, PanelState } from "../../../components/states";
 import type { SseFactory } from "../../../sse";
-import { NaWhy, GapWhy, SectionPanel, gapTitle } from "../../blocks";
+import { NaWhy, GapWhy, SectionPanel, gapTitle, notPublishedText } from "../../blocks";
 import { CardsTable, type CardsColumn } from "../../cardsTable";
 import { Flag } from "../../Flag";
 import type { FlagKind } from "../../flagKinds";
@@ -471,7 +471,7 @@ export default function OverviewScreen({ api, workspaceId, sseFactory, accessHre
           <ManagerSeriesPanel
             label={metric === "NAV" ? "Fund performance" : `Fund ${metric === "NET_PNL" ? "Net PnL" : "Return"}`}
             read={measureRead}
-            gapCopy={`Not published (${FE_MONEY})`}
+            gapCopy={notPublishedText(FE_MONEY)}
             tools
             height={280}
             drawdown={drawdownInputOf(drawdownRead)}

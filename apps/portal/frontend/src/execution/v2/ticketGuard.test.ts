@@ -8,13 +8,14 @@
  * of text nodes, titles, accessible names and visually hidden text.
  */
 import { readdirSync, readFileSync, statSync } from "node:fs";
-import { join, relative } from "node:path";
+import { dirname, join, relative } from "node:path";
+import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
-const ROOT = join(__dirname, "..");
+const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 const CODE = "(?:FE-\\d{2,3}(?:/\\d{2,3})*|FE-CAT-\\d+|BQ-[A-Z][A-Z-]+)";
 const IN_PARENS = new RegExp(`\\(\\s*${CODE}`);
-const TEMPLATE_ID = /Not published \(\$\{/;
+const TEMPLATE_ID = /Not published \((?:\$)?\{/;
 
 function walk(dir: string, out: string[] = []): string[] {
   for (const name of readdirSync(dir)) {
@@ -33,7 +34,7 @@ function withoutComments(source: string): string {
 }
 
 describe("no request id in parentheses in display strings", () => {
-  const files = [...walk(join(ROOT, "execution")), ...walk(join(ROOT, "execution", "v2"))].filter((path, index, all) => all.indexOf(path) === index);
+  const files = [...walk(join(ROOT, "execution"))].filter((path, index, all) => all.indexOf(path) === index);
 
   it("scans the Execution sources", () => {
     expect(files.length).toBeGreaterThan(200);

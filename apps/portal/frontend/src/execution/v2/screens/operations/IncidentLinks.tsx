@@ -9,7 +9,7 @@
  *   - `truncated`: more readable links exist than the list holds.
  *
  * Three states are kept apart: the field is absent (older server or body:
- * "Not published (FE-042)"), the field is present with no readable link
+ * "Not published: incident links on a queue row"), the field is present with no readable link
  * ("No readable incident links"), and the field is present with links. The
  * remainder is printed as the server's own two numbers.
  *
@@ -18,6 +18,8 @@
  */
 import type { KeyboardEvent, MouseEvent } from "react";
 import { Link, type To } from "react-router-dom";
+
+import { notPublishedText } from "../../blocks";
 
 import { GapWhy } from "../../blocks";
 
@@ -88,7 +90,7 @@ export function IncidentLinks({ operationId, links, to, peekTo }: IncidentLinksP
     return (
       <div className="exec-ops-links" role="group" aria-label={label} data-state="absent">
         {/* Said once on the queue's "Not available" line; per row it stays for assistive tech only. */}
-        <span className="exec-blk-sr">Not published ({FE_B1.links})</span>
+        <span className="exec-blk-sr">{notPublishedText(FE_B1.links)}</span>
       </div>
     );
   }

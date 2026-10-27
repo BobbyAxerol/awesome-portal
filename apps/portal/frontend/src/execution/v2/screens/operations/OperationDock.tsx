@@ -177,7 +177,7 @@ export function OperationDock({
           <dt>Display</dt>
           <dd>
             {row.displayState === undefined ? <NaWhy reason={`${notPublishedText(FE.receipts)}: whether the figures shown have caught up.`} />
-              : row.displayState === null ? <NaWhy reason={`Not published (${FE.receipts}): the source did not report whether the figures shown have caught up for this row.`} />
+              : row.displayState === null ? <NaWhy reason={`${notPublishedText(FE.receipts)}: the source did not report whether the figures shown have caught up for this row.`} />
               : <Flag kind={DISPLAY_FACT[row.displayState].kind} label={DISPLAY_FACT[row.displayState].label} size="sm" />}
           </dd>
           <dt>Counted</dt>
