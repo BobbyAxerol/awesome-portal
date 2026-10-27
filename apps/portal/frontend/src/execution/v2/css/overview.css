@@ -415,3 +415,11 @@ a.exec-ov-what-title {
 /* A long figure takes the table-number size so it never outgrows a narrow cell. */
 .exec-ov-kpis .exec-ov-fig[data-long="true"] { font: var(--exec-font-num); font-variant-numeric: tabular-nums; }
 .exec-ov-kpis .exec-ov-unit { margin-left: 0; }
+
+/* QA3 R1-24: at phone width the contributors table gives up its no-wrap columns that carry words, so the Score column stays inside the panel. */
+@media (max-width: 700px) {
+  .exec-ov-contrib .exec-ov-contrib-part { white-space: normal; overflow-wrap: anywhere; }
+  .exec-ov-contrib th,
+  .exec-ov-contrib td { padding-right: var(--space-1); }
+  .exec-ov-contrib tbody th { white-space: normal; overflow-wrap: anywhere; }
+}

@@ -230,3 +230,31 @@ describe("3. units and domain: a value the contract cannot hold is invalid, neve
     expect(measureValue(read, "net_pnl", null)).toBeNull();
   });
 });
+
+describe("5. the score components P / R / B (Portfolio 360 block)", () => {
+  const full = (metrics: Record<string, unknown>) => {
+    const { container } = render(<ScoreFigure read={scoreOf(group(metrics), null)} full />);
+    return container;
+  };
+  const parts = (container: HTMLElement) => [...container.querySelectorAll(".exec-pf-score-part")].map((el) => el.textContent);
+
+  it("published parts print their two-place value; a published zero is a value, not an absence", () => {
+    const c = full({ portfolio_score: score("82.8"), portfolio_score_p: score("80.125"), portfolio_score_r: score("0"), portfolio_score_b: score("83") });
+    expect(parts(c)).toEqual(["P 80.12", "R 0.00", "B 83.00"]);
+    expect(c.querySelector("[data-gap='SCORE_PART_NOT_PUBLISHED']")).toBeNull();
+  });
+
+  it("an unpublished part says 'Not published: component X' in plain words, with the gap code as a data attribute and no ticket code or n/a", () => {
+    const c = full({ portfolio_score: score("82.8"), portfolio_score_p: score("80"), portfolio_score_b: score("83") });
+    const missing = c.querySelector("[data-gap='SCORE_PART_NOT_PUBLISHED']")!;
+    expect(missing.textContent).toBe("Not published: component R");
+    expect(missing.getAttribute("data-part")).toBe("R");
+    expect(c.textContent).not.toMatch(/n\/a|FE-\d/);
+  });
+
+  it("a zero score is a value, and its three unpublished parts are each said", () => {
+    const c = full({ portfolio_score: score("0") });
+    expect(c.textContent).toContain("0.00");
+    expect(c.querySelectorAll("[data-gap='SCORE_PART_NOT_PUBLISHED']").length).toBe(3);
+  });
+});

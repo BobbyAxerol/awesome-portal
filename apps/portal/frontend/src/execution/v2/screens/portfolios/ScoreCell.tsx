@@ -67,7 +67,7 @@ export function ScoreFigure({ read, full = false }: { read: ScoreRead; full?: bo
         <span className="exec-pf-score-parts" aria-label="Score components">
           {([["P", read.p], ["R", read.r], ["B", read.b]] as const).map(([name, value]) => (
             <span key={name} className="exec-pf-score-part" title={value ?? undefined}>
-              <span className="exec-pf-score-partname">{name}</span> {value === null ? "n/a" : truncateDecimal(value)}
+              <span className="exec-pf-score-partname">{name}</span> {value === null ? <span className="exec-pf-na" data-gap="SCORE_PART_NOT_PUBLISHED" data-part={name}>Not published: component {name}</span> : truncateDecimal(value)}
             </span>
           ))}
         </span>
