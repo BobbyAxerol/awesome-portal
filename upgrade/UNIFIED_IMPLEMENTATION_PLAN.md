@@ -16583,3 +16583,10 @@ The focused PostgreSQL cell and source-final tests are identified in the
 [source/fingerprint custody packet](execution_loop/evidence/ELP2-10/COMMAND_STATUS_FINGERPRINT_CUSTODY_2026-10-27.md).
 Keep original UNKNOWN/source custody and the existing commissioning gates.
 
+27Oct History independent qualification: test-only commit `989ff3a8e`
+passed **27/27** focused HTTP/SQL cases and the isolated restore drill,
+including 2,503 ordered points across six pages and refusal after revoke.
+The [History receipt](execution_loop/evidence/ELP2-10/HISTORY_PAGINATION_REVOKE_2026-10-27.md)
+records synthetic source, concurrent host activity and remaining actual Edge
+HISTORY qualification; it does not close ELP2-10 or assert a production SLO.
+
