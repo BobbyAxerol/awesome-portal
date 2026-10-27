@@ -16633,3 +16633,13 @@ returns existing typed `SOURCE_NOT_QUALIFIED`; another subject's history cannot
 force a whole-request 503. [Receipt, tests and Claude note](execution_loop/evidence/ELP2-10/CORE_NET_PNL_READ_FENCE_2026-10-27.md).
 This does not certify connected financial publication or ELP2-10.
 
+27Oct calendar source clarification: a historical unmounted N11 schema has
+`trading_day` but is Paper Binance, while Portal's current calendar seam is VN
+Equity. [Pins, evidence and exact Edge/Claude actions](execution_loop/evidence/ELP2-10/CALENDAR_SOURCE_CANDIDATE_MARKET_BOUNDARY_2026-10-27.md).
+Neither the synthetic schema nor settlement dates qualify a VN provider;
+`SOURCE_DARK` and the real-source gate remain open.
+Public copy delivered to HK Edge EPG10-08 as
+`CALENDAR_SOURCE_CANDIDATE_MARKET_BOUNDARY_2026-10-27_fb6cc5fa.md`; both SHA256
+`fb6cc5fa1be2423f3e1b3d5780b6a1a17f9598ecef21782d5a6681267563ba6e`.
+Delivery is not an Edge response or source qualification.
+
