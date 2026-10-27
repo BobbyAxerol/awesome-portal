@@ -16560,10 +16560,13 @@ The original pin packet was already mirrored to Edge with matching SHA256;
 material delivery and matched secure transport remain required. Discovery does
 not wait for membership; READ/STREAM do require distinct native authority.
 
-27Oct independent Core backend batch is **IN_PROGRESS, not landed**: precise
+27Oct independent Core backend batch **source landed** at
+`feafe56ae217aae73aac54b38b0d0051fd056d2d`: precise
 financial cut and FE-068 ordering, bounded STATUS assertion admission and
 focused synthetic tests are recorded in [the working packet](execution_loop/evidence/ELP2-10/CORE_INDEPENDENT_BACKEND_2026-10-27.md).
-The packet also records the FE-069 200-alpha facet limitation, STATUS original
-capacity risk, tests still running and next gates. This does not alter ELP2-10
+The normal hook passed 1,898 contract tests, 11,676 Control API tests (8 skipped),
+and the isolated PostgreSQL restore drill. The packet records the new paginated
+FE-069 run-alpha facet, remaining STATUS original capacity risk and next gates.
+Claude's consumer handoff is in the packet. This does not alter ELP2-10
 or ELP2-11 acceptance or qualify Edge data, command/Live or calibration.
 

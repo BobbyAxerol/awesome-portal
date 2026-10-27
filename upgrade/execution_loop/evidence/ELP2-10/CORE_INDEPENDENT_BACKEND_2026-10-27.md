@@ -1,6 +1,6 @@
 # Core independent backend work — 27 October 2026
 
-Status: **IN_PROGRESS; local worktree only**. Base
+Status: **SOURCE LANDED; connected qualification remains OPEN**. Base
 `docs/research-loop-plan@21b03093cceab847e903cf6be212e96bd62926b9`.
 This packet is not an ELP2-10 or ELP2-11 acceptance, a real Edge receipt,
 a runtime installation, or a frontend handoff claiming new fields.
@@ -93,7 +93,7 @@ receipt is not a reason to reimplement its old proposal: the current source
 already has the distinct `CAPITAL_COMMAND` family and checks its own current
 ALLOW in `access.service.ts`. This is a source check, not a new runtime receipt.
 
-## Running / next gates
+## Gate history and next work
 
 - The first normal-hook attempt for this batch stopped immediately at the
   contracts snapshot check because the new OpenAPI/generated type had not yet
@@ -157,3 +157,30 @@ ALLOW in `access.service.ts`. This is a source check, not a new runtime receipt.
   gateway inputs. Calendar remains `SOURCE_DARK`; no source qualification,
   production budget/calibration, command/Live enablement or browser acceptance
   is asserted here.
+
+## Final local landing receipt
+
+The corrected code, schema, generated client, tests and inventory landed on
+`docs/research-loop-plan` as
+`feafe56ae217aae73aac54b38b0d0051fd056d2d` (31 files, +839/−30). The normal
+hook on that exact staged batch passed: contract **112 files, 1,898 tests**;
+Control API **566 files passed, 4 skipped; 11,676 tests passed, 8 skipped**;
+Control API build, PostgreSQL migrations and restore drill, workspace and
+tracking gates passed. This includes the final hardened catalogue schema and
+its **2/2 PostgreSQL** tests, the catalogue **3/3** service/controller tests,
+the financial batch **58/58**, and STATUS transport **15/15**. These counts
+overlap the full suite and must not be added to it. The previously interrupted
+attempt and its unknown Portfolio failure remain recorded above; its retake in
+the final hook passed 74/74, without establishing the earlier cause.
+
+Claude may now consume the catalogue handoff above on this SHA. The page is a
+run-derived alpha facet, not a registry or create permission. No frontend was
+changed. `originals` lifetime capacity remains a real STATUS design gap;
+actual Edge financial/census, Calendar, gateway, connected READ/STREAM,
+calibration, coexistence/G2 and browser qualification remain open. ELP2-10
+and ELP2-11 are not closed, and the candidate is not installed or released.
+No push, production/dev/main, command or Live action was taken.
+
+Verification: R0 for this Markdown-only receipt and associated tracking update:
+explicit-path staging, `git diff --cached --check`, link/path inspection and
+`scripts/execution-tracking-test.sh`; no repeated code/build hook.

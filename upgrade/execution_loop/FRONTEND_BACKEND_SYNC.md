@@ -4173,7 +4173,7 @@ mapping from this repair. Claude00e7f6cff is unchanged and preserved. Full R2
 and compare-only visual remain NOT_MET; real-source/current rights, financial
 APPLIED-to-ACK, STATUS original, budget/calibration/G2/browser are separate gates.
 
-### 27Oct independent backend batch — work in progress
+### 27Oct independent backend batch — source landed
 
 [Working evidence and exact boundaries](evidence/ELP2-10/CORE_INDEPENDENT_BACKEND_2026-10-27.md).
 FE-069's old alpha facet is silently limited to 200; the existing run pagination
@@ -4183,7 +4183,12 @@ workspace-authorized Library alpha catalogue and generated type
 membership-revocation tests passed. Once committed, Claude can follow the exact
 consumer handoff in the linked packet. The catalogue lists alphas in recorded
 runs, not the registry or create permissions; each page is a fresh snapshot.
-This contract, the STATUS capacity fix and FE-068 grant ordering are local
-pending the final integration gate and commit, not installed or released. No
-frontend implementation has been changed by Core.
+Contract, STATUS capacity fix and FE-068 grant ordering landed as
+`feafe56ae217aae73aac54b38b0d0051fd056d2d`; the normal hook passed 11,676 API
+tests (8 skipped), 1,898 contract tests and the PostgreSQL restore drill. The
+batch is not installed or released. Claude should traverse all catalogue pages
+and apply the workspace/revocation/absence cases in the linked handoff; it is
+not the full alpha registry. No frontend implementation was changed by Core.
+STATUS original lifetime capacity and all connected/source qualifications
+remain open; do not treat fixture or local tests as Edge acceptance.
 
