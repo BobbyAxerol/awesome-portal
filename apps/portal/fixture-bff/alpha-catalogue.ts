@@ -34,13 +34,14 @@ const problem = (status: number, code: string): BffResponse => json(status, { er
 export interface CatalogueEntry { alpha_id: string; alpha_name: string }
 
 /** Deterministic: world alphas in the published spelling, then the padding, sorted by id. */
-export function fixtureCatalogue(): CatalogueEntry[] {
+export function fixtureCatalogue(padded = true): CatalogueEntry[] {
   const byId = new Map<string, string>();
   for (const alpha of worldAlphas()) {
     const id = alpha.id.toLowerCase().replace(/_/g, "-");
     if (ALPHA_ID.test(id)) byId.set(id, alpha.label);
   }
-  for (let n = 1; n <= FIXTURE_PAD; n += 1) byId.set(`fixture-alpha-${String(n).padStart(3, "0")}`, `Fixture alpha ${String(n).padStart(3, "0")}`);
+  // WP-B2-A3 (N3-06): the padding exists to span pages in a traversal test; the session's own workspace (what a person's picker reads) lists only the alphas of the world
+  if (padded) for (let n = 1; n <= FIXTURE_PAD; n += 1) byId.set(`fixture-alpha-${String(n).padStart(3, "0")}`, `Fixture alpha ${String(n).padStart(3, "0")}`);
   return [...byId.entries()].map(([alpha_id, alpha_name]) => ({ alpha_id, alpha_name })).sort((a, b) => (a.alpha_id < b.alpha_id ? -1 : a.alpha_id > b.alpha_id ? 1 : 0));
 }
 
@@ -93,7 +94,7 @@ export function answerAlphaCatalogue(request: BffRequest): BffResponse | null {
     if (workspace === WS_FAIL_PAGE2) return problem(503, "RESEARCH_RUN_LIBRARY_UNAVAILABLE");
   }
 
-  const all = workspace === WS_EMPTY ? [] : fixtureCatalogue();
+  const all = workspace === WS_EMPTY ? [] : fixtureCatalogue(workspace !== DEFAULT_WS); // WP-B2-A3
   const rest = after === null ? all : all.filter((entry) => entry.alpha_id > after!);
   const items = rest.slice(0, limit);
   const hasMore = rest.length > items.length;

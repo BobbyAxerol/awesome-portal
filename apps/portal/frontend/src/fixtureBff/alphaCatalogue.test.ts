@@ -11,6 +11,8 @@ import {
   type AlphaCataloguePort,
 } from "../execution/v2/readers/runLibraryAlphaCatalogue";
 
+// WP-B2-A3 (N3-06): the session workspace lists the world's alphas only; the multi-page traversals run on a named workspace, which also carries the 230 padding entries
+const LONG = "ws_long";
 const OA = "../openapi/research-run-library.openapi.json";
 const PTR = "/components/schemas/RunLibraryAlphaCatalogueResponse";
 
@@ -36,7 +38,7 @@ describe("the fixture route", () => {
     let cursor: string | undefined;
     let seen = 0;
     for (let guard = 0; guard < 10; guard += 1) {
-      const response = call({ limit: 100, ...(cursor !== undefined ? { cursor } : {}) });
+      const response = call({ limit: 100, workspaceId: LONG, ...(cursor !== undefined ? { cursor } : {}) });
       expect(response.status).toBe(200);
       expect(validateAgainst(OA, PTR, response.body)).toEqual([]);
       const body = response.body as { items: { alpha_id: string }[]; page: { has_more: boolean; next_cursor: string | null } };
@@ -54,6 +56,11 @@ describe("the fixture route", () => {
     for (const id of ["alpha-a", "alpha-b", "alpha-btc-trend", "alpha-c", "alpha-d"]) expect(ids).toContain(id);
     expect(ids.filter((id) => id.startsWith("fixture-alpha-"))).toHaveLength(FIXTURE_PAD);
     expect(ids.length).toBeGreaterThan(200);
+    // the session workspace (a person's picker) lists no placeholder
+    expect(fixtureCatalogue(false).filter((e) => e.alpha_id.startsWith("fixture-alpha-"))).toHaveLength(0);
+    const session = call({ limit: 200 }).body as { items: { alpha_id: string }[]; page: { has_more: boolean } };
+    expect(session.items.some((e) => e.alpha_id.startsWith("fixture-alpha-"))).toBe(false);
+    expect(session.page.has_more).toBe(false);
   });
 
   it("is deterministic", () => {
@@ -77,7 +84,7 @@ describe("the fixture route", () => {
 describe("traversal over more than 200 entries", () => {
   it("follows next_cursor to the last page: complete, in order, no duplicate, no gap", async () => {
     const log: AlphaCatalogueQuery[] = [];
-    const result = await traverseAlphaCatalogue(fixturePort(log), { limit: 100 });
+    const result = await traverseAlphaCatalogue(fixturePort(log), { limit: 100, workspaceId: LONG });
     expect(result.kind).toBe("complete");
     if (result.kind !== "complete") return;
     expect(result.alphas.map((a) => a.id)).toEqual(fixtureCatalogue().map((e) => e.alpha_id));
@@ -88,14 +95,14 @@ describe("traversal over more than 200 entries", () => {
   });
 
   it("at the 200 maximum there are still two pages, and the first page alone is never reported complete", async () => {
-    const first = call({ limit: 200 }).body as { items: unknown[]; page: { has_more: boolean } };
+    const first = call({ limit: 200, workspaceId: LONG }).body as { items: unknown[]; page: { has_more: boolean } };
     expect(first.items).toHaveLength(200);
     expect(first.page.has_more).toBe(true);
     const log: AlphaCatalogueQuery[] = [];
-    const result = await traverseAlphaCatalogue(fixturePort(log), { limit: 200 });
+    const result = await traverseAlphaCatalogue(fixturePort(log), { limit: 200, workspaceId: LONG });
     expect(result.kind === "complete" && result.pages).toBe(2);
     // One page only (a cap of one) is partial, with its reason, and carries a count that is not the list.
-    const capped = await traverseAlphaCatalogue(fixturePort(), { limit: 200, maxPages: 1 });
+    const capped = await traverseAlphaCatalogue(fixturePort(), { limit: 200, maxPages: 1, workspaceId: LONG });
     expect(capped).toMatchObject({ kind: "partial", pages: 1, failure: "PAGE_CAP" });
   });
 
@@ -128,11 +135,11 @@ describe("fences: workspace, page size, forged and expired cursors", () => {
     const real = fixturePort(log);
     let n = 0;
     const flaky: AlphaCataloguePort = async (q) => (++n === 2 ? { kind: "failed", word: "CURSOR_REFUSED" } : real(q));
-    const result = await traverseAlphaCatalogue(flaky, { limit: 100 });
+    const result = await traverseAlphaCatalogue(flaky, { limit: 100, workspaceId: LONG });
     expect(result).toMatchObject({ kind: "partial", pages: 1, failure: "CURSOR_REFUSED" });
     // Restart: a fresh call asks for the first page again (cursor null), never the refused one.
     const again: AlphaCatalogueQuery[] = [];
-    const second = await traverseAlphaCatalogue(fixturePort(again), { limit: 100 });
+    const second = await traverseAlphaCatalogue(fixturePort(again), { limit: 100, workspaceId: LONG });
     expect(second.kind).toBe("complete");
     expect(again[0]!.cursor).toBeNull();
   });
@@ -140,8 +147,8 @@ describe("fences: workspace, page size, forged and expired cursors", () => {
   it("a cursor does not carry from one traversal to the next", async () => {
     const a: AlphaCatalogueQuery[] = [];
     const b: AlphaCatalogueQuery[] = [];
-    await traverseAlphaCatalogue(fixturePort(a), { limit: 100 });
-    await traverseAlphaCatalogue(fixturePort(b), { limit: 100 });
+    await traverseAlphaCatalogue(fixturePort(a), { limit: 100, workspaceId: LONG });
+    await traverseAlphaCatalogue(fixturePort(b), { limit: 100, workspaceId: LONG });
     expect(a[0]!.cursor).toBeNull();
     expect(b[0]!.cursor).toBeNull();
   });
@@ -170,7 +177,7 @@ describe("page failure and revocation", () => {
     const real = fixturePort();
     let n = 0;
     const revoked: AlphaCataloguePort = async (q) => (++n === 2 ? ({ kind: "failed", word: "WORKSPACE_NOT_OBSERVABLE" } as AlphaCataloguePageAnswer) : real(q));
-    const result = await traverseAlphaCatalogue(revoked, { limit: 100 });
+    const result = await traverseAlphaCatalogue(revoked, { limit: 100, workspaceId: LONG });
     expect(result).toEqual({ kind: "failed", pages: 1, failure: "WORKSPACE_NOT_OBSERVABLE" });
     expect(JSON.stringify(result)).not.toContain("alpha-");
   });
@@ -180,7 +187,7 @@ describe("page failure and revocation", () => {
       const real = fixturePort();
       let n = 0;
       const port: AlphaCataloguePort = async (q) => (++n === 2 ? { kind: "failed", word } : real(q));
-      expect(await traverseAlphaCatalogue(port, { limit: 100 })).toMatchObject({ kind: "failed", failure: word });
+      expect(await traverseAlphaCatalogue(port, { limit: 100, workspaceId: LONG })).toMatchObject({ kind: "failed", failure: word });
     }
   });
 
@@ -238,7 +245,7 @@ describe("a source that changes while it is read", () => {
   });
 
   it("a page size other than the one asked is LIMIT_MISMATCH", async () => {
-    const r = await traverseAlphaCatalogue(script(page(["alpha-a1"], null)), { limit: 100 });
+    const r = await traverseAlphaCatalogue(script(page(["alpha-a1"], null)), { limit: 100, workspaceId: LONG });
     expect(r).toEqual({ kind: "failed", pages: 0, failure: "LIMIT_MISMATCH" });
   });
 });

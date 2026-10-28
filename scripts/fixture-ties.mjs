@@ -1421,6 +1421,30 @@ export async function runWorldTies(get) {
       if (exists) check("W47", entries.some((e) => e.label === "capital check"), `${row.id}: ${account.value} exists and the request states no capital check of it`);
     }
   }
+  // ── W48: a request names the entity it decides (a linkable id of the fleet), and the picker the session reads lists no placeholder alpha (N3-06, N3-08) ──
+  {
+    for (const row of approvalRows) {
+      const label = String(row.subject ?? "").split(/\s+[·→]\s+/)[0];
+      const alpha = alphaRows.find((a) => a.alpha_label === label);
+      const dep = /\b(dep_[A-Za-z0-9_]+)/.exec(String(row.subject))?.[1];
+      // a Live gate names the alpha in text and the Canary deployment it promotes in subject_id
+      const canary = row.gate === "LIVE_GATE" ? (alpha?.deployments ?? []).filter((d) => d.stage === "CANARY").map((d) => d.deployment_id) : [];
+      check("W48", row.subject_id === (dep ?? alpha?.alpha_id) || canary.includes(row.subject_id), `${row.id}: subject_id ${row.subject_id} is not the ${dep !== undefined ? "deployment" : "alpha"} its subject names (${dep ?? alpha?.alpha_id})`);
+    }
+    const names = [];
+    let cursor = null;
+    for (let n = 0; n < 6; n += 1) {
+      const page = await ok200(`/api/v1/quantbt/runs/alpha-catalogue?limit=200${cursor === null ? "" : `&cursor=${encodeURIComponent(cursor)}`}`);
+      if (page === null) break;
+      names.push(...page.items.map((i) => i.alpha_name));
+      cursor = page.page?.next_cursor ?? null;
+      if (cursor === null) break;
+    }
+    check("W48", names.length > 0, "the alpha catalogue answers nothing");
+    for (const name of names) check("W48", !/^Fixture alpha /.test(name), `the picker lists the placeholder "${name}"`);
+    // the catalogue is run-derived: alpha_e is the double's own research-only row, with no run in the world, so it is not in it
+    for (const label of alphaRows.filter((a) => a.alpha_id !== "alpha_e").map((a) => a.alpha_label)) check("W48", names.includes(label), `the picker does not list the fleet alpha "${label}"`);
+  }
   // ===== WP-B2-A3 round D end
   return { ties };
 }

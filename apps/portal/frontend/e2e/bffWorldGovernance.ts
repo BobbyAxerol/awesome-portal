@@ -389,6 +389,7 @@ export function worldInboxAnswer(search: URLSearchParams): { status: number; bod
       item.portfolio_id = mine.gate === "R2" ? mine.portfolioId : null;
       item.environment = mine.gate === "R1" ? "RESEARCH" : mine.gate === "R2" ? mine.environment.toUpperCase() : mine.gate === "PAPER_EXIT" ? "PAPER" : mine.gate === "SANDBOX_EXIT" ? "SANDBOX" : "LIVE";
       item.release_candidate = mine.gate === "R1" || mine.gate === "R2" ? mine.releaseCandidate : null;
+      item.subject_id = mine.deploymentId ?? mine.alphaId; // WP-B2-A3 (N3-08): the request names the entity it decides (the deployment of a stage gate, the alpha of R1/R2), so a screen can link it
     }
   }
   return { status: 200, body: envelope };

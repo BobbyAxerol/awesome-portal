@@ -49,7 +49,7 @@ describe("useRunLibrary · the alpha catalogue", () => {
   it("is the whole traversal (more than 200 entries), not page one", async () => {
     const log: AlphaCatalogueQuery[] = [];
     const api = fixtureApi(log);
-    const { result } = renderHook(() => useRunLibrary(true, api));
+    const { result } = renderHook(() => useRunLibrary(true, api, "ws_long")); // WP-B2-A3 (N3-06): multi-page on a named workspace; the session workspace lists the world only
     expect(result.current.alphaCatalogue.status).toBe("loading");
     await waitFor(() => expect(result.current.alphaCatalogue.status).toBe("complete"));
     expect(result.current.catalog).toHaveLength(fixtureCatalogue().length);
@@ -78,7 +78,7 @@ describe("useRunLibrary · the alpha catalogue", () => {
   });
 
   it("a failing second page is partial and carries no alpha into the picker", async () => {
-    const { result } = renderHook(() => useRunLibrary(true, fixtureApi([], (q) => (q.cursor ? { kind: "failed", word: "UNAVAILABLE" } : null))));
+    const { result } = renderHook(() => useRunLibrary(true, fixtureApi([], (q) => (q.cursor ? { kind: "failed", word: "UNAVAILABLE" } : null)), "ws_long"));
     await waitFor(() => expect(result.current.alphaCatalogue.status).toBe("partial"));
     expect(result.current.alphaCatalogue).toMatchObject({ pages: 1, loaded: 200, failure: "UNAVAILABLE" });
     expect(result.current.catalog).toBeNull();
@@ -138,7 +138,7 @@ describe("useRunLibrary · the alpha catalogue", () => {
   it("restartCatalogue reads again from the first page, never a resumed cursor", async () => {
     const log: AlphaCatalogueQuery[] = [];
     const api = fixtureApi(log, (_q, n) => (n === 2 ? { kind: "failed", word: "CURSOR_REFUSED" } : null));
-    const { result } = renderHook(() => useRunLibrary(true, api));
+    const { result } = renderHook(() => useRunLibrary(true, api, "ws_long"));
     await waitFor(() => expect(result.current.alphaCatalogue).toMatchObject({ status: "partial", failure: "CURSOR_REFUSED" }));
     act(() => result.current.restartCatalogue());
     await waitFor(() => expect(result.current.alphaCatalogue.status).toBe("complete"));
