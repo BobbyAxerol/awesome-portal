@@ -16742,6 +16742,7 @@ ELP2-10 remainNOT_MET; no phase transition or runtime authority is inferred.
 
 **Core ACK 28Oct:** [Independent E1–E5 consumption and incremental return](execution_loop/evidence/ELP2-10/CORE_TO_EDGE_CONSUMPTION_ACK_2026-10-28.md).
 **28Oct follow-through:** [seven-package review, focused receipts and Claude handoff](execution_loop/evidence/ELP2-10/CORE_SEVEN_PACKAGE_FOLLOWTHROUGH_2026-10-28.md).
+**28Oct V2 follow-through:** [lossless Core–Edge candidate, fixture browser receipt and remaining source/gate owners](execution_loop/evidence/ELP2-10/CORE_EDGE_V2_FIXTURE_FOLLOWTHROUGH_2026-10-28.md). Source-only; ELP2-10/11 remain open.
 Correction: Edge V1's recursive guard rejects unsafe numeric revisions before
 forwarding; Core V1 also refuses them. Full PostgreSQL BIGINT support requires
 a coordinated versioned lossless wire, not loosening either V1 guard. Fixture
