@@ -955,6 +955,16 @@ export async function runWorldTies(get) {
     const opens = ms(b.lifecycle?.trial?.exit_review_opens_at?.value);
     check("W41", opens !== null && opens <= ms(factsOf("canary", b)?.runtime?.since?.value) + 1000, `${id}: the exit review opens ${b.lifecycle?.trial?.exit_review_opens_at?.value}, after the trial ended ${factsOf("canary", b)?.runtime?.since?.value}`);
   }
+  // W70 (QA8 N8a-01, N8a-03): the published lifecycle of an alpha is its own history: its CURRENT stage is the fleet's stage, the stages it left are DONE, the later ones NOT_STARTED (so a variant page of a deployment, which names that alpha, spines the alpha's real stage)
+  for (const a of alphaRows.filter((x) => STAGE_RANK[x.stage] !== undefined).slice(0, 14)) {
+    const life = await ok200(`${E}/alphas/${a.alpha_id}/lifecycle`);
+    if (life === null) continue;
+    for (const row of life.stages ?? []) {
+      if (STAGE_RANK[row.stage] === undefined) continue;
+      const expected = STAGE_RANK[row.stage] < STAGE_RANK[a.stage] ? "DONE" : row.stage === a.stage ? "CURRENT" : "NOT_STARTED";
+      check("W70", row.state === expected, `${a.alpha_label} (in ${a.stage}): the lifecycle says ${row.stage} is ${row.state}, expected ${expected}`);
+    }
+  }
   // ===== WP-B2-S3 end
   // ===== WP-B2-A3 begin
   // ── W19: a request exists only for the NEXT gate of its subject, once, and its quorum is open (R3-02, R3-09, R3-10, R3-03) ───────────────────────────────

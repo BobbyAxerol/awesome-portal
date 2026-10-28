@@ -1674,11 +1674,19 @@ function wpkAlphaLifecycle(method: string, path: string, search: URLSearchParams
   const exit = (stage: string): number | null => num(`life_${stage}_exit_ms`);
   const days = (stage: string): number | null => num(`life_${stage}_days`);
   const from = (stage: string): number | null => { const to = exit(stage); const d = days(stage); return to === null || d === null ? null : to - d * day; };
-  const stages = [
-    row("R1", exit("r1"), null, null, false, "DONE"), row("R2", exit("r2"), null, null, false, "DONE"),
-    row("PAPER", exit("paper"), days("paper"), from("paper"), true, "DONE"), row("SANDBOX", exit("sandbox"), days("sandbox"), from("sandbox"), true, "DONE"),
-    row("CANARY", exit("canary"), days("canary"), from("canary"), true, "DONE"),
-    row("LIVE", null, days("live"), exit("canary"), false, "CURRENT", { decided_by: null, receipt_ref: null, decider_role: who("life_live_decider"), blocked_reason: who("life_blocked_reason") })];
+  // ===== WP-B2-S3 (QA8 N8a-01, N8a-03): the lifecycle is the alpha's OWN history (the stage record it reached): a stage it left is DONE, the one it is in is CURRENT, a later one NOT_STARTED
+  const record = wpb2sHistory(alphaId).stages;
+  const stageRow = (name: "paper" | "sandbox" | "canary"): Draft => {
+    const upper = name.toUpperCase();
+    if (record[name].status === "completed") return row(upper, exit(name), days(name), from(name), true, "DONE");
+    if (record[name].status === "current") return row(upper, null, record[name].days, record[name].fromMs, true, "CURRENT", { decided_by: null, receipt_ref: null });
+    return row(upper, null, null, null, false, "NOT_STARTED", { decided_by: null, receipt_ref: null });
+  };
+  const liveRow = record.live.status === "current"
+    ? row("LIVE", null, days("live"), exit("canary"), false, "CURRENT", { decided_by: null, receipt_ref: null, decider_role: who("life_live_decider"), blocked_reason: who("life_blocked_reason") })
+    : row("LIVE", null, null, null, false, "NOT_STARTED", { decided_by: null, receipt_ref: null });
+  const stages = [row("R1", exit("r1"), null, null, false, "DONE"), row("R2", exit("r2"), null, null, false, "DONE"), stageRow("paper"), stageRow("sandbox"), stageRow("canary"), liveRow];
+  // ===== WP-B2-S3 end
   const kinds = ["stage", "decision", "incident", "recall", "flow"] as const;
   const items: Draft[] = [];
   for (const [key, metric] of Object.entries(keys)) {
