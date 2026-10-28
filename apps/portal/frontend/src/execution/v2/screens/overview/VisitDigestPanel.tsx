@@ -21,6 +21,10 @@ const KIND_FLAG: Readonly<Record<VisitItemKind, FlagKind>> = {
   INCIDENT: "attention", APPROVAL: "neutral", OPERATION: "neutral", RECONCILIATION: "neutral", REVIEW_DUE: "neutral",
   CONDITION_EXPIRY: "neutral", VERIFIED_OPERATION: "neutral", JOURNAL_COMMAND: "neutral", SOURCE: "neutral", STAGE: "neutral", UNKNOWN: "unknown",
 };
+/** A review the server's own value says is overdue is not worded "due" (QA7 N1-04); with no such word the kind's word stands. */
+export function kindWord(item: Pick<VisitItem, "kind" | "value">): string {
+  return item.kind === "REVIEW_DUE" && /overdue/i.test(item.value) ? "Review overdue" : KIND_WORD[item.kind];
+}
 const CHANGE_WORD = { NEW_OBSERVATION: "New to this list", CHANGED: "Changed" } as const;
 
 export const DIGEST_COVERAGE = "Compared with what you last marked as seen: bounded observations of the triage, today and source lists. It is not an event history, and a fact that left a list is not read as resolved.";
@@ -46,7 +50,7 @@ export function VisitDigestPanel({ ui, onMark, to }: { ui: Extract<VisitDigestUi
               return (
                 <li key={item.id} className="exec-ov-vd-item" data-kind={item.kind} data-change={item.change}>
                   <span className="exec-ov-vd-head">
-                    <Flag kind={KIND_FLAG[item.kind]} label={KIND_WORD[item.kind]} size="sm" />
+                    <Flag kind={KIND_FLAG[item.kind]} label={kindWord(item)} size="sm" />
                     {target !== null ? <Link className="exec-ov-link" to={target}>{item.label}</Link> : <span className="exec-ov-what-title">{item.label}</span>}
                   </span>
                   <span className="exec-ov-sub">
