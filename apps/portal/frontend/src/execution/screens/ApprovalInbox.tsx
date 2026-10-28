@@ -20,6 +20,7 @@
  *      puts "Recently decided" in its own section for a reason: a decided
  *      request in the pending table would be an action item that is not one.
  */
+import { shownQuorum } from "../v2/screens/cockpit/laneModel";
 import { slaOverdue, type ApprovalId, type KeysetPage, type PanelStatus, type Sla } from "../contracts";
 import { emptyScopeLine, emptyScopeTitle } from "../readTruthCopy";
 import { StatusChip } from "../components/badges";
@@ -243,7 +244,7 @@ function SlaPhrase({ sla }: { sla: Sla }) {
 /** What this row asks of the reader, in one place: who it waits on, and the leading blocker if the server counted one. */
 function Next({ row }: { row: ApprovalRow }) {
   const approvers =
-    row.quorumMet !== null && row.quorumRequired !== null ? `${row.quorumMet} of ${row.quorumRequired} approvers` : "approvers not published";
+    row.quorumMet !== null && row.quorumRequired !== null ? `${shownQuorum(row.quorumMet, row.quorumRequired)} approvers` : "approvers not published";
   return (
     <span className="exec-inbox-next">
       {row.inert ? (

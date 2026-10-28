@@ -313,8 +313,13 @@ export function slaView(sla: InboxSlaV2 | null): SlaView | null {
   };
 }
 
+/** The count as printed: never above the quorum ("3 of 2" reads as a broken page). A published count above it says how many were recorded. */
+export function shownQuorum(met: number, required: number): string {
+  return met > required ? `${required} of ${required} (${met} recorded)` : `${met} of ${required}`;
+}
+
 export function quorumText(met: number | null, required: number | null): string | null {
-  return met !== null && required !== null ? `${met} of ${required} approvers` : null;
+  return met !== null && required !== null ? `${shownQuorum(met, required)} approvers` : null;
 }
 
 /** Meter cells, capped so a large quorum cannot fill the pane; the text beside the meter always carries the true numbers. */

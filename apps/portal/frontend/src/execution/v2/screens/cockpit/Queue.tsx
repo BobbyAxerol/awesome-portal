@@ -117,7 +117,8 @@ function GateFlags({ row, principal }: { row: InboxRowV2; principal: Principal }
 
 function GateItem({ row, principal }: { row: InboxRowV2; principal: Principal }) {
   const sla = slaView(row.sla);
-  const context = [row.target, row.releaseCandidate].filter((part) => part !== null).join(" · ");
+  // The subject id the request decides is printed as published; the row is a selectable button and the published row names no subject type, so no route is guessed for it.
+  const context = [row.target, row.releaseCandidate, row.subjectId === null ? null : `subject ${row.subjectId}`].filter((part) => part !== null).join(" · ");
   return (
     <>
       <span className="exec-ck-qt">

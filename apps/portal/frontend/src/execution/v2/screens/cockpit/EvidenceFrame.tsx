@@ -33,7 +33,7 @@ import type {
   R2ParentV2, RecordedActivityV2, RecordedVerdictsV2, ScalarV2, SectionV2,
 } from "../../readers/governanceParents";
 import {
-  instantText, instantWithYear, KIND_TAG, lapseView, NOT_PUBLISHED, notPublishedFor, RUNWAY_AXIS_DAYS, RUNWAY_TICKS_DAYS, settledPanel, summarizeEvidence,
+  instantText, instantWithYear, KIND_TAG, lapseView, NOT_PUBLISHED, notPublishedFor, RUNWAY_AXIS_DAYS, RUNWAY_TICKS_DAYS, settledPanel, shownQuorum, summarizeEvidence,
   type EvidenceData, type EvidenceKind,
 } from "./laneModel";
 
@@ -570,7 +570,7 @@ function ApprovalPanel({ approval, observedAt }: { approval: ApprovalV2; observe
           { label: "Status", value: STATUS_WORD[approval.status] },
           { label: "Version", value: String(approval.approvalVersion) },
           { label: "Policy", value: <Id value={approval.policyVersion} /> },
-          { label: "Approvers", value: `${approval.quorumMet} of ${approval.quorumRequired}` },
+          { label: "Approvers", value: shownQuorum(approval.quorumMet, approval.quorumRequired) },
           { label: "Evidence", value: approval.evidenceComplete ? "Complete" : "Incomplete" },
           { label: "Created", value: when(approval.createdAt) },
           { label: "Review due", value: when(approval.slaDueAt) },
@@ -1042,7 +1042,7 @@ export function EvidenceFrame({ kind, header, evidence, unknownReason, extra = I
           {/* The hi-fi's one line under the headline: the approvers so far and the time left, each only as published (the checklist count is the headline and the meter's). */}
           {header.quorum || header.left ? (
             <div className="exec-ck-meta" data-testid="ck-verdict-line">
-              {header.quorum ? <span>Quorum {header.quorum.met} of {header.quorum.required}</span> : null}
+              {header.quorum ? <span>Quorum {shownQuorum(header.quorum.met, header.quorum.required)}</span> : null}
               {header.left ? <span>{header.left}</span> : null}
             </div>
           ) : null}
