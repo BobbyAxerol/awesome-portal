@@ -238,7 +238,8 @@ export default function FleetScreen({ api, workspaceId, streamFlag = FLEET_STREA
     const out: Record<string, number> = {};
     for (const group of dataset.last === null ? [] : dataset.last.groups) {
       const part = group.key.length === 1 ? group.key[0]! : null;
-      if (part !== null && part.field === "stage_presence" && part.value !== null) out[part.value] = group.uniqueRowCount;
+      // A group is a stage COMBINATION ("CANARY,LIVE" is one alpha in both): a lane counts every group whose key contains it, the same membership the cards of the lane use (never "10 of 9").
+      if (part !== null && part.field === "stage_presence" && part.value !== null) for (const lane of part.value.split(",")) out[lane] = (out[lane] ?? 0) + group.uniqueRowCount;
     }
     return Object.keys(out).length === 0 ? undefined : out;
   }, [dataset.last]);
