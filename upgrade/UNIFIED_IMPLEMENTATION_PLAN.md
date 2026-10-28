@@ -16663,3 +16663,8 @@ v2 references are source-only and S2 attribution remains open. [Source pins,
 Core implications and exact Edge follow-up](execution_loop/evidence/ELP2-10/PM_S6A_FINANCIAL_AUTHORITY_INTAKE_2026-10-27.md).
 No financial source, command, runtime or connected gate is qualified by this intake.
 
+28Oct Core→Edge coordinator request: [independently actionable Research
+discovery, READ/STREAM, financial, STATUS and calendar/workload return](execution_loop/evidence/ELP2-10/CORE_TO_EDGE_CONNECTED_SOURCE_REQUEST_2026-10-28.md).
+Portal Edge is the only external coordinator; its PM/TS follow-through is not
+delegated to Bobby. No connected or runtime acceptance is implied.
+
