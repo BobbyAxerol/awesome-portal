@@ -381,3 +381,18 @@
   font: var(--exec-font-meta);
   color: var(--ink-faint);
 }
+
+/* QA7 N5-07: the envelope table's USED column stays whole at 1440 and 1024: the bar sits over its words ("at limit", "over limit"), which wrap
+   instead of being cut at the panel edge. */
+.exec-cny-v2 .exec-cards .exec-gauge-wrap {
+  flex-direction: column;
+  flex-wrap: nowrap;
+  align-items: stretch;
+  gap: var(--space-1);
+}
+.exec-cny-v2 .exec-cards .exec-gauge {
+  min-width: 72px;
+}
+.exec-cny-v2 .exec-cards .exec-gauge-text {
+  white-space: normal;
+}
