@@ -12,7 +12,7 @@ import { Flag } from "../../Flag";
 import { BlockerList, NotPublished, SectionPanel } from "../../blocks";
 import { formatAsOf } from "../../boundary";
 import { stageWhy } from "../stage/reasons";
-import { blockers, gateOf, humanize, submitReason } from "./model";
+import { blockers, gateOf, humanize, isDecided, submitReason } from "./model";
 import type { SandboxView } from "./readSandbox";
 
 const ACCESS = "/administration/profile-access";
@@ -59,6 +59,20 @@ function Provenance({ view, codes }: { view: SandboxView; codes: readonly string
 export function ExitReviewPanel({ view }: { view: SandboxView }) {
   const gate = gateOf(view);
   const { items, codes } = blockers(view);
+  if (isDecided(view)) {
+    // A decided certification is a closed approved record: no action is offered, and the blocker code stays under Provenance.
+    return (
+      <SectionPanel level={2} title="Exit review" aside={<Flag kind="ok" label="Decided" size="sm" />}>
+        <div className="exec-sbx-exit" data-testid="exit-closed">
+          <p className="exec-sbx-note">This certification was already decided. The record is closed: there is nothing to submit and no exit review to request from here.</p>
+          <details className="exec-blocker-prov">
+            <summary>Provenance</summary>
+            <Provenance view={view} codes={codes} />
+          </details>
+        </div>
+      </SectionPanel>
+    );
+  }
   // A gate the server did not state has no chip: the empty list below already says `Not available`.
   const aside = gate === "blocked" ? <Flag kind="rejected" label="Blocked" size="sm" /> : gate === "eligible" ? <Flag kind="ok" label="Eligible" size="sm" /> : undefined;
   const empty =

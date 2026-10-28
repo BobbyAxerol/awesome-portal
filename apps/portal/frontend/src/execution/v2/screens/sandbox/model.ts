@@ -307,6 +307,14 @@ export function blockers(view: SandboxView): Blockers {
   return { items, codes };
 }
 
+/** The server's blocker code for a certification that already has its decision: the stage is a closed, approved record. */
+export const ALREADY_DECIDED_CODE = "SANDBOX_CERTIFICATION_ALREADY_DECIDED";
+
+/** True when the published progress says the certification was already decided (QA6 R4-03). */
+export function isDecided(view: SandboxView): boolean {
+  return view.progress !== null && view.progress.blockerCodes.includes(ALREADY_DECIDED_CODE);
+}
+
 /** Why Submit for review is off. The action has no route, so it is never on; when the gate is shut the reason says that first. */
 export function submitReason(gate: GateState, notEnabled: string): string {
   return gate === "blocked" ? "Blocked until every step passes" : notEnabled;
@@ -317,7 +325,7 @@ export function submitReason(gate: GateState, notEnabled: string): string {
 const WORST_FRESHNESS: readonly string[] = ["STALE", "AGING", "OK"];
 
 /** Display freshness from the three source panels: the worst state the server published, with its as-of. Nothing is aged here. */
-function freshnessChip(panels: readonly PanelView[]): StageChipValue {
+function freshnessChip(panels: readonly PanelView[], decided = false): StageChipValue {
   // A withheld or failed panel makes no claim about its data, whatever freshness word it carries (Canary's rule).
   const speaks = (p: PanelView) => !p.suppressed && p.state !== "unavailable" && p.state !== "denied" && p.state !== "terminal";
   const known = panels.filter((p) => speaks(p) && p.freshness !== null && p.freshness !== "UNKNOWN");
@@ -328,6 +336,8 @@ function freshnessChip(panels: readonly PanelView[]): StageChipValue {
   const worst = WORST_FRESHNESS.find((word) => known.some((p) => p.freshness === word)) ?? "OK";
   const at = known.find((p) => p.freshness === worst)?.asOf ?? null;
   const tone = worst === "OK" ? "ok" : "warn";
+  // A decided stage is a closed record: its last read is the end of the record, not a live "Fresh" (QA6 R4-03).
+  if (decided) return { state: "dot", tone: "mute", text: `Ended${at === null ? "" : ` · ${formatAsOf(at)}`}`, note: "Decided; the record is closed" };
   return { state: "dot", tone, text: `${FRESHNESS_WORD[worst]}${at === null ? "" : ` · ${formatAsOf(at)}`}` };
 }
 
@@ -367,7 +377,7 @@ function reconciliationChipOf(view: SandboxView): StageChipValue {
 export function chipsOf(view: SandboxView): StageChips {
   return {
     runtime: runtimeChipFrom(view.runtime, view.runtimeState === null ? null : humanize(view.runtimeState)),
-    freshness: freshnessChip(view.panels),
+    freshness: freshnessChip(view.panels, isDecided(view)),
     reconciliation: reconciliationChipOf(view),
   };
 }

@@ -633,6 +633,17 @@ describe("actions with no route are disabled with their reason", () => {
     expect(screen.getAllByRole("link", { name: /My access/ }).length).toBeGreaterThanOrEqual(2);
   });
 
+  it("a certification the server already decided is a closed record: no Submit, no exit review request, no Fresh chip (QA6 R4-03)", async () => {
+    const body = v1Rich();
+    body.progress = { ...body.progress, eligible: false, blocker_codes: ["SANDBOX_CERTIFICATION_ALREADY_DECIDED"] };
+    mount(fakeApi({ read: okRead(body) }));
+    await ready();
+    expect(screen.getByTestId("exit-closed").textContent).toMatch(/already decided/);
+    expect(screen.queryByRole("button", { name: "Submit for review" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Request Sandbox exit review" })).toBeNull();
+    expect(document.body.textContent).not.toMatch(/Fresh/);
+  });
+
   it("on a body with no gate (V2) Submit says the profile reason, not a gate it cannot know", async () => {
     mount(fakeApi());
     await ready();
