@@ -7,6 +7,17 @@ Chúng không thay thế phase hoặc exit gate trong
 
 ## Active deep dives
 
+- **28Oct connected-source E1–E5 — SOURCE_REVALIDATED / CONNECTED_NOT_MET:**
+  [same08/read09 journal](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#28oct--e1e5-connected-source-coordinator-follow-through)
+  and [incremental Core return](../evidence/execution-edge-v1_2/EPG10-08/EDGE_TO_CORE_CONNECTED_SOURCE_RETURN_2026-10-28.md)
+  record3fresh actual-source checks, ACTIVE mapping/zero scoped heads and no
+  current Paper root; trust locators acknowledged, secure transport/native
+  workflow not commissioned. Financial/STATUS/calendar/workload source census
+  returned independently; PM publication pin defect fixed6276588b/10PASS.
+  Edge's single action packet delivered to PM/DL mailboxes; E1 mirrored to
+  Core without all-five wait. No runtime/grant/command/Live change, full08/read09
+  stillNOT_MET; each new owner input unlocks only its matching binding/test.
+
 - **27Oct Research membership reader — INSTALLED / EDGE_METADATA_VERIFIED:**
   [same08/read09 journal](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#epg10-08-research-reader-db-scope-20261027)
   and [current source/test/install return](../evidence/execution-edge-v1_2/EPG10-08/EDGE_RESEARCH_READER_APPROVED_IMPLEMENTATION_2026-10-27.md)

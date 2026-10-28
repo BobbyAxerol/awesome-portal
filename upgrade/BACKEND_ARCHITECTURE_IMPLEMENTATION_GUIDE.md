@@ -650,6 +650,22 @@ deep-dive → ADR → slice → evidence discipline documented above.
 
 ### 14.1 Current backend state (tracking snapshot — 2026-08-17)
 
+**28Oct connected-source E1–E5 — SOURCE_REVALIDATED / CONNECTED_NOT_MET:**
+[same08/read09 journal](EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#28oct--e1e5-connected-source-coordinator-follow-through)
+and [incremental Core return](evidence/execution-edge-v1_2/EPG10-08/EDGE_TO_CORE_CONNECTED_SOURCE_RETURN_2026-10-28.md)
+record3fresh actual-source PASS checks: metadata, scoped observation ACTIVE/
+0heads/0receipts, independent all-Paper root census0. Existing two SGP trust
+bundles/locators acknowledged, not missing or installed. Secure final PG hop
+and official native protected-root workflow remain missing; no invented grant.
+E3 actual financial carrier/proof/ACK source inventory is ready, not mounted;
+E4 stale publication pin fixed at PM6276588b with10focusedPASS, runtime gateway
+and independent service recovery not commissioned. E5 current calendar absent,
+current workload/apparatus pins returned without capacity/load acceptance.
+Edge delivered its single owner-action packet directly to PM/DL incoming
+mailboxes and independently mirrored E1 to Core. No runtime/source-business/
+credential/grant/command/Live change; private observations retained, test cell
+removed. Full08/read09NOT_MET; per-input second-round actions in linked return.
+
 **27Oct Research membership reader — INSTALLED / EDGE_METADATA_VERIFIED:**
 [same08/read09 journal](EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#epg10-08-research-reader-db-scope-20261027)
 and [current source/test/install return](evidence/execution-edge-v1_2/EPG10-08/EDGE_RESEARCH_READER_APPROVED_IMPLEMENTATION_2026-10-27.md)

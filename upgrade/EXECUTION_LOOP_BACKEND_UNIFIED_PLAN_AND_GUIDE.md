@@ -33599,3 +33599,157 @@ HK/SGP SHA256 bothab345cdc5c322d3bc7de06eee4f2d1a2ad831adeedc07ce1121daba57716b2
 read back matching; CoreHEAD stillf50c4ea72. Contains actual installed/source
 pins, secure transport proposal and three concrete owner actions above; no
 private bytes copied. Delivery is not Core ACK, listener READY or connectedPASS.
+
+### 28Oct — E1–E5 connected-source coordinator follow-through
+
+BOBBY_REQUESTED / IN_PROGRESS, original08/read09. Guide: EPG10-08 in
+[v1.2 detailed guide](upgrade_v1.2/EXECUTION_PORTAL_EDGE_UPGRADE_GUIDE_v1.2_VI.md#epg10-08-hoàn-thiện-revocation-scope-và-tls),
+[Core E1–E5 request](evidence/execution-edge-v1_2/EPG10-08/CORE_TO_EDGE_CONNECTED_SOURCE_REQUEST_2026-10-28.md),
+[approved bounded reader delta/rollback](evidence/execution-edge-v1_2/EPG10-08/EDGE_RESEARCH_READER_DB_SCOPE_PROPOSAL_2026-10-27.md#6-backupaudit-installation-and-exact-rollback).
+Goal: fresh E1 installed reader/current identity/source census and official
+Paper authority path first; separately disposition E2 CURRENT/STREAM, E3
+financial carrier/proof, E4 STATUS/recovery and E5 calendar/workload. Return
+each genuinely ready part immediately, no all-five barrier. Edge coordinates
+PM/TS/DL directly through exact source-owner packets, not a task pushed to Bobby.
+
+Scope/invariants: bounded read-only source verification/observation and existing
+contract/runtime/config inspection; preparation and owner coordination. No new
+source DB/credential/grant/runtime/load/command/Live/submit mutation follows
+from the public request. No old session/window, plaintext nonloopback workaround,
+source namespace sharing, shared HBA/TLS or stable credential. Existing reader
+selection ends28Oct09:30UTC/16:30VN, not27Oct; a fresh proposed discovery slot
+must fit actual current pins/expiry and be matched before activation. Expiry
+requires its reviewed stop/rollback, never implicit renewal or fake original.
+Tests: actual bounded metadata verifier and fresh no-selector reader observation;
+hash/identity/source/expiry validation, read-only carrier/contract checks and
+impact tests only for source changes. Fixture is not connected evidence.
+Rollback: no rollout in this intake; retain source/custody/artifacts, perform
+only approved new-reader admission rollback if actually required. No shared
+resource cleanup; exact temporary test resources only if any are created.
+
+Intake28Oct08:09UTC/15:09VN: Edge9ae6f128, canonical peer72/56/20-3 WIP intact.
+Pinned Core docs/research-loop-plan@8e4a7703d46bdb92a708ac7fa9eb3981e44aa7c4;
+HK/SGP requestSHA665ea7978273f97eebe23fb454250e9dbba6019e89f8bb4857ffc411b1214897
+matches. Primary owns E1/E2, source-owner coordination, both tracking docs and
+incremental return/mirror. Read-only disjoint delegates inspect E3 financial,
+E4 STATUS, E5 calendar/coexistence (workspace34b parallel rule); no peer writes.
+Root available105759305728B, no measurement lock present; no load/build started.
+
+E1 independently READY source part delivered first, without waiting E3–E5:
+[incremental E1–E5 return](evidence/execution-edge-v1_2/EPG10-08/EDGE_TO_CORE_CONNECTED_SOURCE_RETURN_2026-10-28.md).
+Revision1 HK/SGP hashbdeeea91a37a23abe0f615d5da98dbd08f80f595b1030acecdd94abe3944cdae
+matched at Core mailbox. It explicitly says SOURCE_ACCESSOR_ONLY_NOT_EDGE_ACCEPTANCE,
+not listener/authority/READ/STREAM READY. Actual fresh metadata verifierPASS,
+guarded observerPASS at28Oct15:15:12VN, independent Paper-root aggregatePASS at
+15:25VN. Selected mappingACTIVE, scopedheads0/receipts0; globalPaperheads0,
+roots0/protectedcurrentroots0/policy1 in the separate aggregate. This scope is
+not all-portfolios/all-mode absence. Core observer1f4109cc4 sourceSHA39d116f6
+unchanged; guarded no-selector observation READONLY/RR/2s/250ms/ROLLBACK.
+Metadata verifier uses existing8s verification bound, not runtime2s/latencyPASS.
+Private0600observation59df2db8e2b5727ec322cdb9d8c7d51cca540741bce2724be8a2c5e5e9c8f154
+retained at exact locator in return; raw envelope never copied to Git/chat/SGP.
+Installedsource/oldcatalogue/roles/ACL/function and pinned52-object PUBLIC
+exception MATCH; no install/grant/credential or source-business mutation.
+
+Trust input already AVAILABLE: CORE_TO_EDGE_DISCOVERY_TRUST_BINDING_2026-10-27.md
+SHA0656899c440b2a92fd04d417e13e1d1201efc132cfc7526c850076251f9daa3b,
+two actual SGP private bundles/manifests/hop custody/SAN/expiry acknowledged.
+Do not ask Core to create them again. Neither is transferred/installed on HK;
+binding09:30UTC caps earlier than certificate expiry. Proposed discovery only
+09:00–09:20UTC/16:00–16:20VN with08:50UTC cutoff is CONDITIONAL, no reserved slot,
+source install/manifest or authority. Authenticated final PG hop is not ready;
+no plaintext/source namespace/Docker-admin shortcut. A shared sourceTLS/HBA
+change requires its separate exact reviewed delta, not reapproval of reader.
+
+Source workflow check on clean PM4cdf5ccc confirms SOURCE_WORKFLOW_ABSENT in
+inspected services/CLI/scripts/init-db: normal writer cannot bootstrap root,
+portfolio metadata admin route and business_root_read acceptance are not native
+membership ROOT. Test-only populations are not a production workflow. PM/native
+authority owner must return independently approved real portfolio/root/import
+operation and receipt, or implement/review the missing source-owned workflow.
+No invented original, SQL membership insert, reused revoked profile or grant.
+
+E3 READY inventory: actual original-publication carrier/schema and concrete
+financial current authority/Ed25519 proof/Rust atomic PG/real APPLIED/source ACK
+ports already exist at PMcandidate6276588b/Edge68344dad; obsolete blanket
+adaptersNOT_IMPLEMENTED is corrected. AS_PUBLISHED_NOT_CURRENT/PARTIAL retained;
+S6A budget not populated in actual publisher, completeness/history floor still
+null, no account-count/transfer-as-PnL inference. Canonical Edged6aa image on
+Paper/Sandbox/Live has no financial-runtime config; mounted real selected
+financial original/carrier and current trust/ACK-scope stillNOT_READY. Existing
+isolated4+32 proof/ACK evidence inherited, not rerun or current acceptance.
+
+E4 owned publication defect FIXED: PMcommit6276588b9cd6622511746468f918c2f18a45ad00,
+3files/+93/-3, normal Bobby identity. Descriptor now matches unchanged committed
+transport912fe9d8 and optional exact lifecycle/drain; one new source/test-pin
+regression, unit pin refreshed; historical evidence untouched. Actualfocused
+10PASS/0FAIL/0SKIP in1.70s, existingSDK089658 image/1CPU/700MiB/read-only/none/
+--rm. No wire/runtime/source-business change. Source-only clean PMcandidate;
+no push/merge/CI. Actual three canonicalEdges have neither STATUS config key.
+Commissioned STATUS endpoint/original/purpose/peer NOT_READY; independent PM
+service-recovery wire not provided; human ACK completion != unattended recovery.
+Edge must bind the accepted producer wire, never invent it or reuse READ grant.
+
+E5 READY census/current apparatus: actual VN static calendar sources insufficient
+for authenticated date/range/holiday/revision/clocks, N11calendarTYPED_UNAVAILABLE;
+Binance fixture/settlement is not VN intraday. New DLe6a837b4 carrier source-only/
+ownerresolverabsent/HOLD, not calendar acceptance. TS next-upgrade0cd356da runner
+9e1e6fd7/samplerf5aa223a differ from historical01 closure; flaggedSTALE_PRIOR_CLOSURE,
+not silently accepted. Current full pins, original12-cell6k/9k600s G2 semantics,
+narrow observed retained bounds and still-unapproved14budget groups in return.
+No capacity/load/window started; DLv2.2.5 mixed-heavy-Portal exclusion and
+PMfinitepilotexecution_readyfalse preserved. Core prepares actual workload/
+numeric calibration proposal for Bobby; TS/DL/physicaltarget provide exact
+admitted image/config/coverage/clocks/quota/durability/headroom/stop/restore.
+
+Direct owner coordination completed, not pushed back to Bobby:
+[single source action packet](evidence/execution-edge-v1_2/EPG10-08/EDGE_TO_SOURCE_OWNERS_CONNECTED_INPUTS_2026-10-28.md)
+SHA70a418f8710126d0838408f20417c3fc092fde44aac25e1898d7bc4f349eda70 copied
+unchanged to active PM-integration/upgrade/ and DLmarket-source-carrier/upgrade/
+incoming mailboxes. Exact paths and same-hash verification in Core return.
+Only these incoming documents added; no peer plan/code/index/HEAD change.
+Reply conventions PM_TO_EXECUTION_* identified; Edge remains sole Corecounterparty.
+Delivery != ownerACK; no new native provisioning/DB/command authority inferred.
+
+Round status: E1source+observationREADY, E2–E5 inventories/source dispositions
+READY as explicitly named; **whole E1–E5 connected NOT_READY, full08/read09NOT_MET**.
+No owned runnable metadata defect left; source review/missing-input manifests
+and incoming owner packets are finished. Exact remaining owners/actions above
+and in one cumulative return, no new phase. Next permissible step: consume each
+source-owner return independently, match real transport/original/authority pins,
+then execute its bounded allowed binding/specimen; not retry an expired window.
+Final delivery/source-validation/cleanup/commit reconciliation follows below.
+
+Final source/public-return validation:34actual fileSHA256 pins MATCH,0mismatch;
+all relative local file links resolve; git diff --checkPASS. CanonicalTS
+668e10320c0bf5a9089e33b72f317d8d7c7215c3/Portal54c6f5f3cccd68f400f4dd25ae6f4b17320a7db4
+unchanged. RuntimeDB6343/native28ea/threeEdge listenersd6aa/threeProxyaa14
+image/config unchanged/restart0. Read-only inventory also observes pre-existing
+Paper manager-projection-worker restart25799→25802/last exit0/OOMKilledfalse;
+Sandbox/Liveworkers0. Not an owned restart or healthy/capacity target; current
+cause not diagnosed from metadata. Earlier original06 source OOM-remedy remains
+isolated-qualified/not deployed, not proof of current cause/fix; do not silently
+restart/fix another runtime under this intake. Actual full digests in return.
+
+C4: E4 exact --rm cell absent, no own image/build/BuildKit/network/volume/source
+deletion or remote test resource. Shared inventory273images/59active/108.4GB,
+BuildKit984/63active/88.11GB retained, no broadprune. Root available entry
+105759305728→closeout105353142272B under concurrent activity, not attributed to
+this slice or claimed reclaimed. Private observation/installation backup and
+Core trust custody explicitly retained; no new key or credential. Stable
+a9b10385 and namedrollback6180b9bf/cd79e9c6/98a191c7 unchanged/unrequalified.
+No merged/abandoned owned worktree or disposable image to remove. Peers remain
+untouched apart from the declared new incoming packet in PM/DL; index/HEAD of
+those peers preserved. No push/merge/remoteCI0minutes. Source-only local commits
+use configuredBobby identity; matching final Core delivery hash is recorded next.
+
+Final public revision2 delivered to CoreELP2-10/ at28Oct15:37VN; HK/SGP
+SHA256a6779077f4a5cf9753346489efcd5c5b64c98be93027b3d2f8abfa336deb1666
+MATCH for EDGE_TO_CORE_CONNECTED_SOURCE_RETURN_2026-10-28.md. Source action
+packet70a418f8710126d0838408f20417c3fc092fde44aac25e1898d7bc4f349eda70
+also MATCH in Edge/PM/DL/Core. Only the two declared public files copied toSGP;
+CoreHEAD still8e4a7703d46bdb92a708ac7fa9eb3981e44aa7c4, no runtime/source change.
+Delivery is not Core/source-owner ACK. Public request665ea797 included as exact
+inbound provenance, not a new authorization. All independently runnable intake,
+publication correction, validation, coordination and cleanup complete; next
+matching source-owner response is consumed immediately in original08/read09.
