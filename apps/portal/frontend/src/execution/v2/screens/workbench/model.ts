@@ -26,7 +26,7 @@ import type { ProfileEnvelope } from "../../../api/profileRead";
 import type { ExactUnit } from "../../../formatExact";
 import { readUtcEpochMs, type UtcEpochMs } from "../../../screenDataContract";
 import { unsafeText } from "../../../unsafeText";
-import { readDecimal, type BoundaryDecimal } from "../../boundary";
+import { formatAsOf, readDecimal, type BoundaryDecimal } from "../../boundary";
 import type { StageTab } from "../../blocks";
 import type { ChartSegment, ChartState, SeriesPoint, ServerEnvelope } from "../../charts";
 import type { FlagKind } from "../../flagKinds";
@@ -39,6 +39,7 @@ import {
   type StageFacts,
   type VenueCalendar,
 } from "../../../stageFacts";
+import { runtimeFactOf } from "../../readers/stageFactViews";
 import { stageIdentity, type StageIdentity } from "../stage/identity";
 
 /* ── constants ────────────────────────────────────────────────────────────── */
@@ -244,6 +245,16 @@ export function envelopeAsOf(envelope: ProfileEnvelope): UtcEpochMs | null {
 /** When the Portal read the profile: the epoch clock when published, else its ISO instant. Never the as-of (a different fact). */
 export function envelopeReadAt(envelope: ProfileEnvelope): UtcEpochMs | null {
   return (envelope.readAtMs === null ? null : readUtcEpochMs(envelope.readAtMs)) ?? instantMs(envelope.readAt);
+}
+
+/**
+ * A run the server publishes as STOPPED has ended: its last read is the end of the record, so the chip says "Ended <date>" in a neutral
+ * state, never a green "Fresh" next to a read 36 days later (QA8 N8a-05). The date is the runtime's own `since`, as published.
+ */
+export function endedFreshness(freshness: FreshnessFacts, facts: StageFacts | null): FreshnessFacts {
+  const runtime = runtimeFactOf(facts);
+  if (runtime === null || runtime.state.kind !== "value" || runtime.state.value !== "STOPPED" || runtime.sinceMs.kind !== "value") return freshness;
+  return { kind: "paused", label: `Ended · ${formatAsOf(runtime.sinceMs.value)}`, asOfMs: freshness.asOfMs };
 }
 
 export function freshnessOf(envelope: ProfileEnvelope): FreshnessFacts {
@@ -730,10 +741,11 @@ export function buildWorkbench(envelope: ProfileEnvelope, quality: DeploymentQua
   // Not qualified: nothing the source says about figures is drawn, whatever it carried.
   const source = page.nq === null ? envelope : withoutFigures(envelope);
   const d = page.nq === null ? quality?.data : undefined;
+  const facts = Object.hasOwn(envelope.objects, "stage_facts") ? readStageFacts(envelope.objects.stage_facts) : null;
   return {
     deployment,
     page,
-    freshness: freshnessOf(envelope),
+    freshness: endedFreshness(freshnessOf(envelope), facts),
     gate: readGate(source),
     equity: readEquity(source, page),
     orders: readOrders(source, populationOf(d?.orderPopulation)),
@@ -742,7 +754,7 @@ export function buildWorkbench(envelope: ProfileEnvelope, quality: DeploymentQua
     sessionsCounted: d === undefined ? { kind: "absent" } : figure(d.executionSessionPopulation, "count"),
     identity: stageIdentity(readDeploymentIdentity(envelope.objects.deployment)),
     // Facts about the deployment, not figures: they survive an unqualified source (they say why they are not published).
-    facts: Object.hasOwn(envelope.objects, "stage_facts") ? readStageFacts(envelope.objects.stage_facts) : null,
+    facts,
     sides: page.nq === null && Object.hasOwn(source.objects, "positions_by_side") ? readPositionsBySide(source.objects.positions_by_side) : null,
     calendar: Object.hasOwn(envelope.objects, "venue_calendar") ? readVenueCalendar(envelope.objects.venue_calendar) : null,
   };

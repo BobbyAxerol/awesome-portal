@@ -103,6 +103,16 @@ describe("VN market calendar", () => {
     expect(text()).not.toContain("ATO");
   });
 
+  it("a STOPPED runtime is Ended with its stop date, never a green Fresh (QA8 N8a-05)", () => {
+    const running = buildWorkbench(envelopeOf(paperWire({ stageFacts: "published" })), null);
+    expect(running.freshness.label).not.toMatch(/^Ended/);
+    const wire = paperWire({ stageFacts: "published" });
+    wire.data.stage_facts.runtime.runtime_state.value = "STOPPED";
+    const stopped = buildWorkbench(envelopeOf(wire), null);
+    expect(stopped.freshness.label).toBe("Ended · 12 Oct 08:00Z");
+    expect(stopped.freshness.kind).toBe("paused");
+  });
+
   it("the model keeps a stage_facts block for the paper variant too; a missing or refused block reads as typed absence", () => {
     expect(buildWorkbench(envelopeOf(paperWire()), null).facts).not.toBeNull();
     const wire = paperWire();
