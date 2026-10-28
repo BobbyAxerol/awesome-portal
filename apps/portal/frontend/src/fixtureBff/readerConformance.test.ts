@@ -65,7 +65,6 @@ const GROUPS: readonly { id: string; title: string }[] = [
 const OPEN_GROUPS: Readonly<Record<string, string>> = {
   W129: "new: ws_TEST_SCOPED_V2 alpha resource body is V2_MALFORMED for every alpha",
   W130: "new: ws_TEST_SCOPED_V2 Sandbox / Canary `_dark` variants answer HTTP 500",
-  W131: "new: the Fleet lists an alpha whose alpha 360 answers EXECUTION_READ_NOT_AVAILABLE",
 };
 
 interface Verdict { group: string; name: string; ok: boolean; why: string; urls: string[]; refusal?: boolean }
@@ -182,6 +181,8 @@ async function runAll(): Promise<void> {
     const group = alphaGroup(id);
     const env = ENV_OF_STAGE[row.stage] ?? "live";
     const link = { link: true };
+    // W131 holds one verdict per alpha the Fleet lists (an alpha that opens is a pass here, so the group never reads nothing once its reds are fixed)
+    await record("W131", `the Fleet's link to ${id} opens`, () => api.getAlpha360ResourceVersioned(id), link);
     for (const w of [undefined, WS]) await record(group, `getAlpha360ResourceVersioned ${id} ws=${w ?? "-"}`, () => api.getAlpha360ResourceVersioned(id, w ? { workspaceId: w } : undefined), link);
     await record(group, `getAlphaLifecycle ${id} ${env}`, () => api.getAlphaLifecycle!(id, env, WS), link);
     await record(group, `getAlphaLifecycle ${id} ${env} no ws`, () => api.getAlphaLifecycle!(id, env), link);

@@ -1111,7 +1111,7 @@ function datasetAnswer(method: string, path: string, search: URLSearchParams, pr
   let rows = rowsFor(environment, template, windowPreset, profile === "populated", wpWorldAlphas(surface, id)); // WP-C: the native ids answer from their own books; WP-P: the positive fleet and fund read hold them too
   const universe = scaled();
   if (id !== undefined) {
-    const known = surface === "PORTFOLIO" ? universe.portfolios.some((entry) => entry.id === id) : surface === "ALPHA" ? universe.alphas.some((entry) => entry.id === id)
+    const known = surface === "PORTFOLIO" ? universe.portfolios.some((entry) => entry.id === id) : surface === "ALPHA" ? universe.alphas.some((entry) => entry.id === id) || id === IDEA_E.id // WP-B2-A3
       : surface === "ACCOUNT" ? universe.bindings.some((entry) => entry.accountId === id && entry.environment === environment) : universe.alphas.some((alpha) => alpha.deployments.some((entry) => entry.id === id && entry.environment === environment));
     const canonicalKnown = rows.some((row) => surface === "PORTFOLIO" ? row.portfolio_id === id : surface === "ALPHA" ? row.alpha_id === id : row.children.some((child: Draft) => child[surface === "ACCOUNT" ? "account_id" : "deployment_id"] === id));
     if (!known && !canonicalKnown && !wpcKnown(surface, id)) return problem(404, "EXECUTION_READ_NOT_AVAILABLE", "This synthetic review resource is not in the selected universe/environment.");
@@ -1236,6 +1236,9 @@ const WP_SLEEVE_BINDING = "bnc_main@BINANCE";
 const WP_BINDING_OF_ACCOUNT: Readonly<Record<string, string>> = { acc_bnc_core: WP_SLEEVE_BINDING, acc_bnc_sat: WP_SLEEVE_BINDING, acc_bnc_can: WP_SLEEVE_BINDING, acc_pap_sim: "pap_sim@BINANCE", acc_tn_bnc: "tn_bnc@BINANCE" };
 /** The native books are the world's (e2e/bffWorld.ts): one source for the deployments, their accounts, their dates and their prices. */
 const WPC_ALPHAS: AlphaSpec[] = NATIVE_ALPHAS;
+// ===== WP-B2-A3 (W131): the research idea the Fleet lists (alpha_e, bffDouble's own research-only row) has no deployment; its Alpha 360 answers like the generated research alphas (readable, empty books)
+const IDEA_E: AlphaSpec = { id: "alpha_e", label: "Idea E", version: "0.1", owner: null, stages: [], health: "RESEARCH_ONLY", attention: [], deployments: [], updatedAt: "2026-09-01T12:00:00Z" };
+// ===== WP-B2-A3 end
 const wpcNativeAlpha = (id: string | undefined): boolean => id !== undefined && WPC_ALPHAS.some((alpha) => alpha.id === id);
 const wpcNativePortfolio = (id: string | undefined): boolean => id !== undefined && (WPC_PORTFOLIO_IDS as readonly string[]).includes(id);
 /** The native ids answer from the native books, in whatever environment is asked (an empty environment is a 200 with no rows, never a 404). */
@@ -1560,7 +1563,7 @@ function wpcAlphaResource(method: string, path: string, search: URLSearchParams)
   // WP-B2-S3 (QA7 R1-01): in the world lane the alpha resource is the alpha's own whatever the workspace (the Overview link carries workspace_id=ws_TEST_ONLY) and whatever the scale; only the legacy lane keeps the canned book
   if (method !== "GET" || match === null || (legacy() && (search.has("workspace_id") || scaled().alphas.length === 0))) return null;
   const id = decodeURIComponent(match[1]!);
-  const spec = [...WPC_ALPHAS, ...scaled().alphas].find((alpha) => alpha.id === id);
+  const spec = [...WPC_ALPHAS, ...scaled().alphas, IDEA_E].find((alpha) => alpha.id === id); // WP-B2-A3
   // QA3 R2-05: an id nobody published is a 404, not a real alpha under another name (the double's own refusal ids keep their answers).
   if (spec === undefined) return /^alpha_(denied|down|empty|bounded)$/.test(id) ? null : problem(404, "EXECUTION_READ_NOT_AVAILABLE", "This alpha is not in the selected universe.");
   const base = answerAlpha(method, path, search);
@@ -1682,7 +1685,7 @@ function wpkAlphaLifecycle(method: string, path: string, search: URLSearchParams
   const match = /^\/alphas\/([A-Za-z0-9._:-]{1,191})\/lifecycle$/.exec(path);
   if (match === null || method !== "GET") return null;
   const alphaId = match[1]!;
-  const alpha = [...scaled().alphas, ...WPC_ALPHAS].find((candidate) => candidate.id === alphaId);
+  const alpha = [...scaled().alphas, ...WPC_ALPHAS, IDEA_E].find((candidate) => candidate.id === alphaId); // WP-B2-A3
   if (alpha === undefined) return problem(404, "EXECUTION_READ_NOT_AVAILABLE", "The requested Execution read is not available.");
   const now = legacy() ? fixtureNowMs() : wpcAnchorMs(); // WP-B2-C3: the read is taken at the world clock, so every event of the lifecycle is on or before it (and the preview moves them as one)
   const keys = wpcLifecycleKeys(alphaId, {});
@@ -2327,7 +2330,7 @@ function wpPositiveSeries(body: Draft, method: string, path: string, search: URL
 function uniqueById<T>(rows: T[], idOf: (row: T) => string): T[] { const seen = new Set<string>(); return rows.filter((row) => { const id = idOf(row); if (seen.has(id)) return false; seen.add(id); return true; }); }
 
 export function wpAlphaResource(body: unknown, alphaId: string): unknown {
-  const spec = [...scaled().alphas, ...WPC_ALPHAS, ...SUITE_ALPHAS].find((entry) => entry.id === alphaId);
+  const spec = [...scaled().alphas, ...WPC_ALPHAS, ...SUITE_ALPHAS, IDEA_E].find((entry) => entry.id === alphaId);
   const root = body as Draft;
   if (spec === undefined || root === null || typeof root !== "object" || root.data === undefined || root.data === null) return body;
   const environment = String(root.selected_environment ?? "live");
