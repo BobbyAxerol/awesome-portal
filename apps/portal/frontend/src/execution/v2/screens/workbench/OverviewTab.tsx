@@ -30,6 +30,7 @@ export interface OverviewTabProps {
   notQualified?: boolean;
   quality: ReadState<DeploymentQuality>;
   exitReviewsHref: string;
+  exitReviewId?: string | null;
   /** The Paper exit review request (RV-10). Absent: the exit gate is read-only. */
   exitRequest?: ExitRequestProps;
 }
@@ -204,14 +205,14 @@ function ExecutionQuality({ quality, notQualified }: { quality: ReadState<Deploy
   );
 }
 
-export function OverviewTab({ model, quality, exitReviewsHref, exitRequest, notQualified = false }: OverviewTabProps) {
+export function OverviewTab({ model, quality, exitReviewsHref, exitReviewId = null, exitRequest, notQualified = false }: OverviewTabProps) {
   return (
     <div className="exec-wb-stack">
       {model.calendar === null ? null : <VenueCalendarPanel calendar={model.calendar} />}
       <div className="exec-wb-grid2">
         <EquityBlock model={model} />
         <div id="exec-wb-evidence">
-          <ExitGatePanel gate={model.gate} exitReviewsHref={exitReviewsHref} request={exitRequest} />
+          <ExitGatePanel gate={model.gate} exitReviewsHref={exitReviewsHref} exitReviewId={exitReviewId} request={exitRequest} />
         </div>
       </div>
       <div className="exec-wb-grid2">

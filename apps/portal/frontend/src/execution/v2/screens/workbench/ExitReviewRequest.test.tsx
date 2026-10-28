@@ -545,7 +545,7 @@ describe("in the exit gate panel", () => {
   it("without a request prop the gate is the read-only panel it was", () => {
     panel();
     expect(screen.queryByRole("button", { name: "Request review" })).toBeNull();
-    expect(screen.getByRole("link", { name: "Open exit review" })).toBeTruthy();
+    expect(screen.getByRole("link", { name: "Open exit reviews" })).toBeTruthy();
   });
 
   it("with one, the control sits above the link to the inbox, shut today because no read publishes the R2 parent", async () => {
@@ -555,7 +555,7 @@ describe("in the exit gate panel", () => {
     const button = screen.getByRole("button", { name: "Request review" }) as HTMLButtonElement;
     expect(button.disabled).toBe(true);
     expect(document.getElementById(button.getAttribute("aria-describedby") ?? "")?.textContent).toBe("The R2 review behind this deployment is not published.");
-    expect(screen.getByRole("link", { name: "Open exit review" }).getAttribute("href")).toBe("/governance/exit-reviews");
+    expect(screen.getByRole("link", { name: "Open exit reviews" }).getAttribute("href")).toBe("/governance/exit-reviews");
   });
 
   it("given the parent's published capture context, the same panel opens the form", async () => {

@@ -52,10 +52,12 @@ export interface ExitRequestProps {
 export interface ExitGatePanelProps {
   gate: GateFacts;
   exitReviewsHref: string;
+  /** The id of this alpha's own exit review, only when a published lineage names one (never made up here): the link then opens that review. */
+  exitReviewId?: string | null;
   request?: ExitRequestProps;
 }
 
-export function ExitGatePanel({ gate, exitReviewsHref, request }: ExitGatePanelProps) {
+export function ExitGatePanel({ gate, exitReviewsHref, exitReviewId = null, request }: ExitGatePanelProps) {
   const verdict = GATE_FLAG[gate.verdict];
   const given = request?.captureContext;
   const parent = useExitParent(request?.api ?? null, request?.deploymentId ?? "", request?.workspaceId ?? null, request !== undefined && given === undefined);
@@ -114,7 +116,9 @@ export function ExitGatePanel({ gate, exitReviewsHref, request }: ExitGatePanelP
       ) : null}
       {request !== undefined && bind !== null ? <ExitReviewRequest api={request.api} deploymentId={request.deploymentId} workspaceId={request.workspaceId} bind={bind} /> : null}
       <p className="exec-wb-link">
-        <Link className="exec-blk-link" to={exitReviewsHref}>Open exit review</Link>
+        {exitReviewId !== null
+          ? <Link className="exec-blk-link" to={`${exitReviewsHref}/${encodeURIComponent(exitReviewId)}`}>Open exit review</Link>
+          : <Link className="exec-blk-link" to={exitReviewsHref} title="No exit review id is published on this read, so the list of exit reviews opens">Open exit reviews</Link>}
       </p>
     </SectionPanel>
   );

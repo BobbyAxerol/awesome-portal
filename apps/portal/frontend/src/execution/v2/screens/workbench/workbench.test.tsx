@@ -15,6 +15,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ExecutionApi } from "../../../api/ports";
 import { V2_NAV_TOKEN, V2_ROLE_PRESETS } from "../../shell/roleNav";
 import { ABSENT, dimension, dimensionOf, pairwise, type Draft } from "../../testkit/matrix";
+import { ExitGatePanel } from "./ExitGatePanel";
 import PaperWorkbenchScreen, { WORKBENCH_SCREEN_KEY, type PaperWorkbenchScreenProps } from "./index";
 import {
   ACCOUNT, ALPHA_ID, DEP, PORTFOLIO, PORTFOLIO_NAME, STRATEGY, deferred, envelopeOf, fail, fakeApi, paperWire, qualityOf, qualityWire, sessionOf, type Fake, type FakeOptions, type Wire,
@@ -371,7 +372,7 @@ describe("Overview", () => {
     expect(panel.textContent).toContain("Version paper.v1");
     expect(whyText(gaps)).toContain("Not published: evidence, baseline and run linkage");
     expect(whyText(gaps)).toContain("Not published: gate criteria");
-    expect(within(panel).getByRole("link", { name: "Open exit review" }).getAttribute("href")).toBe("/governance/exit-reviews");
+    expect(within(panel).getByRole("link", { name: "Open exit reviews" }).getAttribute("href")).toBe("/governance/exit-reviews");
     expect(panel.textContent).not.toMatch(/Insufficient data|Met\b/);
   });
 
@@ -701,6 +702,17 @@ describe("roles: the session pre-narrows nothing (RK-1, DEBT-UXM07-005); the Acc
     await screen.findByRole("button", { name: "Try again" });
     expect(screen.getByRole("link", { name: "My access" })).toBeTruthy();
     expect(text()).toContain("Your session may not read this profile.");
+  });
+});
+
+describe("the exit review link (QA6 R4-02)", () => {
+  const gate = { verdict: "none", observedDays: null, minimumDays: null, trades: null, minimumTrades: null, sessions: null, windowBounded: null, reasonCode: null, policyStage: null, policyVersion: null } as const;
+  it("opens the alpha's own review when a published lineage names one, and the list (said as such) when none is published", () => {
+    render(<MemoryRouter><ExitGatePanel gate={gate} exitReviewsHref="/governance/exit-reviews" exitReviewId="EX-701" /></MemoryRouter>);
+    expect(screen.getByRole("link", { name: "Open exit review" }).getAttribute("href")).toBe("/governance/exit-reviews/EX-701");
+    cleanup();
+    render(<MemoryRouter><ExitGatePanel gate={gate} exitReviewsHref="/governance/exit-reviews" /></MemoryRouter>);
+    expect(screen.getByRole("link", { name: "Open exit reviews" }).getAttribute("href")).toBe("/governance/exit-reviews");
   });
 });
 
