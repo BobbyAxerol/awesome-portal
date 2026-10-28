@@ -1237,7 +1237,7 @@ const WP_BINDING_OF_ACCOUNT: Readonly<Record<string, string>> = { acc_bnc_core: 
 /** The native books are the world's (e2e/bffWorld.ts): one source for the deployments, their accounts, their dates and their prices. */
 const WPC_ALPHAS: AlphaSpec[] = NATIVE_ALPHAS;
 // ===== WP-B2-A3 (W131): the research idea the Fleet lists (alpha_e, bffDouble's own research-only row) has no deployment; its Alpha 360 answers like the generated research alphas (readable, empty books)
-const IDEA_E: AlphaSpec = { id: "alpha_e", label: "Idea E", version: "0.1", owner: null, stages: [], health: "RESEARCH_ONLY", attention: [], deployments: [], updatedAt: "2026-09-01T12:00:00Z" };
+const IDEA_E: AlphaSpec = { id: "alpha_e", label: "Idea E", version: "0.1", owner: null, stages: ["RESEARCH"], health: "RESEARCH_ONLY", attention: [], deployments: [], updatedAt: "2026-09-01T12:00:00Z" };
 // ===== WP-B2-A3 end
 const wpcNativeAlpha = (id: string | undefined): boolean => id !== undefined && WPC_ALPHAS.some((alpha) => alpha.id === id);
 const wpcNativePortfolio = (id: string | undefined): boolean => id !== undefined && (WPC_PORTFOLIO_IDS as readonly string[]).includes(id);
