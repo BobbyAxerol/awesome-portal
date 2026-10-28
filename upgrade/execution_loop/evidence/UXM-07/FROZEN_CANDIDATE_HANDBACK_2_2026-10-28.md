@@ -1,6 +1,6 @@
 # Frozen candidate hand-back 2 — Claude → Codex (28 Oct 2026)
 
-Supersedes `FROZEN_CANDIDATE_HANDBACK_2026-10-28.md` (first freeze, `b9d37516b`). Lane `claude/step-b-integrate` in `/home/bobby/portal-research-fe2`, on canonical `docs/research-loop-plan` @`1a6c2012d`, fast-forwardable. Claude did not merge, push, deploy or enable command/Live. The frozen SHA is the commit carrying this file; its hook result is in the commit outcome.
+Supersedes `FROZEN_CANDIDATE_HANDBACK_2026-10-28.md` (first freeze, `b9d37516b`). Lane `claude/step-b-integrate` in `/home/bobby/portal-research-fe2`, on canonical `docs/research-loop-plan` @`1a6c2012d`, fast-forwardable. Claude did not merge, push, deploy or enable command/Live. Frozen SHA: `9054bd410` (hook-verified); anything after it is this result line only.
 
 ## 1. What changed since hand-back 1
 
@@ -19,7 +19,7 @@ Adopted from Codex without redoing: `0c3441a5f` (research alpha stage, `research
 | Browser review rounds (5 independent reviewers each, then 3, 2, 1) on the preview | BLOCKER 24 → 16 → 8 → 1 → 3 → 1 (QA5 to QA10); Fixed after QA10 on the fixture/FE side: closed-request quorum at close, the 500 on the Overview stage link, the replay candle window (the plot's scaling was not re-viewed), closed-request wording. No full browser round was run after those last fixes: they are covered by ties W150, W160, W161 and the reader guard, not by a reviewer |
 | V2 pixel baselines, pinned image | 65/65 recorded, two consecutive compares 65/65; 37 re-recorded, 28 kept (21 identical, 7 under 0.05 percent) |
 | N29 then EDS-12 re-pin | both `runtime_effect: NONE` |
-| Full pre-commit hook | on the commit carrying this file (see commit outcome) |
+| Full pre-commit hook (`verify-workspace.sh`) | **PASSED** on `9054bd410` ("Portal monorepo verification passed": contracts container 112 files / 1,898 tests, control-api test cell, N29 and EDS-12, D1-D4, N15-N29, tracking reconciliation). Three earlier attempts failed on test-infrastructure causes, each repaired at its root: contracts container copy list (world modules missing), Contributors paging timeout on a load-sensitive large-scale test, control-api test cell copy list (`stageFactViews.ts`, Codex's own repair) |
 
 Not run: legacy `e2e/visual.spec.ts` and the Research Loop spec (LC-FE-03: Codex's official compare), real-API / Edge acceptance, Playwright journeys beyond the layout audit and the reviewers' read-only probes.
 
