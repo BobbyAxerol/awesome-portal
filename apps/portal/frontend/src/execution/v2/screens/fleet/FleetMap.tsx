@@ -14,11 +14,12 @@
  *   environment is not "missing an allocation": it belongs to another partition's map and is counted as such under the map, never drawn here.
  * - Published order is kept (no re-sorting by size), so the picture does not claim a ranking the server did not make.
  */
-import { useMemo, useState } from "react";
+import { useMemo, useState, type CSSProperties } from "react";
 import { Link } from "react-router-dom";
 
 import { NaWhy } from "../../blocks";
 import { toGeometry } from "../../charts/decimal";
+import { useMediaQuery } from "../../useMediaQuery";
 import { Flag } from "../../Flag";
 import { ENVIRONMENT_DOMAIN, type ManagerRow } from "../../readers/managerDataset";
 import type { ManagerPartition, ManagerPartitionedMetrics } from "../../readers/managerMetric";
@@ -30,6 +31,11 @@ import { healthView, notPublished, stageLabel, type UnpublishedFact } from "./fl
 import "./partitionFigures.css";
 
 const SIZE_KEY = "allocation";
+/** The smallest tile, as a share of the heaviest (of 100): small allocations stay legible instead of shrinking to a sliver. */
+const MIN_GROW = 20;
+/** Treemap height: enough area that the smallest tile can hold a name and a figure (about 150 x 56 px each, wide; 130 x 84 narrow). */
+const TILE_HEIGHT_WIDE = 56;
+const TILE_HEIGHT_NARROW = 96;
 type SizeMode = "allocation" | "equal";
 type ColourMode = "health" | "return" | "stage";
 const COLOUR_MODES: readonly { id: ColourMode; label: string }[] = [{ id: "health", label: "Health" }, { id: "return", label: "Return" }, { id: "stage", label: "Stage" }];
@@ -47,7 +53,12 @@ const inPartition = (row: ManagerRow, identity: string): ManagerPartitionedMetri
   row.economicPartitions.find((entry) => identityOf(entry.partition) === identity) ?? null;
 
 interface Rect { x: number; y: number; w: number; h: number }
-const pct = (r: Rect) => ({ left: `${r.x}%`, top: `${r.y}%`, width: `${r.w}%`, height: `${r.h}%` });
+/** A rect laid out in nominal pixels of its parent (`parent`), as percentages of that parent. */
+const pctOf = (r: Rect, parent: { w: number; h: number }) => ({ left: `${(r.x / parent.w) * 100}%`, top: `${(r.y / parent.h) * 100}%`, width: `${(r.w / parent.w) * 100}%`, height: `${(r.h / parent.h) * 100}%` });
+/** Nominal container width in px (wide / phone): squarifying in percent of a tall box would make slivers, so the layout is done in pixels. */
+const NOMINAL_W_WIDE = 1100;
+const NOMINAL_W_NARROW = 330;
+const HEAD_PX = 22;
 
 /**
  * Squarified treemap (Bruls et al.): every rectangle's AREA is proportional to its weight inside the parent. Weights are geometry only
@@ -100,6 +111,7 @@ export interface FleetMapProps {
 }
 
 export function FleetMap({ rows, metricKeys, hrefFor, selectedKey, onOpen }: FleetMapProps) {
+  const phone = useMediaQuery("(max-width: 660px)");
   // The partitions that publish at least one allocation figure, in first-seen (published) order.
   const partitions = useMemo(() => {
     const seen = new Map<string, ManagerPartition>();
@@ -145,7 +157,9 @@ export function FleetMap({ rows, metricKeys, hrefFor, selectedKey, onOpen }: Fle
   }
   const heaviest = drawn.reduce((max, tile) => Math.max(max, tile.weight), 0);
   // Geometry only: a flex weight between 1 and 100 (a zero or negative allocation still gets a minimal, visible tile).
-  const grow = (weight: number): number => (sizeMode === "equal" || heaviest <= 0 ? 1 : Math.max(1, Math.round((weight / heaviest) * 100)));
+  // The floor is 20 of 100, not 1: a tile at 1% of the heaviest was 17px wide and unreadable (QA6 R1-08). The floor is still geometry only; the figure
+  // on every tile is its own published allocation, and the sentence under the control says "Tile size is the published allocation" with the floor stated.
+  const grow = (weight: number): number => (sizeMode === "equal" || heaviest <= 0 ? 1 : Math.max(MIN_GROW, Math.round((weight / heaviest) * 100)));
   const toneOf = (row: ManagerRow): string => {
     if (colourMode === "stage") return row.currentStage === null ? "unknown" : `stage-${row.currentStage.toLowerCase()}`;
     if (colourMode === "return") {
@@ -163,6 +177,9 @@ export function FleetMap({ rows, metricKeys, hrefFor, selectedKey, onOpen }: Fle
     box.tiles.push(tile);
   }
 
+  // The layout is done in nominal pixels so a tall map does not turn into slivers; the boxes are then placed in percent of the real container.
+  const mapW = phone ? NOMINAL_W_NARROW : NOMINAL_W_WIDE;
+  const mapH = phone ? Math.min(4200, Math.max(1100, drawn.length * TILE_HEIGHT_NARROW)) : Math.min(2600, Math.max(640, drawn.length * TILE_HEIGHT_WIDE));
   return (
     <div className="exec-fleet-map" data-testid="fleet-map">
       <div className="exec-fleet-map-head">
@@ -185,7 +202,7 @@ export function FleetMap({ rows, metricKeys, hrefFor, selectedKey, onOpen }: Fle
           ))}
         </span>
         <span className="exec-fleet-note">
-          {sizeMode === "allocation" ? "Tile size is the published allocation of this one partition" : "Every tile is the same size"}. Partitions are never added together.
+          {sizeMode === "allocation" ? "Tile size is the published allocation of this one partition, with a smallest size so a small allocation stays readable" : "Every tile is the same size"}. Partitions are never added together.
         </span>
       </div>
       <ul className="exec-fleet-legend" role="list" aria-label="Map legend" data-testid="map-legend">
@@ -194,12 +211,13 @@ export function FleetMap({ rows, metricKeys, hrefFor, selectedKey, onOpen }: Fle
         ))}
         <li className="exec-fleet-legend-item"><i className="exec-fleet-legend-swatch" data-tone="simulated" aria-hidden="true" />Hatched: simulated (Paper or Sandbox)</li>
       </ul>
-      <div className="exec-fleet-treemap" role="group" aria-label="Allocation by alpha, one box per portfolio" data-testid="treemap">
-        {squarify(portfolios.map((box) => ({ key: box, weight: box.tiles.reduce((sum, tile) => sum + grow(tile.weight), 0) })), { x: 0, y: 0, w: 100, h: 100 }).map(({ key: box, rect }) => (
-          <section key={box.id} className="exec-fleet-pf" style={pct(rect)} aria-label={`Portfolio ${box.id}`}>
-            <header className="exec-fleet-pf-head"><strong title={box.id}>{box.id}</strong><span className="exec-fleet-note">{box.tiles.length} {box.tiles.length === 1 ? "alpha" : "alphas"} drawn</span></header>
+      <div className="exec-fleet-treemap" role="group" aria-label="Allocation by alpha, one box per portfolio" data-testid="treemap"
+        style={{ "--tm-h": `${Math.min(2600, Math.max(640, drawn.length * TILE_HEIGHT_WIDE))}px`, "--tm-h-narrow": `${Math.min(4200, Math.max(1100, drawn.length * TILE_HEIGHT_NARROW))}px` } as CSSProperties}>
+        {squarify(portfolios.map((box) => ({ key: box, weight: box.tiles.reduce((sum, tile) => sum + grow(tile.weight), 0) })), { x: 0, y: 0, w: mapW, h: mapH }).map(({ key: box, rect }) => (
+          <section key={box.id} className="exec-fleet-pf" style={pctOf(rect, { w: mapW, h: mapH })} aria-label={`Portfolio ${box.id}`}>
+            <header className="exec-fleet-pf-head"><strong title={box.id}>{box.id}</strong><span className="exec-fleet-note" title={`${box.tiles.length} ${box.tiles.length === 1 ? "alpha" : "alphas"} drawn`}>{box.tiles.length} {box.tiles.length === 1 ? "alpha" : "alphas"}</span></header>
             <ul className="exec-fleet-tiles" role="list" aria-label={`Allocation by alpha in ${box.id}`}>
-              {squarify(box.tiles.map((tile) => ({ key: tile, weight: grow(tile.weight) })), { x: 0, y: 0, w: 100, h: 100 }).map(({ key: { row, weight }, rect: tileRect }) => {
+              {squarify(box.tiles.map((tile) => ({ key: tile, weight: grow(tile.weight) })), { x: 0, y: 0, w: rect.w, h: Math.max(1, rect.h - HEAD_PX) }).map(({ key: { row, weight }, rect: tileRect }) => {
                 const health = row.health === null ? null : healthView(row.health);
                 const metric = inPartition(row, identity)?.metrics.get(SIZE_KEY);
                 const figure = inPartition(row, identity)?.metrics.get("return_30d_pct");
@@ -207,7 +225,7 @@ export function FleetMap({ rows, metricKeys, hrefFor, selectedKey, onOpen }: Fle
                   <li key={row.rowKey} className="exec-fleet-tile" data-health={health === null ? "unknown" : health.kind} data-tone={toneOf(row)} data-weight={grow(weight)} data-selected={selectedKey === row.rowKey ? "true" : undefined}
                     data-simulated={row.environment === "paper" || row.environment === "sandbox" || row.currentStage === "PAPER" || row.currentStage === "SANDBOX" ? "true" : undefined}
                     title={`${row.name ?? row.alphaId} · ${row.alphaVersionId} · ${row.currentStage === null ? "No single stage" : stageLabel(row.currentStage)}${health ? ` · ${health.label}` : ""}`}
-                    style={pct(tileRect)}>
+                    style={pctOf(tileRect, { w: rect.w, h: Math.max(1, rect.h - HEAD_PX) })}>
                     <Link className="exec-fleet-name" title={row.name ?? row.alphaId} to={hrefFor(row)}>{row.name ?? row.alphaId}</Link>
                     <span className="exec-fleet-version">{row.alphaVersionId} · {row.currentStage === null ? "No single stage" : stageLabel(row.currentStage)}</span>
                     <MetricValue metric={metric} />
