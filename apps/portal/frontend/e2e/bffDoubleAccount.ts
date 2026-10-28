@@ -595,8 +595,12 @@ function positiveAccount(spec: AccountSpec, id: string): AccountSpec {
     rows.account_balances = (rows.account_balances ?? []).map((row) => ({ ...row, updated_at: ACCOUNT_DOUBLE_AS_OF, updated_at_ms: AS_OF_MS }));
     rows.margin_balances ??= [margin(primary, currency, fromCents(free / 10n), fromCents(free / 20n))];
     rows.exposure_headroom = [{ currency, free: fromCents(free), maintenance: fromCents(free / 10n), headroom: fromCents(free - free / 10n), verdict: "AVAILABLE" }];
-    rows.broker_sync = [{ sync_id: `bs_${primary}_0`, source: "BROKER", status: "SYNCED", currency, buying_power: fromCents(free), synced_at: ACCOUNT_DOUBLE_AS_OF, synced_at_ms: AS_OF_MS }];
-    rows.differences = [{ currency, portal_free: fromCents(free), broker_buying_power: fromCents(free), delta: "0.00", in_sync: true }];
+    // ===== WP-B2-A3 (N3-04): a venue that reported no balance published no buying power; "0.00" would be a figure the source never gave, and there is nothing to compare
+    const nothingReported = free <= 0n;
+    rows.broker_sync = [{ sync_id: `bs_${primary}_0`, source: "BROKER", status: "SYNCED", currency, ...(nothingReported ? {} : { buying_power: fromCents(free) }), synced_at: ACCOUNT_DOUBLE_AS_OF, synced_at_ms: AS_OF_MS }];
+    if (nothingReported) delete rows.differences;
+    else rows.differences = [{ currency, portal_free: fromCents(free), broker_buying_power: fromCents(free), delta: "0.00", in_sync: true }];
+    // ===== WP-B2-A3 end
   }
   const capabilities = Object.keys(rows).filter((relation) => ["accounts", "account_balances", "margin_balances", "broker_sync", "exposure_headroom", "positions"].includes(relation))
     .map((relation) => cap(relation === "broker_sync" ? "broker_account_sync_effective" : relation));

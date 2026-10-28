@@ -1392,6 +1392,23 @@ export async function runWorldTies(get) {
       }
     }
   }
+  // ── W46: no margin ratio and no buying power without the data they are made of (N3-04) ──
+  {
+    const rows46 = await pages(`${E}/broker-bindings?limit=50&environment=live`, (b) => b.page?.rows ?? [], (b) => b.page?.next_cursor ?? null, 4);
+    for (const row of rows46.slice(0, 60)) {
+      const data = (await ok200(`${E}/resources/accounts/${row.account_id}`))?.data;
+      if (data === undefined) continue;
+      const ledger = data.account_balances?.find((b) => b.currency === "USDT");
+      for (const m of data.margin_balances ?? []) {
+        if (m.margin_ratio === undefined) continue;
+        check("W46", ledger !== undefined && numOf(ledger.total) > 0n && numOf(m.maintenance) > 0n, `${row.account_id}: margin ratio ${m.margin_ratio}% over maintenance ${m.maintenance} and a ledger of ${ledger?.total}`);
+      }
+      for (const sync of data.broker_sync ?? []) {
+        if (sync.buying_power === undefined) continue;
+        check("W46", !(numOf(sync.buying_power) === 0n && ledger !== undefined && numOf(ledger.total) === 0n), `${row.account_id}: buying power ${sync.buying_power} printed where the venue reported no balance`);
+      }
+    }
+  }
   // ===== WP-B2-A3 round D end
   return { ties };
 }

@@ -141,6 +141,7 @@ function overlayAccountF2(data: Obj, accountId: string): void {
       const maintenance = toCents(String(margin.maintenance ?? "0"));
       const equity = typeof wallet === "string" ? toCents(wallet) : 0n;
       if (equity > 0n && isPositiveMode()) { const bp = maintenance * 10_000n / equity; margin.margin_ratio = `${bp / 100n}.${String(bp % 100n).padStart(2, "0")}`; }
+      else if (isPositiveMode()) delete margin.margin_ratio; // N3-04: no ratio without maintenance AND equity (it printed 5.10% over 0 / not available)
       else margin.margin_ratio = "5.10";
     }
   }
