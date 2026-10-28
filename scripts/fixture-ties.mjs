@@ -478,6 +478,7 @@ export async function runWorldTies(get) {
   const blotterAsOf = ms(blotterFirst?.as_of ?? blotterFirst?.read_at);
   const sameOrder = (where, id, row) => {
     const b = book.get(id);
+    if (b === undefined && /^ord_9\d{5}$/.test(String(id))) { check("W07d", false, `${where}: synthetic earlier-trade order ${id} (retired Paper deployment) is not in the blotter`); return; }
     if (b === undefined) { check("W07", false, `${where}: order ${id} is not in the blotter`); return; }
     const bad = [];
     if (row.symbol && symOf(row.symbol) !== symOf(b.symbol)) bad.push(`symbol ${row.symbol} vs ${b.symbol}`);
