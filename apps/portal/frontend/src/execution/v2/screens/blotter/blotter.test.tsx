@@ -424,6 +424,22 @@ async function wholeBook() {
   return body.data.orders as Record<string, unknown>[];
 }
 
+describe("columns at mid width (QA7 N2-05)", () => {
+  afterEach(() => vi.unstubAllGlobals());
+  it("at 1180px and below Time, Deployment and Avg price wait in the chooser, said on the page, and the chooser brings one back", async () => {
+    vi.stubGlobal("matchMedia", (query: string) => ({ matches: query.includes("min-width: 661px"), media: query, addEventListener() {}, removeEventListener() {} }));
+    mount();
+    await loaded();
+    const heads = [...table().querySelectorAll("th")].map((th) => th.textContent ?? "");
+    for (const gone of ["Time (UTC)", "Deployment", "Avg price"]) expect(heads.some((h) => h.startsWith(gone)), gone).toBe(false);
+    for (const kept of ["Price", "Filled / Qty", "Fee", "Status"]) expect(heads.some((h) => h.startsWith(kept)), kept).toBe(true);
+    expect(screen.getByTestId("columns-hidden").textContent).toMatch(/Time \(UTC\), Deployment, Avg price are hidden/);
+    enableColumn("Avg price");
+    expect([...table().querySelectorAll("th")].some((th) => (th.textContent ?? "").startsWith("Avg price"))).toBe(true);
+    expect(screen.queryByTestId("columns-hidden")).toBeNull();
+  });
+});
+
 describe("scope from other screens (the server narrows before paging)", () => {
   it("an account scope is sent to the server; the page, count and chips are that account's own population", async () => {
     const population = (await wholeBook()).filter((o) => o.account_id === "acc_paper_okx_01");

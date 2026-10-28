@@ -574,6 +574,13 @@ export const COLUMNS: readonly ColumnSpec[] = [
   { id: "status", label: "Status", dflt: true, fixed: true },
 ];
 
+/**
+ * Below ~1180px (and above the phone cards) the sidebar leaves ~680px: Time, Deployment and Avg price wait in the chooser so Price, Filled / Qty
+ * and Fee stay in view without an inner scroll (QA7 N2-05). The page says which are hidden; the Columns chooser brings them back.
+ */
+export const MID_HIDDEN: readonly ColumnId[] = ["time", "deployment", "avg"];
+export const MID_QUERY = "(min-width: 661px) and (max-width: 1180px)";
+
 export const DEFAULT_COLUMNS: ReadonlySet<ColumnId> = new Set(COLUMNS.filter((c) => c.dflt).map((c) => c.id));
 
 /** Facts the orders read does not carry, listed so the table does not look like it forgot them. */

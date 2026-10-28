@@ -534,3 +534,10 @@
     display: block;
   }
 }
+
+/* QA7 N2-05: between the phone cards and 1180px the status chip may take two lines ("Partially / filled") so the figures keep their columns. */
+@media (min-width: 661px) and (max-width: 1180px) {
+  .exec-blt2-v2 .exec-cards td[data-l="Status"] .exec-flag {
+    white-space: normal;
+  }
+}

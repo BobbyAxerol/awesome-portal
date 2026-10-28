@@ -48,7 +48,7 @@ import { withOrigin } from "../../backTo";
 import { withContext } from "../../urlState";
 import { ExactText, OrderDetail, type FunnelRead } from "./OrderDetail";
 import {
-  CHIPS, COLUMNS, DEFAULT_COLUMNS, GROUP_CAP, NOT_IN_READ, NARROW_PAGE_LIMIT, NO_SCOPE, PAGE_LIMIT, applyScope, blotterCsv, blotterCsvName, blotterQuery, chipCounts, filtersKey, isStageRefusal, serverScopeActive, unchippedStatusCounts,
+  CHIPS, COLUMNS, DEFAULT_COLUMNS, GROUP_CAP, MID_HIDDEN, MID_QUERY, NOT_IN_READ, NARROW_PAGE_LIMIT, NO_SCOPE, PAGE_LIMIT, applyScope, blotterCsv, blotterCsvName, blotterQuery, chipCounts, filtersKey, isStageRefusal, serverScopeActive, unchippedStatusCounts,
   fillsFor, groupExact, humanize, isBucket, pageFunnel, legsFor, scopeActive, shortUtc, statusView, type BlotterOrder, type ColumnId, type Scope, type ServerFilters,
 } from "./blotterModel";
 import { useBlotterRead } from "./useBlotterRead";
@@ -215,7 +215,11 @@ export default function BlotterScreen({ api, accessHref, chartHref: chartHrefPro
   useEffect(() => setSymbolText(filters.symbol), [filters.symbol]);
 
   /* ── columns ──────────────────────────────────────────────────────── */
-  const [columns, setColumns] = useState<ReadonlySet<ColumnId>>(DEFAULT_COLUMNS);
+  const mid = useMediaQuery(MID_QUERY);
+  // The reader's own choice wins; until there is one, the default set for this width.
+  const [chosen, setColumns0] = useState<ReadonlySet<ColumnId> | null>(null);
+  const columns: ReadonlySet<ColumnId> = chosen ?? (mid ? new Set([...DEFAULT_COLUMNS].filter((id) => !MID_HIDDEN.includes(id))) : DEFAULT_COLUMNS);
+  const setColumns = (update: (prev: ReadonlySet<ColumnId>) => ReadonlySet<ColumnId>) => setColumns0(update(columns));
   const [chooserOpen, setChooserOpen] = useState(false);
   const visibleColumns = COLUMNS.filter((c) => columns.has(c.id));
 
@@ -654,6 +658,7 @@ export default function BlotterScreen({ api, accessHref, chartHref: chartHrefPro
           </div>
         )}
 
+        {mid && chosen === null ? <p className="exec-blt2-note" data-testid="columns-hidden">To keep Price, Filled and Fee in view at this width, {MID_HIDDEN.map((id) => COLUMNS.find((c) => c.id === id)!.label).join(", ")} are hidden. Columns brings them back.</p> : null}
         {emptyPage ? null : <p className="exec-blt2-note exec-blt2-scrollhint">Scroll sideways for the other columns. The order and the status stay in view.</p>}
         {narrow ? null : pager}
         <details className="exec-blt2-how">
