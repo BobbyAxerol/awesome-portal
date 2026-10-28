@@ -9,7 +9,7 @@
  * and the comparator is absent on every read. Evidence charts are out of S1
  * (FE-029). Nothing here writes, plans or applies.
  */
-import { useEffect, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 
 import { groupExact } from "../blotter/blotterModel";
 import { breakable } from "./breakable";
@@ -257,17 +257,19 @@ const STILL_OPEN = ["Open positions", "Working orders", "Reservations", "Unknown
 
 function StillOpenPanel() {
   const extra = useEvidenceExtra();
+  const closed = useContext(ClosedContext);
+  const title = closed ? "Open at decision" : "Still open after approval";
   const got = sectionOf(extra, (e) => e.obligations);
   if (got !== null && got.kind === "value") {
     const o = got.value;
     return (
-      <Panel title="Still open after approval" right={extra.status === "ready" ? `Read ${formatAsOf(extra.evidence.readAtMs)}` : ""}>
+      <Panel title={title} right={extra.status === "ready" ? `Read ${formatAsOf(extra.evidence.readAtMs)}` : ""}>
         <Kv rows={OBLIGATION_ROWS.map(([label, key]) => ({ label, value: <span className="exec-ck-num" data-testid={`ck-open-${key}`}>{String(o[key])}</span> }))} data-numeric />
       </Panel>
     );
   }
   return (
-    <Panel title="Still open after approval" right="Not published">
+    <Panel title={title} right="Not published">
       <Kv rows={STILL_OPEN.map((label) => ({ label, value: <NotPublished text={NOT_PUBLISHED.decisionCall} /> }))} />
     </Panel>
   );
@@ -373,6 +375,7 @@ function R1Body({ detail }: { detail: GateR1Detail }) {
 }
 
 function R2Body({ detail, heading = "R2 review" }: { detail: GateR2Detail; heading?: string }) {
+  const closed = useContext(ClosedContext);
   // The criterion rows are not published, but the evidence read counts them ("Criteria met 6 → 7"): say that count here, so the page never
   // says "Not published" beside a published count of the same thing.
   const diff = sectionOf(useEvidenceExtra(), (e) => e.diff);
@@ -410,7 +413,7 @@ function R2Body({ detail, heading = "R2 review" }: { detail: GateR2Detail; headi
                 <tr>
                   <th scope="col">Item</th>
                   <th scope="col" data-numeric="true">Before</th>
-                  <th scope="col" data-numeric="true">After approval</th>
+                  <th scope="col" data-numeric="true">{closed ? "Applied at decision" : "After approval"}</th>
                 </tr>
               </thead>
               <tbody>
@@ -892,7 +895,11 @@ export interface EvidenceHeader {
   quorum?: { met: number; required: number } | null;
   /** The review clock in words (`slaView(...).phrase`), from the queue row. */
   left?: string | null;
+  /** The published state is closed or decided: the panels speak in the past tense ("Open at decision"), not as if approval were still to come. */
+  closed?: boolean;
 }
+
+const ClosedContext = createContext(false);
 
 type Tone = "ok" | "warn" | "bad" | "mute";
 
@@ -1029,6 +1036,7 @@ export function EvidenceFrame({ kind, header, evidence, unknownReason, extra = I
     : null;
 
   return (
+    <ClosedContext.Provider value={header.closed === true}>
     <EvidenceExtraContext.Provider value={extra}>
     <div className="exec-ck-evidence">
       <div className="exec-ck-head">
@@ -1086,6 +1094,7 @@ export function EvidenceFrame({ kind, header, evidence, unknownReason, extra = I
       {data !== null ? <ProvenanceDetails data={data} gate={gate} /> : null}
     </div>
     </EvidenceExtraContext.Provider>
+    </ClosedContext.Provider>
   );
 }
 

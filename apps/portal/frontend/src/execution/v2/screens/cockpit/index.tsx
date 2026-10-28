@@ -61,6 +61,7 @@ import {
   principalOf,
   serverViewFor,
   settledPanel,
+  isClosedRow,
   slaView,
   statusClassOf,
   stepSelection,
@@ -448,7 +449,7 @@ function itemHeader(item: QueueItem): EvidenceHeader | null {
   if (item.kind === "waiver") return null;
   const row = item.row;
   const context = item.kind === "gate" ? [item.row.target, item.row.releaseCandidate].filter((part) => part !== null).join(" · ") : "";
-  if (item.kind !== "gate") return { id: row.id, title: row.subject, context: context || null, gate: row.gate, requestedBy: null, quorum: null, left: null };
+  if (item.kind !== "gate") return { id: row.id, title: row.subject, context: context || null, gate: row.gate, requestedBy: null, quorum: null, left: null, closed: true };
   // The queue row publishes who asked, the approver count and the review clock; the evidence header says them again (hi-fi).
   const asked = item.row.requester ?? item.row.creator;
   return {
@@ -459,6 +460,7 @@ function itemHeader(item: QueueItem): EvidenceHeader | null {
     requestedBy: asked === null ? null : asked.username ?? asked.userId,
     quorum: item.row.quorumMet !== null && item.row.quorumRequired !== null ? { met: item.row.quorumMet, required: item.row.quorumRequired } : null,
     left: slaView(item.row.sla)?.phrase ?? null,
+    closed: isClosedRow(item.row),
   };
 }
 

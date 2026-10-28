@@ -322,6 +322,15 @@ describe("the typed panels every gate has", () => {
     }
   });
 
+  it("a closed R2 request says 'Open at decision' and 'Applied at decision', in the past tense (QA10)", async () => {
+    const closedRaw = RAW.map((r) => (r.id === "apr_b" ? { ...r, status: "APPROVED", decided_by: "minh" } : r));
+    const closedInbox = () => ({ ...inbox(), rawRows: closedRaw }) as InboxResult;
+    await mount(standard({ listApprovals: () => ({ ok: true, value: closedInbox() }) }), "/execution/approvals?sel=apr_b");
+    expect(within(evidence()).getByRole("region", { name: "Open at decision" })).toBeTruthy();
+    expect(within(evidence()).queryByRole("region", { name: "Still open after approval" })).toBeNull();
+    expect(evidence().textContent).not.toMatch(/After approval/);
+  });
+
   it("makes no write call while drawing any of it", async () => {
     const p = standard();
     await mount(p, "/execution/approvals?sel=apr_b");
