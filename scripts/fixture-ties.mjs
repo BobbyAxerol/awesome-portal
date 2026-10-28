@@ -1577,6 +1577,12 @@ export async function runWorldTies(get) {
       check("W84", reg.health?.value !== "HEALTHY", `${inc.target.id} is HEALTHY in the register while incident ${id} (${inc.severity}, ${inc.workflow_state}) is open on it`);
     }
   }
+  // ── W85: one open-exception count: the sidebar badge read (no filter) equals the Operations screen's default "Needs attention" lens (N8c-06) ──
+  {
+    const all = (await ok200(`${E}/operations?limit=1`))?.page?.health?.open_exception_count;
+    const lens = (await ok200(`${E}/operations?limit=50&triage_state=UNACKNOWLEDGED`))?.page?.health?.open_exception_count;
+    if (all && lens) check("W85", all.count === lens.count, `the Operations badge says ${all.count} open exceptions, the default lens KPI ${lens.count}`);
+  }
   // ===== WP-B2-A3 round D end
   return { ties };
 }
