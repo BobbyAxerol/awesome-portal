@@ -846,6 +846,20 @@ export async function runWorldTies(get) {
       }
     }
   }
+  // W36 (QA7 N5-01): a Live page's predecessor envelope is the linked Canary room's own envelope (same id, same caps), finished, and never active for live
+  for (const id of [...deployments.keys()].slice(0, 40).filter((x) => deployments.get(x).stage === "LIVE")) {
+    const r = await get(`${E}/deployments/${id}/live`);
+    const live = r.status === 200 ? r.body : null;
+    const env = live?.predecessor_canary_envelope;
+    const link = (live?.lineage ?? []).find((l) => l.kind === "CANARY_ENVELOPE" && typeof l.href === "string");
+    if (env === null || env === undefined || link === undefined) continue;
+    const trial = await ok200(`${E}${link.href.replace(/^\/deployments\/live\//, "/deployments/")}`);
+    check("W36", trial !== null, `${id}: the predecessor link ${link.href} does not open`);
+    if (trial === null) continue;
+    check("W36", env.envelope_id === trial.envelope?.envelope_id, `${id}: predecessor envelope ${env.envelope_id}, the linked canary's ${trial.envelope?.envelope_id}`);
+    for (const key of ["capital_cap", "gross_notional_cap", "daily_loss_cap"]) check("W36", sameDecimal(env.limits?.[key], trial.envelope?.limits?.[key]), `${id}: predecessor ${key} ${env.limits?.[key]}, the linked canary's ${trial.envelope?.limits?.[key]}`);
+    check("W36", env.active_for_live_full === false && env.status !== "ACTIVE", `${id}: a finished canary's envelope is ${env.status} / active for live ${env.active_for_live_full}`);
+  }
   // ===== WP-B2-S3 end
   // ===== WP-B2-A3 begin
   // ── W19: a request exists only for the NEXT gate of its subject, once, and its quorum is open (R3-02, R3-09, R3-10, R3-03) ───────────────────────────────

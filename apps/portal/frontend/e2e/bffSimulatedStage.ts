@@ -913,6 +913,17 @@ function worldStage(kind: "canary" | "live" | "sandbox" | "paper", body: Obj | n
     withIdentityOf(dep);
     dep.activated_at = started;
     (body.lifecycle as Obj).activated_at = started;
+    // WP-B2-S3 (QA7 N5-01): the predecessor envelope is the LINKED canary's own record (its caps from its allocation, as its room states them, COMPLETED), never active for live
+    const predecessorId = predecessorCanary(d.id);
+    const trial = predecessorId === null ? null : resolveStageDeployment(predecessorId);
+    if (trial !== null && isObj(body.predecessor_canary_envelope)) {
+      const trialAlloc = worldToCents(trial.deployment.allocation);
+      const envelope = body.predecessor_canary_envelope as Obj;
+      envelope.envelope_id = `cenv_${predecessorId}`;
+      envelope.status = "COMPLETED";
+      envelope.active_for_live_full = false;
+      envelope.limits = { capital_cap: worldCents(trialAlloc), gross_notional_cap: worldCents(trialAlloc * 3n / 2n), daily_loss_cap: worldCents(trialAlloc / 100n), max_open_orders: 20 };
+    }
     const series = seriesOf(d.id, life.liveFromMs, seriesTo, Math.max(8, life.liveDays + 1), net);
     body.stage_facts = stageFacts({ runtime: halted ? "HALTED" : "RUNNING", since: halted ? haltedIso ?? started : started, verdict: mismatch ? "OPEN_FINDINGS" : "NO_OPEN_FINDINGS", open: mismatch ? 1 : 0, unknownOrders: 0, asOf,
       sessions: [{ id: `session_${d.id}_live_1`, started, ended: null, state: halted ? "HALTED" : "RUNNING" }] });
@@ -949,6 +960,7 @@ function worldStage(kind: "canary" | "live" | "sandbox" | "paper", body: Obj | n
       { cap: "open_orders", unit: "COUNT", limit: "40", approved: "20", consumed: String(orders.length) },
     ];
     const env = body.envelope as Obj;
+    env.envelope_id = `cenv_${d.id}`; // WP-B2-S3: one envelope per canary deployment
     env.limits = { capital_cap: capApproved, gross_notional_cap: grossApproved, daily_loss_cap: lossApproved, max_open_orders: 20, duration_days: finished ? standing.days : 14 };
     const compliance = body.envelope_compliance as Obj;
     // the legacy limits member is the APPROVED caps too (never the draft proposal the dark body carries)
