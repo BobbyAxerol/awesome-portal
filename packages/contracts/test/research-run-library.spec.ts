@@ -61,5 +61,10 @@ describe("P12 published Research Run Library contract", () => {
     const fixture = JSON.parse(readFileSync(join(ROOT, "fixtures/research-run-library-alpha-catalogue.synthetic.valid.json"), "utf8"));
     expect(validate(fixture), JSON.stringify(validate.errors)).toBe(true);
     expect(validate({ ...fixture, page: { ...fixture.page, limit: 201 } })).toBe(false);
+    const negatives = JSON.parse(readFileSync(join(ROOT, "fixtures/research-run-library-alpha-catalogue.synthetic.negative.json"), "utf8"));
+    expect(negatives.lane).toBe("TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT");
+    for (const sample of negatives.cases) {
+      expect(validate(sample.value), sample.id).toBe(!sample.schema_rejects);
+    }
   });
 });

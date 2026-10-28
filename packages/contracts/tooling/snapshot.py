@@ -165,6 +165,7 @@ TRACKED = (
     "tooling/native-read-fixtures.mjs",
     "fixtures/research-current-source.pruned-trial.synthetic.valid.json",
     "fixtures/research-run-library-alpha-catalogue.synthetic.valid.json",
+    "fixtures/research-run-library-alpha-catalogue.synthetic.negative.json",
     "openapi/research-window-execution.openapi.json",
     "generated/research-window-execution.d.ts",
     "fixtures/research-window-execution.holdout.synthetic.valid.json",

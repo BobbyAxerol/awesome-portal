@@ -1,0 +1,35 @@
+{
+  "lane": "TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT",
+  "cases": [
+    {
+      "id": "unknown_authority",
+      "schema_rejects": true,
+      "value": { "schema_version": "research.run-library-alpha-catalogue.v1", "read_authority": "EXECUTION", "items": [], "page": { "limit": 2, "has_more": false, "next_cursor": null, "order": "ALPHA_ID_ASC" }, "as_of_utc_ms": 1793113200000 }
+    },
+    {
+      "id": "limit_above_cap",
+      "schema_rejects": true,
+      "value": { "schema_version": "research.run-library-alpha-catalogue.v1", "read_authority": "PORTAL_PERSISTED_RESEARCH", "items": [], "page": { "limit": 201, "has_more": false, "next_cursor": null, "order": "ALPHA_ID_ASC" }, "as_of_utc_ms": 1793113200000 }
+    },
+    {
+      "id": "unexpected_field",
+      "schema_rejects": true,
+      "value": { "schema_version": "research.run-library-alpha-catalogue.v1", "read_authority": "PORTAL_PERSISTED_RESEARCH", "items": [], "page": { "limit": 2, "has_more": false, "next_cursor": null, "order": "ALPHA_ID_ASC" }, "as_of_utc_ms": 1793113200000, "extra": true }
+    },
+    {
+      "id": "missing_cursor_for_more",
+      "schema_rejects": false,
+      "value": { "schema_version": "research.run-library-alpha-catalogue.v1", "read_authority": "PORTAL_PERSISTED_RESEARCH", "items": [{ "alpha_id": "alpha-a", "alpha_name": "Alpha A" }], "page": { "limit": 1, "has_more": true, "next_cursor": null, "order": "ALPHA_ID_ASC" }, "as_of_utc_ms": 1793113200000 }
+    },
+    {
+      "id": "cursor_when_no_more",
+      "schema_rejects": false,
+      "value": { "schema_version": "research.run-library-alpha-catalogue.v1", "read_authority": "PORTAL_PERSISTED_RESEARCH", "items": [], "page": { "limit": 2, "has_more": false, "next_cursor": "TEST_ONLY-cursor", "order": "ALPHA_ID_ASC" }, "as_of_utc_ms": 1793113200000 }
+    },
+    {
+      "id": "duplicate_alpha_id",
+      "schema_rejects": false,
+      "value": { "schema_version": "research.run-library-alpha-catalogue.v1", "read_authority": "PORTAL_PERSISTED_RESEARCH", "items": [{ "alpha_id": "alpha-a", "alpha_name": "Alpha A" }, { "alpha_id": "alpha-a", "alpha_name": "Alpha B" }], "page": { "limit": 2, "has_more": false, "next_cursor": null, "order": "ALPHA_ID_ASC" }, "as_of_utc_ms": 1793113200000 }
+    }
+  ]
+}

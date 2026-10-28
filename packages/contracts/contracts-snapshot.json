@@ -350,6 +350,7 @@
     "fixtures/research-replay-continuity.mode5.synthetic.valid.json": "sha256:1b923c7848383b20cd7d177b4a0e6a3bd1ad75b6cd5b8d4390c7dcea3d187d29",
     "fixtures/research-replay-continuity.multifold.synthetic.valid.json": "sha256:dd2b33328bcfc39125de039997fc3eb88f4d76b53285f791c29b235a48fdb5d2",
     "fixtures/research-retained-analytics.fixed.valid.json": "sha256:c93e7864bfc88ec84cd6e958086a41bc6baaac1195c0bb395ba39a907b0881b4",
+    "fixtures/research-run-library-alpha-catalogue.synthetic.negative.json": "sha256:4c23c1dd53dee14e25e41631914b4c38495d61a50169358430f13442d45591dd",
     "fixtures/research-run-library-alpha-catalogue.synthetic.valid.json": "sha256:204eb4edd4126d0a03ecc892939fe88a73e5076f933b8ac75decd77b5ac11738",
     "fixtures/research-run-setup-options.fixed.valid.json": "sha256:a52e90271cd1b40e84d3b1fa310f9cd2de2446dac74600c4c6ff7df2e5d3b19a",
     "fixtures/research-run-setup-options.presented.valid.json": "sha256:e59ec76b003f13489a2fbb7e403f5cb9571e1e99d02e9afb6e8dcc2049ed6b42",

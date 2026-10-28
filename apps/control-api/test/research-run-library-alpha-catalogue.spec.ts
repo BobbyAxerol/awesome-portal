@@ -3,6 +3,8 @@ import { ResearchRunLibraryAlphaCatalogueQuerySchema, ResearchRunLibraryAlphaCat
 import { ResearchRunLibraryController } from "../src/research/run-library.controller";
 import { ResearchRunLibraryService } from "../src/research/run-library.service";
 import { testConfig } from "./harness";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 
 const scope = { workspaceId: "workspace-alpha-test", actorUserId: "alpha-reader" };
 const config = testConfig({ FEATURE_RESEARCH_RUN_LIBRARY: "true",
@@ -11,6 +13,13 @@ const config = testConfig({ FEATURE_RESEARCH_RUN_LIBRARY: "true",
 const alpha = (n: number) => ({ alphaId: `alpha-${String(n).padStart(4, "0")}`, alphaName: `Alpha ${n}` });
 
 describe("FE-069 distinct workspace run-alpha catalogue", () => {
+  it("rejects all shared negative schema and paging-consistency vectors", () => {
+    const root = process.env.PORTAL_CONTRACTS_DIR ?? resolve(__dirname, "../../../packages/contracts");
+    const fixture = JSON.parse(readFileSync(resolve(root, "fixtures/research-run-library-alpha-catalogue.synthetic.negative.json"), "utf8"));
+    for (const sample of fixture.cases) {
+      expect(ResearchRunLibraryAlphaCatalogueResponseSchema.safeParse(sample.value).success, sample.id).toBe(false);
+    }
+  });
   it("traverses more than 200 alphas without duplicating or skipping and binds cursor to workspace and limit", async () => {
     const all = Array.from({ length: 405 }, (_, i) => alpha(i));
     const repository = { alphaCatalogue: vi.fn(async (_scope, after: string | null, limit: number) => {
