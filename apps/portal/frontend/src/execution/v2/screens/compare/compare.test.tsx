@@ -657,4 +657,30 @@ describe("states and capability", () => {
     expect(within(group).getAllByRole("button")).toHaveLength(100);
     expect(screen.getByText("Showing 100 of 130 portfolios. Filter to see the rest.")).toBeTruthy();
   });
+
+  describe("the suggested pair (QA6 R1-09)", () => {
+    const listWith = (empty: boolean): Override => (_m, path) => {
+      if (path !== "/portfolios") return undefined;
+      const item = (id: string, environments: string[], allocated: unknown[]) => ({
+        portfolio_id: id, name: id, owner: null, state: "ACTIVE", base_currency: "USDT", environments,
+        allocation_count: allocated.length, deployment_count: 1, allocated_by_currency: allocated, updated_at: "2026-10-17T11:58:00Z",
+      });
+      const usdt = [{ currency: "USDT", value: "10" }];
+      const items = [item("pf_mix_a", ["live", "paper"], usdt), item("pf_mix_b", ["live", "paper"], usdt), item("pf_real_c", ["live"], empty ? [] : usdt), item("pf_real_d", ["live"], empty ? [] : usdt)];
+      return { status: 200, body: { schema_version: "execution.portfolio-list.v1", record_authority: "PORTAL_PROJECTION", source_authority: "TRADING_SYSTEM", delivery_profile: "ALL_EXECUTION_PROFILES", workspace_id: "w", environment: "all", read_at: "2026-10-17T12:04:01Z", source_as_of: "2026-10-17T12:04:00Z", freshness: "FRESH", completeness: "COMPLETE", environments: { live: { state: "AVAILABLE", reason_code: null } }, total_portfolios: 4, truncated: false, items } };
+    };
+
+    it("offers a pair when both have a published allocation", async () => {
+      mount(makeApi(listWith(false)).api, "?in=pf_mix_a,pf_mix_b");
+      await loaded();
+      expect((await screen.findByTestId("compare-suggest")).textContent).toMatch(/Compare pf_real_c with pf_real_d/);
+    });
+
+    it("never offers a pair with no published allocation, and says so in words", async () => {
+      mount(makeApi(listWith(true)).api, "?in=pf_mix_a,pf_mix_b");
+      await loaded();
+      expect((await screen.findByTestId("compare-no-suggestion")).textContent).toMatch(/none is suggested/);
+      expect(screen.queryByTestId("compare-suggest")).toBeNull();
+    });
+  });
 });

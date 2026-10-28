@@ -264,7 +264,14 @@ function CompareBody({ api, portfolioId, capabilities, routes = DEFAULT_ROUTES }
   const suggestion = (() => {
     if (seriesQuery !== null || picked.ids.length < 2) return null;
     const shares = (a: PortfolioRow, b: PortfolioRow) => a.baseCurrency === b.baseCurrency && a.domain === b.domain;
-    const clean = (row: PortfolioRow) => row.comparable && !row.mixedBooks && row.domain !== "unknown";
+    // R1-09: never offer a pair this page already knows is empty: a portfolio with no published allocation, or one whose dataset read came
+    // back with no economic partition, has no figure to put beside another.
+    const knownEmpty = (row: PortfolioRow) => {
+      if (row.allocated.length === 0) return true;
+      const state = datasetReads.get(row.portfolioId);
+      return state !== undefined && state.phase === "ready" && !state.value.groups.some((entry) => entry.economicPartitions.length > 0);
+    };
+    const clean = (row: PortfolioRow) => row.comparable && !row.mixedBooks && row.domain !== "unknown" && !knownEmpty(row);
     const anchor = basis.comparable.find(clean) ?? all.find(clean);
     const partner = anchor === undefined ? undefined : all.find((row) => clean(row) && row.portfolioId !== anchor.portfolioId && shares(anchor, row));
     return anchor === undefined || partner === undefined ? null : { ids: [anchor.portfolioId, partner.portfolioId], names: [anchor.label, partner.label] as const };
@@ -447,7 +454,11 @@ function CompareBody({ api, portfolioId, capabilities, routes = DEFAULT_ROUTES }
             )}
             {suggestion !== null ? (
               <p className="exec-pf-banner" role="status" data-testid="compare-suggest">
-                These picks cannot be read on one basis. <button type="button" className="exec-pf-segbtn" onClick={() => setPicks(suggestion.ids)}>Compare {suggestion.names[0]} with {suggestion.names[1]}</button> (same currency, same domain).
+                These picks cannot be read on one basis. <button type="button" className="exec-pf-segbtn" onClick={() => setPicks(suggestion.ids)}>Compare {suggestion.names[0]} with {suggestion.names[1]}</button> (same currency, same domain, both with a published allocation).
+              </p>
+            ) : seriesQuery === null && picked.ids.length >= 2 ? (
+              <p className="exec-pf-banner" role="status" data-testid="compare-no-suggestion">
+                These picks cannot be read on one basis, and no other pair on one basis has a published allocation, so none is suggested.
               </p>
             ) : null}
             {/* The overlay prints its own "Basis:" line under the chart; this one is visible only when no chart is drawn (it stays for assistive tech either way). */}
