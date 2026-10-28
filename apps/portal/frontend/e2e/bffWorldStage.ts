@@ -184,8 +184,9 @@ export function haltedSinceMs(deploymentId: string): number | null {
     ...book.orders.flatMap((o) => [Date.parse(String(o.submitted_at)), Date.parse(String(o.updated_at))]),
     ...book.fills.map((f) => Date.parse(String(f.trade_time))),
   ].filter((t) => Number.isFinite(t));
-  const last = events.length === 0 ? WORLD_NOW_MS - 3 * DAY_MS : Math.max(...events) + 6_000;
-  return Math.min(last, WORLD_NOW_MS - 10_000);
+  // the halt is at the first whole minute after the last order event (a page prints minutes: no order is stamped in the halt's minute or later), never after the world clock
+  const last = events.length === 0 ? WORLD_NOW_MS - 3 * DAY_MS : Math.ceil((Math.max(...events) + 1) / 60_000) * 60_000;
+  return Math.min(last, WORLD_NOW_MS);
 }
 /** The state word the Fleet row and the Alpha 360 deployment rows print: ENDED for a stage the alpha left, HALTED for a halted runtime, else the booked state. */
 export const stageStateOf = (d: DeploymentSpec): string => (isRetired(d.id) ? "ENDED" : haltedSinceMs(d.id) !== null ? "HALTED" : d.state);

@@ -953,7 +953,7 @@ function worldStage(kind: "canary" | "live" | "sandbox" | "paper", body: Obj | n
     const lossApproved = worldCents(alloc / 100n);
     const dailyPnl = finished ? null : dailyOf(series, 6); // WP-B2-C3 (R5-10): a trial the alpha left has no daily PnL after its exit
     const dailyLoss = dailyPnl !== null && worldToCents(dailyPnl) < 0n ? worldCents(-worldToCents(dailyPnl)) : "0.00";
-    const capConsumed = breach ? worldCents(alloc * 11n / 10n) : worldCents(alloc);
+    const capConsumed = breach ? worldCents(alloc * 11n / 10n) : finished ? "0.00" : worldCents(alloc); // WP-B2-S3 (QA7 N5-05): a finished trial holds nothing, so it consumes none of its capital
     const caps: Omit<CapSpec, "ratio">[] = [
       { cap: "capital", unit: "USDT", limit: worldCents(alloc * 2n), approved: capApproved, consumed: capConsumed },
       { cap: "gross_notional", unit: "USDT", limit: worldCents(alloc * 3n), approved: grossApproved, consumed: gross },
@@ -979,6 +979,19 @@ function worldStage(kind: "canary" | "live" | "sandbox" | "paper", body: Obj | n
     body.positions = collection("positions", "EXECUTION", "ready", stale ? "STALE" : "FRESH", asOf, typedPositions(positions), positions.map((p) => ({ symbol: p.symbol, side: p.side.toUpperCase(), qty: p.quantity, entry_price: p.entry })));
     body.blotter = collection("blotter", "EXECUTION", "ready", stale ? "STALE" : "FRESH", asOf, typedOrders(orders), orders.map((o) => ({ order_id: o.id, price: o.price, type: o.type })));
     body.series = { envelope: panel("series", "DERIVED", "ready", "FRESH", AS_OF), ...seriesMembers(started, 4 * HOUR_MS, "4h", series.map((point) => point.value)) };
+    if (finished) {
+      // ===== WP-B2-S3 (QA7 N5-05): a finished trial carries its ENDED facts: the exit was decided on the exit date, the rollback checks are not claims about now, and no promotion gate is waiting on the owner
+      const ended = ["CANARY_TRIAL_ENDED"];
+      (body.lifecycle as Obj).blocker_codes = ended;
+      (body.envelope as Obj).blocker_codes = ended;
+      const rollback = body.rollback_readiness as Obj;
+      rollback.ready = false;
+      rollback.blocker_codes = ended;
+      rollback.items = ["flatten_plan", "paper_twin", "broker_data", "rollback_drill"].map((key) => ({ key, ready: unpub("TRIAL_ENDED_NOT_CHECKED_SINCE_EXIT"), checked_at: unpub("TRIAL_ENDED_NOT_CHECKED_SINCE_EXIT") }));
+      const policy = body.command_policy as Obj;
+      for (const name of ["protective", "scale_up"]) if (isObj(policy[name])) (policy[name] as Obj).blocker_codes = ended;
+      // ===== WP-B2-S3 end
+    }
   } else if (kind === "sandbox") {
     const startMs = standing.fromMs; // WP-B2-S: this deployment's own stage dates (one stage history)
     const started = iso(startMs);

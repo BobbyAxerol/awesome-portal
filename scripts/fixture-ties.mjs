@@ -807,7 +807,7 @@ export async function runWorldTies(get) {
       if (runtime === "HALTED") {
         const since = ms(factsOf(kind, b)?.runtime?.since?.value);
         const orders = await pages(`${E}/screens/blotter?limit=200`, (body) => body.data?.orders ?? [], (body) => body.data?.page?.next_cursor);
-        for (const o of orders.filter((x) => x.deployment_id === id)) check("W33", ms(o.submitted_at) <= since, `${id}: order ${o.order_id} submitted ${o.submitted_at}, after the halt ${new Date(since).toISOString()}`);
+        for (const o of orders.filter((x) => x.deployment_id === id)) check("W33", Math.floor(ms(o.submitted_at) / 60_000) < Math.floor(since / 60_000), /* a page prints minutes: the order is in an earlier minute than the halt (QA7 R5-09) */ `${id}: order ${o.order_id} submitted ${o.submitted_at}, after the halt ${new Date(since).toISOString()}`);
       }
     }
 
@@ -938,6 +938,22 @@ export async function runWorldTies(get) {
     const page = (await get(`${E}/deployments/${id}/certification`)).body;
     if (!m || !page?.progress) continue;
     check("W40", Number(metricStr(m, "life_sandbox_criteria_met")) === page.progress.passed_count, `${id}: Alpha 360 counts ${metricStr(m, "life_sandbox_criteria_met")} of 7 sandbox criteria met, the Sandbox page ${page.progress.passed_count} of ${page.progress.total_count}`);
+  }
+  // W41 (QA7 N5-05): a Canary trial that ended carries ended facts: no rollback check claims readiness, no promotion gate waits on the owner, no capital is consumed with nothing held, the exit is in the past
+  const canaryIds = [...[...deployments.keys()].slice(0, 40).filter((x) => deployments.get(x).stage === "CANARY"), ...alphaRows.filter((x) => STAGE_RANK[x.stage] > STAGE_RANK.CANARY && !(x.deployments ?? []).some((d) => d.stage === "CANARY")).map((x) => `dep_${x.alpha_id.replace(/^alpha_/, "")}_canary_hist`), "dep_canary_01"];
+  const factsOf = (kind, b) => (kind === "paper" ? b.data?.stage_facts : b.stage_facts);
+  for (const id of [...new Set(canaryIds)]) {
+    const kind = "canary";
+    const b = await ok200(`${E}/deployments/${id}/canary`);
+    if (b === null || factsOf("canary", b)?.runtime?.runtime_state?.value !== "STOPPED") continue;
+    check("W41", (b.rollback_readiness?.items ?? []).every((x) => x.ready?.value !== true) && b.rollback_readiness?.ready === false, `${id}: an ended trial's rollback readiness still claims ready`);
+    const codes = [...(b.command_policy?.scale_up?.blocker_codes ?? []), ...(b.command_policy?.protective?.blocker_codes ?? []), ...(b.lifecycle?.blocker_codes ?? []), ...(b.envelope?.blocker_codes ?? [])];
+    check("W41", !codes.includes("CANARY_OWNER_GATE_REQUIRED") && codes.includes("CANARY_TRIAL_ENDED"), `${id}: an ended trial waits on ${JSON.stringify(codes)}`);
+    const gross = b.envelope_compliance?.rows?.find((r) => r.cap === "gross_notional")?.consumed?.value;
+    const capital = b.envelope_compliance?.rows?.find((r) => r.cap === "capital")?.consumed?.value;
+    if (numOf(gross) === 0n) check("W41", numOf(capital) === 0n, `${id}: capital consumed ${capital} with gross notional ${gross}`);
+    const opens = ms(b.lifecycle?.trial?.exit_review_opens_at?.value);
+    check("W41", opens !== null && opens <= ms(factsOf("canary", b)?.runtime?.since?.value) + 1000, `${id}: the exit review opens ${b.lifecycle?.trial?.exit_review_opens_at?.value}, after the trial ended ${factsOf("canary", b)?.runtime?.since?.value}`);
   }
   // ===== WP-B2-S3 end
   // ===== WP-B2-A3 begin
