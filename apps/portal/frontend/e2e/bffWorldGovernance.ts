@@ -24,7 +24,7 @@ import {
   DAY_MS, fromCents, incidentState, NATIVE_ALPHAS, OPS_READ_MS, PEOPLE, bindingOfAccount, personByUsername, toCents, 
   WORLD_INCIDENTS, WORLD_NOW_MS, WORLD_OPERATIONS, worldAlphas, type StageName, type WorldIncident, type WorldOperation,
 } from "./bffWorld";
-import { criteriaMetOf, gateMinimumDays, stageBookOf, stageHistoryOf } from "./bffWorldStage"; // WP-B2-S3: gateMinimumDays
+import { criteriaMetOf, gateMinimumDays, stageBookOf, stageHistoryOf, stageStateOf } from "./bffWorldStage"; // WP-B2-S3: gateMinimumDays
 import { environmentFor } from "./bffWorldBooks"; // WP-B2-A3: the Overview labels an incident / operation with the environment its page prints
 // ===== WP-B2-A3 begin: the generated universe's requests are derived from its alphas' stage (bffWorldGenerated), not drawn at random
 import { generatedPlans, type GeneratedPlan } from "./bffWorldGenerated";
@@ -241,7 +241,7 @@ function buildApprovals(): WorldApproval[] {
       const rc = RELEASE_CANDIDATE[alpha.id] ?? "RC-40";
       const subject = gate === "R1" ? `${alpha.label} · ${rc}` : gate === "R2" ? `${alpha.label} → ${capital.portfolioName}` : gate === "LIVE_GATE" ? `${alpha.label} → ${venueOf(about)}` : `${alpha.label} · ${about.id}`;
       const target = gate === "R1" ? "research" : gate === "R2" ? `${capital.environment} · ${accountNameOf(capital)}` : gate === "LIVE_GATE" ? "live · dual approval" : `→ ${to!} · ${venueOf(about)}`;
-      const haltedAbout = waiting && about.state === "HALTED" ? `Deployment ${about.id} is halted` : undefined; // WP-B2-A3: a fact of the world blocks the request
+      const haltedAbout = waiting && stageStateOf(about) === "HALTED" ? `Deployment ${about.id} is halted` : undefined; // WP-B2-A3: a fact of the world blocks the request
       out.push({
         ...(haltedAbout !== undefined ? { blocker: haltedAbout } : {}),
         id: ids[gate], gate, alphaId: alpha.id, alphaLabel: alpha.label, releaseCandidate: rc, deploymentId: gate === "R1" || gate === "R2" ? null : about.id,
@@ -526,6 +526,7 @@ export function overlayWorldR2(body: unknown, id: string): unknown {
         const binding = bindingOfAccount(accountId);
         if (binding !== null) {
           entry.label = "account";
+          if (a.status !== "PENDING") continue; // N8a-07: a decided request's capital check is its decided record, not a live check of the binding
           const over = binding.used > binding.equity;
           (group.entries as Obj[]).push({ label: "capital check", value: `${over ? "EXCEEDED" : "WITHIN"} · ${groupedMoney(fromCents(binding.used))} allocated on the binding, equity ${groupedMoney(fromCents(binding.equity))}`, revision: entry.revision });
         }
@@ -563,6 +564,7 @@ export function overlayWorldLive(body: unknown, id: string): unknown {
   const data = out.governance_backbone?.data as Obj | undefined;
   if (data?.approval !== undefined) {
     if (unavailable.length > 0) data.approval.evidence_complete = false; // WP-B2-A3
+    if (a.blocker !== undefined) { data.approval.blocker_count = 1; data.approval.blocker_summary = a.blocker; data.approval.evidence_complete = false; } // N8a-07: a halted subject is not "evidence ready"
     // WP-B2-A3 (R3-02 residual): two gates past R1 the Live request cites the decided R1 of its alpha (stage history), not "Missing"
     const r1 = approvalOfAlpha(a.alphaId, "R1");
     if (r1 !== undefined && r1.status === "APPROVED" && r1.decidedMs !== null) {

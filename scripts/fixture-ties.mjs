@@ -1482,6 +1482,12 @@ export async function runWorldTies(get) {
       check("W67", !(exists && account.label === "account (new)"), `${row.id}: "account (new)" names ${account.value}, which already exists`);
       if (exists) check("W67", entries.some((e) => e.label === "capital check"), `${row.id}: ${account.value} exists and the request states no capital check of it`);
     }
+    // N8a-07: a DECIDED R2 prints no live capital check (its capital is the decided record)
+    for (const h of (await pages(`${E}/governance/approvals/history?limit=50`, (b) => b.page?.rows ?? [], (b) => b.page?.next_cursor ?? null, 3)).filter((x) => x.gate === "R2").slice(0, 20)) {
+      const d = await ok200(`${E}/governance/approvals/${h.approval_id}/r2`);
+      const entries = (d?.readiness ?? []).flatMap((g) => g.entries ?? []);
+      check("W67", !entries.some((e) => e.label === "capital check"), `${h.approval_id}: a decided R2 still prints a live capital check`);
+    }
   }
   // ── W68: a request names the entity it decides (a linkable id of the fleet), and the picker the session reads lists no placeholder alpha (N3-06, N3-08) ──
   {
@@ -1536,6 +1542,17 @@ export async function runWorldTies(get) {
         check("W81", !left || /^(ENDED|RETIRED)$/.test(r.lifecycle ?? ""), `${r.alpha_id} (${alphaStage}) has a ${env} Fleet row at ${r.current_stage} whose lifecycle is ${r.lifecycle}, not ENDED`);
         check("W81", left || !/^(ENDED|RETIRED)$/.test(r.lifecycle ?? ""), `${r.alpha_id}: the ${r.current_stage} Fleet row is the alpha's current stage yet says ${r.lifecycle}`);
       }
+    }
+  }
+  // ── W82: a request whose subject deployment is halted says so (blocked, not evidence-ready) (N8a-07) ──
+  {
+    for (const row of approvalRows.filter((r) => r.gate === "LIVE_GATE" || r.gate === "SANDBOX_EXIT")) {
+      const d = await ok200(`${E}/governance/approvals/${row.id}/${row.gate === "LIVE_GATE" ? "live" : ""}`.replace(/\/$/, "")) ?? await ok200(`${E}/governance/exit-reviews/${row.id}`);
+      const dep = row.gate === "LIVE_GATE" ? d?.canary_ref?.deployment_id : /\b(dep_[A-Za-z0-9_]+)/.exec(String(row.subject))?.[1];
+      const state = deployments.get(dep)?.row?.state;
+      if (state !== "HALTED") continue;
+      check("W82", row.inert === "BLOCKED" && Number(row.blocker_count) > 0, `${row.id}: ${dep} is HALTED in the Fleet and the queue row is not blocked (${row.inert})`);
+      if (row.gate === "LIVE_GATE") check("W82", d?.governance_backbone?.data?.approval?.evidence_complete === false, `${row.id}: ${dep} is halted and the Live gate says evidence complete`);
     }
   }
   // ===== WP-B2-A3 round D end
