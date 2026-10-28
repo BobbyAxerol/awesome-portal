@@ -8,12 +8,19 @@ import { readManagerDataset } from '../../../apps/portal/frontend/src/execution/
 // account/portfolio reference. The deployed fixture scale is not changed.
 vi.mock('../../../apps/portal/frontend/e2e/bffScale', async importOriginal => {
   const source = await importOriginal<any>();
+  // Match scaled()'s per-scale memoization: rebuilding the expanded world for
+  // every lifecycle lookup made a paging test quadratic in fixture creation.
+  let previousGraph: any;
+  let expandedGraph: any;
   return { ...source, scaled: () => {
     const graph = source.scaled();
-    return { ...graph, alphas: [0, 1, 2].flatMap(copy => graph.alphas.map((alpha: any) => ({
+    if (graph === previousGraph) return expandedGraph;
+    previousGraph = graph;
+    expandedGraph = { ...graph, alphas: [0, 1, 2].flatMap(copy => graph.alphas.map((alpha: any) => ({
       ...alpha, id: `${alpha.id}_copy${copy}`, name: `${alpha.name} copy ${copy}`,
       deployments: alpha.deployments.map((child: any) => ({ ...child, id: `${child.id}_copy${copy}`, alphaId: `${alpha.id}_copy${copy}` })),
     }))) };
+    return expandedGraph;
   } };
 });
 
@@ -25,7 +32,9 @@ function read(search: URLSearchParams, path = '/manager/fund-overview'): any {
   expect(parsed.success, parsed.success ? '' : JSON.stringify(parsed.error.issues)).toBe(true);
   return answer!.body;
 }
-describe('Contributors linked fixture paging', () => {
+// The `large` scale pages through hundreds of groups: 8-30 s on the canonical fixture depending on machine load (the default 20 s limit
+// made it load-sensitive on canonical itself). The limit is widened for this group only; no assertion changes.
+describe('Contributors linked fixture paging', { timeout: 120_000 }, () => {
   afterEach(() => setFixtureScale('small'));
   it('leaves ungrouped reads compatible with the existing frontend reader', () => {
     setFixtureScale('medium');

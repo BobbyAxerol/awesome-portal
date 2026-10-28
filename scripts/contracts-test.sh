@@ -283,6 +283,7 @@ for input in \
   apps/control-api/src/command-center/visit-digest.ts \
   apps/control-api/src/domain.ts \
   apps/control-api/src/manager-lists/binding-figures.ts \
+  apps/portal/fixture-bff/alpha-catalogue.ts \
   apps/portal/fixture-bff/app.ts \
   apps/portal/fixture-bff/command-story.ts \
   apps/portal/fixture-bff/review-accounts.ts \
@@ -306,6 +307,7 @@ for input in \
   apps/portal/frontend/e2e/bffDoubleGovernance.ts \
   apps/portal/frontend/e2e/bffDoubleManager.ts \
   apps/portal/frontend/e2e/bffDoubleOverview.ts \
+  apps/portal/frontend/e2e/bffDoublePendingPreview.ts \
   apps/portal/frontend/e2e/bffDoublePortfolios.ts \
   apps/portal/frontend/e2e/bffDoubleScopedResource.ts \
   apps/portal/frontend/e2e/bffDoubleSelfAccess.ts \
@@ -318,6 +320,11 @@ for input in \
   apps/portal/frontend/e2e/bffSimulated.ts \
   apps/portal/frontend/e2e/bffSimulatedStage.ts \
   apps/portal/frontend/e2e/bffWorld.ts \
+  apps/portal/frontend/e2e/bffWorldBooks.ts \
+  apps/portal/frontend/e2e/bffWorldGenerated.ts \
+  apps/portal/frontend/e2e/bffWorldGovernance.ts \
+  apps/portal/frontend/e2e/bffWorldOrders.ts \
+  apps/portal/frontend/e2e/bffWorldStage.ts \
   apps/portal/frontend/src/execution/adapter.ts \
   apps/portal/frontend/src/execution/adminCatalog.fixtures.ts \
   apps/portal/frontend/src/execution/analytics.presentation.fixtures.ts \

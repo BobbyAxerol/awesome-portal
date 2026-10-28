@@ -153,7 +153,8 @@ for paper_reader_file in \
   api/profileRead.ts api/schemaGuard.ts api/screenV2.ts \
   screenDataContract.ts unsafeText.ts formatExact.ts stageFacts.ts \
   v2/boundary.ts v2/charts/decimal.ts v2/charts/model.ts v2/charts/downsample.ts \
-  v2/readers/paperRead.ts v2/screens/stage/identity.ts v2/screens/workbench/model.ts; do
+  v2/readers/paperRead.ts v2/readers/stageFactViews.ts \
+  v2/screens/stage/identity.ts v2/screens/workbench/model.ts; do
   mkdir -p "$(dirname "${PAPER_READER_SOURCE}/${paper_reader_file}")"
   cp -a "${ROOT_DIR}/apps/portal/frontend/src/execution/${paper_reader_file}" \
     "${PAPER_READER_SOURCE}/${paper_reader_file}"
