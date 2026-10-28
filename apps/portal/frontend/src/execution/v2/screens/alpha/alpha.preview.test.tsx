@@ -145,7 +145,9 @@ describe("Net PnL and Exposure are the book in view, never all books added (QA2 
     // QA3 R2-01: a running deployment with open positions never reads 0.00 exposure: the tile prints the deployment's own gross notional.
     const exposure = tile("Exposure, current");
     expect(within(exposure).getByTestId("book-here").textContent).toContain("7,370.68");
-    expect(within(exposure).getByTestId("book-apart").textContent).not.toMatch(/dep_paper_01 0\.00/);
+    // WORLD (step B): Carry A has left Paper, so dep_paper_01 is a retired deployment with no open position: 0.00 there is the truth. The rule stays for a deployment that is running.
+    expect(within(exposure).getByTestId("book-apart").textContent).toContain("dep_paper_01");
+    expect(within(exposure).getByTestId("book-here").textContent).not.toMatch(/dep_live_01 0\.00/);
     cleanup();
     endPreviewLane();
     mount("/deployments/alphas/alpha_a?env=paper", "alpha_a");
