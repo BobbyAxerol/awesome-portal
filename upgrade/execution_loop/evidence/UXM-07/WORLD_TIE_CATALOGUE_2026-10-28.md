@@ -91,6 +91,7 @@ Status is on the tip `3f02e233e` (the frozen lane tip) with the populated, mediu
 | W37 | the links of a mismatch page open the deployment's own records: the finding is an open Real-funded incident of that deployment, the dry-run link's Operations queue is non-empty and is that deployment's | /deployments/{d}/live broker_consistency vs /operations/incidents/{i} and /operations?target_id= | R5-03 N5-09 | B-S | GREEN | see test |
 | W36 | a Live page's predecessor envelope is the linked Canary room's own envelope (same id, same caps), finished, never active for live | /deployments/{d}/live predecessor_canary_envelope vs the linked /deployments/{c}/canary envelope | N5-01 | B-S | GREEN | see test |
 | W19 | A limit exactly reached is full (verdict stays WITHIN_ENVELOPE; BREACH only above the approved limit) and a STOPPED trial states no daily PnL | `/deployments/{d}/canary` | R5-07, R5-10 | B-C3 | GREEN | see run |
+| W80 | One criteria count per gate: the evidence diff's "Criteria met" before equals Alpha 360's lifecycle count for the stage the gate leaves (Momentum C Canary 1 of 7, not 6), and after approval equals the gate's total | `/governance/approvals/{id}/evidence`, `/alphas/{a}/lifecycle` | N8c-01 | B-A3 | GREEN | see test |
 
 Counts on the tip: 19 world ties (W23 added by B-B1, GREEN); the counts below predate it. Plus the walker's T1 to T14 (92 checks): GREEN.
 

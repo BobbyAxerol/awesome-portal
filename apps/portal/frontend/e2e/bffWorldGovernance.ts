@@ -24,7 +24,7 @@ import {
   DAY_MS, fromCents, incidentState, NATIVE_ALPHAS, OPS_READ_MS, PEOPLE, bindingOfAccount, personByUsername, toCents, 
   WORLD_INCIDENTS, WORLD_NOW_MS, WORLD_OPERATIONS, worldAlphas, type StageName, type WorldIncident, type WorldOperation,
 } from "./bffWorld";
-import { gateMinimumDays, stageBookOf, stageHistoryOf } from "./bffWorldStage"; // WP-B2-S3: gateMinimumDays
+import { criteriaMetOf, gateMinimumDays, stageBookOf, stageHistoryOf } from "./bffWorldStage"; // WP-B2-S3: gateMinimumDays
 import { environmentFor } from "./bffWorldBooks"; // WP-B2-A3: the Overview labels an incident / operation with the environment its page prints
 // ===== WP-B2-A3 begin: the generated universe's requests are derived from its alphas' stage (bffWorldGenerated), not drawn at random
 import { generatedPlans, type GeneratedPlan } from "./bffWorldGenerated";
@@ -647,7 +647,9 @@ const groupedMoney = (decimal: string): string => {
 export function worldEvidence(id: string): { portfolioId: string | null; environment: string; changes: Obj[]; whatChanges: (obligations: number) => string; countsAs: { met_after: number; required: number } } | null {
   const a = worldApproval(id);
   if (a === undefined) return null;
-  const met = a.status === "APPROVED" ? 7 : 6;
+  // WP-B2-A3 (N8c-01): the criteria met NOW are the count Alpha 360 and the stage page print for the stage the gate leaves (one rule, criteriaMetOf); R1 / R2 have no stage record
+  const record = a.stageFrom !== null ? stageHistoryOf(a.alphaId).stages[a.stageFrom] : null;
+  const met = a.status === "APPROVED" ? 7 : record !== null ? criteriaMetOf(record.status, record.days) : 6;
   const stageChange = a.stageFrom !== null && a.stageTo !== null ? { label: "Stage", before: STAGE_WORD[a.stageFrom], after: STAGE_WORD[a.stageTo], unit: "TEXT" } : null;
   const capital = a.gate === "R2" ? capitalOf(a) : null;
   const changes: Obj[] = [

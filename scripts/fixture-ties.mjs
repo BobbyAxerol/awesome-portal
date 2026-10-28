@@ -1507,6 +1507,22 @@ export async function runWorldTies(get) {
     // the catalogue is run-derived: alpha_e is the double's own research-only row, with no run in the world, so it is not in it
     for (const label of alphaRows.filter((a) => a.alpha_id !== "alpha_e").map((a) => a.alpha_label)) check("W68", names.includes(label), `the picker does not list the fleet alpha "${label}"`);
   }
+  // ── W80: one criteria count per gate: the request's "criteria met now" is Alpha 360's count for the stage the gate leaves (N8c-01) ──
+  {
+    const STAGE_OF = { SANDBOX_EXIT: "SANDBOX", LIVE_GATE: "CANARY", PAPER_EXIT: "PAPER" };
+    for (const row of approvalRows.filter((r) => STAGE_OF[r.gate] !== undefined)) {
+      const label = String(row.subject ?? "").split(/\s+[·→]\s+/)[0];
+      const alpha = alphaRows.find((a) => a.alpha_label === label);
+      if (alpha === undefined) continue;
+      const life = await ok200(`${E}/alphas/${alpha.alpha_id}/lifecycle`);
+      const stage = (life?.stages ?? []).find((x) => x.stage === STAGE_OF[row.gate]);
+      const ev = await ok200(`${E}/governance/approvals/${row.id}/evidence`);
+      const met = (ev?.evidence_diff?.changes ?? []).find((c) => c.label === "Criteria met");
+      if (stage?.criteria == null || met === undefined) continue;
+      check("W80", Number(met.before) === stage.criteria.met, `${row.id}: criteria met now ${met.before}, Alpha 360 counts ${stage.criteria.met} of ${stage.criteria.total} for ${alpha.alpha_label}'s ${STAGE_OF[row.gate]}`);
+      check("W80", Number(met.after) === stage.criteria.total, `${row.id}: criteria after approval ${met.after}, the gate has ${stage.criteria.total}`);
+    }
+  }
   // ===== WP-B2-A3 round D end
   return { ties };
 }
