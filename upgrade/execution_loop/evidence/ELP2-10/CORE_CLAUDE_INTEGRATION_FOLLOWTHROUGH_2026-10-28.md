@@ -17,6 +17,12 @@ Status: **CANDIDATE ONLY; NOT LANDED, NOT CONNECTED, ELP2-10/11 OPEN**.
   the aggregate of both authors, **not** a claim Core wrote those lines. One
   trailing space in Claude's e2e fixture was corrected, with no semantic/UI
   change. No tracked WIP from either original worktree was overwritten.
+- After including this receipt, the prescribed integrity check found stale N29
+  and dependent EDS-12 hashes. The repository refresh script updated only four
+  hash lines (reviewed diff) in candidate commit `5a1710160`; rerunning
+  `refresh-release-integrity-ledgers.sh --check` passed. Runtime effect NONE;
+  N29 release remains NO_GO and this is not deployed qualification. The
+  candidate's then-current tree was `b208e48a66b621ab7f919aac831021f2e4c4bd37`.
 
 ## Actual checks
 
