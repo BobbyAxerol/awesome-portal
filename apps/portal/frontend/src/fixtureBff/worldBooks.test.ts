@@ -107,7 +107,9 @@ describe("environment label and attention derive from the world", () => {
     expect(environmentFor("PORTFOLIO", "pf_TEST_ONLY_canary", "LIVE")).toBe("SANDBOX");
     expect(riskTierFor("SANDBOX", "R4_LIVE_RISK_INCREASING", "LIVE")).toBe("R2_SANDBOX");
     expect(environmentFor("PORTFOLIO", "pf_TEST_ONLY_core", "SANDBOX")).toBe("SANDBOX"); // Core does hold a sandbox book
-    expect(environmentFor("ACCOUNT", "acc_TEST_ONLY_binance02", "PAPER")).toBe("PAPER"); // unknown to the world: declared stays
+    // WP-B2-A3 (R3-04): the queue's acc_TEST_ONLY_binance02 IS acc_okx_main, whose binding is Real-funded; the world changed, so the declared Paper no longer stays
+    expect(environmentFor("ACCOUNT", "acc_TEST_ONLY_binance02", "PAPER")).toBe("LIVE");
+    expect(environmentFor("ACCOUNT", "acc_okx_main", "SANDBOX")).toBe("LIVE");
   });
   it("Core is flagged because the world has open incidents on it", () => {
     expect(openIncidentsOfPortfolio("pf_TEST_ONLY_core").map((i) => i.id)).toContain("inc_TEST_ONLY_fx_budget");

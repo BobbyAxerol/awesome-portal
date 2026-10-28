@@ -48,6 +48,10 @@ const TIES: readonly { id: string; title: string; qa: string; owner: string }[] 
   { id: "W10", title: "one last-seen per person across every roster filter", qa: "R3-04", owner: "B-A" },
   { id: "W11", title: "environment labels derive from the entity's stage (deployment) or the portfolio's books", qa: "R3-05 R3-10", owner: "B-O" },
   { id: "W12", title: "register NAV / Net PnL = 360 statement for every portfolio and book", qa: "R1-05 R1-15", owner: "B-C" },
+  { id: "W19", title: "an approval request exists only for the next gate of its subject, once, with an open quorum, and its environment label is a partition of the portfolio whose capital it moves", qa: "R3-02 R3-03 R3-09 R3-10", owner: "B-A3" },
+  { id: "W20", title: "an account has one environment: operations, incidents and its Account 360 agree", qa: "R3-04 R1-02", owner: "B-A3" },
+  { id: "W21", title: "Account 360 ties inside itself and to the Accounts list: margin ratio = maintenance / equity, the list virtual sum = the ledger, venue wallet not below the ledger unflagged, distinct deployment names", qa: "R3-05 R3-06 R3-08", owner: "B-A3" },
+  { id: "W22", title: "Since your last visit lists only observations after that visit", qa: "R1-04", owner: "B-A3" },
   { id: "W13", title: "one clock: every read of the world is taken within a day of the others", qa: "R3-10 R3-09", owner: "B-O" },
   // ===== WP-B2-S3 begin
   { id: "W14", title: "a Sandbox page that shows an equity difference or an approved decision blocks its gate: open blocking finding, nothing eligible to submit, steps counted and dated inside the run", qa: "R4-01 R4-03 R4-05 R4-12", owner: "B-S" },

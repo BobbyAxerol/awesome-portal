@@ -52,7 +52,12 @@ export function createVisitDigestFixture() {
           }))
         : makeDigestSnapshot(workspace,config.nowIso,facts.slice(0,-2).map((f,i)=>i<2?{...f,value:'PREVIOUS_TEST_STATE'}:f));
       // ===== WP-B2-A end
-      baselines.set(key,config.reviewProfile==='sparse-realistic'?null:makeBaseline(previous,1,config.nowIso));
+      // ===== WP-B2-A3 begin (R1-04): the last visit is before every observation the digest lists as new or changed (it printed the current instant, so no item could be "since" it)
+      const unseen = positive ? facts.filter((f) => { const stage = seeds.find((seed) => seed.id === f.id); return stage ? ((stage.previous ?? f.value) !== f.value) : !opSeeds.some(({ op, seenAtLastVisit }) => f.id === `operation:${op.id}` && seenAtLastVisit); }) : [];
+      const earliest = unseen.length === 0 ? null : Math.min(...unseen.map((f) => Date.parse(f.as_of ?? "")));
+      const visitedAt = earliest === null || !Number.isFinite(earliest) ? config.nowIso : new Date(earliest - 5 * 60_000).toISOString();
+      baselines.set(key,config.reviewProfile==='sparse-realistic'?null:makeBaseline(previous,1,visitedAt));
+      // ===== WP-B2-A3 end
     }
     let baseline=baselines.get(key)!;
     if(request.method==='POST') {

@@ -54,8 +54,9 @@ import { scopedResourceV2 } from "./bffDoubleScopedResource";
 import { addDecimal, scaled, sumByCurrency } from "./bffScale";
 import { isPositiveMode, positiveBookOf } from "./bffPositiveMode";
 import { accountFact, bindingFact, ledgerSeries } from "./bffWorld";
-import { accountPositions, wholeAccountOf } from "./bffWorldBooks"; // WP-B2-C
+import { accountPositions, setAccountEnvironmentProvider, wholeAccountOf } from "./bffWorldBooks"; // WP-B2-C
 import { blotterBookOf } from "./bffDoubleOverview";
+import { isRetired } from "./bffWorldStage"; // WP-B2-A3
 import { ORDER_BOOK_AS_OF_MS } from "./bffWorldOrders"; // WP-B2-O
 
 export interface BffAnswerAccount {
@@ -121,6 +122,10 @@ const allBindings = (): readonly BindingSpec[] => {
   const extra = scaled().bindings;
   return extra.length === 0 ? BINDINGS : [...BINDINGS, ...extra];
 };
+
+// ===== WP-B2-A3 begin: the operation queue and incidents label an account with the environment of its binding, the one the list and the detail print
+setAccountEnvironmentProvider((accountId) => [...BINDINGS, ...scaled().bindings].find((b) => b.accountId === accountId)?.environment ?? null);
+// ===== WP-B2-A3 end
 
 const bindingItem = (b: BindingSpec) => ({
   binding_id: b.bindingId,
@@ -241,6 +246,15 @@ function bindingExposure(id: string): BffAnswerAccount {
     oldest_source_as_of: ACCOUNT_DOUBLE_AS_OF,
     newest_source_as_of: ACCOUNT_DOUBLE_AS_OF,
   });
+  // ===== WP-B2-A3 begin: an account with no booking states its ledger (used), what is locked (reserved), free (available) and free less maintenance (headroom), from the rows its own page prints
+  const unbooked = (accountId: string) => {
+    const account = ACCOUNTS.find((a) => a.id === accountId);
+    const row = account?.rows.account_balances?.[0];
+    if (row === undefined) return null;
+    const maintenance = toCents(String(account!.rows.margin_balances?.[0]?.maintenance ?? "0"));
+    return bucket(String(row.currency), String(row.total), String(row.locked), String(row.free), fromCents(toCents(String(row.free)) - maintenance));
+  };
+  // ===== WP-B2-A3 end
   const world = isPositiveMode() ? bindingFact(spec.bindingId) : null; // WORLD: the virtual sum is the allocations booked on the binding, the venue holds the sleeve ledgers
   const buckets = world !== null
     ? [bucket(world.currency, fromCents(world.used), fromCents(world.locked), fromCents(world.wallet - world.used), fromCents(world.equity - world.used))]
@@ -248,7 +262,9 @@ function bindingExposure(id: string): BffAnswerAccount {
     ? [bucket("USDT", "197500.00", "2000.00", "213380.25", "13880.25"), bucket("USDC", "10000.00", "0.00", "12000.00", "2000.00")]
     : breached
       ? [bucket("USDT", "92400.00", "0.00", "85000.00", "-7400.00")]
-      : [bucket("USDT", "10.00", "2.00", "88.00", "90.00")];
+      : isPositiveMode() && unbooked(spec.accountId) !== null // WP-B2-A3 (R3-05): the list states the account's own ledger (what Account 360 prints), not a placeholder
+        ? [unbooked(spec.accountId)!]
+        : [bucket("USDT", "10.00", "2.00", "88.00", "90.00")];
   return {
     status: 200,
     body: {
@@ -532,7 +548,8 @@ function positiveAccount(spec: AccountSpec, id: string): AccountSpec {
   if (shared || own) {
     rows.accounts = owners.map((owner, n) => ({ account_id: owner, label: accountFact(owner)?.name ?? sleeveLabel(owner, n), strategy_id: books.find((b) => b.owner === owner)?.book?.deployments[0]?.alpha_id ?? null,
       mode: spec.environment, venue: "BINANCE", base_currency: currency, account_type: "CROSS", state: "ACTIVE" }));
-    rows.deployments = books.flatMap(({ owner, book }) => (book?.deployments ?? []).map((d) => ({ deployment_id: d.deployment_id, account_id: owner, strategy_id: d.alpha_id, portfolio_id: d.portfolio_id, mode: d.environment, stage: d.stage.toLowerCase(), venue: "BINANCE", state: "RUNNING" })));
+    rows.deployments = books.flatMap(({ owner, book }) => (book?.deployments ?? []).filter((d) => !isRetired(d.deployment_id)).map( // WP-B2-A3 (R3-08): a deployment whose stage its alpha has left (a finished Canary trial) is no longer listed as running on the account
+      (d) => ({ deployment_id: d.deployment_id, account_id: owner, strategy_id: d.alpha_id, portfolio_id: d.portfolio_id, mode: d.environment, stage: d.stage.toLowerCase(), venue: "BINANCE", state: "RUNNING" })));
     rows.venue_accounts = owners.map((owner) => ({ binding_id: spec.bindingId, account_id: owner, mode: spec.environment, venue: "BINANCE", state: "ACTIVE" }));
     rows.account_balances = books.flatMap(({ owner }) => {
       const m = money(owner);

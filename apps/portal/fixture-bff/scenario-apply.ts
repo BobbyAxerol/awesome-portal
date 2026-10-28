@@ -7,6 +7,7 @@
  *  3. a body shaper for the scenarios that are value rewrites (zero, dense, empty): `applyScenarioBody`.
  * The producers in review-manager.ts / bffSimulated*.ts read `getScenario()` themselves for the rest.
  */
+import { OPERATION_ACCOUNT_ALIASES } from "../frontend/e2e/bffWorldBooks"; // WP-B2-A3
 import type { OverviewDoubleVariants } from "../frontend/e2e/bffDoubleOverview";
 import type { UsersDoubleVariant } from "../frontend/e2e/bffDoubleUsers";
 import type { BffRequest } from "../frontend/e2e/bffAnswerer";
@@ -117,9 +118,7 @@ function zeroBody(value: unknown, depth = 0): unknown {
  * rewritten, so a free-text field that merely contains the word is left alone. The legacy `missing` scenario keeps the dangling ids on purpose.
  */
 export const ID_ALIASES: Readonly<Record<string, string>> = Object.freeze({
-  acc_TEST_ONLY_operational: "acc_bnc_core",
-  acc_TEST_ONLY_binance01: "acc_bnc_sub",
-  acc_TEST_ONLY_binance02: "acc_okx_main",
+  ...OPERATION_ACCOUNT_ALIASES, // WP-B2-A3: one table (the books use it to find the account's environment)
   pf_core: "pf_TEST_ONLY_core",
   pf_satellite: "pf_TEST_ONLY_satellite",
   pf_canary: "pf_TEST_ONLY_canary",

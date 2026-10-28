@@ -155,7 +155,19 @@ export type OpEnv = "PAPER" | "SANDBOX" | "LIVE";
 const ENV_RANK: Record<OpEnv, number> = { LIVE: 3, SANDBOX: 2, PAPER: 1 };
 const envOf = (e: string): OpEnv => (e === "live" ? "LIVE" : e === "sandbox" ? "SANDBOX" : "PAPER");
 /** The environments the world books on an entity (empty when the world does not know it). */
+// ===== WP-B2-A3 begin (R3-04, R1-02): an account has ONE environment, its binding's (Accounts list and Account 360 print it); the operation queue names three accounts `acc_TEST_ONLY_*` that the served bodies rename
+export const OPERATION_ACCOUNT_ALIASES: Readonly<Record<string, string>> = Object.freeze({ acc_TEST_ONLY_operational: "acc_bnc_core", acc_TEST_ONLY_binance01: "acc_bnc_sub", acc_TEST_ONLY_binance02: "acc_okx_main" });
+let accountEnvironment: ((accountId: string) => string | null) | null = null;
+/** The Accounts double registers how it states an account's environment (a registry, so the books never import the doubles). */
+export const setAccountEnvironmentProvider = (provider: ((accountId: string) => string | null) | null): void => { accountEnvironment = provider; };
+// ===== WP-B2-A3 end
 export function environmentsOfEntity(kind: string, id: string): OpEnv[] {
+  // ===== WP-B2-A3 begin
+  if (kind === "ACCOUNT") {
+    const stated = accountEnvironment?.(OPERATION_ACCOUNT_ALIASES[id] ?? id) ?? null;
+    if (stated !== null) return [envOf(stated)];
+  }
+  // ===== WP-B2-A3 end
   const all = worldAlphas().flatMap((a) => a.deployments);
   const mine = kind === "PORTFOLIO" ? all.filter((d) => d.portfolioId === id) : kind === "ACCOUNT" ? all.filter((d) => d.accountId === id) : kind === "DEPLOYMENT" ? all.filter((d) => d.id === id) : [];
   const listed = mine.length === 0 && kind === "PORTFOLIO" ? (scaled().portfolios.find((p) => p.id === id)?.environments ?? []).map((e) => envOf(e)) : [];

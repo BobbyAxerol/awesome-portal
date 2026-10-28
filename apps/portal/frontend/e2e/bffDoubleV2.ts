@@ -73,7 +73,11 @@ function dataset(): Row[] {
     created_at: s.at,
     updated_at: s.at,
   }));
-  return [FIXTURE_ROW, ...synthetic];
+  // ===== WP-B2-A3: the canonical first row names an account; its environment is the account's (R3-04)
+  const target = (FIXTURE_ROW as { target?: { type: string; id: string } }).target;
+  const first = target !== undefined ? { ...FIXTURE_ROW, environment: environmentFor(target.type, target.id, String(FIXTURE_ROW.environment) as "PAPER" | "SANDBOX" | "LIVE") } : FIXTURE_ROW;
+  // ===== WP-B2-A3 end
+  return [first, ...synthetic];
 }
 
 let memo: { source: unknown; rows: Row[] } | null = null;

@@ -53,8 +53,10 @@ describe("approvals derive from the stage history", () => {
 
   it("a pending request exists only for an alpha standing in front of that gate", () => {
     const pending = pendingApprovals();
-    expect(pending.map((a) => `${a.alphaId}:${a.gate}`).sort()).toEqual(["alpha_c:LIVE_GATE", "alpha_d:SANDBOX_EXIT"]);
-    for (const a of pending) expect(stageHistoryOf(a.alphaId).stages[a.stageFrom!].status).toBe("current");
+    // WP-B2-A3: the generated universe's alphas carry requests too (bffWorldGenerated); the native ones are unchanged
+    expect(pending.filter((a) => !a.alphaId.startsWith("alpha_scale_")).map((a) => `${a.alphaId}:${a.gate}`).sort()).toEqual(["alpha_c:LIVE_GATE", "alpha_d:SANDBOX_EXIT"]);
+    for (const a of pending.filter((x) => x.stageFrom !== null)) expect(stageHistoryOf(a.alphaId).stages[a.stageFrom!].status).toBe("current");
+    for (const a of pending.filter((x) => x.gate === "R1" || x.gate === "R2")) expect(a.deploymentId).toBeNull();
   });
 
   it("the inbox holds the pending ones, the history the decided ones, and every id has a page", async () => {

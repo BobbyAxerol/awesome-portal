@@ -21,6 +21,7 @@ import { isRetired as wpb2sRetired, stageActiveOf as wpb2s3Active, stageHistoryO
 import { accountFact, grossNotional, incidentChildrenBody, lifecycleOf, MARKS, NATIVE_ALPHAS, positionsOf, stageDays, WORLD_ACTORS } from "../frontend/e2e/bffWorld";
 import { APPROVAL_ROWS } from "../frontend/src/execution/api/fixtureData"; // WP-E
 import { approvalRecord, evidenceFromRecord, restateTarget } from "../frontend/e2e/bffApprovalWorld"; // WP-E
+import { worldApprovals } from "../frontend/e2e/bffWorldGovernance"; // WP-B2-A3
 import { legacy, traits } from "./scenario";
 
 // Mutable copies of published JSON templates, confined to this server-only fixture module.
@@ -1609,12 +1610,12 @@ function wpkApprovalEvidence(method: string, path: string, search: URLSearchPara
     return { status: 200, body };
   }
   const record = evidenceFromRecord(approvalId); // WP-E: the history is of the portfolio the approval names
-  const subject = record.portfolioId;
+  const subject = record.portfolioId ?? ""; // WP-B2-A3: a request with no capital (R1) has no portfolio history
   const environment = record.environment ?? (subject === "pf_TEST_ONLY_core" ? "live" : "paper"); // WP-B2-A: a world request names the environment of its own capital
   const query = new URLSearchParams({ environment, metric: "NAV", window: JSON.stringify("90D"), subjects: JSON.stringify([{ subject_type: "PORTFOLIO", subject_id: subject }]) });
   const series = seriesAnswer("GET", "/manager/series", query, profile);
   const entry = series?.status === 200 ? (series.body as Draft).series[0] : null;
-  body.prior_economic_history = entry && entry.state === "AVAILABLE" ? { subject: { subject_type: "PORTFOLIO", subject_id: subject }, metric: "NAV", unit: entry.unit,
+  body.prior_economic_history = record.portfolioId !== null && entry && entry.state === "AVAILABLE" ? { subject: { subject_type: "PORTFOLIO", subject_id: subject }, metric: "NAV", unit: entry.unit,
     currency: entry.currency, ratio_scale: null, window: entry.window, methodology_ref: entry.methodology_ref, points: entry.points, as_of_ms: (series!.body as Draft).as_of_ms } : null;
   const n = (k: number, max: number): number => (seed >>> k) % max; // small integers; a true 0 is common
   // ===== WP-E begin: the diff, the preview and the criteria count are the approval's ONE record (e2e/bffApprovalWorld.ts), not random per id
@@ -1763,7 +1764,8 @@ function wpkEntitySearch(method: string, path: string, search: URLSearchParams):
     portfolio: universe.portfolios.map((p) => ({ id: p.id, label: p.name, detail: p.base, route: `/deployments/portfolios/${encodeURIComponent(p.id)}` })),
     operation: universe.operations.map((o) => ({ id: o.id, label: o.command, detail: o.env, route: `/operations?operation=${encodeURIComponent(o.id)}` })),
     // ===== WP-E begin: the inbox rows are keyed `approval_id` (the generated ones carry no `id`, which printed `?sel=undefined`), and the native rows (AP-352 ...) are in the index too
-    approval: [...APPROVAL_ROWS, ...universe.approvals].map((a: Draft) => ({ id: String(a.approval_id ?? a.id), label: restateTarget(String(a.subject ?? a.approval_id ?? a.id), approvalRecord(String(a.approval_id ?? a.id))), detail: a.gate ? String(a.gate) : null, route: `/approvals?sel=${encodeURIComponent(String(a.approval_id ?? a.id))}` })),
+    approval: [...APPROVAL_ROWS, ...(legacy() ? universe.approvals : worldApprovals().map((w) => ({ approval_id: w.id, subject: w.subject, gate: w.gate })))].map((a: Draft) => // WP-B2-A3: the index lists the requests the world holds
+     ({ id: String(a.approval_id ?? a.id), label: restateTarget(String(a.subject ?? a.approval_id ?? a.id), approvalRecord(String(a.approval_id ?? a.id))), detail: a.gate ? String(a.gate) : null, route: `/approvals?sel=${encodeURIComponent(String(a.approval_id ?? a.id))}` })),
     // ===== WP-E end
     account: null, incident: null,
   };

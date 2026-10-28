@@ -840,6 +840,86 @@ export async function runWorldTies(get) {
     }
   }
   // ===== WP-B2-S3 end
+  // ===== WP-B2-A3 begin
+  // ── W19: a request exists only for the NEXT gate of its subject, once, and its quorum is open (R3-02, R3-09, R3-10, R3-03) ───────────────────────────────
+  {
+    const NEXT = { R1: "RESEARCH", R2: "RESEARCH", PAPER_EXIT: "PAPER", SANDBOX_EXIT: "SANDBOX", LIVE_GATE: "CANARY" };
+    const openByKey = new Map();
+    for (const row of approvalRows) {
+      const label = String(row.subject ?? "").split(/\s+[·→]\s+/)[0];
+      const alpha = alphaRows.find((a) => a.alpha_label === label);
+      if (alpha === undefined) { check("W19", false, `${row.id}: the subject "${label}" is no alpha of the fleet`); continue; }
+      check("W19", alpha.stage === NEXT[row.gate], `${row.id} (${row.gate}) is open for ${alpha.alpha_label}, which the fleet puts at ${alpha.stage}; the gate waits at ${NEXT[row.gate]}`);
+      const dep = /\b(dep_[A-Za-z0-9_]+)/.exec(String(row.subject))?.[1];
+      if (dep !== undefined) {
+        const known = deployments.get(dep);
+        check("W19", known !== undefined && known.alphaId === alpha.alpha_id, `${row.id}: ${dep} is not a deployment of ${alpha.alpha_label}`);
+        if (row.gate === "SANDBOX_EXIT" || row.gate === "PAPER_EXIT") check("W19", known?.stage === (row.gate === "SANDBOX_EXIT" ? "SANDBOX" : "PAPER"), `${row.id}: ${dep} is a ${known?.stage} deployment, the ${row.gate} leaves ${row.gate === "SANDBOX_EXIT" ? "SANDBOX" : "PAPER"}`);
+      }
+      const key = `${alpha.alpha_id}:${row.gate}:${dep ?? ""}`;
+      check("W19", !openByKey.has(key), `${row.id} and ${openByKey.get(key)} are two open ${row.gate} requests for ${alpha.alpha_label} ${dep ?? ""}`);
+      openByKey.set(key, row.id);
+      check("W19", Number(row.quorum_met) < Number(row.quorum_required), `${row.id} is pending with its quorum complete (${row.quorum_met} of ${row.quorum_required})`);
+      // R2 and the sandbox / paper environment label: the capital the request moves is a partition of the label's environment
+      if (row.gate === "R2") {
+        const d = await ok200(`${E}/governance/approvals/${row.id}/r2`);
+        const pf = portfolios.get(d?.approval?.portfolio_id);
+        check("W19", pf !== undefined && (pf.environments ?? []).map((e) => e.toLowerCase()).includes(String(row.environment).toLowerCase()), `${row.id}: labelled ${row.environment}, but it moves capital of ${d?.approval?.portfolio_id}, which holds ${(pf?.environments ?? []).join(", ")}`);
+        const account = d?.readiness?.flatMap((g) => g.entries ?? []).find((e) => e.label === "account (new)")?.value;
+        if (account !== undefined) check("W19", (await get(`${E}/resources/accounts/${account}`)).status === 200, `${row.id}: the new account ${account} does not resolve`);
+      }
+      if (row.gate === "LIVE_GATE" || row.gate === "SANDBOX_EXIT" || row.gate === "PAPER_EXIT") {
+        const d = await ok200(`${E}/governance/${row.gate === "LIVE_GATE" ? `approvals/${row.id}/live` : `exit-reviews/${row.id}`}`);
+        const refs = (d?.lineage ?? []).filter((l) => l.label === "R1" || l.label === "R2");
+        if (row.gate !== "LIVE_GATE") check("W19", refs.length === 2, `${row.id}: the lineage names ${refs.length} of the R1 and R2 requests of ${alpha.alpha_label}`);
+        for (const ref of refs) check("W19", (await get(`${E}/governance/approvals/${ref.value}/${ref.label.toLowerCase()}`)).status === 200, `${row.id}: lineage ${ref.label} ${ref.value} does not resolve`);
+      }
+    }
+  }
+  // ── W20: an account has one environment: every operation row that names it, and its Account 360, say the same (R3-04) ──
+  {
+    const seen = new Map();
+    for (const o of opsRows) if (o.target?.type === "ACCOUNT") { if (!seen.has(o.target.id)) seen.set(o.target.id, new Set()); seen.get(o.target.id).add(String(o.environment).toLowerCase()); }
+    for (const [id, envs] of [...seen].slice(0, 40)) {
+      check("W20", envs.size === 1, `account ${id} is labelled ${[...envs].join(" and ")} by different operations`);
+      const account = await ok200(`${E}/resources/accounts/${id}`);
+      if (account?.selected_environment !== undefined) check("W20", envs.has(String(account.selected_environment).toLowerCase()), `account ${id}: operations say ${[...envs].join("/")}, its Account 360 says ${account.selected_environment}`);
+    }
+  }
+  // ── W21: Account 360 ties inside itself and to the Accounts list (R3-05, R3-06, R3-08) ──
+  {
+    for (const id of ["acc_bnc_core", "acc_bnc_sub", "acc_okx_main"]) {
+      const r = await ok200(`${E}/resources/accounts/${id}`);
+      const data = r?.data;
+      if (data === undefined) continue;
+      const ledger = data.account_balances?.find((b) => b.currency === "USDT")?.total;
+      const sync = (data.broker_sync ?? []).filter((x) => x.wallet_balance !== undefined).sort((a, b) => b.synced_at_ms - a.synced_at_ms)[0];
+      const marginRow = (data.margin_balances ?? []).find((m) => m.currency === "USDT" && m.margin_ratio !== undefined);
+      if (marginRow !== undefined && ledger !== undefined) {
+        const equity = numOf(sync?.wallet_balance ?? ledger);
+        const bp = (numOf(marginRow.maintenance) * 10000n) / equity;
+        const expected = `${bp / 100n}.${String(bp % 100n).padStart(2, "0")}`;
+        check("W21", marginRow.margin_ratio === expected, `${id}: margin ratio ${marginRow.margin_ratio}%, maintenance ${marginRow.maintenance} over equity ${sync?.wallet_balance ?? ledger} is ${expected}%`);
+      }
+      if (sync !== undefined && ledger !== undefined && id !== "acc_bnc_core") check("W21", numOf(sync.wallet_balance) >= numOf(ledger), `${id}: the venue wallet ${sync.wallet_balance} is below the internal ledger ${ledger} with nothing flagged`);
+      const names = (data.deployments ?? []).map((d) => d.deployment_name).filter((n) => n !== undefined);
+      check("W21", new Set(names).size === names.length, `${id}: two deployments carry the same name (${names.join(", ")})`);
+      const account = alphaRows.length >= 0 ? (data.accounts ?? [])[0] : undefined;
+      const bindingId = (data.venue_accounts ?? [])[0]?.binding_id;
+      if (account !== undefined && bindingId !== undefined && id !== "acc_bnc_core") {
+        const exposure = await ok200(`${E}/broker-bindings/${bindingId}/exposure`);
+        const bucket = exposure?.analytics?.data?.buckets?.find((b) => b.currency === "USDT");
+        if (bucket !== undefined && ledger !== undefined) check("W21", sameDecimal(bucket.used, ledger), `${id}: the Accounts list says ${bucket.used} virtual, Account 360 says an internal ledger of ${ledger}`);
+      }
+    }
+  }
+  // ── W22: "since your last visit" lists only observations after that visit (R1-04) ──
+  {
+    const digest = await ok200(`${E}/visit-digest?workspace_id=ws_fixture_tie`);
+    const since = ms(digest?.baseline?.seen_at);
+    for (const item of digest?.items ?? []) check("W22", since !== null && ms(item.as_of) > since, `"${item.label}" is as of ${item.as_of}, not after the last visit ${digest.baseline?.seen_at}`);
+  }
+  // ===== WP-B2-A3 end
   return { ties };
 }
 

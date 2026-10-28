@@ -24,7 +24,11 @@ import {
   DAY_MS, fromCents, incidentState, NATIVE_ALPHAS, OPS_READ_MS, PEOPLE, personByUsername, toCents, 
   WORLD_INCIDENTS, WORLD_NOW_MS, WORLD_OPERATIONS, worldAlphas, type StageName, type WorldIncident, type WorldOperation,
 } from "./bffWorld";
-import { stageHistoryOf } from "./bffWorldStage";
+import { stageBookOf, stageHistoryOf } from "./bffWorldStage";
+import { environmentFor } from "./bffWorldBooks"; // WP-B2-A3: the Overview labels an incident / operation with the environment its page prints
+// ===== WP-B2-A3 begin: the generated universe's requests are derived from its alphas' stage (bffWorldGenerated), not drawn at random
+import { generatedPlans, type GeneratedPlan } from "./bffWorldGenerated";
+// ===== WP-B2-A3 end
 
 type Obj = Record<string, any>; // eslint-disable-line @typescript-eslint/no-explicit-any
 const clone = <T,>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
@@ -141,6 +145,12 @@ export interface WorldApproval {
   target: string;
   stageFrom: StageName | null;
   stageTo: StageName | null;
+  // ===== WP-B2-A3 begin
+  /** an R2 request of an alpha with no deployment states its own step (cents); a request of a booked alpha raises what the alpha holds */
+  requestedCents?: bigint;
+  /** a fact of the world that blocks the request (a halted deployment), else absent */
+  blocker?: string;
+  // ===== WP-B2-A3 end
 }
 
 /** The person who decided a gate of an alpha: the stage history's (B-S, `stageHistoryOf`), the same one the Alpha 360 gate rows and the stage rooms print. */
@@ -152,10 +162,53 @@ export const gateDecider = (alphaId: string, gate: WorldGate): string | null => 
 const venueOf = (d: DeploymentSpec): string => d.venue;
 const accountNameOf = (d: DeploymentSpec): string => (d.environment === "paper" ? "Paper simulator" : d.environment === "sandbox" ? "Binance testnet" : `${d.portfolioName} sleeve`);
 
+
+// ===== WP-B2-A3 begin
+/** How long a waiting request has been waiting: the gate's fixed age for the native alphas, a spread of 20% to 130% of the budget (by alpha) for the generated ones, so some are overdue. */
+function pendingAgeMinutes(alphaId: string, gate: WorldGate): number {
+  if (IDS[alphaId] !== undefined) return PENDING_AGE_MINUTES[gate];
+  return Math.floor(BUDGET_MINUTES[gate] * (20 + (seedOf(alphaId, gate, "age") % 111)) / 100);
+}
+
+/** The requests of an alpha with no deployment: R1 pending, or R1 approved and R2 pending (its capital is a step in a Paper-only portfolio). */
+function researchApprovals(plan: GeneratedPlan): WorldApproval[] {
+  const alpha = worldAlphas().find((a) => a.id === plan.alphaId)!;
+  const history = stageHistoryOf(alpha.id);
+  const requesters = PEOPLE.filter((p) => p.username !== "bobby");
+  const requester = (gate: WorldGate): string => requesters[seedOf(alpha.id, gate, "requester") % requesters.length]!.username;
+  const rc = `RC-${40 + (seedOf(alpha.id, "rc") % 40)}`;
+  const base = { alphaId: alpha.id, alphaLabel: alpha.label, releaseCandidate: rc, deploymentId: null, stageFrom: null, stageTo: null } as const;
+  const out: WorldApproval[] = [];
+  const r1Pending = plan.pending === "R1";
+  const r1Requested = r1Pending ? WORLD_NOW_MS - pendingAgeMinutes(alpha.id, "R1") * MINUTE_MS : history.r1.atMs - 2 * DAY_MS;
+  out.push({
+    ...base, id: plan.ids.R1, gate: "R1", portfolioId: "", portfolioName: "", environment: "paper", status: r1Pending ? "PENDING" : "APPROVED",
+    requestedMs: r1Requested, decidedMs: r1Pending ? null : history.r1.atMs, decidedBy: r1Pending ? null : history.r1.by, requestedBy: requester("R1"),
+    budgetMinutes: BUDGET_MINUTES.R1, ageMinutes: r1Pending ? pendingAgeMinutes(alpha.id, "R1") : Math.round((history.r1.atMs - r1Requested) / MINUTE_MS), dueMs: r1Requested + BUDGET_MINUTES.R1 * MINUTE_MS,
+    quorumRequired: QUORUM.R1, quorumMet: r1Pending ? seedOf(alpha.id, "q") % QUORUM.R1 : QUORUM.R1, subject: `${alpha.label} · ${rc}`, target: "research",
+  });
+  if (plan.r2 !== null) {
+    const requested = WORLD_NOW_MS - pendingAgeMinutes(alpha.id, "R2") * MINUTE_MS;
+    out.push({
+      ...base, id: plan.ids.R2, gate: "R2", portfolioId: plan.r2.portfolioId, portfolioName: plan.r2.portfolioName, environment: "paper", status: "PENDING",
+      requestedMs: requested, decidedMs: null, decidedBy: null, requestedBy: requester("R2"), budgetMinutes: BUDGET_MINUTES.R2, ageMinutes: pendingAgeMinutes(alpha.id, "R2"),
+      dueMs: requested + BUDGET_MINUTES.R2 * MINUTE_MS, quorumRequired: QUORUM.R2, quorumMet: seedOf(alpha.id, "q2") % QUORUM.R2,
+      subject: `${alpha.label} → ${plan.r2.portfolioName}`, target: "paper · Paper simulator", requestedCents: plan.r2.requestedCents,
+    });
+  }
+  return out;
+}
+// ===== WP-B2-A3 end
+
 function buildApprovals(): WorldApproval[] {
   const out: WorldApproval[] = [];
-  for (const alpha of NATIVE_ALPHAS) {
-    const ids = IDS[alpha.id];
+  // ===== WP-B2-A3 begin
+  const plans = new Map<string, GeneratedPlan>(generatedPlans().map((plan) => [plan.alphaId, plan]));
+  const alphas = [...NATIVE_ALPHAS, ...worldAlphas().filter((a) => plans.has(a.id) && !plans.get(a.id)!.research)];
+  for (const plan of plans.values()) if (plan.research) out.push(...researchApprovals(plan));
+  // ===== WP-B2-A3 end
+  for (const alpha of alphas) {
+    const ids = IDS[alpha.id] ?? plans.get(alpha.id)?.ids;
     if (ids === undefined) continue;
     const history = stageHistoryOf(alpha.id);
     const rank = STAGE_RANK[history.reached];
@@ -173,6 +226,7 @@ function buildApprovals(): WorldApproval[] {
       // A gate is waiting when the alpha stands directly in front of it: in the stage the gate leaves (Live gate: in the Canary).
       const waiting = to !== null && !passed && rank === STAGE_RANK[to] - 1;
       if (!passed && !waiting) continue;
+      if (plans.has(alpha.id) && waiting && plans.get(alpha.id)!.pending !== gate) continue; // WP-B2-A3: only the plan's gate waits
       const from: StageName | null = to === null ? null : STAGES[STAGE_RANK[to] - 1]!;
       // An exit gate is a review of a deployment in the stage it leaves: an alpha with no deployment in that stage has no such review.
       if (from !== null && stageOf(from) === undefined) continue;
@@ -181,13 +235,15 @@ function buildApprovals(): WorldApproval[] {
       // R2 reserves the capital the alpha holds in its furthest environment of the portfolio of its furthest deployment.
       const capital = gate === "R2" ? (furthest[0] ?? about) : about;
       const decidedMs = passed ? decisionMs[gate] : null;
-      const requestedMs = decidedMs !== null ? decidedMs - (gate === "R1" ? 2 * DAY_MS : 18 * HOUR_MS) : WORLD_NOW_MS - PENDING_AGE_MINUTES[gate] * MINUTE_MS;
+      const requestedMs = decidedMs !== null ? decidedMs - (gate === "R1" ? 2 * DAY_MS : 18 * HOUR_MS) : WORLD_NOW_MS - pendingAgeMinutes(alpha.id, gate) * MINUTE_MS;
       const budget = BUDGET_MINUTES[gate];
-      const age = decidedMs !== null ? Math.round((decidedMs - requestedMs) / MINUTE_MS) : PENDING_AGE_MINUTES[gate];
+      const age = decidedMs !== null ? Math.round((decidedMs - requestedMs) / MINUTE_MS) : pendingAgeMinutes(alpha.id, gate);
       const rc = RELEASE_CANDIDATE[alpha.id] ?? "RC-40";
       const subject = gate === "R1" ? `${alpha.label} · ${rc}` : gate === "R2" ? `${alpha.label} → ${capital.portfolioName}` : gate === "LIVE_GATE" ? `${alpha.label} → ${venueOf(about)}` : `${alpha.label} · ${about.id}`;
       const target = gate === "R1" ? "research" : gate === "R2" ? `${capital.environment} · ${accountNameOf(capital)}` : gate === "LIVE_GATE" ? "live · dual approval" : `→ ${to!} · ${venueOf(about)}`;
+      const haltedAbout = waiting && about.state === "HALTED" ? `Deployment ${about.id} is halted` : undefined; // WP-B2-A3: a fact of the world blocks the request
       out.push({
+        ...(haltedAbout !== undefined ? { blocker: haltedAbout } : {}),
         id: ids[gate], gate, alphaId: alpha.id, alphaLabel: alpha.label, releaseCandidate: rc, deploymentId: gate === "R1" || gate === "R2" ? null : about.id,
         portfolioId: capital.portfolioId, portfolioName: capital.portfolioName, environment: capital.environment,
         status: passed ? "APPROVED" : "PENDING", requestedMs, decidedMs, decidedBy: passed ? gateDecider(alpha.id, gate) : null, requestedBy: requester(gate),
@@ -223,7 +279,7 @@ export const GATE_WORD: Readonly<Record<WorldGate, string>> = { R1: "R1 review",
 
 /** The allocation the world books in one portfolio and environment (what the portfolio's capital statement prints as Allocated), in cents. */
 export const partitionAllocationCents = (portfolioId: string, environment: string): bigint =>
-  NATIVE_ALPHAS.flatMap((a) => a.deployments).filter((d) => d.portfolioId === portfolioId && d.environment === environment).reduce((n, d) => n + toCents(d.allocation), 0n);
+  worldAlphas().flatMap((a) => a.deployments).filter((d) => d.portfolioId === portfolioId && d.environment === environment).reduce((n, d) => n + toCents(d.allocation), 0n); // WP-B2-A3: the generated portfolios are booked the same way
 
 let budgetProvider: ((portfolioId: string, environment: string) => string | null) | null = null;
 /** The fixture BFF registers how the capital statement states a partition's approved budget (a registry, so the doubles never import the BFF). */
@@ -251,18 +307,18 @@ export interface WorldCapital {
   budget: string | null;
 }
 export function capitalOf(a: WorldApproval): WorldCapital {
-  const alpha = NATIVE_ALPHAS.find((x) => x.id === a.alphaId)!;
+  const alpha = worldAlphas().find((x) => x.id === a.alphaId)!; // WP-B2-A3
   const mine = alpha.deployments.filter((d) => d.portfolioId === a.portfolioId && d.environment === a.environment);
-  const requested = mine.reduce((n, d) => n + toCents(d.allocation), 0n);
+  const requested = a.requestedCents ?? mine.reduce((n, d) => n + toCents(d.allocation), 0n);
   const now = partitionAllocationCents(a.portfolioId, a.environment);
   const before = a.status === "APPROVED" ? now - requested : now;
   const after = a.status === "APPROVED" ? now : now + requested;
-  const everyone = Object.keys(PORTFOLIO_NAMES).reduce((n, id) => n + partitionAllocationCents(id, a.environment), 0n);
+  const everyone = [...new Set([...Object.keys(PORTFOLIO_NAMES), ...scaled().portfolios.map((p) => p.id)])].reduce((n, id) => n + partitionAllocationCents(id, a.environment), 0n); // WP-B2-A3
   const totalNow = everyone;
   const totalBefore = a.status === "APPROVED" ? totalNow - requested : totalNow;
   const totalAfter = a.status === "APPROVED" ? totalNow : totalNow + requested;
   return {
-    portfolioId: a.portfolioId, portfolioName: a.portfolioName, environment: a.environment, currency: mine[0]?.currency ?? "USDT",
+    portfolioId: a.portfolioId, portfolioName: a.portfolioName, environment: a.environment, currency: mine[0]?.currency ?? scaled().portfolios.find((p) => p.id === a.portfolioId)?.base ?? "USDT",
     requested: fromCents(requested), before: fromCents(before), after: fromCents(after),
     weightBefore: percent(before, totalBefore), weightAfter: percent(after, totalAfter), budget: portfolioBudget(a.portfolioId, a.environment),
   };
@@ -279,9 +335,9 @@ function generatedDeployment(id: string): { alpha: string; deployment: Deploymen
 /** A world request as the loose inbox row the double's inbox page and its envelope take. */
 export function looseInboxRow(a: WorldApproval): Obj {
   return {
-    approval_id: a.id, gate: a.gate, subject: a.subject, target: a.target, blocker_count: 0, blocker_summary: "none",
+    approval_id: a.id, gate: a.gate, subject: a.subject, target: a.target, blocker_count: a.blocker === undefined ? 0 : 1, blocker_summary: a.blocker ?? "none",
     sla: { age_minutes: a.ageMinutes, budget_minutes: a.budgetMinutes, due_at: isoOf(a.dueMs) },
-    quorum_met: a.quorumMet, quorum_required: a.quorumRequired, inert: null, needs_you: true,
+    quorum_met: a.quorumMet, quorum_required: a.quorumRequired, inert: a.blocker === undefined ? null : "BLOCKED", needs_you: a.blocker === undefined,
   };
 }
 const person = (username: string): { user_id: string; username: string } => ({ user_id: personByUsername(username)?.id ?? `usr_${username}`, username });
@@ -291,10 +347,7 @@ const person = (username: string): { user_id: string; username: string } => ({ u
  * rows; every deadline is restated against the world clock so the envelope (read at the world clock) and its rows share one frame.
  */
 export function worldInboxAnswer(search: URLSearchParams): { status: number; body: unknown } {
-  const rows: Obj[] = [...pendingApprovals().map(looseInboxRow), ...scaled().approvals.map((row) => {
-    const pick = row.gate === "PAPER_EXIT" ? generatedDeployment(String(row.approval_id)) : null;
-    return pick === null ? row : { ...row, subject: `${pick.alpha} · ${pick.deployment.id}`, target: `→ sandbox · ${pick.deployment.venue}` };
-  })];
+  const rows: Obj[] = pendingApprovals().map(looseInboxRow); // WP-B2-A3: the generated universe's requests are world approvals now (bffWorldGenerated), one per subject's next gate
   const view = search.get("filter") ?? search.get("view") ?? "ALL";
   const inView = rows.filter((r) => matchesView(r, view));
   const limit = Number(search.get("limit") ?? 50);
@@ -403,6 +456,20 @@ export function overlayWorldR1(body: unknown, id: string): unknown {
   if (data.decision_context !== undefined) data.decision_context.approval_id = a.id;
   if (data.capture_context !== undefined) data.capture_context.parent_approval_id = a.id;
   if (data.evidence_manifest?.entries !== undefined) for (const entry of data.evidence_manifest.entries as Obj[]) entry.captured_at = isoSeconds(a.requestedMs - HOUR_MS);
+  // ===== WP-B2-A3 begin: the evidence pack names this alpha's own version, run and digests (R3-09), not one pack for every R1
+  const version = `av_${2000 + (seedOf(a.alphaId, "av") % 900)}`;
+  const run = `run_${5000 + (seedOf(a.alphaId, "run") % 900)}`;
+  data.approval.subject_id = version;
+  if (data.evidence_manifest?.entries !== undefined) {
+    for (const entry of data.evidence_manifest.entries as Obj[]) {
+      entry.sha256 = `sha256:${sha([a.alphaId, entry.label])}`;
+      if (entry.label === "alpha version") { entry.display_value = version; entry.note = null; }
+      if (entry.label === "artifact digest") entry.display_value = `sha256:${sha([a.alphaId, "artifact"]).slice(0, 6)}…${sha([a.alphaId, "artifact"]).slice(-2)}`;
+      if (entry.label === "entrypoint") entry.display_value = `${a.alphaLabel.toLowerCase().replace(/[^a-z0-9]+/g, "_")}_pkg.strategy:Alpha`;
+      if (entry.label === "final audit run") entry.display_value = run;
+    }
+  }
+  // ===== WP-B2-A3 end
   closeEligibility(a, data.eligibility);
   return out;
 }
@@ -414,7 +481,7 @@ export function overlayWorldR2(body: unknown, id: string): unknown {
   const out = clone(body) as Obj;
   const capital = capitalOf(a);
   const r1 = approvalOfAlpha(a.alphaId, "R1");
-  const alpha = NATIVE_ALPHAS.find((x) => x.id === a.alphaId)!;
+  const alpha = worldAlphas().find((x) => x.id === a.alphaId)!; // WP-B2-A3
   if (out.approval !== undefined) {
     Object.assign(out.approval, {
       approval_id: a.id, portfolio_id: capital.portfolioId, currency: capital.currency, requested_amount: capital.requested,
@@ -438,8 +505,8 @@ export function overlayWorldR2(body: unknown, id: string): unknown {
   }
   if (Array.isArray(out.readiness)) {
     for (const group of out.readiness as Obj[]) for (const entry of (group.entries ?? []) as Obj[]) {
-      const deployment = alpha.deployments.find((d) => d.environment === "paper") ?? alpha.deployments[0]!;
-      if (entry.label === "account (new)") entry.value = deployment.accountId;
+      const deployment = alpha.deployments.find((d) => d.environment === "paper") ?? alpha.deployments[0];
+      if (entry.label === "account (new)") entry.value = deployment?.accountId ?? "acc_pap_sim"; // WP-B2-A3: a Paper activation of an alpha with no deployment uses the Paper simulator account, which resolves in Accounts
     }
   }
   out.capital = [
@@ -457,8 +524,21 @@ export function overlayWorldLive(body: unknown, id: string): unknown {
   const out = intoWorldFrame(clone(body) as Obj);
   out.approval_id = a.id;
   if (out.canary_ref !== undefined && a.deploymentId !== null) out.canary_ref.deployment_id = a.deploymentId;
+  // ===== WP-B2-A3 begin (R3-11): the current-source read is taken at the world clock (it printed a read 24 h earlier), and evidence is not "complete" while a branch of it is unavailable
+  const unavailable: boolean[] = [];
+  const visit = (node: unknown): void => {
+    if (Array.isArray(node)) { node.forEach(visit); return; }
+    if (node === null || typeof node !== "object") return;
+    const rec = node as Obj;
+    if (typeof rec.capability_id === "string" && rec.state === "UNAVAILABLE") unavailable.push(true);
+    if (typeof rec.freshness === "string" && typeof rec.as_of === "string" && typeof rec.read_at === "string") { rec.read_at = isoSeconds(WORLD_NOW_MS); rec.as_of = isoSeconds(WORLD_NOW_MS - 1000); }
+    Object.values(rec).forEach(visit);
+  };
+  visit(out);
+  // ===== WP-B2-A3 end
   const data = out.governance_backbone?.data as Obj | undefined;
   if (data?.approval !== undefined) {
+    if (unavailable.length > 0) data.approval.evidence_complete = false; // WP-B2-A3
     decisionFields(a, data.approval);
     Object.assign(data.approval, {
       gate: "LIVE_GATE", subject_type: "DEPLOYMENT", subject_id: a.deploymentId, subject_label: a.alphaLabel, environment: "LIVE",
@@ -474,7 +554,7 @@ export function overlayWorldExit(body: unknown, id: string): unknown {
   const a = worldApproval(id);
   if (a === undefined || (a.gate !== "PAPER_EXIT" && a.gate !== "SANDBOX_EXIT") || a.deploymentId === null) return body;
   const out = clone(body) as Obj;
-  const d = NATIVE_ALPHAS.flatMap((x) => x.deployments).find((x) => x.id === a.deploymentId)!;
+  const d = worldAlphas().flatMap((x) => x.deployments).find((x) => x.id === a.deploymentId)!; // WP-B2-A3
   const days = stageHistoryOf(a.alphaId).stages[a.stageFrom ?? "paper"].days;
   const vocabulary = a.gate === "PAPER_EXIT" ? { stage: "PAPER_OBSERVATION", to: "SANDBOX_VALIDATION" } : { stage: "SANDBOX_VALIDATION", to: "LIVE_CANARY" };
   if (out.review !== undefined) {
@@ -487,6 +567,40 @@ export function overlayWorldExit(body: unknown, id: string): unknown {
   out.gate_met = days >= 5;
   if (out.decision_context !== undefined) { out.decision_context.review_id = a.id; out.decision_context.gate = a.gate; }
   if (out.activation_plan !== undefined) out.activation_plan.target_stage = vocabulary.to;
+  // ===== WP-B2-A3 begin: the lineage and the evidence panels are the subject's own (R3-09), not one cloned set: the alpha's R1 / R2 requests, its stage page, its portfolio, its net PnL in its own currency
+  const r1 = approvalOfAlpha(a.alphaId, "R1");
+  const r2 = approvalOfAlpha(a.alphaId, "R2");
+  const run = `run_${5000 + (seedOf(a.alphaId, "run") % 900)}`;
+  const policy = `${a.stageFrom}.v1`;
+  const stagePath = `/deployments/${a.stageFrom}/${d.id}`;
+  const fills = stageBookOf(d.id).fills.length;
+  const net = fromCents(toCents(d.realized) + toCents(d.unrealized));
+  out.policy_id = policy;
+  if (Array.isArray(out.lineage)) {
+    for (const item of out.lineage as Obj[]) {
+      if (item.label === "artifact") { item.value = `sha256:${sha([a.alphaId, "artifact"]).slice(0, 6)}…${sha([a.alphaId, "artifact"]).slice(-2)}`; item.digest = `sha256:${sha([a.alphaId, "artifact"])}`; }
+      if (item.label === "R1" && r1 !== undefined) { item.value = r1.id; item.href = approvalHref(r1); }
+      if (item.label === "R2" && r2 !== undefined) { item.value = r2.id; item.href = approvalHref(r2); }
+      if (item.label === "observation policy") item.value = policy;
+      if (item.label === "evidence pack") { item.value = `ep_${4000 + (seedOf(a.alphaId, "ep") % 900)} · digest ${sha([a.alphaId, "pack"]).slice(0, 4)}…`; item.digest = `sha256:${sha([a.alphaId, "pack"])}`; }
+    }
+    out.lineage = (out.lineage as Obj[]).filter((item) => !((item.label === "R1" && r1 === undefined) || (item.label === "R2" && r2 === undefined)));
+  }
+  if (Array.isArray(out.panels)) {
+    for (const panel of out.panels as Obj[]) {
+      if (panel.title === "Observation coverage") {
+        panel.source = policy;
+        (panel.findings as Obj[]).splice(0, (panel.findings as Obj[]).length, { label: `${days} / 5 days · ${fills} ${fills === 1 ? "fill" : "fills"}`, outcome: days >= 5 ? "pass" : "watch", href: stagePath, source_label: "sessions" });
+        continue;
+      }
+      for (const finding of (panel.findings ?? []) as Obj[]) {
+        if (typeof finding.href === "string") finding.href = finding.href.replace("/deployments/paper/dep_94", stagePath).replace("/deployments/blotter?deployment=dep_94", `/deployments/blotter?deployment=${d.id}`).replace("/operations?deployment=dep_94", `/operations?deployment=${d.id}`).replace("/deployments/portfolios/pf_main", `/deployments/portfolios/${d.portfolioId}`).replace(/runs\/run_\d+/, `runs/${run}`);
+        if (typeof finding.label === "string") finding.label = finding.label.replace(/contribution [+-]?[\d,.]+ [A-Z]+/, `contribution ${groupedMoney(net)} ${d.currency}`);
+      }
+      if (typeof panel.source === "string" && /^run_\d+$/.test(panel.source)) panel.source = run;
+    }
+  }
+  // ===== WP-B2-A3 end
   closeEligibility(a, out.eligibility);
   return out;
 }
@@ -498,7 +612,7 @@ const groupedMoney = (decimal: string): string => {
 };
 
 /** The evidence read's diff, preview sentence and criteria count of a world request (the same shape `evidenceFromRecord` has). */
-export function worldEvidence(id: string): { portfolioId: string; environment: string; changes: Obj[]; whatChanges: (obligations: number) => string; countsAs: { met_after: number; required: number } } | null {
+export function worldEvidence(id: string): { portfolioId: string | null; environment: string; changes: Obj[]; whatChanges: (obligations: number) => string; countsAs: { met_after: number; required: number } } | null {
   const a = worldApproval(id);
   if (a === undefined) return null;
   const met = a.status === "APPROVED" ? 7 : 6;
@@ -514,7 +628,7 @@ export function worldEvidence(id: string): { portfolioId: string; environment: s
     ? `Allocated capital of ${capital.portfolioName} moves from ${groupedMoney(capital.before)} to ${groupedMoney(capital.after)} ${capital.currency}`
     : stageChange !== null ? `${a.alphaLabel} moves from ${stageChange.before} to ${stageChange.after}` : `${a.alphaLabel} passes ${GATE_WORD[a.gate]}`;
   return {
-    portfolioId: a.portfolioId, environment: a.environment, changes,
+    portfolioId: PORTFOLIO_NAMES[a.portfolioId] === undefined ? null : a.portfolioId, environment: a.environment, changes, // WP-B2-A3: only the world's own portfolios publish an economic history (the one NAV the Portfolio page prints); an R1 review has no capital and a generated portfolio publishes none
     whatChanges: (obligations) => `${sentence}; the gate counts 7 of 7 criteria as met after approval. ${obligations === 0 ? "Nothing stays open." : `${obligations} obligations stay open.`}`,
     countsAs: { met_after: 7, required: 7 },
   };
@@ -574,7 +688,7 @@ function needsAttentionCandidates(): Candidate[] {
     const due = created + budget;
     const finding = incident.evidence[0]?.label;
     out.push({ rank: 0, kind: "INCIDENT", item: {
-      id: incident.id, kind: "INCIDENT", title: incidentTitle(incident), summary: `${ENV_WORD[incident.env]}${finding !== undefined ? ` · ${finding}` : ""}`,
+      id: incident.id, kind: "INCIDENT", title: incidentTitle(incident), summary: `${ENV_WORD[environmentFor(incident.target[0], incident.target[1], incident.env)]}${finding !== undefined ? ` · ${finding}` : ""}`,
       severity: SEVERITY_OF[incident.severity] ?? "MEDIUM", sla_state: slaStateOf(due, WORLD_NOW_MS, budget), sla_due_at: isoOf(due), created_at: isoOf(created),
       updated_at: isoOf(inCcFrame(Math.max(incident.createdMs, ...[incident.acknowledged, incident.assigned, incident.mitigated].map((e) => e?.atMs ?? 0)))),
       authority: "EXECUTION", href: incidentHref(incident), action_label: "Investigate", age_seconds: Math.round((WORLD_NOW_MS - created) / 1000),
@@ -587,7 +701,7 @@ function needsAttentionCandidates(): Candidate[] {
     const created = inCcFrame(opMs);
     const due = created + budget;
     out.push({ rank: 0, kind: "OPERATION", item: {
-      id: op.id, kind: "OPERATION", title: `${OPERATION_COMMAND_WORD[op.command] ?? op.command} ${VERIFY_WORD[op.verify] ?? op.verify.toLowerCase()}`, summary: `${targetName(op.target)} · ${ENV_WORD[op.env]}`,
+      id: op.id, kind: "OPERATION", title: `${OPERATION_COMMAND_WORD[op.command] ?? op.command} ${VERIFY_WORD[op.verify] ?? op.verify.toLowerCase()}`, summary: `${targetName(op.target)} · ${ENV_WORD[environmentFor(op.target[0], op.target[1], op.env)]}`,
       severity: SEVERITY_OF[op.severity] ?? "MEDIUM", sla_state: slaStateOf(due, WORLD_NOW_MS, budget), sla_due_at: isoOf(due), created_at: isoOf(created), updated_at: isoOf(created),
       authority: "EXECUTION", href: operationHref(op), action_label: "Verify", age_seconds: Math.round((WORLD_NOW_MS - created) / 1000),
     } });

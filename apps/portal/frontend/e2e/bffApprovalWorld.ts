@@ -219,7 +219,7 @@ export function overlayCapitalPreview(body: Obj, approvalId: string): Obj {
 }
 
 /** The evidence read's diff, preview sentence and criteria count, from the record (the fixture-bff review lane calls this for `/evidence`). */
-export function evidenceFromRecord(approvalId: string): { portfolioId: string; environment?: string; changes: Obj[]; whatChanges: (obligations: number) => string; countsAs: { met_after: number; required: number } } {
+export function evidenceFromRecord(approvalId: string): { portfolioId: string | null; environment?: string; changes: Obj[]; whatChanges: (obligations: number) => string; countsAs: { met_after: number; required: number } } {
   // ===== WP-B2-A begin
   const fromWorld = worldEvidence(approvalId);
   if (fromWorld !== null) return fromWorld;

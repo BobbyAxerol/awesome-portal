@@ -22,7 +22,7 @@ import { fixtureNowMs, scaled } from "./bffScale";
 import { overlayCapitalPreview, overlayHistorySubjects, overlayInboxSubjects, overlayR2Review } from "./bffApprovalWorld"; // WP-E
 import { simulateStage, stagePageIsForeign } from "./bffSimulatedStage";
 import { isPositiveMode } from "./bffPositiveMode";
-import { accountFact, bindingFact, bindingOfAccount, deploymentOf, fromCents, ledgerSeries, worldAlphas } from "./bffWorld";
+import { accountFact, bindingFact, bindingOfAccount, deploymentOf, fromCents, ledgerSeries, toCents, worldAlphas } from "./bffWorld";
 // ===== WP-F3 end =====
 
 type Obj = Record<string, unknown>;
@@ -84,7 +84,9 @@ function overlayAccountResource(body: Obj, accountId: string): Obj {
       newest.wallet_balance = WALLET_BALANCE_CORE;
       newest.native_equity = NATIVE_EQUITY_CORE;
     } else if (accountId === "acc_bnc_sub") {
-      newest.wallet_balance = "118050.00";
+      // WP-B2-A3 (R3-05): in the positive world the venue holds what the internal ledger says (no unexplained shortfall); the legacy double keeps its 1,950 gap
+      const ledger = isPositiveMode() ? rows("account_balances").find((row) => row.currency === "USDT")?.total : undefined;
+      newest.wallet_balance = typeof ledger === "string" ? ledger : "118050.00";
     }
   }
 
@@ -132,11 +134,22 @@ function overlayAccountF2(data: Obj, accountId: string): void {
     row.duration_ms = durations[index % durations.length];
   });
   for (const margin of rows("margin_balances")) {
-    if (margin.account_id === accountId && margin.currency === "USDT" && margin.instrument_id === undefined) margin.margin_ratio = "5.10";
+    if (margin.account_id === accountId && margin.currency === "USDT" && margin.instrument_id === undefined) {
+      // WP-B2-A3 (R3-06): maintenance over equity, from the account's own rows (the venue's wallet when it reports one, else the ledger), two places, BigInt
+      const wallet = newest?.wallet_balance ?? rows("account_balances").find((row) => row.currency === "USDT")?.total;
+      const maintenance = toCents(String(margin.maintenance ?? "0"));
+      const equity = typeof wallet === "string" ? toCents(wallet) : 0n;
+      if (equity > 0n && isPositiveMode()) { const bp = maintenance * 10_000n / equity; margin.margin_ratio = `${bp / 100n}.${String(bp % 100n).padStart(2, "0")}`; }
+      else margin.margin_ratio = "5.10";
+    }
   }
   // WORLD: names where the rows carry ids. A deployment of the world is named by its alpha and its environment, an alpha by its label, a
   // portfolio id of the test book by its last word (pf_TEST_ONLY_core = Core). Rows that already carry a name keep it; the ids stay on the rows.
   const alphaLabels = new Map(worldAlphas().map((alpha) => [alpha.id, alpha.label] as const));
+  // WP-B2-A3 (R3-08): two deployments of one alpha in one stage (Live in Core and in Satellite) are told apart by their portfolio
+  const stageName = (id: unknown): string | null => { const o = typeof id === "string" ? deploymentOf(id) : null; return o === null ? null : `${o.alpha.label} · ${o.deployment.stage.charAt(0)}${o.deployment.stage.slice(1).toLowerCase()}`; };
+  const sameName = new Map<string, number>();
+  for (const row of rows("deployments")) { const n = stageName(row.deployment_id); if (n !== null) sameName.set(n, (sameName.get(n) ?? 0) + 1); }
   for (const row of [...rows("deployments"), ...rows("portfolio_allocations")]) {
     const pf = typeof row.portfolio_id === "string" ? row.portfolio_id : "";
     if (row.portfolio_name === undefined) {
@@ -145,7 +158,7 @@ function overlayAccountF2(data: Obj, accountId: string): void {
     }
     if (!isPositiveMode()) continue;
     const owner = typeof row.deployment_id === "string" ? deploymentOf(row.deployment_id) : null;
-    if (row.deployment_name === undefined && owner !== null) row.deployment_name = `${owner.alpha.label} · ${owner.deployment.environment}`;
+    if (row.deployment_name === undefined && owner !== null) row.deployment_name = (sameName.get(stageName(row.deployment_id) ?? "") ?? 0) > 1 ? `${stageName(row.deployment_id)} · ${owner.deployment.portfolioName}` : stageName(row.deployment_id); // WP-B2-A3 (R3-08): by stage, so a Canary trial and the Live deployment of one alpha are two names
     const alphaLabel = typeof row.strategy_id === "string" ? alphaLabels.get(row.strategy_id) : undefined;
     if (row.strategy_name === undefined && alphaLabel !== undefined) row.strategy_name = alphaLabel;
   }
