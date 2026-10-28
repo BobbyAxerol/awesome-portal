@@ -27,9 +27,9 @@
  */
 
 import { createHash } from "node:crypto";
-import { blotterBookOf } from "./bffDoubleOverview";
 import { isPositiveMode, positiveDeploymentFact } from "./bffPositiveMode";
-import { DAY_MS as WORLD_DAY_MS, deploymentOf, fromCents as worldCents, grossNotional, lifecycleOf, netPnlOf, stageRecord, netPnlSeries, positionsOf, toCents as worldToCents, workingOrdersOf, WORLD_NOW_MS } from "./bffWorld";
+import { isRetired, resolveStageDeployment, sandboxRecordIdOf, stageBookOf, userIdOf } from "./bffWorldStage"; // WP-B2-S
+import { DAY_MS as WORLD_DAY_MS, deploymentOf, fromCents as worldCents, grossNotional, lifecycleOf, netPnlOf, netPnlSeries, positionsOf, toCents as worldToCents, workingOrdersOf } from "./bffWorld";
 
 type Obj = Record<string, unknown>;
 const isObj = (value: unknown): value is Obj => typeof value === "object" && value !== null && !Array.isArray(value);
@@ -104,7 +104,7 @@ export function predecessorCanary(deploymentId: string): string | null {
 
 /** The stage of a deployment id; an id the universe does not know is taken to be in the stage of the screen that asked. */
 export function stageOf(deploymentId: string, asked: DeploymentStage): DeploymentStage {
-  return STAGE_OF[baseDeploymentId(deploymentId)] ?? positiveDeploymentFact(baseDeploymentId(deploymentId))?.stage ?? asked; // WP-P: every id the world emits has a lifecycle record
+  return STAGE_OF[baseDeploymentId(deploymentId)] ?? positiveDeploymentFact(baseDeploymentId(deploymentId))?.stage ?? (isPositiveMode() ? resolveStageDeployment(baseDeploymentId(deploymentId))?.standing.stage : undefined) ?? asked; // WP-P: every id the world emits has a lifecycle record
 }
 /** A stage page exists (lit) only for a stage the deployment has reached. */
 export const reached = (stage: DeploymentStage, asked: DeploymentStage): boolean => STAGE_ORDER.indexOf(asked) <= STAGE_ORDER.indexOf(stage);
@@ -357,10 +357,16 @@ const capRow = (spec: Omit<CapSpec, "ratio">, asOf: string): Obj => ({
   as_of: avail(asOf),
 });
 
+/** WP-B2-S: the "sandbox exit" a room links is the SANDBOX record of its alpha (its own sandbox deployment or the history record), never the room's own deployment id. */
+function sandboxExitHref(deploymentId: string): string | null {
+  const base = baseDeploymentId(deploymentId);
+  const record = isPositiveMode() && resolveStageDeployment(base) !== null ? sandboxRecordIdOf(base) : base;
+  return record === null ? null : `/deployments/sandbox/${encodeURIComponent(record)}`;
+}
 function canaryLit(body: Obj, deploymentId: string, variant: StageVariant): Obj {
   const halted = variant === "halted";
   // A deployment that is already Live ran its Canary BEFORE its activation: a finished 14-day trial, dated by the one lifecycle record.
-  const finished = stageOf(deploymentId, "canary") === "live";
+  const finished = stageOf(deploymentId, "canary") === "live" || (isPositiveMode() && isRetired(baseDeploymentId(deploymentId))); // WP-B2-S
   const stale = variant === "stale";
   const breach = variant === "breach";
   const freshness = stale ? "STALE" : "FRESH";
@@ -374,7 +380,7 @@ function canaryLit(body: Obj, deploymentId: string, variant: StageVariant): Obj 
     { kind: "ARTIFACT", value: digestOf(`artifact:${baseDeploymentId(deploymentId)}`), href: null },
     { kind: "R1_APPROVAL", value: "AP-118", href: "/governance/approvals?sel=AP-118" },
     { kind: "R2_APPROVAL", value: "AP-152", href: "/governance/approvals?sel=AP-152" },
-    { kind: "SANDBOX_EXIT", value: "SX-14", href: `/deployments/sandbox/${encodeURIComponent(baseDeploymentId(deploymentId))}` },
+    { kind: "SANDBOX_EXIT", value: "SX-14", href: sandboxExitHref(deploymentId) },
     { kind: "CANARY_PROMOTION_PLAN", value: "AP-311", href: null },
   ];
 
@@ -529,7 +535,7 @@ function liveLit(body: Obj, deploymentId: string, variant: StageVariant): Obj {
     { kind: "ARTIFACT", state: "AVAILABLE", value: digestOf(`artifact:${baseDeploymentId(deploymentId)}`), href: null },
     { kind: "R1_APPROVAL", state: "AVAILABLE", value: "AP-118", href: "/governance/approvals?sel=AP-118" },
     { kind: "R2_APPROVAL", state: "AVAILABLE", value: "AP-152", href: "/governance/approvals?sel=AP-152" },
-    { kind: "SANDBOX_EXIT", state: "AVAILABLE", value: "SX-14", href: `/deployments/sandbox/${encodeURIComponent(baseDeploymentId(deploymentId))}` },
+    { kind: "SANDBOX_EXIT", state: "AVAILABLE", value: "SX-14", href: sandboxExitHref(deploymentId) },
     predecessor === null
       ? { kind: "CANARY_ENVELOPE", state: "UNAVAILABLE", value: null, href: null }
       : { kind: "CANARY_ENVELOPE", state: "AVAILABLE", value: "cenv_FIXTURE_LAB_1", href: `/deployments/live/${encodeURIComponent(predecessor)}/canary` },
@@ -727,9 +733,9 @@ function paperLit(body: Obj, deploymentId: string, variant: StageVariant, vnRout
 }
 
 function qualityOfBook(body: Obj, deploymentId: string): Obj | null {
-  const found = deploymentOf(WORLD_ALIAS[baseDeploymentId(deploymentId)] ?? baseDeploymentId(deploymentId));
+  const found = resolveStageDeployment(WORLD_ALIAS[baseDeploymentId(deploymentId)] ?? baseDeploymentId(deploymentId));
   if (found === null || !isObj(body.data)) return null;
-  const book = blotterBookOf(found.deployment.id);
+  const book = stageBookOf(found.deployment.id); // WP-B2-S: the SAME list the Paper tabs and the gate count
   const orders = book.orders.length;
   const rejected = book.orders.filter((o) => String(o.status).toUpperCase() === "REJECTED").length;
   const filled = book.orders.filter((o) => String(o.status).toUpperCase().includes("FILLED")).length;
@@ -774,7 +780,9 @@ export function simulateStage(path: string, answerBody: unknown): Obj | null {
   const variant = variantOf(id);
   if (variant === "dark") return darkOfWorld(answerBody, id);
   // A stage page the deployment has not reached is not lit: the published dark body stands (typed absence), whatever the URL says.
-  if (!reached(stageOf(id, kind), kind)) return darkOfWorld(answerBody, id);
+  // WP-B2-S: a deployment of the world has ONE stage; its page for any other stage is typed absence (a sandbox page of a canary deployment would put one id in two stages).
+  const own = isPositiveMode() ? resolveStageDeployment(baseDeploymentId(id)) : null;
+  if (own !== null ? own.standing.stage !== kind : !reached(stageOf(id, kind), kind)) return darkOfWorld(answerBody, id);
   // The Canary page of a deployment that is already Live would have to show a finished trial of ITS OWN: no world source carries one, so it is
   // typed (the published dark body); the way to the trial is the predecessor link of the Live page, which names the canary deployment itself.
   if (kind === "canary" && stageOf(id, kind) === "live") return darkOfWorld(answerBody, id);
@@ -797,12 +805,14 @@ export function simulateStage(path: string, answerBody: unknown): Obj | null {
  * acct_*_grid): the portfolio, the account and the venue it links to are the deployment's own, so no breadcrumb of a dark room is a dead end (QA3 R5-06).
  */
 function darkOfWorld(answerBody: Obj, requestedId: string): Obj | null {
-  if (!isPositiveMode() || !isObj(answerBody.deployment)) return null;
-  const found = deploymentOf(WORLD_ALIAS[baseDeploymentId(requestedId)] ?? baseDeploymentId(requestedId));
+  if (!isPositiveMode() || !(isObj(answerBody.deployment) || isObj(answerBody.certification))) return null; // WP-B2-S: the certification body carries its identity under `certification`
+  const found = resolveStageDeployment(WORLD_ALIAS[baseDeploymentId(requestedId)] ?? baseDeploymentId(requestedId));
   if (found === null) return null;
   const body = clone(answerBody);
-  const deployment = body.deployment as Obj;
+  const deployment = (isObj(body.deployment) ? body.deployment : body.certification) as Obj;
   const { alpha, deployment: d } = found;
+  if (deployment.alpha_reason_code !== undefined) { deployment.alpha_reason_code = null; deployment.portfolio_name_reason_code = null; }
+  if (isObj(deployment.account_binding)) { deployment.account_binding.account_id = d.accountId; if ("external_account_ref" in deployment.account_binding) deployment.account_binding.external_account_ref = d.accountId; }
   deployment.deployment_id = requestedId;
   deployment.portfolio_id = d.portfolioId;
   deployment.portfolio_name = d.portfolioName;
@@ -822,9 +832,11 @@ function darkOfWorld(answerBody: Obj, requestedId: string): Obj | null {
  */
 function worldStage(kind: "canary" | "live" | "sandbox" | "paper", body: Obj | null, deploymentId: string, variant: StageVariant): Obj | null {
   if (body === null || !isPositiveMode()) return body;
-  const found = deploymentOf(WORLD_ALIAS[baseDeploymentId(deploymentId)] ?? baseDeploymentId(deploymentId));
+  const found = resolveStageDeployment(WORLD_ALIAS[baseDeploymentId(deploymentId)] ?? baseDeploymentId(deploymentId));
   if (found === null) return body;
-  const { alpha, deployment: d } = found;
+  const { alpha, deployment: d, standing } = found;
+  const retired = standing.status === "completed"; // WP-B2-S: the stage the alpha has LEFT: stopped, exited on a date, final figures, nothing open
+  const exitMs = standing.exitMs;
   const life = lifecycleOf(alpha.id);
   const stale = variant === "stale";
   const mismatch = variant === "mismatch";
@@ -834,7 +846,7 @@ function worldStage(kind: "canary" | "live" | "sandbox" | "paper", body: Obj | n
   const alloc = worldToCents(d.allocation);
   const net = netPnlOf(d);
   const equity = worldCents(alloc + net);
-  const trialEnded = kind === "canary" && stageOf(deploymentId, "canary") === "live"; // the Canary page of a deployment that is Live now: a finished trial holds nothing open
+  const trialEnded = retired; // closed: a stage the alpha left holds no open position or working order, whichever stage it is // the Canary page of a deployment that is Live now: a finished trial holds nothing open
   const gross = trialEnded ? "0.00" : grossNotional(d.id);
   const positions = (trialEnded ? [] : positionsOf(d.id)).map((p) => ({ id: p.id, symbol: p.symbol, side: p.side, quantity: p.quantity, entry: p.entry, mark: p.mark, unrealised: p.unrealised })) as PositionSpec[];
   const orders = (trialEnded ? [] : workingOrdersOf(d.id)).map((o) => ({ id: o.id, symbol: o.symbol, type: o.type, side: o.side, quantity: o.quantity, price: o.price, status: o.status, since: iso(o.sinceMs) })) as OrderSpec[];
@@ -858,6 +870,7 @@ function worldStage(kind: "canary" | "live" | "sandbox" | "paper", body: Obj | n
     if (isObj(target.account_binding)) { target.account_binding.account_id = d.accountId; if ("external_account_ref" in target.account_binding) target.account_binding.external_account_ref = d.accountId; }
     target.alpha_id = alpha.id;
     target.alpha_name = alpha.label;
+    if ("alpha_reason_code" in target) { target.alpha_reason_code = null; target.portfolio_name_reason_code = null; } // WP-B2-S: the identity is read
     target.portfolio_id = d.portfolioId;
     target.portfolio_name = d.portfolioName;
   };
@@ -878,14 +891,15 @@ function worldStage(kind: "canary" | "live" | "sandbox" | "paper", body: Obj | n
     (body.open_order_footer as Obj).exact_open_order_count = orders.length;
     body.series = { envelope: panel("series", "DERIVED", "ready", "FRESH", AS_OF), ...seriesMembers(started, WORLD_DAY_MS, "1d", series.map((point) => point.value), "USDT", iso(series[series.length - 1]!.t)) };
   } else if (kind === "canary") {
-    const finished = stageOf(deploymentId, "canary") === "live";
-    const startMs = finished ? life.canaryFromMs : WORLD_NOW_MS - life.canaryDays * WORLD_DAY_MS;
-    const endMs = finished ? life.liveFromMs : startMs + 14 * WORLD_DAY_MS;
+    const finished = retired; // WP-B2-S: a canary the alpha has left is a finished trial of ITS OWN dates (started, exited), never "day N of 14" now
+    const startMs = standing.fromMs;
+    const endMs = finished ? (exitMs ?? standing.fromMs) : startMs + 14 * WORLD_DAY_MS;
     const started = iso(startMs);
     withIdentityOf(body.deployment);
     const lifecycle = body.lifecycle as Obj;
-    lifecycle.day_index = finished ? 14 : life.canaryDays;
-    lifecycle.trial = { basis: "STARTED_AT_PLUS_DURATION_DAYS", duration_days: 14, started_at: avail(started), exit_review_opens_at: avail(iso(endMs)) };
+    lifecycle.day_index = finished ? standing.days : life.canaryDays;
+    if (finished) lifecycle.duration_days = standing.days;
+    lifecycle.trial = { basis: "STARTED_AT_PLUS_DURATION_DAYS", duration_days: finished ? standing.days : 14, started_at: avail(started), exit_review_opens_at: avail(iso(endMs)) };
     const points = Math.max(8, Math.floor(((finished ? endMs : seriesTo) - startMs) / (4 * HOUR_MS)) + 1);
     const series = netPnlSeries(d.id, startMs, finished ? endMs : seriesTo, points);
     // approved caps from the book: capital = the allocation, gross = 1.5x, daily loss = 1% of it; consumed from the same positions and series
@@ -903,7 +917,7 @@ function worldStage(kind: "canary" | "live" | "sandbox" | "paper", body: Obj | n
       { cap: "open_orders", unit: "COUNT", limit: "40", approved: "20", consumed: String(orders.length) },
     ];
     const env = body.envelope as Obj;
-    env.limits = { capital_cap: capApproved, gross_notional_cap: grossApproved, daily_loss_cap: lossApproved, max_open_orders: 20, duration_days: 14 };
+    env.limits = { capital_cap: capApproved, gross_notional_cap: grossApproved, daily_loss_cap: lossApproved, max_open_orders: 20, duration_days: finished ? standing.days : 14 };
     const compliance = body.envelope_compliance as Obj;
     // the legacy limits member is the APPROVED caps too (never the draft proposal the dark body carries)
     compliance.limits = { capital_cap: capApproved, gross_notional_cap: grossApproved, daily_loss_cap: lossApproved, max_open_orders: 20 };
@@ -920,7 +934,7 @@ function worldStage(kind: "canary" | "live" | "sandbox" | "paper", body: Obj | n
     body.blotter = collection("blotter", "EXECUTION", "ready", stale ? "STALE" : "FRESH", asOf, typedOrders(orders), orders.map((o) => ({ order_id: o.id, price: o.price, type: o.type })));
     body.series = { envelope: panel("series", "DERIVED", "ready", "FRESH", AS_OF), ...seriesMembers(started, 4 * HOUR_MS, "4h", series.map((point) => point.value)) };
   } else if (kind === "sandbox") {
-    const startMs = life.sandboxFromMs;
+    const startMs = standing.fromMs; // WP-B2-S: this deployment's own stage dates (one stage history)
     const started = iso(startMs);
     withIdentityOf(body.certification);
     const cert = body.certification as Obj;
@@ -962,7 +976,9 @@ function worldStage(kind: "canary" | "live" | "sandbox" | "paper", body: Obj | n
     }
     // WORLD: the alpha has ONE stage history. A sandbox the alpha has left is a COMPLETED record (seven of seven steps passed, approved on the day the next stage began, nothing open);
     // the sandbox the alpha is in is IN PROGRESS (steps passed so far by the days run, none failed).
-    const record = stageRecord(alpha.id, "sandbox");
+    const record = { status: standing.status, days: standing.days, toMs: standing.exitMs };
+    const sandboxDecider = standing.decidedBy ?? "bobby";
+    const sandboxSubmitter = sandboxDecider === "lan" ? "minh" : "lan";
     const steps = body.steps as Obj[];
     const progress = body.progress as Obj;
     const passedTo = record.status === "completed" ? steps.length : Math.min(steps.length - 1, Math.floor(record.days / 2));
@@ -982,9 +998,9 @@ function worldStage(kind: "canary" | "live" | "sandbox" | "paper", body: Obj | n
       const endMs = record.toMs ?? startMs;
       cert.workflow_state = "APPROVED";
       cert.submitted_at = iso(endMs - 3 * HOUR_MS);
-      cert.submitted_by_user_id = "usr_0002";
+      cert.submitted_by_user_id = userIdOf(sandboxSubmitter);
       cert.decided_at = iso(endMs);
-      cert.decided_by_user_id = "usr_0001";
+      cert.decided_by_user_id = userIdOf(sandboxDecider);
       cert.decision_reason = "All seven steps passed; no open finding.";
       cert.updated_at = iso(endMs);
       body.findings = { total_count: 0, returned_count: 0, truncated: false, rows: [] };
@@ -992,44 +1008,46 @@ function worldStage(kind: "canary" | "live" | "sandbox" | "paper", body: Obj | n
         sessions: [{ id: `sandbox-session-1`, started, ended: iso(endMs), state: "COMPLETED" }] });
       body.timeline = { total_count: 3, returned_count: 3, truncated: false, rows: [
         { event_id: `scevt_${d.id}_create`, actor_user_id: "bobby", action: "CREATE", workflow_version_before: 0, workflow_version_after: 1, created_at: iso(startMs - 2 * MIN) },
-        { event_id: `scevt_${d.id}_submit`, actor_user_id: "lan", action: "SUBMIT", workflow_version_before: 1, workflow_version_after: 2, created_at: iso(endMs - 3 * HOUR_MS) },
-        { event_id: `scevt_${d.id}_approve`, actor_user_id: "bobby", action: "APPROVE", workflow_version_before: 2, workflow_version_after: 3, created_at: iso(endMs) },
+        { event_id: `scevt_${d.id}_submit`, actor_user_id: sandboxSubmitter, action: "SUBMIT", workflow_version_before: 1, workflow_version_after: 2, created_at: iso(endMs - 3 * HOUR_MS) },
+        { event_id: `scevt_${d.id}_approve`, actor_user_id: sandboxDecider, action: "APPROVE", workflow_version_before: 2, workflow_version_after: 3, created_at: iso(endMs) },
       ] };
       body.promotion_plans = [];
     }
   } else {
     const data = body.data;
     if (!isObj(data)) return body;
-    const started = iso(life.paperFromMs);
+    const started = iso(standing.fromMs);
     if (isObj(data.deployment)) withIdentityOf(data.deployment);
+    if (isObj(data.deployment) && retired) { data.deployment.active = false; data.deployment.updated_at = iso(exitMs ?? NOW_MS); }
     if (Array.isArray(data.deployments)) for (const row of data.deployments) withIdentityOf(row);
-    const book = blotterBookOf(d.id);
+    const book = stageBookOf(d.id); // WP-B2-S: inside the stage window; the gate, the quality derivation and the tabs count THIS list
     data.positions = positions.map((p) => ({ instrument_id: p.symbol, side: p.side.toUpperCase(), quantity: p.quantity, avg_px_open: p.entry, mark_price: p.mark, unrealized_pnl: p.unrealised, updated_at: AS_OF }));
     data.orders = book.orders.map((o) => ({ order_id: o.order_id, client_order_id: o.client_order_id, instrument_id: o.symbol, side: o.side, status: o.status, quantity: o.quantity, price: o.price, submitted_at: o.submitted_at }));
     data.fills = book.fills.map((f) => ({ fill_id: f.fill_id, client_order_id: f.client_order_id, order_id: String(f.client_order_id).replace(/^cl-/, "ord_"), quantity: f.quantity, price: f.price, commission: f.commission, commission_currency: f.commission_currency, trade_time: f.trade_time }));
     // the equity line of the paper account: allocation plus the cumulative net PnL of this deployment, ending on allocation + realized + unrealized
-    const equityPoints = netPnlSeries(d.id, NOW_MS - 199 * HOUR_MS, NOW_MS - 4 * MIN, 200);
+    const equityPoints = retired ? netPnlSeries(d.id, standing.fromMs, exitMs ?? NOW_MS, 200) : netPnlSeries(d.id, NOW_MS - 199 * HOUR_MS, NOW_MS - 4 * MIN, 200);
     let peak = 0n;
     data.account_equity = equityPoints.map((pt, i) => {
       const eq = alloc + worldToCents(pt.value);
       if (eq > peak) peak = eq;
       return { ts: new Date(pt.t).toISOString(), currency: "USDT", equity: worldCents(eq), net_pnl: pt.value, fee_total: worldCents(BigInt(i + 1) * alloc / 1_000_000n), funding_pnl: null,
-        cash_free: worldCents(eq - alloc / 10n), cash_locked: worldCents(alloc / 10n), total_fills: Math.min(i + 1, book.fills.length), state_digest: "9c1e04b7a2f1ffff", snapshot_reason: "PERIODIC", source: `paper-${d.id}`,
+        cash_free: worldCents(eq - alloc / 10n), cash_locked: worldCents(alloc / 10n), total_fills: retired ? book.fills.filter((f) => Date.parse(String(f.trade_time)) <= pt.t).length : Math.min(i + 1, book.fills.length), state_digest: "9c1e04b7a2f1ffff", snapshot_reason: "PERIODIC", source: `paper-${d.id}`,
         drawdown: eq === peak ? "0" : canonicalDecimal(((Number(eq - peak) / Number(peak))).toFixed(4)) };
     });
     // ONE clock: the page's own as-of is the world's now, so nothing on it is dated after it.
-    body.as_of = AS_OF;
+    // a stage the alpha left has no source update after its exit: its as-of is the exit, the read is now
+    body.as_of = retired ? iso(exitMs ?? NOW_MS) : AS_OF;
     body.read_at = at(2_000);
     // WORLD: ONE stage history. A Paper stage the alpha has left is a COMPLETED record (gate met, days and trades over the minimum, the session closed on the day Sandbox began);
     // the Paper stage the alpha is in is in progress, its observed days the days since it began.
-    const paperRecord = stageRecord(alpha.id, "paper");
+    const paperRecord = { status: standing.status, days: standing.days, toMs: standing.exitMs };
     const gate = data.observation_gate as Obj;
     const paperEnd = paperRecord.toMs === null ? null : iso(paperRecord.toMs);
     gate.observed_days = paperRecord.days;
-    gate.trade_count = paperRecord.status === "completed" ? Math.max(60, paperRecord.days * 4) : (data.fills as unknown[]).length;
+    gate.trade_count = (data.fills as unknown[]).length; // the gate counts the fills the tabs list
     gate.state = paperRecord.status === "completed" ? "MET" : "PARTIAL";
     gate.reason_code = paperRecord.status === "completed" ? null : "OBSERVATION_WINDOW_OPEN";
-    data.stage_facts = stageFacts({ runtime: paperEnd !== null ? "STOPPED" : halted ? "HALTED" : "RUNNING", since: paperEnd ?? started, verdict: "NO_OPEN_FINDINGS", open: 0, unknownOrders: 0, asOf: AS_OF,
+    data.stage_facts = stageFacts({ runtime: paperEnd !== null ? "STOPPED" : halted ? "HALTED" : "RUNNING", since: paperEnd ?? started, verdict: "NO_OPEN_FINDINGS", open: 0, unknownOrders: 0, asOf: retired ? iso(exitMs ?? NOW_MS) : AS_OF,
       sessions: [{ id: "paper-session-1", started, ended: paperEnd, state: paperEnd !== null ? "COMPLETED" : halted ? "HALTED" : "RUNNING" }] });
   }
   return body;

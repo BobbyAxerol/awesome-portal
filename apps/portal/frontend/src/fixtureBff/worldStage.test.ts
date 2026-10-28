@@ -6,6 +6,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createFixtureServer, loadConfig, resetFixtureGlobals } from "../../../fixture-bff/app";
 import { resetScenario } from "../../../fixture-bff/scenario";
 import { deploymentOf, grossNotional, lifecycleOf, MARKS, netPnlOf, positionsOf, toCents } from "../../e2e/bffWorld";
+import { blotterBookOf } from "../../e2e/bffDoubleOverview";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Body = any;
@@ -66,12 +67,13 @@ describe("a deployment is ONE thing on every screen", () => {
     const b = await get(`${E}/deployments/dep_canary_01/canary`);
     for (const page of [a, b]) {
       expect(page.deployment.account_id).toBe("acc_bnc_core");
-      expect(kpi(page, "gross_notional")).toBe(grossNotional("dep_canary_01"));
+      // WORLD (B2-S, QA5 R2-02): Basis B left Canary (the alpha is Live), so its canary deployment is a finished trial: it holds nothing open (gross 0.00), where it used to print the book's 23,647.22 as if running.
+      expect(kpi(page, "gross_notional")).toBe("0.00");
       const rows = page.envelope_compliance.rows as Body[];
       const gross = rows.find((r) => r.cap === "gross_notional");
-      expect(gross.consumed.value).toBe(grossNotional("dep_canary_01").replace(/\.?0+$/, "") || "0");
+      expect(gross.consumed.value).toBe("0");
       expect(toCents(page.envelope.limits.capital_cap)).toBe(toCents("30000"));
-      expect(Number(rows.find((r) => r.cap === "gross_notional").approved)).toBeGreaterThanOrEqual(Number(grossNotional("dep_canary_01")));
+      expect(Number(rows.find((r) => r.cap === "gross_notional").approved)).toBeGreaterThanOrEqual(Number(kpi(page, "gross_notional")));
     }
   });
 
@@ -100,7 +102,16 @@ describe("a deployment is ONE thing on every screen", () => {
       cursor = next.data.page?.next_cursor ?? next.page?.next_cursor ?? null;
       if (cursor === null) break;
     }
-    for (const id of paperIds) expect(known.has(id), id).toBe(true);
+    // WORLD (B2-S, QA5 R4-02): dep_paper_01's Paper stage is over (Carry A is Live); its page lists the stage's trades up to the exit, and a gate needing 60 trades needs 60 fills. Every id is the blotter's own, except the earlier
+    // trades of the stage, which are older than the blotter's retained rows of this deployment (the extension is dated before its first retained order).
+    const retained = blotterBookOf("dep_paper_01").orders.map((o) => String(o.order_id));
+    for (const id of paperIds) if (!known.has(id)) {
+      expect(retained.includes(id), id).toBe(false);
+      const order = paper.data.orders.find((o: Body) => o.order_id === id);
+      const earliest = Math.min(...paper.data.orders.filter((o: Body) => known.has(o.order_id)).map((o: Body) => Date.parse(o.submitted_at)));
+      expect(Date.parse(order.submitted_at), id).toBeLessThan(earliest);
+    }
+    expect(paperIds.filter((id: string) => known.has(id)).length).toBeGreaterThan(0);
     // one price: the paper positions are at the same mark
     for (const p of paper.data.positions) expect(p.mark_price).toBe(MARKS[p.instrument_id]);
   });
