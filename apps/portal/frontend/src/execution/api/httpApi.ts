@@ -202,6 +202,33 @@ async function post(path: string, body: unknown, signal?: AbortSignal, extraHead
   });
 }
 
+const BLOTTER_QUERY_KEYS = ["limit", "after", "before", "status", "status_bucket", "stage", "deployment_id", "account_id", "alpha_id", "venue", "symbol", "side", "sort"] as const;
+const BLOTTER_ID = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/;
+const BLOTTER_ENUMS: Readonly<Record<string, readonly string[]>> = {
+  stage: ["PAPER", "SANDBOX", "CANARY", "LIVE"],
+  status_bucket: ["FILLED", "PARTIAL", "REJECTED", "OPEN"],
+  side: ["BUY", "SELL"],
+  sort: ["submitted_at_desc", "submitted_at_asc", "updated_at_desc"],
+};
+/** `/screens/blotter?...` for a query, or null when a published key carries a value outside the contract's grammar. Never throws. */
+export function blotterPath(query: BlotterQuery): string | null {
+  const params = new URLSearchParams();
+  const record = query as Readonly<Record<string, unknown>>;
+  for (const key of BLOTTER_QUERY_KEYS) {
+    const value = record[key];
+    if (value === undefined || value === "") continue;
+    if (key === "limit") {
+      if (typeof value !== "number" || !Number.isInteger(value) || value < 1 || value > 200) return null;
+    } else if (key in BLOTTER_ENUMS) {
+      if (typeof value !== "string" || !BLOTTER_ENUMS[key]!.includes(value)) return null;
+    } else if (key === "deployment_id" || key === "account_id" || key === "alpha_id") {
+      if (typeof value !== "string" || !BLOTTER_ID.test(value)) return null;
+    } else if (typeof value !== "string" || value.length > 512) return null;
+    params.set(key, String(value));
+  }
+  return `/screens/blotter${params.size > 0 ? `?${params.toString()}` : ""}`;
+}
+
 async function problem(response: Response): Promise<Result<never>> {
   let body: unknown = null;
   try {
@@ -671,8 +698,13 @@ export function createHttpApi({ policy, signal, readScope = {} }: HttpApiOptions
     }
     return params.size > 0 ? `?${params.toString()}` : "";
   };
-  const getBlotterProfile = (query: BlotterQuery = {}): Promise<Result<ProfileEnvelope>> =>
-    readGet(`/screens/blotter${listParameters(query)}`, readProfileEnvelope, "The exact Paper blotter page");
+  const getBlotterProfile = (query: BlotterQuery = {}): Promise<Result<ProfileEnvelope>> => {
+    // Closed allowlist and validation: a key the contract does not publish, or a value outside its grammar, is never sent.
+    const path = blotterPath(query);
+    return path === null
+      ? Promise.resolve(unavailable("The blotter query named a value the contract does not accept, so no read was sent."))
+      : readGet(path, readProfileEnvelope, "The exact Paper blotter page");
+  };
   const runOperatorTask = async (
     taskId: string,
     params: Readonly<Record<string, string | number | boolean | null>>,

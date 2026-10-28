@@ -60,6 +60,7 @@ const TIES: readonly { id: string; title: string; qa: string; owner: string }[] 
   { id: "W17", title: "a stage page never contradicts the alpha's record: a stage the alpha left is STOPPED and nothing on it is as-of later than its stop", qa: "R4-03 R4-06 R5-10 R2-05", owner: "B-S" },
   { id: "W18", title: "a finished Canary is a Canary record: the room declares the Canary stage, and a Live alpha's predecessor envelope opens as a finished trial", qa: "R5-01 R5-05", owner: "B-S" },
   // ===== WP-B2-S3 end
+  { id: "W23", title: "a scoped blotter is the scope's population: every order of the deployment/alpha (including ord_00225 for Carry A) is on it, count and chips equal the filtered population", qa: "QA6 R2-02", owner: "B-B1" },
 ];
 
 /** Ties still red on the tip. Delete a line when its owner lands the fix (the test then tells you which). */

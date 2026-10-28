@@ -346,6 +346,15 @@ export interface BlotterQuery {
   symbol?: string;
   side?: "BUY" | "SELL";
   sort?: "submitted_at_desc" | "submitted_at_asc" | "updated_at_desc";
+  /**
+   * The server-side scope (`executionFullBlotterV1`): applied BEFORE paging, so the totals, aggregates and
+   * pages are those of the scope's own population. Any stage other than PAPER is refused by the server
+   * with `N22_BLOTTER_STAGE_NOT_AVAILABLE`.
+   */
+  stage?: "PAPER" | "SANDBOX" | "CANARY" | "LIVE";
+  deployment_id?: string;
+  account_id?: string;
+  alpha_id?: string;
 }
 
 export interface ExecutionApi {

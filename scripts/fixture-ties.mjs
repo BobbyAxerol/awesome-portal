@@ -920,6 +920,56 @@ export async function runWorldTies(get) {
     for (const item of digest?.items ?? []) check("W22", since !== null && ms(item.as_of) > since, `"${item.label}" is as of ${item.as_of}, not after the last visit ${digest.baseline?.seen_at}`);
   }
   // ===== WP-B2-A3 end
+  // ── W23: a scoped blotter is the scope's population (QA6 R2-02): the server narrows BEFORE paging, so every order of the deployment / alpha is on it (including a rejected one), and its count and chips equal the filtered population ──
+  {
+    const readAll = async (query) => {
+      const orders = [];
+      let first = null;
+      let cursor = null;
+      for (let n = 0; n < 40; n += 1) {
+        const r = await get(`${E}/screens/blotter?limit=200${query}${cursor === null ? "" : `&after=${encodeURIComponent(cursor)}`}`);
+        if (r.status !== 200) return first === null ? { status: r.status, body: r.body, orders } : { first, orders };
+        first ??= r.body;
+        orders.push(...(r.body.data.orders ?? []));
+        cursor = r.body.data.page?.next_cursor ?? null;
+        if (cursor === null) break;
+      }
+      return { first, orders };
+    };
+    const book = await readAll("");
+    const axes = [["deployment_id", (o) => o.deployment_id], ["alpha_id", (o) => o.alpha_id ?? o.strategy_id], ["account_id", (o) => o.account_id]];
+    if (book.first) {
+      const statusOf = (orders) => { const c = {}; for (const o of orders) c[o.status] = (c[o.status] ?? 0) + 1; return c; };
+      for (const [axis, of] of axes) {
+        const values = [...new Set(book.orders.map(of).filter((v) => typeof v === "string"))].slice(0, 12);
+        for (const value of values) {
+          const expected = book.orders.filter((o) => of(o) === value);
+          const scoped = await readAll(`&${axis}=${encodeURIComponent(value)}`);
+          const where = `${axis}=${value}`;
+          if (!scoped.first) { check("W23", false, `${where}: the scoped blotter answered ${scoped.status}`); continue; }
+          const ids = new Set(scoped.orders.map((o) => o.order_id));
+          const missing = expected.filter((o) => !ids.has(o.order_id)).map((o) => o.order_id);
+          const alien = scoped.orders.filter((o) => of(o) !== value).map((o) => o.order_id);
+          check("W23", missing.length === 0 && alien.length === 0 && scoped.orders.length === expected.length, `${where}: ${expected.length} orders in the book, ${scoped.orders.length} on the scoped blotter (missing ${missing.slice(0, 3).join(", ") || "none"}; foreign ${alien.slice(0, 3).join(", ") || "none"})`);
+          check("W23", scoped.first.scalars?.exact_total === expected.length || scoped.first.data?.exact_total === expected.length, `${where}: the scoped blotter counts ${scoped.first.data?.exact_total ?? scoped.first.scalars?.exact_total}, its population is ${expected.length}`);
+          const chips = scoped.first.data?.aggregates?.status ?? {};
+          const want = statusOf(expected);
+          check("W23", JSON.stringify(Object.entries(chips).sort()) === JSON.stringify(Object.entries(want).sort()), `${where}: chips ${JSON.stringify(chips)} but the population is ${JSON.stringify(want)}`);
+        }
+      }
+      // a rejected order is on the blotter of its own deployment and alpha (the QA6 case: Carry A's rejected order)
+      const rejected = book.orders.find((o) => o.status === "REJECTED" && typeof o.deployment_id === "string");
+      if (rejected) {
+        for (const [axis, of] of axes.slice(0, 2)) {
+          const scoped = await readAll(`&${axis}=${encodeURIComponent(of(rejected))}`);
+          check("W23", (scoped.orders ?? []).some((o) => o.order_id === rejected.order_id), `rejected order ${rejected.order_id} is not on the blotter scoped by ${axis}=${of(rejected)}`);
+        }
+      }
+      // the contract's refusal for a stage the Paper blotter does not serve
+      const refused = await get(`${E}/screens/blotter?limit=1&stage=LIVE`);
+      check("W23", refused.status === 400 && JSON.stringify(refused.body).includes("N22_BLOTTER_STAGE_NOT_AVAILABLE"), `stage=LIVE answered ${refused.status}, not the contract's N22_BLOTTER_STAGE_NOT_AVAILABLE refusal`);
+    }
+  }
   return { ties };
 }
 

@@ -521,14 +521,28 @@ function blotter(search: URLSearchParams): OverviewAnswer {
   if (v === "denied") return DENIED();
   if (v === "error") return problem(503, "PAPER_READ_UPSTREAM_UNAVAILABLE", "The paper read is unavailable.");
   const source = rowsFor(v === "partial");
-  const all = v === "empty" ? [] : source;
+  // ===== WP-B2-B1 begin (the scope is the server's: stage / deployment_id / account_id / alpha_id narrow the ONE order book BEFORE paging; the totals, chips and funnel are the scope's own population)
+  const stageParam = search.get("stage");
+  if (stageParam !== null && stageParam !== "PAPER") {
+    return stageParam === "SANDBOX" || stageParam === "CANARY" || stageParam === "LIVE"
+      ? problem(400, "N22_BLOTTER_STAGE_NOT_AVAILABLE", "This Blotter route only serves the Paper stage.")
+      : problem(400, "PAPER_READ_QUERY_INVALID", "The stage is not one of PAPER, SANDBOX, CANARY, LIVE.");
+  }
+  const scopeAxes = (["deployment_id", "account_id", "alpha_id"] as const).flatMap((axis) => { const value = search.get(axis); return value === null || value === "" ? [] : [[axis, value] as const]; });
+  const inScope = (r: Row): boolean => {
+    const o = r.order as unknown as Record<string, unknown>;
+    return (stageParam === null || o.mode === "paper") && scopeAxes.every(([axis, value]) => (axis === "alpha_id" ? (o.alpha_id ?? o.strategy_id) : o[axis]) === value);
+  };
+  const all = v === "empty" ? [] : source.filter(inScope);
+  const scopeSignature = stageParam === null && scopeAxes.length === 0 ? "" : `|${stageParam ?? ""}|${scopeAxes.map(([axis, value]) => `${axis}=${value}`).join("&")}`; // empty for an unscoped read: its cursors stay byte for byte what they were
+  // ===== WP-B2-B1 end
   const bucket = search.get("status_bucket");
   const statuses = bucket && bucket in BLOTTER_BUCKET ? (BLOTTER_BUCKET[bucket as keyof typeof BLOTTER_BUCKET] as readonly string[]) : null;
   const symbol = search.get("symbol");
   const venue = search.get("venue");
   const side = search.get("side");
   const filtered = all.filter((r) => (statuses === null || statuses.includes(r.status)) && (!symbol || r.symbol === symbol) && (!venue || r.venue === venue) && (!side || r.side === side));
-  const signature = `${bucket ?? ""}|${symbol ?? ""}|${venue ?? ""}|${side ?? ""}`;
+  const signature = `${bucket ?? ""}|${symbol ?? ""}|${venue ?? ""}|${side ?? ""}${scopeSignature}`; // WP-B2-B1: a cursor belongs to its scope
   const limit = Math.min(200, Math.max(1, Number(search.get("limit") ?? 50) || 50));
   let start = 0;
   const after = search.get("after");
@@ -550,7 +564,7 @@ function blotter(search: URLSearchParams): OverviewAnswer {
     conditional_groups: page.flatMap((r) => (r.group ? [r.group] : [])),
     conditional_legs: page.flatMap((r) => r.legs),
     page: { limit, next_cursor: end < filtered.length ? encodeCursor(end - 1, signature) : null, previous_cursor: start > 0 ? encodeCursor(start, signature) : null },
-    query: { ...(body.data.query as Record<string, unknown>), filters: { status: null, status_bucket: bucket, venue, symbol, side } },
+    query: { ...(body.data.query as Record<string, unknown>), filters: { status: null, status_bucket: bucket, venue, symbol, side, ...(stageParam === null ? {} : { stage: stageParam }), ...Object.fromEntries(scopeAxes) } }, // WP-B2-B1
     exact_total: all.length,
     filtered_total: filtered.length,
     aggregates: {

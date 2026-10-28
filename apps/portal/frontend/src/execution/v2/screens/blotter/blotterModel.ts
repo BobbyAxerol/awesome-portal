@@ -13,9 +13,9 @@
  * - nothing is summed. A filled quantity, an average price, a slippage or a fee
  *   total is shown only if the order row publishes it; the expanded fills list
  *   each fill's own quantity, price and fee, in the fee's own currency;
- * - the server filters by status bucket, venue, symbol and side. Deployment,
- *   account, alpha, order and fill scopes are not in `BlotterQuery`, so they
- *   narrow the LOADED rows only and the screen says so;
+ * - the server filters by status bucket, venue, symbol, side and (before paging) stage, deployment,
+ *   account and alpha, so a scoped page carries the scope's own totals, chips and rows. Only the order
+ *   and fill links remain screen-side: they focus a row on a loaded page;
  * - counts come from the server's own `exact_total`, `filtered_total` and
  *   `aggregates.status`. A bucket count is shown only when the aggregate covers
  *   the whole population; otherwise the bucket count is not available, never 0.
@@ -441,7 +441,7 @@ export interface Scope {
   alpha: string | null;
   order: string | null;
   fill: string | null;
-  /** The environment a link came from (`env=live`); narrows the loaded rows by the order's own `mode`. */
+  /** The environment a link came from (`env=live`); is sent as the server's `stage`. */
   env: "paper" | "sandbox" | "live" | null;
 }
 
@@ -495,9 +495,29 @@ export interface ServerFilters {
 
 export const NO_FILTERS: ServerFilters = { bucket: "ALL", symbol: "", venue: "", side: "" };
 
-export function blotterQuery(filters: ServerFilters, cursor: { dir: "after" | "before"; value: string } | null, limit: number = PAGE_LIMIT): BlotterQuery {
+/** The part of the scope the server applies before paging (`deployment_id`, `account_id`, `alpha_id`, and `env` as `stage`). Order and fill stay with the screen: they only focus a row. */
+export function serverScope(scope: Scope): Pick<BlotterQuery, "stage" | "deployment_id" | "account_id" | "alpha_id"> {
+  return {
+    ...(scope.env === null ? {} : { stage: scope.env.toUpperCase() as "PAPER" | "SANDBOX" | "LIVE" }),
+    ...(scope.deployment === null ? {} : { deployment_id: scope.deployment }),
+    ...(scope.account === null ? {} : { account_id: scope.account }),
+    ...(scope.alpha === null ? {} : { alpha_id: scope.alpha }),
+  };
+}
+
+/** True when the link names a population the server narrows (so the totals on the page are that population's own). */
+export function serverScopeActive(scope: Scope): boolean {
+  return Object.keys(serverScope(scope)).length > 0;
+}
+
+/** The refusal the server gives for a stage the Paper blotter does not serve. */
+export const STAGE_REFUSED = "N22_BLOTTER_STAGE_NOT_AVAILABLE";
+export const isStageRefusal = (reason: string): boolean => reason.startsWith(`${STAGE_REFUSED}:`) || reason === STAGE_REFUSED;
+
+export function blotterQuery(filters: ServerFilters, cursor: { dir: "after" | "before"; value: string } | null, limit: number = PAGE_LIMIT, scope: Scope = NO_SCOPE): BlotterQuery {
   return {
     limit,
+    ...serverScope(scope),
     ...(filters.bucket === "ALL" ? {} : { status_bucket: filters.bucket }),
     ...(filters.symbol.trim() === "" ? {} : { symbol: filters.symbol.trim() }),
     ...(filters.venue === "" ? {} : { venue: filters.venue }),
@@ -506,8 +526,9 @@ export function blotterQuery(filters: ServerFilters, cursor: { dir: "after" | "b
   };
 }
 
-export function filtersKey(filters: ServerFilters): string {
-  return `${filters.bucket}|${filters.symbol.trim()}|${filters.venue}|${filters.side}`;
+export function filtersKey(filters: ServerFilters, scope: Scope = NO_SCOPE): string {
+  const s = serverScope(scope);
+  return `${filters.bucket}|${filters.symbol.trim()}|${filters.venue}|${filters.side}|${s.stage ?? ""}|${s.deployment_id ?? ""}|${s.account_id ?? ""}|${s.alpha_id ?? ""}`;
 }
 
 /* ── columns ───────────────────────────────────────────────────────────── */

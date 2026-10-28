@@ -418,32 +418,73 @@ function enableColumn(name: string) {
   fireEvent.click(within(screen.getByRole("group", { name: "Choose columns" })).getByRole("checkbox", { name }));
 }
 
-describe("scope from other screens (loaded pages only)", () => {
-  it("an account scope narrows the loaded rows and says so; the server query is untouched", async () => {
+/** Every order of the double's one book, read unscoped, so a scope's population is counted from the rows and not copied from the code under test. */
+async function wholeBook() {
+  const body = await (await fetch("/api/v1/execution/screens/blotter?limit=200")).json();
+  return body.data.orders as Record<string, unknown>[];
+}
+
+describe("scope from other screens (the server narrows before paging)", () => {
+  it("an account scope is sent to the server; the page, count and chips are that account's own population", async () => {
+    const population = (await wholeBook()).filter((o) => o.account_id === "acc_paper_okx_01");
+    expect(population.length).toBeGreaterThan(0);
+    expect(population.length).toBeLessThan(137);
     mount("/execution/blotter?account=acc_paper_okx_01");
     await loaded();
     enableColumn("Account");
-    expect(bodyRows().length).toBeGreaterThan(0);
+    expect(bodyRows()).toHaveLength(Math.min(50, population.length));
     expect(bodyRows().every((r) => cellOf(r, "Account") === "acc_paper_okx_01")).toBe(true);
-    expect(screen.getByText(/Scope narrows the loaded pages only: \d+ of 50 loaded rows match/)).toBeTruthy();
-    expect(Object.fromEntries(lastQuery())).toEqual({ limit: "50" });
+    expect(countLine()).toMatch(new RegExp(`Showing\\s*${Math.min(50, population.length)}\\s*of\\s*${population.length}\\s*in this scope`));
+    expect(countLine()).not.toMatch(/137/);
+    const group = screen.getByRole("group", { name: "Status" });
+    expect(within(group).getByRole("button", { name: new RegExp(`^All\\s*${population.length}$`) })).toBeTruthy();
+    const filled = population.filter((o) => o.status === "FILLED").length;
+    expect(within(group).getByRole("button", { name: new RegExp(`^Filled\\s*${filled}$`) })).toBeTruthy();
+    expect(screen.getByText(/The server narrowed the blotter to this scope before paging/)).toBeTruthy();
+    expect(Object.fromEntries(lastQuery())).toEqual({ limit: "50", account_id: "acc_paper_okx_01" });
     fireEvent.click(screen.getByRole("button", { name: "Remove account scope" }));
     await waitFor(() => expect(bodyRows()).toHaveLength(50));
     expect(search().get("account")).toBeNull();
+    expect(Object.fromEntries(lastQuery())).toEqual({ limit: "50" });
   });
 
-  it("an alpha scope matches the strategy id", async () => {
+  it("an alpha scope is sent as alpha_id and lists the alpha's whole population, not the newest 50 filtered", async () => {
+    const population = (await wholeBook()).filter((o) => o.strategy_id === "carry_basis_v3");
     mount("/execution/blotter?alpha=carry_basis_v3");
     await loaded();
     enableColumn("Alpha");
     expect(bodyRows().every((r) => cellOf(r, "Alpha") === "carry_basis_v3")).toBe(true);
+    expect(countLine()).toMatch(new RegExp(`of\\s*${population.length}\\s*in this scope`));
+    expect(lastQuery().get("alpha_id")).toBe("carry_basis_v3");
   });
 
-  it("a deployment scope cannot be applied because the orders carry no deployment id, and says so", async () => {
+  it("a deployment the book does not hold is an empty scope that says so, never the global count", async () => {
     mount("/execution/blotter?deployment=dep_x");
+    await screen.findByText("This scope has no orders in the blotter.");
+    expect(lastQuery().get("deployment_id")).toBe("dep_x");
+    expect(document.body.textContent).not.toMatch(/Showing\s*50/);
+    expect(document.body.textContent).not.toMatch(/deployment scope could not be applied/);
+  });
+
+  it("changing the scope returns to the newest page of the new population (the cursor is dropped)", async () => {
+    mount("/execution/blotter");
     await loaded();
-    expect(screen.getByText(/deployment scope could not be applied/)).toBeTruthy();
-    expect(bodyRows()).toHaveLength(50);
+    fireEvent.click(screen.getByRole("button", { name: "Older" }));
+    await waitFor(() => expect(lastQuery().get("after")).not.toBeNull());
+    fireEvent.change(screen.getByLabelText("Add scope"), { target: { value: "account|acc_paper_okx_01" } });
+    await waitFor(() => expect(lastQuery().get("account_id")).toBe("acc_paper_okx_01"));
+    expect(lastQuery().get("after")).toBeNull();
+    expect(lastQuery().get("before")).toBeNull();
+  });
+
+  it("a stage the server refuses (N22_BLOTTER_STAGE_NOT_AVAILABLE) is said in words, with the way back", async () => {
+    mount("/execution/blotter?env=live");
+    await screen.findByText("The blotter does not serve this stage");
+    expect(lastQuery().get("stage")).toBe("LIVE");
+    expect(screen.getByText(/lists Paper orders only/)).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Remove the environment" }));
+    await loaded();
+    expect(search().get("env")).toBeNull();
   });
 
   it("a fill link opens its order, highlights the row and offers the chart", async () => {

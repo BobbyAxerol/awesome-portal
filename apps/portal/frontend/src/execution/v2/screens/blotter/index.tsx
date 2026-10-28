@@ -11,15 +11,18 @@
  * count the server did not state, or filter by something the server cannot
  * filter by and pretend the totals still apply. The status chips and the
  * symbol, venue and side controls go to the server (they are `BlotterQuery`
- * fields). Deployment, account, alpha, order and fill scopes, which arrive
- * from other screens, narrow the LOADED rows only; the caption says
- * "loaded pages" and the count line keeps the server's totals apart.
+ * fields), and so do the deployment, account, alpha and environment (stage)
+ * scopes that arrive from other screens: the server narrows BEFORE paging, so a
+ * scoped page prints the scope's own "Showing N of M", chips and rows. Only an
+ * order or fill link stays on the screen (it opens that row once its page is
+ * loaded). A stage the server refuses (`N22_BLOTTER_STAGE_NOT_AVAILABLE`) is
+ * said in words.
  *
  * Scale and degradation (evidence/UXM07/README.md 2b):
  *
  * | cardinality | break point | degradation | server contract | invariant | perf budget |
  * |---|---|---|---|---|---|
- * | 10^5 to 10^7 orders; 50 per page, up to 100 fills and 200 legs beside it | 200 rows in the DOM | keyset Newer/Older, one page in the DOM; scope narrows loaded rows; column chooser | `BlotterQuery` keyset cursors and the four filters; `exact_total`, `filtered_total`, `aggregates.status` | exact digits; counts only as stated (null is never 0); fills "on this page" not "all"; no cross-currency sum | one read per page, re-read on a realtime notification (never counted as an event); one funnel read per expanded row |
+ * | 10^5 to 10^7 orders; 50 per page, up to 100 fills and 200 legs beside it | 200 rows in the DOM | keyset Newer/Older, one page in the DOM; scope applied by the server before paging; column chooser | `BlotterQuery` keyset cursors, the four filters and `stage` / `deployment_id` / `account_id` / `alpha_id`; `exact_total`, `filtered_total`, `aggregates.status` | exact digits; counts only as stated (null is never 0); fills "on this page" not "all"; no cross-currency sum | one read per page, re-read on a realtime notification (never counted as an event); one funnel read per expanded row |
  *
  * URL: `status` (bucket), `symbol`, `venue`, `side`, and the scopes `deployment`,
  * `account`, `alpha`, `order`, `fill`. Defaults omitted. V1 wrote the bucket as
@@ -45,7 +48,7 @@ import { withOrigin } from "../../backTo";
 import { withContext } from "../../urlState";
 import { ExactText, OrderDetail, type FunnelRead } from "./OrderDetail";
 import {
-  CHIPS, COLUMNS, DEFAULT_COLUMNS, GROUP_CAP, NOT_IN_READ, NARROW_PAGE_LIMIT, NO_SCOPE, PAGE_LIMIT, applyScope, blotterCsv, blotterCsvName, blotterQuery, chipCounts, filtersKey, unchippedStatusCounts,
+  CHIPS, COLUMNS, DEFAULT_COLUMNS, GROUP_CAP, NOT_IN_READ, NARROW_PAGE_LIMIT, NO_SCOPE, PAGE_LIMIT, applyScope, blotterCsv, blotterCsvName, blotterQuery, chipCounts, filtersKey, isStageRefusal, serverScopeActive, unchippedStatusCounts,
   fillsFor, groupExact, humanize, isBucket, pageFunnel, legsFor, scopeActive, shortUtc, statusView, type BlotterOrder, type ColumnId, type Scope, type ServerFilters,
 } from "./blotterModel";
 import { useBlotterRead } from "./useBlotterRead";
@@ -149,7 +152,7 @@ export default function BlotterScreen({ api, accessHref, chartHref: chartHrefPro
     const envWord = params.get("env")?.trim().toLowerCase() ?? "";
     return { ...NO_SCOPE, deployment: read("deployment"), account: read("account"), alpha: read("alpha"), order: read("order"), fill: read("fill"), env: envWord === "paper" || envWord === "sandbox" || envWord === "live" ? envWord : null };
   }, [params]);
-  const fk = filtersKey(filters);
+  const fk = filtersKey(filters, scope);
 
   // V1's `filter` is this screen's `status`; a word that is neither is said, not swallowed. One write, replace.
   const [urlNotices, setUrlNotices] = useState<readonly string[]>([]);
@@ -201,10 +204,10 @@ export default function BlotterScreen({ api, accessHref, chartHref: chartHrefPro
   const live = cursor !== null && cursor.fk === fk ? cursor : null;
   const [reloadTick, setReloadTick] = useState(0);
   const realtime = useProfileRealtime("paper", "EXECUTION_FULL_BLOTTER_SCREEN");
-  // A link that names a deployment, account, alpha, order or fill cannot be filtered by the server: it is looked for page by page.
-  const seeking = scope.deployment !== null || scope.account !== null || scope.alpha !== null || scope.order !== null || scope.fill !== null;
+  // Deployment, account, alpha and environment go to the server (before paging); an order or fill link is looked for page by page.
+  const seeking = scope.order !== null || scope.fill !== null;
   const limit = narrow ? NARROW_PAGE_LIMIT : PAGE_LIMIT;
-  const query = useMemo(() => blotterQuery(filters, live, limit), [filters, live, limit]);
+  const query = useMemo(() => blotterQuery(filters, live, limit, scope), [filters, live, limit, scope]);
   const state = useBlotterRead(api, query, `${fk}|${live ? `${live.dir}:${live.value}` : ""}|${limit}`, realtime.refreshKey, reloadTick);
   const read = state.phase === "ready" ? state.read : null;
 
@@ -272,7 +275,8 @@ export default function BlotterScreen({ api, accessHref, chartHref: chartHrefPro
 
   /* ── derived ──────────────────────────────────────────────────────── */
   const scoped = useMemo(
-    () => (read ? applyScope(read.orders, read.fills, scope) : null),
+    // The server already narrowed the page to the scope's population; only the order / fill focus is screen-side.
+    () => (read ? applyScope(read.orders, read.fills, { ...NO_SCOPE, order: scope.order, fill: scope.fill }) : null),
     [read, scope],
   );
   const rows = scoped ? scoped.rows : [];
@@ -280,9 +284,9 @@ export default function BlotterScreen({ api, accessHref, chartHref: chartHrefPro
   // The server cannot filter by deployment, account, alpha, order or fill, so a link that names one is looked for in the next older
   // pages until it is found or SEEK_PAGES pages were read; the page in the DOM is still one page. The sentence says so while it looks.
   const [hops, setHops] = useState(0);
-  const seekKey = `${fk}|${scope.deployment}|${scope.account}|${scope.alpha}|${scope.order}|${scope.fill}`;
+  const seekKey = `${fk}|${scope.order}|${scope.fill}`;
   useEffect(() => setHops(0), [seekKey]);
-  const missing = seeking && scoped !== null && (scope.order !== null || scope.fill !== null ? scoped.focusMissing : rows.length === 0);
+  const missing = seeking && scoped !== null && scoped.focusMissing;
   const nextOlder = read?.nextCursor ?? null;
   useEffect(() => {
     if (!missing || nextOlder === null || hops >= SEEK_PAGES) return;
@@ -292,7 +296,7 @@ export default function BlotterScreen({ api, accessHref, chartHref: chartHrefPro
   const searching = missing && nextOlder !== null && hops < SEEK_PAGES;
   const counts = useMemo(() => (read ? chipCounts(read) : null), [read]);
   const unchipped = useMemo(() => (read ? unchippedStatusCounts(read) : []), [read]);
-  // Scopes that can still be added: the distinct deployments, accounts and alphas on the loaded page (they narrow the loaded rows only).
+  // Scopes that can still be added: the distinct deployments, accounts and alphas on the loaded page (choosing one asks the server for that population).
   const scopeChoices = useMemo(() => (["deployment", "account", "alpha"] as const).flatMap((key) => {
     if (scope[key] !== null || !read) return [];
     const values = [...new Set(read.orders.flatMap((o) => { const v = key === "deployment" ? o.deploymentId : key === "account" ? o.accountId : o.alphaId; return v ? [v] : []; }))].sort();
@@ -392,6 +396,13 @@ export default function BlotterScreen({ api, accessHref, chartHref: chartHrefPro
             reason="The blotter is outside what your access allows."
             actions={accessHref ? <Link className="exec-blt2-link" to={withContext(accessHref, params)}>See what you can access</Link> : undefined}
           />
+        ) : isStageRefusal(state.reason) ? (
+          <PanelState
+            status="unavailable"
+            title="The blotter does not serve this stage"
+            reason="This blotter lists Paper orders only. The server refused the stage in the link (Sandbox, Canary and Live orders are not available here), so no orders are shown. Remove the environment from the link to see the Paper blotter."
+            actions={<button type="button" className="exec-blt2-btn" onClick={() => clearScope(["env"])}>Remove the environment</button>}
+          />
         ) : (
           <PanelState status={state.status} reason={state.reason} actions={<button type="button" className="exec-blt2-btn" onClick={() => setReloadTick((n) => n + 1)}>Try again</button>} />
         )}
@@ -481,7 +492,9 @@ export default function BlotterScreen({ api, accessHref, chartHref: chartHrefPro
         </div>
         {scopeActive(scope) ? (
           <p className="exec-blt2-note" id={noteId}>
-            Scope narrows the loaded pages only: {rows.length} of {page.orders.length} loaded {page.orders.length === 1 ? "row" : "rows"} match. The server filters by status, venue, symbol and side, not by this.
+            {serverScopeActive(scope)
+              ? <>The server narrowed the blotter to this scope before paging: the counts, status chips and order path below are this scope&rsquo;s own orders.</>
+              : <>An order or fill link opens that row when its page is loaded; it does not narrow the list.</>}
           </p>
         ) : null}
 
@@ -577,13 +590,13 @@ export default function BlotterScreen({ api, accessHref, chartHref: chartHrefPro
         <p className="exec-blt2-count-line" role="status" aria-live="polite">
           {emptyPage
             ? "No orders on this page"
-            : <>Showing <b className="exec-blt2-num">{page.orders.length}</b> {page.filteredTotal !== null ? <>of <b className="exec-blt2-num">{page.filteredTotal}</b> {filtered ? "matching" : "authorized"}{filtered && page.exactTotal !== null ? <> · <span className="exec-blt2-num">{page.exactTotal}</span> authorized</> : null}</> : <>orders (the server did not state a total)</>} · newest first</>}
+            : <>Showing <b className="exec-blt2-num">{page.orders.length}</b> {page.filteredTotal !== null ? <>of <b className="exec-blt2-num">{page.filteredTotal}</b> {filtered ? "matching" : serverScopeActive(scope) ? "in this scope" : "authorized"}{filtered && page.exactTotal !== null ? <> · <span className="exec-blt2-num">{page.exactTotal}</span> {serverScopeActive(scope) ? "in this scope" : "authorized"}</> : null}</> : <>orders (the server did not state a total)</>} · newest first</>}
         </p>
 
         {narrow ? pager : null}
         {emptyPage ? (
           <div className="exec-blt2-empty">
-            {filtered || live ? <><p>No orders match these filters.</p><button type="button" className="exec-blt2-btn" onClick={() => { setCursor(null); clearAll(); }}>Clear all</button></> : <PanelState status="empty" reason="No orders in this scope and window." />}
+            {filtered || live ? <><p>No orders match these filters.</p><button type="button" className="exec-blt2-btn" onClick={() => { setCursor(null); clearAll(); }}>Clear all</button></> : <PanelState status="empty" reason={serverScopeActive(scope) ? "This scope has no orders in the blotter." : "No orders in this scope and window."} />}
           </div>
         ) : (
           <div className="exec-cards-wrap">
@@ -595,7 +608,7 @@ export default function BlotterScreen({ api, accessHref, chartHref: chartHrefPro
               </thead>
               <tbody>
                 {rows.length === 0 ? (
-                  <tr className="exec-cards-empty"><td colSpan={visibleColumns.length}><p className="exec-blt2-na">No loaded order matches this scope. Use Older or Newer to look further.</p></td></tr>
+                  <tr className="exec-cards-empty"><td colSpan={visibleColumns.length}><p className="exec-blt2-na">No loaded order matches this link. Use Older or Newer to look further.</p></td></tr>
                 ) : null}
                 {rows.map((order) => {
                   const isOpen = open.has(order.orderId);

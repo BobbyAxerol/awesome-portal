@@ -52,8 +52,9 @@ Status is on the tip `3f02e233e` (the frozen lane tip) with the populated, mediu
 | W20 | An account has one environment: every operation row that names it carries the environment of its binding (the three `acc_TEST_ONLY_*` ids of the queue resolve to acc_bnc_core / acc_bnc_sub / acc_okx_main), the same one its Account 360 prints | `/operations`, `/resources/accounts/{a}` | R3-04, R1-02 | B-A3 | GREEN | see test |
 | W21 | Account 360 ties inside itself and to the Accounts list: margin ratio = maintenance / equity (two places), the binding's virtual sum on the list equals the internal ledger of Account 360, the venue wallet is not below the ledger without a flag, no two deployments of one account carry the same name | `/resources/accounts/{a}`, `/broker-bindings/{b}/exposure` | R3-05, R3-06, R3-08 | B-A3 | GREEN | see test |
 | W22 | The visit digest's last-visit instant (`baseline.seen_at`) is before every item it lists as new or changed | `/visit-digest` | R1-04 | B-A3 | GREEN | see test |
+| W23 | A scoped blotter is the scope's population: for every deployment, alpha and account of the book, `GET /screens/blotter?{deployment_id,alpha_id,account_id}=X` lists exactly the orders of X in the one book (a rejected one included, e.g. Carry A's ord_00225), `exact_total` equals that count, the status aggregate equals the population's statuses, and `stage=LIVE` is refused with `N22_BLOTTER_STAGE_NOT_AVAILABLE` | the unscoped blotter vs each scoped read | QA6 R2-02 | B-B1 | GREEN | 111 / 0 |
 
-Counts on the tip: 18 world ties, 4 GREEN (W01, W09b, W10, W12), 14 RED. Plus the walker's T1 to T14 (92 checks): GREEN.
+Counts on the tip: 19 world ties (W23 added by B-B1, GREEN); the counts below predate it. Plus the walker's T1 to T14 (92 checks): GREEN.
 
 ## Owner view (what turns each RED tie green)
 
