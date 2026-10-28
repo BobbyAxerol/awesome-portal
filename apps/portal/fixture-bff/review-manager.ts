@@ -15,6 +15,9 @@ import { answerPortfolios } from "../frontend/e2e/bffDoublePortfolios";
 import { worldBlotterCounts } from "../frontend/e2e/bffDoubleOverview";
 import type { PositiveAccountBook, PositiveDeploymentFact, PositivePortfolioBook, PositiveRecall } from "../frontend/e2e/bffPositiveMode";
 import { addDecimal, fixtureNowMs, scaled, type AlphaSpec, type DeploymentSpec } from "../frontend/e2e/bffScale";
+// ===== WP-B2-S begin: a deployment of a stage its alpha has LEFT is retired (ENDED, no exposure): one stage history (e2e/bffWorldStage.ts)
+import { isRetired as wpb2sRetired, stageHistoryOf as wpb2sHistory } from "../frontend/e2e/bffWorldStage";
+// ===== WP-B2-S end
 import { grossNotional, incidentChildrenBody, lifecycleOf, MARKS, NATIVE_ALPHAS, positionsOf, stageDays, WORLD_ACTORS } from "../frontend/e2e/bffWorld";
 import { APPROVAL_ROWS } from "../frontend/src/execution/api/fixtureData"; // WP-E
 import { approvalRecord, evidenceFromRecord, restateTarget } from "../frontend/e2e/bffApprovalWorld"; // WP-E
@@ -1304,6 +1307,8 @@ function wpcLifecycleKeys(alphaId: string, template: Draft): Record<string, Draf
   const now = wpcAnchorMs();
   const seed = seedOf(alphaId, "wpc-life");
   const actor = (n: number): string => wpcActors()[(seed + n) % wpcActors().length]!;
+  const H = wpb2sHistory(alphaId); // WP-B2-S: the gate deciders are the stage history's (approvals and the stage pages read the same record)
+  const by = (decided: string | null | undefined, n: number): string => (legacy() ? actor(n) : decided ?? actor(n));
   const L = lifecycleOf(alphaId); // WORLD: one stage history per alpha (Fleet days in stage, the stage screens' start dates and this spine read it)
   const { liveDays, canaryDays, sandboxDays, paperDays } = L;
   const liveFrom = L.liveFromMs, canaryFrom = L.canaryFromMs, sandboxFrom = L.sandboxFromMs, paperFrom = L.paperFromMs, r2 = L.r2Ms, r1 = L.r1Ms;
@@ -1315,11 +1320,11 @@ function wpcLifecycleKeys(alphaId: string, template: Draft): Record<string, Draf
     out[key] = built;
   };
   const at = (ms: number): string => String(Math.round(ms));
-  put("life_r1_exit_ms", at(r1), "TIMESTAMP_MS", actor(0));
-  put("life_r2_exit_ms", at(r2), "TIMESTAMP_MS", actor(1));
-  put("life_paper_exit_ms", at(sandboxFrom), "TIMESTAMP_MS", actor(2));
-  put("life_sandbox_exit_ms", at(canaryFrom), "TIMESTAMP_MS", actor(0));
-  put("life_canary_exit_ms", at(liveFrom), "TIMESTAMP_MS", actor(1));
+  put("life_r1_exit_ms", at(r1), "TIMESTAMP_MS", by(H.r1.by, 0));
+  put("life_r2_exit_ms", at(r2), "TIMESTAMP_MS", by(H.r2.by, 1));
+  put("life_paper_exit_ms", at(sandboxFrom), "TIMESTAMP_MS", by(H.stages.paper.decidedBy, 2));
+  put("life_sandbox_exit_ms", at(canaryFrom), "TIMESTAMP_MS", by(H.stages.sandbox.decidedBy, 0));
+  put("life_canary_exit_ms", at(liveFrom), "TIMESTAMP_MS", by(H.stages.canary.decidedBy, 1));
   put("life_paper_days", String(paperDays), "DAYS");
   put("life_sandbox_days", String(sandboxDays), "DAYS");
   put("life_canary_days", String(canaryDays), "DAYS");
@@ -1520,23 +1525,23 @@ function wpcAlphaResource(method: string, path: string, search: URLSearchParams)
   alpha.version = spec.version;
   alpha.owner = spec.owner;
   alpha.health = spec.health;
-  alpha.stage = WPC_STAGE_ORDER.find((stage) => spec.deployments.some((d) => d.stage === stage && d.active)) ?? spec.deployments[0]?.stage ?? "PAPER";
+  alpha.stage = WPC_STAGE_ORDER.find((stage) => spec.deployments.some((d) => d.stage === stage && d.active && !wpb2sRetired(d.id))) ?? spec.deployments[0]?.stage ?? "PAPER";
   alpha.stages = WPC_STAGE_ORDER.filter((stage) => spec.deployments.some((d) => d.stage === stage)).reverse();
   alpha.portfolios = [...new Map(spec.deployments.map((d) => [d.portfolioId, { portfolio_id: d.portfolioId, name: d.portfolioName, base_currency: d.currency }])).values()];
   alpha.deployments = spec.deployments.map((d) => {
     const net = addDecimal(d.realized, d.unrealized);
     return { ...copy(template), deployment_id: d.id, strategy_id: id, stage: d.stage, venue: d.venue, account_id: d.accountId, portfolio_id: d.portfolioId, currency: d.currency,
       allocation: d.allocation, balance_total: addDecimal(d.allocation, net), balance_free: addDecimal(d.allocation, net), balance_locked: "0", realized_pnl: d.realized,
-      unrealized_pnl: d.unrealized, net_pnl: net, exposure: wpcGross(d), state: d.active ? "ACTIVE" : "ENDED", active: d.active, health: d.health };
+      unrealized_pnl: d.unrealized, net_pnl: net, exposure: wpb2sRetired(d.id) ? "0.00" : wpcGross(d), state: d.active && !wpb2sRetired(d.id) ? "ACTIVE" : "ENDED", active: d.active && !wpb2sRetired(d.id), health: d.health }; // WP-B2-S: a stage the alpha left is ENDED, no exposure
   });
   const per = (pick: (d: DeploymentSpec) => string, currency: string): string => sum(spec.deployments.filter((d) => d.currency === currency).map(pick));
   alpha.allocations = currencies.map((currency) => ({ currency, value: per((d) => d.allocation, currency) }));
   alpha.balances = currencies.map((currency) => ({ currency, total: per((d) => addDecimal(d.allocation, addDecimal(d.realized, d.unrealized)), currency), free: per((d) => addDecimal(d.allocation, addDecimal(d.realized, d.unrealized)), currency), locked: "0" }));
   alpha.position_pnl = currencies.map((currency) => ({ currency, realized: per((d) => d.realized, currency), unrealized: per((d) => d.unrealized, currency), net: per((d) => addDecimal(d.realized, d.unrealized), currency) }));
-  alpha.exposure = currencies.map((currency) => ({ currency, value: per(wpcGross, currency) }));
+  alpha.exposure = currencies.map((currency) => ({ currency, value: per((d) => (wpb2sRetired(d.id) ? "0.00" : wpcGross(d)), currency) }));
   body.resource = { ...body.resource, label: spec.label };
   const rows = spec.deployments.map((d) => ({ deployment_id: d.id, strategy_id: id, account_id: d.accountId, mode: mode[d.environment], venue: d.venue, currency: d.currency, portfolio_id: d.portfolioId,
-    state: d.active ? "ACTIVE" : "ENDED", active: d.active, updated_at: alpha.updated_at, updated_at_ms: alpha.updated_at_ms, profile_environment: d.environment }));
+    state: d.active && !wpb2sRetired(d.id) ? "ACTIVE" : "ENDED", active: d.active && !wpb2sRetired(d.id), updated_at: alpha.updated_at, updated_at_ms: alpha.updated_at_ms, profile_environment: d.environment }));
   body.data.deployments = rows;
   if (body.panels?.deployments) {
     body.panels.deployments.data = { rows };
