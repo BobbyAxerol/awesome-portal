@@ -61,12 +61,12 @@ const TIES: readonly { id: string; title: string; qa: string; owner: string }[] 
   { id: "W18", title: "a finished Canary is a Canary record: the room declares the Canary stage, and a Live alpha's predecessor envelope opens as a finished trial", qa: "R5-01 R5-05", owner: "B-S" },
   // ===== WP-B2-S3 end
   { id: "W23", title: "a scoped blotter is the scope's population: every order of the deployment/alpha (including ord_00225 for Carry A) is on it, count and chips equal the filtered population", qa: "QA6 R2-02", owner: "B-B1" },
-  { id: "W14", title: "one definition of the money of a book: Net PnL is the published realized, a venue is the sum of its deployments, Equity is allocation + realized + unrealized (a ledger figure without the unrealized is not named Equity)", qa: "R2-03 R5-08 R3-07", owner: "B-C3" },
-  { id: "W15", title: "an Alpha 360 equity line is the alpha's OWN deployments on one account, opens at their allocation on the book's first day and ends at their equity", qa: "R2-01 R2-04", owner: "B-C3" },
-  { id: "W16", title: "drawdown is the drawdown of one level path: the alpha pane and the line above it agree, a sleeve's Account 360 line and its Portfolio NAV are the same series, open PnL is the sum of the positions", qa: "R2-12 R3-07", owner: "B-C3" },
-  { id: "W17", title: "one fee model: the 30-day cost drag of a live book is not below what its deployment has paid since activation", qa: "R2-06", owner: "B-C3" },
-  { id: "W18", title: "the lifecycle is told at the world clock: no event after the read, every exit is named for the stage exited, every started stage has its start event", qa: "R2-09 R2-10 R2-11", owner: "B-C3" },
-  { id: "W19", title: "a limit exactly reached is full, not a breach; a stopped trial states no daily PnL", qa: "R5-07 R5-10", owner: "B-C3" },
+  { id: "W24", title: "one definition of the money of a book: Net PnL is the published realized, a venue is the sum of its deployments, Equity is allocation + realized + unrealized (a ledger figure without the unrealized is not named Equity)", qa: "R2-03 R5-08 R3-07", owner: "B-C3" },
+  { id: "W25", title: "an Alpha 360 equity line is the alpha's OWN deployments on one account, opens at their allocation on the book's first day and ends at their equity", qa: "R2-01 R2-04", owner: "B-C3" },
+  { id: "W26", title: "drawdown is the drawdown of one level path: the alpha pane and the line above it agree, a sleeve's Account 360 line and its Portfolio NAV are the same series, open PnL is the sum of the positions", qa: "R2-12 R3-07", owner: "B-C3" },
+  { id: "W27", title: "one fee model: the 30-day cost drag of a live book is not below what its deployment has paid since activation", qa: "R2-06", owner: "B-C3" },
+  { id: "W28", title: "the lifecycle is told at the world clock: no event after the read, every exit is named for the stage exited, every started stage has its start event", qa: "R2-09 R2-10 R2-11", owner: "B-C3" },
+  { id: "W29", title: "a limit exactly reached is full, not a breach; a stopped trial states no daily PnL", qa: "R5-07 R5-10", owner: "B-C3" },
 ];
 
 /** Ties still red on the tip. Delete a line when its owner lands the fix (the test then tells you which). */
