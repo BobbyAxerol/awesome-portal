@@ -16668,3 +16668,74 @@ discovery, READ/STREAM, financial, STATUS and calendar/workload return](executio
 Portal Edge is the only external coordinator; its PM/TS follow-through is not
 delegated to Bobby. No connected or runtime acceptance is implied.
 
+
+### 28Oct Edge consumption handoff — source-ready, connected NOT_MET
+
+Incoming coordinator slice in existing ELP2-10 / EPG10-08/read09. User requested
+Edge complete independently runnable preparation and deliver directly into the
+actual Core integration checkout. Core remains docs/research-loop-plan at
+8e4a7703d46bdb92a708ac7fa9eb3981e44aa7c4 before this docs-only transaction;
+tracked worktree/index clean. No branch switch, code, generated input, schema,
+runtime, authority, source DB/HBA, session, command or Live change is included.
+
+Goal/approved scope: publish the public Edge E1–E5 return, source-owner packet,
+exact consumer CLI/type/ownership index and prompt, linked here. Rules are Core
+AGENT_WORKING_RULES §10.10d R0 for pure Markdown; no bypass for code/build gates.
+[Start-here handoff](execution_loop/evidence/ELP2-10/EDGE_CORE_READY_TO_CONSUME_2026-10-28.md),
+[full source return](execution_loop/evidence/ELP2-10/EDGE_TO_CORE_CONNECTED_SOURCE_RETURN_2026-10-28.md),
+[source-owner actions](execution_loop/evidence/ELP2-10/EDGE_TO_SOURCE_OWNERS_CONNECTED_INPUTS_2026-10-28.md),
+[Core prompt](execution_loop/evidence/ELP2-10/PROMPT_FOR_CORE_EDGE_SOURCE_CONSUMPTION_2026-10-28.md).
+
+Discovery/financial/STATUS concrete loaders/check/serve exist in exact HK source
+pins in the index. STATUS source ref86178d69 verified present in this Core Git;
+do not ask for a redundant code bundle. Matching real source transport,
+protected-root/original, current purpose-specific trust and finite commissioning
+remain distinct inputs. E1 old09:00–09:20UTC proposal missed08:50 cutoff and is
+CHANGE/elapsed; reader binding ends28Oct09:30UTC. Do not reuse it or infer
+authorization from observation. No READ→STREAM or requester→service-recovery
+authority expansion. Core can prepare its independent consumers/calibration
+per item now; Edge owns PM/TS/DL follow-through, not Bobby.
+
+Test gates: exact public SHA256 and local links/CLI/schema/config locators;
+scripts/execution-tracking-test.sh; explicit staged path and diff check.
+Initial tracking check actually PASS before this append; final post-append
+verification and artifact/publication receipts follow before commit. Unchanged
+product code inherits prior named evidence; no new connected test PASS claimed.
+Candidate artifact build runs only in Edge's separately bounded owned cell;
+not a deployed image or Core build/commissioning. Rollback is narrow public
+Markdown Git history only; no service/data rollback. No SGP test resources or
+private material created/transferred; no cleanup of shared state is authorized.
+
+Final incoming publication: Edge-owned independent preparation COMPLETE;
+consumer/source index and retained candidate artifact READY, connected NOT_MET.
+[Actual candidate receipt](execution_loop/evidence/ELP2-10/EDGE_CANDIDATE_ARTIFACT_68344DAD_2026-10-28.md):
+clean68344dad release buildPASS, binary29614768B SHA256
+60c2e70711b4620cf173195393f9a26f2afe9babcd8be70a1aa3f74e1e891af8,
+4/4offline no-config refusal smokePASS on existing Distrolessd6aa with the new
+binary separately mounted. No serve/default/network/private configuration;
+NOT_INSTALLED, no connected acceptance. Exact owned1158475055B temporary
+build/cache, two cells and newly fetched unused public compiler cleaned;
+17files/29646359B candidate/provenance retained on HK, never copied into Git.
+
+Final HK→Core public fileSHA256 MATCH:
+start-here index fe6e6c4221904abaaa3376be7155090945cf6a4e66c80a5d8ef98bc3b21694d7;
+prompt5686887176f85dd9b5e07e4b46df4c4a0cb0bf459a8fae5a4ee55750d528b6dd;
+artifact receipt f90dfc0efc3dfd830fa234872deb82aaa2ed2b038485bca3c2d8dd8b56f42e8c.
+Full original returna6779077/source-owner packet70a418f8 remain unchanged.
+Actual prior R0 post-scope trackingPASS/13destination referencesPASS; final
+batch link/hash/tracking/staged checks execute before commit and are recorded
+in its Verification:R0 body. Product evidence:25actual exact source tokens/
+6files checked; STATUS sixfiles byte-identical86178d69→68344dad. Unchanged
+application test suites not rerun or claimed newly PASS. CI0minutes/no push.
+
+Old reader binding now EXPIRED09:30UTC; old proposal is not an activation
+window. Real secure source transport/new valid binding, official native root/
+original, independent purpose-specific authority, service-recovery/calendar
+source and admitted calibration target remain exact owner actions, not new
+Edge adapter implementations. Core acts per item from the new prompt and
+returns CORE_TO_EDGE_CONSUMPTION_ACK_2026-10-28.md to both mailboxes; no all-five
+barrier/Bobby relay. No source-side business data, stable/dev/provider28445,
+secret/key/session/grant/command/Live or installed image/config changed here.
+Cleanup on SGP: NO_ACTION_NEEDED, no test/build/private resource created.
+Rollback for this delivery is Markdown Git history only. Full08/read09 and
+ELP2-10 remainNOT_MET; no phase transition or runtime authority is inferred.
