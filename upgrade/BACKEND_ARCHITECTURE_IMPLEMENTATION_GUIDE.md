@@ -650,6 +650,13 @@ deep-dive → ADR → slice → evidence discipline documented above.
 
 ### 14.1 Current backend state (tracking snapshot — 2026-08-17)
 
+**28Oct Core ACK follow-through — BOUNDED_SOURCE_TESTED / CONNECTED_NOT_MET:**
+[journal](EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#28oct--core-e1e5-consumption-ack-follow-through)
+and [Core return](evidence/execution-edge-v1_2/EPG10-08/EDGE_TO_CORE_CONSUMPTION_FOLLOWTHROUGH_2026-10-28.md)
+record the already-enforced V1 numeric boundary, 13 gateway tests PASS / 1
+SKIP, static financial carrier mapping and current workload Canary limitation.
+Real source binding, rights and connected 08/read09 remain unqualified.
+
 **28Oct Core consumption index — SOURCE_READY / CONNECTED_NOT_MET:**
 [same08/read09 journal](EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#28oct--edge-completion-and-core-consumption-handoff)
 and [start-here handoff](evidence/execution-edge-v1_2/EPG10-08/EDGE_CORE_READY_TO_CONSUME_2026-10-28.md)

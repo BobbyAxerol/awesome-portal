@@ -33906,3 +33906,108 @@ source/wire/config/CLI/evidence/prompt and compiled-artifact provenance in its
 own branch; it need not wait for another Edge source bundle. Genuine missing
 source/authority inputs and later physical Edge binding remain explicitly
 NOT_READY, not represented as source completion or connected PASS.
+
+### 28Oct — Core E1–E5 consumption ACK follow-through
+
+Status: IN PROGRESS within approved EPG10-08/read09; no new phase. Core ACK
+`CORE_TO_EDGE_CONSUMPTION_ACK_2026-10-28.md` SHA256
+`1a8a6b184af1b9a7f826f615b8cb09b8a61751b370ee1c40b9f22cf4d6c3695a`
+is the input, not connected evidence. Reconcile discovery revision wire bounds,
+financial carrier mapping, source transport and workload/capacity inputs; perform
+owned, dependency-independent work and deliver exact remaining owner actions.
+Use the EPG10-08 and read09 detailed guide and existing source/consumer return
+linked above. Preserve current profiles and source authority; do not invent
+grants, business roots, lossless integer conversions or financial values.
+Inspect actual source/schema and affected tests; test any owned code changes and
+document the cases and cleanup. Source-only changes can be reverted by their
+commit; no shared DB/HBA, stable/dev/provider or runtime mutation is authorized
+by the ACK. Recommissioning requires fresh, matching binding/trust and owners'
+actual evidence; expired credentials and windows are not reused.
+
+Discovery boundary review: PostgreSQL native revisions have BIGINT range, but
+Edge `unique_json` recursively enforces the JavaScript-safe integer range before
+forwarding source responses. Add a focused TEST_ONLY boundary regression for
+maximum safe and first unsafe values, including nested discovery fields; do not
+change product or wire semantics. Host root free was 85,584,773,120 bytes (84%
+used), below the normal 20% free floor: a bounded isolated correctness build is
+allowed only with at least 80 GiB free at start, 1 CPU/2 GiB memory, a unique
+disposable target/cache, and a 4 GiB growth stop; retain no build cache or image.
+Abort rather than use shared target or touch shared workloads. Measure and
+record actual cleanup; this is not a production-capacity benchmark.
+Follow-up: 85,584,773,120 bytes is less than 80 GiB (85,899,345,920
+bytes), despite rounding to 80G; no HK build was started. SGP independently
+has 198,033,326,080 bytes free and the pinned 1.85.1 compiler already present.
+Prepare a separate source-only test cell there under the same 1 CPU/2 GiB and
+4 GiB disposable-directory bounds; no shared target, secrets, DB or runtime.
+
+E1 source review: PM native revisions are positive BIGINT up to signed64 max,
+but Edge68344dad recursively rejects numeric JSON beyond MAX_SAFE_INTEGER before
+forwarding original bytes. Thus representable V1 numeric values already match
+Core; beyond that boundary availability fails closed, not round-trip full64.
+Mapping revision text remains lossless. No product/DB/wire change was made.
+Added focused nested-boundary source test; SGP run is in progress using exact
+source archive SHA256 `2e645af78b2140bea911bbf827b0ab685d4d7a46b6de9a20e55337fe368d83b6`
+and test SHA256 `2f90476afdf2a7b16dbb78f713993d543989eb3d6e86af555e030c2eb0927567`.
+Separate rustfmt check could not run: existing pinned compiler image does not
+contain rustfmt. Later found the existing SGP host rustfmt1.85.1; its first
+check found two formatting diffs, corrected them, and the final standalone
+check PASS on SHA256 `65b328df7c389e0fce82e9417717c4a5ba079f8356c73ee65f377bf16f6b6ced`.
+Initial `cargo test --bin ...` compiled but selected 0 tests (93 filtered),
+therefore NOT test PASS; the gateway belongs to `--lib`. Corrected bounded
+offline `--lib native_relations_gateway::tests` run is in progress, after the
+first cell exited and the formatted test was copied into its private source.
+
+E3 static carrier/Core field comparison completed without DB access: source
+and exact hashes, historical/null/time/ownership/census/cost semantics and
+gaps are in [Core follow-through](evidence/execution-edge-v1_2/EPG10-08/EDGE_TO_CORE_CONSUMPTION_FOLLOWTHROUGH_2026-10-28.md).
+Focused PM request is `/home/bobby/.worktrees/pm-integration/upgrade/EDGE_TO_PM_FINANCIAL_MAPPING_FOLLOWTHROUGH_2026-10-28.md`,
+under its actual `pm/integration-20261027@4cdf5ccc` mailbox, additive to S3.
+Core follow-through mirrored to SGP `docs/research-loop-plan@71284cf8`; final
+hash/cleanup/test disposition follows. No new business original was invented.
+
+E5 review recalculated fixture B1=1.0667 and B2=6.2667 nominal requests/s;
+B2 includes a stream URL, so neither is accepted production finite-read load.
+Core's newer current workload compiler rejects stream-as-poll and fixture IDs;
+its current context admits paper/sandbox/live only. Core was asked to reconcile
+its measurement compiler with real Canary semantics, without blocking E1/E2.
+Source target, 14 numeric budget groups and actual connected window remain
+unpublished, not replaced with benchmark numbers.
+
+Completed independent E1 verification: test-only source commit
+`6c63d6523a11736e15e9d6e3f62b51c91078c853` on
+`feat/core-current-policy-wire-20261024`; no product source change. Final
+formatted test SHA256 `65b328df7c389e0fce82e9417717c4a5ba079f8356c73ee65f377bf16f6b6ced`.
+SGP isolated `cargo test --offline --locked -p edge-service --lib
+native_relations_gateway::tests -- --test-threads=1`: **13 PASS, 0 FAIL,
+1 SKIP** (genuine Core codec export absent), 326 filtered. Includes new six
+nested safe-integer boundaries and existing fixture mTLS/scope/failure tests;
+not connected evidence. Rustfmt1.85.1 and diff-check PASS. Initial binary
+attempt selected zero tests and was not counted. Test source is new commit;
+retained binary still has original68344dad production source and is not a
+new release or deployed runtime.
+
+Cleanup: SGP owned test containers both absent and exact2,036,464,441-byte
+disposable cell removed, free195,901,911,040→197,981,388,800 bytes; HK own
+2,936,470-byte source archive removed, free84,202,037,248 bytes afterwards.
+Other workload disk changes are not attributed to this cleanup. SGP compiler
+image9f841bbe was pre-existing and retained; no Docker cache/volume/network
+pruning. HK three Edge containers and native Manager retain same image IDs,
+start times and restart0. Stable/rollback artifacts and shared state untouched.
+
+E1 bounded V1 compatibility and E3 static mapping are source/test ready; E5
+legacy workload was checked and current compiler's Canary limitation sent to
+Core. Core and PM receive independent actionable handoffs; no work is delayed
+on the unrelated lanes. Remaining real work: Edge coordinate authenticated
+final source transport + fresh matching E1 trust/binding; PM provide official
+authority/root and financial source semantics/proof, existing STATUS original
+and separate recovery wire; Core supply purpose-specific grants/session and
+review actual Canary workload mapping; TS/DL provide real calendar/source and
+the actual calibration target/bounds. Full08/read09 connected **NOT_MET**;
+per-item commissioning and genuine receipts continue in these same phases.
+Final Core mailbox handoff HK/SGP SHA256 MATCH:
+`f04f29a8c2615afdea004c4e6adedb8891f9da5c9069420d24cce08ccaa0ce18`.
+PM mailbox follow-through SHA256:
+`107c65f93e30d0d25a606792722adf1857b67caed1b234dc66229e54b3ac1e16`.
+Both are sanitized; remote Core and PM mailbox copies remain untracked in the
+respective owners' active branches for their review, without touching their WIP
+or committing on their behalf. No push/merge/remote CI was requested.
