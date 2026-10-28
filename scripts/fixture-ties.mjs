@@ -1583,6 +1583,18 @@ export async function runWorldTies(get) {
     const lens = (await ok200(`${E}/operations?limit=50&triage_state=UNACKNOWLEDGED`))?.page?.health?.open_exception_count;
     if (all && lens) check("W85", all.count === lens.count, `the Operations badge says ${all.count} open exceptions, the default lens KPI ${lens.count}`);
   }
+  // ── W90: the register's health stays inside the published vocabulary: basis WORST_OF_DEPLOYMENT_HEALTH and value = the worst class with a deployment in it (N9b-01) ──
+  {
+    const ORDER = ["HEALTHY", "ATTENTION", "DEGRADED", "HALTED"];
+    for (const p of portfolios.values()) {
+      const h = p.health;
+      if (h?.state !== "PUBLISHED") continue;
+      const worst = [...ORDER].reverse().find((k) => (h.deployments_by_health?.[k] ?? 0) > 0);
+      check("W90", h.basis === "WORST_OF_DEPLOYMENT_HEALTH" && h.value === worst, `${p.portfolio_id}: health ${h.value} on basis ${h.basis}; the worst deployment class is ${worst} (the closed reader rejects anything else)`);
+      const total = ORDER.reduce((n, k) => n + (h.deployments_by_health?.[k] ?? 0), 0);
+      check("W90", total <= p.deployment_count, `${p.portfolio_id}: ${total} classified deployments of ${p.deployment_count}`);
+    }
+  }
   // ===== WP-B2-A3 round D end
   return { ties };
 }

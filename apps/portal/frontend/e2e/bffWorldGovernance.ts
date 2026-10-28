@@ -855,8 +855,12 @@ export function governanceBody(path: string, search: URLSearchParams, body: unkn
       if (open.length === 0 || item.health?.state !== "PUBLISHED") return item;
       const rank: Record<string, number> = { HEALTHY: 0, ATTENTION: 1, DEGRADED: 2, HALTED: 3 };
       const incident = open.some((i) => i.severity === "CRITICAL") ? "DEGRADED" : "ATTENTION";
-      const worst = (rank[item.health.value] ?? 0) >= rank[incident]! ? item.health.value : incident;
-      return { ...item, health: { ...item.health, value: worst, basis: "WORST_OF_DEPLOYMENT_HEALTH_AND_OPEN_INCIDENTS" } };
+      // The published health vocabulary is closed (basis WORST_OF_DEPLOYMENT_HEALTH, value = the worst class with a deployment in it): an open incident reaches the register only through the counts, as one deployment of the portfolio counted in the incident's class
+      const counts = { ...item.health.deployments_by_health } as Record<string, number>;
+      if ((rank[item.health.value] ?? 0) >= rank[incident]! || (counts.HEALTHY ?? 0) < 1) return item;
+      counts.HEALTHY = counts.HEALTHY! - 1;
+      counts[incident] = (counts[incident] ?? 0) + 1;
+      return { ...item, health: { ...item.health, value: incident, deployments_by_health: counts } };
     });
     // ===== WP-B2-A3 end
     return { ...(body as Obj), items, total_portfolios: items.length };
