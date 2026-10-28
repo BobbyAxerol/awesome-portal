@@ -76,6 +76,7 @@ const TIES: readonly { id: string; title: string; qa: string; owner: string }[] 
   { id: "W40", title: "Alpha 360's criteria met of a Sandbox stage is the Sandbox page's own passed-step count (seven once the alpha left the stage)", qa: "N4-09", owner: "B-S" },
   { id: "W41", title: "an ended Canary trial carries ended facts: no readiness claim in its rollback checks, no promotion gate waiting on the owner, no capital consumed with nothing held, the exit review date not after the end", qa: "N5-05", owner: "B-S" },
   { id: "W70", title: "an alpha's published lifecycle is its own history: the fleet's stage is CURRENT, stages it left are DONE, later stages NOT_STARTED (a variant page spines its own alpha's stage)", qa: "N8a-01 N8a-03", owner: "B-S" },
+  { id: "W71", title: "a dark variant removes source facts only: its declared envelope limits, approved caps and trial duration are the base room's", qa: "N8a-04", owner: "B-S" },
   // ===== WP-B2-S3 end
   { id: "W23", title: "a scoped blotter is the scope's population: every order of the deployment/alpha (including ord_00225 for Carry A) is on it, count and chips equal the filtered population", qa: "QA6 R2-02", owner: "B-B1" },
   { id: "W24", title: "one definition of the money of a book: Net PnL is the published realized, a venue is the sum of its deployments, Equity is allocation + realized + unrealized (a ledger figure without the unrealized is not named Equity)", qa: "R2-03 R5-08 R3-07", owner: "B-C3" },

@@ -785,8 +785,8 @@ export function simulateStage(path: string, answerBody: unknown): Obj | null {
   const variant = variantOf(id);
   if (variant === "dark") {
     // WP-B2-S3 R4-04, R4-05: the dark Sandbox and Paper pages of a deployment of the world carry ITS record (one book); only the source facts are the typed absences
-    const darkOwn = isPositiveMode() && (kind === "sandbox" || kind === "paper") ? resolveStageDeployment(baseDeploymentId(id)) : null;
-    if (darkOwn !== null && darkOwn.standing.stage === kind) return darkHybrid(kind as "sandbox" | "paper", answerBody, id) ?? darkOfWorld(answerBody, id);
+    const darkOwn = isPositiveMode() && (kind === "sandbox" || kind === "paper" || kind === "canary") ? resolveStageDeployment(baseDeploymentId(id)) : null;
+    if (darkOwn !== null && darkOwn.standing.stage === kind) return darkHybrid(kind as "sandbox" | "paper" | "canary", answerBody, id) ?? darkOfWorld(answerBody, id);
     return darkOfWorld(answerBody, id);
   }
   // A stage page the deployment has not reached is not lit: the published dark body stands (typed absence), whatever the URL says.
@@ -1223,13 +1223,21 @@ export function capAsOf(node: unknown, limitMs: number): void {
  * The `_dark` page of a Sandbox or Paper deployment of the world: the record (steps, findings, orders, fills, equity, gate) is the deployment's own, computed from its one book; what the
  * dark body takes away is the SOURCE facts (runtime, reconciliation, sessions, panels, figures), which stay the typed absences of the published dark body.
  */
-function darkHybrid(kind: "sandbox" | "paper", answerBody: Obj, id: string): Obj | null {
+function darkHybrid(kind: "sandbox" | "paper" | "canary", answerBody: Obj, id: string): Obj | null {
   const dark = darkOfWorld(answerBody, id) ?? clone(answerBody);
-  const lit = worldStage(kind, kind === "sandbox" ? sandboxLit(clone(answerBody), id, "ok") : paperLit(clone(answerBody), id, "ok", false), id, "ok");
+  const lit = worldStage(kind, kind === "sandbox" ? sandboxLit(clone(answerBody), id, "ok") : kind === "canary" ? canaryLit(clone(answerBody), id, "ok") : paperLit(clone(answerBody), id, "ok", false), id, "ok");
   if (lit === null || lit === answerBody) return null;
   if (kind === "paper") {
     const data = lit.data as Obj;
     data.stage_facts = (isObj(dark.data) ? (dark.data as Obj).stage_facts : data.stage_facts) as unknown;
+    return lit;
+  }
+  if (kind === "canary") {
+    // WP-B2-S3 (QA8 N8a-04): a dark Canary room removes SOURCE facts only; the declared envelope, duration and approved caps stay the deployment's own, what was consumed is typed absent
+    for (const key of ["stage_facts", "source_figures", "source_panels", "kpis", "positions", "blotter", "series", "rollback_readiness"]) if (key in dark) lit[key] = dark[key];
+    const compliance = lit.envelope_compliance as Obj;
+    compliance.rows = (compliance.rows as Obj[]).map((row) => ({ ...row, consumed: unpub("SOURCE_UNAVAILABLE"), used_ratio: unpub("SOURCE_UNAVAILABLE"), as_of: unpub("SOURCE_UNAVAILABLE") }));
+    if (isObj(dark.envelope_compliance)) { compliance.verdict = (dark.envelope_compliance as Obj).verdict; compliance.consumed = (dark.envelope_compliance as Obj).consumed; }
     return lit;
   }
   for (const key of ["stage_facts", "source_figures", "source_panels"]) if (key in dark) lit[key] = dark[key];

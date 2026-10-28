@@ -965,6 +965,15 @@ export async function runWorldTies(get) {
       check("W70", row.state === expected, `${a.alpha_label} (in ${a.stage}): the lifecycle says ${row.stage} is ${row.state}, expected ${expected}`);
     }
   }
+  // W71 (QA8 N8a-04): a dark variant removes SOURCE facts only: its declared envelope (limits, approved caps) and trial duration are the base room's
+  for (const id of [...deployments.keys()].slice(0, 40).filter((x) => deployments.get(x).stage === "CANARY")) {
+    const base = await ok200(`${E}/deployments/${id}/canary`);
+    const dark = await ok200(`${E}/deployments/${id}_dark/canary`);
+    if (base === null || dark === null) continue;
+    check("W71", JSON.stringify(dark.envelope?.limits) === JSON.stringify(base.envelope?.limits), `${id}_dark: envelope limits ${JSON.stringify(dark.envelope?.limits)}, the base room's ${JSON.stringify(base.envelope?.limits)}`);
+    check("W71", dark.lifecycle?.duration_days === base.lifecycle?.duration_days && dark.lifecycle?.day_index === base.lifecycle?.day_index, `${id}_dark: trial ${dark.lifecycle?.day_index}/${dark.lifecycle?.duration_days} days, the base room's ${base.lifecycle?.day_index}/${base.lifecycle?.duration_days}`);
+    check("W71", JSON.stringify((dark.envelope_compliance?.rows ?? []).map((r) => r.approved)) === JSON.stringify((base.envelope_compliance?.rows ?? []).map((r) => r.approved)), `${id}_dark: approved caps differ from the base room's`);
+  }
   // ===== WP-B2-S3 end
   // ===== WP-B2-A3 begin
   // ── W19: a request exists only for the NEXT gate of its subject, once, and its quorum is open (R3-02, R3-09, R3-10, R3-03) ───────────────────────────────
