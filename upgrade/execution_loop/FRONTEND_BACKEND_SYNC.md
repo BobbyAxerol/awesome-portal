@@ -4203,3 +4203,16 @@ not the full alpha registry. No frontend implementation was changed by Core.
 STATUS original lifetime capacity and all connected/source qualifications
 remain open; do not treat fixture or local tests as Edge acceptance.
 
+### 28Oct — Research-stage fixture handoff, not landed
+
+[Core candidate and browser receipt](evidence/ELP2-10/CORE_ALPHA_AND_CODEC_FOLLOWTHROUGH_2026-10-28.md):
+Claude `f823705e8` corrected `stage`, but empty `stages` still causes the
+typed Alpha 360 reader to refuse Research-only alphas. Candidate `837eae444`
+preserves the fixture's declared stages and passes 62 focused tests and six
+targeted browser cases. Claude should integrate onto the latest moving branch,
+review Approval navigation separately, and retest; do not overwrite later
+fixture changes. No accepted component design is changed. The candidate is
+not yet on `docs/research-loop-plan`; the broader fixture journey, full Core
+typecheck and normal integration hook remain open. Source READ/STREAM and
+financial/command qualification are separate from these fixture results.
+
