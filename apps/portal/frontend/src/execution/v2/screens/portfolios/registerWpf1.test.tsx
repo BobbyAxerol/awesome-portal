@@ -5,7 +5,7 @@
  */
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { PF } from "../../../../../e2e/bffDoublePortfolios";
 import type { ExecutionApi } from "../../../api/ports";
@@ -15,7 +15,7 @@ import { makeApi } from "./harness.fixtures";
 import PortfolioListScreen from "./index";
 import { DEFAULT_HIDDEN, OPTIONAL_COLUMNS } from "./PortfolioTable";
 
-afterEach(cleanup);
+afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Body = any;
 
@@ -52,14 +52,26 @@ describe("page head and toolbar", () => {
 });
 
 describe("the default register fits 1440", () => {
-  it("hides Alphas / Dep., Allocations, Domain and HHI until asked; the chooser has every column", async () => {
-    expect([...DEFAULT_HIDDEN]).toEqual(["alphas", "allocations", "domain", "hhi"]);
+  it("hides Alphas / Dep., Allocations and Domain until asked and shows Concentration; the chooser has every column", async () => {
+    expect([...DEFAULT_HIDDEN]).toEqual(["alphas", "allocations", "domain"]);
     await ready(makeApi().api);
     const heads = [...table().querySelectorAll("thead th")].map((th) => th.textContent);
-    for (const gone of ["Alphas / Dep.", "Allocations", "Domain", "HHI"]) expect(heads, gone).not.toContain(gone);
-    for (const kept of ["Manager", "NAV", "Allocated capital", "Health"]) expect(heads.some((h) => h?.startsWith(kept)), kept).toBe(true);
+    for (const gone of ["Alphas / Dep.", "Allocations", "Domain"]) expect(heads, gone).not.toContain(gone);
+    for (const kept of ["Manager", "NAV", "Allocated capital", "Concentration", "Portfolio score", "Health"]) expect(heads.some((h) => h?.startsWith(kept)), kept).toBe(true);
     const menu = screen.getByRole("group", { name: "Columns" });
     for (const column of OPTIONAL_COLUMNS) expect(within(menu).getByRole("checkbox", { name: column.label }), column.label).toBeTruthy();
+  });
+
+  it("at 1180px and below Score and Health stay and the lower-priority figures wait in the chooser, said on the page (QA6 R1-07)", async () => {
+    vi.stubGlobal("matchMedia", (query: string) => ({ matches: query.includes("max-width: 1180px"), media: query, addEventListener() {}, removeEventListener() {} }));
+    await ready(makeApi().api);
+    const heads = [...table().querySelectorAll("thead th")].map((th) => th.textContent ?? "");
+    for (const gone of ["Manager", "Allocated capital", "Net PnL", "Concentration"]) expect(heads.some((h) => h.startsWith(gone)), gone).toBe(false);
+    for (const kept of ["NAV", "Return", "Drawdown", "Portfolio score", "Health"]) expect(heads.some((h) => h.startsWith(kept)), kept).toBe(true);
+    expect(screen.getByTestId("narrow-hidden").textContent).toMatch(/Portfolio score and Health in view.*Manager, Allocated capital, Net PnL, Concentration are hidden\. Columns brings them back/);
+    const menu = screen.getByRole("group", { name: "Columns" });
+    fireEvent.click(within(menu).getByRole("checkbox", { name: "Manager" }));
+    expect([...table().querySelectorAll("thead th")].map((th) => th.textContent ?? "").some((h) => h.startsWith("Manager"))).toBe(true);
   });
 
   it("the table carries its own class, so only the register is tightened", async () => {

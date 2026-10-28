@@ -27,6 +27,7 @@
  * | Perf budget | one read; at most 200 table rows; 60 interactive elements per screenful |
  */
 import { useEffect, useId, useMemo, useRef, useState } from "react";
+import { useMediaQuery } from "../../useMediaQuery";
 import { Link, useSearchParams } from "react-router-dom";
 
 import type { ExecutionApi } from "../../../api/ports";
@@ -48,7 +49,7 @@ import { EXPORT_REASON } from "./fe";
 import { FilterChips, RangeFilters, type FilterChip } from "./RangeFilters";
 import { applyServerOrder, groupAsk } from "./serverOrder";
 import { RANGES, SCORE_KEYS, SCORE_MISSING, SCORE_STATE_PARAM, readRangeState, rangeText, writeRange, type Range, type RangeId } from "./registerMetrics";
-import { OPTIONAL_COLUMNS, PortfolioTable, readHidden, writeHidden, type ColumnId, type PortfolioFigures } from "./PortfolioTable";
+import { DEFAULT_HIDDEN, NARROW_HIDDEN, NARROW_QUERY, OPTIONAL_COLUMNS, PortfolioTable, readHidden, writeHidden, type ColumnId, type PortfolioFigures } from "./PortfolioTable";
 import { COMPARE_OFF_REASON, DEFAULT_ROUTES, FROM_LIST, joinQuery, type PortfolioRoutes } from "./routes";
 import { COMPARE_MAX, COMPARE_MIN, IN_PARAM, partitionByCurrency, selectionFrom, withSelection } from "./selection";
 import { useRead } from "./useRead";
@@ -84,7 +85,7 @@ const SORT_LABEL: Readonly<Record<SortKey, string>> = {
   pnl: "Net PnL",
   ret: "Return",
   dd: "Drawdown",
-  hhi: "HHI",
+  hhi: "Concentration",
   score: "Portfolio score",
 };
 
@@ -141,7 +142,8 @@ export default function PortfolioListScreen({ api, capabilities, routes = DEFAUL
 
   const { q, sort: sortRaw, ccy } = url.value;
   const domain: DomainFilter | null = readDomainFilter(params.get("domain"));
-  const hidden = readHidden(params.get("hide"));
+  const narrow = useMediaQuery(NARROW_QUERY);
+  const hidden = readHidden(params.get("hide"), narrow);
   const compact = params.get("density") === "compact";
   // A range in the address is a range, nothing, or INVALID (not decimals, or a minimum above the maximum): an invalid one is said on the page
   // and never read as "no filter" (Codex post-freeze review, change 1).
@@ -229,7 +231,7 @@ export default function PortfolioListScreen({ api, capabilities, routes = DEFAUL
     const next = new Set(hidden);
     if (show) next.delete(id);
     else next.add(id);
-    setLocal("hide", writeHidden(next));
+    setLocal("hide", writeHidden(next, narrow));
   };
   const clearFilters = () => {
     const next = new URLSearchParams(params);
@@ -423,6 +425,11 @@ export default function PortfolioListScreen({ api, capabilities, routes = DEFAUL
               {" · "}<Link to={withContext(routes.access, params)}>My access</Link>
             </span>
           </div>
+          {narrow && params.get("hide") === null ? (
+            <p className="exec-pf-note" data-testid="narrow-hidden">
+              To keep Portfolio score and Health in view at this width, {NARROW_HIDDEN.filter((id) => !DEFAULT_HIDDEN.includes(id)).map((id) => OPTIONAL_COLUMNS.find((c) => c.id === id)!.label).join(", ")} are hidden. Columns brings them back.
+            </p>
+          ) : null}
           <FilterChips chips={chips} onClearAll={clearFilters} />
           {invalidRanges.length > 0 ? (
             <div className="exec-pf-banner" role="alert" data-testid="invalid-range">
@@ -469,7 +476,12 @@ export default function PortfolioListScreen({ api, capabilities, routes = DEFAUL
               <span className="exec-pf-dim" title="The Manager's own statement for this environment, before the table filters: one line per economic partition, partitions stay apart. The rows above are separate figures.">Scope statement, not a sum of the rows above · Economic capital · {url.value.env === "live" ? "Real-funded" : url.value.env === "paper" ? "Paper" : "Sandbox"}</span>
               <PartitionFigures list={scopeNav} metricKey="current_nav" />
             </div>
-          ) : null}
+          ) : (
+            <div className="exec-pf-total" role="group" aria-label="Scope statement" data-testid="scope-total-absent">
+              <span className="exec-pf-dim">Total NAV, filtered set</span>
+              <span className="exec-pf-np">Not published: the Manager dataset carries no NAV statement for this environment, and nothing is added from the rows above.</span>
+            </div>
+          )}
 
           <div className="exec-pf-foot">
             <span className="exec-pf-count-line" role="status" aria-live="polite">{line ? line.text : null}</span>

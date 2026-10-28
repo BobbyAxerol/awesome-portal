@@ -53,7 +53,7 @@ export const OPTIONAL_COLUMNS: readonly ColumnSpec[] = [
   { id: "pnl", label: "Net PnL", numeric: true, windowed: true },
   { id: "ret", label: "Return", numeric: true, windowed: true },
   { id: "dd", label: "Drawdown", numeric: true, windowed: true },
-  { id: "hhi", label: "HHI", numeric: true, hint: "Concentration of allocation, 0 to 1: a diagnostic, not part of the score" },
+  { id: "hhi", label: "Concentration", numeric: true, hint: "HHI, the concentration of allocation, 0 to 1: a diagnostic, not part of the score" },
   { id: "score", label: "Portfolio score", numeric: true, windowed: true, hint: "Direct from the portfolio NAV: 0.45 P + 0.30 R + 0.25 B. Published, never computed here" },
   { id: "state", label: "Health", hint: "The portfolio state the read publishes" },
 ];
@@ -73,10 +73,20 @@ export const UNPUBLISHED: Readonly<Partial<Record<ColumnId, Unpublished>>> = {
 };
 
 /**
- * Columns hidden until the reader asks (hi-fi `hide={dom:true}`): Domain, which the Domain filter above the table already says, and,
- * so that the default register fits 1440 without a horizontal scroll (WP-F1, measured), Allocations and Alphas / Dep. (counts, also on the 360 and in the row's title) and HHI (a diagnostic). All four are one click away in the column chooser and in the address (`hide=none`).
+ * Columns hidden until the reader asks: Domain, which the Domain filter above the table already says, and Allocations and Alphas / Dep.
+ * (counts, also on the 360 and in the row's title). Concentration (the HHI) is shown, as in the hi-fi. All are one click away in the column
+ * chooser and in the address (`hide=none`).
  */
-export const DEFAULT_HIDDEN: readonly ColumnId[] = ["alphas", "allocations", "domain", "hhi"];
+export const DEFAULT_HIDDEN: readonly ColumnId[] = ["alphas", "allocations", "domain"];
+
+/**
+ * Below ~1180px the sidebar leaves the table about 680px: Score and Health must stay in view without an inner scroll (QA6 R1-07), so
+ * the lower-priority figures wait in the chooser until the reader asks. The page says which ones, and the address keeps the choice.
+ */
+export const NARROW_HIDDEN: readonly ColumnId[] = ["alphas", "allocations", "domain", "owner", "allocated", "pnl", "hhi"];
+
+/** Viewport width at or below which the narrow default applies. */
+export const NARROW_QUERY = "(min-width: 661px) and (max-width: 1180px)";
 
 /** The `hide` value that means "hide nothing", so a reader can switch the default off. */
 export const HIDE_NONE = "none";
@@ -94,16 +104,17 @@ const HEALTH_FLAG = {
  * name it does not know is ignored; `none` (or any list with no known name) is
  * every column shown.
  */
-export function readHidden(raw: string | null): ReadonlySet<ColumnId> {
-  if (raw === null) return new Set(DEFAULT_HIDDEN);
+export function readHidden(raw: string | null, narrow = false): ReadonlySet<ColumnId> {
+  if (raw === null) return new Set(narrow ? NARROW_HIDDEN : DEFAULT_HIDDEN);
   const known = new Set<string>(OPTIONAL_COLUMNS.map((c) => c.id));
   return new Set(raw.split(",").map((p) => p.trim()).filter((p): p is ColumnId => known.has(p)));
 }
 
 /** The `hide` value for a hidden set: omitted when it is the default, `none` when empty. */
-export function writeHidden(hidden: ReadonlySet<ColumnId>): string | null {
+export function writeHidden(hidden: ReadonlySet<ColumnId>, narrow = false): string | null {
   const ids = OPTIONAL_COLUMNS.filter((c) => hidden.has(c.id)).map((c) => c.id);
-  if (ids.join(",") === DEFAULT_HIDDEN.join(",")) return null;
+  const standard = OPTIONAL_COLUMNS.filter((c) => (narrow ? NARROW_HIDDEN : DEFAULT_HIDDEN).includes(c.id)).map((c) => c.id);
+  if (ids.join(",") === standard.join(",")) return null;
   return ids.length === 0 ? HIDE_NONE : ids.join(",");
 }
 

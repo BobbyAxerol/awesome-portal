@@ -54,7 +54,7 @@ describe("Portfolios list: Net PnL column from the FLEET dataset grouped by port
     await waitFor(() => expect(table.querySelector("td[data-l^='Net PnL'] .exec-pf-na")).not.toBeNull());
     const row = [...table.querySelectorAll("tbody tr")].find((tr) => tr.textContent?.includes(PF.core)) as HTMLElement;
     expect(row.querySelector("td[data-l^='Net PnL']")?.textContent).toContain("No paper figures are published for this portfolio");
-    for (const label of ["NAV", "Return", "Drawdown", "HHI"]) {
+    for (const label of ["NAV", "Return", "Drawdown", "Concentration"]) {
       expect(row.querySelector(`td[data-l^='${label}']`)?.textContent, label).toContain("No paper figures are published for this portfolio");
     }
   });
@@ -64,7 +64,7 @@ describe("Portfolios list: Net PnL column from the FLEET dataset grouped by port
     const table = await screen.findByRole("table", { name: "Portfolios" }, { timeout: 5000 });
     await waitFor(() => expect(table.querySelector("td[data-l^='Net PnL'] .exec-part")).not.toBeNull());
     const row = [...table.querySelectorAll("tbody tr")].find((tr) => tr.textContent?.includes(PF.core)) as HTMLElement;
-    for (const [label, _id] of [["NAV", "FE-013"], ["Return", "FE-006, FE-025"], ["Drawdown", "FE-013, FE-025"], ["HHI", "FE-005"]] as const) {
+    for (const [label, _id] of [["NAV", "FE-013"], ["Return", "FE-006, FE-025"], ["Drawdown", "FE-013, FE-025"], ["Concentration", "FE-005"]] as const) {
       expect(row.querySelector(`td[data-l^='${label}']`)?.textContent, label).toContain("Not published");
     }
   });
@@ -85,7 +85,7 @@ describe("Portfolios list: Net PnL column from the FLEET dataset grouped by port
     expect(row.querySelector("td[data-l='NAV']")?.textContent).toContain("10,250.75");
     expect(row.querySelector("td[data-l^='Return']")?.textContent).toContain("+3.42%");
     expect(row.querySelector("td[data-l^='Drawdown']")?.textContent).toContain("-4.80%");
-    expect(row.querySelector("td[data-l='HHI']")?.textContent).toContain("0.2850");
+    expect(row.querySelector("td[data-l='Concentration']")?.textContent).toContain("0.2850");
   });
 
   it("keeps Not published when the dataset is not served", async () => {

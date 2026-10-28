@@ -97,11 +97,11 @@ describe("register", () => {
     expect(cell(pilot, "Allocations")).toBe("0");
   });
 
-  it("keeps Economic capital, Net PnL, Return, Drawdown, HHI and Portfolio score as columns (hi-fi), each cell Not available with its request id when no group is served; Score is named once", async () => {
+  it("keeps Economic capital, Net PnL, Return, Drawdown, Concentration and Portfolio score as columns (hi-fi), each cell Not available with its request id when no group is served; Score is named once", async () => {
     mount(makeApi().api, "/deployments/portfolios?hide=none");
     await loaded();
     const ids: Record<string, string> = {
-      "NAV": "FE-013", "Net PnL": "FE-005, FE-025", Return: "FE-006, FE-025", Drawdown: "FE-013, FE-025", HHI: "FE-005", "Portfolio score": "FE-011",
+      "NAV": "FE-013", "Net PnL": "FE-005, FE-025", Return: "FE-006, FE-025", Drawdown: "FE-013, FE-025", Concentration: "FE-005", "Portfolio score": "FE-011",
     };
     for (const row of bodyRows()) {
       for (const [label, _id] of Object.entries(ids)) {
@@ -140,20 +140,20 @@ describe("register", () => {
     expect(href).toContain("window=30d");
   });
 
-  it("opens with Domain, Alphas / Dep., Allocations and HHI hidden (the register fits 1440); the chooser brings one back and the address remembers it", async () => {
+  it("opens with Domain, Alphas / Dep. and Allocations hidden and Concentration shown (the register fits 1440); the chooser brings one back and the address remembers it", async () => {
     mount(makeApi().api);
     await loaded();
     for (const row of bodyRows()) {
       expect([...row.querySelectorAll("td")].map((td) => td.getAttribute("data-l"))).toEqual([
         "Compare", "Portfolio", "Manager", "NAV", "Allocated capital",
-        "Net PnL \u00b7 90D", "Return \u00b7 90D", "Drawdown \u00b7 90D", "Portfolio score \u00b7 90D", "Health",
+        "Net PnL \u00b7 90D", "Return \u00b7 90D", "Drawdown \u00b7 90D", "Concentration", "Portfolio score \u00b7 90D", "Health",
       ]);
     }
     expect(search().has("hide")).toBe(false);
     const menu = screen.getByRole("group", { name: "Columns" });
     expect((within(menu).getByRole("checkbox", { name: "Domain" }) as HTMLInputElement).checked).toBe(false);
     fireEvent.click(within(menu).getByRole("checkbox", { name: "Domain" }));
-    expect(search().get("hide")).toBe("alphas,allocations,hhi");
+    expect(search().get("hide")).toBe("alphas,allocations");
     expect(cell(bodyRows()[0], "Domain")).not.toBe("");
     fireEvent.click(within(menu).getByRole("checkbox", { name: "Domain" }));
     expect(search().has("hide")).toBe(false);
@@ -165,7 +165,7 @@ describe("register", () => {
     for (const row of bodyRows()) {
       expect([...row.querySelectorAll("td")].map((td) => td.getAttribute("data-l"))).toEqual([
         "Compare", "Portfolio", "Manager", "Alphas / Dep.", "Allocations", "Domain", "NAV", "Allocated capital",
-        "Net PnL \u00b7 90D", "Return \u00b7 90D", "Drawdown \u00b7 90D", "HHI", "Portfolio score \u00b7 90D", "Health",
+        "Net PnL \u00b7 90D", "Return \u00b7 90D", "Drawdown \u00b7 90D", "Concentration", "Portfolio score \u00b7 90D", "Health",
       ]);
     }
     expect(table().className).toContain("exec-cards");
@@ -220,10 +220,12 @@ describe("header, banners and footer", () => {
     expect(screen.getAllByText("6 portfolios").length).toBeGreaterThan(0);
   });
 
-  it("never adds a total NAV for the set: every Economic capital cell is Not available", async () => {
+  it("never adds a total NAV for the set: the total row is a typed absence with its reason, and every Economic capital cell is Not available", async () => {
     mount(makeApi().api);
     await loaded();
-    expect(screen.queryByText(/Total NAV/)).toBeNull();
+    const total = screen.getByTestId("scope-total-absent");
+    expect(total.textContent).toMatch(/Total NAV, filtered set.*Not published.*nothing is added from the rows above/);
+    expect(total.textContent).not.toMatch(/\d/);
     for (const row of bodyRows()) expect(cell(row, "NAV")).toContain("Not published: NAV");
   });
 
@@ -384,15 +386,14 @@ describe("columns", () => {
     // Every measure is in the chooser like any other column.
     expect(within(menu).getByRole("checkbox", { name: "NAV" })).not.toBeNull();
     expect(within(menu).getByRole("checkbox", { name: "Portfolio score" })).not.toBeNull();
-    // HHI, Allocations, Alphas / Dep. and Domain are hidden by default; a click brings one back and the address remembers the rest.
-    fireEvent.click(within(menu).getByRole("checkbox", { name: "HHI" }));
+    // Allocations, Alphas / Dep. and Domain are hidden by default; Concentration is shown. A click brings one back and the address remembers the rest.
     fireEvent.click(within(menu).getByRole("checkbox", { name: "Allocations" }));
     expect(search().get("hide")).toBe("alphas,domain");
     const headers = [...table().querySelectorAll("th")].map((th) => th.textContent);
-    expect(headers).toContain("HHI");
+    expect(headers).toContain("Concentration");
     expect(headers).toContain("Allocations");
     expect(headers).toContain("Manager");
-    fireEvent.click(within(menu).getByRole("checkbox", { name: "HHI" }));
+    fireEvent.click(within(menu).getByRole("checkbox", { name: "Concentration" }));
     expect(search().get("hide")).toBe("alphas,domain,hhi");
     fireEvent.click(within(menu).getByRole("checkbox", { name: "Manager" }));
     expect(search().get("hide")).toBe("owner,alphas,domain,hhi");
