@@ -148,6 +148,10 @@ describe("ELP2-10 existing identity mapping client (TEST_ONLY real loopback mTLS
     const lane = await peer(source, (req, body) => {
       expect(req.url).toBe("/internal/elp210/current-human/membership-discovery");
       expect(body).toMatchObject({ schema_version: "pma.research-membership-discovery.v1", subject, ...selection });
+      expect(Object.keys(body).sort()).toEqual([
+        "environment", "human_issuer", "request_id", "schema_version", "subject", "workload_id", "workspace_id",
+      ]);
+      expect(body.request_id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
       expect((req.socket as TLSSocket).authorized).toBe(true);
       return { body: discoveryReply(body, absent) };
     });
