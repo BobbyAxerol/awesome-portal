@@ -243,6 +243,13 @@ const FIXTURES = resolve(dirname(fileURLToPath(import.meta.url)), "../../../../p
 function fixtureBody(file: string, pick: (json: Record<string, unknown>) => Record<string, unknown>): Record<string, unknown> {
   return pick(JSON.parse(readFileSync(resolve(FIXTURES, file), "utf8")) as Record<string, unknown>);
 }
+// The New request picker reads the paged alpha catalogue (FE-069): the canonical published valid body answers it, one page.
+async function stubAlphaCatalogue(page: Page): Promise<void> {
+  const body = fixtureBody("research-run-library-alpha-catalogue.synthetic.valid.json", (json) => json);
+  await page.route(/\/api\/v1\/quantbt\/runs\/alpha-catalogue(\?|$)/, (route) => (route.request().method() === "GET"
+    ? route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(body) })
+    : route.fallback()));
+}
 async function stubPublishedReads(page: Page, options: Parameters<typeof answerExecutionBff>[4]): Promise<void> {
   const digest = fixtureBody("execution-visit-digest.synthetic.valid.json", (json) => (json.cases as { first_visit: Record<string, unknown> }).first_visit);
   const lifecycle = fixtureBody("execution-alpha-lifecycle.published.synthetic.valid.json", (json) => json.value as Record<string, unknown>);
@@ -279,6 +286,7 @@ for (const cell of CELLS) {
       const bffOptions = { operationsV2: true, screensV2: true, reviewManager: true };
       await stubExecutionBff(page, bffOptions);
       await stubPublishedReads(page, bffOptions);
+      await stubAlphaCatalogue(page);
       await stubAdminRoutes(page);
       await stubQuantbtRuns(page);
       if (cell.scoped) await stubScopedBff(page);
