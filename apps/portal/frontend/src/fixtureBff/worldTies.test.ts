@@ -65,6 +65,7 @@ const TIES: readonly { id: string; title: string; qa: string; owner: string }[] 
   { id: "W81", title: "a Fleet dataset row whose stage its alpha has left says ENDED; a row of the current stage never does", qa: "N8c-04 N3-09", owner: "B-A3" },
   { id: "W82", title: "a request whose subject deployment is halted is blocked and not evidence-complete", qa: "N8a-07", owner: "B-A3" },
   { id: "W83", title: "one headroom per account (the Accounts list = the Account 360 Margin card) and a margin ratio only over a venue-reported equity", qa: "N8c-03", owner: "B-A3" },
+  { id: "W84", title: "a portfolio with an open incident on it is not HEALTHY in the register", qa: "N8c-02 R1-06", owner: "B-A3" },
   { id: "W13", title: "one clock: every read of the world is taken within a day of the others", qa: "R3-10 R3-09", owner: "B-O" },
   // ===== WP-B2-S3 begin
   { id: "W31", title: "a Sandbox page that shows an equity difference or an approved decision blocks its gate: open blocking finding, nothing eligible to submit, steps counted and dated inside the run", qa: "R4-01 R4-03 R4-05 R4-12", owner: "B-S" },

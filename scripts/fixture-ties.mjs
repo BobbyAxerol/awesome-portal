@@ -1567,6 +1567,16 @@ export async function runWorldTies(get) {
       for (const m of data?.margin_balances ?? []) if (m.margin_ratio !== undefined) check("W83", sync !== undefined, `${row.account_id}: margin ratio ${m.margin_ratio}% printed with no venue-reported wallet`);
     }
   }
+  // ── W84: a portfolio with an open incident on it is not HEALTHY in the register (N8c-02) ──
+  {
+    for (const id of incidentIds) {
+      const inc = await ok200(`${E}/operations/incidents/${id}`);
+      if (inc?.target?.type !== "PORTFOLIO" || inc.workflow_state === "RESOLVED") continue;
+      const reg = portfolios.get(inc.target.id);
+      if (reg === undefined) continue;
+      check("W84", reg.health?.value !== "HEALTHY", `${inc.target.id} is HEALTHY in the register while incident ${id} (${inc.severity}, ${inc.workflow_state}) is open on it`);
+    }
+  }
   // ===== WP-B2-A3 round D end
   return { ties };
 }

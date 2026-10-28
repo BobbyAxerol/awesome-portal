@@ -25,7 +25,7 @@ import {
   WORLD_INCIDENTS, WORLD_NOW_MS, WORLD_OPERATIONS, worldAlphas, type StageName, type WorldIncident, type WorldOperation,
 } from "./bffWorld";
 import { criteriaMetOf, gateMinimumDays, stageBookOf, stageHistoryOf, stageStateOf } from "./bffWorldStage"; // WP-B2-S3: gateMinimumDays
-import { environmentFor } from "./bffWorldBooks"; // WP-B2-A3: the Overview labels an incident / operation with the environment its page prints
+import { environmentFor, openIncidentsOfPortfolio } from "./bffWorldBooks"; // WP-B2-A3: the Overview labels an incident / operation with the environment its page prints
 // ===== WP-B2-A3 begin: the generated universe's requests are derived from its alphas' stage (bffWorldGenerated), not drawn at random
 import { generatedPlans, type GeneratedPlan } from "./bffWorldGenerated";
 // ===== WP-B2-A3 end
@@ -848,7 +848,19 @@ export function governanceBody(path: string, search: URLSearchParams, body: unkn
   if (p === "/governance/approvals") return worldInboxAnswer(search).body;
   if (p === "/governance/approvals/history") return worldHistoryAnswer(body);
   // the Portfolios register is one list: its total is the number of rows it holds, and the Fleet header counts the same portfolios
-  if (p === "/portfolios" && Array.isArray((body as Obj)?.items) && (body as Obj).truncated === false) return { ...(body as Obj), total_portfolios: (body as Obj).items.length };
+  if (p === "/portfolios" && Array.isArray((body as Obj)?.items) && (body as Obj).truncated === false) {
+    // ===== WP-B2-A3 (N8c-02): the register's health is the worst of its deployments AND its open incidents (a portfolio with an open Critical incident is not HEALTHY)
+    const items = ((body as Obj).items as Obj[]).map((item) => {
+      const open = typeof item.portfolio_id === "string" ? openIncidentsOfPortfolio(item.portfolio_id) : [];
+      if (open.length === 0 || item.health?.state !== "PUBLISHED") return item;
+      const rank: Record<string, number> = { HEALTHY: 0, ATTENTION: 1, DEGRADED: 2, HALTED: 3 };
+      const incident = open.some((i) => i.severity === "CRITICAL") ? "DEGRADED" : "ATTENTION";
+      const worst = (rank[item.health.value] ?? 0) >= rank[incident]! ? item.health.value : incident;
+      return { ...item, health: { ...item.health, value: worst, basis: "WORST_OF_DEPLOYMENT_HEALTH_AND_OPEN_INCIDENTS" } };
+    });
+    // ===== WP-B2-A3 end
+    return { ...(body as Obj), items, total_portfolios: items.length };
+  }
   const review = /^\/governance\/approvals\/([A-Za-z0-9._:-]+)\/(r1|r2|live)$/.exec(p);
   if (review !== null && review[2] === "r2" && worldApproval(review[1]!) === undefined) {
     // a generated R2: its exit candidate is a deployment of the generated fleet
