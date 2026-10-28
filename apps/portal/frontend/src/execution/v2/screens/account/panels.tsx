@@ -153,7 +153,7 @@ export function MarginPanel({ ctx }: { ctx: PanelContext }) {
           {margin?.perInstrumentOnly ? <Na why="Published per instrument only" /> : <Value metric={margin?.maintenance} suffix={currency ?? undefined} />}
         </Fact>
         <Fact label="Free balance"><Value metric={head?.free} suffix={currency ?? undefined} /></Fact>
-        <Fact label="Headroom"><Value metric={head?.headroom} suffix={currency ?? undefined} signed /></Fact>
+        <Fact label="Margin headroom"><Value metric={head?.headroom} suffix={currency ?? undefined} signed /></Fact>
         <Fact label="Coverage">{cover ? <Flag kind={cover.kind} label={cover.label} size="sm" /> : <Na />}</Fact>
       </dl>
       {cross ? (

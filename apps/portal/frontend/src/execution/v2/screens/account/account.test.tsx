@@ -865,6 +865,9 @@ describe("Account 360: states", () => {
     const margin = screen.getByRole("region", { name: "Margin" });
     expect(margin.textContent).toContain("Initial marginNot available");
     expect(margin.textContent).toContain("MaintenanceNot available");
+    // B-A3 (d): the card's figure is the account's margin headroom, not the list's capital headroom: it says which.
+    expect(margin.textContent).toContain("Margin headroom");
+    expect(margin.textContent).not.toMatch(/(^|[^n] )Headroom/);
   });
 });
 
