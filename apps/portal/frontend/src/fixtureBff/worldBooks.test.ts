@@ -6,6 +6,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createFixtureServer, loadConfig, resetFixtureGlobals } from "../../../fixture-bff/app";
 import { resetScenario } from "../../../fixture-bff/scenario";
 import { MARKS, WORLD_INCIDENTS, accountFact, bindingFact, toCents, netPnlSeries } from "../../e2e/bffWorld";
+import { isRetired } from "../../e2e/bffWorldStage";
 import {
   accountPositions, alphaDrawdownSeries, alphaWindow, drawdownOfLevels, incidentEnvironmentLabel, limitState, notionalCents, environmentFor, riskTierFor, openIncidentsOfPortfolio, partitionOfEntity, units4,
 } from "../../e2e/bffWorldBooks";
@@ -40,6 +41,16 @@ describe("account positions are quantity x the one world mark", () => {
     }
     // and they are the world's own positions merged
     expect(rows.map((r) => r.notional).sort()).toEqual(accountPositions(id).map((p) => p.notional).sort());
+  });
+});
+
+describe("retired deployments hold no positions", () => {
+  it("Core positions are the sum of its non-retired deployments only", () => {
+    const live = accountFact("acc_bnc_core")!.deployments.filter((d) => !isRetired(d.id)).map((d) => d.id);
+    const retired = accountFact("acc_bnc_core")!.deployments.filter((d) => isRetired(d.id));
+    expect(retired.length).toBeGreaterThan(0);
+    expect(accountPositions("acc_bnc_core")).toEqual(accountPositions("acc_bnc_core", live));
+    expect(accountPositions("acc_bnc_core", retired.map((d) => d.id))).toEqual([]);
   });
 });
 

@@ -14,6 +14,7 @@ import {
   MARKS, WORLD_INCIDENTS, accountFact, bindingFact, deploymentOf, fromCents, incidentState, netPnlOf, netPnlSeries, positionsOf, toCents,
   worldAlphas, type WorldIncident, type WorldPosition,
 } from "./bffWorld";
+import { isRetired } from "./bffWorldStage"; // B-S: a deployment whose stage its alpha has left holds nothing open
 
 /* ── positions: quantity x the one mark ─────────────────────────────────── */
 
@@ -38,6 +39,7 @@ export function accountPositions(accountId: string, deploymentIds?: readonly str
   const ids = deploymentIds ?? accountFact(accountId)?.deployments.map((d) => d.id) ?? [];
   const merged = new Map<string, { symbol: string; side: "long" | "short"; qty: bigint; pnl: bigint }>();
   for (const id of ids) {
+    if (isRetired(id)) continue;
     for (const p of positionsOf(id) as WorldPosition[]) {
       const key = `${p.symbol}:${p.side}`;
       const have = merged.get(key) ?? { symbol: p.symbol, side: p.side, qty: 0n, pnl: 0n };
