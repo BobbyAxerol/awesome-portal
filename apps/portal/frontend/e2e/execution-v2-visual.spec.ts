@@ -19,6 +19,9 @@
  * Compare-only: `updateSnapshots: "none"` in the config stands. Baselines are recorded by scripts/portal-web-visual-record-v2.sh
  * inside the pinned Playwright image. Outside that image the cells skip, so the behavioural V2 lane stays usable on a host.
  */
+import { readFileSync } from "node:fs";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { expect, test, type Page } from "@playwright/test";
 
 import { stubExecutionBff } from "./bffDouble";
@@ -233,6 +236,16 @@ async function stillFrame(page: Page): Promise<void> {
 
 test.use({ locale: "en-US", timezoneId: "UTC", colorScheme: "light" });
 
+// The Overview digest panel reads `GET /visit-digest`. The canonical published fixture's first-visit case answers it, bound to the workspace asked.
+const DIGEST_FIXTURE = resolve(dirname(fileURLToPath(import.meta.url)), "../../../../packages/contracts/fixtures/execution-visit-digest.synthetic.valid.json");
+async function stubVisitDigest(page: Page): Promise<void> {
+  const firstVisit = (JSON.parse(readFileSync(DIGEST_FIXTURE, "utf8")) as { cases: { first_visit: Record<string, unknown> } }).cases.first_visit;
+  await page.route("**/api/v1/execution/visit-digest?**", (route) => {
+    const workspace = new URL(route.request().url()).searchParams.get("workspace_id");
+    return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ ...firstVisit, workspace_id: workspace }) });
+  });
+}
+
 for (const cell of CELLS) {
   for (const width of cell.widths) {
     test(`${cell.group} @ ${width}`, async ({ page, baseURL }) => {
@@ -244,6 +257,7 @@ for (const cell of CELLS) {
       await usePreferences(page, "operations");
       await stubPortalApi(page, "healthy");
       await stubExecutionBff(page, { operationsV2: true, screensV2: true, reviewManager: true });
+      await stubVisitDigest(page);
       await stubAdminRoutes(page);
       await stubQuantbtRuns(page);
       if (cell.scoped) await stubScopedBff(page);
