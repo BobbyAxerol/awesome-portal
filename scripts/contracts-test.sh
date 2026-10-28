@@ -279,7 +279,9 @@ cp -a \
 # This explicit runtime-import closure contains only checked-in public inputs;
 # never copy the whole frontend/BFF tree, env files, configs or credentials.
 for input in \
+  apps/control-api/src/command-center/contracts.ts \
   apps/control-api/src/command-center/visit-digest.ts \
+  apps/control-api/src/domain.ts \
   apps/control-api/src/manager-lists/binding-figures.ts \
   apps/portal/fixture-bff/app.ts \
   apps/portal/fixture-bff/command-story.ts \
@@ -289,10 +291,12 @@ for input in \
   apps/portal/fixture-bff/review-manager.ts \
   apps/portal/fixture-bff/review-relations.ts \
   apps/portal/fixture-bff/review-visit-digest.ts \
+  apps/portal/fixture-bff/roster-names.ts \
   apps/portal/fixture-bff/scenario-apply.ts \
   apps/portal/fixture-bff/scenario.ts \
   apps/portal/fixture-bff/time-rebase.ts \
   apps/portal/frontend/e2e/bffAnswerer.ts \
+  apps/portal/frontend/e2e/bffApprovalWorld.ts \
   apps/portal/frontend/e2e/bffDouble.ts \
   apps/portal/frontend/e2e/bffDoubleAccess.ts \
   apps/portal/frontend/e2e/bffDoubleAccount.ts \
