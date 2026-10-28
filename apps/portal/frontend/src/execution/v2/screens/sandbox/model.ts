@@ -12,6 +12,7 @@
  */
 import type { FlagKind } from "../../flagKinds";
 import type { BlockerItem, NotPublishedId, SpineStageFacts, SpineStageId, StageChipValue, StageChips, TriadRow } from "../../blocks";
+import type { UtcEpochMs } from "../../../screenDataContract";
 import { formatAsOf } from "../../boundary";
 import { unsafeText } from "../../../unsafeText";
 import type { PanelStatus } from "../../../contracts";
@@ -319,7 +320,7 @@ export function isDecided(view: SandboxView): boolean {
 }
 
 /** Who decided and when, from the certification's own timeline (the APPROVE event); `null` when it publishes none. */
-export function decisionOf(view: SandboxView): { atMs: number | null; actor: string | null } | null {
+export function decisionOf(view: SandboxView): { atMs: UtcEpochMs | null; actor: string | null } | null {
   const row = view.timeline?.rows.find((r) => r.action === "APPROVE");
   return row === undefined ? null : { atMs: row.at, actor: row.actor };
 }

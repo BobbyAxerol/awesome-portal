@@ -647,7 +647,7 @@ describe("actions with no route are disabled with their reason", () => {
   it("a record whose workflow is APPROVED is never BLOCKED: the gate says Decided with the decision date and decider, and the stage is Done (QA7 N4-01)", async () => {
     const body = v1Rich();
     body.certification.workflow_state = "APPROVED";
-    body.steps.forEach((step: Draft) => { step.evaluation_state = "PASS"; step.blocker_code = null; });
+    body.steps.forEach((step: Record<string, unknown>) => { step.evaluation_state = "PASS"; step.blocker_code = null; });
     body.progress = { ...body.progress, passed_count: 7, eligible: false, blocker_codes: [] };
     body.timeline.rows = [{ event_id: "evt_1", action: "APPROVE", actor_user_id: "bobby", workflow_version_before: 2, workflow_version_after: 3, created_at: "2026-10-06T12:04:00.000Z" }, ...(body.timeline.rows ?? [])];
     mount(fakeApi({ read: okRead(body) }));
