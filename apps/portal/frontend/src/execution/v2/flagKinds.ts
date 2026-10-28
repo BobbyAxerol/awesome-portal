@@ -57,7 +57,7 @@ export const FLAG_KIND_TABLE: Readonly<Record<FlagKind, FlagKindSpec>> = {
   display: { label: "Catching up", glyph: "⟳", announce: "Display catching up" },
   stale: { label: "Stale", glyph: "◷", announce: "Stale" },
   paused: { label: "Paused", glyph: "❚❚", announce: "Paused" },
-  approval: { label: "Approval", glyph: "◈", announce: "Awaiting approval" },
+  approval: { label: "Approval", glyph: "◈", announce: "Approval" },
   incident: { label: "Incident", glyph: "▲", announce: "Incident" },
   operation: { label: "Operation", glyph: "◆", announce: "Operation" },
   attention: { label: "Needs attention", glyph: "⚠", announce: "Needs attention" },

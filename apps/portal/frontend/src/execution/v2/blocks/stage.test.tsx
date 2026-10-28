@@ -475,17 +475,24 @@ describe("CapGauge · D7: only a server-published ratio draws a bar", () => {
     ["0.79", "ok"],
     ["0.8", "warn"],
     ["0.9499", "warn"],
-    ["0.95", "bad"],
-    ["1", "bad"],
+    ["0.95", "warn"],
+    // QA6 R5-07: consumed == limit is AT LIMIT (warn), red only above the approved limit.
+    ["1", "warn"],
+    ["1.01", "bad"],
   ])("ratio %s is tone %s", (ratio, tone) => {
     const { container } = render(<CapGauge label="Capital" ratio={ratio} />);
     expect(container.querySelector(".exec-gauge-fill")?.getAttribute("data-tone")).toBe(tone);
   });
 
+  it("a ratio of exactly 1 says it is at the limit in words", () => {
+    const { container } = render(<CapGauge label="Capital" ratio="1" />);
+    expect(container.querySelector(".exec-gauge-text")?.textContent).toBe("100.00% used · at limit");
+  });
+
   it("over the cap clamps the bar to its track but keeps the exact figure in the readout", () => {
     const { container } = render(<CapGauge label="Capital" ratio="1.05" />);
     expect((container.querySelector(".exec-gauge-fill") as HTMLElement).style.width).toBe("100%");
-    expect(container.querySelector(".exec-gauge-text")?.textContent).toBe("105.00% used");
+    expect(container.querySelector(".exec-gauge-text")?.textContent).toBe("105.00% used · over limit");
   });
 
   it("a published zero is a bar at zero, not a missing value", () => {

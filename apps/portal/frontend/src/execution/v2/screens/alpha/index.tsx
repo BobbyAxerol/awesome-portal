@@ -335,7 +335,7 @@ function Alpha360({ api, alphaId, workspaceId }: AlphaScreenProps) {
             {tab === "replay" ? null : (
             <dl className="exec-blk-kpis exec-alp2-kpis" aria-label="Current facts">
               {/* QA2 R2-02: the headline is the book in view, deployment by deployment; the other books (Paper and Sandbox are simulated, Canary and Live Real-funded) are listed apart and never added to it. */}
-              <Fig label="Net PnL, current" basis={`${ENV_LABEL[env]} book, current facts, realized and unrealized. Other books apart, never added`}>
+              <Fig label="Net PnL, current" basis={`${ENV_LABEL[env]} book, current facts. Net PnL is the realized figure the source publishes, not equity. Other books apart, never added`}>
                 {view?.money.published === false
                   ? <span><Np id="FE-005" /><WhyMark name="Money, reason" reason={view.money.reason} /></span>
                   : rows.length > 0 ? <BookFigures rows={rows} book={env} metric="netPnl" /> : <Na />}

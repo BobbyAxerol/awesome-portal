@@ -48,8 +48,9 @@ export function fractionToPercent(fraction: string): string | null {
   return decimals === "" ? integer : `${integer}.${decimals}`;
 }
 
+/** Red only ABOVE the approved limit; consumed == limit is AT LIMIT (warn tone, said in words), not a breach (QA6 R5-07). */
 export function toneOfUsed(percent: number): "ok" | "warn" | "bad" {
-  if (percent >= 95) return "bad";
+  if (percent > 100) return "bad";
   if (percent >= 80) return "warn";
   return "ok";
 }
@@ -74,7 +75,7 @@ export function CapGauge({ ratio, label, fe = "FE-071", reasonCode, showText = t
   // Drawing only: the bar is clamped to its track, the readout above keeps the exact figure.
   const drawn = Math.min(100, Math.max(0, Number(percent)));
   const tone = toneOfUsed(Number(percent));
-  const text = `${shown.display}% used`;
+  const text = `${shown.display}% used${Number(percent) === 100 ? " · at limit" : Number(percent) > 100 ? " · over limit" : ""}`;
   return (
     <span className="exec-gauge-wrap" data-state="ready">
       <span className="exec-gauge" role="img" aria-label={`${label}: ${text}`} data-full={ratio} title={`${ratio} of the cap`}>

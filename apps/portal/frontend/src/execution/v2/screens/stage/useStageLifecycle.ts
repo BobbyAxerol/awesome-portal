@@ -13,6 +13,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { ExecutionApi } from "../../../api/ports";
 import type { SpineStageId } from "../../blocks";
 import type { ExecEnv } from "../../urlState";
+import type { UtcEpochMs } from "../../screenDataContract";
 import { lifecycleFacts, type LifecycleFacts } from "../alpha/lifecycleModel";
 import { useManagerDataset } from "../manager/useManagerDataset";
 
@@ -78,8 +79,8 @@ export function useStageCriteria(api: ExecutionApi, alphaId: string | null, stag
  * exit instant): the stage is then a closed record and the screen offers no exit action. `null` = not left, not published or not asked.
  * Nothing is derived: the instant and the decider are the server's words.
  */
-export function useStageExit(api: ExecutionApi, alphaId: string | null, stage: "PAPER" | "SANDBOX" | "CANARY" | "LIVE", env: ExecEnv, workspaceId: string | null): { exitedAtMs: number; decidedBy: string | null } | null {
-  const [found, setFound] = useState<{ key: string; exit: { exitedAtMs: number; decidedBy: string | null } | null } | null>(null);
+export function useStageExit(api: ExecutionApi, alphaId: string | null, stage: "PAPER" | "SANDBOX" | "CANARY" | "LIVE", env: ExecEnv, workspaceId: string | null): { exitedAtMs: UtcEpochMs; decidedBy: string | null } | null {
+  const [found, setFound] = useState<{ key: string; exit: { exitedAtMs: UtcEpochMs; decidedBy: string | null } | null } | null>(null);
   const key = `${alphaId}|${stage}|${env}|${workspaceId ?? ""}`;
   useEffect(() => {
     if (alphaId === null || typeof api.getAlphaLifecycle !== "function") return;

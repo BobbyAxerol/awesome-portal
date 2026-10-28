@@ -32,7 +32,7 @@ import type { SeriesReadState } from "../series/useManagerSeries";
 import type { DrawdownInput } from "../../charts/EquityPanel";
 import type { EvidenceSection } from "../../readers/approvalEvidence";
 import type { LifecycleVenuePnl } from "../../readers/alphaLifecycle";
-import { compareDecimal, showDecimal } from "../../charts";
+import { compareDecimal } from "../../charts";
 import { Na } from "./cells";
 import { DaysValue, RowFigure, WindowedFigures, type DatasetReadState } from "./DatasetFigures";
 
@@ -202,13 +202,16 @@ function Contribution({ rows, noTotals }: { rows: readonly DeploymentRow[]; noTo
       </p>
     );
   }
-  const currencies = [...new Set(rows.map((r) => r.currency ?? ""))].sort();
+  // One chart per book AND currency: Paper and Sandbox are Simulated, Canary and Live Real-funded, and the two are never drawn on one axis (QA6 R2-02/R2-03).
+  const bookOf = (r: DeploymentRow) => (r.stage === "paper" || r.stage === "sandbox" ? "Simulated" : r.stage === "canary" || r.stage === "live" ? "Real-funded" : "Book not stated");
+  const groups = [...new Set(rows.map((r) => `${bookOf(r)}|${r.currency ?? ""}`))].sort();
   return (
     <div className="exec-alp2-contrib">
-      {currencies.map((currency) => {
-        const mine = rows.filter((r) => (r.currency ?? "") === currency);
+      {groups.map((group) => {
+        const [book, currency] = group.split("|") as [string, string];
+        const mine = rows.filter((r) => bookOf(r) === book && (r.currency ?? "") === currency);
         const bars: DivBarRow[] = mine.slice(0, ROW_CAP).map((r) => ({ id: r.id, label: `${r.stageLabel} · ${r.id}`, value: r.netPnl }));
-        return <DivBars key={currency} label={`Current net PnL by deployment, ${currency}`} rows={bars} currency={currency} total={mine.length} />;
+        return <DivBars key={group} label={`Current net PnL by deployment, ${book}, ${currency}`} rows={bars} currency={currency} total={mine.length} />;
       })}
     </div>
   );
