@@ -362,7 +362,8 @@ export function EquityPanel(props: EquityPanelProps) {
           </span>
         ) : null}
         {props.readAsOf !== undefined ? <span><span className="exec-c2-ru">As of</span><span data-testid="readout-asof">{timeOf(props.readAsOf)}</span></span> : null}
-        {ddText !== null ? <span><span className="exec-c2-ru">Drawdown</span><span data-testid="readout-drawdown">{ddText}</span></span> : null}
+        {ddText !== null ? <span><span className="exec-c2-ru">Drawdown at this point (published)</span><span data-testid="readout-drawdown">{ddText}</span></span> : null}
+        {ddModel?.low ? <span><span className="exec-c2-ru">Worst drawdown in the series</span><span data-testid="readout-drawdown-low">{showDecimal(ddModel.low.s, { unit: "pct" })}</span></span> : null}
         {ghostText !== null ? <span><span className="exec-c2-ru">{ghost?.name}</span><span data-testid="readout-ghost">{ghostText}</span></span> : null}
       </div>
 

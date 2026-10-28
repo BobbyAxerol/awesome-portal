@@ -268,6 +268,15 @@ describe("EquityPanel · layers", () => {
     expect(container.querySelector('[data-testid="readout-drawdown"]')?.textContent ?? "").not.toMatch(/as of/);
   });
 
+  it("the drawdown readout is the published point at the cursor, labelled as such, beside the series' worst point (QA8 N8b-05)", () => {
+    const dd = series(["-0.0020", "-0.0300", "-0.0100"]);
+    const { container } = render(<EquityPanel label="Equity" points={BASIC} drawdown={{ kind: "series", points: dd }} />);
+    const text = container.querySelector(".exec-c2-readout")!.textContent!;
+    expect(text).toContain("Drawdown at this point (published)");
+    expect(text).toContain("Worst drawdown in the series");
+    expect(container.querySelector('[data-testid="readout-drawdown-low"]')?.textContent).toMatch(/3/);
+  });
+
   it("clips the drawdown series to the plot, so a series that starts before the axis never draws outside the panel (QA7 N2-06)", () => {
     const dd = series(["-0.0100", "-0.0200", "-0.0150"]);
     const { container } = render(<EquityPanel label="Equity" points={BASIC} drawdown={{ kind: "series", points: dd }} />);
