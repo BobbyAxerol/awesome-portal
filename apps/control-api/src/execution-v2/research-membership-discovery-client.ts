@@ -36,10 +36,34 @@ const binding = z.object({ request_id: uuid, human_issuer: scopeText, subject: s
   environment: z.literal("paper"), workload_id: scopeText }).strict();
 const response = binding.extend({ schema_version: z.literal("pma.research-membership-discovery-result.v1"),
   observation }).strict();
-export type ResearchMembershipObservation = z.infer<typeof observation>;
+// V2 is a distinct, opt-in Edge wire. PostgreSQL BIGINT revisions travel as
+// canonical decimal text, never through a JavaScript Number. V1 remains exact.
+const revisionV2 = z.string().regex(/^[1-9][0-9]{0,18}$/)
+  .refine(value => /^[1-9][0-9]{0,18}$/.test(value) && BigInt(value) <= 9223372036854775807n);
+const lineageV2 = lineage.extend({ version: revisionV2 }).strict();
+const nativeReferenceV2 = nativeReference.extend({ version: revisionV2, policy_revision: revisionV2,
+  evaluated_memberships: z.array(z.tuple([text, revisionV2])).max(8) }).strict();
+const candidateV2 = z.discriminatedUnion("state", [
+  lineageV2.extend({ state: z.literal("RECEIPT_NOT_FOUND") }).strict(),
+  lineageV2.extend({ state: z.literal("NATIVE_RECEIPT_OR_LINEAGE_NOT_VALID"), reason: text }).strict(),
+  lineageV2.extend({ state: z.literal("NATIVE_RECEIPT_AND_CURRENT_LINEAGE_OBSERVED"),
+    reference: nativeReferenceV2, current_lineage: z.array(lineageV2).min(1).max(9) }).strict(),
+]);
+const observationV2 = z.discriminatedUnion("state", [
+  z.object({ schema_version: z.literal("portal.edge.research-membership-observation.v2"),
+    state: z.literal("MAPPING_NOT_FOUND"), candidates: z.array(candidateV2).length(0) }).strict(),
+  z.object({ schema_version: z.literal("portal.edge.research-membership-observation.v2"),
+    state: z.literal("OBSERVED_NOT_AUTHORIZED"), mapping_revision: z.string().max(128),
+    policy_revision: revisionV2, candidates: z.array(candidateV2).max(8) }).strict(),
+]);
+const responseV2 = binding.extend({ schema_version: z.literal("portal.edge.research-membership-discovery-result.v2"),
+  observation: observationV2 }).strict();
+export type ResearchMembershipObservation = z.infer<typeof observation> | z.infer<typeof observationV2>;
 
 export interface ResearchMembershipDiscoveryConfig {
   origin: string;
+  /** Explicit commissioning selection; missing remains V1 for compatibility. */
+  wire_version?: "v1" | "v2";
   tls: Pick<ConnectionOptions, "key" | "cert" | "ca">;
   source_certificate_sha256: string;
   human_issuer: string;
@@ -73,12 +97,15 @@ export class ResearchMembershipDiscoveryClient {
         || !(isIP(host) === 4 ? /^(?:127\.|10\.|192\.168\.|172\.(?:1[6-9]|2[0-9]|3[01])\.)/.test(host)
           : isIP(host) === 6 && (host === "::1" || /^(?:fc|fd)/i.test(host)))
         || !input.tls.key || !input.tls.cert || !input.tls.ca
+        || (input.wire_version !== undefined && input.wire_version !== "v1" && input.wire_version !== "v2")
         || !Number.isSafeInteger(input.deadline_ms) || input.deadline_ms < 1 || input.deadline_ms > 10_000
         || !Number.isSafeInteger(input.response_bytes) || input.response_bytes < 1 || input.response_bytes > 32768
         || !Number.isSafeInteger(input.max_inflight) || input.max_inflight < 1 || input.max_inflight > 16
         || !Number.isSafeInteger(input.installation_expires_at_utc_ms) || input.installation_expires_at_utc_ms <= Date.now())
         throw new Error();
-      this.url = new URL("/internal/elp210/current-human/membership-discovery", origin);
+      this.url = new URL(input.wire_version === "v2"
+        ? "/internal/elp210/current-human/membership-discovery-v2"
+        : "/internal/elp210/current-human/membership-discovery", origin);
       this.config = { ...input, tls: { key: input.tls.key, cert: input.tls.cert, ca: input.tls.ca } };
     } catch { throw new ResearchMembershipDiscoveryError("RESEARCH_DISCOVERY_CONFIG_INVALID"); }
   }
@@ -93,7 +120,8 @@ export class ResearchMembershipDiscoveryClient {
     const expected = binding.parse({ request_id: randomUUID(), human_issuer: this.config.human_issuer,
       subject: this.config.subject, workspace_id: this.config.workspace_id, environment: "paper",
       workload_id: this.config.workload_id });
-    const payload = Buffer.from(JSON.stringify({ schema_version: "pma.research-membership-discovery.v1", ...expected }));
+    const payload = Buffer.from(JSON.stringify({ schema_version: this.config.wire_version === "v2"
+      ? "portal.edge.research-membership-discovery.v2" : "pma.research-membership-discovery.v1", ...expected }));
     if (payload.length > 8192) throw new ResearchMembershipDiscoveryError("RESEARCH_DISCOVERY_REQUEST_INVALID");
     if (this.inFlight >= this.config.max_inflight) throw new ResearchMembershipDiscoveryError("RESEARCH_DISCOVERY_BUSY");
     this.inFlight++;
@@ -128,7 +156,8 @@ export class ResearchMembershipDiscoveryClient {
             res.on("end", () => {
               if (settled) return;
               try {
-                const reply = response.parse(nativeRootDecode(Buffer.concat(chunks), this.config.response_bytes));
+                const decoded = nativeRootDecode(Buffer.concat(chunks), this.config.response_bytes);
+                const reply = this.config.wire_version === "v2" ? responseV2.parse(decoded) : response.parse(decoded);
                 for (const key of ["request_id", "human_issuer", "subject", "workspace_id", "environment", "workload_id"] as const)
                   if (reply[key] !== expected[key]) throw new Error();
                 const result = reply.observation;

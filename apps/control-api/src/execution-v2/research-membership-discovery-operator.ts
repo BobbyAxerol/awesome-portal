@@ -39,7 +39,8 @@ export async function runResearchMembershipDiscovery(options: { manifest: z.infe
     const expected = binding.parse(decoded);
     const prepared = await prepareResearchMembershipDiscovery(manifestPin, expected); dispose = prepared.dispose;
     const observation = await prepared.client.observe();
-    const bytes = Buffer.from(nativeRootCanonical({ schema_version: "portal.research-membership-observation-artifact.v1",
+    const bytes = Buffer.from(nativeRootCanonical({ schema_version: observation.schema_version === "portal.edge.research-membership-observation.v2"
+      ? "portal.research-membership-observation-artifact.v2" : "portal.research-membership-observation-artifact.v1",
       manifest_sha256: manifestPin.sha256, binding_sha256: bindingPin.sha256, observation }));
     if (bytes.length > 65536) throw new Error();
     // Check the same private directory again immediately before creating an

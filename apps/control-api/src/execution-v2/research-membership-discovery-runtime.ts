@@ -27,6 +27,7 @@ export const researchMembershipDiscoveryManifest = z.object({
   target: z.object({ kind: z.literal("RESEARCH"), environment: z.literal("paper"),
     human_issuer: text, subject: text, workspace_id: text, workload_id: text }).strict(),
   transport: z.object({ origin, edge_leaf_sha256: z.string().regex(/^sha256:[a-f0-9]{64}$/),
+    wire_version: z.enum(["v1", "v2"]).optional(),
     key_ref: pin, cert_ref: pin, ca_ref: pin, deadline_ms: bounded.max(10000),
     response_bytes: bounded.max(32768), max_inflight: bounded.max(16) }).strict(),
   not_before_utc_ms: bounded, expires_at_utc_ms: bounded,
@@ -80,6 +81,7 @@ export async function prepareResearchMembershipDiscovery(reference: z.infer<type
     }
     createSecureContext({ key, cert, ca, minVersion: "TLSv1.3", maxVersion: "TLSv1.3" });
     const client = new ResearchMembershipDiscoveryClient({ origin: manifest.transport.origin,
+      wire_version: manifest.transport.wire_version,
       source_certificate_sha256: manifest.transport.edge_leaf_sha256,
       human_issuer: manifest.target.human_issuer, subject: manifest.target.subject,
       workspace_id: manifest.target.workspace_id, workload_id: manifest.target.workload_id,

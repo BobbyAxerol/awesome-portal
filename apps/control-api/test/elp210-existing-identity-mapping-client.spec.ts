@@ -230,6 +230,43 @@ describe("ELP2-10 existing identity mapping client (TEST_ONLY real loopback mTLS
       await expect(discovery(lane.origin).observe()).rejects.toMatchObject({ code: "RESEARCH_DISCOVERY_UNAVAILABLE" });
     }
   });
+  it("explicit V2 preserves PostgreSQL BIGINT revision text through the pinned Edge response", async () => {
+    const big = "9223372036854775807";
+    const reference = { command_id: "fixture", membership_id: "child", version: big,
+      scope: { portfolio_id: "portfolio", environment: "paper" }, policy_revision: big, requester: userId,
+      after_digest: "a".repeat(64), before_digest: "b".repeat(64), intent_digest: "c".repeat(64),
+      effective_at: "2026-01-01T00:00:00+00:00", evaluated_memberships: [["root", big]] };
+    const observation = { schema_version: "portal.edge.research-membership-observation.v2", state: "OBSERVED_NOT_AUTHORIZED",
+      mapping_revision: `ts-user:${userId}:${big}`, policy_revision: big, candidates: [{ membership_id: "child", version: big,
+        state: "NATIVE_RECEIPT_AND_CURRENT_LINEAGE_OBSERVED", reference, current_lineage: [{ membership_id: "child", version: big }] }] };
+    const lane = await peer(source, (req, body) => {
+      expect(req.url).toBe("/internal/elp210/current-human/membership-discovery-v2");
+      expect(body.schema_version).toBe("portal.edge.research-membership-discovery.v2");
+      return { body: JSON.stringify({ ...body, schema_version: "portal.edge.research-membership-discovery-result.v2", observation }) };
+    });
+    expect(await discovery(lane.origin, { wire_version: "v2" }).observe()).toEqual(observation);
+    expect(lane.requests()).toBe(1);
+  });
+  it.each([0, "0", "01", "9223372036854775808", "-1", "1e3", " 1 "])(
+    "V2 refuses noncanonical, numeric or out-of-range source revision %s", async invalid => {
+      const observed = { schema_version: "portal.edge.research-membership-observation.v2", state: "OBSERVED_NOT_AUTHORIZED",
+        mapping_revision: `ts-user:${userId}:1`, policy_revision: invalid, candidates: [] };
+      const lane = await peer(source, (_req, body) => ({ body: JSON.stringify({ ...body,
+        schema_version: "portal.edge.research-membership-discovery-result.v2", observation: observed }) }));
+      await expect(discovery(lane.origin, { wire_version: "v2" }).observe()).rejects.toMatchObject({ code: "RESEARCH_DISCOVERY_UNAVAILABLE" });
+      expect(lane.requests()).toBe(1); // no fallback to V1 after a refusal
+    });
+  it("V2 rejects candidate/reference/lineage mismatches without creating authority", async () => {
+    const observed = { schema_version: "portal.edge.research-membership-observation.v2", state: "OBSERVED_NOT_AUTHORIZED",
+      mapping_revision: `ts-user:${userId}:1`, policy_revision: "1", candidates: [{ membership_id: "child", version: "2",
+        state: "NATIVE_RECEIPT_AND_CURRENT_LINEAGE_OBSERVED", current_lineage: [{ membership_id: "child", version: "2" }],
+        reference: { command_id: "fixture", membership_id: "child", version: "1", scope: { portfolio_id: "portfolio", environment: "paper" },
+          policy_revision: "1", requester: userId, after_digest: "a".repeat(64), before_digest: "b".repeat(64),
+          intent_digest: "c".repeat(64), effective_at: "2026-01-01T00:00:00+00:00", evaluated_memberships: [] } }] };
+    const lane = await peer(source, (_req, body) => ({ body: JSON.stringify({ ...body,
+      schema_version: "portal.edge.research-membership-discovery-result.v2", observation: observed }) }));
+    await expect(discovery(lane.origin, { wire_version: "v2" }).observe()).rejects.toMatchObject({ code: "RESEARCH_DISCOVERY_UNAVAILABLE" });
+  });
   it("hydrates exact pinned Research runtime privately and wipes material on disposal", async () => {
     const lane = await peer(source, (_req, body) => ({ body: discoveryReply(body, absent) }));
     const dir = await mkdtemp(join(tmpdir(), "research-discovery-test-")), paths: string[] = [];
@@ -293,6 +330,40 @@ describe("ELP2-10 existing identity mapping client (TEST_ONLY real loopback mTLS
       await symlink(dir, link); paths.push(link);
       await expect(runResearchMembershipDiscovery({ manifest: manifestRef, binding: bindingRef, outputDirectory: link }))
         .rejects.toMatchObject({ code: "RESEARCH_DISCOVERY_OPERATOR_FAILED" });
+      expect(lane.requests()).toBe(1);
+    } finally {
+      for (const path of paths) await unlink(path);
+      await rmdir(dir);
+    }
+  });
+  it("pins V2 through the runtime manifest and writes an explicitly versioned private artifact", async () => {
+    const observed = { schema_version: "portal.edge.research-membership-observation.v2", state: "MAPPING_NOT_FOUND", candidates: [] };
+    const lane = await peer(source, (req, body) => {
+      expect(req.url).toBe("/internal/elp210/current-human/membership-discovery-v2");
+      return { body: JSON.stringify({ ...body, schema_version: "portal.edge.research-membership-discovery-result.v2", observation: observed }) };
+    });
+    const dir = await mkdtemp(join(tmpdir(), "research-discovery-v2-")), paths: string[] = [];
+    const file = async (name: string, bytes: Buffer) => {
+      const path = join(dir, name); await writeFile(path, bytes, { mode: 0o600, flag: "wx" }); paths.push(path);
+      return { path, sha256: createHash("sha256").update(bytes).digest("hex") };
+    };
+    try {
+      const manifest = { schema_version: "portal.research-membership-discovery-runtime.v1",
+        target: { kind: "RESEARCH", ...selection, subject },
+        transport: { origin: lane.origin, wire_version: "v2", edge_leaf_sha256: source.fingerprint,
+          key_ref: await file("key", core.key), cert_ref: await file("cert", core.cert), ca_ref: await file("ca", core.ca),
+          deadline_ms: 1000, response_bytes: 32768, max_inflight: 1 },
+        not_before_utc_ms: Date.now() - 1000, expires_at_utc_ms: Date.now() + 60_000 };
+      const manifestRef = await file("manifest", Buffer.from(nativeRootCanonical(manifest)));
+      const bindingRef = await file("binding", Buffer.from(nativeRootCanonical({
+        schema_version: "portal.research-membership-discovery-binding.v1", human_issuer: selection.human_issuer,
+        subject, workspace_id: selection.workspace_id })));
+      const result = await runResearchMembershipDiscovery({ manifest: manifestRef, binding: bindingRef, outputDirectory: dir });
+      paths.push(result.path);
+      const bytes = await readFile(result.path);
+      expect(createHash("sha256").update(bytes).digest("hex")).toBe(result.sha256);
+      expect(JSON.parse(bytes.toString("utf8"))).toEqual({ schema_version: "portal.research-membership-observation-artifact.v2",
+        manifest_sha256: manifestRef.sha256, binding_sha256: bindingRef.sha256, observation: observed });
       expect(lane.requests()).toBe(1);
     } finally {
       for (const path of paths) await unlink(path);
