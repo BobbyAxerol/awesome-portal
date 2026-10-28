@@ -101,7 +101,8 @@ describe("Canary (dep_canary_01): the design's elements are data", () => {
     expect(chip("freshness")).toContain("Fresh");
     expect(chip("reconciliation")).toContain("No open findings");
     expect(text()).toContain("Real capital at risk");
-    await ticks(4);
+    // the Canary spine reads the published lifecycle like Paper and Sandbox: Carry A has R1, R2, Paper, Sandbox and Canary DONE (QA8 N8a-03)
+    await ticks(5);
     expect(text()).toContain("Trial day 6 of 14");
     expect(text()).toContain("Started 12 Oct 08:00Z");
     expect(text()).toContain("Exit review opens 26 Oct 08:00Z");
