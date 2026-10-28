@@ -100,6 +100,14 @@ describe("chips: runtime and reconciliation are the server's stage facts", () =>
     expect(chipsOf(viewOf(body)).runtime).toMatchObject({ state: "flag", kind, label });
   });
 
+  it("a STOPPED runtime has ended: the freshness chip says Ended with the stop instant, never Fresh (QA6 R5-10)", () => {
+    const body = published();
+    body.stage_facts.runtime.runtime_state.value = "STOPPED";
+    const chip = chipsOf(viewOf(body)).freshness;
+    expect(chip).toMatchObject({ state: "dot", tone: "mute", text: "Ended · 12 Oct 08:00Z" });
+    expect(JSON.stringify(chip)).not.toMatch(/Fresh/);
+  });
+
   it("NO_OPEN_FINDINGS is worded as a statement about the findings relation, never Clean or Reconciled", () => {
     const body = published();
     const r = body.stage_facts.reconciliation;

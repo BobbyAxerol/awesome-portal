@@ -57,6 +57,7 @@ import {
   LOADING_CHIPS,
   SPINE_ROUTES,
   bannersOf,
+  endedAt,
   chipsOf,
   kpiCells,
   panelLine,
@@ -214,7 +215,7 @@ function CanaryBody({ api, deploymentId, workspaceId }: CanaryScreenProps) {
       }
       chips={chips}
       spine={{ current: "canary", onSelect: spineSelect, stages: history, lockAhead: true }}
-      extra={current === null ? undefined : <TrialStrip trial={trialOf(current)} calendar={trialCalendar(current)} />}
+      extra={current === null ? undefined : <TrialStrip trial={trialOf(current)} calendar={trialCalendar(current)} endedAt={endedAt(current)} />}
       renderLink={(to, children) => <Link to={to}>{children}</Link>}
     />
   );

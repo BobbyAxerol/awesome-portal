@@ -81,8 +81,20 @@ function runtimeChip(view: CanaryView): StageChipValue {
   }
 }
 
+/**
+ * The instant the server says the runtime stopped (`stage_facts.runtime`, STOPPED with a `since`), as text; `null` when the runtime is not
+ * published as stopped. A stopped trial has ended: its figures are the last ones, not live ones (QA6 R5-05, R5-10).
+ */
+export function endedAt(view: CanaryView): string | null {
+  const r = view.runtime;
+  if (r === null || r.state.kind !== "value" || r.state.value !== "STOPPED" || r.sinceMs.kind !== "value") return null;
+  return timeOf(r.sinceMs.value);
+}
+
 /** The freshness of the broker snapshot, the one the guard rule is about; other panels are not blended into it. */
 export function freshnessChip(view: CanaryView): StageChipValue {
+  const ended = endedAt(view);
+  if (ended !== null) return { state: "dot", tone: "mute", text: `Ended · ${ended}`, note: "The runtime stopped; the figures are the last ones" };
   const broker = view.broker;
   if (broker === null) return { state: "not-available", reason: "No source panel in this response" };
   if (broker.state === "suppressed") return { state: "not-available", reason: "Withheld by the server" };

@@ -13,7 +13,7 @@ import { FE } from "./model";
 
 const stampGap = (label: string, stamp: Stamp): GapItem[] => (stamp.kind === "time" ? [] : [{ label, id: FE.envelope, reason: stamp.reasonCode }]);
 
-export function TrialStrip({ trial, calendar }: { trial: TrialFact; calendar: TrialCalendar }) {
+export function TrialStrip({ trial, calendar, endedAt = null }: { trial: TrialFact; calendar: TrialCalendar; /** When the runtime stopped: the trial is then read as finished, not as "day N of M". */ endedAt?: string | null }) {
   const gaps: GapItem[] = [
     ...(trial.kind === "day" ? [] : [{ label: "Trial day", id: FE.envelope }]),
     ...stampGap("Started", calendar.started),
@@ -21,7 +21,11 @@ export function TrialStrip({ trial, calendar }: { trial: TrialFact; calendar: Tr
   ];
   return (
     <div className="exec-cny-trial" role="group" aria-label="Trial schedule">
-      {trial.kind === "day" ? (
+      {endedAt !== null ? (
+        <span className="exec-cny-trial-day" data-testid="trial-ended">
+          Trial ended <span className="exec-blk-num">{endedAt}</span>
+        </span>
+      ) : trial.kind === "day" ? (
         <>
           <span className="exec-cny-trial-day">Trial day {trial.day} of {trial.total}</span>
           <span className="exec-cny-ticks" role="img" aria-label={`Day ${trial.day} of ${trial.total}`}>
