@@ -137,7 +137,7 @@ export function stageBookOf(deploymentId: string, minFillsAsked?: number): Stage
   const standing = standingOf(deploymentId);
   if (standing === null || standing.exitMs === null) return base;
   const minFills = minFillsAsked ?? (standing.stage === "paper" ? PAPER_POLICY_MIN_TRADES : 0);
-  const delta = standing.exitMs - WORLD_NOW_MS;
+  const delta = 0; // WP-B2-O: the blotter already places a retired deployment's orders and fills inside its window; nothing is shifted
   const orders = base.orders.map((order) => {
     const moved = shifted(order, delta);
     return TERMINAL.has(String(moved.status).toUpperCase()) ? moved : { ...moved, status: "CANCELED" };
