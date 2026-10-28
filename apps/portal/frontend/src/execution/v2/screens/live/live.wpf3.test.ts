@@ -58,3 +58,13 @@ describe("the dark variant", () => {
     expect(simulateStage("/deployments/dep_live_01_dark/live", v1Raw())).toBeNull();
   });
 });
+
+describe("typed panel warnings in words (QA7 N2-04)", () => {
+  it("POSITIONS_OPENED_BEFORE_THE_RETAINED_ORDER_WINDOW reads as a sentence; an unknown code is not turned into one", async () => {
+    const { warningWords } = await import("./model");
+    expect(warningWords(["POSITIONS_OPENED_BEFORE_THE_RETAINED_ORDER_WINDOW", "SOMETHING_NEW", "POSITIONS_OPENED_BEFORE_THE_RETAINED_ORDER_WINDOW"])).toEqual([
+      "These positions were opened before the retained order window; their opening orders are not listed.",
+    ]);
+    expect(warningWords([])).toEqual([]);
+  });
+});

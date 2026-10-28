@@ -126,6 +126,7 @@ export function ExposureTab({ model, v2, paging }: TabProps) {
         </>
       ) : (
         <>
+          {model.panelWarnings.map((text) => <p key={text} className="exec-liv-line" data-testid="panel-warning">{text}</p>)}
           {v1.positionsGap ? null : <V1RowsSection title="Positions" aside="Internal figures" rows={model.v1Rows?.positions ?? { kind: "none" }} what="Position rows" />}
           {v1.ordersGap ? null : <V1RowsSection title="Orders" rows={model.v1Rows?.orders ?? { kind: "none" }} what="Open order rows" />}
         </>

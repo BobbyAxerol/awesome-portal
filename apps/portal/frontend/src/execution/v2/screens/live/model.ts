@@ -242,6 +242,8 @@ export interface LiveModel {
   triad: TriadModel | null;
   /** V1 body: its positions and orders; `null` for a V2 body (its panels are in `coverage` and the retained tables). */
   v1Rows: V1Rows | null;
+  /** Typed warning codes of the retained panels, worded (QA7 N2-04); empty when none is published. */
+  panelWarnings: readonly string[];
   continuity: ContinuityModel;
   coverage: readonly CoverageRow[];
   predecessor: PredecessorModel;
@@ -309,6 +311,14 @@ export function capCaption(input: { shown: number; loaded: number; total: number
 }
 
 /* ── V1 ───────────────────────────────────────────────────────────────────── */
+
+/** The typed warning codes this build knows, in words; a code it does not know is not printed as a sentence of ours. */
+const WARNING_WORDS: Readonly<Record<string, string>> = {
+  POSITIONS_OPENED_BEFORE_THE_RETAINED_ORDER_WINDOW: "These positions were opened before the retained order window; their opening orders are not listed.",
+};
+export function warningWords(codes: readonly string[]): readonly string[] {
+  return [...new Set(codes)].flatMap((code) => (Object.hasOwn(WARNING_WORDS, code) ? [WARNING_WORDS[code]!] : []));
+}
 
 const KPI_SLOTS: readonly { key: string; label: string; signed: boolean }[] = [
   { key: "capital", label: "Capital", signed: false },
@@ -710,6 +720,7 @@ export function liveModelV1(live: LiveFullOperations): LiveModel {
       suppressed,
       rowsPublished: figures !== null,
     },
+    panelWarnings: warningWords(Object.values(live.panels).flatMap((p) => (p === undefined ? [] : p.warningCodes))),
     v1Rows: { positions: rowsPanelV1(live, "positions", live.positionRows, mismatch), orders: rowsPanelV1(live, "orders", live.orderRows, mismatch) },
     continuity: continuityV1(live),
     coverage: [],
@@ -885,6 +896,7 @@ export function liveModelV2(v2: LiveSourceOperationsV2): LiveModel {
     mismatch: false,
     triad: null,
     v1Rows: null,
+    panelWarnings: [],
     continuity: {
       flag: { kind: "na", label: "Not available" },
       rows: [
