@@ -59,14 +59,10 @@ const OPEN_TIES: Readonly<Record<string, string>> = {
   W04: "Overview links dep_88/dep_74/op_1251/op_1249 and ops ids dep_TEST_ONLY_eth do not resolve (B-A)",
   W05: "Overview fleet 182 vs Fleet 72, portfolios 21 vs 25, register 25 vs 24 rows (B-A)",
   W06: "approval preview base 85,000 vs register 75,000; portfolio resource allocation differs from register (B-A)",
-  W07: "alpha/room orders (ord_001, canary/live rows) are not in the blotter (B-O)",
-  W07b: "blotter ord_00300 updated/filled after the blotter's own as-of (B-O)",
-  W07c: "replay observes orders at submit time, the blotter updated time (B-O)",
   W08: "BTCUSDT mark 67410 / 165000 vs 66470.50 (B-C)",
   W08b: "sleeve equity: alpha pages vs account page; exposure vs position notionals (B-C)",
   W09: "alpha resource net PnL (realized+unrealized) vs dataset net PnL (realized) (B-C)",
   W11: "operations rows: environment contradicts the target's stage / books (B-O)",
-  W13: "datasets and operations are read on 22 Aug / 1 Sep, the world rooms on 17 Oct (B-O)",
 };
 
 let server: Server;
