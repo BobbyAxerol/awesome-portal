@@ -172,11 +172,11 @@ const CELLS: readonly Cell[] = [
     slug: "incident-drawer",
     group: "Incident drawer",
     route: "/execution/operations/incidents/inc_TEST_ONLY_fx_mismatch",
-    root: ".exec-ops",
+    root: '[data-page="incident"]',
     widths: DOCK,
     shot: "viewport",
     ready: async (page) => {
-      await expect(page.locator(".exec-dock")).toHaveCount(1);
+      await expect(page.getByRole("heading", { level: 1, name: /incident on portfolio/i })).toBeVisible();
     },
   },
 ];
