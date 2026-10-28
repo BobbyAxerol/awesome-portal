@@ -158,7 +158,7 @@ function decodeCursor(raw: string): { k: string; s: string } | null {
 function simulatedStatusCounts(all: readonly Row[], applied: readonly { field: string; value: string }[]): Record<string, unknown> {
   const dimension = (param: string, domain: readonly string[]) => {
     const others = applied.filter((a) => a.field !== param);
-    const rows = all.filter((row) => others.every((a) => FILTERS.find((f) => f.param === a.field)!.field(row) === a.value));
+    const rows = all.filter((row) => others.every((a) => FILTERS.find((f) => f.param === a.field)!.field(row) === (a.field === "target_id" ? deploymentOfVariant(a.value) : a.value))); // WP-B2-S3 (QA9 N9a-02): the facets count the SAME rows the filter selected (a variant id selects its deployment's rows)
     const counts: Record<string, number> = Object.fromEntries(domain.map((key) => [key, 0]));
     for (const row of rows) {
       const key = String(row[param]);

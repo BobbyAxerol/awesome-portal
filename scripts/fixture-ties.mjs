@@ -1017,6 +1017,17 @@ export async function runWorldTies(get) {
     const age = ms(r.body.read_at) - ms(r.body.as_of);
     check("W74", !(age > 7 * 86_400_000 && r.body.freshness === "FRESH"), `${id}: freshness ${r.body.freshness} for data ${Math.round(age / 86_400_000)} days older than the read`);
   }
+  // W100 (QA9 N9a-02): the Operations queue under a target filter (a deployment id or a variant id of it) is internally readable: the filters echo the request, every facet dimension counts the same rows the filter selected (the reader is closed and rejects a body whose facets disagree)
+  for (const target of ["dep_live_01", "dep_live_01_mismatch", "dep_live_01_gap"]) {
+    const q = await ok200(`${E}/operations?target_id=${target}&limit=50&sort=created_at:desc`);
+    const page = q?.page;
+    check("W100", page !== undefined, `${target}: the queue did not answer`);
+    if (page === undefined) continue;
+    check("W100", (page.applied_filters ?? []).some((f) => f.field === "target_id" && f.value === target), `${target}: the filters echo ${JSON.stringify(page.applied_filters)}`);
+    for (const [name, dimension] of Object.entries(page.status_counts?.dimensions ?? {})) {
+      check("W100", dimension.total === page.filtered_count, `${target}: facet ${name} counts ${dimension.total}, the filtered set is ${page.filtered_count}`);
+    }
+  }
   // ===== WP-B2-S3 end
   // ===== WP-B2-A3 begin
   // ── W19: a request exists only for the NEXT gate of its subject, once, and its quorum is open (R3-02, R3-09, R3-10, R3-03) ───────────────────────────────
