@@ -39,7 +39,7 @@ import type { SeriesPoint as ChartPoint } from "../../charts/types";
 import { readAsOf } from "../../boundary";
 import { AlphaNameLine } from "../stage/AlphaNameLine";
 import { alphaCrumb, portfolioLabel, stageIdentity } from "../stage/identity";
-import { spineHistory, useStageLifecycle } from "../stage/useStageLifecycle";
+import { spineHistory, useLifecycleStages, useStageLifecycle, viewingLifecycle } from "../stage/useStageLifecycle";
 import { useContextFacts } from "../../shell/contextFacts";
 import { safeInternalHref } from "../../safeHref";
 import { useExecUrlState, withContext } from "../../urlState";
@@ -146,7 +146,11 @@ function CanaryBody({ api, deploymentId, workspaceId }: CanaryScreenProps) {
   const identity = stageIdentity(view?.identity ?? null);
   const alpha = alphaCrumb(identity);
   // The stages the alpha has completed (FE-027): the ticks of the spine, from the alpha's Manager dataset when it publishes them.
-  const history = spineHistory(useStageLifecycle(api, identity.alphaId, "canary", "live", wsId ?? null));
+  const lifecycleStages = useLifecycleStages(api, identity.alphaId, "live", wsId ?? null);
+  const viewing = viewingLifecycle(lifecycleStages, "canary");
+  const datasetHistory = spineHistory(useStageLifecycle(api, identity.alphaId, "canary", "live", wsId ?? null));
+  // The dataset's history plus the published lifecycle's DONE stages; the Canary page marks the stage being viewed and says where the alpha is (QA8 N8a-03).
+  const history = datasetHistory === undefined && lifecycleStages === null ? undefined : { ...(datasetHistory ?? {}), ...viewing.done };
   const crumb: readonly StageCrumb[] = [
     { label: "Alpha Fleet", to: linkTo("/deployments/alphas") },
     ...(alpha === null ? [] : [{ label: alpha.label, to: linkTo(alpha.to) }]),
@@ -215,7 +219,12 @@ function CanaryBody({ api, deploymentId, workspaceId }: CanaryScreenProps) {
       }
       chips={chips}
       spine={{ current: "canary", onSelect: spineSelect, stages: history, lockAhead: true }}
-      extra={current === null ? undefined : <TrialStrip trial={trialOf(current)} calendar={trialCalendar(current)} endedAt={endedAt(current)} />}
+      extra={
+        <>
+          {current === null ? null : <TrialStrip trial={trialOf(current)} calendar={trialCalendar(current)} endedAt={endedAt(current)} />}
+          <p className="exec-cny-trial-fact" data-testid="spine-viewing">{viewing.note}</p>
+        </>
+      }
       renderLink={(to, children) => <Link to={to}>{children}</Link>}
     />
   );

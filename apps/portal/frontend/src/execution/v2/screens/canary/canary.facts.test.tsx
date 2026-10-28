@@ -124,6 +124,20 @@ describe("chips: runtime and reconciliation are the server's stage facts", () =>
     for (const item of dated) expect(screen.getAllByText(`Historical, checked ${item.checked}`).length).toBeGreaterThan(0);
   });
 
+  it("the canary spine says it marks the viewed stage and where the published lifecycle has the alpha: Canary done, Live now (QA8 N8a-03)", async () => {
+    const port = canaryPort(answering(published())) as unknown as Record<string, unknown>;
+    const stage = (id: string, state: string) => ({ stage: id, state, enteredAtMs: 1, exitedAtMs: state === "DONE" ? 2 : null, daysInStage: 3, criteria: null, deciderRole: null, decidedBy: null, receiptRef: null, blockedReason: null });
+    port.getAlphaLifecycle = async () => ({ ok: true, value: { stages: { state: "PUBLISHED", value: [stage("CANARY", "DONE"), stage("LIVE", "CURRENT")] } } });
+    render(
+      <MemoryRouter initialEntries={[`/deployments/live/${DEP}/canary`]}>
+        <CanaryScreen api={port as never} deploymentId={DEP} />
+      </MemoryRouter>,
+    );
+    await ready();
+    await waitFor(() => expect(screen.getByTestId("spine-viewing").textContent).toMatch(/You are viewing the Canary record.*in Live now/));
+    await waitFor(() => expect(document.querySelector('.exec-blk-spine-node[data-stage="canary"]')?.getAttribute("data-s")).toBe("done"));
+  });
+
   it("NO_OPEN_FINDINGS is worded as a statement about the findings relation, never Clean or Reconciled", () => {
     const body = published();
     const r = body.stage_facts.reconciliation;
