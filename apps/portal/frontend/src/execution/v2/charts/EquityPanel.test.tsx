@@ -261,6 +261,14 @@ describe("EquityPanel · layers", () => {
     expect(y).toBeGreaterThan(tickBottom);
   });
 
+  it("clips the drawdown series to the plot, so a series that starts before the axis never draws outside the panel (QA7 N2-06)", () => {
+    const dd = series(["-0.0100", "-0.0200", "-0.0150"]);
+    const { container } = render(<EquityPanel label="Equity" points={BASIC} drawdown={{ kind: "series", points: dd }} />);
+    const clip = container.querySelector('[data-testid="drawdown-clip"]') as SVGGElement | null;
+    expect(clip?.getAttribute("clip-path")).toMatch(/^url\(#.+-ddclip\)$/);
+    expect(clip?.querySelector("path.exec-c2-dd-area")).not.toBeNull();
+  });
+
   it("shows the published drawdown, its worst point, and reads it at the cursor", () => {
     const dd = series(["0.00", "0.00", "-2.5000", "-1.2500"]);
     const { container } = render(<EquityPanel label="Equity" points={BASIC} drawdown={{ kind: "series", points: dd }} />);

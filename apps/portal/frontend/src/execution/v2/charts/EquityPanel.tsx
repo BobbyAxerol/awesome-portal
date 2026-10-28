@@ -469,8 +469,12 @@ export function EquityPanel(props: EquityPanelProps) {
               <line className="exec-c2-grid" x1={frame.ml} x2={frame.ml + iw} y1={ddTop} y2={ddTop} />
               {ddModel && ddModel.drawable > 0 ? (
                 <>
-                  <path className="exec-c2-dd-area" d={areaPath(ddRuns, x, ddY, ddTop)} />
-                  <path className="exec-c2-line" data-s="dd" d={linePath(ddRuns, x, ddY)} />
+                  {/* The drawdown series may start before the equity axis does: nothing is drawn outside the plot (QA7 N2-06). */}
+                  <clipPath id={`${id}-ddclip`}><rect x={frame.ml} y={ddTop - 2} width={iw} height={ddH + 4} /></clipPath>
+                  <g clipPath={`url(#${id}-ddclip)`} data-testid="drawdown-clip">
+                    <path className="exec-c2-dd-area" d={areaPath(ddRuns, x, ddY, ddTop)} />
+                    <path className="exec-c2-line" data-s="dd" d={linePath(ddRuns, x, ddY)} />
+                  </g>
                   {ddModel.low ? (
                     <g className="exec-c2-dd-min">
                       <circle cx={x(ddModel.obs[ddModel.low.index].t)} cy={ddY(ddModel.obs[ddModel.low.index].n as number)} r={4} />
