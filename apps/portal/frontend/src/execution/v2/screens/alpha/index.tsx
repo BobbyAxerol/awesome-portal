@@ -241,7 +241,8 @@ function Alpha360({ api, alphaId, workspaceId }: AlphaScreenProps) {
   })();
   const present = view !== null && view.present;
   // The Manager dataset for this alpha in the chosen Book: the Return tile and the windowed figures. Asked once the alpha is known; only a workspace the caller named is sent (never the body's own).
-  const dataset = useAlphaDataset(api, present, alphaId, env, explicitWs);
+  // A window the address names is asked on the dataset too, so every tab states the same window as the Performance tab (QA7 N2-02); with no window in the address nothing is asked, as before.
+  const dataset = useAlphaDataset(api, present, alphaId, env, explicitWs, params.get("window") === null ? undefined : url.value.window);
   const datasetValue = dataset.phase === "ready" ? dataset.value : null;
   // WP-C: the events and the lifecycle the dataset publishes (open `evt_*` and `life_*` partition keys); none = the lanes say Not published.
   // WP-K: the published lifecycle read (stages with criteria, decider and receipt; the unified feed; regime fit; Net PnL per venue) wins over the open keys.

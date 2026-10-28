@@ -92,6 +92,24 @@ describe("Return tile (return_30d_pct)", () => {
   });
 });
 
+describe("the dataset asks the page window (QA7 N2-02)", () => {
+  it("?window=30d is sent on the ALPHA dataset read, the same window the Performance tab's drawdown asks", async () => {
+    const seen: string[] = [];
+    serveAlphaDouble((path, search) => {
+      if (path !== PATH) return undefined;
+      seen.push(search.toString());
+      return { status: 200, body: alphaBody(true) };
+    });
+    render(
+      <MemoryRouter initialEntries={[`/deployments/alphas/${ALPHA_DOUBLE_ID}?window=30d`]}>
+        <AlphaScreen api={alphaHttpApi()} alphaId={ALPHA_DOUBLE_ID} />
+      </MemoryRouter>,
+    );
+    await waitFor(() => expect(seen.length).toBeGreaterThan(0));
+    expect(seen.every((q) => /window/i.test(q) && /30/.test(q))).toBe(true);
+  });
+});
+
 describe("Performance: windowed figures", () => {
   it("shows one cell per economic partition (Real-funded, USDT), exact, with Not published for keys the dataset does not carry", async () => {
     mount(serving({ status: 200, body: alphaBody(true) }));

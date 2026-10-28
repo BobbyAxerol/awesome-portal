@@ -17,6 +17,7 @@ import { CardsTable, type CardsColumn } from "../../cardsTable";
 import { NaWhy, SectionPanel } from "../../blocks";
 import { showDecimal } from "../../charts/decimal";
 import type { ManagerDataset, ManagerRow } from "../../readers/managerDataset";
+import type { ManagerDatasetWindowQuery } from "../../../api/managerDatasetQuery";
 import type { ManagerMetricRead } from "../../readers/managerMetric";
 import type { ExecEnv } from "../../urlState";
 import { PartitionFigures } from "../fleet/PartitionFigures";
@@ -27,8 +28,9 @@ import { Np, WhyMark } from "./np";
 export type { DatasetReadState };
 
 /** The ALPHA surface for one alpha in one Book. Not asked until the alpha is known to be present. */
-export function useAlphaDataset(api: ExecutionApi, enabled: boolean, alphaId: string, env: ExecEnv, workspaceId: string | null): DatasetReadState {
-  return useManagerDataset(api, enabled, { surface: "ALPHA", id: alphaId, environment: env, ...(workspaceId ? { workspaceId } : {}) });
+export function useAlphaDataset(api: ExecutionApi, enabled: boolean, alphaId: string, env: ExecEnv, workspaceId: string | null, window?: ManagerDatasetWindowQuery): DatasetReadState {
+  // The page window rides along so every tab asks the SAME window as the Performance tab (QA7 N2-02).
+  return useManagerDataset(api, enabled, { surface: "ALPHA", id: alphaId, environment: env, ...(window === undefined ? {} : { window }), ...(workspaceId ? { workspaceId } : {}) });
 }
 
 /** A percentage the dataset publishes (`unit` PERCENT) prints as the exact string with `%`; any other unit prints its own word. */
