@@ -7,6 +7,15 @@ Chúng không thay thế phase hoặc exit gate trong
 
 ## Active deep dives
 
+- **28Oct Core consumption — SOURCE_READY / CONNECTED_NOT_MET:**
+  [same08/read09 journal](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#28oct--edge-completion-and-core-consumption-handoff),
+  [start-here CLI/type/ownership index](../evidence/execution-edge-v1_2/EPG10-08/EDGE_CORE_READY_TO_CONSUME_2026-10-28.md)
+  and [Core prompt](../evidence/execution-edge-v1_2/EPG10-08/PROMPT_FOR_CORE_EDGE_SOURCE_CONSUMPTION_2026-10-28.md)
+  let Core continue per-item consumer preparation without another code bundle.
+  No fake originals/config, old-window reuse or connected claim; candidate
+  binary68344dad buildPASS/4offline refusal smokePASS; ownbuild/cache/compiler
+  cleaned, artifact retained. Actual Core-branch publication receipts in journal.
+
 - **28Oct connected-source E1–E5 — SOURCE_REVALIDATED / CONNECTED_NOT_MET:**
   [same08/read09 journal](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#28oct--e1e5-connected-source-coordinator-follow-through)
   and [incremental Core return](../evidence/execution-edge-v1_2/EPG10-08/EDGE_TO_CORE_CONNECTED_SOURCE_RETURN_2026-10-28.md)

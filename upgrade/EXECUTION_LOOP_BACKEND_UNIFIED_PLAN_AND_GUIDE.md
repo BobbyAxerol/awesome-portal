@@ -33753,3 +33753,156 @@ Delivery is not Core/source-owner ACK. Public request665ea797 included as exact
 inbound provenance, not a new authorization. All independently runnable intake,
 publication correction, validation, coordination and cleanup complete; next
 matching source-owner response is consumed immediately in original08/read09.
+
+### 28Oct — Edge completion and Core consumption handoff
+
+Status: INDEPENDENT_PREPARATION_COMPLETE / CONNECTED_NOT_MET in existing
+EPG10-08/read09; user approved finishing all
+independently runnable Edge work and delivering a usable handoff directly to
+Core's actual checkout/branch. No new phase, source provisioning, authority,
+runtime activation, Git push or release approval is inferred. Governing links:
+[phase guide](upgrade_v1.2/EXECUTION_PORTAL_EDGE_UPGRADE_GUIDE_v1.2_VI.md),
+[current E1–E5 return](evidence/execution-edge-v1_2/EPG10-08/EDGE_TO_CORE_CONNECTED_SOURCE_RETURN_2026-10-28.md),
+[source-owner action packet](evidence/execution-edge-v1_2/EPG10-08/EDGE_TO_SOURCE_OWNERS_CONNECTED_INPUTS_2026-10-28.md).
+
+Goal/scope: recheck concrete discovery/financial/STATUS entrypoints and closed
+configuration types, distinguish missing implementation from uncommissioned
+real inputs, finish the Core consumption index/prompt and record a verified
+delivery in Core's actual docs/research-loop-plan checkout. Reuse existing
+loaders/runners and source receipts; do not create another framework or fake
+production manifest. Main Edge ca30c390, concrete Edge68344dad and PM6276588b
+are source pins, not deployed candidate image evidence. Core actual checkout
+/home/bobby/portal-research@8e4a7703d46bdb92a708ac7fa9eb3981e44aa7c4;
+recheck branch/index before any narrow incoming-doc commit. Core R0 Markdown
+procedure in its AGENT_WORKING_RULES §10.10d governs that docs-only transaction.
+
+Invariants/decision boundary: preserve the three peer dirty files (main-plan
+72 added lines; CONNECTED_READ_BINDING_OWNER_ACTION56 added; old22Oct return
+20added/3removed) and all untracked peer files. Do not change stable/dev,
+provider28445, shared DB/HBA, membership/root business state, grants, private
+keys, live commands or listeners. Discovery is observation, not authorization;
+READ is not STREAM; requester STATUS is not service-recovery authority. The
+09:00–09:20UTC discovery proposal missed its08:50 cutoff and MUST NOT be reused;
+current reader binding ends09:30UTC, not an installation approval.
+
+Test gates: source/path/hash and cross-owner type/CLI parity; Markdown link
+and staged-scope checks; Core tracking checks if its Unified index changes.
+Unchanged previously tested product code inherits explicitly identified
+evidence, not invented fresh PASS counts. A newly demonstrated owned defect
+would require its normal focused correctness tests before commit. No capacity
+test, benchmark or active source specimen is part of this preparation slice.
+
+Rollback: incoming public Markdown and own appended journal only, recoverable
+through normal Git; no runtime/data rollback required. Cleanup: inventory own
+test/build resources and remove only those created by this slice; preserve
+all private installation/observation/custody evidence and active/rollback
+runtime artifacts. Finish every runnable preparation task; record genuinely
+missing source inputs with exact owner/action, not as unfinished Edge code.
+
+Artifact follow-through before closure: no compiled immutable artifact for
+Concrete Edge68344dad was located. Canonicald6aa and older7ab60fb4 binary are
+not interchangeable; compile-closure diff against7ab60fb4 is non-empty. Finish
+this owned preparation now: isolated1CPU/2GiB release build from the clean
+coherent68344dad source using its pinned Rust1.85.1 recipe/toolchain, external
+unique target/cache/output paths, no operational mounts, no listener or source
+access. A missing public toolchain/crate cache may be fetched normally; record
+new image/cache ownership and clean only the disposable resources created.
+Retain the explicitly named hash-pinned candidate binary/provenance outside
+source for this active feature, not a production/installed/connected claim.
+Run no-config fail-closed check smoke only, not serve. Core consumption docs
+may land independently while this owned artifact preparation runs; record any
+actual build/test failure honestly and fix owned source defects if demonstrated.
+
+Artifact capacity decision09:09UTC (project rule requires a documented decision
+below20% root free): available99,895,607,296B, MemAvailable14.69GB, no host
+measurement lock. Permit only the isolated1CPU/2GiB correctness build above;
+unique target+registry cache hard operational stop at8GiB total or host free
+below80GiB, whichever first. Monitor during build, stop the owned cell on that
+condition; never clean a peer image/cache/volume to make room. No absolute
+latency/capacity acceptance is claimed under concurrent host activity. Retain
+only the final named candidate binary and bounded logs/provenance; dispose of
+the exact owned temporary cache/build tree once terminal. This is not approval
+for an unbounded Docker/BuildKit cache or changes to production resource limits.
+
+Tested preparation slice: two read-only delegates inspected discovery/financial
+and STATUS compositions; no additional demonstrated owned product defect.
+Existing check/serve entrypoints, exact closed config types, purpose-specific
+wire/callbacks and TEST_ONLY examples are indexed in
+[Core start-here handoff](evidence/execution-edge-v1_2/EPG10-08/EDGE_CORE_READY_TO_CONSUME_2026-10-28.md)
+and [ready-to-send Core prompt](evidence/execution-edge-v1_2/EPG10-08/PROMPT_FOR_CORE_EDGE_SOURCE_CONSUMPTION_2026-10-28.md).
+No new loader, framework, fake config or trading original created. Source
+validation actually PASS:3public inbound hashes;6concrete source files with
+25exact CLI/schema/config tokens;4public Markdown files/9relative links and
+no private-key, credential-DSN or bearer literals. Existing six STATUS files
+are byte-identical86178d69→68344dad, git diff --exit-codePASS; Core ref
+refs/remotes/hk-candidate/status-bootstrap-20261025 verified86178d69.
+
+Core actual checkout/branch/HEAD unchanged; initial handoff+prompt delivered
+and same SHA256 verified. Its Unified now records only the declared incoming
+receipt; tracking reconciliation PASS before and after that37line append,
+13actual destination relative file referencesPASS. Final artifact addition,
+hash reconciliation and pure-Markdown R0 commit still pending below. Source
+owner recheck: PM4cdf unchanged/no new return; DL e6a837b4 has peer-owned
+source/test WIP, preserved. These are not permission to edit their branches.
+CanonicalTS668e1032 and Portal54c6f5f3 unchanged. Actual three canonicalEdge
+listeners remain imaged6aa7a51/restart0; native28ea and SourceProxyaa14 retained.
+
+Owned artifact preparation finished, not deferred: clean68344dad release build
+exit0 at09:27:33UTC/15m19s; unique1CPU/2GiB/pids256/read-only source, separately
+pinned public1.85.1 toolchain. Initial precompile rustup read-only refusal and
+fixed disposable runner retained, no source edit. Binary29614768B/mode0555,
+SHA25660c2e70711b4620cf173195393f9a26f2afe9babcd8be70a1aa3f74e1e891af8,
+retained outside source at /home/bobby/.local/share/portal-execution-edge/
+candidates/68344dad-20261028/portal-execution-edge. Actual
+[artifact/provenance/cleanup receipt](evidence/execution-edge-v1_2/EPG10-08/EDGE_CANDIDATE_ARTIFACT_68344DAD_2026-10-28.md)
+is part of the consumer packet. New binary mounted read-only onto existing
+Distrolessd6aa, clean environment/networknone/no config/ports/default/serve,
+1CPU/512MiB/--rm/10s: native-relations-check,command-status-check,
+financial-check,financial-trust-check **4PASS/0FAIL** expected exit1 refusals.
+Not configured-input validation or actual source/connected acceptance.
+
+C4 COMPLETE: owned temporary build/cache1158475055B removed; both owned cells
+absent; newly pulled unused compiler9f84 removed after zero references. No own
+application image/BuildKit/cache/network/volume; no broad prune or SGP resource.
+Explicit retained candidate17files/29646359B; PROVENANCE2e13b8b94b7c2694f59b17ae5c6ec04bd1d17e97dadc0e749d53283f7d2f04f6,
+SHA256SUMS8d93807983831b7328e23be12c215b00cb65f5d1a14d2354f343439d88256de7,
+16/16entriesMATCH. Root free entry99895607296→precleanup89943285760→
+postcleanup92264054784B; later90995834880B under peer activity, no attribution
+of global delta as reclaimed. Shared275images/61active/110.5GB, BuildKit984/
+63active/88.11GB retained/unchanged; threeEdges/native images/start/restart0
+unchanged. Current configuration/release not requalified or installed by this
+slice. Prior stablea9b10385/rollback6180b9bf,cd79e9c6,98a191c7 and private
+installation/observation/custody retained, not new release acceptance.
+
+Runnable-now review, source index/prompt and candidate artifact are complete;
+no additional demonstrated owned product defect remains from this audit.
+Missing real inputs stay explicit: final secure source transport/reader secret,
+fresh binding (old binding EXPIRED09:30UTC), official PM protected-root/native
+original, purpose-specific READ/STREAM/financial/STATUS commissioning, absent
+service-recovery/calendar source, admitted target/calibration bounds. Exact
+owners/actions are the existing cumulative packet, not a new phase or blanket
+wait. Core can continue every independent consumer per item now; full08/read09
+remainsNOT_MET until physical acceptance. Final mirrored hashes, Core-branch
+publication and normal Edge commit reconciliation follow below.
+
+Final publication COMPLETE in actual SGP Core checkout
+/home/bobby/portal-research, branchdocs/research-loop-plan, local commit
+aea89f971642b2e52911a9f0760bcdee5421c1b0, BobbyAxerol configuredidentity:
+6Markdown files/+1032lines, including its Unified incoming receipt and the
+five public source/consumer/artifact documents. Core tracked worktree/index
+clean after commit; no peer code/branch switch/push/merge/CI. Used only Core's
+explicit §10.10d R0 Markdown exception after actual final trackingPASS,
+5publicSHA256MATCH/16destination relative referencesPASS and staged diffcheck.
+No code/test/build gate bypass or installed/connected credit from that R0.
+
+Final HK/SGP public hashes MATCH: indexfe6e6c4221904abaaa3376be7155090945cf6a4e66c80a5d8ef98bc3b21694d7;
+prompt5686887176f85dd9b5e07e4b46df4c4a0cb0bf459a8fae5a4ee55750d528b6dd;
+artifactf90dfc0efc3dfd830fa234872deb82aaa2ed2b038485bca3c2d8dd8b56f42e8c;
+fullreturna6779077/sourceaction70a418f8 unchanged. Local final5Markdown files/
+11relative links/no private-key, credentialDSN or bearer literalsPASS; retained
+PROVENANCE/SHA256SUMS hashes independently recheckedMATCH. No binary, private
+config, credential or source archive copied toSGP/Git. Core now has actionable
+source/wire/config/CLI/evidence/prompt and compiled-artifact provenance in its
+own branch; it need not wait for another Edge source bundle. Genuine missing
+source/authority inputs and later physical Edge binding remain explicitly
+NOT_READY, not represented as source completion or connected PASS.

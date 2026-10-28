@@ -650,6 +650,19 @@ deep-dive → ADR → slice → evidence discipline documented above.
 
 ### 14.1 Current backend state (tracking snapshot — 2026-08-17)
 
+**28Oct Core consumption index — SOURCE_READY / CONNECTED_NOT_MET:**
+[same08/read09 journal](EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#28oct--edge-completion-and-core-consumption-handoff)
+and [start-here handoff](evidence/execution-edge-v1_2/EPG10-08/EDGE_CORE_READY_TO_CONSUME_2026-10-28.md)
+identify the existing concrete PM/Edge/Core discovery loaders and exact closed
+types, financial check/serve/proof/receiver and current-human STATUS wire.
+Core can prepare each consumer independently; no new relay/framework needed.
+Matching source commissioning is separate. Old discovery cutoff has elapsed;
+no listener/grant/source-state change. Candidate release binary68344dad now
+buildPASS/4offline fail-closed smokePASS; bounded build/cache/compiler cleanup
+done, named artifact retained outside source. Actual Core-branch Markdown
+publication is tracked in the same journal; source/binary READY does not imply
+a deployed image, unattended recovery or connected PASS.
+
 **28Oct connected-source E1–E5 — SOURCE_REVALIDATED / CONNECTED_NOT_MET:**
 [same08/read09 journal](EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#28oct--e1e5-connected-source-coordinator-follow-through)
 and [incremental Core return](evidence/execution-edge-v1_2/EPG10-08/EDGE_TO_CORE_CONNECTED_SOURCE_RETURN_2026-10-28.md)
