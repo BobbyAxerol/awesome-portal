@@ -539,6 +539,13 @@ export function overlayWorldLive(body: unknown, id: string): unknown {
   const data = out.governance_backbone?.data as Obj | undefined;
   if (data?.approval !== undefined) {
     if (unavailable.length > 0) data.approval.evidence_complete = false; // WP-B2-A3
+    // WP-B2-A3 (R3-02 residual): two gates past R1 the Live request cites the decided R1 of its alpha (stage history), not "Missing"
+    const r1 = approvalOfAlpha(a.alphaId, "R1");
+    if (r1 !== undefined && r1.status === "APPROVED" && r1.decidedMs !== null) {
+      data.r1_reference = { approval_id: r1.id, state: "APPROVED", href: approvalHref(r1), expiry: isoSeconds(r1.decidedMs + 180 * DAY_MS), digest: `sha256:${sha([a.alphaId, "r1"])}`, decided_by: r1.decidedBy, decided_at: isoSeconds(r1.decidedMs) };
+      data.r1_state = "APPROVED";
+      data.r1_id = r1.id;
+    }
     decisionFields(a, data.approval);
     Object.assign(data.approval, {
       gate: "LIVE_GATE", subject_type: "DEPLOYMENT", subject_id: a.deploymentId, subject_label: a.alphaLabel, environment: "LIVE",

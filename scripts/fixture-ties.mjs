@@ -1323,6 +1323,34 @@ export async function runWorldTies(get) {
       if (head && bucket) check("W40", sameDecimal(head.value, bucket.headroom), `${row.account_id}: the list says headroom ${head.value}, the capital invariant (binding exposure) says ${bucket.headroom}`);
     }
   }
+  // ── W41: a decided request is decided everywhere: not in the queue, status APPROVED, quorum met, actions locked (N5-04) ──
+  {
+    const history = await pages(`${E}/governance/approvals/history?limit=50`, (b) => b.page?.rows ?? [], (b) => b.page?.next_cursor ?? null, 3);
+    const open = new Set(approvalRows.map((r) => r.id));
+    for (const h of history.slice(0, 40)) {
+      check("W41", !open.has(h.approval_id), `${h.approval_id} is decided (${h.outcome}) and still in the queue`);
+      const gate = String(h.gate).toLowerCase();
+      const path = gate === "r1" || gate === "r2" || gate === "live_gate" ? `${E}/governance/approvals/${h.approval_id}/${gate === "live_gate" ? "live" : gate}` : `${E}/governance/exit-reviews/${h.approval_id}`;
+      const d = await ok200(path);
+      const approval = d?.data?.approval ?? d?.governance_backbone?.data?.approval ?? d?.approval;
+      if (approval?.status !== undefined) {
+        check("W41", approval.status === "APPROVED", `${h.approval_id}: history says decided, the page says ${approval.status}`);
+        check("W41", approval.quorum_met >= approval.quorum_required, `${h.approval_id}: decided with quorum ${approval.quorum_met} of ${approval.quorum_required}`);
+      }
+      const elig = d?.data?.eligibility ?? d?.eligibility ?? d?.governance_backbone?.data?.eligibility;
+      if (elig !== undefined) check("W41", elig.can_approve === false && elig.can_deny === false, `${h.approval_id}: decided, yet the page allows a decision`);
+    }
+  }
+  // ── W42: a Live gate request states the decided R1 of its alpha (two gates past R1), and it opens (R3-02 residual) ──
+  {
+    for (const row of approvalRows.filter((r) => r.gate === "LIVE_GATE")) {
+      const d = await ok200(`${E}/governance/approvals/${row.id}/live`);
+      const data = d?.governance_backbone?.data;
+      if (data === undefined) continue;
+      check("W42", data.r1_state === "APPROVED" && data.r1_reference?.state === "APPROVED", `${row.id}: a Live gate prints R1 state ${data.r1_state}`);
+      if (data.r1_id) check("W42", (await get(`${E}/governance/approvals/${data.r1_id}/r1`)).status === 200, `${row.id}: R1 ${data.r1_id} does not open`);
+    }
+  }
   // ===== WP-B2-A3 round D end
   return { ties };
 }
