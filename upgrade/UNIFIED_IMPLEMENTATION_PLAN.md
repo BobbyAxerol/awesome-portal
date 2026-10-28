@@ -16741,6 +16741,13 @@ Rollback for this delivery is Markdown Git history only. Full08/read09 and
 ELP2-10 remainNOT_MET; no phase transition or runtime authority is inferred.
 
 **Core ACK 28Oct:** [Independent E1–E5 consumption and incremental return](execution_loop/evidence/ELP2-10/CORE_TO_EDGE_CONSUMPTION_ACK_2026-10-28.md).
+**28Oct follow-through:** [seven-package review, focused receipts and Claude handoff](execution_loop/evidence/ELP2-10/CORE_SEVEN_PACKAGE_FOLLOWTHROUGH_2026-10-28.md).
+Correction: Edge V1's recursive guard rejects unsafe numeric revisions before
+forwarding; Core V1 also refuses them. Full PostgreSQL BIGINT support requires
+a coordinated versioned lossless wire, not loosening either V1 guard. Fixture
+Research-stage residual was fixed in separate Claude-based candidate `78b0a8477`
+(62/62 fixture tests), pending integration/browser. Core test-only `3051ecf16`
+covers boundary and Canary workload; no connected acceptance, load or release.
 The expired binding/window is CHANGE; the ACK is not installed or connected
 acceptance. Core prepares lanes independently; Edge remains source coordinator.
 Core test-only commit `b0571ba99` checks the exact seven discovery request

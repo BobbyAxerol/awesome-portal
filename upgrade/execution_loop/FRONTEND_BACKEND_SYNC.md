@@ -1,5 +1,16 @@
 # Execution Loop V2 — Sổ đồng bộ Frontend ↔ Backend (sống)
 
+## 28Oct — Cross-screen fixture and Core/Edge follow-through
+
+[Independent seven-package receipt and exact handoff](evidence/ELP2-10/CORE_SEVEN_PACKAGE_FOLLOWTHROUGH_2026-10-28.md).
+Claude's fixture fixes are present on `claude/step-b-integrate`; independent
+world-tie retest exposed Research-only alpha stage `PAPER` in W38. Fix prepared
+on top of Claude's `fc05a2478` as `78b0a8477`, with **62/62** fixture tests;
+Claude to review/integrate and retake browser, no UI layout change. Core V1
+discovery safe-integer boundary and Canary stage have focused tests in
+`3051ecf16`. Edge V1 rejects unsafe numbers before forwarding; full-range
+versioned wire, qualified sources, gateway and ELP2-10/11 acceptance remain open.
+
 ## 27Oct — History census consistency
 
 [Core hardening and test boundaries](evidence/ELP2-10/HISTORY_CENSUS_CONSISTENCY_2026-10-27.md):

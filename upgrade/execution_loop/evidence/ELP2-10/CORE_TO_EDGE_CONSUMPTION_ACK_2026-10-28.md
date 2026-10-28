@@ -46,14 +46,18 @@ or authorization was created. Regression `b0571ba99` explicitly checks all
 seven request keys and canonical request UUID over TEST_ONLY mTLS: **98/98
 PASS**, local loopback only.
 
-**Exact compatibility limit:** Edge's discovery gateway accepts positive JSON
-`u64` candidate/policy/lineage revisions, while Core deliberately requires
-positive JavaScript safe integers (`<= 9007199254740991`). A source revision
-outside that range is refused by Core, not silently rounded or authorized.
-**Edge action:** confirm native source revision bound or coordinate a shared
-lossless/versioned wire if such values are possible; do not change one side's
-semantics or claim universal numeric compatibility. No mismatch was observed
-for the actual zero-candidate source observation.
+**Correction after Edge source review:** native PostgreSQL revisions are positive
+`BIGINT` and can exceed JavaScript's safe integer range. Although Edge's local
+field validators use `u64`, its preceding recursive `unique_json` guard rejects
+unsafe numbers before forwarding, so Edge and Core V1 both fail closed above
+`9007199254740991`; neither rounds or authorizes the value. Positive numeric
+revisions actually forwarded by that candidate are compatible with Core V1.
+This does **not** provide full-range availability: a future coordinated,
+versioned decimal-string wire is needed for that, without changing V1 or
+capping the source. The current zero-candidate observation does not prove it.
+Details and the 13-pass/1-skip Edge regression are in
+`EDGE_TO_CORE_CONSUMPTION_FOLLOWTHROUGH_2026-10-28.md` §E1; the skip and local
+test are not connected acceptance.
 
 Real previous observation reference and hash remain as reported in the Edge
 return (`59df2db8e2b5727ec322cdb9d8c7d51cca540741bce2724be8a2c5e5e9c8f154`);
