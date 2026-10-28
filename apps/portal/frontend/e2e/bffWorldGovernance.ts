@@ -563,7 +563,7 @@ export function overlayWorldLive(body: unknown, id: string): unknown {
   // ===== WP-B2-A3 end
   const data = out.governance_backbone?.data as Obj | undefined;
   if (data?.approval !== undefined) {
-    if (unavailable.length > 0) data.approval.evidence_complete = false; // WP-B2-A3
+    if (unavailable.length > 0 && a.status === "PENDING") data.approval.evidence_complete = false; // WP-B2-A3 (N9b-02: a closed request's evidence is its decision record, complete)
     if (a.blocker !== undefined) { data.approval.blocker_count = 1; data.approval.blocker_summary = a.blocker; data.approval.evidence_complete = false; } // N8a-07: a halted subject is not "evidence ready"
     // WP-B2-A3 (R3-02 residual): two gates past R1 the Live request cites the decided R1 of its alpha (stage history), not "Missing"
     const r1 = approvalOfAlpha(a.alphaId, "R1");
@@ -665,7 +665,10 @@ export function worldEvidence(id: string): { portfolioId: string | null; environ
     : stageChange !== null ? `${a.alphaLabel} moves from ${stageChange.before} to ${stageChange.after}` : `${a.alphaLabel} passes ${GATE_WORD[a.gate]}`;
   return {
     portfolioId: PORTFOLIO_NAMES[a.portfolioId] === undefined ? null : a.portfolioId, environment: a.environment, changes, // WP-B2-A3: only the world's own portfolios publish an economic history (the one NAV the Portfolio page prints); an R1 review has no capital and a generated portfolio publishes none
-    whatChanges: (obligations) => `${sentence}; the gate counts 7 of 7 criteria as met after approval. ${obligations === 0 ? "Nothing stays open." : `${obligations} obligations stay open.`}`,
+    // WP-B2-A3 (N9b-02): a closed request tells its decided record in the past tense (no "after approval", obligations carried, not "stay open")
+    whatChanges: (obligations) => a.status === "APPROVED"
+      ? `${sentence.replace(/ moves from /, " moved from ").replace(/ passes /, " passed ")}; the gate counted 7 of 7 criteria as met at decision. ${obligations === 0 ? "Nothing carried." : `${obligations} obligations carried.`}`
+      : `${sentence}; the gate counts 7 of 7 criteria as met after approval. ${obligations === 0 ? "Nothing stays open." : `${obligations} obligations stay open.`}`,
     countsAs: { met_after: 7, required: 7 },
   };
 }

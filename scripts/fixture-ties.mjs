@@ -1595,6 +1595,23 @@ export async function runWorldTies(get) {
       check("W90", total <= p.deployment_count, `${p.portfolio_id}: ${total} classified deployments of ${p.deployment_count}`);
     }
   }
+  // ── W91: a closed request prints its decided record: past tense, evidence complete, R1 lineage decided, criteria 7 of 7 (N9b-02) ──
+  {
+    for (const h of (await pages(`${E}/governance/approvals/history?limit=50`, (b) => b.page?.rows ?? [], (b) => b.page?.next_cursor ?? null, 3)).slice(0, 40)) {
+      const ev = await ok200(`${E}/governance/approvals/${h.approval_id}/evidence`);
+      const said = ev?.receipt_preview?.what_changes;
+      if (typeof said === "string") check("W91", !/after approval|stay open|\bmoves from\b/.test(said), `${h.approval_id}: a closed request says "${said}"`);
+      const met = (ev?.evidence_diff?.changes ?? []).find((c) => c.label === "Criteria met");
+      if (met !== undefined) check("W91", met.before === met.after, `${h.approval_id}: closed, yet criteria ${met.before} -> ${met.after}`);
+      if (h.gate === "LIVE_GATE") {
+        const d = (await ok200(`${E}/governance/approvals/${h.approval_id}/live`))?.governance_backbone?.data;
+        if (d !== undefined) {
+          check("W91", d.approval?.evidence_complete === true, `${h.approval_id}: closed Live request prints evidence incomplete`);
+          check("W91", d.r1_state === "APPROVED", `${h.approval_id}: closed Live request prints R1 ${d.r1_state}`);
+        }
+      }
+    }
+  }
   // ===== WP-B2-A3 round D end
   return { ties };
 }
