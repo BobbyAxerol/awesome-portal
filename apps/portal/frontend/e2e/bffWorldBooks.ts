@@ -223,13 +223,32 @@ export const alphaBookIds = (alphaId: string, environment: string, accountId?: s
  */
 export function bookEquityLine(deploymentIds: readonly string[], maxPoints: number): { t: number; cents: bigint }[] {
   const specs = deploymentIds.map((id) => deploymentOf(id)?.deployment).filter((d): d is NonNullable<typeof d> => d !== undefined);
-  const first = bookFirstDayMs(deploymentIds);
-  if (specs.length === 0 || first === null) return [];
+  const span = bookSpan(deploymentIds);
+  if (specs.length === 0 || span === null) return [];
   // the book's age sampled on the lattice of a 30-day window (the density of the DRAWDOWN pane under it), so the line and the pane step on the same instants
-  const points = Math.max(2, Math.min(maxPoints, 1 + Math.round(((WORLD_NOW_MS - first) * (LEVEL_NODES - 1)) / (30 * DAY_MS))));
+  const points = Math.max(2, Math.min(maxPoints, 1 + Math.round(((span.end - span.first) * (LEVEL_NODES - 1)) / (30 * DAY_MS))));
   const levels = bookLevels(deploymentIds, points, specs.reduce((n, d) => n + toCents(d.allocation), 0n), specs.reduce((n, d) => n + equityOf(d), 0n));
-  return levels.map((value, i) => ({ t: Math.round(first + ((WORLD_NOW_MS - first) * i) / (points - 1)), cents: value }));
+  return levels.map((value, i) => ({ t: Math.round(span.first + ((span.end - span.first) * i) / (points - 1)), cents: value }));
 }
+
+// ===== WP-B2-C4 begin (QA7 N2-01: a stage that ended is a book with an end; its equity line stops at its exit on its final equity)
+/** The life of a book: its first day and its end (the world clock while any deployment runs, else the last exit). null when the world does not know the deployments. */
+export function bookSpan(deploymentIds: readonly string[]): { first: number; end: number } | null {
+  const standings = deploymentIds.flatMap((id) => { const s = standingOf(id); return s === null ? [] : [s]; });
+  if (standings.length === 0) return null;
+  const first = Math.min(...standings.map((s) => s.fromMs));
+  const end = Math.max(...standings.map((s) => Math.min(s.exitMs ?? WORLD_NOW_MS, WORLD_NOW_MS)));
+  return { first, end: Math.max(end, first + 1) };
+}
+/** The equity (cents) of a book at an instant: on the same level path as `bookEquityLine`; null before the book opened and after it ended (a closed stage publishes no close for a later day). */
+export function bookEquityAt(deploymentIds: readonly string[], atMs: number): bigint | null {
+  const span = bookSpan(deploymentIds);
+  const specs = deploymentIds.map((id) => deploymentOf(id)?.deployment).filter((d): d is NonNullable<typeof d> => d !== undefined);
+  if (span === null || specs.length === 0 || atMs < span.first || atMs > span.end) return null;
+  const levels = bookLevels(deploymentIds, LEVEL_NODES, specs.reduce((n, d) => n + toCents(d.allocation), 0n), specs.reduce((n, d) => n + equityOf(d), 0n));
+  return levels[Math.round(((atMs - span.first) * (LEVEL_NODES - 1)) / (span.end - span.first))]!;
+}
+// ===== WP-B2-C4 end
 
 /** The fee model of the world: fees accrue at FEE_BP of a deployment's allocation over its whole run (funding and slippage likewise), pro rata by days. */
 export const COST_BP = { fees: 10n, funding: 4n, slippage: 2n } as const;

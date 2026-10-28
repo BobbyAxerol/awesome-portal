@@ -191,6 +191,9 @@ function applyScenarioToDoubles(config: FixtureConfig): void {
 }
 
 /** The reads written against another instant than the world's (WP-B2-O): served at the world clock. */
+// ===== WP-B2-C4 begin
+const STAGE_DRIFT_PATH = /^\/api\/v1\/execution\/alphas\/[^/]+\/stage-drift$/;
+// ===== WP-B2-C4 end
 const WORLD_CLOCK_READS = /^\/api\/v1\/execution\/(?:alphas|manager\/fund-overview|operations(?:\/incidents\/[^/]+)?)$/;
 
 /* ── the request ────────────────────────────────────────────────────────── */
@@ -488,7 +491,7 @@ async function handle(config: FixtureConfig, incoming: IncomingMessage, response
     // world clock exactly as the preview moves them to the real one (their latest content = the world's now), so every read of the world states the same instant.
     // ===== WP-B2-A begin: the Users roster states no read time, so its instants are carried by the WORLD clock (one constant shift), never by the latest instant a filtered page happens to hold (Hoa Nguyen's last seen moved with the filter)
     const served = config.rebaseTime && typeof answered.body !== "string"
-      ? (/^\/api\/admin\/accounts(\/|$)/.test(request.path) ? rebaseTimes(answered.body, worldClockNow(Date.now()) - WORLD_NOW_MS) : rebaseBody(answered.body, OPERATIONS_V2_DOUBLE_NOW_ISO, Date.now()))
+      ? (/^\/api\/admin\/accounts(\/|$)/.test(request.path) || STAGE_DRIFT_PATH.test(request.path) /* WP-B2-C4: a calendar of days states no instant, so the world clock moves it */ ? rebaseTimes(answered.body, worldClockNow(Date.now()) - WORLD_NOW_MS) : rebaseBody(answered.body, OPERATIONS_V2_DOUBLE_NOW_ISO, Date.now()))
       : isPositiveMode() && answered.status === 200 && typeof answered.body !== "string" && WORLD_CLOCK_READS.test(url.pathname) ? rebaseBody(answered.body, OPERATIONS_V2_DOUBLE_NOW_ISO, WORLD_NOW_MS)
       : answered.body;
     // ===== WP-B2-A end

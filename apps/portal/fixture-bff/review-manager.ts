@@ -12,7 +12,7 @@ import { buildPositiveManagerSeries } from "../../../packages/contracts/tooling/
 import { ALPHA_DOUBLE_AS_OF_MS, answerAlpha } from "../frontend/e2e/bffDoubleAlpha";
 import { answerManagerFleet, answerManagerSeries } from "../frontend/e2e/bffDoubleManager";
 import { answerPortfolios } from "../frontend/e2e/bffDoublePortfolios";
-import { worldBlotterCounts } from "../frontend/e2e/bffDoubleOverview";
+import { blotterBookOf as c4BlotterBook, worldBlotterCounts } from "../frontend/e2e/bffDoubleOverview"; // WP-B2-C4: blotterBookOf
 import type { PositiveAccountBook, PositiveDeploymentFact, PositivePortfolioBook, PositiveRecall } from "../frontend/e2e/bffPositiveMode";
 import { addDecimal, fixtureNowMs, scaled, type AlphaSpec, type DeploymentSpec } from "../frontend/e2e/bffScale";
 // ===== WP-B2-S begin: a deployment of a stage its alpha has LEFT is retired (ENDED, no exposure): one stage history (e2e/bffWorldStage.ts)
@@ -20,7 +20,7 @@ import { isRetired as wpb2sRetired, stageActiveOf as wpb2s3Active, stageHistoryO
 // ===== WP-B2-S end
 import { accountFact, grossNotional, incidentChildrenBody, lifecycleOf, MARKS, NATIVE_ALPHAS, positionsOf, stageDays, WORLD_ACTORS } from "../frontend/e2e/bffWorld";
 // ===== WP-B2-C3 begin: the money figures of the world (one definition, one level path per book)
-import { alphaBookIds as c3BookIds, bookEquityLine as c3EquityLine, bookFirstDayMs as c3FirstDay, costInWindow as c3CostInWindow } from "../frontend/e2e/bffWorldBooks";
+import { alphaBookIds as c3BookIds, bookEquityLine as c3EquityLine, bookFirstDayMs as c3FirstDay, bookEquityAt as c4EquityAt, bookSpan as c4Span, costInWindow as c3CostInWindow } from "../frontend/e2e/bffWorldBooks";
 import { bookLevels as c3BookLevels, DAY_MS as C3_DAY_MS, deploymentOf as c3DeploymentOf, openUnrealizedOf as c3OpenUnrealized, toCents as c3ToCents, fromCents as c3FromCents, worldAlphas as c3WorldAlphas, WORLD_NOW_MS as C3_NOW_MS } from "../frontend/e2e/bffWorld";
 // ===== WP-B2-C3 end
 import { APPROVAL_ROWS } from "../frontend/src/execution/api/fixtureData"; // WP-E
@@ -1217,7 +1217,7 @@ export function answerReviewManager(method: string, path: string, search: URLSea
   return wpDrawdownPass(normalized, search, wpChain(method, normalized, search, profile, requestBody));
 }
 function wpChain(method: string, normalized: string, search: URLSearchParams, profile: ReviewManagerProfile, requestBody: unknown): ReviewManagerResponse | null {
-  return seriesAnswer(method, normalized, search, profile) ?? wpkApprovalEvidence(method, normalized, search, profile) ?? wpkAlphaLifecycle(method, normalized, search) ?? wpkOperationsExtras(method, normalized, search) ?? wpkEntitySearch(method, normalized, search) ?? wpkPortfolioHealth(method, normalized, search) ?? wpkSiblings(method, normalized, search, requestBody) ?? wpcCandles(method, normalized, search) ?? wpcEquity(method, normalized, search) ?? wpcAlphaResource(method, normalized, search) ?? wpF1Answer(method, normalized, search) ?? wpcAlphaKeys(normalized, search, datasetAnswer(method, normalized, search, profile));
+  return seriesAnswer(method, normalized, search, profile) ?? wpkApprovalEvidence(method, normalized, search, profile) ?? wpkAlphaLifecycle(method, normalized, search) ?? wpkOperationsExtras(method, normalized, search) ?? wpkEntitySearch(method, normalized, search) ?? wpkPortfolioHealth(method, normalized, search) ?? wpkSiblings(method, normalized, search, requestBody) ?? wpcCandles(method, normalized, search) ?? wpcEquity(method, normalized, search) ?? c4StageDrift(method, normalized, search) ?? c4AlphaActivity(method, normalized, search) ?? wpcAlphaResource(method, normalized, search) ?? wpF1Answer(method, normalized, search) ?? wpcAlphaKeys(normalized, search, datasetAnswer(method, normalized, search, profile));
 }
 
 // ===== WP-C begin (Alpha 360, Trade replay, Compare; FIXTURE_LAB, register section 2c-wpc)
@@ -1447,7 +1447,7 @@ function wpcWorstDrawdownPercent(alphaId: string, search: URLSearchParams): stri
   const environment = search.get("environment");
   const window = search.get("window");
   if (environment === null || environment === "ALL" || window === JSON.stringify("ALL") || window === "ALL") return null;
-  const query = new URLSearchParams({ environment, metric: "DRAWDOWN", window: window === null ? JSON.stringify("30D") : window.startsWith('"') ? window : JSON.stringify(window),
+  const query = new URLSearchParams({ environment, metric: "DRAWDOWN", window: window === null ? JSON.stringify(legacy() ? "30D" : "90D") : window.startsWith('"') ? window : JSON.stringify(window),
     subjects: JSON.stringify([{ subject_type: "ALPHA", subject_id: alphaId }]) });
   const answer = seriesAnswer("GET", "/manager/series", query, "populated");
   const entry = answer?.status === 200 ? (answer.body as Draft).series?.[0] : undefined;
@@ -2167,6 +2167,74 @@ function c3OwnWalk(view: Draft, metricName: string, navEntry: Draft | undefined)
   });
 }
 // ===== WP-B2-C3 end
+
+// ===== WP-B2-C4 begin (QA7 N2-01 N2-02 N2-03: the stage-drift fallback and the activity rollup are the world's, not a template)
+const C4_STAGE_ENV = { paper: "paper", sandbox: "sandbox", live: "live" } as const;
+/**
+ * `GET /alphas/{id}/stage-drift`: the daily closes of each stage's book. The calendar runs from the alpha's first stage start to the world's day; a stage's close for a day
+ * is the book's equity on the level path (the line Alpha 360 draws), published only for the days the stage RAN, ending on its own final equity (a stage that ended stops at its
+ * exit; a stage that never began has no deployment). The double's template had a fixed 8-17 Oct calendar and numbers no book ever held.
+ */
+function c4StageDrift(method: string, path: string, search: URLSearchParams): ReviewManagerResponse | null {
+  const match = /^\/alphas\/([^/]+)\/stage-drift$/.exec(path);
+  if (method !== "GET" || match === null || legacy()) return null;
+  const alphaId = decodeURIComponent(match[1]!);
+  const alpha = c3WorldAlphas().find((candidate) => candidate.id === alphaId);
+  if (alpha === undefined) return null;
+  const base = answerAlpha(method, path, search);
+  if (base === null || base.status !== 200) return base;
+  const body = base.body as Draft;
+  const exact = search.get("numeric_format") === "DECIMAL_STRING";
+  const books = (["paper", "sandbox", "live"] as const).map((stage) => ({ stage, ids: c3BookIds(alpha.id, C4_STAGE_ENV[stage]) }));
+  const firsts = books.flatMap(({ ids }) => { const span = ids.length > 0 ? c4Span(ids) : null; return span === null ? [] : [span.first]; });
+  const days = Math.max(2, Math.min(120, firsts.length === 0 ? 10 : Math.ceil((C3_NOW_MS - Math.min(...firsts)) / C3_DAY_MS) + 1));
+  const lastDay = Math.floor(C3_NOW_MS / C3_DAY_MS);
+  const calendar = Array.from({ length: days }, (_, i) => new Date((lastDay - (days - 1 - i)) * C3_DAY_MS).toISOString().slice(0, 10));
+  body.alpha_id = alphaId;
+  body.window = { ...body.window, days, ...(exact ? { requested_days: null } : {}) };
+  body.calendar = calendar;
+  const stages: Draft = {};
+  for (const { stage, ids } of books) {
+    const closes = calendar.map((day) => {
+      if (ids.length === 0) return null;
+      const dayStart = Date.parse(`${day}T00:00:00Z`);
+      const span = c4Span(ids);
+      if (span === null || dayStart > span.end || dayStart + C3_DAY_MS <= span.first) return null;
+      return c4EquityAt(ids, Math.min(dayStart + C3_DAY_MS - 1, span.end));
+    });
+    const published = closes.some((value) => value !== null);
+    const series = closes.map((value) => (value === null ? null : exact ? c3FromCents(value) : Number(c3FromCents(value))));
+    const currency = (ids[0] !== undefined ? c3DeploymentOf(ids[0])?.deployment.currency : null) ?? "USDT";
+    const reason = ids.length === 0 ? "NO_DEPLOYMENT_IN_STAGE" : published ? null : "NO_EQUITY_IN_WINDOW";
+    stages[stage] = exact
+      ? { deployed: ids.length > 0, reason_code: reason, currency, series, series_reason_codes: series.map((value) => (value === null ? (ids.length === 0 ? "NO_DEPLOYMENT_IN_STAGE" : "NO_EQUITY_FOR_DAY") : null)) }
+      : { deployed: ids.length > 0, reason_code: reason, series };
+  }
+  body.stages = stages;
+  return { status: 200, body };
+}
+/**
+ * `GET /derivations/alphas/{id}/activity`: the rollup's populations are the blotter's own book of the deployments the alpha has in this environment (the blotter
+ * scoped to them says the same numbers), not 8 orders and 3 fills for every alpha.
+ */
+function c4AlphaActivity(method: string, path: string, search: URLSearchParams): ReviewManagerResponse | null {
+  const match = /^\/derivations\/alphas\/([^/]+)\/activity$/.exec(path);
+  const environment = search.get("environment");
+  if (method !== "GET" || match === null || legacy() || environment === null) return null;
+  const alphaId = decodeURIComponent(match[1]!);
+  const ids = c3BookIds(alphaId, environment);
+  if (ids.length === 0) return null;
+  const base = answerAlpha(method, path, search);
+  if (base === null || base.status !== 200) return base;
+  const body = base.body as Draft;
+  const orders = ids.flatMap((id) => c4BlotterBook(id).orders) as Draft[];
+  const fills = ids.flatMap((id) => c4BlotterBook(id).fills);
+  const counts: Record<string, string> = {};
+  for (const order of orders) counts[String(order.status)] = String(Number(counts[String(order.status)] ?? "0") + 1);
+  body.data = { ...body.data, deployment_population: String(ids.length), order_population: String(orders.length), fill_population: String(fills.length), order_status_counts: counts };
+  return { status: 200, body };
+}
+// ===== WP-B2-C4 end
 
 // ===== WP-P begin (positive world: the four series views from ONE NAV book; scenario guards live next to the code they guard, marked `WP-P`)
 /**
