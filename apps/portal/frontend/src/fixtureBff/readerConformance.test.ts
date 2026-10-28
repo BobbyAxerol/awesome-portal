@@ -63,8 +63,6 @@ const GROUPS: readonly { id: string; title: string }[] = [
  * found (known, being fixed by B-A3 and B-S3). W127 to W131 were found by this guard on the tip; they are reported to the coordinator, not routed here.
  */
 const OPEN_GROUPS: Readonly<Record<string, string>> = {
-  W110k: "known red until B-A3 lands: the portfolio register after the health-basis change",
-  W114k: "known red until B-S3 lands: the Operations queue for ?target_id=dep_live_01_mismatch and the other variant ids",
   W127: "new: the Cmd K search body repeats an approval id (AP-352) in the approval group",
   W128: "new: the pending-recall discovery body for a portfolio has an item the published schema refuses",
   W129: "new: ws_TEST_SCOPED_V2 alpha resource body is V2_MALFORMED for every alpha",
