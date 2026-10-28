@@ -82,13 +82,17 @@ describe("R5-04 the envelope verdict is the rows' own", () => {
 });
 
 describe("R5-05 the predecessor is the alpha's own canary, or none", () => {
-  it("Basis B's live deployments link its own canary; Carry A has none and claims none", async () => {
+  it("Basis B's live deployments link its own canary; Carry A's finished trial is its history record (Alpha 360 lists Canary done)", async () => {
     const b = await raw("/deployments/dep_b1/live");
     expect((b.lineage as Obj[]).find((l) => l.kind === "CANARY_ENVELOPE")!.href).toBe("/deployments/live/dep_canary_01/canary");
     const a = await raw("/deployments/dep_live_01/live");
     const item = (a.lineage as Obj[]).find((l) => l.kind === "CANARY_ENVELOPE")!;
-    expect(item).toMatchObject({ state: "UNAVAILABLE", href: null });
-    expect(a.predecessor_canary_envelope).toBeNull();
+    // WP-B2-S3 R5-05: Alpha 360 says Carry A's Canary is done, so the predecessor tab has the finished trial's record and the link opens it
+    expect(item).toMatchObject({ state: "AVAILABLE", href: "/deployments/live/dep_a_canary_hist/canary" });
+    expect(a.predecessor_canary_envelope).not.toBeNull();
+    const trial = await raw("/deployments/dep_a_canary_hist/canary");
+    expect(trial.lifecycle.declared_stage).toBe("LIVE_CANARY");
+    expect(trial.stage_facts.runtime.runtime_state.value).toBe("STOPPED");
   });
 });
 

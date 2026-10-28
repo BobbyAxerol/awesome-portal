@@ -29,6 +29,9 @@
 import { createHash } from "node:crypto";
 import { isPositiveMode, positiveDeploymentFact } from "./bffPositiveMode";
 import { isRetired, resolveStageDeployment, sandboxRecordIdOf, stageBookOf, userIdOf } from "./bffWorldStage"; // WP-B2-S
+import { currentDeploymentOfStage, haltedSinceMs, historyDeploymentId, historyNetSeries, standingOf } from "./bffWorldStage"; // WP-B2-S3
+import { approvalHref, approvalOfAlpha, type WorldGate } from "./bffWorldGovernance"; // WP-B2-S3
+import { WORLD_INCIDENTS } from "./bffWorld"; // WP-B2-S3
 import { DAY_MS as WORLD_DAY_MS, deploymentOf, fromCents as worldCents, grossNotional, lifecycleOf, netPnlSeries, positionsOf, toCents as worldToCents, workingOrdersOf } from "./bffWorld";
 
 type Obj = Record<string, unknown>;
@@ -97,7 +100,7 @@ export function predecessorCanary(deploymentId: string): string | null {
   const base = baseDeploymentId(deploymentId);
   if (isPositiveMode()) {
     const found = deploymentOf(WORLD_ALIAS[base] ?? base);
-    if (found !== null) return found.alpha.deployments.find((x) => x.stage === "CANARY")?.id ?? null;
+    if (found !== null) return found.alpha.deployments.find((x) => x.stage === "CANARY")?.id ?? worldHistoryCanaryOf(found.alpha.id); // WP-B2-S3: a trial the alpha finished without a deployment of its own is a history record, as Alpha 360 shows it
   }
   return PREDECESSOR[base] ?? base;
 }
@@ -366,7 +369,7 @@ function sandboxExitHref(deploymentId: string): string | null {
 function canaryLit(body: Obj, deploymentId: string, variant: StageVariant): Obj {
   const halted = variant === "halted";
   // A deployment that is already Live ran its Canary BEFORE its activation: a finished 14-day trial, dated by the one lifecycle record.
-  const finished = stageOf(deploymentId, "canary") === "live" || (isPositiveMode() && isRetired(baseDeploymentId(deploymentId))); // WP-B2-S
+  const finished = stageOf(deploymentId, "canary") === "live" || (isPositiveMode() && isRetired(worldIdOf(deploymentId, "canary"))); // WP-B2-S
   const stale = variant === "stale";
   const breach = variant === "breach";
   const freshness = stale ? "STALE" : "FRESH";
@@ -392,7 +395,7 @@ function canaryLit(body: Obj, deploymentId: string, variant: StageVariant): Obj 
     { cap: "open_orders", unit: "COUNT", limit: "40", approved: "20", consumed: "1" },
   ];
   const env = body.envelope as Obj;
-  env.status = isPositiveMode() && isRetired(baseDeploymentId(deploymentId)) ? "COMPLETED" : "ACTIVE"; // WP-B2-S2 W02: the envelope of a trial the alpha has left is no longer active
+  env.status = isPositiveMode() && isRetired(worldIdOf(deploymentId, "canary")) ? "COMPLETED" : "ACTIVE"; // WP-B2-S2 W02: the envelope of a trial the alpha has left is no longer active
   env.reason = "Canary envelope approved by the Canary owner for the 14-day trial.";
   const gateCodes = ["PRODUCTION_COMMAND_INACTIVE", "CANARY_OWNER_GATE_REQUIRED", "BASE_RISK_PROFILE_UNVERIFIED"];
   env.blocker_codes = gateCodes;
@@ -401,7 +404,7 @@ function canaryLit(body: Obj, deploymentId: string, variant: StageVariant): Obj 
   const life = body.lifecycle as Obj;
   const started = finished ? at(-(30 * DAY_MS + 4 * MIN) - 14 * DAY_MS) : CANARY_STARTED;
   const review = finished ? at(-(30 * DAY_MS + 4 * MIN)) : CANARY_REVIEW;
-  if (finished) life.declared_stage = "LIVE_FULL";
+  // WP-B2-S3 R5-01: a finished Canary trial is still a Canary record: its declared stage stays LIVE_CANARY (the room never says the deployment "does not declare the Canary stage")
   life.day_index = finished ? 14 : 6;
   life.duration_days = 14;
   life.blocker_codes = env.blocker_codes;
@@ -584,8 +587,8 @@ function liveLit(body: Obj, deploymentId: string, variant: StageVariant): Obj {
     state: mismatch ? "MISMATCH" : "IN_SYNC",
     mismatch_behavior: "SUPPRESS_ALL_BROKER_VALUES",
     broker_values_visible: visible,
-    finding_href: mismatch ? "/execution/operations/incidents/inc_TEST_ONLY_fx_mismatch" : null,
-    dry_run_reconcile_href: mismatch ? `/execution/operations?target_id=${encodeURIComponent(baseDeploymentId(deploymentId))}` : null,
+    finding_href: mismatch ? liveFindingHref(deploymentId) : null, // WP-B2-S3 R5-03: the finding of the portfolio this deployment is booked on, in its environment
+    dry_run_reconcile_href: mismatch ? `/execution/operations?target_id=${encodeURIComponent(deploymentId)}` : null, // the reconcile targets the deployment the card names
     blocker_codes: [],
   };
   body.projection_continuity = {
@@ -733,7 +736,7 @@ function paperLit(body: Obj, deploymentId: string, variant: StageVariant, vnRout
 }
 
 function qualityOfBook(body: Obj, deploymentId: string): Obj | null {
-  const found = resolveStageDeployment(WORLD_ALIAS[baseDeploymentId(deploymentId)] ?? baseDeploymentId(deploymentId));
+  const found = resolveStageDeployment(worldIdOf(deploymentId, "paper"));
   if (found === null || !isObj(body.data)) return null;
   const book = stageBookOf(found.deployment.id); // WP-B2-S: the SAME list the Paper tabs and the gate count
   const orders = book.orders.length;
@@ -778,7 +781,12 @@ export function simulateStage(path: string, answerBody: unknown): Obj | null {
   }
   if (kind === null || id === undefined || LEGACY_DEPLOYMENT.test(id)) return null;
   const variant = variantOf(id);
-  if (variant === "dark") return darkOfWorld(answerBody, id);
+  if (variant === "dark") {
+    // WP-B2-S3 R4-04, R4-05: the dark Sandbox and Paper pages of a deployment of the world carry ITS record (one book); only the source facts are the typed absences
+    const darkOwn = isPositiveMode() && (kind === "sandbox" || kind === "paper") ? resolveStageDeployment(baseDeploymentId(id)) : null;
+    if (darkOwn !== null && darkOwn.standing.stage === kind) return darkHybrid(kind as "sandbox" | "paper", answerBody, id) ?? darkOfWorld(answerBody, id);
+    return darkOfWorld(answerBody, id);
+  }
   // A stage page the deployment has not reached is not lit: the published dark body stands (typed absence), whatever the URL says.
   // WP-B2-S: a deployment of the world has ONE stage; its page for any other stage is typed absence (a sandbox page of a canary deployment would put one id in two stages).
   const own = isPositiveMode() ? resolveStageDeployment(baseDeploymentId(id)) : null;
@@ -829,6 +837,7 @@ function darkOfWorld(answerBody: Obj, requestedId: string): Obj | null {
   const body = clone(answerBody);
   const deployment = (isObj(body.deployment) ? body.deployment : body.certification) as Obj;
   const { alpha, deployment: d } = found;
+  if (Array.isArray(body.lineage)) body.lineage = worldLineage(body.lineage as Obj[], alpha.id, d.id, requestedId); // WP-B2-S3 R5-04, R5-06: the lineage of this alpha, not the published fixture's ids
   if (deployment.alpha_reason_code !== undefined) { deployment.alpha_reason_code = null; deployment.portfolio_name_reason_code = null; }
   if (isObj(deployment.account_binding)) { deployment.account_binding.account_id = d.accountId; if ("external_account_ref" in deployment.account_binding) deployment.account_binding.external_account_ref = d.accountId; }
   deployment.deployment_id = requestedId;
@@ -850,15 +859,18 @@ function darkOfWorld(answerBody: Obj, requestedId: string): Obj | null {
  */
 function worldStage(kind: "canary" | "live" | "sandbox" | "paper", body: Obj | null, deploymentId: string, variant: StageVariant): Obj | null {
   if (body === null || !isPositiveMode()) return body;
-  const found = resolveStageDeployment(WORLD_ALIAS[baseDeploymentId(deploymentId)] ?? baseDeploymentId(deploymentId));
+  const found = resolveStageDeployment(worldIdOf(deploymentId, kind)); // WP-B2-S3: a state variant of a stage the alpha left is read from a deployment that IS in that stage
   if (found === null) return body;
   const { alpha, deployment: d, standing } = found;
+  if (Array.isArray(body.lineage)) body.lineage = worldLineage(body.lineage as Obj[], alpha.id, worldIdOf(deploymentId, kind), deploymentId); // WP-B2-S3
   const retired = standing.status === "completed"; // WP-B2-S: the stage the alpha has LEFT: stopped, exited on a date, final figures, nothing open
   const exitMs = standing.exitMs;
   const life = lifecycleOf(alpha.id);
   const stale = variant === "stale";
   const mismatch = variant === "mismatch";
-  const halted = variant === "halted";
+  const haltedAtMs = haltedSinceMs(d.id); // WP-B2-S3: the world's one halt fact
+  const halted = variant === "halted" || haltedAtMs !== null;
+  const haltedIso = haltedAtMs === null ? null : new Date(haltedAtMs).toISOString();
   const asOf = stale ? AS_OF_STALE : AS_OF;
   const iso = (ms: number): string => new Date(ms).toISOString();
   const alloc = worldToCents(d.allocation);
@@ -878,6 +890,7 @@ function worldStage(kind: "canary" | "live" | "sandbox" | "paper", body: Obj | n
   });
   const seriesTo = stale ? Date.parse(AS_OF_STALE) : NOW_MS - 4 * MIN;
   const dailyOf = (values: { value: string }[], back: number): string => canonicalDecimal(worldCents(worldToCents(values[values.length - 1]!.value) - worldToCents(values[Math.max(0, values.length - 1 - back)]!.value)));
+  const seriesOf = (id: string, fromMs: number, toMs: number, points: number, target: bigint) => { const walk = netPnlSeries(id, fromMs, toMs, points, target); return walk.length > 0 ? walk : historyNetSeries(id, fromMs, toMs, points, target); }; // WP-B2-S3: a history record has no booked deployment
   const setKpis = (values: Record<string, string | null>): void => {
     body.kpis = (body.kpis as Obj[]).map((k) => ({ ...k, value: values[String(k.key)] ?? null }));
   };
@@ -899,8 +912,8 @@ function worldStage(kind: "canary" | "live" | "sandbox" | "paper", body: Obj | n
     withIdentityOf(dep);
     dep.activated_at = started;
     (body.lifecycle as Obj).activated_at = started;
-    const series = netPnlSeries(d.id, life.liveFromMs, seriesTo, Math.max(8, life.liveDays + 1), net);
-    body.stage_facts = stageFacts({ runtime: halted ? "HALTED" : "RUNNING", since: started, verdict: mismatch ? "OPEN_FINDINGS" : "NO_OPEN_FINDINGS", open: mismatch ? 1 : 0, unknownOrders: 0, asOf,
+    const series = seriesOf(d.id, life.liveFromMs, seriesTo, Math.max(8, life.liveDays + 1), net);
+    body.stage_facts = stageFacts({ runtime: halted ? "HALTED" : "RUNNING", since: halted ? haltedIso ?? started : started, verdict: mismatch ? "OPEN_FINDINGS" : "NO_OPEN_FINDINGS", open: mismatch ? 1 : 0, unknownOrders: 0, asOf,
       sessions: [{ id: `session_${d.id}_live_1`, started, ended: null, state: halted ? "HALTED" : "RUNNING" }] });
     body.source_figures = figures(!mismatch);
     setKpis({ capital: worldCents(alloc), gross_notional: gross, daily_pnl: dailyOf(series, 1), open_orders: String(orders.length), broker_equity: mismatch ? null : equity });
@@ -919,7 +932,7 @@ function worldStage(kind: "canary" | "live" | "sandbox" | "paper", body: Obj | n
     if (finished) lifecycle.duration_days = standing.days;
     lifecycle.trial = { basis: "STARTED_AT_PLUS_DURATION_DAYS", duration_days: finished ? standing.days : 14, started_at: avail(started), exit_review_opens_at: avail(iso(endMs)) };
     const points = Math.max(8, Math.floor(((finished ? endMs : seriesTo) - startMs) / (4 * HOUR_MS)) + 1);
-    const series = netPnlSeries(d.id, startMs, finished ? endMs : seriesTo, points, net);
+    const series = seriesOf(d.id, startMs, finished ? endMs : seriesTo, points, net);
     // approved caps from the book: capital = the allocation, gross = 1.5x, daily loss = 1% of it; consumed from the same positions and series
     const breach = variant === "breach";
     const capApproved = worldCents(alloc);
@@ -944,7 +957,7 @@ function worldStage(kind: "canary" | "live" | "sandbox" | "paper", body: Obj | n
     // The verdict is the rows' own: any consumed figure above its approved limit is a BREACH, else every cap is proven within.
     const above = caps.some((c) => worldToCents(c.consumed) > worldToCents(c.approved));
     compliance.verdict = { state: above ? "BREACH" : "WITHIN_ENVELOPE", basis: "CONSUMED_NOT_ABOVE_APPROVED_PER_CAP", undetermined_caps: [] };
-    body.stage_facts = stageFacts({ runtime: finished ? "STOPPED" : halted ? "HALTED" : "RUNNING", since: finished ? iso(endMs) : started, verdict: "NO_OPEN_FINDINGS", open: 0, unknownOrders: 0, asOf,
+    body.stage_facts = stageFacts({ runtime: finished ? "STOPPED" : halted ? "HALTED" : "RUNNING", since: finished ? iso(endMs) : halted ? haltedIso ?? started : started, verdict: "NO_OPEN_FINDINGS", open: 0, unknownOrders: 0, asOf,
       sessions: [{ id: `session_${d.id}_canary_1`, started, ended: finished ? iso(endMs) : null, state: finished ? "COMPLETED" : halted ? "HALTED" : "RUNNING" }] });
     body.source_figures = figures(true);
     setKpis({ capital_consumed: capConsumed, gross_notional: gross, daily_pnl: dailyPnl, open_orders: String(orders.length), broker_equity: equity });
@@ -969,15 +982,16 @@ function worldStage(kind: "canary" | "live" | "sandbox" | "paper", body: Obj | n
     // ONE list of findings: the chip, the KPI, step 4 and the Difference column all read it
     const cents = (n: bigint): string => worldCents(n);
     const feeB = cents(worldToCents(fees) + 1n);
-    const equityB = mismatch ? cents(worldToCents(equity) + 4687n) : equity;
+    const mismatchCents = 4687n; // the broker reports this much more equity than the internal ledger (the variant's one parameter; the finding's text states the same figure)
+    const equityB = mismatch ? cents(worldToCents(equity) + mismatchCents) : equity;
     const finding = (n: number, code: string, summary: string, createdMs: number): Obj => ({ finding_id: `fnd_${d.id}_${n}`, severity: "WARNING", source_authority: "DERIVED", finding_code: code, summary, blocking: false, evidence_hash: null, as_of: null, resolved_at: null, created_at: iso(createdMs) });
     const rows: Obj[] = [
-      ...(mismatch ? [finding(3, "EQUITY_DIFF", "Equity differs by 46.87 USDT", startMs + 60 * MIN)] : []),
+      ...(mismatch ? [{ ...finding(3, "EQUITY_DIFF", `Equity differs by ${cents(mismatchCents)} USDT`, startMs + 60 * MIN), severity: "CRITICAL", blocking: true }] : []), // WP-B2-S3 R4-01: a non-zero equity difference is an open, blocking finding
       finding(1, "FEE_DIFF", "Fee total differs by 0.01 USDT", startMs + 45 * MIN),
       { ...finding(2, "FILL_LATE", "Fill 3 arrived 4 s late", startMs + 30 * MIN), severity: "INFO" },
     ];
     body.findings = { total_count: rows.length, returned_count: rows.length, truncated: false, rows };
-    body.stage_facts = stageFacts({ runtime: halted ? "HALTED" : "RUNNING", since: started, verdict: "OPEN_FINDINGS", open: rows.length, unknownOrders: 0, asOf: stale ? at(-44 * MIN) : AS_OF,
+    body.stage_facts = stageFacts({ runtime: halted ? "HALTED" : "RUNNING", since: halted ? haltedIso ?? started : started, verdict: "OPEN_FINDINGS", open: rows.length, unknownOrders: 0, asOf: stale ? at(-44 * MIN) : AS_OF,
       sessions: [{ id: `sandbox-session-1`, started, ended: null, state: halted ? "HALTED" : "RUNNING" }] });
     body.source_figures = sourceFigures({
       equity: { internal: equity, broker: equityB, unit: "USDT" },
@@ -1000,18 +1014,31 @@ function worldStage(kind: "canary" | "live" | "sandbox" | "paper", body: Obj | n
     const steps = body.steps as Obj[];
     const progress = body.progress as Obj;
     const passedTo = record.status === "completed" ? steps.length : Math.min(steps.length - 1, Math.floor(record.days / 2));
+    // WP-B2-S3: the steps are checked inside the run (before the submission), the exit-review step at the decision; evidence of a decided record has no expiry, the evidence of a run in progress is valid through the run
+    const completedRun = record.status === "completed";
+    const runEndMs = record.toMs ?? NOW_MS;
+    const submitMs = runEndMs - 3 * HOUR_MS;
+    const checkedAt = (i: number): number => (completedRun ? (i === steps.length - 1 ? runEndMs : startMs + Math.floor(((i + 1) * (submitMs - startMs)) / steps.length)) : startMs + (i + 1) * MIN * 90);
+    const passedUpTo = mismatch && !completedRun ? 3 : passedTo;
     steps.forEach((step, i) => {
-      step.strip_state = i < passedTo ? "DONE" : i === passedTo ? "CURRENT" : "PENDING";
-      step.evaluation_state = i < passedTo ? "PASS" : "UNAVAILABLE";
-      step.blocker_code = i < passedTo ? null : `SANDBOX_STEP_${String(step.step_key)}_PENDING`;
-      step.as_of = i < passedTo ? iso(startMs + (i + 1) * MIN * 90) : null;
-      step.expires_at = i < passedTo ? iso(startMs + 7 * DAY_MS + i * MIN) : null;
-      step.summary = i < passedTo ? `Step ${i + 1} evidence accepted.` : step.summary;
+      step.strip_state = i < passedUpTo ? "DONE" : i === passedUpTo ? "CURRENT" : "PENDING";
+      step.evaluation_state = i < passedUpTo ? "PASS" : "UNAVAILABLE";
+      step.blocker_code = i < passedUpTo ? null : `SANDBOX_STEP_${String(step.step_key)}_PENDING`;
+      step.as_of = i < passedUpTo ? iso(checkedAt(i)) : null;
+      step.expires_at = i < passedUpTo && !completedRun ? iso(Math.max(checkedAt(i) + 14 * DAY_MS, NOW_MS + (2 + i) * DAY_MS)) : null;
+      step.summary = i < passedUpTo ? `Step ${i + 1} evidence accepted.` : step.summary;
     });
-    progress.passed_count = passedTo;
+    if (mismatch && !completedRun) {
+      const recon = steps[3]!;
+      recon.strip_state = "CURRENT";
+      recon.evaluation_state = "FAIL";
+      recon.blocker_code = "SANDBOX_STEP_RECONCILIATION_FAIL";
+      recon.summary = `Step 4 failed: ${rows.length} findings are still open, one blocks the gate.`;
+    }
+    progress.passed_count = passedUpTo;
     progress.total_count = steps.length;
-    progress.eligible = passedTo === steps.length;
-    progress.blocker_codes = steps.filter((step) => step.blocker_code !== null).map((step) => String(step.blocker_code));
+    progress.eligible = passedUpTo === steps.length && record.status !== "completed"; // WP-B2-S3 R4-03: a certification that was decided is closed; nothing is eligible to submit
+    progress.blocker_codes = record.status === "completed" ? ["SANDBOX_CERTIFICATION_ALREADY_DECIDED"] : steps.filter((step) => step.blocker_code !== null).map((step) => String(step.blocker_code));
     if (record.status === "completed") {
       const endMs = record.toMs ?? startMs;
       cert.workflow_state = "APPROVED";
@@ -1022,7 +1049,7 @@ function worldStage(kind: "canary" | "live" | "sandbox" | "paper", body: Obj | n
       cert.decision_reason = "All seven steps passed; no open finding.";
       cert.updated_at = iso(endMs);
       body.findings = { total_count: 0, returned_count: 0, truncated: false, rows: [] };
-      body.stage_facts = stageFacts({ runtime: "STOPPED", since: iso(endMs), verdict: "NO_OPEN_FINDINGS", open: 0, unknownOrders: 0, asOf: stale ? at(-44 * MIN) : AS_OF,
+      body.stage_facts = stageFacts({ runtime: "STOPPED", since: iso(endMs), verdict: "NO_OPEN_FINDINGS", open: 0, unknownOrders: 0, asOf: iso(endMs),
         sessions: [{ id: `sandbox-session-1`, started, ended: iso(endMs), state: "COMPLETED" }] });
       body.timeline = { total_count: 3, returned_count: 3, truncated: false, rows: [
         { event_id: `scevt_${d.id}_create`, actor_user_id: "bobby", action: "CREATE", workflow_version_before: 0, workflow_version_after: 1, created_at: iso(startMs - 2 * MIN) },
@@ -1043,7 +1070,7 @@ function worldStage(kind: "canary" | "live" | "sandbox" | "paper", body: Obj | n
     data.orders = book.orders.map((o) => ({ order_id: o.order_id, client_order_id: o.client_order_id, instrument_id: o.symbol, side: o.side, status: o.status, quantity: o.quantity, price: o.price, submitted_at: o.submitted_at }));
     data.fills = book.fills.map((f) => ({ fill_id: f.fill_id, client_order_id: f.client_order_id, order_id: String(f.client_order_id).replace(/^cl-/, "ord_"), quantity: f.quantity, price: f.price, commission: f.commission, commission_currency: f.commission_currency, trade_time: f.trade_time }));
     // the equity line of the paper account: allocation plus the cumulative net PnL of this deployment, ending on allocation + realized + unrealized
-    const equityPoints = retired ? netPnlSeries(d.id, standing.fromMs, exitMs ?? NOW_MS, 200, net) : netPnlSeries(d.id, NOW_MS - 199 * HOUR_MS, NOW_MS - 4 * MIN, 200, net);
+    const equityPoints = retired ? seriesOf(d.id, standing.fromMs, exitMs ?? NOW_MS, 200, net) : seriesOf(d.id, NOW_MS - 199 * HOUR_MS, NOW_MS - 4 * MIN, 200, net);
     let peak = 0n;
     data.account_equity = equityPoints.map((pt, i) => {
       const eq = alloc + worldToCents(pt.value);
@@ -1065,11 +1092,97 @@ function worldStage(kind: "canary" | "live" | "sandbox" | "paper", body: Obj | n
     gate.trade_count = (data.fills as unknown[]).length; // the gate counts the fills the tabs list
     gate.state = paperRecord.status === "completed" ? "MET" : "PARTIAL";
     gate.reason_code = paperRecord.status === "completed" ? null : "OBSERVATION_WINDOW_OPEN";
-    data.stage_facts = stageFacts({ runtime: paperEnd !== null ? "STOPPED" : halted ? "HALTED" : "RUNNING", since: paperEnd ?? started, verdict: "NO_OPEN_FINDINGS", open: 0, unknownOrders: 0, asOf: retired ? iso(exitMs ?? NOW_MS) : AS_OF,
+    data.stage_facts = stageFacts({ runtime: paperEnd !== null ? "STOPPED" : halted ? "HALTED" : "RUNNING", since: paperEnd ?? (halted ? haltedIso ?? started : started), verdict: "NO_OPEN_FINDINGS", open: 0, unknownOrders: 0, asOf: retired ? iso(exitMs ?? NOW_MS) : AS_OF,
       sessions: [{ id: "paper-session-1", started, ended: paperEnd, state: paperEnd !== null ? "COMPLETED" : halted ? "HALTED" : "RUNNING" }] });
   }
+  body.read_at = AS_OF; // WP-B2-S3: every stage page is READ at the world's one clock; only a stage the alpha left is as-of its exit
+  if (retired && exitMs !== null) capAsOf(body, exitMs); // WP-B2-S3 R4-03, R5-10: a stage the alpha left has no source update after its exit
   return body;
 }
 /** Harness ids that stand for a world deployment (the review index and the audit link dep_canary_01: the canary rollout of Basis B). */
 const WORLD_ALIAS: Readonly<Record<string, string>> = {}; // WORLD: one id per deployment; the canary rollout of Basis B is dep_canary_01 everywhere
 // ===== WP-P end
+
+// ===== WP-B2-S3 begin: lineage from the world's approvals, one home deployment per state variant, the freshness of a stage the alpha left, the dark pages read the same book
+/** The history record of an alpha's finished Canary trial when it has no Canary deployment of its own (the record Alpha 360 lists as Canary done); null when the alpha never left Canary. */
+export function worldHistoryCanaryOf(alphaId: string): string | null {
+  const id = historyDeploymentId(alphaId, "canary");
+  return resolveStageDeployment(id) !== null ? id : null;
+}
+
+const STATE_VARIANTS: ReadonlySet<StageVariant> = new Set<StageVariant>(["mismatch", "stale", "gap", "breach", "halted"]);
+/**
+ * The deployment whose book a stage page reads. A state variant (mismatch, stale, gap, breach, halted) is a state the stage is IN; when the named deployment's stage is over
+ * (its alpha has left it) the variant is a state of the first deployment of the world that IS in that stage, so one alpha never has two opposite records of one stage.
+ */
+export function worldIdOf(deploymentId: string, kind: DeploymentStage): string {
+  const base = WORLD_ALIAS[baseDeploymentId(deploymentId)] ?? baseDeploymentId(deploymentId);
+  if (!isPositiveMode() || !STATE_VARIANTS.has(variantOf(deploymentId))) return base;
+  const standing = standingOf(base);
+  if (standing === null || standing.status !== "completed" || standing.stage !== kind) return base;
+  return currentDeploymentOfStage(kind) ?? base;
+}
+
+const refOf = (alphaId: string, gate: WorldGate): { id: string; href: string } | null => {
+  const approval = approvalOfAlpha(alphaId, gate);
+  return approval === undefined ? null : { id: approval.id, href: approvalHref(approval) };
+};
+/**
+ * The lineage of a stage page: each approval is the one request of THIS alpha (the world's approvals, the ids and decisions Alpha 360 and the Approvals pages state), each link opens that request,
+ * the sandbox exit opens the alpha's own sandbox record and the digest is of this deployment. An approval the alpha has no record of is typed unavailable, never another alpha's.
+ */
+export function worldLineage(current: readonly Obj[], alphaId: string, worldId: string, pageId: string): Obj[] {
+  return current.map((entry) => {
+    const kind = String(entry.kind);
+    const gate: WorldGate | null = kind === "R1_APPROVAL" ? "R1" : kind === "R2_APPROVAL" ? "R2" : kind === "PAPER_EXIT" ? "PAPER_EXIT" : kind === "CANARY_PROMOTION_PLAN" || kind === "LIVE_DUAL_APPROVAL" ? "LIVE_GATE" : null;
+    if (kind === "ARTIFACT") return { ...entry, value: digestOf(`artifact:${pageId}`) };
+    if (kind === "PROMOTION_GRANT") return { ...entry, value: `grant_${pageId}` };
+    if (kind === "SANDBOX_EXIT") {
+      const href = sandboxExitHref(worldId);
+      const approval = refOf(alphaId, "SANDBOX_EXIT");
+      return { ...entry, ...("state" in entry ? { state: href === null ? "UNAVAILABLE" : "AVAILABLE" } : {}), value: href === null ? null : approval?.id ?? entry.value, href };
+    }
+    if (gate === null) return entry;
+    const ref = refOf(alphaId, gate);
+    return { ...entry, ...("state" in entry ? { state: ref === null ? "UNAVAILABLE" : "AVAILABLE" } : {}), value: ref?.id ?? null, href: ref?.href ?? null };
+  });
+}
+
+/** No source update of a stage the alpha left is later than its exit: every `as_of` / `checked_at` of the body (strings and typed availabilities) is capped there. */
+export function capAsOf(node: unknown, limitMs: number): void {
+  if (Array.isArray(node)) { for (const item of node) capAsOf(item, limitMs); return; }
+  if (!isObj(node)) return;
+  for (const [key, value] of Object.entries(node)) {
+    if (key === "as_of" || key === "checked_at") {
+      if (typeof value === "string" && Date.parse(value) > limitMs) node[key] = new Date(limitMs).toISOString();
+      else if (isObj(value) && typeof value.value === "string" && Date.parse(value.value) > limitMs) value.value = new Date(limitMs).toISOString();
+      continue;
+    }
+    capAsOf(value, limitMs);
+  }
+}
+
+/**
+ * The `_dark` page of a Sandbox or Paper deployment of the world: the record (steps, findings, orders, fills, equity, gate) is the deployment's own, computed from its one book; what the
+ * dark body takes away is the SOURCE facts (runtime, reconciliation, sessions, panels, figures), which stay the typed absences of the published dark body.
+ */
+function darkHybrid(kind: "sandbox" | "paper", answerBody: Obj, id: string): Obj | null {
+  const dark = darkOfWorld(answerBody, id) ?? clone(answerBody);
+  const lit = worldStage(kind, kind === "sandbox" ? sandboxLit(clone(answerBody), id, "ok") : paperLit(clone(answerBody), id, "ok", false), id, "ok");
+  if (lit === null || lit === answerBody) return null;
+  if (kind === "paper") {
+    const data = lit.data as Obj;
+    data.stage_facts = (isObj(dark.data) ? (dark.data as Obj).stage_facts : data.stage_facts) as unknown;
+    return lit;
+  }
+  for (const key of ["stage_facts", "source_figures", "source_panels"]) if (key in dark) lit[key] = dark[key];
+  return lit;
+}
+/** The open incident an unreconciled Live deployment links as its finding: an incident of the portfolio it is booked on, in a Real-funded (LIVE) environment; null when the world holds none. */
+function liveFindingHref(deploymentId: string): string | null {
+  const found = resolveStageDeployment(worldIdOf(deploymentId, "live"));
+  if (found === null) return "/execution/operations/incidents/inc_TEST_ONLY_fx_mismatch";
+  const incident = WORLD_INCIDENTS.find((x) => x.target[0] === "PORTFOLIO" && x.target[1] === found.deployment.portfolioId && x.env === "LIVE" && x.resolved === null);
+  return incident === undefined ? null : `/execution/operations/incidents/${incident.id}`;
+}
+// ===== WP-B2-S3 end

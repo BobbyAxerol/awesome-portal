@@ -52,7 +52,7 @@ describe("one stage history per alpha", () => {
     expect(paper.data.stage_facts.sessions.rows[0].ended).not.toBeNull();
     const sandbox = await get(`${E}/deployments/dep_sandbox_01/certification`);
     expect(sandbox.certification.workflow_state).toBe("APPROVED");
-    expect(sandbox.progress).toMatchObject({ passed_count: 7, total_count: 7, eligible: true, blocker_codes: [] });
+    expect(sandbox.progress).toMatchObject({ passed_count: 7, total_count: 7, eligible: false, blocker_codes: ["SANDBOX_CERTIFICATION_ALREADY_DECIDED"] }); // WP-B2-S3 R4-03: a decided certification is closed, nothing is eligible to submit
     expect(sandbox.steps.every((step: Body) => step.strip_state === "DONE" && step.evaluation_state === "PASS")).toBe(true);
     expect(sandbox.findings.rows).toEqual([]);
     expect(Date.parse(sandbox.certification.decided_at)).toBe(stageRecord("alpha_a", "sandbox").toMs);

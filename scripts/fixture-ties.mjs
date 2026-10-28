@@ -267,6 +267,8 @@ const cents = (units) => (units === null ? null : units / 10n ** BigInt(SCALE - 
 const qm = (q, m) => (numOf(q) === null || numOf(m) === null ? null : (abs(numOf(q)) * numOf(m)) / 10n ** BigInt(SCALE));
 const within1 = (a, b) => a !== null && b !== null && abs(a - b) <= 1n;
 
+// WP-B2-S3: the clock a stage page is READ at: its own read_at (the world clock), else the as-of of its panels
+const readClockOf = (kind, b) => b.read_at ?? (kind === "paper" ? b.as_of : b.orders?.envelope?.as_of ?? b.blotter?.envelope?.as_of ?? b.positions?.envelope?.as_of ?? b.source_panels?.[0]?.as_of);
 export async function runWorldTies(get) {
   const ties = {};
   const tie = (id) => (ties[id] ??= { checked: 0, violations: [] });
@@ -363,7 +365,7 @@ export async function runWorldTies(get) {
       const kind = d.stage.toLowerCase();
       const p = await page(kind, d.deployment_id);
       if (p === null || days[kind] === 0) continue;
-      asOf = ms(kind === "paper" ? (p.body.read_at ?? p.body.as_of) /* WP-B2-S2: the read clock; a stage the alpha left is as-of its exit, which is not the clock the lifecycle is chained from */ : p.body.orders?.envelope?.as_of ?? p.body.blotter?.envelope?.as_of ?? p.body.positions?.envelope?.as_of ?? p.body.source_panels?.[0]?.as_of) ?? overview.as_of_ms;
+      asOf = ms(readClockOf(kind, p.body)) ?? overview.as_of_ms; // WP-B2-S3: a stage the alpha left has panels as-of its exit, which is not the clock the lifecycle is chained from
       if (kind === "live") check("W03", near(p.body.lifecycle?.activated_at, startOf("live")), `${a.alpha_label} ${d.deployment_id}: Live page activated ${p.body.lifecycle?.activated_at}, the alpha's lifecycle starts Live ${new Date(startOf("live")).toISOString()}`);
       if (kind === "canary") {
         check("W03", near(p.body.lifecycle?.trial?.started_at?.value, startOf("canary")), `${a.alpha_label} ${d.deployment_id}: Canary room started ${p.body.lifecycle?.trial?.started_at?.value}, the alpha's lifecycle ${new Date(startOf("canary")).toISOString()}`);
@@ -700,7 +702,7 @@ export async function runWorldTies(get) {
     at("blotter", blotterFirst?.as_of);
     at("portfolio register", list.source_as_of);
     at("alpha fleet", fleet.source_as_of);
-    for (const [kind, id] of [["live", "dep_live_01"], ["canary", "dep_canary_01"], ["sandbox", "dep_sandbox_01"], ["paper", "dep_paper_01"]]) { const p = await page(kind, id); if (p) at(`${kind} room ${id}`, kind === "paper" ? (p.body.read_at ?? p.body.as_of) : p.body.orders?.envelope?.as_of ?? p.body.blotter?.envelope?.as_of ?? p.body.positions?.envelope?.as_of ?? p.body.source_panels?.[0]?.as_of); }
+    for (const [kind, id] of [["live", "dep_live_01"], ["canary", "dep_canary_01"], ["sandbox", "dep_sandbox_01"], ["paper", "dep_paper_01"]]) { const p = await page(kind, id); if (p) at(`${kind} room ${id}`, readClockOf(kind, p.body)); } // WP-B2-S3
     const fund = await ok200(`${E}/manager/fund-overview?environment=live&window=30D&limit=1`);
     at("fund dataset", fund?.as_of_ms);
     const q = await ok200(`${E}/operations?limit=1`);

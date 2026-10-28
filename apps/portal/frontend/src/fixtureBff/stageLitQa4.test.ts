@@ -107,9 +107,9 @@ describe("R4-11 no step passes on expired evidence", () => {
 });
 
 describe("R5-05 / R5-06 a live deployment with no canary of its own claims no canary and no missing evidence", () => {
-  it("Carry A: no predecessor link, no 'canary exit evidence is not available' blocker, a real artifact digest", async () => {
+  it("Carry A: its finished trial is the predecessor record, no 'canary exit evidence is not available' blocker, a real artifact digest", async () => {
     const body = await raw("/deployments/dep_live_01/live");
-    expect((body.lineage as Record<string, any>[]).find((l) => l.kind === "CANARY_ENVELOPE")!.href).toBeNull();
+    expect((body.lineage as Record<string, any>[]).find((l) => l.kind === "CANARY_ENVELOPE")!.href).toBe("/deployments/live/dep_a_canary_hist/canary"); // WP-B2-S3 R5-05
     expect(JSON.stringify(body.lifecycle.blocker_codes)).not.toContain("CANARY_EXIT_EVIDENCE_UNAVAILABLE");
     expect((body.lineage as Record<string, any>[]).find((l) => l.kind === "ARTIFACT")!.value).not.toMatch(/^sha256:a{64}$/);
   });

@@ -16,7 +16,7 @@ import { worldBlotterCounts } from "../frontend/e2e/bffDoubleOverview";
 import type { PositiveAccountBook, PositiveDeploymentFact, PositivePortfolioBook, PositiveRecall } from "../frontend/e2e/bffPositiveMode";
 import { addDecimal, fixtureNowMs, scaled, type AlphaSpec, type DeploymentSpec } from "../frontend/e2e/bffScale";
 // ===== WP-B2-S begin: a deployment of a stage its alpha has LEFT is retired (ENDED, no exposure): one stage history (e2e/bffWorldStage.ts)
-import { isRetired as wpb2sRetired, stageHistoryOf as wpb2sHistory } from "../frontend/e2e/bffWorldStage";
+import { isRetired as wpb2sRetired, stageActiveOf as wpb2s3Active, stageHistoryOf as wpb2sHistory, stageStateOf as wpb2s3State } from "../frontend/e2e/bffWorldStage";
 // ===== WP-B2-S end
 import { accountFact, grossNotional, incidentChildrenBody, lifecycleOf, MARKS, NATIVE_ALPHAS, positionsOf, stageDays, WORLD_ACTORS } from "../frontend/e2e/bffWorld";
 import { APPROVAL_ROWS } from "../frontend/src/execution/api/fixtureData"; // WP-E
@@ -1536,7 +1536,7 @@ function wpcAlphaResource(method: string, path: string, search: URLSearchParams)
     const net = d.realized; // WP-B2-C: Net PnL is the published net_pnl everywhere (the dataset's: realized); unrealized is its own field
     return { ...copy(template), deployment_id: d.id, strategy_id: id, stage: d.stage, venue: d.venue, account_id: d.accountId, portfolio_id: d.portfolioId, currency: d.currency,
       allocation: d.allocation, balance_total: addDecimal(d.allocation, net), balance_free: addDecimal(d.allocation, net), balance_locked: "0", realized_pnl: d.realized,
-      unrealized_pnl: d.unrealized, net_pnl: net, exposure: wpb2sRetired(d.id) ? "0.00" : wpcGross(d), state: d.active && !wpb2sRetired(d.id) ? "ACTIVE" : "ENDED", active: d.active && !wpb2sRetired(d.id), health: d.health }; // WP-B2-S: a stage the alpha left is ENDED, no exposure
+      unrealized_pnl: d.unrealized, net_pnl: net, exposure: wpb2sRetired(d.id) ? "0.00" : wpcGross(d), state: wpb2s3State(d) === "HALTED" ? "HALTED" : d.active && !wpb2sRetired(d.id) ? "ACTIVE" : "ENDED", active: wpb2s3Active(d), health: d.health }; // WP-B2-S; WP-B2-S3: HALTED is the one halt fact: a stage the alpha left is ENDED, no exposure
   });
   const per = (pick: (d: DeploymentSpec) => string, currency: string): string => sum(spec.deployments.filter((d) => d.currency === currency).map(pick));
   alpha.allocations = currencies.map((currency) => ({ currency, value: per((d) => d.allocation, currency) }));
@@ -1545,7 +1545,7 @@ function wpcAlphaResource(method: string, path: string, search: URLSearchParams)
   alpha.exposure = currencies.map((currency) => ({ currency, value: per((d) => (wpb2sRetired(d.id) ? "0.00" : wpcGross(d)), currency) }));
   body.resource = { ...body.resource, label: spec.label };
   const rows = spec.deployments.map((d) => ({ deployment_id: d.id, strategy_id: id, account_id: d.accountId, mode: mode[d.environment], venue: d.venue, currency: d.currency, portfolio_id: d.portfolioId,
-    state: d.active && !wpb2sRetired(d.id) ? "ACTIVE" : "ENDED", active: d.active && !wpb2sRetired(d.id), updated_at: alpha.updated_at, updated_at_ms: alpha.updated_at_ms, profile_environment: d.environment }));
+    state: wpb2s3State(d) === "HALTED" ? "HALTED" : d.active && !wpb2sRetired(d.id) ? "ACTIVE" : "ENDED", active: wpb2s3Active(d), updated_at: alpha.updated_at, updated_at_ms: alpha.updated_at_ms, profile_environment: d.environment })); // WP-B2-S3
   body.data.deployments = rows;
   if (body.panels?.deployments) {
     body.panels.deployments.data = { rows };
@@ -2130,7 +2130,7 @@ export function wpAlphaResource(body: unknown, alphaId: string): unknown {
   const portfolios = [...new Map(own.map((deployment) => [deployment.portfolioId, deployment.portfolioName])).entries()];
   const profile = { profile_environment: environment };
   out.data.deployments = own.map((deployment) => ({ ...first(data.deployments), deployment_id: deployment.id, strategy_id: alphaId, account_id: deployment.accountId, mode: environment,
-    venue: deployment.venue, currency: deployment.currency, portfolio_id: deployment.portfolioId, state: wpb2sRetired(deployment.id) ? "ENDED" : deployment.state, active: deployment.active && !wpb2sRetired(deployment.id), ...profile })); // WP-B2-S2 W02
+    venue: deployment.venue, currency: deployment.currency, portfolio_id: deployment.portfolioId, state: wpb2s3State(deployment), active: wpb2s3Active(deployment), ...profile })); // WP-B2-S2 W02; WP-B2-S3
   out.data.accounts = accounts.map((id) => ({ ...first(data.accounts), account_id: id, strategy_id: alphaId, mode: environment, base_currency: own[0]!.currency, ...profile }));
   out.data.account_balances = accounts.map((id) => {
     const booked = own.filter((deployment) => deployment.accountId === id);

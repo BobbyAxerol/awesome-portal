@@ -161,3 +161,44 @@ export function stageBookOf(deploymentId: string, minFillsAsked?: number): Stage
   const byTime = (field: string) => (a: Row, b: Row): number => String(b[field]).localeCompare(String(a[field]));
   return { orders: orders.sort(byTime("submitted_at")), fills: fills.sort(byTime("trade_time")) };
 }
+
+// ===== WP-B2-S3 begin: one halt fact, one state word, one current deployment per stage (QA6 R5-02, R5-09, R4-01, R5-01)
+/** Deployments of the world whose runtime the venue halted (the Canary of Momentum C). The Alpha 360 row, the Fleet row and the stage room all read this one list. */
+const WORLD_HALTED: readonly string[] = ["dep_c1"];
+/**
+ * The instant a halted deployment was halted: just after its last order event in the blotter (a halt stops NEW orders, so none is placed after it), never after
+ * the world clock. null for a deployment that is not halted.
+ */
+export function haltedSinceMs(deploymentId: string): number | null {
+  const found = deploymentOf(deploymentId);
+  if (found === null) return null;
+  const halted = WORLD_HALTED.includes(deploymentId) || found.deployment.state === "HALTED";
+  if (!halted || standingOf(deploymentId)?.status === "completed") return null;
+  const book = blotterBookOf(deploymentId);
+  const events = [
+    ...book.orders.flatMap((o) => [Date.parse(String(o.submitted_at)), Date.parse(String(o.updated_at))]),
+    ...book.fills.map((f) => Date.parse(String(f.trade_time))),
+  ].filter((t) => Number.isFinite(t));
+  const last = events.length === 0 ? WORLD_NOW_MS - 3 * DAY_MS : Math.max(...events) + 6_000;
+  return Math.min(last, WORLD_NOW_MS - 10_000);
+}
+/** The state word the Fleet row and the Alpha 360 deployment rows print: ENDED for a stage the alpha left, HALTED for a halted runtime, else the booked state. */
+export const stageStateOf = (d: DeploymentSpec): string => (isRetired(d.id) ? "ENDED" : haltedSinceMs(d.id) !== null ? "HALTED" : d.state);
+/** Whether the deployment's row reads as running (active): not left, not halted. */
+export const stageActiveOf = (d: DeploymentSpec): boolean => d.active && !isRetired(d.id) && haltedSinceMs(d.id) === null;
+/** The first deployment of the world that is IN `stage` now (its alpha has not left it): the home of a page variant of a deployment whose own stage is over. */
+export function currentDeploymentOfStage(stage: StageName): string | null {
+  for (const alpha of worldAlphas()) for (const d of alpha.deployments) if (stageOfSpec(d) === stage && standingOf(d.id)?.status === "current") return d.id;
+  return null;
+}
+/** The net PnL walk of a history record (a stage the alpha left without a deployment of its own): linear to the final net with a small deterministic wiggle, cents exact. */
+export function historyNetSeries(deploymentId: string, fromMs: number, toMs: number, points: number, net: bigint): { t: number; value: string }[] {
+  if (points < 2) return [];
+  const amp = (net < 0n ? -net : net) / 6n + 100n;
+  let state = BigInt((seedOf(deploymentId) % 2_147_483_646) + 1);
+  const walk: bigint[] = [0n];
+  for (let i = 1; i < points; i += 1) { state = (state * 48_271n) % 2_147_483_647n; walk.push(walk[i - 1]! + ((state % 2001n) - 1000n) * amp / 4000n); }
+  const n = BigInt(points - 1);
+  return walk.map((w, i) => ({ t: Math.round(fromMs + ((toMs - fromMs) * i) / (points - 1)), value: fromCents(net * BigInt(i) / n + (w - (walk[points - 1]! * BigInt(i)) / n)) }));
+}
+// ===== WP-B2-S3 end
