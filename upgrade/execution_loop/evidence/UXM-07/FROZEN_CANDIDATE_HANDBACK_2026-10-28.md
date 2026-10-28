@@ -1,6 +1,6 @@
 # Frozen candidate hand-back — Claude → Codex (28 Oct 2026)
 
-Lane `claude/post-canonical-20261027` in `/home/bobby/portal-research-fe2`, on canonical `docs/research-loop-plan` @`0c3b49dc9` (fast-forwardable; Claude does not merge, push, deploy or enable command/Live). Frozen SHA: the commit that carries this file (see `git log -1` of the lane); all gates below ran on the tree before the re-pin and this document, which touch only the two pinned packs and docs.
+Lane `claude/post-canonical-20261027` in `/home/bobby/portal-research-fe2`, on canonical `docs/research-loop-plan` @`0c3b49dc9` (fast-forwardable; Claude does not merge, push, deploy or enable command/Live). Frozen SHA: `b9d37516b` (hook-verified). Anything after it is this document's result line only.
 
 ## 1. Gates actually run on the candidate
 
@@ -11,7 +11,8 @@ Lane `claude/post-canonical-20261027` in `/home/bobby/portal-research-fe2`, on c
 | Visual compare-only, pinned image, before any recording | 472 passed, 215 failed, 16 skipped (canonical had 213 failed). Root causes classified: V2 spec left three reads unanswered (visit digest, alpha lifecycle, approval evidence → 501), two stale cells (replay root `trade-replay-v2`; incident id and the incident page replacing the dock), plus the world now being populated (every screenshot differs) |
 | V2 baseline recording, chromium-v2, pinned image | 65/65 recorded; two consecutive compares 65/65 green. All 65 differ from the old baselines by more than noise (none restored); before/after contact sheet of Overview, Fleet, Blotter, Account 360, Alpha 360, Incident reviewed |
 | N29 then EDS-12 re-pin from each gate's own refresh | both `runtime_effect: NONE` (39 and 42 inputs) |
-| Full pre-commit hook | run on the commit that carries this file; its result is recorded in the commit outcome, not assumed |
+| Contracts container suite (`scripts/contracts-test.sh`) | first hook attempt failed: 5 files could not import `bffApprovalWorld`, `roster-names`, `domain`, `command-center/contracts` (not in the container's explicit copy list); list fixed, 112 files / 1,898 tests pass |
+| Full pre-commit hook (`verify-workspace.sh`) | PASSED on `b9d37516b` ("Portal monorepo verification passed": control-api vitest, N29 and EDS-12 gates, D1–D4, N15–N29, tracking reconciliation) |
 
 Not run: legacy `e2e/visual.spec.ts` and the Research Loop spec (not touched by this lane; Codex's official run owns LC-FE-03), real-API/Edge acceptance (fixture success is not real-API acceptance).
 
