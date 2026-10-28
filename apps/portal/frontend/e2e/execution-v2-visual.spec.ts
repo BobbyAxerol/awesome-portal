@@ -25,6 +25,7 @@ import { fileURLToPath } from "node:url";
 import { expect, test, type Page } from "@playwright/test";
 
 import { answerExecutionBff, stubExecutionBff } from "./bffDouble";
+import { incidentChildrenBody } from "./bffWorld";
 import { SLICE_URL, stubScopedBff } from "./bffDoubleScoped";
 import { OPERATIONS_V2_DOUBLE_NOW_ISO } from "./bffDoubleV2";
 import { settle, stubPortalApi, usePreferences } from "./fixtures";
@@ -236,8 +237,8 @@ async function stillFrame(page: Page): Promise<void> {
 
 test.use({ locale: "en-US", timezoneId: "UTC", colorScheme: "light" });
 
-// Three reads the shared doubles do not answer for this spec are answered by the canonical published fixtures, bound to the id and workspace asked:
-// the Overview digest panel (`GET /visit-digest`, first-visit case), an alpha's lifecycle record and an approval's evidence read.
+// Reads the shared doubles do not answer for this spec: the canonical published fixtures answer the Overview digest panel (`GET /visit-digest`,
+// first-visit case), an alpha's lifecycle record and an approval's evidence read, bound to the id and workspace asked; the world answers an incident's children.
 const FIXTURES = resolve(dirname(fileURLToPath(import.meta.url)), "../../../../packages/contracts/fixtures");
 function fixtureBody(file: string, pick: (json: Record<string, unknown>) => Record<string, unknown>): Record<string, unknown> {
   return pick(JSON.parse(readFileSync(resolve(FIXTURES, file), "utf8")) as Record<string, unknown>);
@@ -258,6 +259,9 @@ async function stubPublishedReads(page: Page, options: Parameters<typeof answerE
     if (alpha !== null) return answer({ ...lifecycle, alpha_id: decodeURIComponent(alpha[1]!) });
     const approval = /^\/api\/v1\/execution\/governance\/approvals\/([^/]+)\/evidence$/.exec(url.pathname);
     if (approval !== null) return answer({ ...evidence, approval_id: decodeURIComponent(approval[1]!) });
+    const children = /^\/api\/v1\/execution\/operations\/incidents\/([^/]+)\/children$/.exec(url.pathname);
+    const world = children === null ? null : incidentChildrenBody(decodeURIComponent(children[1]!), workspace);
+    if (world !== null) return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(world) });
     return route.fallback();
   });
 }
