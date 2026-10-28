@@ -886,7 +886,7 @@ export async function runWorldTies(get) {
     const collect = (o) => { if (Array.isArray(o)) o.forEach(collect); else if (o && typeof o === "object") for (const [k, v] of Object.entries(o)) { if (k === "href" && typeof v === "string" && /^\/deployments\/alphas\/[^/?]+\?/.test(v)) links.push(v); else collect(v); } };
     collect(digest ?? {});
     const queries = new Map();
-    for (const a of alphaRows.slice(0, 12)) for (const q of ["", "?workspace_id=ws_TEST_ONLY", `?workspace_id=ws_TEST_ONLY&deployment_id=${(a.deployments ?? [])[0]?.deployment_id}`]) queries.set(`${a.alpha_id}${q}`, [a.alpha_id, q]);
+    for (const a of alphaRows.slice(0, 12)) for (const q of ["", "?workspace_id=ws_TEST_ONLY", ...((a.deployments ?? []).length > 0 ? [`?workspace_id=ws_TEST_ONLY&deployment_id=${a.deployments[0].deployment_id}`] : [])]) queries.set(`${a.alpha_id}${q}`, [a.alpha_id, q]);
     for (const href of links) { const m = /^\/deployments\/alphas\/([^/?]+)(\?.*)$/.exec(href); queries.set(`${m[1]}${m[2]}`, [m[1], m[2]]); }
     check("W38", links.length > 0, "the Overview digest links no alpha with a query");
     for (const [alphaId, q] of queries.values()) {
