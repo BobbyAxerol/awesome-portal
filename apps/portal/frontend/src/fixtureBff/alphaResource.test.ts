@@ -46,7 +46,8 @@ describe("alpha resources are not clones", () => {
     const metric = (key: string): bigint => rows.reduce((sum: bigint, row: Body) => sum + cents(row.economic_partitions[0].metrics[key].value), 0n);
     expect(allocated).toBe(metric("allocation"));
     // balance = allocation + realized PnL of the same deployments, free + locked = total
-    const balance = resource.data.account_balances.reduce((sum: bigint, r: Body) => sum + cents(r.total), 0n);
+    // WP-B2-C: account_balances are the SLEEVE's equity (one per account, whichever alpha opens it; W08b); the alpha's own balance is alpha.balances
+    const balance = (resource.data.alpha.balances as Body[]).reduce((sum: bigint, r: Body) => sum + cents(r.total), 0n);
     expect(balance - allocated).toBe(metric("net_pnl"));
     for (const r of resource.data.account_balances) expect(cents(r.free) + cents(r.locked)).toBe(cents(r.total));
   });

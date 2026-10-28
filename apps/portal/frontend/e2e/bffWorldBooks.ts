@@ -14,6 +14,7 @@ import {
   MARKS, WORLD_INCIDENTS, accountFact, bindingFact, deploymentOf, fromCents, incidentState, netPnlOf, netPnlSeries, positionsOf, toCents,
   worldAlphas, type WorldIncident, type WorldPosition,
 } from "./bffWorld";
+import { scaled } from "./bffScale";
 import { isRetired } from "./bffWorldStage"; // B-S: a deployment whose stage its alpha has left holds nothing open
 
 /* ── positions: quantity x the one mark ─────────────────────────────────── */
@@ -157,7 +158,8 @@ const envOf = (e: string): OpEnv => (e === "live" ? "LIVE" : e === "sandbox" ? "
 export function environmentsOfEntity(kind: string, id: string): OpEnv[] {
   const all = worldAlphas().flatMap((a) => a.deployments);
   const mine = kind === "PORTFOLIO" ? all.filter((d) => d.portfolioId === id) : kind === "ACCOUNT" ? all.filter((d) => d.accountId === id) : kind === "DEPLOYMENT" ? all.filter((d) => d.id === id) : [];
-  return [...new Set(mine.map((d) => envOf(d.environment)))].sort((a, b) => ENV_RANK[b] - ENV_RANK[a]);
+  const listed = mine.length === 0 && kind === "PORTFOLIO" ? (scaled().portfolios.find((p) => p.id === id)?.environments ?? []).map((e) => envOf(e)) : [];
+  return [...new Set([...mine.map((d) => envOf(d.environment)), ...listed])].sort((a, b) => ENV_RANK[b] - ENV_RANK[a]);
 }
 /** The environment an operation or incident on `target` states: the declared one when the target has that partition (or the world does not know the target), else the target's own highest partition. */
 export function environmentFor(kind: string, id: string, declared: OpEnv): OpEnv {

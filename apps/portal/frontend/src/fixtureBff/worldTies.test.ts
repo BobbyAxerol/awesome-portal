@@ -58,10 +58,7 @@ const OPEN_TIES: Readonly<Record<string, string>> = {
   W03: "Canary room start date differs from the alpha lifecycle (B-S)",
   W04: "Overview links dep_88/dep_74/op_1251/op_1249 and ops ids dep_TEST_ONLY_eth do not resolve (B-A)",
   W05: "Overview fleet 182 vs Fleet 72, portfolios 21 vs 25, register 25 vs 24 rows (B-A)",
-  W08: "BTCUSDT mark 67410 / 165000 vs 66470.50 (B-C)",
-  W08b: "sleeve equity: alpha pages vs account page; exposure vs position notionals (B-C)",
-  W09: "alpha resource net PnL (realized+unrealized) vs dataset net PnL (realized) (B-C)",
-  W11: "operations rows: environment contradicts the target's stage / books (B-O)",
+  W09: "Live room equity - allocation is realized+unrealized (bffSimulatedStage.ts netPnlOf, B-S); the alpha resource and datasets now agree (B-C)",
 };
 
 let server: Server;

@@ -565,8 +565,9 @@ export async function runWorldTies(get) {
     if (r === null) continue;
     accountResources.set(id, r);
     for (const p of r.data.positions ?? []) {
-      const q = abs(numOf(p.quantity));
-      if (q > 0n && p.notional !== undefined) seenMark(`account ${id} (notional / quantity)`, p.instrument_id, fromUnits((numOf(p.notional) * 10n ** BigInt(SCALE)) / q).replace(/(\.\d{2})\d*$/, "$1"));
+      // notional = quantity x the ONE mark of the symbol, to the cent (a mark with two places times a quarter lot has three)
+      const known = marks.get(symOf(p.instrument_id));
+      if (known && p.notional !== undefined && numOf(p.quantity) !== null) check("W08", within1(cents(qm(p.quantity, known.mark)), cents(numOf(p.notional))), `account ${id} ${p.instrument_id}: notional ${p.notional} is not quantity ${p.quantity} x mark ${known.mark} (${known.where})`);
     }
   }
   // W08b: whole-account figures are the same whichever sleeve opens them; a sleeve has ONE equity
@@ -590,7 +591,7 @@ export async function runWorldTies(get) {
     for (const d of r.data.alpha?.deployments ?? []) {
       const pos = (r.data.positions ?? []).filter((p) => p.deployment_id === d.deployment_id);
       if (pos.length > 0 && pos.every((p) => numOf(p.mark_price) !== null)) check("W08b", cents(pos.reduce((n, p) => n + (qm(p.quantity, p.mark_price) ?? 0n), 0n)) === cents(numOf(d.exposure)), `alpha ${alphaId} ${d.deployment_id}: exposure ${d.exposure} is not the sum of its positions' notionals`);
-      check("W08b", numOf(d.realized_pnl) + numOf(d.unrealized_pnl) === numOf(d.net_pnl), `alpha ${alphaId} ${d.deployment_id}: net PnL ${d.net_pnl} != realized ${d.realized_pnl} + unrealized ${d.unrealized_pnl}`);
+      check("W08b", numOf(d.realized_pnl) === numOf(d.net_pnl), `alpha ${alphaId} ${d.deployment_id}: net PnL ${d.net_pnl} != the published realized ${d.realized_pnl} (W09 decision: Net PnL is the dataset net_pnl; unrealized is its own field)`);
       check("W08b", numOf(d.balance_total) === numOf(d.allocation) + numOf(d.net_pnl) || numOf(d.balance_total) === numOf(d.allocation) + numOf(d.realized_pnl), `alpha ${alphaId} ${d.deployment_id}: balance ${d.balance_total} is not allocation ${d.allocation} + PnL`);
     }
   }
@@ -600,7 +601,7 @@ export async function runWorldTies(get) {
   const reading = (key, where, value) => { if (value === null || value === undefined) return; const seen = readings.get(key); if (!seen) readings.set(key, { value, where }); else check("W09", sameDecimal(seen.value, value), `${key}: ${where} says ${value}, ${seen.where} says ${seen.value}`); };
   for (const env of ["live", "paper", "sandbox"]) {
     const dataset = await ok200(`${E}/manager/fleet?environment=${env}&window=30D&limit=200`);
-    for (const row of dataset?.items ?? []) for (const c of row.children ?? []) {
+    for (const row of dataset?.items ?? []) for (const c of (row.children ?? []).length === 1 ? row.children : []) { // a row is alpha x portfolio: only a one-deployment row is comparable to a deployment
       reading(`${row.alpha_id}:${c.deployment_id}:net_pnl`, `Fleet ${env} dataset`, metricStr(row, "net_pnl"));
       reading(`${row.alpha_id}:${c.deployment_id}:return`, `Fleet ${env} dataset`, metricStr(row, "return_30d_pct"));
     }

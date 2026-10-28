@@ -18,7 +18,7 @@ import { addDecimal, fixtureNowMs, scaled, type AlphaSpec, type DeploymentSpec }
 // ===== WP-B2-S begin: a deployment of a stage its alpha has LEFT is retired (ENDED, no exposure): one stage history (e2e/bffWorldStage.ts)
 import { isRetired as wpb2sRetired, stageHistoryOf as wpb2sHistory } from "../frontend/e2e/bffWorldStage";
 // ===== WP-B2-S end
-import { grossNotional, incidentChildrenBody, lifecycleOf, MARKS, NATIVE_ALPHAS, positionsOf, stageDays, WORLD_ACTORS } from "../frontend/e2e/bffWorld";
+import { accountFact, grossNotional, incidentChildrenBody, lifecycleOf, MARKS, NATIVE_ALPHAS, positionsOf, stageDays, WORLD_ACTORS } from "../frontend/e2e/bffWorld";
 import { APPROVAL_ROWS } from "../frontend/src/execution/api/fixtureData"; // WP-E
 import { approvalRecord, evidenceFromRecord, restateTarget } from "../frontend/e2e/bffApprovalWorld"; // WP-E
 import { legacy, traits } from "./scenario";
@@ -1500,7 +1500,11 @@ function wpcEquity(method: string, path: string, search: URLSearchParams): Revie
 const WPC_STAGE_ORDER = ["LIVE", "CANARY", "SANDBOX", "PAPER"] as const;
 /** Gross notional of a native running deployment (the suite specs carry "0"): the live deployments the Live page prints 7,370.68 for keep that figure; any other running one is 10 to 34 percent of its allocation; an ended one is a true zero. */
 function wpcGross(d: DeploymentSpec): string {
-  if (d.exposure !== "0" || !d.active) return d.exposure;
+  if (!d.active) return d.exposure;
+  // WP-B2-C: exposure = the sum of the deployment's positions at the one mark (retired deployments hold none)
+  const sumOfPositions = grossNotional(d.id);
+  if (/^\d/.test(sumOfPositions) && toScaled(sumOfPositions) !== 0n) return sumOfPositions;
+  if (d.exposure !== "0") return d.exposure;
   // The world's own gross notional of the deployment's open positions (the Live page prints the same figure); a deployment with no positions falls to a share of its allocation.
   const world = grossNotional(d.id);
   if (/^\d/.test(world) && toScaled(world) !== 0n) return world;
@@ -1529,15 +1533,15 @@ function wpcAlphaResource(method: string, path: string, search: URLSearchParams)
   alpha.stages = WPC_STAGE_ORDER.filter((stage) => spec.deployments.some((d) => d.stage === stage)).reverse();
   alpha.portfolios = [...new Map(spec.deployments.map((d) => [d.portfolioId, { portfolio_id: d.portfolioId, name: d.portfolioName, base_currency: d.currency }])).values()];
   alpha.deployments = spec.deployments.map((d) => {
-    const net = addDecimal(d.realized, d.unrealized);
+    const net = d.realized; // WP-B2-C: Net PnL is the published net_pnl everywhere (the dataset's: realized); unrealized is its own field
     return { ...copy(template), deployment_id: d.id, strategy_id: id, stage: d.stage, venue: d.venue, account_id: d.accountId, portfolio_id: d.portfolioId, currency: d.currency,
       allocation: d.allocation, balance_total: addDecimal(d.allocation, net), balance_free: addDecimal(d.allocation, net), balance_locked: "0", realized_pnl: d.realized,
       unrealized_pnl: d.unrealized, net_pnl: net, exposure: wpb2sRetired(d.id) ? "0.00" : wpcGross(d), state: d.active && !wpb2sRetired(d.id) ? "ACTIVE" : "ENDED", active: d.active && !wpb2sRetired(d.id), health: d.health }; // WP-B2-S: a stage the alpha left is ENDED, no exposure
   });
   const per = (pick: (d: DeploymentSpec) => string, currency: string): string => sum(spec.deployments.filter((d) => d.currency === currency).map(pick));
   alpha.allocations = currencies.map((currency) => ({ currency, value: per((d) => d.allocation, currency) }));
-  alpha.balances = currencies.map((currency) => ({ currency, total: per((d) => addDecimal(d.allocation, addDecimal(d.realized, d.unrealized)), currency), free: per((d) => addDecimal(d.allocation, addDecimal(d.realized, d.unrealized)), currency), locked: "0" }));
-  alpha.position_pnl = currencies.map((currency) => ({ currency, realized: per((d) => d.realized, currency), unrealized: per((d) => d.unrealized, currency), net: per((d) => addDecimal(d.realized, d.unrealized), currency) }));
+  alpha.balances = currencies.map((currency) => ({ currency, total: per((d) => addDecimal(d.allocation, d.realized), currency), free: per((d) => addDecimal(d.allocation, d.realized), currency), locked: "0" })); // WP-B2-C
+  alpha.position_pnl = currencies.map((currency) => ({ currency, realized: per((d) => d.realized, currency), unrealized: per((d) => d.unrealized, currency), net: per((d) => d.realized, currency) })); // WP-B2-C
   alpha.exposure = currencies.map((currency) => ({ currency, value: per((d) => (wpb2sRetired(d.id) ? "0.00" : wpcGross(d)), currency) }));
   body.resource = { ...body.resource, label: spec.label };
   const rows = spec.deployments.map((d) => ({ deployment_id: d.id, strategy_id: id, account_id: d.accountId, mode: mode[d.environment], venue: d.venue, currency: d.currency, portfolio_id: d.portfolioId,
@@ -2111,7 +2115,11 @@ export function wpAlphaResource(body: unknown, alphaId: string): unknown {
   if (spec === undefined || root === null || typeof root !== "object" || root.data === undefined || root.data === null) return body;
   const environment = String(root.selected_environment ?? "live");
   const own = spec.deployments.filter((deployment) => deployment.environment === environment);
-  if (own.length === 0) return body;
+  if (own.length === 0) { // WP-B2-C: an alpha with no book in this environment holds no position there (the double's static positions are another world's marks)
+    const bare = copy(root) as Draft;
+    if (Array.isArray(bare.data.positions)) bare.data.positions = [];
+    return bare;
+  }
   const data = root.data as Draft;
   const out = copy(root) as Draft;
   const first = (rows: unknown): Draft => (Array.isArray(rows) && rows[0] !== undefined ? copy(rows[0]) : {});
@@ -2127,7 +2135,9 @@ export function wpAlphaResource(body: unknown, alphaId: string): unknown {
   out.data.account_balances = accounts.map((id) => {
     const booked = own.filter((deployment) => deployment.accountId === id);
     const allocation = booked.reduce((sum, deployment) => sum + cents(deployment.allocation), 0n);
-    const total = allocation + booked.reduce((sum, deployment) => sum + net(deployment), 0n);
+    const sleeve = accountFact(id); // WP-B2-C: a sleeve has ONE equity, the account page's, whichever alpha opens it
+    const total = sleeve !== null ? sleeve.total : allocation + booked.reduce((sum, deployment) => sum + net(deployment), 0n);
+    if (sleeve !== null) return { ...first(data.account_balances), account_id: id, currency: own[0]!.currency, total: text(sleeve.total), free: text(sleeve.free), locked: text(sleeve.locked), ...profile };
     return { ...first(data.account_balances), account_id: id, currency: own[0]!.currency, total: text(total), free: text(total - allocation / 10n), locked: text(allocation / 10n), ...profile };
   });
   out.data.portfolios = portfolios.map(([id, name]) => ({ ...first(data.portfolios), portfolio_id: id, name, base_currency: own[0]!.currency, owner: spec.owner, ...profile }));

@@ -561,6 +561,7 @@ function positiveAccount(spec: AccountSpec, id: string): AccountSpec {
     else delete rows.differences;
   } else {
     // An account no deployment is booked on (the idle sub account, the OKX main): healthy, with the rows its capabilities name.
+    rows.positions = accountPositions(primary, []); // WP-B2-C: nothing is booked here, so nothing is held (the static spec rows are another account's positions)
     rows.deployments = []; // no deployment of the world is booked here, so none is named (a deployment id must have a lifecycle record)
     const have = rows.account_balances?.[0];
     const free = have ? toCents(String(have.free)) : 10_000_000n;
