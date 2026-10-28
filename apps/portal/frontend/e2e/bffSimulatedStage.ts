@@ -1039,8 +1039,8 @@ function worldStage(kind: "canary" | "live" | "sandbox" | "paper", body: Obj | n
     }
     progress.passed_count = passedUpTo;
     progress.total_count = steps.length;
-    progress.eligible = passedUpTo === steps.length && record.status !== "completed"; // WP-B2-S3 R4-03: a certification that was decided is closed; nothing is eligible to submit
-    progress.blocker_codes = record.status === "completed" ? ["SANDBOX_CERTIFICATION_ALREADY_DECIDED"] : steps.filter((step) => step.blocker_code !== null).map((step) => String(step.blocker_code));
+    progress.eligible = passedUpTo === steps.length; // WP-B2-S3 (round D, N4-01): a decided certification publishes the contract's own met state: workflow_state APPROVED, every step PASS / DONE, eligible, no blocker code
+    progress.blocker_codes = record.status === "completed" ? [] : steps.filter((step) => step.blocker_code !== null).map((step) => String(step.blocker_code));
     if (record.status === "completed") {
       const endMs = record.toMs ?? startMs;
       cert.workflow_state = "APPROVED";
@@ -1051,6 +1051,13 @@ function worldStage(kind: "canary" | "live" | "sandbox" | "paper", body: Obj | n
       cert.decision_reason = "All seven steps passed; no open finding.";
       cert.updated_at = iso(endMs);
       body.findings = { total_count: 0, returned_count: 0, truncated: false, rows: [] };
+      body.source_figures = sourceFigures({ // a closed record with no finding: both sides state the same figure
+        equity: { internal: equity, broker: equity, unit: "USDT" },
+        gross_notional: { internal: gross, broker: gross, unit: "USDT" },
+        positions: { internal: String(positions.length), broker: String(positions.length), unit: "COUNT" },
+        open_orders: { internal: String(orders.length), broker: String(orders.length), unit: "COUNT" },
+        fees: { internal: fees, broker: fees, unit: "USDT" },
+      });
       body.stage_facts = stageFacts({ runtime: "STOPPED", since: iso(endMs), verdict: "NO_OPEN_FINDINGS", open: 0, unknownOrders: 0, asOf: iso(endMs),
         sessions: [{ id: `sandbox-session-1`, started, ended: iso(endMs), state: "COMPLETED" }] });
       body.timeline = { total_count: 3, returned_count: 3, truncated: false, rows: [

@@ -54,11 +54,12 @@ const TIES: readonly { id: string; title: string; qa: string; owner: string }[] 
   { id: "W22", title: "Since your last visit lists only observations after that visit", qa: "R1-04", owner: "B-A3" },
   { id: "W13", title: "one clock: every read of the world is taken within a day of the others", qa: "R3-10 R3-09", owner: "B-O" },
   // ===== WP-B2-S3 begin
-  { id: "W14", title: "a Sandbox page that shows an equity difference or an approved decision blocks its gate: open blocking finding, nothing eligible to submit, steps counted and dated inside the run", qa: "R4-01 R4-03 R4-05 R4-12", owner: "B-S" },
-  { id: "W15", title: "every lineage entry of a stage page is a request of that page's alpha, opens, and is that alpha's only (one request id, one alpha)", qa: "R4-02 R4-13 R5-04 R5-06", owner: "B-S" },
-  { id: "W16", title: "one halt fact: a room that says HALTED is HALTED in the Fleet row and the alpha resource (and the reverse), and nothing is ordered after the halt", qa: "R5-02 R5-09", owner: "B-S" },
-  { id: "W17", title: "a stage page never contradicts the alpha's record: a stage the alpha left is STOPPED and nothing on it is as-of later than its stop", qa: "R4-03 R4-06 R5-10 R2-05", owner: "B-S" },
-  { id: "W18", title: "a finished Canary is a Canary record: the room declares the Canary stage, and a Live alpha's predecessor envelope opens as a finished trial", qa: "R5-01 R5-05", owner: "B-S" },
+  { id: "W31", title: "a Sandbox page that shows an equity difference or an approved decision blocks its gate: open blocking finding, nothing eligible to submit, steps counted and dated inside the run", qa: "R4-01 R4-03 R4-05 R4-12", owner: "B-S" },
+  { id: "W32", title: "every lineage entry of a stage page is a request of that page's alpha, opens, and is that alpha's only (one request id, one alpha)", qa: "R4-02 R4-13 R5-04 R5-06", owner: "B-S" },
+  { id: "W33", title: "one halt fact: a room that says HALTED is HALTED in the Fleet row and the alpha resource (and the reverse), and nothing is ordered after the halt", qa: "R5-02 R5-09", owner: "B-S" },
+  { id: "W34", title: "a stage page never contradicts the alpha's record: a stage the alpha left is STOPPED and nothing on it is as-of later than its stop", qa: "R4-03 R4-06 R5-10 R2-05", owner: "B-S" },
+  { id: "W35", title: "a finished Canary is a Canary record: the room declares the Canary stage, and a Live alpha's predecessor envelope opens as a finished trial", qa: "R5-01 R5-05", owner: "B-S" },
+  { id: "W30", title: "a decided certification reads as passed in the contract's own words: APPROVED, eligible, no blocker, every step PASS/DONE, no finding, both sides of every figure equal (the Sandbox page and its history records)", qa: "N4-01 N5-02", owner: "B-S" },
   // ===== WP-B2-S3 end
   { id: "W23", title: "a scoped blotter is the scope's population: every order of the deployment/alpha (including ord_00225 for Carry A) is on it, count and chips equal the filtered population", qa: "QA6 R2-02", owner: "B-B1" },
   { id: "W24", title: "one definition of the money of a book: Net PnL is the published realized, a venue is the sum of its deployments, Equity is allocation + realized + unrealized (a ledger figure without the unrealized is not named Equity)", qa: "R2-03 R5-08 R3-07", owner: "B-C3" },
