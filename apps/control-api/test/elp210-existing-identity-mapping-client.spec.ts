@@ -201,6 +201,35 @@ describe("ELP2-10 existing identity mapping client (TEST_ONLY real loopback mTLS
     const client = discovery(waiting.origin, { deadline_ms: 75 });
     await expect(client.observe()).rejects.toMatchObject({ code: "RESEARCH_DISCOVERY_UNAVAILABLE" });
   });
+  it("accepts the V1 safe boundary and refuses unsafe revisions at every nested source field", async () => {
+    const safe = Number.MAX_SAFE_INTEGER;
+    const makeObservation = () => ({
+      schema_version: "pma.research-membership-observation.v1", state: "OBSERVED_NOT_AUTHORIZED",
+      mapping_revision: `ts-user:${userId}:9223372036854775807`, policy_revision: safe,
+      candidates: [{ membership_id: "child", version: safe, state: "NATIVE_RECEIPT_AND_CURRENT_LINEAGE_OBSERVED",
+        reference: { command_id: "fixture", membership_id: "child", version: safe,
+          scope: { portfolio_id: "portfolio", environment: "paper" }, policy_revision: safe, requester: userId,
+          after_digest: "a".repeat(64), before_digest: "b".repeat(64), intent_digest: "c".repeat(64),
+          effective_at: "2026-01-01T00:00:00+00:00", evaluated_memberships: [["root", safe]] },
+        current_lineage: [{ membership_id: "child", version: safe }] }],
+    });
+    const observation = makeObservation();
+    let selected = observation;
+    const lane = await peer(source, (_req, body) => ({ body: discoveryReply(body, selected) }));
+    expect(await discovery(lane.origin).observe()).toEqual(observation);
+    const mutations = [
+      (o: ReturnType<typeof makeObservation>) => { o.policy_revision = safe + 1; },
+      (o: ReturnType<typeof makeObservation>) => { o.candidates[0].version = safe + 1; },
+      (o: ReturnType<typeof makeObservation>) => { o.candidates[0].reference.version = safe + 1; },
+      (o: ReturnType<typeof makeObservation>) => { o.candidates[0].reference.policy_revision = safe + 1; },
+      (o: ReturnType<typeof makeObservation>) => { o.candidates[0].reference.evaluated_memberships[0][1] = safe + 1; },
+      (o: ReturnType<typeof makeObservation>) => { o.candidates[0].current_lineage[0].version = safe + 1; },
+    ];
+    for (const mutate of mutations) {
+      selected = makeObservation(); mutate(selected);
+      await expect(discovery(lane.origin).observe()).rejects.toMatchObject({ code: "RESEARCH_DISCOVERY_UNAVAILABLE" });
+    }
+  });
   it("hydrates exact pinned Research runtime privately and wipes material on disposal", async () => {
     const lane = await peer(source, (_req, body) => ({ body: discoveryReply(body, absent) }));
     const dir = await mkdtemp(join(tmpdir(), "research-discovery-test-")), paths: string[] = [];

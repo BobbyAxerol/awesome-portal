@@ -127,6 +127,31 @@ test("JSON subject schema enforces FUND identity absence; PORTFOLIO stays in exp
   refuses(() => build({ groups: { ...defaultGroups(), "portfolio-360": [series] } }), "REQUEST_PARAMETER_SCHEMA_INVALID");
 });
 
+test("Canary is a stage within the live profile and ACTUAL partition, not an invented environment", () => {
+  // Source-only workload proposal: this does not commission or exercise Live.
+  const liveContext = { ...context, environment: "live", profile_id: "LIVE_BINANCE_USDM" };
+  const groups = defaultGroups();
+  groups.fleet = [request("executionManagerFleetGetV1", {}, { limit: 50, stage_filter: ["CANARY"], group_by: ["portfolio_id"] })];
+  groups.blotter = [request("executionFullBlotterV1", {}, { limit: 50, stage: "CANARY" })];
+  groups["workbench-fills"] = [request("executionRetainedHistoryGet", { environment: "live", relationKey: "manager.performance:account_equity_snapshots" },
+    { from: new Date(context.window.from_ms).toISOString(), to: new Date(context.window.to_ms).toISOString(), limit: 100 })];
+  const partition = { economic_domain: "ACTUAL", currency: "USDT", basis: "INTERNAL_ACCOUNT_BALANCE",
+    native_profile_ref: "live-profile-ref", domain_proof_ref: "live-proof-ref" };
+  groups["portfolio-360"] = [request("executionManagerSeriesGetV1", {}, {
+    metric: "NAV", subjects: [{ subject_type: "PORTFOLIO", subject_id: "pf_measurement" }], economic_partition: partition,
+  })];
+  const workload = build({ context: liveContext, groups });
+  const fleet = new URL(workload.sets.fleet[0].slice(4), "https://measurement.invalid");
+  assert.equal(fleet.searchParams.get("environment"), "live");
+  assert.equal(fleet.searchParams.get("stage_filter"), "CANARY");
+  const series = new URL(workload.sets["portfolio-360"][0].slice(4), "https://measurement.invalid");
+  assert.equal(JSON.parse(series.searchParams.get("economic_partition")).economic_domain, "ACTUAL");
+  assert.equal(workload.execution_authorized, false);
+  refuses(() => build({ context: { ...liveContext, environment: "canary" }, groups }), "EXPLICIT_NON_FIXTURE_CONTEXT_REQUIRED");
+  groups["portfolio-360"][0].query.economic_partition = { ...partition, economic_domain: "PAPER" };
+  refuses(() => build({ context: liveContext, groups }), "ECONOMIC_PARTITION_ENVIRONMENT_MISMATCH");
+});
+
 function prep(patch = {}) {
   const workload = build(), now_ms = Date.UTC(2026, 9, 22, 12);
   // TEST_ONLY owners/artifact pins, never a real approval or runtime reference.
