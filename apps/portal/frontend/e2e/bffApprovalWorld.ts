@@ -18,6 +18,9 @@ import { createHash } from "node:crypto";
 import { APPROVAL_ROWS } from "../src/execution/api/fixtureData";
 import { scaled } from "./bffScale";
 import { fromCents, NATIVE_ALPHAS, toCents } from "./bffWorld";
+// ===== WP-B2-A begin: a request of the world's alphas is derived from the alpha's stage history (bffWorldGovernance), not from a hash of its id
+import { capitalOf, overlayWorldR2, worldApproval, worldCapitalPreview, worldEvidence } from "./bffWorldGovernance";
+// ===== WP-B2-A end
 
 export interface ApprovalRecord {
   approvalId: string;
@@ -50,9 +53,13 @@ const STEPS: readonly bigint[] = [500_000n, 1_000_000n, 1_500_000n, 2_500_000n];
 
 const hash = (id: string): number => createHash("sha256").update(`wpe-approval:${id}`).digest().readUInt32BE(0);
 
-/** The world's allocation of one portfolio, in cents: every deployment booked in it, every environment (what the Portfolios page states). */
-export const portfolioAllocationCents = (portfolioId: string): bigint =>
-  NATIVE_ALPHAS.flatMap((alpha) => alpha.deployments).filter((d) => d.portfolioId === portfolioId).reduce((sum, d) => sum + toCents(d.allocation), 0n);
+/** The world's allocation of one portfolio, in cents: the real-funded (live) deployments booked in it (what the Portfolios register states as Allocated). */
+export const portfolioAllocationCents = (portfolioId: string): bigint => {
+  // WP-B2-A: the figure the Portfolios register and the capital read state as Allocated is the book of the environment the portfolio opens on: its real-funded (live) deployments, else Sandbox, else Paper
+  const booked = NATIVE_ALPHAS.flatMap((alpha) => alpha.deployments).filter((d) => d.portfolioId === portfolioId);
+  const environment = (["live", "sandbox", "paper"] as const).find((env) => booked.some((d) => d.environment === env));
+  return booked.filter((d) => d.environment === environment).reduce((sum, d) => sum + toCents(d.allocation), 0n);
+};
 
 const percent = (part: bigint, whole: bigint): string => {
   if (whole <= 0n) return "0.0";
@@ -67,6 +74,17 @@ function inboxRowOf(approvalId: string): Record<string, unknown> | null {
 }
 
 export function approvalRecord(approvalId: string): ApprovalRecord {
+  // ===== WP-B2-A begin
+  const world = worldApproval(approvalId);
+  if (world !== undefined) {
+    const capital = capitalOf(world);
+    return {
+      approvalId, gate: world.gate, portfolioId: capital.portfolioId, portfolioName: capital.portfolioName, currency: capital.currency,
+      current: capital.before, requested: capital.requested, after: capital.after, weightBefore: capital.weightBefore, weightAfter: capital.weightAfter,
+      criteriaMet: world.status === "APPROVED" ? 7 : 6, criteriaTotal: 7, quorumMet: world.quorumMet, quorumRequired: world.quorumRequired,
+    };
+  }
+  // ===== WP-B2-A end
   const seed = hash(approvalId);
   const portfolio = PORTFOLIOS[seed % PORTFOLIOS.length]!;
   const step = STEPS[(seed >>> 4) % STEPS.length]!;
@@ -142,6 +160,9 @@ export function overlayHistorySubjects(body: Obj): Obj {
 
 /** `GET /governance/approvals/{id}/r2`: the review's target, requested amount, capital rows and quorum are the record's. */
 export function overlayR2Review(body: Obj, approvalId: string): Obj {
+  // ===== WP-B2-A begin
+  if (worldApproval(approvalId) !== undefined) return overlayWorldR2(body, approvalId) as Obj;
+  // ===== WP-B2-A end
   const out = clone(body);
   const record = approvalRecord(approvalId);
   if (isObj(out.approval)) {
@@ -166,6 +187,10 @@ export function overlayR2Review(body: Obj, approvalId: string): Obj {
 
 /** `GET /approvals/{id}/capital-preview`: the same figures, with the headroom arithmetic done in cents here (the producer), not in the page. */
 export function overlayCapitalPreview(body: Obj, approvalId: string): Obj {
+  // ===== WP-B2-A begin
+  const fromWorld = worldCapitalPreview(body, approvalId);
+  if (fromWorld !== null) return fromWorld as Obj;
+  // ===== WP-B2-A end
   const out = clone(body);
   const analytics = out.analytics;
   if (!isObj(analytics) || !isObj(analytics.data)) return out;
@@ -194,7 +219,11 @@ export function overlayCapitalPreview(body: Obj, approvalId: string): Obj {
 }
 
 /** The evidence read's diff, preview sentence and criteria count, from the record (the fixture-bff review lane calls this for `/evidence`). */
-export function evidenceFromRecord(approvalId: string): { portfolioId: string; changes: Obj[]; whatChanges: (obligations: number) => string; countsAs: { met_after: number; required: number } } {
+export function evidenceFromRecord(approvalId: string): { portfolioId: string; environment?: string; changes: Obj[]; whatChanges: (obligations: number) => string; countsAs: { met_after: number; required: number } } {
+  // ===== WP-B2-A begin
+  const fromWorld = worldEvidence(approvalId);
+  if (fromWorld !== null) return fromWorld;
+  // ===== WP-B2-A end
   const record = approvalRecord(approvalId);
   return {
     portfolioId: record.portfolioId,

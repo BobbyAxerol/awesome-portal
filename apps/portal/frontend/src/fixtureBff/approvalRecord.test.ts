@@ -6,7 +6,7 @@ import { fromCents } from "../../e2e/bffWorld";
 
 /** QA3 R3-04: one approval, one record. Every read of it states the same portfolio, the same allocation and the same requested capital. */
 describe("one approval record per request", () => {
-  const ID = "AP-352";
+  const ID = "AP-510"; // a request of the generated universe (AP-352 is a request of the world's alphas now: bffWorldGovernance.test.ts)
   const record = approvalRecord(ID);
 
   it("takes the portfolio and its current allocation from the world, in exact cents", () => {
