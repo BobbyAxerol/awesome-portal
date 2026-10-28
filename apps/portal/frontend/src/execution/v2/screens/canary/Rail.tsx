@@ -150,7 +150,7 @@ export function RollbackPanel({ view }: { view: CanaryView }) {
                 </span>
               </div>
               {item.status.kind === "flag" && ended !== null ? (
-                <Flag kind="neutral" label="Historical" size="sm" />
+                <Flag kind="neutral" label={item.checked === null ? "Historical" : `Historical, checked ${item.checked}`} size="sm" />
               ) : item.status.kind === "flag" ? (
                 <Flag kind={item.status.flag} label={item.status.label} size="sm" />
               ) : (

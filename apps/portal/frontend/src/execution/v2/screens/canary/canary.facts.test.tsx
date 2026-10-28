@@ -119,6 +119,9 @@ describe("chips: runtime and reconciliation are the server's stage facts", () =>
     expect(screen.queryByText("Before scale-up")).toBeNull();
     expect(screen.getByTestId("rollback-historical").textContent).toMatch(/before the trial ended/);
     expect(screen.queryByText("Ready")).toBeNull();
+    // Each check names its own age: "Historical, checked <date>" when the check published a date.
+    const dated = rollbackItems(view).filter((item) => item.checked !== null);
+    for (const item of dated) expect(screen.getAllByText(`Historical, checked ${item.checked}`).length).toBeGreaterThan(0);
   });
 
   it("NO_OPEN_FINDINGS is worded as a statement about the findings relation, never Clean or Reconciled", () => {
