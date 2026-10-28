@@ -49,6 +49,13 @@ const TIES: readonly { id: string; title: string; qa: string; owner: string }[] 
   { id: "W11", title: "environment labels derive from the entity's stage (deployment) or the portfolio's books", qa: "R3-05 R3-10", owner: "B-O" },
   { id: "W12", title: "register NAV / Net PnL = 360 statement for every portfolio and book", qa: "R1-05 R1-15", owner: "B-C" },
   { id: "W13", title: "one clock: every read of the world is taken within a day of the others", qa: "R3-10 R3-09", owner: "B-O" },
+  // ===== WP-B2-S3 begin
+  { id: "W14", title: "a Sandbox page that shows an equity difference or an approved decision blocks its gate: open blocking finding, nothing eligible to submit, steps counted and dated inside the run", qa: "R4-01 R4-03 R4-05 R4-12", owner: "B-S" },
+  { id: "W15", title: "every lineage entry of a stage page is a request of that page's alpha, opens, and is that alpha's only (one request id, one alpha)", qa: "R4-02 R4-13 R5-04 R5-06", owner: "B-S" },
+  { id: "W16", title: "one halt fact: a room that says HALTED is HALTED in the Fleet row and the alpha resource (and the reverse), and nothing is ordered after the halt", qa: "R5-02 R5-09", owner: "B-S" },
+  { id: "W17", title: "a stage page never contradicts the alpha's record: a stage the alpha left is STOPPED and nothing on it is as-of later than its stop", qa: "R4-03 R4-06 R5-10 R2-05", owner: "B-S" },
+  { id: "W18", title: "a finished Canary is a Canary record: the room declares the Canary stage, and a Live alpha's predecessor envelope opens as a finished trial", qa: "R5-01 R5-05", owner: "B-S" },
+  // ===== WP-B2-S3 end
 ];
 
 /** Ties still red on the tip. Delete a line when its owner lands the fix (the test then tells you which). */

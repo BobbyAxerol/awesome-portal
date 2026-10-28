@@ -1137,10 +1137,14 @@ export function worldLineage(current: readonly Obj[], alphaId: string, worldId: 
     const gate: WorldGate | null = kind === "R1_APPROVAL" ? "R1" : kind === "R2_APPROVAL" ? "R2" : kind === "PAPER_EXIT" ? "PAPER_EXIT" : kind === "CANARY_PROMOTION_PLAN" || kind === "LIVE_DUAL_APPROVAL" ? "LIVE_GATE" : null;
     if (kind === "ARTIFACT") return { ...entry, value: digestOf(`artifact:${pageId}`) };
     if (kind === "PROMOTION_GRANT") return { ...entry, value: `grant_${pageId}` };
+    if (kind === "CANARY_ENVELOPE") {
+      const predecessor = predecessorCanary(worldId); // the alpha's own finished trial (its deployment or its history record), never another alpha's
+      return predecessor === null ? { ...entry, state: "UNAVAILABLE", value: null, href: null } : { ...entry, state: "AVAILABLE", value: `cenv_${predecessor}`, href: `/deployments/live/${encodeURIComponent(predecessor)}/canary` };
+    }
     if (kind === "SANDBOX_EXIT") {
       const href = sandboxExitHref(worldId);
       const approval = refOf(alphaId, "SANDBOX_EXIT");
-      return { ...entry, ...("state" in entry ? { state: href === null ? "UNAVAILABLE" : "AVAILABLE" } : {}), value: href === null ? null : approval?.id ?? entry.value, href };
+      return { ...entry, ...("state" in entry ? { state: href === null ? "UNAVAILABLE" : "AVAILABLE" } : {}), value: href === null ? null : approval?.id ?? "Sandbox exit record", href }; // an alpha with no sandbox deployment of its own has no exit request: the record is the link
     }
     if (gate === null) return entry;
     const ref = refOf(alphaId, gate);

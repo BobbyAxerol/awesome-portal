@@ -711,6 +711,135 @@ export async function runWorldTies(get) {
     const [refWhere, ref] = reads[0] ?? ["", 0];
     for (const [where, t] of reads.slice(1)) check("W13", Math.abs(t - ref) <= DAY, `${where} is read at ${new Date(t).toISOString()}, ${refWhere} at ${new Date(ref).toISOString()}`);
   }
+  // ===== WP-B2-S3 begin: W14 to W18, the QA6 stage-page defect classes (R4-01/03/05, R4-02/13, R5-04/06, R5-02/09, R5-01/05, R4-06/R2-05)
+  {
+    const STAGE_PATH = { paper: (id) => `/screens/paper/${id}`, sandbox: (id) => `/deployments/${id}/certification`, canary: (id) => `/deployments/${id}/canary`, live: (id) => `/deployments/${id}/live` };
+    const idsOfFleet = [...deployments.keys()].slice(0, 40);
+    // the variant ids the review index and the layout audit open (a variant is a state of a deployment, reached by a typed URL)
+    const VARIANTS = [["paper", "dep_paper_01_dark"], ["sandbox", "dep_sandbox_01_mismatch"], ["sandbox", "dep_sandbox_01_dark"], ["canary", "dep_canary_01_stale"], ["canary", "dep_canary_01_breach"],
+      ["canary", "dep_canary_01_dark"], ["canary", "dep_c1"], ["live", "dep_live_01_mismatch"], ["live", "dep_live_01_gap"], ["live", "dep_live_01_stale"], ["live", "dep_live_01_dark"]];
+    const read = async (kind, id) => { const r = await get(`${E}${STAGE_PATH[kind](id)}`); return r.status === 200 ? r.body : null; };
+    const subjectOf = (kind, b) => (kind === "paper" ? b.data?.deployment : kind === "sandbox" ? b.certification : b.deployment);
+    const factsOf = (kind, b) => (kind === "paper" ? b.data?.stage_facts : b.stage_facts);
+    const pageSet = [];
+    for (const id of idsOfFleet) { const stage = deployments.get(id).stage.toLowerCase(); pageSet.push([stage, id]); }
+    pageSet.push(...VARIANTS);
+    const alphaByLabel = new Map(alphaRows.map((a) => [a.alpha_label, a]));
+
+    // W14: a page that says MISMATCH or lists an open blocking finding blocks its gate; a decided certification is closed (nothing is eligible to submit)
+    for (const [kind, id] of pageSet.filter(([k]) => k === "sandbox")) {
+      const b = await read(kind, id);
+      if (b === null) continue;
+      const equity = b.source_figures?.figures?.find((f) => f.key === "equity");
+      const diff = equity?.difference?.value;
+      const open = Number(factsOf(kind, b)?.reconciliation?.open_finding_count?.value ?? 0);
+      const verdict = factsOf(kind, b)?.reconciliation?.verdict?.value;
+      if (diff !== undefined && diff !== null && Number(diff) !== 0) {
+        check("W14", open > 0 && verdict === "OPEN_FINDINGS", `${id}: the equity difference is ${diff} yet the page counts ${open} open findings (verdict ${verdict})`);
+        check("W14", (b.findings?.rows ?? []).some((f) => f.blocking === true || f.severity === "CRITICAL"), `${id}: the equity difference ${diff} has no blocking finding`);
+        check("W14", b.progress?.eligible === false, `${id}: the equity difference ${diff} yet the gate is eligible`);
+      }
+      if (b.certification?.workflow_state === "APPROVED") check("W14", b.progress?.eligible === false && (b.findings?.rows ?? []).length === 0, `${id}: an approved certification is still eligible to submit or carries open findings`);
+      // a step that passed was checked inside the run, before the submission, and its evidence has not expired at the page's own read
+      const readAt = ms(b.read_at);
+      for (const step of b.steps ?? []) {
+        if (step.evaluation_state !== "PASS") continue;
+        check("W14", step.expires_at === null || ms(step.expires_at) >= (b.certification?.workflow_state === "APPROVED" ? 0 : readAt), `${id}: step ${step.step_key} PASS with evidence expired ${step.expires_at}`);
+        if (b.certification?.submitted_at && step.step_key !== "EXIT_REVIEW") check("W14", ms(step.as_of) <= ms(b.certification.submitted_at), `${id}: step ${step.step_key} checked ${step.as_of}, after the submission ${b.certification.submitted_at}`);
+      }
+      if (b.progress && b.steps) check("W14", b.progress.passed_count === b.steps.filter((x) => x.evaluation_state === "PASS").length, `${id}: progress counts ${b.progress.passed_count} passed, the steps ${b.steps.filter((x) => x.evaluation_state === "PASS").length}`);
+    }
+
+    // W15: every lineage entry is a request of THIS alpha that opens; one request id belongs to one alpha
+    const owner = new Map();
+    for (const [kind, id] of pageSet) {
+      const b = await read(kind, id);
+      if (b === null) continue;
+      const subject = subjectOf(kind, b);
+      for (const entry of b.lineage ?? []) {
+        const value = entry.value;
+        if (typeof value !== "string" || !/^(AP|EX|SX)-\d+$/.test(value)) continue;
+        const known = owner.get(value);
+        if (known === undefined) owner.set(value, subject?.alpha_name); else check("W15", known === subject?.alpha_name, `${id}: ${value} is ${subject?.alpha_name}'s lineage here and ${known}'s elsewhere`);
+        const href = entry.href;
+        if (typeof href !== "string") { check("W15", false, `${id}: lineage ${entry.kind} ${value} has no link`); continue; }
+        const m = /^\/governance\/(?:approvals\/(AP-\d+)\/(r1|r2|live)|exit-reviews\/((?:EX|SX)-\d+))$/.exec(href);
+        if (m === null) { if (!/^\/deployments\/(sandbox|paper|live)\//.test(href)) check("W15", false, `${id}: lineage ${entry.kind} ${value} links ${href}`); continue; }
+        check("W15", (m[1] ?? m[3]) === value, `${id}: lineage ${entry.kind} says ${value} but links ${href}`);
+        const detail = await get(`${E}${m[1] ? `/governance/approvals/${m[1]}/${m[2]}` : `/governance/exit-reviews/${m[3]}`}`);
+        check("W15", detail.status === 200, `${id}: lineage ${entry.kind} ${value} (${href}) does not open (${detail.status})`);
+        if (detail.status === 200 && subject?.alpha_name) {
+          const label = String(detail.body?.data?.approval?.subject_label ?? detail.body?.review?.subject_label ?? detail.body?.approval?.subject_label ?? "");
+          if (label !== "") check("W15", label.includes(subject.alpha_name) || !alphaRows.some((a) => label.includes(a.alpha_label)), `${id}: lineage ${entry.kind} ${value} opens "${label}", this page is ${subject.alpha_name}'s`);
+        }
+        // a link to a sandbox record opens a sandbox page of the same alpha
+        // (checked below with the stage links)
+      }
+      // a link to a stage record of the same alpha
+      for (const entry of b.lineage ?? []) {
+        const m = /^\/deployments\/(sandbox|paper|live)\/([^/]+?)(?:\/canary)?$/.exec(entry.href ?? "");
+        if (m === null) continue;
+        const linkedKind = (entry.href ?? "").endsWith("/canary") ? "canary" : m[1];
+        const linked = await read(linkedKind, decodeURIComponent(m[2]));
+        check("W15", linked !== null, `${id}: lineage ${entry.kind} links ${entry.href}, which does not open`);
+        if (linked !== null) check("W15", subjectOf(linkedKind, linked)?.alpha_name === subject?.alpha_name, `${id}: lineage ${entry.kind} links ${entry.href}, a ${subjectOf(linkedKind, linked)?.alpha_name} record, this page is ${subject?.alpha_name}'s`);
+      }
+    }
+
+    // W16: one halt fact. A room that says HALTED is HALTED in the Fleet row and the alpha resource (and the reverse); nothing is ordered after the halt
+    for (const id of idsOfFleet) {
+      const row = deployments.get(id).row;
+      const kind = deployments.get(id).stage.toLowerCase();
+      const b = await read(kind, id);
+      if (b === null) continue;
+      const runtime = factsOf(kind, b)?.runtime?.runtime_state?.value;
+      check("W16", (runtime === "HALTED") === (row.state === "HALTED"), `${id}: the room says ${runtime}, the Fleet row ${row.state}`);
+      const alphaResource = await ok200(`${E}/resources/alphas/${deployments.get(id).alphaId}`);
+      const inResource = alphaResource?.data?.deployments?.find((x) => x.deployment_id === id);
+      if (inResource !== undefined) check("W16", (runtime === "HALTED") === (inResource.state === "HALTED"), `${id}: the room says ${runtime}, the alpha resource ${inResource.state}`);
+      if (runtime === "HALTED") {
+        const since = ms(factsOf(kind, b)?.runtime?.since?.value);
+        const orders = await pages(`${E}/screens/blotter?limit=200`, (body) => body.data?.orders ?? [], (body) => body.data?.page?.next_cursor);
+        for (const o of orders.filter((x) => x.deployment_id === id)) check("W16", ms(o.submitted_at) <= since, `${id}: order ${o.order_id} submitted ${o.submitted_at}, after the halt ${new Date(since).toISOString()}`);
+      }
+    }
+
+    // W17: a stage page never contradicts the alpha's own record (Alpha 360 / Fleet): an alpha that left a stage has no running room or open gate there, and a page of a stage the alpha left is read as-of its exit
+    for (const [kind, id] of pageSet) {
+      const b = await read(kind, id);
+      if (b === null) continue;
+      const subject = subjectOf(kind, b);
+      const alphaRow = alphaByLabel.get(subject?.alpha_name);
+      if (alphaRow === undefined || STAGE_RANK[alphaRow.stage] === undefined) continue;
+      const left = STAGE_RANK[alphaRow.stage] > STAGE_RANK[kind.toUpperCase()];
+      const runtime = factsOf(kind, b)?.runtime?.runtime_state?.value;
+      if (left && runtime !== null && runtime !== undefined) {
+        check("W17", runtime === "STOPPED", `${id}: ${subject.alpha_name} is in ${alphaRow.stage} but its ${kind} page says ${runtime}`);
+        const since = ms(factsOf(kind, b)?.runtime?.since?.value);
+        for (const [where, at] of [["reconciliation", factsOf(kind, b)?.reconciliation?.as_of?.value], ["panel", (b.source_panels?.[0] ?? b.source_panels?.internal)?.as_of]]) {
+          if (at !== null && at !== undefined) check("W17", ms(at) <= since + 1000, `${id}: STOPPED ${new Date(since).toISOString()} yet its ${where} is as-of ${at}`);
+        }
+      }
+    }
+
+    // W18: a Canary the alpha finished is a Canary record: its room declares the Canary stage, and every Live deployment of an alpha that passed Canary links a predecessor that opens
+    for (const id of idsOfFleet.filter((x) => deployments.get(x).stage === "CANARY")) {
+      const b = await read("canary", id);
+      if (b !== null) check("W18", b.lifecycle?.declared_stage === "LIVE_CANARY" && b.deployment?.declared_environment === "LIVE_CANARY", `${id}: a Canary deployment's room declares ${b.lifecycle?.declared_stage}`);
+    }
+    for (const id of idsOfFleet.filter((x) => deployments.get(x).stage === "LIVE" && deployments.get(x).alphaStage === "LIVE")) {
+      const b = await read("live", id);
+      const link = (b?.lineage ?? []).find((l) => l.kind === "CANARY_ENVELOPE");
+      if (link === undefined) continue;
+      check("W18", link.state === "AVAILABLE" && typeof link.href === "string", `${id}: ${deployments.get(id).alphaLabel} is Live (Canary passed) but its predecessor envelope is ${link.state}`);
+      if (typeof link.href === "string") {
+        const m = /^\/deployments\/live\/([^/]+)\/canary$/.exec(link.href);
+        const trial = m === null ? null : await read("canary", decodeURIComponent(m[1]));
+        check("W18", trial !== null && trial.lifecycle?.declared_stage === "LIVE_CANARY" && factsOf("canary", trial)?.runtime?.runtime_state?.value === "STOPPED", `${id}: the predecessor ${link.href} does not open as a finished Canary trial`);
+      }
+    }
+  }
+  // ===== WP-B2-S3 end
   return { ties };
 }
 
