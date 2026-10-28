@@ -220,21 +220,14 @@ function VenueContribution({ venues }: { venues: readonly LifecycleVenuePnl[] })
     <SectionPanel title="Contribution by venue" aside="Per venue, never summed">
       {venues.length === 0 ? <Na why="No venue figure is published." /> : (
         <>
-        {/* One bar chart per book and currency (never one axis across currencies); the table below is the same figures, exact. */}
+        {/* One bar chart per book and currency (never one axis across currencies). Each bar prints its own exact figure: a second table of the same
+            figures drew every venue twice (QA6 R2-13). */}
+        <div data-testid="venue-pnl">
         {[...new Set(venues.map((v) => `${v.economicDomain}|${v.currency}`))].sort().map((group) => {
           const mine = venues.filter((v) => `${v.economicDomain}|${v.currency}` === group);
           return <DivBars key={group} label={`Net PnL by venue, ${mine[0]!.economicDomain === "ACTUAL" ? "Real-funded" : "Simulated"}, ${mine[0]!.currency}`} rows={mine.map((v) => ({ id: v.venue, label: v.venue, value: v.exact }))} currency={mine[0]!.currency} />;
         })}
-        <table className="exec-alp2-gaptable" aria-label="Net PnL by venue" data-testid="venue-pnl">
-          <tbody>
-            {venues.map((v) => (
-              <tr key={`${v.venue}|${v.economicDomain}|${v.currency}`}>
-                <th scope="row">{v.venue}<span className="exec-alp2-why"> {v.economicDomain === "ACTUAL" ? "Real-funded" : "Simulated"}</span></th>
-                <td><span className="exec-mgr-num" title={`${v.exact} ${v.currency}`}>{showDecimal(v.exact, { unit: "money", currency: v.currency, signed: true })}</span></td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        </div>
         </>
       )}
     </SectionPanel>

@@ -39,7 +39,7 @@ export function VisitDigestPanel({ ui, onMark, to }: { ui: Extract<VisitDigestUi
         <p className="exec-ov-vd-line" data-testid="digest-empty">Nothing changed in these lists since you marked them seen{digest.baseline ? ` (${formatInstant(digest.baseline.seenAt)})` : ""}.</p>
       ) : (
         <>
-          <p className="exec-ov-vd-line" data-testid="digest-count">{digest.unseenCount} {digest.unseenCount === 1 ? "observation" : "observations"} to look at since {digest.baseline ? formatInstant(digest.baseline.seenAt) : "the baseline"}.</p>
+          <p className="exec-ov-vd-line" data-testid="digest-count">{digest.unseenCount} {digest.unseenCount === 1 ? "observation" : "observations"} to look at. {digest.baseline ? `Last marked seen ${formatInstant(digest.baseline.seenAt)}; each row carries its own time.` : "No last-seen time is published."}</p>
           <ul className="exec-ov-vd-items" aria-label="Changed since your last visit">
             {digest.items.map((item: VisitItem) => {
               const target = to(item.href);

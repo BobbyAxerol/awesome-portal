@@ -296,7 +296,7 @@ describe("series and identity", () => {
   it("the published series is drawn as published (exact points, its methodology); Paper and Backtest stay Not published: evidence, baseline and run linkage", async () => {
     mount(published());
     await ready();
-    const panel = screen.getByRole("heading", { name: "Live vs Paper vs Backtest" }).closest("section")!;
+    const panel = screen.getByRole("heading", { name: "Deployment series" }).closest("section")!;
     expect(panel.querySelector("svg")).not.toBeNull();
     expect(within(panel).getByRole("button", { name: "Expand Deployment series" })).toBeTruthy();
     expect(within(panel).getByRole("button", { name: "Table, Deployment series" })).toBeTruthy();

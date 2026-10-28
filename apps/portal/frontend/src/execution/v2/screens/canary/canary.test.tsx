@@ -148,7 +148,7 @@ describe("dark V1 body: honest absence everywhere", () => {
   it("the series panel is `Not available` (FE-029 in its title, the source's state beside it): no chart, no invented line", async () => {
     mount(canaryPort(answering(v1Body())));
     await ready();
-    const panel = screen.getByRole("heading", { name: "Live vs Paper vs Backtest" }).closest("section")!;
+    const panel = screen.getByRole("heading", { name: "Deployment series" }).closest("section")!;
     expect(panel.querySelector(".exec-blk-gaps")!.textContent).toBe("Not available: Live, Paper and Backtest series · Source unavailable");
     expect(whyText(panel.querySelector(".exec-blk-gaps")!)).toContain("Not published: evidence, baseline and run linkage");
     expect(panel.querySelector("svg")).toBeNull();

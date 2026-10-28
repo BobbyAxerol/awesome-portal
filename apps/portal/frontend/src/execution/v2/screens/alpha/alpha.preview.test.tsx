@@ -185,9 +185,10 @@ describe("the published lifecycle read (WP-K slice 5, FIXTURE_LAB)", () => {
   it("Performance prints Net PnL per venue in each venue's own currency, one row per venue and book, never a total", async () => {
     mount("/deployments/alphas/alpha_a", "alpha_a");
     const table = await screen.findByTestId("venue-pnl", {}, { timeout: 4000 });
-    const rows = within(table).getAllByRole("row");
-    expect(rows.length).toBeGreaterThan(0);
-    for (const row of rows) expect(row.textContent).toMatch(/USDT|BTC|USDC|[A-Z]{3,5}/);
+    // One bar per venue and book, each with its own figure; the same figures are not drawn a second time as a table (QA6 R2-13).
+    expect(document.querySelector("table[aria-label=\"Net PnL by venue\"]")).toBeNull();
+    expect(table.querySelectorAll(".exec-div-value").length).toBeGreaterThan(0);
+    for (const value of table.querySelectorAll(".exec-div-value")) expect(value.textContent).toMatch(/\d/);
     expect(table.textContent).not.toMatch(/Total/i);
     expect(screen.getByText("Per venue, never summed")).toBeTruthy();
   });

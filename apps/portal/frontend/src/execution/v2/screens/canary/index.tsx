@@ -108,7 +108,7 @@ function PublishedSeries({ series }: { series: NonNullable<CanaryView["seriesPoi
 
 function SeriesPanel({ view }: { view: CanaryView }) {
   return (
-    <SectionPanel level={2} title="Live vs Paper vs Backtest" aside="Since canary start">
+    <SectionPanel level={2} title="Deployment series" aside="Since canary start">
       {view.seriesPoints === null ? (
         <GapLine items={[{ label: "Live, Paper and Backtest series", id: FE.series }]} because={panelLine(view.series)} />
       ) : (
