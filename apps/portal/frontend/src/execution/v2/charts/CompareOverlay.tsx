@@ -263,13 +263,15 @@ export function CompareOverlay({ label, series, notComparable = [], basis, unit 
           {ends.map(({ p, o, y: yy, ty }) => {
             const text = `${clip(p.c.label)}  ${show(o.s as string)}`;
             const w = text.length * 6.8 + 16;
+            // The tag never runs past the panel's right edge (QA7 N1-02): it slides left over the plot instead.
+            const bx = Math.max(frame.ml, Math.min(W - frame.mr + 8, W - w - 2));
             return (
               <g key={p.c.id} className="exec-c2-endtag" data-s={TONES[p.k]} data-testid="end-tag">
                 <title>{`${p.c.label} ${show(o.s as string)}`}</title>
-                <line x1={x(o.t) + 5} x2={W - frame.mr + 8} y1={yy} y2={ty} />
+                <line x1={x(o.t) + 5} x2={bx} y1={yy} y2={ty} />
                 <g className="exec-c2-marker">{marker(MARKERS[p.k], x(o.t), yy)}</g>
-                <rect className="exec-c2-endbox" x={W - frame.mr + 8} y={ty - 11} width={w} height={22} />
-                <text x={W - frame.mr + 16} y={ty + 4}>{text}</text>
+                <rect className="exec-c2-endbox" x={bx} y={ty - 11} width={w} height={22} />
+                <text x={bx + 8} y={ty + 4}>{text}</text>
               </g>
             );
           })}
