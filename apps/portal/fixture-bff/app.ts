@@ -28,8 +28,6 @@ import { applyScenarioBody, resetFixtureTransitions, scenarioRequest, scenarioVa
 import { rosterNames } from "./roster-names";
 // ===== WP-B2-A begin
 import { governanceBody, setPortfolioBudgetProvider, worldCapitalPreview } from "../frontend/e2e/bffWorldGovernance";
-import { WORLD_NOW_MS } from "../frontend/e2e/bffWorld";
-
 // ===== WP-B2-A end
 import { onScenarioChange, healsDoubles, configuredScenario, configureScenario, DEFAULT_SCENARIO, type FixtureScenario, FIXTURE_SCENARIOS, getScenario, isFixtureScenario, resetScenario, SCENARIO_DESCRIPTIONS, setScenario } from "./scenario";
 import { transformReviewBody } from "./review-relations";
