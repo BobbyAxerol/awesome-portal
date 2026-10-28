@@ -995,6 +995,19 @@ export async function runWorldTies(get) {
       check("W72", rows.length > 0 && rows.every((row) => row.target?.id === base), `${id}: the operations list has ${rows.length} rows, targets ${[...new Set(rows.map((row) => row.target?.id))]}`);
     }
   }
+  // W73 (QA8 N8b-01): the world has no venue bar after its clock, and the bar holding the clock closes at the world's one mark of the symbol
+  {
+    const room = await ok200(`${E}/deployments/dep_btc_live/live`);
+    const clock = ms(room?.read_at);
+    if (clock !== null) {
+      const candles = await ok200(`${E}/market/venue-candles?venue=BINANCE&symbol=BTCUSDT&timeframe=1h&from_ms=${clock - 12 * 3_600_000}&to_ms=${clock + 12 * 3_600_000}`);
+      const bars = candles?.candles ?? [];
+      check("W73", bars.length > 0, "no BTCUSDT bars around the world clock");
+      for (const bar of bars) check("W73", bar.t <= clock, `a BTCUSDT bar opens ${new Date(bar.t).toISOString()}, after the world clock ${new Date(clock).toISOString()}`);
+      const mark = (room?.positions?.typed?.rows ?? []).find((r) => r.symbol === "BTCUSDT")?.mark ?? null;
+      if (mark !== null && bars.length > 0) check("W73", sameDecimal(bars.at(-1).c, mark), `the last BTCUSDT bar closes ${bars.at(-1).c}, the world's mark is ${mark}`);
+    }
+  }
   // ===== WP-B2-S3 end
   // ===== WP-B2-A3 begin
   // ── W19: a request exists only for the NEXT gate of its subject, once, and its quorum is open (R3-02, R3-09, R3-10, R3-03) ───────────────────────────────

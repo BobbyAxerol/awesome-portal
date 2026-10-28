@@ -1478,6 +1478,20 @@ function wpcCandles(method: string, path: string, search: URLSearchParams): Revi
     const low = Math.min(open, close) - 110 - (i % 4) * 25;
     return { ...candle, o: wpcCents(open), h: wpcCents(high), l: wpcCents(low), c: wpcCents(close) };
   });
+  if (!legacy()) {
+    // WP-B2-S3 (QA8 N8b-01): the world has no bar after its clock; the bar that holds the as-of closes at the world's mark of the symbol (the page's "mark"), not at a price of the future
+    const asOf = wpcAnchorMs();
+    body.candles = (body.candles as Draft[]).filter((candle) => Number(candle.t) <= asOf);
+    const last = body.candles[body.candles.length - 1] as Draft | undefined;
+    if (last !== undefined) {
+      const mark = Math.round(Number(MARKS.BTCUSDT) * 100);
+      const toCents = (text: string): number => Math.round(Number(text) * 100);
+      last.c = wpcCents(mark);
+      last.h = wpcCents(Math.max(toCents(last.h), mark));
+      last.l = wpcCents(Math.min(toCents(last.l), mark));
+      body.last_candle_closed = false;
+    }
+  }
   return { status: base.status, body };
 }
 /* ---- Alpha equity chart (review lane only): the double serves 24 hourly points, a day of a window the design shows as 90 days, so the
