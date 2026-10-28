@@ -460,7 +460,7 @@ describe("Live, V2 body", () => {
     expect(within(evidence).getByRole("region", { name: "Governance backbone" }).textContent).toContain("Not published");
     expect(within(evidence).getByRole("region", { name: "Canary evidence branches" }).textContent).toContain("Not published");
     expect(within(evidence).getByRole("region", { name: "Current source · live facts" }).textContent).toContain("Not published");
-    expect(within(evidence).getByRole("heading", { name: /Evidence ready · Live decisions are closed/ })).toBeTruthy();
+    expect(within(evidence).getByRole("heading", { name: /Evidence incomplete · Live decisions are closed/ })).toBeTruthy();
   });
 });
 

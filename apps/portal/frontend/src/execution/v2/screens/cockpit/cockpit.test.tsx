@@ -722,7 +722,7 @@ describe("evidence frame", () => {
     await mount(p, "/execution/approvals?sel=apr_d");
     expect(p.called("getLiveReview")).toHaveLength(1);
     const evidence = screen.getByRole("region", { name: "Evidence" });
-    expect(within(evidence).getByRole("heading", { name: /Evidence ready · Live decisions are closed/ })).toBeTruthy();
+    expect(within(evidence).getByRole("heading", { name: /Evidence incomplete · .*Live decisions are closed/ })).toBeTruthy();
     expect(within(evidence).getByRole("region", { name: "Canary evidence branches" })).toBeTruthy();
     expect(within(evidence).getByRole("region", { name: "Current source · live facts" })).toBeTruthy();
     const criteria = within(evidence).getByRole("region", { name: "Criteria" });

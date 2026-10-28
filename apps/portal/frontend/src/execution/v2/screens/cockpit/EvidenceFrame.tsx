@@ -940,8 +940,15 @@ function verdictOf(data: EvidenceData): Verdict {
     }
     case "r2":
       return { tone: "mute", headline: `R2 review · R1 ${data.detail.r1State.toLowerCase().replace(/_/g, " ")}`, facts: data.detail.grantName ? [`Grant ${codeName(data.detail.grantName).name}`] : [] };
-    case "live":
-      return { tone: "mute", headline: "Evidence ready · Live decisions are closed", facts: data.payload.readAt ? [`Read ${instantText(data.payload.readAt) ?? data.payload.readAt}`] : [] };
+    case "live": {
+      // "Ready" only when no published evidence branch is unavailable; otherwise the banner says it is incomplete (QA8 B-A3).
+      const missing = data.payload.derivedBranches.filter((branch) => branch.state !== "AVAILABLE").length;
+      return {
+        tone: missing > 0 ? "warn" : "mute",
+        headline: missing > 0 ? `Evidence incomplete · ${missing} of ${data.payload.derivedBranches.length} evidence branches not available · Live decisions are closed` : "Evidence ready · Live decisions are closed",
+        facts: data.payload.readAt ? [`Read ${instantText(data.payload.readAt) ?? data.payload.readAt}`] : [],
+      };
+    }
     case "r2v2": {
       // The lineage is what the body says it is; the old "no R1 lineage" claim is not made for a body that carries one.
       const lineage = data.parent.lineage;
@@ -971,7 +978,12 @@ function verdictOf(data: EvidenceData): Verdict {
       };
     }
     case "livev2":
-      return { tone: "mute", headline: "Evidence ready · Live decisions are closed", facts: [`Approval ${STATUS_WORD[data.parent.approval.status].toLowerCase()}`] };
+      // Follows the published `evidence_complete`: never "ready" for a body that says it is not.
+      return {
+        tone: data.parent.approval.evidenceComplete ? "mute" : "warn",
+        headline: data.parent.approval.evidenceComplete ? "Evidence ready · Live decisions are closed" : "Evidence incomplete · Live decisions are closed",
+        facts: [`Approval ${STATUS_WORD[data.parent.approval.status].toLowerCase()}`],
+      };
   }
 }
 
