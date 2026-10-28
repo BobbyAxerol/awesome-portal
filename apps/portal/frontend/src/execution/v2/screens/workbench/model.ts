@@ -254,7 +254,7 @@ export function envelopeReadAt(envelope: ProfileEnvelope): UtcEpochMs | null {
 export function endedFreshness(freshness: FreshnessFacts, facts: StageFacts | null): FreshnessFacts {
   const runtime = runtimeFactOf(facts);
   if (runtime === null || runtime.state.kind !== "value" || runtime.state.value !== "STOPPED" || runtime.sinceMs.kind !== "value") return freshness;
-  return { kind: "paused", label: `Ended · ${formatAsOf(runtime.sinceMs.value)}`, asOfMs: freshness.asOfMs };
+  return { kind: "paused", label: `Ended · ${formatAsOf(runtime.sinceMs.value as UtcEpochMs)}`, asOfMs: freshness.asOfMs };
 }
 
 export function freshnessOf(envelope: ProfileEnvelope): FreshnessFacts {
