@@ -171,6 +171,10 @@ async function runAll(): Promise<void> {
     await record("W111", `FLEET ${env} q=carry`, () => api.getManagerDataset({ surface: "FLEET", environment: env, q: "carry", qMode: "CONTAINS", limit: 50 } as Any));
     await record("W111", `getEquitySparklines ${env}`, () => api.getEquitySparklines(env));
   }
+  // QA10 N10-M4: the Fleet header reads the stage-filtered fleet grouped by health, limit 1 (the Overview's /deployments/live?stage=canary link)
+  for (const [env, stage] of [["live", "CANARY"], ["live", "LIVE"], ["paper", "PAPER"], ["sandbox", "SANDBOX"]] as const) {
+    await record("W111", `FLEET ${env} stage_filter ${stage} group_by=health limit 1`, () => api.getManagerDataset({ surface: "FLEET", environment: env, stageFilter: [stage], groupBy: ["health"], limit: 1 } as Any));
+  }
   for (const stage of ["CANARY", "LIVE"]) await record("W111", `FLEET live stage_filter ${stage}`, () => api.getManagerDataset({ surface: "FLEET", environment: "live", stageFilter: [stage], limit: 50 } as Any));
 
   // ── W112 / W131 alpha 360 (the Fleet's own links open these)

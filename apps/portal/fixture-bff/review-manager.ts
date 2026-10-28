@@ -375,6 +375,7 @@ function aggregate(rows: Draft[]): Draft[] {
       if (name === "return_30d_pct" || name === "max_drawdown_pct" || name === "forward_observation_days" || name === "score" || name.startsWith("qbts_")) continue;
       const a = found.item.metrics[name];
       const b = item.metrics[name];
+      if (b === undefined || a === undefined) { if (a === undefined && b !== undefined) found.item.metrics[name] = copy(b); continue; } // WP-B2-S3 (QA10 N10-M4): rows of one group may carry different open metric keys (the lifecycle keys of an alpha); a key only one row has is kept, never summed against nothing
       found.item.metrics[name] = metric(a, a.value === null || b.value === null ? null : addDecimal(a.value, b.value), item.partition.currency);
     }
   }
@@ -1482,30 +1483,36 @@ function wpcCandles(method: string, path: string, search: URLSearchParams): Revi
     const low = Math.min(open, close) - 110 - (i % 4) * 25;
     return { ...candle, o: wpcCents(open), h: wpcCents(high), l: wpcCents(low), c: wpcCents(close) };
   });
-  if (!legacy()) {
-    // WP-B2-S3 (QA8 N8b-01): the world has no bar after its clock; the bar that holds the as-of closes at the world's mark of the symbol (the page's "mark"), not at a price of the future
-    const asOf = wpcAnchorMs();
-    // QA9 N9a-05: a window that lies entirely after the clock (a request in a frame ahead of the world) is served the same number of bars ending at the bar that holds the clock, never an empty list under a non-zero count
-    const ahead = Math.max(0, ...((body.candles as Draft[]).map((candle) => Number(candle.t)))) - asOf;
-    const stepMs = Number(body.interval_ms) > 0 ? Number(body.interval_ms) : 3_600_000;
-    if (ahead > 0 && (body.candles as Draft[]).every((candle) => Number(candle.t) > asOf)) {
-      const back = Math.ceil(ahead / stepMs) * stepMs;
-      body.candles = (body.candles as Draft[]).map((candle) => ({ ...candle, t: Number(candle.t) - back, close_t: Number(candle.close_t) - back }));
-    }
-    body.candles = (body.candles as Draft[]).filter((candle) => Number(candle.t) <= asOf);
-    if (body.coverage && typeof body.coverage === "object") body.coverage = { ...body.coverage, returned_count: body.candles.length, from_ms: body.candles.length > 0 ? Number((body.candles as Draft[])[0]!.t) : body.coverage.from_ms, to_ms: Math.min(Number(body.coverage.to_ms ?? asOf), asOf) };
-    const last = body.candles[body.candles.length - 1] as Draft | undefined;
-    if (last !== undefined) {
-      const mark = Math.round(Number(MARKS.BTCUSDT) * 100);
-      const toCents = (text: string): number => Math.round(Number(text) * 100);
-      last.c = wpcCents(mark);
-      last.h = wpcCents(Math.max(toCents(last.h), mark));
-      last.l = wpcCents(Math.min(toCents(last.l), mark));
-      body.last_candle_closed = false;
-    }
-  }
   return { status: base.status, body };
 }
+// ===== WP-B2-S3 begin (QA8 N8b-01, QA9 N9a-05, QA10 N9a-05): the venue bars of the world end at the world's clock IN THE FRAME OF THE REQUEST (the preview serves candles in the request's time, not rebased)
+/** Bars after `asOfMs` do not exist; a window that lies entirely after it is served the same number of bars ending at the bar holding it; the bar holding the clock closes at the world's mark; the count is the bars listed. */
+export function clampVenueCandles(answered: ReviewManagerResponse | { status: number; body: unknown }, asOfMs: number): { status: number; body: unknown } {
+  const body = (answered as { body: Draft }).body;
+  if (answered.status !== 200 || body === null || typeof body !== "object" || body.state !== "READY" || !Array.isArray(body.candles) || body.candles.length === 0) return answered as { status: number; body: unknown };
+  const out: Draft = { ...body };
+  let bars: Draft[] = (body.candles as Draft[]).map((candle) => ({ ...candle }));
+  const stepMs = Number(body.interval_ms) > 0 ? Number(body.interval_ms) : 3_600_000;
+  const ahead = Math.max(...bars.map((candle) => Number(candle.t))) - asOfMs;
+  if (ahead > 0 && bars.every((candle) => Number(candle.t) > asOfMs)) {
+    const back = Math.ceil(ahead / stepMs) * stepMs;
+    bars = bars.map((candle) => ({ ...candle, t: Number(candle.t) - back, close_t: Number(candle.close_t) - back }));
+  }
+  bars = bars.filter((candle) => Number(candle.t) <= asOfMs);
+  if (out.coverage && typeof out.coverage === "object") out.coverage = { ...out.coverage, returned_count: bars.length, from_ms: bars.length > 0 ? Number(bars[0]!.t) : out.coverage.from_ms, to_ms: Math.min(Number(out.coverage.to_ms ?? asOfMs), asOfMs) };
+  const last = bars[bars.length - 1];
+  if (last !== undefined) {
+    const mark = Math.round(Number(MARKS.BTCUSDT) * 100);
+    const toCents = (text: string): number => Math.round(Number(text) * 100);
+    last.c = wpcCents(mark);
+    last.h = wpcCents(Math.max(toCents(last.h), mark));
+    last.l = wpcCents(Math.min(toCents(last.l), mark));
+    out.last_candle_closed = false;
+  }
+  out.candles = bars;
+  return { status: answered.status, body: out };
+}
+// ===== WP-B2-S3 end
 /* ---- Alpha equity chart (review lane only): the double serves 24 hourly points, a day of a window the design shows as 90 days, so the
  * lifecycle and the event ribbon (which span months) had no axis to sit on. Same body, same start and end values, 120 daily closes in
  * between from a deterministic bridge walk (integer cents). The e2e double and its golden are untouched. */

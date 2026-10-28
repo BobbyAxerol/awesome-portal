@@ -20,7 +20,7 @@ import { ACCESS_DOUBLE_DEFAULT_USER } from "../frontend/e2e/bffDoubleAccess";
 import { setUsersDoubleLastSignIn, setUsersDoubleVariant, type UsersDoubleVariant } from "../frontend/e2e/bffDoubleUsers";
 import { isScaleName, setFixtureNow, setFixtureScale, type ScaleName } from "../frontend/e2e/bffScale";
 import { isReviewProfile, reviewCatalog, reviewHtml, type ReviewProfile } from "./review-catalog";
-import { answerReviewManager, wpAccountBook, wpAlphaResource, wpDeploymentFact, wpPortfolioBook, wpRecall } from "./review-manager";
+import { answerReviewManager, clampVenueCandles, wpAccountBook, wpAlphaResource, wpDeploymentFact, wpPortfolioBook, wpRecall } from "./review-manager";
 import { isPositiveMode, setPositiveMode } from "../frontend/e2e/bffPositiveMode";
 import { WORLD_NOW_MS } from "../frontend/e2e/bffWorld";
 import { commandStoryRoute } from "./command-story";
@@ -496,7 +496,9 @@ async function handle(config: FixtureConfig, incoming: IncomingMessage, response
     return;
   }
 
-  const answered = visitDigest(config, request) ?? answerFor(config, request);
+  const answeredRaw = visitDigest(config, request) ?? answerFor(config, request);
+  // WP-B2-S3: venue bars end at the world clock in the frame of the request (the preview moves the world clock by whole days)
+  const answered = answeredRaw !== null && isPositiveMode() && request.path === "/api/v1/execution/market/venue-candles" ? { ...answeredRaw, ...clampVenueCandles(answeredRaw, config.rebaseTime ? worldClockNow(Date.now()) : WORLD_NOW_MS) } : answeredRaw;
   if (answered !== null) {
     // WP-B2-O: ONE clock. The fleet, the fund dataset, the operations queue and an incident were written against 22 Aug / 1 Sep; in the positive world they are served moved to the
     // world clock exactly as the preview moves them to the real one (their latest content = the world's now), so every read of the world states the same instant.

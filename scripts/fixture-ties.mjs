@@ -1083,6 +1083,13 @@ export async function runWorldTies(get) {
     }
     check("W133", shapes.size <= 2, `the scoped alpha resource has ${shapes.size} different shapes: ${[...shapes.values()].map((x) => x.join(",")).join(" / ")}`);
   }
+  // W160 (QA10 N10-M4): the Fleet read behind every Overview stage link (stage_filter x group_by, any environment) answers 200 and its groups total the rows (a 500 from the fixture is always a bug)
+  for (const [env, stage] of [["live", "CANARY"], ["live", "LIVE"], ["paper", "PAPER"], ["sandbox", "SANDBOX"]]) {
+    for (const group of ["health", "alpha_id", "portfolio_id"]) {
+      const r = await get(`${E}/manager/fleet?environment=${env}&stage_filter=${stage}&group_by=${group}&limit=1`);
+      check("W160", r.status === 200, `fleet ${env} stage_filter=${stage} group_by=${group}: ${r.status}`);
+    }
+  }
   // ===== WP-B2-S3 end
   // ===== WP-B2-A3 begin
   // ── W19: a request exists only for the NEXT gate of its subject, once, and its quorum is open (R3-02, R3-09, R3-10, R3-03) ───────────────────────────────
