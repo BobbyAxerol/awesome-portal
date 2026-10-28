@@ -392,10 +392,10 @@ describe("filters are forwarded to the read", () => {
   });
 
   it("queryFor is the whole mapping", () => {
-    expect(queryFor({ lens: "attention", triage: "", severity: "", verification: "", targetType: "", env: "", commandKey: "" }))
+    expect(queryFor({ lens: "attention", triage: "", severity: "", verification: "", targetType: "", env: "", commandKey: "", targetId: "" }))
       .toMatchObject({ triageState: "UNACKNOWLEDGED" });
-    expect(queryFor({ lens: "all", triage: "RESOLVED", severity: "INFO", verification: "", targetType: "", env: "paper", commandKey: "x" }))
-      .toMatchObject({ triageState: "RESOLVED", severity: "INFO", environment: "paper", commandKey: "x" });
+    expect(queryFor({ lens: "all", triage: "RESOLVED", severity: "INFO", verification: "", targetType: "", env: "paper", commandKey: "x", targetId: "dep_1" }))
+      .toMatchObject({ triageState: "RESOLVED", severity: "INFO", environment: "paper", commandKey: "x", targetId: "dep_1" });
   });
 });
 

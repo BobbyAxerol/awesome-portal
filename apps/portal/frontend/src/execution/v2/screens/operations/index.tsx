@@ -90,6 +90,7 @@ export function queryFor(filters: Filters, workspaceId?: string): OperationalQue
     targetType: filters.targetType || undefined,
     environment: filters.env || undefined,
     commandKey: filters.commandKey || undefined,
+    targetId: filters.targetId || undefined,
   };
 }
 
@@ -569,6 +570,13 @@ function OperationsInner({
                     options={EXEC_ENVS.map((e) => ({ value: e, label: ENV_LABEL[e] }))}
                     onChange={(env) => patch({ env })}
                   />
+                  {filters.targetId === "" ? null : (
+                    <span className="exec-ops-field" data-testid="target-chip">
+                      <span>Target</span>
+                      <span className="exec-ops-mono">{filters.targetId}</span>
+                      <button type="button" className="exec-ops-btn" onClick={() => patch({ targetId: "" })}>Remove target</button>
+                    </span>
+                  )}
                   <form
                     className="exec-ops-field"
                     onSubmit={(event) => {

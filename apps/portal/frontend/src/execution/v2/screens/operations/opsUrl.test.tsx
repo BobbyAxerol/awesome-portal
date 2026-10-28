@@ -83,7 +83,7 @@ describe("readOpsUrl / writeOpsUrl", () => {
     const read = readOpsUrl(new URLSearchParams("range=7D&lens=ALL&state=Resolved&severity=critical&verification=failed&target=portfolio&environment=PAPER&q=account%2Fsync"));
     expect(read.range).toBe("7D");
     expect(read.filters).toEqual({
-      lens: "all", triage: "RESOLVED", severity: "CRITICAL", verification: "FAILED", targetType: "PORTFOLIO", env: "paper", commandKey: "account/sync",
+      lens: "all", triage: "RESOLVED", severity: "CRITICAL", verification: "FAILED", targetType: "PORTFOLIO", env: "paper", commandKey: "account/sync", targetId: "",
     });
     expect(read.invalid).toEqual([]);
     const written = writeOpsUrl(new URLSearchParams("workspace_id=ws_1&sel=op_1"), { filters: read.filters, range: read.range });
@@ -91,6 +91,12 @@ describe("readOpsUrl / writeOpsUrl", () => {
       workspace_id: "ws_1", sel: "op_1", range: "7d", lens: "all", state: "resolved", severity: "critical", verification: "failed",
       target: "portfolio", environment: "paper", q: "account/sync",
     });
+  });
+
+  it("reads target_id (a Live link's target) and writes it back (QA7 N5-09)", () => {
+    const read = readOpsUrl(new URLSearchParams("target_id=dep_live_01_mismatch"));
+    expect(read.filters.targetId).toBe("dep_live_01_mismatch");
+    expect(writeOpsUrl(new URLSearchParams(""), { filters: read.filters, range: read.range }).get("target_id")).toBe("dep_live_01_mismatch");
   });
 
   it("reads a value it does not know as the default and lists the key", () => {

@@ -12,6 +12,7 @@
  *   verification  not_started | pending | succeeded | ...
  *   target        account | portfolio | deployment          the target type
  *   environment   live | paper | sandbox                    an environment filter
+ *   target_id     one target (an account, portfolio or deployment id): forwarded as `target_id`; Live's "Open operations" links write it
  *   q             the command key search
  *   source        commands | journal                       the Source segment (absent = All). It chooses what the page
  *                                                          shows and is never forwarded to the read: every published row is
@@ -45,11 +46,13 @@ export interface Filters {
   targetType: TargetTypeV2 | "";
   env: ExecEnv | "";
   commandKey: string;
+  /** One exact target id, from a link (`?target_id=`); forwarded to the read, never applied to loaded rows. */
+  targetId: string;
 }
-export const NO_FILTERS: Filters = { lens: "attention", triage: "", severity: "", verification: "", targetType: "", env: "", commandKey: "" };
+export const NO_FILTERS: Filters = { lens: "attention", triage: "", severity: "", verification: "", targetType: "", env: "", commandKey: "", targetId: "" };
 
 /** The URL keys this screen owns, in the order they are written. */
-export const OPS_KEYS = ["range", "lens", "state", "severity", "verification", "target", "environment", "q", "source"] as const;
+export const OPS_KEYS = ["range", "lens", "state", "severity", "verification", "target", "environment", "q", "target_id", "source"] as const;
 export type OpsKey = (typeof OPS_KEYS)[number];
 
 /** The Source segment of the hi-fi: All (absent), the command queue, or the admin journal (not published). */
@@ -96,6 +99,11 @@ export function readOpsUrl(params: URLSearchParams): OpsUrl {
     invalid.push("q");
     commandKey = "";
   }
+  let targetId = (params.get("target_id") ?? "").trim();
+  if (targetId.length > COMMAND_KEY_MAX || /[\u0000-\u001f]/.test(targetId)) {
+    invalid.push("target_id");
+    targetId = "";
+  }
   const segmentRaw = (params.get("source") ?? "").trim().toLowerCase();
   let source: OpsSource = "";
   if (segmentRaw !== "") {
@@ -105,7 +113,7 @@ export function readOpsUrl(params: URLSearchParams): OpsUrl {
   const legacy = params.get("filter")?.trim() ?? "";
   return {
     source,
-    filters: { lens, triage, severity, verification, targetType, env: env === "" ? "" : (env.toLowerCase() as ExecEnv), commandKey },
+    filters: { lens, triage, severity, verification, targetType, env: env === "" ? "" : (env.toLowerCase() as ExecEnv), commandKey, targetId },
     range,
     invalid,
     legacyFilter: params.has("filter") ? legacy : null,
@@ -128,6 +136,7 @@ export function writeOpsUrl(base: URLSearchParams, state: { filters: Filters; ra
   put("target", filters.targetType === "" ? null : filters.targetType.toLowerCase());
   put("environment", filters.env === "" ? null : filters.env);
   put("q", filters.commandKey === "" ? null : filters.commandKey);
+  put("target_id", filters.targetId === "" ? null : filters.targetId);
   // The segment is rewritten only by a caller that names it; every other write keeps the param it found.
   if (state.source !== undefined) put("source", state.source === "" ? null : state.source);
   return next;
