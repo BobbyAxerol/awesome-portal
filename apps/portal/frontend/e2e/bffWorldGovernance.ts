@@ -261,7 +261,8 @@ export function worldApprovals(): readonly WorldApproval[] {
   cache ??= buildApprovals().sort((a, b) => b.requestedMs - a.requestedMs || (a.id < b.id ? -1 : 1));
   return cache;
 }
-export const worldApproval = (id: string): WorldApproval | undefined => worldApprovals().find((a) => a.id === id);
+// WP-B2-A3 (N10-B1): the Closed lens opens a decided request by its DECISION id (`dec_AP-311`, the history row id); it is the same request, so every page read answers its decided record
+export const worldApproval = (id: string): WorldApproval | undefined => worldApprovals().find((a) => a.id === id || `dec_${a.id}` === id);
 export const pendingApprovals = (): WorldApproval[] => worldApprovals().filter((a) => a.status === "PENDING").sort((a, b) => a.dueMs - b.dueMs);
 export const approvalOfAlpha = (alphaId: string, gate: WorldGate): WorldApproval | undefined => worldApprovals().find((a) => a.alphaId === alphaId && a.gate === gate);
 /** The exit review (or gate request) of the stage a deployment is in or has left, for the "Open exit review" link on a stage page. */

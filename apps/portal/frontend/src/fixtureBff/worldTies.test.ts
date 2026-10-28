@@ -69,6 +69,7 @@ const TIES: readonly { id: string; title: string; qa: string; owner: string }[] 
   { id: "W85", title: "one open-exception count: the sidebar badge read equals the Operations default lens", qa: "N8c-06", owner: "B-A3" },
   { id: "W90", title: "the register health stays inside the published vocabulary (basis WORST_OF_DEPLOYMENT_HEALTH, value = worst class present)", qa: "N9b-01", owner: "B-A3" },
   { id: "W91", title: "a closed request prints its decided record: past tense, criteria unchanged, evidence complete, R1 decided", qa: "N9b-02", owner: "B-A3" },
+  { id: "W150", title: "a closed request opened by its decision id is its decided record: quorum at close met, and its lineage cites the alpha's own decided requests", qa: "N10-B1 N9b-02 N10-M2", owner: "B-A3" },
   { id: "W13", title: "one clock: every read of the world is taken within a day of the others", qa: "R3-10 R3-09", owner: "B-O" },
   // ===== WP-B2-S3 begin
   { id: "W31", title: "a Sandbox page that shows an equity difference or an approved decision blocks its gate: open blocking finding, nothing eligible to submit, steps counted and dated inside the run", qa: "R4-01 R4-03 R4-05 R4-12", owner: "B-S" },

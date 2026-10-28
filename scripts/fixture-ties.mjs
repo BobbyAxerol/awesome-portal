@@ -1678,6 +1678,26 @@ export async function runWorldTies(get) {
       }
     }
   }
+  // ── W150: a closed request opened by its decision id (dec_<id>, what the Closed lens requests) is its decided record: quorum at close met, APPROVED, lineage = the alpha's OWN decided requests (N10-B1, N9b-02, N10-M2) ──
+  {
+    const hist = await pages(`${E}/governance/approvals/history?limit=50`, (b) => b.page?.rows ?? [], (b) => b.page?.next_cursor ?? null, 3);
+    const alphaOf = (subject) => String(subject ?? "").split(/\s+[·→]\s+/)[0];
+    const byId = new Map(hist.map((h) => [h.approval_id, h]));
+    for (const h of hist.slice(0, 40)) {
+      const dec = `dec_${h.approval_id}`;
+      const gate = String(h.gate);
+      const path = gate === "R1" ? `${E}/governance/approvals/${dec}/r1` : gate === "R2" ? `${E}/governance/approvals/${dec}/r2` : gate === "LIVE_GATE" ? `${E}/governance/approvals/${dec}/live` : `${E}/governance/exit-reviews/${dec}`;
+      const d = await ok200(path);
+      const approval = d?.data?.approval ?? d?.governance_backbone?.data?.approval ?? d?.approval ?? d?.review;
+      if (approval === undefined) continue;
+      check("W150", approval.quorum_required >= 1 && approval.quorum_met === approval.quorum_required, `${dec}: quorum at close ${approval.quorum_met} of ${approval.quorum_required} for an approved request`);
+      const refs = [...(d?.lineage ?? []).filter((l) => l.label === "R1" || l.label === "R2").map((l) => l.value), d?.r1_reference?.approval_id, d?.governance_backbone?.data?.r1_reference?.approval_id].filter(Boolean);
+      for (const ref of refs) {
+        const cited = byId.get(ref);
+        if (cited !== undefined) check("W150", alphaOf(cited.subject) === alphaOf(h.subject), `${dec} (${alphaOf(h.subject)}) cites ${ref}, which is ${alphaOf(cited.subject)}'s request`);
+      }
+    }
+  }
   // ===== WP-B2-A3 round D end
   return { ties };
 }
