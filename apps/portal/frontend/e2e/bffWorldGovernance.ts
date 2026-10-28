@@ -582,7 +582,7 @@ export function overlayWorldExit(body: unknown, id: string): unknown {
   const policy = `${a.stageFrom}.v1`;
   const stagePath = `/deployments/${a.stageFrom}/${d.id}`;
   const fills = stageBookOf(d.id).fills.length;
-  const net = fromCents(toCents(d.realized) + toCents(d.unrealized));
+  const net = fromCents(toCents(d.realized)); // WP-B2-A3 (N3-02): the published Net PnL of a deployment is its realized figure (the Alpha 360 / alpha resource definition), the same number
   out.policy_id = policy;
   if (Array.isArray(out.lineage)) {
     for (const item of out.lineage as Obj[]) {

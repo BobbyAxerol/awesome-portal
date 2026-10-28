@@ -55,6 +55,8 @@ const TIES: readonly { id: string; title: string; qa: string; owner: string }[] 
   { id: "W40", title: "an Accounts list row is a projection of the same account fact as its Account 360: virtual sum = ledger = exposure used, headroom = exposure headroom", qa: "N3-01 R3-05", owner: "B-A3" },
   { id: "W41", title: "a decided request is decided everywhere: absent from the queue, APPROVED, quorum met, decision actions locked", qa: "N5-04", owner: "B-A3" },
   { id: "W42", title: "a Live gate request states the decided R1 of its alpha and it opens", qa: "R3-02 N3-02", owner: "B-A3" },
+  { id: "W43", title: "every approval subject opens a readable Alpha 360 and its Fleet row stage is the stage its approval waits at", qa: "N3-05 N3-09", owner: "B-A3" },
+  { id: "W44", title: "the contribution an exit review prints is the published Net PnL of the deployment it reviews, in its currency", qa: "N3-02 R3-09", owner: "B-A3" },
   { id: "W13", title: "one clock: every read of the world is taken within a day of the others", qa: "R3-10 R3-09", owner: "B-O" },
   // ===== WP-B2-S3 begin
   { id: "W31", title: "a Sandbox page that shows an equity difference or an approved decision blocks its gate: open blocking finding, nothing eligible to submit, steps counted and dated inside the run", qa: "R4-01 R4-03 R4-05 R4-12", owner: "B-S" },

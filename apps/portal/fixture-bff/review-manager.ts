@@ -1574,9 +1574,10 @@ function wpcAlphaResource(method: string, path: string, search: URLSearchParams)
     body.panels.deployments.data = { rows };
     body.panels.deployments.coverage = { ...body.panels.deployments.coverage, source_total: String(rows.length), filtered_total: String(rows.length), returned_count: rows.length };
   }
-  const first = spec.deployments.find((d) => d.stage === "LIVE" && d.active) ?? spec.deployments[0]!;
-  for (const key of ["positions", "reconciliation"]) {
+  const first = spec.deployments.find((d) => d.stage === "LIVE" && d.active) ?? spec.deployments[0];
+  for (const key of ["positions", "reconciliation"]) { // WP-B2-A3 (N3-05): an alpha at Research has no deployment, so it holds no position and no reconciliation row (it used to throw, a 500)
     const list = body.data[key];
+    if (first === undefined) { if (Array.isArray(list)) body.data[key] = []; continue; }
     if (Array.isArray(list)) for (const row of list) { row.deployment_id = first.id; row.account_id = first.accountId; }
   }
   return { status: base.status, body };

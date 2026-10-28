@@ -1351,6 +1351,31 @@ export async function runWorldTies(get) {
       if (data.r1_id) check("W42", (await get(`${E}/governance/approvals/${data.r1_id}/r1`)).status === 200, `${row.id}: R1 ${data.r1_id} does not open`);
     }
   }
+  // ── W43: every approval subject opens a readable Alpha 360 (resource + lifecycle answer 200, never a 500), and its Fleet row stage is its approval's stage (N3-05, N3-09) ──
+  {
+    const WAITS = { R1: "RESEARCH", R2: "RESEARCH", PAPER_EXIT: "PAPER", SANDBOX_EXIT: "SANDBOX", LIVE_GATE: "CANARY" };
+    for (const row of approvalRows) {
+      const label = String(row.subject ?? "").split(/\s+[·→]\s+/)[0];
+      const alpha = alphaRows.find((a) => a.alpha_label === label);
+      if (alpha === undefined) continue;
+      check("W43", (await get(`${E}/resources/alphas/${alpha.alpha_id}`)).status === 200, `${row.id}: the Alpha 360 of ${label} (${alpha.alpha_id}) does not answer 200`);
+      check("W43", (await get(`${E}/alphas/${alpha.alpha_id}/lifecycle`)).status === 200, `${row.id}: the lifecycle of ${label} does not answer 200`);
+      check("W43", alpha.stage === WAITS[row.gate], `${row.id}: the Fleet row of ${label} says ${alpha.stage}, its ${row.gate} waits at ${WAITS[row.gate]}`);
+    }
+  }
+  // ── W44: the contribution an exit review prints is the Net PnL (realized, the published definition) of the deployment it reviews (N3-02) ──
+  {
+    for (const row of approvalRows.filter((r) => r.gate === "SANDBOX_EXIT" || r.gate === "PAPER_EXIT")) {
+      const dep = /\b(dep_[A-Za-z0-9_]+)/.exec(String(row.subject))?.[1];
+      const known = dep === undefined ? undefined : deployments.get(dep);
+      const d = await ok200(`${E}/governance/exit-reviews/${row.id}`);
+      const text = JSON.stringify(d?.panels ?? []);
+      const m = /contribution (-?[\d,]+\.\d+) ([A-Z]+)/.exec(text);
+      if (known === undefined || m === null) continue;
+      check("W44", sameDecimal(m[1], known.row.realized_pnl), `${row.id}: contribution ${m[1]} ${m[2]}, the Fleet row of ${dep} publishes Net PnL ${known.row.realized_pnl}`);
+      check("W44", m[2] === known.row.currency, `${row.id}: contribution in ${m[2]}, ${dep} is booked in ${known.row.currency}`);
+    }
+  }
   // ===== WP-B2-A3 round D end
   return { ties };
 }
