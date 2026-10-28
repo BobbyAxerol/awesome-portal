@@ -879,6 +879,29 @@ export async function runWorldTies(get) {
     const queueRows = queue?.page?.rows ?? [];
     check("W37", queueRows.length > 0 && queueRows.every((row) => row.target?.id === base), `${id}: the dry-run link's queue has ${queueRows.length} rows, targets ${[...new Set(queueRows.map((row) => row.target?.id))]}`);
   }
+  // W38 (QA7 R1-01): an alpha link of the Overview (with its query) and the alpha resource under every workspace/deployment query answer THAT alpha's own deployments, stage and allocation
+  {
+    const digest = await ok200(`${E}/visit-digest`);
+    const links = [];
+    const collect = (o) => { if (Array.isArray(o)) o.forEach(collect); else if (o && typeof o === "object") for (const [k, v] of Object.entries(o)) { if (k === "href" && typeof v === "string" && /^\/deployments\/alphas\/[^/?]+\?/.test(v)) links.push(v); else collect(v); } };
+    collect(digest ?? {});
+    const queries = new Map();
+    for (const a of alphaRows.slice(0, 12)) for (const q of ["", "?workspace_id=ws_TEST_ONLY", `?workspace_id=ws_TEST_ONLY&deployment_id=${(a.deployments ?? [])[0]?.deployment_id}`]) queries.set(`${a.alpha_id}${q}`, [a.alpha_id, q]);
+    for (const href of links) { const m = /^\/deployments\/alphas\/([^/?]+)(\?.*)$/.exec(href); queries.set(`${m[1]}${m[2]}`, [m[1], m[2]]); }
+    check("W38", links.length > 0, "the Overview digest links no alpha with a query");
+    for (const [alphaId, q] of queries.values()) {
+      const row = alphaRows.find((a) => a.alpha_id === alphaId);
+      const body = row === undefined ? null : await ok200(`${E}/resources/alphas/${alphaId}${q.replace(/&?deployment_id=[^&]*/, "")}`);
+      if (row === undefined || body === null) continue;
+      const own = new Set((row.deployments ?? []).map((d) => d.deployment_id));
+      const mentioned = [...new Set(JSON.stringify(body).match(/\bdep_(?!scale_)[a-z0-9]+(?:_[a-z0-9]+)*/g) ?? [])].filter((id) => !/_\d$/.test(id) || own.has(id));
+      for (const id of mentioned) check("W38", own.has(id) || [...own].some((o) => id.startsWith(`${o}_`)), `${alphaId}${q}: the alpha resource names ${id}, which is not a deployment of ${row.alpha_label}`);
+      check("W38", body.data?.alpha?.stage === undefined || body.data.alpha.stage === row.stage, `${alphaId}${q}: the resource says stage ${body.data?.alpha?.stage}, the fleet ${row.stage}`);
+      const sum = (row.deployments ?? []).reduce((n, d) => n + (numOf(d.allocation) ?? 0n), 0n);
+      const stated = (body.data?.alpha?.allocations ?? []).reduce((n, x) => n + (numOf(x.value) ?? 0n), 0n);
+      check("W38", sum === stated, `${alphaId}${q}: the resource states allocation ${stated}, the fleet's deployments ${sum}`);
+    }
+  }
   // ===== WP-B2-S3 end
   // ===== WP-B2-A3 begin
   // ── W19: a request exists only for the NEXT gate of its subject, once, and its quorum is open (R3-02, R3-09, R3-10, R3-03) ───────────────────────────────

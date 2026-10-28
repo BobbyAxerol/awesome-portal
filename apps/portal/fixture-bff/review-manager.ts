@@ -1530,7 +1530,8 @@ function wpcGross(d: DeploymentSpec): string {
 }
 function wpcAlphaResource(method: string, path: string, search: URLSearchParams): ReviewManagerResponse | null {
   const match = /^\/resources\/alphas\/([^/]+)$/.exec(path);
-  if (method !== "GET" || match === null || search.has("workspace_id") || scaled().alphas.length === 0) return null;
+  // WP-B2-S3 (QA7 R1-01): in the world lane the alpha resource is the alpha's own whatever the workspace (the Overview link carries workspace_id=ws_TEST_ONLY) and whatever the scale; only the legacy lane keeps the canned book
+  if (method !== "GET" || match === null || (legacy() && (search.has("workspace_id") || scaled().alphas.length === 0))) return null;
   const id = decodeURIComponent(match[1]!);
   const spec = [...WPC_ALPHAS, ...scaled().alphas].find((alpha) => alpha.id === id);
   // QA3 R2-05: an id nobody published is a 404, not a real alpha under another name (the double's own refusal ids keep their answers).
@@ -2295,6 +2296,12 @@ export function wpAlphaResource(body: unknown, alphaId: string): unknown {
   if (own.length === 0) { // WP-B2-C: an alpha with no book in this environment holds no position there (the double's static positions are another world's marks)
     const bare = copy(root) as Draft;
     if (Array.isArray(bare.data.positions)) bare.data.positions = [];
+    // WP-B2-S3 (QA7 R1-01): no book here, so no allocation, account or reconciliation row of another alpha either (data and the panels that state them)
+    for (const key of ["accounts", "portfolio_allocations", "reconciliation"]) {
+      if (Array.isArray(bare.data[key])) bare.data[key] = [];
+      if (bare.panels?.[key]?.data && typeof bare.panels[key].data === "object") bare.panels[key].data.rows = [];
+    }
+    if (bare.panels?.positions?.data && typeof bare.panels.positions.data === "object") bare.panels.positions.data.rows = [];
     return bare;
   }
   const data = root.data as Draft;
@@ -2330,6 +2337,11 @@ export function wpAlphaResource(body: unknown, alphaId: string): unknown {
   out.data.reconciliation = (Array.isArray(data.reconciliation) ? data.reconciliation : []).map((row: Draft) => ({ ...row, deployment_id: lead.id, account_id: lead.accountId }));
   if (out.data.alpha && typeof out.data.alpha === "object") {
     Object.assign(out.data.alpha, { alpha_id: alphaId, alpha_label: spec.label, version: spec.version, owner: spec.owner, portfolios: portfolios.map(([id, name]) => ({ portfolio_id: id, name, base_currency: own[0]!.currency })) });
+  }
+  // WP-B2-S3 (QA7 R1-01): a panel states the rows of its relation, the ones the data states (the template's panels are another alpha's)
+  for (const key of ["accounts", "portfolio_allocations", "positions", "reconciliation"]) {
+    const panelData = out.panels?.[key]?.data;
+    if (panelData && typeof panelData === "object" && Array.isArray(out.data[key])) panelData.rows = out.data[key].map((row: Draft) => ({ ...row }));
   }
   return out;
 }
