@@ -270,6 +270,7 @@ const within1 = (a, b) => a !== null && b !== null && abs(a - b) <= 1n;
 export async function runWorldTies(get) {
   const ties = {};
   const tie = (id) => (ties[id] ??= { checked: 0, violations: [] });
+  tie("W07d"); // standing guard: present even when no ord_9xxxxx id is served
   const check = (id, ok, message) => { const t = tie(id); t.checked += 1; if (!ok) t.violations.push(message); };
   const ok200 = async (path) => { const r = await get(path); return r.status === 200 ? r.body : null; };
   const pages = async (path, rowsOf, nextOf, max = 12) => {
