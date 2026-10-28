@@ -141,6 +141,15 @@ describe("the lifecycle spine", () => {
     expect(spine.textContent).toContain("Real-funded domain");
   });
 
+  it("a link naming a deployment (?deployment_id=) opens that deployment's own stage as now, not the alpha's headline stage (QA6 R1-01)", async () => {
+    mount(`/deployments/alphas/${ALPHA_DOUBLE_ID}?deployment_id=dep_canary_01`);
+    await ready();
+    const spine = screen.getByRole("list", { name: "Alpha lifecycle" });
+    const current = within(spine).getAllByRole("listitem").filter((n) => n.getAttribute("aria-current") === "step");
+    expect(current).toHaveLength(1);
+    expect(current[0].textContent).toContain("Canary");
+  });
+
   it("a stage other than the current one opens its published deployments and its gate as Not published", async () => {
     mount();
     await ready();

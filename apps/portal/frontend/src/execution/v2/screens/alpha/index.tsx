@@ -155,7 +155,10 @@ function Alpha360({ api, alphaId, workspaceId }: AlphaScreenProps) {
   // One view over either body (legacy v1 or SCOPED_V2 v2): the sections below read it, never the raw body.
   const view = useMemo(() => (resource.phase === "ready" ? alphaViewOf(resource.value, alphaId) : null), [resource, alphaId]);
   const deployed = view?.envs ?? NO_ENVS;
-  const env: ExecEnv = chooseEnv(url.value.env, deployed);
+  // A link that names a deployment (`?deployment_id=dep_c1`, Overview's "Momentum C · CANARY") opens THAT deployment's own book and stage; it
+  // never falls back to the alpha's headline stage (QA6 R1-01). An explicit `env` in the address still wins.
+  const namedDeployment = view?.rows.find((r) => r.id === params.get("deployment_id")) ?? null;
+  const env: ExecEnv = params.get("env") === null && namedDeployment?.env != null && deployed.includes(namedDeployment.env) ? namedDeployment.env : chooseEnv(url.value.env, deployed);
   const settled = resource.phase === "ready" || resource.phase === "error";
   const wsId = explicitWs ?? view?.workspaceId ?? null;
 
@@ -173,7 +176,7 @@ function Alpha360({ api, alphaId, workspaceId }: AlphaScreenProps) {
   // R2-04: when the pane has a series, the tile is that series' lowest point, so the tile and the strip cannot state two figures.
   const ddLow = drawdownLowOf(drawdown);
 
-  const current: SpineStageId | null = view?.current ?? null;
+  const current: SpineStageId | null = namedDeployment?.stage ?? view?.current ?? null;
   const [stagePick, setStagePick] = useState<SpineStageId | null>(null);
   const paths = useMemo(() => stagePaths(drift.phase === "ready" ? drift.value : null), [drift]);
   const inputs = useMemo(() => {
