@@ -1090,6 +1090,18 @@ export async function runWorldTies(get) {
       check("W160", r.status === 200, `fleet ${env} stage_filter=${stage} group_by=${group}: ${r.status}`);
     }
   }
+  // W161 (QA10 N9a-05): a window ending at the clock is served up to the bar HOLDING the clock, from the window's start, so the chart covers the fills of the window and the mark
+  {
+    const room = await ok200(`${E}/deployments/dep_btc_live/live`);
+    const clock = ms(room?.read_at);
+    if (clock !== null) {
+      const from = clock - 21 * 3_600_000;
+      const body = await ok200(`${E}/market/venue-candles?venue=BINANCE&symbol=BTCUSDT&interval=1h&from_ms=${from}&to_ms=${clock}`);
+      const bars = body?.candles ?? [];
+      check("W161", bars.length > 0 && bars.at(-1).t > clock - 3_600_000 && bars.at(-1).t <= clock, `the last bar opens ${bars.length > 0 ? new Date(bars.at(-1).t).toISOString() : "(none)"}, it must hold the clock ${new Date(clock).toISOString()}`);
+      check("W161", bars.length > 0 && bars[0].t <= from + 3_600_000, `the first bar opens ${bars.length > 0 ? new Date(bars[0].t).toISOString() : "(none)"}, after the window start ${new Date(from).toISOString()}`);
+    }
+  }
   // ===== WP-B2-S3 end
   // ===== WP-B2-A3 begin
   // ── W19: a request exists only for the NEXT gate of its subject, once, and its quorum is open (R3-02, R3-09, R3-10, R3-03) ───────────────────────────────
