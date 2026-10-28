@@ -902,6 +902,32 @@ export async function runWorldTies(get) {
       check("W38", sum === stated, `${alphaId}${q}: the resource states allocation ${stated}, the fleet's deployments ${sum}`);
     }
   }
+  // W39 (QA7 N4-04, N4-05): a Paper stage the alpha left nets flat (orders net to zero per symbol, no position, no locked cash with nothing open), its accounting fee is the sum of the USDT fees of the fills it lists, and its gate minimum is the one its exit review states
+  for (const id of [...deployments.keys()].slice(0, 40)) {
+    const d = deployments.get(id);
+    if (d.stage !== "PAPER" || STAGE_RANK[d.alphaStage] === undefined || STAGE_RANK[d.alphaStage] <= STAGE_RANK.PAPER) continue;
+    const r = await get(`${E}/screens/paper/${id}`);
+    const data = r.status === 200 ? r.body?.data : null;
+    if (data === null || data === undefined) continue;
+    const net = new Map();
+    for (const o of data.orders ?? []) if (String(o.status).toUpperCase() === "FILLED") net.set(o.instrument_id, (net.get(o.instrument_id) ?? 0n) + (o.side === "BUY" ? 1n : -1n) * (numOf(o.quantity) ?? 0n));
+    for (const [symbol, quantity] of net) check("W39", quantity === 0n, `${id}: filled orders net ${quantity} units of ${symbol}, yet the stage ended flat`);
+    check("W39", (data.positions ?? []).length === 0, `${id}: ${(data.positions ?? []).length} open positions on a stage the alpha left`);
+    const last = (data.account_equity ?? []).at(-1);
+    if (last !== undefined) {
+      check("W39", numOf(last.cash_locked) === 0n, `${id}: cash locked ${last.cash_locked} with nothing open`);
+      const usdt = (data.fills ?? []).filter((f) => f.commission_currency === "USDT" && f.commission != null).reduce((n, f) => n + numOf(f.commission), 0n);
+      check("W39", numOf(last.fee_total) === usdt, `${id}: accounting fees ${last.fee_total}, the fills list ${usdt} USDT in fees`);
+    }
+    const sandbox = (alphaRows.find((a) => a.alpha_id === d.alphaId)?.deployments ?? []).find((x) => x.stage === "SANDBOX");
+    const lineage = sandbox === undefined ? [] : ((await ok200(`${E}/deployments/${sandbox.deployment_id}/certification`))?.lineage ?? []);
+    const exit = lineage.find((l) => l.kind === "PAPER_EXIT" && /^EX-\d+$/.test(l.value ?? ""));
+    if (exit !== undefined) {
+      const review = await ok200(`${E}/governance/exit-reviews/${exit.value}`);
+      const minimum = data.observation_gate?.policy_minimum_observed_days;
+      check("W39", review !== null && String(review.gate_summary ?? "").includes(`gate minimum ${minimum} days`), `${id}: the page's gate minimum is ${minimum} days, the exit review ${exit.value} says "${review?.gate_summary}"`);
+    }
+  }
   // ===== WP-B2-S3 end
   // ===== WP-B2-A3 begin
   // ── W19: a request exists only for the NEXT gate of its subject, once, and its quorum is open (R3-02, R3-09, R3-10, R3-03) ───────────────────────────────

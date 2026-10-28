@@ -28,7 +28,8 @@
 
 import { createHash } from "node:crypto";
 import { isPositiveMode, positiveDeploymentFact } from "./bffPositiveMode";
-import { isRetired, resolveStageDeployment, sandboxRecordIdOf, stageBookOf, userIdOf } from "./bffWorldStage"; // WP-B2-S
+import { gateMinimumDays, isRetired, PAPER_POLICY_MIN_TRADES, resolveStageDeployment, sandboxRecordIdOf, stageBookOf, userIdOf } from "./bffWorldStage"; // WP-B2-S
+import { text4, units4 } from "./bffWorldBooks"; // WP-B2-S3
 import { currentDeploymentOfStage, haltedSinceMs, historyDeploymentId, historyNetSeries, standingOf } from "./bffWorldStage"; // WP-B2-S3
 import { approvalHref, approvalOfAlpha, type WorldGate } from "./bffWorldGovernance"; // WP-B2-S3
 import { WORLD_INCIDENTS } from "./bffWorld"; // WP-B2-S3
@@ -1093,11 +1094,14 @@ function worldStage(kind: "canary" | "live" | "sandbox" | "paper", body: Obj | n
     // the equity line of the paper account: allocation plus the cumulative net PnL of this deployment, ending on allocation + realized + unrealized
     const equityPoints = retired ? seriesOf(d.id, standing.fromMs, exitMs ?? NOW_MS, 200, net) : seriesOf(d.id, NOW_MS - 199 * HOUR_MS, NOW_MS - 4 * MIN, 200, net);
     let peak = 0n;
+    // WP-B2-S3 (QA7 N4-04): the accounting fee is the sum of the USDT commissions of the fills listed (a fee in another currency is not added to a USDT figure); cash is locked only while something is open
+    const usdtFees = book.fills.filter((f) => f.commission_currency === "USDT" && typeof f.commission === "string").map((f) => ({ t: Date.parse(String(f.trade_time)), fee: units4(String(f.commission)) })).sort((a, b) => a.t - b.t);
+    const lockedCash = positions.length === 0 && orders.length === 0 ? 0n : alloc / 10n;
     data.account_equity = equityPoints.map((pt, i) => {
       const eq = alloc + worldToCents(pt.value);
       if (eq > peak) peak = eq;
-      return { ts: new Date(pt.t).toISOString(), currency: "USDT", equity: worldCents(eq), net_pnl: pt.value, fee_total: worldCents(BigInt(i + 1) * alloc / 1_000_000n), funding_pnl: null,
-        cash_free: worldCents(eq - alloc / 10n), cash_locked: worldCents(alloc / 10n), total_fills: retired ? book.fills.filter((f) => Date.parse(String(f.trade_time)) <= pt.t).length : Math.min(i + 1, book.fills.length), state_digest: "9c1e04b7a2f1ffff", snapshot_reason: "PERIODIC", source: `paper-${d.id}`,
+      return { ts: new Date(pt.t).toISOString(), currency: "USDT", equity: worldCents(eq), net_pnl: pt.value, fee_total: text4(usdtFees.filter((x) => x.t <= pt.t).reduce((n, x) => n + x.fee, 0n)), funding_pnl: null,
+        cash_free: worldCents(eq - lockedCash), cash_locked: worldCents(lockedCash), total_fills: retired ? book.fills.filter((f) => Date.parse(String(f.trade_time)) <= pt.t).length : Math.min(i + 1, book.fills.length), state_digest: "9c1e04b7a2f1ffff", snapshot_reason: "PERIODIC", source: `paper-${d.id}`,
         drawdown: eq === peak ? "0" : canonicalDecimal(((Number(eq - peak) / Number(peak))).toFixed(4)) };
     });
     // ONE clock: the page's own as-of is the world's now, so nothing on it is dated after it.
@@ -1110,6 +1114,8 @@ function worldStage(kind: "canary" | "live" | "sandbox" | "paper", body: Obj | n
     const gate = data.observation_gate as Obj;
     const paperEnd = paperRecord.toMs === null ? null : iso(paperRecord.toMs);
     gate.observed_days = paperRecord.days;
+    gate.policy_minimum_observed_days = gateMinimumDays("paper"); // WP-B2-S3 (QA7 N4-05): one gate minimum, the exit review's too
+    gate.policy_minimum_trade_count = PAPER_POLICY_MIN_TRADES;
     gate.trade_count = (data.fills as unknown[]).length; // the gate counts the fills the tabs list
     gate.state = paperRecord.status === "completed" ? "MET" : "PARTIAL";
     gate.reason_code = paperRecord.status === "completed" ? null : "OBSERVATION_WINDOW_OPEN";

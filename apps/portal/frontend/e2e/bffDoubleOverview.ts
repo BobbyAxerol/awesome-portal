@@ -358,6 +358,20 @@ function buildRows(partial: boolean, count: number): Row[] {
   const slotsOf = new Map<string, number[]>();
   for (let i = 0; i < count; i += 1) { const b = bookAt(i); if (b !== null && b.window !== null) slotsOf.set(b.deployment, [...(slotsOf.get(b.deployment) ?? []), i]); }
   // ===== WP-B2-O end
+  const filledSeen = new Map<string, number>(); // WP-B2-S3
+  // ===== WP-B2-S3 begin (QA7 N4-04): a retired book holds an EVEN number of filled orders (all of one size, alternating buy / sell, so it nets flat): when its drawn statuses leave an odd number, its first unreserved filled order was cancelled instead
+  const cancelForParity = new Set<number>();
+  if (worldBooks !== null) {
+    const filledSlots = new Map<string, number[]>();
+    for (let i = 0; i < count; i += 1) {
+      const b = bookAt(i);
+      if (b === null || b.window === null || b.stage !== RETIRED) continue;
+      const reservedSlot = i >= tailStart && retiredPaper.length > 0;
+      if (reservedSlot || worldStatus(i, worldBooks.length, b.stage, STATUS_PATTERN[i % 10]!) === "FILLED") filledSlots.set(b.deployment, [...(filledSlots.get(b.deployment) ?? []), i]);
+    }
+    for (const slots of filledSlots.values()) if (slots.length % 2 === 1) { const free = slots.find((slot) => !(slot >= tailStart && retiredPaper.length > 0)); if (free !== undefined) cancelForParity.add(free); }
+  }
+  // ===== WP-B2-S3 end
   for (let i = 0; i < count; i += 1) {
     const w = bookAt(i); // WORLD: every order belongs to a deployment of the world (one account, one mark)
     const inst = w === null ? INSTRUMENTS[i % 3]! : w.inst;
@@ -365,10 +379,13 @@ function buildRows(partial: boolean, count: number): Row[] {
     // ===== WP-B2-O begin (the state of an order is a rule of the world: bffWorldOrders)
     const drawn = STATUS_PATTERN[i % 10]!;
     const reserved = w !== null && i >= tailStart && retiredPaper.length > 0;
-    const status = w === null ? drawn : reserved ? "FILLED" : worldStatus(i, worldBooks!.length, w.stage, drawn);
+    const status = w === null ? drawn : reserved ? "FILLED" : cancelForParity.has(i) ? "CANCELED" : worldStatus(i, worldBooks!.length, w.stage, drawn); // WP-B2-S3: parity
     const rests = w !== null && (reserved || mustRest(i, worldBooks!.length, w.stage));
     // ===== WP-B2-O end
-    const side = i % 2 === 0 ? "BUY" : "SELL";
+    let side = i % 2 === 0 ? "BUY" : "SELL";
+    // ===== WP-B2-S3 begin (QA7 N4-04): a stage the alpha has left nets flat: its filled orders alternate buy / sell in its own book (the global index would give one deployment one side)
+    if (w !== null && w.window !== null && w.stage === RETIRED && status === "FILLED") { const seen = filledSeen.get(w.deployment) ?? 0; filledSeen.set(w.deployment, seen + 1); side = seen % 2 === 0 ? "BUY" : "SELL"; }
+    // ===== WP-B2-S3 end
     const market = i % 4 === 1 && !rests;
     const stop = i % 11 === 0 && !market && !rests;
     const number = count - i;

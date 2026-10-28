@@ -132,6 +132,8 @@ export interface StageBook { orders: Row[]; fills: Row[] }
  */
 /** The Paper observation gate's published minimum trade count (policy paper.v1); a test pins it to the page's `policy_minimum_trade_count`. */
 export const PAPER_POLICY_MIN_TRADES = 60;
+/** The published minimum of observed days a stage's exit gate asks (policy paper.v1: 14; the Sandbox certification run: 5). One number for the stage page and the exit review. WP-B2-S3 */
+export const gateMinimumDays = (stage: StageName): number => (stage === "paper" ? 14 : 5);
 export function stageBookOf(deploymentId: string, minFillsAsked?: number): StageBook {
   const base = blotterBookOf(deploymentId);
   const standing = standingOf(deploymentId);
@@ -145,17 +147,20 @@ export function stageBookOf(deploymentId: string, minFillsAsked?: number): Stage
   const fills = base.fills.map((fill) => shifted(fill, delta));
   const template = orders.find((order) => String(order.status).toUpperCase() === "FILLED");
   const templateFills = template === undefined ? [] : fills.filter((fill) => fill.client_order_id === template.client_order_id);
+  const filledBase = orders.filter((order) => String(order.status).toUpperCase() === "FILLED").length;
   if (template !== undefined && templateFills.length > 0 && fills.length < minFills) {
     const earliest = Math.min(...orders.map((order) => Date.parse(String(order.submitted_at))), standing.exitMs);
-    const missing = Math.ceil((minFills - fills.length) / templateFills.length);
+    let missing = Math.max(0, Math.ceil((minFills - fills.length) / templateFills.length));
+    if ((filledBase + missing) % 2 === 1) missing += 1; // WP-B2-S3 (QA7 N4-04): an even number of equal-size filled orders alternating buy / sell nets flat
     const submitted = Date.parse(String(template.submitted_at));
     const gap = Math.max(60_000, Math.floor((earliest - standing.fromMs - DAY_MS / 2) / missing));
     for (let n = 1; n <= missing; n += 1) {
       const at = earliest - n * gap;
       const id = String(900_000 + n + (seedOf(deploymentId) % 1000) * 100).padStart(6, "0");
       const clientId = `cl-${id}`;
-      orders.push({ ...template, order_id: `ord_${id}`, client_order_id: clientId, venue_order_id: null, submitted_at: new Date(at).toISOString() });
-      for (const [i, fill] of templateFills.entries()) fills.push({ ...fill, fill_id: `fil_${id}_${i + 1}`, client_order_id: clientId, order_id: `ord_${id}`, trade_time: new Date(at + (Date.parse(String(fill.trade_time)) - submitted)).toISOString() });
+      const side = (filledBase + n - 1) % 2 === 0 ? "BUY" : "SELL"; // WP-B2-S3: continues the alternation of the book's own filled orders
+      orders.push({ ...template, side, order_id: `ord_${id}`, client_order_id: clientId, venue_order_id: null, submitted_at: new Date(at).toISOString() });
+      for (const [i, fill] of templateFills.entries()) fills.push({ ...fill, ..."side" in fill ? { side } : {}, fill_id: `fil_${id}_${i + 1}`, client_order_id: clientId, order_id: `ord_${id}`, trade_time: new Date(at + (Date.parse(String(fill.trade_time)) - submitted)).toISOString() });
     }
   }
   const byTime = (field: string) => (a: Row, b: Row): number => String(b[field]).localeCompare(String(a[field]));

@@ -24,7 +24,7 @@ import {
   DAY_MS, fromCents, incidentState, NATIVE_ALPHAS, OPS_READ_MS, PEOPLE, personByUsername, toCents, 
   WORLD_INCIDENTS, WORLD_NOW_MS, WORLD_OPERATIONS, worldAlphas, type StageName, type WorldIncident, type WorldOperation,
 } from "./bffWorld";
-import { stageBookOf, stageHistoryOf } from "./bffWorldStage";
+import { gateMinimumDays, stageBookOf, stageHistoryOf } from "./bffWorldStage"; // WP-B2-S3: gateMinimumDays
 import { environmentFor } from "./bffWorldBooks"; // WP-B2-A3: the Overview labels an incident / operation with the environment its page prints
 // ===== WP-B2-A3 begin: the generated universe's requests are derived from its alphas' stage (bffWorldGenerated), not drawn at random
 import { generatedPlans, type GeneratedPlan } from "./bffWorldGenerated";
@@ -563,8 +563,9 @@ export function overlayWorldExit(body: unknown, id: string): unknown {
       quorum_met: a.quorumMet, quorum_required: a.quorumRequired, sla: { age_minutes: a.ageMinutes, budget_minutes: a.budgetMinutes },
     });
   }
-  out.gate_summary = `${days} days in ${a.stageFrom} · gate minimum 5 days`;
-  out.gate_met = days >= 5;
+  const minDays = gateMinimumDays(a.stageFrom ?? "paper"); // WP-B2-S3 (QA7 N4-05): the gate minimum is the stage policy's, the number the stage page prints
+  out.gate_summary = `${days} days in ${a.stageFrom} · gate minimum ${minDays} days`;
+  out.gate_met = days >= minDays;
   if (out.decision_context !== undefined) { out.decision_context.review_id = a.id; out.decision_context.gate = a.gate; }
   if (out.activation_plan !== undefined) out.activation_plan.target_stage = vocabulary.to;
   // ===== WP-B2-A3 begin: the lineage and the evidence panels are the subject's own (R3-09), not one cloned set: the alpha's R1 / R2 requests, its stage page, its portfolio, its net PnL in its own currency
@@ -590,7 +591,7 @@ export function overlayWorldExit(body: unknown, id: string): unknown {
     for (const panel of out.panels as Obj[]) {
       if (panel.title === "Observation coverage") {
         panel.source = policy;
-        (panel.findings as Obj[]).splice(0, (panel.findings as Obj[]).length, { label: `${days} / 5 days · ${fills} ${fills === 1 ? "fill" : "fills"}`, outcome: days >= 5 ? "pass" : "watch", href: stagePath, source_label: "sessions" });
+        (panel.findings as Obj[]).splice(0, (panel.findings as Obj[]).length, { label: `${days} / ${minDays} days · ${fills} ${fills === 1 ? "fill" : "fills"}`, outcome: days >= minDays ? "pass" : "watch", href: stagePath, source_label: "sessions" });
         continue;
       }
       for (const finding of (panel.findings ?? []) as Obj[]) {
