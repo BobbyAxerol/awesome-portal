@@ -54,6 +54,7 @@ import { scopedResourceV2 } from "./bffDoubleScopedResource";
 import { addDecimal, scaled, sumByCurrency } from "./bffScale";
 import { isPositiveMode, positiveBookOf } from "./bffPositiveMode";
 import { accountFact, bindingFact, ledgerSeries } from "./bffWorld";
+import { accountPositions, wholeAccountOf } from "./bffWorldBooks"; // WP-B2-C
 import { blotterBookOf } from "./bffDoubleOverview";
 import { ORDER_BOOK_AS_OF_MS } from "./bffWorldOrders"; // WP-B2-O
 
@@ -542,15 +543,20 @@ function positiveAccount(spec: AccountSpec, id: string): AccountSpec {
     const book = books.find((entry) => entry.owner === primary)!.book!;
     rows.portfolio_allocations = book.deployments.map((d) => ({ portfolio_id: d.portfolio_id, strategy_id: d.alpha_id, deployment_id: d.deployment_id, account_id: primary, mode: d.environment, stage: d.stage.toLowerCase(), currency: d.currency, allocated_capital: d.allocation }));
     const free = own.total - own.locked;
-    rows.margin_balances = [margin(primary, currency, fromCents(own.locked), fromCents(own.locked / 2n))];
-    rows.exposure_headroom = [{ currency, free: fromCents(free), maintenance: fromCents(own.locked / 2n), headroom: fromCents(free - own.locked / 2n), verdict: "AVAILABLE" }];
-    const long = own.unrealized * 7n / 10n;
-    rows.positions = [
-      { position_id: `pos_${primary}_btc`, account_id: primary, instrument_id: "BTCUSDT", side: "LONG", signed_qty: "0.90", quantity: "0.90", notional: fromCents(own.allocation * 55n / 100n), unrealized_pnl: fromCents(long), currency, updated_at: ACCOUNT_DOUBLE_AS_OF },
-      { position_id: `pos_${primary}_eth`, account_id: primary, instrument_id: "ETHUSDT", side: "SHORT", signed_qty: "-12.5", quantity: "12.5", notional: fromCents(own.allocation * 30n / 100n), unrealized_pnl: fromCents(own.unrealized - long), currency, updated_at: ACCOUNT_DOUBLE_AS_OF },
-    ];
+    // ===== WP-B2-C begin: venue figures are WHOLE-account (the sum of the sleeves on the binding) and positions are quantity x the world mark.
+    const whole = shared ? wholeAccountOf(primary, owners) : null;
+    const wFree = whole?.free ?? free;
+    const wInitial = whole?.initialMargin ?? own.locked;
+    const wMaint = whole?.maintenanceMargin ?? own.locked / 2n;
+    rows.margin_balances = [margin(primary, currency, fromCents(wInitial), fromCents(wMaint))];
+    rows.exposure_headroom = [{ currency, free: fromCents(wFree), maintenance: fromCents(wMaint), headroom: fromCents(wFree - wMaint), verdict: "AVAILABLE" }];
+    rows.positions = accountPositions(primary, book.deployments.map((d) => d.deployment_id)).map((p) => ({
+      position_id: `pos_${primary}_${p.symbol.toLowerCase()}_${p.side}`, account_id: primary, instrument_id: p.symbol, side: p.side.toUpperCase(),
+      signed_qty: p.side === "short" ? `-${p.quantity}` : p.quantity, quantity: p.quantity, notional: p.notional, unrealized_pnl: p.unrealised, currency, updated_at: ACCOUNT_DOUBLE_AS_OF,
+    }));
+    // ===== WP-B2-C end
     rows.account_equity = [{ account_id: primary, currency, unrealized_pnl: fromCents(own.unrealized), fee_total: fromCents(own.allocation * 5n / 10_000n), funding_pnl: fromCents(own.allocation * 2n / 10_000n), ts: ACCOUNT_DOUBLE_AS_OF, ts_ms: AS_OF_MS }];
-    rows.broker_sync = [0, 30, 60, 90, 120].map((minutes, n) => ({ sync_id: `bs_${primary}_${n}`, source: "BROKER", status: "SYNCED", currency, buying_power: fromCents(free - BigInt(n) * 1250n), synced_at: iso(minutesBefore(minutes)), synced_at_ms: minutesBefore(minutes) }));
+    rows.broker_sync = [0, 30, 60, 90, 120].map((minutes, n) => ({ sync_id: `bs_${primary}_${n}`, source: "BROKER", status: "SYNCED", currency, buying_power: fromCents((shared ? wholeAccountOf(primary, owners)!.free : free) - BigInt(n) * 1250n), synced_at: iso(minutesBefore(minutes)), synced_at_ms: minutesBefore(minutes) }));
     if (!shared) rows.differences = [{ currency, portal_free: fromCents(free), broker_buying_power: fromCents(free), delta: "0.00", in_sync: true }];
     else delete rows.differences;
   } else {
