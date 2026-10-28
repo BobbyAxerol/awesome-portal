@@ -127,6 +127,16 @@ const allBindings = (): readonly BindingSpec[] => {
 setAccountEnvironmentProvider((accountId) => [...BINDINGS, ...scaled().bindings].find((b) => b.accountId === accountId)?.environment ?? null);
 // ===== WP-B2-A3 end
 
+// ===== WP-B2-A3 begin (N3-01): the Accounts list row of an unbooked binding is a projection of the same account fact as its detail: the ledger it prints, its locked part, and free less maintenance
+export function ledgerFiguresOfBinding(bindingId: string): { currency: string; used: string; reserved: string; available: string; headroom: string } | null {
+  const spec = ACCOUNTS.find((a) => a.bindingId === bindingId);
+  const row = spec?.rows.account_balances?.[0];
+  if (spec === undefined || row === undefined) return null;
+  const maintenance = toCents(String(spec.rows.margin_balances?.[0]?.maintenance ?? "0"));
+  return { currency: String(row.currency), used: String(row.total), reserved: String(row.locked), available: String(row.free), headroom: fromCents(toCents(String(row.free)) - maintenance) };
+}
+// ===== WP-B2-A3 end
+
 const bindingItem = (b: BindingSpec) => ({
   binding_id: b.bindingId,
   account_id: b.accountId,

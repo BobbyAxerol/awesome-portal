@@ -22,6 +22,7 @@ import { fixtureNowMs, scaled } from "./bffScale";
 import { overlayCapitalPreview, overlayHistorySubjects, overlayInboxSubjects, overlayR2Review } from "./bffApprovalWorld"; // WP-E
 import { simulateStage, stagePageIsForeign } from "./bffSimulatedStage";
 import { isPositiveMode } from "./bffPositiveMode";
+import { ledgerFiguresOfBinding } from "./bffDoubleAccount"; // WP-B2-A3
 import { accountFact, bindingFact, bindingOfAccount, deploymentOf, fromCents, ledgerSeries, LEVEL_NODES, toCents, worldAlphas } from "./bffWorld";
 // ===== WP-F3 end =====
 
@@ -376,12 +377,16 @@ const LIST_FIGURES: Readonly<Record<string, (at: string) => Obj>> = {
     ],
     sleeve_count: { count: 3, observed_at: at, coverage: "PARTIAL" },
   }),
-  "bnc_sub@BINANCE": (at) => ({
-    native_equity: null,
-    virtual_used: [{ currency: "USDT", value: "10.00", observed_at: at, coverage: "COMPLETE" }],
-    virtual_headroom: [{ currency: "USDT", value: "90.00", observed_at: at, coverage: "COMPLETE" }],
-    sleeve_count: { count: 1, observed_at: at, coverage: "COMPLETE" },
-  }),
+  "bnc_sub@BINANCE": (at) => {
+    // WP-B2-A3 (N3-01): in the positive world the row is the account's own ledger (what Account 360 prints as used / headroom / wallet), not placeholders
+    const ledger = isPositiveMode() ? ledgerFiguresOfBinding("bnc_sub@BINANCE") : null;
+    return {
+      native_equity: ledger === null ? null : [{ currency: ledger.currency, value: ledger.used, observed_at: at, coverage: "COMPLETE" }],
+      virtual_used: [{ currency: ledger?.currency ?? "USDT", value: ledger?.used ?? "10.00", observed_at: at, coverage: "COMPLETE" }],
+      virtual_headroom: [{ currency: ledger?.currency ?? "USDT", value: ledger?.headroom ?? "90.00", observed_at: at, coverage: "COMPLETE" }],
+      sleeve_count: { count: 1, observed_at: at, coverage: "COMPLETE" },
+    };
+  },
 };
 
 // ===== WP-F2 begin: generated bindings' list figures (FE-CAT-4 lane, FIXTURE_LAB; register 2f2) =====

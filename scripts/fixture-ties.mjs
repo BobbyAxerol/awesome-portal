@@ -1305,6 +1305,25 @@ export async function runWorldTies(get) {
     if (series && typeof series.methodology_ref === "string") check("W54", /realized/i.test(series.methodology_ref), `${id}: the Net PnL series' methodology "${series.methodology_ref}" does not say it is the realized figure`);
   }
   // ===== WP-B2-C4 end
+  // ===== WP-B2-A3 round D begin
+  // ── W40: an Accounts list row is a projection of the same account fact as its Account 360 (N3-01) ──
+  {
+    const bindingRows = await pages(`${E}/broker-bindings?limit=50&environment=live`, (b) => b.page?.rows ?? [], (b) => b.page?.next_cursor ?? null, 4);
+    for (const row of bindingRows) {
+      const used = row.figures?.virtual_used?.[0];
+      if (used === undefined || used === null) continue;
+      const exposure = await ok200(`${E}/broker-bindings/${row.binding_id}/exposure`);
+      const bucket = exposure?.analytics?.data?.buckets?.find((b) => b.currency === used.currency);
+      if (bucket !== undefined) check("W40", sameDecimal(bucket.used, used.value), `${row.binding_id}: the list says virtual ${used.value}, the binding exposure says used ${bucket.used}`);
+      if (!/^acc_(bnc_sub|okx_main)$/.test(row.account_id)) continue;
+      const account = await ok200(`${E}/resources/accounts/${row.account_id}`);
+      const ledger = account?.data?.account_balances?.find((b) => b.currency === used.currency)?.total;
+      if (ledger !== undefined) check("W40", sameDecimal(ledger, used.value), `${row.account_id}: the list says virtual ${used.value}, Account 360 says an internal ledger of ${ledger}`);
+      const head = row.figures?.virtual_headroom?.[0];
+      if (head && bucket) check("W40", sameDecimal(head.value, bucket.headroom), `${row.account_id}: the list says headroom ${head.value}, the capital invariant (binding exposure) says ${bucket.headroom}`);
+    }
+  }
+  // ===== WP-B2-A3 round D end
   return { ties };
 }
 

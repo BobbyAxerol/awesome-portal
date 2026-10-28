@@ -52,6 +52,7 @@ const TIES: readonly { id: string; title: string; qa: string; owner: string }[] 
   { id: "W20", title: "an account has one environment: operations, incidents and its Account 360 agree", qa: "R3-04 R1-02", owner: "B-A3" },
   { id: "W21", title: "Account 360 ties inside itself and to the Accounts list: margin ratio = maintenance / equity, the list virtual sum = the ledger, venue wallet not below the ledger unflagged, distinct deployment names", qa: "R3-05 R3-06 R3-08", owner: "B-A3" },
   { id: "W22", title: "Since your last visit lists only observations after that visit", qa: "R1-04", owner: "B-A3" },
+  { id: "W40", title: "an Accounts list row is a projection of the same account fact as its Account 360: virtual sum = ledger = exposure used, headroom = exposure headroom", qa: "N3-01 R3-05", owner: "B-A3" },
   { id: "W13", title: "one clock: every read of the world is taken within a day of the others", qa: "R3-10 R3-09", owner: "B-O" },
   // ===== WP-B2-S3 begin
   { id: "W31", title: "a Sandbox page that shows an equity difference or an approved decision blocks its gate: open blocking finding, nothing eligible to submit, steps counted and dated inside the run", qa: "R4-01 R4-03 R4-05 R4-12", owner: "B-S" },
