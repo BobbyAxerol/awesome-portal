@@ -1103,6 +1103,15 @@ function worldStage(kind: "canary" | "live" | "sandbox" | "paper", body: Obj | n
   // the Alpha 360 "Equity" (allocation + realized + unrealized, said on that page) is another figure and is not the same word.
   const figuresOfBody = isObj(body.source_figures) ? (body.source_figures as Obj).figures : isObj(body.data) && isObj((body.data as Obj).source_figures) ? ((body.data as Obj).source_figures as Obj).figures : null;
   if (Array.isArray(figuresOfBody)) for (const row of figuresOfBody as Obj[]) if (row.key === "equity") row.label = "Balance, allocation + realized";
+  // ===== WP-B2-C4 begin (QA7 N5-06, N2-04): the room's KPI that holds allocation + realized says so in its own label; the Net PnL series is named realized; the positions say, in a typed
+  // warning, that they are the venue's open book, which the retained order window does not rebuild (the blotter holds no opening fill for them)
+  if (Array.isArray(body.kpis)) body.kpis = (body.kpis as Obj[]).map((k) => (k.key === "broker_equity" ? { ...k, label: "Broker balance (allocation + realized)" } : k));
+  if (isObj(body.series) && typeof (body.series as Obj).methodology_ref === "string") (body.series as Obj).methodology_ref = "portal.net-pnl.realized.FIXTURE_LAB.v1";
+  if (isObj(body.positions) && isObj((body.positions as Obj).envelope) && Array.isArray((body.positions as Obj).rows) && ((body.positions as Obj).rows as unknown[]).length > 0) {
+    const envelope = (body.positions as Obj).envelope as Obj;
+    envelope.warnings = [...(Array.isArray(envelope.warnings) ? (envelope.warnings as unknown[]) : []), { code: "POSITIONS_OPENED_BEFORE_THE_RETAINED_ORDER_WINDOW" }];
+  }
+  // ===== WP-B2-C4 end
   return body;
 }
 /** Harness ids that stand for a world deployment (the review index and the audit link dep_canary_01: the canary rollout of Basis B). */
