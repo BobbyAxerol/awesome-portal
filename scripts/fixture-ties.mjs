@@ -1376,6 +1376,22 @@ export async function runWorldTies(get) {
       check("W44", m[2] === known.row.currency, `${row.id}: contribution in ${m[2]}, ${dep} is booked in ${known.row.currency}`);
     }
   }
+  // ── W45: a request's portfolio weight is allocation over the NAV the portfolio's own chart ends on (N3-03) ──
+  {
+    for (const row of approvalRows.filter((r) => r.gate === "R2" && /^pf_scale_/.test(String(r.portfolio_id ?? "")))) {
+      const d = await ok200(`${E}/governance/approvals/${row.id}/r2`);
+      const weight = d?.capital?.find((c) => c.label === "portfolio weight");
+      const alloc = d?.capital?.find((c) => c.label === "allocated capital");
+      const series = await ok200(`${E}/manager/series?environment=${String(row.environment).toLowerCase()}&metric=NAV&window=${encodeURIComponent('"90D"')}&subjects=${encodeURIComponent(JSON.stringify([{ subject_type: "PORTFOLIO", subject_id: row.portfolio_id }]))}`);
+      const last = [...(series?.series?.[0]?.points ?? [])].reverse().find((p) => p.value !== null);
+      if (!weight || !alloc || last === undefined) continue;
+      const nav = numOf(last.value);
+      for (const [label, money, shown] of [["before", alloc.before, weight.before], ["after", alloc.after, weight.after]]) {
+        const tenths = (numOf(String(money).replace(/,/g, "")) * 2000n + nav) / (2n * nav);
+        check("W45", `${tenths / 10n}.${tenths % 10n}` === shown, `${row.id}: weight ${label} ${shown}%, allocation ${money} over NAV ${last.value} is ${tenths / 10n}.${tenths % 10n}%`);
+      }
+    }
+  }
   // ===== WP-B2-A3 round D end
   return { ties };
 }

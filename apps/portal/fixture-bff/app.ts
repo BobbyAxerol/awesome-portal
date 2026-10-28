@@ -28,7 +28,7 @@ import { answerAlphaCatalogue } from "./alpha-catalogue"; // WP-B2-P2
 import { applyScenarioBody, resetFixtureTransitions, scenarioRequest, scenarioVariants } from "./scenario-apply";
 import { rosterNames } from "./roster-names";
 // ===== WP-B2-A begin
-import { governanceBody, setPortfolioBudgetProvider, worldCapitalPreview } from "../frontend/e2e/bffWorldGovernance";
+import { governanceBody, setPortfolioBudgetProvider, setPortfolioNavProvider, worldCapitalPreview } from "../frontend/e2e/bffWorldGovernance";
 // ===== WP-B2-A end
 import { onScenarioChange, healsDoubles, configuredScenario, configureScenario, DEFAULT_SCENARIO, type FixtureScenario, FIXTURE_SCENARIOS, getScenario, isFixtureScenario, resetScenario, SCENARIO_DESCRIPTIONS, setScenario } from "./scenario";
 import { transformReviewBody } from "./review-relations";
@@ -44,6 +44,17 @@ setPortfolioBudgetProvider((portfolioId, environment) => {
   return metric?.availability === "AVAILABLE" && typeof metric.value === "string" ? metric.value : null;
 });
 // ===== WP-B2-A end
+// ===== WP-B2-A3 begin (N3-03): the NAV a request's weight is taken over is the one the Portfolio page's capital statement prints
+setPortfolioNavProvider((portfolioId, environment, currency) => {
+  const query = new URLSearchParams({ environment, metric: "NAV", window: JSON.stringify("90D"), subjects: JSON.stringify([{ subject_type: "PORTFOLIO", subject_id: portfolioId }]) });
+  const answer = answerReviewManager("GET", "/manager/series", query, "populated");
+  if (answer === null || answer.status !== 200) return null;
+  const entry = (answer.body as { series?: { state?: string; currency?: string; points?: { value: string | null }[] }[] }).series?.[0];
+  if (entry === undefined || entry.state !== "AVAILABLE" || (entry.currency !== undefined && entry.currency !== currency)) return null;
+  const last = [...(entry.points ?? [])].reverse().find((point) => point.value !== null);
+  return last?.value ?? null; // the last point of the series the Portfolio page and the evidence chart draw
+});
+// ===== WP-B2-A3 end
 
 export const LANE_HEADER = "x-fixture-lane";
 export const DEFAULT_LANE = "FIXTURE_LAB";

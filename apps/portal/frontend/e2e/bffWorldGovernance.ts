@@ -284,6 +284,10 @@ export const partitionAllocationCents = (portfolioId: string, environment: strin
 let budgetProvider: ((portfolioId: string, environment: string) => string | null) | null = null;
 /** The fixture BFF registers how the capital statement states a partition's approved budget (a registry, so the doubles never import the BFF). */
 export const setPortfolioBudgetProvider = (provider: ((portfolioId: string, environment: string) => string | null) | null): void => { budgetProvider = provider; };
+// ===== WP-B2-A3 begin (N3-03): a generated portfolio's weight is allocation over the NAV its Portfolio page prints
+let navProvider: ((portfolioId: string, environment: string, currency: string) => string | null) | null = null;
+export const setPortfolioNavProvider = (provider: ((portfolioId: string, environment: string, currency: string) => string | null) | null): void => { navProvider = provider; };
+// ===== WP-B2-A3 end
 export const portfolioBudget = (portfolioId: string, environment: string): string | null => budgetProvider?.(portfolioId, environment) ?? null;
 
 const percent = (part: bigint, whole: bigint): string => {
@@ -306,6 +310,14 @@ export interface WorldCapital {
   weightAfter: string;
   budget: string | null;
 }
+/** The weights of a request: a native portfolio's are its share of the native allocation (as before); a generated portfolio's are allocation / the NAV its page prints (1 place, BigInt). */
+function navWeights(a: WorldApproval, before: bigint, after: bigint, totalBefore: bigint, totalAfter: bigint, currency: string): { weightBefore: string; weightAfter: string } {
+  const nav = PORTFOLIO_NAMES[a.portfolioId] === undefined ? navProvider?.(a.portfolioId, a.environment, currency) ?? null : null;
+  if (nav === null || toCents(nav) <= 0n) return { weightBefore: percent(before, totalBefore), weightAfter: percent(after, totalAfter) };
+  const whole = toCents(nav);
+  const rounded = (part: bigint): string => { const tenths = (part * 2000n + whole) / (2n * whole); return `${tenths / 10n}.${tenths % 10n}`; }; // half-up, 1 place
+  return { weightBefore: rounded(before), weightAfter: rounded(after) };
+}
 export function capitalOf(a: WorldApproval): WorldCapital {
   const alpha = worldAlphas().find((x) => x.id === a.alphaId)!; // WP-B2-A3
   const mine = alpha.deployments.filter((d) => d.portfolioId === a.portfolioId && d.environment === a.environment);
@@ -320,7 +332,7 @@ export function capitalOf(a: WorldApproval): WorldCapital {
   return {
     portfolioId: a.portfolioId, portfolioName: a.portfolioName, environment: a.environment, currency: mine[0]?.currency ?? scaled().portfolios.find((p) => p.id === a.portfolioId)?.base ?? "USDT",
     requested: fromCents(requested), before: fromCents(before), after: fromCents(after),
-    weightBefore: percent(before, totalBefore), weightAfter: percent(after, totalAfter), budget: portfolioBudget(a.portfolioId, a.environment),
+    ...navWeights(a, before, after, totalBefore, totalAfter, mine[0]?.currency ?? scaled().portfolios.find((p) => p.id === a.portfolioId)?.base ?? "USDT"), budget: portfolioBudget(a.portfolioId, a.environment),
   };
 }
 
