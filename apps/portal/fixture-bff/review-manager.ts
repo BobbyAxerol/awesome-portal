@@ -1818,7 +1818,7 @@ function wpkEntitySearch(method: string, path: string, search: URLSearchParams):
     portfolio: universe.portfolios.map((p) => ({ id: p.id, label: p.name, detail: p.base, route: `/deployments/portfolios/${encodeURIComponent(p.id)}` })),
     operation: universe.operations.map((o) => ({ id: o.id, label: o.command, detail: o.env, route: `/operations?operation=${encodeURIComponent(o.id)}` })),
     // ===== WP-E begin: the inbox rows are keyed `approval_id` (the generated ones carry no `id`, which printed `?sel=undefined`), and the native rows (AP-352 ...) are in the index too
-    approval: [...APPROVAL_ROWS, ...(legacy() ? universe.approvals : worldApprovals().map((w) => ({ approval_id: w.id, subject: w.subject, gate: w.gate })))].map((a: Draft) => // WP-B2-A3: the index lists the requests the world holds
+    approval: uniqueById([...APPROVAL_ROWS, ...(legacy() ? universe.approvals : worldApprovals().map((w) => ({ approval_id: w.id, subject: w.subject, gate: w.gate })))], (a: Draft) => String(a.approval_id ?? a.id)).map((a: Draft) => // WP-B2-A3: the index lists the requests the world holds
      ({ id: String(a.approval_id ?? a.id), label: restateTarget(String(a.subject ?? a.approval_id ?? a.id), approvalRecord(String(a.approval_id ?? a.id))), detail: a.gate ? String(a.gate) : null, route: `/approvals?sel=${encodeURIComponent(String(a.approval_id ?? a.id))}` })),
     // ===== WP-E end
     account: null, incident: null,
@@ -2323,6 +2323,9 @@ function wpPositiveSeries(body: Draft, method: string, path: string, search: URL
  * deployments, accounts, balances, portfolios, allocations and positions. Anything the double has no per-alpha source for (orders, fills, replay) stays as
  * the double answers it; those tabs are reported as not derived. Returns the body unchanged for an id the universe does not hold.
  */
+// WP-B2-A3 (W127): a request appears once in the search however many sources list it (the closed reader refuses a repeated hit id in a group)
+function uniqueById<T>(rows: T[], idOf: (row: T) => string): T[] { const seen = new Set<string>(); return rows.filter((row) => { const id = idOf(row); if (seen.has(id)) return false; seen.add(id); return true; }); }
+
 export function wpAlphaResource(body: unknown, alphaId: string): unknown {
   const spec = [...scaled().alphas, ...WPC_ALPHAS, ...SUITE_ALPHAS].find((entry) => entry.id === alphaId);
   const root = body as Draft;
