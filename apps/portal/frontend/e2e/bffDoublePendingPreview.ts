@@ -15,7 +15,7 @@
  *   anything else                                     200 allowed:true (the canonical apply / cancel preview, echoing the recall asked)
  * There is no apply, reserve or submit answer at all: a request to one gets nothing from this module.
  *
- * Discovery (`stubLabDiscovery`): the queue double's PAPER deployment row `dep_TEST_ONLY_eth` has no recall in the governance double (that
+ * Discovery (`stubLabDiscovery`): the queue double's PAPER deployment row `dep_btc_paper` has no recall in the governance double (that
  * holds recalls only on `TEST_ONLY:deployment`). The lab asks the governance answerer for `TEST_ONLY:deployment`, writes the asked id back
  * into the body and appends one UNKNOWN recall, so the row shows both a WAITING and an UNKNOWN recall. Any other question is the
  * governance double's own answer, untouched.
@@ -33,7 +33,7 @@ const loadCanonicalFixture = (name: string): any => JSON.parse(readFileSync(join
 
 export const PENDING_PREVIEW_PATH = "/api/v1/execution/pending-recalls/preview";
 export const PENDING_RECALLS_PATH = "/api/v1/execution/pending-recalls";
-export const LAB_DEPLOYMENT_ID = "dep_TEST_ONLY_eth";
+export const LAB_DEPLOYMENT_ID = "dep_btc_paper";
 export const LAB_POLICY_REVISION = "TEST_ONLY:portal-policy";
 export const LAB_WORKSPACE = /^ws_TEST_ONLY(?:_[A-Za-z0-9._:-]*)?$/;
 

@@ -383,7 +383,7 @@ function operations(rng: Rng, count: number, portfolios: PortfolioSpec[], bindin
       ? (portfolios.length > 0 ? pick(rng, portfolios).id : "pf_TEST_ONLY_core")
       : kind === "ACCOUNT"
         ? (bindings.length > 0 ? pick(rng, bindings).accountId : "acc_TEST_ONLY_binance01")
-        : (deployments.length > 0 ? pick(rng, deployments).id : "dep_TEST_ONLY_btc");
+        : (deployments.length > 0 ? pick(rng, deployments).id : "dep_sandbox_01");
     // Microsecond instants on purpose: the SQL keyset boundary is six digits wide.
     const micro = String(Math.floor(rng() * 1_000_000)).padStart(6, "0");
     rows.push({

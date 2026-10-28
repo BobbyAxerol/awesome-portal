@@ -270,8 +270,8 @@ describe("targets are links (#5)", () => {
     const hrefOf = (name: RegExp) => [...new Set(within(t).getAllByRole("link", { name }).map((a) => a.getAttribute("href")))].join("|");
     expect(hrefOf(/^Portfolio pf_TEST_ONLY_canary$/)).toBe("/deployments/portfolios/pf_TEST_ONLY_canary?env=paper&workspace_id=ws_1");
     expect(hrefOf(/^Account acc_TEST_ONLY_binance02$/)).toBe("/deployments/accounts/acc_TEST_ONLY_binance02?env=paper&workspace_id=ws_1");
-    expect(hrefOf(/^Deployment dep_TEST_ONLY_btc$/)).toBe("/deployments/sandbox/dep_TEST_ONLY_btc?env=paper&workspace_id=ws_1");
-    expect(hrefOf(/^Deployment dep_TEST_ONLY_eth$/)).toBe("/deployments/paper/dep_TEST_ONLY_eth?env=paper&workspace_id=ws_1");
+    expect(hrefOf(/^Deployment dep_sandbox_01$/)).toBe("/deployments/sandbox/dep_sandbox_01?env=paper&workspace_id=ws_1");
+    expect(hrefOf(/^Deployment dep_btc_paper$/)).toBe("/deployments/paper/dep_btc_paper?env=paper&workspace_id=ws_1");
   });
 
   it("clicking a target goes there and does not also open the operation; Enter on it does not either", async () => {
@@ -288,9 +288,9 @@ describe("targets are links (#5)", () => {
 
   it("the operation dock links its target too", async () => {
     mountPlain("/execution/operations?workspace_id=ws_1&sel=op_TEST_ONLY_s04&lens=all");
-    const dock = await screen.findByRole("complementary", { name: "Deployment dep_TEST_ONLY_btc" });
-    const link = within(dock).getByRole("link", { name: "Deployment dep_TEST_ONLY_btc" });
-    expect(link.getAttribute("href")).toBe("/deployments/sandbox/dep_TEST_ONLY_btc?workspace_id=ws_1");
+    const dock = await screen.findByRole("complementary", { name: "Deployment dep_sandbox_01" });
+    const link = within(dock).getByRole("link", { name: "Deployment dep_sandbox_01" });
+    expect(link.getAttribute("href")).toBe("/deployments/sandbox/dep_sandbox_01?workspace_id=ws_1");
   });
 
   it("the incident drawer links its target in the subtitle and in the facts", async () => {

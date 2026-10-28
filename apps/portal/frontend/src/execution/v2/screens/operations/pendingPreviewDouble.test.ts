@@ -40,7 +40,7 @@ describe("lab discovery", () => {
   });
 
   it("answers no other question (the governance double keeps those)", () => {
-    for (const change of [["resource_id", "dep_TEST_ONLY_btc"], ["environment", "live"], ["resource_kind", "PORTFOLIO"]] as const) {
+    for (const change of [["resource_id", "dep_sandbox_01"], ["environment", "live"], ["resource_kind", "PORTFOLIO"]] as const) {
       const search = new URLSearchParams(ASK);
       search.set(change[0], change[1]);
       expect(labDiscovery(search), change.join("=")).toBeNull();

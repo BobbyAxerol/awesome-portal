@@ -478,7 +478,7 @@ describe("local 24H window", () => {
     mount(api, { now: new Date("2026-08-23T09:00:00Z") });
     const t = await table();
     expect(within(t).getByText(/Account acc_TEST_ONLY_operational/)).toBeTruthy();
-    expect(within(t).queryByText(/Deployment dep_TEST_ONLY_eth/)).toBeNull();
+    expect(within(t).queryByText(/Deployment dep_btc_paper/)).toBeNull();
     expect(screen.getByText("2 loaded older than 24H hidden.")).toBeTruthy();
   });
 

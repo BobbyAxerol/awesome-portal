@@ -39,7 +39,7 @@ async function openLane(page: Page, width: number, options: { previewStatus?: nu
 
 /** The queue row of the PAPER deployment whose recalls the lab answers, and its opening button. */
 function openerOf(page: Page): Locator {
-  return page.locator("tbody tr", { hasText: "dep_TEST_ONLY_eth" }).getByRole("button", { name: /^(Review|Check original request)$/ }).first();
+  return page.locator("tbody tr", { hasText: "dep_btc_paper" }).getByRole("button", { name: /^(Review|Check original request)$/ }).first();
 }
 
 /** The lab's queue rows are older than the default 24H window: widen it, as a person would, before looking for the row. */

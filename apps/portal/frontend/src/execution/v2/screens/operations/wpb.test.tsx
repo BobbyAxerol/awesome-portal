@@ -78,7 +78,7 @@ describe("Operations with the lane's rows", () => {
     const t = await table();
     expect(within(rowOf(t, /pf_TEST_ONLY_canary/)).getByRole("button", { name: "Check original request" })).toBeTruthy();
     expect(within(rowOf(t, /pf_TEST_ONLY_satellite/)).getByText("Display updating")).toBeTruthy();
-    expect(within(rowOf(t, /dep_TEST_ONLY_btc/)).getByRole("link", { name: "Open obligations" }).getAttribute("href")).toContain("dep_TEST_ONLY_btc");
+    expect(within(rowOf(t, /dep_sandbox_01/)).getByRole("link", { name: "Open obligations" }).getAttribute("href")).toContain("dep_sandbox_01");
     expect(within(rowOf(t, /pf_TEST_ONLY_core.*Adjust target budget/s)).getByRole("button", { name: "Review" })).toBeTruthy();
   });
 
