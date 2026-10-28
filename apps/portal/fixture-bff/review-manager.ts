@@ -1579,8 +1579,8 @@ function wpcAlphaResource(method: string, path: string, search: URLSearchParams)
   alpha.version = spec.version;
   alpha.owner = spec.owner;
   alpha.health = spec.health;
-  alpha.stage = WPC_STAGE_ORDER.find((stage) => spec.deployments.some((d) => d.stage === stage && d.active && !wpb2sRetired(d.id))) ?? spec.deployments[0]?.stage ?? "RESEARCH"; // WP-B2-S3: an alpha with no deployment is at Research (the fleet row says so), not Paper
-  alpha.stages = WPC_STAGE_ORDER.filter((stage) => spec.deployments.some((d) => d.stage === stage)).reverse();
+  alpha.stage = WPC_STAGE_ORDER.find((stage) => spec.deployments.some((d) => d.stage === stage && d.active && !wpb2sRetired(d.id))) ?? spec.deployments[0]?.stage ?? spec.stages[spec.stages.length - 1] ?? null;
+  alpha.stages = spec.deployments.length === 0 ? [...spec.stages] : WPC_STAGE_ORDER.filter((stage) => spec.deployments.some((d) => d.stage === stage)).reverse();
   alpha.portfolios = [...new Map(spec.deployments.map((d) => [d.portfolioId, { portfolio_id: d.portfolioId, name: d.portfolioName, base_currency: d.currency }])).values()];
   alpha.deployments = spec.deployments.map((d) => {
     const net = d.realized; // WP-B2-C: Net PnL is the published net_pnl everywhere (the dataset's: realized); unrealized is its own field

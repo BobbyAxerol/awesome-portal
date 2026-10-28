@@ -246,7 +246,9 @@ const STEPS = [
   { id: "alpha", re: /^\/deployments\/alphas\/[^/?]+/, hub: "/deployments/alphas" },
   { id: "account", re: /^\/deployments\/accounts\/[^/?]+/, hub: "/deployments/accounts" },
   { id: "deployment", re: /^\/deployments\/(paper|sandbox|live)\/[^/?]+/, hub: "/deployments/alphas/alpha_btc_trend?tab=deployments" },
-  { id: "approval", re: /^\/governance\/approvals\/(?!new)[^/?]+/, hub: "/governance/approvals" },
+  // V2 cockpit opens a request by selecting a queue button and sets ?sel=;
+  // it need not render a legacy per-approval anchor in the inbox.
+  { id: "approval", re: /^\/governance\/approvals\/(?!new)[^/?]+/, hub: "/governance/approvals", cockpit: true },
   { id: "operation", re: /^\/execution\/operations(\?|$)/, hub: null, navOk: true },
   { id: "incident", re: /^\/execution\/operations\/incidents\/[^/?]+/, hub: "/execution/operations" },
   // the Audit view of the Operations screen is a tab (a button that sets ?view=audit), not an anchor
@@ -254,6 +256,17 @@ const STEPS = [
 ];
 
 async function findAndFollow(page, step) {
+  if (step.cockpit) {
+    await page.goto(base + step.hub, { waitUntil: "domcontentloaded" });
+    await settle(page);
+    const item = page.locator('ul[aria-label="Requests"] button.exec-ck-qi[data-kind="gate"]').first();
+    if (!(await item.count())) return { found: false };
+    await item.click({ timeout: 8000 });
+    await settle(page);
+    const selected = new URL(page.url()).searchParams.get("sel");
+    if (!selected || selected === "undefined" || selected === "null") return { found: false };
+    return { found: true, href: stripOrigin(page.url()), via: "hub:" + step.hub + "#queue-button" };
+  }
   if (step.tab) {
     let via = "page";
     let tab = page.getByRole("tab", { name: step.tab }).first();
@@ -383,9 +396,30 @@ async function walk(browser, scenario) {
     noteGuards(`sweep ${href}`, { jargon: r.m.jargon, stamps: r.m.stamps, laterThanAsOf: r.m.laterThanAsOf, dualIds: r.m.dualIds, deadEnd: r.m.deadEnd }, problems);
     sweep.push({ href, from: seenHrefs.get(href), ok: r.ok && r.m.badText.length === 0, badText: r.m.badText, bad: r.bad.map((x) => `${x.status} ${x.path}`).slice(0, 3), notFound: r.m.notFound, errors: r.d.consoleErrors.length + r.d.pageErrors.length, firstError: r.firstError });
   }
+  const researchStage = [];
+  if (flag("research-stage-probe") && scenario === "positive") {
+    for (const width of [1280, 660]) for (const suffix of ["", "?workspace_id=ws_TEST_ONLY", "?workspace_id=ws_TEST_ONLY&deployment_id=dep_unknown"]) {
+      await page.setViewportSize({ width, height: 900 });
+      const resourcePath = "/api/v1/execution/resources/alphas/alpha_scale_004";
+      let resourceStatus = null;
+      const observe = (response) => {
+        if (new URL(response.url()).pathname === resourcePath) resourceStatus = response.status();
+      };
+      page.on("response", observe);
+      await page.goto(base + "/deployments/alphas/alpha_scale_004" + suffix, { waitUntil: "domcontentloaded" });
+      await settle(page);
+      const text = await page.locator("main").innerText();
+      page.off("response", observe);
+      const overflow = await page.evaluate(() => Math.max(0, document.documentElement.scrollWidth - document.documentElement.clientWidth));
+      const available = resourceStatus === 200 && /research/i.test(text) && !/the alpha row for alpha_scale_004 could not be read/i.test(text);
+      researchStage.push({ width, suffix, resourceStatus, available, overflow });
+      if (!available || overflow > 0) problems.push(`research-stage ${width} ${suffix || "plain"}: resource=${resourceStatus}, available=${available}, overflow=${overflow}`);
+      drain(tracker);
+    }
+  }
   await ctx.close();
   const guards = Object.fromEntries(Object.entries(GUARD).map(([k, map]) => [k, { offences: [...map.values()].reduce((n, l) => n + l.length, 0), screens: Object.fromEntries([...map.entries()].map(([w, l]) => [w, [...new Set(l)].slice(0, 4)])) }]));
-  return { scenario, screens, problems, sweep, sweepTotal: detail.length, guards, worldClockIso };
+  return { scenario, screens, problems, sweep, sweepTotal: detail.length, guards, worldClockIso, researchStage };
 }
 
 const browser = await chromium.launch();
