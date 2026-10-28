@@ -92,6 +92,7 @@ const TIES: readonly { id: string; title: string; qa: string; owner: string }[] 
   { id: "W101", title: "a mismatch variant of a Sandbox page passes as many steps as Alpha 360 counts criteria met for that deployment's alpha; the injected failure is one other step", qa: "N9a-01 N8a-02", owner: "B-S" },
   { id: "W102", title: "a dark variant of an ended Canary trial carries the base room's ended facts (runtime STOPPED, closed rollback checks, no promotion gate waiting)", qa: "N9a-04", owner: "B-S" },
   { id: "W103", title: "venue candles of any window (before, at or ahead of the world clock) state a returned count equal to the bars listed, hold at least one bar and none after the clock", qa: "N9a-05", owner: "B-S" },
+  { id: "W132", title: "a stage variant id in the scoped workspace answers 200 like the home one and its V2 body stays the closed V2 shape", qa: "reader conformance W130", owner: "B-S" },
   // ===== WP-B2-S3 end
   { id: "W23", title: "a scoped blotter is the scope's population: every order of the deployment/alpha (including ord_00225 for Carry A) is on it, count and chips equal the filtered population", qa: "QA6 R2-02", owner: "B-B1" },
   { id: "W24", title: "one definition of the money of a book: Net PnL is the published realized, a venue is the sum of its deployments, Equity is allocation + realized + unrealized (a ledger figure without the unrealized is not named Equity)", qa: "R2-03 R5-08 R3-07", owner: "B-C3" },

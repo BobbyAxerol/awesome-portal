@@ -786,7 +786,9 @@ export function simulateStage(path: string, answerBody: unknown): Obj | null {
   if (variant === "dark") {
     // WP-B2-S3 R4-04, R4-05: the dark Sandbox and Paper pages of a deployment of the world carry ITS record (one book); only the source facts are the typed absences
     const darkOwn = isPositiveMode() && (kind === "sandbox" || kind === "paper" || kind === "canary") ? resolveStageDeployment(baseDeploymentId(id)) : null;
-    if (darkOwn !== null && darkOwn.standing.stage === kind) return darkHybrid(kind as "sandbox" | "paper" | "canary", answerBody, id) ?? darkOfWorld(answerBody, id);
+    // the V2 bodies of the scoped workspace (ws_TEST_SCOPED_V2) are never touched: only the V1 shape of the kind is hybridised
+    const v1Shape = kind === "paper" || answerBody.schema_version === (kind === "sandbox" ? "governance.sandbox-certification.v1" : "execution.canary-control-room.v1");
+    if (darkOwn !== null && v1Shape && darkOwn.standing.stage === kind) return darkHybrid(kind as "sandbox" | "paper" | "canary", answerBody, id) ?? darkOfWorld(answerBody, id);
     return darkOfWorld(answerBody, id);
   }
   // A stage page the deployment has not reached is not lit: the published dark body stands (typed absence), whatever the URL says.
@@ -833,6 +835,7 @@ export function stagePageIsForeign(path: string): boolean {
  * acct_*_grid): the portfolio, the account and the venue it links to are the deployment's own, so no breadcrumb of a dark room is a dead end (QA3 R5-06).
  */
 function darkOfWorld(answerBody: Obj, requestedId: string): Obj | null {
+  if (typeof answerBody.schema_version === "string" && /\.v[2-9]$/.test(answerBody.schema_version)) return null; // WP-B2-S3: the V2 bodies (ws_TEST_SCOPED_V2) are closed shapes and are never touched
   if (!isPositiveMode() || !(isObj(answerBody.deployment) || isObj(answerBody.certification))) return null; // WP-B2-S: the certification body carries its identity under `certification`
   const found = resolveStageDeployment(WORLD_ALIAS[baseDeploymentId(requestedId)] ?? baseDeploymentId(requestedId));
   if (found === null) return null;

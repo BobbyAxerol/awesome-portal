@@ -64,7 +64,6 @@ const GROUPS: readonly { id: string; title: string }[] = [
  */
 const OPEN_GROUPS: Readonly<Record<string, string>> = {
   W129: "new: ws_TEST_SCOPED_V2 alpha resource body is V2_MALFORMED for every alpha",
-  W130: "new: ws_TEST_SCOPED_V2 Sandbox / Canary `_dark` variants answer HTTP 500",
 };
 
 interface Verdict { group: string; name: string; ok: boolean; why: string; urls: string[]; refusal?: boolean }

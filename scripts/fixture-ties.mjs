@@ -1065,6 +1065,12 @@ export async function runWorldTies(get) {
       }
     }
   }
+  // W132 (reader conformance W130): a variant id in the scoped workspace answers like the home one (never a 5xx) and its V2 body is the closed V2 shape (no V1 identity keys injected into it)
+  for (const [kind, id] of [["certification", "dep_sandbox_01_dark"], ["canary", "dep_canary_01_dark"], ["certification", "dep_d1_dark"], ["canary", "dep_c1_dark"]]) {
+    const r = await get(`${E}/deployments/${id}/${kind}?workspace_id=ws_TEST_SCOPED_V2`);
+    check("W132", r.status === 200, `${id} (${kind}) in the scoped workspace answers ${r.status}`);
+    if (r.status === 200 && /\.v2$/.test(String(r.body?.schema_version))) check("W132", r.body.certification?.alpha_name === undefined && r.body.certification?.account_id === undefined, `${id}: a V2 body carries V1 identity keys`);
+  }
   // ===== WP-B2-S3 end
   // ===== WP-B2-A3 begin
   // ── W19: a request exists only for the NEXT gate of its subject, once, and its quorum is open (R3-02, R3-09, R3-10, R3-03) ───────────────────────────────
