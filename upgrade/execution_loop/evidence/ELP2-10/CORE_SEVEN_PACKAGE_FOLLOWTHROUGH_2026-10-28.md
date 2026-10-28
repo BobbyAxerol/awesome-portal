@@ -45,6 +45,9 @@ reported **13 PASS / 1 SKIP** for its focused regression at test-only
 `6c63d652`; its skipped Core-codec case is not represented as a pass. Corrected
 ACK mirrored to EPG10-08 with SHA256
 `794de92361ca9754a65dd48a620dd9072e0e62cc416832fda074c999661afd3a`.
+Both Core and fixture candidate whole-project TypeScript checks were interrupted
+before completion; neither is reported as passing. The fixture candidate's
+temporary dependency symlink was removed after its focused test.
 
 ## 4–5. Financial mapping and STATUS
 
