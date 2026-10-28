@@ -95,7 +95,7 @@ const CELLS: readonly Cell[] = [
   { slug: "sandbox", group: "Sandbox", route: `/deployments/sandbox/dep_sandbox_01?${WS}`, root: '[data-screen="sandbox-v2"]', widths: TWO },
   { slug: "admin-actions", group: "Admin", route: "/administration/actions", root: '[data-screen="admin-actions-v2"]', widths: TWO },
   { slug: "users", group: "Users", route: "/administration/users", root: '[data-screen="users-v2"]', widths: TWO },
-  { slug: "trade-replay", group: "Trade Replay", route: "/deployments/alphas/alpha_btc_trend?tab=replay", root: '[data-screen="alpha-360-v2"]', widths: TWO },
+  { slug: "trade-replay", group: "Trade Replay", route: "/deployments/alphas/alpha_btc_trend?tab=replay", root: '[data-screen="trade-replay-v2"]', widths: TWO },
   { slug: "access", group: "Access", route: "/administration/profile-access?workspace_id=ws_TEST_GRANTS", root: ".exec-acc-kpi", widths: TWO },
   { slug: "cockpit", group: "Cockpit", route: "/governance/approvals", root: ".exec-ck", widths: TWO },
   { slug: "operations", group: "Operations", route: "/execution/operations", root: ".exec-ops", widths: TWO },
@@ -171,7 +171,7 @@ const CELLS: readonly Cell[] = [
   {
     slug: "incident-drawer",
     group: "Incident drawer",
-    route: "/execution/operations/incidents/inc_fixture_44",
+    route: "/execution/operations/incidents/inc_TEST_ONLY_fx_mismatch",
     root: ".exec-ops",
     widths: DOCK,
     shot: "viewport",
