@@ -13,6 +13,7 @@
         "id": "apr_fixture_r1",
         "gate": "R1",
         "subject": "Carry v3.2",
+        "subject_type": "ALPHA_VERSION",
         "portfolio_id": null,
         "subject_id": "alpha_carry_v32",
         "release_candidate": "RC-42",

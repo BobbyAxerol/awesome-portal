@@ -5,6 +5,14 @@ import { describe, expect, it } from "vitest";
 const read = (path: string) => JSON.parse(readFileSync(new URL(`../${path}`, import.meta.url), "utf8"));
 
 describe("FE-044/045/046 additive authorized reader contracts", () => {
+  it("publishes the persisted approval subject kind without inferring target authority", () => {
+    const def = read("schemas/execution-governance-product.v1.schema.json").$defs.ApprovalInboxItem;
+    const validate = new Ajv2020({ strict: false }).compile(def.properties.subject_type);
+    for (const value of ["ALPHA_VERSION", "DEPLOYMENT", "EXIT_REVIEW"]) expect(validate(value)).toBe(true);
+    for (const value of ["ALPHA", "PORTFOLIO", null, 1, {}]) expect(validate(value)).toBe(false);
+    expect(def.required).not.toContain("subject_type"); // Existing producers remain readable.
+    expect(read("fixtures/execution-governance.approval-inbox.valid.json").page.rows[0].subject_type).toBe("ALPHA_VERSION");
+  });
   it("publishes literal q and retains legacy population versus loaded-match semantics", () => {
     const spec = read("openapi/execution-manager-lists.openapi.json");
     const q = spec.paths["/api/v1/execution/portfolios"].get.parameters.find((p: any) => p.name === "q");

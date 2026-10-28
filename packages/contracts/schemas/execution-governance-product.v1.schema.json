@@ -35,6 +35,7 @@
         "id": { "$ref": "#/$defs/Identifier" },
         "gate": { "enum": ["R1", "R2", "PAPER_EXIT", "SANDBOX_EXIT", "LIVE_GATE"] },
         "subject": { "type": "string", "minLength": 1, "maxLength": 512 },
+        "subject_type": { "enum": ["ALPHA_VERSION", "DEPLOYMENT", "EXIT_REVIEW"], "description": "Persisted approval subject kind, not a grant to read or navigate to the target. Optional for compatibility with older servers; never infer it from gate or label." },
         "portfolio_id": { "type": ["string", "null"], "minLength": 1, "maxLength": 192, "pattern": "^[A-Za-z0-9._:-]+$", "description": "Navigation only from this gate's immutable authorized scope: direct R2 or captured Paper Exit. Null for R1/unsupported/missing/ambiguous lineage. Not a filter, count scope or inferred permission." },
         "subject_id": { "$ref": "#/$defs/Identifier" },
         "release_candidate": { "type": ["string", "null"], "maxLength": 256 },

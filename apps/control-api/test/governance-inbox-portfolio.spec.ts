@@ -28,7 +28,7 @@ function inboxRow(gate: ApprovalGate): ApprovalInboxRow {
   return {
     r2_parent_ready: false, r2_plan_author_user_id: null,
     approval_id: `TEST-${gate}`, workspace_id: workspace, gate,
-    subject_id: "TEST-alpha", subject_label: "PF_LABEL_IS_NOT_LINEAGE",
+    subject_type: "ALPHA_VERSION", subject_id: "TEST-alpha", subject_label: "PF_LABEL_IS_NOT_LINEAGE",
     release_candidate: null, environment: "PAPER", target_label: "review",
     requester_user_id: "TEST-author", requester_username: "author",
     artifact_creator_user_id: "TEST-author", artifact_creator_username: "author",
@@ -67,6 +67,13 @@ function listFixture(options: { member?: boolean; policy?: boolean; restricted?:
 }
 
 describe("FE-045 authorized Approval Inbox portfolio metadata", () => {
+  it.each(["ALPHA_VERSION", "DEPLOYMENT", "EXIT_REVIEW"] as const)(
+    "publishes the persisted subject type %s, not an inference from gate or label", subject_type => {
+      const resource = approvalInboxResource(actor, () => false, APPROVAL_GATES, now);
+      expect(resource.selectColumns).toContain("subject_type");
+      expect(resource.mapRow({ ...inboxRow("R1"), subject_type }).subject_type).toBe(subject_type);
+    },
+  );
   it.each(APPROVAL_GATES)("the %s mapper never infers portfolio identity from its subject", gate => {
     const item = approvalInboxResource(actor, () => false, APPROVAL_GATES, now).mapRow(inboxRow(gate));
     expect(item.portfolio_id).toBeNull();

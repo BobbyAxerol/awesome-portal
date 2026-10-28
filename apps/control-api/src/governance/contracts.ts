@@ -120,6 +120,7 @@ export interface ApprovalInboxRow extends QueryResultRow {
   approval_id: string;
   workspace_id: string;
   gate: ApprovalGate;
+  subject_type: "ALPHA_VERSION" | "DEPLOYMENT" | "EXIT_REVIEW";
   subject_id: string;
   subject_label: string;
   release_candidate: string | null;
@@ -151,6 +152,8 @@ export interface ApprovalInboxItem {
   id: string;
   gate: ApprovalGate;
   subject: string;
+  /** Persisted subject kind; it is not a grant to read the target. */
+  subject_type: "ALPHA_VERSION" | "DEPLOYMENT" | "EXIT_REVIEW";
   subject_id: string;
   /** Captured by this gate, never inferred from subject text or a later gate.
    * Null means no unambiguous, linkable portfolio lineage was recorded. This
@@ -214,6 +217,7 @@ export function approvalInboxResource(
       "approval_id",
       "workspace_id",
       "gate",
+      "subject_type",
       "subject_id",
       "subject_label",
       "release_candidate",
@@ -311,6 +315,7 @@ export function approvalInboxResource(
         id: row.approval_id,
         gate: row.gate,
         subject: row.subject_label,
+        subject_type: row.subject_type,
         subject_id: row.subject_id,
         // Filled only by the authorized, bounded gate-lineage read in list().
         portfolio_id: null,
