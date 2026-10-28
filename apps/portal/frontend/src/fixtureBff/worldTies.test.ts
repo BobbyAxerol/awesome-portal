@@ -89,6 +89,7 @@ const TIES: readonly { id: string; title: string; qa: string; owner: string }[] 
   { id: "W73", title: "the world has no venue bar after its clock, and the bar holding the clock closes at the world's mark of the symbol", qa: "N8b-01", owner: "B-S" },
   { id: "W74", title: "a Paper page of a stage the alpha left never publishes freshness FRESH for data days older than its read", qa: "N8a-05 N4-03", owner: "B-S" },
   { id: "W100", title: "the Operations queue under a target filter (a deployment id or a variant id) echoes the request and its facets count the same rows the filter selected (the closed reader rejects anything else)", qa: "N9a-02", owner: "B-S" },
+  { id: "W101", title: "a mismatch variant of a Sandbox page passes as many steps as Alpha 360 counts criteria met for that deployment's alpha; the injected failure is one other step", qa: "N9a-01 N8a-02", owner: "B-S" },
   // ===== WP-B2-S3 end
   { id: "W23", title: "a scoped blotter is the scope's population: every order of the deployment/alpha (including ord_00225 for Carry A) is on it, count and chips equal the filtered population", qa: "QA6 R2-02", owner: "B-B1" },
   { id: "W24", title: "one definition of the money of a book: Net PnL is the published realized, a venue is the sum of its deployments, Equity is allocation + realized + unrealized (a ledger figure without the unrealized is not named Equity)", qa: "R2-03 R5-08 R3-07", owner: "B-C3" },

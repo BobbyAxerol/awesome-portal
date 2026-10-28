@@ -1028,6 +1028,19 @@ export async function runWorldTies(get) {
       check("W100", dimension.total === page.filtered_count, `${target}: facet ${name} counts ${dimension.total}, the filtered set is ${page.filtered_count}`);
     }
   }
+  // W101 (QA9 N9a-01): a mismatch variant of a Sandbox page is the same deployment with one injected failure: it passes as many steps as Alpha 360 counts criteria met for that deployment's alpha, and the failed step is not among them
+  {
+    const page = (await get(`${E}/deployments/dep_sandbox_01_mismatch/certification`)).body;
+    const home = alphaRows.find((a) => a.alpha_label === page?.certification?.alpha_name);
+    if (page?.progress && home) {
+      const env = { PAPER: "paper", SANDBOX: "sandbox", CANARY: "live", LIVE: "live" }[home.stage];
+      const overview = await ok200(`${E}/manager/alphas/${home.alpha_id}/overview?environment=${env}&window=30D`);
+      const met = Number(metricStr(overview?.items?.find((x) => x.alpha_id === home.alpha_id)?.economic_partitions?.[0], "life_sandbox_criteria_met"));
+      check("W101", page.progress.passed_count === met, `sandbox-mismatch (${home.alpha_label}): ${page.progress.passed_count} of ${page.progress.total_count} steps pass, Alpha 360 counts ${met} criteria met`);
+      const failed = (page.steps ?? []).filter((x) => x.evaluation_state === "FAIL");
+      check("W101", failed.length === 1 && (page.steps ?? []).filter((x) => x.evaluation_state === "PASS").length === page.progress.passed_count, `sandbox-mismatch: ${failed.length} failed steps, passed_count ${page.progress.passed_count}`);
+    }
+  }
   // ===== WP-B2-S3 end
   // ===== WP-B2-A3 begin
   // ── W19: a request exists only for the NEXT gate of its subject, once, and its quorum is open (R3-02, R3-09, R3-10, R3-03) ───────────────────────────────

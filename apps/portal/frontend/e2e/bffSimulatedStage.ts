@@ -1048,22 +1048,21 @@ function worldStage(kind: "canary" | "live" | "sandbox" | "paper", body: Obj | n
     const runEndMs = record.toMs ?? NOW_MS;
     const submitMs = runEndMs - 3 * HOUR_MS;
     const checkedAt = (i: number): number => (completedRun ? (i === steps.length - 1 ? runEndMs : startMs + Math.floor(((i + 1) * (submitMs - startMs)) / steps.length)) : startMs + (i + 1) * MIN * 90);
-    const passedUpTo = mismatch && !completedRun ? 3 : passedTo;
+    // WP-B2-S3 (QA9 N9a-01): the mismatch variant is the SAME deployment with an injected failure of step 4 (reconciliation): it passes as many steps as Alpha 360 counts criteria met for the deployment, the failed step is not one of them
+    const failing = mismatch && !completedRun ? 3 : -1;
+    const passOrder = failing === -1 ? steps.map((_, i) => i) : steps.map((_, i) => i).filter((i) => i !== failing);
+    const passes = new Set(passOrder.slice(0, passedTo));
+    const passedUpTo = passes.size;
+    const firstOpen = steps.findIndex((_, i) => !passes.has(i));
     steps.forEach((step, i) => {
-      step.strip_state = i < passedUpTo ? "DONE" : i === passedUpTo ? "CURRENT" : "PENDING";
-      step.evaluation_state = i < passedUpTo ? "PASS" : "UNAVAILABLE";
-      step.blocker_code = i < passedUpTo ? null : `SANDBOX_STEP_${String(step.step_key)}_PENDING`;
-      step.as_of = i < passedUpTo ? iso(checkedAt(i)) : null;
-      step.expires_at = i < passedUpTo && !completedRun ? iso(Math.max(checkedAt(i) + 14 * DAY_MS, NOW_MS + (2 + i) * DAY_MS)) : null;
-      step.summary = i < passedUpTo ? `Step ${i + 1} evidence accepted.` : step.summary;
+      const passed = passes.has(i);
+      step.strip_state = passed ? "DONE" : i === firstOpen ? "CURRENT" : "PENDING";
+      step.evaluation_state = passed ? "PASS" : i === failing ? "FAIL" : "UNAVAILABLE";
+      step.blocker_code = passed ? null : i === failing ? "SANDBOX_STEP_RECONCILIATION_FAIL" : `SANDBOX_STEP_${String(step.step_key)}_PENDING`;
+      step.as_of = passed ? iso(checkedAt(i)) : null;
+      step.expires_at = passed && !completedRun ? iso(Math.max(checkedAt(i) + 14 * DAY_MS, NOW_MS + (2 + i) * DAY_MS)) : null;
+      step.summary = passed ? `Step ${i + 1} evidence accepted.` : i === failing ? `Step ${i + 1} failed: ${rows.length} findings are still open, one blocks the gate.` : step.summary;
     });
-    if (mismatch && !completedRun) {
-      const recon = steps[3]!;
-      recon.strip_state = "CURRENT";
-      recon.evaluation_state = "FAIL";
-      recon.blocker_code = "SANDBOX_STEP_RECONCILIATION_FAIL";
-      recon.summary = `Step 4 failed: ${rows.length} findings are still open, one blocks the gate.`;
-    }
     progress.passed_count = passedUpTo;
     progress.total_count = steps.length;
     progress.eligible = passedUpTo === steps.length; // WP-B2-S3 (round D, N4-01): a decided certification publishes the contract's own met state: workflow_state APPROVED, every step PASS / DONE, eligible, no blocker code
