@@ -178,6 +178,35 @@ describe("the lifecycle spine", () => {
   });
 });
 
+describe("the default Book (QA9 N9b-03)", () => {
+  /** A Grid-D-like body: the alpha is in Sandbox now; its Paper deployment ended. */
+  const sandboxNow = (path: string) => {
+    if (path !== `/resources/alphas/${ALPHA_DOUBLE_ID}`) return undefined;
+    const answer = answerAlpha("GET", path, new URLSearchParams())!;
+    const body = structuredClone(answer.body) as { data: { alpha: { stage: string; stages: string[]; deployments: { deployment_id: string; state: string; stage?: string; mode?: string }[] } } };
+    const keep = body.data.alpha.deployments.filter((d) => d.deployment_id === "dep_paper_01" || d.deployment_id === "dep_sandbox_01");
+    for (const d of keep) d.state = d.deployment_id === "dep_paper_01" ? "ENDED" : "ACTIVE";
+    body.data.alpha.deployments = keep;
+    body.data.alpha.stage = "SANDBOX";
+    return { status: 200, body };
+  };
+
+  it("opens the Sandbox book (the current stage's live deployment), not the ended Paper book", async () => {
+    mount(undefined, sandboxNow);
+    await ready();
+    const facts = await screen.findByLabelText("Current facts");
+    expect(facts.textContent).toMatch(/Sandbox book/);
+    expect(facts.textContent).not.toMatch(/Paper book/);
+  });
+
+  it("an explicit ?env=paper still wins, and the ended book stays reachable as history", async () => {
+    mount(`/deployments/alphas/${ALPHA_DOUBLE_ID}?env=paper`, sandboxNow);
+    await ready();
+    const facts = await screen.findByLabelText("Current facts");
+    expect(facts.textContent).toMatch(/Paper book/);
+  });
+});
+
 describe("current facts", () => {
   it("prints the published current figures with their basis, and the windowed ones as Not published", async () => {
     mount();

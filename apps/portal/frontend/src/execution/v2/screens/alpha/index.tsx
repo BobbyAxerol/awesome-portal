@@ -158,7 +158,15 @@ function Alpha360({ api, alphaId, workspaceId }: AlphaScreenProps) {
   // A link that names a deployment (`?deployment_id=dep_c1`, Overview's "Momentum C · CANARY") opens THAT deployment's own book and stage; it
   // never falls back to the alpha's headline stage (QA6 R1-01). An explicit `env` in the address still wins.
   const namedDeployment = view?.rows.find((r) => r.id === params.get("deployment_id")) ?? null;
-  const env: ExecEnv = params.get("env") === null && namedDeployment?.env != null && deployed.includes(namedDeployment.env) ? namedDeployment.env : chooseEnv(url.value.env, deployed);
+  // With no env in the address, the Book defaults to the book of the alpha's CURRENT-stage deployment that has not ended: an ended Paper book is
+  // history behind the Book toggle, not the headline of an alpha that is in Sandbox now (QA9 N9b-03). An explicit `env` still wins.
+  const currentLive = params.get("env") === null && view !== null && view.current !== null
+    ? view.rows.find((r) => r.stage === view.current && !/^(ended|completed|retired)$/i.test(r.runtime.label)) ?? null
+    : null;
+  const currentEnv: ExecEnv | null = currentLive === null ? null : currentLive.env ?? (currentLive.stage === "paper" ? "paper" : currentLive.stage === "sandbox" ? "sandbox" : currentLive.stage === "canary" || currentLive.stage === "live" ? "live" : null);
+  const env: ExecEnv = params.get("env") === null && namedDeployment?.env != null && deployed.includes(namedDeployment.env)
+    ? namedDeployment.env
+    : currentEnv !== null && deployed.includes(currentEnv) ? currentEnv : chooseEnv(url.value.env, deployed);
   const settled = resource.phase === "ready" || resource.phase === "error";
   const wsId = explicitWs ?? view?.workspaceId ?? null;
 
