@@ -75,6 +75,7 @@ import { SIBLINGS, type SiblingId } from "../v2/readers/siblings.generated";
 import { entitySearchAnswers, entitySearchPath, readEntitySearchV1 } from "../v2/readers/entitySearch";
 import { alphaLifecycleAnswers, alphaLifecyclePath, readAlphaLifecycleV1 } from "../v2/readers/alphaLifecycle";
 import { approvalEvidenceAnswers, approvalEvidencePath, readApprovalEvidenceV1 } from "../v2/readers/approvalEvidence";
+import { fetchAlphaCataloguePage } from "../v2/readers/runLibraryAlphaCatalogue";
 import { approvalRequestLookupAnswers, approvalRequestLookupUrl, readApprovalRequestLookupV1 } from "../v2/readers/approvalRequestLookup";
 import { readCanaryControlRoom, readSandboxCertification } from "../certification";
 import { readLiveFullOperations } from "../liveFull";
@@ -1303,6 +1304,10 @@ export function createHttpApi({ policy, signal, readScope = {} }: HttpApiOptions
         return { kind: "unavailable", reason: "The step-up answer is for another proof family than the one asked, so it is not used." };
       }
       return { kind: "ok", stepUp: read.stepUp };
+    },
+
+    async getRunLibraryAlphaCataloguePage(query) {
+      return fetchAlphaCataloguePage(query, signal);
     },
 
     async lookupApprovalRequest(query) {

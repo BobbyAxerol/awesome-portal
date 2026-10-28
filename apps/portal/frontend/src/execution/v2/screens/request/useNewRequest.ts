@@ -168,7 +168,7 @@ export function useNewRequest({ api, writeBlockedReason, prefill, prefillNotices
   const [outcome, setOutcome] = useState<ApprovalCreateOutcome | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [requestKey, setRequestKey] = useState<string | null>(null);
-  const runs = useRunLibrary(runsEnabled);
+  const runs = useRunLibrary(runsEnabled, api);
   const [originalCheck, setOriginalCheck] = useState<OriginalCheck>({ phase: "idle" });
   const checkSeq = useRef(0);
   const checking = useRef(false);

@@ -24,6 +24,7 @@ import { answerReviewManager, wpAccountBook, wpAlphaResource, wpDeploymentFact, 
 import { isPositiveMode, setPositiveMode } from "../frontend/e2e/bffPositiveMode";
 import { WORLD_NOW_MS } from "../frontend/e2e/bffWorld";
 import { commandStoryRoute } from "./command-story";
+import { answerAlphaCatalogue } from "./alpha-catalogue"; // WP-B2-P2
 import { applyScenarioBody, resetFixtureTransitions, scenarioRequest, scenarioVariants } from "./scenario-apply";
 import { rosterNames } from "./roster-names";
 // ===== WP-B2-A begin
@@ -266,6 +267,10 @@ function answererOptions(config: FixtureConfig): FixtureAnswererOptions {
 
 function answerFor(config: FixtureConfig, rawRequest: BffRequest): BffResponse | null {
   const profile = config.reviewProfile;
+  // ===== WP-B2-P2 begin: the run-derived alpha catalogue (FE-069), paged, from the world
+  const catalogue = answerAlphaCatalogue(rawRequest);
+  if (catalogue !== null) return catalogue;
+  // ===== WP-B2-P2 end
   // WP-P: the selected scenario may reroute a read to a negative case the doubles already model, and shape the value-rewrite scenarios.
   const request = profile === "sparse-realistic" ? rawRequest : scenarioRequest(getScenario(), rawRequest);
   const review = profile === "sparse-realistic" ? null : answerReviewManager(request.method, request.path,

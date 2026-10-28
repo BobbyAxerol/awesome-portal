@@ -657,6 +657,12 @@ export interface ExecutionApi {
    */
   lookupApprovalRequest(query: ApprovalRequestLookupQuery): Promise<Result<ApprovalRequestLookupRead>>;
   /**
+   * `GET /api/v1/quantbt/runs/alpha-catalogue` (FE-069, `researchRunLibraryAlphaCatalogueV1`): ONE page of the workspace's run-derived alpha
+   * facet (not the Alpha Registry, not a create grant). Optional: a port that does not offer it leaves the picker on the run list's own
+   * catalogue. Never throws; a failure is a typed word, never server prose. Traversal and its fences live in `traverseAlphaCatalogue`.
+   */
+  getRunLibraryAlphaCataloguePage?(query: import("../v2/readers/runLibraryAlphaCatalogue").AlphaCatalogueQuery): Promise<import("../v2/readers/runLibraryAlphaCatalogue").AlphaCataloguePageAnswer>;
+  /**
    * `GET /api/v1/execution/governance/approvals/{approval_id}/evidence` (WP-K, `portal.execution.approval-evidence.v1`): the evidence beside one
    * request (prior economic history, evidence diff, obligations still open, receipt preview, the Portal's evaluation time). Optional: a port
    * that does not offer it, or a route nothing serves yet, leaves the cockpit panels on their typed absence.

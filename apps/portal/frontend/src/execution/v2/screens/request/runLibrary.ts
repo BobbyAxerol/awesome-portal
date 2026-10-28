@@ -14,9 +14,11 @@
  *
  * It lists candidates and nothing else: the server still validates the alpha / run / claim triple on submit.
  */
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import type { ExecutionApi } from "../../../api/ports";
 import { readRunOptions, type RunOption } from "../../../runSuggestions";
+import { traverseAlphaCatalogue, type CatalogueFailure } from "../../readers/runLibraryAlphaCatalogue";
 
 export const RUN_LIBRARY_SCHEMA = "research.run-library.v1";
 export const RUN_LIBRARY_PATH = "/api/v1/quantbt/runs";
@@ -97,6 +99,20 @@ export function runLibraryUrl(alphaId: string | null, cursor: string | null): st
   return `${RUN_LIBRARY_PATH}?${parts.join("&")}`;
 }
 
+/**
+ * The alpha catalogue traversal (FE-069): `complete` is the only state that is "the workspace's alphas". `partial` and `failed` carry no
+ * alphas into the picker. Workspace change and revocation reset it to `loading` / `failed` with nothing carried over.
+ */
+export type AlphaCatalogueState =
+  | { status: "idle" }
+  | { status: "loading" }
+  | { status: "complete"; pages: number }
+  | { status: "partial"; pages: number; loaded: number; failure: CatalogueFailure }
+  | { status: "failed"; failure: CatalogueFailure };
+
+/** After these the rights to the workspace are gone: the run list's own facet is not used to paper over it. */
+const REVOKED: ReadonlySet<CatalogueFailure> = new Set<CatalogueFailure>(["WORKSPACE_NOT_OBSERVABLE", "FORBIDDEN", "UNAUTHENTICATED"]);
+
 export type RunLibrary = {
   status: "loading" | "ok" | "unavailable";
   options: readonly RunOption[];
@@ -116,6 +132,10 @@ export type RunLibrary = {
   moreError: string | null;
   /** `MAX_RUN_PAGES` pages are loaded and the server has more. */
   capped: boolean;
+  /** The paged alpha catalogue read (idle when the port does not offer it). */
+  alphaCatalogue: AlphaCatalogueState;
+  /** Read the alpha catalogue again from its first page (a cursor is never resumed). */
+  restartCatalogue(): void;
   /** Filter the list to one alpha on the server (`null`: the unfiltered first page). Ignored for an id the catalog does not list. */
   selectAlpha(alphaId: string | null): void;
   /** The next page of the current filter. Single-flight; no-op without a further page or at the cap. */
@@ -144,8 +164,13 @@ const INITIAL: Internal = {
   refreshing: false, loadingMore: false, moreError: null,
 };
 
-export function useRunLibrary(enabled = true): RunLibrary {
+export function useRunLibrary(enabled = true, api?: ExecutionApi, workspaceId: string | null = null): RunLibrary {
   const [state, setState] = useState<Internal>(INITIAL);
+  const [cat, setCat] = useState<{ state: AlphaCatalogueState; alphas: readonly CatalogAlpha[] | null }>({ state: { status: "idle" }, alphas: null });
+  const [restart, setRestart] = useState(0);
+  const apiRef = useRef(api);
+  apiRef.current = api;
+  const offered = typeof api?.getRunLibraryAlphaCataloguePage === "function";
   const stateRef = useRef(state);
   stateRef.current = state;
   /** Identity of the filter whose answers are wanted; an answer for another one is dropped. */
@@ -195,11 +220,51 @@ export function useRunLibrary(enabled = true): RunLibrary {
     };
   }, [enabled, loadFirst]);
 
+  // The paged alpha catalogue. Keyed by workspace and restart: a change drops the previous results at once (no reuse across workspaces),
+  // aborts the read in flight and starts again from the first page.
+  useEffect(() => {
+    if (!enabled || !offered) {
+      setCat({ state: { status: "idle" }, alphas: null });
+      return undefined;
+    }
+    const controller = new AbortController();
+    setCat({ state: { status: "loading" }, alphas: null });
+    const base = apiRef.current!;
+    // The signal only cancels the request in flight; a late answer is dropped by `isCurrent` either way, so a port that cannot scope one is used as is.
+    let scoped: ExecutionApi = base;
+    try { scoped = base.withReadSignal ? base.withReadSignal(controller.signal) : base; } catch { scoped = base; }
+    void traverseAlphaCatalogue((q) => scoped.getRunLibraryAlphaCataloguePage!(q), {
+      ...(workspaceId !== null ? { workspaceId } : {}),
+      isCurrent: () => !controller.signal.aborted,
+    }).then((result) => {
+      if (controller.signal.aborted) return;
+      if (result.kind === "complete") setCat({ state: { status: "complete", pages: result.pages }, alphas: result.alphas.map((a) => ({ id: a.id, name: a.name })) });
+      else if (result.kind === "partial") setCat({ state: { status: "partial", pages: result.pages, loaded: result.alphas.length, failure: result.failure }, alphas: null });
+      else setCat({ state: { status: "failed", failure: result.failure }, alphas: null });
+    });
+    return () => controller.abort();
+  }, [enabled, offered, workspaceId, restart]);
+
+  const restartCatalogue = useCallback(() => setRestart((n) => n + 1), []);
+
+  // The picker's catalogue: the complete traversal; otherwise the run list's own facet, but only when it is under its 200 cap (a full facet
+  // is truncated, so it is not the list) and never after the workspace was revoked.
+  const facet = state.catalog;
+  const catalog = useMemo<readonly CatalogAlpha[] | null>(() => {
+    if (cat.alphas !== null) return cat.alphas;
+    if (cat.state.status === "failed" && REVOKED.has(cat.state.failure)) return null;
+    if (facet !== null && facet.length < MAX_CATALOG_ALPHAS) return facet;
+    return null;
+  }, [cat, facet]);
+  const catalogRef = useRef(catalog);
+  catalogRef.current = catalog;
+
   const selectAlpha = useCallback((alphaId: string | null) => {
     const s = stateRef.current;
     if (s.filter === alphaId) return;
     // Only an alpha the server's own catalog lists is filtered on: a half-typed id never starts a read.
-    if (alphaId !== null && (s.catalog === null || !s.catalog.some((a) => a.id === alphaId))) return;
+    const known = catalogRef.current;
+    if (alphaId !== null && (known === null || !known.some((a) => a.id === alphaId))) return;
     loadFirst(alphaId, false);
   }, [loadFirst]);
 
@@ -231,7 +296,7 @@ export function useRunLibrary(enabled = true): RunLibrary {
   }, [read]);
 
   return {
-    status: state.status, options: state.options, reason: state.reason, filter: state.filter, catalog: state.catalog, filteredRows: state.filteredRows,
+    status: state.status, options: state.options, reason: state.reason, filter: state.filter, catalog, alphaCatalogue: cat.state, restartCatalogue, filteredRows: state.filteredRows,
     hasMore: state.hasMore, pages: state.pages, refreshing: state.refreshing, loadingMore: state.loadingMore, moreError: state.moreError,
     capped: state.hasMore && state.pages >= MAX_RUN_PAGES, selectAlpha, loadMore,
   };

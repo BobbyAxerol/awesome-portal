@@ -179,6 +179,7 @@ const PROXIED_LOCATIONS = [
   '= /api/admin/accounts',
   '^~ /api/admin/accounts/',
   '= /api/v1/quantbt/runs',
+  '= /api/v1/quantbt/runs/alpha-catalogue',
   '= /api/admin/step-up',
   '^~ /__fixture/',
 ];
@@ -234,7 +235,7 @@ test('fragment: only the exact review-library list is synthetic; other Research/
   // WP-E's accepted populated review world needs the exact library picker.
   // No QuantBT prefix, run detail, creation, export or sibling endpoint is proxied.
   assert.deepEqual(withoutComments.split('\n').filter((line) => line.includes('/api/v1/quantbt')).map((line) => line.trim()),
-    ['location = /api/v1/quantbt/runs {']);
+    ['location = /api/v1/quantbt/runs {', 'location = /api/v1/quantbt/runs/alpha-catalogue {']);
   assert.doesNotMatch(withoutComments, /location (?:~\*? |\/ |\/api\/ )/, 'no regex, root or /api/ catch-all location');
   assert.doesNotMatch(withoutComments, /proxy_pass/, 'proxy_pass lives only in the shared include');
   // The populated review's matrix/activity matches are exact, never an admin catch-all.
