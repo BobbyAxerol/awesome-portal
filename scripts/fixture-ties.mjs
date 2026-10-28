@@ -1110,6 +1110,85 @@ export async function runWorldTies(get) {
     if (daily !== undefined && room.runtime === "STOPPED") check("W29", daily.value === null, `${id}: the trial is STOPPED but states a daily PnL of ${daily.value}`);
   }
   // ===== WP-B2-C3 end
+  // ===== WP-B2-C4 begin: (QA7 N2-01 N2-02 N2-03 N2-04 N5-06)
+  const dayOf = (t) => new Date(t).toISOString().slice(0, 10);
+  const scopedBlotter = async (deploymentId) => { const r = await ok200(`${E}/screens/blotter?limit=200&deployment_id=${encodeURIComponent(deploymentId)}`); return r === null ? null : { orders: r.data.orders ?? [], fills: r.data.fills ?? [] }; };
+  // W50: a stage's daily closes are its own book's: inside the days the stage ran, none after the world's day, and the last one is the equity the stage's room / the alpha table states
+  for (const a of c3Alphas.slice(0, 8)) {
+    const resource = alphaResources.get(a.alpha_id).data;
+    const drift = await ok200(`${E}/alphas/${a.alpha_id}/stage-drift?numeric_format=DECIMAL_STRING`);
+    const lifecycle = await ok200(`${E}/alphas/${a.alpha_id}/lifecycle?environment=live`);
+    if (drift === null || lifecycle === null) continue;
+    check("W50", drift.calendar.every((d) => d <= dayOf(lifecycle.read_at_ms)), `alpha ${a.alpha_id}: the stage-drift calendar runs to ${drift.calendar.at(-1)}, after the world's day ${dayOf(lifecycle.read_at_ms)}`);
+    const reached = STAGE_RANK[a.stage];
+    if (reached === undefined) continue;
+    for (const [stage, rank, envName, rows] of [["paper", 0, "PAPER", ["PAPER"]], ["sandbox", 1, "SANDBOX", ["SANDBOX"]], ["live", 3, "LIVE", ["CANARY", "LIVE"]]]) {
+      const mine = (resource.alpha?.deployments ?? []).filter((d) => STAGE_ENV[d.stage] === envName);
+      const values = drift.stages[stage].series.map((v, i) => [drift.calendar[i], v]).filter(([, v]) => v !== null);
+      if (mine.length === 0 || values.length === 0) continue;
+      const equity = mine.reduce((n, d) => n + numOf(d.allocation) + numOf(d.net_pnl) + numOf(d.unrealized_pnl), 0n);
+      check("W50", numOf(values.at(-1)[1]) === equity, `alpha ${a.alpha_id}: the ${stage} book's last daily close is ${values.at(-1)[1]}, its deployments' allocation + Net PnL + unrealized is ${fromUnits(equity)}`);
+      const stageRows = (lifecycle.stages ?? []).filter((r) => rows.includes(r.stage) && r.entered_at_ms !== null && STAGE_RANK[r.stage] <= reached);
+      if (stageRows.length > 0) {
+        check("W50", values[0][0] >= dayOf(Math.min(...stageRows.map((r) => r.entered_at_ms))), `alpha ${a.alpha_id}: the ${stage} book publishes a close for ${values[0][0]}, before its stage began ${dayOf(Math.min(...stageRows.map((r) => r.entered_at_ms)))}`);
+        const exits = stageRows.map((r) => r.exited_at_ms);
+        if (exits.every((e) => e !== null) && STAGE_RANK[rows.at(-1)] < reached) check("W50", values.at(-1)[0] <= dayOf(Math.max(...exits)), `alpha ${a.alpha_id}: the ${stage} book publishes a close for ${values.at(-1)[0]}, after its stage ended ${dayOf(Math.max(...exits))}`);
+      }
+    }
+  }
+  // W51: one drawdown per book and window: the dataset tile (a read that names no window = the page's default window, 90D) is the worst point of the DRAWDOWN series over that window
+  for (const a of c3Alphas.slice(0, 8)) {
+    const overview = await ok200(`${E}/manager/alphas/${a.alpha_id}/overview?environment=live`);
+    const tile = metricStr(overview?.items?.[0]?.economic_partitions?.[0] ?? {}, "max_drawdown_pct");
+    const pane = (await ok200(`${E}/manager/series?environment=live&metric=DRAWDOWN&window=${encodeURIComponent('"90D"')}&subjects=${encodeURIComponent(JSON.stringify([{ subject_type: "ALPHA", subject_id: a.alpha_id }]))}`))?.series?.[0];
+    if (tile === null || pane?.state !== "AVAILABLE") continue;
+    const worst = pane.points.reduce((m, p) => (numOf(p.value) < m ? numOf(p.value) : m), 0n) * 100n;
+    check("W51", abs(numOf(tile) - worst) <= SCALE18 / 100_000n, `alpha ${a.alpha_id}: the Max drawdown tile says ${tile}%, the lowest point of the 90D drawdown pane is ${fromUnits(worst)}%`);
+  }
+  // W52: the Orders rollup is the blotter's own book of the alpha's deployments in the book (orders, fills and statuses)
+  for (const a of c3Alphas.slice(0, 8)) {
+    const resource = alphaResources.get(a.alpha_id).data;
+    for (const environment of ["live", "paper", "sandbox"]) {
+      const ids = (resource.alpha?.deployments ?? []).filter((d) => STAGE_ENV[d.stage] === environment.toUpperCase()).map((d) => d.deployment_id);
+      const rollup = (await ok200(`${E}/derivations/alphas/${a.alpha_id}/activity?environment=${environment}`))?.data;
+      if (ids.length === 0 || rollup === undefined) continue;
+      const books = [];
+      for (const id of ids) { const b = await scopedBlotter(id); if (b !== null) books.push(b); }
+      const orders = books.flatMap((b) => b.orders);
+      const counts = {};
+      for (const o of orders) counts[o.status] = String(Number(counts[o.status] ?? "0") + 1);
+      check("W52", Number(rollup.order_population) === orders.length, `alpha ${a.alpha_id} ${environment}: the Orders rollup counts ${rollup.order_population} orders, the blotter scoped to its deployments holds ${orders.length}`);
+      check("W52", Number(rollup.fill_population) === books.flatMap((b) => b.fills).length, `alpha ${a.alpha_id} ${environment}: the Orders rollup counts ${rollup.fill_population} fills, the blotter scoped to its deployments holds ${books.flatMap((b) => b.fills).length}`);
+      check("W52", JSON.stringify(Object.entries(rollup.order_status_counts ?? {}).sort()) === JSON.stringify(Object.entries(counts).sort()), `alpha ${a.alpha_id} ${environment}: the rollup's statuses ${JSON.stringify(rollup.order_status_counts)} are not the blotter's ${JSON.stringify(counts)}`);
+    }
+  }
+  // W53: every open position of a Real-funded room is either opened by fills the order book holds or says, in a typed warning, that the retained order window does not rebuild it
+  for (const [id] of [...deployments].filter(([, d]) => d.stage === "LIVE" || d.stage === "CANARY").slice(0, 10)) {
+    const room = await page(deployments.get(id).stage === "LIVE" ? "live" : "canary", id);
+    const rows = room?.body.positions?.typed?.rows ?? [];
+    if (rows.length === 0) continue;
+    const book = await scopedBlotter(id);
+    if (book === null) continue;
+    const byId = new Map(book.orders.map((o) => [o.order_id, o]));
+    const warned = (room.body.positions?.envelope?.warnings ?? []).some((w) => w.code === "POSITIONS_OPENED_BEFORE_THE_RETAINED_ORDER_WINDOW");
+    for (const p of rows) {
+      const opening = p.side === "long" ? "BUY" : "SELL";
+      const opened = book.fills.reduce((n, f) => { const o = byId.get(f.order_id ?? String(f.client_order_id).replace(/^cl-/, "ord_")); return o && o.symbol === p.symbol && o.side === opening ? n + (numOf(f.quantity) ?? 0n) : n; }, 0n);
+      check("W53", opened >= numOf(p.quantity) || warned, `${id}: ${p.side} ${p.quantity} ${p.symbol} is opened by ${fromUnits(opened)} of filled ${opening} orders in the book, and the positions panel carries no typed warning that they predate the retained order window`);
+    }
+  }
+  // W54: the room's KPI that holds allocation + realized is not named equity (the unrealized sits on the positions, apart)
+  for (const [id, info] of [...deployments].filter(([, d]) => d.stage === "LIVE" || d.stage === "CANARY").slice(0, 10)) {
+    const room = await page(info.stage === "LIVE" ? "live" : "canary", id);
+    const kpi = (room?.body.kpis ?? []).find((k) => k.key === "broker_equity");
+    const spec = (alphaResources.get(info.alphaId)?.data.alpha?.deployments ?? []).find((d) => d.deployment_id === id);
+    if (kpi === undefined || kpi.value === null || spec === undefined) continue;
+    const full = numOf(spec.allocation) + numOf(spec.net_pnl) + numOf(spec.unrealized_pnl);
+    check("W54", numOf(kpi.value) === full || (kpi.label !== "Broker equity" && numOf(kpi.value) === numOf(spec.allocation) + numOf(spec.net_pnl)), `${id}: the KPI "${kpi.label}" ${kpi.value} is neither allocation + Net PnL + unrealized (${fromUnits(full)}) nor named for what it leaves out`);
+    const series = room?.body.series;
+    if (series && typeof series.methodology_ref === "string") check("W54", /realized/i.test(series.methodology_ref), `${id}: the Net PnL series' methodology "${series.methodology_ref}" does not say it is the realized figure`);
+  }
+  // ===== WP-B2-C4 end
   return { ties };
 }
 

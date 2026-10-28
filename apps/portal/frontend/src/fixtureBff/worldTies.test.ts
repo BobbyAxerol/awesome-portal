@@ -67,6 +67,11 @@ const TIES: readonly { id: string; title: string; qa: string; owner: string }[] 
   { id: "W27", title: "one fee model: the 30-day cost drag of a live book is not below what its deployment has paid since activation", qa: "R2-06", owner: "B-C3" },
   { id: "W28", title: "the lifecycle is told at the world clock: no event after the read, every exit is named for the stage exited, every started stage has its start event", qa: "R2-09 R2-10 R2-11", owner: "B-C3" },
   { id: "W29", title: "a limit exactly reached is full, not a breach; a stopped trial states no daily PnL", qa: "R5-07 R5-10", owner: "B-C3" },
+  { id: "W50", title: "a stage's daily closes are its own book's: inside the days the stage ran, none after the world's day, the last one is the stage's equity", qa: "N2-01", owner: "B-C4" },
+  { id: "W51", title: "one drawdown per book and window: the dataset tile equals the lowest point of the drawdown pane at the page's default window", qa: "N2-02", owner: "B-C4" },
+  { id: "W52", title: "the Orders rollup is the blotter's own book of the alpha's deployments in the book (orders, fills, statuses)", qa: "N2-03", owner: "B-C4" },
+  { id: "W53", title: "every open position of a Real-funded room is opened by fills in the order book or carries the typed warning that it predates the retained order window", qa: "N2-04", owner: "B-C4" },
+  { id: "W54", title: "the room's KPI that holds allocation + realized is not named equity, and its Net PnL series says realized", qa: "N5-06", owner: "B-C4" },
 ];
 
 /** Ties still red on the tip. Delete a line when its owner lands the fix (the test then tells you which). */
