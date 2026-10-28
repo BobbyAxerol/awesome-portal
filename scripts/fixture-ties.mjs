@@ -1523,6 +1523,21 @@ export async function runWorldTies(get) {
       check("W80", Number(met.after) === stage.criteria.total, `${row.id}: criteria after approval ${met.after}, the gate has ${stage.criteria.total}`);
     }
   }
+  // ── W81: a Fleet dataset row whose stage its alpha has left says ENDED, never ACTIVE/HALTED (N8c-04, N3-09) ──
+  {
+    const RANK = { PAPER: 0, SANDBOX: 1, CANARY: 2, LIVE: 3 };
+    const stageOfAlpha = new Map(alphaRows.map((a) => [a.alpha_id, a.stage]));
+    for (const env of ["paper", "sandbox", "live"]) {
+      const rows81 = await pages(`${E}/manager/fleet?environment=${env}&window=30D&limit=100`, (b) => b.items ?? [], (b) => b.page?.next_cursor ?? null, 3);
+      for (const r of rows81.slice(0, 120)) {
+        const alphaStage = stageOfAlpha.get(r.alpha_id);
+        if (alphaStage === undefined || RANK[alphaStage] === undefined || r.current_stage == null || RANK[r.current_stage] === undefined) continue;
+        const left = RANK[r.current_stage] < RANK[alphaStage];
+        check("W81", !left || /^(ENDED|RETIRED)$/.test(r.lifecycle ?? ""), `${r.alpha_id} (${alphaStage}) has a ${env} Fleet row at ${r.current_stage} whose lifecycle is ${r.lifecycle}, not ENDED`);
+        check("W81", left || !/^(ENDED|RETIRED)$/.test(r.lifecycle ?? ""), `${r.alpha_id}: the ${r.current_stage} Fleet row is the alpha's current stage yet says ${r.lifecycle}`);
+      }
+    }
+  }
   // ===== WP-B2-A3 round D end
   return { ties };
 }

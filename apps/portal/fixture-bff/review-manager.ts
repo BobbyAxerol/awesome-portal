@@ -594,7 +594,8 @@ function rowsFor(environment: string, template: Draft, preset: WindowPreset, com
     row.row_key = JSON.stringify([row.alpha_id, row.alpha_version_id, row.portfolio_id]);
     row.name = `${alpha.label} · synthetic review`;
     row.owner_user_id = alpha.owner;
-    row.lifecycle = deployments.some((entry) => entry.active) ? "ACTIVE" : "HALTED";
+    // WP-B2-A3 (N8c-04): a book whose every deployment is of a stage its alpha has left is ENDED (history), not HALTED; the Fleet table then marks it ended instead of calling a left stage current
+    row.lifecycle = deployments.some((entry) => (legacy() ? entry.active : !wpb2sRetired(entry.id) && entry.active)) ? "ACTIVE" : !legacy() && deployments.every((entry) => wpb2sRetired(entry.id)) ? "ENDED" : "HALTED";
     row.venue = first.venue;
     row.health = alpha.health;
     row.source_state = "FRESH";

@@ -62,6 +62,7 @@ const TIES: readonly { id: string; title: string; qa: string; owner: string }[] 
   { id: "W67", title: "an R2 request labels an account (NEW) only when it does not exist, and states the capital check of an existing one", qa: "N3-07", owner: "B-A3" },
   { id: "W68", title: "a request names the entity it decides (a linkable id of the fleet) and the session's alpha picker lists the fleet's alphas and no placeholder", qa: "N3-06 N3-08", owner: "B-A3" },
   { id: "W80", title: "one criteria count per gate: a request's criteria met now is Alpha 360's count for the stage the gate leaves", qa: "N8c-01", owner: "B-A3" },
+  { id: "W81", title: "a Fleet dataset row whose stage its alpha has left says ENDED; a row of the current stage never does", qa: "N8c-04 N3-09", owner: "B-A3" },
   { id: "W13", title: "one clock: every read of the world is taken within a day of the others", qa: "R3-10 R3-09", owner: "B-O" },
   // ===== WP-B2-S3 begin
   { id: "W31", title: "a Sandbox page that shows an equity difference or an approved decision blocks its gate: open blocking finding, nothing eligible to submit, steps counted and dated inside the run", qa: "R4-01 R4-03 R4-05 R4-12", owner: "B-S" },

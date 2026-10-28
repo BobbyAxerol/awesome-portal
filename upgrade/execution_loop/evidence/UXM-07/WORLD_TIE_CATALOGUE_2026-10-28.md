@@ -92,6 +92,7 @@ Status is on the tip `3f02e233e` (the frozen lane tip) with the populated, mediu
 | W36 | a Live page's predecessor envelope is the linked Canary room's own envelope (same id, same caps), finished, never active for live | /deployments/{d}/live predecessor_canary_envelope vs the linked /deployments/{c}/canary envelope | N5-01 | B-S | GREEN | see test |
 | W19 | A limit exactly reached is full (verdict stays WITHIN_ENVELOPE; BREACH only above the approved limit) and a STOPPED trial states no daily PnL | `/deployments/{d}/canary` | R5-07, R5-10 | B-C3 | GREEN | see run |
 | W80 | One criteria count per gate: the evidence diff's "Criteria met" before equals Alpha 360's lifecycle count for the stage the gate leaves (Momentum C Canary 1 of 7, not 6), and after approval equals the gate's total | `/governance/approvals/{id}/evidence`, `/alphas/{a}/lifecycle` | N8c-01 | B-A3 | GREEN | see test |
+| W81 | A Fleet dataset row (`/manager/fleet`, every environment) whose current stage its alpha has left (Grid D's Paper book, 34 days) publishes lifecycle ENDED, so the table marks it ended and not as the alpha's current stage; a row of the alpha's current stage never says ENDED | `/manager/fleet`, `/alphas` | N8c-04, N3-09 | B-A3 | GREEN | see test |
 
 Counts on the tip: 19 world ties (W23 added by B-B1, GREEN); the counts below predate it. Plus the walker's T1 to T14 (92 checks): GREEN.
 
