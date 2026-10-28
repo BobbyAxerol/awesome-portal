@@ -309,6 +309,13 @@ describe("the run list: server filter and cursor", () => {
     expect(whyText(screen.getByText(/Alphas of the loaded runs only/))).toContain("did not publish its alpha list");
   });
 
+  it("says in words that stage is not part of the catalogue, so the picker is not stage-aware (B-A3 e)", async () => {
+    runsAnswer = () => ({ items: [run(1, "alpha_near", "Near Alpha")] });
+    mount(port().api);
+    await screen.findByRole("option", { name: "Near Alpha" });
+    expect(screen.getByTestId("alpha-stage-note").textContent).toMatch(/Stage is not part of the catalogue/);
+  });
+
   it("the write-safety rules of the form hold with the new reads: Enter in an id field never submits", async () => {
     const { api, createApprovalRequest } = port();
     mount(api);

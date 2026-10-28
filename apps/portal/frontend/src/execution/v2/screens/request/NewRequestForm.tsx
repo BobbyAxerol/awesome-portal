@@ -166,6 +166,7 @@ export function NewRequestForm({ state, variant, accessHref }: NewRequestFormPro
             ) : derivedAlphas ? (
               <p className="exec-rq-note">Alphas of the loaded runs only. If yours is missing, type its id below.<GapWhy name="Why only the loaded runs" rows={["The Run Library did not publish its alpha list, so these are the alphas of the runs loaded so far."]} next={null} /></p>
             ) : null}
+            {listReady && state.alphas.length > 0 ? <p className="exec-rq-note" data-testid="alpha-stage-note">Stage is not part of the catalogue: every alpha is listed whatever stage it is in, so the picker cannot offer only the alphas ready for this gate.</p> : null}
           </div>
 
           <div className="exec-rq-fld">
