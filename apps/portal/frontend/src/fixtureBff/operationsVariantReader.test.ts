@@ -33,7 +33,8 @@ describe("the operations reader accepts a variant target", () => {
       const read = readOperationalQueueV2(body);
       expect(read, `the reader rejected the body for ${target}`).not.toBeNull();
       expect(read!.kind, `the reader read ${read?.kind} for ${target}`).toBe("queue");
-      const queue = (read as { kind: "queue"; queue: { page: { rows: { targetId: string }[]; appliedFilters: unknown } } }).queue;
+      if (read === null || read.kind !== "queue") throw new Error(`the reader read ${read?.kind} for ${target}`);
+      const queue = read.queue;
       expect(queue.page.rows.length).toBeGreaterThan(0);
       expect(queue.page.rows.every((row) => row.targetId === "dep_live_01")).toBe(true);
       expect(queue.page.appliedFilters).toEqual([{ field: "target_id", value: target }]);
