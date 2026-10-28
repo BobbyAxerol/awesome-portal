@@ -209,11 +209,13 @@ describe("R2-02 / R5-02 / R5-03: Basis B (Live) - its Canary is a finished trial
   });
 
   it("a stage page that is not the deployment's stage is typed absence of THAT deployment, never a second stage for the same id", async () => {
-    const cert = await get(`${E}/deployments/dep_canary_01/certification`);
-    expect(cert.certification.workflow_state).not.toBe("APPROVED");
-    expect(cert.certification.alpha_id).toBe("alpha_b");
-    expect(cert.certification.account_binding.account_id).toBe("acc_bnc_core");
-    expect(runtimeOf(cert.stage_facts)).not.toBe("STOPPED");
+    // W01b (B-S2): a deployment has ONE stage; dep_canary_01 is a Canary deployment, so its certification page is a typed refusal (404), not a body for a second stage.
+    const response = await fetch(`${base}${E}/deployments/dep_canary_01/certification`);
+    expect(response.status).toBe(404);
+    expect((await response.json()).error.code).toBe("DEPLOYMENT_NOT_IN_STAGE");
+    // its own stage page still answers for it
+    const canary = await get(`${E}/deployments/dep_canary_01/canary`);
+    expect(canary.deployment.alpha_id).toBe("alpha_b");
   });
 });
 

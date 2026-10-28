@@ -292,7 +292,7 @@ const LIMIT_MONEY: Readonly<Record<LimitKey, boolean>> = { capital: true, grossN
 export function envelopeColumn(view: CanaryView): string {
   const status = view.envelope?.status ?? null;
   if (status === "DRAFT") return "Proposed";
-  if (status === "APPROVED" || status === "ACTIVE") return "Approved";
+  if (status === "APPROVED" || status === "ACTIVE" || status === "COMPLETED") return "Approved"; // WP-B2-S2: COMPLETED = the approved envelope of a finished trial
   return "Envelope";
 }
 

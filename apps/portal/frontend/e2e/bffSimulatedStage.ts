@@ -29,7 +29,7 @@
 import { createHash } from "node:crypto";
 import { isPositiveMode, positiveDeploymentFact } from "./bffPositiveMode";
 import { isRetired, resolveStageDeployment, sandboxRecordIdOf, stageBookOf, userIdOf } from "./bffWorldStage"; // WP-B2-S
-import { DAY_MS as WORLD_DAY_MS, deploymentOf, fromCents as worldCents, grossNotional, lifecycleOf, netPnlOf, netPnlSeries, positionsOf, toCents as worldToCents, workingOrdersOf } from "./bffWorld";
+import { DAY_MS as WORLD_DAY_MS, deploymentOf, fromCents as worldCents, grossNotional, lifecycleOf, netPnlSeries, positionsOf, toCents as worldToCents, workingOrdersOf } from "./bffWorld";
 
 type Obj = Record<string, unknown>;
 const isObj = (value: unknown): value is Obj => typeof value === "object" && value !== null && !Array.isArray(value);
@@ -392,7 +392,7 @@ function canaryLit(body: Obj, deploymentId: string, variant: StageVariant): Obj 
     { cap: "open_orders", unit: "COUNT", limit: "40", approved: "20", consumed: "1" },
   ];
   const env = body.envelope as Obj;
-  env.status = "ACTIVE";
+  env.status = isPositiveMode() && isRetired(baseDeploymentId(deploymentId)) ? "COMPLETED" : "ACTIVE"; // WP-B2-S2 W02: the envelope of a trial the alpha has left is no longer active
   env.reason = "Canary envelope approved by the Canary owner for the 14-day trial.";
   const gateCodes = ["PRODUCTION_COMMAND_INACTIVE", "CANARY_OWNER_GATE_REQUIRED", "BASE_RISK_PROFILE_UNVERIFIED"];
   env.blocker_codes = gateCodes;
@@ -800,6 +800,24 @@ export function simulateStage(path: string, answerBody: unknown): Obj | null {
   }
 }
 
+// ===== WP-B2-S2 begin: W01b, a deployment of the world has ONE stage; the stage page of any other stage is a typed refusal (404), not a template body
+const STAGE_ROUTE = { canary: "canary", live: "live", certification: "sandbox" } as const;
+/** The stage a stage-route path asks for (`paper` | `sandbox` | `canary` | `live`) and the deployment id it names, or null for any other path. */
+function stageRouteOf(path: string): { id: string; kind: "paper" | "sandbox" | "canary" | "live" } | null {
+  const seg = path.split("/").filter(Boolean).map((part) => decodeURIComponent(part));
+  if (seg[0] === "deployments" && seg.length === 3 && seg[2]! in STAGE_ROUTE) return { id: seg[1]!, kind: STAGE_ROUTE[seg[2] as keyof typeof STAGE_ROUTE] };
+  if (seg[0] === "screens" && seg[1] === "paper" && seg[2] !== undefined && (seg.length === 3 || (seg.length === 4 && seg[3] === "vn-market"))) return { id: seg[2], kind: "paper" };
+  return null;
+}
+/** True when the path is a stage page of a deployment of the world (booked or history record) for a stage that is NOT the deployment's own. The caller answers 404. */
+export function stagePageIsForeign(path: string): boolean {
+  const route = stageRouteOf(path);
+  if (route === null || !isPositiveMode() || LEGACY_DEPLOYMENT.test(route.id) || variantOf(route.id) === "dark") return false;
+  const own = resolveStageDeployment(baseDeploymentId(route.id));
+  return own !== null && own.standing.stage !== route.kind;
+}
+// ===== WP-B2-S2 end
+
 /**
  * WORLD: a dark stage page (typed absences) of a deployment the world holds keeps the typed absences but NOT the published fixture's identity (dep_88, pf_crypto,
  * acct_*_grid): the portfolio, the account and the venue it links to are the deployment's own, so no breadcrumb of a dark room is a dead end (QA3 R5-06).
@@ -844,7 +862,7 @@ function worldStage(kind: "canary" | "live" | "sandbox" | "paper", body: Obj | n
   const asOf = stale ? AS_OF_STALE : AS_OF;
   const iso = (ms: number): string => new Date(ms).toISOString();
   const alloc = worldToCents(d.allocation);
-  const net = netPnlOf(d);
+  const net = worldToCents(d.realized); // WP-B2-S2 W09: the room's Net PnL is the published net_pnl (realized), the same figure Fleet, Alpha 360 and Compare state; the open positions' unrealized stays on the positions
   const equity = worldCents(alloc + net);
   const trialEnded = retired; // closed: a stage the alpha left holds no open position or working order, whichever stage it is // the Canary page of a deployment that is Live now: a finished trial holds nothing open
   const gross = trialEnded ? "0.00" : grossNotional(d.id);
@@ -881,7 +899,7 @@ function worldStage(kind: "canary" | "live" | "sandbox" | "paper", body: Obj | n
     withIdentityOf(dep);
     dep.activated_at = started;
     (body.lifecycle as Obj).activated_at = started;
-    const series = netPnlSeries(d.id, life.liveFromMs, seriesTo, Math.max(8, life.liveDays + 1));
+    const series = netPnlSeries(d.id, life.liveFromMs, seriesTo, Math.max(8, life.liveDays + 1), net);
     body.stage_facts = stageFacts({ runtime: halted ? "HALTED" : "RUNNING", since: started, verdict: mismatch ? "OPEN_FINDINGS" : "NO_OPEN_FINDINGS", open: mismatch ? 1 : 0, unknownOrders: 0, asOf,
       sessions: [{ id: `session_${d.id}_live_1`, started, ended: null, state: halted ? "HALTED" : "RUNNING" }] });
     body.source_figures = figures(!mismatch);
@@ -901,7 +919,7 @@ function worldStage(kind: "canary" | "live" | "sandbox" | "paper", body: Obj | n
     if (finished) lifecycle.duration_days = standing.days;
     lifecycle.trial = { basis: "STARTED_AT_PLUS_DURATION_DAYS", duration_days: finished ? standing.days : 14, started_at: avail(started), exit_review_opens_at: avail(iso(endMs)) };
     const points = Math.max(8, Math.floor(((finished ? endMs : seriesTo) - startMs) / (4 * HOUR_MS)) + 1);
-    const series = netPnlSeries(d.id, startMs, finished ? endMs : seriesTo, points);
+    const series = netPnlSeries(d.id, startMs, finished ? endMs : seriesTo, points, net);
     // approved caps from the book: capital = the allocation, gross = 1.5x, daily loss = 1% of it; consumed from the same positions and series
     const breach = variant === "breach";
     const capApproved = worldCents(alloc);
@@ -1025,7 +1043,7 @@ function worldStage(kind: "canary" | "live" | "sandbox" | "paper", body: Obj | n
     data.orders = book.orders.map((o) => ({ order_id: o.order_id, client_order_id: o.client_order_id, instrument_id: o.symbol, side: o.side, status: o.status, quantity: o.quantity, price: o.price, submitted_at: o.submitted_at }));
     data.fills = book.fills.map((f) => ({ fill_id: f.fill_id, client_order_id: f.client_order_id, order_id: String(f.client_order_id).replace(/^cl-/, "ord_"), quantity: f.quantity, price: f.price, commission: f.commission, commission_currency: f.commission_currency, trade_time: f.trade_time }));
     // the equity line of the paper account: allocation plus the cumulative net PnL of this deployment, ending on allocation + realized + unrealized
-    const equityPoints = retired ? netPnlSeries(d.id, standing.fromMs, exitMs ?? NOW_MS, 200) : netPnlSeries(d.id, NOW_MS - 199 * HOUR_MS, NOW_MS - 4 * MIN, 200);
+    const equityPoints = retired ? netPnlSeries(d.id, standing.fromMs, exitMs ?? NOW_MS, 200, net) : netPnlSeries(d.id, NOW_MS - 199 * HOUR_MS, NOW_MS - 4 * MIN, 200, net);
     let peak = 0n;
     data.account_equity = equityPoints.map((pt, i) => {
       const eq = alloc + worldToCents(pt.value);

@@ -53,12 +53,8 @@ const TIES: readonly { id: string; title: string; qa: string; owner: string }[] 
 
 /** Ties still red on the tip. Delete a line when its owner lands the fix (the test then tells you which). */
 const OPEN_TIES: Readonly<Record<string, string>> = {
-  W01b: "every stage page answers for every deployment id (B-S)",
-  W02: "left-stage deployments are still ACTIVE in the Fleet rows / alpha resource (B-S)",
-  W03: "Canary room start date differs from the alpha lifecycle (B-S)",
   W04: "Overview links dep_88/dep_74/op_1251/op_1249 and ops ids dep_TEST_ONLY_eth do not resolve (B-A)",
   W05: "Overview fleet 182 vs Fleet 72, portfolios 21 vs 25, register 25 vs 24 rows (B-A)",
-  W09: "Live room equity - allocation is realized+unrealized (bffSimulatedStage.ts netPnlOf, B-S); the alpha resource and datasets now agree (B-C)",
 };
 
 let server: Server;

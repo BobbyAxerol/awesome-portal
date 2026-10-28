@@ -2130,7 +2130,7 @@ export function wpAlphaResource(body: unknown, alphaId: string): unknown {
   const portfolios = [...new Map(own.map((deployment) => [deployment.portfolioId, deployment.portfolioName])).entries()];
   const profile = { profile_environment: environment };
   out.data.deployments = own.map((deployment) => ({ ...first(data.deployments), deployment_id: deployment.id, strategy_id: alphaId, account_id: deployment.accountId, mode: environment,
-    venue: deployment.venue, currency: deployment.currency, portfolio_id: deployment.portfolioId, state: deployment.state, active: deployment.active, ...profile }));
+    venue: deployment.venue, currency: deployment.currency, portfolio_id: deployment.portfolioId, state: wpb2sRetired(deployment.id) ? "ENDED" : deployment.state, active: deployment.active && !wpb2sRetired(deployment.id), ...profile })); // WP-B2-S2 W02
   out.data.accounts = accounts.map((id) => ({ ...first(data.accounts), account_id: id, strategy_id: alphaId, mode: environment, base_currency: own[0]!.currency, ...profile }));
   out.data.account_balances = accounts.map((id) => {
     const booked = own.filter((deployment) => deployment.accountId === id);

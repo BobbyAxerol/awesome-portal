@@ -12,6 +12,7 @@
  * body, so a forgotten route fails loudly instead of rendering a silently
  * empty screen.
  */
+import { isRetired } from "./bffWorldStage"; // WP-B2-S2
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -250,7 +251,7 @@ export function alphaFleet(search: URLSearchParams): Answer {
     health, attention_reasons: attention, updated_at: updated,
   });
   const worldRow = (a: AlphaSpec): Record<string, unknown> => row(a.id, a.label, a.version, a.owner, a.stages, a.health, a.attention,
-    a.deployments.map((d) => dep(d.id, d.stage, d.venue, d.accountId, [d.portfolioId, d.portfolioName], d.health, d.state, d.active, d.updatedAt,
+    a.deployments.map((d) => dep(d.id, d.stage, d.venue, d.accountId, [d.portfolioId, d.portfolioName], d.health, isRetired(d.id) ? "ENDED" : d.state, d.active && !isRetired(d.id), d.updatedAt, // WP-B2-S2 W02: a stage the alpha has left is ENDED
       { currency: d.currency, allocation: d.allocation, exposure: d.exposure, realized: d.realized, unrealized: d.unrealized })), a.updatedAt);
   // WORLD (positive-like scenarios): the Alpha Fleet read counts the alphas, deployments and portfolios of the ONE world: the native books, the
   // research idea and the generated alphas; the hand-written five of the doubles stay for the specs.

@@ -20,7 +20,7 @@ import { credentialView, stateView } from "../src/execution/v2/screens/account/m
 import { fixtureNowMs, scaled } from "./bffScale";
 // ===== WP-F3 begin: lit stage bodies (register 2f3) =====
 import { overlayCapitalPreview, overlayHistorySubjects, overlayInboxSubjects, overlayR2Review } from "./bffApprovalWorld"; // WP-E
-import { simulateStage } from "./bffSimulatedStage";
+import { simulateStage, stagePageIsForeign } from "./bffSimulatedStage";
 import { isPositiveMode } from "./bffPositiveMode";
 import { accountFact, bindingFact, bindingOfAccount, deploymentOf, fromCents, ledgerSeries, worldAlphas } from "./bffWorld";
 // ===== WP-F3 end =====
@@ -577,6 +577,9 @@ export function simulate<T extends SimulatedAnswer>(method: string, path: string
   if (method.toUpperCase() !== "GET" || answer.status !== 200 || !isObj(answer.body)) return answer;
   const seg = path.split("/").filter(Boolean).map((part) => decodeURIComponent(part));
   // ===== WP-F3 begin: Paper, Sandbox, Canary and Live answer a lit body (bffSimulatedStage.ts) =====
+  // ===== WP-B2-S2 begin: W01b, another stage's page of a world deployment is a typed refusal
+  if (stagePageIsForeign(path)) return { ...answer, status: 404, body: { error: { code: "DEPLOYMENT_NOT_IN_STAGE", message: "This deployment is not in the requested stage; its stage page is the one its alpha lifecycle shows." } } };
+  // ===== WP-B2-S2 end
   const stage = simulateStage(path, answer.body);
   if (stage !== null) return { ...answer, body: stage };
   // ===== WP-F3 end =====
