@@ -723,6 +723,23 @@ describe("the On scroll summary bar", () => {
     expect(within(bar).getByRole("link", { name: "← Alpha" }).getAttribute("href")).toBe(`/deployments/alphas/${ALPHA_ID}`);
   });
 
+  it("appears only once the header has scrolled out above the viewport (QA6 R4-10), never at scroll 0", async () => {
+    const observers: Array<(entries: Array<Partial<IntersectionObserverEntry>>) => void> = [];
+    vi.stubGlobal("IntersectionObserver", class { constructor(cb: (entries: Array<Partial<IntersectionObserverEntry>>) => void) { observers.push(cb); } observe() {} disconnect() {} unobserve() {} });
+    vi.stubGlobal("matchMedia", (query: string) => ({ matches: query.includes("min-width"), media: query, addEventListener() {}, removeEventListener() {} }));
+    try {
+      mount({ profile: { ok: true, value: envelopeOf(paperWire({ identity: true })) } });
+      await ready();
+      expect(screen.queryByRole("complementary", { name: "Deployment summary" })).toBeNull();
+      act(() => observers.forEach((cb) => cb([{ isIntersecting: false, boundingClientRect: { bottom: -10 } as DOMRectReadOnly, rootBounds: { top: 0 } as DOMRectReadOnly }])));
+      expect(screen.getByRole("complementary", { name: "Deployment summary" })).toBeTruthy();
+      act(() => observers.forEach((cb) => cb([{ isIntersecting: true, boundingClientRect: { bottom: 80 } as DOMRectReadOnly, rootBounds: { top: 0 } as DOMRectReadOnly }])));
+      expect(screen.queryByRole("complementary", { name: "Deployment summary" })).toBeNull();
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
   it("is pinned on a wide screen and static at phone width, where it would cover the cards it repeats", () => {
     const css = readFileSync(join(__dirname, "../../css/workbench.css"), "utf8");
     expect(/\.exec-wb-mini\s*\{[^}]*position:\s*sticky/.test(css)).toBe(true);

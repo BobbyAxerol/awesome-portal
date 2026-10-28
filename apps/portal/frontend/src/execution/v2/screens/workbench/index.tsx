@@ -30,7 +30,7 @@
  * |---|---|---|---|---|---|
  * | 1 deployment; orders and fills in the thousands, positions tens, equity snapshots up to 1.4k; profile 0.1 to 7.4 MB | over 200 rows in a table, 5,000 chart points, or a profile read over ~6 s | tables keep the 200 newest and say "Showing 200 of N"; the chart keeps min and max per bucket and prints its envelope; one read plus Refresh | `execution.paper-workbench.shadow-panel.v1` keyset (asked of Codex, D12); FE-067 runtime, sessions and reconciliation; FE-028/029/027 gate, band and lifecycle; FE-066 names | a cap or a downsample is always worded; absent is `Not published (FE-xxx)` or `Not available`; PARTIAL and STALE stay worded | one profile read and one quality read on open; at most 200 table rows, under 150 chart nodes |
  */
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 
 import type { ExecutionApi } from "../../../api/ports";
@@ -38,6 +38,7 @@ import { Flag } from "../../Flag";
 import { CompactGaps, GapWhy, PanelGate, StateBoundary, UrlTabs } from "../../blocks";
 import { formatAsOf } from "../../boundary";
 import { resolveTab } from "../../tabAliases";
+import { useMediaQuery } from "../../useMediaQuery";
 import { withContext } from "../../urlState";
 import { stageIdentity } from "../stage/identity";
 import { spineHistory, useStageCriteria, useStageLifecycle } from "../stage/useStageLifecycle";
@@ -152,6 +153,13 @@ export default function PaperWorkbenchScreen({ api, deploymentId, variant = "pap
     );
   })();
 
+  // The summary bar repeats the header, so on a wide screen it appears only once the header has scrolled out above the viewport
+  // (QA6 R4-10: it sat over the content at scroll 0). At phone width it is a static footer and always present.
+  const wide = useMediaQuery("(min-width: 661px)");
+  const rootRef = useRef<HTMLDivElement | null>(null);
+  const headerPast = useHeaderScrolledPast(rootRef, wide);
+  const summaryShown = !wide || headerPast;
+
   // The root says what the body is, as the other stage screens do: `loading` until the profile has answered, so a reader (a person
   // waiting, a test, the M-1 harness) can tell "the body is mounted and has asked for what it needs" from "the first read is out".
   const state = reads.profile.phase === "loading" ? "loading" : reads.profile.phase === "error" ? reads.profile.failure.status : model === null ? "unavailable" : model.page.replace !== null ? model.page.replace.status : "ready";
@@ -159,7 +167,7 @@ export default function PaperWorkbenchScreen({ api, deploymentId, variant = "pap
   const chips = showing && model !== null ? chipsOf(model.deployment, model.freshness, model.facts) : reads.profile.phase === "loading" ? LOADING_CHIPS : UNREAD_CHIPS;
   return (
     <CompactGaps>
-    <div className="exec-wb-v2" data-screen="workbench-v2" data-state={state} data-variant={variant}>
+    <div className="exec-wb-v2" data-screen="workbench-v2" data-state={state} data-variant={variant} ref={rootRef}>
       <Header
         deploymentId={deploymentId}
         deployment={deployment}
@@ -178,8 +186,28 @@ export default function PaperWorkbenchScreen({ api, deploymentId, variant = "pap
         read={{ atLabel: readAtMs === null ? null : formatAsOf(readAtMs), refreshing: reads.refreshing, failure: failure === null ? null : failure.reason, onRefresh: reads.refresh }}
       />
       {body}
-      {showing && model !== null ? <StickySummary name={name} freshness={model.freshness} chips={chips} alphaHref={alphaHref} /> : null}
+      {showing && model !== null && summaryShown ? <StickySummary name={name} freshness={model.freshness} chips={chips} alphaHref={alphaHref} /> : null}
     </div>
     </CompactGaps>
   );
+}
+
+/**
+ * True once the first child of `root` (the header) has left the viewport through the top. Where the browser has no
+ * IntersectionObserver (jsdom) the answer is true, so nothing is hidden on a guess.
+ */
+function useHeaderScrolledPast(root: { current: HTMLElement | null }, active: boolean): boolean {
+  const supported = typeof IntersectionObserver === "function";
+  const [past, setPast] = useState(!supported);
+  useEffect(() => {
+    if (!active || !supported) return;
+    const target = root.current?.firstElementChild;
+    if (!target) return;
+    const observer = new IntersectionObserver(([entry]) => {
+      if (entry) setPast(!entry.isIntersecting && entry.boundingClientRect.bottom <= (entry.rootBounds?.top ?? 0));
+    });
+    observer.observe(target);
+    return () => observer.disconnect();
+  }, [active, supported, root]);
+  return past;
 }
