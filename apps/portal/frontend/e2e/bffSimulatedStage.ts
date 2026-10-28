@@ -32,6 +32,7 @@ import { isRetired, resolveStageDeployment, sandboxRecordIdOf, stageBookOf, user
 import { currentDeploymentOfStage, haltedSinceMs, historyDeploymentId, historyNetSeries, standingOf } from "./bffWorldStage"; // WP-B2-S3
 import { approvalHref, approvalOfAlpha, type WorldGate } from "./bffWorldGovernance"; // WP-B2-S3
 import { WORLD_INCIDENTS } from "./bffWorld"; // WP-B2-S3
+import { costOverRun, limitState } from "./bffWorldBooks"; // WP-B2-C3
 import { DAY_MS as WORLD_DAY_MS, deploymentOf, fromCents as worldCents, grossNotional, lifecycleOf, netPnlSeries, positionsOf, toCents as worldToCents, workingOrdersOf } from "./bffWorld";
 
 type Obj = Record<string, unknown>;
@@ -880,7 +881,7 @@ function worldStage(kind: "canary" | "live" | "sandbox" | "paper", body: Obj | n
   const gross = trialEnded ? "0.00" : grossNotional(d.id);
   const positions = (trialEnded ? [] : positionsOf(d.id)).map((p) => ({ id: p.id, symbol: p.symbol, side: p.side, quantity: p.quantity, entry: p.entry, mark: p.mark, unrealised: p.unrealised })) as PositionSpec[];
   const orders = (trialEnded ? [] : workingOrdersOf(d.id)).map((o) => ({ id: o.id, symbol: o.symbol, type: o.type, side: o.side, quantity: o.quantity, price: o.price, status: o.status, since: iso(o.sinceMs) })) as OrderSpec[];
-  const fees = worldCents(alloc * 10n / 10_000n);
+  const fees = worldCents(costOverRun(alloc, "fees")); // WP-B2-C3 (R2-06): the world's one fee model; Alpha 360's cost drag is this, pro rata to the window
   const figures = (brokerEquity: boolean) => sourceFigures({
     equity: { internal: equity, broker: brokerEquity ? equity : null, unit: "USDT" },
     gross_notional: { internal: gross, broker: brokerEquity ? gross : null, unit: "USDT" },
@@ -938,8 +939,8 @@ function worldStage(kind: "canary" | "live" | "sandbox" | "paper", body: Obj | n
     const capApproved = worldCents(alloc);
     const grossApproved = worldCents(alloc * 3n / 2n);
     const lossApproved = worldCents(alloc / 100n);
-    const dailyPnl = dailyOf(series, 6);
-    const dailyLoss = worldToCents(dailyPnl) < 0n ? worldCents(-worldToCents(dailyPnl)) : "0.00";
+    const dailyPnl = finished ? null : dailyOf(series, 6); // WP-B2-C3 (R5-10): a trial the alpha left has no daily PnL after its exit
+    const dailyLoss = dailyPnl !== null && worldToCents(dailyPnl) < 0n ? worldCents(-worldToCents(dailyPnl)) : "0.00";
     const capConsumed = breach ? worldCents(alloc * 11n / 10n) : worldCents(alloc);
     const caps: Omit<CapSpec, "ratio">[] = [
       { cap: "capital", unit: "USDT", limit: worldCents(alloc * 2n), approved: capApproved, consumed: capConsumed },
@@ -955,12 +956,13 @@ function worldStage(kind: "canary" | "live" | "sandbox" | "paper", body: Obj | n
     compliance.consumed = { capital_cap: capConsumed, gross_notional_cap: gross, daily_loss_cap: dailyLoss, max_open_orders: String(orders.length) };
     compliance.rows = caps.map((c) => capRow(c, AS_OF));
     // The verdict is the rows' own: any consumed figure above its approved limit is a BREACH, else every cap is proven within.
-    const above = caps.some((c) => worldToCents(c.consumed) > worldToCents(c.approved));
+    const above = caps.some((c) => limitState(worldToCents(c.consumed), worldToCents(c.approved)) === "breach"); // WP-B2-C3 (R5-07): exactly at the limit is full, not a breach
     compliance.verdict = { state: above ? "BREACH" : "WITHIN_ENVELOPE", basis: "CONSUMED_NOT_ABOVE_APPROVED_PER_CAP", undetermined_caps: [] };
     body.stage_facts = stageFacts({ runtime: finished ? "STOPPED" : halted ? "HALTED" : "RUNNING", since: finished ? iso(endMs) : halted ? haltedIso ?? started : started, verdict: "NO_OPEN_FINDINGS", open: 0, unknownOrders: 0, asOf,
       sessions: [{ id: `session_${d.id}_canary_1`, started, ended: finished ? iso(endMs) : null, state: finished ? "COMPLETED" : halted ? "HALTED" : "RUNNING" }] });
     body.source_figures = figures(true);
-    setKpis({ capital_consumed: capConsumed, gross_notional: gross, daily_pnl: dailyPnl, open_orders: String(orders.length), broker_equity: equity });
+    setKpis({ capital_consumed: capConsumed, gross_notional: gross, daily_pnl: dailyPnl ?? null, open_orders: String(orders.length), broker_equity: equity });
+    if (finished) body.kpis = (body.kpis as Obj[]).map((k) => (k.key === "daily_pnl" ? { ...k, envelope: panel("kpi-daily_pnl", "EXECUTION", "unavailable", "FRESH", null) } : k)); // WP-B2-C3 (R5-10): the trial ended, so the daily figure is not available (never the last day's figure under a fresh stamp)
     body.positions = collection("positions", "EXECUTION", "ready", stale ? "STALE" : "FRESH", asOf, typedPositions(positions), positions.map((p) => ({ symbol: p.symbol, side: p.side.toUpperCase(), qty: p.quantity, entry_price: p.entry })));
     body.blotter = collection("blotter", "EXECUTION", "ready", stale ? "STALE" : "FRESH", asOf, typedOrders(orders), orders.map((o) => ({ order_id: o.id, price: o.price, type: o.type })));
     body.series = { envelope: panel("series", "DERIVED", "ready", "FRESH", AS_OF), ...seriesMembers(started, 4 * HOUR_MS, "4h", series.map((point) => point.value)) };
@@ -1097,6 +1099,10 @@ function worldStage(kind: "canary" | "live" | "sandbox" | "paper", body: Obj | n
   }
   body.read_at = AS_OF; // WP-B2-S3: every stage page is READ at the world's one clock; only a stage the alpha left is as-of its exit
   if (retired && exitMs !== null) capAsOf(body, exitMs); // WP-B2-S3 R4-03, R5-10: a stage the alpha left has no source update after its exit
+  // WP-B2-C3 (R5-08): the room's `equity` row is the ledger figure allocation + realized (Net PnL stays the realized figure and the unrealized sits on the positions), so it is NAMED for what it is;
+  // the Alpha 360 "Equity" (allocation + realized + unrealized, said on that page) is another figure and is not the same word.
+  const figuresOfBody = isObj(body.source_figures) ? (body.source_figures as Obj).figures : isObj(body.data) && isObj((body.data as Obj).source_figures) ? ((body.data as Obj).source_figures as Obj).figures : null;
+  if (Array.isArray(figuresOfBody)) for (const row of figuresOfBody as Obj[]) if (row.key === "equity") row.label = "Balance, allocation + realized";
   return body;
 }
 /** Harness ids that stand for a world deployment (the review index and the audit link dep_canary_01: the canary rollout of Basis B). */

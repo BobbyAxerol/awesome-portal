@@ -11,11 +11,11 @@
  *   attention = the open world incidents that target the entity (or one of its accounts / deployments)
  */
 import {
-  MARKS, WORLD_INCIDENTS, accountFact, bindingFact, deploymentOf, fromCents, incidentState, netPnlOf, netPnlSeries, positionsOf, toCents,
+  MARKS, WORLD_INCIDENTS, WORLD_NOW_MS, DAY_MS, LEVEL_NODES, accountFact, bindingFact, bookLevels, deploymentOf, fromCents, incidentState, netPnlOf, netPnlSeries, openUnrealizedOf, positionsOf, toCents,
   worldAlphas, type WorldIncident, type WorldPosition,
 } from "./bffWorld";
 import { scaled } from "./bffScale";
-import { isRetired } from "./bffWorldStage"; // B-S: a deployment whose stage its alpha has left holds nothing open
+import { isRetired, standingOf } from "./bffWorldStage"; // B-S: a deployment whose stage its alpha has left holds nothing open
 
 /* ── positions: quantity x the one mark ─────────────────────────────────── */
 
@@ -181,3 +181,72 @@ export function environmentFor(kind: string, id: string, declared: OpEnv): OpEnv
 /** The risk tier that goes with an environment the world corrected (live tiers are kept as declared). */
 export const riskTierFor = (env: OpEnv, declared: string, declaredEnv: OpEnv): string =>
   env === declaredEnv ? declared : env === "SANDBOX" ? "R2_SANDBOX" : env === "PAPER" ? "R1_PAPER_MUTATION" : declared;
+
+// ===== WP-B2-C3 begin: ONE definition of the money figures of a book (QA6 R2-03 R2-04 R2-06 R5-08 R5-10)
+/**
+ * The names of the figures of a deployment, each one number everywhere:
+ *   Net PnL   = realized (the published `net_pnl`); a venue's Net PnL is the SUM of its deployments' Net PnL, and so is the deployment sum
+ *   Unrealized = the open positions' PnL (none for a stage the alpha left)
+ *   Balance   = allocation + realized          (the ledger / "account balance")
+ *   Equity    = allocation + realized + unrealized (the venue's equity; the Live room's, the Alpha 360 "Equity" and the equity line end here)
+ */
+export const netPnlPublished = (d: { realized: string }): bigint => toCents(d.realized);
+export const balanceOf = (d: { allocation: string; realized: string }): bigint => toCents(d.allocation) + toCents(d.realized);
+export function equityOf(d: { id?: string; allocation: string; realized: string; unrealized: string; stage?: string; alphaId?: string }): bigint {
+  const open = d.id !== undefined && isRetired(d.id) ? 0n : toCents(d.unrealized);
+  return balanceOf(d) + open;
+}
+/** Net PnL by venue of an alpha in one environment: one row per venue and currency, each the sum of the published Net PnL of the deployments booked there. */
+export function venueNetPnl(alphaId: string, environment: "live" | "paper" | "sandbox"): { venue: string; currency: string; net: bigint }[] {
+  const rows = new Map<string, { venue: string; currency: string; net: bigint }>();
+  for (const d of worldAlphas().find((a) => a.id === alphaId)?.deployments.filter((x) => x.environment === environment) ?? []) {
+    const key = `${d.venue}|${d.currency}`;
+    const have = rows.get(key) ?? { venue: d.venue, currency: d.currency, net: 0n };
+    have.net += netPnlPublished(d);
+    rows.set(key, have);
+  }
+  return [...rows.values()];
+}
+
+/** The day a book opened: the first stage start among the deployments given (the Live page's "running since"). null when the world does not know them. */
+export function bookFirstDayMs(deploymentIds: readonly string[]): number | null {
+  const starts = deploymentIds.flatMap((id) => { const s = standingOf(id); return s === null ? [] : [s.fromMs]; });
+  return starts.length === 0 ? null : Math.min(...starts);
+}
+/** The deployments of an alpha booked on an account in one environment. */
+export const alphaBookIds = (alphaId: string, environment: string, accountId?: string): string[] =>
+  (worldAlphas().find((a) => a.id === alphaId)?.deployments ?? []).filter((d) => d.environment === environment && (accountId === undefined || d.accountId === accountId)).map((d) => d.id);
+
+/**
+ * The equity line of a book (cents): `points` daily-or-finer samples from the book's first day to the world clock, from its allocation to its equity,
+ * on the same level path every other chart of those deployments draws. `[]` when the world does not know the deployments.
+ */
+export function bookEquityLine(deploymentIds: readonly string[], maxPoints: number): { t: number; cents: bigint }[] {
+  const specs = deploymentIds.map((id) => deploymentOf(id)?.deployment).filter((d): d is NonNullable<typeof d> => d !== undefined);
+  const first = bookFirstDayMs(deploymentIds);
+  if (specs.length === 0 || first === null) return [];
+  // the book's age sampled on the lattice of a 30-day window (the density of the DRAWDOWN pane under it), so the line and the pane step on the same instants
+  const points = Math.max(2, Math.min(maxPoints, 1 + Math.round(((WORLD_NOW_MS - first) * (LEVEL_NODES - 1)) / (30 * DAY_MS))));
+  const levels = bookLevels(deploymentIds, points, specs.reduce((n, d) => n + toCents(d.allocation), 0n), specs.reduce((n, d) => n + equityOf(d), 0n));
+  return levels.map((value, i) => ({ t: Math.round(first + ((WORLD_NOW_MS - first) * i) / (points - 1)), cents: value }));
+}
+
+/** The fee model of the world: fees accrue at FEE_BP of a deployment's allocation over its whole run (funding and slippage likewise), pro rata by days. */
+export const COST_BP = { fees: 10n, funding: 4n, slippage: 2n } as const;
+export const costOverRun = (allocation: bigint, kind: keyof typeof COST_BP): bigint => allocation * COST_BP[kind] / 10_000n;
+/** What a deployment has paid in `kind` of cost inside the `windowDays` before the world clock: its whole-run cost, pro rata to the part of its run inside the window. null when the world does not know it. */
+export function costInWindow(deploymentId: string, kind: keyof typeof COST_BP, windowDays: number, allocationCents?: bigint): bigint | null {
+  const found = deploymentOf(deploymentId);
+  const standing = standingOf(deploymentId);
+  if (found === null || standing === null) return null;
+  const from = standing.fromMs;
+  const end = Math.min(standing.exitMs ?? WORLD_NOW_MS, WORLD_NOW_MS);
+  const span = Math.max(1, end - from);
+  const overlap = Math.max(0, end - Math.max(from, WORLD_NOW_MS - windowDays * DAY_MS));
+  return costOverRun(allocationCents ?? toCents(found.deployment.allocation), kind) * BigInt(overlap) / BigInt(span); // the caller names the allocation when the id it holds belongs to another universe (the suite's ids repeat the world's)
+}
+
+/** A stage the alpha has left has no daily PnL after its exit: the daily figure exists only for a deployment still running. */
+export const hasDailyPnl = (deploymentId: string): boolean => !isRetired(deploymentId);
+void openUnrealizedOf;
+// ===== WP-B2-C3 end

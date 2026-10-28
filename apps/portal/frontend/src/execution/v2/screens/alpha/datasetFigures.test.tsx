@@ -3,6 +3,8 @@
  * canonical `lifecycle.live` fixture (an ALPHA surface body is that fixture with its surface and alpha id set, as the fixture BFF serves it).
  * Exact strings, one cell per economic partition, a true zero as a value, and every absence typed with its reason.
  */
+import { fromCents, toCents } from "../../../../../e2e/bffWorld";
+import { costOverRun } from "../../../../../e2e/bffWorldBooks";
 import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -135,8 +137,9 @@ describe("review lane rows for the suite's alpha (simulated keys through the por
     expect(row.querySelector("td[data-l='Equity, 30D end']")?.textContent).toBe("Real-funded · USDT81,176.20 USDT");
     const cost = screen.getByRole("table", { name: "Cost drag" });
     const cell = (label: string) => [...cost.querySelectorAll("tr")].find((tr) => tr.querySelector("th")?.textContent === label)!.querySelector("td")!;
-    expect(cell("Fees").textContent).toBe("Real-funded · USDT40.00 USDT");
-    expect(cell("Funding").textContent).toBe("Real-funded · USDT16.00 USDT");
+    // QA6 R2-06: the world's one fee model (10 bp fees and 4 bp funding of the allocation over a live run under 30 days), the figure the Live room states as paid since activation
+    expect(cell("Fees").textContent).toBe(`Real-funded · USDT${fromCents(costOverRun(toCents("80000"), "fees"))} USDT`);
+    expect(cell("Funding").textContent).toBe(`Real-funded · USDT${fromCents(costOverRun(toCents("80000"), "funding"))} USDT`);
     expect(cell("Slippage").textContent).toMatch(/USDT|Not available/);
     const forward = screen.getByRole("table", { name: "Forward observation" });
     const days = [...forward.querySelectorAll("tr")].find((tr) => tr.querySelector("th")?.textContent === "Forward days")!.querySelector("td")!;

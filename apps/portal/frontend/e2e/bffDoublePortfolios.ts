@@ -70,7 +70,7 @@ import { scopedResourceV2 } from "./bffDoubleScopedResource";
 import { answerOperationsV2 } from "./bffDoubleV2";
 import { addDecimal as addExact, scaleCounts, scaled, sumByCurrency, type PortfolioSpec } from "./bffScale";
 import { isPositiveMode, positivePortfolioBookOf } from "./bffPositiveMode";
-import { accountFact, deploymentOf, fromCents, grossNotional } from "./bffWorld";
+import { accountFact, bookLevels, deploymentOf, fromCents, grossNotional } from "./bffWorld"; // WP-B2-C3: bookLevels
 
 export interface BffAnswerPortfolios {
   status: number;
@@ -569,7 +569,13 @@ function equityPayload(search: URLSearchParams): BffAnswerPortfolios {
     const minor = (value: string): number => { const negative = value.startsWith("-"); const [w, f = ""] = value.replace("-", "").split("."); const n = Number(w) * 100 + Number(`${f}00`.slice(0, 2)); return negative ? -n : n; };
     const opening = booked.reduce((n, d) => n + minor(d.allocation), 0);
     const nav = opening + booked.reduce((n, d) => n + minor(d.realized), 0);
-    return build(booked[0]!.currency, `${booked[0]!.portfolio_name} equity`, AS_OF_MS - 47 * HOUR, 48, opening, Math.trunc((nav - opening) / 49), null, "READY", nav);
+    const answer = build(booked[0]!.currency, `${booked[0]!.portfolio_name} equity`, AS_OF_MS - 47 * HOUR, 48, opening, Math.trunc((nav - opening) / 49), null, "READY", nav);
+    // WP-B2-C3: the line is the book's level path (the one every chart of these deployments draws), not a zig-zag, so its highs and drawdown are the Portfolio's and the sleeve's
+    const series = (answer.body as { panel?: { data?: { series?: { points: [number, string][] }[] } } }).panel?.data?.series?.[0];
+    if (!isPositiveMode() || series === undefined || series.points.length !== 48) return answer;
+    const levels = bookLevels(booked.map((d) => d.deployment_id), 48, BigInt(opening), BigInt(nav));
+    series.points = series.points.map(([t], i): [number, string] => [t, fromCents(levels[i]!)]);
+    return answer;
   }
   if (id === PF.core) return build("USDT", "Core equity", AS_OF_MS - 47 * HOUR, 48, 61_000_000, 12_500, [20, 28], "PARTIAL");
   if (id === PF.yen) return build("JPY", "Yen-Carry equity", AS_OF_MS - 23 * HOUR, 24, 5_200_000_000, 150_000, null, "READY");

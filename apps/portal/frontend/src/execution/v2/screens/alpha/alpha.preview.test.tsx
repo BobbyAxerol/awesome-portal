@@ -9,6 +9,7 @@ import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { V2_ROLE_PRESETS } from "../../shell/roleNav";
+import { grossNotional } from "../../../../../e2e/bffWorld";
 import AlphaScreen from "./index";
 import { endPreviewLane, startPreviewLane } from "./previewLane.testbase";
 import { sessionOf } from "./testApi";
@@ -144,7 +145,7 @@ describe("Net PnL and Exposure are the book in view, never all books added (QA2 
     expect(tile("Net PnL, current").textContent).toContain("Real-funded book, current facts");
     // QA3 R2-01: a running deployment with open positions never reads 0.00 exposure: the tile prints the deployment's own gross notional.
     const exposure = tile("Exposure, current");
-    expect(within(exposure).getByTestId("book-here").textContent).toContain("7,370.68");
+    expect(within(exposure).getByTestId("book-here").textContent).toContain(Number(grossNotional("dep_live_01")).toLocaleString("en-US", { minimumFractionDigits: 2 })); // the sum of its positions at the world mark (QA6 R2-07: no longer shared with BTC Trend)
     // WORLD (step B): Carry A has left Paper, so dep_paper_01 is a retired deployment with no open position: 0.00 there is the truth. The rule stays for a deployment that is running.
     expect(within(exposure).getByTestId("book-apart").textContent).toContain("dep_paper_01");
     expect(within(exposure).getByTestId("book-here").textContent).not.toMatch(/dep_live_01 0\.00/);

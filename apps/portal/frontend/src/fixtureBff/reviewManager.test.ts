@@ -5,6 +5,8 @@ import { afterAll, afterEach, describe, expect, it, vi } from "vitest";
 import { answerReviewManager, wpWorldAlphas, type ReviewManagerProfile } from "../../../fixture-bff/review-manager";
 import { answerManagerFleet, answerManagerSeries } from "../../e2e/bffDoubleManager";
 import { fixtureNowMs, scaled, setFixtureNow, setFixtureScale } from "../../e2e/bffScale";
+import { costInWindow, costOverRun } from "../../e2e/bffWorldBooks";
+import { fromCents, toCents } from "../../e2e/bffWorld";
 import { createHttpApi } from "../execution/api/httpApi";
 import type { ExecutionApi } from "../execution/api/ports";
 import type { DeliveryPolicy } from "../execution/profile";
@@ -562,17 +564,19 @@ describe("simulated suite universe (small scale)", () => {
     expect(m.balance_total.value).toBe("81120.8");
     expect(m.equity_30d_end_value.value).toBe("81176.2");
     expect(m.return_30d_pct.value).toBe("1.401");
-    expect(m.cost_drag_fees).toMatchObject({ value: "40", unit: "MONEY", currency: "USDT" });
-    expect(m.cost_drag_funding.value).toBe("16");
+    // QA6 R2-06: the world's fee model (a live run is under 30 days, so the 30D figure is its whole-run cost: 10 bp fees, 4 bp funding); it was 5 bp and 2 bp of the allocation per 30 days
+    expect(m.cost_drag_fees).toMatchObject({ value: fromCents(costOverRun(toCents("80000"), "fees")).replace(/\.?0+$/, ""), unit: "MONEY", currency: "USDT" });
+    expect(m.cost_drag_funding.value).toBe(fromCents(costOverRun(toCents("80000"), "funding")).replace(/\.?0+$/, ""));
     expect(m.max_drawdown_pct).toMatchObject({ unit: "PERCENT", currency: null });
     expect(m.max_drawdown_pct.value).toMatch(/^-\d+(\.\d+)?$/);
     expect(m.forward_observation_days).toMatchObject({ unit: "DAYS", currency: null });
     expect(m.forward_observation_days.value).toMatch(/^\d+$/);
   });
 
-  it("scales the cost drag with the window (fees 5 bp of allocation per 30 days, bigint) and gives the other alpha ids their own rows", () => {
+  it("scales the cost drag with the window (the world's fee model: 10 bp of allocation over the whole run, pro rata to the part of the run inside the window; bigint) and gives the other alpha ids their own rows", () => {
+    // QA6 R2-06: one fee model. The window figure is the world's, not a rate restated here (was 5 bp x days / 30, which paid MORE fees in 15 days on the Live page than in 30 on Alpha 360).
     const week = small("/manager/alphas/alpha_btc_trend/overview", { environment: "live", window: JSON.stringify("7D") });
-    expect(week.items[0].economic_partitions[0].metrics.cost_drag_fees.value).toBe("9.333333333333333333");
+    expect(week.items[0].economic_partitions[0].metrics.cost_drag_fees.value).toBe(fromCents(costInWindow("dep_live_01", "fees", 7, toCents("80000"))!).replace(/\.?0+$/, ""));
     expect(week.items[0].economic_partitions[0].metrics.cost_drag_fees.window).toEqual(week.selected_window.resolved);
     expect(week.items[0].economic_partitions[0].metrics.forward_observation_days.window).toBeNull();
     const live = small("/manager/fleet", { environment: "live" });

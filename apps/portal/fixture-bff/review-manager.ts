@@ -19,6 +19,10 @@ import { addDecimal, fixtureNowMs, scaled, type AlphaSpec, type DeploymentSpec }
 import { isRetired as wpb2sRetired, stageActiveOf as wpb2s3Active, stageHistoryOf as wpb2sHistory, stageStateOf as wpb2s3State } from "../frontend/e2e/bffWorldStage";
 // ===== WP-B2-S end
 import { accountFact, grossNotional, incidentChildrenBody, lifecycleOf, MARKS, NATIVE_ALPHAS, positionsOf, stageDays, WORLD_ACTORS } from "../frontend/e2e/bffWorld";
+// ===== WP-B2-C3 begin: the money figures of the world (one definition, one level path per book)
+import { alphaBookIds as c3BookIds, bookEquityLine as c3EquityLine, bookFirstDayMs as c3FirstDay, costInWindow as c3CostInWindow } from "../frontend/e2e/bffWorldBooks";
+import { bookLevels as c3BookLevels, DAY_MS as C3_DAY_MS, deploymentOf as c3DeploymentOf, openUnrealizedOf as c3OpenUnrealized, toCents as c3ToCents, fromCents as c3FromCents, worldAlphas as c3WorldAlphas, WORLD_NOW_MS as C3_NOW_MS } from "../frontend/e2e/bffWorld";
+// ===== WP-B2-C3 end
 import { APPROVAL_ROWS } from "../frontend/src/execution/api/fixtureData"; // WP-E
 import { approvalRecord, evidenceFromRecord, restateTarget } from "../frontend/e2e/bffApprovalWorld"; // WP-E
 import { worldApprovals } from "../frontend/e2e/bffWorldGovernance"; // WP-B2-A3
@@ -343,10 +347,11 @@ function enrichRow(row: Draft, preset: WindowPreset, components = true): Draft {
     // Cost drag = allocation * basis points * window days / 30 (fees 5, funding 2, slippage 1); slippage is a typed absence for
     // about 1 row in 4; forward days is 5..40; a true zero net PnL has a true zero drawdown.
     const cost = (bp: bigint): string | null => A === null ? null : trimmed(toScaled(A) * bp * BigInt(preset.days) / (10_000n * 30n), SCALE);
+    const worldCost = (kind: "fees" | "funding" | "slippage", fallback: string | null): string | null => (legacy() ? fallback : c3RowCost(row, kind, preset.days) ?? fallback); // WP-B2-C3: one fee model
     m.max_drawdown_pct = pctMetric(template, A === null ? null : N !== null && toScaled(N) === 0n ? "0" : drawdownOf(row.row_key, "row"));
-    m.cost_drag_fees = metric(template, cost(5n), entry.partition.currency);
-    m.cost_drag_funding = metric(template, cost(2n), entry.partition.currency);
-    m.cost_drag_slippage = metric(template, legacy() && seedOf(row.row_key, "slippage") % 4 === 0 ? null : cost(1n), entry.partition.currency);
+    m.cost_drag_fees = metric(template, worldCost("fees", cost(5n)), entry.partition.currency);
+    m.cost_drag_funding = metric(template, worldCost("funding", cost(2n)), entry.partition.currency);
+    m.cost_drag_slippage = metric(template, legacy() && seedOf(row.row_key, "slippage") % 4 === 0 ? null : worldCost("slippage", cost(1n)), entry.partition.currency);
     m.forward_observation_days = plainMetric(template, A === null ? null : String(5 + seedOf(row.row_key, "forward") % 36), "DAYS");
     addQbts(m, template, row.row_key, components);
   }
@@ -606,7 +611,7 @@ function rowsFor(environment: string, template: Draft, preset: WindowPreset, com
     // or missing value that differs from the linked detail's source.
     row.metrics = { allocation: metric(sourceMetric, sum(deployments.map((entry) => entry.allocation)), first.currency),
       net_pnl: metric(sourceMetric, legacy() && rows.length % 11 === 0 ? "0" : sum(deployments.map((entry) => entry.realized)), first.currency), // WP-P: the first row's true zero is the legacy variety
-      unrealized_pnl: metric(sourceMetric, legacy() && rows.length % 7 === 0 ? null : sum(deployments.map((entry) => entry.unrealized)), first.currency) };
+      unrealized_pnl: metric(sourceMetric, legacy() && rows.length % 7 === 0 ? null : sum(deployments.map((entry) => (legacy() ? entry.unrealized : c3FromCents(c3OpenUnrealized(entry))))), first.currency) }; // WP-B2-C3: a stage the alpha left holds nothing open
     row.economic_partitions = [{ partition: { economic_domain: domain(environment), currency: first.currency, basis: "FIXTURE_LAB:synthetic-book",
       native_profile_ref: `FIXTURE_LAB:${environment}:synthetic`, domain_proof_ref: "FIXTURE_LAB:NOT_PRODUCT_AUTHORITY" }, metrics: copy(row.metrics) }];
     rows.push(row);
@@ -1291,7 +1296,7 @@ function wpcShapeSeries(entry: Draft, metricName: string, subjectId: string, env
   const [start, end, amp] = metricName === "NAV" ? [target.nav - target.net, target.nav, legacy() ? nav / 120n : nav * depth / 10_000n]
     : metricName === "NET_PNL" ? [0n, target.net, wpcAbs(target.net) > nav / 150n ? wpcAbs(target.net) / 2n : nav / 150n]
       : [0n, target.ret, wpcAbs(target.ret) > 5n * 10n ** 15n ? wpcAbs(target.ret) / 2n : 10n ** 16n];
-  const values = wpcWalk(seed, n - 1, start, end, amp);
+  const values = c3NavShape(metricName, by, subjectId, environment, entry.partition.currency, n, start, end, entry.points) ?? wpcWalk(seed, n - 1, start, end, amp); // WP-B2-C3
   const indices = Array.from({ length: n }, (_, i) => i);
   // Return is a fraction (8 places); money keeps its 18 places. The walk itself is in 18-place integers.
   const text = (value: bigint): string => (metricName === "RETURN" ? trimmed(value / 10n ** 10n, 8) : trimmed(value, 18));
@@ -1336,17 +1341,27 @@ function wpcLifecycleKeys(alphaId: string, template: Draft): Record<string, Draf
   put("life_live_decider", "1", "ROLE", "Manager");
   put("life_blocked_reason", "1", "TEXT", "Criterion 6 of 7 is not met");
   // Events: kind, time, "Title|actor". Offsets are inside the lifecycle above, so the stage lane agrees with the spine.
+  // WP-B2-C3 (R2-10, R2-11): the events are the alpha's own stage history (`stageHistoryOf`): a stage that began has a start event on the day its deployment starts, a stage
+  // that was left has an exit decision NAMED FOR THAT STAGE on the day before the next began, and nothing is told for a stage that never began.
+  const began = (stage: "paper" | "sandbox" | "canary" | "live"): boolean => legacy() || H.stages[stage].status !== "none";
+  const left = (stage: "paper" | "sandbox" | "canary"): boolean => legacy() || H.stages[stage].status === "completed";
   const events: [string, number, string, string][] = [
-    ["stage", paperFrom, "Paper started", "system"], ["stage", sandboxFrom, "Sandbox started", "system"],
-    ["stage", canaryFrom, "Canary started", actor(0)], ["stage", liveFrom, "Live started", actor(1)],
+    ...(began("paper") ? [["stage", paperFrom, "Paper started", "system"] as [string, number, string, string]] : []),
+    ...(began("sandbox") ? [["stage", sandboxFrom, "Sandbox started", "system"] as [string, number, string, string]] : []),
+    ...(began("canary") ? [["stage", canaryFrom, "Canary started", actor(0)] as [string, number, string, string]] : []),
+    ...(began("live") ? [["stage", liveFrom, "Live started", actor(1)] as [string, number, string, string]] : []),
     ["decision", r1, "R1 gate approved", actor(0)], ["decision", r2, "R2 gate approved", actor(1)],
-    ["decision", sandboxFrom - DAY_MS / 2, "Sandbox exit approved", actor(2)], ["decision", canaryFrom - DAY_MS / 2, "Canary approved", actor(0)], ["decision", liveFrom - DAY_MS / 2, "Live approved", actor(1)],
+    ...(left("paper") ? [["decision", sandboxFrom - DAY_MS / 2, legacy() ? "Sandbox exit approved" : "Paper exit approved", actor(2)] as [string, number, string, string]] : []),
+    ...(left("sandbox") ? [["decision", canaryFrom - DAY_MS / 2, legacy() ? "Canary approved" : "Sandbox exit approved", actor(0)] as [string, number, string, string]] : []),
+    ...(left("canary") ? [["decision", liveFrom - DAY_MS / 2, legacy() ? "Live approved" : "Canary exit approved", actor(1)] as [string, number, string, string]] : []),
     // Events on the day the e2e doubles' trades print (the anchor), so Trade Replay's lanes have something to show.
     ["decision", now - 20 * 3_600_000, "Position limit reviewed", actor(2)],
-    ["incident", sandboxFrom + (sandboxDays * DAY_MS) / 2, "Sandbox feed gap", "system"], ["incident", now - 2 * 3_600_000, "Broker sync diverged", "system"],
+    ...(began("sandbox") ? [["incident", sandboxFrom + (sandboxDays * DAY_MS) / 2, "Sandbox feed gap", "system"] as [string, number, string, string]] : []),
+    ["incident", now - 2 * 3_600_000, "Broker sync diverged", "system"],
     ["incident", now - 26 * 3_600_000, "Venue feed gap", "system"],
     ["recall", now - DAY_MS, "Recall pending", actor(1)],
-    ["flow", liveFrom + 300_000, "Allocation added", actor(1)], ["flow", canaryFrom + 300_000, "Allocation added", actor(0)],
+    ...(began("live") ? [["flow", liveFrom + 300_000, "Allocation added", actor(1)] as [string, number, string, string]] : []),
+    ...(began("canary") ? [["flow", canaryFrom + 300_000, "Allocation added", actor(0)] as [string, number, string, string]] : []),
   ];
   const seen: Record<string, number> = {};
   for (const [kind, time, title, by] of events) {
@@ -1470,6 +1485,8 @@ function wpcEquity(method: string, path: string, search: URLSearchParams): Revie
   const body = base?.body as Draft;
   const series = body?.panel?.data?.series?.[0];
   if (base === null || base.status !== 200 || !series || !Array.isArray(series.points) || series.points.length < 2) return base;
+  const worldLines = c3WorldEquity(body, search); // WP-B2-C3: one line per account = the alpha's own book on it, from the book's first day
+  if (worldLines) return { status: base.status, body };
   const cents = (text: string): bigint => BigInt(text.replace(".", ""));
   const first = series.points[0];
   const last = series.points[series.points.length - 1];
@@ -1537,12 +1554,12 @@ function wpcAlphaResource(method: string, path: string, search: URLSearchParams)
     const net = d.realized; // WP-B2-C: Net PnL is the published net_pnl everywhere (the dataset's: realized); unrealized is its own field
     return { ...copy(template), deployment_id: d.id, strategy_id: id, stage: d.stage, venue: d.venue, account_id: d.accountId, portfolio_id: d.portfolioId, currency: d.currency,
       allocation: d.allocation, balance_total: addDecimal(d.allocation, net), balance_free: addDecimal(d.allocation, net), balance_locked: "0", realized_pnl: d.realized,
-      unrealized_pnl: d.unrealized, net_pnl: net, exposure: wpb2sRetired(d.id) ? "0.00" : wpcGross(d), state: wpb2s3State(d) === "HALTED" ? "HALTED" : d.active && !wpb2sRetired(d.id) ? "ACTIVE" : "ENDED", active: wpb2s3Active(d), health: d.health }; // WP-B2-S; WP-B2-S3: HALTED is the one halt fact: a stage the alpha left is ENDED, no exposure
+      unrealized_pnl: legacy() ? d.unrealized : c3FromCents(c3OpenUnrealized(d)), net_pnl: net, exposure: wpb2sRetired(d.id) ? "0.00" : wpcGross(d), state: wpb2s3State(d) === "HALTED" ? "HALTED" : d.active && !wpb2sRetired(d.id) ? "ACTIVE" : "ENDED", active: wpb2s3Active(d), health: d.health }; // WP-B2-S; WP-B2-S3: HALTED is the one halt fact: a stage the alpha left is ENDED, no exposure
   });
   const per = (pick: (d: DeploymentSpec) => string, currency: string): string => sum(spec.deployments.filter((d) => d.currency === currency).map(pick));
   alpha.allocations = currencies.map((currency) => ({ currency, value: per((d) => d.allocation, currency) }));
   alpha.balances = currencies.map((currency) => ({ currency, total: per((d) => addDecimal(d.allocation, d.realized), currency), free: per((d) => addDecimal(d.allocation, d.realized), currency), locked: "0" })); // WP-B2-C
-  alpha.position_pnl = currencies.map((currency) => ({ currency, realized: per((d) => d.realized, currency), unrealized: per((d) => d.unrealized, currency), net: per((d) => d.realized, currency) })); // WP-B2-C
+  alpha.position_pnl = currencies.map((currency) => ({ currency, realized: per((d) => d.realized, currency), unrealized: per((d) => (legacy() ? d.unrealized : c3FromCents(c3OpenUnrealized(d))), currency), net: per((d) => d.realized, currency) })); // WP-B2-C
   alpha.exposure = currencies.map((currency) => ({ currency, value: per((d) => (wpb2sRetired(d.id) ? "0.00" : wpcGross(d)), currency) }));
   body.resource = { ...body.resource, label: spec.label };
   const rows = spec.deployments.map((d) => ({ deployment_id: d.id, strategy_id: id, account_id: d.accountId, mode: mode[d.environment], venue: d.venue, currency: d.currency, portfolio_id: d.portfolioId,
@@ -1638,7 +1655,7 @@ function wpkAlphaLifecycle(method: string, path: string, search: URLSearchParams
   const alphaId = match[1]!;
   const alpha = [...scaled().alphas, ...WPC_ALPHAS].find((candidate) => candidate.id === alphaId);
   if (alpha === undefined) return problem(404, "EXECUTION_READ_NOT_AVAILABLE", "The requested Execution read is not available.");
-  const now = fixtureNowMs();
+  const now = legacy() ? fixtureNowMs() : wpcAnchorMs(); // WP-B2-C3: the read is taken at the world clock, so every event of the lifecycle is on or before it (and the preview moves them as one)
   const keys = wpcLifecycleKeys(alphaId, {});
   const num = (key: string): number | null => { const metric = keys[key]; return metric && metric.availability === "AVAILABLE" ? Number(metric.value) : null; };
   const who = (key: string): string | null => keys[key]?.reason_code ?? null;
@@ -1674,7 +1691,7 @@ function wpkAlphaLifecycle(method: string, path: string, search: URLSearchParams
   const books = new Map<string, Draft>();
   for (const dep of alpha.deployments.filter((candidate) => environment === null || candidate.environment === environment)) {
     const key = `${dep.venue}|${dep.environment}|${dep.currency}`;
-    const net = addDecimal(dep.realized, dep.unrealized);
+    const net = legacy() ? addDecimal(dep.realized, dep.unrealized) : dep.realized; // WP-B2-C3: a venue's Net PnL is the sum of its deployments' published Net PnL (realized)
     const have = books.get(key);
     books.set(key, have ? { ...have, net_pnl: addDecimal(have.net_pnl, net) }
       : { venue: dep.venue, economic_domain: dep.environment === "live" ? "ACTUAL" : dep.environment.toUpperCase(), currency: dep.currency, net_pnl: net, as_of_ms: now });
@@ -2062,6 +2079,95 @@ function wpkStageEntry(body: Draft): void {
 }
 // ===== WP-K end
 
+// ===== WP-B2-C3 begin (money/figures of the world: one level path per book, one fee model; QA6 R2-01 R2-03 R2-04 R2-06 R2-12 R3-07)
+/** The deployments of the world a series subject stands for in one environment and currency; `[]` for the fund, for an unknown subject and for a book too wide to walk. */
+function c3SubjectIds(by: string, subjectId: string, environment: string, currency: string): string[] {
+  if (by === "fund") return [];
+  const ids = c3WorldAlphas().flatMap((alpha) => alpha.deployments)
+    .filter((d) => d.environment === environment && d.currency === currency && (by === "alpha_id" ? d.alphaId === subjectId : d.portfolioId === subjectId)).map((d) => d.id);
+  return ids.length <= 40 ? ids : [];
+}
+/**
+ * The NAV walk of a subject whose deployments the world knows: a straight ramp from the opening to the closing NAV plus the SUM OF THE BRIDGES of its deployments
+ * (`bookLevels`), so the Account 360 line of a sleeve, the Portfolio NAV and the Alpha 360 line of the same deployments are one path (one high, one drawdown).
+ * 18-place integers like `wpcWalk`; null leaves the old walk (the fund, the legacy scenarios, a subject the world does not hold).
+ */
+function c3NavShape(metricName: string, by: string, subjectId: string, environment: string, currency: string, n: number, start: bigint, end: bigint, samples: Draft[]): bigint[] | null {
+  if (legacy() || metricName !== "NAV") return null;
+  const ids = c3SubjectIds(by, subjectId, environment, currency);
+  if (ids.length === 0) return null;
+  // R2-04: an ALPHA's book opens on its first day. Before it the NAV is its opening capital held flat (no gain, no drawdown); the path runs from that day to the end of the window.
+  const step = n > 1 ? (samples[n - 1].ts_ms - samples[0].ts_ms) / (n - 1) : 0;
+  const firstDay = by === "alpha_id" ? c3FirstDay(ids) : null;
+  const opened = firstDay === null || step <= 0 ? 0 : Math.max(0, Math.min(n - 3, n - 1 - Math.round((C3_NOW_MS - firstDay) / step)));
+  const bridge = c3BookLevels(ids, n - opened, 0n, 0n);
+  const last = BigInt(n - 1 - opened);
+  return Array.from({ length: n }, (_, i) => (i < opened ? start : start + (end - start) * BigInt(i - opened) / last + bridge[i - opened]! * 10n ** 16n));
+}
+/** Cost of a dataset row (all of its deployments) over the window, in the world's fee model; null when the world holds none of its deployments. */
+function c3RowCost(row: Draft, kind: "fees" | "funding" | "slippage", windowDays: number): string | null {
+  const ids = ((row.children ?? []) as Draft[]).map((child) => String(child.deployment_id));
+  const owner = [...scaled().alphas, ...NATIVE_ALPHAS, ...SUITE_ALPHAS].find((candidate) => candidate.id === row.alpha_id && ids.every((id) => candidate.deployments.some((d) => d.id === id)));
+  let total = 0n;
+  for (const id of ids) {
+    const spec = owner?.deployments.find((candidate) => candidate.id === id);
+    const part = spec === undefined ? null : c3CostInWindow(id, kind, windowDays, c3ToCents(spec.allocation));
+    if (part === null) return null;
+    total += part;
+  }
+  return ids.length === 0 ? null : trimmed(total * 10n ** 16n, SCALE);
+}
+/** The Alpha 360 equity lines: one per account, each the alpha's OWN deployments on that account from the book's first day, from its allocation to its equity. */
+function c3WorldEquity(body: Draft, search: URLSearchParams): boolean {
+  if (legacy()) return false;
+  const alphaId = search.get("subject_id");
+  const environment = search.get("environment");
+  const panel = body.panel;
+  const list = panel?.data?.series;
+  if (alphaId === null || environment === null || !Array.isArray(list) || list.length === 0) return false;
+  const alpha = c3WorldAlphas().find((candidate) => candidate.id === alphaId);
+  if (alpha === undefined) return false;
+  const lines = list.map((entry: Draft) => {
+    const own = c3BookIds(alphaId, environment, typeof entry.account_id === "string" ? entry.account_id : undefined).filter((id) => c3DeploymentOf(id)?.deployment.currency === entry.currency);
+    return { entry, line: own.length > 0 ? c3EquityLine(own, LEVEL_CAP) : [] };
+  });
+  if (lines.some(({ line }) => line.length === 0)) return false;
+  for (const { entry, line } of lines) {
+    const sleeve = typeof entry.account_id === "string" ? accountFact(entry.account_id) : null;
+    entry.points = line.map((point) => [point.t, c3FromCents(point.cents)]);
+    entry.label = `${alpha.label} book on ${sleeve?.name ?? entry.account_id} \u00b7 ${entry.currency}`;
+  }
+  const first = Math.min(...lines.map(({ line }) => line[0]!.t));
+  const last = Math.max(...lines.map(({ line }) => line[line.length - 1]!.t));
+  const rows = Math.max(...lines.map(({ line }) => line.length));
+  panel.coverage = { ...panel.coverage, from_ms: first, to_ms: last, source_total: String(rows), filtered_total: String(rows), returned_count: rows };
+  panel.data.sampling = { ...panel.data.sampling, source_rows: String(rows), numeric_rows: String(rows), returned_rows: rows };
+  panel.data.retention = { ...panel.data.retention, oldest_available_ms: first, newest_available_ms: last };
+  return true;
+}
+const LEVEL_CAP = 240;
+void C3_DAY_MS; void c3ToCents;
+/**
+ * R2-12: Codex's producer keeps only the first and last NAV and draws a repeating wave between them (a 17-point sawtooth, the same on every book). The four views
+ * are rebuilt here from the NAV walk the entry carries: NAV = the walk, NET_PNL = NAV - opening, RETURN = NET_PNL / opening, DRAWDOWN = NAV / running peak - 1 (<= 0).
+ */
+function c3OwnWalk(view: Draft, metricName: string, navEntry: Draft | undefined): void {
+  if (legacy() || navEntry === undefined || !Array.isArray(navEntry.points) || navEntry.points.length !== view.points.length) return;
+  const levels: bigint[] = (navEntry.points as Draft[]).map((point: Draft): bigint => toScaled(point.value));
+  const opening: bigint = levels[0]!;
+  if (opening <= 0n) return;
+  let peak: bigint = opening;
+  view.points.forEach((point: Draft, i: number) => {
+    const level = levels[i]!;
+    if (level > peak) peak = level;
+    point.value = metricName === "NAV" ? trimmed(level, SCALE)
+      : metricName === "NET_PNL" ? trimmed(level - opening, SCALE)
+        : metricName === "RETURN" ? trimmed((level - opening) * 10n ** 18n / opening, SCALE)
+          : trimmed((level - peak) * 10n ** 18n / peak, SCALE);
+  });
+}
+// ===== WP-B2-C3 end
+
 // ===== WP-P begin (positive world: the four series views from ONE NAV book; scenario guards live next to the code they guard, marked `WP-P`)
 /**
  * Positive scenario series (FIXTURE_LAB). The requested view is rebuilt by Codex's `buildPositiveManagerSeries` from the SAME NAV entries (the ones
@@ -2096,6 +2202,7 @@ function wpPositiveSeries(body: Draft, method: string, path: string, search: URL
   body.series = (body.series as Draft[]).map((entry, index) => {
     const view = views.get(index);
     if (view === undefined) return entry;
+    c3OwnWalk(view, metricName, nav.series[index]); // WP-B2-C3: the producer's own wave is a fixed 17-point sawtooth; the views are derived from the NAV walk instead
     return { ...view, subject: entry.subject, partition: entry.partition, basis: entry.basis, window: entry.window,
       quality: copy(quality), source_confidence: traits().confidence, provenance_refs: entry.provenance_refs };
   });
@@ -2170,7 +2277,7 @@ export function wpPortfolioBook(portfolioId: string): PositivePortfolioBook | nu
   if (booked.length === 0) return null;
   return { portfolio_id: portfolioId, deployments: booked.map(({ alpha, deployment }) => ({ deployment_id: deployment.id, alpha_id: alpha.id, alpha_label: alpha.label,
     portfolio_id: deployment.portfolioId, portfolio_name: deployment.portfolioName, environment: deployment.environment, stage: deployment.stage, currency: deployment.currency,
-    allocation: deployment.allocation, realized: deployment.realized, unrealized: deployment.unrealized })) };
+    allocation: deployment.allocation, realized: deployment.realized, unrealized: legacy() ? deployment.unrealized : c3FromCents(c3OpenUnrealized(deployment)) })) }; // WP-B2-C3: a stage the alpha left holds nothing open
 }
 
 /** The stage and the owners of one deployment id of the world (generated, native or suite): the stage screens' lifecycle record for an id their own table does not list. */
@@ -2199,6 +2306,6 @@ export function wpAccountBook(accountId: string): PositiveAccountBook | null {
   if (booked.length === 0) return null;
   return { account_id: accountId, deployments: booked.map(({ alpha, deployment }) => ({ deployment_id: deployment.id, alpha_id: alpha.id, alpha_label: alpha.label,
     portfolio_id: deployment.portfolioId, portfolio_name: deployment.portfolioName, environment: deployment.environment, stage: deployment.stage, currency: deployment.currency,
-    allocation: deployment.allocation, realized: deployment.realized, unrealized: deployment.unrealized })) };
+    allocation: deployment.allocation, realized: deployment.realized, unrealized: legacy() ? deployment.unrealized : c3FromCents(c3OpenUnrealized(deployment)) })) }; // WP-B2-C3
 }
 // ===== WP-P end

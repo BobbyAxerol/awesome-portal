@@ -165,7 +165,7 @@ export const stageFromMs = (alphaId: string, stage: StageName): number => lifecy
 
 export interface WorldPosition { id: string; symbol: string; side: "long" | "short"; quantity: string; entry: string; mark: string; notional: string; unrealised: string }
 export interface WorldOrder { id: string; symbol: string; side: "buy" | "sell"; type: string; quantity: string; price: string; status: string; sinceMs: number }
-const QTYS = [8n, 4n, 2n, 1n]; // in units of 0.25 (so entry prices keep four places)
+const maxQuarterUnits = (budget: bigint, mark: bigint): bigint => { const q = budget * 10_000n / (2_500n * mark); return q < 1n ? 1n : q; }; // WP-B2-C3
 const units4 = (value: string): bigint => { const [w = "0", f = ""] = value.split("."); return BigInt(w + `${f}0000`.slice(0, 4)); };
 const text4 = (v: bigint): string => { const abs = v < 0n ? -v : v; return `${v < 0n ? "-" : ""}${abs / 10_000n}.${String(abs % 10_000n).padStart(4, "0")}`.replace(/(\.\d*?)0+$/, "$1").replace(/\.$/, ""); };
 
@@ -174,16 +174,16 @@ export function positionsOf(deploymentId: string): WorldPosition[] {
   const found = deploymentOf(deploymentId);
   if (found === null) return [];
   const d = found.deployment;
-  const first = SYMBOLS[seedOf(deploymentId, "sym") % SYMBOLS.length]!;
+  const first = leadSymbolOf(found.alpha.label) ?? SYMBOLS[seedOf(deploymentId, "sym") % SYMBOLS.length]!; // WP-B2-C3: an alpha named for a symbol leads with it
   const second = SYMBOLS[(SYMBOLS.indexOf(first) + 1) % SYMBOLS.length]!;
   const allocation = toCents(d.allocation);
   const unrealized = toCents(d.unrealized);
   const long = unrealized * 7n / 10n;
   const make = (symbol: string, side: "long" | "short", share: bigint, pnl: bigint, index: number): WorldPosition => {
     const mark = units4(MARKS[symbol]!);
-    // quantity in quarter units: the largest of 2, 1, 0.5, 0.25 whose notional stays within the share of the allocation
-    const budget = allocation * share / 100n * 100n; // cents -> 1e-4 units
-    const qUnits = QTYS.find((q) => (q * 2_500n) * mark / 10_000n <= budget) ?? 1n;
+    // quantity in quarter units: the most quarter units whose notional stays within the share of the allocation (WP-B2-C3: a share of its own per deployment, so two books never hold the same size)
+    const budget = allocation * (share * (30n + BigInt(seedOf(deploymentId, `size${index}`) % 21)) / 100n) / 100n * 100n; // cents -> 1e-4 units
+    const qUnits = maxQuarterUnits(budget, mark);
     const quantity = qUnits * 2_500n; // 1e-4 units
     const shift = (pnl * 100n * 10_000n) / quantity; // pnl (1e-4 units) per unit of quantity
     const entry = side === "long" ? mark - shift : mark + shift;
@@ -256,7 +256,7 @@ export function accountFact(accountId: string): AccountFact | null {
   if (meta === undefined || booked.length === 0) return null;
   const allocation = booked.reduce((n, d) => n + toCents(d.allocation), 0n);
   const realized = booked.reduce((n, d) => n + toCents(d.realized), 0n);
-  const unrealized = booked.reduce((n, d) => n + toCents(d.unrealized), 0n);
+  const unrealized = booked.reduce((n, d) => n + (specRetired(d) ? 0n : toCents(d.unrealized)), 0n); // WP-B2-C3: a stage the alpha left holds nothing open, so it has no unrealized PnL
   const total = allocation + realized;
   const locked = allocation / 10n;
   return { id: accountId, name: meta.name, venue: binding?.venue ?? "BINANCE", environment: booked[0]!.environment, bindingId: meta.binding, currency: booked[0]!.currency, deployments: booked, allocation, realized, unrealized, total, locked, free: total - locked };
@@ -264,10 +264,11 @@ export function accountFact(accountId: string): AccountFact | null {
 
 /** The ledger of an account over time: for each booked deployment its allocation plus a cumulative realized PnL that ends on its realized, summed. The last point IS `AccountFact.total`. */
 export function ledgerSeries(accountId: string, fromMs: number, toMs: number, points: number): { t: number; value: string }[] {
+  // WP-B2-C3: the ledger of an account is its deployments' book path (`bookLevels`), so every chart of the same book, whatever its window and sampling, reads the same path
   const fact = accountFact(accountId);
   if (fact === null || points < 2) return [];
-  const parts = fact.deployments.map((d) => ({ alloc: toCents(d.allocation), walk: netPnlSeries(d.id, fromMs, toMs, points, toCents(d.realized)) }));
-  return Array.from({ length: points }, (_, i) => ({ t: parts[0]!.walk[i]!.t, value: fromCents(parts.reduce((n, p) => n + p.alloc + toCents(p.walk[i]!.value), 0n)) }));
+  const levels = bookLevels(fact.deployments.map((d) => d.id), points, fact.deployments.reduce((n, d) => n + toCents(d.allocation), 0n), fact.total);
+  return levels.map((value, i) => ({ t: Math.round(fromMs + ((toMs - fromMs) * i) / (points - 1)), value: fromCents(value) }));
 }
 
 /** A physical binding: the sleeves booked on it (each a logical account of the world) and what the venue holds for all of them. */
@@ -435,3 +436,56 @@ export function incidentChildrenBody(incidentId: string, workspaceId: string): R
 
 /** WORLD: a native deployment's exposure IS the gross notional of its own positions (QA3 R2-01: a running 40,000 deployment with two positions never states exposure 0). */
 for (const alphaSpec of NATIVE_ALPHAS) for (const spec of alphaSpec.deployments) spec.exposure = grossNotional(spec.id);
+
+// ===== WP-B2-C3 begin: money/figures of the world (one level path per book, retired stages hold nothing open, the symbol an alpha is named for)
+/** The symbol an alpha named for it leads with ("BTC Trend" trades BTCUSDT first); null when the label names none. */
+export function leadSymbolOf(label: string): (typeof SYMBOLS)[number] | null {
+  const word = label.trim().split(/\s+/)[0]!.toUpperCase();
+  return SYMBOLS.find((symbol) => (symbol as string) === `${word}USDT`) ?? null;
+}
+/** A deployment whose stage its alpha has left (same rule as `bffWorldStage.isRetired`, local so the world file imports nothing back). */
+export function specRetired(d: DeploymentSpec): boolean {
+  const rank = (stage: string): number => (stage === "LIVE" ? 3 : stage === "CANARY" ? 2 : stage === "SANDBOX" ? 1 : 0);
+  return rank(d.stage) < STAGE_RANK[furthestStage(d.alphaId)];
+}
+/** The unrealized PnL a deployment holds now: a stage the alpha left holds no open position, so none. */
+export const openUnrealizedOf = (d: DeploymentSpec): bigint => (specRetired(d) ? 0n : toCents(d.unrealized));
+
+/** Nodes of every level path: one lattice for every book, so any resample of the same deployments reads the same path. */
+export const LEVEL_NODES = 240;
+/** The bridge of one deployment: a deterministic walk of LEVEL_NODES values (cents), zero at both ends, deep a quarter to a full percent of its allocation. */
+function bridgeOf(d: { id: string; allocation: string }): bigint[] {
+  const amp = toCents(d.allocation) * (150n + BigInt(seedOf(d.id, "wpc3-depth") % 451)) / 10_000n; // a dip of about one to two percent of the allocation, not a tooth
+  let state = BigInt((seedOf(d.id, "wpc3-bridge") % 2_147_483_646) + 1);
+  const n = LEVEL_NODES - 1;
+  const steps = BigInt(Math.max(4, Math.round(Math.sqrt(n) * 0.8)));
+  const walk: bigint[] = [0n];
+  for (let i = 1; i <= n; i += 1) { state = (state * 48_271n) % 2_147_483_647n; walk.push(walk[i - 1]! + ((state % 2001n) - 1000n) * amp / (1000n * steps)); }
+  return walk.map((w, i) => w - walk[n]! * BigInt(i) / BigInt(n));
+}
+const bridgeCache = new Map<string, bigint[]>();
+const bridgeFor = (id: string): bigint[] => {
+  const hit = bridgeCache.get(id);
+  if (hit !== undefined) return hit;
+  const found = deploymentOf(id);
+  const path = found === null ? new Array<bigint>(LEVEL_NODES).fill(0n) : bridgeOf(found.deployment);
+  bridgeCache.set(id, path);
+  return path;
+};
+/**
+ * The level path of a book (cents): `points` samples from `start` to `end` (a straight ramp) plus the sum of its deployments' bridges, resampled from the lattice.
+ * Two charts of the same deployments (a sleeve's Account 360 line, the Portfolio NAV, an alpha's equity line) therefore draw the same path, so their highs and
+ * drawdowns are the same figures. Drawdown = `drawdownOfLevels(levels)` (value / running max - 1).
+ */
+export function bookLevels(deploymentIds: readonly string[], points: number, start: bigint, end: bigint): bigint[] {
+  const bridges = deploymentIds.map(bridgeFor);
+  const last = BigInt(points - 1);
+  return Array.from({ length: points }, (_, i) => {
+    const position = BigInt(i) * BigInt(LEVEL_NODES - 1); // lattice units x (points - 1)
+    const low = Number(position / last);
+    const rest = position % last;
+    const bridge = bridges.reduce((n, b) => n + (rest === 0n || low + 1 >= LEVEL_NODES ? b[low]! : (b[low]! * (last - rest) + b[low + 1]! * rest) / last), 0n);
+    return start + (end - start) * BigInt(i) / last + bridge;
+  });
+}
+// ===== WP-B2-C3 end

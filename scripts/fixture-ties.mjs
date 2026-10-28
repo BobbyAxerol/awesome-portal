@@ -970,6 +970,146 @@ export async function runWorldTies(get) {
       check("W23", refused.status === 400 && JSON.stringify(refused.body).includes("N22_BLOTTER_STAGE_NOT_AVAILABLE"), `stage=LIVE answered ${refused.status}, not the contract's N22_BLOTTER_STAGE_NOT_AVAILABLE refusal`);
     }
   }
+  // ===== WP-B2-C3 begin: money/figures (QA6 R2-01 R2-03 R2-04 R2-06 R2-07 R2-09 R2-10 R2-11 R2-12 R3-07 R5-07 R5-08 R5-10)
+  const c3Alphas = alphaRows.slice(0, 12).filter((a) => alphaResources.has(a.alpha_id));
+  const liveStageOf = (stage) => STAGE_ENV[stage] === "LIVE";
+  const SCALE18 = 10n ** 18n;
+  const worstDrawdown = (points) => { let peak = null; let worst = 0n; for (const v of points) { if (peak === null || v > peak) peak = v; if (peak > 0n) { const dd = (v - peak) * SCALE18 / peak; if (dd < worst) worst = dd; } } return worst; };
+  // W14: ONE definition of the money of a book (R2-03, R5-08): Net PnL = the published realized, a venue = the sum of its deployments, equity = allocation + realized + unrealized, a ledger figure that omits the unrealized is not called equity
+  for (const a of c3Alphas) {
+    const resource = alphaResources.get(a.alpha_id).data;
+    const liveRows = (resource.alpha?.deployments ?? []).filter((d) => liveStageOf(d.stage));
+    if (liveRows.length === 0) continue;
+    const lifecycle = await ok200(`${E}/alphas/${a.alpha_id}/lifecycle?environment=live`);
+    for (const v of lifecycle?.venue_net_pnl ?? []) {
+      const sum = liveRows.filter((d) => d.venue === v.venue && d.currency === v.currency).reduce((n, d) => n + numOf(d.net_pnl), 0n);
+      check("W14", numOf(v.net_pnl) === sum, `alpha ${a.alpha_id}: Contribution by venue ${v.venue} says ${v.net_pnl}, its deployments' Net PnL add up to ${fromUnits(sum)}`);
+    }
+    const overview = await ok200(`${E}/manager/alphas/${a.alpha_id}/overview?environment=live&window=30D`);
+    const rows = overview?.items ?? [];
+    if (rows.length > 0) {
+      const sumKey = (key) => rows.reduce((n, r) => n + (numOf(metricStr(r.economic_partitions?.[0] ?? {}, key)) ?? 0n), 0n);
+      check("W14", sumKey("net_pnl") === liveRows.reduce((n, d) => n + numOf(d.net_pnl), 0n), `alpha ${a.alpha_id}: the dataset Net PnL ${fromUnits(sumKey("net_pnl"))} is not the sum of its live deployments' Net PnL`);
+      check("W14", sumKey("equity_30d_end_value") === sumKey("allocation") + sumKey("net_pnl") + sumKey("unrealized_pnl"), `alpha ${a.alpha_id}: Equity ${fromUnits(sumKey("equity_30d_end_value"))} is not allocation + Net PnL + unrealized`);
+      const open = (resource.positions ?? []).filter((p) => liveRows.some((d) => d.deployment_id === p.deployment_id)).reduce((n, p) => n + (numOf(p.unrealized_pnl) ?? 0n), 0n);
+      check("W14", sumKey("unrealized_pnl") === open, `alpha ${a.alpha_id}: unrealized ${fromUnits(sumKey("unrealized_pnl"))} is not the sum of its open positions' PnL ${fromUnits(open)}`);
+    }
+  }
+  for (const [id, info] of [...deployments].filter(([, d]) => d.stage === "LIVE").slice(0, 8)) {
+    const p = await page("live", id);
+    const figure = p?.body.source_figures?.figures?.find((f) => f.key === "equity");
+    const spec = (alphaResources.get(info.alphaId)?.data.alpha?.deployments ?? []).find((d) => d.deployment_id === id);
+    if (figure === undefined || spec === undefined) continue;
+    const equity = numOf(figure.internal.value);
+    const full = numOf(spec.allocation) + numOf(spec.net_pnl) + numOf(spec.unrealized_pnl);
+    check("W14", equity === full || (figure.label !== "Equity" && equity === numOf(spec.allocation) + numOf(spec.net_pnl)), `${id}: the Live room's "${figure.label}" ${figure.internal.value} is neither allocation + Net PnL + unrealized (${fromUnits(full)}) nor a figure named for what it leaves out`);
+  }
+  // W15: the Alpha 360 equity lines (R2-01, R2-04): one line per account, each the alpha's OWN deployments on it, from the book's first day to the equity of those deployments
+  for (const a of c3Alphas) {
+    const resource = alphaResources.get(a.alpha_id).data;
+    const chart = await ok200(`${E}/views/equity-chart?environment=live&subject_kind=alpha&subject_id=${a.alpha_id}&metric=equity&viewport_px=1440`);
+    const lines = chart?.panel?.data?.series ?? [];
+    for (const line of lines) {
+      const mine = (resource.alpha?.deployments ?? []).filter((d) => liveStageOf(d.stage) && d.account_id === line.account_id);
+      if (mine.length === 0 || line.points.length < 2) continue;
+      const opening = mine.reduce((n, d) => n + numOf(d.allocation), 0n);
+      const closing = mine.reduce((n, d) => n + numOf(d.allocation) + numOf(d.net_pnl) + numOf(d.unrealized_pnl), 0n);
+      check("W15", numOf(line.points[0][1]) === opening, `alpha ${a.alpha_id} "${line.label}": opens at ${line.points[0][1]}, the allocation of its own deployments on ${line.account_id} is ${fromUnits(opening)}`);
+      check("W15", numOf(line.points.at(-1)[1]) === closing, `alpha ${a.alpha_id} "${line.label}": ends at ${line.points.at(-1)[1]}, allocation + Net PnL + unrealized of its own deployments on ${line.account_id} is ${fromUnits(closing)}`);
+      const starts = [];
+      for (const d of mine) {
+        const room = await page(d.stage === "CANARY" ? "canary" : "live", d.deployment_id);
+        const began = d.stage === "CANARY" ? room?.body.lifecycle?.trial?.started_at?.value : room?.body.lifecycle?.activated_at;
+        if (began) starts.push(Date.parse(began));
+      }
+      if (starts.length === mine.length) {
+        const firstDay = Math.min(...starts);
+        // the line starts on the book's first day, at the earliest: nothing is drawn before the first of its deployments ran (the preview moves the instants as one, so the comparison is to the day)
+        check("W15", Math.abs(line.points[0][0] - firstDay) < DAY / 24, `alpha ${a.alpha_id} "${line.label}": the line starts ${new Date(line.points[0][0]).toISOString()}, its first deployment began ${new Date(firstDay).toISOString()}`);
+      }
+    }
+  }
+  // W16: drawdown is the drawdown of a level path, the SAME path in every chart of the book (R2-12, R3-07)
+  for (const a of c3Alphas.slice(0, 6)) {
+    const resource = alphaResources.get(a.alpha_id).data;
+    const liveRows = (resource.alpha?.deployments ?? []).filter((d) => liveStageOf(d.stage));
+    const accounts = new Set(liveRows.map((d) => d.account_id));
+    if (accounts.size !== 1) continue; // one account: the pane and the line are one book
+    const subjects = encodeURIComponent(JSON.stringify([{ subject_type: "ALPHA", subject_id: a.alpha_id }]));
+    const pane = await ok200(`${E}/manager/series?environment=live&metric=DRAWDOWN&window=${encodeURIComponent('"30D"')}&subjects=${subjects}`);
+    const nav = await ok200(`${E}/manager/series?environment=live&metric=NAV&window=${encodeURIComponent('"30D"')}&subjects=${subjects}`);
+    const chart = await ok200(`${E}/views/equity-chart?environment=live&subject_kind=alpha&subject_id=${a.alpha_id}&metric=equity&viewport_px=1440`);
+    const dd = pane?.series?.[0], level = nav?.series?.[0], line = chart?.panel?.data?.series?.[0];
+    if (dd?.state !== "AVAILABLE" || level?.state !== "AVAILABLE" || line === undefined) continue;
+    const levels = level.points.map((p) => numOf(p.value));
+    check("W16", numOf(dd.points.at(-1).value) === (levels.at(-1) - levels.reduce((m, v) => (v > m ? v : m))) * SCALE18 / levels.reduce((m, v) => (v > m ? v : m)), `alpha ${a.alpha_id}: the drawdown pane ends at ${dd.points.at(-1).value}, its own NAV path ends ${fromUnits(levels.at(-1))} under a high of ${fromUnits(levels.reduce((m, v) => (v > m ? v : m)))}`);
+    // the pane and the line above it are one path: their worst drawdowns differ only by the unrealized the line adds (a sawtooth the line cannot produce is a violation)
+    const paneWorst = worstDrawdown(levels), lineWorst = worstDrawdown(line.points.map((p) => numOf(p[1])));
+    const unrealized = liveRows.reduce((n, d) => n + abs(numOf(d.unrealized_pnl)), 0n);
+    const slack = unrealized * SCALE18 / levels.reduce((m, v) => (v > m ? v : m)) + SCALE18 / 1000n; // the unrealized as a share of the NAV, plus 0.1 percentage points
+    check("W16", abs(paneWorst - lineWorst) <= slack, `alpha ${a.alpha_id}: the drawdown pane's worst is ${fromUnits(paneWorst * 100n)}%, the equity line above it ${fromUnits(lineWorst * 100n)}%: not one path`);
+  }
+  for (const [sleeve, portfolio] of [["acc_bnc_core", "pf_TEST_ONLY_core"], ["acc_bnc_sat", "pf_TEST_ONLY_satellite"]]) {
+    const chart = await ok200(`${E}/views/equity-chart?environment=live&subject_kind=account&subject_id=${sleeve}&metric=equity&viewport_px=1440`);
+    const series = chart?.panel?.data?.series?.[0];
+    const subjects = encodeURIComponent(JSON.stringify([{ subject_type: "PORTFOLIO", subject_id: portfolio }]));
+    const dd = (await ok200(`${E}/manager/series?environment=live&metric=DRAWDOWN&window=${encodeURIComponent('"90D"')}&subjects=${subjects}`))?.series?.[0];
+    const nav = (await ok200(`${E}/manager/series?environment=live&metric=NAV&window=${encodeURIComponent('"90D"')}&subjects=${subjects}`))?.series?.[0];
+    if (series === undefined || dd?.state !== "AVAILABLE" || nav?.state !== "AVAILABLE") continue;
+    const levels = series.points.map((p) => numOf(p[1]));
+    check("W16", numOf(nav.points[0].value) === levels[0] && numOf(nav.points.at(-1).value) === levels.at(-1), `${sleeve} vs ${portfolio}: the sleeve line runs ${fromUnits(levels[0])} -> ${fromUnits(levels.at(-1))}, the Portfolio NAV ${nav.points[0].value} -> ${nav.points.at(-1).value}`);
+    const portfolioWorst = dd.points.reduce((m, p) => (numOf(p.value) < m ? numOf(p.value) : m), 0n);
+    check("W16", abs(portfolioWorst - worstDrawdown(levels)) <= SCALE18 / 100_000n, `${sleeve} vs ${portfolio}: the sleeve's worst drawdown is ${fromUnits(worstDrawdown(levels) * 100n)}%, the Portfolio's ${fromUnits(portfolioWorst * 100n)}% (same series, same window)`);
+    // R3-07: the sleeve's open PnL is the sum of its positions' PnL
+    const account = accountResources.get(sleeve)?.data;
+    const rowsPnl = (account?.positions ?? []).reduce((n, p) => n + (numOf(p.unrealized_pnl) ?? 0n), 0n);
+    const stated = numOf(account?.account_equity?.[0]?.unrealized_pnl);
+    if (stated !== null) check("W16", stated === rowsPnl, `${sleeve}: Unrealized PnL ${fromUnits(stated)}, its positions add up to ${fromUnits(rowsPnl)}`);
+  }
+  // W17: one fee model (R2-06): the 30-day cost drag of a live book is not below what its deployments have paid since they began
+  for (const [id, info] of [...deployments].filter(([, d]) => d.stage === "LIVE").slice(0, 8)) {
+    const p = await page("live", id);
+    const paid = numOf(p?.body.source_figures?.figures?.find((f) => f.key === "fees")?.internal?.value);
+    const overview = await ok200(`${E}/manager/alphas/${info.alphaId}/overview?environment=live&window=30D`);
+    const items = overview?.items ?? [];
+    if (paid === null || items.length !== 1 || (items[0].children ?? []).length !== 1) continue; // a row of one deployment is comparable to its room
+    const windowFees = numOf(metricStr(items[0].economic_partitions?.[0] ?? {}, "cost_drag_fees"));
+    // every live run of the world is under thirty days, so the 30-day figure covers the whole run
+    if (windowFees !== null) check("W17", windowFees >= paid, `${id}: the 30D cost drag fees ${fromUnits(windowFees)} are below the ${fromUnits(paid)} the Live room says it has paid since activation`);
+  }
+  // W18: the lifecycle read is taken at the world clock (R2-09 R2-10 R2-11): no event after the read, a stage exit is named for the stage exited, a stage that began has its start event
+  for (const a of alphaRows.slice(0, 12)) {
+    const lifecycle = await ok200(`${E}/alphas/${a.alpha_id}/lifecycle?environment=live`);
+    if (lifecycle === null) continue;
+    for (const e of lifecycle.events?.items ?? []) check("W18", e.at_ms <= lifecycle.read_at_ms, `alpha ${a.alpha_id}: "${e.title}" is dated ${new Date(e.at_ms).toISOString()}, after the read at ${new Date(lifecycle.read_at_ms).toISOString()}`);
+    const exits = (lifecycle.events?.items ?? []).filter((e) => /^(Paper|Sandbox|Canary) exit approved$/.test(e.title));
+    const started = (lifecycle.events?.items ?? []).filter((e) => /^(Paper|Sandbox|Canary|Live) started$/.test(e.title));
+    const rows = new Map((lifecycle.stages ?? []).map((r) => [r.stage, r]));
+    const word = (stage) => stage[0] + stage.slice(1).toLowerCase();
+    const reached = STAGE_RANK[a.stage];
+    if (reached === undefined) continue; // a research-only alpha has no deployment stage to tell
+    for (const stage of ["PAPER", "SANDBOX", "CANARY", "LIVE"]) {
+      const row = rows.get(stage);
+      const event = started.find((e) => e.title === `${word(stage)} started`);
+      const exit = exits.find((e) => e.title === `${word(stage)} exit approved`);
+      // told only for what happened: a stage the alpha has not reached has neither a start nor an exit event; one it has left has both, the exit dated with the stage's own exit
+      check("W18", (STAGE_RANK[stage] <= reached) === (event !== undefined), `alpha ${a.alpha_id} (in ${a.stage}): ${event === undefined ? `no "${word(stage)} started" event` : `"${word(stage)} started" is told`} for a stage it ${STAGE_RANK[stage] <= reached ? "has reached" : "has not reached"}`);
+      if (stage !== "LIVE") check("W18", (STAGE_RANK[stage] < reached) === (exit !== undefined), `alpha ${a.alpha_id} (in ${a.stage}): ${exit === undefined ? `no "${word(stage)} exit approved" event` : `"${word(stage)} exit approved" is told`} for a stage it ${STAGE_RANK[stage] < reached ? "has left" : "has not left"}`);
+      if (row !== undefined && event !== undefined && row.entered_at_ms !== null) check("W18", event.at_ms <= row.entered_at_ms + 1000, `alpha ${a.alpha_id}: the ${stage} start event ${new Date(event.at_ms).toISOString()} is after the stage's entry ${new Date(row.entered_at_ms).toISOString()}`);
+      if (row !== undefined && exit !== undefined && row.exited_at_ms !== null) check("W18", Math.abs(row.exited_at_ms - exit.at_ms) <= DAY, `alpha ${a.alpha_id}: "${exit.title}" ${new Date(exit.at_ms).toISOString()}, the ${stage} stage exited ${new Date(row.exited_at_ms).toISOString()}`);
+    }
+  }
+  // W19: a limit exactly reached is full, not breached (R5-07); a stage that ended has no daily PnL (R5-10)
+  for (const [id, info] of [...deployments].filter(([, d]) => d.stage === "CANARY" || d.stage === "LIVE").slice(0, 12)) {
+    const room = await page("canary", id);
+    if (room === null) continue;
+    const rows = room.body.envelope_compliance?.rows ?? [];
+    const over = rows.some((r) => numOf(r.consumed?.value) > numOf(r.approved));
+    if (rows.length > 0) check("W19", (room.body.envelope_compliance?.verdict?.state === "BREACH") === over, `${id}: the envelope verdict says ${room.body.envelope_compliance?.verdict?.state}, but ${over ? "a cap is above its approved limit" : "no cap is above its approved limit"} (exactly at the limit is within)`);
+    const daily = (room.body.kpis ?? []).find((k) => k.key === "daily_pnl");
+    if (daily !== undefined && room.runtime === "STOPPED") check("W19", daily.value === null, `${id}: the trial is STOPPED but states a daily PnL of ${daily.value}`);
+  }
+  // ===== WP-B2-C3 end
   return { ties };
 }
 

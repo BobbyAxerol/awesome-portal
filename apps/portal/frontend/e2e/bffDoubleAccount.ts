@@ -53,8 +53,8 @@ import { fileURLToPath } from "node:url";
 import { scopedResourceV2 } from "./bffDoubleScopedResource";
 import { addDecimal, scaled, sumByCurrency } from "./bffScale";
 import { isPositiveMode, positiveBookOf } from "./bffPositiveMode";
-import { accountFact, bindingFact, ledgerSeries } from "./bffWorld";
-import { accountPositions, setAccountEnvironmentProvider, wholeAccountOf } from "./bffWorldBooks"; // WP-B2-C
+import { accountFact, bindingFact, ledgerSeries, LEVEL_NODES } from "./bffWorld";
+import { costOverRun, accountPositions, setAccountEnvironmentProvider, wholeAccountOf } from "./bffWorldBooks"; // WP-B2-C, WP-B2-C3
 import { blotterBookOf } from "./bffDoubleOverview";
 import { isRetired } from "./bffWorldStage"; // WP-B2-A3
 import { ORDER_BOOK_AS_OF_MS } from "./bffWorldOrders"; // WP-B2-O
@@ -572,7 +572,7 @@ function positiveAccount(spec: AccountSpec, id: string): AccountSpec {
       signed_qty: p.side === "short" ? `-${p.quantity}` : p.quantity, quantity: p.quantity, notional: p.notional, unrealized_pnl: p.unrealised, currency, updated_at: ACCOUNT_DOUBLE_AS_OF,
     }));
     // ===== WP-B2-C end
-    rows.account_equity = [{ account_id: primary, currency, unrealized_pnl: fromCents(own.unrealized), fee_total: fromCents(own.allocation * 5n / 10_000n), funding_pnl: fromCents(own.allocation * 2n / 10_000n), ts: ACCOUNT_DOUBLE_AS_OF, ts_ms: AS_OF_MS }];
+    rows.account_equity = [{ account_id: primary, currency, unrealized_pnl: fromCents(own.unrealized), fee_total: fromCents(costOverRun(own.allocation, "fees")), funding_pnl: fromCents(costOverRun(own.allocation, "funding")), ts: ACCOUNT_DOUBLE_AS_OF, ts_ms: AS_OF_MS }];
     rows.broker_sync = [0, 30, 60, 90, 120].map((minutes, n) => ({ sync_id: `bs_${primary}_${n}`, source: "BROKER", status: "SYNCED", currency, buying_power: fromCents((shared ? wholeAccountOf(primary, owners)!.free : free) - BigInt(n) * 1250n), synced_at: iso(minutesBefore(minutes)), synced_at_ms: minutesBefore(minutes) }));
     if (!shared) rows.differences = [{ currency, portal_free: fromCents(free), broker_buying_power: fromCents(free), delta: "0.00", in_sync: true }];
     else delete rows.differences;
@@ -740,9 +740,10 @@ function equityChart(search: URLSearchParams): BffAnswerAccount | null {
   const environment = spec.environment;
   const world = isPositiveMode() ? accountFact(subjectId) : null; // WORLD: the equity line ends on the ledger the account states
   const has = world !== null || subjectId === "acc_bnc_core";
-  const step = world !== null ? 60 * 60_000 : 30 * 60_000;
-  const t0 = AS_OF_MS - (world !== null ? 47 : 5) * step;
-  const points: [number, string | null][] = world !== null ? ledgerSeries(subjectId, t0, AS_OF_MS, 48).map((p): [number, string | null] => [p.t, p.value]) : [
+  // WP-B2-C3 (R3-07): a sleeve of the world draws the SAME 90-day, 240-node level path wherever it is read (Core's line is this one), so its highs and drawdown are the Portfolio's
+  const step = world !== null ? Math.round((89 * 86_400_000) / (LEVEL_NODES - 1)) : 30 * 60_000;
+  const t0 = world !== null ? AS_OF_MS - 89 * 86_400_000 : AS_OF_MS - 5 * step;
+  const points: [number, string | null][] = world !== null ? ledgerSeries(subjectId, t0, AS_OF_MS, LEVEL_NODES).map((p): [number, string | null] => [p.t, p.value]) : [
     [t0, "87500.00"], [t0 + step, "87620.40"], [t0 + 2 * step, null], [t0 + 3 * step, "88010.10"], [t0 + 4 * step, "88150.00"], [t0 + 5 * step, "88200.00"],
   ];
   return {

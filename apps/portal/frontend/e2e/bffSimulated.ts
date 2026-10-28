@@ -22,7 +22,7 @@ import { fixtureNowMs, scaled } from "./bffScale";
 import { overlayCapitalPreview, overlayHistorySubjects, overlayInboxSubjects, overlayR2Review } from "./bffApprovalWorld"; // WP-E
 import { simulateStage, stagePageIsForeign } from "./bffSimulatedStage";
 import { isPositiveMode } from "./bffPositiveMode";
-import { accountFact, bindingFact, bindingOfAccount, deploymentOf, fromCents, ledgerSeries, toCents, worldAlphas } from "./bffWorld";
+import { accountFact, bindingFact, bindingOfAccount, deploymentOf, fromCents, ledgerSeries, LEVEL_NODES, toCents, worldAlphas } from "./bffWorld";
 // ===== WP-F3 end =====
 
 type Obj = Record<string, unknown>;
@@ -230,7 +230,7 @@ function overlayChart(body: Obj, metric: string): Obj {
     const lastT = points[points.length - 1]![0];
     const subject = isObj(out.subject) ? String(out.subject.id) : "";
     // WORLD: the equity line of an account of the world ends on that account's ledger; any other account keeps the F2 walk
-    points = isPositiveMode() && accountFact(subject) !== null ? ledgerSeries(subject, lastT - 89 * 86_400_000, lastT, 90).map((p): [number, string | null] => [p.t, p.value]) : accountEquityPoints(lastT); // WP-F2: a 90-day daily series ending on the double's own last instant
+    points = isPositiveMode() && accountFact(subject) !== null ? ledgerSeries(subject, lastT - 89 * 86_400_000, lastT, LEVEL_NODES /* WP-B2-C3: the lattice of the world's level paths, so a sleeve's drawdown is the Portfolio's */).map((p): [number, string | null] => [p.t, p.value]) : accountEquityPoints(lastT); // WP-F2: a 90-day daily series ending on the double's own last instant
     series.points = points;
   }
   if (metric !== "drawdown") return out;
