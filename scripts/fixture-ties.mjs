@@ -1409,6 +1409,18 @@ export async function runWorldTies(get) {
       }
     }
   }
+  // ── W47: "account (new)" names an account that does not exist; an existing account is named as it is, with its capital check (N3-07) ──
+  {
+    for (const row of approvalRows.filter((r) => r.gate === "R2")) {
+      const d = await ok200(`${E}/governance/approvals/${row.id}/r2`);
+      const entries = (d?.readiness ?? []).flatMap((g) => g.entries ?? []);
+      const account = entries.find((e) => e.label === "account (new)" || e.label === "account");
+      if (account === undefined) continue;
+      const exists = (await get(`${E}/resources/accounts/${account.value}`)).status === 200;
+      check("W47", !(exists && account.label === "account (new)"), `${row.id}: "account (new)" names ${account.value}, which already exists`);
+      if (exists) check("W47", entries.some((e) => e.label === "capital check"), `${row.id}: ${account.value} exists and the request states no capital check of it`);
+    }
+  }
   // ===== WP-B2-A3 round D end
   return { ties };
 }

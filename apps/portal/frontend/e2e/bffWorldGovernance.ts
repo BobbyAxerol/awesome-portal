@@ -21,7 +21,7 @@ import { matchesView } from "../src/execution/api/fixtureData";
 import { approvalInboxEnvelope } from "./bffDoubleApprovalEnvelopes";
 import { scaled, type DeploymentSpec } from "./bffScale";
 import {
-  DAY_MS, fromCents, incidentState, NATIVE_ALPHAS, OPS_READ_MS, PEOPLE, personByUsername, toCents, 
+  DAY_MS, fromCents, incidentState, NATIVE_ALPHAS, OPS_READ_MS, PEOPLE, bindingOfAccount, personByUsername, toCents, 
   WORLD_INCIDENTS, WORLD_NOW_MS, WORLD_OPERATIONS, worldAlphas, type StageName, type WorldIncident, type WorldOperation,
 } from "./bffWorld";
 import { gateMinimumDays, stageBookOf, stageHistoryOf } from "./bffWorldStage"; // WP-B2-S3: gateMinimumDays
@@ -518,7 +518,18 @@ export function overlayWorldR2(body: unknown, id: string): unknown {
   if (Array.isArray(out.readiness)) {
     for (const group of out.readiness as Obj[]) for (const entry of (group.entries ?? []) as Obj[]) {
       const deployment = alpha.deployments.find((d) => d.environment === "paper") ?? alpha.deployments[0];
-      if (entry.label === "account (new)") entry.value = deployment?.accountId ?? "acc_pap_sim"; // WP-B2-A3: a Paper activation of an alpha with no deployment uses the Paper simulator account, which resolves in Accounts
+      // ===== WP-B2-A3 (N3-07): "(new)" only for an account the world does not hold; an existing one is named as it is and its capital check is stated (it may already be over-allocated)
+      if (entry.label === "account (new)") {
+        const accountId = deployment?.accountId ?? "acc_pap_sim";
+        entry.value = accountId;
+        const binding = bindingOfAccount(accountId);
+        if (binding !== null) {
+          entry.label = "account";
+          const over = binding.used > binding.equity;
+          (group.entries as Obj[]).push({ label: "capital check", value: `${over ? "EXCEEDED" : "WITHIN"} · ${groupedMoney(fromCents(binding.used))} allocated on the binding, equity ${groupedMoney(fromCents(binding.equity))}`, revision: entry.revision });
+        }
+      }
+      // ===== WP-B2-A3 end
     }
   }
   out.capital = [
