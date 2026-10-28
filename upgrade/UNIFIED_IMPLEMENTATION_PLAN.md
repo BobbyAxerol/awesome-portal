@@ -16739,3 +16739,13 @@ secret/key/session/grant/command/Live or installed image/config changed here.
 Cleanup on SGP: NO_ACTION_NEEDED, no test/build/private resource created.
 Rollback for this delivery is Markdown Git history only. Full08/read09 and
 ELP2-10 remainNOT_MET; no phase transition or runtime authority is inferred.
+
+**Core ACK 28Oct:** [Independent E1–E5 consumption and incremental return](execution_loop/evidence/ELP2-10/CORE_TO_EDGE_CONSUMPTION_ACK_2026-10-28.md).
+The expired binding/window is CHANGE; the ACK is not installed or connected
+acceptance. Core prepares lanes independently; Edge remains source coordinator.
+Core test-only commit `b0571ba99` checks the exact seven discovery request
+fields. Focused tests: discovery 98/98, two loopback mTLS files 116/116 and six
+other files 196/196 (overlapping runs, not additive coverage). Source revisions
+above JavaScript's safe-integer range are a fail-closed Core/Edge compatibility
+question, not proof of source failure. E3 real carrier mapping, E4 genuine
+original/gateway, E5 real calendar and approved 14-group budget remain open.
