@@ -1562,6 +1562,7 @@ function wpcAlphaResource(method: string, path: string, search: URLSearchParams)
   const match = /^\/resources\/alphas\/([^/]+)$/.exec(path);
   // WP-B2-S3 (QA7 R1-01): in the world lane the alpha resource is the alpha's own whatever the workspace (the Overview link carries workspace_id=ws_TEST_ONLY) and whatever the scale; only the legacy lane keeps the canned book
   if (method !== "GET" || match === null || (legacy() && (search.has("workspace_id") || scaled().alphas.length === 0))) return null;
+  if (search.get("workspace_id") === "ws_TEST_SCOPED_V2") return null; // WP-B2-S3: the scoped workspace answers the closed V2 body, never overlaid
   const id = decodeURIComponent(match[1]!);
   const spec = [...WPC_ALPHAS, ...scaled().alphas, IDEA_E].find((alpha) => alpha.id === id); // WP-B2-A3
   // QA3 R2-05: an id nobody published is a 404, not a real alpha under another name (the double's own refusal ids keep their answers).
@@ -2333,6 +2334,7 @@ export function wpAlphaResource(body: unknown, alphaId: string): unknown {
   const spec = [...scaled().alphas, ...WPC_ALPHAS, ...SUITE_ALPHAS, IDEA_E].find((entry) => entry.id === alphaId);
   const root = body as Draft;
   if (spec === undefined || root === null || typeof root !== "object" || root.data === undefined || root.data === null) return body;
+  if (typeof root.schema_version === "string" && /\.v[2-9]$/.test(root.schema_version)) return body; // WP-B2-S3: a closed V2 body (ws_TEST_SCOPED_V2) is never overlaid
   const environment = String(root.selected_environment ?? "live");
   const own = spec.deployments.filter((deployment) => deployment.environment === environment);
   if (own.length === 0) { // WP-B2-C: an alpha with no book in this environment holds no position there (the double's static positions are another world's marks)

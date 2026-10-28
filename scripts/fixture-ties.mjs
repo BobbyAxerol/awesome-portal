@@ -1071,6 +1071,18 @@ export async function runWorldTies(get) {
     check("W132", r.status === 200, `${id} (${kind}) in the scoped workspace answers ${r.status}`);
     if (r.status === 200 && /\.v2$/.test(String(r.body?.schema_version))) check("W132", r.body.certification?.alpha_name === undefined && r.body.certification?.account_id === undefined, `${id}: a V2 body carries V1 identity keys`);
   }
+  // W133 (reader conformance W129): the alpha resource of the scoped workspace is the closed V2 shape for every alpha (one key set at the top and under data; the world overlay never touches it)
+  {
+    const shapes = new Map();
+    for (const a of alphaRows.slice(0, 8)) {
+      const r = await get(`${E}/resources/alphas/${a.alpha_id}?workspace_id=ws_TEST_SCOPED_V2`);
+      if (r.status !== 200) continue;
+      check("W133", /\.v2$/.test(String(r.body?.schema_version)), `${a.alpha_id}: the scoped resource says ${r.body?.schema_version}`);
+      const shape = JSON.stringify([Object.keys(r.body ?? {}).sort(), Object.keys(r.body?.data ?? {}).sort()]);
+      shapes.set(shape, [...(shapes.get(shape) ?? []), a.alpha_id]);
+    }
+    check("W133", shapes.size <= 2, `the scoped alpha resource has ${shapes.size} different shapes: ${[...shapes.values()].map((x) => x.join(",")).join(" / ")}`);
+  }
   // ===== WP-B2-S3 end
   // ===== WP-B2-A3 begin
   // ── W19: a request exists only for the NEXT gate of its subject, once, and its quorum is open (R3-02, R3-09, R3-10, R3-03) ───────────────────────────────
