@@ -71,10 +71,10 @@ const deployment = (id: string, alphaId: string, stage: DeploymentSpec["stage"],
   id, alphaId, stage, environment, venue: "BINANCE",
   accountId: environment === "paper" ? "acc_pap_sim" : environment === "sandbox" ? "acc_tn_bnc" : SLEEVE_OF_PORTFOLIO[portfolio[0]] ?? `acct_${id}`,
   portfolioId: portfolio[0], portfolioName: portfolio[1], currency: "USDT", allocation, exposure: "0", realized, unrealized, health: "READY", state, active: state === "ACTIVE",
-  updatedAt: "2026-10-22T11:00:00Z",
+  updatedAt: "2026-10-17T11:00:00Z", // WP-B2-O: never after the world clock (WORLD_NOW)
 });
 const alpha = (id: string, label: string, version: string, owner: string | null, health: AlphaSpec["health"], deployments: DeploymentSpec[]): AlphaSpec =>
-  ({ id, label, version, owner, stages: [...new Set(deployments.map((entry) => entry.stage))], health, attention: [], deployments, updatedAt: "2026-10-22T11:00:00Z" });
+  ({ id, label, version, owner, stages: [...new Set(deployments.map((entry) => entry.stage))], health, attention: [], deployments, updatedAt: "2026-10-17T11:00:00Z" }); // WP-B2-O: never after the world clock
 
 /** The native alphas of the e2e suite (the ids the doubles and the audit open), booked into the TEST_ONLY portfolios. */
 export const NATIVE_ALPHAS: AlphaSpec[] = [

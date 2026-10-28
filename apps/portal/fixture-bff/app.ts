@@ -21,7 +21,8 @@ import { setUsersDoubleLastSignIn, setUsersDoubleVariant, type UsersDoubleVarian
 import { isScaleName, setFixtureNow, setFixtureScale, type ScaleName } from "../frontend/e2e/bffScale";
 import { isReviewProfile, reviewCatalog, reviewHtml, type ReviewProfile } from "./review-catalog";
 import { answerReviewManager, wpAccountBook, wpAlphaResource, wpDeploymentFact, wpPortfolioBook, wpRecall } from "./review-manager";
-import { setPositiveMode } from "../frontend/e2e/bffPositiveMode";
+import { isPositiveMode, setPositiveMode } from "../frontend/e2e/bffPositiveMode";
+import { WORLD_NOW_MS } from "../frontend/e2e/bffWorld";
 import { commandStoryRoute } from "./command-story";
 import { applyScenarioBody, resetFixtureTransitions, scenarioRequest, scenarioVariants } from "./scenario-apply";
 import { approvalCapital, rosterNames } from "./roster-names";
@@ -174,6 +175,9 @@ function applyScenarioToDoubles(config: FixtureConfig): void {
   setOverviewDoubleVariants({ ...chosen.overview, ...config.overview });
   setUsersDoubleVariant(config.users ?? chosen.users);
 }
+
+/** The reads written against another instant than the world's (WP-B2-O): served at the world clock. */
+const WORLD_CLOCK_READS = /^\/api\/v1\/execution\/(?:alphas|manager\/fund-overview|operations(?:\/incidents\/[^/]+)?)$/;
 
 /* ── the request ────────────────────────────────────────────────────────── */
 
@@ -452,7 +456,11 @@ async function handle(config: FixtureConfig, incoming: IncomingMessage, response
 
   const answered = visitDigest(config, request) ?? answerFor(config, request);
   if (answered !== null) {
-    const served = config.rebaseTime && typeof answered.body !== "string" ? rebaseBody(answered.body, OPERATIONS_V2_DOUBLE_NOW_ISO, Date.now()) : answered.body;
+    // WP-B2-O: ONE clock. The fleet, the fund dataset, the operations queue and an incident were written against 22 Aug / 1 Sep; in the positive world they are served moved to the
+    // world clock exactly as the preview moves them to the real one (their latest content = the world's now), so every read of the world states the same instant.
+    const served = config.rebaseTime && typeof answered.body !== "string" ? rebaseBody(answered.body, OPERATIONS_V2_DOUBLE_NOW_ISO, Date.now())
+      : isPositiveMode() && answered.status === 200 && typeof answered.body !== "string" && WORLD_CLOCK_READS.test(url.pathname) ? rebaseBody(answered.body, OPERATIONS_V2_DOUBLE_NOW_ISO, WORLD_NOW_MS)
+      : answered.body;
     send(response, config, answered.status, served, { ...answered.headers });
     return;
   }

@@ -10,6 +10,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createFixtureServer, loadConfig, resetFixtureGlobals } from "../../../fixture-bff/app";
 import { resetScenario } from "../../../fixture-bff/scenario";
 import { NATIVE_ALPHAS, WORLD_NOW_MS, worldAlphas } from "../../e2e/bffWorld";
+import { isRetired, PAPER_POLICY_MIN_TRADES, stageWindowOf } from "../../e2e/bffWorldStage";
 import { FIRST_PAGE_ROWS, ORDER_BOOK_AS_OF_MS, WORKING_STATES } from "../../e2e/bffWorldOrders";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -77,7 +78,7 @@ describe.each([{ rebase: "0" }, { rebase: "1" }])("one order book (FIXTURE_REBAS
   it("a working order is among the newest rows, and every canary deployment holds exactly one", () => {
     const rows = blotter;
     rows.forEach((o, index) => { if (WORKING_STATES.includes(String(o.status))) expect(index, `${o.order_id} is working but older than the first page`).toBeLessThan(FIRST_PAGE_ROWS); });
-    const canaries = worldAlphas().flatMap((a) => a.deployments).filter((d) => d.stage === "CANARY");
+    const canaries = worldAlphas().flatMap((a) => a.deployments).filter((d) => d.stage === "CANARY" && !isRetired(d.id));
     expect(canaries.length).toBeGreaterThan(0);
     for (const d of canaries) {
       const mine = rows.filter((o) => o.deployment_id === d.id);
@@ -86,6 +87,34 @@ describe.each([{ rebase: "0" }, { rebase: "1" }])("one order book (FIXTURE_REBAS
       if (index >= FIRST_PAGE_ROWS) continue; // a deployment whose newest order is not on the first page holds none (nothing can be scoped to it on the first page)
       expect(mine.filter((o) => WORKING_STATES.includes(String(o.status))).map((o) => `${o.status} ${o.order_type}`), d.id).toEqual(["PARTIALLY_FILLED LIMIT"]);
     }
+  });
+
+
+  it("the book is newest first by submit time", () => {
+    for (let i = 1; i < blotter.length; i += 1) expect(ms(blotter[i - 1]!.submitted_at), blotter[i]!.order_id).toBeGreaterThanOrEqual(ms(blotter[i]!.submitted_at));
+  });
+
+  it("a retired stage holds nothing after its exit and nothing open; a retired Paper stage holds the gate's minimum fills in the book (B-S handoff)", () => {
+    const retired = worldAlphas().flatMap((a) => a.deployments).filter((d) => isRetired(d.id));
+    expect(retired.length).toBeGreaterThan(0);
+    const shiftMs = blotterAsOf - WORLD_NOW_MS;
+    let paperChecked = 0;
+    for (const d of retired) {
+      const window = stageWindowOf(d.id)!;
+      const orders = blotter.filter((o) => o.deployment_id === d.id);
+      const fills = blotterFills.filter((f) => orders.some((o) => o.client_order_id === f.client_order_id));
+      for (const o of orders) {
+        expect(WORKING_STATES.includes(String(o.status)), `${d.id} ${o.order_id} is ${o.status} on a retired stage`).toBe(false);
+        expect(ms(o.submitted_at), `${d.id} ${o.order_id} is before the stage began`).toBeGreaterThanOrEqual(window.fromMs + shiftMs);
+        expect(ms(o.updated_at), `${d.id} ${o.order_id} is after the exit`).toBeLessThanOrEqual(window.toMs + shiftMs);
+      }
+      for (const f of fills) expect(ms(f.trade_time), `${d.id} ${f.fill_id} is after the exit`).toBeLessThanOrEqual(window.toMs + shiftMs);
+      if (d.environment === "paper" && d.stage === "PAPER") {
+        expect(fills.length, `${d.id} fills in the book`).toBeGreaterThanOrEqual(PAPER_POLICY_MIN_TRADES);
+        paperChecked += 1;
+      }
+    }
+    expect(paperChecked).toBeGreaterThan(0);
   });
 
   /** A record of an order anywhere equals the blotter's, on every member it carries. */
@@ -112,7 +141,7 @@ describe.each([{ rebase: "0" }, { rebase: "1" }])("one order book (FIXTURE_REBAS
   const blotterQty = (id: string, printed: string): string => (Number(printed) === Number(book().get(id)!.quantity) ? String(book().get(id)!.quantity) : printed);
 
   it("each Canary room's open order exists in the blotter with the same facts (R5-01)", async () => {
-    const canaries = worldAlphas().flatMap((a) => a.deployments).filter((d) => d.stage === "CANARY" && blotter.some((o) => o.deployment_id === d.id));
+    const canaries = worldAlphas().flatMap((a) => a.deployments).filter((d) => d.stage === "CANARY" && !isRetired(d.id) && blotter.some((o) => o.deployment_id === d.id));
     const checked: string[] = [];
     for (const d of canaries) {
       const room = await get(`${E}/deployments/${d.id}/canary`);

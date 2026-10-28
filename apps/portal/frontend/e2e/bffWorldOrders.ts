@@ -30,6 +30,8 @@ export const HOP = { riskGrant: SECOND, venueAck: 2 * SECOND, firstFill: 4 * SEC
 
 /** The rows a first page of the blotter holds. A working order is never older than this many rows (see `worldStatus`). */
 export const FIRST_PAGE_ROWS = 50;
+/** The stage label of a deployment whose stage its alpha has left (see bffWorldStage.isRetired). */
+export const RETIRED = "RETIRED";
 export const WORKING_STATES: readonly string[] = ["ACCEPTED", "SUBMITTED", "PARTIALLY_FILLED"];
 
 /**
@@ -38,6 +40,8 @@ export const WORKING_STATES: readonly string[] = ["ACCEPTED", "SUBMITTED", "PART
  *  - a working order older than the first page becomes a finished one (partly filled -> filled, accepted / submitted -> canceled).
  */
 export function worldStatus(index: number, deployments: number, stage: string | null, drawn: string): string {
+  // a retired stage (its alpha has moved on) holds nothing open: its working orders ended (partly filled -> filled, accepted / submitted -> canceled)
+  if (stage === RETIRED && WORKING_STATES.includes(drawn)) return drawn === "PARTIALLY_FILLED" ? "FILLED" : "CANCELED";
   if (mustRest(index, deployments, stage)) return "PARTIALLY_FILLED";
   if (index >= FIRST_PAGE_ROWS && WORKING_STATES.includes(drawn)) return drawn === "PARTIALLY_FILLED" ? "FILLED" : "CANCELED";
   return drawn;
@@ -58,8 +62,8 @@ export interface OrderClock {
 export const orderSubmittedMs = (index: number): number => ORDER_BOOK_AS_OF_MS - NEWEST_LEAD_MS - index * ORDER_SPACING_MS - (index % 5) * SECOND;
 
 /** `riskRejected`: refused by the risk gate before any grant (no grant, no venue hop). `pieces`: the number of fills (0 for an order that traded nothing). */
-export function orderClock(index: number, status: string, pieces: number, riskRejected: boolean): OrderClock {
-  const submittedMs = orderSubmittedMs(index);
+export function orderClock(index: number, status: string, pieces: number, riskRejected: boolean, submittedAtMs: number = orderSubmittedMs(index)): OrderClock {
+  const submittedMs = submittedAtMs;
   const grant = submittedMs + HOP.riskGrant;
   const ack = submittedMs + HOP.venueAck;
   if (status === "REJECTED") {
@@ -76,3 +80,16 @@ export function orderClock(index: number, status: string, pieces: number, riskRe
 export function orderPath(clock: OrderClock): (number | null)[] {
   return [clock.submittedMs, clock.riskGrantMs, clock.venueAckMs, clock.fillMs[0] ?? null];
 }
+
+/**
+ * The submit instants of the orders of a RETIRED deployment: `count` orders spread evenly over its stage window, the newest an hour before the exit, each with the
+ * same sub-minute stagger as the live book, so every order and every fill of a retired stage lies inside [stage start, exit] and nothing is dated after the exit.
+ */
+export function retiredSubmitMs(window: { fromMs: number; toMs: number }, count: number, occurrence: number, index: number): number {
+  const hour = 60 * MINUTE;
+  const spacing = Math.max(MINUTE, Math.floor((window.toMs - window.fromMs - 2 * hour) / Math.max(1, count) / SECOND) * SECOND);
+  return window.toMs - hour - occurrence * spacing - (index % 5) * SECOND;
+}
+/** Fills per reserved order of a retired Paper stage (three pieces) and how many orders reach the gate's minimum trade count. */
+export const RESERVED_PIECES = 3;
+export const reservedOrdersFor = (minTrades: number): number => Math.ceil(minTrades / RESERVED_PIECES);

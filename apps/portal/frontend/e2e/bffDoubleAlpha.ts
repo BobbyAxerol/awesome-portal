@@ -320,13 +320,14 @@ function subjectPage(id: string, relation: "orders" | "fills", search: URLSearch
   // WORLD: an alpha's orders and fills are the rows of ITS OWN deployments in the blotter (same ids, same accounts, same marks), not the double's one book
   const own = isPositiveMode() ? worldAlphas().find((alpha) => alpha.id === id) : undefined;
   const ownDeployments = own?.deployments.filter((deployment) => deployment.environment === environment) ?? [];
+  const inWorld = isPositiveMode(); // WP-B2-O: in the world there is ONE order book; an alpha without a deployment here has no orders (never a canned book)
   if (own !== undefined && ownDeployments.length > 0) {
     const books = ownDeployments.map((deployment) => blotterBookOf(deployment.id));
     rows = relation === "orders"
       ? books.flatMap((book) => book.orders).map((row) => pick(row, ORDER_KEYS, ["trigger_price", "error_code", "error_message", "deployment_id"])).sort((a, b) => String(b.submitted_at).localeCompare(String(a.submitted_at)))
       : books.flatMap((book) => book.fills).map((row) => pick(row, FILL_KEYS)).sort((a, b) => String(b.trade_time).localeCompare(String(a.trade_time)));
-  } else if (own !== undefined) {
-    // WP-B2-O: an alpha of the world with no deployment in this environment has no orders and no fills there (the canned rows are not orders of the book)
+  } else if (inWorld) {
+    // WP-B2-O: an alpha of the world (or a fleet idea the world holds no deployment of) with no deployment in this environment has no orders and no fills there (the canned rows are not orders of the book)
     rows = [];
   } else if (relation === "orders") {
     if (after === ORDERS_CURSOR) rows = ALPHA_DOUBLE_ORDERS_P2;
@@ -343,16 +344,16 @@ function subjectPage(id: string, relation: "orders" | "fills", search: URLSearch
     profile_id: ENV_PROFILE[environment],
     resource: { kind: "alpha", id, resolution: "PUBLISHED_STRATEGY_ID" },
     timeframe: { value: "1h", provenance: "DERIVED_STRATEGY_ID_SUFFIX", source_field: null },
-    source_health: { availability: own !== undefined && rows.length === 0 ? "EMPTY" : "AVAILABLE", freshness: "FRESH", completeness: "COMPLETE", as_of_ms: ORDER_BOOK_AS_OF_MS }, // WP-B2-O: the world clock (== ALPHA_DOUBLE_AS_OF_MS)
+    source_health: { availability: inWorld && rows.length === 0 ? "EMPTY" : "AVAILABLE", freshness: "FRESH", completeness: "COMPLETE", as_of_ms: ORDER_BOOK_AS_OF_MS }, // WP-B2-O: the world clock (== ALPHA_DOUBLE_AS_OF_MS)
     coverage: {
-      retained_row_count: own !== undefined ? rows.length : relation === "orders" ? ALPHA_DOUBLE_ORDERS_P1.length + ALPHA_DOUBLE_ORDERS_P2.length : ALPHA_DOUBLE_FILLS.length,
+      retained_row_count: inWorld ? rows.length : relation === "orders" ? ALPHA_DOUBLE_ORDERS_P1.length + ALPHA_DOUBLE_ORDERS_P2.length : ALPHA_DOUBLE_FILLS.length,
       // WP-B2-O: in the world the coverage is the rows' own span (their latest change, never past the as-of)
-      oldest_observed_at_ms: own !== undefined ? (rows.length > 0 ? Math.min(...rows.map((r) => Date.parse(String(r.submitted_at ?? r.trade_time)))) : null) : T0,
-      newest_observed_at_ms: own !== undefined ? (rows.length > 0 ? Math.max(...rows.map((r) => Date.parse(String(r.updated_at ?? r.trade_time ?? r.submitted_at)))) : null) : ALPHA_DOUBLE_AS_OF_MS,
+      oldest_observed_at_ms: inWorld ? (rows.length > 0 ? Math.min(...rows.map((r) => Date.parse(String(r.submitted_at ?? r.trade_time)))) : null) : T0,
+      newest_observed_at_ms: inWorld ? (rows.length > 0 ? Math.max(...rows.map((r) => Date.parse(String(r.updated_at ?? r.trade_time ?? r.submitted_at)))) : null) : ALPHA_DOUBLE_AS_OF_MS,
       source_completeness: "COMPLETE",
       source_window: "CURRENT_SOURCE_CURSOR_TRAVERSAL",
     },
-    state: own !== undefined && rows.length === 0 ? "EMPTY" : "AVAILABLE",
+    state: inWorld && rows.length === 0 ? "EMPTY" : "AVAILABLE",
     page: {
       limit: Math.min(500, Math.max(1, Number(search.get("limit") ?? 200))),
       maximum_page_rows: 500,
@@ -363,7 +364,7 @@ function subjectPage(id: string, relation: "orders" | "fills", search: URLSearch
     records: rows.map((values) => ({ record_id: String(values[idKey]), values })),
     // No `completeness` here: the producer's subject records carry the receive clock instead.
     // ===== WP-B2-O begin (an order-bearing page of the world is read AT the world's now: as-of = read = the clock, so no row is dated after its own page and the rebase moves every order page alike)
-    projection: own !== undefined
+    projection: inWorld
       ? { epoch_id: `alpha-${environment}`, sequence: 7, source_as_of_ms: ORDER_BOOK_AS_OF_MS, received_at_ms: ORDER_BOOK_AS_OF_MS, last_successful_refresh_at_ms: ORDER_BOOK_AS_OF_MS }
       : { epoch_id: `alpha-${environment}`, sequence: 7, source_as_of_ms: ALPHA_DOUBLE_AS_OF_MS, received_at_ms: ALPHA_DOUBLE_READ_AT_MS - 500, last_successful_refresh_at_ms: ALPHA_DOUBLE_READ_AT_MS },
     // ===== WP-B2-O end

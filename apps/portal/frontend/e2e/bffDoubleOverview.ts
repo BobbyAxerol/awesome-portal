@@ -58,7 +58,8 @@ import { answerOperationsV2 } from "./bffDoubleV2";
 import { scaleCounts, scaled } from "./bffScale";
 import { isPositiveMode } from "./bffPositiveMode";
 import { MARKS, positionsOf, setOpenOrderProvider, worldAlphas } from "./bffWorld";
-import { ORDER_BOOK_AS_OF_ISO, mustRest, orderClock, orderPath, worldStatus, type OrderClock } from "./bffWorldOrders"; // WP-B2-O
+import { isRetired, PAPER_POLICY_MIN_TRADES, stageWindowOf } from "./bffWorldStage"; // WP-B2-O
+import { ORDER_BOOK_AS_OF_ISO, RESERVED_PIECES, RETIRED, mustRest, reservedOrdersFor, retiredSubmitMs, orderClock, orderPath, worldStatus, type OrderClock } from "./bffWorldOrders"; // WP-B2-O
 
 export interface OverviewAnswer {
   status: number;
@@ -297,7 +298,7 @@ interface Row { order: Record<string, unknown>; fills: Record<string, unknown>[]
 
 
 // ===== WP-P begin (blotter of the world: every order belongs to a deployment of the world, at the world's one mark per symbol)
-interface WorldBook { deployment: string; alpha: string; account: string; venue: string; mode: string; inst: Instrument; stage: string }
+interface WorldBook { deployment: string; alpha: string; account: string; venue: string; mode: string; inst: Instrument; stage: string; window: { fromMs: number; toMs: number } | null }
 const WORLD_INSTRUMENTS: Readonly<Record<string, Omit<Instrument, "price">>> = {
   BTCUSDT: { symbol: "BTCUSDT", priceDp: 2, qty: "0.0400", qtyDp: 4 }, ETHUSDT: { symbol: "ETHUSDT", priceDp: 2, qty: "1.250", qtyDp: 3 },
   SOLUSDT: { symbol: "SOLUSDT", priceDp: 2, qty: "12.00", qtyDp: 2 }, BNBUSDT: { symbol: "BNBUSDT", priceDp: 2, qty: "3.500", qtyDp: 3 },
@@ -307,7 +308,7 @@ function worldBlotterBooks(): WorldBook[] {
   const books: WorldBook[] = [];
   for (const alpha of worldAlphas()) for (const d of alpha.deployments) {
     const symbol = positionsOf(d.id)[0]?.symbol ?? "BTCUSDT";
-    books.push({ deployment: d.id, alpha: alpha.id, account: d.accountId, venue: d.venue, mode: d.environment, stage: d.stage, inst: { ...WORLD_INSTRUMENTS[symbol]!, price: MARKS[symbol]! } });
+    books.push({ deployment: d.id, alpha: alpha.id, account: d.accountId, venue: d.venue, mode: d.environment, stage: isRetired(d.id) ? RETIRED : d.stage, window: isRetired(d.id) ? stageWindowOf(d.id) : null, inst: { ...WORLD_INSTRUMENTS[symbol]!, price: MARKS[symbol]! } });
   }
   return books;
 }
@@ -343,14 +344,23 @@ function buildRows(partial: boolean, count: number): Row[] {
   const worldBooks = isPositiveMode() ? worldBlotterBooks() : null;
   // A larger book (the standalone server's FIXTURE_SCALE) also leaves some commissions unpublished.
   const larger = count !== BLOTTER_DOUBLE_COUNT;
+  // ===== WP-B2-O begin (retired stages: every order of a deployment whose stage its alpha has left lies inside its stage window; a retired Paper stage holds the gate's minimum fills in the book itself)
+  const retiredPaper = worldBooks === null ? [] : worldBooks.filter((b) => b.stage === RETIRED && b.mode === "paper");
+  const reservedTotal = Math.min(retiredPaper.length * reservedOrdersFor(PAPER_POLICY_MIN_TRADES), Math.max(0, count - 80));
+  const tailStart = count - reservedTotal;
+  const bookAt = (i: number): WorldBook | null => worldBooks === null ? null : retiredPaper.length > 0 && i >= tailStart ? retiredPaper[(i - tailStart) % retiredPaper.length]! : worldBooks[i % worldBooks.length]!;
+  const slotsOf = new Map<string, number[]>();
+  for (let i = 0; i < count; i += 1) { const b = bookAt(i); if (b !== null && b.window !== null) slotsOf.set(b.deployment, [...(slotsOf.get(b.deployment) ?? []), i]); }
+  // ===== WP-B2-O end
   for (let i = 0; i < count; i += 1) {
-    const w = worldBooks === null ? null : worldBooks[i % worldBooks.length]!; // WORLD: every order belongs to a deployment of the world (one account, one mark)
+    const w = bookAt(i); // WORLD: every order belongs to a deployment of the world (one account, one mark)
     const inst = w === null ? INSTRUMENTS[i % 3]! : w.inst;
     const k = i % 3;
     // ===== WP-B2-O begin (the state of an order is a rule of the world: bffWorldOrders)
     const drawn = STATUS_PATTERN[i % 10]!;
-    const status = w === null ? drawn : worldStatus(i, worldBooks!.length, w.stage, drawn);
-    const rests = w !== null && mustRest(i, worldBooks!.length, w.stage);
+    const reserved = w !== null && i >= tailStart && retiredPaper.length > 0;
+    const status = w === null ? drawn : reserved ? "FILLED" : worldStatus(i, worldBooks!.length, w.stage, drawn);
+    const rests = w !== null && (reserved || mustRest(i, worldBooks!.length, w.stage));
     // ===== WP-B2-O end
     const side = i % 2 === 0 ? "BUY" : "SELL";
     const market = i % 4 === 1 && !rests;
@@ -360,8 +370,9 @@ function buildRows(partial: boolean, count: number): Row[] {
     const client = `cl-${pad(number)}`;
     // ===== WP-B2-O begin (the clock of an order: submit < grant < ack < fills <= the world's now; whole seconds)
     const riskRejected = status === "REJECTED" && i % 2 === 0;
-    const pieceCount = status === "PARTIALLY_FILLED" ? 1 : status === "FILLED" ? 1 + (i % 3) : 0;
-    const clock = w === null ? null : orderClock(i, status, pieceCount, riskRejected);
+    const pieceCount = status === "PARTIALLY_FILLED" ? 1 : status === "FILLED" ? (reserved ? RESERVED_PIECES : 1 + (i % 3)) : 0;
+    const mine = w === null || w.window === null ? null : slotsOf.get(w.deployment)!;
+    const clock = w === null ? null : orderClock(i, status, pieceCount, riskRejected, mine === null ? undefined : retiredSubmitMs(w.window!, mine.length, mine.indexOf(i), i));
     const t = clock === null ? NEWEST_MS - i * 7 * 60_000 - (i % 5) * 1000 : clock.submittedMs;
     const settledMs = clock === null ? null : clock.updatedMs;
     // ===== WP-B2-O end
@@ -398,7 +409,7 @@ function buildRows(partial: boolean, count: number): Row[] {
     if (status === "FILLED" || status === "PARTIALLY_FILLED") {
       const total = toUnits(inst.qty, inst.qtyDp);
       const target = status === "PARTIALLY_FILLED" ? total / 2n : total;
-      const pieces = status === "PARTIALLY_FILLED" ? 1 : 1 + (i % 3);
+      const pieces = pieceCount;
       let left = target;
       for (let p = 0; p < pieces; p += 1) {
         const q = p === pieces - 1 ? left : target / BigInt(pieces);
@@ -457,6 +468,8 @@ function buildRows(partial: boolean, count: number): Row[] {
     }
     rows.push({ order, fills, legs, group, status, symbol: inst.symbol, venue: (w?.venue ?? VENUES[k]), side, clock });
   }
+  // WP-B2-O: newest first by the order's own submit (retired stages are weeks old, so they close the book); a stable sort leaves the live book as drawn
+  if (worldBooks !== null) rows.sort((a, b) => Date.parse(String(b.order.submitted_at)) - Date.parse(String(a.order.submitted_at)));
   return rows;
 }
 

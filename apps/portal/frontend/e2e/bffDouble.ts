@@ -29,7 +29,7 @@ import { answerPortfolios } from "./bffDoublePortfolios";
 import { answerStage, isStageDeployment, withStageQuality } from "./bffDoubleStage";
 import { addDecimal, scaled, sumByCurrency, type AlphaSpec } from "./bffScale";
 import { isPositiveMode } from "./bffPositiveMode";
-import { NATIVE_ALPHAS } from "./bffWorld";
+import { NATIVE_ALPHAS, WORLD_NOW_ISO } from "./bffWorld";
 
 const CONTRACTS = join(dirname(fileURLToPath(import.meta.url)), "../../../../packages/contracts/fixtures");
 const canonical = (name: string): unknown => JSON.parse(readFileSync(join(CONTRACTS, name), "utf8"));
@@ -373,6 +373,8 @@ export function alphaFleet(search: URLSearchParams): Answer {
   ].filter(([, , value]) => value).map(([field, op, value]) => ({ field, op, value }));
   return ok({
     ...ALPHA_FLEET,
+    // WP-B2-O: the Fleet of the world is read AT the world clock (as-of = read), like every other read of it
+    ...(isPositiveMode() ? { read_at: WORLD_NOW_ISO.replace(".000Z", "Z"), source_as_of: WORLD_NOW_ISO.replace(".000Z", "Z") } : {}),
     summary,
     page: {
       ...page,
