@@ -53,8 +53,9 @@ import { fileURLToPath } from "node:url";
 import { scopedResourceV2 } from "./bffDoubleScopedResource";
 import { addDecimal, scaled, sumByCurrency } from "./bffScale";
 import { isPositiveMode, positiveBookOf } from "./bffPositiveMode";
-import { accountFact, bindingFact, ledgerSeries, workingOrdersOf } from "./bffWorld";
+import { accountFact, bindingFact, ledgerSeries } from "./bffWorld";
 import { blotterBookOf } from "./bffDoubleOverview";
+import { ORDER_BOOK_AS_OF_MS } from "./bffWorldOrders"; // WP-B2-O
 
 export interface BffAnswerAccount {
   status: number;
@@ -653,19 +654,20 @@ function subjectRecords(accountId: string, relation: "orders" | "fills", search:
   if (!Number.isInteger(limit) || limit < 1 || limit > 500) return problem(400, "SUBJECT_READ_INPUT_INVALID", "limit must be 1 to 500");
   // WORLD: an account's orders are the open orders of the deployments booked on it (one order book: the blotter's, the Live page's, Alpha 360's), at the world's marks
   const worldFact = isPositiveMode() ? accountFact(accountId) : null;
-  const worldRows: Row[] = worldFact === null ? [] : worldFact.deployments.flatMap((d) => workingOrdersOf(d.id).filter((o) => o.sinceMs <= AS_OF_MS).map((o): Row => ({
-    order_id: o.id, account_id: accountId, deployment_id: d.id, instrument_id: o.symbol, symbol: o.symbol, side: o.side.toUpperCase(), status: o.status, price: o.price, quantity: o.quantity, submitted_at: iso(o.sinceMs),
-  }))).sort((a, b) => String(b.submitted_at).localeCompare(String(a.submitted_at)));
+  // ===== WP-B2-O begin (the account's orders are the book's rows by id, working ones included: no second, thinner copy of a working order; the page is read AT the world clock)
   // WP-F2 (QA4 R4-10): the activity is also the recent orders and fills of the account's deployments, from the blotter's own book (same ids, same times),
-  // so a row of the blotter for this account's deployment is in the account's activity. The working orders above stay (they are rows of that book too).
+  // so a row of the blotter for this account's deployment is in the account's activity. The working orders are rows of that book too (WP-B2-O: no separate thinner copy).
   const bookRows: Row[] = worldFact === null ? [] : worldFact.deployments.flatMap((d) => {
     const book = blotterBookOf(d.id);
     return (relation === "orders" ? book.orders : book.fills).map((row) => ({ ...row, account_id: accountId, deployment_id: d.id }) as Row);
   });
   const worldAll = relation === "orders"
-    ? [...new Map([...bookRows, ...worldRows].map((row) => [String(row.order_id), row] as const)).values()].sort((a, b) => String(b.submitted_at).localeCompare(String(a.submitted_at)))
+    ? [...new Map(bookRows.map((row) => [String(row.order_id), row] as const)).values()].sort((a, b) => String(b.submitted_at).localeCompare(String(a.submitted_at)))
     : bookRows.sort((a, b) => String(b.trade_time).localeCompare(String(a.trade_time)));
   const all = isPositiveMode() ? worldAll : accountId === "acc_bnc_core" ? (relation === "orders" ? ORDERS : FILLS) : [];
+  const pageAsOfMs = worldFact !== null ? ORDER_BOOK_AS_OF_MS : AS_OF_MS;
+  const rowTime = (row: Row): number => Date.parse(String(row.updated_at ?? row.trade_time ?? row.submitted_at));
+  // ===== WP-B2-O end
   const after = search.get("after");
   let start = 0;
   if (after !== null) {
@@ -688,18 +690,18 @@ function subjectRecords(accountId: string, relation: "orders" | "fills", search:
       profile_id: PROFILE[environment as Environment],
       resource: { kind: "account", id: accountId, resolution: "EXACT_ACCOUNT_ID" },
       timeframe: { value: null, provenance: "UNAVAILABLE", source_field: null },
-      source_health: { availability: all.length === 0 ? "EMPTY" : "AVAILABLE", freshness: "FRESH", completeness: "COMPLETE", as_of_ms: AS_OF_MS },
+      source_health: { availability: all.length === 0 ? "EMPTY" : "AVAILABLE", freshness: "FRESH", completeness: "COMPLETE", as_of_ms: pageAsOfMs }, // WP-B2-O
       coverage: {
         retained_row_count: all.length,
-        oldest_observed_at_ms: all.length === 0 ? null : minutesBefore(200),
-        newest_observed_at_ms: all.length === 0 ? null : minutesBefore(5),
+        oldest_observed_at_ms: all.length === 0 ? null : worldFact !== null ? Math.min(...all.map((r) => Date.parse(String(r.submitted_at ?? r.trade_time)))) : minutesBefore(200), // WP-B2-O
+        newest_observed_at_ms: all.length === 0 ? null : worldFact !== null ? Math.max(...all.map(rowTime)) : minutesBefore(5),
         source_completeness: "COMPLETE",
         source_window: "CURRENT_SOURCE_CURSOR_TRAVERSAL",
       },
       state: all.length === 0 ? "EMPTY" : "AVAILABLE",
       page: { limit, maximum_page_rows: 500, returned_count: page.length, has_more: more, next_cursor: more ? `subj1.${start + page.length}` : null },
       records: page.map((row) => ({ record_id: String(row[idKey]), values: row })),
-      projection: { epoch_id: `account-double-${environment}`, sequence: 1, source_as_of_ms: AS_OF_MS, last_successful_refresh_at_ms: READ_AT_MS, completeness: "COMPLETE" },
+      projection: { epoch_id: `account-double-${environment}`, sequence: 1, source_as_of_ms: pageAsOfMs, last_successful_refresh_at_ms: worldFact !== null ? ORDER_BOOK_AS_OF_MS : READ_AT_MS, completeness: "COMPLETE" }, // WP-B2-O
     },
   };
 }

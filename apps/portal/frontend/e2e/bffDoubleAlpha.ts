@@ -70,8 +70,9 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { blotterBookOf } from "./bffDoubleOverview";
+import { ORDER_BOOK_AS_OF_MS, WORKING_STATES } from "./bffWorldOrders"; // WP-B2-O
 import { isPositiveMode } from "./bffPositiveMode";
-import { accountFact, ledgerSeries, workingOrdersOf, worldAlphas } from "./bffWorld";
+import { accountFact, ledgerSeries, worldAlphas } from "./bffWorld";
 
 export interface BffAnswerAlpha {
   status: number;
@@ -324,6 +325,9 @@ function subjectPage(id: string, relation: "orders" | "fills", search: URLSearch
     rows = relation === "orders"
       ? books.flatMap((book) => book.orders).map((row) => pick(row, ORDER_KEYS, ["trigger_price", "error_code", "error_message", "deployment_id"])).sort((a, b) => String(b.submitted_at).localeCompare(String(a.submitted_at)))
       : books.flatMap((book) => book.fills).map((row) => pick(row, FILL_KEYS)).sort((a, b) => String(b.trade_time).localeCompare(String(a.trade_time)));
+  } else if (own !== undefined) {
+    // WP-B2-O: an alpha of the world with no deployment in this environment has no orders and no fills there (the canned rows are not orders of the book)
+    rows = [];
   } else if (relation === "orders") {
     if (after === ORDERS_CURSOR) rows = ALPHA_DOUBLE_ORDERS_P2;
     else {
@@ -339,15 +343,16 @@ function subjectPage(id: string, relation: "orders" | "fills", search: URLSearch
     profile_id: ENV_PROFILE[environment],
     resource: { kind: "alpha", id, resolution: "PUBLISHED_STRATEGY_ID" },
     timeframe: { value: "1h", provenance: "DERIVED_STRATEGY_ID_SUFFIX", source_field: null },
-    source_health: { availability: "AVAILABLE", freshness: "FRESH", completeness: "COMPLETE", as_of_ms: ALPHA_DOUBLE_AS_OF_MS },
+    source_health: { availability: own !== undefined && rows.length === 0 ? "EMPTY" : "AVAILABLE", freshness: "FRESH", completeness: "COMPLETE", as_of_ms: ORDER_BOOK_AS_OF_MS }, // WP-B2-O: the world clock (== ALPHA_DOUBLE_AS_OF_MS)
     coverage: {
-      retained_row_count: own !== undefined && ownDeployments.length > 0 ? rows.length : relation === "orders" ? ALPHA_DOUBLE_ORDERS_P1.length + ALPHA_DOUBLE_ORDERS_P2.length : ALPHA_DOUBLE_FILLS.length,
-      oldest_observed_at_ms: T0,
-      newest_observed_at_ms: ALPHA_DOUBLE_AS_OF_MS,
+      retained_row_count: own !== undefined ? rows.length : relation === "orders" ? ALPHA_DOUBLE_ORDERS_P1.length + ALPHA_DOUBLE_ORDERS_P2.length : ALPHA_DOUBLE_FILLS.length,
+      // WP-B2-O: in the world the coverage is the rows' own span (their latest change, never past the as-of)
+      oldest_observed_at_ms: own !== undefined ? (rows.length > 0 ? Math.min(...rows.map((r) => Date.parse(String(r.submitted_at ?? r.trade_time)))) : null) : T0,
+      newest_observed_at_ms: own !== undefined ? (rows.length > 0 ? Math.max(...rows.map((r) => Date.parse(String(r.updated_at ?? r.trade_time ?? r.submitted_at)))) : null) : ALPHA_DOUBLE_AS_OF_MS,
       source_completeness: "COMPLETE",
       source_window: "CURRENT_SOURCE_CURSOR_TRAVERSAL",
     },
-    state: "AVAILABLE",
+    state: own !== undefined && rows.length === 0 ? "EMPTY" : "AVAILABLE",
     page: {
       limit: Math.min(500, Math.max(1, Number(search.get("limit") ?? 200))),
       maximum_page_rows: 500,
@@ -357,7 +362,11 @@ function subjectPage(id: string, relation: "orders" | "fills", search: URLSearch
     },
     records: rows.map((values) => ({ record_id: String(values[idKey]), values })),
     // No `completeness` here: the producer's subject records carry the receive clock instead.
-    projection: { epoch_id: `alpha-${environment}`, sequence: 7, source_as_of_ms: ALPHA_DOUBLE_AS_OF_MS, received_at_ms: ALPHA_DOUBLE_READ_AT_MS - 500, last_successful_refresh_at_ms: ALPHA_DOUBLE_READ_AT_MS },
+    // ===== WP-B2-O begin (an order-bearing page of the world is read AT the world's now: as-of = read = the clock, so no row is dated after its own page and the rebase moves every order page alike)
+    projection: own !== undefined
+      ? { epoch_id: `alpha-${environment}`, sequence: 7, source_as_of_ms: ORDER_BOOK_AS_OF_MS, received_at_ms: ORDER_BOOK_AS_OF_MS, last_successful_refresh_at_ms: ORDER_BOOK_AS_OF_MS }
+      : { epoch_id: `alpha-${environment}`, sequence: 7, source_as_of_ms: ALPHA_DOUBLE_AS_OF_MS, received_at_ms: ALPHA_DOUBLE_READ_AT_MS - 500, last_successful_refresh_at_ms: ALPHA_DOUBLE_READ_AT_MS },
+    // ===== WP-B2-O end
   });
 }
 
@@ -616,9 +625,12 @@ function observedTimeline(id: string, search: URLSearchParams): BffAnswerAlpha {
   const after = search.get("after");
   // WORLD: the orders an alpha's timeline observes are the open orders of its deployments in this environment (the very rows of the blotter, the Live page and the stage rooms), oldest first
   const world = isPositiveMode() ? worldAlphas().find((alpha) => alpha.id === id) : undefined;
-  const worldObs: Obs[] = world === undefined ? [] : world.deployments.filter((d) => d.environment === environment).flatMap((d) => workingOrdersOf(d.id).map((o): Obs => ({
-    at: o.sinceMs, clock: "ORDER_UPDATED_AT", type: "ORDER_OBSERVED", kind: "ORDER", id: o.id, instrument: o.symbol, price: o.price, qty: o.quantity, pnl: null, deployment: d.id, account: d.accountId,
+  // ===== WP-B2-O begin (the observation of an order is stamped on the ORDER_UPDATED_AT clock = the order's own updated_at in the book, by id; never its submit time)
+  const worldObs: Obs[] = world === undefined ? [] : world.deployments.filter((d) => d.environment === environment).flatMap((d) => blotterBookOf(d.id).orders.filter((o) => WORKING_STATES.includes(String(o.status))).map((o): Obs => ({
+    at: Date.parse(String(o.updated_at)), clock: "ORDER_UPDATED_AT", type: "ORDER_OBSERVED", kind: "ORDER", id: String(o.order_id), instrument: String(o.symbol), price: o.price === null ? null : String(o.price), qty: String(o.quantity), pnl: null, deployment: d.id, account: d.accountId,
   }))).sort((a, b) => a.at - b.at);
+  // ===== WP-B2-O end
+  const timelineReadAt = world === undefined ? ALPHA_DOUBLE_READ_AT_MS : ORDER_BOOK_AS_OF_MS; // WP-B2-O: a timeline of the world is read AT the world clock
   const observations: readonly Obs[] = world === undefined ? OBSERVATIONS : worldObs;
   const secondPage = world === undefined && after === TIMELINE_CURSOR;
   const entries = secondPage ? observations.slice(8) : observations.slice(0, 8);
@@ -626,9 +638,9 @@ function observedTimeline(id: string, search: URLSearchParams): BffAnswerAlpha {
   body.environment = environment;
   body.profile_id = ENV_PROFILE[environment];
   body.resource = { kind: "ALPHA", id };
-  body.projection = { ...body.projection, epoch_id: `alpha-${environment}`, source_as_of_ms: ALPHA_DOUBLE_AS_OF_MS, received_at_ms: ALPHA_DOUBLE_READ_AT_MS - 500, last_successful_refresh_at_ms: ALPHA_DOUBLE_READ_AT_MS };
+  body.projection = { ...body.projection, epoch_id: `alpha-${environment}`, source_as_of_ms: ALPHA_DOUBLE_AS_OF_MS, received_at_ms: timelineReadAt - 500, last_successful_refresh_at_ms: timelineReadAt };
   const panel = body.observed_timeline as Json;
-  panel.clocks = { ...panel.clocks, source_published_at_ms: ALPHA_DOUBLE_AS_OF_MS, as_of_ms: ALPHA_DOUBLE_AS_OF_MS, read_at_ms: ALPHA_DOUBLE_READ_AT_MS, received_at_ms: ALPHA_DOUBLE_READ_AT_MS - 500 };
+  panel.clocks = { ...panel.clocks, source_published_at_ms: ALPHA_DOUBLE_AS_OF_MS, as_of_ms: ALPHA_DOUBLE_AS_OF_MS, read_at_ms: timelineReadAt, received_at_ms: timelineReadAt - 500, ingested_at_ms: timelineReadAt - 500, processed_at_ms: timelineReadAt - 500 }; // WP-B2-O: nothing stamped after the read time
   panel.coverage = {
     ...panel.coverage,
     from_ms: entries[0]?.at ?? ALPHA_DOUBLE_AS_OF_MS,
@@ -653,7 +665,7 @@ function observedTimeline(id: string, search: URLSearchParams): BffAnswerAlpha {
       rejected_exact_value_fields: [],
     })),
   };
-  body.mark_context = { ...body.mark_context, clocks: { ...body.mark_context.clocks, as_of_ms: ALPHA_DOUBLE_AS_OF_MS, read_at_ms: ALPHA_DOUBLE_READ_AT_MS } };
+  body.mark_context = { ...body.mark_context, clocks: { ...body.mark_context.clocks, as_of_ms: ALPHA_DOUBLE_AS_OF_MS, read_at_ms: timelineReadAt, ...(world === undefined ? {} : { received_at_ms: timelineReadAt - 500, ingested_at_ms: timelineReadAt - 500, processed_at_ms: timelineReadAt - 500 }) } }; // WP-B2-O
   body.page = { limit: 8, has_more: !secondPage && observations.length > 8, next_cursor: secondPage || observations.length <= 8 ? null : TIMELINE_CURSOR };
   return ok(body);
 }

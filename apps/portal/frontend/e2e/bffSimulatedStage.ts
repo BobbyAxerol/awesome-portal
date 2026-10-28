@@ -1035,9 +1035,9 @@ function worldStage(kind: "canary" | "live" | "sandbox" | "paper", body: Obj | n
         drawdown: eq === peak ? "0" : canonicalDecimal(((Number(eq - peak) / Number(peak))).toFixed(4)) };
     });
     // ONE clock: the page's own as-of is the world's now, so nothing on it is dated after it.
-    // a stage the alpha left has no source update after its exit: its as-of is the exit, the read is now
+    // a stage the alpha left has no source update after its exit: its as-of is the exit; the read is at the world clock (WP-B2-O: the rebase moves it like the blotter)
     body.as_of = retired ? iso(exitMs ?? NOW_MS) : AS_OF;
-    body.read_at = at(2_000);
+    body.read_at = AS_OF;
     // WORLD: ONE stage history. A Paper stage the alpha has left is a COMPLETED record (gate met, days and trades over the minimum, the session closed on the day Sandbox began);
     // the Paper stage the alpha is in is in progress, its observed days the days since it began.
     const paperRecord = { status: standing.status, days: standing.days, toMs: standing.exitMs };

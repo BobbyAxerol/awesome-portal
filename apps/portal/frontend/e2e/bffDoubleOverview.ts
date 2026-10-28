@@ -58,6 +58,7 @@ import { answerOperationsV2 } from "./bffDoubleV2";
 import { scaleCounts, scaled } from "./bffScale";
 import { isPositiveMode } from "./bffPositiveMode";
 import { MARKS, positionsOf, setOpenOrderProvider, worldAlphas } from "./bffWorld";
+import { ORDER_BOOK_AS_OF_ISO, mustRest, orderClock, orderPath, worldStatus, type OrderClock } from "./bffWorldOrders"; // WP-B2-O
 
 export interface OverviewAnswer {
   status: number;
@@ -292,11 +293,11 @@ function toUnits(text: string, dp: number): bigint {
   return BigInt(`${i}${f.padEnd(dp, "0")}`);
 }
 
-interface Row { order: Record<string, unknown>; fills: Record<string, unknown>[]; legs: Record<string, unknown>[]; group: Record<string, unknown> | null; status: string; symbol: string; venue: string; side: string }
+interface Row { order: Record<string, unknown>; fills: Record<string, unknown>[]; legs: Record<string, unknown>[]; group: Record<string, unknown> | null; status: string; symbol: string; venue: string; side: string; clock?: OrderClock | null }
 
 
 // ===== WP-P begin (blotter of the world: every order belongs to a deployment of the world, at the world's one mark per symbol)
-interface WorldBook { deployment: string; alpha: string; account: string; venue: string; mode: string; inst: Instrument }
+interface WorldBook { deployment: string; alpha: string; account: string; venue: string; mode: string; inst: Instrument; stage: string }
 const WORLD_INSTRUMENTS: Readonly<Record<string, Omit<Instrument, "price">>> = {
   BTCUSDT: { symbol: "BTCUSDT", priceDp: 2, qty: "0.0400", qtyDp: 4 }, ETHUSDT: { symbol: "ETHUSDT", priceDp: 2, qty: "1.250", qtyDp: 3 },
   SOLUSDT: { symbol: "SOLUSDT", priceDp: 2, qty: "12.00", qtyDp: 2 }, BNBUSDT: { symbol: "BNBUSDT", priceDp: 2, qty: "3.500", qtyDp: 3 },
@@ -306,7 +307,7 @@ function worldBlotterBooks(): WorldBook[] {
   const books: WorldBook[] = [];
   for (const alpha of worldAlphas()) for (const d of alpha.deployments) {
     const symbol = positionsOf(d.id)[0]?.symbol ?? "BTCUSDT";
-    books.push({ deployment: d.id, alpha: alpha.id, account: d.accountId, venue: d.venue, mode: d.environment, inst: { ...WORLD_INSTRUMENTS[symbol]!, price: MARKS[symbol]! } });
+    books.push({ deployment: d.id, alpha: alpha.id, account: d.accountId, venue: d.venue, mode: d.environment, stage: d.stage, inst: { ...WORLD_INSTRUMENTS[symbol]!, price: MARKS[symbol]! } });
   }
   return books;
 }
@@ -346,14 +347,24 @@ function buildRows(partial: boolean, count: number): Row[] {
     const w = worldBooks === null ? null : worldBooks[i % worldBooks.length]!; // WORLD: every order belongs to a deployment of the world (one account, one mark)
     const inst = w === null ? INSTRUMENTS[i % 3]! : w.inst;
     const k = i % 3;
-    const status = STATUS_PATTERN[i % 10]!;
+    // ===== WP-B2-O begin (the state of an order is a rule of the world: bffWorldOrders)
+    const drawn = STATUS_PATTERN[i % 10]!;
+    const status = w === null ? drawn : worldStatus(i, worldBooks!.length, w.stage, drawn);
+    const rests = w !== null && mustRest(i, worldBooks!.length, w.stage);
+    // ===== WP-B2-O end
     const side = i % 2 === 0 ? "BUY" : "SELL";
-    const market = i % 4 === 1;
-    const stop = i % 11 === 0 && !market;
+    const market = i % 4 === 1 && !rests;
+    const stop = i % 11 === 0 && !market && !rests;
     const number = count - i;
     const orderId = `ord_${pad(number)}`;
     const client = `cl-${pad(number)}`;
-    const t = NEWEST_MS - i * 7 * 60_000 - (i % 5) * 1000;
+    // ===== WP-B2-O begin (the clock of an order: submit < grant < ack < fills <= the world's now; whole seconds)
+    const riskRejected = status === "REJECTED" && i % 2 === 0;
+    const pieceCount = status === "PARTIALLY_FILLED" ? 1 : status === "FILLED" ? 1 + (i % 3) : 0;
+    const clock = w === null ? null : orderClock(i, status, pieceCount, riskRejected);
+    const t = clock === null ? NEWEST_MS - i * 7 * 60_000 - (i % 5) * 1000 : clock.submittedMs;
+    const settledMs = clock === null ? null : clock.updatedMs;
+    // ===== WP-B2-O end
     const priceUnits = toUnits(inst.price, inst.priceDp) + BigInt(i % 17) * 10n ** BigInt(Math.max(0, inst.priceDp - 2));
     const order: Record<string, unknown> = {
       order_id: orderId,
@@ -376,7 +387,7 @@ function buildRows(partial: boolean, count: number): Row[] {
       reduce_only: false,
       post_only: false,
       submitted_at: iso(t),
-      updated_at: iso(t + 2000),
+      updated_at: iso(settledMs ?? t + 2000),
       error_code: status === "REJECTED" ? (i % 2 === 0 ? "RISK_ORDER_SIZE_CAP" : "VENUE_PRICE_BAND") : null,
       error_message: status === "REJECTED" ? (i % 2 === 0 ? "The order size was above the deployment cap." : "The venue refused the price because it was outside the allowed band.") : null,
       ...(w === null ? {} : { deployment_id: w.deployment }),
@@ -397,7 +408,7 @@ function buildRows(partial: boolean, count: number): Row[] {
         fills.push({
           fill_id: `fil_${pad(number)}_${n}`,
           event_id: `evt_${pad(number)}_${n}`,
-          trade_time: iso(t + 1500 + p * 4000),
+          trade_time: iso(clock === null ? t + 1500 + p * 4000 : clock.fillMs[p]!), // WP-B2-O
           trade_id: `tr_${pad(number)}_${n}`,
           client_order_id: client,
           venue_order_id: order.venue_order_id,
@@ -427,13 +438,13 @@ function buildRows(partial: boolean, count: number): Row[] {
         client_order_id: `${client}-${role === "TAKE_PROFIT" ? "tp" : "sl"}`, venue_order_id: null, side: side === "BUY" ? "SELL" : "BUY",
         position_side: "BOTH", order_type: "STOP_MARKET", quantity: inst.qty, filled_quantity: "0", price: null,
         trigger_price: fromUnits(trigger, inst.priceDp), trigger_reference: "LAST", time_in_force: "GTC", good_till_date: null,
-        reduce_only: true, post_only: false, state, average_fill_price: null, version: 1, created_at: iso(t + 1000), updated_at: iso(t + 3000),
+        reduce_only: true, post_only: false, state, average_fill_price: null, version: 1, created_at: iso(settledMs ?? t + 1000), updated_at: iso(settledMs ?? t + 3000), // WP-B2-O
       });
       legs = [
         { group_id: gid, leg_id: `${gid}_entry`, parent_leg_id: null, role: "ENTRY", sequence: "1", client_order_id: client, venue_order_id: order.venue_order_id,
           side, position_side: "BOTH", order_type: order.order_type, quantity: inst.qty, filled_quantity: inst.qty, price: order.price, trigger_price: null,
           trigger_reference: null, time_in_force: "GTC", good_till_date: null, reduce_only: false, post_only: false, state: "FILLED",
-          average_fill_price: order.price, version: 1, created_at: iso(t), updated_at: iso(t + 2000) },
+          average_fill_price: order.price, version: 1, created_at: iso(t), updated_at: iso(settledMs ?? t + 2000) }, // WP-B2-O
         exit("TAKE_PROFIT", "2", priceUnits + 11n * 10n ** BigInt(inst.priceDp), "ARMED"),
         exit("STOP_LOSS", "3", priceUnits - 6n * 10n ** BigInt(inst.priceDp), "ARMED"),
       ];
@@ -441,10 +452,10 @@ function buildRows(partial: boolean, count: number): Row[] {
         group_id: gid, strategy_id: (w?.alpha ?? ALPHAS[k]), account_id: (w?.account ?? ACCOUNTS[k]), execution_session_id: `sess_${k + 1}`, mode: w?.mode ?? "paper", venue: (w?.venue ?? VENUES[k]),
         instrument_id: order.instrument_id, symbol: inst.symbol, position_side: "BOTH", contingency_type: "OUO", activation_policy: "ON_ENTRY_FILL",
         state: "ACTIVE", winner_leg_id: null, target_quantity: inst.qty, filled_quantity: inst.qty, open_quantity: "0", excess_quantity: "0",
-        version: 1, created_at: iso(t), updated_at: iso(t + 3000),
+        version: 1, created_at: iso(t), updated_at: iso(settledMs ?? t + 3000), // WP-B2-O
       };
     }
-    rows.push({ order, fills, legs, group, status, symbol: inst.symbol, venue: (w?.venue ?? VENUES[k]), side });
+    rows.push({ order, fills, legs, group, status, symbol: inst.symbol, venue: (w?.venue ?? VENUES[k]), side, clock });
   }
   return rows;
 }
@@ -532,8 +543,11 @@ function blotter(search: URLSearchParams): OverviewAnswer {
   body.state = v === "partial" ? "partial" : "ready";
   body.completeness = v === "partial" ? "PARTIAL" : "COMPLETE";
   body.freshness = v === "stale" ? "STALE" : "FRESH";
-  body.as_of = v === "stale" ? "2026-10-17T11:46:00Z" : "2026-10-17T12:00:00Z";
-  body.read_at = "2026-10-17T12:00:01Z";
+  // ===== WP-B2-O begin (the book's as-of IS the world clock, and so is the read time: every row is dated at or before it)
+  const worldClock = isPositiveMode() && v !== "stale" ? ORDER_BOOK_AS_OF_ISO.replace(".000Z", "Z") : null;
+  body.as_of = worldClock ?? (v === "stale" ? "2026-10-17T11:46:00Z" : "2026-10-17T12:00:00Z");
+  body.read_at = worldClock ?? "2026-10-17T12:00:01Z";
+  // ===== WP-B2-O end
   return ok(body);
 }
 
@@ -542,17 +556,28 @@ function funnel(orderId: string): OverviewAnswer {
   if (!row) return problem(404, "ORDER_FUNNEL_ORDER_NOT_FOUND", "The order was not found.");
   const body = clone(FUNNEL_BASE) as Record<string, unknown> & { analytics: { data: { order_id: string; stages: Record<string, unknown>[]; event_count: number; returned_event_count: number } } };
   const submitted = Date.parse(String(row.order.submitted_at));
-  const reached = row.status === "REJECTED" ? 1 : row.status === "FILLED" || row.status === "PARTIALLY_FILLED" ? 4 : 3;
+  // ===== WP-B2-O begin (the order path: each hop is a time of the order's own clock, in order, none after the fills; a hop the order never reached is not listed)
+  const path = row.clock === undefined || row.clock === null ? null : orderPath(row.clock);
+  const reached = path !== null ? path.findIndex((hop) => hop === null) === -1 ? path.length : path.findIndex((hop) => hop === null)
+    : row.status === "REJECTED" ? 1 : row.status === "FILLED" || row.status === "PARTIALLY_FILLED" ? 4 : 3;
+  // ===== WP-B2-O end
   const data = body.analytics.data;
   data.order_id = orderId;
   const stages = data.stages.slice(0, reached).map((stage, index) => {
     const events = (stage.events as Record<string, unknown>[]).map((event) => ({
       ...event,
-      occurred_at: iso(submitted + index * 400),
+      occurred_at: iso(path !== null ? path[index]! : submitted + index * 400), // WP-B2-O
       quantity: index === 3 ? String(row.fills[0]?.quantity ?? event.quantity) : null,
     }));
     return { ...stage, events };
   });
+  // ===== WP-B2-O begin (the funnel is read at the world's now: its latest content instant is the clock, so the preview's rebase moves it with the blotter)
+  if (path !== null) {
+    (body as Record<string, unknown>).read_at = ORDER_BOOK_AS_OF_ISO.replace(".000Z", "Z");
+    (body.analytics as Record<string, unknown>).input_as_of = ORDER_BOOK_AS_OF_ISO.replace(".000Z", "Z");
+    for (const stage of stages) for (const event of stage.events as Record<string, unknown>[]) (event.quality as Record<string, unknown>).as_of = event.occurred_at;
+  }
+  // ===== WP-B2-O end
   data.stages = stages;
   data.event_count = stages.length;
   data.returned_event_count = stages.length;
