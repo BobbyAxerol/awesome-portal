@@ -1306,7 +1306,7 @@ export async function runWorldTies(get) {
   }
   // ===== WP-B2-C4 end
   // ===== WP-B2-A3 round D begin
-  // ── W40: an Accounts list row is a projection of the same account fact as its Account 360 (N3-01) ──
+  // ── W60: an Accounts list row is a projection of the same account fact as its Account 360 (N3-01) ──
   {
     const bindingRows = await pages(`${E}/broker-bindings?limit=50&environment=live`, (b) => b.page?.rows ?? [], (b) => b.page?.next_cursor ?? null, 4);
     for (const row of bindingRows) {
@@ -1314,56 +1314,56 @@ export async function runWorldTies(get) {
       if (used === undefined || used === null) continue;
       const exposure = await ok200(`${E}/broker-bindings/${row.binding_id}/exposure`);
       const bucket = exposure?.analytics?.data?.buckets?.find((b) => b.currency === used.currency);
-      if (bucket !== undefined) check("W40", sameDecimal(bucket.used, used.value), `${row.binding_id}: the list says virtual ${used.value}, the binding exposure says used ${bucket.used}`);
+      if (bucket !== undefined) check("W60", sameDecimal(bucket.used, used.value), `${row.binding_id}: the list says virtual ${used.value}, the binding exposure says used ${bucket.used}`);
       if (!/^acc_(bnc_sub|okx_main)$/.test(row.account_id)) continue;
       const account = await ok200(`${E}/resources/accounts/${row.account_id}`);
       const ledger = account?.data?.account_balances?.find((b) => b.currency === used.currency)?.total;
-      if (ledger !== undefined) check("W40", sameDecimal(ledger, used.value), `${row.account_id}: the list says virtual ${used.value}, Account 360 says an internal ledger of ${ledger}`);
+      if (ledger !== undefined) check("W60", sameDecimal(ledger, used.value), `${row.account_id}: the list says virtual ${used.value}, Account 360 says an internal ledger of ${ledger}`);
       const head = row.figures?.virtual_headroom?.[0];
-      if (head && bucket) check("W40", sameDecimal(head.value, bucket.headroom), `${row.account_id}: the list says headroom ${head.value}, the capital invariant (binding exposure) says ${bucket.headroom}`);
+      if (head && bucket) check("W60", sameDecimal(head.value, bucket.headroom), `${row.account_id}: the list says headroom ${head.value}, the capital invariant (binding exposure) says ${bucket.headroom}`);
     }
   }
-  // ── W41: a decided request is decided everywhere: not in the queue, status APPROVED, quorum met, actions locked (N5-04) ──
+  // ── W61: a decided request is decided everywhere: not in the queue, status APPROVED, quorum met, actions locked (N5-04) ──
   {
     const history = await pages(`${E}/governance/approvals/history?limit=50`, (b) => b.page?.rows ?? [], (b) => b.page?.next_cursor ?? null, 3);
     const open = new Set(approvalRows.map((r) => r.id));
     for (const h of history.slice(0, 40)) {
-      check("W41", !open.has(h.approval_id), `${h.approval_id} is decided (${h.outcome}) and still in the queue`);
+      check("W61", !open.has(h.approval_id), `${h.approval_id} is decided (${h.outcome}) and still in the queue`);
       const gate = String(h.gate).toLowerCase();
       const path = gate === "r1" || gate === "r2" || gate === "live_gate" ? `${E}/governance/approvals/${h.approval_id}/${gate === "live_gate" ? "live" : gate}` : `${E}/governance/exit-reviews/${h.approval_id}`;
       const d = await ok200(path);
       const approval = d?.data?.approval ?? d?.governance_backbone?.data?.approval ?? d?.approval;
       if (approval?.status !== undefined) {
-        check("W41", approval.status === "APPROVED", `${h.approval_id}: history says decided, the page says ${approval.status}`);
-        check("W41", approval.quorum_met >= approval.quorum_required, `${h.approval_id}: decided with quorum ${approval.quorum_met} of ${approval.quorum_required}`);
+        check("W61", approval.status === "APPROVED", `${h.approval_id}: history says decided, the page says ${approval.status}`);
+        check("W61", approval.quorum_met >= approval.quorum_required, `${h.approval_id}: decided with quorum ${approval.quorum_met} of ${approval.quorum_required}`);
       }
       const elig = d?.data?.eligibility ?? d?.eligibility ?? d?.governance_backbone?.data?.eligibility;
-      if (elig !== undefined) check("W41", elig.can_approve === false && elig.can_deny === false, `${h.approval_id}: decided, yet the page allows a decision`);
+      if (elig !== undefined) check("W61", elig.can_approve === false && elig.can_deny === false, `${h.approval_id}: decided, yet the page allows a decision`);
     }
   }
-  // ── W42: a Live gate request states the decided R1 of its alpha (two gates past R1), and it opens (R3-02 residual) ──
+  // ── W62: a Live gate request states the decided R1 of its alpha (two gates past R1), and it opens (R3-02 residual) ──
   {
     for (const row of approvalRows.filter((r) => r.gate === "LIVE_GATE")) {
       const d = await ok200(`${E}/governance/approvals/${row.id}/live`);
       const data = d?.governance_backbone?.data;
       if (data === undefined) continue;
-      check("W42", data.r1_state === "APPROVED" && data.r1_reference?.state === "APPROVED", `${row.id}: a Live gate prints R1 state ${data.r1_state}`);
-      if (data.r1_id) check("W42", (await get(`${E}/governance/approvals/${data.r1_id}/r1`)).status === 200, `${row.id}: R1 ${data.r1_id} does not open`);
+      check("W62", data.r1_state === "APPROVED" && data.r1_reference?.state === "APPROVED", `${row.id}: a Live gate prints R1 state ${data.r1_state}`);
+      if (data.r1_id) check("W62", (await get(`${E}/governance/approvals/${data.r1_id}/r1`)).status === 200, `${row.id}: R1 ${data.r1_id} does not open`);
     }
   }
-  // ── W43: every approval subject opens a readable Alpha 360 (resource + lifecycle answer 200, never a 500), and its Fleet row stage is its approval's stage (N3-05, N3-09) ──
+  // ── W63: every approval subject opens a readable Alpha 360 (resource + lifecycle answer 200, never a 500), and its Fleet row stage is its approval's stage (N3-05, N3-09) ──
   {
     const WAITS = { R1: "RESEARCH", R2: "RESEARCH", PAPER_EXIT: "PAPER", SANDBOX_EXIT: "SANDBOX", LIVE_GATE: "CANARY" };
     for (const row of approvalRows) {
       const label = String(row.subject ?? "").split(/\s+[·→]\s+/)[0];
       const alpha = alphaRows.find((a) => a.alpha_label === label);
       if (alpha === undefined) continue;
-      check("W43", (await get(`${E}/resources/alphas/${alpha.alpha_id}`)).status === 200, `${row.id}: the Alpha 360 of ${label} (${alpha.alpha_id}) does not answer 200`);
-      check("W43", (await get(`${E}/alphas/${alpha.alpha_id}/lifecycle`)).status === 200, `${row.id}: the lifecycle of ${label} does not answer 200`);
-      check("W43", alpha.stage === WAITS[row.gate], `${row.id}: the Fleet row of ${label} says ${alpha.stage}, its ${row.gate} waits at ${WAITS[row.gate]}`);
+      check("W63", (await get(`${E}/resources/alphas/${alpha.alpha_id}`)).status === 200, `${row.id}: the Alpha 360 of ${label} (${alpha.alpha_id}) does not answer 200`);
+      check("W63", (await get(`${E}/alphas/${alpha.alpha_id}/lifecycle`)).status === 200, `${row.id}: the lifecycle of ${label} does not answer 200`);
+      check("W63", alpha.stage === WAITS[row.gate], `${row.id}: the Fleet row of ${label} says ${alpha.stage}, its ${row.gate} waits at ${WAITS[row.gate]}`);
     }
   }
-  // ── W44: the contribution an exit review prints is the Net PnL (realized, the published definition) of the deployment it reviews (N3-02) ──
+  // ── W64: the contribution an exit review prints is the Net PnL (realized, the published definition) of the deployment it reviews (N3-02) ──
   {
     for (const row of approvalRows.filter((r) => r.gate === "SANDBOX_EXIT" || r.gate === "PAPER_EXIT")) {
       const dep = /\b(dep_[A-Za-z0-9_]+)/.exec(String(row.subject))?.[1];
@@ -1372,11 +1372,11 @@ export async function runWorldTies(get) {
       const text = JSON.stringify(d?.panels ?? []);
       const m = /contribution (-?[\d,]+\.\d+) ([A-Z]+)/.exec(text);
       if (known === undefined || m === null) continue;
-      check("W44", sameDecimal(m[1], known.row.realized_pnl), `${row.id}: contribution ${m[1]} ${m[2]}, the Fleet row of ${dep} publishes Net PnL ${known.row.realized_pnl}`);
-      check("W44", m[2] === known.row.currency, `${row.id}: contribution in ${m[2]}, ${dep} is booked in ${known.row.currency}`);
+      check("W64", sameDecimal(m[1], known.row.realized_pnl), `${row.id}: contribution ${m[1]} ${m[2]}, the Fleet row of ${dep} publishes Net PnL ${known.row.realized_pnl}`);
+      check("W64", m[2] === known.row.currency, `${row.id}: contribution in ${m[2]}, ${dep} is booked in ${known.row.currency}`);
     }
   }
-  // ── W45: a request's portfolio weight is allocation over the NAV the portfolio's own chart ends on (N3-03) ──
+  // ── W65: a request's portfolio weight is allocation over the NAV the portfolio's own chart ends on (N3-03) ──
   {
     for (const row of approvalRows.filter((r) => r.gate === "R2" && /^pf_scale_/.test(String(r.portfolio_id ?? "")))) {
       const d = await ok200(`${E}/governance/approvals/${row.id}/r2`);
@@ -1388,11 +1388,11 @@ export async function runWorldTies(get) {
       const nav = numOf(last.value);
       for (const [label, money, shown] of [["before", alloc.before, weight.before], ["after", alloc.after, weight.after]]) {
         const tenths = (numOf(String(money).replace(/,/g, "")) * 2000n + nav) / (2n * nav);
-        check("W45", `${tenths / 10n}.${tenths % 10n}` === shown, `${row.id}: weight ${label} ${shown}%, allocation ${money} over NAV ${last.value} is ${tenths / 10n}.${tenths % 10n}%`);
+        check("W65", `${tenths / 10n}.${tenths % 10n}` === shown, `${row.id}: weight ${label} ${shown}%, allocation ${money} over NAV ${last.value} is ${tenths / 10n}.${tenths % 10n}%`);
       }
     }
   }
-  // ── W46: no margin ratio and no buying power without the data they are made of (N3-04) ──
+  // ── W66: no margin ratio and no buying power without the data they are made of (N3-04) ──
   {
     const rows46 = await pages(`${E}/broker-bindings?limit=50&environment=live`, (b) => b.page?.rows ?? [], (b) => b.page?.next_cursor ?? null, 4);
     for (const row of rows46.slice(0, 60)) {
@@ -1401,15 +1401,15 @@ export async function runWorldTies(get) {
       const ledger = data.account_balances?.find((b) => b.currency === "USDT");
       for (const m of data.margin_balances ?? []) {
         if (m.margin_ratio === undefined) continue;
-        check("W46", ledger !== undefined && numOf(ledger.total) > 0n && numOf(m.maintenance) > 0n, `${row.account_id}: margin ratio ${m.margin_ratio}% over maintenance ${m.maintenance} and a ledger of ${ledger?.total}`);
+        check("W66", ledger !== undefined && numOf(ledger.total) > 0n && numOf(m.maintenance) > 0n, `${row.account_id}: margin ratio ${m.margin_ratio}% over maintenance ${m.maintenance} and a ledger of ${ledger?.total}`);
       }
       for (const sync of data.broker_sync ?? []) {
         if (sync.buying_power === undefined) continue;
-        check("W46", !(numOf(sync.buying_power) === 0n && ledger !== undefined && numOf(ledger.total) === 0n), `${row.account_id}: buying power ${sync.buying_power} printed where the venue reported no balance`);
+        check("W66", !(numOf(sync.buying_power) === 0n && ledger !== undefined && numOf(ledger.total) === 0n), `${row.account_id}: buying power ${sync.buying_power} printed where the venue reported no balance`);
       }
     }
   }
-  // ── W47: "account (new)" names an account that does not exist; an existing account is named as it is, with its capital check (N3-07) ──
+  // ── W67: "account (new)" names an account that does not exist; an existing account is named as it is, with its capital check (N3-07) ──
   {
     for (const row of approvalRows.filter((r) => r.gate === "R2")) {
       const d = await ok200(`${E}/governance/approvals/${row.id}/r2`);
@@ -1417,11 +1417,11 @@ export async function runWorldTies(get) {
       const account = entries.find((e) => e.label === "account (new)" || e.label === "account");
       if (account === undefined) continue;
       const exists = (await get(`${E}/resources/accounts/${account.value}`)).status === 200;
-      check("W47", !(exists && account.label === "account (new)"), `${row.id}: "account (new)" names ${account.value}, which already exists`);
-      if (exists) check("W47", entries.some((e) => e.label === "capital check"), `${row.id}: ${account.value} exists and the request states no capital check of it`);
+      check("W67", !(exists && account.label === "account (new)"), `${row.id}: "account (new)" names ${account.value}, which already exists`);
+      if (exists) check("W67", entries.some((e) => e.label === "capital check"), `${row.id}: ${account.value} exists and the request states no capital check of it`);
     }
   }
-  // ── W48: a request names the entity it decides (a linkable id of the fleet), and the picker the session reads lists no placeholder alpha (N3-06, N3-08) ──
+  // ── W68: a request names the entity it decides (a linkable id of the fleet), and the picker the session reads lists no placeholder alpha (N3-06, N3-08) ──
   {
     for (const row of approvalRows) {
       const label = String(row.subject ?? "").split(/\s+[·→]\s+/)[0];
@@ -1429,7 +1429,7 @@ export async function runWorldTies(get) {
       const dep = /\b(dep_[A-Za-z0-9_]+)/.exec(String(row.subject))?.[1];
       // a Live gate names the alpha in text and the Canary deployment it promotes in subject_id
       const canary = row.gate === "LIVE_GATE" ? (alpha?.deployments ?? []).filter((d) => d.stage === "CANARY").map((d) => d.deployment_id) : [];
-      check("W48", row.subject_id === (dep ?? alpha?.alpha_id) || canary.includes(row.subject_id), `${row.id}: subject_id ${row.subject_id} is not the ${dep !== undefined ? "deployment" : "alpha"} its subject names (${dep ?? alpha?.alpha_id})`);
+      check("W68", row.subject_id === (dep ?? alpha?.alpha_id) || canary.includes(row.subject_id), `${row.id}: subject_id ${row.subject_id} is not the ${dep !== undefined ? "deployment" : "alpha"} its subject names (${dep ?? alpha?.alpha_id})`);
     }
     const names = [];
     let cursor = null;
@@ -1440,10 +1440,10 @@ export async function runWorldTies(get) {
       cursor = page.page?.next_cursor ?? null;
       if (cursor === null) break;
     }
-    check("W48", names.length > 0, "the alpha catalogue answers nothing");
-    for (const name of names) check("W48", !/^Fixture alpha /.test(name), `the picker lists the placeholder "${name}"`);
+    check("W68", names.length > 0, "the alpha catalogue answers nothing");
+    for (const name of names) check("W68", !/^Fixture alpha /.test(name), `the picker lists the placeholder "${name}"`);
     // the catalogue is run-derived: alpha_e is the double's own research-only row, with no run in the world, so it is not in it
-    for (const label of alphaRows.filter((a) => a.alpha_id !== "alpha_e").map((a) => a.alpha_label)) check("W48", names.includes(label), `the picker does not list the fleet alpha "${label}"`);
+    for (const label of alphaRows.filter((a) => a.alpha_id !== "alpha_e").map((a) => a.alpha_label)) check("W68", names.includes(label), `the picker does not list the fleet alpha "${label}"`);
   }
   // ===== WP-B2-A3 round D end
   return { ties };
