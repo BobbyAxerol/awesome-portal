@@ -220,8 +220,12 @@ export function Rail({ api, target, evidence, principal, workspaceId, stepUp, ex
     ? "Not counted: a waiver is not an approval"
     : target.kind === "live"
       ? "Not counted: Live decisions are closed on this build"
-      : sod.kind === "violation"
+      : closed
+        ? "Not counted: the request is already decided"
+        : sod.kind === "violation"
         ? "Not counted: you cannot decide this request"
+        : met !== null && required !== null && met >= required
+          ? "Not counted: the quorum is already met"
         : met !== null && required !== null
           ? `If approved: ${met + 1} of ${required} approvals`
           : <Np text={NOT_PUBLISHED.approvers} />;
@@ -309,7 +313,7 @@ export function Rail({ api, target, evidence, principal, workspaceId, stepUp, ex
             { label: "Request", value: <><span className="exec-ck-id">{target.id}</span>{requestTitle ? ` · ${requestTitle}` : ""}</> },
             // The signed-in person, as the session names them; their role preset is not published (FE-015), so none is printed.
             ...(decided ? [] : [{ label: "You", value: youText }]),
-            ...(decided ? [] : [{ label: "Counts as", value: countsAs }]),
+            ...(decided || closed ? [] : [{ label: "Counts as", value: countsAs }]),
             ...(decided ? [] : [previewRow ?? { label: "What changes", value: <Np text={NOT_PUBLISHED.decisionCall} /> }]),
             ...(v2
               ? [

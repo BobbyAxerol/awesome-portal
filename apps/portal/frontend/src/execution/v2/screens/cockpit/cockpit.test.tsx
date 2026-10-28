@@ -686,6 +686,7 @@ describe("evidence frame", () => {
     await mount(standardPort(), "/execution/approvals?sel=dec_old");
     const rail = screen.getByRole("complementary", { name: "Decision" });
     expect(within(rail).getByTestId("ck-closed-outcome").textContent).toContain("Closed: approved by minh");
+    expect(rail.textContent).not.toMatch(/If approved/);
     expect(within(rail).queryByRole("button", { name: /Approve/ })).toBeNull();
     await settle();
   });
