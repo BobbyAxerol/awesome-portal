@@ -2147,7 +2147,7 @@ export function wpAlphaResource(body: unknown, alphaId: string): unknown {
   void allocation;
   const lead = own[0]!;
   // WORLD: the positions are the deployments' own, at the one mark per symbol, adding up to each deployment's unrealized PnL
-  out.data.positions = own.flatMap((deployment) => positionsOf(deployment.id).map((p): Draft => ({ ...first(data.positions), position_id: p.id, strategy_id: alphaId, deployment_id: deployment.id,
+  out.data.positions = own.flatMap((deployment) => (wpb2sRetired(deployment.id) ? [] : positionsOf(deployment.id)).map((p): Draft => ({ ...first(data.positions), position_id: p.id, strategy_id: alphaId, deployment_id: deployment.id,
     account_id: deployment.accountId, mode: environment, venue: deployment.venue, instrument_id: p.symbol, side: p.side.toUpperCase(), quantity: p.quantity, signed_qty: p.side === "short" ? `-${p.quantity}` : p.quantity,
     avg_px_open: p.entry, mark_price: p.mark, notional: p.notional, unrealized_pnl: p.unrealised, currency: deployment.currency, ...profile })));
   out.data.reconciliation = (Array.isArray(data.reconciliation) ? data.reconciliation : []).map((row: Draft) => ({ ...row, deployment_id: lead.id, account_id: lead.accountId }));

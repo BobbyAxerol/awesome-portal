@@ -423,7 +423,10 @@ export async function runWorldTies(get) {
   const depTotal = alphaRows.reduce((n, a) => n + (a.deployments?.length ?? 0), 0);
   check("W05", summary.alpha_count === (fleet.page.total_count ?? alphaRows.length), `Fleet header ALPHAS ${summary.alpha_count} vs ${fleet.page.total_count} rows`);
   check("W05", summary.deployment_count === depTotal, `Fleet header DEPLOYMENTS ${summary.deployment_count} vs ${depTotal} deployments in the rows`);
-  check("W05", summary.portfolio_count === list.total_portfolios, `Fleet header PORTFOLIOS ${summary.portfolio_count} vs register ${list.total_portfolios}`);
+  // The Fleet header counts the portfolios that HOLD a deployment (T11); the register lists every portfolio, held or not.
+  const heldIds = new Set(alphaRows.flatMap((a) => [...(a.portfolios ?? []).map((p) => p.portfolio_id), ...(a.deployments ?? []).map((d) => d.portfolio_id)]).filter(Boolean));
+  const heldInRegister = [...portfolios.keys()].filter((id) => heldIds.has(id)).length;
+  check("W05", summary.portfolio_count === heldInRegister, `Fleet header PORTFOLIOS ${summary.portfolio_count} vs ${heldInRegister} register portfolios that hold a deployment (register lists ${portfolios.size})`);
   check("W05", list.truncated === true || list.total_portfolios === portfolios.size, `register total_portfolios ${list.total_portfolios} vs ${portfolios.size} rows`);
   for (const s of Object.keys(STAGE_RANK)) {
     const members = alphaRows.filter((r) => (r.stages ?? []).includes(s)).length;
@@ -697,7 +700,7 @@ export async function runWorldTies(get) {
     at("blotter", blotterFirst?.as_of);
     at("portfolio register", list.source_as_of);
     at("alpha fleet", fleet.source_as_of);
-    for (const [kind, id] of [["live", "dep_live_01"], ["canary", "dep_canary_01"], ["sandbox", "dep_sandbox_01"], ["paper", "dep_paper_01"]]) { const p = await page(kind, id); if (p) at(`${kind} room ${id}`, kind === "paper" ? p.body.as_of : p.body.orders?.envelope?.as_of ?? p.body.blotter?.envelope?.as_of ?? p.body.positions?.envelope?.as_of ?? p.body.source_panels?.[0]?.as_of); }
+    for (const [kind, id] of [["live", "dep_live_01"], ["canary", "dep_canary_01"], ["sandbox", "dep_sandbox_01"], ["paper", "dep_paper_01"]]) { const p = await page(kind, id); if (p) at(`${kind} room ${id}`, kind === "paper" ? (p.body.read_at ?? p.body.as_of) : p.body.orders?.envelope?.as_of ?? p.body.blotter?.envelope?.as_of ?? p.body.positions?.envelope?.as_of ?? p.body.source_panels?.[0]?.as_of); }
     const fund = await ok200(`${E}/manager/fund-overview?environment=live&window=30D&limit=1`);
     at("fund dataset", fund?.as_of_ms);
     const q = await ok200(`${E}/operations?limit=1`);
