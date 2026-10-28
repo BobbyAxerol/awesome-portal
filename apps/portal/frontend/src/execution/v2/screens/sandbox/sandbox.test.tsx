@@ -644,6 +644,28 @@ describe("actions with no route are disabled with their reason", () => {
     expect(document.body.textContent).not.toMatch(/Fresh/);
   });
 
+  it("a record whose workflow is APPROVED is never BLOCKED: the gate says Decided with the decision date and decider, and the stage is Done (QA7 N4-01)", async () => {
+    const body = v1Rich();
+    body.certification.workflow_state = "APPROVED";
+    body.steps.forEach((step: Draft) => { step.evaluation_state = "PASS"; step.blocker_code = null; });
+    body.progress = { ...body.progress, passed_count: 7, eligible: false, blocker_codes: [] };
+    body.timeline.rows = [{ event_id: "evt_1", action: "APPROVE", actor_user_id: "bobby", workflow_version_before: 2, workflow_version_after: 3, created_at: "2026-10-06T12:04:00.000Z" }, ...(body.timeline.rows ?? [])];
+    mount(fakeApi({ read: okRead(body) }));
+    await ready();
+    const kpis = document.querySelector(".exec-blk-kpis")?.textContent ?? "";
+    expect(kpis).toMatch(/Gate.{0,12}Decided/);
+    expect(kpis).not.toMatch(/Gate.{0,12}Blocked/);
+    expect(screen.getByTestId("exit-closed").textContent).toMatch(/Decided 6 Oct 12:04Z by bobby/);
+    expect(document.body.textContent).toMatch(/Decided 6 Oct 12:04Z by bobby/);
+    expect(document.querySelector('.exec-blk-spine-node[data-stage="sandbox"]')?.getAttribute("data-s")).toBe("done");
+  });
+
+  it("the spine says in words that it marks the stage being viewed (QA7 N4-02)", async () => {
+    mount(fakeApi({ read: okRead(v1Rich()) }));
+    await ready();
+    expect(screen.getByTestId("spine-viewing").textContent).toMatch(/You are viewing the Sandbox record/);
+  });
+
   it("on a body with no gate (V2) Submit says the profile reason, not a gate it cannot know", async () => {
     mount(fakeApi());
     await ready();

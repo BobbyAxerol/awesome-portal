@@ -15,6 +15,7 @@ import type { SpineStageId } from "../../blocks";
 import type { ExecEnv } from "../../urlState";
 import type { UtcEpochMs } from "../../../screenDataContract";
 import { lifecycleFacts, type LifecycleFacts } from "../alpha/lifecycleModel";
+import type { LifecycleStage } from "../../readers/alphaLifecycle";
 import { useManagerDataset } from "../manager/useManagerDataset";
 
 export function useStageLifecycle(api: ExecutionApi, alphaId: string | null, current: SpineStageId, env: ExecEnv, workspaceId: string | null): LifecycleFacts | null {
@@ -74,14 +75,10 @@ export function useStageCriteria(api: ExecutionApi, alphaId: string | null, stag
   return found !== null && found.key === key ? found.criteria : null;
 }
 
-/**
- * The exit of the stage this screen is about, when the published alpha lifecycle says the alpha already LEFT it (`stages[].state` DONE with an
- * exit instant): the stage is then a closed record and the screen offers no exit action. `null` = not left, not published or not asked.
- * Nothing is derived: the instant and the decider are the server's words.
- */
-export function useStageExit(api: ExecutionApi, alphaId: string | null, stage: "PAPER" | "SANDBOX" | "CANARY" | "LIVE", env: ExecEnv, workspaceId: string | null): { exitedAtMs: UtcEpochMs; decidedBy: string | null } | null {
-  const [found, setFound] = useState<{ key: string; exit: { exitedAtMs: UtcEpochMs; decidedBy: string | null } | null } | null>(null);
-  const key = `${alphaId}|${stage}|${env}|${workspaceId ?? ""}`;
+/** The published alpha lifecycle stages (`getAlphaLifecycle`), or `null` while not read, not published or not askable. */
+export function useLifecycleStages(api: ExecutionApi, alphaId: string | null, env: ExecEnv, workspaceId: string | null): readonly LifecycleStage[] | null {
+  const [found, setFound] = useState<{ key: string; stages: readonly LifecycleStage[] | null } | null>(null);
+  const key = `${alphaId}|${env}|${workspaceId ?? ""}`;
   useEffect(() => {
     if (alphaId === null || typeof api.getAlphaLifecycle !== "function") return;
     let cancelled = false;
@@ -94,14 +91,40 @@ export function useStageExit(api: ExecutionApi, alphaId: string | null, stage: "
     pending
       .then((result) => {
         if (cancelled) return;
-        const stages = result.ok && result.value.stages.state === "PUBLISHED" ? result.value.stages.value : [];
-        const row = stages.find((s) => s.stage === stage && s.state === "DONE" && s.exitedAtMs !== null);
-        setFound({ key, exit: row === undefined || row.exitedAtMs === null ? null : { exitedAtMs: row.exitedAtMs, decidedBy: row.decidedBy } });
+        setFound({ key, stages: result.ok && result.value.stages.state === "PUBLISHED" ? result.value.stages.value : null });
       })
       .catch(() => undefined);
     return () => {
       cancelled = true;
     };
-  }, [api, alphaId, env, workspaceId, stage, key]);
-  return found !== null && found.key === key ? found.exit : null;
+  }, [api, alphaId, env, workspaceId, key]);
+  return found !== null && found.key === key ? found.stages : null;
+}
+
+/** The exit of the stage this screen is about, when the published lifecycle says the alpha already LEFT it (DONE with an exit instant). */
+export function useStageExit(api: ExecutionApi, alphaId: string | null, stage: "PAPER" | "SANDBOX" | "CANARY" | "LIVE", env: ExecEnv, workspaceId: string | null): { exitedAtMs: UtcEpochMs; decidedBy: string | null } | null {
+  const stages = useLifecycleStages(api, alphaId, env, workspaceId);
+  const row = stages?.find((s) => s.stage === stage && s.state === "DONE" && s.exitedAtMs !== null);
+  return row === undefined || row.exitedAtMs === null ? null : { exitedAtMs: row.exitedAtMs, decidedBy: row.decidedBy };
+}
+
+const SPINE_OF: Readonly<Record<LifecycleStage["stage"], SpineStageId>> = { R1: "r1", R2: "r2", PAPER: "paper", SANDBOX: "sandbox", CANARY: "canary", LIVE: "live" };
+const WORD_OF: Readonly<Record<SpineStageId, string>> = { r1: "R1 gate", r2: "R2 gate", paper: "Paper", sandbox: "Sandbox", canary: "Canary", live: "Live" };
+
+/**
+ * What the published lifecycle says about the stages around the one being viewed (QA7 N4-02): the stages it marks DONE (later ones too) and
+ * a sentence that the spine marks the stage being viewed, and where the alpha is now. Only published lifecycle data is used; with none,
+ * the sentence still says what the spine marks, and nothing about other stages.
+ */
+export function viewingLifecycle(stages: readonly LifecycleStage[] | null, viewed: SpineStageId): { done: Partial<Record<SpineStageId, { outcome: "done" }>>; note: string } {
+  const done: Partial<Record<SpineStageId, { outcome: "done" }>> = {};
+  let nowStage: SpineStageId | null = null;
+  for (const s of stages ?? []) {
+    const id = SPINE_OF[s.stage];
+    if (s.state === "DONE") done[id] = { outcome: "done" };
+    if (s.state === "CURRENT") nowStage = id;
+  }
+  const base = `You are viewing the ${WORD_OF[viewed]} record; the marked stage is the one on this page.`;
+  const where = nowStage === null ? "" : nowStage === viewed ? ` The published lifecycle has this alpha in ${WORD_OF[nowStage]} now.` : ` The published lifecycle has this alpha in ${WORD_OF[nowStage]} now; stages after ${WORD_OF[viewed]} are after this stage.`;
+  return { done, note: base + where };
 }

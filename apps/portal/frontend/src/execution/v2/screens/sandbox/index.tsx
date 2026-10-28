@@ -43,7 +43,7 @@ import { formatAsOf } from "../../boundary";
 import { figuresUnpublished, triadRowsOf } from "../stage/triadRows";
 import { AlphaNameLine } from "../stage/AlphaNameLine";
 import { alphaCrumb, portfolioLabel, stageIdentity } from "../stage/identity";
-import { mergeSpine, spineHistory, useStageLifecycle } from "../stage/useStageLifecycle";
+import { mergeSpine, spineHistory, useLifecycleStages, useStageLifecycle, viewingLifecycle } from "../stage/useStageLifecycle";
 import { parseUrlParams, withContext } from "../../urlState";
 import { ExitReviewPanel } from "./ExitReviewPanel";
 import { lineageRoute } from "./lineageRoute";
@@ -266,7 +266,11 @@ function SandboxBody({ api, deploymentId, workspaceId }: SandboxScreenProps) {
   // A V2 body names its workspace; a V1 body does not, and the runtime manifest is the V1 screen's source for it.
   const noteWorkspace = view?.workspaceId ?? routeWorkspace ?? runtime?.manifest?.workspaceId ?? null;
   // The stages the alpha has completed (FE-027): the ticks of the spine, from the alpha's Manager dataset when it publishes them.
-  const history = spineHistory(useStageLifecycle(api, view === null ? null : stageIdentity(view.identity).alphaId, "sandbox", "sandbox", routeWorkspace));
+  const sandboxAlpha = view === null ? null : stageIdentity(view.identity).alphaId;
+  const lifecycleStages = useLifecycleStages(api, sandboxAlpha, "sandbox", routeWorkspace);
+  const viewing = viewingLifecycle(lifecycleStages, "sandbox");
+  const datasetHistory = spineHistory(useStageLifecycle(api, sandboxAlpha, "sandbox", "sandbox", routeWorkspace));
+  const history = datasetHistory === undefined && lifecycleStages === null ? undefined : { ...(datasetHistory ?? {}), ...viewing.done };
   const asked = useNoteCapability(api, view === null ? null : noteWorkspace);
   const capability: NoteCapability = view === null || (noteWorkspace === null && runtime === null) ? { state: "loading" } : asked;
 
@@ -335,7 +339,8 @@ function SandboxBody({ api, deploymentId, workspaceId }: SandboxScreenProps) {
           </>
         }
         chips={chipsOf(view)}
-        spine={{ current: "sandbox", blocked: gate === "blocked", stages: mergeSpine(history, spineFacts(view)), label: "Lifecycle", lockAhead: true }}
+        spine={{ current: "sandbox", blocked: gate === "blocked", stages: mergeSpine(isDecided(view) ? { ...(history ?? {}), sandbox: { outcome: "done" } } : history, spineFacts(view)), label: "Lifecycle", lockAhead: true }}
+        extra={<p className="exec-sbx-note" data-testid="spine-viewing">{viewing.note}</p>}
         actions={
           <button type="button" className="exec-dock-btn" disabled={read.refreshing} title={read.refreshing ? "Reading the certification again" : "Read the certification again"} aria-busy={read.refreshing ? "true" : undefined} onClick={reload}>
             Refresh

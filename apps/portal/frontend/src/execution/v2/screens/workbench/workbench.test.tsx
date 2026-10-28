@@ -716,6 +716,7 @@ describe("a Paper stage the alpha already left (QA6 R2-05)", () => {
     expect(screen.queryByRole("button", { name: "Request exit review" })).toBeNull();
     expect(screen.queryByRole("link", { name: /Open exit review/ })).toBeNull();
     expect(screen.getByTestId("stage-closed")).toBeTruthy();
+    expect(screen.getByTestId("spine-viewing").textContent).toMatch(/You are viewing the Paper record/);
   });
 });
 

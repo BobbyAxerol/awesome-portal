@@ -94,7 +94,7 @@ const joinWords = (items: readonly string[]): string =>
 
 /* ── the gate ─────────────────────────────────────────────────────────────── */
 
-export type GateState = "blocked" | "eligible" | "unknown";
+export type GateState = "blocked" | "eligible" | "decided" | "unknown";
 
 const stepsAvailable = (view: SandboxView): readonly StepView[] | null => (view.steps.availability === "available" ? view.steps.items : null);
 
@@ -151,6 +151,8 @@ export function findingCounts(view: SandboxView): FindingCounts | null {
  * No progress (a V2 body, or none published) means the gate is not known, never "open".
  */
 export function gateOf(view: SandboxView): GateState {
+  // A record the server already decided is never BLOCKED: the red treatment needs a failing step or finding on an undecided record (QA7 N4-01).
+  if (isDecided(view)) return "decided";
   const progress = view.progress;
   if (progress === null) return "unknown";
   const steps = stepsAvailable(view);
@@ -253,8 +255,8 @@ export function kpiCells(view: SandboxView): KpiCell[] {
       : {
           key: "gate",
           label: "Gate",
-          flag: gate === "blocked" ? { kind: "rejected", label: "Blocked" } : { kind: "ok", label: "Eligible" },
-          basis: view.workflowState === null ? undefined : `Workflow ${humanize(view.workflowState).toLowerCase()}`,
+          flag: gate === "decided" ? { kind: "ok", label: "Decided" } : gate === "blocked" ? { kind: "rejected", label: "Blocked" } : { kind: "ok", label: "Eligible" },
+          basis: gate === "decided" ? decidedWords(view) : view.workflowState === null ? undefined : `Workflow ${humanize(view.workflowState).toLowerCase()}`,
         };
   return [steps, findings, crit, plans, gateCell];
 }
@@ -312,7 +314,21 @@ export const ALREADY_DECIDED_CODE = "SANDBOX_CERTIFICATION_ALREADY_DECIDED";
 
 /** True when the published progress says the certification was already decided (QA6 R4-03). */
 export function isDecided(view: SandboxView): boolean {
-  return view.progress !== null && view.progress.blockerCodes.includes(ALREADY_DECIDED_CODE);
+  // The progress is what states the gate; a body without it (V2) keeps the earlier behaviour, because its workflow word alone says nothing about this gate.
+  return view.progress !== null && (view.progress.blockerCodes.includes(ALREADY_DECIDED_CODE) || view.workflowState === "APPROVED");
+}
+
+/** Who decided and when, from the certification's own timeline (the APPROVE event); `null` when it publishes none. */
+export function decisionOf(view: SandboxView): { atMs: number | null; actor: string | null } | null {
+  const row = view.timeline?.rows.find((r) => r.action === "APPROVE");
+  return row === undefined ? null : { atMs: row.at, actor: row.actor };
+}
+
+/** "Decided 6 Oct 12:04Z by bobby", from published facts only. */
+export function decidedWords(view: SandboxView): string {
+  const d = decisionOf(view);
+  if (d === null) return "Decided";
+  return `Decided${d.atMs === null ? "" : ` ${formatAsOf(d.atMs)}`}${d.actor === null ? "" : ` by ${d.actor}`}`;
 }
 
 /** Why Submit for review is off. The action has no route, so it is never on; when the gate is shut the reason says that first. */

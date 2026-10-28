@@ -145,9 +145,11 @@ export interface LifecycleProps {
   accessHref: string;
   /** A sentence when the alpha already left this stage: the stage is a closed record and no exit action is offered. */
   closed?: string | null;
+  /** Says in words that the spine marks the stage being viewed, and where the published lifecycle has the alpha. */
+  viewing?: string | null;
 }
 
-export function LifecyclePanel({ gate, history, criteria = null, exitReason, accessHref, closed = null }: LifecycleProps) {
+export function LifecyclePanel({ gate, history, criteria = null, exitReason, accessHref, closed = null, viewing = null }: LifecycleProps) {
   const verdict = GATE_FLAG[gate.verdict];
   return (
     <SectionPanel level={2}
@@ -167,6 +169,7 @@ export function LifecyclePanel({ gate, history, criteria = null, exitReason, acc
               <DockAction label="Request exit review" reason={exitReason} accessHref={accessHref} />
             </div>
           )}
+          {viewing === null ? null : <p className="exec-wb-cap" data-testid="spine-viewing">{viewing}</p>}
           <p className="exec-wb-cap">
             {history === undefined ? <NotPublished id="FE-027/028">Stage history, gate criteria and decider</NotPublished> : <NotPublished id="FE-028">Gate criteria and decider</NotPublished>}
           </p>

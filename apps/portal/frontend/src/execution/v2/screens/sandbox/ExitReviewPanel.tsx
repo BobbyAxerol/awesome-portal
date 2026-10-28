@@ -12,7 +12,7 @@ import { Flag } from "../../Flag";
 import { BlockerList, NotPublished, SectionPanel } from "../../blocks";
 import { formatAsOf } from "../../boundary";
 import { stageWhy } from "../stage/reasons";
-import { blockers, gateOf, humanize, isDecided, submitReason } from "./model";
+import { blockers, decidedWords, gateOf, humanize, isDecided, submitReason } from "./model";
 import type { SandboxView } from "./readSandbox";
 
 const ACCESS = "/administration/profile-access";
@@ -64,7 +64,7 @@ export function ExitReviewPanel({ view }: { view: SandboxView }) {
     return (
       <SectionPanel level={2} title="Exit review" aside={<Flag kind="ok" label="Decided" size="sm" />}>
         <div className="exec-sbx-exit" data-testid="exit-closed">
-          <p className="exec-sbx-note">This certification was already decided. The record is closed: there is nothing to submit and no exit review to request from here.</p>
+          <p className="exec-sbx-note">{decidedWords(view)}. This certification was already decided. The record is closed: there is nothing to submit and no exit review to request from here.</p>
           <details className="exec-blocker-prov">
             <summary>Provenance</summary>
             <Provenance view={view} codes={codes} />

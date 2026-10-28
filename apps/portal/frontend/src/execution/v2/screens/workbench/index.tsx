@@ -41,7 +41,7 @@ import { resolveTab } from "../../tabAliases";
 import { useMediaQuery } from "../../useMediaQuery";
 import { withContext } from "../../urlState";
 import { stageIdentity } from "../stage/identity";
-import { spineHistory, useStageCriteria, useStageExit, useStageLifecycle } from "../stage/useStageLifecycle";
+import { spineHistory, useLifecycleStages, useStageCriteria, useStageExit, useStageLifecycle, viewingLifecycle } from "../stage/useStageLifecycle";
 import { FillsTab } from "./FillsTab";
 import { Header, LOADING_CHIPS, LifecyclePanel, UNREAD_CHIPS, chipsOf } from "./Header";
 import { OrdersTab } from "./OrdersTab";
@@ -96,7 +96,11 @@ export default function PaperWorkbenchScreen({ api, deploymentId, variant = "pap
   const alphaHref = identity.alphaId === null ? null : ctx(r.alpha(identity.alphaId));
   const name = identity.alphaName ?? strategyId ?? deploymentId;
   // The stages the alpha has completed (FE-027): the ticks of the spine, from the alpha's Manager dataset when it publishes them.
-  const history = spineHistory(useStageLifecycle(api, identity.alphaId, "paper", "paper", params.get("workspace_id")));
+  const lifecycleStages = useLifecycleStages(api, identity.alphaId, "paper", params.get("workspace_id"));
+  const viewing = viewingLifecycle(lifecycleStages, "paper");
+  const datasetHistory = spineHistory(useStageLifecycle(api, identity.alphaId, "paper", "paper", params.get("workspace_id")));
+  // The dataset's history and the published lifecycle's DONE stages, later ones included (QA7 N4-02).
+  const history = datasetHistory === undefined && lifecycleStages === null ? undefined : { ...(datasetHistory ?? {}), ...viewing.done };
   const criteria = useStageCriteria(api, identity.alphaId, "PAPER", "paper", params.get("workspace_id"));
   // The alpha already left Paper (the published lifecycle says DONE with an exit instant): this page is a closed record (QA6 R2-05).
   const exited = useStageExit(api, identity.alphaId, "PAPER", "paper", params.get("workspace_id"));
@@ -135,7 +139,7 @@ export default function PaperWorkbenchScreen({ api, deploymentId, variant = "pap
             {model.page.nq.reasons.length > 0 ? <GapWhy name="Why the source is not qualified" rows={[model.page.nq.reasons.join(" · ")]} /> : null}
           </div>
         ) : null}
-        <LifecyclePanel gate={model.gate} accessHref={accessHref} history={history} criteria={criteria} exitReason={exitReviewReason(model.gate)} closed={closed} />
+        <LifecyclePanel gate={model.gate} accessHref={accessHref} history={history} criteria={criteria} exitReason={exitReviewReason(model.gate)} closed={closed} viewing={viewing.note} />
         <UrlTabs surface="paper" tabs={WB_TABS} label="Paper deployment sections">
           {(active) => {
             switch (active) {

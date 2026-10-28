@@ -118,7 +118,8 @@ export function spineNodeState(
   blocked: boolean,
   facts: SpineStageFacts | undefined,
 ): SpineNodeState {
-  if (current === id) return blocked ? "blk" : "cur";
+  // A stage the source says is DONE is a finished record even when it is the one on screen: never blocked, never "now" (QA7 N4-01).
+  if (current === id) return facts?.outcome === "done" ? "done" : blocked ? "blk" : "cur";
   if (facts?.outcome === "done") return "done";
   if (current === null || current === undefined) return "unknown";
   // Position is vocabulary, not history: a stage after the current one has not been reached.
