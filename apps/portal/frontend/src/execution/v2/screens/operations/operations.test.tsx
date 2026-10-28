@@ -91,10 +91,10 @@ describe("loaded queue", () => {
     await table();
     const kpis = screen.getByRole("group", { name: "Queue counts" });
     expect(within(kpis).getByText("In scope").nextElementSibling?.querySelector(".exec-blk-kpi-value")?.textContent).toBe("13"); // WP-B2-S3: 13 operations in the world
-    expect(within(kpis).getByText("Matching").nextElementSibling?.querySelector(".exec-blk-kpi-value")?.textContent).toBe("8");
-    expect(within(kpis).getByText("Loaded").nextElementSibling?.querySelector(".exec-blk-kpi-value")?.textContent).toBe("8");
+    expect(within(kpis).getByText("Matching").nextElementSibling?.querySelector(".exec-blk-kpi-value")?.textContent).toBe("9"); // QA8 N8b-04: 9 pending, the dry-run reconcile of Carry A's Live deployment waits for a manager
+    expect(within(kpis).getByText("Loaded").nextElementSibling?.querySelector(".exec-blk-kpi-value")?.textContent).toBe("9");
     expect(within(kpis).getByText("Read").nextElementSibling?.querySelector(".exec-blk-kpi-value")?.textContent).toBe("Available");
-    expect(screen.getByText(/8 of 8 matching · 13 in scope/)).toBeTruthy();
+    expect(screen.getByText(/9 of 9 matching · 13 in scope/)).toBeTruthy();
     expect(screen.getByText("End of the list.")).toBeTruthy();
   });
 
@@ -405,11 +405,11 @@ describe("keyset paging", () => {
     mount(api);
     const t = await table();
     expect(within(t).getAllByRole("row")).toHaveLength(1 + 5);
-    expect(screen.getByText(/5 of 8 matching · 13 in scope/)).toBeTruthy();
+    expect(screen.getByText(/5 of 9 matching · 13 in scope/)).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Load more" }));
-    await waitFor(() => expect(screen.getByText(/8 of 8 matching · 13 in scope/)).toBeTruthy());
+    await waitFor(() => expect(screen.getByText(/9 of 9 matching · 13 in scope/)).toBeTruthy());
     expect(calls[1].after).toBeTruthy();
-    expect(within(await table()).getAllByRole("row")).toHaveLength(1 + 8);
+    expect(within(await table()).getAllByRole("row")).toHaveLength(1 + 9);
     expect(screen.queryByRole("button", { name: "Load more" })).toBeNull();
     expect(screen.getByText("End of the list.")).toBeTruthy();
   });
@@ -486,7 +486,7 @@ describe("local 24H window", () => {
     const { api, queue } = fakeApi({ queue: readAt("2026-08-30T00:00:00Z") });
     mount(api, { now: new Date("2026-08-30T00:00:00Z") });
     const t = await table();
-    expect(within(t).getByText(/All 8 loaded rows are older than 24H/)).toBeTruthy();
+    expect(within(t).getByText(/All 9 loaded rows are older than 24H/)).toBeTruthy();
     const calls = queue.mock.calls.length;
     const windowGroup = screen.getByRole("group", { name: "Range" });
     fireEvent.click(within(windowGroup).getByRole("button", { name: "30D" }));
@@ -517,7 +517,7 @@ describe("the range counts back from the read (WP-B)", () => {
   it("a read that states no instant falls back to the reader's clock", async () => {
     const { api } = fakeApi({ queue: readAt("1970-01-01T00:00:00Z") });
     mount(api, { now: new Date("2026-08-30T00:00:00Z") });
-    expect(within(await table()).getByText(/All 8 loaded rows are older than 24H/)).toBeTruthy();
+    expect(within(await table()).getByText(/All 9 loaded rows are older than 24H/)).toBeTruthy();
     expect(screen.queryByText(/more than a day ago/)).toBeNull();
   });
 });

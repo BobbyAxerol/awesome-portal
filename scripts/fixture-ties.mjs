@@ -974,6 +974,27 @@ export async function runWorldTies(get) {
     check("W71", dark.lifecycle?.duration_days === base.lifecycle?.duration_days && dark.lifecycle?.day_index === base.lifecycle?.day_index, `${id}_dark: trial ${dark.lifecycle?.day_index}/${dark.lifecycle?.duration_days} days, the base room's ${base.lifecycle?.day_index}/${base.lifecycle?.duration_days}`);
     check("W71", JSON.stringify((dark.envelope_compliance?.rows ?? []).map((r) => r.approved)) === JSON.stringify((base.envelope_compliance?.rows ?? []).map((r) => r.approved)), `${id}_dark: approved caps differ from the base room's`);
   }
+  // W72 (QA8 N8b-02, N8b-03, N8b-04): a room and its variants are one deployment: an open reconciliation incident of the deployment is an open finding of the base room too, and every variant id a room link carries opens the deployment's own non-empty blotter and operations list
+  {
+    const base = "dep_live_01";
+    const baseRoom = await ok200(`${E}/deployments/${base}/live`);
+    const incidents = ((await ok200(`${E}/operations?target_id=${base}&limit=100`))?.page?.rows ?? []);
+    const incidentLinked = incidents.some((row) => (row.incident_links?.items ?? []).some((i) => i.state === "LINKED"));
+    if (baseRoom !== null && incidentLinked) {
+      check("W72", Number(baseRoom.stage_facts?.reconciliation?.open_finding_count?.value) >= 1 && baseRoom.stage_facts?.reconciliation?.verdict?.value === "OPEN_FINDINGS", `${base}: an incident is open on it yet its room says ${baseRoom.stage_facts?.reconciliation?.verdict?.value} (${baseRoom.stage_facts?.reconciliation?.open_finding_count?.value})`);
+    }
+    const baseBlotter = await ok200(`${E}/screens/blotter?deployment_id=${base}&limit=200`);
+    check("W72", (baseBlotter?.data?.orders ?? []).length > 0, `${base}: its own blotter is empty`);
+    for (const variant of ["gap", "mismatch", "stale", "dark"]) {
+      const id = `${base}_${variant}`;
+      const blotter = await ok200(`${E}/screens/blotter?deployment_id=${id}&limit=200`);
+      const orders = blotter?.data?.orders ?? [];
+      check("W72", orders.length === (baseBlotter?.data?.orders ?? []).length && orders.every((o) => o.deployment_id === base), `${id}: the blotter scope lists ${orders.length} orders (the deployment's own: ${(baseBlotter?.data?.orders ?? []).length})`);
+      const ops = await ok200(`${E}/operations?target_id=${id}&limit=100`);
+      const rows = ops?.page?.rows ?? [];
+      check("W72", rows.length > 0 && rows.every((row) => row.target?.id === base), `${id}: the operations list has ${rows.length} rows, targets ${[...new Set(rows.map((row) => row.target?.id))]}`);
+    }
+  }
   // ===== WP-B2-S3 end
   // ===== WP-B2-A3 begin
   // ── W19: a request exists only for the NEXT gate of its subject, once, and its quorum is open (R3-02, R3-09, R3-10, R3-03) ───────────────────────────────

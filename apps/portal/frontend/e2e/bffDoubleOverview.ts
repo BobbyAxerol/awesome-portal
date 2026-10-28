@@ -323,9 +323,13 @@ function worldBlotterBooks(): WorldBook[] {
 let openBook: Map<string, WorldOpenOrder[]> | null = null;
 let openBookSource: Row[] | null = null;
 export interface WorldOpenOrder { id: string; symbol: string; side: "buy" | "sell"; type: string; quantity: string; price: string; status: string; sinceMs: number }
+// ===== WP-B2-S3 begin (QA8 N8b-03): a stage-page variant id (`dep_live_01_gap`) names a state of the deployment `dep_live_01`; its blotter scope is that deployment's
+const VARIANT_SUFFIX = /^(dep_.+?)_(?:dark|mismatch|stale|gap|breach|halted|vn)$/;
+export const deploymentOfVariant = (id: string): string => id.replace(VARIANT_SUFFIX, "$1");
+// ===== WP-B2-S3 end
 /** WORLD: the blotter summary of a scope is COUNTED from the blotter's own rows (environment, optionally one deployment), so its chips and funnel equal the rows the screen lists. */
 export function worldBlotterCounts(environment: string, deploymentId: string | null): { submitted: number; filled: number; partial: number; working: number; cancelled: number; rejected: number } {
-  const rows = rowsFor(false).map((r) => r.order as unknown as Record<string, unknown>).filter((o) => o.mode === environment && (deploymentId === null || o.deployment_id === deploymentId));
+  const rows = rowsFor(false).map((r) => r.order as unknown as Record<string, unknown>).filter((o) => o.mode === environment && (deploymentId === null || o.deployment_id === deploymentOfVariant(deploymentId)));
   const count = (...states: string[]): number => rows.filter((o) => states.includes(String(o.status))).length;
   return { submitted: rows.length, filled: count("FILLED"), partial: count("PARTIALLY_FILLED"), working: count("ACCEPTED", "SUBMITTED"), cancelled: count("CANCELED"), rejected: count("REJECTED") };
 }
@@ -548,7 +552,7 @@ function blotter(search: URLSearchParams): OverviewAnswer {
   const scopeAxes = (["deployment_id", "account_id", "alpha_id"] as const).flatMap((axis) => { const value = search.get(axis); return value === null || value === "" ? [] : [[axis, value] as const]; });
   const inScope = (r: Row): boolean => {
     const o = r.order as unknown as Record<string, unknown>;
-    return (stageParam === null || o.mode === "paper") && scopeAxes.every(([axis, value]) => (axis === "alpha_id" ? (o.alpha_id ?? o.strategy_id) : o[axis]) === value);
+    return (stageParam === null || o.mode === "paper") && scopeAxes.every(([axis, value]) => (axis === "alpha_id" ? (o.alpha_id ?? o.strategy_id) : o[axis]) === (axis === "deployment_id" ? deploymentOfVariant(value) : value)); // WP-B2-S3
   };
   const all = v === "empty" ? [] : source.filter(inScope);
   const scopeSignature = stageParam === null && scopeAxes.length === 0 ? "" : `|${stageParam ?? ""}|${scopeAxes.map(([axis, value]) => `${axis}=${value}`).join("&")}`; // empty for an unscoped read: its cursors stay byte for byte what they were

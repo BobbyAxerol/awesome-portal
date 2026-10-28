@@ -33,6 +33,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { scaled } from "./bffScale";
+import { deploymentOfVariant } from "./bffDoubleOverview"; // WP-B2-S3
 import { environmentFor, riskTierFor } from "./bffWorldBooks"; // WP-B2-C
 import { incidentRootTimes, incidentState, incidentVersion, WORLD_INCIDENTS, WORLD_OPERATIONS } from "./bffWorld";
 
@@ -285,7 +286,7 @@ function queue(search: URLSearchParams, simulate = false): BffAnswerV2 {
     if (spec.allowed && !spec.allowed.includes(value)) return problem(400, "OPERATIONAL_READ_INPUT_INVALID", `${spec.param} is not a valid value.`);
     applied.push({ field: spec.param, op: "eq", value });
     // WP-B2-S3: a page variant id (`dep_live_01_mismatch`) names a state of the deployment `dep_live_01`; the queue is that deployment's
-    const wanted = spec.param === "target_id" ? value.replace(/^(dep_.+?)_(?:dark|mismatch|stale|gap|breach|halted|vn)$/, "$1") : value;
+    const wanted = spec.param === "target_id" ? deploymentOfVariant(value) : value;
     rows = rows.filter((row) => spec.field(row) === wanted);
   }
   const sort = search.get("sort") ?? "created_at:desc";

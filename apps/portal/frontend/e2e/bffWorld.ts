@@ -329,7 +329,7 @@ export const WORLD_OPERATIONS: readonly WorldOperation[] = [
   { id: "op_TEST_ONLY_s10", at: "2026-08-22T08:15:00.000000Z", command: "account/sync", target: ["ACCOUNT", "acc_TEST_ONLY_binance01"], env: "PAPER", risk: "R1_PAPER_MUTATION", severity: "WARNING", source: "SUCCEEDED", verify: "DENIED", triage: "UNACKNOWLEDGED" },
   { id: "op_TEST_ONLY_s11", at: "2026-08-22T07:30:00.000000Z", command: "portfolio/recall", target: ["PORTFOLIO", "pf_TEST_ONLY_satellite"], env: "SANDBOX", risk: "R2_SANDBOX", severity: "INFO", source: "SUCCEEDED", verify: "SUCCEEDED", triage: "RESOLVED" },
   // ===== WP-B2-S3 begin: the dry-run reconcile of the Live deployment whose internal and broker figures disagree (the mismatch variant's "Open dry-run reconcile")
-  { id: "op_TEST_ONLY_s12", at: "2026-08-22T11:30:00.000000Z", command: "deployment/reconcile", target: ["DEPLOYMENT", "dep_live_01"], env: "LIVE", risk: "R3_LIVE_PROTECTIVE", severity: "ERROR", source: "SUCCEEDED", verify: "PARTIAL", triage: "ACKNOWLEDGED" },
+  { id: "op_TEST_ONLY_s12", at: "2026-08-22T11:30:00.000000Z", command: "deployment/reconcile", target: ["DEPLOYMENT", "dep_live_01"], env: "LIVE", risk: "R3_LIVE_PROTECTIVE", severity: "ERROR", source: "SUCCEEDED", verify: "PARTIAL", triage: "UNACKNOWLEDGED" }, // QA8 N8b-04: waiting for a manager, so the default Attention lens of the dry-run link lists it
   // ===== WP-B2-S3 end
 ];
 const opById = (id: string): WorldOperation | undefined => WORLD_OPERATIONS.find((op) => op.id === id);
@@ -378,7 +378,7 @@ export const WORLD_INCIDENTS: readonly WorldIncident[] = [
   // ===== WP-B2-S3 begin: the reconciliation-mismatch incident of Carry A's Live deployment (the mismatch variant's "Open finding")
   { id: "inc_TEST_ONLY_fx_recon", target: ["DEPLOYMENT", "dep_live_01"], env: "LIVE", severity: "ERROR", createdMs: at(11, 31), openedBy: "lan",
     acknowledged: null, assigned: null, mitigated: null, resolved: null,
-    evidence: [{ source: "FINDING", label: "Internal and broker figures disagree", atMs: at(11, 31, 20) }],
+    evidence: [{ source: "FINDING", label: "Reconciliation finding under review", atMs: at(11, 31, 20) }],
     links: [["op_TEST_ONLY_s12", "TRIGGERED_BY", at(11, 31, 5)]] },
   // ===== WP-B2-S3 end
 ];

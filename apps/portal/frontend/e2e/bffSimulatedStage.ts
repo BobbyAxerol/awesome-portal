@@ -589,7 +589,7 @@ function liveLit(body: Obj, deploymentId: string, variant: StageVariant): Obj {
     state: mismatch ? "MISMATCH" : "IN_SYNC",
     mismatch_behavior: "SUPPRESS_ALL_BROKER_VALUES",
     broker_values_visible: visible,
-    finding_href: mismatch ? liveFindingHref(deploymentId) : null, // WP-B2-S3 R5-03: the finding of the portfolio this deployment is booked on, in its environment
+    finding_href: mismatch || openReconIncidentOf(worldIdOf(deploymentId, "live")) !== undefined ? liveFindingHref(deploymentId) : null, // WP-B2-S3 R5-03: the finding of the portfolio this deployment is booked on, in its environment
     dry_run_reconcile_href: mismatch ? `/execution/operations?target_id=${encodeURIComponent(deploymentId)}` : null, // the reconcile targets the deployment the card names
     blocker_codes: [],
   };
@@ -910,6 +910,7 @@ function worldStage(kind: "canary" | "live" | "sandbox" | "paper", body: Obj | n
 
   if (kind === "live") {
     const started = iso(life.liveFromMs);
+    const openRecon = openReconIncidentOf(d.id) !== undefined; // WP-B2-S3
     const dep = body.deployment as Obj;
     withIdentityOf(dep);
     dep.activated_at = started;
@@ -926,7 +927,7 @@ function worldStage(kind: "canary" | "live" | "sandbox" | "paper", body: Obj | n
       envelope.limits = { capital_cap: worldCents(trialAlloc), gross_notional_cap: worldCents(trialAlloc * 3n / 2n), daily_loss_cap: worldCents(trialAlloc / 100n), max_open_orders: 20 };
     }
     const series = seriesOf(d.id, life.liveFromMs, seriesTo, Math.max(8, life.liveDays + 1), net);
-    body.stage_facts = stageFacts({ runtime: halted ? "HALTED" : "RUNNING", since: halted ? haltedIso ?? started : started, verdict: mismatch ? "OPEN_FINDINGS" : "NO_OPEN_FINDINGS", open: mismatch ? 1 : 0, unknownOrders: 0, asOf,
+    body.stage_facts = stageFacts({ runtime: halted ? "HALTED" : "RUNNING", since: halted ? haltedIso ?? started : started, verdict: mismatch || openRecon ? "OPEN_FINDINGS" : "NO_OPEN_FINDINGS", open: mismatch || openRecon ? 1 : 0, unknownOrders: 0, asOf, // WP-B2-S3 (QA8 N8b-02): an open reconciliation incident of the deployment IS its open finding, in the base room and every variant
       sessions: [{ id: `session_${d.id}_live_1`, started, ended: null, state: halted ? "HALTED" : "RUNNING" }] });
     body.source_figures = figures(!mismatch);
     setKpis({ capital: worldCents(alloc), gross_notional: gross, daily_pnl: dailyOf(series, 1), open_orders: String(orders.length), broker_equity: mismatch ? null : equity });
@@ -1243,6 +1244,8 @@ function darkHybrid(kind: "sandbox" | "paper" | "canary", answerBody: Obj, id: s
   for (const key of ["stage_facts", "source_figures", "source_panels"]) if (key in dark) lit[key] = dark[key];
   return lit;
 }
+/** The open reconciliation incident of a Live deployment (a world incident whose target is the deployment, Real-funded, unresolved). */
+export const openReconIncidentOf = (deploymentId: string): (typeof WORLD_INCIDENTS)[number] | undefined => WORLD_INCIDENTS.find((x) => x.target[0] === "DEPLOYMENT" && x.target[1] === deploymentId && x.env === "LIVE" && x.resolved === null);
 /** The open incident an unreconciled Live deployment links as its finding: an incident of the portfolio it is booked on, in a Real-funded (LIVE) environment; null when the world holds none. */
 function liveFindingHref(deploymentId: string): string | null {
   const found = resolveStageDeployment(worldIdOf(deploymentId, "live"));
