@@ -41,7 +41,7 @@ import { resolveTab } from "../../tabAliases";
 import { useMediaQuery } from "../../useMediaQuery";
 import { withContext } from "../../urlState";
 import { stageIdentity } from "../stage/identity";
-import { spineHistory, useStageCriteria, useStageLifecycle } from "../stage/useStageLifecycle";
+import { spineHistory, useStageCriteria, useStageExit, useStageLifecycle } from "../stage/useStageLifecycle";
 import { FillsTab } from "./FillsTab";
 import { Header, LOADING_CHIPS, LifecyclePanel, UNREAD_CHIPS, chipsOf } from "./Header";
 import { OrdersTab } from "./OrdersTab";
@@ -98,6 +98,9 @@ export default function PaperWorkbenchScreen({ api, deploymentId, variant = "pap
   // The stages the alpha has completed (FE-027): the ticks of the spine, from the alpha's Manager dataset when it publishes them.
   const history = spineHistory(useStageLifecycle(api, identity.alphaId, "paper", "paper", params.get("workspace_id")));
   const criteria = useStageCriteria(api, identity.alphaId, "PAPER", "paper", params.get("workspace_id"));
+  // The alpha already left Paper (the published lifecycle says DONE with an exit instant): this page is a closed record (QA6 R2-05).
+  const exited = useStageExit(api, identity.alphaId, "PAPER", "paper", params.get("workspace_id"));
+  const closed = exited === null ? null : `Paper exit decided ${formatAsOf(exited.exitedAtMs)}${exited.decidedBy ? ` by ${exited.decidedBy}` : ""}. This stage is a closed record: no exit review is requested from here.`;
 
   const profileFailure = reads.profile.phase === "ready" ? reads.profile.refreshFailure : null;
   const qualityFailure = reads.quality.phase === "ready" ? reads.quality.refreshFailure : null;
@@ -132,7 +135,7 @@ export default function PaperWorkbenchScreen({ api, deploymentId, variant = "pap
             {model.page.nq.reasons.length > 0 ? <GapWhy name="Why the source is not qualified" rows={[model.page.nq.reasons.join(" · ")]} /> : null}
           </div>
         ) : null}
-        <LifecyclePanel gate={model.gate} accessHref={accessHref} history={history} criteria={criteria} exitReason={exitReviewReason(model.gate)} />
+        <LifecyclePanel gate={model.gate} accessHref={accessHref} history={history} criteria={criteria} exitReason={exitReviewReason(model.gate)} closed={closed} />
         <UrlTabs surface="paper" tabs={WB_TABS} label="Paper deployment sections">
           {(active) => {
             switch (active) {
@@ -145,7 +148,7 @@ export default function PaperWorkbenchScreen({ api, deploymentId, variant = "pap
               case "sessions":
                 return <SessionsTab counted={model.sessionsCounted} sessions={model.facts?.sessions ?? null} />;
               default:
-                return <OverviewTab model={model} quality={reads.quality} exitReviewsHref={ctx(r.exitReviews)} exitRequest={{ api, deploymentId: dep, workspaceId: params.get("workspace_id") }} notQualified={model.page.nq !== null} />;
+                return <OverviewTab model={model} quality={reads.quality} exitReviewsHref={ctx(r.exitReviews)} closed={closed} exitRequest={{ api, deploymentId: dep, workspaceId: params.get("workspace_id") }} notQualified={model.page.nq !== null} />;
             }
           }}
         </UrlTabs>

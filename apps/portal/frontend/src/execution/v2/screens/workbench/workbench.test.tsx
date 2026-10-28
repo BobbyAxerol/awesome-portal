@@ -705,6 +705,20 @@ describe("roles: the session pre-narrows nothing (RK-1, DEBT-UXM07-005); the Acc
   });
 });
 
+describe("a Paper stage the alpha already left (QA6 R2-05)", () => {
+  it("is a closed record: the exit request and the review link are gone and the page says who decided and when", async () => {
+    const served = fakeApi({ profile: { ok: true, value: envelopeOf(paperWire({ identity: true })) } });
+    const done = { stage: "PAPER", state: "DONE", enteredAtMs: 1, exitedAtMs: Date.UTC(2026, 8, 21, 12, 4), daysInStage: 29, criteria: null, deciderRole: null, decidedBy: "minh", receiptRef: null, blockedReason: null };
+    const api = { ...served.api, getAlphaLifecycle: async () => ({ ok: true, value: { stages: { state: "PUBLISHED", value: [done] } } }) } as unknown as ExecutionApi;
+    render(<MemoryRouter initialEntries={[`/deployments/paper/${DEP}`]}><PaperWorkbenchScreen api={api} deploymentId={DEP} /></MemoryRouter>);
+    await ready();
+    expect((await screen.findByTestId("exit-gate-closed")).textContent).toMatch(/Paper exit decided 21 Sep 12:04Z by minh/);
+    expect(screen.queryByRole("button", { name: "Request exit review" })).toBeNull();
+    expect(screen.queryByRole("link", { name: /Open exit review/ })).toBeNull();
+    expect(screen.getByTestId("stage-closed")).toBeTruthy();
+  });
+});
+
 describe("the exit review link (QA6 R4-02)", () => {
   const gate = { verdict: "none", observedDays: null, minimumDays: null, trades: null, minimumTrades: null, sessions: null, windowBounded: null, reasonCode: null, policyStage: null, policyVersion: null } as const;
   it("opens the alpha's own review when a published lineage names one, and the list (said as such) when none is published", () => {

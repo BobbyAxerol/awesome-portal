@@ -55,6 +55,7 @@ import {
   LOADING_CHIPS,
   RECON_ROWS,
   chipsOf,
+  isDecided,
   figuresSuppressed,
   gateOf,
   humanize,
@@ -364,12 +365,14 @@ function SandboxBody({ api, deploymentId, workspaceId }: SandboxScreenProps) {
               </div>
               <aside className="exec-sbx-rail" aria-label="Exit review and review note">
                 <ExitReviewPanel view={view} />
-                <ReviewNoteForm
-                  api={api}
-                  capability={capability}
-                  identity={{ workspaceId: noteWorkspace, certificationId: view.certificationId, workflowVersion: view.workflowVersion }}
-                  onRecorded={reload}
-                />
+                {isDecided(view) ? null : (
+                  <ReviewNoteForm
+                    api={api}
+                    capability={capability}
+                    identity={{ workspaceId: noteWorkspace, certificationId: view.certificationId, workflowVersion: view.workflowVersion }}
+                    onRecorded={reload}
+                  />
+                )}
               </aside>
             </div>
           </div>

@@ -72,3 +72,35 @@ export function useStageCriteria(api: ExecutionApi, alphaId: string | null, stag
   }, [api, alphaId, env, workspaceId, stage, key]);
   return found !== null && found.key === key ? found.criteria : null;
 }
+
+/**
+ * The exit of the stage this screen is about, when the published alpha lifecycle says the alpha already LEFT it (`stages[].state` DONE with an
+ * exit instant): the stage is then a closed record and the screen offers no exit action. `null` = not left, not published or not asked.
+ * Nothing is derived: the instant and the decider are the server's words.
+ */
+export function useStageExit(api: ExecutionApi, alphaId: string | null, stage: "PAPER" | "SANDBOX" | "CANARY" | "LIVE", env: ExecEnv, workspaceId: string | null): { exitedAtMs: number; decidedBy: string | null } | null {
+  const [found, setFound] = useState<{ key: string; exit: { exitedAtMs: number; decidedBy: string | null } | null } | null>(null);
+  const key = `${alphaId}|${stage}|${env}|${workspaceId ?? ""}`;
+  useEffect(() => {
+    if (alphaId === null || typeof api.getAlphaLifecycle !== "function") return;
+    let cancelled = false;
+    let pending: ReturnType<NonNullable<ExecutionApi["getAlphaLifecycle"]>>;
+    try {
+      pending = api.getAlphaLifecycle(alphaId, env, workspaceId ?? undefined);
+    } catch {
+      return;
+    }
+    pending
+      .then((result) => {
+        if (cancelled) return;
+        const stages = result.ok && result.value.stages.state === "PUBLISHED" ? result.value.stages.value : [];
+        const row = stages.find((s) => s.stage === stage && s.state === "DONE" && s.exitedAtMs !== null);
+        setFound({ key, exit: row === undefined || row.exitedAtMs === null ? null : { exitedAtMs: row.exitedAtMs, decidedBy: row.decidedBy } });
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [api, alphaId, env, workspaceId, stage, key]);
+  return found !== null && found.key === key ? found.exit : null;
+}

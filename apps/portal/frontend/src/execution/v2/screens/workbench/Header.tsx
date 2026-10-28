@@ -143,9 +143,11 @@ export interface LifecycleProps {
   exitReason?: string;
   /** Where "My access" lives (the grant behind the disabled action). */
   accessHref: string;
+  /** A sentence when the alpha already left this stage: the stage is a closed record and no exit action is offered. */
+  closed?: string | null;
 }
 
-export function LifecyclePanel({ gate, history, criteria = null, exitReason, accessHref }: LifecycleProps) {
+export function LifecyclePanel({ gate, history, criteria = null, exitReason, accessHref, closed = null }: LifecycleProps) {
   const verdict = GATE_FLAG[gate.verdict];
   return (
     <SectionPanel level={2}
@@ -160,7 +162,7 @@ export function LifecyclePanel({ gate, history, criteria = null, exitReason, acc
       <div className="exec-wb-life">
         <div className="exec-wb-spine">
           <JourneySpine variant="compact" current="paper" blocked={gate.verdict === "blocked"} stages={history} lockAhead label="Deployment lifecycle" />
-          {exitReason === undefined ? null : (
+          {closed !== null ? <p className="exec-wb-cap" data-testid="stage-closed">{closed}</p> : exitReason === undefined ? null : (
             <div className="exec-wb-exitask">
               <DockAction label="Request exit review" reason={exitReason} accessHref={accessHref} />
             </div>
