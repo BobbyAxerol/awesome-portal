@@ -97,7 +97,7 @@ function GateFlags({ row, principal }: { row: InboxRowV2; principal: Principal }
       ) : unknownStatus ? (
         <Flag kind="unknown" label={`Status ${row.status}`} size="sm" />
       ) : sla?.overdue ? (
-        <Flag kind="rejected" label="Overdue" size="sm" />
+        <Flag kind="attention" label="Overdue" size="sm" />
       ) : (
         <Flag kind="pending" label={met !== null && required !== null ? `Pending ${met}/${required}` : "Pending"} size="sm" />
       )}

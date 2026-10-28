@@ -237,7 +237,9 @@ describe("L1 · C1 · row states through reader and lane model", () => {
       if (isClosedRow(row)) {
         if (!kinds.includes("neutral")) problems.push(`${row.id}: closed row has no neutral flag`);
       } else if (sla.overdue) {
-        if (!kinds.includes("rejected")) problems.push(`${row.id}: overdue row has no rejected flag`);
+        // QA8 N8c-05: overdue is a warning state, not rejected or failed.
+        if (!kinds.includes("attention")) problems.push(`${row.id}: overdue row has no warning (attention) flag`);
+        if (kinds.includes("rejected")) problems.push(`${row.id}: overdue row wears the rejected glyph`);
       } else if (!kinds.includes("pending")) {
         problems.push(`${row.id}: open row has no pending flag`);
       }
