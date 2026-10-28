@@ -416,7 +416,7 @@ function Alpha360({ api, alphaId, workspaceId }: AlphaScreenProps) {
 
             <div role="tabpanel" id={panelId} aria-labelledby={inMore ? undefined : tabId(tab)} aria-label={inMore ? ALPHA_MORE_TABS.find((t) => t.key === tab)?.label : undefined} className="exec-alp2-panel">
               {tab === "performance" ? (
-                <PerformanceTab timeline={timeline} drawdown={drawdown} venues={lifecycle?.venueNetPnl ?? null} life={life} rows={rows} noTotals={view?.money.published === false ? view.money.reason : null} dataset={dataset} names={names} env={env} equity={equity} drift={drift} inputs={inputs} paths={paths} view={perfView} onView={(next) => url.set({ view: next === "act" ? null : next })} />
+                <PerformanceTab readAsOf={view?.asOfMs ?? undefined} timeline={timeline} drawdown={drawdown} venues={lifecycle?.venueNetPnl ?? null} life={life} rows={rows} noTotals={view?.money.published === false ? view.money.reason : null} dataset={dataset} names={names} env={env} equity={equity} drift={drift} inputs={inputs} paths={paths} view={perfView} onView={(next) => url.set({ view: next === "act" ? null : next })} />
               ) : null}
               {tab === "deployments" ? (
                 <DeploymentsTab

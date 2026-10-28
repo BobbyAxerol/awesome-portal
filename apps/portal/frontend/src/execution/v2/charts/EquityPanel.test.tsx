@@ -261,6 +261,13 @@ describe("EquityPanel · layers", () => {
     expect(y).toBeGreaterThan(tickBottom);
   });
 
+  it("prints one as-of for the equity and drawdown readouts, and the drawdown does not carry a different one (QA7 N2-07)", () => {
+    const dd = series(["-0.0100"]);
+    const { container } = render(<EquityPanel label="Equity" readAsOf={Date.UTC(2026, 9, 4)} points={BASIC} drawdown={{ kind: "series", points: dd }} />);
+    expect(container.querySelector('[data-testid="readout-asof"]')?.textContent).toBe("4 Oct 00:00Z");
+    expect(container.querySelector('[data-testid="readout-drawdown"]')?.textContent ?? "").not.toMatch(/as of/);
+  });
+
   it("clips the drawdown series to the plot, so a series that starts before the axis never draws outside the panel (QA7 N2-06)", () => {
     const dd = series(["-0.0100", "-0.0200", "-0.0150"]);
     const { container } = render(<EquityPanel label="Equity" points={BASIC} drawdown={{ kind: "series", points: dd }} />);

@@ -51,6 +51,8 @@ export const PERFORMANCE_VIEWS: readonly { id: PerformanceView; label: string }[
 ];
 
 export interface PerformanceTabProps {
+  /** The read's published as-of (ms), printed once beside the equity and drawdown readouts. */
+  readAsOf?: number;
   /** The deployment rows of the read, either variant. */
   rows: readonly DeploymentRow[];
   /** Set on a SCOPED_V2 read: the body's reason for stating no money total (then no bar is drawn from a row). */
@@ -111,7 +113,7 @@ export function drawdownLowOf(read: SeriesReadState | undefined): string | null 
   return low;
 }
 
-function ActualFacet({ env, equity, inputs, drift, rb, drawdown }: Pick<PerformanceTabProps, "env" | "equity" | "inputs" | "drift" | "drawdown"> & { rb: RibbonData }) {
+function ActualFacet({ env, equity, inputs, drift, rb, drawdown, readAsOf }: Pick<PerformanceTabProps, "env" | "equity" | "inputs" | "drift" | "drawdown" | "readAsOf"> & { rb: RibbonData }) {
   const dd = drawdownOf(drawdown);
   const loading = equity.phase === "loading" || equity.phase === "idle" || (inputs.length === 0 && drift.phase === "loading");
   if (loading) return <PanelState status="loading" />;
@@ -142,7 +144,7 @@ function ActualFacet({ env, equity, inputs, drift, rb, drawdown }: Pick<Performa
               state={input.state}
               segments={input.segments}
               height={240}
-              {...(index === 0 ? { ribbon: rb.ribbon, domain: rb.domain ?? undefined, drawdown: dd.input } : {})}
+              {...(index === 0 ? { ribbon: rb.ribbon, domain: rb.domain ?? undefined, drawdown: dd.input, ...(readAsOf === undefined ? {} : { readAsOf }) } : {})}
             />
           </ChartTools>
           {/* The book is the segmented control above, the sampling is the chart's own envelope line, and the windowed figures are the one "Not available" line of the screen. */}
@@ -257,7 +259,7 @@ export function PerformanceTab(props: PerformanceTabProps) {
           </span>
         }
       >
-        {view === "act" ? <ActualFacet env={env} equity={props.equity} inputs={props.inputs} drift={props.drift} rb={rb} drawdown={props.drawdown} /> : null}
+        {view === "act" ? <ActualFacet env={env} equity={props.equity} inputs={props.inputs} drift={props.drift} rb={rb} drawdown={props.drawdown} readAsOf={props.readAsOf} /> : null}
         {view === "sim" ? <SimulatedFacet paths={props.paths} drift={props.drift} /> : null}
         {view === "oos" ? <OosFacet /> : null}
       </SectionPanel>

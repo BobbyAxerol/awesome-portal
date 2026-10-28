@@ -36,6 +36,8 @@ export interface EquityPanelProps {
   seriesName?: string;
   /** What the readout's change figure is called. Default "Change across the plotted points"; a realized-only PnL series says so (QA7 N5-06). */
   changeLabel?: string;
+  /** The published read's as-of (ms). Printed once for the equity and the drawdown readouts together, so the two never carry different instants (QA7 N2-07). */
+  readAsOf?: number;
   /** Display class for every value label. Default `money`. */
   unit?: ExactUnit;
   /** Appended to readout values, e.g. `USDT`. */
@@ -245,7 +247,7 @@ export function EquityPanel(props: EquityPanelProps) {
   const gh = ghostModel && sameTime(ghostModel, o.t) >= 0 ? ghostModel.obs[sameTime(ghostModel, o.t)] : null;
   const readoutValue = o.s !== null ? show(o.s) : o.bad ? "Unreadable value" : "No published value at this time";
   const change = o.s !== null && first >= 0 && model.obs[first].s !== null ? show(subtractDecimal(o.s, model.obs[first].s as string), true) : null;
-  const ddText = drawdown === undefined ? null : drawdown.kind === "absent" ? drawdown.copy : dd?.s ? showDecimal(dd.s, { unit: "pct" }) : ddBefore?.s ? `${showDecimal(ddBefore.s, { unit: "pct" })} as of ${timeOf(ddBefore.t)}` : "No drawdown point up to this time";
+  const ddText = drawdown === undefined ? null : drawdown.kind === "absent" ? drawdown.copy : dd?.s ? showDecimal(dd.s, { unit: "pct" }) : ddBefore?.s ? `${showDecimal(ddBefore.s, { unit: "pct" })}${props.readAsOf !== undefined ? "" : ` as of ${timeOf(ddBefore.t)}`}` : "No drawdown point up to this time";
   const ghostText = ghost === undefined ? null : gh?.s ? show(gh.s) : "No point at this time";
 
   const sayPoint = (at: SeriesModel["obs"][number]) => `${timeOf(at.t)}, ${at.s !== null ? show(at.s) : "no published value"}`;
@@ -359,6 +361,7 @@ export function EquityPanel(props: EquityPanelProps) {
             <span className="exec-c2-ru exec-c2-nw" data-testid="readout-change-span">{timeOf(model.obs[first].t)} to {timeOf(o.t)}</span>
           </span>
         ) : null}
+        {props.readAsOf !== undefined ? <span><span className="exec-c2-ru">As of</span><span data-testid="readout-asof">{timeOf(props.readAsOf)}</span></span> : null}
         {ddText !== null ? <span><span className="exec-c2-ru">Drawdown</span><span data-testid="readout-drawdown">{ddText}</span></span> : null}
         {ghostText !== null ? <span><span className="exec-c2-ru">{ghost?.name}</span><span data-testid="readout-ghost">{ghostText}</span></span> : null}
       </div>
