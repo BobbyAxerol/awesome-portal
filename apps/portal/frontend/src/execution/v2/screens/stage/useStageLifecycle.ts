@@ -13,7 +13,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { ExecutionApi } from "../../../api/ports";
 import type { SpineStageId } from "../../blocks";
 import type { ExecEnv } from "../../urlState";
-import type { UtcEpochMs } from "../../screenDataContract";
+import type { UtcEpochMs } from "../../../screenDataContract";
 import { lifecycleFacts, type LifecycleFacts } from "../alpha/lifecycleModel";
 import { useManagerDataset } from "../manager/useManagerDataset";
 
