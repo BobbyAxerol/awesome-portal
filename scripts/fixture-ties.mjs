@@ -1051,6 +1051,20 @@ export async function runWorldTies(get) {
     const codes = [...(dark.command_policy?.scale_up?.blocker_codes ?? []), ...(dark.lifecycle?.blocker_codes ?? [])];
     check("W102", codes.includes("CANARY_TRIAL_ENDED") && !codes.includes("CANARY_OWNER_GATE_REQUIRED"), `${id}_dark: promotion gate waits on ${JSON.stringify(codes)}`);
   }
+  // W103 (QA9 N9a-05): the venue candles of any window (before, ending at, or ahead of the world clock) state a returned count equal to the bars listed, hold at least one bar, and none after the clock
+  {
+    const room = await ok200(`${E}/deployments/dep_btc_live/live`);
+    const clock = ms(room?.read_at);
+    if (clock !== null) {
+      for (const [from, to] of [[clock - 21 * 3_600_000, clock], [clock - 6 * 3_600_000, clock + 6 * 3_600_000], [clock + 2 * 3_600_000, clock + 24 * 3_600_000]]) {
+        const body = await ok200(`${E}/market/venue-candles?venue=BINANCE&symbol=BTCUSDT&interval=1h&from_ms=${from}&to_ms=${to}`);
+        const bars = body?.candles ?? [];
+        check("W103", body?.state === "READY" && bars.length > 0, `window ${new Date(from).toISOString()} to ${new Date(to).toISOString()}: state ${body?.state} with ${bars.length} bars`);
+        check("W103", body?.coverage?.returned_count === bars.length, `window ${new Date(from).toISOString()} to ${new Date(to).toISOString()}: returned_count ${body?.coverage?.returned_count}, ${bars.length} bars listed`);
+        check("W103", bars.every((b) => b.t <= clock), `window ${new Date(from).toISOString()} to ${new Date(to).toISOString()}: a bar after the world clock`);
+      }
+    }
+  }
   // ===== WP-B2-S3 end
   // ===== WP-B2-A3 begin
   // ── W19: a request exists only for the NEXT gate of its subject, once, and its quorum is open (R3-02, R3-09, R3-10, R3-03) ───────────────────────────────

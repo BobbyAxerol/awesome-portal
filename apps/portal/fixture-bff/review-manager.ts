@@ -1482,7 +1482,15 @@ function wpcCandles(method: string, path: string, search: URLSearchParams): Revi
   if (!legacy()) {
     // WP-B2-S3 (QA8 N8b-01): the world has no bar after its clock; the bar that holds the as-of closes at the world's mark of the symbol (the page's "mark"), not at a price of the future
     const asOf = wpcAnchorMs();
+    // QA9 N9a-05: a window that lies entirely after the clock (a request in a frame ahead of the world) is served the same number of bars ending at the bar that holds the clock, never an empty list under a non-zero count
+    const ahead = Math.max(0, ...((body.candles as Draft[]).map((candle) => Number(candle.t)))) - asOf;
+    const stepMs = Number(body.interval_ms) > 0 ? Number(body.interval_ms) : 3_600_000;
+    if (ahead > 0 && (body.candles as Draft[]).every((candle) => Number(candle.t) > asOf)) {
+      const back = Math.ceil(ahead / stepMs) * stepMs;
+      body.candles = (body.candles as Draft[]).map((candle) => ({ ...candle, t: Number(candle.t) - back, close_t: Number(candle.close_t) - back }));
+    }
     body.candles = (body.candles as Draft[]).filter((candle) => Number(candle.t) <= asOf);
+    if (body.coverage && typeof body.coverage === "object") body.coverage = { ...body.coverage, returned_count: body.candles.length, from_ms: body.candles.length > 0 ? Number((body.candles as Draft[])[0]!.t) : body.coverage.from_ms, to_ms: Math.min(Number(body.coverage.to_ms ?? asOf), asOf) };
     const last = body.candles[body.candles.length - 1] as Draft | undefined;
     if (last !== undefined) {
       const mark = Math.round(Number(MARKS.BTCUSDT) * 100);
