@@ -1122,6 +1122,7 @@ function worldStage(kind: "canary" | "live" | "sandbox" | "paper", body: Obj | n
     // a stage the alpha left has no source update after its exit: its as-of is the exit; the read is at the world clock (WP-B2-O: the rebase moves it like the blotter)
     body.as_of = retired ? iso(exitMs ?? NOW_MS) : AS_OF;
     body.read_at = AS_OF;
+    if (retired) body.freshness = "STALE"; // WP-B2-S3 (QA8 N8a-05): the last update of a stage the alpha left is its exit, 36 days before the read: the contract's word for that age is STALE, not FRESH (the screen can word it "Ended")
     // WORLD: ONE stage history. A Paper stage the alpha has left is a COMPLETED record (gate met, days and trades over the minimum, the session closed on the day Sandbox began);
     // the Paper stage the alpha is in is in progress, its observed days the days since it began.
     const paperRecord = { status: standing.status, days: standing.days, toMs: standing.exitMs };

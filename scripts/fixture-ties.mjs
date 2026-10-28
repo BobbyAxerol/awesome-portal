@@ -1008,6 +1008,15 @@ export async function runWorldTies(get) {
       if (mark !== null && bars.length > 0) check("W73", sameDecimal(bars.at(-1).c, mark), `the last BTCUSDT bar closes ${bars.at(-1).c}, the world's mark is ${mark}`);
     }
   }
+  // W74 (QA8 N8a-05): a Paper page whose stage the alpha left (last update = its exit, long before the read) never publishes freshness FRESH
+  for (const id of [...deployments.keys()].slice(0, 40)) {
+    const d = deployments.get(id);
+    if (d.stage !== "PAPER" || STAGE_RANK[d.alphaStage] === undefined || STAGE_RANK[d.alphaStage] <= STAGE_RANK.PAPER) continue;
+    const r = await get(`${E}/screens/paper/${id}`);
+    if (r.status !== 200) continue;
+    const age = ms(r.body.read_at) - ms(r.body.as_of);
+    check("W74", !(age > 7 * 86_400_000 && r.body.freshness === "FRESH"), `${id}: freshness ${r.body.freshness} for data ${Math.round(age / 86_400_000)} days older than the read`);
+  }
   // ===== WP-B2-S3 end
   // ===== WP-B2-A3 begin
   // ── W19: a request exists only for the NEXT gate of its subject, once, and its quorum is open (R3-02, R3-09, R3-10, R3-03) ───────────────────────────────
