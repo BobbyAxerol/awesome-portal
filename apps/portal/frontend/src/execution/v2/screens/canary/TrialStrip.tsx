@@ -44,7 +44,7 @@ export function TrialStrip({ trial, calendar, endedAt = null }: { trial: TrialFa
       ) : null}
       {calendar.exitReviewOpens.kind === "time" ? (
         <span className="exec-cny-trial-fact">
-          Exit review opens <span className="exec-blk-num">{calendar.exitReviewOpens.text}</span>
+          {endedAt !== null ? "Exit review closed with the trial; it opened" : "Exit review opens"} <span className="exec-blk-num">{calendar.exitReviewOpens.text}</span>
         </span>
       ) : null}
       <GapLine items={gaps} />

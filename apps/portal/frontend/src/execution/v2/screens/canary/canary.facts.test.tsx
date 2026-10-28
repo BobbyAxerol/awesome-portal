@@ -14,6 +14,7 @@ import { loadCanonical } from "../../testkit/loadCanonical";
 import type { Draft } from "../../testkit/matrix";
 import { validateAgainst } from "../../testkit/schema";
 import CanaryScreen from "./index";
+import { BeforeScaleUp, DecisionPanel, RollbackPanel } from "./Rail";
 import { chipsOf, limitRows, rollbackItems, trialCalendar, verdictLine } from "./model";
 import { readCanaryView, type CanaryView } from "./readCanary";
 import { DEP, answering, canaryPort, legacyV1Body, lit, v1Body } from "./canary.testbase";
@@ -106,6 +107,18 @@ describe("chips: runtime and reconciliation are the server's stage facts", () =>
     const chip = chipsOf(viewOf(body)).freshness;
     expect(chip).toMatchObject({ state: "dot", tone: "mute", text: "Ended · 12 Oct 08:00Z" });
     expect(JSON.stringify(chip)).not.toMatch(/Fresh/);
+  });
+
+  it("a stopped trial is a closed record: no promotion buttons, no Before scale-up, and the rollback checks are labelled historical (QA7 N5-05)", () => {
+    const body = published();
+    body.stage_facts.runtime.runtime_state.value = "STOPPED";
+    const view = viewOf(body);
+    render(<MemoryRouter><DecisionPanel view={view} /><BeforeScaleUp view={view} /><RollbackPanel view={view} /></MemoryRouter>);
+    expect(screen.getByTestId("decision-closed").textContent).toMatch(/Exit review closed: the trial ended 12 Oct 08:00Z/);
+    expect(screen.queryByRole("button", { name: /Hold|Reduce|Rollback|Request scale/ })).toBeNull();
+    expect(screen.queryByText("Before scale-up")).toBeNull();
+    expect(screen.getByTestId("rollback-historical").textContent).toMatch(/before the trial ended/);
+    expect(screen.queryByText("Ready")).toBeNull();
   });
 
   it("NO_OPEN_FINDINGS is worded as a statement about the findings relation, never Clean or Reconciled", () => {

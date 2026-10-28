@@ -24,7 +24,7 @@ import { withContext } from "../../urlState";
 import type { CanaryView } from "./readCanary";
 import type { StageAction } from "../stage/reasons";
 import { useStageReason } from "../stage/StageEligibility";
-import { ACCESS_PATH, DECISIONS, FE, blockerItems, decisionReason, rollbackHead, rollbackItems, trialCalendar } from "./model";
+import { ACCESS_PATH, DECISIONS, FE, blockerItems, decisionReason, endedAt, rollbackHead, rollbackItems, trialCalendar } from "./model";
 
 /** The four promotion decisions as the eligibility read names them (display identifiers, not capability names). */
 const DECISION_ACTION: Readonly<Record<string, StageAction>> = {
@@ -46,6 +46,15 @@ export function DecisionPanel({ view }: { view?: CanaryView }) {
   // Closed for one reason: the reason is said ONCE, in plain words, under the four decisions. A decision the server gave its own reason keeps its own.
   const same = reasons.every((text) => text === reasons[0]);
   const plain = plainReason(reasons[0]!);
+  // A stopped trial is a closed record: its exit review is closed, so no promotion decision is offered (QA7 N5-05).
+  const ended = view === undefined ? null : endedAt(view);
+  if (ended !== null) {
+    return (
+      <SectionPanel level={2} title="Promotion decision" aside="Closed">
+        <p className="exec-cny-dec-opens" data-testid="decision-closed">Exit review closed: the trial ended {ended}. No promotion decision is offered from this record; the alpha's stage is on its Alpha 360 page.</p>
+      </SectionPanel>
+    );
+  }
   return (
     <SectionPanel level={2} title="Promotion decision" aside="Via exit review">
       <div className="exec-stage-decs" role="group" aria-label="Promotion decisions" data-grouped={same ? "true" : "false"}>
@@ -82,6 +91,8 @@ export function DecisionPanel({ view }: { view?: CanaryView }) {
 
 export function BeforeScaleUp({ view }: { view: CanaryView }) {
   const [params] = useSearchParams();
+  // Nothing is "before scale-up" for a trial that has already ended.
+  if (endedAt(view) !== null) return null;
   const items = blockerItems(view);
   const env = view.envelope;
   const lineage = view.lineage;
@@ -120,11 +131,13 @@ export function RollbackPanel({ view }: { view: CanaryView }) {
   // A check that says nothing (no status, no date) is not a row of `Not available`: the checks are ONE line (FE-071 and the reasons in its title).
   const silent = (item: (typeof items)[number]) => item.status.kind !== "flag" && item.checked === null;
   const spoken = items.filter((item) => !silent(item));
+  const ended = endedAt(view);
   const gaps: GapItem[] = items
     .filter(silent)
     .map((item) => ({ label: item.label, id: FE.envelope, reason: [item.status.kind === "not-published" ? item.status.reasonCode : null, item.checkedReason].filter(Boolean).join(" · ") || null }));
   return (
-    <SectionPanel level={2} title="Rollback readiness" aside={head.kind === "flag" && !(head.label === "Not available" && spoken.length === 0) ? <Flag kind={head.flag} label={head.label} size="sm" /> : undefined}>
+    <SectionPanel level={2} title={ended === null ? "Rollback readiness" : "Last rollback checks"} aside={ended !== null ? <Flag kind="neutral" label="Historical" size="sm" /> : head.kind === "flag" && !(head.label === "Not available" && spoken.length === 0) ? <Flag kind={head.flag} label={head.label} size="sm" /> : undefined}>
+      {ended !== null ? <p className="exec-cny-dec-opens" data-testid="rollback-historical">These checks were taken before the trial ended ({ended}); they say nothing about now.</p> : null}
       {spoken.length > 0 ? (
         <ul className="exec-cny-rb" aria-label="Rollback readiness checks">
           {spoken.map((item) => (
@@ -136,7 +149,9 @@ export function RollbackPanel({ view }: { view: CanaryView }) {
                   {item.checked === null ? null : `${item.checkedWord} ${item.checked}`}
                 </span>
               </div>
-              {item.status.kind === "flag" ? (
+              {item.status.kind === "flag" && ended !== null ? (
+                <Flag kind="neutral" label="Historical" size="sm" />
+              ) : item.status.kind === "flag" ? (
                 <Flag kind={item.status.flag} label={item.status.label} size="sm" />
               ) : (
                 <NotPublished id={FE.envelope} titleReason={item.status.reasonCode} />
