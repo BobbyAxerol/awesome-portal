@@ -60,6 +60,9 @@ import { isPositiveMode } from "./bffPositiveMode";
 import { MARKS, positionsOf, setOpenOrderProvider, worldAlphas } from "./bffWorld";
 import { isRetired, PAPER_POLICY_MIN_TRADES, stageWindowOf } from "./bffWorldStage"; // WP-B2-O
 import { ORDER_BOOK_AS_OF_ISO, RESERVED_PIECES, RETIRED, mustRest, reservedOrdersFor, retiredSubmitMs, orderClock, orderPath, worldStatus, type OrderClock } from "./bffWorldOrders"; // WP-B2-O
+// ===== WP-B2-A begin
+import { worldCommandCenter } from "./bffWorldGovernance";
+// ===== WP-B2-A end
 
 export interface OverviewAnswer {
   status: number;
@@ -161,7 +164,10 @@ function composition(surface: "command-center" | "admin-action-drawer"): Overvie
 }
 
 function commandCenter(): Record<string, unknown> {
-  const body = clone(CC[variants.commandCenter]) as Record<string, unknown>;
+  let body = clone(CC[variants.commandCenter]) as Record<string, unknown>;
+  // ===== WP-B2-A begin: in the positive world the busy snapshot's cards, totals and cells are COMPUTED from the world (operations, incidents, approvals, fleet), not canonical constants
+  if (isPositiveMode() && variants.commandCenter === "busy") body = worldCommandCenter(body);
+  // ===== WP-B2-A end
   if (variants.stream === "published") {
     body.snapshot = { ...(body.snapshot as Record<string, unknown>), stream_available: true, projection_epoch: "e2e-cc", projection_sequence: 1, cursor: "e2e-cc:1" };
   }

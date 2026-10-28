@@ -1606,7 +1606,7 @@ function wpkApprovalEvidence(method: string, path: string, search: URLSearchPara
   }
   const record = evidenceFromRecord(approvalId); // WP-E: the history is of the portfolio the approval names
   const subject = record.portfolioId;
-  const environment = subject === "pf_TEST_ONLY_core" ? "live" : "paper";
+  const environment = record.environment ?? (subject === "pf_TEST_ONLY_core" ? "live" : "paper"); // WP-B2-A: a world request names the environment of its own capital
   const query = new URLSearchParams({ environment, metric: "NAV", window: JSON.stringify("90D"), subjects: JSON.stringify([{ subject_type: "PORTFOLIO", subject_id: subject }]) });
   const series = seriesAnswer("GET", "/manager/series", query, profile);
   const entry = series?.status === 200 ? (series.body as Draft).series[0] : null;

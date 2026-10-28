@@ -3,6 +3,11 @@ import { scaled } from "../frontend/e2e/bffScale";
 import { composeVisitDigest, makeBaseline, makeDigestSnapshot, type DigestBaseline, type DigestFact } from "../../control-api/src/command-center/visit-digest";
 import type { BffRequest, BffResponse } from "../frontend/e2e/bffAnswerer";
 import type { FixtureConfig } from "./app";
+// ===== WP-B2-A begin
+import { isPositiveMode } from "../frontend/e2e/bffPositiveMode";
+import { WORLD_NOW_MS } from "../frontend/e2e/bffWorld";
+import { worldDigestFacts, worldDigestOperations, operationHref } from "../frontend/e2e/bffWorldGovernance";
+// ===== WP-B2-A end
 
 export function createVisitDigestFixture() {
   const baselines = new Map<string, DigestBaseline | null>();
@@ -19,16 +24,34 @@ export function createVisitDigestFixture() {
     const key = JSON.stringify([config.userId,workspace]);
     if (!baselines.has(key) && baselines.size>=32) return fail(503,'VISIT_DIGEST_CAPACITY');
     const world = scaled();
-    const facts: DigestFact[] = world.alphas.slice(0,4).flatMap(alpha=>alpha.deployments.slice(0,1).map(d=>({
+    // ===== WP-B2-A begin: in the positive world the facts are the native alphas (each with a real name and a page that opens on it) and the newest operations of the world's list,
+    // and the last visit's baseline is what the world held then: an alpha's previous stage, and the operations that already existed.
+    const positive = isPositiveMode();
+    const asOf = (worldMs: number): string => new Date(Date.parse(config.nowIso) + worldMs - WORLD_NOW_MS).toISOString();
+    const seeds = positive ? worldDigestFacts() : [];
+    const opSeeds = positive ? worldDigestOperations() : [];
+    const facts: DigestFact[] = positive ? [
+      ...seeds.map((f) => ({ id: f.id, kind: f.kind, label: f.label, value: f.value, href: f.href, as_of: asOf(f.asOfMs) } as DigestFact)),
+      ...opSeeds.map(({ op }) => ({ id: `operation:${op.id}`, kind: "OPERATION" as const, label: op.command, value: op.verify, href: operationHref(op), as_of: new Date(Date.parse(op.at)).toISOString() })),
+    ] : world.alphas.slice(0,4).flatMap(alpha=>alpha.deployments.slice(0,1).map(d=>({
       id:`stage:${d.id}`,kind:'STAGE' as const,label:`${alpha.label} · ${d.stage}`,value:d.stage,
       href:`/deployments/alphas/${encodeURIComponent(alpha.id)}?deployment_id=${encodeURIComponent(d.id)}`,as_of:d.updatedAt,
     })));
-    for(const op of world.operations.slice(0,4)) facts.push({id:`operation:${op.id}`,kind:'OPERATION',
+    if (!positive) for(const op of world.operations.slice(0,4)) facts.push({id:`operation:${op.id}`,kind:'OPERATION',
       label:op.command,value:op.verify,href:`/execution/operations?operation_id=${encodeURIComponent(op.id)}`,as_of:op.at});
+    // ===== WP-B2-A end
     const snapshot = makeDigestSnapshot(workspace,config.nowIso,facts);
     if(!baselines.has(key)) {
       // Explicit scenario baseline, not a guessed user visit from fixture dates.
-      const previous = makeDigestSnapshot(workspace,config.nowIso,facts.slice(0,-2).map((f,i)=>i<2?{...f,value:'PREVIOUS_TEST_STATE'}:f));
+      // ===== WP-B2-A begin
+      const previous = positive
+        ? makeDigestSnapshot(workspace,config.nowIso,facts.flatMap((f)=>{
+            const stage = seeds.find((seed)=>seed.id===f.id);
+            if (stage) return [{...f,value:stage.previous ?? f.value}];
+            return opSeeds.some(({op,seenAtLastVisit})=>f.id===`operation:${op.id}` && seenAtLastVisit) ? [f] : [];
+          }))
+        : makeDigestSnapshot(workspace,config.nowIso,facts.slice(0,-2).map((f,i)=>i<2?{...f,value:'PREVIOUS_TEST_STATE'}:f));
+      // ===== WP-B2-A end
       baselines.set(key,config.reviewProfile==='sparse-realistic'?null:makeBaseline(previous,1,config.nowIso));
     }
     let baseline=baselines.get(key)!;

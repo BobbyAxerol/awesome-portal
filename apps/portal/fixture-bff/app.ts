@@ -25,11 +25,26 @@ import { isPositiveMode, setPositiveMode } from "../frontend/e2e/bffPositiveMode
 import { WORLD_NOW_MS } from "../frontend/e2e/bffWorld";
 import { commandStoryRoute } from "./command-story";
 import { applyScenarioBody, resetFixtureTransitions, scenarioRequest, scenarioVariants } from "./scenario-apply";
-import { approvalCapital, rosterNames } from "./roster-names";
+import { rosterNames } from "./roster-names";
+// ===== WP-B2-A begin
+import { governanceBody, setPortfolioBudgetProvider, worldCapitalPreview } from "../frontend/e2e/bffWorldGovernance";
+import { WORLD_NOW_MS } from "../frontend/e2e/bffWorld";
+
+// ===== WP-B2-A end
 import { onScenarioChange, healsDoubles, configuredScenario, configureScenario, DEFAULT_SCENARIO, type FixtureScenario, FIXTURE_SCENARIOS, getScenario, isFixtureScenario, resetScenario, SCENARIO_DESCRIPTIONS, setScenario } from "./scenario";
 import { transformReviewBody } from "./review-relations";
-import { rebaseBody, worldClockNow } from "./time-rebase";
+import { rebaseBody, rebaseTimes, worldClockNow } from "./time-rebase";
 import { createVisitDigestFixture } from "./review-visit-digest";
+// ===== WP-B2-A begin
+/** An R2 request's capital preview states the approved budget of the portfolio statement it is about: read it from the same statement the Portfolio page prints. */
+setPortfolioBudgetProvider((portfolioId, environment) => {
+  const answer = answerReviewManager("GET", `/manager/portfolios/${portfolioId}/overview`, new URLSearchParams({ environment, window: "30D" }), "populated");
+  if (answer === null || answer.status !== 200) return null;
+  const statements = ((answer.body as { capital_statements?: { partition: { currency: string }; metrics: Record<string, { availability?: string; value?: string }> }[] }).capital_statements ?? []);
+  const metric = statements.find((entry) => entry.partition.currency === "USDT")?.metrics.current_budget;
+  return metric?.availability === "AVAILABLE" && typeof metric.value === "string" ? metric.value : null;
+});
+// ===== WP-B2-A end
 
 export const LANE_HEADER = "x-fixture-lane";
 export const DEFAULT_LANE = "FIXTURE_LAB";
@@ -260,6 +275,13 @@ function answerFor(config: FixtureConfig, rawRequest: BffRequest): BffResponse |
   const answered = review === null ? answerFixtureRequest(request, answererOptions(config)) : {
     ...review, headers: { "content-type": "application/json" },
   };
+  // ===== WP-B2-A begin: the capital preview of a request of the world is the world's capital (it is a POST, so it passes the GET-only shaping below)
+  const preview = /^\/api\/v1\/execution\/approvals\/([A-Za-z0-9._:-]+)\/capital-preview$/.exec(request.path);
+  if (preview !== null && request.method === "POST" && answered !== null && answered.status === 200 && healsDoubles(getScenario()) && typeof answered.body !== "string") {
+    const world = worldCapitalPreview(answered.body, preview[1]!);
+    return world === null ? answered : { ...answered, body: world };
+  }
+  // ===== WP-B2-A end
   if (answered === null || profile === "sparse-realistic" || answered.status !== 200 || request.method !== "GET") return answered;
   let shaped = transformReviewBody(request.path, answered.body, profile);
   // WP-P (R2-02): every alpha resource is derived from that alpha's own deployments in the positive-like scenarios, not cloned from the double's one alpha.
@@ -272,7 +294,10 @@ function answerFor(config: FixtureConfig, rawRequest: BffRequest): BffResponse |
     shaped = { ...shaped, principal: { ...principal, username: "Bobby Vu", issuedAt: new Date(now - 3 * 3_600_000).toISOString(), exp: Math.floor((now + 5 * 3_600_000) / 1000) } };
   }
   const scenarioBody = applyScenarioBody(getScenario(), request.path, shaped);
-  return { ...answered, body: healsDoubles(getScenario()) && typeof scenarioBody !== "string" ? rosterNames(approvalCapital(request.path, scenarioBody)) : scenarioBody }; // WORLD: one roster of people
+  // ===== WP-B2-A begin: the approval pages (inbox, history, R1, R2, Live gate, exit reviews) are the world's approvals, derived from the alphas' stage history; the AP-352 capital override that used to sit here is the world's capital now
+  let governed = healsDoubles(getScenario()) && typeof scenarioBody !== "string" ? governanceBody(request.path, new URLSearchParams(request.search), scenarioBody) : scenarioBody;
+  // ===== WP-B2-A end
+  return { ...answered, body: healsDoubles(getScenario()) && typeof governed !== "string" ? rosterNames(governed) : governed }; // WORLD: one roster of people
 }
 
 export function createFixtureServer(config: FixtureConfig): Server {
@@ -458,9 +483,12 @@ async function handle(config: FixtureConfig, incoming: IncomingMessage, response
   if (answered !== null) {
     // WP-B2-O: ONE clock. The fleet, the fund dataset, the operations queue and an incident were written against 22 Aug / 1 Sep; in the positive world they are served moved to the
     // world clock exactly as the preview moves them to the real one (their latest content = the world's now), so every read of the world states the same instant.
-    const served = config.rebaseTime && typeof answered.body !== "string" ? rebaseBody(answered.body, OPERATIONS_V2_DOUBLE_NOW_ISO, Date.now())
+    // ===== WP-B2-A begin: the Users roster states no read time, so its instants are carried by the WORLD clock (one constant shift), never by the latest instant a filtered page happens to hold (Hoa Nguyen's last seen moved with the filter)
+    const served = config.rebaseTime && typeof answered.body !== "string"
+      ? (/^\/api\/admin\/accounts(\/|$)/.test(request.path) ? rebaseTimes(answered.body, worldClockNow(Date.now()) - WORLD_NOW_MS) : rebaseBody(answered.body, OPERATIONS_V2_DOUBLE_NOW_ISO, Date.now()))
       : isPositiveMode() && answered.status === 200 && typeof answered.body !== "string" && WORLD_CLOCK_READS.test(url.pathname) ? rebaseBody(answered.body, OPERATIONS_V2_DOUBLE_NOW_ISO, WORLD_NOW_MS)
       : answered.body;
+    // ===== WP-B2-A end
     send(response, config, answered.status, served, { ...answered.headers });
     return;
   }

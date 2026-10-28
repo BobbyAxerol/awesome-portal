@@ -35,6 +35,9 @@
 
 import { isPositiveMode } from "./bffPositiveMode";
 import { PEOPLE } from "./bffWorld";
+// ===== WP-B2-A begin
+import { lastSeenIso } from "./bffWorldGovernance";
+// ===== WP-B2-A end
 
 export interface UsersAnswer {
   status: number;
@@ -189,11 +192,11 @@ export function setUsersDoubleLastSignIn(on: boolean): void {
   lastSignIn = on;
 }
 /** A fixed rule: an INVITED account and every seventh account have unknown history (the key is OMITTED, never null); the others carry a fixed past instant. */
-const PEOPLE_LAST_SIGN_IN: Readonly<Record<string, string>> = { usr_0001: "2026-10-17T11:44:00Z", usr_0002: "2026-10-17T09:20:00Z", usr_0003: "2026-10-16T16:05:00Z", usr_0004: "2026-10-14T08:30:00Z", usr_0005: "2026-10-12T13:10:00Z", usr_0006: "2026-10-09T10:00:00Z" };
+// ===== WP-B2-A: the people's last sign-in is the world's (bffWorldGovernance.lastSeenIso): one value per person
 function simulatedLastSignIn(row: Wire): string | undefined {
   if (row.account_state === "INVITED" || Number(row.user_id.slice(-4)) % 7 === 0) return undefined;
   // WORLD: last sign-in belongs to the PERSON (never to the row's place in a list) and is never later than the world clock (17 Oct 12:04Z), so no filter or page can move it
-  const known = PEOPLE_LAST_SIGN_IN[row.user_id];
+  const known = lastSeenIso(row.user_id) ?? undefined;
   if (known !== undefined) return known;
   const day = 1 + (Number(row.user_id.slice(-4)) % 15);
   return `2026-10-${String(day).padStart(2, "0")}T09:14:00Z`;
