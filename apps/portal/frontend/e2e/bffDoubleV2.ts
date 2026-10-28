@@ -33,6 +33,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { scaled } from "./bffScale";
+import { environmentFor, riskTierFor } from "./bffWorldBooks"; // WP-B2-C
 import { incidentRootTimes, incidentState, incidentVersion, WORLD_INCIDENTS, WORLD_OPERATIONS } from "./bffWorld";
 
 export interface BffAnswerV2 {
@@ -60,8 +61,8 @@ function dataset(): Row[] {
     operation_id: s.id,
     command_key: s.command,
     target: { type: s.target[0], id: s.target[1] },
-    environment: s.env,
-    risk_tier: s.risk,
+    environment: environmentFor(s.target[0], s.target[1], s.env), // WP-B2-C: a partition the target really has
+    risk_tier: riskTierFor(environmentFor(s.target[0], s.target[1], s.env), s.risk, s.env),
     severity: s.severity,
     source_status: s.source,
     verification_result: s.verify,
@@ -193,7 +194,7 @@ function simulatedIncidentLinks(row: Row): Record<string, unknown> {
     const incident = SIM_INCIDENT_BY_ID.get(id);
     return incident === undefined ? [] : [{
       state: "LINKED", incident_id: id, relationship, linked_at: new Date(atMs).toISOString().replace(".000Z", ".000000Z"),
-      incident: { target: { type: incident.target[0], id: incident.target[1] }, environment: incident.env, severity: incident.severity, workflow_state: incidentState(incident) },
+      incident: { target: { type: incident.target[0], id: incident.target[1] }, environment: environmentFor(incident.target[0], incident.target[1], incident.env), severity: incident.severity, workflow_state: incidentState(incident) },
       link_history: NOT_ATTESTED_HISTORY,
     }];
   });
@@ -350,7 +351,7 @@ function incident(id: string, simulate = false): BffAnswerV2 {
   if (simulate && sim === undefined && !KNOWN_INCIDENT_IDS.has(id)) return problem(404, "OPERATIONAL_READ_NOT_FOUND", "The incident was not found.");
   if (sim !== undefined) {
     return { status: 200, body: {
-      ...root, target: { type: sim.target[0], id: sim.target[1] }, environment: sim.env, severity: sim.severity, workflow_state: incidentState(sim),
+      ...root, target: { type: sim.target[0], id: sim.target[1] }, environment: environmentFor(sim.target[0], sim.target[1], sim.env), severity: sim.severity, workflow_state: incidentState(sim),
       workflow_version: incidentVersion(sim), ...incidentRootTimes(sim),
     } };
   }

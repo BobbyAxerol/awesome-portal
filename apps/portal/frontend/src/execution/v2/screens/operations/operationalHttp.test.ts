@@ -57,13 +57,13 @@ describe("listOperationalQueueV2", () => {
   it("forwards every filter, with the environment UPPERCASE on the wire", async () => {
     const calls = serveDouble();
     const result = await api().listOperationalQueueV2({
-      workspaceId: "ws 1", limit: 25, triageState: "UNACKNOWLEDGED", environment: "live", severity: "CRITICAL",
+      workspaceId: "ws 1", limit: 25, triageState: "UNACKNOWLEDGED", environment: "sandbox", severity: "CRITICAL",
       verificationResult: "UNCERTAIN", targetType: "PORTFOLIO", commandKey: "portfolio/adjust-target-budget",
     });
     if (!result.ok) throw new Error(result.reason);
     const query = new URL(calls[0], "http://portal.test").searchParams;
     expect(Object.fromEntries(query)).toEqual({
-      workspace_id: "ws 1", limit: "25", triage_state: "UNACKNOWLEDGED", environment: "LIVE", severity: "CRITICAL",
+      workspace_id: "ws 1", limit: "25", triage_state: "UNACKNOWLEDGED", environment: "SANDBOX", severity: "CRITICAL",
       verification_result: "UNCERTAIN", target_type: "PORTFOLIO", command_key: "portfolio/adjust-target-budget",
     });
     if (result.value.kind !== "queue") throw new Error("expected a queue");

@@ -7,7 +7,7 @@ import { createFixtureServer, loadConfig, resetFixtureGlobals } from "../../../f
 import { resetScenario } from "../../../fixture-bff/scenario";
 import { MARKS, WORLD_INCIDENTS, accountFact, bindingFact, toCents, netPnlSeries } from "../../e2e/bffWorld";
 import {
-  accountPositions, alphaDrawdownSeries, alphaWindow, drawdownOfLevels, incidentEnvironmentLabel, limitState, notionalCents, openIncidentsOfPortfolio, partitionOfEntity, units4,
+  accountPositions, alphaDrawdownSeries, alphaWindow, drawdownOfLevels, incidentEnvironmentLabel, limitState, notionalCents, environmentFor, riskTierFor, openIncidentsOfPortfolio, partitionOfEntity, units4,
 } from "../../e2e/bffWorldBooks";
 
 let server: Server;
@@ -90,6 +90,13 @@ describe("environment label and attention derive from the world", () => {
     expect(partitionOfEntity("PORTFOLIO", "pf_TEST_ONLY_canary")).not.toBeNull();
     const canary = WORLD_INCIDENTS.find((i) => i.id === "inc_TEST_ONLY_fx_mismatch")!;
     expect(incidentEnvironmentLabel(canary)).toBe(partitionOfEntity("PORTFOLIO", canary.target[1]));
+  });
+  it("an operation or incident states a partition its target has: Canary has only Sandbox", () => {
+    expect(partitionOfEntity("PORTFOLIO", "pf_TEST_ONLY_canary")).toBe("Sandbox");
+    expect(environmentFor("PORTFOLIO", "pf_TEST_ONLY_canary", "LIVE")).toBe("SANDBOX");
+    expect(riskTierFor("SANDBOX", "R4_LIVE_RISK_INCREASING", "LIVE")).toBe("R2_SANDBOX");
+    expect(environmentFor("PORTFOLIO", "pf_TEST_ONLY_core", "SANDBOX")).toBe("SANDBOX"); // Core does hold a sandbox book
+    expect(environmentFor("ACCOUNT", "acc_TEST_ONLY_binance02", "PAPER")).toBe("PAPER"); // unknown to the world: declared stays
   });
   it("Core is flagged because the world has open incidents on it", () => {
     expect(openIncidentsOfPortfolio("pf_TEST_ONLY_core").map((i) => i.id)).toContain("inc_TEST_ONLY_fx_budget");

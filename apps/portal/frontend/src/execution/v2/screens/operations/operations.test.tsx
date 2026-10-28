@@ -563,7 +563,7 @@ describe("states", () => {
     mount(api);
     await table();
     fireEvent.change(screen.getByLabelText("Severity"), { target: { value: "CRITICAL" } });
-    fireEvent.change(screen.getByLabelText("Environment"), { target: { value: "sandbox" } });
+    fireEvent.change(screen.getByLabelText("Environment"), { target: { value: "paper" } });
     expect(await screen.findByText("Nothing matched these filters.")).toBeTruthy();
     expect(screen.getByText(/0 of 0 matching · 12 in scope/)).toBeTruthy();
     const kpis = screen.getByRole("group", { name: "Queue counts" });

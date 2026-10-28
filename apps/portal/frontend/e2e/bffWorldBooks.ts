@@ -145,3 +145,23 @@ export function limitState(consumed: bigint, limit: bigint): "ok" | "near" | "at
   if (consumed === limit) return "at-limit";
   return consumed * 100n >= limit * 90n ? "near" : "ok";
 }
+
+/* ── an operation / incident environment must be a partition its target really has ── */
+
+export type OpEnv = "PAPER" | "SANDBOX" | "LIVE";
+const ENV_RANK: Record<OpEnv, number> = { LIVE: 3, SANDBOX: 2, PAPER: 1 };
+const envOf = (e: string): OpEnv => (e === "live" ? "LIVE" : e === "sandbox" ? "SANDBOX" : "PAPER");
+/** The environments the world books on an entity (empty when the world does not know it). */
+export function environmentsOfEntity(kind: string, id: string): OpEnv[] {
+  const all = worldAlphas().flatMap((a) => a.deployments);
+  const mine = kind === "PORTFOLIO" ? all.filter((d) => d.portfolioId === id) : kind === "ACCOUNT" ? all.filter((d) => d.accountId === id) : kind === "DEPLOYMENT" ? all.filter((d) => d.id === id) : [];
+  return [...new Set(mine.map((d) => envOf(d.environment)))].sort((a, b) => ENV_RANK[b] - ENV_RANK[a]);
+}
+/** The environment an operation or incident on `target` states: the declared one when the target has that partition (or the world does not know the target), else the target's own highest partition. */
+export function environmentFor(kind: string, id: string, declared: OpEnv): OpEnv {
+  const have = environmentsOfEntity(kind, id);
+  return have.length === 0 || have.includes(declared) ? declared : have[0]!;
+}
+/** The risk tier that goes with an environment the world corrected (live tiers are kept as declared). */
+export const riskTierFor = (env: OpEnv, declared: string, declaredEnv: OpEnv): string =>
+  env === declaredEnv ? declared : env === "SANDBOX" ? "R2_SANDBOX" : env === "PAPER" ? "R1_PAPER_MUTATION" : declared;
