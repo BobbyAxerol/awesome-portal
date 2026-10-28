@@ -1235,7 +1235,11 @@ function darkHybrid(kind: "sandbox" | "paper" | "canary", answerBody: Obj, id: s
   }
   if (kind === "canary") {
     // WP-B2-S3 (QA8 N8a-04): a dark Canary room removes SOURCE facts only; the declared envelope, duration and approved caps stay the deployment's own, what was consumed is typed absent
-    for (const key of ["stage_facts", "source_figures", "source_panels", "kpis", "positions", "blotter", "series", "rollback_readiness"]) if (key in dark) lit[key] = dark[key];
+    const endedTrial = isObj(lit.stage_facts) && ((lit.stage_facts as Obj).runtime as Obj | undefined) !== undefined && (((lit.stage_facts as Obj).runtime as Obj).runtime_state as Obj | undefined)?.value === "STOPPED";
+    const litFacts = lit.stage_facts;
+    // QA9 N9a-04: that the trial ENDED is the alpha's record (it left the stage), not a source read: the ended facts of the base room (runtime STOPPED, closed rollback checks and promotion gate) stay in the dark room
+    for (const key of ["stage_facts", "source_figures", "source_panels", "kpis", "positions", "blotter", "series", ...(endedTrial ? [] : ["rollback_readiness"])]) if (key in dark) lit[key] = dark[key];
+    if (endedTrial && isObj(lit.stage_facts) && isObj(litFacts)) (lit.stage_facts as Obj).runtime = (litFacts as Obj).runtime;
     const compliance = lit.envelope_compliance as Obj;
     compliance.rows = (compliance.rows as Obj[]).map((row) => ({ ...row, consumed: unpub("SOURCE_UNAVAILABLE"), used_ratio: unpub("SOURCE_UNAVAILABLE"), as_of: unpub("SOURCE_UNAVAILABLE") }));
     if (isObj(dark.envelope_compliance)) { compliance.verdict = (dark.envelope_compliance as Obj).verdict; compliance.consumed = (dark.envelope_compliance as Obj).consumed; }

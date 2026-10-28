@@ -1041,6 +1041,16 @@ export async function runWorldTies(get) {
       check("W101", failed.length === 1 && (page.steps ?? []).filter((x) => x.evaluation_state === "PASS").length === page.progress.passed_count, `sandbox-mismatch: ${failed.length} failed steps, passed_count ${page.progress.passed_count}`);
     }
   }
+  // W102 (QA9 N9a-04): a dark variant of an ENDED Canary trial carries the base room's ended facts (runtime STOPPED, closed rollback checks, no promotion gate waiting)
+  for (const id of ["dep_canary_01"]) {
+    const base = await ok200(`${E}/deployments/${id}/canary`);
+    const dark = await ok200(`${E}/deployments/${id}_dark/canary`);
+    if (base === null || dark === null || base.stage_facts?.runtime?.runtime_state?.value !== "STOPPED") continue;
+    check("W102", dark.stage_facts?.runtime?.runtime_state?.value === "STOPPED", `${id}_dark: runtime ${dark.stage_facts?.runtime?.runtime_state?.value}, the base room's trial ended`);
+    check("W102", dark.rollback_readiness?.ready === false && (dark.rollback_readiness?.items ?? []).every((x) => x.ready?.value !== true), `${id}_dark: rollback readiness still claims ready`);
+    const codes = [...(dark.command_policy?.scale_up?.blocker_codes ?? []), ...(dark.lifecycle?.blocker_codes ?? [])];
+    check("W102", codes.includes("CANARY_TRIAL_ENDED") && !codes.includes("CANARY_OWNER_GATE_REQUIRED"), `${id}_dark: promotion gate waits on ${JSON.stringify(codes)}`);
+  }
   // ===== WP-B2-S3 end
   // ===== WP-B2-A3 begin
   // ── W19: a request exists only for the NEXT gate of its subject, once, and its quorum is open (R3-02, R3-09, R3-10, R3-03) ───────────────────────────────
