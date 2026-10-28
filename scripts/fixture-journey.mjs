@@ -257,15 +257,23 @@ const STEPS = [
 
 async function findAndFollow(page, step) {
   if (step.cockpit) {
+    const reads = [];
+    const observe = (response) => {
+      const path = new URL(response.url()).pathname;
+      if (response.request().method() === "GET" && path.startsWith("/api/v1/execution/governance/")) reads.push({ path, status: response.status() });
+    };
+    page.on("response", observe);
     await page.goto(base + step.hub, { waitUntil: "domcontentloaded" });
     await settle(page);
     const item = page.locator('ul[aria-label="Requests"] button.exec-ck-qi[data-kind="gate"]').first();
-    if (!(await item.count())) return { found: false };
+    if (!(await item.count())) { page.off("response", observe); return { found: false }; }
     await item.click({ timeout: 8000 });
     await settle(page);
     const selected = new URL(page.url()).searchParams.get("sel");
+    page.off("response", observe);
     if (!selected || selected === "undefined" || selected === "null") return { found: false };
-    return { found: true, href: stripOrigin(page.url()), via: "hub:" + step.hub + "#queue-button" };
+    const selectedReads = reads.filter((read) => read.path.split("/").includes(selected));
+    return { found: true, href: stripOrigin(page.url()), via: "hub:" + step.hub + "#queue-button", selectedReads };
   }
   if (step.tab) {
     let via = "page";
@@ -357,7 +365,8 @@ async function walk(browser, scenario) {
     const before = stripOrigin(page.url());
     const res = await findAndFollow(page, step);
     if (!res.found) { problems.push(`${step.id}: NO_LINK_FOUND (after ${previous})`); screens.push({ id: step.id, missing: true }); continue; }
-    const rec = await record(step.id, res.href, { via: res.via, from: previous });
+    const rec = await record(step.id, res.href, { via: res.via, from: previous, selectedReads: res.selectedReads });
+    if (step.id === "approval" && scenario === "positive" && !res.selectedReads?.some((read) => read.status === 200)) problems.push("approval: SELECTED_EVIDENCE_READ_NOT_200");
     if (rec.badText?.length) problems.push(`${step.id}: page text says ${rec.badText.join(", ")}`);
     noteGuards(step.id, rec.guards, problems);
     // the back-link: history back must land on a rendering screen (the page we came from when we clicked on it)
