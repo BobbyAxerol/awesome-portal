@@ -43,6 +43,13 @@ describe("EquityPanel · readout from the published string", () => {
     expect(screen.getByTestId("readout-change-span").textContent).toBe("1 Oct 00:00Z to 4 Oct 00:00Z");
   });
 
+  it("a caller can name the change figure (a realized-only PnL series says 'Net PnL, realized')", () => {
+    const { container } = render(<EquityPanel label="Deployment series" changeLabel="Net PnL, realized" points={BASIC} currency="USDT" />);
+    const text = container.querySelector(".exec-c2-readout")!.textContent!;
+    expect(text).toContain("Net PnL, realized");
+    expect(text).not.toContain("Change across the plotted points");
+  });
+
   it("flags the high and the low, skipping the one the endpoint already shows", () => {
     const { container } = render(<EquityPanel label="Equity" points={series(["1000.00", "1100.00", "950.00", "1020.75"])} />);
     expect(container.querySelector('[data-testid="high-flag"] text')!.textContent).toBe("High 1,100.00");

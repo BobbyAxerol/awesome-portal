@@ -34,6 +34,8 @@ export interface EquityPanelProps {
   points: readonly SeriesPoint[];
   /** Legend and readout name of the series. Defaults to `label`. */
   seriesName?: string;
+  /** What the readout's change figure is called. Default "Change across the plotted points"; a realized-only PnL series says so (QA7 N5-06). */
+  changeLabel?: string;
   /** Display class for every value label. Default `money`. */
   unit?: ExactUnit;
   /** Appended to readout values, e.g. `USDT`. */
@@ -352,7 +354,7 @@ export function EquityPanel(props: EquityPanelProps) {
           // Derived here, not published: the cursor point minus the first plotted point, one series, one unit. It is
           // a change across the plotted points, never "in window" (the window is the server's, and may be unpublished).
           <span title={`${timeOf(model.obs[first].t)} to ${timeOf(o.t)}`}>
-            <span className="exec-c2-ru">Change across the plotted points</span>
+            <span className="exec-c2-ru">{props.changeLabel ?? "Change across the plotted points"}</span>
             <span className="exec-c2-nw" data-testid="readout-change">{change}</span>{" "}
             <span className="exec-c2-ru exec-c2-nw" data-testid="readout-change-span">{timeOf(model.obs[first].t)} to {timeOf(o.t)}</span>
           </span>

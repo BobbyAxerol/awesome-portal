@@ -126,7 +126,7 @@ describe("dark V1 body: honest absence everywhere", () => {
     // The five figures are not tiles holding the words: one line names them, the reasons in its title.
     expect(screen.queryByRole("group", { name: "Canary figures" })).toBeNull();
     const gap = document.querySelector(".exec-cny-v2 > .exec-blk-gaps")!;
-    expect(gap.textContent).toBe("Not available: Capital consumed, Gross notional, Daily PnL, Open orders, Broker equity");
+    expect(gap.textContent).toBe("Not available: Capital consumed, Gross notional, Daily PnL, Open orders, Broker balance (allocation + realized)");
     expect(whyText(gap)).toContain("Capital consumed: Not published · source unavailable");
     expect(gap.textContent).not.toMatch(/\b0\b/);
     for (const label of ["Envelope", "Positions & orders", "Reconciliation", "Guard rule"]) {
@@ -416,7 +416,7 @@ describe("V2 following-parent body: the proposal only", () => {
     // No figure is published: no strip, ONE line naming the five (FE-072 in its title).
     expect(screen.queryByRole("group", { name: "Canary figures" })).toBeNull();
     const gap = document.querySelector(".exec-cny-v2 > .exec-blk-gaps")!;
-    expect(gap.textContent).toBe("Not available: Capital consumed, Gross notional, Daily PnL, Open orders, Broker equity");
+    expect(gap.textContent).toBe("Not available: Capital consumed, Gross notional, Daily PnL, Open orders, Broker balance (allocation + realized)");
     expect(whyText(gap)?.match(/Not published: typed stage rows, series and reconciliation figures/g)).toHaveLength(5);
     const table = screen.getByRole("table", { name: "Canary envelope caps" });
     expect(within(table).getByRole("columnheader", { name: "Proposed" })).toBeTruthy();

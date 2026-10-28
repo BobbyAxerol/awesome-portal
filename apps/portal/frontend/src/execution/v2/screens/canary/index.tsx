@@ -100,7 +100,7 @@ function PublishedSeries({ series }: { series: NonNullable<CanaryView["seriesPoi
   return (
     <div title={series.methodologyRef === null ? undefined : `Methodology ${series.methodologyRef}`}>
       <ChartTools label="Deployment series" columns={points.length === 0 ? [] : [{ key: "series", label: "Deployment series", points, unit: "money", currency: series.unit ?? undefined, signed: true }]}>
-        <EquityPanel label="Deployment series" points={points} unit="money" currency={series.unit ?? undefined} signed height={200} />
+        <EquityPanel label="Deployment series" changeLabel="Net PnL, realized" points={points} unit="money" currency={series.unit ?? undefined} signed height={200} />
       </ChartTools>
       <GapLine items={[{ label: "Paper and Backtest series", id: FE.series }]} />
     </div>

@@ -117,7 +117,7 @@ export function ChartSlot({ slot, gapAbove = false, deploymentId = null }: { slo
         <SectionPanel level={2} title="Deployment series">
           <div title={slot.methodologyRef === null ? undefined : `Methodology ${slot.methodologyRef}`}>
             <ChartTools label="Deployment series" columns={points.length === 0 ? [] : [{ key: "series", label: "Deployment series", points, unit: "money", currency: slot.unit ?? undefined, signed: true }]}>
-              <EquityPanel label="Deployment series" points={points} unit="money" currency={slot.unit ?? undefined} signed height={200} />
+              <EquityPanel label="Deployment series" changeLabel="Net PnL, realized" points={points} unit="money" currency={slot.unit ?? undefined} signed height={200} />
             </ChartTools>
           </div>
         </SectionPanel>

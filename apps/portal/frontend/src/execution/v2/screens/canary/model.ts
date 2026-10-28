@@ -184,7 +184,7 @@ export const KPI_LABEL: Readonly<Record<KpiKey, string>> = {
   gross_notional: "Gross notional",
   daily_pnl: "Daily PnL",
   open_orders: "Open orders",
-  broker_equity: "Broker equity",
+  broker_equity: "Broker balance (allocation + realized)",
 };
 
 export type KpiCell =

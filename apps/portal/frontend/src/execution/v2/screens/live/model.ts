@@ -315,7 +315,7 @@ const KPI_SLOTS: readonly { key: string; label: string; signed: boolean }[] = [
   { key: "gross_notional", label: "Gross notional", signed: false },
   { key: "daily_pnl", label: "Daily PnL", signed: true },
   { key: "open_orders", label: "Open orders", signed: false },
-  { key: "broker_equity", label: "Broker equity", signed: false },
+  { key: "broker_equity", label: "Broker balance (allocation + realized)", signed: false },
 ];
 
 const AUTHORITY_WORD: Readonly<Record<string, string>> = { EXECUTION: "Execution figure", BROKER: "Broker figure", DERIVED: "Derived figure", PORTAL: "Portal figure", RESEARCH: "Research figure" };
@@ -398,7 +398,7 @@ function reconciliationChip(live: LiveFullOperations): StageChipValue {
 }
 
 /**
- * The caption under Broker equity once the broker side is visible: the SERVER's equity difference (`source_figures`, internal minus
+ * The caption under the Balance (allocation + realized) KPI once the broker side is visible: the SERVER's equity difference (`source_figures`, internal minus
  * broker), worded. Exactly zero is "Matches internal"; any other published difference is printed as the server wrote it; none
  * published = no caption of ours.
  */
