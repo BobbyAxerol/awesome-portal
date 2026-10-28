@@ -110,7 +110,7 @@ describe("Canary (dep_canary_01): the design's elements are data", () => {
   it("the five KPIs print published figures with the server's share of the approved cap", async () => {
     await canary("dep_canary_01");
     const strip = within(screen.getByRole("group", { name: "Canary figures" }));
-    for (const label of ["Capital consumed", "Gross notional", "Daily PnL", "Open orders", "Broker equity"]) expect(strip.getByText(label)).toBeTruthy();
+    for (const label of ["Capital consumed", "Gross notional", "Daily PnL", "Open orders", "Broker balance (allocation + realized)"]) expect(strip.getByText(label)).toBeTruthy();
     expect(text()).toContain("3,820.00");
     expect(text()).toContain("76.40% of approved");
     expect(text()).toContain("61.00% of approved");
@@ -273,7 +273,7 @@ describe("Sandbox (dep_sandbox_01)", () => {
     expect(cols[0]).toContain("10,184.20");
     expect(cols[1]).toContain("10,184.21");
     expect(cols[2]).toContain("-0.01");
-    await ticks(3);
+    await ticks(5); // QA7 world truth: Carry A's published lifecycle marks R1, R2, Paper, Sandbox and Canary done (B-F3's spine ticks every stage the lifecycle says DONE)
     // The seven steps, the findings and the exit review are the screen's own (unchanged).
     expect(text()).toContain("4 / 7");
     expect(text()).toContain("Fee total differs by 0.01 USDT");
@@ -300,7 +300,7 @@ describe("Workbench (dep_paper_01)", () => {
     expect(chip("runtime")).toContain("Running");
     expect(chip("reconciliation")).toContain("1 open finding");
     expect(chip("reconciliation")).toContain("1 unknown order");
-    await ticks(2);
+    await ticks(5); // same: five done stages for Carry A's spine
     // The Orders, Fills and Positions tabs exist and the Overview carries the equity, gate, accounting and quality panels.
     for (const tab of ["Overview", "Orders", "Fills", "Positions", "Sessions"]) expect(screen.getByRole("tab", { name: tab })).toBeTruthy();
     expect(text()).toContain("3 of 14 days");
