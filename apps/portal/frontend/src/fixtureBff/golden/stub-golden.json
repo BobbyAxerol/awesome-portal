@@ -1,6 +1,6 @@
 {
  "recorded_from": "stubExecutionBff before the fixture-bff refactor",
- "cases": 890,
+ "cases": 893,
  "entries": {
   "default GET /retained-review": {
    "status": 404,
@@ -2623,35 +2623,35 @@
   "operationsV2 GET /operations": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "adca4a4e99545b44d62bd114e75bf598e8eb5a9a12e719d7184e37240e41f374",
-   "bytes": 6946,
+   "sha256": "a7eea8980a66b40331bae52771d262ca330d09b1c612567a9c6a61065a7ea051",
+   "bytes": 7471,
    "gap": false
   },
   "operationsV2 GET /operations?limit=3": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "7575df2c3f8566bffb5bf183edeefa28274d2571759874111454bb357b0defcf",
+   "sha256": "d730571765f3cafadbae3d699f94eaeff26ad1de243eb3f69234fa991f3ffe6c",
    "bytes": 2368,
    "gap": false
   },
   "operationsV2 GET /operations?triage_state=UNACKNOWLEDGED&environment=LIVE": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "900958eb40d37578eb7c46a3f98938c4b08e749e3afb0e773761fc072ebe591d",
+   "sha256": "cd14983bd9afe29ff7ec630ff446f66a15a664dc9968d5d790724d622f37d3a7",
    "bytes": 3887,
    "gap": false
   },
   "operationsV2 GET /operations?target_type=PORTFOLIO": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "7841c00f89e582f0da6fc63aa20b7ef6ba7f16553931ce0023d403e202d6cfe5",
+   "sha256": "c0fca5733d45070be296bf6a6f50d1f473d21f177d868de3aaa1b576a874e836",
    "bytes": 3425,
    "gap": false
   },
   "operationsV2 GET /operations?target_type=PORTFOLIO&limit=2": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "cb5067eb0b4bf3e3c8a51ba3abdaee093b004ea9eac4d907da726e1103745530",
+   "sha256": "06c720029337e2b1f68c182ed7f683e4fa69a8a1b0148e9cb9c36df67b95a315",
    "bytes": 2009,
    "gap": false
   },
@@ -2679,7 +2679,7 @@
   "operationsV2 GET /operations?sort=created_at:asc&limit=4": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "8576335adfaa86283c4c89b5ef71a39d819eb7f44a0c1bb1d3b0e0322710293a",
+   "sha256": "b2d667513a472106d61cff2e75e95f95433912b48c00d1feee9bfb2bac5e3ab5",
    "bytes": 2920,
    "gap": false
   },
@@ -2854,22 +2854,29 @@
   "operationsV2 CHAIN /operations?limit=4 #0": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "285d37e9ab0a890180af121277134d39c0ffe928d72785018d207b52556099b1",
-   "bytes": 2915,
+   "sha256": "a0c9e2ecb3872b44dc6b44f43e6866c756b8fb6d12961893ec11c768fade1b75",
+   "bytes": 2893,
    "gap": false
   },
   "operationsV2 CHAIN /operations?limit=4 #1": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "497bb33071e467087b0775282370e2259a57fe57b1459e203861990ae52693ef",
-   "bytes": 2974,
+   "sha256": "b2013b4b4b3eab8705cffbe70a1154c0060f750cf747466578467aecdf3eb88e",
+   "bytes": 3017,
    "gap": false
   },
   "operationsV2 CHAIN /operations?limit=4 #2": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "878a572e37e4252af329cf2f0a6670cd57dcf97bcc295240e99f17590906494e",
-   "bytes": 2923,
+   "sha256": "efe846db098319a09a1cb19240ba5cfdf61a808d4a1aa9a03d695910fc26f3b1",
+   "bytes": 2974,
+   "gap": false
+  },
+  "operationsV2 CHAIN /operations?limit=4 #3": {
+   "status": 200,
+   "contentType": "application/json",
+   "sha256": "d79cbc3c340672b2d24ee7a933e78e53f0cb64cfc6fd5b62c95a8cd1a97affd3",
+   "bytes": 1386,
    "gap": false
   },
   "operationsV2 CHAIN /alphas?limit=2 #0": {
@@ -4149,35 +4156,35 @@
   "screensV2 GET /operations": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "adca4a4e99545b44d62bd114e75bf598e8eb5a9a12e719d7184e37240e41f374",
-   "bytes": 6946,
+   "sha256": "a7eea8980a66b40331bae52771d262ca330d09b1c612567a9c6a61065a7ea051",
+   "bytes": 7471,
    "gap": false
   },
   "screensV2 GET /operations?limit=3": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "7575df2c3f8566bffb5bf183edeefa28274d2571759874111454bb357b0defcf",
+   "sha256": "d730571765f3cafadbae3d699f94eaeff26ad1de243eb3f69234fa991f3ffe6c",
    "bytes": 2368,
    "gap": false
   },
   "screensV2 GET /operations?triage_state=UNACKNOWLEDGED&environment=LIVE": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "900958eb40d37578eb7c46a3f98938c4b08e749e3afb0e773761fc072ebe591d",
+   "sha256": "cd14983bd9afe29ff7ec630ff446f66a15a664dc9968d5d790724d622f37d3a7",
    "bytes": 3887,
    "gap": false
   },
   "screensV2 GET /operations?target_type=PORTFOLIO": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "7841c00f89e582f0da6fc63aa20b7ef6ba7f16553931ce0023d403e202d6cfe5",
+   "sha256": "c0fca5733d45070be296bf6a6f50d1f473d21f177d868de3aaa1b576a874e836",
    "bytes": 3425,
    "gap": false
   },
   "screensV2 GET /operations?target_type=PORTFOLIO&limit=2": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "cb5067eb0b4bf3e3c8a51ba3abdaee093b004ea9eac4d907da726e1103745530",
+   "sha256": "06c720029337e2b1f68c182ed7f683e4fa69a8a1b0148e9cb9c36df67b95a315",
    "bytes": 2009,
    "gap": false
   },
@@ -4205,7 +4212,7 @@
   "screensV2 GET /operations?sort=created_at:asc&limit=4": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "8576335adfaa86283c4c89b5ef71a39d819eb7f44a0c1bb1d3b0e0322710293a",
+   "sha256": "b2d667513a472106d61cff2e75e95f95433912b48c00d1feee9bfb2bac5e3ab5",
    "bytes": 2920,
    "gap": false
   },
@@ -4401,22 +4408,29 @@
   "screensV2 CHAIN /operations?limit=4 #0": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "285d37e9ab0a890180af121277134d39c0ffe928d72785018d207b52556099b1",
-   "bytes": 2915,
+   "sha256": "a0c9e2ecb3872b44dc6b44f43e6866c756b8fb6d12961893ec11c768fade1b75",
+   "bytes": 2893,
    "gap": false
   },
   "screensV2 CHAIN /operations?limit=4 #1": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "497bb33071e467087b0775282370e2259a57fe57b1459e203861990ae52693ef",
-   "bytes": 2974,
+   "sha256": "b2013b4b4b3eab8705cffbe70a1154c0060f750cf747466578467aecdf3eb88e",
+   "bytes": 3017,
    "gap": false
   },
   "screensV2 CHAIN /operations?limit=4 #2": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "878a572e37e4252af329cf2f0a6670cd57dcf97bcc295240e99f17590906494e",
-   "bytes": 2923,
+   "sha256": "efe846db098319a09a1cb19240ba5cfdf61a808d4a1aa9a03d695910fc26f3b1",
+   "bytes": 2974,
+   "gap": false
+  },
+  "screensV2 CHAIN /operations?limit=4 #3": {
+   "status": 200,
+   "contentType": "application/json",
+   "sha256": "d79cbc3c340672b2d24ee7a933e78e53f0cb64cfc6fd5b62c95a8cd1a97affd3",
+   "bytes": 1386,
    "gap": false
   },
   "screensV2 CHAIN /alphas?limit=2 #0": {
@@ -5745,35 +5759,35 @@
   "operationsV2+screensV2 GET /operations": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "adca4a4e99545b44d62bd114e75bf598e8eb5a9a12e719d7184e37240e41f374",
-   "bytes": 6946,
+   "sha256": "a7eea8980a66b40331bae52771d262ca330d09b1c612567a9c6a61065a7ea051",
+   "bytes": 7471,
    "gap": false
   },
   "operationsV2+screensV2 GET /operations?limit=3": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "7575df2c3f8566bffb5bf183edeefa28274d2571759874111454bb357b0defcf",
+   "sha256": "d730571765f3cafadbae3d699f94eaeff26ad1de243eb3f69234fa991f3ffe6c",
    "bytes": 2368,
    "gap": false
   },
   "operationsV2+screensV2 GET /operations?triage_state=UNACKNOWLEDGED&environment=LIVE": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "900958eb40d37578eb7c46a3f98938c4b08e749e3afb0e773761fc072ebe591d",
+   "sha256": "cd14983bd9afe29ff7ec630ff446f66a15a664dc9968d5d790724d622f37d3a7",
    "bytes": 3887,
    "gap": false
   },
   "operationsV2+screensV2 GET /operations?target_type=PORTFOLIO": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "7841c00f89e582f0da6fc63aa20b7ef6ba7f16553931ce0023d403e202d6cfe5",
+   "sha256": "c0fca5733d45070be296bf6a6f50d1f473d21f177d868de3aaa1b576a874e836",
    "bytes": 3425,
    "gap": false
   },
   "operationsV2+screensV2 GET /operations?target_type=PORTFOLIO&limit=2": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "cb5067eb0b4bf3e3c8a51ba3abdaee093b004ea9eac4d907da726e1103745530",
+   "sha256": "06c720029337e2b1f68c182ed7f683e4fa69a8a1b0148e9cb9c36df67b95a315",
    "bytes": 2009,
    "gap": false
   },
@@ -5801,7 +5815,7 @@
   "operationsV2+screensV2 GET /operations?sort=created_at:asc&limit=4": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "8576335adfaa86283c4c89b5ef71a39d819eb7f44a0c1bb1d3b0e0322710293a",
+   "sha256": "b2d667513a472106d61cff2e75e95f95433912b48c00d1feee9bfb2bac5e3ab5",
    "bytes": 2920,
    "gap": false
   },
@@ -5997,22 +6011,29 @@
   "operationsV2+screensV2 CHAIN /operations?limit=4 #0": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "285d37e9ab0a890180af121277134d39c0ffe928d72785018d207b52556099b1",
-   "bytes": 2915,
+   "sha256": "a0c9e2ecb3872b44dc6b44f43e6866c756b8fb6d12961893ec11c768fade1b75",
+   "bytes": 2893,
    "gap": false
   },
   "operationsV2+screensV2 CHAIN /operations?limit=4 #1": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "497bb33071e467087b0775282370e2259a57fe57b1459e203861990ae52693ef",
-   "bytes": 2974,
+   "sha256": "b2013b4b4b3eab8705cffbe70a1154c0060f750cf747466578467aecdf3eb88e",
+   "bytes": 3017,
    "gap": false
   },
   "operationsV2+screensV2 CHAIN /operations?limit=4 #2": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "878a572e37e4252af329cf2f0a6670cd57dcf97bcc295240e99f17590906494e",
-   "bytes": 2923,
+   "sha256": "efe846db098319a09a1cb19240ba5cfdf61a808d4a1aa9a03d695910fc26f3b1",
+   "bytes": 2974,
+   "gap": false
+  },
+  "operationsV2+screensV2 CHAIN /operations?limit=4 #3": {
+   "status": 200,
+   "contentType": "application/json",
+   "sha256": "d79cbc3c340672b2d24ee7a933e78e53f0cb64cfc6fd5b62c95a8cd1a97affd3",
+   "bytes": 1386,
    "gap": false
   },
   "operationsV2+screensV2 CHAIN /alphas?limit=2 #0": {

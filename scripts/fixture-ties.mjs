@@ -860,6 +860,25 @@ export async function runWorldTies(get) {
     for (const key of ["capital_cap", "gross_notional_cap", "daily_loss_cap"]) check("W36", sameDecimal(env.limits?.[key], trial.envelope?.limits?.[key]), `${id}: predecessor ${key} ${env.limits?.[key]}, the linked canary's ${trial.envelope?.limits?.[key]}`);
     check("W36", env.active_for_live_full === false && env.status !== "ACTIVE", `${id}: a finished canary's envelope is ${env.status} / active for live ${env.active_for_live_full}`);
   }
+  // W37 (QA7 R5-03, N5-09): the links of a mismatch page open the deployment's own records: the finding is an incident of THIS deployment (Real-funded, open) and the dry-run link's Operations queue is not empty and is the deployment's
+  for (const id of ["dep_live_01_mismatch"]) {
+    const r = await get(`${E}/deployments/${id}/live`);
+    const consistency = r.status === 200 ? r.body?.broker_consistency : null;
+    if (consistency?.state !== "MISMATCH") continue;
+    const base = id.replace(/_mismatch$/, "");
+    const incidentId = /\/incidents\/([^/?]+)$/.exec(consistency.finding_href ?? "")?.[1];
+    check("W37", incidentId !== undefined, `${id}: the mismatch has no finding link (${consistency.finding_href})`);
+    if (incidentId !== undefined) {
+      const inc = await ok200(`${E}/operations/incidents/${incidentId}`);
+      check("W37", inc !== null && JSON.stringify(inc).includes(`"${base}"`), `${id}: the finding ${incidentId} is not an incident of ${base}`);
+      check("W37", inc !== null && /live/i.test(String(inc.environment ?? inc.incident?.environment ?? "live")), `${id}: the finding ${incidentId} is not Real-funded`);
+    }
+    const target = /target_id=([^&]+)/.exec(consistency.dry_run_reconcile_href ?? "")?.[1];
+    check("W37", target === id, `${id}: the dry-run link targets ${target}`);
+    const queue = target === undefined ? null : await ok200(`${E}/operations?target_id=${target}&limit=50`);
+    const queueRows = queue?.page?.rows ?? [];
+    check("W37", queueRows.length > 0 && queueRows.every((row) => row.target?.id === base), `${id}: the dry-run link's queue has ${queueRows.length} rows, targets ${[...new Set(queueRows.map((row) => row.target?.id))]}`);
+  }
   // ===== WP-B2-S3 end
   // ===== WP-B2-A3 begin
   // ── W19: a request exists only for the NEXT gate of its subject, once, and its quorum is open (R3-02, R3-09, R3-10, R3-03) ───────────────────────────────

@@ -166,7 +166,7 @@ describe("scale", () => {
     setFixtureScale("large");
     const newest = Date.parse("2026-10-19T09:00:00Z");
     const generated = scaled().operations;
-    expect(generated.length).toBe(SCALES.large.operations - 12);
+    expect(generated.length).toBe(SCALES.large.operations - 13);
     for (const op of generated) {
       expect(op.at).toMatch(/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{6}Z$/);
       expect(Date.parse(op.at)).toBeLessThan(newest);

@@ -89,7 +89,7 @@ describe("Operations with the lane's rows", () => {
     const value = (label: string) => within(strip).getByText(label).nextElementSibling?.querySelector(".exec-blk-kpi-value")?.textContent;
     expect(Number(value("Pending receipts"))).toBeGreaterThan(0);
     expect(Number(value("Display catching up"))).toBeGreaterThan(0);
-    expect(value("Open exceptions")).toBe("3");
+    expect(value("Open exceptions")).toBe("4"); // WP-B2-S3: the open reconciliation incident of Carry A's Live deployment
     expect(within(strip).getByText("Display catching up").nextElementSibling?.textContent).toContain("at least");
   });
 
@@ -97,13 +97,13 @@ describe("Operations with the lane's rows", () => {
     mount();
     await table();
     const tab = screen.getByRole("tab", { name: /Exceptions/ });
-    expect(within(tab).getByText("3")).toBeTruthy();
+    expect(within(tab).getByText("4")).toBeTruthy();
     fireEvent.click(tab);
     const t = await table("Exceptions");
     const ids = within(t).getAllByRole("link").map((a) => a.textContent);
     expect(ids).toEqual(expect.arrayContaining(["inc_TEST_ONLY_fx_mismatch", "inc_TEST_ONLY_fx_recall", "inc_TEST_ONLY_fx_budget"]));
     expect(ids).not.toContain("inc_TEST_ONLY_fx_sync");
-    expect(screen.getByText(/The server counts 3 open exceptions in scope/)).toBeTruthy();
+    expect(screen.getByText(/The server counts 4 open exceptions in scope/)).toBeTruthy();
     const link = within(t).getByRole("link", { name: "Open incident inc_TEST_ONLY_fx_mismatch" });
     expect(link.getAttribute("href")).toMatch(/^\/execution\/operations\/incidents\/inc_TEST_ONLY_fx_mismatch/);
     // The budget incident is named by two operations and the mismatch incident by two: many to many.
@@ -325,8 +325,8 @@ describe("pure views", () => {
 
   it("incidentsOf joins the rows' links once per incident, newest link first; openExceptionsOf keeps OPEN only", () => {
     const all = incidentsOf(rows());
-    expect(all.map((i) => i.incidentId).sort()).toEqual(["inc_TEST_ONLY_fx_budget", "inc_TEST_ONLY_fx_mismatch", "inc_TEST_ONLY_fx_recall", "inc_TEST_ONLY_fx_resume", "inc_TEST_ONLY_fx_sync"]);
-    expect(openExceptionsOf(rows()).map((i) => i.incidentId).sort()).toEqual(["inc_TEST_ONLY_fx_budget", "inc_TEST_ONLY_fx_mismatch", "inc_TEST_ONLY_fx_recall"]);
+    expect(all.map((i) => i.incidentId).sort()).toEqual(["inc_TEST_ONLY_fx_budget", "inc_TEST_ONLY_fx_mismatch", "inc_TEST_ONLY_fx_recall", "inc_TEST_ONLY_fx_recon", "inc_TEST_ONLY_fx_resume", "inc_TEST_ONLY_fx_sync"]);
+    expect(openExceptionsOf(rows()).map((i) => i.incidentId).sort()).toEqual(["inc_TEST_ONLY_fx_budget", "inc_TEST_ONLY_fx_mismatch", "inc_TEST_ONLY_fx_recall", "inc_TEST_ONLY_fx_recon"]);
     const budget = all.find((i) => i.incidentId === "inc_TEST_ONLY_fx_budget")!;
     expect(budget.edges).toHaveLength(3);
     expect(budget.edges.map((e) => e.linkedAt.ms)).toEqual([...budget.edges.map((e) => e.linkedAt.ms)].sort((a, b) => b - a));

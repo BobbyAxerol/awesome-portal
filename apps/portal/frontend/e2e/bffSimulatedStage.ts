@@ -1220,7 +1220,9 @@ function darkHybrid(kind: "sandbox" | "paper", answerBody: Obj, id: string): Obj
 function liveFindingHref(deploymentId: string): string | null {
   const found = resolveStageDeployment(worldIdOf(deploymentId, "live"));
   if (found === null) return "/execution/operations/incidents/inc_TEST_ONLY_fx_mismatch";
-  const incident = WORLD_INCIDENTS.find((x) => x.target[0] === "PORTFOLIO" && x.target[1] === found.deployment.portfolioId && x.env === "LIVE" && x.resolved === null);
+  // the deployment's own open incident first (WP-B2-S3, QA7 R5-03), else an open one of the portfolio it is booked on
+  const incident = WORLD_INCIDENTS.find((x) => x.target[0] === "DEPLOYMENT" && x.target[1] === found.deployment.id && x.env === "LIVE" && x.resolved === null)
+    ?? WORLD_INCIDENTS.find((x) => x.target[0] === "PORTFOLIO" && x.target[1] === found.deployment.portfolioId && x.env === "LIVE" && x.resolved === null);
   return incident === undefined ? null : `/execution/operations/incidents/${incident.id}`;
 }
 // ===== WP-B2-S3 end

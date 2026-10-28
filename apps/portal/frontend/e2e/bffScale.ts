@@ -41,13 +41,13 @@ export interface ScaleCounts {
 }
 
 export const SCALES: Record<ScaleName, ScaleCounts> = {
-  small: { alphas: 5, portfolios: 6, portfoliosShown: 6, accounts: { live: 3, paper: 1, sandbox: 1 }, blotterOrders: 137, operations: 12, approvals: 5 },
+  small: { alphas: 5, portfolios: 6, portfoliosShown: 6, accounts: { live: 3, paper: 1, sandbox: 1 }, blotterOrders: 137, operations: 13, approvals: 5 }, // WP-B2-S3: 12 -> 13 (the dry-run reconcile of Carry A's Live deployment is a world operation)
   medium: { alphas: 40, portfolios: 25, portfoliosShown: 25, accounts: { live: 50, paper: 20, sandbox: 10 }, blotterOrders: 300, operations: 120, approvals: 30 },
   large: { alphas: 120, portfolios: 75, portfoliosShown: 60, accounts: { live: 150, paper: 60, sandbox: 30 }, blotterOrders: 1500, operations: 400, approvals: 90 },
 };
 
 /** Rows the doubles already hold on their own; the universe adds only what lies beyond them. */
-const NATIVE = { alphas: 5, portfolios: 6, accounts: { live: 3, paper: 1, sandbox: 1 }, operations: 12, approvals: 5 };
+const NATIVE = { alphas: 5, portfolios: 6, accounts: { live: 3, paper: 1, sandbox: 1 }, operations: 13, approvals: 5 };
 
 export function isScaleName(value: unknown): value is ScaleName {
   return value === "small" || value === "medium" || value === "large";

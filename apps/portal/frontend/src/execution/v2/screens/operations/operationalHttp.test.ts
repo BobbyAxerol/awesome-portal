@@ -51,7 +51,7 @@ describe("listOperationalQueueV2", () => {
     if (result.value.kind !== "queue") throw new Error("expected a queue");
     const page = result.value.queue.page;
     expect(page.rows[0].operationId).toBe("op_01K3COMMANDPLAN000000000000");
-    expect(page.totalCount).toBe(12);
+    expect(page.totalCount).toBe(13); // WP-B2-S3: the world holds 13 operations (the dry-run reconcile of Carry A's Live deployment is the 13th)
   });
 
   it("forwards every filter, with the environment UPPERCASE on the wire", async () => {
@@ -69,7 +69,7 @@ describe("listOperationalQueueV2", () => {
     if (result.value.kind !== "queue") throw new Error("expected a queue");
     expect(result.value.queue.page.rows.map((r) => r.operationId)).toEqual(["op_TEST_ONLY_s01"]);
     expect(result.value.queue.page.filteredCount).toBe(1);
-    expect(result.value.queue.page.totalCount).toBe(12);
+    expect(result.value.queue.page.totalCount).toBe(13); // WP-B2-S3: the world holds 13 operations (the dry-run reconcile of Carry A's Live deployment is the 13th)
   });
 
   it("pages with the opaque cursor the server issued, and ends without one", async () => {
@@ -89,7 +89,7 @@ describe("listOperationalQueueV2", () => {
     expect(p3.hasMore).toBe(false);
     expect(p3.nextCursor).toBeNull();
     const ids = [...p1.rows, ...p2.rows, ...p3.rows].map((r) => r.operationId);
-    expect(new Set(ids).size).toBe(12);
+    expect(new Set(ids).size).toBe(13); // WP-B2-S3: the world holds 13 operations (the dry-run reconcile of Carry A's Live deployment is the 13th)
   });
 
   it("a cursor issued under other filters is a 409 the screen can recognise", async () => {

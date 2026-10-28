@@ -284,7 +284,9 @@ function queue(search: URLSearchParams, simulate = false): BffAnswerV2 {
     if (value === null) continue;
     if (spec.allowed && !spec.allowed.includes(value)) return problem(400, "OPERATIONAL_READ_INPUT_INVALID", `${spec.param} is not a valid value.`);
     applied.push({ field: spec.param, op: "eq", value });
-    rows = rows.filter((row) => spec.field(row) === value);
+    // WP-B2-S3: a page variant id (`dep_live_01_mismatch`) names a state of the deployment `dep_live_01`; the queue is that deployment's
+    const wanted = spec.param === "target_id" ? value.replace(/^(dep_.+?)_(?:dark|mismatch|stale|gap|breach|halted|vn)$/, "$1") : value;
+    rows = rows.filter((row) => spec.field(row) === wanted);
   }
   const sort = search.get("sort") ?? "created_at:desc";
   if (sort !== "created_at:desc" && sort !== "created_at:asc") return problem(400, "OPERATIONAL_READ_INPUT_INVALID", "sort is not a valid value.");

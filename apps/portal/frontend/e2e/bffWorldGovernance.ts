@@ -663,7 +663,7 @@ const SEVERITY_OF: Readonly<Record<string, string>> = { CRITICAL: "CRITICAL", ER
 const SEVERITY_RANK: Readonly<Record<string, number>> = { CRITICAL: 4, HIGH: 3, MEDIUM: 2, INFO: 1 };
 const OPERATION_COMMAND_WORD: Readonly<Record<string, string>> = {
   "portfolio/adjust-target-budget": "Target budget change", "portfolio/recall": "Recall", "portfolio/return-capital": "Capital return", "account/sync": "Account sync",
-  "account/top-up": "Account top-up", "deployment/archive": "Deployment archive", "deployment/resume": "Deployment resume",
+  "account/top-up": "Account top-up", "deployment/archive": "Deployment archive", "deployment/resume": "Deployment resume", "deployment/reconcile": "Dry-run reconcile", // WP-B2-S3
 };
 const VERIFY_WORD: Readonly<Record<string, string>> = { PARTIAL: "partially verified", FAILED: "failed verification", UNCERTAIN: "outcome uncertain", EXPIRED: "verification expired", PENDING: "verification pending", DENIED: "verification denied", NOT_STARTED: "not yet verified", SUCCEEDED: "verified" };
 const targetName = (target: readonly [string, string]): string => `${KIND_WORD[target[0]] ?? target[0].toLowerCase()} ${displayNameOf(target[0], target[1])}`;

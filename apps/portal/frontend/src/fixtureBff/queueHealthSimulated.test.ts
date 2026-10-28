@@ -90,7 +90,7 @@ describe("on: incident links and open exceptions (WP-B, FE-042)", () => {
   });
 
   it("open exceptions are counted from the OPEN incidents of the filtered set (a true zero stays 0), complete", () => {
-    expect(queue(ON, { limit: "250" }).health!.openException).toMatchObject({ count: 3, coverage: "COMPLETE" });
+    expect(queue(ON, { limit: "250" }).health!.openException).toMatchObject({ count: 4, coverage: "COMPLETE" }); // WP-B2-S3: 3 -> 4, the world now holds the open reconciliation incident of Carry A's Live deployment (QA7 R5-03)
     expect(queue(ON, { limit: "250", target_id: "acc_TEST_ONLY_binance02" }).health!.openException).toMatchObject({ count: 0, coverage: "COMPLETE" });
   });
 

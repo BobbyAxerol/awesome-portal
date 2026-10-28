@@ -52,7 +52,7 @@ afterAll(() => resetOverviewDouble());
 describe("fixture answerer equivalence", () => {
   it("holds the whole recorded matrix", () => {
     // 882 until the inbox served the published envelope (`page.next_cursor`): the approvals chain then walks its two further pages.
-    expect(golden.cases).toBe(890);
+    expect(golden.cases).toBe(893);
     expect(Object.keys(golden.entries).length).toBe(golden.cases);
     expect(viaStub.size).toBe(golden.cases);
     expect(viaAnswerer.size).toBe(golden.cases);

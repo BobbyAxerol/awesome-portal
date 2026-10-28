@@ -90,11 +90,11 @@ describe("loaded queue", () => {
     mount(api);
     await table();
     const kpis = screen.getByRole("group", { name: "Queue counts" });
-    expect(within(kpis).getByText("In scope").nextElementSibling?.querySelector(".exec-blk-kpi-value")?.textContent).toBe("12");
+    expect(within(kpis).getByText("In scope").nextElementSibling?.querySelector(".exec-blk-kpi-value")?.textContent).toBe("13"); // WP-B2-S3: 13 operations in the world
     expect(within(kpis).getByText("Matching").nextElementSibling?.querySelector(".exec-blk-kpi-value")?.textContent).toBe("8");
     expect(within(kpis).getByText("Loaded").nextElementSibling?.querySelector(".exec-blk-kpi-value")?.textContent).toBe("8");
     expect(within(kpis).getByText("Read").nextElementSibling?.querySelector(".exec-blk-kpi-value")?.textContent).toBe("Available");
-    expect(screen.getByText(/8 of 8 matching · 12 in scope/)).toBeTruthy();
+    expect(screen.getByText(/8 of 8 matching · 13 in scope/)).toBeTruthy();
     expect(screen.getByText("End of the list.")).toBeTruthy();
   });
 
@@ -388,7 +388,7 @@ describe("filters are forwarded to the read", () => {
     await table();
     fireEvent.click(within(screen.getByRole("group", { name: "Lens" })).getByRole("button", { name: "All" }));
     await waitFor(() => expect(calls.at(-1)?.triageState).toBeUndefined());
-    expect(await screen.findByText(/12 of 12 matching/)).toBeTruthy();
+    expect(await screen.findByText(/13 of 13 matching/)).toBeTruthy();
   });
 
   it("queryFor is the whole mapping", () => {
@@ -405,9 +405,9 @@ describe("keyset paging", () => {
     mount(api);
     const t = await table();
     expect(within(t).getAllByRole("row")).toHaveLength(1 + 5);
-    expect(screen.getByText(/5 of 8 matching · 12 in scope/)).toBeTruthy();
+    expect(screen.getByText(/5 of 8 matching · 13 in scope/)).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Load more" }));
-    await waitFor(() => expect(screen.getByText(/8 of 8 matching · 12 in scope/)).toBeTruthy());
+    await waitFor(() => expect(screen.getByText(/8 of 8 matching · 13 in scope/)).toBeTruthy());
     expect(calls[1].after).toBeTruthy();
     expect(within(await table()).getAllByRole("row")).toHaveLength(1 + 8);
     expect(screen.queryByRole("button", { name: "Load more" })).toBeNull();
@@ -565,7 +565,7 @@ describe("states", () => {
     fireEvent.change(screen.getByLabelText("Severity"), { target: { value: "CRITICAL" } });
     fireEvent.change(screen.getByLabelText("Environment"), { target: { value: "paper" } });
     expect(await screen.findByText("Nothing matched these filters.")).toBeTruthy();
-    expect(screen.getByText(/0 of 0 matching · 12 in scope/)).toBeTruthy();
+    expect(screen.getByText(/0 of 0 matching · 13 in scope/)).toBeTruthy();
     const kpis = screen.getByRole("group", { name: "Queue counts" });
     expect(within(kpis).getByText("Read").nextElementSibling?.querySelector(".exec-blk-kpi-value")?.textContent).toBe("Empty");
   });
