@@ -194,9 +194,15 @@ export interface StageView {
   presence: readonly string[];
 }
 
+/** A row whose published lifecycle word says the deployment ended or was retired: history, not the alpha's current stage (QA7). */
+export function isEndedRow(row: ManagerRow): boolean {
+  return /^(ENDED|RETIRED)$/i.test(row.lifecycle ?? "");
+}
+
 export function stageViewOf(row: ManagerRow): StageView {
   if (row.currentStage !== null) {
-    return { kind: "single", code: row.currentStage, label: stageLabel(row.currentStage), reason: null, presence: row.stagePresence };
+    // An ended deployment is shown as what it was, marked ended: never as the alpha's stage now.
+    return { kind: "single", code: row.currentStage, label: isEndedRow(row) ? `${stageLabel(row.currentStage)} · ended` : stageLabel(row.currentStage), reason: null, presence: row.stagePresence };
   }
   const reason = row.stageLifecycleReasons.currentStage;
   const presence = row.stagePresence.map(stageLabel);
@@ -215,6 +221,7 @@ export interface InStageView {
 
 /** Days in stage. Published numbers print as published; otherwise `Not published (FE-027)` with the reason from the row. */
 export function inStageOf(row: ManagerRow, stamp: (ms: number) => string): InStageView {
+  if (isEndedRow(row)) return { text: "Ended", detail: "This deployment ended; its days are history, not days in the alpha's current stage", published: true };
   if (row.daysInStage !== null && row.enteredAtMs !== null) {
     return { text: row.daysInStage === 1 ? "1 day" : `${row.daysInStage} days`, detail: `In this stage since ${stamp(row.enteredAtMs)}`, published: true };
   }
