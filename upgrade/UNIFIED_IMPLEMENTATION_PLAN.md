@@ -16744,6 +16744,7 @@ ELP2-10 remainNOT_MET; no phase transition or runtime authority is inferred.
 **28Oct follow-through:** [seven-package review, focused receipts and Claude handoff](execution_loop/evidence/ELP2-10/CORE_SEVEN_PACKAGE_FOLLOWTHROUGH_2026-10-28.md).
 **28Oct V2 follow-through:** [lossless Core–Edge candidate, fixture browser receipt and remaining source/gate owners](execution_loop/evidence/ELP2-10/CORE_EDGE_V2_FIXTURE_FOLLOWTHROUGH_2026-10-28.md). Source-only; ELP2-10/11 remain open.
 **28Oct Research-alpha follow-through:** [fixture candidate, six targeted browser checks, codec and current acceptance gaps](execution_loop/evidence/ELP2-10/CORE_ALPHA_AND_CODEC_FOLLOWTHROUGH_2026-10-28.md). Candidate `837eae444` is based on Claude's branch and is **not landed**; full journey and normal integration gate remain open. Fixture results do not close connected-source acceptance.
+**28Oct integrated fixture candidate:** [Claude/Core pin, Approval selected-record browser checks and remaining gates](execution_loop/evidence/ELP2-10/CORE_CLAUDE_INTEGRATION_FOLLOWTHROUGH_2026-10-28.md). Candidate `aea2501be` is not landed; the positive fixture journey passed its scoped checks with six ties skipped and no link sweep. Full review/hook and connected-source gates remain open.
 Correction: Edge V1's recursive guard rejects unsafe numeric revisions before
 forwarding; Core V1 also refuses them. Full PostgreSQL BIGINT support requires
 a coordinated versioned lossless wire, not loosening either V1 guard. Fixture

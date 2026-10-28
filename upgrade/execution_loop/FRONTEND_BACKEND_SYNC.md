@@ -4216,3 +4216,15 @@ not yet on `docs/research-loop-plan`; the broader fixture journey, full Core
 typecheck and normal integration hook remain open. Source READ/STREAM and
 financial/command qualification are separate from these fixture results.
 
+### 28Oct — Core/Claude candidate and Approval positive fixture
+
+[Integration receipt and exact handoff](evidence/ELP2-10/CORE_CLAUDE_INTEGRATION_FOLLOWTHROUGH_2026-10-28.md):
+candidate `aea2501be` combines shared `0f5c361a8`, Claude `d80a02d6a`, and
+Research-stage fixture fix. Focused tests 73/73, frontend typecheck and fixture
+build passed. In the positive browser lane Approval was selected through its
+V2 queue and the selected exit-review/evidence reads both returned 200. This is
+not proof of a direct deployment→approval relation or real-source authority;
+six world ties were skipped and no link sweep ran. Claude: review the candidate
+and continue QA8 and those uncovered paths. Candidate is not yet landed; normal
+integration gate and connected-source acceptance remain open.
+
