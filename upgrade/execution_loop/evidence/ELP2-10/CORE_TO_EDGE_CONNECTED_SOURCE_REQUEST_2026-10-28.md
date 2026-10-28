@@ -16,8 +16,11 @@ Do not include token, password, private key or cookie in this public packet.
   zero scoped Paper membership heads. See
   `RESEARCH_READER_INSTALL_OBSERVATION_2026-10-27.md` and
   `PAPER_AUTHORITY_AND_SOURCE_TRANSPORT_2026-10-27.md` in this mailbox. The
-  old 27 October 09:30 UTC binding/window is expired; never reuse its session,
-  grant or window. Discovery is not an authorization grant.
+  selected reader binding has an upper bound of **28 October 09:30 UTC**,
+  not 27 October. This corrects the initial version of this packet. The
+  binding is not an installed manifest or a live connection; separately
+  retired sessions, grants and completed windows must not be reused.
+  Discovery is not an authorization grant.
 - The previous source DB observation reported TLS off and permissive local
   trust. No plaintext non-loopback or trust-bypass transport is accepted.
   Do not alter shared DB/HBA, stable/dev/main or use stable credentials.
