@@ -183,9 +183,8 @@ export function answerPendingRecallDiscovery(method: string, path: string, searc
     const item = (suffix: string, state: string, amounts: Draft): Draft => ({ ...structuredClone(template), original_recall_id: `recall_${id}_${suffix}`, currency: world.currency, state, amounts, recipient_account_id: null,
       last_operation: state === "WAITING_ENCUMBRANCE" ? "APPLY_PENDING" : state === "APPLIED" ? "APPLY" : "REJECT" });
     body.policy_revision = structuredClone(file.discovery_open.policy_revision);
-    body.items = [item("1", "WAITING_ENCUMBRANCE", { requested: world.pending, applied: "0", pending: world.pending, cancelled: "0", rejected: "0" }),
-      ...(id === "pf_TEST_ONLY_core" ? [item("2", "APPLIED", { requested: "1000.00", applied: "1000.00", pending: "0", cancelled: "0", rejected: "0" }),
-        item("3", "REJECTED", { requested: "500.00", applied: "0", pending: "0", cancelled: "0", rejected: "500.00" })] : [])];
+    // WP-B2-A3 (W128): discovery lists only OPEN recalls (the published item state enum is WAITING_ENCUMBRANCE | UNKNOWN); a finished APPLIED / REJECTED recall is not a discovery item
+    body.items = [item("1", "WAITING_ENCUMBRANCE", { requested: world.pending, applied: "0", pending: world.pending, cancelled: "0", rejected: "0" })];
   }
   body.resource = { kind, id };
   body.environment = environment;
