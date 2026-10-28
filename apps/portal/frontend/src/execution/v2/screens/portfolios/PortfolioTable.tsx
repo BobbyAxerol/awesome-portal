@@ -246,11 +246,21 @@ const GROUP_KEY: Readonly<Partial<Record<ColumnId, { key: string; signed: boolea
 /** The fact a figure column stands for, for the visible "Not published: <what>". */
 const WHAT: Partial<Record<ColumnId, string>> = { nav: "NAV", pnl: "Net PnL", ret: "Return", dd: "Drawdown", hhi: "Concentration", score: "Score" };
 
+/**
+ * Why a portfolio has no figure in the viewed environment. When its published environments do not include it, the reason names the
+ * environment the register is showing and the one(s) the portfolio does publish, so the reader knows where its own page has numbers (QA8).
+ */
+export function noFigures(row: Pick<PortfolioRow, "environments">, viewed: string): string {
+  const own = row.environments.map((e) => e.toLowerCase());
+  if (own.length > 0 && !own.includes(viewed.toLowerCase())) return `Not published in the ${viewed} book: this portfolio publishes ${own.join(", ")} only, and its page shows that book`;
+  return `No ${viewed} figures are published for this portfolio`;
+}
+
 function cell(id: ColumnId, row: PortfolioRow, figures: PortfolioFigures | null) {
   if (id === "score" && figures !== null) {
     if (row.unallocated) return <Absent what={WHAT.score} reason="The source publishes no score for capital that no portfolio holds" />;
     const group = figures.groups.get(row.portfolioId);
-    if (group === undefined) return <Absent what={WHAT.score} reason={`No ${figures.environment} figures are published for this portfolio`} />;
+    if (group === undefined) return <Absent what={WHAT.score} reason={noFigures(row, figures.environment)} />;
     if (publishes(group, SCORE_KEYS.score)) return <ScoreList list={group} />;
   }
   if (id === "alphas") {
@@ -263,7 +273,7 @@ function cell(id: ColumnId, row: PortfolioRow, figures: PortfolioFigures | null)
   if (source !== undefined && figures !== null) {
     if (row.unallocated) return <Absent what={WHAT[id]} reason="The source publishes no figure for capital that no portfolio holds" />;
     const group = figures.groups.get(row.portfolioId);
-    if (group === undefined) return <Absent what={WHAT[id]} reason={`No ${figures.environment} figures are published for this portfolio`} />;
+    if (group === undefined) return <Absent what={WHAT[id]} reason={noFigures(row, figures.environment)} />;
     // A group that does not publish this key keeps the column's own Not published (the contract has not spoken for it).
     if (publishes(group, source.key)) return <PartitionFigures list={group} metricKey={source.key} signed={source.signed} labels="several" omitUnit={row.baseCurrency} />;
   }
