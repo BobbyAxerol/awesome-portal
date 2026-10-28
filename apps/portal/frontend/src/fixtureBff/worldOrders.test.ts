@@ -160,8 +160,9 @@ describe.each([{ rebase: "0" }, { rebase: "1" }])("one order book (FIXTURE_REBAS
   it("the Paper tabs list the blotter's orders and fills of their deployment, none after the page's as-of or before its own submit", async () => {
     const paper = await get(`${E}/screens/paper/dep_paper_01`);
     const asOf = ms(paper.as_of);
-    expect(ms(paper.read_at)).toBe(asOf);
-    expect(asOf).toBe(blotterAsOf);
+    // a Paper stage the alpha has left has no source update after its exit: as-of is the exit, the read is at the world clock
+    expect(ms(paper.read_at)).toBe(blotterAsOf);
+    expect(asOf).toBeLessThanOrEqual(blotterAsOf);
     const orders = paper.data.orders as Body[];
     expect(orders.length).toBeGreaterThan(0);
     const submitted = new Map<string, number>();
