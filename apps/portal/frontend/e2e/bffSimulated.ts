@@ -137,7 +137,8 @@ function overlayAccountF2(data: Obj, accountId: string): void {
   for (const margin of rows("margin_balances")) {
     if (margin.account_id === accountId && margin.currency === "USDT" && margin.instrument_id === undefined) {
       // WP-B2-A3 (R3-06): maintenance over equity, from the account's own rows (the venue's wallet when it reports one, else the ledger), two places, BigInt
-      const wallet = newest?.wallet_balance ?? rows("account_balances").find((row) => row.currency === "USDT")?.total;
+      // N8c-03: the denominator is a figure the VENUE reported (native wallet); with none there is no ratio (okx_main printed 25.88% beside "native custody Not available")
+      const wallet = isPositiveMode() ? newest?.wallet_balance : newest?.wallet_balance ?? rows("account_balances").find((row) => row.currency === "USDT")?.total;
       const maintenance = toCents(String(margin.maintenance ?? "0"));
       const equity = typeof wallet === "string" ? toCents(wallet) : 0n;
       if (equity > 0n && isPositiveMode()) { const bp = maintenance * 10_000n / equity; margin.margin_ratio = `${bp / 100n}.${String(bp % 100n).padStart(2, "0")}`; }

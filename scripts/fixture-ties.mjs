@@ -1555,6 +1555,18 @@ export async function runWorldTies(get) {
       if (row.gate === "LIVE_GATE") check("W82", d?.governance_backbone?.data?.approval?.evidence_complete === false, `${row.id}: ${dep} is halted and the Live gate says evidence complete`);
     }
   }
+  // ── W83: ONE headroom per account (list = Account 360 margin card) and a margin ratio only over a venue-reported equity (N8c-03) ──
+  {
+    const rows83 = await pages(`${E}/broker-bindings?limit=50&environment=live`, (b) => b.page?.rows ?? [], (b) => b.page?.next_cursor ?? null, 4);
+    for (const row of rows83.filter((r) => /^acc_(bnc_sub|okx_main)$/.test(r.account_id))) {
+      const data = (await ok200(`${E}/resources/accounts/${row.account_id}`))?.data;
+      const head = row.figures?.virtual_headroom?.[0];
+      const card = data?.exposure_headroom?.[0];
+      if (head && card) check("W83", sameDecimal(head.value, card.headroom), `${row.account_id}: the list says headroom ${head.value}, the Margin card ${card.headroom}`);
+      const sync = (data?.broker_sync ?? []).find((x) => x.wallet_balance !== undefined);
+      for (const m of data?.margin_balances ?? []) if (m.margin_ratio !== undefined) check("W83", sync !== undefined, `${row.account_id}: margin ratio ${m.margin_ratio}% printed with no venue-reported wallet`);
+    }
+  }
   // ===== WP-B2-A3 round D end
   return { ties };
 }

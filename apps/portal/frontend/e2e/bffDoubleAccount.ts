@@ -132,7 +132,7 @@ export function ledgerFiguresOfBinding(bindingId: string): { currency: string; u
   const spec = ACCOUNTS.find((a) => a.bindingId === bindingId);
   const row = spec?.rows.account_balances?.[0];
   if (spec === undefined || row === undefined) return null;
-  const maintenance = toCents(String(spec.rows.margin_balances?.[0]?.maintenance ?? "0"));
+  const maintenance = spec.rows.margin_balances?.[0] !== undefined ? toCents(String(spec.rows.margin_balances[0].maintenance ?? "0")) : toCents(String(row.free)) / 20n; // the rule of the account's own margin row (free / 20 when it states none)
   return { currency: String(row.currency), used: String(row.total), reserved: String(row.locked), available: String(row.free), headroom: fromCents(toCents(String(row.free)) - maintenance) };
 }
 // ===== WP-B2-A3 end
@@ -261,7 +261,7 @@ function bindingExposure(id: string): BffAnswerAccount {
     const account = ACCOUNTS.find((a) => a.id === accountId);
     const row = account?.rows.account_balances?.[0];
     if (row === undefined) return null;
-    const maintenance = toCents(String(account!.rows.margin_balances?.[0]?.maintenance ?? "0"));
+    const maintenance = account!.rows.margin_balances?.[0] !== undefined ? toCents(String(account!.rows.margin_balances[0].maintenance ?? "0")) : toCents(String(row.free)) / 20n;
     return bucket(String(row.currency), String(row.total), String(row.locked), String(row.free), fromCents(toCents(String(row.free)) - maintenance));
   };
   // ===== WP-B2-A3 end
@@ -594,7 +594,10 @@ function positiveAccount(spec: AccountSpec, id: string): AccountSpec {
     const free = have ? toCents(String(have.free)) : 10_000_000n;
     rows.account_balances = (rows.account_balances ?? []).map((row) => ({ ...row, updated_at: ACCOUNT_DOUBLE_AS_OF, updated_at_ms: AS_OF_MS }));
     rows.margin_balances ??= [margin(primary, currency, fromCents(free / 10n), fromCents(free / 20n))];
-    rows.exposure_headroom = [{ currency, free: fromCents(free), maintenance: fromCents(free / 10n), headroom: fromCents(free - free / 10n), verdict: "AVAILABLE" }];
+    // ===== WP-B2-A3 (N8c-03): ONE headroom definition, free less the maintenance margin the margin row states (the list reads the same figure)
+    const maintenanceStated = toCents(String(rows.margin_balances?.[0]?.maintenance ?? "0"));
+    rows.exposure_headroom = [{ currency, free: fromCents(free), maintenance: fromCents(maintenanceStated), headroom: fromCents(free - maintenanceStated), verdict: "AVAILABLE" }];
+    // ===== WP-B2-A3 end
     // ===== WP-B2-A3 (N3-04): a venue that reported no balance published no buying power; "0.00" would be a figure the source never gave, and there is nothing to compare
     const nothingReported = free <= 0n;
     rows.broker_sync = [{ sync_id: `bs_${primary}_0`, source: "BROKER", status: "SYNCED", currency, ...(nothingReported ? {} : { buying_power: fromCents(free) }), synced_at: ACCOUNT_DOUBLE_AS_OF, synced_at_ms: AS_OF_MS }];
