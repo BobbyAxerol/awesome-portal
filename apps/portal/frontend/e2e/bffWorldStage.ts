@@ -206,4 +206,7 @@ export function historyNetSeries(deploymentId: string, fromMs: number, toMs: num
   const n = BigInt(points - 1);
   return walk.map((w, i) => ({ t: Math.round(fromMs + ((toMs - fromMs) * i) / (points - 1)), value: fromCents(net * BigInt(i) / n + (w - (walk[points - 1]! * BigInt(i)) / n)) }));
 }
+/** How many of a stage's 7 criteria (Sandbox: its 7 steps) are met: all seven once the alpha left the stage, else one per two days in it (never the seventh before the exit). Alpha 360 and the stage page read this one rule. */
+export const CRITERIA_TOTAL = 7;
+export const criteriaMetOf = (status: "completed" | "current" | "none", days: number): number => (status === "completed" ? CRITERIA_TOTAL : status === "none" ? 0 : Math.min(CRITERIA_TOTAL - 1, Math.floor(days / 2)));
 // ===== WP-B2-S3 end

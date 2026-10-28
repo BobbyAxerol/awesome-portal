@@ -28,7 +28,7 @@
 
 import { createHash } from "node:crypto";
 import { isPositiveMode, positiveDeploymentFact } from "./bffPositiveMode";
-import { gateMinimumDays, isRetired, PAPER_POLICY_MIN_TRADES, resolveStageDeployment, sandboxRecordIdOf, stageBookOf, userIdOf } from "./bffWorldStage"; // WP-B2-S
+import { criteriaMetOf, gateMinimumDays, isRetired, PAPER_POLICY_MIN_TRADES, resolveStageDeployment, sandboxRecordIdOf, stageBookOf, userIdOf } from "./bffWorldStage"; // WP-B2-S
 import { text4, units4 } from "./bffWorldBooks"; // WP-B2-S3
 import { currentDeploymentOfStage, haltedSinceMs, historyDeploymentId, historyNetSeries, standingOf } from "./bffWorldStage"; // WP-B2-S3
 import { approvalHref, approvalOfAlpha, type WorldGate } from "./bffWorldGovernance"; // WP-B2-S3
@@ -1028,7 +1028,7 @@ function worldStage(kind: "canary" | "live" | "sandbox" | "paper", body: Obj | n
     const sandboxSubmitter = sandboxDecider === "lan" ? "minh" : "lan";
     const steps = body.steps as Obj[];
     const progress = body.progress as Obj;
-    const passedTo = record.status === "completed" ? steps.length : Math.min(steps.length - 1, Math.floor(record.days / 2));
+    const passedTo = criteriaMetOf(record.status, record.days); // WP-B2-S3: the rule Alpha 360 counts criteria by
     // WP-B2-S3: the steps are checked inside the run (before the submission), the exit-review step at the decision; evidence of a decided record has no expiry, the evidence of a run in progress is valid through the run
     const completedRun = record.status === "completed";
     const runEndMs = record.toMs ?? NOW_MS;

@@ -64,6 +64,7 @@ const TIES: readonly { id: string; title: string; qa: string; owner: string }[] 
   { id: "W37", title: "the links of a mismatch page open the deployment's own records: the finding is an open Real-funded incident of that deployment, the dry-run link's Operations queue is non-empty and is that deployment's", qa: "R5-03 N5-09", owner: "B-S" },
   { id: "W38", title: "an alpha link of the Overview with its query, and the alpha resource under every workspace/deployment query, answer that alpha's own deployments, stage and allocation", qa: "R1-01", owner: "B-S" },
   { id: "W39", title: "a Paper stage the alpha left nets flat (no position, orders net zero, no locked cash with nothing open), its accounting fee is the fills' own USDT fees, and its gate minimum is the one its exit review states", qa: "N4-04 N4-05", owner: "B-S" },
+  { id: "W40", title: "Alpha 360's criteria met of a Sandbox stage is the Sandbox page's own passed-step count (seven once the alpha left the stage)", qa: "N4-09", owner: "B-S" },
   // ===== WP-B2-S3 end
   { id: "W23", title: "a scoped blotter is the scope's population: every order of the deployment/alpha (including ord_00225 for Carry A) is on it, count and chips equal the filtered population", qa: "QA6 R2-02", owner: "B-B1" },
   { id: "W24", title: "one definition of the money of a book: Net PnL is the published realized, a venue is the sum of its deployments, Equity is allocation + realized + unrealized (a ledger figure without the unrealized is not named Equity)", qa: "R2-03 R5-08 R3-07", owner: "B-C3" },

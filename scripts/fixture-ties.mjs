@@ -928,6 +928,17 @@ export async function runWorldTies(get) {
       check("W39", review !== null && String(review.gate_summary ?? "").includes(`gate minimum ${minimum} days`), `${id}: the page's gate minimum is ${minimum} days, the exit review ${exit.value} says "${review?.gate_summary}"`);
     }
   }
+  // W40 (QA7 N4-09): Alpha 360's "criteria met" of a stage is the stage page's own count (a Sandbox deployment's steps passed; seven once the alpha left it)
+  for (const id of [...deployments.keys()].slice(0, 40)) {
+    const d = deployments.get(id);
+    if (d.stage !== "SANDBOX" || STAGE_RANK[d.alphaStage] === undefined) continue;
+    const env = { PAPER: "paper", SANDBOX: "sandbox", CANARY: "live", LIVE: "live" }[d.alphaStage];
+    const overview = await ok200(`${E}/manager/alphas/${d.alphaId}/overview?environment=${env}&window=30D`);
+    const m = overview?.items?.find((x) => x.alpha_id === d.alphaId)?.economic_partitions?.[0];
+    const page = (await get(`${E}/deployments/${id}/certification`)).body;
+    if (!m || !page?.progress) continue;
+    check("W40", Number(metricStr(m, "life_sandbox_criteria_met")) === page.progress.passed_count, `${id}: Alpha 360 counts ${metricStr(m, "life_sandbox_criteria_met")} of 7 sandbox criteria met, the Sandbox page ${page.progress.passed_count} of ${page.progress.total_count}`);
+  }
   // ===== WP-B2-S3 end
   // ===== WP-B2-A3 begin
   // ── W19: a request exists only for the NEXT gate of its subject, once, and its quorum is open (R3-02, R3-09, R3-10, R3-03) ───────────────────────────────

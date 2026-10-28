@@ -16,7 +16,7 @@ import { blotterBookOf as c4BlotterBook, worldBlotterCounts } from "../frontend/
 import type { PositiveAccountBook, PositiveDeploymentFact, PositivePortfolioBook, PositiveRecall } from "../frontend/e2e/bffPositiveMode";
 import { addDecimal, fixtureNowMs, scaled, type AlphaSpec, type DeploymentSpec } from "../frontend/e2e/bffScale";
 // ===== WP-B2-S begin: a deployment of a stage its alpha has LEFT is retired (ENDED, no exposure): one stage history (e2e/bffWorldStage.ts)
-import { isRetired as wpb2sRetired, stageActiveOf as wpb2s3Active, stageHistoryOf as wpb2sHistory, stageStateOf as wpb2s3State } from "../frontend/e2e/bffWorldStage";
+import { isRetired as wpb2sRetired, stageActiveOf as wpb2s3Active, stageHistoryOf as wpb2sHistory, stageStateOf as wpb2s3State, criteriaMetOf as wpb2s3Criteria } from "../frontend/e2e/bffWorldStage";
 // ===== WP-B2-S end
 import { accountFact, grossNotional, incidentChildrenBody, lifecycleOf, MARKS, NATIVE_ALPHAS, positionsOf, stageDays, WORLD_ACTORS } from "../frontend/e2e/bffWorld";
 // ===== WP-B2-C3 begin: the money figures of the world (one definition, one level path per book)
@@ -1335,7 +1335,11 @@ function wpcLifecycleKeys(alphaId: string, template: Draft): Record<string, Draf
   put("life_sandbox_days", String(sandboxDays), "DAYS");
   put("life_canary_days", String(canaryDays), "DAYS");
   put("life_live_days", String(liveDays), "DAYS");
-  for (const stage of ["paper", "sandbox", "canary"]) { put(`life_${stage}_criteria_met`, "7", "COUNT"); put(`life_${stage}_criteria_total`, "7", "COUNT"); }
+  for (const stage of ["paper", "sandbox", "canary"] as const) { // WP-B2-S3 (QA7 N4-09): criteria met by the stage's status (all seven once left, else by days in it), the rule the Sandbox page counts its steps by
+    const record = H.stages[stage];
+    if (record.status === "none") continue;
+    put(`life_${stage}_criteria_met`, String(wpb2s3Criteria(record.status, record.days)), "COUNT"); put(`life_${stage}_criteria_total`, "7", "COUNT");
+  }
   put("life_run_ms", at(r1 - 20 * DAY_MS), "TIMESTAMP_MS", actor(1));
   put("life_evidence_revision", String(1 + (seed >> 11) % 4), "COUNT");
   put("life_live_decider", "1", "ROLE", "Manager");
