@@ -24,7 +24,7 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { expect, test, type Page } from "@playwright/test";
 
-import { stubExecutionBff } from "./bffDouble";
+import { answerExecutionBff, stubExecutionBff } from "./bffDouble";
 import { SLICE_URL, stubScopedBff } from "./bffDoubleScoped";
 import { OPERATIONS_V2_DOUBLE_NOW_ISO } from "./bffDoubleV2";
 import { settle, stubPortalApi, usePreferences } from "./fixtures";
@@ -236,13 +236,29 @@ async function stillFrame(page: Page): Promise<void> {
 
 test.use({ locale: "en-US", timezoneId: "UTC", colorScheme: "light" });
 
-// The Overview digest panel reads `GET /visit-digest`. The canonical published fixture's first-visit case answers it, bound to the workspace asked.
-const DIGEST_FIXTURE = resolve(dirname(fileURLToPath(import.meta.url)), "../../../../packages/contracts/fixtures/execution-visit-digest.synthetic.valid.json");
-async function stubVisitDigest(page: Page): Promise<void> {
-  const firstVisit = (JSON.parse(readFileSync(DIGEST_FIXTURE, "utf8")) as { cases: { first_visit: Record<string, unknown> } }).cases.first_visit;
-  await page.route("**/api/v1/execution/visit-digest?**", (route) => {
-    const workspace = new URL(route.request().url()).searchParams.get("workspace_id");
-    return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ ...firstVisit, workspace_id: workspace }) });
+// Three reads the shared doubles do not answer for this spec are answered by the canonical published fixtures, bound to the id and workspace asked:
+// the Overview digest panel (`GET /visit-digest`, first-visit case), an alpha's lifecycle record and an approval's evidence read.
+const FIXTURES = resolve(dirname(fileURLToPath(import.meta.url)), "../../../../packages/contracts/fixtures");
+function fixtureBody(file: string, pick: (json: Record<string, unknown>) => Record<string, unknown>): Record<string, unknown> {
+  return pick(JSON.parse(readFileSync(resolve(FIXTURES, file), "utf8")) as Record<string, unknown>);
+}
+async function stubPublishedReads(page: Page, options: Parameters<typeof answerExecutionBff>[4]): Promise<void> {
+  const digest = fixtureBody("execution-visit-digest.synthetic.valid.json", (json) => (json.cases as { first_visit: Record<string, unknown> }).first_visit);
+  const lifecycle = fixtureBody("execution-alpha-lifecycle.published.synthetic.valid.json", (json) => json.value as Record<string, unknown>);
+  const evidence = fixtureBody("execution-approval-evidence.published.synthetic.valid.json", (json) => json.value as Record<string, unknown>);
+  await page.route("**/api/v1/execution/**", (route) => {
+    const url = new URL(route.request().url());
+    const workspace = url.searchParams.get("workspace_id") ?? (digest.workspace_id as string);
+    const answer = (body: Record<string, unknown>) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ ...body, workspace_id: workspace }) });
+    if (route.request().method() !== "GET") return route.fallback();
+    // Only a read the shared double leaves unanswered (501) is answered here; every other body stays the double's.
+    if (answerExecutionBff("GET", url.pathname, url.searchParams, options).status !== 501) return route.fallback();
+    if (url.pathname === "/api/v1/execution/visit-digest") return answer(digest);
+    const alpha = /^\/api\/v1\/execution\/alphas\/([^/]+)\/lifecycle$/.exec(url.pathname);
+    if (alpha !== null) return answer({ ...lifecycle, alpha_id: decodeURIComponent(alpha[1]!) });
+    const approval = /^\/api\/v1\/execution\/governance\/approvals\/([^/]+)\/evidence$/.exec(url.pathname);
+    if (approval !== null) return answer({ ...evidence, approval_id: decodeURIComponent(approval[1]!) });
+    return route.fallback();
   });
 }
 
@@ -256,8 +272,9 @@ for (const cell of CELLS) {
       await freezeNondeterminism(page);
       await usePreferences(page, "operations");
       await stubPortalApi(page, "healthy");
-      await stubExecutionBff(page, { operationsV2: true, screensV2: true, reviewManager: true });
-      await stubVisitDigest(page);
+      const bffOptions = { operationsV2: true, screensV2: true, reviewManager: true };
+      await stubExecutionBff(page, bffOptions);
+      await stubPublishedReads(page, bffOptions);
       await stubAdminRoutes(page);
       await stubQuantbtRuns(page);
       if (cell.scoped) await stubScopedBff(page);
