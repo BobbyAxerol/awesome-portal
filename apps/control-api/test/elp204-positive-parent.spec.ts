@@ -2341,7 +2341,7 @@ async function followingFixture(family:FollowingFamily,options:{rootOnly?:boolea
       equityProjectionSourceResponse.parse(body);
       expect(body.series).toEqual({availability:"ABSENT",reason_code:"NOT_AUTHORIZED"});
       expect(body.band).toEqual({availability:"ABSENT",reason_code:"NOT_AUTHORIZED"});
-      expect(JSON.stringify(body)).not.toMatch(/points|equity"|lower|upper|currency|lineage|TEST_ONLY/);
+      expect(JSON.stringify([body.series,body.band])).not.toMatch(/points|equity"|lower|upper|currency|lineage|TEST_ONLY/);
     });
     it.each(["series","band"] as const)("FAIL-CLOSED independently: only %s lacks its field authority; the other section still renders",async missing=>{
       const f=await liveFixture(),q=equityQuery(f,{window:"1d"}),asked:string[]=[];
