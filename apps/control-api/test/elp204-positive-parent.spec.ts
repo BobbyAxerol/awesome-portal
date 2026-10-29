@@ -36,6 +36,14 @@ import { NestFactory } from "@nestjs/core";
 import { FastifyAdapter, type NestFastifyApplication } from "@nestjs/platform-fastify";
 import cookiePlugin from "@fastify/cookie";
 import type { FastifyInstance } from "fastify";
+import { readFileSync } from "node:fs";
+import { resolve as resolvePath } from "node:path";
+import { AppModule } from "../src/app.module";
+import { EquityProjectionSourceController } from "../src/equity-projection/equity-projection-source.controller";
+import { SourceNotCommissionedPort } from "../src/equity-projection/equity-projection-source.dark";
+import type { EquityProjectionSourcePort } from "../src/equity-projection/equity-projection-source.port";
+import { EquityProjectionSourceReads } from "../src/equity-projection/equity-projection-source.service";
+import { equityProjectionSourceResponse } from "../src/equity-projection/equity-projection-source.contract";
 import type { Pool } from "pg";
 import { randomUUID } from "node:crypto";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
@@ -2188,6 +2196,127 @@ async function followingFixture(family:FollowingFamily,options:{rootOnly?:boolea
       expect(after.blockers).toEqual({count:2,summary:"TEST_ONLY two stored blockers"});// immutable facts, now paired with version 2
     });
   });
+  // R-C: source-backed equity projection producer. NO SQL of its own: the port is dark, and the fake port below is TEST_ONLY.
+  describe("R-C equity projection source producer (dark port; authorization and bounds against the real access engine)",()=>{
+    const contractsRoot=process.env.PORTAL_CONTRACTS_DIR??resolvePath(__dirname,"../../../packages/contracts");
+    const sections=JSON.parse(readFileSync(resolvePath(contractsRoot,"fixtures/execution-equity-projection-source.synthetic.valid.json"),"utf8")).cases;
+    const equityQuery=(f:Fixture,extra:Record<string,unknown>={})=>({workspace_id:f.workspace,environment:"live",...extra});
+    const reads=(f:Fixture,port:EquityProjectionSourcePort)=>new EquityProjectionSourceReads(port,f.access);
+    const darkPort=()=>new SourceNotCommissionedPort();
+    const spied=(port:EquityProjectionSourcePort)=>({series:vi.spyOn(port,"series"),band:vi.spyOn(port,"band")});
+    /** TEST_ONLY in-memory port: answers for the asked identity unless told otherwise. Never exported to production wiring. */
+    const fake=(over:{series?:unknown;band?:unknown;identity?:Partial<{workspaceId:string;deploymentId:string;environment:"paper"|"sandbox"|"live"}>;throwBand?:boolean}={}):EquityProjectionSourcePort=>({
+      series:async r=>({identity:{workspaceId:r.workspaceId,deploymentId:r.deploymentId,environment:r.environment,...over.identity},section:(over.series??sections.available.series) as never}),
+      band:async r=>{if(over.throwBand)throw Error(PRIVATE);return {identity:{workspaceId:r.workspaceId,deploymentId:r.deploymentId,environment:r.environment,...over.identity},section:(over.band??sections.available.band) as never};},
+    });
+    it("authorized read over the DARK port: both sections are typed SOURCE_NOT_COMMISSIONED absence; no points, no values",async()=>{
+      const f=await liveFixture(),port=darkPort(),calls=spied(port);
+      const body=await reads(f,port).detail(f.principal,f.deployment,equityQuery(f));
+      equityProjectionSourceResponse.parse(body);
+      expect(body).toMatchObject({schema_version:"execution.analytics.equity-projection.source.v2",workspace_id:f.workspace,deployment_id:f.deployment,
+        environment:"live",source_side_effect_requested:false,request:{window:"30d",intent:"overview",limit:5000,cursor:null},
+        series:{availability:"ABSENT",reason_code:"SOURCE_NOT_COMMISSIONED"},band:{availability:"ABSENT",reason_code:"SOURCE_NOT_COMMISSIONED"}});
+      expect(JSON.stringify(body)).not.toMatch(/points|equity"|lower|upper|currency/);
+      expect(calls.series).toHaveBeenCalledTimes(1);expect(calls.band).toHaveBeenCalledTimes(1);expect(f.held()).toBe(0);
+    });
+    it.each(["no-grant-deployment","other-workspace","explicit-workspace-mismatch","wrong-environment","exact-audit-deny"] as const)(
+      "%s is refused 404 before the port is touched (no existence oracle)",async variant=>{
+        const f=await liveFixture(),foreign=await liveFixture(),port=fake(),calls=spied(port);
+        let run:Promise<unknown>;
+        if(variant==="no-grant-deployment")run=reads(f,port).detail(f.principal,next(),equityQuery(f));
+        else if(variant==="other-workspace")run=reads(foreign,port).detail(foreign.principal,f.deployment,equityQuery(foreign));
+        else if(variant==="explicit-workspace-mismatch")run=reads(f,port).detail(f.principal,f.deployment,equityQuery(f,{workspace_id:foreign.workspace}));
+        else if(variant==="wrong-environment")run=reads(f,port).detail(f.principal,f.deployment,equityQuery(f,{environment:"paper"}));
+        else{await f.grants.saveGrant({...f.gate,grant_id:next(),revision:next(),action:"audit.read",effect:"DENY"},true);
+          run=reads(f,port).detail(f.principal,f.deployment,equityQuery(f));}
+        await refused(run,404,"OPERATIONAL_READ_NOT_FOUND");
+        expect(calls.series).not.toHaveBeenCalled();expect(calls.band).not.toHaveBeenCalled();
+      });
+    it("a revoked audit grant after the port read defeats the body at the same final fence",async()=>{
+      const f=await liveFixture(),port=fake();let changed=false;
+      const original=port.series.bind(port);
+      port.series=async r=>{const a=await original(r);if(!changed){changed=true;for(const g of f.source.grants)g.targets=[];}return a;};
+      await refused(reads(f,port).detail(f.principal,f.deployment,equityQuery(f)),404,"OPERATIONAL_READ_NOT_FOUND");expect(changed).toBe(true);
+    });
+    it.each([
+      ["limit above the hard maximum",{limit:"5001"}],["limit zero",{limit:"0"}],["limit not an integer",{limit:"1e3"}],["bad window",{window:"2d"}],
+      ["bad intent",{intent:"all"}],["bad environment",{environment:"research"}],["unknown key",{extra:"1"}],["duplicated key",{window:["1d","7d"]}],
+    ] as const)("%s is 400 before any authorization-dependent work",async(_n,extra)=>{
+      const f=await liveFixture(),port=fake(),calls=spied(port);
+      await refused(reads(f,port).detail(f.principal,f.deployment,equityQuery(f,extra)),400,"OPERATIONAL_READ_INPUT_INVALID");
+      expect(calls.series).not.toHaveBeenCalled();
+    });
+    it("a malformed cursor is a distinct 400; a well-formed one is accepted and passed through",async()=>{
+      const f=await liveFixture(),port=fake(),calls=spied(port);
+      await refused(reads(f,port).detail(f.principal,f.deployment,equityQuery(f,{cursor:"bad cursor!"})),400,"OPERATIONAL_READ_CURSOR_INVALID");
+      expect(calls.series).not.toHaveBeenCalled();
+      const body=await reads(f,port).detail(f.principal,f.deployment,equityQuery(f,{cursor:"abc_DEF-123",limit:"5000"}));
+      expect(body.request).toMatchObject({cursor:"abc_DEF-123",limit:5000});
+      expect(calls.series.mock.calls[0]![0]).toMatchObject({cursor:"abc_DEF-123",limit:5000,environment:"live",workspaceId:f.workspace,deploymentId:f.deployment});
+    });
+    it("TEST_ONLY fake port: AVAILABLE series and band render; the band has its own lineage",async()=>{
+      const f=await liveFixture(),body=await reads(f,fake()).detail(f.principal,f.deployment,equityQuery(f,{window:"1d"}));
+      equityProjectionSourceResponse.parse(body);
+      expect(body.series.availability).toBe("AVAILABLE");expect(body.band.availability).toBe("AVAILABLE");
+      if(body.series.availability==="AVAILABLE"&&body.band.availability==="AVAILABLE"){
+        expect(body.series.points).toHaveLength(24);expect(body.series.points.filter(p=>p.equity===null)).toHaveLength(1);
+        expect(body.series.lineage.source_digest).not.toBe(body.band.lineage.artifact_digest);}
+    });
+    it("TEST_ONLY fake port: series and band are independent (absent band, absent series, failing band)",async()=>{
+      const f=await liveFixture(),q=equityQuery(f,{window:"1d"});
+      const bandAbsent=await reads(f,fake({band:{availability:"ABSENT",reason_code:"BAND_NOT_APPROVED"}})).detail(f.principal,f.deployment,q);
+      expect(bandAbsent.series.availability).toBe("AVAILABLE");expect(bandAbsent.band).toEqual({availability:"ABSENT",reason_code:"BAND_NOT_APPROVED"});
+      const seriesAbsent=await reads(f,fake({series:{availability:"ABSENT",reason_code:"RETENTION_EXPIRED"}})).detail(f.principal,f.deployment,q);
+      expect(seriesAbsent.series).toEqual({availability:"ABSENT",reason_code:"RETENTION_EXPIRED"});expect(seriesAbsent.band.availability).toBe("AVAILABLE");
+      const notAuthorized=await reads(f,fake({band:{availability:"ABSENT",reason_code:"NOT_AUTHORIZED"}})).detail(f.principal,f.deployment,q);
+      expect(notAuthorized.band).toEqual({availability:"ABSENT",reason_code:"NOT_AUTHORIZED"});expect(notAuthorized.series.availability).toBe("AVAILABLE");
+      const throwing=await reads(f,fake({throwBand:true})).detail(f.principal,f.deployment,q);
+      expect(throwing.band).toEqual({availability:"ABSENT",reason_code:"SOURCE_NOT_READ"});expect(throwing.series.availability).toBe("AVAILABLE");
+      expect(JSON.stringify(throwing)).not.toContain(PRIVATE);
+    });
+    it.each([
+      ["another workspace",{identity:{workspaceId:"ws_other"}}],["another deployment",{identity:{deploymentId:"dep_other"}}],["another environment",{identity:{environment:"paper" as const}}],
+      ["a band without lineage",{band:(()=>{const b=structuredClone(sections.available.band);delete b.lineage;return b;})()}],
+      ["a band in another currency",{band:{...sections.available.band,currency:"EUR"}}],
+      ["a series over the requested limit",{series:{...sections.available.series}} ],
+      ["an unknown reason code",{band:{availability:"ABSENT",reason_code:"MADE_UP"}}],
+      ["a series with a key it may not carry",{series:{...sections.available.series,account_id:"acct"}}],
+    ] as const)("TEST_ONLY fake port answering %s is refused 503, never a partially trusted body",async(name,over)=>{
+      const f=await liveFixture(),q=equityQuery(f,{window:"1d",...(name==="a series over the requested limit"?{limit:"10"}:{})});
+      await refused(reads(f,fake(over as never)).detail(f.principal,f.deployment,q),503,"OPERATIONAL_READ_PROVENANCE_INVALID");
+    });
+    it("HTTP: the real controller returns the dark body with no-store; 401 without a session; 404/400 like other governed reads",async()=>{
+      const f=await liveFixture(),service=reads(f,darkPort());
+      const app=await NestFactory.create<NestFastifyApplication>({module:PositiveParentTestModule,controllers:[EquityProjectionSourceController],
+        providers:[SessionGuard,{provide:AuthService,useValue:auth},{provide:CONTROL_API_CONFIG,useValue:f.config},
+          {provide:WorkspacesRepository,useValue:new WorkspacesRepository(ctx.pool,f.config)},{provide:EquityProjectionSourceReads,useValue:service}]},
+        new FastifyAdapter(),{logger:false,abortOnError:false});
+      try{
+        app.useGlobalFilters(new HttpErrorFilter());await app.register(cookiePlugin as never);await app.init();
+        const http=app.getHttpAdapter().getInstance<FastifyInstance>();await http.ready();
+        const url=(id:string,qs:string)=>`/api/v1/execution/deployments/${id}/equity-projection/source?workspace_id=${encodeURIComponent(f.workspace)}&environment=live${qs}`;
+        const ok=await http.inject({method:"GET",url:url(f.deployment,""),headers:headers(f)});
+        expect(ok.statusCode,ok.body).toBe(200);expect(ok.headers["cache-control"]).toBe("private, no-store");
+        expect(equityProjectionSourceResponse.parse(ok.json()).series).toEqual({availability:"ABSENT",reason_code:"SOURCE_NOT_COMMISSIONED"});
+        expect((await http.inject({method:"GET",url:url(f.deployment,"")})).statusCode).toBe(401);
+        expect((await http.inject({method:"GET",url:url(next(),""),headers:headers(f)})).statusCode).toBe(404);
+        expect((await http.inject({method:"GET",url:url(f.deployment,"&limit=5001"),headers:headers(f)})).statusCode).toBe(400);
+        const noWorkspace=await http.inject({method:"GET",url:`/api/v1/execution/deployments/${f.deployment}/equity-projection/source?environment=live`,headers:headers(f)});
+        expect(noWorkspace.statusCode).toBe(400);
+        const foreign=await liveFixture();
+        const other=await http.inject({method:"GET",url:`/api/v1/execution/deployments/${f.deployment}/equity-projection/source?workspace_id=${encodeURIComponent(foreign.workspace)}&environment=live`,headers:headers(f)});
+        expect(other.statusCode).toBe(404);
+      }finally{await app.close();}
+    });
+    it("the route is UNMOUNTED by default and mounts only with the explicit SOURCE_DARK dependency",()=>{
+      const plain=AppModule.register(ctx.config,ctx.pool),dark=AppModule.register(ctx.config,ctx.pool,undefined,{equityProjectionSource:"SOURCE_DARK"});
+      expect(plain.controllers).not.toContain(EquityProjectionSourceController);
+      expect(JSON.stringify((plain.providers??[]).map(p=>typeof p==="function"?p.name:String((p as {provide?:unknown}).provide)))).not.toContain("EquityProjectionSourceReads");
+      expect(dark.controllers).toContain(EquityProjectionSourceController);
+      expect(dark.providers).toContain(EquityProjectionSourceReads);
+    });
+  });
+
   // The old NEW-proposal assertion demanded the pre-source commissioning
   // barrier. It is superseded only by the independent source tests below;
   // no original160 parent definition is removed or relaxed.
