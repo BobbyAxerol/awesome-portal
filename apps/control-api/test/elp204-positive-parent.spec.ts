@@ -14,7 +14,7 @@ import { SandboxCertificationRepository } from "../src/sandbox/sandbox-certifica
 import { CanaryController } from "../src/canary/canary.controller";
 import { CanaryService } from "../src/canary/canary.service";
 import { LiveParentRepository } from "../src/governance/live-parent.repository";
-import { LiveParentReads } from "../src/governance/live-parent.service";
+import { LiveParentReads,mapLiveParent } from "../src/governance/live-parent.service";
 import { liveParentRead } from "../src/governance/live-parent.contract";
 import { LiveOperationsService } from "../src/live/live-operations.service";
 import {LiveOperationsController} from "../src/live/live-operations.controller";
@@ -2077,6 +2077,116 @@ async function followingFixture(family:FollowingFamily,options:{rootOnly?:boolea
     expect(liveParentRead.safeParse({...body,anchors:{...body.anchors,portfolio_id:f.portfolio}}).success).toBe(false);
     expect(liveParentRead.safeParse({...body,source:{...body.source,source_verdict:"ACCEPTED"}}).success).toBe(false);
     expect(liveParentRead.safeParse({...body,source:{...body.source,production_command_active:true}}).success).toBe(false);
+  });
+  // R-B: optional LIVE_BLOCKERS purpose. Blocker columns are read by the SAME statement/RR-RO transaction as the gate.
+  describe("R-B Live blockers: separate purpose, one authorized snapshot",()=>{
+    const blockersFixture=(options:Omit<FixtureOptions,"activation"|"liveRoot"|"nativeEnvironment">={})=>
+      liveFixture({...options,purposes:options.purposes??["LIVE_ROOT","LIVE_BLOCKERS"]});
+    const blocked=(extra:Record<string,unknown>={})=>({evidence_complete:false,blocker_count:2,blocker_summary:"TEST_ONLY two stored blockers",...extra});
+    // Only lifecycle columns are mutable after capture (migration 142 trigger); blocker_count/summary/evidence_complete are immutable.
+    const mutateRow=(id:string)=>ctx.pool.query(`UPDATE governance_approval_requests SET status='DENIED',
+      approval_version=approval_version+1,decided_at=clock_timestamp(),updated_at=clock_timestamp() WHERE approval_id=$1`,[id]);
+    it("without the purpose the body has NO blockers key, is the LIVE_ROOT body, and blocker columns are never selected",async()=>{
+      const f=await liveFixture(),id=await seededLive(f,{extra:blocked()});
+      const privateRead=restore(vi.spyOn(f.liveRepository,"protectedDetails"));
+      const body=await f.liveService.detail(f.principal,id);
+      expect(Object.keys(body)).not.toContain("blockers");liveParentRead.parse(body);
+      expect(privateRead.mock.calls.every(call=>call[1]?.blockers!==true)).toBe(true);
+      expect(f.sql.join("\n")).not.toMatch(/blocker_count|blocker_summary/);
+      expect(JSON.stringify(body)).not.toMatch(/TEST_ONLY two stored|blocker/);
+    });
+    it("LIVE_BLOCKERS alone is refused: the unchanged LIVE_ROOT purpose stays mandatory",async()=>{
+      const f=await blockersFixture({purposes:["LIVE_BLOCKERS"]}),id=await seededLive(f,{extra:blocked()});
+      const privateRead=restore(vi.spyOn(f.liveRepository,"protectedDetails"));
+      await refused(f.liveService.detail(f.principal,id),503,"GOVERNANCE_PARENT_FIELD_PURPOSE_UNAVAILABLE");
+      expect(privateRead).not.toHaveBeenCalled();
+    });
+    it("authorized: gate + blockers from the same row, same approval id/version; same body over HTTP",async()=>{
+      const f=await blockersFixture(),id=await seededLive(f,{extra:blocked()});
+      const body=await f.liveService.detail(f.principal,id);liveParentRead.parse(body);
+      expect(body.approval).toMatchObject({approval_id:id,evidence_complete:false});
+      expect(body.blockers).toEqual({availability:"AVAILABLE",basis:"SAME_READ_SNAPSHOT_AS_APPROVAL",approval_id:id,
+        approval_version:body.approval.approval_version,blocker_count:2,blocker_summary:"TEST_ONLY two stored blockers"});
+      await withHttp(f,async http=>{
+        const r=await http.inject({method:"GET",url:livePath(f,id),headers:headers(f)});
+        expect(r.statusCode,r.body).toBe(200);const over=liveParentRead.parse(r.json());
+        expect(over.blockers).toEqual(body.blockers);finite(over);
+      });
+      expect(f.held()).toBe(0);
+    });
+    it("zero blockers is an AVAILABLE count 0 / null summary (not absence); the fields are not invented for other rows",async()=>{
+      const f=await blockersFixture(),id=await seededLive(f);
+      const body=await f.liveService.detail(f.principal,id);
+      expect(body.blockers).toMatchObject({availability:"AVAILABLE",blocker_count:0,blocker_summary:null});
+    });
+    it.each([["overlong","x".repeat(192)],["control-character","bad\nsummary"]] as const)(
+      "non-public %s summary is typed ABSENT, never truncated and never zero",async(_name,summary)=>{
+        const f=await blockersFixture(),id=await seededLive(f,{extra:blocked({blocker_count:1,blocker_summary:summary})});
+        const body=await f.liveService.detail(f.principal,id);
+        expect(body.blockers).toEqual({availability:"ABSENT",reason_code:"BLOCKER_SUMMARY_NOT_PUBLIC"});
+        expect(JSON.stringify(body)).not.toContain("xxxxx");
+      });
+    it("snapshot mismatch/missing fields are rejected by the finite contract (mapper never emits them)",async()=>{
+      const f=await blockersFixture(),id=await seededLive(f,{extra:blocked()});
+      const body=await f.liveService.detail(f.principal,id);
+      for(const bad of [{...body.blockers,approval_id:"apr_other"},{...body.blockers,approval_version:99},
+        {availability:"AVAILABLE"},{...body.blockers,blocker_count:0}])
+        expect(liveParentRead.safeParse({...body,blockers:bad}).success).toBe(false);
+      expect(liveParentRead.safeParse({...body,blockers:{...body.blockers,extra:1}}).success).toBe(false);
+    });
+    it("denial/refusal wins: exact audit or live-read DENY refuses before any blocker SQL",async()=>{
+      const f=await blockersFixture(),id=await seededLive(f,{extra:blocked()});
+      await f.grants.saveGrant({...f.gate,grant_id:next(),revision:next(),action:"governance.live.read",effect:"DENY"},true);
+      const privateRead=restore(vi.spyOn(f.liveRepository,"protectedDetails"));
+      await refused(f.liveService.detail(f.principal,id),404,"OPERATIONAL_READ_NOT_FOUND");
+      expect(privateRead).not.toHaveBeenCalled();expect(f.sql.join("\n")).not.toMatch(/blocker_count/);
+    });
+    it("a queue/approval mutation between decode and the final fence yields CHANGED, never a mixed body",async()=>{
+      const f=await blockersFixture(),id=await seededLive(f,{extra:blocked()});
+      const original=f.liveRepository.protectedDetails.bind(f.liveRepository);let changed=false;
+      restore(vi.spyOn(f.liveRepository,"protectedDetails").mockImplementation(async(...args)=>{
+        const r=await original(...args);if(!changed){changed=true;await mutateRow(id);}return r;}));
+      await refused(f.liveService.detail(f.principal,id),409,"OPERATIONAL_READ_CHANGED");expect(changed).toBe(true);
+    });
+    it("blocker columns are immutable after capture (DB trigger); the witness still covers them and has a distinct shape",async()=>{
+      const f=await blockersFixture(),id=await seededLive(f,{extra:blocked()});
+      const candidate=(await f.liveRepository.identityCandidate(f.workspace,id))!;
+      const snap=await f.liveRepository.protectedDetails(candidate,{blockers:true});
+      expect(await f.liveRepository.isUnchanged(candidate,snap.revision,{blockers:true})).toBe(true);
+      expect(await f.liveRepository.isUnchanged(candidate,snap.revision)).toBe(false);// LIVE_ROOT witness never equals a blockers witness
+      await expect(ctx.pool.query("UPDATE governance_approval_requests SET blocker_summary='TEST_ONLY changed text' WHERE approval_id=$1",[id]))
+        .rejects.toMatchObject({code:"55000"});
+      await mutateRow(id);// a lifecycle change (status/version) is what can move under the read
+      expect(await f.liveRepository.isUnchanged(candidate,snap.revision,{blockers:true})).toBe(false);
+    });
+    it("REAL DB: concurrent committed mutation mid-read; the read returns the consistent PRE-mutation gate+blockers",async()=>{
+      const f=await blockersFixture(),id=await seededLive(f,{extra:blocked()});
+      const probes:{inside?:unknown;outside?:unknown}={};let hit=false;
+      const probeSql="SELECT approval_version,status,blocker_count FROM governance_approval_requests WHERE approval_id=$1";
+      const proxy={connect:async()=>{
+        const client=await ctx.pool.connect(),query=client.query.bind(client) as (...a:unknown[])=>Promise<unknown>;
+        (client as unknown as {query:unknown}).query=async(...a:unknown[])=>{
+          const r=await query(...a);
+          if(!hit&&typeof a[0]==="string"&&a[0].includes("blocker_count")&&a[0].includes("governance_approval_requests a")){
+            hit=true;await mutateRow(id);// another connection, autocommit = committed
+            probes.inside=(await query(probeSql,[id]) as {rows:unknown[]}).rows[0];
+            probes.outside=(await ctx.pool.query(probeSql,[id])).rows[0];}
+          return r;};
+        return client;}} as unknown as Pool;
+      const repository=new LiveParentRepository(proxy),candidate=(await f.liveRepository.identityCandidate(f.workspace,id))!;
+      const snap=await repository.protectedDetails(candidate,{blockers:true});
+      expect(hit).toBe(true);
+      expect(probes.outside).toMatchObject({approval_version:2,status:"DENIED",blocker_count:2});// committed new state
+      expect(probes.inside).toMatchObject({approval_version:1,status:"APPROVED",blocker_count:2});// RR snapshot still old
+      expect(snap.approval).toMatchObject({approval_version:1,status:"APPROVED",evidence_complete:false});
+      expect(snap.blockers).toEqual({count:2,summary:"TEST_ONLY two stored blockers"});
+      const body=mapLiveParent(snap,Date.now());
+      expect(body.approval.approval_version).toBe(1);expect(body.blockers).toMatchObject({availability:"AVAILABLE",approval_version:1,blocker_count:2});
+      expect(await repository.isUnchanged(candidate,snap.revision,{blockers:true})).toBe(false);// fence sees the change
+      const after=await repository.protectedDetails(candidate,{blockers:true});// second read: new state, consistently
+      expect(after.approval).toMatchObject({approval_version:2,status:"DENIED"});
+      expect(after.blockers).toEqual({count:2,summary:"TEST_ONLY two stored blockers"});// immutable facts, now paired with version 2
+    });
   });
   // The old NEW-proposal assertion demanded the pre-source commissioning
   // barrier. It is superseded only by the independent source tests below;
