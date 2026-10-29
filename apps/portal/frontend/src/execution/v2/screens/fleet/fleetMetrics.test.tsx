@@ -272,7 +272,7 @@ describe("guide 8.2 · sorting is the server's", () => {
       expect(header(label).getAttribute("title"), label).toContain("Basis");
     }
     expect(within(header("QBTS")).getByRole("button")).toBeTruthy();
-    fireEvent.change(within(metrics()).getByRole("combobox", { name: "Basis" }), { target: { value: BASIS_ID } });
+    fireEvent.change(await within(metrics()).findByRole("combobox", { name: "Basis" }, SLOW), { target: { value: BASIS_ID } });
     await waitFor(() => expect(search().get("basis")).toBe(BASIS_ID));
     await click("PNL Amount");
     await waitFor(() => expect(last(state).sort).toEqual([{ field: "net_pnl", direction: "asc" }]));
@@ -533,7 +533,7 @@ describe("Codex review: honest partitions, evidence and sparklines", () => {
     });
     mount(api);
     await loaded();
-    const select = within(metrics()).getByRole("combobox", { name: "Basis" }) as HTMLSelectElement;
+    const select = (await within(metrics()).findByRole("combobox", { name: "Basis" }, SLOW)) as HTMLSelectElement;
     await waitFor(() => expect(select.options.length).toBe(3), SLOW);
     const options = [...select.options].map((option) => option.textContent);
     expect(options).toEqual(["Basis: none", "Basis: Paper · USDT · TEST_ONLY:paper-ledger", "Basis: Paper · USDT · TEST_ONLY:paper-ledger-b"]);
