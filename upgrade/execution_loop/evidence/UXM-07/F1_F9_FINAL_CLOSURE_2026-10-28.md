@@ -13,8 +13,11 @@ Frozen candidate `9054bd410` (hook-verified) on canonical `1a6c2012d`; lane `cla
 | F8 | Review of the contracts Codex delivered | **DELIVERED with receipt** | `F8_CODEX_CONTRACT_REVIEW_RECEIPT_2026-10-28.md`: six packages, blotter scope, FE-069 (own receipt), research-stage fix, test-cell repairs, discovery V2 and STATUS/custody read; six requests back to Codex | Codex ACCEPT of the requests |
 | F9 | UXM-08/09/10 after C3–C7 | **not started, as instructed** (fixture-only slices were done on 21 Oct with Bobby's permission: UXM-08 `91eaf71a`, `bd753eba`, UXM-09 `7f493c42`, UXM-10 `2c0dcdbb`) | — | waits for connected C3–C7 |
 
-## Open decisions that only Bobby can make
+## Decisions (Bobby, 29 Oct 2026)
 
-1. Names of the P/R/B components of the Portfolio score.
-2. One shared number formatter for returns/prices (R2-21): scores round differently between screens (28.07 vs 28.08).
-3. Who may see the Users and Admin Actions rail entries.
+1. **Users and Admin Actions rail entries: owner only.** The current gating stays; Claude records it in the rules and tests it (no change to the product).
+2. **One shared number formatter for returns/prices (R2-21): after Codex lands this tip**, as its own serial slice with a receipt, so the wording of many screens does not change on the tree waiting for the final gate. Until then the score-rounding difference (28.07 vs 28.08) stays a listed debt.
+
+## Still open for Bobby
+
+- Names of the P/R/B components of the Portfolio score (the Overview/Portfolio score cell prints "component P/R/B" until they are named).

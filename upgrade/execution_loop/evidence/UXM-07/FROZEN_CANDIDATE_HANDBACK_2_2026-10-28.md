@@ -36,7 +36,9 @@ Not run: legacy `e2e/visual.spec.ts` and the Research Loop spec (LC-FE-03: Codex
 | Forward / Cost bars, 7D/30D/90D chips on Alpha 360; Live room HIGH/LOW markers, drawdown strip, leverage and ack-latency columns; exit-gate criterion rows and approved band | typed absence (contract carries null) | sibling reads exist (`cost-events`, `order-detail`, `account-profile`, `alpha-readiness`): FE wiring slice |
 | Fleet row selection, Compare selected, Export | disabled with reason | design |
 | Carry A replay plot empty | double serves venue candles for BTCUSDT only; other symbols are the contract's typed absence | another double (new fixture symbols) |
-| Portfolio Score components P/R/B names; R2-21 one number formatter (score rounds 28.07 vs 28.08 between screens); Users/Admin Actions rail gating | needs Bobby decision | Bobby |
+| Portfolio Score components P/R/B names | open | Bobby |
+| R2-21 one number formatter (score rounds 28.07 vs 28.08 between screens) | decided 29 Oct: after Codex lands this tip, own slice with receipt | Claude |
+| Users/Admin Actions rail gating | decided 29 Oct: owner only (no change) | closed |
 | Sidebar 10 px labels and badges | shared token | Codex/Bobby (protected) |
 | DEBT-053 load-sensitive flakes | none failed in the last two full vitest runs; the contracts container spec `execution-contributors-linked-fixture` (large-scale paging) takes 8-30 s depending on machine load, over the 20 s default on canonical itself (measured on a canonical worktree: 30 s for the ALL test under load 15, 21 s on this lane with Codex's memoisation); its group limit is widened to 120 s, assertions unchanged | Claude; Codex may prefer a lighter scale |
 | control-api test cell copy list | `scripts/control-api-test.sh` lacked `v2/readers/stageFactViews.ts` (Workbench now imports it): the same one-line repair Codex made on its candidate, applied; `paper-history-depth`/`-http` pass 37/37 in the cell | done |
