@@ -201,7 +201,7 @@ describe("the Envelope tab: the server's rows, ratio, verdict", () => {
   it("the screen draws a gauge for the two published ratios, a published zero as 0.00% used, and Not published: canary envelope compliance, rollback checks and trial calendar with the reason for the rest", async () => {
     mount(published());
     await ready();
-    const table = screen.getByRole("table", { name: "Canary envelope caps" });
+    const table = await screen.findByRole("table", { name: "Canary envelope caps" });
     const used = (label: string) => Array.from(table.querySelectorAll("tbody tr")).map((row) => row.querySelector(`td[data-l="${label}"]`)!);
     const gauges = used("Used").map((cell) => cell.querySelector('[role="img"]')?.getAttribute("aria-label") ?? null);
     expect(gauges[0]).toBe("Capital cap (USDT): 25.00% used");

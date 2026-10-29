@@ -127,6 +127,9 @@ describe("flag off (the default)", () => {
     const a = rig();
     const first = mount(a, LIVE_URL);
     await table();
+    // The table can render before its associated option effects. Compare the
+    // two flag states after the same queued fixture work has settled.
+    await act(async () => { await settle(); });
     // React's generated ids (`:r1:`) count renders across the file; the markup is compared without them.
     const plain = (html: string) => html.replace(/:r[0-9a-z]+:/g, ":r:");
     const markupDefault = plain(first.container.innerHTML);
@@ -134,7 +137,8 @@ describe("flag off (the default)", () => {
     const b = rig();
     const second = mount(b, LIVE_URL, { streamFlag: false });
     await table();
-    expect(plain(second.container.innerHTML)).toBe(markupDefault);
+    await act(async () => { await settle(); });
+    await waitFor(() => expect(plain(second.container.innerHTML)).toBe(markupDefault));
   });
 });
 

@@ -298,13 +298,13 @@ describe("search, owner, health, sort", () => {
     expect(screen.getByTestId("options-limit").textContent).toContain("Owner and Health choices are the rows loaded so far, not the whole fleet.");
     expect(owner.title).toContain("not the whole fleet");
     const suggestions = () => [...(document.getElementById(owner.getAttribute("list") ?? "") as HTMLDataListElement).options].map((o) => o.value);
-    expect(suggestions()).toEqual(["Bobby-001", "Lan-002", "Minh-003"]);
+    await waitFor(() => expect(suggestions()).toEqual(["Bobby-001", "Lan-002", "Minh-003"]), SLOW);
     fireEvent.change(owner, { target: { value: "Lan-002" } });
     await waitFor(() => expect(names()).toEqual(["Basis B"]), SLOW);
     expect(search().get("owner")).toBe("Lan-002");
     expect(calls.at(-1)!.owner).toBe("Lan-002");
     // The other owners stay suggested while one is applied.
-    expect(suggestions()).toContain("Minh-003");
+    await waitFor(() => expect(suggestions()).toContain("Minh-003"), SLOW);
   });
 
   it("a typed owner that is not among the loaded rows is sent to the server, not refused or filtered here", async () => {
@@ -344,7 +344,7 @@ describe("search, owner, health, sort", () => {
     await loaded();
     const health = screen.getByRole("combobox", { name: "Health" }) as HTMLInputElement;
     const suggestions = () => [...(document.getElementById(health.getAttribute("list") ?? "") as HTMLDataListElement).options].map((o) => o.value);
-    expect(suggestions()).toEqual(["Needs attention", "Ready", "Research only"]);
+    await waitFor(() => expect(suggestions()).toEqual(["Needs attention", "Ready", "Research only"]), SLOW);
     // a label is a choice: it is sent as the published word
     fireEvent.change(health, { target: { value: "Needs attention" } });
     await waitFor(() => expect(names()).toEqual(["Momentum C"]), SLOW);
@@ -406,8 +406,12 @@ describe("search, owner, health, sort", () => {
         await waitFor(() => expect(names()).toHaveLength(PAGE_LIMIT * (step + 2) > 130 ? 130 : PAGE_LIMIT * (step + 2)), SLOW);
       }
       expect(names()).toHaveLength(130);
-      expect(suggestionsOf("Owner")).toEqual(["Owner-0", "Owner-1", "Owner-2", "Zed-129"]);
-      expect(suggestionsOf("Health")).toEqual(["Finding open", "Ready"]);
+      // Suggestions are accumulated in an effect after the rows render. Wait
+      // for that update rather than assuming it shares the table's commit.
+      await waitFor(() => {
+        expect(suggestionsOf("Owner")).toEqual(["Owner-0", "Owner-1", "Owner-2", "Zed-129"]);
+        expect(suggestionsOf("Health")).toEqual(["Finding open", "Ready"]);
+      }, SLOW);
       expect(screen.getByTestId("options-limit")).toBeTruthy();
     }, SLOW_TEST);
   });
