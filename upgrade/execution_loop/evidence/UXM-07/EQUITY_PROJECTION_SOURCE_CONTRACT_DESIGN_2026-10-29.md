@@ -1,0 +1,47 @@
+# R-C: source-backed equity projection contract V2 and an honest dark producer (design, 29 October 2026)
+
+Status: design before code, `claude/ft-be`. Backend authority is Codex; this is a proposal for review. **The source does not exist.** No Edge-qualified equity series and no approved Research band are commissioned, so every real body this producer can return today is typed absence. No connected or browser acceptance is claimed.
+
+## What stays untouched
+
+V1 (`execution.analytics.equity-projection.v1`, `runtime_active: const false`, `GET .../equity-projection`) keeps its fixture-only meaning: its schema, OpenAPI path, fixture, generated types and the fixture-BFF/FE reader built on it are not edited. The V1 route stays unmounted. `runtime_active` is not turned on anywhere.
+
+## Route and version (choice and why)
+
+New sibling resource `GET /api/v1/execution/deployments/{deploymentId}/equity-projection/source`, operationId `executionEquityProjectionSource`, body `schema_version: "execution.analytics.equity-projection.source.v2"`. Rejected: content negotiation (two meanings behind one URL, caches and generated clients conflate them, V1's `const false` could be read as V2's state) and bumping V1 in place (would break the published fixture-only contract). A distinct path/operation/schema name lets the two be mounted, qualified and retired independently.
+
+Request: `workspace_id` (required, explicit; no ambient default), `environment` (`paper|sandbox|live`, required; authorization is environment-bound), `window` (`1d|7d|30d|90d|1y`, default `30d`), `intent` (`overview|inspect`, default `overview`), `limit` (integer 1..5000, default 5000: HARD maximum 5000 points per series and per band), `cursor` (opaque `^[A-Za-z0-9_-]{1,512}$`, optional). Unknown query keys, repeated keys, bad values: 400 `OPERATIONAL_READ_INPUT_INVALID` / `OPERATIONAL_READ_CURSOR_INVALID` before any authorization-dependent work.
+
+## Body
+
+Top level (closed keys): `schema_version`, `workspace_id`, `deployment_id`, `environment`, `observed_at` (server clock, ISO-8601 UTC), `source_side_effect_requested: const false`, `request` (echo of window, intent, limit, cursor), `series`, `band`. Workspace, deployment and environment are in the body so a consumer can refuse a body that is not the one asked for.
+
+`series` and `band` are **independent** `oneOf` variants, each `AVAILABLE` or `ABSENT`; neither depends on the other (an available series with an absent band is the expected early state):
+
+* `ABSENT`: `{availability:"ABSENT", reason_code}` only. Closed vocabulary per section. Series: `SOURCE_NOT_COMMISSIONED`, `SOURCE_NOT_READ`, `NOT_AUTHORIZED`, `RETENTION_EXPIRED`, `SOURCE_STALE`, `NO_DATA_IN_WINDOW`. Band: `SOURCE_NOT_COMMISSIONED`, `SOURCE_NOT_READ`, `NOT_AUTHORIZED`, `BAND_NOT_APPROVED`, `BAND_NOT_LINKED`, `RETENTION_EXPIRED`. `AVAILABLE` with a `reason_code`, or `ABSENT` without one or with data keys, is invalid.
+* Series `AVAILABLE`: `currency`, `timestamp_semantics` (consts: `bucket_start_utc_inclusive`, `event_time_source_clock`; buckets are aligned backwards from the last instant, no interpolation across gaps), `interval`/`interval_seconds` (finest canonical interval with at most 5,000 buckets; clients cannot force one), `window_from`/`window_to`, `expected_buckets`, `returned_buckets`, `source_rows`, `coverage`, `points[]` (`bucket_start`, nullable `equity`, nullable `drawdown`; null is a missing bucket, never 0), `gaps[]` (`from`, `to`, `reason` SOURCE_GAP|RETENTION|SESSION_CLOSED|PROJECTION_DISCONTINUITY), `next_cursor` (null when the window is exhausted), `retention` (`availability` HOT|PARTIAL_HOT|COLD_REQUESTABLE|PURGED|UNKNOWN, `policy_version`, `oldest_retained_at` nullable), `lineage`, `drawdown`.
+* Series `lineage` (the series' own, never the band's): `source_contract` (qualified Edge contract id), `source_revision`, `source_digest` (sha256 over the exact retained rows that produced the points), `source_as_of`, `account_scope: "DEPLOYMENT"` (a series is per deployment; unrelated account equity is not a substitute).
+* Drawdown (stated, not implied): `derivation: {formula_version: "drawdown.running_peak.v1", formula: "value / running_max - 1", population: "RETURNED_WINDOW_BUCKETS" | "SOURCE_FULL_HISTORY", peak_resets_on_gap: false, authority: "EDGE_QUALIFIED" | "PORTAL_DERIVED", confirmed_by_source: boolean}`. A fraction (0 at a high, negative below). Until the Edge owner confirms population and formula, `confirmed_by_source` must be false and a consumer must not present the figure as source-confirmed.
+* Band `AVAILABLE`: `currency`, `run_id`, `lineage` (**required**: `band_revision`, `artifact_digest`, `approval_reference` (Research approval id), `approved_at`, `approval_authority: const "RESEARCH"`, `immutable: const true`), `points[]` (`bucket_start`, `lower`, `upper`; `lower <= upper` is a runtime check). Band currency must equal series currency when both are available; a band is never an "illustrative" value in V2, an unapproved band is `BAND_NOT_APPROVED` absence.
+
+JSON Schema cannot express cross-property equalities (currency equality, point counts equal `returned_buckets`, window/point bounds); the zod contract does, and the service refuses a port result that violates them (`OPERATIONAL_READ_PROVENANCE_INVALID` 503, never a partial body).
+
+## Producer (control-api)
+
+* **Port** `EquityProjectionSourcePort { series(query); band(query) }`, each returning `AVAILABLE | ABSENT` shaped like the section variants, plus the identity it answers for. Only implementation today: `SourceNotCommissionedPort` returning `ABSENT/SOURCE_NOT_COMMISSIONED` for both sections with no I/O, no table, no query. Tests use an in-memory fake, never exported to production wiring.
+* **Service** `EquityProjectionSourceReads` uses the existing `CurrentOperationalReads.prepareExact` flight (same as the Live parent): explicit workspace must equal the principal's selected workspace; current exact audit leaf for `{DEPLOYMENT, deploymentId}` in the explicit environment (`requireCurrentTsAuditRead`, which keeps every DENY and delegation ancestor) is required before the port is touched; proof/`valid_until` are re-checked at the same final fence. A deployment with no grant is 404 exactly like other governed reads (no existence oracle; this is also the deployment anchor check, since no deployment table is invented). Port failures degrade to that section's `ABSENT/SOURCE_NOT_READ` without leaking the cause. The service validates the identity the port answered for (workspace, deployment, environment, currency, band lineage), caps points at `limit`, and refuses a mismatched or over-cap result.
+* **Field purpose not added now (justification).** `LIVE_BLOCKERS` fits because it discloses columns of a governed row inside one environment-bound parent root. An equity series is a derived, cross-environment analytic; purposes are environment-bound with a fixed table, so independent series/band purposes would be 2 x 3 = 6 new seals (cap 32 -> 38) and a new environment rule, a policy-schema change that should be written against the commissioned source's real field list, not guessed. While dark no source field is disclosed, so the exact audit leaf is the correct and sufficient gate. `NOT_AUTHORIZED` stays in the vocabulary for that future per-section field authorization; the commissioning slice must add `EQUITY_SERIES`/`EQUITY_BAND` purposes (listed below).
+* **Mounting.** The controller is not in the default `controllers` list. `ControlApiDependencies.equityProjectionSource` (absent by default) is the only way to mount it, and the only value accepted today is the dark port selector. Production wiring (`main.ts`) does not set it, so the route stays unmounted; a mount test asserts both states. No `config.ts` flag is added (environment-parity lists enumerate flags and the source-dark state is a code-level absence, as for V1).
+* No SQL, no migration, no PG-cell spec.
+
+## What Edge / Research must qualify before a real source (inputs, not assumptions)
+
+1. A retained per-deployment equity series: workspace and deployment keys, currency, timestamp semantics (event vs ingest time, clock, bucket alignment), retention policy and `oldest_retained_at`, explicit gap records, an immutable per-read revision and a digest over the retained rows, with the Edge contract id.
+2. An approved immutable Research band: run id, approval id and authority, `approved_at`, artifact digest and band revision, mapping to the deployment (BAND_NOT_LINKED otherwise), currency and bucket alignment with the series.
+3. Drawdown derivation confirmed by the source authority (population, peak reset rule across gaps, formula), flipping `confirmed_by_source`.
+4. Policy: `EQUITY_SERIES` / `EQUITY_BAND` field purposes and seals per environment, plus a reviewed install, and the numeric cap change that implies.
+5. Schema/runtime qualification and a connected receipt with real rows. Until all five exist the producer answers `SOURCE_NOT_COMMISSIONED`.
+
+## Frontend
+
+Strict closed-key reader `readers/equityProjectionV2.ts` (+ conformance over the new fixtures and negatives). No screen is wired; B-P2's V1 fixture consumers are untouched. A V2 fixture route is not added in this slice.
