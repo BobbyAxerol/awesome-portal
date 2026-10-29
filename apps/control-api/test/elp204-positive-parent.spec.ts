@@ -43,6 +43,7 @@ import { EquityProjectionSourceController } from "../src/equity-projection/equit
 import { SourceNotCommissionedPort } from "../src/equity-projection/equity-projection-source.dark";
 import type { EquityProjectionSourcePort } from "../src/equity-projection/equity-projection-source.port";
 import { EquityProjectionSourceReads } from "../src/equity-projection/equity-projection-source.service";
+import { FIELD_AUTHORITY_NOT_IMPLEMENTED, type EquityFieldAuthority } from "../src/equity-projection/equity-projection-source.authority";
 import { equityProjectionSourceResponse } from "../src/equity-projection/equity-projection-source.contract";
 import type { Pool } from "pg";
 import { randomUUID } from "node:crypto";
@@ -2201,7 +2202,9 @@ async function followingFixture(family:FollowingFamily,options:{rootOnly?:boolea
     const contractsRoot=process.env.PORTAL_CONTRACTS_DIR??resolvePath(__dirname,"../../../packages/contracts");
     const sections=JSON.parse(readFileSync(resolvePath(contractsRoot,"fixtures/execution-equity-projection-source.synthetic.valid.json"),"utf8")).cases;
     const equityQuery=(f:Fixture,extra:Record<string,unknown>={})=>({workspace_id:f.workspace,environment:"live",...extra});
-    const reads=(f:Fixture,port:EquityProjectionSourcePort)=>new EquityProjectionSourceReads(port,f.access);
+    /** TEST_ONLY authority override so the rendering tests can prove AVAILABLE shapes; production binds nothing and is deny-all. */
+    const ALLOW_ALL:EquityFieldAuthority={allows:()=>true};
+    const reads=(f:Fixture,port:EquityProjectionSourcePort,authority:EquityFieldAuthority=ALLOW_ALL)=>new EquityProjectionSourceReads(port,f.access,authority);
     const darkPort=()=>new SourceNotCommissionedPort();
     const spied=(port:EquityProjectionSourcePort)=>({series:vi.spyOn(port,"series"),band:vi.spyOn(port,"band")});
     /** TEST_ONLY in-memory port: answers for the asked identity unless told otherwise. Never exported to production wiring. */
@@ -2284,6 +2287,38 @@ async function followingFixture(family:FollowingFamily,options:{rootOnly?:boolea
     ] as const)("TEST_ONLY fake port answering %s is refused 503, never a partially trusted body",async(name,over)=>{
       const f=await liveFixture(),q=equityQuery(f,{window:"1d",...(name==="a series over the requested limit"?{limit:"10"}:{})});
       await refused(reads(f,fake(over as never)).detail(f.principal,f.deployment,q),503,"OPERATIONAL_READ_PROVENANCE_INVALID");
+    });
+    it("FAIL-CLOSED by default: a mistakenly AVAILABLE series AND band are NOT_AUTHORIZED absence, with the audit leaf alone",async()=>{
+      const f=await liveFixture(),q=equityQuery(f,{window:"1d"});
+      expect(FIELD_AUTHORITY_NOT_IMPLEMENTED).toBe(true);
+      const body=await new EquityProjectionSourceReads(fake(),f.access).detail(f.principal,f.deployment,q);// no override: the production default
+      equityProjectionSourceResponse.parse(body);
+      expect(body.series).toEqual({availability:"ABSENT",reason_code:"NOT_AUTHORIZED"});
+      expect(body.band).toEqual({availability:"ABSENT",reason_code:"NOT_AUTHORIZED"});
+      expect(JSON.stringify(body)).not.toMatch(/points|equity"|lower|upper|currency|lineage|TEST_ONLY/);
+    });
+    it.each(["series","band"] as const)("FAIL-CLOSED independently: only %s lacks its field authority; the other section still renders",async missing=>{
+      const f=await liveFixture(),q=equityQuery(f,{window:"1d"}),asked:string[]=[];
+      const authority:EquityFieldAuthority={allows:section=>{asked.push(section);return section!==missing;}};
+      const body=await reads(f,fake(),authority).detail(f.principal,f.deployment,q);
+      expect(asked.sort()).toEqual(["band","series"]);
+      expect(body[missing]).toEqual({availability:"ABSENT",reason_code:"NOT_AUTHORIZED"});
+      const other=missing==="series"?"band":"series";
+      expect(body[other].availability).toBe("AVAILABLE");
+      expect(JSON.stringify(body[missing])).not.toMatch(/points|currency|lineage/);
+    });
+    it("FAIL-CLOSED leaves a port's own typed absence untouched and never consults authority for it",async()=>{
+      const f=await liveFixture(),asked:string[]=[];
+      const body=await reads(f,fake({band:{availability:"ABSENT",reason_code:"BAND_NOT_APPROVED"}}),{allows:s=>{asked.push(s);return false;}})
+        .detail(f.principal,f.deployment,equityQuery(f,{window:"1d"}));
+      expect(body.band).toEqual({availability:"ABSENT",reason_code:"BAND_NOT_APPROVED"});
+      expect(asked).toEqual(["series"]);expect(body.series).toEqual({availability:"ABSENT",reason_code:"NOT_AUTHORIZED"});
+    });
+    it("FAIL-CLOSED does not change the fence: a revoked audit grant mid-flight is still the existing 404 with a deny-all authority",async()=>{
+      const f=await liveFixture(),port=fake();let changed=false;
+      const original=port.series.bind(port);
+      port.series=async r=>{const a=await original(r);if(!changed){changed=true;for(const g of f.source.grants)g.targets=[];}return a;};
+      await refused(new EquityProjectionSourceReads(port,f.access).detail(f.principal,f.deployment,equityQuery(f)),404,"OPERATIONAL_READ_NOT_FOUND");expect(changed).toBe(true);
     });
     it("HTTP: the real controller returns the dark body with no-store; 401 without a session; 404/400 like other governed reads",async()=>{
       const f=await liveFixture(),service=reads(f,darkPort());

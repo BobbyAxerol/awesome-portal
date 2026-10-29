@@ -18,3 +18,17 @@ export function qualifyEquityProjection(context: AccessEvaluationContext, worksp
       audit: [audit.policy_revision, audit.scope_revision, audit.field_policy_ref], source: currentBoundaryProof(c, environment, [target]) }),
     valid_until_ms: nativeNoticeValidUntil(c, environment, c.actor_lease_until_ms!) };
 }
+
+/** FAIL-CLOSED until independent series/band field authorization exists. The exact audit leaf above authorizes a NO-DATA response only. While this
+ * is true, no AVAILABLE series or band from ANY port is ever disclosed: the service maps it to that section's typed `NOT_AUTHORIZED` absence.
+ * The commissioning slice flips it only together with real, separately reviewed series/band checks (independent denial, mid-flight revoke, policy
+ * owner review) behind `EquityFieldAuthority`. */
+export const FIELD_AUTHORITY_NOT_IMPLEMENTED = true as const;
+
+export type EquitySection = "series" | "band";
+/** Decides, per section, whether an AVAILABLE section may be disclosed to this principal. Context is the same-flight fresh access context. */
+export interface EquityFieldAuthority { allows(section: EquitySection, context: AccessEvaluationContext, deploymentId: string, environment: "paper" | "sandbox" | "live"): boolean; }
+/** Production default: nothing AVAILABLE is authorized yet. */
+export const FIELD_AUTHORITY_DENY_ALL: EquityFieldAuthority = Object.freeze({
+  allows: () => !FIELD_AUTHORITY_NOT_IMPLEMENTED,
+});

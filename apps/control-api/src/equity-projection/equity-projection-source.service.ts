@@ -1,12 +1,12 @@
-import { Inject, Injectable } from "@nestjs/common";
+import { Inject, Injectable, Optional } from "@nestjs/common";
 import { AccessPolicyError } from "../execution-v2/access.contract";
 import { ExecutionAccessService } from "../execution-v2/access.service";
 import type { ReadScopePrincipal } from "../execution-v2/read-scope";
 import { CurrentOperationalReads, OperationalReadError, operationalHttpCall, type PreparedOperationalRead } from "../operations/current-operational-read";
-import { qualifyEquityProjection } from "./equity-projection-source.authority";
+import { FIELD_AUTHORITY_DENY_ALL, qualifyEquityProjection, type EquityFieldAuthority, type EquitySection } from "./equity-projection-source.authority";
 import { EQUITY_PROJECTION_SOURCE_SCHEMA, equityBandSection, equityProjectionSourceResponse, equitySeriesSection,
   parseEquityProjectionQuery, type EquityProjectionSourceResponse } from "./equity-projection-source.contract";
-import { EQUITY_PROJECTION_SOURCE_PORT, type EquityPortAnswer, type EquityProjectionSourcePort, type EquitySourceIdentity } from "./equity-projection-source.port";
+import { EQUITY_FIELD_AUTHORITY, EQUITY_PROJECTION_SOURCE_PORT, type EquityPortAnswer, type EquityProjectionSourcePort, type EquitySourceIdentity } from "./equity-projection-source.port";
 
 const DEPLOYMENT_ID = /^[A-Za-z0-9._:-]{1,128}$/;
 function safe(e: unknown): Error {
@@ -20,7 +20,13 @@ const sameIdentity = (a: EquitySourceIdentity, b: EquitySourceIdentity) =>
 export class EquityProjectionSourceReads {
   private readonly flights: CurrentOperationalReads;
   constructor(@Inject(EQUITY_PROJECTION_SOURCE_PORT) private readonly port: EquityProjectionSourcePort,
-    @Inject(ExecutionAccessService) access: ExecutionAccessService) { this.flights = new CurrentOperationalReads(access); }
+    @Inject(ExecutionAccessService) access: ExecutionAccessService,
+    /** Production binds nothing and gets the deny-all default. Only a test may inject an override; the commissioning slice supplies the real checks. */
+    @Optional() @Inject(EQUITY_FIELD_AUTHORITY) fieldAuthority?: EquityFieldAuthority) {
+    this.flights = new CurrentOperationalReads(access);
+    this.fieldAuthority = fieldAuthority ?? FIELD_AUTHORITY_DENY_ALL;
+  }
+  private readonly fieldAuthority: EquityFieldAuthority;
 
   finish<T>(handle: PreparedOperationalRead<T>): Promise<T> { return operationalHttpCall(() => this.flights.finish(handle)); }
 
@@ -43,17 +49,21 @@ export class EquityProjectionSourceReads {
           const request = { ...identity, window: query.window, intent: query.intent, limit: query.limit, cursor: query.cursor, nowMs: now };
           // Series and band are read and judged independently. A port failure is that section's typed absence; a port that answers for another
           // identity, or with a malformed section, is refused outright (never a partially trusted body).
-          const section = async <S>(read: () => Promise<EquityPortAnswer<S>>, check: (value: unknown) => S | null, absent: S): Promise<S> => {
+          const section = async <S extends { availability: string }>(which: EquitySection, read: () => Promise<EquityPortAnswer<S>>, check: (value: unknown) => S | null, absent: S): Promise<S> => {
             let answer: EquityPortAnswer<S>;
             try { answer = await read(); } catch { return absent; }
             if (!answer || typeof answer !== "object" || !answer.identity || !sameIdentity(answer.identity, identity)) throw new OperationalReadError("OPERATIONAL_READ_PROVENANCE_INVALID");
             const value = check(answer.section);
             if (value === null) throw new OperationalReadError("OPERATIONAL_READ_PROVENANCE_INVALID");
+            // FAIL-CLOSED: the audit leaf alone never discloses data. An AVAILABLE section without its own field authority becomes that section's
+            // typed absence (nothing from the port is retained or logged).
+            if (value.availability === "AVAILABLE" && !this.fieldAuthority.allows(which, context, deploymentId, query.environment))
+              return { availability: "ABSENT", reason_code: "NOT_AUTHORIZED" } as unknown as S;
             return value;
           };
           const [series, band] = await Promise.all([
-            section(() => this.port.series(request), v => { const r = equitySeriesSection.safeParse(v); return r.success ? r.data : null; }, { availability: "ABSENT", reason_code: "SOURCE_NOT_READ" } as const),
-            section(() => this.port.band(request), v => { const r = equityBandSection.safeParse(v); return r.success ? r.data : null; }, { availability: "ABSENT", reason_code: "SOURCE_NOT_READ" } as const),
+            section("series", () => this.port.series(request), v => { const r = equitySeriesSection.safeParse(v); return r.success ? r.data : null; }, { availability: "ABSENT", reason_code: "SOURCE_NOT_READ" } as const),
+            section("band", () => this.port.band(request), v => { const r = equityBandSection.safeParse(v); return r.success ? r.data : null; }, { availability: "ABSENT", reason_code: "SOURCE_NOT_READ" } as const),
           ]);
           const body = equityProjectionSourceResponse.safeParse({ schema_version: EQUITY_PROJECTION_SOURCE_SCHEMA, workspace_id: identity.workspaceId,
             deployment_id: deploymentId, environment: query.environment, observed_at: new Date(now).toISOString(), source_side_effect_requested: false,
