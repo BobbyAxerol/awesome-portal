@@ -14,7 +14,7 @@ import type { PanelStatus } from "../../../contracts";
 import type { DecidedRow } from "../../../screens/ApprovalInbox";
 import { Flag } from "../../Flag";
 import { WaiverFlag } from "./EvidenceFrame";
-import type { InboxRowV2 } from "./inboxRowV2";
+import type { InboxRowV2, InboxSubjectType } from "./inboxRowV2";
 import {
   instantText,
   lapseView,
@@ -36,6 +36,9 @@ import {
   type Principal,
   type QueueItem,
 } from "./laneModel";
+
+/** The persisted subject kind in words; a navigation hint, not a link (the target is resolved through its own authorized relation). */
+const SUBJECT_TYPE_WORDS: Record<InboxSubjectType, string> = { ALPHA_VERSION: "alpha version", DEPLOYMENT: "deployment", EXIT_REVIEW: "exit review" };
 
 /** DOM budget for the queue (S1 card: at most 150 nodes of rows). */
 export const MAX_QUEUE_DOM = 150;
@@ -118,7 +121,7 @@ function GateFlags({ row, principal }: { row: InboxRowV2; principal: Principal }
 function GateItem({ row, principal }: { row: InboxRowV2; principal: Principal }) {
   const sla = slaView(row.sla);
   // The subject id the request decides is printed as published; the row is a selectable button and the published row names no subject type, so no route is guessed for it.
-  const context = [row.target, row.releaseCandidate, row.subjectId === null ? null : `subject ${row.subjectId}`].filter((part) => part !== null).join(" · ");
+  const context = [row.target, row.releaseCandidate, row.subjectId === null ? null : `${row.subjectType === null ? "subject" : SUBJECT_TYPE_WORDS[row.subjectType]} ${row.subjectId}`].filter((part) => part !== null).join(" · ");
   return (
     <>
       <span className="exec-ck-qt">

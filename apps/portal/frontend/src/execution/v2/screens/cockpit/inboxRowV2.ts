@@ -40,11 +40,17 @@ export interface InboxSlaV2 {
   expiresAt: string | null;
 }
 
+/** The persisted subject kind the server publishes on an inbox row (`ApprovalInboxItem.subject_type`). A navigation hint, never a grant. */
+export const INBOX_SUBJECT_TYPES = ["ALPHA_VERSION", "DEPLOYMENT", "EXIT_REVIEW"] as const;
+export type InboxSubjectType = (typeof INBOX_SUBJECT_TYPES)[number];
+
 export interface InboxRowV2 {
   id: string;
   gate: ApprovalGate;
   subject: string;
   subjectId: string | null;
+  /** `null` when the server sent none (an older server); never inferred from the gate, the label or the id. */
+  subjectType: InboxSubjectType | null;
   target: string | null;
   environment: string | null;
   releaseCandidate: string | null;
@@ -118,6 +124,9 @@ export function readInboxRowV2(raw: unknown): InboxRowV2 | null {
   const id = o.id !== undefined ? identifier(o.id) : identifier(o.approval_id);
   const subjectId = o.subject_id === undefined || o.subject_id === null ? null : identifier(o.subject_id);
   if (o.subject_id !== undefined && o.subject_id !== null && subjectId === null) return null;
+  // Optional for old servers; a present value outside the published enum (or null) refuses the row, nothing is guessed.
+  const subjectType = o.subject_type === undefined ? null : INBOX_SUBJECT_TYPES.find((candidate) => candidate === o.subject_type);
+  if (subjectType === undefined) return null;
   const gate = typeof o.gate === "string" ? GATES.find((candidate) => candidate === o.gate) : undefined;
   if (id === null || gate === undefined) return null;
   const inert = typeof o.inert === "string" ? INERT.find((candidate) => candidate === o.inert) : undefined;
@@ -126,6 +135,7 @@ export function readInboxRowV2(raw: unknown): InboxRowV2 | null {
     gate,
     subject: text(o.subject) ?? id,
     subjectId,
+    subjectType,
     target: text(o.target),
     environment: text(o.environment),
     releaseCandidate: text(o.release_candidate),
@@ -190,6 +200,7 @@ export function inboxRowFromV1(row: ApprovalRow): InboxRowV2 {
     gate: row.gate,
     subject: row.subject,
     subjectId: null,
+    subjectType: null,
     target: row.target === V1_TARGET_PLACEHOLDER ? null : row.target,
     environment: null,
     releaseCandidate: null,

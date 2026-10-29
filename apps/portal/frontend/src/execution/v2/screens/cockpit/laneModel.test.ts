@@ -41,6 +41,7 @@ function row(id: string, over: Partial<InboxRowV2> = {}): InboxRowV2 {
     gate: "R1",
     subject: `Subject ${id}`,
     subjectId: null,
+    subjectType: null,
     target: null,
     environment: null,
     releaseCandidate: null,

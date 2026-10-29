@@ -80,6 +80,35 @@ describe("V2 inbox row reader · the canonical contract fixture", () => {
   });
 });
 
+describe("V2 inbox row reader · the persisted subject type (a navigation hint, never a grant)", () => {
+  it("reads the type the canonical fixture publishes and keeps the id apart from it", () => {
+    const row = readInboxRowV2(wireRow());
+    expect(row?.subjectType).toBe("ALPHA_VERSION");
+    expect(row?.subjectId).toEqual(expect.any(String));
+  });
+
+  it("accepts each published kind and nothing is derived from the gate, the label or the id", () => {
+    for (const kind of ["ALPHA_VERSION", "DEPLOYMENT", "EXIT_REVIEW"] as const) {
+      const row = readInboxRowV2({ ...wireRow(), subject_type: kind, gate: "R2", subject: "A label that says deployment" });
+      expect(row?.subjectType, kind).toBe(kind);
+    }
+  });
+
+  it("an older server that sends none is still a valid row, with no type", () => {
+    const wire = wireRow();
+    delete wire.subject_type;
+    const row = readInboxRowV2(wire);
+    expect(row).not.toBeNull();
+    expect(row?.subjectType).toBeNull();
+  });
+
+  it("a type outside the published enum, a null, a lower-case spelling or a non-string refuses the row", () => {
+    for (const bad of ["PORTFOLIO", "alpha_version", "", null, 7, ["DEPLOYMENT"], { kind: "DEPLOYMENT" }]) {
+      expect(readInboxRowV2({ ...wireRow(), subject_type: bad }), JSON.stringify(bad)).toBeNull();
+    }
+  });
+});
+
 describe("V2 inbox row reader · malformed input", () => {
   it.each([null, undefined, "row", 7, [], [wireRow()]])("%j is not a row", (raw) => {
     expect(readInboxRowV2(raw)).toBeNull();

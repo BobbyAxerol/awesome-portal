@@ -11,6 +11,8 @@ import { afterAll, describe, expect, it, vi } from "vitest";
 import { canonicalDigest, loadCanonical } from "../testkit/loadCanonical";
 import type { Draft } from "../testkit/matrix";
 import { leaked, pollutionCases, prototypeIsClean, requiredCases, rootCases, schemaVersionCases } from "../testkit/negative";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { validateAgainst } from "../testkit/schema";
 import {
   ALPHA_CATALOGUE_PATH, ALPHA_CATALOGUE_SCHEMA, CATALOGUE_FAILURES, CATALOGUE_FAILURE_TEXT, alphaCatalogueUrl, failureForStatus, fetchAlphaCataloguePage,
@@ -68,6 +70,30 @@ describe("L1 · a second page reads with its cursor", () => {
     const read = readAlphaCataloguePage(more, 100);
     expect(read.kind === "page" && read.page.nextCursor).toBe("opaque.cursor-1");
   });
+});
+
+describe("L2b · the negative vectors Codex published (research-run-library-alpha-catalogue.synthetic.negative.json)", () => {
+  const negative = JSON.parse(readFileSync(resolve(__dirname, "../../../../../../../packages/contracts/fixtures/research-run-library-alpha-catalogue.synthetic.negative.json"), "utf8")) as {
+    cases: { id: string; schema_rejects: boolean; value: unknown }[];
+  };
+
+  it("the file carries the six published cases", () => {
+    expect(negative.cases.map((c) => c.id)).toEqual([
+      "unknown_authority", "limit_above_cap", "unexpected_field", "missing_cursor_for_more", "cursor_when_no_more", "duplicate_alpha_id",
+    ]);
+  });
+
+  it.each(["unknown_authority", "limit_above_cap", "unexpected_field", "missing_cursor_for_more", "cursor_when_no_more", "duplicate_alpha_id"])(
+    "%s is refused whole, never read as an empty page, and the schema flag it carries is true to the schema",
+    (id) => {
+      const published = negative.cases.find((c) => c.id === id)!;
+      // The file states whether JSON Schema alone rejects the case; the three cross-field cases are schema-valid on purpose.
+      expect(schemaViolations(published.value).length > 0, `${id} schema_rejects`).toBe(published.schema_rejects);
+      const read = readAlphaCataloguePage(published.value, null);
+      expect(read.kind, id).toBe("refused");
+      expect(read.kind === "refused" ? read.word : null, id).not.toBeNull();
+    },
+  );
 });
 
 describe("L2 · refused whole, never repaired", () => {
