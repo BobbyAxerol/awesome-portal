@@ -30,6 +30,7 @@ import { createHash } from "node:crypto";
 import { isPositiveMode, positiveDeploymentFact } from "./bffPositiveMode";
 import { criteriaMetOf, gateMinimumDays, isRetired, PAPER_POLICY_MIN_TRADES, resolveStageDeployment, sandboxRecordIdOf, stageBookOf, userIdOf } from "./bffWorldStage"; // WP-B2-S
 import { text4, units4 } from "./bffWorldBooks"; // WP-B2-S3
+import { deploymentOfView, variantViewOf } from "./bffWorldVariants"; // R-A: the declared variant graph
 import { currentDeploymentOfStage, haltedSinceMs, historyDeploymentId, historyNetSeries, standingOf } from "./bffWorldStage"; // WP-B2-S3
 import { approvalHref, approvalOfAlpha, type WorldGate } from "./bffWorldGovernance"; // WP-B2-S3
 import { WORLD_INCIDENTS } from "./bffWorld"; // WP-B2-S3
@@ -49,8 +50,7 @@ const NAMED_VARIANT: Readonly<Record<string, StageVariant>> = { dep_b2: "mismatc
 export function variantOf(deploymentId: string): StageVariant {
   const named = NAMED_VARIANT[deploymentId];
   if (named !== undefined) return named;
-  for (const word of STAGE_VARIANTS) if (deploymentId.endsWith(`_${word}`) || deploymentId.includes(`_${word}_`)) return word;
-  return "ok";
+  return variantViewOf(deploymentId)?.variant ?? "ok"; // R-A: only a variant the world DECLARES (e2e/bffWorldVariants.ts); a look-alike suffix is not one
 }
 
 /* ── who the deployments belong to (identity keys, FE-066) ─────────────────── */
@@ -114,12 +114,9 @@ export function stageOf(deploymentId: string, asked: DeploymentStage): Deploymen
 /** A stage page exists (lit) only for a stage the deployment has reached. */
 export const reached = (stage: DeploymentStage, asked: DeploymentStage): boolean => STAGE_ORDER.indexOf(asked) <= STAGE_ORDER.indexOf(stage);
 
-/** The universe's own id, with a trailing variant word taken off (`dep_live_01_mismatch` is dep_live_01 in another state). */
+/** The deployment a DECLARED variant view is a view of (`dep_live_01_mismatch` -> dep_live_01); any other id is itself, never a stripped one. */
 export function baseDeploymentId(deploymentId: string): string {
-  for (const word of STAGE_VARIANTS) {
-    if (deploymentId.endsWith(`_${word}`)) return deploymentId.slice(0, -(word.length + 1));
-  }
-  return deploymentId;
+  return deploymentOfView(deploymentId);
 }
 
 function identityOf(deploymentId: string): Identity | null {

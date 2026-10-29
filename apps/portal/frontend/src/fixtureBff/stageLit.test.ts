@@ -62,7 +62,7 @@ describe("variants", () => {
     expect(variantOf("dep_canary_01_stale")).toBe("stale");
     expect(variantOf("dep_live_01_gap")).toBe("gap");
     expect(variantOf("dep_canary_01_breach")).toBe("breach");
-    expect(variantOf("dep_x_dark")).toBe("dark");
+    expect(variantOf("dep_x_dark")).toBe("ok"); // R-A: a variant is DECLARED by the world (bffWorldVariants.ts); an undeclared look-alike suffix is not one
     expect(variantOf("dep_b2")).toBe("mismatch");
     expect(variantOf("dep_c1")).toBe("halted");
     expect(baseDeploymentId("dep_live_01_mismatch")).toBe("dep_live_01");

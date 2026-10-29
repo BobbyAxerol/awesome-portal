@@ -97,6 +97,7 @@ const TIES: readonly { id: string; title: string; qa: string; owner: string }[] 
   { id: "W133", title: "the alpha resource of the scoped workspace is the closed V2 shape for every alpha, never touched by the world overlay", qa: "reader conformance W129", owner: "B-S" },
   { id: "W160", title: "the Fleet read behind every Overview stage link (stage_filter x group_by, any environment) answers 200", qa: "N10-M4", owner: "B-S" },
   { id: "W161", title: "the venue bars end at the as-of of the frame the request is in (the preview clock), cover the window up to it, closing at the world mark, count = bars listed (unit test venueCandlesClamp.test.ts; W73/W103 hold the home frame)", qa: "N9a-05 (QA10)", owner: "B-S" },
+  { id: "W210", title: "variant ids are declared fixture views (never a stripped suffix): every declared view names a fleet deployment, a declared variant's blotter and Operations links list exactly its base's rows, an undeclared look-alike lists nothing", qa: "R-A (Codex 29 Oct)", owner: "B-S" },
   // ===== WP-B2-S3 end
   { id: "W23", title: "a scoped blotter is the scope's population: every order of the deployment/alpha (including ord_00225 for Carry A) is on it, count and chips equal the filtered population", qa: "QA6 R2-02", owner: "B-B1" },
   { id: "W24", title: "one definition of the money of a book: Net PnL is the published realized, a venue is the sum of its deployments, Equity is allocation + realized + unrealized (a ledger figure without the unrealized is not named Equity)", qa: "R2-03 R5-08 R3-07", owner: "B-C3" },

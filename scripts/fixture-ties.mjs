@@ -1102,6 +1102,31 @@ export async function runWorldTies(get) {
       check("W161", bars.length > 0 && bars[0].t <= from + 3_600_000, `the first bar opens ${bars.length > 0 ? new Date(bars[0].t).toISOString() : "(none)"}, after the window start ${new Date(from).toISOString()}`);
     }
   }
+  // W210 (R-A, Codex 29 Oct): variant ids are DECLARED fixture views, never read from a suffix: every declared view names a deployment of the fleet; a declared Live/Canary variant lists exactly its base's blotter and Operations rows; an undeclared look-alike lists nothing
+  {
+    const declared = await ok200("/__fixture/variants");
+    check("W210", declared?.fixture === true && Array.isArray(declared?.views) && declared.views.length > 0, "/__fixture/variants did not publish the declared graph");
+    const views = declared?.views ?? [];
+    for (const view of views.slice(0, 80)) check("W210", deployments.has(view.view_of_deployment_id) || /^dep_scale_/.test(view.view_of_deployment_id), `${view.id}: declared a view of ${view.view_of_deployment_id}, which is no deployment of the fleet`);
+    const stageOf = (id) => deployments.get(id)?.stage;
+    for (const view of views.filter((v) => ["dep_live_01", "dep_btc_live", "dep_canary_01", "dep_c1"].includes(v.view_of_deployment_id))) {
+      const own = await ok200(`${E}/screens/blotter?deployment_id=${view.view_of_deployment_id}&limit=200`);
+      const through = await ok200(`${E}/screens/blotter?deployment_id=${view.id}&limit=200`);
+      check("W210", (through?.data?.orders ?? []).length === (own?.data?.orders ?? []).length, `${view.id}: its blotter link lists ${(through?.data?.orders ?? []).length} orders, the base ${view.view_of_deployment_id} ${(own?.data?.orders ?? []).length}`);
+      const ownOps = await ok200(`${E}/operations?target_id=${view.view_of_deployment_id}&limit=100`);
+      const viaOps = await ok200(`${E}/operations?target_id=${view.id}&limit=100`);
+      check("W210", (viaOps?.page?.rows ?? []).length === (ownOps?.page?.rows ?? []).length, `${view.id}: its Operations link lists ${(viaOps?.page?.rows ?? []).length} rows, the base ${(ownOps?.page?.rows ?? []).length}`);
+    }
+    const declaredIds = new Set(views.map((v) => v.id));
+    for (const id of ["dep_live_01_breach", "dep_canary_01_gap", "dep_paper_01_gap", "dep_nope_dark", "dep_live_01_mismatch_x"]) {
+      if (declaredIds.has(id)) { check("W210", false, `${id} is declared, the test expects an undeclared look-alike`); continue; }
+      const blotter = await ok200(`${E}/screens/blotter?deployment_id=${id}&limit=50`);
+      check("W210", (blotter?.data?.orders ?? []).length === 0, `${id}: an undeclared look-alike lists ${(blotter?.data?.orders ?? []).length} orders (a suffix was stripped)`);
+      const ops = await ok200(`${E}/operations?target_id=${id}&limit=50`);
+      check("W210", (ops?.page?.rows ?? []).length === 0, `${id}: an undeclared look-alike lists ${(ops?.page?.rows ?? []).length} operations`);
+    }
+    void stageOf;
+  }
   // ===== WP-B2-S3 end
   // ===== WP-B2-A3 begin
   // ── W19: a request exists only for the NEXT gate of its subject, once, and its quorum is open (R3-02, R3-09, R3-10, R3-03) ───────────────────────────────

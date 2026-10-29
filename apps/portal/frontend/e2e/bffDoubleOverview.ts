@@ -47,6 +47,7 @@
  * canonical BLOCKED. `resetOverviewDouble` rewinds it. ACCEPTED and UNKNOWN are
  * synthetic: the real F0 relay only ever answers BLOCKED.
  */
+import { deploymentOfView } from "./bffWorldVariants"; // R-A
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -324,8 +325,7 @@ let openBook: Map<string, WorldOpenOrder[]> | null = null;
 let openBookSource: Row[] | null = null;
 export interface WorldOpenOrder { id: string; symbol: string; side: "buy" | "sell"; type: string; quantity: string; price: string; status: string; sinceMs: number }
 // ===== WP-B2-S3 begin (QA8 N8b-03): a stage-page variant id (`dep_live_01_gap`) names a state of the deployment `dep_live_01`; its blotter scope is that deployment's
-const VARIANT_SUFFIX = /^(dep_.+?)_(?:dark|mismatch|stale|gap|breach|halted|vn)$/;
-export const deploymentOfVariant = (id: string): string => id.replace(VARIANT_SUFFIX, "$1");
+export const deploymentOfVariant = (id: string): string => deploymentOfView(id); // R-A: the DECLARED variant graph (bffWorldVariants.ts), no suffix is stripped
 // ===== WP-B2-S3 end
 /** WORLD: the blotter summary of a scope is COUNTED from the blotter's own rows (environment, optionally one deployment), so its chips and funnel equal the rows the screen lists. */
 export function worldBlotterCounts(environment: string, deploymentId: string | null): { submitted: number; filled: number; partial: number; working: number; cancelled: number; rejected: number } {

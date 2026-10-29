@@ -20,6 +20,7 @@ import { ACCESS_DOUBLE_DEFAULT_USER } from "../frontend/e2e/bffDoubleAccess";
 import { setUsersDoubleLastSignIn, setUsersDoubleVariant, type UsersDoubleVariant } from "../frontend/e2e/bffDoubleUsers";
 import { isScaleName, setFixtureNow, setFixtureScale, type ScaleName } from "../frontend/e2e/bffScale";
 import { isReviewProfile, reviewCatalog, reviewHtml, type ReviewProfile } from "./review-catalog";
+import { variantViews } from "../frontend/e2e/bffWorldVariants";
 import { answerReviewManager, clampVenueCandles, wpAccountBook, wpAlphaResource, wpDeploymentFact, wpPortfolioBook, wpRecall } from "./review-manager";
 import { isPositiveMode, setPositiveMode } from "../frontend/e2e/bffPositiveMode";
 import { WORLD_NOW_MS } from "../frontend/e2e/bffWorld";
@@ -426,6 +427,15 @@ async function handle(config: FixtureConfig, incoming: IncomingMessage, response
     const html = url.pathname.endsWith(".html");
     send(response, config, 200, html ? reviewHtml(config.reviewProfile, config.scale, getScenario()) : reviewCatalog(config.reviewProfile, config.scale, getScenario()),
       html ? { "content-type": "text/html; charset=utf-8", "content-security-policy": "default-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'" } : {});
+    return;
+  }
+  // R-A: the declared variant graph of the fixture world (synthetic views; no production field exists). Fixture-only, read-only.
+  if (url.pathname === "/__fixture/variants") {
+    if (method !== "GET") {
+      send(response, config, 405, { error: "FIXTURE_METHOD_NOT_ALLOWED" }, { allow: "GET" });
+      return;
+    }
+    send(response, config, 200, { fixture: true, basis: "DECLARED_FIXTURE_GRAPH_NOT_A_PRODUCTION_RELATIONSHIP_NOT_AN_AUTHORIZATION_RULE", views: variantViews() });
     return;
   }
   if (url.pathname === SCENARIO_PATH) {
