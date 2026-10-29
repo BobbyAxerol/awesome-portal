@@ -24,7 +24,7 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { expect, test, type Page } from "@playwright/test";
 
-import { answerEquityProjection } from "../fixture-bff/equity-projection";
+import { answerEquityProjection } from "../../fixture-bff/equity-projection";
 import { answerExecutionBff, stubExecutionBff } from "./bffDouble";
 import { incidentChildrenBody } from "./bffWorld";
 import { SLICE_URL, stubScopedBff } from "./bffDoubleScoped";
