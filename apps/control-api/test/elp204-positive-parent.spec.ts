@@ -227,7 +227,7 @@ describe.skipIf(!DATABASE_URL)("ELP2-04 finite positive parents / actual PG+HTTP
       ["R2_ROOT", "R2_LINEAGE", "PAPER_EXIT_ROOT", "PAPER_EXIT_REVIEW", "PAPER_EXIT_LINEAGE"]);
     const seals: ParentReadFieldSeal[] = purposes.map(purpose => ({ purpose, environment: env, contract_revision: "portal.execution.parent-fields.v1",
       field_policy_ref: `TEST_ONLY:${purpose}`, field_set_sha256: parentFieldSetDigest(purpose), valid_from_ms: now - 60_000,
-      valid_until_ms: now + (options.purposeTtlMs?.[purpose] ?? (purpose === "DECISION_OPERATION" ? options.operationFieldTtlMs ?? options.fieldTtlMs ?? 600_000 : options.fieldTtlMs ?? 600_000) }));
+      valid_until_ms: now + (options.purposeTtlMs?.[purpose] ?? (purpose === "DECISION_OPERATION" ? options.operationFieldTtlMs ?? options.fieldTtlMs ?? 600_000 : options.fieldTtlMs ?? 600_000)) }));
     const policy: ReviewedAccessPolicy = { workspace_id: data.workspace, revision: next(), artifact_digest: accessDigest(next()),
       approval_ref: "TEST_ONLY-not-owner-runtime-review", state: "REVIEWED", qualification: "TEST_ONLY",
       protected_owner_user_id: owner.user.userId, researcher_fields: { state: "PENDING", policy_ref: null, fields: [] }, parent_read_fields: seals };
