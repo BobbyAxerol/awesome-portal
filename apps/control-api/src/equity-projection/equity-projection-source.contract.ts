@@ -13,6 +13,10 @@ const instant = z.string().refine(v => /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\
 const digest = z.string().regex(/^sha256:[0-9a-f]{64}$/);
 const cursor = z.string().regex(/^[A-Za-z0-9_-]{1,512}$/);
 const count = z.number().int().min(0).max(Number.MAX_SAFE_INTEGER);
+/** The closed interval vocabulary, as name -> seconds. `interval` and `interval_seconds` must be this exact pair. */
+export const EQUITY_INTERVAL_SECONDS = { "1m": 60, "5m": 300, "15m": 900, "1h": 3600, "4h": 14400, "1d": 86400 } as const;
+/** A ratio in [0, 1] as decimal text: `0`, `1`, `0.9583...`, `1.000`. */
+const ratio = z.string().regex(/^(?:0(?:[.][0-9]+)?|1(?:[.]0+)?)$/);
 export const equityEnvironment = z.enum(["paper", "sandbox", "live"]);
 export const equityWindow = z.enum(["1d", "7d", "30d", "90d", "1y"]);
 export const equityIntent = z.enum(["overview", "inspect"]);
@@ -34,7 +38,7 @@ export const equitySeriesAvailable = z.object({ availability: z.literal("AVAILAB
   timestamp_semantics: z.object({ bucket_basis: z.literal("bucket_start_utc_inclusive"), time_basis: z.literal("event_time_source_clock"), interpolation: z.literal("NONE") }).strict(),
   interval: z.enum(["1m", "5m", "15m", "1h", "4h", "1d"]), interval_seconds: z.union([z.literal(60), z.literal(300), z.literal(900), z.literal(3600), z.literal(14400), z.literal(86400)]),
   window_from: instant, window_to: instant, expected_buckets: z.number().int().min(1).max(EQUITY_PROJECTION_MAX_POINTS),
-  returned_buckets: z.number().int().min(0).max(EQUITY_PROJECTION_MAX_POINTS), source_rows: count, coverage: decimal,
+  returned_buckets: z.number().int().min(0).max(EQUITY_PROJECTION_MAX_POINTS), source_rows: count, coverage: ratio,
   points: z.array(point).max(EQUITY_PROJECTION_MAX_POINTS), gaps: z.array(gap).max(EQUITY_PROJECTION_MAX_POINTS),
   next_cursor: cursor.nullable(), retention, lineage: seriesLineage, drawdown }).strict();
 const bandLineage = z.object({ band_revision: id, artifact_digest: digest, approval_reference: id, approved_at: instant,
@@ -71,7 +75,14 @@ export const equityProjectionSourceResponse = z.object({
     if (s.returned_buckets !== s.points.length) bad("EQUITY_RETURNED_BUCKETS_MISMATCH");
     if (s.points.length > v.request.limit) bad("EQUITY_POINTS_OVER_LIMIT");
     if (s.points.length > s.expected_buckets) bad("EQUITY_POINTS_OVER_EXPECTED");
-    if (s.source_rows > s.points.length) bad("EQUITY_SOURCE_ROWS_OVER_POINTS");
+    if (EQUITY_INTERVAL_SECONDS[s.interval] !== s.interval_seconds) bad("EQUITY_INTERVAL_PAIR_MISMATCH");
+    // source_rows = retained source observations that contributed to the returned NON-NULL buckets. Several observations may aggregate into
+    // one bucket, so it may exceed points.length. Only what the definition implies is enforced: every non-null bucket has >= 1 observation,
+    // and a series with no non-null bucket has none (and covers nothing). No unqualified formula is asserted for coverage beyond its range.
+    const present = s.points.filter(p => p.equity !== null).length;
+    if (s.source_rows < present) bad("EQUITY_SOURCE_ROWS_BELOW_PRESENT_BUCKETS");
+    if (present === 0 && s.source_rows !== 0) bad("EQUITY_SOURCE_ROWS_WITHOUT_BUCKET");
+    if (present === 0 && compareDecimal(s.coverage, "0") !== 0) bad("EQUITY_COVERAGE_WITHOUT_BUCKET");
     let previous = -Infinity;
     for (const p of s.points) { const t = Date.parse(p.bucket_start);
       if (!(t > previous) || t < from || t >= to) { bad("EQUITY_POINT_ORDER_OR_WINDOW"); break; } previous = t;

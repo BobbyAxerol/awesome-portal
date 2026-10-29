@@ -13,7 +13,11 @@
  *   identity    workspace, deployment and environment equal the asked ones (`identity_mismatch`)
  *   absence     an ABSENT section carries only a reason of ITS vocabulary; AVAILABLE carries none (`absence_shape`)
  *   cap         at most 5,000 points / band points / gaps; points <= request.limit (`over_cap`, `over_limit`)
- *   counts      returned_buckets = points.length <= expected_buckets; source_rows <= points (`count_mismatch`)
+ *   counts      returned_buckets = points.length <= expected_buckets (`count_mismatch`)
+ *   interval    `interval` and `interval_seconds` are one closed pair (`interval_pair`)
+ *   coverage    a ratio in [0, 1] (non-null buckets / expected buckets), `0` when no bucket has a value (`coverage_range`)
+ *   source_rows retained observations that contributed to non-null buckets: may EXCEED the points (aggregation); at least the non-null
+ *               buckets, and zero exactly when there is none (`source_rows`)
  *   time        points strictly ascending and inside [window_from, window_to); gaps ordered (`point_order`, `point_out_of_window`, `gap_invalid`)
  *   null-pair   equity and drawdown are both null or both set (`null_pairing`)
  *   drawdown    a fraction in [-1, 0]; confirmed_by_source only with EDGE_QUALIFIED authority (`decimal_range`, `drawdown_derivation`)
@@ -37,7 +41,7 @@ const RETENTION_STATES = ["HOT", "PARTIAL_HOT", "COLD_REQUESTABLE", "PURGED", "U
 
 export const SOURCE_REFUSALS = [
   "not_an_object", "unknown_key", "missing_key", "wrong_type", "bad_value", "version", "side_effect", "identity_mismatch", "absence_shape",
-  "over_cap", "over_limit", "count_mismatch", "point_order", "point_out_of_window", "gap_invalid", "null_pairing", "decimal_range",
+  "over_cap", "over_limit", "count_mismatch", "interval_pair", "coverage_range", "source_rows", "point_order", "point_out_of_window", "gap_invalid", "null_pairing", "decimal_range",
   "drawdown_derivation", "band_lineage", "band_invalid", "currency_mismatch",
 ] as const;
 export type SourceRefusal = (typeof SOURCE_REFUSALS)[number];
@@ -148,17 +152,21 @@ function readSeries(raw: unknown, limit: number): SourceSeries {
   if (semantics.bucket_basis !== "bucket_start_utc_inclusive" || semantics.time_basis !== "event_time_source_clock" || semantics.interpolation !== "NONE") fail("bad_value", `${at}.timestamp_semantics`);
   const interval = oneOf(s.interval, SOURCE_INTERVALS.map(([name]) => name), `${at}.interval`);
   const intervalSeconds = integer(s.interval_seconds, `${at}.interval_seconds`, 60, 86400);
-  if (SOURCE_INTERVALS.find(([name]) => name === interval)?.[1] !== intervalSeconds) fail("bad_value", `${at}.interval_seconds`);
+  if (SOURCE_INTERVALS.find(([name]) => name === interval)?.[1] !== intervalSeconds) fail("interval_pair", `${at}.interval_seconds`);
   const windowFromMs = instant(s.window_from, `${at}.window_from`), windowToMs = instant(s.window_to, `${at}.window_to`);
   if (!(windowFromMs < windowToMs)) fail("point_out_of_window", `${at}.window_to`);
   const expectedBuckets = integer(s.expected_buckets, `${at}.expected_buckets`, 1, SOURCE_MAX_POINTS);
   const returnedBuckets = integer(s.returned_buckets, `${at}.returned_buckets`, 0, SOURCE_MAX_POINTS);
   const sourceRows = integer(s.source_rows, `${at}.source_rows`, 0, Number.MAX_SAFE_INTEGER);
   const coverage = decimal(s.coverage, `${at}.coverage`);
+  if (!/^(?:0(?:[.][0-9]+)?|1(?:[.]0+)?)$/.test(coverage)) fail("coverage_range", `${at}.coverage`);
   if (!Array.isArray(s.points) || !Array.isArray(s.gaps)) return fail("wrong_type", `${at}.points`);
   if (s.points.length > SOURCE_MAX_POINTS || s.gaps.length > SOURCE_MAX_POINTS) fail("over_cap", `${at}.points`);
   if (s.points.length > limit) fail("over_limit", `${at}.points`);
-  if (returnedBuckets !== s.points.length || returnedBuckets > expectedBuckets || sourceRows > s.points.length) fail("count_mismatch", `${at}.returned_buckets`);
+  if (returnedBuckets !== s.points.length || returnedBuckets > expectedBuckets) fail("count_mismatch", `${at}.returned_buckets`);
+  // source_rows counts retained observations that contributed to NON-NULL buckets; several may aggregate into one, so it may exceed the points.
+  const present = (s.points as { equity?: unknown }[]).filter((p) => isPlain(p) && p.equity !== null).length;
+  if (sourceRows < present || (present === 0 && (sourceRows !== 0 || compare(coverage, "0") !== 0))) fail("source_rows", `${at}.source_rows`);
   let previous = -Infinity;
   const points = (s.points as unknown[]).map((p, i): SourcePoint => {
     const pa = `${at}.points[${i}]`, c = closed(p, ["bucket_start", "equity", "drawdown"], pa);

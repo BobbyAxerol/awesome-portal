@@ -15,6 +15,9 @@ const decimal = { type: 'string', pattern: '^[+-]?[0-9]+([.][0-9]+)?$' };
 const currency = { type: 'string', pattern: '^[A-Z0-9]{2,12}$' };
 const instant = { type: 'string', format: 'date-time' };
 const digest = { type: 'string', pattern: '^sha256:[0-9a-f]{64}$' };
+const INTERVALS = { '1m': 60, '5m': 300, '15m': 900, '1h': 3600, '4h': 14400, '1d': 86400 };
+// A ratio in [0, 1]: present (non-null) buckets over expected buckets in the window. Range only; no rounding rule is asserted.
+const ratio = { type: 'string', pattern: '^(?:0(?:[.][0-9]+)?|1(?:[.]0+)?)$' };
 const cursor = { type: 'string', minLength: 1, maxLength: 512, pattern: '^[A-Za-z0-9_-]+$' };
 const MAX_POINTS = 5000;
 const SERIES_REASONS = ['SOURCE_NOT_COMMISSIONED', 'SOURCE_NOT_READ', 'NOT_AUTHORIZED', 'RETENTION_EXPIRED', 'SOURCE_STALE', 'NO_DATA_IN_WINDOW'];
@@ -37,10 +40,19 @@ const seriesAvailable = { ...object({ availability: { const: 'AVAILABLE' }, curr
   interval: { type: 'string', enum: ['1m', '5m', '15m', '1h', '4h', '1d'] }, interval_seconds: { type: 'integer', enum: [60, 300, 900, 3600, 14400, 86400] },
   window_from: instant, window_to: instant,
   expected_buckets: { type: 'integer', minimum: 1, maximum: MAX_POINTS }, returned_buckets: { type: 'integer', minimum: 0, maximum: MAX_POINTS },
-  source_rows: { type: 'integer', minimum: 0, maximum: 9007199254740991 }, coverage: decimal,
+  source_rows: { type: 'integer', minimum: 0, maximum: 9007199254740991 }, coverage: ratio,
   points: { type: 'array', maxItems: MAX_POINTS, items: point }, gaps: { type: 'array', maxItems: MAX_POINTS, items: gap },
   next_cursor: nullable(cursor), retention, lineage: seriesLineage, drawdown }),
-  description: 'Per-deployment retained series with its OWN source revision/digest. null equity/drawdown is a missing bucket, never 0. No interpolation across gaps. Runtime also checks returned_buckets == points.length <= request.limit, currency equality with the band, and body identity equals the request.' };
+  allOf: [
+    ...Object.entries(INTERVALS).map(([name, seconds]) => ({ if: { type: 'object', properties: { interval: { const: name } }, required: ['interval'] },
+      then: { type: 'object', properties: { interval_seconds: { const: seconds } } } })),
+    // source_rows counts retained source observations that contributed to the returned NON-NULL buckets (several may aggregate into one bucket,
+    // so it may exceed points). Zero exactly when no bucket has a value, and then coverage is 0. Not expressible in JSON Schema: source_rows >= number
+    // of non-null buckets (zod and the reader enforce it).
+    { if: { type: 'object', properties: { source_rows: { const: 0 } }, required: ['source_rows'] },
+      then: { type: 'object', properties: { coverage: { type: 'string', pattern: '^0(?:[.]0+)?$' }, points: { type: 'array', items: { type: 'object', properties: { equity: { type: 'null' } } } } } },
+      else: { type: 'object', properties: { points: { type: 'array', contains: { type: 'object', properties: { equity: { type: 'string' } }, required: ['equity'] } } } } }],
+  description: 'Per-deployment retained series with its OWN source revision/digest. null equity/drawdown is a missing bucket, never 0. No interpolation across gaps. interval and interval_seconds are one closed pair. coverage = non-null buckets / expected_buckets, a ratio in [0,1]. Runtime also checks returned_buckets == points.length <= request.limit, source_rows >= non-null buckets, currency equality with the band, and body identity equals the request.' };
 const bandLineage = object({ band_revision: id, artifact_digest: digest, approval_reference: id, approved_at: instant, approval_authority: { const: 'RESEARCH' }, immutable: { const: true } });
 const bandAvailable = { ...object({ availability: { const: 'AVAILABLE' }, currency, run_id: id, lineage: bandLineage,
   points: { type: 'array', maxItems: MAX_POINTS, items: object({ bucket_start: instant, lower: decimal, upper: decimal }) } }),

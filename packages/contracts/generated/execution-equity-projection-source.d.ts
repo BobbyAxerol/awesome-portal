@@ -44,7 +44,7 @@ export interface components {
                 limit: number;
                 cursor: string | null;
             };
-            series: {
+            series: ({
                 /** @constant */
                 availability: "AVAILABLE";
                 currency: string;
@@ -112,7 +112,7 @@ export interface components {
                     authority: "EDGE_QUALIFIED" | "PORTAL_DERIVED";
                     confirmed_by_source: boolean;
                 } & unknown;
-            } | {
+            } & (unknown & unknown & unknown & unknown & unknown & unknown & unknown)) | {
                 /** @constant */
                 availability: "ABSENT";
                 /** @enum {string} */

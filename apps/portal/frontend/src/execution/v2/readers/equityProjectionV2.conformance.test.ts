@@ -45,6 +45,15 @@ describe("equity projection V2 reader: canonical synthetic fixtures", () => {
     expect(r.kind === "equity_projection_source" && r.projection.series).toEqual({ availability: "ABSENT", reasonCode: "NOT_AUTHORIZED" });
     expect(r.kind === "equity_projection_source" && r.projection.isUncommissioned).toBe(false);
   });
+  it("source_rows may exceed the points: 5000 observations aggregated into 60 buckets is accepted", () => {
+    const body = copy("series_only"), start = Date.parse("2026-08-26T00:00:00Z");
+    Object.assign(body.series, { interval: "1m", interval_seconds: 60, window_from: "2026-08-26T00:00:00Z", window_to: "2026-08-26T01:00:00Z",
+      expected_buckets: 60, returned_buckets: 60, source_rows: 5000, coverage: "1", gaps: [],
+      points: Array.from({ length: 60 }, (_, i) => ({ bucket_start: new Date(start + i * 60000).toISOString().replace(".000Z", "Z"), equity: "100", drawdown: "0" })) });
+    const r = readEquityProjectionSourceV2(body);
+    expect(r.kind).toBe("equity_projection_source");
+    expect(r.kind === "equity_projection_source" && r.projection.series.availability === "AVAILABLE" && r.projection.series.sourceRows).toBe(5000);
+  });
   it("every vocabulary word is reachable from the reader, and the refusal vocabulary has no duplicate", () => {
     expect(new Set(SOURCE_REFUSALS).size).toBe(SOURCE_REFUSALS.length);
   });
@@ -72,7 +81,14 @@ describe("equity projection V2 reader: refusals", () => {
     ["bad_value", "available", (b) => { b.request.limit = 5001; }],
     ["over_limit", "available", (b) => { b.request.limit = 10; }],
     ["count_mismatch", "available", (b) => { b.series.returned_buckets = 23; }],
-    ["count_mismatch", "available", (b) => { b.series.source_rows = 25; }],
+    ["source_rows", "available", (b) => { b.series.source_rows = 22; }],
+    ["source_rows", "available", (b) => { b.series.points.forEach((p: any) => { p.equity = null; p.drawdown = null; }); b.series.source_rows = 5; b.series.coverage = "0"; }],
+    ["source_rows", "available", (b) => { b.series.points.forEach((p: any) => { p.equity = null; p.drawdown = null; }); b.series.source_rows = 0; b.series.coverage = "0.5"; }],
+    ["interval_pair", "available", (b) => { b.series.interval = "1h"; b.series.interval_seconds = 60; }],
+    ["interval_pair", "available", (b) => { b.series.interval = "1m"; b.series.interval_seconds = 3600; }],
+    ["coverage_range", "available", (b) => { b.series.coverage = "-1"; }],
+    ["coverage_range", "available", (b) => { b.series.coverage = "2"; }],
+    ["coverage_range", "available", (b) => { b.series.coverage = "1.0001"; }],
     ["point_order", "available", (b) => { b.series.points.reverse(); }],
     ["point_out_of_window", "available", (b) => { b.series.window_to = "2026-08-26T12:00:00Z"; }],
     ["null_pairing", "available", (b) => { b.series.points[0].drawdown = null; }],

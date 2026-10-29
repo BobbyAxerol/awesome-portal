@@ -51,6 +51,42 @@ describe("R-C equity projection source V2 contract", () => {
     expect(cases.available.series.gaps).toHaveLength(1);
   });
 
+  /** 60 one-minute buckets of one hour, every bucket present. Used for the aggregation cases. */
+  const hour = (patch: (series: any) => void = () => undefined) => {
+    const body = clone(cases.series_only), start = Date.parse("2026-08-26T00:00:00Z");
+    Object.assign(body.series, { interval: "1m", interval_seconds: 60, window_from: "2026-08-26T00:00:00Z", window_to: "2026-08-26T01:00:00Z",
+      expected_buckets: 60, returned_buckets: 60, source_rows: 60, coverage: "1", gaps: [],
+      points: Array.from({ length: 60 }, (_, i) => ({ bucket_start: new Date(start + i * 60000).toISOString().replace(".000Z", "Z"), equity: "100", drawdown: "0" })) });
+    patch(body.series);
+    return body;
+  };
+  it("interval and interval_seconds are one closed pair, at both layers", () => {
+    both(hour(), true);
+    for (const [name, seconds] of [["1h", 60], ["1m", 3600], ["5m", 60], ["1d", 3600]] as const) both(hour(s => { s.interval = name; s.interval_seconds = seconds; }), false);
+    both(hour(s => { s.interval = "2m"; }), false);
+    both(hour(s => { s.interval_seconds = 61; }), false);
+  });
+  it("coverage is a ratio in [0, 1], at both layers", () => {
+    for (const ok of ["0", "1", "0.5", "0.958333333333333333333333", "1.000"]) both(hour(s => { s.coverage = ok; }), true);
+    for (const bad of ["-1", "2", "1.0001", "-0.5", "+0.5", "01", "1.5", "NaN", "", "0.", ".5"]) both(hour(s => { s.coverage = bad; }), false);
+  });
+  it("source_rows may EXCEED the points: 5000 observations aggregated into 60 buckets is legitimate", () => {
+    both(hour(s => { s.source_rows = 5000; }), true);
+    both(hour(s => { s.source_rows = 9007199254740991; }), true);
+  });
+  it("source_rows impossible cases: below the non-null buckets, nonzero with no value, zero with a value, negative or fractional", () => {
+    // JSON Schema expresses zero <=> no value; zod also enforces source_rows >= non-null buckets (not expressible across items).
+    const nulls = (s: any) => { for (const p of s.points) { p.equity = null; p.drawdown = null; } };
+    both(hour(s => { nulls(s); s.source_rows = 0; s.coverage = "0"; }), true);
+    both(hour(s => { nulls(s); s.source_rows = 5; s.coverage = "0"; }), false);
+    both(hour(s => { nulls(s); s.source_rows = 0; s.coverage = "0.5"; }), false);
+    both(hour(s => { s.source_rows = 0; s.coverage = "0"; }), false);
+    both(hour(s => { s.source_rows = -1; }), false);
+    both(hour(s => { s.source_rows = 1.5; }), false);
+    const below = hour(s => { s.source_rows = 59; });
+    expect(validate(below), "schema alone cannot express rows >= non-null buckets").toBe(true);
+    expect(equityProjectionSourceResponse.safeParse(below).success).toBe(false);
+  });
   it("negatives: unknown keys at every level", () => {
     for (const patch of [(b: any) => { b.extra = 1; }, (b: any) => { b.request.extra = 1; }, (b: any) => { b.series.extra = 1; },
       (b: any) => { b.band.extra = 1; }, (b: any) => { b.series.lineage.extra = 1; }, (b: any) => { b.band.lineage.extra = 1; },

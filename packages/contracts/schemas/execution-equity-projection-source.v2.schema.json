@@ -200,7 +200,7 @@
                 },
                 "coverage": {
                   "type": "string",
-                  "pattern": "^[+-]?[0-9]+([.][0-9]+)?$"
+                  "pattern": "^(?:0(?:[.][0-9]+)?|1(?:[.]0+)?)$"
                 },
                 "points": {
                   "type": "array",
@@ -426,7 +426,187 @@
                   ]
                 }
               },
-              "description": "Per-deployment retained series with its OWN source revision/digest. null equity/drawdown is a missing bucket, never 0. No interpolation across gaps. Runtime also checks returned_buckets == points.length <= request.limit, currency equality with the band, and body identity equals the request."
+              "allOf": [
+                {
+                  "if": {
+                    "type": "object",
+                    "properties": {
+                      "interval": {
+                        "const": "1m"
+                      }
+                    },
+                    "required": [
+                      "interval"
+                    ]
+                  },
+                  "then": {
+                    "type": "object",
+                    "properties": {
+                      "interval_seconds": {
+                        "const": 60
+                      }
+                    }
+                  }
+                },
+                {
+                  "if": {
+                    "type": "object",
+                    "properties": {
+                      "interval": {
+                        "const": "5m"
+                      }
+                    },
+                    "required": [
+                      "interval"
+                    ]
+                  },
+                  "then": {
+                    "type": "object",
+                    "properties": {
+                      "interval_seconds": {
+                        "const": 300
+                      }
+                    }
+                  }
+                },
+                {
+                  "if": {
+                    "type": "object",
+                    "properties": {
+                      "interval": {
+                        "const": "15m"
+                      }
+                    },
+                    "required": [
+                      "interval"
+                    ]
+                  },
+                  "then": {
+                    "type": "object",
+                    "properties": {
+                      "interval_seconds": {
+                        "const": 900
+                      }
+                    }
+                  }
+                },
+                {
+                  "if": {
+                    "type": "object",
+                    "properties": {
+                      "interval": {
+                        "const": "1h"
+                      }
+                    },
+                    "required": [
+                      "interval"
+                    ]
+                  },
+                  "then": {
+                    "type": "object",
+                    "properties": {
+                      "interval_seconds": {
+                        "const": 3600
+                      }
+                    }
+                  }
+                },
+                {
+                  "if": {
+                    "type": "object",
+                    "properties": {
+                      "interval": {
+                        "const": "4h"
+                      }
+                    },
+                    "required": [
+                      "interval"
+                    ]
+                  },
+                  "then": {
+                    "type": "object",
+                    "properties": {
+                      "interval_seconds": {
+                        "const": 14400
+                      }
+                    }
+                  }
+                },
+                {
+                  "if": {
+                    "type": "object",
+                    "properties": {
+                      "interval": {
+                        "const": "1d"
+                      }
+                    },
+                    "required": [
+                      "interval"
+                    ]
+                  },
+                  "then": {
+                    "type": "object",
+                    "properties": {
+                      "interval_seconds": {
+                        "const": 86400
+                      }
+                    }
+                  }
+                },
+                {
+                  "if": {
+                    "type": "object",
+                    "properties": {
+                      "source_rows": {
+                        "const": 0
+                      }
+                    },
+                    "required": [
+                      "source_rows"
+                    ]
+                  },
+                  "then": {
+                    "type": "object",
+                    "properties": {
+                      "coverage": {
+                        "type": "string",
+                        "pattern": "^0(?:[.]0+)?$"
+                      },
+                      "points": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "equity": {
+                              "type": "null"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "else": {
+                    "type": "object",
+                    "properties": {
+                      "points": {
+                        "type": "array",
+                        "contains": {
+                          "type": "object",
+                          "properties": {
+                            "equity": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "equity"
+                          ]
+                        }
+                      }
+                    }
+                  }
+                }
+              ],
+              "description": "Per-deployment retained series with its OWN source revision/digest. null equity/drawdown is a missing bucket, never 0. No interpolation across gaps. interval and interval_seconds are one closed pair. coverage = non-null buckets / expected_buckets, a ratio in [0,1]. Runtime also checks returned_buckets == points.length <= request.limit, source_rows >= non-null buckets, currency equality with the band, and body identity equals the request."
             },
             {
               "type": "object",
