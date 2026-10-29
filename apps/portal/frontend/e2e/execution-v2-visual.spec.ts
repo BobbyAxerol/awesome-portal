@@ -24,6 +24,7 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { expect, test, type Page } from "@playwright/test";
 
+import { answerEquityProjection } from "../fixture-bff/equity-projection";
 import { answerExecutionBff, stubExecutionBff } from "./bffDouble";
 import { incidentChildrenBody } from "./bffWorld";
 import { SLICE_URL, stubScopedBff } from "./bffDoubleScoped";
@@ -250,6 +251,16 @@ async function stubAlphaCatalogue(page: Page): Promise<void> {
     ? route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(body) })
     : route.fallback()));
 }
+// The deployment rooms read the equity projection (R-C, fixture lane): the fixture BFF's own handler answers it from the world, so these cells show the
+// projection panel the fixture lane serves and the watcher sees no 404. The real API answers 404/501 and the rooms keep their typed absence there.
+async function stubEquityProjection(page: Page): Promise<void> {
+  await page.route(/\/api\/v1\/execution\/deployments\/[^/]+\/equity-projection(\?|$)/, (route) => {
+    const url = new URL(route.request().url());
+    const answer = answerEquityProjection({ method: route.request().method(), path: url.pathname, search: url.search, headers: {}, body: null });
+    if (answer === null) return route.fallback();
+    return route.fulfill({ status: answer.status, headers: answer.headers, body: JSON.stringify(answer.body) });
+  });
+}
 async function stubPublishedReads(page: Page, options: Parameters<typeof answerExecutionBff>[4]): Promise<void> {
   const digest = fixtureBody("execution-visit-digest.synthetic.valid.json", (json) => (json.cases as { first_visit: Record<string, unknown> }).first_visit);
   const lifecycle = fixtureBody("execution-alpha-lifecycle.published.synthetic.valid.json", (json) => json.value as Record<string, unknown>);
@@ -287,6 +298,7 @@ for (const cell of CELLS) {
       await stubExecutionBff(page, bffOptions);
       await stubPublishedReads(page, bffOptions);
       await stubAlphaCatalogue(page);
+      await stubEquityProjection(page);
       await stubAdminRoutes(page);
       await stubQuantbtRuns(page);
       if (cell.scoped) await stubScopedBff(page);
