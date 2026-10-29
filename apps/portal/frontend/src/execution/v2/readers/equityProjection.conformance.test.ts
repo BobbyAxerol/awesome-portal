@@ -205,6 +205,12 @@ describe("L3 · helpers and the request", () => {
     expect(equityProjectionUrl({ deploymentId: "dep_88", window: "2d" as never })).toBeNull();
     expect(equityProjectionUrl({ deploymentId: "dep_88", intent: "x" as never })).toBeNull();
   });
+  it("carries the workspace as a validated optional query (workspace_id), after window and intent", () => {
+    expect(equityProjectionUrl({ deploymentId: "dep_88", workspaceId: "ws_TEST_ONLY" })).toBe("/api/v1/execution/deployments/dep_88/equity-projection?workspace_id=ws_TEST_ONLY");
+    expect(equityProjectionUrl({ deploymentId: "dep_88", window: "7d", intent: "inspect", workspaceId: "ws_1" })).toBe("/api/v1/execution/deployments/dep_88/equity-projection?window=7d&intent=inspect&workspace_id=ws_1");
+    expect(equityProjectionUrl({ deploymentId: "dep_88", workspaceId: "" })).toBe("/api/v1/execution/deployments/dep_88/equity-projection");
+    for (const bad of ["a b", "ws/1", "x".repeat(129), "ws?x=1", "ws&workspace_id=other"]) expect(equityProjectionUrl({ deploymentId: "dep_88", workspaceId: bad }), bad).toBeNull();
+  });
   it("status words", () => {
     expect([400, 401, 403, 404, 500, 503].map(projectionFailureForStatus)).toEqual(["INVALID_REQUEST", "DENIED", "DENIED", "NOT_FOUND", "UNAVAILABLE", "UNAVAILABLE"]);
   });
@@ -221,6 +227,14 @@ describe("L4 · the fetch behind the port never throws", () => {
   it("a refused body is UNREADABLE with the named reason; another version is UNSUPPORTED_SHAPE", async () => {
     expect(await fetchEquityProjection({ deploymentId: "dep_88" }, undefined, respond(200, edit((b) => { b.runtime_active = true; })))).toEqual({ kind: "failed", word: "UNREADABLE", refusal: "runtime_active" });
     expect(await fetchEquityProjection({ deploymentId: "dep_88" }, undefined, respond(200, edit((b) => { b.schema_version = "x.v2"; })))).toEqual({ kind: "failed", word: "UNSUPPORTED_SHAPE" });
+  });
+  it("sends the workspace, and sends nothing for one the contract cannot carry", async () => {
+    const f = respond(200, base());
+    await fetchEquityProjection({ deploymentId: "dep_88", workspaceId: "ws_TEST_ONLY" }, undefined, f);
+    expect((f.mock.calls[0] as unknown as [string])[0]).toContain("workspace_id=ws_TEST_ONLY");
+    const never = vi.fn();
+    expect(await fetchEquityProjection({ deploymentId: "dep_88", workspaceId: "a b" }, undefined, never as unknown as typeof fetch)).toEqual({ kind: "failed", word: "INVALID_REQUEST" });
+    expect(never).not.toHaveBeenCalled();
   });
   it("problems, a network failure, an abort and an unsendable query", async () => {
     expect(await fetchEquityProjection({ deploymentId: "dep_88" }, undefined, respond(404, { error: { code: "X", message: "SECRET PROSE" } }))).toEqual({ kind: "failed", word: "NOT_FOUND" });

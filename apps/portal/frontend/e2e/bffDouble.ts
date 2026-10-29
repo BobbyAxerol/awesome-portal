@@ -1156,6 +1156,11 @@ function answerExecutionBffBase(method: string, pathname: string, search: URLSea
   const path = pathname.replace(/^\/api\/v1\/execution/, "") || "/";
   const seg = path.split("/").filter(Boolean);
 
+  // ===== WP-R-C begin: the equity projection route is source-dark and unmounted; this double answers what the real API does (a typed 404), never a 501 gap.
+  // Only the fixture BFF (fixture-bff/equity-projection.ts) serves the fixture projection, so the browser cells keep the typed absence they have.
+  if (method === "GET" && /^\/deployments\/[^/]+\/equity-projection$/.test(path)) return problem(404, "EXECUTION_DEPLOYMENT_NOT_FOUND", "The equity projection is not served by this source.");
+  // ===== WP-R-C end
+
   if (options.screensV2) {
     // The S3 stage screens (Paper workbench, Sandbox, Canary, Live, New request): only their own deployments and writes.
     const stage = answerStage(method, path, seg, search, requestBody);

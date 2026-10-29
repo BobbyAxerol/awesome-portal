@@ -45,6 +45,8 @@ import { spineHistory, useLifecycleStages, useStageCriteria, useStageExit, useSt
 import { FillsTab } from "./FillsTab";
 import { Header, LOADING_CHIPS, LifecyclePanel, UNREAD_CHIPS, chipsOf } from "./Header";
 import { OrdersTab } from "./OrdersTab";
+import { EquityProjectionSection } from "../series/EquityProjectionSection";
+import { useEquityProjection } from "../series/useEquityProjection";
 import { OverviewTab } from "./OverviewTab";
 import { PositionsTab } from "./PositionsTab";
 import { SessionsTab } from "./SessionsTab";
@@ -91,6 +93,8 @@ export default function PaperWorkbenchScreen({ api, deploymentId, variant = "pap
   const deployment = model?.deployment ?? null;
   const strategyId = deployment?.strategyId ?? null;
   const dep = deployment?.deploymentId ?? deploymentId;
+  // R-C (fixture lane): the projection of this deployment; the real API answers 404/501 and the Overview keeps its own typed absence.
+  const projection = useEquityProjection(api, dep, params.get("workspace_id"), model !== null);
   // The Alpha is linked ONLY when the profile published `alpha_id` (FE-066, S3-U5): a strategy id is never promoted to an alpha id.
   const identity = model?.identity ?? stageIdentity(null);
   const alphaHref = identity.alphaId === null ? null : ctx(r.alpha(identity.alphaId));
@@ -152,7 +156,12 @@ export default function PaperWorkbenchScreen({ api, deploymentId, variant = "pap
               case "sessions":
                 return <SessionsTab counted={model.sessionsCounted} sessions={model.facts?.sessions ?? null} />;
               default:
-                return <OverviewTab model={model} quality={reads.quality} exitReviewsHref={ctx(r.exitReviews)} closed={closed} exitRequest={{ api, deploymentId: dep, workspaceId: params.get("workspace_id") }} notQualified={model.page.nq !== null} />;
+                return (
+                  <>
+                    <OverviewTab model={model} quality={reads.quality} exitReviewsHref={ctx(r.exitReviews)} closed={closed} exitRequest={{ api, deploymentId: dep, workspaceId: params.get("workspace_id") }} notQualified={model.page.nq !== null} />
+                    <EquityProjectionSection state={projection} />
+                  </>
+                );
             }
           }}
         </UrlTabs>

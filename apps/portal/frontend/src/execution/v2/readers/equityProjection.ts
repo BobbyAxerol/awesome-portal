@@ -96,6 +96,7 @@ class Refuse extends Error {
 const fail = (reason: EquityRefusal, at: string): never => { throw new Refuse(reason, at); };
 
 const IDENT = /^[A-Za-z0-9._:-]{1,128}$/;
+const WORKSPACE_ID = /^[A-Za-z0-9._-]{1,128}$/;
 const CURRENCY = /^[A-Z0-9]{2,12}$/;
 const DECIMAL = /^[+-]?[0-9]+(?:[.][0-9]+)?$/;
 const DIGEST = /^sha256:[0-9a-f]{64}$/;
@@ -301,7 +302,17 @@ export function readEquityProjectionV1(raw: unknown, ask: EquityProjectionAsk = 
 
 export const PROJECTION_FAILURES = ["INVALID_REQUEST", "NOT_FOUND", "DENIED", "UNAVAILABLE", "NETWORK", "ABORTED", "UNREADABLE", "UNSUPPORTED_SHAPE", "MISMATCH", "NOT_OFFERED"] as const;
 export type ProjectionFailure = (typeof PROJECTION_FAILURES)[number];
-export interface EquityProjectionQuery { deploymentId: string; window?: ProjectionWindow; intent?: ProjectionIntent }
+export interface EquityProjectionQuery {
+  deploymentId: string;
+  window?: ProjectionWindow;
+  intent?: ProjectionIntent;
+  /**
+   * The workspace the page is in. Sent as `workspace_id` when given; absent means the session's own workspace. The body carries no workspace, so
+   * the boundary is the request: a body is only ever read for the workspace that was asked, and the server (not this reader) is what refuses a
+   * deployment of another workspace.
+   */
+  workspaceId?: string;
+}
 export type EquityProjectionAnswer =
   | { kind: "projection"; projection: EquityProjection }
   | { kind: "failed"; word: ProjectionFailure; refusal?: EquityRefusal };
@@ -317,6 +328,10 @@ export function equityProjectionUrl(query: EquityProjectionQuery): string | null
   if (query.intent !== undefined) {
     if (!(PROJECTION_INTENTS as readonly string[]).includes(query.intent)) return null;
     parts.push(`intent=${query.intent}`);
+  }
+  if (query.workspaceId !== undefined && query.workspaceId !== "") {
+    if (!WORKSPACE_ID.test(query.workspaceId)) return null;
+    parts.push(`workspace_id=${encodeURIComponent(query.workspaceId)}`);
   }
   return `/api/v1/execution/deployments/${encodeURIComponent(query.deploymentId)}/equity-projection${parts.length === 0 ? "" : `?${parts.join("&")}`}`;
 }

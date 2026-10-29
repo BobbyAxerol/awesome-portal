@@ -38,6 +38,8 @@ import { spineHistory, useStageLifecycle } from "../stage/useStageLifecycle";
 import { unsupportedText, type LiveFullVersionRead } from "../../readers/dispatch";
 import { useExecUrlState, withContext } from "../../urlState";
 import { ChartSlot } from "./parts";
+import { EquityProjectionSection } from "../series/EquityProjectionSection";
+import { useEquityProjection } from "../series/useEquityProjection";
 import { ContinuityTab, ExposureTab, GuardRulesTab, PredecessorTab, ProtectiveLadder, v1ExposureGaps } from "./tabs";
 import { ACCESS_PATH, FLEET_PATH, LIVE_TABS, canaryHref, liveModelOf, type KpiCell, type LiveModel } from "./model";
 import { useLiveRead, usePanelPaging } from "./useLiveReads";
@@ -104,6 +106,8 @@ function LiveBody({ model, api, deploymentId, workspaceId, v2, reload }: { model
   const paging = usePanelPaging(api, deploymentId, workspaceId, v2);
   const id = model.deploymentId ?? deploymentId;
   const fixtureBase = useFixtureView(deploymentId, workspaceId);
+  // R-C (fixture lane): the projection of this deployment, never beside a chart the page hides (mismatch, gap). The real API answers 404/501: nothing new is shown.
+  const projection = useEquityProjection(api, deploymentId, workspaceId, model.chart.kind !== "mismatch" && model.chart.kind !== "gap");
   // The stages the alpha has completed (FE-027): the ticks of the spine, from the alpha's Manager dataset when it publishes them.
   const history = spineHistory(useStageLifecycle(api, model.identity.alphaId, "live", "live", workspaceId ?? null));
   const shown = model.kpis.filter(printable);
@@ -192,6 +196,7 @@ function LiveBody({ model, api, deploymentId, workspaceId, v2, reload }: { model
       <div className="exec-liv-grid">
         <div className="exec-liv-main">
           <ChartSlot slot={model.chart} gapAbove={v2 === null} deploymentId={fixtureBase ?? id} />
+          <EquityProjectionSection state={projection} />
           <UrlTabs surface="live" tabs={TAB_LIST} label="Live sections">
             {(active) => {
               switch (active) {

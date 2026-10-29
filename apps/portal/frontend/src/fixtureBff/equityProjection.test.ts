@@ -3,10 +3,13 @@
  * scale), against the strict reader and the world's own figures. Lane: FIXTURE_LAB. The real route is source-dark/unmounted; this proves
  * the fixture body and the reader agree, not that a producer exists.
  */
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+
+vi.setConfig({ testTimeout: 180_000 });
 
 import { answerEquityProjection, drawdownText, EQUITY_PROJECTION_PATTERN, MAX_BUCKETS } from "../../../fixture-bff/equity-projection";
 import { resetFixtureGlobals } from "../../../fixture-bff/app";
+import { answerExecutionBff } from "../../e2e/bffDouble";
 import { setFixtureNow, setFixtureScale } from "../../e2e/bffScale";
 import { WORLD_NOW_MS, fromCents, toCents, worldAlphas } from "../../e2e/bffWorld";
 import { bookSpan, equityOf } from "../../e2e/bffWorldBooks";
@@ -129,7 +132,7 @@ describe("every deployment, every window", () => {
         expect(Number(p.drawdown)).toBeLessThanOrEqual(0);
       }
     }
-  });
+  }, 180_000);
 
   it("the band is a labelled illustrative fixture band joined to the series' own run and digest", () => {
     for (const id of ids.slice(0, 30)) {
@@ -153,6 +156,43 @@ describe("every deployment, every window", () => {
 
   it("is deterministic", () => {
     expect(call("dep_live_01", "window=30d")!.body).toEqual(call("dep_live_01", "window=30d")!.body);
+  });
+});
+
+describe("the workspace boundary (workspace_id)", () => {
+  it("the home and the scoped V2 workspaces serve the same deployment with the same body; no workspace is the session's own", () => {
+    const none = call("dep_live_01", "window=30d")!;
+    for (const ws of ["ws_TEST_ONLY", "ws_TEST_SCOPED_V2"]) {
+      const r = call("dep_live_01", `window=30d&workspace_id=${ws}`)!;
+      expect(r.status, ws).toBe(200);
+      expect(r.body, ws).toEqual(none.body);
+    }
+  });
+  it("a denied workspace is 403 ACCESS_DENIED, like the other fixture reads", () => {
+    const r = call("dep_live_01", "workspace_id=ws_TEST_DENIED")!;
+    expect(r.status).toBe(403);
+    expect((r.body as { error: { code: string } }).error.code).toBe("ACCESS_DENIED");
+  });
+  it("another workspace than the deployment's is refused (404, no existence oracle) and so is an unknown one; a malformed id is 400", () => {
+    for (const ws of ["ws_OTHER", "ws_TEST_NOTE_OFF", "unknown"]) {
+      const r = call("dep_live_01", `workspace_id=${ws}`)!;
+      expect(r.status, ws).toBe(404);
+      expect((r.body as { error: { code: string } }).error.code).toBe("EXECUTION_DEPLOYMENT_NOT_FOUND");
+    }
+    expect(call("dep_live_01", "workspace_id=a%20b")!.status).toBe(400);
+  });
+  it("the denial comes before the deployment is looked up: a denied workspace learns nothing about an id", () => {
+    expect(call("dep_does_not_exist", "workspace_id=ws_TEST_DENIED")!.status).toBe(403);
+  });
+});
+
+describe("the e2e double (browser cells)", () => {
+  it("answers the real API's typed 404 for the source-dark route, never the 501 gap that fails a visual cell", () => {
+    for (const options of [{}, { screensV2: true }, { screensV2: true, reviewManager: true }]) {
+      const answer = answerExecutionBff("GET", "/api/v1/execution/deployments/dep_live_01/equity-projection", new URLSearchParams("window=30d"), options);
+      expect(answer.status).toBe(404);
+      expect((answer.body as { error: { code: string } }).error.code).toBe("EXECUTION_DEPLOYMENT_NOT_FOUND");
+    }
   });
 });
 

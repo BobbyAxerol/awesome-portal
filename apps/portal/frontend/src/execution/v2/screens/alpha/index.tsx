@@ -50,6 +50,8 @@ import { LifecyclePanel } from "./Lifecycle";
 import { dayMonth, lifeEvents, lifeEventsOfRead, regimeFit, regimeFitOfRead, runIdentity, stageSpans, stageSpansOfRead } from "./lifecycleModel";
 import { showDecimal } from "../../charts";
 import { OrdersTab } from "./OrdersTab";
+import { EquityProjectionSection } from "../series/EquityProjectionSection";
+import { useEquityProjection } from "../series/useEquityProjection";
 import { PERFORMANCE_VIEWS, PerformanceTab, drawdownLowOf, type PerformanceView } from "./PerformanceTab";
 import type { ManagerSeriesQuery } from "../../readers/managerSeries";
 import { useManagerSeries } from "../series/useManagerSeries";
@@ -226,6 +228,11 @@ function Alpha360({ api, alphaId, workspaceId }: AlphaScreenProps) {
     openTab(key);
   };
   const perfView: PerformanceView = PERFORMANCE_VIEWS.find((v) => v.id === url.value.view)?.id ?? "act";
+  // R-C (fixture lane): a projection is ONE deployment's. It is asked for the deployment the page names, else for the only deployment of the book
+  // in view; with several it is not asked (no deployment is picked for the reader, and nothing is summed across them).
+  const bookRows = view?.rows.filter((r) => (r.env ?? (r.stage === "paper" ? "paper" : r.stage === "sandbox" ? "sandbox" : r.stage === "canary" || r.stage === "live" ? "live" : null)) === env) ?? [];
+  const projectionTarget = namedDeployment?.id ?? (bookRows.length === 1 ? bookRows[0]!.id : null);
+  const projection = useEquityProjection(api, projectionTarget, wsId, settled && tab === "performance" && perfView === "act");
   const focus = params.get("focus");
   const focusOrder = (() => {
     const target = focusTarget(focus);
@@ -426,6 +433,7 @@ function Alpha360({ api, alphaId, workspaceId }: AlphaScreenProps) {
               {tab === "performance" ? (
                 <PerformanceTab readAsOf={view?.asOfMs ?? undefined} timeline={timeline} drawdown={drawdown} venues={lifecycle?.venueNetPnl ?? null} life={life} rows={rows} noTotals={view?.money.published === false ? view.money.reason : null} dataset={dataset} names={names} env={env} equity={equity} drift={drift} inputs={inputs} paths={paths} view={perfView} onView={(next) => url.set({ view: next === "act" ? null : next })} />
               ) : null}
+              {tab === "performance" && perfView === "act" ? <EquityProjectionSection state={projection} /> : null}
               {tab === "deployments" ? (
                 <DeploymentsTab
                   rows={rows}

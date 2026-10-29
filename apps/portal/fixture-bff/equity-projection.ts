@@ -31,6 +31,11 @@ export const WINDOW_DAYS = { "1d": 1, "7d": 7, "30d": 30, "90d": 90, "1y": 365 }
 export type ProjectionWindow = keyof typeof WINDOW_DAYS;
 export const INTERVALS = [["1m", 60], ["5m", 300], ["15m", 900], ["1h", 3600], ["4h", 14400], ["1d", 86400]] as const;
 const DAY_MS = 86_400_000;
+export const HOME_WORKSPACE = "ws_TEST_ONLY";
+export const SCOPED_WORKSPACE = "ws_TEST_SCOPED_V2";
+export const DENIED_WORKSPACE = "ws_TEST_DENIED";
+const SERVED_WORKSPACES = new Set([HOME_WORKSPACE, SCOPED_WORKSPACE]);
+const WS_ID = /^[A-Za-z0-9._-]{1,128}$/;
 const INTENTS = new Set(["overview", "inspect"]);
 
 const json = (status: number, body: unknown): BffResponse => ({ status, headers: { "content-type": "application/json" }, body });
@@ -123,7 +128,15 @@ export function answerEquityProjection(request: BffRequest): BffResponse | null 
   const match = EQUITY_PROJECTION_PATTERN.exec(request.path);
   if (match === null || request.method.toUpperCase() !== "GET") return null;
   const params = new URLSearchParams(request.search.startsWith("?") ? request.search.slice(1) : request.search);
-  for (const key of params.keys()) if (key !== "window" && key !== "intent") return problem(400, "EXECUTION_READ_QUERY_INVALID");
+  for (const key of params.keys()) if (key !== "window" && key !== "intent" && key !== "workspace_id") return problem(400, "EXECUTION_READ_QUERY_INVALID");
+  // The workspace boundary is the request's: the world's deployments are served in the home workspace and in the scoped V2 one; a denied workspace
+  // is 403 like the other fixture reads, and any other workspace is not this deployment's (404, no existence oracle).
+  const workspace = params.get("workspace_id");
+  if (workspace !== null) {
+    if (!WS_ID.test(workspace)) return problem(400, "EXECUTION_READ_QUERY_INVALID");
+    if (workspace === DENIED_WORKSPACE) return problem(403, "ACCESS_DENIED");
+    if (!SERVED_WORKSPACES.has(workspace)) return problem(404, "EXECUTION_DEPLOYMENT_NOT_FOUND");
+  }
   const rawWindow = params.get("window") ?? "30d";
   const intent = params.get("intent") ?? "overview";
   if (!Object.prototype.hasOwnProperty.call(WINDOW_DAYS, rawWindow) || !INTENTS.has(intent)) return problem(400, "EXECUTION_READ_QUERY_INVALID");

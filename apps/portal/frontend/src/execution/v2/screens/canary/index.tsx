@@ -66,6 +66,8 @@ import {
   trialCalendar,
   trialOf,
 } from "./model";
+import { EquityProjectionSection } from "../series/EquityProjectionSection";
+import { useEquityProjection } from "../series/useEquityProjection";
 import { readCanaryView, type CanaryView } from "./readCanary";
 import { useCanaryRead } from "./useCanaryRead";
 
@@ -138,6 +140,8 @@ function CanaryBody({ api, deploymentId, workspaceId }: CanaryScreenProps) {
   const result = useMemo(() => (read.phase === "ready" ? readCanaryView(read.read) : null), [read]);
   const view = result !== null && result.kind === "view" ? result.view : null;
   const fixtureBase = useFixtureView(deploymentId, wsId, view !== null);
+  // R-C (fixture lane): the projection of this deployment; the real API answers 404/501 and the series panel keeps its own typed absence.
+  const projection = useEquityProjection(api, deploymentId, wsId, view !== null);
 
   // The currency the screen states, for the context bar; nothing while the read is in flight.
   useContextFacts({ ccy: view === null ? undefined : (view.envelope?.currency ?? null) });
@@ -296,6 +300,7 @@ function CanaryBody({ api, deploymentId, workspaceId }: CanaryScreenProps) {
       <div className="exec-cny-grid">
         <div className="exec-cny-col">
           <SeriesPanel view={result.view} />
+          <EquityProjectionSection state={projection} />
           <UrlTabs surface="canary" tabs={CANARY_TABS} label="Canary sections">
             {(active) => {
               switch (active) {
