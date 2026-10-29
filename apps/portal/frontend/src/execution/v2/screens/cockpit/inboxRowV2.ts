@@ -59,6 +59,8 @@ export interface InboxRowV2 {
   /** `PENDING` and so on, as published; `null` when the row carries none. */
   status: string | null;
   policyVersion: string | null;
+  /** `approval_version` as published; `null` when absent or not a whole number of 1 or more. Used only to compare with a gate body's version. */
+  approvalVersion: number | null;
   blockerCount: number | null;
   blockerSummary: string | null;
   sla: InboxSlaV2 | null;
@@ -143,6 +145,7 @@ export function readInboxRowV2(raw: unknown): InboxRowV2 | null {
     creator: readInboxActor(o.creator),
     status: text(o.status),
     policyVersion: text(o.policy_version),
+    approvalVersion: (() => { const v = whole(o.approval_version); return v === null || v < 1 ? null : v; })(),
     blockerCount: whole(o.blocker_count),
     blockerSummary: text(o.blocker_summary),
     sla: readInboxSla(o.sla),
@@ -208,6 +211,7 @@ export function inboxRowFromV1(row: ApprovalRow): InboxRowV2 {
     creator: null,
     status: null,
     policyVersion: null,
+    approvalVersion: null,
     blockerCount: row.blockerCount >= 0 ? row.blockerCount : null,
     blockerSummary: row.blockerSummary,
     sla: known

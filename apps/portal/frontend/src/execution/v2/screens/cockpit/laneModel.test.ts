@@ -14,6 +14,7 @@ import {
   instantText,
   isYours,
   kindOfGate,
+  liveBlockerLine,
   lensCounts,
   NO_PRINCIPAL,
   ownRequests,
@@ -49,6 +50,7 @@ function row(id: string, over: Partial<InboxRowV2> = {}): InboxRowV2 {
     creator: { userId: "usr_stan", username: "stan" },
     status: "PENDING",
     policyVersion: null,
+    approvalVersion: null,
     blockerCount: 0,
     blockerSummary: null,
     sla: { state: "ON_TRACK", ageMinutes: 5, budgetMinutes: 240, dueAt: null, expiresAt: null },
@@ -319,5 +321,52 @@ describe("V2 parent actors (Codex e19ad906)", () => {
     const mine = summarizeEvidence({ kind: "exitv2", parent: exit("paper_exit_followthrough") });
     expect(mine.decided?.by).toBe("user_TEST_ONLY_reviewer (you)");
     expect(summarizeEvidence({ kind: "livev2", parent: readLiveParentV2(fixture.live)! }).actors).toBeNull();
+  });
+});
+
+describe("the guarded Live blocker join (R-B)", () => {
+  const fixture = loadCanonical<Record<string, any>>("execution-positive-parent.synthetic");
+  const parent = () => readLiveParentV2(fixture.live)!;
+  const WS = parent().header.workspaceId;
+  const matching = (over: Partial<InboxRowV2> = {}): InboxRowV2 => row(parent().approval.approvalId, {
+    gate: "LIVE_GATE", environment: "LIVE", subjectType: "DEPLOYMENT", subjectId: parent().anchors.deploymentId,
+    approvalVersion: parent().approval.approvalVersion, blockerCount: 2, blockerSummary: "Four Canary branches are unavailable", ...over,
+  });
+  const join = (over: Partial<Parameters<typeof liveBlockerLine>[0]> = {}) => liveBlockerLine({ row: matching(), parent: parent(), requestedWorkspace: WS, rowCurrent: true, ...over });
+
+  it("prints the row's count and summary when every key matches", () => {
+    expect(join()).toBe("2 blockers · Four Canary branches are unavailable");
+    expect(join({ row: matching({ blockerCount: 1 }) })).toBe("1 blocker · Four Canary branches are unavailable");
+    expect(join({ row: matching({ blockerCount: null }) })).toBe("Four Canary branches are unavailable");
+  });
+
+  it.each([
+    ["the row id", { id: "AP-OTHER" }],
+    ["the gate", { gate: "R2" as const }],
+    ["the environment", { environment: "PAPER" }],
+    ["the subject type", { subjectType: "ALPHA_VERSION" as const }],
+    ["a missing subject type (an older server)", { subjectType: null }],
+    ["the subject id", { subjectId: "dep_other" }],
+    ["a missing subject id", { subjectId: null }],
+    ["the approval version", { approvalVersion: parent().approval.approvalVersion + 1 }],
+    ["a missing approval version", { approvalVersion: null }],
+  ])("a mismatch on %s joins nothing", (_name, over) => {
+    expect(join({ row: matching(over as Partial<InboxRowV2>) })).toBeNull();
+  });
+
+  it("joins nothing for another or an unnamed workspace", () => {
+    expect(join({ requestedWorkspace: "ws_other" })).toBeNull();
+    expect(join({ requestedWorkspace: undefined })).toBeNull();
+  });
+
+  it("joins nothing when the row is absent, the gate was not read, or the inbox read is not current", () => {
+    expect(join({ row: null })).toBeNull();
+    expect(join({ parent: null })).toBeNull();
+    expect(join({ rowCurrent: false })).toBeNull();
+  });
+
+  it("a null or blank summary stays the generic state, never zero blockers", () => {
+    expect(join({ row: matching({ blockerSummary: null }) })).toBeNull();
+    expect(join({ row: matching({ blockerSummary: "   " }) })).toBeNull();
   });
 });

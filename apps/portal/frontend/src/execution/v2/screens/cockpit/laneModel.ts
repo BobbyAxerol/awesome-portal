@@ -560,3 +560,38 @@ export function summarizeEvidence(data: EvidenceData | null): EvidenceSummary {
     }
   }
 }
+
+
+/* ── the guarded Live-gate blocker join (R-B) ─────────────────────────────── */
+
+export interface LiveBlockerJoinInput {
+  /** The selected inbox row, from the authorized inbox response; `null` when it is absent (paged out, filtered, denied). */
+  row: InboxRowV2 | null;
+  /** The separately authorized Live gate body; `null` when it was not read or was refused. */
+  parent: LiveParentV2 | null;
+  /** The workspace the page asked both reads for. Without one the join cannot prove "same workspace" and stays closed. */
+  requestedWorkspace: string | undefined;
+  /** The inbox read this row came from is the current one (ready, same view and workspace), not a previous or failed one. */
+  rowCurrent: boolean;
+}
+
+/**
+ * The row's `blocker_count` and nullable `blocker_summary` may be printed on a Live gate ONLY when every key matches: the row id is the
+ * gate's approval id, both reads are for the same requested workspace, the row is a LIVE_GATE in LIVE on a DEPLOYMENT whose id is the gate's
+ * deployment anchor, and both carry the same approval version. Equal ids grant nothing: the two reads are authorized separately. Anything
+ * else (row absent, any mismatch, another version, a stale inbox, a null or empty summary) returns `null`, which the caller words as the
+ * generic "Evidence incomplete": never as zero blockers or a clear gate.
+ */
+export function liveBlockerLine(input: LiveBlockerJoinInput): string | null {
+  const { row, parent, requestedWorkspace, rowCurrent } = input;
+  if (row === null || parent === null || !rowCurrent) return null;
+  if (requestedWorkspace === undefined || requestedWorkspace === "" || parent.header.workspaceId !== requestedWorkspace) return null;
+  if (row.id !== parent.approval.approvalId) return null;
+  if (row.gate !== "LIVE_GATE" || row.environment !== "LIVE" || row.subjectType !== "DEPLOYMENT") return null;
+  if (row.subjectId === null || row.subjectId !== parent.anchors.deploymentId) return null;
+  if (row.approvalVersion === null || row.approvalVersion !== parent.approval.approvalVersion) return null;
+  const summary = row.blockerSummary?.trim() ?? "";
+  if (summary === "") return null;
+  const count = row.blockerCount;
+  return `${count === null ? "" : `${count} ${count === 1 ? "blocker" : "blockers"} · `}${summary}`;
+}

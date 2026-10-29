@@ -753,7 +753,16 @@ function DecisionCockpit({ api, workspaceId, pathSelection, onClearPathSelection
           ) : selected?.kind === "waiver" ? (
             <WaiverEvidence row={selected.row} register={waivers.rows} readAt={waivers.readAt} onSelect={select} />
           ) : (
-            <EvidenceFrame kind={evidenceTarget?.kind ?? null} header={header} evidence={evidence} unknownReason={unknownReason} extra={extra} />
+            <EvidenceFrame
+              kind={evidenceTarget?.kind ?? null}
+              header={header}
+              evidence={evidence}
+              unknownReason={unknownReason}
+              extra={extra}
+              blockerRow={selected?.kind === "gate" ? selected.row : null}
+              requestedWorkspace={workspaceId}
+              inboxCurrent={inbox.status === "ready" && inbox.scope === inboxScope(serverViewFor(lane === "waiver" ? "all" : lane), workspaceId)}
+            />
           )}
         </section>
         <aside className="exec-ck-rail" aria-label="Decision">
