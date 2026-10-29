@@ -18,6 +18,10 @@ Frozen candidate `9054bd410` (hook-verified) on canonical `1a6c2012d`; lane `cla
 1. **Users and Admin Actions rail entries: owner only.** The current gating stays; Claude records it in the rules and tests it (no change to the product).
 2. **One shared number formatter for returns/prices (R2-21): after Codex lands this tip**, as its own serial slice with a receipt, so the wording of many screens does not change on the tree waiting for the final gate. Until then the score-rounding difference (28.07 vs 28.08) stays a listed debt.
 
+## Resolved from the approved spec: the P/R/B names
+
+`upgrade/execution_loop/SCORE_REGIME_SPECIFICATION_v1.1_FINAL_VI.md` (approved by the system owner; row at line 83) defines the component points: **P = Performance** (net excess TWR + Sharpe), **R = Risk** (MDD + ADD), **B = Robustness** (consistency + cost stress); "`P` is not the PortfolioScore, `B` is not confidence". The score cell prints "component P/R/B" until the screens use these names. This is not an open decision for Bobby: Claude applies the names in the same serial slice as the shared number formatter, after Codex lands this tip (so the frozen tree and its baselines stay unchanged).
+
 ## Still open for Bobby
 
-- Names of the P/R/B components of the Portfolio score (the Overview/Portfolio score cell prints "component P/R/B" until they are named).
+Nothing from the F1–F9 list. Landing (Codex), connected READ/STREAM, financial and STATUS acceptance (Codex/Edge) are not Bobby's decisions.

@@ -36,7 +36,7 @@ Not run: legacy `e2e/visual.spec.ts` and the Research Loop spec (LC-FE-03: Codex
 | Forward / Cost bars, 7D/30D/90D chips on Alpha 360; Live room HIGH/LOW markers, drawdown strip, leverage and ack-latency columns; exit-gate criterion rows and approved band | typed absence (contract carries null) | sibling reads exist (`cost-events`, `order-detail`, `account-profile`, `alpha-readiness`): FE wiring slice |
 | Fleet row selection, Compare selected, Export | disabled with reason | design |
 | Carry A replay plot empty | double serves venue candles for BTCUSDT only; other symbols are the contract's typed absence | another double (new fixture symbols) |
-| Portfolio Score components P/R/B names | open | Bobby |
+| Portfolio Score components P/R/B names | resolved: Performance / Risk / Robustness by the approved SCORE_REGIME spec (line 83); applied with the formatter slice after landing | Claude |
 | R2-21 one number formatter (score rounds 28.07 vs 28.08 between screens) | decided 29 Oct: after Codex lands this tip, own slice with receipt | Claude |
 | Users/Admin Actions rail gating | decided 29 Oct: owner only (no change) | closed |
 | Sidebar 10 px labels and badges | shared token | Codex/Bobby (protected) |
