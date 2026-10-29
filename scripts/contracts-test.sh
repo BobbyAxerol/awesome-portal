@@ -207,6 +207,10 @@ cp -a "${ROOT_DIR}/apps/control-api/src/governance/positive-parent.contract.ts" 
   "${ROOT_DIR}/apps/control-api/src/governance/paper-exit-parent.ts" \
   "${ROOT_DIR}/apps/control-api/src/governance/review-context.ts" \
   "${WORKSPACE_DIR}/apps/control-api/src/governance/"
+# R-C: source-backed equity projection V2 contract is pure zod; the port, service and controller are not copied.
+mkdir -p "${WORKSPACE_DIR}/apps/control-api/src/equity-projection"
+cp -a "${ROOT_DIR}/apps/control-api/src/equity-projection/equity-projection-source.contract.ts" \
+  "${WORKSPACE_DIR}/apps/control-api/src/equity-projection/"
 # FE-068 stage-action eligibility is a pure projection; it needs only the type-only gate adapter.
 cp -a "${ROOT_DIR}/apps/control-api/src/auth/governance-access.ts" \
   "${WORKSPACE_DIR}/apps/control-api/src/auth/"

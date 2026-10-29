@@ -28,6 +28,8 @@ node tooling/generate-execution-access.mjs --check
 generate_and_compare openapi/execution-access.openapi.json generated/execution-access.d.ts
 node tooling/generate-execution-incident-eligibility.mjs --check
 generate_and_compare openapi/execution-incident-eligibility.openapi.json generated/execution-incident-eligibility.d.ts
+node tooling/generate-execution-equity-projection-source.mjs --check
+generate_and_compare openapi/execution-equity-projection-source.openapi.json generated/execution-equity-projection-source.d.ts
 node tooling/generate-governance-requester-reads.mjs --check
 node tooling/generate-execution-publication.mjs --check
 generate_and_compare openapi/execution-publication-catalogue.openapi.json generated/execution-publication-catalogue.d.ts

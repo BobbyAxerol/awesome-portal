@@ -5,6 +5,7 @@
   "type": "module",
   "description": "Portal canonical contract workspace (U09): schemas, fixtures, generated types",
   "scripts": {
+    "generate:execution-equity-projection-source": "node tooling/generate-execution-equity-projection-source.mjs && openapi-typescript openapi/execution-equity-projection-source.openapi.json -o generated/execution-equity-projection-source.d.ts",
     "generate:execution-visit-digest": "node tooling/generate-execution-visit-digest.mjs && openapi-typescript openapi/execution-visit-digest.openapi.json -o generated/execution-visit-digest.d.ts",
     "generate:execution-current-view": "node tooling/generate-execution-current-view.mjs && openapi-typescript openapi/execution-current-view.openapi.json -o generated/execution-current-view.d.ts",
     "generate:execution-incident-eligibility": "node tooling/generate-execution-incident-eligibility.mjs && openapi-typescript openapi/execution-incident-eligibility.openapi.json -o generated/execution-incident-eligibility.d.ts",
