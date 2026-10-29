@@ -4,11 +4,12 @@
  * an owning source (omitted). Nothing is computed here: counts, rows and sentences are the source's; a section that is not published keeps the
  * typed absence the panel always had. A port without the read, or a route nothing serves yet, is the same typed absence.
  */
-import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { createContext, useContext, type ReactNode } from "react";
 
 import type { ExecutionApi } from "../../../api/ports";
 import { ChartTools, EquityPanel } from "../../charts";
 import { chartUnit } from "../series/seriesModel";
+import { identityOf, useKeyedAnswer } from "../series/keyedAnswer";
 import type { ApprovalEvidence, EvidenceSection } from "../../readers/approvalEvidence";
 import { formatAsOf } from "../../boundary";
 import type { UtcEpochMs } from "../../../screenDataContract";
@@ -25,22 +26,17 @@ export const useEvidenceExtra = (): ExtraState => useContext(EvidenceExtraContex
 
 /** One read per selected request. A refusal is a typed absence with the port's own reason, never a blank or a zero. */
 export function useApprovalEvidence(api: ExecutionApi, approvalId: string | null, workspaceId: string | undefined): ExtraState {
-  const [state, setState] = useState<ExtraState>(IDLE_EXTRA);
-  useEffect(() => {
-    if (approvalId === null) { setState(IDLE_EXTRA); return; }
-    if (api.getApprovalEvidence === undefined) { setState({ status: "absent", reason: "This build does not read approval evidence." }); return; }
-    let cancelled = false;
-    setState({ status: "loading" });
+  // Bound to the complete request (port, approval, workspace) and derived in render: another request shows loading in the same commit, never the last one's evidence.
+  const key = approvalId === null ? null : JSON.stringify([identityOf(api), approvalId, workspaceId ?? null]);
+  return useKeyedAnswer<ExtraState>(key, IDLE_EXTRA, { status: "loading" }, (settle) => {
+    if (api.getApprovalEvidence === undefined) { settle({ status: "absent", reason: "This build does not read approval evidence." }); return; }
     // A port that throws instead of answering is the same typed absence, never a crash of the evidence pane.
     let pending: Promise<Awaited<ReturnType<NonNullable<ExecutionApi["getApprovalEvidence"]>>>>;
-    try { pending = api.getApprovalEvidence(approvalId, workspaceId); } catch { setState({ status: "absent", reason: "The approval evidence could not be requested." }); return; }
+    try { pending = api.getApprovalEvidence(approvalId!, workspaceId); } catch { settle({ status: "absent", reason: "The approval evidence could not be requested." }); return; }
     void pending.then((result) => {
-      if (cancelled) return;
-      setState(result.ok ? { status: "ready", evidence: result.value } : { status: "absent", reason: result.reason });
-    }, () => { if (!cancelled) setState({ status: "absent", reason: "The approval evidence could not be read." }); });
-    return () => { cancelled = true; };
-  }, [api, approvalId, workspaceId]);
-  return state;
+      settle(result.ok ? { status: "ready", evidence: result.value } : { status: "absent", reason: result.reason });
+    }, () => settle({ status: "absent", reason: "The approval evidence could not be read." }));
+  });
 }
 
 /** The section, or the sentence that says why there is none. `null` when nothing was asked yet. */

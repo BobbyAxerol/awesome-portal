@@ -17,6 +17,7 @@
  * cancelled and the read says `denied` until its key or port changes.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { identityOf, useKeyedAnswer } from "../series/keyedAnswer";
 
 import type { AlphaActivity } from "../../../api/derivations";
 import type { FinancialChartPayload } from "../../../api/financialChart";
@@ -303,15 +304,11 @@ export function useReplayCandles(api: ExecutionApi, query: ReplayCandleQuery | n
 
 /** The alpha's published lifecycle (WP-K). A port without the read, or a route nothing serves yet, is `null`: the screen keeps what it read before. */
 export function useAlphaLifecycle(api: ExecutionApi, enabled: boolean, alphaId: string, env: "paper" | "sandbox" | "live", workspaceId: string | null): AlphaLifecycle | null {
-  const [lifecycle, setLifecycle] = useState<AlphaLifecycle | null>(null);
-  useEffect(() => {
-    setLifecycle(null);
-    if (!enabled || api.getAlphaLifecycle === undefined) return;
-    let cancelled = false;
+  // Bound to the complete request (port, alpha, book, workspace) and derived in render: another alpha or book never shows the last one's lifecycle.
+  const key = !enabled || api.getAlphaLifecycle === undefined ? null : JSON.stringify([identityOf(api), alphaId, env, workspaceId]);
+  return useKeyedAnswer<AlphaLifecycle | null>(key, null, null, (settle) => {
     let pending: ReturnType<NonNullable<ExecutionApi["getAlphaLifecycle"]>>;
-    try { pending = api.getAlphaLifecycle(alphaId, env, workspaceId ?? undefined); } catch { return; }
-    void pending.then((result) => { if (!cancelled && result.ok) setLifecycle(result.value); }, () => undefined);
-    return () => { cancelled = true; };
-  }, [api, enabled, alphaId, env, workspaceId]);
-  return lifecycle;
+    try { pending = api.getAlphaLifecycle!(alphaId, env, workspaceId ?? undefined); } catch { return; }
+    void pending.then((result) => { if (result.ok) settle(result.value); }, () => undefined);
+  });
 }

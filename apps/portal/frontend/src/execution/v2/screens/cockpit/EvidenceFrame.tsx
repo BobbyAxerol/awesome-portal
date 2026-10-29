@@ -9,10 +9,11 @@
  * and the comparator is absent on every read. Evidence charts are out of S1
  * (FE-029). Nothing here writes, plans or applies.
  */
-import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { createContext, useContext, type ReactNode } from "react";
 
 import { groupExact } from "../blotter/blotterModel";
 import { breakable } from "./breakable";
+import { identityOf, useKeyedAnswer } from "../series/keyedAnswer";
 
 import type { PanelStatus } from "../../../contracts";
 import type { ConditionRow, ExecutionApi } from "../../../api/ports";
@@ -106,24 +107,13 @@ async function readEvidence(api: ExecutionApi, target: EvidenceTarget, workspace
 
 /** One evidence read for the selected request; a changed selection cancels the previous one. */
 export function useEvidenceRead(api: ExecutionApi, target: EvidenceTarget | null, workspaceId: string | undefined): EvidenceState {
-  const [state, setState] = useState<EvidenceState>({ status: "idle" });
   const kind = target?.kind ?? null;
   const id = target?.id ?? null;
-  useEffect(() => {
-    if (kind === null || id === null) {
-      setState({ status: "idle" });
-      return;
-    }
-    let cancelled = false;
-    setState({ status: "loading" });
-    void readEvidence(api, { kind, id }, workspaceId).then((next) => {
-      if (!cancelled) setState(next);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [api, kind, id, workspaceId]);
-  return state;
+  // The state is bound to the complete request (port, kind, id, workspace) and derived in render: a changed selection shows loading in the same commit.
+  const key = kind === null || id === null ? null : JSON.stringify([identityOf(api), kind, id, workspaceId ?? null]);
+  return useKeyedAnswer<EvidenceState>(key, { status: "idle" }, { status: "loading" }, (settle) => {
+    void readEvidence(api, { kind: kind!, id: id! }, workspaceId).then(settle);
+  });
 }
 
 /* ── small pieces ─────────────────────────────────────────────────────────── */

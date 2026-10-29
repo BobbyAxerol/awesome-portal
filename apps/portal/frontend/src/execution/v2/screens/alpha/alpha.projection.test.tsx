@@ -1,6 +1,6 @@
 /** Alpha 360 · the equity projection consumer (R-C, FIXTURE lane). A projection is one deployment's: asked for the named deployment or the book's only one. */
-import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
-import { MemoryRouter } from "react-router-dom";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { MemoryRouter, useNavigate } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ALPHA_DOUBLE_ID } from "../../../../../e2e/bffDoubleAlpha";
@@ -8,7 +8,7 @@ import { V2_ROLE_PRESETS } from "../../shell/roleNav";
 import AlphaScreen from "./index";
 import { alphaHttpApi, serveAlphaDouble } from "./testApi";
 import { sessionOf } from "../workbench/workbench.harness.fixtures";
-import { describeProjectionScreen, projectionBody, projectionPort, type Served } from "../series/equityProjection.testbase";
+import { Go, captionNow, commitRecorder, describeProjectionScreen, expectNoCommitWith, projectionBody, projectionPort, taggedBody, type Served } from "../series/equityProjection.testbase";
 import type { EquityProjectionQuery } from "../../readers/equityProjection";
 
 const session = vi.hoisted(() => ({ current: null as unknown }));
@@ -64,5 +64,51 @@ describe("Alpha 360 · which deployment", () => {
     await act(async () => { await new Promise((r) => setTimeout(r, 60)); });
     expect(port.queries).toEqual([]);
     expect(document.querySelector('[data-testid="equity-projection"]')).toBeNull();
+  });
+});
+
+function GoOrders() {
+  const navigate = useNavigate();
+  return <button type="button" data-testid="go-orders" onClick={() => navigate(`${ENTRY}?deployment_id=dep_live_01&tab=orders`)} />;
+}
+
+describe("Alpha 360 · a changed context never shows the previous context's projection (commit level)", () => {
+  const setup = (entry: string) => {
+    const rec = commitRecorder();
+    serveAlphaDouble();
+    const port = projectionPort((q) => ({ status: 200, body: taggedBody(q) }));
+    render(
+      <rec.Wrap>
+        <MemoryRouter initialEntries={[entry]}>
+          <AlphaScreen api={port.api(alphaHttpApi())} alphaId={ALPHA_DOUBLE_ID} />
+          <Go to={`${ENTRY}?deployment_id=dep_canary_01`} />
+          <GoOrders />
+        </MemoryRouter>
+      </rec.Wrap>,
+    );
+    return { rec, port };
+  };
+  // a second, differently named button: leave Performance for another tab (the projection is disabled there)
+
+  it("deployment change through the link", async () => {
+    const { rec } = setup(`${ENTRY}?deployment_id=dep_live_01`);
+    const one = "run_dep_live_01_"; // the alpha page derives its own workspace, so the deployment is the part of the tag that is judged
+    await waitFor(() => expect(captionNow()).toContain(one));
+    const seg = rec.mark();
+    fireEvent.click(screen.getAllByTestId("go")[0]!);
+    await waitFor(() => expect(captionNow()).toContain("run_dep_canary_01_"));
+    expectNoCommitWith(rec, seg, one);
+  });
+
+  it("toggling it off (another tab): the panel is gone in the first commit under the new tab", async () => {
+    const { rec } = setup(`${ENTRY}?deployment_id=dep_live_01`);
+    await waitFor(() => expect(captionNow()).not.toBeNull());
+    const seg = rec.mark();
+    fireEvent.click(screen.getByTestId("go-orders"));
+    await waitFor(() => expect(captionNow()).toBeNull());
+    // judged per commit against the tab that commit shows: a commit that is not on Performance never carries the panel
+    const seen = rec.since(seg);
+    expect(seen.some((c) => c.tab !== null && c.tab !== "Performance")).toBe(true);
+    for (const [i, c] of seen.entries()) if (c.tab !== null && c.tab !== "Performance") expect(c.caption, `commit ${i} on tab ${c.tab}`).toBeNull();
   });
 });

@@ -9,7 +9,8 @@
  * and what the server has recorded.
  */
 import { IDLE_EXTRA, sectionOf, type ExtraState } from "./evidenceExtra";
-import { useEffect, useId, useState, type ReactNode } from "react";
+import { identityOf, useKeyedAnswer } from "../series/keyedAnswer";
+import { useId, type ReactNode } from "react";
 
 import type { ConditionRow, ExecutionApi } from "../../../api/ports";
 import type { ReviewCaptureCapabilities } from "../../../api/reviewCapture";
@@ -79,28 +80,14 @@ type CapabilityRead =
 
 /** The one read the rail makes. It lists which Portal actions the server would offer; it records nothing. */
 function useCaptureCapabilities(api: ExecutionApi, workspaceId: string | null): CapabilityRead {
-  const [state, setState] = useState<CapabilityRead>({ status: "idle" });
-  useEffect(() => {
-    if (workspaceId === null) {
-      setState({ status: "idle" });
-      return;
-    }
-    let cancelled = false;
-    setState({ status: "loading" });
+  // Bound to the complete request (port, workspace) and derived in render: another workspace shows loading in the same commit.
+  const key = workspaceId === null ? null : JSON.stringify([identityOf(api), workspaceId]);
+  return useKeyedAnswer<CapabilityRead>(key, { status: "idle" }, { status: "loading" }, (settle) => {
     void api
-      .getReviewCaptureCapabilities(workspaceId)
-      .then((result) => {
-        if (cancelled) return;
-        setState(result.ok ? { status: "ready", actions: result.value.actions } : { status: "failed", reason: result.reason });
-      })
-      .catch(() => {
-        if (!cancelled) setState({ status: "failed", reason: "The read did not complete." });
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [api, workspaceId]);
-  return state;
+      .getReviewCaptureCapabilities(workspaceId!)
+      .then((result) => settle(result.ok ? { status: "ready", actions: result.value.actions } : { status: "failed", reason: result.reason }))
+      .catch(() => settle({ status: "failed", reason: "The read did not complete." }));
+  });
 }
 
 function ReceiptRows({ rows }: { rows: readonly { label: string; value: ReactNode }[] }) {
