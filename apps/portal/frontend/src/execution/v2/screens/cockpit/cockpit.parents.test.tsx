@@ -464,6 +464,56 @@ describe("Live, V2 body", () => {
   });
 });
 
+describe("Live, V2 body: the snapshot blocker line does not depend on the inbox (R-B)", () => {
+  const LINE = "Blockers: 2 blockers · TEST_ONLY: two stored blockers";
+  /** The Live gate read by path (no inbox row needed), with the inbox answering as `inboxMode` says. */
+  async function openByPath(inboxMode: "ok" | "denied" | "slow", body: unknown) {
+    let releaseInbox: () => void = () => undefined;
+    const api = new Proxy({}, {
+      get(_t, name) {
+        if (typeof name !== "string") return undefined;
+        return () => {
+          switch (name) {
+            case "listApprovals":
+              if (inboxMode === "denied") return Promise.resolve({ ok: false, status: "denied", reason: "Not permitted." });
+              if (inboxMode === "slow") return new Promise((done) => { releaseInbox = () => done({ ok: true, value: inbox() }); });
+              return Promise.resolve({ ok: true, value: inbox() });
+            case "getApprovalHistory": return Promise.resolve({ ok: true, value: { rows: [], totalCount: 0, deliveryProfile: null } });
+            case "getWaivers": return Promise.resolve({ ok: false, status: "unavailable", reason: "not under test" });
+            case "getReviewCaptureCapabilities": return Promise.resolve({ ok: true, value: { schema_version: "governance.review-capture-capabilities.v1", authority: "PORTAL", source_side_effect_requested: false, actions: [] } });
+            case "getGovernanceParent": return Promise.resolve(okRead("live", body));
+            default: throw new Error(`unexpected port call: ${String(name)}`);
+          }
+        };
+      },
+    }) as ExecutionApi;
+    render(
+      <MemoryRouter initialEntries={["/execution/approvals/apr_live/live"]}>
+        <Cockpit api={api} pathSelection={{ kind: "live", id: "apr_live" }} />
+      </MemoryRouter>,
+    );
+    for (let i = 0; i < 5; i += 1) await act(async () => { await new Promise((done) => setTimeout(done, 0)); });
+    return { evidence: screen.getByRole("region", { name: "Evidence" }), releaseInbox };
+  }
+
+  it.each(["ok", "denied", "slow"] as const)("the line reads from the gate body alone with the inbox %s", async (mode) => {
+    const { evidence, releaseInbox } = await openByPath(mode, parent().live_blockers);
+    expect(evidence.textContent).toContain(LINE);
+    // A slow inbox that finishes AFTER the gate read changes nothing.
+    await act(async () => { releaseInbox(); await new Promise((done) => setTimeout(done, 0)); });
+    expect(screen.getByRole("region", { name: "Evidence" }).textContent).toContain(LINE);
+  });
+
+  it.each(["live", "live_blockers_absent", "live_blockers_zero"])("%s: the generic state in every inbox order, never a blocker line or a clear gate", async (name) => {
+    for (const mode of ["ok", "denied"] as const) {
+      const { evidence } = await openByPath(mode, parent()[name]);
+      expect(evidence.textContent).toMatch(/Evidence incomplete/);
+      expect(evidence.textContent).not.toMatch(/Blockers:|no blockers|0 blockers/i);
+      cleanup();
+    }
+  });
+});
+
 describe("V1 body through the same port", () => {
   it("is the V1 pane, exactly as before (R2)", async () => {
     const v1 = loadCanonical<Fixture>("execution-governance.r2-review");

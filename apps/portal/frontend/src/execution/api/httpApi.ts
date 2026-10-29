@@ -515,6 +515,13 @@ export function createHttpApi({ policy, signal, readScope = {} }: HttpApiOptions
     try { body = await response.json(); } catch { /* read below as not an object */ }
     const value = readGovernanceParentByKind(kind, body);
     if (value.read.kind === "unsupported") return unavailable(`${what}: ${unsupportedText(value.read)} (${value.read.reason})`);
+    // A V2 body must answer the question asked: the approval id requested and, when a workspace was named, that workspace. A body for another
+    // workspace or approval is refused, never shown under this one (QA R-B browser case "gate body for another workspace").
+    if (value.read.kind === "v2") {
+      const parent = value.read.value as { header?: { workspaceId?: string }; approval?: { approvalId?: string } };
+      if (workspaceId && parent.header?.workspaceId !== undefined && parent.header.workspaceId !== workspaceId) return unavailable(`${what} answers another workspace, so it is not shown (GOVERNANCE_PARENT_ANSWERS_ANOTHER_WORKSPACE).`);
+      if (parent.approval?.approvalId !== undefined && kind !== "exit" && parent.approval.approvalId !== id) return unavailable(`${what} answers another request, so it is not shown (GOVERNANCE_PARENT_ANSWERS_ANOTHER_REQUEST).`);
+    }
     const warnings = value.kind !== "live" && value.read.kind === "v1" ? value.read.value.gaps : undefined;
     return { ok: true as const, value, ...(warnings ? { warnings } : {}) };
   };

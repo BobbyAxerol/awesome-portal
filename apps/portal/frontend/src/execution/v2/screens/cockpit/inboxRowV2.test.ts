@@ -102,14 +102,6 @@ describe("V2 inbox row reader · the persisted subject type (a navigation hint, 
     expect(row?.subjectType).toBeNull();
   });
 
-  it("reads approval_version as a whole number of 1 or more, and null otherwise (never guessed)", () => {
-    expect(readInboxRowV2({ ...wireRow(), approval_version: 3 })?.approvalVersion).toBe(3);
-    for (const bad of [0, -1, 1.5, "3", null]) expect(readInboxRowV2({ ...wireRow(), approval_version: bad })?.approvalVersion, JSON.stringify(bad)).toBeNull();
-    const wire = wireRow();
-    delete wire.approval_version;
-    expect(readInboxRowV2(wire)?.approvalVersion).toBeNull();
-  });
-
   it("a type outside the published enum, a null, a lower-case spelling or a non-string refuses the row", () => {
     for (const bad of ["PORTFOLIO", "alpha_version", "", null, 7, ["DEPLOYMENT"], { kind: "DEPLOYMENT" }]) {
       expect(readInboxRowV2({ ...wireRow(), subject_type: bad }), JSON.stringify(bad)).toBeNull();

@@ -50,7 +50,6 @@ function row(id: string, over: Partial<InboxRowV2> = {}): InboxRowV2 {
     creator: { userId: "usr_stan", username: "stan" },
     status: "PENDING",
     policyVersion: null,
-    approvalVersion: null,
     blockerCount: 0,
     blockerSummary: null,
     sla: { state: "ON_TRACK", ageMinutes: 5, budgetMinutes: 240, dueAt: null, expiresAt: null },
