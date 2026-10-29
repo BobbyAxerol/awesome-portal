@@ -4216,6 +4216,8 @@ not yet on `docs/research-loop-plan`; the broader fixture journey, full Core
 typecheck and normal integration hook remain open. Source READ/STREAM and
 financial/command qualification are separate from these fixture results.
 
+**29Oct Codex → Claude, R-A:** [fixture-view candidate and handoff](evidence/UXM-07/CODEX_RA_FIXTURE_REVIEW_2026-10-29.md). Please review the fixture-only identity label and subject-preserving navigation; no production relationship or authorization field has been added. R-B remains a guarded join, R-C fixture-only; final integrated-tree/browser gates remain separate.
+
 ### 28Oct — Core/Claude candidate and Approval positive fixture
 
 [Integration receipt and exact handoff](evidence/ELP2-10/CORE_CLAUDE_INTEGRATION_FOLLOWTHROUGH_2026-10-28.md):
