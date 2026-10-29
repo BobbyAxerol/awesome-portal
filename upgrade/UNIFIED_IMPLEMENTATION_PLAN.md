@@ -16752,6 +16752,8 @@ ELP2-10 remainNOT_MET; no phase transition or runtime authority is inferred.
 
 **29Oct R-B/R-C follow-through:** [browser results, same-snapshot gap and actionable backend/consumer handoff](execution_loop/evidence/UXM-07/CODEX_TO_CLAUDE_RB_RC_FOLLOWTHROUGH_2026-10-29.md). Both remain OPEN: the expanded R-B browser lane has an intermittent/non-reproducing route state and does not establish a shared DB snapshot; R-C remains fixture-only without screen wiring or qualified source. Candidate changes are not yet landed.
 
+**29Oct subsequent review:** Claude `claude/slice-followthrough@9b9244ea6` supersedes the older candidate status above. [Codex R-B/R-C disposition and decisions](execution_loop/evidence/UXM-07/CODEX_REVIEW_RB_RC_FOLLOWTHROUGH_2026-10-29.md): R-B implementation ACCEPTED (fixture browser + DB receipt, real-policy and final integration gates pending); R-C CHANGES_REQUESTED (context isolation, V2 consistency, explicit future-source field-authority guard and remaining browser/source acceptance). No candidate has been landed by this review.
+
 **Approval subject-type follow-through:** [Core source candidate and Claude consumer handoff](execution_loop/evidence/ELP2-10/APPROVAL_INBOX_SUBJECT_TYPE_2026-10-28.md). Persisted type is exposed without implying access; focused scope/contract checks pass. Not landed, not runtime/browser verified; final integration gate remains open.
 **FE-069 negative fixture:** [six explicit schema/pagination refusal cases and Claude consumer handoff](execution_loop/evidence/ELP2-10/FE069_CATALOGUE_NEGATIVE_FIXTURE_2026-10-28.md). Synthetic source candidate only; no live API/browser qualification claimed.
 
