@@ -92,7 +92,9 @@ describe("useApprovalEvidence", () => {
     expect(h.log[h.log.length - 1]!.state.status).toBe("idle");
   });
   it("a port without the read is absent, not a hole", async () => {
-    const h = probe((ctx) => useApprovalEvidence({} as ExecutionApi, ctx, undefined));
+    // One port object for every render: the key carries the port's identity, so a port rebuilt inside the probe would be a new key on each render.
+    const api = {} as ExecutionApi;
+    const h = probe((ctx) => useApprovalEvidence(api, ctx, undefined));
     await act(async () => { await Promise.resolve(); });
     expect(h.log[h.log.length - 1]!.state).toMatchObject({ status: "absent" });
   });
