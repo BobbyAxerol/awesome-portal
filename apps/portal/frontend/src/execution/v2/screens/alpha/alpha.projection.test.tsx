@@ -8,7 +8,7 @@ import { V2_ROLE_PRESETS } from "../../shell/roleNav";
 import AlphaScreen from "./index";
 import { alphaHttpApi, serveAlphaDouble } from "./testApi";
 import { sessionOf } from "../workbench/workbench.harness.fixtures";
-import { Go, captionNow, commitRecorder, describeProjectionScreen, expectNoCommitWith, projectionBody, projectionPort, taggedBody, type Served } from "../series/equityProjection.testbase";
+import { Go, captionNow, commitRecorder, describeProjectionScreen, expectNoCommitWith, projectionBody, projectionPort, taggedBody, type Served } from "../series/equityProjection.fixtures";
 import type { EquityProjectionQuery } from "../../readers/equityProjection";
 
 const session = vi.hoisted(() => ({ current: null as unknown }));

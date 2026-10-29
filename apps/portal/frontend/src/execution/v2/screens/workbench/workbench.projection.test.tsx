@@ -1,4 +1,4 @@
-/** Paper workbench · the equity projection consumer (R-C, FIXTURE lane). The shared views are in series/equityProjection.testbase.ts. */
+/** Paper workbench · the equity projection consumer (R-C, FIXTURE lane). The shared views are in series/equityProjection.fixtures.ts. */
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, it, vi, expect } from "vitest";
@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, it, vi, expect } from "vitest";
 import { V2_ROLE_PRESETS } from "../../shell/roleNav";
 import PaperWorkbenchScreen from "./index";
 import { DEP, fakeApi, sessionOf } from "./workbench.harness.fixtures";
-import { Go, captionNow, commitRecorder, describeProjectionScreen, expectNoCommitWith, projectionPort, taggedBody, tagOf } from "../series/equityProjection.testbase";
+import { Go, captionNow, commitRecorder, describeProjectionScreen, expectNoCommitWith, projectionPort, taggedBody, tagOf } from "../series/equityProjection.fixtures";
 
 const session = vi.hoisted(() => ({ current: null as unknown }));
 vi.mock("../../../../auth/session", () => ({ useSession: () => session.current }));

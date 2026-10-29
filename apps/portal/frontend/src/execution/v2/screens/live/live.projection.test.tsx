@@ -1,11 +1,11 @@
-/** Live room · the equity projection consumer (R-C, FIXTURE lane). The shared views are in series/equityProjection.testbase.ts. */
+/** Live room · the equity projection consumer (R-C, FIXTURE lane). The shared views are in series/equityProjection.fixtures.ts. */
 import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, describe, expect, it } from "vitest";
 
 import LiveScreen from "./index";
 import { DEPLOYMENT_ID, fakeApi, ok, populatedV1, v1Read, v2Populated, v2Read } from "./live.testbase";
-import { captionNow, commitRecorder, describeProjectionScreen, expectNoCommitWith, projectionPort, projectionBody, taggedBody, tagOf } from "../series/equityProjection.testbase";
+import { captionNow, commitRecorder, describeProjectionScreen, expectNoCommitWith, projectionPort, projectionBody, taggedBody, tagOf } from "../series/equityProjection.fixtures";
 
 afterEach(cleanup);
 const WS = "ws_TEST_ONLY";

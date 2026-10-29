@@ -8,7 +8,7 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import type { ExecutionApi } from "../../../api/ports";
 import { fetchEquityProjection, type EquityProjectionQuery } from "../../readers/equityProjection";
-import { projectionBody } from "./equityProjection.testbase";
+import { projectionBody } from "./equityProjection.fixtures";
 import { projectionRequestKey, useEquityProjectionFor, type EquityProjectionRequest, type ProjectionState } from "./useEquityProjection";
 
 afterEach(cleanup);

@@ -1,11 +1,11 @@
-/** Canary control room · the equity projection consumer (R-C, FIXTURE lane). The shared views are in series/equityProjection.testbase.ts. */
+/** Canary control room · the equity projection consumer (R-C, FIXTURE lane). The shared views are in series/equityProjection.fixtures.ts. */
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, describe, expect, it } from "vitest";
 
 import CanaryScreen from "./index";
 import { DEP, answering, canaryPort, populatedV1 } from "./canary.testbase";
-import { Go, captionNow, commitRecorder, describeProjectionScreen, expectNoCommitWith, projectionPort, taggedBody, tagOf } from "../series/equityProjection.testbase";
+import { Go, captionNow, commitRecorder, describeProjectionScreen, expectNoCommitWith, projectionPort, taggedBody, tagOf } from "../series/equityProjection.fixtures";
 
 afterEach(cleanup);
 const WS = "ws_TEST_ONLY";
