@@ -335,6 +335,19 @@ describe("V1 body, broker not verified (UNAVAILABLE) is not a mismatch", () => {
 });
 
 describe("V1 body, gap", () => {
+  it("labels a fixture view and opens Operations for its declared base while preserving workspace", async () => {
+    const marker = document.createElement("div"); marker.id = "fixture-banner"; document.body.append(marker);
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({ fixture: true, view: { id: DEPLOYMENT_ID, fixture: true, view_of_deployment_id: "dep_base" } }), { status: 200, headers: { "x-fixture-lane": "FIXTURE_LAB" } })));
+    try {
+      mount(() => ok(v1Read(populatedV1({ gap: true }))), "?workspace_id=ws_TEST_ONLY_a");
+      await loaded();
+      await waitFor(() => expect(text()).toContain("Fixture view of dep_base"));
+      const slot = screen.getByRole("alert", { name: "Live net PnL" });
+      const href = within(slot).getByRole("link", { name: "Open operations for this deployment" }).getAttribute("href");
+      expect(href).toContain("target_id=dep_base");
+      expect(href).toContain("workspace_id=ws_TEST_ONLY_a");
+    } finally { marker.remove(); vi.unstubAllGlobals(); }
+  });
   it("replaces the chart with one sentence and Open operation; the window is Not available (FE-072 in its title)", async () => {
     mount(() => ok(v1Read(populatedV1({ gap: true }))));
     await loaded();

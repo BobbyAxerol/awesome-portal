@@ -31,7 +31,7 @@ import { isPositiveMode, positiveDeploymentFact } from "./bffPositiveMode";
 import { criteriaMetOf, gateMinimumDays, isRetired, PAPER_POLICY_MIN_TRADES, resolveStageDeployment, sandboxRecordIdOf, stageBookOf, userIdOf } from "./bffWorldStage"; // WP-B2-S
 import { text4, units4 } from "./bffWorldBooks"; // WP-B2-S3
 import { deploymentOfView, variantViewOf } from "./bffWorldVariants"; // R-A: the declared variant graph
-import { currentDeploymentOfStage, haltedSinceMs, historyDeploymentId, historyNetSeries, standingOf } from "./bffWorldStage"; // WP-B2-S3
+import { haltedSinceMs, historyDeploymentId, historyNetSeries } from "./bffWorldStage"; // WP-B2-S3
 import { approvalHref, approvalOfAlpha, type WorldGate } from "./bffWorldGovernance"; // WP-B2-S3
 import { WORLD_INCIDENTS } from "./bffWorld"; // WP-B2-S3
 import { costOverRun, limitState } from "./bffWorldBooks"; // WP-B2-C3
@@ -587,7 +587,7 @@ function liveLit(body: Obj, deploymentId: string, variant: StageVariant): Obj {
     mismatch_behavior: "SUPPRESS_ALL_BROKER_VALUES",
     broker_values_visible: visible,
     finding_href: mismatch || openReconIncidentOf(worldIdOf(deploymentId, "live")) !== undefined ? liveFindingHref(deploymentId) : null, // WP-B2-S3 R5-03: the finding of the portfolio this deployment is booked on, in its environment
-    dry_run_reconcile_href: mismatch ? `/execution/operations?target_id=${encodeURIComponent(deploymentId)}` : null, // the reconcile targets the deployment the card names
+    dry_run_reconcile_href: mismatch ? `/execution/operations?target_id=${encodeURIComponent(baseDeploymentId(deploymentId))}` : null, // fixture navigation names the declared subject, not the synthetic view
     blocker_codes: [],
   };
   body.projection_continuity = {
@@ -1164,17 +1164,14 @@ export function worldHistoryCanaryOf(alphaId: string): string | null {
   return resolveStageDeployment(id) !== null ? id : null;
 }
 
-const STATE_VARIANTS: ReadonlySet<StageVariant> = new Set<StageVariant>(["mismatch", "stale", "gap", "breach", "halted"]);
 /**
- * The deployment whose book a stage page reads. A state variant (mismatch, stale, gap, breach, halted) is a state the stage is IN; when the named deployment's stage is over
- * (its alpha has left it) the variant is a state of the first deployment of the world that IS in that stage, so one alpha never has two opposite records of one stage.
+ * The deployment whose book a stage page reads. A declared fixture view never
+ * changes its subject, even if that deployment's stage has since completed.
+ * Replacing it with another alpha's current deployment would mix the room's
+ * identity, lineage and account with the wrong book.
  */
-export function worldIdOf(deploymentId: string, kind: DeploymentStage): string {
-  const base = WORLD_ALIAS[baseDeploymentId(deploymentId)] ?? baseDeploymentId(deploymentId);
-  if (!isPositiveMode() || !STATE_VARIANTS.has(variantOf(deploymentId))) return base;
-  const standing = standingOf(base);
-  if (standing === null || standing.status !== "completed" || standing.stage !== kind) return base;
-  return currentDeploymentOfStage(kind) ?? base;
+export function worldIdOf(deploymentId: string, _kind: DeploymentStage): string {
+  return WORLD_ALIAS[baseDeploymentId(deploymentId)] ?? baseDeploymentId(deploymentId);
 }
 
 const refOf = (alphaId: string, gate: WorldGate): { id: string; href: string } | null => {

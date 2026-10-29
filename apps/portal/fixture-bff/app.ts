@@ -440,6 +440,16 @@ async function handle(config: FixtureConfig, incoming: IncomingMessage, response
       send(response, config, 405, { error: "FIXTURE_METHOD_NOT_ALLOWED" }, { allow: "GET" });
       return;
     }
+    if (url.searchParams.get("workspace_id") === "ws_TEST_DENIED") {
+      send(response, config, 403, { error: { code: "ACCESS_DENIED", message: "Not available in this fixture workspace." } });
+      return;
+    }
+    const id = url.searchParams.get("view_id");
+    if (id !== null) {
+      const view = variantViews().find((entry) => entry.id === id) ?? null;
+      send(response, config, 200, { fixture: true, view });
+      return;
+    }
     send(response, config, 200, { fixture: true, basis: "DECLARED_FIXTURE_GRAPH_NOT_A_PRODUCTION_RELATIONSHIP_NOT_AN_AUTHORIZATION_RULE", views: variantViews() });
     return;
   }

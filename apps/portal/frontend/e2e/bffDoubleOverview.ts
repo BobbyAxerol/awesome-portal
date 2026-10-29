@@ -538,6 +538,7 @@ function statusCounts(rows: readonly Row[]): Record<string, number> {
 }
 
 function blotter(search: URLSearchParams): OverviewAnswer {
+  if (search.get("workspace_id") === "ws_TEST_DENIED") return DENIED();
   const v = variants.blotter;
   if (v === "denied") return DENIED();
   if (v === "error") return problem(503, "PAPER_READ_UPSTREAM_UNAVAILABLE", "The paper read is unavailable.");

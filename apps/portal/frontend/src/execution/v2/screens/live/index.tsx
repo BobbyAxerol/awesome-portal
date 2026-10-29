@@ -32,6 +32,7 @@ import type { ExecutionApi } from "../../../api/ports";
 import { PanelSkeleton, PanelState } from "../../../components/states";
 import { BlockerList, CompactGaps, GapLine, Kpi, KpiStrip, StageHeader, UrlTabs, type GapItem, type StageCrumb, type StageTab } from "../../blocks";
 import { AlphaNameLine } from "../stage/AlphaNameLine";
+import { useFixtureView } from "../stage/useFixtureView";
 import { alphaCrumb, portfolioLabel } from "../stage/identity";
 import { spineHistory, useStageLifecycle } from "../stage/useStageLifecycle";
 import { unsupportedText, type LiveFullVersionRead } from "../../readers/dispatch";
@@ -102,6 +103,7 @@ function LiveBody({ model, api, deploymentId, workspaceId, v2, reload }: { model
   const navigate = useNavigate();
   const paging = usePanelPaging(api, deploymentId, workspaceId, v2);
   const id = model.deploymentId ?? deploymentId;
+  const fixtureBase = useFixtureView(deploymentId, workspaceId);
   // The stages the alpha has completed (FE-027): the ticks of the spine, from the alpha's Manager dataset when it publishes them.
   const history = spineHistory(useStageLifecycle(api, model.identity.alphaId, "live", "live", workspaceId ?? null));
   const shown = model.kpis.filter(printable);
@@ -126,7 +128,7 @@ function LiveBody({ model, api, deploymentId, workspaceId, v2, reload }: { model
     ...(model.accountId ? [{ label: model.accountId, to: withContext(`/deployments/accounts/${enc(model.accountId)}`, params) }] : []),
     { label: "Live" },
   ];
-  const subtitle = [id, model.venue].filter((part): part is string => typeof part === "string" && part !== "").join(" · ");
+  const subtitle = [id, fixtureBase === null ? null : `Fixture view of ${fixtureBase}`, model.venue].filter((part): part is string => typeof part === "string" && part !== "").join(" · ");
 
   const blockerNotes = useMemo(
     () => (
@@ -189,7 +191,7 @@ function LiveBody({ model, api, deploymentId, workspaceId, v2, reload }: { model
       <GapLine items={gapItems} />
       <div className="exec-liv-grid">
         <div className="exec-liv-main">
-          <ChartSlot slot={model.chart} gapAbove={v2 === null} deploymentId={id} />
+          <ChartSlot slot={model.chart} gapAbove={v2 === null} deploymentId={fixtureBase ?? id} />
           <UrlTabs surface="live" tabs={TAB_LIST} label="Live sections">
             {(active) => {
               switch (active) {

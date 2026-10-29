@@ -865,7 +865,9 @@ export async function runWorldTies(get) {
     const r = await get(`${E}/deployments/${id}/live`);
     const consistency = r.status === 200 ? r.body?.broker_consistency : null;
     if (consistency?.state !== "MISMATCH") continue;
-    const base = id.replace(/_mismatch$/, "");
+    const view = await ok200(`/__fixture/variants?view_id=${encodeURIComponent(id)}`);
+    const base = view?.view?.view_of_deployment_id;
+    check("W37", typeof base === "string", `${id}: no declared fixture deployment`);
     const incidentId = /\/incidents\/([^/?]+)$/.exec(consistency.finding_href ?? "")?.[1];
     check("W37", incidentId !== undefined, `${id}: the mismatch has no finding link (${consistency.finding_href})`);
     if (incidentId !== undefined) {
@@ -874,7 +876,7 @@ export async function runWorldTies(get) {
       check("W37", inc !== null && /live/i.test(String(inc.environment ?? inc.incident?.environment ?? "live")), `${id}: the finding ${incidentId} is not Real-funded`);
     }
     const target = /target_id=([^&]+)/.exec(consistency.dry_run_reconcile_href ?? "")?.[1];
-    check("W37", target === id, `${id}: the dry-run link targets ${target}`);
+    check("W37", target === base, `${id}: the dry-run link targets ${target}, not declared base ${base}`);
     const queue = target === undefined ? null : await ok200(`${E}/operations?target_id=${target}&limit=50`);
     const queueRows = queue?.page?.rows ?? [];
     check("W37", queueRows.length > 0 && queueRows.every((row) => row.target?.id === base), `${id}: the dry-run link's queue has ${queueRows.length} rows, targets ${[...new Set(queueRows.map((row) => row.target?.id))]}`);
@@ -1030,7 +1032,10 @@ export async function runWorldTies(get) {
   }
   // W101 (QA9 N9a-01): a mismatch variant of a Sandbox page is the same deployment with one injected failure: it passes as many steps as Alpha 360 counts criteria met for that deployment's alpha, and the failed step is not among them
   {
-    const page = (await get(`${E}/deployments/dep_sandbox_01_mismatch/certification`)).body;
+    const active = alphaRows.find((a) => a.stage === "SANDBOX" && (a.deployments ?? []).some((d) => d.stage === "SANDBOX"));
+    const activeId = active?.deployments?.find((d) => d.stage === "SANDBOX")?.deployment_id;
+    check("W101", typeof activeId === "string", "no current Sandbox deployment available for mismatch scenario");
+    const page = typeof activeId === "string" ? (await get(`${E}/deployments/${activeId}_mismatch/certification`)).body : null;
     const home = alphaRows.find((a) => a.alpha_label === page?.certification?.alpha_name);
     if (page?.progress && home) {
       const env = { PAPER: "paper", SANDBOX: "sandbox", CANARY: "live", LIVE: "live" }[home.stage];

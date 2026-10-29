@@ -286,6 +286,7 @@ for input in \
   apps/portal/fixture-bff/alpha-catalogue.ts \
   apps/portal/fixture-bff/app.ts \
   apps/portal/fixture-bff/command-story.ts \
+  apps/portal/fixture-bff/equity-projection.ts \
   apps/portal/fixture-bff/review-accounts.ts \
   apps/portal/fixture-bff/review-catalog.ts \
   apps/portal/fixture-bff/review-finance.ts \
@@ -325,6 +326,7 @@ for input in \
   apps/portal/frontend/e2e/bffWorldGovernance.ts \
   apps/portal/frontend/e2e/bffWorldOrders.ts \
   apps/portal/frontend/e2e/bffWorldStage.ts \
+  apps/portal/frontend/e2e/bffWorldVariants.ts \
   apps/portal/frontend/src/execution/adapter.ts \
   apps/portal/frontend/src/execution/adminCatalog.fixtures.ts \
   apps/portal/frontend/src/execution/analytics.presentation.fixtures.ts \

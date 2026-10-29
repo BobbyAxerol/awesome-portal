@@ -38,6 +38,7 @@ import { ChartTools, EquityPanel } from "../../charts";
 import type { SeriesPoint as ChartPoint } from "../../charts/types";
 import { readAsOf } from "../../boundary";
 import { AlphaNameLine } from "../stage/AlphaNameLine";
+import { useFixtureView } from "../stage/useFixtureView";
 import { alphaCrumb, portfolioLabel, stageIdentity } from "../stage/identity";
 import { spineHistory, useLifecycleStages, useStageLifecycle, viewingLifecycle } from "../stage/useStageLifecycle";
 import { useContextFacts } from "../../shell/contextFacts";
@@ -136,6 +137,7 @@ function CanaryBody({ api, deploymentId, workspaceId }: CanaryScreenProps) {
   const read = useCanaryRead(api, deploymentId, wsId, refresh);
   const result = useMemo(() => (read.phase === "ready" ? readCanaryView(read.read) : null), [read]);
   const view = result !== null && result.kind === "view" ? result.view : null;
+  const fixtureBase = useFixtureView(deploymentId, wsId, view !== null);
 
   // The currency the screen states, for the context bar; nothing while the read is in flight.
   useContextFacts({ ccy: view === null ? undefined : (view.envelope?.currency ?? null) });
@@ -206,6 +208,7 @@ function CanaryBody({ api, deploymentId, workspaceId }: CanaryScreenProps) {
           <>
             {subtitleIds(current).join(" · ")}
             {subtitleIds(current).length > 0 ? " · " : ""}
+            {fixtureBase === null ? null : <>Fixture view of {fixtureBase} · </>}
             <AlphaNameLine identity={identity} />
           </>
         )

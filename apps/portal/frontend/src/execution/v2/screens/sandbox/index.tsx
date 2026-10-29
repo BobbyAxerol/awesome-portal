@@ -42,6 +42,7 @@ import { CompactGaps, GapLine, GapWhy, KpiStrip, SectionPanel, StageHeader, Tria
 import { formatAsOf } from "../../boundary";
 import { figuresUnpublished, triadRowsOf } from "../stage/triadRows";
 import { AlphaNameLine } from "../stage/AlphaNameLine";
+import { useFixtureView } from "../stage/useFixtureView";
 import { alphaCrumb, portfolioLabel, stageIdentity } from "../stage/identity";
 import { mergeSpine, spineHistory, useLifecycleStages, useStageLifecycle, viewingLifecycle } from "../stage/useStageLifecycle";
 import { parseUrlParams, withContext } from "../../urlState";
@@ -262,6 +263,7 @@ function SandboxBody({ api, deploymentId, workspaceId }: SandboxScreenProps) {
 
   const parsed = useMemo(() => (read.phase === "ready" ? readSandboxView(read.value) : null), [read]);
   const view = parsed !== null && parsed.kind === "ready" ? parsed.view : null;
+  const fixtureBase = useFixtureView(deploymentId, routeWorkspace ?? undefined, view !== null);
 
   // A V2 body names its workspace; a V1 body does not, and the runtime manifest is the V1 screen's source for it.
   const noteWorkspace = view?.workspaceId ?? routeWorkspace ?? runtime?.manifest?.workspaceId ?? null;
@@ -335,6 +337,7 @@ function SandboxBody({ api, deploymentId, workspaceId }: SandboxScreenProps) {
         subtitle={
           <>
             {subtitleOf(view) === null ? null : <>{subtitleOf(view)} · </>}
+            {fixtureBase === null ? null : <>Fixture view of {fixtureBase} · </>}
             <AlphaNameLine identity={identity} />
           </>
         }

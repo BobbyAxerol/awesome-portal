@@ -8,7 +8,8 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { createFixtureServer, loadConfig, resetFixtureGlobals } from "../../../fixture-bff/app";
 import { resetScenario } from "../../../fixture-bff/scenario";
-import { baseDeploymentId, variantOf } from "../../e2e/bffSimulatedStage";
+import { baseDeploymentId, variantOf, worldIdOf } from "../../e2e/bffSimulatedStage";
+import { standingOf } from "../../e2e/bffWorldStage";
 import { deploymentOfView, variantViewOf, variantViews, viewOfDeployment } from "../../e2e/bffWorldVariants";
 
 let server: import("node:http").Server;
@@ -66,6 +67,14 @@ describe("nothing else resolves", () => {
       expect(view.id).toBe(`${view.view_of_deployment_id}_${view.variant}`);
     }
   });
+  it("retired views retain their declared deployment, never another alpha's current book", () => {
+    const retired = variantViews().filter((view) => standingOf(view.view_of_deployment_id)?.status === "completed");
+    expect(retired.length).toBeGreaterThan(0);
+    for (const view of retired) {
+      const standing = standingOf(view.view_of_deployment_id)!;
+      expect(worldIdOf(view.id, standing.stage), view.id).toBe(view.view_of_deployment_id);
+    }
+  });
 });
 
 describe("the mapping is fixture-only and reaches the navigation", () => {
@@ -75,6 +84,15 @@ describe("the mapping is fixture-only and reaches the navigation", () => {
     expect(answer.body.fixture).toBe(true);
     expect(answer.body.basis).toMatch(/NOT_A_PRODUCTION_RELATIONSHIP/);
     expect(answer.body.views.find((v: { id: string }) => v.id === "dep_live_01_mismatch")).toMatchObject({ view_of_deployment_id: "dep_live_01" });
+  });
+  it("returns only the requested view and independently refuses the denied workspace", async () => {
+    const one = await get("/__fixture/variants?view_id=dep_live_01_gap&workspace_id=ws_TEST_ONLY_a");
+    expect(one.status).toBe(200);
+    expect(one.body.view).toMatchObject({ id: "dep_live_01_gap", view_of_deployment_id: "dep_live_01", fixture: true });
+    expect(one.body.views).toBeUndefined();
+    const denied = await get("/__fixture/variants?view_id=dep_live_01_gap&workspace_id=ws_TEST_DENIED");
+    expect(denied.status).toBe(403);
+    expect(denied.body.view).toBeUndefined();
   });
   it("no production payload carries the member: the room, the queue and the blotter do not name it", async () => {
     for (const path of ["/api/v1/execution/deployments/dep_live_01_mismatch/live", "/api/v1/execution/operations?target_id=dep_live_01_mismatch", "/api/v1/execution/screens/blotter?deployment_id=dep_live_01_mismatch&limit=5"]) {
@@ -97,6 +115,17 @@ describe("the mapping is fixture-only and reaches the navigation", () => {
     expect(blotter.body.data.orders).toHaveLength(0);
     const ops = await get("/api/v1/execution/operations?target_id=dep_live_01_breach&limit=50");
     expect(ops.body.page.rows).toHaveLength(0);
+  });
+  it("a declared view does not bypass a destination's workspace refusal", async () => {
+    for (const path of [
+      "/api/v1/execution/deployments/dep_live_01_gap/live?workspace_id=ws_TEST_DENIED",
+      "/api/v1/execution/operations?target_id=dep_live_01_gap&workspace_id=ws_TEST_DENIED",
+      "/api/v1/execution/screens/blotter?deployment_id=dep_live_01_gap&workspace_id=ws_TEST_DENIED",
+    ]) {
+      const result = await get(path);
+      expect(result.status, path).toBe(403);
+      expect(JSON.stringify(result.body), path).not.toContain("dep_live_01");
+    }
   });
   it("same-workspace association: the declared graph is the one world of the lane (every base is a deployment of the fleet)", async () => {
     const fleet = await get("/api/v1/execution/alphas?limit=200");

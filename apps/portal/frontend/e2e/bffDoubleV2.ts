@@ -377,6 +377,11 @@ function incident(id: string, simulate = false): BffAnswerV2 {
  */
 export function answerOperationsV2(method: string, path: string, search: URLSearchParams, simulate = false): BffAnswerV2 | null {
   if (method !== "GET") return null;
+  // Fixture-only negative persona: the destination checks access independently
+  // of a stage view or its declared variant relationship.
+  if ((path === "/operations" || path.startsWith("/operations/")) && search.get("workspace_id") === "ws_TEST_DENIED") {
+    return problem(403, "ACCESS_DENIED", "Your session may not read operations in this workspace.");
+  }
   if (path === "/operations") return queue(search, simulate);
   const seg = path.split("/").filter(Boolean);
   if (seg[0] === "operations" && seg[1] === "incidents" && seg.length === 3) return incident(decodeURIComponent(seg[2]), simulate);
