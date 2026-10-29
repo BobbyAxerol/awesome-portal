@@ -41,3 +41,23 @@ Earlier in the slice, `src/fixtureBff` had failures when run concurrently with t
 * No connected, Edge-source or browser acceptance; no screen consumes V2; no V2 fixture route.
 * No SQL, migration or PG-spec of its own, by design.
 * The generated `.d.ts` is checked by `verify-generated.sh` wiring but that script was not run separately (the generator `--check` mode and `snapshot.py --check` were).
+
+## Follow-up after Codex review (branch `claude/ft2-be`, base 9b9244ea6)
+
+Addressed R-C item 2 (data-contract invariants), item 3 (fail-closed field authority) and the R-B follow-up (direct mid-flight `LIVE_BLOCKERS` revocation/expiry). Items 1 and 4 (consumer context isolation, browser/visual acceptance) belong to other agents and are not touched here.
+
+* **A. Invariants** (`b6d9165c9`): `interval`/`interval_seconds` are one closed pair; `coverage` is a ratio in [0,1] (non-null buckets over expected buckets); `source_rows` is the count of retained observations that contributed to non-null buckets and MAY exceed the points (5000 over 60 buckets accepted); enforced are only non-negative integer, `>=` non-null buckets (zod and reader; JSON Schema cannot compare an integer with an item count) and zero exactly when no bucket has a value (JSON Schema `if/then`, zod, reader). The old `source_rows <= points.length` rule is removed. Negatives prove each layer. No decimal or drawdown formula changed.
+* **B. Fail-closed** (`0d15cbc59`): `FIELD_AUTHORITY_NOT_IMPLEMENTED = true`; the service maps any port-supplied `AVAILABLE` series or band to that section's typed `NOT_AUTHORIZED` absence, independently, unless an injected `EquityFieldAuthority` allows it (tests only). Chosen over 503 because the section-level absence keeps the other section honest and discloses nothing; nothing is logged.
+* **C. R-B direct tests** (`22c8f81e7`, fixes `1f065b8a8`, last commit): grant revoked after decode => 409 `OPERATIONAL_READ_CHANGED` with the blocker already read but never returned; seal expiry after the last Core capture => 409; seal expired before the read => no `blockers` key and no `blocker_*` column in any SQL; seal present but grant revoked before the read, and a LIVE_ROOT-only policy => no key.
+
+| Command | Result |
+|---|---|
+| `flock /tmp/portal-heavy.lock ./scripts/control-api-test.sh test/elp204-positive-parent.spec.ts` (PG cell) | **354 passed / 354, exit 0** (a first run failed to parse a one-token test typo and a second had one wrong assertion about identity ids; both fixed before this green run) |
+| `npx tsc --noEmit -p tsconfig.build.json` (apps/control-api) | clean |
+| `npx vitest run --maxWorkers=3` (packages/contracts) | **113 files, 1922 tests passed** |
+| `snapshot.py --check` | 716 files match |
+| FE vitest: cockpit, readers (incl. `equityProjectionV2.conformance`, 50 tests), seven hygiene tests | **64 files, 67812 passed + 5 expected fail** |
+| FE `tsc --noEmit -p tsconfig.json` (roadmap-task-board filtered) | clean |
+| N29 / EDS-12 refreshes | `changed: false` both (nothing to commit) |
+
+Not run: `scripts/contracts-test.sh` (the contract file's imports did not change, so its copy list did not); the pre-existing control-api `tsc -p tsconfig.json` (test project) reports type errors in many unrelated specs and in older code of this spec (`getInstance<...>` at the existing line 366 and the N04 section), none in the equity-projection sources. Earlier parallel FE/contracts runs produced timeout failures while the host load average reached 200+; they were re-run alone and are green.
