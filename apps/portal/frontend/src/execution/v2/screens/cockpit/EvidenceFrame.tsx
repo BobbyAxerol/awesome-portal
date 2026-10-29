@@ -9,7 +9,6 @@
  * and the comparator is absent on every read. Evidence charts are out of S1
  * (FE-029). Nothing here writes, plans or applies.
  */
-import type { InboxRowV2 } from "./inboxRowV2";
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 
 import { groupExact } from "../blotter/blotterModel";
@@ -990,7 +989,7 @@ function verdictOf(data: EvidenceData, liveBlockers: string | null = null): Verd
       return {
         tone: data.parent.approval.evidenceComplete ? "mute" : "warn",
         headline: data.parent.approval.evidenceComplete ? "Evidence ready · Live decisions are closed" : "Evidence incomplete · Live decisions are closed",
-        // One extra line, only when the guarded join holds (laneModel.liveBlockerLine); otherwise the generic state stands, never "no blockers".
+        // One extra line, only from the gate's own snapshot block (laneModel.liveBlockerLine); otherwise the generic state stands, never "no blockers".
         facts: [`Approval ${STATUS_WORD[data.parent.approval.status].toLowerCase()}`, ...(!data.parent.approval.evidenceComplete && liveBlockers !== null ? [`Blockers: ${liveBlockers}`] : [])],
       };
   }
@@ -1016,13 +1015,9 @@ export interface EvidenceFrameProps {
   unknownReason?: string | null;
   /** The approval evidence read (WP-K): history, diff and obligations; absent keeps the typed absences. */
   extra?: ExtraState;
-  /** The selected inbox row, its workspace and whether its inbox read is the current one: for the guarded Live blocker join only. */
-  blockerRow?: InboxRowV2 | null;
-  requestedWorkspace?: string;
-  inboxCurrent?: boolean;
 }
 
-export function EvidenceFrame({ kind, header, evidence, unknownReason, extra = IDLE_EXTRA, blockerRow = null, requestedWorkspace, inboxCurrent = false }: EvidenceFrameProps) {
+export function EvidenceFrame({ kind, header, evidence, unknownReason, extra = IDLE_EXTRA }: EvidenceFrameProps) {
 
   if (header === null) {
     return (
@@ -1035,7 +1030,7 @@ export function EvidenceFrame({ kind, header, evidence, unknownReason, extra = I
   const data = evidence.status === "ready" ? evidence.data : null;
   const gate = header.gate ?? (kind ? GATE_OF_KIND[kind] : null);
   const liveBlockers = data?.kind === "livev2"
-    ? liveBlockerLine({ row: blockerRow, parent: data.parent, requestedWorkspace, rowCurrent: inboxCurrent })
+    ? liveBlockerLine(data.parent)
     : null;
   const verdict = data ? verdictOf(data, liveBlockers) : null;
   // "N obligations stay open after approval": only the source's own five counts, only when published, and never on an R1 (it closes nothing).

@@ -114,19 +114,20 @@ const BODIES: Body[] = [
   // BE-P12 (c159bb40): the two bodies per family that carry the optional closed `identity` (published, and hidden with typed reasons).
   ...["sandbox", "sandbox_absent", "sandbox_draft", "sandbox_identity", "sandbox_identity_hidden"].map((key) => ({ key, def: "SandboxParentReadV2", read: readSandboxParentV2 as Reader, family: "SANDBOX" })),
   ...["canary", "canary_absent", "canary_revision", "canary_identity", "canary_identity_hidden"].map((key) => ({ key, def: "CanaryParentReadV2", read: readCanaryParentV2 as Reader, family: "CANARY" })),
-  { key: "live", def: "LiveParentReadV2", read: readLiveParentV2 as Reader, family: "LIVE_GATE" },
+  // R-B: the optional LIVE_BLOCKERS block, once available (count 2), once zero (null summary), once declared absent.
+  ...["live", "live_blockers", "live_blockers_zero", "live_blockers_absent"].map((key) => ({ key, def: "LiveParentReadV2", read: readLiveParentV2 as Reader, family: "LIVE_GATE" })),
 ];
 const bodyOf = (key: string): Draft => canonical[key];
 
 /* ═════════════════════════ L0 ═════════════════════════ */
 describe("L0 · canonical, verbatim", () => {
-  it("the file is the synthetic unqualified lane with the 29 parent bodies and 3 compositions this suite covers", () => {
+  it("the file is the synthetic unqualified lane with the 32 parent bodies and 3 compositions this suite covers", () => {
     expect(canonical.lane).toBe("TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT");
     expect(canonical.runtime_qualified).toBe(false);
     expect(canonical.authority_installed).toBe(false);
     // 25 before BE-P12 c159bb40, which published four more bodies (sandbox_identity, sandbox_identity_hidden, canary_identity,
     // canary_identity_hidden): the opt-in `identity` member, once published and once hidden, for each of the two following parents.
-    expect(BODIES).toHaveLength(29);
+    expect(BODIES).toHaveLength(32);
     // Every object in the file is a covered body or a composition: a body Codex adds later fails here, not silently.
     const objects = Object.keys(canonical).filter((key) => typeof canonical[key] === "object");
     expect(objects.filter((key) => !BODIES.some((b) => b.key === key)).sort()).toEqual(["live_composition", "paper_exit_composition", "r2_composition"]);

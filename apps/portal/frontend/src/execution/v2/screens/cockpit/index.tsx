@@ -759,9 +759,6 @@ function DecisionCockpit({ api, workspaceId, pathSelection, onClearPathSelection
               evidence={evidence}
               unknownReason={unknownReason}
               extra={extra}
-              blockerRow={selected?.kind === "gate" ? selected.row : null}
-              requestedWorkspace={workspaceId}
-              inboxCurrent={inbox.status === "ready" && inbox.scope === inboxScope(serverViewFor(lane === "waiver" ? "all" : lane), workspaceId)}
             />
           )}
         </section>

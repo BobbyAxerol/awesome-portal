@@ -472,12 +472,22 @@ export interface CanaryParentV2 {
  * The stored Live gate. It carries the approval and nothing else: no portfolio,
  * no R1/R2 predecessor, no canary reference, no governance backbone.
  */
+export type LiveBlockersV2 =
+  /** The optional LIVE_BLOCKERS block is not on the body (purpose not authorized, or an older server). Never zero. */
+  | { state: "unauthorized" }
+  /** The server declared the block unreadable/not public. Never zero. */
+  | { state: "absent"; reasonCode: "BLOCKER_SUMMARY_NOT_PUBLIC" | "BLOCKER_FIELDS_INVALID" }
+  /** Read in the SAME snapshot as `approval`; id and version equal the approval's (checked by the reader). */
+  | { state: "available"; approvalId: string; approvalVersion: number; count: number; summary: string | null };
+
 export interface LiveParentV2 {
   family: "LIVE_GATE";
   header: ParentHeaderV2;
   anchors: { deploymentId: string; environment: "LIVE" };
   approval: ApprovalV2 & { gate: "LIVE_GATE" };
   acceptedManagerFacts: AbsentSectionV2;
+  /** The only source of a Live gate's blocker line: the same authorized body as the gate (R-B). */
+  blockers: LiveBlockersV2;
   notPublished: NotPublishedV2;
 }
 
@@ -1235,9 +1245,26 @@ const LIVE_KEYS = [
   "observed_at_ms", "anchors", "source", "approval", "accepted_manager_facts",
 ];
 
+/** The optional `blockers` member; `undefined` = a present but invalid block (the whole body is refused). */
+function readLiveBlockers(value: unknown, approval: ApprovalV2): LiveBlockersV2 | undefined {
+  const a = closed(value, ["availability", "reason_code"]);
+  if (a !== null) {
+    const code = oneOf(a.reason_code, ["BLOCKER_SUMMARY_NOT_PUBLIC", "BLOCKER_FIELDS_INVALID"] as const);
+    return a.availability === "ABSENT" && code !== null ? { state: "absent", reasonCode: code } : undefined;
+  }
+  const b = closed(value, ["availability", "basis", "approval_id", "approval_version", "blocker_count", "blocker_summary"]);
+  if (b === null || b.availability !== "AVAILABLE" || b.basis !== "SAME_READ_SNAPSHOT_AS_APPROVAL") return undefined;
+  const approvalId = id(b.approval_id), approvalVersion = version(b.approval_version), count = natural(b.blocker_count);
+  const summary = nullable(b.blocker_summary, (v) => text(v));
+  // The pair must be the gate's own, and count 0 <=> no summary: anything else is a contradiction, not "zero".
+  if (approvalId === null || approvalVersion === null || count === null || summary === undefined) return undefined;
+  if (approvalId !== approval.approvalId || approvalVersion !== approval.approvalVersion || (count === 0) !== (summary === null)) return undefined;
+  return { state: "available", approvalId, approvalVersion, count, summary };
+}
+
 /** `GET /governance/approvals/{id}/live` when the workspace is SCOPED_V2. */
 export function readLiveParentV2(raw: unknown): LiveParentV2 | null {
-  const r = closed(raw, LIVE_KEYS);
+  const r = closedOptional(raw, LIVE_KEYS, "blockers");
   if (r === null || r.schema_version !== LIVE_PARENT_V2_SCHEMA || r.family !== "LIVE_GATE") return null;
   const header = readHeader(r, ["runtime"]);
   const anchors = closed(r.anchors, ["deployment_id", "environment"]);
@@ -1245,8 +1272,10 @@ export function readLiveParentV2(raw: unknown): LiveParentV2 | null {
   const acceptedManagerFacts = readManagerFacts(r.accepted_manager_facts);
   const deploymentId = id(anchors?.deployment_id);
   if (header === null || anchors === null || anchors.environment !== "LIVE" || deploymentId === null || approval === null || acceptedManagerFacts === null) return null;
+  const blockers = Object.hasOwn(r, "blockers") ? readLiveBlockers(r.blockers, approval) : ({ state: "unauthorized" } as const);
+  if (blockers === undefined) return null;
   return {
-    family: "LIVE_GATE", header, anchors: { deploymentId, environment: "LIVE" }, approval, acceptedManagerFacts,
+    family: "LIVE_GATE", header, anchors: { deploymentId, environment: "LIVE" }, approval, acceptedManagerFacts, blockers,
     notPublished: LIVE_NOT_PUBLISHED,
   };
 }

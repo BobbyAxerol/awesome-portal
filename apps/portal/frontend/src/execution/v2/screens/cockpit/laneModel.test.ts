@@ -324,49 +324,55 @@ describe("V2 parent actors (Codex e19ad906)", () => {
   });
 });
 
-describe("the guarded Live blocker join (R-B)", () => {
+describe("the Live blocker line from the gate's own snapshot block (R-B)", () => {
   const fixture = loadCanonical<Record<string, any>>("execution-positive-parent.synthetic");
-  const parent = () => readLiveParentV2(fixture.live)!;
-  const WS = parent().header.workspaceId;
-  const matching = (over: Partial<InboxRowV2> = {}): InboxRowV2 => row(parent().approval.approvalId, {
-    gate: "LIVE_GATE", environment: "LIVE", subjectType: "DEPLOYMENT", subjectId: parent().anchors.deploymentId,
-    approvalVersion: parent().approval.approvalVersion, blockerCount: 2, blockerSummary: "Four Canary branches are unavailable", ...over,
-  });
-  const join = (over: Partial<Parameters<typeof liveBlockerLine>[0]> = {}) => liveBlockerLine({ row: matching(), parent: parent(), requestedWorkspace: WS, rowCurrent: true, ...over });
+  const read = (name: string, patch: (body: any) => void = () => undefined) => {
+    const body = structuredClone(fixture[name]);
+    patch(body);
+    return readLiveParentV2(body);
+  };
 
-  it("prints the row's count and summary when every key matches", () => {
-    expect(join()).toBe("2 blockers · Four Canary branches are unavailable");
-    expect(join({ row: matching({ blockerCount: 1 }) })).toBe("1 blocker · Four Canary branches are unavailable");
-    expect(join({ row: matching({ blockerCount: null }) })).toBe("Four Canary branches are unavailable");
+  it("prints the block's count and summary, plural and singular", () => {
+    expect(liveBlockerLine(read("live_blockers"))).toBe("2 blockers · TEST_ONLY: two stored blockers");
+    expect(liveBlockerLine(read("live_blockers", (b) => { b.blockers.blocker_count = 1; }))).toBe("1 blocker · TEST_ONLY: two stored blockers");
+  });
+
+  it("reads an old body (no block) as 'unauthorized', and that prints nothing: absence is never zero", () => {
+    const parent = read("live")!;
+    expect(parent.blockers).toEqual({ state: "unauthorized" });
+    expect(liveBlockerLine(parent)).toBeNull();
+    expect(liveBlockerLine(read("live_blockers_absent"))).toBeNull();
+    expect(read("live_blockers_absent")!.blockers).toEqual({ state: "absent", reasonCode: "BLOCKER_SUMMARY_NOT_PUBLIC" });
+  });
+
+  it("zero blockers is an available count 0 with a null summary, and still prints no blocker line", () => {
+    const parent = read("live_blockers_zero")!;
+    expect(parent.blockers).toMatchObject({ state: "available", count: 0, summary: null });
+    expect(liveBlockerLine(parent)).toBeNull();
+  });
+
+  it("no gate read, no line", () => {
+    expect(liveBlockerLine(null)).toBeNull();
   });
 
   it.each([
-    ["the row id", { id: "AP-OTHER" }],
-    ["the gate", { gate: "R2" as const }],
-    ["the environment", { environment: "PAPER" }],
-    ["the subject type", { subjectType: "ALPHA_VERSION" as const }],
-    ["a missing subject type (an older server)", { subjectType: null }],
-    ["the subject id", { subjectId: "dep_other" }],
-    ["a missing subject id", { subjectId: null }],
-    ["the approval version", { approvalVersion: parent().approval.approvalVersion + 1 }],
-    ["a missing approval version", { approvalVersion: null }],
-  ])("a mismatch on %s joins nothing", (_name, over) => {
-    expect(join({ row: matching(over as Partial<InboxRowV2>) })).toBeNull();
+    ["another approval id", (b: any) => { b.blockers.approval_id = "apr_other"; }],
+    ["another approval version", (b: any) => { b.blockers.approval_version = 9; }],
+    ["a missing field", (b: any) => { delete b.blockers.blocker_count; }],
+    ["a missing summary field", (b: any) => { delete b.blockers.blocker_summary; }],
+    ["an extra field", (b: any) => { b.blockers.extra = 1; }],
+    ["a count without a summary", (b: any) => { b.blockers.blocker_summary = null; }],
+    ["a summary on zero blockers", (b: any) => { b.blockers.blocker_count = 0; }],
+    ["a negative count", (b: any) => { b.blockers.blocker_count = -1; }],
+    ["an over-long summary", (b: any) => { b.blockers.blocker_summary = "x".repeat(192); }],
+    ["an unknown availability", (b: any) => { b.blockers.availability = "UNKNOWN"; }],
+    ["another basis", (b: any) => { b.blockers.basis = "INBOX_ROW_JOIN"; }],
+  ])("a block with %s refuses the whole gate body", (_name, patch) => {
+    expect(read("live_blockers", patch)).toBeNull();
   });
 
-  it("joins nothing for another or an unnamed workspace", () => {
-    expect(join({ requestedWorkspace: "ws_other" })).toBeNull();
-    expect(join({ requestedWorkspace: undefined })).toBeNull();
-  });
-
-  it("joins nothing when the row is absent, the gate was not read, or the inbox read is not current", () => {
-    expect(join({ row: null })).toBeNull();
-    expect(join({ parent: null })).toBeNull();
-    expect(join({ rowCurrent: false })).toBeNull();
-  });
-
-  it("a null or blank summary stays the generic state, never zero blockers", () => {
-    expect(join({ row: matching({ blockerSummary: null }) })).toBeNull();
-    expect(join({ row: matching({ blockerSummary: "   " }) })).toBeNull();
+  it("an absent block with a made-up reason or extra count is refused", () => {
+    expect(read("live_blockers_absent", (b) => { b.blockers.reason_code = "OTHER"; })).toBeNull();
+    expect(read("live_blockers_absent", (b) => { b.blockers.blocker_count = 0; })).toBeNull();
   });
 });
