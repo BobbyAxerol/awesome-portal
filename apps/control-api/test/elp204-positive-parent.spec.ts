@@ -216,7 +216,7 @@ describe.skipIf(!DATABASE_URL)("ELP2-04 finite positive parents / actual PG+HTTP
     return { workspace: ws, r1, r2, paper: producedId(paperResult.aggregate_id), deployment, portfolio, risk, exits, config };
   }
   type FixtureOptions = { activation?:boolean; grantTtlMs?:number; purposes?: ParentFieldPurpose[]; account?: Account; gate?: boolean; pendingAnchor?: "DEPLOYMENT" | "PORTFOLIO" | "ROOT";
-    nativeTtlMs?: number; fieldTtlMs?: number; operationFieldTtlMs?: number; unrelatedAudit?: boolean; nativeEnvironment?:"paper"|"sandbox"|"live";
+    nativeTtlMs?: number; fieldTtlMs?: number; operationFieldTtlMs?: number; purposeTtlMs?: Partial<Record<ParentFieldPurpose, number>>; unrelatedAudit?: boolean; nativeEnvironment?:"paper"|"sandbox"|"live";
     liveRoot?:boolean; gateAction?:ScopedAccessGrant["action"] };
   async function fixture(options: FixtureOptions = {}) {
     if(options.activation&&options.liveRoot)throw Error("TEST_ONLY mixed parent scope is not a fixture authority");
@@ -227,7 +227,7 @@ describe.skipIf(!DATABASE_URL)("ELP2-04 finite positive parents / actual PG+HTTP
       ["R2_ROOT", "R2_LINEAGE", "PAPER_EXIT_ROOT", "PAPER_EXIT_REVIEW", "PAPER_EXIT_LINEAGE"]);
     const seals: ParentReadFieldSeal[] = purposes.map(purpose => ({ purpose, environment: env, contract_revision: "portal.execution.parent-fields.v1",
       field_policy_ref: `TEST_ONLY:${purpose}`, field_set_sha256: parentFieldSetDigest(purpose), valid_from_ms: now - 60_000,
-      valid_until_ms: now + (purpose === "DECISION_OPERATION" ? options.operationFieldTtlMs ?? options.fieldTtlMs ?? 600_000 : options.fieldTtlMs ?? 600_000) }));
+      valid_until_ms: now + (options.purposeTtlMs?.[purpose] ?? (purpose === "DECISION_OPERATION" ? options.operationFieldTtlMs ?? options.fieldTtlMs ?? 600_000 : options.fieldTtlMs ?? 600_000) }));
     const policy: ReviewedAccessPolicy = { workspace_id: data.workspace, revision: next(), artifact_digest: accessDigest(next()),
       approval_ref: "TEST_ONLY-not-owner-runtime-review", state: "REVIEWED", qualification: "TEST_ONLY",
       protected_owner_user_id: owner.user.userId, researcher_fields: { state: "PENDING", policy_ref: null, fields: [] }, parent_read_fields: seals };
@@ -2167,6 +2167,52 @@ async function followingFixture(family:FollowingFamily,options:{rootOnly?:boolea
         .rejects.toMatchObject({code:"55000"});
       await mutateRow(id);// a lifecycle change (status/version) is what can move under the read
       expect(await f.liveRepository.isUnchanged(candidate,snap.revision,{blockers:true})).toBe(false);
+    });
+    // R-B follow-up (Codex): DIRECT mid-flight seal/grant revocation and expiry for the independent LIVE_BLOCKERS purpose.
+    const blockersGrant=(f:Fixture)=>f.audits.find(g=>g.field_policy_ref==="TEST_ONLY:LIVE_BLOCKERS")!;
+    const dropNativeLeg=(f:Fixture,grantId:string)=>{for(const g of f.source.grants)if(g.grant_id===grantId)g.targets=[];};
+    it("mid-flight: the LIVE_BLOCKERS audit grant is revoked after decode => CHANGED (409), no body and no blocker text",async()=>{
+      const f=await blockersFixture(),id=await seededLive(f,{extra:blocked()}),grant=blockersGrant(f);
+      expect(grant).toBeDefined();
+      const original=f.liveRepository.protectedDetails.bind(f.liveRepository);let changed=false;let carried:unknown;
+      restore(vi.spyOn(f.liveRepository,"protectedDetails").mockImplementation(async(...args)=>{
+        const r=await original(...args);carried=r.blockers;if(!changed){changed=true;dropNativeLeg(f,grant.grant_id);}return r;}));
+      let thrown:unknown;
+      await f.liveService.detail(f.principal,id).catch(e=>{thrown=e;});
+      expect(carried).toEqual({count:2,summary:"TEST_ONLY two stored blockers"});// it WAS read before the revoke
+      expect(thrown).toMatchObject({status:409,code:"OPERATIONAL_READ_CHANGED"});
+      expect(JSON.stringify(thrown)).not.toContain("two stored blockers");expect(changed).toBe(true);
+    });
+    it("mid-flight: the LIVE_BLOCKERS seal EXPIRES after the last Core capture => CHANGED (409), no blocker text",async()=>{
+      const f=await blockersFixture({purposeTtlMs:{LIVE_BLOCKERS:60_000}}),id=await seededLive(f,{extra:blocked()});
+      const deadline=f.policy.parent_read_fields!.find(s=>s.purpose==="LIVE_BLOCKERS")!.valid_until_ms;
+      const root=f.policy.parent_read_fields!.find(s=>s.purpose==="LIVE_ROOT")!.valid_until_ms;
+      expect(root).toBeGreaterThan(deadline+1000);// only the blockers seal is short
+      const confirm=f.access.confirmReadContext.bind(f.access);let captured=false;
+      restore(vi.spyOn(f.access,"confirmReadContext").mockImplementation(async(...args)=>{
+        const current=await confirm(...args);expect(await dbNow()).toBeLessThan(deadline);
+        expect(current.actor_lease_until_ms!).toBeGreaterThan(deadline+10);captured=true;
+        restore(vi.spyOn(Date,"now").mockReturnValue(deadline+10));return current;}));
+      let thrown:unknown;
+      await f.liveService.detail(f.principal,id).catch(e=>{thrown=e;});
+      expect(captured).toBe(true);
+      expect(thrown).toMatchObject({status:409,code:"OPERATIONAL_READ_CHANGED"});expect(JSON.stringify(thrown)).not.toContain("two stored blockers");
+    });
+    it("the LIVE_BLOCKERS seal expired BEFORE the read => no blockers key and no blocker_* column in any SQL; LIVE_ROOT body still served",async()=>{
+      const f=await blockersFixture({purposeTtlMs:{LIVE_BLOCKERS:1500}}),id=await seededLive(f,{extra:blocked()});
+      const deadline=f.policy.parent_read_fields!.find(s=>s.purpose==="LIVE_BLOCKERS")!.valid_until_ms;
+      await afterDb(deadline+10);
+      const body=await f.liveService.detail(f.principal,id);
+      liveParentRead.parse(body);expect(Object.keys(body)).not.toContain("blockers");expect(body.approval.approval_id).toBe(id);
+      expect(f.sql.join("\n")).not.toMatch(/blocker_count|blocker_summary/);expect(JSON.stringify(body)).not.toContain("two stored blockers");
+    });
+    it("a seal exists but its audit grant was revoked BEFORE the read => no blockers key; and a LIVE_ROOT-only policy never has one",async()=>{
+      const f=await blockersFixture(),id=await seededLive(f,{extra:blocked()});
+      dropNativeLeg(f,blockersGrant(f).grant_id);
+      const body=await f.liveService.detail(f.principal,id);
+      expect(Object.keys(body)).not.toContain("blockers");expect(f.sql.join("\n")).not.toMatch(/blocker_count|blocker_summary/);
+      const rootOnly=await liveFixture(),other=await seededLive(rootOnly,{extra:blocked()});
+      expect(Object.keys(await rootOnly.liveService.detail(rootOnly.principal,other))).not.toContain("blockers");
     });
     it("REAL DB: concurrent committed mutation mid-read; the read returns the consistent PRE-mutation gate+blockers",async()=>{
       const f=await blockersFixture(),id=await seededLive(f,{extra:blocked()});
