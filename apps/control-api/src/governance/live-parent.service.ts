@@ -6,8 +6,8 @@ import { CurrentOperationalReads,OperationalReadError,operationalHttpCall,type P
 import { IdentifierSchema } from "../operations/contracts";
 import { ParentFieldPurposeError } from "./positive-parent.authority";
 import { LiveParentRepository,LiveParentRepositoryError,type LiveParentSnapshot } from "./live-parent.repository";
-import { qualifyLiveParent } from "./live-parent.authority";
-import { liveParentRead,type LiveParentRead } from "./live-parent.contract";
+import { qualifyLiveParentDetailed } from "./live-parent.authority";
+import { liveParentRead,liveBlockers,type LiveParentRead } from "./live-parent.contract";
 function safe(e:unknown):Error{
   if(e instanceof AccessPolicyError||e instanceof OperationalReadError)return e;
   if(e instanceof ParentFieldPurposeError)return new OperationalReadError("GOVERNANCE_PARENT_FIELD_PURPOSE_UNAVAILABLE");
@@ -18,6 +18,15 @@ function safe(e:unknown):Error{
 function ms(value:string):number{
   if(typeof value!=="string"||!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,6})?(?:Z|\+00:00)$/.test(value))throw Error("LIVE_PARENT_TIME_INVALID");
   const n=Date.parse(value);if(!Number.isSafeInteger(n)||n<0)throw Error("LIVE_PARENT_TIME_INVALID");return n;
+}
+const publicText=(v:string)=>v.length>0&&[...v].length<=191&&!/[\u0000-\u001f\u007f]/u.test(v);
+/** Only called for a snapshot that requested LIVE_BLOCKERS. Never truncates, never maps invalid/absent data to zero. */
+function mapBlockers(snapshot:LiveParentSnapshot){
+  const b=snapshot.blockers,a=snapshot.approval;
+  if(!b||(b.count===0)!==(b.summary===null))return liveBlockers.parse({availability:"ABSENT",reason_code:"BLOCKER_FIELDS_INVALID"});
+  if(b.summary!==null&&!publicText(b.summary))return liveBlockers.parse({availability:"ABSENT",reason_code:"BLOCKER_SUMMARY_NOT_PUBLIC"});
+  return liveBlockers.parse({availability:"AVAILABLE",basis:"SAME_READ_SNAPSHOT_AS_APPROVAL",approval_id:a.approval_id,
+    approval_version:a.approval_version,blocker_count:b.count,blocker_summary:b.summary});
 }
 export function mapLiveParent(snapshot:LiveParentSnapshot,observedAt:number):LiveParentRead{
   const p=snapshot.identity,a=snapshot.approval;
@@ -31,7 +40,8 @@ export function mapLiveParent(snapshot:LiveParentSnapshot,observedAt:number):Liv
       quorum_required:a.quorum_required,quorum_met:a.quorum_met,evidence_complete:a.evidence_complete,
       created_at_ms:ms(a.created_at),updated_at_ms:ms(a.updated_at),sla_due_at_ms:ms(a.sla_due_at),expires_at_ms:ms(a.expires_at),
       decided_at_ms:a.decided_at===null?null:ms(a.decided_at)},
-    accepted_manager_facts:{availability:"NOT_PUBLISHED",reason_code:"PARENT_ROOT_NOT_SOURCE_SCREEN_COMPOSITION"}});
+    accepted_manager_facts:{availability:"NOT_PUBLISHED",reason_code:"PARENT_ROOT_NOT_SOURCE_SCREEN_COMPOSITION"},
+    ...(snapshot.blockers!==undefined?{blockers:mapBlockers(snapshot)}:{})});
 }
 @Injectable()
 export class LiveParentReads{
@@ -47,12 +57,13 @@ export class LiveParentReads{
       if(!IdentifierSchema.safeParse(id).success)throw new OperationalReadError("OPERATIONAL_READ_NOT_FOUND",404);
       const candidate=await this.repository.identityCandidate(principal.workspaceId,id);
       if(!candidate)throw new OperationalReadError("OPERATIONAL_READ_NOT_FOUND",404);
-      let snapshot:LiveParentSnapshot|undefined;
+      let snapshot:LiveParentSnapshot|undefined,wantBlockers=false;
       return {target:{resource:{kind:"DEPLOYMENT" as const,id:candidate.deploymentId},environment:"live" as const},
-        authorize:context=>qualifyLiveParent(context,candidate),
-        decode:async context=>{snapshot=await this.repository.protectedDetails(candidate);
+        authorize:context=>{const q=qualifyLiveParentDetailed(context,candidate);wantBlockers=q.blockers;
+          return {proof:q.proof,valid_until_ms:q.valid_until_ms};},
+        decode:async context=>{snapshot=await this.repository.protectedDetails(candidate,wantBlockers?{blockers:true}:undefined);
           return mapLiveParent(snapshot,Math.max(context.now_ms,Date.now()));},
-        beforeFinal:async()=>{if(snapshot&&!await this.repository.isUnchanged(candidate,snapshot.revision))
+        beforeFinal:async()=>{if(snapshot&&!await this.repository.isUnchanged(candidate,snapshot.revision,snapshot.blockers!==undefined?{blockers:true}:undefined))
           throw new OperationalReadError("OPERATIONAL_READ_CHANGED",409);}};
     },safe));
   }

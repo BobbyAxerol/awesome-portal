@@ -154,7 +154,11 @@ describe("BE-P12 sealed-digest discipline: no parent-field purpose was added or 
   ] as const)("%s keeps its reviewed field-set digest",purpose=>{
     expect(parentFieldSetDigest(purpose)).toBe(PINNED[purpose]);
   });
-  it("the seal cap is unchanged",()=>{expect(PARENT_FIELD_SEAL_CAP).toBe(31);});
+  it("the seal cap grew by exactly one live-only pair (LIVE_BLOCKERS), no existing pair changed",()=>{expect(PARENT_FIELD_SEAL_CAP).toBe(32);});
+  it("LIVE_BLOCKERS is a distinct live-only purpose; LIVE_ROOT field set did not widen",()=>{
+    expect(parentFieldSetDigest("LIVE_BLOCKERS")).toBe(PINNED_NEW.LIVE_BLOCKERS);
+    expect(parentFieldSetDigest("LIVE_BLOCKERS")).not.toBe(parentFieldSetDigest("LIVE_ROOT"));
+  });
 });
 
 // Compile-only: the generated types carry the optional members, and only optionally.
@@ -170,6 +174,7 @@ type CanaryBody=CanaryTypes["schemas"]["CanaryParentReadV2"];
 type _SandboxIdentityOptional=Assert<{} extends Pick<SandboxBody,"identity">?true:false>;
 type _CanaryIdentityOptional=Assert<{} extends Pick<CanaryBody,"identity">?true:false>;
 
+const PINNED_NEW:Record<string,string>={LIVE_BLOCKERS:"sha256:6216db52ad55b271687d146e1a86e4b500497f7c80e501610b85554900149231"};
 // Pinned from the tree BEFORE BE-P12 (be6d98d1); parent-read-fields.ts is not touched by this change.
 const PINNED:Record<string,string>={
   SANDBOX_ROOT:"sha256:8c030ea147886d0b16ddd6eb66c1d860c3e6305c585f1cad326e9e93f7e69740",

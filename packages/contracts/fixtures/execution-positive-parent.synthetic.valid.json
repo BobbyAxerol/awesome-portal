@@ -2350,6 +2350,140 @@
       "reason_code": "PARENT_ROOT_NOT_SOURCE_SCREEN_COMPOSITION"
     }
   },
+  "live_blockers": {
+    "schema_version": "portal.execution.live-parent.v2",
+    "family": "LIVE_GATE",
+    "workspace_id": "ws_TEST_ONLY_parent",
+    "record_authority": "PORTAL",
+    "provenance_basis": "CURRENT_CORE_BASELINE",
+    "field_contract_revision": "portal.execution.parent-fields.v1",
+    "observed_at_ms": 1792281600000,
+    "anchors": {
+      "deployment_id": "dep_TEST_ONLY_parent",
+      "environment": "LIVE"
+    },
+    "source": {
+      "authority": "PORTAL",
+      "source_verdict": "NOT_ASSERTED",
+      "source_side_effect_requested": false,
+      "runtime_activation_requested": false
+    },
+    "approval": {
+      "approval_id": "apr_TEST_ONLY_live",
+      "gate": "LIVE_GATE",
+      "status": "PENDING",
+      "approval_version": 1,
+      "policy_version": "TEST_ONLY:policy-v1",
+      "quorum_required": 2,
+      "quorum_met": 0,
+      "evidence_complete": false,
+      "created_at_ms": 1790812800000,
+      "updated_at_ms": 1790812800000,
+      "sla_due_at_ms": 1790899200000,
+      "expires_at_ms": 1790985600000,
+      "decided_at_ms": null
+    },
+    "accepted_manager_facts": {
+      "availability": "NOT_PUBLISHED",
+      "reason_code": "PARENT_ROOT_NOT_SOURCE_SCREEN_COMPOSITION"
+    },
+    "blockers": {
+      "availability": "AVAILABLE",
+      "basis": "SAME_READ_SNAPSHOT_AS_APPROVAL",
+      "approval_id": "apr_TEST_ONLY_live",
+      "approval_version": 1,
+      "blocker_count": 2,
+      "blocker_summary": "TEST_ONLY: two stored blockers"
+    }
+  },
+  "live_blockers_zero": {
+    "schema_version": "portal.execution.live-parent.v2",
+    "family": "LIVE_GATE",
+    "workspace_id": "ws_TEST_ONLY_parent",
+    "record_authority": "PORTAL",
+    "provenance_basis": "CURRENT_CORE_BASELINE",
+    "field_contract_revision": "portal.execution.parent-fields.v1",
+    "observed_at_ms": 1792281600000,
+    "anchors": {
+      "deployment_id": "dep_TEST_ONLY_parent",
+      "environment": "LIVE"
+    },
+    "source": {
+      "authority": "PORTAL",
+      "source_verdict": "NOT_ASSERTED",
+      "source_side_effect_requested": false,
+      "runtime_activation_requested": false
+    },
+    "approval": {
+      "approval_id": "apr_TEST_ONLY_live",
+      "gate": "LIVE_GATE",
+      "status": "PENDING",
+      "approval_version": 1,
+      "policy_version": "TEST_ONLY:policy-v1",
+      "quorum_required": 2,
+      "quorum_met": 0,
+      "evidence_complete": false,
+      "created_at_ms": 1790812800000,
+      "updated_at_ms": 1790812800000,
+      "sla_due_at_ms": 1790899200000,
+      "expires_at_ms": 1790985600000,
+      "decided_at_ms": null
+    },
+    "accepted_manager_facts": {
+      "availability": "NOT_PUBLISHED",
+      "reason_code": "PARENT_ROOT_NOT_SOURCE_SCREEN_COMPOSITION"
+    },
+    "blockers": {
+      "availability": "AVAILABLE",
+      "basis": "SAME_READ_SNAPSHOT_AS_APPROVAL",
+      "approval_id": "apr_TEST_ONLY_live",
+      "approval_version": 1,
+      "blocker_count": 0,
+      "blocker_summary": null
+    }
+  },
+  "live_blockers_absent": {
+    "schema_version": "portal.execution.live-parent.v2",
+    "family": "LIVE_GATE",
+    "workspace_id": "ws_TEST_ONLY_parent",
+    "record_authority": "PORTAL",
+    "provenance_basis": "CURRENT_CORE_BASELINE",
+    "field_contract_revision": "portal.execution.parent-fields.v1",
+    "observed_at_ms": 1792281600000,
+    "anchors": {
+      "deployment_id": "dep_TEST_ONLY_parent",
+      "environment": "LIVE"
+    },
+    "source": {
+      "authority": "PORTAL",
+      "source_verdict": "NOT_ASSERTED",
+      "source_side_effect_requested": false,
+      "runtime_activation_requested": false
+    },
+    "approval": {
+      "approval_id": "apr_TEST_ONLY_live",
+      "gate": "LIVE_GATE",
+      "status": "PENDING",
+      "approval_version": 1,
+      "policy_version": "TEST_ONLY:policy-v1",
+      "quorum_required": 2,
+      "quorum_met": 0,
+      "evidence_complete": false,
+      "created_at_ms": 1790812800000,
+      "updated_at_ms": 1790812800000,
+      "sla_due_at_ms": 1790899200000,
+      "expires_at_ms": 1790985600000,
+      "decided_at_ms": null
+    },
+    "accepted_manager_facts": {
+      "availability": "NOT_PUBLISHED",
+      "reason_code": "PARENT_ROOT_NOT_SOURCE_SCREEN_COMPOSITION"
+    },
+    "blockers": {
+      "availability": "ABSENT",
+      "reason_code": "BLOCKER_SUMMARY_NOT_PUBLIC"
+    }
+  },
   "live_composition": {
     "schema_version": "execution.operational-composition.v1",
     "logical_operation_id": "executionOperationalLiveReviewV1",

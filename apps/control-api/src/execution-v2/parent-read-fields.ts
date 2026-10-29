@@ -5,7 +5,7 @@ import type { ScopedAccessGrant, ReviewedAccessPolicy } from "./access.contract"
 export const parentFieldPurpose = z.enum([
   "R2_ROOT", "R2_LINEAGE", "PAPER_EXIT_ROOT", "PAPER_EXIT_REVIEW", "PAPER_EXIT_LINEAGE",
   "DECISION_OPERATION", "SANDBOX_ROOT", "SANDBOX_STEPS", "SANDBOX_LINEAGE",
-  "CANARY_ROOT", "CANARY_PROPOSAL", "CANARY_LINEAGE", "LIVE_ROOT",
+  "CANARY_ROOT", "CANARY_PROPOSAL", "CANARY_LINEAGE", "LIVE_ROOT", "LIVE_BLOCKERS",
   "ACTIVATION_CAPABILITIES","ACTIVATION_PLAN_ROOT","ACTIVATION_PLAN_EVIDENCE","ACTIVATION_PLAN_COMPATIBILITY",
   "PAPER_EXIT_CRITERIA",
   "DECISION_ACTORS", "DECISION_LATEST_OPERATION", "R2_DECISION_CONTEXT",
@@ -22,7 +22,7 @@ export const parentPurposeEnvironments=(purpose:ParentFieldPurpose):readonly ("p
   purpose.startsWith("ACTIVATION_")?["paper","sandbox","live"]:[parentPurposeEnvironment(purpose)];
 export const parentPurposeAllowsEnvironment=(purpose:ParentFieldPurpose,environment:"paper"|"sandbox"|"live")=>
   parentPurposeEnvironments(purpose).includes(environment);
-export const PARENT_FIELD_SEAL_CAP=31; //29 unchanged pairs +2 distinct paper-only recorded sections; no headroom.
+export const PARENT_FIELD_SEAL_CAP=32; //29 unchanged pairs +2 distinct paper-only recorded sections +1 live-only LIVE_BLOCKERS; no headroom.
 export const parentReadFieldSeal = z.object({
   purpose: parentFieldPurpose, environment: z.enum(["paper","sandbox","live"]),
   contract_revision: z.literal("portal.execution.parent-fields.v1"),
@@ -69,6 +69,8 @@ const FIELDS: Record<ParentFieldPurpose, readonly string[]> = {
   LIVE_ROOT:["schema_version","family",...ROOT.filter(field=>field!=="anchors.portfolio_id"),
     "source.runtime_activation_requested",
     "accepted_manager_facts.availability","accepted_manager_facts.reason_code"],
+  LIVE_BLOCKERS:["blockers.availability","blockers.reason_code","blockers.basis","blockers.approval_id",
+    "blockers.approval_version","blockers.blocker_count","blockers.blocker_summary"],
   ACTIVATION_CAPABILITIES:[...ACTIVATION_BASE,...CAPABILITY_FIELDS.map(field=>"capabilities.items."+field)],
   ACTIVATION_PLAN_ROOT:[...ACTIVATION_BASE,...ACTIVATION_PLAN_FIELDS.map(field=>"plan."+field),
     ...CAPABILITY_FIELDS.map(field=>"capability."+field),"evidence.availability","compatibility.availability"],
@@ -194,6 +196,12 @@ const internalInputs = (purpose: ParentFieldPurpose) => purpose === "RECORDED_PO
     fields:["kind","component","exact_revision","expected_digest"],compare_to:"stored.compatibility_set_hash",max_rows:16,max_row_bytes:2048}:null,
   children_scope:"EXACT_SELECTED_PLAN_ONLY_NO_ACTORS_PROSE_REQUEST_MATERIAL",max_total_bytes:262144,
   native_environment:"EXPLICIT_CURRENT_TECHNICAL_PERSPECTIVE_NOT_CAPTURED_HISTORY"
+} : purpose === "LIVE_BLOCKERS" ? {
+  use:"EXACT_STORED_LIVE_APPROVAL_BLOCKER_COLUMNS_SAME_SNAPSHOT_ONLY",disclose:false,business_compute:false,log:false,cache:false,
+  scope:["workspace_id","approval_id","gate=LIVE_GATE","subject_type=DEPLOYMENT","subject_id","environment=LIVE"],
+  source:"SAME_ROOT_ROW_SAME_REPEATABLE_READ_READ_ONLY_TRANSACTION_AS_LIVE_ROOT",fields:["blocker_count","blocker_summary"],
+  summary_public_text:"1_TO_191_CODE_POINTS_NO_CONTROL_ELSE_TYPED_ABSENT_NEVER_TRUNCATED",
+  unauthorized:"BLOCK_OMITTED_LIVE_ROOT_BODY_UNCHANGED",absent_is_not_zero:true,independent_of_purpose:"LIVE_ROOT",
 } : purpose === "LIVE_ROOT" ? {
   use:"EXACT_STORED_LIVE_APPROVAL_MANIFEST_ONLY",disclose:false,business_compute:false,log:false,cache:false,
   immutable_identity:["workspace_id","approval_id","gate=LIVE_GATE","subject_type=DEPLOYMENT","subject_id","environment=LIVE"],
@@ -238,7 +246,7 @@ export function reviewedParentAuditRoot(grant: ScopedAccessGrant, policy: Review
       (seal.purpose.startsWith("ACTIVATION_")?grant.selector.kind==="EXPLICIT_RESOURCE_SET"&&grant.selector.resource_kind==="ROOT":
         grant.selector.kind==="EXPLICIT_RESOURCE_SET"&&(grant.selector.resource_kind==="DEPLOYMENT"||grant.selector.resource_kind==="PORTFOLIO")) &&
       seal.environment === grant.environments[0] && parentPurposeAllowsEnvironment(seal.purpose,seal.environment) &&
-      (seal.purpose!=="LIVE_ROOT"||grant.selector.kind==="EXPLICIT_RESOURCE_SET"&&grant.selector.resource_kind==="DEPLOYMENT") &&
+      (seal.purpose!=="LIVE_ROOT"&&seal.purpose!=="LIVE_BLOCKERS"||grant.selector.kind==="EXPLICIT_RESOURCE_SET"&&grant.selector.resource_kind==="DEPLOYMENT") &&
       seal.field_policy_ref === grant.field_policy_ref &&
       (now === undefined || seal.valid_from_ms <= now && seal.valid_until_ms > now) &&
       seal.contract_revision === REVISION && seal.field_set_sha256 === parentFieldSetDigest(seal.purpose));

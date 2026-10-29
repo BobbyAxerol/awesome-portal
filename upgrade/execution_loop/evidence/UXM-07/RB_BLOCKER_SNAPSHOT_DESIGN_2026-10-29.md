@@ -1,0 +1,33 @@
+# R-B: blocker count/summary read in ONE authorized snapshot (design, 29 October 2026)
+
+Status: design written before code, on `claude/ft-be`. Backend authority is Codex; this is a proposal for review, not a landing. No connected-source or browser acceptance is claimed.
+
+## Problem
+
+The cockpit printed a Live gate's `blocker_count` / `blocker_summary` by joining two independent HTTP reads (inbox row, Live parent gate body). Equal `approval_version` across two reads is a useful guard, not a shared database snapshot, and the `LIVE_ROOT` parent-field purpose does not authorize blocker fields. The fields themselves are columns of the same row the Live parent already reads: `governance_approval_requests.blocker_count` / `blocker_summary` (DB CHECK: count = 0 <=> summary IS NULL).
+
+## Finding while building (migration 142)
+
+`governance_approval_requests` carries a capture-immutability trigger: only `status, quorum_met, decision_actor_ids, approval_version, updated_at, decided_at, decided_by_user_id` can change after capture. `blocker_count`, `blocker_summary` and `evidence_complete` are immutable captured facts. So the real cross-read hazard was never a blocker edit; it was pairing immutable blockers with a gate body whose lifecycle state (status/version) belongs to a different moment. The snapshot design removes exactly that: blockers and lifecycle state come from one statement/one RR snapshot, and the revision witness still covers the blocker columns defensively (a future migration could make them mutable). Tests therefore mutate lifecycle columns (status DENIED, version+1) concurrently.
+
+## Design
+
+1. **New scoped purpose `LIVE_BLOCKERS`** (environment `live`, same `portal.execution.parent-fields.v1` revision, own `field_set_sha256`). `LIVE_ROOT`'s field list, its internal-input description and therefore its digest are untouched. Reviewed policy must carry a separate seal for it, selected through the existing `selectedParentFieldSeal` path: same exact DEPLOYMENT anchor, same `audit.read` grant whose `field_policy_ref` equals the seal's, current audit, workspace, principal and `governance.live.read` gate (all already required for the root). The `LIVE_ROOT` seal alone never grants it. `reviewedParentAuditRoot` already accepts any seal whose purpose is live-compatible; `LIVE_BLOCKERS` is a `LIVE_*` purpose so it is bound to the DEPLOYMENT selector the same way. `PARENT_FIELD_SEAL_CAP` rises 31 -> 32 (one additional distinct env:purpose pair; no existing pair changes).
+2. **Optional block `blockers` on `LiveParentReadV2`.**
+   * Purpose NOT authorized: the key is **omitted**. The body is byte-for-byte the pre-change body (old consumers and the `LIVE_ROOT` field set unaffected; no leak that the purpose exists).
+   * Authorized and readable: `{availability:"AVAILABLE", basis:"SAME_READ_SNAPSHOT_AS_APPROVAL", approval_id, approval_version, blocker_count, blocker_summary|null}`; `approval_id`/`approval_version` are copied from the very row that supplied the gate fields and must equal `approval.approval_id`/`approval_version` (checked by the schema consumer; mismatch = invalid body).
+   * Authorized but not publishable (summary fails the public-text rule: 1..191 code points, no control characters; or count/summary invariant broken): `{availability:"ABSENT", reason_code:"BLOCKER_SUMMARY_NOT_PUBLIC" | "BLOCKER_FIELDS_INVALID"}`. Never truncated, never zero.
+   * Absence (omitted or ABSENT) is never interpreted as "no blockers" or a clear gate.
+3. **One snapshot.** `LiveParentRepository.protectedDetails` already runs inside `BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY`. When `LIVE_BLOCKERS` is authorized the same root `SELECT` also returns the two blocker columns, so the gate fields, evidence-complete flag, manifest verification (evidence rows) and the blockers come out of one statement of one RR/RO transaction. No second request, no token needed: the transaction route is possible, so no separately designed snapshot token is introduced.
+4. **Fence.** The private local `revision` witness now includes `{blocker_count, blocker_summary}` when (and only when) the purpose was requested; `isUnchanged` re-reads with the same flag in a fresh RR/RO transaction, so any queue/approval change between decode and final fence yields `OPERATIONAL_READ_CHANGED` (409), not a silently mixed body. The qualification proof digest includes the selected `LIVE_BLOCKERS` seal+grant (or `null`); revoking/expiring/adding it mid-flight changes the proof and fails the same-flight fence (`ACCESS_RETRY_REQUIRED` 409); the seal's `valid_until_ms` bounds the response lifetime like the root seal.
+5. **Compatibility.** Same route, same schema_version (`portal.execution.live-parent.v2`), optional property added; no new route. `LIVE_ROOT`-only deployments return the identical body (asserted by a test). The composition (`OperationalLiveParentCompositionV2`) carries the same governance body unchanged.
+6. **Contracts.** Generator (`execution-positive-parent-reader.mjs`) emits the optional `blockers` schema (oneOf AVAILABLE/ABSENT with `if/then` count/summary rule), fixtures `live_blockers` (AVAILABLE, count 2), `live_blockers_zero` (count 0, summary null), `live_blockers_absent`; regenerated through the repo generators and snapshot tooling; never hand-edited.
+7. **Frontend.** `readLiveParentV2` decodes the optional block into `blockers: {state:"available"|"absent"|"unauthorized"}`. `liveBlockerLine` reads ONLY `parent.blockers` of the same body; the inbox-row cross-read is removed from the UI path (no fallback): block absent/ABSENT/unmatched = generic "Evidence incomplete", as before. The row is still used for the list itself, never to complete the gate verdict.
+
+## What a real-DB receipt shows
+
+PostgreSQL-backed spec (disposable cell): open the repository read, commit a concurrent mutation of the approval row (lifecycle status and approval_version; blocker columns are DB-immutable) from another connection between statements, and show (a) the transaction's own re-read still sees the pre-mutation values while a separate connection sees the new values (RR proof), (b) the returned gate + blockers are the consistent pre-mutation pair, (c) the final fence reports CHANGED, (d) a second read sees the new pair; plus unauthorized purpose = omitted key, ABSENT cases, refusal/denial, revoked-mid-flight, LIVE_ROOT body unchanged.
+
+## Not claimed
+
+Browser/connected acceptance, Edge/source authority, any Live activation, a policy seal installed in any real environment (the seal must be reviewed/installed by the policy owner before the block appears anywhere).

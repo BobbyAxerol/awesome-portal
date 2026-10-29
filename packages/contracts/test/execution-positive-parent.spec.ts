@@ -115,6 +115,29 @@ describe("ELP2-04 independent finite stored Live approval",()=>{
     expect(modified.paths[liveParentReadRoute].post).toEqual(post);
     expect(modified.paths[liveParentReadRoute].get.parameters).toEqual(get.parameters);
   });
+  it("optional LIVE_BLOCKERS block: valid AVAILABLE/zero/ABSENT fixtures; LIVE_ROOT-only body (no key) stays valid and unchanged",()=>{
+    for(const name of ["live_blockers","live_blockers_zero","live_blockers_absent"])checkBoth("LiveParentReadV2",fixture[name],true);
+    expect(fixture.live).not.toHaveProperty("blockers");
+    const {blockers:_,...rest}=fixture.live_blockers;expect(rest).toEqual(fixture.live);
+    expect(fixture.live_blockers.blockers.approval_id).toBe(fixture.live.approval.approval_id);
+    expect(fixture.live_blockers.blockers.approval_version).toBe(fixture.live.approval.approval_version);
+    expect(fixture.live_blockers_zero.blockers.blocker_summary).toBeNull();
+    expect(fixture.live_blockers_absent.blockers).not.toHaveProperty("blocker_count");
+  });
+  it("LIVE_BLOCKERS negatives: missing fields, extra fields, count/summary contradiction, zero-as-absence",()=>{
+    const b=fixture.live_blockers.blockers,base=fixture.live;
+    for(const key of ["approval_id","approval_version","blocker_count","blocker_summary","basis"]){
+      const bad=clone(b);delete bad[key];checkBoth("LiveParentReadV2",{...base,blockers:bad},false);}
+    for(const bad of [{...b,extra:"x"},{...b,blocker_count:0},{...b,blocker_count:3,blocker_summary:null},
+      {...b,blocker_count:-1},{...b,blocker_summary:""},{...b,blocker_summary:"x".repeat(192)},
+      {...b,availability:"UNKNOWN"},{availability:"ABSENT"},{availability:"ABSENT",reason_code:"OTHER"},
+      {availability:"ABSENT",reason_code:"BLOCKER_SUMMARY_NOT_PUBLIC",blocker_count:0}])
+      checkBoth("LiveParentReadV2",{...base,blockers:bad},false);
+    // Cross-field rule (not expressible in JSON Schema): runtime consumer rejects another approval id/version.
+    for(const bad of [{...b,approval_id:"apr_TEST_ONLY_other"},{...b,approval_version:b.approval_version+1}]){
+      expect(liveParentRead.safeParse({...base,blockers:bad}).success).toBe(false);
+      expect(validate("LiveParentReadV2",{...base,blockers:bad})).toBe(true);}
+  });
   it("keeps current audit source authority distinct from stored approval, source screen and broker state",()=>{
     checkBoth("LiveParentReadV2",fixture.live,true);
     expect(fixture.live.accepted_manager_facts.availability).toBe("NOT_PUBLISHED");
@@ -138,8 +161,8 @@ describe("ELP2-04 finite current-authorized R2/Paper Exit contracts",()=>{
       field_set_sha256:parentFieldSetDigest(purpose),valid_from_ms:0,valid_until_ms:1})));
     expect(parentReadFieldSeals.safeParse(seals).success).toBe(true);
     expect(new Set(seals.map(seal=>seal.field_set_sha256)).size).toBe(parentFieldPurpose.options.length);
-    expect(parentFieldPurpose.options).toHaveLength(23);
-    expect(PARENT_FIELD_SEAL_CAP).toBe(31);expect(seals).toHaveLength(31);
+    expect(parentFieldPurpose.options).toHaveLength(24);
+    expect(PARENT_FIELD_SEAL_CAP).toBe(32);expect(seals).toHaveLength(32);
     const first=seals[0]!;
     for(const values of [
       [...seals,first],Array(17).fill(first),

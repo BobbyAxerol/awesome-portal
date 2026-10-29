@@ -527,6 +527,22 @@ export interface components {
                 /** @constant */
                 reason_code: "PARENT_ROOT_NOT_SOURCE_SCREEN_COMPOSITION";
             };
+            /** @description Read in the SAME REPEATABLE READ READ ONLY snapshot as approval. Block is omitted when LIVE_BLOCKERS is not authorized. blocker_count 0 <=> blocker_summary null (AVAILABLE). approval_id/approval_version MUST equal approval.approval_id/approval_version (runtime consumer check; not expressible across properties in JSON Schema). ABSENT is typed absence, never zero blockers or a clear gate. */
+            blockers?: unknown & ({
+                /** @constant */
+                availability: "AVAILABLE";
+                /** @constant */
+                basis: "SAME_READ_SNAPSHOT_AS_APPROVAL";
+                approval_id: string;
+                approval_version: number;
+                blocker_count: number;
+                blocker_summary: string | null;
+            } | {
+                /** @constant */
+                availability: "ABSENT";
+                /** @enum {string} */
+                reason_code: "BLOCKER_SUMMARY_NOT_PUBLIC" | "BLOCKER_FIELDS_INVALID";
+            });
         };
         CommandProblem: {
             error: {

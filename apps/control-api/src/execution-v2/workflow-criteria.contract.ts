@@ -5,7 +5,7 @@
 import { z } from "zod";
 import { r2ParentRead, paperExitParentRead } from "../governance/positive-parent.contract";
 import { sandboxParentRead, canaryParentRead, followingSteps } from "../governance/following-parent.contract";
-import { liveParentRead } from "../governance/live-parent.contract";
+import { liveParentRead, liveParentReadShape } from "../governance/live-parent.contract";
 
 // Reuse the exact PUBLIC schemas, not the repository/private integrity shape.
 const paper = paperExitParentRead.innerType().shape;
@@ -110,8 +110,8 @@ const Sandbox = z.object({ ...recordBase, family: z.literal("SANDBOX"), anchors:
 const Canary = z.object({ ...recordBase, family: z.literal("CANARY"), anchors: canary.anchors,
   envelope: canary.envelope }).strict().refine(v => (v.envelope.revision === 1) ===
     (v.envelope.previous_envelope_id === null), "RECORDED_PREDECESSOR_INVALID");
-const Live = z.object({ ...recordBase, family: z.literal("LIVE_GATE"), anchors: liveParentRead.shape.anchors,
-  approval: liveParentRead.shape.approval }).strict();
+const Live = z.object({ ...recordBase, family: z.literal("LIVE_GATE"), anchors: liveParentReadShape.anchors,
+  approval: liveParentReadShape.approval }).strict();
 export const workflowRecordedPortal = z.union([R2, Paper, Sandbox, Canary, Live]);
 export type WorkflowRecordedPortal = z.infer<typeof workflowRecordedPortal>;
 export const workflowPublicParentInput = z.union([r2ParentRead, paperExitParentRead, sandboxParentRead, canaryParentRead, liveParentRead]);

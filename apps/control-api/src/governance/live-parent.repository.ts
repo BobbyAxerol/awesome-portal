@@ -9,8 +9,13 @@ import type { RawApprovalMetadata,RawEvidenceMetadata } from "./positive-parent.
 export interface LiveParentCandidate {readonly workspaceId:string;readonly approvalId:string;
   readonly deploymentId:string;readonly environment:"LIVE";readonly family:"LIVE_GATE";}
 export interface LiveParentSnapshot {readonly identity:LiveParentCandidate;readonly approval:RawApprovalMetadata;
+  /** Present ONLY when the optional LIVE_BLOCKERS purpose was requested. Read by the SAME statement, in the SAME
+   * REPEATABLE READ READ ONLY transaction, as the gate/approval fields above. */
+  readonly blockers?:LiveParentBlockers;
   /** Private local equality witness, never a public snapshot digest or permit. */
   readonly revision:string;}
+export interface LiveParentBlockers {readonly count:number;readonly summary:string|null;}
+export interface LiveParentReadOptions {readonly blockers?:boolean;}
 export class LiveParentRepositoryError extends Error{
   constructor(readonly code:"NOT_FOUND"|"BOUND"|"INTEGRITY"){super(code);}
 }
@@ -22,11 +27,12 @@ function candidate(p:LiveParentCandidate):LiveParentCandidate{
   return Object.freeze({workspaceId:p.workspaceId,approvalId:p.approvalId,deploymentId:p.deploymentId,
     environment:"LIVE",family:"LIVE_GATE"});
 }
-const root=`SELECT a.approval_id,a.workspace_id,a.subject_id AS deployment_id,a.status,a.policy_version,
+const rootSql=(blockers:boolean)=>`SELECT a.approval_id,a.workspace_id,a.subject_id AS deployment_id,a.status,a.policy_version,
   a.approval_version,a.quorum_required,a.quorum_met,a.evidence_complete,a.evidence_set_hash,
-  a.sla_due_at,a.expires_at,a.created_at,a.updated_at,a.decided_at
+  a.sla_due_at,a.expires_at,a.created_at,a.updated_at,a.decided_at${blockers?",a.blocker_count,a.blocker_summary":""}
   FROM governance_approval_requests a WHERE a.workspace_id=$1 AND a.approval_id=$2
     AND a.subject_id=$3 AND a.subject_type='DEPLOYMENT' AND a.gate='LIVE_GATE' AND a.environment='LIVE'`;
+const root=rootSql(false);
 function date(value:unknown):Date{
   if(typeof value!=="string"||!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,6})?(?:Z|\+00:00)$/.test(value))return fail("INTEGRITY");
   const d=new Date(value);
@@ -85,16 +91,16 @@ export class LiveParentRepository{
   }
   /** Caller must already hold SAME-flight exact current Live/audit/field
    * qualification. No private decoder is called during identity lookup. */
-  async protectedDetails(selected:LiveParentCandidate):Promise<LiveParentSnapshot>{
-    const p=candidate(selected),values=ids(p);
+  async protectedDetails(selected:LiveParentCandidate,options:LiveParentReadOptions={}):Promise<LiveParentSnapshot>{
+    const p=candidate(selected),values=ids(p),wantBlockers=options.blockers===true,rootQuery=rootSql(wantBlockers);
     return this.read(async(db,budget)=>{
-      const roots=await this.rows<RawApprovalMetadata&{workspace_id:string;deployment_id:string}>(db,budget,root,values,1),a=roots[0];
+      const roots=await this.rows<RawApprovalMetadata&{workspace_id:string;deployment_id:string;blocker_count?:unknown;blocker_summary?:unknown}>(db,budget,rootQuery,values,1),a=roots[0];
       if(!a)return fail("NOT_FOUND");
       if(a.approval_id!==p.approvalId||a.workspace_id!==p.workspaceId||a.deployment_id!==p.deploymentId)return fail("INTEGRITY");
       for(const t of [a.created_at,a.updated_at,a.sla_due_at,a.expires_at])date(t);
       if(a.decided_at!==null)date(a.decided_at);
       if(typeof a.evidence_set_hash!=="string"||!/^sha256:[0-9a-f]{64}$/.test(a.evidence_set_hash))return fail("INTEGRITY");
-      const evidence=await this.rows<RawEvidenceMetadata>(db,budget,`WITH root AS MATERIALIZED(${root})
+      const evidence=await this.rows<RawEvidenceMetadata>(db,budget,`WITH root AS MATERIALIZED(${rootQuery})
         SELECT e.evidence_id,e.ordinal,e.sha256,e.schema_version,e.source_authority,e.captured_at
         FROM governance_approval_evidence e JOIN root r ON e.approval_id=r.approval_id
         ORDER BY e.ordinal,e.evidence_id`,values,256);
@@ -115,14 +121,22 @@ export class LiveParentRepository{
         approval_version:a.approval_version,quorum_required:a.quorum_required,quorum_met:a.quorum_met,
         evidence_complete:a.evidence_complete,evidence_set_hash:a.evidence_set_hash,sla_due_at:a.sla_due_at,
         expires_at:a.expires_at,created_at:a.created_at,updated_at:a.updated_at,decided_at:a.decided_at};
+      let blockers:LiveParentBlockers|undefined;
+      if(wantBlockers){
+        // Same row, same statement, same snapshot as the gate fields. Integrity failure is a fixed 503, never a zero.
+        const n=a.blocker_count,t=a.blocker_summary;
+        if(!Number.isSafeInteger(n)||(n as number)<0||!(t===null||typeof t==="string"))return fail("INTEGRITY");
+        blockers=Object.freeze({count:n as number,summary:t as string|null});
+      }
       // Exact raw UTC microseconds retained ONLY in the private local witness.
       // No hidden hash/preimage becomes a browser snapshot revision.
       const revision=`sha256:${createHash("sha256").update(canonical({identity:p,approval,
-        evidence:[...evidence].sort((x,y)=>x.ordinal-y.ordinal||(x.evidence_id<y.evidence_id?-1:x.evidence_id>y.evidence_id?1:0))}),"utf8").digest("hex")}`;
-      return Object.freeze({identity:p,approval,revision});
+        evidence:[...evidence].sort((x,y)=>x.ordinal-y.ordinal||(x.evidence_id<y.evidence_id?-1:x.evidence_id>y.evidence_id?1:0)),
+        ...(blockers?{blockers}:{})}),"utf8").digest("hex")}`;
+      return Object.freeze({identity:p,approval,...(blockers?{blockers}:{}),revision});
     });
   }
-  async isUnchanged(p:LiveParentCandidate,revision:string):Promise<boolean>{
-    return (await this.protectedDetails(p)).revision===revision;
+  async isUnchanged(p:LiveParentCandidate,revision:string,options:LiveParentReadOptions={}):Promise<boolean>{
+    return (await this.protectedDetails(p,options)).revision===revision;
   }
 }

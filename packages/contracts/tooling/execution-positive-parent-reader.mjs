@@ -245,13 +245,25 @@ export function parentCurrentSchemas(){
     command_type:{const:"GOVERNANCE_PAPER_EXIT_DECISION"},decision:enumeration(["PROMOTE","EXTEND_OBSERVATION","REJECT"]),
     parent_approval_id:{type:"null"},parent_approval_version:{type:"null"},parent_evidence_set_hash:{type:"null"}}),
     allOf:[appliedState],description:operationDescription+" Paper plans do not capture parent_approval_*; all three fields must remain null. expected_version is the captured review version."};
-  const LiveParentReadV2={...object({...base("LIVE_GATE"),
+  // Optional LIVE_BLOCKERS block: key omitted unless that separate purpose is authorized (LIVE_ROOT body unchanged).
+  const liveBlockers={oneOf:[
+    object({availability:{const:"AVAILABLE"},basis:{const:"SAME_READ_SNAPSHOT_AS_APPROVAL"},approval_id:id,approval_version:version,
+      blocker_count:count,blocker_summary:nullable({type:"string",minLength:1,maxLength:191})}),
+    object({availability:{const:"ABSENT"},reason_code:enumeration(["BLOCKER_SUMMARY_NOT_PUBLIC","BLOCKER_FIELDS_INVALID"])})],
+    description:"Read in the SAME REPEATABLE READ READ ONLY snapshot as approval. Block is omitted when LIVE_BLOCKERS is not authorized. blocker_count 0 <=> blocker_summary null (AVAILABLE). approval_id/approval_version MUST equal approval.approval_id/approval_version (runtime consumer check; not expressible across properties in JSON Schema). ABSENT is typed absence, never zero blockers or a clear gate.",
+    allOf:[{if:{type:"object",properties:{availability:{const:"AVAILABLE"}},required:["availability"]},
+      then:{oneOf:[{type:"object",properties:{blocker_count:{type:"integer",const:0},blocker_summary:{type:"null"}}},
+        {type:"object",properties:{blocker_count:{type:"integer",minimum:1},blocker_summary:{type:"string"}}}]}}]};
+  const LiveParentReadV2Base=object({...base("LIVE_GATE"),
     schema_version:{const:"portal.execution.live-parent.v2"},family:{const:"LIVE_GATE"},
     anchors:object({deployment_id:id,environment:{const:"LIVE"}}),
     source:object({authority:{const:"PORTAL"},source_verdict:{const:"NOT_ASSERTED"},
       source_side_effect_requested:{const:false},runtime_activation_requested:{const:false}}),
     accepted_manager_facts:object({availability:{const:"NOT_PUBLISHED"},
-      reason_code:{const:"PARENT_ROOT_NOT_SOURCE_SCREEN_COMPOSITION"}})}),
+      reason_code:{const:"PARENT_ROOT_NOT_SOURCE_SCREEN_COMPOSITION"}}),
+    blockers:liveBlockers});
+  LiveParentReadV2Base.required=LiveParentReadV2Base.required.filter(k=>k!=="blockers");
+  const LiveParentReadV2={...LiveParentReadV2Base,
     description:"Finite stored Portal LIVE_GATE under current exact DEPLOYMENT/LIVE audit, independent governance.live.read and reviewed LIVE_ROOT purpose. No Portfolio or R1/R2 predecessor was captured or fabricated. Historical expiry is metadata, not current read authority. Manifest integrity is local stored-byte verification, not TS acceptance, broker state or runtime commissioning; source facts stay separately unavailable. Runtime additionally verifies timestamp ordering, exact workspace/parent/target and original manifest. No private actor/prose/hash preimage."};
   return {R2ParentReadV2,PaperExitParentReadV2,
     OperationalR2ParentCompositionV2:composition("ApprovalR2",{governance:ref("R2ParentReadV2"),accepted_manager_facts:{type:"null"}}),
@@ -284,7 +296,7 @@ function followingCurrentSchemas(){
     source_authority:nullable(enumeration(["PORTAL","EXECUTION","BROKER","DERIVED"])),
     source_verification_state:nullable(enumeration(["VERIFIED","UNAVAILABLE"])),
     as_of_ms:nullable(count),expires_at_ms:nullable(count)}),
-    allOf:[{if:{properties:{availability:{const:"AVAILABLE"}},required:["availability"]},
+    allOf:[{if:{type:"object",properties:{availability:{const:"AVAILABLE"}},required:["availability"]},
       then:{properties:{evidence_id:id,stored_evaluation_state:enumeration(["PASS","FAIL","STALE","UNAVAILABLE"]),
         source_authority:enumeration(["PORTAL","EXECUTION","BROKER","DERIVED"]),
         source_verification_state:enumeration(["VERIFIED","UNAVAILABLE"])}},
@@ -600,6 +612,12 @@ export function parentCurrentFixture(){
     source:{authority:"PORTAL",source_verdict:"NOT_ASSERTED",source_side_effect_requested:false,runtime_activation_requested:false},
     approval:approval("apr_TEST_ONLY_live","LIVE_GATE"),
     accepted_manager_facts:{availability:"NOT_PUBLISHED",reason_code:"PARENT_ROOT_NOT_SOURCE_SCREEN_COMPOSITION"}};
+  // Optional LIVE_BLOCKERS block variants; approval id/version equal the parent's (cross-field rule).
+  const liveBlockers={...live,blockers:{availability:"AVAILABLE",basis:"SAME_READ_SNAPSHOT_AS_APPROVAL",
+    approval_id:live.approval.approval_id,approval_version:live.approval.approval_version,blocker_count:2,
+    blocker_summary:"TEST_ONLY: two stored blockers"}};
+  const liveBlockersZero={...live,blockers:{...liveBlockers.blockers,blocker_count:0,blocker_summary:null}};
+  const liveBlockersAbsent={...live,blockers:{availability:"ABSENT",reason_code:"BLOCKER_SUMMARY_NOT_PUBLIC"}};
   return {lane:"TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT",runtime_qualified:false,production_config:false,
     authority_installed:false,r2,r2_absent:r2Absent,paper_exit:paperExit,paper_exit_absent:paperExitAbsent,paper_exit_extended:paperExitExtended,
     paper_exit_criteria:paperExitCriteria,
@@ -616,6 +634,7 @@ export function parentCurrentFixture(){
     sandbox_identity_hidden:{...sandboxAbsent,identity:scopedIdentityExamples().hidden},
     canary_identity:{...canary,identity:scopedIdentityExamples().named},
     canary_identity_hidden:{...canaryAbsent,identity:scopedIdentityExamples().hidden},live,
+    live_blockers:liveBlockers,live_blockers_zero:liveBlockersZero,live_blockers_absent:liveBlockersAbsent,
     live_composition:parentCompositionFixture("live_review",{governance:live,
       accepted_manager_facts:live.accepted_manager_facts},base.workspace_id,observed),
     r2_followthrough:r2Followthrough,r2_followthrough_hashes_absent:r2FollowthroughHashesAbsent,
