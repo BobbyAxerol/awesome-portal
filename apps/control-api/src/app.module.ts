@@ -63,6 +63,10 @@ import { PositiveParentReads } from "./governance/positive-parent.service";
 import { FollowingParentRepository } from "./governance/following-parent.repository";
 import { FollowingParentReads } from "./governance/following-parent.service";
 import { LiveParentRepository } from "./governance/live-parent.repository";
+import { EquityProjectionSourceController } from "./equity-projection/equity-projection-source.controller";
+import { SourceNotCommissionedPort } from "./equity-projection/equity-projection-source.dark";
+import { EQUITY_PROJECTION_SOURCE_PORT } from "./equity-projection/equity-projection-source.port";
+import { EquityProjectionSourceReads } from "./equity-projection/equity-projection-source.service";
 import { LiveParentReads } from "./governance/live-parent.service";
 import { PaperExitRepository } from "./governance/paper-exit.repository";
 import { PaperExitService } from "./governance/paper-exit.service";
@@ -286,6 +290,9 @@ export interface ControlApiDependencies {
   nativeCurrent?: PreparedNativeCurrentApplication;
   /** Independent current-requester STATUS; never mounts command SUBMIT. */
   commandStatus?:PreparedCommandStatusApplication;
+  /** R-C: source-dark. Absent (the default and production) leaves the route UNMOUNTED. The only accepted value mounts the producer over the
+   * SOURCE_NOT_COMMISSIONED port, so every body is typed absence. There is no other port implementation and no config flag. */
+  equityProjectionSource?: "SOURCE_DARK";
   /** Independent ROOT original/held COMMIT, same pool/coordinator as writers. */
   nativeRoot?:PreparedNativeRootApplication;
   executionCommandTrust?: CommandTrust;
@@ -411,6 +418,7 @@ export class AppModule implements OnApplicationShutdown {
         SandboxCertificationController,
         CanaryController,
         LiveOperationsController,
+        ...(dependencies.equityProjectionSource === "SOURCE_DARK" ? [EquityProjectionSourceController] : []),
         ActivationController,
         ScreenBffController,
         PaperReadController,
@@ -693,6 +701,8 @@ export class AppModule implements OnApplicationShutdown {
         FollowingParentReads,
         LiveParentRepository,
         LiveParentReads,
+        ...(dependencies.equityProjectionSource === "SOURCE_DARK" ? [
+          { provide: EQUITY_PROJECTION_SOURCE_PORT, useClass: SourceNotCommissionedPort }, EquityProjectionSourceReads] : []),
         PaperExitRepository,
         PaperExitService,
         GovernanceReviewCaptureService,
