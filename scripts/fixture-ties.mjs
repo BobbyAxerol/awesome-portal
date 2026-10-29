@@ -1742,6 +1742,50 @@ export async function runWorldTies(get) {
       }
     }
   }
+  // ===== WP-R-C begin: the equity projection (FIXTURE-ONLY route; the real one is source-dark) is the world's own series (W200-W203)
+  {
+    const D = 10n ** 18n;
+    const EP = (id, window) => `${E}/deployments/${id}/equity-projection?window=${window}`;
+    for (const id of [...deployments.keys()].slice(0, 40)) {
+      const r = await get(EP(id, "30d"));
+      check("W200", r.status === 200, `${id}: the equity projection answers ${r.status}`);
+      if (r.status !== 200) continue;
+      const data = r.body?.analytics?.data;
+      check("W200", data?.deployment_id === id, `${id}: the projection is for ${data?.deployment_id}`);
+      check("W200", data?.currency === deployments.get(id).row?.currency || deployments.get(id).row?.currency === undefined, `${id}: the projection's currency ${data?.currency} is not the deployment's ${deployments.get(id).row?.currency}`);
+      check("W200", r.body?.runtime_active === false && r.body?.source_side_effect_requested === false, `${id}: the projection claims a mounted producer`);
+      const pts = data?.points ?? [];
+      check("W200", pts.length >= 2 && pts.length <= 5000 && pts.length === data?.expected_buckets, `${id}: ${pts.length} points for ${data?.expected_buckets} expected buckets`);
+      // W201: the last equity is the equity every other chart of that deployment ends on (allocation + Net PnL + unrealized of a live deployment)
+      const spec = (alphaResources.get(deployments.get(id).alphaId)?.data.alpha?.deployments ?? []).find((d) => d.deployment_id === id);
+      if (spec !== undefined && STAGE_ENV[spec.stage] === "LIVE" && pts.length > 0) {
+        const full = numOf(spec.allocation) + numOf(spec.net_pnl) + numOf(spec.unrealized_pnl);
+        check("W201", numOf(pts.at(-1).equity) === full, `${id}: the projection ends at ${pts.at(-1).equity}, allocation + Net PnL + unrealized is ${fromUnits(full)}`);
+      }
+      // W202: drawdown = value / running max - 1 (a fraction, 0 at a high)
+      let peak = null;
+      for (const p of pts) {
+        const v = numOf(p.equity);
+        if (v === null) { check("W202", p.drawdown === null, `${id} ${p.bucket_start}: a hole carries a drawdown`); continue; }
+        if (peak === null || v > peak) peak = v;
+        const dd = peak > 0n ? (v - peak) * D / peak : 0n;
+        const got = numOf(p.drawdown);
+        const err = got === null ? D : (got > dd ? got - dd : dd - got);
+        check("W202", err <= D / 1_000_000n + 1n, `${id} ${p.bucket_start}: drawdown ${p.drawdown} is not value / running max - 1 (${fromUnits(dd)})`);
+      }
+      // W203: one lattice from requested_from, the last bucket is requested_to, the band is the labelled fixture band joined to the series
+      const step = (data?.interval_seconds ?? 0) * 1000;
+      const from = Date.parse(data?.requested_from);
+      check("W203", step > 0 && pts.every((p, i) => Date.parse(p.bucket_start) === from + i * step), `${id}: the buckets are not one lattice from ${data?.requested_from}`);
+      check("W203", pts.length > 0 && Date.parse(pts.at(-1).bucket_start) === Date.parse(data?.requested_to), `${id}: the last bucket is not requested_to`);
+      const band = data?.approved_band;
+      check("W203", band !== null && band?.run_id === data?.joined_run_id && band?.artifact_digest === data?.artifact_digest, `${id}: the band is not joined to the series' run and digest`);
+      check("W203", (r.body?.analytics?.warnings ?? []).some((w) => w.code === "FIXTURE_ILLUSTRATIVE_BAND"), `${id}: the fixture band is not labelled as a fixture`);
+    }
+    const unknown = await get(EP("dep_does_not_exist", "30d"));
+    check("W200", unknown.status === 404, `an unknown deployment answers ${unknown.status}, not 404`);
+  }
+  // ===== WP-R-C end
   // ===== WP-B2-A3 round D end
   return { ties };
 }

@@ -663,6 +663,12 @@ export interface ExecutionApi {
    */
   getRunLibraryAlphaCataloguePage?(query: import("../v2/readers/runLibraryAlphaCatalogue").AlphaCatalogueQuery): Promise<import("../v2/readers/runLibraryAlphaCatalogue").AlphaCataloguePageAnswer>;
   /**
+   * `GET /api/v1/execution/deployments/{deploymentId}/equity-projection` (R-C, `executionEquityProjection`): the deployment's equity, drawdown
+   * and an approved-band projection. The real route is source-dark and unmounted (`runtime_active` is the constant false), so real screens keep
+   * their typed absence; only the fixture lane serves it. Optional; never throws; a failure is a typed word, never server prose.
+   */
+  getEquityProjection?(query: import("../v2/readers/equityProjection").EquityProjectionQuery): Promise<import("../v2/readers/equityProjection").EquityProjectionAnswer>;
+  /**
    * `GET /api/v1/execution/governance/approvals/{approval_id}/evidence` (WP-K, `portal.execution.approval-evidence.v1`): the evidence beside one
    * request (prior economic history, evidence diff, obligations still open, receipt preview, the Portal's evaluation time). Optional: a port
    * that does not offer it, or a route nothing serves yet, leaves the cockpit panels on their typed absence.

@@ -26,6 +26,7 @@ import { isPositiveMode, setPositiveMode } from "../frontend/e2e/bffPositiveMode
 import { WORLD_NOW_MS } from "../frontend/e2e/bffWorld";
 import { commandStoryRoute } from "./command-story";
 import { answerAlphaCatalogue } from "./alpha-catalogue"; // WP-B2-P2
+import { answerEquityProjection } from "./equity-projection"; // WP-R-C
 import { applyScenarioBody, resetFixtureTransitions, scenarioRequest, scenarioVariants } from "./scenario-apply";
 import { rosterNames } from "./roster-names";
 // ===== WP-B2-A begin
@@ -286,6 +287,10 @@ function answerFor(config: FixtureConfig, rawRequest: BffRequest): BffResponse |
   const catalogue = answerAlphaCatalogue(rawRequest);
   if (catalogue !== null) return catalogue;
   // ===== WP-B2-P2 end
+  // ===== WP-R-C begin: the equity projection of a world deployment (FIXTURE-ONLY; the real route is source-dark)
+  const projection = answerEquityProjection(rawRequest);
+  if (projection !== null) return projection;
+  // ===== WP-R-C end
   // WP-P: the selected scenario may reroute a read to a negative case the doubles already model, and shape the value-rewrite scenarios.
   const request = profile === "sparse-realistic" ? rawRequest : scenarioRequest(getScenario(), rawRequest);
   const review = profile === "sparse-realistic" ? null : answerReviewManager(request.method, request.path,

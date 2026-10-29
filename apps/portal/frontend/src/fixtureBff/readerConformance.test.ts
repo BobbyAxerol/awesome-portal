@@ -56,6 +56,7 @@ const GROUPS: readonly { id: string; title: string }[] = [
   { id: "W129", title: "alpha resource v2 body in the ws_TEST_SCOPED_V2 workspace is accepted by the v2 reader" },
   { id: "W130", title: "Sandbox and Canary stage variants (_dark) in the ws_TEST_SCOPED_V2 workspace do not crash the server" },
   { id: "W131", title: "every alpha the Fleet lists opens: its alpha 360 resource, lifecycle and dataset exist" },
+  { id: "W125", title: "R-C equity projection (fixture-only route): every Fleet deployment, every window, accepted by the strict equityProjection reader" },
 ];
 
 /**
@@ -385,6 +386,16 @@ async function runAll(): Promise<void> {
     const answer = await api.getRunLibraryAlphaCataloguePage!({} as Any);
     return answer.kind === "page" ? { ok: true, value: answer } : { ok: false, status: "unavailable", reason: `catalogue ${(answer as Any).word}` };
   });
+
+  // ── W125 R-C equity projection (FIXTURE-ONLY: the real route is source-dark, real screens keep typed absence)
+  for (const d of deployments.slice(0, 80)) {
+    for (const window of ["1d", "30d", "1y"] as const) {
+      await record("W125", `getEquityProjection ${d.id} ${window}`, async () => {
+        const answer = await api.getEquityProjection!({ deploymentId: d.id, window });
+        return answer.kind === "projection" ? { ok: true, value: answer } : { ok: false, status: "unavailable", reason: `equity projection ${(answer as Any).word} ${(answer as Any).refusal ?? ""} could not be read` };
+      });
+    }
+  }
 
   // ── W122 shell and admin
   // the root the caller's own grants name (the Access screen reads it from the effective grants)

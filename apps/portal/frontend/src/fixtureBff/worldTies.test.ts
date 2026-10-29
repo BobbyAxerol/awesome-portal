@@ -98,6 +98,10 @@ const TIES: readonly { id: string; title: string; qa: string; owner: string }[] 
   { id: "W160", title: "the Fleet read behind every Overview stage link (stage_filter x group_by, any environment) answers 200", qa: "N10-M4", owner: "B-S" },
   { id: "W161", title: "the venue bars end at the as-of of the frame the request is in (the preview clock), cover the window up to it, closing at the world mark, count = bars listed (unit test venueCandlesClamp.test.ts; W73/W103 hold the home frame)", qa: "N9a-05 (QA10)", owner: "B-S" },
   { id: "W210", title: "variant ids are declared fixture views (never a stripped suffix): every declared view names a fleet deployment, a declared variant's blotter and Operations links list exactly its base's rows, an undeclared look-alike lists nothing", qa: "R-A (Codex 29 Oct)", owner: "B-S" },
+  { id: "W200", title: "R-C (fixture-only) the equity projection of a deployment is that deployment's: its id and currency, no mounted-producer claim, one bucket per expected bucket, 404 for an unknown id", qa: "R-C", owner: "B-P2" },
+  { id: "W201", title: "R-C the projection's last equity is the equity every other chart of a live deployment ends on (allocation + Net PnL + unrealized)", qa: "R-C", owner: "B-P2" },
+  { id: "W202", title: "R-C the projection's drawdown is value / running max - 1 over its own buckets", qa: "R-C", owner: "B-P2" },
+  { id: "W203", title: "R-C the projection is one lattice that ends on requested_to, and its band is the labelled fixture band joined to the series' run and digest", qa: "R-C", owner: "B-P2" },
   // ===== WP-B2-S3 end
   { id: "W23", title: "a scoped blotter is the scope's population: every order of the deployment/alpha (including ord_00225 for Carry A) is on it, count and chips equal the filtered population", qa: "QA6 R2-02", owner: "B-B1" },
   { id: "W24", title: "one definition of the money of a book: Net PnL is the published realized, a venue is the sum of its deployments, Equity is allocation + realized + unrealized (a ledger figure without the unrealized is not named Equity)", qa: "R2-03 R5-08 R3-07", owner: "B-C3" },
