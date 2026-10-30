@@ -48,3 +48,22 @@ Checks on the merged tree: control-api `tsc` clean; frontend `tsc` has 96 errors
 One defect found during the merge: `keyedAnswer.test.tsx` passed a fresh `{}` port every render, so the request key changed every render and the worker ran out of heap (`53593ff4f`, test-only, assertions unchanged). Product code is unaffected: the port comes from context and is stable.
 
 Not run on this branch: full vitest, full hook, V2 pixel baselines (workbench-paper, live and canary will differ on the fixture BFF), `verify-generated.sh`. Fixture lane only: no real source, no field authority.
+
+## research-portal handoff receipt, 30 Oct (REAL_API, current image)
+
+Scope (Bobby, 2026-10-30): QuantBT backtest loop ↔ Execution V2 gate handoff, fixture lane switched off for the window only.
+Window: `preview.sh fixture off` + `up portal-web` (≈11:08Z) → `fixture on` + `up portal-web` (≈11:10Z). `control-api`
+(Up 3 days) and `portal-fixture-bff` untouched; `portal-web` recreated twice on the same image `sha256:0ce9b1aebf30…`
+(stack commit `7946cd3d5`, not the 7d314d7be tip; no rebuild).
+
+Proven with the real session (`claude-preview`, ADMIN; session revoked, logout 201):
+- `GET /research/release-candidates/rc_06GGABY3…/publication` → DELIVERED, approval `apr_06GGAC00…` R1, href carries `workspace_id`.
+- `GET /execution/governance/approvals/apr_06GGAC00…/r1` → same approval; `evidence_hashes` equals the publication's `legacy_artifact_sha256`; payload names the RC id and the run id.
+- Browser: RC page link → `/governance/approvals/<id>/r1?workspace_id=…` mounts the Execution router and renders the R1 row (Quorum 0 of 1). 3 page loads total.
+
+Not proven / open:
+- R2 handoff: no R2 approval exists in this data; the only R1 is EXPIRED (2026-10-07). Not manufactured, per runbook.
+- Two 404s on the R1 page against the deployed Control API: `/api/v1/execution/runtime-manifest` and `/governance/approvals/<id>/evidence`. Cause not established (controller exists in the repo for the first; the deployed image predates the tip). Needs a rebuild at the tip or Codex's mount flags before judging.
+- `delivery_profile: "fixture"` appears on the real Control API's governance responses; its meaning was not confirmed.
+- R1 `approval.release_candidate` is `null` although the publication points at it; the RC id appears elsewhere in the payload.
+- Fixture lane returned to ON; the fixture BFF image does not yet contain R-B/R-C routes (rebuild at the tip is a separate step).
