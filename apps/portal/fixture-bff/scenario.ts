@@ -11,7 +11,7 @@
  * The selection is in-memory and per process (the doubles are module singletons too): `POST /__fixture/scenario`
  * switches it, a reset puts back the configured scenario (`FIXTURE_SCENARIO`, default positive). No persistence.
  */
-export const FIXTURE_SCENARIOS = ["positive", "partial", "stale", "denied", "empty", "missing", "zero", "dense"] as const;
+export const FIXTURE_SCENARIOS = ["positive", "partial", "stale", "denied", "empty", "missing", "zero", "dense", "handoff"] as const;
 export type FixtureScenario = typeof FIXTURE_SCENARIOS[number];
 export const DEFAULT_SCENARIO: FixtureScenario = "positive";
 
@@ -28,6 +28,7 @@ export const SCENARIO_DESCRIPTIONS: Readonly<Record<FixtureScenario, string>> = 
   missing: "Source-dark: Sandbox NOT_CONFIGURED in the All lens, the command center feed unavailable, typed absence where a source is unpublished (the former default).",
   zero: "Exact zero: every money and ratio figure is an exact 0 (true zero, never an absence).",
   dense: "Dense: very long names, very large numbers; layout stress.",
+  handoff: "Positive world plus the SIMULATED Research-to-Execution handoff chain (R1 pending / approved / expired, the R2 requests reachable from the approved R1, and the approval-evidence reads), synthetic TEST_ONLY ids; the Research half is not served here.",
 });
 
 let configured: FixtureScenario = DEFAULT_SCENARIO;
@@ -87,6 +88,7 @@ export const SCENARIO_TRAITS: Readonly<Record<FixtureScenario, ScenarioTraits>> 
   positive: POSITIVE,
   zero: POSITIVE,
   dense: POSITIVE,
+  handoff: POSITIVE,
   denied: POSITIVE,
   empty: POSITIVE,
   partial: { legacy: true, seriesGap: true, dataset: { completeness: "PARTIAL", freshness: "FRESH", reasons: ["SOURCE_COVERAGE_PARTIAL"] }, series: LEGACY_SERIES,

@@ -290,3 +290,41 @@ Round 2 additions to 2p (positive scenarios only unless stated): fleet and fund 
 Round 3 (package 6 and finance, 2f2): the blotter overlay never totals from a partial fill population. The double returns at most 100 fills beside up to 200 orders; on a page that hit the cap, the order owning the last fill and every traded order after it get no `filled_quantity`, `average_fill_price` or `fee` (typed absence), never a total from part of the fills and never a false "0" (an order that never traded keeps its true "0"). Tested deep in a 1500-order book (pages of 200 compared with pages of 25) and on FILLED + ETHUSDT. Opt-in FIXTURE_LAB variant `FIXTURE_BLOTTER_MIXED_FEES=1` (or `setSimulatedMixedFeeCurrencies(true)`): the fills keep the double's own commission currencies (USDT and BNB), so an order whose fills settle in two currencies is served and has NO fee (never converted or summed across currencies); default off, so the default blotter shows one fee currency per order. Account resource portfolio names (`portfolio_name`, `portfolio_name_reason_code`) are read as published (canonical fixture `execution-resource-portfolio-names.synthetic.valid.json`); nothing is simulated for them.
 
 Round 3 (2p): the canonical world module `e2e/bffWorld.ts` is the source of deployment, account, binding, price, stage-history and people facts in the positive-like scenarios; see WP_P_COMPLETION section 8. Fixture clock: whole days only.
+
+## 2h. WP-H Research-to-Execution handoff chain (30 October 2026, `e2e/bffWorldHandoff.ts` between `// ===== WP-H begin/end`, one hook in `fixture-bff/app.ts` `answerFor` between `// ===== WP-H begin/end`, scenario `handoff` in `fixture-bff/scenario.ts`; level FIXTURE_LAB)
+
+**What it is.** Execution has no trading-server data yet and the Research half of the handoff is real, so the fixture lane could not be walked end to end. Scenario `handoff` (select with `GET /__fixture/scenario?set=handoff` or `POST /__fixture/scenario {"scenario":"handoff"}`, or start with `FIXTURE_SCENARIO=handoff`; populated or layout-stress profile; everything outside the chain's ids is the positive world byte for byte) serves one linked chain of synthetic approvals. It is NOT acceptance evidence and NOT a Research read. The positive world already links R1 and R2 per alpha (AP-101 -> AP-352 and so on) and is unchanged; what it lacked was the four evidence variants (its `/evidence` is a per-id pseudo-random mix and never the no-source or not-read case in the positive scenarios), hash agreement across the three reads, and the three R1 states beside a reachable R2.
+
+**Where it comes from.** Nothing is invented: each body is the published synthetic contract fixture with ids, hashes and instants replaced so the reads agree: `execution-governance.r1-review.valid.json`, `execution-governance.r2-review.valid.json`, `execution-approval-evidence.{published,drawdown,no-source,not-read}.synthetic.valid.json`. Every body is validated against its published schema in `src/fixtureBff/handoffChain.test.ts`. The shared instant is the world clock (`WORLD_NOW_MS`): `read_at`, `read_at_ms`, the history `as_of_ms` and the window end are equal; the preview rebase moves them as one.
+
+**Synthetic ids (all `TEST_ONLY`; none copied from the 2026-10-30 real-API run).**
+
+| id | gate / state | release_candidate | evidence read |
+|---|---|---|---|
+| workspace `ws_TEST_ONLY_shared` (or the request's `workspace_id`) | | | |
+| `apr_TEST_ONLY_r1_pending` | R1 PENDING, subject `av_TEST_ONLY_handoff_pending` | `rc_TEST_ONLY_handoff_pending` | no-source (sections omitted) |
+| `apr_TEST_ONLY_r1_approved` | R1 APPROVED (1 of 1, one decision by `lan`), subject `av_TEST_ONLY_handoff`; `linked_panels` lists both R2 requests | `rc_TEST_ONLY_handoff` | no-source |
+| `apr_TEST_ONLY_r1_expired` | R1 EXPIRED, `expires_at` before the read, lock `EXPIRED` | `rc_TEST_ONLY_handoff_expired` | not-read (four explicit nulls) |
+| `apr_TEST_ONLY_r2` | R2 PENDING, deployment `dep_TEST_ONLY_handoff_paper`, portfolio `pf_TEST_ONLY_core` | `rc_TEST_ONLY_handoff` (equal to the approved R1) | published (NAV history, diff, obligations with a true zero, preview) |
+| `apr_TEST_ONLY_r2_satellite` | R2 PENDING, deployment `dep_TEST_ONLY_handoff_satellite`, portfolio `pf_TEST_ONLY_satellite` | `rc_TEST_ONLY_handoff` | drawdown (RATIO history, FRACTION, currency null) |
+
+Other synthetic ids: grants `grant_TEST_ONLY_<deployment>`, evidence ids `ev_<approval id>_<n>`. Hashes are `sha256` of `TEST_ONLY:handoff:<seed>` (deterministic). Each approval has its own `evidence_set_hash` (= its manifest hash); the R2's `r1_reference.digest` and its manifest entry 0 equal the approved R1's `evidence_set_hash`; `r1_reference.expiry` equals the R1's `expires_at`; `r1_reference.decided_at` equals the R1 decision instant. R1 and R2 keep their published subjects (ALPHA_VERSION vs DEPLOYMENT); what links them is the equal non-null `release_candidate`, `r1_id` / `r1_reference` and the approved R1's `linked_panels`.
+
+**Typed absence kept.** R1 carries no capital, so its evidence has no economic history (omitted or null as the fixture says, never `0`); the R1 `release_candidate` is non-null on all three. R1 `decisions` and `linked_panels` are schema-free objects (`type: object`); their keys here (`decision`, `decided_by`, `decided_at`; `kind`, `approval_id`, `href`, `state`, `portfolio_id`) are fixture choices, not a published shape.
+
+**Where the contract fixtures disagree** (resolved by this scenario, not copied): the R1 fixture has `release_candidate: "RC-41"` while the R2 fixture has `null`; the R2 fixture's `r1_reference.digest` is `bbbb...` while the R1 manifest hash is `aaaa...` (and the entry hashes are swapped between them); R1 id `AP-R1-N09` vs the R2's `AP-R1-DETAIL`; the evidence fixtures use `TEST_ONLY:approval-1` ids that the R1/R2 fixtures never use.
+
+| Route | Served by the scenario | How to replace with the real API |
+|---|---|---|
+| `GET /api/v1/execution/governance/approvals/{id}/r1` | the three R1 ids above; any other id takes the normal world | Control API real route (`preview.sh fixture off`, below). The real R1 payload of 2026-10-30 carried `approval.release_candidate: null` with the RC id elsewhere: the real read, not this fixture, is the truth for that field |
+| `GET /api/v1/execution/governance/approvals/{id}/r2` | the two R2 ids | same |
+| `GET /api/v1/execution/governance/approvals/{id}/evidence` | the five ids, one per published evidence case | same, once the Control API publishes the route |
+| `GET /api/v1/research/release-candidates/{id}/publication` | NOT served (404, like all of `/api/v1/research/*`; nginx is not widened) | already real: the Research half of the handoff (RC published, DELIVERED, R1 created) is verified only on the real stack |
+
+**Switch back to the real API (section 4 style).**
+1. `scripts/research-preview/preview.sh fixture off`, then `scripts/research-preview/preview.sh up portal-web` (nginx again sends `/api/v1/execution/` to the real Control API).
+2. To get the fixture lane again: `scripts/research-preview/preview.sh fixture on`, then `up portal-web`, then `GET /__fixture/scenario?set=handoff`.
+3. Without touching the preview, leave the scenario with `POST /__fixture/scenario {"reset":true}`, or never select it; the other scenarios are untouched.
+4. To remove the code: delete `e2e/bffWorldHandoff.ts`, the WP-H lines in `fixture-bff/app.ts`, `handoff` in `fixture-bff/scenario.ts`, and `src/fixtureBff/handoffChain.test.ts`.
+
+Not served: the five synthetic rows are not added to the approval inbox or history (those lists stay the positive world's); reach them by URL, for example `/governance/approvals/apr_TEST_ONLY_r1_approved/r1`. Writes (decide, create) stay refused by default and store nothing.

@@ -9,9 +9,9 @@ import { DEFAULT_SCENARIO, FIXTURE_SCENARIOS, getScenario, isFixtureScenario, re
 import { scenarioVariants } from "../../../fixture-bff/scenario-apply";
 
 describe("the scenario list", () => {
-  it("defaults to positive and names the eight scenarios of the directive", () => {
+  it("defaults to positive and names the eight scenarios of the directive plus the handoff chain", () => {
     expect(DEFAULT_SCENARIO).toBe("positive");
-    expect([...FIXTURE_SCENARIOS]).toEqual(["positive", "partial", "stale", "denied", "empty", "missing", "zero", "dense"]);
+    expect([...FIXTURE_SCENARIOS]).toEqual(["positive", "partial", "stale", "denied", "empty", "missing", "zero", "dense", "handoff"]);
     expect(isFixtureScenario("stale")).toBe(true);
     expect(isFixtureScenario("production")).toBe(false);
   });

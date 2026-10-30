@@ -82,6 +82,17 @@ queries remain explicit 400s. Negative workspace cases and `ALL` history gaps re
 These are synthetic routes, not new real endpoints or source qualification. See
 [profiles, browser probe and removal](README.md#explicit-populatedlayout-review-22-october-2026).
 
+## Scenario `handoff` (30 October 2026): the simulated Research-to-Execution chain
+
+`FIXTURE_SCENARIO=handoff` (or `/__fixture/scenario?set=handoff`) additionally answers three GETs for five synthetic
+`apr_TEST_ONLY_*` ids (R1 pending / approved / expired, two R2 requests reachable from the approved R1):
+`/api/v1/execution/governance/approvals/{id}/r1`, `/r2` and `/evidence` (the four published evidence cases), linked by one
+non-null `release_candidate`, shared hashes and one `as_of`. Every other path is the positive world. The Research read
+`/api/v1/research/release-candidates/{id}/publication` is **not** served (research stays refused above); that half is
+verified only on the real stack. Switch back with `scripts/research-preview/preview.sh fixture off`, then `up portal-web`.
+Ids, files and the replace-with-real-API rows: register section 2h
+(`upgrade/execution_loop/evidence/UXM-07/SIMULATED_DATA_REGISTER_2026-10-22.md`).
+
 ## How an answer is chosen
 
 `e2e/bffAnswerer.ts` (`answerFixtureRequest`) takes the request as data and answers it as data. For

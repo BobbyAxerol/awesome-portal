@@ -25,6 +25,7 @@ import { answerReviewManager, clampVenueCandles, wpAccountBook, wpAlphaResource,
 import { isPositiveMode, setPositiveMode } from "../frontend/e2e/bffPositiveMode";
 import { WORLD_NOW_MS } from "../frontend/e2e/bffWorld";
 import { commandStoryRoute } from "./command-story";
+import { answerHandoff } from "../frontend/e2e/bffWorldHandoff"; // WP-H
 import { answerAlphaCatalogue } from "./alpha-catalogue"; // WP-B2-P2
 import { answerEquityProjection } from "./equity-projection"; // WP-R-C
 import { applyScenarioBody, resetFixtureTransitions, scenarioRequest, scenarioVariants } from "./scenario-apply";
@@ -291,6 +292,12 @@ function answerFor(config: FixtureConfig, rawRequest: BffRequest): BffResponse |
   const projection = answerEquityProjection(rawRequest);
   if (projection !== null) return projection;
   // ===== WP-R-C end
+  // ===== WP-H begin: the `handoff` scenario serves the linked R1 / R2 / evidence chain of synthetic approvals (e2e/bffWorldHandoff.ts); every other path, and every write, takes the normal route
+  if (getScenario() === "handoff") {
+    const handoff = answerHandoff(rawRequest.method, rawRequest.path, new URLSearchParams(rawRequest.search));
+    if (handoff !== null) return { ...handoff, headers: { "content-type": "application/json" } } as BffResponse;
+  }
+  // ===== WP-H end
   // WP-P: the selected scenario may reroute a read to a negative case the doubles already model, and shape the value-rewrite scenarios.
   const request = profile === "sparse-realistic" ? rawRequest : scenarioRequest(getScenario(), rawRequest);
   const review = profile === "sparse-realistic" ? null : answerReviewManager(request.method, request.path,
