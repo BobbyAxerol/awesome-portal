@@ -63,6 +63,11 @@ import { PositiveParentReads } from "./governance/positive-parent.service";
 import { FollowingParentRepository } from "./governance/following-parent.repository";
 import { FollowingParentReads } from "./governance/following-parent.service";
 import { LiveParentRepository } from "./governance/live-parent.repository";
+import { ApprovalEvidenceController } from "./approval-evidence/approval-evidence.controller";
+import { SourceNotCommissionedApprovalEvidencePort } from "./approval-evidence/approval-evidence.dark";
+import { APPROVAL_EVIDENCE_PORT } from "./approval-evidence/approval-evidence.port";
+import { ApprovalEvidenceReads } from "./approval-evidence/approval-evidence.service";
+import { GovernanceApprovalVisibility } from "./approval-evidence/approval-evidence.visibility";
 import { EquityProjectionSourceController } from "./equity-projection/equity-projection-source.controller";
 import { SourceNotCommissionedPort } from "./equity-projection/equity-projection-source.dark";
 import { EQUITY_PROJECTION_SOURCE_PORT } from "./equity-projection/equity-projection-source.port";
@@ -293,6 +298,9 @@ export interface ControlApiDependencies {
   /** R-C: source-dark. Absent (the default and production) leaves the route UNMOUNTED. The only accepted value mounts the producer over the
    * SOURCE_NOT_COMMISSIONED port, so every body is typed absence. There is no other port implementation and no config flag. */
   equityProjectionSource?: "SOURCE_DARK";
+  /** WP-K approval evidence: source-dark. Absent (the default and production) leaves the route UNMOUNTED. The only accepted value mounts the
+   * producer over the source-not-commissioned port (every section omitted), deny-all field authority. No other port, no config flag. */
+  approvalEvidence?: "SOURCE_DARK";
   /** Independent ROOT original/held COMMIT, same pool/coordinator as writers. */
   nativeRoot?:PreparedNativeRootApplication;
   executionCommandTrust?: CommandTrust;
@@ -419,6 +427,7 @@ export class AppModule implements OnApplicationShutdown {
         CanaryController,
         LiveOperationsController,
         ...(dependencies.equityProjectionSource === "SOURCE_DARK" ? [EquityProjectionSourceController] : []),
+        ...(dependencies.approvalEvidence === "SOURCE_DARK" ? [ApprovalEvidenceController] : []),
         ActivationController,
         ScreenBffController,
         PaperReadController,
@@ -703,6 +712,8 @@ export class AppModule implements OnApplicationShutdown {
         LiveParentReads,
         ...(dependencies.equityProjectionSource === "SOURCE_DARK" ? [
           { provide: EQUITY_PROJECTION_SOURCE_PORT, useClass: SourceNotCommissionedPort }, EquityProjectionSourceReads] : []),
+        ...(dependencies.approvalEvidence === "SOURCE_DARK" ? [
+          { provide: APPROVAL_EVIDENCE_PORT, useClass: SourceNotCommissionedApprovalEvidencePort }, GovernanceApprovalVisibility, ApprovalEvidenceReads] : []),
         PaperExitRepository,
         PaperExitService,
         GovernanceReviewCaptureService,
