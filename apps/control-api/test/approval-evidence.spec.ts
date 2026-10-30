@@ -9,7 +9,7 @@ import { approvalEvidenceResponse } from "../src/approval-evidence/approval-evid
 import type { ApprovalEvidencePort } from "../src/approval-evidence/approval-evidence.port";
 import { ApprovalEvidenceReads } from "../src/approval-evidence/approval-evidence.service";
 
-const contracts = resolve(__dirname, "../../../packages/contracts");
+const contracts = process.env.PORTAL_CONTRACTS_DIR ?? resolve(__dirname, "../../../packages/contracts");
 const fixture = (name: string) => JSON.parse(readFileSync(resolve(contracts, "fixtures", `execution-approval-evidence.${name}.json`), "utf8"));
 const published = fixture("published.synthetic.valid").value;
 const negatives = fixture("synthetic.negative");

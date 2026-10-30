@@ -67,3 +67,24 @@ Not proven / open:
 - `delivery_profile: "fixture"` appears on the real Control API's governance responses; its meaning was not confirmed.
 - R1 `approval.release_candidate` is `null` although the publication points at it; the RC id appears elsewhere in the payload.
 - Fixture lane returned to ON; the fixture BFF image does not yet contain R-B/R-C routes (rebuild at the tip is a separate step).
+
+## research-portal rollout at tip + handoff scenario, 30 Oct (FIXTURE_LAB; not acceptance)
+
+Rollout (Bobby-approved scope: `portal-web` + `portal-fixture-bff` only): built at `97f8fa212`, then
+`preview.sh up portal-web portal-fixture-bff`. Images: web `0ce9b1aebf30` → `99583ec4ee92`, fixture BFF
+`51023368d8ae` → `41d9d0ae9ede`. `control-api` untouched (Up 3 days). Rollback: retag
+`local/portal-research-preview-{portal-web,fixture-bff}:pre-20261030-1152` as `:rf02`, then `up portal-web portal-fixture-bff`.
+The approved HMD reader wheel (sha256 `3b2a41b8…`, identical in two checkouts) was copied into this worktree's ignored `vendor/hmd-reader/`.
+
+Backend (deabe3d73): `GET /api/v1/execution/governance/approvals/:id/evidence`, dark (`approvalEvidence: "SOURCE_DARK"`),
+unmounted by default, typed absence, deny-all field authority. Not deployed (control-api not rebuilt), so the real Control API still answers 404.
+Unproven: Postgres/Docker tests, `AppModule` DI with the flag on, HTTP call. Contract follow-ups: withheld section maps to `null`;
+problem codes vs the contract's two-value enum; the OpenAPI text "CONTRACT ONLY" and the test pinning it become stale once mounted.
+
+Fixture (97f8fa212, register 2h): scenario `handoff` serves apr_TEST_ONLY_r1_{pending,approved,expired}, apr_TEST_ONLY_r2, apr_TEST_ONLY_r2_satellite
+with one consistent RC/hash/as_of chain and the four evidence cases. Probed on the deployed lane (HTTP 200 on every read, statuses APPROVED/PENDING/EXPIRED
+as designed); scenario then restored to `positive`. These rows are reachable by URL only (not in the inbox).
+Observed, not explained: `GET /api/v1/research/release-candidates/…/publication` through the fixture lane answered 401, not the documented 404 refusal.
+
+Verified: vitest fixtureBff + productBoundary + r2Ledger + analytics 1027 passed (57 files); control-api `approval-evidence.spec` 24/24.
+Not run: Playwright and visual suites, a browser walk of the `handoff` rows, R2 on the real API (needs a real RC through R1).

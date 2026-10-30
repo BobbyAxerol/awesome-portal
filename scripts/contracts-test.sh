@@ -328,6 +328,7 @@ for input in \
   apps/portal/frontend/e2e/bffWorldBooks.ts \
   apps/portal/frontend/e2e/bffWorldGenerated.ts \
   apps/portal/frontend/e2e/bffWorldGovernance.ts \
+  apps/portal/frontend/e2e/bffWorldHandoff.ts \
   apps/portal/frontend/e2e/bffWorldOrders.ts \
   apps/portal/frontend/e2e/bffWorldStage.ts \
   apps/portal/frontend/e2e/bffWorldVariants.ts \
