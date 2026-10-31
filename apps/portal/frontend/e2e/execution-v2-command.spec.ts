@@ -13,6 +13,7 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
 
 import { stubExecutionBff } from "./bffDouble";
+import { stubV2Reads } from "./v2PublishedReads";
 import { settle, stubPortalApi, usePreferences } from "./fixtures";
 import { stubAdminRoutes, stubQuantbtRuns, watchPage } from "./v2Lane";
 
@@ -26,12 +27,16 @@ const FAKE_PORT = "Answered by the fake port: a scripted fixture answer, not a r
 const SEND_DISABLED = "Command sends are not connected to a source: fixture";
 /** Any path that would be a command, a plan, an apply or an operation write/read. The story must not ask for one. */
 const COMMAND_ROUTES = /\/(commands?|plans?|apply|operations|approvals)(\/|$|\?)|\/ecm_/;
+/** The shell's two sidebar count badges (navCounts.tsx, 656ce2eac/766615d12): one GET with limit=1 each, not a command, a plan or an operation of this story. */
+const SHELL_BADGE_READS = new Set(["GET /api/v1/execution/operations?limit=1", "GET /api/v1/execution/governance/approvals?view=ALL&limit=1"]);
 
 async function openLane(page: Page, width: number): Promise<void> {
   await page.setViewportSize({ width, height: 900 });
   await usePreferences(page, "operations");
   await stubPortalApi(page, "healthy");
-  await stubExecutionBff(page, { operationsV2: true, screensV2: true });
+  const bffOptions = { operationsV2: true, screensV2: true };
+  await stubExecutionBff(page, bffOptions);
+  await stubV2Reads(page, bffOptions);
   await stubAdminRoutes(page);
   await stubQuantbtRuns(page);
 }
@@ -45,7 +50,7 @@ function netMeter(page: Page) {
   });
   return {
     writes: () => all.filter((entry) => !["GET", "HEAD"].includes(entry.method)),
-    commandCalls: () => all.filter((entry) => COMMAND_ROUTES.test(entry.path)),
+    commandCalls: () => all.filter((entry) => COMMAND_ROUTES.test(entry.path) && !SHELL_BADGE_READS.has(`${entry.method} ${entry.path}`)),
     all: () => [...all],
   };
 }

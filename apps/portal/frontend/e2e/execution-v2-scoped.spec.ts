@@ -15,6 +15,7 @@ import { expect, test, type Page } from "@playwright/test";
 import { stubExecutionBff } from "./bffDouble";
 import { stubScopedBff, SCOPED_ALPHA_ID, SCOPED_ENVIRONMENT, SCOPED_PORTFOLIO_ID, SCOPED_WORKSPACE, SLICE_URL, type ScopedBff } from "./bffDoubleScoped";
 import { OPERATIONS_V2_DOUBLE_NOW_ISO } from "./bffDoubleV2";
+import { stubV2Reads, withoutProjectionAbsence } from "./v2PublishedReads";
 import { settle, stubPortalApi, usePreferences } from "./fixtures";
 import { stubAdminRoutes, stubQuantbtRuns, watchPage } from "./v2Lane";
 
@@ -33,7 +34,9 @@ async function openLane(page: Page, width: number, clock: "fixed" | "install" = 
   await page.setViewportSize({ width, height: 900 });
   await usePreferences(page, "operations");
   await stubPortalApi(page, "healthy");
-  await stubExecutionBff(page, { operationsV2: true, screensV2: true });
+  const bffOptions = { operationsV2: true, screensV2: true, reviewManager: true };
+  await stubExecutionBff(page, bffOptions);
+  await stubV2Reads(page, bffOptions);
   await stubAdminRoutes(page);
   await stubQuantbtRuns(page);
   return stubScopedBff(page);
@@ -144,7 +147,8 @@ test("FIXTURE_LAB · slice @1280: portfolio, fleet and alpha open the existing s
   expect(await factOf(page, "Notices")).toBe("0 received, 0 folded into an owed read, 1 reads started");
 
   expect(watch.foreign).toEqual([]);
-  expect(watch.take()).toEqual([]);
+  // This workspace is not one the fixture serves an equity projection for: its typed 404 is the intended absence, nothing else may be printed.
+  expect(withoutProjectionAbsence(watch.take())).toEqual([]);
 });
 
 test("FIXTURE_LAB · slice @1280: the fixture buttons and the select are reachable by keyboard alone, with a visible focus", async ({ page }) => {

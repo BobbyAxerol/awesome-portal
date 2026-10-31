@@ -13,6 +13,7 @@ import { expect, test, type Page } from "@playwright/test";
 import { OPERATIONS_V2_DOUBLE_NOW_ISO } from "./bffDoubleV2";
 import { stubExecutionBff } from "./bffDouble";
 import { PAPER_EXIT_OFF_WORKSPACE, PAPER_EXIT_OPEN_WORKSPACE } from "./bffDoubleGovernance";
+import { stubV2Reads, withoutProjectionAbsence } from "./v2PublishedReads";
 import { settle, stubPortalApi, usePreferences } from "./fixtures";
 import { stubAdminRoutes, stubQuantbtRuns, watchPage } from "./v2Lane";
 
@@ -25,7 +26,9 @@ async function openLane(page: Page): Promise<void> {
   await page.setViewportSize({ width: 1440, height: 900 });
   await usePreferences(page, "operations");
   await stubPortalApi(page, "healthy");
-  await stubExecutionBff(page, { operationsV2: true, screensV2: true });
+  const bffOptions = { operationsV2: true, screensV2: true };
+  await stubExecutionBff(page, bffOptions);
+  await stubV2Reads(page, bffOptions);
   await stubAdminRoutes(page);
   await stubQuantbtRuns(page);
 }
@@ -93,7 +96,8 @@ test("the Exit control opens from the served R2 parent, builds the request from 
     expected_projection_digest: `sha256:${"c".repeat(64)}`,
   });
   expect(watch.foreign).toEqual([]);
-  expect(watch.take()).toEqual([]);
+  // The shared workspace is not one the fixture serves an equity projection for: its typed 404 is the intended absence, nothing else may be printed.
+  expect(withoutProjectionAbsence(watch.take())).toEqual([]);
 });
 
 test("typed denials render as the server worded them and nothing is shown as requested", async ({ page, baseURL }) => {
@@ -129,7 +133,7 @@ test("typed denials render as the server worded them and nothing is shown as req
   await expect(root.locator('.exec-wb-xr[data-state="recorded"]')).toContainText("Matched an earlier request");
 
   // The three refusals are the only failed responses the page saw (Chromium also logs one console line per failed fetch).
-  const seen = watch.take();
+  const seen = withoutProjectionAbsence(watch.take());
   expect(seen.filter((line) => line.startsWith("403 POST") || line.startsWith("409 POST")).map((line) => line.split("?")[0])).toEqual([
     `403 POST ${CREATE}`, `409 POST ${CREATE}`, `409 POST ${CREATE}`,
   ]);
