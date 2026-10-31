@@ -7,6 +7,7 @@ import { SourceNotCommissionedApprovalEvidencePort } from "../src/approval-evide
 import { EVIDENCE_FIELD_AUTHORITY_DENY_ALL, type ApprovalEvidenceFieldAuthority, type ApprovalEvidencePrincipal, type ApprovalVisibility } from "../src/approval-evidence/approval-evidence.authority";
 import { approvalEvidenceResponse } from "../src/approval-evidence/approval-evidence.contract";
 import type { ApprovalEvidencePort } from "../src/approval-evidence/approval-evidence.port";
+import { approvalEvidenceDependency } from "../src/approval-evidence/approval-evidence.bootstrap";
 import { ApprovalEvidenceReads } from "../src/approval-evidence/approval-evidence.service";
 
 const contracts = process.env.PORTAL_CONTRACTS_DIR ?? resolve(__dirname, "../../../packages/contracts");
@@ -135,5 +136,15 @@ describe("approval evidence controller", () => {
     await failure(c.detail(request, "a1", { workspace_id: "ws-9" }), 404, "WORKSPACE_NOT_FOUND");
     await failure(c.detail(request, "a1", { workspace_id: 5 }), 404, "WORKSPACE_NOT_FOUND");
     expect(detail).not.toHaveBeenCalled();
+  });
+});
+
+describe("approval evidence bootstrap gate", () => {
+  const base = { EXECUTION_READ_PROFILE: "retained_review_v1", PORTAL_ENV: "local", AUTH_MODE: "dev" };
+  it("mounts only on the local dev retained-review stack", () => {
+    expect(approvalEvidenceDependency(base)).toEqual({ approvalEvidence: "SOURCE_DARK" });
+    for (const other of [{ EXECUTION_READ_PROFILE: "source_current_v1" }, { EXECUTION_READ_PROFILE: "native_manager_review_v1" }, { PORTAL_ENV: "production" }, { PORTAL_ENV: "dev" }, { AUTH_MODE: "cloudflare_access" }, { AUTH_MODE: undefined }])
+      expect(approvalEvidenceDependency({ ...base, ...other })).toEqual({});
+    expect(approvalEvidenceDependency({})).toEqual({});
   });
 });

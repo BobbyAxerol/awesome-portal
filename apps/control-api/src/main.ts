@@ -14,6 +14,7 @@ import { commandStatusRuntimeReference, prepareCommandStatusRuntime } from "./ex
 import { prepareCommandStatusApplication } from "./execution-v2/command-status-bootstrap";
 import { nativeRootRuntimeReference, prepareNativeRootRuntime, prepareNativeRootApplication } from "./execution-v2/native-root-runtime";
 import { accessDigest } from "./execution-v2/access-digest";
+import { approvalEvidenceDependency } from "./approval-evidence/approval-evidence.bootstrap";
 
 async function bootstrap(): Promise<void> {
   const config = loadConfig();
@@ -53,7 +54,7 @@ async function bootstrap(): Promise<void> {
       ...(commandStatus?[commandStatus.participant]:[])],nativeCurrent?.provider,nativeRoot?.provider);
   }}, pool) : undefined;
   const dependencies = { ...nativeDependencies,...(currentViewRuntime?{currentViewRuntime}:{}),...(financialSource?{financialSource}:{}),
-    ...(nativeCurrent?{nativeCurrent}:{}),...(commandStatus?{commandStatus}:{}),...(nativeRoot?{nativeRoot}:{}) };
+    ...(nativeCurrent?{nativeCurrent}:{}),...(commandStatus?{commandStatus}:{}),...(nativeRoot?{nativeRoot}:{}),...approvalEvidenceDependency(config) };
   const owner = native ? new NativeCoreApplicationOwner(pool) : undefined;
   try {
     const app = await createControlApiApp(config, pool, undefined, dependencies, owner);
