@@ -121,3 +121,13 @@ Not done, on purpose: the R1 decision. It is the owner's gate. R2 follows only a
 - Consequence: **no R1 can be decided on research-portal while this container serves it**. R1 `apr_06GS14RF790VB67JAFWPZRTFH5` stays PENDING (expires 3 Nov). R2 on the real API cannot be accepted on this stack; it needs a stack whose Control API has Execution mutations enabled. R2 stays fixture-only (register section 2h).
 - The membership row for `bobby` is left in place (removing it would advance the authority counter again). Remove with `DELETE FROM workspace_members WHERE workspace_id='ws_06GCVTHWC9WVPGEPR85AB15K82' AND user_id='usr_5a38d5dfb08b44748f5776fbe04a1434'` if unwanted.
 - Full pre-commit hook on `1c6a13e1c` (detached worktree): exit 0 at 07:05Z.
+
+## Playwright V2 non-visual lane, 31 Oct (tip 14f0cfdeb): RED, pre-existing
+
+Command: `npx playwright test --project=chromium-v2 --workers=3 --grep-invert visual e2e/execution-v2-*.spec.ts` (apps/portal/frontend, its own build and preview). Run twice. First run beside the Docker test cell: 169 passed / 177 failed, with `ERR_NETWORK_CHANGED` noise (the cell creates and removes Docker networks), so discarded. Second run alone: **164 passed / 182 failed, 22.5 min, no network noise**.
+
+Failures by file: coexistence 94, s1 50, selfnav 15, alpha-scoped 9, command 7, scoped 3, paper-exit 2, rc-fixture 1, links 1. Causes seen: copy assertions that still expect `Not published (FE-066)` / `(FE-070)` while the product now prints `Not published: <label>` (request ids moved to `data-gap`); request-count budgets exceeded (for example `measured 16, ceiling 14`; 28 cases `visible idle requests … ceiling 0`); `no console noise` (21); elements not found (14).
+
+Attribution: the copy change is `aa652fd3c` (27 Oct), already an ancestor of `448d71212`, with `db51d74bf` updating only the vitest assertions, not these Playwright specs. This session changed no product frontend code. Not yet established for the budget and console cases: whether they are older reds or follow the same refactor; that needs a baseline run of the pre-`aa652fd3c` parent.
+
+Status: the V2 Playwright non-visual lane is not green at the tip and was not green before this session either. Not fixed here.
