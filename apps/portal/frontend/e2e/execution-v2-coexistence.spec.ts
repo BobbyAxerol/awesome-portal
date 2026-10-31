@@ -90,13 +90,11 @@ async function openLane(page: Page, width = 1440, height = 900, clock: "fixed" |
   await stubQuantbtRuns(page);
 }
 
-// The entry table of the shared lane, with the two entries the reviewManager lane (below) answers differently: its world serves only the
-// incidents it knows (`inc_fixture_44` is a 404 there, as the server answers an unknown id), and `?tab=replay` on an alpha is the Trade
-// Replay screen (766615d12, replay alias), not an Alpha 360 tab.
+// The entry table of the shared lane, except that the reviewManager lane (below) serves only the incidents it knows:
+// `inc_fixture_44` is a 404 there, as the server answers an unknown id.
 const KNOWN_INCIDENT_ROUTE = "/execution/operations/incidents/inc_TEST_ONLY_fx_mismatch";
 const SCREENS = LANE_SCREENS.map(([name, route, root]) => {
   if (name === "incident") return [name, KNOWN_INCIDENT_ROUTE, root] as const;
-  if (name === "alpha-replay") return [name, route, '[data-screen="trade-replay-v2"]'] as const;
   return [name, route, root] as const;
 });
 

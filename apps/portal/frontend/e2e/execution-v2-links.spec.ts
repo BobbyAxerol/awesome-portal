@@ -57,8 +57,6 @@ interface Allowed {
   follow: boolean;
   waive?: readonly Check[];
 }
-/** `?tab=replay` is Trade Replay as a page of its own (de05779c4), not the Alpha 360 root the shared SCREENS table still lists for it. */
-const ENTRY_ROOTS: Record<string, string> = { "alpha-replay": '[data-screen="trade-replay-v2"]' };
 
 const ALLOW_LIST: readonly Allowed[] = [
   {
@@ -465,8 +463,7 @@ test("every in-app link on the V2 screens lands on a screen, two levels deep", a
   }
 
   // Level 0: the entry routes.
-  for (const [name, route, listedRoot] of SCREENS) {
-    const root = ENTRY_ROOTS[name] ?? listedRoot;
+  for (const [name, route, root] of SCREENS) {
     const url = new URL(route, origin);
     visited.add(targetKey(url));
     await page.goto(route);
