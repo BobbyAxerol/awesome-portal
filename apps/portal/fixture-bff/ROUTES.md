@@ -45,6 +45,7 @@ answers them `404 {"error":"FIXTURE_ROUTE_NOT_SERVED"}` rather than invent a bod
   never shown while the fixture user is signed in)
 - `/api/v1/portal/capabilities`, `/api/v1/alphas*`
 - `/api/v1/research/*`, `/api/v1/quantbt/*` (except the exact `GET /api/v1/quantbt/runs` above), `/api/runs*`, `/api/strategies`, `/api/config/*`
+  (On the Research preview these paths are **not** routed to this server at all: the overlay has no location for them, so they reach the real Control API, which answers `401 SESSION_REQUIRED` without a real session. The 404 above is what this server itself would answer if it were called directly. Checked 31 Oct 2026.)
 - the other five `manager/*` dataset routes (`fund-overview` and the portfolio, alpha, account and deployment overviews): only `manager/series`, `manager/fleet` and the two ELP2-09 routes under `manager/fleet/` (`realtime-snapshot`, `stream`) are modelled
 - any other `/api/admin/*`
 

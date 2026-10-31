@@ -88,3 +88,16 @@ Observed, not explained: `GET /api/v1/research/release-candidates/…/publicatio
 
 Verified: vitest fixtureBff + productBoundary + r2Ledger + analytics 1027 passed (57 files); control-api `approval-evidence.spec` 24/24.
 Not run: Playwright and visual suites, a browser walk of the `handoff` rows, R2 on the real API (needs a real RC through R1).
+
+## Open items resolved by probe and code, 31 Oct (REAL_API window 05:23Z to 05:24Z)
+
+Window: `preview.sh fixture off` + `up portal-web`, then `fixture on` + `up portal-web`. `control-api` (Up 4 days) untouched. Real session `claude-preview`, workspace `ws_06G19F61YB8CFR7TEWMS7HQ660`.
+
+- `GET /execution/runtime-manifest` (with and without `workspace_id`): 404 `EXECUTION_READ_NOT_AVAILABLE`, a typed refusal from the scoped manifest service (`scoped-runtime-manifest.service.ts` lines 47, 116, 139, 143), not a missing route. Which branch fires was not isolated. The fixture lane serves a positive manifest, so the two lanes differ here by design.
+- `GET /execution/retained-review`: **200** on the real stack. The 404 on the fixture lane is the fixture BFF's documented double (`routeTable.ts` line 88, `UDB_RETAINED_REVIEW_NOT_CONFIGURED`). Pre-existing, not a regression.
+- `GET /execution/governance/approvals/<id>/evidence` on the real stack: 404 `REQUEST_REJECTED`, the generic response of an unmounted route, as expected while `approvalEvidence` is not passed by any bootstrap.
+- Research routes via the fixture lane: 401 `SESSION_REQUIRED`. The overlay has no location for `/api/v1/research/*`, so they reach the real Control API without a real session. ROUTES.md corrected.
+- `delivery_profile: "fixture"`: a literal in `operations/workflow.service.ts` and `incident.service.ts` beside `source_integration_state: "UNAVAILABLE"`; it labels Portal-owned records with no source, not the lane.
+- Evidence route over Postgres + HTTP: `elp204-positive-parent.spec.ts` 355 of 355. With the real governance visibility the route refuses first (503 `ELP2_GOVERNANCE_PARENT_READ_NOT_COMMISSIONED`, no section in the body); with visibility granted it answers the typed no-source body.
+
+Still open: R2 on the real API (needs a new RC through R1 by the real process); wiring `approvalEvidence: "SOURCE_DARK"` into a bootstrap and rebuilding `control-api` (not done; custody risk, and the route would only answer 503 until scoped governance is commissioned).

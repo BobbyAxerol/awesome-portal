@@ -40,6 +40,11 @@ import { readFileSync } from "node:fs";
 import { resolve as resolvePath } from "node:path";
 import { AppModule } from "../src/app.module";
 import { EquityProjectionSourceController } from "../src/equity-projection/equity-projection-source.controller";
+import { ApprovalEvidenceController } from "../src/approval-evidence/approval-evidence.controller";
+import { SourceNotCommissionedApprovalEvidencePort } from "../src/approval-evidence/approval-evidence.dark";
+import { GovernanceApprovalVisibility } from "../src/approval-evidence/approval-evidence.visibility";
+import { ApprovalEvidenceReads } from "../src/approval-evidence/approval-evidence.service";
+import { approvalEvidenceResponse } from "../src/approval-evidence/approval-evidence.contract";
 import { SourceNotCommissionedPort } from "../src/equity-projection/equity-projection-source.dark";
 import type { EquityProjectionSourcePort } from "../src/equity-projection/equity-projection-source.port";
 import { EquityProjectionSourceReads } from "../src/equity-projection/equity-projection-source.service";
@@ -2388,6 +2393,39 @@ async function followingFixture(family:FollowingFamily,options:{rootOnly?:boolea
         const other=await http.inject({method:"GET",url:`/api/v1/execution/deployments/${f.deployment}/equity-projection/source?workspace_id=${encodeURIComponent(foreign.workspace)}&environment=live`,headers:headers(f)});
         expect(other.statusCode).toBe(404);
       }finally{await app.close();}
+    });
+    it("approval evidence HTTP over real PG: the governance fence refuses first; a granted fence answers the typed dark body; 401/404/400 as sibling reads",async()=>{
+      const f=await fixture(),real=new GovernanceApprovalVisibility(ctx.app.get(GovernanceRepository),ctx.app.get(GovernanceService));
+      const mount=async(visibility:{visible(p:never,id:string):Promise<boolean>})=>{
+        const app=await NestFactory.create<NestFastifyApplication>({module:PositiveParentTestModule,controllers:[ApprovalEvidenceController],
+          providers:[SessionGuard,{provide:AuthService,useValue:auth},{provide:CONTROL_API_CONFIG,useValue:f.config},
+            {provide:WorkspacesRepository,useValue:new WorkspacesRepository(ctx.pool,f.config)},
+            {provide:ApprovalEvidenceReads,useValue:new ApprovalEvidenceReads(new SourceNotCommissionedApprovalEvidencePort(),visibility as never)}]},
+          new FastifyAdapter(),{logger:false,abortOnError:false});
+        app.useGlobalFilters(new HttpErrorFilter());await app.register(cookiePlugin as never);await app.init();
+        const http=app.getHttpAdapter().getInstance<FastifyInstance>();await http.ready();return {app,http};
+      };
+      const url=(id:string,ws=f.workspace,qs="")=>`/api/v1/execution/governance/approvals/${id}/evidence?workspace_id=${encodeURIComponent(ws)}${qs}`;
+      const fenced=await mount(real);
+      try{
+        // Scoped governance is not commissioned in this fixture: the SAME visibility fence the sibling R1/R2 reads use refuses first.
+        const refused=await fenced.http.inject({method:"GET",url:url(f.r1),headers:headers(f)});
+        expect(refused.statusCode,refused.body).toBe(503);expect(refused.headers["cache-control"]).toBe("private, no-store");
+        expect(refused.json().error.code).toBe("ELP2_GOVERNANCE_PARENT_READ_NOT_COMMISSIONED");
+        expect(refused.body).not.toMatch(/prior_economic_history|evidence_diff|obligations_after_approval|receipt_preview/);
+        expect((await fenced.http.inject({method:"GET",url:url(next()),headers:headers(f)})).statusCode).toBe(404);
+      }finally{await fenced.app.close();}
+      const granted=await mount({visible:async()=>true});
+      try{
+        const ok=await granted.http.inject({method:"GET",url:url(f.r1),headers:headers(f)});
+        expect(ok.statusCode,ok.body).toBe(200);expect(ok.headers["cache-control"]).toBe("private, no-store");
+        const body=approvalEvidenceResponse.parse(ok.json());
+        expect(body).toMatchObject({workspace_id:f.workspace,approval_id:f.r1,record_authority:"PORTAL_PROJECTION"});
+        expect(Object.keys(body).sort()).toEqual(["approval_id","read_at_ms","record_authority","schema_version","workspace_id"]);
+        expect((await granted.http.inject({method:"GET",url:url(f.r1)})).statusCode).toBe(401);
+        expect((await granted.http.inject({method:"GET",url:url(f.r1,next()),headers:headers(f)})).statusCode).toBe(404);
+        expect((await granted.http.inject({method:"GET",url:url(f.r1,f.workspace,"&extra=1"),headers:headers(f)})).statusCode).toBe(400);
+      }finally{await granted.app.close();}
     });
     it("the route is UNMOUNTED by default and mounts only with the explicit SOURCE_DARK dependency",()=>{
       const plain=AppModule.register(ctx.config,ctx.pool),dark=AppModule.register(ctx.config,ctx.pool,undefined,{equityProjectionSource:"SOURCE_DARK"});
