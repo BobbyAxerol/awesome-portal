@@ -39,6 +39,7 @@ import type { FastifyInstance } from "fastify";
 import { readFileSync } from "node:fs";
 import { resolve as resolvePath } from "node:path";
 import { AppModule } from "../src/app.module";
+import { createControlApiApp } from "../src/app";
 import { EquityProjectionSourceController } from "../src/equity-projection/equity-projection-source.controller";
 import { ApprovalEvidenceController } from "../src/approval-evidence/approval-evidence.controller";
 import { SourceNotCommissionedApprovalEvidencePort } from "../src/approval-evidence/approval-evidence.dark";
@@ -2426,6 +2427,19 @@ async function followingFixture(family:FollowingFamily,options:{rootOnly?:boolea
         expect((await granted.http.inject({method:"GET",url:url(f.r1,next()),headers:headers(f)})).statusCode).toBe(404);
         expect((await granted.http.inject({method:"GET",url:url(f.r1,f.workspace,"&extra=1"),headers:headers(f)})).statusCode).toBe(400);
       }finally{await granted.app.close();}
+    });
+    it("full AppModule boot: both dark routes resolve their dependencies and answer 401 without a session; the plain boot does not mount them",async()=>{
+      const probe=async(deps?:Record<string,unknown>)=>{
+        const app=await createControlApiApp(ctx.config,ctx.pool,undefined,deps as never);
+        try{
+          const http=app.getHttpAdapter().getInstance<FastifyInstance>();await http.ready();
+          const ev=await http.inject({method:"GET",url:"/api/v1/execution/governance/approvals/apr_x1/evidence"});
+          const eq=await http.inject({method:"GET",url:"/api/v1/execution/deployments/dep_x1/equity-projection/source?workspace_id=ws_x1&environment=live"});
+          return [ev.statusCode,eq.statusCode];
+        }finally{await app.close();}
+      };
+      expect(await probe({approvalEvidence:"SOURCE_DARK",equityProjectionSource:"SOURCE_DARK"})).toEqual([401,401]);
+      expect(await probe()).toEqual([404,404]);
     });
     it("the route is UNMOUNTED by default and mounts only with the explicit SOURCE_DARK dependency",()=>{
       const plain=AppModule.register(ctx.config,ctx.pool),dark=AppModule.register(ctx.config,ctx.pool,undefined,{equityProjectionSource:"SOURCE_DARK"});

@@ -7,6 +7,7 @@ import { SourceNotCommissionedApprovalEvidencePort } from "../src/approval-evide
 import { EVIDENCE_FIELD_AUTHORITY_DENY_ALL, type ApprovalEvidenceFieldAuthority, type ApprovalEvidencePrincipal, type ApprovalVisibility } from "../src/approval-evidence/approval-evidence.authority";
 import { approvalEvidenceResponse } from "../src/approval-evidence/approval-evidence.contract";
 import type { ApprovalEvidencePort } from "../src/approval-evidence/approval-evidence.port";
+import { equityProjectionSourceDependency } from "../src/equity-projection/equity-projection-source.bootstrap";
 import { approvalEvidenceDependency } from "../src/approval-evidence/approval-evidence.bootstrap";
 import { ApprovalEvidenceReads } from "../src/approval-evidence/approval-evidence.service";
 
@@ -146,5 +147,11 @@ describe("approval evidence bootstrap gate", () => {
     for (const other of [{ EXECUTION_READ_PROFILE: "source_current_v1" }, { EXECUTION_READ_PROFILE: "native_manager_review_v1" }, { PORTAL_ENV: "production" }, { PORTAL_ENV: "dev" }, { AUTH_MODE: "cloudflare_access" }, { AUTH_MODE: undefined }])
       expect(approvalEvidenceDependency({ ...base, ...other })).toEqual({});
     expect(approvalEvidenceDependency({})).toEqual({});
+  });
+  it("the equity projection source uses the identical gate", () => {
+    expect(equityProjectionSourceDependency(base)).toEqual({ equityProjectionSource: "SOURCE_DARK" });
+    for (const other of [{ EXECUTION_READ_PROFILE: "source_current_v1" }, { PORTAL_ENV: "production" }, { AUTH_MODE: "cloudflare_access" }])
+      expect(equityProjectionSourceDependency({ ...base, ...other })).toEqual({});
+    expect(equityProjectionSourceDependency({})).toEqual({});
   });
 });
