@@ -112,3 +112,12 @@ By Bobby's instruction (31 Oct: run every step to the end). Session `claude-prev
 - `GET …/governance/approvals/apr_06GS14RF…/r1`: 200; the body contains the run id, the RC id and `legacy_artifact_sha256` `19d35709…a8fe` (same as the publication).
 
 Not done, on purpose: the R1 decision. It is the owner's gate. R2 follows only after R1 is APPROVED and a real projection exists; R2 on the real API therefore stays unproven until then.
+
+## R1 decision attempt, 31 Oct: structurally refused on this stack
+
+- The public auto-login of research-portal is `claude-preview`, the requester of the new R1, so the page shows `SELF_APPROVAL` / `separation_of_duties: VIOLATION` to anyone using the public host.
+- `bobby` (the portal owner, `portal_owner_anchor`) could not see the approval: it lives in `ws_06GCVTHWC9WVPGEPR85AB15K82`, where `bobby` was not a member (`WORKSPACE_NOT_FOUND`). On Bobby's instruction `bobby` was added as MEMBER of that workspace on the preview DB (one `workspace_members` row; the ELP2-10 guard advanced `elp210_candidate.authority.revision` 90 → 91; it reads 96 after later logins, so the counter moves with ordinary activity). With that, `bobby` reads the R1 with `eligibility.can_approve: true`, `separation_of_duties: OK`.
+- `POST /api/v1/execution/commands/plans` as `bobby` then returned 403. Cause: `session.guard.ts` line 98 to 99, the retained-review profile (`EXECUTION_READ_PROFILE=retained_review_v1`) refuses every non-GET under `/api/v1/execution` with `UDB_RETAINED_REVIEW_MUTATION_DISABLED`. This is the design of the C7 retained-review container, not an identity or permission problem.
+- Consequence: **no R1 can be decided on research-portal while this container serves it**. R1 `apr_06GS14RF790VB67JAFWPZRTFH5` stays PENDING (expires 3 Nov). R2 on the real API cannot be accepted on this stack; it needs a stack whose Control API has Execution mutations enabled. R2 stays fixture-only (register section 2h).
+- The membership row for `bobby` is left in place (removing it would advance the authority counter again). Remove with `DELETE FROM workspace_members WHERE workspace_id='ws_06GCVTHWC9WVPGEPR85AB15K82' AND user_id='usr_5a38d5dfb08b44748f5776fbe04a1434'` if unwanted.
+- Full pre-commit hook on `1c6a13e1c` (detached worktree): exit 0 at 07:05Z.
