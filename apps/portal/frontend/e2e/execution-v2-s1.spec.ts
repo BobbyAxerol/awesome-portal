@@ -186,7 +186,9 @@ test("Paper workbench: Orders names the UNKNOWN order, Fills and Positions list 
   // RV-06: the request id and the reason sit behind the GapWhy button, not in the headline; ask the way a reader does.
   const calendarGap = root.locator('.exec-wb-sub [data-gap="FE-070"]');
   await calendarGap.getByRole("button").click();
-  await expect(calendarGap).toContainText("Not published (FE-070)");
+  // The words carry the label, never the request id; the id is the wrapper's data-gap (the locator above).
+  await expect(calendarGap).toContainText("Not published: VN market session calendar");
+  await expect(calendarGap).not.toContainText("FE-070");
   expect(watch.foreign).toEqual([]);
   expect(watch.take()).toEqual([]);
 });
