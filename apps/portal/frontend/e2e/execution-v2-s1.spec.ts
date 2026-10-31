@@ -27,12 +27,8 @@ const WIDTHS = [
  */
 const KNOWN_OVERFLOW: Readonly<Record<string, string>> = {};
 
-/**
- * Entry rows whose route or root moved with the product, applied here because v2Lane.ts is shared: `?tab=replay` is Trade Replay as a page of its
- * own (alpha/index.tsx, data-screen trade-replay-v2), and the review-manager world has no inc_fixture_44 (its incidents are the world's, as in execution-v2-visual).
- */
+/** The review-manager world has no inc_fixture_44 (its incidents are the world's, as in execution-v2-visual), so the incident entry reads a known one. */
 const ENTRY_OVERRIDE: Readonly<Record<string, readonly [route: string, root: string]>> = {
-  "alpha-replay": ["/deployments/alphas/alpha_btc_trend?tab=replay", '[data-screen="trade-replay-v2"]'],
   incident: ["/execution/operations/incidents/inc_TEST_ONLY_fx_mismatch", ".exec-opi"],
 };
 
