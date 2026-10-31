@@ -101,3 +101,14 @@ Window: `preview.sh fixture off` + `up portal-web`, then `fixture on` + `up port
 - Evidence route over Postgres + HTTP: `elp204-positive-parent.spec.ts` 355 of 355. With the real governance visibility the route refuses first (503 `ELP2_GOVERNANCE_PARENT_READ_NOT_COMMISSIONED`, no section in the body); with visibility granted it answers the typed no-source body.
 
 Still open: R2 on the real API (needs a new RC through R1 by the real process); wiring `approvalEvidence: "SOURCE_DARK"` into a bootstrap and rebuilding `control-api` (not done; custody risk, and the route would only answer 503 until scoped governance is commissioned).
+
+## Fresh RC through the real process, 31 Oct (REAL_API, fixture off 06:10Z to 06:14Z)
+
+By Bobby's instruction (31 Oct: run every step to the end). Session `claude-preview`, personal workspace (the explicit `workspace_id` of the projection workspace is a 404 for this user on the Research reads). `control-api` untouched.
+
+- Run `rrun_97c8ed4483b411213c21714be0aeb510` (delta-rsi-polynomial-alpha 1.0.1, trial 182): the only blocker was `P21_RESEARCHER_DECLARATIONS_REQUIRED`. Draft `rcd_06GS14NMX40MPTPQ8842VVBHA4` patched with two declarations that assert no research conclusion and state "not for deployment or capital; handoff exercise" (text is in the draft).
+- Seal: 201, `rc_06GS14NNVE4AE8968M63F9W983`, pack digest `4d4459a4…8258`.
+- Publish: the only eligible methodology claim was system-derived (`claim:sha256:dfdc483a…`), so no judgment was needed. Result DELIVERED; **R1 `apr_06GS14RF790VB67JAFWPZRTFH5` is PENDING** (created 06:08Z, SLA 1 Nov, expires 3 Nov).
+- `GET …/governance/approvals/apr_06GS14RF…/r1`: 200; the body contains the run id, the RC id and `legacy_artifact_sha256` `19d35709…a8fe` (same as the publication).
+
+Not done, on purpose: the R1 decision. It is the owner's gate. R2 follows only after R1 is APPROVED and a real projection exists; R2 on the real API therefore stays unproven until then.
