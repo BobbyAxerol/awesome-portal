@@ -213,6 +213,16 @@ describe("overlay mode", () => {
     expect(dialog.contains(inside)).toBe(true);
   });
 
+  it("Tab with focus still on the page behind the dialog lands in the dialog, Shift+Tab on its last stop", () => {
+    mount("/fleet?sel=dep_1", "overlay");
+    (document.activeElement as HTMLElement | null)?.blur();
+    fireEvent.keyDown(document.body, { key: "Tab" });
+    expect(document.activeElement).toBe(screen.getByText("Close"));
+    (document.activeElement as HTMLElement).blur();
+    fireEvent.keyDown(document.body, { key: "Tab", shiftKey: true });
+    expect(document.activeElement).toBe(screen.getByText("My access"));
+  });
+
   it("a disclosure (summary) after the last button is a stop of the trap, not a way out (UXM-10)", () => {
     render(
       <MemoryRouter initialEntries={["/fleet"]}>

@@ -26,6 +26,7 @@ import { QuietIdsWhy } from "../../blocks";
 import { formatAsOf } from "../../boundary";
 import { EvidenceExtraContext, IDLE_EXTRA, OBLIGATION_ROWS, HistoryChart, historyCaption, obligationTotal, sectionOf, useEvidenceExtra, type ExtraState } from "./evidenceExtra";
 import { codeName } from "../../displayNames";
+import { useKeyboardScroll } from "../../useKeyboardScroll";
 import { Flag } from "../../Flag";
 import type { FlagKind } from "../../flagKinds";
 import { unsupportedText, type GovernanceParentRead } from "../../readers/dispatch";
@@ -190,12 +191,18 @@ interface CriteriaRow {
   cell?: ReactNode;
 }
 
+/** The sideways-scrolling table box: a named, focusable region only while it overflows (axe scrollable-region-focusable). */
+function TableWrap({ label, children }: { label: string; children: ReactNode }) {
+  const { ref, props } = useKeyboardScroll<HTMLDivElement>(label, [children]);
+  return <div ref={ref} className="exec-ck-tw" {...props}>{children}</div>;
+}
+
 function Criteria({ rows }: { rows: readonly CriteriaRow[] }) {
   if (rows.length === 0) return <div className="exec-ck-pad"><span className="exec-ck-np">No findings published</span></div>;
   // A column that is the same typed absence on every row is said once under the table, not drawn as a column of placeholders (QA1 I-16).
   const observed = rows.some((row) => row.cell !== undefined);
   return (
-    <div className="exec-ck-tw">
+    <TableWrap label="Criteria">
       <table className="exec-ck-table">
         <thead>
           <tr>
@@ -218,7 +225,7 @@ function Criteria({ rows }: { rows: readonly CriteriaRow[] }) {
         </tbody>
       </table>
       {observed ? null : <p className="exec-ck-note exec-ck-pad" data-testid="ck-observed-absent">Observed and limit: <NotPublished text={NOT_PUBLISHED.criteria} /> for every finding.</p>}
-    </div>
+    </TableWrap>
   );
 }
 
@@ -333,7 +340,7 @@ function R1Body({ detail }: { detail: GateR1Detail }) {
         {detail.passport.length === 0 ? (
           <div className="exec-ck-pad"><span className="exec-ck-np">No manifest entries published</span></div>
         ) : (
-          <div className="exec-ck-tw">
+          <TableWrap label="Artifact passport">
             <table className="exec-ck-table">
               <thead>
                 <tr>
@@ -352,7 +359,7 @@ function R1Body({ detail }: { detail: GateR1Detail }) {
                 ))}
               </tbody>
             </table>
-          </div>
+          </TableWrap>
         )}
       </Panel>
       {detail.locks.length > 0 ? (
@@ -397,7 +404,7 @@ function R2Body({ detail, heading = "R2 review" }: { detail: GateR2Detail; headi
         {detail.capital.length === 0 ? (
           <div className="exec-ck-pad"><span className="exec-ck-np">No capital rows published</span></div>
         ) : (
-          <div className="exec-ck-tw">
+          <TableWrap label="Capital change preview">
             <table className="exec-ck-table">
               <thead>
                 <tr>
@@ -420,7 +427,7 @@ function R2Body({ detail, heading = "R2 review" }: { detail: GateR2Detail; headi
                 ))}
               </tbody>
             </table>
-          </div>
+          </TableWrap>
         )}
       </Panel>
       {detail.readiness.map((group) => (
@@ -490,7 +497,7 @@ function LiveBody({ data }: { data: Extract<EvidenceData, { kind: "live" }> }) {
         {payload.derivedBranches.length === 0 ? (
           <div className="exec-ck-pad"><span className="exec-ck-np">No canary-evidence branches published</span></div>
         ) : (
-          <div className="exec-ck-tw">
+          <TableWrap label="Canary evidence branches">
             <table className="exec-ck-table">
               <thead>
                 <tr>
@@ -509,7 +516,7 @@ function LiveBody({ data }: { data: Extract<EvidenceData, { kind: "live" }> }) {
                 ))}
               </tbody>
             </table>
-          </div>
+          </TableWrap>
         )}
       </Panel>
       <Panel title="Current source · live facts">
@@ -666,7 +673,7 @@ function RecordedDecisionsPanel({ activity }: { activity: SectionV2<RecordedActi
       {activity.items.length === 0 ? (
         <div className="exec-ck-pad">None recorded</div>
       ) : (
-        <div className="exec-ck-tw">
+        <TableWrap label="Recorded decisions">
           <table className="exec-ck-table">
             <thead>
               <tr>
@@ -687,7 +694,7 @@ function RecordedDecisionsPanel({ activity }: { activity: SectionV2<RecordedActi
               ))}
             </tbody>
           </table>
-        </div>
+        </TableWrap>
       )}
       <p className="exec-ck-note exec-ck-pad">Portal decision rows only; not source, order or stage history, and not the full history.</p>
     </Panel>

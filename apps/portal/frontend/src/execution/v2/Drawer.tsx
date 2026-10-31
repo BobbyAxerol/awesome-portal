@@ -239,6 +239,26 @@ export function Drawer({ open = true, onClose, title, subtitle, children, action
     return () => document.removeEventListener("keydown", onKey);
   }, [open, requestClose]);
 
+  // A modal holds Tab even when focus is still on the page behind it (the panel opened by itself, or the window was
+  // narrowed under an open docked pane): the first Tab lands in the dialog instead of on controls under the scrim.
+  const modalOpen = open && mode === "overlay";
+  useEffect(() => {
+    if (!modalOpen) return;
+    const onTab = (event: KeyboardEvent) => {
+      const el = panel.current;
+      if (event.key !== "Tab" || event.defaultPrevented || !el) return;
+      const active = document.activeElement;
+      if (active instanceof Node && el.contains(active)) return;
+      const items = Array.from(el.querySelectorAll<HTMLElement>(FOCUSABLE));
+      const target = event.shiftKey ? items[items.length - 1] : items[0];
+      if (!target) return;
+      event.preventDefault();
+      target.focus();
+    };
+    document.addEventListener("keydown", onTab, true);
+    return () => document.removeEventListener("keydown", onTab, true);
+  }, [modalOpen]);
+
   if (!open) return null;
 
   const overlay = mode === "overlay";

@@ -202,7 +202,7 @@ export default function PaperWorkbenchScreen({ api, deploymentId, variant = "pap
         read={{ atLabel: readAtMs === null ? null : formatAsOf(readAtMs), refreshing: reads.refreshing, failure: failure === null ? null : failure.reason, onRefresh: reads.refresh }}
       />
       {body}
-      {showing && model !== null && summaryShown ? <StickySummary name={name} freshness={model.freshness} chips={chips} alphaHref={alphaHref} /> : null}
+      {showing && model !== null ? <StickySummary name={name} freshness={model.freshness} chips={chips} alphaHref={alphaHref} shown={summaryShown} /> : null}
     </div>
     </CompactGaps>
   );

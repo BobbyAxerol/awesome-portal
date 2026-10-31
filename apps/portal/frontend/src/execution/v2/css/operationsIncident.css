@@ -41,6 +41,8 @@
 }
 .exec-opi-sub a {
   color: var(--accent);
+  /* A link inside running text is told apart by more than colour (WCAG 1.4.1, axe link-in-text-block). */
+  text-decoration: underline;
 }
 .exec-opi-chips {
   display: flex;
@@ -115,6 +117,7 @@
 }
 .exec-opi-op .exec-ops-meta a {
   color: var(--accent);
+  text-decoration: underline;
   overflow-wrap: anywhere;
 }
 

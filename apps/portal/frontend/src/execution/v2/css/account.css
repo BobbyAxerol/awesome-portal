@@ -292,6 +292,10 @@
 .exec-acct-link {
   color: var(--accent);
 }
+/* A link inside a sentence is told apart by more than colour (WCAG 1.4.1, axe link-in-text-block). */
+.exec-acct-note .exec-acct-link {
+  text-decoration: underline;
+}
 /* Updated column: age against the read, with a filled square dot (hi-fi .dot); from 30 min a hollow warn diamond. */
 .exec-acct-ago {
   display: inline-flex;
@@ -565,6 +569,9 @@ a.exec-acct-open {
 }
 .exec-acct-v2 .exec-cards-wrap {
   scrollbar-width: thin;
+  /* A control focused in a column that scrolled under the sticky binding column is brought out beside it, not left under it
+   * (WCAG 2.4.11): the padding is the sticky column's width (about 147px at 1024px) with some room. */
+  scroll-padding-left: 10rem;
 }
 .exec-acct-scrollhint {
   display: none;

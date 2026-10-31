@@ -17,15 +17,20 @@ export interface StickySummaryProps {
   chips: StageChips;
   /** `Alpha` target; absent unless the profile published `alpha_id`. */
   alphaHref: string | null;
+  /**
+   * Whether the bar is on screen. It stays mounted while hidden (`hidden` takes it out of the layout and the Tab order), so the
+   * element a reader tabs to is the same one before and after the header scrolls out; mounting it on scroll replaced the link.
+   */
+  shown: boolean;
 }
 
 /** A chip with a state to say; one that is not published stays in the header. */
 const says = (value: StageChipValue): boolean => value.state !== "not-published" && !(value.state === "not-available" && !value.reason);
 
-export function StickySummary({ name, freshness, chips, alphaHref }: StickySummaryProps) {
+export function StickySummary({ name, freshness, chips, alphaHref, shown }: StickySummaryProps) {
   const kind = freshness.kind === "fresh" ? "ok" : freshness.kind === "stale" || freshness.kind === "aging" ? "stale" : freshness.kind === "paused" ? "paused" : "unknown";
   return (
-    <aside className="exec-wb-mini" aria-label="Deployment summary">
+    <aside className="exec-wb-mini" hidden={!shown} aria-label="Deployment summary">
       <b className="exec-wb-mini-name">{name} · Paper monitor</b>
       {says(chips.runtime) ? <span className="exec-wb-mini-item">{STAGE_CHIP_LABELS.runtime} <ChipBody value={chips.runtime} /></span> : null}
       <span className="exec-wb-mini-item">
