@@ -99,19 +99,22 @@ export default function NavCounts({ registry, options, onView, enabled = EXECUTI
   const workspaceId = useMemo(() => parseUrlParams(search).value.workspace_id ?? undefined, [search]);
   const sessionKey = principal?.sessionId ?? null;
   const listed = useMemo(() => listedBadgeFeatures(registry, options), [registry, options]);
+  // The read depends on WHICH entries are listed, not on the object that says so: a new options object with the same eligibility
+  // (self-navigation arriving) must not abort the pending read and ask again.
+  const listsOperations = listed.operations, listsApprovals = listed.approvals;
   const tick = usePollTick(NAV_COUNTS_POLL_MS, enabled && sessionKey !== null);
   const latest = useRef(onView);
   latest.current = onView;
 
   // The owning scope of every badge: session, workspace and which entries are listed (eligibility). Counts of another scope are
   // cleared on the same commit, before the new read starts, so a pending read for workspace B never shows workspace A's numbers.
-  const scope = `${sessionKey ?? ""}|${workspaceId ?? ""}|${listed.operations ? 1 : 0}${listed.approvals ? 1 : 0}`;
+  const scope = `${sessionKey ?? ""}|${workspaceId ?? ""}|${listsOperations ? 1 : 0}${listsApprovals ? 1 : 0}`;
   useLayoutEffect(() => {
     latest.current(NO_NAV_BADGES);
   }, [scope]);
 
   useEffect(() => {
-    if (!enabled || sessionKey === null || (!listed.operations && !listed.approvals)) {
+    if (!enabled || sessionKey === null || (!listsOperations && !listsApprovals)) {
       latest.current(NO_NAV_BADGES);
       return undefined;
     }
@@ -119,8 +122,8 @@ export default function NavCounts({ registry, options, onView, enabled = EXECUTI
     const api = injected ?? createHttpApi({ policy: null, signal: controller.signal });
     let cancelled = false;
     void Promise.all([
-      listed.operations ? readOperationsBadge(api, workspaceId) : Promise.resolve(null),
-      listed.approvals ? readApprovalsBadge(api, workspaceId) : Promise.resolve(null),
+      listsOperations ? readOperationsBadge(api, workspaceId) : Promise.resolve(null),
+      listsApprovals ? readApprovalsBadge(api, workspaceId) : Promise.resolve(null),
     ]).then(([operations, approvals]) => {
       if (cancelled) return;
       const next: Record<string, NavBadge> = {};
@@ -132,7 +135,7 @@ export default function NavCounts({ registry, options, onView, enabled = EXECUTI
       cancelled = true;
       controller.abort();
     };
-  }, [enabled, sessionKey, workspaceId, listed, tick, injected]);
+  }, [enabled, sessionKey, workspaceId, listsOperations, listsApprovals, tick, injected]);
 
   // Leaving the shell (or a session change) must not leave a badge from the previous session on the rail.
   useEffect(() => () => latest.current(NO_NAV_BADGES), [sessionKey]);
