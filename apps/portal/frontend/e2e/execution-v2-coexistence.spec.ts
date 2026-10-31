@@ -12,13 +12,17 @@
  */
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
-import { appendFileSync } from "node:fs";
+import { appendFileSync, readFileSync } from "node:fs";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 
-import { stubExecutionBff } from "./bffDouble";
+import { answerEquityProjection } from "../../fixture-bff/equity-projection";
+import { answerExecutionBff, stubExecutionBff } from "./bffDouble";
+import { incidentChildrenBody } from "./bffWorld";
 import { OPERATIONS_V2_DOUBLE_NOW_ISO } from "./bffDoubleV2";
 import { usePreferences, stubPortalApi } from "./fixtures";
 import { waitForQuiet } from "./quietGate.mjs";
-import { SCREENS, stubAdminRoutes, stubQuantbtRuns, watchPage } from "./v2Lane";
+import { SCREENS as LANE_SCREENS, stubAdminRoutes, stubQuantbtRuns, watchPage } from "./v2Lane";
 
 const MEASURE_OUT = process.env.UXM10_MEASURE_OUT;
 const HEADROOM = 1.25;
@@ -32,16 +36,69 @@ function record(row: Record<string, unknown>): void {
 
 /* ── lane setup ────────────────────────────────────────────────────────────────────────────────────────────────── */
 
+// Reads the shared doubles do not answer (501): the canonical published fixtures answer the Overview digest panel (`GET /visit-digest`,
+// first-visit case), an alpha's lifecycle record and an approval's evidence read, bound to the id and workspace asked; the world answers an
+// incident's children; the paged alpha catalogue and the equity projection come from their fixture answerers. Same stubs as the visual spec,
+// so the watcher sees no 404/501/400 and a fixture gap is never counted as a quiet page.
+const FIXTURES = resolve(dirname(fileURLToPath(import.meta.url)), "../../../../packages/contracts/fixtures");
+function fixtureBody(file: string, pick: (json: Record<string, unknown>) => Record<string, unknown>): Record<string, unknown> {
+  return pick(JSON.parse(readFileSync(resolve(FIXTURES, file), "utf8")) as Record<string, unknown>);
+}
+async function stubUnansweredReads(page: Page, options: Parameters<typeof answerExecutionBff>[4]): Promise<void> {
+  const digest = fixtureBody("execution-visit-digest.synthetic.valid.json", (json) => (json.cases as { first_visit: Record<string, unknown> }).first_visit);
+  const lifecycle = fixtureBody("execution-alpha-lifecycle.published.synthetic.valid.json", (json) => json.value as Record<string, unknown>);
+  const evidence = fixtureBody("execution-approval-evidence.published.synthetic.valid.json", (json) => json.value as Record<string, unknown>);
+  const catalogue = fixtureBody("research-run-library-alpha-catalogue.synthetic.valid.json", (json) => json);
+  await page.route(/\/api\/v1\/quantbt\/runs\/alpha-catalogue(\?|$)/, (route) => (route.request().method() === "GET"
+    ? route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(catalogue) })
+    : route.fallback()));
+  await page.route(/\/api\/v1\/execution\/deployments\/[^/]+\/equity-projection(\?|$)/, (route) => {
+    const url = new URL(route.request().url());
+    const answer = answerEquityProjection({ method: route.request().method(), path: url.pathname, search: url.search, headers: {}, body: null });
+    if (answer === null) return route.fallback();
+    return route.fulfill({ status: answer.status, headers: answer.headers, body: JSON.stringify(answer.body) });
+  });
+  await page.route("**/api/v1/execution/**", (route) => {
+    const url = new URL(route.request().url());
+    const workspace = url.searchParams.get("workspace_id") ?? (digest.workspace_id as string);
+    const answer = (body: Record<string, unknown>) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ ...body, workspace_id: workspace }) });
+    if (route.request().method() !== "GET") return route.fallback();
+    // Only a read the shared double leaves unanswered (501) is answered here; every other body stays the double's.
+    if (answerExecutionBff("GET", url.pathname, url.searchParams, options).status !== 501) return route.fallback();
+    if (url.pathname === "/api/v1/execution/visit-digest") return answer(digest);
+    const alpha = /^\/api\/v1\/execution\/alphas\/([^/]+)\/lifecycle$/.exec(url.pathname);
+    if (alpha !== null) return answer({ ...lifecycle, alpha_id: decodeURIComponent(alpha[1]!) });
+    const approval = /^\/api\/v1\/execution\/governance\/approvals\/([^/]+)\/evidence$/.exec(url.pathname);
+    if (approval !== null) return answer({ ...evidence, approval_id: decodeURIComponent(approval[1]!) });
+    const children = /^\/api\/v1\/execution\/operations\/incidents\/([^/]+)\/children$/.exec(url.pathname);
+    const world = children === null ? null : incidentChildrenBody(decodeURIComponent(children[1]!), workspace);
+    if (world !== null) return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(world) });
+    return route.fallback();
+  });
+}
+
 async function openLane(page: Page, width = 1440, height = 900, clock: "fixed" | "install" = "fixed"): Promise<void> {
   if (clock === "fixed") await page.clock.setFixedTime(new Date(OPERATIONS_V2_DOUBLE_NOW_ISO));
   else await page.clock.install({ time: new Date(OPERATIONS_V2_DOUBLE_NOW_ISO) });
   await page.setViewportSize({ width, height });
   await usePreferences(page, "operations");
   await stubPortalApi(page, "healthy");
-  await stubExecutionBff(page, { operationsV2: true, screensV2: true });
+  const bffOptions = { operationsV2: true, screensV2: true, reviewManager: true };
+  await stubExecutionBff(page, bffOptions);
+  await stubUnansweredReads(page, bffOptions);
   await stubAdminRoutes(page);
   await stubQuantbtRuns(page);
 }
+
+// The entry table of the shared lane, with the two entries the reviewManager lane (below) answers differently: its world serves only the
+// incidents it knows (`inc_fixture_44` is a 404 there, as the server answers an unknown id), and `?tab=replay` on an alpha is the Trade
+// Replay screen (766615d12, replay alias), not an Alpha 360 tab.
+const KNOWN_INCIDENT_ROUTE = "/execution/operations/incidents/inc_TEST_ONLY_fx_mismatch";
+const SCREENS = LANE_SCREENS.map(([name, route, root]) => {
+  if (name === "incident") return [name, KNOWN_INCIDENT_ROUTE, root] as const;
+  if (name === "alpha-replay") return [name, route, '[data-screen="trade-replay-v2"]'] as const;
+  return [name, route, root] as const;
+});
 
 type Screen = (typeof SCREENS)[number];
 
@@ -170,122 +227,122 @@ interface Budget {
 // BUDGET_BEGIN (generated from UXM10_MEASURE_OUT; do not hand-edit a measured value)
 const BUDGET: Readonly<Record<string, Budget>> = {
   access: {
-    first: { api: [6, 8], apiBytes: [92853, 116067], assets: [41, 52], assetBytes: [1100505, 1375632] },
+    first: { api: [11, 14], apiBytes: [102775, 128469], assets: [69, 87], assetBytes: [1562822, 1953528] },
     tab: { api: [2, 3], apiBytes: [986, 1233] },
   },
   "account-360": {
-    first: { api: [14, 18], apiBytes: [113455, 141819], assets: [86, 108], assetBytes: [3126399, 3907999] },
+    first: { api: [19, 24], apiBytes: [143620, 179525], assets: [92, 115], assetBytes: [3302501, 4128127] },
     tab: { api: [0, 0], apiBytes: [0, 0] },
   },
   accounts: {
-    first: { api: [10, 13], apiBytes: [104308, 130385], assets: [86, 108], assetBytes: [3126399, 3907999] },
-    tab: { api: [2, 3], apiBytes: [2008, 2510] },
+    first: { api: [16, 20], apiBytes: [131720, 164650], assets: [92, 115], assetBytes: [3302501, 4128127] },
+    tab: { api: [10, 13], apiBytes: [13270, 16588] },
   },
   admin: {
-    first: { api: [13, 17], apiBytes: [204840, 256050], assets: [81, 102], assetBytes: [2999650, 3749563] },
+    first: { api: [17, 22], apiBytes: [227229, 284037], assets: [90, 113], assetBytes: [3176663, 3970829] },
   },
   "alpha-360": {
-    first: { api: [12, 15], apiBytes: [130754, 163443], assets: [87, 109], assetBytes: [3141483, 3926854] },
+    first: { api: [20, 25], apiBytes: [211289, 264112], assets: [110, 138], assetBytes: [3409561, 4261952] },
     tab: { api: [0, 0], apiBytes: [0, 0] },
   },
   "alpha-replay": {
-    first: { api: [15, 19], apiBytes: [139494, 174368], assets: [87, 109], assetBytes: [3311387, 4139234] },
-    tab: { api: [1, 2], apiBytes: [2851, 3564] },
+    first: { api: [19, 24], apiBytes: [205965, 257457], assets: [110, 138], assetBytes: [3579465, 4474332] },
   },
   blotter: {
-    first: { api: [12, 15], apiBytes: [168263, 210329], assets: [80, 100], assetBytes: [3004018, 3755023] },
+    first: { api: [16, 20], apiBytes: [195866, 244833], assets: [88, 110], assetBytes: [3165846, 3957308] },
   },
   canary: {
-    first: { api: [11, 14], apiBytes: [122261, 152827], assets: [90, 113], assetBytes: [3088585, 3860732] },
+    first: { api: [18, 23], apiBytes: [461271, 576589], assets: [102, 128], assetBytes: [3292265, 4115332] },
     tab: { api: [0, 0], apiBytes: [0, 0] },
   },
   "canary-guard": {
-    first: { api: [11, 14], apiBytes: [122261, 152827], assets: [90, 113], assetBytes: [3088585, 3860732] },
+    first: { api: [18, 23], apiBytes: [461271, 576589], assets: [102, 128], assetBytes: [3292265, 4115332] },
     tab: { api: [0, 0], apiBytes: [0, 0] },
   },
   "canary-v2body": {
-    first: { api: [10, 13], apiBytes: [107186, 133983], assets: [90, 113], assetBytes: [3088585, 3860732] },
+    first: { api: [17, 22], apiBytes: [432524, 540655], assets: [102, 128], assetBytes: [3292265, 4115332] },
     tab: { api: [0, 0], apiBytes: [0, 0] },
   },
   cockpit: {
-    first: { api: [13, 17], apiBytes: [108634, 135793], assets: [87, 109], assetBytes: [3125845, 3907307] },
+    first: { api: [18, 23], apiBytes: [136817, 171022], assets: [100, 125], assetBytes: [3387226, 4234033] },
   },
   "cockpit-r1": {
-    first: { api: [13, 17], apiBytes: [108431, 135539], assets: [87, 109], assetBytes: [3125845, 3907307] },
+    first: { api: [18, 23], apiBytes: [140171, 175214], assets: [100, 125], assetBytes: [3387226, 4234033] },
   },
   compare: {
-    first: { api: [10, 13], apiBytes: [105488, 131860], assets: [89, 112], assetBytes: [3088645, 3860807] },
+    first: { api: [15, 19], apiBytes: [178792, 223490], assets: [105, 132], assetBytes: [3297900, 4122375] },
   },
   fleet: {
-    first: { api: [10, 13], apiBytes: [111456, 139320], assets: [84, 105], assetBytes: [3025288, 3781610] },
-    tab: { api: [5, 7], apiBytes: [35360, 44200] },
+    first: { api: [21, 27], apiBytes: [447327, 559159], assets: [100, 125], assetBytes: [3366120, 4207650] },
+    tab: { api: [7, 9], apiBytes: [169513, 211892] },
   },
   incident: {
-    first: { api: [12, 15], apiBytes: [111702, 139628], assets: [83, 104], assetBytes: [3037310, 3796638] },
+    first: { api: [17, 22], apiBytes: [144804, 181005], assets: [91, 114], assetBytes: [3159003, 3948754] },
   },
   live: {
-    first: { api: [11, 14], apiBytes: [120566, 150708], assets: [90, 113], assetBytes: [3087891, 3859864] },
+    first: { api: [17, 22], apiBytes: [906890, 1133613], assets: [104, 130], assetBytes: [3290021, 4112527] },
     tab: { api: [0, 0], apiBytes: [0, 0] },
   },
   "live-continuity": {
-    first: { api: [11, 14], apiBytes: [120566, 150708], assets: [90, 113], assetBytes: [3087891, 3859864] },
+    first: { api: [17, 22], apiBytes: [906890, 1133613], assets: [104, 130], assetBytes: [3290021, 4112527] },
     tab: { api: [0, 0], apiBytes: [0, 0] },
   },
   "live-v2body": {
-    first: { api: [10, 13], apiBytes: [132712, 165890], assets: [90, 113], assetBytes: [3087891, 3859864] },
+    first: { api: [16, 20], apiBytes: [918468, 1148085], assets: [104, 130], assetBytes: [3290021, 4112527] },
     tab: { api: [0, 0], apiBytes: [0, 0] },
   },
   "new-request": {
-    first: { api: [11, 14], apiBytes: [107952, 134940], assets: [83, 104], assetBytes: [2974503, 3718129] },
+    first: { api: [16, 20], apiBytes: [130912, 163640], assets: [91, 114], assetBytes: [3172980, 3966225] },
   },
   "new-request-drawer": {
-    first: { api: [15, 19], apiBytes: [113359, 141699], assets: [87, 109], assetBytes: [3125845, 3907307] },
+    first: { api: [21, 27], apiBytes: [141818, 177273], assets: [100, 125], assetBytes: [3387226, 4234033] },
   },
   operations: {
-    first: { api: [11, 14], apiBytes: [110949, 138687], assets: [83, 104], assetBytes: [3037310, 3796638] },
+    first: { api: [16, 20], apiBytes: [142150, 177688], assets: [93, 117], assetBytes: [3224871, 4031089] },
     tab: { api: [0, 0], apiBytes: [0, 0] },
   },
   overview: {
-    first: { api: [13, 17], apiBytes: [123559, 154449], assets: [87, 109], assetBytes: [3084739, 3855924] },
+    first: { api: [23, 29], apiBytes: [267921, 334902], assets: [99, 124], assetBytes: [3289151, 4111439] },
   },
   "portfolio-360": {
-    first: { api: [16, 20], apiBytes: [123707, 154634], assets: [92, 115], assetBytes: [3134674, 3918343] },
-    tab: { api: [1, 2], apiBytes: [736, 920] },
+    first: { api: [24, 30], apiBytes: [202756, 253445], assets: [106, 133], assetBytes: [3369480, 4211850] },
+    tab: { api: [5, 7], apiBytes: [192780, 240975] },
   },
   portfolios: {
-    first: { api: [10, 13], apiBytes: [105488, 131860], assets: [84, 105], assetBytes: [2992915, 3741144] },
+    first: { api: [15, 19], apiBytes: [186907, 233634], assets: [98, 123], assetBytes: [3181753, 3977192] },
   },
   sandbox: {
-    first: { api: [12, 15], apiBytes: [118266, 147833], assets: [85, 107], assetBytes: [3018684, 3773355] },
+    first: { api: [18, 23], apiBytes: [169657, 212072], assets: [96, 120], assetBytes: [3204137, 4005172] },
     tab: { api: [0, 0], apiBytes: [0, 0] },
   },
   "sandbox-plans": {
-    first: { api: [12, 15], apiBytes: [118266, 147833], assets: [85, 107], assetBytes: [3018684, 3773355] },
+    first: { api: [18, 23], apiBytes: [169657, 212072], assets: [95, 119], assetBytes: [3179885, 3974857] },
     tab: { api: [0, 0], apiBytes: [0, 0] },
   },
   "sandbox-steps": {
-    first: { api: [12, 15], apiBytes: [118266, 147833], assets: [85, 107], assetBytes: [3018684, 3773355] },
+    first: { api: [18, 23], apiBytes: [169657, 212072], assets: [95, 119], assetBytes: [3179885, 3974857] },
     tab: { api: [0, 0], apiBytes: [0, 0] },
   },
   "sandbox-v2body": {
-    first: { api: [11, 14], apiBytes: [109345, 136682], assets: [85, 107], assetBytes: [3018684, 3773355] },
+    first: { api: [17, 22], apiBytes: [161595, 201994], assets: [95, 119], assetBytes: [3179885, 3974857] },
     tab: { api: [0, 0], apiBytes: [0, 0] },
   },
   users: {
-    first: { api: [8, 10], apiBytes: [113714, 142143], assets: [47, 59], assetBytes: [1136772, 1420965] },
+    first: { api: [12, 15], apiBytes: [111198, 138998], assets: [75, 94], assetBytes: [1590626, 1988283] },
   },
   workbench: {
-    first: { api: [11, 14], apiBytes: [181803, 227254], assets: [86, 108], assetBytes: [3104896, 3881120] },
+    first: { api: [19, 24], apiBytes: [705055, 881319], assets: [101, 127], assetBytes: [3298606, 4123258] },
     tab: { api: [0, 0], apiBytes: [0, 0] },
   },
   "workbench-fills": {
-    first: { api: [11, 14], apiBytes: [181803, 227254], assets: [85, 107], assetBytes: [3080644, 3850805] },
-    tab: { api: [1, 2], apiBytes: [3033, 3792] },
-  },
-  "workbench-vnm": {
-    first: { api: [11, 14], apiBytes: [182553, 228192], assets: [86, 108], assetBytes: [3104896, 3881120] },
+    first: { api: [18, 23], apiBytes: [702022, 877528], assets: [100, 125], assetBytes: [3274354, 4092943] },
     tab: { api: [0, 0], apiBytes: [0, 0] },
   },
+  "workbench-vnm": {
+    first: { api: [19, 24], apiBytes: [706110, 882638], assets: [101, 127], assetBytes: [3298606, 4123258] },
+    tab: { api: [0, 0], apiBytes: [0, 0] },
+  },
+
 };
 // BUDGET_END
 
@@ -365,11 +422,42 @@ for (const [name, route, root] of SCREENS) {
 /**
  * Screens that re-read on the fallback poll while visible (`PROJECTION_POLL_MS` = 15 s, execution/useRevision.ts), with the
  * /api requests seen over 60 s of virtual idle time as [measured, ceiling]. Every other V2 route must be silent for the
- * whole minute. Overview: 4 ticks x 2 reads (command-center composition + the unacknowledged-operations count).
+ * whole minute. The rail's two count badges (Operations, Approvals) re-read on the 60 s `NAV_COUNTS_POLL_MS` cadence of the shell
+ * (navCounts.tsx, 766615d12): 1 tick x 2 reads on every screen that mounts the V2 shell. Overview adds 4 ticks x 2 reads
+ * (command-center composition + the unacknowledged-operations count).
  * What the double cannot show: a real stream, whose deltas would add re-reads (see NOT-MEASURED in the evidence README).
  */
 const IDLE_VISIBLE_60S: Readonly<Record<string, Pair>> = {
-  overview: [8, 10],
+  "account-360": [2, 3],
+  accounts: [2, 3],
+  admin: [2, 3],
+  "alpha-360": [2, 3],
+  "alpha-replay": [2, 3],
+  blotter: [2, 3],
+  canary: [2, 3],
+  "canary-guard": [2, 3],
+  "canary-v2body": [2, 3],
+  cockpit: [2, 3],
+  "cockpit-r1": [2, 3],
+  compare: [2, 3],
+  fleet: [2, 3],
+  incident: [2, 3],
+  live: [2, 3],
+  "live-continuity": [2, 3],
+  "live-v2body": [2, 3],
+  "new-request": [2, 3],
+  "new-request-drawer": [2, 3],
+  operations: [2, 3],
+  overview: [10, 13],
+  "portfolio-360": [2, 3],
+  portfolios: [2, 3],
+  sandbox: [2, 3],
+  "sandbox-plans": [2, 3],
+  "sandbox-steps": [2, 3],
+  "sandbox-v2body": [2, 3],
+  workbench: [2, 3],
+  "workbench-fills": [2, 3],
+  "workbench-vnm": [2, 3],
 };
 const WINDOW_SHORT_MS = 10_000;
 const WINDOW_LONG_MS = 60_000;
@@ -931,15 +1019,17 @@ interface DrawerCase {
   open: { by: "url" } | { by: "click"; selector: string };
   /** The query keys that name the open drawer and must be gone once it is closed. Default `sel` and `compose`. */
   urlKeys?: readonly string[];
+  /** From this width the pane is the page's right column and stays docked (Admin Actions, QA1 I-35, 0a9db9507); below it the overlay rule holds. */
+  columnFrom?: number;
 }
 
 const DRAWERS: readonly DrawerCase[] = [
   { name: "fleet", route: "/deployments/alphas", root: ".exec-fleet-v2", open: { by: "click", selector: "tbody tr" } },
   { name: "accounts", route: "/deployments/accounts", root: ".exec-acct-v2", open: { by: "click", selector: "tbody tr" } },
   { name: "users", route: "/administration/users", root: '[data-screen="users-v2"]', open: { by: "click", selector: "tbody tr" } },
-  { name: "admin", route: "/administration/actions", root: '[data-screen="admin-actions-v2"]', open: { by: "click", selector: "tbody tr" } },
+  { name: "admin", route: "/administration/actions", root: '[data-screen="admin-actions-v2"]', open: { by: "click", selector: "tbody tr" }, columnFrom: 1101 },
   { name: "operations", route: "/execution/operations", root: ".exec-ops", open: { by: "click", selector: "td[data-l] button" } },
-  { name: "incident", route: "/execution/operations/incidents/inc_fixture_44", root: ".exec-ops", open: { by: "url" } },
+  { name: "incident", route: `${KNOWN_INCIDENT_ROUTE}?peek=1`, root: ".exec-ops", open: { by: "url" } },
   // The drawer is `?compose=request`. The queue behind it selects its first request by itself on a wide first load (HIFI; cockpit/index.tsx,
   // "First load on a wide screen"), so `?sel=` is the queue's choice and stays after the drawer closes: only `compose` names the drawer.
   { name: "new-request", route: "/governance/approvals?compose=request", root: '[data-screen="new-request-drawer-v2"]', open: { by: "url" }, urlKeys: ["compose"] },
@@ -982,7 +1072,8 @@ for (const drawer of DRAWERS) {
     await page.waitForLoadState("networkidle");
 
     const problems: string[] = [];
-    for (const [label, width, height, mode] of DRAWER_WIDTHS) {
+    for (const [label, width, height, ruleMode] of DRAWER_WIDTHS) {
+      const mode = drawer.columnFrom !== undefined && width >= drawer.columnFrom ? "dock" : ruleMode;
       await page.setViewportSize({ width, height });
       await page.waitForTimeout(250);
       const dock = page.locator(".exec-dock");
