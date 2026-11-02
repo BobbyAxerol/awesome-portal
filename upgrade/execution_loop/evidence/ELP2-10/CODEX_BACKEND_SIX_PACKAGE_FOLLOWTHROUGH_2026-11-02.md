@@ -1155,3 +1155,100 @@ remained `636d58a7c4368a617903734ab1d0ce933d2804ca` and the newest twelve
 files in its EPG10-08 mailbox were dated 28 Oct. This bounded mailbox check is
 not proof that no other channel exists or that a source/grant is qualified;
 no Edge file, credential, database or runtime was changed.
+
+## Account identity, lineage and cursor follow-through — 2 Nov 2026
+
+**SOURCE CANDIDATE, not installed/committed.** This follow-through is on
+`docs/research-loop-plan` at base `f460537b874d1a9f4ce7db572433359045a12707`.
+It addresses independently reproducible retained-reader defects, not source
+commissioning. The existing Account 360 V2 resource reader is a separate
+reader; the 200-row lookup limitation described below concerns the older
+Account/Broker profile composer.
+
+1. A returned parent page is not a complete lineage census just because its
+   page says `COMPLETE`: continuation in either direction, a `PARTIAL` scope
+   or relation state, and a requested but unavailable parent leave it
+   unproved. Children whose parents cannot be proved are held as `PARTIAL`
+   with `N30_PROFILE_LINEAGE_REJECTED`; a known-foreign row remains separately
+   counted as scoped out. A partial child is not upgraded to `EMPTY` merely
+   because its known-foreign rows were removed.
+2. Bracket legs require a single complete parent census before their parent
+   identity can be called unique. Continuation, a partial scope/state or an
+   unavailable parent holds the affected legs and leaves a typed partial
+   reason rather than attaching a leg to a potentially duplicated parent.
+   A complete, unique parent still passes. Four of the new five negative
+   cases reproduced the old incorrect behavior before the correction.
+3. A ladder worker previously advanced its durable cursor even when it held a
+   child whose parent was not established. It now commits the **same prior
+   relation cursor** with the partial snapshot; a later refresh can re-read
+   that child after the parent becomes available. Source rows proved foreign
+   do not hold that cursor. A perpetually incomplete source can still stall
+   that relation; stable upstream cursor/recovery behavior remains to be
+   qualified through Edge.
+4. The older Account/Broker composer no longer turns an incomplete first
+   page, inaccessible source, unknown completeness or another incomplete
+   environment into an authoritative account-not-found or unique environment.
+   Duplicate account IDs, a null/blank broker reference or a reference shared
+   by multiple visible account IDs cannot be used to choose a broker row or
+   calculate a comparison. The response carries typed identity/broker absence
+   and withholds unsupported differences instead of returning fabricated zero.
+   This is a fail-closed correction: **exact lookup beyond the first 200 rows
+   for this older route is still open**, and an available local snapshot does
+   not by itself prove economic ownership/census across the real source.
+
+Verification (all data and grants synthetic unless noted):
+
+- Initial targeted tests reproduced eight account/lineage failures; the
+  bracket tests separately reproduced four more before the last correction.
+- After the correction, five focused suites (`profile-lineage`,
+  `profile-projection-lineage-cursor`, `profile-read`, retained bracket legs
+  and retained business aliases) passed **177/177**; Account/Broker responses
+  in the added cases were checked against the current JSON schema.
+- Three PostgreSQL suites passed **77/77** in a separately initialized
+  PostgreSQL 16.15 Unix-socket-only test cell, including migration, real
+  transactional cursor persistence, and reading the originally held child
+  after the synthetic parent becomes available. This run preceded the final
+  bracket-only source correction, so it is a receipt for that earlier source
+  checkpoint, not a claim that the current whole candidate has been retested
+  on PostgreSQL. The earlier default-port attempt was sandbox-denied and is
+  not a PASS. The disposable cell, synthetic database and downloaded packages
+  were stopped/removed; no existing DB was touched.
+- A broader pre-bracket checkpoint had 252 passing non-DB tests; the 177
+  above overlap those tests and must not be added as separate coverage. A
+  typecheck that overlapped a further source edit is **not** counted as a
+  typecheck of the final source. A subsequent no-emit Control API typecheck
+  on the stabilized source exited **0** in 195.30 seconds (peak 2,759,912
+  KiB); tracked source/contract diff SHA-256 was unchanged before/after at
+  `cb02566db6e08386ebb494180168a924f192cc7dd6553205e5aba5b0acc39b5d`.
+  The additional untracked `account-comparison-availability.ts` source hash
+  was `bc504af8404e3ec06ee127d21c9aabb49a4ffde97d87728a95554e2d67aa7e4d`.
+  This is not the normal hook, an emitted build, browser or qualified-source
+  acceptance.
+
+Final local source and test SHA-256 at this checkpoint:
+
+- `profile-lineage.ts`: `5d603b46137783e20c0f6a3aee8ad97af6cd4807799d6ab4b5efc7b8bfe61404`.
+- `profile-projection.worker.ts`: `74c11f188e65a86cd1742319fce9c8beb7535d950e4a28f4f63b2cb82af76d2f`.
+- `profile-read.service.ts`: `e9ec612feb63f788988c2d540bc0b5aa40eae73400464a1bf70d11c1aede51c7`.
+- `profile-lineage.spec.ts`: `d00e058824096552566b5f46401db811898e8e6a6dae5db3006b97f40c61130c`.
+- `profile-projection.spec.ts`: `1a9da492e2cd81aad4d8ab4c47028f6ce00789f3085b0b691c9f1420da22b0b0`.
+- `profile-projection-lineage-cursor.spec.ts`: `065e27adbaa55f5ff2db01209a991f458a6af6b13c144e8a8d9945aa71f78c8f`.
+- `profile-read.spec.ts`: `0bb74fdff5b10599094aab865180586abe1011a8146bfa6f4ab8becd9636535d`.
+
+An owner-private local recovery copy, **not a commit or remote backup**, is
+under `/home/bobby/.local/state/portal-research-backend-20261102-7rY0guq1/`:
+tracked backend patch `backend-code-recovery-lineage-final-20261102.patch`
+SHA-256 `37e590cc1ebac0376c316ef271c0ab8a51e742239d55c67ca2f3bc253ab5a002`;
+six untracked backend files in `untracked-backend-lineage-final-20261102.tar`
+SHA-256 `bc3b482f0f1e59a29434815967470b79ce5c21d609b59269fb0f74ae7d0a1974`.
+The three pre-existing Edge mailbox documents were not changed or included.
+
+Claude consumer: use the existing partial/unavailable presentation and
+handle `SOURCE_CONTINUATION_NOT_READ`, `SOURCE_COMPLETENESS_UNKNOWN`,
+`SOURCE_PARTIAL`, `PHASE2_ACCOUNT_IDENTITY_UNRESOLVED`,
+`PHASE2_ACCOUNT_ENVIRONMENT_UNRESOLVED`,
+`PHASE2_ACCOUNT_IDENTITY_DUPLICATE`, and
+`PHASE2_BROKER_REFERENCE_UNAVAILABLE` / `PHASE2_BROKER_REFERENCE_AMBIGUOUS`
+without showing “not found”, zero, or a complete broker result. No component
+or layout change is required. The separate Alpha V1 nullable-consumer handoff
+remains a known integration failure until Claude consumes the contract.

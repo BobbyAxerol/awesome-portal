@@ -17098,3 +17098,19 @@ focused authority suite passed **43/43**. Control API source typecheck passed
 hash; see [receipt](execution_loop/evidence/ELP2-10/COMMAND_STATUS_DURABLE_ACK_2026-11-02.md#final-source-typecheck-and-coalesced-refusal-test).
 This supersedes only the earlier missing typecheck status, not the unrun normal
 integration hook, FE consumer, real Edge gate or source qualification.
+
+**2 Nov retained lineage / Account-Broker correction:** a parent continuation,
+partial scope or missing parent no longer proves an orphan foreign; bracket
+legs are withheld until the unique-parent census is complete. A resumable
+ladder now retains its original cursor when a child is unaccounted for, so a
+later parent can admit it without skipping the child. The older Account/Broker
+reader distinguishes an unresolved first page/environment and ambiguous/null
+broker reference from a confirmed missing account or valid join. Five affected
+synthetic suites passed **177/177**; PostgreSQL **77/77** passed on the prior
+pre-bracket source checkpoint, not on this final source hash. A no-emit Control
+API typecheck subsequently passed on the stabilized source (exit 0). Exact
+Account lookup beyond the old route's first 200 records, Edge identity/ownership,
+the normal hook and Claude's nullable consumer remain open. The code is
+**uncommitted and not installed**; evidence, hashes, local
+recovery copy and test boundaries are in the
+[six-package receipt](execution_loop/evidence/ELP2-10/CODEX_BACKEND_SIX_PACKAGE_FOLLOWTHROUGH_2026-11-02.md#account-identity-lineage-and-cursor-follow-through--2-nov-2026).

@@ -4267,3 +4267,22 @@ six world ties were skipped and no link sweep ran. Claude: review the candidate
 and continue QA8 and those uncovered paths. Candidate is not yet landed; normal
 integration gate and connected-source acceptance remain open.
 
+### 2Nov — retained Account/Broker and lineage follow-through, source only
+
+[Backend receipt and exact synthetic-test limits](evidence/ELP2-10/CODEX_BACKEND_SIX_PACKAGE_FOLLOWTHROUGH_2026-11-02.md#account-identity-lineage-and-cursor-follow-through--2-nov-2026).
+The legacy Account/Broker profile can now report unresolved identity or broker
+join rather than a false not-found/zero; preserve those existing partial and
+unavailable states when consuming `PHASE2_ACCOUNT_IDENTITY_UNRESOLVED`,
+`PHASE2_ACCOUNT_ENVIRONMENT_UNRESOLVED`, `PHASE2_ACCOUNT_IDENTITY_DUPLICATE`,
+`PHASE2_BROKER_REFERENCE_UNAVAILABLE` and
+`PHASE2_BROKER_REFERENCE_AMBIGUOUS`. A source continuation or unqualified
+bracket parent is not an empty complete population. No UI redesign or newly
+inferred permission is requested. The old profile route's exact lookup after
+the first page is still open; this does not replace the separate Account 360
+V2 resource reader or prove connected Edge authority.
+
+The backend candidate is uncommitted/uninstalled. Please also consume the
+[separate Alpha V1 nullable-facts handoff](evidence/ELP2-10/CLAUDE_ALPHA_V1_NULLABLE_HANDOFF_2026-11-02.md)
+before integrated frontend acceptance; keep V1/V2 dispatch and null versus
+source-zero distinct. Do not treat fixture results as browser/real-source proof.
+
