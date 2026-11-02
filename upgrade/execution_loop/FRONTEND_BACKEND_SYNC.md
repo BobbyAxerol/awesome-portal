@@ -1,5 +1,15 @@
 # Execution Loop V2 — Sổ đồng bộ Frontend ↔ Backend (sống)
 
+## 2 Nov — STATUS durable ACK / no UI change
+
+The [STATUS custody receipt](evidence/ELP2-10/COMMAND_STATUS_DURABLE_ACK_2026-11-02.md)
+describes uncommitted migration 156 and a private STATUS-only fail-closed
+fence. It adds no browser field or approved design change. Claude: continue
+the Alpha nullable consumer handoff below; the backend and migration must not
+be presented as installed or as a real Edge recovery receipt. Edge must keep
+the same original on `COMMAND_STATUS_ASSERTION_CUSTODY_RECOVERY_REQUIRED` and
+provide actual terminal/delivery proof; cross-process continuation remains open.
+
 ## 2 Nov — Backend six-package checkpoint / Alpha consumer
 
 Codex's [six-package receipt](evidence/ELP2-10/CODEX_BACKEND_SIX_PACKAGE_FOLLOWTHROUGH_2026-11-02.md)

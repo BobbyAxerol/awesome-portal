@@ -17058,3 +17058,16 @@ rerun against a newly created socket-only PostgreSQL 16.15 test cell and passed
 **9/9**. The cell was stopped and its synthetic DB/packages removed. This
 supersedes only that suite's earlier NOT RUN status, not source, browser,
 final-candidate migration/rollback or G2 qualification. See the same receipt.
+
+**2 Nov STATUS durable ACK candidate:** STATUS preparation now rejects two
+different concurrent bodies/contracts for the same logical call. A separate
+PostgreSQL fence blocks replacement of the exact source request across Core
+processes and sessions while any prior lease lacks an actual Edge ACK. New
+migration 156 records that ACK only after authenticated source terminal; its
+down migration refuses to remove the evidence. PostgreSQL and loopback tests,
+plus synthetic restore and safely refused rollback, are recorded in the
+[STATUS receipt](execution_loop/evidence/ELP2-10/COMMAND_STATUS_DURABLE_ACK_2026-11-02.md).
+Code/migration are **uncommitted and not installed**. Cross-process recovery
+of a vanished context, old-custody reconciliation, Edge connected proof,
+production retention/budget and the final integrated hook remain open; a
+terminal result alone must never be used as an ACK.
