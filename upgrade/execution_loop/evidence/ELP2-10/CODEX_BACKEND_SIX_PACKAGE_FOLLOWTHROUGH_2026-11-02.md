@@ -5,8 +5,10 @@
 Base examined: `docs/research-loop-plan@f5993a79d`. This receipt describes
 the working-tree changes alongside it, not a deployed image or a signed
 qualification. The three untracked Edge mailbox files already in the checkout
-are outside this change and remain untouched. No frontend files, Edge runtime,
-production, dev, main, Live, or command activation were changed.
+are outside this change and remain untouched. The initial backend checkpoint
+changed no frontend; the later Bobby-approved Alpha parser/data-binding
+follow-through is recorded at the end of this receipt. No Edge runtime,
+production, dev, main, Live, or command activation was changed.
 
 ## 1. Approval Evidence / R1
 
@@ -201,13 +203,13 @@ of qualified portfolio NAV, carrier ownership or economic PnL.
 The owning generator, `execution-alpha-resource.v1` schema, generated
 `execution-serving-reads.d.ts`, producer-written synthetic fixture and
 contract snapshot were updated. Conditional schema tests reject false
-`AVAILABLE`, missing reasons and fabricated PnL. **Do not install/preview
-this candidate alone:** `readProfileEnvelope` accepts the V1 envelope, but
-`readAlphaFleetItem` currently rejects its nullable financial fields, so the
-Alpha detail disappears. Claude must update that reader and view models to
-preserve nulls/reasons, support old complete and new typed-absence V1, and
-not turn missing amounts/counts into zero; keep the design and distinguish
-V2. API version-dispatch alone passed **7/7** but does not prove the screen:
+`AVAILABLE`, missing reasons and fabricated PnL. **Historical blocker,
+superseded by the later Alpha consumer follow-through:** at this checkpoint
+`readProfileEnvelope` accepted the V1 envelope, but
+`readAlphaFleetItem` rejected its nullable financial fields, so the Alpha
+detail disappeared. The later fix uses a separate V1 Resource reader instead
+of widening Fleet; see the follow-through below. At this checkpoint API
+version-dispatch alone passed **7/7** but did not prove the screen:
 Alpha canonical + model suites returned **99/100**, with
 `canonicalServing.test.tsx:33` failing because the reader returned null.
 UI/browser and visual acceptance remain open.
@@ -1250,8 +1252,9 @@ handle `SOURCE_CONTINUATION_NOT_READ`, `SOURCE_COMPLETENESS_UNKNOWN`,
 `PHASE2_ACCOUNT_IDENTITY_DUPLICATE`, and
 `PHASE2_BROKER_REFERENCE_UNAVAILABLE` / `PHASE2_BROKER_REFERENCE_AMBIGUOUS`
 without showing “not found”, zero, or a complete broker result. No component
-or layout change is required. The separate Alpha V1 nullable-consumer handoff
-remains a known integration failure until Claude consumes the contract.
+or layout change is required. At this checkpoint the separate Alpha V1
+nullable consumer remained a known integration failure; the later Codex
+follow-through below fixes it in the local candidate, pending full integration.
 
 ### Resource 360 broker-reference census follow-through
 
