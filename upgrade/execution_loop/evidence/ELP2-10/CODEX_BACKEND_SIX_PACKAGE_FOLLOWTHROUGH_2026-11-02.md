@@ -1365,3 +1365,104 @@ frontend patch is
 SHA-256 `24d9654029a9108f10b8a8d7eafd04195f847c61b3b1bd235c1ce913ecb17ea3`.
 No Edge mailbox was touched and no frontend design/baseline was modified.
 Claude should review the candidate, not reimplement this parser.
+
+### Retained deployment and broker-grain follow-through — 2 Nov 2026
+
+**Source-only candidate, not a runtime/source qualification.** Focused red
+tests revealed further issues in the retained compatibility readers. This
+follow-through preserves the existing contracts and public reason codes:
+
+1. Product deployment tuple fallback now needs an untruncated, complete
+   deployment census with no rejected lineage, and counts another deployment
+   with a missing tuple dimension as a possible owner. Paper mode comparison
+   is case-insensitive; source IDs and payloads are not rewritten. Explicit
+   deployment IDs remain usable when independently valid, while tuple-only
+   or malformed/ambiguous identity facts are withheld with the existing
+   `EDS03_DEPLOYMENT_SCOPE_AMBIGUOUS` rather than assigned to the first row.
+2. Product broker resolution now requires a qualified, unique account
+   `(venue, mode, external_account_ref)` binding; matching the reference
+   alone is insufficient. Unavailable or partial account census and missing
+   or conflicting grain cannot establish ownership. These checks reproduce
+   on the legacy compatibility seam; the scoped V2 reader does not receive a
+   new grant to physical custody fields.
+3. Resource 360 applies the same broker grain. A different known venue is not
+   conflated with the target, while an unknown venue, mode or possible owner
+   withholds just the unproved broker fact and marks the branch partial. Its
+   deployment uniqueness check counts wildcard/missing dimensions across the
+   visible population in bounded signature lookups, rather than treating an
+   incomplete competitor as a different tuple. A malformed published
+   `deployment_id` cannot be recast as a tuple-only observation. Existing
+   reasons include `EDS04_EXTERNAL_ACCOUNT_REF_UNAVAILABLE`,
+   `EDS04_EXTERNAL_ACCOUNT_REF_AMBIGUOUS` and
+   `EDS04_TRANSACTIONAL_SCOPE_AMBIGUOUS`.
+4. A relation whose source window is truncated or has rejected lineage is
+   partial even if its `completeness` field claims `COMPLETE`; dependent
+   financial comparisons are withheld. A parent absent from such a census is
+   `EDS04_ACCOUNT_OUTSIDE_RETAINED_WINDOW`, not a confirmed not-found.
+   Known authorized data and real zeroes are not replaced with fabricated
+   values. These changes do not assert qualified source ownership.
+5. The separate legacy Account/Broker profile also joins against all three
+   published grain dimensions. Unknown possible account owners and unknown
+   broker dimensions produce the existing
+   `PHASE2_BROKER_REFERENCE_AMBIGUOUS`/`UNAVAILABLE` states; a known row from
+   another venue is not attached. When only an observation is ambiguous, a
+   separately qualified row remains visible but the broker capability is
+   partial and the derived comparison is withheld. No extra grant is created.
+
+Local synthetic verification on the current candidate: targeted red cases
+first reproduced incomplete/unknown census, wrong broker grain and tuple
+ambiguity; the final eight affected suites passed **380/380** in 56.73 s:
+`resource-read`, `elp2-resource-reads`, `elp2-product-reads`,
+`retained-negative-fence`, `deployment-identity`, `profile-read`,
+`paper-read`, and `elp2-retained-metadata`. Previous smaller test counts
+overlap and must not be summed. `git diff --check` passed. No network source,
+browser, real credential, live mutation or data migration was used.
+
+Tracked source/contract diff before the final no-emit typecheck:
+`aa6afa789dbfc28b2150cfd9a819fac404af86ec98facc486d4384be6464692e`.
+An earlier typecheck was intentionally interrupted after the separate legacy
+profile finding and is not counted as PASS.
+The final `npm exec -- tsc -p tsconfig.build.json --noEmit --diagnostics`
+then exited **0** on the unchanged tracked source/contract diff above, with
+1,481 files, 218.22 s reported TypeScript time, 3:39.61 wall time and
+2,279,692 KiB peak process RSS. The separate untracked helper
+`account-comparison-availability.ts` retained SHA-256
+`bc504af8404e3ec06ee127d21c9aabb49a4ffde97d87728a95554e2d67aa7e4d`.
+This is not an emitted build, normal integration hook or runtime proof.
+Local SHA-256 pins:
+
+- `product-read-source.ts`: `555eab33bb50ae56395fa06f193e47a3d9e949b5b6c9c77feee639aed0d29615`.
+- `resource-read.service.ts`: `d9ab7ce49426696cc04cd05b52589b9a1cf856fac1bde315778fffd9f2166d9d`.
+- `profile-read.service.ts`: `3de2ac0d888e48c9fda376bf853f68905b340844828c0f623b9918dcbc03dd05`.
+- `elp2-product-reads.spec.ts`: `ea130b44d74494589f223bbc03af4bdf69b3392dfcb2fbc2aa407ac4f826f037`.
+- `resource-read.spec.ts`: `ca5d0e004af625ed6e60e61481870a6e6fff224a632bba29f400c89144916e16`.
+- `profile-read.spec.ts`: `5ead82229500f04795e7e587a2c964c3e3e88c2a66710f191b604012200f0bfd`.
+
+For recovery only, not a Git commit or remote backup: tracked backend patch
+`/home/bobby/.local/state/portal-research-backend-20261102-7rY0guq1/backend-code-recovery-profile-broker-20261102.patch`
+SHA-256 `ab3458f08a7c6db626288df3712b2417104d141fa767315e252f80b0c289400b`;
+the six untracked backend files remain in the previously documented local tar
+`bc3b482f0f1e59a29434815967470b79ce5c21d609b59269fb0f74ae7d0a1974`.
+The tracked backend candidate spans 65 files at +4,904/−458, representing
+the cumulative uncommitted candidate, not just this follow-through.
+
+**Handoff to Claude:** use the existing partial/typed-absence presentation;
+do not show withheld broker sync as zero/synced or infer a deployment from an
+ambiguous tuple. No component/layout/baseline change is requested. The Alpha
+V1 parser fix above is already in the same local candidate, not yet landed.
+The older separate Account/Broker profile still has no exact lookup beyond
+its first 200 records; safe pagination needs an authorized pre-pagination
+identity read and a single retained end-of-response fence. Real Edge source,
+ownership/census, physical HTTP custody and browser verification remain open.
+
+**Gate/capacity and documentation verification:** the root filesystem had
+104 GiB available of 621 GiB, 84% used, at this checkpoint. C4.5 in
+`docs/production-feature-profile-and-cleanup.md` bars starting a new
+disk-intensive local build below 20% free without an inventory-backed scoped
+cleanup or owner-approved capacity change. The normal backend/code hook was
+therefore **not run or bypassed**, and the code remains uncommitted; no shared
+cache, backup, volume or Edge mailbox was removed. The three Markdown receipt/
+tracking files are a separate, user-approved `Verification: R0` documentation
+update: explicit paths, target/anchor, `git diff --check` and
+`scripts/execution-tracking-test.sh` checked. This R0 does not authorize code
+landing or change the remaining source/qualification gates.

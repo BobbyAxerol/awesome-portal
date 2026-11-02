@@ -17138,3 +17138,16 @@ Edge acceptance. Frontend `tsc -b` exited 0 on the unchanged candidate diff.
 Full hook and the wider ELP2-10 source/qualification gates
 remain open. [Exact handoff](execution_loop/evidence/ELP2-10/CLAUDE_ALPHA_V1_NULLABLE_HANDOFF_2026-11-02.md#codex-consumer-follow-through),
 [test and recovery details](execution_loop/evidence/ELP2-10/CODEX_BACKEND_SIX_PACKAGE_FOLLOWTHROUGH_2026-11-02.md#alpha-v1-nullable-consumer-follow-through--2-nov-2026).
+
+**2 Nov retained reader safety follow-through:** the local, **uncommitted and
+uninstalled** candidate now fences tuple fallback against incomplete/missing
+deployment identity, and broker observations in Product, Resource 360 and
+the older Account/Broker profile against the actual
+`venue + mode + external_account_ref` grain and incomplete account census.
+Truncated or lineage-held relations cannot qualify financial comparison or
+prove an absent account. Eight affected synthetic suites passed **380/380**;
+Control API no-emit typecheck exited 0 on the unchanged recorded hash. Neither
+proves real Edge authority, browser acceptance or a source-backed
+ownership census. The older Account/Broker profile's exact >200 lookup remains
+open. Claude should retain the existing partial/absence states, with no UI
+redesign. See [receipt, exact hashes and handoff](execution_loop/evidence/ELP2-10/CODEX_BACKEND_SIX_PACKAGE_FOLLOWTHROUGH_2026-11-02.md#retained-deployment-and-broker-grain-follow-through--2-nov-2026).

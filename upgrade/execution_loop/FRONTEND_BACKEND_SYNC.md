@@ -4310,3 +4310,13 @@ then run integrated browser/visual and qualified-source acceptance when the
 candidate is available. Do not redo the parser or interpret synthetic tests as
 an Edge receipt. No visual design or baseline was changed.
 
+**2 Nov retained grain follow-through:** the same uncommitted, uninstalled
+candidate further checks deployment census and broker `(venue, mode,
+external_account_ref)` before joining. Withheld/ambiguous rows stay in the
+existing `PARTIAL`/typed-absence state; do not turn them into zero, a synced
+badge or a confirmed not-found. No new public grant, component or design is
+requested. Eight affected backend suites passed 380/380 using synthetic facts,
+and Control API no-emit typecheck exited 0 on the recorded source hash; neither
+proves Edge/browser acceptance. The older Account/Broker profile
+still has no exact >200 lookup. [Exact scope and local backup](evidence/ELP2-10/CODEX_BACKEND_SIX_PACKAGE_FOLLOWTHROUGH_2026-11-02.md#retained-deployment-and-broker-grain-follow-through--2-nov-2026).
+
