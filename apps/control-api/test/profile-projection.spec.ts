@@ -1318,6 +1318,46 @@ function emptyManagerResponse(environment: string, relation: string) {
 }
 
 describe("P4-D follow-on: resumable time-series drains", () => {
+  it("does not commit a new ladder cursor while an incomplete parent leaves a child unaccounted for", async () => {
+    const key = "manager.performance:account_equity_snapshots";
+    await repository.saveRelationCursor(workspaceId, "paper", profileId, key, "TEST_ONLY-before");
+    let parentReady = false;
+    const cursors: Array<string | undefined> = [];
+    const source = { relationForProjection: async (_workspace: string, environment: string, _screen: string,
+      _source: string, relation: string, query: { cursor?: string }) => {
+      const response = emptyManagerResponse(environment, relation) as Record<string, any>;
+      if (relation === "accounts") {
+        response.source.completeness = parentReady ? "COMPLETE" : "PARTIAL";
+        if (parentReady) response.source.data.items = [{ relation: { schema: "public", relation }, record_key: "TEST_ONLY-account",
+          fields: { account_id: { kind: "TEXT", value: "TEST_ONLY-account" }, mode: { kind: "TEXT", value: environment } } }];
+      }
+      if (relation === "account_equity_snapshots") {
+        cursors.push(query.cursor);
+        if (query.cursor === "TEST_ONLY-before") {
+          response.source.data.next_cursor = "TEST_ONLY-next";
+          response.source.data.items = [{ relation: { schema: "public", relation }, record_key: "TEST_ONLY-equity",
+            fields: { id: { kind: "TEXT", value: "TEST_ONLY-equity" }, account_id: { kind: "TEXT", value: "TEST_ONLY-account" },
+              mode: { kind: "TEXT", value: environment }, ts: { kind: "TIMESTAMP", value: new Date().toISOString() },
+              equity: { kind: "DECIMAL", value: "10" } } }];
+        }
+      }
+      return response;
+    } };
+    const worker = new ExecutionProfileProjectionWorker(config, source as never, repository);
+    try {
+      await worker.runOnce();
+      expect(await repository.relationCursor(workspaceId, "paper", profileId, key)).toBe("TEST_ONLY-before");
+      expect((await repository.rawSnapshot(workspaceId, "paper", profileId))?.document.relations[key])
+        .toMatchObject({ completeness: "PARTIAL", lineage_rejects: { account: 1 }, items: [] });
+      parentReady = true;
+      await worker.runOnce();
+      expect(cursors).toEqual(["TEST_ONLY-before", "TEST_ONLY-next", "TEST_ONLY-before", "TEST_ONLY-next"]);
+      expect(await repository.relationCursor(workspaceId, "paper", profileId, key)).toBe("TEST_ONLY-next");
+      expect((await repository.rawSnapshot(workspaceId, "paper", profileId))?.document.relations[key].items)
+        .toEqual([expect.objectContaining({ fields: expect.objectContaining({ id: "TEST_ONLY-equity", equity: "10" }) })]);
+    } finally { await worker.onApplicationShutdown(); }
+  });
+
   it("persists the drain cursor, resumes from it next cycle and clears it at the tail", async () => {
     const equityCursors: Array<string | undefined> = [];
     let tail = false;

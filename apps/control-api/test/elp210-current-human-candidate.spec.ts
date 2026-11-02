@@ -163,6 +163,44 @@ describe.skipIf(!database)("ELP2-10 unmounted authentic-human candidate, real Co
     await candidate.endDrain("TEST_ONLY-terminal-financial-drain", 1);
     await expect(candidate.canReplaceResolvedIssue(actor, binding, lease)).rejects.toThrow();
   });
+  it("durably fences concurrent and restarted STATUS issues until exact terminal plus Edge ACK", async () => {
+    const restarted=await CurrentHumanCandidate.create(pool,config);
+    const freshActor={...actor,session_id:`test-only-relogin-${suffix}`};
+    await pool.query(`INSERT INTO auth_sessions(session_id,session_token_hash,user_id,state,csrf_secret_hash,
+      session_version,idle_expires_at,absolute_expires_at) VALUES($1,$1,$2,'ACTIVE','TEST_ONLY',7,
+      clock_timestamp()+interval '10 minutes',clock_timestamp()+interval '20 minutes')`,[freshActor.session_id,actor.user_id]);
+    const attempts=await Promise.allSettled([
+      candidate.issueCommandStatus(actor,binding),restarted.issueCommandStatus(actor,binding),
+    ]);
+    const accepted=attempts.find(value=>value.status==="fulfilled");
+    const refused=attempts.find(value=>value.status==="rejected");
+    expect(attempts.filter(value=>value.status==="fulfilled")).toHaveLength(1);
+    expect(refused).toMatchObject({status:"rejected",reason:{code:"CURRENT_HUMAN_COMMAND_STATUS_RECOVERY_REQUIRED"}});
+    if(!accepted || accepted.status!=="fulfilled")throw new Error("TEST_ONLY:no accepted status lease");
+    const lease=accepted.value,reply=accessDigest("TEST_ONLY:verified exact Edge response");
+    await expect(restarted.issueCommandStatus(freshActor,binding))
+      .rejects.toMatchObject({code:"CURRENT_HUMAN_COMMAND_STATUS_RECOVERY_REQUIRED"});
+    await expect(restarted.acknowledgeCommandStatusIssue(actor,binding,lease,reply))
+      .rejects.toMatchObject({code:"CURRENT_HUMAN_ENTRY_NOT_AVAILABLE"});
+    await candidate.enter(lease.token,await proof(lease.lease_id));
+    await candidate.resolve(await proof(lease.lease_id,"UNKNOWN"));
+    await expect(restarted.issueCommandStatus(actor,binding))
+      .rejects.toMatchObject({code:"CURRENT_HUMAN_COMMAND_STATUS_RECOVERY_REQUIRED"});
+    await candidate.resolve(await proof(lease.lease_id,"COMMITTED"));
+    // Source terminal is not delivery acknowledgement.
+    await expect(restarted.issueCommandStatus(actor,binding))
+      .rejects.toMatchObject({code:"CURRENT_HUMAN_COMMAND_STATUS_RECOVERY_REQUIRED"});
+    expect(await restarted.acknowledgeCommandStatusIssue(actor,binding,lease,reply)).toBe(true);
+    expect(await candidate.acknowledgeCommandStatusIssue(actor,binding,lease,reply)).toBe(true);
+    await expect(candidate.acknowledgeCommandStatusIssue(actor,binding,lease,accessDigest("TEST_ONLY:other response")))
+      .rejects.toMatchObject({code:"CURRENT_HUMAN_COMMAND_STATUS_ACK_MISMATCH"});
+    await expect(pool.query("UPDATE execution_command_status_delivery_acks SET response_digest=$2 WHERE lease_id=$1",
+      [lease.lease_id,accessDigest("TEST_ONLY:other response")])).rejects.toThrow("COMMAND_STATUS_DELIVERY_ACK_IMMUTABLE");
+    await expect(pool.query("DELETE FROM execution_command_status_delivery_acks WHERE lease_id=$1",[lease.lease_id]))
+      .rejects.toThrow("COMMAND_STATUS_DELIVERY_ACK_IMMUTABLE");
+    const next=await restarted.issueCommandStatus(actor,binding);
+    expect(next.lease_id).not.toBe(lease.lease_id);
+  });
   it("does not infer financial delivery from authenticated unentered rollback or an unused retired identity", async () => {
     const lease = await candidate.issue(actor, binding);
     await candidate.resolve(await proof(lease.lease_id, "ROLLED_BACK"));

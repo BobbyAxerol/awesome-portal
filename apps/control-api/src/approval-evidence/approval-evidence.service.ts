@@ -50,6 +50,17 @@ export class ApprovalEvidenceReads {
       // FAIL-CLOSED: visibility alone never discloses a published section.
       body[name] = this.fieldAuthority.allows(name, principal, approvalId) ? parsed.data : null;
     }
+    // Visibility is not a durable permit. Recheck the session/gate after the
+    // source await so a revoked reader cannot receive even the dark body.
+    // A future published port still needs its own same-flight field/source
+    // authority fence; this recheck alone is not that commissioning proof.
+    if (!(await this.visibility.visible(principal, approvalId))) throw new GovernanceError("APPROVAL_NOT_FOUND", "Approval not found.", 404);
+    // Visibility can await I/O while an independently scoped field permit is
+    // revoked. Check each *previously* authorized published section again;
+    // never upgrade a section withheld by the first check during this read.
+    for (const name of APPROVAL_EVIDENCE_SECTION_NAMES) {
+      if (body[name] !== undefined && body[name] !== null && !this.fieldAuthority.allows(name, principal, approvalId)) body[name] = null;
+    }
     const out = approvalEvidenceResponse.safeParse({ schema_version: APPROVAL_EVIDENCE_SCHEMA, workspace_id: principal.workspaceId, approval_id: approvalId,
       record_authority: "PORTAL_PROJECTION", read_at_ms: nowMs, ...body });
     if (!out.success) throw new OperationalReadError("OPERATIONAL_READ_PROVENANCE_INVALID");

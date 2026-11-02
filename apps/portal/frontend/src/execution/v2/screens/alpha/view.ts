@@ -17,7 +17,7 @@
  */
 import { readUtcEpochMs } from "../../../screenDataContract";
 import { marketVenueOf, type MarketVenue } from "../../../api/marketCandles";
-import { readAlphaFleetItem, type AlphaFleetItem, type ProfileEnvelope } from "../../../api/profileRead";
+import { readAlphaResourceItem, type AlphaResourceItem, type ProfileEnvelope } from "../../../api/profileRead";
 import { SPINE_STAGE_IDS, type SpineStageId } from "../../blocks";
 import {
   BOUNDED_REASON,
@@ -56,14 +56,14 @@ import {
 
 /** What the resource hook hands the screen once a read has landed (an unreadable body is an error read instead). */
 export type AlphaResource =
-  | { variant: "legacy"; envelope: ProfileEnvelope; item: AlphaFleetItem | null }
+  | { variant: "legacy"; envelope: ProfileEnvelope; item: AlphaResourceItem | null }
   | { variant: "scoped"; scoped: AlphaResourceScoped };
 
 /** The legacy resource from its envelope, exactly as the V1 hook built it. */
 export const legacyResource = (envelope: ProfileEnvelope): AlphaResource => ({
   variant: "legacy",
   envelope,
-  item: readAlphaFleetItem(envelope.objects.alpha),
+  item: envelope.schemaVersion === "execution.alpha-resource.v1" ? readAlphaResourceItem(envelope.objects.alpha) : null,
 });
 
 export interface MoneyFigure { currency: string; value: string }
@@ -126,8 +126,14 @@ export interface AlphaView {
 
 /* ── legacy ───────────────────────────────────────────────────────────────── */
 
-function legacyView(envelope: ProfileEnvelope, item: AlphaFleetItem | null, alphaId: string): AlphaView {
+function legacyView(envelope: ProfileEnvelope, item: AlphaResourceItem | null, alphaId: string): AlphaView {
   const rows = deploymentRows(item);
+  const netPnl = (item?.positionPnl ?? []).flatMap((p) => p.state !== "UNAVAILABLE" && p.net !== null
+    ? [{ currency: p.currency, value: p.net }] : []);
+  const exposure = (item?.exposure ?? []).flatMap((e) => e.state !== "UNAVAILABLE" && e.value !== null
+    ? [{ currency: e.currency, value: e.value }] : []);
+  const moneyReason = [...(item?.positionPnl ?? []), ...(item?.exposure ?? [])]
+    .find((entry) => entry.state === "UNAVAILABLE" && entry.reasonCode)?.reasonCode ?? null;
   return {
     variant: "legacy",
     alphaId,
@@ -140,16 +146,15 @@ function legacyView(envelope: ProfileEnvelope, item: AlphaFleetItem | null, alph
     versionReason: "UNVERSIONED",
     owner: item?.owner ? { kind: "value", value: item.owner } : { kind: "not-available" },
     portfolioNames: item?.portfolios.map((p) => p.name) ?? [],
-    portfolioNameById: new Map((item?.portfolios ?? []).map((p) => [p.portfolioId, p.name] as const)),
+    portfolioNameById: new Map((item?.portfolios ?? []).flatMap((p) => p.portfolioId === null ? [] : [[p.portfolioId, p.name] as const])),
     current: item === null ? null : currentStageOf(item),
     currentNote: null,
     rows,
     envs: deployedEnvs(item),
-    money: {
-      published: true,
-      netPnl: item?.positionPnl.map((p) => ({ currency: p.currency, value: p.net })) ?? [],
-      exposure: item?.exposure.map((e) => ({ currency: e.currency, value: e.value })) ?? [],
-    },
+    money: moneyReason && netPnl.length === 0 && exposure.length === 0
+      && !rows.some((row) => row.netPnl !== null || row.exposure !== null)
+      ? { published: false, reason: moneyReason }
+      : { published: true, netPnl, exposure },
     positions: positionRows(envelope.data.positions),
     reconciliation: reconciliationRows(envelope.data.reconciliation),
     unplaced: { deployments: 0, positions: 0 },

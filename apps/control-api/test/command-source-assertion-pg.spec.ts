@@ -6,11 +6,12 @@
  * No trusted-command row, positive Core context or terminal lease is SQL-seeded.
  */
 import { createHash, generateKeyPairSync, randomUUID, X509Certificate } from "node:crypto";
-import { readFile } from "node:fs/promises";
+import { lstat, readFile, realpath } from "node:fs/promises";
 import { request, type Server } from "node:https";
 import { join } from "node:path";
 import type { Duplex } from "node:stream";
 import { decodeJwt, generateKeyPair, jwtVerify, SignJWT } from "jose";
+import { Client } from "pg";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { AdminService } from "../src/admin/admin.service";
 import { AuthService } from "../src/auth/auth.service";
@@ -42,6 +43,31 @@ const next = (label: string) => `TEST_ONLY:${label}:${randomUUID()}`;
 const workload = "TEST_ONLY:command-status-pg-edge", gateway = "TEST_ONLY:command-status-pg-gateway";
 type Identity = { key: Buffer; cert: Buffer; ca: Buffer; pin: string };
 type Issued = CommandSourceAssertionResponse;
+
+/** Keep the Docker guard, or independently prove the explicitly named private
+ * Unix-socket cell before running ANY migration or test writer. */
+async function requireDisposableDatabase(connectionString:string):Promise<void> {
+  const target=new URL(connectionString);
+  if(/^control-api-test-postgres-[a-zA-Z0-9_-]+$/u.test(target.hostname) && target.pathname==="/portal_control_test")return;
+  const socket=process.env.PORTAL_TEST_UNIX_PG_CELL;
+  if(!socket || !/^\/tmp\/portal-status-pg-[A-Za-z0-9]{8}$/u.test(socket) ||
+    target.searchParams.get("host")!==socket || target.pathname!=="/portal_status_disposable")
+    throw new Error("COMMAND_STATUS_DISPOSABLE_DATABASE_REQUIRED");
+  const st=await lstat(socket);
+  if(!st.isDirectory() || st.isSymbolicLink() || (st.mode & 0o777)!==0o700 ||
+    st.uid!==process.getuid?.() || await realpath(socket)!==socket)
+    throw new Error("COMMAND_STATUS_DISPOSABLE_DATABASE_REQUIRED");
+  const probe=new Client({connectionString});
+  try {
+    await probe.connect();
+    const row=(await probe.query(`SELECT current_database() AS database_name,
+      inet_server_addr() IS NULL AS unix_only, current_setting('data_directory') AS data_directory,
+      current_setting('listen_addresses') AS listen_addresses`)).rows[0];
+    if(row.database_name!=="portal_status_disposable" || row.unix_only!==true ||
+      row.data_directory!==join(socket,"data") || row.listen_addresses!=="")
+      throw new Error("COMMAND_STATUS_DISPOSABLE_DATABASE_REQUIRED");
+  } finally {await probe.end();}
+}
 
 describe.skipIf(!database).sequential("command STATUS concrete authority with real Core PG (TEST_ONLY source)", () => {
   let ctx: Awaited<ReturnType<typeof setupApp>>, auth: AuthService, coordinatedAuth: AuthService;
@@ -180,8 +206,8 @@ describe.skipIf(!database).sequential("command STATUS concrete authority with re
     return { workspace, input, body, issue, binding, reader, stored, session, access, policy };
   }
   type Fixture = Awaited<ReturnType<typeof fixture>>;
-  const authority = (f: Fixture) => {
-    const result = new CommandSourceAssertionAuthority(ctx.pool, f.access, candidate, {
+  const authority = (f: Fixture, selectedCandidate = candidate) => {
+    const result = new CommandSourceAssertionAuthority(ctx.pool, f.access, selectedCandidate, {
       issuer: "TEST_ONLY:Core-STATUS", audience: gateway, key_id: "TEST_ONLY:status-key", key: humanKey.privateKey,
       workload_id: workload, ttl_ms: 30_000, maximum_contexts: 4, maximum_requests_per_context: 4 });
     authorities.push(result); return result;
@@ -200,9 +226,7 @@ describe.skipIf(!database).sequential("command STATUS concrete authority with re
   };
 
   beforeAll(async () => {
-    const target = new URL(database!);
-    if (!/^control-api-test-postgres-[a-zA-Z0-9_-]+$/u.test(target.hostname) || target.pathname !== "/portal_control_test")
-      throw new Error("COMMAND_STATUS_DISPOSABLE_DATABASE_REQUIRED");
+    await requireDisposableDatabase(database!);
     await migrateTestDatabase(database!);
     // setupApp reuses this bounded pool, rather than mutating a cached pool.
     buildPool(database!, { max: 3, connectionTimeoutMillis: 2000, statement_timeout: 5000,
@@ -319,6 +343,20 @@ describe.skipIf(!database).sequential("command STATUS concrete authority with re
     await candidate.resolve(await proof(f, issued, attempt, "UNKNOWN"));
     const before = (await leases(f.workspace))[0];
     expect(before).toMatchObject({ phase: "UNKNOWN", attempt_id: attempt, terminal_receipt_digest: null });
+    const capacityCandidate=await CurrentHumanCandidate.create(ctx.pool,{...config,
+      limits:{...config.limits,maximum_unresolved:1}});
+    const capacityProcess=authority(f,capacityCandidate), capacityContext=await capacityProcess.prepare(f.input,f.body);
+    // These are real DB-counted capacity refusals, not mock errors; no INSERT
+    // occurs while the original UNKNOWN occupies the sole unresolved slot.
+    for(let attempt=0;attempt<6;attempt++)
+      await expect(capacityProcess.issue(capacityContext.original_context,f.issue))
+        .rejects.toMatchObject({code:"CURRENT_HUMAN_CAPACITY_EXHAUSTED"});
+    const otherProcess=authority(f), otherContext=await otherProcess.prepare(f.input,f.body);
+    // More definite pre-INSERT refusals than the context's issuance quota do
+    // not allocate leases or prevent a same-context retry after the true ACK.
+    for(let attempt=0;attempt<6;attempt++)
+      await expect(otherProcess.issue(otherContext.original_context,f.issue))
+        .rejects.toMatchObject({code:"COMMAND_STATUS_ASSERTION_CUSTODY_RECOVERY_REQUIRED",status:409});
     await expect(service.complete(prepared.original_context, completion(f, issued))).rejects.toMatchObject({ code: "CURRENT_HUMAN_ENTRY_NOT_AVAILABLE" });
     await expect(service.issue(prepared.original_context, { ...f.issue, delivery_sequence: 1, previous_lease_id: issued.lease_id }))
       .rejects.toMatchObject({ code: "COMMAND_STATUS_ASSERTION_DELIVERY_NOT_COMPLETED" });
@@ -330,12 +368,35 @@ describe.skipIf(!database).sequential("command STATUS concrete authority with re
     expect(terminal).toMatchObject({ phase: "COMMITTED", attempt_id: attempt, lease_id: before.lease_id,
       authority_fingerprint: before.authority_fingerprint, request_digest: before.request_digest,
       terminal_receipt_digest: expect.stringMatching(/^sha256:[a-f0-9]{64}$/u) });
+    // The capacity cleared, but terminal alone still cannot replace the
+    // original: its exact Edge delivery ACK has not been recorded yet.
+    await expect(capacityProcess.issue(capacityContext.original_context,f.issue))
+      .rejects.toMatchObject({code:"COMMAND_STATUS_ASSERTION_CUSTODY_RECOVERY_REQUIRED",status:409});
     await expect(service.issue(prepared.original_context, { ...f.issue, delivery_sequence: 1, previous_lease_id: issued.lease_id }))
       .rejects.toMatchObject({ code: "COMMAND_STATUS_ASSERTION_DELIVERY_NOT_COMPLETED" });
     const ack = await service.complete(prepared.original_context, completion(f, issued));
     expect(await service.complete(prepared.original_context, completion(f, issued))).toEqual(ack);
+    const retainedAck=await ctx.pool.query("SELECT request_digest,response_digest,terminal_receipt_digest FROM execution_command_status_delivery_acks WHERE lease_id=$1",[issued.lease_id]);
+    expect(retainedAck.rows).toEqual([{request_digest:issued.request_digest,response_digest:ack.response_digest,
+      terminal_receipt_digest:terminal.terminal_receipt_digest}]);
     expect((await service.prepare(f.input, f.body)).original_context).not.toBe(prepared.original_context);
     expect(await leases(f.workspace)).toEqual([terminal]); // ACK/preparation do not issue replacement credentials.
+    // The capacity-limited process may retry its same context only after the
+    // first source terminal and authenticated delivery ACK are durable.
+    const resumed=await capacityProcess.issue(capacityContext.original_context,f.issue);
+    expect(resumed.lease_id).not.toBe(issued.lease_id);
+    expect(await leases(f.workspace)).toHaveLength(2);
+    // A third authority is still fenced by that new actual issue until its
+    // independently signed terminal and explicit ACK, then may retry too.
+    await expect(otherProcess.issue(otherContext.original_context,f.issue))
+      .rejects.toMatchObject({code:"COMMAND_STATUS_ASSERTION_CUSTODY_RECOVERY_REQUIRED",status:409});
+    const resumedAttempt=randomUUID();
+    await candidate.enter(resumed.assertion,await proof(f,resumed,resumedAttempt,"ENTER"));
+    await candidate.resolve(await proof(f,resumed,resumedAttempt,"COMMITTED"));
+    await capacityProcess.complete(capacityContext.original_context,completion(f,resumed));
+    const next=await otherProcess.issue(otherContext.original_context,f.issue);
+    expect(next.lease_id).not.toBe(resumed.lease_id);
+    expect(await leases(f.workspace)).toHaveLength(3);
   }, 30_000);
 
   it("rechecks current source scope after PG original preparation and refuses a cross-workspace original", async () => {

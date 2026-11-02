@@ -8,9 +8,11 @@ import {
   DeploymentResourceScope,
   DeploymentScopeResolution,
   ExecutionProductReadSource,
+  type ProfileReadComposition,
 } from "../execution/product-read-source";
 import { ManagerPage, ManagerReadContext, managerPage } from "../paper-read/manager-records";
 import { enforceProfileLineage } from "../execution/profile-lineage";
+import { accountComparisonAvailability, exactFinancialDecimal } from "../execution/account-comparison-availability";
 import { attachDeploymentIdentity, IDENTITY_NOT_AUTHORIZED, IDENTITY_NOT_READ, type DeploymentIdentity } from "../execution/deployment-identity";
 import { ExecutionReadScopeError } from "../execution-v2/read-scope";
 import {
@@ -205,7 +207,16 @@ export class ProfileReadService {
     const environments: readonly SourceEnvironment[] = requestedEnvironment
       ? [requestedEnvironment]
       : ["live", "sandbox", "paper"];
-    const candidates = await Promise.all(environments.map(async (environment) => {
+    return this.source.composeProfile(principal as CurrentSourcePrincipal, "EXECUTION_ACCOUNT_BROKER_360_SCREEN", environments,
+      (composition) => this.accountBrokerComposed(principal, accountId, requestedEnvironment, environments, composition), { accountId });
+  }
+
+  private async accountBrokerComposed(principal: ProfileReadPrincipal, accountId: string,
+    requestedEnvironment: SourceEnvironment | undefined, environments: readonly SourceEnvironment[],
+    composition: ProfileReadComposition) {
+    // Do not let a rejected profile return while sibling reads are still
+    // registering their obligations in the same composition.
+    const settled = await Promise.allSettled(environments.map(async (environment) => {
       const profile = PROFILE[environment];
       const context: ManagerReadContext = {
         ...profile,
@@ -217,54 +228,140 @@ export class ProfileReadService {
         "EXECUTION_ACCOUNT_BROKER_360_SCREEN",
         SCREEN_SPECS.EXECUTION_ACCOUNT_BROKER_360_SCREEN,
         context,
+        undefined,
+        composition,
+        accountId,
       ), "N30");
-      const account = relations.find((item) => item.spec.key === "accounts")
-        ?.page?.items.find((row) => row.account_id === accountId);
-      return { environment, profile, relations, account };
+      const proof = this.source.retainedAccountIdentityProof?.(composition, principal as CurrentSourcePrincipal,
+        environment, accountId) ?? null;
+      const accounts = relations.find((item) => item.spec.key === "accounts")
+        ?.page?.items.filter((row) => row.account_id === accountId) ?? [];
+      return { environment, profile, relations, accounts, proof };
     }));
-    const matches = candidates.filter((candidate) => candidate.account !== undefined);
+    const failure = settled.find((item) => item.status === "rejected");
+    if (failure?.status === "rejected") throw failure.reason;
+    const candidates = settled.flatMap((item) => item.status === "fulfilled" ? [item.value] : []);
+    const matches = candidates.filter((candidate) => candidate.accounts.length > 0);
     const selected = matches[0] ?? candidates[0];
-    const ambiguous = matches.length > 1 && requestedEnvironment === undefined;
-    const data = selected ? accountData(selected.relations, accountId, selected.account) : {};
+    // A first page cannot prove the requested account absent (or prove a
+    // match unique across environments). This is especially important when
+    // another profile failed or returned a continuation.
+    const completeCandidate = (candidate: typeof candidates[number]) => {
+      if (!candidate.proof) return accountIdentityCensusComplete(candidate.relations);
+      const accountsRelation = candidate.relations.find((item) => item.spec.key === "accounts");
+      // The private full-snapshot proof cannot replace the redacted relation's
+      // lineage validation: if the latter lost the target, neither a match
+      // nor its absence has been established for this composed screen.
+      if (!accountsRelation?.page || Object.keys(accountsRelation.lineageRejects ?? {}).length > 0) return false;
+      return candidate.proof.state === "FOUND" ? candidate.accounts.length === 1
+        : candidate.proof.state === "MISSING" ? candidate.accounts.length === 0
+          : candidate.proof.state === "DUPLICATE" ? candidate.accounts.length > 1 : false;
+    };
+    const completeIdentity = candidates.length === environments.length && candidates.every(completeCandidate);
+    const ambiguous = requestedEnvironment === undefined &&
+      (matches.length > 1 || (matches.length > 0 && !completeIdentity));
+    const duplicateIdentity = selected?.proof?.state === "DUPLICATE" || (selected?.accounts.length ?? 0) > 1;
+    const accountFound = (selected?.accounts.length ?? 0) > 0;
+    // An exact environment is not proof of a unique account within that
+    // environment: another matching identity may be on an unread page. Never
+    // join the first observed account's children until its census is complete.
+    const incompleteMatchedIdentity = accountFound && !ambiguous && !duplicateIdentity && !completeIdentity;
+    const profileKnown = requestedEnvironment !== undefined || (accountFound && !ambiguous);
+    const unresolvedIdentityState = candidates.some((candidate) =>
+      candidate.relations.find((item) => item.spec.key === "accounts")?.page != null) ? "PARTIAL" as const : "UNAVAILABLE" as const;
+    // An auto-selected first match is not the account the caller asked for
+    // when another environment matches or has not been ruled out. Likewise,
+    // orphan child rows and duplicate identities cannot identify an account.
+    // Keep only the existing typed identity reason; never publish one
+    // candidate's balances/positions under an unresolved identity.
+    const identityIssue = ambiguous
+      ? { state: "PARTIAL" as const, reasonCode: matches.length > 1
+        ? "PHASE2_ACCOUNT_ENVIRONMENT_AMBIGUOUS" : "PHASE2_ACCOUNT_ENVIRONMENT_UNRESOLVED" }
+      : duplicateIdentity ? { state: "PARTIAL" as const, reasonCode: "PHASE2_ACCOUNT_IDENTITY_DUPLICATE" }
+        : !accountFound ? { state: completeIdentity ? "EMPTY" as const : unresolvedIdentityState,
+          reasonCode: completeIdentity ? "PHASE2_ACCOUNT_NOT_FOUND" : "PHASE2_ACCOUNT_IDENTITY_UNRESOLVED" }
+          : incompleteMatchedIdentity ? { state: "PARTIAL" as const, reasonCode: "PHASE2_ACCOUNT_IDENTITY_UNRESOLVED" } : null;
+    // An external broker reference may be joined only from a unique account
+    // on a complete selected profile, never a first of several candidates.
+    const uniqueAccount = selected && !ambiguous && !duplicateIdentity &&
+      completeCandidate(selected) ? selected.accounts[0] : undefined;
+    const requestedBrokerRef = uniqueAccount?.external_account_ref;
+    const brokerRef = typeof requestedBrokerRef === "string" && requestedBrokerRef.trim().length > 0
+      ? requestedBrokerRef : null;
+    const requestedVenue = uniqueAccount?.venue;
+    const venue = typeof requestedVenue === "string" && requestedVenue.trim() ? requestedVenue : null;
+    const requestedMode = uniqueAccount?.mode;
+    const mode = typeof requestedMode === "string" && requestedMode.toLowerCase() === selected?.environment
+      ? selected.environment : null;
+    const brokerGrain: AccountBrokerGrain | null = brokerRef && venue && mode ? { externalRef: brokerRef, venue, mode } : null;
+    const referenceCount = brokerGrain === null ? 0 : selected?.relations.find((item) => item.spec.key === "accounts")
+      ?.page?.items.filter((row) => possibleBrokerGrain(row, brokerGrain)).length ?? 0;
+    // The exact account proof is not a broker-ownership census. Do not infer
+    // uniqueness of an external reference from the filtered account page.
+    const ownerIssue = !uniqueAccount ? null : brokerGrain === null || selected?.proof ? "PHASE2_BROKER_REFERENCE_UNAVAILABLE"
+      : referenceCount !== 1 ? "PHASE2_BROKER_REFERENCE_AMBIGUOUS" : null;
+    const qualifiedGrain = ownerIssue === null ? brokerGrain : null;
+    const ambiguousObservation = qualifiedGrain !== null && (selected?.relations.find((item) => item.spec.key === "broker_sync")
+      ?.page?.items.some((row) => possibleBrokerGrain(row, qualifiedGrain) && !exactBrokerGrain(row, qualifiedGrain)) ?? false);
+    const brokerIdentityIssue = ownerIssue ?? (ambiguousObservation ? "PHASE2_BROKER_REFERENCE_AMBIGUOUS" : null);
+    const data: Record<string, Array<Record<string, unknown>>> = selected
+      ? identityIssue ? Object.fromEntries(selected.relations.map((item) => [item.spec.key, []]))
+        : accountData(selected.relations, accountId, qualifiedGrain)
+      : {};
     const relationState = selected ? productState(selected.relations) : "unavailable";
     const freshness = selected ? relationFreshness(selected.relations) : "UNKNOWN";
-    const accountFound = selected?.account !== undefined;
+    const comparisonRelations = identityIssue || brokerIdentityIssue ? [] : selected?.relations ?? [];
+    const comparisons = accountDifferences(data, comparisonRelations);
+    const comparisonAvailability = accountComparisonAvailability(
+      qualifiedAccountRelations(data, comparisonRelations, ["accounts", "account_balances", "broker_sync"]),
+      data.account_balances?.length ?? 0, comparisons.length,
+    );
     return {
       schema_version: "execution.account-broker-360.v1",
       record_authority: "PORTAL_CONTROL",
       source_authority: "TRADING_SYSTEM",
-      delivery_profile: selected?.profile.profileId ?? null,
+      delivery_profile: profileKnown ? selected?.profile.profileId ?? null : null,
       requested_environment: requestedEnvironment ?? "auto",
-      selected_environment: accountFound ? selected!.environment : null,
+      selected_environment: accountFound && identityIssue === null ? selected!.environment : null,
       candidate_environments: matches.map((candidate) => candidate.environment),
       workspace_id: principal.workspaceId,
       resource: { kind: "ACCOUNT", id: accountId },
       read_at: new Date().toISOString(),
-      as_of: selected ? oldestAsOf(selected.relations) : null,
-      state: ambiguous ? "partial" : !accountFound ? (relationState === "unavailable" ? "unavailable" : "empty")
+      as_of: selected && profileKnown ? oldestAsOf(selected.relations) : null,
+      state: ambiguous || duplicateIdentity || incompleteMatchedIdentity || brokerIdentityIssue ? "partial" : !accountFound ? (!completeIdentity
+        ? (unresolvedIdentityState === "UNAVAILABLE" ? "unavailable" : "partial")
+        : relationState === "unavailable" ? "unavailable" : "empty")
         : freshness === "STALE" ? "stale" : relationState,
-      freshness,
-      completeness: ambiguous || !accountFound || selected!.relations.some((item) =>
+      freshness: profileKnown ? freshness : "UNKNOWN",
+      completeness: identityIssue !== null || brokerIdentityIssue !== null || !accountFound || selected!.relations.some((item) =>
         item.state === "UNAVAILABLE" || item.state === "PARTIAL") ? "PARTIAL" : "COMPLETE",
       actor: { user_id: principal.user.userId, username: principal.user.username, roles: [principal.user.role] },
-      capabilities: selected ? selected.relations.map((item) => ({
+      capabilities: selected ? [...selected.relations.map((item) => ({
         capability_id: `source.${item.spec.key}`,
-        state: item.state,
+        state: identityIssue && item.state !== "UNAVAILABLE" ? identityIssue.state
+          : item.spec.key === "broker_sync" && brokerIdentityIssue && item.state !== "UNAVAILABLE" ? "PARTIAL" : item.state,
         // Relation names are Edge implementation details. The product route
         // is already named and bounded by this BFF.
         relations: [],
-        reason_code: item.reasonCode,
+        reason_code: identityIssue && item.state !== "UNAVAILABLE" ? identityIssue.reasonCode
+          : item.spec.key === "broker_sync" && brokerIdentityIssue && item.state !== "UNAVAILABLE" ? brokerIdentityIssue : item.reasonCode,
         retryable: false,
         ...lineageCounts(item),
-      })) : [],
+      })), { capability_id: "derived.differences", ...comparisonAvailability, relations: ["derived.differences"], retryable: false }] : [],
       data: {
         ...data,
-        differences: accountDifferences(data),
-        exposure_headroom: exposureHeadroom(data),
+        differences: comparisons,
+        exposure_headroom: exposureHeadroom(data, identityIssue ? [] : selected?.relations ?? []),
       },
       unavailable_branches: [
-        ...(!accountFound ? [{ capability_id: "account.identity", state: "EMPTY", reason_code: "PHASE2_ACCOUNT_NOT_FOUND", retryable: false }] : []),
-        ...(ambiguous ? [{ capability_id: "account.identity", state: "PARTIAL", reason_code: "PHASE2_ACCOUNT_ENVIRONMENT_AMBIGUOUS", retryable: false }] : []),
+        ...(!accountFound ? [{ capability_id: "account.identity", state: completeIdentity ? "EMPTY" : unresolvedIdentityState,
+          reason_code: completeIdentity ? "PHASE2_ACCOUNT_NOT_FOUND" : "PHASE2_ACCOUNT_IDENTITY_UNRESOLVED", retryable: false }] : []),
+        ...(ambiguous ? [{ capability_id: "account.identity", state: "PARTIAL", reason_code: matches.length > 1
+          ? "PHASE2_ACCOUNT_ENVIRONMENT_AMBIGUOUS" : "PHASE2_ACCOUNT_ENVIRONMENT_UNRESOLVED", retryable: false }] : []),
+        ...(duplicateIdentity ? [{ capability_id: "account.identity", state: "PARTIAL", reason_code: "PHASE2_ACCOUNT_IDENTITY_DUPLICATE", retryable: false }] : []),
+        ...(incompleteMatchedIdentity ? [{ capability_id: "account.identity", state: "PARTIAL", reason_code: "PHASE2_ACCOUNT_IDENTITY_UNRESOLVED", retryable: false }] : []),
+        ...(brokerIdentityIssue ? [{ capability_id: "account.broker_identity", state: brokerIdentityIssue === "PHASE2_BROKER_REFERENCE_AMBIGUOUS"
+          ? "PARTIAL" : "UNAVAILABLE", reason_code: brokerIdentityIssue, retryable: false }] : []),
       ],
     };
   }
@@ -275,12 +372,18 @@ export class ProfileReadService {
     screenId: keyof typeof SCREEN_SPECS,
     deploymentId?: string,
   ) {
+    return this.source.composeProfile(principal as CurrentSourcePrincipal, screenId, [requestedEnvironment],
+      (composition) => this.snapshotComposed(principal, requestedEnvironment, screenId, deploymentId, composition));
+  }
+
+  private async snapshotComposed(principal: ProfileReadPrincipal, requestedEnvironment: N23ReadEnvironment,
+    screenId: keyof typeof SCREEN_SPECS, deploymentId: string | undefined, composition: ProfileReadComposition) {
     const sourceEnvironment: SourceEnvironment = requestedEnvironment === "canary" ? "live" : requestedEnvironment;
     const profile = PROFILE[sourceEnvironment];
     const context: ManagerReadContext = { ...profile, errorPrefix: "N23" };
     const resolution = deploymentId
       ? await this.source.resolveDeploymentScope(
-        principal as CurrentSourcePrincipal, requestedEnvironment, screenId, deploymentId,
+        principal as CurrentSourcePrincipal, requestedEnvironment, screenId, deploymentId, composition,
       )
       : null;
     const relations = resolution === null || resolution.state === "FOUND"
@@ -291,6 +394,7 @@ export class ProfileReadService {
         SCREEN_SPECS[screenId],
         context,
         resolution?.scope,
+        composition,
       ), "N30")
       : unresolvedRelations(SCREEN_SPECS[screenId], resolution);
     // Detail rows are already exact-scoped before keyset pagination by the
@@ -364,6 +468,8 @@ export class ProfileReadService {
     specs: readonly RelationSpec[],
     context: ManagerReadContext,
     deploymentScope?: DeploymentResourceScope,
+    composition?: ProfileReadComposition,
+    accountTarget?: string,
   ): Promise<RelationResult[]> {
     const results = await Promise.allSettled(specs.map(async (item) => {
       const response = await this.source.relation(
@@ -372,22 +478,35 @@ export class ProfileReadService {
         screenId,
         item.sourceId,
         item.relation,
-        { limit: item.limit, ...(deploymentScope ? { deploymentScope } : {}) },
+        { limit: item.limit, ...(deploymentScope ? { deploymentScope } : {}), ...(accountTarget ? { accountTarget } : {}) },
+        composition,
       );
       return managerPage(response, item.relation, item.fields, context);
     }));
+    // Do not return earlier successful relations after another relation detects
+    // an authority/snapshot change or cannot revalidate current authority.
+    // Ordinary unavailable panels and scoped denials remain typed partials.
+    const unsafe = results.find((result) => result.status === "rejected" &&
+      result.reason instanceof ExecutionReadScopeError &&
+      (result.reason.code === "EXECUTION_READ_ACCESS_CHANGED" ||
+       result.reason.code === "EXECUTION_READ_AUTHORITY_UNAVAILABLE" ||
+       result.reason.code === "EXECUTION_READ_SCOPE_REQUIRED" ||
+       result.reason.code === "EXECUTION_READ_SCOPE_LIMIT"));
+    if (unsafe?.status === "rejected") throw unsafe.reason;
     return results.map((result, index) => {
       const item = specs[index];
       if (result.status === "fulfilled") {
+        const page = result.value;
+        const reasonCode = page.scope?.state === "PARTIAL"
+          ? page.scope.reasonCode ?? "EDS03_RESOURCE_SCOPE_PARTIAL"
+          : page.completeness === "PARTIAL" ? "SOURCE_PARTIAL"
+            : page.completeness === "UNKNOWN" ? "SOURCE_COMPLETENESS_UNKNOWN"
+              : page.nextCursor !== null || page.previousCursor != null ? "SOURCE_CONTINUATION_NOT_READ" : null;
         return {
           spec: item,
-          page: result.value,
-          state: result.value.items.length === 0
-            ? (result.value.completeness === "PARTIAL" || result.value.scope?.state === "PARTIAL" ? "PARTIAL" as const : "EMPTY" as const)
-            : result.value.completeness === "PARTIAL" || result.value.scope?.state === "PARTIAL" ? "PARTIAL" as const : "AVAILABLE" as const,
-          reasonCode: result.value.scope?.state === "PARTIAL"
-            ? result.value.scope.reasonCode ?? "EDS03_RESOURCE_SCOPE_PARTIAL"
-            : result.value.completeness === "PARTIAL" ? "SOURCE_PARTIAL" : null,
+          page,
+          state: reasonCode !== null ? "PARTIAL" as const : page.items.length === 0 ? "EMPTY" as const : "AVAILABLE" as const,
+          reasonCode,
         };
       }
       return { spec: item, page: null, state: "UNAVAILABLE" as const, reasonCode: safeReason(result.reason) };
@@ -410,6 +529,11 @@ function spec(
 }
 
 function safeReason(error: unknown): string {
+  // This static refusal is safe only after the relation has passed its parent
+  // authorization. It does not imply that a binding or upstream source exists.
+  if (error instanceof ExecutionReadScopeError && error.code === "EXECUTION_READ_PUBLICATION_NOT_QUALIFIED") {
+    return error.code;
+  }
   if (error instanceof CurrentSourceProxyError && /^(?:N(?:13B|17B|21|22|23|30)_[A-Z0-9_]+|EDS(?:03|11R)_[A-Z0-9_]+)$/.test(error.code)) {
     return error.code;
   }
@@ -460,20 +584,42 @@ function relationFreshness(relations: readonly RelationResult[]): "FRESH" | "AGI
       : relations.some((item) => item.page?.freshness === "FRESH") ? "FRESH" : "UNKNOWN";
 }
 
+function accountIdentityCensusComplete(relations: readonly RelationResult[]): boolean {
+  const accounts = relations.find((item) => item.spec.key === "accounts");
+  const page = accounts?.page;
+  return page != null && (accounts?.state === "AVAILABLE" || accounts?.state === "EMPTY") &&
+    page.completeness === "COMPLETE" && page.nextCursor === null && page.previousCursor == null &&
+    page.scope?.state !== "PARTIAL";
+}
+
+interface AccountBrokerGrain { externalRef: string; venue: string; mode: SourceEnvironment }
+
+function brokerFact(value: unknown): string | null {
+  return typeof value === "string" && value.trim().length > 0 ? value : null;
+}
+
+function possibleBrokerGrain(row: Record<string, unknown>, grain: AccountBrokerGrain): boolean {
+  const externalRef = brokerFact(row.external_account_ref), venue = brokerFact(row.venue), mode = brokerFact(row.mode);
+  return (externalRef === null || externalRef === grain.externalRef) && (venue === null || venue === grain.venue) &&
+    (mode === null || mode.toLowerCase() === grain.mode);
+}
+
+function exactBrokerGrain(row: Record<string, unknown>, grain: AccountBrokerGrain): boolean {
+  const mode = brokerFact(row.mode);
+  return row.external_account_ref === grain.externalRef && row.venue === grain.venue && mode?.toLowerCase() === grain.mode;
+}
+
 function accountData(
   relations: readonly RelationResult[],
   accountId: string,
-  account?: Record<string, unknown>,
+  brokerGrain: AccountBrokerGrain | null,
 ): Record<string, Array<Record<string, unknown>>> {
-  const externalRef = account?.external_account_ref;
   return Object.fromEntries(relations.map((item) => [
     item.spec.key,
     (item.page?.items ?? []).filter((row) => {
       if (item.spec.key === "accounts") return row.account_id === accountId;
+      if (item.spec.key === "broker_sync") return brokerGrain !== null && exactBrokerGrain(row, brokerGrain);
       if (row.account_id !== undefined) return row.account_id === accountId;
-      if (item.spec.key === "broker_sync" && externalRef !== undefined) {
-        return row.external_account_ref === externalRef;
-      }
       return false;
     }),
   ]));
@@ -481,46 +627,86 @@ function accountData(
 
 function accountDifferences(
   data: Record<string, Array<Record<string, unknown>>>,
+  relations: readonly RelationResult[],
 ): Array<Record<string, unknown>> {
-  const broker = latestRecord(data.broker_sync ?? [], "synced_at");
-  if (!broker || broker.buying_power === undefined) return [];
-  return (data.account_balances ?? []).flatMap((balance) => {
-    if (balance.free === undefined || balance.currency !== broker.currency) return [];
-    const delta = subtractDecimal(String(balance.free), String(broker.buying_power));
+  if (!qualifiedAccountRelations(data, relations, ["accounts", "account_balances", "broker_sync"])) return [];
+  const balances = data.account_balances ?? [], brokerRows = data.broker_sync ?? [];
+  return balances.flatMap((balance) => {
+    if (typeof balance.currency !== "string" || !balance.currency || balances.filter(item => item.currency === balance.currency).length !== 1) return [];
+    const candidates = brokerRows.filter(row => row.currency === balance.currency);
+    if (!candidates.length || candidates.some(row => typeof row.synced_at !== "string" || !Number.isFinite(Date.parse(row.synced_at)))) return [];
+    const latest = Math.max(...candidates.map(row => Date.parse(row.synced_at as string)));
+    const latestRows = candidates.filter(row => Date.parse(row.synced_at as string) === latest);
+    // A timestamp tie is not an authority to choose between source records.
+    if (latestRows.length !== 1) return [];
+    const broker = latestRows[0];
+    const free = exactFinancialDecimal(balance.free), buyingPower = exactFinancialDecimal(broker.buying_power);
+    if (free === null || buyingPower === null) return [];
+    const delta = subtractDecimal(free, buyingPower);
     return delta === null ? [] : [{
       field: "buying_power",
       currency: balance.currency,
-      internal_value: String(balance.free),
-      broker_value: String(broker.buying_power),
+      internal_value: free,
+      broker_value: buyingPower,
+      portal_free: free,
+      broker_buying_power: buyingPower,
       delta,
       in_sync: decimalIsZero(delta),
     }];
   });
 }
 
+function qualifiedAccountRelations(data: Record<string, Array<Record<string, unknown>>>, relations: readonly RelationResult[], keys: readonly string[]): boolean {
+  const inputs = keys.map(key => relations.find(item => item.spec.key === key));
+  const baseline = inputs[0]?.page?.projection;
+  return (data.accounts?.length ?? 0) === 1 && baseline != null && inputs.every(input => {
+    const page = input?.page, projection = page?.projection;
+    return input?.state === "AVAILABLE" && page?.completeness === "COMPLETE" && page.nextCursor === null && page.previousCursor == null &&
+      projection != null && projection.epoch === baseline.epoch && projection.sequence === baseline.sequence &&
+      projection.payloadDigest === baseline.payloadDigest && page.scope?.state !== "PARTIAL";
+  });
+}
+
 function exposureHeadroom(
   data: Record<string, Array<Record<string, unknown>>>,
+  relations: readonly RelationResult[],
 ): Array<Record<string, unknown>> {
   const balances = data.account_balances ?? [];
   const margins = data.margin_balances ?? [];
+  // A partial page, a missing account, or independently refreshed relations
+  // cannot prove a complete same-snapshot account/currency total.
+  const qualified = qualifiedAccountRelations(data, relations, ["accounts", "account_balances", "margin_balances"]);
+  // A margin without a currency cannot be safely assigned to any balance.
+  const unattributedMargin = margins.some(item => typeof item.currency !== "string" || !item.currency);
+  const balanceCounts = new Map<unknown, number>();
+  for (const row of balances) balanceCounts.set(row.currency, (balanceCounts.get(row.currency) ?? 0) + 1);
+  const marginKeys = new Set<string>(), ambiguousMarginCurrencies = new Set<unknown>();
+  for (const row of margins) {
+    const key = JSON.stringify([row.currency ?? null, row.instrument_id ?? null]);
+    if (marginKeys.has(key)) ambiguousMarginCurrencies.add(row.currency);
+    marginKeys.add(key);
+  }
+  const exact = exactFinancialDecimal;
   return balances.map((balance) => {
     const currency = balance.currency;
-    const maintenance = margins.filter((item) => item.currency === currency)
-      .map((item) => String(item.maintenance ?? "0"));
-    const used = maintenance.reduce((sum, value) => addDecimal(sum, value) ?? sum, "0");
-    const headroom = subtractDecimal(String(balance.free ?? "0"), used);
+    const free = exact(balance.free);
+    const maintenance = margins.filter((item) => item.currency === currency).map((item) => exact(item.maintenance));
+    let used: string | null = qualified && typeof currency === "string" && currency.length > 0 && !unattributedMargin &&
+      balanceCounts.get(currency) === 1 && !ambiguousMarginCurrencies.has(currency) &&
+      maintenance.length > 0 && maintenance.every(value => value !== null) ? "0" : null;
+    if (used !== null) for (const value of maintenance) {
+      used = addDecimal(used, value!);
+      if (used === null || used.length > 128) { used = null; break; }
+    }
+    const headroom = free !== null && used !== null ? subtractDecimal(free, used) : null;
     return {
       currency,
-      free: String(balance.free ?? "0"),
+      free,
       maintenance: used,
       headroom,
       verdict: headroom === null ? "UNAVAILABLE" : headroom.startsWith("-") ? "BREACHED" : "AVAILABLE",
     };
   });
-}
-
-function latestRecord(rows: Array<Record<string, unknown>>, field: string): Record<string, unknown> | null {
-  return [...rows].sort((left, right) => String(right[field] ?? "").localeCompare(String(left[field] ?? "")))[0] ?? null;
 }
 
 function decimalIsZero(value: string): boolean { return /^-?0(?:\.0+)?$/.test(value); }
@@ -545,7 +731,7 @@ function decimalOperation(left: string, right: string, operation: (a: bigint, b:
   const digits = (negative ? -result : result).toString().padStart(scale + 1, "0");
   const whole = scale === 0 ? digits : digits.slice(0, -scale);
   const fraction = scale === 0 ? "" : digits.slice(-scale).replace(/0+$/, "");
-  return `${negative ? "-" : ""}${whole}${fraction ? `.${fraction}` : ""}`;
+  return exactFinancialDecimal(`${negative ? "-" : ""}${whole}${fraction ? `.${fraction}` : ""}`);
 }
 
 function unresolvedRelations(

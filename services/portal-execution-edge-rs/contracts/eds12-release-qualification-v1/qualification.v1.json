@@ -60,7 +60,7 @@
     {
       "id": "n29_acceptance",
       "file": "services/portal-execution-edge-rs/contracts/n29-product-acceptance-v1/product-acceptance.v1.json",
-      "sha256": "sha256:d18361e607acea9db464f6ccb2ded3b721a1afe262146da79bf761189b2244d2"
+      "sha256": "sha256:54d7eca5dad598c6c28b05251f2dd57c3ee7c26e4066fbe910217fc9bc68fa76"
     },
     {
       "id": "n29_debt",
@@ -185,7 +185,7 @@
     {
       "id": "projection_worker",
       "file": "apps/control-api/src/execution/profile-projection.worker.ts",
-      "sha256": "sha256:788f7245f16c3956dc4d7afb41536679a32d6e27f4543f5f80959c911f4a9269"
+      "sha256": "sha256:74c11f188e65a86cd1742319fce9c8beb7535d950e4a28f4f63b2cb82af76d2f"
     },
     {
       "id": "projection_repository",

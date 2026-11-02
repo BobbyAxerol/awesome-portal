@@ -98,7 +98,11 @@ export class ResourceReadController {
       await this.resources.readNativeAccount(principal, resourceId, query.data.environment, reply.raw, beforeDispatch);
       return;
     }
-    return await this.resources.read(principal, kind, resourceId, query.data.environment);
+    const result = await this.resources.read(principal, kind, resourceId, query.data.environment);
+    if (!(await this.workspaces.canReadExecution(workspaceId, request.portalUser.userId, query.data.environment))) {
+      throw new ResourceReadError("WORKSPACE_NOT_FOUND", 404);
+    }
+    return result;
     } catch (error) {
       // Once physical native delivery owns the response, lost source ACK or a
       // late failure cannot trigger a framework DTO/error fallback/double send.

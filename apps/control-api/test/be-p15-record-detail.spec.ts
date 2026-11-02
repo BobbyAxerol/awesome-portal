@@ -320,6 +320,9 @@ describe("BE-P15 scoped adapter (RV-11 R-8, R-9 legs)", () => {
 describe("BE-P15 Resource360 v2 (RV-11 R-6, R-7, R-8, R-9)", () => {
   function resources(options: { full: boolean; fields?: string[]; strategy?: Record<string, ProjectionScalar>; equity?: Record<string, ProjectionScalar>[]; fills?: boolean } = { full: true }) {
     const f = productReadFixture({ full: options.full, fields: options.fields });
+    // Resource360's multi-profile delivery requires an explicitly bounded
+    // actor lease. This is a synthetic lease, not a source qualification.
+    f.context.actor_lease_until_ms = f.principal.session.absoluteExpiresAt.getTime();
     addRelations(f, {
       "manager.strategies:strategies": { name: "strategies", rows: [options.strategy ?? { strategy_id: "strategy-own" }, { strategy_id: "strategy-peer", name: "Peer Alpha" }] },
       "manager.fills:fills": { name: "fills", rows: options.fills === false ? [] : [{ ...OWN, fill_id: "f1", side: "BUY", price: "100.1234567890123456789", quantity: "10.5",

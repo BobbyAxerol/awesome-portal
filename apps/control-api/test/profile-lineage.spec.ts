@@ -64,6 +64,64 @@ describe("N30 profile lineage", () => {
     expect(balances?.lineageScopedOut).toBeUndefined();
   });
 
+  it.each(["continuation", "previous page", "partial scope", "partial state", "unavailable parent"] as const)(
+    "does not claim an unseen parent is foreign when the parent has %s", (variant) => {
+      const account = relation("accounts", [{ account_id: "acc_seen" }]);
+      const parent = variant === "unavailable parent"
+        ? { ...account, page: null, state: "UNAVAILABLE" as const, reasonCode: "SOURCE_UNAVAILABLE" }
+        : { ...account, ...(variant === "partial state" ? { state: "PARTIAL" as const } : {}), page: { ...account.page,
+          nextCursor: variant === "continuation" ? "another-page" : null,
+          previousCursor: variant === "previous page" ? "previous-page" : null,
+          scope: variant === "partial scope" ? { state: "PARTIAL" as const, reasonCode: "SCOPE_INCOMPLETE" } : null,
+        } };
+      const result = enforceProfileLineage([
+        parent,
+        relation("account_balances", [{ account_id: "acc_unseen", currency: "USDT", total: "1" }]),
+      ], "N30");
+      expect(result[1]).toMatchObject({ state: "PARTIAL", reasonCode: "N30_PROFILE_LINEAGE_REJECTED",
+        lineageRejects: { account: 1 }, page: { completeness: "PARTIAL", items: [] } });
+      expect(result[1].lineageScopedOut).toBeUndefined();
+    },
+  );
+
+  it("retains a bracket leg when its unique parent census is complete", () => {
+    const result = enforceProfileLineage([
+      relation("brackets", [{ bracket_group_id: "br_1" }]),
+      relation("bracket_legs", [{ bracket_group_id: "br_1", leg_id: "leg_1" }]),
+    ], "N30");
+    expect(result[1]).toMatchObject({ state: "AVAILABLE", reasonCode: null,
+      page: { completeness: "COMPLETE", items: [{ bracket_group_id: "br_1", leg_id: "leg_1" }] } });
+  });
+
+  it("does not promote a partial child to EMPTY after filtering a proven foreign row", () => {
+    const child = relation("account_balances", [{ account_id: "foreign", total: "1" }], "PARTIAL");
+    const result = enforceProfileLineage([
+      relation("accounts", [{ account_id: "acc_live" }]),
+      { ...child, state: "PARTIAL" as const, reasonCode: "SOURCE_PARTIAL" },
+    ], "N30");
+    expect(result[1]).toMatchObject({ state: "PARTIAL", reasonCode: "SOURCE_PARTIAL",
+      lineageScopedOut: { account: 1 }, page: { completeness: "PARTIAL", items: [] } });
+  });
+
+  it.each(["continuation", "previous page", "partial scope", "partial state", "unavailable parent"] as const)(
+    "withholds bracket legs while parent identity census has %s", (variant) => {
+      const original = relation("brackets", [{ bracket_group_id: "br_1" }]);
+      const parent = variant === "unavailable parent"
+        ? { ...original, page: null, state: "UNAVAILABLE" as const, reasonCode: "SOURCE_UNAVAILABLE" }
+        : { ...original, ...(variant === "partial state" ? { state: "PARTIAL" as const } : {}),
+          page: { ...original.page,
+            nextCursor: variant === "continuation" ? "another-page" : null,
+            previousCursor: variant === "previous page" ? "previous-page" : null,
+            scope: variant === "partial scope" ? { state: "PARTIAL" as const, reasonCode: "SCOPE_INCOMPLETE" } : null,
+          } };
+      const result = enforceProfileLineage([
+        parent, relation("bracket_legs", [{ bracket_group_id: "br_1", leg_id: "leg_1" }]),
+      ], "N30");
+      expect(result[1]).toMatchObject({ state: "PARTIAL", reasonCode: "N30_BRACKET_PARENT_CENSUS_UNQUALIFIED",
+        page: { completeness: "PARTIAL", items: [] }, lineageRejects: { bracket: 1 } });
+    },
+  );
+
   it("drops every orphan when a COMPLETE parent relation is empty, and calls the result empty", () => {
     // This is Live on dev: no accounts at all, and 85 balance rows arriving
     // anyway because the source cannot scope that relation. Zero balances is

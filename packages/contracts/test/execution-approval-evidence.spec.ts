@@ -3,7 +3,7 @@ import { resolve } from "node:path";
 import Ajv2020 from "ajv/dist/2020";
 import { describe, expect, it } from "vitest";
 
-// WP-K slice 2: the approval evidence sibling read (inbox E->K 1-5). Contract only: no producer exists, nothing serves the route.
+// WP-K slice 2: the approval evidence sibling read (inbox E->K 1-5). The optional producer is source-dark.
 const root = resolve(__dirname, "..");
 const load = (file: string) => JSON.parse(readFileSync(resolve(root, file), "utf8"));
 const schema = load("schemas/execution-approval-evidence.v1.schema.json");
@@ -13,12 +13,23 @@ const fixture = (name: string) => load(`fixtures/execution-approval-evidence.${n
 const LANE = "TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT";
 
 describe("WP-K slice 2: approval evidence", () => {
-  it("publishes one named read whose 200 body is the schema, and says it has no producer", () => {
+  it("publishes one named read whose 200 body is the schema, and describes the dark producer", () => {
     const op = api.paths["/api/v1/execution/governance/approvals/{approval_id}/evidence"].get;
     expect(op.operationId).toBe("executionApprovalEvidenceGetV1");
-    expect(op.description).toContain("CONTRACT ONLY");
+    expect(op.description).toContain("source-dark producer");
     expect(op.responses["200"].content["application/json"].schema.$ref).toBe("#/components/schemas/ApprovalEvidence");
     expect(api.components.schemas.ApprovalEvidence).toEqual(Object.fromEntries(Object.entries(schema).filter(([k]) => !["$schema", "$id"].includes(k))));
+  });
+  it("models the actual sanitized governance, session and operational error envelopes", () => {
+    const problem = new Ajv2020({ strict: true }).compile(api.components.schemas.ApprovalEvidenceProblem);
+    for (const code of ["SESSION_REQUIRED", "WORKSPACE_NOT_FOUND", "APPROVAL_NOT_FOUND", "OPERATIONAL_READ_INPUT_INVALID", "ELP2_GOVERNANCE_PARENT_READ_NOT_COMMISSIONED"]) {
+      expect(problem({ error: { code, message: "Not available." }, request_id: "test-request" }), JSON.stringify(problem.errors)).toBe(true);
+    }
+    expect(problem({ error: { code: "OPERATIONAL_READ_INPUT_INVALID", message: "Not available." }, request_id: "test-request",
+      public_copy_key: "OPERATIONAL_READ_INPUT_INVALID", safe_next_action: "REVIEW_BLOCKER" })).toBe(true);
+    expect(problem({ error: { code: "private text", message: "Not available." }, request_id: "test-request" })).toBe(false);
+    const responses = api.paths["/api/v1/execution/governance/approvals/{approval_id}/evidence"].get.responses;
+    for (const status of ["400", "401", "403", "404", "409", "500", "503"]) expect(responses[status]).toBeDefined();
   });
   it.each(["published", "not-read", "no-source", "drawdown"])("the %s fixture is TEST_ONLY and conforms", name => {
     const sample = fixture(name);

@@ -3319,6 +3319,12 @@ export interface components {
             reason_code: string | null;
             /** @constant */
             retryable: false;
+            lineage_rejects?: {
+                [key: string]: number;
+            };
+            lineage_scoped_out?: {
+                [key: string]: number;
+            };
         };
         Scalar: string | number | boolean | null | (string | number | boolean | null)[];
         ManagerRecord: {

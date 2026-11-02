@@ -8,7 +8,7 @@ import { AuthorizedExecutionReadScope, ExecutionReadScopes, ExecutionReadScopeEr
   scopeAllowsField, scopeAllowsDetailField, scopeReadPopulation, ReadScopePrincipal, ReadScopeRequirement } from "../execution-v2/read-scope";
 import { projectionRowVisible } from "../execution-v2/read-projection";
 import { managerTimestamp } from "./manager-timestamp";
-import { joinRetainedBracketLegRows, joinRetainedConditionalLegRows, joinRetainedFindingSessionRows, namedRetainedFindingNeedsSession, namedRetainedBusinessAnchored, namedRetainedBusinessFields, namedRetainedBusinessResourceId, namedRetainedBusinessSourceAllowed } from "./retained-business-aliases";
+import { joinRetainedBracketLegRows, joinRetainedConditionalLegLinks, joinRetainedFindingSessionRows, namedRetainedFindingNeedsSession, namedRetainedBusinessAnchored, namedRetainedBusinessFields, namedRetainedBusinessResourceId, namedRetainedBusinessSourceAllowed } from "./retained-business-aliases";
 
 /** Internal adapters share one publication identity. This is never accepted
  * from a browser, and the source revision is not returned as a scoped digest. */
@@ -32,7 +32,7 @@ export async function authorizeRetainedRelation(scopes: ExecutionReadScopes | un
 }
 
 export function retainedRelationAction(relation: string): ReadScopeRequirement["action"] {
-  if (["accounts", "account_balances", "account_policies", "margin_balances", "account_equity_snapshots", "account_sync_effective", "venue_accounts"].includes(relation)) return "account.read";
+  if (["accounts", "account_balances", "account_policies", "margin_balances", "account_equity_snapshots", "account_sync_effective", "venue_accounts", "reconciliation_findings"].includes(relation)) return "account.read";
   if (["portfolios", "portfolio_equity_snapshots", "portfolio_allocations"].includes(relation)) return "portfolio.read";
   return "alpha.read";
 }
@@ -67,6 +67,59 @@ export function namedRetainedRelationAction(relation: string): ReadScopeRequirem
     ? NAMED_RETAINED_PURPOSES[relation as keyof typeof NAMED_RETAINED_PURPOSES] : null;
   if (!action) throw new RetainedOperationError("EXECUTION_NAMED_PURPOSE_NOT_COMMISSIONED", 503);
   return action;
+}
+
+// A collection read is not an exact deployment resolver. These aliases need
+// BOTH independently published tuple populations, not an Account-only swap:
+// an Account can belong to more than one Alpha. This is limited to the four
+// named execution datasets whose authority and source aliases were reviewed.
+const namedExecutionAccountSources: Readonly<Record<string, readonly string[]>> = Object.freeze({
+  orders: ["manager.orders", "manager.current.orders"],
+  positions_v2: ["manager.positions", "manager.current.positions-v2"],
+  execution_sessions: ["manager.sessions", "manager.current.execution-sessions"],
+  fills: ["manager.fills", "manager.current.fills"],
+});
+export function namedExecutionNeedsAccount(relation: string): boolean {
+  return Object.hasOwn(namedExecutionAccountSources, relation);
+}
+
+// Only known local public refusals may survive the shared terminal fence.
+// The held error is recovered by object identity after authority succeeds.
+const namedExecutionSafeRefusals: Readonly<Record<string, number>> = Object.freeze({
+  UDB_RETAINED_PROFILE_NOT_CAPTURED: 503,
+  EXECUTION_READ_PUBLICATION_NOT_QUALIFIED: 503,
+  UDB_RETAINED_VIEW_ROW_BOUND: 503,
+  EXECUTION_READ_FIELD_POLICY_PENDING: 503,
+  UDB_RETAINED_CURSOR_INVALID_OR_STALE: 400,
+  UDB_RETAINED_SCALAR_CONTRACT_REJECTED: 503,
+  EDS11R_RESPONSE_TOO_LARGE: 502,
+});
+
+function namedExecutionAnchored(row: Record<string, ProjectionScalar>, environment: string,
+  alphaScope: AuthorizedExecutionReadScope): boolean {
+  const properties = Object.getOwnPropertyDescriptors(row);
+  const valid = (name: string) => {
+    const property = properties[name];
+    return Boolean(property && "value" in property && typeof property.value === "string" && property.value.length > 0 &&
+      !/[\u0000-\u001f\u007f]/u.test(property.value));
+  };
+  const mode = properties.mode;
+  if (!valid("account_id") || !(valid("strategy_id") || valid("deployment_id") || valid("alpha_id")) ||
+    mode && (!("value" in mode) || mode.value !== null && mode.value !== undefined &&
+      (typeof mode.value !== "string" || mode.value.toLowerCase() !== environment))) return false;
+  // A partial row is safe only when qualified lineage resolves one exact
+  // source tuple. Merely having rights to two plausible deployments is not
+  // proof that either was the actual origin of this order/fill/session.
+  const population = scopeReadPopulation(alphaScope);
+  const strategy = properties.strategy_id?.value;
+  const strategyAlpha = typeof strategy === "string"
+    ? population.strategyPairs.find(pair => pair.strategy_id === strategy)?.alpha_id : undefined;
+  if (strategy !== null && strategy !== undefined && !strategyAlpha) return false;
+  const keys = ["alpha_id", "alpha_version_id", "portfolio_id", "deployment_id", "account_id"] as const;
+  return population.populationTuples.filter(tuple => keys.every(key => {
+    const value = properties[key]?.value;
+    return value === null || value === undefined || value === tuple[key];
+  }) && (!strategyAlpha || tuple.alpha_id === strategyAlpha)).length === 1;
 }
 
 export async function authorizeNamedRetainedRelation(scopes: ExecutionReadScopes | undefined,
@@ -132,13 +185,16 @@ export class RetainedOperationError extends LocalRealtimeError {}
  * workspace, page size and immutable view revision; expiry/key rotation apply. */
 export async function retainedOperationPage(config: ControlApiConfig,
   repository: ExecutionProfileProjectionRepository, principal: MaximumDataOperationPrincipal,
-  operation: ManagerRelationOperation, query: MaximumDataRelationQuery, scopes?: ExecutionReadScopes) {
+  operation: ManagerRelationOperation, query: MaximumDataRelationQuery, scopes?: ExecutionReadScopes,
+  routeScope?: AuthorizedExecutionReadScope) {
   if (principal.workspaceId !== config.EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID) {
     throw new RetainedOperationError("WORKSPACE_NOT_FOUND", 404);
   }
   const profile = scopes ? retainedConfiguredProfile(config, query.environment) : managerRelationProfileBinding(query.environment).profileId;
   const metadata = scopes ? await repository.snapshotMetadata(principal.workspaceId, query.environment, profile) : null;
   const scope = await authorizeNamedRetainedRelation(scopes, principal, query.environment, profile, operation, metadata ?? undefined);
+  if (routeScope?.mode === "SCOPED_V2" && scope?.mode !== "SCOPED_V2")
+    throw new ExecutionReadScopeError("EXECUTION_READ_ACCESS_CHANGED", 409);
   // Explicit account purposes of the two finite leg adapters, distinct
   // from their legacy Alpha readers. A child publication/opaque FK is not
   // authority over the independently accepted exact parent dataset.
@@ -152,13 +208,16 @@ export async function retainedOperationPage(config: ControlApiConfig,
       parent.sourceId, parent.relation, metadata ?? undefined, undefined, "account.read");
     if (parentScope?.mode !== "SCOPED_V2") throw new ExecutionReadScopeError("EXECUTION_READ_ACCESS_CHANGED", 409);
   }
+  let namedRefusal: { original: RetainedOperationError; marker: ExecutionReadScopeError } | undefined;
+  let terminalNamedCheck: (() => void) | undefined;
+  const read = async (executionAccountScope?: AuthorizedExecutionReadScope) => {
   const snapshot = scope?.mode === "SCOPED_V2" ? await repository.rawSnapshot(principal.workspaceId, query.environment, profile)
     : await repository.snapshot(principal.workspaceId, query.environment, profile);
   if (scope?.mode === "SCOPED_V2" && snapshot && (snapshot.payloadDigest !== metadata?.payloadDigest ||
       snapshot.projectionEpoch !== metadata?.projectionEpoch || snapshot.sourceCatalogueSha256 !== metadata?.sourceCatalogueSha256))
     throw new ExecutionReadScopeError("EXECUTION_READ_ACCESS_CHANGED", 409);
   if (!snapshot) throw new RetainedOperationError("UDB_RETAINED_PROFILE_NOT_CAPTURED", 503);
-  const read = async () => {
+  try {
   const scoped = scope?.mode === "SCOPED_V2";
   // Named catalogue aliases (`manager.current.*`) and the legacy ingestion
   // keys (`manager.*`) name the same registered relation. Resolve only a unique
@@ -166,6 +225,8 @@ export async function retainedOperationPage(config: ControlApiConfig,
   const matchingRelations = Object.values(snapshot.document.relations).filter(r => r.relation === operation.relation);
   if (scoped && matchingRelations.length > 1) throw new RetainedOperationError("EXECUTION_READ_PUBLICATION_NOT_QUALIFIED", 503);
   const relation = matchingRelations[0];
+  if (executionAccountScope && relation && !namedExecutionAccountSources[operation.relation].includes(relation.source_id))
+    throw new RetainedOperationError("EXECUTION_READ_PUBLICATION_NOT_QUALIFIED", 503);
   const rawItems = relation?.availability === "AVAILABLE" ? relation.items : [];
   if (rawItems.length > 10000) throw new RetainedOperationError("UDB_RETAINED_VIEW_ROW_BOUND", 503);
   const finiteFields = scoped ? namedRetainedBusinessFields(operation.relation) : null;
@@ -239,15 +300,25 @@ export async function retainedOperationPage(config: ControlApiConfig,
       sourceRows = joined.map(link => link.row);
       for (const link of joined) bracketInheritedFields.set(link.row, link.inherited_fields);
     } else {
-      sourceRows = joinRetainedConditionalLegRows(rawItems, parent.items);
+      const currentParentScope = parentScope;
+      sourceRows = joinRetainedConditionalLegLinks(rawItems, parent.items, query.environment).filter(link =>
+        projectionRowVisible(currentParentScope, link.parent.fields) &&
+        projectionRowVisible(scope!, link.row.fields) &&
+        projectionRowVisible(currentParentScope, link.row.fields)).map(link => link.row);
     }
   }
   // Keep private identity until AFTER row authorization, not after redaction.
   // It supplies only an opaque record ID. Its existence is not a field grant.
-  const items = finiteFields && scope ? sourceRows.filter(row => {
+  const items = (finiteFields || executionAccountScope) && scope ? sourceRows.filter(row => {
     // Establish current visibility first: an unknown/hidden row's shape must
     // not create an error or reveal the existence of another population.
-    if (!projectionRowVisible(scope, row.fields) || parentScope && !projectionRowVisible(parentScope, row.fields)) return false;
+    if (!projectionRowVisible(scope, row.fields) || parentScope && !projectionRowVisible(parentScope, row.fields) ||
+      executionAccountScope && !projectionRowVisible(executionAccountScope, row.fields)) return false;
+    if (executionAccountScope) {
+      if (!namedExecutionAnchored(row.fields, query.environment, scope))
+        throw new RetainedOperationError("EXECUTION_READ_PUBLICATION_NOT_QUALIFIED", 503);
+      return true;
+    }
     if (!namedRetainedBusinessAnchored(operation.relation, row.fields))
       throw new RetainedOperationError("EXECUTION_READ_PUBLICATION_NOT_QUALIFIED", 503);
     return true;
@@ -257,7 +328,7 @@ export async function retainedOperationPage(config: ControlApiConfig,
   // account-policy alias keeps its private PK keyed in BOTH retained modes.
   const keys = querySigningKeys(config);
   const activeKeyId = config.QUERY_CURSOR_ACTIVE_KEY_ID;
-  const keyedIdentity = Boolean(finiteFields) || accountPolicyMetadata;
+  const keyedIdentity = Boolean(finiteFields) || accountPolicyMetadata || Boolean(executionAccountScope);
   const identities = new Set<string>();
   const records = items.map(item => {
     if (accountPolicyMetadata) {
@@ -274,7 +345,8 @@ export async function retainedOperationPage(config: ControlApiConfig,
     const values: Record<string, string | number | boolean | null> = {};
     for (const field of operation.fields) {
       if (publicFields && !publicFields.includes(field.name)) continue;
-      if (finiteFields && !retainedFieldAllowed(scope!, field.name)) continue;
+      if ((finiteFields || executionAccountScope) && !retainedFieldAllowed(scope!, field.name)) continue;
+      if (executionAccountScope && !retainedFieldAllowed(executionAccountScope, field.name)) continue;
       // The parent supplies only strategy; its row authority is not a public
       // field grant. Preserve direct rows and child-owned fields unchanged.
       if (field.name === "strategy_id" && joinedFindingRows.has(item) &&
@@ -287,13 +359,13 @@ export async function retainedOperationPage(config: ControlApiConfig,
       if (field.name in item.fields) values[field.name] = scalar(field.kind, item.fields[field.name]);
     }
     const identity = operation.identityFields.map(name => {
-      const value = publicFields ? item.fields[name] : values[name];
+      const value = publicFields || executionAccountScope ? item.fields[name] : values[name];
       if (value === null || value === undefined) throw new RetainedOperationError(scoped ? "EXECUTION_READ_FIELD_POLICY_PENDING" : "UDB_RETAINED_ROW_IDENTITY_NOT_CAPTURED", 503);
-      if (publicFields && typeof value === "string" && (!value || /[\u0000-\u001f\u007f]/u.test(value)))
+      if ((publicFields || executionAccountScope) && typeof value === "string" && (!value || /[\u0000-\u001f\u007f]/u.test(value)))
         throw new RetainedOperationError("UDB_RETAINED_SCALAR_CONTRACT_REJECTED", 503);
       const kind = operation.fields.find(f => f.name === name)?.kind;
       const key = kind === "TIMESTAMP" ? managerTimestamp(item.fields[name])?.identity :
-        publicFields && kind ? String(scalar(kind, value)) : String(value);
+        (publicFields || executionAccountScope) && kind ? String(scalar(kind, value)) : String(value);
       if (key === undefined) throw new RetainedOperationError("UDB_RETAINED_SCALAR_CONTRACT_REJECTED", 503);
       return `${name}\u0000${key}`;
     });
@@ -311,6 +383,7 @@ export async function retainedOperationPage(config: ControlApiConfig,
   const binding = JSON.stringify([principal.workspaceId, principal.user.userId, principal.user.role,
     principal.session.sessionId, principal.session.sessionVersion, query.environment, profile, operation.operationId,
     query.limit, snapshot.payloadDigest, snapshot.projectionEpoch, snapshot.sourceCatalogueSha256, scope?.fingerprint ?? null,
+    ...(executionAccountScope ? [executionAccountScope.fingerprint] : []),
     ...(parentScope ? [parentScope.fingerprint] : []),
     ...(findingSessionUsed ? [findingSessionScope!.fingerprint] : []),
     // Rotation changes keyed record ordering; an old-key cursor must not
@@ -331,6 +404,26 @@ export async function retainedOperationPage(config: ControlApiConfig,
   const hasMore = offset + page.length < records.length;
   const prefix = `ur1.${config.QUERY_CURSOR_ACTIVE_KEY_ID}.${offset + page.length}.${Math.floor(Date.now() / 1000) + config.QUERY_CURSOR_TTL_SECONDS}`;
   const next = hasMore ? `${prefix}.${mac(prefix, keys[config.QUERY_CURSOR_ACTIVE_KEY_ID])}` : null;
+  if (executionAccountScope) {
+    const inputExpiry = query.cursor ? Number(query.cursor.split(".")[3]) : null;
+    const nextExpiry = next ? Number(next.split(".")[3]) : null;
+    terminalNamedCheck = () => {
+      // A held typed refusal is already non-disclosing. Do not replace its
+      // marker while the composition is deciding which refusal to release.
+      if (namedRefusal) return;
+      const currentKeys = querySigningKeys(config);
+      if (config.QUERY_CURSOR_ACTIVE_KEY_ID !== activeKeyId || currentKeys[activeKeyId] !== keys[activeKeyId])
+        throw new ExecutionReadScopeError("EXECUTION_READ_ACCESS_CHANGED", 409);
+      const now = Math.floor(Date.now() / 1000);
+      if (inputExpiry !== null && inputExpiry <= now) {
+        const marker = new ExecutionReadScopeError("EXECUTION_READ_QUERY_INVALID", 400);
+        namedRefusal = { original: invalidCursor(), marker };
+        throw marker;
+      }
+      if (nextExpiry !== null && nextExpiry <= now)
+        throw new ExecutionReadScopeError("EXECUTION_READ_ACCESS_CHANGED", 409);
+    };
+  }
   const captured = records.length > 0;
   const result = {
     schema_version: "portal.execution.eds11r.manager-relation-page.v1",
@@ -354,12 +447,38 @@ export async function retainedOperationPage(config: ControlApiConfig,
       visibility: "SCOPED", coverage: "AUTHORIZED_ONLY", policy_revision: scope.policyRevision } } : {}),
   };
   if (Buffer.byteLength(JSON.stringify(result)) > 1048576) throw new RetainedOperationError("EDS11R_RESPONSE_TOO_LARGE", 502);
-  if (scoped) await fenceRetainedSnapshot(repository, principal.workspaceId, query.environment, profile, snapshot);
+  if (scoped && !executionAccountScope) await fenceRetainedSnapshot(repository, principal.workspaceId, query.environment, profile, snapshot);
   // Sequential current delivery only, NOT a held compound-source transaction.
   // Unused/missing links cannot impose a new dependency on direct records.
   if (findingSessionUsed && findingSessionScope && scopes) await scopes.revalidate(findingSessionScope);
   return result;
+  } finally {
+    // A failed parse/cursor/source read also observed this protected snapshot.
+    if (executionAccountScope) await fenceRetainedSnapshot(repository, principal.workspaceId, query.environment, profile, snapshot);
+  }
   };
+  if (scope?.mode === "SCOPED_V2" && scopes && namedExecutionNeedsAccount(operation.relation)) {
+    try {
+      return await scopes.deliverScopedTogether(routeScope ? [routeScope, scope] : [scope], async retain => {
+        const accountScope = await authorizeRetainedRelation(scopes, principal, query.environment, profile,
+          operation.sourceId, operation.relation, metadata ?? undefined, undefined, "account.read");
+        if (!accountScope || accountScope.mode !== "SCOPED_V2")
+          throw new ExecutionReadScopeError("EXECUTION_READ_ACCESS_CHANGED", 409);
+        retain(accountScope);
+        try { return await read(accountScope); } catch (error) {
+          if (error instanceof RetainedOperationError && namedExecutionSafeRefusals[error.code] === error.status) {
+            const marker = new ExecutionReadScopeError("EXECUTION_READ_QUERY_INVALID", error.status);
+            namedRefusal = { original: error, marker };
+            throw marker;
+          }
+          throw error;
+        }
+      }, () => terminalNamedCheck?.());
+    } catch (error) {
+      if (namedRefusal && error === namedRefusal.marker) throw namedRefusal.original;
+      throw error;
+    }
+  }
   return scope && scopes ? scopes.deliver(scope, () =>
     parentScope ? scopes.deliver(parentScope, read) : read()) : read();
 }

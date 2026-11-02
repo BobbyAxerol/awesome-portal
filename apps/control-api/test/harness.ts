@@ -1,4 +1,3 @@
-import { runner as migrate } from "node-pg-migrate";
 import { join } from "node:path";
 import { Pool } from "pg";
 import { loadConfig } from "../src/config";
@@ -6,7 +5,15 @@ import { buildPool } from "../src/db/pool";
 import { createControlApiApp } from "../src/app";
 import { ControlApiConfig } from "../src/config";
 
+// Match the production migration CLI's narrow CommonJS shape: the package's
+// conditional type exports are not resolved by this project's legacy Node
+// resolver. This is only the disposable test harness, not a migration change.
+type TestMigrationRunner = (options: { databaseUrl: string; dir: string; direction: "up";
+  migrationsTable: string; count: number; noLock: boolean; log: (line: string) => void }) => Promise<unknown>;
+const migrate = (require("node-pg-migrate") as { runner: TestMigrationRunner }).runner;
+
 export const TEST_TABLES = [
+  "execution_command_status_delivery_acks",
   "execution_command_status_original_fingerprints",
   "execution_pending_recall_events",
   "execution_pending_recall_commands",

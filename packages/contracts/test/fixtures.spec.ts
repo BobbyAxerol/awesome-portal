@@ -442,6 +442,25 @@ describe("canonical contracts (cross-language fixture compilation)", () => {
     });
     expect(JSON.stringify(account)).not.toMatch(/password|token|credential|dsn/i);
     expect(validate!({ ...account, selected_environment: "canary" })).toBe(false);
+    const capabilities = account.capabilities as Array<Record<string, unknown>>;
+    const actualSourceCapabilities = capabilities.map((entry) => entry.capability_id === "source.accounts"
+      ? { ...entry, relations: [], lineage_scoped_out: { account: 1 } } : entry);
+    expect(validate!({ ...account, capabilities: actualSourceCapabilities })).toBe(true);
+    const invalidCounts = capabilities.map((entry) => entry.capability_id === "source.accounts"
+      ? { ...entry, relations: [], lineage_rejects: { account: -1 } } : entry);
+    expect(validate!({ ...account, capabilities: invalidCounts })).toBe(false);
+    const otherCapabilities = capabilities.filter((entry) => entry.capability_id !== "derived.differences");
+    const comparison = capabilities.find((entry) => entry.capability_id === "derived.differences")!;
+    const withComparison = (state: string, reason_code: string | null) => ({ ...account,
+      capabilities: [...otherCapabilities, { ...comparison, state, reason_code }] });
+    expect(validate!(withComparison("PARTIAL", "ACCOUNT_COMPARISON_INCOMPLETE"))).toBe(true);
+    expect(validate!(withComparison("UNAVAILABLE", "ACCOUNT_COMPARISON_INPUTS_NOT_QUALIFIED"))).toBe(true);
+    expect(validate!(withComparison("AVAILABLE", "ACCOUNT_COMPARISON_INCOMPLETE"))).toBe(false);
+    expect(validate!(withComparison("PARTIAL", null))).toBe(false);
+    expect(validate!(withComparison("UNAVAILABLE", "SOURCE_AVAILABLE"))).toBe(false);
+    const generated = readFileSync(join(ROOT, "generated/execution-profile-read.d.ts"), "utf8");
+    expect(generated).toContain("ComparisonCapability:");
+    expect(generated).toContain('"ACCOUNT_COMPARISON_INPUTS_NOT_QUALIFIED"');
   });
 
   it("keeps Live read-only over its own gate backbone and unpublished parent refusal", () => {

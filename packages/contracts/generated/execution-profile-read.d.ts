@@ -84,6 +84,12 @@ export interface components {
             reason_code: string | null;
             /** @constant */
             retryable: false;
+            lineage_rejects?: {
+                [key: string]: number;
+            };
+            lineage_scoped_out?: {
+                [key: string]: number;
+            };
         };
         Scalar: string | number | boolean | null | (string | number | boolean | null)[];
         ManagerRecord: {
@@ -144,6 +150,32 @@ export interface components {
             };
             unavailable_branches: components["schemas"]["UnavailableBranch"][];
         } & (unknown & unknown & unknown);
+        /** @description Availability of comparisons over the authorized balance set in one complete snapshot; AVAILABLE does not mean in sync. */
+        ComparisonCapability: {
+            /** @constant */
+            capability_id: "derived.differences";
+            /** @enum {unknown} */
+            state: "AVAILABLE" | "PARTIAL" | "UNAVAILABLE";
+            relations: "derived.differences"[];
+            /** @enum {unknown} */
+            reason_code: null | "ACCOUNT_COMPARISON_INPUTS_NOT_QUALIFIED" | "ACCOUNT_COMPARISON_INCOMPLETE";
+            /** @constant */
+            retryable: false;
+        } & ({
+            /** @constant */
+            state?: "AVAILABLE";
+            reason_code?: null;
+        } | {
+            /** @constant */
+            state?: "PARTIAL";
+            /** @constant */
+            reason_code?: "ACCOUNT_COMPARISON_INCOMPLETE";
+        } | {
+            /** @constant */
+            state?: "UNAVAILABLE";
+            /** @enum {unknown} */
+            reason_code?: "ACCOUNT_COMPARISON_INPUTS_NOT_QUALIFIED" | "ACCOUNT_COMPARISON_INCOMPLETE";
+        });
         AccountRead: {
             /** @constant */
             schema_version: "execution.account-broker-360.v1";
@@ -175,7 +207,7 @@ export interface components {
                 username: components["schemas"]["Identifier"];
                 roles: ("ADMIN" | "USER")[];
             };
-            capabilities: components["schemas"]["Capability"][];
+            capabilities: ((components["schemas"]["Capability"] & unknown) | components["schemas"]["ComparisonCapability"])[];
             data: {
                 [key: string]: components["schemas"]["ManagerRecord"][];
             };
@@ -607,6 +639,8 @@ export interface operations {
         parameters: {
             query?: {
                 environment?: "paper" | "sandbox" | "live";
+                /** @description Optional workspace; the server trims surrounding whitespace before validating its length. */
+                workspace_id?: string;
             };
             header?: never;
             path: {
@@ -616,7 +650,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Exact Account/Broker 360 read across current profiles */
+            /** @description Bounded Account/Broker 360 read; ambiguous or incomplete identity remains typed partial rather than an arbitrarily selected profile. */
             200: {
                 headers: {
                     [name: string]: unknown;

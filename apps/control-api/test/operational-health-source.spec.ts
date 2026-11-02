@@ -1,15 +1,20 @@
 import { describe, expect, it, vi } from "vitest";
+import { createHash } from "node:crypto";
 import type { QueryResultRow } from "pg";
 import type { PostgresSnapshotReader } from "../src/query";
 import type { OperationalAuditCohort } from "../src/operations/current-operational-read";
-import { createOperationalQueueHealthSource, type OperationalQueueHealthBinding } from "../src/operations/operational-health-source";
+import { createOperationalQueueHealthSource, operationalHealthViewDigest, type OperationalQueueHealthBinding } from "../src/operations/operational-health-source";
 import { queueHealth, queueHealthResource, readQueueSnapshot } from "../src/operations/operational-read.service";
 
 const fingerprint = `sha256:${"a".repeat(64)}`;
 const cohort = { fingerprint, context: {}, scope: { fingerprint, columns: ["target_type", "target_id", "environment"],
   allowedTuples: [["ACCOUNT", "acc_allowed", "PAPER"]] } } as unknown as OperationalAuditCohort;
+const descriptor = [{ definition: "SELECT synthetic", position: 1, name: "operation_id", type: "text" }];
+const digest = `sha256:${createHash("sha256").update(JSON.stringify({ version: "portal.operational-health-view.v1",
+  definition: "SELECT synthetic", columns: [{ position: 1, name: "operation_id", type: "text" }] })).digest("hex")}`;
 const binding: OperationalQueueHealthBinding = { authority: "PORTAL", source_ref: "portal://qualified-operation-health/cut-7",
   schema_sha256: `sha256:${"b".repeat(64)}`, table: "execution_operation_queue_health_v2",
+  view_definition_sha256_v1: digest,
   delivery_axis: "delivery_state", display_axis: "display_state" };
 
 describe("qualified Operations health runtime binding", () => {
@@ -23,7 +28,7 @@ describe("qualified Operations health runtime binding", () => {
     expect(resource.filters!.severity).toBeDefined();
     expect(resource.filters!.delivery_state).toBeDefined();
   });
-  it.each([{ authority: "EDGE" }, { source_ref: "" }, { schema_sha256: "unknown" },
+  it.each([{ authority: "EDGE" }, { source_ref: "" }, { schema_sha256: "unknown" }, { view_definition_sha256_v1: "unknown" },
     { table: "execution_operation_queue_v2; DROP TABLE accounts" }, { delivery_axis: "source_status" },
     { display_axis: "triage_state" }, { delivery_axis: null, display_axis: null }])("rejects unsafe/missing provenance or semantic axis %j", delta => {
     expect(() => createOperationalQueueHealthSource({ ...binding, ...delta } as OperationalQueueHealthBinding)).toThrow();
@@ -35,7 +40,7 @@ describe("qualified Operations health runtime binding", () => {
   it("counts full authorized filtered population rather than page rows or queue business state", async () => {
     const specs: unknown[] = [];
     const lent: PostgresSnapshotReader<QueryResultRow> = { rows: [{ operation_id: "op_a", source_status: "SUCCEEDED",
-      delivery_state: "AWAITING_RECEIPT", display_state: "CURRENT" }], query: async () => [], groupedCounts: async spec => {
+      delivery_state: "AWAITING_RECEIPT", display_state: "CURRENT" }], query: async () => descriptor as never, groupedCounts: async spec => {
       specs.push(spec);
       if (spec.column === "delivery_state") return new Map([["AWAITING_RECEIPT", 3], ["RECEIPT_CONFIRMED", 1]]);
       if (spec.column === "display_state") return new Map([["CURRENT", 1], ["CATCHING_UP", 2], ["NOT_REPORTED", 1]]);
@@ -53,6 +58,23 @@ describe("qualified Operations health runtime binding", () => {
     expect(result.axes!.get("op_a")).toEqual({ delivery_state: "AWAITING_RECEIPT", display_state: "CURRENT" });
     expect(specs).toContainEqual({ column: "delivery_state", excludeFilterFields: [], maxGroups: 5 });
     expect(specs).toContainEqual({ column: "display_state", excludeFilterFields: [], maxGroups: 4 });
+  });
+  it("checks the installed view in the same snapshot before links or health are returned", async () => {
+    const links = vi.fn(async () => []);
+    const counts = vi.fn(async () => new Map<string, number>());
+    const selected = createOperationalQueueHealthSource(binding).select(cohort, {})!;
+    const lent = { rows: [], query: async () => [{ ...descriptor[0], definition: "SELECT changed" }],
+      groupedCounts: counts } as unknown as PostgresSnapshotReader<QueryResultRow>;
+    await expect(readQueueSnapshot({ incidentLinks: links }, "ws_a", cohort.scope, [], lent, selected.plan)).rejects.toThrow();
+    expect(links).not.toHaveBeenCalled();
+    expect(counts).not.toHaveBeenCalled();
+  });
+  it("rejects missing, oversized or inconsistent view descriptors", async () => {
+    for (const rows of [[], [{ ...descriptor[0], definition: "x".repeat(262_145) }],
+      [descriptor[0], { ...descriptor[0], position: 2, definition: "different" }]]) {
+      const lent = { query: async () => rows } as unknown as PostgresSnapshotReader<QueryResultRow>;
+      await expect(operationalHealthViewDigest(lent)).rejects.toThrow();
+    }
   });
   it("passes the same lent transaction, exact cohort and captured filters to a distinct exceptions owner", async () => {
     const exceptions = vi.fn(async () => ({ count: 0 }));

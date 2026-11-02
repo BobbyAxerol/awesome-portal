@@ -38,13 +38,15 @@ function fixture(family: Family, env: Env = "paper", linked = false) {
   f.snapshot.environment = env; f.snapshot.profileId = profile(f, env);
   f.snapshot.document.environment = env; f.snapshot.document.profile_id = profile(f, env);
   // The generated named Orders identity is INTEGER, not the screen's text IDs.
+  f.snapshot.document.relations["manager.orders:orders"].source_id = "manager.orders";
   f.snapshot.document.relations["manager.orders:orders"].items.forEach((item, i) => { item.fields.order_id = String(i + 1); });
   const operation = managerRelationOperationByRoute("portfolios")!;
+  const lineage = { workspace_id: f.principal.workspaceId, profile_id: profile(f, env), source_contract_revision: "TEST_ONLY-contract" };
   f.snapshot.document.relations[`${operation.sourceId}:portfolios`] = {
     source_id: operation.sourceId, relation: "portfolios", availability: "AVAILABLE", completeness: "COMPLETE",
     freshness: "FRESH", reason_code: null, as_of: new Date(f.context.now_ms).toISOString(), items: [
-      { fields: { portfolio_id: PRIVATE.portfolio_id, name: "TEST_ONLY-shared-direct", secret: "NEVER_RETURN" } },
-      { fields: { portfolio_id: OWN.portfolio_id, name: "TEST_ONLY-hidden-portfolio" } },
+      { lineage, fields: { portfolio_id: PRIVATE.portfolio_id, name: "TEST_ONLY-shared-direct", secret: "NEVER_RETURN" } },
+      { lineage, fields: { portfolio_id: OWN.portfolio_id, name: "TEST_ONLY-hidden-portfolio" } },
     ],
   };
   return f;
@@ -60,30 +62,42 @@ function scope(f: F, family: Family, env: Env = "paper", resource?: AccessResour
 const read = (f: F, family: Family, env: Env = "paper", query = {}) =>
   f.maximum.relationPage(f.principal, route(family), { environment: env, limit: 20, ...query });
 
+/** Only named execution observations need this independently granted
+ * Account purpose; the explicit Alpha grant itself never implies it. */
+function grantExecutionAccounts(f: F, env: Env = "paper") {
+  const account = productReadFixture().context.grants.find(g => g.action === "account.read")!;
+  f.context.grants = [...f.context.grants, { ...account, grant_id: `TEST_ONLY-explicit-ACCOUNT-${env}`, environments: [env],
+    selector: { kind: "EXPLICIT_RESOURCE_SET", resource_kind: "ACCOUNT", ids: [OWN.account_id, PRIVATE.account_id] } }];
+}
+
 /** Original accepted fact + per-resource/environment current leg, with no
  * owner/member/root population. TEST_ONLY data is never installed in runtime. */
 function versioned(f: F) {
-  const g = grant(f), receipt = g.ts_receipt!;
-  if (g.selector.kind !== "EXPLICIT_RESOURCE_SET") throw new Error("TEST_ONLY-explicit-required");
-  const selector = g.selector;
-  const accepted = tsMembershipAcceptance.parse({ source: "TEST_ONLY-PM", source_contract: "TEST_ONLY-contract",
-    trust_profile: "TEST_ONLY-profile", receipt_id: receipt.receipt_id, proposal_id: "TEST_ONLY-proposal",
-    proposal_digest: accessDigest("TEST_ONLY-proposal"), portal_user_id: g.subject_user_id, ts_user_id: "TEST_ONLY-ts-user",
-    mapping_revision: receipt.mapping_revision, human_requester_user_id: g.issued_by, workspace_id: g.workspace_id,
-    action: g.action, selector_digest: accessDigest(canonicalSelector(g.selector)), environments: g.environments,
-    previous_membership_revision: null, membership_revision: receipt.membership_revision,
-    effective_at_ms: receipt.effective_at_ms, expires_at_ms: receipt.expires_at_ms, outcome: "ACCEPTED",
-    payload_digest: accessDigest("TEST_ONLY-payload"), provenance_ref: "TEST_ONLY-NOT-SOURCE-AUTHORITY" });
-  g.ts_acceptance_digest = accessDigest(accepted);
+  const versionedGrants = f.context.grants.map(g => {
+    const receipt = g.ts_receipt!;
+    if (g.selector.kind !== "EXPLICIT_RESOURCE_SET") throw new Error("TEST_ONLY-explicit-required");
+    const selector = g.selector;
+    const accepted = tsMembershipAcceptance.parse({ source: "TEST_ONLY-PM", source_contract: "TEST_ONLY-contract",
+      trust_profile: "TEST_ONLY-profile", receipt_id: receipt.receipt_id, proposal_id: "TEST_ONLY-proposal",
+      proposal_digest: accessDigest("TEST_ONLY-proposal"), portal_user_id: g.subject_user_id, ts_user_id: "TEST_ONLY-ts-user",
+      mapping_revision: receipt.mapping_revision, human_requester_user_id: g.issued_by, workspace_id: g.workspace_id,
+      action: g.action, selector_digest: accessDigest(canonicalSelector(g.selector)), environments: g.environments,
+      previous_membership_revision: null, membership_revision: receipt.membership_revision,
+      effective_at_ms: receipt.effective_at_ms, expires_at_ms: receipt.expires_at_ms, outcome: "ACCEPTED",
+      payload_digest: accessDigest(["TEST_ONLY-payload", g.grant_id]), provenance_ref: "TEST_ONLY-NOT-SOURCE-AUTHORITY" });
+    g.ts_acceptance_digest = accessDigest(accepted);
+    return { grant_id: g.grant_id, binding_digest: grantBindingDigest(g), accepted,
+      targets: g.environments.flatMap(environment => selector.ids.map(id => ({ environment,
+        resource: { kind: selector.resource_kind, id }, revision: "TEST_ONLY-current-leg",
+        native_reference_digest: accessDigest(["TEST_ONLY-native", environment, id]),
+        valid_from_ms: f.context.now_ms - 100, valid_until_ms: f.context.now_ms + 5000 }))) };
+  });
+  const accepted = versionedGrants[0].accepted, g = grant(f);
   const current = currentAccessRelations.parse({ schema_version: "pma.core-current-relations.v1",
     subject_user_id: g.subject_user_id, workspace_id: g.workspace_id, ts_user_id: accepted.ts_user_id,
     mapping_revision: accepted.mapping_revision, resources: ENVS.map(environment => ({ environment,
       revision: "TEST_ONLY-empty-owner-cut", own_alpha_ids: [], member_portfolio_ids: [], roots: [] })),
-    grants: [{ grant_id: g.grant_id, binding_digest: grantBindingDigest(g), accepted,
-      targets: g.environments.flatMap(environment => selector.ids.map(id => ({ environment,
-        resource: { kind: selector.resource_kind, id }, revision: "TEST_ONLY-current-leg",
-        native_reference_digest: accessDigest(["TEST_ONLY-native", environment, id]),
-        valid_from_ms: f.context.now_ms - 100, valid_until_ms: f.context.now_ms + 5000 }))) }],
+    grants: versionedGrants,
   });
   const previous = f.context.relationsFor(g.subject_user_id);
   f.context.relationsFor = () => ({ ...previous, current_authority: current }); return current;
@@ -99,13 +113,20 @@ const unavailable = { status: 404, code: "EXECUTION_READ_NOT_AVAILABLE" };
 const unqualified = { status: 503, code: "EXECUTION_READ_PUBLICATION_NOT_QUALIFIED" };
 
 describe("ELP2-04 exact explicit Alpha/Portfolio reads", () => {
+  it.each(["missing", "expired"] as const)("refuses an explicit Alpha read when the final session lease is %s", async fault => {
+    const f = fixture("ALPHA"); grantExecutionAccounts(f); versioned(f);
+    f.context.actor_lease_until_ms = fault === "missing" ? undefined : f.context.now_ms;
+    await expect(read(f, "ALPHA")).rejects.toMatchObject(unavailable);
+  });
   describe.each(FAMILIES)("%s", family => {
     it.each(ENVS)("serves only the exact accepted %s population without owner/member/link", async env => {
-      const f = fixture(family, env); versioned(f);
+      const f = fixture(family, env); if (family === "ALPHA") grantExecutionAccounts(f, env); versioned(f);
       for (const minted of [await scope(f, family, env), await scope(f, family, env, target(family))]) {
         expect(minted).toMatchObject({ mode: "SCOPED_V2", wholePopulation: false, fieldPolicyRef: "TEST_ONLY-fields-r1" });
         expect(scopeReadPopulation(minted).allowedTuples).toEqual(population(family));
-        expect(scopeResources(minted)).toEqual([target(family)]);
+        expect(scopeResources(minted)).toEqual(family === "ALPHA"
+          ? [target(family), { kind: "ACCOUNT", id: OWN.account_id }, { kind: "ACCOUNT", id: PRIVATE.account_id }]
+          : [target(family)]);
         expect(scopeAllowsFullAccountingPopulation(minted)).toBe(false);
         expect(scopeAllowsFullAccountingPopulation(minted, PRIVATE.portfolio_id)).toBe(false);
       }
@@ -168,20 +189,33 @@ describe("ELP2-04 exact explicit Alpha/Portfolio reads", () => {
         action: "access.grant", delegable_actions: [action(family)], requires_ts_acceptance: false, ts_receipt: null };
       const child = { ...g, issued_by: issuer, parent_grant_id: parent.grant_id };
       f.context.active_principals = new Set([...f.context.active_principals, issuer]);
-      f.context.grants = [parent, child]; expect((await read(f, family)).records).toHaveLength(population(family).length);
+      if (family === "ALPHA") grantExecutionAccounts(f);
+      const accounts = f.context.grants.filter(candidate => candidate.action === "account.read");
+      f.context.grants = [parent, child, ...accounts]; expect((await read(f, family)).records).toHaveLength(population(family).length);
       if (fault === "parent-revoked") parent.revoked_at_ms = f.context.now_ms;
       if (fault === "issuer-suspended") f.context.active_principals = new Set([...f.context.active_principals].filter(id => id !== issuer));
       if (fault === "ancestor-deny") f.context.grants = [...f.context.grants, { ...parent, grant_id: "TEST_ONLY-parent-deny", effect: "DENY", delegable_actions: [] }];
       await expect(read(f, family)).rejects.toMatchObject(unavailable);
     });
-    it("a finite reviewed field policy remains mandatory, including source identity", async () => {
-      const f = fixture(family); versioned(f);
+    it("requires a reviewed field policy and never discloses a hidden source identity", async () => {
+      const f = fixture(family); if (family === "ALPHA") grantExecutionAccounts(f); versioned(f);
       const identity = family === "ALPHA" ? "order_id" : "portfolio_id";
       f.context.policy!.researcher_fields.fields = [identity];
       const value = await read(f, family);
       for (const record of value.records) expect(Object.keys(record.values)).toEqual([identity]);
       f.context.policy!.researcher_fields.fields = ["name"];
-      await expect(read(f, family)).rejects.toMatchObject({ status: 503, code: "EXECUTION_READ_FIELD_POLICY_PENDING" });
+      if (family === "ALPHA") {
+        // Dual-purpose execution reads may use the private source identity for
+        // a keyed opaque row ID, but cannot publish the ungranted field.
+        const redacted = await read(f, family);
+        expect(redacted.records).toHaveLength(population(family).length);
+        for (const record of redacted.records) {
+          expect(record.values).toEqual({});
+          expect(record.resource_id).toMatch(/^por1_[a-f0-9]{64}$/);
+        }
+      } else {
+        await expect(read(f, family)).rejects.toMatchObject({ status: 503, code: "EXECUTION_READ_FIELD_POLICY_PENDING" });
+      }
       f.context.policy!.researcher_fields.state = "PENDING";
       await expect(read(f, family)).rejects.toMatchObject({ status: 503, code: "EXECUTION_READ_FIELD_POLICY_PENDING" });
     });
@@ -200,7 +234,7 @@ describe("ELP2-04 exact explicit Alpha/Portfolio reads", () => {
       expect(f.upstream.relationForCataloguedOperation).not.toHaveBeenCalled();
     });
     it("revocation during final source await prevents delivery, including a prior cursor", async () => {
-      const f = fixture(family, "paper", true); versioned(f);
+      const f = fixture(family, "paper", true); if (family === "ALPHA") grantExecutionAccounts(f); versioned(f);
       const first = await read(f, family, "paper", { limit: 1 });
       let calls = 0;
       f.repository.snapshotMetadata.mockImplementation(async () => {
@@ -232,7 +266,8 @@ describe("ELP2-04 exact explicit Alpha/Portfolio reads", () => {
       if (kind === "RESTRICTED" || kind === "DISCOVERY") {
         const operation = managerRelationOperationByRoute("portfolios")!;
         await expect(f.scopes.authorize(f.principal, { environment: "paper", profileId: profile(f, "paper") }, {
-          action: g.action, dataset: { dataset_id: `relation:${operation.sourceId}:portfolios`, source_revision: f.snapshot.payloadDigest,
+          action: kind === "RESTRICTED" ? "portfolio.read_restricted" : "portfolio.discover_linked",
+          dataset: { dataset_id: `relation:${operation.sourceId}:portfolios`, source_revision: f.snapshot.payloadDigest,
             projection_generation: f.snapshot.projectionEpoch, catalogue_revision: f.snapshot.sourceCatalogueSha256, window: null },
         })).rejects.toMatchObject(unavailable);
       } else await expect(read(f, family)).rejects.toMatchObject(unavailable);
@@ -268,7 +303,8 @@ describe("ELP2-04 exact explicit Alpha/Portfolio reads", () => {
   it("actual Blotter filtering/paging never reveals peers or fabricated Cartesian tuples", async () => {
     const f = fixture("ALPHA"); versioned(f);
     const relation = f.snapshot.document.relations["manager.orders:orders"];
-    relation.items.push({ fields: { ...OWN, deployment_id: PEER.deployment_id, order_id: "4", status: "SECRET-CROSS", side: "SELL", venue: "SECRET-CROSS" } });
+    relation.items.push({ lineage: { workspace_id: f.principal.workspaceId, profile_id: profile(f, "paper"), source_contract_revision: "TEST_ONLY-contract" },
+      fields: { ...OWN, deployment_id: PEER.deployment_id, order_id: "4", status: "SECRET-CROSS", side: "SELL", venue: "SECRET-CROSS" } });
     const first = await f.orders();
     expect(first.source.data.next_cursor).toBeTruthy();
     const second = await f.orders({ cursor: first.source.data.next_cursor });

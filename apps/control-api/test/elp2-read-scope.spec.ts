@@ -232,6 +232,28 @@ describe.skipIf(!DATABASE_URL)("ELP2-04 TEST_ONLY scoped reads with real Postgre
     expect(await f.scopes.deliver(scope, async () => "TEST_ONLY-authorized-bytes")).toBe("TEST_ONLY-authorized-bytes");
   });
 
+  it("holds independent Account and Alpha purposes for a retained Account 360 until the PostgreSQL final fence", async () => {
+    const f = await fixture();
+    const accountGrant = await f.addGrant("account.read", {
+      kind: "EXPLICIT_RESOURCE_SET", resource_kind: "ACCOUNT", ids: [OWN_TUPLE.account_id],
+    });
+    const dataset = { dataset_id: "relation:manager.positions:positions_v2", source_revision: "TEST_ONLY-head",
+      projection_generation: "TEST_ONLY-generation", catalogue_revision: null, window: null };
+    vi.spyOn(f.trust, "readPublication").mockImplementation(async request => ({ ...f.trust.publication,
+      binding: structuredClone(request.binding) }));
+    const alphaScope = await f.scopes.authorize(f.p, BINDING, { action: "alpha.read", dataset });
+    const accountScope = await f.scopes.authorize(f.p, BINDING, { action: "account.read", dataset });
+    await expect(f.scopes.deliverRetainedProfileAccounts([alphaScope, accountScope], async () => "TEST_ONLY-scoped"))
+      .resolves.toBe("TEST_ONLY-scoped");
+    await expect(f.scopes.deliverRetainedProfileAccounts([alphaScope, accountScope, accountScope], async () => "never"))
+      .rejects.toMatchObject({ code: "EXECUTION_READ_SCOPE_REQUIRED" });
+    const result = f.scopes.deliverRetainedProfileAccounts([alphaScope, accountScope], async () => {
+      await new AccessRepository(ctx.pool).saveGrant({ ...accountGrant, revoked_at_ms: Date.now(), revision: next("account-revoked") });
+      return "TEST_ONLY-must-not-be-delivered";
+    });
+    await expect(result).rejects.toMatchObject({ code: "EXECUTION_READ_ACCESS_CHANGED", status: 409 });
+  });
+
   it("T04-11 raw stream stays legacy-only even with full business permission", async () => {
     const f = await fixture({ full: true });
     await expect(f.scopes.assertLegacyStream(f.p)).rejects.toMatchObject({ code: "EXECUTION_SCOPED_STREAM_NOT_COMMISSIONED", status: 503 });
@@ -423,7 +445,10 @@ describe.skipIf(!DATABASE_URL)("ELP2-04 TEST_ONLY scoped reads with real Postgre
     expect(scopeResources(scope)).toContainEqual(OWN_BINDING);
     expect(scopeResources(scope)).not.toContainEqual(PEER_BINDING);
     expect(scopeReadPopulation(scope).bindingPairs).toEqual([{ binding_id: OWN_BINDING.id, account_id: OWN_TUPLE.account_id }]);
-    const detached = scopeReadPopulation(scope); detached.bindingPairs.length = 0;
+    const detached = scopeReadPopulation(scope);
+    // Deliberately try to mutate the returned copy to prove the registered
+    // scope is detached, even though normal callers receive a readonly view.
+    (detached.bindingPairs as Array<(typeof detached.bindingPairs)[number]>).length = 0;
     expect(scopeReadPopulation(scope).bindingPairs).toHaveLength(1);
   });
 
@@ -891,6 +916,15 @@ describe.skipIf(!DATABASE_URL)("ELP2-04 TEST_ONLY scoped reads with real Postgre
       expect(outcome.error).toBeInstanceOf(ExecutionReadScopeError);
       expect(read).toHaveBeenCalledTimes(1);
     });
+
+  it("a PostgreSQL grant revoked during a failing read wins over its data-dependent error", async () => {
+    const f = await fixture(), scope = await f.authorize();
+    const sourceError = new Error("TEST_ONLY-protected-source-error");
+    await expect(f.scopes.deliver(scope, async () => { throw sourceError; })).rejects.toBe(sourceError);
+    const result = f.scopes.deliver(scope, async () => { await revoke(f); throw sourceError; });
+    await expect(result).rejects.toBeInstanceOf(ExecutionReadScopeError);
+    await expect(result).rejects.not.toBe(sourceError);
+  });
 
   it.each([
     ["publication", "grant-revoke"], ["publication", "session-generation"],

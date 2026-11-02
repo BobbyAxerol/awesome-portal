@@ -14,13 +14,13 @@ import { useNavigate } from "react-router-dom";
 
 import type { AlphaFleetQuery, BindingListQuery, ExecutionApi } from "../api/ports";
 import type {
-  AlphaFleetDeployment,
-  AlphaFleetItem,
+  AlphaResourceDeployment,
+  AlphaResourceItem,
   BranchCapability,
   ProfileEnvelope,
   QueryAnalytics,
 } from "../api/profileRead";
-import { readAlphaFleetItem, readQueryAnalytics, type BindingDetailRead } from "../api/profileRead";
+import { readAlphaResourceItem, readQueryAnalytics, type BindingDetailRead } from "../api/profileRead";
 import { formatExact } from "../formatExact";
 import { utcStamp } from "../time";
 import { pageOf } from "../api/profileRows";
@@ -1024,30 +1024,30 @@ function promotionStage(stage: string): PromotionStage {
   return SOURCE_STAGE[stage.toUpperCase()] ?? "PAPER_OBSERVATION";
 }
 
-function readiness(deployment: AlphaFleetDeployment): Readiness {
+function readiness(deployment: AlphaResourceDeployment): Readiness {
   const health = deployment.health.toUpperCase();
   if (health === "READY" || health === "BLOCKED" || health === "NOT_READY") return health;
-  return deployment.active && deployment.state.toUpperCase() === "ACTIVE" ? "READY" : "UNKNOWN";
+  return "UNKNOWN";
 }
 
 function unique(values: readonly string[]): readonly string[] {
   return Array.from(new Set(values.filter((value) => value.length > 0)));
 }
 
-function fleetKpis(item: AlphaFleetItem): Kpi[] {
+function fleetKpis(item: AlphaResourceItem): Kpi[] {
   return [
-    ...item.allocations.map((row) => ({ label: `allocation · ${row.currency}`, value: row.value, unit: row.currency })),
+    ...item.allocations.map((row) => ({ label: `allocation · ${row.currency}`, value: row.state === "UNAVAILABLE" ? null : row.value, unit: row.currency })),
     ...item.balances.flatMap((row) => [
-      { label: `balance total · ${row.currency}`, value: row.total, unit: row.currency },
-      { label: `balance free · ${row.currency}`, value: row.free, unit: row.currency },
-      { label: `balance locked · ${row.currency}`, value: row.locked, unit: row.currency },
+      { label: `balance total · ${row.currency}`, value: row.state === "UNAVAILABLE" ? null : row.total, unit: row.currency },
+      { label: `balance free · ${row.currency}`, value: row.state === "UNAVAILABLE" ? null : row.free, unit: row.currency },
+      { label: `balance locked · ${row.currency}`, value: row.state === "UNAVAILABLE" ? null : row.locked, unit: row.currency },
     ]),
-    ...item.positionPnl.map((row) => ({ label: `current position PnL · ${row.currency}`, value: row.net, unit: row.currency })),
-    ...item.exposure.map((row) => ({ label: `current exposure · ${row.currency}`, value: row.value, unit: row.currency })),
+    ...item.positionPnl.map((row) => ({ label: `current position PnL · ${row.currency}`, value: row.state === "UNAVAILABLE" ? null : row.net, unit: row.currency })),
+    ...item.exposure.map((row) => ({ label: `current exposure · ${row.currency}`, value: row.state === "UNAVAILABLE" ? null : row.value, unit: row.currency })),
   ];
 }
 
-function fleetVenues(item: AlphaFleetItem): VenueRow[] {
+function fleetVenues(item: AlphaResourceItem): VenueRow[] {
   const byVenue = new Map<string, VenueRow>();
   for (const deployment of item.deployments) {
     const current: VenueRow = byVenue.get(deployment.venue) ?? {
@@ -1063,7 +1063,7 @@ function fleetVenues(item: AlphaFleetItem): VenueRow[] {
   return Array.from(byVenue.values());
 }
 
-function fleetDeployments(item: AlphaFleetItem): DeploymentRow[] {
+function fleetDeployments(item: AlphaResourceItem): DeploymentRow[] {
   return item.deployments.map((deployment) => ({
     deploymentId: deployment.deploymentId,
     venue: deployment.venue,
@@ -1707,7 +1707,7 @@ export function AlphaThreeSixtyRichContainer({ api, alphaId }: { api: ExecutionA
   const navigate = useNavigate();
   const analytics = analyticsState.value;
   const resource = resourceState.value;
-  const item = resource ? readAlphaFleetItem(resource.objects.alpha) : null;
+  const item = resource?.schemaVersion === "execution.alpha-resource.v1" ? readAlphaResourceItem(resource.objects.alpha) : null;
   const sourceFacts = resourceFacts(resource, "ALPHA", alphaId);
   const viewFacts = combinedFacts(sourceFacts, analytics);
   const envelope: Envelope = resource
@@ -1753,7 +1753,7 @@ export function AlphaThreeSixtyRichContainer({ api, alphaId }: { api: ExecutionA
       owner={item?.owner ?? "owner not published"}
       envelope={envelope}
       venueOptions={["ALL", ...unique(item?.deployments.map((row) => row.venue) ?? [])]}
-      portfolioOptions={["ALL", ...unique(item?.portfolios.map((row) => row.portfolioId) ?? [])]}
+      portfolioOptions={["ALL", ...unique(item?.portfolios.flatMap((row) => row.portfolioId === null ? [] : [row.portfolioId]) ?? [])]}
       modeOptions={["ALL", ...unique(item?.deployments.map((row) => row.stage) ?? [])]}
       windowOptions={[...SCOPE_WINDOWS]}
       scope={scope}

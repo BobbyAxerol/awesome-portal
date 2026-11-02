@@ -1,7 +1,7 @@
 /**
  * Alpha 360 models: published rows in, the shapes the screen draws out.
  *
- * Pure functions over the readers' output (`readAlphaFleetItem`,
+ * Pure functions over the readers' output (`readAlphaResourceItem`,
  * `readProfileEnvelope`, `readFinancialChart`, `readObservedTimeline`, the
  * stage-drift reader). Nothing here fetches, and nothing here computes money:
  * a figure is a published decimal string or it is absent. In particular this
@@ -10,7 +10,7 @@
  */
 import type { FinancialChartPayload } from "../../../api/financialChart";
 import type { ObservedEntry, ObservedTimeline } from "../../../api/observedTimeline";
-import type { AlphaFleetDeployment, AlphaFleetItem } from "../../../api/profileRead";
+import type { AlphaResourceDeployment, AlphaResourceItem } from "../../../api/profileRead";
 import type { FlagKind } from "../../flagKinds";
 import type { StageDrift } from "../../../hifiInsight";
 import { readUtcEpochMs, type UtcEpochMs } from "../../../screenDataContract";
@@ -87,12 +87,12 @@ export function envOfStage(stage: SpineStageId | null): ExecEnv | null {
 }
 
 /** The stage the source names as current, or `null`. Never the highest stage present. */
-export const currentStageOf = (item: AlphaFleetItem | null): SpineStageId | null => (item ? spineStageOf(item.stage) : null);
+export const currentStageOf = (item: AlphaResourceItem | null): SpineStageId | null => (item ? spineStageOf(item.stage) : null);
 
 const ENV_ORDER: readonly ExecEnv[] = ["live", "paper", "sandbox"];
 
 /** Books this alpha has a deployment in, Real-funded first. */
-export function deployedEnvs(item: AlphaFleetItem | null): readonly ExecEnv[] {
+export function deployedEnvs(item: AlphaResourceItem | null): readonly ExecEnv[] {
   if (item === null) return [];
   const seen = new Set<ExecEnv>();
   for (const deployment of item.deployments) {
@@ -161,7 +161,7 @@ export function runtimeOfState(word: string | null): { kind: FlagKind; label: st
   return { kind: "unknown", label: humanize(word) };
 }
 
-const runtimeOf = (deployment: AlphaFleetDeployment): { kind: FlagKind; label: string } => runtimeOfState(deployment.state);
+const runtimeOf = (deployment: AlphaResourceDeployment): { kind: FlagKind; label: string } => runtimeOfState(deployment.state);
 
 /** Where a deployment's own workbench lives (V1 routes, kept). */
 export function deploymentHref(stage: SpineStageId | null, id: string): string {
@@ -181,27 +181,27 @@ export const UNNAMED_ALPHA = "Unnamed alpha";
 export const UNVERSIONED = "UNVERSIONED";
 
 /** The alpha's published name, or `null` while the producer publishes none (then the title is the alpha id). */
-export function alphaName(item: AlphaFleetItem | null): string | null {
+export function alphaName(item: AlphaResourceItem | null): string | null {
   return item === null || item.alphaLabel === UNNAMED_ALPHA ? null : item.alphaLabel;
 }
 
 /** The alpha's published version, or `null` while the producer publishes none. */
-export function alphaVersion(item: AlphaFleetItem | null): string | null {
+export function alphaVersion(item: AlphaResourceItem | null): string | null {
   return item === null || item.version === UNVERSIONED ? null : item.version;
 }
 
 /** The title: the published name, else the alpha id (never "Unnamed alpha"). */
-export function alphaTitle(item: AlphaFleetItem | null, alphaId: string): string {
+export function alphaTitle(item: AlphaResourceItem | null, alphaId: string): string {
   return alphaName(item) ?? item?.alphaId ?? alphaId;
 }
 
 /** `Name v3` when both are published; the title alone otherwise. */
-export function alphaTitleWithVersion(item: AlphaFleetItem | null, alphaId: string): string {
+export function alphaTitleWithVersion(item: AlphaResourceItem | null, alphaId: string): string {
   const version = alphaVersion(item);
   return version === null ? alphaTitle(item, alphaId) : `${alphaTitle(item, alphaId)} v${version}`;
 }
 
-export function deploymentRows(item: AlphaFleetItem | null): readonly DeploymentRow[] {
+export function deploymentRows(item: AlphaResourceItem | null): readonly DeploymentRow[] {
   if (item === null) return [];
   // `portfolio_name` on a deployment is null by contract (no source names an allocation's portfolio): the name is the portfolio
   // relation's own, joined on portfolio_id from the same body (`data.alpha.portfolios[]`).

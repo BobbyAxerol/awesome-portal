@@ -5,6 +5,10 @@ import { Pool } from "pg";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { OperationalHealthPublicationRepository, operationalHealthPublication,
   type OperationalHealthPublication, type OperationalHealthPublicationBinding } from "../src/operations/operational-health-publication";
+import { createOperationalQueueHealthSource, operationalHealthViewDigest } from "../src/operations/operational-health-source";
+import type { PostgresSnapshotReader } from "../src/query";
+import type { QueryResultRow } from "pg";
+import type { OperationalAuditCohort } from "../src/operations/current-operational-read";
 
 const migration = (name: string) => readFileSync(resolve(__dirname, "../migrations", name), "utf8").split("-- Down Migration")[0]!;
 const ws = "TEST_ONLY:health-workspace", source = "TEST_ONLY:health-source", epoch = "TEST_ONLY:health-epoch";
@@ -89,6 +93,28 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)("health ingress and exact queue 
       await admin.query(`DROP DATABASE IF EXISTS ${name} WITH (FORCE)`);
     } finally { await admin.end(); }
   }, 60_000);
+
+  it("pins the installed view descriptor and refuses drift in a real PostgreSQL transaction", async () => {
+    const client = await pool.connect();
+    try {
+      await client.query("BEGIN");
+      const snapshot = { rows: [], query: async (sql: string, values: readonly unknown[]) =>
+        (await client.query(sql, [...values])).rows, groupedCounts: async () => new Map() } as PostgresSnapshotReader<QueryResultRow>;
+      const pin = await operationalHealthViewDigest(snapshot);
+      const fingerprint = `sha256:${"a".repeat(64)}`;
+      const cohort = { fingerprint, scope: { fingerprint } } as OperationalAuditCohort;
+      const source = createOperationalQueueHealthSource({ authority: "PORTAL", source_ref: "TEST_ONLY:view",
+        schema_sha256: `sha256:${"b".repeat(64)}`, view_definition_sha256_v1: pin,
+        table: "execution_operation_queue_health_v2", delivery_axis: "delivery_state", display_axis: "display_state" });
+      const plan = source.select(cohort, {})!.plan;
+      await expect(plan.verify!(snapshot)).resolves.toBeUndefined();
+      await client.query("ALTER VIEW public.execution_operation_queue_health_v2 RENAME COLUMN delivery_state TO altered_delivery_state");
+      await expect(plan.verify!(snapshot)).rejects.toThrow();
+    } finally {
+      await client.query("ROLLBACK");
+      client.release();
+    }
+  });
 
   it("persists source axes separately; base population/status/result never change", async () => {
     const before = (await pool.query("SELECT * FROM execution_operation_queue_v2 ORDER BY operation_id")).rows;

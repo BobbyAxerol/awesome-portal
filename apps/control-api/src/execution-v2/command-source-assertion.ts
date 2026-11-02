@@ -3,7 +3,7 @@ import { types } from "node:util";
 import { decodeJwt, SignJWT } from "jose";
 import { z } from "zod";
 import type { AccessActor } from "./access.contract";
-import { CurrentHumanCandidate, type CurrentHumanBinding } from "./current-human-candidate";
+import { CurrentHumanCandidate, CurrentHumanLeaseError, type CurrentHumanBinding } from "./current-human-candidate";
 import { pmHttpRequestDigest } from "./pm-http-request-binding";
 import type { Pool } from "pg";
 import { CurrentOperationalReads } from "../operations/current-operational-read";
@@ -70,7 +70,7 @@ const registrationSchema = z.object({ workspace_id: text, environment: z.literal
 }).strict();
 export type CommandSourceAssertionSelection = z.infer<typeof registrationSchema>;
 type Issued = Awaited<ReturnType<CurrentHumanCandidate["issue"]>>;
-type Candidate = Pick<CurrentHumanCandidate, "issue" | "revalidateIssue"> & {
+type Candidate = Pick<CurrentHumanCandidate, "issueCommandStatus" | "acknowledgeCommandStatusIssue" | "revalidateIssue"> & {
   /** Real candidate must authenticate persisted terminal source custody plus
    * current actor/authority. Absence is fail-closed for older/test adapters. */
   canReplaceResolvedIssue?: (actor: AccessActor, binding: CurrentHumanBinding, issued: Issued) => Promise<boolean>;
@@ -80,6 +80,11 @@ type Delivery = { sequence: number; previous_lease_id: string | null; key: strin
   completion?: { response_digest: string; pending?: Promise<CommandSourceAssertionCompletionResponse> } };
 type Entry = { input: Omit<CommandStatusInput,"signal">; status_body: string; status_token?: string; fingerprint?:string; read_completed?:boolean; actor: AccessActor; selection: CommandSourceAssertionSelection; expires: number;
   retired: boolean; last?: Delivery; pending: number; issued: number };
+type PreparedStatus = { original_context:string; token:string;
+  prepared:Awaited<ReturnType<EdgeCurrentRequesterStatusPort["prepareStatus"]>>["prepared"] };
+type PreparedStatusInternal = PreparedStatus & { newlyRegistered:boolean };
+type PreparationWaiter = { resolve:(result:PreparedStatus)=>boolean; reject:(error:unknown)=>void };
+type SharedPreparation = { promise:Promise<PreparedStatusInternal>; waiters:Set<PreparationWaiter> };
 
 /** Pure internal server boundary: reject accessors/proxies before schema code.
  * This is not an HTTP registration operation and accepts no client actor. */
@@ -121,9 +126,12 @@ export class CommandSourceAssertionAuthority {
   private readonly reads: CurrentOperationalReads;
   private readonly store: CommandStore;
   private readonly calls = new Map<string,string>();
-  private readonly preparing = new Map<string,Promise<{
-    original_context:string; token:string; prepared:Awaited<ReturnType<EdgeCurrentRequesterStatusPort["prepareStatus"]>>["prepared"];
-  }>>();
+  private readonly preparing = new Map<string,SharedPreparation>();
+  /** A logical call may have only one in-flight preparation, even if a
+   * conflicting request has different bytes and therefore a different
+   * exact-retry key. Keep this reservation until authority I/O settles. */
+  private readonly preparingCalls = new Map<string,string>();
+  private preparationWaiters = 0;
   private readonly config: CommandStatusAuthorityConfig;
   constructor(private readonly pool: Pool, private readonly access: ExecutionAccessService,
     private readonly candidate: Candidate, config: CommandStatusAuthorityConfig, now = Date.now) {
@@ -161,16 +169,72 @@ export class CommandSourceAssertionAuthority {
   async prepare(input: CommandStatusInput, statusBody: string): Promise<{
     original_context: string; token: string; prepared: Awaited<ReturnType<EdgeCurrentRequesterStatusPort["prepareStatus"]>>["prepared"];
   }> {
+    if(input.signal.aborted)return fail("COMMAND_STATUS_ASSERTION_ABORTED",499);
+    if(this.stopped)return fail("COMMAND_STATUS_ASSERTION_STOPPED");
+    if(this.preparationWaiters>=this.limits.maximum_contexts*this.limits.maximum_requests_per_context)
+      return fail("COMMAND_STATUS_ASSERTION_CAPACITY_EXHAUSTED",429);
     const {signal:_signal,...raw}=input;
-    const key=accessDigest({input:raw,body:statusBody});
-    const prior=this.preparing.get(key); if(prior)return prior;
-    const pending=Promise.resolve().then(()=>this.prepareOne(input,statusBody));
-    this.preparing.set(key,pending);
-    try{return await pending;}finally{if(this.preparing.get(key)===pending)this.preparing.delete(key);}
+    const captured=structuredClone(raw);
+    const key=accessDigest({input:captured,body:statusBody});
+    const callKey=accessDigest({actor:captured.actor,original:captured.original,call:captured.call_digest});
+    const reserved=this.preparingCalls.get(callKey);
+    if(reserved!==undefined && reserved!==key)
+      return fail("COMMAND_STATUS_ASSERTION_DELIVERY_REQUEST_MISMATCH",409);
+    let pending=this.preparing.get(key);
+    if(!pending){
+      // Context capacity is checked after asynchronous authority I/O. Bound
+      // distinct in-flight preparations as well, so stalled authority reads
+      // cannot accumulate without limit before registration. Exact retries
+      // still join the existing promise at the bound.
+      if(this.preparing.size>=this.limits.maximum_contexts)
+        return fail("COMMAND_STATUS_ASSERTION_CAPACITY_EXHAUSTED",429);
+      // A shared preparation belongs to the original, not to whichever
+      // caller happened to arrive first. Per-caller cancellation below must
+      // neither cancel the shared operation nor mint another original.
+      const sharedInput={...captured,signal:new AbortController().signal};
+      pending={promise:Promise.resolve().then(()=>this.prepareOne(sharedInput,statusBody)),waiters:new Set()};
+      this.preparing.set(key,pending);
+      this.preparingCalls.set(callKey,key);
+      const shared=pending;
+      const clear=()=>{if(this.preparing.get(key)===shared){this.preparing.delete(key);
+        if(this.preparingCalls.get(callKey)===key)this.preparingCalls.delete(callKey);}};
+      // One listener per shared operation, not one per historical caller.
+      // Aborted callers are removed from this Set and can be reclaimed even
+      // if the authority read remains held for an arbitrarily long time.
+      void shared.promise.then(result=>{
+        clear();
+        const {newlyRegistered,...prepared}=result;
+        let delivered=false;
+        for(const waiter of shared.waiters)delivered=waiter.resolve(prepared)||delivered;
+        // A newly registered context whose token reached no waiter cannot
+        // have authorized a delivery. Reclaim only this exact in-memory
+        // reservation, never a previously delivered context or any custody.
+        if(newlyRegistered&&!delivered){
+          const context=prepared.original_context,entry=this.contexts.get(context);
+          if(entry&&!entry.last&&entry.pending===0&&entry.issued===0&&this.calls.get(callKey)===context){
+            this.contexts.delete(context);this.calls.delete(callKey);
+          }
+        }
+      },
+        error=>{clear();for(const waiter of shared.waiters)waiter.reject(error);});
+    }
+    const shared=pending;
+    this.preparationWaiters++;
+    return new Promise((resolve,reject)=>{
+      const signal=input.signal;
+      let settled=false,waiter:PreparationWaiter;
+      const cleanup=()=>{if(settled)return false;settled=true;signal.removeEventListener("abort",aborted);
+        shared.waiters.delete(waiter);this.preparationWaiters--;return true;};
+      const aborted=()=>{if(cleanup())reject(new CommandSourceAssertionError("COMMAND_STATUS_ASSERTION_ABORTED",499));};
+      waiter={resolve:result=>{if(signal.aborted){aborted();return false;}
+          if(cleanup()){resolve(result);return true;}return false;},
+        reject:error=>{if(cleanup())reject(error);}};
+      shared.waiters.add(waiter);
+      signal.addEventListener("abort",aborted,{once:true});
+      if(signal.aborted){aborted();return;}
+    });
   }
-  private async prepareOne(input:CommandStatusInput,statusBody:string):Promise<{
-    original_context:string;token:string;prepared:Awaited<ReturnType<EdgeCurrentRequesterStatusPort["prepareStatus"]>>["prepared"];
-  }> {
+  private async prepareOne(input:CommandStatusInput,statusBody:string):Promise<PreparedStatusInternal> {
     if(input.signal.aborted) return fail("COMMAND_STATUS_ASSERTION_ABORTED",499);
     const {signal:_signal,...copy}=input, captured=structuredClone(copy);
     const current=await this.authorize(captured);
@@ -181,17 +245,20 @@ export class CommandSourceAssertionAuthority {
     catch { return fail("COMMAND_STATUS_ASSERTION_REQUEST_INVALID",400); }
     const callKey=accessDigest({actor:captured.actor,original:captured.original,call:captured.call_digest});
     this.prune(this.time());
-    let context=this.calls.get(callKey), entry=context?this.contexts.get(context):undefined;
+    let context=this.calls.get(callKey), entry=context?this.contexts.get(context):undefined, newlyRegistered=false;
     if(entry && !entry.read_completed && !entry.last?.completed) {
       this.current(entry);
-      if(entry.status_body!==statusBody || !entry.status_token) return fail("COMMAND_STATUS_ASSERTION_DELIVERY_REQUEST_MISMATCH",409);
+      if(entry.status_body!==statusBody || accessDigest(entry.input)!==accessDigest(captured) || !entry.status_token)
+        return fail("COMMAND_STATUS_ASSERTION_DELIVERY_REQUEST_MISMATCH",409);
       if(current.fingerprint!==entry.fingerprint)return fail("COMMAND_STATUS_ASSERTION_AUTHORITY_CHANGED",409);
-      await this.authorize(entry.input); this.current(entry);
+      const confirmed=await this.authorize(entry.input); this.current(entry);
+      if(confirmed.fingerprint!==entry.fingerprint)return fail("COMMAND_STATUS_ASSERTION_AUTHORITY_CHANGED",409);
     } else {
       const registered=this.register(captured.actor,{workspace_id:captured.intent.workspace_id,environment:"paper",
         workload_id:this.config.workload_id,receiver_id:captured.original.gateway_ref,
         binding_digest:accessDigest({original:captured.original,call:captured.call_digest}),paths:[COMMAND_STATUS_PM_PATH]},captured,statusBody);
-      context=registered.original_context; entry=this.contexts.get(context)!;
+      context=registered.original_context; entry=this.contexts.get(context)!;newlyRegistered=true;
+      try {
       const now=this.time(), expires=Math.min(now+this.config.ttl_ms,current.valid_until_ms,captured.authorization.idempotency_retained_until_ms);
       const requestDigest=pmHttpRequestDigest({method:"POST",raw_path:Buffer.from(COMMAND_STATUS_EDGE_PATH),
         query_string:Buffer.alloc(0),body:Buffer.from(statusBody)},{request_bytes:131_072});
@@ -211,9 +278,17 @@ export class CommandSourceAssertionAuthority {
       const final=await this.authorize(captured); this.current(entry);
       if(final.fingerprint!==current.fingerprint) return fail("COMMAND_STATUS_ASSERTION_AUTHORITY_CHANGED",409);
       this.calls.set(callKey,context);
+      } catch(error) {
+        // The context and signed status token have not escaped prepare yet.
+        // Free only this unissued reservation; an issued/ambiguous delivery
+        // must retain the same original custody and can never be discarded.
+        if(this.contexts.get(context)===entry && !entry.last && entry.pending===0)
+          this.contexts.delete(context);
+        throw error;
+      }
     }
     const claims=decodeJwt(entry!.status_token!);
-    return {original_context:context!,token:entry!.status_token!,prepared:{
+    return {original_context:context!,token:entry!.status_token!,newlyRegistered,prepared:{
       gateway_ref:captured.original.gateway_ref,action:"STATUS",authority:"CURRENT_HUMAN",actor_id:captured.actor.user_id,
       call_digest:captured.call_digest,delivered_request_digest:String(claims.request_digest),assertion_ref:context!,
       issued_at_ms:Number(claims.iat)*1000,expires_at_ms:Number(claims.exp)*1000}};
@@ -221,17 +296,20 @@ export class CommandSourceAssertionAuthority {
   /** Fresh source AND Core/session fence before and after the held status I/O.
    * The issuer-bound token cannot be swapped across principals or originals. */
   async check(context:string,input:CommandStatusInput):Promise<void> {
+    if(input.signal.aborted)return fail("COMMAND_STATUS_ASSERTION_ABORTED",499);
     const entry=this.contexts.get(context); this.current(entry);
     const {signal:_signal,...raw}=input;
     if(accessDigest(raw)!==accessDigest(entry!.input)) return fail("COMMAND_STATUS_ASSERTION_BINDING_MISMATCH",403);
     const current=await this.authorize(entry!.input); this.current(entry);
     if(current.fingerprint!==entry!.fingerprint)return fail("COMMAND_STATUS_ASSERTION_AUTHORITY_CHANGED",409);
+    if(input.signal.aborted)return fail("COMMAND_STATUS_ASSERTION_ABORTED",499);
   }
   /** A pinned Edge response may disclose already retained full terminal
    * custody without doing a new PM POST. Complete ONLY that local read; never
    * invent a PM delivery/lease ACK or erase an unresolved actual PM issuance. */
   async acknowledgeRetainedRead(context:string,input:CommandStatusInput):Promise<void> {
     await this.check(context,input);
+    if(input.signal.aborted)return fail("COMMAND_STATUS_ASSERTION_ABORTED",499);
     const entry=this.contexts.get(context);this.current(entry);
     if(entry!.last && !entry!.last.completed)return fail("COMMAND_STATUS_ASSERTION_DELIVERY_NOT_COMPLETED",409);
     entry!.read_completed=true;
@@ -310,7 +388,27 @@ export class CommandSourceAssertionAuthority {
       entry!.issued++; entry!.pending++; this.pending++;
       const pending = Promise.resolve().then(async () => {
         this.current(entry);
-        const issued: Issued = await this.candidate.issue({ ...entry!.actor }, { ...binding });
+        let issued: Issued;
+        try { issued=await this.candidate.issueCommandStatus({ ...entry!.actor }, { ...binding }); }
+        catch(error) {
+          if(error instanceof CurrentHumanLeaseError && ["CURRENT_HUMAN_COMMAND_STATUS_RECOVERY_REQUIRED",
+            "CURRENT_HUMAN_CAPACITY_EXHAUSTED","CURRENT_HUMAN_DRAINING"].includes(error.code)) {
+            // These exact writer guards run under the DB authority lock
+            // BEFORE the lease INSERT. A later retry may proceed after the
+            // underlying custody/capacity/drain condition is resolved;
+            // ambiguous failures keep their existing delivery/promise.
+            if(entry!.last===delivery){
+              // Only the writer's proven pre-INSERT refusals can return the
+              // reservation. Otherwise repeated recovery polling could use
+              // the entire delivery quota without having issued any lease.
+              entry!.issued--;
+              entry!.last=undefined;
+            }
+            if(error.code==="CURRENT_HUMAN_COMMAND_STATUS_RECOVERY_REQUIRED")
+              return fail("COMMAND_STATUS_ASSERTION_CUSTODY_RECOVERY_REQUIRED",409);
+          }
+          throw error;
+        }
         const own = decodeJwt(issued.token), issuedAt = Number(own.iat) * 1000;
         if (own.jti !== issued.lease_id || own.sub !== entry!.actor.user_id || own.sid !== entry!.actor.session_id ||
           own.session_revision !== entry!.actor.session_generation || own.purpose !== "pma.identity.v1" ||
@@ -402,6 +500,17 @@ export class CommandSourceAssertionAuthority {
         this.current(entry);
         if (entry!.last !== delivery) return fail("COMMAND_STATUS_ASSERTION_COMPLETION_MISMATCH", 409);
         if (!terminal) return fail("COMMAND_STATUS_ASSERTION_TERMINAL_NOT_CONFIRMED", 409);
+        if(this.pending>=16)return fail("COMMAND_STATUS_ASSERTION_CAPACITY_EXHAUSTED",429);
+        entry!.pending++;this.pending++;
+        try {
+          // Persist the exact Edge ACK under the same authority lock as the
+          // source-terminal recheck. A restart may not infer this from phase.
+          if(await this.candidate.acknowledgeCommandStatusIssue({ ...entry!.actor },delivery.binding,
+            this.issued(response),request.response_digest)!==true)
+            return fail("COMMAND_STATUS_ASSERTION_TERMINAL_NOT_CONFIRMED",409);
+        } finally {entry!.pending--;this.pending--;this.prune(this.time());}
+        this.current(entry);
+        if(entry!.last!==delivery)return fail("COMMAND_STATUS_ASSERTION_COMPLETION_MISMATCH",409);
         delivery.completed = true;
         return commandSourceAssertionCompletionResponse.parse({
           schema_version: "portal.execution.command-source-assertion-completion-response.v1",
@@ -436,7 +545,7 @@ export class CommandSourceAssertionAuthority {
   release(token: string): void { const entry = this.contexts.get(token); if (entry) entry.retired = true; this.prune(this.time()); }
   shutdown(): void { this.stopped = true; for (const entry of this.contexts.values()) entry.retired = true; this.prune(this.time()); }
   snapshot() { return Object.freeze({ contexts: this.contexts.size,
-    pending: this.pending, stopped: this.stopped }); }
+    pending: this.pending, preparing: this.preparing.size, preparation_waiters: this.preparationWaiters, stopped: this.stopped }); }
   private time(): number { const now = this.now(); if (!Number.isSafeInteger(now) || now < 0) return fail("COMMAND_STATUS_ASSERTION_CLOCK_INVALID"); return now; }
   private current(entry: Entry | undefined): void {
     if (this.stopped || !entry || entry.retired || this.time() >= entry.expires)

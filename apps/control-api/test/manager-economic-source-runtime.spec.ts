@@ -127,6 +127,8 @@ describe("owning economic source: actual dataset and series path", () => {
     ["foreign binding", (m: ReturnType<typeof mapped>) => { m.binding_digest = HASH; }, "ECONOMIC_SOURCE_BINDING_MISMATCH"],
     ["foreign window", (m: ReturnType<typeof mapped>) => { Object.assign(m.selection.expectation, { window: { from_ms: T - 1, to_ms: T } }); }, "ECONOMIC_SOURCE_BINDING_MISMATCH"],
     ["foreign recorded cut", (m: ReturnType<typeof mapped>) => { m.selection.expectation.cut.recorded_through_ms++; }, "ECONOMIC_SOURCE_BINDING_MISMATCH"],
+    ["foreign expectation currency", (m: ReturnType<typeof mapped>) => { m.selection.expectation.currency = "USD"; }, "ECONOMIC_SOURCE_BINDING_MISMATCH"],
+    ["foreign source-row currency", (m: ReturnType<typeof mapped>) => { m.rows[0].currency = "USD"; }, "ECONOMIC_COMPARABILITY_MISMATCH"],
     ["foreign valuation revision", (m: ReturnType<typeof mapped>) => { m.rows[2].valuation.valuation_revision = "TEST_ONLY:other-v"; }, "ECONOMIC_COMPARABILITY_MISMATCH"],
     ["foreign fact", (m: ReturnType<typeof mapped>) => { m.rows[0].portal_fact_id = "TEST_ONLY:foreign"; }, "ECONOMIC_SOURCE_FACTS_NOT_BOUND"],
     ["unmapped owner", (m: ReturnType<typeof mapped>) => { m.rows[0].ownership.economic_account_ref.ref = "TEST_ONLY:guessed-account"; }, "ECONOMIC_SOURCE_FACTS_NOT_BOUND"],

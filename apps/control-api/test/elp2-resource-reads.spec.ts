@@ -9,6 +9,9 @@ import { ExecutionReadScopeError } from "../src/execution-v2/read-scope";
 
 function fixture(full = false, legacy = false) {
   const f = productReadFixture({ full, legacy });
+  // The combined final authority confirmation requires a live actor lease.
+  // This is a bounded TEST_ONLY lease, not a source grant or a production pin.
+  f.context.actor_lease_until_ms = f.context.now_ms + 3_600_000;
   const source = f.snapshot.document.relations["manager.orders:orders"];
   const relation = (name: string, fields: Record<string, ProjectionScalar>[]): ProjectionRelation => ({ ...source,
     relation: name, items: fields.map(value => ({ fields: value, lineage: source.items[0].lineage })) });
@@ -31,6 +34,13 @@ function fixture(full = false, legacy = false) {
 }
 
 describe("ELP2-04 Resource360 raw graph authorization", () => {
+  it("refuses a result when the final confirmed actor lease is absent", async () => {
+    const f = fixture();
+    delete f.context.actor_lease_until_ms;
+    await expect(f.read("ALPHA", OWN.alpha_id)).rejects.toMatchObject({
+      code: "EXECUTION_READ_NOT_AVAILABLE", status: 404,
+    });
+  });
   it("ALPHA uses qualified strategy mapping and scopes before children/panels", async () => {
     const f = fixture(); const result = await f.read("ALPHA", OWN.alpha_id);
     expect(result.schema_version).toBe("execution.alpha-resource.v2");
@@ -57,6 +67,18 @@ describe("ELP2-04 Resource360 raw graph authorization", () => {
     expect(result.data.portfolio.holdings_count).toBeUndefined();
     expect(result.data.portfolio.allocation_by_currency).toBeUndefined();
     expect(JSON.stringify(result)).not.toMatch(/9000000|9999999|Peer Alpha|dep-peer|shared-account.*1000000/);
+  });
+  it.each([false, true])("does not expose shared broker custody from Account scope (full=%s)", async full => {
+    const f = fixture(full);
+    const accounts = f.snapshot.document.relations["manager.accounts:accounts"];
+    accounts.items.push({ ...accounts.items[0], fields: { ...accounts.items[0].fields, account_id: PEER.account_id } });
+    if (!full) {
+      await expect(f.read("ACCOUNT", OWN.account_id)).rejects.toMatchObject({ code: "EXECUTION_READ_NOT_AVAILABLE", status: 404 });
+      return;
+    }
+    const result = await f.read("ACCOUNT", OWN.account_id);
+    expect(JSON.stringify(result)).not.toMatch(/5555555|HIDDEN_CUSTODY/);
+    expect(scopedResourceResponseSchemas.ACCOUNT.safeParse(result).success).toBe(true);
   });
   it("full manager still gets scoped raw peer facts, without native-custody totals", async () => {
     const f = fixture(true); const result = await f.read("PORTFOLIO", OWN.portfolio_id);

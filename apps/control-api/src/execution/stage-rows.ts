@@ -10,6 +10,7 @@
  * internal figure.
  */
 import { canonicalDecimal, relationBlocks } from "./canary-envelope-facts";
+import { managerTimestamp } from "./manager-timestamp";
 import { exactCurrencySum, openOrders, ProfileScreenSource, ScreenRecord } from "./profile-screen-composer";
 import { available, Fact, missing } from "./stage-facts";
 
@@ -21,9 +22,8 @@ const WORD = /^[A-Za-z][A-Za-z0-9_.-]{0,63}$/;
 const IDENTIFIER = /^[A-Za-z0-9][A-Za-z0-9._:@+-]{0,190}$/;
 
 const isoOf = (value: unknown): string | null => {
-  if (typeof value !== "string" || value.length === 0) return null;
-  const at = Date.parse(value);
-  return Number.isFinite(at) ? new Date(at).toISOString() : null;
+  const timestamp = managerTimestamp(value);
+  return timestamp ? new Date(timestamp.milliseconds).toISOString() : null;
 };
 const decimalOf = (value: unknown): string | null => canonicalDecimal(value);
 const nonNegative = (value: unknown): string | null => {

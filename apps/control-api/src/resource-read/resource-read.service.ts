@@ -27,6 +27,7 @@ import { deploymentFinancials, identityAbsences } from "./scoped-summary-facts";
 import { scopedResourceResponseSchemas } from "./scoped-resource.contract";
 import { scopedPortfolioNames } from "./scoped-portfolio-names";
 import { ManagerCurrentAccounts } from "../execution-v2/manager-current-accounts";
+import { accountComparisonAvailability, exactFinancialDecimal } from "../execution/account-comparison-availability";
 
 export const RESOURCE_KINDS = ["ALPHA", "PORTFOLIO", "ACCOUNT", "BINDING"] as const;
 export type ResourceKind = (typeof RESOURCE_KINDS)[number];
@@ -138,6 +139,11 @@ interface DeploymentLink {
   readonly tupleUnique: boolean;
 }
 
+interface BrokerAccountBinding {
+  readonly externalAccountRef: string;
+  readonly venue: string;
+}
+
 interface ResourceScope {
   readonly kind: ResourceKind;
   readonly resourceId: string;
@@ -146,7 +152,9 @@ interface ResourceScope {
   readonly accountIds: Set<string>;
   readonly portfolioIds: Set<string>;
   readonly bindingIds: Set<string>;
-  readonly externalAccountRefs: Set<string>;
+  readonly brokerAccountBindings: BrokerAccountBinding[];
+  /** Why an account-to-broker reference cannot be treated as a complete join. */
+  readonly externalAccountRefIssue: string | null;
   readonly deployments: readonly DeploymentLink[];
 }
 
@@ -218,6 +226,10 @@ export class ResourceReadService {
 
   private async readWithAuthority(principal: ResourceReadPrincipal, kind: ResourceKind, resourceId: string,
     loaded: readonly LoadedProfile[], requestedEnvironment?: ResourceEnvironment): Promise<Record<string, unknown>> {
+    const actorKey = () => JSON.stringify([principal.user.userId, principal.user.role, principal.session.userId,
+      principal.session.sessionId, principal.session.sessionVersion, principal.workspaceId,
+      principal.viewerWorkspaceId ?? principal.workspaceId]);
+    const originalActor = actorKey();
     if (loaded.every(profile => !profile.profileId) && await this.readScopes!.selectionMode(principal) === "LEGACY_COMPATIBILITY") {
       // Compatibility for an unconfigured local projection is a NO-DATA
       // shell, never a business read authorized by a routing probe.
@@ -305,8 +317,17 @@ export class ResourceReadService {
         throw new ExecutionReadScopeError("EXECUTION_READ_FIELD_POLICY_PENDING", 503);
       return response;
     };
-    // Each actual profile is freshly fenced after the entire composition has
-    // awaited. Neither another profile nor an old template is an entitlement.
+    // Retain every original scoped profile to one shared final authority
+    // confirmation. Nested single-profile checks can miss a revoke of an
+    // earlier profile while a later profile is being revalidated.
+    if (checks.every(check => check.scope.mode === "SCOPED_V2"))
+      return this.readScopes!.deliverRetainedResource(checks.map(check => check.scope), kind, resourceId, read, () => {
+        if (actorKey() !== originalActor) throw new ExecutionReadScopeError("EXECUTION_READ_ACCESS_CHANGED", 409);
+      });
+    if (checks.some(check => check.scope.mode !== "LEGACY_COMPATIBILITY"))
+      throw new ExecutionReadScopeError("EXECUTION_READ_ACCESS_CHANGED", 409);
+    // Preserve the legacy compatibility path and its existing checks; do not
+    // combine a legacy result with a scoped V2 entitlement.
     let delivery = read;
     for (const check of checks) {
       const next = delivery;
@@ -581,13 +602,17 @@ function composeResourceResponse(input: ResourceResponseInput): Record<string, u
     page: selection.page,
     truncated: selection.truncated,
   }));
-  const capabilityRows = [...merged.entries()].map(([alias, selection]) => ({
+  const comparisonAvailability = kind === "ACCOUNT" && found.length > 0 && !scoped
+    ? accountComparisonAvailability(qualifiedAccountInputs(merged, ["accounts", "account_balances", "broker_sync"]),
+      merged.get("account_balances")?.rows.length ?? 0, derived.differences?.length ?? 0) : null;
+  const capabilityRows = [...[...merged.entries()].map(([alias, selection]) => ({
     capability_id: `resource.${kind.toLowerCase()}.${alias}`,
     state: selection.state,
     relations: [],
     reason_code: selection.reasonCode,
     retryable: selection.state === "UNAVAILABLE",
-  }));
+  })), ...(comparisonAvailability ? [{ capability_id: "resource.account.differences", ...comparisonAvailability,
+    relations: ["derived.differences"], retryable: false }] : [])];
   const resourceResolution = resolutionSummary(selections);
   const unavailableBranches = [
     ...resourceResolution.filter((entry) => entry.state !== "FOUND"),
@@ -759,8 +784,10 @@ function resolveScope(
   const parentRows = parentRelation.items.map((row) => row.fields).filter((row) => rowInEnvironment(row, environment));
   const matches = parentRows.filter((row) => parentMatches(kind, row, resourceId));
   if (matches.length === 0) {
-    return unresolved(parentRelation.completeness === "COMPLETE" ? "EMPTY" : "PARTIAL",
-      parentRelation.completeness === "COMPLETE" ? `EDS04_${kind}_NOT_FOUND` : `EDS04_${kind}_OUTSIDE_RETAINED_WINDOW`);
+    const complete = parentRelation.completeness === "COMPLETE" && parentRelation.window?.truncated !== true &&
+      Object.values(parentRelation.lineage_rejects ?? {}).every((count) => count === 0);
+    return unresolved(complete ? "EMPTY" : "PARTIAL",
+      complete ? `EDS04_${kind}_NOT_FOUND` : `EDS04_${kind}_OUTSIDE_RETAINED_WINDOW`);
   }
   const unique = dedupeParents(kind, matches);
   if (unique.length !== 1) return unresolved("PARTIAL", `EDS04_${kind}_ID_DUPLICATE`);
@@ -772,7 +799,8 @@ function resolveScope(
   const scope: ResourceScope = {
     kind, resourceId,
     strategyIds: new Set<string>(), deploymentIds: new Set<string>(), accountIds: new Set<string>(),
-    portfolioIds: new Set<string>(), bindingIds: new Set<string>(), externalAccountRefs: new Set<string>(), deployments: [],
+    portfolioIds: new Set<string>(), bindingIds: new Set<string>(), brokerAccountBindings: [],
+    externalAccountRefIssue: null, deployments: [],
   };
   if (kind === "ALPHA") {
     const strategyId = text(parent, "strategy_id");
@@ -796,8 +824,16 @@ function resolveScope(
 
   const deploymentRelation = relation(snapshot, "deployments");
   const allocationRelation = relation(snapshot, "portfolio_allocations");
-  const selectedDeployments = deploymentRelation?.availability === "AVAILABLE"
-    ? deploymentRelation.items.map((row) => row.fields).filter((row) => rowInEnvironment(row, environment)) : [];
+  const deploymentFacts = deploymentRelation?.availability === "AVAILABLE"
+    ? deploymentRelation.items.map((row) => row.fields) : [];
+  const selectedDeployments = deploymentFacts.filter((row) => rowInEnvironment(row, environment));
+  // An invalid or absent mode cannot prove that a potential identity
+  // collision belongs to another environment. Keep it in the census even
+  // though it cannot itself be rendered as a qualified deployment.
+  const possibleDeployments = deploymentFacts.filter((row) => {
+    const mode = knownResourceMode(row);
+    return mode === null || mode === environment;
+  });
   const selectedAllocations = allocationRelation?.availability === "AVAILABLE"
     ? allocationRelation.items.map((row) => row.fields).filter((row) => rowInEnvironment(row, environment)) : [];
   if (!deploymentRelation || deploymentRelation.availability === "UNAVAILABLE") {
@@ -814,11 +850,24 @@ function resolveScope(
     // Portfolio allocations are the primary membership proof.  A direct
     // deployment FK is an exact fallback only when allocations are not
     // projected at all; it never authorises a transaction by portfolio alone.
+    const deploymentsById = new Map<string, Record<string, ProjectionScalar>[]>();
+    for (const row of selectedDeployments) {
+      const id = text(row, "deployment_id");
+      if (id) {
+        const group = deploymentsById.get(id);
+        if (group) group.push(row); else deploymentsById.set(id, [row]);
+      }
+    }
     const allocationDeploymentIds = new Set(selectedAllocations
       .filter((row) => scope.portfolioIds.has(text(row, "portfolio_id") ?? ""))
       .flatMap((row) => {
         const id = text(row, "deployment_id");
         if (!id) { warnings.push("EDS04_PORTFOLIO_ALLOCATION_DEPLOYMENT_ID_MISSING"); return []; }
+        const candidates = deploymentsById.get(id) ?? [];
+        if (candidates.length !== 1 || !allocationMatchesDeployment(row, candidates[0]!)) {
+          warnings.push("EDS04_ALLOCATION_DEPLOYMENT_SCOPE_MISMATCH");
+          return [];
+        }
         return [id];
       }));
     if (allocationRelation?.availability === "AVAILABLE") {
@@ -833,7 +882,13 @@ function resolveScope(
   } else {
     members = selectedDeployments.filter((row) => scope.accountIds.has(text(row, "account_id") ?? ""));
   }
-  const links = deploymentLinks(members, environment, warnings);
+  // Uniqueness must be checked over the whole visible projection, not only
+  // the members selected for this parent. Otherwise another account's row
+  // with the same deployment ID can make a transaction ambiguous.
+  const deploymentCensusComplete = deploymentRelation?.availability === "AVAILABLE" &&
+    deploymentRelation.completeness === "COMPLETE" && deploymentRelation.window?.truncated !== true &&
+    Object.values(deploymentRelation.lineage_rejects ?? {}).every((count) => count === 0);
+  const links = deploymentLinks(members, environment, warnings, possibleDeployments, deploymentCensusComplete);
   for (const link of links) {
     scope.deploymentIds.add(link.deploymentId);
     scope.strategyIds.add(link.strategyId);
@@ -844,16 +899,46 @@ function resolveScope(
   // resource even when no allocation/deployment row exists.
   if (kind === "PORTFOLIO") scope.portfolioIds.add(resourceId);
   const accountRelation = relation(snapshot, "accounts");
+  let externalAccountRefIssue: string | null = null;
   if (!accountRelation || accountRelation.availability === "UNAVAILABLE") {
     warnings.push(accountRelation?.reason_code ?? "EDS04_ACCOUNTS_RELATION_UNAVAILABLE");
+    externalAccountRefIssue = "EDS04_EXTERNAL_ACCOUNT_REF_UNAVAILABLE";
+  } else if (accountRelation.completeness !== "COMPLETE" || accountRelation.window?.truncated === true ||
+    Object.values(accountRelation.lineage_rejects ?? {}).some((count) => count !== 0)) {
+    // A first-page match cannot prove the same broker reference isn't owned
+    // by an unseen account. Do not make a partial census look like a join.
+    externalAccountRefIssue = "EDS04_EXTERNAL_ACCOUNT_CENSUS_INCOMPLETE";
   } else {
-    for (const row of accountRelation.items.map((item) => item.fields)) {
-      if (!rowInEnvironment(row, environment) || !scope.accountIds.has(text(row, "account_id") ?? "")) continue;
+    const accountFacts = accountRelation.items.map((item) => item.fields);
+    const rows = accountFacts.filter((row) => rowInEnvironment(row, environment));
+    const possibleAccounts = accountFacts.filter((row) => {
+      const mode = knownResourceMode(row);
+      return mode === null || mode === environment;
+    });
+    const identityCounts = new Map<string, number>();
+    for (const row of possibleAccounts) {
+      const key = JSON.stringify([nonBlankFact(row, "external_account_ref"), nonBlankFact(row, "venue")]);
+      identityCounts.set(key, (identityCounts.get(key) ?? 0) + 1);
+    }
+    for (const row of rows) {
+      if (!scope.accountIds.has(text(row, "account_id") ?? "")) continue;
       const external = text(row, "external_account_ref");
-      if (external) scope.externalAccountRefs.add(external);
+      const venue = text(row, "venue");
+      const mode = text(row, "mode");
+      if (!external?.trim() || !venue?.trim() || !mode?.trim() || mode.toLowerCase() !== environment) {
+        externalAccountRefIssue ??= "EDS04_EXTERNAL_ACCOUNT_REF_UNAVAILABLE";
+      } else if ([[external, venue], [null, venue], [external, null], [null, null]]
+        .reduce((count, key) => count + (identityCounts.get(JSON.stringify(key)) ?? 0), 0) !== 1) {
+        // Missing identities count as possible owners, without a quadratic
+        // scan of every account for each resource account.
+        externalAccountRefIssue = "EDS04_EXTERNAL_ACCOUNT_REF_AMBIGUOUS";
+      } else {
+        scope.brokerAccountBindings.push({ externalAccountRef: external, venue });
+      }
     }
   }
-  return { state: "FOUND", reasonCode: warnings[0] ?? null, parent, scope: { ...scope, deployments: links }, warnings };
+  return { state: "FOUND", reasonCode: warnings[0] ?? null, parent,
+    scope: { ...scope, externalAccountRefIssue, deployments: links }, warnings };
 }
 
 function unresolved(state: ScopeResolution["state"], reasonCode: string): ScopeResolution {
@@ -884,11 +969,21 @@ function deploymentLinks(
   rows: readonly Record<string, ProjectionScalar>[],
   environment: ResourceEnvironment,
   warnings: string[],
+  visibleDeployments: readonly Record<string, ProjectionScalar>[],
+  censusComplete: boolean,
 ): readonly DeploymentLink[] {
+  const idCounts = new Map<string, number>();
+  for (const row of visibleDeployments) {
+    const id = text(row, "deployment_id");
+    if (id) idCounts.set(id, (idCounts.get(id) ?? 0) + 1);
+  }
   const counts = new Map<string, number>();
-  for (const row of rows) {
-    const tuple = tupleKey(row, environment);
-    if (tuple) counts.set(tuple, (counts.get(tuple) ?? 0) + 1);
+  // Tuple fallback can identify a transaction only if the tuple is unique in
+  // the complete visible environment, not merely inside this portfolio.
+  for (const row of visibleDeployments) {
+    const signature = JSON.stringify([nonBlankFact(row, "strategy_id"), nonBlankFact(row, "account_id"),
+      knownResourceMode(row), nonBlankFact(row, "venue")]);
+    counts.set(signature, (counts.get(signature) ?? 0) + 1);
   }
   const byId = new Map<string, DeploymentLink>();
   for (const row of rows) {
@@ -897,18 +992,29 @@ function deploymentLinks(
     const accountId = text(row, "account_id");
     const venue = text(row, "venue");
     const mode = text(row, "mode");
-    if (!deploymentId || !strategyId || !accountId || !venue || mode !== environment) {
+    if (!deploymentId || !strategyId || !accountId || !venue || mode?.toLowerCase() !== environment) {
       warnings.push("EDS04_DEPLOYMENT_SCOPE_INCOMPLETE");
+      continue;
+    }
+    if ((idCounts.get(deploymentId) ?? 0) !== 1) {
+      warnings.push("EDS04_DEPLOYMENT_ID_DUPLICATE");
       continue;
     }
     if (byId.has(deploymentId)) {
       warnings.push("EDS04_DEPLOYMENT_ID_DUPLICATE");
       continue;
     }
-    const tuple = tupleKey(row, environment)!;
+    const tuple = [strategyId, accountId, environment, venue];
+    // Each observed candidate has one signature, including null wildcards.
+    // Probe the 16 possible wildcard patterns instead of scanning all rows
+    // once per deployment. Missing facts remain possible collisions.
+    let possibleOwners = 0;
+    for (let mask = 0; mask < 16; mask++) {
+      possibleOwners += counts.get(JSON.stringify(tuple.map((value, index) => mask & (1 << index) ? value : null))) ?? 0;
+    }
     byId.set(deploymentId, {
       deploymentId, strategyId, accountId, mode: environment, venue,
-      portfolioId: text(row, "portfolio_id"), tupleUnique: counts.get(tuple) === 1,
+      portfolioId: text(row, "portfolio_id"), tupleUnique: censusComplete && possibleOwners === 1,
     });
   }
   return [...byId.values()].sort((left, right) => left.deploymentId.localeCompare(right.deploymentId));
@@ -928,7 +1034,11 @@ function scopedRelation(
   }
   const rows = source.items.map((row) => row.fields).filter((row) => rowInEnvironment(row, environment));
   const scoped = rowsForScope(alias, rows, scope, environment);
-  const relationPartial = source.completeness !== "COMPLETE";
+  // A retained page can advertise COMPLETE while its storage window was
+  // truncated or lineage validation rejected rows. Those signals must also
+  // fence downstream financial comparisons and other aggregate consumers.
+  const relationPartial = source.completeness !== "COMPLETE" || source.window?.truncated === true ||
+    Object.values(source.lineage_rejects ?? {}).some((count) => count !== 0);
   const truncated = scoped.rows.length > RESOURCE_RELATION_ROW_LIMIT;
   // This snapshot is already detached and authorized by scopedResourceProfile;
   // use its entire visible identity relation, never a page/global name lookup.
@@ -983,19 +1093,43 @@ function rowsForScope(
     return exactRows(rows, (row) => scope.bindingIds.has(canonicalBindingId(row) ?? "") || scope.accountIds.has(text(row, "account_id") ?? ""));
   }
   if (alias === "broker_sync") {
-    if (scope.externalAccountRefs.size === 0) return { rows: [], reasonCode: "EDS04_EXTERNAL_ACCOUNT_REF_UNAVAILABLE" };
-    return exactRows(rows, (row) => scope.externalAccountRefs.has(text(row, "external_account_ref") ?? ""));
+    if (scope.brokerAccountBindings.length === 0) return { rows: [], reasonCode: scope.externalAccountRefIssue ?? "EDS04_EXTERNAL_ACCOUNT_REF_UNAVAILABLE" };
+    let ambiguous = false;
+    const selected = rows.filter((row) => {
+      const external = text(row, "external_account_ref");
+      const venue = text(row, "venue");
+      const mode = text(row, "mode");
+      const possible = scope.brokerAccountBindings.some((binding) =>
+        (!external?.trim() || external === binding.externalAccountRef) &&
+        (!venue?.trim() || venue === binding.venue) &&
+        (!mode?.trim() || mode.toLowerCase() === environment));
+      if (!possible) return false;
+      if (!external?.trim() || !venue?.trim() || !mode?.trim()) {
+        ambiguous = true;
+        return false;
+      }
+      return true;
+    });
+    return { rows: selected, reasonCode: scope.externalAccountRefIssue ??
+      (ambiguous ? "EDS04_EXTERNAL_ACCOUNT_REF_AMBIGUOUS" : null) };
   }
   if (alias === "portfolios") return exactRows(rows, (row) => scope.portfolioIds.has(text(row, "portfolio_id") ?? ""));
   if (alias === "portfolio_allocations") {
-    if (scope.kind === "PORTFOLIO") {
-      return exactRows(rows, (row) => scope.portfolioIds.has(text(row, "portfolio_id") ?? ""));
-    }
-    const missingDeploymentKey = rows.some((row) =>
-      (scope.strategyIds.has(text(row, "strategy_id") ?? "") || scope.accountIds.has(text(row, "account_id") ?? "")) &&
-      !text(row, "deployment_id"));
-    const selected = rows.filter((row) => scope.deploymentIds.has(text(row, "deployment_id") ?? ""));
-    return { rows: selected, reasonCode: missingDeploymentKey ? "EDS04_ALLOCATION_DEPLOYMENT_ID_MISSING" : null };
+    const relevant = rows.filter(row => scope.kind === "PORTFOLIO"
+      ? scope.portfolioIds.has(text(row, "portfolio_id") ?? "")
+      : scope.deploymentIds.has(text(row, "deployment_id") ?? "") ||
+        (scope.kind === "ALPHA" ? scope.strategyIds.has(text(row, "strategy_id") ?? "") :
+          scope.accountIds.has(text(row, "account_id") ?? "")));
+    let missing = false, mismatch = false;
+    const selected = relevant.filter(row => {
+      const id = text(row, "deployment_id");
+      if (!id) { missing = true; return false; }
+      const deployment = scope.deployments.find(candidate => candidate.deploymentId === id);
+      if (!deployment || !allocationMatchesDeployment(row, deployment)) { mismatch = true; return false; }
+      return true;
+    });
+    return { rows: selected, reasonCode: mismatch ? "EDS04_ALLOCATION_DEPLOYMENT_SCOPE_MISMATCH" :
+      missing ? "EDS04_ALLOCATION_DEPLOYMENT_ID_MISSING" : null };
   }
   if (alias === "portfolio_equity") {
     if (scope.kind !== "PORTFOLIO") return { rows: [], reasonCode: "EDS04_PORTFOLIO_EQUITY_NOT_RESOURCE_SCOPED" };
@@ -1009,13 +1143,30 @@ function rowsForScope(
   let ambiguous = false;
   for (const row of rows) {
     const deploymentId = text(row, "deployment_id");
+    const rawDeploymentId = row.deployment_id;
+    if (rawDeploymentId !== undefined && rawDeploymentId !== null &&
+      (typeof rawDeploymentId !== "string" || !rawDeploymentId.trim())) {
+      if (scope.deployments.some((candidate) => possiblyMatchesDeployment(row, candidate, environment))) ambiguous = true;
+      continue;
+    }
     if (deploymentId) {
-      if (scope.deploymentIds.has(deploymentId)) selected.push(row);
+      const deployment = scope.deployments.find(candidate => candidate.deploymentId === deploymentId);
+      if (!deployment) continue;
+      // An explicit deployment is sufficient when the source did not publish
+      // additional keys, but contradictory published keys cannot be silently
+      // attributed to that deployment.
+      const mismatch = ([['strategy_id', deployment.strategyId], ['account_id', deployment.accountId],
+        ['venue', deployment.venue]] as const).some(([field, expected]) => {
+          const actual = row[field];
+          return actual !== undefined && actual !== null && (typeof actual !== "string" || actual.length === 0 || actual !== expected);
+        });
+      if (mismatch) { ambiguous = true; continue; }
+      selected.push(row);
       continue;
     }
     const tuple = tupleKey(row, environment);
     if (!tuple) {
-      const candidate = scope.strategyIds.has(text(row, "strategy_id") ?? "") || scope.accountIds.has(text(row, "account_id") ?? "");
+      const candidate = scope.deployments.some((item) => possiblyMatchesDeployment(row, item, environment));
       if (candidate) ambiguous = true;
       continue;
     }
@@ -1025,6 +1176,20 @@ function rowsForScope(
     selected.push({ ...row, deployment_id: deployment.deploymentId });
   }
   return { rows: selected, reasonCode: ambiguous ? "EDS04_TRANSACTIONAL_SCOPE_AMBIGUOUS" : null };
+}
+
+/** A published extra identity is a consistency constraint, not permission to
+ * attach an allocation to a different deployment. Missing optional fields do
+ * not invent facts; the unique explicit deployment ID still carries scope. */
+function allocationMatchesDeployment(row: Record<string, ProjectionScalar>,
+  deployment: Record<string, ProjectionScalar> | DeploymentLink): boolean {
+  const record = deployment as unknown as Record<string, unknown>;
+  const expected = (field: "strategy" | "account" | "venue") => field === "strategy" ?
+    text(record, "strategyId") ?? text(record, "strategy_id") : field === "account" ?
+    text(record, "accountId") ?? text(record, "account_id") : text(record, "venue");
+  return ([['strategy_id', 'strategy'], ['account_id', 'account'], ['venue', 'venue']] as const)
+    .every(([name, key]) => { const value = row[name]; return value === undefined || value === null ||
+      typeof value === "string" && value.length > 0 && value === expected(key); });
 }
 
 function exactRows(
@@ -1040,7 +1205,27 @@ function relation(snapshot: ProfileProjectionSnapshot, alias: RelationAlias): Pr
 
 function rowInEnvironment(row: Record<string, ProjectionScalar>, environment: ResourceEnvironment): boolean {
   const mode = text(row, "mode");
-  return mode === null || mode === environment;
+  // Manager may preserve PAPER/paper casing; compare the same environment
+  // without rewriting the value or admitting a different profile.
+  return mode === null || mode.toLowerCase() === environment;
+}
+
+function nonBlankFact(row: Record<string, ProjectionScalar>, field: string): string | null {
+  const value = text(row, field);
+  return value?.trim() ? value : null;
+}
+
+function knownResourceMode(row: Record<string, ProjectionScalar>): ResourceEnvironment | null {
+  const value = nonBlankFact(row, "mode")?.toLowerCase();
+  return value === "paper" || value === "sandbox" || value === "live" ? value : null;
+}
+
+function possiblyMatchesDeployment(row: Record<string, ProjectionScalar>, deployment: DeploymentLink,
+  environment: ResourceEnvironment): boolean {
+  const mode = knownResourceMode(row);
+  return (mode === null || mode === environment) &&
+    ([['strategy_id', deployment.strategyId], ['account_id', deployment.accountId], ['venue', deployment.venue]] as const)
+      .every(([field, expected]) => { const value = nonBlankFact(row, field); return value === null || value === expected; });
 }
 
 function tupleKey(row: { strategyId?: string; accountId?: string; mode?: string; venue?: string } | Record<string, ProjectionScalar>, environment: ResourceEnvironment): string | null {
@@ -1048,7 +1233,13 @@ function tupleKey(row: { strategyId?: string; accountId?: string; mode?: string;
   const account = "accountId" in row ? row.accountId ?? null : text(row, "account_id");
   const mode = "mode" in row ? row.mode ?? null : text(row, "mode");
   const venue = "venue" in row ? row.venue ?? null : text(row, "venue");
-  return strategy && account && mode === environment && venue ? `${strategy}\u001f${account}\u001f${mode}\u001f${venue}` : null;
+  // Values originate in source facts, not in the route's validated resource
+  // ID. A delimiter inside a value must never alias a different scoped tuple.
+  // Case varies between the Manager source and Portal's environment enum.
+  // Canonicalize only that known enum for identity/duplicate detection;
+  // all economic identifiers and the published source values stay intact.
+  return strategy && account && typeof mode === "string" && mode.toLowerCase() === environment && venue
+    ? JSON.stringify([strategy, account, environment, venue]) : null;
 }
 
 function canonicalBindingId(row: Record<string, ProjectionScalar>): string | null {
@@ -1108,12 +1299,19 @@ function mergeRelations(selections: readonly RelationSelection[]): ReadonlyMap<R
     if (members.length === 0) continue;
     // Every page item has already passed copyFact(alias, ...), so this branch
     // only attaches the profile label used by rich multi-stage panels.
-    const allRows = dedupeFacts(members.flatMap((member) => member.page?.items.map((row) => tagFact(row, member.environment)) ?? []));
+    const rawRows = members.flatMap((member) => member.page?.items.map((row) => tagFact(row, member.environment)) ?? []);
+    // A repeated financial identity with different content is not a duplicate
+    // we may safely discard before computing a total. Preserve the existing
+    // bounded display but mark the relation partial so derived totals fail
+    // closed. Identical repeats can still be collapsed.
+    const financialConflict = (alias === "account_balances" || alias === "margin_balances" || alias === "broker_sync" ||
+      alias === "portfolio_allocations" || alias === "positions") && hasConflictingFacts(rawRows, alias);
+    const allRows = dedupeFacts(rawRows);
     const truncated = members.some((member) => member.truncated) || allRows.length > RESOURCE_RELATION_ROW_LIMIT;
     const rows = allRows.slice(0, RESOURCE_RELATION_ROW_LIMIT);
-    const state = truncated ? "PARTIAL" : mergedState(members.map((member) => member.state), rows.length);
+    const state = truncated || financialConflict ? "PARTIAL" : mergedState(members.map((member) => member.state), rows.length);
     const reasonCode = members.map((member) => member.reasonCode).find((value): value is string => value !== null)
-      ?? (truncated ? "EDS04_RESOURCE_RELATION_ROW_BOUND" : null);
+      ?? (financialConflict ? "EDS04_RESOURCE_FINANCIAL_IDENTITY_CONFLICT" : truncated ? "EDS04_RESOURCE_RELATION_ROW_BOUND" : null);
     const pages = members.flatMap((member) => member.page ? [member.page] : []);
     const exactTotal = pages.some((candidate) => candidate.exactTotal === null || candidate.exactTotal === undefined)
       ? null : pages.reduce((total, candidate) => total + (candidate.exactTotal ?? 0), 0);
@@ -1172,16 +1370,39 @@ function trimLargestRelation(relations: ReadonlyMap<RelationAlias, MergedRelatio
   return next;
 }
 
+function factIdentityKey(row: Fact, ignoreObservationTime = false): string {
+  return JSON.stringify([text(row, "profile_environment"), text(row, "id"), text(row, "deployment_id"), text(row, "position_id"),
+    text(row, "order_id"), text(row, "fill_id"), text(row, "allocation_id"), text(row, "account_id"), text(row, "portfolio_id"), text(row, "strategy_id"),
+    // Currency and instrument distinguish concurrent account and valuation facts.
+    text(row, "binding_id"), text(row, "venue_account_id"), text(row, "sync_id"), text(row, "currency"),
+    text(row, "instrument_id"), text(row, "symbol"), ignoreObservationTime ? null : text(row, "ts"),
+    ignoreObservationTime ? null : text(row, "updated_at")]);
+}
+
+function hasConflictingFacts(rows: readonly Fact[], alias: RelationAlias): boolean {
+  const seen = new Map<string, string>();
+  for (const row of rows) {
+    // A different observation timestamp is not proof of a distinct account /
+    // instrument holding. Two versions of that identity in one snapshot need
+    // a source-owned selection rule, not summation or last-row guessing.
+    // IDs supplied for positions and allocations are source identities. A
+    // changed currency/instrument/account under the same ID is a conflict,
+    // not a second independent row that may be counted in a total.
+    const id = alias === "positions" ? text(row, "position_id") :
+      alias === "portfolio_allocations" ? text(row, "allocation_id") : null;
+    const key = id ? JSON.stringify([text(row, "profile_environment"), alias, id]) : factIdentityKey(row, true);
+    const content = JSON.stringify(Object.entries(row).sort(([left], [right]) => left < right ? -1 : left > right ? 1 : 0));
+    const previous = seen.get(key);
+    if (previous !== undefined && previous !== content) return true;
+    seen.set(key, content);
+  }
+  return false;
+}
+
 function dedupeFacts(rows: readonly Fact[]): Fact[] {
   const seen = new Set<string>();
   return [...rows].filter((row) => {
-    const key = [text(row, "profile_environment"), text(row, "id"), text(row, "deployment_id"), text(row, "position_id"),
-      text(row, "order_id"), text(row, "fill_id"), text(row, "account_id"), text(row, "portfolio_id"), text(row, "strategy_id"),
-      // Currency is part of the identity of account and valuation facts.  It
-      // must remain in the merge key: `acc-a/USDT` and `acc-a/USDC` are two
-      // concurrent truths, not duplicate rows where one may be dropped.
-      text(row, "binding_id"), text(row, "venue_account_id"), text(row, "sync_id"), text(row, "currency"),
-      text(row, "instrument_id"), text(row, "symbol"), text(row, "ts"), text(row, "updated_at")].join("\u001f");
+    const key = factIdentityKey(row);
     if (seen.has(key)) return false;
     seen.add(key);
     return true;
@@ -1328,7 +1549,7 @@ function scopedResourceSummary(kind: ResourceKind, resourceId: string, found: re
     ["portfolio_id", "name", "display_name"].filter(field => allows(field) && field in row).map(field => [field, row[field]])));
   result.metrics_availability = {
     account_balance: metricState(data("account_balances"), relations.get("account_balances")),
-    current_position_pnl: metricState(data("positions"), relations.get("positions")),
+    current_position_pnl: { state: "UNAVAILABLE", reason_code: "POSITION_FINANCIAL_SOURCE_NOT_QUALIFIED" },
     equity_series: metricState(data("account_equity"), relations.get("account_equity")),
   };
   // BE-P15 (RV-11 R-7): a published per-deployment snapshot row, or a typed absence. Never a sum of visible rows.
@@ -1349,7 +1570,46 @@ function resourceSummary(
 ): Record<string, unknown> {
   const parent = found[0]?.resolution.parent ?? {};
   const data = (alias: RelationAlias) => relations.get(alias)?.rows ?? [];
-  const deployments = deploymentSummary(data("deployments"), data("accounts"), data("account_balances"), data("portfolio_allocations"), data("positions"), data("reconciliation"));
+  const identityAlias: RelationAlias = kind === "ALPHA" ? "strategies" : kind === "PORTFOLIO" ? "portfolios" :
+    kind === "ACCOUNT" ? "accounts" : "venue_accounts";
+  const identityProjection = relations.get(identityAlias)?.page?.projection;
+  const onIdentitySnapshot = (relation: MergedRelation | undefined) => {
+    const projection = relation?.page?.projection;
+    return identityProjection != null && projection != null && projection.epoch === identityProjection.epoch &&
+      projection.sequence === identityProjection.sequence && projection.payloadDigest === identityProjection.payloadDigest;
+  };
+  const positionRelation = relations.get("positions");
+  const positionCountQualified = found.length === 1 && positionRelation != null &&
+    (positionRelation.state === "AVAILABLE" || positionRelation.state === "EMPTY") && !positionRelation.truncated &&
+    positionRelation.unavailableEnvironments.size === 0 && positionRelation.page?.completeness === "COMPLETE" &&
+    positionRelation.page.scope?.state !== "PARTIAL" && onIdentitySnapshot(positionRelation);
+  const aggregateQualified = (alias: RelationAlias) => {
+    const relation = relations.get(alias);
+    return found.length === 1 && relation != null && relation.state === "AVAILABLE" && !relation.truncated &&
+      relation.unavailableEnvironments.size === 0 && relation.page?.completeness === "COMPLETE" &&
+      relation.page.scope?.state !== "PARTIAL" && onIdentitySnapshot(relation);
+  };
+  const completeRelation = (alias: RelationAlias) => {
+    const relation = relations.get(alias);
+    return found.length === 1 && relation != null && (relation.state === "AVAILABLE" || relation.state === "EMPTY") &&
+      !relation.truncated && relation.unavailableEnvironments.size === 0 && relation.page?.completeness === "COMPLETE" &&
+      relation.page.scope?.state !== "PARTIAL" && onIdentitySnapshot(relation);
+  };
+  const deploymentInputsQualified = aggregateQualified("deployments");
+  const deployments = deploymentSummary(data("deployments"), data("accounts"), data("account_balances"), data("portfolio_allocations"), data("positions"), data("reconciliation"), positionCountQualified, completeRelation("reconciliation"), {
+    accounts: deploymentInputsQualified && aggregateQualified("accounts"),
+    balances: deploymentInputsQualified && aggregateQualified("accounts") && aggregateQualified("account_balances"),
+    allocations: deploymentInputsQualified && aggregateQualified("portfolio_allocations"),
+  });
+  // Keep the currencies of observed allocations visible even when their
+  // amount is not qualified. The amount must come from the unique matching
+  // deployment detail, not merely from an arbitrary retained source row.
+  const observedAllocations = data("portfolio_allocations").map(row => {
+    const matches = deployments.filter(deployment => text(deployment, "deployment_id") === text(row, "deployment_id"));
+    const deployment = matches.length === 1 ? matches[0] : undefined;
+    return { currency: text(row, "currency"), value: deployment && text(deployment, "currency") === text(row, "currency")
+      ? deployment.allocation : null };
+  });
   if (kind === "ALPHA") {
     const strategy = parent;
     return {
@@ -1361,15 +1621,15 @@ function resourceSummary(
       stages: unique(deployments.map((deployment) => String(deployment.stage))),
       portfolios: portfolioSummaries(data("portfolios")),
       deployments,
-      allocations: aggregateCurrency(deployments, "allocation"),
-      balances: aggregateBalances(data("account_balances")),
+      allocations: aggregateRowsCurrency(observedAllocations, "value", "currency", deploymentInputsQualified && aggregateQualified("portfolio_allocations")),
+      balances: aggregateBalances(data("account_balances"), aggregateQualified("account_balances")),
       position_pnl: aggregatePnl(deployments),
-      exposure: aggregateCurrency(deployments, "exposure"),
-      health: deploymentHealth(deployments, data("reconciliation")),
+      exposure: aggregateCurrency(deployments, "exposure", false),
+      health: deploymentHealth(deployments, data("reconciliation"), completeRelation("deployments")),
       attention_reasons: attentionReasons(deployments, data("reconciliation")),
       metrics_availability: {
         account_balance: metricState(data("account_balances"), relations.get("account_balances")),
-        current_position_pnl: metricState(data("positions"), relations.get("positions")),
+        current_position_pnl: { state: "UNAVAILABLE", reason_code: "POSITION_FINANCIAL_SOURCE_NOT_QUALIFIED" },
         equity_series_30d: metricState(data("account_equity"), relations.get("account_equity")),
         max_drawdown_30d: metricState(data("account_equity"), relations.get("account_equity")),
       },
@@ -1386,7 +1646,7 @@ function resourceSummary(
       state: summaryText(parent, "state") ?? "UNKNOWN",
       deployments,
       allocations: data("portfolio_allocations"),
-      allocation_by_currency: aggregateRowsCurrency(data("portfolio_allocations"), "allocated_capital"),
+      allocation_by_currency: aggregateRowsCurrency(data("portfolio_allocations"), "allocated_capital", "currency", aggregateQualified("portfolio_allocations")),
       holdings_count: deployments.length,
       account_ids: unique(deployments.map((deployment) => String(deployment.account_id))),
       valuation_warning: "E5_POSITION_CURRENCY_AND_MARK_LINEAGE_UNQUALIFIED",
@@ -1408,8 +1668,8 @@ function resourceSummary(
       updated_at: summaryText(parent, "updated_at"),
       deployments,
       binding_ids: unique(data("venue_accounts").flatMap((row) => canonicalBindingId(row) ? [canonicalBindingId(row)!] : [])),
-      exposure_headroom: exposureHeadroom(data("account_balances"), data("margin_balances")),
-      differences: accountDifferences(data("account_balances"), data("broker_sync")),
+      exposure_headroom: exposureHeadroom(data("account_balances"), data("margin_balances"), qualifiedHeadroomInputs(relations)),
+      differences: accountDifferences(data("account_balances"), data("broker_sync"), qualifiedAccountInputs(relations, ["accounts", "account_balances", "broker_sync"])),
       valuation_warning: "E5_POSITION_CURRENCY_AND_MARK_LINEAGE_UNQUALIFIED",
     };
   }
@@ -1418,7 +1678,7 @@ function resourceSummary(
     account_id: summaryText(parent, "account_id"),
     venue: summaryText(parent, "venue"),
     state: summaryText(parent, "state") ?? summaryText(parent, "status") ?? "UNKNOWN",
-    credential_state: bindingCredentialState(data("broker_sync")),
+    credential_state: bindingCredentialState(data("broker_sync"), relations.get("broker_sync")),
     updated_at: summaryText(parent, "updated_at") ?? summaryText(parent, "created_at"),
     account: data("accounts")[0] ?? null,
     deployments,
@@ -1438,8 +1698,8 @@ function resourceDerivedData(
   if (kind !== "ACCOUNT") return {};
   const rows = (alias: RelationAlias) => relations.get(alias)?.rows ?? [];
   return {
-    differences: accountDifferences(rows("account_balances"), rows("broker_sync")),
-    exposure_headroom: exposureHeadroom(rows("account_balances"), rows("margin_balances")),
+    differences: accountDifferences(rows("account_balances"), rows("broker_sync"), qualifiedAccountInputs(relations, ["accounts", "account_balances", "broker_sync"])),
+    exposure_headroom: exposureHeadroom(rows("account_balances"), rows("margin_balances"), qualifiedHeadroomInputs(relations)),
   };
 }
 
@@ -1458,21 +1718,36 @@ function summaryText(row: Record<string, unknown>, key: string): string | null {
 
 function deploymentSummary(
   deployments: readonly Fact[], accounts: readonly Fact[], balances: readonly Fact[], allocations: readonly Fact[], positions: readonly Fact[], findings: readonly Fact[],
+  positionCountQualified: boolean, findingsQualified: boolean,
+  qualified: { accounts: boolean; balances: boolean; allocations: boolean },
 ): Array<Record<string, unknown>> {
   return deployments.map((deployment) => {
     const id = text(deployment, "deployment_id") ?? "deployment not published";
-    const accountId = text(deployment, "account_id") ?? "account not published";
-    const currency = text(deployment, "currency") ?? allocationCurrency(allocations, id) ?? accountCurrency(accounts, accountId) ?? "UNKNOWN";
+    const sourceAccountId = text(deployment, "account_id");
+    const accountId = sourceAccountId ?? "account not published";
+    const currency = text(deployment, "currency") ?? (qualified.allocations ? allocationCurrency(allocations, id) : null) ??
+      (qualified.accounts && sourceAccountId ? accountCurrency(accounts, sourceAccountId) : null) ?? "UNKNOWN";
     const deploymentPositions = positions.filter((row) => text(row, "deployment_id") === id);
-    const allocation = allocations.find((row) => text(row, "deployment_id") === id);
-    const balance = balances.find((row) => text(row, "account_id") === accountId && text(row, "currency") === currency);
+    const deploymentAllocations = allocations.filter((row) => text(row, "deployment_id") === id);
+    // A retained partial page, a duplicate or a source row in another
+    // currency cannot supply a value labelled as this deployment's balance or
+    // allocation. Keep the raw observations in their own panels instead.
+    const allocation = qualified.allocations && deploymentAllocations.length === 1 && currency !== "UNKNOWN" &&
+      text(deploymentAllocations[0], "currency") === currency ? deploymentAllocations[0] : undefined;
+    const accountBalances = sourceAccountId ? balances.filter(row => text(row, "account_id") === sourceAccountId) : [];
+    const matchingBalances = accountBalances.filter(row => text(row, "currency") === currency);
+    const balance = qualified.balances && currency !== "UNKNOWN" &&
+      !accountBalances.some(row => !text(row, "currency") || text(row, "currency") === "UNKNOWN") &&
+      matchingBalances.length === 1 ? matchingBalances[0] : undefined;
     const hasFinding = findings.some((row) => text(row, "account_id") === accountId &&
       !["RESOLVED", "CLOSED", "DISMISSED"].includes((text(row, "status") ?? "OPEN").toUpperCase()));
     const active = deployment.active === true;
     const state = text(deployment, "state") ?? (active ? "ACTIVE" : "UNKNOWN");
-    const realized = sumDecimals(deploymentPositions.map((row) => decimal(row.realized_pnl)).filter(isString));
-    const unrealized = sumDecimals(deploymentPositions.map((row) => decimal(row.unrealized_pnl)).filter(isString));
-    const exposure = sumDecimals(deploymentPositions.map((row) => absoluteDecimal(decimal(row.notional))).filter(isString));
+    // The retained POSITION catalogue has no amount-currency, valuation,
+    // cost, or economic-ownership proof. The deployment/account currency is
+    // not proof for any position amount, and a current positions population
+    // is not a realized-PnL ledger. Keep the raw source rows, but never make
+    // a currency-labelled total (or a fabricated zero) from them here.
     return {
       deployment_id: id,
       strategy_id: text(deployment, "strategy_id"),
@@ -1482,18 +1757,23 @@ function deploymentSummary(
       portfolio_id: text(deployment, "portfolio_id"),
       portfolio_name: text(allocations.find((row) => text(row, "deployment_id") === id) ?? {}, "portfolio_name"),
       currency,
-      allocation: allocation ? decimal(allocation.allocated_capital) : null,
-      balance_total: balance ? decimal(balance.total) : null,
-      balance_free: balance ? decimal(balance.free) : null,
-      balance_locked: balance ? decimal(balance.locked) : null,
-      position_fact_count: deploymentPositions.length,
-      realized_pnl: realized,
-      unrealized_pnl: unrealized,
-      net_pnl: sumDecimals([realized, unrealized].filter(isString)),
-      exposure,
+      allocation: allocation ? exactFinancialDecimal(allocation.allocated_capital) : null,
+      balance_total: balance ? exactFinancialDecimal(balance.total) : null,
+      balance_free: balance ? exactFinancialDecimal(balance.free) : null,
+      balance_locked: balance ? exactFinancialDecimal(balance.locked) : null,
+      position_fact_count: positionCountQualified ? deploymentPositions.length : null,
+      position_count_availability: positionCountQualified ? "AVAILABLE" : "UNAVAILABLE",
+      position_count_reason_code: positionCountQualified ? null : "POSITION_POPULATION_NOT_QUALIFIED",
+      realized_pnl: null,
+      unrealized_pnl: null,
+      net_pnl: null,
+      exposure: null,
+      position_metrics_availability: "UNAVAILABLE",
+      position_metrics_reason_code: "POSITION_FINANCIAL_SOURCE_NOT_QUALIFIED",
       state,
       active,
-      health: !active || /HALTED|ERROR|FAILED|SUSPENDED|INACTIVE/.test(state.toUpperCase()) ? "ATTENTION" : hasFinding ? "FINDING" : "READY",
+      health: !active || /HALTED|ERROR|FAILED|SUSPENDED|INACTIVE/.test(state.toUpperCase()) ? "ATTENTION" :
+        hasFinding ? "FINDING" : findingsQualified ? "READY" : "UNKNOWN",
       updated_at: text(deployment, "updated_at") ?? text(deployment, "created_at"),
     };
   }).sort((left, right) => String(left.deployment_id).localeCompare(String(right.deployment_id)));
@@ -1514,46 +1794,52 @@ function portfolioSummaries(rows: readonly Fact[]) {
   })).sort((left, right) => String(left.portfolio_id).localeCompare(String(right.portfolio_id)));
 }
 
-function aggregateCurrency(rows: readonly Record<string, unknown>[], field: string) {
-  return aggregateRowsCurrency(rows, field, "currency");
+function aggregateCurrency(rows: readonly Record<string, unknown>[], field: string, qualified: boolean) {
+  return aggregateRowsCurrency(rows, field, "currency", qualified);
 }
 
-function aggregateRowsCurrency(rows: readonly Record<string, unknown>[], field: string, currencyField = "currency") {
-  const groups = new Map<string, string[]>();
+function aggregateRowsCurrency(rows: readonly Record<string, unknown>[], field: string, currencyField: string, qualified: boolean) {
+  const groups = new Map<string, Array<string | null>>();
+  const unknownCurrency = rows.some(row => !text(row, currencyField) || text(row, currencyField) === "UNKNOWN");
   for (const row of rows) {
     const currency = text(row, currencyField);
-    const value = decimal(row[field]);
-    if (!currency || value === null) continue;
-    groups.set(currency, [...(groups.get(currency) ?? []), value]);
+    if (!currency || currency === "UNKNOWN") continue;
+    groups.set(currency, [...(groups.get(currency) ?? []), exactFinancialDecimal(row[field])]);
   }
-  return [...groups.entries()].sort(([left], [right]) => left.localeCompare(right)).map(([currency, values]) => ({ currency, value: sumDecimals(values) ?? "0" }));
+  return [...groups.entries()].sort(([left], [right]) => left.localeCompare(right)).map(([currency, values]) => {
+    // A single observed source value is not an economic ownership/census
+    // proof for summing several assignments or deployments.
+    const value = qualified && !unknownCurrency && values.length === 1 ? values[0] : null;
+    return { currency, value, state: value === null ? "UNAVAILABLE" : "AVAILABLE",
+      reason_code: value === null ? "FINANCIAL_AGGREGATE_SOURCE_NOT_QUALIFIED" : null };
+  });
 }
 
-function aggregateBalances(rows: readonly Fact[]) {
+function aggregateBalances(rows: readonly Fact[], qualified: boolean) {
   const byCurrency = new Map<string, Fact[]>();
+  const unknownCurrency = rows.some(row => !text(row, "currency") || text(row, "currency") === "UNKNOWN");
   for (const row of rows) {
     const currency = text(row, "currency"); if (!currency) continue;
     byCurrency.set(currency, [...(byCurrency.get(currency) ?? []), row]);
   }
-  return [...byCurrency.entries()].sort(([left], [right]) => left.localeCompare(right)).map(([currency, values]) => ({
-    currency,
-    total: sumDecimals(values.map((row) => decimal(row.total)).filter(isString)) ?? "0",
-    free: sumDecimals(values.map((row) => decimal(row.free)).filter(isString)) ?? "0",
-    locked: sumDecimals(values.map((row) => decimal(row.locked)).filter(isString)) ?? "0",
-  }));
+  return [...byCurrency.entries()].sort(([left], [right]) => left.localeCompare(right)).map(([currency, values]) => {
+    const row = qualified && !unknownCurrency && values.length === 1 && text(values[0], "account_id") ? values[0] : null;
+    const total = exactFinancialDecimal(row?.total), free = exactFinancialDecimal(row?.free), locked = exactFinancialDecimal(row?.locked);
+    const complete = total !== null && free !== null && locked !== null;
+    return { currency, total, free, locked, state: complete ? "AVAILABLE" : "UNAVAILABLE",
+      reason_code: complete ? null : "FINANCIAL_AGGREGATE_SOURCE_NOT_QUALIFIED" };
+  });
 }
 
 function aggregatePnl(deployments: readonly Record<string, unknown>[]) {
-  const byCurrency = new Map<string, Array<Record<string, unknown>>>();
+  const currencies = new Set<string>();
   for (const row of deployments) {
-    const currency = text(row, "currency"); if (!currency || row.position_fact_count === 0) continue;
-    byCurrency.set(currency, [...(byCurrency.get(currency) ?? []), row]);
+    const currency = text(row, "currency"); if (!currency || currency === "UNKNOWN") continue;
+    currencies.add(currency);
   }
-  return [...byCurrency.entries()].sort(([left], [right]) => left.localeCompare(right)).map(([currency, rows]) => {
-    const realized = sumDecimals(rows.map((row) => decimal(row.realized_pnl)).filter(isString)) ?? "0";
-    const unrealized = sumDecimals(rows.map((row) => decimal(row.unrealized_pnl)).filter(isString)) ?? "0";
-    return { currency, realized, unrealized, net: sumDecimals([realized, unrealized]) ?? "0" };
-  });
+  return [...currencies].sort((left, right) => left.localeCompare(right)).map(currency => ({ currency,
+    realized: null, unrealized: null, net: null,
+    state: "UNAVAILABLE", reason_code: "POSITION_FINANCIAL_SOURCE_NOT_QUALIFIED" }));
 }
 
 function highestStage(deployments: readonly Record<string, unknown>[]) {
@@ -1562,9 +1848,11 @@ function highestStage(deployments: readonly Record<string, unknown>[]) {
     .sort((left, right) => (score[right] ?? -1) - (score[left] ?? -1))[0] ?? "RESEARCH";
 }
 
-function deploymentHealth(deployments: readonly Record<string, unknown>[], findings: readonly Fact[]): string {
+function deploymentHealth(deployments: readonly Record<string, unknown>[], findings: readonly Fact[], deploymentsQualified: boolean): string {
+  if (deployments.some((row) => ["ATTENTION", "FINDING"].includes(text(row, "health") ?? "")) ||
+      findings.some(row => !["RESOLVED", "CLOSED", "DISMISSED"].includes((text(row, "status") ?? "OPEN").toUpperCase()))) return "ATTENTION";
+  if (!deploymentsQualified || deployments.some(row => text(row, "health") === "UNKNOWN")) return "UNKNOWN";
   if (deployments.length === 0) return "RESEARCH_ONLY";
-  if (deployments.some((row) => text(row, "health") !== "READY") || findings.length > 0) return "ATTENTION";
   return "READY";
 }
 
@@ -1583,50 +1871,90 @@ function metricState(rows: readonly Fact[], relation: MergedRelation | undefined
 }
 
 function accountCurrency(accounts: readonly Fact[], accountId: string): string | null {
-  return text(accounts.find((row) => text(row, "account_id") === accountId) ?? {}, "base_currency");
+  const matching = accounts.filter(row => text(row, "account_id") === accountId);
+  return matching.length === 1 ? text(matching[0], "base_currency") : null;
 }
 
 function allocationCurrency(allocations: readonly Fact[], deploymentId: string): string | null {
-  return text(allocations.find((row) => text(row, "deployment_id") === deploymentId) ?? {}, "currency");
+  const matching = allocations.filter(row => text(row, "deployment_id") === deploymentId);
+  return matching.length === 1 ? text(matching[0], "currency") : null;
 }
 
-function bindingCredentialState(syncRows: readonly Fact[]): string {
-  const latest = [...syncRows].sort((left, right) => String(text(right, "synced_at") ?? "").localeCompare(String(text(left, "synced_at") ?? "")))[0];
-  return latest ? `SYNC_${(text(latest, "status") ?? "UNKNOWN").toUpperCase()}` : "NOT_PUBLISHED";
+function bindingCredentialState(syncRows: readonly Fact[], relation: MergedRelation | undefined): string {
+  if (!relation || relation.state !== "AVAILABLE" || relation.truncated || relation.unavailableEnvironments.size !== 0 ||
+    relation.page?.completeness !== "COMPLETE" || relation.page.scope?.state === "PARTIAL" || !syncRows.length ||
+    syncRows.some(row => !text(row, "synced_at") || !Number.isFinite(Date.parse(text(row, "synced_at")!)))) return "NOT_PUBLISHED";
+  const environments = new Set(syncRows.map(row => text(row, "profile_environment")));
+  if (environments.size !== 1 || environments.has(null)) return "NOT_PUBLISHED";
+  const latest = Math.max(...syncRows.map(row => Date.parse(text(row, "synced_at")!)));
+  const latestRows = syncRows.filter(row => Date.parse(text(row, "synced_at")!) === latest);
+  const status = latestRows.length === 1 ? text(latestRows[0], "status") : null;
+  return status ? `SYNC_${status.toUpperCase()}` : "NOT_PUBLISHED";
 }
 
-function accountDifferences(balances: readonly Fact[], brokerSync: readonly Fact[]): Array<Record<string, unknown>> {
+function accountDifferences(balances: readonly Fact[], brokerSync: readonly Fact[], qualified: boolean): Array<Record<string, unknown>> {
+  if (!qualified) return [];
   // Sync feeds may legitimately publish several currencies.  Compare the
   // latest exact-currency fact only; a different currency is not a proxy for
   // a zero balance or a global account total.
-  const latestByCurrency = new Map<string, Fact>();
+  const byCurrency = new Map<string, Fact[]>();
   for (const candidate of brokerSync) {
     const currency = text(candidate, "currency");
-    if (!currency || decimal(candidate.buying_power) === null) continue;
-    const existing = latestByCurrency.get(currency);
-    if (!existing || String(text(candidate, "synced_at") ?? "") > String(text(existing, "synced_at") ?? "")) {
-      latestByCurrency.set(currency, candidate);
-    }
+    if (!currency) continue;
+    const rows = byCurrency.get(currency) ?? [];
+    rows.push(candidate); byCurrency.set(currency, rows);
   }
   return balances.flatMap((balance) => {
     const currency = text(balance, "currency");
-    const broker = currency ? latestByCurrency.get(currency) : undefined;
-    const free = decimal(balance.free);
-    const buyingPower = broker ? decimal(broker.buying_power) : null;
+    const candidates = currency ? byCurrency.get(currency) ?? [] : [];
+    if (!currency || balances.filter(row => text(row, "currency") === currency).length !== 1 || !candidates.length ||
+      candidates.some(row => !text(row, "synced_at") || !Number.isFinite(Date.parse(text(row, "synced_at")!)))) return [];
+    const latest = Math.max(...candidates.map(row => Date.parse(text(row, "synced_at")!)));
+    const latestRows = candidates.filter(row => Date.parse(text(row, "synced_at")!) === latest);
+    if (latestRows.length !== 1) return [];
+    const broker = latestRows[0];
+    const free = exactFinancialDecimal(balance.free);
+    const buyingPower = broker ? exactFinancialDecimal(broker.buying_power) : null;
     if (!currency || free === null || buyingPower === null) return [];
     const delta = subtractDecimals(free, buyingPower); if (delta === null) return [];
-    return [{ field: "buying_power", currency, internal_value: free, broker_value: buyingPower, delta, in_sync: zero(delta) }];
+    return [{ field: "buying_power", currency, internal_value: free, broker_value: buyingPower,
+      portal_free: free, broker_buying_power: buyingPower, delta, in_sync: zero(delta) }];
   }).sort((left, right) => String(left.currency).localeCompare(String(right.currency)));
 }
 
-function exposureHeadroom(balances: readonly Fact[], margins: readonly Fact[]): Array<Record<string, unknown>> {
+function qualifiedHeadroomInputs(relations: ReadonlyMap<RelationAlias, MergedRelation>): boolean {
+  return qualifiedAccountInputs(relations, ["accounts", "account_balances", "margin_balances"]);
+}
+
+function qualifiedAccountInputs(relations: ReadonlyMap<RelationAlias, MergedRelation>, aliases: readonly RelationAlias[]): boolean {
+  const inputs = aliases.map(alias => relations.get(alias));
+  const baseline = inputs[0]?.page?.projection;
+  if (!baseline || inputs[0]?.rows.length !== 1) return false;
+  const environments = new Set(inputs.flatMap(input => input?.rows.map(row => text(row, "profile_environment")) ?? []));
+  if (environments.size !== 1 || environments.has(null)) return false;
+  return inputs.every(input => {
+    const page = input?.page, projection = page?.projection;
+    return input?.state === "AVAILABLE" && !input.truncated && input.unavailableEnvironments.size === 0 &&
+      page?.completeness === "COMPLETE" && page.scope?.state !== "PARTIAL" && projection != null &&
+      projection.epoch === baseline.epoch && projection.sequence === baseline.sequence && projection.payloadDigest === baseline.payloadDigest;
+  });
+}
+
+function exposureHeadroom(balances: readonly Fact[], margins: readonly Fact[], qualified: boolean): Array<Record<string, unknown>> {
   const output: Array<Record<string, unknown>> = [];
   for (const balance of balances) {
-    const currency = text(balance, "currency"); const free = decimal(balance.free);
-    if (!currency || free === null) continue;
+    const currency = text(balance, "currency"); const free = exactFinancialDecimal(balance.free);
+    if (!currency) continue;
+    if (free === null) {
+      output.push({ currency, free: null, maintenance: null, headroom: null, verdict: "UNAVAILABLE" });
+      continue;
+    }
     const exactCurrencyMargins = margins.filter((row) => text(row, "currency") === currency)
-      .map((row) => decimal(row.maintenance)).filter(isString);
-    const maintenance = exactCurrencyMargins.length === 0 ? null : sumDecimals(exactCurrencyMargins);
+      .map((row) => exactFinancialDecimal(row.maintenance));
+    // Missing currency or one unreadable matching maintenance value makes the
+    // total incomplete; dropping the row would publish a false headroom.
+    const maintenance = !qualified || margins.some((row) => !text(row, "currency")) || exactCurrencyMargins.length === 0 ||
+      exactCurrencyMargins.some((value) => value === null) ? null : sumDecimals(exactCurrencyMargins.filter(isString));
     if (maintenance === null) {
       output.push({ currency, free, maintenance: null, headroom: null, verdict: "UNAVAILABLE" });
       continue;
@@ -1637,17 +1965,6 @@ function exposureHeadroom(balances: readonly Fact[], margins: readonly Fact[]): 
   return output;
 }
 
-function decimal(value: unknown): string | null {
-  const raw = typeof value === "string" || typeof value === "number" ? String(value) : null;
-  if (!raw || !/^-?\d+(?:\.\d+)?$/.test(raw)) return null;
-  const negative = raw.startsWith("-");
-  const [wholeRaw, fractionRaw = ""] = (negative ? raw.slice(1) : raw).split(".");
-  const whole = wholeRaw.replace(/^0+(?=\d)/, "") || "0";
-  const fraction = fractionRaw.replace(/0+$/, "");
-  return `${negative && (whole !== "0" || fraction) ? "-" : ""}${whole}${fraction ? `.${fraction}` : ""}`;
-}
-
-function absoluteDecimal(value: string | null): string | null { return value?.startsWith("-") ? value.slice(1) : value; }
 function isString(value: string | null): value is string { return value !== null; }
 function zero(value: string): boolean { return /^-?0(?:\.0+)?$/.test(value); }
 
@@ -1661,7 +1978,7 @@ function sumDecimals(values: readonly string[]): string | null {
     const magnitude = BigInt(`${value[2]}${(value[3] ?? "").padEnd(scale, "0")}`);
     return sum + (value[1] === "-" ? -magnitude : magnitude);
   }, 0n);
-  return renderDecimal(total, scale);
+  return exactFinancialDecimal(renderDecimal(total, scale));
 }
 
 function subtractDecimals(left: string, right: string): string | null {
@@ -1673,7 +1990,7 @@ function subtractDecimals(left: string, right: string): string | null {
     const amount = BigInt(`${match[2]}${(match[3] ?? "").padEnd(scale, "0")}`);
     return match[1] === "-" ? -amount : amount;
   };
-  return renderDecimal(units(a) - units(b), scale);
+  return exactFinancialDecimal(renderDecimal(units(a) - units(b), scale));
 }
 
 function renderDecimal(value: bigint, scale: number): string {

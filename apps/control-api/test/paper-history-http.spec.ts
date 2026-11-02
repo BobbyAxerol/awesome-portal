@@ -61,9 +61,9 @@ const bound = (k: number) => 3 * k * (Math.max(1, Math.floor(TARGET / (3 * k))) 
 const apps: NestFastifyApplication[] = [];
 afterAll(async () => { for (const app of apps) await app.close(); });
 
-async function httpApp(service: PaperReadService) {
+async function httpApp(service: PaperReadService, canReadExecution: () => Promise<boolean> = async () => true) {
   const auth = { sessionFromToken: async () => session, users: { findById: async () => user } };
-  const workspaces = { canReadExecution: async () => true, ensurePersonal: async () => WORKSPACE };
+  const workspaces = { canReadExecution, ensurePersonal: async () => WORKSPACE };
   @Module({
     controllers: [PaperReadController],
     providers: [
@@ -148,6 +148,15 @@ const burstOrLast = (rows: MirrorRow[], pattern: Pattern) => pattern === "burst_
 
 describe("real HTTP path: bytes against the approved 16 MiB budget", () => {
   const measured: Record<string, unknown>[] = [];
+  it("refuses the Paper workbench HTTP body when workspace access is revoked during the source read", async () => {
+    const { service } = realProducer(mirror(32, { pattern: "hourly" }));
+    let checks = 0;
+    const response = await (await httpApp(service, async () => ++checks === 1))();
+    expect(checks).toBe(2);
+    expect(response.statusCode).toBe(404);
+    expect(response.json()).not.toHaveProperty("data");
+    expect(response.headers["cache-control"]).toBe("private, no-store");
+  });
   it.each(DEPTHS)("N=%i through Nest/Fastify", async n => {
     const rows = mirror(n, { pattern: "hourly" });
     const { service, repository } = realProducer(rows);

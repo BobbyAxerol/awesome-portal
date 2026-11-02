@@ -18,10 +18,11 @@
       "get": {
         "operationId": "executionAccountBroker360V1",
         "parameters": [
-          { "name": "account_id", "in": "path", "required": true, "schema": { "type": "string", "minLength": 1, "maxLength": 191 } },
-          { "name": "environment", "in": "query", "required": false, "schema": { "type": "string", "enum": ["paper", "sandbox", "live"] } }
+          { "name": "account_id", "in": "path", "required": true, "schema": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[A-Za-z0-9._:-]{1,128}$" } },
+          { "name": "environment", "in": "query", "required": false, "schema": { "type": "string", "enum": ["paper", "sandbox", "live"] } },
+          { "name": "workspace_id", "in": "query", "required": false, "description": "Optional workspace; the server trims surrounding whitespace before validating its length.", "schema": { "type": "string", "minLength": 1, "maxLength": 96, "pattern": "\\S" } }
         ],
-        "responses": { "200": { "description": "Exact Account/Broker 360 read across current profiles", "content": { "application/json": { "schema": { "$ref": "../schemas/execution-profile-read.v1.schema.json#/$defs/AccountRead" } } } } }
+        "responses": { "200": { "description": "Bounded Account/Broker 360 read; ambiguous or incomplete identity remains typed partial rather than an arbitrarily selected profile.", "content": { "application/json": { "schema": { "$ref": "../schemas/execution-profile-read.v1.schema.json#/$defs/AccountRead" } } } } }
       }
     },
     "/api/v1/execution/governance/approvals/{approval_id}/live": {

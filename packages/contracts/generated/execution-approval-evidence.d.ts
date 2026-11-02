@@ -11,7 +11,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description The evidence beside one approval request: prior economic history, evidence diff, obligations still open after approval, the receipt preview, and the Portal evaluation time. Each section is omitted (no owning source), null (source not read) or published; a count of 0 is a published true zero. CONTRACT ONLY: no producer exists yet (Edge/Core inputs are in WP_K_CONTRACTS_2026-10-23.md), so nothing serves this route and every screen keeps its typed absence. */
+        /** @description The evidence beside one approval request: prior economic history, evidence diff, obligations still open after approval, the receipt preview, and the Portal evaluation time. Each section is omitted (no owning source), null (source not read) or published; a count of 0 is a published true zero. A source-dark producer is optionally mounted only on the authorized Research review profile; source sections and field authority are not commissioned (see WP_K_CONTRACTS_2026-10-23.md). */
         get: operations["executionApprovalEvidenceGetV1"];
         put?: never;
         post?: never;
@@ -83,11 +83,16 @@ export interface components {
         } & unknown;
         ApprovalEvidenceProblem: {
             error: {
-                /** @enum {string} */
-                code: "EXECUTION_READ_NOT_AVAILABLE" | "EXECUTION_READ_CURRENT_ONLY";
+                code: string;
                 message: string;
             };
             request_id: string;
+            public_copy_key?: string;
+            /** @enum {string} */
+            safe_next_action?: "QUERY_SAME_INTENT" | "REVIEW_BLOCKER";
+            details?: {
+                [key: string]: unknown;
+            };
         };
     };
     responses: never;
@@ -141,6 +146,16 @@ export interface operations {
                     "application/json": components["schemas"]["ApprovalEvidenceProblem"];
                 };
             };
+            /** @description Read authority refused */
+            403: {
+                headers: {
+                    "Cache-Control": "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApprovalEvidenceProblem"];
+                };
+            };
             /** @description Approval unavailable or not authorized */
             404: {
                 headers: {
@@ -151,7 +166,27 @@ export interface operations {
                     "application/json": components["schemas"]["ApprovalEvidenceProblem"];
                 };
             };
-            /** @description Source unavailable */
+            /** @description Read authority changed */
+            409: {
+                headers: {
+                    "Cache-Control": "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApprovalEvidenceProblem"];
+                };
+            };
+            /** @description Internal error */
+            500: {
+                headers: {
+                    "Cache-Control": "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApprovalEvidenceProblem"];
+                };
+            };
+            /** @description Source or read authority unavailable */
             503: {
                 headers: {
                     "Cache-Control": "private, no-store";

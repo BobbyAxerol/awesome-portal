@@ -18,13 +18,14 @@
     { "capability_id": "source.accounts", "state": "AVAILABLE", "relations": ["accounts"], "reason_code": null, "retryable": false },
     { "capability_id": "source.account_balances", "state": "AVAILABLE", "relations": ["account_balances"], "reason_code": null, "retryable": false },
     { "capability_id": "source.margin_balances", "state": "AVAILABLE", "relations": ["margin_balances"], "reason_code": null, "retryable": false },
-    { "capability_id": "source.broker_account_sync_effective", "state": "AVAILABLE", "relations": ["broker_account_sync_effective"], "reason_code": null, "retryable": false }
+    { "capability_id": "source.broker_account_sync_effective", "state": "AVAILABLE", "relations": ["broker_account_sync_effective"], "reason_code": null, "retryable": false },
+    { "capability_id": "derived.differences", "state": "AVAILABLE", "relations": ["derived.differences"], "reason_code": null, "retryable": false }
   ],
   "data": {
     "accounts": [{ "account_id": "acc_1", "mode": "live", "venue": "BINANCE", "external_account_ref": "external_1" }],
     "account_balances": [{ "account_id": "acc_1", "currency": "USDT", "total": "1000.10", "free": "800.10", "locked": "200.00" }],
     "margin_balances": [{ "account_id": "acc_1", "currency": "USDT", "initial": "100.00", "maintenance": "50.05" }],
-    "broker_sync": [{ "sync_id": "broker_1", "external_account_ref": "external_1", "mode": "live", "venue": "BINANCE", "status": "SYNCED", "synced_at": "2026-09-02T12:00:00Z" }],
+    "broker_sync": [{ "sync_id": "broker_1", "external_account_ref": "external_1", "mode": "live", "venue": "BINANCE", "status": "SYNCED", "currency": "USDT", "buying_power": "799.90", "synced_at": "2026-09-02T12:00:00Z" }],
     "differences": [{ "currency": "USDT", "portal_free": "800.10", "broker_buying_power": "799.90", "delta": "0.20", "in_sync": false }],
     "exposure_headroom": [{ "currency": "USDT", "free": "800.10", "maintenance": "50.05", "headroom": "750.05", "verdict": "AVAILABLE" }]
   },

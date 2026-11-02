@@ -63,16 +63,21 @@ const typed = node => {
   return node;
 };
 typed(response);
-const problem = object({ error: object({ code: { type: 'string', enum: ['EXECUTION_READ_NOT_AVAILABLE', 'EXECUTION_READ_CURRENT_ONLY'] }, message: text }, ['code', 'message']), request_id: { type: 'string' } });
+// The route shares Portal's sanitized HTTP error envelope. Governance, session,
+// workspace and operational fences use different stable codes; do not claim
+// that only the two legacy execution-read codes can be emitted.
+const problem = object({ error: object({ code: { type: 'string', minLength: 1, maxLength: 191, pattern: '^[A-Z][A-Z0-9_]*$(?![\\s\\S])' }, message: text }, ['code', 'message']),
+  request_id: { type: 'string' }, public_copy_key: { type: 'string' }, safe_next_action: { type: 'string', enum: ['QUERY_SAME_INTENT', 'REVIEW_BLOCKER'] },
+  details: { type: 'object', additionalProperties: true } }, ['error', 'request_id']);
 const headers = { 'Cache-Control': { required: true, schema: { type: 'string', const: 'private, no-store' } } };
 const err = d => ({ description: d, headers, content: { 'application/json': { schema: { $ref: '#/components/schemas/ApprovalEvidenceProblem' } } } });
 const operation = { get: { operationId: 'executionApprovalEvidenceGetV1', security: [{ PortalSession: [] }],
   description: 'The evidence beside one approval request: prior economic history, evidence diff, obligations still open after approval, the receipt preview, and the Portal evaluation time. ' +
     'Each section is omitted (no owning source), null (source not read) or published; a count of 0 is a published true zero. ' +
-    'CONTRACT ONLY: no producer exists yet (Edge/Core inputs are in WP_K_CONTRACTS_2026-10-23.md), so nothing serves this route and every screen keeps its typed absence.',
+    'A source-dark producer is optionally mounted only on the authorized Research review profile; source sections and field authority are not commissioned (see WP_K_CONTRACTS_2026-10-23.md).',
   parameters: [{ name: 'approval_id', in: 'path', required: true, schema: id }, { name: 'workspace_id', in: 'query', required: false, schema: text }],
   responses: { 200: { description: 'Authorized current evidence; absence stays typed', headers, content: { 'application/json': { schema: { $ref: '#/components/schemas/ApprovalEvidence' } } } },
-    ...Object.fromEntries([[400, 'Invalid query'], [401, 'Session required'], [404, 'Approval unavailable or not authorized'], [503, 'Source unavailable']].map(([c, t]) => [c, err(t)])) } } };
+    ...Object.fromEntries([[400, 'Invalid query'], [401, 'Session required'], [403, 'Read authority refused'], [404, 'Approval unavailable or not authorized'], [409, 'Read authority changed'], [500, 'Internal error'], [503, 'Source or read authority unavailable']].map(([c, t]) => [c, err(t)])) } } };
 const header = { $schema: 'https://json-schema.org/draft/2020-12/schema', $id: 'https://schemas.primusspark.com/portal/execution-approval-evidence.v1.schema.json' };
 
 const T0 = 1_800_000_000_000, DAY = 86_400_000;

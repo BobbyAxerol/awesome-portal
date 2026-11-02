@@ -138,6 +138,18 @@ describe("private current-requester STATUS application composition",()=>{
     f.assertion.counts.in_flight=0;await expect(f.c.shutdown()).rejects.toMatchObject({code:"COMMAND_STATUS_COMPOSITION_SHUTDOWN_PENDING"});
     f.reverse.counts.in_flight=0;await f.c.shutdown();expect(f.c.snapshot().state).toBe("STOPPED");expect(f.end).not.toHaveBeenCalled();
   });
+  it("does not complete shutdown while a canceled caller's shared preparation is still using authority",async()=>{
+    const f=await setup();await f.c.start(targets);
+    const authority=factories.edge.mock.calls[0][2] as CommandSourceAssertionAuthority;
+    const original=authority.snapshot.bind(authority);let preparing=1,preparation_waiters=0;
+    vi.spyOn(authority,"snapshot").mockImplementation(()=>({...original(),preparing,preparation_waiters}));
+    await expect(f.c.shutdown()).rejects.toMatchObject({code:"COMMAND_STATUS_COMPOSITION_SHUTDOWN_PENDING"});
+    expect(f.c.snapshot()).toMatchObject({state:"STOPPING",authority:{preparing:1}});
+    preparing=0;preparation_waiters=1;
+    await expect(f.c.shutdown()).rejects.toMatchObject({code:"COMMAND_STATUS_COMPOSITION_SHUTDOWN_PENDING"});
+    preparation_waiters=0;await f.c.shutdown();
+    expect(f.c.snapshot().state).toBe("STOPPED");expect(f.end).not.toHaveBeenCalled();
+  });
   it("closes first listener if the second bind fails and waits physical close callbacks",async()=>{
     const f=await setup();f.reverse.server.fail=true;f.assertion.server.holdClose=true;
     await expect(f.c.start(targets)).rejects.toMatchObject({code:"COMMAND_STATUS_COMPOSITION_START_FAILED"});

@@ -528,6 +528,41 @@ export interface AlphaFleetDeployment {
   realizedPnl: string; unrealizedPnl: string; netPnl: string; exposure: string;
   state: string; active: boolean; health: string; updatedAt: string;
 }
+
+/** Alpha Resource V1 has a different contract from the Fleet list: it can
+ * report qualified absence instead of an amount or timestamp. Keep that
+ * shape separate so accepting it does not weaken the fleet-list reader. */
+export interface AlphaResourceAvailability {
+  state?: "AVAILABLE" | "UNAVAILABLE" | null;
+  reasonCode?: string | null;
+}
+export interface AlphaResourceCurrencyValue extends AlphaResourceAvailability { currency: string; value: string | null }
+export interface AlphaResourceCurrencyBalance extends AlphaResourceAvailability {
+  currency: string; total: string | null; free: string | null; locked: string | null;
+}
+export interface AlphaResourceCurrencyPnl extends AlphaResourceAvailability {
+  currency: string; realized: string | null; unrealized: string | null; net: string | null;
+}
+export interface AlphaResourceDeployment extends Omit<AlphaFleetDeployment,
+  "positionFactCount" | "realizedPnl" | "unrealizedPnl" | "netPnl" | "exposure" | "updatedAt"> {
+  positionFactCount: number | null;
+  positionCountAvailability?: "AVAILABLE" | "UNAVAILABLE" | null;
+  positionCountReasonCode?: string | null;
+  realizedPnl: string | null; unrealizedPnl: string | null; netPnl: string | null; exposure: string | null;
+  positionMetricsAvailability?: "UNAVAILABLE" | null;
+  positionMetricsReasonCode?: string | null;
+  updatedAt: string | null;
+}
+export interface AlphaResourceItem extends Omit<AlphaFleetItem,
+  "portfolios" | "deployments" | "allocations" | "balances" | "positionPnl" | "exposure" | "updatedAt"> {
+  portfolios: readonly { portfolioId: string | null; name: string; baseCurrency: string }[];
+  deployments: readonly AlphaResourceDeployment[];
+  allocations: readonly AlphaResourceCurrencyValue[];
+  balances: readonly AlphaResourceCurrencyBalance[];
+  positionPnl: readonly AlphaResourceCurrencyPnl[];
+  exposure: readonly AlphaResourceCurrencyValue[];
+  updatedAt: string | null;
+}
 export interface AlphaFleetSummary {
   alphaCount: number; deploymentCount: number; portfolioCount: number;
   needsAttentionCount: number; researchOnlyCount: number;
@@ -731,6 +766,123 @@ export function readAlphaFleetItem(raw: unknown): AlphaFleetItem | null {
     allocations, balances, positionPnl, exposure, health,
     attentionReasons: root.attention_reasons as string[], metricsAvailability, updatedAt,
   };
+}
+
+/** Resource V1 reader; call only after the envelope's schema-version dispatch.
+ * A typed absence is retained, never reinterpreted as a numeric zero. */
+export function readAlphaResourceItem(raw: unknown): AlphaResourceItem | null {
+  const root = obj(raw);
+  if (!root || !Array.isArray(root.deployments) || !Array.isArray(root.portfolios)
+    || !Array.isArray(root.allocations) || !Array.isArray(root.balances)
+    || !Array.isArray(root.position_pnl) || !Array.isArray(root.exposure)
+    || !Array.isArray(root.attention_reasons)) return null;
+  const alphaId = str(root.alpha_id), alphaLabel = str(root.alpha_label), version = str(root.version), stage = str(root.stage);
+  const health = str(root.health), updatedAt = str(root.updated_at), metrics = obj(root.metrics_availability);
+  const stages = Array.isArray(root.stages)
+    ? root.stages.flatMap((value) => typeof value === "string" && value.length > 0 ? [value] : []) : [];
+  if (!alphaId || !alphaLabel || !version || !stage || !health || !metrics
+    || (root.updated_at !== null && updatedAt === null)
+    || stages.length !== (Array.isArray(root.stages) ? root.stages.length : -1)
+    || root.attention_reasons.some((value) => typeof value !== "string")) return null;
+  const portfolios = exactArray(root.portfolios, (value) => {
+    const item = obj(value), name = str(item?.name), baseCurrency = str(item?.base_currency);
+    const portfolioId = str(item?.portfolio_id);
+    return item && name && baseCurrency && (item.portfolio_id === null || portfolioId)
+      ? { portfolioId, name, baseCurrency } : null;
+  });
+  const deployments = exactArray(root.deployments, readAlphaResourceDeployment);
+  const allocations = exactArray(root.allocations, readAlphaResourceCurrencyValue);
+  const balances = exactArray(root.balances, readAlphaResourceCurrencyBalance);
+  const positionPnl = exactArray(root.position_pnl, readAlphaResourceCurrencyPnl);
+  const exposure = exactArray(root.exposure, readAlphaResourceCurrencyValue);
+  const metricsAvailability: Record<string, MetricState> = {};
+  for (const [key, value] of Object.entries(metrics)) {
+    const metric = obj(value);
+    if (!metric || !["AVAILABLE", "EMPTY", "PARTIAL", "UNAVAILABLE"].includes(String(metric.state))
+      || (metric.reason_code !== null && typeof metric.reason_code !== "string")) return null;
+    metricsAvailability[key] = { state: metric.state as string, reasonCode: metric.reason_code as string | null };
+  }
+  if (!portfolios || !deployments || !allocations || !balances || !positionPnl || !exposure) return null;
+  return { alphaId, alphaLabel, version, stage, stages, owner: str(root.owner), portfolios, deployments,
+    allocations, balances, positionPnl, exposure, health, attentionReasons: root.attention_reasons as string[],
+    metricsAvailability, updatedAt };
+}
+
+function readAlphaResourceDeployment(value: unknown): AlphaResourceDeployment | null {
+  const item = obj(value); if (!item) return null;
+  const deploymentId = str(item.deployment_id), stage = str(item.stage), venue = str(item.venue);
+  const accountId = str(item.account_id), currency = str(item.currency), state = str(item.state);
+  const health = str(item.health), updatedAt = str(item.updated_at);
+  const allocation = requiredNullableMoney(item.allocation), balanceTotal = requiredNullableMoney(item.balance_total);
+  const balanceFree = requiredNullableMoney(item.balance_free), balanceLocked = requiredNullableMoney(item.balance_locked);
+  const realizedPnl = requiredNullableMoney(item.realized_pnl), unrealizedPnl = requiredNullableMoney(item.unrealized_pnl);
+  const netPnl = requiredNullableMoney(item.net_pnl), exposure = requiredNullableMoney(item.exposure);
+  const count = typeof item.position_fact_count === "number" && Number.isSafeInteger(item.position_fact_count)
+    && item.position_fact_count >= 0 ? item.position_fact_count : null;
+  const countState = item.position_count_availability;
+  const countReason = item.position_count_reason_code;
+  const countValid = countState === undefined
+    ? count !== null && (countReason === undefined || countReason === null || countReason === "POSITION_POPULATION_NOT_QUALIFIED")
+    : countState === "AVAILABLE" ? count !== null && countReason === null
+      : countState === "UNAVAILABLE" && item.position_fact_count === null && countReason === "POSITION_POPULATION_NOT_QUALIFIED";
+  const metricsState = item.position_metrics_availability;
+  const metricsReason = item.position_metrics_reason_code;
+  const metricsValid = metricsState === undefined
+    ? [realizedPnl, unrealizedPnl, netPnl, exposure].every((amount) => amount.ok && amount.value !== null)
+      && (metricsReason === undefined || metricsReason === "POSITION_FINANCIAL_SOURCE_NOT_QUALIFIED")
+    : metricsState === "UNAVAILABLE" && metricsReason === "POSITION_FINANCIAL_SOURCE_NOT_QUALIFIED"
+      && [realizedPnl, unrealizedPnl, netPnl, exposure].every((amount) => amount.ok && amount.value === null);
+  if (!deploymentId || !stage || !venue || !accountId || !currency || !state || !health
+    || (item.updated_at !== null && updatedAt === null) || typeof item.active !== "boolean"
+    || !allocation.ok || !balanceTotal.ok || !balanceFree.ok || !balanceLocked.ok || !countValid || !metricsValid) return null;
+  return { deploymentId, stage, venue, accountId, portfolioId: str(item.portfolio_id), portfolioName: str(item.portfolio_name),
+    currency, allocation: allocation.value, balanceTotal: balanceTotal.value, balanceFree: balanceFree.value,
+    balanceLocked: balanceLocked.value, positionFactCount: count,
+    positionCountAvailability: countState === "AVAILABLE" || countState === "UNAVAILABLE" ? countState : null,
+    positionCountReasonCode: typeof countReason === "string" ? countReason : null,
+    realizedPnl: realizedPnl.value, unrealizedPnl: unrealizedPnl.value, netPnl: netPnl.value, exposure: exposure.value,
+    positionMetricsAvailability: metricsState === "UNAVAILABLE" ? metricsState : null,
+    positionMetricsReasonCode: typeof metricsReason === "string" ? metricsReason : null,
+    state, active: item.active, health, updatedAt };
+}
+
+function requiredNullableMoney(value: unknown): { ok: boolean; value: string | null } {
+  if (value === null) return { ok: true, value: null };
+  const result = money(value);
+  return { ok: result !== null, value: result };
+}
+
+function alphaResourceAvailability(item: Record<string, unknown>, amounts: readonly { ok: boolean; value: string | null }[],
+  reason: string, nullWhenUnavailable = false): AlphaResourceAvailability | null {
+  if (amounts.some((amount) => !amount.ok)) return null;
+  const state = item.state, code = item.reason_code;
+  if (state === undefined) {
+    if (amounts.some((amount) => amount.value === null) || (code !== undefined && code !== null && typeof code !== "string")) return null;
+    return { state: null, reasonCode: typeof code === "string" ? code : null };
+  }
+  if (state === "AVAILABLE" && code === null && amounts.every((amount) => amount.value !== null)) return { state, reasonCode: null };
+  if (state === "UNAVAILABLE" && code === reason && (!nullWhenUnavailable || amounts.every((amount) => amount.value === null)))
+    return { state, reasonCode: reason };
+  return null;
+}
+
+function readAlphaResourceCurrencyValue(value: unknown): AlphaResourceCurrencyValue | null {
+  const item = obj(value), currency = str(item?.currency); if (!item || !currency) return null;
+  const amount = requiredNullableMoney(item.value), availability = alphaResourceAvailability(item, [amount], "FINANCIAL_AGGREGATE_SOURCE_NOT_QUALIFIED");
+  return availability ? { currency, value: amount.value, ...availability } : null;
+}
+function readAlphaResourceCurrencyBalance(value: unknown): AlphaResourceCurrencyBalance | null {
+  const item = obj(value), currency = str(item?.currency); if (!item || !currency) return null;
+  const total = requiredNullableMoney(item.total), free = requiredNullableMoney(item.free), locked = requiredNullableMoney(item.locked);
+  const availability = alphaResourceAvailability(item, [total, free, locked], "FINANCIAL_AGGREGATE_SOURCE_NOT_QUALIFIED");
+  return availability ? { currency, total: total.value, free: free.value, locked: locked.value, ...availability } : null;
+}
+function readAlphaResourceCurrencyPnl(value: unknown): AlphaResourceCurrencyPnl | null {
+  const item = obj(value), currency = str(item?.currency); if (!item || !currency) return null;
+  const realized = requiredNullableMoney(item.realized), unrealized = requiredNullableMoney(item.unrealized), net = requiredNullableMoney(item.net);
+  const availability = alphaResourceAvailability(item, [realized, unrealized, net], "POSITION_FINANCIAL_SOURCE_NOT_QUALIFIED", true);
+  if (availability?.state === "AVAILABLE") return null; // V1 publishes typed UNAVAILABLE or the older untagged shape.
+  return availability ? { currency, realized: realized.value, unrealized: unrealized.value, net: net.value, ...availability } : null;
 }
 
 function exactArray<T>(raw: unknown[], reader: (value: unknown) => T | null): T[] | null {

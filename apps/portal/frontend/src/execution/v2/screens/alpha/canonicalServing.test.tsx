@@ -9,10 +9,11 @@ import { describe, expect, it } from "vitest";
 import { readFinancialChart } from "../../../api/financialChart";
 import { readMarketCandles } from "../../../api/marketCandles";
 import { readObservedTimeline } from "../../../api/observedTimeline";
-import { readAlphaFleetItem, readProfileEnvelope } from "../../../api/profileRead";
+import { readAlphaFleetItem, readAlphaResourceItem, readProfileEnvelope } from "../../../api/profileRead";
 import { readSubjectActivity } from "../../../api/subjectActivity";
 import { loadCanonical } from "../../testkit/loadCanonical";
 import { alphaName, alphaTitle, alphaVersion, deploymentRows } from "./model";
+import { alphaViewOf, legacyResource } from "./view";
 import { validateAgainst } from "../../testkit/schema";
 
 type Any = Record<string, any>;
@@ -29,7 +30,7 @@ describe("alpha resource (execution.alpha-resource.v1)", () => {
   it("the ready case reads as the alpha the screen draws: Unnamed alpha, UNVERSIONED, READY|ATTENTION|FINDING health, names from data.alpha.portfolios", () => {
     const ready = cases("execution-alpha-resource.v1.synthetic")[0]!.value;
     const envelope = readProfileEnvelope(ready)!;
-    const item = readAlphaFleetItem(envelope.objects.alpha ?? ready.data.alpha);
+    const item = readAlphaResourceItem(envelope.objects.alpha ?? ready.data.alpha);
     expect(item).not.toBeNull();
     expect(item!.alphaId).toBe("alpha_btc_trend");
     expect(item!.alphaLabel).toBe("Unnamed alpha");
@@ -41,7 +42,85 @@ describe("alpha resource (execution.alpha-resource.v1)", () => {
     // a deployment's portfolio_name is null by contract; the name is joined from portfolios[] on portfolio_id
     expect(item!.deployments[0]!.portfolioName).toBeNull();
     expect(deploymentRows(item)[0]!.portfolio).toBe("Core");
-    expect(item!.health).toBe("READY");
+    expect(item!.health).toBe("UNKNOWN");
+    expect(item!.deployments[0]).toMatchObject({ positionFactCount: 1, netPnl: null,
+      positionMetricsAvailability: "UNAVAILABLE", positionMetricsReasonCode: "POSITION_FINANCIAL_SOURCE_NOT_QUALIFIED" });
+    expect(item!.positionPnl[0]).toMatchObject({ net: null, state: "UNAVAILABLE", reasonCode: "POSITION_FINANCIAL_SOURCE_NOT_QUALIFIED" });
+    expect(item!.exposure[0]).toMatchObject({ value: null, state: "UNAVAILABLE", reasonCode: "FINANCIAL_AGGREGATE_SOURCE_NOT_QUALIFIED" });
+    expect(deploymentRows(item)[0]).toMatchObject({ netPnl: null, exposure: null, health: "UNKNOWN" });
+  });
+
+  it("keeps source zero, an old complete body and nullable timestamps distinct from unavailable values", () => {
+    const alpha = structuredClone(cases("execution-alpha-resource.v1.synthetic")[0]!.value.data.alpha);
+    const d = alpha.deployments[0];
+    delete d.position_count_availability; delete d.position_count_reason_code;
+    delete d.position_metrics_availability; delete d.position_metrics_reason_code;
+    Object.assign(d, { position_fact_count: 0, realized_pnl: "0", unrealized_pnl: "0", net_pnl: "0", exposure: "0", updated_at: null });
+    alpha.updated_at = null;
+    alpha.position_pnl = [{ currency: "USDT", realized: "0", unrealized: "0", net: "0" }];
+    alpha.exposure = [{ currency: "USDT", value: "0" }];
+    const item = readAlphaResourceItem(alpha)!;
+    expect(item.updatedAt).toBeNull();
+    expect(item.deployments[0]).toMatchObject({ positionFactCount: 0, netPnl: "0", exposure: "0", updatedAt: null });
+    expect(item.positionPnl[0].net).toBe("0");
+    expect(item.exposure[0].value).toBe("0");
+  });
+
+  it("rejects invalid availability pairs without widening the fleet-list reader", () => {
+    const alpha = structuredClone(cases("execution-alpha-resource.v1.synthetic")[0]!.value.data.alpha);
+    expect(readAlphaFleetItem(alpha)).toBeNull(); // fleet-list v2 keeps its own strict contract
+    const mutations = [
+      (v: Any) => { v.deployments[0].position_count_availability = "UNAVAILABLE"; },
+      (v: Any) => { v.deployments[0].position_count_reason_code = "invented"; },
+      (v: Any) => { v.deployments[0].net_pnl = "0"; },
+      (v: Any) => { delete v.deployments[0].position_metrics_reason_code; },
+      (v: Any) => { v.position_pnl[0].reason_code = "invented"; },
+      (v: Any) => { v.exposure[0].state = "AVAILABLE"; },
+      (v: Any) => { delete v.exposure[0].reason_code; },
+    ];
+    for (const mutate of mutations) {
+      const bad = structuredClone(alpha); mutate(bad);
+      expect(readAlphaResourceItem(bad)).toBeNull();
+    }
+  });
+
+  it("keeps the Alpha visible with the source's unavailable reason instead of a fabricated zero", () => {
+    const body = cases("execution-alpha-resource.v1.synthetic")[0]!.value;
+    const envelope = readProfileEnvelope(body)!;
+    const view = alphaViewOf(legacyResource(envelope), "alpha_btc_trend");
+    expect(view.present).toBe(true);
+    expect(view.rows[0]).toMatchObject({ id: "dep_live_01", netPnl: null, exposure: null, health: "UNKNOWN" });
+    expect(view.money).toEqual({ published: false, reason: "POSITION_FINANCIAL_SOURCE_NOT_QUALIFIED" });
+    expect(legacyResource({ ...envelope, schemaVersion: "execution.alpha-resource.v2" })).toMatchObject({
+      variant: "legacy",
+      item: null,
+    });
+  });
+
+  it("keeps a qualified deployment amount visible even when its aggregate is unavailable", () => {
+    const body = structuredClone(cases("execution-alpha-resource.v1.synthetic")[0]!.value);
+    const d = body.data.alpha.deployments[0];
+    delete d.position_metrics_availability; delete d.position_metrics_reason_code;
+    Object.assign(d, { realized_pnl: "0", unrealized_pnl: "0", net_pnl: "0", exposure: "5" });
+    const view = alphaViewOf(legacyResource(readProfileEnvelope(body)!), "alpha_btc_trend");
+    expect(view.rows[0]).toMatchObject({ netPnl: "0", exposure: "5" });
+    expect(view.money.published).toBe(true);
+  });
+
+  it("retains an unqualified observation but does not promote it into a displayed aggregate", () => {
+    const body = structuredClone(cases("execution-alpha-resource.v1.synthetic")[0]!.value);
+    body.data.alpha.exposure[0].value = "42"; // a known component, not a qualified aggregate
+    body.data.alpha.balances[0] = { currency: "USDT", total: "10", free: null, locked: "10",
+      state: "UNAVAILABLE", reason_code: "FINANCIAL_AGGREGATE_SOURCE_NOT_QUALIFIED" };
+    body.data.alpha.portfolios[0].portfolio_id = null;
+    expect(validateAgainst("execution-alpha-resource.v1", "", body)).toEqual([]);
+    const envelope = readProfileEnvelope(body)!;
+    const item = readAlphaResourceItem(envelope.objects.alpha)!;
+    expect(item.exposure[0]).toMatchObject({ value: "42", state: "UNAVAILABLE" });
+    expect(item.balances[0]).toMatchObject({ total: "10", free: null, state: "UNAVAILABLE" });
+    const view = alphaViewOf(legacyResource(envelope), "alpha_btc_trend");
+    expect(view.money.published).toBe(false);
+    expect(view.portfolioNameById.size).toBe(0);
   });
 });
 

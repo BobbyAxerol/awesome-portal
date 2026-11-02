@@ -34,7 +34,9 @@ export class PaperReadController {
     const query = PaperOverviewQuerySchema.safeParse(raw);
     if (!query.success) throw invalidQuery();
     const workspaceId = await this.workspace(request, query.data.workspace_id);
-    return this.negotiate(request, await this.paper.overview(this.principal(request, workspaceId)));
+    const body = await this.paper.overview(this.principal(request, workspaceId));
+    await this.workspace(request, workspaceId);
+    return this.negotiate(request, body);
   }
 
   @Get("/paper/:deployment_id")
@@ -60,7 +62,9 @@ export class PaperReadController {
     const query = PaperBlotterQuerySchema.safeParse(raw);
     if (!query.success) throw invalidQuery();
     const workspaceId = await this.workspace(request, query.data.workspace_id);
-    return this.negotiate(request, await this.paper.blotter(this.principal(request, workspaceId), query.data));
+    const body = await this.paper.blotter(this.principal(request, workspaceId), query.data);
+    await this.workspace(request, workspaceId);
+    return this.negotiate(request, body);
   }
 
   /**
@@ -97,7 +101,9 @@ export class PaperReadController {
     // one-row snapshot panel, so the reader sees 1 point while `history_windows` claims thousands) and lifts `deployment`,
     // `history_windows`, `stage_facts`... out of `data`, which the strict published reader rejects ("... not allowed").
     // Proved in test/paper-history-http.spec.ts. The V1 body adds only the bounded snapshot panel rows, never history rows.
-    return this.negotiate(request, await this.paper.workbench(this.principal(request, workspaceId), deploymentId.data, vnm), false);
+    const body = await this.paper.workbench(this.principal(request, workspaceId), deploymentId.data, vnm);
+    await this.workspace(request, workspaceId);
+    return this.negotiate(request, body, false);
   }
 
   private async workspace(request: PaperReadRequest, requested?: string): Promise<string> {

@@ -88,6 +88,28 @@ type HeldNativeReadState={issuer:ExecutionReadScopes;scopes:readonly AuthorizedE
 const heldNativeReads=new WeakMap<object,HeldNativeReadState>();
 const businessReads=new Set<AccessAction>(["business.read_all","alpha.read","portfolio.read","portfolio.read_restricted",
   "portfolio.discover_linked","account.read","binding.read"]);
+/** The only cross-environment retained derivation admitted below. These are
+ * source-health inputs, not new grants or a general cross-profile reader. */
+const retainedSourceHealthDatasets=new Set([
+  "relation:manager.strategies:strategies", "relation:manager.deployments:strategy_deployments",
+  "relation:manager.accounts:accounts", "relation:manager.accounts:account_balances",
+  "relation:manager.portfolios:portfolios", "relation:manager.portfolios:portfolio_allocations",
+  "relation:manager.sessions:execution_sessions", "relation:manager.orders:orders", "relation:manager.fills:fills",
+  "relation:manager.conditional-orders:conditional_order_groups",
+  "relation:manager.conditional-orders:conditional_order_group_legs", "derivation:empty",
+]);
+/** Only the Account 360 environment-selection read may combine these
+ * separately authorized current relations across profiles. No item here
+ * grants a new purpose or a whole-population entitlement. */
+const retainedAccountProfilePurposes:Readonly<Record<string,readonly ReadScopeRequirement["action"][]>>=Object.freeze({
+  "relation:manager.accounts:accounts":["account.read"],
+  "relation:manager.accounts:account_balances":["account.read"],
+  "relation:manager.accounts:margin_balances":["account.read"],
+  "relation:manager.accounts:account_sync_effective":["account.read"],
+  "relation:manager.deployments:strategy_deployments":["alpha.read","account.read"],
+  "relation:manager.positions:positions_v2":["alpha.read","account.read"],
+  "relation:manager.reconciliation:reconciliation_findings":["account.read"],
+});
 const exactKey=(r:AccessResource)=>JSON.stringify([r.kind,r.id]);
 /** One private retained technical input, not a public alias/grant/purpose
  * registry. Other technical datasets still need their own reviewed branch. */
@@ -1166,11 +1188,100 @@ export class ExecutionReadScopes {
       state.principal.workspaceId,state.principal.viewerWorkspaceId]));
   }
 
+  /** Source health contains at most 11 relation scopes and one entry scope
+   * for each of three profiles. Keep every already-authorized obligation until
+   * a single final Core confirmation; this grants no cross-environment access.
+   * This is a retained point-in-time fence, not native physical-send custody. */
+  async deliverRetainedSourceHealth<T>(initial:readonly AuthorizedExecutionReadScope[],read:()=>Promise<T>):Promise<T>{
+    if(!Array.isArray(initial)||!initial.length||initial.length>36)fail("EXECUTION_READ_SCOPE_REQUIRED");
+    const environments=new Map<ReadEnvironment,{profile:string;source:string;count:number}>();
+    for(const scope of initial){
+      assertExecutionReadScope(scope);
+      const state=minted.get(scope)!, dataset=state.requirement.dataset;
+      if(state.issuer!==this||scope.mode!=="SCOPED_V2"||!state.context||state.requirement.action!=="alpha.read"||
+        state.requirement.resource!==undefined||state.requirement.requireWholePopulation===true||!dataset||
+        !retainedSourceHealthDatasets.has(dataset.dataset_id)||dataset.window!==null)
+        fail("EXECUTION_READ_SCOPE_REQUIRED");
+      const source=JSON.stringify([dataset.source_revision,dataset.projection_generation,dataset.catalogue_revision]);
+      const previous=environments.get(state.binding.environment);
+      if(previous&&(previous.profile!==state.binding.profileId||previous.source!==source||previous.count>=12))
+        fail("EXECUTION_READ_SCOPE_REQUIRED");
+      environments.set(state.binding.environment,{profile:state.binding.profileId,source,count:(previous?.count??0)+1});
+    }
+    return this.deliverReadComposition(initial,()=>read(),undefined,state=>JSON.stringify([
+      state.principal.user.userId,state.principal.user.role,state.principal.session.userId,
+      state.principal.session.sessionId,state.principal.session.sessionVersion,
+      state.principal.workspaceId,state.principal.viewerWorkspaceId]),36);
+  }
+
+  /** Account 360 can select among three existing profile observations. Each
+   * scope remains an independently authorized exact relation; this only holds
+   * those obligations until one final confirmation, never merges privileges.
+   * Like other retained fences, this is not native physical-send custody. */
+  async deliverRetainedProfileAccounts<T>(initial:readonly AuthorizedExecutionReadScope[],read:()=>Promise<T>,
+    validateBeforeRelease?:()=>void):Promise<T>{
+    if(!Array.isArray(initial)||!initial.length||initial.length>27)fail("EXECUTION_READ_SCOPE_REQUIRED");
+    const environments=new Map<ReadEnvironment,{profile:string;source:string;datasets:Set<string>}>();
+    for(const scope of initial){
+      assertExecutionReadScope(scope);
+      const state=minted.get(scope)!, dataset=state.requirement.dataset;
+      if(state.issuer!==this||scope.mode!=="SCOPED_V2"||!state.context||!dataset||
+        !Object.hasOwn(retainedAccountProfilePurposes,dataset.dataset_id)||
+        !retainedAccountProfilePurposes[dataset.dataset_id].includes(state.requirement.action)||
+        state.requirement.resource!==undefined||state.requirement.requireWholePopulation===true||dataset.window!==null)
+        fail("EXECUTION_READ_SCOPE_REQUIRED");
+      const source=JSON.stringify([dataset.source_revision,dataset.projection_generation,dataset.catalogue_revision]);
+      const previous=environments.get(state.binding.environment);
+      const purpose=JSON.stringify([dataset.dataset_id,state.requirement.action]);
+      if(previous&&(previous.profile!==state.binding.profileId||previous.source!==source||
+        previous.datasets.has(purpose)||previous.datasets.size>=9))fail("EXECUTION_READ_SCOPE_REQUIRED");
+      const datasets=previous?.datasets??new Set<string>();datasets.add(purpose);
+      environments.set(state.binding.environment,{profile:state.binding.profileId,source,datasets});
+    }
+    return this.deliverReadComposition(initial,()=>read(),validateBeforeRelease,state=>JSON.stringify([
+      state.principal.user.userId,state.principal.user.role,state.principal.session.userId,
+      state.principal.session.sessionId,state.principal.session.sessionVersion,
+      state.principal.workspaceId,state.principal.viewerWorkspaceId]),27);
+  }
+
+  /** Resource360 combines at most one already-authorized resource scope per
+   * retained environment. This holds those exact existing obligations until
+   * the shared final authority confirmation; it never adds a grant or changes
+   * the resource/field visibility selected by the originating scope. */
+  async deliverRetainedResource<T>(initial:readonly AuthorizedExecutionReadScope[],
+    kind:"ALPHA"|"PORTFOLIO"|"ACCOUNT"|"BINDING",resourceId:string,read:()=>Promise<T>,
+    validateBeforeRelease?:()=>void):Promise<T>{
+    if(!Array.isArray(initial)||!initial.length||initial.length>3||
+      typeof resourceId!=="string"||!resourceId)fail("EXECUTION_READ_SCOPE_REQUIRED");
+    const purposes:Readonly<Record<typeof kind,readonly ReadScopeRequirement["action"][]>>={
+      ALPHA:["alpha.read"],PORTFOLIO:["portfolio.read","portfolio.read_restricted"],
+      ACCOUNT:["account.read"],BINDING:["binding.read"],
+    };
+    const actions=Object.hasOwn(purposes,kind)?purposes[kind]:undefined;
+    if(!actions)fail("EXECUTION_READ_SCOPE_REQUIRED");
+    const environments=new Set<ReadEnvironment>();
+    for(const scope of initial){
+      assertExecutionReadScope(scope);
+      const state=minted.get(scope)!,dataset=state.requirement.dataset,resource=state.requirement.resource;
+      if(state.issuer!==this||scope.mode!=="SCOPED_V2"||!state.context||!dataset||
+        dataset.dataset_id!==`relation:resource360:${kind.toLowerCase()}`||dataset.window!==null||
+        !actions.includes(state.requirement.action)||state.requirement.requireWholePopulation===true||
+        environments.has(state.binding.environment)||
+        (kind==="ALPHA"?resource!==undefined:resource?.kind!==kind||resource.id!==resourceId))
+        fail("EXECUTION_READ_SCOPE_REQUIRED");
+      environments.add(state.binding.environment);
+    }
+    return this.deliverReadComposition(initial,()=>read(),validateBeforeRelease,state=>JSON.stringify([
+      state.principal.user.userId,state.principal.user.role,state.principal.session.userId,
+      state.principal.session.sessionId,state.principal.session.sessionVersion,
+      state.principal.workspaceId,state.principal.viewerWorkspaceId]),3);
+  }
+
   private async deliverReadComposition<T>(initial:readonly AuthorizedExecutionReadScope[],
     read:(retain:(scope:AuthorizedExecutionReadScope)=>void)=>Promise<T>,
-    validateBeforeRelease:(()=>void)|undefined,actorKey:(state:ScopeState)=>string):Promise<T>{
+    validateBeforeRelease:(()=>void)|undefined,actorKey:(state:ScopeState)=>string,scopeLimit=16):Promise<T>{
     if(this.access.hasNativeCurrentRelations())fail("EXECUTION_READ_AUTHORITY_UNAVAILABLE",503);
-    if(!Array.isArray(initial)||!initial.length||initial.length>16)fail("EXECUTION_READ_SCOPE_REQUIRED");
+    if(!Array.isArray(initial)||!initial.length||initial.length>scopeLimit)fail("EXECUTION_READ_SCOPE_REQUIRED");
     const original:AuthorizedExecutionReadScope[]=[],states:ScopeState[]=[];
     let expected:string|undefined;
     const retain=(scope:AuthorizedExecutionReadScope)=>{
@@ -1178,7 +1289,7 @@ export class ExecutionReadScopes {
       if(state.issuer!==this||scope.mode!=="SCOPED_V2"||!state.context)fail("EXECUTION_READ_SCOPE_REQUIRED");
       const key=actorKey(state);if(expected!==undefined&&key!==expected)fail("EXECUTION_READ_SCOPE_REQUIRED");
       expected=key;if(original.includes(scope))return;
-      if(original.length>=16)fail("EXECUTION_READ_SCOPE_LIMIT",503);
+      if(original.length>=scopeLimit)fail("EXECUTION_READ_SCOPE_LIMIT",503);
       original.push(scope);states.push(state);
     };
     initial.forEach(retain);
@@ -1313,11 +1424,24 @@ export class ExecutionReadScopes {
     if(this.access.hasNativeCurrentRelations())fail("EXECUTION_READ_AUTHORITY_UNAVAILABLE",503);
     assertExecutionReadScope(scope);
     if(minted.get(scope)!.issuer!==this)fail("EXECUTION_READ_SCOPE_REQUIRED");
-    // Fences cover cache HIT, follower and miss equally; no cached entitlement.
+    // Fences cover cache HIT, follower, miss AND an error derived from a
+    // protected read. A revoked caller must not receive an earlier refusal
+    // which could distinguish a protected record or source condition.
     await this.revalidate(scope);
-    const result=await read();
-    await this.revalidate(scope);
-    return result;
+    let result:T|undefined,held:unknown,failed=false;
+    try{result=await read();}catch(error){held=error;failed=true;}
+    try{await this.revalidate(scope);}catch(error){
+      // A nested parent may already have returned the deliberately uniform
+      // not-available denial; the same revoke can also change this outer
+      // scope's fingerprint. Keep that existing non-disclosing 404 instead
+      // of changing its public contract to 409. Other held errors never mask
+      // the final authority failure, including an unavailable authority.
+      if(failed&&held instanceof ExecutionReadScopeError&&held.status===404&&held.code==="EXECUTION_READ_NOT_AVAILABLE"&&
+        error instanceof ExecutionReadScopeError&&error.status===409&&error.code==="EXECUTION_READ_ACCESS_CHANGED")throw held;
+      throw error;
+    }
+    if(failed)throw held;
+    return result as T;
   }
 
   /** Opt-in real finite CURRENT egress. Uses this issuer's genuine scope and

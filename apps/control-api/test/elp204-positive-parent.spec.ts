@@ -2427,6 +2427,39 @@ async function followingFixture(family:FollowingFamily,options:{rootOnly?:boolea
         expect((await granted.http.inject({method:"GET",url:url(f.r1,f.workspace,"&extra=1"),headers:headers(f)})).statusCode).toBe(400);
       }finally{await granted.app.close();}
     });
+    it("approval evidence real PG+HTTP refuses a workspace membership revoked while the source is being read",async()=>{
+      // A fresh TEST_ONLY workspace with no scoped-policy installation takes
+      // the real legacy governance visibility/session/membership fences. The
+      // source and field permit remain synthetic and cannot commission data.
+      const f=await captured(owner), real=new GovernanceApprovalVisibility(ctx.app.get(GovernanceRepository),ctx.app.get(GovernanceService));
+      let revoke=false;
+      const port={read:async (request:{workspaceId:string;approvalId:string;nowMs:number})=>{
+        if(revoke) await ctx.pool.query("DELETE FROM workspace_members WHERE workspace_id=$1 AND user_id=$2",[f.workspace,owner.user.userId]);
+        return {identity:request,sections:{obligations_after_approval:{open_positions:2,working_orders:0,reservations:1,unknown_outcomes:0,settlement_pending:0}}};
+      }};
+      const app=await NestFactory.create<NestFastifyApplication>({module:PositiveParentTestModule,controllers:[ApprovalEvidenceController],
+        providers:[SessionGuard,{provide:AuthService,useValue:auth},{provide:CONTROL_API_CONFIG,useValue:f.config},
+          {provide:WorkspacesRepository,useValue:new WorkspacesRepository(ctx.pool,f.config)},
+          {provide:ApprovalEvidenceReads,useValue:new ApprovalEvidenceReads(port,real,{allows:()=>true})}]},
+        new FastifyAdapter(),{logger:false,abortOnError:false});
+      try{
+        app.useGlobalFilters(new HttpErrorFilter());await app.register(cookiePlugin as never);await app.init();
+        const http=app.getHttpAdapter().getInstance<FastifyInstance>();await http.ready();
+        const url=`/api/v1/execution/governance/approvals/${f.r1}/evidence?workspace_id=${encodeURIComponent(f.workspace)}`;
+        const reqHeaders={cookie:`${SESSION_COOKIE}=${owner.login.token}`,"x-request-id":"TEST_ONLY-approval-evidence-revoke"};
+        const before=await http.inject({method:"GET",url,headers:reqHeaders});
+        expect(before.statusCode,before.body).toBe(200);
+        expect(before.json().obligations_after_approval.open_positions).toBe(2);
+        revoke=true;
+        const changed=await http.inject({method:"GET",url,headers:reqHeaders});
+        expect(changed.statusCode,changed.body).toBe(403);
+        expect(changed.json().error.code).toBe("WORKSPACE_ACCESS_DENIED");
+        expect(changed.headers["cache-control"]).toBe("private, no-store");
+        expect(changed.body).not.toContain("open_positions");
+        const after=await http.inject({method:"GET",url,headers:reqHeaders});
+        expect(after.statusCode,after.body).toBe(404);
+      }finally{await app.close();}
+    });
     it("the route is UNMOUNTED by default and mounts only with the explicit SOURCE_DARK dependency",()=>{
       const plain=AppModule.register(ctx.config,ctx.pool),dark=AppModule.register(ctx.config,ctx.pool,undefined,{equityProjectionSource:"SOURCE_DARK"});
       expect(plain.controllers).not.toContain(EquityProjectionSourceController);

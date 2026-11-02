@@ -56,14 +56,15 @@ export type QueueSnapshot = { links: ReadonlyMap<string, OperationalIncidentLink
   axes?: ReadonlyMap<string, Partial<QueueAxes>>; health?: QueueHealthGroups };
 
 /**
- * FE-CAT-2. What the projection view carries for the queue health. The production view has NONE of these columns today (no
- * migration), so the service passes no plan and publishes no health and no axes. A plan is the day Edge/Core add them:
+ * FE-CAT-2. What a commissioned projection view carries for queue health. A
+ * migration defines the view; publication remains optional and source-dark until commissioned:
  * `delivery_state` / `display_state` are NON-NULL closed-domain view columns whose extra value `NOT_REPORTED` (the source did
  * not report the axis for that row) is published as JSON null; `exceptions` counts the owning source's open exceptions under
  * the same scope inside the same snapshot.
  */
 export interface QueueHealthPlan {
   delivery?: boolean; display?: boolean;
+  verify?: (lent: PostgresSnapshotReader<QueryResultRow>) => Promise<void>;
   exceptions?: (lent: PostgresSnapshotReader<QueryResultRow>) => Promise<{ count: number | null }>;
 }
 export const QUEUE_NOT_REPORTED = "NOT_REPORTED";
@@ -129,6 +130,7 @@ function groupLinks(rows: readonly QueryResultRow[]): Map<string, OperationalInc
 export async function readQueueSnapshot(repository: Pick<OperationalReadRepository, "incidentLinks">, workspaceId: string,
   scope: PostgresRowScope, selected: readonly RawFilterInput[], lent: PostgresSnapshotReader<QueryResultRow>,
   plan?: QueueHealthPlan): Promise<QueueSnapshot> {
+  if (plan?.verify) await plan.verify(lent);
   const ids = lent.rows.map(row => row.operation_id).filter((id): id is string => typeof id === "string");
   const links = groupLinks(await repository.incidentLinks(lent, workspaceId, ids, scope));
   const dimensions: Record<string, unknown> = {};

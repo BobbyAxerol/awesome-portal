@@ -9,6 +9,7 @@ import type { AccessEvaluationContext } from "../src/execution-v2/access-policy"
 import { accessDigest } from "../src/execution-v2/access-digest";
 import type { ExecutionAccessService } from "../src/execution-v2/access.service";
 import { commandAuthorization } from "../src/execution-v2/command-trust";
+import { CurrentHumanLeaseError } from "../src/execution-v2/current-human-candidate";
 import { commandIntent, commandStatus } from "../src/execution-v2/command.contract";
 import { CommandSourceAssertionAuthority, COMMAND_STATUS_PM_PATH, COMMAND_STATUS_EDGE_PATH,
   type CommandStatusInput, type CommandSourceAssertionResponse } from "../src/execution-v2/command-source-assertion";
@@ -60,12 +61,28 @@ function setup(){
     rows:sql.includes("elp210_candidate.authority")?[{revision:"7",drain_id:null}]:[{command_id:status.command_id}],rowCount:1}))};
   const access={usesPool:(p:unknown)=>p===pool,readContext:vi.fn(async()=>context()),confirmReadContext:vi.fn(async()=>context())};
   let count=0;
-  const candidate={issue:vi.fn(async(a,b)=>{
+  const issueLease=vi.fn(async(a,b)=>{
     const lease=`TEST_ONLY:lease-${++count}`,iat=Math.floor(Date.now()/1000),exp=iat+30;
     return {token:await new SignJWT({...b,purpose:"pma.identity.v1",sub:a.user_id,sid:a.session_id,
       session_revision:a.session_generation,authority_revision:2,jti:lease,iat,exp}).setProtectedHeader({alg:"EdDSA"}).sign(key.privateKey),
       lease_id:lease,expires_at_ms:exp*1000,authority_revision:2};
-  }),revalidateIssue:vi.fn(async()=>undefined),canReplaceResolvedIssue:vi.fn(async()=>false)};
+  });
+  const outstanding=new Map<string,string>(),acknowledged=new Map<string,string>();
+  const canReplaceResolvedIssue=vi.fn(async(_a,_b,_issued)=>false);
+  const candidate={issue:issueLease,revalidateIssue:vi.fn(async()=>undefined),canReplaceResolvedIssue,
+    issueCommandStatus:vi.fn(async(a,b)=>{
+      const k=accessDigest({actor:a,binding:b});
+      if(outstanding.has(k))throw new CurrentHumanLeaseError("CURRENT_HUMAN_COMMAND_STATUS_RECOVERY_REQUIRED");
+      // Hold even an ambiguous issue error: it might have committed.
+      outstanding.set(k,"TEST_ONLY:ISSUE_UNKNOWN");
+      const result=await issueLease(a,b);outstanding.set(k,result.lease_id);return result;
+    }),
+    acknowledgeCommandStatusIssue:vi.fn(async(a,b,issued,responseDigest)=>{
+      if(!await canReplaceResolvedIssue(a,b,issued))return false;
+      if(acknowledged.has(issued.lease_id))return acknowledged.get(issued.lease_id)===responseDigest;
+      const k=accessDigest({actor:a,binding:b});if(outstanding.get(k)!==issued.lease_id)return false;
+      outstanding.delete(k);acknowledged.set(issued.lease_id,responseDigest);return true;
+    })};
   const config={issuer:"TEST_ONLY:core",audience:original.gateway_ref,key_id:"TEST_ONLY:key",key:key.privateKey,
     workload_id:"TEST_ONLY:edge-status",ttl_ms:30000,maximum_contexts:4,maximum_requests_per_context:4};
   const authority=new CommandSourceAssertionAuthority(pool as unknown as Pool,access as unknown as ExecutionAccessService,candidate,config);
@@ -122,6 +139,290 @@ describe("purpose-specific current-requester command STATUS authority",()=>{
     expect(f.candidate.issue).toHaveBeenCalledOnce();expect(new Set(responses.map(r=>r.lease_id)).size).toBe(1);
     expect(decodeJwt(responses[0].assertion)).toMatchObject({purpose:"pma.identity.v1",request_digest:f.issue.request_digest,sub:actor.user_id});
   });
+  it("rejects a conflicting body for the same concurrent STATUS original and call",async()=>{
+    const f=setup(),conflicting=JSON.stringify({...JSON.parse(f.body),
+      pm_status_request_digest:accessDigest("TEST_ONLY:conflicting-PM-request")});
+    const [first,second]=await Promise.allSettled([
+      f.authority.prepare(f.input,f.body),f.authority.prepare(f.input,conflicting),
+    ]);
+    expect(first.status).toBe("fulfilled");
+    expect(second).toMatchObject({status:"rejected",reason:{code:"COMMAND_STATUS_ASSERTION_DELIVERY_REQUEST_MISMATCH",status:409}});
+    if(first.status!=="fulfilled")throw first.reason;
+    expect((await f.authority.prepare(f.input,f.body)).original_context).toBe(first.value.original_context);
+    await expect(f.authority.prepare(f.input,conflicting)).rejects.toMatchObject({
+      code:"COMMAND_STATUS_ASSERTION_DELIVERY_REQUEST_MISMATCH",status:409});
+    expect(f.candidate.issue).not.toHaveBeenCalled();
+  });
+  it("rejects different contract input for the same pending STATUS call",async()=>{
+    const f=setup(),changed={...f.input,contract:{...f.input.contract,reference:"TEST_ONLY:other-contract"}};
+    const [first,second]=await Promise.allSettled([
+      f.authority.prepare(f.input,f.body),f.authority.prepare(changed,f.body),
+    ]);
+    expect(first.status).toBe("fulfilled");
+    expect(second).toMatchObject({status:"rejected",reason:{code:"COMMAND_STATUS_ASSERTION_DELIVERY_REQUEST_MISMATCH",status:409}});
+    await expect(f.authority.prepare(changed,f.body)).rejects.toMatchObject({
+      code:"COMMAND_STATUS_ASSERTION_DELIVERY_REQUEST_MISMATCH",status:409});
+    expect(f.candidate.issue).not.toHaveBeenCalled();
+  });
+  it("releases the logical-call reservation after a failed preparation",async()=>{
+    const f=setup(),target=f.authority as any;
+    vi.spyOn(target,"authorize").mockRejectedValueOnce(new Error("TEST_ONLY:authority-unavailable"));
+    await expect(f.authority.prepare(f.input,f.body)).rejects.toThrow("TEST_ONLY:authority-unavailable");
+    const conflicting=JSON.stringify({...JSON.parse(f.body),pm_status_request_digest:accessDigest("TEST_ONLY:replacement")});
+    await expect(f.authority.prepare(f.input,conflicting)).resolves.toHaveProperty("original_context");
+    expect(f.candidate.issue).not.toHaveBeenCalled();
+  });
+  it("bounds distinct pending STATUS preparations before the authority I/O finishes",async()=>{
+    const f=setup(),target=f.authority as any,original=target.authorize.bind(f.authority);
+    let release!:()=>void,entered!:()=>void,count=0;
+    const held=new Promise<void>(resolve=>{release=resolve;}),started=new Promise<void>(resolve=>{entered=resolve;});
+    vi.spyOn(target,"authorize").mockImplementation(async input=>{
+      if(++count===f.config.maximum_contexts)entered();
+      await held;return original(input);
+    });
+    const call=(index:number)=>{
+      const call_digest=accessDigest(`TEST_ONLY:pending-${index}`);
+      return f.authority.prepare({...f.input,call_digest},JSON.stringify({...JSON.parse(f.body),call_digest}));
+    };
+    const pending=Array.from({length:f.config.maximum_contexts},(_,index)=>call(index));
+    await started;
+    const during=f.authority.snapshot();
+    // An exact retry joins an existing preparation even at the unique limit.
+    const joined=call(0);
+    const excess=call(f.config.maximum_contexts).then(()=>"UNEXPECTED_SUCCESS",error=>error.code);
+    let disposition:string;
+    try {
+      disposition=await Promise.race([excess,new Promise<string>(resolve=>setTimeout(()=>resolve("WAITING"),50))]);
+    } finally { release(); }
+    const settled=await Promise.allSettled([...pending,joined,excess]);
+    expect(disposition).toBe("COMMAND_STATUS_ASSERTION_CAPACITY_EXHAUSTED");
+    expect(during).toMatchObject({preparing:f.config.maximum_contexts});
+    expect(settled.slice(0,f.config.maximum_contexts+1).every(value=>value.status==="fulfilled")).toBe(true);
+    const first=settled[0],duplicate=settled[f.config.maximum_contexts];
+    if(first.status!=="fulfilled"||duplicate.status!=="fulfilled")throw new Error("expected prepared results");
+    expect(duplicate.value.original_context).toBe(first.value.original_context);
+    expect(f.authority.snapshot()).toMatchObject({preparing:0});
+    expect(f.candidate.issue).not.toHaveBeenCalled();
+  });
+  it("bounds coalesced waiters and releases their slots on cancellation",async()=>{
+    const f=setup(),target=f.authority as any,original=target.authorize.bind(f.authority);
+    let release!:()=>void,entered!:()=>void,first=true;
+    const held=new Promise<void>(resolve=>{release=resolve;}),started=new Promise<void>(resolve=>{entered=resolve;});
+    vi.spyOn(target,"authorize").mockImplementation(async input=>{
+      if(first){first=false;entered();await held;}
+      return original(input);
+    });
+    const limit=f.config.maximum_contexts*f.config.maximum_requests_per_context;
+    const controllers=Array.from({length:limit},()=>new AbortController());
+    const waiters=controllers.map(controller=>f.authority.prepare({...f.input,signal:controller.signal},f.body));
+    // Observe the canceled promise before dispatching abort.
+    const canceled=waiters[0].then(()=>"UNEXPECTED_SUCCESS",error=>error.code);
+    await started;
+    const before=f.authority.snapshot();
+    const excess=f.authority.prepare(f.input,f.body).then(()=>"UNEXPECTED_SUCCESS",error=>error.code);
+    const outcome=await Promise.race([excess,new Promise<string>(resolve=>setTimeout(()=>resolve("WAITING"),50))]);
+    controllers[0].abort();const canceledCode=await canceled;
+    const replacement=f.authority.prepare(f.input,f.body);
+    release();
+    const results=await Promise.allSettled([...waiters.slice(1),replacement,excess]);
+    expect(before).toMatchObject({preparing:1,preparation_waiters:limit});
+    expect(outcome).toBe("COMMAND_STATUS_ASSERTION_CAPACITY_EXHAUSTED");
+    expect(canceledCode).toBe("COMMAND_STATUS_ASSERTION_ABORTED");
+    expect(results.slice(0,-1).every(result=>result.status==="fulfilled")).toBe(true);
+    expect(f.authority.snapshot()).toMatchObject({preparing:0,preparation_waiters:0});
+    expect(f.candidate.issue).not.toHaveBeenCalled();
+  });
+  it("detaches repeatedly canceled waiters from a held shared preparation",async()=>{
+    const f=setup(),target=f.authority as any,original=target.authorize.bind(f.authority);
+    let release!:()=>void,entered!:()=>void,first=true;
+    const held=new Promise<void>(resolve=>{release=resolve;}),started=new Promise<void>(resolve=>{entered=resolve;});
+    vi.spyOn(target,"authorize").mockImplementation(async input=>{
+      if(first){first=false;entered();await held;}return original(input);
+    });
+    const initial=new AbortController(),firstWait=f.authority.prepare({...f.input,signal:initial.signal},f.body);
+    await started;
+    const shared=[...target.preparing.values()][0] as {promise:Promise<unknown>;waiters:Set<unknown>};
+    try {
+      initial.abort();await expect(firstWait).rejects.toMatchObject({code:"COMMAND_STATUS_ASSERTION_ABORTED"});
+      for(let index=0;index<128;index++){
+        const controller=new AbortController(),waiter=f.authority.prepare({...f.input,signal:controller.signal},f.body);
+        controller.abort();await expect(waiter).rejects.toMatchObject({code:"COMMAND_STATUS_ASSERTION_ABORTED"});
+        expect(shared.waiters.size).toBe(0);
+      }
+      expect(f.authority.snapshot()).toMatchObject({preparing:1,preparation_waiters:0});
+    } finally { release(); }
+    await expect(shared.promise).resolves.toMatchObject({original_context:expect.any(String)});
+    expect(f.candidate.issue).not.toHaveBeenCalled();
+  });
+  it("reclaims a new STATUS context that was never delivered to any canceled waiter",async()=>{
+    const f=setup(),target=f.authority as any,original=target.authorize.bind(f.authority);
+    let release!:()=>void,entered!:()=>void,first=true;
+    const held=new Promise<void>(resolve=>{release=resolve;}),started=new Promise<void>(resolve=>{entered=resolve;});
+    vi.spyOn(target,"authorize").mockImplementation(async input=>{
+      if(first){first=false;entered();await held;}return original(input);
+    });
+    const controller=new AbortController(),cancelled=f.authority.prepare({...f.input,signal:controller.signal},f.body);
+    await started;
+    const shared=([...target.preparing.values()][0] as {promise:Promise<unknown>}).promise;
+    try {
+      controller.abort();await expect(cancelled).rejects.toMatchObject({code:"COMMAND_STATUS_ASSERTION_ABORTED"});
+    } finally { release(); }
+    await shared;
+    expect(f.authority.snapshot()).toMatchObject({contexts:0,preparing:0,preparation_waiters:0});
+    expect(target.calls.size).toBe(0);
+    expect(f.candidate.issue).not.toHaveBeenCalled();
+    const retry=await f.authority.prepare(f.input,f.body);
+    expect(Object.keys(retry).sort()).toEqual(["original_context","prepared","token"]);
+    expect(retry.prepared.call_digest).toBe(f.input.call_digest);
+    expect(f.candidate.issue).not.toHaveBeenCalled();
+  });
+  it("does not reclaim a previously delivered context or outstanding lease when a retry is canceled",async()=>{
+    const f=setup(),ready=await f.authority.prepare(f.input,f.body);
+    const issued=await f.authority.issue(ready.original_context,f.issue);
+    const target=f.authority as any,original=target.authorize.bind(f.authority);
+    let release!:()=>void,entered!:()=>void,first=true;
+    const held=new Promise<void>(resolve=>{release=resolve;}),started=new Promise<void>(resolve=>{entered=resolve;});
+    vi.spyOn(target,"authorize").mockImplementation(async input=>{
+      if(first){first=false;entered();await held;}return original(input);
+    });
+    const controller=new AbortController(),cancelled=f.authority.prepare({...f.input,signal:controller.signal},f.body);
+    await started;
+    const shared=([...target.preparing.values()][0] as {promise:Promise<unknown>}).promise;
+    try {
+      controller.abort();await expect(cancelled).rejects.toMatchObject({code:"COMMAND_STATUS_ASSERTION_ABORTED"});
+    } finally { release(); }
+    await shared;
+    expect(f.authority.snapshot()).toMatchObject({contexts:1,preparing:0,preparation_waiters:0});
+    expect((await f.authority.prepare(f.input,f.body)).original_context).toBe(ready.original_context);
+    expect((await f.authority.issue(ready.original_context,f.issue)).lease_id).toBe(issued.lease_id);
+    expect(f.candidate.issue).toHaveBeenCalledOnce();
+  });
+  it("isolates caller cancellation when concurrent STATUS prepares share the same original",async()=>{
+    const f=setup(), first=new AbortController(), second=new AbortController();
+    const cancelled=f.authority.prepare({...f.input,signal:first.signal},f.body);
+    // Abort before the shared prepare microtask starts; the live caller must
+    // still receive the same original without creating a native identity.
+    first.abort();
+    const live=f.authority.prepare({...f.input,signal:second.signal},f.body);
+    await expect(cancelled).rejects.toMatchObject({code:"COMMAND_STATUS_ASSERTION_ABORTED",status:499});
+    const ready=await live;
+    expect(ready.original_context).toBeTruthy();
+    expect(f.candidate.issue).not.toHaveBeenCalled();
+    expect((await f.authority.prepare({...f.input,signal:second.signal},f.body)).original_context).toBe(ready.original_context);
+  });
+  it("never returns a coalesced STATUS preparation to an already aborted caller",async()=>{
+    const f=setup(),aborted=new AbortController();aborted.abort();
+    const live=f.authority.prepare(f.input,f.body);
+    await expect(f.authority.prepare({...f.input,signal:aborted.signal},f.body))
+      .rejects.toMatchObject({code:"COMMAND_STATUS_ASSERTION_ABORTED",status:499});
+    expect((await live).original_context).toBeTruthy();
+    expect(f.candidate.issue).not.toHaveBeenCalled();
+  });
+  it("refuses a new STATUS preparation before authority I/O after shutdown",async()=>{
+    const f=setup();f.authority.shutdown();
+    await expect(f.authority.prepare(f.input,f.body)).rejects.toMatchObject({code:"COMMAND_STATUS_ASSERTION_STOPPED"});
+    expect(f.access.readContext).not.toHaveBeenCalled();expect(f.candidate.issue).not.toHaveBeenCalled();
+  });
+  it("releases an aborted waiter promptly without interrupting a held shared authority read",async()=>{
+    const f=setup(),target=f.authority as any,original=target.authorize.bind(f.authority);
+    let release!:()=>void,entered!:()=>void;
+    const held=new Promise<void>(resolve=>{release=resolve;}),started=new Promise<void>(resolve=>{entered=resolve;});
+    let firstCheck=true;
+    vi.spyOn(target,"authorize").mockImplementation(async input=>{
+      if(firstCheck){firstCheck=false;entered();await held;}
+      return original(input);
+    });
+    const first=new AbortController(),second=new AbortController();
+    const cancelled=f.authority.prepare({...f.input,signal:first.signal},f.body);
+    const live=f.authority.prepare({...f.input,signal:second.signal},f.body);
+    await started;first.abort();
+    await expect(cancelled).rejects.toMatchObject({code:"COMMAND_STATUS_ASSERTION_ABORTED",status:499});
+    release();
+    expect((await live).original_context).toBeTruthy();
+    expect(f.candidate.issue).not.toHaveBeenCalled();
+  });
+  it("tracks a canceled caller's held preparation through shutdown without issuing custody",async()=>{
+    const f=setup(),target=f.authority as any,original=target.authorize.bind(f.authority);
+    let release!:()=>void,entered!:()=>void;
+    const held=new Promise<void>(resolve=>{release=resolve;}),started=new Promise<void>(resolve=>{entered=resolve;});
+    vi.spyOn(target,"authorize").mockImplementation(async input=>{entered();await held;return original(input);});
+    const controller=new AbortController(),cancelled=f.authority.prepare({...f.input,signal:controller.signal},f.body);
+    await started;
+    const shared=([...target.preparing.values()][0] as {promise:Promise<unknown>}).promise;
+    try {
+      controller.abort();await expect(cancelled).rejects.toMatchObject({code:"COMMAND_STATUS_ASSERTION_ABORTED",status:499});
+      f.authority.shutdown();expect(f.authority.snapshot()).toMatchObject({preparing:1,stopped:true});
+    } finally { release(); }
+    await expect(shared).rejects.toMatchObject({code:"COMMAND_STATUS_ASSERTION_STOPPED"});
+    expect(f.authority.snapshot()).toMatchObject({preparing:0,contexts:0});
+    expect(f.candidate.issue).not.toHaveBeenCalled();
+  });
+  it("captures the original before the asynchronous shared preparation starts",async()=>{
+    const f=setup(),gateway=f.input.original.gateway_ref;
+    const pending=f.authority.prepare(f.input,f.body);
+    f.input.original.gateway_ref="TEST_ONLY:changed-after-prepare";
+    expect((await pending).prepared.gateway_ref).toBe(gateway);
+    expect(f.candidate.issue).not.toHaveBeenCalled();
+  });
+  it("refuses an aborted caller at the STATUS delivery fence",async()=>{
+    const f=setup(),ready=await f.authority.prepare(f.input,f.body),signal=new AbortController();
+    signal.abort();
+    const before=f.access.readContext.mock.calls.length;
+    await expect(f.authority.check(ready.original_context,{...f.input,signal:signal.signal}))
+      .rejects.toMatchObject({code:"COMMAND_STATUS_ASSERTION_ABORTED",status:499});
+    expect(f.access.readContext.mock.calls.length).toBe(before);
+  });
+  it("does not complete an original's retained-read custody for an aborted caller",async()=>{
+    const f=setup(),ready=await f.authority.prepare(f.input,f.body),controller=new AbortController();
+    controller.abort();
+    await expect(f.authority.acknowledgeRetainedRead(ready.original_context,{...f.input,signal:controller.signal}))
+      .rejects.toMatchObject({code:"COMMAND_STATUS_ASSERTION_ABORTED",status:499});
+    expect((await f.authority.prepare(f.input,f.body)).original_context).toBe(ready.original_context);
+    expect(f.candidate.issue).not.toHaveBeenCalled();
+  });
+  it("refuses STATUS delivery if cancellation arrives during the final authority read",async()=>{
+    const f=setup(),ready=await f.authority.prepare(f.input,f.body),target=f.authority as any;
+    const original=target.authorize.bind(f.authority);
+    let release!:()=>void,entered!:()=>void;
+    const held=new Promise<void>(resolve=>{release=resolve;}),started=new Promise<void>(resolve=>{entered=resolve;});
+    vi.spyOn(target,"authorize").mockImplementation(async input=>{entered();await held;return original(input);});
+    const controller=new AbortController();
+    const check=f.authority.check(ready.original_context,{...f.input,signal:controller.signal});
+    await started;controller.abort();release();
+    await expect(check).rejects.toMatchObject({code:"COMMAND_STATUS_ASSERTION_ABORTED",status:499});
+    expect(f.candidate.issue).not.toHaveBeenCalled();
+  });
+  it("refuses a reused STATUS preparation if authority changes between its two fresh checks",async()=>{
+    const f=setup(),first=await f.authority.prepare(f.input,f.body);
+    const target=f.authority as any, original=target.authorize.bind(f.authority);let checks=0;
+    vi.spyOn(target,"authorize").mockImplementation(async input=>{
+      const result=await original(input);
+      if(++checks===1)f.state.fingerprint=accessDigest("TEST_ONLY:changed-between-checks");
+      return result;
+    });
+    await expect(f.authority.prepare(f.input,f.body)).rejects.toMatchObject({code:"COMMAND_STATUS_ASSERTION_AUTHORITY_CHANGED",status:409});
+    expect(checks).toBe(2);expect(f.authority.snapshot().contexts).toBe(1);
+    expect(f.candidate.issue).not.toHaveBeenCalled();
+    await expect(f.authority.check(first.original_context,f.input)).rejects.toThrow();
+  });
+  it("cleans only an unissued STATUS reservation when the final prepare check fails",async()=>{
+    const f=setup(),target=f.authority as any,original=target.authorize.bind(f.authority);let checks=0;
+    const spy=vi.spyOn(target,"authorize").mockImplementation(async input=>{
+      const count=++checks,result=await original(input);
+      if(count%2===1)f.state.current=false;
+      return result;
+    });
+    for(let attempt=0;attempt<6;attempt++) {
+      f.state.current=true;
+      await expect(f.authority.prepare(f.input,f.body)).rejects.toThrow();
+      expect(f.authority.snapshot().contexts).toBe(0);
+    }
+    expect(f.candidate.issue).not.toHaveBeenCalled();
+    spy.mockRestore();f.state.current=true;
+    const prepared=await f.authority.prepare(f.input,f.body);
+    expect(prepared.original_context).toBeTruthy();expect(f.authority.snapshot().contexts).toBe(1);
+    expect(f.candidate.issue).not.toHaveBeenCalled();
+  });
   it.each(["financial","READ","SUBMIT"])("refuses %s callback purpose/path before any identity ISSUE",async mode=>{
     const f=setup(),p=await f.authority.prepare(f.input,f.body);
     await expect(f.authority.issue(p.original_context,{...f.issue,...(mode==="financial"?{schema_version:"portal.execution.financial-source-assertion-request.v1"}:
@@ -138,6 +439,106 @@ describe("purpose-specific current-requester command STATUS authority",()=>{
   it("does not replace an ambiguous original ISSUE after retry",async()=>{
     const f=setup(),p=await f.authority.prepare(f.input,f.body);f.candidate.issue.mockRejectedValueOnce(new Error("TEST_ONLY unknown COMMIT"));
     for(let n=0;n<2;n++)await expect(f.authority.issue(p.original_context,f.issue)).rejects.toThrow("unknown COMMIT");
+    expect(f.candidate.issue).toHaveBeenCalledOnce();
+  });
+  it("keeps an unacknowledged original fenced after authority reconstruction",async()=>{
+    const f=setup(),first=await f.authority.prepare(f.input,f.body);
+    const issued=await f.authority.issue(first.original_context,f.issue);
+    const restarted=new CommandSourceAssertionAuthority(f.pool as unknown as Pool,
+      f.access as unknown as ExecutionAccessService,f.candidate,f.config);
+    const fresh=await restarted.prepare(f.input,f.body);
+    await expect(restarted.issue(fresh.original_context,f.issue))
+      .rejects.toMatchObject({code:"COMMAND_STATUS_ASSERTION_CUSTODY_RECOVERY_REQUIRED",status:409});
+    expect(f.candidate.issue).toHaveBeenCalledOnce();
+    f.candidate.canReplaceResolvedIssue.mockResolvedValue(true);
+    await f.authority.complete(first.original_context,f.completion(issued));
+    const recovered=await restarted.issue(fresh.original_context,f.issue);
+    expect(recovered.lease_id).not.toBe(issued.lease_id);
+    expect(f.candidate.issue).toHaveBeenCalledTimes(2);
+  });
+  it("does not spend the delivery quota on definite pre-issue custody refusals",async()=>{
+    const f=setup(),first=await f.authority.prepare(f.input,f.body);
+    const issued=await f.authority.issue(first.original_context,f.issue);
+    const restarted=new CommandSourceAssertionAuthority(f.pool as unknown as Pool,
+      f.access as unknown as ExecutionAccessService,f.candidate,f.config);
+    const fresh=await restarted.prepare(f.input,f.body);
+    // Every attempt is refused by the writer before it can INSERT a lease.
+    // Exceed the context's lifetime ISSUE quota to distinguish an actual
+    // issuance from a no-op refusal; the original is still fenced throughout.
+    for(let attempt=0;attempt<f.config.maximum_requests_per_context+2;attempt++) {
+      await expect(restarted.issue(fresh.original_context,f.issue))
+        .rejects.toMatchObject({code:"COMMAND_STATUS_ASSERTION_CUSTODY_RECOVERY_REQUIRED",status:409});
+    }
+    expect(f.candidate.issue).toHaveBeenCalledOnce();
+    f.candidate.canReplaceResolvedIssue.mockResolvedValue(true);
+    await f.authority.complete(first.original_context,f.completion(issued));
+    const recovered=await restarted.issue(fresh.original_context,f.issue);
+    expect(recovered.lease_id).not.toBe(issued.lease_id);
+    expect(f.candidate.issue).toHaveBeenCalledTimes(2);
+  });
+  it.each(["CURRENT_HUMAN_CAPACITY_EXHAUSTED","CURRENT_HUMAN_DRAINING"])(
+    "permits same-context retry after definite pre-INSERT %s",async code=>{
+      const f=setup(),p=await f.authority.prepare(f.input,f.body);
+      for(let attempt=0;attempt<f.config.maximum_requests_per_context+2;attempt++) {
+        f.candidate.issueCommandStatus.mockRejectedValueOnce(new CurrentHumanLeaseError(code));
+        await expect(f.authority.issue(p.original_context,f.issue)).rejects.toMatchObject({code});
+      }
+      expect(f.candidate.issue).not.toHaveBeenCalled();
+      const issued=await f.authority.issue(p.original_context,f.issue);
+      expect(issued.lease_id).toBeTruthy();expect(f.candidate.issue).toHaveBeenCalledOnce();
+    });
+  it("refunds one reservation for coalesced pre-INSERT refusals, never one per waiter",async()=>{
+    const f=setup(),p=await f.authority.prepare(f.input,f.body);
+    let entered!:()=>void,release!:()=>void;
+    const started=new Promise<void>(resolve=>{entered=resolve;}),held=new Promise<void>(resolve=>{release=resolve;});
+    f.candidate.issueCommandStatus.mockImplementationOnce(async()=>{
+      entered();await held;throw new CurrentHumanLeaseError("CURRENT_HUMAN_CAPACITY_EXHAUSTED");
+    });
+    const attempts=Array.from({length:16},()=>f.authority.issue(p.original_context,f.issue).catch(error=>error));
+    await started;
+    // Let all exact concurrent callers reach the held shared promise before
+    // its pre-INSERT rejection settles.
+    await new Promise<void>(resolve=>setTimeout(resolve,0));release();
+    for(const error of await Promise.all(attempts))expect(error).toMatchObject({code:"CURRENT_HUMAN_CAPACITY_EXHAUSTED"});
+    expect(f.candidate.issueCommandStatus).toHaveBeenCalledOnce();
+    expect(f.candidate.issue).not.toHaveBeenCalled();
+    f.candidate.canReplaceResolvedIssue.mockResolvedValue(true);
+    let previous:string|null=null;
+    for(let sequence=0;sequence<f.config.maximum_requests_per_context;sequence++) {
+      const issued=await f.authority.issue(p.original_context,{...f.issue,delivery_sequence:sequence,previous_lease_id:previous});
+      await f.authority.complete(p.original_context,f.completion(issued));
+      previous=issued.lease_id;
+    }
+    await expect(f.authority.issue(p.original_context,{...f.issue,
+      delivery_sequence:f.config.maximum_requests_per_context,previous_lease_id:previous}))
+      .rejects.toMatchObject({code:"COMMAND_STATUS_ASSERTION_CAPACITY_EXHAUSTED",status:429});
+    expect(f.candidate.issue).toHaveBeenCalledTimes(f.config.maximum_requests_per_context);
+  });
+  it("still applies the delivery quota to actual acknowledged issues",async()=>{
+    const f=setup(),p=await f.authority.prepare(f.input,f.body);
+    f.candidate.canReplaceResolvedIssue.mockResolvedValue(true);
+    let previous:string|null=null;
+    for(let sequence=0;sequence<f.config.maximum_requests_per_context;sequence++) {
+      const issued=await f.authority.issue(p.original_context,{...f.issue,delivery_sequence:sequence,previous_lease_id:previous});
+      await f.authority.complete(p.original_context,f.completion(issued));
+      previous=issued.lease_id;
+    }
+    await expect(f.authority.issue(p.original_context,{...f.issue,
+      delivery_sequence:f.config.maximum_requests_per_context,previous_lease_id:previous}))
+      .rejects.toMatchObject({code:"COMMAND_STATUS_ASSERTION_CAPACITY_EXHAUSTED",status:429});
+    expect(f.candidate.issue).toHaveBeenCalledTimes(f.config.maximum_requests_per_context);
+  });
+  it("retries a lost ACK response against the same delivered lease without another ISSUE",async()=>{
+    const f=setup(),p=await f.authority.prepare(f.input,f.body),issued=await f.authority.issue(p.original_context,f.issue);
+    f.candidate.canReplaceResolvedIssue.mockResolvedValue(true);
+    const acknowledge=f.candidate.acknowledgeCommandStatusIssue.getMockImplementation()!;
+    f.candidate.acknowledgeCommandStatusIssue.mockImplementationOnce(async(...args)=>{
+      await acknowledge(...args);throw new Error("TEST_ONLY:lost response after ACK commit");
+    });
+    const request=f.completion(issued);
+    await expect(f.authority.complete(p.original_context,request)).rejects.toThrow("lost response after ACK commit");
+    expect(await f.authority.complete(p.original_context,request)).toMatchObject({
+      completed:true,lease_id:issued.lease_id,response_digest:request.response_digest});
     expect(f.candidate.issue).toHaveBeenCalledOnce();
   });
   it("requires exact source PM bytes instead of guessing Core/PM reference equality",async()=>{

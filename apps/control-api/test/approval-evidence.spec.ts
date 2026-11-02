@@ -109,6 +109,47 @@ describe("approval evidence read (dark port, deny-all field authority)", () => {
     await failure(reads(port, deny).detail(principal, "approval-1", {}), 403);
     expect(spy).not.toHaveBeenCalled();
   });
+  it("refuses the body if approval visibility is revoked while the source is read", async () => {
+    let visible = true;
+    const authority: ApprovalVisibility = { visible: vi.fn(async () => visible) };
+    const port: ApprovalEvidencePort = { read: async (r) => {
+      visible = false;
+      return { identity: r, sections: { obligations_after_approval: published.obligations_after_approval } };
+    } };
+    await failure(reads(port, authority, ALLOW).detail(principal, "approval-1", {}), 404, "APPROVAL_NOT_FOUND");
+    expect(authority.visible).toHaveBeenCalledTimes(2);
+  });
+  it("propagates a final session or gate refusal after source read", async () => {
+    const denied = Object.assign(new Error("revoked"), { status: 403, code: "GOVERNANCE_FORBIDDEN" });
+    const visible = vi.fn().mockResolvedValueOnce(true).mockRejectedValueOnce(denied);
+    await failure(reads(dark(), { visible }).detail(principal, "approval-1", {}), 403, "GOVERNANCE_FORBIDDEN");
+    expect(visible).toHaveBeenCalledTimes(2);
+  });
+  it("withholds a section if field authority is revoked during the final visibility check", async () => {
+    let allowed = true;
+    const visibility: ApprovalVisibility = { visible: vi.fn().mockImplementationOnce(async () => true).mockImplementationOnce(async () => {
+      allowed = false;
+      return true;
+    }) };
+    const authority: ApprovalEvidenceFieldAuthority = { allows: vi.fn(() => allowed) };
+    const port: ApprovalEvidencePort = { read: async (r) => ({ identity: r, sections: { obligations_after_approval: published.obligations_after_approval } }) };
+    const body = await reads(port, visibility, authority).detail(principal, "approval-1", {});
+    expect(body.obligations_after_approval).toBeNull();
+    expect(JSON.stringify(body)).not.toContain("open_positions");
+    expect(authority.allows).toHaveBeenCalledTimes(2);
+  });
+  it("does not upgrade an initially withheld section if authority appears mid-read", async () => {
+    let allowed = false;
+    const visibility: ApprovalVisibility = { visible: vi.fn().mockImplementationOnce(async () => true).mockImplementationOnce(async () => {
+      allowed = true;
+      return true;
+    }) };
+    const authority: ApprovalEvidenceFieldAuthority = { allows: vi.fn(() => allowed) };
+    const port: ApprovalEvidencePort = { read: async (r) => ({ identity: r, sections: { obligations_after_approval: published.obligations_after_approval } }) };
+    const body = await reads(port, visibility, authority).detail(principal, "approval-1", {});
+    expect(body.obligations_after_approval).toBeNull();
+    expect(authority.allows).toHaveBeenCalledTimes(1);
+  });
 });
 
 describe("approval evidence controller", () => {

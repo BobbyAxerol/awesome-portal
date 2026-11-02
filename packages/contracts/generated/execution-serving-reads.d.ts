@@ -102,18 +102,25 @@ export interface components {
             balance_total: string | null;
             balance_free: string | null;
             balance_locked: string | null;
-            position_fact_count: number;
-            realized_pnl: string;
-            unrealized_pnl: string;
-            net_pnl: string;
-            exposure: string;
+            position_fact_count: number | null;
+            /** @enum {unknown} */
+            position_count_availability?: "AVAILABLE" | "UNAVAILABLE";
+            position_count_reason_code?: "POSITION_POPULATION_NOT_QUALIFIED" | null;
+            realized_pnl: string | null;
+            unrealized_pnl: string | null;
+            net_pnl: string | null;
+            exposure: string | null;
+            /** @constant */
+            position_metrics_availability?: "UNAVAILABLE";
+            /** @constant */
+            position_metrics_reason_code?: "POSITION_FINANCIAL_SOURCE_NOT_QUALIFIED";
             state: string;
             active: boolean;
             /** @enum {unknown} */
-            health: "READY" | "ATTENTION" | "FINDING";
+            health: "READY" | "ATTENTION" | "FINDING" | "UNKNOWN";
             updated_at: string | null;
             updated_at_ms?: number;
-        };
+        } & (unknown & unknown & unknown & unknown & unknown);
         Metric: {
             /** @enum {unknown} */
             state: "AVAILABLE" | "EMPTY" | "PARTIAL" | "UNAVAILABLE";
@@ -160,26 +167,39 @@ export interface components {
                 base_currency: string;
             }[];
             deployments: components["schemas"]["Deployment"][];
-            allocations: {
+            allocations: ({
                 currency: string;
-                value: string;
-            }[];
-            balances: {
+                value: string | null;
+                /** @enum {unknown} */
+                state?: "AVAILABLE" | "UNAVAILABLE";
+                reason_code?: string | null;
+            } & (unknown & unknown & unknown))[];
+            balances: ({
                 currency: string;
-                total: string;
-                free: string;
-                locked: string;
-            }[];
-            position_pnl: {
+                total: string | null;
+                free: string | null;
+                locked: string | null;
+                /** @enum {unknown} */
+                state?: "AVAILABLE" | "UNAVAILABLE";
+                reason_code?: string | null;
+            } & (unknown & unknown & unknown))[];
+            position_pnl: ({
                 currency: string;
-                realized: string;
-                unrealized: string;
-                net: string;
-            }[];
-            exposure: {
+                realized: string | null;
+                unrealized: string | null;
+                net: string | null;
+                /** @constant */
+                state?: "UNAVAILABLE";
+                /** @constant */
+                reason_code?: "POSITION_FINANCIAL_SOURCE_NOT_QUALIFIED";
+            } & (unknown & unknown))[];
+            exposure: ({
                 currency: string;
-                value: string;
-            }[];
+                value: string | null;
+                /** @enum {unknown} */
+                state?: "AVAILABLE" | "UNAVAILABLE";
+                reason_code?: string | null;
+            } & (unknown & unknown & unknown))[];
             health: string;
             attention_reasons: string[];
             metrics_availability: {
@@ -389,18 +409,25 @@ export interface components {
                     balance_total: string | null;
                     balance_free: string | null;
                     balance_locked: string | null;
-                    position_fact_count: number;
-                    realized_pnl: string;
-                    unrealized_pnl: string;
-                    net_pnl: string;
-                    exposure: string;
+                    position_fact_count: number | null;
+                    /** @enum {unknown} */
+                    position_count_availability?: "AVAILABLE" | "UNAVAILABLE";
+                    position_count_reason_code?: "POSITION_POPULATION_NOT_QUALIFIED" | null;
+                    realized_pnl: string | null;
+                    unrealized_pnl: string | null;
+                    net_pnl: string | null;
+                    exposure: string | null;
+                    /** @constant */
+                    position_metrics_availability?: "UNAVAILABLE";
+                    /** @constant */
+                    position_metrics_reason_code?: "POSITION_FINANCIAL_SOURCE_NOT_QUALIFIED";
                     state: string;
                     active: boolean;
                     /** @enum {unknown} */
-                    health: "READY" | "ATTENTION" | "FINDING";
+                    health: "READY" | "ATTENTION" | "FINDING" | "UNKNOWN";
                     updated_at: string | null;
                     updated_at_ms?: number;
-                };
+                } & (unknown & unknown & unknown & unknown & unknown);
                 AlphaSummary: {
                     alpha_id: string;
                     alpha_label: string;
@@ -414,26 +441,39 @@ export interface components {
                         base_currency: string;
                     }[];
                     deployments: components["schemas"]["Deployment"][];
-                    allocations: {
+                    allocations: ({
                         currency: string;
-                        value: string;
-                    }[];
-                    balances: {
+                        value: string | null;
+                        /** @enum {unknown} */
+                        state?: "AVAILABLE" | "UNAVAILABLE";
+                        reason_code?: string | null;
+                    } & (unknown & unknown & unknown))[];
+                    balances: ({
                         currency: string;
-                        total: string;
-                        free: string;
-                        locked: string;
-                    }[];
-                    position_pnl: {
+                        total: string | null;
+                        free: string | null;
+                        locked: string | null;
+                        /** @enum {unknown} */
+                        state?: "AVAILABLE" | "UNAVAILABLE";
+                        reason_code?: string | null;
+                    } & (unknown & unknown & unknown))[];
+                    position_pnl: ({
                         currency: string;
-                        realized: string;
-                        unrealized: string;
-                        net: string;
-                    }[];
-                    exposure: {
+                        realized: string | null;
+                        unrealized: string | null;
+                        net: string | null;
+                        /** @constant */
+                        state?: "UNAVAILABLE";
+                        /** @constant */
+                        reason_code?: "POSITION_FINANCIAL_SOURCE_NOT_QUALIFIED";
+                    } & (unknown & unknown))[];
+                    exposure: ({
                         currency: string;
-                        value: string;
-                    }[];
+                        value: string | null;
+                        /** @enum {unknown} */
+                        state?: "AVAILABLE" | "UNAVAILABLE";
+                        reason_code?: string | null;
+                    } & (unknown & unknown & unknown))[];
                     health: string;
                     attention_reasons: string[];
                     metrics_availability: {

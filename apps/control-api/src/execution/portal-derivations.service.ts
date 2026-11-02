@@ -3,7 +3,7 @@ import { Inject, Injectable, Optional } from "@nestjs/common";
 import { ExecutionReadScopes, ExecutionReadScopeError, type AuthorizedExecutionReadScope,
   type ReadScopeRequirement, scopeReadPopulation } from "../execution-v2/read-scope";
 import { scopedRetainedRows, fenceRetainedSnapshot, retainedFieldAllowed } from "./retained-operation-page";
-import { joinRetainedConditionalLegRows } from "./retained-business-aliases";
+import { joinRetainedConditionalLegLinks } from "./retained-business-aliases";
 import { projectionRowVisible } from "../execution-v2/read-projection";
 import { ControlApiConfig } from "../config";
 import { projectionExpired } from "./retained-read-profile";
@@ -114,7 +114,7 @@ export class PortalDerivationsService {
       state: profile.state,
       reason_code: profile.reason_code,
     })));
-    for (const snapshot of snapshots) await this.finish(snapshot);
+    await this.finishAll(snapshots);
     return {
       schema_version: "execution.derivation.source-health.v1",
       logical_operation_id: "executionSourceHealthV1",
@@ -381,6 +381,9 @@ export class PortalDerivationsService {
     if (!snapshot) throw new PortalDerivationError("N31_PROJECTION_NOT_READY", 503, "Execution projection is not ready.");
     const readAt = new Date();
     if (projectionExpired(this.config, snapshot.lastSuccessfulRefreshAt)) {
+      // A stale-source refusal still discloses the selected profile. Recheck
+      // every retained purpose before returning that data-dependent error.
+      await this.finish(snapshot);
       throw new PortalDerivationError("N31_PROJECTION_STALE_CEILING_EXCEEDED", 503, "Execution projection is stale.");
     }
     return { snapshot, profileId, readAt };
@@ -399,7 +402,12 @@ export class PortalDerivationsService {
     const original = entry?.mode === "SCOPED_V2" ? await this.repository.rawSnapshot(workspace, environment, profile)
       : await this.repository.snapshot(workspace, environment, profile);
     if (!original) {
-      if (entry) await this.readScopes!.deliver(entry, async () => undefined);
+      // A scoped metadata head followed by no raw snapshot is a cutover, not
+      // a stable absence that can be combined with other profile results.
+      if (entry) await this.readScopes!.deliver(entry, async () => {
+        if (entry.mode === "SCOPED_V2" && metadata)
+          throw new ExecutionReadScopeError("EXECUTION_READ_ACCESS_CHANGED", 409);
+      });
       return null;
     }
     if (!entry || entry.mode === "LEGACY_COMPATIBILITY") {
@@ -411,6 +419,7 @@ export class PortalDerivationsService {
     if (!metadata || metadata.payloadDigest !== original.payloadDigest || metadata.projectionEpoch !== original.projectionEpoch ||
       metadata.sourceCatalogueSha256 !== original.sourceCatalogueSha256) throw new ExecutionReadScopeError("EXECUTION_READ_ACCESS_CHANGED", 409);
     const scopes = [entry];
+    const relationScopes = new Map<string, AuthorizedExecutionReadScope>();
     const relations: Record<string, ProjectionRelation> = {};
     for (const key of keys) {
       const source = original.document.relations[key];
@@ -419,14 +428,30 @@ export class PortalDerivationsService {
         dataset: { dataset_id: `relation:${key}`, source_revision: original.payloadDigest,
           projection_generation: original.projectionEpoch, catalogue_revision: original.sourceCatalogueSha256, window: null } });
       scopes.push(scope);
+      relationScopes.set(key, scope);
       if (deployment && !scopeReadPopulation(scope).allowedTuples.some(tuple => tuple.deployment_id === deployment))
         throw new ExecutionReadScopeError("EXECUTION_READ_NOT_AVAILABLE", 404);
       let sourceRows = source.items;
+      if (key === RELATION.conditionalGroups) {
+        // Imported/corrupt retained rows cannot assert a different environment
+        // merely because the surrounding snapshot belongs to this profile.
+        sourceRows = sourceRows.filter(row => {
+          const mode = Object.getOwnPropertyDescriptor(row.fields, "mode");
+          return !mode || "value" in mode && (mode.value === null || mode.value === undefined ||
+            typeof mode.value === "string" && mode.value.toLowerCase() === environment);
+        });
+      }
       if (key === RELATION.conditionalLegs) {
         // The child has no economic tuple of its own. Join only through an
-        // unambiguous parent from this same immutable source revision.
+        // unambiguous parent from this same immutable source revision. The
+        // original parent must be visible before a child can narrow its tuple.
         const parents = original.document.relations[RELATION.conditionalGroups]?.items ?? [];
-        sourceRows = joinRetainedConditionalLegRows(sourceRows, parents);
+        const parentScope = relationScopes.get(RELATION.conditionalGroups);
+        if (parents.length && !parentScope) throw new ExecutionReadScopeError("EXECUTION_READ_PUBLICATION_NOT_QUALIFIED", 503);
+        sourceRows = parentScope ? joinRetainedConditionalLegLinks(sourceRows, parents, environment).filter(link =>
+          projectionRowVisible(parentScope, link.parent.fields) &&
+          projectionRowVisible(parentScope, link.row.fields) &&
+          projectionRowVisible(scope, link.row.fields)).map(link => link.row) : [];
       }
       const allowedRows = sourceRows.filter(row => projectionRowVisible(scope, row.fields));
       const required = key === RELATION.sessions && keys.includes(RELATION.deployments) && requirement.resource?.kind === "DEPLOYMENT"
@@ -460,13 +485,32 @@ export class PortalDerivationsService {
   }
 
   private async finish(snapshot: ProfileProjectionSnapshot) {
-    const context = this.scopedSnapshots.get(snapshot);
-    if (!context || !this.readScopes) return;
-    for (const scope of context.scopes) await this.readScopes.deliver(scope, async () => undefined);
-    if (context.scopes.some(scope => scope.mode === "SCOPED_V2")) {
-      await fenceRetainedSnapshot(this.repository, context.workspace, context.environment, context.profile, context.original);
-      for (const scope of context.scopes) await this.readScopes.deliver(scope, async () => undefined);
+    await this.finishAll([snapshot]);
+  }
+
+  private async finishAll(snapshots: readonly ProfileProjectionSnapshot[]) {
+    if (!this.readScopes) return;
+    const contexts = snapshots.flatMap(snapshot => {
+      const context = this.scopedSnapshots.get(snapshot);
+      return context ? [context] : [];
+    });
+    const scopes = contexts.flatMap(context => context.scopes);
+    if (!scopes.length) return;
+    if (scopes.some(scope => scope.mode === "SCOPED_V2")) {
+      // Never combine old and newly activated authority in one envelope.
+      if (scopes.some(scope => scope.mode !== "SCOPED_V2"))
+        throw new ExecutionReadScopeError("EXECUTION_READ_ACCESS_CHANGED", 409);
+      const fenceSources = async () => {
+        for (const context of contexts)
+          await fenceRetainedSnapshot(this.repository, context.workspace, context.environment, context.profile, context.original);
+      };
+      // Every source head is checked BEFORE the last common Core authority
+      // confirmation; no independent profile's earlier ALLOW is discarded.
+      if (contexts.length === 1) await this.readScopes.deliverScopedTogether(scopes, fenceSources);
+      else await this.readScopes.deliverRetainedSourceHealth(scopes, fenceSources);
+      return;
     }
+    for (const scope of scopes) await this.readScopes.deliver(scope, async () => undefined);
   }
 
   private async envelope(

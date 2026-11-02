@@ -50,10 +50,31 @@ describe("variant-specific refusals", () => {
     const ready = named("fixtures/execution-alpha-resource.v1.synthetic.valid.json", "ready");
     expect(v({ ...ready, schema_version: "execution.alpha-resource.v2" })).toBe(false);
     const bad = structuredClone(ready); bad.data.alpha.deployments[0].health = "NOT_READY"; expect(v(bad)).toBe(false);
+    const unknown = structuredClone(ready); unknown.data.alpha.deployments[0].health = "UNKNOWN";
+    unknown.data.alpha.health = "UNKNOWN"; expect(v(unknown), JSON.stringify(v.errors)).toBe(true);
     const money = structuredClone(ready); money.data.alpha.balances[0].total = 41230.55; expect(v(money)).toBe(false);
     const shell = structuredClone(ready); shell.data.alpha = { id: "alpha_btc_trend", state: "PARTIAL", reason_code: "EDS04_RESOURCE_RESPONSE_BYTE_BOUND" };
     expect(v(shell), JSON.stringify(v.errors)).toBe(true);
     const lie = structuredClone(ready); lie.data.alpha.valuation_warning = "NONE"; expect(v(lie)).toBe(false);
+  });
+  it("alpha resource: absent position and balance totals need typed reasons and cannot claim AVAILABLE", () => {
+    const v = validator("execution-alpha-resource.v1.schema.json");
+    const ready = named("fixtures/execution-alpha-resource.v1.synthetic.valid.json", "ready");
+    expect(v(ready), JSON.stringify(v.errors)).toBe(true);
+    const missingReason = structuredClone(ready);
+    delete missingReason.data.alpha.deployments[0].position_metrics_reason_code;
+    expect(v(missingReason)).toBe(false);
+    const fakePnl = structuredClone(ready);
+    fakePnl.data.alpha.deployments[0].net_pnl = "0";
+    expect(v(fakePnl)).toBe(false);
+    const missingCount = structuredClone(ready);
+    missingCount.data.alpha.deployments[0].position_fact_count = null;
+    missingCount.data.alpha.deployments[0].position_count_availability = "AVAILABLE";
+    expect(v(missingCount)).toBe(false);
+    const invalidTotal = structuredClone(ready);
+    invalidTotal.data.alpha.balances[0].free = null;
+    invalidTotal.data.alpha.balances[0].state = "AVAILABLE";
+    expect(v(invalidTotal)).toBe(false);
   });
   it("subject records: unavailable and authoritative-empty pages carry no rows; cursor is Portal-signed", () => {
     const v = validator("execution-subject-records.v1.schema.json");

@@ -77,6 +77,14 @@ describe("ELP2-04 finite same-snapshot order-bracket legs", () => {
     expect((await run(f)).records[0].values).toEqual({ status: "SUBMITTED" });
   });
 
+  it("joins an authorized PAPER bracket to a paper leg without rewriting source mode", async () => {
+    const f = fixture();
+    put(f, "order_brackets", [bracket("PRIVATE-bracket", { mode: "PAPER" })]);
+    put(f, "order_bracket_legs", [leg("1", { mode: "paper" })]);
+    expect((await run(f)).records).toHaveLength(1);
+    expect(f.snapshot.document.relations[PARENT].items[0].fields.mode).toBe("PAPER");
+  });
+
   it("does not allow Alpha ownership to replace explicit child account authority", async () => {
     const f = fixture(); seed(f);
     f.context.grants = f.context.grants.filter(grant => grant.action !== "account.read");
@@ -102,7 +110,7 @@ describe("ELP2-04 finite same-snapshot order-bracket legs", () => {
   });
 
   it.each(["missing", "hidden", "duplicate-hidden", "contradictory-account", "contradictory-strategy",
-    "contradictory-session", "wrong-mode", "no-account"] as const)(
+    "contradictory-session", "wrong-mode", "wrong-uppercase-mode", "no-account"] as const)(
     "omits %s parent links uniformly before private identity/field validation", async fault => {
       const f = fixture(); let parents: ReturnType<typeof bracket>[] = [bracket()];
       let row: Record<string, ProjectionScalar> = leg();
@@ -113,6 +121,7 @@ describe("ELP2-04 finite same-snapshot order-bracket legs", () => {
       if (fault === "contradictory-strategy") { parents = [bracket("PRIVATE-bracket", { strategy_id: "strategy-own" })]; row.strategy_id = "strategy-peer"; }
       if (fault === "contradictory-session") row.execution_session_id = "OTHER-PRIVATE-session";
       if (fault === "wrong-mode") parents = [bracket("PRIVATE-bracket", { mode: "live" })];
+      if (fault === "wrong-uppercase-mode") parents = [bracket("PRIVATE-bracket", { mode: "LIVE" })];
       if (fault === "no-account") parents = [bracket("PRIVATE-bracket", { account_id: null })];
       put(f, "order_brackets", parents); put(f, "order_bracket_legs", [row]);
       const absent = await run(f);

@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import Ajv2020 from "ajv/dist/2020";
@@ -10,7 +10,7 @@ import { ExecutionAnalyticsProxy } from "../src/execution/analytics.proxy";
 import { PaperReadService } from "../src/paper-read/paper-read.service";
 import { PaperBlotterQuerySchema } from "../src/paper-read/contracts";
 import { HistoryByteBudgetError, type PaperHistoryBytePolicy } from "../src/execution/history-byte-budget";
-import { ExecutionReadScopes } from "../src/execution-v2/read-scope";
+import { ExecutionReadScopes, ExecutionReadScopeError } from "../src/execution-v2/read-scope";
 import { paperHistoryTestScopes } from "./paper-history-authority.fixture";
 import { createPaperVenueCalendarSource, type PaperVenueCalendarSource, type VenueCalendarSourceSnapshot } from "../src/execution/venue-calendar-source";
 
@@ -296,6 +296,27 @@ function tagged(value: string | number | boolean | null) {
 }
 
 describe("N22 full Paper read product BFF", () => {
+  it.each([
+    ["overview", "EXECUTION_READ_ACCESS_CHANGED", 409],
+    ["overview", "EXECUTION_READ_AUTHORITY_UNAVAILABLE", 503],
+    ["workbench", "EXECUTION_READ_ACCESS_CHANGED", 409],
+    ["workbench", "EXECUTION_READ_AUTHORITY_UNAVAILABLE", 503],
+    ["blotter", "EXECUTION_READ_ACCESS_CHANGED", 409],
+    ["blotter", "EXECUTION_READ_AUTHORITY_UNAVAILABLE", 503],
+  ] as const)("withholds %s sibling rows when %s occurs", async (screen, code, status) => {
+    const source = new FakeCurrentSource();
+    const original = source.relation.bind(source);
+    vi.spyOn(source, "relation").mockImplementation(async (...args) => {
+      if (args[4] === (screen === "blotter" ? "orders" : "performance_snapshots"))
+        throw new ExecutionReadScopeError(code, status);
+      return original(...args);
+    });
+    const reader = service(source);
+    const result = screen === "overview" ? reader.overview(principal()) : screen === "workbench"
+      ? reader.workbench(principal(), "dep_default", false) : reader.blotter(principal(), { limit: 25 });
+    await expect(result).rejects.toMatchObject({ code, status });
+    expect(source.calls.length).toBeGreaterThan(0);
+  });
   it("composes the Paper overview with bounded fan-out and strips source internals", async () => {
     const source = new FakeCurrentSource();
     source.rows.set("strategy_deployments", [{ deployment_id: "dep_default", strategy_id: "str_default", account_id: "acc_default", portfolio_id: "pf_default", mode: "paper", venue: "BINANCE" }]);

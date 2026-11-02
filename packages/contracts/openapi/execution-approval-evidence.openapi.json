@@ -13,7 +13,7 @@
             "PortalSession": []
           }
         ],
-        "description": "The evidence beside one approval request: prior economic history, evidence diff, obligations still open after approval, the receipt preview, and the Portal evaluation time. Each section is omitted (no owning source), null (source not read) or published; a count of 0 is a published true zero. CONTRACT ONLY: no producer exists yet (Edge/Core inputs are in WP_K_CONTRACTS_2026-10-23.md), so nothing serves this route and every screen keeps its typed absence.",
+        "description": "The evidence beside one approval request: prior economic history, evidence diff, obligations still open after approval, the receipt preview, and the Portal evaluation time. Each section is omitted (no owning source), null (source not read) or published; a count of 0 is a published true zero. A source-dark producer is optionally mounted only on the authorized Research review profile; source sections and field authority are not commissioned (see WP_K_CONTRACTS_2026-10-23.md).",
         "parameters": [
           {
             "name": "approval_id",
@@ -96,6 +96,25 @@
               }
             }
           },
+          "403": {
+            "description": "Read authority refused",
+            "headers": {
+              "Cache-Control": {
+                "required": true,
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApprovalEvidenceProblem"
+                }
+              }
+            }
+          },
           "404": {
             "description": "Approval unavailable or not authorized",
             "headers": {
@@ -115,8 +134,46 @@
               }
             }
           },
+          "409": {
+            "description": "Read authority changed",
+            "headers": {
+              "Cache-Control": {
+                "required": true,
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApprovalEvidenceProblem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "headers": {
+              "Cache-Control": {
+                "required": true,
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApprovalEvidenceProblem"
+                }
+              }
+            }
+          },
           "503": {
-            "description": "Source unavailable",
+            "description": "Source or read authority unavailable",
             "headers": {
               "Cache-Control": {
                 "required": true,
@@ -615,10 +672,9 @@
             "properties": {
               "code": {
                 "type": "string",
-                "enum": [
-                  "EXECUTION_READ_NOT_AVAILABLE",
-                  "EXECUTION_READ_CURRENT_ONLY"
-                ]
+                "minLength": 1,
+                "maxLength": 191,
+                "pattern": "^[A-Z][A-Z0-9_]*$(?![\\s\\S])"
               },
               "message": {
                 "type": "string",
@@ -630,6 +686,20 @@
           },
           "request_id": {
             "type": "string"
+          },
+          "public_copy_key": {
+            "type": "string"
+          },
+          "safe_next_action": {
+            "type": "string",
+            "enum": [
+              "QUERY_SAME_INTENT",
+              "REVIEW_BLOCKER"
+            ]
+          },
+          "details": {
+            "type": "object",
+            "additionalProperties": true
           }
         }
       }

@@ -71,6 +71,12 @@ type ParentRow = { fields: Record<string, ProjectionScalar> };
 const boundedText = (value: unknown): value is string => typeof value === "string" &&
   value.length > 0 && Buffer.byteLength(value) <= 4_096 && !/[\u0000-\u001f\u007f]/u.test(value);
 
+// The retained source may preserve PAPER/paper casing. Normalize only for
+// environment comparison; never rewrite the source value exposed to readers.
+function comparableMode(value: unknown): string | null | undefined {
+  return value === null || value === undefined ? null : boundedText(value) ? value.toLowerCase() : undefined;
+}
+
 /** Caller must first establish child account-grain visibility. A direct row
  * never acquires an unrelated session scope, even if it carries a session ID.
  * Do not inspect/validate the private session identity before that predicate. */
@@ -148,7 +154,7 @@ export function joinRetainedBracketLegRows<T extends ParentRow>(
         return !property || "value" in property &&
           (property.value === null || property.value === undefined || boundedText(property.value));
       }) &&
-      (properties.mode?.value === null || properties.mode?.value === undefined || properties.mode.value === environment);
+      (properties.mode?.value === null || properties.mode?.value === undefined || comparableMode(properties.mode.value) === environment);
     groups.set(id.value, groups.has(id.value) || !valid ? null : parent);
   }
   return children.flatMap(child => {
@@ -163,14 +169,15 @@ export function joinRetainedBracketLegRows<T extends ParentRow>(
     for (const key of contextFields) {
       const own = properties[key]?.value, value = parent.fields[key];
       if (own !== null && own !== undefined && !boundedText(own)) return [];
-      if (own !== null && own !== undefined && value !== null && value !== undefined && own !== value) return [];
+      if (own !== null && own !== undefined && value !== null && value !== undefined &&
+        (key === "mode" ? comparableMode(own) !== comparableMode(value) : own !== value)) return [];
       if (value !== null && value !== undefined && (own === null || own === undefined)) {
         anchors[key] = value;
         inheritedFields.push(key);
       }
     }
     if (properties.mode?.value !== null && properties.mode?.value !== undefined &&
-      properties.mode.value !== environment) return [];
+      comparableMode(properties.mode.value) !== environment) return [];
     // Explicit child values are never overwritten. Null/missing values have
     // no lineage of their own; the independently authorized parent supplies it.
     return [{ row: { ...child, fields: { ...child.fields, ...anchors } }, parent, inherited_fields: inheritedFields }];
@@ -178,30 +185,39 @@ export function joinRetainedBracketLegRows<T extends ParentRow>(
 }
 
 /** Exact conditional-group join shared with the pre-existing derivation.
- * Caller supplies both relations from ONE immutable snapshot and authorizes
- * the merged row under BOTH current dataset scopes before public redaction.
- * Duplicate group IDs are ambiguous even when a later policy could hide one.
- * A child cannot replace its parent's explicit economic anchor. */
-export function joinRetainedConditionalLegRows<T extends ParentRow>(
-  children: readonly T[], parents: readonly ParentRow[],
-): T[] {
+ * The original parent remains available to the caller: a narrower child must
+ * never manufacture authority to see a parent on a shared account.
+ * Caller supplies ONE immutable snapshot and authorizes the original parent
+ * and merged child under their respective current dataset scopes. Duplicate
+ * identities, including a malformed duplicate, poison the complete census. */
+export function joinRetainedConditionalLegLinks<T extends ParentRow>(
+  children: readonly T[], parents: readonly ParentRow[], environment?: "paper" | "sandbox" | "live",
+): { row: T; parent: ParentRow }[] {
   if (children.length > 2_000 || parents.length > 2_000)
     throw new ExecutionReadScopeError("EXECUTION_READ_PUBLICATION_NOT_QUALIFIED", 503);
   const groups = new Map<string, ParentRow | null>();
   for (const parent of parents) {
     const descriptors = Object.getOwnPropertyDescriptors(parent.fields);
-    if (Object.values(descriptors).some(property => !("value" in property))) continue;
-    const id: unknown = descriptors.group_id?.value;
-    if (typeof id !== "string" || !id || id.length > 4_096) continue;
-    groups.set(id, groups.has(id) ? null : parent);
+    const identity = descriptors.group_id;
+    if (!identity || !("value" in identity) || !boundedText(identity.value)) continue;
+    const valid = Object.values(descriptors).every(property => "value" in property) &&
+      [...inherited, "mode"].every(key => {
+        const value = descriptors[key]?.value;
+        return value === null || value === undefined || boundedText(value);
+      });
+    groups.set(identity.value, groups.has(identity.value) || !valid ? null : parent);
   }
   return children.flatMap(child => {
     const childProperties = Object.getOwnPropertyDescriptors(child.fields);
     if (Object.values(childProperties).some(property => !("value" in property))) return [];
     const id: unknown = childProperties.group_id?.value;
-    if (typeof id !== "string") return [];
+    if (!boundedText(id)) return [];
     const parent = groups.get(id);
     if (!parent) return [];
+    const ownMode = comparableMode(childProperties.mode?.value), parentMode = comparableMode(parent.fields.mode);
+    if (ownMode === undefined || parentMode === undefined ||
+      ownMode !== null && parentMode !== null && ownMode !== parentMode ||
+      environment && (ownMode !== null && ownMode !== environment || parentMode !== null && parentMode !== environment)) return [];
     const anchors: Record<string, ProjectionScalar> = {};
     for (const key of inherited) {
       const value = parent.fields[key];
@@ -210,6 +226,12 @@ export function joinRetainedConditionalLegRows<T extends ParentRow>(
       if (own && own.value !== undefined && own.value !== value) return [];
       anchors[key] = value;
     }
-    return [{ ...child, fields: { ...anchors, ...child.fields } }];
+    return [{ row: { ...child, fields: { ...anchors, ...child.fields } }, parent }];
   });
+}
+
+/** Compatibility wrapper for non-authorizing computations. New readers must
+ * use the links above and check the original parent's authority separately. */
+export function joinRetainedConditionalLegRows<T extends ParentRow>(children: readonly T[], parents: readonly ParentRow[]): T[] {
+  return joinRetainedConditionalLegLinks(children, parents).map(link => link.row);
 }

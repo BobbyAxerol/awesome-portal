@@ -151,7 +151,8 @@ describe("resolveDeploymentScope carries the identity inside the authority fence
       "dep_2": { state: "FOUND", reasonCode: null, scope, deployment: { deployment_id: "dep_2" } },
       "dep_3": { state: "EMPTY", reasonCode: "EDS03_DEPLOYMENT_NOT_FOUND" },
     };
-    const source = { resolveDeploymentScope: vi.fn(async (_p: unknown, _e: string, _s: string, id: string) => resolutions[id]),
+    const source = { composeProfile: async <T>(_p: unknown, _s: string, _e: unknown, read: (scope: undefined) => Promise<T>) => read(undefined),
+      resolveDeploymentScope: vi.fn(async (_p: unknown, _e: string, _s: string, id: string) => resolutions[id]),
       relation: vi.fn(async () => { throw new Error("relation detail must not escape"); }) };
     const service = new ProfileReadService(source as never);
     const read = (id: string) => service.snapshot({ user: {} as never, session: {} as never, workspaceId: "w" }, "sandbox",

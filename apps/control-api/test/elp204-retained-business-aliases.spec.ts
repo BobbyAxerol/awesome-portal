@@ -196,6 +196,60 @@ describe("ELP2-04 first three finite named business aliases", () => {
     expect(JSON.stringify(value)).not.toMatch(/SECRET-LEG|DO_NOT_PUBLISH|trigger_price|order_type/);
     expect(f.access.readPublication.mock.calls.some(([r]) => r.binding.dataset_id === "relation:manager.current.conditional-order-groups:conditional_order_groups")).toBe(true);
   });
+  it("does not use a leg's narrower tuple to grant visibility of its shared-account parent", async () => {
+    const f = fixture();
+    const accountGrant = f.context.grants.find(grant => grant.action === "account.read")!;
+    accountGrant.selector = { kind: "EXPLICIT_RESOURCE_SET", resource_kind: "ACCOUNT", ids: [OWN.account_id] };
+    f.context.grants.push({ ...accountGrant, grant_id: "TEST_ONLY-deny-peer", action: "alpha.read", effect: "DENY",
+      selector: { kind: "EXPLICIT_RESOURCE_SET", resource_kind: "ALPHA", ids: [PEER.alpha_id] },
+      requires_ts_acceptance: false, ts_receipt: null });
+    set(f, "conditional_order_groups", [{ group_id: "shared-parent", account_id: OWN.account_id, mode: "paper" }]);
+    set(f, "conditional_order_group_legs", [{ ...leg("shared-parent", "SECRET-LEG"), ...OWN, strategy_id: "strategy-own" }]);
+    const value = await run(f, "conditional-order-group-legs");
+    expect(value.records).toEqual([]);
+    expect(JSON.stringify(value)).not.toContain("SECRET-LEG");
+  });
+  it("refuses the child before raw access when the parent dataset has no authorized account", async () => {
+    const f = fixture();
+    set(f, "conditional_order_groups", [parent("own")]);
+    set(f, "conditional_order_group_legs", [leg("own")]);
+    const original = f.access.readPublication.getMockImplementation()!;
+    f.access.readPublication.mockImplementation(async request => {
+      const value = await original(request);
+      return request.binding.dataset_id.includes(":conditional_order_groups") ? {
+        ...value,
+        resources: value.resources.filter(resource => resource.id !== PRIVATE.account_id),
+        tuples: value.tuples.filter(tuple => tuple.account_id !== PRIVATE.account_id),
+      } : value;
+    });
+    await expect(run(f, "conditional-order-group-legs"))
+      .rejects.toMatchObject({ code: "EXECUTION_READ_NOT_AVAILABLE", status: 404 });
+    expect(f.repository.rawSnapshot).not.toHaveBeenCalled();
+  });
+  it("rejects contradictory parent/leg modes without evaluating a malformed duplicate getter", () => {
+    expect(joinRetainedConditionalLegRows([{ fields: { ...leg("own"), mode: "live" } }],
+      [{ fields: parent("own") }])).toEqual([]);
+    const getter = vi.fn(() => "SECRET");
+    const malformed = Object.defineProperty({ group_id: "own" }, "account_id", { enumerable: true, get: getter });
+    expect(joinRetainedConditionalLegRows([{ fields: leg("own") }], [
+      { fields: parent("own") }, { fields: malformed as never },
+    ])).toEqual([]);
+    expect(getter).not.toHaveBeenCalled();
+  });
+  it.each(["live", "LIVE"])("does not publish matching %s parent and leg from a retained PAPER profile", async mode => {
+    const f = fixture({ full: true });
+    set(f, "conditional_order_groups", [{ ...parent("foreign"), mode }]);
+    set(f, "conditional_order_group_legs", [{ ...leg("foreign"), mode }]);
+    expect((await run(f, "conditional-order-group-legs")).records).toEqual([]);
+  });
+  it("keeps an authorized PAPER source group when joining its lowercase paper leg", async () => {
+    const f = fixture({ full: true });
+    set(f, "conditional_order_groups", [{ ...parent("own"), mode: "PAPER" }]);
+    set(f, "conditional_order_group_legs", [{ ...leg("own"), mode: "paper" }]);
+    const value = await run(f, "conditional-order-group-legs");
+    expect(value.records).toHaveLength(1);
+    expect(value.records[0].values).toMatchObject({ group_id: "own", leg_id: "own-leg" });
+  });
   it.each(["missing", "duplicate", "contradictory"])("does not reinterpret %s conditional parent lineage", async fault => {
     const f = fixture({ full: true });
     set(f, "conditional_order_groups", fault === "missing" ? [] : fault === "duplicate" ? [parent("own"), parent("own", PEER)] : [parent("own")]);

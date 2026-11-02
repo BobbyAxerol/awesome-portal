@@ -663,6 +663,13 @@ export class PaperReadService {
       const normalized = this.normalizePaperRows(page.items);
       return { page: { ...page, items: normalized.items }, quarantinedOrderRows: normalized.quarantinedOrderRows };
     }));
+    // Do not turn a changed or unverifiable authority into an ordinary
+    // partial panel while returning rows from sibling relation reads.
+    const unsafe = results.find((result) => result.status === "rejected" &&
+      result.reason instanceof ExecutionReadScopeError &&
+      (result.reason.code === "EXECUTION_READ_ACCESS_CHANGED" ||
+       result.reason.code === "EXECUTION_READ_AUTHORITY_UNAVAILABLE"));
+    if (unsafe?.status === "rejected") throw unsafe.reason;
     return enforceProfileLineage(results.map((result, index) => {
       const item = specs[index];
       if (result.status === "fulfilled") {

@@ -10,6 +10,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ALPHA_DOUBLE_ID, ALPHA_DOUBLE_ORDERS_P1, answerAlpha } from "../../../../../e2e/bffDoubleAlpha";
 import { V2_ROLE_PRESETS } from "../../shell/roleNav";
 import { cloneRows } from "../../testkit/scale";
+import { loadCanonical } from "../../testkit/loadCanonical";
 import AlphaScreen, { ALPHA_SCREEN_KEY } from "./index";
 import { useContextFactsValue } from "../../shell/contextFacts";
 import { alphaHttpApi, serveAlphaDouble, sessionOf, type Override } from "./testApi";
@@ -90,6 +91,19 @@ describe("screen contract", () => {
     const line = h1.parentElement!.querySelector("[data-testid='not-available-line']")!;
     expect(line.textContent).toContain("Run, Evidence");
     expect(line.textContent).toContain("Not published: Run");
+  });
+
+  it("renders the producer's V1 typed absence without blanking the Alpha or inventing a zero", async () => {
+    const fixture = loadCanonical<{ cases: { value: unknown }[] }>("execution-alpha-resource.v1.synthetic").cases[0]!.value;
+    mount(undefined, (path) => path === `/resources/alphas/${ALPHA_DOUBLE_ID}` ? { status: 200, body: fixture } : undefined);
+    await ready();
+    expect(screen.getByText("asmith")).toBeTruthy();
+    const facts = screen.getByLabelText("Current facts");
+    const net = within(facts).getByText("Net PnL, current").closest(".exec-blk-kpi") as HTMLElement;
+    expect(net.textContent).toContain("Not available");
+    expect(net.textContent).not.toMatch(/\b0(?:\.0+)?\b/);
+    fireEvent.click(within(net).getByRole("button", { name: "Money, reason" }));
+    expect(net.textContent).toContain("POSITION_FINANCIAL_SOURCE_NOT_QUALIFIED");
   });
 
   it("prints no dash and no N/A anywhere on any tab", async () => {

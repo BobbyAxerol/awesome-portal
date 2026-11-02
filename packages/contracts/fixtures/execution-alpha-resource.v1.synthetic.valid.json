@@ -933,18 +933,22 @@
                 "portfolio_id": "pf_core",
                 "portfolio_name": null,
                 "currency": "USDT",
-                "allocation": "40000",
+                "allocation": "40000.00",
                 "balance_total": "41230.55",
-                "balance_free": "38900.1",
+                "balance_free": "38900.10",
                 "balance_locked": "2330.45",
                 "position_fact_count": 1,
-                "realized_pnl": "980.4",
-                "unrealized_pnl": "41.67",
-                "net_pnl": "1022.07",
-                "exposure": "61343.1",
+                "position_count_availability": "AVAILABLE",
+                "position_count_reason_code": null,
+                "realized_pnl": null,
+                "unrealized_pnl": null,
+                "net_pnl": null,
+                "exposure": null,
+                "position_metrics_availability": "UNAVAILABLE",
+                "position_metrics_reason_code": "POSITION_FINANCIAL_SOURCE_NOT_QUALIFIED",
                 "state": "ACTIVE",
                 "active": true,
-                "health": "READY",
+                "health": "UNKNOWN",
                 "updated_at": "2026-10-17T12:02:00.000Z",
                 "updated_at_ms": 1792238520000
               }
@@ -952,41 +956,51 @@
             "allocations": [
               {
                 "currency": "USDT",
-                "value": "40000"
+                "value": "40000.00",
+                "state": "AVAILABLE",
+                "reason_code": null
               }
             ],
             "balances": [
               {
                 "currency": "USDT",
                 "total": "41230.55",
-                "free": "38900.1",
-                "locked": "2330.45"
+                "free": "38900.10",
+                "locked": "2330.45",
+                "state": "AVAILABLE",
+                "reason_code": null
               }
             ],
             "position_pnl": [
               {
                 "currency": "USDT",
-                "realized": "980.4",
-                "unrealized": "41.67",
-                "net": "1022.07"
+                "realized": null,
+                "unrealized": null,
+                "net": null,
+                "state": "UNAVAILABLE",
+                "reason_code": "POSITION_FINANCIAL_SOURCE_NOT_QUALIFIED"
               }
             ],
             "exposure": [
               {
                 "currency": "USDT",
-                "value": "61343.1"
+                "value": null,
+                "state": "UNAVAILABLE",
+                "reason_code": "FINANCIAL_AGGREGATE_SOURCE_NOT_QUALIFIED"
               }
             ],
-            "health": "READY",
-            "attention_reasons": [],
+            "health": "UNKNOWN",
+            "attention_reasons": [
+              "DEPLOYMENT_UNKNOWN"
+            ],
             "metrics_availability": {
               "account_balance": {
                 "state": "AVAILABLE",
                 "reason_code": null
               },
               "current_position_pnl": {
-                "state": "AVAILABLE",
-                "reason_code": null
+                "state": "UNAVAILABLE",
+                "reason_code": "POSITION_FINANCIAL_SOURCE_NOT_QUALIFIED"
               },
               "equity_series_30d": {
                 "state": "UNAVAILABLE",

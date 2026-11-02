@@ -60,23 +60,63 @@ const panel = (data, states5 = ['READY', 'EMPTY', 'PARTIAL', 'STALE', 'UNAVAILAB
 });
 const common = { UtcEpochMs: utc, Identifier: identifier, Decimal: decimal, Row: row, PanelClocks: panelClocks, PanelCoverage: panelCoverage };
 
+// Old complete V1 records remain valid without the optional status fields.
+// Once an amount is absent, a typed unavailable status is mandatory; a
+// published AVAILABLE aggregate must contain every amount and no reason.
+const aggregateRow = amountKeys => ({
+  ...obj({ currency: identifier, ...Object.fromEntries(amountKeys.map(key => [key, nullable(looseDecimal)])),
+    state: { enum: ['AVAILABLE', 'UNAVAILABLE'] }, reason_code: reason }, ['currency', ...amountKeys]),
+  allOf: [
+    { if: { required: ['state'], properties: { state: { const: 'AVAILABLE' } } },
+      then: { required: ['reason_code'], properties: { reason_code: nil, ...Object.fromEntries(amountKeys.map(key => [key, looseDecimal])) } } },
+    { if: { required: ['state'], properties: { state: { const: 'UNAVAILABLE' } } },
+      then: { required: ['reason_code'], properties: { reason_code: { const: 'FINANCIAL_AGGREGATE_SOURCE_NOT_QUALIFIED' } } } },
+    { if: { not: { properties: { state: {} }, required: ['state'] } }, then: { properties: Object.fromEntries(amountKeys.map(key => [key, looseDecimal])) } },
+  ],
+});
+const positionPnlRow = {
+  ...obj({ currency: identifier, realized: nullable(looseDecimal), unrealized: nullable(looseDecimal), net: nullable(looseDecimal),
+    state: { const: 'UNAVAILABLE' }, reason_code: { const: 'POSITION_FINANCIAL_SOURCE_NOT_QUALIFIED' } }, ['currency', 'realized', 'unrealized', 'net']),
+  allOf: [
+    { if: { properties: { state: {} }, required: ['state'] }, then: { required: ['reason_code'], properties: { reason_code: {}, realized: nil, unrealized: nil, net: nil } } },
+    { if: { not: { properties: { state: {} }, required: ['state'] } }, then: { properties: { realized: looseDecimal, unrealized: looseDecimal, net: looseDecimal } } },
+  ],
+};
+const deployment = {
+  ...obj({ deployment_id: identifier, strategy_id: nullable(identifier), stage: identifier, venue: identifier, account_id: identifier, portfolio_id: nullable(identifier),
+    portfolio_name: nullable(text), currency: identifier, allocation: nullable(looseDecimal), balance_total: nullable(looseDecimal), balance_free: nullable(looseDecimal),
+    balance_locked: nullable(looseDecimal), position_fact_count: nullable(integer), position_count_availability: { enum: ['AVAILABLE', 'UNAVAILABLE'] },
+    position_count_reason_code: nullable({ const: 'POSITION_POPULATION_NOT_QUALIFIED' }),
+    realized_pnl: nullable(looseDecimal), unrealized_pnl: nullable(looseDecimal), net_pnl: nullable(looseDecimal), exposure: nullable(looseDecimal),
+    position_metrics_availability: { const: 'UNAVAILABLE' }, position_metrics_reason_code: { const: 'POSITION_FINANCIAL_SOURCE_NOT_QUALIFIED' },
+    state: text, active: { type: 'boolean' }, health: { enum: ['READY', 'ATTENTION', 'FINDING', 'UNKNOWN'] }, updated_at: nullable(text), updated_at_ms: utc }, [
+    'deployment_id', 'strategy_id', 'stage', 'venue', 'account_id', 'portfolio_id', 'portfolio_name', 'currency', 'allocation', 'balance_total', 'balance_free', 'balance_locked',
+    'position_fact_count', 'realized_pnl', 'unrealized_pnl', 'net_pnl', 'exposure', 'state', 'active', 'health', 'updated_at']),
+  allOf: [
+    { if: { required: ['position_count_availability'], properties: { position_count_availability: { const: 'AVAILABLE' } } },
+      then: { required: ['position_count_reason_code'], properties: { position_fact_count: integer, position_count_reason_code: nil } } },
+    { if: { required: ['position_count_availability'], properties: { position_count_availability: { const: 'UNAVAILABLE' } } },
+      then: { required: ['position_count_reason_code'], properties: { position_fact_count: nil, position_count_reason_code: { const: 'POSITION_POPULATION_NOT_QUALIFIED' } } } },
+    { if: { not: { properties: { position_count_availability: {} }, required: ['position_count_availability'] } }, then: { properties: { position_fact_count: integer } } },
+    { if: { properties: { position_metrics_availability: {} }, required: ['position_metrics_availability'] }, then: { required: ['position_metrics_reason_code'],
+      properties: { position_metrics_reason_code: {}, realized_pnl: nil, unrealized_pnl: nil, net_pnl: nil, exposure: nil } } },
+    { if: { not: { properties: { position_metrics_availability: {} }, required: ['position_metrics_availability'] } },
+      then: { properties: { realized_pnl: looseDecimal, unrealized_pnl: looseDecimal, net_pnl: looseDecimal, exposure: looseDecimal } } },
+  ],
+};
+
 /* ── execution.alpha-resource.v1 ─────────────────────────────────────────── */
 const alphaDefs = {
   ...common,
   Metric: obj({ state: states, reason_code: reason }),
-  Deployment: obj({ deployment_id: identifier, strategy_id: nullable(identifier), stage: identifier, venue: identifier, account_id: identifier, portfolio_id: nullable(identifier),
-    portfolio_name: nullable(text), currency: identifier, allocation: nullable(looseDecimal), balance_total: nullable(looseDecimal), balance_free: nullable(looseDecimal),
-    balance_locked: nullable(looseDecimal), position_fact_count: integer, realized_pnl: looseDecimal, unrealized_pnl: looseDecimal, net_pnl: looseDecimal, exposure: looseDecimal,
-    state: text, active: { type: 'boolean' }, health: { enum: ['READY', 'ATTENTION', 'FINDING'] }, updated_at: nullable(text), updated_at_ms: utc }, [
-    'deployment_id', 'strategy_id', 'stage', 'venue', 'account_id', 'portfolio_id', 'portfolio_name', 'currency', 'allocation', 'balance_total', 'balance_free', 'balance_locked',
-    'position_fact_count', 'realized_pnl', 'unrealized_pnl', 'net_pnl', 'exposure', 'state', 'active', 'health', 'updated_at']),
+  Deployment: deployment,
   AlphaSummary: obj({ alpha_id: identifier, alpha_label: text, version: text, owner: nullable(text), stage: text, stages: { type: 'array', maxItems: 8, items: text },
     portfolios: { type: 'array', maxItems: 200, items: obj({ portfolio_id: nullable(identifier), name: text, base_currency: text }) },
     deployments: { type: 'array', maxItems: 200, items: ref('Deployment') },
-    allocations: { type: 'array', maxItems: 64, items: obj({ currency: identifier, value: looseDecimal }) },
-    balances: { type: 'array', maxItems: 64, items: obj({ currency: identifier, total: looseDecimal, free: looseDecimal, locked: looseDecimal }) },
-    position_pnl: { type: 'array', maxItems: 64, items: obj({ currency: identifier, realized: looseDecimal, unrealized: looseDecimal, net: looseDecimal }) },
-    exposure: { type: 'array', maxItems: 64, items: obj({ currency: identifier, value: looseDecimal }) },
+    allocations: { type: 'array', maxItems: 64, items: aggregateRow(['value']) },
+    balances: { type: 'array', maxItems: 64, items: aggregateRow(['total', 'free', 'locked']) },
+    position_pnl: { type: 'array', maxItems: 64, items: positionPnlRow },
+    exposure: { type: 'array', maxItems: 64, items: aggregateRow(['value']) },
     health: text, attention_reasons: { type: 'array', maxItems: 64, items: text },
     metrics_availability: obj({ account_balance: ref('Metric'), current_position_pnl: ref('Metric'), equity_series_30d: ref('Metric'), max_drawdown_30d: ref('Metric') }),
     updated_at: nullable(text), updated_at_ms: utc, valuation_warning: { const: 'E5_POSITION_CURRENCY_AND_MARK_LINEAGE_UNQUALIFIED' } },

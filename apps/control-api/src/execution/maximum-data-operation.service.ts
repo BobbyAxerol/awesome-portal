@@ -11,7 +11,8 @@ import type { ControlApiConfig } from "../config";
 import { CONTROL_API_CONFIG, CONTROL_API_POOL } from "../tokens";
 import { ExecutionProfileProjectionRepository } from "./profile-projection.repository";
 import { retainedReview } from "./retained-read-profile";
-import { retainedOperationPage, authorizeNamedRetainedRelation, retainedConfiguredProfile, retainedRelationAction } from "./retained-operation-page";
+import { retainedOperationPage, authorizeNamedRetainedRelation, retainedConfiguredProfile, retainedRelationAction,
+  namedExecutionNeedsAccount } from "./retained-operation-page";
 import { ExecutionReadScopes, ExecutionReadScopeError, AuthorizedExecutionReadScope } from "../execution-v2/read-scope";
 import { AuthSession, PortalUser } from "../domain";
 import { ExecutionCurrentSourceProxy } from "./current-source.proxy";
@@ -167,6 +168,12 @@ export class MaximumDataOperationService {
       throw new MaximumDataOperationError("EDS11R_OPERATION_QUERY_INVALID", 400);
     }
     const operationScope = await this.authorizeOperation(principal, operation, query);
+    if (operationScope?.mode === "SCOPED_V2" && namedExecutionNeedsAccount(operation.relation)) {
+      // Hold the route's first grant with the independently minted Alpha and
+      // Account obligations through one final Core confirmation. A later
+      // outer Alpha-only await would reopen an Account-revocation window.
+      return retainedOperationPage(this.config!, this.projection!, principal, operation, query, this.readScopes, operationScope);
+    }
     const read = async () => {
     if (retainedReview(this.config) || operationScope?.mode === "SCOPED_V2")
       return retainedOperationPage(this.config!, this.projection!, principal, operation, query, this.readScopes);

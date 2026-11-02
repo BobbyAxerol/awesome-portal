@@ -632,29 +632,86 @@
           ]
         },
         "position_fact_count": {
-          "type": "integer",
-          "minimum": 0,
-          "maximum": 9007199254740991
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "position_count_availability": {
+          "enum": [
+            "AVAILABLE",
+            "UNAVAILABLE"
+          ]
+        },
+        "position_count_reason_code": {
+          "anyOf": [
+            {
+              "const": "POSITION_POPULATION_NOT_QUALIFIED"
+            },
+            {
+              "type": "null"
+            }
+          ]
         },
         "realized_pnl": {
-          "type": "string",
-          "maxLength": 128,
-          "pattern": "^-?[0-9]+(?:\\.[0-9]+)?$(?![\\s\\S])"
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 128,
+              "pattern": "^-?[0-9]+(?:\\.[0-9]+)?$(?![\\s\\S])"
+            },
+            {
+              "type": "null"
+            }
+          ]
         },
         "unrealized_pnl": {
-          "type": "string",
-          "maxLength": 128,
-          "pattern": "^-?[0-9]+(?:\\.[0-9]+)?$(?![\\s\\S])"
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 128,
+              "pattern": "^-?[0-9]+(?:\\.[0-9]+)?$(?![\\s\\S])"
+            },
+            {
+              "type": "null"
+            }
+          ]
         },
         "net_pnl": {
-          "type": "string",
-          "maxLength": 128,
-          "pattern": "^-?[0-9]+(?:\\.[0-9]+)?$(?![\\s\\S])"
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 128,
+              "pattern": "^-?[0-9]+(?:\\.[0-9]+)?$(?![\\s\\S])"
+            },
+            {
+              "type": "null"
+            }
+          ]
         },
         "exposure": {
-          "type": "string",
-          "maxLength": 128,
-          "pattern": "^-?[0-9]+(?:\\.[0-9]+)?$(?![\\s\\S])"
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 128,
+              "pattern": "^-?[0-9]+(?:\\.[0-9]+)?$(?![\\s\\S])"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "position_metrics_availability": {
+          "const": "UNAVAILABLE"
+        },
+        "position_metrics_reason_code": {
+          "const": "POSITION_FINANCIAL_SOURCE_NOT_QUALIFIED"
         },
         "state": {
           "type": "string",
@@ -668,7 +725,8 @@
           "enum": [
             "READY",
             "ATTENTION",
-            "FINDING"
+            "FINDING",
+            "UNKNOWN"
           ]
         },
         "updated_at": {
@@ -688,7 +746,148 @@
           "minimum": -8640000000000000,
           "maximum": 8640000000000000
         }
-      }
+      },
+      "allOf": [
+        {
+          "if": {
+            "required": [
+              "position_count_availability"
+            ],
+            "properties": {
+              "position_count_availability": {
+                "const": "AVAILABLE"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "position_count_reason_code"
+            ],
+            "properties": {
+              "position_fact_count": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "position_count_reason_code": {
+                "type": "null"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "position_count_availability"
+            ],
+            "properties": {
+              "position_count_availability": {
+                "const": "UNAVAILABLE"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "position_count_reason_code"
+            ],
+            "properties": {
+              "position_fact_count": {
+                "type": "null"
+              },
+              "position_count_reason_code": {
+                "const": "POSITION_POPULATION_NOT_QUALIFIED"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "not": {
+              "properties": {
+                "position_count_availability": {}
+              },
+              "required": [
+                "position_count_availability"
+              ]
+            }
+          },
+          "then": {
+            "properties": {
+              "position_fact_count": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "position_metrics_availability": {}
+            },
+            "required": [
+              "position_metrics_availability"
+            ]
+          },
+          "then": {
+            "required": [
+              "position_metrics_reason_code"
+            ],
+            "properties": {
+              "position_metrics_reason_code": {},
+              "realized_pnl": {
+                "type": "null"
+              },
+              "unrealized_pnl": {
+                "type": "null"
+              },
+              "net_pnl": {
+                "type": "null"
+              },
+              "exposure": {
+                "type": "null"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "not": {
+              "properties": {
+                "position_metrics_availability": {}
+              },
+              "required": [
+                "position_metrics_availability"
+              ]
+            }
+          },
+          "then": {
+            "properties": {
+              "realized_pnl": {
+                "type": "string",
+                "maxLength": 128,
+                "pattern": "^-?[0-9]+(?:\\.[0-9]+)?$(?![\\s\\S])"
+              },
+              "unrealized_pnl": {
+                "type": "string",
+                "maxLength": 128,
+                "pattern": "^-?[0-9]+(?:\\.[0-9]+)?$(?![\\s\\S])"
+              },
+              "net_pnl": {
+                "type": "string",
+                "maxLength": 128,
+                "pattern": "^-?[0-9]+(?:\\.[0-9]+)?$(?![\\s\\S])"
+              },
+              "exposure": {
+                "type": "string",
+                "maxLength": 128,
+                "pattern": "^-?[0-9]+(?:\\.[0-9]+)?$(?![\\s\\S])"
+              }
+            }
+          }
+        }
+      ]
     },
     "AlphaSummary": {
       "type": "object",
@@ -815,11 +1014,107 @@
                 "maxLength": 191
               },
               "value": {
-                "type": "string",
-                "maxLength": 128,
-                "pattern": "^-?[0-9]+(?:\\.[0-9]+)?$(?![\\s\\S])"
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "maxLength": 128,
+                    "pattern": "^-?[0-9]+(?:\\.[0-9]+)?$(?![\\s\\S])"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "state": {
+                "enum": [
+                  "AVAILABLE",
+                  "UNAVAILABLE"
+                ]
+              },
+              "reason_code": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "maxLength": 256
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
               }
-            }
+            },
+            "allOf": [
+              {
+                "if": {
+                  "required": [
+                    "state"
+                  ],
+                  "properties": {
+                    "state": {
+                      "const": "AVAILABLE"
+                    }
+                  }
+                },
+                "then": {
+                  "required": [
+                    "reason_code"
+                  ],
+                  "properties": {
+                    "reason_code": {
+                      "type": "null"
+                    },
+                    "value": {
+                      "type": "string",
+                      "maxLength": 128,
+                      "pattern": "^-?[0-9]+(?:\\.[0-9]+)?$(?![\\s\\S])"
+                    }
+                  }
+                }
+              },
+              {
+                "if": {
+                  "required": [
+                    "state"
+                  ],
+                  "properties": {
+                    "state": {
+                      "const": "UNAVAILABLE"
+                    }
+                  }
+                },
+                "then": {
+                  "required": [
+                    "reason_code"
+                  ],
+                  "properties": {
+                    "reason_code": {
+                      "const": "FINANCIAL_AGGREGATE_SOURCE_NOT_QUALIFIED"
+                    }
+                  }
+                }
+              },
+              {
+                "if": {
+                  "not": {
+                    "properties": {
+                      "state": {}
+                    },
+                    "required": [
+                      "state"
+                    ]
+                  }
+                },
+                "then": {
+                  "properties": {
+                    "value": {
+                      "type": "string",
+                      "maxLength": 128,
+                      "pattern": "^-?[0-9]+(?:\\.[0-9]+)?$(?![\\s\\S])"
+                    }
+                  }
+                }
+              }
+            ]
           }
         },
         "balances": {
@@ -841,21 +1136,151 @@
                 "maxLength": 191
               },
               "total": {
-                "type": "string",
-                "maxLength": 128,
-                "pattern": "^-?[0-9]+(?:\\.[0-9]+)?$(?![\\s\\S])"
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "maxLength": 128,
+                    "pattern": "^-?[0-9]+(?:\\.[0-9]+)?$(?![\\s\\S])"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
               },
               "free": {
-                "type": "string",
-                "maxLength": 128,
-                "pattern": "^-?[0-9]+(?:\\.[0-9]+)?$(?![\\s\\S])"
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "maxLength": 128,
+                    "pattern": "^-?[0-9]+(?:\\.[0-9]+)?$(?![\\s\\S])"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
               },
               "locked": {
-                "type": "string",
-                "maxLength": 128,
-                "pattern": "^-?[0-9]+(?:\\.[0-9]+)?$(?![\\s\\S])"
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "maxLength": 128,
+                    "pattern": "^-?[0-9]+(?:\\.[0-9]+)?$(?![\\s\\S])"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "state": {
+                "enum": [
+                  "AVAILABLE",
+                  "UNAVAILABLE"
+                ]
+              },
+              "reason_code": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "maxLength": 256
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
               }
-            }
+            },
+            "allOf": [
+              {
+                "if": {
+                  "required": [
+                    "state"
+                  ],
+                  "properties": {
+                    "state": {
+                      "const": "AVAILABLE"
+                    }
+                  }
+                },
+                "then": {
+                  "required": [
+                    "reason_code"
+                  ],
+                  "properties": {
+                    "reason_code": {
+                      "type": "null"
+                    },
+                    "total": {
+                      "type": "string",
+                      "maxLength": 128,
+                      "pattern": "^-?[0-9]+(?:\\.[0-9]+)?$(?![\\s\\S])"
+                    },
+                    "free": {
+                      "type": "string",
+                      "maxLength": 128,
+                      "pattern": "^-?[0-9]+(?:\\.[0-9]+)?$(?![\\s\\S])"
+                    },
+                    "locked": {
+                      "type": "string",
+                      "maxLength": 128,
+                      "pattern": "^-?[0-9]+(?:\\.[0-9]+)?$(?![\\s\\S])"
+                    }
+                  }
+                }
+              },
+              {
+                "if": {
+                  "required": [
+                    "state"
+                  ],
+                  "properties": {
+                    "state": {
+                      "const": "UNAVAILABLE"
+                    }
+                  }
+                },
+                "then": {
+                  "required": [
+                    "reason_code"
+                  ],
+                  "properties": {
+                    "reason_code": {
+                      "const": "FINANCIAL_AGGREGATE_SOURCE_NOT_QUALIFIED"
+                    }
+                  }
+                }
+              },
+              {
+                "if": {
+                  "not": {
+                    "properties": {
+                      "state": {}
+                    },
+                    "required": [
+                      "state"
+                    ]
+                  }
+                },
+                "then": {
+                  "properties": {
+                    "total": {
+                      "type": "string",
+                      "maxLength": 128,
+                      "pattern": "^-?[0-9]+(?:\\.[0-9]+)?$(?![\\s\\S])"
+                    },
+                    "free": {
+                      "type": "string",
+                      "maxLength": 128,
+                      "pattern": "^-?[0-9]+(?:\\.[0-9]+)?$(?![\\s\\S])"
+                    },
+                    "locked": {
+                      "type": "string",
+                      "maxLength": 128,
+                      "pattern": "^-?[0-9]+(?:\\.[0-9]+)?$(?![\\s\\S])"
+                    }
+                  }
+                }
+              }
+            ]
           }
         },
         "position_pnl": {
@@ -877,21 +1302,108 @@
                 "maxLength": 191
               },
               "realized": {
-                "type": "string",
-                "maxLength": 128,
-                "pattern": "^-?[0-9]+(?:\\.[0-9]+)?$(?![\\s\\S])"
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "maxLength": 128,
+                    "pattern": "^-?[0-9]+(?:\\.[0-9]+)?$(?![\\s\\S])"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
               },
               "unrealized": {
-                "type": "string",
-                "maxLength": 128,
-                "pattern": "^-?[0-9]+(?:\\.[0-9]+)?$(?![\\s\\S])"
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "maxLength": 128,
+                    "pattern": "^-?[0-9]+(?:\\.[0-9]+)?$(?![\\s\\S])"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
               },
               "net": {
-                "type": "string",
-                "maxLength": 128,
-                "pattern": "^-?[0-9]+(?:\\.[0-9]+)?$(?![\\s\\S])"
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "maxLength": 128,
+                    "pattern": "^-?[0-9]+(?:\\.[0-9]+)?$(?![\\s\\S])"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "state": {
+                "const": "UNAVAILABLE"
+              },
+              "reason_code": {
+                "const": "POSITION_FINANCIAL_SOURCE_NOT_QUALIFIED"
               }
-            }
+            },
+            "allOf": [
+              {
+                "if": {
+                  "properties": {
+                    "state": {}
+                  },
+                  "required": [
+                    "state"
+                  ]
+                },
+                "then": {
+                  "required": [
+                    "reason_code"
+                  ],
+                  "properties": {
+                    "reason_code": {},
+                    "realized": {
+                      "type": "null"
+                    },
+                    "unrealized": {
+                      "type": "null"
+                    },
+                    "net": {
+                      "type": "null"
+                    }
+                  }
+                }
+              },
+              {
+                "if": {
+                  "not": {
+                    "properties": {
+                      "state": {}
+                    },
+                    "required": [
+                      "state"
+                    ]
+                  }
+                },
+                "then": {
+                  "properties": {
+                    "realized": {
+                      "type": "string",
+                      "maxLength": 128,
+                      "pattern": "^-?[0-9]+(?:\\.[0-9]+)?$(?![\\s\\S])"
+                    },
+                    "unrealized": {
+                      "type": "string",
+                      "maxLength": 128,
+                      "pattern": "^-?[0-9]+(?:\\.[0-9]+)?$(?![\\s\\S])"
+                    },
+                    "net": {
+                      "type": "string",
+                      "maxLength": 128,
+                      "pattern": "^-?[0-9]+(?:\\.[0-9]+)?$(?![\\s\\S])"
+                    }
+                  }
+                }
+              }
+            ]
           }
         },
         "exposure": {
@@ -911,11 +1423,107 @@
                 "maxLength": 191
               },
               "value": {
-                "type": "string",
-                "maxLength": 128,
-                "pattern": "^-?[0-9]+(?:\\.[0-9]+)?$(?![\\s\\S])"
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "maxLength": 128,
+                    "pattern": "^-?[0-9]+(?:\\.[0-9]+)?$(?![\\s\\S])"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "state": {
+                "enum": [
+                  "AVAILABLE",
+                  "UNAVAILABLE"
+                ]
+              },
+              "reason_code": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "maxLength": 256
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
               }
-            }
+            },
+            "allOf": [
+              {
+                "if": {
+                  "required": [
+                    "state"
+                  ],
+                  "properties": {
+                    "state": {
+                      "const": "AVAILABLE"
+                    }
+                  }
+                },
+                "then": {
+                  "required": [
+                    "reason_code"
+                  ],
+                  "properties": {
+                    "reason_code": {
+                      "type": "null"
+                    },
+                    "value": {
+                      "type": "string",
+                      "maxLength": 128,
+                      "pattern": "^-?[0-9]+(?:\\.[0-9]+)?$(?![\\s\\S])"
+                    }
+                  }
+                }
+              },
+              {
+                "if": {
+                  "required": [
+                    "state"
+                  ],
+                  "properties": {
+                    "state": {
+                      "const": "UNAVAILABLE"
+                    }
+                  }
+                },
+                "then": {
+                  "required": [
+                    "reason_code"
+                  ],
+                  "properties": {
+                    "reason_code": {
+                      "const": "FINANCIAL_AGGREGATE_SOURCE_NOT_QUALIFIED"
+                    }
+                  }
+                }
+              },
+              {
+                "if": {
+                  "not": {
+                    "properties": {
+                      "state": {}
+                    },
+                    "required": [
+                      "state"
+                    ]
+                  }
+                },
+                "then": {
+                  "properties": {
+                    "value": {
+                      "type": "string",
+                      "maxLength": 128,
+                      "pattern": "^-?[0-9]+(?:\\.[0-9]+)?$(?![\\s\\S])"
+                    }
+                  }
+                }
+              }
+            ]
           }
         },
         "health": {

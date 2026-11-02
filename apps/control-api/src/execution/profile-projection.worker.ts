@@ -133,12 +133,14 @@ export class ExecutionProfileProjectionWorker implements OnApplicationBootstrap,
         carryForward?: ProfileProjectionDocument["relations"][string];
       }> = [];
       const relationCursors: DurableMirrorRelationCursor[] = [];
+      const previousRelationCursors = new Map<string, string | null>();
       for (const binding of profileProjectionCatalog(environment)) {
         let page: ManagerPage;
         let resumePoint: string | null = null;
         const resumeCursor = binding.ladder
           ? await this.repository.relationCursor(workspaceId, environment, profileId, `${binding.sourceId}:${binding.relation}`)
           : null;
+        if (binding.ladder) previousRelationCursors.set(`${binding.sourceId}:${binding.relation}`, resumeCursor);
         try {
           const drained = await this.drain(workspaceId, environment, binding, context, resumeCursor);
           page = drained.page;
@@ -228,6 +230,16 @@ export class ExecutionProfileProjectionWorker implements OnApplicationBootstrap,
       // carry-forward association survives it at runtime; its signature just
       // does not model extra fields.
       const isolated = enforceProfileLineage(results, "N30") as typeof results;
+      const unaccountedRelations = new Set(isolated.flatMap((item) =>
+        item.spec.binding.ladder && item.lineageRejects && Object.values(item.lineageRejects).some((count) => count > 0)
+          ? [`${item.spec.binding.sourceId}:${item.spec.binding.relation}`] : []));
+      // Rows rejected against an incomplete parent are not proven foreign.
+      // Advancing their durable source position would skip them permanently
+      // when that parent later becomes visible. Commit the prior position in
+      // the same transaction as the partial snapshot/mirror; genuinely scoped
+      // out rows (lineageScopedOut) do not hold progress.
+      const safeRelationCursors = relationCursors.map((cursor) => unaccountedRelations.has(cursor.relationKey)
+        ? { ...cursor, sourceCursor: previousRelationCursors.get(cursor.relationKey) ?? null } : cursor);
       const retainedRangeRows: DurableMirrorRetainedRangeRows = Object.fromEntries(isolated.flatMap((item) => {
         const binding = item.spec.binding;
         if (!binding.ladder || !item.page) return [];
@@ -373,7 +385,7 @@ export class ExecutionProfileProjectionWorker implements OnApplicationBootstrap,
         completeness,
         retentionSeconds: this.config.EXECUTION_LOCAL_PROJECTION_JOURNAL_RETENTION_SECONDS,
         maximumJournalEntries: this.config.EXECUTION_LOCAL_PROJECTION_MAXIMUM_JOURNAL_ENTRIES,
-        relationCursors,
+        relationCursors: safeRelationCursors,
         retainedRangeRows,
       });
       if (receipt.outcome === "QUARANTINED") {

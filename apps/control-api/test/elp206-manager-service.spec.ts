@@ -75,13 +75,15 @@ describe("ELP2-06 service admission and final authority fences (synthetic adapte
     f.context.grants=[{...f.context.grants[0],action:"portfolio.read",selector:{kind:"EXPLICIT_RESOURCE_SET",resource_kind:"PORTFOLIO",ids:[OWN.portfolio_id]}}];
     const spy=vi.spyOn(f.scopes,"authorize");
     await expect(f.model.read(f.principal,"PORTFOLIO",{environment:"paper"},OWN.portfolio_id)).rejects.toMatchObject({status:503});
-    expect(spy.mock.calls.map(call=>call[2].action)).toEqual(["portfolio.read","portfolio.read"]); // initial + current delivery fence, no fallback
+    // Initial authorization plus delivery's pre/post fences, including when
+    // a source refusal is held; no restricted fallback may be acquired.
+    expect(spy.mock.calls.map(call=>call[2].action)).toEqual(["portfolio.read","portfolio.read","portfolio.read"]);
     expect(f.repository.document).toHaveBeenCalledOnce();
   });
   it("uses the distinct restricted Portfolio capability only after an explicit full-read denial",async()=>{
     const f=fixture();const spy=vi.spyOn(f.scopes,"authorize");
     await expect(f.model.read(f.principal,"PORTFOLIO",{environment:"paper"},OWN.portfolio_id)).rejects.toMatchObject({status:503});
-    expect(spy.mock.calls.map(call=>call[2].action)).toEqual(["portfolio.read","portfolio.read_restricted","portfolio.read_restricted"]);
+    expect(spy.mock.calls.map(call=>call[2].action)).toEqual(["portfolio.read","portfolio.read_restricted","portfolio.read_restricted","portfolio.read_restricted"]);
     expect(f.repository.document).toHaveBeenCalledOnce();
   });
   it("legacy compatibility and missing new projection never return a legacy fallback",async()=>{
@@ -102,6 +104,15 @@ describe("ELP2-06 service admission and final authority fences (synthetic adapte
   it("current grant revoke while the store is awaited prevents delivery",async()=>{
     const f=fixture(true);f.repository.document.mockImplementation(async()=>{f.context.grants[0].revoked_at_ms=f.context.now_ms;return emptyProjection(f);});
     await expect(f.model.read(f.principal,"FLEET",{environment:"paper"})).rejects.toMatchObject({status:404});
+  });
+  it("rechecks a grant before releasing a source refusal",async()=>{
+    const f=fixture(true);
+    f.repository.document.mockImplementation(async()=>{
+      f.context.grants[0].revoked_at_ms=f.context.now_ms;
+      return {qualification:"TEST_ONLY"};
+    });
+    await expect(f.model.read(f.principal,"FLEET",{environment:"paper"}))
+      .rejects.toMatchObject({code:"EXECUTION_READ_NOT_AVAILABLE",status:404});
   });
   it("typed current snapshot passes only through the final scoped delivery fence",async()=>{
     const f=fixture(true);f.repository.document.mockResolvedValue(emptyProjection(f));const fence=vi.spyOn(f.scopes,"deliver");

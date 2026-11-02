@@ -5,6 +5,7 @@ import { MaximumDataOperationController } from "../src/execution/maximum-data-op
 import { PaperReadController } from "../src/paper-read/paper-read.controller";
 import { ProfileReadController } from "../src/profile-read/profile-read.controller";
 import { OperationalCompositionController } from "../src/execution/operational-composition.controller";
+import { LiveOperationsController } from "../src/live/live-operations.controller";
 
 // Controller-only regression: server-attached viewer context must not be
 // replaced by the retained source workspace (or by browser query parameters).
@@ -50,12 +51,66 @@ describe("ELP2-04 trusted controller context and HTTP cache isolation", () => {
     await new PaperReadController({ overview: f.read } as any, f.workspaces).overview(f.request, {});
     expect(f.read.mock.calls[0][0]).toMatchObject(principal);
   });
+  it.each(["overview", "workbench", "workbenchVnm", "blotter"])("Paper %s withholds the result when workspace access is revoked during the read", async route => {
+    const f = fixture();
+    f.workspaces.canReadExecution.mockResolvedValueOnce(true).mockResolvedValueOnce(false);
+    const controller = new PaperReadController({ overview: f.read, workbench: f.read, blotter: f.read } as any, f.workspaces);
+    const query = { workspace_id: "source" };
+    const read = route === "overview" ? controller.overview(f.request, query) : route === "blotter"
+      ? controller.blotter(f.request, query) : route === "workbench"
+        ? controller.workbench(f.request, "deployment", query) : controller.workbenchVnm(f.request, "deployment", query);
+    await expect(read).rejects.toMatchObject({ code: "WORKSPACE_NOT_FOUND", status: 404 });
+    expect(f.read).toHaveBeenCalledOnce();
+    expect(f.workspaces.canReadExecution).toHaveBeenCalledTimes(2);
+    expect(f.workspaces.canReadExecution).toHaveBeenNthCalledWith(2, "source", "TEST_ONLY-viewer", "paper");
+  });
+  it("Live detail withholds the result when workspace membership is revoked during the read", async () => {
+    const f = fixture();
+    f.workspaces.isMember.mockResolvedValueOnce(true).mockResolvedValueOnce(false);
+    const controller = new LiveOperationsController({ detail: f.read } as any, f.workspaces);
+    await expect(controller.detail(f.request, "deployment", "source"))
+      .rejects.toMatchObject({ code: "WORKSPACE_NOT_FOUND", status: 404 });
+    expect(f.read).toHaveBeenCalledOnce();
+    expect(f.workspaces.isMember).toHaveBeenCalledTimes(2);
+    expect(f.workspaces.isMember).toHaveBeenNthCalledWith(2, "source", "TEST_ONLY-viewer");
+  });
   it.each(["overview", "account"])("Profile %s preserves the trusted viewer workspace", async route => {
     const f = fixture();
     const controller = new ProfileReadController({ overview: f.read, accountBroker: f.read } as any, f.workspaces);
     if (route === "overview") await controller.sandbox(f.request, {});
     else await controller.account(f.request, "account", { environment: "paper" });
     expect(f.read.mock.calls[0][0]).toMatchObject(principal);
+  });
+  it.each(["sandbox", "live", "account"])("Profile %s withholds the result when workspace access is revoked during the read", async route => {
+    const f = fixture();
+    f.workspaces.canReadExecution.mockResolvedValueOnce(true).mockResolvedValueOnce(false);
+    const controller = new ProfileReadController({ overview: f.read, accountBroker: f.read } as any, f.workspaces);
+    const read = route === "account" ? controller.account(f.request, "account", { workspace_id: "source", environment: "paper" }) :
+      route === "sandbox" ? controller.sandbox(f.request, { workspace_id: "source" }) :
+        controller.live(f.request, { workspace_id: "source" });
+    await expect(read).rejects.toMatchObject({ code: "WORKSPACE_NOT_FOUND", status: 404 });
+    const environment = route === "account" ? "paper" : route;
+    expect(f.read).toHaveBeenCalledOnce();
+    expect(f.workspaces.canReadExecution).toHaveBeenCalledTimes(2);
+    expect(f.workspaces.canReadExecution).toHaveBeenNthCalledWith(1, "source", "TEST_ONLY-viewer", environment);
+    expect(f.workspaces.canReadExecution).toHaveBeenNthCalledWith(2, "source", "TEST_ONLY-viewer", environment);
+  });
+  it.each(["alpha", "portfolio", "account", "binding"])("Resource %s withholds the result when workspace access is revoked during the read", async route => {
+    const f = fixture();
+    f.workspaces.canReadExecution.mockResolvedValueOnce(true).mockResolvedValueOnce(false);
+    const controller = new ResourceReadController({ read: f.read } as any, f.workspaces, f.config);
+    const read = controller[route as "alpha" | "portfolio" | "account" | "binding"](f.request, "resource", { workspace_id: "source", environment: "paper" });
+    await expect(read).rejects.toMatchObject({ code: "WORKSPACE_NOT_FOUND", status: 404 });
+    expect(f.read).toHaveBeenCalledOnce();
+    expect(f.workspaces.canReadExecution).toHaveBeenCalledTimes(2);
+    expect(f.workspaces.canReadExecution).toHaveBeenNthCalledWith(2, "source", "TEST_ONLY-viewer", "paper");
+  });
+  it.each(["alpha", "portfolio", "account", "binding"])("Resource %s rejects a foreign workspace before reading data", async route => {
+    const f = fixture();
+    const controller = new ResourceReadController({ read: f.read } as any, f.workspaces, f.config);
+    const read = controller[route as "alpha" | "portfolio" | "account" | "binding"](f.request, "resource", { workspace_id: "foreign", environment: "paper" });
+    await expect(read).rejects.toMatchObject({ code: "EDS04_PROJECTION_WORKSPACE_NOT_FOUND", status: 404 });
+    expect(f.read).not.toHaveBeenCalled();
   });
   it("composition preserves the trusted viewer workspace", async () => {
     const f = fixture();

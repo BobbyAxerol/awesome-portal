@@ -174,10 +174,15 @@ function subjectStorageShape(relationKey: string, retained = false):
   return null;
 }
 
-/** The promoted column for a subject filter, or null when the field is not one we promote. */
+/** A promoted subject column; only an intentionally absent filter returns null. */
 function subjectEntityColumn(entity: { field: string; value: string } | null | undefined): string | null {
   if (!entity) return null;
-  return SUBJECT_ENTITY_COLUMNS[entity.field] ?? null;
+  // A supplied but unsupported filter must never degrade into an unfiltered
+  // read or coverage count. Inherited names such as `constructor` are not
+  // promoted columns, either. Only an intentionally absent entity is broad.
+  if (typeof entity.field !== "string" || !Object.hasOwn(SUBJECT_ENTITY_COLUMNS, entity.field) ||
+      typeof entity.value !== "string") throw new ExecutionReadScopeError("EXECUTION_READ_SCOPE_REQUIRED");
+  return SUBJECT_ENTITY_COLUMNS[entity.field]!;
 }
 
 /**

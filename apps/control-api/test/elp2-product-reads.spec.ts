@@ -8,6 +8,7 @@ import {ProfileReadService} from "../src/profile-read/profile-read.service";
 import {LiveOperationsService} from "../src/live/live-operations.service";
 import {liveSourceOperationsRead} from "../src/live/live-source.contract";
 import {SCOPED_LIVE_SPECS} from "../src/profile-read/scoped-live-source";
+import { ExecutionProductReadSource } from "../src/execution/product-read-source";
 
 describe("ELP2-04 product reads before filtering, counts and pages", () => {
   // Existing pure adapter harness only. Real Core/HTTP/installed TS-acceptance
@@ -389,6 +390,194 @@ describe("ELP2-04 product reads before filtering, counts and pages", () => {
     expect(result.scope?.externalAccountRef).toBeNull();
     expect(JSON.stringify(result)).not.toContain("peer");
   });
+
+  it.each(["complete", "partial", "truncated", "lineage-held"] as const)(
+    "reports deployment absence only when the retained census is complete (%s)", async condition => {
+      const f = fixture();
+      const deployments = f.snapshot.document.relations["manager.deployments:strategy_deployments"];
+      deployments.items = [];
+      if (condition === "partial") deployments.completeness = "PARTIAL";
+      if (condition === "truncated") deployments.window = { days: 1, max_rows: 1, basis: "MERGED_SNAPSHOT_LADDER", truncated: true };
+      if (condition === "lineage-held") deployments.lineage_rejects = { missing_parent: 1 };
+      const legacy = new ExecutionProductReadSource(f.config, f.repository as never, f.named as never);
+      const result = await legacy.resolveDeploymentScope(f.principal, "paper", "EXECUTION_PAPER_WORKBENCH_SCREEN", OWN.deployment_id);
+      expect(result).toMatchObject(condition === "complete"
+        ? { state: "EMPTY", reasonCode: "EDS03_DEPLOYMENT_NOT_FOUND" }
+        : { state: "PARTIAL", reasonCode: "EDS03_DEPLOYMENT_OUTSIDE_RETAINED_WINDOW" });
+    },
+  );
+
+  it.each(["partial", "truncated", "lineage-held"] as const)(
+    "does not treat a deployment tuple as globally unique when the deployment census is %s",
+    async (condition) => {
+      const f = fixture({ full: true });
+      f.context.actor_lease_until_ms = f.context.now_ms + 600_000;
+      const deployments = f.snapshot.document.relations["manager.deployments:strategy_deployments"];
+      if (condition === "partial") deployments.completeness = "PARTIAL";
+      if (condition === "truncated") deployments.window = {
+        days: 1, max_rows: 1, basis: "MERGED_SNAPSHOT_LADDER", truncated: true,
+      };
+      if (condition === "lineage-held") deployments.lineage_rejects = { missing_parent: 1 };
+      const orders = f.snapshot.document.relations["manager.orders:orders"];
+      const tupleOnly = structuredClone(orders.items[0]);
+      delete tupleOnly.fields.deployment_id;
+      Object.assign(tupleOnly.fields, { strategy_id: "strategy-own", mode: "paper", venue: "VENUE", order_id: "TEST_ONLY-tuple-order" });
+      orders.items = [tupleOnly];
+
+      const resolution = await f.product.resolveDeploymentScope(f.principal, "paper", "EXECUTION_PAPER_WORKBENCH_SCREEN", OWN.deployment_id);
+      expect(resolution).toMatchObject({ state: "FOUND", scope: { tupleUnique: false } });
+      if (resolution.state !== "FOUND") throw new Error("expected the known deployment");
+      const page = await f.product.relation(f.principal, "paper", "EXECUTION_PAPER_WORKBENCH_SCREEN",
+        "manager.orders", "orders", { limit: 200, deploymentScope: resolution.scope }) as any;
+      expect(page.source.data).toMatchObject({ items: [], scope: {
+        state: "PARTIAL", reason_code: "EDS03_DEPLOYMENT_SCOPE_AMBIGUOUS",
+      } });
+      expect(JSON.stringify(page)).not.toContain("TEST_ONLY-tuple-order");
+    },
+  );
+  it.each(["mode-case", "unknown-strategy", "unknown-account", "unknown-mode", "unknown-venue"] as const)(
+    "withholds tuple-only joins when another deployment may share the tuple (%s)", async (condition) => {
+      const f = fixture({ full: true });
+      const deployments = f.snapshot.document.relations["manager.deployments:strategy_deployments"];
+      const other = deployments.items[1].fields;
+      Object.assign(other, { account_id: OWN.account_id, venue: "VENUE", mode: "paper", strategy_id: "strategy-own" });
+      if (condition === "mode-case") other.mode = "PAPER";
+      if (condition === "unknown-strategy") other.strategy_id = null;
+      if (condition === "unknown-account") other.account_id = null;
+      if (condition === "unknown-mode") other.mode = null;
+      if (condition === "unknown-venue") other.venue = null;
+      const resolution = await f.product.resolveDeploymentScope(f.principal, "paper", "EXECUTION_PAPER_WORKBENCH_SCREEN", OWN.deployment_id);
+      expect(resolution).toMatchObject({ state: "FOUND", scope: { tupleUnique: false } });
+    },
+  );
+  it("resolves and joins a uniquely qualified Paper tuple despite source mode casing", async () => {
+    const f = fixture({ full: true });
+    f.context.actor_lease_until_ms = f.context.now_ms + 600_000;
+    f.snapshot.document.relations["manager.deployments:strategy_deployments"].items[0].fields.mode = "PAPER";
+    const orders = f.snapshot.document.relations["manager.orders:orders"];
+    const tupleOnly = structuredClone(orders.items[0]);
+    delete tupleOnly.fields.deployment_id;
+    Object.assign(tupleOnly.fields, { strategy_id: "strategy-own", mode: "PAPER", venue: "VENUE", order_id: "TEST_ONLY-qualified-tuple" });
+    orders.items = [tupleOnly];
+    const resolution = await f.product.resolveDeploymentScope(f.principal, "paper", "EXECUTION_PAPER_WORKBENCH_SCREEN", OWN.deployment_id);
+    expect(resolution).toMatchObject({ state: "FOUND", scope: { tupleUnique: true, mode: "paper" } });
+    if (resolution.state !== "FOUND") throw new Error("expected the qualified deployment");
+    const page = await f.product.relation(f.principal, "paper", "EXECUTION_PAPER_WORKBENCH_SCREEN",
+      "manager.orders", "orders", { limit: 200, deploymentScope: resolution.scope }) as any;
+    expect(page.source.data.scope.state).toBe("EXACT");
+    expect(page.source.data.items).toHaveLength(1);
+    expect(page.source.data.items[0].fields.order_id.value).toBe("TEST_ONLY-qualified-tuple");
+  });
+  it("keeps an explicit deployment-id order available when tuple uniqueness is unknown", async () => {
+    const f = fixture({ full: true });
+    f.context.actor_lease_until_ms = f.context.now_ms + 600_000;
+    f.snapshot.document.relations["manager.deployments:strategy_deployments"].completeness = "PARTIAL";
+    const orders = f.snapshot.document.relations["manager.orders:orders"];
+    orders.items = [orders.items[0]];
+    const resolution = await f.product.resolveDeploymentScope(f.principal, "paper", "EXECUTION_PAPER_WORKBENCH_SCREEN", OWN.deployment_id);
+    expect(resolution).toMatchObject({ state: "FOUND", scope: { tupleUnique: false } });
+    if (resolution.state !== "FOUND") throw new Error("expected the known deployment");
+    const page = await f.product.relation(f.principal, "paper", "EXECUTION_PAPER_WORKBENCH_SCREEN",
+      "manager.orders", "orders", { limit: 200, deploymentScope: resolution.scope }) as any;
+    expect(page.source.data.scope.state).toBe("EXACT");
+    expect(page.source.data.items).toHaveLength(1);
+    expect(page.source.data.items[0].fields.order_id.value).toBe("order-own-1");
+  });
+  it.each(["qualified", "unknown-census", "unknown-order-mode"] as const)(
+    "keeps explicit orders and classifies tuple-only siblings without pretending completeness (%s)", async condition => {
+      const f = fixture({ full: true });
+      f.context.actor_lease_until_ms = f.context.now_ms + 600_000;
+      const deployments = f.snapshot.document.relations["manager.deployments:strategy_deployments"];
+      if (condition === "unknown-census") deployments.completeness = "PARTIAL";
+      const orders = f.snapshot.document.relations["manager.orders:orders"];
+      const explicit = structuredClone(orders.items[0]);
+      const tupleOnly = structuredClone(explicit);
+      delete tupleOnly.fields.deployment_id;
+      Object.assign(tupleOnly.fields, { strategy_id: "strategy-own", mode: "paper", venue: "VENUE", order_id: "TEST_ONLY-mixed-tuple" });
+      if (condition === "unknown-order-mode") tupleOnly.fields.mode = null;
+      const otherExplicit = structuredClone(tupleOnly);
+      Object.assign(otherExplicit.fields, { deployment_id: "TEST_ONLY-other-deployment", order_id: "TEST_ONLY-other-explicit" });
+      orders.items = [explicit, tupleOnly, otherExplicit];
+
+      const resolution = await f.product.resolveDeploymentScope(f.principal, "paper", "EXECUTION_PAPER_WORKBENCH_SCREEN", OWN.deployment_id);
+      if (resolution.state !== "FOUND") throw new Error("expected the known deployment");
+      const page = await f.product.relation(f.principal, "paper", "EXECUTION_PAPER_WORKBENCH_SCREEN",
+        "manager.orders", "orders", { limit: 200, deploymentScope: resolution.scope }) as any;
+      const ids = page.source.data.items.map((item: any) => item.fields.order_id.value);
+      expect(ids).toContain("order-own-1");
+      expect(ids).not.toContain("TEST_ONLY-other-explicit");
+      if (condition === "qualified") {
+        expect(ids).toContain("TEST_ONLY-mixed-tuple");
+        expect(page.source.data.scope.state).toBe("EXACT");
+      } else {
+        expect(ids).not.toContain("TEST_ONLY-mixed-tuple");
+        expect(page.source.data.scope).toMatchObject({ state: "PARTIAL", reason_code: "EDS03_DEPLOYMENT_SCOPE_AMBIGUOUS" });
+      }
+    },
+  );
+  it.each(["qualified", "shared-reference", "shared-other-venue", "shared-unknown-venue", "unknown-reference", "distinct-reference", "duplicate-account", "target-unknown-venue", "target-unknown-mode", "partial", "truncated", "lineage-held"] as const)(
+    "uses a broker reference only when the same-environment account census proves it unambiguous (%s)", async condition => {
+      const f = fixture({ full: true, fields: [...FIELDS, "mode", "external_account_ref"] });
+      const template = f.snapshot.document.relations["manager.deployments:strategy_deployments"];
+      const accounts = structuredClone(template);
+      accounts.source_id = "manager.accounts"; accounts.relation = "accounts";
+      accounts.items = [structuredClone(template.items[0])];
+      accounts.items[0].fields = { ...OWN, mode: "paper", venue: "VENUE", external_account_ref: "TEST_ONLY-external" };
+      if (["shared-reference", "shared-other-venue", "shared-unknown-venue", "unknown-reference", "distinct-reference", "duplicate-account"].includes(condition)) {
+        const other = structuredClone(accounts.items[0]);
+        if (condition !== "duplicate-account") Object.assign(other.fields, PRIVATE);
+        Object.assign(other.fields, { mode: "PAPER" });
+        if (condition === "shared-other-venue") other.fields.venue = "TEST_ONLY-other-venue";
+        if (condition === "shared-unknown-venue") other.fields.venue = null;
+        if (condition === "unknown-reference") other.fields.external_account_ref = null;
+        if (condition === "distinct-reference") other.fields.external_account_ref = "TEST_ONLY-different-reference";
+        accounts.items.push(other);
+      }
+      if (condition === "target-unknown-venue") accounts.items[0].fields.venue = null;
+      if (condition === "target-unknown-mode") accounts.items[0].fields.mode = null;
+      if (condition === "partial") accounts.completeness = "PARTIAL";
+      if (condition === "truncated") accounts.window = { days: 1, max_rows: 1, basis: "MERGED_SNAPSHOT_LADDER", truncated: true };
+      if (condition === "lineage-held") accounts.lineage_rejects = { missing_parent: 1 };
+      f.snapshot.document.relations["manager.accounts:accounts"] = accounts;
+      // The scoped policy intentionally withholds this physical identifier.
+      // Exercise the older unscoped compatibility seam without inventing a
+      // new field grant; scoped V2 has its own non-disclosure assertions.
+      const legacy = new ExecutionProductReadSource(f.config, f.repository as never, f.named as never);
+      const resolution = await legacy.resolveDeploymentScope(f.principal, "paper", "EXECUTION_PAPER_WORKBENCH_SCREEN", OWN.deployment_id);
+      expect(resolution).toMatchObject({ state: "FOUND", scope: {
+        externalAccountRef: ["qualified", "shared-other-venue", "distinct-reference"].includes(condition) ? "TEST_ONLY-external" : null,
+      } });
+    },
+  );
+  it.each(["foreign-venue", "foreign-mode", "unknown-venue", "unknown-mode"] as const)(
+    "never attaches a same-reference broker observation with an unproved mode/venue (%s)", async condition => {
+      const f = fixture();
+      const template = f.snapshot.document.relations["manager.deployments:strategy_deployments"];
+      const accounts = structuredClone(template);
+      accounts.source_id = "manager.accounts"; accounts.relation = "accounts";
+      accounts.items = [structuredClone(template.items[0])];
+      accounts.items[0].fields = { ...OWN, mode: "paper", venue: "VENUE", external_account_ref: "TEST_ONLY-external" };
+      f.snapshot.document.relations["manager.accounts:accounts"] = accounts;
+      const broker = structuredClone(accounts);
+      broker.relation = "broker_account_sync_effective";
+      broker.items[0].fields = { external_account_ref: "TEST_ONLY-external", mode: "paper", venue: "VENUE", sync_id: "TEST_ONLY-broker-own" };
+      const other = structuredClone(broker.items[0]); other.fields.sync_id = "TEST_ONLY-broker-other";
+      if (condition === "foreign-venue") other.fields.venue = "TEST_ONLY-other-venue";
+      if (condition === "foreign-mode") other.fields.mode = "live";
+      if (condition === "unknown-venue") other.fields.venue = null;
+      if (condition === "unknown-mode") other.fields.mode = null;
+      broker.items.push(other);
+      f.snapshot.document.relations["manager.accounts:broker_account_sync_effective"] = broker;
+      const legacy = new ExecutionProductReadSource(f.config, f.repository as never, f.named as never);
+      const resolution = await legacy.resolveDeploymentScope(f.principal, "paper", "EXECUTION_PAPER_WORKBENCH_SCREEN", OWN.deployment_id);
+      if (resolution.state !== "FOUND") throw new Error("expected the known deployment");
+      const page = await legacy.relation(f.principal, "paper", "EXECUTION_ACCOUNT_BROKER_360_SCREEN",
+        "manager.accounts", "broker_account_sync_effective", { limit: 200, deploymentScope: resolution.scope }) as any;
+      expect(page.source.data.items.map((item: any) => item.fields.sync_id.value)).toEqual(["TEST_ONLY-broker-own"]);
+      expect(page.source.data.scope.state).toBe(condition.startsWith("unknown") ? "PARTIAL" : "EXACT");
+      expect(JSON.stringify(page)).not.toContain("TEST_ONLY-broker-other");
+    },
+  );
   it("epoch changes after projection produce a typed conflict", async () => {
     const f = fixture(); f.repository.snapshotMetadata.mockResolvedValue({ ...f.snapshot, projectionEpoch: "epoch-changed" });
     await expect(f.orders()).rejects.toMatchObject({ code: "EXECUTION_READ_ACCESS_CHANGED", status: 409 });
@@ -401,6 +590,10 @@ describe("ELP2-04 product reads before filtering, counts and pages", () => {
   });
   it("named V2 operations use retained scoped rows without upstream or continuation writes", async () => {
     const f = fixture();
+    f.context.actor_lease_until_ms = f.context.now_ms + 600_000;
+    f.context.grants = f.context.grants.map(g => g.action === "account.read" ? { ...g,
+      selector: { kind: "EXPLICIT_RESOURCE_SET", resource_kind: "ACCOUNT", ids: [OWN.account_id, PRIVATE.account_id] } } : g);
+    f.snapshot.document.relations["manager.orders:orders"].source_id = "manager.orders";
     // Manager's named Orders catalogue declares the source PK as INTEGER.
     f.snapshot.document.relations["manager.orders:orders"].items.forEach((row, i) => { row.fields.order_id = String(i + 1); });
     const page = await f.maximum.relationPage(f.principal, "orders", { environment: "paper", limit: 1 });
@@ -411,7 +604,9 @@ describe("ELP2-04 product reads before filtering, counts and pages", () => {
   });
   it("named source health cannot distinguish peer-only retained data from an empty relation", async () => {
     const f = fixture();
+    f.context.actor_lease_until_ms = f.context.now_ms + 600_000;
     const relation = f.snapshot.document.relations["manager.orders:orders"];
+    relation.source_id = "manager.orders";
     relation.items = relation.items.filter(row => row.fields.alpha_id === "peer");
     relation.items[0].fields.order_id = "2";
     const peerOnly = await f.maximum.relationPage(f.principal, "orders", { environment: "paper", limit: 1 }) as any;

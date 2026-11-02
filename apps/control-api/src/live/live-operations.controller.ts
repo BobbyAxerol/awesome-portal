@@ -38,7 +38,11 @@ export class LiveOperationsController {
     if (!workspaceId || !(await this.workspaces.isMember(workspaceId, request.portalUser.userId))) {
       throw new GovernanceError("WORKSPACE_NOT_FOUND", "Workspace not found.", 404);
     }
-    return this.live.detail(request.portalUser, request.portalSession, workspaceId, deploymentId,
+    const result = await this.live.detail(request.portalUser, request.portalSession, workspaceId, deploymentId,
       request.portalViewerWorkspaceId ?? request.portalWorkspaceId,{panel:rawPanel,cursor:rawCursor,include:rawInclude});
+    if (!(await this.workspaces.isMember(workspaceId, request.portalUser.userId))) {
+      throw new GovernanceError("WORKSPACE_NOT_FOUND", "Workspace not found.", 404);
+    }
+    return result;
   }
 }

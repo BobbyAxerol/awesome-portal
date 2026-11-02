@@ -261,7 +261,19 @@ export class CurrentHumanCandidate {
   }
 
   async issue(actor: AccessActor, untrustedBinding: CurrentHumanBinding): Promise<{ token: string; lease_id: string; expires_at_ms: number; authority_revision: number }> {
+    return this.issueBound(actor, untrustedBinding, false);
+  }
+
+  /** STATUS has its own durable delivery fence. Unlike a financial read,
+   * terminal source custody alone cannot authorize a replacement: an exact
+   * authenticated Edge delivery ACK must also have been retained. */
+  async issueCommandStatus(actor: AccessActor, untrustedBinding: CurrentHumanBinding): Promise<{ token: string; lease_id: string; expires_at_ms: number; authority_revision: number }> {
+    return this.issueBound(actor, untrustedBinding, true);
+  }
+
+  private async issueBound(actor: AccessActor, untrustedBinding: CurrentHumanBinding, commandStatus: boolean): Promise<{ token: string; lease_id: string; expires_at_ms: number; authority_revision: number }> {
     const binding = currentHumanBinding.parse(untrustedBinding);
+    if (commandStatus && binding.environment !== "paper") throw new CurrentHumanLeaseError("CURRENT_HUMAN_COMMAND_STATUS_PAPER_REQUIRED");
     this.checkInstallation(binding, true);
     if (binding.workload_id !== this.reverseSource().workload_id) throw new CurrentHumanLeaseError("CURRENT_HUMAN_WORKLOAD_MISMATCH");
     const claims = await this.transaction(async (db, authority) => {
@@ -271,6 +283,23 @@ export class CurrentHumanCandidate {
         count(*) FILTER (WHERE unresolved)::int AS unresolved FROM elp210_candidate.obligations`)).rows[0];
       if (counts.unresolved >= this.config.limits.maximum_unresolved || counts.retained >= this.config.limits.maximum_retained)
         throw new CurrentHumanLeaseError("CURRENT_HUMAN_CAPACITY_EXHAUSTED");
+      if (commandStatus) {
+        // The authority singleton is locked by transaction(), so this check
+        // and lease INSERT are serialized across Core processes and restarts.
+        // RETIRED, UNKNOWN and terminal-without-ACK all remain fenced. The
+        // exact source request, not the human session, owns that fence: a
+        // new login cannot bypass a previous session's unresolved delivery.
+        const outstanding = await db.query(`SELECT l.lease_id FROM elp210_candidate.leases l
+          WHERE l.workspace_id=$1 AND l.environment=$2 AND l.workload_id=$3 AND l.request_digest=$4
+            AND NOT EXISTS (SELECT 1 FROM execution_command_status_delivery_acks a
+              WHERE a.lease_id=l.lease_id AND a.subject_id=l.subject_id AND a.session_id=l.session_id
+                AND a.session_revision=l.session_revision AND a.workspace_id=l.workspace_id
+                AND a.environment=l.environment AND a.workload_id=l.workload_id
+                AND a.request_digest=l.request_digest AND a.terminal_receipt_digest=l.terminal_receipt_digest
+                AND l.phase IN ('COMMITTED','ROLLED_BACK')) LIMIT 1`,
+        [binding.workspace_id, binding.environment, binding.workload_id, binding.request_digest]);
+        if (outstanding.rowCount) throw new CurrentHumanLeaseError("CURRENT_HUMAN_COMMAND_STATUS_RECOVERY_REQUIRED");
+      }
       this.checkInstallation(binding, true);
       const iat = Math.floor(current.now / 1000), exp = Math.floor(Math.min(current.now + this.config.limits.ttl_ms,
         current.lease_until_ms, this.config.installation_scope?.valid_until_ms ?? Number.MAX_SAFE_INTEGER) / 1000);
@@ -349,6 +378,46 @@ export class CurrentHumanCandidate {
       if (!["COMMITTED", "ROLLED_BACK"].includes(row.phase) || !row.attempt_id ||
         !digest.safeParse(row.terminal_receipt_digest).success)
         throw new CurrentHumanLeaseError("CURRENT_HUMAN_ENTRY_NOT_AVAILABLE");
+      return true;
+    });
+  }
+
+  /** Record only the Edge's exact authenticated delivery after persisted
+   * source terminal. The row contains digests/identity references, not JWTs
+   * or payloads. Repeated ACKs must match; terminal alone is never an ACK. */
+  async acknowledgeCommandStatusIssue(untrustedActor: AccessActor, untrustedBinding: CurrentHumanBinding,
+    issued: { token: string; lease_id: string; expires_at_ms: number; authority_revision: number },
+    responseDigest: string): Promise<boolean> {
+    const actor=nativeActor(untrustedActor), binding=currentHumanBinding.parse(untrustedBinding);
+    if(binding.environment!=="paper" || !digest.safeParse(responseDigest).success)
+      throw new CurrentHumanLeaseError("CURRENT_HUMAN_ENTRY_NOT_AVAILABLE");
+    this.checkInstallation(binding,true);
+    if(binding.workload_id!==this.reverseSource().workload_id)
+      throw new CurrentHumanLeaseError("CURRENT_HUMAN_WORKLOAD_MISMATCH");
+    return this.transaction(async(db,authority)=>{
+      const row=(await db.query<Row & {authority_fingerprint:string}>(
+        "SELECT * FROM elp210_candidate.leases WHERE lease_id=$1 FOR SHARE",[issued.lease_id])).rows[0];
+      if(!row || authority.drain_id || row.authority_revision!==authority.revision ||
+        Number(row.authority_revision)!==issued.authority_revision || row.subject_id!==actor.user_id ||
+        row.session_id!==actor.session_id || Number(row.session_revision)!==actor.session_generation ||
+        row.workspace_id!==binding.workspace_id || row.environment!==binding.environment ||
+        row.workload_id!==binding.workload_id || row.request_digest!==binding.request_digest ||
+        Number(row.expires_at_ms)!==issued.expires_at_ms || !["COMMITTED","ROLLED_BACK"].includes(row.phase) ||
+        !row.attempt_id || !digest.safeParse(row.terminal_receipt_digest).success)
+        throw new CurrentHumanLeaseError("CURRENT_HUMAN_ENTRY_NOT_AVAILABLE");
+      const current=await captureCurrentHumanSnapshot(db,actor,binding.workspace_id);
+      this.checkInstallation(binding,true);
+      if(current.authority_fingerprint!==row.authority_fingerprint)
+        throw new CurrentHumanLeaseError("CURRENT_HUMAN_ENTRY_NOT_AVAILABLE");
+      const values=[issued.lease_id,binding.workspace_id,actor.user_id,actor.session_id,actor.session_generation,
+        binding.environment,binding.workload_id,binding.request_digest,responseDigest,row.terminal_receipt_digest];
+      await db.query(`INSERT INTO execution_command_status_delivery_acks
+        (lease_id,workspace_id,subject_id,session_id,session_revision,environment,workload_id,request_digest,response_digest,terminal_receipt_digest)
+        VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) ON CONFLICT(lease_id) DO NOTHING`,values);
+      const recorded=(await db.query(`SELECT 1 FROM execution_command_status_delivery_acks
+        WHERE lease_id=$1 AND workspace_id=$2 AND subject_id=$3 AND session_id=$4 AND session_revision=$5
+          AND environment=$6 AND workload_id=$7 AND request_digest=$8 AND response_digest=$9 AND terminal_receipt_digest=$10`,values));
+      if(recorded.rowCount!==1)throw new CurrentHumanLeaseError("CURRENT_HUMAN_COMMAND_STATUS_ACK_MISMATCH");
       return true;
     });
   }

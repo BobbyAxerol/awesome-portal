@@ -78,6 +78,15 @@ describe("FE-072 typed orders", () => {
     expect(typed.not_published_columns[0].column).toBe("ack_latency_ms");
     assertPublishedSchema(FAMILY, "StageTypedOrders", typed);
   });
+  it("does not turn an impossible or timezone-less source timestamp into a real order instant", () => {
+    const timestamps = ["2026-02-30T08:00:00Z", "2026-10-12T08:00:00", "2026-10-12", "2026-10-12T08:00:00+07:00",
+      "2026-10-12T01:00:00.123456789Z", "2026-13-12T08:00:00Z", null];
+    const rows = timestamps.map((submitted_at, index) => ({ order_id: `order-${index}`, symbol: "BTCUSDT", submitted_at }));
+    const typed = typedOrders(profile({ orders: rows }), "DARK");
+    expect(typed.rows.map(row => row.since)).toEqual([null, null, null, "2026-10-12T01:00:00.000Z",
+      "2026-10-12T01:00:00.123Z", null, null]);
+    assertPublishedSchema(FAMILY, "StageTypedOrders", typed);
+  });
 });
 
 describe("FE-072 Internal / Broker / Difference figures", () => {

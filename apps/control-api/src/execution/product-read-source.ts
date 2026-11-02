@@ -53,6 +53,24 @@ const DECIMAL_FIELD = new Set([
   "total_notional", "margin_initial", "margin_maintenance", "target_quantity",
   "filled_quantity", "open_quantity", "excess_quantity", "average_fill_price",
 ]);
+// Deployment-scoped execution facts require BOTH the Alpha/deployment view
+// and the independently authorized Account. Sharing an account must never
+// turn either permission into access to another deployment's observations.
+const DEPLOYMENT_ACCOUNT_RELATIONS = new Set(["positions_v2", "execution_sessions", "orders", "fills"]);
+const ACCOUNT_PROFILE_ALPHA_RELATIONS = new Set(["strategy_deployments", "positions_v2"]);
+const ACCOUNT_PROFILE_RELATIONS = new Set(["accounts", "account_balances", "margin_balances", "account_sync_effective",
+  "broker_account_sync_effective", "venue_accounts", "strategy_deployments", "positions_v2", "reconciliation_findings"]);
+// Only locally constructed, non-secret failures may cross the combined scope
+// fence as their original public contract after every authority has renewed.
+const RETAINED_SAFE_REFUSALS: Readonly<Record<string, number>> = Object.freeze({
+  N31_PROJECTED_RELATION_NOT_AVAILABLE: 503,
+  N31_PROJECTED_RELATION_UNAVAILABLE: 503,
+  N31_PROJECTION_NOT_READY: 503,
+  N31_PROJECTION_STALE_CEILING_EXCEEDED: 503,
+  N31_PROJECTION_CURSOR_INVALID: 400,
+  N31_PROJECTION_CURSOR_AHEAD: 409,
+  N31_PROJECTION_SCALAR_INVALID: 500,
+});
 
 /**
  * A server-only resource identity recovered from the local, profile-bound
@@ -93,7 +111,34 @@ interface DeploymentScopeQuery {
   deploymentScope?: DeploymentResourceScope;
 }
 
-type ProductReadQuery = CurrentSourcePageQuery & LocalProductQuery & DeploymentScopeQuery;
+/** Server-owned exact target; valid only inside the matching Account 360
+ * composition. Never serialized to the browser or the Edge. */
+interface AccountTargetQuery { accountTarget?: string }
+type ProductReadQuery = CurrentSourcePageQuery & LocalProductQuery & DeploymentScopeQuery & AccountTargetQuery;
+
+export type RetainedAccountIdentityProof = Readonly<{
+  state: "FOUND" | "MISSING" | "DUPLICATE" | "UNRESOLVED";
+}>;
+
+declare const profileReadCompositionBrand: unique symbol;
+/** Private, in-process obligation collector, never a browser-supplied scope. */
+export interface ProfileReadComposition { readonly [profileReadCompositionBrand]: true }
+type ProfileReadHead = Pick<ProfileProjectionSnapshot, "payloadDigest" | "projectionEpoch" | "sourceCatalogueSha256">;
+type ProfileReadCompositionState = {
+  actor: string; workspace: string; screenId: string; environments: ReadonlySet<CurrentSourceEnvironment>;
+  accountId?: string; accountProofs: Map<CurrentSourceEnvironment, RetainedAccountIdentityProof>;
+  scopes: AuthorizedExecutionReadScope[];
+  heads: Array<{ environment: ProjectionEnvironment; profileId: string; head: ProfileReadHead }>;
+  unscoped: boolean; active: boolean;
+};
+const PROFILE_COMPOSITION_SCREENS = new Set([
+  "SANDBOX_TRADING_SCREEN", "EXECUTION_SANDBOX_CERTIFICATION_SCREEN", "LIVE_OPERATIONS_SCREEN",
+  "EXECUTION_CANARY_CONTROL_ROOM_SCREEN", "EXECUTION_LIVE_FULL_OPERATIONS_SCREEN", "EXECUTION_ACCOUNT_BROKER_360_SCREEN",
+]);
+const profileActor = (principal: CurrentSourcePrincipal) => JSON.stringify([
+  principal.user.userId, principal.user.role, principal.session.userId, principal.session.sessionId,
+  principal.session.sessionVersion, principal.workspaceId, principal.viewerWorkspaceId ?? principal.workspaceId,
+]);
 
 /**
  * Product-facing relation source.
@@ -107,12 +152,98 @@ type ProductReadQuery = CurrentSourcePageQuery & LocalProductQuery & DeploymentS
  */
 @Injectable()
 export class ExecutionProductReadSource {
+  private readonly profileCompositions = new WeakMap<object, ProfileReadCompositionState>();
   constructor(
     @Inject(CONTROL_API_CONFIG) private readonly config: ControlApiConfig,
     @Inject(ExecutionProfileProjectionRepository) private readonly repository: ExecutionProfileProjectionRepository,
     @Inject(MaximumDataOperationService) private readonly namedOperations: MaximumDataOperationService,
     @Optional() @Inject(ExecutionReadScopes) private readonly readScopes?: ExecutionReadScopes,
   ) {}
+
+  /** Keep every relation/scope the Profile screen used until the whole body
+   * (or data-derived error) is ready. This is a retained point-in-time fence;
+   * it does not implement native source custody at physical HTTP delivery. */
+  async composeProfile<T>(principal: CurrentSourcePrincipal, screenId: string,
+    environments: readonly CurrentSourceEnvironment[],
+    read: (composition: ProfileReadComposition) => Promise<T>, options?: { readonly accountId: string }): Promise<T> {
+    if (!PROFILE_COMPOSITION_SCREENS.has(screenId) || !Array.isArray(environments) || !environments.length ||
+      environments.length > 3 || new Set(environments).size !== environments.length ||
+      environments.some(environment => !["paper", "sandbox", "live", "canary"].includes(environment)) ||
+      (screenId !== "EXECUTION_ACCOUNT_BROKER_360_SCREEN" && environments.length !== 1) ||
+      (screenId === "EXECUTION_ACCOUNT_BROKER_360_SCREEN" && environments.includes("canary")) ||
+      (options !== undefined && (screenId !== "EXECUTION_ACCOUNT_BROKER_360_SCREEN" ||
+        !/^[A-Za-z0-9._:-]{1,128}$/.test(options.accountId))))
+      throw new ExecutionReadScopeError("EXECUTION_READ_SCOPE_REQUIRED");
+    const token = Object.freeze({}) as ProfileReadComposition;
+    const state: ProfileReadCompositionState = { actor: profileActor(principal), workspace: principal.workspaceId, screenId,
+      environments: new Set(environments), accountId: options?.accountId, accountProofs: new Map(),
+      scopes: [], heads: [], unscoped: false, active: true };
+    this.profileCompositions.set(token, state);
+    let value: T | undefined, held: unknown, failed = false;
+    try { value = await read(token); } catch (error) { held = error; failed = true; }
+    state.active = false;
+    const finish = async () => {
+      const heads = new Map<string, typeof state.heads[number]>();
+      for (const item of state.heads) {
+        const key = JSON.stringify([item.environment, item.profileId]);
+        const previous = heads.get(key);
+        if (previous && JSON.stringify(previous.head) !== JSON.stringify(item.head))
+          throw new ExecutionReadScopeError("EXECUTION_READ_ACCESS_CHANGED", 409);
+        heads.set(key, item);
+      }
+      for (const item of heads.values()) {
+        const current = await this.repository.snapshotMetadata(state.workspace, item.environment, item.profileId);
+        if (!current || current.payloadDigest !== item.head.payloadDigest ||
+          current.projectionEpoch !== item.head.projectionEpoch || current.sourceCatalogueSha256 !== item.head.sourceCatalogueSha256)
+          throw new ExecutionReadScopeError("EXECUTION_READ_ACCESS_CHANGED", 409);
+      }
+      if (failed) throw held;
+      return value as T;
+    };
+    if (!state.scopes.length) {
+      if (failed) throw held;
+      return value as T;
+    }
+    if (state.unscoped || !this.readScopes) throw new ExecutionReadScopeError("EXECUTION_READ_ACCESS_CHANGED", 409);
+    const validateActor = () => {
+      if (profileActor(principal) !== state.actor) throw new ExecutionReadScopeError("EXECUTION_READ_ACCESS_CHANGED", 409);
+    };
+    if (new Set(state.scopes.map(scope => scope.environment)).size > 1) {
+      if (screenId !== "EXECUTION_ACCOUNT_BROKER_360_SCREEN")
+        throw new ExecutionReadScopeError("EXECUTION_READ_SCOPE_REQUIRED");
+      return this.readScopes.deliverRetainedProfileAccounts(state.scopes, finish, validateActor);
+    }
+    return this.readScopes.deliverScopedTogether(state.scopes, finish, validateActor);
+  }
+
+  /** Read only inside the owning in-process composition; this is not an API
+   * field, independent entitlement, or proof from a native Edge source. */
+  retainedAccountIdentityProof(composition: ProfileReadComposition, principal: CurrentSourcePrincipal,
+    environment: CurrentSourceEnvironment, accountId: string): RetainedAccountIdentityProof | null {
+    const state = this.profileCompositions.get(composition);
+    if (!state?.active || state.actor !== profileActor(principal) || state.screenId !== "EXECUTION_ACCOUNT_BROKER_360_SCREEN" ||
+      state.accountId !== accountId || !state.environments.has(environment))
+      throw new ExecutionReadScopeError("EXECUTION_READ_SCOPE_REQUIRED");
+    return state.accountProofs.get(environment) ?? null;
+  }
+
+  private retainProfileRead(composition: ProfileReadComposition | undefined, principal: CurrentSourcePrincipal,
+    requestedEnvironment: CurrentSourceEnvironment, screenId: string, profileId?: string,
+    scope?: AuthorizedExecutionReadScope, head?: ProfileReadHead | null): void {
+    if (!composition) return;
+    const state = this.profileCompositions.get(composition);
+    if (!state?.active || state.actor !== profileActor(principal) || state.screenId !== screenId ||
+      !state.environments.has(requestedEnvironment)) throw new ExecutionReadScopeError("EXECUTION_READ_SCOPE_REQUIRED");
+    if (!scope || scope.mode === "LEGACY_COMPATIBILITY") { state.unscoped = true; return; }
+    const environment = maximumDataEnvironment(requestedEnvironment);
+    if (!head || !profileId || scope.workspaceId !== principal.workspaceId || scope.environment !== environment || scope.profileId !== profileId)
+      throw new ExecutionReadScopeError("EXECUTION_READ_ACCESS_CHANGED", 409);
+    const maximum = state.screenId === "EXECUTION_ACCOUNT_BROKER_360_SCREEN" ? 27 : 16;
+    if (state.scopes.length >= maximum) throw new ExecutionReadScopeError("EXECUTION_READ_SCOPE_LIMIT", 503);
+    state.scopes.push(scope);
+    state.heads.push({ environment, profileId, head: { payloadDigest: head.payloadDigest,
+      projectionEpoch: head.projectionEpoch, sourceCatalogueSha256: head.sourceCatalogueSha256 } });
+  }
 
   async relation(
     principal: CurrentSourcePrincipal,
@@ -121,17 +252,26 @@ export class ExecutionProductReadSource {
     sourceId: string,
     relation: string,
     query: ProductReadQuery,
+    composition?: ProfileReadComposition,
   ): Promise<unknown> {
+    if (query.accountTarget !== undefined) {
+      const state = composition && this.profileCompositions.get(composition);
+      if (!state?.active || state.actor !== profileActor(principal) || state.screenId !== screenId ||
+        screenId !== "EXECUTION_ACCOUNT_BROKER_360_SCREEN" || !state.environments.has(environment) ||
+        state.accountId !== query.accountTarget || !ACCOUNT_PROFILE_RELATIONS.has(relation))
+        throw new ExecutionReadScopeError("EXECUTION_READ_SCOPE_REQUIRED");
+    }
     if (this.config.FEATURE_EXECUTION_LOCAL_PROJECTION !== "true") {
       if (hasLocalQuery(query)) {
         throw new CurrentSourceProxyError("PHASE2_LOCAL_QUERY_REQUIRED", 503, {
           availability: "UNAVAILABLE", retryable: false,
         });
       }
+      this.retainProfileRead(composition, principal, environment, screenId);
       return this.namedCurrentRelation(principal, environment, screenId, sourceId, relation, query);
     }
     try {
-      return await this.localRelation(principal, environment, screenId, sourceId, relation, query);
+      return await this.localRelation(principal, environment, screenId, sourceId, relation, query, composition);
     } catch (error) {
       // A missing initial snapshot is the only safe read-through case.  A
       // stale, corrupt, scoped or otherwise rejected projection must remain
@@ -142,6 +282,7 @@ export class ExecutionProductReadSource {
         !retainedReview(this.config) &&
         !hasLocalQuery(query)
       ) {
+        this.retainProfileRead(composition, principal, environment, screenId);
         return this.namedCurrentRelation(principal, environment, screenId, sourceId, relation, query);
       }
       throw error;
@@ -278,6 +419,7 @@ export class ExecutionProductReadSource {
     requestedEnvironment: CurrentSourceEnvironment,
     screenId: string,
     deploymentId: string,
+    composition?: ProfileReadComposition,
   ): Promise<DeploymentScopeResolution> {
     if (this.config.FEATURE_EXECUTION_LOCAL_PROJECTION !== "true") {
       return { state: "UNAVAILABLE", reasonCode: "EDS03_EXACT_RESOURCE_REQUIRES_LOCAL_PROJECTION" };
@@ -293,10 +435,12 @@ export class ExecutionProductReadSource {
       const metadata = this.readScopes ? await this.repository.snapshotMetadata(principal.workspaceId, environment, profileId) : null;
       const readScope = await authorizeRetainedRelation(this.readScopes, principal, environment, profileId,
         "manager.deployments", "strategy_deployments", metadata ?? undefined, { kind: "DEPLOYMENT", id: deploymentId });
+      this.retainProfileRead(composition, principal, requestedEnvironment, screenId, profileId, readScope, metadata);
       const read = async (): Promise<DeploymentScopeResolution> => {
       const { snapshot } = await this.localSnapshot(requestedEnvironment, readScope?.mode === "SCOPED_V2");
       if (readScope?.mode === "SCOPED_V2" && (snapshot.payloadDigest !== metadata?.payloadDigest || snapshot.projectionEpoch !== metadata?.projectionEpoch ||
           snapshot.sourceCatalogueSha256 !== metadata?.sourceCatalogueSha256)) throw new ExecutionReadScopeError("EXECUTION_READ_ACCESS_CHANGED", 409);
+      try {
       const deployments = snapshot.document.relations["manager.deployments:strategy_deployments"];
       if (!deployments || deployments.availability === "UNAVAILABLE") {
         return {
@@ -308,8 +452,11 @@ export class ExecutionProductReadSource {
       const matches = visibleDeployments
         .map((row) => row.fields)
         .filter((fields) => fields.deployment_id === deploymentId);
+      const completeDeploymentCensus = deployments.completeness === "COMPLETE" &&
+        deployments.window?.truncated !== true &&
+        Object.values(deployments.lineage_rejects ?? {}).every((count) => count === 0);
       if (matches.length === 0) {
-        return deployments.completeness === "COMPLETE"
+        return completeDeploymentCensus
           ? { state: "EMPTY", reasonCode: "EDS03_DEPLOYMENT_NOT_FOUND" }
           : { state: "PARTIAL", reasonCode: "EDS03_DEPLOYMENT_OUTSIDE_RETAINED_WINDOW" };
       }
@@ -321,24 +468,42 @@ export class ExecutionProductReadSource {
       const accountId = textField(deployment.account_id);
       const mode = textField(deployment.mode);
       const venue = textField(deployment.venue);
-      if (!strategyId || !accountId || !venue || mode !== environment) {
+      if (!strategyId?.trim() || !accountId?.trim() || !venue?.trim() || mode?.toLowerCase() !== environment) {
         return {
           state: "PARTIAL",
           reasonCode: "EDS03_DEPLOYMENT_SCOPE_INCOMPLETE",
           deployment,
         };
       }
+      // A tuple is not unique merely because the rows observed so far have
+      // one exact match. A truncated/lineage-held census or an otherwise
+      // compatible row with a missing dimension can hide a second owner.
+      // Only the known environment enum is compared case-insensitively; do
+      // not rewrite source identifiers or the returned payload.
       const tupleMatches = deployments.items
         .map((row) => row.fields)
-        .filter((fields) => fields.strategy_id === strategyId && fields.account_id === accountId &&
-          fields.mode === mode && fields.venue === venue);
+        .filter((fields) => maybeTupleFieldMatches(fields.strategy_id, strategyId) &&
+          maybeTupleFieldMatches(fields.account_id, accountId) &&
+          maybeTupleFieldMatches(fields.mode, environment, true) && maybeTupleFieldMatches(fields.venue, venue));
       const accounts = snapshot.document.relations["manager.accounts:accounts"];
       const accountMatches = accounts?.availability === "AVAILABLE"
         ? scopedRetainedRows(readScope, accounts.items).map((row) => row.fields).filter((fields) => fields.account_id === accountId)
         : [];
-      const externalRefs = [...new Set(accountMatches
-        .map((fields) => textField(fields.external_account_ref))
-        .filter((value): value is string => value !== null))];
+      const account = accountMatches.length === 1 ? accountMatches[0] : undefined;
+      const candidateReference = account ? textField(account.external_account_ref) : null;
+      // This is a private join key, never a new field grant. A partial account
+      // census, duplicate owner, unknown grain, or another possibly matching
+      // reference cannot establish the venue/mode/broker identity.
+      const completeAccountCensus = accounts?.availability === "AVAILABLE" && accounts.completeness === "COMPLETE" &&
+        accounts.window?.truncated !== true &&
+        Object.values(accounts.lineage_rejects ?? {}).every((count) => count === 0);
+      const candidateOwners = candidateReference && accounts
+        ? accounts.items.filter(({ fields }) => maybeTupleFieldMatches(fields.external_account_ref, candidateReference) &&
+          maybeTupleFieldMatches(fields.mode, environment, true) && maybeTupleFieldMatches(fields.venue, venue))
+        : [];
+      const externalAccountRef = completeAccountCensus && candidateReference !== null && candidateReference.trim().length > 0 &&
+        typeof account?.mode === "string" && account.mode.toLowerCase() === environment && account.venue === venue &&
+        candidateOwners.length === 1 ? candidateReference : null;
       const result: DeploymentScopeResolution = {
         state: "FOUND",
         reasonCode: null,
@@ -349,8 +514,8 @@ export class ExecutionProductReadSource {
           mode: environment,
           venue,
           portfolioId: textField(deployment.portfolio_id),
-          externalAccountRef: externalRefs.length === 1 ? externalRefs[0] : null,
-          tupleUnique: tupleMatches.length === 1,
+          externalAccountRef,
+          tupleUnique: completeDeploymentCensus && tupleMatches.length === 1,
         },
         deployment,
         identity: deploymentIdentityFromRetained({
@@ -358,8 +523,13 @@ export class ExecutionProductReadSource {
           portfolios: snapshot.document.relations["manager.portfolios:portfolios"],
         }),
       };
-      if (readScope?.mode === "SCOPED_V2") await fenceRetainedSnapshot(this.repository, principal.workspaceId, environment, profileId, snapshot);
       return result;
+      } finally {
+        // EMPTY, PARTIAL and source failures also depend on this snapshot.
+        // A later revision must win over every result from the old one.
+        if (readScope?.mode === "SCOPED_V2")
+          await fenceRetainedSnapshot(this.repository, principal.workspaceId, environment, profileId, snapshot);
+      }
       };
       return readScope && this.readScopes ? this.readScopes.deliver(readScope, read) : read();
     } catch (error) {
@@ -376,6 +546,7 @@ export class ExecutionProductReadSource {
     sourceId: string,
     relation: string,
     query: ProductReadQuery,
+    composition?: ProfileReadComposition,
   ): Promise<unknown> {
     validateBinding(requestedEnvironment, screenId, sourceId, relation, {
       limit: query.limit,
@@ -387,14 +558,29 @@ export class ExecutionProductReadSource {
     if (this.readScopes && principal.workspaceId !== projectionWorkspaceId)
       throw new ExecutionReadScopeError("EXECUTION_READ_NOT_AVAILABLE", 404);
     const metadata = this.readScopes ? await this.repository.snapshotMetadata(projectionWorkspaceId, environment, profileId) : null;
+    // A deployment selects the rows, but cannot turn an Alpha grant into an
+    // account grant. Resolve the parent Account action independently against
+    // the exact account selected by the already-resolved deployment.
+    const action = retainedRelationAction(relation);
+    const resource = query.deploymentScope ? action === "account.read"
+      ? { kind: "ACCOUNT" as const, id: query.deploymentScope.accountId }
+      : { kind: "DEPLOYMENT" as const, id: query.deploymentScope.deploymentId } : undefined;
     const readScope = await authorizeRetainedRelation(this.readScopes, principal, environment, profileId,
-      sourceId, relation, metadata ?? undefined, query.deploymentScope ? { kind: "DEPLOYMENT", id: query.deploymentScope.deploymentId } : undefined,
-      query.deploymentScope ? "alpha.read" : retainedRelationAction(relation));
-    const read = async () => {
+      sourceId, relation, metadata ?? undefined, resource, action);
+    // These are physical-binding observations, not ordinary Account/Alpha
+    // rows. Until the exact binding resolver and purpose are commissioned,
+    // do not infer custody permission from a shared account or deployment.
+    if (readScope?.mode === "SCOPED_V2" &&
+        (relation === "broker_account_sync_effective" || relation === "venue_accounts"))
+      throw new ExecutionReadScopeError("EXECUTION_READ_PUBLICATION_NOT_QUALIFIED", 503);
+    this.retainProfileRead(composition, principal, requestedEnvironment, screenId, profileId, readScope, metadata);
+    const read = async (accountScope?: AuthorizedExecutionReadScope) => {
     const isScoped = readScope?.mode === "SCOPED_V2";
+    const accountTarget = isScoped ? query.accountTarget : undefined;
     const { snapshot, ageMs } = await this.localSnapshot(requestedEnvironment, isScoped);
     if (isScoped && (snapshot.payloadDigest !== metadata?.payloadDigest || snapshot.projectionEpoch !== metadata?.projectionEpoch ||
       snapshot.sourceCatalogueSha256 !== metadata?.sourceCatalogueSha256)) throw new ExecutionReadScopeError("EXECUTION_READ_ACCESS_CHANGED", 409);
+    try {
     if (isScoped) {
       const fields = [query.status !== undefined || query.statuses !== undefined ? "status" : null,
         query.venue !== undefined ? "venue" : null, query.symbol !== undefined ? "symbol" : null,
@@ -404,7 +590,9 @@ export class ExecutionProductReadSource {
         query.alpha_id !== undefined ? "alpha_id" : null,
         screenId === "EXECUTION_FULL_BLOTTER_SCREEN" && relation === "orders" ?
           query.sort === "updated_at_desc" ? "updated_at" : "submitted_at" : null];
-      if (fields.some(field => field !== null && !retainedFieldAllowed(readScope, field)))
+      if ((accountTarget !== undefined && (!retainedFieldAllowed(readScope, "account_id") ||
+        accountScope && !retainedFieldAllowed(accountScope, "account_id"))) || fields.some(field => field !== null &&
+        (!retainedFieldAllowed(readScope, field) || accountScope && !retainedFieldAllowed(accountScope, field))))
         throw new ExecutionReadScopeError("EXECUTION_READ_NOT_AVAILABLE", 404);
     }
     const projected = snapshot.document.relations[`${sourceId}:${relation}`];
@@ -416,16 +604,52 @@ export class ExecutionProductReadSource {
         availability: "UNAVAILABLE", reason_code: isScoped ? "EXECUTION_READ_NOT_AVAILABLE" : projected.reason_code, retryable: false,
       });
     }
+    if (accountTarget !== undefined && relation === "accounts" && composition) {
+      const owner = this.profileCompositions.get(composition);
+      if (!owner?.active || owner.accountId !== accountTarget) throw new ExecutionReadScopeError("EXECUTION_READ_SCOPE_REQUIRED");
+      const identityScope = readScope;
+      if (!identityScope || identityScope.mode !== "SCOPED_V2")
+        throw new ExecutionReadScopeError("EXECUTION_READ_SCOPE_REQUIRED");
+      // A target not in the caller's authorized account population is the
+      // same refusal whether or not an upstream row happens to exist.
+      if (!scopeReadPopulation(identityScope).allowedTuples.some(tuple => tuple.account_id === accountTarget))
+        throw new ExecutionReadScopeError("EXECUTION_READ_NOT_AVAILABLE", 404);
+      const censusComplete = projected.completeness === "COMPLETE" && projected.window?.truncated !== true &&
+        Object.values(projected.lineage_rejects ?? {}).every(count => count === 0) &&
+        projected.items.every(({ fields }) => typeof fields.account_id === "string" && fields.account_id.trim().length > 0);
+      const matches = projected.items.filter(({ fields }) => fields.account_id === accountTarget);
+      const visible = matches.filter(row => projectionRowVisible(identityScope, row.fields));
+      const state: RetainedAccountIdentityProof["state"] = !censusComplete ? "UNRESOLVED"
+        : matches.length === 0 ? "MISSING"
+          : visible.length !== matches.length ? "UNRESOLVED"
+            : matches.length === 1 ? "FOUND" : "DUPLICATE";
+      owner.accountProofs.set(requestedEnvironment, Object.freeze({ state }));
+    }
     // Existing internal composers sometimes default absent money fields to zero.
     // Do not feed them a silently stripped protected value: this whole relation
     // remains unavailable until its purpose-built DTO can represent absence.
     if (isScoped && projected.items.some(row => projectionRowVisible(readScope, row.fields) &&
-      Object.keys(row.fields).some(field => DECIMAL_FIELD.has(field) && !retainedFieldAllowed(readScope, field))))
+      (!accountScope || projectionRowVisible(accountScope, row.fields)) &&
+      Object.keys(row.fields).some(field => DECIMAL_FIELD.has(field) &&
+        (!retainedFieldAllowed(readScope, field) || accountScope && !retainedFieldAllowed(accountScope, field)))))
       throw new ExecutionReadScopeError("EXECUTION_READ_FIELD_POLICY_PENDING", 503);
-    const authorizedItems = scopedRetainedRows(readScope, projected.items);
+    // Apply both population predicates to the original unredacted row. Only
+    // then redact to the intersection of their field permissions: redacting
+    // first could erase the anchors needed to reject a shared-account peer.
+    const jointPopulation = accountScope ? projected.items.filter(row => projectionRowVisible(accountScope, row.fields)) : projected.items;
+    const unknownAccountLineage = accountTarget !== undefined && jointPopulation.some(row =>
+      projectionRowVisible(readScope!, row.fields) &&
+      (typeof row.fields.account_id !== "string" || row.fields.account_id.trim().length === 0));
+    const targetPopulation = accountTarget === undefined ? jointPopulation :
+      jointPopulation.filter(row => row.fields.account_id === accountTarget);
+    const primaryItems = scopedRetainedRows(readScope, targetPopulation);
+    const authorizedItems = accountScope ? primaryItems.map(row => ({ ...row, fields: Object.fromEntries(
+      Object.entries(row.fields).filter(([field]) => retainedFieldAllowed(accountScope, field)),
+    ) })) : primaryItems;
     const resourceScoped = query.deploymentScope
       ? scopeRows(relation, authorizedItems, query.deploymentScope)
-      : { items: authorizedItems, state: "EXACT" as const, reasonCode: null };
+      : { items: authorizedItems, state: unknownAccountLineage ? "PARTIAL" as const : "EXACT" as const,
+        reasonCode: unknownAccountLineage ? "EDS03_ACCOUNT_SCOPE_AMBIGUOUS" : null };
     // The same authorized relation population supplies rows, counts and the
     // continuation. Never filter an already-paginated Manager page in the BFF.
     const scoped = screenId === "EXECUTION_FULL_BLOTTER_SCREEN"
@@ -440,7 +664,7 @@ export class ExecutionProductReadSource {
       ...(screenId === "EXECUTION_FULL_BLOTTER_SCREEN" && relation === "orders"
         ? { sort: query.sort ?? "submitted_at_desc" } : {}) };
     const cursorBinding = JSON.stringify([readScope?.fingerprint, requestedEnvironment, screenId, sourceId, relation,
-      cursorQuery, snapshot.projectionEpoch, snapshot.payloadDigest]);
+      cursorQuery, snapshot.projectionEpoch, snapshot.payloadDigest, ...(accountScope ? [accountScope.fingerprint] : [])]);
     const boundCursor = isScoped || screenId === "EXECUTION_FULL_BLOTTER_SCREEN";
     const start = boundCursor ? decodeScopedCursor(this.config, query.cursor, cursorBinding) : decodeCursor(query.cursor, snapshot.payloadDigest);
     if (start > scopedItems.length) {
@@ -520,9 +744,10 @@ export class ExecutionProductReadSource {
             filtered_total_items: scopedItems.length,
             ...(exactCurrentProjection ? { window_aggregates: countByDimensions(scopedItems) } : {}),
           } : {}),
-          scope: query.deploymentScope || hasBlotterScope(query) ? {
+          scope: query.deploymentScope || accountTarget !== undefined || hasBlotterScope(query) ? {
             ...(query.deploymentScope ? { resource_kind: "DEPLOYMENT",
               resource_id: query.deploymentScope.deploymentId } : {}),
+            ...(accountTarget !== undefined ? { resource_kind: "ACCOUNT", resource_id: accountTarget } : {}),
             state: scoped.state,
             reason_code: scoped.reasonCode,
           } : undefined,
@@ -530,10 +755,45 @@ export class ExecutionProductReadSource {
       },
       ...(isScoped ? { visibility: "SCOPED", coverage: "AUTHORIZED_ONLY", policy_revision: readScope.policyRevision } : {}),
     };
-    if (isScoped) await fenceRetainedSnapshot(this.repository, projectionWorkspaceId, environment, profileId, snapshot);
     return result;
+    } finally {
+      // A data-derived refusal (including a cursor/scope error) is also an
+      // observation of this document; do not emit it after a revision change.
+      if (isScoped) await fenceRetainedSnapshot(this.repository, projectionWorkspaceId, environment, profileId, snapshot);
+    }
     };
-    return readScope && this.readScopes ? this.readScopes.deliver(readScope, read) : read();
+    if (readScope?.mode === "SCOPED_V2" && this.readScopes &&
+        ((query.deploymentScope && DEPLOYMENT_ACCOUNT_RELATIONS.has(relation)) ||
+         (query.accountTarget !== undefined && ACCOUNT_PROFILE_ALPHA_RELATIONS.has(relation)))) {
+      // Hold the existing Alpha scope even if the account authorization fails,
+      // and hold both successful obligations through the terminal fence.
+      let refusal: { original: CurrentSourceProxyError; marker: ExecutionReadScopeError } | undefined;
+      try {
+        return await this.readScopes.deliverScopedTogether([readScope], async retain => {
+          const accountScope = await authorizeRetainedRelation(this.readScopes, principal, environment, profileId,
+            sourceId, relation, metadata ?? undefined,
+            query.deploymentScope ? { kind: "ACCOUNT", id: query.deploymentScope.accountId } : undefined, "account.read");
+          if (!accountScope || accountScope.mode !== "SCOPED_V2")
+            throw new ExecutionReadScopeError("EXECUTION_READ_ACCESS_CHANGED", 409);
+          retain(accountScope);
+          this.retainProfileRead(composition, principal, requestedEnvironment, screenId, profileId, accountScope, metadata);
+          try { return await read(accountScope); } catch (error) {
+            if (error instanceof CurrentSourceProxyError && RETAINED_SAFE_REFUSALS[error.code] === error.status) {
+              const marker = new ExecutionReadScopeError("EXECUTION_READ_QUERY_INVALID", error.status);
+              refusal = { original: error, marker };
+              throw marker;
+            }
+            throw error;
+          }
+        });
+      } catch (error) {
+        // Object identity guarantees that a later authority failure cannot be
+        // mistaken for the earlier, held input/source refusal.
+        if (refusal && error === refusal.marker) throw refusal.original;
+        throw error;
+      }
+    }
+    return readScope && this.readScopes ? this.readScopes.deliver(readScope, () => read()) : read();
   }
 
   private async localSnapshot(requestedEnvironment: CurrentSourceEnvironment, raw = false): Promise<{
@@ -839,7 +1099,19 @@ function scopeRows(
     if (!scope.externalAccountRef) {
       return { items: [], state: "PARTIAL", reasonCode: "EDS03_EXTERNAL_ACCOUNT_REF_UNAVAILABLE" };
     }
-    return exactRows(rows, (fields) => fields.external_account_ref === scope.externalAccountRef);
+    const items: Array<(typeof rows)[number]> = [];
+    let unclassified = false;
+    for (const row of rows) {
+      const fields = row.fields;
+      const possible = maybeTupleFieldMatches(fields.external_account_ref, scope.externalAccountRef) &&
+        maybeTupleFieldMatches(fields.mode, scope.mode, true) && maybeTupleFieldMatches(fields.venue, scope.venue);
+      if (!possible) continue;
+      if (fields.external_account_ref === scope.externalAccountRef && typeof fields.mode === "string" &&
+          fields.mode.toLowerCase() === scope.mode && fields.venue === scope.venue) items.push(row);
+      else unclassified = true;
+    }
+    return { items, state: unclassified ? "PARTIAL" : "EXACT",
+      reasonCode: unclassified ? "EDS03_DEPLOYMENT_SCOPE_AMBIGUOUS" : null };
   }
   if (relation === "portfolio_equity_snapshots") {
     if (!scope.portfolioId) {
@@ -847,15 +1119,35 @@ function scopeRows(
     }
     return exactRows(rows, (fields) => fields.portfolio_id === scope.portfolioId);
   }
-  const explicit = rows.filter((row) => row.fields.deployment_id !== undefined);
-  if (explicit.length > 0) {
-    return exactRows(rows, (fields) => fields.deployment_id === scope.deploymentId);
+  // Explicit deployment ids always win. A source may mix them with rows that
+  // have only the tuple: do not silently discard the latter and call the
+  // result complete, and never override an explicit foreign deployment id.
+  const items: Array<(typeof rows)[number]> = [];
+  let unclassified = false;
+  for (const row of rows) {
+    const fields = row.fields;
+    const id = fields.deployment_id;
+    if (typeof id === "string" && id.trim()) {
+      if (id === scope.deploymentId) items.push(row);
+      continue;
+    }
+    const possible = maybeTupleFieldMatches(fields.strategy_id, scope.strategyId) &&
+      maybeTupleFieldMatches(fields.account_id, scope.accountId) &&
+      maybeTupleFieldMatches(fields.mode, scope.mode, true) && maybeTupleFieldMatches(fields.venue, scope.venue);
+    if (!possible) continue;
+    const exact = fields.strategy_id === scope.strategyId && fields.account_id === scope.accountId &&
+      typeof fields.mode === "string" && fields.mode.toLowerCase() === scope.mode && fields.venue === scope.venue;
+    if ((id === null || id === undefined) && exact && scope.tupleUnique) items.push(row);
+    else unclassified = true;
   }
-  if (!scope.tupleUnique) {
-    return { items: [], state: "PARTIAL", reasonCode: "EDS03_DEPLOYMENT_SCOPE_AMBIGUOUS" };
-  }
-  return exactRows(rows, (fields) => fields.strategy_id === scope.strategyId &&
-    fields.account_id === scope.accountId && fields.mode === scope.mode && fields.venue === scope.venue);
+  return { items, state: unclassified ? "PARTIAL" : "EXACT",
+    reasonCode: unclassified ? "EDS03_DEPLOYMENT_SCOPE_AMBIGUOUS" : null };
+}
+
+/** Missing tuple dimensions cannot disprove that a row has the target owner. */
+function maybeTupleFieldMatches(value: ProjectionScalar | undefined, expected: string, environment = false): boolean {
+  if (typeof value !== "string" || !value.trim()) return true;
+  return environment ? value.toLowerCase() === expected : value === expected;
 }
 
 function exactRows(

@@ -53,12 +53,13 @@ export function productReadFixture(options: { full?: boolean; legacy?: boolean; 
     revoked_at_ms: null, requires_ts_acceptance: true, field_policy_ref: policy.researcher_fields.policy_ref,
     ts_receipt: { ...membership, membership_revision: membership.revision, effective_at_ms: NOW - 1000, expires_at_ms: NOW + 3600000 } });
   const context: AccessEvaluationContext = { principal_id: USER, workspace_id: WS, now_ms: NOW, actor_current: true,
-    actor_role: "USER", allow_test_only: true, authority_fingerprint: "TEST_ONLY-db-r1", policy,
+    actor_role: "USER", actor_lease_until_ms: session.idleExpiresAt.getTime(),
+    allow_test_only: true, authority_fingerprint: "TEST_ONLY-db-r1", policy,
     active_principals: new Set([USER, OWNER]), relationsFor: () => relations,
     grants: options.full ? [grant("business.read_all", { kind: "ROOT_SCOPE", root_id: "root" })] : [
       grant("alpha.read", { kind: "OWN_ALPHA" }),
       grant("account.read", { kind: "EXPLICIT_RESOURCE_SET", resource_kind: "ACCOUNT", ids: [PRIVATE.account_id] }),
-      grant("portfolio.read_restricted", { kind: "PORTFOLIO_MEMBERSHIP", portfolio_ids: relations.member_portfolio_ids }),
+      grant("portfolio.read_restricted", { kind: "PORTFOLIO_MEMBERSHIP", portfolio_ids: [...relations.member_portfolio_ids] }),
     ] };
   const access = { hasNativeCurrentRelations:()=>false, readContext: vi.fn(async () => context), confirmReadContext: vi.fn(async () => context),
     readPublication: vi.fn(async (request: ExecutionReadPublicationRequest) => ({ ...request, qualification: "TEST_ONLY",
@@ -86,7 +87,7 @@ export function productReadFixture(options: { full?: boolean; legacy?: boolean; 
       "manager.deployments:strategy_deployments": relation("strategy_deployments", [
         { ...OWN, strategy_id: "strategy-own", mode: "paper", venue: "VENUE" },
         { ...PEER, strategy_id: "strategy-peer", mode: "paper", venue: "VENUE" }]),
-    } } } as unknown as ProfileProjectionSnapshot;
+    } } } as unknown as ProfileProjectionSnapshot & { workspaceId: string; environment: string; profileId: string };
   const repository = { snapshot: vi.fn(async () => snapshot), rawSnapshot: vi.fn(async () => snapshot), snapshotMetadata: vi.fn(async () => snapshot) };
   const named = { relationPage: vi.fn() };
   const product = new ExecutionProductReadSource(config, repository as unknown as ExecutionProfileProjectionRepository, named as never, scopes);

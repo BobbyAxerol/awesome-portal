@@ -202,7 +202,8 @@ export class CommandStatusComposition {
   }
   private async drain():Promise<void> {
     const until=performance.now()+this.config.shutdown_deadline_ms;
-    while(this.uses.size||this.authority?.snapshot().pending||this.assertion?.snapshot().in_flight||
+    while(this.uses.size||this.authority?.snapshot().pending||this.authority?.snapshot().preparing||
+      this.authority?.snapshot().preparation_waiters||this.assertion?.snapshot().in_flight||
       this.reverse.snapshot().in_flight||this.status?.port.snapshot().in_flight||this.sockets.size||this.closing.size||
       this.startingPending||this.assertion?.server.listening||this.reverse.server.listening){
       if(performance.now()>=until)throw failure("COMMAND_STATUS_COMPOSITION_SHUTDOWN_PENDING");

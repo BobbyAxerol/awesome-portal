@@ -222,6 +222,16 @@ describe("ELP2-04 retained JSON projection pure boundaries", () => {
     expect(projectionScopeSql(detail, "fields", 1).sql).not.toBe("TRUE");
     expect(projectionRowVisible(detail, PEER)).toBe(false);
     expect(projectionRowVisible(detail, OWN)).toBe(true);
+    // Subject activity has no extra entity predicate for Alpha: the minted
+    // detail scope itself must restrict the rows *and* their SQL coverage,
+    // even where the caller can independently read the peer Alpha.
+    expect(projectionRowVisible(detail, { strategy_id: OWN_STRATEGY })).toBe(true);
+    expect(projectionRowVisible(detail, { strategy_id: PEER_STRATEGY })).toBe(false);
+    expect(projectionRowVisible(detail, { account_id: OWN.account_id })).toBe(false);
+    const sqlPopulation = JSON.parse(projectionScopeSql(detail, "fields", 1).values[0] as string);
+    expect(sqlPopulation.tuples.filter((tuple: { allowed: boolean }) => tuple.allowed))
+      .toEqual(expect.arrayContaining([expect.objectContaining(OWN), expect.objectContaining(PRIVATE)]));
+    expect(sqlPopulation.tuples.find((tuple: { alpha_id: string }) => tuple.alpha_id === PEER.alpha_id).allowed).toBe(false);
   });
   it("returns FALSE for an authorized empty restricted collection", async () => {
     const empty = (await fixture({ empty: true, resource: { kind: "ALPHA", id: OWN.alpha_id } })).scope;
