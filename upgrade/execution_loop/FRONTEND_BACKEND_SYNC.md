@@ -4369,3 +4369,13 @@ is requested. The source candidate remains uncommitted/uninstalled; named
 aliases, native Edge and browser acceptance remain separate. [Tests, cursor
 and limitations](evidence/ELP2-10/CODEX_BACKEND_SIX_PACKAGE_FOLLOWTHROUGH_2026-11-02.md#deployment-scoped-execution-dual-purpose-follow-through--2-nov-2026).
 
+**2 Nov named execution alias follow-through:** the uninstalled local scoped
+candidate also requires both Alpha and Account purposes for the retained
+Orders, Positions, Sessions and Fills aliases; the Account and Alpha may not
+authorize each other's hidden rows. An unavailable purpose, unqualified source
+or missing anchor remains unavailable, never a zero/empty definitive result.
+Opaque observation IDs may change from the prior scoped candidate; they are
+not a source record ID. No component, layout or new permission is requested.
+Four focused suites passed **282/282** using synthetic facts, not Edge or
+browser acceptance. [Exact scope and remaining gates](evidence/ELP2-10/CODEX_BACKEND_SIX_PACKAGE_FOLLOWTHROUGH_2026-11-02.md#named-retained-execution-alias-dual-purpose-follow-through--2-nov-2026).
+

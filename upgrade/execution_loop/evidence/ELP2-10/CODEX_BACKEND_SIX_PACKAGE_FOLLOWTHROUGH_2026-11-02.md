@@ -1817,3 +1817,74 @@ cumulative tracked backend/contract/ownership-ledger candidate is 66 files,
 uninstalled. Claude should keep the existing unavailable/not-permitted state
 when the Account purpose is missing, rather than rendering missing execution
 facts as zero; no component redesign or new grant is requested.
+
+### Named retained execution alias dual-purpose follow-through — 2 Nov 2026
+
+This supersedes the preceding named-alias warning **only** for the four
+local, retained named aliases `orders`, `positions-v2`, `execution-sessions`
+and `fills`. Before this correction synthetic tests reproduced observations
+from the Orders and Positions aliases with only Alpha authority; the other
+two aliases also lacked the independent Account obligation, even when their
+old field handling happened to refuse the supplied synthetic identities.
+
+For scoped V2, the candidate holds the route's initial authorization and the
+separate Alpha and Account dataset obligations until one final Core authority
+confirmation. The Account grant does not authorize a peer Alpha sharing the
+same Account. The adapter intersects the independently authorized populations
+on the **original** row before redaction, sorting and paging; public fields
+must pass both policies. Visible rows without the required Account and
+Alpha/deployment/strategy anchors, mode consistency, or an explicitly
+registered local source produce typed unavailability. Hidden malformed rows
+do not become a source-existence oracle. The identity is now keyed and opaque
+for these scoped aliases, with duplicate visible identities refused; this is
+not a source-issued record identifier. The Account fingerprint and active key
+bind the continuation, including a terminal expiry/key recheck. A later revoke
+or authority failure wins over a held cursor error. Legacy compatibility is
+not switched to this new scoped path.
+
+This is an **in-process retained snapshot fence**, not native Edge authority,
+source-atomic delivery or a physical HTTP-send custody guarantee. Other named
+aliases, non-deployment Product readers, account-wide exact lookup beyond
+200, qualified history and connected browser behavior are not closed here.
+Do not infer a source count or return zero when either purpose is unavailable.
+
+Verification on this source checkpoint:
+
+- The four focused suites `elp204-named-dual-purpose`, `elp2-product-reads`,
+  `elp204-retained-business-aliases` and `elp204-retained-bracket-legs` passed
+  **282/282**, exit 0. The new suite contributes 46 cases in this same count;
+  these overlap the earlier test runs and must not be added to them.
+- Synthetic cases exercise missing Alpha or Account, wrong Account, a peer
+  deployment on a shared Account, read-time revoke and revoke while an invalid
+  cursor is held, stale Account grant revision, expiry during the final
+  authority fence, source lineage, missing/malformed anchors, hidden-peer
+  non-disclosure and compatibility mode. The earlier red run included test
+  fixture/identity failures in addition to the demonstrated authority gap; it
+  must not be described as ten independent security findings.
+- A no-emit TypeScript check for `maximum-data-operation.service.ts` and its
+  transitive **source** graph exited 0 (792 files, 17.72 s compiler time,
+  574,775 KiB compiler-reported memory). An initial larger source-and-test
+  typecheck was intentionally stopped while still running and is **not PASS**.
+  `git diff --check` passed. The normal code hook was not run.
+- Source SHA-256: retained page
+  `4f0e9d021516547066bdcd265292209424cb32825007b4e8e604e87d7616f298`;
+  operation service
+  `abd1768797be5a5e337a2812ddbce83beae27c0cc60e680ff0d39c61d61eef3f`.
+  New test SHA-256
+  `4be9ab01001e73895c5442c355c741753cff90021b71153135a8e33be2877995`;
+  Product test SHA-256
+  `fe452eee8547c51d960c69e302903462ad95044407f894db23296baa56e1f0bd`.
+
+The private local recovery patch is
+`/home/bobby/.local/state/portal-research-backend-20261102-7rY0guq1/backend-code-recovery-named-dual-purpose-20261102.patch`,
+SHA-256 `477a885c617c4cb305f4ff716c7426c548b811bf0a8aea84c2a78bdd799756b8`.
+The separate seven-untracked-backend-file archive is
+`untracked-backend-named-dual-purpose-20261102.tar`, SHA-256
+`58f1e80c789bf7c6f5401db4e55203fb2c6d8954514d332d1ce619826f487b8c`.
+Neither is a Git commit or remote backup. The cumulative tracked backend,
+contract and ownership-ledger candidate is 67 files, +5,517/−494, plus those
+seven untracked backend files; this total includes earlier work, not only this
+follow-through. The separately approved Alpha frontend diff remains six files,
++289/−39. Code is still uncommitted and uninstalled. The next acceptance needs
+a safe capacity decision for the normal hook, then integrated source/browser
+checks; no UI redesign, Edge credential or Live/command activation is implied.

@@ -17204,3 +17204,11 @@ passed **470 / 41 skipped**; a new full-profile capacity test separately
 passed; the focused source typecheck passed. Named aliases, live source,
 PostgreSQL cases, native HTTP egress, final hook and qualification remain open.
 [Tests, precise scope and pins](execution_loop/evidence/ELP2-10/CODEX_BACKEND_SIX_PACKAGE_FOLLOWTHROUGH_2026-11-02.md#deployment-scoped-execution-dual-purpose-follow-through--2-nov-2026).
+
+**2 Nov named execution alias addendum:** the same uncommitted, uninstalled
+candidate now intersects Alpha and Account authorization for the four retained
+named Orders/Positions/Sessions/Fills aliases, with row, cursor and terminal
+fences. Four related suites passed **282/282** and the affected source graph
+typecheck exited 0. This does not close other aliases, native HTTP custody,
+connected/browser acceptance, the normal hook or ELP2-10/11.
+[Exact tests, recovery pins and Claude handoff](execution_loop/evidence/ELP2-10/CODEX_BACKEND_SIX_PACKAGE_FOLLOWTHROUGH_2026-11-02.md#named-retained-execution-alias-dual-purpose-follow-through--2-nov-2026).
