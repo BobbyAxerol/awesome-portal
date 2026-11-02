@@ -4379,3 +4379,10 @@ not a source record ID. No component, layout or new permission is requested.
 Four focused suites passed **282/282** using synthetic facts, not Edge or
 browser acceptance. [Exact scope and remaining gates](evidence/ELP2-10/CODEX_BACKEND_SIX_PACKAGE_FOLLOWTHROUGH_2026-11-02.md#named-retained-execution-alias-dual-purpose-follow-through--2-nov-2026).
 
+**2 Nov exact-lineage follow-through:** on the newer uncommitted candidate,
+those four named aliases also withhold a row when its source anchors match
+more than one permitted deployment. Keep the existing unavailable state; do
+not assign the row to the first deployment. The same suites now pass
+**286/286** (overlapping the prior 282), and the changed source graph typecheck
+passed. [Pins and scope](evidence/ELP2-10/CODEX_BACKEND_SIX_PACKAGE_FOLLOWTHROUGH_2026-11-02.md#exact-tuple-follow-through-on-the-named-execution-aliases).
+

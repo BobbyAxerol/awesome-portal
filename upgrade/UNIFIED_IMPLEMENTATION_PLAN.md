@@ -17212,3 +17212,9 @@ fences. Four related suites passed **282/282** and the affected source graph
 typecheck exited 0. This does not close other aliases, native HTTP custody,
 connected/browser acceptance, the normal hook or ELP2-10/11.
 [Exact tests, recovery pins and Claude handoff](execution_loop/evidence/ELP2-10/CODEX_BACKEND_SIX_PACKAGE_FOLLOWTHROUGH_2026-11-02.md#named-retained-execution-alias-dual-purpose-follow-through--2-nov-2026).
+
+**2 Nov exact named-lineage follow-through:** the four retained execution
+aliases additionally require one unambiguous source tuple even if a viewer
+may access multiple matching deployments. The same four focused suites pass
+**286/286** on the newer uncommitted candidate and the changed source graph
+typecheck passes. [Receipt and unchanged qualification limits](execution_loop/evidence/ELP2-10/CODEX_BACKEND_SIX_PACKAGE_FOLLOWTHROUGH_2026-11-02.md#exact-tuple-follow-through-on-the-named-execution-aliases).

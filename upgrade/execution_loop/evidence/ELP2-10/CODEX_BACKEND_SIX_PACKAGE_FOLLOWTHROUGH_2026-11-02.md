@@ -1888,3 +1888,39 @@ follow-through. The separately approved Alpha frontend diff remains six files,
 +289/−39. Code is still uncommitted and uninstalled. The next acceptance needs
 a safe capacity decision for the normal hook, then integrated source/browser
 checks; no UI redesign, Edge credential or Live/command activation is implied.
+
+#### Exact tuple follow-through on the named execution aliases
+
+On the later local candidate, a visible account/Alpha-anchored row is also
+required to resolve to exactly **one** tuple in the qualified published
+population. If two allowed deployments match its partial source lineage,
+the reader withholds the row with
+`EXECUTION_READ_PUBLICATION_NOT_QUALIFIED`; authority over both deployments is
+not evidence of which deployment produced it. Hidden rows remain non-disclosing.
+This is a local, point-in-time lineage check against the retained TEST_ONLY
+publication, not a newly qualified source fact.
+
+The same four suites were rerun on this newer source: **286/286 passed**,
+including four new permitted-but-ambiguous-deployment cases; these counts
+replace, and overlap with, the immediately preceding 282/282. The source-only
+TypeScript graph check exited 0 (792 files, 16.96 s compiler time,
+568,220 KiB compiler-reported memory). Normal hook, test-file typecheck and
+source-connected/browser acceptance remain open. `git diff --check` passed.
+
+New retained-page SHA-256:
+`2f6ab0412a059ad58c2df3cba7d3919cd14dca6e5d34e4601cd5a88027107054`;
+new synthetic test SHA-256:
+`c3f90462ea685bebcac4fd7587cbb1e420cc375fcc354f2b7baeeea1a520caa4`.
+The operation service and Product test hashes in the preceding section are
+unchanged. The newest local recovery patch is
+`/home/bobby/.local/state/portal-research-backend-20261102-7rY0guq1/backend-code-recovery-named-exact-lineage-20261102.patch`,
+SHA-256 `0b51a954cd45c65551c60145fd3f6515087c214d40fae5c3b2408a834744ab28`.
+The separate untracked-backend archive is
+`untracked-backend-named-exact-lineage-20261102.tar`, SHA-256
+`83308a92b1b4e864d1f35e2fbb31000dd17f357e91faba08e213126452bc503f`.
+These remain private local recovery files, not a commit or remote backup. The
+cumulative tracked backend/contracts/ownership candidate is 67 files,
++5,531/−494, plus seven untracked backend files; earlier contributions are
+included. The Alpha frontend patch is unchanged and separate. Claude should
+keep the existing unavailable state for this refusal; no design change is
+requested.
