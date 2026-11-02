@@ -1252,3 +1252,113 @@ handle `SOURCE_CONTINUATION_NOT_READ`, `SOURCE_COMPLETENESS_UNKNOWN`,
 without showing “not found”, zero, or a complete broker result. No component
 or layout change is required. The separate Alpha V1 nullable-consumer handoff
 remains a known integration failure until Claude consumes the contract.
+
+### Resource 360 broker-reference census follow-through
+
+The earlier no-emit typecheck is a receipt for its recorded checkpoint;
+the later Resource source edits were typechecked again as recorded below.
+Two new synthetic cases reproduced the legacy Resource 360 composer joining a
+broker record when its reference was shared by accounts or the account census
+was partial. A third showed that a second account with source mode `PAPER`
+could be missed when the requested environment was `paper`. The composer now
+counts a reference against the complete same-environment account population
+before using it; an incomplete or ambiguous census withholds the corresponding
+broker rows and carries `EDS04_EXTERNAL_ACCOUNT_CENSUS_INCOMPLETE` or
+`EDS04_EXTERNAL_ACCOUNT_REF_AMBIGUOUS`. Valid `PAPER`/`paper` are compared
+case-insensitively without rewriting the source and `LIVE` remains a different
+environment. Multiple valid references can still be shown with a partial
+branch when another reference is ambiguous; derived comparisons require the
+branch to be complete. Source authority, account ownership and census from
+Edge have not been proven by these local checks.
+
+The tuple join needed the same case handling: two synthetic negative/positive
+tests initially failed, showing both lost Paper orders and an erroneous unique
+association when two Paper deployments differed only by the casing of their
+mode. The internal tuple and duplicate census now use the canonical requested
+environment for this enum alone. Distinct identifiers remain exact, source
+payload fields are not rewritten, and a Live row is not admitted to Paper.
+An ambiguous tuple remains withheld with
+`EDS04_TRANSACTIONAL_SCOPE_AMBIGUOUS`; it is never assigned to the first
+deployment. Additional red tests found that counting only the deployments
+already selected for one portfolio could incorrectly attach another
+portfolio's tuple-only order, and that a partial population could make an
+unproved tuple look unique. The tuple census now counts the whole visible
+same-environment deployment population, and fallback is allowed only when
+the deployment relation is complete, not truncated, and has no held lineage
+rejects. Each negative condition retains the ambiguous status. Explicit
+deployment-id handling is separate and this change is not a proof of native
+authority or physical HTTP egress.
+
+This finding reproduces in the **legacy V1 Resource** read. The separately
+scoped V2 Resource composer currently withholds broker custody altogether
+without its own commissioned capability; it is not claimed to have disclosed
+that broker observation. Synthetic tests also check V2 scoped refusal for a
+narrow account and nondisclosure for a full viewer.
+
+- The affected six-suite checkpoint passed **167/167**; the later Resource
+  and scoped-Resource run passed **72/72**, adding a positive uppercase
+  Paper/non-Paper separation case. The final affected six-suite run after the
+  tuple fix passed **170/170**. After the global/partial census follow-through,
+  the same six suites passed **174/174**; partial, truncated and held-lineage
+  inputs each refuse tuple fallback. These runs overlap and must not be summed.
+- Control API `npm exec -- tsc -p tsconfig.build.json --noEmit --diagnostics`
+  exited **0**, 1,481 files, 192.97 seconds, peak process memory 2,377,864
+  KiB. The tracked source/contract binary diff SHA-256 remained
+  `8824aed38c9dcbea84a525c0498810c42f962f9a66f11e376eb4eb6c80ca4bfa`
+  before and after; the separate untracked source
+  `account-comparison-availability.ts` retained SHA-256
+  `bc504af8404e3ec06ee127d21c9aabb49a4ffde97d87728a95554e2d67aa7e4d`.
+  This is not an emitted build, integration hook, or runtime receipt.
+- `resource-read.service.ts` SHA-256:
+  `01cd23cc5e99cd61231e17011ad6954be395ffeabbdb75357585baa586ac6c59`.
+- `resource-read.spec.ts` SHA-256:
+  `cb6f2e4485fc5be4e919c9a429eae5c5af06f51f6aa72091c248c4da1e25f7f0`.
+- `elp2-resource-reads.spec.ts` SHA-256:
+  `5964619f256797ae6e48f0d7d0981715aeb85c10cc1b4b330b138f5e1f1be4ff`.
+- The newer local recovery patch (not a Git commit or remote backup) is
+  `/home/bobby/.local/state/portal-research-backend-20261102-7rY0guq1/backend-code-recovery-global-tuple-20261102.patch`,
+  SHA-256 `6884594483fa0b0bc0333f48c952a001e5be0fb72a75ca6a5080a7be7a12540a`.
+  The six untracked source files remain in the tar recorded above.
+
+Claude: keep the existing partial/unavailable handling for these two new
+reason codes; do not render an incomplete broker row or comparison as 0,
+synced, or not-found. No component or design change is needed for this fix.
+
+### Alpha V1 nullable consumer follow-through — 2 Nov 2026
+
+Bobby approved a narrow frontend parser/data-binding and test fix without a
+design change. This supersedes the historical 28/29 Alpha consumer blocker
+above; it does **not** supersede the need for the integrated normal hook,
+browser/visual acceptance or a qualified real source. The change is local
+and uncommitted on the same candidate as the backend:
+
+- `apps/portal/frontend/src/execution/api/profileRead.ts`
+- `apps/portal/frontend/src/execution/screens/recomposeContainers.tsx`
+- `apps/portal/frontend/src/execution/v2/screens/alpha/model.ts`
+- `apps/portal/frontend/src/execution/v2/screens/alpha/view.ts`
+- `apps/portal/frontend/src/execution/v2/screens/alpha/alpha.test.tsx`
+- `apps/portal/frontend/src/execution/v2/screens/alpha/canonicalServing.test.tsx`
+
+The V1 Resource reader now accepts the published typed absence without
+weakening Fleet or reading a scoped V2 envelope as V1. Nulls and reasons are
+preserved, as are real zeros. The existing presentation doesn't promote an
+unknown health or unavailable aggregate into a healthy/complete value.
+The React screen test uses the service-generated fixture through a synthetic
+HTTP client, not a browser or a real Edge producer. Six focused FE suites
+passed **494/494**, followed by four Alpha-scoped/Fleet-conformance/profile
+integration/canonical suites passing **691/691**. These checks overlap; do
+not total them. The latter included the final amended canonical assertion.
+Frontend `npm exec -- tsc -b --pretty false` exited **0**, 157.29 seconds,
+peak 2,596,156 KiB; the candidate frontend diff SHA-256 was unchanged before
+and after at `24d9654029a9108f10b8a8d7eafd04195f847c61b3b1bd235c1ce913ecb17ea3`.
+Execution tracking reconciliation and `git diff --check` passed. The root
+filesystem was at **84% used**, below the project's 20% free-space threshold
+for a disk-intensive build. The normal integration hook was not run or
+bypassed for code; no runtime install or connected/browser proof is claimed.
+
+For local recovery only, not a Git commit or remote backup, the exact tracked
+frontend patch is
+`/home/bobby/.local/state/portal-research-backend-20261102-7rY0guq1/alpha-v1-consumer-final-20261102.patch`,
+SHA-256 `24d9654029a9108f10b8a8d7eafd04195f847c61b3b1bd235c1ce913ecb17ea3`.
+No Edge mailbox was touched and no frontend design/baseline was modified.
+Claude should review the candidate, not reimplement this parser.

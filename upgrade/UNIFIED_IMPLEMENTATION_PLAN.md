@@ -17114,3 +17114,27 @@ the normal hook and Claude's nullable consumer remain open. The code is
 **uncommitted and not installed**; evidence, hashes, local
 recovery copy and test boundaries are in the
 [six-package receipt](execution_loop/evidence/ELP2-10/CODEX_BACKEND_SIX_PACKAGE_FOLLOWTHROUGH_2026-11-02.md#account-identity-lineage-and-cursor-follow-through--2-nov-2026).
+
+**2 Nov Resource broker census:** a subsequent local correction prevents the
+legacy Resource 360 composer from joining broker facts when an external
+reference is shared or the account census is partial. `PAPER` and `paper`
+are compared as the same source environment without rewriting payloads;
+`LIVE` remains distinct. Case-only mode differences, tuples shared across
+portfolios, and incomplete/truncated/lineage-held deployment populations
+cannot make a tuple look unique. The latest affected synthetic suites passed
+**174/174**; previous overlapping counts are not additional coverage.
+The corresponding Control API no-emit typecheck exited **0** on the recorded
+source hash; it is not an emitted build or the normal integration hook.
+Scoped Resource V2 currently withholds custody unless separately commissioned.
+No new source install, ownership proof, browser or Edge receipt is implied.
+Details: [Resource census follow-through](execution_loop/evidence/ELP2-10/CODEX_BACKEND_SIX_PACKAGE_FOLLOWTHROUGH_2026-11-02.md#resource-360-broker-reference-census-follow-through).
+
+**2 Nov Alpha V1 consumer:** Bobby authorized Codex to fix parser/data
+binding and tests without a design change. The previously failing nullable
+Alpha V1 consumer is now fixed in the **uncommitted/uninstalled candidate**;
+Fleet and scoped V2 stay separate. Overlapping focused FE checks passed
+494/494 and then 691/691. These are synthetic checks, not browser or real
+Edge acceptance. Frontend `tsc -b` exited 0 on the unchanged candidate diff.
+Full hook and the wider ELP2-10 source/qualification gates
+remain open. [Exact handoff](execution_loop/evidence/ELP2-10/CLAUDE_ALPHA_V1_NULLABLE_HANDOFF_2026-11-02.md#codex-consumer-follow-through),
+[test and recovery details](execution_loop/evidence/ELP2-10/CODEX_BACKEND_SIX_PACKAGE_FOLLOWTHROUGH_2026-11-02.md#alpha-v1-nullable-consumer-follow-through--2-nov-2026).

@@ -1,5 +1,40 @@
 # Claude handoff — Alpha V1 nullable facts (2 Nov 2026)
 
+> **Follow-through, 2 Nov:** Bobby authorized Codex to update the Alpha
+> parser/data-binding and its tests without changing the approved design.
+> The previously failing consumer below has now been fixed in the local
+> candidate. The original request and 28/29 result are retained as history;
+> Claude should review the candidate and run the remaining browser/visual and
+> qualified-source gates, not implement the same parser again. The candidate
+> is not yet committed, installed or released.
+
+## Codex consumer follow-through
+
+- `profileRead.ts` now has a distinct Alpha Resource V1 reader. The Fleet
+  list reader remains strict; the scoped Resource V2 body is not parsed as
+  V1. Typed absence and its reason remain distinct from the decimal `"0"`.
+- Existing Alpha view/model and legacy recomposition data bindings consume
+  the V1 shape. Unknown health is not promoted to READY, null portfolio IDs
+  do not become selection options, and unavailable aggregates are not shown
+  as complete values. No design, colour, layout or baseline was changed.
+- The checked-in synthetic service fixture, older complete V1 shape,
+  malformed availability/reason pairs, nullable time/portfolio, V1/V2
+  dispatch, and positive-zero cases have focused coverage. A React test
+  exercises the existing screen with a synthetic HTTP client; it is not a
+  Playwright/browser or connected-source receipt.
+- An affected six-suite checkpoint passed **494/494**; a later four-suite
+  check including Alpha scoped, Fleet conformance, profile integration and
+  the amended canonical test passed **691/691**. The suites overlap and
+  must not be added together as independent coverage.
+- Frontend `npm exec -- tsc -b --pretty false` exited **0** on the unchanged
+  frontend candidate diff (157.29 seconds; peak 2,596,156 KiB). This is not
+  the normal integration hook or browser/real-source acceptance.
+- The exact six modified frontend source/test files and qualification
+  boundaries are recorded in the [backend six-package receipt](./CODEX_BACKEND_SIX_PACKAGE_FOLLOWTHROUGH_2026-11-02.md#alpha-v1-nullable-consumer-follow-through--2-nov-2026).
+  Full normal hook, final integrated browser/visual and real Edge-source
+  acceptance remain separate. Claude should review the result on the actual
+  integration candidate and report any remaining issue.
+
 ## Integration boundary
 
 This backend work is still an uncommitted candidate in `/home/bobby/portal-research`

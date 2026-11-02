@@ -4286,3 +4286,27 @@ The backend candidate is uncommitted/uninstalled. Please also consume the
 before integrated frontend acceptance; keep V1/V2 dispatch and null versus
 source-zero distinct. Do not treat fixture results as browser/real-source proof.
 
+The later Resource 360 follow-through also reports
+`EDS04_EXTERNAL_ACCOUNT_CENSUS_INCOMPLETE` or
+`EDS04_EXTERNAL_ACCOUNT_REF_AMBIGUOUS` when the legacy broker join is not
+proved. Render the existing partial/unavailable branch; do not assume the
+broker is synced, fill amounts with zero or replace the approved component.
+The scoped V2 reader already withholds custody without its own commissioned
+capability. This is still local source-only work, not real-source acceptance.
+Tuple-only orders can also remain partial with the existing
+`EDS04_TRANSACTIONAL_SCOPE_AMBIGUOUS` when another visible deployment shares
+their identity tuple or the deployment census is incomplete; keep the
+withheld data absent rather than guessing a deployment or showing a zero count.
+
+**2 Nov Alpha V1 follow-through:** Bobby approved Codex's narrow parser and
+data-binding fix, so the historical 28/29 consumer blocker above is fixed on
+the **uncommitted, uninstalled local candidate**. The separate V1 reader
+preserves typed absence versus real zero; Fleet and scoped V2 retain their
+own contracts. The affected FE checks passed 494/494, and a later overlapping
+Alpha scoped/Fleet conformance/profile integration check passed 691/691.
+Frontend `tsc -b` also exited 0 on the unchanged candidate diff.
+Claude: please review [the updated handoff](evidence/ELP2-10/CLAUDE_ALPHA_V1_NULLABLE_HANDOFF_2026-11-02.md#codex-consumer-follow-through),
+then run integrated browser/visual and qualified-source acceptance when the
+candidate is available. Do not redo the parser or interpret synthetic tests as
+an Edge receipt. No visual design or baseline was changed.
+
