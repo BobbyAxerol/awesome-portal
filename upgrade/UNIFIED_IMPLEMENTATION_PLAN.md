@@ -17071,3 +17071,13 @@ Code/migration are **uncommitted and not installed**. Cross-process recovery
 of a vanished context, old-custody reconciliation, Edge connected proof,
 production retention/budget and the final integrated hook remain open; a
 terminal result alone must never be used as an ACK.
+
+**2 Nov STATUS quota follow-through:** reproduced and fixed exhaustion of the
+per-context ISSUE quota by definite pre-INSERT custody refusals. Only that
+proven refusal returns its reservation; actual and ambiguous issues stay
+counted/fenced. Six affected suites **205/205** and isolated PostgreSQL
+**4/4** passed, including repeated refusals across authorities followed by
+same-context retry after the original's TEST_ONLY terminal + ACK. See the
+[follow-through](execution_loop/evidence/ELP2-10/COMMAND_STATUS_DURABLE_ACK_2026-11-02.md#follow-through-recovery-quota-after-a-definite-refusal).
+The code remains uncommitted/uninstalled; the Edge gateway/original, vanished
+context recovery and final integrated gate are not claimed complete.

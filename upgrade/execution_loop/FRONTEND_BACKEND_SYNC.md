@@ -10,6 +10,11 @@ be presented as installed or as a real Edge recovery receipt. Edge must keep
 the same original on `COMMAND_STATUS_ASSERTION_CUSTODY_RECOVERY_REQUIRED` and
 provide actual terminal/delivery proof; cross-process continuation remains open.
 
+The [quota follow-through](evidence/ELP2-10/COMMAND_STATUS_DURABLE_ACK_2026-11-02.md#follow-through-recovery-quota-after-a-definite-refusal)
+fixes a locally reproduced retry-capacity defect; it adds no UI field.
+Focused STATUS suites and isolated PostgreSQL passed; genuine Edge STATUS and
+cross-process continuation remain open, and the candidate is not installed.
+
 ## 2 Nov — Backend six-package checkpoint / Alpha consumer
 
 Codex's [six-package receipt](evidence/ELP2-10/CODEX_BACKEND_SIX_PACKAGE_FOLLOWTHROUGH_2026-11-02.md)
