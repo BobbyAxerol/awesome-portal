@@ -4360,3 +4360,12 @@ unresolved order/position/session policy discrepancies, are recorded in the
 [scope receipt](evidence/ELP2-10/CODEX_BACKEND_SIX_PACKAGE_FOLLOWTHROUGH_2026-11-02.md#scoped-retained-account-and-physical-binding-purpose-fence--2-nov-2026).
 No current Edge permission or browser acceptance is implied.
 
+**2 Nov deployment execution follow-through:** for the local retained
+deployment-scoped Product reader only, position/session/order/fill facts now
+require the intersection of the existing Alpha scope and separate exact
+Account scope. Missing/revoked Account permission leaves the affected panel
+unavailable; preserve that state, not a zero. No visual redesign or new grant
+is requested. The source candidate remains uncommitted/uninstalled; named
+aliases, native Edge and browser acceptance remain separate. [Tests, cursor
+and limitations](evidence/ELP2-10/CODEX_BACKEND_SIX_PACKAGE_FOLLOWTHROUGH_2026-11-02.md#deployment-scoped-execution-dual-purpose-follow-through--2-nov-2026).
+

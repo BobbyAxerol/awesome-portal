@@ -17195,3 +17195,12 @@ authority, physical HTTP-egress fencing or complete the remaining order,
 position, session and other route-policy intersections. Exact tests, source
 hashes, recovery patch and Claude handoff:
 [scoped reader receipt](execution_loop/evidence/ELP2-10/CODEX_BACKEND_SIX_PACKAGE_FOLLOWTHROUGH_2026-11-02.md#scoped-retained-account-and-physical-binding-purpose-fence--2-nov-2026).
+
+**2 Nov deployment execution addendum:** the local uncommitted Product
+candidate additionally holds the separate exact Account purpose together with
+Alpha for deployment-scoped positions, sessions, orders and fills, before
+filtering/page/cursor and final Profile release. Nine relevant synthetic suites
+passed **470 / 41 skipped**; a new full-profile capacity test separately
+passed; the focused source typecheck passed. Named aliases, live source,
+PostgreSQL cases, native HTTP egress, final hook and qualification remain open.
+[Tests, precise scope and pins](execution_loop/evidence/ELP2-10/CODEX_BACKEND_SIX_PACKAGE_FOLLOWTHROUGH_2026-11-02.md#deployment-scoped-execution-dual-purpose-follow-through--2-nov-2026).

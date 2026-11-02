@@ -1752,3 +1752,68 @@ approved Alpha parser/test files are separate (+289/−39), without a visual
 design change. The code is still uncommitted and uninstalled; final code
 hook, real source/Edge, browser, exact >200 Account lookup and final-candidate
 qualification remain open.
+
+### Deployment-scoped execution dual-purpose follow-through — 2 Nov 2026
+
+This supersedes the preceding warning **only** for the local retained Product
+reader when its trusted internal deployment scope is present and the relation
+is `positions_v2`, `execution_sessions`, `orders` or `fills`. It does not
+close the named-alias, other-reader or native-source policy matrix.
+
+The candidate now holds both the existing deployment/Alpha read and a
+separate exact `account.read` during the same finite source flight. It applies
+both population predicates to the original row before pagination, applies
+the intersection of both field policies, includes the Account fingerprint in
+the cursor binding, and retains both obligations for the enclosing Profile's
+final fence. A scoped caller lacking either grant cannot receive the row; a
+shared Account does not itself authorize a peer Alpha's deployment. Typed
+local source/cursor refusals retain their public codes only after successful
+final authority checks; a later revoke or unavailable authority wins over a
+held invalid-cursor error. Legacy behavior is not switched to the new scope.
+
+These are in-process retained projection checks, not a source-atomic Edge cut
+or physical HTTP-send custody. Whole-account and named/raw alias routes,
+conditional/bracket/risk observations and independent native publication
+still require their own current-policy and lineage review. The separate
+`scopedLiveSource` path already holds its own independent Account obligations;
+this change is not a new qualification of that path or its source.
+
+Verification:
+
+- Four new synthetic tests first failed because only Alpha was checked. The
+  nine affected suites ultimately passed **470 tests; 41 PostgreSQL tests
+  skipped**. A subsequent new full-profile capacity case passed **1**, with
+  **49 other cases filtered/skipped**; the suite was not rerun after that
+  test-only addition. The full-profile case held 15 distinct obligations under
+  the existing limit of 16, including four separate Account obligations.
+- Targeted checks cover no Account, wrong Account, no Alpha, both grants,
+  peer deployment sharing the Account, Account revoke during read, revoke
+  while an invalid cursor is held, and cursor rejection after Account-grant
+  revision changes. An intermediate run exposed that the new combined fence
+  converted the existing typed cursor error into 503; the candidate now
+  preserves only an explicitly allowlisted local error after the fence.
+  Eight pre-existing synthetic test cases also needed an explicit current
+  actor lease to exercise the stronger shared terminal check. Neither change
+  establishes a real Edge grant or browser behavior.
+- The focused TypeScript source graph exited 0 (810 files, 19.75 s compiler
+  time, 612,499 KiB compiler-reported memory); `git diff --check` passed.
+  The normal code hook and final integrated candidate were not checked.
+- Product reader SHA-256
+  `6773a409d3ec9389903ad699c7ddeab767bd66413cf61f952912758d57e02a30`;
+  retained-metadata tests
+  `10b40ef4712ccd8d8da861321a2fbbbd5088bb55707a4d0d0e5c5e709eda38e5`;
+  Product-read tests
+  `6d86cfc49ad53bc5ad586fb30437932858c445d829b086316d571d1775103835`.
+  Tracked source/contract diff SHA-256
+  `a17b65c5ae1412a8df55b59265d405056ec13cac896f43d9f94e91378b736c1d`.
+
+The newest private tracked-backend recovery patch is
+`/home/bobby/.local/state/portal-research-backend-20261102-7rY0guq1/backend-code-recovery-dual-purpose-20261102.patch`,
+SHA-256 `e979779a4b17e99d4de977a77263ec259cc8124b4d2b2f4d37a7a8cc3b8292c6`.
+It is not a Git commit or remote backup, and excludes the six separately
+archived untracked backend files and separate Alpha frontend patch. The
+cumulative tracked backend/contract/ownership-ledger candidate is 66 files,
++5,392/−483 plus those six untracked files. The code remains uncommitted and
+uninstalled. Claude should keep the existing unavailable/not-permitted state
+when the Account purpose is missing, rather than rendering missing execution
+facts as zero; no component redesign or new grant is requested.
