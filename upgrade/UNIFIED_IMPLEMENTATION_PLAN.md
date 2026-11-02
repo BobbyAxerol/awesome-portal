@@ -17317,3 +17317,15 @@ hook exited 0 and the code landed locally at
 `2e1e56535dfbccd774762b27a72512454fcc0cbb`; suite skips are not PASS.
 Source-dark, connected authority, browser and ELP2-10/11 gates remain open.
 [Scope, hashes, disk check and Claude handoff](execution_loop/evidence/ELP2-10/CODEX_BACKEND_SIX_PACKAGE_FOLLOWTHROUGH_2026-11-02.md#approval-evidence-error-fence-and-migration-0156-guard--2-nov).
+
+**2 Nov Approval Evidence parity landed:** align prospective producer with
+the existing WP-K consumer's history/diff, display and timestamp constraints,
+and reject malformed source envelopes without bypassing final visibility.
+Focused tests and generated-contract checks passed; the normal hook exited 0
+and the code landed locally as `2a0e00e0c59ca5022769c60741d1f543eb6a5645`.
+Control API: 12,168 passed, 8 skipped; skipped tests are not PASS. The
+disposable PostgreSQL restore/preservation drill passed. This is not
+real-source or browser qualification. [Test
+boundaries and Claude handoff](execution_loop/evidence/ELP2-10/CODEX_BACKEND_SIX_PACKAGE_FOLLOWTHROUGH_2026-11-02.md#approval-evidence-producerconsumer-parity--2-nov).
+The 2 Nov read-only Edge worktree/working-plan check did not establish fresh
+connected authority or financial/source proof; [pin and limits](execution_loop/evidence/ELP2-10/CODEX_BACKEND_SIX_PACKAGE_FOLLOWTHROUGH_2026-11-02.md#read-only-edge-recheck--2-nov-2140-utc).

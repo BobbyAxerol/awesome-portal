@@ -2198,3 +2198,63 @@ Disk inspection: filesystem had approximately 127 GiB available. Docker
 reported no dangling images; tagged images and volumes were retained because
 their use by existing candidates or receipts was not excluded. No image or
 volume was removed in this pass.
+
+## Approval Evidence producer/consumer parity — 2 Nov
+
+The WP-K consumer rejects history with an empty or reversed time interval,
+duplicate/out-of-order or out-of-window points, unchanged diff pairs, unsafe
+display text, timestamps outside the ECMAScript Date range and negative-zero
+decimal strings. The prospective producer now enforces the same rules without
+rounding or substituting source facts. Inclusive interval endpoints, empty
+point arrays and the larger safe-integer range for counts remain valid; text
+length is measured in Unicode code points as in the consumer and JSON Schema.
+An invalid, missing or unknown-key sections envelope is a typed provenance
+refusal, not an invented NO_SOURCE result; final visibility is still checked
+before exposing errors.
+
+OpenAPI and JSON Schema document the semantic rules; generated types and the
+717-file contract snapshot were regenerated. Standard JSON Schema alone does
+not enforce comparisons between values or all display constraints: the new
+14-case synthetic negative fixture is deliberately structurally valid, and
+the Zod producer and existing frontend reader independently reject all cases.
+The existing published positive and a 256-codepoint Unicode boundary remain
+accepted. Focused backend tests: **69/69**; contract tests: **30/30**;
+existing frontend reader tests: **14/14**. A direct consumer parity check
+rejected the same **14/14** vectors. Generator/snapshot check and release
+integrity ledger check passed. These focused and parity tests overlap and are
+not a connected-source, browser or full-product receipt.
+
+One ad-hoc transitive TypeScript invocation exited 2: its incomplete plugin
+context missed Fastify cookie declarations and it exposed two test typing
+errors, subsequently corrected. It is not a project typecheck PASS. The
+normal hook completed with exit 0 on the complete candidate. Control API:
+**574 files passed, 4 skipped; 12,168 tests passed, 8 skipped**; the separate
+contract suite passed **1,940 tests across 113 files**. The hook's disposable
+PostgreSQL restore/preservation drill and repository verification passed.
+Skipped tests are not counted as PASS. Code landed locally as
+`2a0e00e0c59ca5022769c60741d1f543eb6a5645` (12 files, +448/−58); no push or
+runtime installation. Claude: no new response fields or UI
+redesign; the shared negatives may be reused for the existing reader. Approval
+Evidence remains source-dark until commissioned; ELP2-10/11 remain open.
+The current source confirms `approvalEvidenceDependency` mounts only when
+`retainedReview(config)`, `PORTAL_ENV=local` and `AUTH_MODE=dev` all hold;
+`app.module.ts` installs `SourceNotCommissionedApprovalEvidencePort` and the
+default field authority denies every section. This is a configuration/source
+inspection, not a receipt from the currently deployed preview image.
+
+### Read-only Edge recheck — 2 Nov 21:40 UTC
+
+SSH read-only to the authorized HK Edge worktree reported branch
+`feat/execution-edge-upgrade-v1_2` at
+`636d58a7c4368a617903734ab1d0ce933d2804ca`, with tracked and untracked WIP;
+that SHA is not proof of installed runtime. The current tail of its working
+Unified plan still records full 08/read09 connected as NOT_MET and calls for
+fresh source transport/binding, official source authority/root, financial
+proof, same-original STATUS recovery, and approved calibration/bounds. Its
+13-pass isolated gateway test includes one skipped genuine codec case and is
+not a connected receipt. This limited read does not certify every mailbox,
+live credential, image, host capacity or remote branch. No remote files,
+credentials, services, DB or permissions were modified.
+An additional read-only modification-time listing of that exact EPG10-08
+directory showed its newest 20 filenames dated no later than 28 Oct; this is
+not a search of other HK directories or proof that no unpublished source exists.
