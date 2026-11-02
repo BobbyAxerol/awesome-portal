@@ -17205,6 +17205,14 @@ passed; the focused source typecheck passed. Named aliases, live source,
 PostgreSQL cases, native HTTP egress, final hook and qualification remain open.
 [Tests, precise scope and pins](execution_loop/evidence/ELP2-10/CODEX_BACKEND_SIX_PACKAGE_FOLLOWTHROUGH_2026-11-02.md#deployment-scoped-execution-dual-purpose-follow-through--2-nov-2026).
 
+**2026-11-02 local capacity:** Bobby authorized scoped cleanup of unused,
+regenerable cache. After process/ownership checks, only the exact old Rust,
+Trivy and isolated dependency caches in the [capacity receipt](execution_loop/evidence/ELP2-10/LOCAL_CAPACITY_CLEANUP_2026-11-02.md)
+were removed; no Docker image/volume, source, evidence or runtime data was
+removed. Observed available disk rose by 24,945,664,000 bytes to ~20.39%.
+The margin above the 20% C4.5 floor is small: recheck free space and workload
+headroom before a disk-intensive hook. Cleanup is not a test or qualification.
+
 **2 Nov named execution alias addendum:** the same uncommitted, uninstalled
 candidate now intersects Alpha and Account authorization for the four retained
 named Orders/Positions/Sessions/Fills aliases, with row, cursor and terminal
