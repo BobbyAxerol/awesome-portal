@@ -1579,3 +1579,51 @@ withheld values as a zero or silently choose the first candidate. Preserve
 the established UI and current ownership of components. Review/browser proof
 remains separate. The exact >200 lookup, real-source authority, final hook,
 connected/browser gates and final-candidate migration/rollback remain open.
+
+### Account 360 request contract correction — 2 Nov 2026
+
+The existing Account 360 OpenAPI path advertised `account_id` up to 191
+characters with no pattern, while the actual controller accepts 1–128 ASCII
+letters, digits, `.`, `_`, `:` and `-` only. The optional `workspace_id`
+already supported by the controller was missing from OpenAPI. The contract
+now documents the implemented identifier bounds and workspace parameter,
+including that the server trims workspace input before validating it; the
+schema describes the normalized workspace value. Its 200 description no
+longer promises an exact result for an incomplete or ambiguous profile. This
+changes neither the route's identifier validation nor authorization behavior.
+
+The first contract/route parity test failed against the old OpenAPI. After the
+correction, the full affected `profile-read` suite passed **54/54**, including
+controller and JSON Schema checks for valid 1/128-character IDs, 129-character
+and invalid-character refusal, empty/overlong workspace refusal, and trimmed
+workspace forwarding. `openapi-typescript` 7.13.0 regenerated
+`generated/execution-profile-read.d.ts`; its delta adds the optional
+`workspace_id` and updates the description, without changing a UI component.
+`node tooling/execution-operation-reader.mjs --check` passed. The focused
+contract/fixture suites passed **5**, with **152 skipped** by the name filter;
+this is not 157 executed tests. The supplied snapshot tool also reconciled a
+pre-existing candidate Alpha synthetic-fixture digest, and `--check` now
+matches **716** tracked files. The Alpha fixture cases were among those five
+focused contract tests; synthetic fixture validation is not source evidence.
+
+Current tracked source/contract diff SHA-256:
+`8a8f3c149f612495051f5e6c8416179248784e75e0592781b1d9ab2de21e680e`.
+Profile source SHA-256 remains
+`36d0cceca7eaf604e50372063f3e902c64d8ff25eb8e18c26d3a53a25f9ff990`;
+the final profile test is `d44ea0d40fce8c6a26b1e0779fe3ca62db3c7951ce23b4c043f1810c6a30038d`.
+OpenAPI and generated type SHA-256 are respectively
+`ba54410096f31b6ecf322b82c6856665df9e6097d9d305ee57bd7531a44622a8` and
+`c80aa2e1d61ce654ea5213b0309269b96d28b61e77d472beb24d5e026cf0a1b8`.
+The previous focused source typecheck remains applicable to the unchanged
+profile source; no new full-project/frontend typecheck or normal hook is
+claimed on this contract checkpoint.
+
+Latest local tracked-backend recovery patch:
+`/home/bobby/.local/state/portal-research-backend-20261102-7rY0guq1/backend-code-recovery-account-contract-20261102.patch`,
+SHA-256 `b1d05b1ccc028b2b051ec99d670bd2e384ffa337d091447ee20a790b6639fce6`.
+It supersedes earlier tracked-backend patches but is not a Git commit or remote
+backup. The separately documented untracked tar and Alpha frontend patch are
+unchanged. The cumulative tracked backend/contract/ownership-ledger candidate
+is now 66 files, +5,036/−468, plus six untracked backend files; this is not
+the size of this contract correction. All previously recorded qualification,
+capacity, source, >200 lookup and integration gates remain open.

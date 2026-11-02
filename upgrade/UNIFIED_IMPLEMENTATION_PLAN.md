@@ -17168,3 +17168,11 @@ and its module-graph typecheck passed; a related **182/182** suite is pinned
 to the immediately preceding source hash. Code is uncommitted/uninstalled;
 the normal hook, exact >200 lookup and connected/browser gates remain open.
 [Receipt and Claude handoff](execution_loop/evidence/ELP2-10/CODEX_BACKEND_SIX_PACKAGE_FOLLOWTHROUGH_2026-11-02.md#account-360-identity-selection-follow-through--2-nov-2026).
+
+**2 Nov Account 360 contract parity:** OpenAPI now matches the existing
+128-character ASCII identifier validator, documents `workspace_id`, and
+describes bounded/partial identity honestly. Generated type and contract
+snapshot were refreshed. Profile suite **54/54**, focused contract/fixture
+**5 pass / 152 skipped**, and snapshot **716/716** checked on the local
+candidate. [Exact test and hash boundaries](execution_loop/evidence/ELP2-10/CODEX_BACKEND_SIX_PACKAGE_FOLLOWTHROUGH_2026-11-02.md#account-360-request-contract-correction--2-nov-2026).
+Normal code hook, landing and real-source qualification remain open.

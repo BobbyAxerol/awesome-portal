@@ -4336,3 +4336,9 @@ environment still works. Do not infer zero or pick the first candidate. No UI
 redesign is requested; Claude may review the existing selection flow and take
 browser acceptance after landing. [Tests, limits and pins](evidence/ELP2-10/CODEX_BACKEND_SIX_PACKAGE_FOLLOWTHROUGH_2026-11-02.md#account-360-identity-selection-follow-through--2-nov-2026).
 
+**2 Nov Account 360 request contract:** existing backend accepts account IDs
+of at most 128 characters from `A–Z a–z 0–9 . _ : -`, and already accepts an
+optional workspace (normalized by the server). OpenAPI and generated types
+now describe this; the route did not gain new permissions. No visual change
+is requested. [Parity test and candidate limitations](evidence/ELP2-10/CODEX_BACKEND_SIX_PACKAGE_FOLLOWTHROUGH_2026-11-02.md#account-360-request-contract-correction--2-nov-2026).
+
