@@ -16772,3 +16772,289 @@ other files 196/196 (overlapping runs, not additive coverage). Source revisions
 above JavaScript's safe-integer range are a fail-closed Core/Edge compatibility
 question, not proof of source failure. E3 real carrier mapping, E4 genuine
 original/gateway, E5 real calendar and approved 14-group budget remain open.
+
+**2 Nov backend follow-through:** [Approval Evidence final visibility recheck,
+contract correction, R-B/R-C disposition, focused verification and six-package
+remaining gates](execution_loop/evidence/ELP2-10/CODEX_BACKEND_SIX_PACKAGE_FOLLOWTHROUGH_2026-11-02.md).
+The earlier R-C CHANGES_REQUESTED note above is superseded for the identified
+source-code fixes; source/field authority, connected acceptance and the final
+integration gate remain separate. This is a working-tree receipt, not a deployed
+or final-hook-qualified candidate; ELP2-10/11 remain open. The same checkpoint
+hardens Account headroom and broker currency comparisons against incomplete,
+ambiguous, mixed-profile or different-snapshot inputs; see the receipt for
+tests, Claude handoff and the remaining real-carrier qualification. The
+`derived.differences` / `resource.account.differences` capability now states
+comparison availability with typed reasons; AVAILABLE is not an in-sync
+verdict. Real-source, browser, scoped-V2 derivation and integration gates
+remain separate.
+
+**2 Nov profile-read security follow-through:** authority/snapshot change and
+authority-unavailable failures are no longer downgraded to a partial composed
+response (57/57 focused Profile/Resource tests). Individual relation fences
+do not establish one final native HTTP-egress fence; that acceptance remains
+open as recorded in the same receipt.
+
+**2 Nov STATUS preparation:** reused STATUS contexts now compare the final
+fresh authority fingerprint, and a failed new preparation releases only its
+own unissued reservation. Issued/UNKNOWN custody is unchanged. Authority and
+composition tests pass 55/55; separate loopback-only transport tests pass
+76/76 after local socket permission. Real Edge/original and PG recovery are
+still open. See the [six-package receipt](execution_loop/evidence/ELP2-10/CODEX_BACKEND_SIX_PACKAGE_FOLLOWTHROUGH_2026-11-02.md).
+
+**2 Nov disposable PostgreSQL follow-through:** a separate PostgreSQL 16.15
+Unix-socket-only cell now proves the focused Approval Evidence PG/HTTP tests
+(2/2), command authority/integrity and migration-recovery suites (28/28),
+and a TEST_ONLY M-6b dump/restore/lease-fencing rehearsal. The temporary cell
+was stopped and removed. This supersedes only the earlier lack of an available
+disposable PostgreSQL for these tests; it does not qualify a source, real
+gateway, production DR/RTO, final-candidate rollback, full hook or G2. Exact
+hashes, exclusions and the remaining frontend consumer blocker are in the
+[six-package receipt](execution_loop/evidence/ELP2-10/CODEX_BACKEND_SIX_PACKAGE_FOLLOWTHROUGH_2026-11-02.md).
+
+**2 Nov native custody follow-through:** real disposable PostgreSQL with
+TEST_ONLY source vectors passed 31/31 Core obligations/custody tests and
+50/50 ROOT/CURRENT provider/coordinator tests. The distinct 17 native
+Account/Alpha HTTP cases remain unrun: their Docker-host guard rejected the
+Unix-socket cell and was not bypassed. Connected Edge authority and the
+final candidate remain unqualified. Details and cleanup are in the same receipt.
+
+**2 Nov Operations health source review:** whole-population health aggregation
+already uses the authorized scoped snapshot, but the optional binding currently
+validates only the format of `schema_sha256`, not the installed view. Before
+commissioning, define and verify the canonical view digest and prove the
+one-to-one/base-population invariant; do not treat the configured string as
+source proof. The view exists in migration 154; five focused Operations
+health/current suites passed 147/147 with disposable PostgreSQL and TEST_ONLY
+source. Real health remains dark. See the six-package receipt.
+
+**2 Nov Resource scope-key follow-through:** a synthetic foreign-order case
+exposed delimiter collisions in the fallback deployment tuple; Resource now
+uses structured keys both for tuple matching and retained-fact identity.
+Focused Resource/scope/controller suites passed 151/151, plus the distinct
+retained-order collision regression 1/1. No real-source or final-egress
+authorization is claimed. See the six-package receipt.
+
+**2 Nov Resource deployment consistency:** within the visible projection,
+duplicated deployment IDs are excluded before scope derivation, and orders or
+other transactional rows with contradictory published account/strategy/venue
+are withheld with a partial reason. ID-only rows remain accepted when the
+deployment is unambiguous. Resource/scope/controller tests passed 156/156;
+this is not proof over hidden source rows or final egress. Details and tests
+are in the six-package receipt.
+
+**2 Nov Alpha health absence:** incomplete reconciliation/deployment sources
+no longer imply READY or RESEARCH_ONLY. V1 adds `UNKNOWN` to deployment health;
+the aggregate retains unknown, while complete empty and known finding cases
+remain distinct. `UNKNOWN` currency also cannot qualify a balance total.
+Synthetic Resource suites passed 157/157, schema/fixture suites 157/157, and
+the fleet health model 26/26; this does not qualify Edge source or browser.
+See the six-package receipt for Claude's consumer handoff and remaining gates.
+
+**2 Nov allocation scope consistency:** Resource no longer expands Portfolio
+scope through allocations whose published account/strategy/venue contradicts
+the unique visible deployment, and withholds those allocation facts from Alpha
+as partial. Four affected suites passed 162/162 on synthetic projections. This
+does not establish real ownership/census or native egress authorization; order
+detail remains a separate contract-only sibling. See the six-package receipt.
+
+**2 Nov allocation completeness follow-through:** malformed published identity
+fields are refused, and a matching allocation whose deployment is missing from
+the visible projection marks the set partial rather than shrinking a total.
+The four focused Resource/fixture suites passed 165/165; source authority and
+ownership/census still require separate qualification.
+
+**2 Nov Alpha subject scope audit:** the scoped subject reader uses its
+exact-Alpha minted scope for both page and coverage, rather than a separate
+entity filter. Additional synthetic checks cover peer strategy and shared
+account under whole-business authority: 65/65 pass, 41 PG cases skipped.
+Connected source qualification and final egress custody remain open; see the
+six-package receipt. The Control API build also exited 0 on the working tree;
+this is not the normal integration hook.
+
+**2 Nov subject filter boundary:** durable-mirror page and coverage now
+refuse explicitly supplied unsupported/prototype filter names rather than
+silently dropping the filter. Account/strategy bindings remain supported in
+durable and retained shapes; four local suites passed 221/221 with 41 PG cases
+skipped. This is not an order-detail producer or connected source proof, and
+the prior backend build predates this edit. See the six-package receipt.
+
+**2 Nov retained negative-result fences:** the shared scoped reader now
+rechecks authority on held errors, and retained deployment/relation readers
+fence the source snapshot even for EMPTY/PARTIAL/error outcomes. Uniform nested
+404 semantics are preserved. Focused synthetic suites passed 134/134 and the
+final negative suite 11/11; separate PostgreSQL 16.15 tests passed 118/118
+for scoped authority and 55/55 for History/financial/subject on a disposable
+Unix-socket-only DB, since stopped and removed. This is not source, browser or
+physical HTTP-egress qualification. See the [receipt](execution_loop/evidence/ELP2-10/CODEX_BACKEND_SIX_PACKAGE_FOLLOWTHROUGH_2026-11-02.md)
+and [Alpha V1 consumer handoff](execution_loop/evidence/ELP2-10/CLAUDE_ALPHA_V1_NULLABLE_HANDOFF_2026-11-02.md).
+One backend build attempt timed out (exit 124); a later no-emit typecheck
+passed on the fence candidate. The financial follow-through below has since
+received its own no-emit typecheck; emitted build and normal hook remain
+separate.
+
+**2 Nov deployment financial detail:** Resource360 now requires complete,
+same-snapshot and unique deployment/account/balance/allocation relations before
+publishing nested amounts; differing or missing currency, duplicates, partial
+data and lossy numeric input do not become a balance or allocation. Observed
+currencies can remain visible as `UNAVAILABLE`; a real source `"0"` remains
+zero. Six affected local suites passed 249 tests, with 41 PG cases skipped;
+contracts/fixture suites passed 157/157. This is not Edge source/ownership or
+connected/browser qualification. Source pins, remaining scope-fence review
+and the updated Claude handoff are in the linked six-package receipt above.
+The producer-regenerated synthetic Alpha fixture was checked in non-writing
+mode (3/3); the changed Control API source passed a no-emit typecheck. Neither
+that check nor the fixture is a connected-source or full-hook receipt.
+
+**2 Nov retained-derivation authority follow-through:** a TEST_ONLY regression
+with genuine server-minted scopes reproduced earlier Paper health remaining in
+a multi-profile response after its source leg was revoked during later profile
+I/O. Retained derivations now retain their original scopes through a common
+final authority fence; cross-profile source-health is restricted to its named
+inputs, one actor and bounded profile/source heads. The regression and focused
+retained/derivation/Fleet suites passed **48/48**. This is not native
+physical-send custody or connected Edge/revoke acceptance, and it does not close
+the independently scoped Profile aggregate gap. Details and limitations are
+in the [six-package receipt](execution_loop/evidence/ELP2-10/CODEX_BACKEND_SIX_PACKAGE_FOLLOWTHROUGH_2026-11-02.md).
+The full 36-scope bound and overflow refusal were subsequently checked in the
+retained-metadata suite (**15/15**); a separate scoped batch reported 76 pass
+and 515 skipped, not a PostgreSQL PASS on this revision.
+A scoped stale-source error is also fenced before returning: the retained
+reader now prioritizes an intervening revoke over the data-dependent stale
+503. A later three-suite rerun passed **50/50**; both explicit stale/refusal
+cases passed **2/2**. The stabilized Control API source passed a separate
+no-emit typecheck (exit 0); this is not the normal hook or runtime acceptance.
+An added missing-profile negative confirmed that absent, unqualified
+publication refuses the entire response before the raw Paper read. The
+affected three-suite rerun passed **52/52**; source authority was TEST_ONLY.
+The Alpha canonical consumer was rechecked on this working candidate and
+remains **28 passed / 1 failed** on the new nullable V1 facts. Claude's
+[consumer handoff](execution_loop/evidence/ELP2-10/CLAUDE_ALPHA_V1_NULLABLE_HANDOFF_2026-11-02.md)
+is required before the coordinated full hook/landing; this is not a UI redesign.
+
+**2 Nov retained Profile final-authority follow-through:** the stage and
+Account 360 retained readers now hold each original scoped relation through
+their combined body/error and recheck actor, authority and profile heads.
+The Account cross-profile case uses only its nine named purposes and existing
+permissions, at most 27 scopes; other single-profile compositions remain
+bounded at 16. Seven affected suites passed **251/251** with TEST_ONLY
+source/grants, and the current Control API source passed no-emit typecheck
+(177.80 seconds, exit 0). This supersedes the earlier open Profile aggregate statement
+only for these retained paths; native physical-egress custody, actual Edge
+source/READ/STREAM/revoke and load/browser acceptance remain open. See the
+[detailed receipt](execution_loop/evidence/ELP2-10/CODEX_BACKEND_SIX_PACKAGE_FOLLOWTHROUGH_2026-11-02.md).
+
+**2 Nov retained Resource 360 final-authority follow-through:** a synthetic
+server-scope regression showed Paper Alpha could be returned after its source
+authority was revoked during a later Sandbox check. Resource composition now
+holds the original per-environment ALPHA/PORTFOLIO/ACCOUNT/BINDING scopes to a
+common final confirmation, without creating a new grant. Eight related suites
+passed **232/232**, and the current Control API source passed a separate
+no-emit typecheck (exit 0); actor-change, purpose/resource and absent-lease negatives
+are recorded in the [six-package receipt](execution_loop/evidence/ELP2-10/CODEX_BACKEND_SIX_PACKAGE_FOLLOWTHROUGH_2026-11-02.md).
+This is not the separate native Account writer, an order-detail producer,
+physical HTTP-egress custody or proof of connected Edge authority.
+
+**2 Nov STATUS cancellation isolation:** same-original preparation now
+captures the input and separates each caller's cancellation from the shared
+operation. Synthetic authority/transport/gateway/composition tests passed
+164/164 with loopback permitted. An abandoned unissued shared context can
+remain until the existing TTL/prune; gateway/original and restart acceptance
+remain open. See the six-package receipt for failure and cleanup boundaries.
+The final authority fence now also rejects a caller canceled before or during
+its check, without settling another caller's operation; rerun **166/166**.
+The subsequently extended authority suite passed **28/28**, including no
+retained-read completion for a canceled caller and reuse of the same original.
+Distinct waiting STATUS preparations are now bounded before authority I/O,
+and shutdown accounts for canceled callers' still-running shared work rather
+than reporting `STOPPED` prematurely. Five affected suites passed 169/169
+before the final stop-admission guard; the final authority/composition pair
+passed 58/58. These are local-only; see the six-package receipt.
+Coalesced waiters now have a separate bounded count and release their slot on
+cancel or settlement; shutdown observes that count as well. The five affected
+local suites passed **172/172** after this follow-through; the started build
+was interrupted before these last changes and is not a candidate build receipt.
+Canceled waiters are now detached from a held shared operation, not merely
+subtracted from a counter; the same five local suites passed **173/173** after
+this fix. A later build was interrupted before the fix and is not a PASS;
+the subsequent stabilized Control API build exited 0, with exact diff hashes
+in the six-package receipt. This is not the normal hook.
+
+**2 Nov health view drift follow-through:** the optional health binding now
+requires a separately versioned `view_definition_sha256_v1` and verifies the
+installed public view's definition and ordered column descriptors inside the
+same page transaction before returning health. The prior `schema_sha256` is
+unchanged and is not presented as verified. Five affected suites passed
+151/151 on disposable PostgreSQL 16.15 with TEST_ONLY sources, including
+view-drift refusal; the isolated DB was stopped and removed. This does not
+verify dependencies of the view, source identity, one-to-one semantics or
+commission any health source. See the six-package receipt.
+
+**2 Nov workspace recheck:** the existing Profile sandbox/live/account and
+non-native Resource alpha/portfolio/account/binding routes now repeat the
+same workspace access check after their async reader. Seven revoke-during-read
+and four foreign-workspace controller tests pass; the native Account writer
+is unchanged. Paper overview/workbench/VN-market/blotter and Live detail now
+also recheck their existing workspace permission after async reads; Paper
+fan-out refuses authority-change/unavailable errors instead of leaking sibling
+data as a partial response. Focused local suites 145/145 pass (synthetic
+sources). This is not an atomic field/session/source or HTTP-egress fence;
+17 native PG cases remain skipped without a disposable DB. See the
+[six-package receipt](execution_loop/evidence/ELP2-10/CODEX_BACKEND_SIX_PACKAGE_FOLLOWTHROUGH_2026-11-02.md).
+
+**2 Nov exact-money follow-through:** Bounded arithmetic also checks the
+derived output, not only its operands; overflow produces typed unavailability
+without rounding. The affected Profile/Resource/scoped/producer suites passed
+85/85 on the working tree, not against a qualified live carrier. Account Profile and Resource derive
+comparison/headroom only from bounded decimal text or safe integers; missing
+or inexact amounts stay unavailable, not fabricated zero. Focused tests
+62/62 PASS; real financial carrier and browser acceptance remain separate.
+
+**2 Nov Alpha V1 financial truthfulness — consumer handoff required:** the
+working-tree backend no longer assigns position PnL/notional a guessed
+currency or turns absent source amounts into zero; ambiguous/partial balance
+and allocation totals carry typed absence. Contract, generated type and
+producer fixture were updated. Claude must adapt the existing Alpha reader to
+nullable summary facts before landing/preview: the focused canonical Alpha
+consumer test currently fails (99/100 across two files). Version dispatch
+alone passes but is not screen acceptance. Source/ownership qualification,
+connected/browser and integration gates remain open. See the same receipt.
+
+**2 Nov conditional-order parent scope:** a TEST_ONLY regression exposed a
+shared-account conditional leg whose narrower tuple could make an unauthorized
+parent appear readable. The retained named reader and scoped derivation now
+check the original parent plus the merged child under the relevant independent
+scopes; malformed duplicate identities and cross-environment mode conflicts
+are not used as lineage. Six affected suites passed **339/339** at the
+pre-final-mode checkpoint; the three changed suites then passed **115/115**
+on the final mode change (overlapping counts, not an additive total). See the
+[six-package receipt](execution_loop/evidence/ELP2-10/CODEX_BACKEND_SIX_PACKAGE_FOLLOWTHROUGH_2026-11-02.md).
+This does not implement the separate order-detail producer, certify complete
+fill/fee census, qualify an Edge source or close ELP2-10/11. Earlier typechecks
+and candidate receipts apply only to their recorded source hashes.
+
+**2 Nov typed order clock:** Canary/Live `since` no longer turns an impossible
+calendar date or a timestamp without a zone into a fabricated instant. It uses
+the existing validated Manager clock and leaves invalid/absent values null;
+no DTO was changed. Four affected local suites passed **87/87**. A separate
+Canary integration attempt could not reach its default PostgreSQL inside the
+sandbox and is not a PASS. See the six-package receipt; source/browser and
+candidate qualification remain separate. The Control API no-emit source
+typecheck passed after both the parent-scope and clock edits (exit 0); this
+is not the normal hook or an installed build.
+
+**2 Nov retained-mode compatibility:** the conditional-order and bracket
+parent/leg readers now accept source-preserved `PAPER` and request `paper`
+as the same environment without changing the data; uppercase/lowercase LIVE
+still cannot enter a PAPER result and existing scope fences remain. Four
+affected suites passed **155/155** with synthetic grants/data. No contract or
+UI field was added; the affected Control API no-emit typecheck also passed.
+The backend is not yet committed or installed; source
+qualification and Claude's Alpha nullable-facts consumer remain separate.
+See the [six-package receipt](execution_loop/evidence/ELP2-10/CODEX_BACKEND_SIX_PACKAGE_FOLLOWTHROUGH_2026-11-02.md).
+
+**2 Nov Canary disposable-DB follow-through:** the separate Canary
+Control Room suite that previously could not reach its default PostgreSQL was
+rerun against a newly created socket-only PostgreSQL 16.15 test cell and passed
+**9/9**. The cell was stopped and its synthetic DB/packages removed. This
+supersedes only that suite's earlier NOT RUN status, not source, browser,
+final-candidate migration/rollback or G2 qualification. See the same receipt.
