@@ -17235,3 +17235,77 @@ not join balances/positions; scoped retained Account/Broker remains partial
 until a qualified exact census exists. The two affected synthetic suites pass
 **109/109**; the changed source graph typecheck passes. [Receipt, availability
 impact, pins and remaining gates](execution_loop/evidence/ELP2-10/CODEX_BACKEND_SIX_PACKAGE_FOLLOWTHROUGH_2026-11-02.md#account-360-first-page-identity-fence--2-nov-2026).
+
+**2 Nov Account 360 exact retained lookup (later addendum):** the local
+candidate now proves a unique target against the complete retained relation
+before paging, with separate Account and Alpha authority and a final snapshot/
+grant fence. It can resolve an authorized account beyond page one without
+claiming global or native-source completeness; incomplete/duplicate/denied
+facts and unqualified broker binding stay unavailable. The five-suite run
+including a disposable PostgreSQL cell passed **382/382** on the immediately
+preceding test-only annotation checkpoint; both changed authority assertions
+then passed on the final annotation checkpoint, and strict test-file typecheck
+exited 0. Static N29/EDS-12 input hashes were
+regenerated without runtime or release approval. See the [exact source,
+test boundaries and Claude handoff](execution_loop/evidence/ELP2-10/CODEX_BACKEND_SIX_PACKAGE_FOLLOWTHROUGH_2026-11-02.md#exact-account-360-retained-lookup--2-nov-2026).
+The candidate is not yet installed; normal hook, qualified Edge source and
+browser acceptance remain separate.
+
+**2 Nov generated-contract integration:** the first normal-hook attempt
+passed 1,924 contract tests but failed because three declarations downstream
+of the changed Profile schema were stale. Governance, Canary and Live Full
+types and the contract snapshot were regenerated; 58 generated files were
+checked for drift, and the seven later generator checks passed. The failed
+hook is not a PASS; it must run again on the corrected candidate. Details are
+in the [Account 360 follow-through](execution_loop/evidence/ELP2-10/CODEX_BACKEND_SIX_PACKAGE_FOLLOWTHROUGH_2026-11-02.md#exact-account-360-retained-lookup--2-nov-2026).
+
+**2 Nov hook-container correction:** the next hook was interrupted after
+`profile-read.spec.ts` exposed 29 failures caused by its host-relative
+contract path in the isolated container. The test now uses the existing
+`PORTAL_CONTRACTS_DIR` contract mount without bypassing schema validation.
+The isolated retake and a fresh full hook are still required; no install,
+connected-source or browser acceptance follows from this correction.
+
+**Retake:** the identical isolated container/mount passed **59/59**
+Profile Read tests, Control API build, forward migrations and the disposable
+PostgreSQL restore/preservation drill. A fresh normal hook on the repaired
+candidate is still required before landing.
+
+**2 Nov scoped-test follow-through:** the next normal hook was stopped after
+eight legacy explicit-resource tests failed, so it is not a PASS. TEST_ONLY
+fixtures now carry the real synthetic session expiry, independent Account
+grant and correct retained Orders source identity; Alpha alone still does not
+grant Account access. Six related suites passed **393/393** locally. The
+full normal hook and real Edge/consumer qualification remain open. Details:
+[backend follow-through](execution_loop/evidence/ELP2-10/CODEX_BACKEND_SIX_PACKAGE_FOLLOWTHROUGH_2026-11-02.md#exact-account-360-retained-lookup--2-nov-2026).
+
+**Scoped-fixture retake:** 41/42 selected files passed in a disposable
+PostgreSQL cell (1,806 tests passed, two Manager-service assertions failed);
+the run was interrupted before restore and is not a passing gate. After
+updating the stale pre/post authorization-call expectations and adding a
+source-refusal/revocation regression, that Manager file passed 20/20 locally.
+The final normal hook is still required.
+
+**2 Nov integrated backend landing — supersedes the uncommitted/hook-open
+status in the preceding addenda:** the consolidated code, contract, generated
+types, test and Bobby-authorized Alpha parser changes landed on
+`docs/research-loop-plan` as `4bd2a5f00ef36e57d52dc8fa50f1a8c1a15bb862`
+(90 files, +6,758/−581). The normal repository hook exited 0: the contract
+suite passed **1,924 tests in 113 files**; the Control API suite reported
+**12,132 passed and 8 skipped across 573 passed and 4 skipped files**; its
+disposable PostgreSQL forward-migration and restore/preservation drill passed.
+The earlier failed/interrupted attempts remain recorded above as history and
+must not be counted as passing runs. The separately recorded frontend focused
+suite and typecheck apply to the same unchanged Alpha consumer diff; no
+browser or real-source acceptance is implied.
+
+Claude should consume the landed Alpha V1 nullable/typed-absence handling
+without reimplementing it or changing the approved design; review the
+Account 360 grant/absence behavior and run the candidate browser/visual
+checks. [Exact scope, evidence and remaining work](execution_loop/evidence/ELP2-10/CODEX_BACKEND_SIX_PACKAGE_FOLLOWTHROUGH_2026-11-02.md)
+and [consumer handoff](execution_loop/evidence/ELP2-10/CLAUDE_ALPHA_V1_NULLABLE_HANDOFF_2026-11-02.md).
+This is a local source commit, not a runtime install, connected Edge receipt,
+G2/calibration, product release or ELP2-10/11 closeout. Approval Evidence
+and the qualified real financial/equity/Calendar sources remain dark or
+unqualified as stated in their source-specific receipts; do not infer positive
+facts or connected READ/STREAM and STATUS from this hook.

@@ -1,5 +1,19 @@
 # Core backend six-package follow-through — 2026-11-02
 
+> **Final local source landing, 2 Nov:** the code and contract candidate in
+> this receipt is committed on `docs/research-loop-plan` at
+> `4bd2a5f00ef36e57d52dc8fa50f1a8c1a15bb862` (90 files, +6,758/−581).
+> The normal repository hook completed with exit 0: contracts **113 files /
+> 1,924 tests passed**; Control API **573 files / 12,132 tests passed**, plus
+> **4 files / 8 tests skipped**; forward migrations and the disposable
+> PostgreSQL restore/preservation drill passed. This supersedes later
+> historical references to the candidate being uncommitted or its final hook
+> still pending, without changing the recorded earlier failed/interrupted
+> attempts. The landed source is not installed, deployed, pushed or qualified
+> against Edge. The existing 691/691 focused frontend result and typecheck
+> apply to the unchanged Alpha consumer diff and overlap earlier FE tests;
+> they do not establish browser, visual or connected-source acceptance.
+
 ## Scope and source
 
 Base examined: `docs/research-loop-plan@f5993a79d`. This receipt describes
@@ -1978,3 +1992,169 @@ build hook. An inventory-backed cleanup or owner-approved capacity change is
 required; no image/volume is safe to delete merely because Docker calls it
 reclaimable. The candidate remains uncommitted/uninstalled and the broader
 six-package goal, ELP2-10 and ELP2-11 remain open.
+
+#### Exact Account 360 retained lookup — 2 Nov 2026
+
+This follow-through supersedes the scoped-source availability limitation in
+the immediately preceding first-page fence, **only for the independently
+authorized in-process retained projection**. The server's private Account 360
+composition binds an exact account to its actor, workspace, screen and
+environment; it checks identity against the untruncated, complete source
+relation before pagination and derives a private identity proof. That proof is
+not a browser field or a new Edge/source entitlement. Duplicate identities,
+unresolved lineage, missing identifiers, partial or truncated input and a
+changed snapshot do not produce a joined account or its children.
+
+The matching account can now be found beyond the first 200 rows. The Account
+and Alpha authorities for deployment and position rows remain independent:
+their intersection is checked on the original rows and held through the final
+snapshot and grant fence. A permitted Account alone does not grant its peer
+Alpha. The public page's `PARTIAL` label is not changed into a global census
+claim. This local proof does **not** qualify the native Edge source, prove
+physical HTTP-egress custody, establish external broker/venue uniqueness, or
+make unqualified binding/comparison/financial data available. The legacy
+path still needs its own complete census; it does not receive this proof.
+
+The affected five-suite run on the immediately preceding test-only annotation
+checkpoint passed **382/382**, including the PostgreSQL authority suite and a
+new dual-purpose revoke-at-final-fence case, using a resource-bounded disposable
+PostgreSQL container with TEST_ONLY authority/source. That cell was removed.
+The subsequent edit to `elp2-read-scope.spec.ts` only expresses the deliberate
+mutation of a detached readonly test copy to TypeScript; it does not change
+product code or the JavaScript assertion. No count here is a connected Edge or
+browser receipt; this run overlaps earlier suite counts and must not be added.
+On the final annotation checkpoint, the detached-copy and new dual-purpose
+revoke cases were rerun against a fresh isolated PostgreSQL cell: **2 passed,
+117 deliberately not selected**, exit 0. A strict no-emit TypeScript check
+covering both `elp2-retained-metadata.spec.ts` and `elp2-read-scope.spec.ts`
+and their imports exited 0; this is not a full workspace hook. The previous
+test-file typecheck exited 2 on the readonly test-copy mutation and is not
+counted as a pass.
+
+Current source SHA-256: `read-scope.ts`
+`e734d1ab9509e5fdeb236f9edbc5e9be300d4934fbe47a009a56bad75f46d78f`;
+`product-read-source.ts`
+`6dc7126013876c9449f63bc38361a7a838ce384b5d11e9a9b0061883d0590cd7`;
+`profile-read.service.ts`
+`8560fefe320fbb03ae7c0a3b8c0b09e2f2bb1b518b7884aab6ce6b8784b804c3`.
+The test harness resolves `node-pg-migrate` like the repository's existing
+CommonJS CLI, preserving real migration execution rather than skipping it.
+The private same-host recovery patch made before this receipt's final notes is
+`/home/bobby/.local/state/portal-research-backend-20261102-7rY0guq1/tracked-wip-20261102T1652.patch`,
+SHA-256 `f90b02afd48828bb82293542ac4903752124f7dc133add075ce9ea26217fe409`;
+the seven candidate untracked backend files were archived separately as
+`untracked-candidate-20261102T1652.tar`, SHA-256
+`83308a92b1b4e864d1f35e2fbb31000dd17f357e91faba08e213126452bc503f`.
+They are recovery copies, not a Git commit, install or remote backup; the
+three pre-existing Edge mailbox documents remain outside the candidate.
+
+The two static input ledgers were regenerated using their repository tools:
+N29's changed input is the already-reviewed Alpha recompose consumer; EDS-12's
+changed inputs are that N29 ledger and the lineage-safe projection worker.
+Both verifiers report `runtime_effect: NONE`; N29 remains `product_release:
+NO_GO` and EDS-12 `operations_qualified: false`. This is a hash-input refresh,
+not a new browser, operational or release acceptance. The prior FE receipt's
+691/691 tests and typecheck apply to the unchanged frontend diff SHA-256
+`24d9654029a9108f10b8a8d7eafd04195f847c61b3b1bd235c1ce913ecb17ea3`.
+The projection worker and its lineage regression retain the exact hashes
+recorded in the earlier cursor receipt above. Contract snapshot check covers
+716 tracked inputs. This candidate is not installed or promoted; the normal
+hook and connected-source/browser gates remain separate.
+
+The first normal-hook attempt passed its 113-file / **1,924-test** contract
+suite, but then failed the generated Governance type comparison: the new
+Profile schema's two optional lineage counters were referenced transitively
+without regenerating every downstream declaration. A separate comparison of
+**58** generated OpenAPI files found exactly three stale declarations:
+Governance, Canary and Live Full. Those three were regenerated from the
+unchanged owning OpenAPI with the lockfile-pinned generator; the only new
+type fields are the existing optional `lineage_rejects` and
+`lineage_scoped_out`. The contract snapshot was regenerated and its 716-file
+check passed; all seven later generator-specific `--check` commands also
+passed. This fixes an integration defect, not an API expansion or a real-source
+receipt. The first normal hook **did not pass** and was not bypassed; a fresh
+hook on the corrected staged candidate is required.
+
+**Claude handoff:** consume the existing Account 360 API and typed absence;
+do not add a public field for the private proof or redesign the screen. A
+qualified local exact account may be populated, while missing/denied or
+incomplete data and independently denied Alpha/broker details stay absent.
+Please test the user journey and grant-revocation states on the integrated
+candidate; do not interpret synthetic data as a real-source qualification.
+
+**Normal-hook environment correction:** after the generated type repair, the
+next normal-hook run exposed 29 failures in `profile-read.spec.ts` in the
+isolated container, despite that suite passing in the host focused run. The
+suite had resolved contracts from the host working-directory layout instead
+of the `PORTAL_CONTRACTS_DIR` used by the normal hook. The run was deliberately
+interrupted after the failed suite was observed; it is **not** a passing full
+hook or restore receipt. The test now resolves the real schema and OpenAPI
+through the same environment-aware path as the other contract tests. No schema
+validation or test case was removed. An isolated retake and fresh normal hook
+are required before a code landing can be claimed.
+
+The exact container-path retake completed with **59/59 profile-read tests**,
+the Control API build, forward migrations through `0156`, and the repository's
+disposable PostgreSQL restore/preservation drill all passing (exit 0). The
+test cell was removed by its cleanup trap. This confirms the mount-path repair;
+it is not a substitute for the full normal hook or a connected-source receipt.
+
+The subsequent normal-hook attempt passed the contract suite and reached the
+Control API tests, but eight legacy explicit-resource cases failed. The run
+was stopped once failure was known and is **not** a full-hook pass. The shared
+TEST_ONLY context omitted its session lease; the affected named Orders cases
+also assumed an Alpha grant implied Account authority. The test fixture now
+supplies the actual synthetic session expiry, a separately granted Account
+purpose and the source identity. It preserves the negative no-Account case,
+checks missing/expired lease and checks that hidden source IDs stay private.
+Six focused suites then passed **393/393** locally, including the dual-purpose
+and final-revocation negatives. These synthetic tests do not establish a
+qualified source, and the final full normal hook remains required.
+
+An additional whole-Control-API `npm run typecheck` was intentionally stopped
+before completion to avoid duplicating the build gate; it is **not** a PASS.
+A strict transitive check of the changed fixture/spec then exited 2, finding
+eight test typing errors including a newly introduced readonly-array mutation
+and older synthetic row/selector typings. The test-only definitions were
+corrected. A strict no-emit retake of `elp204-explicit-resource-read.spec.ts`
+and its transitive imports exited **0**. This is not a whole-project
+typecheck, real-source qualification, or full-hook pass.
+
+The subsequent focused disposable-PostgreSQL run built the Control API and
+applied forward migrations through `0156`; its 42 selected files reported
+**1,806 passed / 2 failed**, with 41 files passing and two Manager service
+assertions expecting the old number of authorization calls. That run was
+interrupted and did **not** complete its post-test restore drill. The extra
+calls are the intentional pre/post delivery revalidations, including held
+source errors. Those exact assertions were updated, and a new regression
+proves revocation takes precedence over an earlier source refusal; the Manager
+service file then passed **20/20** locally. The 90/90 explicit-resource cases
+also passed in that cell. Do not add these overlapping counts or present this
+as a passing 42-file cell or full hook. The separate 59/59 Profile retake
+above had already completed the disposable restore drill on the same code
+and schema; the later edits described here affect tests only.
+
+## Final hook, handoff and outstanding gates
+
+The later normal hook on the exact landed code completed, including the
+previously failing Profile Read **59/59**, explicit-resource **90/90** and
+Manager service **20/20** suites. The hook also passed the monorepo static,
+contract-generation and Control API build checks and verified PostgreSQL
+restore/preservation for identity, session, command and custody. The suite
+totals and skips are recorded in the notice above, without adding overlapping
+focused counts. The isolated test cell is not a production/runtime receipt.
+
+For Claude: the authorized Alpha V1 parser/data bindings are already in the
+landed commit. Do not duplicate the fix or replace unavailable values with
+zero. Review the retained Account 360 and independent Alpha/Account grant
+semantics and exercise the existing screens, final revoke/absence behavior,
+browser and visual acceptance on the eventual integrated candidate. Keep the
+three pre-existing Edge mailbox documents outside this commit.
+
+Still open: qualified real Edge READ/STREAM, current-human trust and
+revoke/recovery; financial carrier and economic ownership/census, APPLIED→ACK;
+real gateway STATUS with the original intent; source-qualified equity,
+metadata/health/history and Calendar (`SOURCE_DARK`); approved Score
+calibration, coexistence/G2, browser and ELP2-10/11 integration qualification.
+The optional Approval Evidence producer remains source-dark; 503 is not a
+positive evidence receipt. No command/Live capability was enabled.

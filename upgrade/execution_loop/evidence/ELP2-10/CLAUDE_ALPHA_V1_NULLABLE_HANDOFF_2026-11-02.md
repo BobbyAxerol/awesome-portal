@@ -2,11 +2,14 @@
 
 > **Follow-through, 2 Nov:** Bobby authorized Codex to update the Alpha
 > parser/data-binding and its tests without changing the approved design.
-> The previously failing consumer below has now been fixed in the local
-> candidate. The original request and 28/29 result are retained as history;
-> Claude should review the candidate and run the remaining browser/visual and
-> qualified-source gates, not implement the same parser again. The candidate
-> is not yet committed, installed or released.
+> The previously failing consumer below is fixed in local source commit
+> `4bd2a5f00ef36e57d52dc8fa50f1a8c1a15bb862` on
+> `docs/research-loop-plan`. Its normal repository hook passed, including
+> 12,132 Control API tests (8 skipped) and the isolated PostgreSQL restore
+> drill. The original request and 28/29 result below are retained as history;
+> Claude should review the landed fix and run the remaining browser/visual
+> and qualified-source gates, not implement the same parser again. The code
+> is not installed or released.
 
 ## Codex consumer follow-through
 
@@ -31,28 +34,28 @@
   the normal integration hook or browser/real-source acceptance.
 - The exact six modified frontend source/test files and qualification
   boundaries are recorded in the [backend six-package receipt](./CODEX_BACKEND_SIX_PACKAGE_FOLLOWTHROUGH_2026-11-02.md#alpha-v1-nullable-consumer-follow-through--2-nov-2026).
-  Full normal hook, final integrated browser/visual and real Edge-source
-  acceptance remain separate. Claude should review the result on the actual
-  integration candidate and report any remaining issue.
+  The final normal hook has passed; integrated browser/visual and real
+  Edge-source acceptance remain separate. Claude should review the result on
+  the actual integration candidate and report any remaining issue.
 
 ## Integration boundary
 
-This backend work is still an uncommitted candidate in `/home/bobby/portal-research`
-on `docs/research-loop-plan`; it is **not installed or released**. Please apply
-the consumer fix on your UI lane against the same candidate, then return its
-commit and tests. Do not revert this schema to make the existing reader pass,
-replace absent values with zero, or change the approved component design.
+This backend and the authorized consumer fix are committed in
+`/home/bobby/portal-research` on `docs/research-loop-plan`; they are **not
+installed or released**. Please consume/review the landed fix on the UI lane,
+then return browser/visual findings and exact candidate pins. Do not implement
+it again, revert this schema, replace absent values with zero, or change the
+approved component design.
 
 The backend ledger and test limits are in
 [`CODEX_BACKEND_SIX_PACKAGE_FOLLOWTHROUGH_2026-11-02.md`](./CODEX_BACKEND_SIX_PACKAGE_FOLLOWTHROUGH_2026-11-02.md).
-The concrete blocker is `apps/portal/frontend/src/execution/api/profileRead.ts`,
+The historical blocker was `apps/portal/frontend/src/execution/api/profileRead.ts`,
 `readAlphaFleetItem` and its `readFleetDeployment` / currency readers, which
-currently reject the new nullable facts rather than rendering absence.
-Rechecked on the working candidate: `canonicalServing.test.tsx` reports
-**28 passed / 1 failed** at `expect(item).not.toBeNull()` (line 33). The
-producer fixture passes its schema and the backend test; the product reader
-has not yet consumed the revised nullable contract. The failing case is not
-an integrated acceptance or a reason to fall back to fabricated zeroes.
+previously rejected the new nullable facts rather than rendering absence.
+Before the fix, `canonicalServing.test.tsx` reported **28 passed / 1 failed**
+at `expect(item).not.toBeNull()`. The later 691/691 focused test checkpoint
+above includes the corrected consumer; this remains distinct from integrated
+browser acceptance and is not a reason to fall back to fabricated zeroes.
 
 ## Consumer requirements
 
@@ -122,3 +125,14 @@ an integrated acceptance or a reason to fall back to fabricated zeroes.
 3. Report the exact candidate/consumer commits and focused tests. Full hook,
    visual baseline, browser on the candidate and a real qualified source are
    separate acceptance gates. No request to redo already-consumed R-B/R-C UI.
+
+## Later Core follow-through — Account 360 retained exact lookup
+
+The local Core candidate can now find a unique, authorized Account beyond the
+first retained page when its complete local snapshot proves that identity. It
+holds separate Account/Alpha purposes through the final snapshot/grant fence.
+There is no new public field and no requested layout change. Use the existing
+typed absence/refusal states for partial, ambiguous, denied or changed data;
+do not infer an external broker binding or financial value. Browser testing
+on the integrated candidate is still needed. This does not establish an Edge
+source or production entitlement. [Evidence and exact scope](./CODEX_BACKEND_SIX_PACKAGE_FOLLOWTHROUGH_2026-11-02.md#exact-account-360-retained-lookup--2-nov-2026).
