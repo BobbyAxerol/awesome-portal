@@ -4342,3 +4342,9 @@ optional workspace (normalized by the server). OpenAPI and generated types
 now describe this; the route did not gain new permissions. No visual change
 is requested. [Parity test and candidate limitations](evidence/ELP2-10/CODEX_BACKEND_SIX_PACKAGE_FOLLOWTHROUGH_2026-11-02.md#account-360-request-contract-correction--2-nov-2026).
 
+**2 Nov STATUS capacity:** Codex's local candidate reclaims only a new STATUS
+context that was never delivered after every waiter canceled; already delivered
+contexts and unresolved leases retain their custody. No frontend contract or UI
+change is requested. Gateway/original acceptance remains separate. [Exact
+receipt](evidence/ELP2-10/CODEX_BACKEND_SIX_PACKAGE_FOLLOWTHROUGH_2026-11-02.md#status-canceled-preparation-capacity-follow-through--2-nov-2026).
+

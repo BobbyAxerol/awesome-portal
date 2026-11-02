@@ -17176,3 +17176,11 @@ snapshot were refreshed. Profile suite **54/54**, focused contract/fixture
 **5 pass / 152 skipped**, and snapshot **716/716** checked on the local
 candidate. [Exact test and hash boundaries](execution_loop/evidence/ELP2-10/CODEX_BACKEND_SIX_PACKAGE_FOLLOWTHROUGH_2026-11-02.md#account-360-request-contract-correction--2-nov-2026).
 Normal code hook, landing and real-source qualification remain open.
+
+**2 Nov STATUS preparation capacity:** the local candidate now reclaims a
+new in-memory STATUS context if every waiter canceled before receiving it,
+while preserving any previously delivered context and outstanding lease.
+Seven focused synthetic suites passed **206/206** and the changed module's
+TypeScript graph check passed; the real gateway/original, full hook and
+integration remain open. No command or Live capability was enabled.
+[Exact scope, source pins and recovery artifact](execution_loop/evidence/ELP2-10/CODEX_BACKEND_SIX_PACKAGE_FOLLOWTHROUGH_2026-11-02.md#status-canceled-preparation-capacity-follow-through--2-nov-2026).

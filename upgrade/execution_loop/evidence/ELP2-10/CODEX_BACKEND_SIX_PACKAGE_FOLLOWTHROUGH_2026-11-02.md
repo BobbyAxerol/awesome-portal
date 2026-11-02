@@ -1627,3 +1627,51 @@ unchanged. The cumulative tracked backend/contract/ownership-ledger candidate
 is now 66 files, +5,036/−468, plus six untracked backend files; this is not
 the size of this contract correction. All previously recorded qualification,
 capacity, source, >200 lookup and integration gates remain open.
+
+### STATUS canceled-preparation capacity follow-through — 2 Nov 2026
+
+The earlier cancellation follow-through retained a newly prepared in-memory
+STATUS context until its TTL even when **every** waiting caller had canceled
+and its token had never been delivered. A focused regression reproduced the
+unnecessary reserved context before this change: one test failed, its
+previously-issued-context safety control passed, and 43 tests were skipped.
+
+After the shared authority read finishes, the local candidate now reclaims
+only the exact newly registered context when no waiter received it, its call
+mapping still points to that context, and it has no delivery, pending work or
+issued identity. The internal new-context marker is stripped from the return
+value. A canceled retry on an already delivered context does **not** remove
+the context or its outstanding lease: another retry receives the same context
+and original lease. No source attempt, receipt or ACK is created, deleted or
+replaced; the STATUS original remains the same. This supersedes only the
+earlier note that all-canceled **newly registered** contexts necessarily stay
+until TTL. It does not change cleanup of issued, ambiguous or UNKNOWN custody.
+
+Verification at this candidate:
+
+- The seven relevant authority, transport, gateway binding, composition,
+  runtime and bootstrap suites passed **206/206**. The two transport suites
+  used ephemeral loopback TLS listeners and synthetic credentials; temporary
+  test fixtures were cleaned by their own tests. They did not connect to Edge,
+  create a real source identity, call a real gateway or use PostgreSQL.
+- A focused TypeScript no-emit check of the changed module and its transitive
+  graph exited 0 (694 files, 18.29 s compiler time, 509,899 KiB TypeScript
+  memory reported). This is not a full-project check or the normal hook.
+- Source SHA-256:
+  `70acdb8243ee49de17a3e72f10a87da8f807c164ec98e5d9752c4d1266a4dc18`;
+  test SHA-256:
+  `ee38c153541cec53977e1cc82aab0f72ff428cfd13c4d0fce0db6b950f5e6d74`.
+  Tracked source/contract diff SHA-256:
+  `746717949d1a63dc51185b0a71feb1ca0f61f11186ac3e96a544b750aab7245a`.
+
+The current local tracked-backend recovery patch is
+`/home/bobby/.local/state/portal-research-backend-20261102-7rY0guq1/backend-code-recovery-status-capacity-20261102.patch`,
+SHA-256 `e6c7af6d52ce863f4e7e188301fd18416d5a2ba0934bc958559e4681cf87b027`.
+It is a private local recovery artifact, **not** a Git commit or remote backup.
+The previously recorded separate untracked-file tar and Alpha parser patch are
+unchanged. The cumulative tracked backend/contract/ownership-ledger diff is
+66 files, +5,099/−474, plus six untracked backend files; it includes work from
+several earlier checkpoints, not just this change. Code remains uncommitted
+and uninstalled. Real gateway/original/authority, final integration hook,
+connected and browser acceptance, and migration/rollback on the final candidate
+remain open. No command or Live capability was enabled.
