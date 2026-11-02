@@ -4348,3 +4348,15 @@ contexts and unresolved leases retain their custody. No frontend contract or UI
 change is requested. Gateway/original acceptance remains separate. [Exact
 receipt](evidence/ELP2-10/CODEX_BACKEND_SIX_PACKAGE_FOLLOWTHROUGH_2026-11-02.md#status-canceled-preparation-capacity-follow-through--2-nov-2026).
 
+**2 Nov scoped Account/physical binding:** the local uninstalled candidate
+checks Account facts against the separate exact-account purpose, rather than
+assuming an Alpha grant includes them. Physical broker/venue observations
+remain unavailable until their own qualified binding resolution and rights
+exist. Profile capabilities may now say
+`EXECUTION_READ_PUBLICATION_NOT_QUALIFIED`: preserve the existing unavailable
+state, not a zero or a synced value. No component redesign is requested.
+Synthetic focused tests and their skipped PostgreSQL cases, plus further
+unresolved order/position/session policy discrepancies, are recorded in the
+[scope receipt](evidence/ELP2-10/CODEX_BACKEND_SIX_PACKAGE_FOLLOWTHROUGH_2026-11-02.md#scoped-retained-account-and-physical-binding-purpose-fence--2-nov-2026).
+No current Edge permission or browser acceptance is implied.
+

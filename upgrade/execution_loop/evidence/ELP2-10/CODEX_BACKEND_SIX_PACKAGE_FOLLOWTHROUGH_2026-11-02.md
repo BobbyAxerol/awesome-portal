@@ -1675,3 +1675,80 @@ several earlier checkpoints, not just this change. Code remains uncommitted
 and uninstalled. Real gateway/original/authority, final integration hook,
 connected and browser acceptance, and migration/rollback on the final candidate
 remain open. No command or Live capability was enabled.
+
+### Scoped retained Account and physical-binding purpose fence — 2 Nov 2026
+
+This is a **local candidate**, not an installed policy or a source-backed
+receipt. Synthetic regressions reproduced the following source-level problem:
+a deployment-scoped Profile read used `alpha.read` for account relations,
+even when a separate `account.read` grant had not been established. The local
+reader now uses the relation's account purpose for `accounts`,
+`account_balances`, `margin_balances`, `account_sync_effective` and
+`reconciliation_findings`, bound to the deployment's exact resolved account.
+Profile composition rechecks the contributing authority before returning. It
+does not grant the user new rights or prove a qualified native source.
+
+The physical `broker_account_sync_effective` and `venue_accounts` relations
+must not inherit an Alpha/account grant. In scoped V2 the candidate withholds
+them with `EXECUTION_READ_PUBLICATION_NOT_QUALIFIED` until an exact qualified
+binding resolver and the separate `binding.read` purpose are commissioned.
+A nominal synthetic binding grant alone does not make them available. The
+Profile capability now preserves this static typed source-qualification
+refusal instead of returning a generic source error; it does not expose a
+binding identity or assert that upstream data exists. Legacy compatibility is
+unchanged in the three exercised synthetic cases. Claude should render the
+existing unavailable state, never a zero, and need not change the design.
+
+Verification on the recorded candidate, not production:
+
+- Before the fix, **7/7** focused synthetic scope cases failed. The final
+  nine affected backend suites passed **460 tests, 41 skipped**. The skipped
+  PostgreSQL cases did not run without a disposable `TEST_DATABASE_URL`.
+  A later targeted legacy run passed **3 new cases**, with **39 deliberately
+  filtered/skipped**. The entire suite was not rerun after adding those
+  test-only cases.
+- The positive/negative cases cover own Alpha without account authority,
+  authority for the wrong account, an explicitly granted exact account,
+  revoked account grant, missing qualified physical binding, and revocation
+  before a Profile composition returns. They use synthetic authority and
+  retained projections, not a native Edge/current-human receipt or a proof of
+  atomic authorization through physical HTTP egress.
+- The focused source TypeScript graph exited 0: 810 files, 17.54 s compiler
+  time, 612,330 KiB compiler-reported memory. This is not the full hook.
+  `git diff --check` passed.
+- Source SHA-256, in order: Product reader
+  `6030d51dfa782784a2e38c87248d4ceef07042e8e7e36e858c2ee3c6a65b4bcd`;
+  retained purpose helper
+  `ae74df657defb5f9ad7ba2c54c45afb755334cd7abda6264034c64ede6b957e8`;
+  scoped final fence
+  `fb846a2dc7fac19ebb72b564589091fc7301cee980b22a9c0eb003906bdc9f52`;
+  Profile reader
+  `7c75e6375ea064e7990c66ced38e7f63993fc6116ff3f631a734efb6138b9601`.
+  The final test file SHA-256 is
+  `932d50e03e5c16bb8e6335177e10ef67c737b86369149353c7ed8a86122e8ed3`.
+  Tracked source/contract diff SHA-256 is
+  `fc2af8248be72da43030a886b8e97519fe4230b4ff5b51944365ef5f5c422365`.
+
+**Still open, not a claim of full reader coverage:**
+[the route authority plan](../ELP2-04/route-authorization-plan.md) lists
+`account.read` plus exact tuple/lineage for positions, orders, fills, sessions,
+conditional/bracket records and risk observations; several current named
+or Profile mappings still use `alpha.read`. An account action substituted on
+its own could expose a peer deployment on a shared account. Reconcile each
+actual route with the current approved policy, require the proper intersection
+and final revoke fence, and test scoped/legacy/negative behavior before
+claiming those rows compliant. The plan's alias probes are themselves marked
+PENDING/NOT_RUN. This correction does not complete them.
+
+The current private tracked-backend recovery patch is
+`/home/bobby/.local/state/portal-research-backend-20261102-7rY0guq1/backend-code-recovery-scoped-actions-20261102.patch`,
+SHA-256 `407ed5dab3d493e75e87e91d23c0603a5652755c991084073adbdf2fb6788190`.
+It replaces the prior tracked recovery patch, is not a Git commit or remote
+backup, and does not contain the separately archived six untracked backend
+files or the separate Alpha frontend patch. The cumulative tracked
+backend/contract/ownership-ledger candidate is 66 files, +5,224/−477,
+plus those six untracked files; those counts include prior work. The six
+approved Alpha parser/test files are separate (+289/−39), without a visual
+design change. The code is still uncommitted and uninstalled; final code
+hook, real source/Edge, browser, exact >200 Account lookup and final-candidate
+qualification remain open.

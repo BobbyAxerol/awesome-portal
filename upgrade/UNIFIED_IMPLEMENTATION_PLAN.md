@@ -17184,3 +17184,14 @@ Seven focused synthetic suites passed **206/206** and the changed module's
 TypeScript graph check passed; the real gateway/original, full hook and
 integration remain open. No command or Live capability was enabled.
 [Exact scope, source pins and recovery artifact](execution_loop/evidence/ELP2-10/CODEX_BACKEND_SIX_PACKAGE_FOLLOWTHROUGH_2026-11-02.md#status-canceled-preparation-capacity-follow-through--2-nov-2026).
+
+**2 Nov scoped Account / physical binding correction:** the uncommitted,
+uninstalled local Profile candidate now checks account facts under the exact
+`account.read` purpose; broker and venue observations are withheld under
+scoped V2 until their separately qualified binding authority exists. Synthetic
+tests: 460 passed / 41 PostgreSQL skipped; three targeted legacy cases also
+passed. A focused TypeScript graph check passed. This does not establish native
+authority, physical HTTP-egress fencing or complete the remaining order,
+position, session and other route-policy intersections. Exact tests, source
+hashes, recovery patch and Claude handoff:
+[scoped reader receipt](execution_loop/evidence/ELP2-10/CODEX_BACKEND_SIX_PACKAGE_FOLLOWTHROUGH_2026-11-02.md#scoped-retained-account-and-physical-binding-purpose-fence--2-nov-2026).
