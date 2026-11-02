@@ -4386,3 +4386,13 @@ not assign the row to the first deployment. The same suites now pass
 **286/286** (overlapping the prior 282), and the changed source graph typecheck
 passed. [Pins and scope](evidence/ELP2-10/CODEX_BACKEND_SIX_PACKAGE_FOLLOWTHROUGH_2026-11-02.md#exact-tuple-follow-through-on-the-named-execution-aliases).
 
+**2 Nov Account 360 first-page follow-through:** an explicit environment is
+not enough to prove a first-page account match unique. Until a qualified exact
+census exists, the scoped retained Account/Broker composer can return
+`PHASE2_ACCOUNT_IDENTITY_UNRESOLVED`, no selected environment and no joined
+account/balance/position rows. Preserve the existing partial state, not a
+confirmed not-found or zero; the separate Account resource reader is not
+changed. No visual redesign or new permission is requested. The candidate is
+still uncommitted/uninstalled; **109/109** focused synthetic tests do not
+replace Edge/browser acceptance. [Full receipt and pins](evidence/ELP2-10/CODEX_BACKEND_SIX_PACKAGE_FOLLOWTHROUGH_2026-11-02.md#account-360-first-page-identity-fence--2-nov-2026).
+

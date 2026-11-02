@@ -17218,3 +17218,12 @@ aliases additionally require one unambiguous source tuple even if a viewer
 may access multiple matching deployments. The same four focused suites pass
 **286/286** on the newer uncommitted candidate and the changed source graph
 typecheck passes. [Receipt and unchanged qualification limits](execution_loop/evidence/ELP2-10/CODEX_BACKEND_SIX_PACKAGE_FOLLOWTHROUGH_2026-11-02.md#exact-tuple-follow-through-on-the-named-execution-aliases).
+
+**2 Nov Account 360 first-page fence:** an explicit environment no longer
+turns a first-page account match into a unique identity while the account
+census is partial, has continuation or is unknown. The uncommitted,
+uninstalled candidate returns the existing typed unresolved state and does
+not join balances/positions; scoped retained Account/Broker remains partial
+until a qualified exact census exists. The two affected synthetic suites pass
+**109/109**; the changed source graph typecheck passes. [Receipt, availability
+impact, pins and remaining gates](execution_loop/evidence/ELP2-10/CODEX_BACKEND_SIX_PACKAGE_FOLLOWTHROUGH_2026-11-02.md#account-360-first-page-identity-fence--2-nov-2026).

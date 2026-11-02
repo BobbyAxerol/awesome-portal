@@ -1924,3 +1924,57 @@ cumulative tracked backend/contracts/ownership candidate is 67 files,
 included. The Alpha frontend patch is unchanged and separate. Claude should
 keep the existing unavailable state for this refusal; no design change is
 requested.
+
+#### Account 360 first-page identity fence — 2 Nov 2026
+
+The prior explicit-environment path still treated an Account match on the
+first page as uniquely identified, even when the selected identity census
+had another page or its source/scope completeness was unknown. The Account
+360 composer could then join the matching balance and position rows before a
+duplicate identity outside the page was ruled out. This is separate from the
+already recorded unseen-account/not-found and auto-environment corrections.
+
+The local candidate withholds the account and its child/derived rows when a
+first-page match lacks a complete identity census. It does not select an
+environment and uses the existing typed reason
+`PHASE2_ACCOUNT_IDENTITY_UNRESOLVED`; an observed duplicate also does not
+select an environment. It does not promote a page, a redacted scope or a
+candidate environment to a global identity proof. **Availability impact:**
+the scoped retained relation currently labels its population `PARTIAL`, so
+this Account/Broker composer remains unavailable for that scoped source until
+a qualified exact-account/census capability exists. The separately scoped
+Account resource reader is not changed by this patch. No new public field,
+permission, schema, component or design is added. Claude should render the
+existing partial/absence state, not `not found` or an empty account balance.
+
+Verification at the hashes below: the five new first-page regression cases
+initially failed against the previous code and passed after the fix. The latest
+`profile-read` and `elp2-retained-metadata` synthetic suites passed **109/109**;
+the preceding three-suite run passed **135/135** before adding one more
+assertion to the retained-metadata test. These suites overlap and must not be
+added. The no-emit TypeScript check of `profile-read.service.ts` and its
+transitive source graph exited 0 (810 files, 18.30 s, 613,888 KiB compiler
+reported memory). Test-file typecheck, normal code hook, exact lookup beyond
+the page, actual Edge authority and browser acceptance remain open.
+
+Source SHA-256:
+`c6be7e4fc95ed32586daed8b2463188f4ab9a321f329976c41513a76825083b6`;
+`profile-read` test SHA-256:
+`cc230be67bad9d43f3e9e981080eb09e2759557f444e85631dbb712407aeb7bf`;
+retained metadata test SHA-256:
+`d39e8291998d22ccfdc6d4950354f98681a51a445170c60f8935ccd30dde0ef8`.
+The tracked backend/contracts recovery patch is
+`/home/bobby/.local/state/portal-research-backend-20261102-7rY0guq1/backend-code-recovery-account-census-20261102.patch`,
+SHA-256 `e375ffdc9e45855f8e5039cbe4279411c1c1da122f9dc3e39d38727756f33e2f`;
+the seven untracked backend files remain in the unchanged archive documented
+immediately above. These are same-host recovery artifacts, not commits,
+installs or remote backups. The cumulative candidate includes prior work:
+67 tracked backend/contracts/ownership files, +5,577/−494, plus seven
+untracked backend files; the separately approved Alpha frontend change remains
+six files, +289/−39. No source, existing data or volume was removed.
+
+The root filesystem is below the 20% free threshold for starting the normal
+build hook. An inventory-backed cleanup or owner-approved capacity change is
+required; no image/volume is safe to delete merely because Docker calls it
+reclaimable. The candidate remains uncommitted/uninstalled and the broader
+six-package goal, ELP2-10 and ELP2-11 remain open.
