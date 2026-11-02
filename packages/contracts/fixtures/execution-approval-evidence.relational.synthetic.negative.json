@@ -1,0 +1,203 @@
+{
+  "lane": "TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT",
+  "base": "execution-approval-evidence.published.synthetic.valid.json",
+  "cases": [
+    {
+      "id": "EV-1/window-equal",
+      "ops": [
+        {
+          "path": [
+            "prior_economic_history",
+            "window",
+            "to_ms"
+          ],
+          "value": 1797408000000
+        }
+      ]
+    },
+    {
+      "id": "EV-1/window-reversed",
+      "ops": [
+        {
+          "path": [
+            "prior_economic_history",
+            "window",
+            "to_ms"
+          ],
+          "value": 1797407999999
+        }
+      ]
+    },
+    {
+      "id": "EV-1/point-before",
+      "ops": [
+        {
+          "path": [
+            "prior_economic_history",
+            "points",
+            0,
+            "ts_ms"
+          ],
+          "value": 1797407999999
+        }
+      ]
+    },
+    {
+      "id": "EV-1/point-after",
+      "ops": [
+        {
+          "path": [
+            "prior_economic_history",
+            "points",
+            3,
+            "ts_ms"
+          ],
+          "value": 1800000000001
+        }
+      ]
+    },
+    {
+      "id": "EV-1/duplicate",
+      "ops": [
+        {
+          "path": [
+            "prior_economic_history",
+            "points",
+            1,
+            "ts_ms"
+          ],
+          "value": 1797408000000
+        }
+      ]
+    },
+    {
+      "id": "EV-1/descending",
+      "ops": [
+        {
+          "path": [
+            "prior_economic_history",
+            "points",
+            0,
+            "ts_ms"
+          ],
+          "value": 1798272000000
+        },
+        {
+          "path": [
+            "prior_economic_history",
+            "points",
+            1,
+            "ts_ms"
+          ],
+          "value": 1797408000000
+        }
+      ]
+    },
+    {
+      "id": "EV-3/unchanged-text",
+      "ops": [
+        {
+          "path": [
+            "evidence_diff",
+            "changes",
+            0,
+            "after"
+          ],
+          "value": "10000.00"
+        }
+      ]
+    },
+    {
+      "id": "EV-3/null-pair",
+      "ops": [
+        {
+          "path": [
+            "evidence_diff",
+            "changes",
+            2,
+            "after"
+          ],
+          "value": null
+        }
+      ]
+    },
+    {
+      "id": "MD-S1/whitespace-only",
+      "ops": [
+        {
+          "path": [
+            "evidence_diff",
+            "changes",
+            0,
+            "label"
+          ],
+          "value": " "
+        }
+      ]
+    },
+    {
+      "id": "MD-S1/bidi-control",
+      "ops": [
+        {
+          "path": [
+            "evidence_diff",
+            "changes",
+            0,
+            "label"
+          ],
+          "value": "a‮b"
+        }
+      ]
+    },
+    {
+      "id": "MD-S1/c1-control",
+      "ops": [
+        {
+          "path": [
+            "prior_economic_history",
+            "methodology_ref"
+          ],
+          "value": "ab"
+        }
+      ]
+    },
+    {
+      "id": "MD-S1/unpaired-surrogate",
+      "ops": [
+        {
+          "path": [
+            "receipt_preview",
+            "what_changes"
+          ],
+          "value": "\ud800"
+        }
+      ]
+    },
+    {
+      "id": "MD-S2/negative-zero",
+      "ops": [
+        {
+          "path": [
+            "prior_economic_history",
+            "points",
+            0,
+            "value"
+          ],
+          "value": "-0.00"
+        }
+      ]
+    },
+    {
+      "id": "MD-S12/date-range",
+      "ops": [
+        {
+          "path": [
+            "prior_economic_history",
+            "as_of_ms"
+          ],
+          "value": 8640000000000001
+        }
+      ]
+    }
+  ]
+}

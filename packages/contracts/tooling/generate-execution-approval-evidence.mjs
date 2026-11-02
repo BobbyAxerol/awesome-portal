@@ -10,21 +10,21 @@ import { fileURLToPath } from 'node:url';
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const object = (properties, required = Object.keys(properties)) => ({ type: 'object', additionalProperties: false, required, properties });
 const nullable = schema => ({ anyOf: [schema, { type: 'null' }] });
-const ms = { type: 'integer', minimum: 0, maximum: 9007199254740991 };
-const text = { type: 'string', minLength: 1, maxLength: 256, pattern: '^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])' };
+const ms = { type: 'integer', minimum: 0, maximum: 9007199254740991, description: 'MD-S12 producer/reader rule: epoch milliseconds must also be within the ECMAScript Date range.' };
+const text = { type: 'string', minLength: 1, maxLength: 256, pattern: '^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])', description: 'MD-S1 producer/reader display rule: nonblank, well-formed text without C1, invisible or bidirectional control characters.' };
 const id = { type: 'string', minLength: 1, maxLength: 191, pattern: '^[A-Za-z0-9._:-]+$(?![\\s\\S])' };
 const decimal = { type: 'string', pattern: '^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$(?![\\s\\S])', maxLength: 80 };
 const count = { type: 'integer', minimum: 0, maximum: 9007199254740991 };
 const unit = { type: 'string', enum: ['MONEY', 'RATIO', 'COUNT', 'TEXT', 'TIMESTAMP_MS'] };
 
-const point = object({ ts_ms: ms, value: decimal });
+const point = object({ ts_ms: ms, value: { ...decimal, description: 'Reader display-safety rule MD-S2: negative zero is refused; producers must not invent a value.' } });
 const history = object({
   subject: object({ subject_type: { type: 'string', enum: ['ALPHA', 'PORTFOLIO', 'ACCOUNT', 'DEPLOYMENT'] }, subject_id: id }),
   metric: { type: 'string', enum: ['NAV', 'NET_PNL', 'RETURN', 'DRAWDOWN'] },
   unit: { type: 'string', enum: ['MONEY', 'RATIO'] }, currency: nullable(text), ratio_scale: nullable({ type: 'string', enum: ['FRACTION', 'PERCENT'] }),
-  window: object({ from_ms: ms, to_ms: ms }), methodology_ref: text,
-  points: { type: 'array', maxItems: 2000, items: point }, as_of_ms: ms });
-const change = object({ label: text, before: nullable(text), after: nullable(text), unit });
+  window: { ...object({ from_ms: ms, to_ms: ms }), description: 'EV-1: from_ms must be strictly less than to_ms; observations may lie on either endpoint.' }, methodology_ref: text,
+  points: { type: 'array', maxItems: 2000, items: point, description: 'EV-1: timestamps must be strictly ascending and inside the inclusive window; an empty array is valid.' }, as_of_ms: ms });
+const change = { ...object({ label: text, before: nullable(text), after: nullable(text), unit }), description: 'EV-3: before and after must not be identical, including null-to-null.' };
 const diff = object({ previous_revision: text, changes: { type: 'array', maxItems: 64, items: change } });
 const obligations = object({ open_positions: count, working_orders: count, reservations: count, unknown_outcomes: count, settlement_pending: count });
 const preview = object({ what_changes: text, counts_as: object({ met_after: count, required: count }) });
@@ -105,6 +105,25 @@ const negative = { lane: 'TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT', bases: { pub
     { id: 'WP-K/history-drawdown-above-zero', base: 'drawdown', rule: 'a drawdown is at or below zero', ops: [{ op: 'set', path: ['prior_economic_history', 'points', 1, 'value'], value: '0.5' }] },
     { id: 'WP-K/history-ratio-without-scale', base: 'drawdown', rule: 'a ratio states its scale', ops: [{ op: 'set', path: ['prior_economic_history', 'ratio_scale'], value: null }] },
     { id: 'WP-K/unknown-key', base: 'published', rule: 'closed object', ops: [{ op: 'set', path: ['score'], value: 1 }] }] };
+// Standard JSON Schema cannot compare sibling values or successive points.
+// This separate fixture exercises WP-K EV-1 / EV-3 and consumer display/Date
+// rules; these vectors must not be counted as AJV structural rejections.
+const relationalNegative = { lane: 'TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT', base: 'execution-approval-evidence.published.synthetic.valid.json', cases: [
+  { id: 'EV-1/window-equal', ops: [{ path: ['prior_economic_history', 'window', 'to_ms'], value: T0 - 30 * DAY }] },
+  { id: 'EV-1/window-reversed', ops: [{ path: ['prior_economic_history', 'window', 'to_ms'], value: T0 - 30 * DAY - 1 }] },
+  { id: 'EV-1/point-before', ops: [{ path: ['prior_economic_history', 'points', 0, 'ts_ms'], value: T0 - 30 * DAY - 1 }] },
+  { id: 'EV-1/point-after', ops: [{ path: ['prior_economic_history', 'points', 3, 'ts_ms'], value: T0 + 1 }] },
+  { id: 'EV-1/duplicate', ops: [{ path: ['prior_economic_history', 'points', 1, 'ts_ms'], value: T0 - 30 * DAY }] },
+  { id: 'EV-1/descending', ops: [{ path: ['prior_economic_history', 'points', 0, 'ts_ms'], value: T0 - 20 * DAY }, { path: ['prior_economic_history', 'points', 1, 'ts_ms'], value: T0 - 30 * DAY }] },
+  { id: 'EV-3/unchanged-text', ops: [{ path: ['evidence_diff', 'changes', 0, 'after'], value: '10000.00' }] },
+  { id: 'EV-3/null-pair', ops: [{ path: ['evidence_diff', 'changes', 2, 'after'], value: null }] },
+  { id: 'MD-S1/whitespace-only', ops: [{ path: ['evidence_diff', 'changes', 0, 'label'], value: ' ' }] },
+  { id: 'MD-S1/bidi-control', ops: [{ path: ['evidence_diff', 'changes', 0, 'label'], value: 'a\u202eb' }] },
+  { id: 'MD-S1/c1-control', ops: [{ path: ['prior_economic_history', 'methodology_ref'], value: 'a\u0085b' }] },
+  { id: 'MD-S1/unpaired-surrogate', ops: [{ path: ['receipt_preview', 'what_changes'], value: '\ud800' }] },
+  { id: 'MD-S2/negative-zero', ops: [{ path: ['prior_economic_history', 'points', 0, 'value'], value: '-0.00' }] },
+  { id: 'MD-S12/date-range', ops: [{ path: ['prior_economic_history', 'as_of_ms'], value: 8640000000000001 }] },
+] };
 
 const outputs = {
   'schemas/execution-approval-evidence.v1.schema.json': { ...header, ...response },
@@ -116,6 +135,7 @@ const outputs = {
   'fixtures/execution-approval-evidence.no-source.synthetic.valid.json': wrap(noSource),
   'fixtures/execution-approval-evidence.drawdown.synthetic.valid.json': wrap(drawdown),
   'fixtures/execution-approval-evidence.synthetic.negative.json': negative,
+  'fixtures/execution-approval-evidence.relational.synthetic.negative.json': relationalNegative,
 };
 for (const [file, value] of Object.entries(outputs)) {
   const content = JSON.stringify(value, null, 2) + '\n', path = resolve(root, file);

@@ -35,7 +35,15 @@ export class ApprovalEvidenceReads {
       const answer = await this.port.read({ workspaceId: principal.workspaceId, approvalId, nowMs });
       if (!answer || typeof answer !== "object" || !answer.identity || answer.identity.workspaceId !== principal.workspaceId || answer.identity.approvalId !== approvalId)
         throw new OperationalReadError("OPERATIONAL_READ_PROVENANCE_INVALID");
-      sections = { ...(answer.sections ?? {}) };
+      // An invalid envelope is not the same fact as an empty, source-dark
+      // section map. Refuse unknown section names rather than silently
+      // converting a source typo or a future unbound source into NO_SOURCE.
+      const published = answer.sections;
+      if (!published || typeof published !== "object" || Array.isArray(published) ||
+          ![Object.prototype, null].includes(Object.getPrototypeOf(published)) ||
+          Object.keys(published).some(name => !APPROVAL_EVIDENCE_SECTION_NAMES.includes(name as typeof APPROVAL_EVIDENCE_SECTION_NAMES[number])))
+        throw new OperationalReadError("OPERATIONAL_READ_PROVENANCE_INVALID");
+      sections = { ...published };
     } catch (e) {
       if (e instanceof OperationalReadError) heldSourceError = e;
       else {

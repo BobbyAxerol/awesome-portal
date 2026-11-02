@@ -605,6 +605,7 @@ TRACKED = (
     "fixtures/execution-approval-evidence.no-source.synthetic.valid.json",
     "fixtures/execution-approval-evidence.drawdown.synthetic.valid.json",
     "fixtures/execution-approval-evidence.synthetic.negative.json",
+    "fixtures/execution-approval-evidence.relational.synthetic.negative.json",
     "tooling/generate-execution-alpha-lifecycle.mjs",
     "schemas/execution-alpha-lifecycle.v1.schema.json",
     "openapi/execution-alpha-lifecycle.openapi.json",

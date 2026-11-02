@@ -47,6 +47,35 @@ describe("approval evidence contract (zod mirrors the published fixtures)", () =
       expect(approvalEvidenceResponse.safeParse(body).success).toBe(false);
     });
   }
+
+  // WP-K EV-1 and EV-3 are relational producer rules. Standard JSON Schema
+  // cannot compare sibling values or successive array entries; the consumer
+  // checks them separately, so exercise the same invariants at this boundary.
+  const relational = fixture("relational.synthetic.negative");
+  it.each(relational.cases as Array<{ id: string; ops: Array<{ path: Array<string | number>; value: unknown }> }>)("refuses the WP-K relational rule: $id", (testCase) => {
+    const value = structuredClone(published);
+    for (const op of testCase.ops) {
+      const holder = op.path.slice(0, -1).reduce((node: any, key: string | number) => node[key], value);
+      holder[op.path.at(-1)] = op.value;
+    }
+    expect(approvalEvidenceResponse.safeParse(value).success).toBe(false);
+  });
+  it("keeps inclusive window endpoints, empty history and actual changes valid", () => {
+    expect(approvalEvidenceResponse.safeParse(published).success).toBe(true);
+    const empty = structuredClone(published);
+    empty.prior_economic_history.points = [];
+    expect(approvalEvidenceResponse.safeParse(empty).success).toBe(true);
+    // Counts are not timestamps: the Date range must not narrow the integer contract.
+    empty.obligations_after_approval.open_positions = Number.MAX_SAFE_INTEGER;
+    expect(approvalEvidenceResponse.safeParse(empty).success).toBe(true);
+  });
+  it("counts safe Unicode code points, not UTF-16 code units, at the text bound", () => {
+    const value = structuredClone(published);
+    value.receipt_preview.what_changes = "🚀".repeat(256);
+    expect(approvalEvidenceResponse.safeParse(value).success).toBe(true);
+    value.receipt_preview.what_changes += "🚀";
+    expect(approvalEvidenceResponse.safeParse(value).success).toBe(false);
+  });
 });
 
 describe("approval evidence read (dark port, deny-all field authority)", () => {
@@ -69,6 +98,14 @@ describe("approval evidence read (dark port, deny-all field authority)", () => {
     const body = await reads(port).detail(principal, "approval-1", {});
     expect(sections(body)).toEqual({ prior_economic_history: null, evidence_diff: null, obligations_after_approval: null, receipt_preview: null });
   });
+  it.each([
+    ["missing sections", undefined], ["null sections", null], ["array sections", []],
+    ["text sections", "oops"], ["non-record sections", new Date(0)],
+    ["unknown section", { obligation_after_approval: null }],
+  ])("does not turn %s into a false no-source body", async (_name, invalid) => {
+    const port: ApprovalEvidencePort = { read: async identity => ({ identity, sections: invalid } as any) };
+    await failure(reads(port, SEE, ALLOW).detail(principal, "approval-1", {}), 503, "OPERATIONAL_READ_PROVENANCE_INVALID");
+  });
   it("deny-all field authority withholds a published section as null (nothing leaks)", async () => {
     const port: ApprovalEvidencePort = { read: async (r) => ({ identity: r, sections: { obligations_after_approval: published.obligations_after_approval } }) };
     const body = await reads(port).detail(principal, "approval-1", {});
@@ -85,6 +122,13 @@ describe("approval evidence read (dark port, deny-all field authority)", () => {
   });
   it("refuses a malformed published section instead of passing it through", async () => {
     const port: ApprovalEvidencePort = { read: async (r) => ({ identity: r, sections: { obligations_after_approval: { ...published.obligations_after_approval, working_orders: -1 } } as any }) };
+    await failure(reads(port, SEE, ALLOW).detail(principal, "approval-1", {}), 503, "OPERATIONAL_READ_PROVENANCE_INVALID");
+  });
+  it.each(["history", "diff"])("fences an authorized invalid %s section rather than sending a body the consumer rejects", async (kind) => {
+    const sample = structuredClone(published);
+    if (kind === "history") sample.prior_economic_history.points[1].ts_ms = sample.prior_economic_history.points[0].ts_ms;
+    else sample.evidence_diff.changes[0].after = sample.evidence_diff.changes[0].before;
+    const port: ApprovalEvidencePort = { read: async (identity) => ({ identity, sections: sections(sample) }) };
     await failure(reads(port, SEE, ALLOW).detail(principal, "approval-1", {}), 503, "OPERATIONAL_READ_PROVENANCE_INVALID");
   });
   it("does not expose corruption of a section the principal cannot read", async () => {
@@ -107,7 +151,7 @@ describe("approval evidence read (dark port, deny-all field authority)", () => {
     expect(result.obligations_after_approval).toBeNull();
     expect(visibility.visible).toHaveBeenCalledTimes(2);
   });
-  it.each(["mismatched identity", "malformed section", "source refusal"])(
+  it.each(["mismatched identity", "malformed section", "malformed source envelope", "source refusal"])(
     "approval revoke after a held %s replaces its private error",
     async (kind) => {
       let visible = true;
@@ -116,6 +160,7 @@ describe("approval evidence read (dark port, deny-all field authority)", () => {
         visible = false;
         if (kind === "source refusal") throw new OperationalReadError("OPERATIONAL_READ_PROVENANCE_INVALID");
         if (kind === "mismatched identity") return { identity: { ...r, approvalId: "other" }, sections: {} };
+        if (kind === "malformed source envelope") return { identity: r, sections: null } as any;
         return { identity: r, sections: { obligations_after_approval: { ...published.obligations_after_approval, working_orders: -1 } } as any };
       } };
       await failure(reads(port, visibility, ALLOW).detail(principal, "approval-1", {}), 404, "APPROVAL_NOT_FOUND");

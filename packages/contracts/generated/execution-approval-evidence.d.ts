@@ -28,10 +28,12 @@ export interface components {
         ApprovalEvidence: {
             /** @constant */
             schema_version: "portal.execution.approval-evidence.v1";
+            /** @description MD-S1 producer/reader display rule: nonblank, well-formed text without C1, invisible or bidirectional control characters. */
             workspace_id: string;
             approval_id: string;
             /** @constant */
             record_authority: "PORTAL_PROJECTION";
+            /** @description MD-S12 producer/reader rule: epoch milliseconds must also be within the ECMAScript Date range. */
             read_at_ms: number;
             prior_economic_history?: {
                 subject: {
@@ -45,20 +47,30 @@ export interface components {
                 unit: "MONEY" | "RATIO";
                 currency: string | null;
                 ratio_scale: ("FRACTION" | "PERCENT") | null;
+                /** @description EV-1: from_ms must be strictly less than to_ms; observations may lie on either endpoint. */
                 window: {
+                    /** @description MD-S12 producer/reader rule: epoch milliseconds must also be within the ECMAScript Date range. */
                     from_ms: number;
+                    /** @description MD-S12 producer/reader rule: epoch milliseconds must also be within the ECMAScript Date range. */
                     to_ms: number;
                 };
+                /** @description MD-S1 producer/reader display rule: nonblank, well-formed text without C1, invisible or bidirectional control characters. */
                 methodology_ref: string;
+                /** @description EV-1: timestamps must be strictly ascending and inside the inclusive window; an empty array is valid. */
                 points: {
+                    /** @description MD-S12 producer/reader rule: epoch milliseconds must also be within the ECMAScript Date range. */
                     ts_ms: number;
+                    /** @description Reader display-safety rule MD-S2: negative zero is refused; producers must not invent a value. */
                     value: string;
                 }[];
+                /** @description MD-S12 producer/reader rule: epoch milliseconds must also be within the ECMAScript Date range. */
                 as_of_ms: number;
             } | null;
             evidence_diff?: {
+                /** @description MD-S1 producer/reader display rule: nonblank, well-formed text without C1, invisible or bidirectional control characters. */
                 previous_revision: string;
                 changes: {
+                    /** @description MD-S1 producer/reader display rule: nonblank, well-formed text without C1, invisible or bidirectional control characters. */
                     label: string;
                     before: string | null;
                     after: string | null;
@@ -74,6 +86,7 @@ export interface components {
                 settlement_pending: number;
             } | null;
             receipt_preview?: {
+                /** @description MD-S1 producer/reader display rule: nonblank, well-formed text without C1, invisible or bidirectional control characters. */
                 what_changes: string;
                 counts_as: {
                     met_after: number;
@@ -84,6 +97,7 @@ export interface components {
         ApprovalEvidenceProblem: {
             error: {
                 code: string;
+                /** @description MD-S1 producer/reader display rule: nonblank, well-formed text without C1, invisible or bidirectional control characters. */
                 message: string;
             };
             request_id: string;

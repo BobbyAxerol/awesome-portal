@@ -45,6 +45,31 @@ describe("WP-K slice 2: approval evidence", () => {
     }
     expect(published.read_at_ms).toBeGreaterThan(0);
   });
+  it("documents the relational history and diff rules that JSON Schema cannot enforce", () => {
+    const history = schema.properties.prior_economic_history.anyOf[0].properties;
+    const change = schema.properties.evidence_diff.anyOf[0].properties.changes.items;
+    expect(history.window.description).toContain("strictly less");
+    expect(history.points.description).toContain("strictly ascending");
+    expect(history.points.description).toContain("inclusive window");
+    expect(change.description).toContain("null-to-null");
+  });
+  it("defines the Unicode text bound in code points", () => {
+    const body = structuredClone(fixture("published").value);
+    body.receipt_preview.what_changes = "🚀".repeat(256);
+    expect(check(body), JSON.stringify(check.errors)).toBe(true);
+    body.receipt_preview.what_changes += "🚀";
+    expect(check(body)).toBe(false);
+  });
+  const relational = load("fixtures/execution-approval-evidence.relational.synthetic.negative.json");
+  it.each(relational.cases)("$id is structurally valid and requires semantic validation", (testCase: any) => {
+    expect(relational.lane).toBe(LANE);
+    const body = structuredClone(load(`fixtures/${relational.base}`).value);
+    for (const op of testCase.ops) {
+      const holder = op.path.slice(0, -1).reduce((node: any, key: string | number) => node[key], body);
+      holder[op.path.at(-1)] = op.value;
+    }
+    expect(check(body), JSON.stringify(check.errors)).toBe(true);
+  });
   const rule = load("fixtures/execution-approval-evidence.synthetic.negative.json");
   it.each(rule.cases.map((c: any) => [c.id, c]))("%s is refused", (_id, c: any) => {
     const body = structuredClone(load(`fixtures/${rule.bases[c.base]}`).value);
