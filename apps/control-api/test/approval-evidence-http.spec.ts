@@ -29,7 +29,7 @@ const route = "/api/v1/execution/governance/approvals/approval-1/evidence";
 describe("approval evidence synthetic HTTP delivery", () => {
   let app: NestFastifyApplication, http: FastifyInstance;
   let workspaceMember = true, visible = true, sectionAllowed = true, revokeOnRead = false, failClosed = false;
-  let visibilityCalls = 0, revokeFieldOnFinal = false;
+  let visibilityCalls = 0, revokeFieldOnFinal = false, malformedSection = false;
   const fieldAuthority: ApprovalEvidenceFieldAuthority = { allows: () => sectionAllowed };
   const visibility: ApprovalVisibility = { visible: async () => {
     visibilityCalls++;
@@ -39,7 +39,9 @@ describe("approval evidence synthetic HTTP delivery", () => {
   } };
   const port: ApprovalEvidencePort = { read: vi.fn(async r => {
     if (revokeOnRead) visible = false;
-    return { identity: r, sections: { obligations_after_approval: fixture.obligations_after_approval } };
+    return { identity: r, sections: { obligations_after_approval: malformedSection
+      ? { ...fixture.obligations_after_approval, working_orders: -1 }
+      : fixture.obligations_after_approval } };
   }) };
   @Injectable() class SyntheticGuard { canActivate(ctx: ExecutionContext) {
     const request = ctx.switchToHttp().getRequest();
@@ -65,7 +67,7 @@ describe("approval evidence synthetic HTTP delivery", () => {
     await http.ready();
   });
   beforeEach(() => { workspaceMember = true; visible = true; sectionAllowed = true; revokeOnRead = false; failClosed = false;
-    visibilityCalls = 0; revokeFieldOnFinal = false; vi.mocked(port.read).mockClear(); });
+    visibilityCalls = 0; revokeFieldOnFinal = false; malformedSection = false; vi.mocked(port.read).mockClear(); });
   afterAll(async () => { if (app) await app.close(); Reflect.defineMetadata("__guards__", originalGuards ?? [SessionGuard], ApprovalEvidenceController); });
   const get = (url = route, session = true) => http.inject({ method: "GET", url, headers: session ? { "x-test-session": "valid" } : {} });
   const checkProblem = (body: unknown) => expect(validateProblem(body), JSON.stringify(validateProblem.errors)).toBe(true);
@@ -108,5 +110,35 @@ describe("approval evidence synthetic HTTP delivery", () => {
     expect(response.statusCode).toBe(200);
     expect(response.json().obligations_after_approval).toBeNull();
     expect(response.body).not.toContain("open_positions");
+  });
+  it("does not expose malformed data in a section the caller cannot read", async () => {
+    sectionAllowed = false; malformedSection = true;
+    const response = await get();
+    expect(response.statusCode).toBe(200);
+    expect(response.headers["cache-control"]).toBe("private, no-store");
+    expect(response.json().obligations_after_approval).toBeNull();
+    expect(response.body).not.toContain("open_positions");
+  });
+  it("withholds a malformed section if field access is revoked at the final visibility check", async () => {
+    malformedSection = true; revokeFieldOnFinal = true;
+    const response = await get();
+    expect(response.statusCode).toBe(200);
+    expect(response.json().obligations_after_approval).toBeNull();
+    expect(visibilityCalls).toBe(2);
+  });
+  it("returns not found if visibility is revoked before a malformed section is delivered", async () => {
+    malformedSection = true; revokeOnRead = true;
+    const response = await get();
+    expect(response.statusCode).toBe(404); checkProblem(response.json());
+    expect(response.headers["cache-control"]).toBe("private, no-store");
+    expect(response.json().error.code).toBe("APPROVAL_NOT_FOUND");
+    expect(response.body).not.toContain("open_positions");
+  });
+  it("refuses malformed evidence when the caller still has field access", async () => {
+    malformedSection = true;
+    const response = await get();
+    expect(response.statusCode).toBe(503); checkProblem(response.json());
+    expect(response.json().error.code).toBe("OPERATIONAL_READ_PROVENANCE_INVALID");
+    expect(response.headers["cache-control"]).toBe("private, no-store");
   });
 });

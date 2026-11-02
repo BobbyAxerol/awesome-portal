@@ -30,35 +30,49 @@ export class ApprovalEvidenceReads {
 
     const nowMs = Date.now();
     let sections: Record<string, unknown> = {};
+    let heldSourceError: OperationalReadError | undefined;
     try {
       const answer = await this.port.read({ workspaceId: principal.workspaceId, approvalId, nowMs });
       if (!answer || typeof answer !== "object" || !answer.identity || answer.identity.workspaceId !== principal.workspaceId || answer.identity.approvalId !== approvalId)
         throw new OperationalReadError("OPERATIONAL_READ_PROVENANCE_INVALID");
       sections = { ...(answer.sections ?? {}) };
     } catch (e) {
-      if (e instanceof OperationalReadError) throw e;
-      // A failing source is "not read" for every section, never an invented value and never a 0.
-      sections = Object.fromEntries(APPROVAL_EVIDENCE_SECTION_NAMES.map((name) => [name, null]));
+      if (e instanceof OperationalReadError) heldSourceError = e;
+      else {
+        // A failing source is "not read" for every section, never an invented value and never a 0.
+        sections = Object.fromEntries(APPROVAL_EVIDENCE_SECTION_NAMES.map((name) => [name, null]));
+      }
     }
     const body: Record<string, unknown> = {};
+    const malformed = new Set<string>();
     for (const name of APPROVAL_EVIDENCE_SECTION_NAMES) {
       const value = sections[name];
       if (value === undefined) continue;                       // no owning source: omitted
       if (value === null) { body[name] = null; continue; }     // not read
+      // Do not let corruption in an undisclosed field become a 503 oracle.
+      // An initially denied field can never be upgraded in this flight.
+      if (!this.fieldAuthority.allows(name, principal, approvalId)) { body[name] = null; continue; }
       const parsed = approvalEvidenceSections[name].safeParse(value);
-      if (!parsed.success) throw new OperationalReadError("OPERATIONAL_READ_PROVENANCE_INVALID");
-      // FAIL-CLOSED: visibility alone never discloses a published section.
-      body[name] = this.fieldAuthority.allows(name, principal, approvalId) ? parsed.data : null;
+      if (!parsed.success) { malformed.add(name); body[name] = null; continue; }
+      body[name] = parsed.data;
     }
     // Visibility is not a durable permit. Recheck the session/gate after the
     // source await so a revoked reader cannot receive even the dark body.
     // A future published port still needs its own same-flight field/source
     // authority fence; this recheck alone is not that commissioning proof.
     if (!(await this.visibility.visible(principal, approvalId))) throw new GovernanceError("APPROVAL_NOT_FOUND", "Approval not found.", 404);
+    // Neither a source/provenance refusal nor a malformed private section may
+    // escape the final approval visibility fence. Once fenced, preserve the
+    // existing 503 for an authorized source failure or corrupt field.
+    if (heldSourceError) throw heldSourceError;
     // Visibility can await I/O while an independently scoped field permit is
     // revoked. Check each *previously* authorized published section again;
     // never upgrade a section withheld by the first check during this read.
     for (const name of APPROVAL_EVIDENCE_SECTION_NAMES) {
+      if (malformed.has(name)) {
+        if (this.fieldAuthority.allows(name, principal, approvalId)) throw new OperationalReadError("OPERATIONAL_READ_PROVENANCE_INVALID");
+        continue;
+      }
       if (body[name] !== undefined && body[name] !== null && !this.fieldAuthority.allows(name, principal, approvalId)) body[name] = null;
     }
     const out = approvalEvidenceResponse.safeParse({ schema_version: APPROVAL_EVIDENCE_SCHEMA, workspace_id: principal.workspaceId, approval_id: approvalId,

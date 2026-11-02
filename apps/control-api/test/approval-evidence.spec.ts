@@ -9,6 +9,7 @@ import { approvalEvidenceResponse } from "../src/approval-evidence/approval-evid
 import type { ApprovalEvidencePort } from "../src/approval-evidence/approval-evidence.port";
 import { approvalEvidenceDependency } from "../src/approval-evidence/approval-evidence.bootstrap";
 import { ApprovalEvidenceReads } from "../src/approval-evidence/approval-evidence.service";
+import { OperationalReadError } from "../src/operations/current-operational-read";
 
 const contracts = process.env.PORTAL_CONTRACTS_DIR ?? resolve(__dirname, "../../../packages/contracts");
 const fixture = (name: string) => JSON.parse(readFileSync(resolve(contracts, "fixtures", `execution-approval-evidence.${name}.json`), "utf8"));
@@ -86,6 +87,41 @@ describe("approval evidence read (dark port, deny-all field authority)", () => {
     const port: ApprovalEvidencePort = { read: async (r) => ({ identity: r, sections: { obligations_after_approval: { ...published.obligations_after_approval, working_orders: -1 } } as any }) };
     await failure(reads(port, SEE, ALLOW).detail(principal, "approval-1", {}), 503, "OPERATIONAL_READ_PROVENANCE_INVALID");
   });
+  it("does not expose corruption of a section the principal cannot read", async () => {
+    const port: ApprovalEvidencePort = { read: async (r) => ({ identity: r, sections: {
+      obligations_after_approval: { ...published.obligations_after_approval, working_orders: -1 },
+    } as any }) };
+    const result = await reads(port).detail(principal, "approval-1", {});
+    expect(result.obligations_after_approval).toBeNull();
+  });
+  it("withholds a malformed section when its field authority is revoked during the final visibility check", async () => {
+    let allowed = true;
+    const visibility: ApprovalVisibility = { visible: vi.fn().mockImplementationOnce(async () => true).mockImplementationOnce(async () => {
+      allowed = false;
+      return true;
+    }) };
+    const port: ApprovalEvidencePort = { read: async (r) => ({ identity: r, sections: {
+      obligations_after_approval: { ...published.obligations_after_approval, working_orders: -1 },
+    } as any }) };
+    const result = await reads(port, visibility, { allows: () => allowed }).detail(principal, "approval-1", {});
+    expect(result.obligations_after_approval).toBeNull();
+    expect(visibility.visible).toHaveBeenCalledTimes(2);
+  });
+  it.each(["mismatched identity", "malformed section", "source refusal"])(
+    "approval revoke after a held %s replaces its private error",
+    async (kind) => {
+      let visible = true;
+      const visibility: ApprovalVisibility = { visible: vi.fn(async () => visible) };
+      const port: ApprovalEvidencePort = { read: async (r) => {
+        visible = false;
+        if (kind === "source refusal") throw new OperationalReadError("OPERATIONAL_READ_PROVENANCE_INVALID");
+        if (kind === "mismatched identity") return { identity: { ...r, approvalId: "other" }, sections: {} };
+        return { identity: r, sections: { obligations_after_approval: { ...published.obligations_after_approval, working_orders: -1 } } as any };
+      } };
+      await failure(reads(port, visibility, ALLOW).detail(principal, "approval-1", {}), 404, "APPROVAL_NOT_FOUND");
+      expect(visibility.visible).toHaveBeenCalledTimes(2);
+    },
+  );
   it("refuses a port that answers for another approval or workspace", async () => {
     const other: ApprovalEvidencePort = { read: async () => ({ identity: { workspaceId: WS, approvalId: "other" }, sections: {} }) };
     await failure(reads(other).detail(principal, "approval-1", {}), 503);
