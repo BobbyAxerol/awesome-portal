@@ -1466,3 +1466,16 @@ tracking files are a separate, user-approved `Verification: R0` documentation
 update: explicit paths, target/anchor, `git diff --check` and
 `scripts/execution-tracking-test.sh` checked. This R0 does not authorize code
 landing or change the remaining source/qualification gates.
+
+Read-only follow-up inventory: `/tmp` was approximately 52 GiB and contains
+Claude-owned scratch as well as paths cited by existing Edge evidence; these
+are not assumed disposable. `sudo -n docker system df` reported 381 images
+(27 active; 88.35 GB total, 73.85 GB labelled reclaimable), 99 volumes
+(22 active; 32.98 GB total) and 141.3 GB build cache; no dangling image was
+listed. Docker's reclaimable label is **not** evidence that tagged rollback,
+release or another agent's assets may be removed. The direct Docker socket was
+denied, while the existing test script has a passwordless-sudo fallback; no
+Docker/volume cleanup or runtime mutation was attempted. Codex/ops must first
+inventory exact candidates and their active/release/rollback/evidence owners,
+or arrange an owner-approved capacity change, before the normal hook. This
+observation is not an instruction to delete `/tmp` or prune Docker.
