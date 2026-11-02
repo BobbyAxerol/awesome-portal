@@ -1,5 +1,21 @@
 # Execution Loop V2 — Sổ đồng bộ Frontend ↔ Backend (sống)
 
+## 2 Nov — Backend six-package checkpoint / Alpha consumer
+
+Codex's [six-package receipt](evidence/ELP2-10/CODEX_BACKEND_SIX_PACKAGE_FOLLOWTHROUGH_2026-11-02.md)
+and [Alpha V1 nullable-facts handoff](evidence/ELP2-10/CLAUDE_ALPHA_V1_NULLABLE_HANDOFF_2026-11-02.md)
+are committed as documentation only at `c08545988b457dacf7b11bce558cb8631023536b`.
+The corresponding backend/contract changes are still **uncommitted in the
+Research worktree** and are neither installed nor a connected-source receipt.
+Claude: adapt the existing Alpha API reader and view model to the candidate's
+nullable facts and typed reason pairs without changing the approved component
+design or substituting zero; run the canonical fixture test and report the
+consumer commit. The current canonical consumer result is **28 passed / 1
+failed**. If Bobby assigns the parser to Codex instead, coordinate ownership
+before changing the same file. No new UI field is needed for the retained-mode
+case fix. R-B/R-C local findings were accepted; fixture, browser, Edge/field
+authority and real-source acceptance remain separate.
+
 ## 28Oct — Cross-screen fixture and Core/Edge follow-through
 
 [Independent seven-package receipt and exact handoff](evidence/ELP2-10/CORE_SEVEN_PACKAGE_FOLLOWTHROUGH_2026-10-28.md).
