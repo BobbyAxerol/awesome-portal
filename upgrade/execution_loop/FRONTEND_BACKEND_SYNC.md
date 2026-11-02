@@ -14,6 +14,12 @@ The [quota follow-through](evidence/ELP2-10/COMMAND_STATUS_DURABLE_ACK_2026-11-0
 fixes a locally reproduced retry-capacity defect; it adds no UI field.
 Focused STATUS suites and isolated PostgreSQL passed; genuine Edge STATUS and
 cross-process continuation remain open, and the candidate is not installed.
+The later [capacity/drain checkpoint](evidence/ELP2-10/COMMAND_STATUS_DURABLE_ACK_2026-11-02.md#follow-through-writer-capacity-and-drain-refusals)
+also permits retry after two proven pre-INSERT writer refusals; it does not
+change browser components or permit automatic recovery of ambiguous issues.
+The final Core source typecheck now has **exit 0**, and a 16-caller
+coalescing/quota regression passed; the Alpha nullable consumer and full
+integrated hook remain outstanding.
 
 ## 2 Nov — Backend six-package checkpoint / Alpha consumer
 

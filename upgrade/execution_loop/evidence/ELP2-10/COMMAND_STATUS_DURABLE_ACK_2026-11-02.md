@@ -178,3 +178,73 @@ No new source identity, source attempt or acknowledgement is synthesized.
 
 The other limitations above are unchanged, including actual cross-process
 continuation of an already-vanished context and the final integrated gate.
+
+## Follow-through: writer capacity and drain refusals
+
+After the quota checkpoint, two focused regressions also reproduced a stuck
+context when the writer definitely rejected an issue **before INSERT** with
+`CURRENT_HUMAN_CAPACITY_EXHAUSTED` or `CURRENT_HUMAN_DRAINING`. The previous
+promise stayed cached even after the condition cleared. The earlier statement
+that *only* the custody refusal returns its quota reservation is therefore
+historical: the candidate now returns it for these **three specifically
+identified pre-INSERT guards**. The original typed recovery-required response
+is unchanged. Capacity and drain retain their existing sanitized transport
+behavior; ambiguous SQL/COMMIT/signing failures are still cached and fenced.
+
+- The two new isolated tests failed before this change and passed afterward.
+  They exercise repeated pre-INSERT capacity/drain refusals beyond the quota,
+  then a same-context retry; the drain error is synthetic, not a connected
+  live-revocation proof.
+- One final combined run of **7 suites / 211 tests passed**, including all four
+  real-PostgreSQL STATUS cases. The extended PG case used a real
+  one-unresolved-lease capacity limit across three authorities: six capacity
+  refusals did not insert a second lease; after capacity cleared, the original
+  still blocked on missing ACK; only authenticated TEST_ONLY terminal + ACK
+  permitted each successive lease. This is synthetic source data on a real
+  local database, not an Edge or PM authority receipt.
+- The PostgreSQL 16.15 client/server/libpq hashes matched the pinned artifacts.
+  The private 0700 cell had TCP disabled and was stopped and removed after
+  testing, together with its synthetic data. No shared DB was changed.
+- Final checkpoint SHA-256: `command-source-assertion.ts`
+  `f066b82892f37c3f6dac9ccfb21838c535757c44d947971f2777e3e79d84896b`;
+  `command-source-assertion.spec.ts`
+  `11d9b77deae981d2e86144483a646676d23d4175254f881a3500f857dd41eca7`;
+  `command-source-assertion-pg.spec.ts`
+  `73959fefc0141845b3b1b80ba98655b251c48eb810c921c7b71b5c22d1e3aabc`.
+  The newer complete tracked-diff backup is
+  `tracked-recovery-capacity-20261102.patch` in the private backup cell above,
+  SHA-256 `0daf3522c633db95ccb19bc019674d8568bbd42a53b5176d634e4e89aa0c2d03`;
+  the previously recorded untracked backend archive remains applicable.
+
+No production/runtime install, new UI contract, source qualification or
+cross-process recovery of a vanished context is implied. The candidate remains
+uncommitted and the final typecheck/hook still needs an exit-status receipt.
+
+## Final source typecheck and coalesced-refusal test
+
+An additional synthetic concurrency regression holds one definite pre-INSERT
+capacity refusal while **16 exact callers** join the same delivery. They all
+receive that refusal, one reservation is refunded, and the original limit of
+four actual acknowledged issues still blocks a fifth. The complete focused
+`command-source-assertion.spec.ts` suite passed **43/43**; this overlaps the
+earlier combined 211-test run and must not be added to it as new coverage.
+
+The candidate Control API source typecheck
+`npm exec -- tsc -p tsconfig.build.json --noEmit --diagnostics` completed
+**exit 0**, 1,481 files, 212.63 seconds, peak reported TypeScript memory
+2,230,794 KiB. This supersedes the earlier unrecorded typecheck-status note,
+but not the final integrated hook. The tracked `apps/control-api/src` binary
+diff SHA-256 was
+`41b451280fbfcf104ab22191f5ee2fc26523397856d85970d20f167e30757095`
+both immediately before and after that typecheck; the untracked included source
+`account-comparison-availability.ts` SHA-256 was
+`bc504af8404e3ec06ee127d21c9aabb49a4ffde97d87728a95554e2d67aa7e4d`.
+The test file SHA-256 after the extra concurrency case is
+`61d74dafc735edf6eee3642cda1b55daa2edc576a4f4e32dac306b14ceaef5bc`;
+the source and PG-test hashes in the preceding checkpoint are unchanged.
+
+The latest backup in the same private cell separates code from Markdown:
+`backend-code-recovery-final-20261102.patch` SHA-256
+`191313c9f5df11bba5a264bda479ae0802ada61580297b0c360a486552fbf5dc`,
+plus the previously listed `untracked-backend-20261102.tar`. It is local
+preservation only; none of these results is an installed or connected source.

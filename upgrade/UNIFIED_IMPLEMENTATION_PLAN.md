@@ -17081,3 +17081,20 @@ same-context retry after the original's TEST_ONLY terminal + ACK. See the
 [follow-through](execution_loop/evidence/ELP2-10/COMMAND_STATUS_DURABLE_ACK_2026-11-02.md#follow-through-recovery-quota-after-a-definite-refusal).
 The code remains uncommitted/uninstalled; the Edge gateway/original, vanished
 context recovery and final integrated gate are not claimed complete.
+
+**2 Nov STATUS capacity/drain follow-through:** two further pre-INSERT writer
+guards (`CURRENT_HUMAN_CAPACITY_EXHAUSTED` and `CURRENT_HUMAN_DRAINING`) now
+allow a same-context retry after their condition clears; ambiguous outcomes
+remain held. The preceding “only that refusal” statement is superseded by this
+explicit three-guard allowlist. Final combined **7 suites / 211 tests PASS**
+includes real isolated-PG capacity/ACK sequencing; drain is synthetic.
+Details and current hashes: [STATUS receipt](execution_loop/evidence/ELP2-10/COMMAND_STATUS_DURABLE_ACK_2026-11-02.md#follow-through-writer-capacity-and-drain-refusals).
+No Edge acceptance, runtime install or final gate is claimed.
+
+**2 Nov STATUS final focused check:** 16 coalesced pre-INSERT refusals refund
+one reservation without weakening the four-actual-issues quota; the complete
+focused authority suite passed **43/43**. Control API source typecheck passed
+**exit 0** on unchanged tracked source diff and recorded untracked source
+hash; see [receipt](execution_loop/evidence/ELP2-10/COMMAND_STATUS_DURABLE_ACK_2026-11-02.md#final-source-typecheck-and-coalesced-refusal-test).
+This supersedes only the earlier missing typecheck status, not the unrun normal
+integration hook, FE consumer, real Edge gate or source qualification.
