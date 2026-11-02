@@ -17151,3 +17151,11 @@ proves real Edge authority, browser acceptance or a source-backed
 ownership census. The older Account/Broker profile's exact >200 lookup remains
 open. Claude should retain the existing partial/absence states, with no UI
 redesign. See [receipt, exact hashes and handoff](execution_loop/evidence/ELP2-10/CODEX_BACKEND_SIX_PACKAGE_FOLLOWTHROUGH_2026-11-02.md#retained-deployment-and-broker-grain-follow-through--2-nov-2026).
+
+**2 Nov negative-lookup addendum:** Product retained reads now return an
+outside-window partial result, not confirmed not-found, when a deployment
+census is truncated or has rejected lineage. The latest affected synthetic
+suites passed **130/130** and its module-graph TypeScript check passed; the
+380/380 and full typecheck above belong to the preceding source hash, not this
+newer one. The candidate remains uncommitted/uninstalled and all real-source,
+normal-hook and qualification gates remain open. [Pins and exact limits](execution_loop/evidence/ELP2-10/CODEX_BACKEND_SIX_PACKAGE_FOLLOWTHROUGH_2026-11-02.md#deployment-negative-lookup-correction--2-nov-2026).

@@ -4320,3 +4320,11 @@ and Control API no-emit typecheck exited 0 on the recorded source hash; neither
 proves Edge/browser acceptance. The older Account/Broker profile
 still has no exact >200 lookup. [Exact scope and local backup](evidence/ELP2-10/CODEX_BACKEND_SIX_PACKAGE_FOLLOWTHROUGH_2026-11-02.md#retained-deployment-and-broker-grain-follow-through--2-nov-2026).
 
+**2 Nov negative-lookup addendum:** when deployment census is truncated or
+has rejected lineage, the Product reader now preserves the existing
+outside-window/partial state rather than declaring a deployment not found.
+No frontend redesign is requested. The newer local candidate passed 130/130
+affected synthetic tests and a focused module-graph TypeScript check; the
+380/380 suite and full typecheck above refer to the preceding source hash.
+Candidate remains uncommitted/uninstalled. [Receipt and pins](evidence/ELP2-10/CODEX_BACKEND_SIX_PACKAGE_FOLLOWTHROUGH_2026-11-02.md#deployment-negative-lookup-correction--2-nov-2026).
+

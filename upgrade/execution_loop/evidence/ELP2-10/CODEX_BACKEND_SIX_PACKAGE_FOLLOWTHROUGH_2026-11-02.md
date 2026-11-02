@@ -1479,3 +1479,49 @@ Docker/volume cleanup or runtime mutation was attempted. Codex/ops must first
 inventory exact candidates and their active/release/rollback/evidence owners,
 or arrange an owner-approved capacity change, before the normal hook. This
 observation is not an instruction to delete `/tmp` or prune Docker.
+
+### Deployment negative-lookup correction — 2 Nov 2026
+
+The follow-through above used a confirmed missing-deployment result even when
+the census advertised `COMPLETE` but its window was truncated or its lineage
+contained rejected rows. Product retained reads now reuse the already-required
+complete-census fence for that negative lookup as well. A genuinely complete,
+untruncated census with no rejected lineage may return
+`EMPTY / EDS03_DEPLOYMENT_NOT_FOUND`; a partial, truncated or lineage-rejected
+census instead returns `PARTIAL / EDS03_DEPLOYMENT_OUTSIDE_RETAINED_WINDOW`.
+This does not add a grant, relax the final authorization fence, or claim a
+real-source deployment is present. Four synthetic regressions cover these
+distinctions.
+
+On this newer candidate, `elp2-product-reads` and `retained-negative-fence`
+passed **130/130** in 23.34 s. A focused TypeScript check of
+`product-read-source.ts` and its transitive module graph exited 0 (803 files,
+17.13 s compiler time, 18.01 s wall, peak process RSS 685,352 KiB), using the
+Control API compiler settings. This is **not** a full-project typecheck. The
+earlier **380/380** eight-suite run and the full Control API no-emit
+typecheck described above apply to the immediately preceding tracked
+source/contract hash `aa6afa789dbfc28b2150cfd9a819fac404af86ec98facc486d4384be6464692e`;
+the suites overlap and must not be added. An intentionally interrupted
+unnecessary all-suite rerun is not counted as PASS.
+
+New tracked source/contract diff SHA-256:
+`38548535d0b41acdeb9061fe5aa930e9a81a4aaf3032447ae2c43af43bbd29a4`.
+`product-read-source.ts` SHA-256:
+`20f705de698f1528d9937754554bb2bd2bc40987b61f81b8598979ab369f54a2`;
+`elp2-product-reads.spec.ts` SHA-256:
+`b5b3cdd6f996903d604d9bbba7ac6eed64aa749d5cb4ed4d113bf53f3f296bdf`.
+The separately untracked `account-comparison-availability.ts` remains
+`bc504af8404e3ec06ee127d21c9aabb49a4ffde97d87728a95554e2d67aa7e4d`.
+
+The newer local recovery patch, superseding the prior tracked-backend patch,
+is `/home/bobby/.local/state/portal-research-backend-20261102-7rY0guq1/backend-code-recovery-deployment-negative-20261102.patch`,
+SHA-256 `233d7866f3544ba5e6c3efd6adca7917dae2427a755930f091b4175f18925bd7`.
+The previously recorded untracked-file tar remains unchanged. Across earlier
+work and this follow-through, the **cumulative, uncommitted** tracked backend,
+contract and ownership-ledger diff is 65 files, +4,922/−459; six backend files
+are additionally untracked. Separately, the approved frontend parser/test
+candidate is six tracked files, +289/−39. These are not per-fix line counts,
+commits, installed code or a remote backup. Normal hook, source-backed/Edge and
+browser gates, final-candidate migration/rollback and the >200 legacy lookup
+remain open. Claude should preserve the existing outside-window/partial state;
+no component, copy or visual-baseline change is requested here.
