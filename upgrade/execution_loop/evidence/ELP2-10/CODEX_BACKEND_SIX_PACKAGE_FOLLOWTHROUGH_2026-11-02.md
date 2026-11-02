@@ -1525,3 +1525,57 @@ commits, installed code or a remote backup. Normal hook, source-backed/Edge and
 browser gates, final-candidate migration/rollback and the >200 legacy lookup
 remain open. Claude should preserve the existing outside-window/partial state;
 no component, copy or visual-baseline change is requested here.
+
+### Account 360 identity selection follow-through — 2 Nov 2026
+
+**Local candidate only.** A focused review found that the older Account/Broker
+360 reader could report a first `selected_environment` and publish that
+environment's account rows even after its own identity check found another
+matching environment or could not rule one out. It could also return child
+balances when the account identity was absent, or present a first profile and
+its clock when auto-selection found no account. Duplicate account identities
+could similarly expose unassigned candidate rows. These are separate from the
+already recorded >200 exact-lookup limitation.
+
+The composer now keeps the existing `candidate_environments` and existing
+identity reason codes but withholds account-specific data when identity is
+ambiguous, duplicated or absent. Auto-selection does not publish a selected
+environment/profile/clock when it has no unique resolution; source
+capabilities reflect the identity state instead of claiming the withheld rows
+as available. A caller that explicitly selects a valid environment continues
+to receive its authorized data. This adds no schema field, grant or visual
+change; it does not prove native HTTP custody or qualify an Edge source.
+
+Four focused regressions first failed on the prior candidate, and an additional
+no-match auto-selection test subsequently failed on its first-profile clock.
+The three related suites passed **182/182** before that last small profile
+metadata correction, on tracked source/contract hash
+`beba7533726f79e1d188210daac26a7910aba93b8b48cc771e8fb04e653a956f`.
+On the newer final candidate the affected `profile-read` suite passed
+**53/53**, including complete/partial orphan-parent cases, duplicate identity,
+multi-environment selection, unavailable alternate census, no-match auto
+selection, contract validation and explicit-environment positive control.
+The counts overlap and must not be added. A focused TypeScript check of the
+profile module and transitive graph exited 0 (810 files, 20.68 s compiler time,
+608,969 KiB reported TypeScript memory). This is not the full-project check;
+the earlier full check belongs only to the separately documented `aa6afa...`
+checkpoint. No browser, production source or actual source-revoke test was run.
+
+Current tracked source/contract diff SHA-256:
+`be411cb2fdef55a3a01ffa0314e28c15f2a7b04a37102dff933183147f5f8973`.
+Profile source SHA-256 `36d0cceca7eaf604e50372063f3e902c64d8ff25eb8e18c26d3a53a25f9ff990`;
+profile test SHA-256 `a80c9e5d7152a5a937c47e42335f94755e8524b989dbdf2d164288688eb9b4be`.
+Latest local recovery patch, superseding earlier tracked-backend patches:
+`/home/bobby/.local/state/portal-research-backend-20261102-7rY0guq1/backend-code-recovery-account-selection-final-20261102.patch`,
+SHA-256 `21107b246be6a74ece0607bd7c11a4bf6d013ace155b2173b35a2a4ba10f0eac`.
+The six untracked backend files remain in the earlier tar
+`bc3b482f0f1e59a29434815967470b79ce5c21d609b59269fb0f74ae7d0a1974`.
+The cumulative uncommitted tracked backend/contract/ownership-ledger diff is
+65 files, +4,997/−463; this is not the size of this particular correction.
+
+**Claude handoff:** consume existing typed identity branches and, where
+appropriate, let the user choose a listed environment explicitly; never show
+withheld values as a zero or silently choose the first candidate. Preserve
+the established UI and current ownership of components. Review/browser proof
+remains separate. The exact >200 lookup, real-source authority, final hook,
+connected/browser gates and final-candidate migration/rollback remain open.

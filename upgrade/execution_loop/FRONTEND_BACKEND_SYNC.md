@@ -4328,3 +4328,11 @@ affected synthetic tests and a focused module-graph TypeScript check; the
 380/380 suite and full typecheck above refer to the preceding source hash.
 Candidate remains uncommitted/uninstalled. [Receipt and pins](evidence/ELP2-10/CODEX_BACKEND_SIX_PACKAGE_FOLLOWTHROUGH_2026-11-02.md#deployment-negative-lookup-correction--2-nov-2026).
 
+**2 Nov Account 360 identity handoff:** the local uninstalled candidate
+withholds account-specific values when identity/environment is ambiguous,
+duplicated or absent; auto mode no longer names the first profile as selected.
+Use the existing typed reason and candidate environments; an explicit valid
+environment still works. Do not infer zero or pick the first candidate. No UI
+redesign is requested; Claude may review the existing selection flow and take
+browser acceptance after landing. [Tests, limits and pins](evidence/ELP2-10/CODEX_BACKEND_SIX_PACKAGE_FOLLOWTHROUGH_2026-11-02.md#account-360-identity-selection-follow-through--2-nov-2026).
+

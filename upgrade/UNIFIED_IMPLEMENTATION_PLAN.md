@@ -17159,3 +17159,12 @@ suites passed **130/130** and its module-graph TypeScript check passed; the
 380/380 and full typecheck above belong to the preceding source hash, not this
 newer one. The candidate remains uncommitted/uninstalled and all real-source,
 normal-hook and qualification gates remain open. [Pins and exact limits](execution_loop/evidence/ELP2-10/CODEX_BACKEND_SIX_PACKAGE_FOLLOWTHROUGH_2026-11-02.md#deployment-negative-lookup-correction--2-nov-2026).
+
+**2 Nov Account 360 identity addendum:** the local candidate no longer
+selects the first environment or attributes balances to an absent, duplicated
+or unresolved account. Explicit environment selection remains available;
+existing typed reasons are reused. The newer profile suite passed **53/53**
+and its module-graph typecheck passed; a related **182/182** suite is pinned
+to the immediately preceding source hash. Code is uncommitted/uninstalled;
+the normal hook, exact >200 lookup and connected/browser gates remain open.
+[Receipt and Claude handoff](execution_loop/evidence/ELP2-10/CODEX_BACKEND_SIX_PACKAGE_FOLLOWTHROUGH_2026-11-02.md#account-360-identity-selection-follow-through--2-nov-2026).
