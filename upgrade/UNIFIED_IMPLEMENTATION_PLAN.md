@@ -17309,3 +17309,11 @@ G2/calibration, product release or ELP2-10/11 closeout. Approval Evidence
 and the qualified real financial/equity/Calendar sources remain dark or
 unqualified as stated in their source-specific receipts; do not infer positive
 facts or connected READ/STREAM and STATUS from this hook.
+
+**2 Nov follow-through landed:** an Approval Evidence error/visibility fence
+and a migration 0156 custody rollback-guard regression passed the focused
+isolated PostgreSQL cell (44/44 plus restore/preservation). The full normal
+hook exited 0 and the code landed locally at
+`2e1e56535dfbccd774762b27a72512454fcc0cbb`; suite skips are not PASS.
+Source-dark, connected authority, browser and ELP2-10/11 gates remain open.
+[Scope, hashes, disk check and Claude handoff](execution_loop/evidence/ELP2-10/CODEX_BACKEND_SIX_PACKAGE_FOLLOWTHROUGH_2026-11-02.md#approval-evidence-error-fence-and-migration-0156-guard--2-nov).

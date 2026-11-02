@@ -2158,3 +2158,43 @@ metadata/health/history and Calendar (`SOURCE_DARK`); approved Score
 calibration, coexistence/G2, browser and ELP2-10/11 integration qualification.
 The optional Approval Evidence producer remains source-dark; 503 is not a
 positive evidence receipt. No command/Live capability was enabled.
+
+## Approval Evidence error fence and migration 0156 guard — 2 Nov
+
+The prospective Approval Evidence reader previously validated a published
+section before checking its field authority; malformed hidden data could
+therefore affect the response. A source/provenance error could also escape
+before the final asynchronous approval-visibility check. The service now
+withholds unauthorized sections before parsing and holds source/validation
+errors until the final visibility check: revoked approval returns 404;
+revoked field returns null; an authorized malformed field still fails with
+the existing typed 503. No public response schema changed. This is a local
+security/correctness fix for a prospective, source-dark producer, not evidence
+that a qualified source leaked data or was commissioned.
+
+The exact scoped disposable PostgreSQL cell built the Control API, applied
+forward migrations through 0156 and passed **44/44** tests including HTTP
+serialization and a dedicated actual-migration-runner regression, followed
+by its restore/preservation drill (exit 0). The regression creates its own
+randomly named database inside the guarded test cell and verifies that down
+is deliberately refused both empty and populated, while retaining the ACK,
+migration ledger and immutable triggers. This is not a claim that destructive
+down is supported. Test SHA256:
+`eefb2c5f6cf0c183e60f12d9f5612e256aad96255a3b8fb7e6049b09cd4c469a`;
+migration SHA256:
+`c48d6e76f45928eaf186cfce445dd72051274cdf5ca422a9e3ea6b4c0b271a6d`.
+
+The full normal hook completed with exit 0 on the four backend/test files,
+including the contract and Control API suites, the isolated PostgreSQL
+restore/preservation drill and repository verification. Some cases were
+skipped by their suite; skipped cases are not claimed as passing. Code landed
+locally as `2e1e56535dfbccd774762b27a72512454fcc0cbb` (4 files,
++173/−9), with no push or runtime install. Claude: no UI redesign or new
+field is needed for this fix; continue to treat denied evidence as absent and
+503 as a refusal, not a positive record. Connected source authority, real
+browser acceptance and the other ELP2-10/11 qualification gates remain open.
+
+Disk inspection: filesystem had approximately 127 GiB available. Docker
+reported no dangling images; tagged images and volumes were retained because
+their use by existing candidates or receipts was not excluded. No image or
+volume was removed in this pass.
