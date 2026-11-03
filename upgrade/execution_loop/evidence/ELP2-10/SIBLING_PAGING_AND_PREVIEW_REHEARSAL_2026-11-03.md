@@ -51,7 +51,7 @@ not treat it as verification of the final source. A subsequent strict,
 source entrypoints was rerun after the newline guard and exited 0. Execution
 tracking passed before this follow-through; the full hook remains open.
 
-Final local source SHA-256: seam
+First-checkpoint local source SHA-256: seam
 `575291239c78d7f647aeb4d4ba2ff1c02323db843dd13370fb9c9b77bc2a7e0f`; cursor
 `f0e33e2ad3adc6b98c4ec17e3fcd58be32f35db0a1a4bf582c011b6f197c63e1`;
 paged source `bf296359318117bb0f20c2520026b96d921fe26f0d8abf1fe9bc9e5f499a67b5`.
@@ -61,6 +61,29 @@ tracked patch SHA-256 `5b876ed2bf73e2f05f65f3d8c51744e01d3bf270198eb48a6f720c376
 four untracked source/test files archive SHA-256
 `04a8583a1f870d3b5c80c1ce9feb20e76b4dd83eed1c79c67e0f12b9b36aaa74`.
 This point-in-time local preservation is not a commit or remote backup.
+
+### Follow-through: source snapshot versus asynchronous revocation
+
+The private seam previously held the source-owned mutable response object
+across its final asynchronous authority check. Another task holding that same
+object could alter the records or declared scope after the source returned.
+The seam now validates and deep-copies the source body and validates its exact
+scope synchronously before that await. A failed final authority check still
+wins over both the captured data and any captured source error. Regression
+tests exercise mutation of a nested financial figure and a paged obligation
+during the authority check, plus a revoked caller with a malformed source.
+Sibling seam/cursor/page tests passed **24/24**; strict TypeScript on the three
+source entrypoints exited 0. These are local checks: the genuine field/source
+authority, physical egress fence and HTTP routes are still NOT DELIVERED.
+
+Current seam source SHA-256
+`dfba787de5c719ee041c5b207fcc8d045ddb771d39c19a2c2197c8f8d30eaca6`.
+Updated uncommitted code is preserved separately under mode-0700
+`/home/bobby/.local/state/portal-sibling-20261103-next-1Vu4QWxn` (tracked patch
+`72a42845ab5b004893e264bf41a2ca1f7a2a872f02d8c475eccf20f09502d05b`;
+untracked archive
+`e91da2f3705e8ca13209b9bb7f75d06b611710282f40ab8136927a57ca42157f`).
+This does not change or supersede the actual database backup.
 
 ## Actual preview snapshot → disposable migration rehearsal
 

@@ -17348,6 +17348,10 @@ public routes, commissioned Edge sources or an HTTP egress authority fence.
 Financial/Approval/STATUS local regression is distinct from source acceptance.
 See [scope, test results, rollback and Claude handoff](execution_loop/evidence/ELP2-10/SIBLING_PAGING_AND_PREVIEW_REHEARSAL_2026-11-03.md).
 ELP2-10/11 and cross-process STATUS recovery remain open.
+Follow-through: the private sibling seam now captures the validated source
+body/scope before its asynchronous final authority check; focused tests also
+exercise source mutation and revoked/invalid-source precedence. This is not
+yet a mounted reader or an HTTP/source custody fence.
 Preview restore rehearsal also exposed that the real `portal_research_runtime`
 role is `NOINHERIT`: a clone created with PostgreSQL's default `INHERIT` is
 not an equivalent security restore, even when object ACLs match. Never install
