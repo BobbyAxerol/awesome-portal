@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, writeFileSync, rmSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -38,4 +38,12 @@ test('existing wrong-stack port protection is unchanged', () => {
   const result = probe({ direct: false, port: '18081' });
   assert.notEqual(result.status, 0);
   assert.match(result.stderr, /belongs to another stack/);
+});
+test('scoped rollout does not claim checkout SHA or a filename as observed runtime provenance', () => {
+  const source = readFileSync(script, 'utf8');
+  assert.match(source, /"git_commit": null/);
+  assert.match(source, /"checkout_git_commit"/);
+  assert.match(source, /"source_pin_status": "UNVERIFIED_MIXED_IMAGES"/);
+  assert.match(source, /"migrations": null/);
+  assert.match(source, /"latest_migration_in_checkout"/);
 });

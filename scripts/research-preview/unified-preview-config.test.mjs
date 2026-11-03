@@ -12,7 +12,11 @@ function service(name) {
 test('combined preview compiles existing product Execution routes, not a fixture consumer', () => {
   assert.match(service('portal-web'), /^        EXECUTION_PREVIEW_ENABLED: "true"$/m);
   const source = readFileSync(new URL('../../apps/portal/frontend/src/execution/ExecutionPreviewRoute.tsx', import.meta.url), 'utf8');
-  assert.match(source, /createHttpApi\(\{ policy \}\)/);
+  // The route uses the stable-policy wrapper; the wrapper still defaults to
+  // the real HTTP adapter, not a fixture consumer.
+  assert.match(source, /useValueStableApi\(/);
+  const wrapper = readFileSync(new URL('../../apps/portal/frontend/src/execution/useValueStableApi.ts', import.meta.url), 'utf8');
+  assert.match(wrapper, /make = createHttpApi/);
   assert.doesNotMatch(source, /createFixtureApi\(/);
 });
 

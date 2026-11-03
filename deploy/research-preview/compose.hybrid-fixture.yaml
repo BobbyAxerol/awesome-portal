@@ -1,0 +1,6 @@
+services:
+  portal-web:
+    environment:
+      PORTAL_WEB_UPSTREAM: control-api:4000
+    volumes:
+      - ./deploy/research-preview/nginx/hybrid-fixture:/etc/nginx/fixture:ro

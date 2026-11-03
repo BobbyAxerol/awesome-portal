@@ -27,6 +27,7 @@ IDENTITY_FILE="$ENV_DIR/identity.json"
 FORBIDDEN_PORTS=" 8080 8081 8090 18081 "
 
 FIXTURE_MARKER="$ENV_DIR/fixture-bff.enabled"
+HYBRID_MARKER="$ENV_DIR/hybrid-fixture.enabled"
 NATIVE_CURRENT_MARKER="$ENV_DIR/execution-native-current.enabled"
 # Fixture BFF switch (FIXTURE_LAB lane, not acceptance evidence): only a marker file. It never runs
 # docker; the operator applies it with `build` + `up`. See deploy/research-preview/README-fixture.md.
@@ -51,6 +52,7 @@ cmd_fixture() {
       ;;
     off)
       rm -f "$FIXTURE_MARKER"
+      rm -f "$HYBRID_MARKER"
       echo "preview: fixture BFF marker removed"
       echo "next: $0 up   # recreates portal-web without the fixture locations and banner"
       echo "then: remove the now-orphaned fixture container once (project $PROJECT only):"
@@ -58,10 +60,22 @@ cmd_fixture() {
       ;;
     status)
       if [[ -f "$FIXTURE_MARKER" ]]; then echo "fixture-bff: on (marker present)"; else echo "fixture-bff: off"; fi
+      if [[ -f "$HYBRID_MARKER" ]]; then echo "hybrid fixture: on (Research API and preview session real)"; else echo "hybrid fixture: off"; fi
       echo "PORTAL_EXECUTION_V2_SCREENS: $screen_count screen(s) in the env file"
       echo "note: the marker only takes effect on the next '$0 up'"
       ;;
-    *) echo "usage: $0 fixture on|off|status" >&2; return 2 ;;
+    hybrid-on)
+      [[ "$ENV_DIR" == /home/bobby/.config/portal-research-preview && -f "$FIXTURE_MARKER" ]] || {
+        echo 'preview: hybrid requires the fixed Research preview and the fixture marker' >&2; return 1; }
+      : >"$HYBRID_MARKER"
+      echo 'preview: hybrid marker set; apply with up portal-web after verifying control-api'
+      ;;
+    hybrid-off)
+      [[ "$ENV_DIR" == /home/bobby/.config/portal-research-preview ]] || return 1
+      rm -f "$HYBRID_MARKER"
+      echo 'preview: hybrid marker removed; apply with up portal-web'
+      ;;
+    *) echo "usage: $0 fixture on|off|status|hybrid-on|hybrid-off" >&2; return 2 ;;
   esac
 }
 # Handled before the Docker probe below: this command must work without Docker.
@@ -125,6 +139,13 @@ compose() {
     # Fixture BFF (FIXTURE_LAB lane): one private service plus an nginx variant and a banner on
     # portal-web. The project name and port rails above/below are unchanged.
     domain_overlay+=(-f "$ROOT/deploy/research-preview/compose.fixture-bff.yaml")
+    if [[ -f "$HYBRID_MARKER" ]]; then
+      [[ "$ENV_DIR" == /home/bobby/.config/portal-research-preview ]] || {
+        echo 'preview: hybrid fixture is restricted to the fixed Research preview' >&2; return 1; }
+      domain_overlay+=(-f "$ROOT/deploy/research-preview/compose.hybrid-fixture.yaml")
+    fi
+  elif [[ -f "$HYBRID_MARKER" ]]; then
+    echo 'preview: hybrid fixture requires fixture-bff.enabled; refusing ambiguous routing' >&2; return 1
   fi
   if [[ "${DOCKER[0]}" == sudo ]]; then
     compose_docker=(sudo -n env "PORTAL_BUILD_COMMIT=${PORTAL_BUILD_COMMIT:-unknown}" \
@@ -260,7 +281,9 @@ record_identity() {
   local sha
   sha="$(git -C "$ROOT" rev-parse HEAD)"
   {
-    printf '{\n  "project": "%s",\n  "git_commit": "%s",\n  "recorded_at_utc": "%s",\n  "images": {\n' \
+    # A scoped up can mix images built at different commits. The checkout SHA
+    # is not image provenance and a migration filename is not an applied row.
+    printf '{\n  "project": "%s",\n  "git_commit": null,\n  "checkout_git_commit": "%s",\n  "source_pin_status": "UNVERIFIED_MIXED_IMAGES",\n  "recorded_at_utc": "%s",\n  "images": {\n' \
       "$PROJECT" "$sha" "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
     local first=1
     for service in portal-api control-api portal-web roadmap-task-board-api quant-worker-py portal-fixture-bff; do
@@ -273,7 +296,7 @@ record_identity() {
       printf '    "%s": "%s"' "$service" "$image"
       first=0
     done
-    printf '\n  },\n  "migrations": "%s"\n}\n' \
+    printf '\n  },\n  "migrations": null,\n  "latest_migration_in_checkout": "%s"\n}\n' \
       "$(ls "$ROOT/apps/control-api/migrations" | tail -n1)"
   } >"$IDENTITY_FILE"
   chmod 600 "$IDENTITY_FILE"

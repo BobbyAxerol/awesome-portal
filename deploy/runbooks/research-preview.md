@@ -47,9 +47,24 @@ accepted with `PORTAL_ENV=local`, so the preview is `local` with its own
 query-cursor and governance keyrings.
 
 The script refuses ports 8080, 8081, 8090 and 18081, and never prints the env
-file. `identity.json` beside it records the git commit, the image ID of every
-running service and the last migration, so a receipt can name exactly what it
-looked at.
+file. `identity.json` records running image IDs and the checkout SHA separately.
+A scoped rollout can mix images, so `git_commit` remains null until independent
+provenance is verified. Likewise the latest migration filename in the checkout
+is not the applied ledger: inspect the target DB read-only before a receipt
+claims a migration was installed.
+
+### Combined Execution fixture and Research API
+
+For Bobby's isolated public preview, `preview.sh fixture hybrid-on` selects
+the tracked hybrid overlay while the fixture lane is already on. Apply it with
+`preview.sh up --force-recreate portal-web`: Execution fixture routes remain
+synthetic, while `/api/auth/*` and the QuantBT routes reach the preview Control
+API and its local/dev-only preview auto-session. This exposes the permissions of
+that preview identity to visitors; it must never be used for production. The
+page banner distinguishes Execution fixture from Research preview API.
+Rollback to the previous fixture-only lane with `preview.sh fixture hybrid-off`
+and `preview.sh up --force-recreate portal-web`. Neither action touches DB or
+starts a command/Live source. Real-source and browser acceptance remain separate.
 
 ## Looking at it
 

@@ -17329,3 +17329,14 @@ real-source or browser qualification. [Test
 boundaries and Claude handoff](execution_loop/evidence/ELP2-10/CODEX_BACKEND_SIX_PACKAGE_FOLLOWTHROUGH_2026-11-02.md#approval-evidence-producerconsumer-parity--2-nov).
 The 2 Nov read-only Edge worktree/working-plan check did not establish fresh
 connected authority or financial/source proof; [pin and limits](execution_loop/evidence/ELP2-10/CODEX_BACKEND_SIX_PACKAGE_FOLLOWTHROUGH_2026-11-02.md#read-only-edge-recheck--2-nov-2140-utc).
+
+**3 Nov combined preview and sibling preparation — IN PROGRESS:** isolate
+Execution fixture routing from the real Research preview session/API, and
+prepare four source-only sibling seams without claiming commissioned routes.
+The exact gates, source hashes, observed migration-ledger discrepancy,
+rollback, frontend handoff and outstanding source authority are in
+[the new receipt](execution_loop/evidence/ELP2-10/SIBLING_SEAMS_AND_HYBRID_PREVIEW_2026-11-03.md).
+This does not close ELP2-10/11 or establish Edge/G2 qualification.
+The public hybrid preview's rebuilt web/fixture images passed a Chromium smoke
+for Research Library and Execution Fleet; the newer Control API image remains
+uninstalled pending compatibility with the actual preview migration ledger.

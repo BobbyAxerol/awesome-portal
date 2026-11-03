@@ -143,6 +143,22 @@ const overlay = read('deploy/research-preview/compose.fixture-bff.yaml');
 const fragment = read('deploy/research-preview/nginx/fixture-bff/fixture-bff.conf');
 const proxyInc = read('deploy/research-preview/nginx/fixture-bff/proxy.inc');
 const portalConf = read('deploy/nginx/portal.conf');
+const hybrid = read('deploy/research-preview/nginx/hybrid-fixture/fixture-bff.conf');
+const hybridOverlay = read('deploy/research-preview/compose.hybrid-fixture.yaml');
+
+test('hybrid fixture routes auth and all QuantBT to the isolated Control API without changing standalone fixture mode', () => {
+  const uncommented = hybrid.replace(/^\s*#.*$/gm, '');
+  assert.doesNotMatch(uncommented, /^location [^\n]*\/api\/auth\//m);
+  assert.doesNotMatch(uncommented, /^location [^\n]*\/api\/v1\/quantbt\//m);
+  assert.match(uncommented, /^location \^~ \/api\/v1\/execution\/ \{/m);
+  assert.match(uncommented, /^location \^~ \/__fixture\/ \{/m);
+  assert(hybrid.includes('EXECUTION FIXTURES · RESEARCH USES PREVIEW API · NOT ACCEPTANCE EVIDENCE'));
+  assert.match(hybridOverlay, /PORTAL_WEB_UPSTREAM: control-api:4000/);
+  assert.match(hybridOverlay, /nginx\/hybrid-fixture:\/etc\/nginx\/fixture:ro/);
+  const scriptSource = read('scripts/research-preview/preview.sh');
+  assert.match(scriptSource, /hybrid fixture is restricted to the fixed Research preview/);
+  assert.match(scriptSource, /hybrid fixture requires fixture-bff.enabled/);
+});
 
 test('overlay: the fixture service is private, read-only and capped', () => {
   const raw = overlay.match(/^  portal-fixture-bff:\n([\s\S]*?)(?=^  portal-web:)/m)?.[1];
