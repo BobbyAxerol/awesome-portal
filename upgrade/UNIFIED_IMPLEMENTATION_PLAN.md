@@ -17340,3 +17340,16 @@ This does not close ELP2-10/11 or establish Edge/G2 qualification.
 The public hybrid preview's rebuilt web/fixture images passed a Chromium smoke
 for Research Library and Execution Fleet; the newer Control API image remains
 uninstalled pending compatibility with the actual preview migration ledger.
+
+**3 Nov sibling paging / rehearsal follow-through — IN PROGRESS:** Bobby
+assigned five backend packages. Internal encrypted, scope/snapshot-bound page
+continuations and a bounded source adapter have focused coverage, but are not
+public routes, commissioned Edge sources or an HTTP egress authority fence.
+Financial/Approval/STATUS local regression is distinct from source acceptance.
+See [scope, test results, rollback and Claude handoff](execution_loop/evidence/ELP2-10/SIBLING_PAGING_AND_PREVIEW_REHEARSAL_2026-11-03.md).
+ELP2-10/11 and cross-process STATUS recovery remain open.
+Preview restore rehearsal also exposed that the real `portal_research_runtime`
+role is `NOINHERIT`: a clone created with PostgreSQL's default `INHERIT` is
+not an equivalent security restore, even when object ACLs match. Never install
+from the earlier `--no-owner --no-acl` rehearsal alone; verify role/policy,
+custody and a fresh backup as recorded in the linked receipt.
