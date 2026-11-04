@@ -9,8 +9,14 @@ import {VERIFY_ARTIFACTS} from '../research-p23/restore-receipt.mjs';
 import {HISTORICAL_TEST_MANIFEST_LOSSES} from '../research-p23/historical-manifest-exceptions.mjs';
 import {PROJECT,HOME,SOURCE,docker,owned,compose,privateWrite,readPrivate,coreQuery,inControl} from './acceptance-cell.mjs';
 import {namedClient,client,sessions,authSetup,refreshSessions} from './acceptance-api.mjs';
+import {assertLegacyDrSchemaSafe} from './legacy-dr-guard.mjs';
 const hash=b=>createHash('sha256').update(b).digest('hex');
 const pause=ms=>new Promise(r=>setTimeout(r,ms));
+function assertLegacyDrSafe(){
+  assertLegacyDrSchemaSafe(sql=>({rows:[JSON.parse(docker(['exec',owned('portal-postgres'),
+    'psql','-X','-v','ON_ERROR_STOP=1','-U','portal','-d','portal_control','-Atc',
+    `SELECT row_to_json(probe) FROM (${sql}) probe`]))]}));
+}
 
 function dump(service,user,db,name){
   const bytes=execFileSync('sudo',['-n','docker','exec',owned(service),'pg_dump','-U',user,'-d',db,'-Fc'],
@@ -151,6 +157,9 @@ async function authMatrix(){
     external_ttl:'NOT_APPLICABLE_AUTH_DEV_EDGE_DISABLED',self_approval_and_idempotency:'Unchanged service-policy regression suite; no fabricated owner password step-up'};
 }
 async function main(){
+  // This historical harness does not fingerprint Execution V2 policy or
+  // native/STATUS custody. Refuse before modifying any test identity or data.
+  assertLegacyDrSafe();
   await refreshSessions();
   // A revoked grant cannot be re-issued without a new owner approval. A
   // repeat uses a different already-approved owned grant, never clears a
@@ -205,7 +214,8 @@ async function main(){
       result.independent_execution_alive=docker(['exec',owned('execution-postgres'),'pg_isready','-U','exec_owner','-d','portal_execution']).includes('accepting');
     }finally{docker(['start',owned('portal-postgres')]);}
     await pause(1000);await operator.call('GET','/api/v1/quantbt/runs');
-    compose(['stop','control-api']);const currentCustody=custody();result.current_authority_sha256=currentCustody;
+    compose(['stop','control-api']);assertLegacyDrSafe();
+    const currentCustody=custody();result.current_authority_sha256=currentCustody;
     cutoverAllowed=false;
     restore('portal-postgres','portal','portal_control','core-before-revoke.dump');
     result.stale_auth_restore_rejected=custody()!==currentCustody;assert.equal(result.stale_auth_restore_rejected,true);
@@ -237,6 +247,7 @@ async function main(){
     denominator:result.artifacts_after.strict_denominator,missing:result.artifacts_after.missing_manifests.length}));
 }
 async function resumeReads(){
+  assertLegacyDrSafe();
   const result=readPrivate('authorization-dr.json');
   assert(result.current_auth_cutover_verified&&result.cutover_allowed&&result.stale_auth_restore_rejected,
     'RESTORE_CHECKPOINT_REQUIRED_BEFORE_HTTP_RESUME');
