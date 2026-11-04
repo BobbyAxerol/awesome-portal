@@ -7,12 +7,12 @@
  */
 import { createHash, generateKeyPairSync, randomUUID, X509Certificate } from "node:crypto";
 import { fork, type ChildProcess } from "node:child_process";
-import { lstat, readFile, realpath } from "node:fs/promises";
+import { lstat, readFile, realpath, writeFile } from "node:fs/promises";
 import { createServer, request, type Server } from "node:https";
 import { join } from "node:path";
 import type { Duplex } from "node:stream";
 import { decodeJwt, exportPKCS8, exportSPKI, generateKeyPair, jwtVerify, SignJWT } from "jose";
-import { Client } from "pg";
+import { Client, Pool } from "pg";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { AdminService } from "../src/admin/admin.service";
 import { AuthService } from "../src/auth/auth.service";
@@ -224,7 +224,7 @@ describe.skipIf(!database).sequential("command STATUS concrete authority with re
       method: "POST", path: COMMAND_STATUS_PM_PATH, body_utf8: pmBody, request_digest: requestDigest,
       delivery_sequence: 0, previous_lease_id: null };
     const binding: CurrentHumanBinding = { workspace_id: workspace, environment: "paper", workload_id: workload, request_digest: requestDigest };
-    return { workspace, input, body, issue, binding, reader, author, stored, session, access, policy };
+    return { workspace, input, body, issue, binding, reader, author, stored, session, access, policy, trust };
   }
   type Fixture = Awaited<ReturnType<typeof fixture>>;
   const authority = (f: Fixture, selectedCandidate = candidate) => {
@@ -650,6 +650,50 @@ describe.skipIf(!database).sequential("command STATUS concrete authority with re
     expect(acknowledged.status).toBe(200);
     const stopped=new Promise<void>(resolve=>child.once("exit",()=>resolve()));
     child.send({type:"STOP"});await stopped;
+    if (process.env.PORTAL_TEST_ACK_RESTORE === "TEST_ONLY_DISPOSABLE_RESTORE") {
+      // An external, internal-network-only runner takes a real pg_dump after
+      // the writer's terminal+ACK and restores it into a NEW database while
+      // this test is paused. No tokens, keys or fixture bodies enter /sync.
+      const source=new URL(database!), match=/^control-api-test-postgres-([a-f0-9]{8})$/u.exec(source.hostname);
+      if (!match || source.pathname!=="/portal_control_test" || source.username!=="portal" || source.search ||
+          process.env.PORTAL_TEST_ACK_SYNC!=="/sync") throw Error("TEST_ONLY_ACK_RESTORE_CELL_REQUIRED");
+      await writeFile("/sync/ready", "TEST_ONLY\n", {flag:"wx",mode:0o600});
+      const deadline=Date.now()+15000;
+      for (;;) {
+        try { if ((await readFile("/sync/restored", "utf8"))==="TEST_ONLY\n") break; }
+        catch (error) { if ((error as NodeJS.ErrnoException).code!=="ENOENT") throw error; }
+        if (Date.now()>=deadline) throw Error("TEST_ONLY_ACK_RESTORE_TIMEOUT");
+        await new Promise(resolve=>setTimeout(resolve,50));
+      }
+      source.pathname=`/portal_ack_restore_${match[1]}`;
+      const restoredPool=new Pool({connectionString:source.toString(),max:3,connectionTimeoutMillis:2000,query_timeout:6000});
+      let restoredIssuer:CommandSourceAssertionAuthority|undefined;
+      try {
+        const clone=(await restoredPool.query("SELECT current_database() AS name,current_user AS actor")).rows[0];
+        expect(clone).toEqual({name:`portal_ack_restore_${match[1]}`,actor:"portal"});
+        const restoredAuth=new AuthService(restoredPool,ctx.config,auth.argon2);
+        const restoredAccess=new ExecutionAccessService(restoredPool,restoredAuth,f.trust,true);
+        const restoredCandidate=await CurrentHumanCandidate.create(restoredPool,config);
+        restoredIssuer=new CommandSourceAssertionAuthority(restoredPool,restoredAccess,restoredCandidate,{
+          issuer:"TEST_ONLY:Core-STATUS",audience:gateway,key_id:"TEST_ONLY:status-key",key:humanKey.privateKey,
+          workload_id:workload,ttl_ms:30000,maximum_contexts:4,maximum_requests_per_context:4});
+        restoredIssuer.bindRecoverySource(original,f.input.contract);
+        const restoredOrigin=await listen(restoredIssuer), body=completion(f,result), path="/internal/elp210/command-source/complete";
+        const rows=async()=> (await restoredPool.query(`SELECT lease_id,request_digest,response_digest,terminal_receipt_digest
+          FROM execution_command_status_delivery_acks WHERE lease_id=$1`,[result.lease_id])).rows;
+        const before=await rows();expect(before).toHaveLength(1);
+        await expect(post(restoredOrigin,prepared.original_context,body,foreign,path)).rejects.toThrow();
+        for (let retry=0;retry<2;retry++) {
+          const repeated=await post(restoredOrigin,prepared.original_context,body,edge,path);
+          expect(repeated.status).toBe(200);expect(repeated.json).toEqual(acknowledged.json);
+        }
+        const mismatch=await post(restoredOrigin,prepared.original_context,
+          {...body,response_digest:accessDigest("TEST_ONLY changed ACK")},edge,path);
+        expect(mismatch.status).not.toBe(200);expect(await rows()).toEqual(before);
+        const cloneLeases=await restoredPool.query("SELECT lease_id,attempt_id,phase,terminal_receipt_digest FROM elp210_candidate.leases WHERE workspace_id=$1",[f.workspace]);
+        expect(cloneLeases.rows).toHaveLength(1);expect(cloneLeases.rows[0]).toMatchObject({lease_id:result.lease_id,attempt_id:attempt,phase:"ROLLED_BACK"});
+      } finally { restoredIssuer?.shutdown();await restoredPool.end(); }
+    }
     // Restart again after durable Edge ACK but before retained STATUS is
     // consumed. This exercises the recovery gap in an entirely new process.
     const afterAck=fork(join(__dirname,"fixtures/command-status-recovery-child.cjs"),[],{
