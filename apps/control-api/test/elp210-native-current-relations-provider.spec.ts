@@ -29,7 +29,11 @@ import {NativeCurrentRelationsProvider,type NativeCurrentRelationsProviderConfig
 import {CurrentViewCoreComposition,type CurrentViewCompositionConfig} from "../src/execution-v2/current-view-composition";
 import {ExecutionReadScopes,type ReadScopePrincipal} from "../src/execution-v2/read-scope";
 import {ManagerCurrentAccounts} from "../src/execution-v2/manager-current-accounts";
+import {ApprovalEvidenceNativeDelivery,type ApprovalEvidenceNativePlan} from "../src/approval-evidence/approval-evidence-native-delivery";
+import type {CurrentViewSelection} from "../src/execution-v2/current-view-authority";
 import {SiblingSourceDarkController} from "../src/execution-v2/sibling-source-dark.controller";
+import {SiblingNativeDelivery,type SiblingNativePlan} from "../src/execution-v2/sibling-native-delivery";
+import {SiblingPageCursorCodec} from "../src/execution-v2/sibling-page-cursor";
 import {WorkspacesRepository} from "../src/repos/workspaces";
 import {SessionGuard} from "../src/facade/session.guard";
 import {SESSION_COOKIE} from "../src/auth/cookies";
@@ -54,7 +58,7 @@ describe.skipIf(!url)("ordinary native CURRENT actual custody/finite egress, TES
  afterEach(async()=>{for(const endpoint of endpoints.splice(0))await endpoint.close();
   if(pool){await pool.query("TRUNCATE portal_native_current_read_obligations");await pool.query("DROP SCHEMA IF EXISTS elp210_candidate CASCADE");}});
  afterAll(async()=>{if(pool)await pool.end();if(ctx)await teardownApp(ctx);});
- async function fixture(futureTransition=false,options:{actions?:AccessAction[];maximum_unresolved?:number;
+ async function fixture(futureTransition=false,options:{actions?:AccessAction[];maximum_unresolved?:number;policyFields?:string[];
   relationsForPurpose?:(purpose:NativeCurrentRelationsSourceBase["purpose"],relations:CurrentAccessRelations)=>CurrentAccessRelations}={}){
   await pool.query(await readFile(join(__dirname,"../src/execution-v2/current-human-candidate.sql"),"utf8"));
   const id=randomUUID(),now=Date.now(),workspace=`TEST_ONLY-current-${id}`,session=`TEST_ONLY-current-session-${id}`;
@@ -64,7 +68,7 @@ describe.skipIf(!url)("ordinary native CURRENT actual custody/finite egress, TES
    VALUES($1,$1,$2,'ACTIVE','TEST_ONLY',$3,clock_timestamp()+interval '10 minutes',clock_timestamp()+interval '20 minutes')`,[session,owner,generation]);
   const actor={user_id:owner,session_id:session,session_generation:generation},facts=rootWireFacts(now),policy={workspace_id:workspace,
    revision:`TEST_ONLY-policy-${id}`,artifact_digest:accessDigest(id),approval_ref:"TEST_ONLY-owner-reviewed",state:"REVIEWED" as const,
-   qualification:"TEST_ONLY" as const,protected_owner_user_id:owner,researcher_fields:{state:"QUALIFIED" as const,policy_ref:"TEST_ONLY-fields",fields:["portfolio_id"]}},
+   qualification:"TEST_ONLY" as const,protected_owner_user_id:owner,researcher_fields:{state:"QUALIFIED" as const,policy_ref:"TEST_ONLY-fields",fields:options.policyFields??["portfolio_id"]}},
    grant={...facts.grant,grant_id:`TEST_ONLY-current-grant-${id}`,subject_user_id:owner,issued_by:owner,workspace_id:workspace,policy_revision:policy.revision};
   const futureDeny={...grant,grant_id:`TEST_ONLY-future-deny-${id}`,effect:"DENY" as const,requires_ts_acceptance:false,
    valid_from_ms:now+1200,valid_until_ms:now+600000};
@@ -76,7 +80,7 @@ describe.skipIf(!url)("ordinary native CURRENT actual custody/finite egress, TES
    policy_install_digest:accessDigest(artifact),approval_ref:policy.approval_ref},relations={...facts.relations,subject_user_id:owner,workspace_id:workspace,
     grants:[{...facts.relations.grants[0],grant_id:grant.grant_id,binding_digest:grantBindingDigest(grant),accepted:fact}]};
   const terminal=generateKeyPairSync("ed25519"),states=new Map<string,string>(),terminals:Array<Record<string,unknown>>=[];
-  let loseIssue=false,loseResolve=false,loseEnterBefore=false,loseCancel=false,onIssue:(()=>Promise<void>)|undefined;
+  let loseIssue=false,loseResolve=0,loseEnterBefore=false,loseCancel=false,onIssue:(()=>Promise<void>)|undefined;
   const endpoint=await currentRelationsTestEndpoint(async(base,action,res,body)=>{
    // Pool1 proves no source network wait retains Core's client.
    expect((await pool.query("SELECT 1 AS n")).rows[0].n).toBe(1);
@@ -93,7 +97,7 @@ describe.skipIf(!url)("ordinary native CURRENT actual custody/finite egress, TES
     expect(claims).toMatchObject({purpose:"pma.native-business-to-core-terminal.v1",operation:"READ",lease_id:lease,
      attempt_id:base.binding.attempt_id,binding_digest:accessDigest(base.binding).slice(7),source_digest:"c".repeat(64)});
     expect(["SERVED","ABORTED"]).toContain(claims.phase);expect(claims.evidence_kind).toBe(claims.phase==="SERVED"?"FINAL_HTTP_SEND_COMPLETED":"FINAL_HTTP_ABORT_CONFIRMED");
-    terminals.push({...claims});states.set(lease,String(claims.phase));if(loseResolve){loseResolve=false;res.destroy();}
+    terminals.push({...claims});states.set(lease,String(claims.phase));if(loseResolve>0){loseResolve--;res.destroy();}
     return{...reply,recovery:{state:"SETTLED",phase:claims.phase,terminal_authority:true,release_permitted:true}};
    }return reply;
   });endpoints.push(endpoint);
@@ -109,7 +113,7 @@ describe.skipIf(!url)("ordinary native CURRENT actual custody/finite egress, TES
    observe=()=>provider.observe({actor,workspace_id:workspace,principal_ids:[owner],action:"access.read",resource_digest:accessDigest({kind:"CURRENT_POLICY_CONTEXT"})}),
    rows=async()=> (await pool.query("SELECT * FROM portal_native_current_read_obligations WHERE source_config_digest=$1 ORDER BY created_at,lease_id",[provider.source_config_digest])).rows;
   return{provider,config,actor,workspace,access,baseTrust,observe,rows,endpoint,terminals,relations,states,fact,
-   loseIssue(){loseIssue=true;},loseResolve(){loseResolve=true;},loseEnterBefore(){loseEnterBefore=true;},loseCancel(){loseCancel=true;},onIssue(callback:()=>Promise<void>){onIssue=callback;}};
+   loseIssue(){loseIssue=true;},loseResolve(count=1){loseResolve=count;},loseEnterBefore(){loseEnterBefore=true;},loseCancel(){loseCancel=true;},onIssue(callback:()=>Promise<void>){onIssue=callback;}};
  }
  async function http(operation:(res:ServerResponse)=>Promise<void>){
   let finish!:(result:{error?:unknown})=>void;const completion=new Promise<{error?:unknown}>(resolve=>{finish=resolve;}),sockets=new Set<Socket>();
@@ -150,7 +154,7 @@ describe.skipIf(!url)("ordinary native CURRENT actual custody/finite egress, TES
  it("joins Account profile, current field authority, mTLS and native PG custody to a physical HTTP send",async()=>{
   // The only doubles are the isolated native/Edge sources and their authority
   // fixtures. This is NOT a receipt from the deployed Edge or a real grant.
-  const f=await fixture(false,{actions:["access.read","business.read_all"]}),now=Date.now();
+  const f=await fixture(false,{actions:["access.read","business.read_all"],policyFields:["portfolio_id","reconciliation_run_id","obligation_id"]}),now=Date.now();
   const account=`TEST_ONLY-account-${randomUUID()}`,entity=`TEST_ONLY-entity-${randomUUID()}`;
   const resource={kind:"ACCOUNT" as const,id:account},root=f.relations.resources[0]!.roots[0]!;
   root.resources.push(resource);
@@ -288,6 +292,104 @@ describe.skipIf(!url)("ordinary native CURRENT actual custody/finite egress, TES
     const afterRoute=await f.rows();expect(afterRoute.filter(row=>row.phase==="SERVED"&&row.source_settled)).toHaveLength(2);
     expect(afterRoute.every(row=>row.source_settled)).toBe(true);
    }finally{await web.close();}
+   // Exercise two Approval sections from ONE selected source read while the
+   // actual native lease is held through HTTP dispatch. The source facts,
+   // section mapping and qualifier are deliberately synthetic, not a real
+   // Approval field-policy or connected Edge qualification.
+   const selection:CurrentViewSelection={resource_ref:"accounts",binding:{environment:"paper",profileId:metadata.scope.profile_id},
+    read_requirement:{action:"business.read_all",resource,dataset:structuredClone(binding),requireWholePopulation:true},fields:["account_id"]};
+   const paths=["receipt_preview.what_changes","receipt_preview.counts_as.met_after","receipt_preview.counts_as.required",
+    "obligations_after_approval.open_positions","obligations_after_approval.working_orders","obligations_after_approval.reservations",
+    "obligations_after_approval.unknown_outcomes","obligations_after_approval.settlement_pending"];
+   const proofs=Object.fromEntries(paths.map(path=>[path,{selection:0,field:"account_id",detail:false}]));
+   const fieldPolicy=(prefix:string)=>Object.fromEntries(paths.filter(path=>path.startsWith(prefix)).map(path=>[path,{field:"account_id",detail:false}]));
+   let revoked=false;
+   const qualifier={prepare:async(scope:ApprovalEvidenceNativePlan["scope"]):Promise<ApprovalEvidenceNativePlan>=>({scope,selections:[selection],
+    sections:["receipt_preview","obligations_after_approval"],fieldProofs:proofs,read:async read=>{
+     const result=await read({authority:selection,resource:"accounts",query:{limit:1,max_bytes:8192,entity_id:entity}});
+     const page=JSON.parse(result.body.toString());const count=page.rows.length;
+     return{identity:{workspaceId:scope.workspaceId,approvalId:scope.approvalId},sections:{
+      receipt_preview:{what_changes:page.rows[0].payload.account_id.value,counts_as:{met_after:count,required:count}},
+      obligations_after_approval:{open_positions:count,working_orders:count,reservations:count,unknown_outcomes:count,settlement_pending:count}}};
+    }}),revalidate:async()=>{},revalidateBeforeDispatch:()=>{if(revoked)throw Error("TEST_ONLY_APPROVAL_REVOKED");}};
+   const approval=new ApprovalEvidenceNativeDelivery(composition,qualifier,{visible:async()=>true},
+    {receipt_preview:fieldPolicy("receipt_preview."),obligations_after_approval:fieldPolicy("obligations_after_approval.")});
+   const beforeApproval=await f.rows(),sourceHits=hits;
+   const delivered=await http(res=>approval.deliver(principal,"TEST_ONLY-approval",{workspace_id:f.workspace},res,()=>{}));
+   if(delivered.completion.error)throw delivered.completion.error;
+   const body=JSON.parse(delivered.received.body.toString());
+   expect(delivered.received.complete).toBe(true);expect(body.receipt_preview.what_changes).toBe(account);
+   expect(body.obligations_after_approval.open_positions).toBe(1);expect(hits-sourceHits).toBe(1);
+   const afterApproval=await f.rows();
+   expect(afterApproval.filter(row=>row.phase==="SERVED"&&row.source_settled)).toHaveLength(
+    beforeApproval.filter(row=>row.phase==="SERVED"&&row.source_settled).length+1);
+   expect(afterApproval.every(row=>row.source_settled)).toBe(true);
+   revoked=true;
+   const denied=await http(res=>approval.deliver(principal,"TEST_ONLY-approval",{workspace_id:f.workspace},res,()=>{}));
+   expect(denied.received.body).toHaveLength(0);
+   const afterRevoke=await f.rows();
+   expect(afterRevoke.filter(row=>row.phase==="SERVED")).toHaveLength(afterApproval.filter(row=>row.phase==="SERVED").length);
+   expect(afterRevoke.filter(row=>row.phase==="ABORTED"&&row.source_settled)).toHaveLength(
+    afterApproval.filter(row=>row.phase==="ABORTED"&&row.source_settled).length+1);
+   // Drop the terminal response after the synthetic source records it. A new
+   // provider instance must recover the persisted original, not issue a new
+   // lease or send the Approval body a second time. This simulates a restart
+   // of the provider instance; it is not an OS/process or real Edge receipt.
+   revoked=false;f.loseResolve(2);
+   const lostAck=await http(res=>approval.deliver(principal,"TEST_ONLY-approval",{workspace_id:f.workspace},res,()=>{}));
+   expect(lostAck.received.complete).toBe(true);expect(JSON.parse(lostAck.received.body.toString()).receipt_preview.what_changes).toBe(account);
+   const beforeRecovery=await f.rows(),issuedBefore=f.endpoint.requests.filter(request=>request.action==="issue").length;
+   expect(beforeRecovery.some(row=>row.phase==="SERVED"&&!row.source_settled)).toBe(true);
+   const recoveryEgress=new NativeReadEgress({maximum_response_bytes:65536,maximum_inflight:2,send_timeout_ms:5000,quiesce_timeout_ms:50});
+   const restarted=new NativeCurrentRelationsProvider(pool,f.endpoint.client,recoveryEgress,f.config);
+   await restarted.recover();const afterRecovery=await f.rows();
+   expect(f.endpoint.requests.filter(request=>request.action==="issue")).toHaveLength(issuedBefore);
+   expect(afterRecovery.map(row=>[row.base_body,row.terminal_receipt_id,row.terminal_receipt_digest])).toEqual(
+    beforeRecovery.map(row=>[row.base_body,row.terminal_receipt_id,row.terminal_receipt_digest]));
+   expect(afterRecovery.every(row=>row.source_settled)).toBe(true);
+   // The same disposable PG/mTLS/native HTTP fence for all three sibling
+   // families. The order relationship and mapped values here are synthetic:
+   // no Edge publication or order-to-account authority is being claimed.
+   const siblingSelection={...selection,detail_fields:["filled_quantity","reconciliation_run_id","obligation_id"]};
+   const codec=new SiblingPageCursorCodec("TEST_ONLY",{TEST_ONLY:"x".repeat(40)},60000);
+   const digest=accessDigest("TEST_ONLY-sibling-snapshot"),positions:string[]=[];
+   let siblingRevoked=false;
+   const siblingQualifier={prepare:async(scope:SiblingNativePlan["scope"],pageSize?:number):Promise<SiblingNativePlan>=>{
+    const family=scope.kind,field=family==="order-detail"?"filled_quantity":family==="reconciliation"?"reconciliation_run_id":"obligation_id";
+    const path=family==="order-detail"?"filled_quantity":family==="reconciliation"?"runs":"items";
+    const isPaged=pageSize!==undefined;
+    return{scope,selections:[siblingSelection],fieldProofs:{[path]:{selection:0,field,detail:true}},
+     ...(isPaged?{page:{codec,binding:{workspace_id:scope.workspaceId,principal_id:scope.principalId,session_id:scope.sessionId,
+      session_generation:scope.sessionGeneration,environment:"paper" as const,kind:family as "reconciliation"|"obligations",
+      target_type:scope.targetType,target_id:scope.targetId,app_policy_revision:"TEST_ONLY-app",field_policy_revision:"TEST_ONLY-field",
+      source_set_digest:digest,snapshot_id:"TEST_ONLY-snapshot",query_digest:digest,page_size:pageSize!}}}:{}),
+     read:async(read,page)=>{await read({authority:siblingSelection,resource:"accounts",query:{limit:1,max_bytes:8192,entity_id:entity}});
+      if(page)positions.push(page.position??"first");
+      const base={schema_version:`portal.execution.${family}.v1`,workspace_id:scope.workspaceId,record_authority:"PORTAL_PROJECTION",read_at_ms:now};
+      const body=family==="order-detail"?{...base,order_id:scope.targetId,filled_quantity:"5"}:
+       {...base,subject:{type:"ACCOUNT",id:scope.targetId},...(family==="reconciliation"?{runs:[]}:{items:[]})};
+      return{scope,body,complete:!page||page.position!==null,...(page?{snapshot_id:"TEST_ONLY-snapshot",next_source:page.position?null:"TEST_ONLY-next"}:{})};
+     }};
+   },revalidate:async()=>{},revalidateBeforeDispatch:()=>{if(siblingRevoked)throw Error("TEST_ONLY_SIBLING_REVOKED");}};
+   const sibling=new SiblingNativeDelivery(composition,siblingQualifier);
+   for(const family of ["order-detail","reconciliation","obligations"] as const){
+    const paged=family!=="order-detail",id=paged?account:"TEST_ONLY-order",type=paged?"ACCOUNT":"ORDER";
+    const requestPage=(cursor:string|null)=>http(res=>sibling.deliver(principal,family,type,id,res,()=>{},paged?{cursor,pageSize:1}:undefined));
+    const first=await requestPage(null);if(first.completion.error)throw first.completion.error;
+    expect(first.received.complete).toBe(true);const firstBody=JSON.parse(first.received.body.toString());
+    if(paged){expect(firstBody.next_cursor).toBeTruthy();expect(firstBody.next_cursor).not.toContain("TEST_ONLY-next");
+     const foreign=await http(res=>sibling.deliver({...principal,workspaceId:"TEST_ONLY-foreign"},family,type,id,res,()=>{},
+      {cursor:firstBody.next_cursor,pageSize:1}));
+     expect(foreign.received.body).toHaveLength(0);
+     const next=await requestPage(firstBody.next_cursor);if(next.completion.error)throw next.completion.error;
+     expect(JSON.parse(next.received.body.toString()).next_cursor).toBeNull();}
+    const beforeDenial=await f.rows();siblingRevoked=true;const deniedSibling=await requestPage(null);
+    expect(deniedSibling.received.body).toHaveLength(0);siblingRevoked=false;
+    const afterDenial=await f.rows();expect(afterDenial.filter(row=>row.phase==="SERVED")).toHaveLength(beforeDenial.filter(row=>row.phase==="SERVED").length);
+    expect(afterDenial.filter(row=>row.phase==="ABORTED"&&row.source_settled)).toHaveLength(
+     beforeDenial.filter(row=>row.phase==="ABORTED"&&row.source_settled).length+1);
+   }
+   expect(positions).toEqual(["first","TEST_ONLY-next","first","first","TEST_ONLY-next","first"]);
   }finally{await composition.shutdown();await managerRuntime.beforeApplicationShutdown();for(const socket of sockets)socket.destroy();server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()));}
  });
  const seriesPurposes:NativeCurrentRelationsPurpose[]=[

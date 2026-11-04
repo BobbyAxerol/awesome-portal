@@ -34,17 +34,18 @@ describe("sibling HTTP + native composition with synthetic custody", () => {
         kind: scope.kind as "reconciliation" | "obligations", target_type: scope.targetType, target_id: scope.targetId,
         app_policy_revision: "a", field_policy_revision: "f", source_set_digest: digest, snapshot_id: "snapshot",
         query_digest: digest, page_size: pageSize! } } }),
-      read: async () => ({ scope, complete: true, snapshot_id: "snapshot", next_source: null,
+      read: async read => { await read({ authority: selection, resource: "resource", query: { limit: 1, max_bytes: 1000 } });
+        return { scope, complete: true, snapshot_id: "snapshot", next_source: null,
         body: { schema_version: `portal.execution.${scope.kind}.v1`, workspace_id: scope.workspaceId,
           record_authority: "PORTAL_PROJECTION", read_at_ms: 1, ...(order ? { order_id: scope.targetId, filled_quantity: "2" } :
-            { subject: { type: scope.targetType, id: scope.targetId }, ...(recon ? { runs: [] } : { items: [] }) }) } }) };
+            { subject: { type: scope.targetType, id: scope.targetId }, ...(recon ? { runs: [] } : { items: [] }) }) } }; } };
   }, revalidate: async () => {}, revalidateBeforeDispatch: () => {
     if (revoked) throw new ExecutionReadScopeError("EXECUTION_READ_ACCESS_CHANGED", 409);
   } };
   const native = { hasNativeCurrentRelations: () => true,
     deliverNative: async (_actor: unknown, _selections: unknown, response: ServerResponse,
       build: (read: never) => Promise<Buffer>, validation: { validateAfterEnter: () => Promise<void>; validateBeforeDispatch: () => void }) => {
-      await validation.validateAfterEnter(); const bytes = await build(undefined as never);
+      await validation.validateAfterEnter(); const bytes = await build((async () => ({ status: 200, body: Buffer.from("{}") })) as never);
       validation.validateBeforeDispatch(); response.writeHead(200, { "content-type": "application/json", "cache-control": "private, no-store" }); response.end(bytes);
     } };
   @Injectable() class Guard { canActivate(context: ExecutionContext) {

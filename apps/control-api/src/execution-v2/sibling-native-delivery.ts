@@ -106,19 +106,26 @@ export class SiblingNativeDelivery {
     await check();
     await this.core.deliverNative(actor, selections, response, async read => {
       await check();
+      const observed = new Set<string>();
+      const trackedRead: Read = async input => {
+        const captured = structuredClone(input);
+        const result = await read(captured);
+        observed.add(accessDigest(captured.authority));
+        return result;
+      };
       let body: unknown;
       let next: string | null | undefined;
       try {
         const authority = { check: async () => { await check(); return true; } };
         if (page && plan.page) {
           const paged = new SiblingPagedSource(authority, { read: async (_scope, input) => {
-            const result = await sourceRead.call(plan, read, input);
+            const result = await sourceRead.call(plan, trackedRead, input);
             if (typeof result.snapshot_id !== "string" || result.next_source === undefined) return unavailable();
             return { ...result, snapshot_id: result.snapshot_id, next_source: result.next_source };
           } }, plan.page.codec);
           const result = await paged.read(scope, plan.page.binding, page.cursor);
           body = result.body; next = result.next_cursor;
-        } else body = await new SiblingSourceSeam(authority, { read: async () => sourceRead.call(plan, read) }).read(scope);
+        } else body = await new SiblingSourceSeam(authority, { read: async () => sourceRead.call(plan, trackedRead) }).read(scope);
       }
       catch (error) {
         if (error instanceof OperationalReadError) {
@@ -129,11 +136,16 @@ export class SiblingNativeDelivery {
         }
         throw error;
       }
+      // A field proof names a selected authority, but is not evidence that
+      // its source was actually read under this custody. The qualifier still
+      // owns the source semantics; this fence prevents a detached body from
+      // being laundered through an otherwise valid selection.
+      if (!selections.some(selection => observed.has(accessDigest(selection)))) unavailable();
       for (const path of new Set(leafPaths(body))) {
         if (envelope.has(path)) continue;
         const proof = proofs[path], expected = policy[family][path], selection = proof && selections[proof.selection];
         if (!selection || !Number.isSafeInteger(proof.selection) || typeof proof.field !== "string" || typeof proof.detail !== "boolean" ||
-          !expected || proof.field !== expected[0] || proof.detail !== expected[1] ||
+          !expected || proof.field !== expected[0] || proof.detail !== expected[1] || !observed.has(accessDigest(selection)) ||
           !(proof.detail ? selection.detail_fields : selection.fields)?.includes(proof.field)) unavailable();
       }
       const bytes = Buffer.from(JSON.stringify(next === undefined ? body : { ...(body as object), next_cursor: next }));

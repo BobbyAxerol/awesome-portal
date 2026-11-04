@@ -12,6 +12,8 @@ const selection = { resource_ref: "resource", binding: { environment: "paper", p
   read_requirement: { action: "account.read", resource: { kind: "ACCOUNT", id: "account" },
     dataset: { dataset_id: "test", source_revision: "1", window: null } }, fields: ["state"],
   detail_fields: ["filled_quantity", "reconciliation_run_id", "obligation_id"] } as unknown as CurrentViewSelection;
+const sourceRequest = { authority: selection, resource: "resource", query: { limit: 1, max_bytes: 1000 } } as const;
+const sourceRead = async () => ({ status: 200 as const, body: Buffer.from("{}") });
 const familyBody = (kind: "order-detail" | "reconciliation" | "obligations") => ({
   schema_version: `portal.execution.${kind}.v1`, workspace_id: "ws", record_authority: "PORTAL_PROJECTION", read_at_ms: 1,
   ...(kind === "order-detail" ? { order_id: "target", filled_quantity: "5" } :
@@ -26,7 +28,7 @@ function cell(kind: "order-detail" | "reconciliation" | "obligations") {
     prepare: vi.fn(async (scope: SiblingNativePlan["scope"]): Promise<SiblingNativePlan> => activePlan = { scope, selections: [selection],
       fieldProofs: { [kind === "order-detail" ? "filled_quantity" : kind === "reconciliation" ? "runs" : "items"]:
         { selection: 0, field: kind === "order-detail" ? "filled_quantity" : kind === "reconciliation" ? "reconciliation_run_id" : "obligation_id", detail: true } },
-      read: async () => ({ scope, body, complete: true }) }),
+      read: async read => { await read(sourceRequest); return { scope, body, complete: true }; } }),
     revalidate: vi.fn(async () => { if (!allowed) throw Error("revoked"); }),
     revalidateBeforeDispatch: vi.fn(() => { if (!allowed) throw Error("revoked"); }),
   };
@@ -34,7 +36,7 @@ function cell(kind: "order-detail" | "reconciliation" | "obligations") {
   const core = { hasNativeCurrentRelations: () => true,
     deliverNative: vi.fn(async (_a: unknown, _s: unknown, _r: unknown, build: (read: never) => Promise<Buffer>,
       check: { validateAfterEnter: () => Promise<void>; validateBeforeDispatch: () => void }) => {
-      await check.validateAfterEnter(); const bytes = await build(undefined as never); check.validateBeforeDispatch(); dispatched = bytes;
+      await check.validateAfterEnter(); const bytes = await build(sourceRead as never); check.validateBeforeDispatch(); dispatched = bytes;
     }) };
   const service = new SiblingNativeDelivery(core as never, qualifier);
   const call = () => service.deliver(actor, kind, kind === "order-detail" ? "ORDER" : "ACCOUNT", "target", {} as ServerResponse, before);
@@ -50,6 +52,23 @@ describe("sibling native custody composition (synthetic only)", () => {
   });
   it("rejects an output field without a matching native field proof", async () => {
     const c = cell("order-detail"); c.setBody({ ...familyBody("order-detail"), average_fill_price: "123" });
+    await expect(c.call()).rejects.toMatchObject({ code: "EXECUTION_READ_PUBLICATION_NOT_QUALIFIED" });
+    expect(c.before).not.toHaveBeenCalled(); expect(c.result()).toBeUndefined();
+  });
+  it("rejects a detached body when its claimed selected source was not read", async () => {
+    const c = cell("order-detail");
+    c.qualifier.prepare.mockImplementation(async scope => ({ scope, selections: [selection],
+      fieldProofs: { filled_quantity: { selection: 0, field: "filled_quantity", detail: true } },
+      read: async () => ({ scope, body: familyBody("order-detail"), complete: true }) }));
+    await expect(c.call()).rejects.toMatchObject({ code: "EXECUTION_READ_PUBLICATION_NOT_QUALIFIED" });
+    expect(c.before).not.toHaveBeenCalled(); expect(c.result()).toBeUndefined();
+  });
+  it("does not borrow an unrelated observed selection for a field proof", async () => {
+    const c = cell("order-detail"), other = { ...selection, resource_ref: "other" };
+    c.qualifier.prepare.mockImplementation(async scope => ({ scope, selections: [selection, other],
+      fieldProofs: { filled_quantity: { selection: 0, field: "filled_quantity", detail: true } },
+      read: async read => { await read({ ...sourceRequest, authority: other });
+        return { scope, body: familyBody("order-detail"), complete: true }; } }));
     await expect(c.call()).rejects.toMatchObject({ code: "EXECUTION_READ_PUBLICATION_NOT_QUALIFIED" });
     expect(c.before).not.toHaveBeenCalled(); expect(c.result()).toBeUndefined();
   });
@@ -84,7 +103,7 @@ describe("sibling native custody composition (synthetic only)", () => {
     const c = cell("order-detail");
     c.qualifier.prepare.mockImplementation(async scope => ({ scope, selections: [selection],
       fieldProofs: { filled_quantity: { selection: 0, field: "ungranted", detail: false } },
-      read: async () => ({ scope, body: familyBody("order-detail"), complete: true }) }));
+      read: async read => { await read(sourceRequest); return { scope, body: familyBody("order-detail"), complete: true }; } }));
     await expect(c.call()).rejects.toMatchObject({ code: "EXECUTION_READ_PUBLICATION_NOT_QUALIFIED" });
     expect(c.before).not.toHaveBeenCalled();
   });
@@ -92,7 +111,7 @@ describe("sibling native custody composition (synthetic only)", () => {
     const c = cell("order-detail");
     c.qualifier.prepare.mockImplementation(async scope => ({ scope, selections: [selection],
       fieldProofs: { filled_quantity: { selection: 0, field: "state", detail: false } },
-      read: async () => ({ scope, body: familyBody("order-detail"), complete: true }) }));
+      read: async read => { await read(sourceRequest); return { scope, body: familyBody("order-detail"), complete: true }; } }));
     await expect(c.call()).rejects.toMatchObject({ code: "EXECUTION_READ_PUBLICATION_NOT_QUALIFIED" });
     expect(c.before).not.toHaveBeenCalled();
   });
@@ -105,12 +124,12 @@ describe("sibling native custody composition (synthetic only)", () => {
         session_generation: scope.sessionGeneration, environment: "paper", kind: "obligations", target_type: scope.targetType,
         target_id: scope.targetId, app_policy_revision: "a", field_policy_revision: "f", source_set_digest: digest,
         snapshot_id: "snapshot", query_digest: digest, page_size: pageSize! } },
-      read: async (_read, page) => { positions.push(page!.position); return { scope, snapshot_id: "snapshot",
+      read: async (read, page) => { await read(sourceRequest); positions.push(page!.position); return { scope, snapshot_id: "snapshot",
         body: familyBody("obligations"), complete: page!.position !== null, next_source: page!.position ? null : "private-next" }; },
     }), revalidate: async () => {}, revalidateBeforeDispatch: () => {} };
     const core = { hasNativeCurrentRelations: () => true, deliverNative: async (_a: unknown, _s: unknown, _r: unknown,
       build: (read: never) => Promise<Buffer>, check: { validateAfterEnter: () => Promise<void>; validateBeforeDispatch: () => void }) => {
-      await check.validateAfterEnter(); const bytes = await build(undefined as never); check.validateBeforeDispatch(); responses.push(bytes);
+      await check.validateAfterEnter(); const bytes = await build(sourceRead as never); check.validateBeforeDispatch(); responses.push(bytes);
     } };
     const service = new SiblingNativeDelivery(core as never, qualifier);
     const run = (principal: ReadScopePrincipal, cursor: string | null) => service.deliver(principal, "obligations", "ACCOUNT", "target",
