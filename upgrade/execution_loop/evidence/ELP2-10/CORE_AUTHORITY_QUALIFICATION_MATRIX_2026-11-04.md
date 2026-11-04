@@ -18,6 +18,10 @@ runtime inputs, not simply because a file or a test name matches.
 | Test-inclusive TypeScript | `npm run typecheck` in Control API, including tests and the cross-loop project, exited 0 on this working source; see [retake](CORE_NATIVE_FINITE_RETAKE_2026-11-04.md). | Repeat on relevant source or dependency changes. A build-only compilation does not substitute for it. |
 | Browser / connected | None of the synthetic tests above is an Edge or browser acceptance. | Commission the current Research source, grants and trust via Edge, then validate the corresponding browser and revocation/recovery paths on the deployed candidate. |
 
-The code commit is local; this receipt remains local until committed. No push,
-runtime install, stable/dev/main change, command or Live enablement
-is implied. ELP2-10 and ELP2-11 remain open.
+The code and receipt commits are local. No push, runtime install,
+stable/dev/main change, command or Live enablement is implied. ELP2-10 and
+ELP2-11 remain open. In particular, the restored-repository test compares ACK
+rows before and after idempotent original pinning; the repeated ACK completion
+exercise belongs to a separate pre-restore PostgreSQL test. Their combination
+does not demonstrate a repeated authenticated ACK against the restored
+database, nor an approved operational rollback after new source facts arrive.
