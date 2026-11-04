@@ -675,6 +675,29 @@ describe.skipIf(!database).sequential("command STATUS concrete authority with re
       try {
         const clone=(await restoredPool.query("SELECT current_database() AS name,current_user AS actor")).rows[0];
         expect(clone).toEqual({name:`portal_ack_restore_${match[1]}`,actor:"portal"});
+        // The dump is now complete. Revoke the SAME disposable session through
+        // the real coordinator on the original, then prove the restored copy
+        // has stale authority even though its STATUS ACK still matches. This is
+        // a restore diagnostic, not an operational cutover barrier: it neither
+        // reconciles the revoke into the clone nor consults an external source.
+        const sessionState=async(pool:Pool)=>(await pool.query(
+          "SELECT state,revoke_reason FROM auth_sessions WHERE session_id=$1",[f.input.actor.session_id])).rows[0];
+        const revision=async(pool:Pool)=>BigInt((await pool.query(
+          "SELECT revision::text AS revision FROM elp210_candidate.authority WHERE singleton")).rows[0].revision);
+        const ackRows=async(pool:Pool)=>(await pool.query(`SELECT lease_id,request_digest,response_digest,terminal_receipt_digest
+          FROM execution_command_status_delivery_acks WHERE lease_id=$1`,[result.lease_id])).rows;
+        expect((await sessionState(ctx.pool)).state).toBe("ACTIVE");
+        expect(await sessionState(restoredPool)).toEqual(await sessionState(ctx.pool));
+        const priorRevision=await revision(ctx.pool), priorAck=await ackRows(ctx.pool);
+        expect(await revision(restoredPool)).toBe(priorRevision);
+        expect(priorAck).toHaveLength(1);
+        await coordinatedAuth.logout(f.session.token);
+        expect(await sessionState(ctx.pool)).toEqual({state:"REVOKED",revoke_reason:"logout"});
+        expect((await sessionState(restoredPool)).state).toBe("ACTIVE");
+        expect(await revision(ctx.pool)).toBeGreaterThan(priorRevision);
+        expect(await revision(restoredPool)).toBe(priorRevision);
+        expect(await ackRows(ctx.pool)).toEqual(priorAck);
+        expect(await ackRows(restoredPool)).toEqual(priorAck);
         const restoredAuth=new AuthService(restoredPool,ctx.config,auth.argon2);
         const restoredAccess=new ExecutionAccessService(restoredPool,restoredAuth,f.trust,true);
         const restoredCandidate=await CurrentHumanCandidate.create(restoredPool,config);
