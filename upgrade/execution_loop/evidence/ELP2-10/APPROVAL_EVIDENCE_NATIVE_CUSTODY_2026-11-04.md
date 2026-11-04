@@ -82,6 +82,9 @@ source-specific section/path policy, native qualifier, approval lineage,
 rights and live custody/revocation proof before mounting a positive provider.
 That work must not infer HISTORY or field authority from CURRENT, approval
 visibility, a fixture or a different workspace.
+The independent-purpose proposal, current fence and test/commissioning matrix
+are in [Approval HISTORY/diff authority design](APPROVAL_HISTORY_DIFF_AUTHORITY_DESIGN_2026-11-04.md).
+It is a design only and does not mount or grant historical access.
 
 Research needs an actual current Paper root/delegation, independent READ and
 STREAM grants, valid trust/binding and protected final source transport through

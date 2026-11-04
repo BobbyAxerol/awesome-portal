@@ -18023,4 +18023,15 @@ CURRENT cannot open historical evidence or previous-revision diff. Default
 source and policy remain dark; synthetic HTTP tests do not commission them.
 [Scope, tests, source pins and handoff](execution_loop/evidence/ELP2-10/APPROVAL_EVIDENCE_NATIVE_CUSTODY_2026-11-04.md).
 
+**4 Nov native finite follow-through — local code, not connected acceptance:** Core
+requires each published sibling field's selected source to be consumed inside
+native custody. Focused tests and the synthetic-source PostgreSQL/mTLS physical
+HTTP retake, HISTORY design, exact limits and pending gates are recorded in
+[the retake](execution_loop/evidence/ELP2-10/CORE_NATIVE_FINITE_RETAKE_2026-11-04.md)
+and [qualification matrix](execution_loop/evidence/ELP2-10/CORE_AUTHORITY_QUALIFICATION_MATRIX_2026-11-04.md).
+This is not a commissioned source, real Edge ACK, successful G2 or ELP2-10/11
+closeout. Test-inclusive typecheck, the normal hook on `d1462632c` and an
+isolated historical-clone/custody restore passed with the limitations in the
+receipt; an approved operational rollback and connected qualification remain.
+
 
