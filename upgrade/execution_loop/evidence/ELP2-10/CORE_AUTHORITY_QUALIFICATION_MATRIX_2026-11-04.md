@@ -84,3 +84,8 @@ was delivered to the HK EPG10-08 mailbox; the SGP and HK bytes both hashed to
 It identifies unverified installed pins and the source-level ENTER/RESOLVE
 and global authority-revision differences. It is **not** an installed A2
 bundle, owner acceptance, connected receipt or source authority grant.
+
+A later [read-only Research runtime inventory](CORE_PREVIEW_RUNTIME_READ_ONLY_20261104.md)
+records the running image, its declared revision, namespace listeners and
+compiled file hashes. It does not establish mounted routes, trust, effective
+delegation or connected qualification; the A2 disposition remains NOT READY.
