@@ -73,9 +73,9 @@ Working-file SHA-256 at this retake:
 [HISTORY/diff authority design](APPROVAL_HISTORY_DIFF_AUTHORITY_DESIGN_2026-11-04.md)
 keeps historical sections refused on CURRENT. [Qualification matrix](CORE_AUTHORITY_QUALIFICATION_MATRIX_2026-11-04.md)
 separates reusable source pins from final connected, restore and G2 gates.
-Further independent work remains: an Approval recovery across an actual process
-boundary and an approved operational rollback; the combined
-historical-clone/custody restore is recorded below. Edge must qualify the real
+Further independent work remains: an approved operational rollback; the combined
+historical-clone/custody restore and maintained Approval crash/restart test are
+recorded below. Edge must qualify the real
 source, grants, field policy and approval/order lineage. STATUS real ACK,
 financial/Approval, connected browser and G2 are not established here.
 
@@ -128,3 +128,47 @@ or real Edge ACK. The overlay was a disposable diagnostic, not a maintained
 regression test. Promoting an issuer-kill/restart test into the suite remains
 follow-up; no real-world credential or session was used. The cell containers
 and network were removed and checked by their explicit names.
+
+## Maintained Approval issuer crash and STATUS restored-repository retake
+
+On the working tree after `53aadef2c`, a single internally networked,
+disposable PG/mTLS cell compiled Core and ran these tests sequentially:
+
+- `elp210-native-current-relations-provider.spec.ts`, one selected test
+  **PASS** (21 skipped): in addition to the prior full CurrentView composition
+  and physical HTTP assertions, a TEST_ONLY issuer process sent two Approval
+  sections under native custody, lost two synthetic source terminal responses,
+  and was killed with `SIGKILL` after a persisted `SERVED` terminal. A new OS
+  process recovered; the test compared the original base, terminal id/digest,
+  source configuration and issue count. Its separate-process selected-read
+  adapter, field permits, source and ACK are deliberately synthetic. The
+  selected-read adapter for this crash subcase is not the production
+  `CurrentViewCoreComposition`; that composition is exercised separately in
+  the same selected test. This is neither connected Edge proof nor a grant.
+- `command-source-assertion-pg.spec.ts` **8/8 PASS** with writer-created
+  TEST_ONLY custody retained, then a PostgreSQL dump restored to another
+  disposable database in the same cell.
+- `command-status-populated-restore.spec.ts` **1/1 PASS** on that restore:
+  original/context/lease/ACK rows and effective ACL matched, re-pinning the
+  same writer-created original twice was idempotent, changed original and
+  wrong workspace were refused, and all captured records remained unchanged.
+  An unapproved down was refused. Raw ACL representation differed in one
+  case while effective ACL matched; no approved operational rollback or real
+  Edge acknowledgement is claimed.
+
+Test-inclusive `npm run typecheck` passed on this working tree. Input SHA-256:
+`elp210-native-current-relations-provider.spec.ts` `cf3708307ee6c6aef5f681b14a516ca5c2c5c248e4b113f704bad521519492dd`,
+`command-status-populated-restore.spec.ts` `94c216b92125401d5e65e0bb63a10d7d3aa17b8a17728f2b33b6585015f7d268`,
+and `native-approval-restart-child.cjs` `05bcdfcd66ae30a867b9dc0d0c451f7797cdb89095f6e7021dcfe3bbb3a66953`.
+Node/PG image digests are the same as the earlier retake. The non-secret cell
+runner is retained locally at
+`/home/bobby/.local/state/portal-research-evidence/elp2-crash-restore-20261104/run.sh`
+(SHA-256 `8f1653dd6e0f7eef4a91f793a52a90caf4c76b18c8b1f3319adfe6e77b5dbe47`);
+it is not a remote or production artifact. Its containers/network and the
+189 MiB temporary cell were removed. The normal monorepo hook finished with
+exit 0 on test commit `fec700592a78c4e7a789fd18865c3a6d5ddcc550` (tree
+`ccc6e48b0bc583a8f9223fb37367ad3eb5d3f7bc`); the portal monorepo verification
+and execution tracking gates completed. The populated-restore test is opt-in
+and was **skipped in the normal hook**; its separate 1/1 disposable-cell run
+above, rather than the hook, is its execution receipt. The synthetic Approval
+test remains distinct from connected production authority or an Edge ACK.
