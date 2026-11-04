@@ -16,6 +16,7 @@ const user: PortalUser = {
   userId: "usr_bobby", username: "bobby", displayName: "Bobby", role: "ADMIN", status: "ACTIVE",
   mustChangePassword: false, failedLoginCount: 0, lockedUntil: null, sessionVersion: 1,
   createdAt: new Date("2026-08-30T00:00:00Z"), updatedAt: new Date("2026-08-30T00:00:00Z"), disabledAt: null,
+  accountRevision: 1, archivedAt: null,
 };
 const session: AuthSession = {
   sessionId: "ses_bobby", userId: user.userId, state: "ACTIVE", sessionVersion: 1,
@@ -189,7 +190,7 @@ function managerResponse(
           relation: { schema: "public", relation }, record_key: "must-not-leak",
           fields: Object.fromEntries(Object.entries({ ...fields, raw: "must-not-leak" }).map(([key, value]) => [key, tagged(value)])),
         })),
-        next_cursor: null,
+        next_cursor: null as string | null,
         ...(scope ? { scope: { state: scope.state, reason_code: scope.reasonCode } } : {}),
       },
     },

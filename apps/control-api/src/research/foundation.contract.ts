@@ -21,10 +21,16 @@ export const RESEARCH_CURSOR_KEYS = [
   "mode", "schedule", "route", "playback_ordinal",
 ] as const;
 
-const CursorFields = Object.fromEntries(RESEARCH_CURSOR_KEYS.map((key) => [
-  key,
-  key === "stage" ? z.enum(RESEARCH_CURSOR_STAGES).optional() : Identifier.optional(),
-]));
+// Keep the statically inferred query in sync with the runtime vocabulary.
+// Object.fromEntries erased these keys from z.infer even though the parser
+// accepted them, causing callers to cast away the actual cursor contract.
+const CursorFields = {
+  stage: z.enum(RESEARCH_CURSOR_STAGES).optional(),
+  fold: Identifier.optional(), study: Identifier.optional(), trial: Identifier.optional(),
+  pick: Identifier.optional(), params: Identifier.optional(), trade: Identifier.optional(),
+  seq: Identifier.optional(), event_seq: Identifier.optional(), mode: Identifier.optional(),
+  schedule: Identifier.optional(), route: Identifier.optional(), playback_ordinal: Identifier.optional(),
+} satisfies Record<(typeof RESEARCH_CURSOR_KEYS)[number], z.ZodTypeAny>;
 
 export const ResearchJourneyQuerySchema = z.object({
   workspace_id: WorkspaceId,

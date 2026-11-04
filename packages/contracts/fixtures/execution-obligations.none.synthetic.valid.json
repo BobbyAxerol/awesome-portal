@@ -9,6 +9,7 @@
       "type": "PORTFOLIO",
       "id": "TEST_ONLY:portfolio-a"
     },
-    "items": []
+    "items": [],
+    "next_cursor": null
   }
 }

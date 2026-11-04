@@ -65,7 +65,7 @@ function decaySource() {
   if (f.summary.counts) Object.assign(f.summary.counts, { trials: f.rows.TRIAL.length, candidates: f.rows.CANDIDATE.length });
   return f;
 }
-function reader(f: any, profile = DELTA_PER_FOLD_DECAY_PROFILE.current_source) {
+function reader(f: any, profile: {source_adapter_id:string;profile_id:string} = DELTA_PER_FOLD_DECAY_PROFILE.current_source) {
   const seal = { runId: f.run_id, artifactRevision: 1, sourceAdapterId: profile.source_adapter_id, profileId: profile.profile_id,
     manifestDigest: f.manifest_digest, sourceTransformDigest: f.source_transform_digest, retainedImportDigest: "f".repeat(64),
     requestedSpecDigest: "1".repeat(64), effectiveSpecDigest: "2".repeat(64), datasetBindingDigest: "3".repeat(64),

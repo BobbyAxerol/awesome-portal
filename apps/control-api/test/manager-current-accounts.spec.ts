@@ -37,7 +37,7 @@ const principal = (): ResourceReadPrincipal => ({ workspaceId: "research", viewe
   session: { sessionId: "actual-session", userId: "actual-user", state: "ACTIVE", sessionVersion: 3,
     authenticationTime: new Date(500), idleExpiresAt: new Date(10000), absoluteExpiresAt: new Date(10000) } });
 
-function fixture(metadata = fixtureMetadata()) {
+function fixture(metadata = fixtureMetadata(), readCap?: number) {
   let source = metadata, now = 2000, sourceCalls = 0, denied = false;
   const artifact = { schema_version: "portal.execution.manager-current-commissioning.v1", scope: source.scope, binding: source.binding,
     source_workspace_id: source.source_workspace_id, adapter_revision: source.adapter_revision,
@@ -54,6 +54,7 @@ function fixture(metadata = fixtureMetadata()) {
   const calls: { principal: ReadScopePrincipal; selection: SelectedCurrentViewEdgeRead; operation: CurrentViewOperation }[] = [];
   const outer: CurrentViewSelection[] = [];
   const core = {
+    ...(readCap === undefined ? {} : { currentReadResponseLimit: () => readCap }),
     async read(actor: ReadScopePrincipal, selection: SelectedCurrentViewEdgeRead, operation: CurrentViewOperation) {
       calls.push({ principal: structuredClone(actor), selection: structuredClone(selection), operation });
       const entityId = selection.query.entity_id!, entity = source.grains.flatMap(grain => grain.entities).find(value => value.entity_id === entityId)!;
@@ -80,14 +81,14 @@ function fixture(metadata = fixtureMetadata()) {
 
 /** Adapter orchestration only; this fake port is NOT native custody, a source
  * terminal or physical HTTP acceptance. Primary separately tests that engine. */
-function nativeFixture() {
-  const f = fixture(), delivered: Buffer[] = [], supplied: CurrentViewSelection[][] = [];
+function nativeFixture(readCap?: number) {
+  const f = fixture(fixtureMetadata(), readCap), delivered: Buffer[] = [], supplied: CurrentViewSelection[][] = [];
   let afterBuild = () => {}, afterEnter = () => {};
   const native: Pick<CurrentViewCoreComposition, "hasNativeCurrentRelations" | "deliverNative"> = {
     hasNativeCurrentRelations: () => true,
     deliverNative: vi.fn(async (actor, selections, _response, build, validation) => {
       supplied.push(structuredClone([...selections]));
-      const bytes = await build(input => f.core.read(actor, input, "CURRENT"));
+      const bytes = await build((input: SelectedCurrentViewEdgeRead) => f.core.read(actor, input, "CURRENT"));
       afterBuild();
       await validation?.validateAfterEnter?.();
       afterEnter();
@@ -101,6 +102,43 @@ function nativeFixture() {
 }
 
 describe("Manager CURRENT Account360 (synthetic source/real adapter; not connected acceptance)", () => {
+  it("enforces a tighter configured Edge byte cap on the source response before dispatch", async () => {
+    const f = nativeFixture(1), beforeDispatch = vi.fn();
+    await expect(f.service.readNativeProfile(f.principal, "target-account", "paper", {} as never, beforeDispatch)).rejects.toThrow();
+    expect(f.calls[0]!.selection.query.max_bytes).toBe(1);
+    expect(f.delivered).toHaveLength(0); expect(beforeDispatch).not.toHaveBeenCalled();
+  });
+  it("delivers an identity-only account profile through native custody without inventing financial fields", async () => {
+    const f = nativeFixture(), beforeDispatch = vi.fn();
+    await f.service.readNativeProfile(f.principal, "target-account", "paper", {} as never, beforeDispatch);
+    expect(f.delivered).toHaveLength(1);
+    expect(JSON.parse(f.delivered[0]!.toString())).toEqual({
+      schema_version: "portal.execution.account-profile.v1", workspace_id: "research",
+      record_authority: "PORTAL_PROJECTION", read_at_ms: 2000, account_id: "target-account",
+    });
+    expect(f.supplied[0]!.some(selection => selection.read_requirement.resource.id === "target-account")).toBe(true);
+    expect(f.calls.map(call => call.selection.query.entity_id)).toEqual(["account-target"]);
+    expect(f.supplied[0]!.every(selection => selection.resource_ref === "accounts")).toBe(true);
+    expect(beforeDispatch).toHaveBeenCalledOnce();
+  });
+  it("does not dispatch an account profile if source metadata changes during native delivery", async () => {
+    const f = nativeFixture(), beforeDispatch = vi.fn();
+    f.afterBuild(() => { const changed = f.getSource(); changed.state = "DRAINING"; f.setSource(changed); });
+    await expect(f.service.readNativeProfile(f.principal, "target-account", "paper", {} as never, beforeDispatch)).rejects.toThrow();
+    expect(f.delivered).toHaveLength(0); expect(beforeDispatch).not.toHaveBeenCalled();
+  });
+  it("does not dispatch a profile after the exact source approval expires before HTTP handoff", async () => {
+    const f = nativeFixture(), beforeDispatch = vi.fn();
+    f.afterEnter(() => f.setNow(8000));
+    await expect(f.service.readNativeProfile(f.principal, "target-account", "paper", {} as never, beforeDispatch)).rejects.toThrow();
+    expect(f.delivered).toHaveLength(0); expect(beforeDispatch).not.toHaveBeenCalled();
+  });
+  it("rejects a source decimal with a trailing line terminator before native dispatch", async () => {
+    const f = nativeFixture();
+    f.payloads["balance-target"]!.total = decimal("100.500\n");
+    await expect(f.service.readNative(f.principal, "target-account", "paper", {} as never, vi.fn())).rejects.toThrow();
+    expect(f.delivered).toHaveLength(0);
+  });
   it("keeps the exact Account360 DTO while providing requested account plus every source pin to native delivery", async () => {
     const f = nativeFixture(), beforeDispatch = vi.fn(), detached = vi.spyOn(f.core, "deliver");
     await expect(f.service.readNative(f.principal, "target-account", "paper", {} as never, beforeDispatch)).resolves.toBeUndefined();

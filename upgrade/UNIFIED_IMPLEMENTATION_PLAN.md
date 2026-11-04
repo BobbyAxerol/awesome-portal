@@ -17348,12 +17348,662 @@ public routes, commissioned Edge sources or an HTTP egress authority fence.
 Financial/Approval/STATUS local regression is distinct from source acceptance.
 See [scope, test results, rollback and Claude handoff](execution_loop/evidence/ELP2-10/SIBLING_PAGING_AND_PREVIEW_REHEARSAL_2026-11-03.md).
 ELP2-10/11 and cross-process STATUS recovery remain open.
+Later continuation: a positive Account-profile path now passes a joined
+synthetic-source test through real Core field authorization, mTLS, disposable
+PostgreSQL native custody and physical HTTP completion. A Manager publication
+decorator that dropped the native custody port was corrected; publication
+tests are 42/42 and the complete native custody suite is 22/22. This is not
+connected Edge acceptance: the other three positive readers, real source
+authority/ACK, cross-process STATUS and candidate-wide gates remain open.
+The catalogue publication decorator was subsequently corrected to preserve
+the same native port; the joined Account test exercises both decorators
+(22/22 native custody, 68/68 publication tests). These are still synthetic
+source/authority tests, not Edge commissioning or closure of other readers.
+The native Research `SessionGuard` routing ceiling also rejected the new
+Account profile route; the exact Paper GET is now allowed only with the
+private Account composer. Guard/route tests passed 141/141 and a separate
+joined SessionGuard–Fastify–mTLS–PG case passed 1/1. Live source/ACK and the
+other sibling readers remain unqualified; full Core typecheck remains red.
+Subsequent AppModule-path review found and fixed a third native-port loss in
+the installed Manager runtime delegate. Focused Manager/runtime publication
+tests passed 116/116 and the joined synthetic-source SessionGuard/Fastify/mTLS/
+PostgreSQL case passed 1/1 through all three wrappers. This is not a live Edge
+source or ACK receipt; the other scope and final gates remain open.
+A subsequent focused TypeScript run exposed three typing errors in the Manager
+test fixture. The literal and mock typing were corrected without changing the
+runtime, its suite passed 48/48, and the strict compile of both affected native
+tests and their imports exited 0. This does not replace the failed full-Core
+typecheck or the required final normal hook. The subsequent production-source
+`npm run build -- --noEmit` also exited 0; no image or runtime was changed.
+The refreshed whole-Core test-inclusive typecheck exited 2 with 415 diagnostics
+across Research/Execution tests and imported frontend sources; ownership has
+not been established for the entire set. It remains FAIL, not waived.
+Three in-scope custody test typing issues were corrected; affected suites
+passed 54/54 and their focused strict compile exited 0. Disposable PostgreSQL
+runner tests for the 0156/0157 down guards passed 2/2 with empty and populated
+custody; the 0157 correlation and ledger remained intact. This is not a deployed
+candidate rollback or a waiver of the full typecheck and normal hook.
+The identity-test HTTP helper was also corrected without changing its request
+behavior; focused strict compilation exited 0 and 18/18 identity/revocation
+tests passed against disposable PostgreSQL. The whole-Core diagnostic count has
+not been recomputed after these targeted changes.
+Financial follow-through: Core no longer publishes a partial currency sum when
+any source amount is missing or malformed; affected composer, Canary and stage
+tests passed 43/43 and the production-source build check exited 0. The typed
+absence and the distinction between existing Edge
+relation adapters and commissioned sibling authority are recorded in the
+[receipt](execution_loop/evidence/ELP2-10/SIBLING_PAGING_AND_PREVIEW_REHEARSAL_2026-11-03.md#3-nov-financial-partial-total-correction-and-edge-catalogue-clarification).
+This does not qualify an Edge financial carrier or close ELP2-10/11.
+The guarded STATUS cross-process PostgreSQL/mTLS regression now also verifies
+that an ACK replay with a different response digest is refused while the
+original ACK remains unchanged; selected case 1/1 passed with disposable-cell
+cleanup. It remains synthetic, not an Edge acceptance receipt; see the same
+receipt under “STATUS cross-process changed-ACK regression”.
+An additional fresh-cell run of that same case passed after coordinated logout:
+the restored context was refused across processes and the sole lease/ACK
+remained unchanged. It is not a source-backed Edge revoke receipt.
+The full six-case file then passed 6/6 after replacing an order-dependent test
+assertion with an exact per-logout mutation delta; its initial 5/6 run and
+final pins are recorded in the receipt.
+A separate strict focused compile of the positive-parent test now passes after
+correcting 18 test-only typing diagnostics; one Approval Evidence HTTP/PG case
+passed in a disposable cell (355 cases not selected). This does not replace
+the full-Core typecheck, connected acceptance or final normal hook. Cleanup
+and the exact test pin are recorded in the same receipt. A subsequent full
+test-inclusive Core typecheck exited 2; its output was truncated and includes
+Core test typing and frontend JSX/DOM configuration errors. Its exact error
+count and final normal-hook status remain unproven; see the receipt's
+“full-Core typecheck and projected digest audit”.
+One strict compilation of ten affected STATUS/reader test files and their
+imports subsequently exited 0; this is not execution of those tests or a
+replacement for the failing full typecheck and unrun normal hook.
+Canary legacy summary/headroom and KPI figures now use the same qualified
+facts as compliance rows; unknown order status and missing financial
+provenance remain typed absence. Focused suites 45/45 and isolated synthetic
+HTTP/PostgreSQL suite 9/9 passed, as did the no-emit production-source build;
+real carrier and financial acceptance remain open. See the same receipt under “Canary legacy financial consistency and
+status qualification” for first-attempt failure, cleanup, pins and FE handoff.
+The next full test-inclusive Core typecheck exited 2 with 362 diagnostics;
+test-only typing in the changed Canary fixture, CURRENT installation and
+current-human transport fixtures was corrected. CURRENT installation and
+loopback mTLS tests passed 24/24 with synthetic inputs, and strict compilation
+of those two and the Canary HTTP test exited 0; see the linked receipt
+for pins and cleanup. Full typecheck, connected source and normal hook remain
+open; these focused results do not qualify the three dark sibling readers.
+New STATUS issuance now refuses a missing durable context/original/lease link;
+the existing legacy request fence remains. The candidate and cross-process
+PostgreSQL/mTLS suites passed 113/113 in an isolated synthetic-source cell,
+and focused strict compilation exited 0; this is not an Edge ACK or connected acceptance. Pins, discarded earlier run and
+cleanup are in the linked receipt under “refuse new unlinked STATUS leases”.
+After adding explicit preservation coverage for a legacy unlinked lease, the
+same two suites passed 114/114 in a fresh isolated cell and their focused strict
+compile exited 0; no existing lease was rewritten or replaced in that regression.
+A later full test-inclusive typecheck exited 2 with 358 diagnostics. The Manager
+policy test harness's wrong error-class import and test-only mutable collection
+types were corrected; synthetic scope suites passed 9/9 and 272/272, and
+their five-file focused strict compile exited 0. Edge's
+inspected mailbox has no newer publication/binding; source qualification,
+full typecheck and final gate remain open. See the linked receipt.
+Two further test-only TLS connection cleanup typing fixes passed 163/163
+identity-mapping/business-read loopback cases. Their standalone compile failed
+on missing Fastify cookie augmentation; the corrected focused compile including
+`src/app.ts` exited 0. No real Edge trust or full compile pass is implied.
+Details and hashes are in the linked receipt.
+Financial batch prototype-backed test doubles no longer intersect private
+class members with mock types; the synthetic suite passed 58/58 and its
+focused strict compile passed. The full-Core typecheck remains open; see the
+linked receipt for diagnostic limitations.
+STATUS recovery has an additional pre-issuance restart boundary: a context
+already reserved by Edge but lost by Core before any lease/link commits is
+currently refused, not recovered. A focused fail-closed regression passed;
+the bounded joint reservation/resolution remains implementation work. Edge
+DISPATCHING without retained response also still requires authenticated source
+resolution. See the linked receipt; neither path is a connected ACK.
+**3 Nov pre-issuance follow-through — source candidate, not connected:** the
+later uninstalled migration 0158 and bounded preparation writer preserve a
+digest/nonce-only correlation before the STATUS context escapes. Under the
+same native authority lock, a competing issued lease refuses a new preparation;
+current-human/original checks are repeated during recovery. The guarded
+PostgreSQL cell exercised a new OS process and pinned test-only mTLS before
+the first lease, and the separate migration runner refused unsafe down:
+10/10 affected tests passed. The synthetic issuer suite passed 68/68. On a
+later issuer-only revision, exact retry joins the same winning lease;
+the affected PostgreSQL/mTLS suite passed 7/7 and the issuer suite 68/68.
+The prior compiler invocation was stopped after its inputs changed; a later
+source-only Control API build check exited 0, and the issuer suite passed
+70/70 with capacity and altered-byte tests. These are not source/Edge ACKs;
+expired-preparation/source-custody resolution,
+final candidate qualification and actual connected acceptance remain open.
+A subsequent candidate fixes the post-ACK local-read lifecycle: a safely
+consumed preparation may be replaced while stale contexts are fenced under the
+native lock. Guarded candidate/recovery/migration tests passed 118/118 and the
+synthetic issuer suite 71/71. These are TEST_ONLY, not connected Edge proof;
+the source-only Control API build check also passed on the superseding source.
+See the linked receipt for the hashes and cleanup; full typecheck/hook remain open.
+Latest complete test-inclusive Core typecheck exited 2 with 337 diagnostics;
+the focused sibling regression passed 82/82. The latest receipt records scope,
+source hashes and cleanup. Neither result proves connected Edge acceptance.
+Five ELP2-10 test typing fixes subsequently passed focused strict compilation,
+153 local tests (98 skipped) and 143/143 in two overlapping disposable-PG
+suites. The cell was cleaned; this does not rerun or pass full-Core typecheck.
+The current migration CLI was also rehearsed through 0158 on the historical
+preview clone with seven protected-table content checks; this limited
+`--no-owner --no-acl` restore is not final restore/rollback qualification.
+A subsequent full owner/ACL clone restore passed migration 0155–0158 with
+scoped pre-existing ACL/RLS/policy/role and seven-table before/after checks;
+the historic snapshot and empty real custody still prevent final qualification.
+STATUS now keeps the same context after the lease callback ACK until the
+retained Edge response is consumed; 156/156 synthetic/loopback and the
+affected 7/7 isolated PG/mTLS suite passed after correcting one stale test
+expectation. Source-only build checking also passed on the new hash. The Edge
+response and ACK remain TEST_ONLY; see the receipt.
+Subsequent STATUS transport retry hardening prevents an older failed waiter
+from clearing a newer same-context promise; focused loopback mTLS 19/19 passed.
+It does not close real Edge recovery. Root free space is below the 20% build
+threshold; preserve the private rehearsal backup and perform a documented,
+ownership-scoped capacity decision before a disk-intensive build (see receipt).
+The later full test-inclusive typecheck completed with exit 2; its bounded
+summary identifies remaining Research test and imported frontend diagnostics,
+but did not retain a reliable total. No normal hook or integration PASS is claimed.
+Three grouped test/fixture type failures were subsequently corrected; focused
+strict compilation passed and the affected suites passed 87/87. A full
+typecheck has not been rerun after these corrections; see the receipt.
+Four more affected suites now pass scoped strict compilation; their tests
+passed 22 with one source-dependent skip and 8/8 on isolated PostgreSQL.
+The cross-project JSX/DOM typecheck boundary and whole-Core gate remain open.
+Journey cursor runtime keys and inferred types were aligned without changing
+the API; six affected suites passed 226/226 and the new cursor regression
+passed. Scoped strict compilation also passed; the full-Core gate remains separate;
+see the linked receipt. Shared disk remains below the build-free-space gate.
+STATUS recovery now preserves the linked context after its delivery ACK and
+before consumption across a fresh OS process; guarded PG/mTLS 7/7, related
+local tests 98/98 and loopback transport 19/19 passed. This is synthetic
+source evidence, not an Edge ACK or a closure of connected acceptance. The
+affected source/test also passed scoped strict typechecking.
+A later full Core typecheck returned 204 diagnostics before the subsequent
+test-fixture batch; affected suites passed in local/isolated PG cells. The
+seven-suite strict scoped typecheck passed. The cross-project compiler
+boundary and other diagnostics still need resolution;
+do not infer a post-batch full PASS from those focused tests.
+The later Command Center/bootstrap/EDS-02 fixture batch passed strict scoped
+typecheck and 27/27 tests on a cleaned isolated PG cell; no runtime was changed.
+Exact source hashes, scope, cleanup and remaining reader work are in the linked
+receipt. The full-Core typecheck, normal hook and final restore remain open.
 Follow-through: the private sibling seam now captures the validated source
 body/scope before its asynchronous final authority check; focused tests also
 exercise source mutation and revoked/invalid-source precedence. This is not
 yet a mounted reader or an HTTP/source custody fence.
+At the earlier route-shell checkpoint, all four sibling routes were registered
+locally, authenticated and source-dark (503 for a valid request); their error
+contracts and generated types were aligned. The later Account-profile
+synthetic-source custody result is recorded above; the other three remain dark. See
+the linked receipt for the 72/72 API, 96/96 contract and 188/188 related
+synthetic/loopback regressions and the initial corrected stale-test failure.
+Further 3 Nov hardening rejects trailing control characters in source text and
+noncanonical decimal strings in Manager CURRENT Account360 before native
+dispatch. Focused synthetic tests and the loopback STATUS suite passed; the
+first STATUS attempt was sandbox-blocked (`EPERM`) and was rerun with loopback
+permission. That earlier test did not provide restart recovery or source acceptance; see
+the linked receipt for exact status and uncommitted code.
 Preview restore rehearsal also exposed that the real `portal_research_runtime`
 role is `NOINHERIT`: a clone created with PostgreSQL's default `INHERIT` is
 not an equivalent security restore, even when object ACLs match. Never install
 from the earlier `--no-owner --no-acl` rehearsal alone; verify role/policy,
 custody and a fresh backup as recorded in the linked receipt.
+
+**3 Nov STATUS link follow-through — IN PROGRESS:** migration 0157 and the
+lease writer now persist an immutable, digest-only context/original/lease
+correlation in the same transaction and fence a successor on the exact prior
+delivery ACK. At that checkpoint focused PostgreSQL and authority tests passed,
+but restart continuation and positive HTTP custody had not yet been shown.
+The subsequent isolated restart and Account-custody tests are in the linked
+receipt; candidate installation and real Edge acceptance remain open. The guarded mTLS suite rejected the
+loopback test cell, then passed 4/4 on its required isolated Docker-network
+cell without changing the guard. This is not process-restart continuation or
+real Edge acceptance. See the linked sibling paging receipt for exact scope,
+test disposition and rollback constraints.
+The same-original delivery fence also prevents a changed STATUS request or
+context from bypassing an unacknowledged lease after restart; the combined
+guarded PostgreSQL/mTLS regression passed 111/111 on a fresh disposable cell.
+Explicit record-detail requirements are now checked independently through the
+native/current-view field authority, including union across shared purposes;
+58/58 focused synthetic/loopback tests passed. At that earlier checkpoint four
+positive readers remained uncomposed; the later Account-only synthetic-source
+physical custody result and the other three dark readers are recorded above.
+The source-only `tsconfig.build.json --noEmit` check passed; the broader
+`tsconfig.json` typecheck failed with multiple diagnostics, and the normal
+hook remains open. See the receipt for the distinction and test disposition.
+
+**3 Nov account-profile follow-through:** superseding the earlier shell-only
+statement for that one route, Core now conditionally composes an identity-only
+account-profile from the existing qualified Paper Manager CURRENT path, with
+the same source/resource/field checks and native HTTP custody. No financial
+field is inferred; without a commissioned source it remains 503. The other
+three routes remain dark. Focused synthetic HTTP/adapter tests do not establish
+connected acceptance. STATUS restart recovery with actual Edge/original/ACK
+and the final integrated gate remain open; see the linked sibling paging receipt.
+Focused adapter/HTTP/source-seam tests passed 65/65, sibling contract tests
+97/97, R2 ledger tests 22/22, and source-only Control API typecheck exited 0;
+none is a full typecheck, normal hook or connected-source receipt.
+
+**3 Nov STATUS restart follow-through — partial, not phase closure:** a
+durable, authority-bound context/original/lease link now permits bounded
+recovery of the exact authenticated completion on a fresh Core process while
+the original context and current-human authority remain valid. Local authority
+tests passed 81/81 and isolated real-PG/mTLS tests passed 5/5, including a
+separate OS process; test source/terminal and ACK are not connected Edge
+evidence. Outbound STATUS continuation, expired/pre-0157 contexts, the other
+three positive readers, real Edge verification, integrated hook and final
+restore/rollback remain open. See the linked sibling paging receipt for limits,
+cleanup and Claude handoff; no runtime has been installed.
+
+**3 Nov lost-ISSUE retry follow-through — partial:** the 0157 link now commits
+the exact assertion digest with the lease. A restarted Core can replay the same
+still-ISSUED assertion to the authenticated Edge for the exact retained
+context/request, after current authority and original checks; key rotation,
+ENTER, expiry or altered inputs fail closed. Real PostgreSQL/test-mTLS
+regression passed 112/112 including a distinct OS process; focused transport,
+assertion and composition tests passed 103/103. The complete 112-test isolated regression was rerun successfully after
+the final immutable-TRUNCATE and harness changes; source-only Control API
+typecheck also exited 0. A preliminary restored-preview-backup cell applied
+0155–0157 and checked selected identity/custody preservation and migration
+guards. An additional disposable clone test verified that the old image's
+migration CLI exits successfully with 0157 in the ledger and preserves a
+synthetic link; it did not establish old-application recovery, security ACL
+parity or final-candidate rollback. This is not outbound
+transport restart recovery or a real Edge receipt. The remaining readers,
+integration gates and acceptance remain open; see the linked sibling paging
+receipt.
+
+**3 Nov callback-driven outbound rehydration — partial:** when the pinned
+Edge peer retains and retries the original context after restart, the Core
+candidate now checks the committed linked lease and token/request digests,
+re-signs the identical outbound STATUS token, and makes the same context
+available to a matching prepare. A distinct-OS-process PostgreSQL/test-mTLS
+regression passed 112/112; no real Edge or automatic no-callback recovery is
+implied. A further early guard refuses a competing outbound context while the
+original's lease lacks exact terminal and ACK; the transaction-time fence stays
+authoritative. The updated version passed 112/112 PostgreSQL/mTLS and 106/106
+transport/assertion/composition tests, plus source-only typecheck. The current
+0157 bytes were applied to a restored historical preview clone and their
+TRUNCATE guard checked, without owner/ACL restoration. A separate clone showed
+the old migration CLI preserving the new ledger and a synthetic link, and the
+down SQL refusing; it is not a final rollback rehearsal. The remaining readers, recovery paths, candidate hook and connected
+acceptance are still open. Details and source pins are in the linked receipt.
+
+**3 Nov sibling continuation hardening — source only:** the unmounted cursor
+and source seam now bind the server-side session generation, refuse a prior
+generation before source I/O, and check current authority before disclosing
+cursor validity; the existing final authority check remains. Focused tests
+passed 28/28 after correcting one negative-test expectation; see the linked
+sibling paging receipt. This is not a mounted reader, native HTTP custody or
+connected Edge acceptance. Remaining readers and final gates stay open.
+
+**3 Nov STATUS restart follow-through — source only:** the uninstalled 0157
+candidate stores a public nonce plus immutable digest bindings, allowing Core
+to recover the same 43-character outbound context/token after its own restart
+without waiting for an Edge callback, subject to current authority, exact
+source/original/session/request and expiry checks. No new lease, terminal or
+ACK is inferred. Focused tests passed 109/109 and isolated PostgreSQL/test-mTLS
+112/112 including a new OS process. A historical backup clone accepted current
+0155–0157 and refused TRUNCATE; it is not a final ACL/custody rollback proof.
+The Control API source-only typecheck also exited 0; the normal hook was not run.
+The deterministic context derivation requires independent security review;
+Edge-side restart custody and connected acceptance remain open. See the
+linked sibling paging receipt for exact pins, cleanup and qualifications.
+
+**3 Nov concurrent STATUS prepare race — partial:** the losing Core authority
+now rejoins the already-linked context on a later prepare after an exact
+pre-INSERT custody refusal; pending/ambiguous or previously issued contexts
+are not discarded. Focused tests passed 110/110 and isolated PostgreSQL/mTLS
+113/113, including two authority instances and one actual test-database lease;
+the updated Control API source-only typecheck exited 0.
+The old image migration CLI also preserved a synthetic 0157 link on a
+disposable restored clone; the down guard refused. This remains preparation,
+not production rollback, old-binary recovery or ACL qualification.
+Edge durable response custody, connected acceptance and final gates remain
+open; see the linked receipt for pins, environment and caveats.
+
+**3 Nov backup round trip — partial:** a disposable PostgreSQL cell restored
+the historical preview dump with ownership and ACLs, applied 0155–0157 and
+round-tripped a test-only 0157 link. Link, immutability triggers, migration
+ledger and owner/ACL metadata for 211 relations matched. This is not proof of
+all role/function/default privileges, actual source custody, old-binary
+recovery or final-candidate rollback. The cell was removed; Edge durable
+custody, the remaining positive readers and integrated acceptance remain open.
+
+**3 Nov Edge STATUS custody candidate — source only:** a separate Edge source
+snapshot now retains immutable context/lease and exact response-byte digest,
+fences ambiguous dispatch and retries only the same completion. Focused Edge
+tests passed 27/27 and isolated PostgreSQL tests 18/18, including a separate
+test process. This is not a real-source ACK or whole-service connected
+restart. The candidate is uncommitted and not installed; migration numbering,
+permissions, bounded retention and integration must be reviewed against the
+actual Edge worktree. See the linked sibling paging receipt for the archive,
+hash and remaining gates. The other positive readers remain open.
+
+**3 Nov Edge STATUS + discovery V2 candidate — source only:** an isolated
+local clone was fast-forwarded to Edge discovery V2 `4cf434c45b4ea5b5d62045edcfa536298c5d1da6`
+and the twelve STATUS files applied and staged without touching HK WIP. On
+this combination, discovery passed 25 tests plus the separately invoked
+genuine Core synthetic codec test, STATUS passed 27, and isolated PostgreSQL
+custody passed 18. The staged patch and its hash are in the linked receipt;
+it is not a commit, deployed image, source qualification or a real ACK.
+Three sibling sources remain unqualified and the final combined hook and
+restore/rollback acceptance remain open.
+
+**3 Nov Edge strict check and test restore:** strict Edge Clippy initially failed
+on new code; the errors were fixed and it then passed. The STATUS/discovery,
+codec and custody suites were rerun after the fixes. A synthetic two-row Edge
+custody dump restored with the same row hash, triggers and 0025 migration into
+a disposable single-role DB. This does not prove production roles/ACL or
+operational rollback. The newer staged patch supersedes the earlier archive;
+its exact path/hash and failed-then-passed test history are in the linked
+receipt. No runtime or final integration gate is claimed.
+
+**3 Nov Edge issuer process-restart regression:** the same uninstalled Edge
+candidate now has a feature-gated, isolated PostgreSQL and loopback mTLS test
+covering two OS processes, a lost completion response, and retry with identical
+original/lease/response digest. The mock observed one issuance and two matching
+completion attempts; the focused test passed 1/1. Its simulated ACK is not a
+connected receipt. The current 13-file staged patch, SHA256, impact analysis,
+cleanup and remaining gaps are recorded in the linked sibling paging receipt.
+ELP2-10/11, actual source authorization, remaining positive readers and final
+integration/rollback gates remain open.
+
+**3 Nov STATUS lost-ACK follow-through:** the isolated issuer regression now
+uses three verified processes: a test-only completion commit with lost reply,
+exact retry and another reload after ACK. It passed 1/1 with one mock commit,
+one assertion issue and two identical completion calls. The newer staged patch
+and cleanup receipt are in the linked sibling paging packet. This does not
+replace a real Core/Edge ACK or change any open source/authority, reader,
+integration, migration or operational qualification gate.
+
+**3 Nov STATUS same-original fence:** source review found and fixed a race
+where different contexts could reserve unresolved STATUS custody for the same
+original. The local uninstalled Edge candidate now fences inside the ledger
+transaction and has a partial unique index for non-ACKED original custody.
+The disposable test exercises competing connections, exact retry, unrelated
+originals, post-ACK admission and direct duplicate SQL. Focused PostgreSQL
+19/19, STATUS 27/27 and three-process loopback mTLS 1/1 passed on the final
+index; strict Clippy passed on the Rust source before the SQL-only change.
+Patch/migration hashes, cleanup and limits are in the linked sibling receipt.
+This is not a real-source ACK, mounted reader or final candidate gate.
+Indexed migration 0025 also passed a synthetic, network-none dump/restore
+check for its row digest, unique index, triggers, test-role ACL and duplicate
+refusal; the limited parent/schema and role are not an operational rollback
+or a substitute for final-candidate ACL/DR qualification.
+
+**3 Nov Account profile composition check:** the real account-profile
+adapter, Core field-authority composition and loopback mTLS source callback
+were exercised together, including wrong-workspace, malformed-source and
+revoke-before-dispatch negatives. The three affected Core test files passed
+77/77. Identity/policy data, source and native final custody in this specific
+test are synthetic; see the linked sibling paging receipt for the precise
+boundary. This does not establish real source authorization, a physical
+account-native egress receipt or ELP2-10/11 completion.
+
+The joined Account test revealed and fixed a source-level byte-bound
+incompatibility: the adapter now requests and enforces the lower of its 64
+KiB maximum and the actual Core-to-Edge response cap. The affected reader,
+composition, route and Edge-client suites passed 94/94; an 8 KiB cap and an
+oversized source page are covered. No authority, runtime or Edge acceptance
+is implied. Details and initial sandbox refusal are in the same receipt.
+
+On this WIP, `npm run typecheck` including Core tests and imported frontend
+failed with many diagnostics; two STATUS-test typing issues were corrected
+and its focused tests passed 65/65, but the full check has not been rerun.
+The subsequent source-only build check emitted no errors but its exit status
+was not retained, so it is UNKNOWN. The final candidate must run the
+appropriate source gate and normal hook with recorded exit statuses; neither
+this update nor the focused tests makes those gates PASS.
+
+Follow-up: targeted strict TypeScript checking of the three affected STATUS,
+current-view and Account test files passed after fixing three readonly test
+mutations and one missing callback type. Their Vitest suites passed 134/134.
+The full typecheck and final-candidate source/hook gates above remain open;
+the exact targeted command, scope and test hashes are in the sibling receipt.
+
+Follow-up: STATUS now refuses an authority lifetime whose whole-second JWT
+expiry has already elapsed, before persisting a preparation or issuing a
+lease. The affected synthetic suites passed 99/99; source-connected recovery
+and final candidate gates remain open. See the sibling receipt for the exact
+source/test hashes, initial failed test setup and resource-cleanup audit.
+
+The later test-inclusive Core typecheck exited 2; because it overlapped an
+Account-reader investigation and revert, its output is diagnostic only, not
+the final frozen-candidate gate. The Account publication, reader and sibling
+HTTP synthetic suites passed 96/96 after the revert; the other three positive
+readers and real-source qualification remain open. See the sibling receipt.
+
+STATUS follow-up: an unchanged fingerprint no longer allows an old context to
+outlive a shortened current-human authority deadline. Cached completion
+retries are rechecked and a durable ACK is preserved if authority changes
+before disclosure. Synthetic STATUS/loopback suites passed 122/122; connected
+Edge ACK, guarded PG/mTLS on this source and final-candidate gates remain open.
+
+The subsequent guarded PostgreSQL/pinned-mTLS retake passed 7/7 on the
+shortened-authority source; its new deadline-specific cases remain proven by
+synthetic unit tests, not a real Edge grant/ACK. Cell resource bounds, pins,
+overlap disclosure and cleanup are recorded in the sibling receipt. Final
+candidate typecheck/hook, source-authorized sibling readers, migration/rollback
+and connected acceptance are still open.
+
+Grouped Score/History/realtime typing corrections and the fixture's explicit
+Paper/Live profile checks passed the six-file strict compiler retake. Five
+affected synthetic suites passed 112/112 on the preceding fixture and Regime
+was rerun 35/35 on the final fixture. The History HTTP case was typechecked
+only; the full candidate gate and real-source acceptance remain open. Exact
+hashes and the initial failed retake are in the sibling receipt.
+
+Additional grouped Core test typing/fixture corrections passed 145 focused
+tests, with 14 PostgreSQL-dependent tests skipped; the corresponding eight-file
+strict TypeScript check exited 0. The initial sandboxed
+loopback attempt was refused and was not counted as PASS. Test hashes,
+scope and cleanup are recorded in the sibling receipt. This does not close
+the final candidate gate, source-authorized readers or Edge acceptance.
+Stage/Manager/native-custody test-typing follow-up: 136 focused tests passed;
+31 native-custody PostgreSQL tests were skipped and the follow-up awaits the
+next grouped typecheck/PG retake. See the same receipt for exact hashes.
+
+The subsequent guarded PG/mTLS cell passed 52/52 across STATUS recovery,
+native custody and ROOT, including the 45 previously skipped cases; the
+seven STATUS cases overlap an earlier receipt. This is TEST_ONLY source and
+not an Edge ACK. Source pins, the initial read-only-cache setup failure and
+owned-resource cleanup are recorded in the sibling receipt. HK catalogue
+still marks the order, reconciliation and obligations exports unavailable;
+full positive readers and connected acceptance are not closed by this retake.
+
+The latest full Core test-inclusive typecheck remains FAIL (exit 2; output
+truncated). Subsequent scoped fixture/test typing corrections were exercised
+with focused suites, and a guarded disposable PostgreSQL cell passed 95/95
+including migration recovery, Manager authority and Score restatement. The
+cell's containers, network and temporary runner were removed without pruning
+shared resources. See the sibling receipt under “Full typecheck follow-through
+and isolated migration suites” for results, overlaps and the Claude request
+for frontend type-only import boundaries. This is not a final-candidate
+typecheck/hook, preview migration, actual Edge ACK or connected acceptance.
+
+STATUS transport follow-through: a shared Edge STATUS delivery no longer uses
+the first caller's cancellation signal; individual callers cancel separately,
+the bounded exchange aborts when its last waiter leaves, and retries retain
+the original custody. Three affected synthetic/mTLS-loopback suites passed
+125/125; focused strict typecheck on the final source exited 0. This is not a
+real Edge ACK, full candidate typecheck or normal hook. Details, pins and cleanup are in
+the sibling receipt under “STATUS shared-caller cancellation”.
+The stage-drift fixture was also adjusted to use its typed fixture function;
+31/31 synthetic tests passed. Its first ad-hoc TypeScript invocation omitted
+the project's ES2022-only library option and failed on a DOM `fetch` overload;
+the corrected grouped retake with the project library setting exited 0.
+The next full-Core test-inclusive typecheck ran once under a 300-second limit
+and exited 124 without diagnostics; it is TIMEOUT, not PASS and not a revised
+diagnostic count. No normal hook was run. See the sibling receipt under
+“Full-Core retake after grouped fixes”.
+
+Scoped compiler follow-through: step-up fixture and Manager PG test typing
+were corrected without changing production policy. Step-up passed 24/24 and a
+strict no-emit TypeScript check for those two test files and their imports
+exited 0; the Manager PG suite itself was not run in this follow-through.
+This is not a full-Core typecheck, normal hook or connected-source receipt.
+Pins, the initial scoped compiler error and cleanup are recorded in the same
+receipt under “Scoped step-up and Manager test typing follow-through”.
+
+STATUS resource follow-through: a shared exchange now retains only its active
+subscribers, including during repeated cancellation churn. Synthetic
+loopback/mTLS STATUS suites passed 126/126 and focused strict no-emit
+typecheck exited 0. Source hashes and scope are in the sibling receipt under
+“STATUS cancellation churn and bounded subscribers”; this does not qualify
+an Edge original/ACK, the full-Core typecheck, normal hook or the remaining
+source-dark positive readers.
+
+STATUS admission also retains the shared preparation capacity slot until the
+last identical waiter leaves, including when the initiating caller cancels.
+The overlapping focused suite retake passed 127/127 and strict no-emit scoped
+typecheck exited 0; source pins and test scope are recorded in the sibling
+receipt under “STATUS shared preparation reservation”. Real Edge ACK, other
+positive readers, full typecheck and normal hook remain open.
+
+The subsequent single whole-Core compiler run finished with exit 2 (output
+truncated), replacing the prior TIMEOUT as the latest observation. Its visible
+failures include Research test types and the frontend JSX/DOM import boundary;
+the compiler gate is FAIL and the normal hook remains NOT RUN. See the sibling
+receipt under “Whole-Core compiler completion on the working candidate”.
+
+The guarded PostgreSQL restart case now also exercises the concrete STATUS
+transport against a TEST_ONLY Edge over pinned mTLS after process restart and
+the same original/context/lease/terminal/ACK. The corrected focused retake
+passed 1/1 (six skipped); it overlaps prior restart receipts and is not a real
+Edge acknowledgement. Source pins, the initial harness failure and owned-cell
+cleanup are in the sibling receipt under “STATUS transport joined to
+PostgreSQL restart rehearsal”. Full candidate gate and source qualification
+remain open.
+
+
+Follow-up fixture repairs address several reported Core compiler diagnostics;
+the focused blotter, profile, ingress and causal regression suites passed
+76/76. A grouped strict compiler run reported one profile-test type error;
+the negative test was corrected afterward but has not been re-typechecked.
+Full-Core typecheck remains FAIL and final normal hook NOT RUN. Pins, the
+failed first test invocation, test scope and cleanup are recorded in the
+sibling receipt under “Focused fixture repairs after the compiler failure”.
+
+Retake: strict no-emit TypeScript for those four suites plus the STATUS PG
+suite and their imports subsequently exited 0; the preceding line describes
+the earlier observation. This scoped result does not replace whole-Core
+typecheck or the final normal hook. A 3 Nov read-only Edge catalogue recheck
+also confirmed the three other sibling sources remain unqualified; pins and
+the precise scope are in the same receipt.
+
+The later 3 Nov whole-Core diagnostic retake still exited 2. Grouped test
+fixture follow-through subsequently passed strict no-emit compilation for 18
+test files, and a separate Research group passed 173 tests with one real-HMD
+case skipped plus scoped strict compilation for its 11 files. Some test runs
+overlap; do not add their counts as independent coverage. PG tests affected by
+the migration-wrapper change have not been rerun in their isolated cell. Full
+Core typecheck, normal hook and final-candidate migration/rollback remain open;
+see “Whole-Core diagnostic retake and grouped fixture follow-through” in the
+sibling receipt.
+
+The next whole-Core retake on 3 Nov exited 2 with one backend fixture error
+and 44 frontend-boundary diagnostics; the backend fixture was fixed afterward
+and its focused test passed 16/16, without a further whole-Core retake. Three
+affected migration suites passed 29/29 in a disposable isolated PostgreSQL
+cell; owned containers, network and runner were removed. These results do not
+close the full compiler/hook or final-candidate restore/rollback gates. See
+“Whole-Core retake and isolated migration tests” in the sibling receipt.
+The W1 ingest, retained Release Candidate and lineage test fixtures and their
+imports subsequently passed a grouped strict no-emit compile; this does not
+replace the whole-Core check.
+The targeted cross-loop compiler experiment with DOM/JSX and one generated
+alias exited 2 due to Node fetch/Buffer overload conflict and a second missing
+frontend alias; do not apply that global configuration as a shortcut. The
+owned temporary configuration was removed. See “Cross-loop compiler boundary
+experiment” in the sibling receipt for the consumer handoff.
+Superseding follow-through: the Node and cross-loop test compiler projects now
+run together via `npm run typecheck`; the full command exited 0 on the pinned
+working candidate, and focused boundary/ingress tests passed 17/17. This does
+not close the normal hook, source qualification, or final-candidate rehearsal.
+The existing frontend handoff for a type-only change is no longer required for
+this compiler gate. See “Test-inclusive Core and cross-loop typecheck” in the
+sibling receipt for scope, pins and the first failed targeted attempt.
+In a later disposable-cell rehearsal, writer-created synthetic STATUS custody
+was dumped, restored and checked against the source, with 0158 down refused;
+the mTLS STATUS suite passed 7/7 and restore test 1/1. One raw owner-default
+ACL changed representation on restore, while effective permissions matched.
+The first raw-ACL comparison failed and is recorded, not silently replaced.
+This does not establish real Edge ACK, a full historical restore, or the final
+candidate gate; the prior full typecheck predates the subsequent test-only
+edits. See “Populated STATUS custody backup, restore and guarded down”.
+The two changed STATUS PG/restore tests and their imports subsequently passed
+a grouped strict no-emit compile; the full final-candidate compiler and hook
+remain separate gates.
+Follow-through: the three disposable-cell scripts now stage the cross-loop
+TypeScript configuration; shell syntax passed. The proxy's unchanged body
+forwarding and the typecheck-project boundary passed 4/4 focused mock tests
+and grouped strict no-emit compilation. A Docker hook/cell packaging run and
+the final candidate gate have not been claimed; see “Test-cell packaging
+follow-through” in the sibling receipt.
+The official focused Control API cell subsequently completed exit 0: build,
+fresh migrations through 0158, the cross-loop boundary test 1/1, and its
+synthetic PostgreSQL restore drill. No matching test container/network remained
+in the subsequent read-only check. This is not the full normal hook or a
+final-candidate historical restore; see “Official focused Control API cell
+retake” in the sibling receipt.
+
+The complete guarded STATUS PostgreSQL suite was subsequently rerun on the
+extended transport/restart test and passed 7/7; this overlaps earlier 1/1 and
+7/7 results. The standalone strict TypeScript check of that PG test timed out
+at 180 seconds without diagnostics; it is not PASS. The same receipt records
+the cell cleanup and runner hash. Full-Core typecheck and the final normal hook
+remain open.
+
+The later full Core plus cross-loop `npm run typecheck -- --pretty false`
+retake completed exit 0 after the STATUS restore and test-cell packaging
+changes. The working-tree fingerprints and scope are recorded under “Full
+typecheck retake after test-cell follow-through” in the sibling receipt; it is
+not a frozen commit, normal hook, final restore/rollback or connected receipt.
+
+**4 Nov Core integration checkpoint:** preserved the existing shared WIP and
+reviewed/imported Claude's local retained-review-only `SOURCE_DARK` equity
+bootstrap into the working tree, including its boot regression; the latter has
+not yet run against PG. Focused sibling/STATUS/approval/financial tests passed
+258/258 and an isolated loopback mTLS STATUS retake passed 24/24 after the
+sandboxed loopback attempt failed with `EPERM`. These are not Edge receipts.
+The Claude checkpoint, overlapping files, migration hashes, gate reuse limits,
+resource snapshot and remaining work are in the [integration checkpoint](execution_loop/evidence/ELP2-10/CORE_INTEGRATION_CHECKPOINT_2026-11-04.md).
+No complete candidate, normal hook, installed runtime, connected source or
+ELP2-10/11 closeout is claimed.
+
+**4 Nov candidate reconciliation follow-through:** Claude's eleven commits and
+the shared WIP were preserved in a separate uncommitted merge candidate; both
+overlapping regressions were retained. Selected synthetic suites and
+disposable PostgreSQL STATUS, restore and rollback-guard tests passed; the
+earlier failed setup attempts and the raw ACL representation difference remain
+recorded. Candidate Control API plus cross-loop typecheck also exited 0 at
+that earlier working-tree fingerprint; see the newer follow-through for the
+subsequent typecheck failure and retake.
+The source catalogue SHA remains unchanged, and no source,
+field-authority or connected acceptance is inferred. The candidate is not
+landed, installed or final: complete semantic review, the three reader
+compositions, representative restore and one final normal hook remain open.
+See the [integration checkpoint](execution_loop/evidence/ELP2-10/CORE_INTEGRATION_CHECKPOINT_2026-11-04.md)
+for exact pins, results, cleanup and limitations.
+
+**4 Nov historical-clone follow-through:** candidate migration 0155–0158,
+scoped owner/ACL and non-internal trigger preservation, and refusal of the
+0158 down without approved drain passed on a separately restored historical
+preview clone. Four-sibling contract fixtures passed 97/97. Source catalogue
+still lists the three corresponding Edge families unavailable/unqualified.
+The shared WIP is preserved; candidate remains uncommitted and not landed.
+See the [integration checkpoint](execution_loop/evidence/ELP2-10/CORE_INTEGRATION_CHECKPOINT_2026-11-04.md)
+for pins, exact coverage, cleanup and gates still open.
+
+**4 Nov independent sibling follow-through:** the uncommitted candidate now
+contains native-custody composition and bounded cursor contracts for the
+three dark readers, with closed field-policy mapping and synthetic tests.
+No qualified source or order-parent proof is installed; endpoints remain
+source-dark. Focused checks and the exact remaining gates are recorded in the
+[integration checkpoint](execution_loop/evidence/ELP2-10/CORE_INTEGRATION_CHECKPOINT_2026-11-04.md#independent-sibling-native-composition--candidate-wip).
+This does not close ELP2-10/11, connected acceptance or final integration.
+
+

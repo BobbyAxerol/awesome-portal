@@ -11,9 +11,9 @@
 import {
   exactCurrencySum,
   latest,
-  openOrders,
   ProfileScreenSource,
 } from "./profile-screen-composer";
+import { canonicalOrderStatus } from "../paper-read/order-status-map";
 import { available, Fact, missing } from "./stage-facts";
 
 export const COMPLIANCE_CAPS = ["capital", "gross_notional", "daily_loss", "open_orders"] as const;
@@ -154,11 +154,29 @@ function consumedFacts(approved: ApprovedEnvelope, source: ProfileScreenSource):
   else if (positions.length === 0) gross = available("0");
   else gross = missing(POSITION_VALUE_REASON);
 
-  // open orders: a count over a complete orders relation.
+  // An exact count needs both a complete relation and a known status for
+  // every row. Treating every unknown word as open can invent a count and
+  // even a false breach. The closed canonical map plus existing explicit
+  // legacy aliases are the only words counted; newly observed source words
+  // remain absent until their semantics are qualified.
   let open: Consumed;
   const orderBlock = relationBlocks(source, "orders");
   if (orderBlock !== null) open = missing(orderBlock);
-  else open = available(String(openOrders(source.rows("orders")).length));
+  else {
+    const statuses = source.rows("orders").map(row => {
+      if (typeof row.status !== "string") return null;
+      const raw = row.status.toUpperCase();
+      if (raw === "OPEN") return "OPEN";
+      if (raw === "CLOSED") return "CLOSED";
+      if (raw === "CANCELLED") return "CANCELED";
+      return canonicalOrderStatus(raw);
+    });
+    if (statuses.some(status => status === null)) open = missing("ORDER_STATUS_NOT_QUALIFIED");
+    else {
+      const terminal = new Set(["FILLED", "CANCELED", "REJECTED", "DENIED", "EXPIRED", "CLOSED"]);
+      open = available(String(statuses.filter(status => !terminal.has(status!)).length));
+    }
+  }
 
   return {
     capital,

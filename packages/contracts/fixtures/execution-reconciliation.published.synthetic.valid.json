@@ -34,6 +34,7 @@
         "resolution_revision": null,
         "detected_at_ms": 1799996400000
       }
-    ]
+    ],
+    "next_cursor": "TEST_ONLY_CURSOR"
   }
 }

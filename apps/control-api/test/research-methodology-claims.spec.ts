@@ -1,5 +1,5 @@
 import { readFileSync } from "node:fs";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 
 import { ResearchEngineAtlasPrivateSchema } from "../src/research/foundation.contract";
@@ -8,10 +8,10 @@ import { MethodologyClaimSchema, ResearchMethodologyClaimsService, projectEviden
 // The isolated Control API cell mounts the canonical contracts at /contracts.
 const atlasFixturePath = process.env.PORTAL_CONTRACTS_DIR
   ? join(process.env.PORTAL_CONTRACTS_DIR, "fixtures", "research-foundation.atlas-current.valid.json")
-  : new URL("../../../packages/contracts/fixtures/research-foundation.atlas-current.valid.json", import.meta.url);
+  : resolve(__dirname, "../../../packages/contracts/fixtures/research-foundation.atlas-current.valid.json");
 const atlasFixture = JSON.parse(readFileSync(atlasFixturePath, "utf8")) as { atlas: unknown };
 const atlas = ResearchEngineAtlasPrivateSchema.parse(atlasFixture.atlas);
-const sealFixture = JSON.parse(readFileSync(new URL("./research-w3-real-hmd-seal.fixture.json", import.meta.url), "utf8")) as { summary: Record<string, unknown> };
+const sealFixture = JSON.parse(readFileSync(resolve(__dirname, "research-w3-real-hmd-seal.fixture.json"), "utf8")) as { summary: Record<string, unknown> };
 const identity = { releaseId: "er_quantbt_111", mode: "mode_1_decay", schedule: "global" };
 
 describe("CG-FG-S03-02/S04-01 shared methodology claim projection", () => {
@@ -29,7 +29,9 @@ describe("CG-FG-S03-02/S04-01 shared methodology claim projection", () => {
     expect(claimFactsForRead).toHaveBeenCalledOnce();
   });
   it("projects the same claims from the narrow sealed groups without fetching analytics", () => {
-    const full = sealFixture.summary.source_facts!;
+    const sourceFacts = sealFixture.summary.source_facts;
+    if (!sourceFacts || typeof sourceFacts !== "object" || Array.isArray(sourceFacts)) throw new Error("Invalid source_facts fixture");
+    const full = sourceFacts as Record<string, unknown>;
     const narrow = { source_facts: { schema_version: full.schema_version, claims: full.claims, execution: full.execution } };
     expect(projectMethodologyClaims(atlas, narrow, identity)).toEqual(projectMethodologyClaims(atlas, sealFixture.summary, identity));
     expect(projectEvidenceClaimStrip(atlas, narrow, identity)).toEqual(projectEvidenceClaimStrip(atlas, sealFixture.summary, identity));

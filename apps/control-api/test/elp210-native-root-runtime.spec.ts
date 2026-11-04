@@ -286,7 +286,7 @@ describe("inert ROOT application factory (schema/ledger TEST_ONLY doubles)",()=>
   const candidate={usesPool:(selected:Pool)=>selected===f.pool} as CurrentHumanCandidate;
   const withoutRoot=new CurrentHumanMutations(f.pool,candidate,{recover:vi.fn()},{maximum_intents:16,maximum_recoveries_per_request:2});
   expect(()=>AppModule.register(config,f.pool,undefined,{...deps,currentHumanMutations:withoutRoot})).toThrow("NATIVE_ROOT_SHARED_RESEARCH_COMPOSITION_REQUIRED");
-  const cloned={...prepared,provider:{usesPool:()=>true} as NativeRootReceiptProvider};
+  const cloned={...prepared,provider:{usesPool:()=>true} as unknown as NativeRootReceiptProvider};
   expect(()=>AppModule.register(config,f.pool,undefined,{...deps,nativeRoot:cloned})).toThrow("NATIVE_ROOT_SHARED_RESEARCH_COMPOSITION_REQUIRED");
   const other=await application(),otherPrepared=await prepareNativeRootApplication(other.pool,other.runtime);
   expect(()=>AppModule.register(config,f.pool,undefined,{...deps,nativeRoot:otherPrepared})).toThrow("NATIVE_ROOT_SHARED_RESEARCH_COMPOSITION_REQUIRED");

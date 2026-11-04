@@ -123,6 +123,112 @@ describe("concrete explicitly selected command STATUS Edge port",()=>{
     const replies=await Promise.all(Array.from({length:4},()=>f.port.status({...f.input,prepared:p.prepared})));
     expect(replies).toHaveLength(4);expect(f.requests.filter(r=>r.path===COMMAND_STATUS_EDGE_PATH)).toHaveLength(1);
   });
+  it("does not let one canceled STATUS waiter abort another waiter's same delivery",async()=>{
+    const f=await setup();await f.port.original(f.input);const p=await f.port.prepareStatus(f.input);
+    const transport=f.port as unknown as {exchange:(path:string,body:string,token:string|undefined,signal:AbortSignal)=>Promise<unknown>};
+    const actual=transport.exchange.bind(f.port);
+    let started!:()=>void,release!:()=>void;
+    const entered=new Promise<void>(resolve=>{started=resolve;}), gate=new Promise<void>(resolve=>{release=resolve;});
+    vi.spyOn(transport,"exchange").mockImplementation(async(path,body,token,signal)=>{
+      if(path===COMMAND_STATUS_EDGE_PATH){started();await gate;}
+      return actual(path,body,token,signal);
+    });
+    const first=new AbortController(),second=new AbortController();
+    const firstOriginal=structuredClone(original);
+    const firstCall=f.port.status({...f.input,original:firstOriginal,signal:first.signal,prepared:p.prepared});
+    const firstRejected=expect(firstCall).rejects.toMatchObject({code:"COMMAND_STATUS_EDGE_ABORTED"});
+    await entered;
+    const secondCall=f.port.status({...f.input,signal:second.signal,prepared:p.prepared});
+    const flights=(f.port as unknown as {prepared:Map<string,{pending?:{waiters:number}}>}).prepared;
+    await vi.waitFor(()=>expect(flights.get(p.prepared.assertion_ref)?.pending?.waiters).toBe(2));
+    first.abort();await firstRejected;firstOriginal.reference="TEST_ONLY:mutated-after-cancel";release();
+    expect((await secondCall).result.business.state).toBe("APPLIED");
+    expect(f.requests.filter(r=>r.path===COMMAND_STATUS_EDGE_PATH)).toHaveLength(1);
+    expect(f.authority.acknowledgeRetainedRead).toHaveBeenCalledTimes(1);
+  });
+  it("reclaims cancelled waiter callbacks while another caller holds the same STATUS exchange",async()=>{
+    const f=await setup();await f.port.original(f.input);const p=await f.port.prepareStatus(f.input);
+    const transport=f.port as unknown as {exchange:(path:string,body:string,token:string|undefined,signal:AbortSignal)=>Promise<unknown>};
+    const actual=transport.exchange.bind(f.port);
+    let started!:()=>void,release!:()=>void;
+    const entered=new Promise<void>(resolve=>{started=resolve;}),gate=new Promise<void>(resolve=>{release=resolve;});
+    vi.spyOn(transport,"exchange").mockImplementation(async(path,body,token,signal)=>{
+      if(path===COMMAND_STATUS_EDGE_PATH){started();await gate;}
+      return actual(path,body,token,signal);
+    });
+    const anchor=f.port.status({...f.input,prepared:p.prepared});await entered;
+    const flights=(f.port as unknown as {prepared:Map<string,{pending?:{waiters:number;subscribers:Set<unknown>}}>}).prepared;
+    const pending=flights.get(p.prepared.assertion_ref)!.pending!;
+    for(let n=0;n<256;n++){
+      const caller=new AbortController();
+      const response=f.port.status({...f.input,signal:caller.signal,prepared:p.prepared})
+        .then(()=>"unexpected",error=>error.code);
+      await vi.waitFor(()=>expect(pending.waiters).toBe(2));
+      caller.abort();expect(await response).toBe("COMMAND_STATUS_EDGE_ABORTED");
+      expect(pending.subscribers.size).toBe(1);
+    }
+    release();expect((await anchor).result.business.state).toBe("APPLIED");
+    expect(pending.subscribers.size).toBe(0);
+    expect(f.requests.filter(r=>r.path===COMMAND_STATUS_EDGE_PATH)).toHaveLength(1);
+    expect(f.authority.acknowledgeRetainedRead).toHaveBeenCalledTimes(1);
+  });
+  it("aborts the shared STATUS exchange when its last waiter leaves and keeps the original for retry",async()=>{
+    const f=await setup();await f.port.original(f.input);const p=await f.port.prepareStatus(f.input);
+    const transport=f.port as unknown as {exchange:(path:string,body:string,token:string|undefined,signal:AbortSignal)=>Promise<unknown>};
+    let started!:()=>void,observedAbort=false;
+    const entered=new Promise<void>(resolve=>{started=resolve;});
+    const spy=vi.spyOn(transport,"exchange").mockImplementation((_path,_body,_token,signal)=>new Promise((_resolve,reject)=>{
+      started();signal.addEventListener("abort",()=>{observedAbort=true;reject(new Error("TEST_ONLY:aborted exchange"));},{once:true});
+    }));
+    const caller=new AbortController();
+    const request=f.port.status({...f.input,signal:caller.signal,prepared:p.prepared});
+    const rejected=expect(request).rejects.toMatchObject({code:"COMMAND_STATUS_EDGE_ABORTED"});
+    await entered;caller.abort();await rejected;
+    await vi.waitFor(()=>expect(observedAbort).toBe(true));
+    await vi.waitFor(()=>expect((f.port as unknown as {prepared:Map<string,{pending?:unknown}>}).prepared.get(p.prepared.assertion_ref)?.pending).toBeUndefined());
+    expect(f.authority.acknowledgeRetainedRead).not.toHaveBeenCalled();
+    spy.mockRestore();
+    expect((await f.port.status({...f.input,prepared:p.prepared})).result.business.state).toBe("APPLIED");
+    expect(f.authority.prepare).toHaveBeenCalledTimes(1);
+  });
+  it("bounds shared STATUS waiters without issuing another original",async()=>{
+    const f=await setup();await f.port.original(f.input);const p=await f.port.prepareStatus(f.input);
+    const transport=f.port as unknown as {exchange:(path:string,body:string,token:string|undefined,signal:AbortSignal)=>Promise<unknown>};
+    let observedAbort=false;
+    vi.spyOn(transport,"exchange").mockImplementation((_path,_body,_token,signal)=>new Promise((_resolve,reject)=>{
+      signal.addEventListener("abort",()=>{observedAbort=true;reject(new Error("TEST_ONLY:aborted exchange"));},{once:true});
+    }));
+    const callers=Array.from({length:64},()=>new AbortController());
+    const replies=callers.map(c=>f.port.status({...f.input,signal:c.signal,prepared:p.prepared})
+      .then(()=>"unexpected",error=>error.code));
+    const flights=(f.port as unknown as {prepared:Map<string,{pending?:{waiters:number}}>}).prepared;
+    await vi.waitFor(()=>expect(flights.get(p.prepared.assertion_ref)?.pending?.waiters).toBe(64));
+    await expect(f.port.status({...f.input,prepared:p.prepared})).rejects.toMatchObject({code:"COMMAND_STATUS_EDGE_CAPACITY"});
+    for(const caller of callers)caller.abort();
+    expect(await Promise.all(replies)).toEqual(Array(64).fill("COMMAND_STATUS_EDGE_ABORTED"));
+    await vi.waitFor(()=>expect(observedAbort).toBe(true));
+    expect(f.authority.prepare).toHaveBeenCalledTimes(1);
+    expect(f.authority.acknowledgeRetainedRead).not.toHaveBeenCalled();
+  });
+  it("does not discard a newer retry when an older failed waiter resumes",async()=>{
+    const f=await setup();await f.port.original(f.input);const p=await f.port.prepareStatus(f.input);
+    let rejectOld!:(error:Error)=>void,started!:()=>void;
+    const startedSignal=new Promise<void>(resolve=>{started=resolve;});
+    const oldExchange=new Promise<never>((_,reject)=>{rejectOld=reject;});
+    vi.spyOn(f.port as unknown as {exchange:()=>Promise<unknown>},"exchange")
+      .mockImplementation(()=>{started();return oldExchange;});
+    const oldCall=f.port.status({...f.input,prepared:p.prepared});
+    await startedSignal;
+    // Model the legal interleaving in which a different waiter has already
+    // installed the next same-context retry before this waiter handles failure.
+    const flights=(f.port as unknown as {prepared:Map<string,{pending?:unknown}>}).prepared;
+    const flight=flights.get(p.prepared.assertion_ref)!;
+    const newer={promise:Promise.resolve({TEST_ONLY:"newer retry"}),abort:new AbortController(),waiters:0,settled:true};flight.pending=newer;
+    rejectOld(new Error("TEST_ONLY:lost response"));
+    await expect(oldCall).rejects.toThrow("lost response");
+    expect(flight.pending).toBe(newer);
+    expect(f.authority.acknowledgeRetainedRead).not.toHaveBeenCalled();
+  });
   it("handles 140 source originals, preserves pending preparation, and detects changes after cache eviction and restart",async()=>{
     const f=await setup();
     f.mutate(v=>{
@@ -216,6 +322,35 @@ describe("concrete explicitly selected command STATUS Edge port",()=>{
     const results=await Promise.all(identical);
     expect(results.every(result=>result.prepared.assertion_ref===results[0].prepared.assertion_ref)).toBe(true);
     expect(f.port.snapshot().prepared).toBe(1);
+  });
+  it("keeps shared preparation capacity reserved when its first caller cancels",async()=>{
+    const f=await setup();await f.port.original(f.input);
+    const prepare=f.authority.prepare.getMockImplementation()!;
+    let release!:()=>void;
+    const barrier=new Promise<void>(resolve=>{release=resolve;});
+    const shared=new Map<string,ReturnType<typeof prepare>>();
+    f.authority.prepare.mockImplementation((input,body)=>{
+      let pending=shared.get(input.call_digest);
+      if(!pending){pending=barrier.then(()=>prepare(input,body));shared.set(input.call_digest,pending);}
+      return new Promise((resolve,reject)=>{
+        const abort=()=>reject(new Error("TEST_ONLY:prepare aborted"));
+        input.signal.addEventListener("abort",abort,{once:true});
+        pending!.then(value=>{input.signal.removeEventListener("abort",abort);resolve(value);},
+          error=>{input.signal.removeEventListener("abort",abort);reject(error);});
+      });
+    });
+    const firstController=new AbortController();
+    const first=f.port.prepareStatus({...f.input,signal:firstController.signal});
+    const firstRejected=expect(first).rejects.toThrow("prepare aborted");
+    const survivor=f.port.prepareStatus(f.input);
+    await vi.waitFor(()=>expect(f.authority.prepare).toHaveBeenCalledTimes(2));
+    firstController.abort();await firstRejected;
+    const others=Array.from({length:3},(_,i)=>f.port.prepareStatus({...f.input,call_digest:accessDigest(`TEST_ONLY:other-${i}`)}));
+    await vi.waitFor(()=>expect(f.authority.prepare).toHaveBeenCalledTimes(5));
+    await expect(f.port.prepareStatus({...f.input,call_digest:accessDigest("TEST_ONLY:overflow-after-cancel")}))
+      .rejects.toMatchObject({code:"COMMAND_STATUS_EDGE_CAPACITY"});
+    release();await Promise.all([survivor,...others]);
+    expect(f.port.snapshot().prepared).toBe(4);
   });
   it("final current-authority revoke hides held full source result",async()=>{
     const f=await setup();await f.port.original(f.input);const p=await f.port.prepareStatus(f.input);

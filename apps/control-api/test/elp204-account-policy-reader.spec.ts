@@ -140,8 +140,9 @@ describe("ELP2-04 finite account-policy reader / synthetic authority", () => {
       source_id: "manager.current.account-sync-current-state", relation: "account_sync_current_state",
       availability: "AVAILABLE", completeness: "COMPLETE", freshness: "FRESH", reason_code: null, as_of: TIME,
       items: [{ fields: { account_id: PRIVATE.account_id, mode: "paper", currency: "USDT", status: "READY",
-        updated_at: TIME, buying_power: "TEST_ONLY-NEVER-PUBLISH" } }],
-    } as typeof f.snapshot.document.relations[string];
+        updated_at: TIME, buying_power: "TEST_ONLY-NEVER-PUBLISH" }, lineage: {
+        workspace_id: f.principal.workspaceId, profile_id: profile(f, "paper"), source_contract_revision: "TEST_ONLY-contract" } }],
+    };
     const value = await f.maximum.relationPage(f.principal, "account-sync-current-state", { environment: "paper", limit: 20 });
     expect(value.records).toHaveLength(1);
     expect(value.records[0].values).toEqual({ account_id: PRIVATE.account_id, mode: "paper", currency: "USDT",

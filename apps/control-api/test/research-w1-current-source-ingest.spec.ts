@@ -146,6 +146,7 @@ function controller(flags: { retained?: boolean; currentSource?: boolean } = {})
     progress as never,
     {} as never,
     ingest as never,
+    {} as never,
   );
   return { instance, progress, ingest };
 }

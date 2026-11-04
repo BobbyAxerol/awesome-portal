@@ -139,6 +139,9 @@ export function withCataloguePublications(base: AccessTrustProvider,
     expectedContinuity:options.expectedContinuity && structuredClone(options.expectedContinuity)};
   const now = options.now ?? Date.now;
   return {
+    // A catalogue decorator is not a source of authority: retain the exact
+    // existing native custody port, and never synthesize one when absent.
+    ...(base.currentRelations ? { currentRelations: base.currentRelations } : {}),
     verifyPolicy: input => base.verifyPolicy(input), verifyReceipt: input => base.verifyReceipt(input),
     verifyRootReceipt: (input, context) => base.verifyRootReceipt?.(input, context) ?? Promise.resolve(null),
     qualifyDelegatedReceipt: (input, scope) => base.qualifyDelegatedReceipt?.(input, scope) ?? Promise.resolve(null),

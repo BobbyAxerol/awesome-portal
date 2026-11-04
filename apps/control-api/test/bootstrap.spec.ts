@@ -1,7 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { existsSync, readFileSync } from "node:fs";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
+import { join } from "node:path";
 import { Pool } from "pg";
 import { buildPool } from "../src/db/pool";
 import { AuthService } from "../src/auth/auth.service";
@@ -170,7 +169,7 @@ describe("parseBootstrapUsers", () => {
      * it sits one level up; in the repo it is three. Resolved rather than
      * duplicated — a second copy is the defect this test exists to catch.
      */
-    const here = dirname(fileURLToPath(import.meta.url));
+    const here = __dirname;
     const candidates = [
       join(here, "../deploy/control-api/bootstrap-users.yaml"),
       join(here, "../../../deploy/control-api/bootstrap-users.yaml"),

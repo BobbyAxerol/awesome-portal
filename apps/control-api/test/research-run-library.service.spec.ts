@@ -699,7 +699,7 @@ describe("E11 (audit 01-7) — a COMPLETED card reads the retained lane the hub 
     const analytics = JSON.parse(readFileSync(join(process.env.PORTAL_CONTRACTS_DIR ?? join(__dirname, "../../../packages/contracts"), "fixtures/research-retained-analytics-v2.fixed.valid.json"), "utf8"));
     const digest = sha256ResearchJson(analytics);
     const { item } = await card([retainedRow({ analytics_v2: analytics, analytics_v2_digest: digest })]);
-    expect(item.last_30d.availability.state).toBe("AVAILABLE");
+    expect(item.last_30d?.availability.state).toBe("AVAILABLE");
     await expect(card([retainedRow({ analytics_v2: analytics, analytics_v2_digest: "0".repeat(64) })]))
       .rejects.toMatchObject({ code: "RESEARCH_RUN_LIBRARY_UNAVAILABLE" });
   });

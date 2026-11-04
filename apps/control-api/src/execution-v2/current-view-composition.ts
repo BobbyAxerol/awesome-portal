@@ -61,6 +61,7 @@ export class CurrentViewCoreComposition {
   private readonly client: CurrentViewEdgeClient;
   private readonly transport: ReturnType<typeof createCurrentViewTransport>;
   private readonly workload: string;
+  private readonly edgeResponseBytes: number;
   private readonly shutdownMs: number;
   private starting?: Promise<AddressInfo>;
   private startingPending = false;
@@ -70,6 +71,7 @@ export class CurrentViewCoreComposition {
       throw failure("CURRENT_VIEW_COMPOSITION_CONFIG_INVALID");
     this.shutdownMs = config.shutdown_deadline_ms;
     this.workload = config.transport.peer.workload_id;
+    this.edgeResponseBytes = config.edge.limits.response_bytes;
     this.authority = new OwnedAuthority(auth, scopes, { ...config.authority }, () => this.state === "RUNNING", this.contexts);
     this.client = new CurrentViewEdgeClient(this.authority, config.edge);
     this.transport = createCurrentViewTransport(this.authority, { ...config.transport,
@@ -135,6 +137,8 @@ export class CurrentViewCoreComposition {
     this.reads.add(pending); return pending;
   }
   hasNativeCurrentRelations(): boolean { return this.scopes.hasNativeCurrentRelations(); }
+  /** Private configured bound, not an upstream capability or authorization. */
+  currentReadResponseLimit(): number { return this.edgeResponseBytes; }
 
   /** One native physical response for the complete BFF. Exact requirements
    * deduplicate, not source resources/datasets/field proofs. An internal query
@@ -154,7 +158,9 @@ export class CurrentViewCoreComposition {
         if (!Array.isArray(item.fields)) throw new ExecutionReadScopeError("EXECUTION_READ_SCOPE_REQUIRED");
         const key = accessDigest({ binding: item.binding, requirement: item.read_requirement });
         const previous = originals.get(key);
-        if (previous) originals.set(key, { ...previous, fields: [...new Set([...previous.fields, ...item.fields])] });
+        if (previous) originals.set(key, { ...previous, fields: [...new Set([...previous.fields, ...item.fields])],
+          ...((previous.detail_fields || item.detail_fields) ?
+            { detail_fields: [...new Set([...(previous.detail_fields ?? []), ...(item.detail_fields ?? [])])] } : {}) });
         else originals.set(key, structuredClone(item));
       }
       if (originals.size > 4) throw new ExecutionReadScopeError("EXECUTION_READ_SCOPE_LIMIT", 503);

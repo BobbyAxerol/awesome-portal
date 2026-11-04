@@ -162,7 +162,10 @@ describe("W7 · P21 retained lane on the real Delta WFO run", () => {
     const proof={...auditProof,result,result_digest:sha(result)};
     // This fixture removes generation witnesses, modelling non-reusable
     // original evidence; the selected trial and raw parent report stay fixed.
-    const noGeneration=lane().folds.map(fold=>{const payload={...fold.payload};delete payload.child_audit;return {...fold,payload};});
+    const noGeneration=lane().folds.map(fold=>{
+      if(!fold.payload || typeof fold.payload!=="object" || Array.isArray(fold.payload))throw new Error("expected fold payload");
+      const payload:Record<string,unknown>={...fold.payload};delete payload.child_audit;return {...fold,payload};
+    });
     const value=source({verifiedAudit:proof},{folds:noGeneration});
     const originalCore=sha(value.report.frozenCore);
     const noProof=await subject(source(),draft(original)).service.detail(scope,original.runId);

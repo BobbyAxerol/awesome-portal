@@ -138,6 +138,16 @@ describe("FE-072 Internal / Broker / Difference figures", () => {
     expect(noQuantity.figures.find((item) => item.key === "positions")!.internal.reason_code).toBe("POSITION_QUANTITY_NOT_PUBLISHED");
   });
 
+  it("does not publish a partial fee total when a fill has no commission", () => {
+    const figures = sourceFigures(profile({ positions: [], orders: [], fills: [
+      { commission: "1", commission_currency: "USDT" }, { commission: null, commission_currency: "USDT" },
+    ] }), "DARK");
+    expect(figures.figures.find((item) => item.key === "fees")!.internal).toEqual({
+      availability: "NOT_PUBLISHED", value: null, reason_code: "EXACT_DECIMAL_SOURCE_VALUE_NOT_PUBLISHED",
+    });
+    assertPublishedSchema(FAMILY, "StageSourceFigures", figures);
+  });
+
   it("does not turn an unstated relation into a zero while the profile never listed it", () => {
     const figures = sourceFigures(profile({ positions: [] }, {}, ["positions"]), "DARK");
     const by = Object.fromEntries(figures.figures.map((item) => [item.key, item]));

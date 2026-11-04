@@ -28,6 +28,7 @@
         "operation_id": "TEST_ONLY:op-3",
         "opened_at_ms": 1799996400000
       }
-    ]
+    ],
+    "next_cursor": "TEST_ONLY_CURSOR"
   }
 }

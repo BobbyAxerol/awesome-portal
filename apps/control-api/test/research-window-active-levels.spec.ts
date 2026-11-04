@@ -5,11 +5,15 @@ import {WindowExecutionRowSchema,WindowExecutionReadRowSchema,WindowObservationS
 import {sha256ResearchJson} from "../src/research/preflight.service";
 import {openApiValidator} from "./research-rf05-openapi";
 
-const observation=(position:string,stop:string|null,takeProfit:string|null)=>WindowExecutionRowSchema.parse({
+const observation=(position:string,stop:string|null,takeProfit:string|null)=>{
+  const row=WindowExecutionRowSchema.parse({
   source_ordinal:0,kind:"OBSERVATION",window:"OOS",fold_id:null,at_utc_ms:1781280000000,
   payload:{equity:"20000",return_fraction:"0",drawdown_fraction:"0",accepted_position:position,signal_target:null,candle:null,
     fee:null,funding:null,turnover:null,active_stop:stop,active_take_profit:takeProfit},
-});
+  });
+  if(row.kind!=="OBSERVATION")throw new Error("Expected observation fixture");
+  return row;
+};
 const cases=[
   ["flat zero", "0", "0", "NOT_APPLICABLE", "POSITION_FLAT", null],
   ["flat signed decimal zero", "-0.000", "65209.5846", "NOT_APPLICABLE", "POSITION_FLAT", null],

@@ -1,4 +1,5 @@
 import {describe,it,expect,vi} from "vitest";
+import {join} from "node:path";
 import {ResearchWindowExecutionRepository} from "../src/research/window-execution.repository";
 
 /**
@@ -58,7 +59,7 @@ describe("window-execution seal lock discipline",()=>{
   });
 
   it("the verification phase takes no lock-bearing statement of its own (the authority is the only locker)",async()=>{
-    const source=(await import("node:fs")).readFileSync(new URL("../src/research/window-execution.repository.ts",import.meta.url),"utf8");
+    const source=(await import("node:fs")).readFileSync(join(__dirname,"../src/research/window-execution.repository.ts"),"utf8");
     const verify=source.slice(source.indexOf("private async verifyBatches"),source.indexOf("async page("));
     expect(verify).not.toMatch(/FOR UPDATE|FOR SHARE|pg_advisory|LOCK TABLE/);
     const seal=source.slice(source.indexOf("async seal("),source.indexOf("private async batchSummary"));

@@ -120,10 +120,12 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)("ELP2-04 scoped Manager raw read
     finally { await adminPool.end(); }
     domain = new Pool({ connectionString: databaseUrl(domainName), max: 2 });
     await migrateExecutionStore(domain);
-    vi.spyOn(auth, "verifyAccessIdentity").mockImplementation(async assertion => ({
-      iss: "https://test-only.cloudflareaccess.com", sub: assertion, aud: "test-audience", email: `${assertion}@azdag.com`,
-      normalizedEmail: `${assertion}@azdag.com`, authenticationTime: new Date(), tokenExpiresAt: new Date(Date.now() + 3600000),
-    } satisfies VerifiedAccessIdentity));
+    vi.spyOn(auth, "verifyAccessIdentity").mockImplementation(async assertion => {
+      if (!assertion) throw new Error("TEST_ONLY_ASSERTION_REQUIRED");
+      return { iss: "https://test-only.cloudflareaccess.com", sub: assertion, aud: "test-audience", email: `${assertion}@azdag.com`,
+        normalizedEmail: `${assertion}@azdag.com`, authenticationTime: new Date(), tokenExpiresAt: new Date(Date.now() + 3600000),
+      } satisfies VerifiedAccessIdentity;
+    });
     const admin = new AdminService(ctx.pool, ctx.config, auth);
     const active = async (role: "ADMIN" | "USER") => {
       const username = `manager-${randomUUID()}`, created = await admin.createUser({ username, displayName: username, role });
@@ -494,7 +496,8 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)("ELP2-04 scoped Manager raw read
       // repository/service/scope implementation. Only DATA is coalesced.
       const counted = { query: (text: string, values?: unknown[]) => {
         if (text.includes("FROM execution_manager_model_revisions")) documentSelects++;
-        return domain.query({ text, values, query_timeout: 4000 });
+        const queryConfig = { text, values, query_timeout: 4000 };
+        return domain.query(queryConfig);
       } } as unknown as Pool;
       const service = new ManagerModelService(counted, f.scopes, f.config);
       const inflight = (service as unknown as { repository: {

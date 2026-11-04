@@ -263,7 +263,7 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)("ELP2-10 Manager consumer real P
   it("stop cancels and awaits the single fetch before releasing its lease; no dangling writer or ACK", async () => {
     let entered!: () => void; const entry = new Promise<void>(resolve => { entered = resolve; });
     const provider = source([]);
-    provider.read = vi.fn(async ({ signal }) => new Promise((_, reject) => {
+    provider.read = vi.fn(async ({ signal }) => new Promise<never>((_, reject) => {
       signal.addEventListener("abort", () => reject(signal.reason), { once: true }); entered();
     }));
     const consumer = create(provider), flight = consumer.tick(); await entry;
@@ -277,7 +277,7 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)("ELP2-10 Manager consumer real P
 
   it("source timeout aborts and settles before the next tick can fetch", async () => {
     const provider = source([]);
-    provider.read = vi.fn(async ({ signal }) => new Promise((_, reject) => signal.addEventListener("abort", () => reject(signal.reason), { once: true })));
+    provider.read = vi.fn(async ({ signal }) => new Promise<never>((_, reject) => signal.addEventListener("abort", () => reject(signal.reason), { once: true })));
     const consumer = create(provider, { source_timeout_ms: 30 });
     await expect(consumer.tick()).rejects.toThrow("MANAGER_SOURCE_TIMEOUT");
     expect(await count()).toBe(0); expect(provider.acknowledge).not.toHaveBeenCalled();

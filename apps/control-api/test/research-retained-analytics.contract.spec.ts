@@ -25,7 +25,7 @@ describe("E11/E14 sealed engine analytics wire", () => {
     privateBlock.total_trade_count.value = source.direct.num_trades;
     privateBlock.in_sample_equity.start_utc_ms -= 120000;
     privateBlock.in_sample_equity.end_exclusive_utc_ms -= 120000;
-    privateBlock.in_sample_equity.points.forEach(point => { point.at_utc_ms -= 120000; });
+    privateBlock.in_sample_equity.points.forEach((point: {at_utc_ms:number}) => { point.at_utc_ms -= 120000; });
     expect(ResearchEvidenceSourceSchema.safeParse({ ...source, summary_analytics: privateBlock }).success).toBe(true);
     privateBlock.total_trade_count.value = "999";
     expect(ResearchEvidenceSourceSchema.safeParse({ ...source, summary_analytics: privateBlock }).success).toBe(false);

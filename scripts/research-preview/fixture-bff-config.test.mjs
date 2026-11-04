@@ -152,7 +152,7 @@ test('hybrid fixture routes auth and all QuantBT to the isolated Control API wit
   assert.doesNotMatch(uncommented, /^location [^\n]*\/api\/v1\/quantbt\//m);
   assert.match(uncommented, /^location \^~ \/api\/v1\/execution\/ \{/m);
   assert.match(uncommented, /^location \^~ \/__fixture\/ \{/m);
-  assert(hybrid.includes('EXECUTION FIXTURES · RESEARCH USES PREVIEW API · NOT ACCEPTANCE EVIDENCE'));
+  assert.doesNotMatch(uncommented, /fixture-banner|sub_filter/);
   assert.match(hybridOverlay, /PORTAL_WEB_UPSTREAM: control-api:4000/);
   assert.match(hybridOverlay, /nginx\/hybrid-fixture:\/etc\/nginx\/fixture:ro/);
   const scriptSource = read('scripts/research-preview/preview.sh');

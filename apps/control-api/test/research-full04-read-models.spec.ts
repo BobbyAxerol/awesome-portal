@@ -3,7 +3,7 @@ import {readFileSync,readdirSync} from "node:fs";
 import {join} from "node:path";
 import {gunzipSync} from "node:zlib";
 import {describe,expect,it} from "vitest";
-import {executionRecipes} from "../src/research/execution-recipes";
+import {executionRecipes, type ExecutionRecipe} from "../src/research/execution-recipes";
 import {currentSourceExecutionPair,currentSourceRetainedMethod} from "../src/research/current-source-profile";
 import {CurrentSourceOptimizerDisclosureSchema,CurrentSourceMode4SelectionSchema,CurrentSourceFoldPayloadSchema,CurrentSourceSummarySchema} from "../src/research/current-source.payload";
 import {selectionRoles} from "../src/research/current-source-facts";
@@ -20,7 +20,8 @@ import {resolveSealedPerformanceMetric} from "../src/research/source-aware-metri
 import {ResearchRunLibraryService} from "../src/research/run-library.service";
 import {testConfig} from "./harness";
 
-const recipes=executionRecipes.filter(row=>row.descriptor.schema_version==="research.full04-delta-profile.v1");
+type Full04Recipe=Extract<ExecutionRecipe,{descriptor:{schema_version:"research.full04-delta-profile.v1"}}>;
+const recipes=executionRecipes.filter((row):row is Full04Recipe=>row.descriptor.schema_version==="research.full04-delta-profile.v1");
 const fixture=JSON.parse(gunzipSync(readFileSync(join(__dirname,"research-w5b-real-replay.fixture.json.gz"))).toString());
 const params={window:"34",rsi_lower:"40",rsi_upper:"60"};
 const dispersion={selector:"is_only_robust",is_subperiods:2,temporal_score:"0.5",temporal_q25:"0.4",temporal_mad:"0.1",temporal_count:2,is_only_robust_score:"0.45"};
@@ -76,7 +77,7 @@ describe("FULL-04 exact source read semantics",()=>{
     const originalEvent=structuredClone(event),mode2=recipes.find(row=>row.public_profile.optimization_mode==="mode_2_sbb")!;
     const projected=toPublicResearchProgressEvent(event,mode2.profile_id);
     expect(projected.payload.tqdm_line).toContain("best objective");
-    expect(projected.payload.console?.text).toContain("objective=");
+    expect(projected.payload.console).toMatchObject({text:expect.stringContaining("objective=")});
     expect(event).toEqual(originalEvent);
   });
   it("maps exactly35method×interval pairs without assuming Mode1 causal",()=>{

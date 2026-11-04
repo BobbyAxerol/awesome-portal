@@ -1,6 +1,7 @@
 {
   "lane": "TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT",
   "bases": {
+    "identity_only": "execution-account-profile.identity_only.synthetic.valid.json",
     "published": "execution-account-profile.published.synthetic.valid.json",
     "partial": "execution-account-profile.partial.synthetic.valid.json"
   },

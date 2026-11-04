@@ -142,7 +142,7 @@ describe("CORE-05 guarded Edge-only command binding support", () => {
       prepare: vi.fn(async () => auth), original: vi.fn(async () => structuredClone(original)),
       prepareCall: vi.fn(async input => ({ gateway_ref: config.selection.gateway_ref, action: input.action, call_digest: input.call_digest,
         delivered_request_digest: accessDigest("TEST_ONLY:exact-submit-bytes"), assertion_ref: "TEST_ONLY:fresh-author",
-        authority: "CURRENT_HUMAN", actor_id: originalActor.user_id, issued_at_ms: now - 10, expires_at_ms: now + 1000 })),
+        authority: "CURRENT_HUMAN" as const, actor_id: originalActor.user_id, issued_at_ms: now - 10, expires_at_ms: now + 1000 })),
       exchange: vi.fn(async () => { throw new Error("TEST_ONLY:ACK_LOST"); }),
     };
     const base = createEdgeCommandTrust(config.selection, gateway, () => now);

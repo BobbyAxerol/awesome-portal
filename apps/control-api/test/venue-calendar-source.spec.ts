@@ -10,7 +10,7 @@ const snapshot = () => JSON.parse(readFileSync(join(__dirname, "fixtures/paper-v
 const principal: CurrentSourcePrincipal = { workspaceId: "synthetic-workspace", user: {
   userId: "synthetic-user", username: "synthetic-user", displayName: "Synthetic user", role: "USER", status: "ACTIVE",
   mustChangePassword: false, failedLoginCount: 0, lockedUntil: null, sessionVersion: 1, disabledAt: null,
-  createdAt: new Date(0), updatedAt: new Date(0),
+  createdAt: new Date(0), updatedAt: new Date(0), accountRevision: 1, archivedAt: null,
 }, session: { sessionId: "synthetic-session", userId: "synthetic-user", state: "ACTIVE", sessionVersion: 1,
   authenticationTime: new Date(0), idleExpiresAt: new Date("2099-01-01"), absoluteExpiresAt: new Date("2099-01-01") } };
 const context: VenueCalendarReadContext = { environment: "paper", profile_id: "synthetic-paper",
@@ -18,10 +18,13 @@ const context: VenueCalendarReadContext = { environment: "paper", profile_id: "s
 function setup() {
   let source: unknown = snapshot(), now = Date.parse("2026-10-25T01:00:02Z"), missing = false, revoked = false;
   const checks = vi.fn(async () => { if (revoked) throw new Error("private source detail"); });
-  const provider = vi.fn<VenueCalendarSourceInstallation["withVerifiedSnapshot"]>(async (_principal, _context, use) =>
-    use(missing ? null : { snapshot: source, assertCurrent: checks }));
+  const provider = vi.fn((_principal: CurrentSourcePrincipal, _context: VenueCalendarReadContext) => undefined);
+  const withVerifiedSnapshot: VenueCalendarSourceInstallation["withVerifiedSnapshot"] = async (actor, selected, use) => {
+    provider(actor, selected);
+    return use(missing ? null : { snapshot: source, assertCurrent: checks });
+  };
   const binding = { workspace_id: "synthetic-workspace", profile_id: "synthetic-paper", venue: "SYNTHETIC_VN",
-    source_ref: "synthetic-edge-calendar", catalogue_revision: "synthetic-catalogue-1", withVerifiedSnapshot: provider };
+    source_ref: "synthetic-edge-calendar", catalogue_revision: "synthetic-catalogue-1", withVerifiedSnapshot };
   const service = createPaperVenueCalendarSource(binding, () => now);
   return { service, provider, binding, checks, source: () => source as VenueCalendarSourceSnapshot,
     replace: (value: unknown) => { source = value; }, now: (value: number) => { now = value; },

@@ -39,6 +39,7 @@ import type { FastifyInstance } from "fastify";
 import { readFileSync } from "node:fs";
 import { resolve as resolvePath } from "node:path";
 import { AppModule } from "../src/app.module";
+import { createControlApiApp } from "../src/app";
 import { EquityProjectionSourceController } from "../src/equity-projection/equity-projection-source.controller";
 import { ApprovalEvidenceController } from "../src/approval-evidence/approval-evidence.controller";
 import { SourceNotCommissionedApprovalEvidencePort } from "../src/approval-evidence/approval-evidence.dark";
@@ -194,7 +195,7 @@ describe.skipIf(!DATABASE_URL)("ELP2-04 finite positive parents / actual PG+HTTP
         "manager.risk:risk_grants": relation([{ risk_grant_id: risk, strategy_id: alpha, account_id: "TEST_ONLY_account" }]),
         "manager.portfolios:portfolios": relation([{ portfolio_id: portfolio }]),
       } };
-    const digest = projectionDigest(document), config = { ...ctx.config, FEATURE_EXECUTION_LOCAL_PROJECTION: "true" as const,
+    const digest = projectionDigest(document), config: typeof ctx.config = { ...ctx.config, FEATURE_EXECUTION_LOCAL_PROJECTION: "true" as const,
       FEATURE_EXECUTION_CURRENT_SOURCE_PAPER: "true" as const, EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID: ws,
       EXECUTION_EDGE_PAPER_PROFILE_ID: "PAPER_BINANCE_USDM" };
     await ctx.pool.query(`INSERT INTO execution_profile_projection_snapshots
@@ -368,7 +369,7 @@ describe.skipIf(!DATABASE_URL)("ELP2-04 finite positive parents / actual PG+HTTP
         {provide:CanaryService,useValue:new CanaryService(deniedLegacy as never,deniedLegacy as never,deniedLegacy as never,f.scopes,f.followingService)},
         { provide: OperationalCompositionService, useValue: compositions }] }, new FastifyAdapter(), { logger: false, abortOnError: false });
     try { app.useGlobalFilters(new HttpErrorFilter()); await app.register(cookiePlugin as never); await app.init();
-      const http = app.getHttpAdapter().getInstance<FastifyInstance>(); await http.ready(); return await run(http, legacy, current);
+      const http = app.getHttpAdapter().getInstance() as FastifyInstance; await http.ready(); return await run(http, legacy, current);
     } finally { await app.close(); }
   }
   const path = (f: Fixture, family: PositiveParentFamily, id = idFor(f, family), ws = f.workspace) =>
@@ -2379,7 +2380,7 @@ async function followingFixture(family:FollowingFamily,options:{rootOnly?:boolea
         new FastifyAdapter(),{logger:false,abortOnError:false});
       try{
         app.useGlobalFilters(new HttpErrorFilter());await app.register(cookiePlugin as never);await app.init();
-        const http=app.getHttpAdapter().getInstance<FastifyInstance>();await http.ready();
+        const http=app.getHttpAdapter().getInstance() as FastifyInstance;await http.ready();
         const url=(id:string,qs:string)=>`/api/v1/execution/deployments/${id}/equity-projection/source?workspace_id=${encodeURIComponent(f.workspace)}&environment=live${qs}`;
         const ok=await http.inject({method:"GET",url:url(f.deployment,""),headers:headers(f)});
         expect(ok.statusCode,ok.body).toBe(200);expect(ok.headers["cache-control"]).toBe("private, no-store");
@@ -2403,7 +2404,7 @@ async function followingFixture(family:FollowingFamily,options:{rootOnly?:boolea
             {provide:ApprovalEvidenceReads,useValue:new ApprovalEvidenceReads(new SourceNotCommissionedApprovalEvidencePort(),visibility as never)}]},
           new FastifyAdapter(),{logger:false,abortOnError:false});
         app.useGlobalFilters(new HttpErrorFilter());await app.register(cookiePlugin as never);await app.init();
-        const http=app.getHttpAdapter().getInstance<FastifyInstance>();await http.ready();return {app,http};
+        const http=app.getHttpAdapter().getInstance() as FastifyInstance;await http.ready();return {app,http};
       };
       const url=(id:string,ws=f.workspace,qs="")=>`/api/v1/execution/governance/approvals/${id}/evidence?workspace_id=${encodeURIComponent(ws)}${qs}`;
       const fenced=await mount(real);
@@ -2444,7 +2445,7 @@ async function followingFixture(family:FollowingFamily,options:{rootOnly?:boolea
         new FastifyAdapter(),{logger:false,abortOnError:false});
       try{
         app.useGlobalFilters(new HttpErrorFilter());await app.register(cookiePlugin as never);await app.init();
-        const http=app.getHttpAdapter().getInstance<FastifyInstance>();await http.ready();
+        const http=app.getHttpAdapter().getInstance() as FastifyInstance;await http.ready();
         const url=`/api/v1/execution/governance/approvals/${f.r1}/evidence?workspace_id=${encodeURIComponent(f.workspace)}`;
         const reqHeaders={cookie:`${SESSION_COOKIE}=${owner.login.token}`,"x-request-id":"TEST_ONLY-approval-evidence-revoke"};
         const before=await http.inject({method:"GET",url,headers:reqHeaders});
@@ -2459,6 +2460,19 @@ async function followingFixture(family:FollowingFamily,options:{rootOnly?:boolea
         const after=await http.inject({method:"GET",url,headers:reqHeaders});
         expect(after.statusCode,after.body).toBe(404);
       }finally{await app.close();}
+    });
+    it("full AppModule boot: both dark routes resolve their dependencies and answer 401 without a session; the plain boot does not mount them",async()=>{
+      const probe=async(deps?:Record<string,unknown>)=>{
+        const app=await createControlApiApp(ctx.config,ctx.pool,undefined,deps as never);
+        try{
+          const http=app.getHttpAdapter().getInstance() as FastifyInstance;await http.ready();
+          const ev=await http.inject({method:"GET",url:"/api/v1/execution/governance/approvals/apr_x1/evidence"});
+          const eq=await http.inject({method:"GET",url:"/api/v1/execution/deployments/dep_x1/equity-projection/source?workspace_id=ws_x1&environment=live"});
+          return [ev.statusCode,eq.statusCode];
+        }finally{await app.close();}
+      };
+      expect(await probe({approvalEvidence:"SOURCE_DARK",equityProjectionSource:"SOURCE_DARK"})).toEqual([401,401]);
+      expect(await probe()).toEqual([404,404]);
     });
     it("the route is UNMOUNTED by default and mounts only with the explicit SOURCE_DARK dependency",()=>{
       const plain=AppModule.register(ctx.config,ctx.pool),dark=AppModule.register(ctx.config,ctx.pool,undefined,{equityProjectionSource:"SOURCE_DARK"});

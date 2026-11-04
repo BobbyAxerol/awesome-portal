@@ -44,7 +44,7 @@ describe("private current-requester STATUS application composition",()=>{
   beforeAll(async()=>{keys=await generateKeyPair("EdDSA",{crv:"Ed25519",extractable:true});});
   beforeEach(()=>{
     factories.assertion.mockReset().mockImplementation(()=>transport());factories.reverse.mockReset().mockImplementation(()=>transport());
-    factories.edge.mockReset().mockImplementation((_binding,base)=>({port:{snapshot:()=>({in_flight:0,originals:0,prepared:0})},
+    factories.edge.mockReset().mockImplementation((_binding,base)=>({port:{original:vi.fn(async()=>null),snapshot:()=>({in_flight:0,originals:0,prepared:0})},
       trust:{prepare:base.prepare.bind(base),send:base.send.bind(base),lookup:base.lookup.bind(base),lookupCurrentRequester:vi.fn(async()=>null)}}));
     transports.length=0;
   });

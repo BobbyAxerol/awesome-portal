@@ -3,7 +3,7 @@ import type { ManagerMember, ManagerModelDocument } from "./manager-model.contra
 import type { ManagerScorePublication } from "./manager-score-publication.contract";
 
 /** Stable population identity, independent of source object property ordering. */
-export function managerScorePopulationDigest(members: readonly ManagerMember[]): string {
+export function managerScorePopulationDigest(members: readonly Pick<ManagerMember, "tuple">[]): string {
   return accessDigest([...new Set(members.map(m => JSON.stringify([m.tuple.alpha_id, m.tuple.alpha_version_id,
     m.tuple.portfolio_id, m.tuple.deployment_id, m.tuple.account_id])))].sort());
 }

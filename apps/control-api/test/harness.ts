@@ -13,6 +13,10 @@ type TestMigrationRunner = (options: { databaseUrl: string; dir: string; directi
 const migrate = (require("node-pg-migrate") as { runner: TestMigrationRunner }).runner;
 
 export const TEST_TABLES = [
+  "execution_command_status_preparations",
+  // STATUS context links intentionally survive a test-app reset: the production
+  // table refuses TRUNCATE. Tests use unique IDs and the disposable database
+  // itself is removed after the suite; never disable its immutability trigger.
   "execution_command_status_delivery_acks",
   "execution_command_status_original_fingerprints",
   "execution_pending_recall_events",

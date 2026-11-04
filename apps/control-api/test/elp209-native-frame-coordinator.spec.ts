@@ -85,7 +85,8 @@ describe("ELP2 native subscribe — absence of actual fixed dependencies stays f
       throw new Error("TEST_ONLY source must not be reached");
     });
     const hub = new ScopedReplayHub({ read }, codec(), limits);
-    const current = vi.fn<Parameters<ScopedReplayHub["subscribeNative"]>[0]["current"]>(async () => {
+    type EntitySubscription = Extract<Parameters<ScopedReplayHub["subscribeNative"]>[0], { resource: unknown }>;
+    const current = vi.fn<EntitySubscription["current"]>(async () => {
       throw new Error("TEST_ONLY current scope must not be requested");
     });
     const responseAccess = vi.fn((): never => { throw new Error("TEST_ONLY response must not be acquired"); });

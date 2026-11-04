@@ -9,11 +9,8 @@ import { ProfileReadService } from "../profile-read/profile-read.service";
 import { browserSafeProfileRead } from "../execution/browser-safe-profile-read";
 import { deploymentIdentityOf, identityFields } from "../execution/deployment-identity";
 import {
-  decimalAbsoluteSum,
   decimalSubtract,
-  decimalSum,
   latest,
-  openOrders,
   ProfileScreenSource,
 } from "../execution/profile-screen-composer";
 import { evaluateSandboxCertification } from "../sandbox/sandbox-certification.service";
@@ -200,7 +197,7 @@ export class CanaryService {
     const readAt = new Date().toISOString();
     const source = new ProfileScreenSource(currentSource ?? {}, readAt);
     const sourceConnected = source.connected;
-    const unavailablePanel = (panelId: string, authority: "EXECUTION" | "BROKER" | "DERIVED") => ({
+    const unavailablePanel = (panelId: string, authority: "EXECUTION" | "BROKER" | "DERIVED", reason?: string) => ({
       panel_id: panelId,
       source_authority: authority,
       panel_state: "unavailable",
@@ -216,7 +213,7 @@ export class CanaryService {
       projection_sequence: null,
       capability_snapshot_id: null,
       data: null,
-      warnings: [{ code: `CANARY_${panelId.toUpperCase()}_UNAVAILABLE` }],
+      warnings: [{ code: reason ?? `CANARY_${panelId.toUpperCase()}_UNAVAILABLE` }],
     });
     const unavailableCollection = (panelId: string, authority: "EXECUTION" | "BROKER") => ({
       envelope: unavailablePanel(panelId, authority),
@@ -224,12 +221,12 @@ export class CanaryService {
       returned_count: 0,
       rows: [],
     });
-    const unavailableKpi = (key: string, label: string, authority: "EXECUTION" | "BROKER" | "DERIVED") => ({
+    const unavailableKpi = (key: string, label: string, authority: "EXECUTION" | "BROKER" | "DERIVED", unit = envelope.currency, reason?: string) => ({
       key,
       label,
       value: null,
-      unit: envelope.currency,
-      envelope: unavailablePanel(`kpi-${key}`, authority),
+      unit,
+      envelope: unavailablePanel(`kpi-${key}`, authority, reason),
     });
     const positions = source.rows("positions");
     const orders = source.rows("orders");
@@ -240,12 +237,11 @@ export class CanaryService {
     const accountSync = source.rows("account_sync");
     const brokerSync = source.rows("broker_sync");
     const reconciliation = source.rows("reconciliation");
-    const open = openOrders(orders);
-    const capitalConsumed = decimalSum(margins, ["initial"]);
-    const grossNotional = decimalAbsoluteSum(positions, "notional");
-    const dailyPnl = decimalSum(positions, ["realized_pnl", "unrealized_pnl"]);
     const broker = latest(brokerSync, "synced_at");
-    const brokerEquity = typeof broker?.buying_power === "string" ? broker.buying_power : null;
+    // Buying power is not broker equity. Nor do position P&L fields establish
+    // a daily window or a common currency. Do not publish either as a KPI.
+    const dailyPnl = null;
+    const brokerEquity = null;
     const valueKpi = (
       key: string,
       label: string,
@@ -253,7 +249,9 @@ export class CanaryService {
       value: string | null,
       keys: readonly string[],
       unit = envelope.currency,
-    ) => ({ key, label, value, unit, envelope: source.panel(`kpi-${key}`, authority, keys, value === null ? {} : { value }) });
+      reason?: string,
+    ) => value === null ? unavailableKpi(key, label, authority, unit, reason)
+      : ({ key, label, value, unit, envelope: source.panel(`kpi-${key}`, authority, keys, { value }) });
     const sourcePositions = source.collection("positions", "EXECUTION", "positions");
     const sourceBlotter = source.collection("blotter", "EXECUTION", "orders");
     const internalData = { positions, orders, fills, sessions, account_balances: balances, margin_balances: margins, account_sync: accountSync };
@@ -267,17 +265,24 @@ export class CanaryService {
       max_open_orders: envelope.max_open_orders,
       duration_days: envelope.duration_days,
     }, source);
+    // The legacy summary and headroom must not bypass the qualified facts
+    // used by the newer compliance rows. A partial/mixed-currency relation
+    // must never look like a complete monetary total or zero.
+    const fact = (cap: (typeof compliance.rows)[number]["cap"]) => compliance.rows.find(row => row.cap === cap)!.consumed;
+    const capital = fact("capital"), gross = fact("gross_notional"), orderCount = fact("open_orders");
+    const capitalConsumed = capital.value, grossNotional = gross.value;
+    const openCount = orderCount.value === null ? null : Number(orderCount.value);
     const consumed = sourceConnected ? {
       capital: capitalConsumed,
       gross_notional: grossNotional,
       daily_pnl: dailyPnl,
-      open_orders: open.length,
+      open_orders: openCount,
     } : null;
     const headroom = sourceConnected ? {
       capital: capitalConsumed === null ? null : decimalSubtract(decimal(envelope.capital_cap), capitalConsumed),
       gross_notional: grossNotional === null ? null : decimalSubtract(decimal(envelope.gross_notional_cap), grossNotional),
-      daily_loss: dailyPnl === null ? null : decimalSubtract(decimal(envelope.daily_loss_cap), dailyPnl.startsWith("-") ? dailyPnl.slice(1) : "0"),
-      open_orders: envelope.max_open_orders - open.length,
+      daily_loss: null,
+      open_orders: openCount === null ? null : envelope.max_open_orders - openCount,
     } : null;
     return {
       schema_version: "execution.canary-control-room.v1",
@@ -345,16 +350,16 @@ export class CanaryService {
       source_figures: sourceFigures(source, "LIVE_SOURCE_UNAVAILABLE"),
       kpis: [
         ...(sourceConnected ? [
-          valueKpi("capital_consumed", "Capital consumed", "EXECUTION", capitalConsumed, ["margin_balances"]),
-          valueKpi("gross_notional", "Gross notional", "EXECUTION", grossNotional, ["positions"]),
-          valueKpi("daily_pnl", "Daily P&L", "DERIVED", dailyPnl, ["positions"]),
-          valueKpi("open_orders", "Open orders", "EXECUTION", String(open.length), ["orders"], "COUNT"),
-          valueKpi("broker_equity", "Broker equity", "BROKER", brokerEquity, ["broker_sync"]),
+          valueKpi("capital_consumed", "Capital consumed", "EXECUTION", capitalConsumed, ["margin_balances"], envelope.currency, capital.reason_code ?? undefined),
+          valueKpi("gross_notional", "Gross notional", "EXECUTION", grossNotional, ["positions"], envelope.currency, gross.reason_code ?? undefined),
+          valueKpi("daily_pnl", "Daily P&L", "DERIVED", dailyPnl, ["positions"], envelope.currency, "DAILY_PNL_WINDOW_NOT_PUBLISHED"),
+          valueKpi("open_orders", "Open orders", "EXECUTION", orderCount.value, ["orders"], "COUNT", orderCount.reason_code ?? undefined),
+          valueKpi("broker_equity", "Broker equity", "BROKER", brokerEquity, ["broker_sync"], envelope.currency, "BROKER_EQUITY_NOT_PUBLISHED"),
         ] : [
           unavailableKpi("capital_consumed", "Capital consumed", "EXECUTION"),
           unavailableKpi("gross_notional", "Gross notional", "EXECUTION"),
           unavailableKpi("daily_pnl", "Daily P&L", "DERIVED"),
-          unavailableKpi("open_orders", "Open orders", "EXECUTION"),
+          unavailableKpi("open_orders", "Open orders", "EXECUTION", "COUNT"),
           unavailableKpi("broker_equity", "Broker equity", "BROKER"),
         ]),
       ],

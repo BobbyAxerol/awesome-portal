@@ -49,3 +49,51 @@ To avoid claiming the threshold has been met prematurely, the following addition
 The host process check was repeated immediately before removing those nine entries; `rm` exited 0. `/dev/vda1` then had **135,785,795,584 bytes available** out of 665,811,062,784 (about **20.39%**), an observed total increase of **24,945,664,000 bytes** over the original measurement. This exceeds the C4.5 20% minimum by only about 2.62 GB; a disk-intensive build still needs an assessment of its actual headroom, ongoing work, and a fresh free-space check. This action does not change application test or qualification status.
 
 All removed content was regenerable compilation/dependency/scanner cache, not a versioned source or receipt. The exact removed bytes are not recoverable from this cleanup; dependencies and scan databases must be reinstalled/redownloaded if those old temporary copies are used again. Source, images, containers, volumes, worktrees, run logs, receipts, credentials and runtime data were not removed.
+
+## Follow-up — 2026-11-04
+
+The shared filesystem was at 88% used, about 79 GiB available. After checking
+that no corresponding process or open file was using them, removed two
+regenerable caches: `/tmp/playwright-transform-cache-1000` (264,260,428
+apparent bytes of transformed test code) and the isolated Cargo dependency
+cache `/tmp/elp210-edge-source-20261024.gt6Znz8L/cargo-home` (571,369,764
+apparent bytes). Playwright recreates its cache; the Cargo dependencies can be
+downloaded again subject to registry availability. Deleted bytes themselves
+are not recoverable. Removal was verified; the Cargo tree's source, binary,
+test logs and evidence were kept.
+
+Post-cleanup `df -B1` reported 85,060,677,632 bytes available out of
+665,811,062,784 (about 12.8%): still below the C4.5 20% headroom rule. Docker
+reported no dangling images and no `control-api-test-*` containers. Nominal
+reclaimable tagged images, volumes and shared builder cache were not pruned;
+their rollback and concurrent-use impact was not established. Old scratch
+trees containing source, binary artifacts, visual recordings or logs were
+also retained. No service, runtime data, worktree or credential was changed.
+
+### Additional cleanup requested by Bobby
+
+On the next pass, eight `node_modules` directories in the four old isolated
+`/tmp/portal-pr36-BbMbHW`, `/tmp/portal-pr36-final-cgYPLo`,
+`/tmp/portal-pr36-fixed-OOL8hT` and `/tmp/portal-eds04-frontend.GhLoA9`
+cells were removed. Their combined apparent size before removal was
+2,376,923,624 bytes. Three additional isolated dependency directories were
+removed: `/tmp/portal-astra-audit-06dId6ty/node_modules`,
+`/tmp/portal-contract-generate.8jGAfa/node_modules`, and
+`/tmp/portal-phase2-contract-deps/node_modules` (approximately 337 MiB by
+`du -sh`). These are reinstallable dependency copies; the deleted bytes are
+not recoverable and reinstalls can require a package registry. Source,
+reports, evidence and each parent cell remain. No open files or registered Git
+worktrees were found in the four main cells. The first unprivileged removal
+partially succeeded and reported permission errors for container-owned files;
+the same exact paths were then removed successfully with `sudo -n` and checked.
+
+The shared filesystem had 85,029,912,576 bytes available immediately before
+this pass and 88,191,975,424 afterwards: an observed increase of 3,162,062,848
+bytes, subject to concurrent filesystem activity. This is about 13.2% free,
+still below the 20% C4.5 headroom rule. One specifically selected private
+build-cache record was offered for pruning under `/tmp/portal-heavy.lock`;
+Docker reported `Total: 0B`. No Docker image, container, volume or broad cache
+prune was performed. In particular, preserved/candidate images and a
+`roadmap-api-cve-test` image were retained: an archive with the same tag had
+a different image configuration digest, so it was not claimed as an exact
+recovery. A separate Claude `vrec` test tree had open files and was retained.

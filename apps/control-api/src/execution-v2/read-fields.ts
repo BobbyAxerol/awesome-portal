@@ -40,6 +40,18 @@ export const RECORD_DETAIL_READ_FIELDS = [
 ] as const;
 const detail = new Set<string>(RECORD_DETAIL_READ_FIELDS);
 export const isRecordDetailReadField = (field:string):boolean => detail.has(field);
+/** Sibling-only names are not part of the general record-detail copier. They
+ * require an explicit reviewed field-policy entry even for full-business
+ * readers; adding this vocabulary never supplies a grant or source proof. */
+export const SIBLING_DETAIL_READ_FIELDS = [
+  "order_fee_absence", "order_ack_latency_ms", "order_intent_id", "order_idempotency_scope",
+  "reconciliation_run_id", "reconciliation_break_id", "reconciliation_break_kind",
+  "reconciliation_started_at_ms", "reconciliation_finished_at_ms", "reconciliation_breaks_open",
+  "reconciliation_resolution_revision", "reconciliation_detected_at_ms",
+  "obligation_id", "obligation_kind", "obligation_recovery_id", "obligation_operation_id", "obligation_opened_at_ms",
+] as const;
+const siblingDetail = new Set<string>(SIBLING_DETAIL_READ_FIELDS);
+export const isSiblingDetailReadField = (field:string):boolean => siblingDetail.has(field);
 export const TECHNICAL_READ_FIELDS = ["environment", "profile_id", "component", "health", "state", "observed_at",
   "availability", "reason_code", "revision", "lag_ms", "last_error_code"] as const;
 export const AUDIT_READ_FIELDS = ["event_id", "operation", "actor_user_id", "subject_user_id", "occurred_at_ms",

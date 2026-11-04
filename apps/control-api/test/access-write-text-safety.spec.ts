@@ -106,7 +106,7 @@ function setup(){
     {config:{PORTAL_PUBLIC_ORIGIN:ORIGIN}} as AuthService);
   const request={method:"POST",headers:{origin:ORIGIN,"x-portal-csrf":CSRF,"x-portal-idempotency-key":KEY},
     cookies:{[CSRF_COOKIE]:CSRF},portalUser:{userId:"TEST_ONLY:actor",sessionVersion:1},
-    portalSession:{sessionId:"TEST_ONLY:session",csrfSecretHash:sha256(CSRF)}} as Parameters<ExecutionAccessController["preview"]>[0];
+    portalSession:{sessionId:"TEST_ONLY:session",csrfSecretHash:sha256(CSRF)}} as unknown as Parameters<ExecutionAccessController["preview"]>[0];
   const reply={code:vi.fn()};
   return {service,controller,request,reply:reply as unknown as Parameters<ExecutionAccessController["preview"]>[2]};
 }

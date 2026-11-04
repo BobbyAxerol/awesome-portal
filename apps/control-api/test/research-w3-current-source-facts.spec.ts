@@ -20,6 +20,7 @@ import {
   ResearchCurrentSourceSplitResponseSchema,
   type ResearchCurrentSourceEvidenceResponse,
   type ResearchCurrentSourceNotApplicableResponse,
+  type ResearchCurrentSourceSplitTerminalAbsenceResponse,
   type ResearchCurrentSourceSearchResponse,
   type ResearchCurrentSourceSplitResponse,
 } from "../src/research/current-source.contract";
@@ -63,8 +64,9 @@ const config = {
   QUERY_CURSOR_TTL_SECONDS: 900,
 };
 
-function sealed<T>(value: T | ResearchCurrentSourceNotApplicableResponse): T {
-  if ((value as { schema_version?: string }).schema_version === "research.current-source-not-applicable.v1") {
+function sealed<T>(value: T | ResearchCurrentSourceNotApplicableResponse | ResearchCurrentSourceSplitTerminalAbsenceResponse): T {
+  if (["research.current-source-not-applicable.v1", "research.current-source-split-terminal-absence.v1"]
+      .includes((value as { schema_version?: string }).schema_version ?? "")) {
     throw new Error("expected a sealed current-source response");
   }
   return value as T;

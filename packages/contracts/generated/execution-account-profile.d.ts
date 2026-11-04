@@ -11,7 +11,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description The physical profile of an account/binding as the venue states it: product, network and when the network was proven, margin mode and ratio (a percent decimal text), wallet balance and native equity (each ONE currency). CONTRACT ONLY: no producer exists yet (Edge/Core inputs are in WP_K_CONTRACTS_2026-10-23.md), so nothing serves this route and every screen keeps its typed absence. */
+        /** @description The physical profile of an account/binding as the venue states it: product, network and when the network was proven, margin mode and ratio (a percent decimal text), wallet balance and native equity (each ONE currency). When the separately qualified Paper Manager CURRENT and native HTTP custody are installed, the route can return account identity alone. Fields without source authority are omitted. Otherwise it refuses; no source is enabled by this contract. */
         get: operations["executionAccountProfileGetV1"];
         put?: never;
         post?: never;
@@ -57,7 +57,7 @@ export interface components {
         AccountProfileProblem: {
             error: {
                 /** @enum {string} */
-                code: "EXECUTION_READ_NOT_AVAILABLE" | "EXECUTION_READ_QUERY_INVALID";
+                code: "EXECUTION_READ_NOT_AVAILABLE" | "EXECUTION_READ_QUERY_INVALID" | "SESSION_REQUIRED" | "REQUEST_REJECTED" | "PORTAL_AUTHORITY_UNAVAILABLE" | "PORTAL_READ_STORE_UNAVAILABLE" | "EXECUTION_LOCAL_READ_BUSY" | "EXECUTION_READ_SCOPE_REQUIRED" | "EXECUTION_READ_ACCESS_CHANGED" | "EXECUTION_READ_CURRENT_ONLY" | "EXECUTION_READ_POLICY_PENDING" | "EXECUTION_READ_PUBLICATION_NOT_QUALIFIED" | "EXECUTION_READ_FIELD_POLICY_PENDING" | "EXECUTION_READ_SCOPE_LIMIT" | "EXECUTION_READ_AUTHORITY_UNAVAILABLE" | "EXECUTION_READ_CURSOR_INVALID";
                 message: string;
             };
             request_id: string;
@@ -115,8 +115,28 @@ export interface operations {
                     "application/json": components["schemas"]["AccountProfileProblem"];
                 };
             };
+            /** @description Read refused */
+            403: {
+                headers: {
+                    "Cache-Control": "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccountProfileProblem"];
+                };
+            };
             /** @description Unavailable or not authorized */
             404: {
+                headers: {
+                    "Cache-Control": "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccountProfileProblem"];
+                };
+            };
+            /** @description Authority or source changed before dispatch */
+            409: {
                 headers: {
                     "Cache-Control": "private, no-store";
                     [name: string]: unknown;

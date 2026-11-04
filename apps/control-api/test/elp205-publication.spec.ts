@@ -5,6 +5,7 @@ import Ajv2020 from "ajv/dist/2020";
 import { qualifyDatasetPublication, withCataloguePublications } from "../src/execution-v2/publication-adapter";
 import { browserPublicationCatalogue, assertPublicationFieldName, metricPublicationRequirements, ECONOMIC_PUBLICATION_INPUTS } from "../src/execution-v2/publication-catalogue";
 import { unqualifiedAccessTrust } from "../src/execution-v2/access-trust";
+import type { NativeCurrentRelationsPort } from "../src/execution-v2/native-current-relations-port";
 import { browserManagerRelationOperationManifest } from "../src/execution/eds11r-manager-relation.registry";
 import type { DatasetPublication } from "../src/execution-v2/publication.contract";
 const contracts = process.env.PORTAL_CONTRACTS_DIR ?? resolve(__dirname, "../../../packages/contracts");
@@ -78,6 +79,13 @@ describe("ELP2-05 publication admission (TEST_ONLY, not source certification)", 
     const provider=withCataloguePublications(unqualifiedAccessTrust,async()=>null,{purpose:"BUSINESS"});
     expect(await provider.readPublication!(request())).toBeNull();
     expect(browserPublicationCatalogue().families.every(f=>f.availability==="UNAVAILABLE"&&!f.runtime_enabled&&!f.history_full)).toBe(true);
+  });
+  it("preserves only the exact existing native custody port when adding catalogue publication", () => {
+    const port = {} as NativeCurrentRelationsPort;
+    const withPort = withCataloguePublications({ ...unqualifiedAccessTrust, currentRelations: port }, async () => null, { purpose: "BUSINESS" });
+    const withoutPort = withCataloguePublications(unqualifiedAccessTrust, async () => null, { purpose: "BUSINESS" });
+    expect(withPort.currentRelations).toBe(port);
+    expect(withoutPort.currentRelations).toBeUndefined();
   });
   it("T05-09 declares fund/Fleet/model owners and exact grains", () => {
     const families=browserPublicationCatalogue().families;

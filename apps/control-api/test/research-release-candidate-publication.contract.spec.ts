@@ -44,7 +44,7 @@ describe("P22 strict publication contract", () => {
   it("P22-T01/T06 fixture bundle keeps success, typed negative and mirror states explicit", () => {
     const fixturePath = process.env.PORTAL_CONTRACTS_DIR
       ? join(process.env.PORTAL_CONTRACTS_DIR, "fixtures/research-release-candidate-publication.p22-governance.fixtures.json")
-      : new URL("../../../packages/contracts/fixtures/research-release-candidate-publication.p22-governance.fixtures.json", import.meta.url);
+      : join(__dirname, "../../../packages/contracts/fixtures/research-release-candidate-publication.p22-governance.fixtures.json");
     const fixture = JSON.parse(readFileSync(fixturePath, "utf8"));
     expect(fixture.schema_version).toBe("research.release-candidate-publication.fixtures.v1");
     expect(fixture.success.approval_create.schema_version).toBe("governance.approval-create.v1");

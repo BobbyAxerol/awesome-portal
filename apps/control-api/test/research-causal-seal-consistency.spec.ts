@@ -41,7 +41,7 @@ function graph(candidateCount=1,configuredTrials=3) {
   return { input:{tableRows:{FOLD:folds.length,TRIAL:trials.length,CANDIDATE:candidates.length,SELECTION:1},summary},
     authority:{requestedSpec:{schema_version:"research.requested-spec.v2",optimization_schedule:"per_fold_causal",data:{timeframe:"1h"},
       walk_forward:{inner:{split_frequency:"weekly",window_mode:"expanding",train_window:"7D",min_folds:2}}},
-      topology:{plan_source:"quantbt.walkforward.WalkForwardEngine.build_folds",folds:folds.map(fold=>({inner_fold_count:2,
+      topology:{plan_source:"quantbt.walkforward.WalkForwardEngine.build_folds",folds:folds.map((fold: any)=>({inner_fold_count:2,
         train:{start_utc_ms:fold.payload.train_start_utc_ms,end_exclusive_utc_ms:fold.payload.train_end_utc_ms+3_600_000},
         outer_oos:{start_utc_ms:fold.payload.test_start_utc_ms,end_exclusive_utc_ms:fold.payload.test_end_utc_ms+3_600_000}}))}},
     rows:[...folds,...trials,...candidates,{tableKind:"SELECTION",sourceOrdinal:0,sourceId:"selected",payload:selection}] };

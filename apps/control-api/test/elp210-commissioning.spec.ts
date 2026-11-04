@@ -461,7 +461,7 @@ describe("ELP2-10 private commissioning and real registered constructors (synthe
     const read=()=>queryManagerModel(authorized,d.document,{environment:"paper"},codec,"ALPHA",OWN.alpha_id,
       {accepts:score=>managerScorePublicationPolicyCurrent(handle,{quality:{...score.quality,preview:null},provenance:score.provenance},now)});
     expect(read().scores.raw).toEqual({value:quality.value,status:quality.status});
-    expect(read().items[0].metrics.score.value).toBe(quality.value);
+    expect(read().items[0].metrics.score?.value).toBe(quality.value);
     expect(read().score_details).toHaveLength(1);
     for(const change of [
       (score:typeof s)=>{score.provenance.binding.tuple_population_digest=hash("other-population");},
@@ -591,6 +591,7 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)("ELP2-10 installed worker/Score/
     const controller=new ManagerModelController(service,workspaces);
     const request={portalUser:f.principal.user,portalSession:f.principal.session,portalWorkspaceId:scope.workspace_id} as Parameters<ManagerModelController["portfolio"]>[0];
     const result=await controller.portfolio(request,{workspace_id:scope.workspace_id,environment:"paper",limit:"1"},OWN.portfolio_id);
+    if (!result) throw new Error("TEST_ONLY_EXPECTED_PORTFOLIO_BODY");
     expect(result.scores.composition).toEqual({value:"80",status:"available"});
     expect(result.scores.direct_nav).toEqual({value:"60",status:"available"});
     expect(result.composition_details).toEqual(doc!.precomputed_compositions);

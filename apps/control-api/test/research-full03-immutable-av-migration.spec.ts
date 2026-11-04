@@ -3,7 +3,7 @@ import { randomUUID } from "node:crypto";
 import { cpSync, mkdtempSync, readdirSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { runner as migrate } from "node-pg-migrate";
+import { migrate } from "./helpers/node-pg-migrate";
 import { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 

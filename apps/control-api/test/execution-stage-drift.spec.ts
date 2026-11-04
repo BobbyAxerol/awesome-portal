@@ -16,14 +16,15 @@ function fixture(rows = [row("0")]) {
   const repository = { stageEquityDailyCloses: read };
   const service = new LocalQueryAnalyticsService({ ...testConfig(), FEATURE_EXECUTION_LOCAL_PROJECTION: "true" },
     repository as unknown as ExecutionProfileProjectionRepository);
-  const context = vi.spyOn(service as any, "localContext").mockImplementation(async (env: unknown) => {
+  const originalContext = async (env: unknown) => {
     if (env !== "paper") throw new AnalyticsProxyError("EXECUTION_PROFILE_READ_DISABLED", 404);
     return { workspaceId: "TEST_ONLY-workspace", environment: "paper", profileId: "TEST_ONLY-profile", scopes: [],
       snapshot: { document: { relations: { "manager.deployments:strategy_deployments": { items: [{ fields: { strategy_id: "alpha" } }] } } } } };
-  });
+  };
+  const context = vi.spyOn(service as any, "localContext").mockImplementation(originalContext);
   vi.spyOn(service as any, "historyScope").mockResolvedValue(undefined);
   const finish = vi.spyOn(service as any, "finish").mockImplementation(async (_context: unknown, result: unknown) => result);
-  return { service, read, repository, context, finish, run: () => service.stageDriftExact({ workspaceId: "TEST_ONLY-workspace" }, "alpha") };
+  return { service, read, repository, context, originalContext, finish, run: () => service.stageDriftExact({ workspaceId: "TEST_ONLY-workspace" }, "alpha") };
 }
 
 describe("FE-054 opt-in exact stage equity", () => {
@@ -50,9 +51,8 @@ describe("FE-054 opt-in exact stage equity", () => {
   });
   it("preserves true zero and gaps on a shared calendar, never forward filling", async () => {
     const f = fixture([row("0"), row("2", "a", "2026-01-03")]);
-    const original = f.context.getMockImplementation()!;
     f.context.mockImplementation(async env => {
-      const c = await original("paper");
+      const c = await f.originalContext("paper");
       if (env === "live") throw new AnalyticsProxyError("EXECUTION_PROFILE_READ_DISABLED", 404);
       return { ...c, environment: env };
     });
@@ -75,9 +75,8 @@ describe("FE-054 opt-in exact stage equity", () => {
     const empty = fixture([]);
     expect((await empty.run()).stages.paper.reason_code).toBe("NO_EQUITY_IN_WINDOW");
     const notDeployed = fixture();
-    const original = notDeployed.context.getMockImplementation()!;
     notDeployed.context.mockImplementation(async env => {
-      const c = await original(env);
+      const c = await notDeployed.originalContext(env);
       c.snapshot.document.relations["manager.deployments:strategy_deployments"].items = [];
       return c;
     });

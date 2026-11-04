@@ -35,6 +35,23 @@ describe("Phase 2 profile screen composition", () => {
     ], ["total"])).toEqual({ value: null, currency: null, reasonCode: "CROSS_CURRENCY_AGGREGATE_FORBIDDEN" });
   });
 
+  it("does not publish a partial total when any requested monetary value is absent or malformed", () => {
+    for (const missing of [null, undefined]) {
+      // Deliberately exercise an invalid runtime value outside the typed source contract.
+      const second = { total: missing, currency: "USDT" } as unknown as Parameters<typeof exactCurrencySum>[0][number];
+      expect(exactCurrencySum([{ total: "10", currency: "USDT" }, second], ["total"]))
+        .toEqual({ value: null, currency: null, reasonCode: "EXACT_DECIMAL_SOURCE_VALUE_NOT_PUBLISHED" });
+    }
+    expect(exactCurrencySum([{ total: "10", currency: "USDT" }, { currency: "USDT" }], ["total"]))
+      .toEqual({ value: null, currency: null, reasonCode: "EXACT_DECIMAL_SOURCE_VALUE_NOT_PUBLISHED" });
+    for (const invalid of [42, "1e3", "1\n", "not-a-decimal"]) {
+      expect(exactCurrencySum([{ total: "10", currency: "USDT" }, { total: invalid, currency: "USDT" }], ["total"]))
+        .toEqual({ value: null, currency: null, reasonCode: "EXACT_DECIMAL_SOURCE_VALUE_INVALID" });
+    }
+    expect(exactCurrencySum([{ total: "0", currency: "USDT" }], ["total"]))
+      .toEqual({ value: "0", currency: "USDT", reasonCode: null });
+  });
+
   it("composes ready, empty and unavailable branches from one profile envelope", () => {
     const source = new ProfileScreenSource({
       state: "ready",

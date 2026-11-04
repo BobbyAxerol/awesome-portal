@@ -56,6 +56,22 @@ describe("Research native Manager profile classification", () => {
 });
 
 describe("Research native Manager closed read surface", () => {
+  it("opens the exact Account profile only with the private Account composition", () => {
+    const route="/api/v1/execution/accounts/TEST_ONLY-account:1/profile";
+    const current=(path=route,query:Record<string,unknown>={},method="GET")=>
+      nativeResearchReadAllowed(config,method,path,query,false,false,true);
+    expect(allowed(route)).toBe(false);
+    expect(nativeResearchReadAllowed(config,"GET",route,{},true,true)).toBe(false);
+    expect(current()).toBe(true);
+    expect(current(route,{workspace_id:workspace,environment:"paper"})).toBe(true);
+    for(const environment of ["live","sandbox","all",null,["paper"]])expect(current(route,{environment})).toBe(false);
+    expect(current(route,{workspace_id:"TEST_ONLY-foreign"})).toBe(false);
+    for(const method of ["POST","PUT","PATCH","DELETE","HEAD","OPTIONS"])expect(current(route,{},method)).toBe(false);
+    for(const path of [route+"/",route+"\n",route+"/extra",route+"?environment=paper",
+      "/api/v1/execution/accounts//profile","/api/v1/execution/accounts/"+"a".repeat(192)+"/profile",
+      "/api/v1/execution/accounts/account@wrong/profile","/api/v1/execution/orders/order/profile"])
+      expect(current(path)).toBe(false);
+  });
   it("opens only the separately commissioned basic CURRENT Account360 route", () => {
     const route = "/api/v1/execution/resources/accounts/TEST_ONLY-account:1";
     const current = (path = route, query: Record<string, unknown> = {}, method = "GET") =>
@@ -169,6 +185,14 @@ function guardFixture(path = fixedRoutes[0]!, query: Record<string, unknown> = {
 }
 
 describe("Research native SessionGuard authority composition", () => {
+  it("the real guard admits Account profile only when its private Account composition exists",async()=>{
+    const route="/api/v1/execution/accounts/TEST_ONLY-account/profile";
+    const absent=guardFixture(route),installed=guardFixture(route,{workspace_id:workspace,environment:"paper"},true);
+    await expect(absent.guard.canActivate(absent.context)).rejects.toMatchObject({status:403});
+    await expect(installed.guard.canActivate(installed.context)).resolves.toBe(true);
+    expect(installed.canReadExecution).toHaveBeenCalledWith(workspace,installed.user.userId,"paper");
+    expect(installed.request.portalWorkspaceId).toBe(workspace);
+  });
   it("the actual CurrentView factory uses installed native scopes, otherwise ordinary scopes, without starting runtime", () => {
     const db = { end: vi.fn(), query: vi.fn() } as unknown as Pool;
     const cfg = { NODE_ENV: "test" } as ControlApiConfig;

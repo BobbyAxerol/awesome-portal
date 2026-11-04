@@ -14,6 +14,7 @@ import { expect, test, type Locator, type Page } from "@playwright/test";
 
 import { stubExecutionBff } from "./bffDouble";
 import { SELF_ACCESS_DOUBLE_WORKSPACES as WS, answerSelfNavigation } from "./bffDoubleSelfAccess";
+import { stubV2Reads } from "./v2PublishedReads";
 import { settle, stubPortalApi, usePreferences } from "./fixtures";
 import { stubAdminRoutes, stubQuantbtRuns, watchPage } from "./v2Lane";
 
@@ -60,7 +61,9 @@ async function openLane(page: Page, baseURL: string | undefined, width: number, 
   await page.setViewportSize({ width, height });
   await usePreferences(page, "operations");
   await stubPortalApi(page, "healthy");
-  await stubExecutionBff(page, { operationsV2: true, screensV2: true });
+  const bffOptions = { operationsV2: true, screensV2: true, reviewManager: true };
+  await stubExecutionBff(page, bffOptions);
+  await stubV2Reads(page, bffOptions);
   await stubAdminRoutes(page);
   await stubQuantbtRuns(page);
   // An ordinary user: no owner flag, no admin capability, no execution.* token.

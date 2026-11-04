@@ -19,6 +19,7 @@ import { CurrentHumanCandidate, type PreparedCurrentHumanNativeHTTP } from "../s
 import { SelectedNativeBusinessReadSource, selectedNativeBusinessReadSelection } from "../src/execution-v2/native-business-read-selected-source";
 import { composeNativeCore,nativeCoreManagerReadConsumer,type NativeCoreSelection } from "../src/execution-v2/native-core-composition";
 import { unqualifiedAccessTrust } from "../src/execution-v2/access-trust";
+import type { NativeCurrentRelationsPort } from "../src/execution-v2/native-current-relations-port";
 import { MaximumDataOperationController } from "../src/execution/maximum-data-operation.controller";
 import type { WorkspacesRepository } from "../src/repos/workspaces";
 import { Module,type FactoryProvider } from "@nestjs/common";
@@ -96,7 +97,8 @@ function envelope(next:string|null=null){return{
     data:{relation:{schema:"public",relation:"strategy_deployments"},items:[],next_cursor:next}}};}
 function fakePool(){
   const client={query:vi.fn(async()=>({rows:[]})),release:vi.fn()};
-  return {pool:{options:{connectionTimeoutMillis:2000,query_timeout:6000},connect:vi.fn(async()=>client),query:vi.fn()} as unknown as Pool,client};
+  const connect=vi.fn(async()=>client);
+  return {pool:{options:{connectionTimeoutMillis:2000,query_timeout:6000},connect,query:vi.fn()} as unknown as Pool,client,connect};
 }
 function reply(){
   const rawResponse=new ServerResponse(new IncomingMessage(new Socket()));
@@ -281,6 +283,7 @@ describe("TEST_ONLY native finite factory and optional route mount",()=>{
         transaction_timeout_ms:1000,lease_ttl_ms:2000}}]});
     const delegate=runtime.accessTrust(d.executionAccessTrust)!;
     expect(Object.isFrozen(delegate)).toBe(true);expect(isManagerRuntimeTrustDelegate(delegate,d.executionAccessTrust)).toBe(true);
+    expect(delegate.currentRelations).toBe(d.executionAccessTrust.currentRelations);
     expect(isManagerRuntimeTrustDelegate({...delegate},d.executionAccessTrust)).toBe(false);
     expect(isManagerRuntimeTrustDelegate(delegate,unqualifiedAccessTrust)).toBe(false);
     expect(()=>runtime.accessTrust(unqualifiedAccessTrust)).toThrow("MANAGER_RUNTIME_TRUST_CONFLICT");
@@ -294,6 +297,17 @@ describe("TEST_ONLY native finite factory and optional route mount",()=>{
         message:"The current identity operation is not available."}));
     expect(f.db.pool.connect).not.toHaveBeenCalled();expect(f.source.relationForNamedOperation).not.toHaveBeenCalled();
     await runtime.beforeApplicationShutdown();
+    // Manager publication must preserve a separately commissioned native
+    // port, not create or replace one. This sentinel is identity-only; it is
+    // never invoked and does not represent an actual grant or source.
+    const port={} as NativeCurrentRelationsPort,base={...d.executionAccessTrust,currentRelations:port};
+    const runtimeWithPort=new ExecutionManagerRuntime(f.db.pool,{trust:base,cadence_ms:1000,maximum_publication_reads:1,
+      partitions:[{scope,commissioning,source:{} as never,publication:async()=>null,bounds:{maximum_documents_per_tick:1,
+        maximum_document_bytes:1048576,maximum_document_rows:200,maximum_tick_ms:5000,source_timeout_ms:1000,
+        transaction_timeout_ms:1000,lease_ttl_ms:2000}}]});
+    const withPort=runtimeWithPort.accessTrust(base)!;
+    expect(withPort.currentRelations).toBe(port);expect(isManagerRuntimeTrustDelegate(withPort,base)).toBe(true);
+    await runtimeWithPort.beforeApplicationShutdown();
   });
   it("captures finite selections before caller mutation; no installed grant or physical-delivery claim",async()=>{
     const f=await fixture(),original=structuredClone(f.e.selector),composition=await genuine(f);
@@ -404,7 +418,7 @@ async function realtimeFixture(maximumClients=realtimeLimits.maximumClients){
     principal_scope_digest:accessDigest({schema_version:"portal.manager-observation.read-baseline-scope.v1",
       actor:f.d.actor,viewer_workspace_id:f.p.viewerWorkspaceId??null,read_scope_digest:f.d.scope_digest}),
     app_policy_revision:f.d.policy_revision,field_policy_revision:f.d.field_policy_ref,
-    model_revision:MANAGER_OBSERVATION_BASELINE_MODEL,schema_revision:"portal.execution.scoped-realtime.v1",
+    model_revision:MANAGER_OBSERVATION_BASELINE_MODEL,schema_revision:"portal.execution.scoped-realtime.v1" as const,
     dataset:"execution_profile_observation" as const,query_digest:managerObservationQueryDigest(selection),window:null,
     snapshot_id:baseline.snapshot_id,source_set_digest:baseline.source_set_digest,
     projection_generation:baseline.projection_generation,source_continuity_epoch:baseline.source_continuity_epoch};
@@ -700,7 +714,7 @@ describe("TEST_ONLY pre-await STREAM capacity and original-promise ownership",()
       replacement=third();replacementOutcome=replacement.then(()=>null,error=>error);
       await enteredThree.promise;
       expect(evaluateManagerDomainStream).toHaveBeenCalledTimes(3);
-      const headReads=f.repository.snapshotMetadata.mock.calls.length,connects=f.db.pool.connect.mock.calls.length;
+      const headReads=f.repository.snapshotMetadata.mock.calls.length,connects=f.db.connect.mock.calls.length;
       let stopped=false;stop=f.local.beforeApplicationShutdown().then(()=>{stopped=true;});
       await expect(third()).rejects.toMatchObject({code:"NATIVE_MANAGER_READ_UNAVAILABLE"});
       expect(evaluateManagerDomainStream).toHaveBeenCalledTimes(3);expect(f.db.pool.connect).toHaveBeenCalledTimes(connects);
@@ -730,7 +744,7 @@ describe("TEST_ONLY pre-await STREAM capacity and original-promise ownership",()
       }
       expect(f.consumer.hasRealtimeClients()).toBe(true);
       const authorityCalls=vi.mocked(evaluateManagerDomainStream).mock.calls.length,
-        connects=f.db.pool.connect.mock.calls.length,headReads=f.repository.snapshotMetadata.mock.calls.length;
+        connects=f.db.connect.mock.calls.length,headReads=f.repository.snapshotMetadata.mock.calls.length;
       await expect(f.consumer.serveProfileStream(f.p,"paper",f.profile,f.token(),reply()))
         .rejects.toMatchObject({code:"RECONNECT_LIMIT"});
       expect(evaluateManagerDomainStream).toHaveBeenCalledTimes(authorityCalls);

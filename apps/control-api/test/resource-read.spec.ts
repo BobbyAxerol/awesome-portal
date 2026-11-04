@@ -21,6 +21,7 @@ const user: PortalUser = {
   userId: "usr_bobby", username: "bobby", displayName: "Bobby", role: "ADMIN", status: "ACTIVE",
   mustChangePassword: false, failedLoginCount: 0, lockedUntil: null, sessionVersion: 1,
   createdAt: new Date("2026-09-05T00:00:00Z"), updatedAt: new Date("2026-09-05T00:00:00Z"), disabledAt: null,
+  accountRevision: 1, archivedAt: null,
 };
 const session: AuthSession = {
   sessionId: "ses_eds04", userId: user.userId, state: "ACTIVE", sessionVersion: 1,
@@ -94,7 +95,7 @@ function snapshot(relations: Record<string, ProjectionRelation>): ProfileProject
     document, sourceEpoch: "epoch-eds04", sourceCursor: "opaque-source-cursor-must-not-leak",
     sourceAsOf: new Date("2026-09-05T12:00:00.000Z"), receivedAt: now, lastSuccessfulRefreshAt: now,
     completeness: "COMPLETE", projectionEpoch: "projection-eds04", projectionSequence: 17,
-    payloadDigest: "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    payloadDigest: "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", sourceCatalogueSha256: null,
   };
 }
 
@@ -164,7 +165,8 @@ describe("EDS-04 named resource BFFs", () => {
   it("reuses only bounded DATA after a fresh snapshot load, never actor/clocks or an outage fallback", async () => {
     const fact = snapshot({ [RELATION.portfolios]: relation("portfolios", [{ portfolio_id: "pf_target", name: "Target" }]) });
     const repo = new ExecutionProfileProjectionRepository({ query: vi.fn() } as any, undefined,
-      { EXECUTION_READ_PROFILE: "retained_review_v1" });
+      { EXECUTION_READ_PROFILE: "retained_review_v1", FEATURE_EXECUTION_DURABLE_MIRROR: "false",
+        FEATURE_EXECUTION_DURABLE_MIRROR_READS: "false" });
     const load = vi.spyOn(repo, "snapshot").mockResolvedValue(fact);
     const reader = new ResourceReadService({ ...config(), EXECUTION_READ_PROFILE: "retained_review_v1" }, repo);
     const prepare = vi.spyOn(reader as any, "prepare");

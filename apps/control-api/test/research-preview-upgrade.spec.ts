@@ -3,7 +3,7 @@ import { cpSync, mkdtempSync, readdirSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { runner as migrate } from "node-pg-migrate";
+import { migrate } from "./helpers/node-pg-migrate";
 import { Pool } from "pg";
 import { runControlApiMigrations } from "../src/cli/migrate";
 

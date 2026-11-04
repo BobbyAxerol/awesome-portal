@@ -63,7 +63,7 @@ function producer(amounts: readonly (string | null | undefined)[]) {
     user: {
       userId: "usr_decimal", username: "decimal", displayName: "Decimal", role: "ADMIN", status: "ACTIVE",
       mustChangePassword: false, failedLoginCount: 0, lockedUntil: null, sessionVersion: 1,
-      createdAt: new Date(0), updatedAt: new Date(0), disabledAt: null,
+      createdAt: new Date(0), updatedAt: new Date(0), disabledAt: null, accountRevision: 1, archivedAt: null,
     },
     session: {
       sessionId: "ses_decimal", userId: "usr_decimal", state: "ACTIVE", sessionVersion: 1,
@@ -91,7 +91,7 @@ describe("FE-049 public manager-list producer exact decimal bound", () => {
   ])("publishes %s without losing precision", async (_name, input, expected) => {
     const { read, replace } = producer([input]);
     const response = await read();
-    expect(response.items[0].allocated_by_currency).toEqual([{ currency: "USDT", value: expected }]);
+    expect(response).toMatchObject({items:[{allocated_by_currency:[{ currency: "USDT", value: expected }]}]});
     expect(replace).toHaveBeenCalledOnce();
   });
 
@@ -119,17 +119,17 @@ describe("FE-049 public manager-list producer exact decimal bound", () => {
 
   it("sums exact boundary values without floating-point conversion", async () => {
     const response = await producer(["1".repeat(128), "-1"]).read();
-    expect(response.items[0].allocated_by_currency).toEqual([
+    expect(response).toMatchObject({items:[{allocated_by_currency:[
       { currency: "USDT", value: `${"1".repeat(127)}0` },
-    ]);
+    ]}]});
   });
 
   it("preserves missing versus explicit-null source behavior", async () => {
     for (const amount of [undefined, null]) {
       const response = await producer([amount]).read();
-      expect(response.items[0].allocated_by_currency).toEqual([{ currency: "USDT", value: "0" }]);
+      expect(response).toMatchObject({items:[{allocated_by_currency:[{ currency: "USDT", value: "0" }]}]});
     }
     const empty = await producer([]).read();
-    expect(empty.items[0].allocated_by_currency).toEqual([]);
+    expect(empty).toMatchObject({items:[{allocated_by_currency:[]}]});
   });
 });

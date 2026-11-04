@@ -27,7 +27,7 @@ describe("FULL-01 exact historical recipe authority",()=>{
     expect(()=>assertExecutionRecipeTable(changed,EXECUTION_RECIPE_REVISION)).toThrow("revision mismatch");
     expect(()=>assertExecutionRecipeTable(changed,recipeDigest(changed))).toThrow("qualification/profile mismatch");
     const duplicate=structuredClone(EXECUTION_RECIPE_TABLE);
-    (duplicate.recipes as unknown[]).push(duplicate.recipes[0]);
+    (duplicate.recipes as unknown as unknown[]).push(duplicate.recipes[0]);
     expect(()=>assertExecutionRecipeTable(duplicate,recipeDigest(duplicate))).toThrow("Ambiguous");
     expect(Object.isFrozen(executionRecipes[1].descriptor.child_limits)).toBe(true);
   });

@@ -302,7 +302,7 @@ describe("P17 route-aware, current-source replay authority", () => {
 
   it("keeps an otherwise available foreign/legacy evidence series typed as unsupported rather than exposing it or failing open", async () => {
     const fixture = evidenceFixture(3);
-    fixture.hub.core.source_adapter_id = null;
+    (fixture.hub.core as {source_adapter_id:string | null}).source_adapter_id = null;
     const evidence = evidenceReader(fixture);
     const service = new ResearchReplayService(evidence as never, enabledConfig() as never);
     await expect(service.detail(scope, "run_p17", { limit: 10 })).resolves.toMatchObject({
@@ -359,6 +359,7 @@ describe("P17 route-aware, current-source replay authority", () => {
     expect(overview.reason_code).toBeNull();
     expect(overview.emitted_bucket_count).toBe(overview.values.length);
     // Not one bucket is rebuilt by this reader: the bytes are the sealed ones.
+    if (fixture.candleOverview.value === null) throw new Error("expected candle fixture");
     expect(overview.values).toEqual(fixture.candleOverview.value.values);
     expect(Number(overview.envelope!.max_high)).toBe(Math.max(...overview.values.map((bucket) => Number(bucket.high))));
     expect(Number(overview.envelope!.min_low)).toBe(Math.min(...overview.values.map((bucket) => Number(bucket.low))));

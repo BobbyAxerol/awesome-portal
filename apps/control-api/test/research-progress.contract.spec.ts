@@ -83,7 +83,7 @@ describe("P11 progress contracts", () => {
     expect(() => service.assertProfileBoundIngress({ executionProfileId: VN_OBSERVED_FIXED_PROFILE_ID }, terminal)).not.toThrow();
     expect(() => service.assertProfileBoundIngress({ executionProfileId: "p04.fixed-qualification.v1" }, terminal))
       .toThrow("Research split evaluation does not match");
-    const legacy = { ...terminal, split: p14SplitSourceFixture() };
+    const legacy = ResearchProgressIngressSchema.parse({ ...terminal, split: p14SplitSourceFixture() });
     expect(() => service.assertProfileBoundIngress({ executionProfileId: VN_OBSERVED_FIXED_PROFILE_ID }, legacy))
       .toThrow("Research split evaluation does not match");
     expect(() => service.assertProfileBoundIngress({ executionProfileId: "p04.fixed-qualification.v1" }, legacy)).not.toThrow();

@@ -218,7 +218,11 @@ export class PortalProxyService {
     const url = buildPortalUpstreamUrl(configuredOrigin, input.path, input.query);
     const headers = this.principalHeaders(input, additionalHeaders);
 
-    const response = await fetch(url, {
+    // Control API executes on Node.  Cross-loop tests also compile browser
+    // declarations, whose global fetch overload rejects Node's Buffer body.
+    // Keep the runtime call unchanged while selecting Node's fetch types.
+    const nodeFetch = globalThis.fetch as unknown as typeof import("undici-types").fetch;
+    const response = await nodeFetch(url, {
       method: input.method,
       headers,
       body: input.body ?? null,

@@ -3,7 +3,7 @@ import { readFileSync, readdirSync } from "node:fs";
 import { resolve } from "node:path";
 import { SiblingSourceSeam, siblingSchemas, type SiblingKind, type SiblingScope } from "../src/execution-v2/sibling-source-seam";
 
-const scope = (kind: SiblingKind): SiblingScope => ({ workspaceId: "ws_test", principalId: "user_test", sessionId: "session_test",
+const scope = (kind: SiblingKind): SiblingScope => ({ workspaceId: "ws_test", principalId: "user_test", sessionId: "session_test", sessionGeneration: 1,
   environment: "paper", kind, targetType: kind === "account-profile" || kind === "reconciliation" || kind === "obligations" ? "ACCOUNT" : "ORDER", targetId: "target_1" });
 const body = (s: SiblingScope) => ({ schema_version: `portal.execution.${s.kind}.v1`, workspace_id: s.workspaceId,
   record_authority: "PORTAL_PROJECTION", read_at_ms: 123,
@@ -44,10 +44,30 @@ describe("source-only sibling seam", () => {
     const revoked = new SiblingSourceSeam({ check: async () => ++checks === 1 }, { read: async () => ({ scope: s, body: body(s), complete: true }) });
     await expect(revoked.read(s)).rejects.toMatchObject({ code: "SIBLING_ACCESS_DENIED" });
   });
+  it("captures the exact source body and scope before awaiting the final authority check", async () => {
+    const s = scope("account-profile"), sourceScope = { ...s };
+    const sourceBody = { ...body(s), wallet_balance: { currency: "USD", value: "12", as_of_ms: 123 } };
+    let checks = 0;
+    const seam = new SiblingSourceSeam({ check: async () => {
+      if (++checks === 2) {
+        sourceBody.wallet_balance.value = "999";
+        sourceScope.targetId = "other";
+      }
+      return true;
+    } }, { read: async () => ({ scope: sourceScope, body: sourceBody, complete: true }) });
+    expect(await seam.read(s)).toMatchObject({ account_id: s.targetId, wallet_balance: { value: "12" } });
+  });
+  it("gives revocation precedence over a held malformed source body", async () => {
+    const s = scope("account-profile"); let checks = 0;
+    const seam = new SiblingSourceSeam({ check: async () => ++checks === 1 },
+      { read: async () => ({ scope: s, body: { ...body(s), workspace_id: "other" }, complete: true }) });
+    await expect(seam.read(s)).rejects.toMatchObject({ code: "SIBLING_ACCESS_DENIED", status: 404 });
+  });
   it("refuses an uncommissioned source, wrong principal/workspace/target, and incomplete pages", async () => {
     const s = scope("reconciliation"); const authority = { check: async () => true };
     await expect(new SiblingSourceSeam(authority).read(s)).rejects.toMatchObject({ code: "SIBLING_SOURCE_NOT_COMMISSIONED" });
-    for (const altered of [{ ...s, principalId: "other" }, { ...s, workspaceId: "other" }, { ...s, targetId: "other" }]) {
+    for (const altered of [{ ...s, principalId: "other" }, { ...s, workspaceId: "other" }, { ...s, targetId: "other" },
+      { ...s, sessionGeneration: s.sessionGeneration + 1 }]) {
       const seam = new SiblingSourceSeam(authority, { read: async () => ({ scope: altered, body: body(s), complete: true }) });
       await expect(seam.read(s)).rejects.toMatchObject({ code: "SIBLING_SOURCE_SCOPE_MISMATCH" });
     }
@@ -61,5 +81,30 @@ describe("source-only sibling seam", () => {
     await expect(invalid.read(s)).rejects.toMatchObject({ code: "SIBLING_SOURCE_INVALID" });
     const failed = new SiblingSourceSeam(authority, { read: async () => { throw Error("private source error"); } });
     await expect(failed.read(s)).rejects.toMatchObject({ code: "SIBLING_SOURCE_UNAVAILABLE" });
+  });
+  it("rejects terminal newline in target identifiers and source decimals or states", async () => {
+    const s = scope("order-detail"); let reads = 0;
+    const seam = new SiblingSourceSeam({ check: async () => true }, { read: async () => {
+      reads++; return { scope: s, body: body(s), complete: true };
+    } });
+    await expect(seam.read({ ...s, targetId: `${s.targetId}\n` })).rejects.toMatchObject({ code: "SIBLING_INPUT_INVALID" });
+    expect(reads).toBe(0);
+    expect(siblingSchemas["order-detail"].safeParse({ ...body(s), filled_quantity: "1\n" }).success).toBe(false);
+    const o = scope("obligations");
+    expect(siblingSchemas.obligations.safeParse({ ...body(o), items: [{ obligation_id: "o1", kind: "WORKING_ORDER",
+      state: "OPEN\n", recovery_id: null, order_id: null, operation_id: null, opened_at_ms: 1 }] }).success).toBe(false);
+  });
+  it("rejects terminal control characters in workspace and source text fields", async () => {
+    const s = scope("account-profile"); let reads = 0;
+    const seam = new SiblingSourceSeam({ check: async () => true }, { read: async () => {
+      reads++; return { scope: s, body: body(s), complete: true };
+    } });
+    await expect(seam.read({ ...s, workspaceId: `${s.workspaceId}\n` })).rejects.toMatchObject({ code: "SIBLING_INPUT_INVALID" });
+    expect(reads).toBe(0);
+    for (const payload of [
+      { ...body(s), product: "spot\n" },
+      { ...body(s), wallet_balance: { currency: "USD\n", value: "1", as_of_ms: 123 } },
+      { ...body(s), network: { name: "network\n", proof_at_ms: null } },
+    ]) expect(siblingSchemas["account-profile"].safeParse(payload).success).toBe(false);
   });
 });

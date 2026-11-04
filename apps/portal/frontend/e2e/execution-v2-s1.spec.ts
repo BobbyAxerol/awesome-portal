@@ -11,6 +11,7 @@ import { expect, test, type Page } from "@playwright/test";
 import { OPERATIONS_V2_DOUBLE_NOW_ISO } from "./bffDoubleV2";
 import { stubExecutionBff } from "./bffDouble";
 import { settle, stubPortalApi, usePreferences } from "./fixtures";
+import { stubV2Reads } from "./v2PublishedReads";
 import { SCREENS, V2_WORKSPACE, stubAccessSelf, stubAdminRoutes, stubQuantbtRuns, watchPage } from "./v2Lane";
 
 const WIDTHS = [
@@ -26,14 +27,22 @@ const WIDTHS = [
  */
 const KNOWN_OVERFLOW: Readonly<Record<string, string>> = {};
 
-for (const [name, route, root] of SCREENS) {
+/** The review-manager world has no inc_fixture_44 (its incidents are the world's, as in execution-v2-visual), so the incident entry reads a known one. */
+const ENTRY_OVERRIDE: Readonly<Record<string, readonly [route: string, root: string]>> = {
+  incident: ["/execution/operations/incidents/inc_TEST_ONLY_fx_mismatch", ".exec-opi"],
+};
+
+for (const [name, entryRoute, entryRoot] of SCREENS) {
+  const [route, root] = ENTRY_OVERRIDE[name] ?? [entryRoute, entryRoot];
   for (const [label, width, height] of WIDTHS) {
     test(`${name} renders in V2 at ${label} width without console noise`, async ({ page, baseURL }) => {
       await page.clock.setFixedTime(new Date(OPERATIONS_V2_DOUBLE_NOW_ISO));
       await page.setViewportSize({ width, height });
       await usePreferences(page, "operations");
       await stubPortalApi(page, "healthy");
-      await stubExecutionBff(page, { operationsV2: true, screensV2: true });
+      const bffOptions = { operationsV2: true, screensV2: true, reviewManager: true };
+      await stubExecutionBff(page, bffOptions);
+      await stubV2Reads(page, bffOptions);
       await stubAdminRoutes(page);
       await stubQuantbtRuns(page);
 
@@ -66,7 +75,9 @@ test("the Compare links on Portfolios and Portfolio 360 open the Compare screen"
   await page.setViewportSize({ width: 1440, height: 900 });
   await usePreferences(page, "operations");
   await stubPortalApi(page, "healthy");
-  await stubExecutionBff(page, { operationsV2: true, screensV2: true });
+  const bffOptions = { operationsV2: true, screensV2: true, reviewManager: true };
+  await stubExecutionBff(page, bffOptions);
+  await stubV2Reads(page, bffOptions);
   await stubAccessSelf(page);
   await page.goto("/deployments/portfolios");
   await expect(page.locator('[data-screen="portfolios-v2"]').first()).toBeVisible();
@@ -108,7 +119,9 @@ async function openLane(page: Page, width = 1440, height = 900): Promise<void> {
   await page.setViewportSize({ width, height });
   await usePreferences(page, "operations");
   await stubPortalApi(page, "healthy");
-  await stubExecutionBff(page, { operationsV2: true, screensV2: true });
+  const bffOptions = { operationsV2: true, screensV2: true, reviewManager: true };
+  await stubExecutionBff(page, bffOptions);
+  await stubV2Reads(page, bffOptions);
   await stubAdminRoutes(page);
   await stubQuantbtRuns(page);
 }
@@ -145,7 +158,8 @@ test("Fleet -> Alpha 360 -> a Deployment link -> the Paper workbench -> Back", a
   await expect(page.locator(".exec-fleet-v2").first()).toBeVisible();
   await settle(page);
   // A row opens the drawer, the drawer opens the alpha.
-  await page.locator("td[data-l='Alpha'] .exec-fleet-name").first().click();
+  // The name is a link to the alpha on its own; the rest of the row opens the peek.
+  await page.locator("td[data-l='Alpha'] .exec-fleet-version").first().click();
   await page.getByRole("link", { name: "Open Alpha 360" }).click();
   await expect(page.locator('[data-screen="alpha-360-v2"]').first()).toBeVisible();
   await settle(page);
@@ -180,13 +194,14 @@ test("Paper workbench: Orders names the UNKNOWN order, Fills and Positions list 
   const positions = page.getByRole("table", { name: "Positions" });
   await expect(positions).toContainText("BTCUSDT");
   await expect(positions).toContainText("ETHUSDT");
-  // The VN variant is the same screen on the same rows; its calendar is named as not published, never invented.
+  // The VN variant is the same screen on the same rows; the review-manager world publishes the venue calendar, so it is shown (and no FE-070 gap is).
   await page.goto(`/deployments/paper/${DEPLOYMENT_PAPER}/vn-market`);
   await expect(root).toHaveAttribute("data-variant", "vnm");
-  // RV-06: the request id and the reason sit behind the GapWhy button, not in the headline; ask the way a reader does.
-  const calendarGap = root.locator('.exec-wb-sub [data-gap="FE-070"]');
-  await calendarGap.getByRole("button").click();
-  await expect(calendarGap).toContainText("Not published (FE-070)");
+  await expect(root.locator('.exec-wb-sub [data-gap="FE-070"]')).toHaveCount(0);
+  await expect(root.locator(".exec-wb-sub")).toContainText("VN market calendar");
+  const sessions = root.getByRole("region", { name: "VN market sessions" });
+  await expect(sessions.getByRole("row", { name: /^Time zone/ })).toContainText("Asia/Ho_Chi_Minh");
+  await expect(sessions.getByRole("row", { name: /^Breaks/ })).toContainText("11:30-13:00");
   expect(watch.foreign).toEqual([]);
   expect(watch.take()).toEqual([]);
 });
@@ -214,16 +229,17 @@ test("Alpha 360 Deployment links open each stage screen on its own route", async
   expect(watch.take()).toEqual([]);
 });
 
-test("the spine of the Canary screen leads to Live and Back returns", async ({ page, baseURL }) => {
+test("the spine of the Live screen leads to its finished Canary and Back returns", async ({ page, baseURL }) => {
+  // A stage not reached yet is not a link (33ea70299): dep_canary_01 is in Canary now, so its Live is inert; the reachable hop is Live -> the finished Canary.
   await openLane(page);
   const watch = watchPage(page, baseURL);
-  await page.goto(`/deployments/live/${DEPLOYMENT_CANARY}/canary`);
-  await expect(page.locator('[data-screen="canary-v2"]').first()).toBeVisible();
-  await settle(page);
-  await page.getByRole("button", { name: /^Live/ }).first().click();
+  await page.goto(`/deployments/live/${DEPLOYMENT_LIVE}`);
   await expect(page.locator('[data-screen="live-v2"]').first()).toBeVisible();
-  await page.goBack();
+  await settle(page);
+  await page.getByRole("button", { name: /^Canary/ }).first().click();
   await expect(page.locator('[data-screen="canary-v2"]').first()).toBeVisible();
+  await page.goBack();
+  await expect(page.locator('[data-screen="live-v2"]').first()).toBeVisible();
   expect(watch.take()).toEqual([]);
 });
 

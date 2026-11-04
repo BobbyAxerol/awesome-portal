@@ -141,6 +141,7 @@ describe("P18 immutable Report and bounded reproducible export", () => {
       } },
     } as never);
     const report = await value.service.materialize(scope, "run_p18");
+    if (report.frozen_core.schema_version !== "research.report-frozen-core.v2") throw new Error("expected v2");
     expect(report.frozen_core.headline.find((item) => item.key === "OOS_SHARPE")).toMatchObject({
       scope: "OOS", value: "0.744", availability: availability(),
     });
@@ -186,6 +187,7 @@ describe("P18 immutable Report and bounded reproducible export", () => {
     const subjectValue = subject();
     const report = await subjectValue.service.materialize(scope, "run_p18");
     expect(report).toMatchObject({ schema_version: "research.report-detail.v1", report_revision: expect.stringMatching(/^p18r1_[0-9a-f]{64}$/) });
+    if (report.frozen_core.schema_version !== "research.report-frozen-core.v2") throw new Error("expected a v2 core");
     expect(report.frozen_core.source_revisions).toEqual({ evidence_revision: `p13r1_${digest("a")}`, split_revision: `p14r1_${digest("1")}`, search_revision: `p15r1_${digest("2")}`, freeze_revision: `p16r1_${digest("3")}`, replay_revision: `p17r1_${digest("4")}` });
     expect(report.frozen_core.metrics.find((item) => item.key === "FINAL_EQUITY")).toMatchObject({ value: "110", scope: "OOS" });
     expect(report.frozen_core.headline.find((item) => item.key === "OOS_SHARPE")).toMatchObject({ value: null, availability: { state: "NOT_PUBLISHED" } });
@@ -222,6 +224,7 @@ describe("P18 immutable Report and bounded reproducible export", () => {
     const subjectValue = subject();
     await subjectValue.service.materialize(scope, "run_p18");
     const stored = subjectValue.stored!;
+    if (stored.frozenCore.schema_version !== "research.report-frozen-core.v2") throw new Error("expected a v2 core");
     const claim: ClaimedResearchReportExport = {
       workspaceId: scope.workspaceId, leaseToken: digest("9"), jobId: `rpex_01J00000000000000000000000`, runId: stored.runId,
       reportRevision: stored.reportRevision, format: "REPORT_JSON", state: "RUNNING", requestedAtUtcMs: 1, completedAtUtcMs: null,

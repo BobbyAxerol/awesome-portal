@@ -1,12 +1,13 @@
 /** Contract/policy proofs, not substitutes for ordinary historical product runs. */
 import {describe,it,expect} from "vitest";
-import {executionRecipes,executionRecipe,executionRecipeActivationReason,executionRecipeQualification,recipeDigest,wfoExecutionRecipe} from "../src/research/execution-recipes";
+import {executionRecipes,executionRecipe,executionRecipeActivationReason,executionRecipeQualification,recipeDigest,wfoExecutionRecipe,type ExecutionRecipe} from "../src/research/execution-recipes";
 import {FULL03_DELTA_BINDING} from "../src/research/full03-delta.binding";
 import {FULL06_DELTA_BINDING,isIndexedDeltaBinding} from "../src/research/full06-delta.binding";
 import {researchPortalAdmission} from "../src/research/portal-admission";
 import {ResearchParameterBindingRegistry} from "../src/research/parameter-binding.registry";
 import {RunSetupProfileSchema} from "../src/research/run-setup.contract";
-const rows=executionRecipes.filter(r=>r.descriptor.schema_version==="research.full06-delta-profile.v1");
+type Full06Recipe=Extract<ExecutionRecipe,{descriptor:{schema_version:"research.full06-delta-profile.v1"}}>;
+const rows=executionRecipes.filter((r):r is Full06Recipe=>r.descriptor.schema_version==="research.full06-delta-profile.v1");
 const flags={FEATURE_RESEARCH_RUN_PRODUCER:"true",FEATURE_RESEARCH_WFO_PROFILE:"true",FEATURE_RESEARCH_FULL06_PROFILE:"true"};
 describe("FULL06 exact percent-equity identity, units and bounded activation",()=>{
   it("preserves notional source identity; new AV has a distinct account contract",()=>{

@@ -4,7 +4,7 @@ import type { AuthService } from "../auth/auth.service";
 import type { AuthSession, PortalUser } from "../domain";
 import { accessResource, type AccessResource } from "./access.contract";
 import { accessDigest } from "./access-policy";
-import { BUSINESS_READ_FIELDS, RECORD_DETAIL_READ_FIELDS } from "./read-fields";
+import { BUSINESS_READ_FIELDS, RECORD_DETAIL_READ_FIELDS, isSiblingDetailReadField } from "./read-fields";
 import { readDatasetBinding, type ReadDatasetBinding } from "./read-publication";
 import { assertExecutionReadScope, ExecutionReadScopeError, ExecutionReadScopes, scopeAllowsDetailField, scopeAllowsField,
   scopeReadPopulation, scopeResources, type AuthorizedExecutionReadScope,
@@ -32,6 +32,9 @@ export interface CurrentViewSelection {
   /** Exact fields required by the selected server dataset. Omitting a field
    * never grants it; an unauthorized requested field refuses the operation. */
   readonly fields: readonly string[];
+  /** Separately authorized record-detail fields, never folded into the
+   * business-field vocabulary or inferred from its grants. Server-owned only. */
+  readonly detail_fields?: readonly string[];
 }
 
 export interface CurrentViewRequest {
@@ -145,7 +148,8 @@ export class CurrentViewAuthority {
     if (!this.scopes.hasNativeCurrentRelations() || selected.binding.environment !== "paper" || selected.read_requirement.dataset.window !== null)
       fail("CURRENT_VIEW_OPERATION_NOT_COMMISSIONED", 503);
     const current = await this.currentPrincipal(original), [scope] = await this.authorize(current, selected, "CURRENT");
-    if (selected.fields.some(field => !scopeAllowsField(scope, field))) fail("CURRENT_VIEW_AUTHORITY_CHANGED", 409);
+    if (selected.fields.some(field => !scopeAllowsField(scope, field)) ||
+      selected.detail_fields?.some(field => !scopeAllowsDetailField(scope, field))) fail("CURRENT_VIEW_AUTHORITY_CHANGED", 409);
     return scope;
   }
 
@@ -302,7 +306,11 @@ export class CurrentViewAuthority {
       !businessActions.has(requirement.action) || !accessResource.safeParse(requirement.resource).success ||
       !readDatasetBinding.safeParse(requirement.dataset).success || !Array.isArray(selection.fields) ||
       selection.fields.length === 0 || selection.fields.length > 64 || new Set(selection.fields).size !== selection.fields.length ||
-      selection.fields.some(field => typeof field !== "string" || !BUSINESS_READ_FIELDS.includes(field as typeof BUSINESS_READ_FIELDS[number])))
+      selection.fields.some(field => typeof field !== "string" || !BUSINESS_READ_FIELDS.includes(field as typeof BUSINESS_READ_FIELDS[number])) ||
+      selection.detail_fields !== undefined && (!Array.isArray(selection.detail_fields) || selection.detail_fields.length > 64 ||
+        new Set(selection.detail_fields).size !== selection.detail_fields.length ||
+        selection.detail_fields.some(field => typeof field !== "string" ||
+          !RECORD_DETAIL_READ_FIELDS.includes(field as typeof RECORD_DETAIL_READ_FIELDS[number]) && !isSiblingDetailReadField(field))))
       fail("CURRENT_VIEW_BINDING_MISMATCH", 400);
     if (operation === "HISTORY" || operation === "REPLAY") {
       const purpose = selection.operation_requirements?.[operation];
@@ -422,7 +430,8 @@ export class CurrentViewAuthority {
   }
   private decision(context: Context, scopes: readonly AuthorizedExecutionReadScope[]): CurrentViewDecision {
     const scope = scopes[0], population = scopeReadPopulation(scope);
-    if (context.selection.fields.some(field => !scopeAllowsField(scope, field)))
+    if (context.selection.fields.some(field => !scopeAllowsField(scope, field)) ||
+      context.selection.detail_fields?.some(field => !scopeAllowsDetailField(scope, field)))
       fail("CURRENT_VIEW_AUTHORITY_CHANGED", 409);
     const value = { schema_version: "portal.execution.current-view-decision.v1" as const, context_digest: context.contextDigest,
       workload_digest: accessDigest({ workload_id: context.workload }),
@@ -434,7 +443,8 @@ export class CurrentViewAuthority {
       dataset_binding: structuredClone(context.selection.read_requirement.dataset),
       allowed_tuples: population.allowedTuples, resources: scopeResources(scope),
       fields: [...context.selection.fields],
-      detail_fields: RECORD_DETAIL_READ_FIELDS.filter(field => scopeAllowsDetailField(scope, field)),
+      detail_fields: [...RECORD_DETAIL_READ_FIELDS.filter(field => scopeAllowsDetailField(scope, field)),
+        ...(context.selection.detail_fields ?? []).filter(field => isSiblingDetailReadField(field) && scopeAllowsDetailField(scope, field))],
       expires_at_ms: context.until };
     const decision = { ...value, decision_digest: accessDigest({ schema: "portal.current-view-decision.v1", ...value,
       scope_fingerprints: scopes.map(item => item.fingerprint) }) };

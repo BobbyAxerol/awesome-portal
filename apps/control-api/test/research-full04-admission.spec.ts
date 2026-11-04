@@ -1,11 +1,12 @@
 /** Exact predicate tests, not ordinary product qualification evidence. */
 import {describe,it,expect} from "vitest";
-import {executionRecipes,executionRecipe,executionRecipeQualification,recipeDigest,wfoExecutionRecipe,executionRecipeActivationReason} from "../src/research/execution-recipes";
+import {executionRecipes,executionRecipe,executionRecipeQualification,recipeDigest,wfoExecutionRecipe,executionRecipeActivationReason,type ExecutionRecipe} from "../src/research/execution-recipes";
 import {FULL03_DELTA_BINDING,FULL03_DELTA_ADAPTER_CONTRACT_DIGEST} from "../src/research/full03-delta.binding";
 import {ResearchRequestedSpecSchema,type ResearchRequestedSpec} from "../src/research/preflight.contract";
 import {ResearchRunAdmissionService} from "../src/research/run-admission.service";
 import {admissionRepository,flagConfig,manifestFor,w1Admin,w1Scope,wfoRequested} from "./research-w1-wfo.fixture";
-const rows=executionRecipes.filter(r=>r.descriptor.schema_version==="research.full04-delta-profile.v1");
+type Full04Recipe=Extract<ExecutionRecipe,{descriptor:{schema_version:"research.full04-delta-profile.v1"}}>;
+const rows=executionRecipes.filter((r):r is Full04Recipe=>r.descriptor.schema_version==="research.full04-delta-profile.v1");
 function qualifiedSuccessor(row:typeof rows[number]) {
   const successor=executionRecipe(row.profile_id.replace(/\.v1$/,".v2"));
   expect(successor.descriptor).toHaveProperty("predecessor_profile_id",row.profile_id);
@@ -47,8 +48,12 @@ describe("FULL04 exact native optimizer admission",()=>{
       && r.descriptor.schema_version!=="research.expanded-trial-profile.v1"
       && r.descriptor.schema_version!=="research.native-route-profile.v1")).toHaveLength(71);
     expect(executionRecipes.filter(r=>r.descriptor.schema_version==="research.full05-imported-profile.v1")).toHaveLength(27);
-    expect(executionRecipes.filter(r=>"predecessor_profile_id" in r.descriptor
-      && rows.some(old=>old.profile_id===r.descriptor.predecessor_profile_id))).toHaveLength(35);
+    expect(executionRecipes.filter(r=>{
+      const descriptor=r.descriptor;
+      if (!("predecessor_profile_id" in descriptor)) return false;
+      const predecessor=descriptor.predecessor_profile_id;
+      return rows.some(old=>old.profile_id===predecessor);
+    })).toHaveLength(35);
     expect(new Set(rows.map(r=>r.public_profile.optimization_mode+":"+r.public_profile.optimization_schedule)).size).toBe(5);
     expect(executionRecipes.filter(r=>r.descriptor.schema_version==="research.full03-delta-profile.v1")).toHaveLength(28);
   });
@@ -72,8 +77,8 @@ describe("FULL04 exact native optimizer admission",()=>{
   it("keeps Mode4 causal IS-only, Mode3 centroid and Mode5 calibration distinct",()=>{
     const by=(mode:string)=>rows.find(r=>r.profile_id===`p10.delta-${mode}-1h.v1`)!;
     expect(by("mode4-causal").descriptor).toMatchObject({trial_scope:"PER_OUTER_FOLD_STUDY",inner_validation:"NOT_APPLICABLE"});
-    expect(by("mode4-causal").descriptor.inner_constraints).toBeUndefined();
-    expect(by("mode3-global").descriptor.optimizer_settings.flat_selector).toBe("centroid");
+    expect(by("mode4-causal").descriptor).not.toHaveProperty("inner_constraints");
+    expect(by("mode3-global").descriptor.optimizer_settings).toMatchObject({flat_selector:"centroid"});
     expect(by("mode5-global").public_profile.fold_bounds).toEqual({min:1,max:1});
   });
 });

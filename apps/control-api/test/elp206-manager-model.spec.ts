@@ -389,7 +389,7 @@ describe("ELP2-06 Manager fact identities, partitions and statements (TEST_ONLY)
       source_confidence: "UNKNOWN", quality: { completeness: "COMPLETE", freshness: "STALE", reasons: ["TEST_ONLY:stale"] } }) })];
     const metric = f.read().items.find(row => row.portfolio_id === OWN.portfolio_id && row.alpha_id === OWN.alpha_id)!.metrics.net_pnl;
     expect(metric).toMatchObject({ value: "30", source_confidence: "UNKNOWN", quality: { completeness: "COMPLETE", freshness: "STALE" } });
-    expect(metric.quality.reasons).toContain("TEST_ONLY:stale");
+    expect(metric?.quality.reasons).toContain("TEST_ONLY:stale");
   });
   it("documents statements as selected-resource/stages before arbitrary table filters", async () => {
     const f = await fixture({ full: true });
@@ -438,7 +438,7 @@ describe("ELP2-06 Manager fact identities, partitions and statements (TEST_ONLY)
     const row = f.read().items.find(value => value.portfolio_id === OWN.portfolio_id && value.alpha_id === OWN.alpha_id)!;
     expect(row.economic_partitions).toHaveLength(2);
     expect(row.metrics.net_pnl).toMatchObject({ value: null, reason_code: "MIXED_ECONOMIC_DOMAINS" });
-    expect(f.read({ economic_partition: partition() }).items.find(value => value.portfolio_id === OWN.portfolio_id && value.alpha_id === OWN.alpha_id)!.metrics.net_pnl.value).toBe("5");
+    expect(f.read({ economic_partition: partition() }).items.find(value => value.portfolio_id === OWN.portfolio_id && value.alpha_id === OWN.alpha_id)!.metrics.net_pnl?.value).toBe("5");
     expect(managerPartitionKey(partition())).not.toBe(managerPartitionKey({ ...partition(), currency: "USD" }));
   });
   it("does not cancel equal reciprocal amounts at different cuts or with partial economic proof", async () => {
@@ -588,14 +588,15 @@ describe("C4 current-only exact-window queries (TEST_ONLY, not commissioning)", 
     f.doc.facts.push(allocation);
     const before=f.read({economic_partition:partition()});
     const exact=f.read({window:"30D",economic_partition:partition()});
-    expect(exact.items[0].metrics.net_pnl.value).not.toBeNull();
+    expect(exact.items[0].metrics.net_pnl).toBeDefined();
+    expect(exact.items[0].metrics.net_pnl?.value).not.toBeNull();
     expect(exact.query_options.window.presets.find(p=>p.value==="30D")?.data_state).toBe("METRIC_SPECIFIC");
     const missing=f.read({window:"7D",economic_partition:partition(),group_by:["venue"]});
     expect(missing.page.authorized_filtered_count).toBe(before.page.authorized_filtered_count);
-    expect(missing.items.every(row=>row.metrics.net_pnl.value===null)).toBe(true);
-    expect(missing.groups[0].economic_partitions[0].metrics.net_pnl.reason_code).toBe("EXACT_METRIC_WINDOW_NOT_PUBLISHED");
+    expect(missing.items.every(row=>row.metrics.net_pnl?.value===null)).toBe(true);
+    expect(missing.groups[0].economic_partitions[0].metrics.net_pnl?.reason_code).toBe("EXACT_METRIC_WINDOW_NOT_PUBLISHED");
     const own=missing.items.find(row=>row.alpha_id===OWN.alpha_id && row.portfolio_id===OWN.portfolio_id)!;
-    expect(own.metrics.allocation.value).toBe("10");
+    expect(own.metrics.allocation?.value).toBe("10");
     expect(missing.capital_statements).toEqual(before.capital_statements);
     // No accepted Score publication exists here: do not misname a policy/source gap as a window mismatch.
     expect(missing.scores.raw).toEqual({value:null,status:"policy_pending"});

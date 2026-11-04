@@ -4,7 +4,8 @@ import Ajv2020 from "ajv/dist/2020";
 import { describe, expect, it } from "vitest";
 
 // WP-K second pass: twelve small additive sibling reads (GAP-3, 4, 5, 6, 7, 9, 11, 12, 13, 14, 15, 16), generated from one definition each.
-// Contract only: no producer exists, nothing serves the routes. The generator already proved every refusal; this suite judges the PUBLISHED files.
+// Four routes have a source-dark HTTP refusal; none has a positive producer.
+// Other siblings remain contract-only. This suite judges PUBLISHED files.
 const root = resolve(__dirname, "..");
 const load = (file: string) => JSON.parse(readFileSync(resolve(root, file), "utf8"));
 const index = load("fixtures/execution-siblings.index.json").siblings as Array<{ name: string; gap: string; schema: string; route: string; valid: string[]; post: string | null }>;
@@ -27,9 +28,12 @@ describe.each(index.map((s) => [s.name, s] as const))("%s", (name, entry) => {
   const schema = load(`schemas/${entry.schema}`);
   const api = load(`openapi/execution-${name}.openapi.json`);
   const check = new Ajv2020({ strict: true, allErrors: true }).compile(schema);
-  it("publishes one named GET whose 200 body is the schema, says it has no producer, and is closed", () => {
+  it("publishes one named GET whose 200 body matches its schema and producer disposition", () => {
     const op = api.paths[entry.route].get;
-    expect(op.description).toContain("CONTRACT ONLY");
+    const dark = ["order-detail", "account-profile", "reconciliation", "obligations"].includes(name);
+    expect(op.description).toContain(name === "account-profile" ? "native HTTP custody" : dark ? "Source-dark route" : "CONTRACT ONLY");
+    if (dark) expect(op.responses["403"]).toBeDefined();
+    if (name === "account-profile") expect(op.responses["409"]).toBeDefined();
     expect(op.responses["200"].content["application/json"].schema.$ref).toMatch(/^#\/components\/schemas\//);
     expect(Object.values(api.components.schemas).some((s) => JSON.stringify(s) === JSON.stringify(Object.fromEntries(Object.entries(schema).filter(([k]) => !["$schema", "$id"].includes(k)))))).toBe(true);
     expect(schema.additionalProperties).toBe(false);

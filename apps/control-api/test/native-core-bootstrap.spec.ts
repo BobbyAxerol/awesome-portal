@@ -91,7 +91,7 @@ async function fixture() {
 }
 function poolFixture(target: { database_name: string; role_name: string; database_system_identifier: string }) {
   const query = vi.fn(async () => ({ rowCount: 1, rows: [{ ...target, session_role_name: target.role_name }] }));
-  const end = vi.fn(async () => undefined), connect = vi.fn(async () => { throw Error("TEST_ONLY-unexpected-connect"); });
+  const end = vi.fn(async (): Promise<void> => undefined), connect = vi.fn(async () => { throw Error("TEST_ONLY-unexpected-connect"); });
   const pool = { options: { connectionTimeoutMillis: 1000, query_timeout: 3000 }, query, end, connect } as unknown as Pool;
   return { pool, query, end, connect };
 }

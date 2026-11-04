@@ -25,7 +25,7 @@ export const SCREENS = [
   ["portfolio-360", "/deployments/portfolios/pf_TEST_ONLY_core", '[data-screen="portfolio-360-v2"]'],
   ["compare", "/deployments/compare?in=pf_TEST_ONLY_core,pf_TEST_ONLY_satellite", '[data-screen="compare-v2"]'],
   ["alpha-360", "/deployments/alphas/alpha_btc_trend", '[data-screen="alpha-360-v2"]'],
-  ["alpha-replay", "/deployments/alphas/alpha_btc_trend?tab=replay", '[data-screen="alpha-360-v2"]'],
+  ["alpha-replay", "/deployments/alphas/alpha_btc_trend?tab=replay", '[data-screen="trade-replay-v2"]'],
   ["accounts", "/deployments/accounts", ".exec-acct-v2"],
   ["account-360", "/deployments/accounts/acc_bnc_core", ".exec-acct-v2"],
   ["blotter", "/deployments/blotter", '[data-screen="blotter-v2"]'],

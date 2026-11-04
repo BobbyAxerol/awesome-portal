@@ -11,7 +11,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description Reconciliation runs and the breaks they found for a subject, so the Reconciliation tab, the stage chips and the Account 360 triad stop counting rows. CONTRACT ONLY: no producer exists yet (Edge/Core inputs are in WP_K_CONTRACTS_2026-10-23.md), so nothing serves this route and every screen keeps its typed absence. */
+        /** @description Reconciliation runs and the breaks they found for a subject, so the Reconciliation tab, the stage chips and the Account 360 triad stop counting rows. Source-dark route: no positive producer is commissioned; the route refuses instead of inventing data. */
         get: operations["executionReconciliationGetV1"];
         put?: never;
         post?: never;
@@ -55,11 +55,12 @@ export interface components {
                 resolution_revision: number | null;
                 detected_at_ms: number;
             }[] | null;
+            next_cursor?: string | null;
         };
         ReconciliationProblem: {
             error: {
                 /** @enum {string} */
-                code: "EXECUTION_READ_NOT_AVAILABLE" | "EXECUTION_READ_QUERY_INVALID";
+                code: "EXECUTION_READ_NOT_AVAILABLE" | "EXECUTION_READ_QUERY_INVALID" | "SESSION_REQUIRED" | "REQUEST_REJECTED" | "PORTAL_AUTHORITY_UNAVAILABLE" | "PORTAL_READ_STORE_UNAVAILABLE" | "EXECUTION_LOCAL_READ_BUSY" | "EXECUTION_READ_SCOPE_REQUIRED" | "EXECUTION_READ_ACCESS_CHANGED" | "EXECUTION_READ_CURRENT_ONLY" | "EXECUTION_READ_POLICY_PENDING" | "EXECUTION_READ_PUBLICATION_NOT_QUALIFIED" | "EXECUTION_READ_FIELD_POLICY_PENDING" | "EXECUTION_READ_SCOPE_LIMIT" | "EXECUTION_READ_AUTHORITY_UNAVAILABLE" | "EXECUTION_READ_CURSOR_INVALID";
                 message: string;
             };
             request_id: string;
@@ -79,6 +80,8 @@ export interface operations {
                 workspace_id?: string;
                 subject_type?: string;
                 subject_id?: string;
+                page_size?: number;
+                cursor?: string;
             };
             header?: never;
             path?: never;
@@ -116,8 +119,28 @@ export interface operations {
                     "application/json": components["schemas"]["ReconciliationProblem"];
                 };
             };
+            /** @description Profile not commissioned */
+            403: {
+                headers: {
+                    "Cache-Control": "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReconciliationProblem"];
+                };
+            };
             /** @description Unavailable or not authorized */
             404: {
+                headers: {
+                    "Cache-Control": "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReconciliationProblem"];
+                };
+            };
+            /** @description Authority or source changed before dispatch */
+            409: {
                 headers: {
                     "Cache-Control": "private, no-store";
                     [name: string]: unknown;

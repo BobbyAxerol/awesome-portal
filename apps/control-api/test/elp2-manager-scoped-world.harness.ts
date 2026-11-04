@@ -4,9 +4,9 @@
 import { vi } from "vitest";
 import type { Pool } from "pg";
 import type { AuthSession, PortalUser } from "../src/domain";
-import { AccessPolicyError, type AccessEvaluationContext, type AccessRelations } from "../src/execution-v2/access-policy";
+import { type AccessEvaluationContext, type AccessRelations } from "../src/execution-v2/access-policy";
 import { accessDigest } from "../src/execution-v2/access-policy";
-import type { AccessResource, ReviewedAccessPolicy, ScopedAccessGrant } from "../src/execution-v2/access.contract";
+import { AccessPolicyError, type AccessResource, type ReviewedAccessPolicy, type ScopedAccessGrant } from "../src/execution-v2/access.contract";
 import type { ExecutionAccessService } from "../src/execution-v2/access.service";
 import { BUSINESS_READ_FIELDS } from "../src/execution-v2/read-fields";
 import { ExecutionReadScopes } from "../src/execution-v2/read-scope";
@@ -78,7 +78,7 @@ export function makeReader(world: World, options: Options, workspaceId = world.w
     policy: authorizing && options.policyPending?.includes(authorizing) ? pendingPolicy : policy, active_principals: new Set([USER, OWNER]), relationsFor: () => relations,
     grants: options.principal === "OWNER" ? [grant("business.read_all", { kind: "ROOT_SCOPE", root_id: "root" })] : [
       grant("alpha.read", { kind: "OWN_ALPHA" }),
-      grant("portfolio.read_restricted", { kind: "PORTFOLIO_MEMBERSHIP", portfolio_ids: relations.member_portfolio_ids }),
+      grant("portfolio.read_restricted", { kind: "PORTFOLIO_MEMBERSHIP", portfolio_ids: [...relations.member_portfolio_ids] }),
       grant("binding.read", { kind: "EXPLICIT_RESOURCE_SET", resource_kind: "BINDING", ids: world.bindings.map((b: any) => b.binding_id) })] });
 
   let publicationReads = 0;

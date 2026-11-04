@@ -259,6 +259,7 @@ function principal(userId = "usr_eds07"): { user: PortalUser; session: AuthSessi
       createdAt: now,
       updatedAt: now,
       disabledAt: null,
+      accountRevision: 1, archivedAt: null,
     },
     session: {
       sessionId: `ses_${userId}`,

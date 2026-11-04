@@ -27,7 +27,7 @@ describe("TEST_ONLY financial shared-builder/dataset/series composition", () => 
     expect(managerModelDocument.safeParse(f.doc).success).toBe(true);
     const response = f.dataset();
     expect(managerDatasetResponse.safeParse(response).success).toBe(true);
-    expect(response.items.map(row => row.metrics.net_pnl.value).sort()).toEqual(["10.1", "5.2", "900001"].sort());
+    expect(response.items.map(row => row.metrics.net_pnl?.value).sort()).toEqual(["10.1", "5.2", "900001"].sort());
     expect(response.groups[0].economic_partitions[0].metrics.net_pnl.value).toBe("900016.3");
     expect(f.doc.qualification).toBe("TEST_ONLY");
     expect(f.doc.facts.every(fact => fact.metric.source_confidence === "PROVISIONAL")).toBe(true);

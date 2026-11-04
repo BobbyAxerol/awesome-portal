@@ -16,6 +16,7 @@ import { stubExecutionBff } from "./bffDouble";
 import { ALPHA_DOUBLE_ID, ALPHA_V2_WORKSPACE } from "./bffDoubleAlpha";
 import { stubScopedBff, type ScopedBff } from "./bffDoubleScoped";
 import { OPERATIONS_V2_DOUBLE_NOW_ISO } from "./bffDoubleV2";
+import { stubV2Reads } from "./v2PublishedReads";
 import { settle, stubPortalApi, usePreferences } from "./fixtures";
 import { stubAdminRoutes, stubQuantbtRuns, watchPage } from "./v2Lane";
 
@@ -26,6 +27,7 @@ const WIDTHS = [
 
 const ALPHA_URL = `/deployments/alphas/${ALPHA_DOUBLE_ID}?workspace_id=${ALPHA_V2_WORKSPACE}`;
 const ROOT = '[data-screen="alpha-360-v2"]';
+const REPLAY_ROOT = '[data-screen="trade-replay-v2"]';
 /** Figures and words only the legacy v1 body carries: none of them may appear on a scoped read. */
 const LEGACY_ONLY = ["1,120.80", "126,500.00", "96,400.00", "asmith", "UNVERSIONED", "Unnamed alpha"];
 /** What a revoked scope must leave nowhere on the page. */
@@ -37,7 +39,9 @@ async function openLane(page: Page, width: number): Promise<ScopedBff> {
   await page.setViewportSize({ width, height: 900 });
   await usePreferences(page, "operations");
   await stubPortalApi(page, "healthy");
-  await stubExecutionBff(page, { operationsV2: true, screensV2: true });
+  const bffOptions = { operationsV2: true, screensV2: true, reviewManager: true };
+  await stubExecutionBff(page, bffOptions);
+  await stubV2Reads(page, bffOptions);
   await stubAdminRoutes(page);
   await stubQuantbtRuns(page);
   return stubScopedBff(page);
@@ -45,6 +49,12 @@ async function openLane(page: Page, width: number): Promise<ScopedBff> {
 
 async function openAlpha(page: Page, url = ALPHA_URL): Promise<void> {
   await page.goto(url);
+  // `?tab=replay` is Trade Replay as a page of its own (de05779c4: one route, two screens), with its own root.
+  if (new URL(url, "http://x").searchParams.get("tab") === "replay") {
+    await expect(page.locator(REPLAY_ROOT).first()).toBeVisible();
+    await settle(page);
+    return;
+  }
   await expect(page.locator(ROOT).first()).toBeVisible();
   // The meta line is empty (hidden) when the body names no owner and no portfolio; the header's Not available line or the state section then says the read landed.
   await expect(page.locator(`${ROOT} .exec-alp2-meta:not(:empty), ${ROOT} [data-testid="not-available-line"], ${ROOT} [aria-label="Alpha state"]`).first()).toBeVisible();
@@ -91,17 +101,27 @@ for (const [label, width] of WIDTHS) {
     await banner.getByText("Scope, policy and population").click();
     await expect(banner).toContainText(ALPHA_V2_WORKSPACE);
     await expect(banner).toContainText("TEST_ONLY-policy-live-4");
-    // What the body does not publish reads Not published (FE-xxx), never a literal and never a figure.
+    // What the body does not publish reads Not published: <label> (the id is the data-gap), never a literal and never a figure.
     // The header's gaps are ONE "Not available:" line (UX audit A); each id and reason is behind its disclosure button, not printed per fact.
     const meta = page.locator(".exec-alp2-meta");
     const gaps = page.getByTestId("not-available-line").filter({ hasText: "Not available: Name" });
-    await expect(gaps).toContainText("Not available: Name, Version, Owner, Run, Evidence");
-    await gaps.getByRole("button", { name: "Why not available: Name, Version, Owner, Run, Evidence" }).click();
-    await expect(gaps.locator(".exec-blk-why-row", { hasText: /^Name:/ })).toContainText("Not published (FE-066)");
-    await expect(gaps.locator(".exec-blk-why-row", { hasText: /^Version:/ })).toContainText("Not published (FE-066)");
-    await expect(gaps.locator(".exec-blk-why-row", { hasText: /^Owner:/ })).toContainText("Not published (FE-030)");
+    // The alpha's lifecycle record (stubV2Reads) publishes the run and the evidence linkage, so only the names and the owner stay gaps.
+    await expect(gaps).toContainText("Not available: Name, Version, Owner");
+    await gaps.getByRole("button", { name: "Why not available: Name, Version, Owner" }).click();
+    await expect(gaps.locator(".exec-blk-why-row", { hasText: /^Name:/ })).toContainText("Not published: alpha and portfolio names on a deployment");
+    await expect(gaps.locator(".exec-blk-why-row", { hasText: /^Version:/ })).toContainText("Not published: alpha and portfolio names on a deployment");
+    await expect(gaps.locator(".exec-blk-why-row", { hasText: /^Owner:/ })).toContainText("Not published: creator, ladder, SLA and needs-you");
+    // The request ids travel in the line's data-gap, not in the words.
+    await expect(gaps).toHaveAttribute("data-gap", /\bFE-066\b/);
+    await expect(gaps).toHaveAttribute("data-gap", /\bFE-030\b/);
+    await expect(gaps).not.toContainText("FE-066");
     await expect(meta).toContainText("Core");
-    await expect(page.getByLabel("Current facts")).toContainText("Not published (FE-005)");
+    const facts = page.getByLabel("Current facts");
+    // A compact gap says "Not available"; the words and the request id are behind its disclosure (the id in data-gap).
+    await expect(facts.locator('[data-gap~="FE-005"]').first()).toBeAttached();
+    await facts.getByRole("button", { name: "Not available, reason" }).first().click();
+    await expect(facts).toContainText("Not published: windowed totals and concentration");
+    await expect(facts).not.toContainText("FE-005");
     // Screenshots are for review only and are never compared.
     const shots = process.env.UXM07_SHOT_DIR;
     if (shots) await page.screenshot({ path: `${shots}/alpha-scoped-${label}.png`, fullPage: true });
@@ -219,7 +239,14 @@ for (const [label, width] of WIDTHS) {
     const scoped = await openLane(page, width);
     const watch = watchPage(page, baseURL);
     await openAlpha(page, `${ALPHA_URL}&tab=orders&env=live`);
-    await expect(page.getByRole("table", { name: "Orders of this alpha" }).locator("tbody tr")).toHaveCount(6);
+    const orderRows = page.getByRole("table", { name: "Orders of this alpha" }).locator("tbody tr");
+    // A phone shows three cards of the six loaded; its first Load more draws the other three from memory and asks the server only on the next one (89536bda7).
+    const phone = width <= 660;
+    await expect(orderRows).toHaveCount(phone ? 3 : 6);
+    if (phone) {
+      await page.getByRole("button", { name: "Load more" }).click();
+      await expect(orderRows).toHaveCount(6);
+    }
 
     // Withdrawn while a page is open: the next page is refused with the typed reason, and the first page stays as it was read.
     scoped.revoke();

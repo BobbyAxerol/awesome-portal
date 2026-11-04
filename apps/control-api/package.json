@@ -5,7 +5,7 @@
   "description": "Portal Control API: thin identity BFF (U07), future Control API facade (U10)",
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit && tsc -p tsconfig.cross-loop.json",
     "test": "vitest run --maxWorkers=1 --no-file-parallelism",
     "migrate:up": "node dist/cli/migrate.js",
     "start": "node dist/main.js",
@@ -43,6 +43,7 @@
     "@types/pg": "^8.11.0",
     "typescript": "^5.7.0",
     "undici": "7.29.1",
+    "undici-types": "6.21.0",
     "vitest": "^4.1.11"
   }
 }

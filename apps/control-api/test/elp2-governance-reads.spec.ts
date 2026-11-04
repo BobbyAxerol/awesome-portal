@@ -59,7 +59,7 @@ describe("ELP2 Governance read boundaries", () => {
     const access: EffectiveAccess = { userId: user.userId, isOwner: false, ownerState: "NOT_OWNER",
       capabilities: [capability], scopes: { [capability]: [workspace] } };
     const governance = new GovernanceService({ pool: { query: async () => ({ rows: [{ member: true, policy_seen: false }] }) }, r2Detail: lookup } as never, config, {} as never,
-      { effectiveAccess: async () => access } as OwnerAccessService);
+      { effectiveAccess: async () => access } as unknown as OwnerAccessService);
     return { ...composition(governance), lookup };
   }
 

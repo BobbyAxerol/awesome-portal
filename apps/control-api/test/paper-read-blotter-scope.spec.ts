@@ -93,7 +93,8 @@ describe("FE-052 authorization and scope before pagination", () => {
 
   it("accepts qualified strategy lineage, never alpha=strategy string guessing", async () => {
     const f = productReadFixture();
-    orderRows(f).items = [{ fields: {
+    orderRows(f).items = [{ lineage: { workspace_id: f.snapshot.workspaceId, profile_id: f.snapshot.profileId,
+      source_contract_revision: f.snapshot.document.source_contract_revision }, fields: {
       strategy_id: "strategy-own", account_id: PRIVATE.account_id,
       order_id: "qualified-strategy-order", status: "OPEN", quantity: "0",
       submitted_at: "2026-10-01T00:00:00.000Z",
@@ -107,7 +108,8 @@ describe("FE-052 authorization and scope before pagination", () => {
 
   it("keeps ambiguous deployment attribution partial rather than assigning a shared account", async () => {
     const f = productReadFixture();
-    orderRows(f).items = [{ fields: {
+    orderRows(f).items = [{ lineage: { workspace_id: f.snapshot.workspaceId, profile_id: f.snapshot.profileId,
+      source_contract_revision: f.snapshot.document.source_contract_revision }, fields: {
       alpha_id: OWN.alpha_id, order_id: "ambiguous-order", quantity: "0", status: "OPEN",
       submitted_at: "2026-10-01T00:00:00.000Z",
     } }];

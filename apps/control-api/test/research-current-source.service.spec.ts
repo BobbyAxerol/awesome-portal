@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { strict as assert } from "node:assert";
 
 import { ResearchCurrentSourceService, currentSourceReadRevision, currentSourceSealDigest, currentSourceFactRevision } from "../src/research/current-source.service";
 import { mockSearchRepository } from "./research-search-inputs.fixture";
@@ -8,15 +9,16 @@ import { wfoRequested } from "./research-w1-wfo.fixture";
 import { P04_DELTA_BINDING } from "../src/research/p04-delta.binding";
 import { executionRecipes } from "../src/research/execution-recipes";
 import { sha256ResearchJson } from "../src/research/preflight.service";
-import type { ResearchCurrentSourceNotApplicableResponse } from "../src/research/current-source.contract";
 import { p11StageEvents, POOL_FREEZE_CLOCK_ABSENT } from "../src/research/p11-stage-events";
 
 /** RF-05: these fixtures are sealed RS-02 runs; a not-applicable lane answer here is a test failure. */
-function sealed<T>(value: T | ResearchCurrentSourceNotApplicableResponse): T {
-  if ((value as { schema_version?: string }).schema_version === "research.current-source-not-applicable.v1") {
+function sealed<T extends { schema_version: string }>(value: T): Exclude<T,
+  { schema_version: "research.current-source-not-applicable.v1" | "research.current-source-split-terminal-absence.v1" }> {
+  if (value.schema_version === "research.current-source-not-applicable.v1" ||
+      value.schema_version === "research.current-source-split-terminal-absence.v1") {
     throw new Error("expected a sealed current-source response");
   }
-  return value as T;
+  return value as Exclude<T, { schema_version: "research.current-source-not-applicable.v1" | "research.current-source-split-terminal-absence.v1" }>;
 }
 import {
   currentSourceImportDigest,
@@ -239,7 +241,9 @@ describe("RS-02 retained current-source named read models", () => {
     expect(search.pool).toMatchObject({ frozen_at_utc_ms: null, frozen_at_source: null, frozen_at_reason_code: POOL_FREEZE_CLOCK_ABSENT });
     expect(freeze.fold_ordering.stage_events).toEqual(search.stage_events);
     expect(freeze.fold_ordering.wall_clock.state).toBe("NOT_PUBLISHED");
-    expect(freeze.stage4_binding.sealed_params_sha256).toBe(sha256ResearchJson(seal.summary.selection.parameters));
+    const selection = seal.summary.selection;
+    assert.ok(selection && typeof selection === "object" && "parameters" in selection);
+    expect(freeze.stage4_binding.sealed_params_sha256).toBe(sha256ResearchJson(selection.parameters));
     expect(stageEventClocks).toHaveBeenCalledWith(scope, seal, undefined);
 
     stageEventClocks.mockResolvedValue(p11StageEvents("a".repeat(64), {

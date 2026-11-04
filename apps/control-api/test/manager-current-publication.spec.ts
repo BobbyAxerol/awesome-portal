@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { describe, expect, it, vi } from "vitest";
 import { accessDigest } from "../src/execution-v2/access-digest";
 import { unqualifiedAccessTrust } from "../src/execution-v2/access-trust";
+import type { NativeCurrentRelationsPort } from "../src/execution-v2/native-current-relations-port";
 import { loadManagerCurrentCommissioning, managerCurrentBusinessFields, managerCurrentCommissioningDeadline,
   managerCurrentMetadataDigest, managerCurrentPublicationBase, managerCurrentSelectionCatalogue, parseManagerCurrentMetadata,
   qualifyManagerCurrentMetadata, withManagerCurrentPublications,
@@ -49,6 +50,15 @@ const qualify = (m: unknown, handle = commission().handle, nowMs = 2000) =>
   qualifyManagerCurrentMetadata(m, request(), { commissioning: handle, nowMs });
 
 describe("Manager CURRENT exact source publication (synthetic private adapter mechanics)", () => {
+  it("preserves the exact existing native custody port without inventing one", () => {
+    const port = Object.freeze({ TEST_ONLY: true }) as unknown as NativeCurrentRelationsPort;
+    const withPort = withManagerCurrentPublications({ ...unqualifiedAccessTrust, currentRelations: port }, async () => metadata(),
+      { commissioning: commission().handle, now: () => 2000 });
+    const withoutPort = withManagerCurrentPublications(unqualifiedAccessTrust, async () => metadata(),
+      { commissioning: commission().handle, now: () => 2000 });
+    expect(withPort.currentRelations).toBe(port);
+    expect(withoutPort.currentRelations).toBeUndefined();
+  });
   it("unwraps only a genuinely registered publication decorator without trusting lookalike markers", () => {
     const base = { ...unqualifiedAccessTrust }, decorated = withManagerCurrentPublications(base, async () => metadata(),
       { commissioning: commission().handle, now: () => 2000 });

@@ -173,7 +173,7 @@ describe.skipIf(!DATABASE)("successor writer real disposable PG (synthetic autho
   });
   it("window expiring after actual grant/event inserts rolls back everything before COMMIT", async () => {
     const doc = document(), verified = await token(doc), original = AccessRepository.prototype.event;
-    vi.spyOn(AccessRepository.prototype, "event").mockImplementationOnce(async function (event) {
+    vi.spyOn(AccessRepository.prototype, "event").mockImplementationOnce(async function (this: AccessRepository, event) {
       await original.call(this, event);
       vi.spyOn(Date, "now").mockReturnValue(pin.not_after_ms);
     });

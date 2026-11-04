@@ -200,6 +200,10 @@ export function withManagerCurrentPublications(base: AccessTrustProvider,
   if (!record) throw new Error("MANAGER_CURRENT_COMMISSIONING_INVALID");
   const now = options.now ?? Date.now;
   const provider: AccessTrustProvider = {
+    // Preserve the exact existing native custody port. The publication
+    // decorator grants nothing and must not silently demote a commissioned
+    // CURRENT read to the detached/source-dark path.
+    ...(base.currentRelations ? { currentRelations: base.currentRelations } : {}),
     verifyPolicy: input => base.verifyPolicy(input), verifyReceipt: input => base.verifyReceipt(input),
     verifyRootReceipt: (input, context) => base.verifyRootReceipt?.(input, context) ?? Promise.resolve(null),
     qualifyDelegatedReceipt: (input, scope) => base.qualifyDelegatedReceipt?.(input, scope) ?? Promise.resolve(null),

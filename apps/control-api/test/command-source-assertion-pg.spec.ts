@@ -6,11 +6,12 @@
  * No trusted-command row, positive Core context or terminal lease is SQL-seeded.
  */
 import { createHash, generateKeyPairSync, randomUUID, X509Certificate } from "node:crypto";
+import { fork, type ChildProcess } from "node:child_process";
 import { lstat, readFile, realpath } from "node:fs/promises";
-import { request, type Server } from "node:https";
+import { createServer, request, type Server } from "node:https";
 import { join } from "node:path";
 import type { Duplex } from "node:stream";
-import { decodeJwt, generateKeyPair, jwtVerify, SignJWT } from "jose";
+import { decodeJwt, exportPKCS8, exportSPKI, generateKeyPair, jwtVerify, SignJWT } from "jose";
 import { Client } from "pg";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { AdminService } from "../src/admin/admin.service";
@@ -25,7 +26,7 @@ import { grantBindingDigest, type CurrentAccessRelations } from "../src/executio
 import { AccessRepository } from "../src/execution-v2/access.repository";
 import { ExecutionAccessService } from "../src/execution-v2/access.service";
 import type { AccessTrustProvider } from "../src/execution-v2/access-trust";
-import { CommandSourceAssertionAuthority, COMMAND_STATUS_PM_PATH, type CommandStatusInput,
+import { CommandSourceAssertionAuthority, COMMAND_STATUS_PM_PATH, COMMAND_STATUS_EDGE_PATH, type CommandStatusInput,
   type CommandSourceAssertionRequest, type CommandSourceAssertionResponse } from "../src/execution-v2/command-source-assertion";
 import { createCommandSourceAssertionTransport } from "../src/execution-v2/command-source-assertion-transport";
 import { ExecutionCommandService, intentHash, previewHash } from "../src/execution-v2/command.service";
@@ -35,6 +36,9 @@ import { commandAuthorization, type CommandTrust } from "../src/execution-v2/com
 import { CurrentHumanCandidate, type CurrentHumanBinding, type CurrentHumanCandidateConfig } from "../src/execution-v2/current-human-candidate";
 import { CurrentHumanMutations } from "../src/execution-v2/current-human-mutations";
 import { pmHttpRequestDigest } from "../src/execution-v2/pm-http-request-binding";
+import { PgCommandStatusOriginalFingerprints } from "../src/execution-v2/command-status-original-fingerprints";
+import { EdgeCommandStatusTransport, COMMAND_STATUS_ORIGINAL_PATH,
+  type EdgeCommandStatusTransportConfig } from "../src/execution-v2/edge-command-status-transport";
 import { commonName, testCertificate, type TestAuthority } from "./fixtures/elp210-test-certificates";
 import { migrateTestDatabase, setupApp, teardownApp } from "./harness";
 
@@ -48,10 +52,15 @@ type Issued = CommandSourceAssertionResponse;
  * Unix-socket cell before running ANY migration or test writer. */
 async function requireDisposableDatabase(connectionString:string):Promise<void> {
   const target=new URL(connectionString);
-  if(/^control-api-test-postgres-[a-zA-Z0-9_-]+$/u.test(target.hostname) && target.pathname==="/portal_control_test")return;
+  if(!["postgres:","postgresql:"].includes(target.protocol) || target.hash)
+    throw new Error("COMMAND_STATUS_DISPOSABLE_DATABASE_REQUIRED");
+  if(/^control-api-test-postgres-[a-zA-Z0-9_-]+$/u.test(target.hostname) && target.pathname==="/portal_control_test" &&
+    target.username==="portal" && (target.port==="" || target.port==="5432") && !target.search)return;
   const socket=process.env.PORTAL_TEST_UNIX_PG_CELL;
   if(!socket || !/^\/tmp\/portal-status-pg-[A-Za-z0-9]{8}$/u.test(socket) ||
-    target.searchParams.get("host")!==socket || target.pathname!=="/portal_status_disposable")
+    target.searchParams.getAll("host").length!==1 || target.searchParams.get("host")!==socket ||
+    [...target.searchParams.keys()].some(key=>key!=="host" && key!=="port") ||
+    target.searchParams.getAll("port").length>1 || target.pathname!=="/portal_status_disposable")
     throw new Error("COMMAND_STATUS_DISPOSABLE_DATABASE_REQUIRED");
   const st=await lstat(socket);
   if(!st.isDirectory() || st.isSymbolicLink() || (st.mode & 0o777)!==0o700 ||
@@ -69,6 +78,17 @@ async function requireDisposableDatabase(connectionString:string):Promise<void> 
   } finally {await probe.end();}
 }
 
+describe("STATUS PostgreSQL disposable target guard", () => {
+  it("rejects network target overrides before connecting", async () => {
+    await expect(requireDisposableDatabase("postgres://portal:test@control-api-test-postgres-1234abcd:5432/portal_control_test")).resolves.toBeUndefined();
+    for(const url of ["postgres://portal:test@control-api-test-postgres-1234abcd:5432/portal_control_test?host=other",
+      "postgres://portal:test@control-api-test-postgres-1234abcd:5432/portal_control_test?hostaddr=127.0.0.1",
+      "postgres://portal:test@control-api-test-postgres-1234abcd:5433/portal_control_test",
+      "postgres://other:test@control-api-test-postgres-1234abcd:5432/portal_control_test"])
+      await expect(requireDisposableDatabase(url)).rejects.toThrow("COMMAND_STATUS_DISPOSABLE_DATABASE_REQUIRED");
+  });
+});
+
 describe.skipIf(!database).sequential("command STATUS concrete authority with real Core PG (TEST_ONLY source)", () => {
   let ctx: Awaited<ReturnType<typeof setupApp>>, auth: AuthService, coordinatedAuth: AuthService;
   let owner: AccessActor, reviewerId: string, candidate: CurrentHumanCandidate, config: CurrentHumanCandidateConfig;
@@ -77,6 +97,7 @@ describe.skipIf(!database).sequential("command STATUS concrete authority with re
   const fixtures: Awaited<ReturnType<typeof fixture>>[] = [];
   const authorities: CommandSourceAssertionAuthority[] = [];
   const listeners: { server: Server; sockets: Set<Duplex> }[] = [];
+  const children: ChildProcess[] = [];
   const nowOnDb = async () => Number((await ctx.pool.query(
     "SELECT floor(extract(epoch FROM clock_timestamp())*1000)::bigint AS ms")).rows[0].ms);
   const leases = async (workspace: string) => (await ctx.pool.query(
@@ -203,7 +224,7 @@ describe.skipIf(!database).sequential("command STATUS concrete authority with re
       method: "POST", path: COMMAND_STATUS_PM_PATH, body_utf8: pmBody, request_digest: requestDigest,
       delivery_sequence: 0, previous_lease_id: null };
     const binding: CurrentHumanBinding = { workspace_id: workspace, environment: "paper", workload_id: workload, request_digest: requestDigest };
-    return { workspace, input, body, issue, binding, reader, stored, session, access, policy };
+    return { workspace, input, body, issue, binding, reader, author, stored, session, access, policy };
   }
   type Fixture = Awaited<ReturnType<typeof fixture>>;
   const authority = (f: Fixture, selectedCandidate = candidate) => {
@@ -243,7 +264,7 @@ describe.skipIf(!database).sequential("command STATUS concrete authority with re
       userId: owner.user_id, ttlSeconds: 600 });
     // Authentication and real original writers run before candidate authority
     // guards are installed. Later revocation uses the actual drain coordinator.
-    for (let n = 0; n < 4; n++) fixtures.push(await fixture(await reviewer.login()));
+    for (let n = 0; n < 7; n++) fixtures.push(await fixture(await reviewer.login()));
     const bootstrap = await author.login();
     [humanKey, sourceKey] = await Promise.all([generateKeyPair("EdDSA", { crv: "Ed25519", extractable: true }),
       generateKeyPair("EdDSA", { crv: "Ed25519", extractable: true })]);
@@ -270,6 +291,7 @@ describe.skipIf(!database).sequential("command STATUS concrete authority with re
     core = identity("TEST_ONLY:STATUS-PG-Core"); edge = identity("TEST_ONLY:STATUS-PG-Edge"); foreign = identity("TEST_ONLY:STATUS-PG-other");
   }, 120_000);
   afterEach(async () => {
+    for (const child of children.splice(0)) if (child.exitCode === null) child.kill();
     for (const { server, sockets } of listeners.splice(0)) {
       for (const socket of sockets) socket.destroy();
       if (server.listening) await new Promise<void>(resolve => server.close(() => resolve()));
@@ -277,7 +299,14 @@ describe.skipIf(!database).sequential("command STATUS concrete authority with re
   });
   afterAll(async () => {
     authorities.forEach(value => value.shutdown()); vi.restoreAllMocks();
-    if (ctx) { await ctx.pool.query("DROP SCHEMA IF EXISTS elp210_candidate CASCADE"); await teardownApp(ctx); }
+    if (ctx) {
+      // A separately guarded disposable-cell rehearsal can snapshot the exact
+      // synthetic leases produced by this suite before the whole cell is
+      // destroyed. The ordinary test path continues to remove its schema.
+      if (process.env.PORTAL_TEST_KEEP_STATUS_CUSTODY !== "TEST_ONLY_DISPOSABLE_RESTORE")
+        await ctx.pool.query("DROP SCHEMA IF EXISTS elp210_candidate CASCADE");
+      await teardownApp(ctx);
+    }
   });
 
   async function listen(issuer: CommandSourceAssertionAuthority) {
@@ -304,6 +333,161 @@ describe.skipIf(!database).sequential("command STATUS concrete authority with re
       req.on("error", reject); req.setTimeout(10_000, () => req.destroy(new Error("TEST_ONLY CLIENT DEADLINE"))); req.end(bytes);
     });
   }
+
+  it("recovers the same ISSUED assertion and terminal ACK through pinned mTLS in a new OS process", async () => {
+    const f=fixtures[4], before=await commandRows(f.workspace);
+    f.input.call_digest=accessDigest({action:"STATUS",authority:"CURRENT_REQUESTER",requester_digest:accessDigest(f.input.actor),
+      original:f.input.original,authorization_digest:accessDigest(f.input.authorization),intent_hash:f.input.authorization.intent_hash});
+    f.body=JSON.stringify({...JSON.parse(f.body),call_digest:f.input.call_digest});
+    f.issue.binding_digest=accessDigest({original:f.input.original,call:f.input.call_digest});
+    // The Edge endpoint below is a private, synthetic source, not a real Edge
+    // terminal or economic outcome. Both directions use pinned test mTLS.
+    const requests:string[]=[];
+    const source=createServer({key:edge.key,cert:edge.cert,ca:edge.ca,requestCert:true,rejectUnauthorized:true,
+      minVersion:"TLSv1.3",maxVersion:"TLSv1.3"},(req,res)=>{
+      const chunks:Buffer[]=[];req.on("data",chunk=>chunks.push(Buffer.from(chunk)));req.on("end",()=>{
+        const bytes=Buffer.concat(chunks),body=JSON.parse(bytes.toString("utf8"));requests.push(req.url!);
+        const a=f.input.authorization,i=f.input.intent;
+        const value=req.url===COMMAND_STATUS_ORIGINAL_PATH?{schema_version:"execution.core-command-original-response.v1",
+          original:f.input.original,status_request_utf8:JSON.stringify(JSON.parse(f.body).core_request),
+          pm_status_request_digest:f.issue.request_digest}:
+          {schema_version:"execution.core-command-status-response.v1",original_digest:accessDigest(body.original),
+            call_digest:body.call_digest,delivered_request_digest:pmHttpRequestDigest({method:"POST",
+              raw_path:Buffer.from(COMMAND_STATUS_EDGE_PATH),query_string:Buffer.alloc(0),body:bytes},{request_bytes:131_072}),
+            full_outcome_custody:{reference:"TEST_ONLY:retained-outcome",digest:accessDigest("TEST_ONLY:retained-outcome")},
+            result:{authority_ref:a.authority_ref,profile_ref:a.profile_ref,workspace_id:i.workspace_id,environment:"paper",
+              operation:i.business_payload.operation,resource_kind:i.resource.kind,resource_id:i.resource.id,
+              idempotency_key:i.business_payload.idempotency_key,source_intent_digest:a.source_intent_digest,
+              delivery:"ACKNOWLEDGED",projection:"UNAVAILABLE",venue:"NOT_APPLICABLE",
+              business:{state:"APPLIED",receipt_ref:"TEST_ONLY:receipt",source_event_ref:"TEST_ONLY:event",revision:"1",
+                amounts:{requested:i.business_payload.amount,applied:i.business_payload.amount,pending:"0",cancelled:"0",rejected:"0"}}}};
+        const result=JSON.stringify(value);res.writeHead(200,{"content-type":"application/json",
+          "content-length":Buffer.byteLength(result),connection:"close"});res.end(result);
+      });
+    });
+    const sourceSockets=new Set<Duplex>();listeners.push({server:source,sockets:sourceSockets});
+    for(const event of ["connection","secureConnection"] as const)source.on(event,socket=>{sourceSockets.add(socket);socket.once("close",()=>sourceSockets.delete(socket));});
+    source.on("tlsClientError",()=>undefined);
+    await new Promise<void>((resolve,reject)=>{source.once("error",reject);source.listen(0,"127.0.0.1",()=>{source.off("error",reject);resolve();});});
+    const sourceAddress=source.address();if(!sourceAddress||typeof sourceAddress==="string")throw Error("TEST_ONLY ADDRESS REQUIRED");
+    const edgeConfig:EdgeCommandStatusTransportConfig={mode:"EXPLICIT_CURRENT_REQUESTER_STATUS_ONLY",
+      origin:`https://127.0.0.1:${sourceAddress.port}`,gateway_ref:gateway,tls:{key:core.key,cert:core.cert,ca:core.ca},
+      peer:{certificate_sha256:edge.pin,dns_name:"localhost"},
+      limits:{maximum_in_flight:2,deadline_ms:5000,request_bytes:131_072,response_bytes:65_536,maximum_originals:4}};
+    const first=authority(f),port=new EdgeCommandStatusTransport(first,edgeConfig,new PgCommandStatusOriginalFingerprints(ctx.pool));
+    first.bindRecoverySource(port,f.input.contract);
+    expect(await port.original(f.input)).toEqual(f.input.original);
+    const outbound=await port.prepareStatus(f.input),prepared=await first.prepare(f.input,f.body);
+    expect(outbound.prepared.assertion_ref).toBe(prepared.original_context);
+    const issued=await first.issue(prepared.original_context,f.issue);
+    // The next authority runs in a distinct OS process with a fresh pool and
+    // no parent in-memory contexts. Only TEST_ONLY pins, key material and
+    // synthetic relations/original are passed privately over IPC.
+    first.shutdown();
+    const child=fork(join(__dirname,"fixtures/command-status-recovery-child.cjs"),[],{
+      stdio:["ignore","ignore","ignore","ipc"],env:{...process.env,JITI_FS_CACHE:"false"}});
+    children.push(child);
+    const ready=new Promise<number>((resolve,reject)=>{
+      const timer=setTimeout(()=>reject(new Error("TEST_ONLY_CHILD_START_TIMEOUT")),15000);
+      child.once("error",error=>{clearTimeout(timer);reject(error);});
+      child.once("exit",code=>{clearTimeout(timer);reject(new Error(`TEST_ONLY_CHILD_EXIT_${code}`));});
+      child.on("message",(message:{type:string;port?:number;message?:string})=>{
+        if(message.type==="READY"&&message.port){clearTimeout(timer);resolve(message.port);}
+        else if(message.type==="ERROR"){clearTimeout(timer);reject(new Error(message.message));}
+      });
+    });
+    const {private_key:_private,...candidateConfig}=config;
+    const {public_key:_public,...candidateSource}=config.source;
+    child.send({type:"START",database,portfolio:f.input.intent.resource.id,
+      relations:[[owner.user_id,f.author.source],[reviewerId,f.reader.source]],original:f.input.original,contract:f.input.contract,
+      candidate:{...candidateConfig,source:candidateSource},humanPrivate:await exportPKCS8(humanKey.privateKey),
+      sourcePublic:await exportSPKI(sourceKey.publicKey),authority:{issuer:"TEST_ONLY:Core-STATUS",audience:gateway,
+        key_id:"TEST_ONLY:status-key",workload_id:workload,ttl_ms:30000,maximum_contexts:4,maximum_requests_per_context:4},
+      core:{key:core.key.toString("base64"),cert:core.cert.toString("base64"),ca:core.ca.toString("base64")},
+      peer:{certificate_sha256:edge.pin,dns_name:"localhost",workload_id:workload},edgeTransport:{...edgeConfig,
+        tls:{key:core.key.toString("base64"),cert:core.cert.toString("base64"),ca:core.ca.toString("base64")}}});
+    const childOrigin=`https://127.0.0.1:${await ready}`;
+    const beforeCallback=new Promise<unknown>((resolve,reject)=>{
+      const timer=setTimeout(()=>reject(new Error("TEST_ONLY_CHILD_PREPARE_TIMEOUT")),5000);
+      const onMessage=(message:{type:string;code?:string;result?:unknown})=>{
+        if(message.type==="PREPARED"){clearTimeout(timer);child.off("message",onMessage);resolve(message.result);}
+        if(message.type==="PREPARE_REFUSED"){clearTimeout(timer);child.off("message",onMessage);reject(new Error(message.code));}
+      };
+      child.on("message",onMessage);
+    });
+    const {signal:_signal,...retryInput}=f.input;
+    child.send({type:"PREPARE",input:retryInput,body:f.body});
+    expect(await beforeCallback).toEqual(prepared);
+    await expect(post(childOrigin,prepared.original_context,f.issue,foreign)).rejects.toThrow();
+    const replay=await post(childOrigin,prepared.original_context,f.issue,edge);
+    expect(replay.status).toBe(200);expect(replay.json).toEqual(issued);
+    const restored=new Promise<unknown>((resolve,reject)=>{
+      const timer=setTimeout(()=>reject(new Error("TEST_ONLY_CHILD_PREPARE_TIMEOUT")),5000);
+      const onMessage=(message:{type:string;result?:unknown})=>{
+        if(message.type==="PREPARED"){clearTimeout(timer);child.off("message",onMessage);resolve(message.result);}
+      };
+      child.on("message",onMessage);
+    });
+    child.send({type:"PREPARE",input:retryInput,body:f.body});
+    expect(await restored).toEqual(prepared); // Same context AND signed outbound token after restart.
+    const changed=await post(childOrigin,prepared.original_context,{...f.issue,body_utf8:f.issue.body_utf8+" "},edge);
+    expect(changed.status).not.toBe(200);
+    expect(await leases(f.workspace)).toHaveLength(1);
+    const attempt=randomUUID();await candidate.enter(issued.assertion,await proof(f,issued,attempt,"ENTER"));
+    expect((await post(childOrigin,prepared.original_context,f.issue,edge)).status).not.toBe(200);
+    // An unresolved attempt must not become an ACK during restart.
+    await candidate.resolve(await proof(f,issued,attempt,"UNKNOWN"));
+    const requestBody=completion(f,issued),path="/internal/elp210/command-source/complete";
+    const unresolved=await post(childOrigin,prepared.original_context,requestBody,edge,path);
+    expect(unresolved.status).not.toBe(200);
+    expect((await ctx.pool.query("SELECT count(*)::int AS n FROM execution_command_status_delivery_acks WHERE lease_id=$1",[issued.lease_id])).rows[0].n).toBe(0);
+    await candidate.resolve(await proof(f,issued,attempt,"COMMITTED"));
+    const accepted=await post(childOrigin,prepared.original_context,requestBody,edge,path);
+    expect(accepted.status).toBe(200);expect(accepted.json).toMatchObject({completed:true,lease_id:issued.lease_id});
+    expect(await post(childOrigin,prepared.original_context,requestBody,edge,path)).toEqual(accepted);
+    // A second authenticated callback in the new process is idempotent only
+    // for the same exact response. Do not let a different digest replace the
+    // durable acknowledgement or silently pass as the original source result.
+    const changedAck=await post(childOrigin,prepared.original_context,
+      {...requestBody,response_digest:accessDigest("TEST_ONLY different response")},edge,path);
+    expect(changedAck.status).not.toBe(200);
+    const acknowledgements=await ctx.pool.query("SELECT response_digest FROM execution_command_status_delivery_acks WHERE lease_id=$1",[issued.lease_id]);
+    expect(acknowledgements.rows).toEqual([{response_digest:requestBody.response_digest}]);
+    expect(await leases(f.workspace)).toHaveLength(1);expect(await commandRows(f.workspace)).toEqual(before);
+    const edgePrepared=new Promise<{prepared:typeof outbound.prepared}>((resolve,reject)=>{
+      const timer=setTimeout(()=>reject(new Error("TEST_ONLY_EDGE_PREPARE_TIMEOUT")),10_000);
+      const onMessage=(message:{type:string;code?:string;result?:{prepared:typeof outbound.prepared}})=>{
+        if(message.type==="EDGE_PREPARED"&&message.result){clearTimeout(timer);child.off("message",onMessage);resolve(message.result);}
+        if(message.type==="EDGE_PREPARE_REFUSED"){clearTimeout(timer);child.off("message",onMessage);reject(Error(message.code));}
+      };child.on("message",onMessage);
+    });
+    child.send({type:"EDGE_PREPARE",input:retryInput});
+    const recoveredOutbound=await edgePrepared;
+    expect(recoveredOutbound.prepared).toEqual(outbound.prepared);
+    const edgeStatus=new Promise<{result:{business:{state:string}}}>((resolve,reject)=>{
+      const timer=setTimeout(()=>reject(new Error("TEST_ONLY_EDGE_STATUS_TIMEOUT")),10_000);
+      const onMessage=(message:{type:string;code?:string;result?:{result:{business:{state:string}}}})=>{
+        if(message.type==="EDGE_STATUS_RESULT"&&message.result){clearTimeout(timer);child.off("message",onMessage);resolve(message.result);}
+        if(message.type==="EDGE_STATUS_REFUSED"){clearTimeout(timer);child.off("message",onMessage);reject(Error(message.code));}
+      };child.on("message",onMessage);
+    });
+    child.send({type:"EDGE_STATUS",input:retryInput,prepared:recoveredOutbound.prepared});
+    expect((await edgeStatus).result.business.state).toBe("APPLIED");
+    expect(requests.filter(path=>path===COMMAND_STATUS_EDGE_PATH)).toHaveLength(1);
+    expect(await leases(f.workspace)).toHaveLength(1);expect(await commandRows(f.workspace)).toEqual(before);
+    // Revoke through the real coordinated logout, not by editing a session or
+    // policy row. The already-restored context in the other process must no
+    // longer return success, and revocation must not rewrite custody or ACK.
+    await coordinatedAuth.logout(f.session.token);
+    const afterRevoke=await post(childOrigin,prepared.original_context,requestBody,edge,path);
+    expect(afterRevoke.status).not.toBe(200);
+    expect((await ctx.pool.query("SELECT response_digest FROM execution_command_status_delivery_acks WHERE lease_id=$1",[issued.lease_id])).rows)
+      .toEqual([{response_digest:requestBody.response_digest}]);
+    expect(await leases(f.workspace)).toHaveLength(1);expect(await commandRows(f.workspace)).toEqual(before);
+    const stopped = new Promise<void>(resolve => child.once("exit", () => resolve()));
+    child.send({type:"STOP"});
+    await stopped;
+  },60_000);
 
   it("binds the real stored original to a different current password session through actual pinned mTLS", async () => {
     const f = fixtures[0], service = authority(f), before = await commandRows(f.workspace);
@@ -335,6 +519,168 @@ describe.skipIf(!database).sequential("command STATUS concrete authority with re
     expect(ack.status).toBe(200); expect(ack.json).toMatchObject({ completed: true, lease_id: issued.lease_id });
     expect(await commandRows(f.workspace)).toEqual(before); // STATUS never SUBMITs or rewrites the original.
   }, 30_000);
+
+  it("rejoins the winning context after two authorities prepare before the first lease commits", async () => {
+    const f=fixtures[5],winner=authority(f),loser=authority(f);
+    f.input.call_digest=accessDigest({action:"STATUS",authority:"CURRENT_REQUESTER",requester_digest:accessDigest(f.input.actor),
+      original:f.input.original,authorization_digest:accessDigest(f.input.authorization),intent_hash:f.input.authorization.intent_hash});
+    f.body=JSON.stringify({...JSON.parse(f.body),call_digest:f.input.call_digest});
+    f.issue.binding_digest=accessDigest({original:f.input.original,call:f.input.call_digest});
+    await new PgCommandStatusOriginalFingerprints(ctx.pool).pin({
+      binding_digest:accessDigest({gateway_ref:gateway,authorization_digest:f.input.original.authorization_digest,
+        intent_hash:f.input.original.intent_hash,source_intent_digest:f.input.original.source_intent_digest}),
+      original_digest:accessDigest(f.input.original),status_bytes_digest:accessDigest("TEST_ONLY:retained source wire"),
+      pm_status_request_digest:f.issue.request_digest,workspace_id:f.workspace,
+      key_hash:accessDigest(f.input.intent.business_payload.idempotency_key),intent_hash:f.stored.hash,
+      intent_digest:accessDigest(f.input.intent),authorization_digest:accessDigest(f.input.authorization),actor_id:f.stored.actor,
+    });
+    winner.bindRecoverySource({original:async()=>structuredClone(f.input.original)},f.input.contract);
+    loser.bindRecoverySource({original:async()=>structuredClone(f.input.original)},f.input.contract);
+    const first=await winner.prepare(f.input,f.body),rival=await loser.prepare(f.input,f.body);
+    expect(rival).toEqual(first);
+    const issued=await winner.issue(first.original_context,f.issue);
+    await expect(loser.issue(rival.original_context,f.issue))
+      .rejects.toMatchObject({code:"COMMAND_STATUS_ASSERTION_CUSTODY_RECOVERY_REQUIRED"});
+    // The exact callback retry joins the already-issued winner directly; it
+    // neither needs a new PREPARE nor creates a second lease or ACK.
+    expect(await loser.issue(rival.original_context,f.issue)).toEqual(issued);
+    expect(await loser.prepare(f.input,f.body)).toEqual(first);
+    expect(await leases(f.workspace)).toHaveLength(1);
+    const attempt=randomUUID();await candidate.enter(issued.assertion,await proof(f,issued,attempt,"ENTER"));
+    await candidate.resolve(await proof(f,issued,attempt,"ROLLED_BACK"));
+    await winner.complete(first.original_context,completion(f,issued));
+    expect(await leases(f.workspace)).toHaveLength(1);
+    expect(await winner.prepare(f.input,f.body)).toEqual(first);
+    expect(await leases(f.workspace)).toHaveLength(1);
+    // Simulate a fresh authority with no process-local context in the narrow
+    // gap after the exact terminal/Edge ACK but before Core consumes the
+    // retained response. It must restore the linked lease, never treat the
+    // persisted preparation as an unissued reservation and mint a new lease.
+    const afterRestart=authority(f);
+    afterRestart.bindRecoverySource({original:async()=>structuredClone(f.input.original)},f.input.contract);
+    expect(await afterRestart.prepare(f.input,f.body)).toEqual(first);
+    await expect(afterRestart.issue(first.original_context,f.issue)).rejects.toThrow();
+    expect(await leases(f.workspace)).toHaveLength(1);
+    await afterRestart.acknowledgeRetainedRead(first.original_context,f.input);
+    const next=await afterRestart.prepare(f.input,f.body);
+    expect(next.original_context).not.toBe(first.original_context);
+    // A stale process retaining the previous context cannot issue a successor
+    // after the new local read was admitted, even though its old ACK remains.
+    await expect(winner.issue(first.original_context,{...f.issue,delivery_sequence:1,previous_lease_id:issued.lease_id}))
+      .rejects.toMatchObject({code:"CURRENT_HUMAN_COMMAND_STATUS_PREPARATION_RETIRED"});
+    const second=await afterRestart.issue(next.original_context,f.issue);
+    expect(second.lease_id).not.toBe(issued.lease_id);
+    const secondAttempt=randomUUID();await candidate.enter(second.assertion,await proof(f,second,secondAttempt,"ENTER"));
+    await candidate.resolve(await proof(f,second,secondAttempt,"ROLLED_BACK"));
+    await afterRestart.complete(next.original_context,completion(f,second));
+    expect(await leases(f.workspace)).toHaveLength(2);
+  },30_000);
+
+  it("recovers a persisted pre-lease context in a new OS process over pinned mTLS without inventing a source receipt", async () => {
+    const f=fixtures[6];
+    f.input.call_digest=accessDigest({action:"STATUS",authority:"CURRENT_REQUESTER",requester_digest:accessDigest(f.input.actor),
+      original:f.input.original,authorization_digest:accessDigest(f.input.authorization),intent_hash:f.input.authorization.intent_hash});
+    f.body=JSON.stringify({...JSON.parse(f.body),call_digest:f.input.call_digest});
+    f.issue.binding_digest=accessDigest({original:f.input.original,call:f.input.call_digest});
+    await new PgCommandStatusOriginalFingerprints(ctx.pool).pin({
+      binding_digest:accessDigest({gateway_ref:gateway,authorization_digest:f.input.original.authorization_digest,
+        intent_hash:f.input.original.intent_hash,source_intent_digest:f.input.original.source_intent_digest}),
+      original_digest:accessDigest(f.input.original),status_bytes_digest:accessDigest("TEST_ONLY:retained source wire"),
+      pm_status_request_digest:f.issue.request_digest,workspace_id:f.workspace,
+      key_hash:accessDigest(f.input.intent.business_payload.idempotency_key),intent_hash:f.stored.hash,
+      intent_digest:accessDigest(f.input.intent),authorization_digest:accessDigest(f.input.authorization),actor_id:f.stored.actor,
+    });
+    const original={original:async()=>structuredClone(f.input.original)};
+    const first=authority(f);first.bindRecoverySource(original,f.input.contract);
+    const prepared=await first.prepare(f.input,f.body);
+    expect(await leases(f.workspace)).toHaveLength(0);
+    const reserved=await ctx.pool.query("SELECT * FROM execution_command_status_preparations WHERE workspace_id=$1",[f.workspace]);
+    expect(reserved.rowCount).toBe(1);
+    expect(JSON.stringify(reserved.rows)).not.toContain(prepared.token);
+    expect(JSON.stringify(reserved.rows)).not.toContain(prepared.original_context);
+    first.shutdown();
+    const child=fork(join(__dirname,"fixtures/command-status-recovery-child.cjs"),[],{
+      stdio:["ignore","ignore","ignore","ipc"],env:{...process.env,JITI_FS_CACHE:"false"}});
+    children.push(child);
+    const ready=new Promise<number>((resolve,reject)=>{
+      const timer=setTimeout(()=>reject(new Error("TEST_ONLY_CHILD_START_TIMEOUT")),15000);
+      child.once("error",error=>{clearTimeout(timer);reject(error);});
+      child.once("exit",code=>{clearTimeout(timer);reject(new Error(`TEST_ONLY_CHILD_EXIT_${code}`));});
+      child.on("message",(message:{type:string;port?:number;message?:string})=>{
+        if(message.type==="READY"&&message.port){clearTimeout(timer);resolve(message.port);}
+        else if(message.type==="ERROR"){clearTimeout(timer);reject(new Error(message.message));}
+      });
+    });
+    const {private_key:_private,...candidateConfig}=config;
+    const {public_key:_public,...candidateSource}=config.source;
+    const startMessage={type:"START",database,portfolio:f.input.intent.resource.id,
+      relations:[[owner.user_id,f.author.source],[reviewerId,f.reader.source]],original:f.input.original,contract:f.input.contract,
+      candidate:{...candidateConfig,source:candidateSource},humanPrivate:await exportPKCS8(humanKey.privateKey),
+      sourcePublic:await exportSPKI(sourceKey.publicKey),authority:{issuer:"TEST_ONLY:Core-STATUS",audience:gateway,
+        key_id:"TEST_ONLY:status-key",workload_id:workload,ttl_ms:30000,maximum_contexts:4,maximum_requests_per_context:4},
+      core:{key:core.key.toString("base64"),cert:core.cert.toString("base64"),ca:core.ca.toString("base64")},
+      peer:{certificate_sha256:edge.pin,dns_name:"localhost",workload_id:workload}};
+    child.send(startMessage);
+    const origin=`https://127.0.0.1:${await ready}`;
+    await expect(post(origin,prepared.original_context,f.issue,foreign)).rejects.toThrow();
+    expect((await post(origin,prepared.original_context,{...f.issue,body_utf8:f.issue.body_utf8+" "},edge)).status).not.toBe(200);
+    expect(await leases(f.workspace)).toHaveLength(0);
+    const response=await post(origin,prepared.original_context,f.issue,edge);
+    expect(response.status).toBe(200);
+    const result=response.json as unknown as Issued;
+    expect(result.lease_id).toBeTruthy();
+    expect(await leases(f.workspace)).toHaveLength(1);
+    expect((await ctx.pool.query("SELECT count(*)::int AS n FROM execution_command_status_delivery_acks WHERE lease_id=$1",[result.lease_id])).rows[0].n).toBe(0);
+    const retry=new Promise<unknown>((resolve,reject)=>{
+      const timer=setTimeout(()=>reject(new Error("TEST_ONLY_CHILD_PREPARE_TIMEOUT")),5000);
+      child.on("message",(message:{type:string;result?:unknown;code?:string})=>{
+        if(message.type==="PREPARED"){clearTimeout(timer);resolve(message.result);}
+        else if(message.type==="PREPARE_REFUSED"){clearTimeout(timer);reject(new Error(message.code));}
+      });
+    });
+    const {signal:_signal,...retryInput}=f.input;
+    child.send({type:"PREPARE",input:retryInput,body:f.body});
+    expect(await retry).toEqual(prepared);
+    // Resolve only the disposable TEST_ONLY attempt so it cannot consume the
+    // shared test cell's capacity in later cases.
+    const attempt=randomUUID();
+    await candidate.enter(result.assertion,await proof(f,result,attempt,"ENTER"));
+    await candidate.resolve(await proof(f,result,attempt,"ROLLED_BACK"));
+    const acknowledged=await post(origin,prepared.original_context,completion(f,result),edge,"/internal/elp210/command-source/complete");
+    expect(acknowledged.status).toBe(200);
+    const stopped=new Promise<void>(resolve=>child.once("exit",()=>resolve()));
+    child.send({type:"STOP"});await stopped;
+    // Restart again after durable Edge ACK but before retained STATUS is
+    // consumed. This exercises the recovery gap in an entirely new process.
+    const afterAck=fork(join(__dirname,"fixtures/command-status-recovery-child.cjs"),[],{
+      stdio:["ignore","ignore","ignore","ipc"],env:{...process.env,JITI_FS_CACHE:"false"}});
+    children.push(afterAck);
+    const readyAfterAck=new Promise<number>((resolve,reject)=>{
+      const timer=setTimeout(()=>reject(new Error("TEST_ONLY_CHILD_RESTART_TIMEOUT")),15000);
+      afterAck.once("error",error=>{clearTimeout(timer);reject(error);});
+      afterAck.once("exit",code=>{clearTimeout(timer);reject(new Error(`TEST_ONLY_CHILD_EXIT_${code}`));});
+      afterAck.on("message",(message:{type:string;port?:number;message?:string})=>{
+        if(message.type==="READY"&&message.port){clearTimeout(timer);resolve(message.port);}
+        else if(message.type==="ERROR"){clearTimeout(timer);reject(new Error(message.message));}
+      });
+    });
+    afterAck.send(startMessage);
+    const afterAckOrigin=`https://127.0.0.1:${await readyAfterAck}`;
+    const preparedAfterAck=new Promise<unknown>((resolve,reject)=>{
+      const timer=setTimeout(()=>reject(new Error("TEST_ONLY_CHILD_PREPARE_TIMEOUT")),5000);
+      afterAck.on("message",(message:{type:string;result?:unknown;code?:string})=>{
+        if(message.type==="PREPARED"){clearTimeout(timer);resolve(message.result);}
+        else if(message.type==="PREPARE_REFUSED"){clearTimeout(timer);reject(new Error(message.code));}
+      });
+    });
+    afterAck.send({type:"PREPARE",input:retryInput,body:f.body});
+    expect(await preparedAfterAck).toEqual(prepared);
+    expect((await post(afterAckOrigin,prepared.original_context,f.issue,edge)).status).not.toBe(200);
+    expect(await leases(f.workspace)).toHaveLength(1);
+    expect((await ctx.pool.query("SELECT count(*)::int AS n FROM execution_command_status_delivery_acks WHERE lease_id=$1",[result.lease_id])).rows[0].n).toBe(1);
+    const restartedStopped=new Promise<void>(resolve=>afterAck.once("exit",()=>resolve()));
+    afterAck.send({type:"STOP"});await restartedStopped;
+  },60_000);
 
   it("keeps UNKNOWN on the same PG attempt until signed original recovery and separate completion", async () => {
     const f = fixtures[1], service = authority(f), prepared = await service.prepare(f.input, f.body);
@@ -379,6 +725,10 @@ describe.skipIf(!database).sequential("command STATUS concrete authority with re
     const retainedAck=await ctx.pool.query("SELECT request_digest,response_digest,terminal_receipt_digest FROM execution_command_status_delivery_acks WHERE lease_id=$1",[issued.lease_id]);
     expect(retainedAck.rows).toEqual([{request_digest:issued.request_digest,response_digest:ack.response_digest,
       terminal_receipt_digest:terminal.terminal_receipt_digest}]);
+    // Edge completion ACK precedes delivery of its retained STATUS response.
+    // A caller racing in this gap must stay on the same context.
+    expect((await service.prepare(f.input, f.body)).original_context).toBe(prepared.original_context);
+    await service.acknowledgeRetainedRead(prepared.original_context,f.input);
     expect((await service.prepare(f.input, f.body)).original_context).not.toBe(prepared.original_context);
     expect(await leases(f.workspace)).toEqual([terminal]); // ACK/preparation do not issue replacement credentials.
     // The capacity-limited process may retry its same context only after the
@@ -413,11 +763,12 @@ describe.skipIf(!database).sequential("command STATUS concrete authority with re
 
   it("actual coordinated password-session logout fences the prepared requester before any ISSUE", async () => {
     const f = fixtures[3], service = authority(f), prepared = await service.prepare(f.input, f.body), before = await commandRows(f.workspace);
+    const finishedBefore = (await ctx.pool.query("SELECT count(*)::int n FROM elp210_candidate.mutations WHERE state='FINISHED'")).rows[0].n;
     await coordinatedAuth.logout(f.session.token);
     const row = (await ctx.pool.query("SELECT state,revoke_reason FROM auth_sessions WHERE session_id=$1", [f.input.actor.session_id])).rows[0];
     expect(row).toEqual({ state: "REVOKED", revoke_reason: "logout" });
     await expect(service.issue(prepared.original_context, f.issue)).rejects.toMatchObject({ code: "CURRENT_ACTOR_AUTHORITY_REQUIRED" });
     expect(await leases(f.workspace)).toHaveLength(0); expect(await commandRows(f.workspace)).toEqual(before);
-    expect((await ctx.pool.query("SELECT count(*)::int n FROM elp210_candidate.mutations WHERE state='FINISHED'")).rows[0].n).toBe(2);
+    expect((await ctx.pool.query("SELECT count(*)::int n FROM elp210_candidate.mutations WHERE state='FINISHED'")).rows[0].n).toBe(finishedBefore + 1);
   }, 30_000);
 });

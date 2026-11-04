@@ -12,13 +12,14 @@ import { ExecutionReadScopeError } from "./read-scope";
 import { managerCurrentMetadataDigest, managerCurrentSelectionCatalogue, qualifyManagerCurrentMetadata,
   type ManagerCurrentCommissioning, type ManagerCurrentMetadata } from "./manager-current-publication";
 import type { ExecutionReadPublicationRequest } from "./read-publication";
+import { siblingSchemas } from "./sibling-source-seam";
 
 export interface ManagerCurrentAccountsOptions {
   request: ExecutionReadPublicationRequest;
   commissioning: ManagerCurrentCommissioning;
   source: (request: ExecutionReadPublicationRequest) => Promise<unknown | null>;
   core: Pick<CurrentViewCoreComposition, "read" | "deliver"> &
-    Partial<Pick<CurrentViewCoreComposition, "hasNativeCurrentRelations" | "deliverNative">>;
+    Partial<Pick<CurrentViewCoreComposition, "hasNativeCurrentRelations" | "deliverNative" | "currentReadResponseLimit">>;
   now?: () => number;
 }
 const digest = z.string().regex(/^sha256:[a-f0-9]{64}$/u);
@@ -31,7 +32,7 @@ const pageSchema = z.object({ schema_version: z.literal("portal.execution.manage
   rows: z.array(z.object({ entity_id: accessText, revision: digest,
     payload: z.record(z.unknown()) }).strict()).length(1), next_cursor: z.null(), resume_cursor: z.null(),
 }).strict();
-const decimal = z.string().max(128).regex(/^-?(?:0|[1-9][0-9]*)(?:\.[0-9]+)?$/u);
+const decimal = z.string().max(128).regex(/^-?(?:0|[1-9][0-9]*)(?:\.[0-9]+)?$(?![\s\S])/u);
 const tagged = z.object({ kind: z.enum(["NULL", "TEXT", "DECIMAL", "TIMESTAMP"]), value: z.unknown() }).strict();
 const aliases = ["deployments", "accounts", "account_balances", "margin_balances", "account_sync", "broker_sync",
   "venue_accounts", "portfolios", "portfolio_allocations", "positions", "sessions", "orders", "fills", "performance",
@@ -83,9 +84,13 @@ export class ManagerCurrentAccounts {
   private readonly source: ManagerCurrentAccountsOptions["source"];
   private readonly core: ManagerCurrentAccountsOptions["core"];
   private readonly now: () => number;
+  private readonly readMaxBytes: number;
   constructor(options: ManagerCurrentAccountsOptions) {
     this.request = structuredClone(options.request); this.commissioning = options.commissioning;
     this.source = options.source; this.core = options.core; this.now = options.now ?? Date.now;
+    const configuredLimit = options.core.currentReadResponseLimit?.() ?? 65_536;
+    if (!Number.isSafeInteger(configuredLimit) || configuredLimit < 1) throw new Error("MANAGER_CURRENT_READ_LIMIT_INVALID");
+    this.readMaxBytes = Math.min(configuredLimit, 65_536);
   }
   private async metadata(): Promise<ManagerCurrentMetadata> {
     let input: unknown;
@@ -95,12 +100,13 @@ export class ManagerCurrentAccounts {
     return qualifyManagerCurrentMetadata(input, this.request, { commissioning: this.commissioning, nowMs: this.now() });
   }
   hasNativeCurrentRelations(): boolean { return this.core.hasNativeCurrentRelations?.() === true; }
-  private async prepare(principal: ResourceReadPrincipal, resourceId: string, environment?: ResourceEnvironment): Promise<PreparedAccount> {
+  private async prepare(principal: ResourceReadPrincipal, resourceId: string, environment?: ResourceEnvironment,
+    identityOnly = false): Promise<PreparedAccount> {
     const actor = structuredClone(principal), accountId = accessText.parse(resourceId);
     if (actor.workspaceId !== this.request.workspace_id || this.request.environment !== "paper" || environment && environment !== "paper")
       return refuse("EXECUTION_READ_NOT_AVAILABLE", 404);
     const metadata = await this.metadata(), catalogue = managerCurrentSelectionCatalogue(metadata);
-    const relevant = catalogue.filter(selection => selection.grain !== "relation.account_policies" &&
+    const relevant = catalogue.filter(selection => (identityOnly ? selection.grain === "manager.account" : selection.grain !== "relation.account_policies") &&
       selection.entities.some(entity => entity.account_id === accountId));
     const identities = relevant.filter(selection => selection.grain === "manager.account")
       .flatMap(selection => selection.entities.filter(entity => entity.account_id === accountId));
@@ -124,14 +130,31 @@ export class ManagerCurrentAccounts {
   }
   async readNative(principal: ResourceReadPrincipal, resourceId: string, environment: ResourceEnvironment | undefined,
     response: ServerResponse, beforeDispatch: () => void): Promise<void> {
+    return this.deliverNativeAccount(principal, resourceId, environment, response, beforeDispatch, false);
+  }
+  /** Identity-only sibling projection. Optional financial fields are omitted:
+   * Account360 balances do not establish the semantics of wallet/equity. */
+  async readNativeProfile(principal: ResourceReadPrincipal, resourceId: string, environment: ResourceEnvironment | undefined,
+    response: ServerResponse, beforeDispatch: () => void): Promise<void> {
+    return this.deliverNativeAccount(principal, resourceId, environment, response, beforeDispatch, true);
+  }
+  private async deliverNativeAccount(principal: ResourceReadPrincipal, resourceId: string, environment: ResourceEnvironment | undefined,
+    response: ServerResponse, beforeDispatch: () => void, profile: boolean): Promise<void> {
     if (!this.hasNativeCurrentRelations() || !this.core.deliverNative)
       return refuse("EXECUTION_READ_AUTHORITY_UNAVAILABLE", 503);
-    const prepared = await this.prepare(principal, resourceId, environment);
+    const prepared = await this.prepare(principal, resourceId, environment, profile);
     // Keep requested account AND every source-selection resource. A source pin
     // may name another account; neither scope may stand in for the other.
     const selections = [prepared.outer, ...prepared.relevant.map(source => selected(prepared.metadata, source))];
     await this.core.deliverNative(prepared.actor, selections, response,
-      async read => Buffer.from(JSON.stringify(await this.build(prepared, read)), "utf8"), {
+      async read => {
+        const account = await this.build(prepared, read);
+        const result = profile ? siblingSchemas["account-profile"].parse({
+          schema_version: "portal.execution.account-profile.v1", workspace_id: prepared.actor.workspaceId,
+          record_authority: "PORTAL_PROJECTION", read_at_ms: account.read_at_ms, account_id: prepared.accountId,
+        }) : account;
+        return Buffer.from(JSON.stringify(result), "utf8");
+      }, {
         validateAfterEnter: () => this.confirm(prepared.metadata),
         validateBeforeDispatch: () => {
           // PURE expiry/commissioning recheck after final Core COMMIT. No
@@ -151,10 +174,10 @@ export class ManagerCurrentAccounts {
         for (const entity of selection.entities.filter(candidate => candidate.account_id === accountId)) {
           if (rows[alias].length >= 200) { truncated = true; continue; }
           const input: SelectedCurrentViewEdgeRead = { authority: selected(metadata, selection),
-            resource: selection.resource_ref, query: { limit: 1, max_bytes: 65_536, entity_id: entity.entity_id } };
+            resource: selection.resource_ref, query: { limit: 1, max_bytes: this.readMaxBytes, entity_id: entity.entity_id } };
           const response = await read(input);
           try {
-            if (response.status !== 200 || response.body.byteLength > 65_536) return refuse();
+            if (response.status !== 200 || response.body.byteLength > this.readMaxBytes) return refuse();
             const parsed: unknown = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(response.body));
             if (!Buffer.from(JSON.stringify(parsed), "utf8").equals(response.body)) return refuse();
             const page = pageSchema.parse(parsed), row = page.rows[0]!;

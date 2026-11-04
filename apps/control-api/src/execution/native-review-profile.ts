@@ -23,9 +23,11 @@ export function nativeResearchReadAllowed(config: {EXECUTION_LOCAL_PROJECTION_WO
   if(method!=="GET")return false;
   // Basic Account360 has a distinct commissioned three-grain CURRENT
   // composer, not the broader native Manager overview dataset. Only that
-  // installed composer opens this exact route; it still checks ordinary
+  // installed composer opens these exact account routes; they still check
   // business.read_all/current source authority at read and final delivery.
-  if(managerCurrentAccount&&/^\/api\/v1\/execution\/resources\/accounts\/[A-Za-z0-9._:@-]{1,160}$(?![\s\S])/u.test(path))return true;
+  if(managerCurrentAccount&&(
+    /^\/api\/v1\/execution\/resources\/accounts\/[A-Za-z0-9._:@-]{1,160}$(?![\s\S])/u.test(path)||
+    /^\/api\/v1\/execution\/accounts\/[A-Za-z0-9._:-]{1,191}\/profile$(?![\s\S])/u.test(path)))return true;
   // Private provider presence widens only these named finite Paper routes. It is not
   // a public flag or a grant; the provider still fences the physical send.
   if(nativeCurrentAccount&&(/^\/api\/v1\/execution\/manager\/(?:accounts|alphas|portfolios|deployments)\/[A-Za-z0-9][A-Za-z0-9._:-]{0,255}\/overview$(?![\s\S])/u.test(path)||

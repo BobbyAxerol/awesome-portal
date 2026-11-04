@@ -129,7 +129,7 @@ describe("UDB03 retained reader and Core-only read delegation",()=>{
   });
   it("actual HTTP guards preserve Core workspace and reject mutations, streams and revoked sessions",async()=>{
     const app=await createControlApiApp(cfg(),core,domain);const server=app.getHttpAdapter().getInstance();
-    const auth=app.get(AuthService);let session=await auth.previewAutoSession();expect(session).not.toBeNull();
+    const auth=app.get(AuthService);let session=await auth.previewAutoSession(undefined);expect(session).not.toBeNull();
     const headers={cookie:`__Host-portal_session=${session!.token}`};
     const get=(path:string)=>server.inject({method:"GET",url:path,headers});
     try{
@@ -176,7 +176,7 @@ describe("UDB03 retained reader and Core-only read delegation",()=>{
       // Enabling an account never resurrects a session revoked while disabled.
       // Continue the retained-access checks with a fresh authenticated session.
       expect((await get("/api/v1/execution/retained-review")).statusCode).toBe(401);
-      session=await auth.previewAutoSession();expect(session).not.toBeNull();
+      session=await auth.previewAutoSession(undefined);expect(session).not.toBeNull();
       headers.cookie=`__Host-portal_session=${session!.token}`;
       expect((await server.inject({method:"POST",url:"/api/v1/execution/governance/approvals",headers,payload:{}})).statusCode).toBe(403);
       expect((await get(`/api/v1/execution/governance/approvals/not_real/r1?workspace_id=${ws}`)).statusCode).toBe(404);

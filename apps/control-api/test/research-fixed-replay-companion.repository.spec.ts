@@ -1,5 +1,6 @@
 import { describe,expect,it,vi } from "vitest";
 import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { createHash } from "node:crypto";
 import { ResearchFixedReplayCompanionRepository } from "../src/research/fixed-replay-companion.repository";
 import { FixedReplayCompanionQuerySchema } from "../src/research/fixed-replay-companion.contract";
@@ -61,6 +62,7 @@ describe("transactional P05-bound fixed replay custody",()=>{
     expect(native[10]?.profile_id).toBe('p10.delta-event-driven-limit-oco-fixed-1h.v1');
     expect(native[11]?.profile_id).toBe('p10.delta-event-driven-limit-oco-search-1h.v1');
     for(const profile of native)for(const mutation of ['none','route','timeframe','edition','digest']){
+      if(profile.descriptor.schema_version!=='research.native-route-profile.v1')throw new Error('expected native profile');
       const h=privateHarness([],true),hash=(s:string)=>createHash('sha256').update(s).digest('hex');
       const receipt={...JSON.parse(h.seal.run_receipt_json),execution_profile_id:profile.profile_id,
         execution_profile_digest:profile.profile_digest};
@@ -70,14 +72,15 @@ describe("transactional P05-bound fixed replay custody",()=>{
       const manifest={...h.seal.manifest,manifest_digest,execution_profile_id:profile.profile_id,
         execution_profile_digest:profile.profile_digest};
       const seal={...h.seal,manifest_digest,manifest,companion_digest:sha256ResearchJson(manifest),artifact_manifest_json,run_receipt_json};
-      h.state.binding={...manifest,requested_spec:{protocol:'three_window_decay',execution_route:profile.descriptor.execution_route,
+      const requested_spec={protocol:'three_window_decay',execution_route:String(profile.descriptor.execution_route),
         data:{dataset_id:'crypto-binance-1m',symbol:manifest.market_symbol,timeframe:'1h'},
-        alpha_binding:{alpha_version_id:profile.descriptor.alpha_binding_requirements.alpha_version_id},
+        alpha_binding:{alpha_version_id:String(profile.descriptor.alpha_binding_requirements.alpha_version_id)},
         windows:{oos:{start:new Date(manifest.source.oos_start_utc_ms).toISOString(),
-          end_exclusive:new Date(manifest.source.oos_end_exclusive_utc_ms).toISOString()}}}} as any;
-      if(mutation==='route')h.state.binding.requested_spec.execution_route='signal_notional';
-      if(mutation==='timeframe')h.state.binding.requested_spec.data.timeframe='4h';
-      if(mutation==='edition')h.state.binding.requested_spec.alpha_binding.alpha_version_id='av_delta_rsi_polynomial_alpha_1_0_1';
+          end_exclusive:new Date(manifest.source.oos_end_exclusive_utc_ms).toISOString()}}};
+      h.state.binding={...manifest,requested_spec} as any;
+      if(mutation==='route')requested_spec.execution_route='signal_notional';
+      if(mutation==='timeframe')requested_spec.data.timeframe='4h';
+      if(mutation==='edition')requested_spec.alpha_binding.alpha_version_id='av_delta_rsi_polynomial_alpha_1_0_1';
       if(mutation==='digest')h.state.binding.execution_profile_digest='0'.repeat(64);
       if(mutation==='none')expect(await h.repository.seal(replayScope,seal)).toEqual({replayed:false});
       else await expect(h.repository.seal(replayScope,seal)).rejects.toMatchObject({status:409});
@@ -192,7 +195,7 @@ describe("bounded fixed replay repository reads",()=>{
     await expect(noCustody.repository.page(replayScope,"fixed-replay-run",FixedReplayCompanionQuerySchema.parse({}),()=>{throw new Error("stale cursor");})).rejects.toMatchObject({status:503});
   });
   it("migration keeps append-only RLS custody and serializes append/finalization independently of repository",()=>{
-    const sql=readFileSync(new URL("../migrations/1723680000088_research-fixed-replay-companion.sql",import.meta.url),"utf8");
+    const sql=readFileSync(join(__dirname,"../migrations/1723680000088_research-fixed-replay-companion.sql"),"utf8");
     for(const marker of ["FORCE ROW LEVEL SECURITY","portal_research_runtime","GRANT SELECT,INSERT","BEFORE UPDATE OR DELETE",
       "prevent_immutable_log_mutation","prevent_fixed_replay_append_after_seal","validate_fixed_replay_finalization",
       "pg_advisory_xact_lock","FOREIGN KEY(workspace_id,artifact_id)","lag(at_utc_ms)","state='SEALED'"])

@@ -1,7 +1,7 @@
 import {describe,it,expect} from "vitest";
 import {bindImportedSearch,importedSearchRecipe} from "../src/research/imported-search.binding";
 import type {ResearchRequestedSpec} from "../src/research/preflight.contract";
-import {executionRecipes,executionRecipe,executionRecipeActivationReason,executionRecipeQualification} from "../src/research/execution-recipes";
+import {executionRecipes,executionRecipe,executionRecipeActivationReason,executionRecipeQualification,type ExecutionRecipe} from "../src/research/execution-recipes";
 import {currentSourceExecutionPair,currentSourceRetainedMethod} from "../src/research/current-source-profile";
 import {importedRetainedBinding} from "../src/research/imported-search.read";
 import {recipeDigest} from "../src/research/execution-recipes";
@@ -13,8 +13,11 @@ const declaration={schema_version:"research.alpha-source.v1",entrypoint:"generat
   warmup_bars:256,determinism:{seed_required:true},parameter_space:{
     length:{kind:"int_range",low:2,high:10,step:2},scale:{kind:"float_range",low:0.1,high:1.1,step:0.1},
     direction:{kind:"categorical",values:[-1,1]},fixed:{kind:"fixed",value:5}}};
-const spec=(patch={})=>({schema_version:"research.requested-spec.v2",data:{timeframe:"1h"},protocol:"advanced",
-  optimization_mode:"mode_1_decay",optimization_schedule:"global",random_seed:42,parameter_space_overrides:[],...patch}) as ResearchRequestedSpec;
+const spec=(patch={}):ResearchRequestedSpec=>({...wfoRequested(),schema_version:"research.requested-spec.v2",
+  data:{...wfoRequested().data,timeframe:"1h"},protocol:"advanced",optimization_mode:"mode_1_decay",
+  optimization_schedule:"global",random_seed:42,parameter_space_overrides:[],...patch});
+type ImportedRecipe=Extract<ExecutionRecipe,{descriptor:{schema_version:"research.full05-imported-profile.v1"}}>;
+type ExpandedImportedRecipe=Extract<ExecutionRecipe,{adapter_kind:"IMPORTED_SEARCH";descriptor:{schema_version:"research.expanded-trial-profile.v1"}}>;
 const bind=(patch={})=>bindImportedSearch(spec(patch),declaration,"a".repeat(64),"generate_signals");
 describe("FULL05 confined imported search custody",()=>{
   it("preserves all declaration kinds and narrows numeric bounds without widening steps",()=>{
@@ -42,7 +45,7 @@ describe("FULL05 confined imported search custody",()=>{
     expect(importedSearchRecipe(spec({optimization_mode:"mode_2_sbb",optimization_schedule:"per_fold_causal"}))).toBeNull();
   });
   it("never inherits built-in Delta qualification or preview-long limits",()=>{
-    const rows=executionRecipes.filter(row=>row.descriptor.schema_version==="research.full05-imported-profile.v1");expect(rows).toHaveLength(27);
+    const rows=executionRecipes.filter((row):row is ImportedRecipe=>row.descriptor.schema_version==="research.full05-imported-profile.v1");expect(rows).toHaveLength(27);
     for(const row of rows){
       expect(row.preview_override).toBeNull();expect(row.budgets).toMatchObject({cpu_seconds:120,wall_seconds:240,max_warmup_bars:4096});
       expect(currentSourceExecutionPair(row.profile_id,row.profile_digest)).toEqual(row.descriptor.current_source);
@@ -62,7 +65,7 @@ describe("FULL05 confined imported search custody",()=>{
     }
   });
   it("qualifies expanded imported recipes with their own budgets and product receipts, not predecessor proof",()=>{
-    const rows=executionRecipes.filter(row=>row.adapter_kind==="IMPORTED_SEARCH"
+    const rows=executionRecipes.filter((row):row is ExpandedImportedRecipe=>row.adapter_kind==="IMPORTED_SEARCH"
       && row.descriptor.schema_version==="research.expanded-trial-profile.v1");
     expect(rows).toHaveLength(27);
     for(const row of rows){

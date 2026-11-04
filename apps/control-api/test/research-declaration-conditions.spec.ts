@@ -11,7 +11,7 @@ const profiles=read("research-foundation.atlas-current.valid.json").portal_admis
 const spec={schema_version:"research.requested-spec.v1",protocol:"advanced",execution_route:"signal_notional",
  data:{timeframe:"1h"},client:{engine_release_id:"er_quantbt_111"},optuna_trials:3,random_seed:42,
  optimization_mode:"mode_1_decay",optimization_schedule:"global",early_stopping:null,
- walk_forward:{frequency:"weekly",window_mode:"expanding"},route_params:{},optimization_config:{},parameter_space_overrides:[]} as ResearchRequestedSpec;
+ walk_forward:{frequency:"weekly",window_mode:"expanding"},route_params:{},optimization_config:{},parameter_space_overrides:[]} as unknown as ResearchRequestedSpec; // Deliberately partial declaration for this estimator fixture.
 describe("DR-09 source-bound advisory conditions",()=>{
  it("publishes executable-profile estimates, not a token or may_create_run grant",()=>{
    const r=declarationConditions(spec,example.metadata,profiles,["1h"]);

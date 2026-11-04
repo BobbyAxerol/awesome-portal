@@ -159,6 +159,7 @@ import { ManagerListsController } from "./manager-lists/manager-lists.controller
 import { ManagerListsRepository } from "./manager-lists/manager-lists.repository";
 import { ManagerListsService } from "./manager-lists/manager-lists.service";
 import { ManagerModelController } from "./execution-v2/manager-model.controller";
+import { SiblingSourceDarkController } from "./execution-v2/sibling-source-dark.controller";
 import { ManagerModelService } from "./execution-v2/manager-model.service";
 import { ManagerScoreRevisionController } from "./execution-v2/manager-score-revision.controller";
 import { ManagerScoreRevisionService } from "./execution-v2/manager-score-revision.service";
@@ -434,6 +435,7 @@ export class AppModule implements OnApplicationShutdown {
         ProfileReadController,
         ManagerListsController,
         ManagerModelController,
+        SiblingSourceDarkController,
         ManagerScoreRevisionController,
         ManagerSeriesController,
         AlphaFleetRealtimeController,

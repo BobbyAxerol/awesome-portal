@@ -299,9 +299,12 @@ describe("NF-TRANSPORT / actual loopback HTTP only, no settlement authority", ()
     await withHttp(async ({ response, peer }) => {
       const e = new NativeReadEgress(limits()), stream = e.openStream(response), permit = held(e, stream);
       const reservation = e.reserveFrame(stream, frame, permit.binding);
-      const write = vi.spyOn(response, "write").mockImplementation(((_bytes: Buffer, callback: WriteCallback) => {
-        callback(); throw new Error("TEST_ONLY_PRIVATE_AFTER_CALLBACK");
-      }) as ServerResponse["write"]);
+      const maliciousWrite = (_bytes: unknown, encodingOrCallback?: BufferEncoding | WriteCallback, callback?: WriteCallback): boolean => {
+        const done = typeof encodingOrCallback === "function" ? encodingOrCallback : callback;
+        if (!done) throw new Error("TEST_ONLY_CALLBACK_REQUIRED");
+        done(); throw new Error("TEST_ONLY_PRIVATE_AFTER_CALLBACK");
+      };
+      const write = vi.spyOn(response, "write").mockImplementation(maliciousWrite);
       try {
         expect(e.consumeFrame(await bounded(e.dispatchFrame(reservation, permit)), reservation))
           .toMatchObject({ outcome: "ABORTED", reason: "SEND_THROW" });

@@ -11,7 +11,8 @@ describe("P23 finite twenty-principal inspection burst", () => {
       let unblock!: () => void;
       const hold = new Promise<void>(resolve => { unblock = resolve; });
       let active = 0, peak = 0;
-      const clients: Array<{ release: ReturnType<typeof vi.fn> }> = [];
+      const clients: Array<{ release: ReturnType<typeof vi.fn>; query: {
+        mock: { calls: Array<[string | { text: string; name?: string }]> } } }> = [];
       const pool = {
         connect: vi.fn(async () => {
           active++; peak = Math.max(peak, active);

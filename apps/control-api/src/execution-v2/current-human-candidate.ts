@@ -29,6 +29,17 @@ const digest = z.string().length(71).regex(/^sha256:[a-f0-9]{64}$/);
 export const currentHumanBinding = z.object({ workspace_id: id, environment: z.enum(["paper", "sandbox", "live"]),
   workload_id: id, request_digest: digest }).strict();
 export type CurrentHumanBinding = z.infer<typeof currentHumanBinding>;
+/** Private digest and public nonce correlation supplied by the STATUS authority, not a
+ * browser grant, source terminal or proof that Edge received a response. */
+const commandStatusContextLink = z.object({ context_digest: digest, context_nonce: z.string().regex(/^[A-Za-z0-9_-]{43}$(?![\s\S])/), original_digest: digest, call_digest: digest,
+  binding_digest: digest, authority_fingerprint: digest, status_token_digest: digest, status_request_digest: digest,
+  status_issued_at_ms: z.number().int().nonnegative().safe(),
+  receiver_id: z.string().min(1).max(256).regex(/^[^\u0000-\u0020\u007f]+$(?![\s\S])/),
+  delivery_sequence: z.number().int().min(0).max(63), previous_lease_id: id.nullable(),
+  context_expires_at_ms: z.number().int().positive().safe() }).strict()
+  .refine(value => value.delivery_sequence === 0 ? value.previous_lease_id === null : value.previous_lease_id !== null)
+  .refine(value => value.status_issued_at_ms < value.context_expires_at_ms);
+export type CommandStatusContextLink = z.infer<typeof commandStatusContextLink>;
 const humanClaims = z.object({ iss: id, aud: id, sub: id, sid: id, jti: id, iat: integer, nbf: integer, exp: integer,
   purpose: z.literal("pma.identity.v1"), principal_kind: z.literal("human"), session_revision: integer,
   authority_revision: integer, workspace_id: id, environment: z.enum(["paper", "sandbox", "live"]),
@@ -267,18 +278,37 @@ export class CurrentHumanCandidate {
   /** STATUS has its own durable delivery fence. Unlike a financial read,
    * terminal source custody alone cannot authorize a replacement: an exact
    * authenticated Edge delivery ACK must also have been retained. */
-  async issueCommandStatus(actor: AccessActor, untrustedBinding: CurrentHumanBinding): Promise<{ token: string; lease_id: string; expires_at_ms: number; authority_revision: number }> {
-    return this.issueBound(actor, untrustedBinding, true);
+  async issueCommandStatus(actor: AccessActor, untrustedBinding: CurrentHumanBinding, untrustedLink: CommandStatusContextLink): Promise<{ token: string; lease_id: string; expires_at_ms: number; authority_revision: number }> {
+    return this.issueBound(actor, untrustedBinding, true, untrustedLink);
   }
 
-  private async issueBound(actor: AccessActor, untrustedBinding: CurrentHumanBinding, commandStatus: boolean): Promise<{ token: string; lease_id: string; expires_at_ms: number; authority_revision: number }> {
+  private async issueBound(actor: AccessActor, untrustedBinding: CurrentHumanBinding, commandStatus: boolean, untrustedLink?: CommandStatusContextLink): Promise<{ token: string; lease_id: string; expires_at_ms: number; authority_revision: number }> {
     const binding = currentHumanBinding.parse(untrustedBinding);
+    const link = untrustedLink === undefined ? undefined : commandStatusContextLink.parse(untrustedLink);
+    // New STATUS leases must always carry the durable correlation required
+    // for same-context restart recovery. Older unlinked leases are still
+    // fenced by the request-digest lookup below; they are not rewritten.
+    if (Boolean(link) !== commandStatus) throw new CurrentHumanLeaseError("CURRENT_HUMAN_COMMAND_STATUS_LINK_INVALID");
     if (commandStatus && binding.environment !== "paper") throw new CurrentHumanLeaseError("CURRENT_HUMAN_COMMAND_STATUS_PAPER_REQUIRED");
     this.checkInstallation(binding, true);
     if (binding.workload_id !== this.reverseSource().workload_id) throw new CurrentHumanLeaseError("CURRENT_HUMAN_WORKLOAD_MISMATCH");
-    const claims = await this.transaction(async (db, authority) => {
+    const issued = await this.transaction(async (db, authority) => {
       if (authority.drain_id) throw new CurrentHumanLeaseError("CURRENT_HUMAN_DRAINING");
       const current = await captureCurrentHumanSnapshot(db, actor, binding.workspace_id);
+      if (link && current.now >= link.context_expires_at_ms)
+        throw new CurrentHumanLeaseError("CURRENT_HUMAN_COMMAND_STATUS_LINK_EXPIRED");
+      if (link) {
+        // A consumed or replaced preparation may never authorize another
+        // ISSUE, even from a stale Core process that still has the bearer in
+        // memory. Legacy originals without a preparation remain subject to
+        // the existing immutable lease/ACK fence below.
+        const preparation=await db.query(`SELECT context_digest,consumed_at FROM execution_command_status_preparations
+          WHERE workspace_id=$1 AND workload_id=$2 AND original_digest=$3 LIMIT 2`,
+        [binding.workspace_id,binding.workload_id,link.original_digest]);
+        if(preparation.rowCount && (preparation.rowCount!==1 || preparation.rows[0].context_digest!==link.context_digest ||
+          preparation.rows[0].consumed_at!==null))
+          throw new CurrentHumanLeaseError("CURRENT_HUMAN_COMMAND_STATUS_PREPARATION_RETIRED");
+      }
       const counts = (await db.query(`SELECT count(*)::int AS retained,
         count(*) FILTER (WHERE unresolved)::int AS unresolved FROM elp210_candidate.obligations`)).rows[0];
       if (counts.unresolved >= this.config.limits.maximum_unresolved || counts.retained >= this.config.limits.maximum_retained)
@@ -287,17 +317,21 @@ export class CurrentHumanCandidate {
         // The authority singleton is locked by transaction(), so this check
         // and lease INSERT are serialized across Core processes and restarts.
         // RETIRED, UNKNOWN and terminal-without-ACK all remain fenced. The
-        // exact source request, not the human session, owns that fence: a
-        // new login cannot bypass a previous session's unresolved delivery.
+        // Exact source request AND persisted original own the fence, not the
+        // human session. A restarted process must not evade the existing
+        // original's unresolved delivery by changing STATUS request bytes.
+        // Legacy unlinked leases remain protected by exact request digest.
         const outstanding = await db.query(`SELECT l.lease_id FROM elp210_candidate.leases l
-          WHERE l.workspace_id=$1 AND l.environment=$2 AND l.workload_id=$3 AND l.request_digest=$4
+          LEFT JOIN execution_command_status_context_links c ON c.lease_id=l.lease_id
+          WHERE l.workspace_id=$1 AND l.environment=$2 AND l.workload_id=$3
+            AND (l.request_digest=$4 OR ($5::text IS NOT NULL AND c.original_digest=$5))
             AND NOT EXISTS (SELECT 1 FROM execution_command_status_delivery_acks a
               WHERE a.lease_id=l.lease_id AND a.subject_id=l.subject_id AND a.session_id=l.session_id
                 AND a.session_revision=l.session_revision AND a.workspace_id=l.workspace_id
                 AND a.environment=l.environment AND a.workload_id=l.workload_id
                 AND a.request_digest=l.request_digest AND a.terminal_receipt_digest=l.terminal_receipt_digest
                 AND l.phase IN ('COMMITTED','ROLLED_BACK')) LIMIT 1`,
-        [binding.workspace_id, binding.environment, binding.workload_id, binding.request_digest]);
+        [binding.workspace_id, binding.environment, binding.workload_id, binding.request_digest, link?.original_digest ?? null]);
         if (outstanding.rowCount) throw new CurrentHumanLeaseError("CURRENT_HUMAN_COMMAND_STATUS_RECOVERY_REQUIRED");
       }
       this.checkInstallation(binding, true);
@@ -312,12 +346,80 @@ export class CurrentHumanCandidate {
         VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)`, [body.jti, body.authority_revision, body.sub, body.sid,
         body.session_revision, body.workspace_id, body.environment, body.workload_id, body.request_digest,
         current.authority_fingerprint, body.iat * 1000, body.exp * 1000]);
-      return body;
+      let assertion: string | undefined;
+      if (link) {
+        if (link.delivery_sequence > 0) {
+          const prior = await db.query(`SELECT 1 FROM execution_command_status_context_links p
+            JOIN execution_command_status_delivery_acks a ON a.lease_id=p.lease_id
+            WHERE p.context_digest=$1 AND p.delivery_sequence=$2 AND p.lease_id=$3
+              AND p.original_digest=$4 AND p.call_digest=$5 AND p.binding_digest=$6 AND p.authority_fingerprint=$15
+              AND p.status_token_digest=$16 AND p.status_request_digest=$17 AND p.status_issued_at_ms=$18 AND p.context_nonce=$19
+              AND p.receiver_id=$7 AND p.request_digest=$8 AND a.request_digest=$8
+              AND a.workspace_id=$9 AND a.environment=$10 AND a.workload_id=$11
+              AND a.subject_id=$12 AND a.session_id=$13 AND a.session_revision=$14`,
+          [link.context_digest, link.delivery_sequence - 1, link.previous_lease_id,
+            link.original_digest, link.call_digest, link.binding_digest, link.receiver_id, binding.request_digest,
+            body.workspace_id, body.environment, body.workload_id, body.sub, body.sid, body.session_revision, link.authority_fingerprint,
+            link.status_token_digest,link.status_request_digest,link.status_issued_at_ms,link.context_nonce]);
+          if (prior.rowCount !== 1) throw new CurrentHumanLeaseError("CURRENT_HUMAN_COMMAND_STATUS_LINK_PREVIOUS_REQUIRED");
+        }
+        // Commit the digest of the exact deterministic EdDSA assertion with
+        // its lease before allowing the token to escape this process. This
+        // permits a later retry of the same ISSUED lease without persisting
+        // the bearer or accidentally minting another authority.
+        assertion = await new SignJWT(body).setProtectedHeader({ alg: "EdDSA", kid: this.config.key_id, typ: "JWT" })
+          .sign(this.config.private_key);
+        await db.query(`INSERT INTO execution_command_status_context_links
+          (context_digest,delivery_sequence,lease_id,previous_lease_id,original_digest,call_digest,binding_digest,
+           request_digest,receiver_id,context_expires_at_ms,authority_fingerprint,assertion_digest,
+           status_token_digest,status_request_digest,status_issued_at_ms,context_nonce) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)`,
+        [link.context_digest, link.delivery_sequence, body.jti, link.previous_lease_id, link.original_digest,
+          link.call_digest, link.binding_digest, binding.request_digest, link.receiver_id, link.context_expires_at_ms, link.authority_fingerprint,
+          accessDigest(assertion),link.status_token_digest,link.status_request_digest,link.status_issued_at_ms,link.context_nonce]);
+      }
+      return { body, assertion };
     });
-    // A concurrent drain can retire this ISSUED lease before signing completes;
-    // enter will refuse it. Signing is never performed under a Core lock.
-    return { token: await new SignJWT(claims).setProtectedHeader({ alg: "EdDSA", kid: this.config.key_id, typ: "JWT" })
+    // A concurrent drain can retire this ISSUED lease before it is delivered;
+    // enter will refuse it. For linked STATUS only, local signing occurs in
+    // the transaction so its exact assertion digest commits with the lease.
+    const claims = issued.body;
+    return { token: issued.assertion ?? await new SignJWT(claims).setProtectedHeader({ alg: "EdDSA", kid: this.config.key_id, typ: "JWT" })
       .sign(this.config.private_key), lease_id: claims.jti, expires_at_ms: claims.exp * 1000, authority_revision: claims.authority_revision };
+  }
+
+  /** Reproduce only an already committed ISSUED STATUS assertion. The stored
+   * digest checks exact bytes including signing key and header; an entered,
+   * retired, expired, revoked, drained, or rotated-key lease cannot resume. */
+  async resumeCommandStatusIssue(untrustedActor: AccessActor, untrustedBinding: CurrentHumanBinding, leaseId: string): Promise<{
+    token: string; lease_id: string; expires_at_ms: number; authority_revision: number }> {
+    const actor = nativeActor(untrustedActor), binding = currentHumanBinding.parse(untrustedBinding), lease = id.parse(leaseId);
+    if (binding.environment !== "paper") throw new CurrentHumanLeaseError("CURRENT_HUMAN_COMMAND_STATUS_PAPER_REQUIRED");
+    this.checkInstallation(binding, true);
+    if (binding.workload_id !== this.reverseSource().workload_id) throw new CurrentHumanLeaseError("CURRENT_HUMAN_WORKLOAD_MISMATCH");
+    return this.transaction(async (db, authority) => {
+      const row = (await db.query(`SELECT l.*, c.assertion_digest, c.context_expires_at_ms
+        FROM elp210_candidate.leases l JOIN execution_command_status_context_links c ON c.lease_id=l.lease_id
+        WHERE l.lease_id=$1 FOR SHARE OF l`, [lease])).rows[0];
+      if (!row || authority.drain_id || row.phase !== "ISSUED" || Number(row.authority_revision) !== Number(authority.revision) ||
+        row.subject_id !== actor.user_id || row.session_id !== actor.session_id || Number(row.session_revision) !== actor.session_generation ||
+        row.workspace_id !== binding.workspace_id || row.environment !== binding.environment || row.workload_id !== binding.workload_id ||
+        row.request_digest !== binding.request_digest) throw new CurrentHumanLeaseError("CURRENT_HUMAN_ENTRY_NOT_AVAILABLE");
+      const current = await captureCurrentHumanSnapshot(db, actor, binding.workspace_id);
+      this.checkInstallation(binding, true);
+      const issuedMs = Number(row.issued_at_ms), expiresMs = Number(row.expires_at_ms), contextExpires = Number(row.context_expires_at_ms);
+      if (current.authority_fingerprint !== row.authority_fingerprint || !Number.isSafeInteger(issuedMs) || issuedMs % 1000 !== 0 ||
+        !Number.isSafeInteger(expiresMs) || expiresMs % 1000 !== 0 || !Number.isSafeInteger(contextExpires) ||
+        current.now >= expiresMs || current.now >= contextExpires)
+        throw new CurrentHumanLeaseError("CURRENT_HUMAN_ENTRY_NOT_AVAILABLE");
+      const claims = humanClaims.parse({ iss: this.config.issuer, aud: this.config.audience, sub: actor.user_id,
+        sid: actor.session_id, jti: lease, iat: issuedMs / 1000, nbf: issuedMs / 1000, exp: expiresMs / 1000,
+        purpose: "pma.identity.v1", principal_kind: "human", session_revision: actor.session_generation,
+        authority_revision: Number(row.authority_revision), ...binding });
+      const token = await new SignJWT(claims).setProtectedHeader({ alg: "EdDSA", kid: this.config.key_id, typ: "JWT" })
+        .sign(this.config.private_key);
+      if (accessDigest(token) !== row.assertion_digest) throw new CurrentHumanLeaseError("CURRENT_HUMAN_ASSERTION_CHANGED");
+      return { token, lease_id: lease, expires_at_ms: expiresMs, authority_revision: Number(row.authority_revision) };
+    });
   }
 
   /** Same-lease delivery fence for the private financial identity issuer.
@@ -353,7 +455,7 @@ export class CurrentHumanCandidate {
    * tell whether Edge received the PM response. No expiry/retirement inference,
    * new lease, source attempt, receipt or ACK is created here. */
   async canReplaceResolvedIssue(untrustedActor: AccessActor, untrustedBinding: CurrentHumanBinding,
-    issued: { token: string; lease_id: string; expires_at_ms: number; authority_revision: number }): Promise<boolean> {
+    issued: { lease_id: string; expires_at_ms: number; authority_revision: number }): Promise<boolean> {
     const actor = nativeActor(untrustedActor), binding = currentHumanBinding.parse(untrustedBinding);
     this.checkInstallation(binding, true);
     if (binding.workload_id !== this.reverseSource().workload_id)
@@ -386,7 +488,7 @@ export class CurrentHumanCandidate {
    * source terminal. The row contains digests/identity references, not JWTs
    * or payloads. Repeated ACKs must match; terminal alone is never an ACK. */
   async acknowledgeCommandStatusIssue(untrustedActor: AccessActor, untrustedBinding: CurrentHumanBinding,
-    issued: { token: string; lease_id: string; expires_at_ms: number; authority_revision: number },
+    issued: { lease_id: string; expires_at_ms: number; authority_revision: number },
     responseDigest: string): Promise<boolean> {
     const actor=nativeActor(untrustedActor), binding=currentHumanBinding.parse(untrustedBinding);
     if(binding.environment!=="paper" || !digest.safeParse(responseDigest).success)

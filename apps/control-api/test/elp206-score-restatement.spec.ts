@@ -18,7 +18,7 @@ import {productReadFixture,OWN,PEER,PRIVATE} from "./elp2-product-read.fixture";
 import {ManagerScoreRuntime,loadApprovedManagerScorePolicy,managerScorePolicyHash,managerScoreRecalculationPolicy,
   managerScorePublicationPolicyCurrent,managerScoreMethodDigest,type ApprovedManagerScorePolicy,type ManagerScoreRuntimeTask,
   type ManagerScoreMethodDescriptor,
-  type ManagerScoreRuntimePolicyArtifact} from "../src/execution-v2/manager-score-runtime";
+  type ManagerScoreRuntimePolicyArtifact,type ManagerScoreRuntimeScope} from "../src/execution-v2/manager-score-runtime";
 import {ManagerScoreOriginalCustody,captureManagerScoreOriginalInputs,type ManagerScoreOriginalInput,
   type ManagerScorePathMethodManifest} from "../src/execution-v2/manager-score-original-custody";
 import {ManagerScoreRestatement} from "../src/execution-v2/manager-score-restatement";
@@ -37,7 +37,7 @@ const limits={maximum_observations:20,maximum_blocks:20,maximum_stress_subperiod
 const scope={workspace_id:"SYNTHETIC:restatement",environment:"paper" as const,profile_id:"PAPER_BINANCE_USDM"};
 const catalogue=EXECUTION_PUBLICATION_CATALOGUE.source_catalogue_digest;
 const scoped={...scope,catalogue_digest:catalogue};
-function policy(asOf:number,name="B",delta="5",method="SYNTHETIC:grid",anchors="0.08",policyScope=scoped){
+function policy(asOf:number,name="B",delta="5",method="SYNTHETIC:grid",anchors="0.08",policyScope:ManagerScoreRuntimeScope=scoped){
   const now=Date.now(),approved=now-500;
   const artifact:ManagerScoreRuntimePolicyArtifact={schema_version:"portal.execution.manager-score-policy-runtime.v1",scope:policyScope,
     policy:{formula_id:"qbts_prb_v1_1",qualification:"RUNTIME_APPROVED",policy_id:"SYNTHETIC:policy-"+name,

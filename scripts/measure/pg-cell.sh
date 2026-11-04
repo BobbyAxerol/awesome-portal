@@ -83,7 +83,7 @@ cp "${APP_DIR}/package.json" "${APP_DIR}/package-lock.json" "${DEPS_DIR}/"
 test -x "${DEPS_DIR}/node_modules/.bin/tsc"
 mkdir -p "${WORK_DIR}"
 cp -a "${APP_DIR}/migrations" "${APP_DIR}/src" "${APP_DIR}/test" "${APP_DIR}/tooling" "${APP_DIR}/package.json" \
-  "${APP_DIR}/package-lock.json" "${APP_DIR}/tsconfig.build.json" "${APP_DIR}/tsconfig.json" "${APP_DIR}/vitest.config.mts" "${WORK_DIR}/"
+  "${APP_DIR}/package-lock.json" "${APP_DIR}/tsconfig.build.json" "${APP_DIR}/tsconfig.json" "${APP_DIR}/tsconfig.cross-loop.json" "${APP_DIR}/vitest.config.mts" "${WORK_DIR}/"
 mkdir -p "${WORK_DIR}/deploy/control-api"; cp -a "${ROOT_DIR}/deploy/control-api/bootstrap-users.yaml" "${WORK_DIR}/deploy/control-api/"
 ln -s ../node_modules "${WORK_DIR}/node_modules"
 "${DOCKER[@]}" network create --internal "${NETWORK}" >/dev/null

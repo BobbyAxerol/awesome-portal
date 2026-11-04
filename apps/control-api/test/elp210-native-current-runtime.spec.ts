@@ -283,7 +283,7 @@ describe("native CURRENT actual private bootstrap/AppModule factory (explicit sy
     expect(absent.providers?.some(value => typeof value === "object" && value !== null && "provide" in value && value.provide === NativeCurrentAccountScopes)).toBe(false);
     expect(() => AppModule.register({ NODE_ENV: "test" } as ControlApiConfig, f.pool, undefined, deps)).toThrow("NATIVE_CURRENT_SHARED_RESEARCH_COMPOSITION_REQUIRED");
     expect(() => AppModule.register(config, {} as Pool, undefined, deps)).toThrow("CURRENT_HUMAN_MUTATION_CORE_POOL_REQUIRED");
-    const wrong = { ...prepared, provider: { ...prepared.provider, usesPool: () => true } as NativeCurrentRelationsProvider };
+    const wrong = { ...prepared, provider: { ...prepared.provider, usesPool: () => true } as unknown as NativeCurrentRelationsProvider };
     expect(() => AppModule.register(config, f.pool, undefined, { ...deps, nativeCurrent: wrong })).toThrow("NATIVE_CURRENT_SHARED_RESEARCH_COMPOSITION_REQUIRED");
     expect(f.pool.connect).not.toHaveBeenCalled(); expect(f.pool.end).not.toHaveBeenCalled();
   });

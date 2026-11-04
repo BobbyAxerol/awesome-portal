@@ -49,7 +49,7 @@ cp "${APP_DIR}/package.json" "${APP_DIR}/package-lock.json" "${DEPS_DIR}/"
   "${NODE_IMAGE}" npm ci --no-audit --no-fund >"${OUT}/npm-ci.log" 2>&1
 mkdir -p "${WORK_DIR}"
 cp -a "${APP_DIR}/migrations" "${APP_DIR}/src" "${APP_DIR}/test" "${APP_DIR}/tooling" "${APP_DIR}/package.json" "${APP_DIR}/package-lock.json" \
-  "${APP_DIR}/tsconfig.build.json" "${APP_DIR}/tsconfig.json" "${APP_DIR}/vitest.config.mts" "${WORK_DIR}/"
+  "${APP_DIR}/tsconfig.build.json" "${APP_DIR}/tsconfig.json" "${APP_DIR}/tsconfig.cross-loop.json" "${APP_DIR}/vitest.config.mts" "${WORK_DIR}/"
 ln -s ../node_modules "${WORK_DIR}/node_modules"
 "${DOCKER[@]}" network create --internal "${NETWORK}" >/dev/null
 "${DOCKER[@]}" run -d --name "${PG_CONTAINER}" --network "${NETWORK}" --read-only --cpus "${PG_CPUS}" --memory "${PG_MEM}" --pids-limit 256 \

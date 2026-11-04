@@ -1,6 +1,6 @@
 /** Predicate/contract tests, distinct from ordinary real-source product proof. */
 import {describe,it,expect} from "vitest";
-import {executionRecipes,executionRecipe,executionRecipeActivationReason,executionRecipeBudgets,
+import {executionRecipes,executionRecipe,executionRecipeActivationReason,executionRecipeBudgets, type ExecutionRecipe,
   recipeDigest,wfoExecutionRecipe,currentSourceRecipePairs,executionRecipeQualification} from "../src/research/execution-recipes";
 import {FULL03_DELTA_BINDING,FULL03_DELTA_ADAPTER_CONTRACT_DIGEST} from "../src/research/full03-delta.binding";
 import {P04_DELTA_BINDING} from "../src/research/p04-delta.binding";
@@ -9,7 +9,8 @@ import {ResearchRunAdmissionService} from "../src/research/run-admission.service
 import {researchPortalAdmission} from "../src/research/portal-admission";
 import {admissionRepository,flagConfig,manifestFor,w1Admin,w1Scope,wfoRequested,p04Requested} from "./research-w1-wfo.fixture";
 import {ResearchCurrentSourceSealIngressSchema} from "../src/research/artifact-ingress.contract";
-const rows=executionRecipes.filter(r=>r.descriptor.schema_version==="research.full03-delta-profile.v1");
+type Full03Recipe=Extract<ExecutionRecipe,{descriptor:{schema_version:"research.full03-delta-profile.v1"}}>;
+const rows=executionRecipes.filter((r):r is Full03Recipe=>r.descriptor.schema_version==="research.full03-delta-profile.v1");
 function qualifiedSuccessor(row:typeof rows[number]) {
   const successor=executionRecipe(row.profile_id.replace(/\.v1$/,".v2"));
   expect(successor.descriptor).toHaveProperty("predecessor_profile_id",row.profile_id);

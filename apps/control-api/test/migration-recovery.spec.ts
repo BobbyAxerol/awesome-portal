@@ -3,7 +3,7 @@ import { cpSync, mkdtempSync, readdirSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { randomUUID } from "node:crypto";
-import { runner as migrate } from "node-pg-migrate";
+import { migrate } from "./helpers/node-pg-migrate";
 import { Pool } from "pg";
 import {
   N09_GOVERNANCE_MIGRATION,

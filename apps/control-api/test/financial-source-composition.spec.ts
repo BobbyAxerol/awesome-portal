@@ -97,7 +97,7 @@ describe("private financial source Core composition (TEST_ONLY lifecycle)", () =
       const token = [Buffer.from('{"alg":"TEST_ONLY"}').toString("base64url"),
         Buffer.from(JSON.stringify(claims)).toString("base64url"), "TEST_ONLY"].join(".");
       return { token, lease_id: lease, expires_at_ms: exp * 1000, authority_revision: 2 };
-    }), revalidateIssue: vi.fn(async () => undefined), enter: vi.fn(async () => ({ lease_id: "TEST_ONLY-lease", attempt_id: "TEST_ONLY-attempt" })),
+    }), revalidateIssue: vi.fn(async (): Promise<void> => undefined), enter: vi.fn(async () => ({ lease_id: "TEST_ONLY-lease", attempt_id: "TEST_ONLY-attempt" })),
       resolve: vi.fn(async () => ({ replayed: false, phase: "COMMITTED" })) };
     return candidate;
   }

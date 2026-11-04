@@ -93,3 +93,12 @@ is restore/forward with reconciliation, not erasing retained obligations.
   four moderate, one low); no dependency upgrade was performed in this slice.
   The normal commit hook/complete suite and final schema rehearsal are separate
   from the focused checks above. No origin push or release is implied.
+
+### Bobby follow-up — hybrid banner removed
+
+Bobby asked that the yellow fixture banner be removed from the combined
+preview. The hybrid nginx overlay no longer injects a banner or adds layout
+offsets; Execution routing remains fixture and Research stays on the preview
+API. This is presentation only and does not change the provenance or status of
+any source. The standalone fixture-only overlay is unchanged. The earlier
+banner observations above record the state before this follow-up.

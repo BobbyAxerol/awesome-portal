@@ -56,8 +56,10 @@ function fixture() {
     { now: () => now, ttl_ms: 30_000 });
   const dataset = { dataset_id: "TEST_ONLY-held-native-dataset", source_revision: "TEST_ONLY-source-r1",
     projection_generation: "TEST_ONLY-generation", catalogue_revision: "TEST_ONLY-catalogue", window: null };
+  const profileId = base.config.EXECUTION_EDGE_PAPER_PROFILE_ID;
+  if (!profileId) throw new Error("TEST_ONLY_PAPER_PROFILE_REQUIRED");
   const selection: CurrentViewSelection = { resource_ref: "TEST_ONLY.account-current", binding: {
-    environment: "paper", profileId: base.config.EXECUTION_EDGE_PAPER_PROFILE_ID }, read_requirement: {
+    environment: "paper", profileId }, read_requirement: {
     action: "business.read_all", resource: { kind: "ACCOUNT", id: OWN.account_id }, dataset,
     requireWholePopulation: true }, fields: ["account_id", "equity"] };
   const sourceSelection: CurrentViewSelection = { ...structuredClone(selection), resource_ref: "TEST_ONLY.source-pin",
@@ -207,8 +209,9 @@ describe("CurrentView held native query capability — explicit TEST_ONLY port",
 
   it("does not widen a genuine held scope's qualified researcher field mask", async () => {
     const f = fixture(), grant = f.context.grants[0];
-    f.context.grants.splice(0, 1, { ...grant, action: "account.read",
-      selector: { kind: "EXPLICIT_RESOURCE_SET", resource_kind: "ACCOUNT", ids: [OWN.account_id, PRIVATE.account_id] } });
+    f.context.grants = [{ ...grant, action: "account.read",
+      selector: { kind: "EXPLICIT_RESOURCE_SET", resource_kind: "ACCOUNT", ids: [OWN.account_id, PRIVATE.account_id] } },
+      ...f.context.grants.slice(1)];
     f.context.policy!.researcher_fields.fields = ["account_id"];
     const selected: CurrentViewSelection = { ...f.selection, fields: ["account_id"], read_requirement: {
       ...f.selection.read_requirement, action: "account.read", requireWholePopulation: false } };

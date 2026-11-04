@@ -24,11 +24,15 @@ const validatePaperContract = paperAjv.compile(paperContract);
 function assertPaperContract(value: unknown) {
   expect(validatePaperContract(value), JSON.stringify(validatePaperContract.errors)).toBe(true);
 }
+function assertDataObject(value: unknown): asserts value is Record<string, unknown> {
+  if (value === null || typeof value !== "object" || Array.isArray(value)) throw new Error("Expected response data object");
+}
 
 const user: PortalUser = {
   userId: "usr_bobby", username: "bobby", displayName: "Bobby", role: "ADMIN", status: "ACTIVE",
   mustChangePassword: false, failedLoginCount: 0, lockedUntil: null, sessionVersion: 1,
   createdAt: new Date("2026-08-30T00:00:00Z"), updatedAt: new Date("2026-08-30T00:00:00Z"), disabledAt: null,
+  accountRevision: 1, archivedAt: null,
 };
 const session: AuthSession = {
   sessionId: "ses_bobby", userId: user.userId, state: "ACTIVE", sessionVersion: 1,
@@ -124,7 +128,7 @@ class FakeLocalProjectionSource extends FakeCurrentSource {
     relation: string,
     query: Record<string, unknown>,
   ) {
-    const response = await super.relation(principal, environment, screenId, sourceId, relation, query) as Record<string, any>;
+    const response = await super.relation(principal, environment, screenId, sourceId, relation, query);
     if (relation === "orders") {
       response.source.completeness = this.partialOrders ? "PARTIAL" : "COMPLETE";
       response.projection = {
@@ -552,6 +556,7 @@ describe("N22 full Paper read product BFF", () => {
     const projection = { timeSeriesHistoryDownsampled: async () => { reads++; return { rows: [], sourceRows: 0, downsample: null }; } };
     const response = await service(source, undefined, projection).workbench(principal(), "TEST_ONLY-not-found", false);
     expect(reads).toBe(0);
+    assertDataObject(response.data);
     expect(response.data.deployment).toBeNull();
     expect(response.data.history_windows).toBeUndefined();
   });
@@ -568,6 +573,7 @@ describe("N22 full Paper read product BFF", () => {
       const response = await service(source, undefined, projection, undefined, scopes)
         .workbench(principal(scenario === "wrong-workspace" ? "ws_peer" : "ws_primary"), "dep_default", false);
       expect(reads).toBe(0);
+      assertDataObject(response.data);
       expect(response.data.account_equity).toMatchObject([{ id: 1, equity: "105" }]);
       expect(response.data.history_windows).toBeUndefined();
       expect(response.capabilities).toContainEqual(expect.objectContaining({
@@ -590,6 +596,7 @@ describe("N22 full Paper read product BFF", () => {
     const scopes = paperHistoryTestScopes(config, call => ({ policy_seen: call >= activationCall }));
     const response = await service(source, undefined, projection, undefined, scopes).workbench(principal(), "dep_default", false);
     expect(reads).toBe(activationCall === 2 ? 0 : 1);
+    assertDataObject(response.data);
     expect(response.data.account_equity).toMatchObject([{ id: 1, equity: "105" }]);
     expect(response.data.history_windows).toBeUndefined();
     expect(response.capabilities).toContainEqual(expect.objectContaining({
@@ -604,6 +611,7 @@ describe("N22 full Paper read product BFF", () => {
     const config = loadConfig({ DATABASE_URL: "postgres://unused:unused@localhost/unused", PORTAL_ENV: "local", AUTH_MODE: "dev" });
     const scopes = paperHistoryTestScopes(config, call => ({ policy_seen: call >= 4 }));
     const response = await service(source, undefined, projection, undefined, scopes).workbench(principal(), "dep_default", false);
+    assertDataObject(response.data);
     expect(response.data.history_windows).toBeUndefined();
     expect(response.capabilities).toContainEqual(expect.objectContaining({
       capability_id: "workbench.account-equity-history", reason_code: "EXECUTION_READ_POLICY_PENDING",
@@ -994,7 +1002,7 @@ describe("N22 full Paper read product BFF", () => {
 
     const responses = await Promise.all(Array.from({ length: 20 }, () => service(source).overview(principal())));
     expect(source.calls).toHaveLength(120);
-    expect(source.calls.every((call) => (call.query.limit ?? 0) > 0 && (call.query.limit ?? 0) <= 200)).toBe(true);
+    expect(source.calls.every((call) => typeof call.query.limit === "number" && call.query.limit > 0 && call.query.limit <= 200)).toBe(true);
     expect(responses.every((response) => Buffer.byteLength(JSON.stringify(response)) < 1_048_576)).toBe(true);
   });
 

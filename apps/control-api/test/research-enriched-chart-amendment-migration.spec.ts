@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { runner as migrate } from "node-pg-migrate";
+import { migrate } from "./helpers/node-pg-migrate";
 import { Pool, type PoolClient } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { ResearchEnrichedAnalysisSchema, type ResearchEnrichedAnalysis } from "../src/research/enriched-analysis.contract";

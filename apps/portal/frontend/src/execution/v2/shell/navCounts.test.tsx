@@ -126,6 +126,19 @@ describe("NavCounts component", () => {
     expect(api.listOperationalQueueV2).toHaveBeenCalledTimes(1);
   });
 
+  it("a new options object with the same eligibility does not abort the pending read and ask again", async () => {
+    const api = both();
+    const view = mount(api);
+    view.rerender(
+      <MemoryRouter initialEntries={["/execution"]}>
+        <NavCounts registry={registry} options={{ capabilities: [...MANAGER.capabilities] }} onView={() => undefined} api={api} enabled />
+      </MemoryRouter>,
+    );
+    await act(async () => { await Promise.resolve(); });
+    expect(api.listOperationalQueueV2).toHaveBeenCalledTimes(1);
+    expect(api.listApprovals).toHaveBeenCalledTimes(1);
+  });
+
   it("a researcher's rail lists no Operations: that read is never made", async () => {
     const api = both();
     mount(api, { capabilities: [...V2_ROLE_PRESETS.researcher] });

@@ -9,7 +9,7 @@ import { chmod, mkdtemp, readFile, rmdir, stat, symlink, unlink, writeFile } fro
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createServer, type Server } from "node:https";
-import type { Socket } from "node:net";
+import type { Duplex } from "node:stream";
 import type { TLSSocket } from "node:tls";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { unqualifiedAccessRelations } from "../src/execution-v2/access-policy";
@@ -69,7 +69,7 @@ function testCertificate(name: Buffer, key: KeyPairKeyObjectResult, issuer: { na
 describe("ELP2-10 existing identity mapping client (TEST_ONLY real loopback mTLS)", () => {
   let core: Certificate, source: Certificate, otherSource: Certificate,
     foreignCore: Certificate, foreignSource: Certificate, wrongHost: Certificate;
-  const allocated: { server: Server; sockets: Set<Socket> }[] = [];
+  const allocated: { server: Server; sockets: Set<Duplex> }[] = [];
   const authority = (label: string): TestAuthority => {
     const key = generateKeyPairSync("ec", { namedCurve: "prime256v1" }), name = commonName(`TEST_ONLY_${label}`);
     return { key: key.privateKey, name, certificate: testCertificate(name, key, { name, key: key.privateKey }, true) };
@@ -84,7 +84,7 @@ describe("ELP2-10 existing identity mapping client (TEST_ONLY real loopback mTLS
     handler: (req: IncomingMessage, body: Record<string, unknown>) => Reply = (_req, body) => ({ body: result(body) }),
     maximumVersion: "TLSv1.2" | "TLSv1.3" = "TLSv1.3") => {
     let requests = 0, bytes = 0, connections = 0;
-    const bodies: Record<string, unknown>[] = [], sockets = new Set<Socket>();
+    const bodies: Record<string, unknown>[] = [], sockets = new Set<Duplex>();
     const server = createServer({ key: certificate.key, cert: certificate.cert, ca: core.ca,
       requestCert: true, rejectUnauthorized: true,
       minVersion: maximumVersion, maxVersion: maximumVersion }, (req, res) => {

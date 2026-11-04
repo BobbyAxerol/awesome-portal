@@ -349,6 +349,9 @@ a.exec-wb-stage:focus-visible {
   background: var(--paper-raised);
   border: 1px solid var(--line-strong);
 }
+.exec-wb-mini[hidden] {
+  display: none;
+}
 .exec-wb-mini-cap {
   font: var(--exec-font-id);
   color: var(--ink-faint);

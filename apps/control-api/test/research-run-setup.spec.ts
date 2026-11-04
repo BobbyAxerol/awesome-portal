@@ -28,7 +28,7 @@ const version={alphaId:context.alpha_id,alphaVersionId:context.alpha_version_id,
   binding:{...P04_DELTA_BINDING,contractDigest:P04_DELTA_ADAPTER_CONTRACT_DIGEST}};
 const admission=researchPortalAdmission(config,{release_id:"er_quantbt_111",verified:true});
 const guards={label_horizon_bars:0,purge_bars:0,embargo_bars:0};
-const build=(v=version,ctx=context,user=w1Admin,flags=config)=>runSetupOptions(user,flags,v,ctx,admission,
+const build=(v:Parameters<typeof runSetupOptions>[2]=version,ctx=context,user=w1Admin,flags=config)=>runSetupOptions(user,flags,v,ctx,admission,
   read("research-dataset-catalog.v2.healthy.valid.json"),guards);
 const reply={header:vi.fn()};
 describe("S02 Alpha-bound setup without admission widening",()=>{
@@ -54,7 +54,9 @@ describe("S02 Alpha-bound setup without admission widening",()=>{
       const recipe=executionRecipes.find(r=>r.profile_id===profile?.profile_id);
       expect(recipe,route).toBeDefined();
       if(!recipe||!("alpha_binding_requirements" in recipe.descriptor))throw new Error("exact binding missing");
-      const v={...version,alphaVersionId:recipe.descriptor.alpha_binding_requirements.alpha_version_id,
+      const requirements=recipe.descriptor.alpha_binding_requirements;
+      if(!("alpha_version_id" in requirements))throw new Error("immutable alpha version missing");
+      const v={...version,alphaVersionId:requirements.alpha_version_id,
         binding:{...version.binding,adapterId:recipe.descriptor.adapter_id,contractDigest:recipe.descriptor.adapter_contract_digest}};
       const result=runVersionOptions(w1Admin,flags,v,{workspace_id:context.workspace_id,alpha_id:context.alpha_id,alpha_version_id:v.alphaVersionId},profiles);
       expect(result.routes.filter(r=>r.state==="COMPATIBLE").map(r=>r.execution_route)).toEqual([route]);

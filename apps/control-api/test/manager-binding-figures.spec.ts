@@ -4,11 +4,23 @@ import { ManagerListsRepository, type BindingProjectionRecord } from "../src/man
 import { ManagerListsService } from "../src/manager-lists/manager-lists.service";
 import { bindingsResource } from "../src/manager-lists/contracts";
 import { ControlPlaneQueryService, KeysetCursorCodec } from "../src/query";
+import type { QueryActorContext } from "../src/query/contracts";
 import { querySigningKeys } from "../src/config";
 import { type ExecutionProductReadSource } from "../src/execution/product-read-source";
 import { migrateTestDatabase, testConfig } from "./harness";
 
-const url = process.env.TEST_DATABASE_URL ?? "postgres://portal:portal@127.0.0.1:5432/portal_control_test";
+// This suite migrates and truncates tables. Never silently fall back to a
+// host PostgreSQL, even if a developer happens to have a DB on port 5432.
+// The official isolated Control API runner owns this hostname and DB.
+const url = process.env.TEST_DATABASE_URL;
+function assertDisposableTarget(value: string): void {
+  let parsed: URL;
+  try { parsed = new URL(value); } catch { throw new Error("TEST_ONLY_DISPOSABLE_DATABASE_REQUIRED"); }
+  if (!["postgres:", "postgresql:"].includes(parsed.protocol) ||
+      !/^control-api-test-postgres-[a-z0-9]+$/u.test(parsed.hostname) || parsed.username !== "portal" ||
+      parsed.pathname !== "/portal_control_test" || parsed.search || parsed.hash)
+    throw new Error("TEST_ONLY_DISPOSABLE_DATABASE_REQUIRED");
+}
 const at = new Date("2026-10-23T12:00:00Z");
 const amount = (value: string, currency = "USDT") => ({ currency, value,
   observed_at: at.toISOString(), coverage: "COMPLETE" as const });
@@ -18,7 +30,17 @@ const binding = (id: string, figures = true): BindingProjectionRecord => ({ bind
     virtual_used: [amount("10.01", "USDC"), amount("0")], virtual_headroom: null,
     sleeve_count: { count: 0, observed_at: at.toISOString(), coverage: "COMPLETE" as const } } } : {}) });
 
-describe("Accounts list committed figures and authorized snapshot counts", () => {
+describe("Accounts list destructive-test target guard", () => {
+  it("accepts only the explicitly named disposable Control API cell", () => {
+    expect(() => assertDisposableTarget("postgres://portal:portal@control-api-test-postgres-12345:5432/portal_control_test")).not.toThrow();
+    for (const value of ["postgres://portal:portal@127.0.0.1:5432/portal_control_test",
+      "postgres://portal:portal@control-api-test-postgres-12345:5432/other",
+      "postgres://portal:portal@control-api-test-postgres-12345:5432/portal_control_test?host=other", "not-a-url"])
+      expect(() => assertDisposableTarget(value)).toThrow("TEST_ONLY_DISPOSABLE_DATABASE_REQUIRED");
+  });
+});
+
+describe.skipIf(!url)("Accounts list committed figures and authorized snapshot counts", () => {
   const pool = new Pool({ connectionString: url }), repository = new ManagerListsRepository(pool);
   const config = testConfig();
   const query = new ControlPlaneQueryService(pool, new KeysetCursorCodec({
@@ -26,8 +48,8 @@ describe("Accounts list committed figures and authorized snapshot counts", () =>
   }));
   const write = (rows: BindingProjectionRecord[], workspaceId = "ws_accounts", environment: "paper" | "live" = "paper") =>
     repository.replaceBindings({ workspaceId, environment, sourceAsOf: at, completeness: "COMPLETE", rows });
-  const actor = { actorId: "usr_bobby", role: "ADMIN", workspaceId: "ws_accounts:paper" };
-  beforeAll(async () => migrateTestDatabase(url));
+  const actor = { actorId: "usr_bobby", role: "ADMIN" as const, workspaceId: "ws_accounts:paper" };
+  beforeAll(async () => { assertDisposableTarget(url!); await migrateTestDatabase(url!); });
   // This isolated repository suite writes only these two projection tables.
   // Avoid truncating the entire application schema between every tiny case.
   beforeEach(async () => { await pool.query("TRUNCATE execution_binding_projection, execution_manager_projection_snapshots"); });
@@ -79,7 +101,7 @@ describe("Accounts list committed figures and authorized snapshot counts", () =>
 
   it("rejects invalid roles before any snapshot callback and publishes no invented observation clock", async () => {
     const read = vi.fn(reader => repository.bindingListSnapshot(reader, "ws_accounts", "paper"));
-    await expect(query.listWithSnapshot(bindingsResource(), { ...actor, role: "UNTRUSTED" }, {}, read))
+    await expect(query.listWithSnapshot(bindingsResource(), { ...actor, role: "UNTRUSTED" } as unknown as QueryActorContext, {}, read))
       .rejects.toMatchObject({ code: "QUERY_FORBIDDEN" });
     expect(read).not.toHaveBeenCalled();
     await repository.replaceBindings({ workspaceId: "ws_accounts", environment: "paper", sourceAsOf: null,

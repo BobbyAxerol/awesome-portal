@@ -18,6 +18,7 @@ describe("FULL-03 exact current-source contracts",()=>{
     const pairs=recipes.map(row=>currentSourceExecutionPair(row.profile_id,row.profile_digest)!);
     expect(new Set(pairs.map(pair=>JSON.stringify(pair))).size).toBe(28);
     for(const [index,row] of recipes.entries()) {
+      if(row.descriptor.schema_version!=="research.full03-delta-profile.v1")throw new Error("expected FULL-03 profile");
       const pair=pairs[index]!;
       expect(isCurrentSourceLanePair(pair.source_adapter_id,pair.profile_id)).toBe(true);
       expect(currentSourceExecutionPair(row.profile_id,"0".repeat(64))).toBeNull();

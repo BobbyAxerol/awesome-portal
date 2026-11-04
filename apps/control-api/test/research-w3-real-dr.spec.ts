@@ -105,7 +105,9 @@ describe.skipIf(!exportPath)("W3 real-HMD DR receipt (V11-P13/P14/P15-DR)", () =
       expect(Math.abs(Number(row.worst_return_fraction) - expected.worst_return_fraction)).toBeLessThanOrEqual(1e-12);
     }
 
-    const series = await service.evidenceSeries(scope, dr.run_id, "EQUITY") as { source_sample: { sampling: string; emitted_point_count: number; envelope: Record<string, string> } };
+    const series = await service.evidenceSeries(scope, dr.run_id, "EQUITY");
+    if (series.schema_version !== "research.current-source-evidence-series.v1" || !series.source_sample.envelope)
+      throw new Error("expected retained equity series and envelope");
     expect(series.source_sample).toMatchObject({ sampling: "FULL", emitted_point_count: dr.table_rows.OBSERVATION });
     expect(decimal(series.source_sample.envelope.first_equity)).toBe(decimal(dr.expected.passport.initial_equity));
     expect(decimal(series.source_sample.envelope.last_equity)).toBe(decimal(dr.expected.passport.final_equity));

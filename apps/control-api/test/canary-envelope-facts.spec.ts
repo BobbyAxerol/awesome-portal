@@ -108,11 +108,30 @@ describe("FE-071 envelope compliance rows", () => {
     expect(partial[3].consumed.reason_code).toBe("ORDERS_WINDOW_PARTIAL");
   });
 
+  it("refuses an exact open-order count for unknown or missing statuses", () => {
+    for (const orders of [[{ status: "OPEN" }, { status: "NEW_UNQUALIFIED" }], [{ status: null }]]) {
+      const count = complianceRows(approved, profile({ positions: [], orders, margin_balances: [] })).rows[3].consumed;
+      expect(count).toEqual({ availability: "NOT_PUBLISHED", value: null, reason_code: "ORDER_STATUS_NOT_QUALIFIED" });
+    }
+    const known = complianceRows(approved, profile({ positions: [], margin_balances: [], orders: [
+      { status: "OPEN" }, { status: "DENIED" }, { status: "RISK_REJECTED" }, { status: "CANCELLED" },
+    ] })).rows[3].consumed;
+    expect(known).toEqual({ availability: "AVAILABLE", value: "1", reason_code: null });
+  });
+
   it("refuses a capital figure in another currency or without one", () => {
     const wrong = complianceRows(approved, profile({ positions: [], orders: [], margin_balances: [{ currency: "BUSD", initial: "5" }] })).rows[0];
     expect(wrong.consumed.reason_code).toBe("EDS03_CANARY_BALANCE_CURRENCY_MISMATCH");
     const none = complianceRows(approved, profile({ positions: [], orders: [], margin_balances: [{ initial: "5" }] })).rows[0];
     expect(none.consumed.reason_code).toBe("EXACT_DECIMAL_VALUES_REQUIRE_EXPLICIT_CURRENCY");
+  });
+
+  it("does not understate capital consumption when a margin row has no initial amount", () => {
+    const capital = complianceRows(approved, profile({ positions: [], orders: [], margin_balances: [
+      { currency: "USDT", initial: "5" }, { currency: "USDT", initial: null },
+    ] })).rows[0];
+    expect(capital.consumed).toEqual({ availability: "NOT_PUBLISHED", value: null,
+      reason_code: "EXACT_DECIMAL_SOURCE_VALUE_NOT_PUBLISHED" });
   });
 
   it("is a typed absence per cap, and keeps the approved limits, while the source is dark", () => {
@@ -212,7 +231,7 @@ describe("FE-071 through the Canary service", () => {
   const detail = (currentSource?: Record<string, unknown>) =>
     (service as unknown as { publicDetail: (...args: unknown[]) => Record<string, any> }).publicDetail(user, envelopeRow, lineage, false, currentSource);
 
-  it("publishes the approved limits and typed absences while the source is dark, leaving the legacy members as they were", () => {
+  it("publishes the approved limits and typed absences while the source is dark", () => {
     const body = detail();
     expect(body.envelope_compliance.consumed).toBeNull();
     expect(body.envelope_compliance.base_risk_profile_verified).toBe(false);
@@ -246,9 +265,38 @@ describe("FE-071 through the Canary service", () => {
     expect(byCap.open_orders.consumed.value).toBe("1");
     expect(body.envelope_compliance.verdict).toMatchObject({ state: "UNDETERMINED", undetermined_caps: ["daily_loss"] });
     expect(body.rollback_readiness.items.find((item: any) => item.key === "broker_data").ready.value).toBe(true);
-    // The legacy members keep their own semantics beside the new ones.
+    // Legacy summary must carry the same qualified facts as the new rows.
     expect(body.envelope_compliance.consumed).toMatchObject({ capital: "250", open_orders: 1 });
     // `current_source` is the profile read echo (a hand-built stand-in here); everything else must conform.
+    const { current_source: _echo, ...rest } = body;
+    assertPublishedSchema("execution-canary-control-room.v1.schema.json", "CanaryControlRoom", JSON.parse(JSON.stringify(rest)));
+  });
+
+  it("does not publish partial money, unqualified position valuation or buying power as equity", () => {
+    const source = {
+      state: "ready", delivery_profile: "LIVE_BINANCE_USDM", freshness: "FRESH", completeness: "PARTIAL",
+      as_of: "2026-10-12T08:00:00.000Z",
+      capabilities: ["positions", "orders", "fills", "sessions", "margin_balances", "broker_sync", "reconciliation"]
+        .map(key => ({ capability_id: `source.${key}`, state: key === "orders" ? "PARTIAL" : "AVAILABLE", reason_code: null })),
+      data: {
+        positions: [{ notional: "100", realized_pnl: "2", unrealized_pnl: "3" }],
+        orders: [{ order_id: "o1", status: "OPEN" }], fills: [], sessions: [], reconciliation: [],
+        margin_balances: [{ currency: "USDT", initial: "250" }, { currency: "USDT", initial: null }],
+        broker_sync: [{ status: "SYNCED", synced_at: "2026-10-12T07:59:00Z", buying_power: "9999" }],
+      },
+    };
+    const body = detail(source);
+    expect(body.envelope_compliance.consumed).toEqual({ capital: null, gross_notional: null, daily_pnl: null, open_orders: null });
+    expect(body.envelope_compliance.headroom).toEqual({ capital: null, gross_notional: null, daily_loss: null, open_orders: null });
+    const kpis = Object.fromEntries(body.kpis.map((kpi: any) => [kpi.key, kpi]));
+    for (const kpi of Object.values(kpis) as any[]) {
+      expect(kpi.value).toBeNull();
+      expect(kpi.envelope.panel_state).toBe("unavailable");
+    }
+    expect(kpis.capital_consumed.envelope.warnings[0].code).toBe("EXACT_DECIMAL_SOURCE_VALUE_NOT_PUBLISHED");
+    expect(kpis.gross_notional.envelope.warnings[0].code).toBe("E5_POSITION_CURRENCY_AND_MARK_LINEAGE_UNQUALIFIED");
+    expect(kpis.open_orders.envelope.warnings[0].code).toBe("ORDERS_WINDOW_PARTIAL");
+    expect(kpis.broker_equity.envelope.warnings[0].code).toBe("BROKER_EQUITY_NOT_PUBLISHED");
     const { current_source: _echo, ...rest } = body;
     assertPublishedSchema("execution-canary-control-room.v1.schema.json", "CanaryControlRoom", JSON.parse(JSON.stringify(rest)));
   });

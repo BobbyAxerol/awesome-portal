@@ -64,7 +64,10 @@ afterAll(async () => { for (const app of apps) await app.close(); });
 async function httpApp(service: PaperReadService, canReadExecution: () => Promise<boolean> = async () => true) {
   const auth = { sessionFromToken: async () => session, users: { findById: async () => user } };
   const workspaces = { canReadExecution, ensurePersonal: async () => WORKSPACE };
-  @Module({
+  class HarnessModule {}
+  // Apply the Nest decorator explicitly: Vitest's test-file transform can leave
+  // decorators inside functions as syntax unsupported by the Node test runner.
+  Module({
     controllers: [PaperReadController],
     providers: [
       { provide: PaperReadService, useValue: service },
@@ -73,8 +76,7 @@ async function httpApp(service: PaperReadService, canReadExecution: () => Promis
       { provide: CONTROL_API_CONFIG, useValue: config() },
       SessionGuard,
     ],
-  })
-  class HarnessModule {}
+  })(HarnessModule);
   const app = await NestFactory.create<NestFastifyApplication>(HarnessModule, new FastifyAdapter({ trustProxy: true }), { logger: false });
   app.useGlobalFilters(new HttpErrorFilter());
   await app.register(fastifyCookie as never);

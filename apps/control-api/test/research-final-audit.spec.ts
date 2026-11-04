@@ -166,7 +166,7 @@ describe("Final audit actor/idempotency/byte seal boundary",()=>{
   });
   it("registers only its own exact observed manifest, part and result bytes",async()=>{
     const x=subject();
-    const input={run_id:auditResult.run_id,job_id:"rjob_audit",worker_attempt_id:"rwrk_audit",lease_epoch:1,
+    const input={workspace_id:scope.workspaceId,run_id:auditResult.run_id,job_id:"rjob_audit",worker_attempt_id:"rwrk_audit",lease_epoch:1,
       artifact_id:auditProof.artifact_id,artifact_revision:1,manifest_digest:auditProof.manifest_digest,result:auditResult};
     const part={relativePath:"tables/audit_equity/part-000001.parquet",partDigest:"a".repeat(64)};
     x.artifacts.expectation.mockResolvedValue({artifactId:input.artifact_id,state:"SEALED",

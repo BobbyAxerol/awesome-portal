@@ -89,6 +89,13 @@ function row(runId: string, overrides: Partial<CompareRunRow> = {}): CompareRunR
     current_source_transform_digest: digest("a"),
     evidence_equity_sampling: "FULL",
     evidence_equity_source_observation_count: 3,
+    alpha_version_lifecycle: null,
+    current_profile_id: null,
+    current_source_summary: null,
+    current_source_table_rows: null,
+    current_source_folds: null,
+    current_selected_mean_oos_sharpe: null,
+    current_selected_mean_decay: null,
     evidence_equity_values: [
       { at_utc_ms: 1_704_672_000_000, equity: "100", drawdown_fraction: "0" },
       { at_utc_ms: 1_704_675_600_000, equity: "98", drawdown_fraction: "-0.02" },
@@ -168,7 +175,7 @@ describe("P20 bounded Compare persisted truth", () => {
       [{}, "1.25"], [{ current_outer_mean_oos_sharpe: null, current_outer_mean_decay: null }, null],
       [{ current_artifact_sealed: false }, null], [{ current_source_folds: folds.slice(0, 1) }, null],
     ] as Array<[Partial<CompareRunRow>, string | null]>) {
-      const response = await subject(snapshot([retained(overrides)])).service.detail(scope, "alpha-p20", { mode: "attempts", run_ids: [] });
+      const response = await subject(snapshot([retained(overrides)])).service.detail(scope, "alpha-p20", { workspace_id: undefined, mode: "attempts", run_ids: [] });
       if (response.result.mode !== "attempts") throw new Error("test guard");
       expect(response.result.attempts[0]!.original_metrics.find(metric => metric.key === "OOS_SHARPE")).toMatchObject({
         value: expected, scope: "RS02_OOS_MEAN_OF_FOLDS", availability: { state: expected === null ? "NOT_PUBLISHED" : "AVAILABLE" },
@@ -191,7 +198,7 @@ describe("P20 bounded Compare persisted truth", () => {
       data: { dataset_id: "hmd", symbol: "ETHUSDT", timeframe: "1h" },
     }) } : {});
     const { service, repository } = subject(snapshot([historical, right]));
-    const response = await service.detail(scope, "alpha-p20", { mode, run_ids: mode === "pair" ? [historical.run_id!, right.run_id!] : [] });
+    const response = await service.detail(scope, "alpha-p20", { workspace_id: undefined, mode, run_ids: mode === "pair" ? [historical.run_id!, right.run_id!] : [] });
     const found = response.result.mode === "attempts" ? response.result.attempts.find((run) => run.run_id === block.run_id)
       : response.result.mode === "markets" ? response.result.cards.find((card) => card.run.run_id === block.run_id)?.run
       : response.result.pair?.runs.find((run) => run.run_id === block.run_id);
@@ -217,7 +224,7 @@ describe("P20 bounded Compare persisted truth", () => {
       const { service, repository } = subject(snapshot([row(mismatch === "run" ? "rrun_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" : block.run_id, {
         enriched_analysis: block, enriched_digest: mismatch === "digest" ? "0".repeat(64) : sha256ResearchJson(block),
       })]));
-      await expect(service.detail(scope, "alpha-p20", { mode: "attempts", run_ids: [] }))
+      await expect(service.detail(scope, "alpha-p20", { workspace_id: undefined, mode: "attempts", run_ids: [] }))
         .rejects.toMatchObject({ code: "RESEARCH_COMPARE_UNAVAILABLE", status: 503 });
       expect(repository.cached).not.toHaveBeenCalled();
     }
@@ -230,9 +237,9 @@ describe("P20 bounded Compare persisted truth", () => {
     amendment.facts.metrics.sharpe.value = "3.650968955554157";
     amendment.library_summary.sharpe.value = amendment.facts.metrics.sharpe.value;
     const { service, repository } = subject(snapshot([row(original.run_id, { enriched_analysis: original, enriched_digest: sha256ResearchJson(original) })]));
-    await service.detail(scope, "alpha-p20", { mode: "attempts", run_ids: [] });
+    await service.detail(scope, "alpha-p20", { workspace_id: undefined, mode: "attempts", run_ids: [] });
     repository.snapshot.mockResolvedValueOnce(snapshot([row(amendment.run_id, { enriched_analysis: amendment, enriched_digest: sha256ResearchJson(amendment) })]));
-    await service.detail(scope, "alpha-p20", { mode: "attempts", run_ids: [] });
+    await service.detail(scope, "alpha-p20", { workspace_id: undefined, mode: "attempts", run_ids: [] });
     const cachedCalls = repository.cached.mock.calls as unknown[][];
     expect(cachedCalls[0]![4]).not.toBe(cachedCalls[1]![4]);
   });
@@ -251,7 +258,7 @@ describe("P20 bounded Compare persisted truth", () => {
       } });
     };
     const { service } = subject(snapshot([embedded("run-p20-left"), embedded("run-p20-right", true)]));
-    const response = await service.detail(scope, "alpha-p20", { mode: "attempts", run_ids: [] });
+    const response = await service.detail(scope, "alpha-p20", { workspace_id: undefined, mode: "attempts", run_ids: [] });
     if (response.result.mode !== "attempts") throw new Error("test guard");
     const left = response.result.attempts.find((run) => run.run_id === "run-p20-left")!;
     const right = response.result.attempts.find((run) => run.run_id === "run-p20-right")!;
@@ -281,7 +288,7 @@ describe("P20 bounded Compare persisted truth", () => {
     const { service } = subject(snapshot([row("run-p20-left", { evidence_projection: {
       ...source.evidence_projection as Record<string, unknown>, summary_analytics_v2: block,
     } })]));
-    const response = await service.detail(scope, "alpha-p20", { mode: "attempts", run_ids: [] });
+    const response = await service.detail(scope, "alpha-p20", { workspace_id: undefined, mode: "attempts", run_ids: [] });
     if (response.result.mode !== "attempts") throw new Error("test guard");
     expect(response.result.attempts[0]!.original_metrics.find((metric) => metric.key === "OOS_SHARPE"))
       .toMatchObject({ value: null, availability: { state: "NOT_PUBLISHED" } });
@@ -295,7 +302,7 @@ describe("P20 bounded Compare persisted truth", () => {
         methodology_certificate: { state: "ISSUED", grade: "B", issued_at_utc_ms: 1_790_000_000_000, reason_code: null } },
     } });
     const { service } = subject(snapshot([certified, row("run-p20-right")]));
-    const response = await service.detail(scope, "alpha-p20", { mode: "attempts", run_ids: [] });
+    const response = await service.detail(scope, "alpha-p20", { workspace_id: undefined, mode: "attempts", run_ids: [] });
     if (response.result.mode !== "attempts") throw new Error("test guard");
     expect(response.result.attempts.find((item) => item.run_id === "run-p20-left")?.certification).toEqual({
       state: "AVAILABLE", grade: "B", reason_code: null, availability: { state: "AVAILABLE", reason_code: null },
@@ -318,7 +325,7 @@ describe("P20 bounded Compare persisted truth", () => {
       withMetric("run-p20-left", "full_report.sharpe"),
       withMetric("run-p20-right", "unrelated.sharpe"),
     ]));
-    const response = await service.detail(scope, "alpha-p20", { mode: "attempts", run_ids: [] });
+    const response = await service.detail(scope, "alpha-p20", { workspace_id: undefined, mode: "attempts", run_ids: [] });
     if (response.result.mode !== "attempts") throw new Error("test guard");
     const good = response.result.attempts.find((item) => item.run_id === "run-p20-left");
     const bad = response.result.attempts.find((item) => item.run_id === "run-p20-right");
@@ -340,7 +347,7 @@ describe("P20 bounded Compare persisted truth", () => {
       },
     });
     const { service, repository } = subject(snapshot([noClaim, row("run-p20-left")]));
-    const response = await service.detail(scope, "alpha-p20", { mode: "attempts", run_ids: [] });
+    const response = await service.detail(scope, "alpha-p20", { workspace_id: undefined, mode: "attempts", run_ids: [] });
     expect(response.result.mode).toBe("attempts");
     if (response.result.mode !== "attempts") throw new Error("test guard");
     expect(response.result.attempts.map((value) => value.run_id)).toEqual(["run-p20-left", "run-p20-no-claim"]);
@@ -353,7 +360,7 @@ describe("P20 bounded Compare persisted truth", () => {
   it("P20-T01/T02 refuses a same-Alpha key mismatch before raw math or an overlay can exist", async () => {
     const right = row("run-p20-right", { requested_spec: requested("run-p20-right", { data: { dataset_id: "hmd", symbol: "BTCUSDT", timeframe: "4h" } }) });
     const { service, repository } = subject(snapshot([row("run-p20-left"), right]));
-    const response = await service.detail(scope, "alpha-p20", { mode: "pair", run_ids: ["run-p20-left", "run-p20-right"] });
+    const response = await service.detail(scope, "alpha-p20", { workspace_id: undefined, mode: "pair", run_ids: ["run-p20-left", "run-p20-right"] });
     expect(response.result).toMatchObject({ mode: "pair", state: "REFUSED", pair: null, refusal: { code: "P20_CONTRACT_KEY_MISMATCH" } });
     expect(repository.pairRaw).not.toHaveBeenCalled();
     expect(repository.pairOverlay).not.toHaveBeenCalled();
@@ -362,7 +369,7 @@ describe("P20 bounded Compare persisted truth", () => {
 
   it("P20-T05/T06/T10 computes only scoped exact raw facts, labels the formula and preserves original values separately", async () => {
     const { service, repository } = subject();
-    const response = await service.detail(scope, "alpha-p20", { mode: "pair", run_ids: ["run-p20-left", "run-p20-right"] });
+    const response = await service.detail(scope, "alpha-p20", { workspace_id: undefined, mode: "pair", run_ids: ["run-p20-left", "run-p20-right"] });
     expect(repository.pairRaw).toHaveBeenCalledTimes(1);
     expect(response.result).toMatchObject({ mode: "pair", state: "AVAILABLE" });
     if (response.result.mode !== "pair" || response.result.pair === null) throw new Error("test guard");
@@ -394,7 +401,7 @@ describe("P20 bounded Compare persisted truth", () => {
     const wfo = (runId: string, overrides: Partial<CompareRunRow> = {}) =>
       row(runId, { current_manifest_digest: digest(runId.endsWith("left") ? "c" : "7"), current_artifact_sealed: true, ...overrides });
     const bound = subject(snapshot([wfo("run-p20-left"), wfo("run-p20-right")]));
-    const ok = await bound.service.detail(scope, "alpha-p20", { mode: "pair", run_ids: ["run-p20-left", "run-p20-right"] });
+    const ok = await bound.service.detail(scope, "alpha-p20", { workspace_id: undefined, mode: "pair", run_ids: ["run-p20-left", "run-p20-right"] });
     expect(ok.result).toMatchObject({ mode: "pair", state: "AVAILABLE" });
     expect(bound.repository.pairRaw).toHaveBeenCalledTimes(1);
     if (ok.result.mode !== "pair" || !ok.result.pair) throw new Error("test guard");
@@ -409,7 +416,7 @@ describe("P20 bounded Compare persisted truth", () => {
       { current_manifest_digest: "not-a-digest" },
     ] as Partial<CompareRunRow>[]) {
       const refused = subject(snapshot([wfo("run-p20-left", broken), wfo("run-p20-right")]));
-      const answer = await refused.service.detail(scope, "alpha-p20", { mode: "pair", run_ids: ["run-p20-left", "run-p20-right"] });
+      const answer = await refused.service.detail(scope, "alpha-p20", { workspace_id: undefined, mode: "pair", run_ids: ["run-p20-left", "run-p20-right"] });
       expect(answer.result).toMatchObject({ mode: "pair", state: "PARTIAL" });
       if (answer.result.mode !== "pair" || !answer.result.pair) throw new Error("test guard");
       expect(answer.result.pair.runs[0].provenance.source_manifest_digest).toBeNull();
@@ -419,13 +426,13 @@ describe("P20 bounded Compare persisted truth", () => {
 
     /* The preflight manifest is still bound to the P14 receipt. */
     const splitMismatch = subject(snapshot([wfo("run-p20-left", { manifest_digest: digest("8") }), wfo("run-p20-right")]));
-    const mismatch = await splitMismatch.service.detail(scope, "alpha-p20", { mode: "pair", run_ids: ["run-p20-left", "run-p20-right"] });
+    const mismatch = await splitMismatch.service.detail(scope, "alpha-p20", { workspace_id: undefined, mode: "pair", run_ids: ["run-p20-left", "run-p20-right"] });
     expect(mismatch.result).toMatchObject({ mode: "pair", state: "PARTIAL" });
     expect(splitMismatch.repository.pairRaw).not.toHaveBeenCalled();
 
     /* A run with no retained seal (the P04 fixed qualification) stays unbound, as before. */
     const p04 = subject(snapshot([row("run-p20-left", { current_artifact_revision: null, current_manifest_digest: null, current_artifact_sealed: null }), wfo("run-p20-right")]));
-    const unbound = await p04.service.detail(scope, "alpha-p20", { mode: "pair", run_ids: ["run-p20-left", "run-p20-right"] });
+    const unbound = await p04.service.detail(scope, "alpha-p20", { workspace_id: undefined, mode: "pair", run_ids: ["run-p20-left", "run-p20-right"] });
     expect(unbound.result).toMatchObject({ mode: "pair", state: "PARTIAL" });
     expect(p04.repository.pairRaw).not.toHaveBeenCalled();
   });
@@ -433,13 +440,13 @@ describe("P20 bounded Compare persisted truth", () => {
   it("P20-T05/T11 never substitutes zero for insufficient, zero-variance or no-overlap correlation", async () => {
     const { service, repository } = subject();
     repository.pairRaw.mockResolvedValue(raw({ correlation: null }));
-    const zeroVariance = await service.detail(scope, "alpha-p20", { mode: "pair", run_ids: ["run-p20-left", "run-p20-right"] });
+    const zeroVariance = await service.detail(scope, "alpha-p20", { workspace_id: undefined, mode: "pair", run_ids: ["run-p20-left", "run-p20-right"] });
     if (zeroVariance.result.mode !== "pair" || zeroVariance.result.pair === null) throw new Error("test guard");
     expect(zeroVariance.result.pair.correlation).toMatchObject({ state: "NOT_PUBLISHED", value: null, availability: { reason_code: "P20_ZERO_VARIANCE_RAW_RETURNS" } });
 
     repository.cached.mockResolvedValue(null);
     repository.pairRaw.mockResolvedValue(raw({ matchedCount: 0, startUtcMs: null, endUtcMs: null, correlation: null, leftCommonReturnFraction: null, rightCommonReturnFraction: null, leftCommonMaxDrawdownFraction: null, rightCommonMaxDrawdownFraction: null }));
-    const noOverlap = await service.detail(scope, "alpha-p20", { mode: "pair", run_ids: ["run-p20-left", "run-p20-right"] });
+    const noOverlap = await service.detail(scope, "alpha-p20", { workspace_id: undefined, mode: "pair", run_ids: ["run-p20-left", "run-p20-right"] });
     if (noOverlap.result.mode !== "pair" || noOverlap.result.pair === null) throw new Error("test guard");
     expect(noOverlap.result.pair.correlation).toMatchObject({ state: "NOT_PUBLISHED", value: null, n: 0, availability: { reason_code: "P20_NO_COMMON_RAW_RETURN_WINDOW" } });
     expect(noOverlap.result.pair.overlay.points).toEqual([]);
@@ -454,7 +461,7 @@ describe("P20 bounded Compare persisted truth", () => {
     }));
 
     const response = await service.detail(scope, "alpha-p20", {
-      mode: "pair", run_ids: ["run-p20-left", "run-p20-right"],
+      workspace_id: undefined, mode: "pair", run_ids: ["run-p20-left", "run-p20-right"],
     });
 
     if (response.result.mode !== "pair" || response.result.pair === null) throw new Error("test guard");
@@ -476,7 +483,7 @@ describe("P20 bounded Compare persisted truth", () => {
       requested_spec: requested(`run-p20-market-${index}`, { data: { dataset_id: "hmd", symbol: `SYM${index}`, timeframe: "1h" } }),
     }));
     const { service, repository } = subject(snapshot(rows));
-    const response = await service.detail(scope, "alpha-p20", { mode: "markets", run_ids: [] });
+    const response = await service.detail(scope, "alpha-p20", { workspace_id: undefined, mode: "markets", run_ids: [] });
     expect(response.result).toMatchObject({
       mode: "markets",
       caption: "different contract keys — small multiples only; an overlay across keys would be a comparison lie.",
@@ -508,7 +515,7 @@ describe("P20 bounded Compare persisted truth", () => {
       row("run-eth-b", { requested_spec: requested("run-eth-b", market("ETHUSDT", "1h")), run_created_at: at(6), alpha_version_lifecycle: "SUPERSEDED" }),
     ];
     const { service } = subject(snapshot(rows));
-    const response = await service.detail(scope, "alpha-p20", { mode: "markets", run_ids: [] });
+    const response = await service.detail(scope, "alpha-p20", { workspace_id: undefined, mode: "markets", run_ids: [] });
     expect(ResearchCompareResponseSchema.safeParse(response).success).toBe(true);
     if (response.result.mode !== "markets") throw new Error("test guard");
     const cards = Object.fromEntries(response.result.cards.map((card) => [`${card.market.symbol} · ${card.market.timeframe}`, card]));
@@ -525,7 +532,7 @@ describe("P20 bounded Compare persisted truth", () => {
       row("run-nomarket-b", { requested_spec: null }),
     ];
     const { service } = subject(snapshot(rows));
-    const response = await service.detail(scope, "alpha-p20", { mode: "markets", run_ids: [] });
+    const response = await service.detail(scope, "alpha-p20", { workspace_id: undefined, mode: "markets", run_ids: [] });
     if (response.result.mode !== "markets") throw new Error("test guard");
     const unknown = response.result.cards.filter((card) => card.selection === "MARKET_NOT_PUBLISHED");
     expect(unknown).toHaveLength(2);
@@ -538,7 +545,7 @@ describe("P20 bounded Compare persisted truth", () => {
       row("run-p20-left", { display_profile_id: "p04.fixed-qualification.v1", display_ordinal: "1" }),
       row("run-p20-right", { display_profile_id: "unmapped-profile", display_ordinal: "2" }),
     ]));
-    const response = await service.detail(scope, "alpha-p20", { mode: "attempts", run_ids: [] });
+    const response = await service.detail(scope, "alpha-p20", { workspace_id: undefined, mode: "attempts", run_ids: [] });
     if (response.result.mode !== "attempts") throw new Error("test guard");
     const labels = new Map(response.result.attempts.map((attempt) => [attempt.run_id, attempt.display_label]));
     expect(labels.get("run-p20-left")).toBe("R-P04-001");
@@ -551,7 +558,7 @@ describe("P20 bounded Compare persisted truth", () => {
       FEATURE_RESEARCH_COMPARE: "true", FEATURE_RESEARCH_RUN_LIBRARY: "true",
       FEATURE_RESEARCH_EVIDENCE: "false", FEATURE_RESEARCH_SPLIT: "true",
     } as never);
-    await expect(service.detail(scope, "alpha-p20", { mode: "attempts", run_ids: [] }))
+    await expect(service.detail(scope, "alpha-p20", { workspace_id: undefined, mode: "attempts", run_ids: [] }))
       .rejects.toMatchObject({ code: "RESEARCH_COMPARE_UNAVAILABLE", status: 503 });
     expect(repository.snapshot).not.toHaveBeenCalled();
   });

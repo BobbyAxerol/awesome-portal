@@ -101,6 +101,50 @@ function fixture(options: { capacity?: number; ttl?: number; tuples?: number } =
 }
 
 describe("Core current-view authority — synthetic boundary tests over real scope evaluator", () => {
+  it("requires an explicit reviewed policy entry for sibling detail even under full-business authority", async () => {
+    const f = fixture();
+    const selected: CurrentViewSelection = { ...f.selection, detail_fields: ["obligation_id"] };
+    await expect(f.register("CURRENT", selected)).rejects.toMatchObject({ code: "CURRENT_VIEW_AUTHORITY_CHANGED" });
+    f.policy.researcher_fields.fields.push("obligation_id");
+    const original = await f.register("CURRENT", selected), request = f.request(original);
+    const decision = await f.service.resolve(request);
+    expect(decision.detail_fields).toContain("obligation_id");
+    expect(decision.fields).not.toContain("obligation_id");
+    f.policy.researcher_fields.fields = f.policy.researcher_fields.fields.filter(field => field !== "obligation_id");
+    await expect(f.service.recheck({ ...request, decision_digest: decision.decision_digest })).rejects.toBeDefined();
+  });
+  it.each(["PENDING", "NO_REFERENCE"] as const)("refuses sibling detail when the field policy is %s", async state => {
+    const f = fixture();
+    f.policy.researcher_fields.fields.push("obligation_id");
+    if (state === "PENDING") f.policy.researcher_fields.state = "PENDING";
+    else f.policy.researcher_fields.policy_ref = null;
+    await expect(f.register("CURRENT", { ...f.selection, detail_fields: ["obligation_id"] }))
+      .rejects.toMatchObject({ code: "CURRENT_VIEW_AUTHORITY_CHANGED" });
+  });
+  it("authorizes explicitly requested record-detail fields separately and rechecks revocation", async () => {
+    const f = fixture();
+    f.grants[0]!.action = "account.read";
+    const selected: CurrentViewSelection = { ...f.selection, detail_fields: ["filled_quantity"],
+      read_requirement: { ...f.selection.read_requirement, action: "account.read",
+        resource: { kind: "ACCOUNT", id: f.tuples[0]!.account_id } } };
+    await expect(f.register("CURRENT", selected)).rejects.toMatchObject({ code: "CURRENT_VIEW_AUTHORITY_CHANGED" });
+    f.policy.researcher_fields.fields.push("filled_quantity");
+    const original = await f.register("CURRENT", selected), request = f.request(original);
+    const decision = await f.service.resolve(request);
+    expect(decision.detail_fields).toContain("filled_quantity");
+    expect(decision.fields).not.toContain("filled_quantity");
+    f.policy.researcher_fields.fields = f.policy.researcher_fields.fields.filter(field => field !== "filled_quantity");
+    await expect(f.service.recheck({ ...request, decision_digest: decision.decision_digest })).rejects.toBeDefined();
+  });
+
+  it.each([{ detail_fields: ["private_key"] }, { detail_fields: ["filled_quantity", "filled_quantity"] },
+    { detail_fields: ["equity"] }])(
+    "rejects malformed, duplicate or non-detail requested detail fields $detail_fields", async ({ detail_fields }) => {
+      const f = fixture();
+      await expect(f.register("CURRENT", { ...f.selection, detail_fields })).rejects.toMatchObject({
+        code: "CURRENT_VIEW_BINDING_MISMATCH", status: 400 });
+    });
+
   it("mints original custody only on Core, re-resolves actual actor and returns exact correlated tuples", async () => {
     const f = fixture(), registered = await f.register(), input = f.request(registered);
     expect(registered.original_context).toMatch(/^[A-Za-z0-9_-]{43}$/);

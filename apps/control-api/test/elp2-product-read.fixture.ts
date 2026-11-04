@@ -25,15 +25,25 @@ const lineages = (t: typeof OWN): AccessResource[] => [{ kind: "ALPHA", id: t.al
   { kind: "ALPHA_VERSION", id: t.alpha_version_id }, { kind: "PORTFOLIO", id: t.portfolio_id },
   { kind: "DEPLOYMENT", id: t.deployment_id }, { kind: "ACCOUNT", id: t.account_id }];
 const resources = [...new Map(tuples.flatMap(lineages).map(r => [JSON.stringify(r), r])).values()];
+// Tests deliberately simulate changes to authority between the read and its
+// final fence. Production receives the readonly AccessEvaluationContext;
+// only this fixture owns mutable collections for those transitions.
+type MutableFixtureContext = Omit<AccessEvaluationContext, "grants" | "active_principals"> & {
+  grants: ScopedAccessGrant[]; active_principals: Set<string>;
+};
 export const FIELDS = ["alpha_id", "alpha_version_id", "portfolio_id", "deployment_id", "account_id", "strategy_id", "environment",
   "order_id", "status", "venue", "side", "name", "display_name", "instrument_id", "created_at", "updated_at", "quantity", "balance_total", "currency", "equity"];
 
 export function productReadFixture(options: { full?: boolean; legacy?: boolean; fields?: string[] } = {}) {
-  const config = testConfig({ FEATURE_EXECUTION_LOCAL_PROJECTION: "true", EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID: WS,
+  const rawConfig = testConfig({ FEATURE_EXECUTION_LOCAL_PROJECTION: "true", EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID: WS,
     EXECUTION_READ_PROFILE: "retained_review_v1", AUTH_MODE: "dev",
     EXECUTION_DATABASE_URL: "postgres://portal:portal@127.0.0.1:5432/execution_test_only",
     EXECUTION_EDGE_PAPER_PROFILE_ID: "PAPER_BINANCE_USDM", EXECUTION_EDGE_SANDBOX_PROFILE_ID: "SANDBOX_BINANCE_USDM",
     EXECUTION_EDGE_LIVE_PROFILE_ID: "LIVE_BINANCE_USDM" });
+  if (!rawConfig.EXECUTION_EDGE_PAPER_PROFILE_ID || !rawConfig.EXECUTION_EDGE_LIVE_PROFILE_ID)
+    throw new Error("TEST_ONLY_PAPER_AND_LIVE_PROFILES_REQUIRED");
+  const config = { ...rawConfig, EXECUTION_EDGE_PAPER_PROFILE_ID: rawConfig.EXECUTION_EDGE_PAPER_PROFILE_ID,
+    EXECUTION_EDGE_LIVE_PROFILE_ID: rawConfig.EXECUTION_EDGE_LIVE_PROFILE_ID };
   const user = { userId: USER, username: USER, displayName: USER, role: "USER", status: "ACTIVE", sessionVersion: 1,
     mustChangePassword: false, failedLoginCount: 0, lockedUntil: null, createdAt: new Date(NOW), updatedAt: new Date(NOW),
     disabledAt: null, archivedAt: null, accountRevision: 1 } as PortalUser;
@@ -52,7 +62,7 @@ export function productReadFixture(options: { full?: boolean; legacy?: boolean; 
     issued_by: OWNER, parent_grant_id: null, revision: "TEST_ONLY-grant-r1", policy_revision: policy.revision,
     revoked_at_ms: null, requires_ts_acceptance: true, field_policy_ref: policy.researcher_fields.policy_ref,
     ts_receipt: { ...membership, membership_revision: membership.revision, effective_at_ms: NOW - 1000, expires_at_ms: NOW + 3600000 } });
-  const context: AccessEvaluationContext = { principal_id: USER, workspace_id: WS, now_ms: NOW, actor_current: true,
+  const context: MutableFixtureContext = { principal_id: USER, workspace_id: WS, now_ms: NOW, actor_current: true,
     actor_role: "USER", actor_lease_until_ms: session.idleExpiresAt.getTime(),
     allow_test_only: true, authority_fingerprint: "TEST_ONLY-db-r1", policy,
     active_principals: new Set([USER, OWNER]), relationsFor: () => relations,
@@ -88,7 +98,11 @@ export function productReadFixture(options: { full?: boolean; legacy?: boolean; 
         { ...OWN, strategy_id: "strategy-own", mode: "paper", venue: "VENUE" },
         { ...PEER, strategy_id: "strategy-peer", mode: "paper", venue: "VENUE" }]),
     } } } as unknown as ProfileProjectionSnapshot & { workspaceId: string; environment: string; profileId: string };
-  const repository = { snapshot: vi.fn(async () => snapshot), rawSnapshot: vi.fn(async () => snapshot), snapshotMetadata: vi.fn(async () => snapshot) };
+  // Model the repository's public return type instead of over-constraining
+  // every replacement to fixture-only workspace/environment helper fields.
+  const repository = { snapshot: vi.fn(async (): Promise<ProfileProjectionSnapshot> => snapshot),
+    rawSnapshot: vi.fn(async (): Promise<ProfileProjectionSnapshot> => snapshot),
+    snapshotMetadata: vi.fn(async (): Promise<ProfileProjectionSnapshot> => snapshot) };
   const named = { relationPage: vi.fn() };
   const product = new ExecutionProductReadSource(config, repository as unknown as ExecutionProfileProjectionRepository, named as never, scopes);
   const upstream = { relationForCataloguedOperation: vi.fn(), relationForNamedOperation: vi.fn() };

@@ -10,6 +10,7 @@
       "id": "TEST_ONLY:account-1"
     },
     "runs": [],
-    "breaks": []
+    "breaks": [],
+    "next_cursor": null
   }
 }

@@ -5,7 +5,7 @@
 import { createHash, generateKeyPairSync, X509Certificate, type KeyObject } from "node:crypto";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { createServer, type Server } from "node:https";
-import type { Socket } from "node:net";
+import type { Duplex } from "node:stream";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { NativeBusinessReadClient } from "../src/execution-v2/native-business-read-client";
 import { prepareNativeBusinessReadRequest, type NativeBusinessReadAction,
@@ -85,7 +85,7 @@ function identity(label: string, ca: Authority): Identity {
 
 describe("NC02 selected native source — genuine local TLS witness, synthetic source facts", () => {
   let core: Identity, pm: Identity;
-  const allocations: Array<{ server: Server; sockets: Set<Socket> }> = [];
+  const allocations: Array<{ server: Server; sockets: Set<Duplex> }> = [];
   beforeAll(() => { const ca = authority(); core = identity("selected_core", ca); pm = identity("selected_pm", ca); }, 15000);
   afterEach(async () => {
     vi.restoreAllMocks();
@@ -100,7 +100,7 @@ describe("NC02 selected native source — genuine local TLS witness, synthetic s
       "content-length": String(bytes.length), "cache-control": "no-store", connection: "close" }); response.end(bytes);
   }
   async function endpoint(handler: (req: IncomingMessage, response: ServerResponse, body: Buffer) => void | Promise<void>) {
-    const sockets = new Set<Socket>(), received: Array<{ path: string; body: Buffer }> = [];
+    const sockets = new Set<Duplex>(), received: Array<{ path: string; body: Buffer }> = [];
     const server = createServer({ key: pm.key, cert: pm.cert, ca: core.ca, requestCert: true, rejectUnauthorized: true,
       minVersion: "TLSv1.3", maxVersion: "TLSv1.3" }, (req, response) => {
       const chunks: Buffer[] = []; req.on("error", () => undefined); response.on("error", () => undefined);

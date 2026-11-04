@@ -222,8 +222,8 @@ describe.skipIf(!database)("NC-01 native custody and shared Core drain, real iso
       SELECT lease_id,authority_revision,subject_id,session_id,session_revision,workspace_id,environment,workload_id,
         $1,authority_fingerprint,issued_at_ms,expires_at_ms FROM elp210_candidate.native_read_obligations`,[binding.request_digest]))
       .rejects.toThrow("CURRENT_HUMAN_CROSS_FAMILY_ID_CONFLICT");
-    const legacy = await candidate.issue(actor,binding), input = base(original.deadline);
-    input.binding.lease_id=legacy.lease_id;
+    const legacy = await candidate.issue(actor,binding), initial = base(original.deadline);
+    const input = { ...initial, binding: { ...initial.binding, lease_id: legacy.lease_id } };
     const wire=prepareNativeBusinessReadRequest("status",input,{ request_bytes:32768,response_bytes:32768 });
     await expect(insert({ ...original,lease_id:input.binding.lease_id,attempt_id:input.binding.attempt_id,
       base_body:wire.base_body,stable_core_digest:wire.stable_core_digest,binding_digest:wire.binding_digest }))

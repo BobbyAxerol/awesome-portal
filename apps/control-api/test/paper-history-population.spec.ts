@@ -73,7 +73,7 @@ async function scopedWindow() {
   const now = Date.now(), userId = "TEST_ONLY-history-user", owner = "TEST_ONLY-owner";
   const user: PortalUser = { userId, username: userId, displayName: userId, role: "USER", status: "ACTIVE",
     mustChangePassword: false, failedLoginCount: 0, lockedUntil: null, sessionVersion: 1,
-    createdAt: new Date(now), updatedAt: new Date(now), disabledAt: null };
+    createdAt: new Date(now), updatedAt: new Date(now), disabledAt: null, accountRevision: 1, archivedAt: null };
   const session: AuthSession = { sessionId: "TEST_ONLY-history-session", userId, state: "ACTIVE", sessionVersion: 1,
     authenticationTime: new Date(now), idleExpiresAt: new Date(now + 60_000), absoluteExpiresAt: new Date(now + 60_000) };
   const resources: AccessResource[] = [

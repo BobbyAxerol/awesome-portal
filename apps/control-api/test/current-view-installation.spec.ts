@@ -54,7 +54,6 @@ describe("explicit private current-view installation", () => {
       "provide" in value && value.provide === ManagerCurrentAccounts)).toBe(false);
   });
   it("registers Account360 only with explicit metadata and the existing identity trust", () => {
-    const selected = runtime();
     // TEST_ONLY commissioning mechanics. Registration must not query the
     // source; real metadata/source qualification has its separate test lane.
     const request = { workspace_id: "TEST_ONLY-research", environment: "paper" as const, profile_id: "TEST_ONLY-paper",
@@ -66,12 +65,12 @@ describe("explicit private current-view installation", () => {
       source_metadata_digest: `sha256:${"a".repeat(64)}`, receipt_pins: { source_read: "TEST_ONLY-source",
         transport_trust: "TEST_ONLY-trust", privacy: "TEST_ONLY-privacy", field_policy: "TEST_ONLY-fields" } }));
     const now = Date.now();
-    selected.managerCurrent = {
+    const selected: PreparedCurrentViewRuntime = { ...runtime(), managerCurrent: {
       request, commissioning: loadManagerCurrentCommissioning(bytes, {
         artifact_sha256: `sha256:${createHash("sha256").update(bytes).digest("hex")}`,
         approval_ref: "TEST_ONLY-approval", approved_at_ms: now, valid_until_ms: now + 60_000,
       }, now), source: vi.fn(async () => null),
-    };
+    } };
     expect(() => AppModule.register(config, pool, undefined, { currentViewRuntime: selected }))
       .toThrow("MANAGER_CURRENT_IDENTITY_TRUST_REQUIRED");
     const providers = AppModule.register(config, pool, undefined, { currentViewRuntime: selected,
@@ -80,7 +79,7 @@ describe("explicit private current-view installation", () => {
       "provide" in value && value.provide === ManagerCurrentAccounts) as FactoryProvider;
     expect(current.inject).toEqual([CurrentViewCoreComposition]);
     expect(current.useFactory({ read: vi.fn(), deliver: vi.fn() })).toBeInstanceOf(ManagerCurrentAccounts);
-    expect(selected.managerCurrent.source).not.toHaveBeenCalled();
+    expect(selected.managerCurrent!.source).not.toHaveBeenCalled();
   });
   it("injects the existing real identity and read-scope providers, not replacements", () => {
     expect(provider(runtime())!.inject).toEqual([AuthService, ExecutionReadScopes,

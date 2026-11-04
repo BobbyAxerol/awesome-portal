@@ -376,8 +376,8 @@ describe("BE-P12 ProfileReadService.deploymentIdentity over the real scoped sour
   });
   it("authority that changes before delivery ends the call (409) instead of becoming an absence", async () => {
     const f = liveFixture(), snapshot = f.repository.rawSnapshot.getMockImplementation()!;
-    f.repository.rawSnapshot.mockImplementation(async (...args: unknown[]) => {
-      const result = await (snapshot as (...a: unknown[]) => Promise<unknown>)(...args);
+    f.repository.rawSnapshot.mockImplementation(async () => {
+      const result = await snapshot();
       f.context.authority_fingerprint = "TEST_ONLY-changed-before-delivery";
       return result;
     });

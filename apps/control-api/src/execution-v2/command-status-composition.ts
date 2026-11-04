@@ -130,6 +130,8 @@ export class CommandStatusComposition {
     try {
       const status=createAuthenticatedEdgeCurrentRequesterStatus(this.config.gateway_binding,base,authority,this.config.edge_transport,
         new PgCommandStatusOriginalFingerprints(this.pool));
+      if(!this.config.gateway_binding.edge_contract)throw failure("COMMAND_STATUS_COMPOSITION_CONFIG_INVALID");
+      authority.bindRecoverySource(status.port,this.config.gateway_binding.edge_contract);
       const assertion=createCommandSourceAssertionTransport({issue:(context,input)=>{
         if(this.state!=="RUNNING")return Promise.reject(failure("COMMAND_STATUS_COMPOSITION_NOT_RUNNING"));
         return authority.issue(context,input);

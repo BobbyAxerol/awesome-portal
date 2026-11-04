@@ -30,6 +30,7 @@ const user: PortalUser = {
   userId: "usr_market_context", username: "market-context", displayName: "Market Context", role: "ADMIN",
   status: "ACTIVE", mustChangePassword: false, failedLoginCount: 0, lockedUntil: null, sessionVersion: 1,
   createdAt: new Date("2026-09-06T00:00:00.000Z"), updatedAt: new Date("2026-09-06T00:00:00.000Z"), disabledAt: null,
+  accountRevision: 1, archivedAt: null,
 };
 const session: AuthSession = {
   sessionId: "ses_market_context", userId: user.userId, state: "ACTIVE", sessionVersion: 1,

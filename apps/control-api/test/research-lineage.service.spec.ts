@@ -128,10 +128,10 @@ describe("P19 Attempt Lineage persisted truth", () => {
       expect(refused.attempts[0]!.run_facts.oos_sharpe).toMatchObject({ value: null, availability: { state: "NOT_PUBLISHED" } });
       expect(refused.attempts[0]!.run_facts.decay.value).toBeNull();
     }
-    const item = libraryItem("run-p19-root");
-    item.stats = item.stats.map(cell => cell.role === "OOS_SHARPE" || cell.role === "DECAY"
+    const baseItem = libraryItem("run-p19-root");
+    const item = libraryItem("run-p19-root", { stats: baseItem.stats.map(cell => cell.role === "OOS_SHARPE" || cell.role === "DECAY"
       ? { ...cell, value: null, availability: { state: "NOT_PUBLISHED", reason_code: "CAUSAL_DEPLOYMENT_INNER_METRICS_NOT_OUTER_OOS" } }
-      : cell);
+      : cell) });
     const repository = { read: vi.fn().mockResolvedValue(snapshot({
       libraryRows: [{ run_id: "run-p19-root" }], retainedMetrics: [retained],
     })) };

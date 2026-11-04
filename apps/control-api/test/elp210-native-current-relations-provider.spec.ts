@@ -1,17 +1,22 @@
 /** Real disposable PG + real loopback mTLS/HTTP. Source relation payloads are
  * SYNTHETIC component vectors, never a native-source commissioning receipt. */
-import {generateKeyPairSync,randomUUID} from "node:crypto";
+import {createHash,generateKeyPairSync,randomUUID,X509Certificate} from "node:crypto";
 import {readFile} from "node:fs/promises";
 import {join} from "node:path";
 import {createServer,request,type ServerResponse} from "node:http";
+import {createServer as createTlsServer,request as tlsRequest} from "node:https";
 import type {Socket} from "node:net";
+import type {Duplex} from "node:stream";
 import {generateKeyPair,jwtVerify} from "jose";
 import {Pool} from "pg";
+import fastify from "fastify";
+import type {ExecutionContext} from "@nestjs/common";
 import {afterAll,afterEach,beforeAll,describe,expect,it} from "vitest";
 import {AuthService} from "../src/auth/auth.service";
 import {OwnerAccessRepository} from "../src/repos/owner-access";
 import {ExecutionAccessService} from "../src/execution-v2/access.service";
 import {accessDigest} from "../src/execution-v2/access-digest";
+import {evaluateBusinessRead} from "../src/execution-v2/access-policy";
 import {grantBindingDigest,type CurrentAccessRelations} from "../src/execution-v2/access-current-relations";
 import type {AccessAction} from "../src/execution-v2/access.contract";
 import type {NativeCurrentRelationsSourceBase} from "../src/execution-v2/native-current-relations-codec";
@@ -21,10 +26,22 @@ import {NativeReadEgress} from "../src/execution-v2/native-read-egress";
 import {CurrentHumanCandidate} from "../src/execution-v2/current-human-candidate";
 import {CurrentHumanMutations} from "../src/execution-v2/current-human-mutations";
 import {NativeCurrentRelationsProvider,type NativeCurrentRelationsProviderConfig} from "../src/execution-v2/native-current-relations-provider";
+import {CurrentViewCoreComposition,type CurrentViewCompositionConfig} from "../src/execution-v2/current-view-composition";
+import {ExecutionReadScopes,type ReadScopePrincipal} from "../src/execution-v2/read-scope";
+import {ManagerCurrentAccounts} from "../src/execution-v2/manager-current-accounts";
+import {SiblingSourceDarkController} from "../src/execution-v2/sibling-source-dark.controller";
+import {WorkspacesRepository} from "../src/repos/workspaces";
+import {SessionGuard} from "../src/facade/session.guard";
+import {SESSION_COOKIE} from "../src/auth/cookies";
+import {loadManagerCurrentCommissioning,managerCurrentMetadataDigest,withManagerCurrentPublications,type ManagerCurrentMetadata} from "../src/execution-v2/manager-current-publication";
+import {loadPublicationCommissioning,withCataloguePublications} from "../src/execution-v2/publication-adapter";
+import {ExecutionManagerRuntime} from "../src/execution-v2/manager-runtime";
+import {EXECUTION_PUBLICATION_CATALOGUE} from "../src/execution-v2/publication-source.generated";
 import {setupApp,teardownApp,migrateTestDatabase} from "./harness";
 import {rootWireFacts} from "./fixtures/elp210-native-root-wire";
 import {currentRelationsWireReply} from "./fixtures/elp210-native-current-relations-wire";
 import {currentRelationsTestEndpoint} from "./fixtures/elp210-native-current-relations-server";
+import {commonName,testCertificate,type TestAuthority} from "./fixtures/elp210-test-certificates";
 
 const url=process.env.TEST_DATABASE_URL;
 describe.skipIf(!url)("ordinary native CURRENT actual custody/finite egress, TEST_ONLY PG",()=>{
@@ -55,7 +72,8 @@ describe.skipIf(!url)("ordinary native CURRENT actual custody/finite egress, TES
    verifyPolicy:async(input:unknown)=>input===artifact?artifact:null};
   await new ExecutionAccessService(pool,ctx.app.get(AuthService),baseTrust,true).installReviewedPolicy(artifact);
   const fact={...facts.fact,portal_user_id:owner,human_requester_user_id:owner,workspace_id:workspace,grant_id:grant.grant_id,
-   policy_revision:policy.revision,grant_digest:accessDigest(grant)},relations={...facts.relations,subject_user_id:owner,workspace_id:workspace,
+   policy_revision:policy.revision,grant_digest:accessDigest(grant),policy_artifact_digest:policy.artifact_digest,
+   policy_install_digest:accessDigest(artifact),approval_ref:policy.approval_ref},relations={...facts.relations,subject_user_id:owner,workspace_id:workspace,
     grants:[{...facts.relations.grants[0],grant_id:grant.grant_id,binding_digest:grantBindingDigest(grant),accepted:fact}]};
   const terminal=generateKeyPairSync("ed25519"),states=new Map<string,string>(),terminals:Array<Record<string,unknown>>=[];
   let loseIssue=false,loseResolve=false,loseEnterBefore=false,loseCancel=false,onIssue:(()=>Promise<void>)|undefined;
@@ -90,7 +108,7 @@ describe.skipIf(!url)("ordinary native CURRENT actual custody/finite egress, TES
    provider=new NativeCurrentRelationsProvider(pool,endpoint.client,egress,config),access=new ExecutionAccessService(pool,ctx.app.get(AuthService),provider.compose(baseTrust),true),
    observe=()=>provider.observe({actor,workspace_id:workspace,principal_ids:[owner],action:"access.read",resource_digest:accessDigest({kind:"CURRENT_POLICY_CONTEXT"})}),
    rows=async()=> (await pool.query("SELECT * FROM portal_native_current_read_obligations WHERE source_config_digest=$1 ORDER BY created_at,lease_id",[provider.source_config_digest])).rows;
-  return{provider,config,actor,workspace,access,observe,rows,endpoint,terminals,relations,states,
+  return{provider,config,actor,workspace,access,baseTrust,observe,rows,endpoint,terminals,relations,states,fact,
    loseIssue(){loseIssue=true;},loseResolve(){loseResolve=true;},loseEnterBefore(){loseEnterBefore=true;},loseCancel(){loseCancel=true;},onIssue(callback:()=>Promise<void>){onIssue=callback;}};
  }
  async function http(operation:(res:ServerResponse)=>Promise<void>){
@@ -128,6 +146,149 @@ describe.skipIf(!url)("ordinary native CURRENT actual custody/finite egress, TES
   const row=(await f.rows())[0];expect(row).toMatchObject({phase:"SERVED",source_settled:true});expect(row.terminal_fact.observation.outcome).toBe("FINISHED");
   expect(f.endpoint.requests.map(r=>r.action)).toEqual(["issue","enter","status","resolve"]);expect(f.terminals[0].phase).toBe("SERVED");
   await expect(pool.query("UPDATE portal_users SET session_version=session_version+1 WHERE user_id=$1",[owner])).resolves.toBeDefined();
+ });
+ it("joins Account profile, current field authority, mTLS and native PG custody to a physical HTTP send",async()=>{
+  // The only doubles are the isolated native/Edge sources and their authority
+  // fixtures. This is NOT a receipt from the deployed Edge or a real grant.
+  const f=await fixture(false,{actions:["access.read","business.read_all"]}),now=Date.now();
+  const account=`TEST_ONLY-account-${randomUUID()}`,entity=`TEST_ONLY-entity-${randomUUID()}`;
+  const resource={kind:"ACCOUNT" as const,id:account},root=f.relations.resources[0]!.roots[0]!;
+  root.resources.push(resource);
+  const target=f.relations.grants[0]!.targets[0]!;
+  f.relations.grants[0]!.targets.push({...target,resource,native_reference_digest:accessDigest(["TEST_ONLY",resource])});
+  // Install the explicitly synthetic receipt through the same Core intake as a
+  // real original; never update the grant directly or bypass authorization.
+  const input=Object.freeze({TEST_ONLY_root_receipt:randomUUID()}),fact=f.fact;
+  const intake=new ExecutionAccessService(pool,ctx.app.get(AuthService),{...f.baseTrust,
+   verifyRootReceipt:async(candidate:unknown)=>candidate===input?{fact,
+    mapping:{ts_user_id:fact.ts_user_id,revision:fact.mapping_revision},
+    membership:{receipt_id:fact.receipt_id,revision:fact.membership_revision,mapping_revision:fact.mapping_revision},
+    current_authority:f.relations,assertCurrent:()=>{if(Date.now()>=fact.expires_at_ms!)throw Error("TEST_ONLY_ROOT_RECEIPT_EXPIRED");},
+    release:async()=>{}}:null},true);
+  expect((await intake.acceptRootTsReceipt(input)).receipt.outcome).toBe("TS_APPLIED");
+  const binding={dataset_id:"manager-current:ACCOUNT",source_revision:"TEST_ONLY-cycle",projection_generation:"TEST_ONLY-generation",
+   catalogue_revision:"TEST_ONLY-catalogue",window:null};
+  const rowDigest=accessDigest("TEST_ONLY-committed-entity");
+  const metadata:ManagerCurrentMetadata={schema_version:"portal.execution.manager-current-metadata.v1",
+   scope:{workspace_id:f.workspace,environment:"paper",profile_id:"TEST_ONLY-profile"},binding,
+   source_workspace_id:"TEST_ONLY-source-workspace",adapter_revision:"TEST_ONLY-adapter",publication_revision:"TEST_ONLY-publication",
+   state:"ACTIVE",issued_at_ms:now-1000,expires_at_ms:now+60000,source_read_at_ms:now-1000,observed_at_ms:now-500,
+   receipt_pins:{source_read:"TEST_ONLY-read",transport_trust:"TEST_ONLY-transport",privacy:"TEST_ONLY-privacy",field_policy:"TEST_ONLY-fields"},
+   grains:[{grain:"manager.account",source_fields:["account_id"],fields:["account_id"],
+    selections:[{resource_ref:"accounts",resource,entity_ids:[entity]}],entities:[{entity_id:entity,account_id:account,payload_digest:rowDigest}]},
+    {grain:"relation.account_balances",source_fields:["account_id"],fields:["account_id"],selections:[],entities:[]},
+    {grain:"relation.account_policies",source_fields:["account_id"],fields:["account_id"],selections:[],entities:[]}]};
+  const artifact=JSON.stringify({schema_version:"portal.execution.manager-current-commissioning.v1",scope:metadata.scope,binding,
+   source_workspace_id:metadata.source_workspace_id,adapter_revision:metadata.adapter_revision,
+   source_metadata_digest:managerCurrentMetadataDigest(metadata),receipt_pins:metadata.receipt_pins});
+  const commissioning=loadManagerCurrentCommissioning(artifact,{artifact_sha256:`sha256:${createHash("sha256").update(artifact).digest("hex")}`,
+   approval_ref:"TEST_ONLY-approval",approved_at_ms:now-2000,valid_until_ms:now+60000},now);
+  // Exercise the real installed Manager runtime delegate as AppModule does,
+  // before the catalogue and Manager CURRENT publication decorators.
+  const publicationArtifact=JSON.stringify({schema_version:"portal.execution.publication-commissioning.v1",scope:metadata.scope,
+   catalogue_digest:EXECUTION_PUBLICATION_CATALOGUE.source_catalogue_digest,adapter_id:"TEST_ONLY-manager-adapter",
+   family_ids:["alpha_fleet_overview"],purposes:["BUSINESS"],receipt_pins:{source_read:"TEST_ONLY-read",
+    transport_trust:"TEST_ONLY-transport",privacy:"TEST_ONLY-privacy",field_policy:"TEST_ONLY-fields"}});
+  const publicationCommissioning=loadPublicationCommissioning(publicationArtifact,{artifact_sha256:`sha256:${createHash("sha256").update(publicationArtifact).digest("hex")}`,
+   adapter_id:"TEST_ONLY-manager-adapter",approval_ref:"TEST_ONLY-not-owner-approval",approved_at_ms:now-1000,valid_until_ms:now+60000},now);
+  const nativeTrust=f.provider.compose(f.baseTrust),managerRuntime=new ExecutionManagerRuntime(pool,{trust:nativeTrust,cadence_ms:1000,
+   maximum_publication_reads:1,partitions:[{scope:metadata.scope,commissioning:publicationCommissioning,source:{} as never,
+    publication:async()=>null,bounds:{maximum_documents_per_tick:1,maximum_document_bytes:1048576,maximum_document_rows:200,
+     maximum_tick_ms:5000,source_timeout_ms:1000,transaction_timeout_ms:1000,lease_ttl_ms:2000}}]});
+  const source=async()=>structuredClone(metadata),auth=ctx.app.get(AuthService),catalogue=withCataloguePublications(
+   managerRuntime.accessTrust(nativeTrust)!,async()=>null,{purpose:"BUSINESS"}),trust=withManagerCurrentPublications(catalogue,source,{commissioning});
+  const access=new ExecutionAccessService(pool,auth,trust,true),scopes=new ExecutionReadScopes(pool,access,ctx.config);
+  const user=(await pool.query("SELECT * FROM portal_users WHERE user_id=$1",[owner])).rows[0],session=(await pool.query(
+   "SELECT * FROM auth_sessions WHERE session_id=$1",[f.actor.session_id])).rows[0];
+  const principal:ReadScopePrincipal={workspaceId:f.workspace,viewerWorkspaceId:f.workspace,
+   user:{userId:user.user_id,username:user.username,displayName:user.display_name,role:user.role,status:user.status,
+    mustChangePassword:user.must_change_password,failedLoginCount:user.failed_login_count,lockedUntil:user.locked_until,
+    sessionVersion:user.session_version,createdAt:user.created_at,updatedAt:user.updated_at,disabledAt:user.disabled_at,
+    accountRevision:user.account_revision,archivedAt:user.archived_at},
+   session:{sessionId:session.session_id,userId:session.user_id,state:session.state,sessionVersion:session.session_version,
+    authenticationTime:session.created_at,idleExpiresAt:session.idle_expires_at,absoluteExpiresAt:session.absolute_expires_at}};
+  const keys=generateKeyPairSync("ec",{namedCurve:"prime256v1"}),name=commonName("TEST_ONLY-ca"),ca:TestAuthority={key:keys.privateKey,name,
+   certificate:testCertificate(name,keys,{name,key:keys.privateKey},true)};
+  const identity=(label:string)=>{const pair=generateKeyPairSync("ec",{namedCurve:"prime256v1"}),cert=testCertificate(commonName(label),pair,ca,false);
+   return{key:Buffer.from(pair.privateKey.export({type:"pkcs8",format:"pem"})),cert,ca:ca.certificate,
+    pin:`sha256:${createHash("sha256").update(new X509Certificate(cert).raw).digest("hex")}`};};
+  const core=identity("TEST_ONLY-core"),edge=identity("TEST_ONLY-edge"),sockets=new Set<Duplex>();
+  let origin="",hits=0;
+  const server=createTlsServer({...edge,requestCert:true,rejectUnauthorized:true,minVersion:"TLSv1.3",maxVersion:"TLSv1.3"},(req,res)=>{
+   hits++;const context=req.headers.authorization?.slice(7),body=JSON.stringify({schema_version:"portal.execution.current-view-resolve.v1",
+    original_context:context,workload_id:"TEST_ONLY-workload",operation:"CURRENT",resource_ref:"accounts"});
+   const upstream=tlsRequest(`${origin}/internal/elp210/current-view/resolve`,{...edge,method:"POST",agent:false,rejectUnauthorized:true,
+    minVersion:"TLSv1.3",maxVersion:"TLSv1.3",headers:{"content-type":"application/json","content-length":Buffer.byteLength(body)}},reply=>{
+    reply.resume();reply.once("end",()=>{if(reply.statusCode!==200){res.writeHead(403);res.end();return;}
+     const page=JSON.stringify({schema_version:"portal.execution.manager-current.v1",projection_generation:binding.projection_generation,
+      source_continuity_epoch:binding.source_revision,source_read_at_ms:metadata.source_read_at_ms,produced_at_ms:now,
+      availability:"AVAILABLE",source_basis:"MANAGER_COMMITTED_POLL_BOUNDED_SNAPSHOT",history_capability:"UNAVAILABLE",
+      coverage:"CURRENT_PAGE_ONLY",count_status:"COMPLETE_AUTHORIZED_SELECTION",rows:[{entity_id:entity,revision:rowDigest,
+       payload:{account_id:{kind:"TEXT",value:account}}}],next_cursor:null,resume_cursor:null});
+     res.writeHead(200,{"content-type":"application/json","content-length":Buffer.byteLength(page),connection:"close"});res.end(page);});});
+   upstream.on("error",()=>{res.writeHead(503);res.end();});upstream.end(body);
+  });
+  server.on("connection",socket=>{sockets.add(socket);socket.once("close",()=>sockets.delete(socket));});
+  await new Promise<void>(resolve=>server.listen(0,"127.0.0.1",resolve));const address=server.address();
+  if(!address||typeof address==="string")throw Error("TEST_ONLY_TLS_ADDRESS");
+  const config:CurrentViewCompositionConfig={authority:{ttl_ms:30000,maximum_contexts:8},shutdown_deadline_ms:2000,
+   transport:{tls:core,peer:{certificate_sha256:edge.pin,dns_name:"localhost",workload_id:"TEST_ONLY-workload"},
+    limits:{maximum_in_flight:2,request_bytes:8192,response_bytes:65536,deadline_ms:2000}},
+   edge:{origin:`https://127.0.0.1:${address.port}`,tls:core,peer:{certificate_sha256:edge.pin,dns_name:"localhost"},
+    limits:{maximum_in_flight:2,deadline_ms:2000,response_bytes:8192}}};
+  const composition=new CurrentViewCoreComposition(auth,scopes,config);
+  try{
+   const listening=await composition.start({host:"127.0.0.1",port:0});origin=`https://127.0.0.1:${listening.port}`;
+   const service=new ManagerCurrentAccounts({request:{...metadata.scope,binding},commissioning,source,core:composition});
+   const actualContext=await access.readContext(f.actor,f.workspace);
+   expect(evaluateBusinessRead(actualContext,"business.read_all",resource,"paper")).toMatchObject({allowed:true});
+   const result=await http(res=>service.readNativeProfile(principal,account,"paper",res,()=>undefined));
+   if(result.completion.error)throw result.completion.error;
+   expect(result.completion.error).toBeUndefined();expect(result.received.complete).toBe(true);
+   expect(JSON.parse(result.received.body.toString())).toMatchObject({schema_version:"portal.execution.account-profile.v1",account_id:account,workspace_id:f.workspace});
+   expect(hits).toBe(1);const obligations=await f.rows();expect(obligations.length).toBeGreaterThan(0);
+   expect(obligations.some(row=>row.phase==="SERVED"&&row.source_settled)).toBe(true);
+   expect(obligations.every(row=>row.source_settled)).toBe(true);
+   // The successful identity-only response must not become a workspace-wide
+   // or account enumeration grant; neither denial may contact the data source.
+   const wrongWorkspace=await http(res=>service.readNativeProfile({...principal,workspaceId:"TEST_ONLY-other-workspace"},account,"paper",res,()=>undefined));
+   expect(wrongWorkspace.completion.error).toMatchObject({status:404});
+   expect(wrongWorkspace.received.body).toHaveLength(0);
+   const wrongAccount=await http(res=>service.readNativeProfile(principal,"TEST_ONLY-other-account","paper",res,()=>undefined));
+   expect(wrongAccount.completion.error).toMatchObject({status:404});
+   expect(wrongAccount.received.body).toHaveLength(0);expect(hits).toBe(1);
+   // Exercise actual SessionGuard and Fastify reply/hijack with a synthetic
+   // cookie whose hash and membership are stored in this disposable database.
+   // Only the upstream original and field publication remain synthetic.
+   await pool.query("INSERT INTO workspace_members(workspace_id,user_id,role) VALUES($1,$2,'OWNER')",[f.workspace,owner]);
+   await pool.query("UPDATE auth_sessions SET session_token_hash=$2 WHERE session_id=$1",
+    [f.actor.session_id,createHash("sha256").update(f.actor.session_id).digest("hex")]);
+   const web=fastify({logger:false});
+   const routeConfig={...ctx.config,EXECUTION_READ_PROFILE:"native_manager_review_v1" as const,
+    EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID:f.workspace},workspaces=new WorkspacesRepository(pool,routeConfig);
+   const controller=new SiblingSourceDarkController(workspaces,service);
+   const guard=new SessionGuard(auth,workspaces,routeConfig,undefined,undefined,undefined,service);
+   let finishRoute!:()=>void;const routeFinished=new Promise<void>(resolve=>{finishRoute=resolve;});
+   web.get("/api/v1/execution/accounts/:account_id/profile",async(req,reply)=>{
+    try{
+     Object.assign(req,{cookies:{[SESSION_COOKIE]:f.actor.session_id}});
+     await guard.canActivate({switchToHttp:()=>({getRequest:()=>req,getResponse:()=>reply})} as ExecutionContext);
+     return await controller.account(req as never,account,req.query,reply);
+    }finally{finishRoute();}
+   });
+   try{
+    await web.listen({host:"127.0.0.1",port:0});
+    const address=web.server.address();if(!address||typeof address==="string")throw Error("TEST_ONLY_FASTIFY_ADDRESS");
+    const response=await new Promise<{status:number|undefined;body:Buffer}>((resolve,reject)=>{
+     const req=request(`http://127.0.0.1:${address.port}/api/v1/execution/accounts/${account}/profile?environment=paper&workspace_id=${encodeURIComponent(f.workspace)}`,{agent:false},res=>{
+      const chunks:Buffer[]=[];res.on("data",chunk=>chunks.push(Buffer.from(chunk)));res.on("error",reject);
+      res.on("end",()=>resolve({status:res.statusCode,body:Buffer.concat(chunks)}));});req.on("error",reject);req.end();});
+    expect(response.status).toBe(200);expect(JSON.parse(response.body.toString())).toMatchObject({account_id:account,workspace_id:f.workspace});
+    expect(hits).toBe(2);await routeFinished;
+    const afterRoute=await f.rows();expect(afterRoute.filter(row=>row.phase==="SERVED"&&row.source_settled)).toHaveLength(2);
+    expect(afterRoute.every(row=>row.source_settled)).toBe(true);
+   }finally{await web.close();}
+  }finally{await composition.shutdown();await managerRuntime.beforeApplicationShutdown();for(const socket of sockets)socket.destroy();server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()));}
  });
  const seriesPurposes:NativeCurrentRelationsPurpose[]=[
   {action:"business.read_all",resources:[{kind:"ROOT",id:"TEST_ONLY-root"}]},

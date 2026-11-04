@@ -11,7 +11,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description The typed fields of one order: deployment, filled quantity (a true 0 is a value), average fill price, fee with the fee rule (never defaulted to 0; absent with a stated reason when a fill has no commission or the fills use two currencies), acknowledgement latency and the order intent record. CONTRACT ONLY: no producer exists yet (Edge/Core inputs are in WP_K_CONTRACTS_2026-10-23.md), so nothing serves this route and every screen keeps its typed absence. */
+        /** @description The typed fields of one order: deployment, filled quantity (a true 0 is a value), average fill price, fee with the fee rule (never defaulted to 0; absent with a stated reason when a fill has no commission or the fills use two currencies), acknowledgement latency and the order intent record. Source-dark route: no positive producer is commissioned; the route refuses instead of inventing data. */
         get: operations["executionOrderDetailGetV1"];
         put?: never;
         post?: never;
@@ -51,7 +51,7 @@ export interface components {
         OrderDetailProblem: {
             error: {
                 /** @enum {string} */
-                code: "EXECUTION_READ_NOT_AVAILABLE" | "EXECUTION_READ_QUERY_INVALID";
+                code: "EXECUTION_READ_NOT_AVAILABLE" | "EXECUTION_READ_QUERY_INVALID" | "SESSION_REQUIRED" | "REQUEST_REJECTED" | "PORTAL_AUTHORITY_UNAVAILABLE" | "PORTAL_READ_STORE_UNAVAILABLE" | "EXECUTION_LOCAL_READ_BUSY" | "EXECUTION_READ_SCOPE_REQUIRED" | "EXECUTION_READ_ACCESS_CHANGED" | "EXECUTION_READ_CURRENT_ONLY" | "EXECUTION_READ_POLICY_PENDING" | "EXECUTION_READ_PUBLICATION_NOT_QUALIFIED" | "EXECUTION_READ_FIELD_POLICY_PENDING" | "EXECUTION_READ_SCOPE_LIMIT" | "EXECUTION_READ_AUTHORITY_UNAVAILABLE" | "EXECUTION_READ_CURSOR_INVALID";
                 message: string;
             };
             request_id: string;
@@ -108,8 +108,28 @@ export interface operations {
                     "application/json": components["schemas"]["OrderDetailProblem"];
                 };
             };
+            /** @description Profile not commissioned */
+            403: {
+                headers: {
+                    "Cache-Control": "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrderDetailProblem"];
+                };
+            };
             /** @description Unavailable or not authorized */
             404: {
+                headers: {
+                    "Cache-Control": "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrderDetailProblem"];
+                };
+            };
+            /** @description Authority or source changed before dispatch */
+            409: {
                 headers: {
                     "Cache-Control": "private, no-store";
                     [name: string]: unknown;

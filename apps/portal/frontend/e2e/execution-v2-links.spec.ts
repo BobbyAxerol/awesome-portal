@@ -19,6 +19,7 @@ import { expect, test, type Page, type TestInfo } from "@playwright/test";
 
 import { OPERATIONS_V2_DOUBLE_NOW_ISO } from "./bffDoubleV2";
 import { stubExecutionBff } from "./bffDouble";
+import { stubV2Reads, withoutProjectionAbsence } from "./v2PublishedReads";
 import { settle, stubPortalApi, usePreferences } from "./fixtures";
 import { SCREENS, stubAdminRoutes, stubQuantbtRuns, watchPage } from "./v2Lane";
 import { resolveTab, type TabSurface } from "../src/execution/v2/tabAliases";
@@ -56,6 +57,7 @@ interface Allowed {
   follow: boolean;
   waive?: readonly Check[];
 }
+
 const ALLOW_LIST: readonly Allowed[] = [
   {
     id: "api",
@@ -98,8 +100,22 @@ const ALLOW_LIST: readonly Allowed[] = [
   },
   {
     id: "double-account-ids-operations-and-live",
-    match: (url) => /^\/deployments\/accounts\/(acc_TEST_ONLY_(operational|binance01|binance02)|acct_live_grid|acct_canary_grid)$/.test(url.pathname),
-    reason: "FIXTURE GAP, not a link defect: the operations double (acc_TEST_ONLY_*) and the published dark Live body (acct_live_grid) and Canary body (acct_canary_grid) name accounts the accounts double does not hold, so the typed 404 for the account read is the double's. The route and the link are right.",
+    match: (url) => /^\/deployments\/accounts\/(acc_TEST_ONLY_(operational|binance01|binance02)|acct_live_grid|acct_canary_grid|acct_binance_02)$/.test(url.pathname),
+    reason: "FIXTURE GAP, not a link defect: the operations double (acc_TEST_ONLY_*, and acct_binance_02 on the replay's account chip) and the published dark Live body (acct_live_grid) and Canary body (acct_canary_grid) name accounts the accounts double does not hold, so the typed 404 for the account read is the double's. The route and the link are right.",
+    follow: true,
+    waive: ["console"],
+  },
+  {
+    id: "double-operations-ids",
+    match: (url) => /^\/execution\/operations\/incidents\/inc_(fixture_)?44$/.test(url.pathname) || (url.pathname === "/execution/operations" && url.searchParams.get("operation") === "op_1251"),
+    reason: "FIXTURE GAP, not a link defect: the canonical visit digest (stubV2Reads) and the Overview rows name inc_44 / inc_fixture_44 / op_1251, which the operations double does not hold, so its typed 404 for the incident or operation read is the double's. The routes and the links are right.",
+    follow: true,
+    waive: ["console"],
+  },
+  {
+    id: "double-sandbox-reads",
+    match: (url) => (url.pathname.startsWith("/deployments/alphas/") || url.pathname === "/deployments/blotter") && url.searchParams.get("env") === "sandbox",
+    reason: "INTENDED ABSENCE, not a link defect: the double answers the Sandbox equity history with its one deliberate 503 (bffDoubleAlpha.ts) and the Blotter's stage=SANDBOX with the typed 400 N22_BLOTTER_STAGE_NOT_AVAILABLE (the route serves Paper only); both screens render those as states.",
     follow: true,
     waive: ["console"],
   },
@@ -324,7 +340,8 @@ async function assertLanded(page: Page, watch: ReturnType<typeof watchPage>, url
   }
 
   // (2) console and network.
-  for (const line of watch.take()) {
+  // A deployment or workspace the fixture world does not serve answers its equity projection with the typed 404 (no existence oracle): the intended absence, not a dead link.
+  for (const line of withoutProjectionAbsence(watch.take())) {
     if (waive.includes("console")) notes.push(`waived console/network: ${line}`);
     else problems.push(`console/network: ${line}`);
   }
@@ -394,7 +411,9 @@ test("every in-app link on the V2 screens lands on a screen, two levels deep", a
   await page.setViewportSize({ width: 1440, height: 900 });
   await usePreferences(page, "operations");
   await stubPortalApi(page, "healthy");
-  await stubExecutionBff(page, { operationsV2: true, screensV2: true });
+  const bffOptions = { operationsV2: true, screensV2: true, reviewManager: true };
+  await stubExecutionBff(page, bffOptions);
+  await stubV2Reads(page, bffOptions);
   await stubAdminRoutes(page);
   await stubQuantbtRuns(page);
   const watch = watchPage(page, baseURL);
@@ -452,7 +471,7 @@ test("every in-app link on the V2 screens lands on a screen, two levels deep", a
     const problems: string[] = [];
     const notes: string[] = [];
     if ((await page.locator(root).count()) === 0) problems.push(`entry root ${root} did not appear`);
-    await assertLanded(page, watch, url, problems, notes);
+    await assertLanded(page, watch, url, problems, notes, allowedBy(url)?.waive ?? []);
     visits.push({ depth: 0, source: "(entry)", text: name, target: toRelative(url), landed: toRelative(new URL(page.url())), via: "entry", verdict: problems.length ? "fail" : "ok", problems, notes });
     await harvest(url, 0);
   }

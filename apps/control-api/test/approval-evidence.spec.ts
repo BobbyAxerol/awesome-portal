@@ -8,6 +8,7 @@ import { EVIDENCE_FIELD_AUTHORITY_DENY_ALL, type ApprovalEvidenceFieldAuthority,
 import { approvalEvidenceResponse } from "../src/approval-evidence/approval-evidence.contract";
 import type { ApprovalEvidencePort } from "../src/approval-evidence/approval-evidence.port";
 import { approvalEvidenceDependency } from "../src/approval-evidence/approval-evidence.bootstrap";
+import { equityProjectionSourceDependency } from "../src/equity-projection/equity-projection-source.bootstrap";
 import { ApprovalEvidenceReads } from "../src/approval-evidence/approval-evidence.service";
 import { OperationalReadError } from "../src/operations/current-operational-read";
 
@@ -56,7 +57,9 @@ describe("approval evidence contract (zod mirrors the published fixtures)", () =
     const value = structuredClone(published);
     for (const op of testCase.ops) {
       const holder = op.path.slice(0, -1).reduce((node: any, key: string | number) => node[key], value);
-      holder[op.path.at(-1)] = op.value;
+      const key = op.path.at(-1);
+      if (key === undefined) throw new Error("TEST_ONLY_INVALID_FIXTURE_PATH");
+      holder[key] = op.value;
     }
     expect(approvalEvidenceResponse.safeParse(value).success).toBe(false);
   });
@@ -268,5 +271,12 @@ describe("approval evidence bootstrap gate", () => {
     for (const other of [{ EXECUTION_READ_PROFILE: "source_current_v1" }, { EXECUTION_READ_PROFILE: "native_manager_review_v1" }, { PORTAL_ENV: "production" }, { PORTAL_ENV: "dev" }, { AUTH_MODE: "cloudflare_access" }, { AUTH_MODE: undefined }])
       expect(approvalEvidenceDependency({ ...base, ...other })).toEqual({});
     expect(approvalEvidenceDependency({})).toEqual({});
+  });
+  it("uses the identical local-only gate for the dark equity projection", () => {
+    expect(equityProjectionSourceDependency(base)).toEqual({ equityProjectionSource: "SOURCE_DARK" });
+    for (const other of [{ EXECUTION_READ_PROFILE: "source_current_v1" }, { EXECUTION_READ_PROFILE: "native_manager_review_v1" },
+      { PORTAL_ENV: "production" }, { PORTAL_ENV: "dev" }, { AUTH_MODE: "cloudflare_access" }, { AUTH_MODE: undefined }])
+      expect(equityProjectionSourceDependency({ ...base, ...other })).toEqual({});
+    expect(equityProjectionSourceDependency({})).toEqual({});
   });
 });

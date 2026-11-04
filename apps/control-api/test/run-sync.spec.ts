@@ -7,7 +7,7 @@ import { PortalUser } from "../src/domain";
 const user: PortalUser = {
   userId: "usr_bobby", username: "bobby", displayName: "Bobby", role: "ADMIN", status: "ACTIVE",
   mustChangePassword: false, failedLoginCount: 0, lockedUntil: null, sessionVersion: 1,
-  createdAt: new Date(), updatedAt: new Date(), disabledAt: null,
+  createdAt: new Date(), updatedAt: new Date(), disabledAt: null, accountRevision: 1, archivedAt: null,
 };
 
 const config = {

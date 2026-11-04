@@ -39,8 +39,11 @@ export interface EdgeCommandStatusTransportConfig {
 const fail=(code:string,status=503):never=>{throw new CommandSourceAssertionError(code,status);};
 const bounded=(n:number,max:number)=>Number.isSafeInteger(n)&&n>=1&&n<=max;
 type OriginalInput=Parameters<EdgeCurrentRequesterStatusPort["original"]>[0];
+type StatusWaiter={resolve:(value:EdgeCommandExchange)=>void;reject:(error:unknown)=>void};
+type SharedStatusDelivery={promise:Promise<EdgeCommandExchange>;abort:AbortController;waiters:number;settled:boolean;
+  subscribers:Set<StatusWaiter>;outcome?:{ok:true;value:EdgeCommandExchange}|{ok:false;error:unknown}};
 type Prepared={input:Omit<CommandStatusInput,"signal">;body:string;token:string;prepared:EdgeCommandPreparedCall;
-  pending?:Promise<EdgeCommandExchange>;finished?:boolean};
+  pending?:SharedStatusDelivery;finished?:boolean};
 
 /** Concrete HTTP1/TLS1.3 STATUS-only Edge port. It never addresses PM, resolves
  * a target, creates a command/claim, or reuses the old author's identity. The
@@ -55,7 +58,7 @@ export class EdgeCommandStatusTransport implements EdgeCurrentRequesterStatusPor
   private readonly prepared=new Map<string,Prepared>();
   /** Reserve before issuing an assertion. Concurrent identical preparation
    * shares one reservation, just as the authority shares its pending call. */
-  private readonly preparing=new Set<string>();
+  private readonly preparing=new Map<string,number>();
   private inFlight=0;
   constructor(private readonly authority:CommandSourceAssertionAuthority,input:EdgeCommandStatusTransportConfig,
     private readonly fingerprints:CommandStatusOriginalFingerprints) {
@@ -125,8 +128,11 @@ export class EdgeCommandStatusTransport implements EdgeCurrentRequesterStatusPor
     const existing=[...this.prepared.values()].some(p=>!p.finished&&p.body===body&&accessDigest(p.input)===accessDigest(captured));
     if(!existing&&!this.preparing.has(admission)&&this.prepared.size+this.preparing.size>=this.config.limits.maximum_originals)
       return fail("COMMAND_STATUS_EDGE_CAPACITY",429);
-    const reserved=!existing&&!this.preparing.has(admission);
-    if(reserved)this.preparing.add(admission);
+    // Each caller owns its share of the same capacity reservation. Releasing
+    // the first caller must not free the slot while another caller is still
+    // waiting for the authority's coalesced preparation.
+    const reserved=!existing;
+    if(reserved)this.preparing.set(admission,(this.preparing.get(admission)??0)+1);
     try {
       const issued=await this.authority.prepare(input,body),key=issued.prepared.assertion_ref;
       const old=this.prepared.get(key);
@@ -138,29 +144,68 @@ export class EdgeCommandStatusTransport implements EdgeCurrentRequesterStatusPor
         this.prepared.set(key,{input:structuredClone(captured),body,token:issued.token,prepared:issued.prepared});
       }
       return {requester_digest:accessDigest(input.actor),prepared:{...issued.prepared}};
-    } finally { if(reserved)this.preparing.delete(admission); }
+    } finally { if(reserved){
+      const remaining=(this.preparing.get(admission)??1)-1;
+      if(remaining===0)this.preparing.delete(admission);else this.preparing.set(admission,remaining);
+    } }
   }
   async status(input:CommandStatusInput & {prepared:EdgeCommandPreparedCall}) {
     const flight=this.prepared.get(input.prepared.assertion_ref),{prepared:_prepared,signal:_signal,...captured}=input;
     if(!flight||accessDigest(captured)!==accessDigest(flight.input)||accessDigest(input.prepared)!==accessDigest(flight.prepared))
       return fail("COMMAND_STATUS_PREPARED_REQUIRED",403);
     await this.authority.check(input.prepared.assertion_ref,{...captured,signal:input.signal});
+    if(input.signal.aborted)return fail("COMMAND_STATUS_EDGE_ABORTED",499);
     // Same-delivery retry rejoins the exact original promise, including an
-    // ambiguous failure. It never reissues identity or makes a second PM call.
-    if(!flight.pending)flight.pending=Promise.resolve().then(async()=>{
-      const raw=commandStatusExchange.parse(await this.exchange(COMMAND_STATUS_EDGE_PATH,flight.body,flight.token,input.signal));
-      if(raw.original_digest!==accessDigest(input.original)||raw.call_digest!==input.call_digest||
-        raw.delivered_request_digest!==flight.prepared.delivered_request_digest)return fail("COMMAND_STATUS_REPLY_INVALID");
-      if(raw.result.business.state!=="UNKNOWN"&&(!raw.full_outcome_custody||raw.result.delivery!=="ACKNOWLEDGED"))
-        return fail("COMMAND_STATUS_REPLY_CUSTODY_REQUIRED");
-      const {schema_version:_schema,...reply}=raw;return reply;
-    });
+    // ambiguous failure. The physical request belongs to all its waiters,
+    // not to the first request's AbortSignal. Cancel it when the last waiter
+    // leaves, without releasing or inventing the original Edge custody.
+    if(!flight.pending){
+      const shared:SharedStatusDelivery={abort:new AbortController(),waiters:0,settled:false,promise:undefined as never,
+        subscribers:new Set()};
+      shared.promise=Promise.resolve().then(async()=>{
+        const raw=commandStatusExchange.parse(await this.exchange(COMMAND_STATUS_EDGE_PATH,flight.body,flight.token,shared.abort.signal));
+        if(raw.original_digest!==accessDigest(flight.input.original)||raw.call_digest!==flight.input.call_digest||
+          raw.delivered_request_digest!==flight.prepared.delivered_request_digest)return fail("COMMAND_STATUS_REPLY_INVALID");
+        if(raw.result.business.state!=="UNKNOWN"&&(!raw.full_outcome_custody||raw.result.delivery!=="ACKNOWLEDGED"))
+          return fail("COMMAND_STATUS_REPLY_CUSTODY_REQUIRED");
+        const {schema_version:_schema,...reply}=raw;return reply;
+      }).then(value=>{shared.settled=true;return value;},error=>{
+        shared.settled=true;
+        // Never discard a successor if an older delivery finishes late.
+        if(flight.pending===shared)flight.pending=undefined;
+        throw error;
+      });
+      // A single settlement listener owns the shared exchange. Registering a
+      // promise handler per caller would retain every cancelled caller until a
+      // slow exchange ends, even though the concurrent-waiter cap is 64.
+      // Remove individual subscribers synchronously on cancellation instead.
+      void shared.promise.then(value=>{
+        shared.outcome={ok:true,value};
+        for(const waiter of shared.subscribers)waiter.resolve(value);
+      },error=>{
+        shared.outcome={ok:false,error};
+        for(const waiter of shared.subscribers)waiter.reject(error);
+      });
+      flight.pending=shared;
+    }
+    const pending=flight.pending;
+    if(pending.waiters>=64)return fail("COMMAND_STATUS_EDGE_CAPACITY",429);
+    pending.waiters++;
     let held:EdgeCommandExchange;
-    try {held=await flight.pending;}catch(error){
-      // Retry the SAME signed Edge delivery/context only. The owning Edge
-      // coordinator retains its exact PM lease/outcome and may retry a lost
-      // completion ACK, never mint a new ISSUE or resend a command.
-      flight.pending=undefined;throw error;
+    try {held=await new Promise<EdgeCommandExchange>((resolve,reject)=>{
+      let done=false;
+      const finish=(callback:()=>void)=>{if(done)return;done=true;input.signal.removeEventListener("abort",cancel);
+        pending.subscribers.delete(waiter);callback();};
+      const cancel=()=>finish(()=>reject(new CommandSourceAssertionError("COMMAND_STATUS_EDGE_ABORTED",499)));
+      const waiter:StatusWaiter={resolve:value=>finish(()=>resolve(value)),reject:error=>finish(()=>reject(error))};
+      pending.subscribers.add(waiter);
+      input.signal.addEventListener("abort",cancel,{once:true});
+      if(input.signal.aborted)cancel();
+      else if(pending.outcome?.ok===true)waiter.resolve(pending.outcome.value);
+      else if(pending.outcome?.ok===false)waiter.reject(pending.outcome.error);
+    });} finally {
+      pending.waiters--;
+      if(pending.waiters===0&&!pending.settled)pending.abort.abort();
     }
     await this.authority.check(input.prepared.assertion_ref,{...captured,signal:input.signal});
     if(held.result.business.state!=="UNKNOWN"&&held.full_outcome_custody) {

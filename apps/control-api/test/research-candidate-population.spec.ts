@@ -3,7 +3,7 @@ import { join } from "node:path";
 import { createHash } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import { candidatePopulationIds, selectionRoles } from "../src/research/current-source-facts";
-import { CurrentSourceFactsSchema } from "../src/research/current-source.payload";
+import { CurrentSourceFactsSchema, CurrentSourceTrialFactsSchema } from "../src/research/current-source.payload";
 
 const original = JSON.parse(readFileSync(join(__dirname, "research-w3-real-hmd-seal.fixture.json"), "utf8")).summary.source_facts;
 function referenced(ids: string[], source_field: "candidate_id" | "trial_facts.source_trial_id" = "candidate_id") {
@@ -31,7 +31,14 @@ describe("bounded seal metadata, complete candidate authority", () => {
   it("resolves global source trial identities without substituting candidate display ids", () => {
     const ids = Array.from({length:400}, (_,i)=>String(i)).sort();
     const facts = referenced(ids, "trial_facts.source_trial_id");
-    const rows = ids.map(id=>({candidate_id:`candidate_${id}`,trial_facts:{source_trial_id:id}}));
+    const rows = ids.map(id=>({candidate_id:`candidate_${id}`,trial_facts:CurrentSourceTrialFactsSchema.parse({
+      schema_version:"research.current-source-trial-facts.v1",stage:null,objective_kind:"NOT_PUBLISHED",
+      fold_scope:{kind:"NOT_PUBLISHED",fold_id:null,reason_code:null},study_id:null,source_trial_id:id,
+      pruned:null,oos_seen_by_optuna:null,
+      metrics:{mean_is_sharpe:null,mean_oos_sharpe:null,mean_decay:null,std_decay:null,oos_reason_code:null,
+        temporal_score:null,temporal_q25:null,temporal_count:null,temporal_reason_code:null},
+      objective_components:{state:"NOT_PUBLISHED",reason_code:null,formula:null,terms:[]},
+    })}));
     expect(candidatePopulationIds(facts, rows)).toEqual(ids);
     expect(()=>candidatePopulationIds(facts, rows.map(({candidate_id})=>({candidate_id})))).toThrow("sealed reference");
   });

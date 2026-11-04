@@ -46,7 +46,7 @@ describe.skipIf(!DATABASE_URL)("ELP2-02 disposable-PG identity and own profile",
     return ctx.app.getHttpAdapter().getInstance().inject({ method: "GET", url: "/api/auth/profile",
       headers: session ? { cookie: cookie(session) } : {} });
   }
-  function patchProfile(session: Session, payload: unknown, key?: string, overrides: Record<string, string> = {}) {
+  function patchProfile(session: Session, payload: Record<string, unknown>, key?: string, overrides: Record<string, string> = {}) {
     return ctx.app.getHttpAdapter().getInstance().inject({ method: "PATCH", url: "/api/auth/profile",
       headers: { ...headers(session, key), ...overrides }, payload });
   }

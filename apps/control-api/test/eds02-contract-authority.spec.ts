@@ -12,7 +12,9 @@ import {
   utcEpochMs,
 } from "../src/execution/contract-authority";
 
-const actor = { userId: "usr_eds02", username: "eds02-admin", role: "ADMIN" } as const;
+const actor = { userId: "usr_eds02", username: "eds02-admin", displayName: "EDS-02", role: "ADMIN",
+  status: "ACTIVE", mustChangePassword: false, failedLoginCount: 0, lockedUntil: null, sessionVersion: 1,
+  createdAt: new Date(0), updatedAt: new Date(0), disabledAt: null, archivedAt: null, accountRevision: 1 } as const;
 
 function envelopeFor(state: (typeof EDS02_PANEL_STATES)[number], data: unknown) {
   return {

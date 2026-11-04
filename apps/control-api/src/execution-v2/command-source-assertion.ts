@@ -1,4 +1,4 @@
-import { randomBytes } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 import { types } from "node:util";
 import { decodeJwt, SignJWT } from "jose";
 import { z } from "zod";
@@ -15,6 +15,7 @@ import { CommandStore } from "./command.store";
 import { workflowCommandRecord, workflowCommandTarget } from "./capital-workflow-record";
 import { nativeNoticeValidUntil } from "./read-scope";
 import type { EdgeCurrentRequesterStatusPort } from "./edge-command-gateway-binding";
+import { CommandStatusPreparationError, PgCommandStatusPreparations } from "./command-status-preparations";
 export const COMMAND_STATUS_PM_PATH = "/internal/elp210/pm-command/status";
 export const COMMAND_STATUS_EDGE_PATH = "/internal/elp210/core-command/status";
 export type CommandStatusInput = Parameters<EdgeCurrentRequesterStatusPort["prepareStatus"]>[0];
@@ -70,16 +71,19 @@ const registrationSchema = z.object({ workspace_id: text, environment: z.literal
 }).strict();
 export type CommandSourceAssertionSelection = z.infer<typeof registrationSchema>;
 type Issued = Awaited<ReturnType<CurrentHumanCandidate["issue"]>>;
+type LeaseIdentity = Omit<Issued, "token">;
 type Candidate = Pick<CurrentHumanCandidate, "issueCommandStatus" | "acknowledgeCommandStatusIssue" | "revalidateIssue"> & {
   /** Real candidate must authenticate persisted terminal source custody plus
    * current actor/authority. Absence is fail-closed for older/test adapters. */
-  canReplaceResolvedIssue?: (actor: AccessActor, binding: CurrentHumanBinding, issued: Issued) => Promise<boolean>;
+  canReplaceResolvedIssue?: (actor: AccessActor, binding: CurrentHumanBinding, issued: LeaseIdentity) => Promise<boolean>;
+  resumeCommandStatusIssue?: CurrentHumanCandidate["resumeCommandStatusIssue"];
 };
 type Delivery = { sequence: number; previous_lease_id: string | null; key: string; binding: CurrentHumanBinding;
   response: Promise<CommandSourceAssertionResponse>; completed: boolean;
   completion?: { response_digest: string; pending?: Promise<CommandSourceAssertionCompletionResponse> } };
-type Entry = { input: Omit<CommandStatusInput,"signal">; status_body: string; status_token?: string; fingerprint?:string; read_completed?:boolean; actor: AccessActor; selection: CommandSourceAssertionSelection; expires: number;
-  retired: boolean; last?: Delivery; pending: number; issued: number };
+type Entry = { input: Omit<CommandStatusInput,"signal">; status_body: string; status_token?: string; fingerprint?:string; read_completed?:boolean; actor: AccessActor; selection: CommandSourceAssertionSelection; expires: number; context_nonce: string;
+  retired: boolean; last?: Delivery; pending: number; issued: number; restored?: boolean;
+  preissue_recovered?: boolean; recovery_required?: boolean; status_request_digest?: string };
 type PreparedStatus = { original_context:string; token:string;
   prepared:Awaited<ReturnType<EdgeCurrentRequesterStatusPort["prepareStatus"]>>["prepared"] };
 type PreparedStatusInternal = PreparedStatus & { newlyRegistered:boolean };
@@ -114,7 +118,8 @@ function snapshot(value: unknown, keys: readonly string[]): Record<string, unkno
  * send/acquire, expiry, ENTERED/UNKNOWN or lost response NEVER completes a
  * delivery or allows replacement. This is identity orchestration, not a proof
  * invented by Core that the Edge actually received command STATUS response bytes.
- * Restart refuses vanished contexts instead of fabricating recovery.
+ * A vanished context can only resume a durably linked exact issued assertion
+ * or authenticated terminal completion; it cannot manufacture a lease.
  * Context expiry/release only stops issue; it NEVER deletes lease obligations.
  */
 export class CommandSourceAssertionAuthority {
@@ -133,6 +138,9 @@ export class CommandSourceAssertionAuthority {
   private readonly preparingCalls = new Map<string,string>();
   private preparationWaiters = 0;
   private readonly config: CommandStatusAuthorityConfig;
+  private readonly preparations: PgCommandStatusPreparations;
+  private recovery?: { source: Pick<EdgeCurrentRequesterStatusPort, "original">;
+    contract: Parameters<EdgeCurrentRequesterStatusPort["original"]>[0]["contract"] };
   constructor(private readonly pool: Pool, private readonly access: ExecutionAccessService,
     private readonly candidate: Candidate, config: CommandStatusAuthorityConfig, now = Date.now) {
     const limits = config;
@@ -144,10 +152,19 @@ export class CommandSourceAssertionAuthority {
       limits.maximum_requests_per_context < 1 || limits.maximum_requests_per_context > 64)
       fail("COMMAND_STATUS_ASSERTION_CONFIG_INVALID");
     this.limits = { ...limits }; this.now = now;
+    this.preparations = new PgCommandStatusPreparations(pool, limits.maximum_contexts);
+  }
+  /** Private composition wiring only. The selected Edge source independently
+   * re-reads the original; a hash or a caller-provided object is not one. */
+  bindRecoverySource(source: Pick<EdgeCurrentRequesterStatusPort, "original">,
+    contract: Parameters<EdgeCurrentRequesterStatusPort["original"]>[0]["contract"]): void {
+    if (this.stopped || this.recovery || this.contexts.size || typeof source?.original !== "function" || !contract)
+      return fail("COMMAND_STATUS_ASSERTION_RECOVERY_CONFIG_INVALID");
+    this.recovery = { source, contract: structuredClone(contract) };
   }
   /** Called only by an authenticated Core server composition using its exact
    * principal, commissioned source binding and exact PM STATUS-only path. */
-  private register(actor: AccessActor, selection: CommandSourceAssertionSelection, input: Omit<CommandStatusInput,"signal">, status_body: string): { original_context: string; expires_at_ms: number } {
+  private async register(actor: AccessActor, selection: CommandSourceAssertionSelection, input: Omit<CommandStatusInput,"signal">, status_body: string): Promise<{ original_context: string; expires_at_ms: number }> {
     let capturedActor: AccessActor, capturedSelection: CommandSourceAssertionSelection;
     try {
       capturedActor = actorSchema.parse(snapshot(actor, ["user_id", "session_id", "session_generation"]));
@@ -158,8 +175,11 @@ export class CommandSourceAssertionAuthority {
     const now = this.time(); this.prune(now);
     if (this.stopped) return fail("COMMAND_STATUS_ASSERTION_STOPPED");
     if (this.contexts.size >= this.limits.maximum_contexts) return fail("COMMAND_STATUS_ASSERTION_CAPACITY_EXHAUSTED", 429);
-    const token = randomBytes(32).toString("base64url"), expires = now + this.limits.ttl_ms;
-    this.contexts.set(token, { input, status_body, actor: capturedActor, selection: capturedSelection, expires, retired: false,
+    const nonce = randomBytes(32).toString("base64url"), token = await this.contextFromNonce(nonce), expires = now + this.limits.ttl_ms;
+    this.prune(this.time());
+    if (this.stopped || this.contexts.size >= this.limits.maximum_contexts || this.contexts.has(token))
+      return fail("COMMAND_STATUS_ASSERTION_CAPACITY_EXHAUSTED",429);
+    this.contexts.set(token, { input, status_body, actor: capturedActor, selection: capturedSelection, expires, context_nonce: nonce, retired: false,
       pending: 0, issued: 0 });
     return { original_context: token, expires_at_ms: expires };
   }
@@ -241,42 +261,107 @@ export class CommandSourceAssertionAuthority {
     let wire: Record<string,unknown>;
     try { wire=JSON.parse(statusBody); if(wire.schema_version!=="execution.core-command-status-request.v1" ||
       accessDigest(wire.original)!==accessDigest(captured.original) || wire.call_digest!==captured.call_digest ||
-      (wire.core_request as {action?:unknown})?.action!=="STATUS") throw new Error(); }
+      (wire.core_request as {action?:unknown})?.action!=="STATUS" ||
+      typeof wire.pm_status_request_digest!=="string" || !/^sha256:[0-9a-f]{64}$/.test(wire.pm_status_request_digest)) throw new Error(); }
     catch { return fail("COMMAND_STATUS_ASSERTION_REQUEST_INVALID",400); }
     const callKey=accessDigest({actor:captured.actor,original:captured.original,call:captured.call_digest});
     this.prune(this.time());
     let context=this.calls.get(callKey), entry=context?this.contexts.get(context):undefined, newlyRegistered=false;
-    if(entry && !entry.read_completed && !entry.last?.completed) {
+    // Two processes may both prepare before either commits a lease. Once the
+    // writer proves that the other context won, a subsequent prepare must
+    // rejoin its immutable link instead of keeping the losing context forever.
+    // Never retire an in-flight or ambiguously issued reservation.
+    if(this.recovery && (!entry || (!entry.restored && entry.issued===0 && !entry.last && entry.pending===0))) {
+      const outstanding=await this.findOutstanding(captured,statusBody,wire,current);
+      if(outstanding && (outstanding.context!==context || entry?.recovery_required)) {
+        if(entry) {
+          if(entry.pending!==0 || entry.issued!==0 || entry.last)
+            return fail("COMMAND_STATUS_ASSERTION_CUSTODY_RECOVERY_REQUIRED",409);
+          entry.retired=true;
+          if(context && this.contexts.get(context)===entry)this.contexts.delete(context);
+          if(this.calls.get(callKey)===context)this.calls.delete(callKey);
+        }
+        await this.restoreOutboundContext(outstanding.context,captured,outstanding.row,current);
+        return this.prepareOne(input,statusBody);
+      }
+    }
+    // A completed lease callback only confirms Edge's delivery ACK; it does
+    // not mean the retained STATUS response has reached Core. Until that
+    // response is checked and consumed, retries must keep the exact context.
+    if(entry && !entry.read_completed) {
       this.current(entry);
-      if(entry.status_body!==statusBody || accessDigest(entry.input)!==accessDigest(captured) || !entry.status_token)
+      const requestDigest=pmHttpRequestDigest({method:"POST",raw_path:Buffer.from(COMMAND_STATUS_EDGE_PATH),
+        query_string:Buffer.alloc(0),body:Buffer.from(statusBody)},{request_bytes:131_072});
+      if((entry.restored || entry.preissue_recovered ? entry.status_request_digest!==requestDigest : entry.status_body!==statusBody) ||
+        accessDigest(entry.input)!==accessDigest(captured) || !entry.status_token)
         return fail("COMMAND_STATUS_ASSERTION_DELIVERY_REQUEST_MISMATCH",409);
-      if(current.fingerprint!==entry.fingerprint)return fail("COMMAND_STATUS_ASSERTION_AUTHORITY_CHANGED",409);
+      if(current.fingerprint!==entry.fingerprint || entry.expires>current.valid_until_ms)
+        return fail("COMMAND_STATUS_ASSERTION_AUTHORITY_CHANGED",409);
       const confirmed=await this.authorize(entry.input); this.current(entry);
-      if(confirmed.fingerprint!==entry.fingerprint)return fail("COMMAND_STATUS_ASSERTION_AUTHORITY_CHANGED",409);
+      if(confirmed.fingerprint!==entry.fingerprint || entry.expires>confirmed.valid_until_ms)
+        return fail("COMMAND_STATUS_ASSERTION_AUTHORITY_CHANGED",409);
+      if(entry.restored || entry.preissue_recovered) {entry.status_body=statusBody;entry.preissue_recovered=false;}
     } else {
-      const registered=this.register(captured.actor,{workspace_id:captured.intent.workspace_id,environment:"paper",
+      const registered=await this.register(captured.actor,{workspace_id:captured.intent.workspace_id,environment:"paper",
         workload_id:this.config.workload_id,receiver_id:captured.original.gateway_ref,
         binding_digest:accessDigest({original:captured.original,call:captured.call_digest}),paths:[COMMAND_STATUS_PM_PATH]},captured,statusBody);
       context=registered.original_context; entry=this.contexts.get(context)!;newlyRegistered=true;
       try {
-      const now=this.time(), expires=Math.min(now+this.config.ttl_ms,current.valid_until_ms,captured.authorization.idempotency_retained_until_ms);
+      // JWT times are whole seconds. Check the actual encoded expiry, not the
+      // unrounded bound, so a sub-second remaining authority cannot create an
+      // already-expired token or an invalid durable recovery preparation.
+      const now=this.time(), expires=Math.floor(Math.min(now+this.config.ttl_ms,current.valid_until_ms,
+        captured.authorization.idempotency_retained_until_ms)/1000)*1000;
       const requestDigest=pmHttpRequestDigest({method:"POST",raw_path:Buffer.from(COMMAND_STATUS_EDGE_PATH),
         query_string:Buffer.alloc(0),body:Buffer.from(statusBody)},{request_bytes:131_072});
       if(expires<=now) return fail("COMMAND_STATUS_ASSERTION_EXPIRED",403);
       entry.expires=expires;entry.fingerprint=current.fingerprint;
-      entry.status_token=await new SignJWT({purpose:"execution.command-status-authority.v1",action:"STATUS",
-        current_actor:captured.actor.user_id,sid:captured.actor.session_id,session_generation:captured.actor.session_generation,
-        workspace_id:captured.intent.workspace_id,environment:"paper",workload_id:this.config.workload_id,
-        authorization_id:captured.authorization.reference,intent_id:captured.authorization.intent_hash,
-        original_sha256:accessDigest(captured.original),request_digest:requestDigest,call_digest:captured.call_digest,
-        original_context:context,authority_fingerprint:current.fingerprint,authority_revision:current.authority_revision,
-        scope_revision:current.scope_revision,policy_revision:current.policy_revision,field_policy_ref:current.field_policy_ref})
-        .setProtectedHeader({alg:"EdDSA",kid:this.config.key_id,typ:"JWT"}).setIssuer(this.config.issuer)
-        .setAudience(this.config.audience).setSubject(captured.actor.user_id).setIssuedAt(Math.floor(now/1000))
-        .setExpirationTime(Math.floor(expires/1000)).setJti(context).sign(this.config.key);
-      entry.expires=Math.floor(expires/1000)*1000;
+      entry.status_request_digest=requestDigest;
+      entry.status_token=await this.signStatus(captured,current,context,requestDigest,Math.floor(now/1000)*1000,
+        Math.floor(expires/1000)*1000);
+      entry.expires=expires;
       const final=await this.authorize(captured); this.current(entry);
-      if(final.fingerprint!==current.fingerprint) return fail("COMMAND_STATUS_ASSERTION_AUTHORITY_CHANGED",409);
+      if(final.fingerprint!==current.fingerprint || entry.expires>final.valid_until_ms)
+        return fail("COMMAND_STATUS_ASSERTION_AUTHORITY_CHANGED",409);
+      if(this.recovery) {
+        // Persist before either the opaque context or STATUS JWT can escape.
+        // A concurrent process must join the first reservation, not produce a
+        // different context for the same original. This stores only digests and
+        // a public nonce, never the token or source bytes.
+        const claims=decodeJwt(entry.status_token);
+        const selected=await this.preparations.reserve({
+          context_digest:accessDigest(context),context_nonce:entry.context_nonce,
+          subject_id:captured.actor.user_id,session_id:captured.actor.session_id,
+          session_revision:captured.actor.session_generation,workspace_id:captured.intent.workspace_id,
+          workload_id:this.config.workload_id,receiver_id:captured.original.gateway_ref,
+          original_digest:accessDigest(captured.original),call_digest:captured.call_digest,
+          binding_digest:entry.selection.binding_digest,authority_fingerprint:current.fingerprint,
+          pm_request_digest:String(wire.pm_status_request_digest),status_request_digest:requestDigest,
+          status_token_digest:accessDigest(entry.status_token),status_issued_at_ms:Number(claims.iat)*1000,
+          context_expires_at_ms:entry.expires,
+        },captured.authorization.intent_hash).catch(error=>{
+          if(error instanceof CommandStatusPreparationError && error.code==="COMMAND_STATUS_PREPARATION_LEASE_RECOVERY_REQUIRED")
+            return fail("COMMAND_STATUS_ASSERTION_CUSTODY_RECOVERY_REQUIRED",409);
+          if(error instanceof CommandStatusPreparationError && error.code==="COMMAND_STATUS_PREPARATION_CAPACITY_EXHAUSTED")
+            return fail("COMMAND_STATUS_ASSERTION_CAPACITY_EXHAUSTED",429);
+          throw error;
+        });
+        this.current(entry);
+        if(selected.context_digest!==accessDigest(context)) {
+          this.contexts.delete(context);
+          context=await this.contextFromNonce(selected.context_nonce);
+          if(accessDigest(context)!==selected.context_digest)
+            return fail("COMMAND_STATUS_ASSERTION_CONTEXT_CHANGED",409);
+          await this.restoreOutboundContext(context,captured,selected,final,true);
+          entry=this.contexts.get(context)!;
+          entry.status_body=statusBody;
+          entry.preissue_recovered=false;
+          newlyRegistered=false;
+        }
+        const confirmed=await this.authorize(captured);this.current(entry);
+        if(confirmed.fingerprint!==current.fingerprint || entry.expires>confirmed.valid_until_ms)
+          return fail("COMMAND_STATUS_ASSERTION_AUTHORITY_CHANGED",409);
+      }
       this.calls.set(callKey,context);
       } catch(error) {
         // The context and signed status token have not escaped prepare yet.
@@ -293,6 +378,114 @@ export class CommandSourceAssertionAuthority {
       call_digest:captured.call_digest,delivered_request_digest:String(claims.request_digest),assertion_ref:context!,
       issued_at_ms:Number(claims.iat)*1000,expires_at_ms:Number(claims.exp)*1000}};
   }
+  private async findOutstanding(captured:Omit<CommandStatusInput,"signal">,statusBody:string,wire:Record<string,unknown>,
+    current:{fingerprint:string}):Promise<{context:string;row:Record<string,unknown>}|undefined> {
+    // This is an early recovery guard; the transactional issue fence remains
+    // authoritative if another process wins after this SELECT.
+    const outstanding=await this.pool.query(`SELECT l.lease_id,l.subject_id,l.session_id,l.session_revision,
+      l.workspace_id,l.environment,l.workload_id,l.request_digest,c.context_digest,c.context_nonce,
+      c.original_digest,c.call_digest,c.binding_digest,c.authority_fingerprint,c.receiver_id,
+      c.context_expires_at_ms,c.status_token_digest,c.status_request_digest,c.status_issued_at_ms
+      FROM elp210_candidate.leases l
+      LEFT JOIN execution_command_status_context_links c ON c.lease_id=l.lease_id
+      LEFT JOIN execution_command_status_preparations p ON p.context_digest=c.context_digest
+      WHERE l.workspace_id=$1 AND l.environment='paper' AND l.workload_id=$2
+        AND (c.original_digest=$3 OR l.request_digest=$4)
+        AND (NOT EXISTS (SELECT 1 FROM execution_command_status_delivery_acks a
+          WHERE a.lease_id=l.lease_id AND a.subject_id=l.subject_id AND a.session_id=l.session_id
+            AND a.session_revision=l.session_revision AND a.workspace_id=l.workspace_id
+            AND a.environment=l.environment AND a.workload_id=l.workload_id
+            AND a.request_digest=l.request_digest AND a.terminal_receipt_digest=l.terminal_receipt_digest
+            AND l.phase IN ('COMMITTED','ROLLED_BACK'))
+          OR (p.context_digest IS NOT NULL AND p.consumed_at IS NULL
+            AND p.context_expires_at_ms > floor(extract(epoch FROM clock_timestamp())*1000)
+            AND NOT EXISTS (SELECT 1 FROM execution_command_status_context_links next_link
+              WHERE next_link.context_digest=c.context_digest AND next_link.delivery_sequence>c.delivery_sequence))) LIMIT 2`,
+    [captured.intent.workspace_id,this.config.workload_id,accessDigest(captured.original),wire.pm_status_request_digest]);
+    if(!outstanding.rowCount)return undefined;
+    const row=outstanding.rows[0];
+    const requestDigest=pmHttpRequestDigest({method:"POST",raw_path:Buffer.from(COMMAND_STATUS_EDGE_PATH),
+      query_string:Buffer.alloc(0),body:Buffer.from(statusBody)},{request_bytes:131_072});
+    if(outstanding.rowCount!==1 || row.subject_id!==captured.actor.user_id ||
+      row.session_id!==captured.actor.session_id || Number(row.session_revision)!==captured.actor.session_generation ||
+      row.workspace_id!==captured.intent.workspace_id || row.environment!=="paper" ||
+      row.workload_id!==this.config.workload_id || row.request_digest!==wire.pm_status_request_digest ||
+      row.original_digest!==accessDigest(captured.original) || row.call_digest!==captured.call_digest ||
+      row.binding_digest!==accessDigest({original:captured.original,call:captured.call_digest}) ||
+      row.authority_fingerprint!==current.fingerprint || row.receiver_id!==captured.original.gateway_ref ||
+      row.status_request_digest!==requestDigest || typeof row.context_nonce!=="string")
+      return fail("COMMAND_STATUS_ASSERTION_CUSTODY_RECOVERY_REQUIRED",409);
+    const context=await this.contextFromNonce(row.context_nonce);
+    if(accessDigest(context)!==row.context_digest)return fail("COMMAND_STATUS_ASSERTION_CUSTODY_RECOVERY_REQUIRED",409);
+    return {context,row};
+  }
+  /** Domain-separated Ed25519 signature over a public random nonce. Only the
+   * configured status signing key can reproduce the opaque context; the DB
+   * never stores its bearer value or the signing key. The fixed purpose has
+   * no authority claims and is not a STATUS JWT. */
+  private async contextFromNonce(nonce:string):Promise<string> {
+    if(!/^[A-Za-z0-9_-]{43}$(?![\s\S])/.test(nonce))return fail("COMMAND_STATUS_ASSERTION_CONTEXT_REQUIRED",403);
+    const proof=await new SignJWT({purpose:"portal.execution.status-context-derivation.v1",nonce})
+      .setProtectedHeader({alg:"EdDSA",kid:this.config.key_id,typ:"portal-status-context-v1"})
+      .setIssuer(this.config.issuer).setAudience(this.config.audience).sign(this.config.key);
+    const parts=proof.split(".");
+    if(parts.length!==3||!parts[2]||!/^[A-Za-z0-9_-]{86}$(?![\s\S])/.test(parts[2]))
+      return fail("COMMAND_STATUS_ASSERTION_CONTEXT_REQUIRED",403);
+    // Preserve the existing 43-character opaque context wire contract.
+    return createHash("sha256").update(Buffer.from(parts[2],"base64url")).digest("base64url");
+  }
+  private signStatus(input:Omit<CommandStatusInput,"signal">,
+    current:{fingerprint:string;authority_revision:string;scope_revision:string;policy_revision:string;field_policy_ref:string|null},
+    context:string,requestDigest:string,issuedAt:number,expires:number):Promise<string> {
+    return new SignJWT({purpose:"execution.command-status-authority.v1",action:"STATUS",
+      current_actor:input.actor.user_id,sid:input.actor.session_id,session_generation:input.actor.session_generation,
+      workspace_id:input.intent.workspace_id,environment:"paper",workload_id:this.config.workload_id,
+      authorization_id:input.authorization.reference,intent_id:input.authorization.intent_hash,
+      original_sha256:accessDigest(input.original),request_digest:requestDigest,call_digest:input.call_digest,
+      original_context:context,authority_fingerprint:current.fingerprint,authority_revision:current.authority_revision,
+      scope_revision:current.scope_revision,policy_revision:current.policy_revision,field_policy_ref:current.field_policy_ref})
+      .setProtectedHeader({alg:"EdDSA",kid:this.config.key_id,typ:"JWT"}).setIssuer(this.config.issuer)
+      .setAudience(this.config.audience).setSubject(input.actor.user_id).setIssuedAt(issuedAt/1000)
+      .setExpirationTime(expires/1000).setJti(context).sign(this.config.key);
+  }
+  /** Restore only the exact linked context and token after current-human and
+   * original checks. The public nonce is not the bearer context; both the
+   * derived context and deterministic token must match committed digests. */
+  private async restoreOutboundContext(context:string,input:Omit<CommandStatusInput,"signal">,
+    row:Record<string,unknown>,current:{fingerprint:string;valid_until_ms:number;authority_revision:string;
+      scope_revision:string;policy_revision:string;field_policy_ref:string|null},unissued=false):Promise<void> {
+    const expires=Number(row.context_expires_at_ms),issued=Number(row.status_issued_at_ms);
+    if(!Number.isSafeInteger(expires)||expires%1000!==0||!Number.isSafeInteger(issued)||issued%1000!==0||
+      issued>=expires||this.time()>=expires||expires>current.valid_until_ms||
+      !digest.safeParse(row.status_token_digest).success||!digest.safeParse(row.status_request_digest).success||
+      typeof row.context_nonce!=="string" || await this.contextFromNonce(row.context_nonce)!==context)
+      return fail("COMMAND_STATUS_ASSERTION_CONTEXT_REQUIRED",403);
+    const statusToken=await this.signStatus(input,current,context,row.status_request_digest as string,issued,expires);
+    if(accessDigest(statusToken)!==row.status_token_digest)return fail("COMMAND_STATUS_ASSERTION_CONTEXT_CHANGED",409);
+    const confirmed=await this.authorize(input);
+    if(this.stopped||this.time()>=expires||confirmed.fingerprint!==current.fingerprint||expires>confirmed.valid_until_ms)
+      return fail("COMMAND_STATUS_ASSERTION_AUTHORITY_CHANGED",409);
+    const key=accessDigest({actor:input.actor,original:input.original,call:input.call_digest});
+    this.prune(this.time());
+    const old=this.contexts.get(context), other=this.calls.get(key);
+    if(other && other!==context)return fail("COMMAND_STATUS_ASSERTION_DELIVERY_REQUEST_MISMATCH",409);
+    if(old) {
+      const upgrade=!unissued && old.recovery_required===true && !old.last && old.pending===0;
+      if((old.restored===unissued && !upgrade)||accessDigest(old.input)!==accessDigest(input)||old.status_token!==statusToken||
+        old.status_request_digest!==row.status_request_digest||old.expires!==expires)
+        return fail("COMMAND_STATUS_ASSERTION_DELIVERY_REQUEST_MISMATCH",409);
+      if(upgrade) {old.restored=true;old.recovery_required=false;old.preissue_recovered=false;}
+      return;
+    }
+    if(this.contexts.size>=this.limits.maximum_contexts)return fail("COMMAND_STATUS_ASSERTION_CAPACITY_EXHAUSTED",429);
+    this.contexts.set(context,{input:structuredClone(input),status_body:"",status_token:statusToken,
+      status_request_digest:row.status_request_digest as string,fingerprint:current.fingerprint,actor:{...input.actor},
+      selection:{workspace_id:input.intent.workspace_id,environment:"paper",workload_id:this.config.workload_id,
+        receiver_id:input.original.gateway_ref,binding_digest:accessDigest({original:input.original,call:input.call_digest}),
+      paths:[COMMAND_STATUS_PM_PATH]},expires,context_nonce:row.context_nonce,retired:false,pending:0,issued:0,
+      restored:!unissued,preissue_recovered:unissued});
+    this.calls.set(key,context);
+  }
   /** Fresh source AND Core/session fence before and after the held status I/O.
    * The issuer-bound token cannot be swapped across principals or originals. */
   async check(context:string,input:CommandStatusInput):Promise<void> {
@@ -301,7 +494,8 @@ export class CommandSourceAssertionAuthority {
     const {signal:_signal,...raw}=input;
     if(accessDigest(raw)!==accessDigest(entry!.input)) return fail("COMMAND_STATUS_ASSERTION_BINDING_MISMATCH",403);
     const current=await this.authorize(entry!.input); this.current(entry);
-    if(current.fingerprint!==entry!.fingerprint)return fail("COMMAND_STATUS_ASSERTION_AUTHORITY_CHANGED",409);
+    if(current.fingerprint!==entry!.fingerprint || entry!.expires>current.valid_until_ms)
+      return fail("COMMAND_STATUS_ASSERTION_AUTHORITY_CHANGED",409);
     if(input.signal.aborted)return fail("COMMAND_STATUS_ASSERTION_ABORTED",499);
   }
   /** A pinned Edge response may disclose already retained full terminal
@@ -312,6 +506,29 @@ export class CommandSourceAssertionAuthority {
     if(input.signal.aborted)return fail("COMMAND_STATUS_ASSERTION_ABORTED",499);
     const entry=this.contexts.get(context);this.current(entry);
     if(entry!.last && !entry!.last.completed)return fail("COMMAND_STATUS_ASSERTION_DELIVERY_NOT_COMPLETED",409);
+    if(entry!.restored) {
+      // A restored entry has no in-memory Delivery. Do not mistake that for
+      // a no-ISSUE read: every linked original lease must have its exact
+      // persisted terminal AND Edge acknowledgement before releasing it.
+      const result=await this.pool.query(`SELECT count(*)::int AS total, count(*) FILTER (WHERE NOT EXISTS (
+        SELECT 1 FROM execution_command_status_delivery_acks a WHERE a.lease_id=l.lease_id
+          AND a.subject_id=l.subject_id AND a.session_id=l.session_id AND a.session_revision=l.session_revision
+          AND a.workspace_id=l.workspace_id AND a.environment=l.environment AND a.workload_id=l.workload_id
+          AND a.request_digest=l.request_digest AND a.terminal_receipt_digest=l.terminal_receipt_digest
+          AND l.phase IN ('COMMITTED','ROLLED_BACK')))::int AS unresolved
+        FROM execution_command_status_context_links c JOIN elp210_candidate.leases l ON l.lease_id=c.lease_id
+        WHERE c.context_digest=$1`,[accessDigest(context)]);
+      if(result.rows[0]?.total<1 || result.rows[0]?.unresolved!==0)
+        return fail("COMMAND_STATUS_ASSERTION_DELIVERY_NOT_COMPLETED",409);
+      await this.check(context,input);this.current(entry);
+    }
+    if(this.recovery) {
+      await this.preparations.consume({context_digest:accessDigest(context),subject_id:entry!.actor.user_id,
+        session_id:entry!.actor.session_id,session_revision:entry!.actor.session_generation,
+        workspace_id:entry!.selection.workspace_id,workload_id:entry!.selection.workload_id,
+        original_digest:accessDigest(entry!.input.original)});
+      await this.check(context,input);this.current(entry);
+    }
     entry!.read_completed=true;
   }
   private async authorize(input:Omit<CommandStatusInput,"signal">):Promise<{fingerprint:string;valid_until_ms:number;authority_revision:string;
@@ -323,7 +540,14 @@ export class CommandSourceAssertionAuthority {
       input.original.intent_hash!==a.intent_hash || input.original.source_intent_digest!==a.source_intent_digest ||
       input.original.gateway_ref!==this.config.audience)
       return fail("COMMAND_STATUS_ASSERTION_BINDING_MISMATCH",403);
-    const flight=await this.reads.prepareExact(input.actor,i.workspace_id,async()=>{
+    return this.authorizeBase(input.actor,a,i);
+  }
+  private async authorizeBase(actor: AccessActor, a: z.infer<typeof commandAuthorization>, i: z.infer<typeof commandIntent>):Promise<{
+    fingerprint:string;valid_until_ms:number;authority_revision:string;scope_revision:string;policy_revision:string;field_policy_ref:string|null}> {
+    if (i.environment !== "paper" || a.qualification !== "OWNER_VERIFIED" || a.workspace_id !== i.workspace_id ||
+      a.intent_hash !== accessDigest({actor_user_id:a.actor_id,intent:i}) || a.idempotency_retained_until_ms <= this.time())
+      return fail("COMMAND_STATUS_ASSERTION_BINDING_MISMATCH",403);
+    const flight=await this.reads.prepareExact(actor,i.workspace_id,async()=>{
       const epoch=async()=>{
         const row=(await this.pool.query("SELECT revision::text,drain_id FROM elp210_candidate.authority WHERE singleton")).rows[0];
         if(!row||typeof row.revision!=="string"||!(/^[1-9][0-9]*$/u).test(row.revision)||row.drain_id!==null)
@@ -359,10 +583,13 @@ export class CommandSourceAssertionAuthority {
     catch { return fail("COMMAND_STATUS_ASSERTION_REQUEST_INVALID", 400); }
     if (typeof token !== "string" || !/^[A-Za-z0-9_-]{43}$/u.test(token)) return fail("COMMAND_STATUS_ASSERTION_CONTEXT_REQUIRED", 403);
     const entry = this.contexts.get(token);
+    if (!entry) return this.recoverIssue(token,request);
+    if (entry.restored || entry.recovery_required) return this.recoverIssue(token,request);
     this.current(entry);
     const s = entry!.selection;
     const current=await this.authorize(entry!.input); this.current(entry);
-    if(current.fingerprint!==entry!.fingerprint)return fail("COMMAND_STATUS_ASSERTION_AUTHORITY_CHANGED",409);
+    if(current.fingerprint!==entry!.fingerprint || entry!.expires>current.valid_until_ms)
+      return fail("COMMAND_STATUS_ASSERTION_AUTHORITY_CHANGED",409);
     let expectedDigest: unknown;
     try {
       expectedDigest=JSON.parse(entry!.status_body).pm_status_request_digest;
@@ -389,7 +616,18 @@ export class CommandSourceAssertionAuthority {
       const pending = Promise.resolve().then(async () => {
         this.current(entry);
         let issued: Issued;
-        try { issued=await this.candidate.issueCommandStatus({ ...entry!.actor }, { ...binding }); }
+        const statusClaims=decodeJwt(entry!.status_token!);
+        const statusIssued=Number(statusClaims.iat)*1000;
+        if (!digest.safeParse(statusClaims.request_digest).success || !Number.isSafeInteger(statusIssued))
+          return fail("COMMAND_STATUS_ASSERTION_ISSUER_BINDING_INVALID");
+        try { issued=await this.candidate.issueCommandStatus({ ...entry!.actor }, { ...binding }, {
+          context_digest: accessDigest(token), context_nonce:entry!.context_nonce, original_digest: accessDigest(entry!.input.original),
+          call_digest: entry!.input.call_digest, binding_digest: s.binding_digest, authority_fingerprint: current.fingerprint,
+          receiver_id: s.receiver_id,
+          delivery_sequence: request.delivery_sequence, previous_lease_id: request.previous_lease_id,
+          context_expires_at_ms: entry!.expires, status_token_digest:accessDigest(entry!.status_token!),
+          status_request_digest:statusClaims.request_digest as string, status_issued_at_ms:statusIssued,
+        }); }
         catch(error) {
           if(error instanceof CurrentHumanLeaseError && ["CURRENT_HUMAN_COMMAND_STATUS_RECOVERY_REQUIRED",
             "CURRENT_HUMAN_CAPACITY_EXHAUSTED","CURRENT_HUMAN_DRAINING"].includes(error.code)) {
@@ -405,7 +643,7 @@ export class CommandSourceAssertionAuthority {
               entry!.last=undefined;
             }
             if(error.code==="CURRENT_HUMAN_COMMAND_STATUS_RECOVERY_REQUIRED")
-              return fail("COMMAND_STATUS_ASSERTION_CUSTODY_RECOVERY_REQUIRED",409);
+              {if(this.recovery)entry!.recovery_required=true;return fail("COMMAND_STATUS_ASSERTION_CUSTODY_RECOVERY_REQUIRED",409);}
           }
           throw error;
         }
@@ -464,22 +702,207 @@ export class CommandSourceAssertionAuthority {
     await this.candidate.revalidateIssue({ ...entry!.actor }, { ...binding }, this.issued(response));
     this.current(entry);
     const final=await this.authorize(entry!.input);this.current(entry);
-    if(final.fingerprint!==entry!.fingerprint)return fail("COMMAND_STATUS_ASSERTION_AUTHORITY_CHANGED",409);
+    if(final.fingerprint!==entry!.fingerprint || entry!.expires>final.valid_until_ms)
+      return fail("COMMAND_STATUS_ASSERTION_AUTHORITY_CHANGED",409);
     if (this.time() >= response.expires_at_ms) return fail("COMMAND_STATUS_ASSERTION_EXPIRED", 403);
     return { ...response };
+  }
+  /** After a process restart only return the original, still-ISSUED assertion
+   * when the authenticated Edge sends the exact previously linked request.
+   * This path never creates or rotates a lease or starts a source attempt. */
+  private async recoverIssue(token: string, request: CommandSourceAssertionRequest): Promise<CommandSourceAssertionResponse> {
+    const recovery = this.recovery, resume = this.candidate.resumeCommandStatusIssue;
+    if (!recovery || !resume || this.stopped) return fail("COMMAND_STATUS_ASSERTION_CONTEXT_REQUIRED",403);
+    if (this.pending >= 16) return fail("COMMAND_STATUS_ASSERTION_CAPACITY_EXHAUSTED",429);
+    this.pending++;
+    try {
+      const found = await this.pool.query(`SELECT c.lease_id,c.previous_lease_id,c.context_nonce,c.original_digest,c.call_digest,c.binding_digest,
+        c.authority_fingerprint,c.request_digest,c.receiver_id,c.context_expires_at_ms,c.status_token_digest,
+        c.status_request_digest,c.status_issued_at_ms,l.subject_id,l.session_id,l.session_revision,
+        l.workspace_id,l.environment,l.workload_id,f.command_id,f.pm_status_request_digest
+        FROM execution_command_status_context_links c
+        JOIN elp210_candidate.leases l ON l.lease_id=c.lease_id
+        JOIN execution_command_status_original_fingerprints f ON f.original_digest=c.original_digest
+        JOIN execution_trusted_commands t ON t.command_id=f.command_id AND t.workspace_id=l.workspace_id
+        WHERE c.context_digest=$1 AND c.delivery_sequence=$2 LIMIT 2`, [accessDigest(token),request.delivery_sequence]);
+      if (found.rowCount !== 0 && found.rowCount !== 1) return fail("COMMAND_STATUS_ASSERTION_CONTEXT_REQUIRED",403);
+      let unissued=false;
+      let row=found.rows[0];
+      if(found.rowCount===0) {
+        // Only a persisted, still-live original preparation may recover the
+        // pre-lease window. An arbitrary old context cannot mint authority.
+        const prepared=await this.preparations.find(accessDigest(token));
+        if(!prepared || request.delivery_sequence!==0 || request.previous_lease_id!==null)
+          return fail("COMMAND_STATUS_ASSERTION_CONTEXT_REQUIRED",403);
+        // A preparation that lost a cross-process race cannot supersede an
+        // already issued original, even if its own short-lived row remains.
+        // The transactional issuer repeats this fence under the authority lock.
+        const outstanding=await this.pool.query(`SELECT l.lease_id FROM elp210_candidate.leases l
+          LEFT JOIN execution_command_status_context_links c ON c.lease_id=l.lease_id
+          WHERE l.workspace_id=$1 AND l.environment='paper' AND l.workload_id=$2
+            AND (c.original_digest=$3 OR l.request_digest=$4)
+            AND NOT EXISTS (SELECT 1 FROM execution_command_status_delivery_acks a
+              WHERE a.lease_id=l.lease_id AND a.subject_id=l.subject_id AND a.session_id=l.session_id
+                AND a.session_revision=l.session_revision AND a.workspace_id=l.workspace_id
+                AND a.environment=l.environment AND a.workload_id=l.workload_id
+                AND a.request_digest=l.request_digest AND a.terminal_receipt_digest=l.terminal_receipt_digest
+                AND l.phase IN ('COMMITTED','ROLLED_BACK')) LIMIT 1`,
+        [prepared.workspace_id,prepared.workload_id,prepared.original_digest,prepared.pm_request_digest]);
+        if(outstanding.rowCount) return fail("COMMAND_STATUS_ASSERTION_CONTEXT_REQUIRED",403);
+        row={...prepared,environment:"paper",request_digest:prepared.pm_request_digest,previous_lease_id:null};
+        unissued=true;
+      }
+      const expires=Number(row.context_expires_at_ms), sessionRevision=Number(row.session_revision);
+      const current=()=>{if(this.stopped || !Number.isSafeInteger(expires) || this.time()>=expires)
+        return fail("COMMAND_STATUS_ASSERTION_CONTEXT_REQUIRED",403);};
+      current();
+      if (!Number.isSafeInteger(sessionRevision) || !digest.safeParse(row.authority_fingerprint).success ||
+        !digest.safeParse(row.original_digest).success || !digest.safeParse(row.call_digest).success ||
+        row.binding_digest!==request.binding_digest || row.request_digest!==request.request_digest ||
+        row.pm_status_request_digest!==request.request_digest || row.previous_lease_id!==request.previous_lease_id ||
+        row.receiver_id!==request.receiver_id || row.receiver_id!==this.config.audience ||
+        row.workload_id!==request.workload_id || row.workload_id!==this.config.workload_id || row.environment!=="paper" ||
+        pmHttpRequestDigest({method:request.method,raw_path:Buffer.from(request.path,"utf8"),query_string:Buffer.alloc(0),
+          body:Buffer.from(request.body_utf8,"utf8")},{request_bytes:1_048_576})!==request.request_digest)
+        return fail("COMMAND_STATUS_ASSERTION_BINDING_MISMATCH",403);
+      const actor=actorSchema.parse({user_id:row.subject_id,session_id:row.session_id,session_generation:sessionRevision});
+      const stored=await this.store.workflowCandidate(row.workspace_id,row.command_id);current();
+      if(!stored)return fail("COMMAND_STATUS_ASSERTION_ORIGINAL_MISSING",404);
+      const authorization=commandAuthorization.parse(stored.authorization),
+        intent=workflowCommandRecord(stored,row.workspace_id,row.command_id,workflowCommandTarget(stored)).intent;
+      const before=await this.authorizeBase(actor,authorization,intent);current();
+      if(before.fingerprint!==row.authority_fingerprint || expires>before.valid_until_ms)
+        return fail("COMMAND_STATUS_ASSERTION_AUTHORITY_CHANGED",409);
+      const signal=AbortSignal.timeout(Math.max(1,Math.min(5000,expires-this.time())));
+      const original=await recovery.source.original({authorization,intent,contract:structuredClone(recovery.contract),signal});current();
+      if(!original || accessDigest(original)!==row.original_digest || accessDigest({original,call:row.call_digest})!==row.binding_digest ||
+        accessDigest({action:"STATUS",authority:"CURRENT_REQUESTER",requester_digest:accessDigest(actor),
+          original,authorization_digest:accessDigest(authorization),intent_hash:authorization.intent_hash})!==row.call_digest)
+        return fail("COMMAND_STATUS_ASSERTION_ORIGINAL_MISMATCH",409);
+      const captured={actor,authorization,intent,contract:structuredClone(recovery.contract),original,
+        action:"STATUS" as const,call_digest:row.call_digest};
+      const beforeIssue=await this.authorize(captured);current();
+      if(beforeIssue.fingerprint!==row.authority_fingerprint || expires>beforeIssue.valid_until_ms)
+        return fail("COMMAND_STATUS_ASSERTION_AUTHORITY_CHANGED",409);
+      if(unissued) {
+        await this.restoreOutboundContext(token,captured,row,beforeIssue,true);current();
+        const entry=this.contexts.get(token);
+        if(!entry)return fail("COMMAND_STATUS_ASSERTION_CONTEXT_REQUIRED",403);
+        // The exact PM request digest, not reconstructed source bytes, was
+        // pinned before the outgoing STATUS token escaped. issue() also checks
+        // the authenticated callback bytes and the native candidate writer.
+        entry.status_body=JSON.stringify({pm_status_request_digest:row.pm_request_digest});
+        return await this.issue(token,request);
+      }
+      const binding:CurrentHumanBinding={workspace_id:row.workspace_id,environment:"paper",workload_id:row.workload_id,request_digest:row.request_digest};
+      const issued=await resume.call(this.candidate,actor,binding,row.lease_id as string);current();
+      await this.candidate.revalidateIssue(actor,binding,issued);current();
+      const final=await this.authorize(captured);current();
+      if(final.fingerprint!==row.authority_fingerprint || expires>final.valid_until_ms)
+        return fail("COMMAND_STATUS_ASSERTION_AUTHORITY_CHANGED",409);
+      if(this.time()>=issued.expires_at_ms)return fail("COMMAND_STATUS_ASSERTION_EXPIRED",403);
+      await this.restoreOutboundContext(token,captured,row,final);current();
+      const claims=decodeJwt(issued.token), issuedAt=Number(claims.iat)*1000;
+      const {body_utf8:_body,...echo}=request;
+      return commandSourceAssertionResponse.parse({...echo,schema_version:"portal.execution.command-source-assertion-response.v1",
+        assertion:issued.token,lease_id:issued.lease_id,issued_at_ms:issuedAt,expires_at_ms:issued.expires_at_ms,
+        authority_revision:issued.authority_revision});
+    } finally {this.pending--;this.prune(this.time());}
   }
   /** Only the authenticated pinned Edge transport may call this seam after
    * verifying the exact raw PM envelope. Acquire/send/timeout are NOT completion.
    * A response digest records that explicit acknowledgement, not Core-produced
    * command STATUS proof. This operation never issues a lease or changes source rows.
    */
+  private async recoverCompletion(token: string, request: CommandSourceAssertionCompletionRequest): Promise<CommandSourceAssertionCompletionResponse> {
+    const recovery = this.recovery;
+    if (!recovery || this.stopped) return fail("COMMAND_STATUS_ASSERTION_CONTEXT_REQUIRED",403);
+    if (this.pending >= 16) return fail("COMMAND_STATUS_ASSERTION_CAPACITY_EXHAUSTED",429);
+    this.pending++;
+    try {
+      // Only a previously persisted, unambiguous context/lease/command link
+      // can be recovered. No token, source body, terminal or ACK is minted.
+      const found = await this.pool.query(`SELECT c.context_nonce,c.original_digest,c.call_digest,c.binding_digest,c.authority_fingerprint,
+        c.request_digest,c.receiver_id,c.context_expires_at_ms,c.status_token_digest,c.status_request_digest,
+        c.status_issued_at_ms,l.subject_id,l.session_id,l.session_revision,
+        l.workspace_id,l.environment,l.workload_id,l.expires_at_ms,l.authority_revision,
+        f.command_id,f.pm_status_request_digest
+        FROM execution_command_status_context_links c
+        JOIN elp210_candidate.leases l ON l.lease_id=c.lease_id
+        JOIN execution_command_status_original_fingerprints f ON f.original_digest=c.original_digest
+        JOIN execution_trusted_commands t ON t.command_id=f.command_id AND t.workspace_id=l.workspace_id
+        WHERE c.context_digest=$1 AND c.delivery_sequence=$2 AND c.lease_id=$3 LIMIT 2`,
+      [accessDigest(token),request.delivery_sequence,request.lease_id]);
+      if (found.rowCount !== 1) return fail("COMMAND_STATUS_ASSERTION_CONTEXT_REQUIRED",403);
+      const row = found.rows[0];
+      const expires = Number(row.context_expires_at_ms), leaseExpires = Number(row.expires_at_ms),
+        revision = Number(row.authority_revision), sessionRevision = Number(row.session_revision);
+      const current = () => {
+        if (this.stopped || !Number.isSafeInteger(expires) || this.time() >= expires)
+          return fail("COMMAND_STATUS_ASSERTION_CONTEXT_REQUIRED",403);
+      };
+      current();
+      if (!Number.isSafeInteger(leaseExpires) || !Number.isSafeInteger(revision) || !Number.isSafeInteger(sessionRevision) ||
+        !digest.safeParse(row.authority_fingerprint).success || !digest.safeParse(row.original_digest).success ||
+        !digest.safeParse(row.call_digest).success || row.binding_digest !== request.binding_digest ||
+        row.request_digest !== request.request_digest || row.pm_status_request_digest !== request.request_digest ||
+        row.receiver_id !== request.receiver_id || row.receiver_id !== this.config.audience ||
+        row.workload_id !== request.workload_id || row.workload_id !== this.config.workload_id || row.environment !== "paper")
+        return fail("COMMAND_STATUS_ASSERTION_COMPLETION_MISMATCH",409);
+      const actor = actorSchema.parse({user_id:row.subject_id,session_id:row.session_id,session_generation:sessionRevision});
+      const stored = await this.store.workflowCandidate(row.workspace_id,row.command_id); current();
+      if (!stored) return fail("COMMAND_STATUS_ASSERTION_ORIGINAL_MISSING",404);
+      const originalRecord = workflowCommandRecord(stored,row.workspace_id,row.command_id,workflowCommandTarget(stored));
+      const authorization = commandAuthorization.parse(stored.authorization), intent = originalRecord.intent;
+      // Check exact current human access BEFORE fetching any source original.
+      const before = await this.authorizeBase(actor,authorization,intent); current();
+      if (before.fingerprint !== row.authority_fingerprint || expires > before.valid_until_ms)
+        return fail("COMMAND_STATUS_ASSERTION_AUTHORITY_CHANGED",409);
+      const signal = AbortSignal.timeout(Math.max(1,Math.min(5000,expires-this.time())));
+      const original = await recovery.source.original({authorization,intent,contract:structuredClone(recovery.contract),signal}); current();
+      if (!original || accessDigest(original) !== row.original_digest ||
+        accessDigest({original,call:row.call_digest}) !== row.binding_digest ||
+        accessDigest({action:"STATUS",authority:"CURRENT_REQUESTER",requester_digest:accessDigest(actor),
+          original,authorization_digest:accessDigest(authorization),intent_hash:authorization.intent_hash}) !== row.call_digest)
+        return fail("COMMAND_STATUS_ASSERTION_ORIGINAL_MISMATCH",409);
+      const input = {actor,authorization,intent,contract:structuredClone(recovery.contract),original,
+        action:"STATUS" as const,call_digest:row.call_digest};
+      const verified = await this.authorize(input); current();
+      if (verified.fingerprint !== row.authority_fingerprint || expires > verified.valid_until_ms)
+        return fail("COMMAND_STATUS_ASSERTION_AUTHORITY_CHANGED",409);
+      const binding: CurrentHumanBinding = {workspace_id:row.workspace_id,environment:"paper",
+        workload_id:row.workload_id,request_digest:row.request_digest};
+      const issued: LeaseIdentity = {lease_id:request.lease_id,expires_at_ms:leaseExpires,authority_revision:revision};
+      if (!this.candidate.canReplaceResolvedIssue ||
+        !await this.candidate.canReplaceResolvedIssue(actor,binding,issued))
+        return fail("COMMAND_STATUS_ASSERTION_TERMINAL_NOT_CONFIRMED",409);
+      current();
+      if (!await this.candidate.acknowledgeCommandStatusIssue(actor,binding,issued,request.response_digest))
+        return fail("COMMAND_STATUS_ASSERTION_TERMINAL_NOT_CONFIRMED",409);
+      current();
+      const final = await this.authorize(input); current();
+      if (final.fingerprint !== row.authority_fingerprint || expires > final.valid_until_ms)
+        return fail("COMMAND_STATUS_ASSERTION_AUTHORITY_CHANGED",409);
+      await this.restoreOutboundContext(token,input,row,final);current();
+      return commandSourceAssertionCompletionResponse.parse({schema_version:"portal.execution.command-source-assertion-completion-response.v1",
+        delivery_sequence:request.delivery_sequence,lease_id:request.lease_id,request_digest:request.request_digest,
+        response_digest:request.response_digest,completed:true});
+    } finally {this.pending--;this.prune(this.time());}
+  }
   async complete(token: string, input: unknown): Promise<CommandSourceAssertionCompletionResponse> {
     let request: CommandSourceAssertionCompletionRequest;
     try { request = commandSourceAssertionCompletionRequest.parse(snapshot(input, ["schema_version", "binding_digest", "receiver_id",
       "workload_id", "delivery_sequence", "lease_id", "request_digest", "response_digest"])); }
     catch { return fail("COMMAND_STATUS_ASSERTION_REQUEST_INVALID", 400); }
     if (typeof token !== "string" || !/^[A-Za-z0-9_-]{43}$/u.test(token)) return fail("COMMAND_STATUS_ASSERTION_CONTEXT_REQUIRED", 403);
-    const entry = this.contexts.get(token); this.current(entry);
+    const entry = this.contexts.get(token);
+    if (!entry || entry.restored) return this.recoverCompletion(token,request);
+    this.current(entry);
+    // A cached completion is still a disclosure. Recheck current authority on
+    // every retry, including retries after a previous successful Edge ACK.
+    const before=await this.authorize(entry!.input);this.current(entry);
+    if(before.fingerprint!==entry!.fingerprint || entry!.expires>before.valid_until_ms)
+      return fail("COMMAND_STATUS_ASSERTION_AUTHORITY_CHANGED",409);
     const s = entry!.selection, delivery = entry!.last;
     if (request.binding_digest !== s.binding_digest || request.receiver_id !== s.receiver_id || request.workload_id !== s.workload_id)
       return fail("COMMAND_STATUS_ASSERTION_BINDING_MISMATCH", 403);
@@ -522,6 +945,11 @@ export class CommandSourceAssertionAuthority {
     }
     const result = await completion.pending; this.current(entry);
     if (entry!.last !== delivery) return fail("COMMAND_STATUS_ASSERTION_COMPLETION_MISMATCH", 409);
+    // ACK can commit while access changes. Preserve that durable ACK but do
+    // not send its completion response to a requester who lost authority.
+    const final=await this.authorize(entry!.input);this.current(entry);
+    if(final.fingerprint!==entry!.fingerprint || entry!.expires>final.valid_until_ms)
+      return fail("COMMAND_STATUS_ASSERTION_AUTHORITY_CHANGED",409);
     return { ...result };
   }
   private issued(response: CommandSourceAssertionResponse): Issued {
@@ -530,14 +958,16 @@ export class CommandSourceAssertionAuthority {
   }
   private async terminal(entry: Entry, binding: CurrentHumanBinding, response: CommandSourceAssertionResponse): Promise<boolean> {
     const before=await this.authorize(entry.input); this.current(entry);
-    if(before.fingerprint!==entry.fingerprint)return fail("COMMAND_STATUS_ASSERTION_AUTHORITY_CHANGED",409);
+    if(before.fingerprint!==entry.fingerprint || entry.expires>before.valid_until_ms)
+      return fail("COMMAND_STATUS_ASSERTION_AUTHORITY_CHANGED",409);
     if (!this.candidate.canReplaceResolvedIssue) return false;
     if (this.pending >= 16) return fail("COMMAND_STATUS_ASSERTION_CAPACITY_EXHAUSTED", 429);
     this.current(entry); entry.pending++; this.pending++;
     try {
       const terminal=await this.candidate.canReplaceResolvedIssue({ ...entry.actor }, { ...binding }, this.issued(response)) === true;
       const final=await this.authorize(entry.input);this.current(entry);
-      if(final.fingerprint!==entry.fingerprint)return fail("COMMAND_STATUS_ASSERTION_AUTHORITY_CHANGED",409);
+      if(final.fingerprint!==entry.fingerprint || entry.expires>final.valid_until_ms)
+        return fail("COMMAND_STATUS_ASSERTION_AUTHORITY_CHANGED",409);
       return terminal;
     }
     finally { entry.pending--; this.pending--; this.prune(this.time()); }

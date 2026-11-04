@@ -195,7 +195,12 @@ export class ExecutionManagerRuntime implements OnModuleInit, BeforeApplicationS
     if (!this.installation) return base;
     if (base && base !== this.installedTrust) throw new Error("MANAGER_RUNTIME_TRUST_CONFLICT");
     const trust = this.installedTrust!;
-    const delegate = Object.freeze<AccessTrustProvider>({ verifyPolicy:i=>trust.verifyPolicy(i),verifyReceipt:i=>trust.verifyReceipt(i),
+    const delegate = Object.freeze<AccessTrustProvider>({
+      // An installed publication runtime must not detach the independently
+      // commissioned native CURRENT egress/custody port. Preserve its exact
+      // identity; this does not qualify any publication or grant a permission.
+      ...(trust.currentRelations?{currentRelations:trust.currentRelations}:{}),
+      verifyPolicy:i=>trust.verifyPolicy(i),verifyReceipt:i=>trust.verifyReceipt(i),
       verifyRootReceipt:(i,c)=>trust.verifyRootReceipt?.(i,c) ?? Promise.resolve(null),
       qualifyDelegatedReceipt:(i,s)=>trust.qualifyDelegatedReceipt?.(i,s) ?? Promise.resolve(null),
       relations:(u,w)=>trust.relations(u,w),verifiedHumanMapping:(u,w)=>trust.verifiedHumanMapping(u,w),

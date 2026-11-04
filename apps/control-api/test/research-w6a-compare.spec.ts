@@ -145,7 +145,7 @@ function subject(rows: CompareRunRow[], raw?: Record<string, unknown>) {
 }
 
 async function read(rows: CompareRunRow[], query: { mode: "attempts" | "markets" | "pair"; run_ids: string[] }, raw?: Record<string, unknown>) {
-  const response = await subject(rows, raw).service.detail(scope, "delta-rsi-polynomial-alpha", query);
+  const response = await subject(rows, raw).service.detail(scope, "delta-rsi-polynomial-alpha", { ...query, workspace_id: undefined });
   expect(ResearchCompareResponseSchema.safeParse(response).success).toBe(true);
   compareValidator.assert(response);
   return response;
@@ -231,7 +231,7 @@ describe("W6a · Compare reads the retained WFO lane and answers CG-P20-02…11"
 
   it("pair: two WFO runs compare over the retained outer-test span; CG-P20-06/09 are in the contract", async () => {
     const { service, repository } = subject(rows());
-    const response = await service.detail(scope, "delta-rsi-polynomial-alpha", { mode: "pair", run_ids: ["run-w6a-wfo-a", "run-w6a-wfo-b"] });
+    const response = await service.detail(scope, "delta-rsi-polynomial-alpha", { mode: "pair", run_ids: ["run-w6a-wfo-a", "run-w6a-wfo-b"], workspace_id: undefined });
     compareValidator.assert(response);
     expect(repository.pairRaw.mock.calls[0]![1]).toMatchObject({
       left: { outerOosStartUtcMs: realFolds[0]!.test_start_utc_ms, outerOosEndExclusiveUtcMs: realFolds.at(-1)!.test_end_utc_ms + 1, expectedOuterOosBars: 336 },

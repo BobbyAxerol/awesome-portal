@@ -16,9 +16,9 @@ export const SIBLINGS = {
   },
   "obligations": {
     gap: "GAP-4", schemaVersion: "portal.execution.obligations.v1",
-    read: S.obj({ "schema_version": S.lit("portal.execution.obligations.v1"), "workspace_id": S.str(256), "record_authority": S.lit("PORTAL_PROJECTION"), "read_at_ms": S.ms, "subject": S.obj({ "type": S.en("ALPHA", "PORTFOLIO", "ACCOUNT", "DEPLOYMENT", "OPERATION", "INCIDENT", "APPROVAL"), "id": S.id }), "items": S.sec(S.arr(S.obj({ "obligation_id": S.id, "kind": S.en("OPEN_POSITION", "WORKING_ORDER", "RESERVATION", "UNKNOWN_OUTCOME", "SETTLEMENT_PENDING"), "state": S.code, "recovery_id": S.nul(S.id), "order_id": S.nul(S.id), "operation_id": S.nul(S.id), "opened_at_ms": S.ms }), 200)) }),
+    read: S.obj({ "schema_version": S.lit("portal.execution.obligations.v1"), "workspace_id": S.str(256), "record_authority": S.lit("PORTAL_PROJECTION"), "read_at_ms": S.ms, "subject": S.obj({ "type": S.en("ALPHA", "PORTFOLIO", "ACCOUNT", "DEPLOYMENT", "OPERATION", "INCIDENT", "APPROVAL"), "id": S.id }), "items": S.sec(S.arr(S.obj({ "obligation_id": S.id, "kind": S.en("OPEN_POSITION", "WORKING_ORDER", "RESERVATION", "UNKNOWN_OUTCOME", "SETTLEMENT_PENDING"), "state": S.code, "recovery_id": S.nul(S.id), "order_id": S.nul(S.id), "operation_id": S.nul(S.id), "opened_at_ms": S.ms }), 200)), "next_cursor": S.sec(S.str(4096)) }),
     path: (params) => {
-      const query = new URLSearchParams(); for (const key of ["workspace_id","subject_type","subject_id"]) if (params[key]) query.set(key, params[key]!);
+      const query = new URLSearchParams(); for (const key of ["workspace_id","subject_type","subject_id","page_size","cursor"]) if (params[key]) query.set(key, params[key]!);
       return `/obligations${query.toString() === "" ? "" : "?" + query.toString()}`;
     },
   },
@@ -50,9 +50,9 @@ export const SIBLINGS = {
   },
   "reconciliation": {
     gap: "GAP-11", schemaVersion: "portal.execution.reconciliation.v1",
-    read: S.obj({ "schema_version": S.lit("portal.execution.reconciliation.v1"), "workspace_id": S.str(256), "record_authority": S.lit("PORTAL_PROJECTION"), "read_at_ms": S.ms, "subject": S.obj({ "type": S.en("ALPHA", "PORTFOLIO", "ACCOUNT", "DEPLOYMENT", "OPERATION", "INCIDENT", "APPROVAL"), "id": S.id }), "runs": S.sec(S.arr(S.obj({ "run_id": S.id, "state": S.en("RUNNING", "MATCHED", "BREAKS_FOUND", "FAILED"), "started_at_ms": S.ms, "finished_at_ms": S.nul(S.ms), "breaks_open": S.int(0) }), 100)), "breaks": S.sec(S.arr(S.obj({ "break_id": S.id, "run_id": S.id, "state": S.en("OPEN", "RESOLVING", "RESOLVED"), "kind": S.en("POSITION", "BALANCE", "ORDER", "FILL"), "resolution_revision": S.nul(S.int(1)), "detected_at_ms": S.ms }), 200)) }),
+    read: S.obj({ "schema_version": S.lit("portal.execution.reconciliation.v1"), "workspace_id": S.str(256), "record_authority": S.lit("PORTAL_PROJECTION"), "read_at_ms": S.ms, "subject": S.obj({ "type": S.en("ALPHA", "PORTFOLIO", "ACCOUNT", "DEPLOYMENT", "OPERATION", "INCIDENT", "APPROVAL"), "id": S.id }), "runs": S.sec(S.arr(S.obj({ "run_id": S.id, "state": S.en("RUNNING", "MATCHED", "BREAKS_FOUND", "FAILED"), "started_at_ms": S.ms, "finished_at_ms": S.nul(S.ms), "breaks_open": S.int(0) }), 100)), "breaks": S.sec(S.arr(S.obj({ "break_id": S.id, "run_id": S.id, "state": S.en("OPEN", "RESOLVING", "RESOLVED"), "kind": S.en("POSITION", "BALANCE", "ORDER", "FILL"), "resolution_revision": S.nul(S.int(1)), "detected_at_ms": S.ms }), 200)), "next_cursor": S.sec(S.str(4096)) }),
     path: (params) => {
-      const query = new URLSearchParams(); for (const key of ["workspace_id","subject_type","subject_id"]) if (params[key]) query.set(key, params[key]!);
+      const query = new URLSearchParams(); for (const key of ["workspace_id","subject_type","subject_id","page_size","cursor"]) if (params[key]) query.set(key, params[key]!);
       return `/reconciliation${query.toString() === "" ? "" : "?" + query.toString()}`;
     },
   },

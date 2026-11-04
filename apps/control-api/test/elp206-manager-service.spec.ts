@@ -48,6 +48,7 @@ describe("ELP2-06 service admission and final authority fences (synthetic adapte
     const request={portalUser:f.principal.user,portalSession:f.principal.session,portalWorkspaceId:f.principal.workspaceId} as any;
     for(const window of ["ALL",JSON.stringify("ALL"),JSON.stringify({from_ms:0,to_ms:900})]){
       const response=await controller.fleet(request,{environment:"paper",window});
+      if (!response) throw new Error("TEST_ONLY_EXPECTED_FLEET_RESPONSE");
       expect(response.selected_window?.requested).toEqual(window.includes("from_ms")?{from_ms:0,to_ms:900}:"ALL");
     }
     f.repository.head.mockClear();f.repository.document.mockClear();

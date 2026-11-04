@@ -1,6 +1,6 @@
 import { afterAll, describe, expect, it } from 'vitest';
 import { Pool } from 'pg';
-import { runner as migrate } from 'node-pg-migrate';
+import { migrate } from './helpers/node-pg-migrate';
 import { cpSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';

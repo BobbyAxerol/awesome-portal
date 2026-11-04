@@ -23,6 +23,7 @@ function principal() {
       createdAt: now,
       updatedAt: now,
       disabledAt: null,
+      accountRevision: 1, archivedAt: null,
     },
     session: {
       sessionId: "ses_bobby",
@@ -141,7 +142,7 @@ describe("EDS-11R rich-screen named warm-up", () => {
     await expect(scoped.instance.relation(
       principal(), "paper", "EXECUTION_FULL_BLOTTER_SCREEN", "manager.orders", "orders",
       { limit: 1, status: "FILLED" },
-    )).rejects.toMatchObject<Partial<CurrentSourceProxyError>>({
+    )).rejects.toMatchObject({
       code: "PHASE2_LOCAL_QUERY_REQUIRED",
     });
     expect(scoped.relationPage).not.toHaveBeenCalled();
@@ -152,7 +153,7 @@ describe("EDS-11R rich-screen named warm-up", () => {
 
     await expect(instance.relation(
       principal(), "paper", "PAPER_TRADING_SCREEN", "manager.performance", "performance_snapshots", { limit: 1 },
-    )).rejects.toMatchObject<Partial<CurrentSourceProxyError>>({
+    )).rejects.toMatchObject({
       code: "EDS11R_PANEL_REQUIRES_PROJECTION",
     });
     expect(relationPage).not.toHaveBeenCalled();

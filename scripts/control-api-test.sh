@@ -135,6 +135,7 @@ cp -a \
   "${APP_DIR}/package-lock.json" \
   "${APP_DIR}/tsconfig.build.json" \
   "${APP_DIR}/tsconfig.json" \
+  "${APP_DIR}/tsconfig.cross-loop.json" \
   "${APP_DIR}/vitest.config.mts" \
   "${WORK_DIR}/"
 # A4-D15 · the deployment's own bootstrap input, so a test can assert against

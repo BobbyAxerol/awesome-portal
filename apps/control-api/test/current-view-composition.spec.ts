@@ -18,6 +18,8 @@ import { CurrentViewCoreComposition, type CurrentViewCompositionConfig } from ".
 import type { SelectedCurrentViewEdgeRead } from "../src/execution-v2/current-view-edge-client";
 import { ExecutionReadScopes, type ReadScopePrincipal } from "../src/execution-v2/read-scope";
 import type { ExecutionReadPublication } from "../src/execution-v2/read-publication";
+import { ManagerCurrentAccounts } from "../src/execution-v2/manager-current-accounts";
+import { loadManagerCurrentCommissioning, managerCurrentMetadataDigest, type ManagerCurrentMetadata } from "../src/execution-v2/manager-current-publication";
 import { commonName, testCertificate, type TestAuthority } from "./fixtures/elp210-test-certificates";
 
 type Identity = { key: Buffer; cert: Buffer; ca: Buffer; pin: string };
@@ -87,7 +89,7 @@ function coreFixture(native = false) {
   const scopes = new ExecutionReadScopes(pool, access, config);
   const selected: SelectedCurrentViewEdgeRead = { resource: "accounts", authority: { resource_ref: "accounts", binding: { environment: "paper", profileId: profile },
     read_requirement: { action: "business.read_all", resource: root, dataset }, fields: ["equity"] }, query: { limit: 200, max_bytes: 4096 } };
-  return { auth, scopes, principal, selected, query, end, grants, tuple, nativeDeliver, sent, stages,
+  return { auth, scopes, principal, selected, query, end, grants, policy, tuple, nativeDeliver, sent, stages,
     afterEnter: (callback: () => Promise<void>) => { enterHook = callback; },
     beforeDispatch: (callback: () => void) => { dispatchHook = callback; },
     onIdentity: (callback: () => Promise<void>) => { beforeIdentity = callback; } };
@@ -123,16 +125,17 @@ describe("Core current-view lifecycle composition", () => {
     });
     req.on("error", reject); req.end(body);
   });
-  async function setup(options: { hold?: boolean; shutdownMs?: number; native?: boolean } = {}) {
-    const fixture = coreFixture(options.native), captured: { token?: string; policy?: { status: number; body: Record<string, unknown> } } = {};
+  async function setup(options: { hold?: boolean; shutdownMs?: number; native?: boolean; page?: () => unknown } = {}) {
+    const fixture = coreFixture(options.native), captured: { token?: string; maxBytes?: string; policy?: { status: number; body: Record<string, unknown> } } = {};
     let origin = "", hits = 0;
     const server = createServer({ ...edge, requestCert: true, rejectUnauthorized: true, minVersion: "TLSv1.3", maxVersion: "TLSv1.3" }, (req, res) => {
       hits++; captured.token = req.headers.authorization?.slice(7);
+      captured.maxBytes = new URL(req.url!, "https://localhost").searchParams.get("max_bytes") ?? undefined;
       const resource = new URL(req.url!, "https://localhost").pathname.split("/").at(-2)!;
       void policyRead(origin, captured.token!, resource).then(policy => {
         captured.policy = policy;
         if (options.hold) return;
-        const body = JSON.stringify({ equity: "123.45", TEST_ONLY: true });
+        const body = JSON.stringify(options.page ? options.page() : { equity: "123.45", TEST_ONLY: true });
         res.writeHead(policy.status, { "content-type": "application/json", "content-length": Buffer.byteLength(body), connection: "close" }); res.end(body);
       }).catch(() => { res.writeHead(503); res.end(); });
     });
@@ -223,9 +226,68 @@ describe("Core current-view lifecycle composition", () => {
     await f.composition.shutdown(); await refused;
     expect(f.composition.snapshot()).toMatchObject({ state: "STOPPED", listener: null, owned_contexts: 0 });
   });
+  async function accountProfileFixture() {
+    let page: unknown;
+    const f = await setup({ native: true, page: () => page });
+    const now = Date.now(), account = f.tuple.account_id, entity = id("account-entity"), revision = accessDigest(id("account-revision"));
+    const binding = { ...f.selected.authority.read_requirement.dataset, dataset_id: "manager-current:ACCOUNT",
+      catalogue_revision: id("catalogue") };
+    Object.assign(f.selected.authority.read_requirement.dataset, binding);
+    const metadata: ManagerCurrentMetadata = { schema_version: "portal.execution.manager-current-metadata.v1",
+      scope: { workspace_id: f.principal.workspaceId, environment: "paper", profile_id: f.selected.authority.binding.profileId },
+      binding, source_workspace_id: id("source-workspace"), adapter_revision: id("adapter"), publication_revision: id("publication"),
+      state: "ACTIVE", issued_at_ms: now - 1000, expires_at_ms: now + 60_000, source_read_at_ms: now - 1000, observed_at_ms: now - 500,
+      receipt_pins: { source_read: id("source"), transport_trust: id("trust"), privacy: id("privacy"), field_policy: id("field-policy") },
+      grains: [{ grain: "manager.account", source_fields: ["account_id"], fields: ["account_id"],
+        selections: [{ resource_ref: "accounts", resource: { kind: "ACCOUNT", id: account }, entity_ids: [entity] }],
+        entities: [{ entity_id: entity, account_id: account, payload_digest: revision }] },
+        { grain: "relation.account_balances", source_fields: ["account_id"], fields: ["account_id"], selections: [], entities: [] },
+        { grain: "relation.account_policies", source_fields: ["account_id"], fields: ["account_id"], selections: [], entities: [] }] };
+    const artifact = JSON.stringify({ schema_version: "portal.execution.manager-current-commissioning.v1", scope: metadata.scope,
+      binding, source_workspace_id: metadata.source_workspace_id, adapter_revision: metadata.adapter_revision,
+      source_metadata_digest: managerCurrentMetadataDigest(metadata), receipt_pins: metadata.receipt_pins });
+    const commissioning = loadManagerCurrentCommissioning(artifact, { artifact_sha256: `sha256:${createHash("sha256").update(artifact).digest("hex")}`,
+      approval_ref: id("synthetic-approval"), approved_at_ms: now - 2000, valid_until_ms: now + 60_000 }, now);
+    page = { schema_version: "portal.execution.manager-current.v1", projection_generation: binding.projection_generation,
+      source_continuity_epoch: binding.source_revision, source_read_at_ms: metadata.source_read_at_ms, produced_at_ms: now,
+      availability: "AVAILABLE", source_basis: "MANAGER_COMMITTED_POLL_BOUNDED_SNAPSHOT", history_capability: "UNAVAILABLE",
+      coverage: "CURRENT_PAGE_ONLY", count_status: "COMPLETE_AUTHORIZED_SELECTION",
+      rows: [{ entity_id: entity, revision, payload: { account_id: { kind: "TEXT", value: account } } }], next_cursor: null, resume_cursor: null };
+    const service = new ManagerCurrentAccounts({ request: { ...metadata.scope, binding }, commissioning,
+      source: async () => structuredClone(metadata), core: f.composition });
+    await f.start();
+    return { ...f, service, account, setPage: (value: unknown) => { page = value; } };
+  }
+  it("connects the real Account profile adapter to mTLS field authority and synthetic native custody", async () => {
+    const f = await accountProfileFixture(), dispatch = vi.fn();
+    await f.service.readNativeProfile(f.principal, f.account, "paper", {} as ServerResponse, dispatch);
+    expect(f.hits()).toBe(1); expect(f.captured.policy?.status).toBe(200); expect(f.captured.maxBytes).toBe("8192");
+    expect(f.sent).toHaveLength(1); expect(JSON.parse(f.sent[0]!.toString())).toMatchObject({
+      schema_version: "portal.execution.account-profile.v1", workspace_id: f.principal.workspaceId, account_id: f.account });
+    expect(dispatch).toHaveBeenCalledOnce();
+  });
+  it("does not dispatch an Account profile after grant revocation at the synthetic ENTER boundary", async () => {
+    const f = await accountProfileFixture(), dispatch = vi.fn();
+    f.afterEnter(async () => { f.grants[0]!.revoked_at_ms = Date.now(); });
+    await expect(f.service.readNativeProfile(f.principal, f.account, "paper", {} as ServerResponse, dispatch)).rejects.toBeInstanceOf(Error);
+    expect(f.sent).toHaveLength(0); expect(dispatch).not.toHaveBeenCalled();
+  });
+  it("does not dispatch an Account profile when the real mTLS client receives a malformed private source page", async () => {
+    const f = await accountProfileFixture(), dispatch = vi.fn();
+    f.setPage({ TEST_ONLY: "malformed" });
+    await expect(f.service.readNativeProfile(f.principal, f.account, "paper", {} as ServerResponse, dispatch)).rejects.toBeInstanceOf(Error);
+    expect(f.hits()).toBe(1); expect(f.sent).toHaveLength(0); expect(dispatch).not.toHaveBeenCalled();
+  });
+  it("rejects a different workspace before the Account profile makes an mTLS read", async () => {
+    const f = await accountProfileFixture(), dispatch = vi.fn();
+    await expect(f.service.readNativeProfile({ ...f.principal, workspaceId: id("other-workspace") }, f.account,
+      "paper", {} as ServerResponse, dispatch)).rejects.toMatchObject({ code: "EXECUTION_READ_NOT_AVAILABLE", status: 404 });
+    expect(f.hits()).toBe(0); expect(f.sent).toHaveLength(0); expect(dispatch).not.toHaveBeenCalled();
+  });
   it("keeps target + source purposes through two actual mTLS reads and one synthetic native final egress", async () => {
     const f = await setup({ native: true }); await f.start();
-    const balances = structuredClone(f.selected); balances.resource = "balances"; balances.authority.resource_ref = "balances";
+    const balances: SelectedCurrentViewEdgeRead = { ...structuredClone(f.selected), resource: "balances",
+      authority: { ...structuredClone(f.selected.authority), resource_ref: "balances" } };
     const target = structuredClone(f.selected.authority);
     target.read_requirement.resource = { kind: "ACCOUNT", id: f.tuple.account_id };
     const after = vi.fn(async () => { expect(f.sent).toHaveLength(0); expect(f.hits()).toBe(2); });
@@ -250,9 +312,47 @@ describe("Core current-view lifecycle composition", () => {
     await expect(f.composition.deliver(f.principal, f.selected.authority, "CURRENT", async () => Buffer.from("private"))).rejects.toBeInstanceOf(Error);
     expect(f.hits()).toBe(0); expect(f.nativeDeliver).not.toHaveBeenCalled(); expect(f.sent).toHaveLength(0);
   });
+  it("does not drop a restricted detail field when native selections share one purpose", async () => {
+    const f = await setup({ native: true }); await f.start();
+    f.grants[0]!.action = "account.read";
+    f.policy.researcher_fields.fields.push("filled_quantity");
+    const requirement = { ...structuredClone(f.selected.authority.read_requirement), action: "account.read" as const,
+      resource: { kind: "ACCOUNT" as const, id: f.tuple.account_id } };
+    const first = { ...structuredClone(f.selected.authority), read_requirement: requirement, detail_fields: ["filled_quantity"] };
+    const second = { ...structuredClone(f.selected.authority), read_requirement: requirement,
+      resource_ref: "balances", detail_fields: ["commission"] };
+    await expect(f.composition.deliverNative(f.principal, [first, second], {} as ServerResponse, async () => Buffer.from("private")))
+      .rejects.toMatchObject({ code: "CURRENT_VIEW_AUTHORITY_CHANGED" });
+    expect(f.hits()).toBe(0); expect(f.nativeDeliver).not.toHaveBeenCalled(); expect(f.sent).toHaveLength(0);
+  });
+  it("carries an explicitly authorized detail field through the native composition", async () => {
+    const f = await setup({ native: true }); await f.start();
+    f.grants[0]!.action = "account.read";
+    f.policy.researcher_fields.fields.push("filled_quantity");
+    const selected: SelectedCurrentViewEdgeRead = { ...structuredClone(f.selected), authority: { ...structuredClone(f.selected.authority),
+      read_requirement: { ...structuredClone(f.selected.authority.read_requirement), action: "account.read",
+        resource: { kind: "ACCOUNT", id: f.tuple.account_id } }, detail_fields: ["filled_quantity"] } };
+    await f.composition.deliverNative(f.principal, [selected.authority], {} as ServerResponse, async read => (await read(selected)).body);
+    expect(f.hits()).toBe(1); expect(f.sent).toHaveLength(1);
+    expect(f.captured.policy?.body.detail_fields).toContain("filled_quantity");
+    expect(f.captured.policy?.body.detail_fields).not.toContain("commission");
+  });
+  it("does not dispatch after a requested detail field is revoked during the native flight", async () => {
+    const f = await setup({ native: true }); await f.start();
+    f.grants[0]!.action = "account.read";
+    f.policy.researcher_fields.fields.push("filled_quantity");
+    const selected: SelectedCurrentViewEdgeRead = { ...structuredClone(f.selected), authority: { ...structuredClone(f.selected.authority),
+      read_requirement: { ...structuredClone(f.selected.authority.read_requirement), action: "account.read",
+        resource: { kind: "ACCOUNT", id: f.tuple.account_id } }, detail_fields: ["filled_quantity"] } };
+    f.afterEnter(async () => { f.policy.researcher_fields.fields = f.policy.researcher_fields.fields.filter(field => field !== "filled_quantity"); });
+    await expect(f.composition.deliverNative(f.principal, [selected.authority], {} as ServerResponse, async read => (await read(selected)).body))
+      .rejects.toBeDefined();
+    expect(f.hits()).toBe(1); expect(f.sent).toHaveLength(0);
+  });
   it("refuses a retargeted native query before network even under the same held source purpose", async () => {
     const f = await setup({ native: true }); await f.start();
-    const wrong = structuredClone(f.selected); wrong.authority.resource_ref = "balances"; wrong.resource = "balances";
+    const wrong: SelectedCurrentViewEdgeRead = { ...structuredClone(f.selected), resource: "balances",
+      authority: { ...structuredClone(f.selected.authority), resource_ref: "balances" } };
     await expect(f.composition.deliverNative(f.principal, [f.selected.authority], {} as ServerResponse, async read =>
       (await read(wrong)).body)).rejects.toMatchObject({ code: "EXECUTION_READ_SCOPE_REQUIRED" });
     expect(f.hits()).toBe(0); expect(f.sent).toHaveLength(0);
@@ -287,7 +387,8 @@ describe("Core current-view lifecycle composition", () => {
   });
   it("a revoke between source grains invalidates the complete BFF, including the first private body", async () => {
     const f = await setup({ native: true }); await f.start();
-    const balance = structuredClone(f.selected); balance.resource = "balances"; balance.authority.resource_ref = "balances";
+    const balance: SelectedCurrentViewEdgeRead = { ...structuredClone(f.selected), resource: "balances",
+      authority: { ...structuredClone(f.selected.authority), resource_ref: "balances" } };
     await expect(f.composition.deliverNative(f.principal, [f.selected.authority, balance.authority], {} as ServerResponse, async read => {
       const first = await read(f.selected); expect(first.status).toBe(200); expect(f.sent).toHaveLength(0);
       f.grants[0]!.revoked_at_ms = Date.now(); return (await read(balance)).body;

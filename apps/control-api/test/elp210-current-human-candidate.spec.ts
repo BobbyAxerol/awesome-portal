@@ -165,12 +165,21 @@ describe.skipIf(!database)("ELP2-10 unmounted authentic-human candidate, real Co
   });
   it("durably fences concurrent and restarted STATUS issues until exact terminal plus Edge ACK", async () => {
     const restarted=await CurrentHumanCandidate.create(pool,config);
+    const link = { context_digest: accessDigest(`TEST_ONLY:context-${suffix}`), context_nonce:"a".repeat(43),
+      original_digest: accessDigest("TEST_ONLY:original"), call_digest: accessDigest("TEST_ONLY:call"),
+      binding_digest: accessDigest("TEST_ONLY:binding"), receiver_id: "TEST_ONLY:edge",
+      authority_fingerprint: accessDigest("TEST_ONLY:authority"), delivery_sequence: 0, previous_lease_id: null,
+      context_expires_at_ms: Date.now()+90000, status_token_digest:accessDigest("TEST_ONLY:status-token"),
+      status_request_digest:accessDigest("TEST_ONLY:status-request"),status_issued_at_ms:Math.floor(Date.now()/1000)*1000 };
+    await expect(candidate.issueCommandStatus(actor,binding,undefined as never))
+      .rejects.toMatchObject({code:"CURRENT_HUMAN_COMMAND_STATUS_LINK_INVALID"});
+    expect((await pool.query("SELECT count(*)::int AS n FROM elp210_candidate.leases")).rows[0].n).toBe(0);
     const freshActor={...actor,session_id:`test-only-relogin-${suffix}`};
     await pool.query(`INSERT INTO auth_sessions(session_id,session_token_hash,user_id,state,csrf_secret_hash,
       session_version,idle_expires_at,absolute_expires_at) VALUES($1,$1,$2,'ACTIVE','TEST_ONLY',7,
       clock_timestamp()+interval '10 minutes',clock_timestamp()+interval '20 minutes')`,[freshActor.session_id,actor.user_id]);
     const attempts=await Promise.allSettled([
-      candidate.issueCommandStatus(actor,binding),restarted.issueCommandStatus(actor,binding),
+      candidate.issueCommandStatus(actor,binding,link),restarted.issueCommandStatus(actor,binding,link),
     ]);
     const accepted=attempts.find(value=>value.status==="fulfilled");
     const refused=attempts.find(value=>value.status==="rejected");
@@ -178,17 +187,17 @@ describe.skipIf(!database)("ELP2-10 unmounted authentic-human candidate, real Co
     expect(refused).toMatchObject({status:"rejected",reason:{code:"CURRENT_HUMAN_COMMAND_STATUS_RECOVERY_REQUIRED"}});
     if(!accepted || accepted.status!=="fulfilled")throw new Error("TEST_ONLY:no accepted status lease");
     const lease=accepted.value,reply=accessDigest("TEST_ONLY:verified exact Edge response");
-    await expect(restarted.issueCommandStatus(freshActor,binding))
+    await expect(restarted.issueCommandStatus(freshActor,binding,link))
       .rejects.toMatchObject({code:"CURRENT_HUMAN_COMMAND_STATUS_RECOVERY_REQUIRED"});
     await expect(restarted.acknowledgeCommandStatusIssue(actor,binding,lease,reply))
       .rejects.toMatchObject({code:"CURRENT_HUMAN_ENTRY_NOT_AVAILABLE"});
     await candidate.enter(lease.token,await proof(lease.lease_id));
     await candidate.resolve(await proof(lease.lease_id,"UNKNOWN"));
-    await expect(restarted.issueCommandStatus(actor,binding))
+    await expect(restarted.issueCommandStatus(actor,binding,link))
       .rejects.toMatchObject({code:"CURRENT_HUMAN_COMMAND_STATUS_RECOVERY_REQUIRED"});
     await candidate.resolve(await proof(lease.lease_id,"COMMITTED"));
     // Source terminal is not delivery acknowledgement.
-    await expect(restarted.issueCommandStatus(actor,binding))
+    await expect(restarted.issueCommandStatus(actor,binding,link))
       .rejects.toMatchObject({code:"CURRENT_HUMAN_COMMAND_STATUS_RECOVERY_REQUIRED"});
     expect(await restarted.acknowledgeCommandStatusIssue(actor,binding,lease,reply)).toBe(true);
     expect(await candidate.acknowledgeCommandStatusIssue(actor,binding,lease,reply)).toBe(true);
@@ -198,8 +207,78 @@ describe.skipIf(!database)("ELP2-10 unmounted authentic-human candidate, real Co
       [lease.lease_id,accessDigest("TEST_ONLY:other response")])).rejects.toThrow("COMMAND_STATUS_DELIVERY_ACK_IMMUTABLE");
     await expect(pool.query("DELETE FROM execution_command_status_delivery_acks WHERE lease_id=$1",[lease.lease_id]))
       .rejects.toThrow("COMMAND_STATUS_DELIVERY_ACK_IMMUTABLE");
-    const next=await restarted.issueCommandStatus(actor,binding);
+    const next=await restarted.issueCommandStatus(actor,binding,{...link,
+      context_digest:accessDigest(`TEST_ONLY:next-context-${suffix}`),context_nonce:"b".repeat(43)});
     expect(next.lease_id).not.toBe(lease.lease_id);
+  });
+  it("keeps a pre-existing unlinked lease fenced rather than replacing or rewriting it", async () => {
+    // Simulate only the historical storage shape using the generic issuer;
+    // the STATUS writer must no longer be able to create that shape itself.
+    const legacy = await candidate.issue(actor, binding);
+    const before = (await pool.query("SELECT * FROM elp210_candidate.leases WHERE lease_id=$1", [legacy.lease_id])).rows[0];
+    const link = { context_digest: accessDigest(`TEST_ONLY:context-${suffix}`), context_nonce:"a".repeat(43),
+      original_digest: accessDigest("TEST_ONLY:original"), call_digest: accessDigest("TEST_ONLY:call"),
+      binding_digest: accessDigest("TEST_ONLY:binding"), receiver_id: "TEST_ONLY:edge",
+      authority_fingerprint: accessDigest("TEST_ONLY:authority"), delivery_sequence: 0, previous_lease_id: null,
+      context_expires_at_ms: Date.now()+90000, status_token_digest:accessDigest("TEST_ONLY:status-token"),
+      status_request_digest:accessDigest("TEST_ONLY:status-request"),status_issued_at_ms:Math.floor(Date.now()/1000)*1000 };
+    await expect(candidate.issueCommandStatus(actor, binding, link))
+      .rejects.toMatchObject({code:"CURRENT_HUMAN_COMMAND_STATUS_RECOVERY_REQUIRED"});
+    expect((await pool.query("SELECT * FROM elp210_candidate.leases WHERE lease_id=$1", [legacy.lease_id])).rows[0]).toEqual(before);
+    expect((await pool.query("SELECT count(*)::int AS n FROM elp210_candidate.leases")).rows[0].n).toBe(1);
+    expect((await pool.query("SELECT count(*)::int AS n FROM execution_command_status_context_links WHERE lease_id=$1", [legacy.lease_id])).rows[0].n).toBe(0);
+  });
+  it("commits the original context/lease link atomically and fences invalid successors after restart", async () => {
+    const link = { context_digest: accessDigest(`TEST_ONLY:context-${suffix}`), context_nonce:"a".repeat(43), original_digest: accessDigest("TEST_ONLY:original"),
+      call_digest: accessDigest("TEST_ONLY:call"), binding_digest: accessDigest("TEST_ONLY:binding"),
+      receiver_id: "TEST_ONLY:edge", authority_fingerprint: accessDigest("TEST_ONLY:authority"), delivery_sequence: 0,
+      previous_lease_id: null, context_expires_at_ms: Date.now()+20000,
+      status_token_digest:accessDigest("TEST_ONLY:status-token"),status_request_digest:accessDigest("TEST_ONLY:status-request"),
+      status_issued_at_ms:Math.floor(Date.now()/1000)*1000 };
+    const lease=await candidate.issueCommandStatus(actor,binding,link);
+    const stored=(await pool.query("SELECT * FROM execution_command_status_context_links WHERE lease_id=$1",[lease.lease_id])).rows[0];
+    expect(stored).toMatchObject({context_digest:link.context_digest,original_digest:link.original_digest,
+      binding_digest:link.binding_digest,request_digest:binding.request_digest,delivery_sequence:0,previous_lease_id:null,
+      assertion_digest:accessDigest(lease.token)});
+    expect(JSON.stringify(stored)).not.toContain(lease.token);
+    const restarted=await CurrentHumanCandidate.create(pool,config);
+    expect(await restarted.resumeCommandStatusIssue(actor,binding,lease.lease_id)).toEqual(lease);
+    await expect(restarted.resumeCommandStatusIssue(actor,{...binding,request_digest:accessDigest("TEST_ONLY:wrong-request")},lease.lease_id))
+      .rejects.toMatchObject({code:"CURRENT_HUMAN_ENTRY_NOT_AVAILABLE"});
+    const rotated=await generateKeyPair("EdDSA",{crv:"Ed25519",extractable:true});
+    const otherKey=await CurrentHumanCandidate.create(pool,{...config,private_key:rotated.privateKey});
+    await expect(otherKey.resumeCommandStatusIssue(actor,binding,lease.lease_id))
+      .rejects.toMatchObject({code:"CURRENT_HUMAN_ASSERTION_CHANGED"});
+    await expect(pool.query("UPDATE execution_command_status_context_links SET receiver_id='changed' WHERE lease_id=$1",[lease.lease_id]))
+      .rejects.toThrow("COMMAND_STATUS_CONTEXT_LINK_IMMUTABLE");
+    await expect(pool.query("TRUNCATE execution_command_status_context_links"))
+      .rejects.toThrow("COMMAND_STATUS_CONTEXT_LINK_IMMUTABLE");
+    await candidate.enter(lease.token,await proof(lease.lease_id));
+    await expect(restarted.resumeCommandStatusIssue(actor,binding,lease.lease_id))
+      .rejects.toMatchObject({code:"CURRENT_HUMAN_ENTRY_NOT_AVAILABLE"});
+    await candidate.resolve(await proof(lease.lease_id,"COMMITTED"));
+    // A different request/context after restart cannot evade the SAME
+    // original's terminal-without-ACK fence. No second lease is inserted.
+    await expect(restarted.issueCommandStatus(actor,{...binding,request_digest:accessDigest("TEST_ONLY:different-status-request")},
+      {...link,context_digest:accessDigest("TEST_ONLY:different-context"),call_digest:accessDigest("TEST_ONLY:different-call")}))
+      .rejects.toMatchObject({code:"CURRENT_HUMAN_COMMAND_STATUS_RECOVERY_REQUIRED"});
+    const successor={...link,delivery_sequence:1,previous_lease_id:lease.lease_id};
+    await expect(restarted.issueCommandStatus(actor,binding,successor))
+      .rejects.toMatchObject({code:"CURRENT_HUMAN_COMMAND_STATUS_RECOVERY_REQUIRED"});
+    expect((await pool.query("SELECT count(*)::int AS n FROM elp210_candidate.leases")).rows[0].n).toBe(1);
+    await restarted.acknowledgeCommandStatusIssue(actor,binding,lease,accessDigest("TEST_ONLY:actual edge ack"));
+    await expect(restarted.issueCommandStatus(actor,binding,{...successor,original_digest:accessDigest("TEST_ONLY:wrong-original")}))
+      .rejects.toMatchObject({code:"CURRENT_HUMAN_COMMAND_STATUS_LINK_PREVIOUS_REQUIRED"});
+    expect((await pool.query("SELECT count(*)::int AS n FROM elp210_candidate.leases")).rows[0].n).toBe(1);
+    const next=await restarted.issueCommandStatus(actor,binding,successor);
+    expect((await pool.query("SELECT previous_lease_id FROM execution_command_status_context_links WHERE lease_id=$1",[next.lease_id])).rows[0])
+      .toEqual({previous_lease_id:lease.lease_id});
+    expect((await pool.query("SELECT count(*)::int AS n FROM execution_command_status_delivery_acks WHERE lease_id=$1",[next.lease_id])).rows[0].n).toBe(0);
+    const migration = await readFile(join(__dirname, "../migrations/1723680000157_execution-command-status-context-links.sql"), "utf8");
+    const down = migration.split("-- Down Migration")[1];
+    expect(down).toBeTruthy();
+    await expect(pool.query(down!)).rejects.toThrow("COMMAND_STATUS_CONTEXT_DOWN_REQUIRES_APPROVED_ARCHIVE");
+    expect((await pool.query("SELECT count(*)::int AS n FROM execution_command_status_context_links WHERE lease_id=$1", [lease.lease_id])).rows[0].n).toBe(1);
   });
   it("does not infer financial delivery from authenticated unentered rollback or an unused retired identity", async () => {
     const lease = await candidate.issue(actor, binding);

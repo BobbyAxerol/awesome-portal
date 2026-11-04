@@ -231,6 +231,7 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)("ELP2-06 Regime actual PG chain 
     const controller = new ManagerModelController(new ManagerModelService(pool, f.scopes, f.config, runtime), workspaces);
     const request = { portalUser: f.principal.user, portalSession: f.principal.session, portalWorkspaceId: scope.workspace_id } as Parameters<ManagerModelController["alpha"]>[0];
     const result = await controller.alpha(request, { workspace_id: scope.workspace_id, environment: "paper" }, OWN.alpha_id);
+    if (!result) throw new Error("TEST_ONLY_EXPECTED_ALPHA_RESPONSE");
     expect(result.regime_details).toEqual([doc!.precomputed_regimes!.find(p => p.provenance.binding.alpha_id === OWN.alpha_id)]);
     expect(result.regime_details![0].result).toMatchObject({ status: "weak_support", neighbor_count: 3, qualification: "RUNTIME_APPROVED" });
     expect(result.scores.regime).toMatchObject({ value: null, status: "weak_support" }); expect(result.scores.raw.value).toBeTypeOf("string");

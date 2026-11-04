@@ -103,16 +103,16 @@ def({
 
 // GAP-4: obligation records behind the approval counts.
 def({
-  name: 'obligations', gap: 'GAP-4', route: '/api/v1/execution/obligations', params: [], query: ['workspace_id', 'subject_type', 'subject_id'],
+  name: 'obligations', gap: 'GAP-4', route: '/api/v1/execution/obligations', params: [], query: ['workspace_id', 'subject_type', 'subject_id', 'page_size', 'cursor'],
   description: 'The records behind the counts of obligations_after_approval (and the stage unknown-order chip): one row per open position, working order, reservation, unknown outcome or settlement.',
   schema: T.obj({ ...head('obligations'), subject,
     items: T.sec(T.arr(T.obj({ obligation_id: T.id(), kind: T.en('OPEN_POSITION', 'WORKING_ORDER', 'RESERVATION', 'UNKNOWN_OUTCOME', 'SETTLEMENT_PENDING'), state: T.code(),
-      recovery_id: T.nul(T.id()), order_id: T.nul(T.id()), operation_id: T.nul(T.id()), opened_at_ms: T.ms() }), 200)) }),
+      recovery_id: T.nul(T.id()), order_id: T.nul(T.id()), operation_id: T.nul(T.id()), opened_at_ms: T.ms() }), 200)), next_cursor: T.sec(T.str(4096)) }),
   valid: {
     published: { ...hv('obligations'), subject: { type: 'PORTFOLIO', id: 'TEST_ONLY:portfolio-a' }, items: [
       { obligation_id: 'TEST_ONLY:ob-1', kind: 'OPEN_POSITION', state: 'OPEN', recovery_id: null, order_id: null, operation_id: null, opened_at_ms: T0 - DAY },
-      { obligation_id: 'TEST_ONLY:ob-2', kind: 'UNKNOWN_OUTCOME', state: 'RECOVERING', recovery_id: 'TEST_ONLY:rec-1', order_id: 'TEST_ONLY:ord-9', operation_id: 'TEST_ONLY:op-3', opened_at_ms: T0 - H }] },
-    none: { ...hv('obligations'), subject: { type: 'PORTFOLIO', id: 'TEST_ONLY:portfolio-a' }, items: [] },
+      { obligation_id: 'TEST_ONLY:ob-2', kind: 'UNKNOWN_OUTCOME', state: 'RECOVERING', recovery_id: 'TEST_ONLY:rec-1', order_id: 'TEST_ONLY:ord-9', operation_id: 'TEST_ONLY:op-3', opened_at_ms: T0 - H }], next_cursor: 'TEST_ONLY_CURSOR' },
+    none: { ...hv('obligations'), subject: { type: 'PORTFOLIO', id: 'TEST_ONLY:portfolio-a' }, items: [], next_cursor: null },
     'not-read': { ...hv('obligations'), subject: { type: 'PORTFOLIO', id: 'TEST_ONLY:portfolio-a' }, items: null },
   },
   negatives: [
@@ -149,6 +149,7 @@ def({
     margin_ratio: T.sec(T.obj({ percent: T.dec(), as_of_ms: T.ms() })), wallet_balance: T.sec(T.obj({ currency: T.str(32), value: T.dec(), as_of_ms: T.ms() })),
     native_equity: T.sec(T.obj({ currency: T.str(32), value: T.dec(), as_of_ms: T.ms() })) }),
   valid: {
+    identity_only: { ...hv('account-profile'), account_id: 'TEST_ONLY:account-1' },
     published: { ...hv('account-profile'), account_id: 'TEST_ONLY:account-1', product: 'USDT-M futures · hedge', network: { name: 'MAINNET', proof_at_ms: T0 - 2 * 60_000 }, margin_mode: 'CROSS',
       margin_ratio: { percent: '5.10', as_of_ms: T0 }, wallet_balance: { currency: 'USDT', value: '88200.00', as_of_ms: T0 }, native_equity: { currency: 'USDT', value: '88580.38', as_of_ms: T0 } },
     partial: { ...hv('account-profile'), account_id: 'TEST_ONLY:account-1', product: 'Perpetual swap · net', network: { name: 'MAINNET', proof_at_ms: null }, margin_mode: null, margin_ratio: null, wallet_balance: { currency: 'USDT', value: '0', as_of_ms: T0 } },
@@ -180,16 +181,16 @@ def({
 
 // GAP-11: reconciliation runs and breaks.
 def({
-  name: 'reconciliation', gap: 'GAP-11', route: '/api/v1/execution/reconciliation', params: [], query: ['workspace_id', 'subject_type', 'subject_id'],
+  name: 'reconciliation', gap: 'GAP-11', route: '/api/v1/execution/reconciliation', params: [], query: ['workspace_id', 'subject_type', 'subject_id', 'page_size', 'cursor'],
   description: 'Reconciliation runs and the breaks they found for a subject, so the Reconciliation tab, the stage chips and the Account 360 triad stop counting rows.',
   schema: T.obj({ ...head('reconciliation'), subject,
     runs: T.sec(T.arr(T.obj({ run_id: T.id(), state: T.en('RUNNING', 'MATCHED', 'BREAKS_FOUND', 'FAILED'), started_at_ms: T.ms(), finished_at_ms: T.nul(T.ms()), breaks_open: T.int() }), 100)),
-    breaks: T.sec(T.arr(T.obj({ break_id: T.id(), run_id: T.id(), state: T.en('OPEN', 'RESOLVING', 'RESOLVED'), kind: T.en('POSITION', 'BALANCE', 'ORDER', 'FILL'), resolution_revision: T.nul(T.int(1)), detected_at_ms: T.ms() }), 200)) }),
+    breaks: T.sec(T.arr(T.obj({ break_id: T.id(), run_id: T.id(), state: T.en('OPEN', 'RESOLVING', 'RESOLVED'), kind: T.en('POSITION', 'BALANCE', 'ORDER', 'FILL'), resolution_revision: T.nul(T.int(1)), detected_at_ms: T.ms() }), 200)), next_cursor: T.sec(T.str(4096)) }),
   valid: {
     published: { ...hv('reconciliation'), subject: { type: 'ACCOUNT', id: 'TEST_ONLY:account-1' }, runs: [
       { run_id: 'TEST_ONLY:run-2', state: 'BREAKS_FOUND', started_at_ms: T0 - H, finished_at_ms: T0 - H + 60_000, breaks_open: 1 }, { run_id: 'TEST_ONLY:run-1', state: 'MATCHED', started_at_ms: T0 - DAY, finished_at_ms: T0 - DAY + 60_000, breaks_open: 0 }],
-      breaks: [{ break_id: 'TEST_ONLY:brk-1', run_id: 'TEST_ONLY:run-2', state: 'OPEN', kind: 'BALANCE', resolution_revision: null, detected_at_ms: T0 - H }] },
-    clean: { ...hv('reconciliation'), subject: { type: 'ACCOUNT', id: 'TEST_ONLY:account-1' }, runs: [], breaks: [] },
+      breaks: [{ break_id: 'TEST_ONLY:brk-1', run_id: 'TEST_ONLY:run-2', state: 'OPEN', kind: 'BALANCE', resolution_revision: null, detected_at_ms: T0 - H }], next_cursor: 'TEST_ONLY_CURSOR' },
+    clean: { ...hv('reconciliation'), subject: { type: 'ACCOUNT', id: 'TEST_ONLY:account-1' }, runs: [], breaks: [], next_cursor: null },
   },
   negatives: [
     { id: 'break-state-unknown', base: 'published', rule: 'break states are closed', ops: [{ op: 'set', path: ['breaks', 0, 'state'], value: 'IGNORED' }] },
@@ -376,13 +377,24 @@ for (const d of DEFS) {
   const file = `execution-${d.name}.v1.schema.json`;
   const check = ajv.compile({ ...header(file), ...schema });
   const Name = camel(d.name);
+  const sourceDarkRoute = ['order-detail', 'account-profile', 'reconciliation', 'obligations'].includes(d.name);
+  const nativeAccountProfile = d.name === 'account-profile';
+  const nativeSibling = sourceDarkRoute;
+  const problemCodes = ['EXECUTION_READ_NOT_AVAILABLE', 'EXECUTION_READ_QUERY_INVALID', ...(sourceDarkRoute
+    ? ['SESSION_REQUIRED', 'REQUEST_REJECTED', 'PORTAL_AUTHORITY_UNAVAILABLE', 'PORTAL_READ_STORE_UNAVAILABLE', 'EXECUTION_LOCAL_READ_BUSY'] : []),
+    ...(nativeSibling ? ['EXECUTION_READ_SCOPE_REQUIRED', 'EXECUTION_READ_ACCESS_CHANGED', 'EXECUTION_READ_CURRENT_ONLY',
+      'EXECUTION_READ_POLICY_PENDING', 'EXECUTION_READ_PUBLICATION_NOT_QUALIFIED', 'EXECUTION_READ_FIELD_POLICY_PENDING',
+      'EXECUTION_READ_SCOPE_LIMIT', 'EXECUTION_READ_AUTHORITY_UNAVAILABLE', 'EXECUTION_READ_CURSOR_INVALID'] : [])];
   const problem = { type: 'object', additionalProperties: false, required: ['error', 'request_id'], properties: {
-    error: { type: 'object', additionalProperties: false, required: ['code', 'message'], properties: { code: { type: 'string', enum: ['EXECUTION_READ_NOT_AVAILABLE', 'EXECUTION_READ_QUERY_INVALID'] }, message: { type: 'string', minLength: 1, maxLength: 256 } } },
+    error: { type: 'object', additionalProperties: false, required: ['code', 'message'], properties: { code: { type: 'string', enum: problemCodes }, message: { type: 'string', minLength: 1, maxLength: 256 } } },
     request_id: { type: 'string' } } };
-  const errors = Object.fromEntries([[400, 'Invalid query'], [401, 'Session required'], [404, 'Unavailable or not authorized'], [503, 'Source unavailable']]
+  const errors = Object.fromEntries([[400, 'Invalid query'], [401, 'Session required'], ...(sourceDarkRoute ? [[403, nativeAccountProfile ? 'Read refused' : 'Profile not commissioned']] : []), [404, 'Unavailable or not authorized'],
+    ...(nativeSibling ? [[409, 'Authority or source changed before dispatch']] : []), [503, 'Source unavailable']]
     .map(([c, t]) => [c, { description: t, headers, content: { 'application/json': { schema: { $ref: `#/components/schemas/${Name}Problem` } } } }]));
-  const get = { operationId: `execution${Name}GetV1`, security: [{ PortalSession: [] }], description: `${d.description} ${NO_PRODUCER}`,
-    parameters: [...d.params.map(n => ({ name: n, in: 'path', required: true, schema: schemaOf(T.id()) })), ...d.query.map(n => ({ name: n, in: 'query', required: false, schema: n === 'environment' ? { type: 'string', enum: ['paper', 'sandbox', 'live'] } : schemaOf(T.str()) }))],
+  const get = { operationId: `execution${Name}GetV1`, security: [{ PortalSession: [] }], description: `${d.description} ${nativeAccountProfile
+    ? 'When the separately qualified Paper Manager CURRENT and native HTTP custody are installed, the route can return account identity alone. Fields without source authority are omitted. Otherwise it refuses; no source is enabled by this contract.'
+    : sourceDarkRoute ? 'Source-dark route: no positive producer is commissioned; the route refuses instead of inventing data.' : NO_PRODUCER}`,
+    parameters: [...d.params.map(n => ({ name: n, in: 'path', required: true, schema: schemaOf(T.id()) })), ...d.query.map(n => ({ name: n, in: 'query', required: false, schema: n === 'environment' ? { type: 'string', enum: ['paper', 'sandbox', 'live'] } : n === 'page_size' ? { type: 'integer', minimum: 1, maximum: 200 } : n === 'cursor' ? schemaOf(T.str(4096)) : schemaOf(T.str()) }))],
     responses: { 200: { description: 'Authorized current answer; absence stays typed', headers, content: { 'application/json': { schema: { $ref: `#/components/schemas/${Name}` } } } }, ...errors } };
   const paths = { [d.route]: { get } };
   const schemas = { [Name]: schema, [`${Name}Problem`]: problem };

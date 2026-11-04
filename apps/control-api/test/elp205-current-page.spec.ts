@@ -13,6 +13,7 @@ const user: PortalUser = {
   userId: "usr_elp205", username: "elp205", displayName: "ELP2-05", role: "ADMIN", status: "ACTIVE",
   mustChangePassword: false, failedLoginCount: 0, lockedUntil: null, sessionVersion: 1,
   createdAt: new Date("2026-10-16T00:00:00.000Z"), updatedAt: new Date("2026-10-16T00:00:00.000Z"), disabledAt: null,
+  accountRevision: 1, archivedAt: null,
 };
 const session: AuthSession = {
   sessionId: "ses_elp205", userId: user.userId, state: "ACTIVE", sessionVersion: 1,

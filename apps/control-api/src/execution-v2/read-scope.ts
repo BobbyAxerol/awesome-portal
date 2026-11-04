@@ -2,7 +2,7 @@ import { accessDigest, AccessEvaluationContext, businessReadDenied, evaluateAcce
   environmentRelations, currentBoundaryProof, currentExplicitReadAllows } from "./access-policy";
 import { AccessAction, AccessPolicyError, AccessResource, accessResource } from "./access.contract";
 import { ExecutionReadPublication, ExecutionReadPublicationRequest, ReadDatasetBinding, readDatasetBinding, readPublication } from "./read-publication";
-import { AUDIT_READ_FIELDS, BUSINESS_READ_FIELDS, TECHNICAL_READ_FIELDS, isBusinessReadField, isRecordDetailReadField } from "./read-fields";
+import { AUDIT_READ_FIELDS, BUSINESS_READ_FIELDS, TECHNICAL_READ_FIELDS, isBusinessReadField, isRecordDetailReadField, isSiblingDetailReadField } from "./read-fields";
 import type { ExecutionAccessService } from "./access.service";
 import type { ControlApiConfig } from "../config";
 import type { AuthSession, PortalUser } from "../domain";
@@ -185,7 +185,13 @@ export function scopeAllowsField(scope:AuthorizedExecutionReadScope,field:string
 export function scopeAllowsDetailField(scope:AuthorizedExecutionReadScope,field:string):boolean {
   assertExecutionReadScope(scope);
   const state=minted.get(scope)!;
-  if(!isRecordDetailReadField(field)||!businessReads.has(state.requirement.action))return false;
+  if(!businessReads.has(state.requirement.action))return false;
+  if(isSiblingDetailReadField(field)) {
+    const context=state.context,policy=context?.policy?.researcher_fields;
+    return scope.mode==="SCOPED_V2" && !!context && policyReady(context) && policy?.state==="QUALIFIED" &&
+      !!policy.policy_ref && policy.fields.includes(field);
+  }
+  if(!isRecordDetailReadField(field))return false;
   return state.detail==null||state.detail.includes(field);
 }
 /** Hidden values must not become a filter, sort, group or ranking oracle. */

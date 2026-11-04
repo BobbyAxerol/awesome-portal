@@ -7,9 +7,12 @@ import type { ProjectionRelation, ProjectionScalar } from "../src/execution/prof
 import { productReadFixture, FIELDS, OWN, PEER } from "./elp2-product-read.fixture";
 
 const PORTFOLIOS = "manager.portfolios:portfolios";
+const lineage = { workspace_id: "TEST_ONLY-product-workspace", profile_id: "PAPER_BINANCE_USDM",
+  source_contract_revision: "TEST_ONLY-contract" };
+const projectedRow = (fields: Record<string, ProjectionScalar>) => ({ lineage: { ...lineage }, fields });
 function relation(rows: Record<string, ProjectionScalar>[]): ProjectionRelation {
   return { source_id: "manager.portfolios", relation: "portfolios", availability: "AVAILABLE", reason_code: null,
-    freshness: "FRESH", completeness: "COMPLETE", as_of: "2026-10-23T00:00:00Z", items: rows.map(fields => ({ fields })) };
+    freshness: "FRESH", completeness: "COMPLETE", as_of: "2026-10-23T00:00:00Z", items: rows.map(projectedRow) };
 }
 function fixture(fields = FIELDS) {
   const f = productReadFixture({ fields });
@@ -56,7 +59,7 @@ describe("package6 same-snapshot authorized portfolio names", () => {
   });
   it("cannot use the page as its name universe", async () => {
     const f = fixture();
-    f.snapshot.document.relations[PORTFOLIOS].items.unshift(...Array.from({ length: 250 }, (_, i) => ({ fields: { portfolio_id: `hidden-${i}`, name: "HIDDEN_PREFIX" } })));
+    f.snapshot.document.relations[PORTFOLIOS].items.unshift(...Array.from({ length: 250 }, (_, i) => projectedRow({ portfolio_id: `hidden-${i}`, name: "HIDDEN_PREFIX" })));
     expect((await f.read()).data.deployments[0].portfolio_name).toBe("Visible linked portfolio");
   });
   it.each(["missing", "unavailable", "no-name", "conflict"] as const)("publishes typed absence for %s source", async fault => {
@@ -64,7 +67,7 @@ describe("package6 same-snapshot authorized portfolio names", () => {
     if (fault === "missing") delete f.snapshot.document.relations[PORTFOLIOS];
     if (fault === "unavailable") source.availability = "UNAVAILABLE";
     if (fault === "no-name") delete source.items[0].fields.name;
-    if (fault === "conflict") source.items.push({ fields: { portfolio_id: OWN.portfolio_id, name: "Conflicting" } });
+    if (fault === "conflict") source.items.push(projectedRow({ portfolio_id: OWN.portfolio_id, name: "Conflicting" }));
     const result = await f.read();
     expect(result.data.deployments[0]).toMatchObject({ portfolio_name: null, portfolio_name_reason_code:
       fault === "conflict" ? "PORTFOLIO_NAME_AMBIGUOUS" : fault === "no-name" ? "PORTFOLIO_NAME_NOT_PUBLISHED" : "PORTFOLIO_NAME_NOT_READ" });

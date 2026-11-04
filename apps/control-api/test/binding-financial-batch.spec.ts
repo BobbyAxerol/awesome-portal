@@ -142,10 +142,12 @@ describe("same-authorized-snapshot binding financial batch", () => {
     const listWithSnapshot = vi.fn(async (_resource: unknown, _actor: unknown, _query: unknown,
       read: (snapshot: PostgresSnapshotReader<BindingRow>) => Promise<unknown>) => ({ page: { rows: rows.map(row => ({ ...row,
       updated_at: at })), total_count: 2, filtered_count: 2 }, snapshot: await read(transaction) }));
-    const service = Object.assign(Object.create(ManagerListsService.prototype) as ManagerListsService, {
+    // This is a prototype-backed test double with explicit private seam stubs,
+    // not a constructed production service; avoid intersecting private types.
+    const service = Object.assign(Object.create(ManagerListsService.prototype), {
       repository: { bindingListSnapshot: metadata }, query: { listWithSnapshot }, config: {}, bindingFinancialSource: source,
       ensureSnapshot: vi.fn(async () => projection),
-    });
+    }) as ManagerListsService;
     const result = await service.bindings({ workspaceId: "ws_a", user: { userId: "usr_a", role: "ADMIN" },
       session: { sessionId: "ses_a", sessionVersion: 1 } } as never, { environment: "paper", limit: 50 } as never) as { page: { rows: Array<{ figures: unknown }> } };
     expect(source.read).toHaveBeenCalledTimes(1);
@@ -212,12 +214,12 @@ describe("owning financial refresh → persistence → retained Accounts list", 
       return { page: { rows: rows.map(row => ({ ...row, updated_at: row.updated_at.toISOString() })), total_count: rows.length,
         filtered_count: rows.length }, snapshot: retained };
     });
-    const service = Object.assign(Object.create(ManagerListsService.prototype) as ManagerListsService, {
+    const service = Object.assign(Object.create(ManagerListsService.prototype), {
       repository, source, inFlight: new Map(), logger: { warn: vi.fn() },
       config: { EXECUTION_EDGE_CURRENT_SOURCE_REQUEST_TIMEOUT_MS: options.timeoutMs ?? 1000 }, query: { listWithSnapshot },
       bindingFinancialSource: createRetainedBindingFinancialBatchSource(),
       bindingFinancialRefreshSource: options.noProvider ? undefined : refreshSource,
-    });
+    }) as ManagerListsService;
     const read = () => service.bindings(principal() as never, { environment: "paper", limit: 50 } as never) as Promise<{
       page: { rows: Array<{ binding_id: string; figures?: unknown }> } }>;
     return { read, source, refreshSource, replaceBindings, listWithSnapshot, persisted: () => persisted };

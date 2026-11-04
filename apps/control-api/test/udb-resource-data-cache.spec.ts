@@ -4,7 +4,8 @@ import { RETAINED_DATA_VIEW_CACHE_MAXIMUM_SERIALIZED_BYTES as MAX } from "../src
 
 function repository(retained = true) {
   return new ExecutionProfileProjectionRepository({ query: vi.fn() } as any, undefined,
-    { EXECUTION_READ_PROFILE: retained ? "retained_review_v1" : "live" });
+    { EXECUTION_READ_PROFILE: retained ? "retained_review_v1" : "live",
+      FEATURE_EXECUTION_DURABLE_MIRROR: "false", FEATURE_EXECUTION_DURABLE_MIRROR_READS: "false" });
 }
 const data = (text = "data") => ({ read_at_ms: 0, data: { rows: [{ price: text }] }, panels: {} });
 

@@ -74,6 +74,8 @@ function controller(enabled = true) {
     { INTERNAL_PRINCIPAL_SECRET: secret, FEATURE_RESEARCH_RETAINED_ARTIFACTS: enabled ? "true" : "false" } as never,
     progress as never,
     metadata as never,
+    {} as never,
+    {} as never,
   );
   return { instance, progress, metadata };
 }

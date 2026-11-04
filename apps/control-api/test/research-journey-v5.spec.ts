@@ -8,6 +8,7 @@ import { describe, expect, it, vi } from "vitest";
 import { SessionGuard } from "../src/facade/session.guard";
 import { ResearchFoundationController } from "../src/research/foundation.controller";
 import { ResearchFoundationService } from "../src/research/foundation.service";
+import { RESEARCH_CURSOR_KEYS, ResearchJourneyQuerySchema } from "../src/research/foundation.contract";
 import { RESEARCH_JOURNEY_DESCRIPTOR as v3, RESEARCH_JOURNEY_DESCRIPTOR_SHA256 as v3Hash } from "../src/research/journey.descriptor.v3";
 import { RESEARCH_JOURNEY_DESCRIPTOR as v4, RESEARCH_JOURNEY_DESCRIPTOR_SHA256 as v4Hash } from "../src/research/journey.descriptor.v4";
 import { RESEARCH_JOURNEY_DESCRIPTOR as v5, RESEARCH_JOURNEY_DESCRIPTOR_SHA256 as v5Hash } from "../src/research/journey.descriptor.v5";
@@ -42,6 +43,11 @@ function request(headers = {}) {
 }
 
 describe("G-26 immutable Journey v5 and accepted product links", () => {
+  it("keeps the cursor runtime schema aligned with its declared vocabulary", () => {
+    const actual = Object.keys(ResearchJourneyQuerySchema.shape).filter(key => key !== "workspace_id" && key !== "run_id");
+    expect(actual).toEqual([...RESEARCH_CURSOR_KEYS]);
+  });
+
   it("preserves exact immutable v3/v4 content and gives v5 its own canonical hash", () => {
     for (const [revision, descriptor, digest] of [[3, v3, v3Hash], [4, v4, v4Hash], [5, v5, v5Hash]] as const) {
       const { content_sha256, ...stored } = fixture(revision).descriptor;

@@ -11,7 +11,7 @@ const user = { userId, role: "ADMIN", sessionVersion: 1 } as PortalUser;
 const session = { userId, sessionId: "ses_TEST_ONLY", sessionVersion: 1 } as AuthSession;
 const config = { EXECUTION_READ_PROFILE: "native_v1", FEATURE_EXECUTION_LOCAL_PROJECTION: "true",
   FEATURE_EXECUTION_CURRENT_SOURCE_PAPER: "true", EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID: ws,
-  EXECUTION_EDGE_PAPER_PROFILE_ID: "PAPER_PROFILE" } as ControlApiConfig;
+  EXECUTION_EDGE_PAPER_PROFILE_ID: "PAPER_PROFILE" } as unknown as ControlApiConfig; // Only fields read by this isolated service fixture.
 const access = (allowed: boolean): EffectiveAccess => ({ userId, isOwner: false, ownerState: "NOT_OWNER",
   capabilities: allowed ? ["governance.r2.read"] : [],
   scopes: allowed ? { "governance.r2.read": [ws] } : {} });

@@ -645,7 +645,7 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)("ELP2-06 immutable policy PATH r
     expect(result.score_details).toHaveLength(1);
     expect(result.score_details![0].quality).toMatchObject({status:"partial_components",value:null,band_code:null});
     expect(result.score_details![0].quality.reason_codes).toContain("STRESS_INPUTS_NOT_RETAINED_FOR_POLICY");
-    expect(result.score_details![0].quality.reason_codes).toEqual(expect.arrayContaining(t.input.quality.reason_codes));
+    expect(result.score_details![0].quality.reason_codes).toEqual(expect.arrayContaining([...t.input.quality.reason_codes]));
     expect(calculate).not.toHaveBeenCalled();expect(h.acknowledge).toHaveBeenCalledOnce();
   });
 

@@ -2,7 +2,7 @@
  * input, not a source registration, accepted authority or connected receipt. */
 import { createHash,generateKeyPairSync,X509Certificate } from "node:crypto";
 import { createServer,type Server } from "node:https";
-import type { Socket } from "node:net";
+import type { Duplex } from "node:stream";
 import type { ServerResponse } from "node:http";
 import { commonName,testCertificate } from "./elp210-test-certificates";
 import { nativeCurrentRelationsBase,type NativeCurrentRelationsSourceAction,type NativeCurrentRelationsSourceBase } from "../../src/execution-v2/native-current-relations-codec";
@@ -14,7 +14,7 @@ export async function currentRelationsTestEndpoint(handler:(base:Readonly<Native
   const certificate=testCertificate(name,caKey,ca,true);
   const identity=(label:string)=>{const key=generateKeyPairSync("ec",{namedCurve:"prime256v1"}),cert=testCertificate(commonName(label),key,ca,false);
     return{key:Buffer.from(key.privateKey.export({type:"pkcs8",format:"pem"})),cert};};
-  const core=identity("TEST_ONLY-core"),edge=identity("TEST_ONLY-edge"),sockets=new Set<Socket>();
+  const core=identity("TEST_ONLY-core"),edge=identity("TEST_ONLY-edge"),sockets=new Set<Duplex>();
   const requests:Array<{action:NativeCurrentRelationsSourceAction;base:Readonly<NativeCurrentRelationsSourceBase>;body:Record<string,unknown>}> = [];
   const server:Server=createServer({key:edge.key,cert:edge.cert,ca:certificate,requestCert:true,rejectUnauthorized:true,
     minVersion:"TLSv1.3",maxVersion:"TLSv1.3"},(req,res)=>{

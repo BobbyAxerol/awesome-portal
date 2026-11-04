@@ -48,6 +48,7 @@ const user: PortalUser = {
   userId: "usr_depth_fixture", username: "depth-fixture", displayName: "Depth fixture", role: "ADMIN", status: "ACTIVE",
   mustChangePassword: false, failedLoginCount: 0, lockedUntil: null, sessionVersion: 1,
   createdAt: new Date(AS_OF), updatedAt: new Date(AS_OF), disabledAt: null,
+  accountRevision: 1, archivedAt: null,
 };
 const session: AuthSession = {
   sessionId: "ses_depth_fixture", userId: user.userId, state: "ACTIVE", sessionVersion: 1,

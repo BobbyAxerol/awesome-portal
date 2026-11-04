@@ -1,4 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+import type { InjectOptions } from "fastify";
 import { AdminService } from "../src/admin/admin.service";
 import { AuthService } from "../src/auth/auth.service";
 import { ExecutionProfileProjectionRepository } from "../src/execution/profile-projection.repository";
@@ -65,7 +66,7 @@ describe("BE-R2-8 authenticated local read authority", () => {
   }, 30_000);
   afterAll(async () => { vi.restoreAllMocks(); if (ctx) await teardownApp(ctx); });
 
-  function inject(username: string, url: string, method = "GET", payload?: unknown, headers = {}) {
+  function inject(username: string, url: string, method: NonNullable<InjectOptions["method"]> = "GET", payload?: InjectOptions["payload"], headers = {}) {
     return ctx.app.getHttpAdapter().getInstance().inject({ method, url, payload,
       headers: { "x-dev-access-email": `${username}@azdag.com`, origin: ctx.config.PORTAL_PUBLIC_ORIGIN, ...headers } });
   }

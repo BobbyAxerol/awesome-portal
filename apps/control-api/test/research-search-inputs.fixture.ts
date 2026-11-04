@@ -5,7 +5,7 @@ import type { CurrentSourceSealRow, CurrentSourcePage } from "../src/research/cu
 import type { ResearchScope } from "../src/research/contracts";
 import { p11StageEvents, type P11StageEvents } from "../src/research/p11-stage-events";
 
-export function mockSearchRepository(repository: Record<string, unknown>) {
+export function mockSearchRepository<T extends Record<string, unknown>>(repository: T) {
   const stageEventClocks = repository.stageEventClocks as ((...args: unknown[]) => Promise<P11StageEvents>) | undefined
     ?? vi.fn().mockResolvedValue(p11StageEvents());
   const searchInputs = vi.fn(async (scope: ResearchScope, seal: CurrentSourceSealRow) => {

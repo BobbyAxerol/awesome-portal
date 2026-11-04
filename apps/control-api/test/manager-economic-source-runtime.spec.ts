@@ -188,7 +188,7 @@ describe("owning economic source: actual dataset and series path", () => {
     for (const group of blocked.groups) for (const partition of group.economic_partitions)
       expect(partition.metrics.net_pnl).toMatchObject({ value: null, reason_code: "ECONOMIC_SOURCE_MAPPING_NOT_PUBLISHED" });
     const allowed = read(runtime(doc));
-    expect(allowed.items.some(row => row.metrics.net_pnl.value !== null)).toBe(true);
+    expect(allowed.items.some(row => row.metrics.net_pnl != null && row.metrics.net_pnl.value !== null)).toBe(true);
     const base = { environment: "paper", limit: 1, group_by: ["portfolio_id"], group_limit: 1 };
     const first = queryManagerModel(scope, doc, base, codec, "FLEET");
     expect(first.page.next_cursor).toBeTruthy();
@@ -262,7 +262,11 @@ describe("owning economic source: actual dataset and series path", () => {
     expect(() => read({ group_after: first.group_page!.next_cursor })).not.toThrow();
     epoch++;
     const fresh = read();
-    expect(fresh.items.map(row => row.metrics.net_pnl.value)).toEqual(first.items.map(row => row.metrics.net_pnl.value));
+    const netPnl = (row: typeof fresh.items[number]) => {
+      if (!row.metrics.net_pnl) throw new Error("TEST_ONLY_EXPECTED_NET_PNL");
+      return row.metrics.net_pnl.value;
+    };
+    expect(fresh.items.map(netPnl)).toEqual(first.items.map(netPnl));
     expect(fresh.groups.flatMap(group => group.economic_partitions.map(partition => partition.metrics.net_pnl.value)))
       .toEqual(first.groups.flatMap(group => group.economic_partitions.map(partition => partition.metrics.net_pnl.value)));
     expect(() => read({ after: first.page.next_cursor })).toThrow(/Query cursor does not match/);

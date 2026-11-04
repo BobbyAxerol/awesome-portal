@@ -421,7 +421,7 @@ describe("FE-CAT-3 service fan-out (mocked repository, no database)", () => {
     // The first response proves this test really admitted the numeric Score,
     // rather than testing an empty publication list.
     const ready = await s.model.read(s.principal, "FLEET", { environment: "ALL" });
-    expect(ready.items.find(row => row.environment === "paper")!.metrics.score.value).toBe("73.3");
+    expect(ready.items.find(row => row.environment === "paper")!.metrics.score?.value).toBe("73.3");
     const confirmations = s.access.confirmReadContext.mock.calls.length;
     s.access.confirmReadContext.mockClear();
     s.access.confirmReadContext.mockImplementation(async () => {

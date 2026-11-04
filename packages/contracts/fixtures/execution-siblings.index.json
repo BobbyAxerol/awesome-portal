@@ -44,6 +44,7 @@
       "schema": "execution-account-profile.v1.schema.json",
       "route": "/api/v1/execution/accounts/{account_id}/profile",
       "valid": [
+        "identity_only",
         "published",
         "partial"
       ],

@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import { calculateManagerQualityScore, calculateManagerScoreMetrics, type ManagerScoreMetrics,
-  type ManagerScorePathInput, type ManagerScorePolicy } from "../src/execution-v2/manager-score";
+  type ManagerScorePathInput } from "../src/execution-v2/manager-score";
 import { loadApprovedManagerScorePolicy, ManagerScoreRuntime, managerScorePolicyHash, managerScorePublicationCurrent, managerScorePublicationPolicyCurrent,
   managerScoreHistoricalPolicyState, managerScoreRecalculationPolicy,
   type ApprovedManagerScorePolicy, type ManagerScorePolicyApprovalPin, type ManagerScoreRuntimePolicyArtifact,
@@ -17,7 +17,7 @@ const limits = { maximum_observations: 20, maximum_blocks: 20, maximum_stress_su
   maximum_input_bytes: 30_000, maximum_in_flight: 1 };
 
 function fixture(change?: (artifact: ManagerScoreRuntimePolicyArtifact) => void) {
-  const policy: ManagerScorePolicy = { formula_id: "qbts_prb_v1_1", qualification: "RUNTIME_APPROVED",
+  const policy: ManagerScoreRuntimePolicyArtifact["policy"] = { formula_id: "qbts_prb_v1_1", qualification: "RUNTIME_APPROVED",
     policy_id: "synthetic-policy", policy_hash: digest("unsealed"), formula_hash: digest("synthetic-canonical-formula"),
     approved_policy_id: "synthetic-approval", calibration_snapshot_id: "synthetic-calibration",
     comparable_basis_id: "synthetic-basis", duration_key: "synthetic-four-observations", observation_frequency: "synthetic-hourly",

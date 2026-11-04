@@ -14,6 +14,7 @@ import type { DatasetPublication } from "../../src/execution-v2/publication.cont
 import { EXECUTION_PUBLICATION_CATALOGUE } from "../../src/execution-v2/publication-source.generated";
 import { queryManagerModel } from "../../src/execution-v2/manager-model";
 import { BUSINESS_READ_FIELDS } from "../../src/execution-v2/read-fields";
+import { readPublication } from "../../src/execution-v2/read-publication";
 import { KeysetCursorCodec } from "../../src/query/cursor";
 import { productReadFixture, OWN, PEER, PRIVATE } from "../elp2-product-read.fixture";
 
@@ -108,7 +109,8 @@ export async function financialIntegrationFixture(options: { full?: boolean; fie
   const contractsRoot = process.env.PORTAL_CONTRACTS_DIR ?? resolve(__dirname, "../../../../packages/contracts");
   const publication = JSON.parse(readFileSync(resolve(contractsRoot,
     "fixtures/execution-dataset-publication.synthetic.valid.json"), "utf8")).value as DatasetPublication;
-  const publicationShape = await authority.access.readPublication({ workspace_id: doc.workspace_id, environment: doc.environment, profile_id: doc.profile_id, binding });
+  const publicationShape = readPublication.parse(await authority.access.readPublication({
+    workspace_id: doc.workspace_id, environment: doc.environment, profile_id: doc.profile_id, binding }));
   const prepare = (input: ManagerModelDocument = doc) => prepareManagerProjection(input, { ...publication,
     family_id: doc.family_id, catalogue_digest: doc.catalogue_digest, environment: doc.environment, profile_id: doc.profile_id,
     issued_at_ms: T - 1_000, expires_at_ms: T + 1_000, source_as_of_ms: doc.as_of_ms, observed_at_ms: T,

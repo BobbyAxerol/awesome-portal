@@ -32,15 +32,16 @@ describe("W6b CG-P19-02 · revision and ETag", () => {
 
   it("REQ-B: typed missing facts retain the sealed provenance rather than losing its reason", async () => {
     const item = libraryItem("run-att-1");
+    const unavailable = { state: "NOT_PUBLISHED", reason_code: "P04_RETAINED_SAMPLED_EQUITY_HAS_NO_COMPLETE_ANALYTICS_INPUT" };
     item.stats[1] = { ...item.stats[1]!, source: "ENRICHED_ANALYSIS", origin: "PORTAL_DERIVED",
       source_locator: "P13.retained_sampled_equity:not_a_daily_or_position_ledger", input_digest: digest("7"),
-      availability: { state: "NOT_PUBLISHED", reason_code: "P04_RETAINED_SAMPLED_EQUITY_HAS_NO_COMPLETE_ANALYTICS_INPUT" } } as never;
+      availability: unavailable } as never;
     const response = await subject(snapshot({ libraryRows: rows("run-att-1") }), { "run-att-1": item })
       .service.read(scope, "alpha-p19", { limit: 128 }, user as never);
     expect(response.attempts[0]!.run_facts.decay).toEqual({
       value: null, scope: null, definition_id: null, source: "ENRICHED_ANALYSIS", origin: "PORTAL_DERIVED",
       source_locator: "P13.retained_sampled_equity:not_a_daily_or_position_ledger", input_digest: digest("7"),
-      availability: item.stats[1]!.availability,
+      availability: unavailable,
     });
   });
 

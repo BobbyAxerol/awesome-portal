@@ -7,6 +7,7 @@
  * asserted by test/elp2-access-transaction.spec.ts (T03-07) plus the family tests appended there; those are
  * NOT_RUN in this environment (no PostgreSQL) and listed in BE-P7. */
 import { describe, expect, it, vi } from "vitest";
+import type { Pool } from "pg";
 import { AccessPolicyError, type AccessAction, type ScopedAccessGrant } from "../src/execution-v2/access.contract";
 import { ExecutionAccessController } from "../src/execution-v2/access.controller";
 import { ExecutionAccessService } from "../src/execution-v2/access.service";
@@ -58,7 +59,7 @@ function fakeDb(rows: Array<{ step_up_id: string; session_id: string; user_id: s
     }
     return { rows: [], rowCount: 0 };
   });
-  return { db: { query } as never, calls, rows };
+  return { db: { query } as unknown as Pool, calls, rows };
 }
 
 describe("AccountLifecycleRepository: the proof family is stored in the id and every reader names the families it accepts", () => {
@@ -234,7 +235,7 @@ describe("parity: the batch read and the command route use the same proofs and t
   });
   it("eligibilityBatch reads the session's command proofs, and its relation closure covers every step-up action", async () => {
     const { context } = fixture([capitalGrant()]);
-    const pool = { query: vi.fn(async () => ({ rows: [{ expires_at: new Date(NOW + 5000) }], rowCount: 1 })) };
+    const pool = { query: vi.fn(async (_sql: string, _params: unknown[]) => ({ rows: [{ expires_at: new Date(NOW + 5000) }], rowCount: 1 })) };
     const service = new ExecutionAccessService(pool as never, {} as never, undefined, true);
     const closure = vi.fn(async () => context as never);
     (service as never as { selfProjectionContext: unknown }).selfProjectionContext = closure;
@@ -262,12 +263,13 @@ describe("the step-up route validates the family and keeps CSRF / origin / idemp
   const reply = { code: () => reply } as never;
   it("a request without the CSRF proof, origin or idempotency key never reaches the service", async () => {
     const stepUp = vi.fn();
-    for (const headers of [{}, { origin: "https://evil.test" }, { origin: "https://portal.test" }])
+    const cases: Record<string, string>[] = [{}, { origin: "https://evil.test" }, { origin: "https://portal.test" }];
+    for (const headers of cases)
       await expect(controller({ stepUp }).stepUp(request(headers), { workspace_id: WS, password: "p", family: "CAPITAL_COMMAND" }, reply)).rejects.toBeTruthy();
     expect(stepUp).not.toHaveBeenCalled();
   });
   it("the body is strict: only the documented family values, no actor / session / extra keys", async () => {
-    const service = { stepUp: vi.fn(async () => ({})) };
+    const service = { stepUp: vi.fn(async (_actor: unknown, _workspace: unknown, _password: unknown, _family: unknown) => ({})) };
     const c = controller(service);
     (c as never as { security: () => string }).security = () => "idem-key-12345";
     for (const body of [{ workspace_id: WS, password: "p", family: "OWNER" }, { workspace_id: WS, password: "p", family: "" },

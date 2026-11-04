@@ -5,7 +5,7 @@
 import {createHash,generateKeyPairSync,X509Certificate,type KeyObject} from "node:crypto";
 import type {IncomingMessage,ServerResponse} from "node:http";
 import {createServer,type Server} from "node:https";
-import type {Socket} from "node:net";
+import type {Duplex} from "node:stream";
 import type {TLSSocket} from "node:tls";
 import {afterAll,afterEach,beforeAll,describe,expect,it} from "vitest";
 import {NativeBusinessReadClient,NativeBusinessReadClientError,nativeBusinessReadAuthenticatedResult,type NativeBusinessReadClientConfig}
@@ -70,7 +70,7 @@ function identity(label:string,ca:Authority,host="localhost"):Identity{const key
 
 describe("ELP2-10 real native business READ TLS transport — synthetic wire, no source authority",()=>{
   let core:Identity,pm:Identity,otherPm:Identity,foreignPm:Identity,foreignCore:Identity,wrongHost:Identity;
-  const allocations:Array<{server:Server;sockets:Set<Socket>}>=[];
+  const allocations:Array<{server:Server;sockets:Set<Duplex>}>=[];
   beforeAll(()=>{const ca=authority("native_root"),foreign=authority("native_foreign");core=identity("core",ca);pm=identity("pm",ca);
     otherPm=identity("other_pm",ca);foreignPm=identity("foreign_pm",foreign);foreignCore=identity("foreign_core",foreign);
     wrongHost=identity("wrong_host",ca,"not-this-host.invalid");},15000);
@@ -79,7 +79,7 @@ describe("ELP2-10 real native business READ TLS transport — synthetic wire, no
   afterAll(()=>{for(const item of [core,pm,otherPm,foreignPm,foreignCore,wrongHost])item?.key.fill(0);});
   type Handler=(req:IncomingMessage,res:ServerResponse,body:Buffer)=>void;
   async function endpoint(handler:Handler=(_req,res)=>json(res,nativeReply()),options:{identity?:Identity;tls12?:boolean;requestCert?:boolean}={}){
-    const id=options.identity??pm,sockets=new Set<Socket>(),received:Array<{path:string;method:string;headers:IncomingMessage["headers"];body:Buffer}>=[];
+    const id=options.identity??pm,sockets=new Set<Duplex>(),received:Array<{path:string;method:string;headers:IncomingMessage["headers"];body:Buffer}>=[];
     let applicationBytes=0;
     const server=createServer({key:id.key,cert:id.cert,ca:core.ca,requestCert:options.requestCert??true,rejectUnauthorized:true,
       minVersion:options.tls12?"TLSv1.2":"TLSv1.3",maxVersion:options.tls12?"TLSv1.2":"TLSv1.3"},(req,res)=>{

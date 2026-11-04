@@ -89,7 +89,7 @@ describe("X2 · B6 · published P04 hub-lane replay fixtures (research.replay.v1
     const first = await service.detail(scope, RUN, { limit: 50 });
     expect(first.route.state).not.toBe("NOT_PUBLISHED");
     expect(first.equity_replay.items.length).toBeGreaterThan(0);
-    const total = first.equity_replay.source_sample?.emitted_point_count ?? first.equity_replay.items.length;
+    const total = first.equity_replay.emitted_point_count ?? first.equity_replay.items.length;
     const seek = await service.detail(scope, RUN, { limit: 10, at_ordinal: Math.max(0, total - 3) });
     expect(seek.equity_replay.state_at_cursor).toMatchObject({ playback_ordinal: Math.max(0, total - 3) });
     // The hub replay is equity only: it never synthesises an order or fill ledger.
@@ -101,7 +101,7 @@ describe("X2 · B6 · published P04 hub-lane replay fixtures (research.replay.v1
     if (process.env.X2_WRITE_FIXTURES === "1") {
       const service = await replayService();
       const first = await service.detail(scope, RUN, { limit: 50 });
-      const total = first.equity_replay.source_sample?.emitted_point_count ?? first.equity_replay.items.length;
+      const total = first.equity_replay.emitted_point_count ?? first.equity_replay.items.length;
       writeFileSync(join(root, files.first), `${JSON.stringify(first)}\n`);
       writeFileSync(join(root, files.seek), `${JSON.stringify(await service.detail(scope, RUN, { limit: 10, at_ordinal: Math.max(0, total - 3) }))}\n`);
       writeFileSync(join(root, files.absent), `${JSON.stringify(await (await replayService({ published: false })).detail(scope, RUN, { limit: 50 }))}\n`);

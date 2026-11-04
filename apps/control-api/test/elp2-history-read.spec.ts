@@ -201,7 +201,7 @@ describe.skipIf(!DATABASE_URL)("ELP2-04 mounted history read authorization, TEST
     apps.add(app);
     const server = app.getHttpAdapter().getInstance();
     const get = (query: Record<string, string | number> = {}, account = researcher, environment = "paper") => {
-      const params = new URLSearchParams(Object.entries(query).map(([key, value]) => [key, String(value)]));
+      const params = new URLSearchParams(Object.entries(query).map(([key, value]): [string, string] => [key, String(value)]));
       return server.inject({ method: "GET", url: `/api/v1/execution/history/${environment}/${encodeURIComponent(KEY)}?${params}`,
         headers: { cookie: `${SESSION_COOKIE}=${account.session.token}` } });
     };

@@ -60,8 +60,9 @@ the tracked hybrid overlay while the fixture lane is already on. Apply it with
 `preview.sh up --force-recreate portal-web`: Execution fixture routes remain
 synthetic, while `/api/auth/*` and the QuantBT routes reach the preview Control
 API and its local/dev-only preview auto-session. This exposes the permissions of
-that preview identity to visitors; it must never be used for production. The
-page banner distinguishes Execution fixture from Research preview API.
+that preview identity to visitors; it must never be used for production. At
+Bobby's request the hybrid lane has no banner; Execution remains fixture and
+Research uses the preview API despite the lack of a visual label.
 Rollback to the previous fixture-only lane with `preview.sh fixture hybrid-off`
 and `preview.sh up --force-recreate portal-web`. Neither action touches DB or
 starts a command/Live source. Real-source and browser acceptance remain separate.

@@ -5,7 +5,7 @@
 import { createHash, generateKeyPairSync, X509Certificate } from "node:crypto";
 import type { IncomingMessage } from "node:http";
 import { createServer, request, type Server } from "node:https";
-import type { Socket } from "node:net";
+import type { Duplex } from "node:stream";
 import { performance } from "node:perf_hooks";
 import { connect as connectTls, type ConnectionOptions } from "node:tls";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
@@ -31,7 +31,7 @@ const recoveryAck = { schema_version: "pma.current-human-recover-ack.v1", lease_
 describe("ELP2-10 private current-human real TLS transport (TEST_ONLY candidate operations)", () => {
   let core: Certificate, source: Certificate, otherCore: Certificate,
     otherSource: Certificate, foreignCore: Certificate, foreignSource: Certificate;
-  const allocated: { server: Server; sockets: Set<Socket> }[] = [];
+  const allocated: { server: Server; sockets: Set<Duplex> }[] = [];
 
   const authority = (label: string): TestAuthority => {
     const key = generateKeyPairSync("ec", { namedCurve: "prime256v1" }), name = commonName(`TEST_ONLY_${label}`);
@@ -44,7 +44,7 @@ describe("ELP2-10 private current-human real TLS transport (TEST_ONLY candidate 
       fingerprint: `sha256:${createHash("sha256").update(new X509Certificate(cert).raw).digest("hex")}` };
   };
   const listen = async (server: Server): Promise<string> => {
-    const sockets = new Set<Socket>();
+    const sockets = new Set<Duplex>();
     allocated.push({ server, sockets });
     server.on("connection", socket => { sockets.add(socket); socket.once("close", () => sockets.delete(socket)); });
     server.on("secureConnection", socket => { sockets.add(socket); socket.once("close", () => sockets.delete(socket)); });
