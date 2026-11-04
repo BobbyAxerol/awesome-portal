@@ -186,8 +186,9 @@ describe.skipIf(!url)("ordinary native CURRENT actual custody/finite egress, TES
   const artifact=JSON.stringify({schema_version:"portal.execution.manager-current-commissioning.v1",scope:metadata.scope,binding,
    source_workspace_id:metadata.source_workspace_id,adapter_revision:metadata.adapter_revision,
    source_metadata_digest:managerCurrentMetadataDigest(metadata),receipt_pins:metadata.receipt_pins});
-  const commissioning=loadManagerCurrentCommissioning(artifact,{artifact_sha256:`sha256:${createHash("sha256").update(artifact).digest("hex")}`,
-   approval_ref:"TEST_ONLY-approval",approved_at_ms:now-2000,valid_until_ms:now+60000},now);
+  const currentApproval={artifact_sha256:`sha256:${createHash("sha256").update(artifact).digest("hex")}`,
+   approval_ref:"TEST_ONLY-approval",approved_at_ms:now-2000,valid_until_ms:now+60000};
+  const commissioning=loadManagerCurrentCommissioning(artifact,currentApproval,now);
   // Exercise the real installed Manager runtime delegate as AppModule does,
   // before the catalogue and Manager CURRENT publication decorators.
   const publicationArtifact=JSON.stringify({schema_version:"portal.execution.publication-commissioning.v1",scope:metadata.scope,
@@ -351,17 +352,19 @@ describe.skipIf(!url)("ordinary native CURRENT actual custody/finite egress, TES
    // A second scenario kills the actual issuer process after its physical
    // Approval response and durable SERVED terminal, but before synthetic
    // source acknowledgement. A fresh process recovers the same original.
-   // Its read adapter and field permits are TEST_ONLY; the real composition
-   // and selection fence were exercised above, not bypassed by this fixture.
+   // The child uses the actual CurrentView composition. Its publication,
+   // field permits and source responses remain explicitly TEST_ONLY.
    const {private_key,...terminal}=f.config.terminal;
    const tls=Object.fromEntries(Object.entries(f.endpoint.config.tls).map(([key,value])=>[key,Buffer.from(value).toString("base64")]));
    const message={transport:{...f.endpoint.config,tls},config:{...f.config,terminal},
-    terminalPem:private_key.export({type:"pkcs8",format:"pem"}).toString(),actor:f.actor,principal,selection,account,resource,workspace:f.workspace};
+    terminalPem:private_key.export({type:"pkcs8",format:"pem"}).toString(),principal,selection,account,entity,workspace:f.workspace,
+    currentView:{controlConfig:ctx.config,metadata,artifact,approval:currentApproval,config}};
    const childPath=join(__dirname,"fixtures/native-approval-restart-child.cjs");
+   const parentOrigin=origin;
    let issuer:ChildProcess|undefined,recoverer:ChildProcess|undefined;
    const start=async(mode:"issue"|"recover")=>{
-    const child=fork(childPath,[],{stdio:["ignore","ignore","ignore","ipc"]});
-    const ready=new Promise<{type:string;pid:number;port?:number;digest:string}>((resolve,reject)=>{
+    const child=fork(childPath,[],{stdio:["ignore","ignore","ignore","ipc"],serialization:"advanced"});
+    const ready=new Promise<{type:string;pid:number;port?:number;currentPort?:number;digest:string}>((resolve,reject)=>{
      const timer=setTimeout(()=>{child.kill("SIGKILL");reject(Error("TEST_ONLY_APPROVAL_CHILD_TIMEOUT"));},15000);
      child.once("error",error=>{clearTimeout(timer);reject(error);});
      child.once("message",value=>{clearTimeout(timer);resolve(value as never);});
@@ -373,6 +376,7 @@ describe.skipIf(!url)("ordinary native CURRENT actual custody/finite egress, TES
     f.loseResolve(2);const started=await start("issue");issuer=started.child;
     const opened=await started.ready;expect(opened.type).toBe("listening");expect(opened.pid).not.toBe(process.pid);
     expect(opened.digest).toBe(f.provider.source_config_digest);
+    expect(opened.currentPort).toBeTypeOf("number");origin=`https://127.0.0.1:${opened.currentPort}`;
     const result=await new Promise<{body:Buffer;complete:boolean}>((resolve,reject)=>{
      const req=request(`http://127.0.0.1:${opened.port}/`,{agent:false},res=>{const chunks:Buffer[]=[];
       res.on("data",chunk=>chunks.push(Buffer.from(chunk)));res.on("error",reject);
@@ -393,7 +397,7 @@ describe.skipIf(!url)("ordinary native CURRENT actual custody/finite egress, TES
     expect(settled).toMatchObject({phase:"SERVED",source_settled:true,base_body:original.base_body,
      terminal_receipt_id:original.terminal_receipt_id,terminal_receipt_digest:original.terminal_receipt_digest});
     expect(f.endpoint.requests.filter(request=>request.action==="issue")).toHaveLength(issues);
-   }finally{issuer?.kill("SIGKILL");recoverer?.kill("SIGKILL");}
+   }finally{origin=parentOrigin;issuer?.kill("SIGKILL");recoverer?.kill("SIGKILL");}
    // The same disposable PG/mTLS/native HTTP fence for all three sibling
    // families. The order relationship and mapped values here are synthetic:
    // no Edge publication or order-to-account authority is being claimed.

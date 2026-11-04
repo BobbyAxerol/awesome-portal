@@ -645,7 +645,11 @@ describe.skipIf(!database).sequential("command STATUS concrete authority with re
     // shared test cell's capacity in later cases.
     const attempt=randomUUID();
     await candidate.enter(result.assertion,await proof(f,result,attempt,"ENTER"));
-    await candidate.resolve(await proof(f,result,attempt,"ROLLED_BACK"));
+    const restoredTerminal = process.env.PORTAL_TEST_ACK_RESTORE === "TEST_ONLY_DISPOSABLE_RESTORE" &&
+      process.env.PORTAL_TEST_ACK_PHASE === "COMMITTED" ? "COMMITTED" : "ROLLED_BACK";
+    await candidate.resolve(await proof(f,result,attempt,restoredTerminal));
+    const sourceTerminal=(await leases(f.workspace))[0];
+    expect(sourceTerminal.terminal_receipt_digest).toMatch(/^sha256:[a-f0-9]{64}$/);
     const acknowledged=await post(origin,prepared.original_context,completion(f,result),edge,"/internal/elp210/command-source/complete");
     expect(acknowledged.status).toBe(200);
     const stopped=new Promise<void>(resolve=>child.once("exit",()=>resolve()));
@@ -691,8 +695,36 @@ describe.skipIf(!database).sequential("command STATUS concrete authority with re
           {...body,response_digest:accessDigest("TEST_ONLY changed ACK")},edge,path);
         expect(mismatch.status).not.toBe(200);expect(await rows()).toEqual(before);
         const cloneLeases=await restoredPool.query("SELECT lease_id,attempt_id,phase,terminal_receipt_digest FROM elp210_candidate.leases WHERE workspace_id=$1",[f.workspace]);
-        expect(cloneLeases.rows).toHaveLength(1);expect(cloneLeases.rows[0]).toMatchObject({lease_id:result.lease_id,attempt_id:attempt,phase:"ROLLED_BACK"});
+        expect(cloneLeases.rows).toHaveLength(1);expect(cloneLeases.rows[0]).toMatchObject({lease_id:result.lease_id,attempt_id:attempt,
+          phase:restoredTerminal,terminal_receipt_digest:sourceTerminal.terminal_receipt_digest});
+        // This is a separate OS process reading the restored database, not a
+        // second authority instance in the parent process. It receives the
+        // same synthetic original and source pins over private test IPC.
+        const restoredChild=fork(join(__dirname,"fixtures/command-status-recovery-child.cjs"),[],{
+          stdio:["ignore","ignore","ignore","ipc"],env:{...process.env,JITI_FS_CACHE:"false"}});
+        children.push(restoredChild);
+        const restoredReady=new Promise<number>((resolve,reject)=>{
+          const timer=setTimeout(()=>reject(new Error("TEST_ONLY_RESTORED_CHILD_TIMEOUT")),15000);
+          restoredChild.once("error",error=>{clearTimeout(timer);reject(error);});
+          restoredChild.once("exit",code=>{clearTimeout(timer);reject(new Error(`TEST_ONLY_RESTORED_CHILD_EXIT_${code}`));});
+          restoredChild.on("message",(message:{type:string;port?:number;message?:string})=>{
+            if(message.type==="READY"&&message.port){clearTimeout(timer);resolve(message.port);}
+            else if(message.type==="ERROR"){clearTimeout(timer);reject(new Error(message.message));}
+          });
+        });
+        restoredChild.send({...startMessage,database:source.toString(),restoreTestOnly:"TEST_ONLY_DISPOSABLE_RESTORE"});
+        const restoredChildOrigin=`https://127.0.0.1:${await restoredReady}`;
+        const replay=await post(restoredChildOrigin,prepared.original_context,body,edge,path);
+        expect(replay.status).toBe(200);expect(replay.json).toEqual(acknowledged.json);
+        expect(await rows()).toEqual(before);
+        const restoredStopped=new Promise<void>(resolve=>restoredChild.once("exit",()=>resolve()));
+        restoredChild.send({type:"STOP"});await restoredStopped;
       } finally { restoredIssuer?.shutdown();await restoredPool.end(); }
+      // The restore lane has already restarted against the cloned DB. The
+      // separate original-DB restart below is covered by the normal test and
+      // must not rely on a 30-second context surviving an additional dump,
+      // restore and OS-process boot under load.
+      return;
     }
     // Restart again after durable Edge ACK but before retained STATUS is
     // consumed. This exercises the recovery gap in an entirely new process.
@@ -718,7 +750,9 @@ describe.skipIf(!database).sequential("command STATUS concrete authority with re
       });
     });
     afterAck.send({type:"PREPARE",input:retryInput,body:f.body});
-    expect(await preparedAfterAck).toEqual(prepared);
+    // Compare exact values without dumping the short-lived assertion/context
+    // into the test log when a timeout or other failure occurs.
+    expect(accessDigest(await preparedAfterAck)).toBe(accessDigest(prepared));
     expect((await post(afterAckOrigin,prepared.original_context,f.issue,edge)).status).not.toBe(200);
     expect(await leases(f.workspace)).toHaveLength(1);
     expect((await ctx.pool.query("SELECT count(*)::int AS n FROM execution_command_status_delivery_acks WHERE lease_id=$1",[result.lease_id])).rows[0].n).toBe(1);

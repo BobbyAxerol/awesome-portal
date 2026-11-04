@@ -51,7 +51,12 @@ process.on("message", async message => {
     }
     if (message.type !== "START" || pool) throw Error("TEST_ONLY_INVALID_MESSAGE");
     const target = new URL(message.database);
-    if (!/^control-api-test-postgres-[a-zA-Z0-9_-]+$/.test(target.hostname) || target.pathname !== "/portal_control_test")
+    const restored = /^control-api-test-postgres-([a-f0-9]{8})$/.exec(target.hostname);
+    const allowedRestore = message.restoreTestOnly === "TEST_ONLY_DISPOSABLE_RESTORE" && restored &&
+      target.pathname === `/portal_ack_restore_${restored[1]}`;
+    if (!/^control-api-test-postgres-[a-zA-Z0-9_-]+$/.test(target.hostname) ||
+        (target.pathname !== "/portal_control_test" && !allowedRestore) ||
+        target.protocol !== "postgres:" || target.username !== "portal" || target.search || target.hash)
       throw Error("COMMAND_STATUS_DISPOSABLE_DATABASE_REQUIRED");
     const { importPKCS8, importSPKI } = await import("jose");
     const humanPrivate = await importPKCS8(message.humanPrivate, "EdDSA");

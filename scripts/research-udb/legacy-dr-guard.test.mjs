@@ -9,6 +9,9 @@ test('legacy DR accepts only an explicitly verified pre-Execution-V2 schema', ()
     return {rows:[{has_execution_v2_authority:false,has_execution_v2_migration:false}]};
   }));
   assert.equal(seen, LEGACY_DR_SCHEMA_PROBE);
+  // The candidate installer is independent of numbered migrations; its
+  // namespace alone is enough to make the legacy custody barrier unsafe.
+  assert.match(seen, /to_regnamespace\('elp210_candidate'\) IS NOT NULL/);
 });
 
 test('legacy DR refuses new schema, migration-only, unknown and failed probes', () => {
