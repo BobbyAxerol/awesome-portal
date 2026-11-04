@@ -59,7 +59,20 @@ That failed run is not PASS. A later direct-file TypeScript invocation exited 2
 with six existing Fastify cookie-augmentation errors because that invocation
 did not include the project-wide ambient registration; it produced no other
 diagnostics but is also not a PASS. The affected Vitest suites passed after
-the controller correction. No connected or normal-hook PASS is inferred.
+the controller correction. Neither failed typecheck is counted as PASS.
+
+## Commit and normal hook
+
+Code commit `7266bb53f68f21cc03d6a68a6d3a06eec1f0d795` passed the normal
+repository hook once: contracts **1,941 passed**, Control API build passed,
+and Control API tests **12,325 passed, 10 skipped** (584 files passed,
+5 files skipped). The hook also reports its isolated PostgreSQL restore drill
+and repository gates passed. Those results are not connected Edge acceptance,
+G2, final-candidate DR qualification, or a successful rerun of the separate
+test-inclusive typecheck. The hook's two uniquely named test containers were
+absent when checked after completion; no other containers were removed.
+Verification for this Markdown-only follow-up: R0, staged diff whitespace
+check and local file/commit locators checked; no runtime or code changes.
 
 ## Handoff and remaining gates
 
