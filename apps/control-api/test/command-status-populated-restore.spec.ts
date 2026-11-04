@@ -4,6 +4,8 @@
 import { resolve } from "node:path";
 import { Pool } from "pg";
 import { describe, expect, it } from "vitest";
+import { accessDigest } from "../src/execution-v2/access-digest";
+import { PgCommandStatusOriginalFingerprints } from "../src/execution-v2/command-status-original-fingerprints";
 
 type Runner = (options: { databaseUrl: string; dir: string; direction: "down";
   migrationsTable: string; count: number; noLock: boolean; log: (line: string) => void }) => Promise<unknown>;
@@ -59,6 +61,28 @@ describe.skipIf(!enabled)("populated STATUS custody restore and rollback guard",
       const sourceAcl = await rawAcl(original), restoredAcl = await rawAcl(copy);
       const changedAcl = sourceAcl.filter((row, i) => JSON.stringify(row) !== JSON.stringify(restoredAcl[i]));
       console.log(`TEST_ONLY_RAW_ACL_REPRESENTATION_CHANGES=${changedAcl.length}`);
+      expect(await snapshot(copy)).toEqual(before);
+      // Exercise the actual repository on restored writer-created records,
+      // not only a byte comparison. Re-pinning the same original is a no-op;
+      // changed originals and workspace substitution must fail without adding
+      // another fingerprint, lease, context or ACK. Nothing is synthesized
+      // into the restored DB and no original/credential is printed.
+      const joined = await copy.query(`SELECT f.binding_digest,f.original_digest,f.status_bytes_digest,
+        f.pm_status_request_digest,c.workspace_id,c.key_hash,c.intent_hash,c.intent,c.authorization_fact,c.actor_user_id
+        FROM execution_command_status_original_fingerprints f
+        JOIN execution_trusted_commands c ON c.command_id=f.command_id ORDER BY f.command_id LIMIT 1`);
+      expect(joined.rowCount).toBe(1);
+      const row = joined.rows[0], pin = { binding_digest:row.binding_digest, original_digest:row.original_digest,
+        status_bytes_digest:row.status_bytes_digest, pm_status_request_digest:row.pm_status_request_digest,
+        workspace_id:row.workspace_id, key_hash:row.key_hash, intent_hash:row.intent_hash,
+        intent_digest:accessDigest(row.intent), authorization_digest:accessDigest(row.authorization_fact), actor_id:row.actor_user_id };
+      const repository = new PgCommandStatusOriginalFingerprints(copy);
+      await repository.pin(pin);
+      await repository.pin(pin);
+      const replacement = accessDigest(["TEST_ONLY-changed-original",pin.original_digest]);
+      expect(replacement).not.toBe(pin.original_digest);
+      await expect(repository.pin({...pin,original_digest:replacement})).rejects.toMatchObject({code:"COMMAND_STATUS_ORIGINAL_CHANGED"});
+      await expect(repository.pin({...pin,workspace_id:"TEST_ONLY-wrong-workspace"})).rejects.toMatchObject({code:"COMMAND_STATUS_ORIGINAL_REQUIRED"});
       expect(await snapshot(copy)).toEqual(before);
       await expect(migrate({ databaseUrl: restoreUrl!, dir: resolve(__dirname, "../migrations"), direction: "down",
         migrationsTable: "pgmigrations", count: 1, noLock: true, log: () => undefined }))

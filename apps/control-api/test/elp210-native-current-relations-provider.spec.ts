@@ -1,6 +1,7 @@
 /** Real disposable PG + real loopback mTLS/HTTP. Source relation payloads are
  * SYNTHETIC component vectors, never a native-source commissioning receipt. */
 import {createHash,generateKeyPairSync,randomUUID,X509Certificate} from "node:crypto";
+import {fork,type ChildProcess} from "node:child_process";
 import {readFile} from "node:fs/promises";
 import {join} from "node:path";
 import {createServer,request,type ServerResponse} from "node:http";
@@ -347,6 +348,52 @@ describe.skipIf(!url)("ordinary native CURRENT actual custody/finite egress, TES
    expect(afterRecovery.map(row=>[row.base_body,row.terminal_receipt_id,row.terminal_receipt_digest])).toEqual(
     beforeRecovery.map(row=>[row.base_body,row.terminal_receipt_id,row.terminal_receipt_digest]));
    expect(afterRecovery.every(row=>row.source_settled)).toBe(true);
+   // A second scenario kills the actual issuer process after its physical
+   // Approval response and durable SERVED terminal, but before synthetic
+   // source acknowledgement. A fresh process recovers the same original.
+   // Its read adapter and field permits are TEST_ONLY; the real composition
+   // and selection fence were exercised above, not bypassed by this fixture.
+   const {private_key,...terminal}=f.config.terminal;
+   const tls=Object.fromEntries(Object.entries(f.endpoint.config.tls).map(([key,value])=>[key,Buffer.from(value).toString("base64")]));
+   const message={transport:{...f.endpoint.config,tls},config:{...f.config,terminal},
+    terminalPem:private_key.export({type:"pkcs8",format:"pem"}).toString(),actor:f.actor,principal,selection,account,resource,workspace:f.workspace};
+   const childPath=join(__dirname,"fixtures/native-approval-restart-child.cjs");
+   let issuer:ChildProcess|undefined,recoverer:ChildProcess|undefined;
+   const start=async(mode:"issue"|"recover")=>{
+    const child=fork(childPath,[],{stdio:["ignore","ignore","ignore","ipc"]});
+    const ready=new Promise<{type:string;pid:number;port?:number;digest:string}>((resolve,reject)=>{
+     const timer=setTimeout(()=>{child.kill("SIGKILL");reject(Error("TEST_ONLY_APPROVAL_CHILD_TIMEOUT"));},15000);
+     child.once("error",error=>{clearTimeout(timer);reject(error);});
+     child.once("message",value=>{clearTimeout(timer);resolve(value as never);});
+     child.once("exit",code=>{if(code!==0){clearTimeout(timer);reject(Error("TEST_ONLY_APPROVAL_CHILD_EXIT"));}});
+    });
+    child.send({...message,mode});return{child,ready};
+   };
+   try{
+    f.loseResolve(2);const started=await start("issue");issuer=started.child;
+    const opened=await started.ready;expect(opened.type).toBe("listening");expect(opened.pid).not.toBe(process.pid);
+    expect(opened.digest).toBe(f.provider.source_config_digest);
+    const result=await new Promise<{body:Buffer;complete:boolean}>((resolve,reject)=>{
+     const req=request(`http://127.0.0.1:${opened.port}/`,{agent:false},res=>{const chunks:Buffer[]=[];
+      res.on("data",chunk=>chunks.push(Buffer.from(chunk)));res.on("error",reject);
+      res.on("end",()=>resolve({body:Buffer.concat(chunks),complete:res.complete}));});req.on("error",reject);req.end();});
+    expect(result.complete).toBe(true);expect(JSON.parse(result.body.toString()).receipt_preview.what_changes).toBe(account);
+    const end=Date.now()+5000;let pending=(await f.rows()).find(row=>row.phase==="SERVED"&&!row.source_settled);
+    while(!pending&&Date.now()<end){await new Promise(resolve=>setTimeout(resolve,20));pending=(await f.rows()).find(row=>row.phase==="SERVED"&&!row.source_settled);}
+    expect(pending).toBeDefined();const original=structuredClone(pending),issues=f.endpoint.requests.filter(request=>request.action==="issue").length;
+    // Both intentionally lost resolve responses must have reached the source
+    // before termination; no new source session or permission is invented.
+    while(f.terminals.filter(item=>item.lease_id===original.lease_id).length<2&&Date.now()<end)await new Promise(resolve=>setTimeout(resolve,20));
+    expect(f.terminals.filter(item=>item.lease_id===original.lease_id)).toHaveLength(2);
+    const issuerExit=new Promise<{code:number|null;signal:NodeJS.Signals|null}>(resolve=>issuer!.once("exit",(code,signal)=>resolve({code,signal})));
+    issuer.kill("SIGKILL");expect((await issuerExit).signal).toBe("SIGKILL");issuer=undefined;
+    f.loseResolve(0);const restarted=await start("recover");recoverer=restarted.child;const recovered=await restarted.ready;
+    expect(recovered.type).toBe("recovered");expect(recovered.pid).not.toBe(opened.pid);expect(recovered.digest).toBe(opened.digest);
+    const settled=(await f.rows()).find(row=>row.lease_id===original.lease_id);
+    expect(settled).toMatchObject({phase:"SERVED",source_settled:true,base_body:original.base_body,
+     terminal_receipt_id:original.terminal_receipt_id,terminal_receipt_digest:original.terminal_receipt_digest});
+    expect(f.endpoint.requests.filter(request=>request.action==="issue")).toHaveLength(issues);
+   }finally{issuer?.kill("SIGKILL");recoverer?.kill("SIGKILL");}
    // The same disposable PG/mTLS/native HTTP fence for all three sibling
    // families. The order relationship and mapped values here are synthetic:
    // no Edge publication or order-to-account authority is being claimed.
