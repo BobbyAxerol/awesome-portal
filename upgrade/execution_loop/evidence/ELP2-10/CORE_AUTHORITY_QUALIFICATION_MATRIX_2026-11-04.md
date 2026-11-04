@@ -1,6 +1,6 @@
 # Core authority / qualification impact matrix — 4 November 2026
 
-Status: test commit `fec700592a78c4e7a789fd18865c3a6d5ddcc550` passed its
+Status: test commit `1d34b4e5bbbd48bb98086039851e9dcd2dbaf7d9` passed its
 normal monorepo hook; this is not an image or deployment identity. SHA-256
 pins below identify individual bytes, not every input of a run. Reuse a receipt
 only after checking its source, schema, configuration, fixtures, dependency and
@@ -11,6 +11,7 @@ runtime inputs, not simply because a file or a test name matches.
 | STATUS source assertion `92deaeaa1d8a9f8271d05b62eda0ffc3f2df13b667aa7ebd93856beaa3230d6e`; composition `6529d2425b867ee612b24dc0042355cf0b0694e739c17f4e59e865dd56023334`; preparations `823c810a4aaac2424c21fdba15052e655cfb150d70c8d1dc7a9d23aea02c631a` | [Retake](CORE_NATIVE_FINITE_RETAKE_2026-11-04.md#maintained-approval-issuer-crash-and-status-restored-repository-retake) covers process recovery and the actual fingerprint repository after populated TEST_ONLY custody restore. These three code hashes still match; the opt-in restore case ran separately and was skipped by the normal hook. | A genuine Edge original, terminal and ACK remain separate; repeat local STATUS/restore if code, schema or relevant dependencies change. |
 | Migrations 0155/0156/0157/0158, respectively `e19def4c5dd28de66077469331ce0985a8397e9e971ff62d30b73c3fec1f1067`, `c48d6e76f45928eaf186cfce445dd72051274cdf5ca422a9e3ea6b4c0b271a6d`, `d0e5428fcc6c724de1a033e14f3a585b1318f6472350c0b1c2b589b894bf01b5`, `2461986e1c4d8873b44aa719368ab2c8b95ab0e38aaa5060c133841ff3f27b53` | [Combined historical-clone/custody retake](CORE_NATIVE_FINITE_RETAKE_2026-11-04.md#historical-clone-with-synthetic-custody--restore-retake) covers migrated protected rows, selected security metadata, a refused unapproved down and dump/restore with synthetic custody/STATUS records. These SQL hashes still match. | This does not prove an approved operational rollback, all database objects, actual Edge ACK or the final deployed candidate. Repeat affected scope if migration/schema/security dependencies change. |
 | Restore lease fencing | The separate [M-6b fixture drill](measurements/M-6b-2026-10-21.json) reports two successful disposable PostgreSQL repetitions: immediately after snapshot restore the old holder was still valid, and only an epoch-checked reset fenced it before a new tenure committed. This is a separate, small synthetic Manager-only drill, not the historical-clone/custody retake. | A plain restore is unsafe to promote as a rollback: preserve post-snapshot revocations and late facts, quiesce affected paths, and prove applicable fencing/reconciliation on the final candidate before accepting operational recovery. M-6b does not establish current-human grant restoration, source epoch reconciliation, production-scale RTO or connected acceptance. |
+| Historical UDB authorization restore | The older [UDB-04 scoped DR retake](../../../research_loop/evidence/UDB-04/test-receipt.md#later-scoped-retake) reports a stale pre-revocation restore refused before cutover, followed by current-authority restore and 27 Execution table hashes matching on its named image `c18099d2`. The current `scripts/research-udb/acceptance-dr.mjs` (SHA-256 `049eb351318013bc519d0a1aca77836c87cda4582396574ad540a0b84e5c0850`) implements an explicit custody-hash barrier before restarting applications. | This is prior-candidate evidence, not a retake on the current ELP2 candidate or proof that late source facts and every new custody table survive recovery. The historical image identifier is not a Git object and is not a verified pin of the current script. Verify historical script/image/dependency compatibility and extend or rerun the affected boundary in a disposable cell before reusing it; never restore a shared runtime to perform the drill. |
 | Approval native delivery `3c618bbf090dcaa9c8daaa7383302d63a641e47ffc6828e073c3860869db1991` | [Approval receipt](APPROVAL_EVIDENCE_NATIVE_CUSTODY_2026-11-04.md) records synthetic HTTP/fence tests and a normal hook on `7266bb53f`; this code hash still matches. The [PG/native retake](CORE_NATIVE_FINITE_RETAKE_2026-11-04.md#maintained-approval-issuer-crash-and-status-restored-repository-retake) additionally exercises a killed issuer and process recovery using a synthetic selected-read adapter/source; test commit `fec700592` passed the normal hook. | Real section/field authority, source lineage and connected ACK remain uncommissioned. |
 | Sibling native delivery `e03d9401978af38bf0fb848333a1d17c84f200ab91cabb9567fa524bd58b23e1` | [Retake](CORE_NATIVE_FINITE_RETAKE_2026-11-04.md) covers synthetic source via isolated native PG/mTLS/HTTP including paging/revoke; the official grouped gate passed 53/53 and its restore drill passed. Commit `d1462632c` passed the normal hook. | Repeat relevant tests when its dependencies change. Qualified source and order relation are still absent. |
 | HISTORY/diff | CURRENT-only rejection is covered by the Approval focused negative tests; see [design](APPROVAL_HISTORY_DIFF_AUTHORITY_DESIGN_2026-11-04.md). | Independent purpose, historical native custody, source lineage and positive connected acceptance are not implemented/commissioned. |
@@ -20,8 +21,12 @@ runtime inputs, not simply because a file or a test name matches.
 
 The code and receipt commits are local. No push, runtime install,
 stable/dev/main change, command or Live enablement is implied. ELP2-10 and
-ELP2-11 remain open. In particular, the restored-repository test compares ACK
-rows before and after idempotent original pinning; the repeated ACK completion
-exercise belongs to a separate pre-restore PostgreSQL test. Their combination
-does not demonstrate a repeated authenticated ACK against the restored
-database, nor an approved operational rollback after new source facts arrive.
+ELP2-11 remain open. A later [STATUS restore retake](CORE_NATIVE_FINITE_RETAKE_2026-11-04.md#status-completion-retry-on-a-restored-database)
+exercises duplicate completion on the restored database through pinned TEST_ONLY
+mTLS, including wrong certificate/digest refusal. It does not establish a real
+Edge ACK, a separate issuer OS-process restart on the restored database, or an
+approved operational rollback after new source facts arrive. The restored
+lease exercised by this opt-in case is `ROLLED_BACK`; a restored `COMMITTED`
+terminal is not covered by this receipt. The additional test change passed the
+normal hook, but its opt-in restored-database subcase was separately run in the
+isolated cell; the hook is not its execution receipt.

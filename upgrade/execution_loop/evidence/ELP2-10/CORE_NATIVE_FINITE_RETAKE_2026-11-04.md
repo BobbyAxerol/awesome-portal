@@ -172,3 +172,40 @@ and execution tracking gates completed. The populated-restore test is opt-in
 and was **skipped in the normal hook**; its separate 1/1 disposable-cell run
 above, rather than the hook, is its execution receipt. The synthetic Approval
 test remains distinct from connected production authority or an Edge ACK.
+
+## STATUS completion retry on a restored database
+
+An additional opt-in `TEST_ONLY` path in
+`command-source-assertion-pg.spec.ts` paused immediately after the real Core
+writer committed its synthetic source terminal and Edge-delivery ACK. The
+bounded, internal-only PostgreSQL cell performed `pg_dump` and `pg_restore`
+into a new database, then built a fresh Core authority using that restored
+database and the same synthetic source mapping, credentials and original.
+Through a pinned loopback mTLS transport, two exact completion retries each
+returned the same completion; a different client certificate and a different
+response digest were refused. The restored database retained exactly one
+ACK and one lease with the same lease/attempt/terminal. The selected test
+passed **1/1, 7 skipped**; the test process also verifies restart recovery on
+the original database. The restored lease in this specific test is
+`ROLLED_BACK`; this receipt does not prove a restored `COMMITTED` terminal or
+the preservation of events and revocations after the snapshot. All source
+terminals, source/field permissions, human
+and mTLS identities are TEST_ONLY, not a real gateway ACK or a connected
+acceptance. The issuer restored in this subcase is a fresh instance in the
+same test process; separate-process recovery is tested by the surrounding case
+against the original database, not by this subcase against the restored one.
+
+The test file SHA-256 is
+`3401cb30baafc19ff2ebf371ecfbde6236a2bb074bb8fc7d8b147ed31211d4d6`;
+the non-secret runner is retained at
+`/home/bobby/.local/state/portal-research-evidence/elp2-ack-restore-20261104/run.sh`
+(SHA-256 `9173b63aa0fc7ec41f78a5f65b312381f19e98bfb64650718567346d47e4ac3c`).
+Node/PG image digests match the earlier retake. The exact test container,
+PostgreSQL container, network and owned temporary directory were absent after
+cleanup. `npm run typecheck`, including tests and cross-loop TypeScript, also
+completed with exit 0 after this test change. Its normal monorepo commit hook
+finished with exit 0 on commit `1d34b4e5bbbd48bb98086039851e9dcd2dbaf7d9`
+(tree `1b7439c634738e5e8d0728983694b0aede7848df`), including the portal
+verification and execution tracking gates. The restored-database subcase is
+opt-in and was not enabled by that hook: the separate isolated 1/1 run above,
+not the hook, is its execution receipt.
