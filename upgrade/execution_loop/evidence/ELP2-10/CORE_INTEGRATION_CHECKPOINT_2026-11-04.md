@@ -1,5 +1,40 @@
 # Core integration checkpoint — 4 November 2026
 
+## Landing receipt — supersedes the historical WIP status below
+
+- Integration commit `c61f60b8e4f77a0742893524b517c835ea46f0eb`, tree
+  `2ba11854b567e7b5cc5a0c89bb5a72c25d3142bf`, was fast-forwarded into
+  `docs/research-loop-plan`. Its parents are Research
+  `f804659dfd8f77f1c1d5ecd4c67c3fce0c39590c` and Claude checkpoint
+  `c7429e1ed2f7f6444393cd359ea3c5599a15dc9f`; the latter's 11 commits are
+  ancestors, not a squash or a wholesale replacement. The integration diff
+  is 245 files, +10,260/−663 lines, including code, tests and evidence from
+  both sides; this is not an attribution of all lines to one author.
+- The **normal hook** on that exact tree exited 0: contracts 113/113 files,
+  1,941/1,941 tests; Control API 583 files passed / five skipped, 12,312 tests
+  passed / ten skipped; its PostgreSQL restore drill and monorepo verifier
+  also passed. These are local, isolated checks. Full log:
+  `/home/bobby/.local/state/portal-final-hook-20261104-vpPxRcGs/hook.log`.
+  The previous hook failure and the test-harness fix are preserved below.
+- Before fast-forward, the original Research WIP was checked against its
+  byte-for-byte archive and preserved in Git stash
+  `5bc6a59e54e1b0a1b5139133361c0add81244759`; the archive remains at
+  `/home/bobby/.local/state/portal-research-wip-20261104-B6GUF547/research-wip.tar`
+  with SHA-256 `3a1cc129c4e91fd9a789b5bdf4297e56b57c69732090395f18d075018d3beaad`.
+  Its 204 pre-integration paths were checked: all files present were also
+  present in the candidate; 20 differed after subsequent integration and are
+  retained exactly in the stash/archive for inspection. Do not blindly pop
+  the stash over the landed integration.
+- This is **source landing only**. No remote push, preview rebuild, migration,
+  runtime activation, Edge connection, command or Live action was performed.
+  Three sibling sources remain dark until independently qualified; isolated
+  tests do not constitute Edge field authority, a real STATUS ACK, real
+  financial/Approval evidence, connected browser acceptance, G2 qualification,
+  or final ELP2-10/11 closeout. The historical paragraphs below record what
+  was true at earlier checkpoints and are not the current landing status.
+- Receipt verification: **R0**, Markdown only. The landed code tree passed the
+  normal hook above; the receipt-only follow-up does not alter that code tree.
+
 ## Scope and pins
 
 This is an **in-progress working-tree checkpoint**, not a frozen candidate,
