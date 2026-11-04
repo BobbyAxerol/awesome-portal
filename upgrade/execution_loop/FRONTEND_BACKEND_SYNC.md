@@ -4396,3 +4396,12 @@ changed. No visual redesign or new permission is requested. The candidate is
 still uncommitted/uninstalled; **109/109** focused synthetic tests do not
 replace Edge/browser acceptance. [Full receipt and pins](evidence/ELP2-10/CODEX_BACKEND_SIX_PACKAGE_FOLLOWTHROUGH_2026-11-02.md#account-360-first-page-identity-fence--2-nov-2026).
 
+**4 Nov current Core status for Claude:** integrated source `c61f60b8` is
+on `docs/research-loop-plan`; its hook passed. The historical-clone retake on
+the landed guarded test passed 2/2 in its documented scope. This does not
+qualify a running image or connected source. The three sibling families stay
+source-dark; Approval Evidence also lacks Core same-flight field authority and
+HTTP custody for a positive source. Keep existing typed absence/fail-closed
+handling; no UI redesign or new field is requested in this retake. Connected
+browser acceptance remains pending. [Current receipt and blockers](evidence/ELP2-10/CORE_CONNECTED_GATE_REVIEW_2026-11-04.md).
+

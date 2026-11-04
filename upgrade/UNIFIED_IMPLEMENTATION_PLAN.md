@@ -18006,4 +18006,14 @@ source-dark. Focused checks and the exact remaining gates are recorded in the
 [integration checkpoint](execution_loop/evidence/ELP2-10/CORE_INTEGRATION_CHECKPOINT_2026-11-04.md#independent-sibling-native-composition--candidate-wip).
 This does not close ELP2-10/11, connected acceptance or final integration.
 
+**4 Nov landed-source qualification retake (supersedes historical candidate
+status above):** integrated code `c61f60b8` is on Research and passed its normal
+hook. The landed guarded historical-clone test passed 2/2 for migrations
+0155–0158, scoped row/security preservation and refusal of undrained down; it
+does not prove operational rollback or connected acceptance. Edge's three
+families remain unqualified in the checked catalogue. Approval Evidence still
+needs Core same-flight field/source authority and HTTP custody before positive
+commissioning. [Current retake, pins and owners](execution_loop/evidence/ELP2-10/CORE_CONNECTED_GATE_REVIEW_2026-11-04.md).
+ELP2-10/11 remain open; no runtime install or remote push is implied.
+
 
