@@ -292,3 +292,43 @@ After that retake, the original-DB restart assertion was changed to compare
 digests instead of printing its TEST_ONLY token/context on mismatch. Current
 test SHA-256 is `e143d99634e56244a55c8079fb95a7dfb5e0ded89f1744a7656981adb70ebc87`;
 the original-DB path needs its normal-hook retake on those bytes.
+
+## Approval issuer crash with actual Core composition — working source
+
+On 4 November the focused disposable PostgreSQL/mTLS test passed **1 selected,
+21 skipped**. It sends two Approval sections from a single selected source
+read through the actual `CurrentViewCoreComposition` and native custody to
+physical HTTP, refuses a revoked dispatch with zero response bytes, loses the
+synthetic source acknowledgement, kills the issuer OS process and recovers
+the same durable original and terminal in another process without issuing a
+new source lease. Its metadata, source response, field policy and private test
+credentials are synthetic: no Edge field authority, real source lineage or
+connected ACK is claimed. This is not a database restore rehearsal.
+
+The first attempt's test result was lost in verbose migration and cleanup
+output; cleanup also encountered root-owned build files. It is not counted.
+The exact owned temporary directory was removed after verifying its container
+was absent. The runner was updated to quiet migration output and remove only
+its own validated temporary directory; the passing retake exited 0 and its
+test containers were verified absent. A subsequent name/ID check also found
+the earlier interrupted cell's 14 MiB temporary directory with no matching
+container or network; that exact owned directory was removed. Working source hashes: test
+`ff5533f9f3f83b6c11a218ee424e917dbdb68212a1d3bfa0606c404205a43f4f`,
+child `e7375a9a8f8ce9b56610fc32342028807d488c9112e5052b8a109f2e012d06d2`,
+runner `ad18610373220d64ec0a667d548ddccd07e2991c7f6b523380d3727c0af4aa4e`.
+The two test files were subsequently committed in `48e675f06`. A Control API `npm run typecheck`,
+including tests and the cross-loop project, subsequently exited 0 against
+these bytes and the staged STATUS/guard follow-through. The normal hook for
+`48e675f06b7102bb62e98dc448b98b404d0ffeca`, tree
+`690722203b90b901ebcd70354d4959e2ac9ff435`, exited 0; Control API reported
+584 files / 12,327 tests passed and 5 files / 10 tests skipped. These opt-in
+isolated retakes were separate; they are not counted as tests run by the hook.
+Unrelated documentation WIP remained present while the hook ran. This does not
+establish the deployed runtime, source authority or final connected acceptance.
+
+The final committed STATUS test SHA-256 is
+`e143d99634e56244a55c8079fb95a7dfb5e0ded89f1744a7656981adb70ebc87`.
+The opt-in COMMITTED restore retake used the earlier test bytes explicitly
+recorded above; the later change affects the separately exercised original-DB
+restart assertion, and the normal hook covers that original-DB path. Neither
+the hook nor this receipt upgrades a synthetic ACK into an Edge ACK.

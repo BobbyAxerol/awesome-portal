@@ -1,11 +1,12 @@
 # Core authority / qualification impact matrix — 4 November 2026
 
-Status: guard commit `68f32714402bc10c891c22cfbc09eba5af608f52` passed its
-normal monorepo hook, but the namespace follow-through was edited in the
-working tree before that hook finished; it is not a frozen-clean-tree final
-candidate receipt. The independent namespace guard and restored COMMITTED test
-follow-through are uncommitted and not covered by that hook; this is not an
-image or deployment identity. SHA-256
+Status: the namespace guard, restored COMMITTED test and actual-composition
+Approval retakes are committed in `48e675f06b7102bb62e98dc448b98b404d0ffeca`
+(tree `690722203b90b901ebcd70354d4959e2ac9ff435`). Its normal monorepo hook
+exited 0: Control API 584 files / 12,327 tests passed, 5 files / 10 tests
+skipped. The opt-in isolated restore/composition retakes were run separately;
+they are not counted as hook coverage. Unrelated documentation WIP was present
+during the hook. This is not an image or deployment identity. SHA-256
 pins below identify individual bytes, not every input of a run. Reuse a receipt
 only after checking its source, schema, configuration, fixtures, dependency and
 runtime inputs, not simply because a file or a test name matches.
@@ -34,4 +35,43 @@ The original opt-in receipt exercises `ROLLED_BACK` in a fresh authority
 instance. A later [working-source retake](CORE_NATIVE_FINITE_RETAKE_2026-11-04.md#restored-committed-terminal-and-separate-core-process--working-source)
 also exercises `COMMITTED` in a separate Core OS process against the restored
 database. These opt-in subcases ran separately in isolated cells, not in the
-normal hook; the later changes still need their final commit/hook.
+normal hook. The later changes are in `48e675f06`.
+
+An additional [working-source Approval retake](CORE_NATIVE_FINITE_RETAKE_2026-11-04.md#approval-issuer-crash-with-actual-core-composition--working-source)
+combines the actual Core composition, native custody and issuer OS-process
+crash/recovery with a synthetic source and field policy. The selected test
+passed. Test-inclusive and cross-loop typecheck subsequently passed on the
+working source; the subsequent normal hook passed on the committed test bytes.
+It does not qualify real Edge authority or a connected source.
+
+## Six-request completion audit — source candidate
+
+1. **Approval CURRENT:** the working-source isolated retake combines actual
+   Core composition, PostgreSQL/mTLS custody, two sections from one source
+   read, dispatch revoke, lost synthetic ACK and issuer process restart. It
+   has a normal-hook commit; real qualifier, field policy and lineage
+   remain source-owned qualification work, not established by this fixture.
+2. **Approval HISTORY/diff:** the separate authority design and CURRENT
+   rejection tests exist. They do not implement or grant a historical purpose,
+   nor establish historical source coverage.
+3. **Order/reconciliation/obligations:** the sibling retake covers native
+   custody, paging, cross-workspace refusal and revoke with synthetic source
+   relationships. Edge source publication and field/relationship authority
+   remain unqualified; the product routes remain source-dark.
+4. **STATUS:** the populated restore and restored `COMMITTED` test keep the
+   same TEST_ONLY original, lease and terminal and one synthetic ACK across a
+   separate process. The test follow-through is committed; real
+   Edge terminal/ACK and late facts are not proved.
+5. **ELP2-11:** the representative historical clone was forward-migrated and
+   restored with populated synthetic custody; selected ownership, effective
+   ACL, RLS, triggers and function metadata were compared. The drill refuses
+   an unapproved down; it is not a full operational rollback or a proof of
+   post-snapshot revocation preservation. The old UDB harness is now guarded
+   against unsupported V2 schemas, including the candidate namespace.
+6. **ELP2-10:** the pins and impact decisions above, bounded workload dry-run
+   and test-inclusive/cross-loop typecheck have receipts. Normal hook passed;
+   G2 target/bounds/calibration and connected browser acceptance
+   remain separate gates.
+
+Do not mark the full ELP2-10/11 phase or operational restore green from this
+local audit. Final candidate/runtime and source-dependent gates remain open.
