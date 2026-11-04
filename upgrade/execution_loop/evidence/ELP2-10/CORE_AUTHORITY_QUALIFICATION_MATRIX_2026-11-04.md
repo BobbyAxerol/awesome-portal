@@ -89,3 +89,6 @@ A later [read-only Research runtime inventory](CORE_PREVIEW_RUNTIME_READ_ONLY_20
 records the running image, its declared revision, namespace listeners and
 compiled file hashes. It does not establish mounted routes, trust, effective
 delegation or connected qualification; the A2 disposition remains NOT READY.
+The separate [bootstrap observation](CORE_PREVIEW_BOOTSTRAP_COMPOSITION_20261104.md)
+also records absence of the native configuration-selector keys from the Node
+process's original environment; it is not an A2 acceptance or a route test.
