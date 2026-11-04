@@ -249,7 +249,8 @@ was extended to refuse that namespace even with an otherwise legacy ledger.
 On a separate network-disabled PostgreSQL cell, the actual probe allowed the
 empty legacy ledger and refused after creating only that namespace. Its exact
 container was removed. The focused Node test passed. This extension is not in
-commit `68f327144` and requires its own final normal-hook commit.
+commit `68f327144`; it was subsequently included in normal-hook commit
+`48e675f06`.
 Working SHA-256: guard
 `10d584a67cf86a025c86a3cc141f8745df83ea299375d1d587239f06d25e5073`,
 unit test `257ce3f452446a87781b4e8af7074d8f8cb55ff3a3a9bbfabea8a71facc3f4d3`.
@@ -265,8 +266,8 @@ The selected test passed **1/1, 7 skipped**; the exact test containers,
 network and owned temporary directory were cleaned. This is not an Edge ACK,
 not a real gateway, and not preservation of post-snapshot revocations or late
 source facts. The new process receives synthetic source mapping and test-only
-keys over private IPC. The test and helper changes remain uncommitted and need
-the normal hook on the final source. `npm run typecheck` in the Control API,
+keys over private IPC. The test and helper changes were subsequently committed
+with the normal hook in `48e675f06`. `npm run typecheck` in the Control API,
 including tests and the cross-loop project, exited 0 on the earlier test
 bytes below; a later edit adds an exact terminal digest comparison and separates
 the independent original-DB lane, so that result is not a final-source retake.
@@ -287,7 +288,8 @@ revised test, the bounded PG/mTLS `COMMITTED` restore retake passed **1/1,
 Its test SHA-256 is
 `511ca352f731593d5ea4699dbe5d00114d31e69f33b46a7dfeff22e45c57d7d0`.
 The owned test containers/network were verified absent afterwards. The final
-typecheck and normal hook for these later test bytes remain outstanding.
+typecheck subsequently passed, and the later bytes passed the normal hook in
+`48e675f06` as specified below.
 After that retake, the original-DB restart assertion was changed to compare
 digests instead of printing its TEST_ONLY token/context on mismatch. Current
 test SHA-256 is `e143d99634e56244a55c8079fb95a7dfb5e0ded89f1744a7656981adb70ebc87`;
@@ -332,3 +334,41 @@ The opt-in COMMITTED restore retake used the earlier test bytes explicitly
 recorded above; the later change affects the separately exercised original-DB
 restart assertion, and the normal hook covers that original-DB path. Neither
 the hook nor this receipt upgrades a synthetic ACK into an Edge ACK.
+
+## Expanded V2 restore inventory and stale-snapshot diagnostic
+
+The disposable PostgreSQL/mTLS runner built the current source and produced
+writer-created synthetic custody: `command-source-assertion-pg.spec.ts` passed
+**8/8**, then a custom dump was restored into a second database in the same
+isolated cell. `command-status-populated-restore.spec.ts` passed **1/1**.
+It compares rows and scoped owner/effective ACL/RLS/trigger metadata for the
+four STATUS tables, the candidate lease, identity/session/workspace records,
+V2 policies and grants, native obligations, candidate authority/mutations and
+events, Manager fences and trusted commands. One raw ACL representation
+changed while the checked effective ACL remained equal.
+
+In a rollback-only transaction on the disposable source, a synthetic authority
+revision was advanced and a new TEST_ONLY pending mutation was inserted. The
+original STATUS-only snapshot still matched the restored copy, while the V2
+authority, mutation and mutation-event snapshots differed. Both synthetic
+writes were rolled back. This is a diagnostic of a stale snapshot, **not** an
+actual revoked grant, real Edge fact, production recovery barrier, safe
+cutover decision or operational rollback. A source-independent authority
+checkpoint, quiescence, lease fencing and reconciliation of post-snapshot
+facts are still required before an actual cutover.
+
+Inputs: test SHA-256
+`957e8db39be97f5e78e78ffdc354b769428f1590ec7c7f5c99ed07258d2c58f0`;
+local runner `/home/bobby/.local/state/portal-research-evidence/elp2-crash-restore-20261104/run-v2-inventory.sh`
+SHA-256 `24d8f20b483c640a6989c66de79b7fe04343a53faea5a4960ad9e8c31ccf66cf`.
+Node/PG image pins match the runner. The owned containers and network were
+verified absent after exit 0; the runner also removes its validated temporary
+directory. Control API `npm run typecheck`, including tests and the cross-loop
+project, subsequently exited 0 with these test bytes. The added test is in
+`02086aae876838ed23dafb8411aa9360d89f1704` (tree
+`c51662101bd4edcdcc2206dfd7f210b058ff059d`); its normal monorepo hook
+exited **0**, including Control API, contract and tracking gates. The
+opt-in restore test was skipped by that hook: its **1/1** result above is
+from the separately executed disposable PostgreSQL cell, not hook coverage.
+The hook's exact named Control API test containers and network were absent
+after exit. No source-connected acceptance or installed runtime is implied.
