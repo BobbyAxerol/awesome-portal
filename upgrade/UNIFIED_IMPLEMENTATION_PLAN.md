@@ -18016,4 +18016,11 @@ needs Core same-flight field/source authority and HTTP custody before positive
 commissioning. [Current retake, pins and owners](execution_loop/evidence/ELP2-10/CORE_CONNECTED_GATE_REVIEW_2026-11-04.md).
 ELP2-10/11 remain open; no runtime install or remote push is implied.
 
+**4 Nov Approval Evidence native custody:** a private, unmounted Core
+composition now has independently supplied section grants, exact server-owned
+field-path policy/proofs, original native custody and a synchronous final fence.
+CURRENT cannot open historical evidence or previous-revision diff. Default
+source and policy remain dark; synthetic HTTP tests do not commission them.
+[Scope, tests, source pins and handoff](execution_loop/evidence/ELP2-10/APPROVAL_EVIDENCE_NATIVE_CUSTODY_2026-11-04.md).
+
 

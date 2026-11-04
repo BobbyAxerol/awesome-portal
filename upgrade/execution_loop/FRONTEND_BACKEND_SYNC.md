@@ -4405,3 +4405,9 @@ HTTP custody for a positive source. Keep existing typed absence/fail-closed
 handling; no UI redesign or new field is requested in this retake. Connected
 browser acceptance remains pending. [Current receipt and blockers](evidence/ELP2-10/CORE_CONNECTED_GATE_REVIEW_2026-11-04.md).
 
+**Approval Evidence Core follow-through:** an unmounted native custody/field
+policy composition is prepared, but no qualified Edge source, per-section
+policy or native qualifier is installed. Keep the existing typed absence; no
+frontend contract or component change is requested. HISTORY/diff still need
+their own purpose. [Source, tests and remaining gates](evidence/ELP2-10/APPROVAL_EVIDENCE_NATIVE_CUSTODY_2026-11-04.md).
+
