@@ -209,3 +209,68 @@ finished with exit 0 on commit `1d34b4e5bbbd48bb98086039851e9dcd2dbaf7d9`
 verification and execution tracking gates. The restored-database subcase is
 opt-in and was not enabled by that hook: the separate isolated 1/1 run above,
 not the hook, is its execution receipt.
+
+## Legacy UDB DR schema guard
+
+The historical UDB-04 harness compares a fixed legacy authority-table digest.
+It omits Execution V2 access policy, native read custody and STATUS custody;
+therefore matching that digest on an ELP2 candidate is insufficient to prove
+safe cutover. The harness now checks for V2 authority/custody relations or a
+migration at or beyond 0134 before touching test identities, again after
+stopping its private clone's control API and before restore, and before
+resuming reads. Missing or invalid probe results fail closed. This deliberately
+refuses the old harness on V2; it does not implement V2 rollback or protect
+source facts that arrive after a snapshot.
+
+`node --test scripts/research-udb/legacy-dr-guard.test.mjs`, `node --check`
+of the harness and `git diff --check` passed. A network-disabled, disposable
+PostgreSQL image `sha256:44c4ee9810eff91f7eab4d822642e01115b1a9eccce4bcbdde7604752d68eac6`
+ran the actual SQL and guard: legacy schema allowed; V2 policy table alone,
+STATUS ACK table alone and a later migration ledger row alone each refused.
+These were minimal synthetic schema probes, not a full DR rehearsal. The
+explicit test container was stopped and verified absent afterwards.
+SHA-256: guard `5a9f5a840d2b0f45021dcc4cfa667658c8adecfbbbddf4e819f9e3be42ef1c63`,
+unit test `599a9c8d2b2b178fbe026dc6905da7dd105f1a982cac23da4a0212c3799d9db3`,
+updated harness `e4af45741ab01c3f0852fd2f2a0ecd0e48060b81730c9f014a1b71af191587c6`.
+The normal commit hook exited 0 for commit
+`68f32714402bc10c891c22cfbc09eba5af608f52` (tree
+`98709b52fa8f4eb17126ab84b3f9deba6cba0053`); its Control API suite reported
+12,327 passed and 10 skipped. The later namespace follow-through was edited
+in the working tree before this hook finished, while the commit index still
+contained the earlier guard: this is not a frozen-clean-tree final-candidate
+receipt. The first sandboxed attempt failed before
+verification because it could not access Docker and is not a PASS.
+
+### Independent candidate schema follow-through — working source
+
+Review after starting that hook found a separate installer can create the
+`elp210_candidate` custody namespace without a numbered migration. The guard
+was extended to refuse that namespace even with an otherwise legacy ledger.
+On a separate network-disabled PostgreSQL cell, the actual probe allowed the
+empty legacy ledger and refused after creating only that namespace. Its exact
+container was removed. The focused Node test passed. This extension is not in
+commit `68f327144` and requires its own final normal-hook commit.
+Working SHA-256: guard
+`10d584a67cf86a025c86a3cc141f8745df83ea299375d1d587239f06d25e5073`,
+unit test `257ce3f452446a87781b4e8af7074d8f8cb55ff3a3a9bbfabea8a71facc3f4d3`.
+
+## Restored COMMITTED terminal and separate Core process — working source
+
+The separate disposable PG/mTLS runner restored a database containing a
+TEST_ONLY `COMMITTED` terminal and its synthetic ACK. A fresh parent authority
+and then a separate OS process both retried the same completion against that
+restore; the same original, lease, attempt and terminal remained and the ACK
+row count stayed one. Foreign certificate and changed digest were refused.
+The selected test passed **1/1, 7 skipped**; the exact test containers,
+network and owned temporary directory were cleaned. This is not an Edge ACK,
+not a real gateway, and not preservation of post-snapshot revocations or late
+source facts. The new process receives synthetic source mapping and test-only
+keys over private IPC. The test and helper changes remain uncommitted and need
+the normal hook on the final source. `npm run typecheck` in the Control API,
+including tests and the cross-loop project, exited 0 on these test bytes.
+
+Working SHA-256: test
+`991b080d3d5f540b258e58e0bf5f91e3ab4e123673e0aa6089aa5a5e14ef7496`,
+child `5901223fd8a25efab1e3e36308584b2c1d569c2212b22e9bf6017ef176d96ac0`,
+runner `/home/bobby/.local/state/portal-research-evidence/elp2-ack-restore-20261104/run-committed.sh`
+`e0b98e0fb6822c705c2008c9b03c093bc39edd05c208e1f031892bb95d019a83`.
