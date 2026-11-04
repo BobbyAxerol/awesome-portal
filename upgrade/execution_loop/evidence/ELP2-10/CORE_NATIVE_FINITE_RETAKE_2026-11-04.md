@@ -267,10 +267,28 @@ not a real gateway, and not preservation of post-snapshot revocations or late
 source facts. The new process receives synthetic source mapping and test-only
 keys over private IPC. The test and helper changes remain uncommitted and need
 the normal hook on the final source. `npm run typecheck` in the Control API,
-including tests and the cross-loop project, exited 0 on these test bytes.
+including tests and the cross-loop project, exited 0 on the earlier test
+bytes below; a later edit adds an exact terminal digest comparison and separates
+the independent original-DB lane, so that result is not a final-source retake.
 
-Working SHA-256: test
+Earlier selected-test SHA-256: test
 `991b080d3d5f540b258e58e0bf5f91e3ab4e123673e0aa6089aa5a5e14ef7496`,
 child `5901223fd8a25efab1e3e36308584b2c1d569c2212b22e9bf6017ef176d96ac0`,
 runner `/home/bobby/.local/state/portal-research-evidence/elp2-ack-restore-20261104/run-committed.sh`
 `e0b98e0fb6822c705c2008c9b03c093bc39edd05c208e1f031892bb95d019a83`.
+
+The next retake compared the original terminal digest directly with the clone.
+Its first run failed after the clone checks, when an unrelated original-DB
+restart crossed the test's 30-second context expiry under load. That failure
+is not a PASS. The restore lane now returns after the restored-process checks;
+the normal test still exercises original-DB restart independently. On the
+revised test, the bounded PG/mTLS `COMMITTED` restore retake passed **1/1,
+7 skipped**, including exact terminal digest and single-ACK comparison.
+Its test SHA-256 is
+`511ca352f731593d5ea4699dbe5d00114d31e69f33b46a7dfeff22e45c57d7d0`.
+The owned test containers/network were verified absent afterwards. The final
+typecheck and normal hook for these later test bytes remain outstanding.
+After that retake, the original-DB restart assertion was changed to compare
+digests instead of printing its TEST_ONLY token/context on mismatch. Current
+test SHA-256 is `e143d99634e56244a55c8079fb95a7dfb5e0ded89f1744a7656981adb70ebc87`;
+the original-DB path needs its normal-hook retake on those bytes.
