@@ -182,7 +182,7 @@ function portfolioList(): BffAnswerPortfolios {
 
 type Row = Record<string, unknown>;
 
-interface Dep { id: string; strategy: string; mode: "live" | "paper" | "sandbox"; venue: string; account: string; ccy: string; allocation: string; pnl: string; exposure: string; health: "READY" | "ATTENTION" | "FINDING" }
+interface Dep { id: string; strategy: string; mode: "live" | "paper" | "sandbox"; /** The deployment's own stage (a Canary trial is stage CANARY under mode live); absent: the stage is the mode, as the hand-written books state it. */ stage?: string; venue: string; account: string; ccy: string; allocation: string; pnl: string; exposure: string; health: "READY" | "ATTENTION" | "FINDING" }
 
 const STRATEGIES: Record<string, Row> = {
   strat_btc: { strategy_id: "strat_btc", alpha_id: "strat_btc", label: "BTC-Trend", version: "v3", trader_id: "asmith" },
@@ -226,7 +226,7 @@ function resourceFor(id: string, deps: readonly Dep[], over: { name: string; own
   const strategyIds = [...new Set(deps.map((d) => d.strategy))];
   const accounts = [...new Set(deps.map((d) => d.account))];
   const deployments = deps.map((d) => ({
-    deployment_id: d.id, strategy_id: d.strategy, stage: d.mode.toUpperCase(), venue: d.venue, account_id: d.account, portfolio_id: id, portfolio_name: over.name,
+    deployment_id: d.id, strategy_id: d.strategy, stage: d.stage ?? d.mode.toUpperCase(), venue: d.venue, account_id: d.account, portfolio_id: id, portfolio_name: over.name,
     currency: d.ccy, allocation: d.allocation, balance_total: BALANCES[d.account]?.total ?? null, balance_free: BALANCES[d.account]?.free ?? null, balance_locked: BALANCES[d.account]?.locked ?? null,
     position_fact_count: 2, realized_pnl: null, unrealized_pnl: null, net_pnl: d.pnl, exposure: d.exposure,
     state: "ACTIVE", active: true, health: d.health, updated_at: "2026-10-17T11:58:00Z",
@@ -290,7 +290,7 @@ function worldDeps(id: string): Dep[] | null {
     STRATEGIES[entry.alpha_id] ??= { strategy_id: entry.alpha_id, alpha_id: entry.alpha_id, label: entry.alpha_label, version: `v${found?.alpha.version ?? "1"}`, trader_id: found?.alpha.owner ?? null };
     if (fact !== null) BALANCES[account] = { ccy: fact.currency, total: fromCents(fact.total), free: fromCents(fact.free), locked: fromCents(fact.locked) };
     const pnl = addExact(entry.realized, entry.unrealized);
-    return { id: entry.deployment_id, strategy: entry.alpha_id, mode: entry.environment, venue: found?.deployment.venue ?? "BINANCE", account, ccy: entry.currency, allocation: entry.allocation, pnl, exposure: grossNotional(entry.deployment_id), health: "READY" as const };
+    return { id: entry.deployment_id, strategy: entry.alpha_id, mode: entry.environment, stage: entry.stage, venue: found?.deployment.venue ?? "BINANCE", account, ccy: entry.currency, allocation: entry.allocation, pnl, exposure: grossNotional(entry.deployment_id), health: "READY" as const };
   });
 }
 const worldResource = (id: string, name: string, owner: string | null, base: string): BffAnswerPortfolios | null => {
@@ -335,7 +335,7 @@ function scaledDeps(p: PortfolioSpec): Dep[] {
     else if (binding && binding.credentialState !== "NOT_PUBLISHED" && binding.credentialState !== "EXPIRED") {
       BALANCES[d.accountId] ??= { ccy: d.currency, total: addExact(d.allocation, d.allocation), free: d.allocation, locked: d.allocation };
     }
-    return { id: d.id, strategy: a.id, mode: d.environment, venue: d.venue, account: d.accountId, ccy: d.currency, allocation: d.allocation, pnl: addExact(d.realized, d.unrealized), exposure: d.exposure, health: d.health };
+    return { id: d.id, strategy: a.id, mode: d.environment, stage: d.stage, venue: d.venue, account: d.accountId, ccy: d.currency, allocation: d.allocation, pnl: addExact(d.realized, d.unrealized), exposure: d.exposure, health: d.health };
   });
 }
 

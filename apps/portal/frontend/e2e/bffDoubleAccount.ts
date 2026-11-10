@@ -112,11 +112,17 @@ const BINDINGS: readonly BindingSpec[] = [
   { bindingId: "tn_bnc@BINANCE", accountId: "acc_tn_bnc", venue: "BINANCE", state: "SUSPENDED", credentialState: "NOT_PUBLISHED", updatedAt: "2026-10-15T12:00:00.000Z", environment: "sandbox" },
 ];
 
+/** F3c: the bindings of the two world accounts the Portfolio books name (see WORLD_ACCOUNTS); positive mode only. */
+const WORLD_BINDINGS: readonly BindingSpec[] = [
+  { bindingId: "byb_main@BYBIT", accountId: "acc_byb_main", venue: "BYBIT", state: "ACTIVE", credentialState: "SYNC_SYNCED", updatedAt: "2026-10-17T08:40:00.000Z", environment: "live" },
+  { bindingId: "pap_yen@BITFLYER", accountId: "acc_pap_yen", venue: "BITFLYER", state: "ACTIVE", credentialState: "SYNC_SYNCED", updatedAt: "2026-10-17T08:30:00.000Z", environment: "paper" },
+];
+
 /** The five bindings the double holds, plus the generated ones (empty unless the standalone server runs at a larger scale). */
 const allBindings = (): readonly BindingSpec[] => {
   if (isPositiveMode()) {
     // WP-P: no stale, expired or suspended binding in the positive world, each updated within the last three hours of the read
-    return [...BINDINGS, ...scaled().bindings].map((b) => ({ ...b, state: "ACTIVE", credentialState: "SYNC_SYNCED",
+    return [...BINDINGS, ...WORLD_BINDINGS, ...scaled().bindings].map((b) => ({ ...b, state: "ACTIVE", credentialState: "SYNC_SYNCED",
       updatedAt: new Date(Date.parse(ACCOUNT_DOUBLE_AS_OF) - (Array.from(b.bindingId).reduce((h, c) => (h * 31 + c.charCodeAt(0)) % 170, 7) + 5) * 60_000).toISOString() }));
   }
   const extra = scaled().bindings;
@@ -124,12 +130,12 @@ const allBindings = (): readonly BindingSpec[] => {
 };
 
 // ===== WP-B2-A3 begin: the operation queue and incidents label an account with the environment of its binding, the one the list and the detail print
-setAccountEnvironmentProvider((accountId) => [...BINDINGS, ...scaled().bindings].find((b) => b.accountId === accountId)?.environment ?? null);
+setAccountEnvironmentProvider((accountId) => [...BINDINGS, ...(isPositiveMode() ? WORLD_BINDINGS : []), ...scaled().bindings].find((b) => b.accountId === accountId)?.environment ?? null);
 // ===== WP-B2-A3 end
 
 // ===== WP-B2-A3 begin (N3-01): the Accounts list row of an unbooked binding is a projection of the same account fact as its detail: the ledger it prints, its locked part, and free less maintenance
 export function ledgerFiguresOfBinding(bindingId: string): { currency: string; used: string; reserved: string; available: string; headroom: string } | null {
-  const spec = ACCOUNTS.find((a) => a.bindingId === bindingId);
+  const spec = accountSpecs().find((a) => a.bindingId === bindingId);
   const row = spec?.rows.account_balances?.[0];
   if (spec === undefined || row === undefined) return null;
   const maintenance = spec.rows.margin_balances?.[0] !== undefined ? toCents(String(spec.rows.margin_balances[0].maintenance ?? "0")) : toCents(String(row.free)) / 20n; // the rule of the account's own margin row (free / 20 when it states none)
@@ -258,7 +264,7 @@ function bindingExposure(id: string): BffAnswerAccount {
   });
   // ===== WP-B2-A3 begin: an account with no booking states its ledger (used), what is locked (reserved), free (available) and free less maintenance (headroom), from the rows its own page prints
   const unbooked = (accountId: string) => {
-    const account = ACCOUNTS.find((a) => a.id === accountId);
+    const account = accountSpecs().find((a) => a.id === accountId);
     const row = account?.rows.account_balances?.[0];
     if (row === undefined) return null;
     const maintenance = account!.rows.margin_balances?.[0] !== undefined ? toCents(String(account!.rows.margin_balances[0].maintenance ?? "0")) : toCents(String(row.free)) / 20n;
@@ -472,6 +478,43 @@ const ACCOUNTS: readonly AccountSpec[] = [
   },
 ];
 
+// ===== F3c begin: the accounts the Portfolio books name that the Accounts screen did not hold (Bybit-01 on Core, Paper-Yen on Yen-Carry). In the positive world they are accounts of the world,
+// with the balance and margin the Portfolio books already state, so a link from a ledger row or an Accounts tab opens the account it names.
+const WORLD_ACCOUNTS: readonly AccountSpec[] = [
+  {
+    id: "acc_byb_main",
+    environment: "live",
+    bindingId: "byb_main@BYBIT",
+    label: "Bybit main",
+    state: "ready",
+    freshness: "FRESH",
+    rows: {
+      accounts: [{ account_id: "acc_byb_main", label: "Bybit main", strategy_id: null, mode: "live", venue: "BYBIT", base_currency: "USDT", state: "ACTIVE" }],
+      venue_accounts: [{ binding_id: "byb_main@BYBIT", account_id: "acc_byb_main", mode: "live", venue: "BYBIT", state: "ACTIVE" }],
+      account_balances: [balance("acc_byb_main", "USDT", "96520.00", "80660.00", "15860.00")],
+      margin_balances: [margin("acc_byb_main", "USDT", "15860.00", "7930.00")],
+    },
+    capabilities: [cap("accounts"), cap("account_balances"), cap("margin_balances"), cap("broker_account_sync_effective"), cap("exposure_headroom")],
+  },
+  {
+    id: "acc_pap_yen",
+    environment: "paper",
+    bindingId: "pap_yen@BITFLYER",
+    label: "Paper yen",
+    state: "ready",
+    freshness: "FRESH",
+    rows: {
+      accounts: [{ account_id: "acc_pap_yen", label: "Paper yen", strategy_id: null, mode: "paper", venue: "BITFLYER", base_currency: "JPY", state: "ACTIVE" }],
+      venue_accounts: [{ binding_id: "pap_yen@BITFLYER", account_id: "acc_pap_yen", mode: "paper", venue: "BITFLYER", state: "ACTIVE" }],
+      account_balances: [balance("acc_pap_yen", "JPY", "52000000", "20000000", "32000000")],
+    },
+    capabilities: [cap("accounts"), cap("account_balances"), cap("margin_balances", "EMPTY", "NO_MARGIN_ROWS"), cap("broker_account_sync_effective", "EMPTY", "SIMULATED_NO_VENUE")],
+  },
+];
+/** The accounts the Account double answers: the five of the specs, plus those of the world in the positive mode only (the specs and the sparse lane never see them). */
+const accountSpecs = (): readonly AccountSpec[] => (isPositiveMode() ? [...ACCOUNTS, ...WORLD_ACCOUNTS] : ACCOUNTS);
+// ===== F3c end
+
 /**
  * An account the generated universe holds, shaped like the hand-written ones. Its facts come from the
  * deployments the fleet shows against it; what its credential state says is unpublished stays absent.
@@ -497,11 +540,12 @@ function scaledAccount(id: string): AccountSpec | undefined {
   const at = expired ? minutesBefore(900) : stale ? minutesBefore(180) : AS_OF_MS;
   const rows: Record<string, Row[]> = {
     accounts: [{ account_id: id, label, strategy_id: deployments[0]?.a.id ?? null, mode, venue, base_currency: currency, account_type: "CROSS", state: "ACTIVE" }],
-    deployments: deployments.map(({ a, d }) => ({ deployment_id: d.id, account_id: id, strategy_id: a.id, portfolio_id: d.portfolioId, mode, venue, state: d.state === "ACTIVE" ? "RUNNING" : "HALTED" })),
+    // F3c: the deployment's own stage (a Canary trial is stage canary under mode live), so Account 360 links it to the control room the Fleet names, not to a Live page that refuses it
+    deployments: deployments.map(({ a, d }) => ({ deployment_id: d.id, account_id: id, strategy_id: a.id, portfolio_id: d.portfolioId, mode, stage: d.stage.toLowerCase(), venue, state: d.state === "ACTIVE" ? "RUNNING" : "HALTED" })),
     venue_accounts: [{ binding_id: bindingId, account_id: id, mode, venue, state: binding.state }],
     account_balances: [balance(id, currency, total, free, locked, at)],
     positions: [],
-    portfolio_allocations: deployments.map(({ a, d }) => ({ portfolio_id: d.portfolioId, strategy_id: a.id, deployment_id: d.id, account_id: id, mode, currency: d.currency, allocated_capital: d.allocation })),
+    portfolio_allocations: deployments.map(({ a, d }) => ({ portfolio_id: d.portfolioId, strategy_id: a.id, deployment_id: d.id, account_id: id, mode, stage: d.stage.toLowerCase(), currency: d.currency, allocated_capital: d.allocation })),
   };
   if (isPositiveMode()) rows.margin_balances = [margin(id, currency, fromCents(toCents(total) / 10n), fromCents(toCents(total) / 20n))]; // WP-P
   if (!expired) {
@@ -615,7 +659,7 @@ const SYNTHETIC_PHYSICAL_KEYS = /external_account_ref/;
 
 function accountResource(id: string, search: URLSearchParams): BffAnswerAccount {
   if (id === "acc_err") return problem(503, "ACCOUNT_RESOURCE_UNAVAILABLE", "the account resource could not be read");
-  const spec = ACCOUNTS.find((entry) => entry.id === id) ?? scaledAccount(id);
+  const spec = accountSpecs().find((entry) => entry.id === id) ?? scaledAccount(id);
   // A sibling sleeve answers as a thin account on the same binding.
   const sibling = SIBLINGS.has(id);
   if (!spec && !sibling) return problem(404, "ACCOUNT_NOT_FOUND", `no account ${id}`);
@@ -683,7 +727,7 @@ const FILLS: readonly Row[] = [
 
 /** The two sibling sleeves of the shared binding answer as empty accounts of the same environment. */
 const SIBLINGS: ReadonlySet<string> = new Set(["acc_bnc_sat", "acc_bnc_can"]);
-const specOf = (id: string): AccountSpec | undefined => ACCOUNTS.find((entry) => entry.id === id) ?? (SIBLINGS.has(id) ? ACCOUNTS[0] : undefined) ?? scaledAccount(id);
+const specOf = (id: string): AccountSpec | undefined => accountSpecs().find((entry) => entry.id === id) ?? (SIBLINGS.has(id) ? ACCOUNTS[0] : undefined) ?? scaledAccount(id);
 
 function subjectRecords(accountId: string, relation: "orders" | "fills", search: URLSearchParams): BffAnswerAccount {
   const spec = specOf(accountId);
