@@ -31,6 +31,10 @@ EDS08_SOURCE_CONTINUITY_PACK="${ROOT_DIR}/services/portal-execution-edge-rs/cont
 # explicitly mounted into the disposable test cell so the provenance test is
 # meaningful in CI as well as from a developer checkout.
 EDS11R_MANAGER_CENSUS_PACK="${ROOT_DIR}/services/portal-execution-edge-rs/contracts/manager-surface-census-v1"
+# The source-dark Edge Manager consumer spec cross-checks the owner Manager-v2 pack and the Edge service
+# problem table; both are mounted read-only and located through explicit variables.
+EDGE_MANAGER_V2_PACK_DIR="${ROOT_DIR}/services/portal-execution-edge-rs/contracts/manager-v2-paper-read-v1"
+EDGE_SERVICE_MAIN_FILE="${ROOT_DIR}/services/portal-execution-edge-rs/crates/edge-service/src/main.rs"
 # Each invocation owns an isolated disposable cell.  The historical fixed
 # names made two concurrent local/CI verification runs collide even though
 # neither touches Portal runtime state.  A caller may still pin all names for
@@ -208,6 +212,8 @@ fi
   -v "${MAXIMUM_DATA_PACK}:/services/portal-execution-edge-rs/contracts/maximum-data-return-v1:ro" \
   -v "${EDS08_SOURCE_CONTINUITY_PACK}:/services/portal-execution-edge-rs/contracts/eds08-source-continuity-v1:ro" \
   -v "${EDS11R_MANAGER_CENSUS_PACK}:/services/portal-execution-edge-rs/contracts/manager-surface-census-v1:ro" \
+  -v "${EDGE_MANAGER_V2_PACK_DIR}:/services/portal-execution-edge-rs/contracts/manager-v2-paper-read-v1:ro" \
+  -v "${EDGE_SERVICE_MAIN_FILE}:/services/portal-execution-edge-rs/crates/edge-service/src/main.rs:ro" \
   --tmpfs /tmp:rw,exec,mode=1777,size=512m \
   -w /cell/work \
   -e HOME=/tmp \
@@ -217,6 +223,8 @@ fi
   -e EDS08_SOURCE_CONTINUITY_PACK="/services/portal-execution-edge-rs/contracts/eds08-source-continuity-v1" \
   -e EDS11R_SOURCE_PACK="/services/portal-execution-edge-rs/contracts/maximum-data-return-v1" \
   -e EDS11R_CENSUS_PACK="/services/portal-execution-edge-rs/contracts/manager-surface-census-v1" \
+  -e EDGE_MANAGER_V2_PACK="/services/portal-execution-edge-rs/contracts/manager-v2-paper-read-v1" \
+  -e EDGE_SERVICE_MAIN="/services/portal-execution-edge-rs/crates/edge-service/src/main.rs" \
   -e CONTROL_API_CAPTURE_QUALIFIED="$([[ -n "${QUALIFIED_OUTPUT_DIR}" ]] && printf 1 || printf 0)" \
   "${NODE_IMAGE}" sh -c '
     set -e
