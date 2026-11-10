@@ -110,4 +110,55 @@ runtime shape in `edge-manager-read-contract.ts` and a spec cross-checks it agai
 
 ## 6. STEP 2 result
 
-See section 7 (appended after implementation).
+See section 7.
+
+## 7. STEP 2: what was built (rows 3 and 4)
+
+New files (nothing Codex edits was touched; no `app.module.ts`/`main.ts` change):
+
+- `apps/control-api/src/execution-v2/edge-manager-read-contract.ts`: strict zod mirror of the Edge's runtime Manager envelope
+  (catalogue, projection, typed unavailable, Edge problem body with its closed code->status table). Pure module.
+- `apps/control-api/src/execution-v2/edge-manager-read-client.ts`: source-dark client. Branded bootstrap only
+  (`edgeManagerReadBootstrap()`), injected `token_provider` (no key, no signer here), exact leaf-pin mTLS TLS1.3 GET, one fresh
+  connection per call, nothing written before the pin check, no retry/redirect/log. Deny-all: no grant = typed `DENIED` and no
+  network; unconfigured = `EDGE_MANAGER_READ_ABSENT` (typed `ABSENT`). `record_key` is never exposed; cells removed by the grant
+  are counted (`withheld_field_cells`).
+- `apps/control-api/test/edge-manager-read-client.spec.ts`: 59 tests, all passing. Cross-checks the mirror against the owner
+  openapi and runtime overlay in the Edge pack (enums, patterns, documented drift, the pack's own fixtures refused unless the
+  documented deltas are applied) and against `edge-service/src/main.rs` (every problem code present). Per Edge problem code a
+  case over a real loopback TLS1.3/mTLS server (20 codes, plus wrong-status/unknown-code/widened body, bare 401/403, typed 503).
+  Plus refusals: wrong pin, foreign CA, TLS1.2, missing client certificate, bad config (13 cases), bad kind/limit/cursor/token,
+  wrong profile/version/kind/row count/digest pin, missing no-store, wrong media type, encoding, chunked, short body, redirect, BOM,
+  oversize, BUSY, deadline, no secret in any error, and a source-purity guard (no env, no Nest decorator, not imported by app entries).
+- `scripts/control-api-test.sh`: +8 lines, backward compatible: read-only mounts and env (`EDGE_MANAGER_V2_PACK`, `EDGE_SERVICE_MAIN`)
+  so the spec runs in the Docker cell.
+
+Rust check: `cargo test --offline -p manager-v2-contract` (scratch target dir) built in 26 s, 8/8 pass, confirming the runtime
+constants the mirror pins (`RUNTIME_CONTRACT_REVISION`, `PROFILE_ID`, 200 rows, 1 MiB). No Rust file was changed.
+
+Not built and why: row 5 (compatibility snapshot) has no published JSON schema (only Rust types); mirroring it from Rust source by
+hand would not be "checked against a contract file". Needs the Edge-owner schema from section 5 first.
+
+### Composition lines for whoever owns `app.module.ts`/`main.ts` (Codex in flight; not applied)
+
+```ts
+// app.module.ts
+import { createEdgeManagerReadPort, type EdgeManagerReadBootstrap } from "./execution-v2/edge-manager-read-client";
+export const EDGE_MANAGER_READ_PORT = Symbol("EDGE_MANAGER_READ_PORT");
+// AppModuleOptions: edgeManagerRead?: EdgeManagerReadBootstrap;
+// providers:
+{ provide: EDGE_MANAGER_READ_PORT, useValue: createEdgeManagerReadPort(options.edgeManagerRead) },
+```
+
+`main.ts` passes `edgeManagerRead` only when an owner-prepared private reference exists (same shape as the command-status runtime reference),
+built with `edgeManagerReadBootstrap({ origin, tls, edge_leaf_sha256, profile_id, deadline_ms, response_bytes, max_inflight,
+token_provider: () => <mint resource "execution:manager-v2:read" with the existing ExecutionDelegationService>, grants })`.
+No env flag may select it. Until that reference exists the port is `ABSENT`. Nothing consumes the port yet.
+
+### Blocked, and on whom
+
+- Field grants (which projection fields may leave): owner decision, linked to FE-026 researcher field policy and FE-052/067/072. Default stays deny-all.
+- Runtime enablement: Edge Manager read-through requires a real Edge, installed trust, a delegated issuer and an accepted Paper profile (Core/Edge/Bobby; same trust window as rows 11-12). No network was attempted here.
+- Wire drift request (section 5): Edge/Codex owner to publish the runtime schema and a projection golden fixture.
+- Rows 11-15: Codex in flight (C2, command status, financial, current-human) and owner decisions as tabled.
+- Command relay: remains off; `config.ts:673` still throws; nothing in this work composes any command path.
