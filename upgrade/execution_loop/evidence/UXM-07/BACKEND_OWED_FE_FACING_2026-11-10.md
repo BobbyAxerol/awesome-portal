@@ -103,3 +103,15 @@ See the commit list in the package report; every built row has: contract (zod in
 function, written by the generator), handler (reducer in `manager-model.ts`, no new route), unit spec, FE reader pass-through
 (only `src/execution/v2/readers/*`), and a register entry (`SIMULATED_DATA_REGISTER_2026-10-22.md` section 2m) for the TEST_ONLY
 values. Nothing here is a source receipt or an acceptance claim.
+
+## 6. Result of the build (same day)
+
+| Row | Built | Where | Proof |
+|---|---|---|---|
+| 2.1 emitted `effective_at_ms` | yes | `sumMetric` in `manager-model.ts` (source facts' own time, only when all state one) | `elp206-manager-model.spec.ts` (BE-B1 block, 7 tests); contracts fixture `execution-manager-dataset.percent-figures.synthetic.valid.json` (row net PnL and win rate carry it) |
+| 2.2 `win_rate_pct`, 2.3 `max_drawdown_pct` | contract, admission, reducer, invariants: yes; real values: no (no source) | `managerPercentFields` and fact kinds in `manager-model.contract.ts`; reducer in `managerPartitionTotals` / `rowsFor`; MD-9 in `manager-dataset-invariants.ts`; reader rule in `readers/managerMetric.ts` | six MD-9 negative cases in `execution-manager-dataset.invariants.synthetic.negative.json`, refused by the zod producer and by the FE reader (`managerDataset.conformance.test.ts`) |
+| 2.4 per-deployment allocation time | yes | `allocationEffectiveAt` in `manager-model.ts`; optional `children[].allocation_effective_at_ms`; reader keeps `allocationEffectiveAtMs` | unit spec, contracts spec, `managerDataset.percentFigures.test.ts` |
+| 2.5 enumerations | decision only | not added to money lists, `metric_keys` or sort fields (asserted by the unit spec) | |
+| 2.6 MAP, 2.7 entity search, (b), (c), R-* | not built | sections 2 to 4 | |
+
+Gates run (single job at a time, `nice`, no docker except the one PG-cell spec): `tsc --noEmit -p tsconfig.build.json` (control-api) clean; `elp206-manager-model.spec.ts` 98 tests (the whole file once: 96 passed, 1 old test timed out under machine load 24, plus 1 of mine that was then fixed; then the 7 new ones on their own: 7/7); six other manager specs 140 passed; PG cell `fe-cat-3-manager-all.spec.ts` 27/27; `packages/contracts` full suite 113 files, 1943 tests; `snapshot.py --check` 719 files; FE readers (`managerDataset*`, `managerMetric*`) 2578 passed; FE `fixtureBff` + fleet + overview + portfolios + alpha screens 3454 passed, 2 failed (`src/fixtureBff/equivalence.test.ts`, all on `accounts/*` routes, none touches the Manager dataset; not caused by this package, not investigated here); FE `tsc` has one error in the older `managerMetric.effectiveAt.test.ts` (readonly cast), none in the files of this package; `scripts/refresh-release-integrity-ledgers.sh --check`: current.
