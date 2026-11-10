@@ -27,7 +27,7 @@ describe("ManagerMetric.effective_at_ms", () => {
     const read = readManagerDataset(fixtureValue(FIXTURE_STATEMENT_TIMES));
     expect(read).not.toBeNull();
     expect(read!.kind).toBe("dataset");
-    const dataset = (read as { dataset: { asOfMs: number; capitalStatements: { metrics: ReadonlyMap<string, { effectiveAtMs: number | null }> }[] } }).dataset;
+    const dataset = (read as unknown as { dataset: { asOfMs: number; capitalStatements: { metrics: ReadonlyMap<string, { effectiveAtMs: number | null }> }[] } }).dataset;
     const at = (key: string) => dataset.capitalStatements[0]!.metrics.get(key)!.effectiveAtMs;
     expect(at("added_funds")).toBeNull();
     expect(at("net_external_flows")).toBeNull();
