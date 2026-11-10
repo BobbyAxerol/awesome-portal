@@ -609,7 +609,8 @@ function DecisionCockpit({ api, workspaceId, pathSelection, onClearPathSelection
             kind: target.kind,
             id: target.id,
             row: selected?.kind === "gate" ? selected.row : inbox.rows.find((row) => row.id === target.id) ?? null,
-            decided: decided.rows.find((row) => row.id === target.id) ?? null,
+            // A decided request opened by its approval id (a review path) is found through the history row's `approvalId`, not only its decision id.
+            decided: decided.rows.find((row) => row.id === target.id || row.approvalId === target.id) ?? null,
             waiver: null,
           }
         : null;

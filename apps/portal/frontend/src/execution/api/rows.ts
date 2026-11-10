@@ -186,6 +186,9 @@ export function readDecidedRow(raw: Record<string, unknown>): { row: DecidedRow 
   return {
     row: {
       id,
+      // The history keys a row by its decision id (`dec_AP-352`); the approval it closed is named apart. A screen that opens a request
+      // by its approval id (a review path) finds its decision through this, not through the decision id.
+      ...(readId(raw.approval_id) && readId(raw.approval_id) !== id ? { approvalId: readId(raw.approval_id) as ApprovalId } : {}),
       gate: gateParsed.value,
       subject: str(raw.subject) ?? id,
       outcome: outcomeParsed.value,

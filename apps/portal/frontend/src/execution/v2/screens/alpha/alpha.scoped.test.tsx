@@ -102,7 +102,7 @@ describe("the header and the authority label", () => {
     const meta = document.querySelector(".exec-alp2-meta")!;
     const line = meta.parentElement!.querySelector("[data-testid='not-available-line']")!;
     expect(line.textContent).toContain("Not available: Name, Version, Owner, Run, Evidence");
-    expect(line.textContent).toContain("(Not published)");
+    expect(line.textContent).toContain("(not published)");
     fireEvent.click(within(line as HTMLElement).getByRole("button", { name: "Why not available: Name, Version, Owner, Run, Evidence" }));
     const rows = Array.from(line.querySelectorAll(".exec-blk-why-row")).map((row) => row.textContent ?? "");
     expect(rows.find((row) => row.startsWith("Name:"))).toContain("The source has no alpha name");

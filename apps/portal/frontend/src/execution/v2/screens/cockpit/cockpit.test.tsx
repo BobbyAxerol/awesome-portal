@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { ExecutionApi, InboxResult } from "../../../api/ports";
 import { readLiveReview } from "../../../api/profileRead";
-import { readConditionsPage, readGateR1Detail, readGateR2Detail, readPaperExitDetail } from "../../../api/rows";
+import { readConditionsPage, readDecidedRow, readGateR1Detail, readGateR2Detail, readPaperExitDetail } from "../../../api/rows";
 import type { ApprovalRow, DecidedRow } from "../../../screens/ApprovalInbox";
 import { readApprovalEvidenceV1 } from "../../readers/approvalEvidence";
 import { v1GovernanceParent, type GovernanceParentKind } from "../../readers/dispatch";
@@ -689,6 +689,41 @@ describe("evidence frame", () => {
     expect(rail.textContent).not.toMatch(/If approved/);
     expect(within(rail).queryByRole("button", { name: /Approve/ })).toBeNull();
     await settle();
+  });
+
+  // UI review F1: the history keys a row by its decision id (`dec_AP-352`) and names the approval apart; a review path opens the approval id.
+  it("a decided request opened by its approval id (a review path) shows its closed view, with no Approve and no live quorum note", async () => {
+    const history: DecidedRow[] = [{ ...HISTORY[0]!, id: "dec_apr_off" as DecidedRow["id"], approvalId: "apr_off" as DecidedRow["id"], gate: "R2", subject: "Off Page R2" }];
+    const p = standardPort({ getApprovalHistory: () => ({ ok: true, value: { rows: history, totalCount: 1, deliveryProfile: null } }) });
+    await mount(p, "/governance/approvals/apr_off/r2", { pathSelection: { id: "apr_off", kind: "r2" } });
+    await settle();
+    const rail = screen.getByRole("complementary", { name: "Decision" });
+    expect(within(rail).getByTestId("ck-closed-outcome").textContent).toContain("Closed: approved by minh");
+    expect(within(rail).queryByRole("button", { name: /Approve/ })).toBeNull();
+    expect(rail.textContent).not.toMatch(/quorum is already met/);
+  });
+
+  it("the history reader keeps the approval a decision closed apart from the decision id", () => {
+    const hit = readDecidedRow({ id: "dec_AP-352", approval_id: "AP-352", gate: "R2", subject: "Carry v3.2", outcome: "APPROVED", decided_by: { username: "minh" }, decided_at: "2026-10-17T09:12:00Z" });
+    expect(hit.row?.id).toBe("dec_AP-352");
+    expect(hit.row?.approvalId).toBe("AP-352");
+    // a wire that names only one id adds nothing
+    expect(readDecidedRow({ id: "AP-9", gate: "R1", subject: "x", outcome: "DENIED", decided_at: "2026-10-17T09:12:00Z" }).row?.approvalId).toBeUndefined();
+  });
+
+  it("the Needs you lens count and the Needs you chips agree: a blocked request that needs you wears both chips", async () => {
+    const raw = RAW.map((row) => (row.id === "apr_a" ? { ...row, needs_you: true, blocker_count: 1, blocker_summary: "A held" } : row));
+    viewport(true);
+    await mount(standardPort({}, { ...inbox(), rawRows: raw }));
+    await settle();
+    const q = queue();
+    const lens = within(q).getByRole("button", { name: /^Needs you \d/ });
+    const counted = Number(/(\d+)/.exec(lens.textContent ?? "")![1]);
+    const chips = Array.from(q.querySelectorAll(".exec-ck-list [data-kind='gate']")).filter((item) => /Needs you/.test(item.textContent ?? "")).length;
+    expect(chips).toBe(counted);
+    const blocked = within(q).getByRole("button", { name: /Alpha One/ });
+    expect(blocked.textContent).toMatch(/Blocker/);
+    expect(blocked.textContent).toMatch(/Needs you/);
   });
 
   it("a ?sel=undefined link (a search result built from a missing id) is no selection and the page never prints the word (QA4 R3-01)", async () => {

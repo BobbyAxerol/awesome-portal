@@ -107,13 +107,18 @@ function GateFlags({ row, principal }: { row: InboxRowV2; principal: Principal }
       {row.gate === "LIVE_GATE" ? <Flag kind="paused" label="Live closed" size="sm" /> : null}
       {closed ? null : isYours(row, principal) ? (
         <Flag kind="na" label="Yours" size="sm" />
-      ) : row.inert === "BLOCKED" || (row.blockerCount !== null && row.blockerCount > 0) ? (
-        <Flag kind="incident" label="Blocker" size="sm" />
-      ) : row.needsYou === true ? (
-        <Flag kind="approval" label="Needs you" size="sm" />
-      ) : row.inert === "QUORUM" ? (
-        <Flag kind="neutral" label="Waiting on others" size="sm" />
-      ) : null}
+      ) : (
+        <>
+          {/* The "Needs you" lens counts the server's needs_you flag, so every row it counts wears that chip. A blocker is a fact about the
+              request and is shown alongside it, never instead of it (UI review F1: the lens said 3 and the chips showed 2). */}
+          {row.inert === "BLOCKED" || (row.blockerCount !== null && row.blockerCount > 0) ? <Flag kind="incident" label="Blocker" size="sm" /> : null}
+          {row.needsYou === true ? (
+            <Flag kind="approval" label="Needs you" size="sm" />
+          ) : row.inert === "QUORUM" ? (
+            <Flag kind="neutral" label="Waiting on others" size="sm" />
+          ) : null}
+        </>
+      )}
     </>
   );
 }

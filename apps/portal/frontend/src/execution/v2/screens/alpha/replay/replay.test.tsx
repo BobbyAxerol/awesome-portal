@@ -183,7 +183,8 @@ describe("deep link", () => {
       </MemoryRouter>,
     );
     await screen.findByTestId("v1-replay");
-    expect(await screen.findByText(/Opened at/)).toBeTruthy();
+    // UI review D12: the reason is plain words and the server\'s exact words sit in the closed Details line, so two nodes carry it.
+    expect((await screen.findAllByText(/Opened at/)).length).toBeGreaterThan(0);
     expect(props().focusId).toBe("order:ord_004");
     // The replay is a page of its own (title, chips), at the same address: no lifecycle and no current-facts strip above the chart.
     expect(screen.getByRole("heading", { level: 1, name: "Trade Replay" })).toBeTruthy();
@@ -203,27 +204,30 @@ describe("states", () => {
       body.page.has_more = false;
       return { status: 200, body };
     });
-    expect(await screen.findByText(/No order or fill of this alpha is present/)).toBeTruthy();
+    // UI review D12: the reason is plain words and the server\'s exact words sit in the closed Details line, so two nodes carry it.
+    expect((await screen.findAllByText(/No order or fill of this alpha is present/)).length).toBeGreaterThan(0);
     expect(screen.queryByTestId("v1-replay")).toBeNull();
   });
 
   it("partial: one relation failing keeps the other and says which is missing", async () => {
     mount("/replay", (path) => (path.endsWith("/fills") ? { status: 503, body: { error: { code: "UPSTREAM_UNAVAILABLE", message: "fills down" } } } : undefined));
     await screen.findByTestId("v1-replay");
-    expect(screen.getByText(/Fills could not be read/)).toBeTruthy();
+    expect(screen.getAllByText(/Fills could not be read/).length).toBeGreaterThan(0);
     expect(props().orders.length).toBeGreaterThan(0);
     expect(props().fills).toEqual([]);
   });
 
   it("both relations failing is unavailable, with both reasons", async () => {
     mount("/replay", (path) => (path.endsWith("/fills") || path.endsWith("/orders") ? { status: 503, body: { error: { code: "UPSTREAM_UNAVAILABLE", message: "down" } } } : undefined));
-    expect(await screen.findByText(/Orders: .*Fills: /)).toBeTruthy();
+    // UI review D12: the reason is plain words and the server\'s exact words sit in the closed Details line, so two nodes carry it.
+    expect((await screen.findAllByText(/Orders: .*Fills: /)).length).toBeGreaterThan(0);
     expect(screen.queryByTestId("v1-replay")).toBeNull();
   });
 
   it("denied: the alpha is outside the slice, so nothing is replayed", async () => {
     mount("/replay", undefined, "alpha_denied");
-    expect(await screen.findByText(/outside your slice/)).toBeTruthy();
+    // UI review D12: the reason is plain words and the server\'s exact words sit in the closed Details line, so two nodes carry it.
+    expect((await screen.findAllByText(/outside your slice/)).length).toBeGreaterThan(0);
     expect(screen.queryByRole("region", { name: "Trade Replay" })).toBeNull();
   });
 
@@ -254,6 +258,7 @@ describe("states", () => {
   it("a server refusal still shows its reason under a researcher session", async () => {
     session.current = sessionOf(V2_ROLE_PRESETS.researcher);
     mount("/replay", undefined, "alpha_denied");
-    expect(await screen.findByText(/outside your slice/)).toBeTruthy();
+    // UI review D12: the reason is plain words and the server\'s exact words sit in the closed Details line, so two nodes carry it.
+    expect((await screen.findAllByText(/outside your slice/)).length).toBeGreaterThan(0);
   });
 });
