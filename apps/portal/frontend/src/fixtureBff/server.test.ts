@@ -305,8 +305,8 @@ describe("medium scale", () => {
         expect(want, `${row.alpha_id} ${entry.currency}`).toBe(cents);
       }
     }
-    // More than one currency exists, and the fleet summary lists each on its own line.
-    expect(currencies.size).toBeGreaterThan(1);
+    // The scale world publishes USDT only (WP-4); the fleet summary lists each currency present on its own line.
+    expect([...currencies]).toEqual(["USDT"]);
     expect(fleet.summary.allocation_by_currency.map((e: { currency: string }) => e.currency).sort()).toEqual([...currencies].sort());
     // A research-only alpha has no owner and no deployments: both stay empty, nothing is invented.
     const researchOnly = fleet.page.rows.filter((row: { health: string }) => row.health === "RESEARCH_ONLY");

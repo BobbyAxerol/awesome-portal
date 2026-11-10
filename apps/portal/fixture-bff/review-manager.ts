@@ -99,6 +99,12 @@ function pageGroups(body: Draft, path: string, search: URLSearchParams, profile:
   return null;
 }
 
+/**
+ * The scale world publishes USDT only (UI adjustment WP-4). The one non-USDT subject the series port still answers is the TEST_ONLY
+ * yen book (the Portfolios double's Yen-Carry), so the currency-mixed refusal stays exercised and no screen lists it by default.
+ */
+const TEST_ONLY_CURRENCY_BOOKS: readonly { id: string; base: string }[] = [{ id: "pf_TEST_ONLY_yen", base: "JPY" }];
+
 function comparison(series: Draft[]): Draft {
   const neutral = { transform: "NONE_NO_REBASE_NO_CROSS_CURRENCY_SUM", axis_ms: null };
   const described = series.filter((entry) => entry.state !== "UNAVAILABLE");
@@ -157,7 +163,7 @@ function seriesAnswer(method: string, path: string, search: URLSearchParams, pro
   body.quality = copy(traits().series); // WP-P: COMPLETE/FRESH in the positive world (Codex's default); the former PARTIAL body is partial/missing
   body.selected_window = { requested, resolved: window, selection_basis: "EXACT_PUBLISHED_METRIC_WINDOW_ONLY", reason_code: null };
   const pinned = search.has("economic_partition") ? JSON.parse(search.get("economic_partition")!) : null;
-  const knownPortfolios = new Map([...scaled().portfolios, ...wpcPortfolioStubs(body.environment)].map((portfolio) => [portfolio.id, portfolio]));
+  const knownPortfolios = new Map([...scaled().portfolios, ...wpcPortfolioStubs(body.environment), ...TEST_ONLY_CURRENCY_BOOKS].map((portfolio) => [portfolio.id, portfolio]));
   body.series = subjects.map((subject, subjectIndex) => {
     const identity = { subject_type: subject.subject_type, subject_id: subject.subject_type === "FUND" ? body.workspace_id : subject.subject_id };
     const portfolio = subject.subject_type === "ALPHA" ? wpkAlphaBook(identity.subject_id, body.environment) : knownPortfolios.get(identity.subject_id); // WP-K

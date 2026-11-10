@@ -89,9 +89,8 @@ describe("series for the native portfolios", () => {
   it("a subject with no member in the environment is typed UNAVAILABLE (Canary holds only a sandbox book), and a JPY book is INCOMPARABLE with USDT", () => {
     const canary = seriesOf("NAV", ["pf_TEST_ONLY_satellite", "pf_TEST_ONLY_canary"]);
     expect(canary.body.series[1]).toMatchObject({ state: "UNAVAILABLE", reason_code: "SUBJECT_HAS_NO_ACTIVE_MEMBERS" });
-    const jpy = scaled().portfolios.find((entry) => entry.base === "JPY");
-    expect(jpy).toBeDefined();
-    const mixed = seriesOf("NAV", ["pf_TEST_ONLY_satellite", jpy!.id]);
+    expect(scaled().portfolios.every((entry) => entry.base === "USDT")).toBe(true); // the scale world publishes USDT only (WP-4)
+    const mixed = seriesOf("NAV", ["pf_TEST_ONLY_satellite", "pf_TEST_ONLY_yen"]); // the TEST_ONLY yen book is the JPY side
     expect(mixed.body.comparison).toMatchObject({ state: "INCOMPARABLE", reason_code: "CURRENCY_MIXED" });
   });
 });
