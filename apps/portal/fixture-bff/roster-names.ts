@@ -51,14 +51,3 @@ export function rosterNames<T>(body: T): T {
   if (/"status":"APPROVED"/.test(changed)) closeQuorum(next);
   return next;
 }
-
-/** The R2 request of AP-352 states the capital of the portfolio it names: Core allocated 270,000.00 of its 340,000 budget, raised by the requested 25,000.00. */
-export function approvalCapital(path: string, body: unknown): unknown {
-  if (!/\/governance\/approvals\/AP-352\/r2$/.test(path) || body === null || typeof body !== "object") return body;
-  const copy = JSON.parse(JSON.stringify(body)) as { capital?: { label?: string; before?: string; after?: string }[] };
-  for (const row of copy.capital ?? []) {
-    if (row.label === "allocated capital") { row.before = "270,000.00"; row.after = "295,000.00"; }
-    if (row.label === "portfolio weight") { row.before = "79.4"; row.after = "86.8"; }
-  }
-  return copy;
-}
