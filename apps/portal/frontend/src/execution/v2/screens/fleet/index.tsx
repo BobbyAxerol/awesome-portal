@@ -415,8 +415,13 @@ export default function FleetScreen({ api, workspaceId, streamFlag = FLEET_STREA
   const searchInput = useRef<HTMLInputElement>(null);
   // The chips' focus fallback: the search box, which on a phone sits inside the closed Filters bar, so it opens first.
   const focusSearch = () => {
-    if (phone && !filtersOpen) setFiltersOpen(true);
-    requestAnimationFrame(() => searchInput.current?.focus());
+    // Focus at once when the box is already rendered; only a closed phone bar needs a frame to mount it first.
+    if (phone && !filtersOpen) {
+      setFiltersOpen(true);
+      requestAnimationFrame(() => searchInput.current?.focus());
+      return;
+    }
+    searchInput.current?.focus();
   };
   const commitNow = () => url.set({ q: text.trim() === "" ? null : text.trim(), sel: null }, { replace: true });
 
