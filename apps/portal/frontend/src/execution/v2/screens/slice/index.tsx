@@ -43,6 +43,7 @@ import {
   type RevocationMemory,
 } from "./canonicalLane";
 import {
+  AVAILABILITY_REASON_SENTENCE,
   bindingRows,
   connectionKey,
   dispositionChips,
@@ -285,7 +286,7 @@ function FleetPanel({ rows, search, withheld }: { rows: readonly FleetRow[]; sea
         return (
           <span className="exec-slice-avail">
             <Flag kind={flag.kind} label={flag.label} size="sm" />
-            <span className="exec-slice-muted">{row.availability.reasonCode}</span>
+            <FinancialReason code={row.availability.reasonCode} />
           </span>
         );
       },
@@ -314,6 +315,19 @@ function FleetPanel({ rows, search, withheld }: { rows: readonly FleetRow[]; sea
         empty={<span className="exec-slice-muted">{withheld ? "No row from the environments that were read." : "No row is visible to you in this read."}</span>}
       />
     </SectionPanel>
+  );
+}
+
+/** The reason a row's financial data is partial or absent: a sentence, with the published code as its title and as screen-reader text. */
+function FinancialReason({ code }: { code: string | null }) {
+  if (code === null) return null;
+  const sentence = AVAILABILITY_REASON_SENTENCE[code];
+  if (sentence === undefined) return <span className="exec-slice-muted">{code}</span>;
+  return (
+    <span className="exec-slice-muted" title={code}>
+      {sentence}
+      <span className="exec-blk-sr"> ({code})</span>
+    </span>
   );
 }
 

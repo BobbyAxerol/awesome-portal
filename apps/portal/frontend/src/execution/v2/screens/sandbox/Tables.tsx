@@ -97,7 +97,7 @@ export function FindingsPanel({ view }: { view: SandboxView }) {
           reason={sourcesReported ? "No findings recorded." : "No findings returned; with the sources unavailable that is not a clean result."}
         />
       ) : (
-        <CardsTable columns={FINDING_COLUMNS} rows={keyed(f.rows).slice(0, SANDBOX_ROW_CAP)} rowKey={(r) => r.k} label="Reconciliation findings" />
+        <CardsTable scrollHint columns={FINDING_COLUMNS} rows={keyed(f.rows).slice(0, SANDBOX_ROW_CAP)} rowKey={(r) => r.k} label="Reconciliation findings" />
       )}
     </SectionPanel>
   );
@@ -168,7 +168,7 @@ export function PlansPanel({ view }: { view: SandboxView }) {
         <PanelState status="empty" reason="No plans recorded." />
       ) : (
         <div title="A plan records a refusal to promote; it does not start Canary.">
-          <CardsTable columns={columns} rows={keyed(view.plans).slice(0, SANDBOX_ROW_CAP)} rowKey={(r) => r.k} label="Promotion plans" />
+          <CardsTable scrollHint columns={columns} rows={keyed(view.plans).slice(0, SANDBOX_ROW_CAP)} rowKey={(r) => r.k} label="Promotion plans" />
           {gaps.length > 0 ? <div className="exec-sbx-note"><GapLine items={gaps} /></div> : null}
         </div>
       )}
@@ -198,7 +198,7 @@ export function TimelinePanel({ view }: { view: SandboxView }) {
       {t.rows.length === 0 ? (
         <PanelState status="empty" reason="No events recorded." />
       ) : (
-        <CardsTable columns={TIMELINE_COLUMNS} rows={keyed(t.rows).slice(0, SANDBOX_ROW_CAP)} rowKey={(r) => r.k} label="Certification timeline" />
+        <CardsTable scrollHint columns={TIMELINE_COLUMNS} rows={keyed(t.rows).slice(0, SANDBOX_ROW_CAP)} rowKey={(r) => r.k} label="Certification timeline" />
       )}
     </SectionPanel>
   );

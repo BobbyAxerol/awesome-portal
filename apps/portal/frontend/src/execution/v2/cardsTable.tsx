@@ -64,6 +64,11 @@ export interface CardsTableProps<Row> {
   className?: string;
   /** A group header row before this row (it starts a group), or `null`. The rows arrive already ordered by group. */
   groupBefore?(row: Row, index: number): ReactNode;
+  /**
+   * Says in words, under the table, that it goes on to the right: printed only while the wrap really overflows (the same
+   * `data-more` the edge fade reads). The fade alone cuts a header mid-word and reads as clipping; the sentence names the cause.
+   */
+  scrollHint?: boolean;
 }
 
 /** A cell that rendered nothing says so; it is never a dash and never 0. */
@@ -71,7 +76,7 @@ function present(content: ReactNode): boolean {
   return content !== null && content !== undefined && content !== false && content !== "";
 }
 
-export function CardsTable<Row>({ columns, rows, rowKey, label, selectedKey, onRowOpen, empty, sort, sorts, onSort, className, groupBefore }: CardsTableProps<Row>) {
+export function CardsTable<Row>({ columns, rows, rowKey, label, selectedKey, onRowOpen, empty, sort, sorts, onSort, className, groupBefore, scrollHint }: CardsTableProps<Row>) {
   const open = (row: Row) => (event: KeyboardEvent) => {
     // Space is prevented so the page does not scroll from under the row.
     if (event.key === "Enter" || event.key === " ") {
@@ -80,7 +85,9 @@ export function CardsTable<Row>({ columns, rows, rowKey, label, selectedKey, onR
     }
   };
   const { ref: wrapRef, props: scrollProps } = useKeyboardScroll<HTMLDivElement>(label, [rows, columns]);
+  const hint = scrollHint === true && scrollProps["data-more"] !== undefined;
   return (
+    <>
     <div ref={wrapRef} className="exec-cards-wrap" {...scrollProps}>
       <table className={className ? `exec-cards ${className}` : "exec-cards"} aria-label={label}>
         <thead>
@@ -150,5 +157,7 @@ export function CardsTable<Row>({ columns, rows, rowKey, label, selectedKey, onR
         </tbody>
       </table>
     </div>
+    {hint ? <p className="exec-cards-hint">Scroll sideways for the other columns</p> : null}
+    </>
   );
 }

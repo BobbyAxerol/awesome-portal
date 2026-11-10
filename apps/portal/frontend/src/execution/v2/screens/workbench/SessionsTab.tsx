@@ -33,7 +33,7 @@ export function SessionsTab({ counted, sessions }: { counted: Figure; sessions: 
         <GapLine items={[{ label: "Session rows", id: "FE-067", reason: sessions.reasonCode }]} />
       ) : (
         <div className="exec-wb-tablewrap" data-table="Sessions">
-          <CardsTable columns={COLUMNS} rows={sessions.rows} rowKey={(r) => r.id} label="Sessions" empty={<span className="exec-wb-empty">No sessions</span>} />
+          <CardsTable scrollHint columns={COLUMNS} rows={sessions.rows} rowKey={(r) => r.id} label="Sessions" empty={<span className="exec-wb-empty">No sessions</span>} />
           <p className="exec-wb-cap" data-testid="Sessions-cap">
             {sessions.returnedCount === 1 ? "1 session" : `${sessions.returnedCount.toLocaleString("en-US")} sessions`}
             {sessions.omittedCount > 0 ? ` · ${sessions.omittedCount.toLocaleString("en-US")} could not be read and ${sessions.omittedCount === 1 ? "is" : "are"} not listed` : ""}

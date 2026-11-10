@@ -57,7 +57,7 @@ function SidesBlock({ sides }: { sides: PositionsBySide }) {
       {sides.rows.length === 0 ? (
         <p className="exec-wb-empty">No open position to split by side.</p>
       ) : (
-        <SideTable columns={SIDE_COLUMNS} rows={sides.rows.slice(0, PAGE_CAP)} rowKey={(r) => r.instrumentId} label="Long, Short and Gross by instrument" />
+        <SideTable scrollHint columns={SIDE_COLUMNS} rows={sides.rows.slice(0, PAGE_CAP)} rowKey={(r) => r.instrumentId} label="Long, Short and Gross by instrument" />
       )}
       {sides.state === "PARTIAL" && sides.reasonCode !== null ? <p className="exec-wb-cap"><Na why={humanize(sides.reasonCode)} visible /></p> : null}
       {excluded === null ? null : <p className="exec-wb-cap">{excluded}</p>}

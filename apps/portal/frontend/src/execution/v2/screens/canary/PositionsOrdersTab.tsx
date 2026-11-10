@@ -74,7 +74,7 @@ function PublishedRowsTable({ table, label, rowsLabel, reasonCode }: { table: Pu
   return (
     <>
       <div title="Columns are the source's own field names.">
-        <CardsTable columns={publishedColumns(table)} rows={table.rows} rowKey={(row) => row.key} label={label} empty="The source reported none." />
+        <CardsTable scrollHint columns={publishedColumns(table)} rows={table.rows} rowKey={(row) => row.key} label={label} empty="The source reported none." />
       </div>
       {table.hiddenColumns > 0 || lossNote(table) !== null ? (
         <p className="exec-cny-rowsnote">
@@ -126,6 +126,7 @@ function RowsPanel<R>({
         <GapLine items={[{ label: rowsLabel, id: FE.rows, reason: fact.typedReasonCode }]} because={panelLine(fact.panel)} />
       ) : (
         <CardsTable
+          scrollHint
           columns={shownColumns}
           rows={visible}
           rowKey={(row) => rowKey(row, position.get(row) ?? 0)}

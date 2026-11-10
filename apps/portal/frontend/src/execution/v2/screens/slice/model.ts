@@ -157,6 +157,16 @@ export const DISPOSITION_REASON_WORD: Readonly<Record<string, string>> = {
   SCOPED_PROFILE_SNAPSHOT_NOT_RECORDED: "Not recorded",
 };
 
+/**
+ * One plain sentence per typed availability reason of a row's financial data (`SCOPED_AVAILABILITY_REASONS`). The code stays on the cell as its
+ * title and as screen-reader text; a reason this build does not know is shown as its code, never as a guess.
+ */
+export const AVAILABILITY_REASON_SENTENCE: Readonly<Record<string, string>> = {
+  AUTHORIZED_RETAINED_FACTS: "Retained facts are published for this row.",
+  SCOPED_FINANCIAL_GRAIN_OR_FIELDS_UNAVAILABLE: "Some financial fields are not published at this grain.",
+  SOURCE_FACTS_NOT_PUBLISHED: "The source has not published these facts.",
+};
+
 export interface DispositionChip {
   environment: ScopedItemEnvironment;
   state: ScopedDisposition["state"];

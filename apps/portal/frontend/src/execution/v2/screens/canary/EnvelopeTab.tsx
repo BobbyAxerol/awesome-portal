@@ -77,7 +77,7 @@ export function EnvelopeTab({ view }: { view: CanaryView }) {
               <span className="exec-cny-cmpl-note">{panelLine(view.compliance)}</span>
             </p>
           )}
-          <CardsTable columns={columns} rows={rows} rowKey={(row) => row.key} label="Canary envelope caps" />
+          <CardsTable scrollHint columns={columns} rows={rows} rowKey={(row) => row.key} label="Canary envelope caps" />
           <GapLine items={gaps} because={verdict === null ? panelLine(view.compliance) : null} />
           {notes.headroom.length > 0 || notes.other.length > 0 ? (
             <ul className="exec-cny-lineage" aria-label="Other published figures">

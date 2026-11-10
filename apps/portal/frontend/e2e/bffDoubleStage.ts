@@ -45,6 +45,10 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { fromCents, toCents } from "./bffWorld";
+import { equityOf } from "./bffWorldBooks";
+import { resolveStageDeployment } from "./bffWorldStage";
+
 interface Answer {
   status: number;
   body: unknown;
@@ -273,7 +277,8 @@ function sandboxV1(deploymentId: string): Row {
 function parentV2(key: "sandbox" | "canary", deploymentId: string): Row {
   const body = (fresh<Row>("execution-positive-parent.synthetic.valid.json")[key] ?? {}) as Row;
   const anchors = (body.anchors as Row) ?? {};
-  const next: Row = { ...body, anchors: { ...anchors, deployment_id: deploymentId } };
+  const next: Row = { ...body, observed_at_ms: LIVE_OBSERVED_MS, anchors: { ...anchors, deployment_id: deploymentId } };
+  if (key === "canary") return worldCanary(next, deploymentId);
   if (key === "sandbox") {
     next.certification = { ...((body.certification as Row) ?? {}), certification_id: `scert_${safeId(deploymentId)}` };
   }
@@ -305,10 +310,10 @@ function includeAsked(route: StageRoute, search: URLSearchParams): ReadonlySet<s
 const includeRefused = (): Answer => problem(400, "EXECUTION_READ_QUERY_INVALID", "include is a comma list of distinct tokens this read publishes.");
 
 /** The parent body with the identity the fixture publishes, when asked. */
-function withParentMembers(body: Row, key: "sandbox" | "canary", asked: ReadonlySet<string>): Row {
+function withParentMembers(body: Row, key: "sandbox" | "canary", asked: ReadonlySet<string>, deploymentId: string): Row {
   if (!asked.has("identity")) return body;
   const published = (fresh<Row>("execution-positive-parent.synthetic.valid.json")[`${key}_identity`] ?? {}) as Row;
-  return { ...body, identity: published.identity };
+  return { ...body, identity: worldIdentity(published.identity, deploymentId) };
 }
 
 function stageAnswer(route: StageRoute, deploymentId: string, search: URLSearchParams): Answer {
@@ -317,8 +322,8 @@ function stageAnswer(route: StageRoute, deploymentId: string, search: URLSearchP
   if (workspace === STAGE_V2_WORKSPACE) {
     const asked = includeAsked(route, search);
     if (asked === null) return includeRefused();
-    if (route === "certification") return ok(withParentMembers(parentV2("sandbox", deploymentId), "sandbox", asked));
-    if (route === "canary") return ok(withParentMembers(parentV2("canary", deploymentId), "canary", asked));
+    if (route === "certification") return ok(withParentMembers(parentV2("sandbox", deploymentId), "sandbox", asked, deploymentId));
+    if (route === "canary") return ok(withParentMembers(parentV2("canary", deploymentId), "canary", asked, deploymentId));
     return liveV2(deploymentId, search, asked);
   }
   if (route === "certification") return ok(sandboxV1(deploymentId));
@@ -328,6 +333,104 @@ function stageAnswer(route: StageRoute, deploymentId: string, search: URLSearchP
   }
   const body = fresh<Row>("execution-live-full-operations.unavailable.valid.json");
   return ok({ ...body, deployment: { ...((body.deployment as Row) ?? {}), deployment_id: deploymentId } });
+}
+
+/* ── the world's own figures on the V2 stage bodies (F2 D1/D5) ────────────────
+ *
+ * The canonical V2 fixtures Codex published (`execution-positive-parent`, `execution-live-source`) carry the precision-boundary values
+ * on purpose: `9007199254740993.123456789123456789` (2^53 plus a fraction), `0.000000000000000001` for a cap or a quantity, the
+ * placeholders `TEST_ONLY:BTC-USDT`, `TEST_ONLY:venue`, `TEST_ONLY:USD` and `alpha_TEST_ONLY_identity`. They are right for the contract
+ * and unit suites, which load them straight from the file, and wrong for a world a person browses: a Canary envelope capped at 9.0 quadrillion
+ * USDT, a Live position of quantity 0 with that entry price, an alpha called "alpha_TEST_ONLY_identity". The fixture world therefore
+ * serves the same BODY SHAPE with the figures of the deployment the page is about: its allocation, its Net PnL, its venue and account,
+ * its alpha and portfolio. The file on disk is untouched, so every test that reads it keeps its boundary assertion.
+ *
+ * What is derived, all in exact integer arithmetic (cents; a quantity of 0.50 is exact in the 4-place decimals below):
+ *   Canary envelope  capital cap = allocation, gross notional cap = 1.5 x allocation, daily loss cap = 1% of allocation;
+ *   Live position    quantity 0.50 LONG BTCUSDT, entry 67,000.00, mark = entry + unrealised / 0.50 (so quantity x (mark - entry) IS the
+ *                    deployment's unrealised PnL), realised PnL = the deployment's realised;
+ *   Account balance  total = allocation + realised + unrealised = `equityOf`, the figure the equity projection of the same deployment ends on.
+ * A deployment the world does not hold gets the Live room's own booking (`dep_live_01`, 40,000.00).
+ */
+const FALLBACK_BOOK = { allocation: "40000.00", realized: "980.40", unrealized: "140.40", venue: "BINANCE", accountId: "acct_binance_02", alphaId: "alpha_a", alphaName: "Carry A", portfolioName: "Core", currency: "USDT" } as const;
+
+function bookOf(deploymentId: string): { allocation: string; realized: string; unrealized: string; venue: string; accountId: string; alphaId: string; alphaName: string; portfolioName: string; currency: string } {
+  const found = resolveStageDeployment(deploymentId);
+  if (found === null) return { ...FALLBACK_BOOK };
+  const { alpha, deployment } = found;
+  return { allocation: deployment.allocation, realized: deployment.realized, unrealized: deployment.unrealized, venue: deployment.venue, accountId: deployment.accountId, alphaId: alpha.id, alphaName: alpha.label, portfolioName: deployment.portfolioName, currency: deployment.currency };
+}
+
+/** A cents amount as an exact decimal string with at most `places` fraction digits (4 = ten-thousandths), trailing zeros kept to cents. */
+function decimalOf(units: bigint, scale: bigint, places: number): string {
+  const negative = units < 0n;
+  const abs = negative ? -units : units;
+  const whole = abs / scale;
+  const fraction = String(abs % scale).padStart(places, "0").replace(/0+$/, "").padEnd(2, "0");
+  return `${negative ? "-" : ""}${whole}.${fraction}`;
+}
+
+/** The instant of a Live read: just inside the world clock (12:04Z), so no row and no stamp of the page is later than its own as-of. The canonical file says 18 Oct 00:00Z, a day AFTER the world. */
+const LIVE_OBSERVED_MS = Date.UTC(2026, 9, 17, 12, 3, 0);
+/** Row `n` of a paged panel (oldest first): one minute apart, the last one a minute before the read. */
+const liveRowMs = (n: number): number => LIVE_OBSERVED_MS - (LIVE_PAGES * LIVE_PAGE_SIZE - n) * 60_000;
+const ENTRY_CENTS = 6_700_000n;
+const QUANTITY_TENTHS = 5n; // 0.5
+
+/**
+ * The identity member the V2 body carries when asked: the deployment's own alpha id and portfolio name. The published schema CLOSES the alpha
+ * name (`alpha_name` is null with the constant reason `ALPHA_NAME_NOT_PUBLISHED`; `server.test.ts` caught it when the name was first overlaid), so
+ * the name and its reason stay as the contract publishes them and only the two values it does publish become the world's.
+ */
+function worldIdentity(identity: unknown, deploymentId: string): unknown {
+  if (!isRow(identity)) return identity;
+  const book = bookOf(deploymentId);
+  return { ...identity, alpha_id: book.alphaId, portfolio_name: book.portfolioName };
+}
+
+function worldCanary(body: Row, deploymentId: string): Row {
+  const proposal = body.proposal;
+  if (!isRow(proposal)) return body;
+  const book = bookOf(deploymentId);
+  const allocation = toCents(book.allocation);
+  return {
+    ...body,
+    proposal: { ...proposal, currency: book.currency, capital_cap: fromCents(allocation), gross_notional_cap: fromCents((allocation * 3n) / 2n), daily_loss_cap: fromCents(allocation / 100n) },
+  };
+}
+
+/** One Live `data` block: the records keep their ids, states and paging; the figures and the labels are the deployment's. */
+function worldLiveData(data: Row, deploymentId: string): Row {
+  const book = bookOf(deploymentId);
+  const unrealized = toCents(book.unrealized);
+  const markCents = ENTRY_CENTS + (unrealized * 10n) / QUANTITY_TENTHS; // quantity 0.5: mark - entry = unrealised / 0.5
+  const notionalTenThousandths = (markCents * QUANTITY_TENTHS * 100n) / 10n; // cents x tenths -> ten-thousandths of a unit
+  const labels = { venue: book.venue, account_id: book.accountId, instrument_id: "BTCUSDT" };
+  const figures: Record<string, Row> = {
+    positions: { signed_qty: "0.50", quantity: "0.50", avg_px_open: fromCents(ENTRY_CENTS), mark_price: fromCents(markCents), notional: decimalOf(notionalTenThousandths, 10_000n, 4), realized_pnl: fromCents(toCents(book.realized)), unrealized_pnl: fromCents(unrealized) },
+    sessions: { submitted_count: "412", risk_rejected_count: "0", filled_count: "389" },
+    orders: { quantity: "0.50", price: fromCents(ENTRY_CENTS) },
+    fills: { quantity: "0.50", price: fromCents(ENTRY_CENTS) },
+    account_balances: { total: fromCents(equityOf({ id: deploymentId, ...book })), locked: "0.00", currency: book.currency },
+    margin_balances: { initial: fromCents(toCents(book.allocation) / 10n), currency: book.currency },
+  };
+  const next: Row = { ...data };
+  for (const name of Object.keys(figures)) {
+    const panel = data[name];
+    if (!isRow(panel) || !Array.isArray(panel.records)) continue;
+    next[name] = {
+      ...panel,
+      records: (panel.records as Row[]).map((record) => {
+        const values = isRow(record.values) ? record.values : {};
+        const labelled: Row = { ...values };
+        for (const [key, text] of Object.entries(labels)) if (key in values) labelled[key] = text;
+        for (const [key, text] of Object.entries(figures[name]!)) if (key in values && values[key] !== null) labelled[key] = text;
+        if ("updated_at_ms" in values) labelled.updated_at_ms = LIVE_OBSERVED_MS - 60_000;
+        return { ...record, values: labelled };
+      }),
+    };
+  }
+  return next;
 }
 
 /* ── Live V2: GET /deployments/{id}/live?panel=&cursor= (keyset, 3 pages) ──── */
@@ -363,13 +466,14 @@ function livePage(base: Row, panel: (typeof LIVE_PAGED)[number], page: number): 
       values.side = n % 2 === 0 ? "BUY" : "SELL";
       values.quantity = (0.5 + (n % 7) * 0.25).toFixed(2);
       values.price = (67_000 + n * 3.5).toFixed(2);
-      values.updated_at_ms = 1_792_281_600_000 + n * 60_000;
+      values.updated_at_ms = liveRowMs(n);
+      values.created_at_ms = liveRowMs(n) - 10 * 60_000;
     } else {
       values.fill_id = `fill_TEST_ONLY_${pad(n, 4)}`;
       values.side = n % 2 === 0 ? "BUY" : "SELL";
       values.quantity = (0.5 + (n % 7) * 0.25).toFixed(2);
       values.price = (67_000 + n * 3.5).toFixed(2);
-      values.trade_time_ms = 1_792_281_600_000 + n * 60_000;
+      values.trade_time_ms = liveRowMs(n);
     }
     return { observation_id: observationId(panel, n), values };
   });
@@ -392,15 +496,15 @@ function liveV2(deploymentId: string, search: URLSearchParams, asked: ReadonlySe
     return problem(400, "LIVE_CURSOR_NEEDS_PANEL", "A continuation belongs to one panel.");
   }
   const body = (fresh<Row>("execution-live-source.synthetic.valid.json").populated ?? {}) as Row;
-  const data = { ...((body.data as Row) ?? {}) };
+  const data = worldLiveData({ ...((body.data as Row) ?? {}) }, deploymentId);
   // Every read answers all eleven panels; the orders and fills panels are paged, the requested one at its page.
   for (const name of LIVE_PAGED) {
     data[name] = livePage((data[name] as Row) ?? {}, name, requested !== null && requested.panel === name ? requested.page : 0);
   }
   const members = (fresh<Row>("execution-live-source.synthetic.valid.json").with_members ?? {}) as Row;
   return ok({
-    ...body, deployment_id: deploymentId, data,
-    ...(asked.has("identity") ? { identity: members.identity } : {}),
+    ...body, deployment_id: deploymentId, observed_at_ms: LIVE_OBSERVED_MS, data,
+    ...(asked.has("identity") ? { identity: worldIdentity(members.identity, deploymentId) } : {}),
     ...(asked.has("stage_facts") ? { stage_facts: members.stage_facts } : {}),
   });
 }
