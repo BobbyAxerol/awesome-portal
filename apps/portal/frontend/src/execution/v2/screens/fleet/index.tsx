@@ -194,6 +194,9 @@ export default function FleetScreen({ api, workspaceId, streamFlag = FLEET_STREA
   // stay in the DOM and in the tab order once opened. Above it, and where the browser cannot tell (jsdom), the bar is drawn as it always was.
   const phone = useMediaQuery(PHONE_QUERY);
   const [filtersOpen, setFiltersOpen] = useState(false);
+  // The Notes disclosure: the explanatory sentences of the page, gathered under one line (the table-side ones are portalled into this host).
+  const [notesOpen, setNotesOpen] = useState(false);
+  const [notesHost, setNotesHost] = useState<HTMLElement | null>(null);
   const hiddenDataset = useMemo(() => new Set((params.get("dhide") ?? "").split(",").map((part) => part.trim()).filter(Boolean)), [params]);
   const shownOptional = useMemo(() => parseShownOptional(params.get(OPTIONAL_SHOWN_PARAM)), [params]);
   // The partitions the loaded rows publish (kept while filtering): the Basis choices, and the partition a money order or range pins.
@@ -555,6 +558,21 @@ export default function FleetScreen({ api, workspaceId, streamFlag = FLEET_STREA
     </div>
   );
 
+  const countsNote = !archived && datasetMode ? (
+            <p className="exec-fleet-counts-src" data-testid="counts-source" title={countsRead.envelope?.sourceAsOf ? `${COUNTS_SOURCE_TITLE} Counts as of ${formatInstant(countsRead.envelope.sourceAsOf)}.` : COUNTS_SOURCE_TITLE}>
+            {phone
+              ? <>Counts: Fleet read, whole scope. Table: Manager dataset{dataset.total === null || dataset.total === undefined ? "" : `, ${dataset.total} rows`}.</>
+              : <>Counts: Fleet read, alphas in your whole scope. Table: Manager dataset, alpha versions in {scopeWords}.{dataset.total === null || dataset.total === undefined ? "" : ` ${dataset.total} rows match, one per alpha version in a portfolio. Alphas (tabs), deployments (header) and rows (table) are three units: none has to equal another.`}</>}
+            <GapWhy name="How these counts relate" next={null} rows={[
+              ...(phone ? [`Counts: Fleet read, alphas in your whole scope. Table: Manager dataset, alpha versions in ${scopeWords}.${dataset.total === null || dataset.total === undefined ? "" : ` ${dataset.total} rows match, one per alpha version in a portfolio. Alphas (tabs), deployments (header) and rows (table) are three units: none has to equal another.`}`] : []),
+              "Alphas, Deployments, Portfolios and the stage tabs are the Fleet read over your whole scope: the unit is an alpha (Deployments: running deployments).",
+              "An alpha in two stages is counted in each of its tabs, so the stage tabs do not add up to Alphas, and Real-funded (Canary + Live) is an upper bound.",
+              "The environment strip and the table are the Manager dataset: the unit is a row, one alpha version in one portfolio, so rows and alphas differ by design (one alpha in two portfolios is two rows).",
+              "Showing N of M counts rows of the table: N loaded, M over the whole filtered query. An environment the dataset does not read says Not available there, whatever the tab counts.",
+            ]} />
+          </p>
+  ) : null;
+
   return (
     <div className={compact && datasetMode ? "exec-fleet-v2 exec-fleet-compact" : "exec-fleet-v2"} data-screen="alpha-fleet-v2">
       <header className="exec-fleet-head">
@@ -629,21 +647,6 @@ export default function FleetScreen({ api, workspaceId, streamFlag = FLEET_STREA
           ))}
         </KpiStrip>
       ) : null}
-      {!archived && datasetMode ? (
-        <p className="exec-fleet-counts-src" data-testid="counts-source" title={countsRead.envelope?.sourceAsOf ? `${COUNTS_SOURCE_TITLE} Counts as of ${formatInstant(countsRead.envelope.sourceAsOf)}.` : COUNTS_SOURCE_TITLE}>
-          {phone
-            ? <>Counts: Fleet read, whole scope. Table: Manager dataset{dataset.total === null || dataset.total === undefined ? "" : `, ${dataset.total} rows`}.</>
-            : <>Counts: Fleet read, alphas in your whole scope. Table: Manager dataset, alpha versions in {scopeWords}.{dataset.total === null || dataset.total === undefined ? "" : ` ${dataset.total} rows match, one per alpha version in a portfolio. Alphas (tabs), deployments (header) and rows (table) are three units: none has to equal another.`}</>}
-          <GapWhy name="How these counts relate" next={null} rows={[
-            ...(phone ? [`Counts: Fleet read, alphas in your whole scope. Table: Manager dataset, alpha versions in ${scopeWords}.${dataset.total === null || dataset.total === undefined ? "" : ` ${dataset.total} rows match, one per alpha version in a portfolio. Alphas (tabs), deployments (header) and rows (table) are three units: none has to equal another.`}`] : []),
-            "Alphas, Deployments, Portfolios and the stage tabs are the Fleet read over your whole scope: the unit is an alpha (Deployments: running deployments).",
-            "An alpha in two stages is counted in each of its tabs, so the stage tabs do not add up to Alphas, and Real-funded (Canary + Live) is an upper bound.",
-            "The environment strip and the table are the Manager dataset: the unit is a row, one alpha version in one portfolio, so rows and alphas differ by design (one alpha in two portfolios is two rows).",
-            "Showing N of M counts rows of the table: N loaded, M over the whole filtered query. An environment the dataset does not read says Not available there, whatever the tab counts.",
-          ]} />
-        </p>
-      ) : null}
-
       <div className="exec-fleet-main" data-docked={selection !== null && mode === "dock" ? "true" : undefined}>
         <div className="exec-fleet-body">
           <div className="exec-fleet-tabs" role="tablist" aria-label="Fleet lens">
@@ -673,9 +676,8 @@ export default function FleetScreen({ api, workspaceId, streamFlag = FLEET_STREA
           </div>
 
           {(() => {
-            const controls = (
+            const search = (
               <>
-          {archived ? null : <div className="exec-fleet-tool" role="search">
             <label className="exec-fleet-field">
               <span className="exec-fleet-sr">Search alpha</span>
               <input
@@ -693,6 +695,9 @@ export default function FleetScreen({ api, workspaceId, streamFlag = FLEET_STREA
                 }}
               />
             </label>
+              </>
+            );
+            const ownerFilter = (
             <div className="exec-fleet-field">
               <OptionFilter
                 name="Owner"
@@ -706,6 +711,9 @@ export default function FleetScreen({ api, workspaceId, streamFlag = FLEET_STREA
                 onChange={(next) => setLocal("owner", next ?? "")}
               />
             </div>
+            );
+            const healthFilter = (
+              <>
             {datasetMode ? (
               <div className="exec-fleet-field">
                 <MultiPick
@@ -731,6 +739,10 @@ export default function FleetScreen({ api, workspaceId, streamFlag = FLEET_STREA
                 />
               </div>
             )}
+              </>
+            );
+            const sortGroup = (
+              <>
             <label className="exec-fleet-field">
               <span className="exec-fleet-sr">Sort</span>
               {datasetMode ? (
@@ -785,12 +797,14 @@ export default function FleetScreen({ api, workspaceId, streamFlag = FLEET_STREA
                 </select>
               </label>
             ) : null}
-            <span className="exec-fleet-grow" />
-            {datasetMode && gridless ? null : datasetMode ? <DatasetColumnsMenu showEnvironment={allMode} hidden={hiddenDataset} shownOptional={shownOptional} onToggle={setDatasetColumn} /> : <ColumnsMenu hidden={hiddenColumns} onToggle={setColumn} />}
-          </div>}
-          {archived || !datasetMode ? null : (
-            <div className="exec-fleet-tool2" role="group" aria-label="Metric filters">
+              </>
+            );
+            const columnsMenu = datasetMode && gridless ? null : datasetMode ? <DatasetColumnsMenu showEnvironment={allMode} hidden={hiddenDataset} shownOptional={shownOptional} onToggle={setDatasetColumn} /> : <ColumnsMenu hidden={hiddenColumns} onToggle={setColumn} />;
+            const portfolioFilter = archived || !datasetMode ? null : (
               <MultiPick name="Portfolio" complete={false} options={mergeSeen(seenFacets.portfolio, portfolios).map((value) => ({ value, label: value }))} selected={portfolios} onChange={(next) => setMany({ portfolio: serializeHealths(next) })} />
+            );
+            const metricFilters = archived || !datasetMode ? null : (
+            <div className="exec-fleet-tool2" role="group" aria-label="Metric filters">
               <MultiPick name="Venue" complete={false} options={mergeSeen(seenFacets.venue, venues).map((value) => ({ value, label: value }))} selected={venues} onChange={(next) => setMany({ venue: serializeHealths(next) })} />
               <MultiPick name="Source" complete={false} options={mergeSeen(seenFacets.source, sources).map((value) => ({ value, label: humanize(value) }))} selected={sources} onChange={(next) => setMany({ source: serializeHealths(next) })} />
               <div className="exec-fleet-field">
@@ -822,8 +836,8 @@ export default function FleetScreen({ api, workspaceId, streamFlag = FLEET_STREA
               {gridless ? null : <EquityScalarSelect value={equityScalar} onChange={(next) => setMany({ eq: next === "value" ? null : next })} />}
               {gridless ? null : <DensityToggle compact={compact} onChange={(next) => setMany({ density: next ? "compact" : null })} />}
             </div>
-          )}
-          {archived || !datasetMode || gridless ? null : (
+            );
+            const sortbar = archived || !datasetMode || gridless ? null : (
             <div className="exec-fleet-sortbar" data-testid="sortbar">
               {sorts.length === 0
                 ? <span>Server order. Click a column header to sort; again to reverse; again to remove. Up to three keys, in the order you click them.</span>
@@ -842,29 +856,74 @@ export default function FleetScreen({ api, workspaceId, streamFlag = FLEET_STREA
               <span id={exportReasonId} className="exec-fleet-note">Export reflects the filter, snapshot, fields, basis and as-of, and is reauthorized when made: Not published (export action).</span>
               <span id={selectionReasonId} className="exec-fleet-note">Comparing 2 to 4 alphas is not available: {notPublished(FE.compare)}.</span>
             </div>
-          )}
-              </>
             );
-            if (!phone || archived) return controls;
+            if (archived) return null;
+            const toggle = (
+              <button type="button" className="exec-fleet-btn exec-fleet-filters-toggle" aria-expanded={filtersOpen} aria-controls={`${searchId}-filters`} onClick={() => setFiltersOpen((open) => !open)} data-testid="filters-toggle">
+                Filters and options{chips.length > 0 ? ` · ${chips.length} active` : ""}
+                <span aria-hidden="true">{filtersOpen ? " \u25b4" : " \u25be"}</span>
+              </button>
+            );
+            // The options behind the disclosure: every control the bar used to spread over three rows. They stay in the DOM (hidden, so out of the tab order
+            // while closed) and reachable by keyboard once the toggle opens them; the applied ones stay visible as chips under the bar.
+            const options = (
+              <div id={`${searchId}-filters`} className="exec-fleet-filters" data-testid="filters-panel" hidden={!filtersOpen}>
+                {phone ? <div className="exec-fleet-tool" role="search">{search}{healthFilter}{portfolioFilter}{columnsMenu}</div> : null}
+                <div className="exec-fleet-tool">{ownerFilter}{sortGroup}</div>
+                {metricFilters}
+                {sortbar}
+              </div>
+            );
             return (
               <>
-                <button type="button" className="exec-fleet-btn exec-fleet-filters-toggle" aria-expanded={filtersOpen} aria-controls={`${searchId}-filters`} onClick={() => setFiltersOpen((open) => !open)} data-testid="filters-toggle">
-                  Filters{chips.length > 0 ? ` · ${chips.length} active` : ""}
-                  <span aria-hidden="true">{filtersOpen ? " \u25b4" : " \u25be"}</span>
-                </button>
-                <div id={`${searchId}-filters`} className="exec-fleet-filters" hidden={!filtersOpen}>{controls}</div>
+                {phone ? (
+                  <>{toggle}{options}</>
+                ) : (
+                  <>
+                    <div className="exec-fleet-tool exec-fleet-tool-main" role="search">
+                      {search}{healthFilter}{portfolioFilter}
+                      <span className="exec-fleet-grow" />
+                      {columnsMenu}
+                      {toggle}
+                    </div>
+                    {options}
+                  </>
+                )}
               </>
             );
           })()}
           {archived ? null : <FilterChips chips={chips} onClearAll={clearFilters} urlText={urlText} onFocusFallback={focusSearch} />}
           {/* Tied to every disabled control by aria-describedby: the visible words are the names, the ids are in the title and the hidden text. The Archived lens has no list to filter, so its panel says the one thing and this line is for assistive tech only. */}
-          <p id={reasonId} className={archived ? "exec-fleet-sr" : "exec-fleet-unpub"}>
-            Not available: {unpublishedList.map((fact) => fact.what).join(", ")}
-            <span className="exec-fleet-sr"> ({unpublishedList.map((fact) => `${fact.what}`).join(", ")})</span>
-            {archived ? null : <GapWhy name="Why these are not available" rows={unpublishedList.map((fact) => notPublished(fact))} />}
-          </p>
-          {datasetNote ? <p className="exec-fleet-sr" data-testid="dataset-note">{datasetNote}</p> : null}
-          {limitNote ? <p className="exec-fleet-note exec-fleet-limit" data-testid="options-limit">{limitNote}</p> : null}
+          {archived ? (
+            <p id={reasonId} className="exec-fleet-sr">
+              Not available: {unpublishedList.map((fact) => fact.what).join(", ")}
+              <span className="exec-fleet-sr"> ({unpublishedList.map((fact) => `${fact.what}`).join(", ")})</span>
+            </p>
+          ) : (
+            <>
+              {/* One line above the table: what the domain chips spell, the counts in a few words, and the button that opens every explanatory sentence below, word for word. */}
+              <div className="exec-fleet-notesline" data-testid="notes-line">
+                {datasetMode && tableView ? (
+                  <span className="exec-fleet-legend-line" data-testid="domain-legend">Domain: <b>REAL</b> Real-funded · <b>PAPER</b> Paper · <b>SIM</b> Sandbox. Never added across domains.</span>
+                ) : null}
+                {datasetMode && !phone ? <span>Counts: Fleet read, whole scope. Table: Manager dataset{dataset.total === null || dataset.total === undefined ? "" : `, ${dataset.total} rows`}.</span> : null}
+                <button type="button" className="exec-fleet-link" aria-expanded={notesOpen} aria-controls={`${searchId}-notes`} onClick={() => setNotesOpen((open) => !open)} data-testid="notes-toggle">
+                  Notes<span aria-hidden="true">{notesOpen ? " \u25b4" : " \u25be"}</span>
+                </button>
+              </div>
+              <div id={`${searchId}-notes`} className="exec-fleet-notes" data-testid="notes-panel" hidden={!notesOpen} ref={setNotesHost}>
+                {countsNote}
+                <p id={reasonId} className="exec-fleet-unpub">
+                  Not available: {unpublishedList.map((fact) => fact.what).join(", ")}
+                  <span className="exec-fleet-sr"> ({unpublishedList.map((fact) => `${fact.what}`).join(", ")})</span>
+                  <GapWhy name="Why these are not available" rows={unpublishedList.map((fact) => notPublished(fact))} />
+                </p>
+                {datasetNote ? <p className="exec-fleet-sr" data-testid="dataset-note">{datasetNote}</p> : null}
+                {limitNote ? <p className="exec-fleet-note exec-fleet-limit" data-testid="options-limit">{limitNote}</p> : null}
+              </div>
+            </>
+          )}
+          {archived && datasetNote ? <p className="exec-fleet-sr" data-testid="dataset-note">{datasetNote}</p> : null}
 
           <div role="tabpanel" id={`${searchId}-panel`} aria-labelledby={`${searchId}-tab-${lens ?? "all"}`} className="exec-fleet-panel">
             {archived ? (
