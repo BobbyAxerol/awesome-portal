@@ -812,7 +812,7 @@ export default function FleetScreen({ api, workspaceId, streamFlag = FLEET_STREA
                   </>
                 )}
               {basis === null && seenBasis.length > 0
-                ? <span className="exec-fleet-note" data-testid="money-sort-hint">Alloc, PNL, Unrealized, Balance and Equity 30D sort inside one economic partition: choose a Basis to enable their headers.</span>
+                ? <span className="exec-fleet-note" data-testid="money-sort-hint">Alloc, PNL and Equity 30D (and Unrealized and Balance when shown) sort inside one economic partition: choose a Basis to enable their headers.</span>
                 : null}
               {askable.unaskable.map(({ key, why }) => <span key={key.field} className="exec-fleet-np">{sortLabel(key.field)} is not applied: {why}</span>)}
               <button type="button" className="exec-fleet-btn" disabled aria-describedby={selectionReasonId}>Compare selected</button>
@@ -910,7 +910,7 @@ export default function FleetScreen({ api, workspaceId, streamFlag = FLEET_STREA
                     )
                   ) : (
                     <>
-                    <p className="exec-fleet-scrollhint" data-testid="scroll-hint">Health, Source and more columns sit to the right: scroll the table sideways (the Alpha column stays).</p>
+                    <p className="exec-fleet-scrollhint" data-testid="scroll-hint">More columns sit to the right: scroll the table sideways (the Alpha column stays).</p>
                     <FleetDatasetTable
                       rows={datasetRows}
                       groupFields={datasetFilters === null ? [] : [datasetFilters.group, datasetFilters.then ?? null].filter((field): field is NonNullable<typeof field> => field !== null)}

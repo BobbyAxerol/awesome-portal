@@ -25,7 +25,7 @@ export interface DoubleAlpha {
   venue?: string | null;
   sourceState?: string | null;
   /** ALL reads only: the money this alpha holds in ITS environment, one partition (USDT in every environment: the trap a sum would fall into). */
-  money?: { allocation?: string | null; netPnl?: string | null; unrealized?: string | null; balance?: string | null; equity?: string | null; returnPct?: string | null; currency?: string };
+  money?: { allocation?: string | null; netPnl?: string | null; unrealized?: string | null; balance?: string | null; equity?: string | null; returnPct?: string | null; drawdownPct?: string | null; winRatePct?: string | null; currency?: string };
   /** `rich` reads only: the QBTS as published (value, the band code, evidence word, components). `value: null` is a typed absence (reason). */
   qbts?: { value: string | null; band?: string; evidence?: "eligible" | "provisional" | "insufficient"; p?: string; r?: string; b?: string; reason?: string; noEvidence?: boolean };
 }
@@ -174,6 +174,9 @@ function rowOf(template: Draft, c: Computed, environment: string, rich = false):
       put("balance_total", money.balance);
       put("equity_30d_end_value", money.equity);
       if (money.returnPct !== undefined && money.returnPct !== null) metrics.return_30d_pct = moneyMetric({ value: money.returnPct, unit: "PERCENT", currency: null });
+      // The open partition keys of the Fleet's MDD and Winrate columns (not in `query_options.metric_keys`); absent here = the row publishes none.
+      if (money.drawdownPct !== undefined && money.drawdownPct !== null) metrics.max_drawdown_pct = moneyMetric({ value: money.drawdownPct, unit: "PERCENT", currency: null });
+      if (money.winRatePct !== undefined && money.winRatePct !== null) metrics.win_rate_pct = moneyMetric({ value: money.winRatePct, unit: "PERCENT", currency: null });
       const q = a.qbts;
       if (q !== undefined) {
         const plain = (value: string | null, unit: string, extra: Draft = {}) => (value === null

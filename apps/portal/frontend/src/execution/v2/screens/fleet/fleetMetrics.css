@@ -135,9 +135,12 @@
 .exec-fleet-card-figures .exec-fleet-part { flex-wrap: wrap; justify-content: flex-start; gap: 0 var(--space-2); }
 .exec-fleet-card-fig, .exec-fleet-card-figures .exec-fleet-parts { min-width: 0; max-width: 100%; }
 
-/* A table wider than the screen says so (QA2: hidden columns at 1024). */
+/* A table wider than the screen says so (QA2: hidden columns at 1024). The default columns fit from 1440 up (UXM-07 UI adjustment, WP-1), so the
+ * hint shows only when the table really is wider than its column (a narrower window, or optional columns switched on). */
 .exec-fleet-scrollhint { margin: 0; font: var(--exec-font-meta); color: var(--ink-faint); }
-@media (min-width: 1900px) { .exec-fleet-scrollhint { display: none; } }
+/* Shown only while the wrap really overflows (useKeyboardScroll sets data-more on it): the default columns fit 1440, optional columns may not. */
+.exec-fleet-scrollhint { display: none; }
+.exec-fleet-scrollhint:has(~ .exec-cards-wrap[data-more]) { display: block; }
 .exec-fleet-lane-tag { white-space: nowrap; }
 .exec-fleet-board .exec-fleet-lane { min-width: 240px; }
 .exec-fleet-dataset .exec-fleet-portfolio-line .exec-fleet-trunc { max-width: 22ch; }
@@ -148,3 +151,28 @@
 .exec-fleet-dataset thead th:first-child { z-index: 4; }
 /* A tag never breaks inside its word ("Real-/funded"). */
 .exec-fleet-card .exec-fleet-env-tag, .exec-fleet-card .exec-fleet-lane-tag, .exec-fleet-card .exec-fleet-version, .exec-fleet-lane-tag { white-space: nowrap; hyphens: none; }
+
+/* WP-1: the default column set fits 1440 with no sideways scroll (11 columns in the 1180px beside the sidebar). Where a cell had room to spare in
+ * height (the rows are two lines tall anyway) it gives width instead: QBTS puts its band under the score, a health flag breaks between words,
+ * and the head is tracked a little tighter. Tokens only. */
+.exec-fleet-dataset thead th { letter-spacing: 0.04em; }
+/* Figures sit against the right edge of their column: the left gutter of a numeric column is the narrower one (4px beside 6px). */
+.exec-fleet-dataset thead th[data-numeric="true"],
+.exec-fleet-dataset tbody td[data-numeric="true"] { padding-left: var(--space-1); }
+/* QBTS: the score and its details mark on the first line, the band (and a provisional flag) under it. */
+.exec-fleet-dataset .exec-fleet-qbts { flex-wrap: wrap; max-width: 84px; row-gap: 2px; }
+/* Cell gutters: 6px (a token step between space-1 and space-2) instead of 8, eleven columns x two sides. */
+.exec-fleet-dataset thead th,
+.exec-fleet-dataset tbody td { padding-inline: calc(var(--space-2) - var(--space-1) / 2); }
+/* "No single stage" and "Not published" may break between words: a typed absence is read, not scanned, and the row is two lines tall anyway. */
+.exec-fleet-dataset .exec-fleet-stagecell .exec-fleet-none,
+.exec-fleet-dataset .exec-fleet-stagecell .exec-fleet-also,
+.exec-fleet-dataset .exec-fleet-np { white-space: normal; }
+.exec-fleet-dataset .exec-fleet-qbts[data-state="value"] > .exec-blk-why { order: 1; }
+.exec-fleet-dataset .exec-fleet-qbts[data-state="value"] > .exec-flag,
+.exec-fleet-dataset .exec-fleet-qbts[data-state="value"] > .exec-fleet-np { order: 2; }
+/* A health flag may break between words ("NEEDS / ATTENTION"), never inside one. */
+.exec-fleet-dataset .exec-fleet-healthcell .exec-flag { white-space: normal; overflow-wrap: normal; }
+@media (max-width: 660px) {
+  .exec-fleet-dataset .exec-fleet-qbts { max-width: none; flex-wrap: nowrap; }
+}

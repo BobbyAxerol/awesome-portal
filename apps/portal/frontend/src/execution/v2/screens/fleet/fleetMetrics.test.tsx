@@ -29,7 +29,7 @@ const OPEN: DeliveryPolicy = {
 const alpha = (id: string, extra: Partial<DoubleAlpha>): DoubleAlpha => ({ id, name: `Alpha ${id}`, owner: "Lan-002", health: "READY", stages: ["PAPER"], portfolio: "pf-1", venue: "BINANCE", ...extra });
 // Four QBTS states on purpose: published and eligible, provisional, insufficient evidence (a typed absence), a true zero. One has no band.
 const POPULATION: DoubleAlpha[] = [
-  alpha("a-1", { money: { allocation: "1000", netPnl: "11.5", unrealized: "-2.25", balance: "1011.5", equity: "1009.25", returnPct: "1.15", currency: "USDT" },
+  alpha("a-1", { money: { allocation: "1000", netPnl: "11.5", unrealized: "-2.25", balance: "1011.5", equity: "1009.25", returnPct: "1.15", drawdownPct: "-3.4", winRatePct: "58.25", currency: "USDT" },
     qbts: { value: "83.2", band: "good", evidence: "eligible", p: "90", r: "80", b: "70" } }),
   alpha("a-2", { portfolio: "pf-2", money: { allocation: "500", netPnl: "-3", unrealized: "0", balance: "497", equity: "497", returnPct: "-0.6" },
     qbts: { value: "66.5", band: "fair", evidence: "provisional", p: "70", r: "60", b: "65" } }),
@@ -113,11 +113,11 @@ describe("QA3 R2-04 · no ticket ids in the rendered words of any Fleet view", (
 });
 
 describe("guide 8.1 · the columns", () => {
-  it("the default set is the guide 8.1 set with QBTS, Alloc and PNL early; Owner and Source are lines of their cells until their own columns are switched on", async () => {
+  it("the default set is the guide 8.1 set with QBTS, Alloc, PNL, MDD and Winrate early (Unrealized PNL and Account balance are optional now); Owner and Source are lines of their cells until their own columns are switched on", async () => {
     const { api } = harness();
     mount(api, "/execution/fleet?stage=paper", false);
     await loaded();
-    expect(headers()).toEqual(["Alpha", "Portfolio", "Current stage", "In stage", "QBTS", "Alloc", "PNL Amount", "Unrealized PNL", "Account balance", "Equity 30D", "Health"]);
+    expect(headers()).toEqual(["Alpha", "Portfolio", "Current stage", "In stage", "QBTS", "Alloc", "PNL Amount", "MDD", "Winrate", "Equity 30D", "Health"]);
     const a1 = rowOf("a-1");
     // Owner / Portfolio and Health / Source are one cell each: the owner is the second line, the source state the second line
     expect(a1.querySelector("td[data-l='Portfolio'] .exec-fleet-owner-line")?.textContent).toBeTruthy();
@@ -134,7 +134,7 @@ describe("guide 8.1 · the columns", () => {
     mount(api);
     await loaded();
     expect(headers().filter((h) => h !== "Select")).toEqual([
-      "Alpha", "Owner", "Portfolio", "Current stage", "In stage", "QBTS", "Alloc", "PNL Amount", "Unrealized PNL", "Account balance", "Equity 30D", "Health", "Source",
+      "Alpha", "Owner", "Portfolio", "Current stage", "In stage", "QBTS", "Alloc", "PNL Amount", "MDD", "Winrate", "Equity 30D", "Health", "Source", "Unrealized PNL", "Account balance",
     ]);
     const a1 = rowOf("a-1");
     expect(cell(a1, "Alloc")).toContain("Paper · USDT");
@@ -143,6 +143,15 @@ describe("guide 8.1 · the columns", () => {
     expect(cell(a1, "Unrealized PNL")).toContain("-2.25");
     expect(cell(a1, "Account balance")).toContain("1,011.50");
     expect(cell(a1, "Equity 30D")).toContain("1,009.25");
+    // MDD keeps the MetricValue percent (2 places); Winrate is a percent of closed trades with ONE decimal and a % sign, the exact string on its title
+    expect(cell(a1, "MDD")).toContain("-3.40%");
+    expect(cell(a1, "Winrate")).toContain("58.3%");
+    expect(rowOf("a-1").querySelector("td[data-l='Winrate'] .exec-mgr-num")?.getAttribute("title")).toContain("58.25");
+    // a row that publishes neither says so (the typed absence), never 0 and never a dash
+    for (const label of ["MDD", "Winrate"]) {
+      expect(cell(rowOf("a-2"), label), label).toContain("Not available");
+      expect(cell(rowOf("a-2"), label), label).not.toMatch(/\d%/);
+    }
   });
 
   it("QBTS is read as published: value, band, provisional flag, typed absence, true zero; no band is ever computed here", async () => {
@@ -190,7 +199,7 @@ describe("guide 8.1 · the columns", () => {
     expect(rowOf("m-1").querySelector(".exec-fleet-badge")).toBeNull();
   });
 
-  it("optional columns live in the Columns menu: venue, lifecycle, version, economic domain, drawdown, score coverage; the rest are not controls", async () => {
+  it("optional columns live in the Columns menu: unrealized PNL, account balance, venue, lifecycle, version, economic domain, score coverage; the rest are not controls", async () => {
     const { api } = harness();
     mount(api, "/execution/fleet?stage=paper", false);
     await loaded();
@@ -199,8 +208,8 @@ describe("guide 8.1 · the columns", () => {
     const menu = screen.getByRole("group", { name: "Columns" });
     const labels = within(menu).getAllByRole("checkbox").map((box) => (box as HTMLInputElement).labels?.[0]?.textContent?.replace(" optional", ""));
     expect(labels).toEqual([
-      "Owner", "Portfolio", "Current stage", "In stage", "QBTS", "Alloc", "PNL Amount", "Unrealized PNL", "Account balance", "Equity 30D", "Health", "Source",
-      "Select", "Venue", "Lifecycle", "Version", "Economic domain", "Drawdown", "Score coverage",
+      "Owner", "Portfolio", "Current stage", "In stage", "QBTS", "Alloc", "PNL Amount", "MDD", "Winrate", "Equity 30D", "Health", "Source",
+      "Select", "Unrealized PNL", "Account balance", "Venue", "Lifecycle", "Version", "Economic domain", "Score coverage",
     ]);
     expect(menu.textContent).not.toMatch(/Deployer|Regime|Last trade|funding completeness/);
     fireEvent.click(within(menu).getByRole("checkbox", { name: /Venue/ }));

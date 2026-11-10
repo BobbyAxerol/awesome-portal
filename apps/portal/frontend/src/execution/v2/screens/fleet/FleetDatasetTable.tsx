@@ -2,9 +2,9 @@
  * Fleet rows read from the Manager DATASET (guide M03 section 8.1), on the shared CardsTable.
  *
  * One row is an alpha version in a portfolio (in one environment, when the read is ALL). The columns are the guide's: Alpha / Version,
- * Owner / Portfolio (a badge with the deployments when there are several), Stage Presence, Alloc, PNL Amount, Unrealized PNL, Account balance,
- * Equity 30D (a scalar the reader chooses, and a sparkline from the series port), Health / Source State, QBTS; the optional ones live in the
- * Columns menu. A money column is the row's `economic_partitions`, one cell per partition, never summed or merged across currencies or economic
+ * Owner / Portfolio (a badge with the deployments when there are several), Stage Presence, Alloc, PNL Amount, MDD, Winrate,
+ * Equity 30D (a scalar the reader chooses, and a sparkline from the series port), Health / Source State, QBTS; the optional ones (Unrealized PNL,
+ * Account balance, Owner, Source, Venue ...) live in the Columns menu. A money column is the row's `economic_partitions`, one cell per partition, never summed or merged across currencies or economic
  * domains (`PartitionFigures`). QBTS is read as published: value, band, evidence, provisional, policy; the client computes none of them.
  * Every absence is a statement: no owner is "Not available"; no single stage names why; days in stage is `Not published (FE-027)`, never a dash
  * and never 0. Sorting is the server's: a header is a sort control only for a field the dataset offers (money fields: with a basis pinned).
@@ -17,7 +17,8 @@ import { GapWhy, JourneySpine, NaWhy } from "../../blocks";
 import { Spark } from "../../charts";
 import { Flag } from "../../Flag";
 import type { ManagerGroup, ManagerGroupField, ManagerRow, ManagerSortField } from "../../readers/managerDataset";
-import { MetricValue } from "../manager/MetricValue";
+import type { ManagerMetricRead } from "../../readers/managerMetric";
+import { MetricValue, metricTitle } from "../manager/MetricValue";
 import { FE, healthView, humanize, type UnpublishedFact } from "./fleetModel";
 import { ENVIRONMENT_LABEL, findGroup, groupEntries, groupLabel, inStageOf, lifecycleFlagOf, sourceFlagOf, stageViewOf, type GroupedEntry } from "./fleetDatasetModel";
 import {
@@ -160,6 +161,11 @@ export function FleetDatasetTable({
   const money = (key: string, gap: UnpublishedFact, signed = false, keys: readonly string[] | null = metricKeys) =>
     (row: ManagerRow) => <PartitionFigures partitions={row.economicPartitions} metricKey={key} metricKeys={keys} gap={gap} signed={signed} />;
 
+  /** A win rate is a fraction of closed trades that won: one decimal and a % sign, rounded for display only (the exact string stays on the title). */
+  const winRate = (metric: ManagerMetricRead | null) => metric !== null && metric.kind === "value" && metric.unit === "PERCENT"
+    ? <span className="exec-mgr-num" title={`${metric.exact} · ${metricTitle(metric)}`} data-zero={metric.zero ? "true" : undefined}>{fixedDecimals(metric.exact, 1)}%</span>
+    : <MetricValue metric={metric} />;
+
   const render: Readonly<Record<string, CardsColumn<ManagerRow>["render"]>> = {
     alpha: (row) => (
       <span className="exec-fleet-alpha">
@@ -223,7 +229,10 @@ export function FleetDatasetTable({
         ))}
       </span>
     )),
-    drawdown: money("max_drawdown_pct", { fe: "FE-013", what: "Drawdown" }, false, null),
+    // MDD and Winrate are partition-open metrics (`economic_partitions[].metrics`), not in `query_options.metric_keys`: the key list is not consulted
+    // (`null`), so an absent value keeps its own typed reason through MetricValue and is never printed as 0.
+    drawdown: money("max_drawdown_pct", { fe: "FE-013", what: "MDD" }, false, null),
+    winrate: (row) => <PartitionFigures partitions={row.economicPartitions} metricKey="win_rate_pct" metricKeys={null} gap={{ fe: "FE-013", what: "Winrate" }} cell={winRate} />,
     coverage: (row) => {
       const view = qbtsOf(row);
       if (view === null) return <NaWhy className="exec-fleet-np" text={"Not published"} reason="No score on this row, so no coverage." />;

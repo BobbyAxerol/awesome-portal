@@ -65,12 +65,13 @@ export const DATASET_COLUMNS: readonly DatasetColumnSpec[] = [
   { key: "portfolio", label: "Portfolio", guide: "Owner / Portfolio", optional: false, sortField: "portfolio_id" },
   { key: "stage", label: "Current stage", guide: "Stage Presence", optional: false, sortField: "current_stage" },
   { key: "in-stage", label: "In stage", guide: "Stage Presence", optional: false, sortField: null },
-  // QBTS, Alloc and PNL come early (guide 8.1 reading order for a manager); the rest of the money scrolls in behind the pinned identity.
+  // QBTS, Alloc and PNL come early (guide 8.1 reading order for a manager), then the two risk figures a manager scans next to them: MDD
+  // (the partition metric `max_drawdown_pct`) and Winrate (`win_rate_pct`). Neither is a published sort field (the open partition map).
   { key: "qbts", label: "QBTS", guide: "QBTS", optional: false, sortField: "score", numeric: true },
   { key: "allocation", label: "Alloc", guide: "Alloc", optional: false, sortField: "allocation", numeric: true },
   { key: "pnl", label: "PNL Amount", guide: "PNL Amount", optional: false, sortField: "net_pnl", numeric: true },
-  { key: "unrealized", label: "Unrealized PNL", guide: "Unrealized PNL", optional: false, sortField: "unrealized_pnl", numeric: true },
-  { key: "balance", label: "Account balance", guide: "Account Balance", optional: false, sortField: "balance_total", numeric: true },
+  { key: "drawdown", label: "MDD", guide: "Max drawdown (UXM-07 UI adjustment, WP-1)", optional: false, sortField: null, numeric: true },
+  { key: "winrate", label: "Winrate", guide: "Win rate (UXM-07 UI adjustment, WP-1)", optional: false, sortField: null, numeric: true },
   { key: "equity", label: "Equity 30D", guide: "Equity 30D", optional: false, sortField: "equity_30d_end_value", numeric: true },
   { key: "health", label: "Health", guide: "Health / Source State", optional: false, sortField: "health" },
   // Source is a line of the Health cell while its own column is off.
@@ -79,19 +80,23 @@ export const DATASET_COLUMNS: readonly DatasetColumnSpec[] = [
   // ALL reads only: the environment is always stated in the Alpha cell; this column repeats it on its own when switched on.
   { key: "environment", label: "Environment", guide: "FE-CAT-3 environment label", optional: true, sortField: null },
   { key: "select", label: "Select", guide: "8.3 bulk selection (explicit capability only)", optional: true, sortField: null },
+  // Balance and Unrealized left the default set (UXM-07 UI adjustment, WP-1: the default columns fit 1440); the data path is unchanged and they
+  // are one click away in the Columns menu.
+  { key: "unrealized", label: "Unrealized PNL", guide: "Unrealized PNL", optional: true, sortField: "unrealized_pnl", numeric: true },
+  { key: "balance", label: "Account balance", guide: "Account Balance", optional: true, sortField: "balance_total", numeric: true },
   // Optional (guide 8.1 "additional optional columns"): only those the dataset can carry. The others are recorded, not drawn.
   { key: "venue", label: "Venue", guide: "8.1 optional: venue / profile", optional: true, sortField: "venue" },
   { key: "lifecycle", label: "Lifecycle", guide: "8.1 optional: archive monitor state", optional: true, sortField: "lifecycle" },
   { key: "version", label: "Version", guide: "8.1 optional: version", optional: true, sortField: "alpha_version_id" },
   { key: "domain", label: "Economic domain", guide: "8.1 optional: economic domain", optional: true, sortField: null },
-  { key: "drawdown", label: "Drawdown", guide: "8.1 optional: current drawdown", optional: true, sortField: null },
   { key: "coverage", label: "Score coverage", guide: "8.1 optional: score coverage", optional: true, sortField: null },
 ];
 
 /**
- * The default set is the guide 8.1 set (QA1 R2-03): Alpha, Portfolio (+ owner), Current stage, In stage, QBTS, Alloc, PNL Amount, Unrealized PNL,
- * Account balance, Equity 30D, Health (+ source). It is wider than 1440, so the identity column is pinned and the table says it scrolls
- * (the `Scroll for more` affordance). Owner and Source are lines of the Portfolio and Health cells until their own column is switched on.
+ * The default set is the guide 8.1 set as adjusted by Bobby's review of 10 Nov 2026 (UXM-07 UI adjustment plan, WP-1): Alpha, Portfolio (+ owner),
+ * Current stage, In stage, QBTS, Alloc, PNL Amount, MDD, Winrate, Equity 30D, Health (+ source). It fits 1440 with no sideways scroll; the pinned
+ * identity column and the `Scroll for more` affordance remain for narrower screens and for the optional columns. Unrealized PNL and Account
+ * balance are optional now (Columns menu). Owner and Source are lines of the Portfolio and Health cells until their own column is switched on.
  */
 export const OPTIONAL_SHOWN_PARAM = "cols";
 export function parseShownOptional(raw: string | null): ReadonlySet<string> {

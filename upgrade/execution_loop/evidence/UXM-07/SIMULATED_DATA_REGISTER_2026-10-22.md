@@ -64,6 +64,7 @@ Rule: guide M03 8.1 and score spec 5.8. A score is per alpha version, so it is a
 | partition (open) | qbts_band | BAND_ORDINAL | ordinal of the policy band of the UNROUNDED q (`quality_bands_v1_1`: weak below 40, neutral below 60, fair below 75, good below 90, very_good); the band code is the metric's `reason_code` | QBTS band flag | `band_code`, `band_policy_version` |
 | partition (open) | qbts_evidence | EVIDENCE_STATE | 2 eligible, 1 provisional, 0 insufficient; the word is the `reason_code` | QBTS provisional / coverage | evidence maturity state |
 | partition (open) | qbts_provisional | FLAG | 1 when provisional | QBTS flag | provisional marker |
+| partition (open), row | win_rate_pct | PERCENT | 10 Nov 2026 (UI adjustment WP-1): winning closed trades over closed trades, 1 place, deterministic from the row key (`seedOf("win-rate", row_key)`), 35.0 to 74.9; a typed absence where the partition publishes no allocation (no book, no closed trades); not windowed (no `window`), not carried by groups; never 0 for a missing value | Alpha Fleet Winrate column (`screens/fleet`, `FleetDatasetTable`) | closed-trade ledger: winners / closed trades per partition |
 | row | balance_total | MONEY | basis `FIXTURE_LAB:INTERNAL_ACCOUNT_BALANCE` (was `synthetic-book`); still allocation + net PnL inside the partition | Fleet Account balance | internal account balance projection |
 
 ## 2d. WP-E (Approvals, New request, Profile & Access, Admin Actions, Users), 23 October 2026
@@ -113,6 +114,7 @@ From the subagent reports of 2026-10-22; each is a field to ask Codex for, with 
 | Users | Role preset, last sign-in | `AccountSummary.role_preset`, `.last_sign_in_at_ms` | Reviewer; 17 Oct 09:14Z |
 | Access | per-action eligibility (archive, operations, export, own admin rights) | eligibility vocabulary actions | request ALLOWED, approve UNAVAILABLE NO_CURRENT_PERMISSION |
 | Alpha 360 | Max drawdown tile; Cost drag (fees, funding, slippage); Forward days | partition-level keys `max_drawdown_pct`, `cost_drag_fees`, `cost_drag_funding`, `cost_drag_slippage` (MONEY), `forward_observation_days` (unit DAYS) in `economic_partitions[].metrics` of each ALPHA row; wired in `alpha/DatasetFigures.tsx` (`RowFigure`), `Not published` stays when absent | drawdown -7.35%; fees 40.00 USDT; 14 days |
+| Fleet | MDD and Winrate columns (default set; Unrealized PNL and Account balance moved to the Columns menu) | partition-level keys `max_drawdown_pct` (existing) and `win_rate_pct` (new, PERCENT) in `economic_partitions[].metrics` of each row; open keys, no contract change; Winrate prints 1 decimal + %, `Not published` when absent | MDD -2.43%; Winrate 63.9% |
 | Fleet | Equity 30D series per alpha | `getManagerSeries` subject ALPHA | 30 NAV points |
 | Fleet | Allocation domain | question BQ-FLEET-ALLOC to Codex | domain of `allocations[]` |
 

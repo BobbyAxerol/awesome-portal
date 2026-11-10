@@ -247,6 +247,8 @@ const seedOf = (...parts: unknown[]): number => parseInt(digest(parts).slice(7, 
 /** A deterministic negative percent between -2.00 and -19.99. */
 // WORLD: a book that is up has a shallow drawdown (0.5 to 3 percent); the legacy lane keeps its 2 to 20 percent
 const drawdownOf = (...parts: unknown[]): string => trimmed(legacy() ? -(200n + BigInt(seedOf(...parts) % 1800)) : -(50n + BigInt(seedOf(...parts) % 250)), 2);
+/** SIMULATED win rate: wins over closed trades as a percent with 1 place, deterministic from the row key, 35.0 to 74.9 (never 0 for a published value). */
+const winRateOf = (...parts: unknown[]): string => trimmed(350n + BigInt(seedOf("win-rate", ...parts) % 400), 1);
 const plainMetric = (template: Draft, value: string | null, unit: string): Draft => {
   const out = metric(template, value, "X");
   out.currency = null;
@@ -256,7 +258,7 @@ const plainMetric = (template: Draft, value: string | null, unit: string): Draft
 const pctMetric = (template: Draft, value: string | null): Draft => plainMetric(template, value, "PERCENT");
 /** A present metric becomes a typed absence in its own unit. */
 const nulled = (key: string, template: Draft, currency: string): Draft =>
-  (key === "return_30d_pct" || key === "max_drawdown_pct") ? pctMetric(template, null)
+  (key === "return_30d_pct" || key === "max_drawdown_pct" || key === "win_rate_pct") ? pctMetric(template, null)
     : (key === "score" || key.startsWith("qbts_")) ? qbtsMetric(template, null, "SCORE", "INSUFFICIENT_EVIDENCE") : metric(template, null, currency);
 
 const NEW_ROW_KEYS = ["balance_total", "equity_30d_end_value", "return_30d_pct", "score"] as const;
@@ -355,6 +357,8 @@ function enrichRow(row: Draft, preset: WindowPreset, components = true): Draft {
     const cost = (bp: bigint): string | null => A === null ? null : trimmed(toScaled(A) * bp * BigInt(preset.days) / (10_000n * 30n), SCALE);
     const worldCost = (kind: "fees" | "funding" | "slippage", fallback: string | null): string | null => (legacy() ? fallback : c3RowCost(row, kind, preset.days) ?? fallback); // WP-B2-C3: one fee model
     m.max_drawdown_pct = pctMetric(template, A === null ? null : N !== null && toScaled(N) === 0n ? "0" : drawdownOf(row.row_key, "row"));
+    // SIMULATED win rate: a typed absence where the allocation is unpublished (no book, no closed trades), else 35.0 to 74.9, not windowed.
+    m.win_rate_pct = pctMetric(template, A === null ? null : winRateOf(row.row_key));
     m.cost_drag_fees = metric(template, worldCost("fees", cost(5n)), entry.partition.currency);
     m.cost_drag_funding = metric(template, worldCost("funding", cost(2n)), entry.partition.currency);
     m.cost_drag_slippage = metric(template, legacy() && seedOf(row.row_key, "slippage") % 4 === 0 ? null : worldCost("slippage", cost(1n)), entry.partition.currency);
@@ -378,7 +382,7 @@ function aggregate(rows: Draft[]): Draft[] {
     if (!found) { byPartition.set(key, { item: copy(item), members: [item.metrics] }); continue; }
     found.members.push(item.metrics);
     for (const name of Object.keys(item.metrics)) {
-      if (name === "return_30d_pct" || name === "max_drawdown_pct" || name === "forward_observation_days" || name === "score" || name.startsWith("qbts_")) continue;
+      if (name === "return_30d_pct" || name === "max_drawdown_pct" || name === "win_rate_pct" || name === "forward_observation_days" || name === "score" || name.startsWith("qbts_")) continue;
       const a = found.item.metrics[name];
       const b = item.metrics[name];
       if (b === undefined || a === undefined) { if (a === undefined && b !== undefined) found.item.metrics[name] = copy(b); continue; } // WP-B2-S3 (QA10 N10-M4): rows of one group may carry different open metric keys (the lifecycle keys of an alpha); a key only one row has is kept, never summed against nothing
@@ -400,7 +404,7 @@ function aggregate(rows: Draft[]): Draft[] {
     item.metrics.concentration_hhi.unit = "RATIO";
     // Row-only keys (days observed, cost drag) are not portfolio totals here and would only grow the response.
     // A score is per alpha version and is never added up: the group carries none.
-    for (const rowOnly of ["forward_observation_days", "cost_drag_fees", "cost_drag_funding", "cost_drag_slippage", "score", "qbts_p", "qbts_r", "qbts_b", "qbts_band", "qbts_evidence", "qbts_provisional"]) delete item.metrics[rowOnly];
+    for (const rowOnly of ["win_rate_pct", "forward_observation_days", "cost_drag_fees", "cost_drag_funding", "cost_drag_slippage", "score", "qbts_p", "qbts_r", "qbts_b", "qbts_band", "qbts_evidence", "qbts_provisional"]) delete item.metrics[rowOnly];
     return item;
   });
 }

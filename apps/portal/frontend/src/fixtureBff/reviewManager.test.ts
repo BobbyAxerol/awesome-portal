@@ -577,6 +577,23 @@ describe("simulated suite universe (small scale)", () => {
     expect(m.max_drawdown_pct.value).toMatch(/^-\d+(\.\d+)?$/);
     expect(m.forward_observation_days).toMatchObject({ unit: "DAYS", currency: null });
     expect(m.forward_observation_days.value).toMatch(/^\d+$/);
+    // UXM-07 WP-1: the Fleet's Winrate (open partition key): a percent with one place, 35.0 to 74.9, no window
+    expect(m.win_rate_pct).toMatchObject({ unit: "PERCENT", currency: null, window: null, availability: "AVAILABLE" });
+    expect(m.win_rate_pct.value).toMatch(/^(3[5-9]|[4-6]\d|7[0-4])(\.\d)?$/);
+  });
+
+  it("publishes win_rate_pct per row partition, deterministic from the row key, 35.0 to 74.9, never on a group", () => {
+    const first = small("/manager/fleet", { environment: "live" });
+    const again = small("/manager/fleet", { environment: "live" });
+    expect(first.items.length).toBeGreaterThan(1);
+    const rates = (body: Body): (string | null)[] => (body.items as Body[]).flatMap((row) => (row.economic_partitions as Body[]).map((entry) => (entry.metrics.win_rate_pct.availability === "AVAILABLE" ? entry.metrics.win_rate_pct.value : null)));
+    expect(rates(first)).toEqual(rates(again));
+    for (const rate of rates(first)) expect(rate, "a missing value is a typed absence, never a made-up one").toMatch(/^(3[5-9]|[4-6]\d|7[0-4])(\.\d)?$/);
+    // two rows do not all share one value (the seed is the row key)
+    expect(new Set(rates(first)).size).toBeGreaterThan(1);
+    // a portfolio group aggregates other keys but a win rate is not a sum: it carries none
+    const grouped = small("/manager/fleet", { environment: "live", group_by: "portfolio_id" });
+    for (const group of (grouped.groups ?? []) as Body[]) for (const entry of group.economic_partitions as Body[]) expect(entry.metrics).not.toHaveProperty("win_rate_pct");
   });
 
   it("scales the cost drag with the window (the world's fee model: 10 bp of allocation over the whole run, pro rata to the part of the run inside the window; bigint) and gives the other alpha ids their own rows", () => {

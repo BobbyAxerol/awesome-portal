@@ -72,7 +72,8 @@ describe("ranges", () => {
 
 describe("small parsers", () => {
   it("the optional columns are the optional ones only", () => {
-    expect([...parseShownOptional("venue,qbts,drawdown,nope")]).toEqual(["venue", "drawdown"]);
+    // MDD (`drawdown`) and Winrate are default columns now (WP-1); Unrealized PNL and Account balance became optional.
+    expect([...parseShownOptional("venue,qbts,drawdown,winrate,unrealized,balance,nope")]).toEqual(["venue", "unrealized", "balance"]);
   });
   it("the equity scalar is the value unless one of the two others is named", () => {
     expect(equityScalarOf(null).id).toBe("value");
