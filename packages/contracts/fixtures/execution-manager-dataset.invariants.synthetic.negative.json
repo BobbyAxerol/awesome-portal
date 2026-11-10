@@ -377,6 +377,426 @@
       ]
     },
     {
+      "id": "MD-9/win-rate-in-a-group-total",
+      "gap": "MD-9",
+      "rule": "a rate is never pooled: a group carries no win_rate_pct",
+      "refused_by": "PRODUCER_ONLY",
+      "code": "MANAGER_WIN_RATE_NOT_POOLABLE",
+      "ops": [
+        {
+          "op": "set_copy",
+          "path": [
+            "groups",
+            0,
+            "economic_partitions",
+            0,
+            "metrics",
+            "win_rate_pct"
+          ],
+          "from": [
+            "items",
+            0,
+            "economic_partitions",
+            0,
+            "metrics",
+            "net_pnl"
+          ]
+        },
+        {
+          "op": "set",
+          "path": [
+            "groups",
+            0,
+            "economic_partitions",
+            0,
+            "metrics",
+            "win_rate_pct",
+            "unit"
+          ],
+          "value": "PERCENT"
+        },
+        {
+          "op": "set",
+          "path": [
+            "groups",
+            0,
+            "economic_partitions",
+            0,
+            "metrics",
+            "win_rate_pct",
+            "currency"
+          ],
+          "value": null
+        },
+        {
+          "op": "set",
+          "path": [
+            "groups",
+            0,
+            "economic_partitions",
+            0,
+            "metrics",
+            "win_rate_pct",
+            "value"
+          ],
+          "value": "50"
+        }
+      ]
+    },
+    {
+      "id": "MD-9/win-rate-in-a-capital-statement",
+      "gap": "MD-9",
+      "rule": "a capital statement carries no win_rate_pct",
+      "refused_by": "PRODUCER_ONLY",
+      "code": "MANAGER_WIN_RATE_NOT_POOLABLE",
+      "ops": [
+        {
+          "op": "set_copy",
+          "path": [
+            "capital_statements",
+            0,
+            "metrics",
+            "win_rate_pct"
+          ],
+          "from": [
+            "items",
+            0,
+            "economic_partitions",
+            0,
+            "metrics",
+            "net_pnl"
+          ]
+        },
+        {
+          "op": "set",
+          "path": [
+            "capital_statements",
+            0,
+            "metrics",
+            "win_rate_pct",
+            "unit"
+          ],
+          "value": "PERCENT"
+        },
+        {
+          "op": "set",
+          "path": [
+            "capital_statements",
+            0,
+            "metrics",
+            "win_rate_pct",
+            "currency"
+          ],
+          "value": null
+        },
+        {
+          "op": "set",
+          "path": [
+            "capital_statements",
+            0,
+            "metrics",
+            "win_rate_pct",
+            "value"
+          ],
+          "value": "50"
+        }
+      ]
+    },
+    {
+      "id": "MD-9/win-rate-above-one-hundred",
+      "gap": "MD-9",
+      "rule": "a win rate is within 0..100",
+      "refused_by": "PRODUCER_ONLY",
+      "code": "MANAGER_WIN_RATE_OUT_OF_RANGE",
+      "ops": [
+        {
+          "op": "set_copy",
+          "path": [
+            "items",
+            0,
+            "economic_partitions",
+            0,
+            "metrics",
+            "win_rate_pct"
+          ],
+          "from": [
+            "items",
+            0,
+            "economic_partitions",
+            0,
+            "metrics",
+            "net_pnl"
+          ]
+        },
+        {
+          "op": "set",
+          "path": [
+            "items",
+            0,
+            "economic_partitions",
+            0,
+            "metrics",
+            "win_rate_pct",
+            "unit"
+          ],
+          "value": "PERCENT"
+        },
+        {
+          "op": "set",
+          "path": [
+            "items",
+            0,
+            "economic_partitions",
+            0,
+            "metrics",
+            "win_rate_pct",
+            "currency"
+          ],
+          "value": null
+        },
+        {
+          "op": "set",
+          "path": [
+            "items",
+            0,
+            "economic_partitions",
+            0,
+            "metrics",
+            "win_rate_pct",
+            "value"
+          ],
+          "value": "100.1"
+        }
+      ]
+    },
+    {
+      "id": "MD-9/win-rate-below-zero",
+      "gap": "MD-9",
+      "rule": "a win rate is within 0..100",
+      "refused_by": "PRODUCER_ONLY",
+      "code": "MANAGER_WIN_RATE_OUT_OF_RANGE",
+      "ops": [
+        {
+          "op": "set_copy",
+          "path": [
+            "items",
+            0,
+            "economic_partitions",
+            0,
+            "metrics",
+            "win_rate_pct"
+          ],
+          "from": [
+            "items",
+            0,
+            "economic_partitions",
+            0,
+            "metrics",
+            "net_pnl"
+          ]
+        },
+        {
+          "op": "set",
+          "path": [
+            "items",
+            0,
+            "economic_partitions",
+            0,
+            "metrics",
+            "win_rate_pct",
+            "unit"
+          ],
+          "value": "PERCENT"
+        },
+        {
+          "op": "set",
+          "path": [
+            "items",
+            0,
+            "economic_partitions",
+            0,
+            "metrics",
+            "win_rate_pct",
+            "currency"
+          ],
+          "value": null
+        },
+        {
+          "op": "set",
+          "path": [
+            "items",
+            0,
+            "economic_partitions",
+            0,
+            "metrics",
+            "win_rate_pct",
+            "value"
+          ],
+          "value": "-1"
+        }
+      ]
+    },
+    {
+      "id": "MD-9/percent-figure-naming-a-currency",
+      "gap": "MD-9",
+      "rule": "a percentage has no currency",
+      "refused_by": "PRODUCER_ONLY",
+      "code": "MANAGER_PERCENT_METRIC_HAS_CURRENCY",
+      "ops": [
+        {
+          "op": "set_copy",
+          "path": [
+            "items",
+            0,
+            "economic_partitions",
+            0,
+            "metrics",
+            "max_drawdown_pct"
+          ],
+          "from": [
+            "items",
+            0,
+            "economic_partitions",
+            0,
+            "metrics",
+            "net_pnl"
+          ]
+        },
+        {
+          "op": "set",
+          "path": [
+            "items",
+            0,
+            "economic_partitions",
+            0,
+            "metrics",
+            "max_drawdown_pct",
+            "unit"
+          ],
+          "value": "PERCENT"
+        },
+        {
+          "op": "set",
+          "path": [
+            "items",
+            0,
+            "economic_partitions",
+            0,
+            "metrics",
+            "max_drawdown_pct",
+            "currency"
+          ],
+          "value": null
+        },
+        {
+          "op": "set",
+          "path": [
+            "items",
+            0,
+            "economic_partitions",
+            0,
+            "metrics",
+            "max_drawdown_pct",
+            "value"
+          ],
+          "value": "-2"
+        },
+        {
+          "op": "set",
+          "path": [
+            "items",
+            0,
+            "economic_partitions",
+            0,
+            "metrics",
+            "max_drawdown_pct",
+            "currency"
+          ],
+          "value": "USDT"
+        }
+      ]
+    },
+    {
+      "id": "MD-9/percent-figure-in-another-unit",
+      "gap": "MD-9",
+      "rule": "an available percent key has unit PERCENT",
+      "refused_by": "PRODUCER_ONLY",
+      "code": "MANAGER_PERCENT_METRIC_UNIT_INVALID",
+      "ops": [
+        {
+          "op": "set_copy",
+          "path": [
+            "items",
+            0,
+            "economic_partitions",
+            0,
+            "metrics",
+            "max_drawdown_pct"
+          ],
+          "from": [
+            "items",
+            0,
+            "economic_partitions",
+            0,
+            "metrics",
+            "net_pnl"
+          ]
+        },
+        {
+          "op": "set",
+          "path": [
+            "items",
+            0,
+            "economic_partitions",
+            0,
+            "metrics",
+            "max_drawdown_pct",
+            "unit"
+          ],
+          "value": "PERCENT"
+        },
+        {
+          "op": "set",
+          "path": [
+            "items",
+            0,
+            "economic_partitions",
+            0,
+            "metrics",
+            "max_drawdown_pct",
+            "currency"
+          ],
+          "value": null
+        },
+        {
+          "op": "set",
+          "path": [
+            "items",
+            0,
+            "economic_partitions",
+            0,
+            "metrics",
+            "max_drawdown_pct",
+            "value"
+          ],
+          "value": "-2"
+        },
+        {
+          "op": "set",
+          "path": [
+            "items",
+            0,
+            "economic_partitions",
+            0,
+            "metrics",
+            "max_drawdown_pct",
+            "unit"
+          ],
+          "value": "RATIO"
+        }
+      ]
+    },
+    {
       "id": "MD-5/negative-zero-in-a-row-headline-and-its-partition",
       "gap": "MD-5",
       "rule": "a zero is never signed: \"-0\" is published as \"0\"",

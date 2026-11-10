@@ -95,11 +95,16 @@ const PARTITION_LIST_NOTE='A partition appears once per list (identity: economic
   'domain_proof_ref is evidence, not identity). A metric that names a currency names its partition\'s currency. '+
   'uniqueItems here catches an exact repeat; a repeat of the identity with different metrics is refused by the producer '+
   '(MANAGER_PARTITION_DUPLICATE) and by the reader, because JSON Schema cannot compare a property of two items.';
-function partitionListSemantics(list) {
+/** BE-B1 (MD-9): the two well-known PERCENT keys of an economic partition's open metric map. */
+const PERCENT_ROW_NOTE='Open PERCENT keys max_drawdown_pct and win_rate_pct (BE-B1, MD-9): no currency; unit PERCENT when available; win_rate_pct is within '+
+  '0..100 (MANAGER_PERCENT_METRIC_HAS_CURRENCY, MANAGER_PERCENT_METRIC_UNIT_INVALID, MANAGER_WIN_RATE_OUT_OF_RANGE). The key is omitted when no source fact '+
+  'states it: omission is Not published, never 0.';
+const PERCENT_POOLED_NOTE='A win rate is row level only (a rate is never pooled): no group and no capital statement carries win_rate_pct (MANAGER_WIN_RATE_NOT_POOLABLE).';
+function partitionListSemantics(list,note=PARTITION_LIST_NOTE) {
   list.uniqueItems=true;
-  list.description=PARTITION_LIST_NOTE;
+  list.description=note;
 }
-/** Finite JSON part of the producer invariants MD-1..MD-8 (see manager-dataset-invariants.ts for the rest). */
+/** Finite JSON part of the producer invariants MD-1..MD-9 (see manager-dataset-invariants.ts for the rest). */
 function datasetInvariantSemantics(response,row) {
   const page=response.properties.page;
   page.description='returned_count is items.length, at most limit and at most authorized_filtered_count; a non-empty page '+
@@ -115,7 +120,7 @@ function datasetInvariantSemantics(response,row) {
   row.properties.metrics.description='A money metric that names a currency is the figure of exactly one partition listed in '+
     'economic_partitions (the same metric), never a total across partitions. When a query pins one economic_partition the '+
     'row still lists its other partitions and the headline is the pinned partition\'s figure (MANAGER_HEADLINE_NOT_A_PARTITION_FIGURE).';
-  partitionListSemantics(row.properties.economic_partitions);
+  partitionListSemantics(row.properties.economic_partitions,PARTITION_LIST_NOTE+' '+PERCENT_ROW_NOTE);
   const group=response.properties.groups;
   group.uniqueItems=true;
   group.description='A group appears once (identity: key) and holds no more unique rows than page.authorized_filtered_count '+
@@ -125,8 +130,8 @@ function datasetInvariantSemantics(response,row) {
   // A field twice in one key: finite over the eight groupable fields, no $data comparison.
   key.allOf=key.items.properties.field.enum.map(field=>({not:{type:'array',
     contains:obj({field:{const:field}},['field']),minContains:2}}));
-  partitionListSemantics(group.items.properties.economic_partitions);
-  partitionListSemantics(response.properties.capital_statements);
+  partitionListSemantics(group.items.properties.economic_partitions,PARTITION_LIST_NOTE+' '+PERCENT_POOLED_NOTE);
+  partitionListSemantics(response.properties.capital_statements,PARTITION_LIST_NOTE+' '+PERCENT_POOLED_NOTE);
 }
 /** MD-5 canonical zero (owner decision C): the response decimal carries the lookahead-free canonical pattern; this puts the
  * rule text next to it, wherever it occurs (metric value/denominator, score summaries, series points). Idempotent. */
@@ -160,7 +165,7 @@ export function amendManagerP1Schemas({response,query,metric,row:standaloneRow,o
   metricSemantics(metric);
   if(standaloneRow){
     standaloneRow.properties.metrics.propertyNames={type:'string',enum:managerP1MetricKeys};
-    partitionListSemantics(standaloneRow.properties.economic_partitions);
+    partitionListSemantics(standaloneRow.properties.economic_partitions,PARTITION_LIST_NOTE+' '+PERCENT_ROW_NOTE);
     walk(standaloneRow,node=>{if(node.properties?.availability && node.properties?.provenance_refs && node.properties?.calculation_revision)metricSemantics(node);});
   }
   const row=response.properties.items.items;

@@ -361,6 +361,7 @@ export interface components {
                     /** @enum {string} */
                     stage: "PAPER" | "SANDBOX" | "CANARY" | "LIVE";
                     binding_ref: string | null;
+                    allocation_effective_at_ms?: number;
                 }[];
                 /** @description A money metric that names a currency is the figure of exactly one partition listed in economic_partitions (the same metric), never a total across partitions. When a query pins one economic_partition the row still lists its other partitions and the headline is the pinned partition's figure (MANAGER_HEADLINE_NOT_A_PARTITION_FIGURE). */
                 metrics: {
@@ -393,7 +394,7 @@ export interface components {
                         effective_at_ms?: number;
                     } & (unknown & unknown);
                 };
-                /** @description A partition appears once per list (identity: economic_domain, currency, basis, native_profile_ref; domain_proof_ref is evidence, not identity). A metric that names a currency names its partition's currency. uniqueItems here catches an exact repeat; a repeat of the identity with different metrics is refused by the producer (MANAGER_PARTITION_DUPLICATE) and by the reader, because JSON Schema cannot compare a property of two items. */
+                /** @description A partition appears once per list (identity: economic_domain, currency, basis, native_profile_ref; domain_proof_ref is evidence, not identity). A metric that names a currency names its partition's currency. uniqueItems here catches an exact repeat; a repeat of the identity with different metrics is refused by the producer (MANAGER_PARTITION_DUPLICATE) and by the reader, because JSON Schema cannot compare a property of two items. Open PERCENT keys max_drawdown_pct and win_rate_pct (BE-B1, MD-9): no currency; unit PERCENT when available; win_rate_pct is within 0..100 (MANAGER_PERCENT_METRIC_HAS_CURRENCY, MANAGER_PERCENT_METRIC_UNIT_INVALID, MANAGER_WIN_RATE_OUT_OF_RANGE). The key is omitted when no source fact states it: omission is Not published, never 0. */
                 economic_partitions: {
                     partition: {
                         /** @enum {string} */
@@ -457,7 +458,7 @@ export interface components {
                 unique_row_count: number;
                 /** @constant */
                 totals_scope: "FULL_AUTHORIZED_FILTERED_QUERY";
-                /** @description A partition appears once per list (identity: economic_domain, currency, basis, native_profile_ref; domain_proof_ref is evidence, not identity). A metric that names a currency names its partition's currency. uniqueItems here catches an exact repeat; a repeat of the identity with different metrics is refused by the producer (MANAGER_PARTITION_DUPLICATE) and by the reader, because JSON Schema cannot compare a property of two items. */
+                /** @description A partition appears once per list (identity: economic_domain, currency, basis, native_profile_ref; domain_proof_ref is evidence, not identity). A metric that names a currency names its partition's currency. uniqueItems here catches an exact repeat; a repeat of the identity with different metrics is refused by the producer (MANAGER_PARTITION_DUPLICATE) and by the reader, because JSON Schema cannot compare a property of two items. A win rate is row level only (a rate is never pooled): no group and no capital statement carries win_rate_pct (MANAGER_WIN_RATE_NOT_POOLABLE). */
                 economic_partitions: {
                     partition: {
                         /** @enum {string} */
@@ -516,7 +517,7 @@ export interface components {
                 groups_before_filter: number;
                 groups_returned: number;
             };
-            /** @description A partition appears once per list (identity: economic_domain, currency, basis, native_profile_ref; domain_proof_ref is evidence, not identity). A metric that names a currency names its partition's currency. uniqueItems here catches an exact repeat; a repeat of the identity with different metrics is refused by the producer (MANAGER_PARTITION_DUPLICATE) and by the reader, because JSON Schema cannot compare a property of two items. */
+            /** @description A partition appears once per list (identity: economic_domain, currency, basis, native_profile_ref; domain_proof_ref is evidence, not identity). A metric that names a currency names its partition's currency. uniqueItems here catches an exact repeat; a repeat of the identity with different metrics is refused by the producer (MANAGER_PARTITION_DUPLICATE) and by the reader, because JSON Schema cannot compare a property of two items. A win rate is row level only (a rate is never pooled): no group and no capital statement carries win_rate_pct (MANAGER_WIN_RATE_NOT_POOLABLE). */
             capital_statements: {
                 partition: {
                     /** @enum {string} */
@@ -1044,6 +1045,7 @@ export interface components {
                 /** @enum {string} */
                 stage: "PAPER" | "SANDBOX" | "CANARY" | "LIVE";
                 binding_ref: string | null;
+                allocation_effective_at_ms?: number;
             }[];
             metrics: {
                 [key: string]: {
@@ -1075,7 +1077,7 @@ export interface components {
                     effective_at_ms?: number;
                 } & (unknown & unknown);
             };
-            /** @description A partition appears once per list (identity: economic_domain, currency, basis, native_profile_ref; domain_proof_ref is evidence, not identity). A metric that names a currency names its partition's currency. uniqueItems here catches an exact repeat; a repeat of the identity with different metrics is refused by the producer (MANAGER_PARTITION_DUPLICATE) and by the reader, because JSON Schema cannot compare a property of two items. */
+            /** @description A partition appears once per list (identity: economic_domain, currency, basis, native_profile_ref; domain_proof_ref is evidence, not identity). A metric that names a currency names its partition's currency. uniqueItems here catches an exact repeat; a repeat of the identity with different metrics is refused by the producer (MANAGER_PARTITION_DUPLICATE) and by the reader, because JSON Schema cannot compare a property of two items. Open PERCENT keys max_drawdown_pct and win_rate_pct (BE-B1, MD-9): no currency; unit PERCENT when available; win_rate_pct is within 0..100 (MANAGER_PERCENT_METRIC_HAS_CURRENCY, MANAGER_PERCENT_METRIC_UNIT_INVALID, MANAGER_WIN_RATE_OUT_OF_RANGE). The key is omitted when no source fact states it: omission is Not published, never 0. */
             economic_partitions: {
                 partition: {
                     /** @enum {string} */

@@ -123,7 +123,7 @@ export const MANAGER_PARTITION_METRIC_KEY = /^[a-z][a-z0-9_]{0,63}$/;
 export const MANAGER_MAX_PARTITION_METRICS = 64;
 
 interface PartitionLike { economic_domain: string; currency: string; basis: string; native_profile_ref: string }
-interface MetricLike { currency: string | null }
+interface MetricLike { currency: string | null; unit?: string; value?: string | null; availability?: string }
 interface PartitionedMetricsLike { partition: PartitionLike; metrics: Record<string, MetricLike> }
 export interface ManagerDatasetInvariantInput {
   query_options: { group_fields: readonly string[] };
@@ -141,6 +141,16 @@ const partitionIdentity = (p: PartitionLike) => JSON.stringify([p.economic_domai
  * a test pins the two equal). */
 export const MANAGER_DATASET_MONEY_KEYS = ["allocation", "net_pnl", "unrealized_pnl", "balance_total", "equity_30d_end_value"] as const;
 const moneyKeys: ReadonlySet<string> = new Set(MANAGER_DATASET_MONEY_KEYS);
+/** BE-B1 (MD-9): the two well-known PERCENT keys of a row's economic partition. Same list as `managerPercentFields` (a test pins the two equal). */
+export const MANAGER_PERCENT_PARTITION_KEYS = ["max_drawdown_pct", "win_rate_pct"] as const;
+/** A rate over closed trades is never pooled (the mean of two rates is not the rate of the pool), so it is a row-level figure only. */
+export const MANAGER_ROW_ONLY_PERCENT_KEYS = ["win_rate_pct"] as const;
+/** `0 <= value <= 100` for a canonical response decimal (no sign on zero, no exponent): a non-negative integer part of at most 100, and exactly 100 only with a zero fraction. */
+export function managerPercentWithinZeroToHundred(value: string): boolean {
+  if (value.startsWith("-")) return false;
+  const [whole, fraction = ""] = value.split(".");
+  return whole.length <= 3 && (Number(whole) < 100 || Number(whole) === 100 && /^0*$/.test(fraction));
+}
 
 export function validateManagerDatasetInvariants(v: ManagerDatasetInvariantInput, c: z.RefinementCtx): void {
   const issue = (path: Array<string | number>, message: string) => c.addIssue({ code: z.ZodIssueCode.custom, path, message });
@@ -165,7 +175,7 @@ export function validateManagerDatasetInvariants(v: ManagerDatasetInvariantInput
   });
 
   // MD-3 and MD-2: a partition appears once per list, and a metric that names a currency names its partition's.
-  const checkPartitions = (list: PartitionedMetricsLike[], path: Array<string | number>) => {
+  const checkPartitions = (list: PartitionedMetricsLike[], path: Array<string | number>, rowLevel = false) => {
     const seen = new Set<string>();
     list.forEach((entry, i) => {
       const identity = partitionIdentity(entry.partition);
@@ -178,10 +188,20 @@ export function validateManagerDatasetInvariants(v: ManagerDatasetInvariantInput
       for (const [key, metric] of Object.entries(entry.metrics))
         if (metric.currency !== null && metric.currency !== entry.partition.currency)
           issue([...path, i, "metrics", key, "currency"], "MANAGER_PARTITION_CURRENCY_MISMATCH");
+      // MD-9: the two PERCENT keys are percentages (never money), a win rate is within 0..100 and exists at row level only.
+      for (const key of MANAGER_PERCENT_PARTITION_KEYS) {
+        const metric = entry.metrics[key];
+        if (metric === undefined) continue;
+        if ((MANAGER_ROW_ONLY_PERCENT_KEYS as readonly string[]).includes(key) && !rowLevel) issue([...path, i, "metrics", key], "MANAGER_WIN_RATE_NOT_POOLABLE");
+        if (metric.currency !== null) issue([...path, i, "metrics", key, "currency"], "MANAGER_PERCENT_METRIC_HAS_CURRENCY");
+        if (metric.availability === "AVAILABLE" && metric.unit !== "PERCENT") issue([...path, i, "metrics", key, "unit"], "MANAGER_PERCENT_METRIC_UNIT_INVALID");
+        if (key === "win_rate_pct" && metric.availability === "AVAILABLE" && typeof metric.value === "string" && !managerPercentWithinZeroToHundred(metric.value))
+          issue([...path, i, "metrics", key, "value"], "MANAGER_WIN_RATE_OUT_OF_RANGE");
+      }
     });
   };
   checkPartitions(v.capital_statements, ["capital_statements"]);
-  v.items.forEach((row, i) => checkPartitions(row.economic_partitions, ["items", i, "economic_partitions"]));
+  v.items.forEach((row, i) => checkPartitions(row.economic_partitions, ["items", i, "economic_partitions"], true));
   v.groups.forEach((group, i) => checkPartitions(group.economic_partitions, ["groups", i, "economic_partitions"]));
 
   // MD-8: a row-level money figure that names a currency is the figure of ONE published partition of that row, never a

@@ -106,6 +106,30 @@ export function managerStatementTimesSyntheticFixture(partitions){
   return sample;
 }
 
+/** BE-B1 positive example of the two PERCENT partition keys, the emitted per-metric `effective_at_ms` on a row's own partition figures and the
+ * per-deployment `allocation_effective_at_ms` on a row child (all additive and optional; absent = Not published, never inferred). Derived from the
+ * partitions fixture: row A (one USDT partition) states a win rate (58.3, within 0..100, unit PERCENT, no currency), a drawdown (-2.43) and the time its
+ * allocation took effect; row B (two currencies) states neither percent figure and no time (typed absence by omission). The group states a drawdown
+ * but NO win rate (a rate is never pooled). Synthetic and TEST_ONLY: not a source receipt, no real closed-trade or drawdown source is claimed. */
+export function managerPercentFiguresSyntheticFixture(partitions){
+  if(partitions.lane!==lane)throw new Error('The TEST_ONLY partitions fixture is required');
+  const sample=clone(partitions), body=sample.value, rowA=body.items[0], asOf=body.as_of_ms;
+  if(!Number.isSafeInteger(asOf) || asOf<500)throw new Error('as_of_ms leaves no room for an earlier effective time');
+  const template=clone(rowA.economic_partitions[0].metrics.net_pnl);
+  const percent=(value,methodology,effective)=>({...clone(template),value,unit:'PERCENT',currency:null,denominator:null,
+    methodology_ref:methodology,quality:{completeness:'COMPLETE',freshness:'FRESH',reasons:[]},source_confidence:'PROVISIONAL',
+    ...(effective===undefined?{}:{effective_at_ms:effective})});
+  const allocatedAt=asOf-400;
+  rowA.economic_partitions[0].metrics.win_rate_pct=percent('58.3','TEST_ONLY:win-rate-closed-trades',asOf-50);
+  rowA.economic_partitions[0].metrics.max_drawdown_pct=percent('-2.43','TEST_ONLY:max-drawdown-peak-to-trough');
+  // The headline is that partition's figure (MD-8): the time is stated on both, identically.
+  rowA.economic_partitions[0].metrics.net_pnl.effective_at_ms=asOf-50;
+  rowA.metrics.net_pnl.effective_at_ms=asOf-50;
+  rowA.children[0].allocation_effective_at_ms=allocatedAt;
+  body.groups[0].economic_partitions[0].metrics.max_drawdown_pct=percent('-3.1','TEST_ONLY:max-drawdown-peak-to-trough');
+  return sample;
+}
+
 /** Operations of the negative fixture on a JSON path of the positive example: set, delete, append, append_copy, set_copy. */
 export function applyManagerP1Ops(base,ops){
   const body=clone(base), at=path=>path.reduce((node,key)=>node[key],body);
@@ -121,7 +145,7 @@ export function applyManagerP1Ops(base,ops){
   return body;
 }
 
-/** BE-P1 negative cases MD-1..MD-8. `refused_by` says who refuses the mutated body: SCHEMA_AND_PRODUCER (JSON Schema can
+/** BE-P1 negative cases MD-1..MD-9 (MD-9 = BE-B1, the PERCENT partition keys). `refused_by` says who refuses the mutated body: SCHEMA_AND_PRODUCER (JSON Schema can
  * state it) or PRODUCER_ONLY (it cannot: equality of two fields, identity inside a list, a property of two items). `code`
  * is the producer's issue message (or Zod issue code). MD-5 (negative zero, owner decision C 2026-10-20) is canonical zero on
  * emit: a response body that still carries "-0" / "-0.00" is refused (schema pattern AND producer, MANAGER_DECIMAL_NEGATIVE_ZERO),
@@ -130,6 +154,8 @@ export function managerP1InvariantNegativeFixture(){
   const both='SCHEMA_AND_PRODUCER', producer='PRODUCER_ONLY', zero='MANAGER_DECIMAL_NEGATIVE_ZERO';
   const set=(path,value)=>({op:'set',path,value});
   const copy=(path,from)=>({op:'append_copy',path,from});
+  const percentOps=(path,value)=>[{op:'set_copy',path,from:['items',0,'economic_partitions',0,'metrics','net_pnl']},
+    set([...path,'unit'],'PERCENT'),set([...path,'currency'],null),set([...path,'value'],value)];
   const cases=[
     ['MD-1','empty-page-with-a-count',both,'MANAGER_PAGE_RETURNED_COUNT_MISMATCH','an empty page publishes returned_count 0',[set(['items'],[]),set(['groups'],[])]],
     ['MD-1','rows-with-a-zero-count',both,'MANAGER_PAGE_RETURNED_COUNT_MISMATCH','a page with rows publishes at least 1',[set(['page','returned_count'],0)]],
@@ -160,6 +186,19 @@ export function managerP1InvariantNegativeFixture(){
       [set(['groups',0,'unique_row_count'],10)]],
     ['MD-8','usdt-headline-above-a-eur-partition',producer,'MANAGER_HEADLINE_NOT_A_PARTITION_FIGURE','a headline money figure is one partition\'s figure',
       [{op:'set_copy',path:['items',1,'metrics','net_pnl'],from:['items',0,'metrics','net_pnl']},set(['items',1,'metrics','net_pnl','value'],'1')]],
+    // MD-9 (BE-B1): the two PERCENT partition keys. Each case first copies a money metric to the key, then makes it a PERCENT figure.
+    ['MD-9','win-rate-in-a-group-total',producer,'MANAGER_WIN_RATE_NOT_POOLABLE','a rate is never pooled: a group carries no win_rate_pct',
+      percentOps(['groups',0,'economic_partitions',0,'metrics','win_rate_pct'],'50')],
+    ['MD-9','win-rate-in-a-capital-statement',producer,'MANAGER_WIN_RATE_NOT_POOLABLE','a capital statement carries no win_rate_pct',
+      percentOps(['capital_statements',0,'metrics','win_rate_pct'],'50')],
+    ['MD-9','win-rate-above-one-hundred',producer,'MANAGER_WIN_RATE_OUT_OF_RANGE','a win rate is within 0..100',
+      percentOps(['items',0,'economic_partitions',0,'metrics','win_rate_pct'],'100.1')],
+    ['MD-9','win-rate-below-zero',producer,'MANAGER_WIN_RATE_OUT_OF_RANGE','a win rate is within 0..100',
+      percentOps(['items',0,'economic_partitions',0,'metrics','win_rate_pct'],'-1')],
+    ['MD-9','percent-figure-naming-a-currency',producer,'MANAGER_PERCENT_METRIC_HAS_CURRENCY','a percentage has no currency',
+      [...percentOps(['items',0,'economic_partitions',0,'metrics','max_drawdown_pct'],'-2'),set(['items',0,'economic_partitions',0,'metrics','max_drawdown_pct','currency'],'USDT')]],
+    ['MD-9','percent-figure-in-another-unit',producer,'MANAGER_PERCENT_METRIC_UNIT_INVALID','an available percent key has unit PERCENT',
+      [...percentOps(['items',0,'economic_partitions',0,'metrics','max_drawdown_pct'],'-2'),set(['items',0,'economic_partitions',0,'metrics','max_drawdown_pct','unit'],'RATIO')]],
     ['MD-5','negative-zero-in-a-row-headline-and-its-partition',both,zero,'a zero is never signed: "-0" is published as "0"',
       [set(['items',0,'metrics','net_pnl','value'],'-0'),set(['items',0,'economic_partitions',0,'metrics','net_pnl','value'],'-0')]],
     ['MD-5','negative-zero-with-a-scale-in-a-denominator',both,zero,'the scale is kept and the sign dropped: "-0.00" is published as "0.00"',

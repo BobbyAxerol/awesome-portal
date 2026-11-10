@@ -6,13 +6,13 @@ import { resolve } from "node:path";
 import { rejectManagerAsOf, resolveManagerWindow, managerFactsForWindow,
   managerPublicationsForWindow, managerQueryOptions } from "../src/execution-v2/manager-query-p1";
 import { managerDatasetResponse } from "../src/execution-v2/manager-model.contract";
-import { canonicalizeManagerDatasetZero } from "../src/execution-v2/manager-dataset-invariants";
+import { canonicalizeManagerDatasetZero, MANAGER_DATASET_MONEY_KEYS, MANAGER_PERCENT_PARTITION_KEYS, managerPercentWithinZeroToHundred } from "../src/execution-v2/manager-dataset-invariants";
 import { accessDigest } from "../src/execution-v2/access-policy";
 import { BUSINESS_READ_FIELDS } from "../src/execution-v2/read-fields";
 import { scopeReadPopulation } from "../src/execution-v2/read-scope";
 import { EXECUTION_PUBLICATION_CATALOGUE } from "../src/execution-v2/publication-source.generated";
 import type { DatasetPublication } from "../src/execution-v2/publication.contract";
-import { managerModelDocument, managerModelQuery, managerMetric,
+import { managerModelDocument, managerModelQuery, managerMetric, managerFact, managerMoneyFields, managerPercentFields,
   type ManagerFact, type ManagerMember, type ManagerMetric, type ManagerModelDocument } from "../src/execution-v2/manager-model.contract";
 import { compareManagerDecimals, dedupeManagerFacts, managerPartitionKey, queryManagerModel } from "../src/execution-v2/manager-model";
 import { prepareManagerProjection } from "../src/execution-v2/manager-model.store";
@@ -734,5 +734,111 @@ describe("BE-P1 producer invariants on the actual read path (MD-1, MD-2, MD-4, M
     const second = f.read({ limit: 1, after: first.page.next_cursor! });
     expect(second.page.returned_count).toBe(second.items.length);
     expect(f.read().page).toMatchObject({ returned_count: 3, next_cursor: null, previous_cursor: null });
+  });
+});
+
+describe("BE-B1 emitted effective_at_ms, per-deployment allocation time and the PERCENT partition keys (TEST_ONLY; no real closed-trade, drawdown or allocation-time source is claimed)", () => {
+  const ownRow = (result: ReturnType<typeof queryManagerModel>) =>
+    result.items.find(value => value.portfolio_id === OWN.portfolio_id && value.alpha_id === OWN.alpha_id)!;
+  const percent = (value: string | null, patch: Partial<ManagerMetric> = {}): ManagerMetric => ({ ...money(value ?? "0"), value, unit: "PERCENT", currency: null,
+    methodology_ref: "TEST_ONLY:percent-method", availability: value === null ? "UNAVAILABLE" : "AVAILABLE", reason_code: value === null ? "TEST_ONLY_NOT_PUBLISHED" : null, ...patch });
+  const winRate = (tuple: ManagerMember["tuple"], id: string, value: string | null, patch: Partial<ManagerFact> = {}) =>
+    fact(tuple, id, value ?? "0", { kind: "win_rate_pct", metric: percent(value), ...patch });
+
+  it("states WHEN a figure took effect from the source facts' own time, only when they all state one time", async () => {
+    const f = await fixture({ full: true });
+    // Default facts: one net_pnl fact per tuple, all effective at NOW - 100.
+    const single = f.read();
+    for (const row of single.items) {
+      expect(row.economic_partitions[0].metrics.net_pnl.effective_at_ms).toBe(NOW - 100);
+      // MD-8: the headline is that partition's figure, time included.
+      expect(row.metrics.net_pnl).toEqual(row.economic_partitions[0].metrics.net_pnl);
+    }
+    // Two receipts at ONE time: that time. Two receipts at different times: no time at all (not the latest, not the first).
+    // Every member states a receipt (a zero one for PEER): a member with no fact would make the census incomplete, which is a different absence.
+    f.doc.members = f.doc.members.filter(m => m.tuple.portfolio_id !== PRIVATE.portfolio_id);
+    f.doc.facts = [fact(OWN, "flow-a", "5", { kind: "added_funds", effective_at_ms: NOW - 300 }), fact(OWN, "flow-b", "7", { kind: "added_funds", effective_at_ms: NOW - 300 }),
+      fact(PEER, "flow-none", "0", { kind: "added_funds", effective_at_ms: NOW - 300 }),
+      fact(OWN, "pay-a", "1", { kind: "returned_capital", effective_at_ms: NOW - 300 }), fact(OWN, "pay-b", "2", { kind: "returned_capital", effective_at_ms: NOW - 200 }),
+      fact(PEER, "pay-none", "0", { kind: "returned_capital", effective_at_ms: NOW - 300 })];
+    const statement = f.read({}, "FUND").capital_statements[0].metrics;
+    expect(statement.added_funds).toMatchObject({ value: "12", effective_at_ms: NOW - 300 });
+    expect(statement.returned_capital.value).toBe("3");
+    expect(statement.returned_capital).not.toHaveProperty("effective_at_ms");
+  });
+
+  it("never invents a time for a typed absence", async () => {
+    const f = await fixture({ full: true });
+    f.doc.facts = [fact(OWN, "one", "5"), fact(OWN, "two", "6", { metric: money("6", { methodology_ref: "TEST_ONLY:other" }) })];
+    const metric = ownRow(f.read()).economic_partitions[0].metrics.net_pnl;
+    expect(metric).toMatchObject({ value: null, reason_code: "INCOMPARABLE_UNITS" });
+    expect(metric).not.toHaveProperty("effective_at_ms");
+  });
+
+  it("publishes a deployment's allocation time on its row child from the allocation facts of exactly that tuple", async () => {
+    const f = await fixture({ full: true, secondOwn: true });
+    const second = { ...OWN, deployment_id: "TEST_ONLY:second-deployment", account_id: "TEST_ONLY:second-account" };
+    f.doc.facts = [fact(OWN, "alloc-own", "80", { kind: "allocation", effective_at_ms: NOW - 400 }),
+      // The second deployment was allocated twice, at two different times: which one is "the" allocation is not stated, so none is published.
+      fact(second, "alloc-second-1", "40", { kind: "allocation", effective_at_ms: NOW - 500 }), fact(second, "alloc-second-2", "10", { kind: "allocation", effective_at_ms: NOW - 450 })];
+    const row = ownRow(f.read());
+    const own = row.children.find(c => c.deployment_id === OWN.deployment_id)!, other = row.children.find(c => c.deployment_id === second.deployment_id)!;
+    expect(own.allocation_effective_at_ms).toBe(NOW - 400);
+    expect(other).not.toHaveProperty("allocation_effective_at_ms");
+    // A partition figure over both deployments sums receipts taken at different times: no single time.
+    expect(row.economic_partitions[0].metrics.allocation).toMatchObject({ value: "130" });
+    expect(row.economic_partitions[0].metrics.allocation).not.toHaveProperty("effective_at_ms");
+  });
+
+  it("serves a PERCENT figure only where a source fact states it, row level, with its methodology, and never pools a win rate", async () => {
+    const f = await fixture({ full: true });
+    f.doc.facts = [fact(OWN, "pnl", "1"), winRate(OWN, "win", "58.3", { effective_at_ms: NOW - 110 }),
+      fact(OWN, "dd", "-2.43", { kind: "max_drawdown_pct", metric: percent("-2.43") })];
+    const result = f.read({ group_by: ["portfolio_id"] });
+    const metrics = ownRow(result).economic_partitions[0].metrics;
+    expect(metrics.win_rate_pct).toMatchObject({ value: "58.3", unit: "PERCENT", currency: null, effective_at_ms: NOW - 110 });
+    expect(metrics.max_drawdown_pct).toMatchObject({ value: "-2.43", unit: "PERCENT", currency: null });
+    // A row whose partition has no such fact omits the key: Not published, not a typed zero.
+    for (const row of result.items.filter(r => r.portfolio_id !== OWN.portfolio_id)) for (const p of row.economic_partitions) expect(p.metrics).not.toHaveProperty("win_rate_pct");
+    // Never a headline scalar, never a sort key, never money.
+    expect(ownRow(result).metrics).not.toHaveProperty("win_rate_pct");
+    expect(result.query_options.metric_keys).not.toContain("win_rate_pct");
+    expect(result.query_options.economic_partition_required_for).not.toContain("win_rate_pct");
+    // A rate is not poolable: no group total and no capital statement carries it.
+    for (const group of result.groups) for (const p of group.economic_partitions) expect(p.metrics).not.toHaveProperty("win_rate_pct");
+    for (const p of f.read({}, "FUND").capital_statements) expect(p.metrics).not.toHaveProperty("win_rate_pct");
+  });
+
+  it("answers a PERCENT figure with a typed absence when its definition is missing or it spans deployments", async () => {
+    const f = await fixture({ full: true, secondOwn: true });
+    const second = { ...OWN, deployment_id: "TEST_ONLY:second-deployment", account_id: "TEST_ONLY:second-account" };
+    f.doc.facts = [winRate(OWN, "win-a", "50", { metric: percent("50", { methodology_ref: null }) })];
+    expect(ownRow(f.read()).economic_partitions[0].metrics.win_rate_pct).toMatchObject({ value: null, availability: "UNAVAILABLE", reason_code: "METHODOLOGY_NOT_PUBLISHED" });
+    // Two deployments each state a rate: two rates are never summed or averaged (a rate is not pooled), so the row says so.
+    f.doc.facts = [winRate(OWN, "win-a", "50"), winRate(second, "win-b", "60")];
+    expect(ownRow(f.read()).economic_partitions[0].metrics.win_rate_pct).toMatchObject({ value: null, availability: "UNAVAILABLE", reason_code: "CONSOLIDATED_PATH_REQUIRED" });
+    // Only one of the two deployments states a rate: a partial census is not a row figure.
+    f.doc.facts = [winRate(OWN, "win-a", "50"), fact(second, "pnl-b", "1")];
+    expect(ownRow(f.read()).economic_partitions[0].metrics.win_rate_pct).toMatchObject({ value: null, reason_code: "SOURCE_FACT_CENSUS_INCOMPLETE" });
+  });
+
+  it("refuses to emit a win rate outside 0..100 or a percentage that names a currency (the producer fails closed, never clamps)", async () => {
+    const f = await fixture({ full: true });
+    for (const bad of ["100.1", "-1", "101"]) {
+      f.doc.facts = [winRate(OWN, "win", bad)];
+      expect(() => f.read(), bad).toThrow();
+    }
+    f.doc.facts = [winRate(OWN, "win", "100"), winRate({ ...PEER }, "win-peer", "0")];
+    expect(ownRow(f.read()).economic_partitions[0].metrics.win_rate_pct).toMatchObject({ value: "100" });
+    f.doc.facts = [winRate(OWN, "win", "10", { metric: percent("10", { currency: "USDT" }) })];
+    expect(() => f.read()).toThrow();
+  });
+
+  it("keeps the two PERCENT keys out of every money list and equal to the invariants' own list", () => {
+    expect([...managerPercentFields]).toEqual([...MANAGER_PERCENT_PARTITION_KEYS]);
+    for (const key of managerPercentFields) { expect(managerMoneyFields as readonly string[]).not.toContain(key); expect(MANAGER_DATASET_MONEY_KEYS as readonly string[]).not.toContain(key); }
+    expect(managerFact.safeParse(winRate(OWN, "w", "50")).success).toBe(true);
+    for (const [value, ok] of [["0", true], ["0.0", true], ["58.3", true], ["100", true], ["100.00", true], ["100.01", false], ["1000", false], ["-1", false], ["-0.5", false]] as const)
+      expect(managerPercentWithinZeroToHundred(value), value).toBe(ok);
   });
 });

@@ -14,7 +14,7 @@ import { selectManagerCompositionPublications,type ManagerCompositionReadFence }
 import { selectManagerRegimePublications, type ManagerRegimeReadFence } from "./manager-regime-publication";
 import { deriveManagerRowLifecycle, deriveManagerRowLifecycleFromFacts, MANAGER_STAGE_LIFECYCLE_POLICY } from "./manager-lifecycle";
 import { MANAGER_ALL_ENVIRONMENTS, managerAllRowKey, type ManagerAllReason } from "./manager-all-scope";
-import { managerModelDocument, managerModelQuery, managerDatasetResponse, MANAGER_SCALARS, managerMoneyFields, managerStatementFields,
+import { managerModelDocument, managerModelQuery, managerDatasetResponse, MANAGER_SCALARS, managerMoneyFields, managerPercentFields, managerStatementFields,
   type ManagerMember, type ManagerFact, type ManagerMetric, type ManagerModelDocument, type ManagerModelQuery } from "./manager-model.contract";
 
 export type ManagerSurface = "FUND" | "FLEET" | "PORTFOLIO" | "ALPHA" | "ACCOUNT" | "DEPLOYMENT";
@@ -33,7 +33,11 @@ export function compareManagerDecimals(a: string, b: string): number {
 }
 const lexical = (a: string, b: string) => a < b ? -1 : a > b ? 1 : 0;
 const fieldPolicy = (field: string) => ({ stage_presence: "stage", current_stage: "stage", source_state: "freshness",
-  equity_30d_end_value: "equity", return_30d_pct: "return" } as Record<string, string>)[field] ?? field;
+  equity_30d_end_value: "equity", return_30d_pct: "return",
+  // BE-B1: a drawdown is governed by the `drawdown` read field, a win rate by `return` (performance); neither is a money field.
+  max_drawdown_pct: "drawdown", win_rate_pct: "return" } as Record<string, string>)[field] ?? field;
+/** A metric as EMITTED: the source metric plus, optionally, WHEN the figure took effect (BE-B1). Absent = not published, never inferred. */
+export type ManagerEmittedMetric = ManagerMetric & { effective_at_ms?: number };
 function absent(reason: string, template?: ManagerMetric): ManagerMetric {
   return { value: null, unit: template?.unit ?? "NOT_PUBLISHED", currency: template?.currency ?? null,
     basis: template?.basis ?? "NOT_PUBLISHED", window: template?.window ?? null, denominator: null, methodology_ref: template?.methodology_ref ?? null,
@@ -47,7 +51,7 @@ export interface ManagerDatasetRow {
   health: string | null; source_state: string | null; stage_presence: ManagerMember["stage"][];
   current_stage: ManagerMember["stage"] | null; entered_at_ms: number | null; days_in_stage: number | null;
   stage_lifecycle_reasons: ReturnType<typeof deriveManagerRowLifecycle>["stage_lifecycle_reasons"];
-  children: Array<ManagerMember["tuple"] & { stage: ManagerMember["stage"]; binding_ref: string | null }>;
+  children: Array<ManagerMember["tuple"] & { stage: ManagerMember["stage"]; binding_ref: string | null; allocation_effective_at_ms?: number }>;
   metrics: Record<string, ManagerMetric>;
   economic_partitions: Array<{ partition: ManagerFact["partition"]; metrics: Record<string, ManagerMetric> }>;
   /** FE-CAT-3: set only on the rows of an ALL read (the row's own environment). */
@@ -80,7 +84,7 @@ export function dedupeManagerFacts(facts: readonly ManagerFact[]): ManagerFact[]
   }
   return [...seen.values()];
 }
-function sumMetric(facts: ManagerFact[]): ManagerMetric {
+function sumMetric(facts: ManagerFact[]): ManagerEmittedMetric {
   const first = facts[0]?.metric;
   if (!first) return absent("SOURCE_FACTS_NOT_PUBLISHED");
   // A requested exact window missing on any contributing fact is not a
@@ -89,7 +93,7 @@ function sumMetric(facts: ManagerFact[]): ManagerMetric {
   if (missingWindow) return absent(missingWindow.metric.reason_code!, missingWindow.metric);
   // Performance facts need their own methodology; capital/fees/budgets remain
   // independently readable. Missing methodology is not source-zero or PnL.
-  if (["return_30d_pct", "net_pnl", "realized_pnl", "unrealized_pnl"].includes(facts[0].kind) &&
+  if (["return_30d_pct", "net_pnl", "realized_pnl", "unrealized_pnl", ...managerPercentFields].includes(facts[0].kind) &&
     facts.some(f => !f.metric.methodology_ref)) return absent("METHODOLOGY_NOT_PUBLISHED", first);
   const identity = (m: ManagerMetric) => JSON.stringify([m.unit, m.currency, m.basis, m.window,
     m.methodology_ref, m.denominator, m.policy_revision]);
@@ -105,7 +109,10 @@ function sumMetric(facts: ManagerFact[]): ManagerMetric {
     source_confidence: facts.some(f => f.metric.source_confidence === "UNKNOWN") ? "UNKNOWN" :
       facts.some(f => f.metric.source_confidence === "PROVISIONAL") ? "PROVISIONAL" : "VERIFIED",
     provenance_refs: [accessDigest(facts.map(f => [f.fact_id, f.revision, f.source_receipt_ref]).sort())],
-    calculation_revision: "manager-model.v1" };
+    calculation_revision: "manager-model.v1",
+    // BE-B1: the time a figure took effect is the contributing facts' own source-stated `effective_at_ms`, and only when they all state ONE time
+    // (a sum of receipts taken at several times took effect at no single time; it is not inferred as the latest or the first).
+    ...(facts.every(f => f.effective_at_ms === facts[0].effective_at_ms) ? { effective_at_ms: facts[0].effective_at_ms } : {}) };
 }
 /** Valuation/balance snapshots of shared ownership count once, not once per
  * deployment/stage clone. Conflicting attribution cannot be repaired by SUM.
@@ -146,7 +153,8 @@ export function managerPartitionTotals(facts: ManagerFact[], keys: readonly stri
   return [...groups].sort(([a], [b]) => lexical(a, b)).map(([partitionKey, rows]) => {
     const raw = rawGroups.get(partitionKey)!;
     const expected = new Set([...unknownTuples, ...raw.map(f => managerTupleKey(f.tuple))]);
-    const metricValues = Object.fromEntries(keys.map(key => {
+    // BE-B1: a PERCENT figure is published only where a source fact states it; no fact = the key is omitted (Not published), not a typed zero.
+    const metricValues = Object.fromEntries(keys.filter(key => !(managerPercentFields as readonly string[]).includes(key) || raw.some(f => f.kind === key)).map(key => {
       // On the real service boundary a missing producer mapping is not proof
       // that account-scoped PnL facts are disjoint. Retain legacy pure callers
       // for fixture/replay compatibility, but never publish their aggregate as
@@ -179,6 +187,15 @@ export function managerPartitionTotals(facts: ManagerFact[], keys: readonly stri
   });
 }
 const DEFAULT_METRICS = [...managerMoneyFields, "return_30d_pct", "score"];
+/**
+ * BE-B1: when ONE deployment's allocation took effect = the `effective_at_ms` of the allocation facts of exactly that tuple, only when at least one
+ * is published as AVAILABLE and they all state the same time. Several different times (a top-up after the first allocation) or none is `null`
+ * (Not published): which of them "the" allocation time is would be a guess, and the capital ledger already carries the legs.
+ */
+export function allocationEffectiveAt(tupleFacts: readonly ManagerFact[]): number | null {
+  const times = new Set(tupleFacts.filter(f => f.kind === "allocation" && f.classification !== "CUSTODY" && f.metric.availability === "AVAILABLE").map(f => f.effective_at_ms));
+  return times.size === 1 ? [...times][0] : null;
+}
 const nullableConsensus = (values: Array<string | null>) => new Set(values).size === 1 ? values[0] : null;
 function rowsFor(members: ManagerMember[], facts: ManagerFact[], query: ManagerModelQuery, scope: AuthorizedExecutionReadScope,
   lifecycleStages: ReadonlyMap<string, ManagerMember["stage"][]>, doc: ManagerModelDocument, economic?: ManagerEconomicSourceContext,
@@ -199,7 +216,8 @@ function rowsFor(members: ManagerMember[], facts: ManagerFact[], query: ManagerM
   return [...groups].map(([row_key, group]): ManagerDatasetRow => {
     const keys = new Set(group.map(m => managerTupleKey(m.tuple)));
     const ownFacts = [...keys].flatMap(key => byTuple.get(key) ?? []);
-    const economic_partitions = managerPartitionTotals(ownFacts, DEFAULT_METRICS.filter(f => scopeAllowsField(scope, fieldPolicy(f))), keys, economic, requireEconomicNetPnl);
+    // BE-B1: the row's partitions also carry the PERCENT figures a source states (row level only: groups and statements never do).
+    const economic_partitions = managerPartitionTotals(ownFacts, [...DEFAULT_METRICS, ...managerPercentFields].filter(f => scopeAllowsField(scope, fieldPolicy(f))), keys, economic, requireEconomicNetPnl);
     const selected = query.economic_partition ? economic_partitions.find(p => managerPartitionKey(p.partition) === managerPartitionKey(query.economic_partition!)) :
       economic_partitions.length === 1 ? economic_partitions[0] : undefined;
     const metricValues = Object.fromEntries(DEFAULT_METRICS.filter(f => scopeAllowsField(scope, fieldPolicy(f))).map(key => [key,
@@ -217,7 +235,11 @@ function rowsFor(members: ManagerMember[], facts: ManagerFact[], query: ManagerM
       health: scopeAllowsField(scope, "health") ? nullableConsensus(group.map(m => m.health)) : null,
       source_state: scopeAllowsField(scope, "freshness") ? nullableConsensus(group.map(m => m.source_state)) : null,
       stage_presence: stagePresence,
-      children: group.map(m => ({ ...m.tuple, stage: m.stage, binding_ref: scopeAllowsField(scope, "binding_id") ? m.binding_ref : null })),
+      children: group.map(m => {
+        const allocatedAt = scopeAllowsField(scope, "allocation") ? allocationEffectiveAt(byTuple.get(managerTupleKey(m.tuple)) ?? []) : null;
+        return { ...m.tuple, stage: m.stage, binding_ref: scopeAllowsField(scope, "binding_id") ? m.binding_ref : null,
+          ...(allocatedAt === null ? {} : { allocation_effective_at_ms: allocatedAt }) };
+      }),
       metrics: metricValues, economic_partitions };
   });
 }
