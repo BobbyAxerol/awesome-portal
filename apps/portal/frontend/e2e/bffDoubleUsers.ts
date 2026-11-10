@@ -109,13 +109,13 @@ function history(userId: string): unknown[] {
     resulting_revision: 1,
     rollback_description: "Archive the account.",
     step_up_used: false,
-    occurred_at: "2026-09-30T08:00:00.000Z",
+    occurred_at: "2026-08-05T08:56:00.000Z",
   };
   if (userId !== "usr_0001") return [base];
   return [
     base,
-    { ...base, operation_id: "op_usr_0001_2", action: "issue-activation", expected_revision: 1, resulting_revision: 2, rollback_description: "Revoke the activation.", step_up_used: true, occurred_at: "2026-10-01T09:30:00.000Z" },
-    { ...base, operation_id: "op_usr_0001_3", action: "disable", outcome: "CONFLICT", reason_code: "ACCOUNT_REVISION_STALE", expected_revision: 1, resulting_revision: null, rollback_description: "Nothing changed.", step_up_used: true, occurred_at: "2026-10-02T10:15:00.000Z" },
+    { ...base, operation_id: "op_usr_0001_2", action: "issue-activation", expected_revision: 1, resulting_revision: 2, rollback_description: "Revoke the activation.", step_up_used: true, occurred_at: "2026-08-06T10:26:00.000Z" },
+    { ...base, operation_id: "op_usr_0001_3", action: "disable", outcome: "CONFLICT", reason_code: "ACCOUNT_REVISION_STALE", expected_revision: 1, resulting_revision: null, rollback_description: "Nothing changed.", step_up_used: true, occurred_at: "2026-08-07T11:11:00.000Z" },
   ];
 }
 
@@ -195,11 +195,11 @@ export function setUsersDoubleLastSignIn(on: boolean): void {
 // ===== WP-B2-A: the people's last sign-in is the world's (bffWorldGovernance.lastSeenIso): one value per person
 function simulatedLastSignIn(row: Wire): string | undefined {
   if (row.account_state === "INVITED" || Number(row.user_id.slice(-4)) % 7 === 0) return undefined;
-  // WORLD: last sign-in belongs to the PERSON (never to the row's place in a list) and is never later than the world clock (17 Oct 12:04Z), so no filter or page can move it
+  // WORLD: last sign-in belongs to the PERSON (never to the row's place in a list) and is never later than the world clock (22 Aug 13:00Z), so no filter or page can move it
   const known = lastSeenIso(row.user_id) ?? undefined;
   if (known !== undefined) return known;
   const day = 1 + (Number(row.user_id.slice(-4)) % 15);
-  return `2026-10-${String(day).padStart(2, "0")}T09:14:00Z`;
+  return `2026-08-${String(day + 5).padStart(2, "0")}T10:10:00Z`;
 }
 
 /**
@@ -254,7 +254,7 @@ function answerUsersBase(method: string, pathname: string, search: URLSearchPara
     return {
       status: 200,
       body: variant === "verified"
-        ? { state: "ACTIVE", expires_at: "2026-10-17T12:11:00.000Z" }
+        ? { state: "ACTIVE", expires_at: "2026-08-22T13:07:00.000Z" }
         : { state: "REQUIRED", expires_at: null },
     };
   }

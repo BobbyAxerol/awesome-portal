@@ -101,7 +101,7 @@ describe("lifecycle, events and regime fit (open partition keys, register 2c-wpc
   it("the exit instants chain R1 < R2 < paper < sandbox < canary < now and the day counts agree with them", () => {
     const m = metricsOf("alpha_a");
     const at = (key: string): number => Number(m[key].value);
-    const anchor = Date.UTC(2026, 9, 17, 12, 4); // the alpha doubles' own "now", whatever FIXTURE_NOW is
+    const anchor = Date.UTC(2026, 7, 22, 13, 0); // the alpha doubles' own "now", whatever FIXTURE_NOW is
     const chain = ["life_r1_exit_ms", "life_r2_exit_ms", "life_paper_exit_ms", "life_sandbox_exit_ms", "life_canary_exit_ms"].map(at);
     expect([...chain].sort((a, b) => a - b)).toEqual(chain);
     expect(anchor - chain[4]!).toBe(Number(m.life_live_days.value) * DAY);

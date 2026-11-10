@@ -69,7 +69,7 @@ export function rebaseDelta(doubleNowIso: string, realNowMs: number): number {
 
 /**
  * The instant a body says it was read, when it says so at the top level (`read_at` as an ISO instant or `read_at_ms`). The doubles are
- * not written against one instant (the operations double uses 22 Aug, the alpha doubles 17 Oct), so shifting every body by one global
+ * not written against one instant (the operations double uses 22 Aug, the alpha doubles used 17 Oct before F4: now one clock), so shifting every body by one global
  * delta would push some of them past the real clock. A body that names its own read time is shifted so that read time becomes "now";
  * everything inside it keeps its distance from that read time, which is what makes a window, a series and an event ribbon line up.
  */
@@ -115,7 +115,7 @@ export function latestContentInstant(value: unknown, after: number, key = ""): n
  */
 /**
  * The ONE clock of the preview (WORLD): the world's anchor moved forward by whole days, never past the real clock. Within a day every load states the same
- * "now" (12:04Z of the current world day), so two reviewers and two reloads see the same dates; at midnight UTC the whole world moves by exactly a day.
+ * "now" (13:00Z of the current world day), so two reviewers and two reloads see the same dates; at midnight UTC the whole world moves by exactly a day.
  */
 export function worldClockNow(realNowMs: number): number {
   return WORLD_NOW_MS + Math.max(0, Math.floor((realNowMs - WORLD_NOW_MS) / 86_400_000)) * 86_400_000;

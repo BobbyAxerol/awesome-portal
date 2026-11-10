@@ -405,7 +405,7 @@ describe("step-up state", () => {
     mount();
     await loaded();
     expect(await screen.findByText("Step-up verified")).toBeTruthy();
-    expect(screen.getByText(/until 17 Oct 12:11Z/)).toBeTruthy();
+    expect(screen.getByText(/until 22 Aug 13:07Z/)).toBeTruthy();
   });
 
   it("says it was not read, rather than required, when that read fails", async () => {

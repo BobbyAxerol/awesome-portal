@@ -3246,21 +3246,21 @@
   "screensV2 GET /resources/alphas/alpha_a": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "01cfc09f0149a26b89ee86c9f6c26097e2f0c226d014c5eb34464e476f784dbb",
+   "sha256": "f265da9d5554df2d0970ca980aa7c5a0cc4fb4d0f15f0af887c8d96040833afa",
    "bytes": 23889,
    "gap": false
   },
   "screensV2 GET /resources/alphas/alpha_btc_trend": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "63fb95adecdbe8a3231f3618cb3aacb6b9639b83b8cae461a8ddb52ba700ab84",
+   "sha256": "fb8e772bbd69a5d5222ecbd61e2649609a07d84d32479d221611a55e50b02ff5",
    "bytes": 24017,
    "gap": false
   },
   "screensV2 GET /resources/alphas/alpha_empty": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "96f5048784db1a20ec2ab2904e673555d7717ff4edf7a2360e41fba286d724ad",
+   "sha256": "d202961b0e4e28c1a3d9e3e35dff48b2471298a5f25536ee34e1b492e5e2998b",
    "bytes": 14848,
    "gap": false
   },
@@ -3337,42 +3337,42 @@
   "screensV2 GET /resources/accounts/acc_bnc_core": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "04242e3330d3fae709634804fb7d4361b8362b3cce9373b666a3c2af42d5741f",
+   "sha256": "aa7cd98b6abc1477dbf3602fd529cec858763d6b797553423e0e54013ced63da",
    "bytes": 5880,
    "gap": false
   },
   "screensV2 GET /resources/accounts/acc_bnc_sub": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "b55cbb2de8cd00c0d4145aed0a83835e7f849ea5ac410f6ef4657a4f303076d3",
+   "sha256": "07690450ac7ef6e66499711550276a453853ac58092d076b376b6e68d8509dd5",
    "bytes": 2824,
    "gap": false
   },
   "screensV2 GET /resources/accounts/acc_bnc_sat": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "01bcc75ee2d720af6f786fde41e1af7424d5c5b0a5a6eea2a5716aef8d5995a7",
+   "sha256": "9ae691a900f71f99292044b59d4403e5c08b3b300fb6bd3606fb20afa27d1ba3",
    "bytes": 4543,
    "gap": false
   },
   "screensV2 GET /resources/accounts/acc_okx_main": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "8381a239c1973e3058217422c28f7d93fa44ccd5682e15235d754ff575b86e33",
+   "sha256": "b545314a1087ee5771ff40ae0dfb57abe803ab4b3a1cb7398fe9077d623c35b8",
    "bytes": 2481,
    "gap": false
   },
   "screensV2 GET /resources/accounts/acc_pap_sim": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "d02991abcbbd1fedd08be25088d2bce5fd47c0358aecf7eb0c7b09f9d7a1ef49",
+   "sha256": "0c5fa7c0c4a317f5ae6920e68606d79f735adab08c09d673de2ee11ba34cd4f1",
    "bytes": 1919,
    "gap": false
   },
   "screensV2 GET /resources/accounts/acc_tn_bnc": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "0b8f9fdf47e3994a82c7e8db7138069a7a2f506a6885cb8b0ccc5acad95f6afc",
+   "sha256": "47f92f15f6cff53739c85695fafba1c726e4d263f678f79ffddd4392d542de1c",
    "bytes": 665,
    "gap": false
   },
@@ -3400,35 +3400,35 @@
   "screensV2 GET /resources/alphas/alpha_btc_trend/orders?environment=paper&limit=2": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "69b7a3e3a201a5d57cbacbceb89858d20a4e68fac3e94075665cf92b18c61e3a",
+   "sha256": "dcff718dc86b66a7fb4d5e27b57876d2064d0d30e3a9dc3cc338f23db0ef62da",
    "bytes": 4204,
    "gap": false
   },
   "screensV2 GET /resources/alphas/alpha_btc_trend/fills?environment=paper&limit=3": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "4b2b70c8fcd625b265ab97e85718c1a404e6996057c335ed3288e7cd9b5808d5",
+   "sha256": "24684b2abf86d5473b34afd1167c7bbb3f825f81835f2efb809e16c62e6b8837",
    "bytes": 2445,
    "gap": false
   },
   "screensV2 GET /resources/accounts/acc_bnc_core/orders?environment=live&limit=2": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "9dc8c6f05fb6f67704a8a387c08902f335ee186606f2f4adfa0e7651eaf6a2d4",
+   "sha256": "8f8aaf2e8cb19529d48f0ae2e345b3ce04c6b082ebfebd0cf475cb75bcc0b43a",
    "bytes": 1572,
    "gap": false
   },
   "screensV2 GET /resources/accounts/acc_bnc_core/fills?environment=live": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "a77cf8a2239d6bc3bad6415294b0bf88dffb1684df84bc445e1e2d8d37a5be74",
+   "sha256": "cf923391f671547fcb5a7da1cc08a2e7ac6851375488b08025571c33cb6ed415",
    "bytes": 1317,
    "gap": false
   },
   "screensV2 GET /resources/accounts/acc_pap_sim/orders?environment=paper": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "ad48ccea072490658a9a32998c01ce73e242e74f4b12db5c0f4a2e765e6a1ecc",
+   "sha256": "104050d9e84bd21a68f4be3b7a3ae74858a4119ac6f9d96bad7d6362baed5deb",
    "bytes": 1079,
    "gap": false
   },
@@ -3589,28 +3589,28 @@
   "screensV2 GET /derivations/alphas/alpha_a/activity?environment=paper": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "10f0f88027582c1af9cbb2e76268831b0f8a424219cb0d61e705b09ae35b3f16",
+   "sha256": "0e2b6486c5a697270f3cd1215071156e647486f1da73361933b8bbb68828f1e2",
    "bytes": 1111,
    "gap": false
   },
   "screensV2 GET /derivations/alphas/alpha_a/activity?environment=sandbox": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "8fc2b5f73a61d1e2a4ff752b6d3b14b237e5bc7806fb7ca8c550c1a2a470efcc",
+   "sha256": "b9642cc1f59ab40c475026c084e834b86bc30de3ed2ec10a980240b5448b5415",
    "bytes": 1115,
    "gap": false
   },
   "screensV2 GET /derivations/alphas/alpha_a/activity?environment=live": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "ea4cb08980dbf4aaa88de1c3c14a39a323e26106f89bbc920bfe7d51ec7a6c34",
+   "sha256": "8bc2a9dc1179b1dc657ab08d95f4a1a17504b6bd1c01c36d67bef22c10f9c5b2",
    "bytes": 1109,
    "gap": false
   },
   "screensV2 GET /derivations/alphas/alpha_btc_trend/activity?environment=paper": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "ce8ffdde34ae18e7af7b22139c7a5dc57bdb052d8f972c55bbc0f032dc17bfcf",
+   "sha256": "acbe04962291df2428833314b7735d2af1c92a74814fc057456dd5b5f2715337",
    "bytes": 1127,
    "gap": false
   },
@@ -3638,14 +3638,14 @@
   "screensV2 GET /views/equity-chart?environment=paper&subject_kind=alpha&subject_id=alpha_a&metric=equity&viewport_px=960": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "1af5ad310885949d5ea5fc0873f4b16dc86e857d0a3cd02d8063d569300899cc",
+   "sha256": "30cdf8faa58c375b662ff57bf5eda2831b2fef11ee23e0d1080bba1512819d59",
    "bytes": 2851,
    "gap": false
   },
   "screensV2 GET /views/equity-chart?environment=paper&subject_kind=alpha&subject_id=alpha_btc_trend&metric=equity": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "62d5467fb4da3b16b47acecfdc1141381839860bef32022b6dcccdb805a95af8",
+   "sha256": "dc6777e13e08f3c10f51314ff288e181774a818297994c27679b8bf6dfe43ab3",
    "bytes": 2859,
    "gap": false
   },
@@ -3673,42 +3673,42 @@
   "screensV2 GET /views/equity-chart?environment=live&subject_kind=account&subject_id=acc_bnc_core&metric=equity": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "27b4f99e7bb4eb64f5e25e18eb253a83a6f8319187b225249ef214d5f63a1dfb",
+   "sha256": "9649118fc024d67a9040a0648b8cac6cfeb3dc104060c68145b74448fc071432",
    "bytes": 1958,
    "gap": false
   },
   "screensV2 GET /views/equity-chart?environment=live&subject_kind=account&subject_id=acc_pap_sim&metric=equity": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "591856ecdc5c345064cef34e7db0ce9cf10664a239becf984e53030aeeaa273e",
+   "sha256": "b04b3d6f9a68c25b0b02e1b1a40a7e78f3e82e61f331cc4df7058205c95a3d64",
    "bytes": 1636,
    "gap": false
   },
   "screensV2 GET /views/observed-timeline?environment=paper&subject_kind=alpha&subject_id=alpha_btc_trend": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "e9dff49c757713fac0def0cb6a462c208bed58a498bac95136ffb21a4d34fef4",
+   "sha256": "0fca9985fbd40bdaf9a40ddd92289f3b119607c3cd98851834cf4a6f9bedad68",
    "bytes": 6852,
    "gap": false
   },
   "screensV2 GET /views/observed-timeline?environment=paper&subject_kind=account&subject_id=acc_a": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "d6255debb2b03cebc7aec9a884d2be929645f6bdc6362803581ef8a319b49898",
+   "sha256": "8eda5d718ed1ca1028f04b974c01e25ba8833ec859468a7f214d201152e67e0f",
    "bytes": 6762,
    "gap": false
   },
   "screensV2 GET /market/venue-candles?environment=paper&venue=BINANCE&symbol=ETHUSDT&interval=1h&from_ms=1&to_ms=2": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "36703f48a731f210c39405e081a19330267a321f1c44c641af0f3c2acea27a49",
+   "sha256": "1a181aa6884eb794d09b7bd5c391dc58f2fec44998cd0ceec04d4ffe6f8b226d",
    "bytes": 813,
    "gap": false
   },
   "screensV2 GET /market/venue-candles?venue=OKX&interval=15m": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "860309d875b4be3e0eb340598c16c032e03ebdfc8d8f31a54574aed0e1099305",
+   "sha256": "3eaaa81031dacb16b18cea1cc75fa8f991ba417890e86caca456a25e62311fe1",
    "bytes": 897,
    "gap": false
   },
@@ -3855,14 +3855,14 @@
   "screensV2 GET /alphas/av_2041/stage-drift": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "19e8f8228fc2ddab7cd082ca09ce43d7a04787e49ecea3eda044ec43cf75e707",
+   "sha256": "cfb95fce569c9899c0afe3e441eb18262c6e6e7c1def67c7b6cd51e3ac01e528",
    "bytes": 651,
    "gap": false
   },
   "screensV2 GET /alphas/alpha_btc_trend/stage-drift?days=3": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "d93ff6f25ca38c8615b101f61153ff92c4a48615b520b73d3100002ccd38462b",
+   "sha256": "091c56c75e5f98687d9d86de07ec14fcf49026e741595e9d231fd8f6ad9ba86f",
    "bytes": 659,
    "gap": false
   },
@@ -3988,28 +3988,28 @@
   "screensV2 GET /broker-bindings": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "f34488b577f4aead62d93be1b0fb63e05777d35fed12f9d17868ecfea313b97f",
+   "sha256": "e6aa92f009f4aa2914bbc9d7612688d6db7a63150e1935c4793c609386cf311c",
    "bytes": 1081,
    "gap": false
   },
   "screensV2 GET /broker-bindings?environment=live": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "f34488b577f4aead62d93be1b0fb63e05777d35fed12f9d17868ecfea313b97f",
+   "sha256": "e6aa92f009f4aa2914bbc9d7612688d6db7a63150e1935c4793c609386cf311c",
    "bytes": 1081,
    "gap": false
   },
   "screensV2 GET /broker-bindings?environment=paper": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "faf4df00f9f3c6a8a5d43516328910936937bcd5cbb9130605317db0e97c3c16",
+   "sha256": "05a3a39eeb7b19922917581a17972fdf89b23bff1fd887c6bf59765db6908bad",
    "bytes": 756,
    "gap": false
   },
   "screensV2 GET /broker-bindings?environment=sandbox": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "e985134ba135f89510b4efee0dcd5c6277d6a5fd3f4eb38239198e5b255fc21f",
+   "sha256": "2a28cd78f77d0ad0936a9fba7b75a3c60ce6ddac71768f3a994e3401aac2819c",
    "bytes": 763,
    "gap": false
   },
@@ -4023,14 +4023,14 @@
   "screensV2 GET /broker-bindings?environment=live&limit=2": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "0e98ecaa1d0015eac12b77adf29a406ee53e954688b5cb9f9b444c14db05974e",
+   "sha256": "c067afbefb5f4acf15550e0c912863c056ec0c98a448e8b2cd16445a3745ae5a",
    "bytes": 937,
    "gap": false
   },
   "screensV2 GET /broker-bindings?environment=live&search=okx&venue=OKX&state=ACTIVE": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "9ffc67753b1d6d14b2aa14b5f779a1d072b2ae8d1e24ceb59f13741c064c82af",
+   "sha256": "600a42751094eb43782b74934189ffc7f857f57aa030b22388ef0cd94fa3583a",
    "bytes": 744,
    "gap": false
   },
@@ -4044,7 +4044,7 @@
   "screensV2 GET /broker-bindings/bnc_main@BINANCE?environment=live": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "db8b3265a350c6d3993261fb1ceddd800ea76b73658fdcc940dbcfc454da9599",
+   "sha256": "c061a948aeab3ae85c054a11c948036629cc81556db63f56b97b58e0e49b1903",
    "bytes": 487,
    "gap": false
   },
@@ -4065,14 +4065,14 @@
   "screensV2 GET /broker-bindings/bnc_main@BINANCE/exposure": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "46d9d6c573e5582eea707cfa9e887d95b0f8835216e669c117ca70a5b9c8f828",
+   "sha256": "552e3b80512081dad04fd4f3d69e28872e2a73f6eb277328cda6bfe9a225d555",
    "bytes": 1170,
    "gap": false
   },
   "screensV2 GET /broker-bindings/okx_main@OKX/exposure": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "f323bb13ae2d082cd117028f7678de17899f9e1df86a55519a1d29872f08e779",
+   "sha256": "2df208ffdec4d115d81a214a60f06d4ad72c9b2e9bf210b443ec47b7599e8084",
    "bytes": 946,
    "gap": false
   },
@@ -4457,21 +4457,21 @@
   "screensV2 CHAIN /broker-bindings?environment=live&limit=1 #0": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "b638c86580466cbf5505e56439d1f6b2dc4fb9393c6d3101aed1b161eaf61c92",
+   "sha256": "07db7be1558087d20e283527bec657c472871cf4e29be447de049ef1a178d87f",
    "bytes": 770,
    "gap": false
   },
   "screensV2 CHAIN /broker-bindings?environment=live&limit=1 #1": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "030d0e2afc0184c5699cda733bec13bd0cb140b1a1a81e9082bf79ef5efded39",
+   "sha256": "60440fbb113d8c00545317148d875d6e157e9853a470f9154100454ecfad5aa7",
    "bytes": 781,
    "gap": false
   },
   "screensV2 CHAIN /broker-bindings?environment=live&limit=1 #2": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "16f622cdceed0438ec894ecba5928c3148104d37e1c3e5f7bbc968554cbb9893",
+   "sha256": "89f92a418f2968891263099465206917edd5dfcc910b7b276a0144ccd7c4b65e",
    "bytes": 758,
    "gap": false
   },
@@ -4499,35 +4499,35 @@
   "screensV2 CHAIN /resources/alphas/alpha_btc_trend/orders?environment=paper&limit=3 #0": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "8239bb3f3263e17d4f5051861a083148569d06a77624ed4fc3dddc68c3527271",
+   "sha256": "0e777820e82ab96c0836e5fbdcb9eda342843afb603172a16e87bf8b6255eecf",
    "bytes": 4204,
    "gap": false
   },
   "screensV2 CHAIN /resources/alphas/alpha_btc_trend/orders?environment=paper&limit=3 #1": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "eecea7812f8c3e5ee3379fdb49a99a5957984a58235406b8b02b5325a90db6c9",
+   "sha256": "e6a089cd65376db075ffefb4a6f7ecae302d2ea7b511d37c847f655ed47b7b6e",
    "bytes": 2060,
    "gap": false
   },
   "screensV2 CHAIN /resources/accounts/acc_bnc_core/orders?environment=live&limit=1 #0": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "a02335562c0ff89519b999b3c28e6d0427e80072c276a854bb8f348f2c85431e",
+   "sha256": "39e87b6716dab9cf4783a29df1bcdd98b37a61a08bf439b8486c085d39a11d78",
    "bytes": 1339,
    "gap": false
   },
   "screensV2 CHAIN /resources/accounts/acc_bnc_core/orders?environment=live&limit=1 #1": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "4459df941c98238acae6e6671895a69fe1909c499f9e5785eed1cd332ddf31ef",
+   "sha256": "2fb0134abaddd96ed1788a1db3db078e0fe8876d7889f64837e1e4aa04c50155",
    "bytes": 1337,
    "gap": false
   },
   "screensV2 CHAIN /resources/accounts/acc_bnc_core/orders?environment=live&limit=1 #2": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "6417b3e73ef91c8ab86c4b36ec190939a8e85c70dc75d75f20bc486daebb8471",
+   "sha256": "dbac33cd8a6c1b1879b038fcaa911a432f9d3ceb887e3f5808230e558f36aec1",
    "bytes": 1337,
    "gap": false
   },
@@ -4849,21 +4849,21 @@
   "operationsV2+screensV2 GET /resources/alphas/alpha_a": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "01cfc09f0149a26b89ee86c9f6c26097e2f0c226d014c5eb34464e476f784dbb",
+   "sha256": "f265da9d5554df2d0970ca980aa7c5a0cc4fb4d0f15f0af887c8d96040833afa",
    "bytes": 23889,
    "gap": false
   },
   "operationsV2+screensV2 GET /resources/alphas/alpha_btc_trend": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "63fb95adecdbe8a3231f3618cb3aacb6b9639b83b8cae461a8ddb52ba700ab84",
+   "sha256": "fb8e772bbd69a5d5222ecbd61e2649609a07d84d32479d221611a55e50b02ff5",
    "bytes": 24017,
    "gap": false
   },
   "operationsV2+screensV2 GET /resources/alphas/alpha_empty": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "96f5048784db1a20ec2ab2904e673555d7717ff4edf7a2360e41fba286d724ad",
+   "sha256": "d202961b0e4e28c1a3d9e3e35dff48b2471298a5f25536ee34e1b492e5e2998b",
    "bytes": 14848,
    "gap": false
   },
@@ -4940,42 +4940,42 @@
   "operationsV2+screensV2 GET /resources/accounts/acc_bnc_core": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "04242e3330d3fae709634804fb7d4361b8362b3cce9373b666a3c2af42d5741f",
+   "sha256": "aa7cd98b6abc1477dbf3602fd529cec858763d6b797553423e0e54013ced63da",
    "bytes": 5880,
    "gap": false
   },
   "operationsV2+screensV2 GET /resources/accounts/acc_bnc_sub": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "b55cbb2de8cd00c0d4145aed0a83835e7f849ea5ac410f6ef4657a4f303076d3",
+   "sha256": "07690450ac7ef6e66499711550276a453853ac58092d076b376b6e68d8509dd5",
    "bytes": 2824,
    "gap": false
   },
   "operationsV2+screensV2 GET /resources/accounts/acc_bnc_sat": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "01bcc75ee2d720af6f786fde41e1af7424d5c5b0a5a6eea2a5716aef8d5995a7",
+   "sha256": "9ae691a900f71f99292044b59d4403e5c08b3b300fb6bd3606fb20afa27d1ba3",
    "bytes": 4543,
    "gap": false
   },
   "operationsV2+screensV2 GET /resources/accounts/acc_okx_main": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "8381a239c1973e3058217422c28f7d93fa44ccd5682e15235d754ff575b86e33",
+   "sha256": "b545314a1087ee5771ff40ae0dfb57abe803ab4b3a1cb7398fe9077d623c35b8",
    "bytes": 2481,
    "gap": false
   },
   "operationsV2+screensV2 GET /resources/accounts/acc_pap_sim": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "d02991abcbbd1fedd08be25088d2bce5fd47c0358aecf7eb0c7b09f9d7a1ef49",
+   "sha256": "0c5fa7c0c4a317f5ae6920e68606d79f735adab08c09d673de2ee11ba34cd4f1",
    "bytes": 1919,
    "gap": false
   },
   "operationsV2+screensV2 GET /resources/accounts/acc_tn_bnc": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "0b8f9fdf47e3994a82c7e8db7138069a7a2f506a6885cb8b0ccc5acad95f6afc",
+   "sha256": "47f92f15f6cff53739c85695fafba1c726e4d263f678f79ffddd4392d542de1c",
    "bytes": 665,
    "gap": false
   },
@@ -5003,35 +5003,35 @@
   "operationsV2+screensV2 GET /resources/alphas/alpha_btc_trend/orders?environment=paper&limit=2": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "69b7a3e3a201a5d57cbacbceb89858d20a4e68fac3e94075665cf92b18c61e3a",
+   "sha256": "dcff718dc86b66a7fb4d5e27b57876d2064d0d30e3a9dc3cc338f23db0ef62da",
    "bytes": 4204,
    "gap": false
   },
   "operationsV2+screensV2 GET /resources/alphas/alpha_btc_trend/fills?environment=paper&limit=3": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "4b2b70c8fcd625b265ab97e85718c1a404e6996057c335ed3288e7cd9b5808d5",
+   "sha256": "24684b2abf86d5473b34afd1167c7bbb3f825f81835f2efb809e16c62e6b8837",
    "bytes": 2445,
    "gap": false
   },
   "operationsV2+screensV2 GET /resources/accounts/acc_bnc_core/orders?environment=live&limit=2": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "9dc8c6f05fb6f67704a8a387c08902f335ee186606f2f4adfa0e7651eaf6a2d4",
+   "sha256": "8f8aaf2e8cb19529d48f0ae2e345b3ce04c6b082ebfebd0cf475cb75bcc0b43a",
    "bytes": 1572,
    "gap": false
   },
   "operationsV2+screensV2 GET /resources/accounts/acc_bnc_core/fills?environment=live": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "a77cf8a2239d6bc3bad6415294b0bf88dffb1684df84bc445e1e2d8d37a5be74",
+   "sha256": "cf923391f671547fcb5a7da1cc08a2e7ac6851375488b08025571c33cb6ed415",
    "bytes": 1317,
    "gap": false
   },
   "operationsV2+screensV2 GET /resources/accounts/acc_pap_sim/orders?environment=paper": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "ad48ccea072490658a9a32998c01ce73e242e74f4b12db5c0f4a2e765e6a1ecc",
+   "sha256": "104050d9e84bd21a68f4be3b7a3ae74858a4119ac6f9d96bad7d6362baed5deb",
    "bytes": 1079,
    "gap": false
   },
@@ -5192,28 +5192,28 @@
   "operationsV2+screensV2 GET /derivations/alphas/alpha_a/activity?environment=paper": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "10f0f88027582c1af9cbb2e76268831b0f8a424219cb0d61e705b09ae35b3f16",
+   "sha256": "0e2b6486c5a697270f3cd1215071156e647486f1da73361933b8bbb68828f1e2",
    "bytes": 1111,
    "gap": false
   },
   "operationsV2+screensV2 GET /derivations/alphas/alpha_a/activity?environment=sandbox": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "8fc2b5f73a61d1e2a4ff752b6d3b14b237e5bc7806fb7ca8c550c1a2a470efcc",
+   "sha256": "b9642cc1f59ab40c475026c084e834b86bc30de3ed2ec10a980240b5448b5415",
    "bytes": 1115,
    "gap": false
   },
   "operationsV2+screensV2 GET /derivations/alphas/alpha_a/activity?environment=live": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "ea4cb08980dbf4aaa88de1c3c14a39a323e26106f89bbc920bfe7d51ec7a6c34",
+   "sha256": "8bc2a9dc1179b1dc657ab08d95f4a1a17504b6bd1c01c36d67bef22c10f9c5b2",
    "bytes": 1109,
    "gap": false
   },
   "operationsV2+screensV2 GET /derivations/alphas/alpha_btc_trend/activity?environment=paper": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "ce8ffdde34ae18e7af7b22139c7a5dc57bdb052d8f972c55bbc0f032dc17bfcf",
+   "sha256": "acbe04962291df2428833314b7735d2af1c92a74814fc057456dd5b5f2715337",
    "bytes": 1127,
    "gap": false
   },
@@ -5241,14 +5241,14 @@
   "operationsV2+screensV2 GET /views/equity-chart?environment=paper&subject_kind=alpha&subject_id=alpha_a&metric=equity&viewport_px=960": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "1af5ad310885949d5ea5fc0873f4b16dc86e857d0a3cd02d8063d569300899cc",
+   "sha256": "30cdf8faa58c375b662ff57bf5eda2831b2fef11ee23e0d1080bba1512819d59",
    "bytes": 2851,
    "gap": false
   },
   "operationsV2+screensV2 GET /views/equity-chart?environment=paper&subject_kind=alpha&subject_id=alpha_btc_trend&metric=equity": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "62d5467fb4da3b16b47acecfdc1141381839860bef32022b6dcccdb805a95af8",
+   "sha256": "dc6777e13e08f3c10f51314ff288e181774a818297994c27679b8bf6dfe43ab3",
    "bytes": 2859,
    "gap": false
   },
@@ -5276,42 +5276,42 @@
   "operationsV2+screensV2 GET /views/equity-chart?environment=live&subject_kind=account&subject_id=acc_bnc_core&metric=equity": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "27b4f99e7bb4eb64f5e25e18eb253a83a6f8319187b225249ef214d5f63a1dfb",
+   "sha256": "9649118fc024d67a9040a0648b8cac6cfeb3dc104060c68145b74448fc071432",
    "bytes": 1958,
    "gap": false
   },
   "operationsV2+screensV2 GET /views/equity-chart?environment=live&subject_kind=account&subject_id=acc_pap_sim&metric=equity": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "591856ecdc5c345064cef34e7db0ce9cf10664a239becf984e53030aeeaa273e",
+   "sha256": "b04b3d6f9a68c25b0b02e1b1a40a7e78f3e82e61f331cc4df7058205c95a3d64",
    "bytes": 1636,
    "gap": false
   },
   "operationsV2+screensV2 GET /views/observed-timeline?environment=paper&subject_kind=alpha&subject_id=alpha_btc_trend": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "e9dff49c757713fac0def0cb6a462c208bed58a498bac95136ffb21a4d34fef4",
+   "sha256": "0fca9985fbd40bdaf9a40ddd92289f3b119607c3cd98851834cf4a6f9bedad68",
    "bytes": 6852,
    "gap": false
   },
   "operationsV2+screensV2 GET /views/observed-timeline?environment=paper&subject_kind=account&subject_id=acc_a": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "d6255debb2b03cebc7aec9a884d2be929645f6bdc6362803581ef8a319b49898",
+   "sha256": "8eda5d718ed1ca1028f04b974c01e25ba8833ec859468a7f214d201152e67e0f",
    "bytes": 6762,
    "gap": false
   },
   "operationsV2+screensV2 GET /market/venue-candles?environment=paper&venue=BINANCE&symbol=ETHUSDT&interval=1h&from_ms=1&to_ms=2": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "36703f48a731f210c39405e081a19330267a321f1c44c641af0f3c2acea27a49",
+   "sha256": "1a181aa6884eb794d09b7bd5c391dc58f2fec44998cd0ceec04d4ffe6f8b226d",
    "bytes": 813,
    "gap": false
   },
   "operationsV2+screensV2 GET /market/venue-candles?venue=OKX&interval=15m": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "860309d875b4be3e0eb340598c16c032e03ebdfc8d8f31a54574aed0e1099305",
+   "sha256": "3eaaa81031dacb16b18cea1cc75fa8f991ba417890e86caca456a25e62311fe1",
    "bytes": 897,
    "gap": false
   },
@@ -5458,14 +5458,14 @@
   "operationsV2+screensV2 GET /alphas/av_2041/stage-drift": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "19e8f8228fc2ddab7cd082ca09ce43d7a04787e49ecea3eda044ec43cf75e707",
+   "sha256": "cfb95fce569c9899c0afe3e441eb18262c6e6e7c1def67c7b6cd51e3ac01e528",
    "bytes": 651,
    "gap": false
   },
   "operationsV2+screensV2 GET /alphas/alpha_btc_trend/stage-drift?days=3": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "d93ff6f25ca38c8615b101f61153ff92c4a48615b520b73d3100002ccd38462b",
+   "sha256": "091c56c75e5f98687d9d86de07ec14fcf49026e741595e9d231fd8f6ad9ba86f",
    "bytes": 659,
    "gap": false
   },
@@ -5591,28 +5591,28 @@
   "operationsV2+screensV2 GET /broker-bindings": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "f34488b577f4aead62d93be1b0fb63e05777d35fed12f9d17868ecfea313b97f",
+   "sha256": "e6aa92f009f4aa2914bbc9d7612688d6db7a63150e1935c4793c609386cf311c",
    "bytes": 1081,
    "gap": false
   },
   "operationsV2+screensV2 GET /broker-bindings?environment=live": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "f34488b577f4aead62d93be1b0fb63e05777d35fed12f9d17868ecfea313b97f",
+   "sha256": "e6aa92f009f4aa2914bbc9d7612688d6db7a63150e1935c4793c609386cf311c",
    "bytes": 1081,
    "gap": false
   },
   "operationsV2+screensV2 GET /broker-bindings?environment=paper": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "faf4df00f9f3c6a8a5d43516328910936937bcd5cbb9130605317db0e97c3c16",
+   "sha256": "05a3a39eeb7b19922917581a17972fdf89b23bff1fd887c6bf59765db6908bad",
    "bytes": 756,
    "gap": false
   },
   "operationsV2+screensV2 GET /broker-bindings?environment=sandbox": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "e985134ba135f89510b4efee0dcd5c6277d6a5fd3f4eb38239198e5b255fc21f",
+   "sha256": "2a28cd78f77d0ad0936a9fba7b75a3c60ce6ddac71768f3a994e3401aac2819c",
    "bytes": 763,
    "gap": false
   },
@@ -5626,14 +5626,14 @@
   "operationsV2+screensV2 GET /broker-bindings?environment=live&limit=2": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "0e98ecaa1d0015eac12b77adf29a406ee53e954688b5cb9f9b444c14db05974e",
+   "sha256": "c067afbefb5f4acf15550e0c912863c056ec0c98a448e8b2cd16445a3745ae5a",
    "bytes": 937,
    "gap": false
   },
   "operationsV2+screensV2 GET /broker-bindings?environment=live&search=okx&venue=OKX&state=ACTIVE": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "9ffc67753b1d6d14b2aa14b5f779a1d072b2ae8d1e24ceb59f13741c064c82af",
+   "sha256": "600a42751094eb43782b74934189ffc7f857f57aa030b22388ef0cd94fa3583a",
    "bytes": 744,
    "gap": false
   },
@@ -5647,7 +5647,7 @@
   "operationsV2+screensV2 GET /broker-bindings/bnc_main@BINANCE?environment=live": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "db8b3265a350c6d3993261fb1ceddd800ea76b73658fdcc940dbcfc454da9599",
+   "sha256": "c061a948aeab3ae85c054a11c948036629cc81556db63f56b97b58e0e49b1903",
    "bytes": 487,
    "gap": false
   },
@@ -5668,14 +5668,14 @@
   "operationsV2+screensV2 GET /broker-bindings/bnc_main@BINANCE/exposure": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "46d9d6c573e5582eea707cfa9e887d95b0f8835216e669c117ca70a5b9c8f828",
+   "sha256": "552e3b80512081dad04fd4f3d69e28872e2a73f6eb277328cda6bfe9a225d555",
    "bytes": 1170,
    "gap": false
   },
   "operationsV2+screensV2 GET /broker-bindings/okx_main@OKX/exposure": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "f323bb13ae2d082cd117028f7678de17899f9e1df86a55519a1d29872f08e779",
+   "sha256": "2df208ffdec4d115d81a214a60f06d4ad72c9b2e9bf210b443ec47b7599e8084",
    "bytes": 946,
    "gap": false
   },
@@ -6060,21 +6060,21 @@
   "operationsV2+screensV2 CHAIN /broker-bindings?environment=live&limit=1 #0": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "b638c86580466cbf5505e56439d1f6b2dc4fb9393c6d3101aed1b161eaf61c92",
+   "sha256": "07db7be1558087d20e283527bec657c472871cf4e29be447de049ef1a178d87f",
    "bytes": 770,
    "gap": false
   },
   "operationsV2+screensV2 CHAIN /broker-bindings?environment=live&limit=1 #1": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "030d0e2afc0184c5699cda733bec13bd0cb140b1a1a81e9082bf79ef5efded39",
+   "sha256": "60440fbb113d8c00545317148d875d6e157e9853a470f9154100454ecfad5aa7",
    "bytes": 781,
    "gap": false
   },
   "operationsV2+screensV2 CHAIN /broker-bindings?environment=live&limit=1 #2": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "16f622cdceed0438ec894ecba5928c3148104d37e1c3e5f7bbc968554cbb9893",
+   "sha256": "89f92a418f2968891263099465206917edd5dfcc910b7b276a0144ccd7c4b65e",
    "bytes": 758,
    "gap": false
   },
@@ -6102,35 +6102,35 @@
   "operationsV2+screensV2 CHAIN /resources/alphas/alpha_btc_trend/orders?environment=paper&limit=3 #0": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "8239bb3f3263e17d4f5051861a083148569d06a77624ed4fc3dddc68c3527271",
+   "sha256": "0e777820e82ab96c0836e5fbdcb9eda342843afb603172a16e87bf8b6255eecf",
    "bytes": 4204,
    "gap": false
   },
   "operationsV2+screensV2 CHAIN /resources/alphas/alpha_btc_trend/orders?environment=paper&limit=3 #1": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "eecea7812f8c3e5ee3379fdb49a99a5957984a58235406b8b02b5325a90db6c9",
+   "sha256": "e6a089cd65376db075ffefb4a6f7ecae302d2ea7b511d37c847f655ed47b7b6e",
    "bytes": 2060,
    "gap": false
   },
   "operationsV2+screensV2 CHAIN /resources/accounts/acc_bnc_core/orders?environment=live&limit=1 #0": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "a02335562c0ff89519b999b3c28e6d0427e80072c276a854bb8f348f2c85431e",
+   "sha256": "39e87b6716dab9cf4783a29df1bcdd98b37a61a08bf439b8486c085d39a11d78",
    "bytes": 1339,
    "gap": false
   },
   "operationsV2+screensV2 CHAIN /resources/accounts/acc_bnc_core/orders?environment=live&limit=1 #1": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "4459df941c98238acae6e6671895a69fe1909c499f9e5785eed1cd332ddf31ef",
+   "sha256": "2fb0134abaddd96ed1788a1db3db078e0fe8876d7889f64837e1e4aa04c50155",
    "bytes": 1337,
    "gap": false
   },
   "operationsV2+screensV2 CHAIN /resources/accounts/acc_bnc_core/orders?environment=live&limit=1 #2": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "6417b3e73ef91c8ab86c4b36ec190939a8e85c70dc75d75f20bc486daebb8471",
+   "sha256": "dbac33cd8a6c1b1879b038fcaa911a432f9d3ceb887e3f5808230e558f36aec1",
    "bytes": 1337,
    "gap": false
   },

@@ -45,7 +45,7 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { fromCents, toCents } from "./bffWorld";
+import { fromCents, inWorldClock, toCents } from "./bffWorld";
 import { equityOf } from "./bffWorldBooks";
 import { resolveStageDeployment } from "./bffWorldStage";
 
@@ -58,7 +58,7 @@ interface Answer {
 type Row = Record<string, unknown>;
 
 const CONTRACTS = join(dirname(fileURLToPath(import.meta.url)), "../../../../packages/contracts/fixtures");
-const canonical = (name: string): unknown => JSON.parse(readFileSync(join(CONTRACTS, name), "utf8"));
+const canonical = (name: string): unknown => inWorldClock(JSON.parse(readFileSync(join(CONTRACTS, name), "utf8"))); // F4: the canonical file is written at 17 Oct 12:04Z; the double serves it at the world clock
 const fresh = <T>(name: string): T => canonical(name) as T;
 
 const ok = (body: unknown): Answer => ({ status: 200, body });
@@ -81,10 +81,10 @@ const safeId = (id: string): string => id.replace(SAFE_ID, "_").slice(0, 120);
 
 const ORDER_COUNT = 40;
 const EQUITY_ROWS = 200;
-const AS_OF = "2026-10-17T12:03:00Z"; // WORLD: the world clock (12:04Z), so no order or point of this page is later than its own as-of
-const READ_AT = "2026-10-17T12:04:00Z";
+const AS_OF = "2026-08-22T12:59:00Z"; // WORLD: the world clock (13:00Z), so no order or point of this page is later than its own as-of
+const READ_AT = "2026-08-22T13:00:00Z";
 const HOUR = 3_600_000;
-const END_MS = Date.UTC(2026, 9, 17, 12, 0, 0);
+const END_MS = Date.UTC(2026, 7, 22, 12, 56, 0);
 
 const pad = (n: number, width = 5): string => String(n).padStart(width, "0");
 const iso = (ms: number): string => new Date(ms).toISOString();
@@ -239,8 +239,8 @@ function sandboxV1(deploymentId: string): Row {
     step.source_verification_state = states[index] === "PASS" ? "VERIFIED" : "UNAVAILABLE";
     step.evidence_hash = states[index] === "PASS" ? `sha256:${"c".repeat(64)}` : null;
     step.evidence_schema_version = states[index] === "PASS" ? "sandbox-evidence.v1" : null;
-    step.as_of = states[index] === "PASS" ? `2026-10-16T17:5${index}:00.000Z` : null;
-    step.expires_at = states[index] === "PASS" ? "2026-10-23T17:50:00.000Z" : null;
+    step.as_of = states[index] === "PASS" ? new Date(Date.UTC(2026, 7, 21, 18, 46 + index)).toISOString() : null;
+    step.expires_at = states[index] === "PASS" ? "2026-08-28T18:46:00.000Z" : null;
     step.blocker_code = states[index] === "PASS" ? null : `SANDBOX_STEP_${String(step.step_key)}_${states[index]}`;
   });
   body.progress = {
@@ -255,8 +255,8 @@ function sandboxV1(deploymentId: string): Row {
     returned_count: 2,
     truncated: false,
     rows: [
-      { finding_id: "fnd_TEST_ONLY_1", severity: "WARNING", source_authority: "DERIVED", finding_code: "FEE_DIFF", summary: "Fee total differs by 0.01 USDT", blocking: false, evidence_hash: null, as_of: null, resolved_at: null, created_at: "2026-10-17T12:02:00.000Z" },
-      { finding_id: "fnd_TEST_ONLY_2", severity: "INFO", source_authority: "DERIVED", finding_code: "FILL_LATE", summary: "Fill 3 arrived 4 s late", blocking: false, evidence_hash: null, as_of: null, resolved_at: null, created_at: "2026-10-17T11:15:00.000Z" },
+      { finding_id: "fnd_TEST_ONLY_1", severity: "WARNING", source_authority: "DERIVED", finding_code: "FEE_DIFF", summary: "Fee total differs by 0.01 USDT", blocking: false, evidence_hash: null, as_of: null, resolved_at: null, created_at: "2026-08-22T12:58:00.000Z" },
+      { finding_id: "fnd_TEST_ONLY_2", severity: "INFO", source_authority: "DERIVED", finding_code: "FILL_LATE", summary: "Fill 3 arrived 4 s late", blocking: false, evidence_hash: null, as_of: null, resolved_at: null, created_at: "2026-08-22T12:11:00.000Z" },
     ],
   };
   body.timeline = {
@@ -264,12 +264,12 @@ function sandboxV1(deploymentId: string): Row {
     returned_count: 2,
     truncated: false,
     rows: [
-      { event_id: "evt_TEST_ONLY_2", actor_user_id: "usr_TEST_ONLY_a", action: "SUBMIT", workflow_version_before: 1, workflow_version_after: 2, created_at: "2026-10-17T12:02:00.000Z" },
-      { event_id: "evt_TEST_ONLY_1", actor_user_id: "usr_TEST_ONLY_a", action: "CREATE", workflow_version_before: 0, workflow_version_after: 1, created_at: "2026-10-16T17:55:00.000Z" },
+      { event_id: "evt_TEST_ONLY_2", actor_user_id: "usr_TEST_ONLY_a", action: "SUBMIT", workflow_version_before: 1, workflow_version_after: 2, created_at: "2026-08-22T12:58:00.000Z" },
+      { event_id: "evt_TEST_ONLY_1", actor_user_id: "usr_TEST_ONLY_a", action: "CREATE", workflow_version_before: 0, workflow_version_after: 1, created_at: "2026-08-21T18:51:00.000Z" },
     ],
   };
   body.promotion_plans = [
-    { plan_id: "plan_TEST_ONLY_1", target_stage: "CANARY", evidence_set_hash: `sha256:${"e".repeat(64)}`, status: "BLOCKED", blocker_codes: ["SANDBOX_NOT_ELIGIBLE"], source_side_effect_requested: false, created_at: "2026-10-17T12:10:00.000Z" },
+    { plan_id: "plan_TEST_ONLY_1", target_stage: "CANARY", evidence_set_hash: `sha256:${"e".repeat(64)}`, status: "BLOCKED", blocker_codes: ["SANDBOX_NOT_ELIGIBLE"], source_side_effect_requested: false, created_at: "2026-08-22T13:06:00.000Z" },
   ];
   return body;
 }
@@ -370,8 +370,8 @@ function decimalOf(units: bigint, scale: bigint, places: number): string {
   return `${negative ? "-" : ""}${whole}.${fraction}`;
 }
 
-/** The instant of a Live read: just inside the world clock (12:04Z), so no row and no stamp of the page is later than its own as-of. The canonical file says 18 Oct 00:00Z, a day AFTER the world. */
-const LIVE_OBSERVED_MS = Date.UTC(2026, 9, 17, 12, 3, 0);
+/** The instant of a Live read: just inside the world clock (13:00Z), so no row and no stamp of the page is later than its own as-of. The canonical file says 18 Oct 00:00Z, a day AFTER the world. */
+const LIVE_OBSERVED_MS = Date.UTC(2026, 7, 22, 12, 59, 0);
 /** Row `n` of a paged panel (oldest first): one minute apart, the last one a minute before the read. */
 const liveRowMs = (n: number): number => LIVE_OBSERVED_MS - (LIVE_PAGES * LIVE_PAGE_SIZE - n) * 60_000;
 const ENTRY_CENTS = 6_700_000n;
@@ -610,7 +610,7 @@ export function answerApprovalCreate(body: unknown): Answer | null {
 const run = (id: string, alpha: string, name: string | null, day: number, claims: unknown): Row => ({
   run_id: id,
   status: "COMPLETED",
-  created_at_utc_ms: Date.UTC(2026, 9, day),
+  created_at_utc_ms: Date.UTC(2026, 7, day + 5),
   binding: { alpha_id: alpha, alpha_name: name },
   ...(claims as Row),
 });
@@ -634,8 +634,8 @@ const RUN_ITEMS: Row[] = [
     methodology_claims_availability: { reason_code: "R1_CLAIMS_NOT_PUBLISHED" },
   }),
   // Not offered by the picker: only COMPLETED runs that name their alpha are.
-  { run_id: "run_sol_break_c0", status: "FAILED", created_at_utc_ms: Date.UTC(2026, 9, 12), binding: { alpha_id: "alpha_sol_break", alpha_name: "SOL Breakout" } },
-  { run_id: "run_doge_d1", status: "RUNNING", created_at_utc_ms: Date.UTC(2026, 9, 17), binding: { alpha_id: "alpha_doge_mom", alpha_name: "DOGE Momentum" } },
+  { run_id: "run_sol_break_c0", status: "FAILED", created_at_utc_ms: Date.UTC(2026, 7, 17), binding: { alpha_id: "alpha_sol_break", alpha_name: "SOL Breakout" } },
+  { run_id: "run_doge_d1", status: "RUNNING", created_at_utc_ms: Date.UTC(2026, 7, 22), binding: { alpha_id: "alpha_doge_mom", alpha_name: "DOGE Momentum" } },
 ];
 
 export const QUANTBT_RUNS_PATH = "/api/v1/quantbt/runs";

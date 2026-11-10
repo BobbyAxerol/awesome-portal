@@ -53,7 +53,7 @@ import { fileURLToPath } from "node:url";
 import { scopedResourceV2 } from "./bffDoubleScopedResource";
 import { addDecimal, scaled, sumByCurrency } from "./bffScale";
 import { isPositiveMode, positiveBookOf } from "./bffPositiveMode";
-import { accountFact, bindingFact, ledgerSeries, LEVEL_NODES } from "./bffWorld";
+import { accountFact, bindingFact, inWorldClock, ledgerSeries, LEVEL_NODES } from "./bffWorld";
 import { costOverRun, accountPositions, setAccountEnvironmentProvider, wholeAccountOf } from "./bffWorldBooks"; // WP-B2-C, WP-B2-C3
 import { blotterBookOf } from "./bffDoubleOverview";
 import { isRetired } from "./bffWorldStage"; // WP-B2-A3
@@ -66,15 +66,15 @@ export interface BffAnswerAccount {
 }
 
 const CONTRACTS = join(dirname(fileURLToPath(import.meta.url)), "../../../../packages/contracts/fixtures");
-const canonical = (name: string): Record<string, unknown> => JSON.parse(readFileSync(join(CONTRACTS, name), "utf8")) as Record<string, unknown>;
+const canonical = (name: string): Record<string, unknown> => inWorldClock(JSON.parse(readFileSync(join(CONTRACTS, name), "utf8")) as Record<string, unknown>); // F4: canonical file at 17 Oct, served at the world clock
 const BINDINGS_LIST = canonical("execution-bindings-list.valid.json");
 const BINDING_DETAIL = canonical("execution-binding-detail.valid.json");
 const BINDING_EXPOSURE = canonical("execution-analytics.binding-exposure.valid.json");
 const ACCOUNT_READY = canonical("execution-account-broker-360.ready.valid.json");
 
 /** The instant the source published; reads happen 14 minutes later. */
-export const ACCOUNT_DOUBLE_AS_OF = "2026-10-17T09:00:00.000Z";
-export const ACCOUNT_DOUBLE_READ_AT = "2026-10-17T09:14:00.000Z";
+export const ACCOUNT_DOUBLE_AS_OF = "2026-08-22T09:56:00.000Z";
+export const ACCOUNT_DOUBLE_READ_AT = "2026-08-22T10:10:00.000Z";
 const AS_OF_MS = Date.parse(ACCOUNT_DOUBLE_AS_OF);
 const READ_AT_MS = Date.parse(ACCOUNT_DOUBLE_READ_AT);
 const iso = (ms: number): string => new Date(ms).toISOString();
@@ -105,17 +105,17 @@ interface BindingSpec {
 }
 
 const BINDINGS: readonly BindingSpec[] = [
-  { bindingId: "bnc_main@BINANCE", accountId: "acc_bnc_core", venue: "BINANCE", state: "ACTIVE", credentialState: "SYNC_SYNCED", updatedAt: "2026-10-17T09:00:00.000Z", environment: "live" },
-  { bindingId: "bnc_sub@BINANCE", accountId: "acc_bnc_sub", venue: "BINANCE", state: "ACTIVE", credentialState: "SYNC_STALE", updatedAt: "2026-10-17T06:10:00.000Z", environment: "live" },
-  { bindingId: "okx_main@OKX", accountId: "acc_okx_main", venue: "OKX", state: "ACTIVE", credentialState: "EXPIRED", updatedAt: "2026-10-16T21:30:00.000Z", environment: "live" },
-  { bindingId: "pap_sim@BINANCE", accountId: "acc_pap_sim", venue: "BINANCE", state: "ACTIVE", credentialState: "SYNC_SYNCED", updatedAt: "2026-10-17T08:57:00.000Z", environment: "paper" },
-  { bindingId: "tn_bnc@BINANCE", accountId: "acc_tn_bnc", venue: "BINANCE", state: "SUSPENDED", credentialState: "NOT_PUBLISHED", updatedAt: "2026-10-15T12:00:00.000Z", environment: "sandbox" },
+  { bindingId: "bnc_main@BINANCE", accountId: "acc_bnc_core", venue: "BINANCE", state: "ACTIVE", credentialState: "SYNC_SYNCED", updatedAt: "2026-08-22T09:56:00.000Z", environment: "live" },
+  { bindingId: "bnc_sub@BINANCE", accountId: "acc_bnc_sub", venue: "BINANCE", state: "ACTIVE", credentialState: "SYNC_STALE", updatedAt: "2026-08-22T07:06:00.000Z", environment: "live" },
+  { bindingId: "okx_main@OKX", accountId: "acc_okx_main", venue: "OKX", state: "ACTIVE", credentialState: "EXPIRED", updatedAt: "2026-08-21T22:26:00.000Z", environment: "live" },
+  { bindingId: "pap_sim@BINANCE", accountId: "acc_pap_sim", venue: "BINANCE", state: "ACTIVE", credentialState: "SYNC_SYNCED", updatedAt: "2026-08-22T09:53:00.000Z", environment: "paper" },
+  { bindingId: "tn_bnc@BINANCE", accountId: "acc_tn_bnc", venue: "BINANCE", state: "SUSPENDED", credentialState: "NOT_PUBLISHED", updatedAt: "2026-08-20T12:56:00.000Z", environment: "sandbox" },
 ];
 
 /** F3c: the bindings of the two world accounts the Portfolio books name (see WORLD_ACCOUNTS); positive mode only. */
 const WORLD_BINDINGS: readonly BindingSpec[] = [
-  { bindingId: "byb_main@BYBIT", accountId: "acc_byb_main", venue: "BYBIT", state: "ACTIVE", credentialState: "SYNC_SYNCED", updatedAt: "2026-10-17T08:40:00.000Z", environment: "live" },
-  { bindingId: "pap_yen@BITFLYER", accountId: "acc_pap_yen", venue: "BITFLYER", state: "ACTIVE", credentialState: "SYNC_SYNCED", updatedAt: "2026-10-17T08:30:00.000Z", environment: "paper" },
+  { bindingId: "byb_main@BYBIT", accountId: "acc_byb_main", venue: "BYBIT", state: "ACTIVE", credentialState: "SYNC_SYNCED", updatedAt: "2026-08-22T09:36:00.000Z", environment: "live" },
+  { bindingId: "pap_yen@BITFLYER", accountId: "acc_pap_yen", venue: "BITFLYER", state: "ACTIVE", credentialState: "SYNC_SYNCED", updatedAt: "2026-08-22T09:26:00.000Z", environment: "paper" },
 ];
 
 /** The five bindings the double holds, plus the generated ones (empty unless the standalone server runs at a larger scale). */

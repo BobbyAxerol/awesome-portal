@@ -230,7 +230,7 @@ describe("the same sections, from the scoped facts", () => {
     const [resolved, open] = rows;
     expect(resolved.textContent).toContain("POSITION_MISMATCH");
     expect(resolved.textContent).toContain("find_001");
-    expect(resolved.querySelector("td[data-l='Resolved'] time")!.getAttribute("datetime")).toBe(new Date(Date.UTC(2026, 9, 17, 9, 48)).toISOString());
+    expect(resolved.querySelector("td[data-l='Resolved'] time")!.getAttribute("datetime")).toBe(new Date(Date.UTC(2026, 7, 22, 10, 44)).toISOString());
     expect(open.textContent).toContain("BALANCE_MISMATCH");
     expect(open.querySelector("td[data-l='Resolved']")!.textContent).toContain("Not resolved");
     expect(document.body.textContent).not.toContain("Not published: typed stage rows, series and reconciliation figures");
@@ -280,7 +280,7 @@ describe("Orders & Fills on subject-records.v2", () => {
     expect(rows).toHaveLength(6);
     const first = rows.find((r) => r.textContent?.includes("ord_001"))!;
     expect(first.querySelector("td[data-l='Client order']")!.textContent).toBe("bt3-001");
-    expect(first.querySelector("td[data-l='Time (UTC)'] time")!.getAttribute("datetime")).toBe(new Date(Date.UTC(2026, 9, 16, 14, 0)).toISOString());
+    expect(first.querySelector("td[data-l='Time (UTC)'] time")!.getAttribute("datetime")).toBe(new Date(Date.UTC(2026, 7, 21, 14, 56)).toISOString());
     expect(first.querySelector("td[data-l='Type']")!.textContent).toContain("Limit");
     // A conditional leg states its role and sequence; an entry order states none, and says so without a guess.
     const takeProfit = rows.find((r) => r.textContent?.includes("ord_002"))!;

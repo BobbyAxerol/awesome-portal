@@ -602,6 +602,9 @@ function blotter(search: URLSearchParams): OverviewAnswer {
   const worldClock = isPositiveMode() && v !== "stale" ? ORDER_BOOK_AS_OF_ISO.replace(".000Z", "Z") : null;
   body.as_of = worldClock ?? (v === "stale" ? "2026-08-22T12:42:00Z" : "2026-08-22T12:56:00Z");
   body.read_at = worldClock ?? "2026-08-22T12:56:01Z";
+  // F4: the canonical mirror revision states its last refresh on 30 Aug; with the world clock on 22 Aug that is a content instant after the read, which the preview would take for "now"
+  const mirror = (body.data.exact_query as { mirror_revision?: { last_successful_refresh_at?: string } }).mirror_revision;
+  if (worldClock !== null && mirror?.last_successful_refresh_at !== undefined && Date.parse(mirror.last_successful_refresh_at) > Date.parse(worldClock)) mirror.last_successful_refresh_at = worldClock;
   // ===== WP-B2-O end
   return ok(body);
 }

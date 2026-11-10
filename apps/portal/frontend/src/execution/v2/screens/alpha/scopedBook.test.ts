@@ -60,7 +60,7 @@ describe("scopedPageAsActivity", () => {
     const orders = readReplayOrders(read("orders").records.map((r) => r.values));
     expect(orders).toHaveLength(6);
     expect(orders[0]).toMatchObject({ orderId: "ord_001", symbol: "BTCUSDT", side: "BUY", status: "FILLED", price: "67200.50", qty: "0.40", accountId: "acct_binance_02" });
-    expect(orders[0]!.submittedAt).toBe(new Date(Date.UTC(2026, 9, 16, 14, 0)).toISOString());
+    expect(orders[0]!.submittedAt).toBe(new Date(Date.UTC(2026, 7, 21, 14, 56)).toISOString());
     // The record states the client order id and the type; session and venue order id are not in the v2 record: null, not guessed.
     expect(orders[0]).toMatchObject({ clientOrderId: "bt3-001", type: "LIMIT", sessionId: null, venueOrderId: null });
   });

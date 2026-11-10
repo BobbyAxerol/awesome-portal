@@ -175,7 +175,7 @@ describe("Accounts list", () => {
     expect(screen.getByText("3 of 3 bindings")).toBeTruthy();
     // The environment is the selected tab, not repeated in the as-of line.
     expect(screen.queryByText(/Live environment/)).toBeNull();
-    expect(screen.getByText(/As of 17 Oct 09:00Z/)).toBeTruthy();
+    expect(screen.getByText(/As of 22 Aug 09:56Z/)).toBeTruthy();
   });
 
   it("reads one environment per tab and writes it to the URL; All environments is not offered", async () => {
@@ -554,7 +554,7 @@ describe("Account 360: the shared sleeve", () => {
     await loaded360();
     expect(screen.getByText(/Shared account · 3 sleeves.*\. Native figures are not sleeve capital\./)).toBeTruthy();
     expect(screen.getByText("Stale 14 min")).toBeTruthy();
-    expect(screen.getByText("As of 17 Oct 09:00Z")).toBeTruthy();
+    expect(screen.getByText("As of 22 Aug 09:56Z")).toBeTruthy();
     expect(screen.getByText("Broker sync: Synced")).toBeTruthy();
   });
 
@@ -1059,7 +1059,7 @@ describe("Account 360: tabs", () => {
     const table = within(panel).getByRole("table", { name: "Sync history" });
     const rows = bodyRows(table);
     expect(rows).toHaveLength(7);
-    expect(cell(rows[0]!, "When (UTC)")).toContain("17 Oct 09:00Z");
+    expect(cell(rows[0]!, "When (UTC)")).toContain("22 Aug 09:56Z");
     // The reason is a disclosure on the cell, not a title and not hidden text: open it and read it.
     const noTime = rows.map((r) => r.querySelector("td[data-l='When (UTC)'] .exec-acct-na")).find((n) => n !== null && n !== undefined);
     expect(noTime).toBeTruthy();
@@ -1207,9 +1207,9 @@ describe("Accounts list: when it was read, and how old a row is", () => {
     stubFetch();
     mount("/deployments/accounts");
     await loadedList();
-    expect(screen.getByText(/As of 17 Oct 09:00Z · Read 17 Oct 09:14Z$/)).toBeTruthy();
+    expect(screen.getByText(/As of 22 Aug 09:56Z · Read 22 Aug 10:10Z$/)).toBeTruthy();
     const head = within(bindingsTable()).getByRole("columnheader", { name: "Updated" });
-    expect(head.getAttribute("title")).toContain("17 Oct 09:14Z");
+    expect(head.getAttribute("title")).toContain("22 Aug 10:10Z");
     expect(head.getAttribute("title")).toContain("not the browser clock");
   });
 
@@ -1394,7 +1394,7 @@ describe("Account 360: WP-F2 simulated identity and margin (FIXTURE_LAB)", () =>
     await loaded360();
     const physical = screen.getByText("Physical binding", { selector: "h2, h3, .exec-blk-ph-title" }).closest("section")!;
     expect(physical.textContent).toContain("USDT-M futures · hedge");
-    expect(physical.textContent).toMatch(/Real-funded · Mainnet · proof 17 Oct 0\d:\d\dZ/);
+    expect(physical.textContent).toMatch(/Real-funded · Mainnet · proof 22 Aug [01]\d:\d\dZ/);
     expect(physical.textContent).not.toContain("Not published");
     const margin = screen.getByText("Margin", { selector: "h2, h3, .exec-blk-ph-title" }).closest("section")!;
     expect(margin.textContent).toMatch(/5\.10\s?%/);

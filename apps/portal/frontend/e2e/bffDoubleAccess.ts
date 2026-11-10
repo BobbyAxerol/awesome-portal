@@ -260,8 +260,8 @@ export function answerProfileAccessPolicy(method: string, pathname: string, sear
       body: {
         activity: grantee === "usr_fx_minh" || grantee === PEOPLE.find((person) => person.username === "minh")!.id
           ? [
-              { event_id: "evt_fx_1", action: "GRANT", capability: "governance.r2.decide", outcome: "APPLIED", reason_code: null, step_up_used: true, occurred_at: "2026-10-12T09:30:00.000Z" },
-              { event_id: "evt_fx_2", action: "GRANT", capability: "governance.r1.decide", outcome: "APPLIED", reason_code: null, step_up_used: true, occurred_at: "2026-10-01T08:00:00.000Z" },
+              { event_id: "evt_fx_1", action: "GRANT", capability: "governance.r2.decide", outcome: "APPLIED", reason_code: null, step_up_used: true, occurred_at: "2026-08-17T10:26:00.000Z" },
+              { event_id: "evt_fx_2", action: "GRANT", capability: "governance.r1.decide", outcome: "APPLIED", reason_code: null, step_up_used: true, occurred_at: "2026-08-06T08:56:00.000Z" },
             ]
           : [],
       },

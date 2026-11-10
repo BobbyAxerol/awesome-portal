@@ -210,7 +210,7 @@ const VENUES = ["BINANCE", "OKX", "BYBIT", "DERIBIT", "BITFLYER"] as const;
 const STAGE_ENV: Record<DeploymentSpec["stage"], Env> = { RESEARCH: "paper", PAPER: "paper", SANDBOX: "sandbox", CANARY: "live", LIVE: "live" };
 const STAGE_ORDER = ["LIVE", "CANARY", "SANDBOX", "PAPER", "RESEARCH"] as const;
 const ALLOCATIONS = ["5000", "7500", "10000", "12500", "2500.50", "25000", "40000.25", "60000", "100000"] as const;
-const DATA_BASE = Date.parse("2026-09-01T15:10:00Z");
+const DATA_BASE = Date.parse("2026-08-22T11:56:00Z"); // F4: the world clock (22 Aug 13:00Z) less 64 min; generated rows are never dated after it (was 1 Sep 15:10Z, a day on the 17 Oct frame)
 /** Two decimals, never "-0.00" (a negative zero is not a published value). */
 const money = (n: number): string => {
   const text = n.toFixed(2);

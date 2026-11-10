@@ -71,7 +71,7 @@ describe("the Last seen column", () => {
     await screen.findByRole("table", { name: "Accounts" });
     const texts = rowsOf().map((r) => cell(r, "Last seen (UTC)"));
     expect(texts.every((t) => !t.includes("Never signed in"))).toBe(true);
-    expect(texts.some((t) => /\b\d{1,2} Oct\b/.test(t) || t.includes("2026"))).toBe(true);
+    expect(texts.some((t) => /\b\d{1,2} Aug\b/.test(t) || t.includes("2026"))).toBe(true);
     // The INVITED accounts and every seventh one are omitted by the double, and read as unknown.
     const unknown = texts.filter((t) => t.includes("Not available"));
     expect(unknown.length).toBeGreaterThan(0);

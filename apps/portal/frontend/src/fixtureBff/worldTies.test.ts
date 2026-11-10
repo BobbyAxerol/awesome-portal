@@ -119,10 +119,6 @@ const TIES: readonly { id: string; title: string; qa: string; owner: string }[] 
 
 /** Ties still red on the tip. Delete a line when its owner lands the fix (the test then tells you which). */
 const OPEN_TIES: Readonly<Record<string, string>> = {
-  // F3a (10 Nov 2026): the Overview, Portfolios, Command Centre, series and operations now read at ONE clock, 22 Aug 13:00Z (OPS_READ_MS). The alpha resource,
-  // the positive-mode blotter and the stage rooms are still anchored on WORLD_NOW_MS (17 Oct 12:04Z) and on instants hard-coded in bffDoubleAlpha / Stage /
-  // Account (not this package's files). Closing it = move WORLD_NOW_MS to 22 Aug 13:00Z and shift those instants by the same distance.
-  W13: "alpha resource / blotter / stage rooms stay on WORLD_NOW (17 Oct 12:04Z); Overview and Portfolios are on 22 Aug 13:00Z",
 };
 
 let server: Server;

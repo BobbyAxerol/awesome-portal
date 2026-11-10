@@ -137,7 +137,7 @@ describe("the screen", () => {
     expect(screen.getByText("Orders and fills, newest first")).toBeTruthy();
     const head = document.querySelector(".exec-blt2-fresh")!;
     expect(head.textContent).toContain("Fresh");
-    expect(head.textContent).toMatch(/As of 17 Oct 12:00:00Z/);
+    expect(head.textContent).toMatch(/As of 22 Aug 12:56:00Z/);
   });
 
   it("an order link to an old order walks older pages until the order is found, and says so while it looks", async () => {

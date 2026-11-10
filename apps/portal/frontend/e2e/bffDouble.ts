@@ -257,7 +257,7 @@ export function alphaFleet(search: URLSearchParams): Answer {
   // WORLD (positive-like scenarios): the Alpha Fleet read counts the alphas, deployments and portfolios of the ONE world: the native books, the
   // research idea and the generated alphas; the hand-written five of the doubles stay for the specs.
   const worldFleet: Record<string, unknown>[] = isPositiveMode()
-    ? [...NATIVE_ALPHAS.map(worldRow), row("alpha_e", "Idea E", "0.1", null, ["RESEARCH"], "RESEARCH_ONLY", [], [], "2026-09-01T12:00:00Z")]
+    ? [...NATIVE_ALPHAS.map(worldRow), row("alpha_e", "Idea E", "0.1", null, ["RESEARCH"], "RESEARCH_ONLY", [], [], "2026-08-22T11:00:00Z")]
     : [];
   const all: Record<string, unknown>[] = isPositiveMode() ? [...worldFleet, ...scaled().alphas.map(worldRow)] : [
     base,
