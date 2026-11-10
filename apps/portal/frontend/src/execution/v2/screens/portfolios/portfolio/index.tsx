@@ -201,7 +201,7 @@ export default function PortfolioScreen({ api, portfolioId, capabilities, routes
     if (identity === null) {
       return <PanelState status={resource.state === "empty" ? "empty" : "partial"} reason={`Portfolio ${id} is not present in the projected resource population.`} />;
     }
-    const ctx: TabCtx = { portfolioId: id, identity, resource, deployments, accounts, environments, routes, search: params, reads, window: url.value.window, mayOpenAccounts };
+    const ctx: TabCtx = { api, portfolioId: id, identity, resource, deployments, accounts, environments, routes, search: params, reads, window: url.value.window, mayOpenAccounts };
     return (
       <>
         {resource.completeness !== null && resource.completeness.toUpperCase() !== "COMPLETE" ? (

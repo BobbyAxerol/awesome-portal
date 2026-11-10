@@ -19,6 +19,8 @@ import type { ExecutionApi } from "../../../api/ports";
 import { V2_ROLE_PRESETS } from "../../shell/roleNav";
 import { loadCanonical } from "../../testkit/loadCanonical";
 import AccountScreen, { ACCOUNT_SCREEN_KEY } from "./index";
+import { DATASET_COLUMNS } from "../fleet/fleetMetricsModel";
+import { datasetAnswer, newDatasetDouble, surfaceOfPath, type DoubleAlpha } from "../fleet/datasetDouble.testbase";
 import { whyText } from "../../gapWhyTestUtil";
 
 /* ── the session, standing in for useSession ─────────────────────────────── */
@@ -948,17 +950,64 @@ describe("Account 360: tabs", () => {
     expect(within(panel).queryByRole("table")).toBeNull();
   });
 
-  it("Allocations: logical, with links, and no claim on native balance", async () => {
-    stubFetch();
+  /** The Manager dataset the Allocations tab reads (ACCOUNT surface), from the Fleet's own dataset double; every row sits on `acc_bnc_core`. */
+  const datasetStub = (population: DoubleAlpha[]) => {
+    const state = newDatasetDouble({ live: population });
+    state.mutate = (body) => {
+      for (const row of body.items) for (const child of row.children) child.account_id = "acc_bnc_core";
+    };
+    const answer = (url: URL) => {
+      const path = url.pathname.replace(/^\/api\/v1\/execution/, "");
+      if (surfaceOfPath(path) === null) return null;
+      state.calls.push({ path, query: url.searchParams, filters: null, sort: null, window: null });
+      return datasetAnswer(path, url.searchParams, state);
+    };
+    return { state, answer };
+  };
+
+  it("Allocations (WP-3): the Alpha Fleet table filtered to this account by the server, with the Fleet's columns, a link to Alpha 360 and no claim on native balance", async () => {
+    const { state, answer } = datasetStub([
+      { id: "btc_trend", name: "btc_trend", owner: "asmith", health: "READY", stages: ["LIVE"], portfolio: "pf_core", version: "v3" },
+      { id: "eth_mean", name: "eth_mean", owner: "asmith", health: "ATTENTION", stages: ["CANARY"], portfolio: "pf_core", version: "v1" },
+    ]);
+    stubFetch({ answer });
     account("acc_bnc_core");
     await loaded360();
     const panel = await openTab("Allocations");
-    const row = bodyRows(within(panel).getByRole("table", { name: "Allocations on this account" }))[0]!;
-    expect(cell(row, "Allocation")).toContain("80,000.00");
-    expect(within(row).getByRole("link", { name: "btc_trend" }).getAttribute("href")).toBe("/deployments/alphas/btc_trend");
-    expect(within(row).getByRole("link", { name: "dep_btc_live" }).getAttribute("href")).toBe("/deployments/live/dep_btc_live");
-    expect(cell(row, "Stage")).toBe("Real-funded");
+    const table = await within(panel).findByRole("table", { name: "Alpha fleet" }, SLOW);
+    const heads = [...table.querySelectorAll("th")].map((th) => th.textContent?.replace(/[↑↓\d]+$/, "").trim());
+    expect(heads).toEqual(DATASET_COLUMNS.filter((column) => !column.optional).map((column) => (column.key === "equity" ? "Equity 30D" : column.label)));
+    const rows = bodyRows(table);
+    expect(rows).toHaveLength(2);
+    const btc = rows.find((row) => cell(row, "Alpha").startsWith("btc_trend"))!;
+    expect(within(btc).getByRole("link", { name: "btc_trend" }).getAttribute("href")).toBe("/deployments/alphas/btc_trend");
+    expect(cell(btc, "Portfolio")).toContain("pf_core");
     expect(within(panel).getByText("No claim on the native balance").getAttribute("title")).toBe("Logical allocations are no claim on the native balance.");
+    // The scope is the server's: the ACCOUNT route of this account, one environment (the account's own), no client filter.
+    const ask = state.calls.filter((call) => call.query.get("limit") !== "1").pop()!;
+    expect(ask.path).toBe("/manager/accounts/acc_bnc_core/overview");
+    expect(ask.query.get("environment")).toBe("live");
+    expect(ask.query.has("filters")).toBe(false);
+    expect(ask.query.has("window")).toBe(false);
+  });
+
+  it("Allocations (WP-3): an account the dataset holds no alpha for says so, and a refused dataset read is its own state", async () => {
+    const empty = datasetStub([]);
+    stubFetch({ answer: empty.answer });
+    account("acc_bnc_core");
+    await loaded360();
+    let panel = await openTab("Allocations");
+    await waitFor(() => expect(panel.textContent).toContain("The Manager dataset holds no alpha on this account in this environment."), SLOW);
+    cleanup();
+    const refused = datasetStub([]);
+    refused.state.variant = "status:503";
+    stubFetch({ answer: refused.answer });
+    account("acc_bnc_core");
+    await loaded360();
+    panel = await openTab("Allocations");
+    await waitFor(() => expect(panel.textContent).toMatch(/unavailable|503|could not/i), SLOW);
+    expect(within(panel).queryByRole("table", { name: "Alpha fleet" })).toBeNull();
+    expect(within(panel).queryByRole("table", { name: "Allocations on this account" })).toBeNull();
   });
 
   it("Fees & funding: windowed figures are one 'Not available' line (FE-025); current ones are labelled current", async () => {

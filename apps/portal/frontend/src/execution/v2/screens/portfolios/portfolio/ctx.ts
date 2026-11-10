@@ -1,10 +1,13 @@
 /** What every tab of Portfolio 360 receives: the answers already read, and the links to build. */
+import type { ExecutionApi } from "../../../../api/ports";
 import type { ProfileEnvelope } from "../../../../api/profileRead";
 import type { PortfolioRoutes } from "../routes";
 import type { AccountView, DeploymentView, Environment, Identity } from "./model";
 import type { PortfolioReads } from "./use360";
 
 export interface TabCtx {
+  /** The port, for the one tab list that reads the Manager dataset itself (Alphas). */
+  api: ExecutionApi;
   portfolioId: string;
   identity: Identity;
   resource: ProfileEnvelope;

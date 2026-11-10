@@ -410,39 +410,8 @@ describe("Allocations", () => {
   });
 });
 
+// The Alphas list itself is the Alpha Fleet table over the Manager dataset: see alphasFleet.test.tsx.
 describe("Alphas", () => {
-  it("lists five deployments under four alphas with the server's per-deployment strings and no per-alpha sum", async () => {
-    mount(makeApi().api);
-    await ready();
-    await goto("Alphas");
-    const rows = rowsOf("Alphas and deployments");
-    expect(rows).toHaveLength(5);
-    const btc = rows.filter((r) => cell(r, "Alpha").startsWith("BTC-Trend"));
-    expect(btc).toHaveLength(2);
-    expect(cell(btc[0], "Alpha")).toContain("v3 · asmith");
-    expect(cell(btc[0], "Allocation")).toContain("120,000.00");
-    expect(cell(btc[0], "Allocation")).toContain("USDT");
-    const carry = rows.find((r) => cell(r, "Deployment") === "pap-0301")!;
-    expect(cell(carry, "Position PnL, now")).toContain("-410.00");
-    expect(carry.querySelector('.exec-pf-num[data-tone="negative"]')).not.toBeNull();
-    expect(panel().textContent).not.toContain("320,000.00");
-    for (const row of rows) expect(cell(row, "Share of PnL")).toBe("Not published");
-    expect(panel().textContent).toContain("4 alphas · 5 deployments");
-    expect(within(panel()).getByRole("link", { name: "Open in Alpha Fleet" }).getAttribute("href")).toContain("/deployments/alphas");
-  });
-
-  it("links alphas, deployments by stage and accounts, and carries the context", async () => {
-    mount(makeApi().api, "?window=7d");
-    await ready();
-    await goto("Alphas");
-    const rows = rowsOf("Alphas and deployments");
-    expect(within(rows[0]).getByRole("link", { name: "BTC-Trend" }).getAttribute("href")).toContain("/deployments/alphas/strat_btc");
-    expect(within(rows[0]).getByRole("link", { name: "live-0192" }).getAttribute("href")).toContain("/deployments/live/live-0192");
-    const paper = rows.find((r) => cell(r, "Deployment") === "pap-0301")!;
-    expect(within(paper).getByRole("link", { name: "pap-0301" }).getAttribute("href")).toContain("/deployments/paper/pap-0301");
-    expect(within(rows[0]).getByRole("link", { name: "Binance-02" }).getAttribute("href")).toContain("window=7d");
-  });
-
   it("draws contribution as current position PnL, one chart per currency, never combined", async () => {
     mount(makeApi().api);
     await ready();
@@ -754,8 +723,9 @@ describe("states", () => {
     expect(whyText(screen.getByText("Some relations may be missing").parentElement)).toBe("The resource is partial");
     const strip = screen.getByRole("group", { name: "Portfolio identity" });
     expect(within(strip).getByText("Allocated, all books").closest("div")!.textContent).toContain("Not available · no allocation published");
+    // The Alphas list is the Fleet's dataset now (alphasFleet.test.tsx); what the resource says about a portfolio with no deployment is the Contribution note.
     await goto("Alphas");
-    expect(screen.getByText("The resource published no deployment for this portfolio.")).toBeTruthy();
+    expect(screen.getByText("No deployment published a currency, so no contribution is drawn.")).toBeTruthy();
     await goto("Accounts");
     expect(screen.getByText("The resource published no account for this portfolio.")).toBeTruthy();
   });
@@ -846,12 +816,13 @@ describe("states", () => {
     expect(screen.getByRole("link", { name: "Back to Portfolios" })).toBeTruthy();
   });
 
-  it("keeps its tables as cards at or below 660px: every cell has its label", async () => {
+  // The Alphas table's card labels moved with the table to alphasFleet.test.tsx (it is the Fleet's table now); the Accounts table keeps its own here.
+  it("keeps the Accounts table as cards at or below 660px: every cell has its label", async () => {
     mount(makeApi().api);
     await ready();
-    await goto("Alphas");
-    for (const row of rowsOf("Alphas and deployments")) {
-      expect([...row.querySelectorAll("td")].map((td) => td.getAttribute("data-l"))).toEqual(["Alpha", "Deployment", "Stage", "Account", "Allocation", "Position PnL, now", "Share of PnL", "Health"]);
+    await goto("Accounts");
+    for (const row of rowsOf("Accounts")) {
+      expect([...row.querySelectorAll("td")].map((td) => td.getAttribute("data-l"))).toEqual(["Account", "Profile", "Serves here", "Venue balance, total", "Status", "Last synced"]);
     }
   });
 });
@@ -872,8 +843,9 @@ describe("capability", () => {
     expect(screen.queryByRole("tab", { name: "Accounts" })).toBeNull();
     expect(screen.getByText(/Accounts is not listed in your navigation read/)).toBeTruthy();
     expect(screen.getByRole("tab", { name: "Overview" }).getAttribute("aria-selected")).toBe("true");
-    await goto("Alphas");
-    const row = rowsOf("Alphas and deployments")[0];
+    // The account links of the old Alphas table went with it; the same rule holds where the page still names accounts (Risk and Health).
+    await goto("Risk and Health");
+    const row = rowsOf("Margin by account")[0];
     expect(within(row).queryByRole("link", { name: "Binance-02" })).toBeNull();
     expect(cell(row, "Account")).toBe("Binance-02");
   });

@@ -251,7 +251,7 @@ function Loaded({ api, accountId, profile, staleReason, refreshing, reload, back
             </>
           ) : null}
           {tab === "pos" ? <PositionsPanel ctx={ctx} scope={positionScope} onScope={setPositionScope} /> : null}
-          {tab === "all" ? <AllocationsPanel ctx={ctx} /> : null}
+          {tab === "all" ? <AllocationsPanel ctx={ctx} api={api} /> : null}
           {tab === "fee" ? <FeesPanel ctx={ctx} /> : null}
           {tab === "rec" ? <ReconciliationPanel ctx={ctx} exposure={exposure.state.phase === "ready" ? exposure.state.value : null} /> : null}
           {tab === "act" ? <ActivityPanel api={api} accountId={accountId} environment={environment} /> : null}
