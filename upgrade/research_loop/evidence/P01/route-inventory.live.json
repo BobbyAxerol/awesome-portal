@@ -2,7 +2,7 @@
   "schema": "research-loop.live-route-ledger.v1",
   "statement": "Live static route ledger. Regenerate with --write-live-routes in the same change that adds or removes a route.",
   "protected_kernel_sha256": "34dc1847d051ca40f9ae3d2fbbf2d7e8fdc6b8d1e853beb0cc480b69afe2054d",
-  "route_count": 329,
+  "route_count": 333,
   "routes": [
     {
       "method": "DELETE",
@@ -306,6 +306,11 @@
     },
     {
       "method": "GET",
+      "path": "/api/v1/execution/alphas/:alpha_id/lifecycle",
+      "owner": "apps/control-api/src/typed-absence/typed-absence.controller.ts"
+    },
+    {
+      "method": "GET",
       "path": "/api/v1/execution/alphas/:alphaId/query-analytics",
       "owner": "apps/control-api/src/execution/analytics.controller.ts"
     },
@@ -413,6 +418,11 @@
       "method": "GET",
       "path": "/api/v1/execution/contract-authority",
       "owner": "apps/control-api/src/execution/contract-authority.controller.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/execution/controls",
+      "owner": "apps/control-api/src/typed-absence/typed-absence.controller.ts"
     },
     {
       "method": "GET",
@@ -681,6 +691,11 @@
     },
     {
       "method": "GET",
+      "path": "/api/v1/execution/operations/incidents/:incident_id/children",
+      "owner": "apps/control-api/src/typed-absence/typed-absence.controller.ts"
+    },
+    {
+      "method": "GET",
       "path": "/api/v1/execution/operations/incidents/:incident_id/eligibility",
       "owner": "apps/control-api/src/operations/incident.controller.ts"
     },
@@ -708,6 +723,11 @@
       "method": "GET",
       "path": "/api/v1/execution/portfolios",
       "owner": "apps/control-api/src/manager-lists/manager-lists.controller.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/execution/portfolios/:portfolio_id/members",
+      "owner": "apps/control-api/src/typed-absence/typed-absence.controller.ts"
     },
     {
       "method": "GET",

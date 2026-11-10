@@ -1,0 +1,103 @@
+import "reflect-metadata";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+import { Injectable, Module, type ExecutionContext } from "@nestjs/common";
+import { NestFactory } from "@nestjs/core";
+import { FastifyAdapter, type NestFastifyApplication } from "@nestjs/platform-fastify";
+import type { FastifyInstance } from "fastify";
+import Ajv2020 from "ajv/dist/2020";
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { AuthError } from "../src/auth/auth.service";
+import { SessionGuard } from "../src/facade/session.guard";
+import { HttpErrorFilter } from "../src/http-error.filter";
+import { WorkspacesRepository } from "../src/repos/workspaces";
+import { TypedAbsenceController } from "../src/typed-absence/typed-absence.controller";
+import { typedAbsenceDependency } from "../src/typed-absence/typed-absence.bootstrap";
+
+// B3: route serialization, workspace refusals and the contract's own no-source body. A synthetic guard stands in for the session.
+@Module({}) class SyntheticTypedAbsenceModule {}
+const contracts = process.env.PORTAL_CONTRACTS_DIR ?? resolve(__dirname, "../../../packages/contracts");
+const routes = [
+  { name: "execution-controls", schema: "Controls", fixture: "execution-controls.no-source", path: "/api/v1/execution/controls", extra: { }, id: null, invalid: 400 as number },
+  { name: "execution-alpha-lifecycle", schema: "AlphaLifecycle", fixture: "execution-alpha-lifecycle.no-source", path: "/api/v1/execution/alphas/alpha-1/lifecycle", extra: { alpha_id: "alpha-1" }, id: "alpha_id", invalid: 404 as number },
+  { name: "execution-incident-children", schema: "IncidentChildren", fixture: "execution-incident-children.no-source", path: "/api/v1/execution/operations/incidents/inc-1/children", extra: { incident_id: "inc-1" }, id: "incident_id", invalid: 400 as number },
+  { name: "execution-portfolio-members", schema: "PortfolioMembers", fixture: "execution-portfolio-members.no-source", path: "/api/v1/execution/portfolios/pf-1/members", extra: { portfolio_id: "pf-1" }, id: "portfolio_id", invalid: 400 as number },
+];
+const load = (name: string) => JSON.parse(readFileSync(resolve(contracts, name), "utf8"));
+
+describe("typed-absence HTTP routes (B3)", () => {
+  let app: NestFastifyApplication, http: FastifyInstance, readable = true;
+  const canRead = vi.fn(async (workspace: string) => readable && workspace === "ws-1");
+  @Injectable() class SyntheticGuard { canActivate(ctx: ExecutionContext) {
+    ctx.switchToHttp().getResponse().header("Cache-Control", "private, no-store");
+    const request = ctx.switchToHttp().getRequest();
+    if (request.headers["x-test-session"] !== "valid") throw new AuthError("SESSION_REQUIRED", "Authentication required.", 401);
+    request.portalUser = { userId: "user-1" }; request.portalSession = { sessionId: "session-1" }; request.portalWorkspaceId = "ws-1"; return true;
+  } }
+  let originalGuards: unknown;
+  beforeAll(async () => {
+    originalGuards = Reflect.getMetadata("__guards__", TypedAbsenceController);
+    Reflect.defineMetadata("__guards__", [SyntheticGuard], TypedAbsenceController);
+    app = await NestFactory.create<NestFastifyApplication>({ module: SyntheticTypedAbsenceModule, controllers: [TypedAbsenceController],
+      providers: [SyntheticGuard, { provide: WorkspacesRepository, useValue: { canReadExecution: canRead } }] },
+    new FastifyAdapter(), { logger: false, abortOnError: false });
+    app.useGlobalFilters(new HttpErrorFilter()); await app.init();
+    http = app.getHttpAdapter().getInstance() as FastifyInstance; await http.ready();
+  });
+  beforeEach(() => { readable = true; canRead.mockClear(); });
+  afterAll(async () => { if (app) await app.close(); Reflect.defineMetadata("__guards__", originalGuards ?? [SessionGuard], TypedAbsenceController); });
+  const get = (url: string, session = true) => http.inject({ method: "GET", url, headers: session ? { "x-test-session": "valid" } : {} });
+
+  for (const route of routes) {
+    describe(route.name, () => {
+      const api = load(`openapi/${route.name}.openapi.json`);
+      const validate = new Ajv2020({ strict: true }).compile(api.components.schemas[route.schema]);
+      const problem = new Ajv2020({ strict: true }).compile(api.components.schemas[`${route.schema}Problem`]);
+
+      it("answers the contract's no-source body: valid, private, and inside the published fixture's shape", async () => {
+        const response = await get(route.path);
+        expect(response.statusCode, response.body).toBe(200);
+        expect(response.headers["cache-control"]).toBe("private, no-store");
+        const body = response.json();
+        expect(validate(body), JSON.stringify(validate.errors)).toBe(true);
+        const fixture = load(`fixtures/${route.fixture}.synthetic.valid.json`).value;
+        // the fixture may also carry optional identity fields (alpha_version_id); nothing outside its shape may appear
+        for (const key of Object.keys(body)) expect(Object.keys(fixture), key).toContain(key);
+        expect(body).toMatchObject({ schema_version: fixture.schema_version, workspace_id: "ws-1", record_authority: "PORTAL_PROJECTION", ...route.extra });
+        expect(Number.isInteger(body.read_at_ms)).toBe(true);
+        expect(canRead).toHaveBeenCalledWith("ws-1", "user-1", undefined);
+      });
+      it("is typed on every refusal: 401 without a session, 404 for an unreadable workspace, 400 for an unknown key (404 on the lifecycle: its published problem has no query-invalid code)", async () => {
+        for (const [url, session, status] of [[route.path, false, 401], [`${route.path}?workspace_id=ws-2`, true, 404], [`${route.path}?extra=1`, true, route.invalid]] as const) {
+          const response = await get(url, session);
+          expect(response.statusCode, response.body).toBe(status);
+          expect(response.headers["cache-control"]).toBe("private, no-store");
+          if (status !== 401) expect(problem(response.json()), JSON.stringify(problem.errors)).toBe(true);
+        }
+        readable = false;
+        const refused = await get(route.path);
+        expect(refused.statusCode).toBe(404);
+        expect(refused.json().error.code).toBe("EXECUTION_READ_NOT_AVAILABLE");
+        expect(refused.body).not.toContain("workspace_id\":\"ws");
+      });
+      if (route.id !== null) it("refuses an id outside the contract's grammar", async () => {
+        const response = await get(route.path.replace(/\/[^/]+(\/(?:lifecycle|children|members))$/, "/bad%20id$1"));
+        expect(response.statusCode).toBe(route.invalid);
+        expect(problem(response.json())).toBe(true);
+      });
+    });
+  }
+
+  it("states no section, no count and no zero: only the envelope and the echoed ids are present", async () => {
+    for (const route of routes) {
+      const keys = Object.keys((await get(route.path)).json()).sort();
+      expect(keys).toEqual(["read_at_ms", "record_authority", "schema_version", "workspace_id", ...Object.keys(route.extra)].sort());
+    }
+  });
+
+  it("mounts only on the retained-review profile and adds no flag", () => {
+    expect(typedAbsenceDependency({ EXECUTION_READ_PROFILE: "retained_review_v1" })).toEqual({ typedAbsence: "SOURCE_DARK" });
+    expect(typedAbsenceDependency({})).toEqual({});
+    expect(typedAbsenceDependency({ EXECUTION_READ_PROFILE: "native_manager_review_v1" })).toEqual({});
+  });
+});

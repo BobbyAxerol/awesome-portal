@@ -370,11 +370,15 @@ for (const e of [...caByKey.values()].sort((a, b) => cmp(a.path, b.path) || cmp(
   const key = `${e.method} ${e.path}`;
   const owner = oas.filter((o) => o.method === e.method && looseMatches(e.path, o.path)).map((o) => `${o.file}#${o.op ?? o.schema ?? ""}`);
   const tests = specs.filter((s) => s.lits.some((l) => l.startsWith("/api") && matches(e.path, l) && bestRoutes(caTemplates, l).includes(e.path))).map((s) => s.file);
+  // weak evidence: a spec that spells the route's last two literal segments (a relative path or a helper-built URL); marked with `~`
+  const lit = segs(e.path).filter((x) => x !== "{}");
+  const needle = "/" + lit.slice(-2).join("/");
+  const weak = needle.length >= 8 ? specs.filter((sp) => !tests.includes(sp.file) && new RegExp(needle.replace(/[.*+?^${}()|[\]\\]/g, "\\  const cls = mounts[") + "(?=[\"'`?/])").test(sp.src)).map((sp) => `~${sp.file}`) : [];
   const cls = mounts[caRoutes.find((r) => `${r.method} ${normTemplate(r.path)}` === key)?.cls];
   const dbl = rtByServed.get(key) ?? [];
   table.push({
     route: key, mounted: e.mount, retained: e.profile?.retained ?? "", native: e.profile?.native ?? "",
-    callers: fmtCallers(callersByRoute.get(key) ?? []), contract: [...new Set(owner)].sort(), tests: [...new Set(tests)].sort(),
+    callers: fmtCallers(callersByRoute.get(key) ?? []), contract: [...new Set(owner)].sort(), tests: [...new Set([...tests, ...weak])].sort(),
     double: [...new Set(dbl.map((d) => d.real))].sort(), controller: e.owners[0], cls,
   });
 }
@@ -405,7 +409,7 @@ const counts = {
   control_api_ts_routes: tsRoutes.length, portal_backend_python_routes: pyRoutes.length,
   frontend_call_sites: calls.length, frontend_unmatched_sites: unmatched.length, frontend_method_mismatch_sites: methodMismatch.length,
   routes_called_by_frontend: table.filter((t) => t.callers.length).length,
-  routes_with_spec: table.filter((t) => t.tests.length).length, routes_with_contract: table.filter((t) => t.contract.length).length,
+  routes_with_spec: table.filter((t) => t.tests.some((x) => !x.startsWith("~"))).length, routes_with_weak_spec_evidence_only: table.filter((t) => t.tests.length && t.tests.every((x) => x.startsWith("~"))).length, routes_with_contract: table.filter((t) => t.contract.length).length,
   routeTable_rows: rt.length, routeTable_unserved: rtNoReal.length,
 };
 const result = { scope: SCOPE, counts, ledgerDiff, finding1_frontend_unserved: finding1, finding1b_method_mismatch: methodMismatch.map((c) => ({ probe: c.probe, method: c.method, caller: `${c.file}:${c.line}` })),
