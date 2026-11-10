@@ -6,7 +6,7 @@
  * at `MAX_QUEUE_DOM` rows and the footer says how many are shown of how many,
  * so a long queue never reads as a short one.
  */
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import type { WaiverStateCode } from "../../../api/ports";
 import { PanelSkeleton, PanelState } from "../../../components/states";
@@ -213,6 +213,23 @@ export function Queue(props: QueueProps) {
   }, [selectedKey]);
   const suffix = moreAvailable ? "+" : "";
 
+  // UI review D9: the list scrolls inside a capped panel (stacked, and short windows); say so when rows are below the fold.
+  const listRef = useRef<HTMLUListElement | null>(null);
+  const [moreBelow, setMoreBelow] = useState(false);
+  useEffect(() => {
+    const list = listRef.current;
+    if (list === null) return undefined;
+    const measure = () => setMoreBelow(list.scrollHeight - list.scrollTop - list.clientHeight > 4);
+    measure();
+    list.addEventListener("scroll", measure, { passive: true });
+    const observer = typeof ResizeObserver === "function" ? new ResizeObserver(measure) : null;
+    observer?.observe(list);
+    return () => {
+      list.removeEventListener("scroll", measure);
+      observer?.disconnect();
+    };
+  }, [family, shown.length, loading]);
+
   return (
     <section className="exec-ck-panel exec-ck-q" aria-label="Decision queue">
       <div className="exec-ck-ph">
@@ -265,7 +282,7 @@ export function Queue(props: QueueProps) {
       ) : null}
 
       {family !== null ? null : (
-      <ul className="exec-ck-list" aria-label={lane === "waiver" ? "Waivers" : "Requests"}>
+      <ul className="exec-ck-list" aria-label={lane === "waiver" ? "Waivers" : "Requests"} ref={listRef}>
         {shown.map((item) => (
           <li key={`${item.kind}:${item.key}`}>
             <button
@@ -287,6 +304,7 @@ export function Queue(props: QueueProps) {
 
       <div className="exec-ck-foot" hidden={family !== null}>
         <span>{footer}{items.length > MAX_QUEUE_DOM ? ` · top ${MAX_QUEUE_DOM} of ${items.length} shown` : ""}</span>
+        {moreBelow ? <span className="exec-ck-scrollcue" data-testid="ck-scroll-cue">▾ More requests below, scroll the list</span> : null}
         {moreAvailable ? (
           <button type="button" className="exec-ck-more" disabled={moreBusy} aria-describedby={moreBusy ? "exec-ck-more-busy" : undefined} onClick={onMore}>
             {moreBusy ? "Loading" : "Load more"}

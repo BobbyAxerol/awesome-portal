@@ -21,6 +21,7 @@ import { workspaceNamedHref } from "../research/ResearchScopedLink";
 import { researchRunCrumb, useRunUnknown } from "./researchRunCrumb";
 import { ADMIN_USERS_ROUTE } from "./PortalRoutes";
 import { usePortalContext } from "./context";
+import { crumbHref } from "../execution/v2/shell/crumbReturn";
 import { v2Crumbs } from "../execution/v2/shell/roleNav";
 import { usePreferences, type PreferencesContextValue } from "./preferences";
 import { usePresentation } from "./presentation";
@@ -126,7 +127,7 @@ export function TopBar({
             ].filter(Boolean).join(" ")}
           >
             {index > 0 ? <span aria-hidden="true" className="portal-crumb-sep">/</span> : null}
-            {crumb.route ? <Link to={workspaceNamedHref(crumb.route, workspaceId)}>{crumb.label}</Link> : <span>{crumb.label}</span>}
+            {crumb.route ? <Link to={workspaceNamedHref(v2 ? crumbHref(crumb.route, location.pathname, location.search) : crumb.route, workspaceId)} {...(v2 ? { title: crumb.label } : {})}>{crumb.label}</Link> : <span {...(v2 ? { title: crumb.label } : {})}>{crumb.label}</span>}
           </span>
         ))}
         {/* §4.3 product locator tail: `Deployments / Paper / Carry v3.2`. The

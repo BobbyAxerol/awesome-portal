@@ -75,7 +75,7 @@ describe("screen contract", () => {
     expect(h1.textContent).toContain(ALPHA_DOUBLE_ID);
     expect(h1.textContent).not.toMatch(/Unnamed alpha|UNVERSIONED|\bv\d/);
     // The header's gaps are ONE "Not available" line; the server's literals sit behind its one disclosure (UX audit A).
-    const line = h1.parentElement!.querySelector("[data-testid='not-available-line']")!;
+    const line = h1.closest("header")!.querySelector("[data-testid='not-available-line']")!;
     expect(line.textContent).toContain("Not available: Name, Version, Run, Evidence");
     fireEvent.click(within(line as HTMLElement).getByRole("button", { name: "Why not available: Name, Version, Run, Evidence" }));
     const rows = Array.from(line.querySelectorAll(".exec-blk-why-row")).map((row) => row.textContent ?? "");
@@ -87,10 +87,12 @@ describe("screen contract", () => {
   it("states what is not published about the header: score, run and evidence, each with its request id", async () => {
     mount();
     const h1 = await ready();
-    expect(within(h1).getByRole("button", { name: /Not scored · policy not set/ })).toBeTruthy();
-    const line = h1.parentElement!.querySelector("[data-testid='not-available-line']")!;
+    expect(within(h1.closest(".exec-alp2-titlerow") as HTMLElement).getByRole("button", { name: /Not scored · policy not set/ })).toBeTruthy();
+    const line = h1.closest("header")!.querySelector("[data-testid='not-available-line']")!;
     expect(line.textContent).toContain("Run, Evidence");
-    expect(line.textContent).toContain("Not published: Run");
+    // UI review D10: the hidden text says "(Not published)" once, not the list a second time.
+    expect(line.textContent).toContain("(Not published)");
+    expect(line.textContent).not.toContain("Not published: Run");
   });
 
   it("renders the producer's V1 typed absence without blanking the Alpha or inventing a zero", async () => {
@@ -714,7 +716,7 @@ describe("Score drawer", () => {
   it("opens from the chip, shows every score row as Not published: score, and the raw economics as current", async () => {
     mount();
     const h1 = await ready();
-    fireEvent.click(within(h1).getByRole("button", { name: /Not scored/ }));
+    fireEvent.click(within(h1.closest(".exec-alp2-titlerow") as HTMLElement).getByRole("button", { name: /Not scored/ }));
     expect(search().get("sel")).toBe("score");
     const drawer = await screen.findByRole("complementary");
     expect(within(drawer).getByRole("heading", { name: "Score" })).toBeTruthy();

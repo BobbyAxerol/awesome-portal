@@ -561,6 +561,9 @@ function DecisionCockpit({ api, workspaceId, pathSelection, onClearPathSelection
   const rawSel = url.value.sel;
   const selectedKey = (rawSel !== null && rawSel !== "undefined" && rawSel !== "null" && rawSel.trim() !== "" ? rawSel : null) ?? pathSelection?.id ?? null;
 
+  // The reads this lane waits for have answered (the first-load effect below uses the same word).
+  const settled = lane === "waiver" ? waivers.status === "ready" || waivers.status === "failed" : inbox.status === "ready" || inbox.status === "failed";
+
   // The selection is found among everything loaded, not only what the lens shows, so changing lens keeps the evidence open.
   const selected: QueueItem | null = useMemo(() => {
     if (selectedKey === null) return null;
@@ -577,6 +580,7 @@ function DecisionCockpit({ api, workspaceId, pathSelection, onClearPathSelection
   let evidenceTarget: EvidenceTarget | null = null;
   let header: EvidenceHeader | null = null;
   let unknownReason: string | null = null;
+  let pendingId: string | null = null;
   if (family !== null) {
     // A family panel reads nothing of a gate: no evidence read for a leftover selection.
   } else if (selected && selected.kind !== "waiver") {
@@ -586,8 +590,11 @@ function DecisionCockpit({ api, workspaceId, pathSelection, onClearPathSelection
     if (pathSelection && pathSelection.id === selectedKey) {
       evidenceTarget = { kind: pathSelection.kind, id: selectedKey };
       header = { id: selectedKey, title: null, context: null, gate: null };
+    } else if (!settled) {
+      // The queue is still being read: the request the address names may be on it. Say that, not "not on this page" (UI review D9).
+      pendingId = selectedKey;
     } else {
-      unknownReason = `${selectedKey} is not on the page the server returned, so its kind is not known here. Open it from its review link.`;
+      unknownReason = `${selectedKey} is not among the requests loaded here (the queue loads ${PAGE_SIZE} at a time), so it cannot be opened from this list. Open it from its own review link, or press Esc to clear it.`;
     }
   }
   const evidence = useEvidenceRead(api, evidenceTarget, workspaceId);
@@ -664,7 +671,6 @@ function DecisionCockpit({ api, workspaceId, pathSelection, onClearPathSelection
   // rail are not an empty page (HIFI selects one). Once per mount: Esc still clears, and a link's `sel` wins.
   // At 1100px and below the panes stack, so an unasked-for selection would push the queue away: nothing is chosen there.
   const firstLoadDone = useRef(false);
-  const settled = lane === "waiver" ? waivers.status === "ready" || waivers.status === "failed" : inbox.status === "ready" || inbox.status === "failed";
   useEffect(() => {
     if (firstLoadDone.current || !settled) return;
     firstLoadDone.current = true;
@@ -743,11 +749,14 @@ function DecisionCockpit({ api, workspaceId, pathSelection, onClearPathSelection
         />
         <section className="exec-ck-main" aria-label="Evidence">
           {/* Where the panes stack the decision is below the evidence: two jumps, up to the queue and down to the decision (QA1 I-19). */}
-          <div className="exec-ck-jumps">
-            <button type="button" className="exec-ck-backq" onClick={() => document.querySelector(".exec-ck-q")?.scrollIntoView?.({ block: "start" })}>Back to the queue</button>
-            {/* With nothing selected there is no decision to go to (QA2 R3-25). */}
-            {selectedKey !== null && family === null ? <button type="button" className="exec-ck-backq" onClick={() => document.querySelector(".exec-ck-rail")?.scrollIntoView?.({ block: "start" })}>Go to the decision</button> : null}
-          </div>
+          {/* With nothing selected there is no decision to go to (QA2 R3-25) and nothing to go back from: the queue is what is right above.
+              Both jumps exist only while a request is open (UI review D9). */}
+          {selectedKey !== null && family === null ? (
+            <div className="exec-ck-jumps">
+              <button type="button" className="exec-ck-backq" onClick={() => document.querySelector(".exec-ck-q")?.scrollIntoView?.({ block: "start" })}>Back to the queue</button>
+              <button type="button" className="exec-ck-backq" onClick={() => document.querySelector(".exec-ck-rail")?.scrollIntoView?.({ block: "start" })}>Go to the decision</button>
+            </div>
+          ) : null}
           {family !== null ? (
             <FamilyPanel family={family} />
           ) : selected?.kind === "waiver" ? (
@@ -758,6 +767,7 @@ function DecisionCockpit({ api, workspaceId, pathSelection, onClearPathSelection
               header={header}
               evidence={evidence}
               unknownReason={unknownReason}
+              pendingId={pendingId}
               extra={extra}
             />
           )}

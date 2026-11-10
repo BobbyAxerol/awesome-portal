@@ -7,6 +7,7 @@ import { Link } from "react-router-dom";
 
 import { GapWhy, gapTitle } from "../../blocks";
 import { useKeyboardScroll } from "../../useKeyboardScroll";
+import { plainReason } from "../../plainReason";
 import { MetricValue } from "../manager/MetricValue";
 import { partitionLabel } from "../portfolios/PartitionFigures";
 import { scaledOf } from "../portfolios/capitalModel";
@@ -41,6 +42,8 @@ export interface ContributorsPager {
 
 /** `Not published (FE-025)` with the typed code behind a disclosure, and the reason in words. */
 function Absence({ code, reason }: { code: string; reason: string }) {
+  // The reason can carry the reader's own code (`MANAGER_DATASET_REFUSED`): the sentence is plain, the code stays in the title and the disclosure rows.
+  const plain = plainReason(reason);
   return (
     <>
       <p className="exec-ov-na">
@@ -48,7 +51,7 @@ function Absence({ code, reason }: { code: string; reason: string }) {
           <GapWhy className="exec-blk-np-word" gap={FE_CONTRIBUTORS} text="Not published" name="Not published, reason" rows={[gapTitle(FE_CONTRIBUTORS, null, code), reason]} />
         </span>
       </p>
-      <p className="exec-ov-note" data-contributors-absence={code}>Per-alpha contribution over a window is not shown: {reason}</p>
+      <p className="exec-ov-note" data-contributors-absence={code} title={plain.codes.length > 0 ? plain.codes.join(", ") : undefined}>Per-alpha contribution over a window is not shown: {plain.text}</p>
     </>
   );
 }

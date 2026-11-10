@@ -305,7 +305,9 @@ describe("NAV (FE-013, BE-P4 manager series)", () => {
   it("UNAVAILABLE for a source that is not published keeps Not published and names the code", async () => {
     mount(makeApi(serving("unavailable")).api);
     await ready();
-    await waitFor(() => expect(navPanel().textContent).toContain("SERIES_SOURCE_NOT_PUBLISHED"));
+    // UI review D12: the code is on the chart (data-code), not in the sentence.
+    await waitFor(() => expect(navPanel().querySelector('[data-code~="SERIES_SOURCE_NOT_PUBLISHED"]')).not.toBeNull());
+    expect(navPanel().textContent).not.toContain("SERIES_SOURCE_NOT_PUBLISHED");
     expect(navPanel().textContent).toContain("Not published");
     expect(kpiNav().textContent).toContain("Not published");
     expect(navPanel().querySelector("svg path[data-main]")).toBeNull();
@@ -314,7 +316,7 @@ describe("NAV (FE-013, BE-P4 manager series)", () => {
   it("UNAVAILABLE for ALL prints its own typed reason in the card and the KPI, not a source gap", async () => {
     mount(makeApi(serving("populated")).api, "?window=all");
     await ready();
-    await waitFor(() => expect(navPanel().textContent).toContain("ALL_HISTORY_WINDOW_NOT_PUBLISHED"));
+    await waitFor(() => expect(navPanel().querySelector('[data-code~="ALL_HISTORY_WINDOW_NOT_PUBLISHED"]')).not.toBeNull());
     expect(navPanel().textContent).toContain("Not available");
     expect(kpiNav().textContent).toContain("Not available · All history is not a published window (ALL_HISTORY_WINDOW_NOT_PUBLISHED)");
     expect(kpiNav().textContent).not.toContain("Not published");
@@ -736,7 +738,13 @@ describe("states", () => {
 
   it("says a portfolio the population does not hold is not present, not that it is empty", async () => {
     mount(makeApi().api, "", "pf_somebody_else");
-    expect(await screen.findByText(/is not present in the projected resource population/)).toBeTruthy();
+    // UI review D8: a plain sentence, the id as secondary text, a way back to the list, and no Compare or Actions for nothing.
+    expect(await screen.findByText("Portfolio not found")).toBeTruthy();
+    expect(screen.getByText(/This portfolio is not in the list you can see/)).toBeTruthy();
+    expect(screen.getByText("pf_somebody_else", { selector: "code" })).toBeTruthy();
+    expect(screen.getByRole("link", { name: "Back to Portfolios" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Try again" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Actions" })).toBeNull();
     expect(screen.queryByRole("tablist")).toBeNull();
   });
 

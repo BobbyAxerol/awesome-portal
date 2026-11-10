@@ -247,27 +247,3 @@ describe("badges belong to one scope (session, workspace, eligibility)", () => {
     expect(api.listOperationalQueueV2.mock.calls.length).toBe(reads);
   });
 });
-
-describe("the browser tab names the screen (QA3 R2-24)", () => {
-  const tab = (url: string, enabled = true) => {
-    const api = { listOperationalQueueV2: async () => queue(undefined), listApprovals: async () => inbox(null) } as unknown as ExecutionApi;
-    return render(<MemoryRouter initialEntries={[url]}><NavCounts registry={registry} options={MANAGER} onView={() => undefined} api={api} enabled={enabled} /></MemoryRouter>);
-  };
-  it("says the screen's rail name and the product, and puts the old title back on leaving", () => {
-    document.title = "QuantBT Backtest Portal";
-    const view = tab("/execution");
-    expect(document.title).toBe("Overview · Quant Ecosystem Portal");
-    view.unmount();
-    expect(document.title).toBe("QuantBT Backtest Portal");
-  });
-  it("Compare and Blotter have their own names; a disabled shell leaves the title alone", () => {
-    expect(tab("/deployments/compare").container && document.title).toBe("Compare · Quant Ecosystem Portal");
-    cleanup();
-    tab("/deployments/blotter");
-    expect(document.title).toBe("Blotter · Quant Ecosystem Portal");
-    cleanup();
-    document.title = "Kept";
-    tab("/execution", false);
-    expect(document.title).toBe("Kept");
-  });
-});

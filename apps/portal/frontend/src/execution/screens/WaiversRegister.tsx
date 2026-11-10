@@ -22,6 +22,7 @@ import { useAgeTick } from "../liveTick";
 import { PanelState } from "../components/states";
 import { QuietEmpty } from "../components/quietEmpty";
 import { reviewRouteFor, type ApprovalGate } from "./ApprovalInbox";
+import { humanizeCode } from "../v2/displayNames";
 import type { PanelStatus } from "../contracts";
 
 const FILTERS = ["ALL", "OPEN", "EXPIRING", "LAPSED", "WAIVED"] as const;
@@ -280,7 +281,7 @@ export function WaiversRegisterScreen({
                               {r.statement}
                             </button>
                           </th>
-                          <td><a href={sourceHref(r)}>{r.approvalId} · {r.gate}</a></td>
+                          <td><a href={sourceHref(r)} title={r.gate} data-gate={r.gate}>{r.approvalId} · {humanizeCode(r.gate)}</a></td>
                           <td>{r.subjectLabel}</td>
                           <td><span className="exec-gov-chip" data-fill="good">{r.environment}</span></td>
                           <td className="exec-num"><span className="exec-wv-duenum" data-live={r.state === "EXPIRING" ? "true" : undefined} data-tone={due.tone}>{due.text}</span></td>

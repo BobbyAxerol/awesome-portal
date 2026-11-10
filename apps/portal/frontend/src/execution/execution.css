@@ -724,6 +724,14 @@
   overflow-wrap: anywhere;
 }
 
+/* UI review D12: the machine code behind a plain reason sits in a closed disclosure, one quiet line. */
+.exec-state-code {
+  font: var(--exec-font-meta);
+  color: var(--ink-faint);
+}
+.exec-state-code summary { cursor: pointer; }
+.exec-state-code code { margin-left: var(--space-2); overflow-wrap: anywhere; }
+
 /* Last-good values stay readable but visibly demoted, so a reader can use them
  * while knowing they are not current. */
 .exec-state-lastgood {

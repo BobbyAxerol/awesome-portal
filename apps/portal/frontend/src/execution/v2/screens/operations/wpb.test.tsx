@@ -376,7 +376,10 @@ describe("wave 2: unknown ids, honest reads, settled rows", () => {
     const api = { ...fakeApi().api, getIncidentChildren: children } as unknown as ExecutionApi;
     mountIncident("inc_NOPE_nothing", api);
     expect(await screen.findByText("Incident not found")).toBeTruthy();
-    expect(screen.getByText(/No incident with the id inc_NOPE_nothing/)).toBeTruthy();
+    // UI review D8: a plain sentence, the id as secondary text, and no raw code in the words.
+    expect(screen.getAllByText(/This incident does not exist, or it is not visible in this workspace/).length).toBeGreaterThan(0);
+    expect(screen.getByText("inc_NOPE_nothing", { selector: "code" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Try again" })).toBeNull();
     expect(children).not.toHaveBeenCalled();
   });
 

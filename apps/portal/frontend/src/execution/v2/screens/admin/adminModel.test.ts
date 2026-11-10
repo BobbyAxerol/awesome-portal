@@ -114,7 +114,7 @@ describe("first reason it is not live", () => {
     expect(firstReasonFor(row("health").task, activation).capability).toBe("PROJECTION");
   });
   it("says nothing when the activation was not read, rather than inventing a sentence", () => {
-    expect(firstReasonFor(row("account-sync").task, null)).toEqual({ code: "N27_COMMAND_TRANSPORT_NOT_ACTIVATED", sentence: null, capability: null });
+    expect(firstReasonFor(row("account-sync").task, null)).toEqual({ code: "N27_COMMAND_TRANSPORT_NOT_ACTIVATED", sentence: null, plain: null, capability: null });
   });
   it("a capability is live only with source, runtime and the kill switch released", () => {
     const cap = activation.capabilities[0]!;

@@ -26,7 +26,7 @@ import type { CatalogEntry, CommandCatalogue } from "../../../adminCatalog";
 import { BLOCKED_REASON_TEXT } from "../../../adminCatalog";
 import type { OperatorTask } from "../../../api/profileRead";
 import { PLAN_ENVIRONMENTS, planApplicable, type CommandPlan, type CommandPlanRequestInput, type PlanEnvironment } from "../../../commandPlan";
-import { activationSentence, type ActivationCapability, type StagedActivation } from "../../../stagedActivation";
+import { activationPlain, activationSentence, type ActivationCapability, type StagedActivation } from "../../../stagedActivation";
 import { codeName } from "../../displayNames";
 import type { FlagKind } from "../../flagKinds";
 
@@ -218,6 +218,8 @@ export interface FirstReason {
   code: string | null;
   /** One sentence, from the staged-activation read. */
   sentence: string | null;
+  /** The same reason in plain words (capability by its plain name); what a screen prints. */
+  plain: string | null;
   /** Which capability the sentence is about. */
   capability: string | null;
 }
@@ -234,6 +236,7 @@ export function firstReasonFor(task: OperatorTask, activation: StagedActivation 
   return {
     code: task.reasonCode,
     sentence: capability ? `${capability.capabilityKey}: ${activationSentence(capability)}` : null,
+    plain: capability ? activationPlain(capability) : null,
     capability: capability?.capabilityKey ?? null,
   };
 }

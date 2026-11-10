@@ -18,13 +18,13 @@ import { useLocation } from "react-router-dom";
 import { useSession } from "../../../auth/session";
 import { NO_NAV_BADGES, type NavBadge, type NavBadges } from "../../../app/selfNavView";
 import type { PortalRegistryDocument } from "../../../portal/contracts";
-import { breadcrumbsFor, sidebarGroups, type NavOptions } from "../../../portal/navigation";
+import { sidebarGroups, type NavOptions } from "../../../portal/navigation";
 import { createHttpApi } from "../../api/httpApi";
 import type { ExecutionApi } from "../../api/ports";
 import { usePollTick } from "../../useRevision";
 import { EXECUTION_V2_SHELL } from "../flags";
 import { parseUrlParams } from "../urlState";
-import { applyV2Nav, v2Crumbs } from "./roleNav";
+import { applyV2Nav } from "./roleNav";
 
 export const OPERATIONS_FEATURE = "EXECUTION_OPERATIONS";
 export const APPROVALS_FEATURE = "EXECUTION_APPROVALS";
@@ -84,18 +84,7 @@ export interface NavCountsProps {
 /** Renders nothing: reads the counts and hands the shell the badges. */
 export default function NavCounts({ registry, options, onView, enabled = EXECUTION_V2_SHELL, api: injected }: NavCountsProps): null {
   const { principal } = useSession();
-  const { search, pathname } = useLocation();
-  // The browser tab names the screen ("Overview · Quant Ecosystem Portal"), not the Research product the document was served with.
-  useEffect(() => {
-    if (!enabled) return undefined;
-    const before = document.title;
-    const trail = v2Crumbs(breadcrumbsFor(registry, pathname), registry.features);
-    const name = pathname.startsWith("/deployments/compare") ? "Compare" : trail[trail.length - 1]?.label;
-    if (name) document.title = `${name} · Quant Ecosystem Portal`;
-    return () => {
-      document.title = before;
-    };
-  }, [enabled, registry, pathname]);
+  const { search } = useLocation();
   const workspaceId = useMemo(() => parseUrlParams(search).value.workspace_id ?? undefined, [search]);
   const sessionKey = principal?.sessionId ?? null;
   const listed = useMemo(() => listedBadgeFeatures(registry, options), [registry, options]);

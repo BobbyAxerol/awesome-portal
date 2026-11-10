@@ -44,6 +44,13 @@ import type {
 } from "./screens/PaperWorkbench";
 import { formatExact } from "./formatExact";
 import { soonReason } from "./soon";
+import { samplingWords } from "./v2/displayNames";
+
+/** What the server's reduction kept, in words; a method the dictionary does not know reads `downsampled`. */
+const sampledAs = (method: string | null): string => {
+  const hit = method === null ? null : samplingWords(method);
+  return hit !== null && hit.known ? hit.words : "downsampled";
+};
 
 type Row = Record<string, unknown>;
 type Fact = { label: string; value: string | null; note?: string | null };
@@ -124,7 +131,7 @@ function equityOf(envelope: ProfileEnvelope, analytics: QueryAnalytics | null): 
         window: count(window?.days) !== null ? `${count(window?.days)}d` : "published window",
         // The bucket is the source's, not a request parameter: say which.
         interval: count(downsample?.bucket_seconds) !== null
-          ? `${count(downsample?.bucket_seconds)}s buckets · ${text(downsample?.method) ?? "downsampled"}`
+          ? `${count(downsample?.bucket_seconds)}s buckets · ${sampledAs(text(downsample?.method))}`
           : "source snapshots",
         currency,
         asOf: envelope.asOf ?? new Date(0).toISOString(),

@@ -145,7 +145,9 @@ describe("why nothing is live", () => {
     await loaded();
     const banner = screen.getAllByRole("status").find((n) => n.textContent?.includes("First reason nothing is live"))!;
     expect(banner.textContent).toContain("Command authority: Fail closed");
-    expect(banner.textContent).toContain("PROJECTION, kill switch engaged");
+    // UI review D12: the capability by its plain name and the kill switch as a sentence, not "PROJECTION, kill switch engaged".
+    expect(banner.textContent).toContain("Projection: the kill switch is engaged");
+    expect(banner.textContent).not.toContain("PROJECTION");
   });
 
   it("each action's provenance row gives its code as a display name (the code behind a disclosure), else the activation's sentence", async () => {
@@ -348,7 +350,7 @@ describe("planning", () => {
     await fill(pane);
     fireEvent.click(makePlan(pane));
     await waitFor(() => expect(posts()).toHaveLength(1), SLOW);
-    await waitFor(() => expect(pane.textContent).toContain("COMMAND_R2: kill switch engaged"), SLOW);
+    await waitFor(() => expect(pane.textContent).toContain("Command R2: the kill switch is engaged"), SLOW);
     expect((within(pane).getByRole("button", { name: "Apply" }) as HTMLButtonElement).disabled).toBe(true);
     expect(calls.some((c) => /\/apply$/.test(c.path))).toBe(false);
   });

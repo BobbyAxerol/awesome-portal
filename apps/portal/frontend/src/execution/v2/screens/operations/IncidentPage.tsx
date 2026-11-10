@@ -20,6 +20,7 @@ import { PanelState } from "../../../components/states";
 import type { ExecutionApi } from "../../../api/ports";
 import type { PanelStatus } from "../../../contracts";
 import { NotAvailableLine, SectionPanel } from "../../blocks";
+import { NotFound } from "../../blocks/NotFound";
 import { formatAsOf } from "../../boundary";
 import { Flag } from "../../Flag";
 import type { IncidentRootV2, InstantV2, OperationV2 } from "../../readers/operationalQueue";
@@ -213,11 +214,12 @@ function IncidentInner({ api, incidentId, workspaceId, queuePath = "/execution/o
         <h1 className="exec-ops-title">Incident <span className="exec-ops-mono">{incidentId}</span></h1>
         {root.phase === "loading" ? <PanelState status="loading" /> : null}
         {root.phase === "failed" && NOT_FOUND.test(root.reason) ? (
-          <PanelState
-            status="empty"
-            title="Incident not found"
-            reason={`No incident with the id ${incidentId} is visible in this workspace (${root.reason}). Check the id; nothing is shown in its place.`}
-            actions={<Link className="exec-ops-apply" to={withContext(queuePath, withoutPeek(params))}>Back to Operations</Link>}
+          <NotFound
+            what="Incident"
+            id={incidentId}
+            sentence="This incident does not exist, or it is not visible in this workspace. (OPERATIONAL_READ_NOT_FOUND)."
+            backTo={withContext(queuePath, withoutPeek(params))}
+            backLabel="Operations"
           />
         ) : null}
         {root.phase === "failed" && !NOT_FOUND.test(root.reason) ? <PanelState status={root.status} reason={root.reason} actions={root.status === "denied" ? <AccessLink href={accessHref} /> : undefined} /> : null}

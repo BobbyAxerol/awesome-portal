@@ -153,7 +153,7 @@ describe("FE-013 ratio scale: the print is a decimal-STRING shift, never a float
     if (entry.state !== "UNAVAILABLE") throw new Error("expected UNAVAILABLE");
     expect(unavailableChart(entry)).toEqual({
       copy: "Not published: NAV and drawdown",
-      reason: `${UNAVAILABLE_SENTENCE.RATIO_SCALE_NOT_PUBLISHED} (RATIO_SCALE_NOT_PUBLISHED). Nothing is drawn from client arithmetic.`,
+      reason: `${UNAVAILABLE_SENTENCE.RATIO_SCALE_NOT_PUBLISHED} (RATIO_SCALE_NOT_PUBLISHED). Nothing is estimated in its place.`,
     });
     expect(UNAVAILABLE_SENTENCE.RATIO_SCALE_NOT_PUBLISHED).toMatch(/states no ratio scale/);
     expect(unavailableChart(entry, "FE-013/033").copy).toBe("Not published");

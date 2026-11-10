@@ -62,6 +62,7 @@ import { usePortfolioReads, type Visited } from "./use360";
 import "../../../css/portfolios.css";
 import { formatInstant } from "../../../boundary";
 import { GapWhy } from "../../../blocks";
+import { NotFound } from "../../../blocks/NotFound";
 
 export const PORTFOLIO_SCREEN_KEY = "portfolios" as const;
 
@@ -211,7 +212,8 @@ export default function PortfolioScreen({ api, portfolioId, capabilities, routes
     if (state.phase === "error" && resource === null) return <PanelState status={state.status} reason={state.reason} />;
     if (resource === null) return <PanelState status="loading" />;
     if (identity === null) {
-      return <PanelState status={resource.state === "empty" ? "empty" : "partial"} reason={`Portfolio ${id} is not present in the projected resource population.`} />;
+      // The resource answered and names no such portfolio: a permanent not-found with a way back, not a "Partial" panel (UI review D8).
+      return <NotFound what="Portfolio" id={id} sentence="This portfolio is not in the list you can see. Check the id, or pick one from the Portfolios list." backTo={withContext(routes.list, params)} backLabel="Portfolios" />;
     }
     const ctx: TabCtx = { api, portfolioId: id, identity, resource, deployments, accounts, environments, routes, search: params, reads, window: url.value.window, mayOpenAccounts };
     return (
@@ -256,6 +258,8 @@ export default function PortfolioScreen({ api, portfolioId, capabilities, routes
     );
   })();
 
+  // The resource answered and names no such portfolio: the page is the not-found panel alone (no freshness, Compare or Actions for nothing).
+  const absent = resource !== null && identity === null;
   const fresh = resource ? freshnessFlag(resource.freshness) : null;
   const subParts = [identity?.portfolioId ?? id, identity?.owner ?? null, identity?.baseCurrency ?? null].filter((part): part is string => part !== null);
   const compareHref = routes.compare === null
@@ -267,15 +271,15 @@ export default function PortfolioScreen({ api, portfolioId, capabilities, routes
       <header className="exec-pf-head">
         <div>
           <p className="exec-pf-crumb"><Link to={withContext(routes.list, params)}>Portfolios</Link></p>
-          <h1 className="exec-pf-h1">{identity?.name ?? id}</h1>
-          <p className="exec-pf-sub">
+          <h1 className="exec-pf-h1">{absent ? "Portfolio" : identity?.name ?? id}</h1>
+          <p className="exec-pf-sub" hidden={absent}>
             <span className="exec-pf-id">{subParts[0]}</span>
             {subParts.slice(1).map((part) => <span key={part}> · {part}</span>)}
             {identity && identity.owner === null ? <span> · Owner: Not available</span> : null}
             {identity && identity.baseCurrency === null ? <span> · Base currency: Not available</span> : null}
           </p>
         </div>
-        <div className="exec-pf-ctrls">
+        {absent ? null : <div className="exec-pf-ctrls">
           {identity ? <Flag kind={identity.stateKind} label={identity.stateLabel} size="sm" /> : null}
           {fresh ? <Flag kind={fresh.kind} label={fresh.label} size="sm" /> : null}
           {resource ? <span className="exec-pf-dim">{resource.asOf ? `As of ${formatInstant(resource.asOf)}` : "Source time not published"}</span> : null}
@@ -292,7 +296,7 @@ export default function PortfolioScreen({ api, portfolioId, capabilities, routes
             <Link className="exec-pf-link-btn" to={compareHref}>Compare with</Link>
           )}
           <button type="button" className="exec-pf-btn" disabled={identity === null} title={identity === null ? "The portfolio has not resolved" : undefined} onClick={() => select(RAIL_SELECTION)}>Actions</button>
-        </div>
+        </div>}
       </header>
       <div className="exec-pf-main" data-docked={selection === RAIL_SELECTION && mode === "dock" ? "true" : undefined}>
         <div className="exec-pf-body">{body}</div>

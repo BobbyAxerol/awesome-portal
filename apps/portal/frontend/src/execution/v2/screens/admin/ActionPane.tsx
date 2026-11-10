@@ -250,11 +250,11 @@ export function ActionPane({ row, api, activation, stale = false, workspaceId, m
             row.kind === "read"
               ? "Nothing: the server classifies this action as connected, a local read. It does not use the command relay."
               : "Nothing: the server classifies this action as connected."
-          ) : first.code ?? first.sentence ? (
+          ) : first.code ?? first.plain ? (
             <>
               {first.code ? <CodeName code={first.code} /> : null}
-              {first.code && first.sentence ? " " : null}
-              {first.sentence ?? null}
+              {first.code && first.plain ? " " : null}
+              {first.plain === null ? null : <span title={first.sentence ?? undefined} data-code={first.capability ?? undefined}>{first.plain}</span>}
             </>
           ) : "No reason was published."}
         </Fact>

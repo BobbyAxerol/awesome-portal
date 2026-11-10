@@ -34,8 +34,10 @@
 }
 .exec-ck-ctrls {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: var(--space-3);
+  gap: var(--space-2) var(--space-3);
+  min-width: 0;
 }
 .exec-ck-counts {
   font: var(--exec-font-id);
@@ -436,6 +438,10 @@
   background: var(--paper-sunken);
   border-top: 1px solid var(--line-strong);
 }
+/* UI review D9: the queue list scrolls inside its capped panel; this says so while rows are below the fold. */
+.exec-ck-scrollcue {
+  color: var(--accent);
+}
 .exec-ck-more {
   padding: 1px 8px;
   font: var(--exec-font-control);
@@ -669,6 +675,8 @@
 
 /* freshness chip, the key chip on a decision button, "Decided today" (WP-E) */
 .exec-ck-fresh {
+  /* UI review D9: one line ("Queue read 11 Sep 09:00Z"), never five at 390px; the controls row wraps around it instead. */
+  white-space: nowrap;
   padding: 2px var(--space-3);
   font: var(--exec-font-id);
   color: var(--ink-soft);
@@ -907,6 +915,9 @@
 }
 
 @media (max-width: 660px) {
+  .exec-ck-mast > .exec-ck-ctrls {
+    flex: 1 1 100%;
+  }
   .exec-ck-list {
     display: grid;
     gap: var(--space-2);

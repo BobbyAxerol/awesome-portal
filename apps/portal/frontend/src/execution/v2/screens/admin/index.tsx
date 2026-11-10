@@ -27,7 +27,7 @@ import { Link, useSearchParams } from "react-router-dom";
 
 import type { ExecutionApi } from "../../../api/ports";
 import { PanelSkeleton, PanelState } from "../../../components/states";
-import { activationSentence } from "../../../stagedActivation";
+import { activationPlain } from "../../../stagedActivation";
 import { CodeName, GapWhy, NaWhy, PanelGate, SectionPanel } from "../../blocks";
 import { CardsTable, type CardsColumn } from "../../cardsTable";
 import { useDockMode, useDockSelection } from "../../Drawer";
@@ -323,7 +323,7 @@ export default function AdminScreen({
           <span>
             <span data-testid="admin-relay-meaning">{relaySentence(relay)} </span>
             {authority ? `Command authority: ${humanize(authority.state)}. ` : ""}
-            {notLive ? `First reason nothing is live: ${notLive.capabilityKey}, ${activationSentence(notLive)}.` : ""}
+            {notLive ? `First reason nothing is live: ${activationPlain(notLive)}` : ""}
           </span>
         </div>
       ) : null}

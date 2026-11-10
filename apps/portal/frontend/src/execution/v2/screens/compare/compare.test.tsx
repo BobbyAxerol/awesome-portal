@@ -431,7 +431,9 @@ describe("series (FE-013/033, BE-P4 manager series)", () => {
   it("INCOMPARABLE lists every subject apart with the mismatch reason and its own currency; nothing is drawn, converted or summed", async () => {
     const { container } = mount(makeApi(serving("mixed")).api, pick(A, B));
     await settled(container);
-    await waitFor(() => expect(overlay(container).textContent).toContain("CURRENCY_MIXED"));
+    // UI review D12: the typed code rides on the chart (data-code), the words are plain.
+    await waitFor(() => expect(overlay(container).querySelector('[data-code~="CURRENCY_MIXED"]')).not.toBeNull());
+    expect(overlay(container).textContent).not.toContain("CURRENCY_MIXED");
     expect(overlay(container).textContent).toContain("Not comparable");
     expect(overlay(container).textContent).toContain("Different currencies are never converted or summed");
     expect(overlay(container).querySelectorAll("svg")).toHaveLength(0);
@@ -510,7 +512,8 @@ describe("series (FE-013/033, BE-P4 manager series)", () => {
     it("RATIO_SCALE_MIXED is INCOMPARABLE with that reason: nothing is drawn, each subject is listed apart with its own scale", async () => {
       const { container } = mount(makeApi(returns((body) => { body.series[1].ratio_scale = "PERCENT"; })).api, pick(A, B));
       await openReturn(container);
-      await waitFor(() => expect(overlay(container).textContent).toContain("RATIO_SCALE_MIXED"));
+      await waitFor(() => expect(overlay(container).querySelector('[data-code~="RATIO_SCALE_MIXED"]')).not.toBeNull());
+      expect(overlay(container).textContent).not.toContain("RATIO_SCALE_MIXED");
       expect(overlay(container).textContent).toContain("Not comparable");
       expect(overlay(container).textContent).toContain("These returns are stated on different scales and are not drawn together");
       expect(overlay(container).querySelectorAll("svg")).toHaveLength(0);

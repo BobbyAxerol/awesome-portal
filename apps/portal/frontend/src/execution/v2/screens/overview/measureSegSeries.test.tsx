@@ -147,7 +147,7 @@ describe("the fund series is served (source published)", () => {
     await ready();
     series.variant = "unavailable";
     fireEvent.click(screen.getByRole("button", { name: "Refresh" }));
-    await waitFor(() => expect(performance().textContent).toContain("SERIES_SOURCE_NOT_PUBLISHED"));
+    await waitFor(() => expect(performance().querySelector('[data-code~="SERIES_SOURCE_NOT_PUBLISHED"]')).not.toBeNull());
     expect(performance().querySelector("svg path[data-main]")).toBeNull();
   });
 });
