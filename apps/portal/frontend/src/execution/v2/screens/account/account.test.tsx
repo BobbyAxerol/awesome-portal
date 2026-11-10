@@ -974,7 +974,7 @@ describe("Account 360: tabs", () => {
     account("acc_bnc_core");
     await loaded360();
     const panel = await openTab("Allocations");
-    const table = await within(panel).findByRole("table", { name: "Alpha fleet" }, SLOW);
+    const table = await within(panel).findByRole("table", { name: "Alphas on account acc_bnc_core" }, SLOW);
     const heads = [...table.querySelectorAll("th")].map((th) => th.textContent?.replace(/[↑↓\d]+$/, "").trim());
     expect(heads).toEqual(DATASET_COLUMNS.filter((column) => !column.optional).map((column) => (column.key === "equity" ? "Equity 30D" : column.label)));
     const rows = bodyRows(table);
@@ -1006,7 +1006,7 @@ describe("Account 360: tabs", () => {
     await loaded360();
     panel = await openTab("Allocations");
     await waitFor(() => expect(panel.textContent).toMatch(/unavailable|503|could not/i), SLOW);
-    expect(within(panel).queryByRole("table", { name: "Alpha fleet" })).toBeNull();
+    expect(within(panel).queryByRole("table", { name: "Alphas on account acc_bnc_core" })).toBeNull();
     expect(within(panel).queryByRole("table", { name: "Allocations on this account" })).toBeNull();
   });
 

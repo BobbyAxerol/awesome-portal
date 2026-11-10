@@ -150,11 +150,13 @@ export interface FleetDatasetTableProps {
   onOpen?(row: ManagerRow): void;
   /** Row selection for Compare: only with an explicit capability. Absent, the checkboxes are disabled and name why (aria-describedby). */
   selectionReasonId?: string;
+  /** The table's accessible name. The Fleet's own is "Alpha fleet"; a list of one portfolio or account names its scope. */
+  label?: string;
 }
 
 export function FleetDatasetTable({
   rows, metricKeys = null, showEnvironment = false, shownOptional, hidden, offeredSorts = null, basisPinned = false, sorts = [], onSort,
-  equityScalar = "value", sparks, datasetEnvironment, hrefFor, empty, selectedKey, onOpen, selectionReasonId, groupFields = [], groups = [],
+  equityScalar = "value", sparks, datasetEnvironment, hrefFor, empty, selectedKey, onOpen, selectionReasonId, groupFields = [], groups = [], label = "Alpha fleet",
 }: FleetDatasetTableProps) {
   const scalar = equityScalarOf(equityScalar);
   const carried = metricKeys === null || metricKeys.includes("score");
@@ -307,7 +309,7 @@ export function FleetDatasetTable({
   };
   return (
     <CardsTable
-      label="Alpha fleet"
+      label={label}
       className={selectionReasonId !== undefined && shownOptional?.has("select") ? "exec-fleet-dataset exec-fleet-sel" : "exec-fleet-dataset"}
       columns={entryColumns}
       rows={entries}

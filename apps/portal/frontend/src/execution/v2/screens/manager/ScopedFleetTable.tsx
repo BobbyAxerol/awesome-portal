@@ -41,6 +41,8 @@ export interface ScopedFleetTableProps {
   emptyText: ReactNode;
   /** Said when `environment` is `null`. */
   noEnvironmentText: ReactNode;
+  /** The table's accessible name (default: the scope's own, e.g. "Alphas in this portfolio"). */
+  label?: string;
 }
 
 /** The query this list asks: the Fleet's page size, the server's scope, one environment, the reader's sort. */
@@ -52,7 +54,7 @@ export function scopedFleetQuery(scope: ScopedFleetScope, environment: ManagerEn
   return query;
 }
 
-export function ScopedFleetTable({ api, scope, environment, workspaceId, hrefFor, emptyText, noEnvironmentText }: ScopedFleetTableProps) {
+export function ScopedFleetTable({ api, scope, environment, workspaceId, hrefFor, emptyText, noEnvironmentText, label }: ScopedFleetTableProps) {
   const serves = servesDataset(api);
   const enabled = serves && environment !== null;
   const [sorts, setSorts] = useState<readonly SortKey[]>([]);
@@ -94,6 +96,7 @@ export function ScopedFleetTable({ api, scope, environment, workspaceId, hrefFor
           metricKeys={dataset.first === null ? null : dataset.first.queryOptions.metricKeys}
           hrefFor={hrefFor}
           empty={empty}
+          label={label ?? (scope.surface === "PORTFOLIO" ? `Alphas in portfolio ${scope.id}` : `Alphas on account ${scope.id}`)}
         />
         </>
       )}

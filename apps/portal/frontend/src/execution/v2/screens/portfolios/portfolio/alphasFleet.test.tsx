@@ -52,7 +52,7 @@ const mount = (api: ExecutionApi, query = "?tab=alphas") =>
     </MemoryRouter>,
   );
 const search = () => new URLSearchParams((screen.getByTestId("where").textContent ?? "").split("?")[1] ?? "");
-const fleetTable = () => screen.findByRole("table", { name: "Alpha fleet" }, SLOW);
+const fleetTable = () => screen.findByRole("table", { name: /^Alphas in portfolio / }, SLOW);
 const rows = (table: HTMLElement) => within(table).getAllByRole("row").slice(1);
 const cell = (row: HTMLElement, label: string) => row.querySelector(`td[data-l='${label}']`)?.textContent ?? "";
 const datasetCalls = (state: DatasetDoubleState) => state.calls.filter((call) => call.query.get("limit") !== "1");
@@ -116,7 +116,7 @@ describe("Portfolio 360 Alphas tab is the Alpha Fleet table", () => {
     fireEvent.click(within(group).getByRole("button", { name: "Paper" }));
     await waitFor(() => expect(search().get("aenv")).toBe("paper"));
     expect(search().get("tab")).toBe("alphas");
-    await waitFor(() => expect(cell(rows(screen.getByRole("table", { name: "Alpha fleet" }))[0]!, "Alpha")).toContain("Carry-Paper"), SLOW);
+    await waitFor(() => expect(cell(rows(screen.getByRole("table", { name: /^Alphas in portfolio / }))[0]!, "Alpha")).toContain("Carry-Paper"), SLOW);
     expect(datasetCalls(state).some((call) => call.path.includes(`/manager/portfolios/${PF.core}/`) && call.query.get("environment") === "paper")).toBe(true);
   });
 
@@ -141,7 +141,7 @@ describe("Portfolio 360 Alphas tab is the Alpha Fleet table", () => {
     expect(screen.getByRole("tabpanel").textContent).toContain("Showing 50 of 260 rows. Load more for the rest.");
     for (let page = 2; page <= 4; page += 1) {
       fireEvent.click(screen.getByRole("button", { name: "Load more" }));
-      await waitFor(() => expect(rows(screen.getByRole("table", { name: "Alpha fleet" }))).toHaveLength(page * 50), SLOW);
+      await waitFor(() => expect(rows(screen.getByRole("table", { name: /^Alphas in portfolio / }))).toHaveLength(page * 50), SLOW);
     }
     expect(screen.queryByRole("button", { name: "Load more" })).toBeNull();
     expect(screen.getByRole("tabpanel").textContent).toContain("Showing the first 200 rows.");
@@ -164,6 +164,6 @@ describe("Portfolio 360 Alphas tab is the Alpha Fleet table", () => {
     refused.state.variant = "status:503";
     mount(refused.api);
     await waitFor(() => expect(screen.getByRole("tabpanel").textContent).toMatch(/unavailable|503|could not/i), SLOW);
-    expect(screen.queryByRole("table", { name: "Alpha fleet" })).toBeNull();
+    expect(screen.queryByRole("table", { name: /^Alphas in portfolio / })).toBeNull();
   });
 });
