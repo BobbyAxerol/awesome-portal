@@ -45,6 +45,9 @@ import { freshnessFlag, humanize } from "../format";
 import { EXPORT_REASON } from "../fe";
 import { COMPARE_OFF_REASON, DEFAULT_ROUTES, FROM_PORTFOLIO_PREFIX, joinQuery, type PortfolioRoutes } from "../routes";
 import { IN_PARAM } from "../selection";
+import { toRows } from "../listModel";
+import { useRead } from "../useRead";
+import { compareOptionsFor } from "../../compare/model";
 import { Allocations } from "./Allocations";
 import { AccountsTab, AlphasTab } from "./AlphasAccounts";
 import type { TabCtx } from "./ctx";
@@ -141,6 +144,15 @@ export default function PortfolioScreen({ api, portfolioId, capabilities, routes
   // address names a workspace (DEBT-UXM07-011). It words the rail's reasons; it never enables a control.
   const railEligibility = useRailEligibility(api, { enabled: selection === RAIL_SELECTION && permitted, workspaceId: url.value.workspace_id, environment: url.value.env, portfolioId: id });
   const reads = usePortfolioReads(api, id, permitted && id !== "", url.value.window, visited);
+
+  // G1: "Compare with" is offered only while some other portfolio shares this one's basis (currency and book). The list read tells which; if it
+  // cannot be read, or does not hold this portfolio, nothing is known and the entry stays as it was (the Compare screen then restricts its own picks).
+  const listRead = useRead(api, permitted && id !== "" && routes.compare !== null && reads.resource.phase === "ready", "compare-partners", (scoped) =>
+    typeof scoped.listPortfolios === "function"
+      ? scoped.listPortfolios()
+      : Promise.resolve({ ok: false as const, status: "unavailable" as const, reason: "The portfolio list is not served here" }));
+  const listed = listRead.phase === "ready" ? listRead.value : listRead.phase === "loading" || listRead.phase === "error" ? listRead.last : null;
+  const compareOptions = useMemo(() => (listed === null ? { kind: "unknown" as const } : compareOptionsFor(toRows(listed.items), id)), [listed, id]);
 
   const resource = reads.resource.phase === "ready" ? reads.resource.value : reads.resource.phase === "loading" || reads.resource.phase === "error" ? reads.resource.last : null;
   const identity = useMemo(() => (resource && id ? readIdentity(resource, id) : null), [resource, id]);
@@ -271,10 +283,10 @@ export default function PortfolioScreen({ api, portfolioId, capabilities, routes
             <GapWhy className="exec-blk-np-word" gap="D20" text="Report pack: not available yet" name="Report pack: not available yet, reason" rows={[EXPORT_REASON, "A report pack needs the export contract; nothing is generated here."]} next={null} />
             {" · "}<Link to={withContext(routes.access, params)}>My access</Link>
           </span>
-          {compareHref === null ? (
+          {compareHref === null || compareOptions.kind === "none" ? (
             <span className="exec-pf-btnwhy">
               <button type="button" className="exec-pf-btn" disabled aria-describedby={`${tabsId}-compare`}>Compare with</button>
-              <span id={`${tabsId}-compare`} className="exec-pf-why">{COMPARE_OFF_REASON}</span>
+              <span id={`${tabsId}-compare`} className="exec-pf-why">{compareHref === null ? COMPARE_OFF_REASON : compareOptions.kind === "none" ? compareOptions.reason : COMPARE_OFF_REASON}</span>
             </span>
           ) : (
             <Link className="exec-pf-link-btn" to={compareHref}>Compare with</Link>

@@ -875,3 +875,33 @@ describe("Owner and Health choices are the authorized population, or they say th
     expect(legacy).toEqual([]);
   });
 });
+
+describe("G1: the filter bar on a phone", () => {
+  const phone = () => vi.stubGlobal("matchMedia", (query: string) => ({ matches: query === "(max-width: 660px)", media: query, addEventListener() {}, removeEventListener() {} }));
+
+  it("at 660px and narrower the filter bar sits behind a Filters button that counts what is applied; open, every control is reachable", async () => {
+    phone();
+    const { api } = harness({ live: MIXED }, "status:404");
+    mount(api, `${LIVE_URL}&q=a`);
+    await loaded();
+    const toggle = screen.getByRole("button", { name: /^Filters/ });
+    expect(toggle.getAttribute("aria-expanded")).toBe("false");
+    expect(toggle.textContent).toMatch(/Filters · 2 active/);
+    // Closed: the controls are out of the page and out of the tab order; the chips of what is applied stay.
+    expect(screen.queryByRole("searchbox", { name: "Search alpha" })).toBeNull();
+    expect(screen.queryByRole("combobox", { name: "Sort" })).toBeNull();
+    fireEvent.click(toggle);
+    expect(toggle.getAttribute("aria-expanded")).toBe("true");
+    expect(screen.getByRole("searchbox", { name: "Search alpha" })).toBeTruthy();
+    expect(screen.getByRole("combobox", { name: "Sort" })).toBeTruthy();
+    expect(document.getElementById(toggle.getAttribute("aria-controls") ?? "")).not.toBeNull();
+  });
+
+  it("above 660px (and where the browser cannot tell) nothing changes: no Filters button, the bar is drawn", async () => {
+    const { api } = harness({ live: MIXED }, "status:404");
+    mount(api, LIVE_URL);
+    await loaded();
+    expect(screen.queryByTestId("filters-toggle")).toBeNull();
+    expect(screen.getByRole("searchbox", { name: "Search alpha" })).toBeTruthy();
+  });
+});

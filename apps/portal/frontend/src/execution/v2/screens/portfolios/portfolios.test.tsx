@@ -205,7 +205,12 @@ describe("header, banners and footer", () => {
     await loaded();
     expect(screen.getAllByText("Top 6 / 9 portfolios").length).toBeGreaterThan(0);
     expect(screen.queryByRole("button", { name: "Load more" })).toBeNull();
-    expect(screen.getByText(/no cursor/)).toBeTruthy();
+    // G1: it says what is hidden and why, and offers the nearest honest action (the reader has no limit or cursor, so no "ask for more").
+    const note = screen.getByTestId("truncated-note");
+    expect(note.textContent).toContain("3 more portfolios are not listed");
+    expect(note.textContent).toContain("publishes no way to page the rest");
+    expect(note.textContent).not.toMatch(/no cursor/);
+    expect(within(note).getByRole("link", { name: "See every alpha by portfolio in Fleet" }).getAttribute("href")).toContain("/deployments/alphas?group=portfolio_id");
   });
 
   it("has no Load more when the read is whole", async () => {
@@ -226,7 +231,28 @@ describe("header, banners and footer", () => {
     const total = screen.getByTestId("scope-total-absent");
     expect(total.textContent).toMatch(/Total NAV, filtered set.*Not published.*nothing is added from the rows above/);
     expect(total.textContent).not.toMatch(/\d/);
-    for (const row of bodyRows()) expect(cell(row, "NAV")).toContain("Not published: NAV");
+    // G1: the cell prints the short word; the fact and the reason ride the disclosure (aria name) and the hidden text.
+    for (const row of bodyRows()) {
+      expect(row.querySelector("td[data-l='NAV'] .exec-blk-why-btn")?.textContent).toBe("Not published");
+      expect(row.querySelector("td[data-l='NAV'] .exec-blk-why-btn")?.getAttribute("aria-label")).toBe("Not published: NAV, reason");
+      expect(cell(row, "NAV")).toContain("NAV: Not published");
+    }
+  });
+
+  it("G1: a column in which every row is absent is said once above the table, with its reason behind one disclosure; a cell never repeats the phrase", async () => {
+    mount(makeApi().api);
+    await loaded();
+    const note = screen.getByTestId("column-absence");
+    expect(note.textContent).toContain("Not published for any portfolio shown:");
+    expect(note.textContent).toContain("NAV");
+    // Nothing in a cell is a dash or a zero, and no cell prints more than the short word.
+    for (const row of bodyRows()) {
+      const buttons = [...row.querySelectorAll("td[data-l^='NAV'] .exec-blk-why-btn, td[data-l^='Concentration'] .exec-blk-why-btn")];
+      expect(buttons.length).toBeGreaterThan(0);
+      for (const button of buttons) expect(button.textContent).toBe("Not published");
+    }
+    fireEvent.click(within(note).getByRole("button", { name: "Why these columns have no figure" }));
+    expect(note.textContent).toContain("NAV:");
   });
 
   it("switches to a compact table from the toolbar and the URL", async () => {

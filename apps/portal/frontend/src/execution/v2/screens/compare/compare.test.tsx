@@ -104,16 +104,55 @@ describe("picks", () => {
     mount(makeApi().api);
     await loaded();
     expect(screen.getByText("Pick two to four portfolios to compare.")).toBeTruthy();
-    fireEvent.click(chip("Satellite"));
-    expect(search().get("in")).toBe(PF.satellite);
+    fireEvent.click(chip("Canary"));
+    expect(search().get("in")).toBe(PF.canary);
     expect(screen.getByText("Pick at least one more to compare.")).toBeTruthy();
-    for (const name of ["Canary", "Core", "Yen-Carry"]) fireEvent.click(chip(name));
-    expect(search().get("in")?.split(",")).toHaveLength(4);
+    fireEvent.click(chip("Pilot"));
+    expect(search().get("in")).toBe(`${PF.canary},${PF.empty}`);
+    // The picks start dataset reads; let them settle inside the test.
+    await waitFor(() => expect(screen.queryByText("Loading")).toBeNull());
+  });
+
+  it("says when four is the most: the fifth chip is refused with its reason", async () => {
+    mount(makeApi().api, pick(PF.core, PF.satellite, PF.canary, PF.yen));
+    await loaded();
     expect(screen.getByText("4 selected. Remove one to change.")).toBeTruthy();
     const fifth = chip("Pilot");
     expect(fifth.disabled).toBe(true);
     expect(fifth.title).toBe("At most 4");
-    // The picks start dataset reads; let them settle inside the test.
+    await waitFor(() => expect(screen.queryByText("Loading")).toBeNull());
+  });
+
+  it("G1: once a pick sets the basis, only portfolios that share it stay offered; the others are disabled with the reason, so no pair ends in 'Fewer than two picks share one basis'", async () => {
+    mount(makeApi().api, pick(PF.canary));
+    await loaded();
+    // Pilot: same currency and book. Satellite: a Real-funded book. Yen-Carry: another currency. Core: a mixed book.
+    expect(chip("Pilot").disabled).toBe(false);
+    expect(chip("Satellite").disabled).toBe(true);
+    expect(chip("Satellite").title).toMatch(/Real-funded book; the basis is Simulated/);
+    expect(chip("Satellite").textContent).toContain("other book");
+    expect(chip("Yen-Carry").disabled).toBe(true);
+    expect(chip("Yen-Carry").title).toMatch(/Other currency \(JPY\); the basis is USDT/);
+    expect(chip("Yen-Carry").textContent).toContain("other currency");
+    expect(chip("Core").disabled).toBe(true);
+    expect(chip("Core").title).toMatch(/Real-funded and Simulated books in one allocation figure/);
+    // The pick itself is never blocked: it can always be taken off.
+    expect(chip("Canary").disabled).toBe(false);
+    await waitFor(() => expect(screen.queryByText("Loading")).toBeNull());
+  });
+
+  it("G1: a pick with no basis of its own (a mixed book) leaves nothing to offer, says so beside the chips, and can be taken off", async () => {
+    mount(makeApi().api, pick(PF.core));
+    await loaded();
+    const note = screen.getByTestId("no-partner");
+    expect(note.textContent).toContain("No other portfolio can be offered");
+    expect(note.textContent).toContain("Real-funded and Simulated books in one allocation figure");
+    for (const name of ["Canary", "Satellite", "Pilot", "Yen-Carry"]) expect(chip(name).disabled, name).toBe(true);
+    expect(chip("Pilot").title).toMatch(/Nothing can be compared with Core/);
+    expect(chip("Core").disabled).toBe(false);
+    fireEvent.click(chip("Core"));
+    expect(screen.queryByTestId("no-partner")).toBeNull();
+    expect(chip("Canary").disabled).toBe(false);
     await waitFor(() => expect(screen.queryByText("Loading")).toBeNull());
   });
 

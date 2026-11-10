@@ -333,6 +333,9 @@ div.exec-pf-banner {
   margin: 0;
   color: var(--ink-soft);
 }
+/* G1: a typed absence in a cell is two short words on one line (the column keeps its width for the figures beside it); its reason is behind the disclosure. */
+.exec-pf-panel .exec-cards td .exec-pf-na[data-absent] { display: inline-block; max-width: none; white-space: nowrap; }
+.exec-pf-colnotes-lead { color: var(--ink-soft); }
 .exec-pf-ccylist {
   display: inline-flex;
   flex-direction: column;

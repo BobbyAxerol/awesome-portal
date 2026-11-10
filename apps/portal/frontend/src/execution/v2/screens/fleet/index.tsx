@@ -48,6 +48,8 @@ import { FleetStreamChip } from "../../fleetStream/FleetStreamChip";
 import type { FleetSessionDeps } from "../../fleetStream/fleetStreamSession";
 import { withOrigin } from "../../backTo";
 import { serializeUrlParams, useExecUrlState, withContext } from "../../urlState";
+import { PHONE_QUERY } from "../../usePhoneRows";
+import { useMediaQuery } from "../../useMediaQuery";
 import { MANAGER_STATEMENT_SCOPE } from "../../readers/managerDataset";
 import { ColumnsMenu, FilterChips, MultiPick, type FilterChip } from "./fleetControls";
 import { OptionFilter } from "./OptionFilter";
@@ -188,6 +190,10 @@ export default function FleetScreen({ api, workspaceId, streamFlag = FLEET_STREA
   const evidence = evidenceOf(params.get("evidence"));
   const equityScalar = equityScalarOf(params.get("eq")).id;
   const compact = params.get("density") === "compact";
+  // G1: at phone width (the table's own 660px) the filter bar sits behind one "Filters" button that counts what is applied; the controls
+  // stay in the DOM and in the tab order once opened. Above it, and where the browser cannot tell (jsdom), the bar is drawn as it always was.
+  const phone = useMediaQuery(PHONE_QUERY);
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const hiddenDataset = useMemo(() => new Set((params.get("dhide") ?? "").split(",").map((part) => part.trim()).filter(Boolean)), [params]);
   const shownOptional = useMemo(() => parseShownOptional(params.get(OPTIONAL_SHOWN_PARAM)), [params]);
   // The partitions the loaded rows publish (kept while filtering): the Basis choices, and the partition a money order or range pins.
@@ -407,6 +413,11 @@ export default function FleetScreen({ api, workspaceId, streamFlag = FLEET_STREA
     return () => clearTimeout(timer);
   }, [text, q]);
   const searchInput = useRef<HTMLInputElement>(null);
+  // The chips' focus fallback: the search box, which on a phone sits inside the closed Filters bar, so it opens first.
+  const focusSearch = () => {
+    if (phone && !filtersOpen) setFiltersOpen(true);
+    requestAnimationFrame(() => searchInput.current?.focus());
+  };
   const commitNow = () => url.set({ q: text.trim() === "" ? null : text.trim(), sel: null }, { replace: true });
 
   const metricFiltered = ranges.length > 0 || portfolios.length > 0 || venues.length > 0 || sources.length > 0 || version !== null || lifecycleFilter !== null || evidence !== null;
@@ -615,8 +626,11 @@ export default function FleetScreen({ api, workspaceId, streamFlag = FLEET_STREA
       ) : null}
       {!archived && datasetMode ? (
         <p className="exec-fleet-counts-src" data-testid="counts-source" title={countsRead.envelope?.sourceAsOf ? `${COUNTS_SOURCE_TITLE} Counts as of ${formatInstant(countsRead.envelope.sourceAsOf)}.` : COUNTS_SOURCE_TITLE}>
-          Counts: Fleet read, alphas in your whole scope. Table: Manager dataset, alpha versions in {scopeWords}.{dataset.total === null || dataset.total === undefined ? "" : ` ${dataset.total} rows match, one per alpha version in a portfolio. Alphas (tabs), deployments (header) and rows (table) are three units: none has to equal another.`}
+          {phone
+            ? <>Counts: Fleet read, whole scope. Table: Manager dataset{dataset.total === null || dataset.total === undefined ? "" : `, ${dataset.total} rows`}.</>
+            : <>Counts: Fleet read, alphas in your whole scope. Table: Manager dataset, alpha versions in {scopeWords}.{dataset.total === null || dataset.total === undefined ? "" : ` ${dataset.total} rows match, one per alpha version in a portfolio. Alphas (tabs), deployments (header) and rows (table) are three units: none has to equal another.`}</>}
           <GapWhy name="How these counts relate" next={null} rows={[
+            ...(phone ? [`Counts: Fleet read, alphas in your whole scope. Table: Manager dataset, alpha versions in ${scopeWords}.${dataset.total === null || dataset.total === undefined ? "" : ` ${dataset.total} rows match, one per alpha version in a portfolio. Alphas (tabs), deployments (header) and rows (table) are three units: none has to equal another.`}`] : []),
             "Alphas, Deployments, Portfolios and the stage tabs are the Fleet read over your whole scope: the unit is an alpha (Deployments: running deployments).",
             "An alpha in two stages is counted in each of its tabs, so the stage tabs do not add up to Alphas, and Real-funded (Canary + Live) is an upper bound.",
             "The environment strip and the table are the Manager dataset: the unit is a row, one alpha version in one portfolio, so rows and alphas differ by design (one alpha in two portfolios is two rows).",
@@ -653,6 +667,9 @@ export default function FleetScreen({ api, workspaceId, streamFlag = FLEET_STREA
             })}
           </div>
 
+          {(() => {
+            const controls = (
+              <>
           {archived ? null : <div className="exec-fleet-tool" role="search">
             <label className="exec-fleet-field">
               <span className="exec-fleet-sr">Search alpha</span>
@@ -821,7 +838,20 @@ export default function FleetScreen({ api, workspaceId, streamFlag = FLEET_STREA
               <span id={selectionReasonId} className="exec-fleet-note">Select 2 to 4 alphas to compare: {notPublished(FE.compare)}.</span>
             </div>
           )}
-          {archived ? null : <FilterChips chips={chips} onClearAll={clearFilters} urlText={urlText} onFocusFallback={() => searchInput.current?.focus()} />}
+              </>
+            );
+            if (!phone || archived) return controls;
+            return (
+              <>
+                <button type="button" className="exec-fleet-btn exec-fleet-filters-toggle" aria-expanded={filtersOpen} aria-controls={`${searchId}-filters`} onClick={() => setFiltersOpen((open) => !open)} data-testid="filters-toggle">
+                  Filters{chips.length > 0 ? ` · ${chips.length} active` : ""}
+                  <span aria-hidden="true">{filtersOpen ? " \u25b4" : " \u25be"}</span>
+                </button>
+                <div id={`${searchId}-filters`} className="exec-fleet-filters" hidden={!filtersOpen}>{controls}</div>
+              </>
+            );
+          })()}
+          {archived ? null : <FilterChips chips={chips} onClearAll={clearFilters} urlText={urlText} onFocusFallback={focusSearch} />}
           {/* Tied to every disabled control by aria-describedby: the visible words are the names, the ids are in the title and the hidden text. The Archived lens has no list to filter, so its panel says the one thing and this line is for assistive tech only. */}
           <p id={reasonId} className={archived ? "exec-fleet-sr" : "exec-fleet-unpub"}>
             Not available: {unpublishedList.map((fact) => fact.what).join(", ")}

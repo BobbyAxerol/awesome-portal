@@ -11,6 +11,7 @@
 import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
 
+import { GapWhy } from "../../blocks";
 import { CardsTable, type CardsColumn, type CardsSort } from "../../cardsTable";
 import { Flag } from "../../Flag";
 import { withContext } from "../../urlState";
@@ -220,17 +221,38 @@ export function PortfolioTable({ rows, hidden, routes, search, selected, onToggl
       };
     }),
   ];
+  // G1: a column in which EVERY row on screen is absent says so once, above the table (one line, one reason per column behind its disclosure).
+  // Each cell still prints its own short typed `Not published`: the note adds the column's story, it never replaces a cell.
+  const allAbsent = rows.length === 0 ? [] : OPTIONAL_COLUMNS.filter((c) => !hidden.has(c.id) && c.id !== "alphas").flatMap((c) => {
+    const gaps = rows.map((row) => absenceOf(c.id, row, figures));
+    if (gaps.some((gap) => gap === null)) return [];
+    const reasons = [...new Set(gaps.map((gap) => gap!.reason))];
+    const label = c.windowed && windowLabel ? `${c.label} \u00b7 ${windowLabel}` : c.label;
+    return [{ id: c.id, label, reasons }];
+  });
   return (
-    <CardsTable
-      label="Portfolios"
-      className="exec-pf-reg"
-      columns={columns}
-      rows={rows}
-      rowKey={(row) => row.key}
-      empty={empty}
-      sort={sort}
-      onSort={onSort ? (key) => onSort(key as SortKey) : undefined}
-    />
+    <>
+      {allAbsent.length > 0 ? (
+        <p className="exec-pf-note exec-pf-colnotes" data-testid="column-absence">
+          <span className="exec-pf-colnotes-lead">Not published for any portfolio shown:</span> {allAbsent.map((col) => col.label).join(", ")}
+          <GapWhy
+            name="Why these columns have no figure"
+            next={null}
+            rows={allAbsent.map((col) => `${col.label}: ${col.reasons.length === 1 ? col.reasons[0] : `${col.reasons.length} reasons, one per portfolio (open the cell of a row to read its own)`}`)}
+          />
+        </p>
+      ) : null}
+      <CardsTable
+        label="Portfolios"
+        className="exec-pf-reg"
+        columns={columns}
+        rows={rows}
+        rowKey={(row) => row.key}
+        empty={empty}
+        sort={sort}
+        onSort={onSort ? (key) => onSort(key as SortKey) : undefined}
+      />
+    </>
   );
 }
 
@@ -256,12 +278,31 @@ export function noFigures(row: Pick<PortfolioRow, "environments">, viewed: strin
   return `No ${viewed} figures are published for this portfolio`;
 }
 
-function cell(id: ColumnId, row: PortfolioRow, figures: PortfolioFigures | null) {
+/** A figure column's typed absence for one row: the fact and the reason, or `null` when the row carries a value (or the column is not a figure column). */
+export function absenceOf(id: ColumnId, row: PortfolioRow, figures: PortfolioFigures | null): { what: string; reason: string } | null {
   if (id === "score" && figures !== null) {
-    if (row.unallocated) return <Absent what={WHAT.score} reason="The source publishes no score for capital that no portfolio holds" />;
+    if (row.unallocated) return { what: WHAT.score!, reason: "The source publishes no score for capital that no portfolio holds" };
     const group = figures.groups.get(row.portfolioId);
-    if (group === undefined) return <Absent what={WHAT.score} reason={noFigures(row, figures.environment)} />;
-    if (publishes(group, SCORE_KEYS.score)) return <ScoreList list={group} />;
+    if (group === undefined) return { what: WHAT.score!, reason: noFigures(row, figures.environment) };
+    if (publishes(group, SCORE_KEYS.score)) return null;
+  }
+  const source = GROUP_KEY[id];
+  if (source !== undefined && figures !== null) {
+    if (row.unallocated) return { what: WHAT[id]!, reason: "The source publishes no figure for capital that no portfolio holds" };
+    const group = figures.groups.get(row.portfolioId);
+    if (group === undefined) return { what: WHAT[id]!, reason: noFigures(row, figures.environment) };
+    if (publishes(group, source.key)) return null;
+  }
+  const fact = UNPUBLISHED[id];
+  return fact ? { what: WHAT[id] ?? fact.what, reason: `${npText(fact)}: ${fact.what}` } : null;
+}
+
+function cell(id: ColumnId, row: PortfolioRow, figures: PortfolioFigures | null) {
+  const gap = absenceOf(id, row, figures);
+  if (gap !== null) return <Absent what={gap.what} reason={gap.reason} />;
+  if (id === "score" && figures !== null) {
+    const group = figures.groups.get(row.portfolioId);
+    if (group !== undefined) return <ScoreList list={group} />;
   }
   if (id === "alphas") {
     const count = figures?.rows?.get(row.portfolioId);
@@ -271,14 +312,9 @@ function cell(id: ColumnId, row: PortfolioRow, figures: PortfolioFigures | null)
   }
   const source = GROUP_KEY[id];
   if (source !== undefined && figures !== null) {
-    if (row.unallocated) return <Absent what={WHAT[id]} reason="The source publishes no figure for capital that no portfolio holds" />;
     const group = figures.groups.get(row.portfolioId);
-    if (group === undefined) return <Absent what={WHAT[id]} reason={noFigures(row, figures.environment)} />;
-    // A group that does not publish this key keeps the column's own Not published (the contract has not spoken for it).
-    if (publishes(group, source.key)) return <PartitionFigures list={group} metricKey={source.key} signed={source.signed} labels="several" omitUnit={row.baseCurrency} />;
+    if (group !== undefined) return <PartitionFigures list={group} metricKey={source.key} signed={source.signed} labels="several" omitUnit={row.baseCurrency} />;
   }
-  const fact = UNPUBLISHED[id];
-  if (fact) return <Absent what={WHAT[id] ?? fact.what} reason={`${npText(fact)}: ${fact.what}`} />;
   switch (id) {
     case "owner":
       return row.owner ?? <Absent reason="owner not published" />;

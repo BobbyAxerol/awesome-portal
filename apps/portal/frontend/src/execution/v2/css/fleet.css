@@ -517,6 +517,20 @@ a.exec-fleet-open {
   .exec-fleet-input {
     width: 100%;
   }
+  /* G1: the filter bar waits behind one "Filters" button (it counts the applied filters); closed, the controls leave the page and the tab order. */
+  .exec-fleet-filters-toggle {
+    align-self: stretch;
+    text-align: left;
+  }
+  .exec-fleet-filters {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    min-width: 0;
+  }
+  .exec-fleet-filters[hidden] {
+    display: none;
+  }
 }
 
 /* Board (hi-fi modules/board.js): the loaded rows, one lane per stage in spine order. Tokens only. */

@@ -58,7 +58,7 @@ import { toRows, type PortfolioRow } from "../portfolios/listModel";
 import { DEFAULT_ROUTES, type PortfolioRoutes } from "../portfolios/routes";
 import { COMPARE_MAX, selectionFrom, withSelection } from "../portfolios/selection";
 import { useRead } from "../portfolios/useRead";
-import { backTarget, basisOf, bestIndexes, resolveSelection, selectionHint, selectionState } from "./model";
+import { backTarget, basisOf, bestIndexes, noBasisReason, partnerBlock, resolveSelection, selectionHint, selectionState } from "./model";
 import { measureValue, scoreOf } from "../portfolios/registerMetrics";
 import { AlphaCompare } from "./AlphaCompare";
 import { DrawdownCell, NavCell, NetPnlCell, ReturnCell, ScoreCell, type DatasetCellContext } from "./DatasetCells";
@@ -195,6 +195,21 @@ function CompareBody({ api, portfolioId, capabilities, routes = DEFAULT_ROUTES }
   const candidates = all.filter((row) => needle === "" || [row.label, row.portfolioId, row.owner ?? ""].some((part) => part.toLowerCase().includes(needle)));
   const chips = candidates.slice(0, CHIP_CAP);
   const repeats = new Set(all.filter((row) => row.key !== row.portfolioId).map((row) => row.key));
+  // G1: a chip is offered only while it can share a basis with what is already picked. With one pick that has no basis of its own (a
+  // mixed book), or a pick on another currency or book, a second pick could only end in "Fewer than two picks share one basis": the chip
+  // stays visible, disabled, with the reason beside it. A pick that is already on is never blocked, so it can always be taken off.
+  const anchor = chosen[0];
+  const established = basis.comparable[0];
+  const anchorWhy = anchor !== undefined && established === undefined ? noBasisReason(anchor) : null;
+  const partnerWhy = (row: PortfolioRow): string | null => {
+    if (anchor === undefined) return null;
+    if (established === undefined) return anchorWhy === null ? null : `Nothing can be compared with ${anchor.label}: ${anchorWhy}`;
+    return partnerBlock({ currency: established.baseCurrency, domain: established.domain, domainLabel: domainWord(established.domain) }, row);
+  };
+  const blockWord = (row: PortfolioRow): string =>
+    row.mixedBooks || row.domain === "unknown" ? " · no single basis"
+      : established === undefined ? " · no shared basis"
+        : row.baseCurrency !== established.baseCurrency ? " · other currency" : " · other book";
   const back = backTarget(from);
   const backHref = back.kind === "portfolio" ? routes.portfolio(back.portfolioId) : back.kind === "fleet" ? routes.fleet : routes.list;
   const backLabel = back.kind === "portfolio" ? "← Portfolio" : back.kind === "fleet" ? "← Alpha Fleet" : "← Portfolios";
@@ -353,8 +368,9 @@ function CompareBody({ api, portfolioId, capabilities, routes = DEFAULT_ROUTES }
                 const repeat = repeats.has(row.key);
                 const tone = repeat ? -1 : toneOf(row.portfolioId);
                 const on = tone >= 0;
-                const blocked = repeat || !row.comparable || (!on && state.kind === "full");
-                const why = repeat ? "Same id as an earlier portfolio in the read; the first one is used" : !row.comparable ? row.notComparableReason : !on && state.kind === "full" ? `At most ${COMPARE_MAX}` : null;
+                const noPartner = on || repeat || !row.comparable ? null : partnerWhy(row);
+                const blocked = repeat || !row.comparable || (!on && state.kind === "full") || noPartner !== null;
+                const why = repeat ? "Same id as an earlier portfolio in the read; the first one is used" : !row.comparable ? row.notComparableReason : !on && state.kind === "full" ? `At most ${COMPARE_MAX}` : noPartner;
                 return (
                   <button
                     key={row.key}
@@ -370,7 +386,7 @@ function CompareBody({ api, portfolioId, capabilities, routes = DEFAULT_ROUTES }
                     {row.label}
                     <small>
                       {row.baseCurrency}
-                      {!row.comparable ? " · not comparable" : basis.currency !== null && !on && row.baseCurrency !== basis.currency ? " · other currency" : ""}
+                      {!row.comparable ? " · not comparable" : noPartner === null ? "" : blockWord(row)}
                     </small>
                   </button>
                 );
@@ -379,6 +395,7 @@ function CompareBody({ api, portfolioId, capabilities, routes = DEFAULT_ROUTES }
               {envelope.truncated ? <span className="exec-pf-note">The portfolio read is the top {all.length} / {envelope.totalPortfolios}; the rest cannot be chosen yet.</span> : null}
             </div>
             <p className="exec-pf-note" role="status">{hint}</p>
+            {anchorWhy !== null ? <p className="exec-pf-note" role="status" data-testid="no-partner">No other portfolio can be offered: {anchorWhy}. Take it off to choose another pair.</p> : null}
             {picked.dropped > 0 ? <p className="exec-pf-note">{picked.dropped} entries in the address were not used: not a clean id, a repeat, or past the fourth.</p> : null}
           </section>
 

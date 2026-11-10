@@ -60,17 +60,40 @@ describe("header", () => {
   });
 
   it("links back to the list, to Compare with this portfolio, and turns the report pack off with the one sentence", async () => {
-    mount(makeApi().api, "?env=paper");
+    // Pilot (Simulated, USDT) shares its basis with Canary, so Compare with stays a link. Core is a mixed book: see the next test.
+    mount(makeApi().api, "?env=paper", PF.empty);
     await ready();
     expect(screen.getByRole("link", { name: "Portfolios" }).getAttribute("href")).toContain("/deployments/portfolios");
+    await waitFor(() => expect(screen.getByRole("link", { name: "Compare with" })).toBeTruthy());
+    await waitFor(() => expect(screen.queryByRole("button", { name: "Compare with" })).toBeNull());
     const compare = new URL(screen.getByRole("link", { name: "Compare with" }).getAttribute("href")!, "http://x");
     // Compare's own route (registry rev 9, EXECUTION_COMPARE_SCREEN); the old ?view=compare URL is only redirected.
     expect(compare.pathname).toBe("/deployments/compare");
     expect(compare.searchParams.get("view")).toBeNull();
-    expect(compare.searchParams.get("in")).toBe(PF.core);
-    expect(compare.searchParams.get("from")).toBe(`portfolio:${PF.core}`);
+    expect(compare.searchParams.get("in")).toBe(PF.empty);
+    expect(compare.searchParams.get("from")).toBe(`portfolio:${PF.empty}`);
     expect(compare.searchParams.get("env")).toBe("paper");
     expect(screen.queryByRole("button", { name: "Report pack" })).toBeNull();
+  });
+
+  it("G1: a mixed-book portfolio has no basis to share, so Compare with is a disabled control with the reason beside it, never a link to a dead end", async () => {
+    mount(makeApi().api, "?env=paper");
+    await ready();
+    const button = (await screen.findByRole("button", { name: "Compare with" })) as HTMLButtonElement;
+    expect(button.disabled).toBe(true);
+    const reason = document.getElementById(button.getAttribute("aria-describedby") ?? "")?.textContent ?? "";
+    expect(reason).toContain("Real-funded and Simulated books in one allocation figure");
+    expect(reason).toContain("no other portfolio can be compared with it");
+    expect(screen.queryByRole("link", { name: "Compare with" })).toBeNull();
+    expect(document.querySelector("a[href*='/deployments/compare']")).toBeNull();
+  });
+
+  it("G1: a portfolio nobody shares a basis with (Satellite: the only Real-funded USDT book) says so beside a disabled Compare with", async () => {
+    mount(makeApi().api, "?env=live", PF.satellite);
+    await ready();
+    const button = (await screen.findByRole("button", { name: "Compare with" })) as HTMLButtonElement;
+    expect(button.disabled).toBe(true);
+    expect(document.getElementById(button.getAttribute("aria-describedby") ?? "")?.textContent).toMatch(/No other portfolio shares the USDT Real-funded basis of Satellite/);
   });
 
   it("M2: with Compare off the header has no link to it, a disabled control with the reason instead", async () => {

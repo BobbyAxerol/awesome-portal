@@ -89,7 +89,6 @@ const SORT_LABEL: Readonly<Record<SortKey, string>> = {
   score: "Portfolio score",
 };
 
-const LOAD_MORE_REASON = "The read publishes no cursor.";
 /** The score is a column; this line only appears while no portfolio group publishes it (then the column says Not published too). */
 const UNPUBLISHED_MEASURES: readonly UnavailableFact[] = [
   { label: "Score", id: "FE-011", why: "Policy not set" },
@@ -486,7 +485,12 @@ export default function PortfolioListScreen({ api, capabilities, routes = DEFAUL
           <div className="exec-pf-foot">
             <span className="exec-pf-count-line" role="status" aria-live="polite">{line ? line.text : null}</span>
             {otherCurrency > 0 ? <span className="exec-pf-note" data-testid="other-currency">{otherCurrency} {otherCurrency === 1 ? "portfolio" : "portfolios"} in another currency · pick "Currency: any" to see {otherCurrency === 1 ? "it" : "them"}</span> : null}
-            {envelope.truncated ? <span className="exec-pf-note">{LOAD_MORE_REASON}</span> : null}
+            {envelope.truncated ? (
+              <span className="exec-pf-note" data-testid="truncated-note">
+                {envelope.totalPortfolios - loaded.length > 0 ? `${envelope.totalPortfolios - loaded.length} more ${envelope.totalPortfolios - loaded.length === 1 ? "portfolio is" : "portfolios are"} not listed` : "More portfolios are not listed"}: the server sends only the first {loaded.length} and publishes no way to page the rest, so none of this page's filters or sorts reach them.{" "}
+                <Link to={withContext(joinQuery(routes.fleet, "group=portfolio_id"), params)}>See every alpha by portfolio in Fleet</Link>
+              </span>
+            ) : null}
             {capped ? <span className="exec-pf-note">Showing the first {ROW_CAP} rows. Narrow the filters to see the rest.</span> : null}
           </div>
           {serverApplied ? (

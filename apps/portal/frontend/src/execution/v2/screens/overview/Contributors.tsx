@@ -6,6 +6,7 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 
 import { GapWhy, gapTitle } from "../../blocks";
+import { useKeyboardScroll } from "../../useKeyboardScroll";
 import { MetricValue } from "../manager/MetricValue";
 import { partitionLabel } from "../portfolios/PartitionFigures";
 import { scaledOf } from "../portfolios/capitalModel";
@@ -85,6 +86,10 @@ export const CONTRIBUTORS_SHOWN = 8;
 
 export function ContributorsBody({ view, linkOf, pager }: { view: ContributorsView; pager?: ContributorsPager; /** Where an alpha or portfolio id leads (QA1 OV-08); `null` keeps plain text. */ linkOf?: (field: "alpha_id" | "portfolio_id", id: string) => string | null }) {
   const [showAll, setShowAll] = useState(false);
+  // At phone width the table keeps its natural column widths and scrolls inside its panel (the Alpha column stays pinned, see overview.css);
+  // a scroller with nothing focusable in it becomes a named region so the keyboard can scroll it. The fade marks only the side that goes on.
+  const { ref: wrapRef, props: scrollProps } = useKeyboardScroll<HTMLDivElement>(`Contributors by ${(view.kind === "ready" || view.kind === "empty") && view.field === "portfolio_id" ? "portfolio" : "alpha"}`, [view, showAll]);
+  const { "data-more": more, ...scrollAccess } = scrollProps;
   if (view.kind === "loading") return <p className="exec-ov-note" role="status">Reading contributors</p>;
   if (view.kind === "absent") return <Absence code={view.code} reason={view.reason} />;
   if (view.kind === "empty") {
@@ -107,7 +112,7 @@ export function ContributorsBody({ view, linkOf, pager }: { view: ContributorsVi
   const field = view.field === "portfolio_id" ? "portfolio_id" : "alpha_id";
   return (
     <>
-      <div className="exec-ov-contrib-wrap"><table className="exec-ov-contrib" aria-label={`Contributors by ${word.toLowerCase()}`}>
+      <div ref={wrapRef} className="exec-ov-contrib-wrap" data-more={more === "end" || more === "both" ? "end" : undefined} {...scrollAccess}><table className="exec-ov-contrib" aria-label={`Contributors by ${word.toLowerCase()}`}>
         <thead>
           <tr>
             <th scope="col">{word}</th>

@@ -140,3 +140,45 @@ export function bestIndexes(values: readonly (string | null)[]): ReadonlySet<num
   const best = scaled.filter((entry) => entry.n === top);
   return best.length === scaled.length ? new Set() : new Set(best.map((entry) => entry.index));
 }
+
+/* ── Partners that share a basis (G1) ───────────────────────────────────────────────────────────────────────────────────────── */
+
+/** A portfolio that can anchor a basis: allocated, one book (not Real-funded and Simulated in one figure) and a published domain. */
+export const hasOwnBasis = (row: PortfolioRow): boolean => row.comparable && !row.mixedBooks && row.domain !== "unknown";
+
+/** Why a portfolio has no basis of its own, in words; `null` when it has one. */
+export function noBasisReason(row: PortfolioRow): string | null {
+  if (!row.comparable) return row.notComparableReason ?? "Not comparable";
+  if (row.mixedBooks) return `${row.label} holds Real-funded and Simulated books in one allocation figure, so it has no single basis`;
+  if (row.domain === "unknown") return `${row.label} publishes no domain, so it cannot be placed on a Real-funded or Simulated basis`;
+  return null;
+}
+
+/** Why `candidate` cannot be compared with a portfolio on `basis` (a currency and a domain); `null` when it can. */
+export function partnerBlock(basis: { currency: string; domain: PortfolioRow["domain"]; domainLabel: string }, candidate: PortfolioRow): string | null {
+  const own = noBasisReason(candidate);
+  if (own !== null) return own;
+  if (candidate.baseCurrency !== basis.currency) return `Other currency (${candidate.baseCurrency}); the basis is ${basis.currency}, and currencies are never converted`;
+  if (candidate.domain !== basis.domain) return `${candidate.domainLabel} book; the basis is ${basis.domainLabel}, and the two are never combined`;
+  return null;
+}
+
+export type CompareOptions =
+  /** The list does not hold the source (cut off, or not read): nothing is known, so the entry stays open. */
+  | { kind: "unknown" }
+  /** The source has a basis and these others share it. */
+  | { kind: "open"; partners: readonly PortfolioRow[] }
+  /** Nothing can be compared with the source, and why. */
+  | { kind: "none"; reason: string };
+
+/** The partners "Compare with" may offer for `sourceId`: only portfolios that share its currency and domain, never a mixed or unallocated one. */
+export function compareOptionsFor(all: readonly PortfolioRow[], sourceId: string): CompareOptions {
+  const source = all.find((row) => row.portfolioId === sourceId);
+  if (source === undefined) return { kind: "unknown" };
+  const own = noBasisReason(source);
+  if (own !== null) return { kind: "none", reason: `${own}, so no other portfolio can be compared with it` };
+  const basis = { currency: source.baseCurrency, domain: source.domain, domainLabel: source.domainLabel };
+  const partners = all.filter((row) => row.portfolioId !== source.portfolioId && partnerBlock(basis, row) === null);
+  if (partners.length === 0) return { kind: "none", reason: `No other portfolio shares the ${source.baseCurrency} ${source.domainLabel} basis of ${source.label}` };
+  return { kind: "open", partners };
+}
