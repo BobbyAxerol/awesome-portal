@@ -54,7 +54,7 @@ describe("header", () => {
     expect(screen.getByText("Active")).toBeTruthy();
     // The freshness chip is always drawn (hi-fi "Fresh"), beside the as-of line. Score is on the Overview's one 'Not available' line.
     expect(screen.getAllByText("Fresh").length).toBeGreaterThan(0);
-    expect(screen.getByText(/As of 17 Oct/)).toBeTruthy();
+    expect(screen.getByText(/As of 22 Aug/)).toBeTruthy();
     expect(screen.queryByText(/Score: Not published/)).toBeNull();
     expect(screen.getByTestId("not-available-line").textContent).toContain("Score");
   });
@@ -458,7 +458,7 @@ describe("Accounts", () => {
     expect(cell(binance, "Serves here")).toBe("2 deployments");
     expect(cell(binance, "Venue balance, total")).toContain("412,880.00");
     expect(cell(binance, "Status")).toContain("Stale");
-    expect(cell(binance, "Last synced")).toContain("17 Oct 11:50Z");
+    expect(cell(binance, "Last synced")).toContain("22 Aug 12:46Z");
     const okx = rows.find((r) => cell(r, "Account").startsWith("OKX-01"))!;
     expect(cell(okx, "Status")).toContain("Synced");
     expect(panel().textContent).toContain("never this portfolio's capital or added to it");

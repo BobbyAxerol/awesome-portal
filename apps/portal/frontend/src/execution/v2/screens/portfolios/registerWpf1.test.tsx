@@ -38,7 +38,7 @@ describe("page head and toolbar", () => {
   it("draws the freshness chip always, beside the as-of line", async () => {
     await ready(makeApi().api);
     expect(screen.getAllByText(/^Fresh$|Freshness not stated|Aging|Stale/).length).toBeGreaterThan(0);
-    expect(screen.getByText(/As of 17 Oct/)).toBeTruthy();
+    expect(screen.getByText(/As of 22 Aug/)).toBeTruthy();
   });
 
   it("the export is a sentence behind a disclosure with the one D20 sentence and a link to My access, never a dead button", async () => {

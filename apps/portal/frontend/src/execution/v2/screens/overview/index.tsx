@@ -373,7 +373,7 @@ export default function OverviewScreen({ api, workspaceId, sseFactory, accessHre
   ];
 
   const needsPanel = (
-    <SectionPanel title="Needs attention" aside={needs ? `${needs.counts.limit !== null ? `top ${needs.counts.limit}, ` : ""}${attention.text ?? "not counted"}` : undefined} flush>
+    <SectionPanel title="Needs attention" aside={needs ? `${needs.counts.limit !== null && needs.items.length >= needs.counts.limit ? `top ${needs.counts.limit}, ` : ""}${attention.text ?? "not counted"}` : undefined} flush>
     {needs === null || needs.state === "unavailable" ? (
       <PanelState status="unavailable" reason={needs?.state === "unavailable" ? "The triage sources did not answer." : "The snapshot carries no triage panel."} />
     ) : mode === "quiet" || (triage.length === 0 && needs.state === "empty") ? (
@@ -386,7 +386,7 @@ export default function OverviewScreen({ api, workspaceId, sseFactory, accessHre
         {needs.state === "partial" || needs.state === "stale" ? <p className="exec-ov-banner" role="status"><Flag kind={needs.state === "stale" ? "stale" : "partial"} label={needs.state === "stale" ? "Stale" : "Partial"} size="sm" /> <span>The list may be missing items</span><GapWhy name="Why the list may be missing items" rows={["Some triage sources did not answer"]} next={null} /></p> : null}
         <ol className="exec-ov-items" aria-label="Ranked triage list">
           {triage.map((r) => (
-            <li key={r.id} className="exec-ov-item" data-sla={r.slaState ?? undefined}>
+            <li key={r.id} className="exec-ov-item" data-sla={r.slaVisual ?? undefined}>
               <div className="exec-ov-item-t">
                 <span className="exec-ov-item-what">
                   <span className="exec-ov-item-rank" title={r.rank === null ? "Not ranked" : `Rank ${r.rank}`}>{r.rank === null ? "Not ranked" : r.rank}</span>
@@ -397,7 +397,7 @@ export default function OverviewScreen({ api, workspaceId, sseFactory, accessHre
               </div>
               {r.summary ? <div className="exec-ov-sub">{r.summary}</div> : null}
               <div className="exec-ov-sub exec-ov-item-sla" title={r.sla}>{r.slaShort}</div>
-              <span className="exec-ov-sla-stripe" data-sla={r.slaState ?? "none"} aria-hidden="true" />
+              <span className="exec-ov-sla-stripe" data-sla={r.slaVisual ?? "none"} aria-hidden="true" />
             </li>
           ))}
         </ol>

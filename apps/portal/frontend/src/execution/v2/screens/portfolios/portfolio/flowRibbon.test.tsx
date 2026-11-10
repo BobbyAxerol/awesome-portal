@@ -58,8 +58,8 @@ describe("ribbon under the equity", () => {
     mount(makeApi().api);
     const group = await ribbon();
     const names = marks(group).map((m) => m.getAttribute("aria-label"));
-    expect(names).toContain("Flow: Withdraw, decrease: 20,000.00 USDT, 17 Oct 09:14Z");
-    expect(names).toContain("Flow: Allocate, increase: 50,000.00 USDT, 17 Oct 08:40Z");
+    expect(names).toContain("Flow: Withdraw, decrease: 20,000.00 USDT, 22 Aug 10:10Z");
+    expect(names).toContain("Flow: Allocate, increase: 50,000.00 USDT, 22 Aug 09:36Z");
     // The Unchanged rebalance moved nothing: it is not a flow, and the page says it is left out.
     expect(names.some((n) => n?.includes("Rebalance"))).toBe(false);
     expect(screen.getByText(/1 entry left the allocation unchanged and is not drawn as a flow/)).toBeTruthy();
@@ -130,16 +130,16 @@ describe("ribbon under the equity", () => {
 
 describe("currencies are never mixed", () => {
   const two = withLedger([
-    { currency: "USDT", gross_increase: "100.00", gross_decrease: "0", entry_count: 1, entries: [entry(1, "INCREASE", "100.00", "2026-10-16T09:00:00Z")] },
-    { currency: "JPY", gross_increase: "5000", gross_decrease: "0", entry_count: 1, entries: [entry(2, "INCREASE", "5000", "2026-10-17T10:00:00Z")] },
+    { currency: "USDT", gross_increase: "100.00", gross_decrease: "0", entry_count: 1, entries: [entry(1, "INCREASE", "100.00", "2026-08-21T09:56:00Z")] },
+    { currency: "JPY", gross_increase: "5000", gross_decrease: "0", entry_count: 1, entries: [entry(2, "INCREASE", "5000", "2026-08-22T10:56:00Z")] },
   ], { total: 2, returned: 2, hasMore: false });
 
   it("labels each mark with its own amount and currency and prints no sum", async () => {
     mount(makeApi(two).api);
     const group = await ribbon();
     const names = marks(group).map((m) => m.getAttribute("aria-label"));
-    expect(names).toContain("Flow: Allocate, increase: 100.00 USDT, 16 Oct 09:00Z");
-    expect(names).toContain("Flow: Allocate, increase: 5,000.00 JPY, 17 Oct 10:00Z");
+    expect(names).toContain("Flow: Allocate, increase: 100.00 USDT, 21 Aug 09:56Z");
+    expect(names).toContain("Flow: Allocate, increase: 5,000.00 JPY, 22 Aug 10:56Z");
     const notes = document.querySelector(".exec-pf-ribbon-notes")!;
     expect(notes.textContent).not.toMatch(/5,100|5100/);
     fireEvent.click(screen.getByText(/^Flow events as a table/));
@@ -176,8 +176,8 @@ describe("absences stay absences", () => {
 
   it("entries the reader could not read are counted, not silently shorter", async () => {
     const bad = withLedger([{ currency: "USDT", gross_increase: "10.00", gross_decrease: "0", entry_count: 2, entries: [
-      entry(1, "INCREASE", "10.00", "2026-10-17T09:00:00Z"),
-      { ...entry(2, "INCREASE", "1e5", "2026-10-17T10:00:00Z") },
+      entry(1, "INCREASE", "10.00", "2026-08-22T09:56:00Z"),
+      { ...entry(2, "INCREASE", "1e5", "2026-08-22T10:56:00Z") },
     ] }], { total: 2, returned: 2, hasMore: false });
     mount(makeApi(bad).api);
     await ribbon();
@@ -186,7 +186,7 @@ describe("absences stay absences", () => {
 
   it("an entry with no time cannot sit on an axis: it is counted, not placed", async () => {
     const undated = withLedger([{ currency: "USDT", gross_increase: "10.00", gross_decrease: "0", entry_count: 2, entries: [
-      entry(1, "INCREASE", "10.00", "2026-10-17T09:00:00Z"),
+      entry(1, "INCREASE", "10.00", "2026-08-22T09:56:00Z"),
       { ...entry(2, "INCREASE", "20.00", "x"), occurred_at: null },
     ] }], { total: 2, returned: 2, hasMore: false });
     mount(makeApi(undated).api);
@@ -197,9 +197,9 @@ describe("absences stay absences", () => {
 });
 
 describe("a bounded ledger of 1,500 entries", () => {
-  // Hourly from 1 Oct 2026, so most of it falls inside the equity window.
+  // Hourly from 6 Aug 2026 00:56Z (the old 1 Oct start moved with the double's clock, F3a), so most of it falls inside the equity window.
   const entries = Array.from({ length: 1500 }, (_, i) =>
-    entry(i, i % 3 === 0 ? "DECREASE" : "INCREASE", `${i + 1}.00`, new Date(Date.UTC(2026, 9, 1) + i * 3_600_000).toISOString().replace(/\.\d{3}Z$/, "Z")));
+    entry(i, i % 3 === 0 ? "DECREASE" : "INCREASE", `${i + 1}.00`, new Date(Date.UTC(2026, 7, 6, 0, 56) + i * 3_600_000).toISOString().replace(/\.\d{3}Z$/, "Z")));
   const big = withLedger([{ currency: "USDT", gross_increase: "9999999.00", gross_decrease: "1.00", entry_count: 4180, entries }], { total: 4180, returned: 1500, hasMore: true });
 
   it("says latest 1,500 of 4,180, keeps the marks bounded, and caps the table at 200 with the exact count", async () => {
@@ -225,9 +225,9 @@ describe("ledgerFlow (model)", () => {
 
   it("keeps INCREASE and DECREASE, leaves UNCHANGED out and counts it, and never sums", () => {
     const flow = ledgerFlow(read([{ currency: "USDT", gross_increase: "5.00", gross_decrease: "1.00", entry_count: 3, entries: [
-      entry(1, "INCREASE", "5.00", "2026-10-17T09:00:00Z"),
-      entry(2, "DECREASE", "1.00", "2026-10-17T10:00:00Z", "WITHDRAW"),
-      entry(3, "UNCHANGED", "0", "2026-10-17T11:00:00Z", "REBALANCE"),
+      entry(1, "INCREASE", "5.00", "2026-08-22T09:56:00Z"),
+      entry(2, "DECREASE", "1.00", "2026-08-22T10:56:00Z", "WITHDRAW"),
+      entry(3, "UNCHANGED", "0", "2026-08-22T11:56:00Z", "REBALANCE"),
     ] }]));
     expect(flow.events.map((e) => e.title)).toEqual(["Withdraw, decrease: 1.00 USDT", "Allocate, increase: 5.00 USDT"]);
     expect(flow.unchanged).toBe(1);
@@ -238,7 +238,7 @@ describe("ledgerFlow (model)", () => {
 
   it("refuses a time without a zone", () => {
     const flow = ledgerFlow(read([{ currency: "USDT", gross_increase: "5.00", gross_decrease: "0", entry_count: 1, entries: [
-      entry(1, "INCREASE", "5.00", "2026-10-17T09:00:00"),
+      entry(1, "INCREASE", "5.00", "2026-08-22T09:56:00"),
     ] }], { total: 1, returned: 1, hasMore: false }));
     expect(flow.events).toHaveLength(0);
     expect(flow.undated).toBe(1);

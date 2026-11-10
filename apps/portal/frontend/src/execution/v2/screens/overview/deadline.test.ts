@@ -32,4 +32,15 @@ describe("deadline labels", () => {
     const [row] = triageRows(panel("OVERDUE", "2026-10-25T00:00:00Z"), stamp, READ);
     expect(row!.slaShort).toBe("Deadline 25 Oct 00:00Z, 1 day after the read time");
   });
+  it("a deadline the read time has passed is drawn overdue, never amber (F3a)", () => {
+    const [past] = triageRows(panel("DUE_SOON", "2026-08-28T18:28:00Z"), stamp, READ);
+    expect(past!.slaState).toBe("DUE_SOON");
+    expect(past!.slaVisual).toBe("OVERDUE");
+    const [pastOnTrack] = triageRows(panel("ON_TRACK", "2026-08-28T18:28:00Z"), stamp, READ);
+    expect(pastOnTrack!.slaVisual).toBe("OVERDUE");
+    const [soon] = triageRows(panel("DUE_SOON", "2026-10-24T00:00:00Z"), stamp, READ);
+    expect(soon!.slaVisual).toBe("DUE_SOON");
+    const [over] = triageRows(panel("OVERDUE", "2026-08-28T18:28:00Z"), stamp, READ);
+    expect(over!.slaVisual).toBe("OVERDUE");
+  });
 });

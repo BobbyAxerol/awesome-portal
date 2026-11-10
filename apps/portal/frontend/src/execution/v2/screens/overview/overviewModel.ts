@@ -65,6 +65,11 @@ export interface TriageView {
   /** One line for a narrow list: "Overdue since 22 Aug 11:58Z, age 10 min". The full instant stays in `sla`. */
   slaShort: string;
   slaState: string | null;
+  /**
+   * The state the row is DRAWN in. It is the server's word, except that a deadline the server's own read time has already passed is drawn
+   * overdue (red) whatever the word says: an amber "Due soon" beside a date in the past is the contradiction F3a removed.
+   */
+  slaVisual: string | null;
   rank: number | null;
   href: string | null;
   actionLabel: string;
@@ -153,6 +158,7 @@ export function triageRows(panel: NeedsYouPanel | null, stamp: (iso: string) => 
       sla: `${contradicted && item.slaDueAt ? `Deadline ${stamp(item.slaDueAt)}, ${gap} ${relation === "before" ? "before" : "after"} the read time; the server's state word is ${word}` : `${word}${due}`}${age === null && item.ageSeconds !== null ? ". Age not shown: its as-of time is not comparable with the read time" : ""}`,
       slaShort: `${slaShortDate ?? `${word}${shortDue}`}${age ? `, age ${age}` : ""}`,
       slaState: item.slaState,
+      slaVisual: contradicted && relation === "before" ? "OVERDUE" : item.slaState,
       rank: item.rank,
       href: item.href,
       actionLabel: item.actionLabel ?? "Open",

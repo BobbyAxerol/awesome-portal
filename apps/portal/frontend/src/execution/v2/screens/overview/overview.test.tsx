@@ -123,7 +123,10 @@ describe("BUSY", () => {
     expect(href(rows[1]!)).toBe("/execution/operations?operation=op_1251");
     expect(href(rows[2]!)).toBe("/governance/approvals/AP-352/r2");
     expect(rows.map((r) => r.querySelector("a")?.textContent)).toEqual(["Investigate", "Verify", "Review"]);
-    // The count is in the head ("top 10, 3 of 214"); the foot is one link, the rest-of-the-list sentence is its title.
+    // The count is in the head. The server's cap is 10 but it returned 3 rows of 214: the head must not claim "top 10" over 3 rows (F3a), it says what is shown and what exists.
+    expect(panel("Needs attention").textContent).toContain("3 of 214");
+    expect(panel("Needs attention").textContent).not.toMatch(/top 10/);
+    // The foot is one link, the rest-of-the-list sentence is its title.
     const all = within(panel("Needs attention")).getByRole("link", { name: "All in Operations" });
     expect(all.getAttribute("title")).toContain("the rest are ranked behind these");
     expect(all.getAttribute("href")).toMatch(/^\/execution\/operations/);

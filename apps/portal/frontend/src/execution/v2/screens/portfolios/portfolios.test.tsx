@@ -188,7 +188,7 @@ describe("header, banners and footer", () => {
     await loaded();
     // The freshness chip is always drawn (hi-fi "Fresh"), beside the as-of line; a tier that is not fresh wears its own word (conformance matrix).
     expect(screen.getByText("Fresh")).toBeTruthy();
-    expect(screen.getByText(/As of 17 Oct/)).toBeTruthy();
+    expect(screen.getByText(/As of 22 Aug/)).toBeTruthy();
     // UXM07-048/10: one banner. The branch that is not whole names what is missing; the partial read's sentence is its disclosure
     expect(screen.queryByText("Some portfolios or figures may be missing")).toBeNull();
     expect(document.querySelectorAll(".exec-pf-banner-line")).toHaveLength(1);

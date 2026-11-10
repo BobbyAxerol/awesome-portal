@@ -728,8 +728,11 @@ export function worldCapitalPreview(body: unknown, id: string, view?: WorldAppro
 
 /* ── the Command Centre: Needs attention, Today, Fleet by stage ─────────── */
 
-/** The operations clock to the Command Centre clock, by distance from each body's read time. */
-const inCcFrame = (opsMs: number): number => opsMs - OPS_READ_MS + WORLD_NOW_MS;
+/** F3a, one fixed "now" for the Command Centre: the operations clock (OPS_READ_MS, 22 Aug 13:00Z). An operation or incident is already dated on it; an approval
+ * (dated on WORLD_NOW) is carried over by its distance from WORLD_NOW, so a card keeps the age and the overdue state of the page it opens. */
+const CC_NOW_MS = OPS_READ_MS;
+const inCcFrame = (opsMs: number): number => opsMs;
+const inCcFrameWorld = (worldMs: number): number => worldMs - WORLD_NOW_MS + CC_NOW_MS;
 const SEVERITY_OF: Readonly<Record<string, string>> = { CRITICAL: "CRITICAL", ERROR: "HIGH", WARNING: "MEDIUM", INFO: "INFO" };
 const SEVERITY_RANK: Readonly<Record<string, number>> = { CRITICAL: 4, HIGH: 3, MEDIUM: 2, INFO: 1 };
 const OPERATION_COMMAND_WORD: Readonly<Record<string, string>> = {
@@ -760,9 +763,9 @@ function needsAttentionCandidates(): Candidate[] {
     const finding = incident.evidence[0]?.label;
     out.push({ rank: 0, kind: "INCIDENT", item: {
       id: incident.id, kind: "INCIDENT", title: incidentTitle(incident), summary: `${ENV_WORD[environmentFor(incident.target[0], incident.target[1], incident.env)]}${finding !== undefined ? ` · ${finding}` : ""}`,
-      severity: SEVERITY_OF[incident.severity] ?? "MEDIUM", sla_state: slaStateOf(due, WORLD_NOW_MS, budget), sla_due_at: isoOf(due), created_at: isoOf(created),
+      severity: SEVERITY_OF[incident.severity] ?? "MEDIUM", sla_state: slaStateOf(due, CC_NOW_MS, budget), sla_due_at: isoOf(due), created_at: isoOf(created),
       updated_at: isoOf(inCcFrame(Math.max(incident.createdMs, ...[incident.acknowledged, incident.assigned, incident.mitigated].map((e) => e?.atMs ?? 0)))),
-      authority: "EXECUTION", href: incidentHref(incident), action_label: "Investigate", age_seconds: Math.round((WORLD_NOW_MS - created) / 1000),
+      authority: "EXECUTION", href: incidentHref(incident), action_label: "Investigate", age_seconds: Math.round((CC_NOW_MS - created) / 1000),
     } });
   }
   for (const op of WORLD_OPERATIONS) {
@@ -773,15 +776,15 @@ function needsAttentionCandidates(): Candidate[] {
     const due = created + budget;
     out.push({ rank: 0, kind: "OPERATION", item: {
       id: op.id, kind: "OPERATION", title: `${OPERATION_COMMAND_WORD[op.command] ?? op.command} ${VERIFY_WORD[op.verify] ?? op.verify.toLowerCase()}`, summary: `${targetName(op.target)} · ${ENV_WORD[environmentFor(op.target[0], op.target[1], op.env)]}`,
-      severity: SEVERITY_OF[op.severity] ?? "MEDIUM", sla_state: slaStateOf(due, WORLD_NOW_MS, budget), sla_due_at: isoOf(due), created_at: isoOf(created), updated_at: isoOf(created),
-      authority: "EXECUTION", href: operationHref(op), action_label: "Verify", age_seconds: Math.round((WORLD_NOW_MS - created) / 1000),
+      severity: SEVERITY_OF[op.severity] ?? "MEDIUM", sla_state: slaStateOf(due, CC_NOW_MS, budget), sla_due_at: isoOf(due), created_at: isoOf(created), updated_at: isoOf(created),
+      authority: "EXECUTION", href: operationHref(op), action_label: "Verify", age_seconds: Math.round((CC_NOW_MS - created) / 1000),
     } });
   }
   for (const a of pendingApprovals()) {
     out.push({ rank: 0, kind: "APPROVAL", item: {
       id: a.id, kind: "APPROVAL", title: a.alphaLabel, summary: `${GATE_WORD[a.gate]} · ${a.target}`, severity: "MEDIUM",
-      sla_state: slaStateOf(a.dueMs, WORLD_NOW_MS, a.budgetMinutes * MINUTE_MS), sla_due_at: isoOf(a.dueMs), created_at: isoOf(a.requestedMs), updated_at: isoOf(a.requestedMs),
-      authority: "PORTAL", href: approvalHref(a), action_label: "Review", age_seconds: Math.round((WORLD_NOW_MS - a.requestedMs) / 1000),
+      sla_state: slaStateOf(inCcFrameWorld(a.dueMs), CC_NOW_MS, a.budgetMinutes * MINUTE_MS), sla_due_at: isoOf(inCcFrameWorld(a.dueMs)), created_at: isoOf(inCcFrameWorld(a.requestedMs)), updated_at: isoOf(inCcFrameWorld(a.requestedMs)),
+      authority: "PORTAL", href: approvalHref(a), action_label: "Review", age_seconds: Math.round((CC_NOW_MS - inCcFrameWorld(a.requestedMs)) / 1000),
     } });
   }
   out.sort((x, y) => (SEVERITY_RANK[y.item.severity] ?? 0) - (SEVERITY_RANK[x.item.severity] ?? 0) || kindOrder[x.kind] - kindOrder[y.kind] || Date.parse(y.item.created_at) - Date.parse(x.item.created_at));
@@ -802,14 +805,14 @@ export function worldCommandCenter(base: Obj): Obj {
   const out = clone(base);
   const candidates = needsAttentionCandidates();
   const shown = candidates.slice(0, NEEDS_LIMIT);
-  out.read_at = WORLD_NOW_ISO;
+  out.read_at = isoOf(CC_NOW_MS);
   const panels = out.panels as Obj;
-  for (const panel of Object.values(panels) as Obj[]) if (typeof panel.as_of === "string") panel.as_of = isoOf(WORLD_NOW_MS - 1000);
-  for (const panel of Object.values(panels) as Obj[]) for (const source of (panel.sources ?? []) as Obj[]) if (typeof source.as_of === "string") source.as_of = isoOf(WORLD_NOW_MS - 1000);
+  for (const panel of Object.values(panels) as Obj[]) if (typeof panel.as_of === "string") panel.as_of = isoOf(CC_NOW_MS - 1000);
+  for (const panel of Object.values(panels) as Obj[]) for (const source of (panel.sources ?? []) as Obj[]) if (typeof source.as_of === "string") source.as_of = isoOf(CC_NOW_MS - 1000);
   if (panels.needs_you !== undefined) {
     Object.assign(panels.needs_you, {
-      total_count: candidates.length, observed_total_count: candidates.length, returned_count: shown.length, limit: 10, truncated: candidates.length > shown.length,
-      items: shown.map((c) => ({ ...c.item, as_of: isoOf(WORLD_NOW_MS - 1000) })),
+      total_count: candidates.length, observed_total_count: candidates.length, returned_count: shown.length, limit: NEEDS_LIMIT, truncated: candidates.length > shown.length,
+      items: shown.map((c) => ({ ...c.item, as_of: isoOf(CC_NOW_MS - 1000) })),
     });
   }
   const counts = fleetCounts();
@@ -830,18 +833,18 @@ export function worldCommandCenter(base: Obj): Obj {
     panels.pinned_watchlist.total_count = pins.length;
     panels.pinned_watchlist.items = pins.map(({ a, d }, i) => ({
       slot: i + 1, entity_type: "DEPLOYMENT", entity_id: d.id, label: a.label, href: d.stage === "CANARY" ? `/deployments/live/${d.id}/canary` : `/deployments/${d.stage.toLowerCase()}/${d.id}`,
-      pinned_at: isoOf(WORLD_NOW_MS - (10 - i) * HOUR_MS), target_label: a.label, target_state: "available", target_authority: "EXECUTION",
-      target_as_of: isoOf(WORLD_NOW_MS - 1000), target_freshness_state: "OK",
+      pinned_at: isoOf(CC_NOW_MS - (10 - i) * HOUR_MS), target_label: a.label, target_state: "available", target_authority: "EXECUTION",
+      target_as_of: isoOf(CC_NOW_MS - 1000), target_freshness_state: "OK",
     }));
   }
   if (panels.today !== undefined) {
     const items: Obj[] = pendingApprovals().map((a) => ({
-      id: `review:${a.id}`, kind: "REVIEW_DUE", label: `${GATE_WORD[a.gate]} · ${a.alphaLabel}`, scheduled_at: isoOf(a.dueMs), authority: "PORTAL", as_of: isoOf(WORLD_NOW_MS - 1000), href: approvalHref(a),
+      id: `review:${a.id}`, kind: "REVIEW_DUE", label: `${GATE_WORD[a.gate]} · ${a.alphaLabel}`, scheduled_at: isoOf(inCcFrameWorld(a.dueMs)), authority: "PORTAL", as_of: isoOf(CC_NOW_MS - 1000), href: approvalHref(a),
     }));
     const verified = lastVerifiedOperation();
     if (verified !== undefined) {
       items.push({ id: `verified:${verified.id}`, kind: "VERIFIED_OPERATION", label: `Last verified: ${OPERATION_COMMAND_WORD[verified.command] ?? verified.command} on ${targetName(verified.target)}`,
-        scheduled_at: isoOf(inCcFrame(Date.parse(verified.at))), authority: "EXECUTION", as_of: isoOf(WORLD_NOW_MS - 1000), href: operationHref(verified) });
+        scheduled_at: isoOf(inCcFrame(Date.parse(verified.at))), authority: "EXECUTION", as_of: isoOf(CC_NOW_MS - 1000), href: operationHref(verified) });
     }
     Object.assign(panels.today, { total_count: items.length, observed_total_count: items.length, returned_count: items.length, limit: 12, truncated: false, items });
   }

@@ -85,10 +85,10 @@ const LEDGER = canonical("execution-analytics.capital-ledger.valid.json");
 const CORRELATION = canonical("execution-analytics.correlation.valid.json");
 
 /** The instant the double calls "now": the browser clock can be fixed here. */
-export const PORTFOLIOS_DOUBLE_NOW_ISO = "2026-10-17T12:04:00Z";
-const AS_OF = "2026-10-17T12:04:00.000Z";
+export const PORTFOLIOS_DOUBLE_NOW_ISO = "2026-08-22T13:00:00Z";
+const AS_OF = "2026-08-22T13:00:00.000Z";
 const AS_OF_MS = Date.parse(AS_OF);
-const READ_AT = "2026-10-17T12:04:01.000Z";
+const READ_AT = "2026-08-22T13:00:01.000Z";
 const READ_AT_MS = Date.parse(READ_AT);
 const HOUR = 3_600_000;
 
@@ -115,17 +115,17 @@ const problem = (status: number, code: string, message: string): BffAnswerPortfo
 const ITEM = (over: Record<string, unknown>) => ({
   state: "ACTIVE",
   base_currency: "USDT",
-  updated_at: "2026-10-17T11:58:00Z",
+  updated_at: "2026-08-22T12:54:00Z",
   ...over,
 });
 
 const LIST_ITEMS = [
   ITEM({ portfolio_id: PF.core, name: "Core", owner: "M. Tran", environments: ["paper", "live"], allocation_count: 5, deployment_count: 5, allocated_by_currency: [{ currency: "USDT", value: "540000.00" }] }),
-  ITEM({ portfolio_id: PF.satellite, name: "Satellite", owner: "L. Nguyen", environments: ["live"], allocation_count: 2, deployment_count: 2, allocated_by_currency: [{ currency: "USDT", value: "350000.00" }], updated_at: "2026-10-17T11:40:00Z" }),
-  ITEM({ portfolio_id: PF.canary, name: "Canary", owner: "L. Nguyen", environments: ["sandbox"], allocation_count: 1, deployment_count: 1, allocated_by_currency: [{ currency: "USDT", value: "240000.00" }], updated_at: "2026-10-16T09:00:00Z" }),
-  ITEM({ portfolio_id: PF.yen, name: "Yen-Carry", owner: "M. Tran", base_currency: "JPY", environments: ["paper"], allocation_count: 1, deployment_count: 1, allocated_by_currency: [{ currency: "JPY", value: "48000000" }], updated_at: "2026-10-17T10:15:00Z" }),
-  ITEM({ portfolio_id: PF.empty, name: "Pilot", owner: null, environments: ["paper"], allocation_count: 0, deployment_count: 0, allocated_by_currency: [], updated_at: "2026-10-12T08:00:00Z" }),
-  ITEM({ portfolio_id: PF.unallocated, name: "pf_unallocated", owner: null, state: "UNKNOWN", base_currency: "UNKNOWN", environments: ["paper"], allocation_count: 0, deployment_count: 0, allocated_by_currency: [], updated_at: "2026-10-01T00:00:00Z" }),
+  ITEM({ portfolio_id: PF.satellite, name: "Satellite", owner: "L. Nguyen", environments: ["live"], allocation_count: 2, deployment_count: 2, allocated_by_currency: [{ currency: "USDT", value: "350000.00" }], updated_at: "2026-08-22T12:36:00Z" }),
+  ITEM({ portfolio_id: PF.canary, name: "Canary", owner: "L. Nguyen", environments: ["sandbox"], allocation_count: 1, deployment_count: 1, allocated_by_currency: [{ currency: "USDT", value: "240000.00" }], updated_at: "2026-08-21T09:56:00Z" }),
+  ITEM({ portfolio_id: PF.yen, name: "Yen-Carry", owner: "M. Tran", base_currency: "JPY", environments: ["paper"], allocation_count: 1, deployment_count: 1, allocated_by_currency: [{ currency: "JPY", value: "48000000" }], updated_at: "2026-08-22T11:11:00Z" }),
+  ITEM({ portfolio_id: PF.empty, name: "Pilot", owner: null, environments: ["paper"], allocation_count: 0, deployment_count: 0, allocated_by_currency: [], updated_at: "2026-08-17T08:56:00Z" }),
+  ITEM({ portfolio_id: PF.unallocated, name: "pf_unallocated", owner: null, state: "UNKNOWN", base_currency: "UNKNOWN", environments: ["paper"], allocation_count: 0, deployment_count: 0, allocated_by_currency: [], updated_at: "2026-08-06T00:56:00Z" }),
 ];
 
 /** Generated portfolios (empty unless the standalone server runs at a larger scale, e2e/bffScale.ts). */
@@ -229,7 +229,7 @@ function resourceFor(id: string, deps: readonly Dep[], over: { name: string; own
     deployment_id: d.id, strategy_id: d.strategy, stage: d.stage ?? d.mode.toUpperCase(), venue: d.venue, account_id: d.account, portfolio_id: id, portfolio_name: over.name,
     currency: d.ccy, allocation: d.allocation, balance_total: BALANCES[d.account]?.total ?? null, balance_free: BALANCES[d.account]?.free ?? null, balance_locked: BALANCES[d.account]?.locked ?? null,
     position_fact_count: 2, realized_pnl: null, unrealized_pnl: null, net_pnl: d.pnl, exposure: d.exposure,
-    state: "ACTIVE", active: true, health: d.health, updated_at: "2026-10-17T11:58:00Z",
+    state: "ACTIVE", active: true, health: d.health, updated_at: "2026-08-22T12:54:00Z",
   }));
   // The server's own per-currency sum, which the double stands in for. The screens never add.
   const allocationByCurrency = [...new Set(deps.map((d) => d.ccy))].sort().map((ccy) => ({
@@ -255,7 +255,7 @@ function resourceFor(id: string, deps: readonly Dep[], over: { name: string; own
       accounts: accounts.map((a) => ({ account_id: a, venue: deps.find((d) => d.account === a)?.venue, mode: deps.find((d) => d.account === a)?.mode, base_currency: BALANCES[a]?.ccy ?? over.base, account_type: "USDT-M futures", updated_at: AS_OF })),
       account_balances: accounts.flatMap((a) => (BALANCES[a] ? [{ account_id: a, currency: BALANCES[a].ccy, total: BALANCES[a].total, free: BALANCES[a].free, locked: BALANCES[a].locked, updated_at: AS_OF }] : [])),
       margin_balances: accounts.flatMap((a) => (MARGINS[a] ? [{ account_id: a, currency: "USDT", initial: MARGINS[a].initial, maintenance: MARGINS[a].maintenance, updated_at: AS_OF }] : [])),
-      account_sync: accounts.map((a) => ({ sync_id: `sync_${a}`, account_id: a, status: a === "Binance-02" ? "STALE" : "SYNCED", synced_at: a === "Binance-02" ? "2026-10-17T11:50:00Z" : "2026-10-17T12:03:40Z" })),
+      account_sync: accounts.map((a) => ({ sync_id: `sync_${a}`, account_id: a, status: a === "Binance-02" ? "STALE" : "SYNCED", synced_at: a === "Binance-02" ? "2026-08-22T12:46:00Z" : "2026-08-22T12:59:40Z" })),
       reconciliation: accounts.includes("Binance-02") ? [{ finding_id: "rec_1", account_id: "Binance-02", status: "OPEN" }] : [],
       portfolio_allocations: deps.map((d) => ({ portfolio_id: id, deployment_id: d.id, strategy_id: d.strategy, currency: d.ccy, allocated_capital: d.allocation })),
       profile_coverage: Object.fromEntries(over.environments.map((env) => [env, { state: "FOUND" }])),
@@ -465,9 +465,9 @@ function capitalLedger(id: string, environment: Env): BffAnswerPortfolios {
       gross_decrease: "20000.00",
       entry_count: 12,
       entries: [
-        ledgerEntry(12, "WITHDRAW", "DECREASE", "20000.00", "140000.00", "120000.00", "2026-10-17T09:14:00Z", "Binance-02"),
-        ledgerEntry(11, "ALLOCATE", "INCREASE", "50000.00", "90000.00", "140000.00", "2026-10-17T08:40:00Z", "Binance-02"),
-        ledgerEntry(10, "REBALANCE", "UNCHANGED", "0", "160000.00", "160000.00", "2026-10-17T08:30:00Z", "Binance-02"),
+        ledgerEntry(12, "WITHDRAW", "DECREASE", "20000.00", "140000.00", "120000.00", "2026-08-22T10:10:00Z", "Binance-02"),
+        ledgerEntry(11, "ALLOCATE", "INCREASE", "50000.00", "90000.00", "140000.00", "2026-08-22T09:36:00Z", "Binance-02"),
+        ledgerEntry(10, "REBALANCE", "UNCHANGED", "0", "160000.00", "160000.00", "2026-08-22T09:26:00Z", "Binance-02"),
         ledgerEntry(9, "ALLOCATE", "INCREASE", "100000.00", "60000.00", "160000.00", "2026-08-11T09:12:00Z", "OKX-01"),
         ledgerEntry(8, "INITIAL_ALLOCATE", "INCREASE", "60000.00", "0", "60000.00", "2026-07-02T08:00:00Z", "Bybit-01"),
       ],
@@ -480,7 +480,7 @@ function capitalLedger(id: string, environment: Env): BffAnswerPortfolios {
       gross_decrease: "0",
       entry_count: 2,
       entries: [
-        ledgerEntry(2, "ALLOCATE", "INCREASE", "18000000", "30000000", "48000000", "2026-09-02T08:00:00Z", "Paper-Yen"),
+        ledgerEntry(2, "ALLOCATE", "INCREASE", "18000000", "30000000", "48000000", "2026-08-18T08:00:00Z", "Paper-Yen"),
         ledgerEntry(1, "INITIAL_ALLOCATE", "INCREASE", "30000000", "0", "30000000", "2026-08-11T09:20:00Z", "Paper-Yen"),
       ],
     }], 2, 2, false);

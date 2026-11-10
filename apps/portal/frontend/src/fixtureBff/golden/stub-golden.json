@@ -194,8 +194,8 @@
   "default GET /screens/accounts/acc_bnc_core": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "fe6d03dd0e024b3c2dd19ea8055faeed057e19d74ef89cf368fab338a67103e6",
-   "bytes": 1857,
+   "sha256": "97bbe8a84f7589f66c697f4d245391d0891897239da3629832338c7e7173b3a0",
+   "bytes": 2032,
    "gap": false
   },
   "default GET /resources/alphas/alpha_a": {
@@ -285,64 +285,64 @@
   "default GET /resources/accounts/acc_a": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "616482ae8543f620a3df60e7a30d9a5ad09a242c3354ea3aad5edd6b1188cfde",
-   "bytes": 3984,
+   "sha256": "3bac248caf997fbc9fbefdbc276d429c1537729f515e2508d456681d8a7aaab1",
+   "bytes": 4026,
    "gap": false
   },
   "default GET /resources/accounts/acc_bnc_core": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "b69af080a63f26139392a8a6a32c6ea9bfa03e02ad0bc09a81b049b5adbe8b99",
-   "bytes": 4089,
+   "sha256": "2140920de569f83c3677a3c2647ee72c0fdaae59f77b1fd68c4a8bf7846b5425",
+   "bytes": 4131,
    "gap": false
   },
   "default GET /resources/accounts/acc_bnc_sub": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "0c1a3c39ceceae406ca83850f63e05646d517390c0c44b0720c59ed49f11f119",
-   "bytes": 4074,
+   "sha256": "254fe16ba12a43447ddef8f7a20587e264993a92f4121e62fb4a955f4128d9a6",
+   "bytes": 4116,
    "gap": false
   },
   "default GET /resources/accounts/acc_bnc_sat": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "04e002d09e6858681b07e4c8eb41884a205202b93b48cdf7135b65e6b9a455c3",
-   "bytes": 4074,
+   "sha256": "1b12060d92db5f0bea67dc53fa1d504b0f123aa92d2f885753bec18403266a10",
+   "bytes": 4116,
    "gap": false
   },
   "default GET /resources/accounts/acc_okx_main": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "198ea1b8b0396d2763d856c88936c9b63aafb3cca3634b22d354370859bf2bb1",
-   "bytes": 4089,
+   "sha256": "3cd2b3b8f34ce3e58c296847c5b63fc366877254dcb2b5e7731a2047b1b7b0e4",
+   "bytes": 4131,
    "gap": false
   },
   "default GET /resources/accounts/acc_pap_sim": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "d2f66c852789ddd1d5d8a01ad96fc8ecef1da27eb19c9aa51bd7b7a99ef2e7bb",
-   "bytes": 4074,
+   "sha256": "7e536b3d0b5981aab65b10d4365e378ab3e14d7b79f91c8bfb294746e900462b",
+   "bytes": 4116,
    "gap": false
   },
   "default GET /resources/accounts/acc_tn_bnc": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "166b8df1f506f55c0b2de36e900a0d51529a1b593d4a2fcaf290d3d1a9bdd634",
-   "bytes": 4059,
+   "sha256": "fec62154d22a7a5f521183c205a491fbf43e443d55d03c3b1154d24de889c880",
+   "bytes": 4101,
    "gap": false
   },
   "default GET /resources/accounts/acc_err": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "8f376c420b9fdbb5051b971a432be2abb510064c701c435543a5499897a2d4bb",
-   "bytes": 4014,
+   "sha256": "4fa1ae397e61e6c34684b16abedcffd80c05bf9327fc862a6fc89ae206be8589",
+   "bytes": 4056,
    "gap": false
   },
   "default GET /resources/accounts/acc_unknown": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "4e97b90f1f18affa2302503d3328077f5026e60fcc3979a651aaf7684c6a4078",
-   "bytes": 4074,
+   "sha256": "633ca57a257623af3264dad7fcf851c21550fdf1f8fab7ef0c14d33591385d5b",
+   "bytes": 4116,
    "gap": false
   },
   "default GET /resources/bindings/bnc_main@BINANCE": {
@@ -1706,8 +1706,8 @@
   "operationsV2 GET /screens/accounts/acc_bnc_core": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "fe6d03dd0e024b3c2dd19ea8055faeed057e19d74ef89cf368fab338a67103e6",
-   "bytes": 1857,
+   "sha256": "97bbe8a84f7589f66c697f4d245391d0891897239da3629832338c7e7173b3a0",
+   "bytes": 2032,
    "gap": false
   },
   "operationsV2 GET /resources/alphas/alpha_a": {
@@ -1797,64 +1797,64 @@
   "operationsV2 GET /resources/accounts/acc_a": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "616482ae8543f620a3df60e7a30d9a5ad09a242c3354ea3aad5edd6b1188cfde",
-   "bytes": 3984,
+   "sha256": "3bac248caf997fbc9fbefdbc276d429c1537729f515e2508d456681d8a7aaab1",
+   "bytes": 4026,
    "gap": false
   },
   "operationsV2 GET /resources/accounts/acc_bnc_core": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "b69af080a63f26139392a8a6a32c6ea9bfa03e02ad0bc09a81b049b5adbe8b99",
-   "bytes": 4089,
+   "sha256": "2140920de569f83c3677a3c2647ee72c0fdaae59f77b1fd68c4a8bf7846b5425",
+   "bytes": 4131,
    "gap": false
   },
   "operationsV2 GET /resources/accounts/acc_bnc_sub": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "0c1a3c39ceceae406ca83850f63e05646d517390c0c44b0720c59ed49f11f119",
-   "bytes": 4074,
+   "sha256": "254fe16ba12a43447ddef8f7a20587e264993a92f4121e62fb4a955f4128d9a6",
+   "bytes": 4116,
    "gap": false
   },
   "operationsV2 GET /resources/accounts/acc_bnc_sat": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "04e002d09e6858681b07e4c8eb41884a205202b93b48cdf7135b65e6b9a455c3",
-   "bytes": 4074,
+   "sha256": "1b12060d92db5f0bea67dc53fa1d504b0f123aa92d2f885753bec18403266a10",
+   "bytes": 4116,
    "gap": false
   },
   "operationsV2 GET /resources/accounts/acc_okx_main": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "198ea1b8b0396d2763d856c88936c9b63aafb3cca3634b22d354370859bf2bb1",
-   "bytes": 4089,
+   "sha256": "3cd2b3b8f34ce3e58c296847c5b63fc366877254dcb2b5e7731a2047b1b7b0e4",
+   "bytes": 4131,
    "gap": false
   },
   "operationsV2 GET /resources/accounts/acc_pap_sim": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "d2f66c852789ddd1d5d8a01ad96fc8ecef1da27eb19c9aa51bd7b7a99ef2e7bb",
-   "bytes": 4074,
+   "sha256": "7e536b3d0b5981aab65b10d4365e378ab3e14d7b79f91c8bfb294746e900462b",
+   "bytes": 4116,
    "gap": false
   },
   "operationsV2 GET /resources/accounts/acc_tn_bnc": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "166b8df1f506f55c0b2de36e900a0d51529a1b593d4a2fcaf290d3d1a9bdd634",
-   "bytes": 4059,
+   "sha256": "fec62154d22a7a5f521183c205a491fbf43e443d55d03c3b1154d24de889c880",
+   "bytes": 4101,
    "gap": false
   },
   "operationsV2 GET /resources/accounts/acc_err": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "8f376c420b9fdbb5051b971a432be2abb510064c701c435543a5499897a2d4bb",
-   "bytes": 4014,
+   "sha256": "4fa1ae397e61e6c34684b16abedcffd80c05bf9327fc862a6fc89ae206be8589",
+   "bytes": 4056,
    "gap": false
   },
   "operationsV2 GET /resources/accounts/acc_unknown": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "4e97b90f1f18affa2302503d3328077f5026e60fcc3979a651aaf7684c6a4078",
-   "bytes": 4074,
+   "sha256": "633ca57a257623af3264dad7fcf851c21550fdf1f8fab7ef0c14d33591385d5b",
+   "bytes": 4116,
    "gap": false
   },
   "operationsV2 GET /resources/bindings/bnc_main@BINANCE": {
@@ -3120,7 +3120,7 @@
   "screensV2 GET /compositions/command-center": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "65964e134b3ba78e614df4b3a8713959987609eecc55761c2f8783626977cb3c",
+   "sha256": "5ce691c9c64a653a7ccfed1ec3f60dbc4dad6748868e63eab058e0129d521b52",
    "bytes": 8501,
    "gap": false
   },
@@ -3141,7 +3141,7 @@
   "screensV2 GET /compositions/admin-action-drawer": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "2ab07090da6c5ed5bf725ad63af3169d4e15fa44267d138c0e040abbf8a84f9f",
+   "sha256": "d36926d43c33234d353ab179989b6ddad1b3df7df641042d86c16eee6c71d202",
    "bytes": 35913,
    "gap": false
   },
@@ -3197,21 +3197,21 @@
   "screensV2 GET /screens/blotter": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "097698db96fc2000ffb2548d44f5f49b0a094c0d76711db5370ae294f726738e",
+   "sha256": "749ad2c4a739cb5956e4d2d0c2bf0899c050147dbc44058afcad15834ec9bfb8",
    "bytes": 64523,
    "gap": false
   },
   "screensV2 GET /screens/blotter?limit=25&status_bucket=FILLED": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "03dff27ca34254fe458e8ce5709e437becdce47375714790e65101d73bcfc548",
+   "sha256": "81af879176e0b136dc313cd64889fa47f0ba450931e667d115201fe90e8b3794",
    "bytes": 46939,
    "gap": false
   },
   "screensV2 GET /screens/blotter?limit=10&symbol=BTCUSDT&venue=BINANCE&side=BUY": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "a1136110ba583d09b0a9b637d15daec78e7dc441207abbb5c132ebbdf3c0df51",
+   "sha256": "6dcc1e331d82c769f0074428f7647a62c0d146e43c9519a43f045157ed200011",
    "bytes": 17681,
    "gap": false
   },
@@ -3239,8 +3239,8 @@
   "screensV2 GET /screens/accounts/acc_bnc_core": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "fe6d03dd0e024b3c2dd19ea8055faeed057e19d74ef89cf368fab338a67103e6",
-   "bytes": 1857,
+   "sha256": "97bbe8a84f7589f66c697f4d245391d0891897239da3629832338c7e7173b3a0",
+   "bytes": 2032,
    "gap": false
   },
   "screensV2 GET /resources/alphas/alpha_a": {
@@ -3281,35 +3281,35 @@
   "screensV2 GET /resources/portfolios/pf_main": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "c0617d7388454038f781ae9240bc4e3e733374831ca631f7cb4a2bc95446225d",
+   "sha256": "5f5a96c16814964dd90e86db208375f3ff70cef8cdd48a35d0a05e10cca91144",
    "bytes": 454,
    "gap": false
   },
   "screensV2 GET /resources/portfolios/pf_TEST_ONLY_core": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "0bdce58c48e87b0fdb1f6aa2d6509eb0f94c864d252cff1b1e24ba934202ec3b",
+   "sha256": "4fc17cf99d423070457ea806c3ff0dcdadcba16f81fbcbfad43b7ef44af2f772",
    "bytes": 9079,
    "gap": false
   },
   "screensV2 GET /resources/portfolios/pf_TEST_ONLY_satellite": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "1b551fbeadf1a3f5bbd2c98148eb16aa247f596ac8dccb9578d5b8f035df9d10",
+   "sha256": "50fe54e623561fad1138717f7ad288de45652ecfad5f7a60b15feee08aff0ed0",
    "bytes": 4242,
    "gap": false
   },
   "screensV2 GET /resources/portfolios/pf_TEST_ONLY_yen": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "90342e636e63b60bdfa237a6d02e836b5de8898502506767aac88663eb1f2c7f",
+   "sha256": "dae89f9040e18a3943f9315f11308bf0c00272ab87ee9e88c4c120026e30a215",
    "bytes": 2544,
    "gap": false
   },
   "screensV2 GET /resources/portfolios/pf_TEST_ONLY_empty": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "76149fa6842af5be7d9fd1c138a22a995b6d9ac7e932fda4990592e00e06c6c4",
+   "sha256": "e4f900950b58041fe2eda3a37cef015a73e2b0f639368f9cb22f059c7a2c2bd6",
    "bytes": 870,
    "gap": false
   },
@@ -3533,49 +3533,49 @@
   "screensV2 GET /derivations/portfolios/pf_main/capital?environment=paper": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "00e2ba204ffb7a1da3a7a43730d62224f7716972d68f4b6ec0a48ed59caf34c6",
+   "sha256": "0b076d7192d6c62f63f4be442025d151449aa120657667f5853ff09ca23cb92d",
    "bytes": 1177,
    "gap": false
   },
   "screensV2 GET /derivations/portfolios/pf_main/capital?environment=sandbox": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "ef4470707fcb64b2316d6bee92f9b067271c6da89a4bcec5da072102d0db12f5",
+   "sha256": "8a4550b8c1682b84c4106e0c4bb61238e1543ed17ffcea417cb4f6fee2e4a3ef",
    "bytes": 1181,
    "gap": false
   },
   "screensV2 GET /derivations/portfolios/pf_main/capital?environment=live": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "505760f90bc22cb04265d75d963966841061d3644ce0f4ac91ad9f7fc273e2c9",
+   "sha256": "6f30a33bcb28c39aad2837ac0cfe3c7352c377d3c11ebd51286958f8263895a3",
    "bytes": 1175,
    "gap": false
   },
   "screensV2 GET /derivations/portfolios/pf_TEST_ONLY_core/capital?environment=paper": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "896a828cfd365b209d628a116581d21e69f33e99583972b8a7056e60279bb207",
+   "sha256": "63ff0a59e92ea4c3b1d53d5c3dd9d26988da5a2198a8762ad265b4942c773731",
    "bytes": 1523,
    "gap": false
   },
   "screensV2 GET /derivations/portfolios/pf_TEST_ONLY_core/capital?environment=sandbox": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "c7b1354c1895f1424ee16bd5e4ae5f27168a22f314f459048023e665bf7e0cce",
+   "sha256": "4f9d2f82272baa17844de5f5d453a0d91566ac5f03d04d1acadb8266c061c0c1",
    "bytes": 1191,
    "gap": false
   },
   "screensV2 GET /derivations/portfolios/pf_TEST_ONLY_core/capital?environment=live": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "a63ad7c06aafc420d1fe3febe87733f4e2a634cc136ef9d64bdfbaf0c0b3a0c1",
+   "sha256": "ed531188007361350dda09870d1a101abbd0a33a78b9d191b8035dc586614568",
    "bytes": 1483,
    "gap": false
   },
   "screensV2 GET /derivations/portfolios/pf_TEST_ONLY_yen/capital?environment=paper": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "9d8eeb2c1d1795c8b93b23d1da29ab7a42be8816eb482687c7ad5fe6bfc0e31b",
+   "sha256": "bccf3d262ee0bdfc1765f07606acc8a33f51797db0397872e4810a63b5a0f163",
    "bytes": 1481,
    "gap": false
   },
@@ -3624,7 +3624,7 @@
   "screensV2 GET /derivations/conditional-groups/grp_00137?environment=paper": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "c76275d8c05653cb0ec2844ee6611817d6ebee00f61f19020b8a622c819d6733",
+   "sha256": "44a69fafc4d4644d412ab7157089daa73ecd6ebd68b5ae46026b1d69ab459771",
    "bytes": 2361,
    "gap": false
   },
@@ -3652,21 +3652,21 @@
   "screensV2 GET /views/equity-chart?environment=live&subject_kind=portfolio&subject_id=pf_TEST_ONLY_core&metric=equity": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "b16cb3aa3344f1ded8385db32e2db32b73f40ab52b2a23ab5ebc5b04fcf5f87a",
+   "sha256": "d964bd4d9ca12d97ed47ec307595b9b10ff76bac4b4770c93aa86f11a26c19a4",
    "bytes": 3018,
    "gap": false
   },
   "screensV2 GET /views/equity-chart?environment=paper&subject_kind=portfolio&subject_id=pf_TEST_ONLY_yen&metric=equity": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "ff457f63b14a5f859cdc149264d7913c8964cc55d1c976f9373c8fc19e62c845",
+   "sha256": "4aa4d68b092b373311af3c376f230aeaa00f57150fe9cb1f5f43ebdc8cb7e9f7",
    "bytes": 2523,
    "gap": false
   },
   "screensV2 GET /views/equity-chart?environment=live&subject_kind=portfolio&subject_id=pf_TEST_ONLY_satellite&metric=equity": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "08b0109a48e8d5ed2a2fe9d7256593da46a787a12deb9d3c8c9eb2a769639347",
+   "sha256": "62dcfa68ca6024f497b6ebc487d3b98ebccec3e0ca13f7d300c729398cd55bd5",
    "bytes": 1187,
    "gap": false
   },
@@ -3981,7 +3981,7 @@
   "screensV2 GET /portfolios": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "92bfac606caf114e7be5123367f9f95e97a7fcb524d18f332f6a0d982084da33",
+   "sha256": "f779af2b3587e39ba17a3a7e531400749f8c0a1a87f8461e10b00647fa06e55a",
    "bytes": 2261,
    "gap": false
   },
@@ -4289,14 +4289,14 @@
   "screensV2 GET /orders/ord_00137/funnel": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "63ef83ce8bf9a0ec221ed73706c5cbed7e2a73287324e4260a4619b54a0560ce",
+   "sha256": "a431c2488c461c5d9117c2a2c3e2128d7fa6dc0708f6ee263c4bbe93cfc13d4f",
    "bytes": 2180,
    "gap": false
   },
   "screensV2 GET /orders/ord_00136/funnel": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "998345993858d1119b7b17a797ea73d04823f2616eee5d7f3b28d6205b1d11b4",
+   "sha256": "091012c767611c81fde8f19f93ca5ceed5b3ac5820037384797e3413634ca50d",
    "bytes": 2179,
    "gap": false
   },
@@ -4324,28 +4324,28 @@
   "screensV2 GET /portfolios/pf_main/capital-ledger?environment=live": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "6f28c9a813f11a267f9ba546ec08a394ada90870dcbee750a67440bbc5a450b4",
+   "sha256": "3435ec145da5f7a7b8e8bfe10d42ba4979dcff15579f79e69f75e07133a42843",
    "bytes": 726,
    "gap": false
   },
   "screensV2 GET /portfolios/pf_TEST_ONLY_core/capital-ledger?environment=live": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "933610de8f05847ef8bdc7d7e6226704a2a9c57273b07bd4f5aa6fcd9c1f980e",
+   "sha256": "c1bd74c1a2485a6d1d8ebec1423a1af2bf47af57ceb17df44fd13a5c449df39c",
    "bytes": 2084,
    "gap": false
   },
   "screensV2 GET /portfolios/pf_TEST_ONLY_core/capital-ledger?environment=paper": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "5d94c6f7b9ac9c6ad691e92f2bbd85a66520a1b9e8066caa0f508f3e44da29d3",
+   "sha256": "4f0b794a27b4f182dc4f4337391b4f50bc934b251d69d172ea9904168c806199",
    "bytes": 736,
    "gap": false
   },
   "screensV2 GET /portfolios/pf_TEST_ONLY_yen/capital-ledger?environment=paper": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "48e60c95e38c03e450f2064b63b80027931cf000b70625dd3251503d10b38a51",
+   "sha256": "c6f1e435b7549002794fd802947c0a53f9e77f5b178355eb9665c3a8e8d370e5",
    "bytes": 1325,
    "gap": false
   },
@@ -4380,28 +4380,28 @@
   "screensV2 CHAIN /screens/blotter?limit=20 #0": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "f2e8d62dade7bcc478ac854c7849d6d0dcf762b84060b7a8941c242b784788a4",
+   "sha256": "3ace51016ddf4b6780cae481d7ccbc0f43ecef5a31f466a9c69e9510c3076021",
    "bytes": 26330,
    "gap": false
   },
   "screensV2 CHAIN /screens/blotter?limit=20 #1": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "644b463fbbc14a08b5787297baa5f95b1fa5c871ffef8c7707c9dad11732ab3a",
+   "sha256": "64515710aacf4dc3bc0232b1c90946283e0caca1dc340855b291306a7ae1685c",
    "bytes": 28017,
    "gap": false
   },
   "screensV2 CHAIN /screens/blotter?limit=20 #2": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "e1c36c1e65f0a459b3d168abd72ad387a451185069783b03a753b38c1aa646c7",
+   "sha256": "86babc8e9205d3cddde49693c94144a542120566c16ca4f740e6686aa7c3dfba",
    "bytes": 25870,
    "gap": false
   },
   "screensV2 CHAIN /screens/blotter?limit=20 #3": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "f6a2a8c63539406f2520b2d235ce3916d3a94e9855bb7fe85d867b5028b93122",
+   "sha256": "3627d7bfecc99079d6f01ff6ade7f64b3dae1592325a29088fb07c095a02e7d7",
    "bytes": 26337,
    "gap": false
   },
@@ -4723,7 +4723,7 @@
   "operationsV2+screensV2 GET /compositions/command-center": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "65964e134b3ba78e614df4b3a8713959987609eecc55761c2f8783626977cb3c",
+   "sha256": "5ce691c9c64a653a7ccfed1ec3f60dbc4dad6748868e63eab058e0129d521b52",
    "bytes": 8501,
    "gap": false
   },
@@ -4744,7 +4744,7 @@
   "operationsV2+screensV2 GET /compositions/admin-action-drawer": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "2ab07090da6c5ed5bf725ad63af3169d4e15fa44267d138c0e040abbf8a84f9f",
+   "sha256": "d36926d43c33234d353ab179989b6ddad1b3df7df641042d86c16eee6c71d202",
    "bytes": 35913,
    "gap": false
   },
@@ -4800,21 +4800,21 @@
   "operationsV2+screensV2 GET /screens/blotter": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "097698db96fc2000ffb2548d44f5f49b0a094c0d76711db5370ae294f726738e",
+   "sha256": "749ad2c4a739cb5956e4d2d0c2bf0899c050147dbc44058afcad15834ec9bfb8",
    "bytes": 64523,
    "gap": false
   },
   "operationsV2+screensV2 GET /screens/blotter?limit=25&status_bucket=FILLED": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "03dff27ca34254fe458e8ce5709e437becdce47375714790e65101d73bcfc548",
+   "sha256": "81af879176e0b136dc313cd64889fa47f0ba450931e667d115201fe90e8b3794",
    "bytes": 46939,
    "gap": false
   },
   "operationsV2+screensV2 GET /screens/blotter?limit=10&symbol=BTCUSDT&venue=BINANCE&side=BUY": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "a1136110ba583d09b0a9b637d15daec78e7dc441207abbb5c132ebbdf3c0df51",
+   "sha256": "6dcc1e331d82c769f0074428f7647a62c0d146e43c9519a43f045157ed200011",
    "bytes": 17681,
    "gap": false
   },
@@ -4842,8 +4842,8 @@
   "operationsV2+screensV2 GET /screens/accounts/acc_bnc_core": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "fe6d03dd0e024b3c2dd19ea8055faeed057e19d74ef89cf368fab338a67103e6",
-   "bytes": 1857,
+   "sha256": "97bbe8a84f7589f66c697f4d245391d0891897239da3629832338c7e7173b3a0",
+   "bytes": 2032,
    "gap": false
   },
   "operationsV2+screensV2 GET /resources/alphas/alpha_a": {
@@ -4884,35 +4884,35 @@
   "operationsV2+screensV2 GET /resources/portfolios/pf_main": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "c0617d7388454038f781ae9240bc4e3e733374831ca631f7cb4a2bc95446225d",
+   "sha256": "5f5a96c16814964dd90e86db208375f3ff70cef8cdd48a35d0a05e10cca91144",
    "bytes": 454,
    "gap": false
   },
   "operationsV2+screensV2 GET /resources/portfolios/pf_TEST_ONLY_core": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "0bdce58c48e87b0fdb1f6aa2d6509eb0f94c864d252cff1b1e24ba934202ec3b",
+   "sha256": "4fc17cf99d423070457ea806c3ff0dcdadcba16f81fbcbfad43b7ef44af2f772",
    "bytes": 9079,
    "gap": false
   },
   "operationsV2+screensV2 GET /resources/portfolios/pf_TEST_ONLY_satellite": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "1b551fbeadf1a3f5bbd2c98148eb16aa247f596ac8dccb9578d5b8f035df9d10",
+   "sha256": "50fe54e623561fad1138717f7ad288de45652ecfad5f7a60b15feee08aff0ed0",
    "bytes": 4242,
    "gap": false
   },
   "operationsV2+screensV2 GET /resources/portfolios/pf_TEST_ONLY_yen": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "90342e636e63b60bdfa237a6d02e836b5de8898502506767aac88663eb1f2c7f",
+   "sha256": "dae89f9040e18a3943f9315f11308bf0c00272ab87ee9e88c4c120026e30a215",
    "bytes": 2544,
    "gap": false
   },
   "operationsV2+screensV2 GET /resources/portfolios/pf_TEST_ONLY_empty": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "76149fa6842af5be7d9fd1c138a22a995b6d9ac7e932fda4990592e00e06c6c4",
+   "sha256": "e4f900950b58041fe2eda3a37cef015a73e2b0f639368f9cb22f059c7a2c2bd6",
    "bytes": 870,
    "gap": false
   },
@@ -5136,49 +5136,49 @@
   "operationsV2+screensV2 GET /derivations/portfolios/pf_main/capital?environment=paper": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "00e2ba204ffb7a1da3a7a43730d62224f7716972d68f4b6ec0a48ed59caf34c6",
+   "sha256": "0b076d7192d6c62f63f4be442025d151449aa120657667f5853ff09ca23cb92d",
    "bytes": 1177,
    "gap": false
   },
   "operationsV2+screensV2 GET /derivations/portfolios/pf_main/capital?environment=sandbox": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "ef4470707fcb64b2316d6bee92f9b067271c6da89a4bcec5da072102d0db12f5",
+   "sha256": "8a4550b8c1682b84c4106e0c4bb61238e1543ed17ffcea417cb4f6fee2e4a3ef",
    "bytes": 1181,
    "gap": false
   },
   "operationsV2+screensV2 GET /derivations/portfolios/pf_main/capital?environment=live": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "505760f90bc22cb04265d75d963966841061d3644ce0f4ac91ad9f7fc273e2c9",
+   "sha256": "6f30a33bcb28c39aad2837ac0cfe3c7352c377d3c11ebd51286958f8263895a3",
    "bytes": 1175,
    "gap": false
   },
   "operationsV2+screensV2 GET /derivations/portfolios/pf_TEST_ONLY_core/capital?environment=paper": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "896a828cfd365b209d628a116581d21e69f33e99583972b8a7056e60279bb207",
+   "sha256": "63ff0a59e92ea4c3b1d53d5c3dd9d26988da5a2198a8762ad265b4942c773731",
    "bytes": 1523,
    "gap": false
   },
   "operationsV2+screensV2 GET /derivations/portfolios/pf_TEST_ONLY_core/capital?environment=sandbox": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "c7b1354c1895f1424ee16bd5e4ae5f27168a22f314f459048023e665bf7e0cce",
+   "sha256": "4f9d2f82272baa17844de5f5d453a0d91566ac5f03d04d1acadb8266c061c0c1",
    "bytes": 1191,
    "gap": false
   },
   "operationsV2+screensV2 GET /derivations/portfolios/pf_TEST_ONLY_core/capital?environment=live": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "a63ad7c06aafc420d1fe3febe87733f4e2a634cc136ef9d64bdfbaf0c0b3a0c1",
+   "sha256": "ed531188007361350dda09870d1a101abbd0a33a78b9d191b8035dc586614568",
    "bytes": 1483,
    "gap": false
   },
   "operationsV2+screensV2 GET /derivations/portfolios/pf_TEST_ONLY_yen/capital?environment=paper": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "9d8eeb2c1d1795c8b93b23d1da29ab7a42be8816eb482687c7ad5fe6bfc0e31b",
+   "sha256": "bccf3d262ee0bdfc1765f07606acc8a33f51797db0397872e4810a63b5a0f163",
    "bytes": 1481,
    "gap": false
   },
@@ -5227,7 +5227,7 @@
   "operationsV2+screensV2 GET /derivations/conditional-groups/grp_00137?environment=paper": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "c76275d8c05653cb0ec2844ee6611817d6ebee00f61f19020b8a622c819d6733",
+   "sha256": "44a69fafc4d4644d412ab7157089daa73ecd6ebd68b5ae46026b1d69ab459771",
    "bytes": 2361,
    "gap": false
   },
@@ -5255,21 +5255,21 @@
   "operationsV2+screensV2 GET /views/equity-chart?environment=live&subject_kind=portfolio&subject_id=pf_TEST_ONLY_core&metric=equity": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "b16cb3aa3344f1ded8385db32e2db32b73f40ab52b2a23ab5ebc5b04fcf5f87a",
+   "sha256": "d964bd4d9ca12d97ed47ec307595b9b10ff76bac4b4770c93aa86f11a26c19a4",
    "bytes": 3018,
    "gap": false
   },
   "operationsV2+screensV2 GET /views/equity-chart?environment=paper&subject_kind=portfolio&subject_id=pf_TEST_ONLY_yen&metric=equity": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "ff457f63b14a5f859cdc149264d7913c8964cc55d1c976f9373c8fc19e62c845",
+   "sha256": "4aa4d68b092b373311af3c376f230aeaa00f57150fe9cb1f5f43ebdc8cb7e9f7",
    "bytes": 2523,
    "gap": false
   },
   "operationsV2+screensV2 GET /views/equity-chart?environment=live&subject_kind=portfolio&subject_id=pf_TEST_ONLY_satellite&metric=equity": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "08b0109a48e8d5ed2a2fe9d7256593da46a787a12deb9d3c8c9eb2a769639347",
+   "sha256": "62dcfa68ca6024f497b6ebc487d3b98ebccec3e0ca13f7d300c729398cd55bd5",
    "bytes": 1187,
    "gap": false
   },
@@ -5584,7 +5584,7 @@
   "operationsV2+screensV2 GET /portfolios": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "92bfac606caf114e7be5123367f9f95e97a7fcb524d18f332f6a0d982084da33",
+   "sha256": "f779af2b3587e39ba17a3a7e531400749f8c0a1a87f8461e10b00647fa06e55a",
    "bytes": 2261,
    "gap": false
   },
@@ -5892,14 +5892,14 @@
   "operationsV2+screensV2 GET /orders/ord_00137/funnel": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "63ef83ce8bf9a0ec221ed73706c5cbed7e2a73287324e4260a4619b54a0560ce",
+   "sha256": "a431c2488c461c5d9117c2a2c3e2128d7fa6dc0708f6ee263c4bbe93cfc13d4f",
    "bytes": 2180,
    "gap": false
   },
   "operationsV2+screensV2 GET /orders/ord_00136/funnel": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "998345993858d1119b7b17a797ea73d04823f2616eee5d7f3b28d6205b1d11b4",
+   "sha256": "091012c767611c81fde8f19f93ca5ceed5b3ac5820037384797e3413634ca50d",
    "bytes": 2179,
    "gap": false
   },
@@ -5927,28 +5927,28 @@
   "operationsV2+screensV2 GET /portfolios/pf_main/capital-ledger?environment=live": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "6f28c9a813f11a267f9ba546ec08a394ada90870dcbee750a67440bbc5a450b4",
+   "sha256": "3435ec145da5f7a7b8e8bfe10d42ba4979dcff15579f79e69f75e07133a42843",
    "bytes": 726,
    "gap": false
   },
   "operationsV2+screensV2 GET /portfolios/pf_TEST_ONLY_core/capital-ledger?environment=live": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "933610de8f05847ef8bdc7d7e6226704a2a9c57273b07bd4f5aa6fcd9c1f980e",
+   "sha256": "c1bd74c1a2485a6d1d8ebec1423a1af2bf47af57ceb17df44fd13a5c449df39c",
    "bytes": 2084,
    "gap": false
   },
   "operationsV2+screensV2 GET /portfolios/pf_TEST_ONLY_core/capital-ledger?environment=paper": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "5d94c6f7b9ac9c6ad691e92f2bbd85a66520a1b9e8066caa0f508f3e44da29d3",
+   "sha256": "4f0b794a27b4f182dc4f4337391b4f50bc934b251d69d172ea9904168c806199",
    "bytes": 736,
    "gap": false
   },
   "operationsV2+screensV2 GET /portfolios/pf_TEST_ONLY_yen/capital-ledger?environment=paper": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "48e60c95e38c03e450f2064b63b80027931cf000b70625dd3251503d10b38a51",
+   "sha256": "c6f1e435b7549002794fd802947c0a53f9e77f5b178355eb9665c3a8e8d370e5",
    "bytes": 1325,
    "gap": false
   },
@@ -5983,28 +5983,28 @@
   "operationsV2+screensV2 CHAIN /screens/blotter?limit=20 #0": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "f2e8d62dade7bcc478ac854c7849d6d0dcf762b84060b7a8941c242b784788a4",
+   "sha256": "3ace51016ddf4b6780cae481d7ccbc0f43ecef5a31f466a9c69e9510c3076021",
    "bytes": 26330,
    "gap": false
   },
   "operationsV2+screensV2 CHAIN /screens/blotter?limit=20 #1": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "644b463fbbc14a08b5787297baa5f95b1fa5c871ffef8c7707c9dad11732ab3a",
+   "sha256": "64515710aacf4dc3bc0232b1c90946283e0caca1dc340855b291306a7ae1685c",
    "bytes": 28017,
    "gap": false
   },
   "operationsV2+screensV2 CHAIN /screens/blotter?limit=20 #2": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "e1c36c1e65f0a459b3d168abd72ad387a451185069783b03a753b38c1aa646c7",
+   "sha256": "86babc8e9205d3cddde49693c94144a542120566c16ca4f740e6686aa7c3dfba",
    "bytes": 25870,
    "gap": false
   },
   "operationsV2+screensV2 CHAIN /screens/blotter?limit=20 #3": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "f6a2a8c63539406f2520b2d235ce3916d3a94e9855bb7fe85d867b5028b93122",
+   "sha256": "3627d7bfecc99079d6f01ff6ade7f64b3dae1592325a29088fb07c095a02e7d7",
    "bytes": 26337,
    "gap": false
   },
