@@ -12,7 +12,7 @@ import { Flag } from "../../Flag";
 import { BlockerList, NotPublished, SectionPanel } from "../../blocks";
 import { formatAsOf } from "../../boundary";
 import { stageWhy } from "../stage/reasons";
-import { blockers, decidedWords, gateOf, humanize, isDecided, submitReason } from "./model";
+import { WHY_MISSING, blockers, decidedWords, gateOf, humanize, isDecided, submitReason } from "./model";
 import type { SandboxView } from "./readSandbox";
 
 const ACCESS = "/administration/profile-access";
@@ -91,6 +91,8 @@ export function ExitReviewPanel({ view }: { view: SandboxView }) {
           emptyText={empty}
           provenance={<Provenance view={view} codes={codes} />}
         />
+        {/* One sentence for both buttons: what is missing and who to ask, instead of the same "Not enabled" twice. */}
+        <p className="exec-sbx-note" data-role="why-missing">{WHY_MISSING.exit}</p>
         <div className="exec-sbx-actions">
           <DockAction label="Submit for review" reason={submitReason(gate, stageWhy("notEnabled"))} accessHref={ACCESS} />
           <DockAction label="Request Sandbox exit review" reason={stageWhy("notEnabled")} accessHref={ACCESS} />

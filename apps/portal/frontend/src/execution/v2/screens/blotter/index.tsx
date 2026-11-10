@@ -46,9 +46,10 @@ import { Flag } from "../../Flag";
 import { useMediaQuery } from "../../useMediaQuery";
 import { withOrigin } from "../../backTo";
 import { withContext } from "../../urlState";
+import { ClosedFlag } from "./ClosedFlag";
 import { ExactText, OrderDetail, type FunnelRead } from "./OrderDetail";
 import {
-  CHIPS, COLUMNS, DEFAULT_COLUMNS, GROUP_CAP, MID_HIDDEN, MID_QUERY, NOT_IN_READ, NARROW_PAGE_LIMIT, NO_SCOPE, PAGE_LIMIT, applyScope, blotterCsv, blotterCsvName, blotterQuery, chipCounts, filtersKey, isStageRefusal, serverScopeActive, unchippedStatusCounts,
+  CHIPS, COLUMNS, DEFAULT_COLUMNS, GROUP_CAP, MID_HIDDEN, MID_QUERY, NOT_IN_READ, NARROW_PAGE_LIMIT, NO_SCOPE, PAGE_LIMIT, applyScope, blotterCsv, blotterCsvName, blotterQuery, chipCounts, feePrecisionByCurrency, filtersKey, formatFee, isStageRefusal, serverScopeActive, unchippedStatusCounts,
   fillsFor, groupExact, humanize, isBucket, pageFunnel, legsFor, scopeActive, shortUtc, statusView, type BlotterOrder, type ColumnId, type Scope, type ServerFilters,
 } from "./blotterModel";
 import { useBlotterRead } from "./useBlotterRead";
@@ -336,6 +337,7 @@ export default function BlotterScreen({ api, accessHref, chartHref: chartHrefPro
     setParams(next, { replace: true });
   };
 
+  const feePlaces = read === null ? new Map<string, number>() : feePrecisionByCurrency(read.orders);
   const cell = (order: BlotterOrder, id: ColumnId) => {
     switch (id) {
       case "time": return order.submittedAt ? <span className="exec-blt2-num" title={order.submittedAt}>{shortUtc(order.submittedAt)}</span> : <span className="exec-blt2-na">Not available</span>;
@@ -354,7 +356,15 @@ export default function BlotterScreen({ api, accessHref, chartHref: chartHrefPro
         : <ExactText value={order.averageFillPrice} />;
       case "fee": return order.fee.kind === "absent"
         ? (noFill(order) ? <span className="exec-blt2-na" title="Nothing has traded on this order">No fill</span> : <NaWhy reason="The orders read publishes no fee for this order." className="exec-blt2-na" />)
-        : <span className="exec-blt2-two exec-blt2-fee"><ExactText value={order.fee} />{order.feeCurrency ? <span className="exec-blt2-na"> {order.feeCurrency}</span> : null}</span>;
+        : (
+          <span className="exec-blt2-two exec-blt2-fee">
+            {/* One precision per currency down the column; the exact published text is the title (and the CSV). */}
+            {order.fee.kind === "value"
+              ? <span className="exec-blt2-num" title={order.fee.text}>{formatFee(order.fee.text, feePlaces.get(order.feeCurrency ?? "") ?? 0)}</span>
+              : <ExactText value={order.fee} />}
+            {order.feeCurrency ? <span className="exec-blt2-na"> {order.feeCurrency}</span> : null}
+          </span>
+        );
       case "venue": return order.venue ?? <span className="exec-blt2-na">Not available</span>;
       case "symbol": return order.symbol ?? <span className="exec-blt2-na">Not available</span>;
       // Side over type on every row, so every row is two lines tall like the deployment and fee cells (QA2 R4-12: no alternating heights).
@@ -374,7 +384,7 @@ export default function BlotterScreen({ api, accessHref, chartHref: chartHrefPro
       case "updated": return order.updatedAt ? <span className="exec-blt2-num" title={order.updatedAt}>{shortUtc(order.updatedAt)}</span> : <span className="exec-blt2-na">Not available</span>;
       case "status": {
         const view = statusView(order.status);
-        return <Flag kind={view.kind} label={view.label} size="sm" />;
+        return view.closed ? <ClosedFlag label={view.label} /> : <Flag kind={view.kind} label={view.label} size="sm" />;
       }
       case "order": return null;
     }
@@ -664,7 +674,7 @@ export default function BlotterScreen({ api, accessHref, chartHref: chartHrefPro
         <details className="exec-blt2-how">
           <summary>How to read</summary>
           <p className="exec-blt2-note">
-            Rows are newest first. Numbers are exact and never shortened. A fee is in its venue currency. Orders with bracket legs, fills and an order path expand in place. Not in this read: {notInRead.join(", ").toLowerCase()} (the source does not publish them yet).
+            Rows are newest first. Quantities and prices are exact and never shortened. A fee is in its venue currency and shown at one precision per currency; hover it for the exact value. Orders with bracket legs, fills and an order path expand in place. Not in this read: {notInRead.join(", ").toLowerCase()} (the source does not publish them yet).
           </p>
         </details>
       </section>

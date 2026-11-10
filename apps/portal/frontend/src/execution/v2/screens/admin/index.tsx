@@ -37,7 +37,8 @@ import { useExecUrlState, withContext } from "../../urlState";
 import { useMediaQuery } from "../../useMediaQuery";
 import { ActionPane, withQuery } from "./ActionPane";
 import {
-  ROW_CAP, ROW_STATES, ROW_STATE_VIEW, firstNotLive, firstReasonFor, humanize, stateCounts, tiersOf, toRows, type ActionRow, type RowState,
+  ROW_CAP, ROW_STATES, ROW_STATE_VIEW, firstNotLive, firstReasonFor, humanize, relaySentence, rowStateView, runnableNow, stateCounts, tiersOf, toRows,
+  type ActionRow, type RelayState, type RowState,
 } from "./adminModel";
 import { useAdminReads } from "./useAdminReads";
 
@@ -131,7 +132,8 @@ function freshness(state: string | null): { kind: FlagKind; label: string } {
     case "FRESH": return { kind: "ok", label: "Fresh" };
     case "STALE": return { kind: "stale", label: "Stale" };
     case "": return { kind: "unknown", label: "Freshness not stated" };
-    default: return { kind: "na", label: humanize(state ?? "") };
+    // "Unavailable" alone read as the page's own state; it is the catalogue read's freshness.
+    default: return { kind: "na", label: `Catalogue freshness: ${humanize(state ?? "").toLowerCase()}` };
   }
 }
 
@@ -266,6 +268,7 @@ export default function AdminScreen({
   const authority = composition?.commandAuthority ?? null;
   // An unreadable relay bit is "not stated", never "inactive" (fail closed).
   const relayText = authority === null || authority.relayActive === null ? "not stated" : authority.relayActive ? "active" : "inactive";
+  const relay: RelayState = authority === null || authority.relayActive === null ? "unknown" : authority.relayActive ? "active" : "inactive";
 
   const columns: readonly CardsColumn<ActionRow>[] = [
     {
@@ -288,7 +291,7 @@ export default function AdminScreen({
       label: "State",
       render: (r) => (
         <span className="exec-adm-state">
-          <Flag kind={ROW_STATE_VIEW[r.state].kind} label={ROW_STATE_VIEW[r.state].label} size="sm" />
+          <Flag kind={rowStateView(r, relay).kind} label={rowStateView(r, relay).label} size="sm" />
           {r.state === "elsewhere" ? (
             <Link className="exec-adm-link" to={withContext(portfoliosHref, params)} onClick={(event) => event.stopPropagation()}>Open</Link>
           ) : null}
@@ -316,8 +319,9 @@ export default function AdminScreen({
 
       {authority || notLive ? (
         <div className="exec-adm-banner" data-tone="warn" role="status">
-          <Flag kind="paused" label="Relay off" size="sm" />
+          <Flag kind={relay === "active" ? "ok" : "paused"} label={relay === "active" ? "Relay on" : relay === "inactive" ? "Relay off" : "Relay not stated"} size="sm" />
           <span>
+            <span data-testid="admin-relay-meaning">{relaySentence(relay)} </span>
             {authority ? `Command authority: ${humanize(authority.state)}. ` : ""}
             {notLive ? `First reason nothing is live: ${notLive.capabilityKey}, ${activationSentence(notLive)}.` : ""}
           </span>
@@ -371,7 +375,7 @@ export default function AdminScreen({
             </button>
           ))}
         </div>
-        <span id={summaryId} className="exec-adm-meta" role="status">{counts.ready} of {counts.all} can run now</span>
+        <span id={summaryId} className="exec-adm-meta" role="status">{runnableNow(rows, relay)} of {counts.all} can run now</span>
       </div>
 
       <div className="exec-adm-main" data-docked={mode === "dock" ? "true" : undefined}>
@@ -402,6 +406,7 @@ export default function AdminScreen({
               mode={mode}
               focusOnOpen={selection !== autoId.current}
               onClose={closePane}
+              relay={relay}
               portfoliosHref={portfoliosHref}
               operationsHref={operationsHref}
             />

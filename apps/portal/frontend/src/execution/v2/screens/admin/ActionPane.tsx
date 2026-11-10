@@ -28,8 +28,8 @@ import { DockAction, Drawer, type DockMode } from "../../Drawer";
 import { Flag } from "../../Flag";
 import { withContext } from "../../urlState";
 import {
-  COMMAND_STATES, COMMAND_STATE_VIEW, KIND_VIEW, NOTE_MIN, ROW_STATE_VIEW, applyReason, commandStateOf, defaultEnvironment,
-  firstReasonFor, formProblem, humanize, planGate, planRequest, tierCopy, type ActionRow, type PlanForm,
+  COMMAND_STATES, COMMAND_STATE_VIEW, KIND_VIEW, NOTE_MIN, applyReason, commandStateOf, defaultEnvironment,
+  firstReasonFor, formProblem, humanize, planGate, planRequest, rowStateView, tierCopy, type ActionRow, type PlanForm, type RelayState,
 } from "./adminModel";
 import { formatInstant } from "../../boundary";
 
@@ -53,6 +53,8 @@ export interface ActionPaneProps {
   /** False while the screen opened this pane itself (nobody asked): focus is not pulled into it. */
   focusOnOpen?: boolean;
   onClose: () => void;
+  /** The relay as the composition states it; decides what a READY label may promise. Absent reads as not stated. */
+  relay?: RelayState;
   portfoliosHref: string;
   operationsHref: string;
 }
@@ -76,6 +78,16 @@ function Fact({ term, children }: { term: string; children: ReactNode }) {
       <dd>{children}</dd>
     </>
   );
+}
+
+/**
+ * Where the allowed values of a read parameter come from. The task catalogue names the server registry (and, for a bound, states the rule)
+ * but publishes no list of values, and no Portal read lists them, so there is nothing to offer as a menu: a menu invented here would be a
+ * guess. The line says where the values live and what happens to a wrong one (the server refuses it as an unknown registry id and says so).
+ */
+export function registryHint(param: { key: string; sourceRegistry: string | null; constraint: string | null }): string {
+  if (param.sourceRegistry === "server_bounds") return `A bound the server sets${param.constraint ? `: ${param.constraint}` : ""}.`;
+  return `Allowed values are held in the server's ${param.sourceRegistry} registry. The task catalogue names it but does not list it, and no Portal read does, so type one exactly; the server refuses an unknown value and says so.`;
 }
 
 function stepsOf(row: ActionRow): string {
@@ -159,7 +171,7 @@ function PlanResult({ plan, operationsHref, params }: { plan: CommandPlan; opera
   );
 }
 
-export function ActionPane({ row, api, activation, stale = false, workspaceId, mode, focusOnOpen = true, onClose, portfoliosHref, operationsHref }: ActionPaneProps) {
+export function ActionPane({ row, api, activation, stale = false, workspaceId, mode, focusOnOpen = true, onClose, relay = "unknown", portfoliosHref, operationsHref }: ActionPaneProps) {
   const { task, entry } = row;
   const [params] = useSearchParams();
   const ids = { target: useId(), version: useId(), env: useId(), note: useId() };
@@ -169,7 +181,7 @@ export function ActionPane({ row, api, activation, stale = false, workspaceId, m
   const [readParams, setReadParams] = useState<Record<string, string>>(() => Object.fromEntries(task.params.map((p) => [p.key, p.defaultValue ?? ""])));
   const intent = useRef<{ sig: string; key: string } | null>(null);
 
-  const state = ROW_STATE_VIEW[row.state];
+  const state = rowStateView(row, relay);
   const first = firstReasonFor(task, activation);
   const gate = planGate(row, workspaceId);
   const problem = formProblem(form);
@@ -235,7 +247,9 @@ export function ActionPane({ row, api, activation, stale = false, workspaceId, m
         <Fact term="State"><Flag kind={state.kind} label={state.label} size="sm" /></Fact>
         <Fact term="Not live because">
           {row.state === "ready" ? (
-            "Nothing: the server classifies this action as connected, a local read."
+            row.kind === "read"
+              ? "Nothing: the server classifies this action as connected, a local read. It does not use the command relay."
+              : "Nothing: the server classifies this action as connected."
           ) : first.code ?? first.sentence ? (
             <>
               {first.code ? <CodeName code={first.code} /> : null}
@@ -268,7 +282,7 @@ export function ActionPane({ row, api, activation, stale = false, workspaceId, m
                       onChange={(event) => setReadParams((current) => ({ ...current, [p.key]: event.target.value }))}
                     />
                     {/* The value comes from a server registry no read lists yet (request to K): the box says so instead of pretending to be free text. */}
-                    {p.sourceRegistry ? <span className="exec-adm-note" data-testid="admin-param-registry">Value from the server's {p.sourceRegistry} registry; no read lists it yet, so type it.</span> : null}
+                    {p.sourceRegistry ? <span className="exec-adm-note" data-testid="admin-param-registry">{registryHint(p)}</span> : null}
                   </label>
                 ))}
                 <button type="button" className="exec-adm-btn" data-variant="primary" disabled={run.phase === "busy" || missingRead} aria-describedby={missingRead ? ids.note : undefined} onClick={() => void runRead()}>

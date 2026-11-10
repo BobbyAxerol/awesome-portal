@@ -22,6 +22,17 @@ import "../../css/request.css";
  */
 export const OWN_WORKSPACE_NOTE = "Created in your own workspace, not the one this page shows.";
 
+/**
+ * What the environment control of the context bar does to this page: nothing. The form has no environment field: a request names an alpha,
+ * a run and a claim and goes to R1 review, so Real-funded, Paper and Sandbox change none of it. One line, so the switch is not read as a setting
+ * of the form (the bar is the shell's; this page does not own it).
+ */
+export const ENV_APPLIES_NOTE = "Applies to: nothing here. The environment control does not change this form; a request names an alpha, a run and a claim.";
+
+export function EnvironmentNote() {
+  return <p className="exec-rq-note" data-notice="environment">{ENV_APPLIES_NOTE}</p>;
+}
+
 export function WorkspaceNote() {
   const [params] = useSearchParams();
   if ((params.get("workspace_id") ?? "").trim() === "") return null;

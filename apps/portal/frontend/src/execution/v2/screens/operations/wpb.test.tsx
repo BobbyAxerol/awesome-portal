@@ -261,15 +261,17 @@ describe("incident page", () => {
     expect(screen.getAllByRole("listitem", { name: "" }).length).toBeGreaterThan(0);
   });
 
-  it("every action is disabled with its reason", async () => {
+  it("the six writes are one 'Actions not available yet' disclosure with each reason inside, and no button", async () => {
     mountIncident("inc_TEST_ONLY_fx_mismatch");
-    const group = await screen.findByRole("group", { name: "Incident actions" });
+    const summary = await screen.findByText("Actions not available yet");
+    const disclosure = summary.closest("details") as HTMLElement;
+    expect(disclosure.getAttribute("data-role")).toBe("actions-unavailable");
+    expect(document.querySelectorAll('details[data-role="actions-unavailable"]')).toHaveLength(1);
     const labels = ["Acknowledge", "Assign to me", "Record exposure mitigated", "Attach dry-run evidence", "Mark mitigated", "Mark resolved"];
-    for (const label of labels) {
-      const button = within(group).getByRole("button", { name: label }) as HTMLButtonElement;
-      expect(button.disabled).toBe(true);
-      expect(document.getElementById(button.getAttribute("aria-describedby") ?? "")?.textContent).toMatch(/^Not published: /);
-    }
+    const items = within(disclosure).getAllByRole("listitem");
+    expect(items.map((li) => labels.find((l) => li.textContent?.startsWith(l)))).toEqual(labels);
+    for (const li of items) expect(li.textContent).toMatch(/Not published/);
+    for (const label of labels) expect(screen.queryByRole("button", { name: label })).toBeNull();
   });
 
   it("a resolved incident has all steps done; an unknown id is a typed read failure, not an empty page", async () => {
@@ -570,7 +572,7 @@ describe("round 5: deep link by id, complete incident records, cards below 1100"
       expect(screen.getByRole("list", { name: "Linked operations" }).querySelectorAll("li")).toHaveLength(incident.links.length);
       expect(screen.getByTestId("children-linked").querySelectorAll("li")).toHaveLength(incident.links.length);
       // the Actions block does not call an assigned incident unassigned
-      const actions = screen.getByRole("group", { name: "Incident actions" }).textContent ?? "";
+      const actions = screen.getByText("Actions not available yet").closest("details")!.textContent ?? "";
       if (incident.assigned) expect(actions).not.toContain("No assignee is published");
       cleanup();
     }

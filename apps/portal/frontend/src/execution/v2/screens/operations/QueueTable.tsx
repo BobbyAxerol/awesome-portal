@@ -18,7 +18,7 @@ import type { FlagKind } from "../../flagKinds";
 import type { DisplayStateV2, OperationV2 } from "../../readers/operationalQueue";
 import { ENV_LABEL } from "../../urlState";
 import { IncidentLinks } from "./IncidentLinks";
-import { nextActionOf } from "./opsViews";
+import { nextStepOf } from "./opsViews";
 import { commandLabel, receiptOutcome, severityWord, triageOutcome } from "./outcome";
 import { TargetLink } from "./TargetLink";
 
@@ -81,7 +81,8 @@ function columnsFor(onOpen: (row: OperationV2) => void, incidentTo: (incidentId:
       label: "Next",
       render: (row) => {
         const triage = triageOutcome(row.triageState);
-        const action = nextActionOf(row);
+        const step = nextStepOf(row);
+        const action = step.action;
         // Next is an action. The queue's default lens is already UNACKNOWLEDGED, so repeating that flag on
         // every row says nothing; the triage flag appears only when a person has already acted on the row.
         const acted = row.triageState !== "UNACKNOWLEDGED";
@@ -95,7 +96,6 @@ function columnsFor(onOpen: (row: OperationV2) => void, incidentTo: (incidentId:
             {action === "check-original" ? (
               <>
                 <button type="button" className="exec-ops-apply exec-ops-next" data-variant="primary" onClick={open}>Check original request</button>
-                <span className="exec-ops-meta">Do not send it again.</span>
               </>
             ) : null}
             {/* The axis is published as CATCHING_UP: the figures are on their way and there is nothing for a person to do yet. */}
@@ -104,6 +104,8 @@ function columnsFor(onOpen: (row: OperationV2) => void, incidentTo: (incidentId:
               <TargetLink className="exec-ops-id exec-ops-next-link" type={row.targetType} id={row.targetId} environment={row.environment} label="Open obligations" />
             ) : null}
             {action === "review" && !acted ? <button type="button" className="exec-ops-apply exec-ops-next" onClick={open}>Review</button> : null}
+            {/* Where the control above leads, in one line. A row a person already handled has no control, and says so. */}
+            <span className="exec-ops-meta" data-role="next-hint">{action === "review" && acted ? "Already handled in the Portal. Open the row to read it." : step.leadsTo}</span>
           </span>
         );
       },

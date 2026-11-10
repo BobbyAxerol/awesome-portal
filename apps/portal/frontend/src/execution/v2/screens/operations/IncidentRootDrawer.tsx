@@ -18,7 +18,7 @@ import { Link, type To } from "react-router-dom";
 import { PanelState } from "../../../components/states";
 import type { ExecutionApi } from "../../../api/ports";
 import type { PanelStatus } from "../../../contracts";
-import { DockAction, Drawer, type DockMode } from "../../Drawer";
+import { Drawer, type DockMode } from "../../Drawer";
 import { NotAvailableLine } from "../../blocks";
 import type { IncidentDetail } from "../../../operations";
 import { IncidentSections } from "./IncidentSections";
@@ -31,6 +31,7 @@ import { ENV_LABEL } from "../../urlState";
 import { ACCESS_PATH, AccessLink, FE, notPublishedReason } from "./notPublished";
 import { humanize } from "./outcome";
 import { TargetLink } from "./TargetLink";
+import { UnavailableActions } from "./UnavailableActions";
 
 import "../../css/operations.css";
 
@@ -118,14 +119,17 @@ export function IncidentRootDrawer({ api, incidentId, workspaceId, mode, onClose
     return () => { live = false; };
   }, [api, incidentId, workspaceId]);
 
-  // D9: a blocked action says why and where to see the missing grant.
+  // D9: a blocked action says why and where to see the missing grant. Four greyed buttons said one thing four times: one disclosure says it once.
   const actions = (
-    <>
-      <DockAction label="Acknowledge" reason={INCIDENT_ACTION_REASONS.acknowledge} accessHref={accessHref} />
-      <DockAction label="Assign to me" reason={INCIDENT_ACTION_REASONS.assign} accessHref={accessHref} />
-      <DockAction label="Mark mitigated" reason={INCIDENT_ACTION_REASONS.mitigate} accessHref={accessHref} />
-      <DockAction label="Mark resolved" reason={INCIDENT_ACTION_REASONS.resolve} variant="primary" accessHref={accessHref} />
-    </>
+    <UnavailableActions
+      accessHref={accessHref}
+      actions={[
+        { label: "Acknowledge", reason: INCIDENT_ACTION_REASONS.acknowledge },
+        { label: "Assign to me", reason: INCIDENT_ACTION_REASONS.assign },
+        { label: "Mark mitigated", reason: INCIDENT_ACTION_REASONS.mitigate },
+        { label: "Mark resolved", reason: INCIDENT_ACTION_REASONS.resolve },
+      ]}
+    />
   );
 
   if (load.phase !== "ready") {

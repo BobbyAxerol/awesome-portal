@@ -17,7 +17,7 @@ import { Flag } from "../../Flag";
 import { GapLine, GapWhy, NotPublished, SectionPanel, type GapItem } from "../../blocks";
 import { formatAsOf } from "../../boundary";
 import { PanelState } from "../../../components/states";
-import { actionWord, humanize, severityFlag } from "./model";
+import { WHY_MISSING, actionWord, humanize, severityFlag } from "./model";
 import type { CollectionView, FindingView, PlanView, SandboxView, TimelineRowView } from "./readSandbox";
 import type { UtcEpochMs } from "../../../screenDataContract";
 
@@ -84,6 +84,7 @@ export function FindingsPanel({ view }: { view: SandboxView }) {
     return (
       <SectionPanel level={2} title="Findings">
         <GapLine items={[{ label: "Reconciliation findings", id: "FE-072" }]} />
+        <p className="exec-sbx-note" data-role="why-missing">{WHY_MISSING.findings}</p>
       </SectionPanel>
     );
   }

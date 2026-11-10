@@ -699,3 +699,35 @@ a.exec-ops-next-link {
     grid-column: 1 / -1;
   }
 }
+
+/* Incident writes the server does not offer yet: one disclosure instead of a row of disabled buttons. */
+.exec-ops-unavail {
+  min-width: 0;
+  padding: var(--space-2) var(--space-3);
+  color: var(--ink);
+  background: var(--paper-raised);
+  border: 1px solid var(--line);
+}
+.exec-ops-unavail > summary {
+  cursor: pointer;
+  font: var(--exec-font-control);
+}
+.exec-ops-unavail > .exec-ops-reason {
+  margin-top: var(--space-2);
+}
+.exec-ops-unavail-list {
+  display: grid;
+  gap: var(--space-1);
+  margin: var(--space-2) 0;
+  padding: 0;
+  list-style: none;
+}
+.exec-ops-unavail-list li {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-3);
+}
+.exec-ops-unavail-name {
+  font: var(--exec-font-body);
+  color: var(--ink-soft);
+}

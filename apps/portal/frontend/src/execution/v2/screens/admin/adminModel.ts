@@ -73,6 +73,36 @@ export const ROW_STATE_VIEW: Readonly<Record<RowState, { kind: FlagKind; label: 
   "not-offered": { kind: "paused", label: "Not offered in the portal", filter: "Not offered" },
 };
 
+/**
+ * The command relay as the composition read states it. Only the read changes what a READY action can do: a local read never goes through
+ * the relay, a command does. An unreadable relay bit is `unknown`, never `inactive` and never `active` (fail closed).
+ */
+export type RelayState = "active" | "inactive" | "unknown";
+
+/**
+ * The state chip of a row. A READY label beside a relay that cannot deliver would promise a run the page cannot do, so it says what the
+ * run is: a connected local read ("Ready: local read", the relay is not involved), and, were a connected command ever listed while the relay
+ * is not active, "Plan only" (a plan is a preview the server records; nothing is applied). Every other state keeps its published word.
+ */
+export function rowStateView(row: Pick<ActionRow, "state" | "kind">, relay: RelayState): { kind: FlagKind; label: string } {
+  if (row.state !== "ready") return ROW_STATE_VIEW[row.state];
+  if (row.kind === "read") return { kind: "ok", label: "Ready: local read" };
+  if (relay === "active") return ROW_STATE_VIEW.ready;
+  return { kind: "paused", label: relay === "inactive" ? "Plan only: relay off" : "Plan only: relay not stated" };
+}
+
+/** Rows that can actually run from this page now: a connected read always, a connected command only through an active relay. */
+export function runnableNow(rows: readonly Pick<ActionRow, "state" | "kind">[], relay: RelayState): number {
+  return rows.filter((row) => row.state === "ready" && (row.kind === "read" || relay === "active")).length;
+}
+
+/** One sentence: what the relay state means for running an action on this page. */
+export function relaySentence(relay: RelayState): string {
+  if (relay === "active") return "The command relay is on: a command can be planned here and its apply is gated by the steps below.";
+  const word = relay === "inactive" ? "Relay off means" : "The relay state was not stated, so it is treated as off, which means";
+  return `${word} commands can be planned (a preview) but never delivered to the trading system from this page. Local reads do not use the relay and can still run.`;
+}
+
 export type ActionKind = "read" | "capital" | "command" | "danger";
 
 export const KIND_VIEW: Readonly<Record<ActionKind, { kind: FlagKind; label: string }>> = {
