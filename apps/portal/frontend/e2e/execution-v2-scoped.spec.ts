@@ -327,7 +327,9 @@ test("FIXTURE_LAB / BFF_DOUBLE · slice @1280: after a revoke, a linked screen o
   const text = await bodyText(page);
   // The linked screen may name the portfolio in its own URL; what must not be there is anything the slice's read carried.
   expect(await residue(page, ["100.1235", "TEST_ONLY Alpha"])).toEqual([]);
-  expect(text, "the linked screen says the Portal refused it").toContain("ACCESS_DENIED: Your access to this scope was withdrawn.");
+  expect(text, "the linked screen says the Portal refused it").toContain("Your access to this scope was withdrawn.");
+  // Plain reasons: the sentence is the words, the machine code stays in data-code.
+  expect(await page.locator('[data-code*="ACCESS_DENIED"]').count(), "the machine code is kept in data-code").toBeGreaterThan(0);
 
   // Back to the slice: still denied, still empty.
   await page.goBack();
