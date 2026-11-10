@@ -474,7 +474,7 @@ describe("guide 8.2 / 8.3 · groups, density, selection, KPIs", () => {
     expect(boxes).toHaveLength(5);
     const reasonId = boxes[0]!.getAttribute("aria-describedby")!;
     expect(boxes.every((box) => box.disabled && box.getAttribute("aria-describedby") === reasonId)).toBe(true);
-    expect(document.getElementById(reasonId)!.textContent).toBe("Select 2 to 4 alphas to compare: Not published: compare.");
+    expect(document.getElementById(reasonId)!.textContent).toBe("Comparing 2 to 4 alphas is not available: Not published: compare.");
     expect((screen.getByRole("button", { name: "Compare selected" }) as HTMLButtonElement).disabled).toBe(true);
   });
 

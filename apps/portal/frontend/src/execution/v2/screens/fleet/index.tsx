@@ -564,7 +564,7 @@ export default function FleetScreen({ api, workspaceId, streamFlag = FLEET_STREA
             {published && !forceFleet
               ? <button type="button" className="exec-fleet-segbtn" aria-pressed={mapView} onClick={() => url.set({ view: "map" })}>Map</button>
               : <button type="button" className="exec-fleet-segbtn" aria-pressed="false" disabled aria-describedby={mapReasonId} title={notPublished(FE.map)}>Map</button>}
-            <span id={mapReasonId} className="exec-fleet-sr">{notPublished(FE.map)}: the Map reads the Manager dataset, which is not published here.</span>
+            <span id={mapReasonId} className="exec-fleet-sr">{notPublished(FE.map)}. The Map reads the Manager dataset, which is not published here.</span>
           </span>
           {sourceChip}
           {streamOn && scope !== null ? (
@@ -835,7 +835,7 @@ export default function FleetScreen({ api, workspaceId, streamFlag = FLEET_STREA
               <button type="button" className="exec-fleet-btn" disabled aria-describedby={selectionReasonId}>Compare selected</button>
               <button type="button" className="exec-fleet-btn" disabled aria-describedby={exportReasonId}>Export</button>
               <span id={exportReasonId} className="exec-fleet-note">Export reflects the filter, snapshot, fields, basis and as-of, and is reauthorized when made: Not published (export action).</span>
-              <span id={selectionReasonId} className="exec-fleet-note">Select 2 to 4 alphas to compare: {notPublished(FE.compare)}.</span>
+              <span id={selectionReasonId} className="exec-fleet-note">Comparing 2 to 4 alphas is not available: {notPublished(FE.compare)}.</span>
             </div>
           )}
               </>
