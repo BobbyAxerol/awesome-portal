@@ -300,7 +300,7 @@ describe("when the dataset does not answer ALL, nothing is faked", () => {
       if (call.query.get("limit") !== "1") delete body.items[0].environment;
     };
     mount(api, "/execution/fleet");
-    expect(await screen.findByText(/MANAGER_DATASET_REFUSED|could not be read/, {}, SLOW)).toBeTruthy();
+    expect((await screen.findAllByText(/MANAGER_DATASET_REFUSED|could not be read/, {}, SLOW)).length).toBeGreaterThan(0);
     expect(screen.queryByRole("table", { name: "Alpha fleet" })).toBeNull();
   });
 });
