@@ -313,6 +313,11 @@ div.exec-pf-banner {
   display: block;
   white-space: nowrap;
 }
+/* A flow's effective time: mono, one line. */
+.exec-pf-flow-time {
+  font: var(--exec-font-id);
+  white-space: nowrap;
+}
 .exec-pf-envs,
 .exec-pf-dim,
 .exec-pf-na,

@@ -579,6 +579,7 @@ TRACKED = (
     "tooling/execution-manager-lifecycle-semantics.mjs",
     "fixtures/execution-manager-dataset.lifecycle.live.synthetic.valid.json",
     "fixtures/execution-manager-dataset.lifecycle.transitions.synthetic.valid.json",
+    "fixtures/execution-manager-dataset.statement-times.synthetic.valid.json",
     "fixtures/execution-manager-contributors.synthetic.valid.json",
     "tooling/generate-execution-manager-series.mjs",
     "tooling/execution-manager-series-fixtures.mjs",

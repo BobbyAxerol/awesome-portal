@@ -56,13 +56,15 @@ describe("positive series: four views of one NAV book", () => {
     expect(dd.body.series[0].points.every((point: Body) => units(point.value) <= 0n)).toBe(true);
   });
 
-  it("statement identity: current NAV = initial funds + net PnL = the sum of the rows' balances; capital added = returned", () => {
+  it("statement identity: current NAV = initial + added - returned + net PnL = the sum of the rows' balances; the unallocated surplus is the capital returned", () => {
     const body = dataset("/manager/fund-overview", "live").body;
     for (const statement of body.capital_statements) {
       const m = statement.metrics;
       const currency = statement.partition.currency;
-      expect(units(m.current_nav.value)).toBe(units(m.initial_funds.value) + units(m.net_pnl.value));
-      expect(units(m.added_funds.value)).toBe(units(m.returned_capital.value));
+      // UXM-07 WP-2: the whole approved budget was funded at inception (initial funds = budget) and what was not allocated was handed back
+      // (returned = initial - allocated), so the PM identity closes with the flows on both sides: NAV = initial + added - returned + net PnL.
+      expect(units(m.current_nav.value)).toBe(units(m.initial_funds.value) + units(m.added_funds.value) - units(m.returned_capital.value) + units(m.net_pnl.value));
+      expect(units(m.initial_funds.value) - units(m.returned_capital.value)).toBe(units(m.allocation.value));
       const rows = body.items.flatMap((row: Body) => row.economic_partitions).filter((p: Body) => p.partition.currency === currency);
       const balances = rows.reduce((sum: bigint, p: Body) => sum + units(p.metrics.balance_total.value), 0n);
       expect(balances).toBe(units(m.current_nav.value));
@@ -85,8 +87,10 @@ describe("positive series: four views of one NAV book", () => {
     expect(pnl(week)).not.toEqual(pnl(month));
     for (const statement of month.capital_statements) {
       const m = statement.metrics;
-      expect(units(m.allocation.value)).toBe(units(m.initial_funds.value));
+      // The allocated capital is what stayed funded (initial + added - returned); the approved budget is a limit above it and never above the funds in.
+      expect(units(m.allocation.value)).toBe(units(m.initial_funds.value) + units(m.added_funds.value) - units(m.returned_capital.value));
       expect(units(m.current_budget.value)).toBeGreaterThan(units(m.allocation.value));
+      expect(units(m.current_budget.value)).toBeLessThanOrEqual(units(m.initial_funds.value) + units(m.added_funds.value));
       expect(units(m.headroom.value)).toBe(units(m.current_budget.value) - units(m.allocation.value));
     }
   });

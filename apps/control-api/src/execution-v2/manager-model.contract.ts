@@ -56,7 +56,8 @@ const managerMetricConsistent = (v: { availability: string; value: string | null
 /** A metric as ADMITTED from a source document (a fact). A source value may be "-0": admission is unchanged (MD-5). */
 export const managerMetric = z.object(managerMetricShape(exactDecimal)).strict().superRefine(managerMetricConsistent);
 /** A metric as EMITTED in the dataset response: canonical zero (MD-5), a signed zero is refused. */
-export const managerResponseMetric = z.object(managerMetricShape(managerResponseDecimal)).strict().superRefine(managerMetricConsistent);
+/** `effective_at_ms` is optional and only on the EMITTED metric: the UTC time this figure took effect (a funding or return receipt, a budget approval, an allocation). Absent = not published, never inferred. */
+export const managerResponseMetric = z.object({ ...managerMetricShape(managerResponseDecimal), effective_at_ms: utcMilliseconds.optional() }).strict().superRefine(managerMetricConsistent);
 export const managerStatementFields = ["opening_economic_capital", "initial_funds", "added_funds", "returned_capital",
   "net_economic_assignments", "current_nav", "realized_pnl", "unrealized_pnl", "actual_fees", "pending_fees",
   "funding", "interest", "initial_budget", "current_budget", "topups_applied", "decreases_applied", "recall_applied",

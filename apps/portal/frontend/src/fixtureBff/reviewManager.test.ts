@@ -232,7 +232,8 @@ describe("six opt-in review Manager datasets", () => {
       // Capital comes from the linked deployment graph, not a decorative
       // fractional sentinel unrelated to accounts/portfolios.
       const members = (wpWorldAlphas("FUND", undefined) ?? scaled().alphas).flatMap(alpha => alpha.deployments).filter(d => d.environment === "live" && d.currency === partition.currency);
-      expect(Number(metrics.initial_funds.value)).toBe(members.reduce((n, d) => n + Number(d.allocation), 0));
+      // UXM-07 WP-2: the funds in are the approved budget; what stayed funded (initial - returned) is the allocation of the linked deployments.
+      expect(Number(metrics.initial_funds.value) - Number(metrics.returned_capital.value)).toBeCloseTo(members.reduce((n, d) => n + Number(d.allocation), 0), 6);
       expect(Number(metrics.current_nav.value)).toBeCloseTo(members.reduce((n, d) => n + Number(d.allocation) + Number(d.realized), 0), 6);
     }
     expect(statements[0].metrics.pending_amount).toMatchObject({ value: "0", availability: "AVAILABLE", reason_code: null });
@@ -380,8 +381,10 @@ describe("simulated Manager metrics (row, capital statement, group)", () => {
       // WP-P: the positive world has no exact-zero drawdown; the former index-0 "0" is the `missing` scenario (positiveWorld.test.ts)
       expect(metrics.max_drawdown_pct.value, `partition ${index}`).toMatch(/^-\d+(\.\d\d?)?$/);
       {
-        expect(metrics.return_30d_pct.denominator).toBe(metrics.initial_funds.value);
-        const expected = big(metrics.net_pnl.value) * 100n * 1_000_000n / big(metrics.initial_funds.value);
+        // The return is on the allocated base (initial - returned); the funds in are the approved budget since UXM-07 WP-2.
+        const base = big(metrics.initial_funds.value) - big(metrics.returned_capital.value);
+        expect(big(metrics.return_30d_pct.denominator)).toBe(base);
+        const expected = big(metrics.net_pnl.value) * 100n * 1_000_000n / base;
         expect(big(metrics.return_30d_pct.value)).toBe(expected * 10n ** 12n);
       }
     }

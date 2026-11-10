@@ -17,7 +17,7 @@ import { layoutFlow, NODE_W, trace, WIDTH, type FlowBlock, type FlowEdge, type F
 import { useChartId } from "./hooks";
 import type { ChartState } from "./types";
 
-export type { FlowBlock, FlowEdge, FlowNode } from "./flowLayout";
+export type { FlowBlock, FlowEdge, FlowNode, FlowTime } from "./flowLayout";
 
 export interface CapitalFlowProps {
   /** Accessible name and visible heading. */
@@ -96,10 +96,12 @@ export function CapitalFlow({ label, blocks, basis, unit = "money", currency, st
   const table = (
     <details className="exec-c2-table" open={tooMany || undefined}>
       <summary>Table view</summary>
-      {blocks.map((b) => (
+      {blocks.map((b) => {
+        const timed = !structure && (b.nodes.some((n) => n.time !== undefined) || b.edges.some((e) => e.time !== undefined));
+        return (
         <table key={b.id} className="exec-c2-tbl">
           <caption>{`${b.label} · ${b.basis === "simulated" ? "Simulated" : "Real-funded"}`}</caption>
-          <thead><tr><th scope="col">Node</th><th scope="col">Column</th><th scope="col">Amount</th><th scope="col">Note</th></tr></thead>
+          <thead><tr><th scope="col">Node</th><th scope="col">Column</th><th scope="col">Amount</th>{timed ? <th scope="col">Time</th> : null}<th scope="col">Note</th></tr></thead>
           <tbody>
             {b.nodes.map((n) => (
               <tr key={n.id}>
@@ -116,6 +118,7 @@ export function CapitalFlow({ label, blocks, basis, unit = "money", currency, st
                 </th>
                 <td>{n.column}</td>
                 <td>{show(n) ?? n.absent ?? "Not available"}</td>
+                {timed ? <td className="exec-c2-time">{n.time?.text ?? ""}</td> : null}
                 <td>{n.note ?? ""}</td>
               </tr>
             ))}
@@ -127,13 +130,15 @@ export function CapitalFlow({ label, blocks, basis, unit = "money", currency, st
                   <th scope="row">{`${b.nodes.find((n) => n.id === e.from)?.label ?? e.from} to ${b.nodes.find((n) => n.id === e.to)?.label ?? e.to}`}</th>
                   <td>{(e.kind ?? "flow") === "limit" ? "Limit" : "Flow"}</td>
                   <td>{(e.kind ?? "flow") === "limit" ? "Not cash" : amount(e.value)}</td>
+                  {timed ? <td className="exec-c2-time">{e.time?.text ?? ""}</td> : null}
                   <td>{e.label ?? ""}</td>
                 </tr>
               ))}
             </tbody>
           ) : null}
         </table>
-      ))}
+        );
+      })}
     </details>
   );
 
@@ -170,8 +175,12 @@ export function CapitalFlow({ label, blocks, basis, unit = "money", currency, st
           if (e.kind === "limit") {
             const a = pb.nodes.find((n) => n.node.id === e.edge.from);
             const b = pb.nodes.find((n) => n.node.id === e.edge.to);
-            const mx = a && b ? (a.x + NODE_W + b.x) / 2 : 0;
-            const my = a && b ? (a.y + a.h / 2 + b.y + b.h / 2) / 2 : 0;
+            // The words sit 62% of the way along the dashed line, not at its middle: at the middle they landed on the source node's own amount.
+            const along = 0.62;
+            const ax = a ? a.x + NODE_W : 0;
+            const ay = a ? a.y + a.h / 2 : 0;
+            const mx = a && b ? ax + (b.x - ax) * along : 0;
+            const my = a && b ? ay + (b.y + b.h / 2 - ay) * along : 0;
             return (
               <g key={e.edge.id} className="exec-flow-limit" data-testid="flow-limit" {...common}>
                 <path d={e.d} />
@@ -193,6 +202,7 @@ export function CapitalFlow({ label, blocks, basis, unit = "money", currency, st
           const hi = nodeHi(pb.block.id, n.id);
           const value = show(n);
           const name = clip(n.label, 26);
+          const caption = structure ? null : n.time?.short ?? null;
           return (
             <g
               key={n.id}
@@ -205,12 +215,13 @@ export function CapitalFlow({ label, blocks, basis, unit = "money", currency, st
               onMouseLeave={() => setActive(null)}
               onClick={() => onSelect?.(n.id)}
             >
-              <title>{`${n.label}: ${value ?? n.absent ?? "Not available"}`}</title>
+              <title>{`${n.label}: ${value ?? n.absent ?? "Not available"}${caption !== null && n.time ? ` · ${n.time.text}` : ""}`}</title>
               <rect className="exec-flow-rect" data-hatch={hatched ? "true" : "false"} data-sim={sim ? "true" : "false"} data-hollow={p.valid && p.numeric === 0 ? "true" : "false"} x={p.x} y={p.y} width={NODE_W} height={p.h} fill={hatched ? `url(#${id}-${sim ? "hsim" : "hna"})` : undefined} />
-              <text className="exec-flow-name" x={p.x + NODE_W + 8} y={p.cy - 2}>{name}</text>
-              <text className="exec-flow-val" data-na={value === null ? "true" : "false"} x={p.x + NODE_W + 8} y={p.cy + 11}>
+              <text className="exec-flow-name" x={p.x + NODE_W + 8} y={caption === null ? p.cy - 2 : p.cy - 9}>{name}</text>
+              <text className="exec-flow-val" data-na={value === null ? "true" : "false"} x={p.x + NODE_W + 8} y={caption === null ? p.cy + 11 : p.cy + 4}>
                 {value ?? n.absent ?? "Not available"}
               </text>
+              {caption !== null ? <text className="exec-flow-time" data-testid="flow-time" x={p.x + NODE_W + 8} y={p.cy + 17}>{caption}</text> : null}
             </g>
           );
         })}

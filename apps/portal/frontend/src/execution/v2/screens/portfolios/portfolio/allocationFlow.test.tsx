@@ -110,8 +110,11 @@ describe("Allocations: the capital flow", () => {
     expect(within(flow).getAllByText("Limit, not cash").length).toBeGreaterThan(0);
     expect(flow.textContent).toContain("Approved budget");
     expect(flow.textContent).toContain("Initial funds");
-    expect(flow.textContent).toContain("Basis: Amounts in each block's own currency. A budget is a limit, not cash. Blocks are never summed.");
-    const facts = within(flow).getByRole("list", { name: "Facts without a band, Live" });
+    // UXM-07 WP-2: the basis line says what a budget is (a limit on what may be allocated, not cash) and that the times are UTC and never inferred.
+    expect(flow.textContent).toContain("Basis: Amounts in each block's own currency and never summed. An approved budget is a limit on what may be allocated, not cash: it is not added to funds, NAV or allocations. Times are UTC, the effective time each source publishes, none inferred.");
+    // The facts without a band are a table now (Fact, Amount, Time), so each fact row can state its time.
+    const facts = within(flow).getByRole("table", { name: "Facts without a band, Live" });
+    expect(within(facts).getAllByRole("columnheader").map((cell) => cell.textContent)).toEqual(["Fact", "Amount", "Time"]);
     expect(facts.textContent).toContain("19,750.00");
     expect(facts.textContent).toContain("360.00");
     expect(facts.textContent).toContain("3,420.00");
@@ -148,5 +151,59 @@ describe("Allocations: the capital flow", () => {
     const flow = await screen.findByRole("region", { name: "Capital flow · Live" });
     fireEvent.click(within(flow).getByText("Table view"));
     expect(flow.textContent).toContain("Not published: capital statements");
+  });
+});
+
+describe("Allocations: the capital flow states when each flow took effect (UXM-07 WP-2)", () => {
+  const T = { funds: Date.UTC(2026, 6, 12, 12, 0), returned: Date.UTC(2026, 6, 15, 12, 0), budget: Date.UTC(2026, 6, 27, 12, 0), alpha: Date.UTC(2026, 8, 11, 12, 0) };
+  const at = (metric: Body, ms: number) => ({ ...metric, effective_at_ms: ms });
+  const withTimes = () => withDataset(makeApi().api, (query) => datasetFor("PORTFOLIO", PF.core, (body: Body) => {
+    body.capital_statements = [{ partition: query.environment === "live" ? LIVE() : partition("PAPER", "USDT", "usdt"), metrics: {
+      ...FULL, initial_funds: at(money("20000.00"), T.funds), returned_capital: at(money("250.00"), T.returned), current_budget: at(money("18000.00"), T.budget),
+    } }];
+    if (query.groupBy?.[0] === "alpha_id") {
+      body.groups = [["strat_btc", "9000.00"]].map(([alpha, allocation]) => ({
+        key: [{ field: "alpha_id", value: alpha }], unique_row_count: 1, totals_scope: "FULL_AUTHORIZED_FILTERED_QUERY",
+        economic_partitions: [{ partition: query.environment === "live" ? LIVE() : partition("PAPER", "USDT", "usdt"), metrics: { net_pnl: money("1"), allocation: at(money(allocation!), T.alpha) } }],
+      }));
+      body.items = [body.items[0]];
+      body.page = { limit: 1, returned_count: 1, authorized_filtered_count: 1, next_cursor: null, previous_cursor: null };
+    }
+  }));
+
+  it("draws a short date under each node that has a published time, and prints the whole UTC time in the table's Time column", async () => {
+    mount(withTimes(), "?tab=allocations");
+    await ready();
+    const flow = await screen.findByRole("region", { name: "Capital flow · Live" });
+    await waitFor(() => expect(flow.querySelectorAll("[data-testid='flow-time']").length).toBeGreaterThan(0));
+    const captions = [...flow.querySelectorAll("[data-testid='flow-time']")].map((node) => node.textContent);
+    expect(captions).toEqual(expect.arrayContaining(["12 Jul", "15 Jul", "27 Jul", "11 Sep"]));
+    fireEvent.click(within(flow).getByText("Table view"));
+    const tables = flow.querySelectorAll("table.exec-c2-tbl");
+    expect([...tables[0]!.querySelectorAll("thead th")].map((cell) => cell.textContent)).toEqual(["Node", "Column", "Amount", "Time", "Note"]);
+    const row = (label: string) => [...tables[0]!.querySelectorAll("tbody tr")].find((tr) => tr.querySelector("th")?.textContent === label)!;
+    expect(row("Initial funds").textContent).toContain("12 Jul 12:00Z");
+    expect(row("Returned").textContent).toContain("15 Jul 12:00Z");
+    expect(row("Approved budget").textContent).toContain("27 Jul 12:00Z");
+    // NAV is a valuation, not a flow with a receipt: it states no time. A published zero flow says there was no receipt.
+    expect(row("NAV").querySelector(".exec-c2-time")!.textContent).toBe("");
+    expect(row("Added funds").textContent).toContain("No receipt");
+    // The dashed limit is the budget's approval, and the budget stays a limit in the table.
+    const limit = [...tables[0]!.querySelectorAll("tr.exec-c2-tbl-edge")].find((tr) => tr.textContent?.includes("Limit, not cash"))!;
+    expect(limit.textContent).toContain("27 Jul 12:00Z");
+    expect(limit.textContent).toContain("Not cash");
+  });
+
+  it("an unpublished time says 'Not published' in the facts table and in the deployment table (here the ledger is a bounded read), and no caption is drawn for it", async () => {
+    mount(served(), "?tab=allocations");
+    await ready();
+    const flow = await screen.findByRole("region", { name: "Capital flow · Live" });
+    const facts = within(flow).getByRole("table", { name: "Facts without a band, Live" });
+    expect([...facts.querySelectorAll("tbody tr")].map((tr) => tr.textContent)).toEqual([
+      expect.stringContaining("Not published"), expect.stringContaining("Not published"), expect.stringContaining("Not published"),
+    ]);
+    expect(flow.querySelectorAll("[data-testid='flow-time']")).toHaveLength(0);
+    const deployments = within(flow).getByRole("table", { name: "Deployments in the Live flow" });
+    expect(within(deployments).getAllByRole("columnheader").map((cell) => cell.textContent)).toContain("Allocated at");
   });
 });

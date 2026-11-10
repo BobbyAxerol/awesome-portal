@@ -2714,6 +2714,11 @@
                   "minLength": 1,
                   "maxLength": 256,
                   "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+                },
+                "effective_at_ms": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
                 }
               },
               "required": [
@@ -3032,6 +3037,11 @@
                         "minLength": 1,
                         "maxLength": 256,
                         "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+                      },
+                      "effective_at_ms": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 9007199254740991
                       }
                     },
                     "required": [
@@ -4041,6 +4051,11 @@
                         "minLength": 1,
                         "maxLength": 256,
                         "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+                      },
+                      "effective_at_ms": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 9007199254740991
                       }
                     },
                     "required": [
@@ -4467,6 +4482,11 @@
                   "minLength": 1,
                   "maxLength": 256,
                   "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+                },
+                "effective_at_ms": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
                 }
               },
               "required": [

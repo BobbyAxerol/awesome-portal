@@ -400,6 +400,25 @@ describe("BE-P1 Manager dataset producer invariants: schema part and runtime par
       expect(validate(body),c.id).toBe(c.refused_by === "PRODUCER_ONLY");
     }
   });
+  it("UXM-07 WP-2: the optional per-metric effective_at_ms is a UTC-ms integer in both validators, ordered funds before budget before allocation, and absent where the source published none", () => {
+    const sample = load("fixtures/execution-manager-dataset.statement-times.synthetic.valid.json");
+    expect(sample.lane).toBe("TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT");
+    expect(both(sample.value)).toEqual({schema:true,runtime:true});
+    const m = sample.value.capital_statements[0].metrics;
+    expect(m.added_funds).not.toHaveProperty("effective_at_ms");
+    const when = (key:string) => m[key].effective_at_ms as number;
+    expect(when("initial_funds")).toBeLessThan(when("returned_capital"));
+    expect(when("returned_capital")).toBeLessThan(when("current_budget"));
+    expect(when("current_budget")).toBeLessThan(when("allocation"));
+    expect(when("allocation")).toBeLessThan(sample.value.as_of_ms);
+    // A budget is a limit: never above the net funded capital; allocated + headroom closes on it.
+    expect(BigInt(m.current_budget.value)).toBeLessThanOrEqual(BigInt(m.net_external_flows.value));
+    expect(BigInt(m.allocation.value) + BigInt(m.headroom.value)).toBe(BigInt(m.current_budget.value));
+    for (const bad of [-1, 1.5, "1", null, Number.MAX_SAFE_INTEGER + 1]) {
+      const body = clone(sample.value); body.capital_statements[0].metrics.initial_funds.effective_at_ms = bad;
+      expect(both(body), String(bad)).toEqual({schema:false,runtime:false});
+    }
+  });
   it("accepts the pinned-partition headline and a past-the-end empty page", () => {
     const pinned = rich(); pinned.items[1].metrics.net_pnl = clone(pinned.items[1].economic_partitions[1].metrics.net_pnl);
     expect(both(pinned)).toEqual({schema:true,runtime:true});

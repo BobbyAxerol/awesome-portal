@@ -390,6 +390,7 @@ export interface components {
                         provenance_refs: string[];
                         calculation_revision: string;
                         policy_revision: string;
+                        effective_at_ms?: number;
                     } & (unknown & unknown);
                 };
                 /** @description A partition appears once per list (identity: economic_domain, currency, basis, native_profile_ref; domain_proof_ref is evidence, not identity). A metric that names a currency names its partition's currency. uniqueItems here catches an exact repeat; a repeat of the identity with different metrics is refused by the producer (MANAGER_PARTITION_DUPLICATE) and by the reader, because JSON Schema cannot compare a property of two items. */
@@ -429,6 +430,7 @@ export interface components {
                             provenance_refs: string[];
                             calculation_revision: string;
                             policy_revision: string;
+                            effective_at_ms?: number;
                         } & (unknown & unknown);
                     };
                 }[];
@@ -492,6 +494,7 @@ export interface components {
                             provenance_refs: string[];
                             calculation_revision: string;
                             policy_revision: string;
+                            effective_at_ms?: number;
                         } & (unknown & unknown);
                     };
                 }[];
@@ -550,6 +553,7 @@ export interface components {
                         provenance_refs: string[];
                         calculation_revision: string;
                         policy_revision: string;
+                        effective_at_ms?: number;
                     } & (unknown & unknown);
                 };
             }[];
@@ -1009,6 +1013,7 @@ export interface components {
             provenance_refs: string[];
             calculation_revision: string;
             policy_revision: string;
+            effective_at_ms?: number;
         } & (unknown & unknown);
         ManagerDatasetRow: {
             row_key: string;
@@ -1067,6 +1072,7 @@ export interface components {
                     provenance_refs: string[];
                     calculation_revision: string;
                     policy_revision: string;
+                    effective_at_ms?: number;
                 } & (unknown & unknown);
             };
             /** @description A partition appears once per list (identity: economic_domain, currency, basis, native_profile_ref; domain_proof_ref is evidence, not identity). A metric that names a currency names its partition's currency. uniqueItems here catches an exact repeat; a repeat of the identity with different metrics is refused by the producer (MANAGER_PARTITION_DUPLICATE) and by the reader, because JSON Schema cannot compare a property of two items. */
@@ -1106,6 +1112,7 @@ export interface components {
                         provenance_refs: string[];
                         calculation_revision: string;
                         policy_revision: string;
+                        effective_at_ms?: number;
                     } & (unknown & unknown);
                 };
             }[];

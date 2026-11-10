@@ -170,6 +170,8 @@ interface MetricBase {
   provenanceRefs: readonly string[];
   calculationRevision: string;
   policyRevision: string;
+  /** The UTC time this figure took effect (a funding or return receipt, a budget approval, an allocation), when the source publishes one. `null` is "not published", never inferred. */
+  effectiveAtMs: UtcEpochMs | null;
 }
 
 export interface ManagerMetricValue extends MetricBase {
@@ -204,6 +206,8 @@ const METRIC_KEYS = [
   "value", "unit", "currency", "basis", "window", "denominator", "methodology_ref", "availability", "reason_code", "quality",
   "source_confidence", "provenance_refs", "calculation_revision", "policy_revision",
 ] as const;
+/** Optional keys of the metric: absent is allowed, present must be valid (additive since UXM-07 WP-2). */
+const METRIC_OPTIONAL_KEYS = ["effective_at_ms"] as const;
 
 /** The dataset's own `quality` (reasons maxItems 32) and the metric's (64) are the same shape. */
 export function readManagerQuality(raw: unknown, maxReasons: number): ManagerQuality | null {
@@ -230,7 +234,10 @@ export function readManagerQuality(raw: unknown, maxReasons: number): ManagerQua
  */
 export function readManagerMetric(raw: unknown): ManagerMetricRead | null {
   const metric = record(raw);
-  if (metric === null || !hasOnly(metric, METRIC_KEYS) || !hasAll(metric, METRIC_KEYS)) return null;
+  if (metric === null || !hasOnly(metric, [...METRIC_KEYS, ...METRIC_OPTIONAL_KEYS]) || !hasAll(metric, METRIC_KEYS)) return null;
+  // Schema `effective_at_ms`: optional UTC-ms integer. Present and invalid (a string, a fraction, a negative, null) voids the metric.
+  const effectiveAtMs = Object.prototype.hasOwnProperty.call(metric, "effective_at_ms") ? clockMs(metric.effective_at_ms) : null;
+  if (Object.prototype.hasOwnProperty.call(metric, "effective_at_ms") && (effectiveAtMs === null || !Number.isSafeInteger(metric.effective_at_ms))) return null;
 
   const availability = oneOf(metric.availability, MANAGER_AVAILABILITIES);
   const unit = managerText(metric.unit);
@@ -264,7 +271,7 @@ export function readManagerMetric(raw: unknown): ManagerMetricRead | null {
 
   const base: MetricBase = {
     unit, currency, basis, window, denominator: denominator === null ? null : denominator.exact, methodologyRef, quality,
-    sourceConfidence: confidence, provenanceRefs, calculationRevision, policyRevision,
+    sourceConfidence: confidence, provenanceRefs, calculationRevision, policyRevision, effectiveAtMs,
   };
 
   if (availability === "AVAILABLE") {

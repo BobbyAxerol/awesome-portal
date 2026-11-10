@@ -23,6 +23,8 @@ export const FIXTURE_ALL = "execution-manager-dataset.all-window.synthetic";
 export const FIXTURE_PARTITIONS = "execution-manager-dataset.partitions.synthetic";
 /** BE-P4: a live-environment dataset with one single-stage row (current_stage LIVE) and one Canary+Live row (current_stage null, MULTIPLE_ACTIVE_STAGES). */
 export const FIXTURE_LIFECYCLE_LIVE = "execution-manager-dataset.lifecycle.live.synthetic";
+/** UXM-07 WP-2: a capital statement whose lines state `effective_at_ms` (funds, return, budget, allocation), added funds with none. */
+export const FIXTURE_STATEMENT_TIMES = "execution-manager-dataset.statement-times.synthetic";
 /** FE-CAT-3: the Fleet ALL lens (`environment: ALL`): a Paper row and a Live row of one alpha in one currency, the Sandbox typed UNAVAILABLE, no total. */
 export const FIXTURE_ALL_ENVIRONMENTS = "execution-manager-dataset.all-environments.synthetic";
 /** FE-CAT-3: the negative cases of the ALL shape as operations on FIXTURE_ALL_ENVIRONMENTS. */
@@ -34,7 +36,7 @@ export const FIXTURE_METRIC = "execution-manager-metric.derived-reasons.syntheti
 export const FIXTURE_STAGE_TRANSITIONS = "execution-manager-dataset.lifecycle.transitions.synthetic";
 /** Codex ace3547ca (package 5): a Fund overview paged by alpha_id, with the group page and the group attribution. */
 export const FIXTURE_CONTRIBUTORS = "execution-manager-contributors.synthetic";
-export const DATASET_FIXTURES = [FIXTURE_EMPTY, FIXTURE_ROWS, FIXTURE_ALL, FIXTURE_PARTITIONS, FIXTURE_LIFECYCLE_LIVE, FIXTURE_ALL_ENVIRONMENTS, FIXTURE_STAGE_TRANSITIONS, FIXTURE_CONTRIBUTORS] as const;
+export const DATASET_FIXTURES = [FIXTURE_EMPTY, FIXTURE_ROWS, FIXTURE_ALL, FIXTURE_PARTITIONS, FIXTURE_LIFECYCLE_LIVE, FIXTURE_ALL_ENVIRONMENTS, FIXTURE_STAGE_TRANSITIONS, FIXTURE_CONTRIBUTORS, FIXTURE_STATEMENT_TIMES] as const;
 
 export const clone = <T,>(value: T): T => structuredClone(value);
 

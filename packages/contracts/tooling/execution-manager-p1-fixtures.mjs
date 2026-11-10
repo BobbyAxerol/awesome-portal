@@ -86,6 +86,26 @@ export function managerP1PartitionsSyntheticFixture(rows){
   return sample;
 }
 
+/** UXM-07 WP-2 positive example of the optional per-metric `effective_at_ms` on the capital statement (additive; absent = not published,
+ * never inferred). Derived from the partitions fixture, one USDT statement whose lines state WHEN each figure took effect, in the order the
+ * PM TS guide gives them: funding receipts, then the budget approval, then the allocation. Added funds carries NO time on purpose (the
+ * source published none), so the example also shows an absent field next to present ones. Every time is before `as_of_ms`. A budget is a
+ * LIMIT and is never larger than the net funded capital; allocated + headroom = budget. Synthetic; not a source receipt. */
+export function managerStatementTimesSyntheticFixture(partitions){
+  if(partitions.lane!==lane)throw new Error('The TEST_ONLY partitions fixture is required');
+  const sample=clone(partitions), body=sample.value, asOf=body.as_of_ms;
+  if(!Number.isSafeInteger(asOf) || asOf<500)throw new Error('as_of_ms leaves no room for earlier effective times');
+  const template=clone(body.capital_statements[0].metrics.balance_total);
+  const line=(value,effective)=>({...clone(template),value,denominator:null,methodology_ref:'TEST_ONLY:statement-times',
+    quality:{completeness:'COMPLETE',freshness:'FRESH',reasons:[]},source_confidence:'PROVISIONAL',
+    ...(effective===undefined?{}:{effective_at_ms:effective})});
+  const times={initial:asOf-800,returned:asOf-600,budget:asOf-500,allocation:asOf-400};
+  body.capital_statements=[{partition:body.capital_statements[0].partition,metrics:{
+    initial_funds:line('1000',times.initial),added_funds:line('0'),returned_capital:line('100',times.returned),
+    net_external_flows:line('900'),current_budget:line('900',times.budget),allocation:line('800',times.allocation),headroom:line('100')}}];
+  return sample;
+}
+
 /** Operations of the negative fixture on a JSON path of the positive example: set, delete, append, append_copy, set_copy. */
 export function applyManagerP1Ops(base,ops){
   const body=clone(base), at=path=>path.reduce((node,key)=>node[key],body);

@@ -10,7 +10,7 @@ import { amendManagerLifecycleSchemas, attachManagerLifecycleSynthetic,
   managerLifecycleLiveSyntheticFixture } from './execution-manager-lifecycle-semantics.mjs';
 import { managerAllEnvironmentsSyntheticFixture, managerAllEnvironmentsNegativeFixture, amendManagerAllSchemas } from './execution-manager-all-fixtures.mjs';
 import { managerP1NoFactsSyntheticOptions, attachManagerP1SyntheticOptions,
-  managerP1AllWindowSyntheticFixture, managerP1PartitionsSyntheticFixture, managerP1InvariantNegativeFixture,
+  managerP1AllWindowSyntheticFixture, managerP1PartitionsSyntheticFixture, managerStatementTimesSyntheticFixture, managerP1InvariantNegativeFixture,
   applyManagerP1Ops } from './execution-manager-p1-fixtures.mjs';
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const sourceRoot = resolve(root, '../../apps/control-api/src/execution-v2');
@@ -193,6 +193,9 @@ for(const [name,context] of [
     const partitions=managerP1PartitionsSyntheticFixture(sample);
     contract.managerDatasetResponse.parse(partitions.value);
     outputs['fixtures/execution-manager-dataset.partitions.synthetic.valid.json']=partitions;
+    const statementTimes=managerStatementTimesSyntheticFixture(partitions);
+    contract.managerDatasetResponse.parse(statementTimes.value);
+    outputs['fixtures/execution-manager-dataset.statement-times.synthetic.valid.json']=statementTimes;
     const negative=managerP1InvariantNegativeFixture();
     for(const c of negative.cases){
       const refused=contract.managerDatasetResponse.safeParse(applyManagerP1Ops(partitions.value,c.ops));

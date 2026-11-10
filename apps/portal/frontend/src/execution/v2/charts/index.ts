@@ -51,7 +51,7 @@
  * (the one label path), {@link domainOfSeries} (the window to share between an
  * EquityPanel and its ribbon), {@link CHART_MARGIN} (the margins both use).
  */
-export { CapitalFlow, type CapitalFlowProps, type FlowBlock, type FlowEdge, type FlowNode } from "./CapitalFlow";
+export { CapitalFlow, type CapitalFlowProps, type FlowBlock, type FlowEdge, type FlowNode, type FlowTime } from "./CapitalFlow";
 export { ChartTools, type ChartToolsProps } from "./ChartTools";
 export { chartTableModel, type ChartTableCell, type ChartTableColumn, type ChartTableModel } from "./chartTable";
 export { ChartStateFlags, ChartUnavailable, type ChartUnavailableProps } from "./ChartStateView";

@@ -6,6 +6,17 @@
 import { readChartDecimal, toGeometry } from "./decimal";
 import type { ExactUnit } from "../../formatExact";
 
+/**
+ * When a flow took effect, as the caller formatted it (the chart owns no clock and no time zone). `text` is whole (the table and the title),
+ * `short` is the caption under a node in the diagram, `null` when the diagram draws none (an absence is a table fact, not a caption).
+ */
+export interface FlowTime {
+  /** The whole time, or the words for its absence ("Not published"): the table's Time cell and the node's title. */
+  readonly text: string;
+  /** The date caption drawn under the node; `null` draws none. */
+  readonly short: string | null;
+}
+
 export interface FlowNode {
   /** Stable key; edges refer to it. */
   readonly id: string;
@@ -25,6 +36,8 @@ export interface FlowNode {
   readonly hatched?: boolean;
   /** Extra line in the table and the readout. Must not carry an amount if the chart may be unavailable. */
   readonly note?: string;
+  /** When this node's amount took effect. Absent key = the node has no time to state (NAV, headroom). */
+  readonly time?: FlowTime;
 }
 
 export interface FlowEdge {
@@ -40,6 +53,8 @@ export interface FlowEdge {
   readonly value: string | null;
   /** Words on a limit connector. Default "Limit, not cash". */
   readonly label?: string;
+  /** When this flow (or limit) took effect; printed in the table's Time column. Never drawn on the band. */
+  readonly time?: FlowTime;
 }
 
 export interface FlowBlock {
@@ -57,6 +72,8 @@ export interface FlowBlock {
 
 export const NODE_W = 12;
 export const SLOT_MIN = 32;
+/** A node that carries a time caption needs a third text line. */
+export const SLOT_TIMED = 46;
 export const NODE_PAD = 12;
 export const HEAD_H = 30;
 export const BLOCK_GAP = 28;
@@ -144,7 +161,7 @@ export function layoutFlow(blocks: readonly FlowBlock[], unit: ExactUnit, struct
         const numeric = structureOnly ? null : amountOf(node.value, unit);
         const hasValue = numeric !== null;
         const h = structureOnly ? 22 : hasValue ? (numeric === 0 ? 3 : Math.max(MIN_BAR, numeric * k)) : 18;
-        const slot = Math.max(h, SLOT_MIN);
+        const slot = Math.max(h, node.time?.short && !structureOnly ? SLOT_TIMED : SLOT_MIN);
         nodes.push({
           node,
           col,

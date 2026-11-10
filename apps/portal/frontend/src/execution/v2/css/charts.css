@@ -385,6 +385,15 @@
   stroke-linejoin: round;
 }
 .exec-flow-val[data-na="true"] { fill: var(--ink-faint); }
+.exec-flow-time {
+  font: var(--exec-font-label);
+  fill: var(--ink-faint);
+  paint-order: stroke;
+  stroke: var(--paper-sunken);
+  stroke-width: 4px;
+  stroke-linejoin: round;
+}
+.exec-c2-time { font: var(--exec-font-id); white-space: nowrap; }
 .exec-flow-rect { fill: var(--series); stroke: var(--series); }
 .exec-flow-node[data-tone="series-2"] .exec-flow-rect { fill: var(--series-2); stroke: var(--series-2); }
 .exec-flow-node[data-tone="series-3"] .exec-flow-rect { fill: var(--series-3); stroke: var(--series-3); }

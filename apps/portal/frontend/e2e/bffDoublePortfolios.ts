@@ -366,6 +366,9 @@ function derivation(id: string, environment: Env, data: Row, stateAsked: "READY"
   };
 }
 
+/** The approved budget of the positive world for allocated capital `allocated`: a limit above it, rounded up to the next ten thousand (the same rule as `worldBudgetOf` in fixture-bff/review-manager.ts, which states the capital statement). */
+const worldBudgetCents = (allocated: string): string => fromCents(((toCentsOf(allocated) * 5n / 4n / 1_000_000n) + 1n) * 1_000_000n);
+
 function portfolioCapital(id: string, environment: Env): BffAnswerPortfolios {
   const portfolio = (name: string, base: string) => ({ name, base_currency: base, state: "ACTIVE", created_at: "2026-07-02T08:00:00Z", updated_at: AS_OF });
   // WORLD: a native portfolio's capital in one environment is the world's own: Σ allocation of its deployments there, the approved budget above it, and the balance
@@ -375,7 +378,7 @@ function portfolioCapital(id: string, environment: Env): BffAnswerPortfolios {
     const item = LIST_ITEMS.find((entry) => (entry as { portfolio_id?: string }).portfolio_id === id) as { name?: string; base_currency?: string } | undefined;
     const ccy = worldBook[0]!.ccy;
     const allocated = worldBook.reduce((acc, d) => addExact(acc, d.allocation), "0");
-    const budget = fromCents(((toCentsOf(allocated) * 5n / 4n / 1_000_000n) + 1n) * 1_000_000n);
+    const budget = worldBudgetCents(allocated);
     const accounts = [...new Set(worldBook.map((d) => d.account))].filter((a) => BALANCES[a] !== undefined);
     const sum = (field: "total" | "free" | "locked") => accounts.reduce((acc, a) => addExact(acc, BALANCES[a]![field]), "0");
     return ok(derivation(id, environment, {
@@ -427,7 +430,7 @@ function portfolioCapital(id: string, environment: Env): BffAnswerPortfolios {
     const complete = published.length === accounts.length;
     return ok(derivation(id, environment, {
       portfolio: portfolio(generated.name, generated.base),
-      allocation_by_currency: allocated.map(({ currency, value }) => ({ currency, population: String(deps.filter((d) => d.ccy === currency).length), allocated_capital: value, max_capital: addExact(value, value) })),
+      allocation_by_currency: allocated.map(({ currency, value }) => ({ currency, population: String(deps.filter((d) => d.ccy === currency).length), allocated_capital: value, max_capital: isPositiveMode() ? worldBudgetCents(value) : addExact(value, value) })), // UXM-07 WP-2: Max is the approved budget of the statement (never a second limit); the former 2x is the scenario variety
       account_balance_by_currency: balances.map(({ currency, value }) => {
         const mine = published.filter((a) => BALANCES[a]!.ccy === currency);
         const sum = (field: "free" | "locked") => mine.reduce((acc, a) => addExact(acc, BALANCES[a]![field]), "0");
