@@ -12,7 +12,9 @@ import type { OverviewDoubleVariants } from "../frontend/e2e/bffDoubleOverview";
 import type { UsersDoubleVariant } from "../frontend/e2e/bffDoubleUsers";
 import type { BffRequest } from "../frontend/e2e/bffAnswerer";
 import { resetCommandStory, storyRecords } from "./command-story";
+import { WORLD_NOW_MS } from "../frontend/e2e/bffWorld";
 import { transformReviewBody } from "./review-relations";
+import { rebaseTimes } from "./time-rebase";
 import { healsDoubles, SCENARIO_TRAITS, type FixtureScenario } from "./scenario";
 
 export interface ScenarioVariants {
@@ -61,7 +63,11 @@ function healBody(value: unknown, depth = 0): unknown {
   if (Array.isArray(value)) return value.map((entry) => healBody(entry, depth + 1));
   const record = value as Record<string, unknown>;
   if (record.schema_version === "execution.derivation.source-health.v1" && Array.isArray(record.profiles)) {
-    return { ...record, state: "AVAILABLE", profiles: (record.profiles as Record<string, unknown>[]).map((profile) => ({ ...profile, state: "AVAILABLE", reason_code: null, availability: "AVAILABLE", freshness: "FRESH", completeness: "COMPLETE" })) };
+    // The canonical envelope carries its own 9 Sep read time. Left there, it is the latest content instant of the command-center envelope that embeds it, and the
+    // time rebase then anchors on IT and shifts the whole envelope by the wrong distance (the Overview read '23 Oct'). Carry it to the world clock first.
+    const read = typeof record.read_at === "string" ? Date.parse(record.read_at) : Number.NaN;
+    const aligned = (Number.isFinite(read) ? rebaseTimes(record, WORLD_NOW_MS - read) : record) as Record<string, unknown>;
+    return { ...aligned, state: "AVAILABLE", profiles: (aligned.profiles as Record<string, unknown>[]).map((profile) => ({ ...profile, state: "AVAILABLE", reason_code: null, availability: "AVAILABLE", freshness: "FRESH", completeness: "COMPLETE" })) };
   }
   let changed = false;
   const out: Record<string, unknown> = {};
