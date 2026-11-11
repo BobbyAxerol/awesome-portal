@@ -153,6 +153,7 @@ export function ContributorsBody({ view, linkOf, pager }: { view: ContributorsVi
           })}
         </tbody>
       </table></div>
+      {more === "end" || more === "both" ? <p className="exec-cards-hint" data-testid="contrib-scroll-hint">Scroll sideways for the other columns.</p> : null}
       {view.groups.length > CONTRIBUTORS_SHOWN ? (
         <p className="exec-ov-note">
           {showAll ? `All ${view.groups.length} groups are shown.` : `The first ${CONTRIBUTORS_SHOWN} of ${view.groups.length} groups, in the server's order.`}{" "}

@@ -436,3 +436,6 @@ a.exec-ov-what-title {
   .exec-ov-contrib .exec-ov-contrib-who { overflow-wrap: anywhere; }
   .exec-ov-contrib .exec-ov-contrib-part { white-space: normal; overflow-wrap: normal; min-width: 5.5rem; }
 }
+
+/* The contributors table scrolls inside its card at phone width (it is a table, not cards): the sentence under it stays visible there. */
+.exec-ov-contrib-wrap + .exec-cards-hint { display: block; }
