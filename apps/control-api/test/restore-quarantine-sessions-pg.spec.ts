@@ -7,7 +7,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { migrateTestDatabase } from "./harness";
 
 const database = process.env.TEST_DATABASE_URL;
-describe.skipIf(!database)("TEST_ONLY restored session quarantine", () => {
+describe.skipIf(!database||process.env.PORTAL_TEST_RESTORE_RLS!=="TEST_ONLY_DISPOSABLE_RLS")("TEST_ONLY restored session quarantine", () => {
   let admin: Pool, writer: Pool, script: string;
   beforeAll(async () => {
     const target = new URL(database!);

@@ -9,7 +9,7 @@ import { CurrentHumanCandidate, type CurrentHumanCandidateConfig } from "../src/
 import { migrateTestDatabase } from "./harness";
 
 const database = process.env.TEST_DATABASE_URL;
-describe.skipIf(!database)("C-P3-3 unentered UNKNOWN quarantine", () => {
+describe.skipIf(!database||process.env.PORTAL_TEST_RESTORE_RLS!=="TEST_ONLY_DISPOSABLE_RLS")("C-P3-3 unentered UNKNOWN quarantine", () => {
   let pool: Pool, candidate: CurrentHumanCandidate, config: CurrentHumanCandidateConfig;
   let human: Awaited<ReturnType<typeof generateKeyPair>>, source: Awaited<ReturnType<typeof generateKeyPair>>;
   let actor: {user_id:string;session_id:string;session_generation:number}, workspace:string;

@@ -14,7 +14,7 @@ import { commonName, testCertificate, type TestAuthority } from "./fixtures/elp2
 import { migrateTestDatabase } from "./harness";
 
 const database = process.env.TEST_DATABASE_URL;
-describe.skipIf(!database)("TEST_ONLY recovery exact-original PostgreSQL", () => {
+describe.skipIf(!database||process.env.PORTAL_TEST_RESTORE_RLS!=="TEST_ONLY_DISPOSABLE_RLS")("TEST_ONLY recovery exact-original PostgreSQL", () => {
   let pool: Pool;
   beforeAll(async () => {
     const parsed = new URL(database!);

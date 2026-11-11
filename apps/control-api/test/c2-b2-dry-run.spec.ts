@@ -1,6 +1,9 @@
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { spawnSync } from "node:child_process";
+
+// The byte-parity test shells out to python3, which the Docker node cell does not have; it runs wherever python3 exists.
+const hasPython3 = spawnSync("python3", ["--version"]).error === undefined;
 import { describe, expect, it } from "vitest";
 import { assembleC2B2DryRun } from "../src/execution-v2/c2-b2-dry-run";
 
@@ -28,7 +31,7 @@ const bytes = (value: unknown) => Buffer.from(JSON.stringify(value));
 const hash = (data: Uint8Array) => createHash("sha256").update(data).digest("hex");
 
 describe("C2 B2 unsigned, unauthorized dry-run", () => {
-  it("copies TS arrays exactly and produces Python ensure_ascii/sort_keys bytes", () => {
+  it.skipIf(!hasPython3)("copies TS arrays exactly and produces Python ensure_ascii/sort_keys bytes", () => {
     const input = sample(), raw = bytes(input);
     const output = assembleC2B2DryRun(raw, hash(raw), fields());
     expect(output.state).toBe("DRY_RUN_NOT_AUTHORIZED");

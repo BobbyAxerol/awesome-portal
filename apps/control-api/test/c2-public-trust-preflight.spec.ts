@@ -1,13 +1,14 @@
 /** TEST_ONLY CA and keys live solely inside an owned temporary directory. */
 import { execFileSync } from "node:child_process";
 import { createHash, generateKeyPairSync, X509Certificate } from "node:crypto";
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { preflightC2PublicTrust, type C2PublicTrustInput } from "../src/execution-v2/c2-public-trust-preflight";
 
-describe("C2 public trust preflight is not installation", () => {
+// Needs /usr/bin/openssl (absent from the Docker node cell); runs wherever it exists.
+describe.skipIf(!existsSync("/usr/bin/openssl"))("C2 public trust preflight is not installation", () => {
   let cell: string, input: C2PublicTrustInput, otherCsr: Buffer, shortClient: Buffer, foreignCa: Buffer, badServer: Buffer, badClient: Buffer, badClientCsr: Buffer;
   const run = (...args: string[]) => execFileSync("/usr/bin/openssl", args, { cwd: cell, stdio: "ignore", timeout: 10_000 });
   const read = (name: string) => readFileSync(join(cell, name));

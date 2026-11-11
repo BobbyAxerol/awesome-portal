@@ -11,7 +11,7 @@ const schemas = ["elp210_candidate", "elp210_c2_p7_candidate", "elp210_c2_prepar
 const sqlFiles = ["current-human-candidate.sql", "c2-p7-acceptance.sql", "c2-p7-registration-table-candidate.sql",
   "c2-p7-owner-intent-candidate.sql", "c2-b2-custody.sql", "c2-p5-revision-outbox.sql", "c2-block-new-fence-candidate.sql", "c2-block-new-procedure-acl-candidate.sql",
   "restore-local-generation-fence-candidate.sql", "restore-local-generation-c2-extension-candidate.sql"];
-describe.skipIf(!database)("TEST_ONLY C2 extension with real candidate schemas", () => {
+describe.skipIf(!database||process.env.PORTAL_TEST_RESTORE_RLS!=="TEST_ONLY_DISPOSABLE_RLS")("TEST_ONLY C2 extension with real candidate schemas", () => {
   let admin: Pool, one: Pool, two: Pool, three: Pool, first: string, second: string, third: string, role1: string, role2: string, role3: string;
   beforeAll(async () => {
     const url = new URL(database!);

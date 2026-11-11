@@ -9,7 +9,7 @@ import { migrateTestDatabase } from "./harness";
 
 const database = process.env.TEST_DATABASE_URL;
 const tables = ["authority", "events", "leases", "mutation_events", "mutations", "native_read_events", "native_read_obligations"];
-describe.skipIf(!database)("TEST_ONLY local generation fence, never a cutover fence", () => {
+describe.skipIf(!database||process.env.PORTAL_TEST_RESTORE_RLS!=="TEST_ONLY_DISPOSABLE_RLS")("TEST_ONLY local generation fence, never a cutover fence", () => {
   let admin: Pool, one: Pool, two: Pool, first: string, second: string;
   beforeAll(async () => {
     const parsed = new URL(database!);
@@ -221,7 +221,7 @@ describe.skipIf(!database)("TEST_ONLY local generation fence, never a cutover fe
   }, 30000);
 });
 
-describe.skipIf(!database)("TEST_ONLY local fence on real candidate schema", () => {
+describe.skipIf(!database||process.env.PORTAL_TEST_RESTORE_RLS!=="TEST_ONLY_DISPOSABLE_RLS")("TEST_ONLY local fence on real candidate schema", () => {
   let admin: Pool, writer: Pool, writerName: string;
   beforeAll(async () => {
     const parsed = new URL(database!);

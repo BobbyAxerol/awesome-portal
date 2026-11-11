@@ -38,6 +38,10 @@ vi.mock("../src/execution-v2/command-status-runtime", () => ({
 vi.mock("../src/execution-v2/command-status-bootstrap", () => ({ prepareCommandStatusApplication: h.prepareStatusApplication }));
 vi.mock("../src/execution-v2/native-root-runtime", () => ({ nativeRootRuntimeReference: h.rootReference,
   prepareNativeRootRuntime: h.prepareRoot, prepareNativeRootApplication: h.prepareRootApplication }));
+// main.ts also reads the C2 P7 review selection; this spec is about the native Core boot, so P7 is not selected (no reference), as in an ordinary boot.
+vi.mock("../src/execution-v2/c2-p7-review-runtime", () => ({
+  c2P7ReviewRuntimeReference: () => null, assertC2P7ReviewSchemaCommissioned: () => undefined,
+  prepareC2P7ReviewRuntime: async () => { throw new Error("TEST_ONLY C2 P7 runtime is not selected here"); } }));
 
 const optionalReferences = () => [h.currentViewReference, h.financialReference, h.currentReference, h.statusReference, h.rootReference];
 const optionalPreparers = () => [h.prepareCurrentView, h.prepareFinancial, h.prepareFinancialApplication,

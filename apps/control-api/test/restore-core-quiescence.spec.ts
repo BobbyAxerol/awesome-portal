@@ -45,6 +45,10 @@ async function fixture() {
     if (sql.startsWith("UPDATE elp210_candidate.leases SET phase=$2,terminal_receipt_digest=$3")) {
       state.phase = values[1] as string; state.terminal = values[2] as string | null; return { rows: [] };
     }
+    // The drain census also proves the two underlying tables have no row-level security, and whether the C2 delivery schema is installed. This fake
+    // models a candidate without the delivery schema (namespace and table both absent, which is the consistent "not installed" answer).
+    if (sql.includes("AS safe FROM pg_catalog.pg_class")) return { rows: [{ safe: 2 }] };
+    if (sql.includes("to_regnamespace('elp210_c2_delivery_candidate')")) return { rows: [{ namespace_present: false, present: false }] };
     if (["BEGIN", "COMMIT", "ROLLBACK"].includes(sql) || sql.startsWith("SET LOCAL")) return { rows: [] };
     throw new Error(`unexpected TEST_ONLY SQL: ${sql}`);
   };

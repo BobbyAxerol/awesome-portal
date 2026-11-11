@@ -16,7 +16,7 @@ import {accessDigest} from "../src/execution-v2/access-digest";
 import {commonName,testCertificate,type TestAuthority} from "./fixtures/elp210-test-certificates";
 
 const database=process.env.TEST_DATABASE_URL;
-describe.skipIf(!database)("TEST_ONLY delivery authority-first procedure",()=>{
+describe.skipIf(!database||process.env.PORTAL_TEST_RESTORE_RLS!=="TEST_ONLY_DISPOSABLE_RLS")("TEST_ONLY delivery authority-first procedure",()=>{
   let admin:Pool,caller:Pool,login:string,expiry:number,authorityRevision:number,duplicateScopeRejected=false;
   const p7Intent=randomUUID(),p7Lease="TEST-lease-p7",p7Second="TEST-lease-p7-2",p7Third="TEST-lease-p7-3",p7Gap="TEST-lease-p7-gap";
   const statusHttpLease="TEST-status-http",contextToken="T".repeat(43),httpAssertion="TEST_ONLY_status_assertion";

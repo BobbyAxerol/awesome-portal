@@ -1,6 +1,6 @@
 import { execFileSync } from "node:child_process";
 import { createHash, createPublicKey, randomBytes, X509Certificate } from "node:crypto";
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { exportSPKI, generateKeyPair, importJWK, jwtVerify, SignJWT } from "jose";
@@ -101,7 +101,8 @@ describe("unmounted C2 issuer/public JWKS composition", () => {
   });
 });
 
-describe("reverse transport rejects mismatched C2 trust before creating a server", () => {
+// Needs /usr/bin/openssl (absent from the Docker node cell); runs wherever it exists.
+describe.skipIf(!existsSync("/usr/bin/openssl"))("reverse transport rejects mismatched C2 trust before creating a server", () => {
   let cell: string, ca: Buffer, serverCert: Buffer, serverKey: Buffer, clientCert: Buffer, clientCsr: Buffer, otherCsr: Buffer;
   const run = (...args: string[]) => execFileSync("/usr/bin/openssl", args, { cwd: cell, stdio: "ignore", timeout: 10_000 });
   const read = (name: string) => readFileSync(join(cell, name));

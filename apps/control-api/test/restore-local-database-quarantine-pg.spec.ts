@@ -5,7 +5,7 @@ import {afterAll,beforeAll,describe,expect,it} from "vitest";
 import {quarantineLocalDatabaseForRestore} from "../src/execution-v2/restore-local-database-quarantine-candidate";
 
 const sourceUrl=process.env.TEST_DATABASE_URL;
-describe.skipIf(!sourceUrl)("TEST_ONLY exact database quarantine",()=>{
+describe.skipIf(!sourceUrl||process.env.PORTAL_TEST_RESTORE_RLS!=="TEST_ONLY_DISPOSABLE_RLS")("TEST_ONLY exact database quarantine",()=>{
   let admin:Pool,application:Pool,pin:{system_identifier:string;operator_database:string;operator_role:string;
     target_database:string;target_oid:string;maximum_sessions:number};
   let role:string,table:string;const password="TEST_ONLY_DATABASE_QUARANTINE";

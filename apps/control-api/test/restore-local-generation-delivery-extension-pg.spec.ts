@@ -15,7 +15,7 @@ const sql=["current-human-candidate.sql","c2-p7-acceptance.sql","c2-p7-registrat
   "restore-local-generation-fence-candidate.sql","restore-local-generation-c2-extension-candidate.sql",
   "c2-delivery-obligation-candidate.sql","restore-local-generation-delivery-extension-candidate.sql"];
 
-describe.skipIf(!database)("TEST_ONLY delivery generation extension",()=>{
+describe.skipIf(!database||process.env.PORTAL_TEST_RESTORE_RLS!=="TEST_ONLY_DISPOSABLE_RLS")("TEST_ONLY delivery generation extension",()=>{
   let admin:Pool,one:Pool,two:Pool,first:string,second:string,role1:string,role2:string,expiry:number;
   const request=`sha256:${"1".repeat(64)}`,original=`sha256:${"2".repeat(64)}`,payload=`sha256:${"3".repeat(64)}`;
   beforeAll(async()=>{

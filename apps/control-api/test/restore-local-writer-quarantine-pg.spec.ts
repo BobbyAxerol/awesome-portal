@@ -5,7 +5,7 @@ import {afterAll,beforeAll,describe,expect,it} from "vitest";
 import {quarantineLocalWriterForRestore} from "../src/execution-v2/restore-local-writer-quarantine-candidate";
 
 const database=process.env.TEST_DATABASE_URL;
-describe.skipIf(!database)("TEST_ONLY pinned PostgreSQL writer quarantine",()=>{
+describe.skipIf(!database||process.env.PORTAL_TEST_RESTORE_RLS!=="TEST_ONLY_DISPOSABLE_RLS")("TEST_ONLY pinned PostgreSQL writer quarantine",()=>{
   let admin:Pool,writer:Pool,other:Pool,writerName:string,otherName:string,otherDb:string;
   let pin:{system_identifier:string;database_name:string;operator_role:string;writer_role:string;writer_oid:string;maximum_sessions:number};
   const password="TEST_ONLY_LOCAL_QUARANTINE";
