@@ -7,6 +7,7 @@
  * the disclosure; an UNAVAILABLE one prints `Not available` with the closed reason in words and the code behind it. Nothing here is
  * summed: the counts sit side by side and the only total on the screen is the dataset's own row count of the page line.
  */
+import { createPortal } from "react-dom";
 import { GapWhy, NaWhy } from "../../blocks";
 import { formatInstant } from "../../boundary";
 import { Flag } from "../../Flag";
@@ -17,7 +18,8 @@ import "./partitionFigures.css";
 
 const EPOCH_DAY_MS = 86_400_000;
 
-export function FleetEnvironmentCoverage({ coverage }: { coverage: readonly ManagerEnvironmentCoverage[] }) {
+export function FleetEnvironmentCoverage({ coverage, noteHost = null }: { coverage: readonly ManagerEnvironmentCoverage[]; /** The Notes disclosure on the Fleet page: the sentence about environments is drawn there when it exists. */ noteHost?: HTMLElement | null }) {
+  const note = <p className="exec-fleet-env-note">Each environment is separate: Real-funded, Paper and Sandbox figures are never added together or converted.</p>;
   return (
     <section className="exec-fleet-envs" aria-label="Environments in this view" data-testid="env-coverage">
       <ul role="list" className="exec-fleet-envlist">
@@ -38,7 +40,7 @@ export function FleetEnvironmentCoverage({ coverage }: { coverage: readonly Mana
           );
         })}
       </ul>
-      <p className="exec-fleet-env-note">Each environment is separate: Real-funded, Paper and Sandbox figures are never added together or converted.</p>
+      {noteHost === null ? note : createPortal(note, noteHost)}
     </section>
   );
 }

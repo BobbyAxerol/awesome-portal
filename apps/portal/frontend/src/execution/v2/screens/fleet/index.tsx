@@ -34,7 +34,8 @@
  * Owner and Health choices: the whole authorized population when the dataset published it (a group list over the whole filtered
  * query), otherwise the rows loaded so far, worded as such, with a typed value that the server filters on (`useFleetOptions`).
  */
-import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { useSearchParams } from "react-router-dom";
 
 import type { ExecutionApi } from "../../../api/ports";
@@ -197,6 +198,7 @@ export default function FleetScreen({ api, workspaceId, streamFlag = FLEET_STREA
   // The Notes disclosure: the explanatory sentences of the page, gathered under one line (the table-side ones are portalled into this host).
   const [notesOpen, setNotesOpen] = useState(false);
   const [notesHost, setNotesHost] = useState<HTMLElement | null>(null);
+  const inNotes = (node: ReactNode): ReactNode => (notesHost === null ? node : createPortal(node, notesHost));
   const hiddenDataset = useMemo(() => new Set((params.get("dhide") ?? "").split(",").map((part) => part.trim()).filter(Boolean)), [params]);
   const shownOptional = useMemo(() => parseShownOptional(params.get(OPTIONAL_SHOWN_PARAM)), [params]);
   // The partitions the loaded rows publish (kept while filtering): the Basis choices, and the partition a money order or range pins.
@@ -955,12 +957,12 @@ export default function FleetScreen({ api, workspaceId, streamFlag = FLEET_STREA
                 />
               ) : (
                 <>
-                  {allMode && dataset.first && dataset.first.environmentCoverage ? <FleetEnvironmentCoverage coverage={dataset.first.environmentCoverage} /> : null}
-                  {moneyLines.length > 0 ? (
+                  {allMode && dataset.first && dataset.first.environmentCoverage ? <FleetEnvironmentCoverage coverage={dataset.first.environmentCoverage} noteHost={notesHost} /> : null}
+                  {moneyLines.length > 0 ? inNotes(
                     <p className="exec-fleet-note" data-testid="money-provenance">
                       Money columns: one figure per economic partition, never added across partitions or environments
                       <GapWhy name="Where the money columns come from" rows={moneyLines} next={null} />
-                    </p>
+                    </p>,
                   ) : null}
                   {dataset.last && dataset.last.groups.length > 0 ? (
                     <ul className="exec-fleet-chips" role="list" aria-label="Groups" data-testid="dataset-groups">
@@ -971,10 +973,10 @@ export default function FleetScreen({ api, workspaceId, streamFlag = FLEET_STREA
                       ))}
                     </ul>
                   ) : null}
-                  {dataset.last && dataset.last.groups.length > 0 ? (
+                  {dataset.last && dataset.last.groups.length > 0 ? inNotes(
                     <p className="exec-fleet-note" data-testid="group-note">
                       Group counts are rows (alpha versions in a portfolio) over the whole filtered result, not the loaded page. A stage group is a membership: an alpha in two stages is in both, so groups are never added into a total.
-                    </p>
+                    </p>,
                   ) : null}
                   {boardView ? (
                     datasetRows.length === 0 ? emptyBlock : (

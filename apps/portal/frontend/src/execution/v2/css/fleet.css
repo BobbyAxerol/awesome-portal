@@ -533,6 +533,34 @@ a.exec-fleet-open {
   }
 }
 
+/* The options behind "Filters and options" at every width, and the Notes line: the controls that used to spread over three rows and five paragraphs.
+ * Closed, they leave the page and the tab order; open, they wrap like the bar always did. */
+.exec-fleet-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+  min-width: 0;
+}
+.exec-fleet-filters[hidden],
+.exec-fleet-notes[hidden] {
+  display: none;
+}
+.exec-fleet-notes {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+.exec-fleet-notesline {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-3);
+  align-items: baseline;
+  font: var(--exec-font-meta);
+  color: var(--ink-soft);
+}
+
 /* Board (hi-fi modules/board.js): the loaded rows, one lane per stage in spine order. Tokens only. */
 .exec-fleet-board-note {
   margin: 0;
