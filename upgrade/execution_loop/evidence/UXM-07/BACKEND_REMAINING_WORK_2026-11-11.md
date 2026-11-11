@@ -144,3 +144,19 @@ Open and not Claude's to close: Edge and TS data grants, win rate and drawdown f
 | R-MAN (V1 `runtime-manifest` for a caller without a source-workspace grant) | **No change; the V1 route stays workspace-bound.** The route's own comment (`execution/runtime-manifest.controller.ts` lines 49 to 52) says the legacy DTO mixes catalogue evidence with runtime configuration, business-read permission cannot authorize the technical part, and an old schema must not be silently redacted into a different success body. The static catalogue part already has its own public route (`contract-authority`). | The frontend already degrades correctly: `useExecutionRuntime.ts` falls back to `DEFAULT_PAGE_BOUNDS` and labels the source `FRONTEND_DEFAULT` instead of failing a screen |
 | R-A (`view_of_deployment_id` on room identity, incident and queue row) | **Declined.** The request itself states the variants are a fixture device ("the real API has no variants"). A published field with no possible real producer would only widen three contracts. The fixture BFF keeps resolving a variant id to its base. | `CLAUDE_TO_CODEX_OPEN_REQUESTS_2026-10-29.md`, R-A "Actual" and "Fallback" |
 | R-B (`blocker_summary` and `blocker_count` on the gate evidence frame) | **Already delivered.** The Live parent body carries both with the rule "count 0 if and only if summary null" (`governance/live-parent.contract.ts` line 9, schema `governance-live-decision-review.v1`); the frontend reader accepts it (`readers/governanceParents.ts` line 1255) and `cockpit/EvidenceFrame.tsx` line 990 prints the gate's own blocker line instead of only the generic sentence. | the three locators above |
+
+## I. Before and after of the capital rule, `pf_scale_006` (UI adjustment point 2)
+
+Source of "before": `apps/portal/fixture-bff/review-manager.ts` at `2faa8968f` (positive world branch: `initial_funds: opening`, `returned_capital: "0"`, `current_budget` = the world budget, a limit above allocated capital rounded up to the next ten thousand; no effective time on any figure). Source of "after": the same function today (UXM-07 WP-2) and the live lane measured on 11 Nov.
+
+| Figure (USDT) | Before | After | Why |
+| --- | --- | --- | --- |
+| Allocated (current) | 42,500.75 | 42,500.75 | unchanged: `dep_scale_015` 40,000.25 plus `dep_scale_040` 2,500.50 |
+| Approved budget | 60,000.00 | 60,000.00 | a **limit**, not cash (labelled "Limit, not cash" on the diagram) |
+| Initial funds | **42,500.75** (it was the sum of allocations) | **60,000.00** | the owner's complaint: initial funds below the approved budget made no sense. The PM TS guide (11.1) and the Manager UX guide (6.3) say a budget is a limit over the capital that was funded: allocated plus headroom equals the budget, and funds never sit below it |
+| Returned capital | 0.00 | 17,499.25 | the unallocated surplus is returned: initial minus allocated |
+| Headroom | 17,499.25 | 17,499.25 | budget minus allocated |
+| NAV | 42,659.41 | 42,659.41 | now closes by arithmetic: 60,000.00 + 0.00 - 17,499.25 + 158.66 net PnL |
+| Time per flow | none (no figure carried an effective time) | Initial funds 1 Aug, Returned 4 Aug, Approved budget 16 Aug, `dep_scale_015` 1 Oct, `dep_scale_040` 2 Oct; a Time column and an "Allocated at" column; figures with no receipt of their own (NAV, headroom, net external flows, recalling) read "Not published" | optional `effective_at_ms` per metric and `allocation_effective_at_ms` per child (contract change), ordered as the PM TS guide orders a portfolio's life: funds in and returned, then the budget approval, then the allocations; "Times are UTC, the effective time each source publishes, none inferred" |
+
+The live lane at 15:12Z (rebuilt at the tip) shows the "after" column; the screenshot of the diagram and the ledger (six rows with UTC times) was taken from `https://research-portal.primusspark.com/deployments/portfolios/pf_scale_006?tab=allocations` on the lane.
