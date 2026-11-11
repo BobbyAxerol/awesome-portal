@@ -1087,7 +1087,7 @@ describe("purpose-specific current-requester command STATUS authority",()=>{
   it("counts and bounds held STATUS revalidations during shutdown",async()=>{
     const f=setup(),p=await f.authority.prepare(f.input,f.body);
     await f.authority.issue(p.original_context,f.issue);
-    let release!:()=>void;const held=new Promise<void>(resolve=>{release=resolve;});
+    let release!:()=>void;const held=new Promise<undefined>(resolve=>{release=()=>resolve(undefined);});
     f.candidate.revalidateIssue.mockImplementation(()=>held);
     const retries=Array.from({length:16},()=>f.authority.issue(p.original_context,f.issue).catch(error=>error));
     await vi.waitFor(()=>expect(f.candidate.revalidateIssue).toHaveBeenCalledTimes(17));

@@ -182,7 +182,7 @@ describe.skipIf(!database)("TEST_ONLY delivery authority-first procedure",()=>{
       .rejects.toThrow(/permission denied/i);
     expect((await caller.query(readStatus,readerArgs)).rows).toEqual([
       {original_digest:original("6"),expires_at_ms:String(httpExpiry)}]);
-    const mismatches: [number,unknown][]=[
+    const mismatches: [number,(typeof readerArgs)[number]][]=[
       [0,original("7")],[1,1],[2,"TEST-wrong-lease"],[3,"TEST-wrong-previous"],
       [4,original("7")],[5,"TEST-wrong-receiver"],[6,original("7")],[7,original("7")],
       [8,httpIssued-1],[9,httpExpiry-1],[10,authorityRevision+1],

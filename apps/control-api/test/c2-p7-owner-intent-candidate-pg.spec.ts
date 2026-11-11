@@ -426,7 +426,9 @@ describe.skipIf(!enabled)("P7 owner intent candidate, isolated PG",()=>{
     await expect(signer.confirmOwner(actor,signerPreview.confirmation_sha256,"TEST_ONLY-signer",Buffer.from("forged"))).rejects.toThrow();
     await expect(signer.confirmOwner(actor,signerPreview.confirmation_sha256,"TEST_ONLY-other-key",signerAttestation)).rejects.toThrow();
     expect((await pool.query("SELECT count(*)::int AS n FROM elp210_c2_p7_candidate.records WHERE cycle_sha256=$1",[signerCycle])).rows[0].n).toBe(0);
-    const signed=await signer.confirmOwner(actor,signerPreview.confirmation_sha256,"TEST_ONLY-signer",signerAttestation);
+    // confirmOwner has no declared return type (inferred unknown); this is the shape it freezes and returns on success.
+    const signed=(await signer.confirmOwner(actor,signerPreview.confirmation_sha256,"TEST_ONLY-signer",signerAttestation)) as
+      {state:"WITNESS_RETAINED_NOT_AUTHORIZED";intent_id:string;acceptance_id:string;delegation_id:string;proof_sha256:string};
     expect(signed.state).toBe("WITNESS_RETAINED_NOT_AUTHORIZED");
     // Once a witness exists, reserveIntent must still authenticate the
     // reservation and require the identical request hash before resume.
