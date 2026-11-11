@@ -64,6 +64,18 @@
       "post": null
     },
     {
+      "name": "fleet-map",
+      "gap": "FE-035",
+      "schema": "execution-fleet-map.v1.schema.json",
+      "route": "/api/v1/execution/manager/fleet-map",
+      "valid": [
+        "published",
+        "capped_small",
+        "max_1000"
+      ],
+      "post": null
+    },
+    {
       "name": "reconciliation",
       "gap": "GAP-11",
       "schema": "execution-reconciliation.v1.schema.json",

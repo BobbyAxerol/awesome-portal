@@ -48,6 +48,14 @@ export const SIBLINGS = {
       return `/readiness${query.toString() === "" ? "" : "?" + query.toString()}`;
     },
   },
+  "fleet-map": {
+    gap: "FE-035", schemaVersion: "portal.execution.fleet-map.v1",
+    read: S.refine(S.obj({ "schema_version": S.lit("portal.execution.fleet-map.v1"), "workspace_id": S.str(256), "record_authority": S.lit("PORTAL_PROJECTION"), "read_at_ms": S.ms, "window": S.str(32), "rows": S.arr(S.obj({ "row_key": S.str(2048), "name": S.sec(S.str(256)), "allocation": S.sec(S.obj({ "currency": S.str(32), "value": S.dec })), "window_return": S.sec(S.obj({ "ratio_scale": S.en("FRACTION", "PERCENT"), "value": S.dec })), "net_pnl": S.sec(S.obj({ "currency": S.str(32), "value": S.dec })), "health": S.sec(S.str(256)), "stage_presence": S.arr(S.en("PAPER", "SANDBOX", "CANARY", "LIVE"), 4) }), 1000), "total_count": S.nul(S.int(0)), "truncated": S.bool }), (v: any) => new Set(v.rows.map((r: any) => r.row_key)).size === v.rows.length && (v.truncated === true || v.total_count === null || v.total_count <= v.rows.length)),
+    path: (params) => {
+      const query = new URLSearchParams(); for (const key of ["workspace_id","window"]) if (params[key]) query.set(key, params[key]!);
+      return `/manager/fleet-map${query.toString() === "" ? "" : "?" + query.toString()}`;
+    },
+  },
   "reconciliation": {
     gap: "GAP-11", schemaVersion: "portal.execution.reconciliation.v1",
     read: S.obj({ "schema_version": S.lit("portal.execution.reconciliation.v1"), "workspace_id": S.str(256), "record_authority": S.lit("PORTAL_PROJECTION"), "read_at_ms": S.ms, "subject": S.obj({ "type": S.en("ALPHA", "PORTFOLIO", "ACCOUNT", "DEPLOYMENT", "OPERATION", "INCIDENT", "APPROVAL"), "id": S.id }), "runs": S.sec(S.arr(S.obj({ "run_id": S.id, "state": S.en("RUNNING", "MATCHED", "BREAKS_FOUND", "FAILED"), "started_at_ms": S.ms, "finished_at_ms": S.nul(S.ms), "breaks_open": S.int(0) }), 100)), "breaks": S.sec(S.arr(S.obj({ "break_id": S.id, "run_id": S.id, "state": S.en("OPEN", "RESOLVING", "RESOLVED"), "kind": S.en("POSITION", "BALANCE", "ORDER", "FILL"), "resolution_revision": S.nul(S.int(1)), "detected_at_ms": S.ms }), 200)), "next_cursor": S.sec(S.str(4096)) }),

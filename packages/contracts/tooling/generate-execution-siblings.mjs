@@ -185,6 +185,36 @@ def({
     { id: 'environment-missing', base: 'no_source', rule: 'the answer names the environment it is about', ops: [{ op: 'delete', path: ['environment'] }] }],
 });
 
+// FE-035 (P3): the fleet-map projection, `view=MAP` of the fleet read as its own bounded read so the Manager model itself is untouched. A row is a SUBSET of the
+// Manager row facts (same meaning, same vocabularies): row_key, name, allocation, windowed return and net PnL, health text, stage_presence. At most 1000 rows;
+// `truncated` and `total_count` keep a cap from reading as the whole fleet (`total_count` is the number of rows the source holds, or null when it was not
+// counted; fewer rows than the count without `truncated` is refused).
+const mapRow = T.obj({ row_key: T.str(2048), name: T.sec(T.str(256)), allocation: T.sec(money),
+  window_return: T.sec(T.obj({ ratio_scale: T.en('FRACTION', 'PERCENT'), value: T.dec() })), net_pnl: T.sec(money), health: T.sec(T.str(256)),
+  stage_presence: T.arr(T.en('PAPER', 'SANDBOX', 'CANARY', 'LIVE'), 4) });
+const mapRows = (n, first = 0) => Array.from({ length: n }, (_, i) => ({ row_key: `TEST_ONLY:map-row-${first + i}`, name: `Alpha ${first + i}`,
+  allocation: { currency: 'USDT', value: `${1000 + ((first + i) % 9000)}.00` }, window_return: { ratio_scale: 'FRACTION', value: `0.0${(first + i) % 10}25` },
+  net_pnl: { currency: 'USDT', value: `${((first + i) % 200) - 60}.50` }, health: (first + i) % 17 === 0 ? 'WARN' : 'OK', stage_presence: [['PAPER'], ['SANDBOX'], ['PAPER', 'CANARY'], ['LIVE']][(first + i) % 4] }));
+def({
+  name: 'fleet-map', gap: 'FE-035', route: '/api/v1/execution/manager/fleet-map', params: [], query: ['workspace_id', 'window'],
+  description: 'The fleet-map projection (`view=MAP`): per row only row_key, name, allocation, windowed return and net PnL, health and stage_presence, at most 1000 rows, with its own byte cap, for the C1 heat map at fleet scale.',
+  schema: T.rule(T.obj({ ...head('fleet-map'), window: T.str(32), rows: T.arr(mapRow, 1000), total_count: T.nul(T.int()), truncated: T.bool() }),
+    'new Set(v.rows.map((r: any) => r.row_key)).size === v.rows.length && (v.truncated === true || v.total_count === null || v.total_count <= v.rows.length)'),
+  valid: {
+    published: { ...hv('fleet-map'), window: '30D', total_count: 3, truncated: false, rows: [
+      ...mapRows(2), { row_key: 'TEST_ONLY:map-row-bare', stage_presence: [] }] },
+    capped_small: { ...hv('fleet-map'), window: '7D', total_count: 5, truncated: true, rows: mapRows(2) },
+    max_1000: { ...hv('fleet-map'), window: '30D', total_count: 1000, truncated: false, rows: mapRows(1000) },
+  },
+  negatives: [
+    { id: 'rows-over-cap', base: 'max_1000', rule: 'a map answer carries at most 1000 rows', ops: [{ op: 'set', path: ['rows'], value: Array.from({ length: 1001 }, (_, i) => ({ row_key: `TEST_ONLY:map-row-${i}`, stage_presence: [] })) }] },
+    { id: 'duplicate-row-key', base: 'published', rule: 'a row key is unique within a body', ops: [{ op: 'set', path: ['rows', 1, 'row_key'], value: 'TEST_ONLY:map-row-0' }], schemaCannot: true },
+    { id: 'short-without-truncated', base: 'published', rule: 'fewer rows than the count, without truncated, would read as the whole fleet', ops: [{ op: 'set', path: ['total_count'], value: 9 }], schemaCannot: true },
+    { id: 'stage-presence-unknown', base: 'published', rule: 'stage presence uses the Manager stage vocabulary', ops: [{ op: 'set', path: ['rows', 0, 'stage_presence'], value: ['RESEARCH'] }] },
+    { id: 'allocation-number', base: 'published', rule: 'money is exact decimal text', ops: [{ op: 'set', path: ['rows', 0, 'allocation', 'value'], value: 1000 }] },
+    { id: 'truncated-missing', base: 'published', rule: 'the answer states whether it was capped', ops: [{ op: 'delete', path: ['truncated'] }] }],
+});
+
 // GAP-11: reconciliation runs and breaks.
 def({
   name: 'reconciliation', gap: 'GAP-11', route: '/api/v1/execution/reconciliation', params: [], query: ['workspace_id', 'subject_type', 'subject_id', 'page_size', 'cursor'],
