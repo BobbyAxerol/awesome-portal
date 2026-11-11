@@ -148,7 +148,7 @@ export function KeyedTable({ label, columns, rows }: { label: string; columns: r
     numeric: c.numeric,
     render: (row) => <CellView cell={row.cells[index] ?? { t: "na" }} />,
   }));
-  return <CardsTable columns={cols} rows={rows} rowKey={(row) => row.key} label={label} />;
+  return <CardsTable scrollHint columns={cols} rows={rows} rowKey={(row) => row.key} label={label} />;
 }
 
 /* ── a V2 retained-observation panel: capped table + keyset Load more ───── */
@@ -230,9 +230,9 @@ export function V1RowsSection({ title, aside, rows, what }: { title: string; asi
       <SectionPanel level={2} title={title} aside={aside}>
         {rows.line ? <p className="exec-liv-line"><span className="exec-blk-na">{rows.line}</span></p> : null}
         {rows.kind === "typed-positions" ? (
-          <CardsTable columns={POSITION_COLUMNS(rows.reasons).filter(keep)} rows={withPaddedQuantity(shown as TypedPositionRow[])} rowKey={(row) => `${row.id ?? row.symbol}`} label={title} empty="The source reported none." />
+          <CardsTable scrollHint columns={POSITION_COLUMNS(rows.reasons).filter(keep)} rows={withPaddedQuantity(shown as TypedPositionRow[])} rowKey={(row) => `${row.id ?? row.symbol}`} label={title} empty="The source reported none." />
         ) : (
-          <CardsTable columns={ORDER_COLUMNS(rows.reasons).filter(keep)} rows={withPaddedQuantity(shown as unknown as TypedOrderRow[])} rowKey={(row) => `${row.id ?? row.symbol}`} label={title} empty="The source reported none." />
+          <CardsTable scrollHint columns={ORDER_COLUMNS(rows.reasons).filter(keep)} rows={withPaddedQuantity(shown as unknown as TypedOrderRow[])} rowKey={(row) => `${row.id ?? row.symbol}`} label={title} empty="The source reported none." />
         )}
         <div className="exec-liv-more">
           <span className="exec-liv-cap">{rows.caption}</span>
@@ -267,7 +267,7 @@ export function V1RowsSection({ title, aside, rows, what }: { title: string; asi
     <SectionPanel level={2} title={title} aside={aside}>
       {rows.line ? <p className="exec-liv-line"><span className="exec-blk-na">{rows.line}</span></p> : null}
       <div title="Columns are the source's own field names.">
-        <CardsTable columns={cols} rows={shown} rowKey={(row) => row.key} label={title} empty="The source reported none." />
+        <CardsTable scrollHint columns={cols} rows={shown} rowKey={(row) => row.key} label={title} empty="The source reported none." />
       </div>
       <div className="exec-liv-more">
         <span className="exec-liv-cap">{rows.caption}</span>
@@ -325,7 +325,7 @@ export function PanelSection({ panel, page, onMore }: PanelSectionProps) {
   } else {
     body = (
       <>
-        <CardsTable columns={cols} rows={shown} rowKey={(record) => record.observationId} label={title} />
+        <CardsTable scrollHint columns={cols} rows={shown} rowKey={(record) => record.observationId} label={title} />
         <div className="exec-liv-more">
           <span className="exec-liv-cap">
             {atCap

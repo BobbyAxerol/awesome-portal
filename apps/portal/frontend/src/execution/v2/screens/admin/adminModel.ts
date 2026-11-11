@@ -26,7 +26,7 @@ import type { CatalogEntry, CommandCatalogue } from "../../../adminCatalog";
 import { BLOCKED_REASON_TEXT } from "../../../adminCatalog";
 import type { OperatorTask } from "../../../api/profileRead";
 import { PLAN_ENVIRONMENTS, planApplicable, type CommandPlan, type CommandPlanRequestInput, type PlanEnvironment } from "../../../commandPlan";
-import { activationSentence, type ActivationCapability, type StagedActivation } from "../../../stagedActivation";
+import { activationPlain, activationSentence, type ActivationCapability, type StagedActivation } from "../../../stagedActivation";
 import { codeName } from "../../displayNames";
 import type { FlagKind } from "../../flagKinds";
 
@@ -72,6 +72,36 @@ export const ROW_STATE_VIEW: Readonly<Record<RowState, { kind: FlagKind; label: 
   elsewhere: { kind: "operation", label: "Start in Portfolios", filter: "Start elsewhere" },
   "not-offered": { kind: "paused", label: "Not offered in the portal", filter: "Not offered" },
 };
+
+/**
+ * The command relay as the composition read states it. Only the read changes what a READY action can do: a local read never goes through
+ * the relay, a command does. An unreadable relay bit is `unknown`, never `inactive` and never `active` (fail closed).
+ */
+export type RelayState = "active" | "inactive" | "unknown";
+
+/**
+ * The state chip of a row. A READY label beside a relay that cannot deliver would promise a run the page cannot do, so it says what the
+ * run is: a connected local read ("Ready: local read", the relay is not involved), and, were a connected command ever listed while the relay
+ * is not active, "Plan only" (a plan is a preview the server records; nothing is applied). Every other state keeps its published word.
+ */
+export function rowStateView(row: Pick<ActionRow, "state" | "kind">, relay: RelayState): { kind: FlagKind; label: string } {
+  if (row.state !== "ready") return ROW_STATE_VIEW[row.state];
+  if (row.kind === "read") return { kind: "ok", label: "Ready: local read" };
+  if (relay === "active") return ROW_STATE_VIEW.ready;
+  return { kind: "paused", label: relay === "inactive" ? "Plan only: relay off" : "Plan only: relay not stated" };
+}
+
+/** Rows that can actually run from this page now: a connected read always, a connected command only through an active relay. */
+export function runnableNow(rows: readonly Pick<ActionRow, "state" | "kind">[], relay: RelayState): number {
+  return rows.filter((row) => row.state === "ready" && (row.kind === "read" || relay === "active")).length;
+}
+
+/** One sentence: what the relay state means for running an action on this page. */
+export function relaySentence(relay: RelayState): string {
+  if (relay === "active") return "The command relay is on: a command can be planned here and its apply is gated by the steps below.";
+  const word = relay === "inactive" ? "Relay off means" : "The relay state was not stated, so it is treated as off, which means";
+  return `${word} commands can be planned (a preview) but never delivered to the trading system from this page. Local reads do not use the relay and can still run.`;
+}
 
 export type ActionKind = "read" | "capital" | "command" | "danger";
 
@@ -188,6 +218,8 @@ export interface FirstReason {
   code: string | null;
   /** One sentence, from the staged-activation read. */
   sentence: string | null;
+  /** The same reason in plain words (capability by its plain name); what a screen prints. */
+  plain: string | null;
   /** Which capability the sentence is about. */
   capability: string | null;
 }
@@ -204,6 +236,7 @@ export function firstReasonFor(task: OperatorTask, activation: StagedActivation 
   return {
     code: task.reasonCode,
     sentence: capability ? `${capability.capabilityKey}: ${activationSentence(capability)}` : null,
+    plain: capability ? activationPlain(capability) : null,
     capability: capability?.capabilityKey ?? null,
   };
 }

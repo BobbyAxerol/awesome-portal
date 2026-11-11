@@ -15,7 +15,7 @@ import type { AlphaFleetQuery, ExecutionApi } from "../../../api/ports";
 import { readAlphaFleet } from "../../../api/profileRead";
 import { createHttpApi } from "../../../api/httpApi";
 import type { DeliveryPolicy } from "../../../profile";
-import { alphasOf, newDatasetDouble, wrapDatasetFetch, type DatasetDoubleState, type DatasetVariant, type DoubleAlpha } from "./datasetDouble.testbase";
+import { alphasOf, newDatasetDouble, openFilters, openNotes, wrapDatasetFetch, type DatasetDoubleState, type DatasetVariant, type DoubleAlpha } from "./datasetDouble.testbase";
 import FleetScreen from "./index";
 
 afterEach(() => {
@@ -70,7 +70,12 @@ const mount = (api: ExecutionApi, entry: string) =>
 const where = () => screen.getByTestId("where").textContent ?? "";
 const search = () => new URLSearchParams(where().split("?")[1] ?? "");
 const table = () => screen.getByRole("table", { name: "Alpha fleet" });
-const loaded = async () => screen.findByRole("table", { name: "Alpha fleet" }, SLOW);
+const loaded = async () => {
+  const found = await screen.findByRole("table", { name: "Alpha fleet" }, SLOW);
+  openFilters();
+  openNotes();
+  return found;
+};
 const dataRows = () => within(table()).getAllByRole("row").slice(1).filter((row) => !row.classList.contains("exec-cards-group"));
 const cell = (row: HTMLElement, label: string) => row.querySelector(`td[data-l='${label}']`)?.textContent ?? "";
 const isDatasetTable = () => [...table().querySelectorAll("th")].some((th) => th.textContent === "In stage");
@@ -300,7 +305,7 @@ describe("when the dataset does not answer ALL, nothing is faked", () => {
       if (call.query.get("limit") !== "1") delete body.items[0].environment;
     };
     mount(api, "/execution/fleet");
-    expect(await screen.findByText(/MANAGER_DATASET_REFUSED|could not be read/, {}, SLOW)).toBeTruthy();
+    expect((await screen.findAllByText(/MANAGER_DATASET_REFUSED|could not be read/, {}, SLOW)).length).toBeGreaterThan(0);
     expect(screen.queryByRole("table", { name: "Alpha fleet" })).toBeNull();
   });
 });

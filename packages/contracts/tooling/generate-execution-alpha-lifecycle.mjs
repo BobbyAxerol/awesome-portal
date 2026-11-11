@@ -48,7 +48,7 @@ const response = {
   { type: 'object', if: { type: 'object', required: ['regime_fit'], properties: { regime_fit: { type: 'object', required: ['state'], properties: { state: { const: 'NOT_PUBLISHED' } } } } },
     then: { type: 'object', properties: { regime_fit: { type: 'object', properties: { value: { type: 'null' }, ratio_scale: { type: 'null' }, reason_code: { type: 'string' } } } } } }],
 };
-const problem = object({ error: object({ code: { type: 'string', enum: ['EXECUTION_READ_NOT_AVAILABLE', 'EXECUTION_READ_CURRENT_ONLY'] }, message: text }, ['code', 'message']), request_id: { type: 'string' } });
+const problem = object({ error: object({ code: { type: 'string', enum: ['EXECUTION_READ_NOT_AVAILABLE', 'EXECUTION_READ_CURRENT_ONLY', 'EXECUTION_READ_QUERY_INVALID'] }, message: text }, ['code', 'message']), request_id: { type: 'string' } });
 const headers = { 'Cache-Control': { required: true, schema: { type: 'string', const: 'private, no-store' } } };
 const err = d => ({ description: d, headers, content: { 'application/json': { schema: { $ref: '#/components/schemas/AlphaLifecycleProblem' } } } });
 const operation = { get: { operationId: 'executionAlphaLifecycleGetV1', security: [{ PortalSession: [] }],

@@ -14,7 +14,7 @@ import { ABSENT, dimension, pairwise, type Draft } from "../../testkit/matrix";
 import { enumCases, leaked, prototypeIsClean, requiredCases, rootCases, stringCases } from "../../testkit/negative";
 import {
   COMMAND_STATES, NOTE_MIN, applyReason, capabilityLive, commandStateOf, defaultEnvironment, entryFor, firstNotLive, firstReasonFor, formProblem, kindOf,
-  planGate, planRequest, stateCounts, stateOf, targetTypeOf, tierCopy, tiersOf, toRows,
+  planGate, planRequest, relaySentence, ROW_STATE_VIEW, rowStateView, runnableNow, stateCounts, stateOf, targetTypeOf, tierCopy, tiersOf, toRows,
 } from "./adminModel";
 
 const TASKS = "execution-command-tasks";
@@ -114,7 +114,7 @@ describe("first reason it is not live", () => {
     expect(firstReasonFor(row("health").task, activation).capability).toBe("PROJECTION");
   });
   it("says nothing when the activation was not read, rather than inventing a sentence", () => {
-    expect(firstReasonFor(row("account-sync").task, null)).toEqual({ code: "N27_COMMAND_TRANSPORT_NOT_ACTIVATED", sentence: null, capability: null });
+    expect(firstReasonFor(row("account-sync").task, null)).toEqual({ code: "N27_COMMAND_TRANSPORT_NOT_ACTIVATED", sentence: null, plain: null, capability: null });
   });
   it("a capability is live only with source, runtime and the kill switch released", () => {
     const cap = activation.capabilities[0]!;
@@ -257,5 +257,37 @@ describe("L3 negative", () => {
       if (holder.out) for (const t of holder.out.tasks) if (stateOf(t) === "ready") expect(t.state, c.name).toBe("CONNECTED");
     }
     expect(prototypeIsClean()).toBe(true);
+  });
+});
+
+describe("G2: row state words follow the relay", () => {
+  const read = { state: "ready", kind: "read" } as const;
+  const command = { state: "ready", kind: "command" } as const;
+
+  it("a connected read is a local read whatever the relay says", () => {
+    for (const relay of ["active", "inactive", "unknown"] as const) expect(rowStateView(read, relay)).toEqual({ kind: "ok", label: "Ready: local read" });
+  });
+
+  it("a connected command is Ready only through an active relay; otherwise it is plan only, and says which relay state", () => {
+    expect(rowStateView(command, "active").label).toBe("Ready to run");
+    expect(rowStateView(command, "inactive")).toEqual({ kind: "paused", label: "Plan only: relay off" });
+    expect(rowStateView(command, "unknown").label).toBe("Plan only: relay not stated");
+  });
+
+  it("states other than ready keep their published word", () => {
+    for (const state of ["not-enabled", "elsewhere", "not-offered"] as const) expect(rowStateView({ state, kind: "command" }, "inactive")).toBe(ROW_STATE_VIEW[state]);
+  });
+
+  it("counts what can run now: reads always, commands only through an active relay", () => {
+    const list = [read, read, command, { state: "not-enabled", kind: "read" } as const];
+    expect(runnableNow(list, "inactive")).toBe(2);
+    expect(runnableNow(list, "unknown")).toBe(2);
+    expect(runnableNow(list, "active")).toBe(3);
+  });
+
+  it("the relay sentence never calls an unreadable relay inactive", () => {
+    expect(relaySentence("inactive")).toMatch(/^Relay off means/);
+    expect(relaySentence("unknown")).toMatch(/not stated, so it is treated as off/);
+    expect(relaySentence("active")).toMatch(/relay is on/);
   });
 });

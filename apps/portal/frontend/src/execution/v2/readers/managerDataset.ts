@@ -197,6 +197,11 @@ export interface ManagerRowChild {
   accountId: string;
   stage: ManagerStage;
   bindingRef: string | null;
+  /**
+   * BE-B1: the UTC time this deployment's allocation took effect, from the allocation facts of exactly this deployment when they all state one time.
+   * ABSENT (the property is not there) = not published: never inferred from the capital ledger, the row or the partition figure here.
+   */
+  allocationEffectiveAtMs?: UtcEpochMs;
 }
 
 export type ManagerRowMetrics = Readonly<Partial<Record<ManagerMetricKey, ManagerMetricRead>>>;
@@ -589,10 +594,15 @@ function readPage(raw: unknown, bounds: { items: number; filtered: number } = { 
 }
 
 const CHILD_KEYS = ["alpha_id", "alpha_version_id", "portfolio_id", "deployment_id", "account_id", "stage", "binding_ref"] as const;
+const CHILD_OPTIONAL_KEYS = ["allocation_effective_at_ms"] as const;
 
 function readChild(raw: unknown, allowedStages: readonly ManagerStage[]): ManagerRowChild | null {
   const child = record(raw);
-  if (child === null || !hasOnly(child, CHILD_KEYS) || !hasAll(child, CHILD_KEYS)) return null;
+  if (child === null || !hasOnly(child, [...CHILD_KEYS, ...CHILD_OPTIONAL_KEYS]) || !hasAll(child, CHILD_KEYS)) return null;
+  // Optional UTC-ms integer; present and invalid (a string, a fraction, a negative, null) voids the child, which voids the row.
+  const hasAllocationTime = Object.prototype.hasOwnProperty.call(child, "allocation_effective_at_ms");
+  const allocationEffectiveAtMs = hasAllocationTime ? clockMs(child.allocation_effective_at_ms) : null;
+  if (hasAllocationTime && (allocationEffectiveAtMs === null || !Number.isSafeInteger(child.allocation_effective_at_ms))) return null;
   const alphaId = managerText(child.alpha_id);
   const alphaVersionId = managerText(child.alpha_version_id);
   const portfolioId = managerText(child.portfolio_id);
@@ -601,7 +611,7 @@ function readChild(raw: unknown, allowedStages: readonly ManagerStage[]): Manage
   const stage = oneOf(child.stage, allowedStages);
   const bindingRef = nullableText(child.binding_ref);
   if (alphaId === null || alphaVersionId === null || portfolioId === null || deploymentId === null || accountId === null || stage === null || bindingRef === undefined) return null;
-  return { alphaId, alphaVersionId, portfolioId, deploymentId, accountId, stage, bindingRef };
+  return { alphaId, alphaVersionId, portfolioId, deploymentId, accountId, stage, bindingRef, ...(allocationEffectiveAtMs === null ? {} : { allocationEffectiveAtMs }) };
 }
 
 const ROW_KEYS = [
@@ -737,7 +747,7 @@ function readRow(raw: unknown, scope: ManagerEnvironmentScope, metricKeys: reado
     children.push(child);
   }
   const metrics = readRowMetrics(row.metrics, metricKeys);
-  const economicPartitions = readPartitionedMetricsList(row.economic_partitions);
+  const economicPartitions = readPartitionedMetricsList(row.economic_partitions, "row");
   if (metrics === null || economicPartitions === null || !headlineIsAPartitionFigure(metrics, economicPartitions)) return null;
   if (scope === MANAGER_ALL) {
     // The key is the identity of one row of one environment, and its figures are of that environment's own economic domain: a Live row

@@ -102,7 +102,8 @@ describe("opt-in review Manager series", () => {
     const api = client();
     const portfolios = scaled().portfolios;
     const usdt = portfolios.find((entry) => entry.base === "USDT")!;
-    const other = portfolios.find((entry) => entry.base !== "USDT")!;
+    expect(portfolios.every((entry) => entry.base === "USDT")).toBe(true); // the scale world publishes USDT only (WP-4)
+    const other = { id: "pf_TEST_ONLY_yen" }; // the TEST_ONLY yen book carries the one non-USDT currency
     const mixed = await api.getManagerSeries({ environment: "paper", metric: "NAV", window: "30D", subjects: [usdt, other].map((entry) => ({ subjectType: "PORTFOLIO", subjectId: entry.id })) });
     expect(mixed.ok && mixed.value.comparison).toMatchObject({ state: "INCOMPARABLE", reasonCode: "CURRENCY_MIXED" });
     const unknown = await api.getManagerSeries({ environment: "paper", metric: "NAV", window: "30D", subjects: [{ subjectType: "PORTFOLIO", subjectId: "pf_missing" }] });
@@ -195,7 +196,7 @@ describe("six opt-in review Manager datasets", () => {
     prepare("layout-stress");
     const all = ask("/manager/fleet", { environment: "live", limit: "200" }, "layout-stress");
     expect(all.status).toBe(200);
-    expect(all.body.capital_statements.length).toBeGreaterThan(1);
+    expect(all.body.capital_statements.length).toBeGreaterThanOrEqual(1); // USDT-only scale world (WP-4): one statement per economic domain
     for (const row of all.body.items as Body[]) {
       expect(row.metrics.net_pnl.availability).toBe("AVAILABLE");
       expect(row.metrics.unrealized_pnl.availability).toBe("AVAILABLE");
@@ -213,7 +214,7 @@ describe("six opt-in review Manager datasets", () => {
     expect(raw.status).toBe(200);
     schema(raw.body, "execution-manager-dataset.v1");
     const statements = raw.body.capital_statements as Body[];
-    expect(statements.length).toBeGreaterThan(1);
+    expect(statements.length).toBeGreaterThanOrEqual(1); // USDT-only scale world (WP-4)
     for (const { partition, metrics } of statements) {
       const original = Object.fromEntries(Object.entries<Body>(metrics).filter(([kind]) => !["net_pnl", "return_30d_pct", "max_drawdown_pct", "allocation", "headroom", "net_external_flows", "recalling"].includes(kind))); // the last four are WP-F1's (reviewCapital.test.ts)
       expect(Object.keys(original).sort()).toEqual(["added_funds", "current_budget", "current_nav", "initial_funds", "pending_amount", "returned_capital"]);
@@ -231,12 +232,14 @@ describe("six opt-in review Manager datasets", () => {
       // Capital comes from the linked deployment graph, not a decorative
       // fractional sentinel unrelated to accounts/portfolios.
       const members = (wpWorldAlphas("FUND", undefined) ?? scaled().alphas).flatMap(alpha => alpha.deployments).filter(d => d.environment === "live" && d.currency === partition.currency);
-      expect(Number(metrics.initial_funds.value)).toBe(members.reduce((n, d) => n + Number(d.allocation), 0));
+      // UXM-07 WP-2: the funds in are the approved budget; what stayed funded (initial - returned) is the allocation of the linked deployments.
+      expect(Number(metrics.initial_funds.value) - Number(metrics.returned_capital.value)).toBeCloseTo(members.reduce((n, d) => n + Number(d.allocation), 0), 6);
       expect(Number(metrics.current_nav.value)).toBeCloseTo(members.reduce((n, d) => n + Number(d.allocation) + Number(d.realized), 0), 6);
     }
     expect(statements[0].metrics.pending_amount).toMatchObject({ value: "0", availability: "AVAILABLE", reason_code: null });
-    expect(statements[1].metrics.pending_amount).toMatchObject({ value: "0", availability: "AVAILABLE" });
-    expect(Number(statements[1].metrics.current_nav.value)).toBeGreaterThan(0);
+    const last = statements[statements.length - 1]; // USDT-only scale world (WP-4): one statement per economic domain, so first and last may be the same line
+    expect(last.metrics.pending_amount).toMatchObject({ value: "0", availability: "AVAILABLE" });
+    expect(Number(last.metrics.current_nav.value)).toBeGreaterThan(0);
     expect(raw.body.statement_scope).toBe("AUTHORIZED_RESOURCE_SELECTED_STAGES_BEFORE_TABLE_FILTERS");
     // Smaller pages and a table search do not alter the capital source/population.
     const filtered = ask("/manager/fund-overview", { environment: "live", q: "not-in-the-synthetic-book", limit: "1" }, profile);
@@ -247,7 +250,7 @@ describe("six opt-in review Manager datasets", () => {
     if (!parsed.ok) return;
     expect(parsed.value.capitalStatements).toHaveLength(statements.length);
     expect(parsed.value.capitalStatements[0]!.metrics.get("pending_amount")).toMatchObject({ kind: "value", exact: "0" });
-    expect(parsed.value.capitalStatements[1]!.metrics.get("current_nav")).toMatchObject({ kind: "value", exact: statements[1].metrics.current_nav.value });
+    expect(parsed.value.capitalStatements[statements.length - 1]!.metrics.get("current_nav")).toMatchObject({ kind: "value", exact: last.metrics.current_nav.value });
   });
 
   it("does not inject rich capital statements into the existing sparse fixture", () => {
@@ -365,7 +368,7 @@ describe("simulated Manager metrics (row, capital statement, group)", () => {
   it.each(["populated", "layout-stress"] as const)("%s: capital statements add net_pnl, return_30d_pct and max_drawdown_pct inside each partition", (profile) => {
     const body = read({}, profile);
     const statements = body.capital_statements as Body[];
-    expect(statements.length).toBeGreaterThan(1);
+    expect(statements.length).toBeGreaterThanOrEqual(1); // USDT-only scale world (WP-4); the cross-currency refusal lives in the TEST_ONLY yen series test above
     // net_pnl of a partition = the sum of THIS partition's rows' net_pnl; nothing crosses a currency or domain.
     const sums = new Map<string, bigint>();
     for (const row of body.items as Body[]) for (const entry of row.economic_partitions as Body[]) {
@@ -378,8 +381,10 @@ describe("simulated Manager metrics (row, capital statement, group)", () => {
       // WP-P: the positive world has no exact-zero drawdown; the former index-0 "0" is the `missing` scenario (positiveWorld.test.ts)
       expect(metrics.max_drawdown_pct.value, `partition ${index}`).toMatch(/^-\d+(\.\d\d?)?$/);
       {
-        expect(metrics.return_30d_pct.denominator).toBe(metrics.initial_funds.value);
-        const expected = big(metrics.net_pnl.value) * 100n * 1_000_000n / big(metrics.initial_funds.value);
+        // The return is on the allocated base (initial - returned); the funds in are the approved budget since UXM-07 WP-2.
+        const base = big(metrics.initial_funds.value) - big(metrics.returned_capital.value);
+        expect(big(metrics.return_30d_pct.denominator)).toBe(base);
+        const expected = big(metrics.net_pnl.value) * 100n * 1_000_000n / base;
         expect(big(metrics.return_30d_pct.value)).toBe(expected * 10n ** 12n);
       }
     }
@@ -493,8 +498,12 @@ describe("simulated Manager window presets", () => {
     const dd = (body: Body, i: number): string => body.body.capital_statements[i].metrics.max_drawdown_pct.value;
     expect(dd(short, 0)).toBe("0");
     expect(dd(long, 0)).toBe("0");
-    expect(big18(dd(short, 2)) * 4n).toBeLessThanOrEqual(0n);
-    expect(big18(dd(long, 2)) * 2n).toBe(big18(dd(base, 2)) * 5n);
+    // The USDT-only world has one statement per environment, so the non-zero drawdown scaling is read on the first row that has one.
+    const rowDd = (body: Body, i: number): string => body.body.items[i].economic_partitions[0].metrics.max_drawdown_pct.value;
+    const at = (base.body.items as Body[]).findIndex((_row, i) => rowDd(base, i) !== null && rowDd(base, i) !== "0");
+    expect(at).toBeGreaterThanOrEqual(0);
+    expect(big18(rowDd(short, at)) * 4n).toBeLessThanOrEqual(0n);
+    expect(big18(rowDd(long, at)) * 2n).toBe(big18(rowDd(base, at)) * 5n);
   });
 
   it.each(SURFACES)("%s: ALL is the typed window gap, not a 400 and not a number", (_surface, path) => {
@@ -571,6 +580,23 @@ describe("simulated suite universe (small scale)", () => {
     expect(m.max_drawdown_pct.value).toMatch(/^-\d+(\.\d+)?$/);
     expect(m.forward_observation_days).toMatchObject({ unit: "DAYS", currency: null });
     expect(m.forward_observation_days.value).toMatch(/^\d+$/);
+    // UXM-07 WP-1: the Fleet's Winrate (open partition key): a percent with one place, 35.0 to 74.9, no window
+    expect(m.win_rate_pct).toMatchObject({ unit: "PERCENT", currency: null, window: null, availability: "AVAILABLE" });
+    expect(m.win_rate_pct.value).toMatch(/^(3[5-9]|[4-6]\d|7[0-4])(\.\d)?$/);
+  });
+
+  it("publishes win_rate_pct per row partition, deterministic from the row key, 35.0 to 74.9, never on a group", () => {
+    const first = small("/manager/fleet", { environment: "live" });
+    const again = small("/manager/fleet", { environment: "live" });
+    expect(first.items.length).toBeGreaterThan(1);
+    const rates = (body: Body): (string | null)[] => (body.items as Body[]).flatMap((row) => (row.economic_partitions as Body[]).map((entry) => (entry.metrics.win_rate_pct.availability === "AVAILABLE" ? entry.metrics.win_rate_pct.value : null)));
+    expect(rates(first)).toEqual(rates(again));
+    for (const rate of rates(first)) expect(rate, "a missing value is a typed absence, never a made-up one").toMatch(/^(3[5-9]|[4-6]\d|7[0-4])(\.\d)?$/);
+    // two rows do not all share one value (the seed is the row key)
+    expect(new Set(rates(first)).size).toBeGreaterThan(1);
+    // a portfolio group aggregates other keys but a win rate is not a sum: it carries none
+    const grouped = small("/manager/fleet", { environment: "live", group_by: "portfolio_id" });
+    for (const group of (grouped.groups ?? []) as Body[]) for (const entry of group.economic_partitions as Body[]) expect(entry.metrics).not.toHaveProperty("win_rate_pct");
   });
 
   it("scales the cost drag with the window (the world's fee model: 10 bp of allocation over the whole run, pro rata to the part of the run inside the window; bigint) and gives the other alpha ids their own rows", () => {

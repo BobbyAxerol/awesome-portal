@@ -19,8 +19,27 @@ import { APPROVAL_ROWS } from "../src/execution/api/fixtureData";
 import { scaled } from "./bffScale";
 import { fromCents, NATIVE_ALPHAS, toCents } from "./bffWorld";
 // ===== WP-B2-A begin: a request of the world's alphas is derived from the alpha's stage history (bffWorldGovernance), not from a hash of its id
-import { capitalOf, overlayWorldR2, worldApproval, worldCapitalPreview, worldEvidence } from "./bffWorldGovernance";
+import { capitalOf, inboxViewOf, overlayWorldR2, worldApproval, worldCapitalPreview, worldEvidence, type WorldApproval } from "./bffWorldGovernance";
 // ===== WP-B2-A end
+
+/**
+ * F3b: the request as THIS lane's inbox lists it. The legacy inbox (`APPROVAL_ROWS`: AP-352, AP-201, EX-771, AP-360, AP-311) keeps those requests waiting
+ * while the world has decided some of them, so the review, the capital and the evidence of a request such a row lists tell the waiting story (the row's quorum
+ * and age; the books' allocation raised by the requested step). A request no legacy row lists is the world's own record.
+ */
+function viewOf(approvalId: string): WorldApproval | undefined {
+  const row = APPROVAL_ROWS.find((candidate) => candidate.approval_id === approvalId) ?? null;
+  return row === null ? undefined : inboxViewOf(approvalId, row); // undefined: no legacy row lists it, so the world's own record is the one story
+}
+/**
+ * The evidence read answers for the lane that asks: the fixture BFF's populated lane serves the world's inbox (a decided request is a decided record), the
+ * Playwright lane serves the legacy inbox (`withInboxView`): the same request, as that inbox shows it.
+ */
+let inboxEvidence = 0;
+export function withInboxView<T>(read: () => T): T {
+  inboxEvidence += 1;
+  try { return read(); } finally { inboxEvidence -= 1; }
+}
 
 export interface ApprovalRecord {
   approvalId: string;
@@ -75,7 +94,7 @@ function inboxRowOf(approvalId: string): Record<string, unknown> | null {
 
 export function approvalRecord(approvalId: string): ApprovalRecord {
   // ===== WP-B2-A begin
-  const world = worldApproval(approvalId);
+  const world = viewOf(approvalId) ?? worldApproval(approvalId); // F3b: the request as the lane's inbox lists it, else the world's own record
   if (world !== undefined) {
     const capital = capitalOf(world);
     return {
@@ -161,7 +180,7 @@ export function overlayHistorySubjects(body: Obj): Obj {
 /** `GET /governance/approvals/{id}/r2`: the review's target, requested amount, capital rows and quorum are the record's. */
 export function overlayR2Review(body: Obj, approvalId: string): Obj {
   // ===== WP-B2-A begin
-  if (worldApproval(approvalId) !== undefined) return overlayWorldR2(body, approvalId) as Obj;
+  if (worldApproval(approvalId) !== undefined) return overlayWorldR2(body, approvalId, viewOf(approvalId)) as Obj;
   // ===== WP-B2-A end
   const out = clone(body);
   const record = approvalRecord(approvalId);
@@ -188,7 +207,7 @@ export function overlayR2Review(body: Obj, approvalId: string): Obj {
 /** `GET /approvals/{id}/capital-preview`: the same figures, with the headroom arithmetic done in cents here (the producer), not in the page. */
 export function overlayCapitalPreview(body: Obj, approvalId: string): Obj {
   // ===== WP-B2-A begin
-  const fromWorld = worldCapitalPreview(body, approvalId);
+  const fromWorld = worldCapitalPreview(body, approvalId, viewOf(approvalId));
   if (fromWorld !== null) return fromWorld as Obj;
   // ===== WP-B2-A end
   const out = clone(body);
@@ -221,7 +240,7 @@ export function overlayCapitalPreview(body: Obj, approvalId: string): Obj {
 /** The evidence read's diff, preview sentence and criteria count, from the record (the fixture-bff review lane calls this for `/evidence`). */
 export function evidenceFromRecord(approvalId: string): { portfolioId: string | null; environment?: string; changes: Obj[]; whatChanges: (obligations: number) => string; countsAs: { met_after: number; required: number } } {
   // ===== WP-B2-A begin
-  const fromWorld = worldEvidence(approvalId);
+  const fromWorld = worldEvidence(approvalId, inboxEvidence > 0 ? viewOf(approvalId) : undefined);
   if (fromWorld !== null) return fromWorld;
   // ===== WP-B2-A end
   const record = approvalRecord(approvalId);

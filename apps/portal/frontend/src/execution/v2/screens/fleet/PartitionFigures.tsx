@@ -30,6 +30,9 @@ export interface PartitionFiguresProps {
   cell?: (metric: ManagerMetricRead | null) => ReactNode;
 }
 
+/** The short chip the table prints in place of the word (the word stays in the DOM, the title and the legend line above the table). Never merged across domains. */
+export const DOMAIN_SHORT: Readonly<Record<ManagerEconomicDomain, string>> = { ACTUAL: "REAL", PAPER: "PAPER", SANDBOX: "SIM" };
+
 export const partitionTag = (entry: ManagerPartitionedMetrics): string => `${DOMAIN_LABEL[entry.partition.economicDomain]} · ${entry.partition.currency}`;
 
 /**
@@ -53,7 +56,7 @@ export function PartitionFigures({ partitions, metricKey, metricKeys, gap, signe
         return (
           <span key={`${entry.partition.economicDomain}|${entry.partition.currency}|${entry.partition.basis}|${entry.partition.nativeProfileRef}`}
             className="exec-fleet-part" data-domain={entry.partition.economicDomain} data-testid={`part-${metricKey}`}>
-            <span className="exec-fleet-part-tag" title={partitionTitle(entry)}>
+            <span className="exec-fleet-part-tag" data-short={DOMAIN_SHORT[entry.partition.economicDomain]} title={partitionTitle(entry)}>
               {DOMAIN_LABEL[entry.partition.economicDomain]}
               {/* The currency is the figure's own suffix; it stays in the tag for assistive technology and in the text, not on screen twice. */}
               <span className="exec-fleet-sr"> · {entry.partition.currency}</span>

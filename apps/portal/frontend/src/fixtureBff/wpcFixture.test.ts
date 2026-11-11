@@ -89,9 +89,8 @@ describe("series for the native portfolios", () => {
   it("a subject with no member in the environment is typed UNAVAILABLE (Canary holds only a sandbox book), and a JPY book is INCOMPARABLE with USDT", () => {
     const canary = seriesOf("NAV", ["pf_TEST_ONLY_satellite", "pf_TEST_ONLY_canary"]);
     expect(canary.body.series[1]).toMatchObject({ state: "UNAVAILABLE", reason_code: "SUBJECT_HAS_NO_ACTIVE_MEMBERS" });
-    const jpy = scaled().portfolios.find((entry) => entry.base === "JPY");
-    expect(jpy).toBeDefined();
-    const mixed = seriesOf("NAV", ["pf_TEST_ONLY_satellite", jpy!.id]);
+    expect(scaled().portfolios.every((entry) => entry.base === "USDT")).toBe(true); // the scale world publishes USDT only (WP-4)
+    const mixed = seriesOf("NAV", ["pf_TEST_ONLY_satellite", "pf_TEST_ONLY_yen"]); // the TEST_ONLY yen book is the JPY side
     expect(mixed.body.comparison).toMatchObject({ state: "INCOMPARABLE", reason_code: "CURRENCY_MIXED" });
   });
 });
@@ -102,7 +101,7 @@ describe("lifecycle, events and regime fit (open partition keys, register 2c-wpc
   it("the exit instants chain R1 < R2 < paper < sandbox < canary < now and the day counts agree with them", () => {
     const m = metricsOf("alpha_a");
     const at = (key: string): number => Number(m[key].value);
-    const anchor = Date.UTC(2026, 9, 17, 12, 4); // the alpha doubles' own "now", whatever FIXTURE_NOW is
+    const anchor = Date.UTC(2026, 7, 22, 13, 0); // the alpha doubles' own "now", whatever FIXTURE_NOW is
     const chain = ["life_r1_exit_ms", "life_r2_exit_ms", "life_paper_exit_ms", "life_sandbox_exit_ms", "life_canary_exit_ms"].map(at);
     expect([...chain].sort((a, b) => a - b)).toEqual(chain);
     expect(anchor - chain[4]!).toBe(Number(m.life_live_days.value) * DAY);

@@ -58,7 +58,8 @@ describe("60 deployments, 20 accounts", () => {
     expect(deployments).toContain("60");
     expect(deployments).toContain("24 alphas");
     expect(deployments).toContain("20 accounts");
-    for (const [tab, table, count] of [["Alphas", "Alphas and deployments", 60], ["Accounts", "Accounts", 20], ["Risk and Health", "Exposure by deployment", 60]] as const) {
+    // The Alphas tab is the Alpha Fleet dataset now (paged, see alphasFleet.test.tsx); the resource-backed tables keep their whole-read budget here.
+    for (const [tab, table, count] of [["Accounts", "Accounts", 20], ["Risk and Health", "Exposure by deployment", 60]] as const) {
       const started = performance.now();
       fireEvent.click(screen.getByRole("tab", { name: tab }));
       await waitFor(() => expect(screen.getByRole("tab", { name: tab }).getAttribute("aria-selected")).toBe("true"));
@@ -69,9 +70,9 @@ describe("60 deployments, 20 accounts", () => {
 
   it("caps a table at 200 rows and says how many there are", async () => {
     const huge: Override = (_m, path) => (path === `/resources/portfolios/${PF.core}` ? { status: 200, body: bigResource(260, 230) } : undefined);
-    mount(makeApi(huge).api, "?tab=alphas");
+    mount(makeApi(huge).api, "?tab=risk");
     await ready();
-    expect(rowsOf("Alphas and deployments")).toHaveLength(200);
+    expect(rowsOf("Exposure by deployment")).toHaveLength(200);
     expect(screen.getByText("Showing the first 200 of 260 deployments. The resource is read whole; narrow it from the Alpha Fleet or the account list.")).toBeTruthy();
     fireEvent.click(screen.getByRole("tab", { name: "Accounts" }));
     await waitFor(() => expect(rowsOf("Accounts")).toHaveLength(200));

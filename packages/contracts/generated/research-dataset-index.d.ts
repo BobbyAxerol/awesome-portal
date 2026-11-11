@@ -140,7 +140,12 @@ export interface components {
             end_exclusive_utc_ms: components["schemas"]["UtcMilliseconds"];
             bars?: number;
         };
-        Warmup: components["schemas"]["UtcRange"] & {
+        Warmup: {
+            start_utc: string;
+            end_exclusive_utc: string;
+            start_utc_ms: components["schemas"]["UtcMilliseconds"];
+            end_exclusive_utc_ms: components["schemas"]["UtcMilliseconds"];
+            bars?: number;
             requested_bars: number;
             /** @constant */
             state: "BOUNDARY_ONLY_NOT_FIT";
@@ -200,7 +205,12 @@ export interface components {
             /** @description CG-P02-02: nested inner folds the engine built inside this outer IS. */
             inner_fold_count?: number;
         };
-        SealedHoldout: components["schemas"]["UtcRange"] & {
+        SealedHoldout: {
+            start_utc: string;
+            end_exclusive_utc: string;
+            start_utc_ms: components["schemas"]["UtcMilliseconds"];
+            end_exclusive_utc_ms: components["schemas"]["UtcMilliseconds"];
+            bars?: number;
             /** @constant */
             snapshot_read_state: "OPAQUE_SNAPSHOT_ONLY";
             /** @constant */

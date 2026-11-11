@@ -86,3 +86,18 @@ export function activationSentence(capability: ActivationCapability): string {
   if (!capability.runtimeEnabled) return "the runtime is not enabled";
   return `live on ${capability.effectiveProfile ?? "a profile the server did not name"}`;
 }
+
+/**
+ * The same reason for a reader (UI review D12): the capability by its plain name, not its key, and the kill switch as a sentence.
+ * `activationSentence` stays the machine wording (the key is kept in `capabilityKey`); this is what a screen prints.
+ */
+export function activationPlain(capability: ActivationCapability): string {
+  // Gate tokens (`R1`, `R2`) keep their capital; every other word is lower case, the first one capitalised.
+  const words = capability.capabilityKey.split(/[_\s-]+/).filter((word) => word !== "").map((word) => (/^[A-Za-z]\d+$/.test(word) ? word.toUpperCase() : word.toLowerCase()));
+  const name = words.join(" ");
+  const subject = name === "" ? "This capability" : `${name.charAt(0).toUpperCase()}${name.slice(1)}`;
+  if (capability.killSwitchEngaged) return `${subject}: the kill switch is engaged, so it is stopped.`;
+  if (!capability.sourceEnabled) return `${subject}: its source is not enabled.`;
+  if (!capability.runtimeEnabled) return `${subject}: its runtime is not enabled.`;
+  return `${subject}: live on ${capability.effectiveProfile ?? "a profile the server did not name"}.`;
+}

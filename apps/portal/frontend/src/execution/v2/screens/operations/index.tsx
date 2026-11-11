@@ -460,6 +460,56 @@ function OperationsInner({
             ))}
           </div>
 
+          <div className="exec-ops-tool" data-role="range-lens">
+            <div className="exec-ops-field">
+              <span id="exec-ops-lens-label">Lens</span>
+              <div className="exec-ops-seg" role="group" aria-labelledby="exec-ops-lens-label">
+                <button
+                  type="button"
+                  aria-pressed={filters.lens === "attention" && filters.triage === ""}
+                  onClick={() => patch({ lens: "attention", triage: "" })}
+                >
+                  Needs attention
+                </button>
+                <button
+                  type="button"
+                  disabled
+                  aria-describedby={mineReasonId}
+                >
+                  Mine
+                </button>
+                <button
+                  type="button"
+                  aria-pressed={filters.lens === "all" && filters.triage === ""}
+                  onClick={() => patch({ lens: "all", triage: "" })}
+                >
+                  All
+                </button>
+              </div>
+            </div>
+            <div className="exec-ops-field">
+              <span id="exec-ops-window-label">Range</span>
+              <div className="exec-ops-seg" role="group" aria-labelledby="exec-ops-window-label">
+                {WINDOWS.map((w) => (
+                  <button key={w} type="button" aria-pressed={range === w} onClick={() => commit({ range: w })}>
+                    {w === "ALL" ? "All time" : w}
+                  </button>
+                ))}
+              </div>
+            </div>
+            {view === "commands" ? (
+              <div className="exec-ops-field">
+                <span id="exec-ops-source-label">Source</span>
+                <div className="exec-ops-seg" role="group" aria-labelledby="exec-ops-source-label">
+                  <button type="button" aria-pressed={source === ""} onClick={() => commit({ source: "" })}>All</button>
+                  <button type="button" aria-pressed={source === "commands"} onClick={() => commit({ source: "commands" })}>Commands</button>
+                  <button type="button" aria-pressed={source === "journal"} onClick={() => commit({ source: "journal" })}>Admin journal</button>
+                </div>
+              </div>
+            ) : null}
+          </div>
+          <p id={mineReasonId} className="exec-ops-reason">Mine: <QuietIds text={MINE_REASON} /></p>
+
           <div id="exec-ops-panel" role="tabpanel" aria-labelledby={`exec-ops-tab-${view}`}>
             {view === "exceptions" ? (
               ready ? (
@@ -493,52 +543,6 @@ function OperationsInner({
 
             {view === "commands" ? (
               <>
-                <div className="exec-ops-tool">
-                  <div className="exec-ops-field">
-                    <span id="exec-ops-lens-label">Lens</span>
-                    <div className="exec-ops-seg" role="group" aria-labelledby="exec-ops-lens-label">
-                      <button
-                        type="button"
-                        aria-pressed={filters.lens === "attention" && filters.triage === ""}
-                        onClick={() => patch({ lens: "attention", triage: "" })}
-                      >
-                        Needs attention
-                      </button>
-                      <button
-                        type="button"
-                        disabled
-                        aria-describedby={mineReasonId}
-                      >
-                        Mine
-                      </button>
-                      <button
-                        type="button"
-                        aria-pressed={filters.lens === "all" && filters.triage === ""}
-                        onClick={() => patch({ lens: "all", triage: "" })}
-                      >
-                        All
-                      </button>
-                    </div>
-                  </div>
-                  <div className="exec-ops-field">
-                    <span id="exec-ops-window-label">Range</span>
-                    <div className="exec-ops-seg" role="group" aria-labelledby="exec-ops-window-label">
-                      {WINDOWS.map((w) => (
-                        <button key={w} type="button" aria-pressed={range === w} onClick={() => commit({ range: w })}>
-                          {w === "ALL" ? "All time" : w}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                  <div className="exec-ops-field">
-                    <span id="exec-ops-source-label">Source</span>
-                    <div className="exec-ops-seg" role="group" aria-labelledby="exec-ops-source-label">
-                      <button type="button" aria-pressed={source === ""} onClick={() => commit({ source: "" })}>All</button>
-                      <button type="button" aria-pressed={source === "commands"} onClick={() => commit({ source: "commands" })}>Commands</button>
-                      <button type="button" aria-pressed={source === "journal"} onClick={() => commit({ source: "journal" })}>Admin journal</button>
-                    </div>
-                  </div>
-                </div>
                 <div className="exec-ops-tool" data-row="narrow">
                   <Select<TriageStateV2>
                     label="Triage"
@@ -597,7 +601,6 @@ function OperationsInner({
                     </span>
                   </form>
                 </div>
-                <p id={mineReasonId} className="exec-ops-reason">Mine: <QuietIds text={MINE_REASON} /></p>
                 <NotAvailableLine
                   className="exec-ops-na-line"
                   facts={[

@@ -122,6 +122,19 @@ export function useDockSelection(): DockSelection {
 // `summary` is a tab stop (a disclosure); without it the trap wraps at the last button and a disclosure after it is unreachable.
 const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), summary, [tabindex]:not([tabindex="-1"])';
 
+/**
+ * A control inside a closed disclosure is not a tab stop (only the disclosure's own summary is). Left in the list it can be the
+ * "last" control, so Tab from the last reachable one never matches it and walks out of the modal.
+ */
+function reachable(el: HTMLElement): boolean {
+  const closed = el.closest("details:not([open])");
+  return closed === null || (el.tagName === "SUMMARY" && el.parentElement === closed);
+}
+
+function tabStops(root: HTMLElement): HTMLElement[] {
+  return Array.from(root.querySelectorAll<HTMLElement>(FOCUSABLE)).filter(reachable);
+}
+
 export interface DrawerProps {
   /** Rendered only while true. Defaults to true so `{selection ? <Drawer/> : null}` also works. */
   open?: boolean;
@@ -249,7 +262,7 @@ export function Drawer({ open = true, onClose, title, subtitle, children, action
       if (event.key !== "Tab" || event.defaultPrevented || !el) return;
       const active = document.activeElement;
       if (active instanceof Node && el.contains(active)) return;
-      const items = Array.from(el.querySelectorAll<HTMLElement>(FOCUSABLE));
+      const items = tabStops(el);
       const target = event.shiftKey ? items[items.length - 1] : items[0];
       if (!target) return;
       event.preventDefault();
@@ -266,7 +279,7 @@ export function Drawer({ open = true, onClose, title, subtitle, children, action
   // A modal dialog must not let Tab leave it.
   const trap = (event: ReactKeyboardEvent) => {
     if (!overlay || event.key !== "Tab" || !panel.current) return;
-    const items = Array.from(panel.current.querySelectorAll<HTMLElement>(FOCUSABLE));
+    const items = tabStops(panel.current);
     const first = items[0];
     const last = items[items.length - 1];
     if (!first || !last) return;

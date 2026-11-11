@@ -592,12 +592,14 @@ describe("QA1 I-19 / I-23: the detail is reachable from the queue", () => {
     expect(scrolled.some((c) => c.includes("exec-ck-q"))).toBe(true);
   });
 
-  it("QA2 R3-25: with nothing selected there is no Go to the decision control, only the way back to the queue", async () => {
+  // UI review F1 / D9 supersedes QA2 R3-25: "Back to the queue" under the queue with nothing open had nothing to go back from, so with
+  // nothing selected neither jump is drawn.
+  it("D9: with nothing selected there is no Go to the decision control and no Back to the queue either", async () => {
     // Narrow: the stacked query matches and the wide (auto-select) query does not, so nothing is chosen on load.
     (window as unknown as { matchMedia: (q: string) => MediaQueryList }).matchMedia = (q: string) =>
       ({ matches: q.includes("max-width"), media: q, addEventListener: () => undefined, removeEventListener: () => undefined }) as unknown as MediaQueryList;
     await mount(standard());
-    expect(within(evidence()).getByRole("button", { name: "Back to the queue" })).toBeTruthy();
+    expect(within(evidence()).queryByRole("button", { name: "Back to the queue" })).toBeNull();
     expect(within(evidence()).queryByRole("button", { name: "Go to the decision" })).toBeNull();
   });
 

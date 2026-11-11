@@ -392,12 +392,52 @@ describe("BE-P1 Manager dataset producer invariants: schema part and runtime par
       }
       return body;
     };
-    expect(negative.cases.map((c:any) => c.gap).filter((gap:string,i:number,all:string[]) => all.indexOf(gap) === i).sort()).toEqual(["MD-1","MD-2","MD-3","MD-4","MD-5","MD-6","MD-7","MD-8"]);
+    expect(negative.cases.map((c:any) => c.gap).filter((gap:string,i:number,all:string[]) => all.indexOf(gap) === i).sort()).toEqual(["MD-1","MD-2","MD-3","MD-4","MD-5","MD-6","MD-7","MD-8","MD-9"]);
     for (const c of negative.cases) {
       const body = apply(c.ops), runtime = managerDatasetResponse.safeParse(body);
       expect(runtime.success,c.id).toBe(false);
       expect(!runtime.success && runtime.error.issues.some(i => i.message === c.code || i.code === c.code),c.id).toBe(true);
       expect(validate(body),c.id).toBe(c.refused_by === "PRODUCER_ONLY");
+    }
+  });
+  it("BE-B1: the PERCENT partition keys, the emitted effective_at_ms and the per-deployment allocation time are judged alike by both validators, and a win rate is row level only", () => {
+    const sample = load("fixtures/execution-manager-dataset.percent-figures.synthetic.valid.json");
+    expect(sample.lane).toBe("TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT");
+    expect(both(sample.value)).toEqual({schema:true,runtime:true});
+    const a = sample.value.items[0], b = sample.value.items[1];
+    const m = a.economic_partitions[0].metrics;
+    expect(m.win_rate_pct).toMatchObject({unit:"PERCENT",currency:null,value:"58.3"});
+    expect(m.max_drawdown_pct).toMatchObject({unit:"PERCENT",currency:null,value:"-2.43"});
+    expect(m.win_rate_pct.effective_at_ms).toBeLessThan(sample.value.as_of_ms);
+    expect(a.children[0].allocation_effective_at_ms).toBeLessThan(sample.value.as_of_ms);
+    // Omission is Not published: the two-currency row states neither figure, nor a time.
+    for (const p of b.economic_partitions) expect(Object.keys(p.metrics)).not.toContain("win_rate_pct");
+    expect(b.children[0]).not.toHaveProperty("allocation_effective_at_ms");
+    // A group states a drawdown but no win rate.
+    expect(sample.value.groups[0].economic_partitions[0].metrics.max_drawdown_pct.unit).toBe("PERCENT");
+    expect(Object.keys(sample.value.groups[0].economic_partitions[0].metrics)).not.toContain("win_rate_pct");
+    for (const bad of [-1, 1.5, "1", null]) {
+      const body = clone(sample.value); body.items[0].children[0].allocation_effective_at_ms = bad;
+      expect(both(body), String(bad)).toEqual({schema:false,runtime:false});
+    }
+  });
+  it("UXM-07 WP-2: the optional per-metric effective_at_ms is a UTC-ms integer in both validators, ordered funds before budget before allocation, and absent where the source published none", () => {
+    const sample = load("fixtures/execution-manager-dataset.statement-times.synthetic.valid.json");
+    expect(sample.lane).toBe("TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT");
+    expect(both(sample.value)).toEqual({schema:true,runtime:true});
+    const m = sample.value.capital_statements[0].metrics;
+    expect(m.added_funds).not.toHaveProperty("effective_at_ms");
+    const when = (key:string) => m[key].effective_at_ms as number;
+    expect(when("initial_funds")).toBeLessThan(when("returned_capital"));
+    expect(when("returned_capital")).toBeLessThan(when("current_budget"));
+    expect(when("current_budget")).toBeLessThan(when("allocation"));
+    expect(when("allocation")).toBeLessThan(sample.value.as_of_ms);
+    // A budget is a limit: never above the net funded capital; allocated + headroom closes on it.
+    expect(BigInt(m.current_budget.value)).toBeLessThanOrEqual(BigInt(m.net_external_flows.value));
+    expect(BigInt(m.allocation.value) + BigInt(m.headroom.value)).toBe(BigInt(m.current_budget.value));
+    for (const bad of [-1, 1.5, "1", null, Number.MAX_SAFE_INTEGER + 1]) {
+      const body = clone(sample.value); body.capital_statements[0].metrics.initial_funds.effective_at_ms = bad;
+      expect(both(body), String(bad)).toEqual({schema:false,runtime:false});
     }
   });
   it("accepts the pinned-partition headline and a past-the-end empty page", () => {

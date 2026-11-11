@@ -20,6 +20,7 @@ import { fileURLToPath } from "node:url";
 import type { Page } from "@playwright/test";
 import { answerOperationsV2 } from "./bffDoubleV2";
 import { answerAccount } from "./bffDoubleAccount";
+import { withInboxView } from "./bffApprovalWorld"; // F3b
 import { simulate, simulatedRunResult } from "./bffSimulated";
 import { answerAlpha } from "./bffDoubleAlpha";
 import { answerGovernance } from "./bffDoubleGovernance";
@@ -256,7 +257,7 @@ export function alphaFleet(search: URLSearchParams): Answer {
   // WORLD (positive-like scenarios): the Alpha Fleet read counts the alphas, deployments and portfolios of the ONE world: the native books, the
   // research idea and the generated alphas; the hand-written five of the doubles stay for the specs.
   const worldFleet: Record<string, unknown>[] = isPositiveMode()
-    ? [...NATIVE_ALPHAS.map(worldRow), row("alpha_e", "Idea E", "0.1", null, ["RESEARCH"], "RESEARCH_ONLY", [], [], "2026-09-01T12:00:00Z")]
+    ? [...NATIVE_ALPHAS.map(worldRow), row("alpha_e", "Idea E", "0.1", null, ["RESEARCH"], "RESEARCH_ONLY", [], [], "2026-08-22T11:00:00Z")]
     : [];
   const all: Record<string, unknown>[] = isPositiveMode() ? [...worldFleet, ...scaled().alphas.map(worldRow)] : [
     base,
@@ -1145,6 +1146,14 @@ export function answerExecutionBff(method: string, pathname: string, search: URL
   const answer = answerExecutionBffBase(method, pathname, search, options, requestBody);
   if (options.screensV2 !== true || (options.simulated !== true && options.reviewManager !== true)) return answer;
   const path = pathname.replace(/^\/api\/v1\/execution/, "") || "/";
+  // ===== F3b begin: an approval's evidence read is answered per approval (its own diff, "What changes", counts and read time) as the lane's inbox shows that request,
+  // not by one canonical published body relabelled with the id (which printed one capital step for two requests and a read time of 15 Jan). Only a 501 (the double has no
+  // evidence of its own) is answered; the specs' own published-read stubs keep every other route.
+  if (method === "GET" && answer.status === 501 && /^\/governance\/approvals\/[A-Za-z0-9._:-]+\/evidence$/.test(path)) {
+    const evidence = withInboxView(() => answerReviewManager("GET", path, search, "populated"));
+    if (evidence !== null && evidence.status === 200) return evidence as Answer;
+  }
+  // ===== F3b end
   // The overview double answers the V2 queue too; the same V2 function answers it again with the counts the server would publish.
   if (method === "GET" && path === "/operations" && answer.status === 200 && (answer.body as { schema_version?: unknown } | null)?.schema_version === "portal.execution.operational-queue.v2") {
     return answerOperationsV2(method, path, search, true) ?? answer;

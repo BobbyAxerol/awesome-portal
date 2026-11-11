@@ -24,6 +24,21 @@
   font: var(--exec-font-control);
   color: var(--ink-soft);
 }
+/* UI review D8: a record that is not there. The id is secondary text, the way back is a plain link. */
+.exec-nf-id {
+  margin: 0;
+  font: var(--exec-font-meta);
+  color: var(--ink-faint);
+}
+.exec-nf-id code {
+  font: var(--exec-font-id);
+  color: var(--ink-soft);
+  overflow-wrap: anywhere;
+}
+.exec-nf-back {
+  font: var(--exec-font-control);
+  color: var(--accent);
+}
 /* An id never breaks mid-token: "(FE-027/028)" wraps before the "(" at 390px. */
 .exec-blk-np-id {
   white-space: nowrap;

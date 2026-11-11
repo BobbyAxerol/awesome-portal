@@ -17,6 +17,7 @@ import type { ExecutionApi } from "../../../api/ports";
 import type { ProfileEnvelope } from "../../../api/profileRead";
 import { PanelState } from "../../../components/states";
 import { GapWhy, SectionPanel, StateBoundary } from "../../blocks";
+import { NotFound } from "../../blocks/NotFound";
 import { readUtcEpochMs, type UtcEpochMs } from "../../../screenDataContract";
 import { formatAsOf } from "../../boundary";
 import { Flag } from "../../Flag";
@@ -72,6 +73,15 @@ export function Account360({ api, accountId }: Account360Props) {
         {back}
         <h1 className="exec-acct-title">{accountId}</h1>
         <PanelState status="loading" />
+      </div>
+    );
+  }
+  if (state.phase === "error" && /NOT_FOUND|\b404\b/.test(state.reason)) {
+    // A permanent not-found: no "Try again" (asking again cannot change the answer), a way back to the list the reader came from.
+    return (
+      <div className="exec-acct-v2" data-screen="account-360-v2">
+        <h1 className="exec-acct-title">Account</h1>
+        <NotFound what="Account" id={accountId} sentence="This account does not exist, or it is not visible to you (ACCOUNT_NOT_FOUND)." backTo={origin.to} backLabel={origin.label} />
       </div>
     );
   }
@@ -251,7 +261,7 @@ function Loaded({ api, accountId, profile, staleReason, refreshing, reload, back
             </>
           ) : null}
           {tab === "pos" ? <PositionsPanel ctx={ctx} scope={positionScope} onScope={setPositionScope} /> : null}
-          {tab === "all" ? <AllocationsPanel ctx={ctx} /> : null}
+          {tab === "all" ? <AllocationsPanel ctx={ctx} api={api} /> : null}
           {tab === "fee" ? <FeesPanel ctx={ctx} /> : null}
           {tab === "rec" ? <ReconciliationPanel ctx={ctx} exposure={exposure.state.phase === "ready" ? exposure.state.value : null} /> : null}
           {tab === "act" ? <ActivityPanel api={api} accountId={accountId} environment={environment} /> : null}

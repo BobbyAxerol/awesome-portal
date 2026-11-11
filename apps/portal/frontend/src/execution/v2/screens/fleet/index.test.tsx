@@ -16,6 +16,7 @@ import type { AlphaFleetQuery, ExecutionApi } from "../../../api/ports";
 import { readAlphaFleet } from "../../../api/profileRead";
 import { PAGE_LIMIT } from "./fleetModel";
 import FleetScreen, { FLEET_SCREEN_KEY } from "./index";
+import { openFilters, openNotes } from "./datasetDouble.testbase";
 
 afterEach(cleanup);
 
@@ -58,7 +59,12 @@ const where = () => screen.getByTestId("where").textContent ?? "";
 const search = () => new URLSearchParams(where().split("?")[1] ?? "");
 const table = () => screen.getByRole("table", { name: "Alpha fleet" });
 const names = () => within(table()).getAllByRole("row").slice(1).map((r) => r.querySelector("td[data-l='Alpha'] .exec-fleet-name")?.textContent ?? "");
-const loaded = async () => screen.findByRole("table", { name: "Alpha fleet" }, SLOW);
+const loaded = async () => {
+  const found = await screen.findByRole("table", { name: "Alpha fleet" }, SLOW);
+  openFilters();
+  openNotes();
+  return found;
+};
 
 describe("identity table", () => {
   it("is the fleet flag's screen", () => {
@@ -326,6 +332,7 @@ describe("search, owner, health, sort", () => {
     const { api, calls } = makeApi();
     mount(api, "/execution/fleet?owner=Lan-002");
     await waitFor(() => expect(names()).toEqual(["Basis B"]), SLOW);
+    openFilters();
     const owner = screen.getByRole("combobox", { name: "Owner" }) as HTMLInputElement;
     expect(owner.value).toBe("Lan-002");
     fireEvent.change(owner, { target: { value: "half-typ" } });

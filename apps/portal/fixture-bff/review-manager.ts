@@ -99,6 +99,12 @@ function pageGroups(body: Draft, path: string, search: URLSearchParams, profile:
   return null;
 }
 
+/**
+ * The scale world publishes USDT only (UI adjustment WP-4). The one non-USDT subject the series port still answers is the TEST_ONLY
+ * yen book (the Portfolios double's Yen-Carry), so the currency-mixed refusal stays exercised and no screen lists it by default.
+ */
+const TEST_ONLY_CURRENCY_BOOKS: readonly { id: string; base: string }[] = [{ id: "pf_TEST_ONLY_yen", base: "JPY" }];
+
 function comparison(series: Draft[]): Draft {
   const neutral = { transform: "NONE_NO_REBASE_NO_CROSS_CURRENCY_SUM", axis_ms: null };
   const described = series.filter((entry) => entry.state !== "UNAVAILABLE");
@@ -157,7 +163,7 @@ function seriesAnswer(method: string, path: string, search: URLSearchParams, pro
   body.quality = copy(traits().series); // WP-P: COMPLETE/FRESH in the positive world (Codex's default); the former PARTIAL body is partial/missing
   body.selected_window = { requested, resolved: window, selection_basis: "EXACT_PUBLISHED_METRIC_WINDOW_ONLY", reason_code: null };
   const pinned = search.has("economic_partition") ? JSON.parse(search.get("economic_partition")!) : null;
-  const knownPortfolios = new Map([...scaled().portfolios, ...wpcPortfolioStubs(body.environment)].map((portfolio) => [portfolio.id, portfolio]));
+  const knownPortfolios = new Map([...scaled().portfolios, ...wpcPortfolioStubs(body.environment), ...TEST_ONLY_CURRENCY_BOOKS].map((portfolio) => [portfolio.id, portfolio]));
   body.series = subjects.map((subject, subjectIndex) => {
     const identity = { subject_type: subject.subject_type, subject_id: subject.subject_type === "FUND" ? body.workspace_id : subject.subject_id };
     const portfolio = subject.subject_type === "ALPHA" ? wpkAlphaBook(identity.subject_id, body.environment) : knownPortfolios.get(identity.subject_id); // WP-K
@@ -241,6 +247,8 @@ const seedOf = (...parts: unknown[]): number => parseInt(digest(parts).slice(7, 
 /** A deterministic negative percent between -2.00 and -19.99. */
 // WORLD: a book that is up has a shallow drawdown (0.5 to 3 percent); the legacy lane keeps its 2 to 20 percent
 const drawdownOf = (...parts: unknown[]): string => trimmed(legacy() ? -(200n + BigInt(seedOf(...parts) % 1800)) : -(50n + BigInt(seedOf(...parts) % 250)), 2);
+/** SIMULATED win rate: wins over closed trades as a percent with 1 place, deterministic from the row key, 35.0 to 74.9 (never 0 for a published value). */
+const winRateOf = (...parts: unknown[]): string => trimmed(350n + BigInt(seedOf("win-rate", ...parts) % 400), 1);
 const plainMetric = (template: Draft, value: string | null, unit: string): Draft => {
   const out = metric(template, value, "X");
   out.currency = null;
@@ -250,7 +258,7 @@ const plainMetric = (template: Draft, value: string | null, unit: string): Draft
 const pctMetric = (template: Draft, value: string | null): Draft => plainMetric(template, value, "PERCENT");
 /** A present metric becomes a typed absence in its own unit. */
 const nulled = (key: string, template: Draft, currency: string): Draft =>
-  (key === "return_30d_pct" || key === "max_drawdown_pct") ? pctMetric(template, null)
+  (key === "return_30d_pct" || key === "max_drawdown_pct" || key === "win_rate_pct") ? pctMetric(template, null)
     : (key === "score" || key.startsWith("qbts_")) ? qbtsMetric(template, null, "SCORE", "INSUFFICIENT_EVIDENCE") : metric(template, null, currency);
 
 const NEW_ROW_KEYS = ["balance_total", "equity_30d_end_value", "return_30d_pct", "score"] as const;
@@ -349,6 +357,8 @@ function enrichRow(row: Draft, preset: WindowPreset, components = true): Draft {
     const cost = (bp: bigint): string | null => A === null ? null : trimmed(toScaled(A) * bp * BigInt(preset.days) / (10_000n * 30n), SCALE);
     const worldCost = (kind: "fees" | "funding" | "slippage", fallback: string | null): string | null => (legacy() ? fallback : c3RowCost(row, kind, preset.days) ?? fallback); // WP-B2-C3: one fee model
     m.max_drawdown_pct = pctMetric(template, A === null ? null : N !== null && toScaled(N) === 0n ? "0" : drawdownOf(row.row_key, "row"));
+    // SIMULATED win rate: a typed absence where the allocation is unpublished (no book, no closed trades), else 35.0 to 74.9, not windowed.
+    m.win_rate_pct = pctMetric(template, A === null ? null : winRateOf(row.row_key));
     m.cost_drag_fees = metric(template, worldCost("fees", cost(5n)), entry.partition.currency);
     m.cost_drag_funding = metric(template, worldCost("funding", cost(2n)), entry.partition.currency);
     m.cost_drag_slippage = metric(template, legacy() && seedOf(row.row_key, "slippage") % 4 === 0 ? null : worldCost("slippage", cost(1n)), entry.partition.currency);
@@ -372,7 +382,7 @@ function aggregate(rows: Draft[]): Draft[] {
     if (!found) { byPartition.set(key, { item: copy(item), members: [item.metrics] }); continue; }
     found.members.push(item.metrics);
     for (const name of Object.keys(item.metrics)) {
-      if (name === "return_30d_pct" || name === "max_drawdown_pct" || name === "forward_observation_days" || name === "score" || name.startsWith("qbts_")) continue;
+      if (name === "return_30d_pct" || name === "max_drawdown_pct" || name === "win_rate_pct" || name === "forward_observation_days" || name === "score" || name.startsWith("qbts_")) continue;
       const a = found.item.metrics[name];
       const b = item.metrics[name];
       if (b === undefined || a === undefined) { if (a === undefined && b !== undefined) found.item.metrics[name] = copy(b); continue; } // WP-B2-S3 (QA10 N10-M4): rows of one group may carry different open metric keys (the lifecycle keys of an alpha); a key only one row has is kept, never summed against nothing
@@ -394,7 +404,7 @@ function aggregate(rows: Draft[]): Draft[] {
     item.metrics.concentration_hhi.unit = "RATIO";
     // Row-only keys (days observed, cost drag) are not portfolio totals here and would only grow the response.
     // A score is per alpha version and is never added up: the group carries none.
-    for (const rowOnly of ["forward_observation_days", "cost_drag_fees", "cost_drag_funding", "cost_drag_slippage", "score", "qbts_p", "qbts_r", "qbts_b", "qbts_band", "qbts_evidence", "qbts_provisional"]) delete item.metrics[rowOnly];
+    for (const rowOnly of ["win_rate_pct", "forward_observation_days", "cost_drag_fees", "cost_drag_funding", "cost_drag_slippage", "score", "qbts_p", "qbts_r", "qbts_b", "qbts_band", "qbts_evidence", "qbts_provisional"]) delete item.metrics[rowOnly];
     return item;
   });
 }
@@ -474,6 +484,43 @@ function applyWindow(body: Draft, name: "7D" | "30D" | "90D" | "ALL", preset: Wi
   for (const group of body.groups) visit(group.economic_partitions);
 }
 
+/** The approved budget of the positive world for allocated capital `allocated`: a limit above it, rounded up to the next ten thousand. One rule for the statements and for the capital derivation's `max_capital` (e2e/bffDoublePortfolios.ts mirrors it). */
+const worldBudgetOf = (allocated: string): string => trimmed(((toScaled(allocated) * 5n / 4n / (10_000n * 10n ** 18n)) + 1n) * 10_000n * 10n ** 18n, SCALE);
+
+/* UXM-07 WP-2: EFFECTIVE TIMES of the capital statement (optional `effective_at_ms` on a metric; register 2f1b). Deterministic from the fixture's as-of and
+ * ordered the way the PM TS guide orders a portfolio's life: funds in and returned, then the budget approval, then the allocations. The allocation time of
+ * a deployment is the ALLOCATE leg of the simulated capital ledger (`wpF1Ledger`: 41 days before as-of, less (position in the portfolio's book mod 5)
+ * days), so the flow table and the ledger on the same tab state one date. A figure with no receipt of its own (NAV, headroom, net external flows,
+ * recalling, a zero flow, anything in the `partial`/`missing` scenarios) publishes none: absent, never inferred. */
+const WP2_ALLOCATE_DAYS = 41;
+const WP2_INITIAL_ALLOCATE_DAYS = 82;
+let wp2OrderMemo: { universe: unknown; order: Map<string, number> } | null = null;
+/** Position of each deployment inside its portfolio's book of one environment (the order `wpF1Ledger` walks), over every known deployment. */
+function wp2Order(): Map<string, number> {
+  const universe = scaled();
+  if (wp2OrderMemo !== null && wp2OrderMemo.universe === universe) return wp2OrderMemo.order;
+  const counts = new Map<string, number>();
+  const order = new Map<string, number>();
+  for (const alpha of [...SUITE_ALPHAS, ...WPC_ALPHAS, ...universe.alphas]) for (const d of alpha.deployments) {
+    const book = `${d.portfolioId}|${d.environment}`;
+    const at = counts.get(book) ?? 0;
+    counts.set(book, at + 1);
+    order.set(d.id, at);
+  }
+  wp2OrderMemo = { universe, order };
+  return order;
+}
+const wp2AllocationMs = (d: DeploymentSpec): number => fixtureNowMs() - (WP2_ALLOCATE_DAYS - ((wp2Order().get(d.id) ?? 0) % 5)) * DAY_MS;
+/** The latest allocation time of a set of deployments (when the whole line had taken effect), or null for none. */
+const wp2LatestAllocationMs = (deployments: readonly (DeploymentSpec | undefined)[]): number | null => {
+  const times = deployments.filter((d): d is DeploymentSpec => d !== undefined).map(wp2AllocationMs);
+  return times.length === 0 ? null : Math.max(...times);
+};
+/** Budget approval: five days before the first INITIAL_ALLOCATE leg of any book. Funds in: 3 to 22 days before that (by partition), the surplus return 3 days after them. */
+const wp2BudgetMs = (): number => fixtureNowMs() - (WP2_INITIAL_ALLOCATE_DAYS + 5) * DAY_MS;
+const wp2FundsMs = (partitionKey: string): number => wp2BudgetMs() - (6 + seedOf(partitionKey, "funds-time") % 20) * DAY_MS;
+const wp2ReturnMs = (partitionKey: string): number => wp2FundsMs(partitionKey) + 3 * DAY_MS;
+
 /** Separate synthetic capital receipts, NOT aliases for the table's allocation/PnL.
  * Like the real statement projection, scope and selected stages are applied first,
  * table filters/page limits never change the statement, and currencies stay apart.
@@ -509,12 +556,16 @@ function capitalStatements(rows: Draft[]): Draft[] {
       current_budget: decimal(count * 9_000n * scale, 18),
       pending_amount: index === 0 ? null : "0",
     } : {
-      initial_funds: opening,
+      // UXM-07 WP-2 (capital rule, PM TS guide 11.1 and Manager UX guide 6.3): an approved budget is a LIMIT over the capital that was funded, never
+      // above it, and allocated + headroom = budget. So the WORLD funds the portfolio with the budget (initial funds = approved budget, the whole
+      // limit was funded at inception), allocates `opening` of it, and returns the unallocated surplus (returned = initial - allocated). The
+      // chain then closes without touching a published figure: NAV = initial + added - returned + net PnL, net external flows = allocated.
+      initial_funds: opening === null ? null : worldBudgetOf(opening),
       added_funds: "0",
-      returned_capital: "0",
+      returned_capital: opening === null ? null : addDecimal(worldBudgetOf(opening), `-${opening}`), // keeps the places of the allocated base ("70000.00")
       current_nav: opening !== null && currentPnl !== null ? addDecimal(opening, currentPnl) : null,
       // The WORLD budget is a limit above allocated capital, rounded up to the next ten thousand.
-      current_budget: opening === null ? null : trimmed(((toScaled(opening) * 5n / 4n / (10_000n * 10n ** 18n)) + 1n) * 10_000n * 10n ** 18n, SCALE),
+      current_budget: opening === null ? null : worldBudgetOf(opening),
       pending_amount: "0",
     };
     const money = Object.fromEntries(Object.entries(values).map(([kind, value]) => {
@@ -525,6 +576,9 @@ function capitalStatements(rows: Draft[]): Draft[] {
       out.methodology_ref = value === null ? null : "FIXTURE_LAB:synthetic-capital-receipts-v1";
       out.provenance_refs = [digest(["FIXTURE_LAB_SYNTHETIC_CAPITAL", key, accounts, kind])];
       out.calculation_revision = "FIXTURE_LAB:capital-review.v1";
+      // UXM-07 WP-2: the time each receipt took effect (funds, return, budget). Not in the `partial`/`missing` scenarios (typed absence).
+      const at = legacy() || value === null ? null : ({ initial_funds: wp2FundsMs(key), returned_capital: wp2ReturnMs(key), current_budget: wp2BudgetMs() } as Record<string, number>)[kind] ?? null;
+      if (at !== null) out.effective_at_ms = at;
       return [kind, out];
     }));
     // SIMULATED performance keys of the same partition: net_pnl = sum of THIS partition's rows; return = net_pnl * 100 / initial_funds;
@@ -541,7 +595,7 @@ function capitalStatements(rows: Draft[]): Draft[] {
     const denominator = legacy() ? values.initial_funds : opening;
     const ret = pnl === null || denominator === null ? null : pct(toScaled(pnl), toScaled(denominator));
     const returnMetric = perf("return_30d_pct", pctMetric(entry.template, legacy() && index === 1 && all.length > 1 ? null : ret));
-    returnMetric.denominator = returnMetric.availability === "AVAILABLE" ? values.initial_funds : null;
+    returnMetric.denominator = returnMetric.availability === "AVAILABLE" ? (legacy() ? values.initial_funds : opening) : null; // WORLD: the denominator is the allocated base the return was computed on
     const extra = {
       net_pnl: perf("net_pnl", metric(entry.template, pnl, entry.partition.currency)),
       return_30d_pct: returnMetric,
@@ -900,6 +954,7 @@ function addGroupScores(body: Draft, groupFields: string[], windowName: string |
  * windows do not apply (current facts, window null). No schema is widened: both maps are open. */
 function wpF1Money(template: Draft, value: string | null, currency: string, kind: string): Draft {
   const out = metric(template, value, currency);
+  delete out.effective_at_ms; // UXM-07 WP-2: a derived figure has no receipt of its own; the template's time is the budget's, not this figure's
   out.window = null;
   out.denominator = null;
   out.methodology_ref = value === null ? null : "FIXTURE_LAB:synthetic-capital-derived-v1";
@@ -909,17 +964,26 @@ function wpF1Money(template: Draft, value: string | null, currency: string, kind
 }
 const wpF1Value = (entry: Draft, key: string): string | null => (entry.metrics[key]?.availability === "AVAILABLE" ? entry.metrics[key].value : null);
 const wpF1Part = (budget: string, percent: bigint): string => trimmed(toScaled(budget) * percent / 100n / 10n ** 16n * 10n ** 16n, SCALE);
-function addWpF1(body: Draft, groupFields: string[]): void {
+/** The deployments a read is about (its surface, resource and environment), optionally of one currency: the ones whose allocation times a statement line or an alpha group states. */
+function wp2ScopeDeployments(scope: { surface: string; id: string | undefined; environment: string }, currency: string, alphaId?: string): DeploymentSpec[] {
+  return [...SUITE_ALPHAS, ...WPC_ALPHAS, ...scaled().alphas].flatMap((alpha) => alpha.deployments).filter((d) => d.environment === scope.environment && d.currency === currency
+    && (alphaId === undefined || d.alphaId === alphaId)
+    && (scope.id === undefined || (scope.surface === "PORTFOLIO" ? d.portfolioId === scope.id : scope.surface === "ALPHA" ? d.alphaId === scope.id : scope.surface === "ACCOUNT" ? d.accountId === scope.id : scope.surface === "DEPLOYMENT" ? d.id === scope.id : true)));
+}
+function addWpF1(body: Draft, groupFields: string[], scope: { surface: string; id: string | undefined; environment: string }): void {
   for (const entry of body.capital_statements) {
     const currency = entry.partition.currency;
     const template = entry.metrics.current_budget;
     const key = JSON.stringify(entry.partition);
     const [initial, added, returned, budget] = ["initial_funds", "added_funds", "returned_capital", "current_budget"].map((name) => wpF1Value(entry, name));
     const net = initial !== null && added !== null && returned !== null ? trimmed(toScaled(initial) + toScaled(added) - toScaled(returned), SCALE) : null;
-    const allocation = budget === null ? null : !legacy() && initial !== null ? initial : wpF1Part(budget, 55n + BigInt(seedOf(key, "allocation") % 36));
+    // WORLD: everything funded and not returned is allocated (net external flows), so allocated + headroom = budget and the budget is never above the funds in.
+    const allocation = budget === null ? null : !legacy() && initial !== null && returned !== null && added === "0" ? addDecimal(initial, `-${returned}`) : wpF1Part(budget, 55n + BigInt(seedOf(key, "allocation") % 36));
     const room = budget !== null && allocation !== null ? trimmed(toScaled(budget) - toScaled(allocation), SCALE) : null;
     const recall = budget === null ? null : legacy() && seedOf(key, "recalling") % 3 === 0 ? "0" : wpF1Part(budget, 1n + BigInt(seedOf(key, "recall-pct") % 4));
     entry.metrics.allocation = wpF1Money(template, allocation, currency, "allocation");
+    const allocatedAt = legacy() || allocation === null ? null : wp2LatestAllocationMs(wp2ScopeDeployments(scope, currency)); // UXM-07 WP-2: the latest allocation leg of the book
+    if (allocatedAt !== null) entry.metrics.allocation.effective_at_ms = allocatedAt;
     entry.metrics.net_external_flows = wpF1Money(template, net, currency, "net_external_flows");
     entry.metrics.headroom = wpF1Money(template, room, currency, "headroom");
     entry.metrics.recalling = wpF1Money(template, recall, currency, "recalling");
@@ -931,6 +995,11 @@ function addWpF1(body: Draft, groupFields: string[]): void {
       if (value !== null) totals.set(JSON.stringify(item.partition), (totals.get(JSON.stringify(item.partition)) ?? 0n) + toScaled(value));
     }
     for (const group of body.groups) for (const item of group.economic_partitions) {
+      // UXM-07 WP-2: when this alpha's allocation took effect (its latest allocation leg), from the deployments the alpha runs in this read's scope.
+      const alphaId = group.key?.[0]?.field === "alpha_id" ? group.key[0].value : null;
+      const at = legacy() || alphaId === null || item.metrics.allocation === undefined || item.metrics.allocation.availability !== "AVAILABLE" ? null
+        : wp2LatestAllocationMs(wp2ScopeDeployments(scope, item.partition.currency, alphaId));
+      if (at !== null) item.metrics.allocation.effective_at_ms = at;
       const value = wpF1Value(item, "allocation");
       const total = totals.get(JSON.stringify(item.partition)) ?? 0n;
       const share = pctMetric(item.metrics.net_pnl, value === null ? null : pct(toScaled(value), total));
@@ -1203,7 +1272,7 @@ function datasetAnswer(method: string, path: string, search: URLSearchParams, pr
   if (!body.query_options.window.independent_metrics.includes("balance_total")) body.query_options.window.independent_metrics.push("balance_total");
   if (windowName !== null) applyWindow(body, windowName, windowPreset);
   addGroupScores(body, groups, windowName); // SIMULATED score keys (register 2c), after the window so ALL stays a gap
-  addWpF1(body, groups); // WP-F1: capital statement keys and allocation shares (register 2f1)
+  addWpF1(body, groups, { surface, id, environment }); // WP-F1: capital statement keys and allocation shares (register 2f1)
   wpkStageEntry(body); // WP-K: FIXTURE_LAB stage entry (register 2k2), the single-environment reads only
   const groupQuery = wpkGroupQuery(body, search, groups);
   if (groupQuery !== null) return groupQuery; // WP-K slice 6: a 400 for a malformed or unsupported group query
@@ -1238,7 +1307,7 @@ const WP_BINDING_OF_ACCOUNT: Readonly<Record<string, string>> = { acc_bnc_core: 
 /** The native books are the world's (e2e/bffWorld.ts): one source for the deployments, their accounts, their dates and their prices. */
 const WPC_ALPHAS: AlphaSpec[] = NATIVE_ALPHAS;
 // ===== WP-B2-A3 (W131): the research idea the Fleet lists (alpha_e, bffDouble's own research-only row) has no deployment; its Alpha 360 answers like the generated research alphas (readable, empty books)
-const IDEA_E: AlphaSpec = { id: "alpha_e", label: "Idea E", version: "0.1", owner: null, stages: ["RESEARCH"], health: "RESEARCH_ONLY", attention: [], deployments: [], updatedAt: "2026-09-01T12:00:00Z" };
+const IDEA_E: AlphaSpec = { id: "alpha_e", label: "Idea E", version: "0.1", owner: null, stages: ["RESEARCH"], health: "RESEARCH_ONLY", attention: [], deployments: [], updatedAt: "2026-08-22T11:00:00Z" };
 // ===== WP-B2-A3 end
 const wpcNativeAlpha = (id: string | undefined): boolean => id !== undefined && WPC_ALPHAS.some((alpha) => alpha.id === id);
 const wpcNativePortfolio = (id: string | undefined): boolean => id !== undefined && (WPC_PORTFOLIO_IDS as readonly string[]).includes(id);
@@ -1312,7 +1381,7 @@ function wpcShapeSeries(entry: Draft, metricName: string, subjectId: string, env
 const DAY_MS = 86_400_000;
 const WPC_ACTORS_OLD = ["bjones", "asmith", "lnguyen"] as const;
 const wpcActors = (): readonly string[] => (legacy() ? WPC_ACTORS_OLD : WORLD_ACTORS); // WORLD: the actors are people of the roster
-/** The instant the alpha doubles state as "now" (17 Oct 12:04Z): the lifecycle, the events, the replay's trades and the equity line end here, so they share one window whatever FIXTURE_NOW is. */
+/** The instant the alpha doubles state as "now" (the world clock, 22 Aug 13:00Z): the lifecycle, the events, the replay's trades and the equity line end here, so they share one window whatever FIXTURE_NOW is. */
 const wpcAnchorMs = (): number => ALPHA_DOUBLE_AS_OF_MS;
 function wpcLifecycleKeys(alphaId: string, template: Draft): Record<string, Draft> {
   const now = wpcAnchorMs();

@@ -180,6 +180,20 @@ describe("CardsTable scroll region (UXM-10 F-5, scrollable-region-focusable)", (
     expect(table().container.querySelector(".exec-cards-wrap")!.hasAttribute("data-more")).toBe(false);
   });
 
+  it("F2 D11: says in words that the table goes on, only when it asks for the hint and only while it overflows", () => {
+    overflow(900, 500);
+    const { unmount } = table({ scrollHint: true });
+    expect(screen.getByText("Scroll sideways for the other columns")).toBeTruthy();
+    unmount();
+    table();
+    expect(screen.queryByText("Scroll sideways for the other columns")).toBeNull();
+    vi.restoreAllMocks();
+    overflow(500, 500);
+    cleanup();
+    table({ scrollHint: true });
+    expect(screen.queryByText("Scroll sideways for the other columns")).toBeNull();
+  });
+
   it("fades the cut-off edge in the stylesheet, and only while data-more says there is more", () => {
     const css = readFileSync(join(__dirname, "css/cards.css"), "utf8");
     expect(css).toMatch(/\.exec-cards-wrap\[data-more="end"\]\s*\{[^}]*mask-image/);

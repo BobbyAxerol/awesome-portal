@@ -72,7 +72,7 @@ import { fileURLToPath } from "node:url";
 import { blotterBookOf } from "./bffDoubleOverview";
 import { ORDER_BOOK_AS_OF_MS, WORKING_STATES } from "./bffWorldOrders"; // WP-B2-O
 import { isPositiveMode } from "./bffPositiveMode";
-import { accountFact, ledgerSeries, worldAlphas } from "./bffWorld";
+import { accountFact, inWorldClock, ledgerSeries, WORLD_NOW_MS, worldAlphas } from "./bffWorld";
 
 export interface BffAnswerAlpha {
   status: number;
@@ -80,8 +80,8 @@ export interface BffAnswerAlpha {
   contentType?: string;
 }
 
-/** Newest source instant: 17 Oct 2026 12:04Z. */
-export const ALPHA_DOUBLE_AS_OF_MS = Date.UTC(2026, 9, 17, 12, 4, 0);
+/** Newest source instant: the world clock (22 Aug 2026 13:00Z). */
+export const ALPHA_DOUBLE_AS_OF_MS = WORLD_NOW_MS;
 export const ALPHA_DOUBLE_READ_AT_MS = ALPHA_DOUBLE_AS_OF_MS + 1_000;
 /** The alpha the double describes in full. */
 export const ALPHA_DOUBLE_ID = "alpha_btc_trend";
@@ -102,7 +102,7 @@ function canonicalCase(file: string, name: string): Json {
   const cases = (JSON.parse(readFileSync(join(CONTRACTS, file), "utf8")) as { cases: { name: string; value: Json }[] }).cases;
   const found = cases.find((c) => c.name === name);
   if (!found) throw new Error(`canonical case ${name} not found in ${file}`);
-  return structuredClone(found.value);
+  return inWorldClock(structuredClone(found.value)); // F4: canonical file at 17 Oct 12:04Z, served at the world clock
 }
 
 const ENV_PROFILE: Readonly<Record<string, string>> = {
@@ -232,7 +232,7 @@ function resource(id: string, empty: boolean): BffAnswerAlpha {
     { position_id: "pos_btc_short", strategy_id: id, deployment_id: "dep_live_01", account_id: "acct_binance_02", mode: "live", venue: "BINANCE", instrument_id: "BTCUSDT", side: "SHORT", quantity: "0.52", avg_px_open: "67410.55", mark_price: null, notional: "35053.05", realized_pnl: "0", unrealized_pnl: null, updated_at: iso(ALPHA_DOUBLE_AS_OF_MS), updated_at_ms: ALPHA_DOUBLE_AS_OF_MS, profile_environment: "live" },
   ]);
   withRows(body, "reconciliation", [
-    { finding_id: "rec_001", deployment_id: "dep_live_01", account_id: "acct_binance_02", venue: "BINANCE", finding_type: "POSITION", status: "RESOLVED", resolved_at: iso(Date.UTC(2026, 9, 17, 9, 12)), profile_environment: "live" },
+    { finding_id: "rec_001", deployment_id: "dep_live_01", account_id: "acct_binance_02", venue: "BINANCE", finding_type: "POSITION", status: "RESOLVED", resolved_at: iso(Date.UTC(2026, 7, 22, 10, 8)), profile_environment: "live" },
     { finding_id: "rec_002", deployment_id: "dep_live_01", account_id: "acct_binance_02", venue: "BINANCE", finding_type: "BALANCE", status: "OPEN", resolved_at: null, profile_environment: "live" },
   ]);
   return ok(body);
@@ -265,7 +265,7 @@ function order(n: number, symbol: string, side: string, type: string, status: st
   };
 }
 
-const T0 = Date.UTC(2026, 9, 16, 14, 0);
+const T0 = Date.UTC(2026, 7, 21, 14, 56);
 export const ALPHA_DOUBLE_ORDERS_P1: readonly Rec[] = [
   order(1, "BTCUSDT", "BUY", "LIMIT", "FILLED", "0.40", "67200.50", T0),
   order(2, "BTCUSDT", "SELL", "TAKE_PROFIT_MARKET", "NEW", "0.40", null, T0 + 5_000, { trigger_price: "68500.00", reduce_only: true }),
@@ -460,8 +460,8 @@ function resourceScoped(id: string, shape: "populated" | "empty" | "bounded"): B
     position("pos_btc_short", "SHORT", "0.52", "67410.55", null, "35053.05", null),
   ]);
   scopedRelation(body, "reconciliation", [
-    { profile_environment: "live", account_id: "acct_binance_02", strategy_id: id, mode: "live", venue: "BINANCE", status: "RESOLVED", created_at_ms: Date.UTC(2026, 9, 17, 9, 12), finding_id: "find_001", finding_type: "POSITION_MISMATCH", resolved_at_ms: Date.UTC(2026, 9, 17, 9, 48), deployment_id: "dep_live_01" },
-    { profile_environment: "live", account_id: "acct_binance_02", strategy_id: id, mode: "live", venue: "BINANCE", status: "OPEN", created_at_ms: Date.UTC(2026, 9, 17, 11, 40), finding_id: "find_002", finding_type: "BALANCE_MISMATCH", resolved_at: null, deployment_id: "dep_live_01" },
+    { profile_environment: "live", account_id: "acct_binance_02", strategy_id: id, mode: "live", venue: "BINANCE", status: "RESOLVED", created_at_ms: Date.UTC(2026, 7, 22, 10, 8), finding_id: "find_001", finding_type: "POSITION_MISMATCH", resolved_at_ms: Date.UTC(2026, 7, 22, 10, 44), deployment_id: "dep_live_01" },
+    { profile_environment: "live", account_id: "acct_binance_02", strategy_id: id, mode: "live", venue: "BINANCE", status: "OPEN", created_at_ms: Date.UTC(2026, 7, 22, 12, 36), finding_id: "find_002", finding_type: "BALANCE_MISMATCH", resolved_at: null, deployment_id: "dep_live_01" },
   ]);
   // Published and deliberately not consumed as the alpha's stage: it is per strategy and per book.
   scopedRelation(body, "strategies", [{ profile_environment: "live", strategy_id: id, alpha_id: id, state: "ACTIVE", stage: "LIVE", deployment_id: "dep_live_01" }]);
@@ -554,19 +554,19 @@ function canonicalScopedPage(): Json {
   const cases = (JSON.parse(readFileSync(join(CONTRACTS, "execution-scoped-records.synthetic.valid.json"), "utf8")) as { cases: { type: string; value: Json }[] }).cases;
   const found = cases.find((c) => c.type === "ScopedSubjectRecordsResponse");
   if (!found) throw new Error("canonical ScopedSubjectRecordsResponse not found");
-  return structuredClone(found.value);
+  return inWorldClock(structuredClone(found.value)); // F4: canonical file at 17 Oct 12:04Z, served at the world clock
 }
 
 /* ── stage drift ──────────────────────────────────────────────────────────── */
 
 function stageDrift(id: string): BffAnswerAlpha {
-  const calendar = Array.from({ length: 10 }, (_, i) => iso(Date.UTC(2026, 9, 8 + i)).slice(0, 10));
+  const calendar = Array.from({ length: 10 }, (_, i) => iso(Date.UTC(2026, 7, 13 + i)).slice(0, 10));
   return ok({
     calendar,
     window: { days: 10, daily_basis: "UTC close" },
     research_binding: { alpha_id: id, reason_code: "RESEARCH_RUN_NOT_BOUND" },
     stages: {
-      // A gap: the 12 Oct close was not published.
+      // A gap: the 17 Aug close was not published.
       paper: { deployed: true, reason_code: null, series: [20000, 20041.5, 20012.25, 20110, null, 20085.75, 20150.5, 20122, 20190.25, 20180] },
       sandbox: { deployed: true, reason_code: null, series: [10000, 10020.5, 10018, 10061.25, 10050, 10090.5, null, null, null, null] },
       live: { deployed: true, reason_code: null, series: [null, null, null, null, null, 40000, 40210.8, 40390.4, 40880.15, 41120.8] },
@@ -581,7 +581,7 @@ function stageDrift(id: string): BffAnswerAlpha {
  */
 function stageDriftExact(id: string): BffAnswerAlpha {
   const body = canonicalCase("execution-alpha-stage-drift.v2.synthetic.json", "exact_above_safe_integer_and_zero");
-  const calendar = Array.from({ length: 10 }, (_, i) => iso(Date.UTC(2026, 9, 8 + i)).slice(0, 10));
+  const calendar = Array.from({ length: 10 }, (_, i) => iso(Date.UTC(2026, 7, 13 + i)).slice(0, 10));
   const stage = (series: (string | null)[]): Json => ({
     deployed: true,
     reason_code: null,
@@ -593,7 +593,7 @@ function stageDriftExact(id: string): BffAnswerAlpha {
   body.window = { ...body.window, days: calendar.length, requested_days: null };
   body.calendar = calendar;
   body.stages = {
-    // A gap: the 12 Oct close was not published.
+    // A gap: the 17 Aug close was not published.
     paper: stage(["20000", "20041.5", "20012.25", "20110", null, "20085.75", "20150.5", "20122", "20190.25", "20180"]),
     sandbox: stage(["10000", "10020.5", "10018", "10061.25", "10050", "10090.5", null, null, null, null]),
     live: stage([null, null, null, null, null, "40000", "40210.8", "40390.4", "40880.15", "41120.8"]),

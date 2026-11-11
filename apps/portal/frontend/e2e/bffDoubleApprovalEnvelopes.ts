@@ -13,7 +13,8 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { R1_DETAIL } from "../src/execution/api/fixtureData";
+import { R1_DETAIL, R2_DETAIL } from "../src/execution/api/fixtureData";
+import { OPERATIONS_V2_DOUBLE_NOW_ISO } from "./bffDoubleV2";
 
 type Json = Record<string, any>; // eslint-disable-line @typescript-eslint/no-explicit-any
 
@@ -27,7 +28,13 @@ export const GOVERNANCE_READ_TRUTH = { state: "AVAILABLE", reason_code: null, sc
 /** The sort the producer publishes for each list (read from its canonical fixture, so the names cannot drift). */
 const sortOf = (file: string): unknown[] => structuredClone(canonical(file).page.applied_sort);
 
-const INBOX_READ_AT = "2026-09-11T09:00:00.000Z";
+/**
+ * ONE clock (F3b): every instant an approval envelope prints is a distance from the fixture "now" every V2 double and the page share
+ * (`OPERATIONS_V2_DOUBLE_NOW_ISO`, the Playwright page clock and the fixture BFF default). Read lazily: bffDoubleV2 reaches the world, which reaches this file.
+ */
+const nowMs = (): number => Date.parse(OPERATIONS_V2_DOUBLE_NOW_ISO);
+const isoAt = (ms: number): string => new Date(ms).toISOString();
+const MINUTE_MS = 60_000;
 const INBOX_ENVIRONMENT: Readonly<Record<string, string>> = { R1: "RESEARCH", R2: "SANDBOX", PAPER_EXIT: "PAPER", SANDBOX_EXIT: "SANDBOX", LIVE_GATE: "LIVE" };
 /** The approval versions the review doubles pin (R1_DETAIL: 7, R2_DETAIL: 3); every other row starts at 1. */
 const INBOX_VERSION: Readonly<Record<string, number>> = { "AP-201": 7, "AP-352": 3 };
@@ -43,13 +50,14 @@ function inboxItem(row: Json): Json {
   const sla = (row.sla ?? {}) as Json;
   const budget = Number(sla.budget_minutes);
   const age = Number(sla.age_minutes);
-  const dueAt = typeof sla.due_at === "string" ? new Date(sla.due_at).toISOString() : new Date(Date.parse(INBOX_READ_AT) + (budget - age) * 60_000).toISOString();
+  // F3b: the deadline is the age and budget the row states, against the one fixture "now" (a row's own due_at was a second, older clock that contradicted its age)
+  const dueAt = isoAt(nowMs() + (budget - age) * MINUTE_MS);
   return {
     id,
     gate: row.gate,
     subject: row.subject,
     portfolio_id: null,
-    subject_id: `subject_${id.toLowerCase()}`,
+    subject_id: subjectIdOf(id, String(row.gate), String(row.subject)),
     release_candidate: null,
     target: row.target,
     environment: INBOX_ENVIRONMENT[String(row.gate)] ?? "RESEARCH",
@@ -74,8 +82,33 @@ function inboxItem(row: Json): Json {
     inert: row.inert,
     needs_you: row.needs_you,
     record_authority: "PORTAL",
-    updated_at: "2026-09-11T08:59:00.000Z",
+    updated_at: isoAt(nowMs() - MINUTE_MS),
   };
+}
+
+const idHash = (text: string): number => {
+  let h = 2166136261;
+  for (const ch of text) h = Math.imul(h ^ ch.charCodeAt(0), 16777619) >>> 0;
+  return h;
+};
+/**
+ * The entity a request decides, as the contract's `subject_id` states it (never the request's own id restated: "subject subject_ap-352"). An exit or Live
+ * request names its deployment (the `dep_...` the subject already carries); R1 names the alpha version of its review (the R1 double's own for AP-201),
+ * R2 its deployment candidate (the R2 double's own for AP-352); every other row gets a stable id of the same kind.
+ */
+function subjectIdOf(id: string, gate: string, subject: string): string {
+  const deployment = /\b(dep_[A-Za-z0-9_]+)\b/.exec(subject);
+  if (deployment !== null) return deployment[1]!;
+  const n = idHash(id);
+  if (gate === "R1") {
+    const own = ((R1_DETAIL as Json).evidence_manifest?.entries as Json[] | undefined)?.find((entry) => entry.label === "alpha version")?.value;
+    return id === (R1_DETAIL as Json).approval?.approval_id && typeof own === "string" ? own : `av_${2000 + (n % 900)}`;
+  }
+  if (gate === "R2") {
+    const own = (R2_DETAIL as Json).approval?.deployment_candidate;
+    return id === (R2_DETAIL as Json).approval?.approval_id && typeof own === "string" ? own : `DC-${10 + (n % 90)}`;
+  }
+  return `dep_${10 + (n % 90)}`;
 }
 
 /** `GET /governance/approvals`: the double's inbox page inside the published envelope. */
@@ -85,7 +118,7 @@ export function approvalInboxEnvelope(page: Json, counts: Json, workspaceId: str
     record_authority: "PORTAL",
     workspace_id: workspaceId,
     delivery_profile: "fixture",
-    read_at: INBOX_READ_AT,
+    read_at: isoAt(nowMs()),
     actor: GOVERNANCE_ACTOR,
     counts,
     read_truth: GOVERNANCE_READ_TRUTH,
@@ -124,6 +157,10 @@ export function r1ReviewEnvelope(approvalId: string): Json {
   const canon = canonical("execution-governance.r1-review.valid.json");
   const flat = R1_DETAIL as Json;
   const looseApproval = flat.approval as Json;
+  // F3b: the review's clocks are the double's own age and budget against the one fixture "now" (the canonical review was read on 26 Aug, after the page's clock)
+  const instant = (ms: number): string => isoAt(ms).replace(/\.000Z$/, "Z");
+  const createdMs = nowMs() - Number((looseApproval.sla as Json).age_minutes) * MINUTE_MS;
+  const dueMs = createdMs + Number((looseApproval.sla as Json).budget_minutes) * MINUTE_MS;
   const entries = (flat.evidence_manifest.entries as Json[]).map((entry, ordinal) => ({
     evidence_id: `ev_r1_${ordinal}`,
     ordinal,
@@ -140,7 +177,7 @@ export function r1ReviewEnvelope(approvalId: string): Json {
     source_authority: "RESEARCH",
     source_reference: null,
     required: true,
-    captured_at: "2026-08-26T08:00:00Z",
+    captured_at: instant(createdMs - 60 * MINUTE_MS),
     retention_class: "GOVERNANCE_LONG_TERM",
     access_policy: "WORKSPACE_APPROVER",
   }));
@@ -156,13 +193,17 @@ export function r1ReviewEnvelope(approvalId: string): Json {
     creator: { user_id: "usr_minh", username: looseApproval.creator },
     blocker_count: 0,
     blocker_summary: null,
+    created_at: instant(createdMs),
+    updated_at: instant(nowMs() - MINUTE_MS),
+    sla_due_at: instant(dueMs),
+    expires_at: instant(dueMs + 24 * 60 * MINUTE_MS),
   };
   return {
     schema_version: canon.schema_version,
     workspace_id: flat.workspace_id,
     record_authority: canon.record_authority,
     delivery_profile: canon.delivery_profile,
-    read_at: canon.read_at,
+    read_at: isoAt(nowMs()),
     data: {
       approval,
       decision_context: flat.decision_context,
@@ -171,7 +212,8 @@ export function r1ReviewEnvelope(approvalId: string): Json {
       eligibility: { ...flat.eligibility, separation_of_duties: "OK" },
       known_limitations: [],
       evidence_manifest: { manifest_hash: approval.evidence_set_hash, complete: true, entries },
-      checklist: structuredClone(flat.checklist),
+      // F3b: the gate counts SEVEN criteria (the evidence read and the receipt say "6 -> 7"): the double's six plus the manifest pin, so "Checklist 6 of 7" is the same count
+      checklist: [...structuredClone(flat.checklist), { label: "release candidate pinned and evidence manifest hash recorded", outcome: "pass" }],
       decisions: [],
       linked_panels: [],
     },

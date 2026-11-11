@@ -28,6 +28,15 @@
   -webkit-mask-image: linear-gradient(to right, transparent, var(--ink) 48px, var(--ink) calc(100% - 48px), transparent);
   mask-image: linear-gradient(to right, transparent, var(--ink) 48px, var(--ink) calc(100% - 48px), transparent);
 }
+/* The sentence under a table that goes on to the right (`scrollHint`): printed only while it really overflows, at the table's left edge. */
+.exec-cards-hint {
+  margin: var(--space-1) 0 0;
+  font: var(--exec-font-meta);
+  color: var(--ink-soft);
+}
+@media (max-width: 660px) {
+  .exec-cards-hint { display: none; }
+}
 .exec-cards-wrap:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: -2px;

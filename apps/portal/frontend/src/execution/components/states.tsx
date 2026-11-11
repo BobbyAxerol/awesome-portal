@@ -13,6 +13,7 @@ import type { PanelStatus } from "../contracts";
 import type { ReactNode } from "react";
 
 import { soonReason, soonTitle } from "../soon";
+import { plainReason } from "../v2/plainReason";
 import { ExecutionPulse, SkeletonLine } from "./loading";
 
 const TITLE: Record<Exclude<PanelStatus, "ok">, string> = {
@@ -94,7 +95,12 @@ export function PanelState({
   // it reads "Soon" and keeps its code, so nobody pages an engineer over it and
   // nobody holds a phase open waiting for it (owner ruling 2026-09-07).
   const title = ownTitle ?? soonTitle(status, reason, TITLE[status]);
-  const line = soonReason(reason);
+  const soonLine = soonReason(reason);
+  // UI review D12: a machine code in the reason never reads as the sentence. A "Soon" capability keeps its code (it is the schedule);
+  // every other state shows plain words and keeps the code in `data-code`, a tooltip and the server's exact words in a closed "Details" disclosure.
+  const plain = title === "Soon" || !soonLine ? null : plainReason(soonLine);
+  const line = plain === null ? soonLine : plain.text;
+  const codes = plain !== null && plain.codes.length > 0 ? plain.codes : null;
 
   return (
     <div
@@ -102,9 +108,11 @@ export function PanelState({
       data-status={status}
       data-soon={title === "Soon" ? "true" : undefined}
       data-prominent-empty={status === "empty" && prominentEmpty ? "true" : undefined}
+      data-code={codes === null ? undefined : codes.join(" ")}
     >
       <span className="exec-state-title">{title}</span>
-      {line ? <span className="exec-state-reason">{line}</span> : null}
+      {line ? <span className="exec-state-reason" title={codes === null ? undefined : codes.join(", ")}>{line}</span> : null}
+      {codes !== null ? <details className="exec-state-code"><summary>Details</summary><code>{soonLine}</code></details> : null}
       {lastGood ? <div className="exec-state-lastgood">{lastGood}</div> : null}
       {actions}
     </div>

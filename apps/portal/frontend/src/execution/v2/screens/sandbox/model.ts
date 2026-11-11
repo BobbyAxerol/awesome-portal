@@ -332,6 +332,25 @@ export function decidedWords(view: SandboxView): string {
   return `Decided${d.atMs === null ? "" : ` ${formatAsOf(d.atMs)}`}${d.actor === null ? "" : ` by ${d.actor}`}`;
 }
 
+/**
+ * One sentence per panel that says nothing but "Not available": what is missing and who can do something about it. Each names ONE cause (the
+ * source did not publish it, the profile does not enable it, or there is no data yet), never a guess between them.
+ */
+export const WHY_MISSING = {
+  /** A V2 body is the stored certification and its step evaluations only. */
+  reconciliationStored:
+    "Source not published: this certification is read from the stored record, which carries no Internal, Broker or Difference figures. There is nothing to enter here; ask the backend team when the source will publish them.",
+  /** A V1 body without a figures block. */
+  reconciliationNoFigures:
+    "Source not published: the response has no figures block, so Internal, Broker and Difference cannot be shown. Refresh to read again; if it stays, ask the backend team.",
+  /** No findings list at all (an empty list would read as "none found"). */
+  findings:
+    "Source not published: this response carries no findings list. An empty table would read as \"none found\", so none is drawn; ask the backend team when the source will publish it.",
+  /** Both exit actions have no route on this profile. */
+  exit:
+    "Profile not enabled: neither action has a route on this profile, so nobody can use them yet. To get them, ask your Portal administrator; until then \"What exit needs\" below is the runbook.",
+} as const;
+
 /** Why Submit for review is off. The action has no route, so it is never on; when the gate is shut the reason says that first. */
 export function submitReason(gate: GateState, notEnabled: string): string {
   return gate === "blocked" ? "Blocked until every step passes" : notEnabled;

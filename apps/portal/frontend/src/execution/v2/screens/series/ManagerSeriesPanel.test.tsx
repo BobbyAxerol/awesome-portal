@@ -44,7 +44,9 @@ describe("ManagerSeriesPanel · RETURN", () => {
     const { container } = render(<ManagerSeriesPanel label="Portfolio return" read={{ phase: "ready", value, warnings: [] }} />);
     expect(container.querySelector("[data-state='UNAVAILABLE']")).not.toBeNull();
     expect(container.textContent).toContain("Not published");
-    expect(container.textContent).toContain("RATIO_SCALE_NOT_PUBLISHED");
+    // UI review D12: the code is data-code on the chart, not part of the sentence.
+    expect(container.querySelector('[data-code~="RATIO_SCALE_NOT_PUBLISHED"]')).not.toBeNull();
+    expect(container.textContent).not.toContain("RATIO_SCALE_NOT_PUBLISHED");
     expect(container.textContent).toContain("states no ratio scale");
     expect(container.querySelectorAll("svg path")).toHaveLength(0);
   });

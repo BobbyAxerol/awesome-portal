@@ -75,7 +75,7 @@ describe("screen contract", () => {
     expect(h1.textContent).toContain(ALPHA_DOUBLE_ID);
     expect(h1.textContent).not.toMatch(/Unnamed alpha|UNVERSIONED|\bv\d/);
     // The header's gaps are ONE "Not available" line; the server's literals sit behind its one disclosure (UX audit A).
-    const line = h1.parentElement!.querySelector("[data-testid='not-available-line']")!;
+    const line = h1.closest("header")!.querySelector("[data-testid='not-available-line']")!;
     expect(line.textContent).toContain("Not available: Name, Version, Run, Evidence");
     fireEvent.click(within(line as HTMLElement).getByRole("button", { name: "Why not available: Name, Version, Run, Evidence" }));
     const rows = Array.from(line.querySelectorAll(".exec-blk-why-row")).map((row) => row.textContent ?? "");
@@ -87,10 +87,12 @@ describe("screen contract", () => {
   it("states what is not published about the header: score, run and evidence, each with its request id", async () => {
     mount();
     const h1 = await ready();
-    expect(within(h1).getByRole("button", { name: /Not scored · policy not set/ })).toBeTruthy();
-    const line = h1.parentElement!.querySelector("[data-testid='not-available-line']")!;
+    expect(within(h1.closest(".exec-alp2-titlerow") as HTMLElement).getByRole("button", { name: /Not scored · policy not set/ })).toBeTruthy();
+    const line = h1.closest("header")!.querySelector("[data-testid='not-available-line']")!;
     expect(line.textContent).toContain("Run, Evidence");
-    expect(line.textContent).toContain("Not published: Run");
+    // UI review D10: the hidden text says "(not published)" once, not the list a second time.
+    expect(line.textContent).toContain("(not published)");
+    expect(line.textContent).not.toContain("Not published: Run");
   });
 
   it("renders the producer's V1 typed absence without blanking the Alpha or inventing a zero", async () => {
@@ -294,7 +296,7 @@ describe("Performance", () => {
       return { status: 200, body: { calendar: ["2026-10-08"], window: { days: 1, daily_basis: "UTC close" }, research_binding: { alpha_id: ALPHA_DOUBLE_ID, reason_code: null }, stages: { sandbox: { deployed: false, reason_code: "NO_DEPLOYMENT_IN_STAGE", series: [] } } } };
     });
     await ready();
-    await waitFor(() => expect(document.body.textContent).toContain("UPSTREAM_UNAVAILABLE"));
+    await waitFor(() => expect(document.querySelector('[data-code~="UPSTREAM_UNAVAILABLE"]')).not.toBeNull());
     expect(screen.queryByTestId("readout-value")).toBeNull();
   });
 
@@ -452,7 +454,8 @@ describe("Deployments", () => {
     for (const caps of [V2_ROLE_PRESETS.manager, V2_ROLE_PRESETS.researcher]) {
       session.current = sessionOf(caps);
       mount(undefined, undefined, "alpha_denied");
-      expect(await screen.findByText(/outside your slice/)).toBeTruthy();
+      // UI review D12: the reason is plain words and the server\'s exact words sit in the closed Details line, so two nodes carry it.
+    expect((await screen.findAllByText(/outside your slice/)).length).toBeGreaterThan(0);
       expect(screen.queryByRole("tablist")).toBeNull();
       cleanup();
     }
@@ -664,19 +667,22 @@ describe("Activity & Decisions", () => {
 describe("states", () => {
   it("empty: the resource carries no alpha row", async () => {
     mount(undefined, undefined, "alpha_empty");
-    expect(await screen.findByText(/not present in the current projected resource population/)).toBeTruthy();
+    // UI review D12: the reason is plain words and the server\'s exact words sit in the closed Details line, so two nodes carry it.
+    expect((await screen.findAllByText(/not present in the current projected resource population/)).length).toBeGreaterThan(0);
     expect(screen.queryByRole("tablist")).toBeNull();
   });
 
   it("denied: says denied with the server's reason and offers no tabs", async () => {
     mount(undefined, undefined, "alpha_denied");
-    expect(await screen.findByText(/outside your slice/)).toBeTruthy();
+    // UI review D12: the reason is plain words and the server\'s exact words sit in the closed Details line, so two nodes carry it.
+    expect((await screen.findAllByText(/outside your slice/)).length).toBeGreaterThan(0);
     expect(screen.queryByRole("tablist")).toBeNull();
   });
 
   it("unavailable: a 503 is not an empty alpha", async () => {
     mount(undefined, undefined, "alpha_down");
-    expect(await screen.findByText(/could not be read/)).toBeTruthy();
+    // UI review D12: the reason is plain words and the server\'s exact words sit in the closed Details line, so two nodes carry it.
+    expect((await screen.findAllByText(/could not be read/)).length).toBeGreaterThan(0);
     expect(screen.queryByText(/not present in the current projected/)).toBeNull();
   });
 
@@ -714,7 +720,7 @@ describe("Score drawer", () => {
   it("opens from the chip, shows every score row as Not published: score, and the raw economics as current", async () => {
     mount();
     const h1 = await ready();
-    fireEvent.click(within(h1).getByRole("button", { name: /Not scored/ }));
+    fireEvent.click(within(h1.closest(".exec-alp2-titlerow") as HTMLElement).getByRole("button", { name: /Not scored/ }));
     expect(search().get("sel")).toBe("score");
     const drawer = await screen.findByRole("complementary");
     expect(within(drawer).getByRole("heading", { name: "Score" })).toBeTruthy();

@@ -15,7 +15,7 @@ import type { AlphaFleetQuery, ExecutionApi } from "../../../api/ports";
 import { readAlphaFleet } from "../../../api/profileRead";
 import { createHttpApi } from "../../../api/httpApi";
 import type { DeliveryPolicy } from "../../../profile";
-import { alphasOf, newDatasetDouble, wrapDatasetFetch, type DatasetDoubleState, type DatasetVariant, type DoubleAlpha } from "./datasetDouble.testbase";
+import { alphasOf, newDatasetDouble, openFilters, openNotes, wrapDatasetFetch, type DatasetDoubleState, type DatasetVariant, type DoubleAlpha } from "./datasetDouble.testbase";
 import FleetScreen from "./index";
 
 afterEach(() => {
@@ -68,7 +68,12 @@ const mount = (api: ExecutionApi, entry: string) =>
   );
 const search = () => new URLSearchParams((screen.getByTestId("where").textContent ?? "").split("?")[1] ?? "");
 const table = () => screen.getByRole("table", { name: "Alpha fleet" });
-const loaded = async () => screen.findByRole("table", { name: "Alpha fleet" });
+const loaded = async () => {
+  const found = await screen.findByRole("table", { name: "Alpha fleet" });
+  openFilters();
+  openNotes();
+  return found;
+};
 const dataRows = () => within(table()).getAllByRole("row").slice(1).filter((row) => !row.classList.contains("exec-cards-group"));
 const cell = (row: HTMLElement, label: string) => row.querySelector(`td[data-l='${label}']`)?.textContent ?? "";
 const kpis = () =>

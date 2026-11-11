@@ -106,3 +106,43 @@ export function nextActionOf(row: Pick<OperationV2, "sourceStatus" | "verificati
   if (row.deliveryState === ("AWAITING_RECEIPT" satisfies DeliveryStateV2)) return "open-obligations";
   return "review";
 }
+
+/** The operation links to an incident the reader may read (FE-042). An absent or empty link list means none the reader can see, never "no incident exists". */
+export function hasIncident(row: Pick<OperationV2, "incidentLinks">): boolean {
+  const links = row.incidentLinks;
+  return links !== undefined && (links.items.length > 0 || links.authorizedLinkCount > 0);
+}
+
+export interface NextStep {
+  action: NextAction;
+  /** One line under the row's Next control: where it leads, or why there is nothing to do. */
+  leadsTo: string;
+  /** The same step as one sentence at the top of the operation dock; null where the dock already says it (the unknown-outcome banner). */
+  dock: string | null;
+}
+
+/**
+ * Every Next control says where it leads. The four controls are different (a button that opens the operation, plain text, a link to the
+ * target), so the one line under each is what makes the column read as one flow. Wording only: the action still comes from `nextActionOf`.
+ */
+export function nextStepOf(
+  row: Pick<OperationV2, "sourceStatus" | "verificationResult" | "deliveryState" | "displayState" | "triageState" | "incidentLinks">,
+): NextStep {
+  const action = nextActionOf(row);
+  switch (action) {
+    case "check-original":
+      return { action, leadsTo: "Opens this operation. Do not send it again.", dock: null };
+    case "display-updating":
+      return { action, leadsTo: "Nothing to do yet: the figures are catching up.", dock: "Next: nothing to do yet. The figures are catching up; refresh the queue in a moment." };
+    case "open-obligations":
+      return { action, leadsTo: "Opens the target's obligations: the receipt has not arrived.", dock: "Next: open the target's obligations. The receipt for this operation has not arrived." };
+    case "review":
+      return hasIncident(row)
+        ? { action, leadsTo: "Opens this operation. Its linked incident is listed under the target.", dock: "Next: open the linked incident listed under Linked incidents." }
+        : {
+            action,
+            leadsTo: "Opens the details. No readable incident is linked, so there is nothing to resolve.",
+            dock: "Next: nothing to act on here. No readable incident is linked and acknowledging is not offered yet, so this page is for reading.",
+          };
+  }
+}

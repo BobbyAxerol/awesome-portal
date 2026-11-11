@@ -149,7 +149,7 @@ describe("the scoped view", () => {
   it("reconciliation rows carry the result, venue, finding id and type, and the resolution instant when the body states them; a member it omits stays null, not 'Unknown' and not now", () => {
     const rows = scopedView().reconciliation;
     expect(rows.map((r) => [r.status.label, r.venue, r.kind, r.resolvedAt, r.findingId])).toEqual([
-      ["Resolved", "BINANCE", "POSITION_MISMATCH", Date.UTC(2026, 9, 17, 9, 48), "find_001"], ["Open", "BINANCE", "BALANCE_MISMATCH", null, "find_002"],
+      ["Resolved", "BINANCE", "POSITION_MISMATCH", Date.UTC(2026, 7, 22, 10, 44), "find_001"], ["Open", "BINANCE", "BALANCE_MISMATCH", null, "find_002"],
     ]);
     const bare = scopedView((b) => { for (const row of b.data.reconciliation) { delete row.finding_id; delete row.finding_type; delete row.resolved_at_ms; } }).reconciliation;
     expect(bare.map((r) => [r.kind, r.resolvedAt, r.findingId])).toEqual([[null, null, null], [null, null, null]]);

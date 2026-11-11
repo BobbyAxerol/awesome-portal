@@ -208,7 +208,8 @@ function applyScenarioToDoubles(config: FixtureConfig): void {
 // ===== WP-B2-C4 begin
 const STAGE_DRIFT_PATH = /^\/api\/v1\/execution\/alphas\/[^/]+\/stage-drift$/;
 // ===== WP-B2-C4 end
-const WORLD_CLOCK_READS = /^\/api\/v1\/execution\/(?:alphas|manager\/fund-overview|operations(?:\/incidents\/[^/]+)?)$/;
+// F3b: an approval's evidence is read at the world clock like the queue and the reviews it sits beside (it was read on the operations clock: "Read 22 Aug" under a queue read on 17 Oct)
+const WORLD_CLOCK_READS = /^\/api\/v1\/execution\/(?:alphas|manager\/fund-overview|operations(?:\/incidents\/[^/]+)?|governance\/approvals\/[^/]+\/evidence)$/;
 
 /* ── the request ────────────────────────────────────────────────────────── */
 

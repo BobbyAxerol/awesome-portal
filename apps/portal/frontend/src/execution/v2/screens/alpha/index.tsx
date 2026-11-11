@@ -288,15 +288,20 @@ function Alpha360({ api, alphaId, workspaceId }: AlphaScreenProps) {
       <header className="exec-alp2-head">
         <div>
           <Link className="exec-alp2-back" to={back.to}>← {back.label}</Link>
-          <h1 className="exec-alp2-title">
-            {view?.present ? view.title : alphaId}
-            {view?.present && view.version !== null ? <span className="exec-alp2-version">v{view.version}</span> : null}
+          {/* The heading is the NAME (with its version); the id and the score chip sit beside it, so the heading's accessible name is not the
+              id plus a chip's words. With no published name the heading keeps the id, and the Not-available line below says so once. */}
+          <div className="exec-alp2-titlerow">
+            <h1 className="exec-alp2-title">
+              {view?.present ? view.title : alphaId}
+              {view?.present && view.version !== null ? <span className="exec-alp2-version">v{view.version}</span> : null}
+            </h1>
+            {view?.present && view.name !== null && view.name !== alphaId ? <span className="exec-alp2-idtext" data-testid="alpha-id">{alphaId}</span> : null}
             {present ? (
               <button type="button" className="exec-alp2-scorechip" aria-haspopup="dialog" onClick={() => select("score")}>
                 {qbts !== null && qbts.kind === "value" ? <Flag kind={qbts.band?.kind ?? "neutral"} label={`QBTS ${qbts.exact}${qbts.band ? ` · ${qbts.band.label}` : ""}`} size="sm" /> : <Flag kind="pending" label="Not scored · policy not set" size="sm" />}
               </button>
             ) : null}
-          </h1>
+          </div>
           {view !== null && view.present ? (
             <>
               <p className="exec-alp2-meta">

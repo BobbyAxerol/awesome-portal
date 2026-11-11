@@ -415,7 +415,9 @@ describe("EquityPanel · scale", () => {
     );
     const line = screen.getByTestId("envelope");
     expect(line.textContent).toContain("Server: 4 of 1,438 points, min and max kept per bucket");
-    expect(container.querySelector("[data-testid=envelope] .exec-c2-sr")!.textContent).toContain("PER_SERIES_BUCKET_EXTREMA");
+    // F1/D12: the code now lives in a data-method attribute, never in text (not even hidden text).
+    expect(container.querySelector("[data-testid=envelope] [data-method]")!.getAttribute("data-method")).toBe("PER_SERIES_BUCKET_EXTREMA");
+    expect(line.textContent).not.toContain("PER_SERIES_BUCKET_EXTREMA");
     expect(container.querySelector(".exec-blk-why-btn")).toBeNull();
   });
 });

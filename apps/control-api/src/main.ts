@@ -16,6 +16,7 @@ import { nativeRootRuntimeReference, prepareNativeRootRuntime, prepareNativeRoot
 import { accessDigest } from "./execution-v2/access-digest";
 import { approvalEvidenceDependency } from "./approval-evidence/approval-evidence.bootstrap";
 import { equityProjectionSourceDependency } from "./equity-projection/equity-projection-source.bootstrap";
+import { typedAbsenceDependency } from "./typed-absence/typed-absence.bootstrap";
 import { assertC2P7ReviewSchemaCommissioned, c2P7ReviewRuntimeReference, prepareC2P7ReviewRuntime } from "./execution-v2/c2-p7-review-runtime";
 
 async function bootstrap(): Promise<void> {
@@ -69,7 +70,7 @@ async function bootstrap(): Promise<void> {
       ...(commandStatus?[commandStatus.participant]:[])],nativeCurrent?.provider,nativeRoot?.provider);
   }}, pool) : undefined;
   const dependencies = { ...nativeDependencies,...(currentViewRuntime?{currentViewRuntime}:{}),...(financialSource?{financialSource}:{}),
-    ...(nativeCurrent?{nativeCurrent}:{}),...(commandStatus?{commandStatus}:{}),...(nativeRoot?{nativeRoot}:{}),...(p7Review??{}),...approvalEvidenceDependency(config),...equityProjectionSourceDependency(config) };
+    ...(nativeCurrent?{nativeCurrent}:{}),...(commandStatus?{commandStatus}:{}),...(nativeRoot?{nativeRoot}:{}),...(p7Review??{}),...approvalEvidenceDependency(config),...equityProjectionSourceDependency(config),...typedAbsenceDependency(config) };
   const owner = native ? new NativeCoreApplicationOwner(pool) : undefined;
   try {
     const app = await createControlApiApp(config, pool, undefined, dependencies, owner);

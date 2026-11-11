@@ -11,6 +11,7 @@
  */
 export type ReviewProfile = "populated" | "layout-stress";
 import { scaled, addDecimal } from "../frontend/e2e/bffScale";
+import { isPositiveMode } from "../frontend/e2e/bffPositiveMode";
 import { linkedAccountFigures } from "./review-accounts";
 import { linkedReviewFinance } from "./review-finance";
 
@@ -36,6 +37,11 @@ const ACCOUNT_KEYS: Readonly<Record<string, string>> = Object.freeze({
   "OKX-01": "acc_okx_main",
   "Paper-Binance": "acc_pap_sim",
 });
+/** F3c: the two the Accounts screen did not hold. The Account double answers them in the positive world only (bffDoubleAccount WORLD_ACCOUNTS), so the alias applies only there. */
+const WORLD_ACCOUNT_KEYS: Readonly<Record<string, string>> = Object.freeze({
+  "Bybit-01": "acc_byb_main",
+  "Paper-Yen": "acc_pap_yen",
+});
 const HUMAN_NAMES = new Set(["display_name", "portfolio_name", "alpha_name", "account_name", "deployment_name"]);
 const ENTITY_KEYS = ["alpha_id", "strategy_id", "portfolio_id", "account_id", "deployment_id", "row_key"];
 const STRESS_SUFFIX = " · Nhóm nghiên cứu đa thị trường — danh mục dài để kiểm tra xuống dòng, dấu tiếng Việt và 日本語";
@@ -47,12 +53,13 @@ function record(value: unknown): value is Record<string, unknown> {
 }
 
 function accountKey(value: string): string {
-  return Object.prototype.hasOwnProperty.call(ACCOUNT_KEYS, value) ? ACCOUNT_KEYS[value]! : value;
+  if (Object.prototype.hasOwnProperty.call(ACCOUNT_KEYS, value)) return ACCOUNT_KEYS[value]!;
+  return isPositiveMode() && Object.prototype.hasOwnProperty.call(WORLD_ACCOUNT_KEYS, value) ? WORLD_ACCOUNT_KEYS[value]! : value;
 }
 
 /** Only same-origin account links, never arbitrary URLs, query text or opaque cursor content. */
 function accountLink(value: string): string {
-  return value.replace(/^(\/(?:deployments\/accounts|api\/v1\/execution\/resources\/accounts)\/)(Binance-02|OKX-01|Paper-Binance)(?=\/|\?|#|$)/u,
+  return value.replace(/^(\/(?:deployments\/accounts|api\/v1\/execution\/resources\/accounts)\/)(Binance-02|OKX-01|Paper-Binance|Bybit-01|Paper-Yen)(?=\/|\?|#|$)/u,
     (_match, prefix: string, id: string) => `${prefix}${accountKey(id)}`);
 }
 

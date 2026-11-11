@@ -28,6 +28,7 @@ import { EvidenceExtraContext, IDLE_EXTRA, OBLIGATION_ROWS, HistoryChart, histor
 import { codeName } from "../../displayNames";
 import { useKeyboardScroll } from "../../useKeyboardScroll";
 import { Flag } from "../../Flag";
+import { plainReason } from "../../plainReason";
 import type { FlagKind } from "../../flagKinds";
 import { unsupportedText, type GovernanceParentRead } from "../../readers/dispatch";
 import type {
@@ -1010,16 +1011,29 @@ export interface EvidenceFrameProps {
   evidence: EvidenceState;
   /** Why nothing can be shown for a selection the queue does not know. */
   unknownReason?: string | null;
+  /** The id the address names while the queue that may hold it is still being read (a loading state, not a verdict). */
+  pendingId?: string | null;
   /** The approval evidence read (WP-K): history, diff and obligations; absent keeps the typed absences. */
   extra?: ExtraState;
 }
 
-export function EvidenceFrame({ kind, header, evidence, unknownReason, extra = IDLE_EXTRA }: EvidenceFrameProps) {
+/** "Partial read: ..." in plain words; the machine codes the read named stay in `data-code` and the tooltip (UI review D12). */
+function PartialReadNote({ warnings }: { warnings: readonly string[] }) {
+  const plain = warnings.map((warning) => plainReason(warning));
+  const codes = [...new Set(plain.flatMap((entry) => entry.codes))];
+  return (
+    <p className="exec-ck-note" role="status" data-code={codes.length > 0 ? codes.join(" ") : undefined} title={codes.length > 0 ? codes.join(", ") : undefined}>
+      Partial read: {plain.map((entry) => entry.text.replace(/[.\s]+$/, "")).join("; ")}
+    </p>
+  );
+}
+
+export function EvidenceFrame({ kind, header, evidence, unknownReason, pendingId = null, extra = IDLE_EXTRA }: EvidenceFrameProps) {
 
   if (header === null) {
     return (
       <div className="exec-ck-empty">
-        {unknownReason ? <PanelState status="empty" title="Request not on this page" reason={unknownReason} /> : <PanelState status="empty" title="Nothing selected" reason="Select a request in the queue, or press J to start." />}
+        {pendingId !== null ? <PanelSkeleton label={`Finding ${pendingId} in the queue`} /> : unknownReason ? <PanelState status="empty" title="Request not on this page" reason={unknownReason} /> : <PanelState status="empty" title="Nothing selected" reason="Select a request in the queue, or press J to start." />}
       </div>
     );
   }
@@ -1077,7 +1091,7 @@ export function EvidenceFrame({ kind, header, evidence, unknownReason, extra = I
       ) : null}
 
       {evidence.status === "ready" && evidence.partial ? (
-        <p className="exec-ck-note" role="status">Partial read: {evidence.warnings.join("; ")}</p>
+        <PartialReadNote warnings={evidence.warnings} />
       ) : null}
 
       {data?.kind === "r1" ? <R1Body detail={data.detail} /> : null}

@@ -52,6 +52,7 @@ import { ReviewNoteForm } from "./ReviewNoteForm";
 import { StepsGrid } from "./StepsGrid";
 import { FindingsPanel, PlansPanel, TimelinePanel } from "./Tables";
 import {
+  WHY_MISSING,
   LINEAGE_LABEL,
   LOADING_CHIPS,
   RECON_ROWS,
@@ -131,7 +132,10 @@ function Reconciliation({ view }: { view: SandboxView }) {
   return (
     <div className="exec-sbx-recon">
       {noFigures ? (
-        <GapLine items={[{ label: "Internal, Broker and Difference figures", id: "FE-072", reason: unpublished.reason }]} />
+        <>
+          <GapLine items={[{ label: "Internal, Broker and Difference figures", id: "FE-072", reason: unpublished.reason }]} />
+          <p className="exec-sbx-note" data-role="why-missing">{view.version === "v2" ? WHY_MISSING.reconciliationStored : WHY_MISSING.reconciliationNoFigures}</p>
+        </>
       ) : (
         <Triad
           titleLevel={2}

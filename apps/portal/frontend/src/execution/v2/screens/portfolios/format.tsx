@@ -29,12 +29,24 @@ export function Np({ fact, children }: { fact: Unpublished; children?: ReactNode
 }
 
 /** A value the source did not send. It is a statement, never an empty cell. */
-export function Absent({ reason, what }: { reason?: string; /** The fact that is missing: the visible words become `Not published: <what>`. */ what?: string }) {
-  // The reason sits behind a disclosure (RV-06) and stays in hidden text for assistive tech and copy; the visible word is "Not available".
+export function Absent({ reason, what }: { reason?: string; /** The fact that is missing: it names the disclosure, the visible word stays the short `Not published` (G1: a column that repeats a phrase per cell crowds the figures). */ what?: string }) {
+  // The reason sits behind a disclosure (RV-06) and stays in hidden text for assistive tech and copy; the visible word is "Not available",
+  // or "Not published" when the cell names the fact (the fact and the full reason are in the disclosure and the title, never dropped).
+  if (what !== undefined) {
+    const why = reason ? ticketFree(reason) : null;
+    const rows = [why === `Not published: ${what}` ? `${what}: Not published` : `${what}: ${why !== null && why.startsWith("Not published") ? why : `Not published${why ? ` \u00b7 ${why}` : ""}`}`];
+    return (
+      <span className="exec-pf-na" data-absent={what} title={rows[0]}>
+        <GapWhy className="" text="Not published" name={`Not published: ${what}, reason`} rows={rows} />
+        {/* The fact and the reason stay in hidden text for assistive tech and copy, as before; only the visible words got shorter. */}
+        <span className="exec-blk-sr"> {rows[0]}</span>
+      </span>
+    );
+  }
   return (
     <span className="exec-pf-na">
-      <NaWhy reason={reason} className="" text={what === undefined ? undefined : `Not published: ${what}`} />
-      {reason && !(what !== undefined && ticketFree(reason).startsWith("Not published")) ? <span className="exec-blk-sr"> · {ticketFree(reason)}</span> : null}
+      <NaWhy reason={reason} className="" />
+      {reason ? <span className="exec-blk-sr"> · {ticketFree(reason)}</span> : null}
     </span>
   );
 }

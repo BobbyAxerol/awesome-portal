@@ -2461,18 +2461,19 @@ async function followingFixture(family:FollowingFamily,options:{rootOnly?:boolea
         expect(after.statusCode,after.body).toBe(404);
       }finally{await app.close();}
     });
-    it("full AppModule boot: both dark routes resolve their dependencies and answer 401 without a session; the plain boot does not mount them",async()=>{
+    it("full AppModule boot: the three dark route sets resolve their dependencies and answer 401 without a session; the plain boot does not mount them",async()=>{
       const probe=async(deps?:Record<string,unknown>)=>{
         const app=await createControlApiApp(ctx.config,ctx.pool,undefined,deps as never);
         try{
           const http=app.getHttpAdapter().getInstance() as FastifyInstance;await http.ready();
           const ev=await http.inject({method:"GET",url:"/api/v1/execution/governance/approvals/apr_x1/evidence"});
           const eq=await http.inject({method:"GET",url:"/api/v1/execution/deployments/dep_x1/equity-projection/source?workspace_id=ws_x1&environment=live"});
-          return [ev.statusCode,eq.statusCode];
+          const ta=await http.inject({method:"GET",url:"/api/v1/execution/controls"});
+          return [ev.statusCode,eq.statusCode,ta.statusCode];
         }finally{await app.close();}
       };
-      expect(await probe({approvalEvidence:"SOURCE_DARK",equityProjectionSource:"SOURCE_DARK"})).toEqual([401,401]);
-      expect(await probe()).toEqual([404,404]);
+      expect(await probe({approvalEvidence:"SOURCE_DARK",equityProjectionSource:"SOURCE_DARK",typedAbsence:"SOURCE_DARK"})).toEqual([401,401,401]);
+      expect(await probe()).toEqual([404,404,404]);
     });
     it("the route is UNMOUNTED by default and mounts only with the explicit SOURCE_DARK dependency",()=>{
       const plain=AppModule.register(ctx.config,ctx.pool),dark=AppModule.register(ctx.config,ctx.pool,undefined,{equityProjectionSource:"SOURCE_DARK"});

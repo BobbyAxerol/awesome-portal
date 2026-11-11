@@ -14,6 +14,7 @@ import { PanelState } from "../../../components/states";
 import { Flag } from "../../Flag";
 import { withContext } from "../../urlState";
 import type { FlagKind } from "../../flagKinds";
+import { ClosedFlag } from "./ClosedFlag";
 import { groupExact, humanize, shortUtc, statusView, type BlotterFill, type BlotterLeg, type BlotterOrder, type Exact } from "./blotterModel";
 
 export type FunnelRead =
@@ -46,9 +47,7 @@ function legKind(state: string | null): FlagKind {
     case "TRIGGERED":
     case "FILLED":
     case "CLOSED": return "ok";
-    case "CANCELED":
-    case "CANCELLED":
-    case "EXPIRED": return "paused";
+    case "EXPIRED": return "stale";
     case "REJECTED": return "rejected";
     default: return "unknown";
   }
@@ -134,7 +133,7 @@ export function OrderDetail({
                   <td data-numeric="true"><ExactText value={leg.triggerPrice} absent="At market" /></td>
                   <td data-numeric="true"><ExactText value={leg.price} absent="At market" /></td>
                   <td data-numeric="true"><ExactText value={leg.quantity} /></td>
-                  <td><Flag kind={legKind(leg.state)} label={leg.state ? humanize(leg.state) : "State not stated"} size="sm" /></td>
+                  <td>{/^CANCELL?ED$/i.test(leg.state ?? "") ? <ClosedFlag label={humanize(leg.state!)} /> : <Flag kind={legKind(leg.state)} label={leg.state ? humanize(leg.state) : "State not stated"} size="sm" />}</td>
                 </tr>
               ))}
             </tbody>

@@ -2870,6 +2870,9 @@ html {
     white-space: nowrap;
   }
   .portal-topbar .badge-env { flex: 0 0 auto; }
+  /* UI review D10: the word "Portal" before the environment badge gives its room to the page name, which was left ~50px and broke
+     mid-word ("Approval/s"). The badge keeps its own label, and its title still says it is the Portal's environment. */
+  :root[data-theme="execution-carbon"] .portal-topbar .portal-env-prefix { display: none; }
 
   /* Only the current crumb stays; it takes the free room and ellipsises. */
   .portal-breadcrumbs,
@@ -2904,7 +2907,11 @@ html {
     -webkit-box-orient: vertical;
     -webkit-line-clamp: 2;
     white-space: normal;
-    overflow-wrap: anywhere;
+    /* UI review D10: a word is never cut in the middle ("Approval/s"). It wraps between words; a single token longer than the line
+       (an id) breaks only then, and the clamp ends the second line with an ellipsis. */
+    overflow-wrap: break-word;
+    word-break: normal;
+    hyphens: none;
     padding: 0;
     font-size: 13px;
     line-height: 18px;

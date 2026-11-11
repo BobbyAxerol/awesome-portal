@@ -3,6 +3,7 @@
  * search. Per kind at most `limit` rows already scoped to the caller: an entity the caller may not see is ABSENT (there is no denied row). `total_matched`
  * is an integer or `null` (the source did not count it); 0 is a counted zero. Named rules stricter than the schema: ES-1 a row's kind is its group's kind,
  * ES-2 groups are unique per kind and inside the asked kinds, ES-3 rows are unique per id and never more than `limit`, a route hint is an in-app path.
+ * ES-4 a group with `state: NOT_COMMISSIONED` has a null count and no rows (an answered group may state either).
  * Never throws: a malformed body is `null`; another schema is `unsupported_shape`.
  */
 import type { UtcEpochMs } from "../../screenDataContract";
@@ -15,7 +16,8 @@ const ID = /^[A-Za-z0-9._:-]{1,191}$/;
 const HINT = /^\/[^\u0000-\u001f\u007f\s]*$/;
 
 export interface EntityHit { kind: EntityKind; id: string; label: string; detail: string | null; routeHint: string }
-export interface EntityGroup { kind: EntityKind; totalMatched: number | null; rows: readonly EntityHit[] }
+/** `notCommissioned`: the server says no source answers for this kind. It is not "no match": the count is null and the rows empty by rule ES-4. */
+export interface EntityGroup { kind: EntityKind; totalMatched: number | null; rows: readonly EntityHit[]; notCommissioned?: true }
 export interface EntitySearch { workspaceId: string; readAtMs: UtcEpochMs; query: { q: string; kinds: readonly EntityKind[]; limit: number }; groups: readonly EntityGroup[] }
 export type EntitySearchRead = { kind: "entity_search"; search: EntitySearch } | { kind: "unsupported_shape"; schemaVersion: string | null };
 
@@ -38,7 +40,8 @@ export function readEntitySearchV1(raw: unknown): EntitySearchRead | null {
     const groups: EntityGroup[] = [];
     for (const entry of root.groups) {
       const g = record(entry);
-      if (g === null || !hasOnly(g, ["kind", "total_matched", "rows"]) || !Array.isArray(g.rows)) return null;
+      if (g === null || !hasOnly(g, ["kind", "total_matched", "rows", "state"]) || !Array.isArray(g.rows)) return null;
+      if (g.state !== undefined && g.state !== "NOT_COMMISSIONED") return null;
       const kind = oneOf(g.kind, ENTITY_KINDS);
       const totalMatched = g.total_matched === null ? null : typeof g.total_matched === "number" && Number.isSafeInteger(g.total_matched) && g.total_matched >= 0 ? g.total_matched : undefined;
       if (kind === null || totalMatched === undefined || groups.some((x) => x.kind === kind) || !kinds.includes(kind) || g.rows.length > limit) return null; // ES-2, ES-3
@@ -56,6 +59,11 @@ export function readEntitySearchV1(raw: unknown): EntitySearchRead | null {
         rows.push({ kind, id, label, detail, routeHint: r.route_hint });
       }
       if (totalMatched !== null && totalMatched < rows.length) return null;
+      if (g.state === "NOT_COMMISSIONED") {
+        if (totalMatched !== null || rows.length > 0) return null; // ES-4
+        groups.push({ kind, totalMatched, rows, notCommissioned: true });
+        continue;
+      }
       groups.push({ kind, totalMatched, rows });
     }
     return { kind: "entity_search", search: { workspaceId, readAtMs, query: { q: text, kinds, limit }, groups } };

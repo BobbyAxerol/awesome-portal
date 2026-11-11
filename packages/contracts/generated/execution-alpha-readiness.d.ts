@@ -34,14 +34,14 @@ export interface components {
             read_at_ms: number;
             /** @enum {string} */
             environment: "paper" | "sandbox" | "live";
-            items: {
+            items?: {
                 alpha_id: string;
                 readiness?: {
                     met: number;
                     total: number;
                 } | null;
                 archive_state?: ("ACTIVE" | "PAPER_WATCH" | "ARCHIVE_IN_PROGRESS" | "ARCHIVED") | null;
-            }[];
+            }[] | null;
         };
         AlphaReadinessProblem: {
             error: {

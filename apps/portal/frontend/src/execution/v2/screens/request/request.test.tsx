@@ -16,7 +16,7 @@ import type { ApprovalCreateInput, ExecutionApi } from "../../../api/ports";
 import { useExecUrlState } from "../../urlState";
 import NewRequestPage, { REQUEST_SCREEN_KEY } from "./index";
 import { RequestDrawer, type RequestDrawerProps } from "./RequestDrawer";
-import { OWN_WORKSPACE_NOTE } from "./parts";
+import { ENV_APPLIES_NOTE, OWN_WORKSPACE_NOTE } from "./parts";
 import { clearRequestIntents } from "./useNewRequest";
 
 const u = (n: number): string => String.fromCodePoint(n);
@@ -1549,5 +1549,21 @@ describe("M4: the Run Library link does not take the typed form away", () => {
     fireEvent.click(link);
     expect(screen.getByTestId("where").textContent).toBe("/governance/approvals/new");
     expect(summaryBox()).toHaveProperty("value", "Typed before the click.");
+  });
+});
+
+describe("G2: the environment control is not a setting of this form", () => {
+  it("the page says in one line what the environment control applies to (nothing here), once, whatever the URL carries", async () => {
+    for (const entry of ["/governance/approvals/new", "/governance/approvals/new?env=paper", "/governance/approvals/new?env=live&workspace_id=ws_other"]) {
+      mountPage(port(() => CREATED).api, entry);
+      await loaded();
+      expect(screen.getAllByText(ENV_APPLIES_NOTE), entry).toHaveLength(1);
+      cleanup();
+    }
+    expect(ENV_APPLIES_NOTE).toMatch(/^Applies to: nothing here\./);
+    // The form has no environment field to change, so the line is the truth rather than a hint.
+    mountPage(port(() => CREATED).api);
+    await loaded();
+    expect(document.querySelector('[data-screen="new-request-v2"] form select[name*="env" i]')).toBeNull();
   });
 });

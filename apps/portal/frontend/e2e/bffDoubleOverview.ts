@@ -127,7 +127,7 @@ const DENIED = (): OverviewAnswer => problem(403, "FORBIDDEN", "This account may
 
 /* ── composition ───────────────────────────────────────────────────────── */
 
-const READ_AT = "2026-10-17T12:04:00.000Z";
+const READ_AT = "2026-08-22T13:00:00.000Z";
 
 function composition(surface: "command-center" | "admin-action-drawer"): OverviewAnswer {
   const admin = surface === "admin-action-drawer";
@@ -148,8 +148,8 @@ function composition(surface: "command-center" | "admin-action-drawer"): Overvie
       retention: "E2E_REDACTED_JOURNAL",
       rows: admin
         ? [
-            { command_id: "cmd_double_01", accepted_at: "2026-10-17T11:40:00.000Z", state: "BLOCKED", venue: "BINANCE", environment: "PAPER" },
-            { command_id: "cmd_double_02", accepted_at: "2026-10-17T11:20:00.000Z", state: "BLOCKED", venue: "OKX", environment: "SANDBOX" },
+            { command_id: "cmd_double_01", accepted_at: "2026-08-22T12:36:00.000Z", state: "BLOCKED", venue: "BINANCE", environment: "PAPER" },
+            { command_id: "cmd_double_02", accepted_at: "2026-08-22T12:16:00.000Z", state: "BLOCKED", venue: "OKX", environment: "SANDBOX" },
           ]
         : [],
     },
@@ -286,7 +286,7 @@ const INSTRUMENTS: readonly Instrument[] = [
 ];
 const STATUS_PATTERN = ["FILLED", "FILLED", "ACCEPTED", "PARTIALLY_FILLED", "FILLED", "REJECTED", "FILLED", "CANCELED", "SUBMITTED", "FILLED"] as const;
 export const BLOTTER_DOUBLE_COUNT = 137;
-const NEWEST_MS = Date.parse("2026-10-17T12:00:00.000Z");
+const NEWEST_MS = Date.parse("2026-08-22T12:56:00.000Z");
 
 const pad = (n: number, w = 5) => String(n).padStart(w, "0");
 const iso = (ms: number) => new Date(ms).toISOString();
@@ -600,8 +600,11 @@ function blotter(search: URLSearchParams): OverviewAnswer {
   body.freshness = v === "stale" ? "STALE" : "FRESH";
   // ===== WP-B2-O begin (the book's as-of IS the world clock, and so is the read time: every row is dated at or before it)
   const worldClock = isPositiveMode() && v !== "stale" ? ORDER_BOOK_AS_OF_ISO.replace(".000Z", "Z") : null;
-  body.as_of = worldClock ?? (v === "stale" ? "2026-10-17T11:46:00Z" : "2026-10-17T12:00:00Z");
-  body.read_at = worldClock ?? "2026-10-17T12:00:01Z";
+  body.as_of = worldClock ?? (v === "stale" ? "2026-08-22T12:42:00Z" : "2026-08-22T12:56:00Z");
+  body.read_at = worldClock ?? "2026-08-22T12:56:01Z";
+  // F4: the canonical mirror revision states its last refresh on 30 Aug; with the world clock on 22 Aug that is a content instant after the read, which the preview would take for "now"
+  const mirror = (body.data.exact_query as { mirror_revision?: { last_successful_refresh_at?: string } }).mirror_revision;
+  if (worldClock !== null && mirror?.last_successful_refresh_at !== undefined && Date.parse(mirror.last_successful_refresh_at) > Date.parse(worldClock)) mirror.last_successful_refresh_at = worldClock;
   // ===== WP-B2-O end
   return ok(body);
 }

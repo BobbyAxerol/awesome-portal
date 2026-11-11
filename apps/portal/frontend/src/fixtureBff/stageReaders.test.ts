@@ -278,14 +278,17 @@ describe("include (BE-P12): the opt-in members come from the canonical fixtures,
     }
   });
 
+  // F2 D1/D5: the identity member keeps the published SHAPE (the schema closes the alpha name: null with ALPHA_NAME_NOT_PUBLISHED) but its alpha id
+  // and portfolio name are the deployment's own from the world, not the canonical file's placeholders (`alpha_TEST_ONLY_identity`,
+  // "TEST_ONLY portfolio name"), which the unit suites still read from the file.
   it("through the product's own client and readers: the members read as typed values", async () => {
     const sandbox = await value(api.getSandboxCertificationVersioned("dep_sandbox_01", { workspaceId: STAGE_V2_WORKSPACE, include: ["identity"] }));
-    expect(sandbox.kind === "v2" && sandbox.value.identity).toMatchObject({ alphaId: "alpha_TEST_ONLY_identity", portfolioName: "TEST_ONLY portfolio name" });
+    expect(sandbox.kind === "v2" && sandbox.value.identity).toMatchObject({ alphaId: "alpha_a", portfolioName: "Core" });
     const canary = await value(api.getCanaryVersioned("dep_canary_01", { workspaceId: STAGE_V2_WORKSPACE, include: ["identity"] }));
-    expect(canary.kind === "v2" && canary.value.identity).toMatchObject({ alphaId: "alpha_TEST_ONLY_identity" });
+    expect(canary.kind === "v2" && canary.value.identity).toMatchObject({ alphaId: "alpha_b", portfolioName: "Core" });
     const live = await value(api.getLiveFullVersioned("dep_live_01", { workspaceId: STAGE_V2_WORKSPACE, include: ["identity", "stage_facts"] }));
     if (live.kind !== "v2") throw new Error("not V2");
-    expect(live.value.identity).toMatchObject({ alphaId: "alpha_TEST_ONLY_identity" });
+    expect(live.value.identity).toMatchObject({ alphaId: "alpha_a" });
     expect(live.value.stageFacts!.reconciliation.verdict).toEqual({ availability: "AVAILABLE", value: "OPEN_FINDINGS" });
     expect(live.value.stageFacts!.reconciliation.openFindingCount.availability).toBe("NOT_PUBLISHED");
     // Not asked: the same read has neither.

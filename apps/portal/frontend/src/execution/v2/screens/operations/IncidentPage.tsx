@@ -19,8 +19,8 @@ import { Link, useSearchParams } from "react-router-dom";
 import { PanelState } from "../../../components/states";
 import type { ExecutionApi } from "../../../api/ports";
 import type { PanelStatus } from "../../../contracts";
-import { DockAction } from "../../Drawer";
 import { NotAvailableLine, SectionPanel } from "../../blocks";
+import { NotFound } from "../../blocks/NotFound";
 import { formatAsOf } from "../../boundary";
 import { Flag } from "../../Flag";
 import type { IncidentRootV2, InstantV2, OperationV2 } from "../../readers/operationalQueue";
@@ -31,6 +31,7 @@ import { INCIDENT_ACTION_REASONS, railFor, STATE_FLAG } from "./IncidentRootDraw
 import { ACCESS_PATH, AccessLink, FE, notPublishedReason } from "./notPublished";
 import { commandLabel, humanize, receiptOutcome, TARGET_LABEL } from "./outcome";
 import { TargetLink } from "./TargetLink";
+import { UnavailableActions } from "./UnavailableActions";
 import { TargetNamesProvider, usePortfolioNames } from "./targetNames";
 
 import "../../css/operations.css";
@@ -213,11 +214,12 @@ function IncidentInner({ api, incidentId, workspaceId, queuePath = "/execution/o
         <h1 className="exec-ops-title">Incident <span className="exec-ops-mono">{incidentId}</span></h1>
         {root.phase === "loading" ? <PanelState status="loading" /> : null}
         {root.phase === "failed" && NOT_FOUND.test(root.reason) ? (
-          <PanelState
-            status="empty"
-            title="Incident not found"
-            reason={`No incident with the id ${incidentId} is visible in this workspace (${root.reason}). Check the id; nothing is shown in its place.`}
-            actions={<Link className="exec-ops-apply" to={withContext(queuePath, withoutPeek(params))}>Back to Operations</Link>}
+          <NotFound
+            what="Incident"
+            id={incidentId}
+            sentence="This incident does not exist, or it is not visible in this workspace. (OPERATIONAL_READ_NOT_FOUND)."
+            backTo={withContext(queuePath, withoutPeek(params))}
+            backLabel="Operations"
           />
         ) : null}
         {root.phase === "failed" && !NOT_FOUND.test(root.reason) ? <PanelState status={root.status} reason={root.reason} actions={root.status === "denied" ? <AccessLink href={accessHref} /> : undefined} /> : null}
@@ -439,14 +441,17 @@ function IncidentInner({ api, incidentId, workspaceId, queuePath = "/execution/o
       )}
 
       <SectionPanel title="Actions" level={2}>
-        <div className="exec-ops-actions" role="group" aria-label="Incident actions">
-          <DockAction label="Acknowledge" reason={INCIDENT_ACTION_REASONS.acknowledge} accessHref={accessHref} />
-          <DockAction label="Assign to me" reason={kids !== null && kids.assignedTo.state === "PUBLISHED" ? ASSIGN_OFFERED_REASON : INCIDENT_ACTION_REASONS.assign} accessHref={accessHref} />
-          <DockAction label="Record exposure mitigated" reason={EXPOSURE_REASON} accessHref={accessHref} />
-          <DockAction label="Attach dry-run evidence" reason={EVIDENCE_REASON} accessHref={accessHref} />
-          <DockAction label="Mark mitigated" reason={INCIDENT_ACTION_REASONS.mitigate} accessHref={accessHref} />
-          <DockAction label="Mark resolved" reason={INCIDENT_ACTION_REASONS.resolve} variant="primary" accessHref={accessHref} />
-        </div>
+        <UnavailableActions
+          accessHref={accessHref}
+          actions={[
+            { label: "Acknowledge", reason: INCIDENT_ACTION_REASONS.acknowledge },
+            { label: "Assign to me", reason: kids !== null && kids.assignedTo.state === "PUBLISHED" ? ASSIGN_OFFERED_REASON : INCIDENT_ACTION_REASONS.assign },
+            { label: "Record exposure mitigated", reason: EXPOSURE_REASON },
+            { label: "Attach dry-run evidence", reason: EVIDENCE_REASON },
+            { label: "Mark mitigated", reason: INCIDENT_ACTION_REASONS.mitigate },
+            { label: "Mark resolved", reason: INCIDENT_ACTION_REASONS.resolve },
+          ]}
+        />
         <p className="exec-ops-reason">Resolving closes the incident only. It never resumes a deployment; resuming is its own plan, apply and verify with a fresh sync.</p>
       </SectionPanel>
     </div>

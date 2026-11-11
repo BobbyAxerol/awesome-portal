@@ -42,7 +42,7 @@ export const SIBLINGS = {
   },
   "alpha-readiness": {
     gap: "GAP-9", schemaVersion: "portal.execution.alpha-readiness.v1",
-    read: S.obj({ "schema_version": S.lit("portal.execution.alpha-readiness.v1"), "workspace_id": S.str(256), "record_authority": S.lit("PORTAL_PROJECTION"), "read_at_ms": S.ms, "environment": S.en("paper", "sandbox", "live"), "items": S.arr(S.obj({ "alpha_id": S.id, "readiness": S.sec(S.refine(S.obj({ "met": S.int(0), "total": S.int(1) }), (v: any) => v.met <= v.total)), "archive_state": S.sec(S.en("ACTIVE", "PAPER_WATCH", "ARCHIVE_IN_PROGRESS", "ARCHIVED")) }), 200) }),
+    read: S.obj({ "schema_version": S.lit("portal.execution.alpha-readiness.v1"), "workspace_id": S.str(256), "record_authority": S.lit("PORTAL_PROJECTION"), "read_at_ms": S.ms, "environment": S.en("paper", "sandbox", "live"), "items": S.sec(S.arr(S.obj({ "alpha_id": S.id, "readiness": S.sec(S.refine(S.obj({ "met": S.int(0), "total": S.int(1) }), (v: any) => v.met <= v.total)), "archive_state": S.sec(S.en("ACTIVE", "PAPER_WATCH", "ARCHIVE_IN_PROGRESS", "ARCHIVED")) }), 200)) }),
     path: (params) => {
       const query = new URLSearchParams(); for (const key of ["workspace_id","environment"]) if (params[key]) query.set(key, params[key]!);
       return `/readiness${query.toString() === "" ? "" : "?" + query.toString()}`;

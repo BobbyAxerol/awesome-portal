@@ -33,6 +33,7 @@ export function TablePanel<R extends { key: string }>({ label, noun, table, colu
   return (
     <div className="exec-wb-tablewrap" data-table={label}>
       <CardsTable
+        scrollHint
         columns={columns}
         rows={table.rows}
         rowKey={(row) => row.key}

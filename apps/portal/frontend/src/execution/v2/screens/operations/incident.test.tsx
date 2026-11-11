@@ -11,6 +11,7 @@ import type { ExecutionApi, Result } from "../../../api/ports";
 import { readIncidentRootV2, type IncidentRootReadV2 } from "../../readers/operationalQueue";
 import { readOperationalQueueV2 } from "../../readers/operationalQueue";
 import { IncidentRootDrawer, INCIDENT_ACTION_REASONS, railFor } from "./IncidentRootDrawer";
+import { ACTIONS_UNAVAILABLE_WHY } from "./UnavailableActions";
 import OperationsV2 from "./index";
 import { whyText } from "../../gapWhyTestUtil";
 import { loadCanonical } from "../../testkit/loadCanonical";
@@ -222,28 +223,36 @@ describe("root content", () => {
     expect(within(drawer).getAllByTestId("not-available-line").length).toBeGreaterThanOrEqual(5);
   });
 
-  it("every blocked action links to My access, the Access screen's real route (INC-8)", async () => {
+  it("the blocked actions are ONE disclosure with one link to My access, not four greyed buttons (INC-8)", async () => {
     const drawer = await readyDrawer(api().port);
-    const links = within(drawer).getAllByRole("link", { name: /^My access/ });
-    expect(links).toHaveLength(4);
-    for (const link of links) expect(link.getAttribute("href")).toBe("/administration/profile-access");
-    // Four links with the same words need their action in the name (WCAG 2.4.4).
-    expect(new Set(links.map((l) => l.getAttribute("aria-label"))).size).toBe(4);
-    for (const link of links) expect(link.getAttribute("aria-label")).toMatch(/^My access: \S/);
+    const disclosure = drawer.querySelector('details[data-role="actions-unavailable"]') as HTMLDetailsElement;
+    expect(disclosure).not.toBeNull();
+    expect(disclosure.querySelector("summary")!.textContent).toBe("Actions not available yet");
+    const links = within(drawer).getAllByRole("link", { name: /access/i });
+    expect(links).toHaveLength(1);
+    expect(links[0].getAttribute("href")).toBe("/administration/profile-access");
+    // Nothing in the footer can be pressed, so nothing can look like an action.
+    expect(drawer.querySelector("footer button")).toBeNull();
+    for (const label of ["Acknowledge", "Assign to me", "Mark mitigated", "Mark resolved"]) expect(within(drawer).queryByRole("button", { name: label })).toBeNull();
   });
 
-  it("every action is disabled and points at its reason", async () => {
+  it("the disclosure says why in one sentence and names who can act today, and keeps each action's own reason", async () => {
     const drawer = await readyDrawer(api().port);
+    const disclosure = drawer.querySelector('details[data-role="actions-unavailable"]') as HTMLElement;
+    expect(disclosure.textContent).toContain(ACTIONS_UNAVAILABLE_WHY);
+    expect(ACTIONS_UNAVAILABLE_WHY).toMatch(/nobody can do these from the Portal today, Admins included/);
     const wanted: Record<string, string> = {
       Acknowledge: INCIDENT_ACTION_REASONS.acknowledge,
       "Assign to me": INCIDENT_ACTION_REASONS.assign,
       "Mark mitigated": INCIDENT_ACTION_REASONS.mitigate,
       "Mark resolved": INCIDENT_ACTION_REASONS.resolve,
     };
+    const items = within(disclosure).getAllByRole("listitem");
+    expect(items).toHaveLength(4);
     for (const [label, reason] of Object.entries(wanted)) {
-      const button = within(drawer).getByRole("button", { name: label }) as HTMLButtonElement;
-      expect(button.disabled, label).toBe(true);
-      expect(document.getElementById(button.getAttribute("aria-describedby") ?? "")?.textContent, label).toBe(reason);
+      const item = items.find((li) => li.textContent?.startsWith(label));
+      expect(item, label).toBeTruthy();
+      expect(item!.textContent, label).toContain(reason);
       expect(reason).toMatch(/^Not published: /);
       expect(reason).not.toMatch(/FE-\d/);
     }

@@ -205,3 +205,35 @@ describe("simulated lane: six connected local reads", () => {
     expect(screen.getByText("6 of 24 can run now")).toBeTruthy();
   });
 });
+
+describe("G2: the relay and the READY label agree", () => {
+  it("says in one sentence what the relay state means for running an action", async () => {
+    simulated = true;
+    mount();
+    await loaded();
+    const meaning = screen.getByTestId("admin-relay-meaning").textContent ?? "";
+    expect(meaning).toMatch(/commands can be planned \(a preview\) but never delivered/);
+    expect(meaning).toMatch(/Local reads do not use the relay and can still run/);
+  });
+
+  it("a ready local read is labelled as one, so READY never promises a relay delivery", async () => {
+    simulated = true;
+    mount();
+    await loaded();
+    const states = within(tierTable("Read")).getAllByRole("row").slice(1).map((r) => r.querySelector("td[data-l='State']")?.textContent ?? "");
+    expect(states.filter((s) => s.includes("Ready: local read"))).toHaveLength(6);
+    expect(states.some((s) => /Ready to run/.test(s))).toBe(false);
+    const pane = await dock();
+    expect(pane.textContent).toContain("It does not use the command relay");
+  });
+
+  it("a read parameter with no published list of values says where the values live and what happens to a wrong one", async () => {
+    simulated = true;
+    mount("/administration/actions?sel=health");
+    const pane = await dock();
+    const note = await within(pane).findByTestId("admin-param-registry");
+    expect(note.textContent).toContain("held in the server's modes registry");
+    expect(note.textContent).toContain("does not list it");
+    expect(note.textContent).toContain("refuses an unknown value");
+  });
+});

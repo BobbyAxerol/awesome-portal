@@ -17,10 +17,39 @@ import { isPositiveMode } from "./bffPositiveMode";
 
 /* ── clock ──────────────────────────────────────────────────────────────── */
 
-/** The instant every positive body states as "now" before the preview shifts the WHOLE world by whole days. */
-export const WORLD_NOW_MS = Date.UTC(2026, 9, 17, 12, 4, 0);
+/** The ONE clock of the world: 22 Aug 2026 13:00Z, the operations clock (OPERATIONS_V2_DOUBLE_NOW_ISO); the preview shifts the WHOLE world by whole days from here. */
+export const WORLD_NOW_MS = Date.UTC(2026, 7, 22, 13, 0, 0);
 export const WORLD_NOW_ISO = new Date(WORLD_NOW_MS).toISOString();
 export const DAY_MS = 86_400_000;
+
+/**
+ * The canonical contract fixtures (packages/contracts/fixtures, Codex's, never edited here) were written at 17 Oct 2026 12:04Z. A double that serves a body built from one
+ * moves every instant of it to the world clock by the SAME distance (the order of every event, the gaps and the read/as-of pair are kept): full instants and epoch-ms
+ * numbers by CANONICAL_TO_WORLD_MS, date-only strings by whole days. Only instants of Sep-Dec 2026 move (the frame the fixtures were written in).
+ */
+export const CANONICAL_CLOCK_MS = Date.UTC(2026, 9, 17, 12, 4, 0);
+export const CANONICAL_TO_WORLD_MS = WORLD_NOW_MS - CANONICAL_CLOCK_MS;
+const FRAME_FROM_MS = Date.UTC(2026, 8, 1);
+const FRAME_TO_MS = Date.UTC(2027, 0, 1);
+export function inWorldClock<T>(value: T): T {
+  const walk = (node: unknown): unknown => {
+    if (typeof node === "string") {
+      const full = /^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(\.\d+)?Z$/.exec(node);
+      if (full !== null && Date.parse(node) >= FRAME_FROM_MS && Date.parse(node) < FRAME_TO_MS) {
+        const fraction = full[1] ?? "";
+        const base = new Date(Date.parse(node.replace(/\.\d+Z$/, "Z")) + CANONICAL_TO_WORLD_MS).toISOString().replace(".000Z", "Z");
+        return fraction === "" ? base : base.replace("Z", `${fraction}Z`);
+      }
+      if (/^2026-(09|10)-\d\d$/.test(node)) return new Date(Date.parse(`${node}T00:00:00Z`) + Math.round(CANONICAL_TO_WORLD_MS / DAY_MS) * DAY_MS).toISOString().slice(0, 10);
+      return node;
+    }
+    if (typeof node === "number") return Number.isInteger(node) && node >= FRAME_FROM_MS && node < FRAME_TO_MS ? node + CANONICAL_TO_WORLD_MS : node;
+    if (Array.isArray(node)) return node.map(walk);
+    if (node !== null && typeof node === "object") return Object.fromEntries(Object.entries(node as Record<string, unknown>).map(([k, v]) => [k, walk(v)]));
+    return node;
+  };
+  return walk(value) as T;
+}
 
 /* ── people: ONE roster ─────────────────────────────────────────────────── */
 
@@ -71,10 +100,10 @@ const deployment = (id: string, alphaId: string, stage: DeploymentSpec["stage"],
   id, alphaId, stage, environment, venue: "BINANCE",
   accountId: environment === "paper" ? "acc_pap_sim" : environment === "sandbox" ? "acc_tn_bnc" : SLEEVE_OF_PORTFOLIO[portfolio[0]] ?? `acct_${id}`,
   portfolioId: portfolio[0], portfolioName: portfolio[1], currency: "USDT", allocation, exposure: "0", realized, unrealized, health: "READY", state, active: state === "ACTIVE",
-  updatedAt: "2026-10-17T11:00:00Z", // WP-B2-O: never after the world clock (WORLD_NOW)
+  updatedAt: "2026-08-22T11:56:00Z", // WP-B2-O: never after the world clock (WORLD_NOW)
 });
 const alpha = (id: string, label: string, version: string, owner: string | null, health: AlphaSpec["health"], deployments: DeploymentSpec[]): AlphaSpec =>
-  ({ id, label, version, owner, stages: [...new Set(deployments.map((entry) => entry.stage))], health, attention: [], deployments, updatedAt: "2026-10-17T11:00:00Z" }); // WP-B2-O: never after the world clock
+  ({ id, label, version, owner, stages: [...new Set(deployments.map((entry) => entry.stage))], health, attention: [], deployments, updatedAt: "2026-08-22T11:56:00Z" }); // WP-B2-O: never after the world clock
 
 /** The native alphas of the e2e suite (the ids the doubles and the audit open), booked into the TEST_ONLY portfolios. */
 export const NATIVE_ALPHAS: AlphaSpec[] = [
@@ -300,7 +329,7 @@ export const bindingOfAccount = (accountId: string): BindingFact | null => {
  * Times are absolute instants against the operations read (OPS_READ_MS); a body that states that read time is shifted by the preview as a
  * whole, so every distance (acknowledged 20 minutes after it opened, linked 30 seconds after the operation) survives.
  */
-export const OPS_READ_MS = Date.UTC(2026, 7, 22, 13, 0, 0);
+export const OPS_READ_MS = WORLD_NOW_MS;
 
 export interface WorldOperation {
   id: string;

@@ -28,7 +28,7 @@ import { useSearchParams } from "react-router-dom";
 
 import type { ExecutionApi } from "../../../api/ports";
 import { NewRequestForm } from "./NewRequestForm";
-import { FrameToggle, FreshChip, NextPanel, ResultPreview, StepBar, SUBTITLE, WorkspaceNote } from "./parts";
+import { EnvironmentNote, FrameToggle, FreshChip, NextPanel, ResultPreview, StepBar, SUBTITLE, WorkspaceNote } from "./parts";
 import { readPrefill, type PrefillRead } from "./model";
 import { useNewRequest } from "./useNewRequest";
 
@@ -61,6 +61,7 @@ export default function NewRequestPage({ api, writeBlockedReason, accessHref = A
         <div className="exec-rq-mast-text">
           <h1 className="exec-rq-title">New approval request</h1>
           <p className="exec-rq-sub" data-testid="rq-subtitle">{SUBTITLE}</p>
+          <EnvironmentNote />
           <WorkspaceNote />
         </div>
         <div className="exec-rq-mast-ctrls">

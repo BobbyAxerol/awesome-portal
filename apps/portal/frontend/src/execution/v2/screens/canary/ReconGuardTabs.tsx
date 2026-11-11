@@ -95,7 +95,7 @@ export function GuardRuleTab({ view }: { view: CanaryView }) {
   return (
     <SectionPanel level={2} title="Guard rule">
       <p className="exec-cny-guard-note">Scale-up and Protective actions say what the rule does when the condition holds. Now says whether it holds at present.</p>
-      <CardsTable columns={GUARD_COLUMNS} rows={guardRows(view)} rowKey={(r) => r.condition} label="Canary guard rule" />
+      <CardsTable scrollHint columns={GUARD_COLUMNS} rows={guardRows(view)} rowKey={(r) => r.condition} label="Canary guard rule" />
       <p className="exec-cny-foot">{guardSentence(view)}</p>
     </SectionPanel>
   );

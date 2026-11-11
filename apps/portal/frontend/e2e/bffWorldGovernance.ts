@@ -263,6 +263,25 @@ export function worldApprovals(): readonly WorldApproval[] {
 }
 // WP-B2-A3 (N10-B1): the Closed lens opens a decided request by its DECISION id (`dec_AP-311`, the history row id); it is the same request, so every page read answers its decided record
 export const worldApproval = (id: string): WorldApproval | undefined => worldApprovals().find((a) => a.id === id || `dec_${a.id}` === id);
+/**
+ * F3b: the request as an inbox that still lists it as waiting shows it. The legacy inbox of the Playwright lane (`APPROVAL_ROWS`) keeps AP-352 and AP-201
+ * waiting, while the world has decided them; its reviews, capital and evidence must then tell the waiting story from the row's own facts (quorum and age),
+ * with the world's portfolio and capital rules: the books already hold what the world booked, so a waiting request raises it by the requested step.
+ * The populated lane serves the world's inbox, where a decided request is not listed, and keeps the decided record (`worldApproval`).
+ */
+export function inboxViewOf(id: string, row: Obj | null): WorldApproval | undefined {
+  const a = worldApproval(id);
+  if (a === undefined || row === null) return a;
+  const sla = (row.sla ?? {}) as Obj;
+  const int = (value: unknown): number | undefined => (typeof value === "number" && Number.isInteger(value) ? value : undefined);
+  // the subject the row prints names the alpha ("RSI v1.7 · RC-41", "Carry v3.2 → PF-MAIN"): the sentences of this request say that name, not the world alpha's
+  const named = typeof row.subject === "string" ? row.subject.split(/ [·→] /)[0]?.trim() : undefined;
+  return {
+    ...a, alphaLabel: named !== undefined && named !== "" ? named : a.alphaLabel, status: "PENDING", decidedMs: null, decidedBy: null,
+    quorumMet: int(row.quorum_met) ?? 0, quorumRequired: int(row.quorum_required) ?? a.quorumRequired,
+    ageMinutes: int(sla.age_minutes) ?? a.ageMinutes, budgetMinutes: int(sla.budget_minutes) ?? a.budgetMinutes,
+  };
+}
 export const pendingApprovals = (): WorldApproval[] => worldApprovals().filter((a) => a.status === "PENDING").sort((a, b) => a.dueMs - b.dueMs);
 export const approvalOfAlpha = (alphaId: string, gate: WorldGate): WorldApproval | undefined => worldApprovals().find((a) => a.alphaId === alphaId && a.gate === gate);
 /** The exit review (or gate request) of the stage a deployment is in or has left, for the "Open exit review" link on a stage page. */
@@ -452,10 +471,15 @@ function decisionFields(a: WorldApproval, approval: Obj): void {
   approval.sla_due_at = isoOf(a.dueMs);
   approval.expires_at = isoOf(a.dueMs + DAY_MS);
 }
+/**
+ * A decided request offers no decision: every `can_*` is false. It carries NO lock. The published lock words are the reviewer's (self approval, blocking
+ * findings, expiry, R1 lineage, capital breach); the server has no `REQUEST_ALREADY_DECIDED` lock (its word for a repeat decision is the plan blocker
+ * `ACTOR_ALREADY_DECIDED`), so a lock the readers cannot name printed "Partial read: lock ... treated as NOT_ELIGIBLE" on a closed request (F3b).
+ */
 function closeEligibility(a: WorldApproval, eligibility: Obj | undefined): void {
   if (a.status === "PENDING" || eligibility === undefined) return;
   for (const key of Object.keys(eligibility)) if (key.startsWith("can_")) eligibility[key] = false;
-  eligibility.locks = ["REQUEST_ALREADY_DECIDED"];
+  eligibility.locks = [];
 }
 
 /** `GET /governance/approvals/{id}/r1`. */
@@ -484,13 +508,19 @@ export function overlayWorldR1(body: unknown, id: string): unknown {
     }
   }
   // ===== WP-B2-A3 end
+  // ===== F3b begin: the checklist counts the gate's 7 criteria (what the evidence read and the receipt say): a decided request met all 7 and says who decided it
+  if (a.status === "APPROVED" && Array.isArray(data.checklist)) {
+    data.checklist = (data.checklist as Obj[]).map((item) => item.outcome === "pass" ? item : { label: "capacity evidence covers the traded symbols (volume data)", outcome: "pass" });
+    data.decisions = [{ outcome: "APPROVED", by: personByUsername(a.decidedBy ?? "")?.name ?? a.decidedBy, at: isoOf(a.decidedMs!) }];
+  }
+  // ===== F3b end
   closeEligibility(a, data.eligibility);
   return out;
 }
 
 /** `GET /governance/approvals/{id}/r2`: the capital rows, the candidate deployment and the R1 lineage are the world's. */
-export function overlayWorldR2(body: unknown, id: string): unknown {
-  const a = worldApproval(id);
+export function overlayWorldR2(body: unknown, id: string, view?: WorldApproval): unknown {
+  const a = view ?? worldApproval(id); // F3b: `view` is the request as the lane's own inbox lists it (inboxViewOf)
   if (a === undefined || a.gate !== "R2") return body;
   const out = clone(body) as Obj;
   const capital = capitalOf(a);
@@ -527,7 +557,7 @@ export function overlayWorldR2(body: unknown, id: string): unknown {
         const binding = bindingOfAccount(accountId);
         if (binding !== null) {
           entry.label = "account";
-          if (a.status !== "PENDING") continue; // N8a-07: a decided request's capital check is its decided record, not a live check of the binding
+          if (a.status !== "PENDING" || view !== undefined) continue; // N8a-07: a decided request's capital check is its decided record, not a live check of the binding (F3b: the inbox view is only a first pass; the world's own pass decides)
           const over = binding.used > binding.equity;
           (group.entries as Obj[]).push({ label: "capital check", value: `${over ? "EXCEEDED" : "WITHIN"} · ${groupedMoney(fromCents(binding.used))} allocated on the binding, equity ${groupedMoney(fromCents(binding.equity))}`, revision: entry.revision });
         }
@@ -647,8 +677,8 @@ const groupedMoney = (decimal: string): string => {
 };
 
 /** The evidence read's diff, preview sentence and criteria count of a world request (the same shape `evidenceFromRecord` has). */
-export function worldEvidence(id: string): { portfolioId: string | null; environment: string; changes: Obj[]; whatChanges: (obligations: number) => string; countsAs: { met_after: number; required: number } } | null {
-  const a = worldApproval(id);
+export function worldEvidence(id: string, view?: WorldApproval): { portfolioId: string | null; environment: string; changes: Obj[]; whatChanges: (obligations: number) => string; countsAs: { met_after: number; required: number } } | null {
+  const a = view ?? worldApproval(id);
   if (a === undefined) return null;
   // WP-B2-A3 (N8c-01): the criteria met NOW are the count Alpha 360 and the stage page print for the stage the gate leaves (one rule, criteriaMetOf); R1 / R2 have no stage record
   const record = a.stageFrom !== null ? stageHistoryOf(a.alphaId).stages[a.stageFrom] : null;
@@ -658,7 +688,8 @@ export function worldEvidence(id: string): { portfolioId: string | null; environ
   const changes: Obj[] = [
     ...(capital !== null ? [{ label: "Allocated capital", before: capital.before, after: capital.after, unit: "MONEY" }] : []),
     ...(stageChange !== null ? [stageChange] : []),
-    { label: "Criteria met", before: String(met), after: "7", unit: "COUNT" },
+    // F3b: a diff row that changes nothing voids the whole evidence read (reader EV-3), so a decided request (7 of 7 at decision) has no "Criteria met" row
+    ...(met !== 7 ? [{ label: "Criteria met", before: String(met), after: "7", unit: "COUNT" }] : []),
     { label: "Reviewer note", before: null, after: "Added", unit: "TEXT" },
   ];
   const sentence = capital !== null
@@ -668,15 +699,15 @@ export function worldEvidence(id: string): { portfolioId: string | null; environ
     portfolioId: PORTFOLIO_NAMES[a.portfolioId] === undefined ? null : a.portfolioId, environment: a.environment, changes, // WP-B2-A3: only the world's own portfolios publish an economic history (the one NAV the Portfolio page prints); an R1 review has no capital and a generated portfolio publishes none
     // WP-B2-A3 (N9b-02): a closed request tells its decided record in the past tense (no "after approval", obligations carried, not "stay open")
     whatChanges: (obligations) => a.status === "APPROVED"
-      ? `${sentence.replace(/ moves from /, " moved from ").replace(/ passes /, " passed ")}; the gate counted 7 of 7 criteria as met at decision. ${obligations === 0 ? "Nothing carried." : `${obligations} obligations carried.`}`
-      : `${sentence}; the gate counts 7 of 7 criteria as met after approval. ${obligations === 0 ? "Nothing stays open." : `${obligations} obligations stay open.`}`,
+      ? `${sentence.replace(/ moves from /, " moved from ").replace(/ passes /, " passed ")}; the gate counted 7 of 7 criteria as met at decision. ${obligations === 0 ? "Nothing carried." : `${obligations} ${obligations === 1 ? "obligation" : "obligations"} carried.`}`
+      : `${sentence}; the gate counts 7 of 7 criteria as met after approval. ${obligations === 0 ? "Nothing stays open." : `${obligations} ${obligations === 1 ? "obligation stays" : "obligations stay"} open.`}`,
     countsAs: { met_after: 7, required: 7 },
   };
 }
 
 /** `POST /approvals/{id}/capital-preview` for a world R2 request: allocated before/after are the statement's, the ceiling is the statement's approved budget. */
-export function worldCapitalPreview(body: unknown, id: string): unknown | null {
-  const a = worldApproval(id);
+export function worldCapitalPreview(body: unknown, id: string, view?: WorldApproval): unknown | null {
+  const a = view ?? worldApproval(id);
   if (a === undefined || a.gate !== "R2") return null;
   const out = clone(body) as Obj;
   if (out.analytics?.data === undefined) return out;
@@ -697,8 +728,11 @@ export function worldCapitalPreview(body: unknown, id: string): unknown | null {
 
 /* ── the Command Centre: Needs attention, Today, Fleet by stage ─────────── */
 
-/** The operations clock to the Command Centre clock, by distance from each body's read time. */
-const inCcFrame = (opsMs: number): number => opsMs - OPS_READ_MS + WORLD_NOW_MS;
+/** F3a, one fixed "now" for the Command Centre: the operations clock (OPS_READ_MS, 22 Aug 13:00Z). An operation or incident is already dated on it; an approval
+ * (dated on WORLD_NOW) is carried over by its distance from WORLD_NOW, so a card keeps the age and the overdue state of the page it opens. */
+const CC_NOW_MS = OPS_READ_MS;
+const inCcFrame = (opsMs: number): number => opsMs;
+const inCcFrameWorld = (worldMs: number): number => worldMs - WORLD_NOW_MS + CC_NOW_MS;
 const SEVERITY_OF: Readonly<Record<string, string>> = { CRITICAL: "CRITICAL", ERROR: "HIGH", WARNING: "MEDIUM", INFO: "INFO" };
 const SEVERITY_RANK: Readonly<Record<string, number>> = { CRITICAL: 4, HIGH: 3, MEDIUM: 2, INFO: 1 };
 const OPERATION_COMMAND_WORD: Readonly<Record<string, string>> = {
@@ -729,9 +763,9 @@ function needsAttentionCandidates(): Candidate[] {
     const finding = incident.evidence[0]?.label;
     out.push({ rank: 0, kind: "INCIDENT", item: {
       id: incident.id, kind: "INCIDENT", title: incidentTitle(incident), summary: `${ENV_WORD[environmentFor(incident.target[0], incident.target[1], incident.env)]}${finding !== undefined ? ` · ${finding}` : ""}`,
-      severity: SEVERITY_OF[incident.severity] ?? "MEDIUM", sla_state: slaStateOf(due, WORLD_NOW_MS, budget), sla_due_at: isoOf(due), created_at: isoOf(created),
+      severity: SEVERITY_OF[incident.severity] ?? "MEDIUM", sla_state: slaStateOf(due, CC_NOW_MS, budget), sla_due_at: isoOf(due), created_at: isoOf(created),
       updated_at: isoOf(inCcFrame(Math.max(incident.createdMs, ...[incident.acknowledged, incident.assigned, incident.mitigated].map((e) => e?.atMs ?? 0)))),
-      authority: "EXECUTION", href: incidentHref(incident), action_label: "Investigate", age_seconds: Math.round((WORLD_NOW_MS - created) / 1000),
+      authority: "EXECUTION", href: incidentHref(incident), action_label: "Investigate", age_seconds: Math.round((CC_NOW_MS - created) / 1000),
     } });
   }
   for (const op of WORLD_OPERATIONS) {
@@ -742,15 +776,15 @@ function needsAttentionCandidates(): Candidate[] {
     const due = created + budget;
     out.push({ rank: 0, kind: "OPERATION", item: {
       id: op.id, kind: "OPERATION", title: `${OPERATION_COMMAND_WORD[op.command] ?? op.command} ${VERIFY_WORD[op.verify] ?? op.verify.toLowerCase()}`, summary: `${targetName(op.target)} · ${ENV_WORD[environmentFor(op.target[0], op.target[1], op.env)]}`,
-      severity: SEVERITY_OF[op.severity] ?? "MEDIUM", sla_state: slaStateOf(due, WORLD_NOW_MS, budget), sla_due_at: isoOf(due), created_at: isoOf(created), updated_at: isoOf(created),
-      authority: "EXECUTION", href: operationHref(op), action_label: "Verify", age_seconds: Math.round((WORLD_NOW_MS - created) / 1000),
+      severity: SEVERITY_OF[op.severity] ?? "MEDIUM", sla_state: slaStateOf(due, CC_NOW_MS, budget), sla_due_at: isoOf(due), created_at: isoOf(created), updated_at: isoOf(created),
+      authority: "EXECUTION", href: operationHref(op), action_label: "Verify", age_seconds: Math.round((CC_NOW_MS - created) / 1000),
     } });
   }
   for (const a of pendingApprovals()) {
     out.push({ rank: 0, kind: "APPROVAL", item: {
       id: a.id, kind: "APPROVAL", title: a.alphaLabel, summary: `${GATE_WORD[a.gate]} · ${a.target}`, severity: "MEDIUM",
-      sla_state: slaStateOf(a.dueMs, WORLD_NOW_MS, a.budgetMinutes * MINUTE_MS), sla_due_at: isoOf(a.dueMs), created_at: isoOf(a.requestedMs), updated_at: isoOf(a.requestedMs),
-      authority: "PORTAL", href: approvalHref(a), action_label: "Review", age_seconds: Math.round((WORLD_NOW_MS - a.requestedMs) / 1000),
+      sla_state: slaStateOf(inCcFrameWorld(a.dueMs), CC_NOW_MS, a.budgetMinutes * MINUTE_MS), sla_due_at: isoOf(inCcFrameWorld(a.dueMs)), created_at: isoOf(inCcFrameWorld(a.requestedMs)), updated_at: isoOf(inCcFrameWorld(a.requestedMs)),
+      authority: "PORTAL", href: approvalHref(a), action_label: "Review", age_seconds: Math.round((CC_NOW_MS - inCcFrameWorld(a.requestedMs)) / 1000),
     } });
   }
   out.sort((x, y) => (SEVERITY_RANK[y.item.severity] ?? 0) - (SEVERITY_RANK[x.item.severity] ?? 0) || kindOrder[x.kind] - kindOrder[y.kind] || Date.parse(y.item.created_at) - Date.parse(x.item.created_at));
@@ -771,14 +805,14 @@ export function worldCommandCenter(base: Obj): Obj {
   const out = clone(base);
   const candidates = needsAttentionCandidates();
   const shown = candidates.slice(0, NEEDS_LIMIT);
-  out.read_at = WORLD_NOW_ISO;
+  out.read_at = isoOf(CC_NOW_MS);
   const panels = out.panels as Obj;
-  for (const panel of Object.values(panels) as Obj[]) if (typeof panel.as_of === "string") panel.as_of = isoOf(WORLD_NOW_MS - 1000);
-  for (const panel of Object.values(panels) as Obj[]) for (const source of (panel.sources ?? []) as Obj[]) if (typeof source.as_of === "string") source.as_of = isoOf(WORLD_NOW_MS - 1000);
+  for (const panel of Object.values(panels) as Obj[]) if (typeof panel.as_of === "string") panel.as_of = isoOf(CC_NOW_MS - 1000);
+  for (const panel of Object.values(panels) as Obj[]) for (const source of (panel.sources ?? []) as Obj[]) if (typeof source.as_of === "string") source.as_of = isoOf(CC_NOW_MS - 1000);
   if (panels.needs_you !== undefined) {
     Object.assign(panels.needs_you, {
-      total_count: candidates.length, observed_total_count: candidates.length, returned_count: shown.length, limit: 10, truncated: candidates.length > shown.length,
-      items: shown.map((c) => ({ ...c.item, as_of: isoOf(WORLD_NOW_MS - 1000) })),
+      total_count: candidates.length, observed_total_count: candidates.length, returned_count: shown.length, limit: NEEDS_LIMIT, truncated: candidates.length > shown.length,
+      items: shown.map((c) => ({ ...c.item, as_of: isoOf(CC_NOW_MS - 1000) })),
     });
   }
   const counts = fleetCounts();
@@ -799,18 +833,18 @@ export function worldCommandCenter(base: Obj): Obj {
     panels.pinned_watchlist.total_count = pins.length;
     panels.pinned_watchlist.items = pins.map(({ a, d }, i) => ({
       slot: i + 1, entity_type: "DEPLOYMENT", entity_id: d.id, label: a.label, href: d.stage === "CANARY" ? `/deployments/live/${d.id}/canary` : `/deployments/${d.stage.toLowerCase()}/${d.id}`,
-      pinned_at: isoOf(WORLD_NOW_MS - (10 - i) * HOUR_MS), target_label: a.label, target_state: "available", target_authority: "EXECUTION",
-      target_as_of: isoOf(WORLD_NOW_MS - 1000), target_freshness_state: "OK",
+      pinned_at: isoOf(CC_NOW_MS - (10 - i) * HOUR_MS), target_label: a.label, target_state: "available", target_authority: "EXECUTION",
+      target_as_of: isoOf(CC_NOW_MS - 1000), target_freshness_state: "OK",
     }));
   }
   if (panels.today !== undefined) {
     const items: Obj[] = pendingApprovals().map((a) => ({
-      id: `review:${a.id}`, kind: "REVIEW_DUE", label: `${GATE_WORD[a.gate]} · ${a.alphaLabel}`, scheduled_at: isoOf(a.dueMs), authority: "PORTAL", as_of: isoOf(WORLD_NOW_MS - 1000), href: approvalHref(a),
+      id: `review:${a.id}`, kind: "REVIEW_DUE", label: `${GATE_WORD[a.gate]} · ${a.alphaLabel}`, scheduled_at: isoOf(inCcFrameWorld(a.dueMs)), authority: "PORTAL", as_of: isoOf(CC_NOW_MS - 1000), href: approvalHref(a),
     }));
     const verified = lastVerifiedOperation();
     if (verified !== undefined) {
       items.push({ id: `verified:${verified.id}`, kind: "VERIFIED_OPERATION", label: `Last verified: ${OPERATION_COMMAND_WORD[verified.command] ?? verified.command} on ${targetName(verified.target)}`,
-        scheduled_at: isoOf(inCcFrame(Date.parse(verified.at))), authority: "EXECUTION", as_of: isoOf(WORLD_NOW_MS - 1000), href: operationHref(verified) });
+        scheduled_at: isoOf(inCcFrame(Date.parse(verified.at))), authority: "EXECUTION", as_of: isoOf(CC_NOW_MS - 1000), href: operationHref(verified) });
     }
     Object.assign(panels.today, { total_count: items.length, observed_total_count: items.length, returned_count: items.length, limit: 12, truncated: false, items });
   }

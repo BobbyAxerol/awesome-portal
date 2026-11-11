@@ -46,11 +46,12 @@ export function NotAvailableLine({ facts, className, note }: NotAvailableLinePro
       <span className="exec-blk-np-word">Not available:</span> {facts.map((fact) => fact.label).join(", ")}
       {note ? <> {note}</> : null}
       <GapWhy name={`Why not available: ${facts.map((fact) => fact.label).join(", ")}`} rows={unavailableRows(facts)} />
-      <span className="exec-blk-sr">
-        {" ("}
-        {facts.map((fact) => (fact.id ? `${NOT_PUBLISHED}: ${fact.label}` : fact.label)).join(", ")}
-        {")"}
-      </span>
+      {/* The visible words already name every fact, so this adds only what they leave out (the ones with a request id are not published) and never repeats a label: the accessible name used to read "Not available: Name, Version (Not published: Name, Not published: Version)". */}
+      {facts.some((fact) => fact.id) ? (
+        <span className="exec-blk-sr">
+          {facts.every((fact) => fact.id) ? ` (${NOT_PUBLISHED.toLowerCase()})` : ` (some ${NOT_PUBLISHED.toLowerCase()})`}
+        </span>
+      ) : null}
     </p>
   );
 }

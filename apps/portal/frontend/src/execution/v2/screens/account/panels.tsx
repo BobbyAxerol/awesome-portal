@@ -19,11 +19,13 @@ import { GapWhy, KpiStrip, Kpi, NotAvailableLine, SectionPanel, Triad } from "..
 import { withoutOrigin } from "../../backTo";
 import { withContext } from "../../urlState";
 import {
-  FE, SYNC_SHOWN, humanize, alphaHref, balanceFacts, brokerFacts, coverageFlag, deploymentHref, diffFacts, headroomFacts,
-  ledgerPnl, marginFacts, portfolioHref, sleeveRows, stageWord, triadModel,
-  type AccountView, type AllocationFacts, type PositionFacts, type Population, type SleeveRow, type SyncEntry,
+  FE, SYNC_SHOWN, humanize, alphaHref, balanceFacts, brokerFacts, coverageFlag, diffFacts, headroomFacts,
+  ledgerPnl, marginFacts, sleeveRows, triadModel,
+  type AccountView, type PositionFacts, type Population, type SleeveRow, type SyncEntry,
 } from "./model";
-import { Fact, Na, Np, PortfolioName, Value, When } from "./parts";
+import { Fact, Na, Np, Value, When } from "./parts";
+import type { ExecutionApi } from "../../../api/ports";
+import { ScopedFleetTable } from "../manager/ScopedFleetTable";
 
 export interface PanelContext {
   profile: ProfileEnvelope;
@@ -208,35 +210,18 @@ export function PositionsPanel({ ctx, scope, onScope }: { ctx: PanelContext; sco
 
 /* ── allocations ────────────────────────────────────────────────────────── */
 
-export function AllocationsPanel({ ctx }: { ctx: PanelContext }) {
+export function AllocationsPanel({ ctx, api }: { ctx: PanelContext; api: ExecutionApi }) {
   const [params] = useSearchParams();
-  const columns: CardsColumn<AllocationFacts>[] = [
-    {
-      key: "alpha",
-      label: "Alpha",
-      render: (row) => row.alpha === null ? <Na /> : <Link className="exec-acct-link" to={withContext(alphaHref(row.alpha), withoutOrigin(params))}>{ctx.view.names.alphas[row.alpha] ?? row.alpha}</Link>,
-    },
-    {
-      key: "deployment",
-      label: "Deployment",
-      render: (row) => row.deployment === null ? <Na /> : <Link className="exec-acct-link" to={withContext(deploymentHref(row.deployment, row.mode, row.stage), withoutOrigin(params))}>{ctx.view.names.deployments[row.deployment] ?? row.deployment}</Link>,
-    },
-    { key: "stage", label: "Stage", render: (row) => stageWord(row.mode) },
-    {
-      key: "portfolio",
-      label: "Portfolio",
-      render: (row) => row.portfolio === null ? <Na /> : <PortfolioName id={row.portfolio} name={ctx.view.names.portfolios[row.portfolio] ?? null} reason={ctx.view.names.portfolioReasons[row.portfolio] ?? null} to={withContext(portfolioHref(row.portfolio), withoutOrigin(params))} />,
-    },
-    { key: "allocation", label: "Allocation", numeric: true, render: (row) => <Value metric={row.allocation} suffix={row.currency ?? undefined} /> },
-  ];
   return (
-    <SectionPanel title="Allocations" flush>
-      <CardsTable
-        columns={columns}
-        rows={ctx.view.allocations}
-        rowKey={(row) => row.id}
-        label="Allocations on this account"
-        empty={<span className="exec-acct-note">No allocation row is published for this account.</span>}
+    <SectionPanel title="Allocations" aside="Alpha Fleet rows on this account" flush>
+      <ScopedFleetTable
+        api={api}
+        scope={{ surface: "ACCOUNT", id: ctx.accountId }}
+        environment={ctx.view.identity.environment}
+        workspaceId={ctx.profile.workspaceId}
+        hrefFor={(row) => withContext(alphaHref(row.alphaId), withoutOrigin(params))}
+        emptyText="The Manager dataset holds no alpha on this account in this environment."
+        noEnvironmentText="The account resource names no environment, so the alpha list asks nothing. It does not guess one."
       />
       <p className="exec-acct-cap" title="Logical allocations are no claim on the native balance.">No claim on the native balance</p>
     </SectionPanel>

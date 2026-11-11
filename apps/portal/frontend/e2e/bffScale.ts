@@ -210,8 +210,7 @@ const VENUES = ["BINANCE", "OKX", "BYBIT", "DERIBIT", "BITFLYER"] as const;
 const STAGE_ENV: Record<DeploymentSpec["stage"], Env> = { RESEARCH: "paper", PAPER: "paper", SANDBOX: "sandbox", CANARY: "live", LIVE: "live" };
 const STAGE_ORDER = ["LIVE", "CANARY", "SANDBOX", "PAPER", "RESEARCH"] as const;
 const ALLOCATIONS = ["5000", "7500", "10000", "12500", "2500.50", "25000", "40000.25", "60000", "100000"] as const;
-const JPY_ALLOCATIONS = ["1200000", "3000000", "4500000", "9000000"] as const;
-const DATA_BASE = Date.parse("2026-09-01T15:10:00Z");
+const DATA_BASE = Date.parse("2026-08-22T11:56:00Z"); // F4: the world clock (22 Aug 13:00Z) less 64 min; generated rows are never dated after it (was 1 Sep 15:10Z, a day on the 17 Oct frame)
 /** Two decimals, never "-0.00" (a negative zero is not a published value). */
 const money = (n: number): string => {
   const text = n.toFixed(2);
@@ -261,7 +260,9 @@ function build(counts: ScaleCounts, name: ScaleName): Universe {
   const extraPortfolios = counts.portfolios - NATIVE.portfolios;
   const portfolios: PortfolioSpec[] = [];
   for (let i = 0; i < extraPortfolios; i += 1) {
-    const base = weighted(rng, [["USDT", 17], ["JPY", 3], ["USD", 2]] as const);
+    // UI adjustment WP-4 (Bobby, 2026-11-10): the review/scale world publishes USDT only. The draw is kept (one rng call) so the
+    // seeded sequence after it is unchanged; multi-currency honesty is exercised by the TEST_ONLY doubles (bffDoublePortfolios).
+    const base = weighted(rng, [["USDT", 1]] as const);
     portfolios.push({
       id: `pf_scale_${pad(i + 1, 3)}`,
       name: `${pick(rng, THEMES)} Book ${pad(i + 1, 2)}`,
@@ -290,7 +291,7 @@ function build(counts: ScaleCounts, name: ScaleName): Universe {
       const portfolio = pick(rng, portfolios);
       const account = pool.length > 0 ? pick(rng, pool) : null;
       const health = weighted(rng, [["READY", 75], ["ATTENTION", 15], ["FINDING", 10]] as const);
-      const allocation = portfolio.base === "JPY" ? pick(rng, JPY_ALLOCATIONS) : pick(rng, ALLOCATIONS);
+      const allocation = pick(rng, ALLOCATIONS);
       const state = health === "ATTENTION" && rng() < 0.5 ? "HALTED" : "ACTIVE";
       depCount += 1;
       const deployment: DeploymentSpec = {

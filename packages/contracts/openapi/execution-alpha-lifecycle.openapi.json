@@ -751,7 +751,8 @@
                 "type": "string",
                 "enum": [
                   "EXECUTION_READ_NOT_AVAILABLE",
-                  "EXECUTION_READ_CURRENT_ONLY"
+                  "EXECUTION_READ_CURRENT_ONLY",
+                  "EXECUTION_READ_QUERY_INVALID"
                 ]
               },
               "message": {

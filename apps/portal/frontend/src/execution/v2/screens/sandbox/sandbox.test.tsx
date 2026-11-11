@@ -12,6 +12,7 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import { STAGE_WHY } from "../stage/reasons";
 import SandboxScreen, { SANDBOX_SCREEN_KEY } from "./index";
+import { WHY_MISSING } from "./model";
 import { fakeApi, okRead, v1Body, v1Rich, v2Body, type FakeApi } from "./testApi";
 import { whyText } from "../../gapWhyTestUtil";
 
@@ -706,5 +707,38 @@ describe("layout at 390px", () => {
     await ready();
     expect(document.querySelectorAll("table.exec-cards").length).toBeGreaterThan(0);
     expect(css).toMatch(/\.exec-sbx-id\s*\{[^}]*overflow-wrap: anywhere/);
+  });
+});
+
+describe("G2: a panel that says only 'Not available' also says what is missing and who to ask", () => {
+  it("a V2 body: Reconciliation and Exit review each carry one sentence naming ONE cause", async () => {
+    mount(fakeApi({ read: okRead(v2Body()) }));
+    await ready();
+    const recon = screen.getByRole("tabpanel");
+    const reconWhy = recon.querySelectorAll('[data-role="why-missing"]');
+    expect(reconWhy.length).toBeGreaterThanOrEqual(1);
+    expect(recon.textContent).toContain(WHY_MISSING.reconciliationStored);
+    expect(WHY_MISSING.reconciliationStored).toMatch(/^Source not published:/);
+    const rail = screen.getByRole("complementary", { name: "Exit review and review note" });
+    expect(rail.querySelectorAll('[data-role="why-missing"]')).toHaveLength(1);
+    expect(rail.textContent).toContain(WHY_MISSING.exit);
+    expect(WHY_MISSING.exit).toMatch(/^Profile not enabled:/);
+    expect(WHY_MISSING.exit).toMatch(/ask your Portal administrator/);
+    // The two buttons stay disabled; the sentence explains them and enables nothing.
+    for (const name of ["Submit for review", "Request Sandbox exit review"]) expect((screen.getByRole("button", { name }) as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  it("the findings panel with no findings list says the source did not publish one (and draws no empty table)", async () => {
+    mount(fakeApi({ read: okRead(v2Body()) }));
+    await ready();
+    const findings = screen.getByRole("heading", { level: 2, name: "Findings" }).closest("section") as HTMLElement;
+    expect(findings.textContent).toContain(WHY_MISSING.findings);
+    expect(findings.querySelector("table")).toBeNull();
+  });
+
+  it("a body that publishes findings does not get the missing-source sentence", async () => {
+    mount(fakeApi({ read: okRead(v1Rich()) }));
+    await ready();
+    expect(screen.getByRole("tabpanel").textContent).not.toContain(WHY_MISSING.findings);
   });
 });

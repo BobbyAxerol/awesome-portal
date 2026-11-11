@@ -27,6 +27,12 @@
   font: var(--exec-font-meta);
   color: var(--accent);
 }
+.exec-alp2-titlerow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-3);
+}
 .exec-alp2-title {
   display: flex;
   flex-wrap: wrap;
@@ -35,6 +41,14 @@
   margin: 0;
   font: var(--exec-font-title);
   color: var(--ink);
+  min-width: 0;
+  overflow-wrap: break-word;
+}
+/* The id beside the name: secondary text, never the heading itself. */
+.exec-alp2-idtext {
+  font: var(--exec-font-id);
+  color: var(--ink-soft);
+  overflow-wrap: anywhere;
 }
 .exec-alp2-version {
   padding: 0 var(--space-2);
@@ -622,4 +636,12 @@
 }
 .exec-alp2-apart summary {
   cursor: pointer;
+}
+
+/* Alpha 360 windowed figures at phone width: a label and its partition values (tag + amount + unit) can be wider than one line, and flex-end
+ * pushes the overflow out of the left edge ("ALLOCATION" read "LLOCATION"). Only this table stacks them; other card tables keep their layout. */
+@media (max-width: 660px) {
+  .exec-cards[aria-label="Windowed figures by portfolio"] tbody td[data-l] {
+    flex-wrap: wrap;
+  }
 }

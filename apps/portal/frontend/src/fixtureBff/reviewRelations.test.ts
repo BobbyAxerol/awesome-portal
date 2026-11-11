@@ -4,6 +4,8 @@ import { afterAll, describe, expect, it } from "vitest";
 
 import { transformReviewBody } from "../../../fixture-bff/review-relations";
 import { answerFixtureRequest, V2_OPTIONS } from "../../e2e/bffAnswerer";
+import { setPositiveMode } from "../../e2e/bffPositiveMode";
+import { wpAccountBook, wpDeploymentFact, wpPortfolioBook, wpRecall } from "../../../fixture-bff/review-manager";
 import { readProfileEnvelope } from "../execution/api/profileRead";
 import { canonicalDigest, loadCanonical } from "../execution/v2/testkit/loadCanonical";
 import { validateAgainst } from "../execution/v2/testkit/schema";
@@ -124,6 +126,45 @@ describe("layout stress — human labels only", () => {
     expect(transformReviewBody("https://external.test/api/v1/execution/manager/fleet", body, "layout-stress")).toBe(body);
     for (const value of [null, "event: unavailable\n\n", ["Binance-02"]]) {
       expect(transformReviewBody(`${EX}/manager/fleet`, value, "layout-stress")).toBe(value);
+    }
+  });
+
+  it("F3c: in the positive world every account a Portfolio books or ledger names is an account the Account double answers", () => {
+    setPositiveMode(true, wpAccountBook, wpPortfolioBook, wpDeploymentFact, wpRecall);
+    try {
+      const ids = new Set<string>();
+      for (const path of [`${EX}/resources/portfolios/pf_TEST_ONLY_core`, `${EX}/resources/portfolios/pf_TEST_ONLY_yen`, `${EX}/portfolios/pf_TEST_ONLY_core/capital-ledger`, `${EX}/portfolios/pf_TEST_ONLY_yen/capital-ledger`]) {
+        const raw = answer(path)!;
+        expect(raw.status).toBe(200);
+        const walk = (value: unknown): void => {
+          if (Array.isArray(value)) value.forEach(walk);
+          else if (value !== null && typeof value === "object") {
+            for (const [key, child] of Object.entries(value as Record<string, unknown>)) {
+              if (key === "account_id" && typeof child === "string") ids.add(child);
+              else walk(child);
+            }
+          }
+        };
+        walk(transformReviewBody(path, raw.body, "populated"));
+      }
+      expect(ids.has("acc_byb_main") || ids.has("acc_pap_yen")).toBe(true);
+      expect([...ids].filter((id) => ["Bybit-01", "Paper-Yen"].includes(id))).toEqual([]);
+      for (const id of ids) expect(answer(`${EX}/resources/accounts/${id}`)!.status, `account ${id} is a dead link`).toBe(200);
+      expect(answer(`${EX}/resources/accounts/Bybit-01`)!.status).toBe(404); // the raw legacy key is still no fuzzy fallback
+    } finally {
+      setPositiveMode(false);
+    }
+  });
+
+  it("F3c: a Canary trial is stage CANARY on the Portfolio resource, so its link opens the control room the Fleet names", () => {
+    setPositiveMode(true, wpAccountBook, wpPortfolioBook, wpDeploymentFact, wpRecall);
+    try {
+      const body = obj(answer(`${EX}/resources/portfolios/pf_TEST_ONLY_satellite`)!.body);
+      const deployments = obj(body.data).deployments as { deployment_id: string; stage: string }[];
+      expect(deployments.find((row) => row.deployment_id === "dep_c1")?.stage).toBe("CANARY");
+      expect(deployments.find((row) => row.deployment_id === "dep_d2")?.stage).toBe("PAPER");
+    } finally {
+      setPositiveMode(false);
     }
   });
 

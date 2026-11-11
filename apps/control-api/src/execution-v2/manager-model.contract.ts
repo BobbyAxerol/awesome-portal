@@ -28,6 +28,10 @@ export const managerScalar = z.enum(Object.keys(MANAGER_SCALARS) as [keyof typeo
 /** The fields a dataset can be grouped by (a group key names one of these, never any text). */
 export const managerGroupField = z.enum(["portfolio_id", "owner_user_id", "alpha_id", "stage_presence", "current_stage", "venue", "health", "source_state", "lifecycle"]);
 export const managerMoneyFields = ["allocation", "net_pnl", "unrealized_pnl", "balance_total", "equity_30d_end_value"] as const;
+/** BE-B1: the two PERCENT figures of a row's economic partition that the Fleet table reads. They are NOT money (never in `managerMoneyFields`: that list
+ * drives "an economic partition is required"), NOT scalars (not sortable: the row-level `metrics` map stays the closed seven-key enum) and are admitted
+ * as source fact kinds so that a source that has them can publish them. Omitted from a partition when no fact states them (omission = Not published). */
+export const managerPercentFields = ["max_drawdown_pct", "win_rate_pct"] as const;
 export const managerTuple = z.object({ alpha_id: text, alpha_version_id: text, portfolio_id: text,
   deployment_id: text, account_id: text }).strict();
 export const managerPartition = z.object({ economic_domain: z.enum(["ACTUAL", "PAPER", "SANDBOX"]),
@@ -56,7 +60,8 @@ const managerMetricConsistent = (v: { availability: string; value: string | null
 /** A metric as ADMITTED from a source document (a fact). A source value may be "-0": admission is unchanged (MD-5). */
 export const managerMetric = z.object(managerMetricShape(exactDecimal)).strict().superRefine(managerMetricConsistent);
 /** A metric as EMITTED in the dataset response: canonical zero (MD-5), a signed zero is refused. */
-export const managerResponseMetric = z.object(managerMetricShape(managerResponseDecimal)).strict().superRefine(managerMetricConsistent);
+/** `effective_at_ms` is optional and only on the EMITTED metric: the UTC time this figure took effect (a funding or return receipt, a budget approval, an allocation). Absent = not published, never inferred. */
+export const managerResponseMetric = z.object({ ...managerMetricShape(managerResponseDecimal), effective_at_ms: utcMilliseconds.optional() }).strict().superRefine(managerMetricConsistent);
 export const managerStatementFields = ["opening_economic_capital", "initial_funds", "added_funds", "returned_capital",
   "net_economic_assignments", "current_nav", "realized_pnl", "unrealized_pnl", "actual_fees", "pending_fees",
   "funding", "interest", "initial_budget", "current_budget", "topups_applied", "decreases_applied", "recall_applied",
@@ -64,7 +69,7 @@ export const managerStatementFields = ["opening_economic_capital", "initial_fund
 export const managerFact = z.object({ fact_id: text, revision: opaqueRevision, source_receipt_ref: text,
   tuple: managerTuple, partition: managerPartition, economic_account_ref: text,
   ownership_partition_ref: text, // Authoritative economic ownership, not a physical custody ID.
-  kind: z.enum([...managerStatementFields, "allocation", "balance_total", "net_pnl", "equity_30d_end_value", "return_30d_pct"]),
+  kind: z.enum([...managerStatementFields, "allocation", "balance_total", "net_pnl", "equity_30d_end_value", "return_30d_pct", ...managerPercentFields]),
   metric: managerMetric, effective_at_ms: utcMilliseconds, recorded_at_ms: utcMilliseconds,
   classification: z.enum(["ECONOMIC", "BUDGET", "INTERNAL_TRANSFER", "CUSTODY"]),
   transfer_pair_ref: text.nullable(), counterpart_portfolio_id: text.nullable(),
@@ -176,7 +181,9 @@ export const managerDatasetRow = z.object({ row_key: z.string().min(1).max(2048)
   // FE-027/FE-012 scalars: sortable/groupable `current_stage`; the entry pair is a typed absence until a source states the transition.
   current_stage: financialStage.nullable(), entered_at_ms: utcMilliseconds.nullable(),
   days_in_stage: z.number().int().min(0).max(10_000_000).nullable(), stage_lifecycle_reasons: managerStageLifecycleReasons,
-  children: z.array(managerTuple.extend({ stage: financialStage, binding_ref: text.nullable() }).strict()).max(10_000),
+  // BE-B1: `allocation_effective_at_ms` is optional; the UTC time this deployment's allocation took effect, from the allocation fact(s) of exactly this tuple
+  // when they all state ONE time. Absent = Not published (several different times, no allocation fact, or the field is not authorized): never inferred.
+  children: z.array(managerTuple.extend({ stage: financialStage, binding_ref: text.nullable(), allocation_effective_at_ms: utcMilliseconds.optional() }).strict()).max(10_000),
   metrics: metricMap, economic_partitions: z.array(partitionMetrics).max(200),
   // FE-CAT-3: present exactly on the rows of an `environment: ALL` dataset (the row's own environment); absent otherwise.
   environment: executionEnvironment.optional() }).strict();

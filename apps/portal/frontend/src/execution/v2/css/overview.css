@@ -128,13 +128,6 @@
     grid-template-columns: minmax(0, 1fr);
   }
 }
-/* a phone is narrower than the five figure columns: the table scrolls inside its panel instead of widening the page */
-@media (max-width: 600px) {
-  .exec-ov-contrib {
-    display: block;
-    overflow-x: auto;
-  }
-}
 
 /* capital block */
 .exec-ov-cap {
@@ -365,6 +358,12 @@ a.exec-ov-what-title {
 .exec-ov-digest-line { flex: 1; height: 8px; background: repeating-linear-gradient(135deg, var(--line-soft) 0 2px, transparent 2px 6px); }
 /* Contributors: a drawn bar beside the published amount, scaled inside one partition only. */
 .exec-ov-contrib-wrap { overflow-x: auto; }
+/* The side that goes on fades (alpha only; the pinned Alpha column on the left is never faded). Same mask as the shared table wrap. */
+.exec-ov-contrib-wrap[data-more="end"] {
+  -webkit-mask-image: linear-gradient(to right, var(--ink) calc(100% - 48px), transparent);
+  mask-image: linear-gradient(to right, var(--ink) calc(100% - 48px), transparent);
+}
+.exec-ov-contrib-wrap:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 .exec-ov-bar-track { display: block; height: 4px; margin-top: 3px; background: var(--surface-2); }
 .exec-ov-bar { display: block; height: 100%; background: var(--series); }
 .exec-ov-bar[data-neg="true"] { background: var(--series-dd); }
@@ -416,10 +415,27 @@ a.exec-ov-what-title {
 .exec-ov-kpis .exec-ov-fig[data-long="true"] { font: var(--exec-font-num); font-variant-numeric: tabular-nums; }
 .exec-ov-kpis .exec-ov-unit { margin-left: 0; }
 
-/* QA3 R1-24: at phone width the contributors table gives up its no-wrap columns that carry words, so the Score column stays inside the panel. */
+/* G1 (390px): the contributors table keeps the natural width of its columns and scrolls sideways inside its panel (.exec-ov-contrib-wrap),
+ * with the Alpha column pinned: a name wraps at word breaks inside a readable column, the partition label wraps at its spaces and hyphen, and the figures never break
+ * inside the token (words used to break a letter at a time). A sticky cell needs an opaque ground, the panel's own. */
 @media (max-width: 700px) {
-  .exec-ov-contrib .exec-ov-contrib-part { white-space: normal; overflow-wrap: anywhere; }
   .exec-ov-contrib th,
-  .exec-ov-contrib td { padding-right: var(--space-1); }
-  .exec-ov-contrib tbody th { white-space: normal; overflow-wrap: anywhere; }
+  .exec-ov-contrib td { padding-right: var(--space-3); }
+  .exec-ov-contrib tbody th {
+    position: sticky;
+    left: 0;
+    z-index: 1;
+    min-width: 7rem;
+    max-width: 8rem;
+    white-space: normal;
+    overflow-wrap: normal;
+    background: var(--paper-raised);
+  }
+  .exec-ov-contrib thead th:first-child { position: sticky; left: 0; z-index: 1; background: var(--paper-raised); }
+  .exec-ov-contrib .exec-ov-contrib-id,
+  .exec-ov-contrib .exec-ov-contrib-who { overflow-wrap: anywhere; }
+  .exec-ov-contrib .exec-ov-contrib-part { white-space: normal; overflow-wrap: normal; min-width: 5.5rem; }
 }
+
+/* The contributors table scrolls inside its card at phone width (it is a table, not cards): the sentence under it stays visible there. */
+.exec-ov-contrib-wrap + .exec-cards-hint { display: block; }

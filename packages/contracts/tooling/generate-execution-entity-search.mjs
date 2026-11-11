@@ -16,7 +16,10 @@ const KINDS = ['alpha', 'portfolio', 'account', 'operation', 'incident', 'approv
 const kind = { type: 'string', enum: KINDS };
 const hint = { type: 'string', minLength: 2, maxLength: 512, pattern: '^/[^\\u0000-\\u001f\\u007f\\s]*$(?![\\s\\S])' };
 const row = object({ kind, id, label: text, detail: nullable(text), route_hint: hint });
-const group = object({ kind, total_matched: nullable(count), rows: { type: 'array', maxItems: 50, items: row } });
+// A group may say NOT_COMMISSIONED: no source answers for that kind yet. It is NOT "no match": `total_matched` is null and `rows` is empty, which an
+// answered group never has to say, and the bar asks the kind's own list read instead. `state` is optional (absent = answered), so every existing body stays valid.
+const group = { ...object({ kind, total_matched: nullable(count), rows: { type: 'array', maxItems: 50, items: row }, state: { type: 'string', enum: ['NOT_COMMISSIONED'] } }, ['kind', 'total_matched', 'rows']),
+  if: { properties: { state: { const: 'NOT_COMMISSIONED' } }, required: ['state'] }, then: { properties: { total_matched: { type: 'null' }, rows: { type: 'array', maxItems: 0 } } } };
 const typed = node => {
   if (Array.isArray(node)) { node.forEach(typed); return node; }
   if (node && typeof node === 'object') {
@@ -56,7 +59,8 @@ const hit = { ...base, query: { q: 'carry', kinds: KINDS, limit: 3 }, groups: [
   { kind: 'portfolio', total_matched: 0, rows: [] },
   { kind: 'operation', total_matched: null, rows: [{ kind: 'operation', id: 'TEST_ONLY:op-1', label: 'Carry rebalance', detail: 'Paper', route_hint: '/operations?operation=TEST_ONLY%3Aop-1' }] }] };
 const none = { ...base, query: { q: 'zzzz', kinds: ['alpha', 'portfolio'], limit: 8 }, groups: [{ kind: 'alpha', total_matched: 0, rows: [] }, { kind: 'portfolio', total_matched: 0, rows: [] }] };
-const negative = { lane: 'TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT', bases: { hit: 'execution-entity-search.hit.synthetic.valid.json' },
+const notCommissioned = { ...base, query: { q: 'carry', kinds: KINDS, limit: 8 }, groups: KINDS.map(k => ({ kind: k, total_matched: null, rows: [], state: 'NOT_COMMISSIONED' })) };
+const negative = { lane: 'TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT', bases: { hit: 'execution-entity-search.hit.synthetic.valid.json', notCommissioned: 'execution-entity-search.not-commissioned.synthetic.valid.json' },
   note: 'WP-K slice 7: a count is a non-negative integer or null (never a string, never -1); a route hint is a path; kinds are closed; an entity is never "denied" (there is no such state); the object is closed.',
   cases: [
     { id: 'WP-K/total-negative', base: 'hit', rule: 'a count is not negative', ops: [{ op: 'set', path: ['groups', 0, 'total_matched'], value: -1 }] },
@@ -65,6 +69,9 @@ const negative = { lane: 'TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT', bases: { hit
     { id: 'WP-K/route-hint-absolute-url', base: 'hit', rule: 'a route hint is an in-app path', ops: [{ op: 'set', path: ['groups', 0, 'rows', 0, 'route_hint'], value: 'https://example.com/x' }] },
     { id: 'WP-K/denied-state', base: 'hit', rule: 'an unauthorized entity is absent, there is no denied row', ops: [{ op: 'set', path: ['groups', 0, 'rows', 0, 'state'], value: 'DENIED' }] },
     { id: 'WP-K/limit-zero', base: 'hit', rule: 'limit is 1 to 50', ops: [{ op: 'set', path: ['query', 'limit'], value: 0 }] },
+    { id: 'WP-K/not-commissioned-with-rows', base: 'notCommissioned', rule: 'a group that no source answers has no rows', ops: [{ op: 'set', path: ['groups', 0, 'rows'], value: [{ kind: 'alpha', id: 'TEST_ONLY:alpha-a', label: 'Carry A', detail: null, route_hint: '/deployments/alphas/TEST_ONLY%3Aalpha-a' }] }] },
+    { id: 'WP-K/not-commissioned-with-count', base: 'notCommissioned', rule: 'a group that no source answers has no count, not even zero', ops: [{ op: 'set', path: ['groups', 0, 'total_matched'], value: 0 }] },
+    { id: 'WP-K/state-unknown', base: 'notCommissioned', rule: 'the group state vocabulary is closed', ops: [{ op: 'set', path: ['groups', 0, 'state'], value: 'DENIED' }] },
     { id: 'WP-K/empty-query', base: 'hit', rule: 'a query is not empty', ops: [{ op: 'set', path: ['query', 'q'], value: '' }] }] };
 const outputs = {
   'schemas/execution-entity-search.v1.schema.json': { ...header, ...response },
@@ -72,6 +79,7 @@ const outputs = {
     components: { securitySchemes: { PortalSession: { type: 'apiKey', in: 'cookie', name: '__Host-portal_session' } }, schemas: { EntitySearch: response, EntitySearchProblem: problem } } },
   'fixtures/execution-entity-search.hit.synthetic.valid.json': wrap(hit),
   'fixtures/execution-entity-search.none.synthetic.valid.json': wrap(none),
+  'fixtures/execution-entity-search.not-commissioned.synthetic.valid.json': wrap(notCommissioned),
   'fixtures/execution-entity-search.synthetic.negative.json': negative,
 };
 for (const [file, value] of Object.entries(outputs)) {

@@ -18,6 +18,7 @@ import { cloneRows, pad, timed } from "../../testkit/scale";
 import {
   COLUMNS, DEFAULT_COLUMNS, NO_FILTERS, NO_SCOPE, ROW_CAP, applyScope, blotterCsv, blotterCsvName, blotterQuery, chipCounts, unchippedStatusCounts, fillsFor, filtersKey, groupExact, humanize,
   isBucket, legsFor, readBlotter, readExact, scopeActive, shortUtc, statusView, type BlotterFill, type BlotterLeg, type BlotterOrder,
+  feePrecisionByCurrency, formatFee,
 } from "./blotterModel";
 
 const NAME = "execution-full-blotter.partial";
@@ -78,7 +79,10 @@ describe("statusView", () => {
     expect(statusView("PARTIALLY_FILLED")).toMatchObject({ kind: "partial", bucket: "PARTIAL" });
     for (const s of ["REJECTED", "DENIED"]) expect(statusView(s)).toMatchObject({ kind: "rejected", bucket: "REJECTED" });
     for (const s of ["INITIALIZED", "SUBMITTED", "ACCEPTED", "PENDING_UPDATE", "PENDING_CANCEL", "TRIGGERED"]) expect(statusView(s)).toMatchObject({ kind: "pending", bucket: "OPEN" });
-    for (const s of ["CANCELED", "EXPIRED"]) expect(statusView(s)).toMatchObject({ kind: "paused", bucket: null });
+    expect(statusView("CANCELED")).toMatchObject({ kind: "na", label: "Canceled", closed: true, bucket: null });
+    expect(statusView("EXPIRED")).toMatchObject({ kind: "stale", label: "Expired", bucket: null });
+    // Nothing that is over is called paused.
+    for (const s of ["CANCELED", "EXPIRED"]) expect(statusView(s).kind).not.toBe("paused");
   });
   it("an unknown or missing status is unknown, never a success", () => {
     for (const s of ["WIZARD", "filled", "FILLED ", "", null]) expect(statusView(s as string | null).kind).toBe("unknown");
@@ -359,5 +363,32 @@ describe("an order path never shows a time that cannot belong to the order (QA4 
 
   it("no time, no problem", () => {
     expect(pathTimeProblem(stage("SUBMIT"), null, order, "2026-10-27T12:03:57Z")).toBe(false);
+  });
+});
+
+describe("G2: Fee precision, one per currency", () => {
+  const order = (fee: string | null, feeCurrency: string | null) => ({ fee: fee === null ? { kind: "absent" } : { kind: "value", text: fee }, feeCurrency }) as never;
+
+  it("writes every fee of a currency to the same number of places (the finest the page needs), padding rather than rounding away digits", () => {
+    const orders = [order("0.0123", "USDT"), order("0.01272100", "USDT"), order("0.01", "USDT")];
+    const places = feePrecisionByCurrency(orders).get("USDT")!;
+    expect(places).toBe(4);
+    expect(["0.0123", "0.01272100", "0.01"].map((t) => formatFee(t, places))).toEqual(["0.0123", "0.0127", "0.0100"]);
+  });
+
+  it("keeps a currency of its own: another currency on the page does not set this one's precision", () => {
+    const orders = [order("0.00001234", "BTC"), order("1.5", "USDT"), order("0.25", "USDT")];
+    const places = feePrecisionByCurrency(orders);
+    expect(places.get("USDT")).toBe(2);
+    expect(places.get("BTC")).toBe(8);
+    expect(formatFee("1.5", places.get("USDT")!)).toBe("1.50");
+    // A real fee is never shown as zero: the page's finest scale keeps it.
+    expect(formatFee("0.00001234", places.get("BTC")!)).toBe("0.00001234");
+  });
+
+  it("groups thousands, ignores absent fees, and returns a text the formatter cannot read as published", () => {
+    expect(feePrecisionByCurrency([order(null, "USDT")]).size).toBe(0);
+    expect(formatFee("1234.5", 2)).toBe("1,234.50");
+    expect(formatFee("1e-5", 2)).toBe("1e-5");
   });
 });

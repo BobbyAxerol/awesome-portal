@@ -123,7 +123,10 @@ describe("BUSY", () => {
     expect(href(rows[1]!)).toBe("/execution/operations?operation=op_1251");
     expect(href(rows[2]!)).toBe("/governance/approvals/AP-352/r2");
     expect(rows.map((r) => r.querySelector("a")?.textContent)).toEqual(["Investigate", "Verify", "Review"]);
-    // The count is in the head ("top 10, 3 of 214"); the foot is one link, the rest-of-the-list sentence is its title.
+    // The count is in the head. The server's cap is 10 but it returned 3 rows of 214: the head must not claim "top 10" over 3 rows (F3a), it says what is shown and what exists.
+    expect(panel("Needs attention").textContent).toContain("3 of 214");
+    expect(panel("Needs attention").textContent).not.toMatch(/top 10/);
+    // The foot is one link, the rest-of-the-list sentence is its title.
     const all = within(panel("Needs attention")).getByRole("link", { name: "All in Operations" });
     expect(all.getAttribute("title")).toContain("the rest are ranked behind these");
     expect(all.getAttribute("href")).toMatch(/^\/execution\/operations/);
@@ -172,6 +175,19 @@ describe("BUSY", () => {
     const today = panel("Today");
     expect(within(today).getByRole("link", { name: "Capital condition expires" }).getAttribute("href")).toBe("/governance/waivers");
     expect(within(today).getByRole("link", { name: "R1 review · Momentum v4" }).getAttribute("href")).toBe("/governance/approvals/AP-201/r1");
+  });
+
+  // UI review F1 / D8: after the reader switches environment every Today link keeps the context ("R1 review" and "Capital condition expires"
+  // were reported to lose ?env=paper while Investigate and Review kept it). Not reproduced in the built app; this pins it.
+  it("every Today link keeps the environment, window and workspace of the address", async () => {
+    mount({}, undefined, "/execution?env=paper&window=30d&workspace_id=ws_1");
+    await loaded();
+    const links = within(panel("Today")).getAllByRole("link");
+    expect(links.length).toBeGreaterThanOrEqual(2);
+    for (const link of links) {
+      const query = new URLSearchParams(link.getAttribute("href")!.split("?")[1] ?? "");
+      expect([query.get("env"), query.get("window"), query.get("workspace_id")], link.textContent ?? "").toEqual(["paper", "30d", "ws_1"]);
+    }
   });
 
   it("source health by profile", async () => {
@@ -591,7 +607,9 @@ describe("the fund NAV series (FE-013, BE-P4 manager series)", () => {
 
   it("UNAVAILABLE with no published source keeps the request ids and prints the typed reason", async () => {
     await mountWith("unavailable");
-    await waitFor(() => expect(performance().textContent).toContain("SERIES_SOURCE_NOT_PUBLISHED"));
+    // UI review D12: the typed code is on the chart (data-code), not in the sentence the reader gets.
+    await waitFor(() => expect(performance().querySelector('[data-code~="SERIES_SOURCE_NOT_PUBLISHED"]')).not.toBeNull());
+    expect(performance().textContent).not.toContain("SERIES_SOURCE_NOT_PUBLISHED");
     expect(performance().textContent).toContain(MONEY_GAP);
     expect(navCell()).toBe(MONEY_GAP);
     expect(performance().querySelector("svg path.exec-c2-line, svg path[data-main]")).toBeNull();
@@ -599,7 +617,8 @@ describe("the fund NAV series (FE-013, BE-P4 manager series)", () => {
 
   it("UNAVAILABLE for a window that is not a window: ALL prints its own typed reason, in the chart and in the KPI", async () => {
     await mountWith("populated", "/execution?window=all");
-    await waitFor(() => expect(performance().textContent).toContain("ALL_HISTORY_WINDOW_NOT_PUBLISHED"));
+    await waitFor(() => expect(performance().querySelector('[data-code~="ALL_HISTORY_WINDOW_NOT_PUBLISHED"]')).not.toBeNull());
+    expect(performance().textContent).not.toContain("ALL_HISTORY_WINDOW_NOT_PUBLISHED");
     expect(performance().textContent).toContain("All history is not a published window");
     expect(performance().textContent).toContain("Not available");
     expect(whyText(kpi("NAV").querySelector(".exec-blk-kpi-note"))).toContain("ALL_HISTORY_WINDOW_NOT_PUBLISHED");

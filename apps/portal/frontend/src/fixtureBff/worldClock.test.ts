@@ -23,7 +23,7 @@ describe("rebaseBody anchors on the latest content instant, not only on read_at"
     const body = { read_at: "2026-10-17T12:00:00.000Z", points: [{ ts_ms: Date.parse("2026-10-16T00:00:00Z") }] };
     expect(latestContentInstant(body, Date.parse(body.read_at))).toBe(Date.parse(body.read_at));
     const shifted = rebaseBody(body, "2026-08-22T13:00:00Z", NOW) as typeof body;
-    expect(shifted.read_at).toBe("2026-10-22T12:04:00.000Z");
+    expect(shifted.read_at).toBe("2026-10-22T13:00:00.000Z");
   });
   it("content far beyond the window (a ceiling that is not named like one) is not taken for the present", () => {
     const body = { read_at: "2026-10-17T12:00:00.000Z", note_at: "2028-01-01T00:00:00Z" };

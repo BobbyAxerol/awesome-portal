@@ -81,7 +81,7 @@ const MAX_MARKS = 40;
 const charW = 6.6;
 
 /**
- * What the server already reduced, in words of what it kept. A method the dictionary names keeps its code in hidden text; any other
+ * What the server already reduced, in words of what it kept. A method the dictionary names keeps its code in a `data-method` attribute (never in text, not even hidden text); any other
  * reads `method not stated` with the code behind a disclosure (UXM-07 DEBT-048/4).
  */
 function ServerReduction({ envelope }: { envelope: ServerEnvelope }) {
@@ -89,7 +89,7 @@ function ServerReduction({ envelope }: { envelope: ServerEnvelope }) {
   return (
     <>
       {` · Server: ${envelope.shownCount.toLocaleString("en-US")} of ${envelope.sourceCount.toLocaleString("en-US")} points, ${words}`}
-      {envelope.method === "" ? null : known ? <span className="exec-c2-sr"> ({envelope.method})</span> : <GapWhy name="Reduction method" rows={[envelope.method]} next={null} />}
+      {envelope.method === "" ? null : known ? <span data-method={envelope.method} hidden /> : <GapWhy name="Reduction method" rows={[envelope.method]} next={null} />}
     </>
   );
 }

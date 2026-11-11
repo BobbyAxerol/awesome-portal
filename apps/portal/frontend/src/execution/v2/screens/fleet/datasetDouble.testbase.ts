@@ -10,6 +10,7 @@
  * The variants break one thing on purpose (a wrong environment, a wrong window, a filter the server ignored, another schema, a
  * malformed body, a refusal status) so a test can prove the fail-closed mapping end to end.
  */
+import { fireEvent, screen } from "@testing-library/react";
 import { clone, fixtureValue, moneyMetric, absentMetric, FIXTURE_LIFECYCLE_LIVE, FIXTURE_ALL, type Draft } from "../../readers/managerDataset.testbase";
 
 export interface DoubleAlpha {
@@ -25,7 +26,7 @@ export interface DoubleAlpha {
   venue?: string | null;
   sourceState?: string | null;
   /** ALL reads only: the money this alpha holds in ITS environment, one partition (USDT in every environment: the trap a sum would fall into). */
-  money?: { allocation?: string | null; netPnl?: string | null; unrealized?: string | null; balance?: string | null; equity?: string | null; returnPct?: string | null; currency?: string };
+  money?: { allocation?: string | null; netPnl?: string | null; unrealized?: string | null; balance?: string | null; equity?: string | null; returnPct?: string | null; drawdownPct?: string | null; winRatePct?: string | null; currency?: string };
   /** `rich` reads only: the QBTS as published (value, the band code, evidence word, components). `value: null` is a typed absence (reason). */
   qbts?: { value: string | null; band?: string; evidence?: "eligible" | "provisional" | "insufficient"; p?: string; r?: string; b?: string; reason?: string; noEvidence?: boolean };
 }
@@ -174,6 +175,9 @@ function rowOf(template: Draft, c: Computed, environment: string, rich = false):
       put("balance_total", money.balance);
       put("equity_30d_end_value", money.equity);
       if (money.returnPct !== undefined && money.returnPct !== null) metrics.return_30d_pct = moneyMetric({ value: money.returnPct, unit: "PERCENT", currency: null });
+      // The open partition keys of the Fleet's MDD and Winrate columns (not in `query_options.metric_keys`); absent here = the row publishes none.
+      if (money.drawdownPct !== undefined && money.drawdownPct !== null) metrics.max_drawdown_pct = moneyMetric({ value: money.drawdownPct, unit: "PERCENT", currency: null });
+      if (money.winRatePct !== undefined && money.winRatePct !== null) metrics.win_rate_pct = moneyMetric({ value: money.winRatePct, unit: "PERCENT", currency: null });
       const q = a.qbts;
       if (q !== undefined) {
         const plain = (value: string | null, unit: string, extra: Draft = {}) => (value === null
@@ -408,4 +412,20 @@ export function wrapDatasetFetch(inner: typeof fetch | null, state: DatasetDoubl
     const answer = datasetAnswer(path, url.searchParams, state);
     return new Response(typeof answer.body === "string" ? answer.body : JSON.stringify(answer.body), { status: answer.status, headers: { "content-type": "application/json" } });
   }) as typeof fetch;
+}
+
+/**
+ * The Fleet filter bar keeps search, Health, Portfolio and Columns in view; every other control (Owner, Sort, Group, Then, Lifecycle,
+ * Version, Evidence, Basis, Ranges, Equity 30D, density, Compare selected, Export, Venue, Source) sits behind the one
+ * `filters-toggle` disclosure, and the explanatory sentences behind `notes-toggle`. A closed panel is `hidden`, so role queries do not
+ * see its controls: a test that needs them calls these first. Both are idempotent (they click only a closed disclosure).
+ */
+export function openFilters(): void {
+  const toggle = screen.queryByTestId("filters-toggle");
+  if (toggle !== null && toggle.getAttribute("aria-expanded") === "false") fireEvent.click(toggle);
+}
+
+export function openNotes(): void {
+  const toggle = screen.queryByTestId("notes-toggle");
+  if (toggle !== null && toggle.getAttribute("aria-expanded") === "false") fireEvent.click(toggle);
 }

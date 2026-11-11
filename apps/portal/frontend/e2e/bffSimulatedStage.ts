@@ -33,7 +33,7 @@ import { text4, units4 } from "./bffWorldBooks"; // WP-B2-S3
 import { deploymentOfView, variantViewOf } from "./bffWorldVariants"; // R-A: the declared variant graph
 import { haltedSinceMs, historyDeploymentId, historyNetSeries } from "./bffWorldStage"; // WP-B2-S3
 import { approvalHref, approvalOfAlpha, type WorldGate } from "./bffWorldGovernance"; // WP-B2-S3
-import { WORLD_INCIDENTS } from "./bffWorld"; // WP-B2-S3
+import { WORLD_INCIDENTS, WORLD_NOW_ISO } from "./bffWorld"; // WP-B2-S3
 import { costOverRun, limitState } from "./bffWorldBooks"; // WP-B2-C3
 import { DAY_MS as WORLD_DAY_MS, deploymentOf, fromCents as worldCents, grossNotional, lifecycleOf, netPnlSeries, positionsOf, toCents as worldToCents, workingOrdersOf } from "./bffWorld";
 
@@ -141,7 +141,7 @@ const digestOf = (label: string): string => `sha256:${createHash("sha256").updat
 /* ── small builders ────────────────────────────────────────────────────────── */
 
 /** The ONE `now` of every lit stage body. Every other instant below is an offset from it (WP-P's single world clock replaces this line). */
-export const STAGE_NOW_ISO = "2026-10-17T12:04:00.000Z";
+export const STAGE_NOW_ISO = WORLD_NOW_ISO;
 const NOW_MS = Date.parse(STAGE_NOW_ISO);
 const MIN = 60_000;
 const HOUR_MS = 3_600_000;
@@ -396,6 +396,8 @@ function canaryLit(body: Obj, deploymentId: string, variant: StageVariant): Obj 
   const env = body.envelope as Obj;
   env.status = isPositiveMode() && isRetired(worldIdOf(deploymentId, "canary")) ? "COMPLETED" : "ACTIVE"; // WP-B2-S2 W02: the envelope of a trial the alpha has left is no longer active
   env.reason = "Canary envelope approved by the Canary owner for the 14-day trial.";
+  // F4: the canonical envelope was created on 23 Aug; on the 22 Aug world clock that is a day after the read, and the preview would take it for "now" and move the whole room by a day
+  if (isPositiveMode() && Date.parse(String(env.created_at)) > NOW_MS) env.created_at = new Date(NOW_MS - 2 * HOUR_MS).toISOString();
   const gateCodes = ["PRODUCTION_COMMAND_INACTIVE", "CANARY_OWNER_GATE_REQUIRED", "BASE_RISK_PROFILE_UNVERIFIED"];
   env.blocker_codes = gateCodes;
   env.limits = { capital_cap: "5000", gross_notional_cap: "10000", daily_loss_cap: "250", max_open_orders: 20, duration_days: 14 };
@@ -497,7 +499,7 @@ function canaryLit(body: Obj, deploymentId: string, variant: StageVariant): Obj 
 /* ── LIVE ──────────────────────────────────────────────────────────────────── */
 
 const LIVE_ACTIVATED = at(-(30 * DAY_MS + 4 * MIN));
-/** Net PnL (USDT) of the live deployment, daily from 17 Sep 08:00Z, 31 points, the last at 17 Oct 12:00Z (low -900.06, high 7523.04). */
+/** Net PnL (USDT) of the live deployment, 31 daily points ending at the world clock (low -900.06, high 7523.04). */
 const LIVE_PNL = [
   "0", "-420.5", "-900.06", "-312.4", "240.3", "1850.2", "3720.55", "2790.1", "4270.4", "3010.75", "5520.9", "4410.3", "4750.15", "2890.6", "4630", "3830.25",
   "2760.8", "1630.5", "2810.35", "1930.2", "-240.7", "-310.15", "-90.4", "2105.6", "4480.3", "5830.75", "5790.2", "7523.04", "6610.4", "4740.8", "4210.55",

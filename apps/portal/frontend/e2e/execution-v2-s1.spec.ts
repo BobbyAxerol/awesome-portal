@@ -97,7 +97,9 @@ test("the Compare links on Portfolios and Portfolio 360 open the Compare screen"
   expect(new URL(page.url()).pathname).toBe("/deployments/compare");
   expect(new URL(page.url()).searchParams.get("view")).toBeNull();
 
-  await page.goto("/deployments/portfolios/pf_TEST_ONLY_core");
+  // Compare partner blocking: Core is a mixed book and has no basis to share, so its "Compare with" is a disabled control. Pilot
+  // (Simulated, USDT) shares its basis with Canary and keeps the link.
+  await page.goto("/deployments/portfolios/pf_TEST_ONLY_empty");
   await expect(page.locator('[data-screen="portfolio-360-v2"]').first()).toBeVisible();
   await settle(page);
   await page.getByRole("link", { name: "Compare with" }).click();

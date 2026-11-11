@@ -161,7 +161,36 @@
                 }
               }
             }
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "NOT_COMMISSIONED"
+            ]
           }
+        },
+        "if": {
+          "properties": {
+            "state": {
+              "const": "NOT_COMMISSIONED"
+            }
+          },
+          "required": [
+            "state"
+          ],
+          "type": "object"
+        },
+        "then": {
+          "properties": {
+            "total_matched": {
+              "type": "null"
+            },
+            "rows": {
+              "type": "array",
+              "maxItems": 0
+            }
+          },
+          "type": "object"
         }
       }
     }

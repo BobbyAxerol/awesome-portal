@@ -9458,6 +9458,11 @@
                             "type": "null"
                           }
                         ]
+                      },
+                      "allocation_effective_at_ms": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 9007199254740991
                       }
                     },
                     "required": [
@@ -9670,6 +9675,11 @@
                         "minLength": 1,
                         "maxLength": 256,
                         "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+                      },
+                      "effective_at_ms": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 9007199254740991
                       }
                     },
                     "required": [
@@ -9988,6 +9998,11 @@
                               "minLength": 1,
                               "maxLength": 256,
                               "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+                            },
+                            "effective_at_ms": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 9007199254740991
                             }
                           },
                           "required": [
@@ -10073,7 +10088,7 @@
                   },
                   "maxItems": 200,
                   "uniqueItems": true,
-                  "description": "A partition appears once per list (identity: economic_domain, currency, basis, native_profile_ref; domain_proof_ref is evidence, not identity). A metric that names a currency names its partition's currency. uniqueItems here catches an exact repeat; a repeat of the identity with different metrics is refused by the producer (MANAGER_PARTITION_DUPLICATE) and by the reader, because JSON Schema cannot compare a property of two items."
+                  "description": "A partition appears once per list (identity: economic_domain, currency, basis, native_profile_ref; domain_proof_ref is evidence, not identity). A metric that names a currency names its partition's currency. uniqueItems here catches an exact repeat; a repeat of the identity with different metrics is refused by the producer (MANAGER_PARTITION_DUPLICATE) and by the reader, because JSON Schema cannot compare a property of two items. Open PERCENT keys max_drawdown_pct and win_rate_pct (BE-B1, MD-9): no currency; unit PERCENT when available; win_rate_pct is within 0..100 (MANAGER_PERCENT_METRIC_HAS_CURRENCY, MANAGER_PERCENT_METRIC_UNIT_INVALID, MANAGER_WIN_RATE_OUT_OF_RANGE). The key is omitted when no source fact states it: omission is Not published, never 0."
                 },
                 "environment": {
                   "type": "string",
@@ -10997,6 +11012,11 @@
                               "minLength": 1,
                               "maxLength": 256,
                               "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+                            },
+                            "effective_at_ms": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 9007199254740991
                             }
                           },
                           "required": [
@@ -11082,7 +11102,7 @@
                   },
                   "maxItems": 200,
                   "uniqueItems": true,
-                  "description": "A partition appears once per list (identity: economic_domain, currency, basis, native_profile_ref; domain_proof_ref is evidence, not identity). A metric that names a currency names its partition's currency. uniqueItems here catches an exact repeat; a repeat of the identity with different metrics is refused by the producer (MANAGER_PARTITION_DUPLICATE) and by the reader, because JSON Schema cannot compare a property of two items."
+                  "description": "A partition appears once per list (identity: economic_domain, currency, basis, native_profile_ref; domain_proof_ref is evidence, not identity). A metric that names a currency names its partition's currency. uniqueItems here catches an exact repeat; a repeat of the identity with different metrics is refused by the producer (MANAGER_PARTITION_DUPLICATE) and by the reader, because JSON Schema cannot compare a property of two items. A win rate is row level only (a rate is never pooled): no group and no capital statement carries win_rate_pct (MANAGER_WIN_RATE_NOT_POOLABLE)."
                 }
               },
               "required": [
@@ -11423,6 +11443,11 @@
                         "minLength": 1,
                         "maxLength": 256,
                         "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+                      },
+                      "effective_at_ms": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 9007199254740991
                       }
                     },
                     "required": [
@@ -11508,7 +11533,7 @@
             },
             "maxItems": 200,
             "uniqueItems": true,
-            "description": "A partition appears once per list (identity: economic_domain, currency, basis, native_profile_ref; domain_proof_ref is evidence, not identity). A metric that names a currency names its partition's currency. uniqueItems here catches an exact repeat; a repeat of the identity with different metrics is refused by the producer (MANAGER_PARTITION_DUPLICATE) and by the reader, because JSON Schema cannot compare a property of two items."
+            "description": "A partition appears once per list (identity: economic_domain, currency, basis, native_profile_ref; domain_proof_ref is evidence, not identity). A metric that names a currency names its partition's currency. uniqueItems here catches an exact repeat; a repeat of the identity with different metrics is refused by the producer (MANAGER_PARTITION_DUPLICATE) and by the reader, because JSON Schema cannot compare a property of two items. A win rate is row level only (a rate is never pooled): no group and no capital statement carries win_rate_pct (MANAGER_WIN_RATE_NOT_POOLABLE)."
           },
           "statement_scope": {
             "const": "AUTHORIZED_RESOURCE_SELECTED_STAGES_BEFORE_TABLE_FILTERS"
@@ -17181,6 +17206,11 @@
             "minLength": 1,
             "maxLength": 256,
             "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+          },
+          "effective_at_ms": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
           }
         },
         "required": [
@@ -17517,6 +17547,11 @@
                       "type": "null"
                     }
                   ]
+                },
+                "allocation_effective_at_ms": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
                 }
               },
               "required": [
@@ -17729,6 +17764,11 @@
                   "minLength": 1,
                   "maxLength": 256,
                   "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+                },
+                "effective_at_ms": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
                 }
               },
               "required": [
@@ -18046,6 +18086,11 @@
                         "minLength": 1,
                         "maxLength": 256,
                         "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+                      },
+                      "effective_at_ms": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 9007199254740991
                       }
                     },
                     "required": [
@@ -18131,7 +18176,7 @@
             },
             "maxItems": 200,
             "uniqueItems": true,
-            "description": "A partition appears once per list (identity: economic_domain, currency, basis, native_profile_ref; domain_proof_ref is evidence, not identity). A metric that names a currency names its partition's currency. uniqueItems here catches an exact repeat; a repeat of the identity with different metrics is refused by the producer (MANAGER_PARTITION_DUPLICATE) and by the reader, because JSON Schema cannot compare a property of two items."
+            "description": "A partition appears once per list (identity: economic_domain, currency, basis, native_profile_ref; domain_proof_ref is evidence, not identity). A metric that names a currency names its partition's currency. uniqueItems here catches an exact repeat; a repeat of the identity with different metrics is refused by the producer (MANAGER_PARTITION_DUPLICATE) and by the reader, because JSON Schema cannot compare a property of two items. Open PERCENT keys max_drawdown_pct and win_rate_pct (BE-B1, MD-9): no currency; unit PERCENT when available; win_rate_pct is within 0..100 (MANAGER_PERCENT_METRIC_HAS_CURRENCY, MANAGER_PERCENT_METRIC_UNIT_INVALID, MANAGER_WIN_RATE_OUT_OF_RANGE). The key is omitted when no source fact states it: omission is Not published, never 0."
           },
           "environment": {
             "type": "string",

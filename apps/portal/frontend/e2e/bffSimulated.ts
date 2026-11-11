@@ -561,9 +561,9 @@ export function overlayApprovalHistory(body: Obj, nowMs: number): Obj {
 const RUN_RESULTS: Readonly<Record<string, Obj>> = {
   health: { services: [{ name: "projection", state: "OK" }, { name: "query", state: "OK" }, { name: "live updates", state: "STALE" }] },
   inspect: { subject: "alpha_btc_trend", mode: "paper", state: "ACTIVE", positions: 2, working_orders: 1 },
-  capital: { portfolio: "pf_TEST_ONLY_core", rows: [{ at: "2026-10-12T09:30:00Z", movement: "TOP_UP", amount: "5000.00", currency: "USDT" }, { at: "2026-09-28T08:00:00Z", movement: "INITIAL_GRANT", amount: "50000.00", currency: "USDT" }] },
+  capital: { portfolio: "pf_TEST_ONLY_core", rows: [{ at: "2026-08-17T10:26:00Z", movement: "TOP_UP", amount: "5000.00", currency: "USDT" }, { at: "2026-08-03T08:56:00Z", movement: "INITIAL_GRANT", amount: "50000.00", currency: "USDT" }] },
   performance: { subject: "pf_TEST_ONLY_core", basis: "USDT", nav: "412880.25", return_30d_pct: "3.2100" },
-  sizing: { alpha: "alpha_btc_trend", symbol: "BTCUSDT", rows: [{ at: "2026-10-17T11:58:00Z", requested: "0.0400", sized: "0.0300", reason: "BUDGET_HEADROOM" }] },
+  sizing: { alpha: "alpha_btc_trend", symbol: "BTCUSDT", rows: [{ at: "2026-08-22T12:54:00Z", requested: "0.0400", sized: "0.0300", reason: "BUDGET_HEADROOM" }] },
   "broker-read": { account: "acc_bnc_core", venue: "BINANCE", bindings: 1, exposure_used: "197500.00", currency: "USDT" },
 };
 

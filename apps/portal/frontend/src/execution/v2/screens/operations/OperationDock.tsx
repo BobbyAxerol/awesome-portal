@@ -28,6 +28,7 @@ import { ACCESS_PATH, FE, notPublishedReason } from "./notPublished";
 import { NaWhy, NotAvailableLine } from "../../blocks";
 import type { FlagKind } from "../../flagKinds";
 import { IncidentLinks } from "./IncidentLinks";
+import { nextStepOf } from "./opsViews";
 import {
   CHECK_ORIGINAL_COPY, commandLabel, humanize, receiptOutcome, severityWord, TARGET_LABEL, triageOutcome,
 } from "./outcome";
@@ -172,11 +173,13 @@ export function OperationDock({
     );
   }
   const outcome = receiptOutcome(row.sourceStatus, row.verificationResult);
+  const nextStep = nextStepOf(row);
   const triage = triageOutcome(row.triageState);
   const delivery = row.deliveryState ? DELIVERY_FACT[row.deliveryState] : null;
   return (
     <Drawer title={`${TARGET_LABEL[row.targetType]} ${row.targetId}`} subtitle={`${commandLabel(row.commandKey)} · ${row.operationId}`} onClose={onClose} mode={mode} actions={actions}>
       {outcome.checkOriginal ? <p className="exec-ops-banner" data-tone="unknown">{CHECK_ORIGINAL_COPY}</p> : null}
+      {nextStep.dock !== null && row.triageState === "UNACKNOWLEDGED" ? <p className="exec-ops-reason" data-role="next-step">{nextStep.dock}</p> : null}
 
       <Section name="Intent">
         <dl className="exec-ops-facts">

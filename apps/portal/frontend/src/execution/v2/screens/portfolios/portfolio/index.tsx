@@ -45,6 +45,9 @@ import { freshnessFlag, humanize } from "../format";
 import { EXPORT_REASON } from "../fe";
 import { COMPARE_OFF_REASON, DEFAULT_ROUTES, FROM_PORTFOLIO_PREFIX, joinQuery, type PortfolioRoutes } from "../routes";
 import { IN_PARAM } from "../selection";
+import { toRows } from "../listModel";
+import { useRead } from "../useRead";
+import { compareOptionsFor } from "../../compare/model";
 import { Allocations } from "./Allocations";
 import { AccountsTab, AlphasTab } from "./AlphasAccounts";
 import type { TabCtx } from "./ctx";
@@ -59,6 +62,7 @@ import { usePortfolioReads, type Visited } from "./use360";
 import "../../../css/portfolios.css";
 import { formatInstant } from "../../../boundary";
 import { GapWhy } from "../../../blocks";
+import { NotFound } from "../../../blocks/NotFound";
 
 export const PORTFOLIO_SCREEN_KEY = "portfolios" as const;
 
@@ -142,6 +146,15 @@ export default function PortfolioScreen({ api, portfolioId, capabilities, routes
   const railEligibility = useRailEligibility(api, { enabled: selection === RAIL_SELECTION && permitted, workspaceId: url.value.workspace_id, environment: url.value.env, portfolioId: id });
   const reads = usePortfolioReads(api, id, permitted && id !== "", url.value.window, visited);
 
+  // G1: "Compare with" is offered only while some other portfolio shares this one's basis (currency and book). The list read tells which; if it
+  // cannot be read, or does not hold this portfolio, nothing is known and the entry stays as it was (the Compare screen then restricts its own picks).
+  const listRead = useRead(api, permitted && id !== "" && routes.compare !== null && reads.resource.phase === "ready", "compare-partners", (scoped) =>
+    typeof scoped.listPortfolios === "function"
+      ? scoped.listPortfolios()
+      : Promise.resolve({ ok: false as const, status: "unavailable" as const, reason: "The portfolio list is not served here" }));
+  const listed = listRead.phase === "ready" ? listRead.value : listRead.phase === "loading" || listRead.phase === "error" ? listRead.last : null;
+  const compareOptions = useMemo(() => (listed === null ? { kind: "unknown" as const } : compareOptionsFor(toRows(listed.items), id)), [listed, id]);
+
   const resource = reads.resource.phase === "ready" ? reads.resource.value : reads.resource.phase === "loading" || reads.resource.phase === "error" ? reads.resource.last : null;
   const identity = useMemo(() => (resource && id ? readIdentity(resource, id) : null), [resource, id]);
   const deployments = useMemo(() => (resource ? readDeployments(resource) : []), [resource]);
@@ -199,9 +212,10 @@ export default function PortfolioScreen({ api, portfolioId, capabilities, routes
     if (state.phase === "error" && resource === null) return <PanelState status={state.status} reason={state.reason} />;
     if (resource === null) return <PanelState status="loading" />;
     if (identity === null) {
-      return <PanelState status={resource.state === "empty" ? "empty" : "partial"} reason={`Portfolio ${id} is not present in the projected resource population.`} />;
+      // The resource answered and names no such portfolio: a permanent not-found with a way back, not a "Partial" panel (UI review D8).
+      return <NotFound what="Portfolio" id={id} sentence="This portfolio is not in the list you can see. Check the id, or pick one from the Portfolios list." backTo={withContext(routes.list, params)} backLabel="Portfolios" />;
     }
-    const ctx: TabCtx = { portfolioId: id, identity, resource, deployments, accounts, environments, routes, search: params, reads, window: url.value.window, mayOpenAccounts };
+    const ctx: TabCtx = { api, portfolioId: id, identity, resource, deployments, accounts, environments, routes, search: params, reads, window: url.value.window, mayOpenAccounts };
     return (
       <>
         {resource.completeness !== null && resource.completeness.toUpperCase() !== "COMPLETE" ? (
@@ -244,6 +258,8 @@ export default function PortfolioScreen({ api, portfolioId, capabilities, routes
     );
   })();
 
+  // The resource answered and names no such portfolio: the page is the not-found panel alone (no freshness, Compare or Actions for nothing).
+  const absent = resource !== null && identity === null;
   const fresh = resource ? freshnessFlag(resource.freshness) : null;
   const subParts = [identity?.portfolioId ?? id, identity?.owner ?? null, identity?.baseCurrency ?? null].filter((part): part is string => part !== null);
   const compareHref = routes.compare === null
@@ -255,15 +271,15 @@ export default function PortfolioScreen({ api, portfolioId, capabilities, routes
       <header className="exec-pf-head">
         <div>
           <p className="exec-pf-crumb"><Link to={withContext(routes.list, params)}>Portfolios</Link></p>
-          <h1 className="exec-pf-h1">{identity?.name ?? id}</h1>
-          <p className="exec-pf-sub">
+          <h1 className="exec-pf-h1">{absent ? "Portfolio" : identity?.name ?? id}</h1>
+          <p className="exec-pf-sub" hidden={absent}>
             <span className="exec-pf-id">{subParts[0]}</span>
             {subParts.slice(1).map((part) => <span key={part}> · {part}</span>)}
             {identity && identity.owner === null ? <span> · Owner: Not available</span> : null}
             {identity && identity.baseCurrency === null ? <span> · Base currency: Not available</span> : null}
           </p>
         </div>
-        <div className="exec-pf-ctrls">
+        {absent ? null : <div className="exec-pf-ctrls">
           {identity ? <Flag kind={identity.stateKind} label={identity.stateLabel} size="sm" /> : null}
           {fresh ? <Flag kind={fresh.kind} label={fresh.label} size="sm" /> : null}
           {resource ? <span className="exec-pf-dim">{resource.asOf ? `As of ${formatInstant(resource.asOf)}` : "Source time not published"}</span> : null}
@@ -271,16 +287,16 @@ export default function PortfolioScreen({ api, portfolioId, capabilities, routes
             <GapWhy className="exec-blk-np-word" gap="D20" text="Report pack: not available yet" name="Report pack: not available yet, reason" rows={[EXPORT_REASON, "A report pack needs the export contract; nothing is generated here."]} next={null} />
             {" · "}<Link to={withContext(routes.access, params)}>My access</Link>
           </span>
-          {compareHref === null ? (
+          {compareHref === null || compareOptions.kind === "none" ? (
             <span className="exec-pf-btnwhy">
               <button type="button" className="exec-pf-btn" disabled aria-describedby={`${tabsId}-compare`}>Compare with</button>
-              <span id={`${tabsId}-compare`} className="exec-pf-why">{COMPARE_OFF_REASON}</span>
+              <span id={`${tabsId}-compare`} className="exec-pf-why">{compareHref === null ? COMPARE_OFF_REASON : compareOptions.kind === "none" ? compareOptions.reason : COMPARE_OFF_REASON}</span>
             </span>
           ) : (
             <Link className="exec-pf-link-btn" to={compareHref}>Compare with</Link>
           )}
           <button type="button" className="exec-pf-btn" disabled={identity === null} title={identity === null ? "The portfolio has not resolved" : undefined} onClick={() => select(RAIL_SELECTION)}>Actions</button>
-        </div>
+        </div>}
       </header>
       <div className="exec-pf-main" data-docked={selection === RAIL_SELECTION && mode === "dock" ? "true" : undefined}>
         <div className="exec-pf-body">{body}</div>

@@ -13,6 +13,9 @@ type Body = any;
 const ask = (path: string, extra: Record<string, string>): Body =>
   answerReviewManager("GET", path, new URLSearchParams(extra), "populated");
 const dataset = (path: string, environment: string, extra: Record<string, string> = {}): Body => ask(path, { environment, limit: "200", ...extra });
+// The All lens at the medium scale already sat at the contract's 1 MiB response bound (`query_policy.maximum_response_bytes`) with 70 rows
+// (about 15 KB a row); a row now carries the Winrate key too (UXM-07 WP-1, +0.5 KB), so the lens is read in a page of 60 (the Fleet itself pages by 50).
+const allLens = (): Body => dataset("/manager/fleet", "ALL", { limit: "60" });
 const series = (metric: string, environment: string, subject: Body = { subject_type: "FUND" }): Body => ask("/manager/series", {
   environment, metric, subjects: JSON.stringify([subject]), window: JSON.stringify("30D") });
 const units = (value: string): bigint => {
@@ -53,13 +56,15 @@ describe("positive series: four views of one NAV book", () => {
     expect(dd.body.series[0].points.every((point: Body) => units(point.value) <= 0n)).toBe(true);
   });
 
-  it("statement identity: current NAV = initial funds + net PnL = the sum of the rows' balances; capital added = returned", () => {
+  it("statement identity: current NAV = initial + added - returned + net PnL = the sum of the rows' balances; the unallocated surplus is the capital returned", () => {
     const body = dataset("/manager/fund-overview", "live").body;
     for (const statement of body.capital_statements) {
       const m = statement.metrics;
       const currency = statement.partition.currency;
-      expect(units(m.current_nav.value)).toBe(units(m.initial_funds.value) + units(m.net_pnl.value));
-      expect(units(m.added_funds.value)).toBe(units(m.returned_capital.value));
+      // UXM-07 WP-2: the whole approved budget was funded at inception (initial funds = budget) and what was not allocated was handed back
+      // (returned = initial - allocated), so the PM identity closes with the flows on both sides: NAV = initial + added - returned + net PnL.
+      expect(units(m.current_nav.value)).toBe(units(m.initial_funds.value) + units(m.added_funds.value) - units(m.returned_capital.value) + units(m.net_pnl.value));
+      expect(units(m.initial_funds.value) - units(m.returned_capital.value)).toBe(units(m.allocation.value));
       const rows = body.items.flatMap((row: Body) => row.economic_partitions).filter((p: Body) => p.partition.currency === currency);
       const balances = rows.reduce((sum: bigint, p: Body) => sum + units(p.metrics.balance_total.value), 0n);
       expect(balances).toBe(units(m.current_nav.value));
@@ -82,8 +87,10 @@ describe("positive series: four views of one NAV book", () => {
     expect(pnl(week)).not.toEqual(pnl(month));
     for (const statement of month.capital_statements) {
       const m = statement.metrics;
-      expect(units(m.allocation.value)).toBe(units(m.initial_funds.value));
+      // The allocated capital is what stayed funded (initial + added - returned); the approved budget is a limit above it and never above the funds in.
+      expect(units(m.allocation.value)).toBe(units(m.initial_funds.value) + units(m.added_funds.value) - units(m.returned_capital.value));
       expect(units(m.current_budget.value)).toBeGreaterThan(units(m.allocation.value));
+      expect(units(m.current_budget.value)).toBeLessThanOrEqual(units(m.initial_funds.value) + units(m.added_funds.value));
       expect(units(m.headroom.value)).toBe(units(m.current_budget.value) - units(m.allocation.value));
     }
   });
@@ -115,7 +122,7 @@ describe("positive datasets carry nothing degraded", () => {
   });
 
   it("All lens: Paper, Sandbox and Live are all INCLUDED, fresh and complete, with rows; no body-level warning", () => {
-    const body = dataset("/manager/fleet", "ALL").body;
+    const body = allLens().body;
     expect(violationsOf({ file: "execution-manager-dataset.v1", ptr: "" }, body).violations).toEqual([]);
     expect(body.quality).toEqual({ completeness: "COMPLETE", freshness: "FRESH", reasons: [] });
     expect(body.environment_coverage.map((c: Body) => [c.environment, c.availability, c.reason_code, c.quality?.completeness, c.quality?.freshness]))
@@ -131,11 +138,11 @@ describe("the other scenarios keep their meaning", () => {
   });
   it("missing: the All lens has a NOT_CONFIGURED Sandbox and a lagging Paper; partial: Paper is partial; stale: Paper lags", () => {
     setScenario("missing");
-    expect(dataset("/manager/fleet", "ALL").body.environment_coverage.map((c: Body) => c.availability)).toEqual(["INCLUDED", "UNAVAILABLE", "INCLUDED"]);
+    expect(allLens().body.environment_coverage.map((c: Body) => c.availability)).toEqual(["INCLUDED", "UNAVAILABLE", "INCLUDED"]);
     setScenario("partial");
-    expect(dataset("/manager/fleet", "ALL").body.environment_coverage[0].quality.completeness).toBe("PARTIAL");
+    expect(allLens().body.environment_coverage[0].quality.completeness).toBe("PARTIAL");
     setScenario("stale");
-    expect(dataset("/manager/fleet", "ALL").body.environment_coverage[0].quality.freshness).toBe("STALE");
+    expect(allLens().body.environment_coverage[0].quality.freshness).toBe("STALE");
   });
   it("missing keeps the former default's exact-zero drawdown, a null second return and an off-book receipt", () => {
     setScenario("missing");

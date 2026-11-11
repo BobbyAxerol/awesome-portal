@@ -170,6 +170,8 @@ interface MetricBase {
   provenanceRefs: readonly string[];
   calculationRevision: string;
   policyRevision: string;
+  /** The UTC time this figure took effect (a funding or return receipt, a budget approval, an allocation), when the source publishes one. `null` is "not published", never inferred. */
+  effectiveAtMs: UtcEpochMs | null;
 }
 
 export interface ManagerMetricValue extends MetricBase {
@@ -204,6 +206,8 @@ const METRIC_KEYS = [
   "value", "unit", "currency", "basis", "window", "denominator", "methodology_ref", "availability", "reason_code", "quality",
   "source_confidence", "provenance_refs", "calculation_revision", "policy_revision",
 ] as const;
+/** Optional keys of the metric: absent is allowed, present must be valid (additive since UXM-07 WP-2). */
+const METRIC_OPTIONAL_KEYS = ["effective_at_ms"] as const;
 
 /** The dataset's own `quality` (reasons maxItems 32) and the metric's (64) are the same shape. */
 export function readManagerQuality(raw: unknown, maxReasons: number): ManagerQuality | null {
@@ -230,7 +234,10 @@ export function readManagerQuality(raw: unknown, maxReasons: number): ManagerQua
  */
 export function readManagerMetric(raw: unknown): ManagerMetricRead | null {
   const metric = record(raw);
-  if (metric === null || !hasOnly(metric, METRIC_KEYS) || !hasAll(metric, METRIC_KEYS)) return null;
+  if (metric === null || !hasOnly(metric, [...METRIC_KEYS, ...METRIC_OPTIONAL_KEYS]) || !hasAll(metric, METRIC_KEYS)) return null;
+  // Schema `effective_at_ms`: optional UTC-ms integer. Present and invalid (a string, a fraction, a negative, null) voids the metric.
+  const effectiveAtMs = Object.prototype.hasOwnProperty.call(metric, "effective_at_ms") ? clockMs(metric.effective_at_ms) : null;
+  if (Object.prototype.hasOwnProperty.call(metric, "effective_at_ms") && (effectiveAtMs === null || !Number.isSafeInteger(metric.effective_at_ms))) return null;
 
   const availability = oneOf(metric.availability, MANAGER_AVAILABILITIES);
   const unit = managerText(metric.unit);
@@ -264,7 +271,7 @@ export function readManagerMetric(raw: unknown): ManagerMetricRead | null {
 
   const base: MetricBase = {
     unit, currency, basis, window, denominator: denominator === null ? null : denominator.exact, methodologyRef, quality,
-    sourceConfidence: confidence, provenanceRefs, calculationRevision, policyRevision,
+    sourceConfidence: confidence, provenanceRefs, calculationRevision, policyRevision, effectiveAtMs,
   };
 
   if (availability === "AVAILABLE") {
@@ -343,9 +350,19 @@ const partitionIdentity = (partition: ManagerPartition): string => JSON.stringif
  * - MD-S6: a partition appears once (identity = domain, currency, basis, native_profile_ref; the proof reference is evidence):
  *   two entries with the same identity would be summed twice by anyone who sums;
  * - MD-S6: a metric that names a currency names the partition's: a USDT partition holding a EUR figure is a cross-currency mix.
+ * - MD-9 (BE-B1): the two well-known PERCENT keys. A percentage names no currency, an AVAILABLE one is unit PERCENT, a win rate is within
+ *   0..100, and a win rate is a ROW figure only (`level: "row"`): a group or a capital statement that carries one is refused, because a rate
+ *   is never pooled. No range rule on a drawdown (the source's sign convention is not ours to impose).
  * There is no total anywhere in the output; partitions are published in order and stay separate.
  */
-export function readPartitionedMetricsList(raw: unknown): readonly ManagerPartitionedMetrics[] | null {
+export const PERCENT_PARTITION_KEYS = ["max_drawdown_pct", "win_rate_pct"] as const;
+/** `0 <= v <= 100` for a canonical exact decimal string. */
+export function percentWithinZeroToHundred(exact: string): boolean {
+  if (exact.startsWith("-")) return false;
+  const [whole, fraction = ""] = exact.split(".");
+  return whole.length <= 3 && (Number(whole) < 100 || Number(whole) === 100 && /^0*$/.test(fraction));
+}
+export function readPartitionedMetricsList(raw: unknown, level: "row" | "pooled" = "pooled"): readonly ManagerPartitionedMetrics[] | null {
   if (!Array.isArray(raw) || raw.length > MAX_PARTITIONS) return null;
   const out: ManagerPartitionedMetrics[] = [];
   const seen = new Set<string>();
@@ -364,6 +381,10 @@ export function readPartitionedMetricsList(raw: unknown): readonly ManagerPartit
     for (const key of keys) {
       const metric = PARTITION_METRIC_KEY.test(key) ? readManagerMetric(bag[key]) : null;
       if (metric === null || (metric.currency !== null && metric.currency !== partition.currency)) return null;
+      if ((PERCENT_PARTITION_KEYS as readonly string[]).includes(key)) {
+        if (metric.currency !== null || (metric.kind === "value" && metric.unit !== "PERCENT")) return null;
+        if (key === "win_rate_pct" && (level !== "row" || (metric.kind === "value" && !percentWithinZeroToHundred(metric.exact)))) return null;
+      }
       metrics.set(key, metric);
     }
     out.push({ partition, metrics });

@@ -124,7 +124,7 @@ export const isDescribed = (entry: ManagerSeriesEntry): entry is ManagerSeriesAv
 export function unavailableChart(entry: ManagerSeriesUnavailable, fe: string = SERIES_FE): { copy: string; reason: string } {
   return {
     copy: entry.reasonCode === "SERIES_SOURCE_NOT_PUBLISHED" || entry.reasonCode === "RATIO_SCALE_NOT_PUBLISHED" ? notPublishedText(fe) : "Not available",
-    reason: `${UNAVAILABLE_SENTENCE[entry.reasonCode]} (${entry.reasonCode}). Nothing is drawn from client arithmetic.`,
+    reason: `${UNAVAILABLE_SENTENCE[entry.reasonCode]} (${entry.reasonCode}). Nothing is estimated in its place.`,
   };
 }
 

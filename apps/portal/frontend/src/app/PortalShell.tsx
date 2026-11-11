@@ -27,6 +27,7 @@ import { Sidebar } from "./Sidebar";
 import { TopBar } from "./TopBar";
 import { usePreferences } from "./preferences";
 import { installPrintLightTheme } from "./printTheme";
+import { useExecutionDocumentTitle } from "./executionTitle";
 
 // V2 command bar (concept C1). Lazy on the RAW env string, like the other V2 mounts, so a build
 // without the manifest emits no V2 chunk and never evaluates this module. Whether it is used on
@@ -71,6 +72,8 @@ export function PortalShell() {
   }, [mobileNavOpen]);
   /* T-D1/T-D2: print is the light palette whatever the theme. */
   useEffect(() => installPrintLightTheme(), []);
+  // UI review D10: the tab names the Execution screen from the first render (route metadata, no registry needed).
+  useExecutionDocumentTitle(location.pathname, location.search);
   const [v2BarOpen, setV2BarOpen] = useState(false);
   // One shortcut, one overlay: on an Execution route with the shell flag on, Cmd/Ctrl+K (and the
   // topbar search button) open the V2 bar; everywhere else, and always with the flag off, the V1 palette.

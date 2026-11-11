@@ -131,3 +131,23 @@ Failures by file: coexistence 94, s1 50, selfnav 15, alpha-scoped 9, command 7, 
 Attribution: the copy change is `aa652fd3c` (27 Oct), already an ancestor of `448d71212`, with `db51d74bf` updating only the vitest assertions, not these Playwright specs. This session changed no product frontend code. Not yet established for the budget and console cases: whether they are older reds or follow the same refactor; that needs a baseline run of the pre-`aa652fd3c` parent.
 
 Status: the V2 Playwright non-visual lane is not green at the tip and was not green before this session either. Not fixed here.
+
+## Handoff to Codex for the Research `control-api` swap, 10 Nov (Claude asks nothing to be changed in custody)
+
+Answer to Codex's question "which two flags, or which handoff commit". There is no environment flag to flip. Two dark routes are mounted from `main.ts` through two small bootstrap functions, each returning a dependency key for `AppModule.register`:
+
+| Route | Dependency key | Commit | Bootstrap file |
+| --- | --- | --- | --- |
+| `GET /api/v1/execution/governance/approvals/:approval_id/evidence` | `approvalEvidence: "SOURCE_DARK"` | `1c6a13e1c` | `apps/control-api/src/approval-evidence/approval-evidence.bootstrap.ts` |
+| `GET /api/v1/execution/deployments/:deployment_id/equity-projection/source` | `equityProjectionSource: "SOURCE_DARK"` | `14f0cfdeb` | `apps/control-api/src/equity-projection/equity-projection-source.bootstrap.ts` |
+
+Both mount only when `EXECUTION_READ_PROFILE=retained_review_v1` and `PORTAL_ENV=local` and `AUTH_MODE=dev`. The running container (`portal-research-preview-control-api-1`) already has exactly those three values, and runs `node dist/main.js`, so a build that contains the two commits mounts both routes on start with no env change. Both are in canonical (`docs/research-loop-plan`); the tip contains both.
+
+What the swap changes for users: nothing visible. Evidence answers 503 `ELP2_GOVERNANCE_PARENT_READ_NOT_COMMISSIONED` while scoped governance is not commissioned (no section in the body); equity answers typed absence. Both are deny-all and `source-not-commissioned`. Verified on the Postgres cell (`elp204-positive-parent.spec.ts` + `approval-evidence.spec.ts` 382 of 382, including a full `AppModule` boot with both keys: 401 without a session; 404 on a plain boot). Not verified: a boot of the custody container itself (reverse-bootstrap entrypoint, mounts), which only Codex can do.
+
+Image facts observed 10 Nov (read-only, no container touched):
+- Running container: image `sha256:d65e77860860…` (created 26 Oct), config tag `local/portal-research-preview-control-api:rf02`.
+- That tag now points to a **different** image, `cf60a6044b8b` (created 3 Nov 02:48Z, no `org.opencontainers.image.revision` label). It was not built by this session. It contains `approval-evidence.bootstrap.js` and `main.js` references `approvalEvidenceDependency`, but has **no** equity bootstrap (`main.js` has no `equityProjectionSourceDependency`), so it predates `14f0cfdeb`. A bare `compose up` would therefore replace the running API with that unlabelled image: Codex's concern is right.
+- Recommendation: build from canonical tip (or any commit containing `14f0cfdeb`), label it with its revision, and run the custody conditions of the CORE009 runbook (section 0, G5 zero-custody readback, G8 backup, G10 rollback inputs) before swapping only the Research Control API.
+
+Also changed since the last swap-relevant state: Control API source for the rail count badges is frontend-only (`541501aca`); no backend contract changed. The preview DB has one added `workspace_members` row (`bobby` in `ws_06GCVTHWC9WVPGEPR85AB15K82`, 31 Oct; `elp210_candidate.authority.revision` reads 128 on 10 Nov because logins also advance it). Claude did not restart, swap or recreate anything.

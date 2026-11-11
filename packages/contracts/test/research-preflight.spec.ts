@@ -143,3 +143,46 @@ describe("P08 published Research preflight contract", () => {
     expect(catalog.coverage_rule).toContain("not the exact first or last bar");
   });
 });
+
+describe("the public preflight response is admitted by its own contract", () => {
+  const load = (path: string) => JSON.parse(readFileSync(join(ROOT, path), "utf8"));
+  const rewrite = (value: unknown): unknown => {
+    if (Array.isArray(value)) return value.map(rewrite);
+    if (value && typeof value === "object") return Object.fromEntries(Object.entries(value).map(([key, item]) =>
+      [key, key === "$ref" && typeof item === "string" ? item.replace("#/components/schemas/", "#/$defs/") : rewrite(item)]));
+    return value;
+  };
+  const base = "https://schemas.primusspark.com/portal/openapi/research-preflight.openapi.json";
+  const api = load("openapi/research-preflight.openapi.json");
+  const ajv = new Ajv2020({ allErrors: true, strict: false });
+  for (const version of ["v1", "v2"]) ajv.addSchema(load(`schemas/research-requested-spec.${version}.schema.json`),
+    new URL(`../schemas/research-requested-spec.${version}.schema.json`, base).href);
+  ajv.addSchema({ $id: base, $defs: rewrite(api.components.schemas), components: rewrite(api.components) });
+  const validate = ajv.getSchema(`${base}#/$defs/ResearchPreflightV1`)!;
+
+  it("the pinned P08 response validates against ResearchPreflightV1 (it was rejected under /effective_spec/topology/sealed_holdout and /snapshot/warmup)", () => {
+    const fixture = load("fixtures/research-preflight.response.valid.json");
+    expect(validate(fixture), JSON.stringify(validate.errors)).toBe(true);
+  });
+
+  it("a ranged window is one closed object: no schema composes a closed object with another closed branch, which no body can satisfy", () => {
+    const schemas = api.components.schemas as Record<string, unknown>;
+    const offenders: string[] = [];
+    const walk = (node: unknown, path: string): void => {
+      if (Array.isArray(node)) return node.forEach((item, i) => walk(item, `${path}[${i}]`));
+      if (!node || typeof node !== "object") return;
+      const record = node as Record<string, unknown>;
+      if (Array.isArray(record.allOf) && record.allOf.some((b) => (b as { $ref?: string }).$ref)
+        && record.allOf.some((b) => (b as { additionalProperties?: boolean }).additionalProperties === false)) offenders.push(path);
+      for (const [key, value] of Object.entries(record)) walk(value, `${path}/${key}`);
+    };
+    walk(schemas, "");
+    expect(offenders).toEqual([]);
+    // the sealed holdout and the warm-up carry the range fields themselves
+    for (const name of ["SealedHoldout", "Warmup"]) {
+      const schema = schemas[name] as { properties: Record<string, unknown>; additionalProperties: boolean };
+      expect(schema.additionalProperties, name).toBe(false);
+      for (const key of ["start_utc", "end_exclusive_utc", "start_utc_ms", "end_exclusive_utc_ms", "bars"]) expect(schema.properties, `${name}.${key}`).toHaveProperty(key);
+    }
+  });
+});

@@ -97,15 +97,15 @@ describe("Canary (dep_canary_01): the design's elements are data", () => {
   it("chips: Running since, Fresh, No open findings; the guard tag; the spine ticks four stages; trial day 6 of 14 with both dates", async () => {
     await canary("dep_canary_01");
     expect(chip("runtime")).toContain("Running");
-    expect(chip("runtime")).toContain("since 12 Oct 08:00Z");
+    expect(chip("runtime")).toContain("since 17 Aug 08:56Z");
     expect(chip("freshness")).toContain("Fresh");
     expect(chip("reconciliation")).toContain("No open findings");
     expect(text()).toContain("Real capital at risk");
     // the Canary spine reads the published lifecycle like Paper and Sandbox: Carry A has R1, R2, Paper, Sandbox and Canary DONE (QA8 N8a-03)
     await ticks(5);
     expect(text()).toContain("Trial day 6 of 14");
-    expect(text()).toContain("Started 12 Oct 08:00Z");
-    expect(text()).toContain("Exit review opens 26 Oct 08:00Z");
+    expect(text()).toContain("Started 17 Aug 08:56Z");
+    expect(text()).toContain("Exit review opens 31 Aug 08:56Z");
   });
 
   it("the five KPIs print published figures with the server's share of the approved cap", async () => {
@@ -140,10 +140,10 @@ describe("Canary (dep_canary_01): the design's elements are data", () => {
     const section = screen.getByRole("heading", { name: "Rollback readiness" }).closest("section")!;
     expect(section.textContent).toContain("Ready");
     expect(section.textContent).toContain("Flatten plan prepared");
-    expect(section.textContent).toContain("Checked 17 Oct 11:30Z");
-    expect(section.textContent).toContain("Last update 17 Oct 12:04Z");
+    expect(section.textContent).toContain("Checked 22 Aug 12:26Z");
+    expect(section.textContent).toContain("Last update 22 Aug 13:00Z");
     expect(section.textContent).toContain("Passed");
-    expect(section.textContent).toContain("Last drill 11 Oct 10:00Z");
+    expect(section.textContent).toContain("Last drill 16 Aug 10:56Z");
   });
 
   it("the series is drawn from the published points and says the Paper and Backtest series are not published", async () => {
@@ -252,7 +252,7 @@ describe("Live: the states the audit could not reach", () => {
 
   it("_stale: the banner names the as-of and the freshness chip says Stale", async () => {
     await live("dep_live_01_stale");
-    expect(text()).toContain("Stale. Data as of 17 Oct 11:52Z.");
+    expect(text()).toContain("Stale. Data as of 22 Aug 12:48Z.");
     expect(chip("freshness")).toContain("Stale");
   });
 
