@@ -8,7 +8,7 @@ import type {Pool,PoolClient} from "pg";
 import {z} from "zod";
 
 export const CURRENT_HUMAN_RESEARCH_SCHEMA_VERSION="research-current-human.v1";
-export const CURRENT_HUMAN_RESEARCH_SCHEMA_SHA256="826e4e083c8db536fc80a0f0ec272e3a71387a5e5d53a9cde48563f41fe32728";
+export const CURRENT_HUMAN_RESEARCH_SCHEMA_SHA256="efdfc8d3246acbd81df170cbdb5440925148d97abd0b0aa16f20c69fc17d7189";
 const text=z.string().min(1).max(256);
 export const nativeCoreSchemaTarget=z.object({database_name:text,database_system_identifier:z.string().regex(/^[0-9]{1,20}$/),
   role_name:text,protected_owner_user_id:text,workspace_id:text,

@@ -17,7 +17,7 @@ import {
 import {migrateTestDatabase} from "./harness";
 
 const sourcePath=join(__dirname,"../src/execution-v2/current-human-candidate.sql");
-const sqlSha="826e4e083c8db536fc80a0f0ec272e3a71387a5e5d53a9cde48563f41fe32728";
+const sqlSha="efdfc8d3246acbd81df170cbdb5440925148d97abd0b0aa16f20c69fc17d7189";
 const dependencies=["auth_sessions","execution_retained_review_access","external_identity_bindings",
   "portal_access_grants_v2","portal_access_policy_events","portal_access_policy_state","portal_capability_grants",
   "portal_owner_anchor","portal_users","workspace_members","workspaces"];
