@@ -2,7 +2,7 @@
   "schema": "research-loop.live-route-ledger.v1",
   "statement": "Live static route ledger. Regenerate with --write-live-routes in the same change that adds or removes a route.",
   "protected_kernel_sha256": "34dc1847d051ca40f9ae3d2fbbf2d7e8fdc6b8d1e853beb0cc480b69afe2054d",
-  "route_count": 341,
+  "route_count": 347,
   "routes": [
     {
       "method": "DELETE",
@@ -23,6 +23,11 @@
       "method": "GET",
       "path": "/api/admin/accounts/:user_id",
       "owner": "apps/control-api/src/admin/account-lifecycle.controller.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/c2-p7-candidate/preview",
+      "owner": "apps/control-api/src/execution-v2/c2-p7-review-candidate.controller.ts"
     },
     {
       "method": "GET",
@@ -1253,6 +1258,31 @@
       "method": "POST",
       "path": "/api/admin/accounts/:user_id/revoke-sessions",
       "owner": "apps/control-api/src/admin/account-lifecycle.controller.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/c2-p7-candidate/confirm",
+      "owner": "apps/control-api/src/execution-v2/c2-p7-review-candidate.controller.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/c2-p7-candidate/confirm-signed",
+      "owner": "apps/control-api/src/execution-v2/c2-p7-owner-confirm-signer-candidate.controller.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/c2-p7-candidate/emergency-revoke",
+      "owner": "apps/control-api/src/execution-v2/c2-p7-review-candidate.controller.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/c2-p7-candidate/resume",
+      "owner": "apps/control-api/src/execution-v2/c2-p7-review-candidate.controller.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/c2-p7-candidate/resume-by-key",
+      "owner": "apps/control-api/src/execution-v2/c2-p7-review-candidate.controller.ts"
     },
     {
       "method": "POST",
