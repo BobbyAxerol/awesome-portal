@@ -89,7 +89,7 @@ export interface components {
         AlphaLifecycleProblem: {
             error: {
                 /** @enum {string} */
-                code: "EXECUTION_READ_NOT_AVAILABLE" | "EXECUTION_READ_CURRENT_ONLY";
+                code: "EXECUTION_READ_NOT_AVAILABLE" | "EXECUTION_READ_CURRENT_ONLY" | "EXECUTION_READ_QUERY_INVALID";
                 message: string;
             };
             request_id: string;

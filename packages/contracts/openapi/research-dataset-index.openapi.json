@@ -780,28 +780,45 @@
         }
       },
       "Warmup": {
-        "allOf": [
-          {
-            "$ref": "#/components/schemas/UtcRange"
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "start_utc",
+          "end_exclusive_utc",
+          "start_utc_ms",
+          "end_exclusive_utc_ms",
+          "requested_bars",
+          "state"
+        ],
+        "properties": {
+          "start_utc": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
           },
-          {
-            "type": "object",
-            "additionalProperties": false,
-            "required": [
-              "requested_bars",
-              "state"
-            ],
-            "properties": {
-              "requested_bars": {
-                "type": "integer",
-                "minimum": 0
-              },
-              "state": {
-                "const": "BOUNDARY_ONLY_NOT_FIT"
-              }
-            }
+          "end_exclusive_utc": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "start_utc_ms": {
+            "$ref": "#/components/schemas/UtcMilliseconds"
+          },
+          "end_exclusive_utc_ms": {
+            "$ref": "#/components/schemas/UtcMilliseconds"
+          },
+          "bars": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "requested_bars": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "state": {
+            "const": "BOUNDARY_ONLY_NOT_FIT"
           }
-        ]
+        }
       },
       "Quality": {
         "oneOf": [
@@ -1143,33 +1160,50 @@
         }
       },
       "SealedHoldout": {
-        "allOf": [
-          {
-            "$ref": "#/components/schemas/UtcRange"
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "start_utc",
+          "end_exclusive_utc",
+          "start_utc_ms",
+          "end_exclusive_utc_ms",
+          "snapshot_read_state",
+          "evaluation_state",
+          "disclosure"
+        ],
+        "properties": {
+          "start_utc": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
           },
-          {
-            "type": "object",
-            "additionalProperties": false,
-            "required": [
-              "snapshot_read_state",
-              "evaluation_state",
-              "disclosure"
-            ],
-            "properties": {
-              "snapshot_read_state": {
-                "const": "OPAQUE_SNAPSHOT_ONLY"
-              },
-              "evaluation_state": {
-                "const": "NOT_EVALUATED"
-              },
-              "disclosure": {
-                "type": "string",
-                "minLength": 1,
-                "maxLength": 512
-              }
-            }
+          "end_exclusive_utc": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "start_utc_ms": {
+            "$ref": "#/components/schemas/UtcMilliseconds"
+          },
+          "end_exclusive_utc_ms": {
+            "$ref": "#/components/schemas/UtcMilliseconds"
+          },
+          "bars": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "snapshot_read_state": {
+            "const": "OPAQUE_SNAPSHOT_ONLY"
+          },
+          "evaluation_state": {
+            "const": "NOT_EVALUATED"
+          },
+          "disclosure": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 512
           }
-        ]
+        }
       },
       "ThreeWindowTopology": {
         "type": "object",
