@@ -28,13 +28,14 @@
 - Two Research fixtures are rejected by their own contract: `research-preflight.response` (additional property under `/effective_spec/topology/sealed_holdout`) and `research-run-create.reproduction` (missing `run_id`).
 - Nine contract-only reads have no producer: `blotter/summary`, `commands/{id}/receipt`, `cost-events`, `grants`, `limits`, `readiness`, `recovery-events`, `reports`, `search`.
 
-## 4. Lines for the files Codex is editing (not applied by Claude)
+## 4. Wiring state (Codex's uncommitted `app.module.ts` / `main.ts` in the main checkout will conflict by a few lines)
 
-`app.module.ts` and `main.ts` have uncommitted Codex changes, so the following are text for Codex to add when integrating (full detail in the two analysis files):
+Applied by Claude on `claude/slice-followthrough` (the committed copies of the two files, not Codex's working copies):
 
-- Typed absence (four reads: `/controls`, `/alphas/:alpha_id/lifecycle`, `/operations/incidents/:incident_id/children`, `/portfolios/:portfolio_id/members`): `app.module.ts`: `import { TypedAbsenceController } from "./typed-absence/typed-absence.controller";`, add `typedAbsence?: "SOURCE_DARK";` next to `approvalEvidence` in `ControlApiDependencies`, and `...(dependencies.typedAbsence === "SOURCE_DARK" ? [TypedAbsenceController] : []),` after the approvalEvidence line in `controllers`. `main.ts`: `import { typedAbsenceDependency } from "./typed-absence/typed-absence.bootstrap";` and `...typedAbsenceDependency(config)` after `...equityProjectionSourceDependency(config)`. It mounts only on `EXECUTION_READ_PROFILE=retained_review_v1`.
-- Edge Manager read port (nothing consumes it yet): `EDGE_CONSUMER_GAP_ANALYSIS` section 7: `EDGE_MANAGER_READ_PORT` provider from `createEdgeManagerReadPort(options.edgeManagerRead)` and a private `edgeManagerRead` bootstrap object built only from an owner-prepared reference; no flag may select it.
-- The running Research `control-api` (image `a5e3968c…`, built from `2faa8968f`) mounts the evidence and equity-source dark routes but not the typed-absence reads or the Edge client: they need a new image.
+- `app.module.ts`: `import { TypedAbsenceController }`, `typedAbsence?: "SOURCE_DARK"` in `ControlApiDependencies`, and `...(dependencies.typedAbsence === "SOURCE_DARK" ? [TypedAbsenceController] : [])` in `controllers`. `main.ts`: `typedAbsenceDependency(config)` in the dependencies spread (mounts only on `EXECUTION_READ_PROFILE=retained_review_v1`). The full `AppModule` boot test (`elp204-positive-parent.spec.ts`, PG cell, 357 of 357) covers all three dark sets (approval evidence, equity-projection source, typed absence): 401 without a session when the key is passed, 404 on a plain boot.
+- Typed absence now serves ten contract-only reads: `/controls`, `/alphas/:id/lifecycle`, `/operations/incidents/:id/children`, `/portfolios/:id/members` (B3) and `/blotter/summary`, `/cost-events`, `/grants`, `/limits`, `/recovery-events`, `/reports` (BK1: the contract's own no-source body, nothing invented). Three stay unserved because every shape of their contract asserts a value; exact requests in [BACKEND_CONTRACT_ONLY_READS_2026-11-11.md](BACKEND_CONTRACT_ONLY_READS_2026-11-11.md): `/readiness` (make `items` optional or nullable and give it a producer), `/commands/{operation_id}/receipt` (source is in Codex's command-status work), `/search` (a per-group NOT_COMMISSIONED state or a published 404).
+- Not applied, on purpose: the Edge Manager read port (`EDGE_MANAGER_READ_PORT`): nothing consumes it and it needs an owner-prepared private reference; the provider text is in section 7 of the Edge gap analysis.
+- The running Research `control-api` image (`a5e3968c…`, from `2faa8968f`) has the evidence and equity-source dark routes only. A labelled image from the final tip is prepared for the swap (see the receipt note below when it exists).
 
 ## 5. Verification state (31 Oct to 11 Nov)
 
