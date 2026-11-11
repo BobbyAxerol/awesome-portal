@@ -121,3 +121,18 @@ Order: W1, W2, W3, W6, W4, W7, W8; W5 whenever an owner publishes.
 - **Seven reads still fixture (W2): kept on purpose** (Bobby: "not yet, keep the rich fixture"). Flip them when the preview has real data.
 - **Old agent worktrees (W8): done.** 43 worktrees removed, about 11 GB freed. One had uncommitted files (a `dist-w6` build directory only). All 235 branches kept, including 40 with commits not on the integration branch.
 - **FE-035 (W4): contract and fixtures only.** New sibling `fleet-map` (`GET /api/v1/execution/manager/fleet-map`, `view=MAP` as its own bounded read so the Manager model is untouched): row = row_key, name, allocation, window_return, net_pnl, health, stage_presence (the Manager row's own vocabularies), at most 1000 rows, `truncated` and `total_count` so a cap never reads as the whole fleet. Fixtures: published, capped_small, a 1000-row body (462 KB); six negatives including 1001 rows, duplicate row_key, a count above the rows without `truncated`. No producer and no consumer yet (the manager dataset is dark); the reader is generated with the others.
+
+## G. Verification at the tip (11 Nov, evening)
+
+| Gate | Result |
+| --- | --- |
+| Full pre-commit hook on the merged tip `b2ad87aca` (13:57 to 14:59Z) | exit 0, "Portal monorepo verification passed". The first merged-tip run (`8af0a2ce0`) failed: 18 tests in 14 files, all Codex's new C2 specs (missing mock for `c2-p7-review-runtime`, two census queries the fake pool did not answer, nine PG specs without the dedicated-cell guard their siblings use, three needing `openssl` or `python3`), plus a stale N29 ledger. Fixed in `02fc09978` and `b2ad87aca`; the pin `CURRENT_HUMAN_RESEARCH_SCHEMA_SHA256` was re-pinned with Bobby's approval |
+| Contracts cell (`scripts/contracts-test.sh`, whole suite) | 113 files, 1,962 tests, exit 0 (includes the 15 siblings and the flattened preflight schemas); snapshot 729 files |
+| Frontend readers | 51 files, 66,952 tests passed (5 expected fail unchanged) |
+| Frontend `src/fixtureBff`, Overview, Command Center consumers (FE-055) | 71 files, 1,163 tests passed; golden changed in exactly the four command-center entries |
+| `tsc --noEmit` | clean in `apps/control-api` (merged tree) and `apps/portal/frontend` |
+| V2 Playwright plus pixel suite (`chromium-v2`, pinned image) on the tip | 412 tests: 411 passed, 1 skipped, exit 0 (22.9 min) |
+| Python backend (Python 3.12 image, pytest installed into a temporary directory) | `test_terminal_event_subjects` plus `test_durable_worker`: 23 passed. Six real-child tests in `test_research_run_producer` and `test_research_delta_wfo` fail the same way on the untouched `2faa8968f`: the trial container has no child sandbox (seccomp and the AppArmor profile of the worker); not caused by the worker change |
+| Lane (research-portal, rebuilt at the tip) | Fleet table 1128 of 1128 at 1440 with MDD and Winrate; capital flow `pf_scale_006` Initial funds 60,000.00 (1 Aug), Approved budget 60,000.00 (16 Aug, "Limit, not cash"), Returned 17,499.25, NAV 42,659.41, a date per flow and a Time column; Portfolio alphas tab and the Account Allocations tab use the 11-column Fleet table; Overview shows no JPY and no USD; four reads real (`X-Real-Route: core`), the command-center snapshot answers `execution.manager-realtime-snapshot.v2`, the seven others stay fixture; no page error on Admin Actions at 1440 and 390 |
+
+Open and not Claude's to close: Edge and TS data grants, win rate and drawdown facts (PM and TS), the Research trust binding (expired 28 Oct), C2 A2/B2 and P7, command relay and Live (still `PRODUCTION_INACTIVE`), the receipt route (waits for a real Core, Bobby's choice), the seven reads that need real preview data.
