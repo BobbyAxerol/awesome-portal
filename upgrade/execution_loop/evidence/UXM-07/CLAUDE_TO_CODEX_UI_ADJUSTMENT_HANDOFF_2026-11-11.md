@@ -40,3 +40,11 @@ Applied by Claude on `claude/slice-followthrough` (the committed copies of the t
 ## 5. Verification state (31 Oct to 11 Nov)
 
 Frontend unit suite 799 files, 88,094 tests (one load flake); Fleet area 2,404 of 2,404 after the disclosure change; `tsc` clean in frontend and control-api; contracts 113 files, 1,943 tests, snapshot 719 files; control-api typed-absence, Edge client and manager-model specs 170 of 170; Playwright V2 non-visual lane 346 passed, 0 failed (21.7 min). Pixel baselines: see the P1 result. Not run: the full pre-commit hook on the final tip; no Docker cell for the new control-api specs that need the Manager-v2 pack mounts (`scripts/control-api-test.sh` carries 8 additive lines for them).
+
+## 6. Image prepared for the Research `control-api` swap (11 Nov, NOT swapped by Claude)
+
+- Tag `local/portal-research-preview-control-api:20261111-2e31b74da`, ID `sha256:d15e8e21bdebacd9c972b9350ef38a7a07509c61a9231f157b898b3c2c78410a`, label `org.opencontainers.image.revision=2e31b74daec809833339a5569f892775b113c5b0`, built from a clean detached worktree of that commit (not the shared checkout). `dist/main.js` carries all three dark bootstraps (approval evidence, equity-projection source, typed absence); `dist/execution-v2/edge-manager-read-*.js` is present but unwired. Entry point and command as before (`docker-entrypoint.sh`, `node dist/main.js`, user `node`); migrations folder has 152 files (last `…158`, still not applied to the preview DB: the swap does not run them).
+- Full pre-commit hook on that commit: exit 0 (11 Nov, 04:04 to 05:04 UTC). Playwright V2 non-visual 346 of 346; pixel V2 196 of 196.
+- Running container unchanged: image `sha256:a5e3968c…` (built from `2faa8968f`, started 10 Nov 14:12Z): it remains the rollback.
+- Not done by Claude: the swap (custody runbook, Codex), applying the migrations, and any landing into `docs/research-loop-plan`: that checkout has uncommitted Codex changes in `app.module.ts` and `main.ts`, which this branch also edits (typed-absence lines), so Codex should land with `git merge --ff-only` only after reconciling those two files.
+- Lane: `portal-web` and `portal-fixture-bff` on research-portal are at the same commit. Measured there: Alpha Fleet table 1128/1128 at 1440 on all four tabs, 326/326 at 390; Overview read time 10 Nov 13:00Z.
