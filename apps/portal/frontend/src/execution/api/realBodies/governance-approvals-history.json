@@ -1,0 +1,38 @@
+{
+ "schema_version": "governance.approval-history.v1",
+ "record_authority": "PORTAL",
+ "delivery_profile": "fixture",
+ "read_at": "2026-11-11T11:45:25.198Z",
+ "actor": {
+  "user_id": "usr_TEST_ONLY",
+  "username": "preview-user",
+  "roles": [
+   "ADMIN"
+  ]
+ },
+ "read_truth": {
+  "state": "EMPTY",
+  "reason_code": "NO_MATCHING_PORTAL_GOVERNANCE_RECORDS",
+  "scope": "REQUEST"
+ },
+ "page": {
+  "rows": [],
+  "total_count": 0,
+  "filtered_count": 0,
+  "next_cursor": null,
+  "prev_cursor": null,
+  "has_more": false,
+  "has_previous": false,
+  "applied_filters": [],
+  "applied_sort": [
+   {
+    "field": "decided_at",
+    "direction": "desc"
+   },
+   {
+    "field": "history_id",
+    "direction": "desc"
+   }
+  ]
+ }
+}

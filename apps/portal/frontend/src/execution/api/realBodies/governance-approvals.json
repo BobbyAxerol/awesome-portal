@@ -1,0 +1,50 @@
+{
+ "schema_version": "governance.approval-inbox.v1",
+ "record_authority": "PORTAL",
+ "workspace_id": "ws_TEST_ONLY",
+ "delivery_profile": "fixture",
+ "read_at": "2026-11-11T11:45:25.174Z",
+ "actor": {
+  "user_id": "usr_TEST_ONLY",
+  "username": "preview-user",
+  "roles": [
+   "ADMIN"
+  ]
+ },
+ "counts": {
+  "pending": 0,
+  "overdue": 0,
+  "due_soon": 0
+ },
+ "read_truth": {
+  "state": "EMPTY",
+  "reason_code": "NO_MATCHING_PORTAL_GOVERNANCE_RECORDS",
+  "scope": "REQUEST"
+ },
+ "page": {
+  "rows": [],
+  "total_count": 3,
+  "filtered_count": 0,
+  "next_cursor": null,
+  "prev_cursor": null,
+  "has_more": false,
+  "has_previous": false,
+  "applied_filters": [
+   {
+    "field": "status",
+    "op": "eq",
+    "value": "PENDING"
+   }
+  ],
+  "applied_sort": [
+   {
+    "field": "sla_due_at",
+    "direction": "asc"
+   },
+   {
+    "field": "approval_id",
+    "direction": "asc"
+   }
+  ]
+ }
+}

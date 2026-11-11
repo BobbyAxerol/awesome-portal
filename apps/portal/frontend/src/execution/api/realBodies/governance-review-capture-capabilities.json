@@ -1,0 +1,43 @@
+{
+ "schema_version": "governance.review-capture-capabilities.v1",
+ "authority": "PORTAL",
+ "source_side_effect_requested": false,
+ "actions": [
+  {
+   "id": "R2_CREATE",
+   "state": "UNAVAILABLE",
+   "inputs": "APPROVED_R1_AND_PINNED_PAPER_DEPLOYMENT_RISK_GRANT",
+   "path": "/api/v1/execution/governance/r2/capture",
+   "reason_code": "RETAINED_REVIEW_READ_ONLY"
+  },
+  {
+   "id": "PAPER_EXIT_CREATE",
+   "state": "UNAVAILABLE",
+   "inputs": "PINNED_R2_AND_PAPER_DEPLOYMENT",
+   "path": "/api/v1/execution/governance/paper-exit/create",
+   "reason_code": "RETAINED_REVIEW_READ_ONLY"
+  },
+  {
+   "id": "SANDBOX_NOTE",
+   "state": "UNAVAILABLE",
+   "inputs": "EXISTING_DRAFT_CERTIFICATION",
+   "path": "/api/v1/execution/governance/sandbox/capture-note",
+   "reason_code": "RETAINED_REVIEW_READ_ONLY"
+  },
+  {
+   "id": "R2_EXECUTION_GRANT",
+   "state": "UNAVAILABLE",
+   "reason_code": "R2_UPSTREAM_EXECUTION_NOT_QUALIFIED"
+  },
+  {
+   "id": "PAPER_EXIT_PROMOTE",
+   "state": "UNAVAILABLE",
+   "reason_code": "ACCEPTED_EXIT_POLICY_EVALUATION_UNAVAILABLE"
+  },
+  {
+   "id": "SANDBOX_CERTIFY_SOURCE",
+   "state": "UNAVAILABLE",
+   "reason_code": "ACCEPTED_SANDBOX_STEP_EVIDENCE_UNAVAILABLE"
+  }
+ ]
+}

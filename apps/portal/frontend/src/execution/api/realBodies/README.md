@@ -1,0 +1,1 @@
+Bodies captured on 2026-11-11 from the isolated Research preview Control API (preview data, ids replaced by TEST_ONLY placeholders; not a product receipt). They pin what the real Portal-owned reads answer today so the frontend readers are judged against them (realBodies.conformance.test.ts).
