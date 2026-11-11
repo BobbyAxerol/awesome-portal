@@ -8,9 +8,9 @@ Prepared for Bobby and Codex after a read-only survey of the canonical checkout 
 - Baseline `account-acct-live-grid-v21` re-recorded.
 - control-api swapped to `2e31b74da`.
 
-## Blocked on a root action (new)
+## Done later on 11 Nov
 
-- **`quant-worker-py` cannot start**: the host AppArmor profile `portal-research-child` (CG-RF02-01) was loaded by hand and lost at the host reboot of 10 Nov 14:11Z. The reviewed profile is committed at `deploy/research-preview/apparmor-research-child`; fix is `sudo apparmor_parser -r -W deploy/research-preview/apparmor-research-child` as root, then a worker start. Waiting for Bobby's go after seeing the profile. The QUEUED run `rrun_5e1185f8...` will be picked up when the worker runs.
+- `quant-worker-py` is running again: Bobby approved loading the committed AppArmor profile (`deploy/research-preview/apparmor-research-child`); loaded as root, worker started 09:43:04Z under `portal-research-child`. Open: the profile is not persisted across host reboots (host owner to install under `/etc/apparmor.d`), and the QUEUED run `rrun_5e1185f8...` had not been picked up in the first minutes.
 
 ## P1. Real source authority (blocks every real-data screen)
 
