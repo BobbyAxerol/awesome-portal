@@ -13,10 +13,16 @@ const id = z.string().min(1).max(191).regex(/^[A-Za-z0-9._:-]+$(?![\s\S])/);
 const workspaceOnly = z.object({ workspace_id: text.optional() }).strict();
 const controlsQuery = z.object({ workspace_id: text.optional(), scope_type: text.optional(), scope_id: text.optional() }).strict();
 const lifecycleQuery = z.object({ workspace_id: text.optional(), environment: z.enum(["paper", "sandbox", "live"]).optional() }).strict();
+const blotterQuery = z.object({ workspace_id: text.optional(), environment: z.enum(["paper", "sandbox", "live"]).optional(), deployment_id: text.optional() }).strict();
+const subjectQuery = z.object({ workspace_id: text.optional(), subject_type: text.optional(), subject_id: text.optional() }).strict();
+const costQuery = z.object({ workspace_id: text.optional(), subject_type: text.optional(), subject_id: text.optional(), window: text.optional() }).strict();
+/** The contracts' own subject kinds (execution-cost-events, -grants, -limits, -recovery-events, -report-snapshots all publish this enum). */
+const subjectKind = z.enum(["ALPHA", "PORTFOLIO", "ACCOUNT", "DEPLOYMENT", "OPERATION", "INCIDENT", "APPROVAL"]);
 
 /**
- * Typed absence for four contract-published reads that have no Portal producer yet (execution-controls, execution-alpha-lifecycle,
- * execution-incident-children, execution-portfolio-members; each contract says "CONTRACT ONLY: no producer exists yet ... every screen
+ * Typed absence for ten contract-published reads that have no Portal producer yet (execution-controls, execution-alpha-lifecycle,
+ * execution-incident-children, execution-portfolio-members, plus execution-blotter-summary, execution-cost-events, execution-grants,
+ * execution-limits, execution-recovery-events, execution-report-snapshots; each contract says "CONTRACT ONLY: no producer exists yet ... every screen
  * keeps its typed absence"). The body is the contract's own no-source answer: the envelope and the echoed ids, every section OMITTED,
  * which the contract defines as "no owning source". Nothing here reads a database or an Edge, mints a section, or states a count, a
  * state or a zero. Only a session with Execution read access to the workspace gets the answer; every other caller gets the same typed
@@ -61,6 +67,56 @@ export class TypedAbsenceController {
     return envelope("portal.execution.portfolio-members.v1", workspaceId, { portfolio_id: portfolioId });
   }
 
+  // The six reads below require a scope the body must name (the environment, or the subject): the body states only what the request itself
+  // named and the Portal validated. A request that names none cannot be answered by any published shape, so it gets the published 404.
+
+  @Get("/blotter/summary") @Header("Cache-Control", "private, no-store")
+  async blotterSummary(@Req() request: Request, @Query() raw: unknown) {
+    const query = blotterQuery.safeParse(raw);
+    if (!query.success) throw new ExecutionReadScopeError("EXECUTION_READ_QUERY_INVALID", 400);
+    const workspaceId = await this.authorize(request, query.data.workspace_id, query.data.environment);
+    if (query.data.environment === undefined) throw new ExecutionReadScopeError("EXECUTION_READ_NOT_AVAILABLE", 404);
+    // status_buckets and funnel stay omitted ("no owning source"): no bucket, no count and no zero is stated.
+    return envelope("portal.execution.blotter-summary.v1", workspaceId, { environment: query.data.environment });
+  }
+
+  @Get("/cost-events") @Header("Cache-Control", "private, no-store")
+  async costEvents(@Req() request: Request, @Query() raw: unknown) {
+    return this.subjectRead("portal.execution.cost-events.v1", request, costQuery.safeParse(raw));
+  }
+
+  @Get("/grants") @Header("Cache-Control", "private, no-store")
+  async grants(@Req() request: Request, @Query() raw: unknown) {
+    return this.subjectRead("portal.execution.grants.v1", request, subjectQuery.safeParse(raw));
+  }
+
+  @Get("/limits") @Header("Cache-Control", "private, no-store")
+  async limits(@Req() request: Request, @Query() raw: unknown) {
+    return this.subjectRead("portal.execution.limits.v1", request, subjectQuery.safeParse(raw));
+  }
+
+  @Get("/recovery-events") @Header("Cache-Control", "private, no-store")
+  async recoveryEvents(@Req() request: Request, @Query() raw: unknown) {
+    return this.subjectRead("portal.execution.recovery-events.v1", request, subjectQuery.safeParse(raw));
+  }
+
+  @Get("/reports") @Header("Cache-Control", "private, no-store")
+  async reports(@Req() request: Request, @Query() raw: unknown) {
+    return this.subjectRead("portal.execution.report-snapshots.v1", request, subjectQuery.safeParse(raw));
+  }
+
+  /** A subject read: the subject is echoed only when both halves are valid; every list/total section stays omitted. */
+  private async subjectRead(schemaVersion: string, request: Request,
+    query: { success: true; data: { workspace_id?: string; subject_type?: string; subject_id?: string } } | { success: false }) {
+    if (!query.success) throw new ExecutionReadScopeError("EXECUTION_READ_QUERY_INVALID", 400);
+    const type = query.data.subject_type === undefined ? undefined : subjectKind.safeParse(query.data.subject_type);
+    const subjectId = query.data.subject_id === undefined ? undefined : id.safeParse(query.data.subject_id);
+    if (type?.success === false || subjectId?.success === false) throw new ExecutionReadScopeError("EXECUTION_READ_QUERY_INVALID", 400);
+    const workspaceId = await this.authorize(request, query.data.workspace_id);
+    if (type === undefined || subjectId === undefined) throw new ExecutionReadScopeError("EXECUTION_READ_NOT_AVAILABLE", 404);
+    return envelope(schemaVersion, workspaceId, { subject: { type: type.data, id: subjectId.data } });
+  }
+
   /** The caller's own workspace unless a named one is readable; the same 404 for every refusal, so existence is never confirmed. */
   private async authorize(request: Request, named: string | undefined, environment?: string): Promise<string> {
     const workspaceId = named ?? request.portalWorkspaceId;
@@ -71,6 +127,6 @@ export class TypedAbsenceController {
 }
 
 /** The contracts' required fields only; every optional section stays omitted ("no owning source"). */
-function envelope(schemaVersion: string, workspaceId: string, ids: Record<string, string>) {
+function envelope(schemaVersion: string, workspaceId: string, ids: Record<string, unknown>) {
   return { schema_version: schemaVersion, workspace_id: workspaceId, ...ids, record_authority: "PORTAL_PROJECTION" as const, read_at_ms: Date.now() };
 }

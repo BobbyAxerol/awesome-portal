@@ -23,6 +23,16 @@ const routes = [
   { name: "execution-incident-children", schema: "IncidentChildren", fixture: "execution-incident-children.no-source", path: "/api/v1/execution/operations/incidents/inc-1/children", extra: { incident_id: "inc-1" }, id: "incident_id", invalid: 400 as number },
   { name: "execution-portfolio-members", schema: "PortfolioMembers", fixture: "execution-portfolio-members.no-source", path: "/api/v1/execution/portfolios/pf-1/members", extra: { portfolio_id: "pf-1" }, id: "portfolio_id", invalid: 400 as number },
 ];
+// The six scoped reads: the body names the scope the request itself named (environment, or subject); the lists, buckets and totals stay omitted.
+const subject = { type: "DEPLOYMENT", id: "dep-1" };
+const scoped = [
+  { name: "execution-blotter-summary", schema: "BlotterSummary", path: "/api/v1/execution/blotter/summary", scope: "environment=live&deployment_id=dep-1", bare: "", version: "portal.execution.blotter-summary.v1", extra: { environment: "live" }, badValue: "environment=paper2" },
+  { name: "execution-cost-events", schema: "CostEvents", path: "/api/v1/execution/cost-events", scope: "subject_type=DEPLOYMENT&subject_id=dep-1&window=7d", bare: "", version: "portal.execution.cost-events.v1", extra: { subject }, badValue: "subject_type=deployment&subject_id=dep-1" },
+  { name: "execution-grants", schema: "Grants", path: "/api/v1/execution/grants", scope: "subject_type=DEPLOYMENT&subject_id=dep-1", bare: "", version: "portal.execution.grants.v1", extra: { subject }, badValue: "subject_type=DEPLOYMENT&subject_id=bad%20id" },
+  { name: "execution-limits", schema: "Limits", path: "/api/v1/execution/limits", scope: "subject_type=DEPLOYMENT&subject_id=dep-1", bare: "", version: "portal.execution.limits.v1", extra: { subject }, badValue: "subject_type=NOPE&subject_id=dep-1" },
+  { name: "execution-recovery-events", schema: "RecoveryEvents", path: "/api/v1/execution/recovery-events", scope: "subject_type=DEPLOYMENT&subject_id=dep-1", bare: "", version: "portal.execution.recovery-events.v1", extra: { subject }, badValue: "subject_type=DEPLOYMENT&subject_id=a%2Fb" },
+  { name: "execution-report-snapshots", schema: "ReportSnapshots", path: "/api/v1/execution/reports", scope: "subject_type=DEPLOYMENT&subject_id=dep-1", bare: "", version: "portal.execution.report-snapshots.v1", extra: { subject }, badValue: "subject_type=DEPLOYMENT&subject_id=" },
+];
 const load = (name: string) => JSON.parse(readFileSync(resolve(contracts, name), "utf8"));
 
 describe("typed-absence HTTP routes (B3)", () => {
@@ -84,6 +94,52 @@ describe("typed-absence HTTP routes (B3)", () => {
         const response = await get(route.path.replace(/\/[^/]+(\/(?:lifecycle|children|members))$/, "/bad%20id$1"));
         expect(response.statusCode).toBe(route.invalid);
         expect(problem(response.json())).toBe(true);
+      });
+    });
+  }
+
+  for (const route of scoped) {
+    describe(`${route.name} (scoped)`, () => {
+      const api = load(`openapi/${route.name}.openapi.json`);
+      const validate = new Ajv2020({ strict: true }).compile(api.components.schemas[route.schema]);
+      const problem = new Ajv2020({ strict: true }).compile(api.components.schemas[`${route.schema}Problem`]);
+      const url = `${route.path}?${route.scope}`;
+      it("answers the no-source body for the scope the request named: valid, private, every list or total omitted", async () => {
+        const response = await get(url);
+        expect(response.statusCode, response.body).toBe(200);
+        expect(response.headers["cache-control"]).toBe("private, no-store");
+        const body = response.json();
+        expect(validate(body), JSON.stringify(validate.errors)).toBe(true);
+        expect(body).toMatchObject({ schema_version: route.version, workspace_id: "ws-1", record_authority: "PORTAL_PROJECTION", ...route.extra });
+        // nothing beyond the envelope and the echoed scope: no section, count, state or zero
+        expect(Object.keys(body).sort()).toEqual(["read_at_ms", "record_authority", "schema_version", "workspace_id", ...Object.keys(route.extra)].sort());
+        expect(Number.isInteger(body.read_at_ms)).toBe(true);
+        expect(canRead).toHaveBeenCalledWith("ws-1", "user-1", route.name === "execution-blotter-summary" ? "live" : undefined);
+      });
+      it("is typed on every refusal: 401 without a session, 404 for an unreadable or unnamed scope, 400 for an unknown or malformed key", async () => {
+        for (const [target, session, status] of [
+          [url, false, 401], [`${url}&workspace_id=ws-2`, true, 404], [route.path, true, 404], [`${url}&extra=1`, true, 400], [`${route.path}?${route.badValue}`, true, 400],
+          [`${url}&${route.scope.split("&")[0]}`, true, 400],
+        ] as const) {
+          const response = await get(target, session);
+          expect(response.statusCode, `${target}: ${response.body}`).toBe(status);
+          expect(response.headers["cache-control"]).toBe("private, no-store");
+          if (status !== 401) {
+            expect(problem(response.json()), JSON.stringify(problem.errors)).toBe(true);
+            expect(response.json().error.code).toBe(status === 400 ? "EXECUTION_READ_QUERY_INVALID" : "EXECUTION_READ_NOT_AVAILABLE");
+          }
+        }
+        readable = false;
+        const refused = await get(url);
+        expect(refused.statusCode).toBe(404);
+        expect(refused.json().error.code).toBe("EXECUTION_READ_NOT_AVAILABLE");
+        expect(refused.body).not.toContain("dep-1");
+      });
+      it("answers an unnamed scope after the workspace check, so an unreadable workspace is never told what was missing", async () => {
+        readable = false;
+        const response = await get(route.path);
+        expect(response.statusCode).toBe(404);
+        expect(canRead).toHaveBeenCalled();
       });
     });
   }
