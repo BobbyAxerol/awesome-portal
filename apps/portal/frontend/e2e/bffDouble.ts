@@ -393,6 +393,23 @@ export function alphaFleet(search: URLSearchParams): Answer {
   });
 }
 
+/**
+ * FE-055: the command-center snapshot is `execution.manager-realtime-snapshot.v2` (`realtime.proxy.ts`), not the profile snapshot, and its consumers
+ * (`profileContainers.tsx`, `overview/stream.ts`) refuse any other schema. The stream is NOT published here (`stream_available: false`): a fixture
+ * that says "published" is not a deployment capability (the Overview double's `stream: published` variant opts in to that).
+ */
+function managerRealtimeSnapshot(epoch: string): Answer {
+  return ok({
+    schema_version: "execution.manager-realtime-snapshot.v2",
+    cursor: `e2e-${epoch}:1`,
+    projection_epoch: `e2e-${epoch}`,
+    projection_sequence: 1,
+    source_read_at: "2026-09-06T12:00:01.000Z",
+    stream_available: false,
+    data_state: "AVAILABLE",
+  });
+}
+
 function realtimeSnapshot(environment: string): Answer {
   const epoch = `e2e-${environment}`;
   return ok({
@@ -1253,7 +1270,7 @@ function answerExecutionBffBase(method: string, pathname: string, search: URLSea
       }
     }
     if (path === "/command-center") return ok(CC_SNAPSHOT_BUSY);
-    if (path === "/command-center/realtime-snapshot") return realtimeSnapshot("command-center");
+    if (path === "/command-center/realtime-snapshot") return managerRealtimeSnapshot("command-center");
     if (path === "/command-center/stream") {
       const event = JSON.stringify({
         schema_version: "execution.command-center.stream.v1",

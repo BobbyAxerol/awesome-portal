@@ -117,8 +117,8 @@
   "default GET /command-center/realtime-snapshot": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "4672614a4f25796cc8c3bba86d814a7f1230cd933d5d9e3870ebab873bba2763",
-   "bytes": 264,
+   "sha256": "6ab8160c8e61b9277bd031ac35c7626c410037a28467015ebdd2193b7c10af60",
+   "bytes": 249,
    "gap": false
   },
   "default GET /command-center/stream": {
@@ -1629,8 +1629,8 @@
   "operationsV2 GET /command-center/realtime-snapshot": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "4672614a4f25796cc8c3bba86d814a7f1230cd933d5d9e3870ebab873bba2763",
-   "bytes": 264,
+   "sha256": "6ab8160c8e61b9277bd031ac35c7626c410037a28467015ebdd2193b7c10af60",
+   "bytes": 249,
    "gap": false
   },
   "operationsV2 GET /command-center/stream": {
@@ -3162,8 +3162,8 @@
   "screensV2 GET /command-center/realtime-snapshot": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "4672614a4f25796cc8c3bba86d814a7f1230cd933d5d9e3870ebab873bba2763",
-   "bytes": 264,
+   "sha256": "6ab8160c8e61b9277bd031ac35c7626c410037a28467015ebdd2193b7c10af60",
+   "bytes": 249,
    "gap": false
   },
   "screensV2 GET /command-center/stream": {
@@ -4765,8 +4765,8 @@
   "operationsV2+screensV2 GET /command-center/realtime-snapshot": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "4672614a4f25796cc8c3bba86d814a7f1230cd933d5d9e3870ebab873bba2763",
-   "bytes": 264,
+   "sha256": "6ab8160c8e61b9277bd031ac35c7626c410037a28467015ebdd2193b7c10af60",
+   "bytes": 249,
    "gap": false
   },
   "operationsV2+screensV2 GET /command-center/stream": {
