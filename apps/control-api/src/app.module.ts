@@ -64,6 +64,7 @@ import { FollowingParentRepository } from "./governance/following-parent.reposit
 import { FollowingParentReads } from "./governance/following-parent.service";
 import { LiveParentRepository } from "./governance/live-parent.repository";
 import { ApprovalEvidenceController } from "./approval-evidence/approval-evidence.controller";
+import { TypedAbsenceController } from "./typed-absence/typed-absence.controller";
 import { SourceNotCommissionedApprovalEvidencePort } from "./approval-evidence/approval-evidence.dark";
 import { APPROVAL_EVIDENCE_PORT } from "./approval-evidence/approval-evidence.port";
 import { ApprovalEvidenceReads } from "./approval-evidence/approval-evidence.service";
@@ -302,6 +303,8 @@ export interface ControlApiDependencies {
   /** WP-K approval evidence: source-dark. Absent (the default and production) leaves the route UNMOUNTED. The only accepted value mounts the
    * producer over the source-not-commissioned port (every section omitted), deny-all field authority. No other port, no config flag. */
   approvalEvidence?: "SOURCE_DARK";
+  /** B3: typed absence for the contract-published reads that have no Portal producer yet (the contract's own no-source body). Absent leaves them UNMOUNTED. */
+  typedAbsence?: "SOURCE_DARK";
   /** Independent ROOT original/held COMMIT, same pool/coordinator as writers. */
   nativeRoot?:PreparedNativeRootApplication;
   executionCommandTrust?: CommandTrust;
@@ -429,6 +432,7 @@ export class AppModule implements OnApplicationShutdown {
         LiveOperationsController,
         ...(dependencies.equityProjectionSource === "SOURCE_DARK" ? [EquityProjectionSourceController] : []),
         ...(dependencies.approvalEvidence === "SOURCE_DARK" ? [ApprovalEvidenceController] : []),
+        ...(dependencies.typedAbsence === "SOURCE_DARK" ? [TypedAbsenceController] : []),
         ActivationController,
         ScreenBffController,
         PaperReadController,
