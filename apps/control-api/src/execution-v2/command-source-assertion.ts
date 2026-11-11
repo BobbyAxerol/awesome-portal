@@ -3,8 +3,9 @@ import { types } from "node:util";
 import { decodeJwt, SignJWT } from "jose";
 import { z } from "zod";
 import type { AccessActor } from "./access.contract";
-import { CurrentHumanCandidate, CurrentHumanLeaseError, type CurrentHumanBinding } from "./current-human-candidate";
-import { pmHttpRequestDigest } from "./pm-http-request-binding";
+import { CurrentHumanCandidate, CurrentHumanLeaseError, type CurrentHumanBinding, type CommandStatusContextLink } from "./current-human-candidate";
+import { C2CustodyPendingError } from "./c2-custody-pending-error";
+import { pmHttpRequestDigest, type PmHttpRequestBytes } from "./pm-http-request-binding";
 import type { Pool } from "pg";
 import { CurrentOperationalReads } from "../operations/current-operational-read";
 import { ExecutionAccessService } from "./access.service";
@@ -16,6 +17,7 @@ import { workflowCommandRecord, workflowCommandTarget } from "./capital-workflow
 import { nativeNoticeValidUntil } from "./read-scope";
 import type { EdgeCurrentRequesterStatusPort } from "./edge-command-gateway-binding";
 import { CommandStatusPreparationError, PgCommandStatusPreparations } from "./command-status-preparations";
+import { COMMAND_STATUS_ACK_CENSUS_SQL } from "./command-status-ack-census";
 export const COMMAND_STATUS_PM_PATH = "/internal/elp210/pm-command/status";
 export const COMMAND_STATUS_EDGE_PATH = "/internal/elp210/core-command/status";
 export type CommandStatusInput = Parameters<EdgeCurrentRequesterStatusPort["prepareStatus"]>[0];
@@ -72,16 +74,20 @@ const registrationSchema = z.object({ workspace_id: text, environment: z.literal
 export type CommandSourceAssertionSelection = z.infer<typeof registrationSchema>;
 type Issued = Awaited<ReturnType<CurrentHumanCandidate["issue"]>>;
 type LeaseIdentity = Omit<Issued, "token">;
-type Candidate = Pick<CurrentHumanCandidate, "issueCommandStatus" | "acknowledgeCommandStatusIssue" | "revalidateIssue"> & {
+type Candidate = Pick<CurrentHumanCandidate, "acknowledgeCommandStatusIssue"> & {
+  issueCommandStatus:(actor:AccessActor,binding:CurrentHumanBinding,link:CommandStatusContextLink,request?:PmHttpRequestBytes)=>Promise<Issued>;
+  revalidateIssue:(actor:AccessActor,binding:CurrentHumanBinding,issued:Issued,link?:CommandStatusContextLink)=>Promise<void>;
   /** Real candidate must authenticate persisted terminal source custody plus
    * current actor/authority. Absence is fail-closed for older/test adapters. */
   canReplaceResolvedIssue?: (actor: AccessActor, binding: CurrentHumanBinding, issued: LeaseIdentity) => Promise<boolean>;
-  resumeCommandStatusIssue?: CurrentHumanCandidate["resumeCommandStatusIssue"];
+  resumeCommandStatusIssue?: (actor:AccessActor,binding:CurrentHumanBinding,leaseId:string,
+    request?:PmHttpRequestBytes,link?:CommandStatusContextLink)=>Promise<Issued>;
 };
 type Delivery = { sequence: number; previous_lease_id: string | null; key: string; binding: CurrentHumanBinding;
+  link:CommandStatusContextLink;
   response: Promise<CommandSourceAssertionResponse>; completed: boolean;
   completion?: { response_digest: string; pending?: Promise<CommandSourceAssertionCompletionResponse> } };
-type Entry = { input: Omit<CommandStatusInput,"signal">; status_body: string; status_token?: string; fingerprint?:string; read_completed?:boolean; actor: AccessActor; selection: CommandSourceAssertionSelection; expires: number; context_nonce: string;
+type Entry = { input: Omit<CommandStatusInput,"signal">; status_body: string; status_token?: string; fingerprint?:string; read_completed?:boolean; read_closing?:boolean; actor: AccessActor; selection: CommandSourceAssertionSelection; expires: number; context_nonce: string;
   retired: boolean; last?: Delivery; pending: number; issued: number; restored?: boolean;
   preissue_recovered?: boolean; recovery_required?: boolean; status_request_digest?: string };
 type PreparedStatus = { original_context:string; token:string;
@@ -158,7 +164,8 @@ export class CommandSourceAssertionAuthority {
    * re-reads the original; a hash or a caller-provided object is not one. */
   bindRecoverySource(source: Pick<EdgeCurrentRequesterStatusPort, "original">,
     contract: Parameters<EdgeCurrentRequesterStatusPort["original"]>[0]["contract"]): void {
-    if (this.stopped || this.recovery || this.contexts.size || typeof source?.original !== "function" || !contract)
+    if (this.stopped || this.recovery || this.contexts.size || this.preparing.size ||
+      this.preparationWaiters || typeof source?.original !== "function" || !contract)
       return fail("COMMAND_STATUS_ASSERTION_RECOVERY_CONFIG_INVALID");
     this.recovery = { source, contract: structuredClone(contract) };
   }
@@ -257,6 +264,14 @@ export class CommandSourceAssertionAuthority {
   private async prepareOne(input:CommandStatusInput,statusBody:string):Promise<PreparedStatusInternal> {
     if(input.signal.aborted) return fail("COMMAND_STATUS_ASSERTION_ABORTED",499);
     const {signal:_signal,...copy}=input, captured=structuredClone(copy);
+    // A durable preparation must be recoverable from the exact same original
+    // and requester after process loss. Reject a noncanonical call before it
+    // can reserve a context or mint a lease: recoverIssue enforces this same
+    // binding when it reloads the original from the configured source.
+    if(this.recovery && captured.call_digest!==accessDigest({action:"STATUS",authority:"CURRENT_REQUESTER",
+      requester_digest:accessDigest(captured.actor),original:captured.original,
+      authorization_digest:accessDigest(captured.authorization),intent_hash:captured.authorization.intent_hash}))
+      return fail("COMMAND_STATUS_ASSERTION_BINDING_MISMATCH",403);
     const current=await this.authorize(captured);
     let wire: Record<string,unknown>;
     try { wire=JSON.parse(statusBody); if(wire.schema_version!=="execution.core-command-status-request.v1" ||
@@ -505,31 +520,40 @@ export class CommandSourceAssertionAuthority {
     await this.check(context,input);
     if(input.signal.aborted)return fail("COMMAND_STATUS_ASSERTION_ABORTED",499);
     const entry=this.contexts.get(context);this.current(entry);
+    if(entry!.read_completed)return;
+    if(entry!.read_closing)return fail("COMMAND_STATUS_ASSERTION_CONTEXT_REQUIRED",403);
     if(entry!.last && !entry!.last.completed)return fail("COMMAND_STATUS_ASSERTION_DELIVERY_NOT_COMPLETED",409);
+    // Take the in-process close fence before any asynchronous census/consume.
+    // Otherwise a concurrent callback can issue while consume is waiting.
+    entry!.read_closing=true;
+    try {
     if(entry!.restored) {
       // A restored entry has no in-memory Delivery. Do not mistake that for
       // a no-ISSUE read: every linked original lease must have its exact
       // persisted terminal AND Edge acknowledgement before releasing it.
-      const result=await this.pool.query(`SELECT count(*)::int AS total, count(*) FILTER (WHERE NOT EXISTS (
-        SELECT 1 FROM execution_command_status_delivery_acks a WHERE a.lease_id=l.lease_id
-          AND a.subject_id=l.subject_id AND a.session_id=l.session_id AND a.session_revision=l.session_revision
-          AND a.workspace_id=l.workspace_id AND a.environment=l.environment AND a.workload_id=l.workload_id
-          AND a.request_digest=l.request_digest AND a.terminal_receipt_digest=l.terminal_receipt_digest
-          AND l.phase IN ('COMMITTED','ROLLED_BACK')))::int AS unresolved
-        FROM execution_command_status_context_links c JOIN elp210_candidate.leases l ON l.lease_id=c.lease_id
-        WHERE c.context_digest=$1`,[accessDigest(context)]);
+      const result=await this.pool.query(COMMAND_STATUS_ACK_CENSUS_SQL,[accessDigest(context),accessDigest(entry!.input.original),
+        entry!.input.call_digest,entry!.selection.binding_digest,entry!.actor.user_id,entry!.actor.session_id,
+        entry!.actor.session_generation,entry!.selection.workspace_id,entry!.selection.workload_id]);
       if(result.rows[0]?.total<1 || result.rows[0]?.unresolved!==0)
         return fail("COMMAND_STATUS_ASSERTION_DELIVERY_NOT_COMPLETED",409);
       await this.check(context,input);this.current(entry);
     }
     if(this.recovery) {
-      await this.preparations.consume({context_digest:accessDigest(context),subject_id:entry!.actor.user_id,
-        session_id:entry!.actor.session_id,session_revision:entry!.actor.session_generation,
-        workspace_id:entry!.selection.workspace_id,workload_id:entry!.selection.workload_id,
-        original_digest:accessDigest(entry!.input.original)});
+      try {
+        await this.preparations.consume({context_digest:accessDigest(context),subject_id:entry!.actor.user_id,
+          session_id:entry!.actor.session_id,session_revision:entry!.actor.session_generation,
+          workspace_id:entry!.selection.workspace_id,workload_id:entry!.selection.workload_id,
+          original_digest:accessDigest(entry!.input.original)},entry!.restored ? {
+            call_digest:entry!.input.call_digest,binding_digest:entry!.selection.binding_digest} : undefined);
+      } catch(error) {
+        if(error instanceof CommandStatusPreparationError && error.code==="COMMAND_STATUS_PREPARATION_LEASE_RECOVERY_REQUIRED")
+          return fail("COMMAND_STATUS_ASSERTION_DELIVERY_NOT_COMPLETED",409);
+        throw error;
+      }
       await this.check(context,input);this.current(entry);
     }
     entry!.read_completed=true;
+    } finally {entry!.read_closing=false;}
   }
   private async authorize(input:Omit<CommandStatusInput,"signal">):Promise<{fingerprint:string;valid_until_ms:number;authority_revision:string;
     scope_revision:string;policy_revision:string;field_policy_ref:string|null}> {
@@ -584,10 +608,10 @@ export class CommandSourceAssertionAuthority {
     if (typeof token !== "string" || !/^[A-Za-z0-9_-]{43}$/u.test(token)) return fail("COMMAND_STATUS_ASSERTION_CONTEXT_REQUIRED", 403);
     const entry = this.contexts.get(token);
     if (!entry) return this.recoverIssue(token,request);
-    if (entry.restored || entry.recovery_required) return this.recoverIssue(token,request);
-    this.current(entry);
+    this.issueCurrent(entry);
+    if (entry.restored || entry.recovery_required) return this.recoverIssue(token,request,entry.recovery_required===true);
     const s = entry!.selection;
-    const current=await this.authorize(entry!.input); this.current(entry);
+    const current=await this.authorize(entry!.input); this.issueCurrent(entry);
     if(current.fingerprint!==entry!.fingerprint || entry!.expires>current.valid_until_ms)
       return fail("COMMAND_STATUS_ASSERTION_AUTHORITY_CHANGED",409);
     let expectedDigest: unknown;
@@ -610,25 +634,34 @@ export class CommandSourceAssertionAuthority {
       // a completed Idle poll cannot evade the per-context lifetime quota.
       if (entry!.issued >= this.limits.maximum_requests_per_context || this.pending >= 16)
         return fail("COMMAND_STATUS_ASSERTION_CAPACITY_EXHAUSTED", 429);
+      const statusClaims=decodeJwt(entry!.status_token!);
+      const statusIssued=Number(statusClaims.iat)*1000;
+      if (!digest.safeParse(statusClaims.request_digest).success || !Number.isSafeInteger(statusIssued))
+        return fail("COMMAND_STATUS_ASSERTION_ISSUER_BINDING_INVALID");
+      const link:CommandStatusContextLink={
+        context_digest:accessDigest(token),context_nonce:entry!.context_nonce,original_digest:accessDigest(entry!.input.original),
+        call_digest:entry!.input.call_digest,binding_digest:s.binding_digest,authority_fingerprint:current.fingerprint,
+        receiver_id:s.receiver_id,delivery_sequence:request.delivery_sequence,previous_lease_id:request.previous_lease_id,
+        context_expires_at_ms:entry!.expires,status_token_digest:accessDigest(entry!.status_token!),
+        status_request_digest:statusClaims.request_digest as string,status_issued_at_ms:statusIssued};
+      const rawRequest:PmHttpRequestBytes={method:request.method,raw_path:Buffer.from(request.path,"utf8"),
+        query_string:Buffer.alloc(0),body:Buffer.from(request.body_utf8,"utf8")};
       // Microtask boundary ensures the cache and pending ownership exist BEFORE
       // candidate.issue starts, even for synchronous re-entry or lost response.
       entry!.issued++; entry!.pending++; this.pending++;
       const pending = Promise.resolve().then(async () => {
-        this.current(entry);
+        this.issueCurrent(entry);
         let issued: Issued;
-        const statusClaims=decodeJwt(entry!.status_token!);
-        const statusIssued=Number(statusClaims.iat)*1000;
-        if (!digest.safeParse(statusClaims.request_digest).success || !Number.isSafeInteger(statusIssued))
-          return fail("COMMAND_STATUS_ASSERTION_ISSUER_BINDING_INVALID");
-        try { issued=await this.candidate.issueCommandStatus({ ...entry!.actor }, { ...binding }, {
-          context_digest: accessDigest(token), context_nonce:entry!.context_nonce, original_digest: accessDigest(entry!.input.original),
-          call_digest: entry!.input.call_digest, binding_digest: s.binding_digest, authority_fingerprint: current.fingerprint,
-          receiver_id: s.receiver_id,
-          delivery_sequence: request.delivery_sequence, previous_lease_id: request.previous_lease_id,
-          context_expires_at_ms: entry!.expires, status_token_digest:accessDigest(entry!.status_token!),
-          status_request_digest:statusClaims.request_digest as string, status_issued_at_ms:statusIssued,
-        }); }
+        try { issued=await this.candidate.issueCommandStatus({ ...entry!.actor }, { ...binding }, {...link},rawRequest); }
         catch(error) {
+          if(error instanceof C2CustodyPendingError && this.recovery && entry!.last===delivery) {
+            // The original lease/link may already be committed. Keep its
+            // quota reservation and force an authenticated source + durable
+            // link lookup; never call issueNew to replace it on a retry.
+            entry!.last=undefined;
+            entry!.recovery_required=true;
+            return fail("COMMAND_STATUS_ASSERTION_CUSTODY_RECOVERY_REQUIRED",409);
+          }
           if(error instanceof CurrentHumanLeaseError && ["CURRENT_HUMAN_COMMAND_STATUS_RECOVERY_REQUIRED",
             "CURRENT_HUMAN_CAPACITY_EXHAUSTED","CURRENT_HUMAN_DRAINING"].includes(error.code)) {
             // These exact writer guards run under the DB authority lock
@@ -662,7 +695,7 @@ export class CommandSourceAssertionAuthority {
         catch { return fail("COMMAND_STATUS_ASSERTION_ISSUER_RESPONSE_INVALID"); }
       }).finally(() => { entry!.pending--; this.pending--; this.prune(this.time()); });
       const delivery: Delivery = { sequence: request.delivery_sequence, previous_lease_id: request.previous_lease_id,
-        key, binding: { ...binding }, response: pending, completed: false };
+        key, binding: { ...binding }, link, response: pending, completed: false };
       entry!.last = delivery;
       return delivery;
     };
@@ -683,12 +716,12 @@ export class CommandSourceAssertionAuthority {
         return fail("COMMAND_STATUS_ASSERTION_DELIVERY_SEQUENCE_INVALID", 409);
       if (!previous.completed) return fail("COMMAND_STATUS_ASSERTION_DELIVERY_NOT_COMPLETED", 409);
       const response = await previous.response;
-      this.current(entry);
+      this.issueCurrent(entry);
       if (request.previous_lease_id !== response.lease_id) return fail("COMMAND_STATUS_ASSERTION_PREVIOUS_LEASE_MISMATCH", 409);
       // Completion ACK is a historical fact, NOT renewed permission. The next
       // read must freshly authenticate the previous exact terminal custody too.
       const terminal = await this.terminal(entry!, previous.binding, response);
-      this.current(entry);
+      this.issueCurrent(entry);
       if (!terminal) return fail("COMMAND_STATUS_ASSERTION_TERMINAL_NOT_CONFIRMED", 409);
       // Compare/swap has no await. Concurrent successors share ONE issuance;
       // different bytes for that same sequence refuse on the next iteration.
@@ -698,10 +731,13 @@ export class CommandSourceAssertionAuthority {
     // Failed/ambiguous acquisition stays on this exact sequence and Promise.
     // A terminal source result does NOT make same-sequence retry a new read.
     const response = await delivery.response;
-    this.current(entry);
-    await this.candidate.revalidateIssue({ ...entry!.actor }, { ...binding }, this.issued(response));
-    this.current(entry);
-    const final=await this.authorize(entry!.input);this.current(entry);
+    this.issueCurrent(entry);
+    if(entry!.last!==delivery)return fail("COMMAND_STATUS_ASSERTION_DELIVERY_REQUEST_MISMATCH",409);
+    await this.revalidate(entry!,binding,response,delivery.link);
+    this.issueCurrent(entry);
+    if(entry!.last!==delivery)return fail("COMMAND_STATUS_ASSERTION_DELIVERY_REQUEST_MISMATCH",409);
+    const final=await this.authorize(entry!.input);this.issueCurrent(entry);
+    if(entry!.last!==delivery)return fail("COMMAND_STATUS_ASSERTION_DELIVERY_REQUEST_MISMATCH",409);
     if(final.fingerprint!==entry!.fingerprint || entry!.expires>final.valid_until_ms)
       return fail("COMMAND_STATUS_ASSERTION_AUTHORITY_CHANGED",409);
     if (this.time() >= response.expires_at_ms) return fail("COMMAND_STATUS_ASSERTION_EXPIRED", 403);
@@ -710,7 +746,7 @@ export class CommandSourceAssertionAuthority {
   /** After a process restart only return the original, still-ISSUED assertion
    * when the authenticated Edge sends the exact previously linked request.
    * This path never creates or rotates a lease or starts a source attempt. */
-  private async recoverIssue(token: string, request: CommandSourceAssertionRequest): Promise<CommandSourceAssertionResponse> {
+  private async recoverIssue(token: string, request: CommandSourceAssertionRequest,requireIssued=false): Promise<CommandSourceAssertionResponse> {
     const recovery = this.recovery, resume = this.candidate.resumeCommandStatusIssue;
     if (!recovery || !resume || this.stopped) return fail("COMMAND_STATUS_ASSERTION_CONTEXT_REQUIRED",403);
     if (this.pending >= 16) return fail("COMMAND_STATUS_ASSERTION_CAPACITY_EXHAUSTED",429);
@@ -729,6 +765,9 @@ export class CommandSourceAssertionAuthority {
       let unissued=false;
       let row=found.rows[0];
       if(found.rowCount===0) {
+        // A same-process pending or competing ISSUE is not the pre-lease
+        // restart case. Absence of its link must never authorize a new ISSUE.
+        if(requireIssued)return fail("COMMAND_STATUS_ASSERTION_CUSTODY_RECOVERY_REQUIRED",409);
         // Only a persisted, still-live original preparation may recover the
         // pre-lease window. An arbitrary old context cannot mint authority.
         const prepared=await this.preparations.find(accessDigest(token));
@@ -754,7 +793,8 @@ export class CommandSourceAssertionAuthority {
       }
       const expires=Number(row.context_expires_at_ms), sessionRevision=Number(row.session_revision);
       const current=()=>{if(this.stopped || !Number.isSafeInteger(expires) || this.time()>=expires)
-        return fail("COMMAND_STATUS_ASSERTION_CONTEXT_REQUIRED",403);};
+        return fail("COMMAND_STATUS_ASSERTION_CONTEXT_REQUIRED",403);
+        const live=this.contexts.get(token);if(live)this.issueCurrent(live);};
       current();
       if (!Number.isSafeInteger(sessionRevision) || !digest.safeParse(row.authority_fingerprint).success ||
         !digest.safeParse(row.original_digest).success || !digest.safeParse(row.call_digest).success ||
@@ -795,8 +835,16 @@ export class CommandSourceAssertionAuthority {
         return await this.issue(token,request);
       }
       const binding:CurrentHumanBinding={workspace_id:row.workspace_id,environment:"paper",workload_id:row.workload_id,request_digest:row.request_digest};
-      const issued=await resume.call(this.candidate,actor,binding,row.lease_id as string);current();
-      await this.candidate.revalidateIssue(actor,binding,issued);current();
+      const link:CommandStatusContextLink={context_digest:accessDigest(token),context_nonce:row.context_nonce,
+        original_digest:row.original_digest,call_digest:row.call_digest,binding_digest:row.binding_digest,
+        authority_fingerprint:row.authority_fingerprint,status_token_digest:row.status_token_digest,
+        status_request_digest:row.status_request_digest,status_issued_at_ms:Number(row.status_issued_at_ms),
+        receiver_id:row.receiver_id,delivery_sequence:request.delivery_sequence,previous_lease_id:row.previous_lease_id,
+        context_expires_at_ms:expires};
+      const rawRequest:PmHttpRequestBytes={method:request.method,raw_path:Buffer.from(request.path,"utf8"),
+        query_string:Buffer.alloc(0),body:Buffer.from(request.body_utf8,"utf8")};
+      const issued=await resume.call(this.candidate,actor,binding,row.lease_id as string,rawRequest,link);current();
+      await this.candidate.revalidateIssue(actor,binding,issued,{...link});current();
       const final=await this.authorize(captured);current();
       if(final.fingerprint!==row.authority_fingerprint || expires>final.valid_until_ms)
         return fail("COMMAND_STATUS_ASSERTION_AUTHORITY_CHANGED",409);
@@ -956,6 +1004,15 @@ export class CommandSourceAssertionAuthority {
     return { token: response.assertion, lease_id: response.lease_id, expires_at_ms: response.expires_at_ms,
       authority_revision: response.authority_revision };
   }
+  private async revalidate(entry:Entry,binding:CurrentHumanBinding,response:CommandSourceAssertionResponse,
+    link:CommandStatusContextLink):Promise<void> {
+    // Each retry performs live authority I/O even when ISSUE was coalesced.
+    // Retain and bound it until the actual check settles, including shutdown.
+    if(this.pending>=16)return fail("COMMAND_STATUS_ASSERTION_CAPACITY_EXHAUSTED",429);
+    this.issueCurrent(entry);entry.pending++;this.pending++;
+    try {await this.candidate.revalidateIssue({...entry.actor},{...binding},this.issued(response),{...link});}
+    finally {entry.pending--;this.pending--;this.prune(this.time());}
+  }
   private async terminal(entry: Entry, binding: CurrentHumanBinding, response: CommandSourceAssertionResponse): Promise<boolean> {
     const before=await this.authorize(entry.input); this.current(entry);
     if(before.fingerprint!==entry.fingerprint || entry.expires>before.valid_until_ms)
@@ -980,6 +1037,11 @@ export class CommandSourceAssertionAuthority {
   private current(entry: Entry | undefined): void {
     if (this.stopped || !entry || entry.retired || this.time() >= entry.expires)
       fail("COMMAND_STATUS_ASSERTION_CONTEXT_REQUIRED", 403);
+  }
+  private issueCurrent(entry: Entry | undefined): void {
+    this.current(entry);
+    if(entry!.read_closing || entry!.read_completed)
+      fail("COMMAND_STATUS_ASSERTION_CONTEXT_REQUIRED",403);
   }
   private prune(now: number): void {
     for (const [token, entry] of this.contexts) {

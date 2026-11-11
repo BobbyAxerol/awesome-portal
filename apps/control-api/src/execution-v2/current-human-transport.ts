@@ -6,6 +6,7 @@ import { TLSSocket } from "node:tls";
 import { z } from "zod";
 import { CurrentHumanCandidate, CurrentHumanLeaseError } from "./current-human-candidate";
 import { parseCurrentHumanWire } from "./current-human-wire";
+import { C2CustodiedTerminalCandidate } from "./c2-custodied-terminal-candidate";
 
 /** Private transport only. This module does not listen, create trust material,
  * register a public route, accept forwarded-certificate headers or issue human
@@ -24,12 +25,45 @@ const resolveBody = z.object({ schema_version: z.literal("pma.current-human-reso
   source_assertion: token }).strict();
 const fingerprint = /^sha256:[a-f0-9]{64}$/;
 type TransportState = { in_flight: number; accepted: number; denied: number; timed_out: number };
+// Bind the check to the class implementation: an instance override must not
+// make a C2 candidate appear suitable for the legacy, non-custodied listener.
+const requiresC2DeliverySchema = CurrentHumanCandidate.prototype.requiresC2DeliverySchema;
 
 /** Return an UNBOUND real HTTPS server; explicit private/cell allocation owns
  * listen/close. The quota counts the underlying DB operation until completion,
  * even after its HTTP deadline/peer disconnect. Lost ACK is NOT rollback. */
 export function createCurrentHumanTransport(candidate: CurrentHumanCandidate, input: CurrentHumanTransportConfig): {
   server: Server; snapshot(): Readonly<TransportState>;
+} {
+  // C2 source terminals must go through the independently custodied path.
+  // Reject at construction, before creating a server or acknowledging any
+  // source operation. The method uses a private field, so prototype-only
+  // objects cannot impersonate a constructed candidate either.
+  try {
+    if (!candidate || Object.getPrototypeOf(candidate)!==CurrentHumanCandidate.prototype ||
+      requiresC2DeliverySchema.call(candidate)) throw new Error();
+  } catch { throw new CurrentHumanLeaseError("CURRENT_HUMAN_TRANSPORT_CONFIG_INVALID"); }
+  return createTransport(candidate,input,(human,proof)=>candidate.enter(human,proof),proof=>candidate.resolve(proof));
+}
+
+/** Explicit unmounted C2 variant; no terminal ACK before independent custody.
+ * The older generic transport remains for unrelated current-human consumers;
+ * it is not an approved C2 commissioning route. */
+export function createC2CustodiedCurrentHumanTransport(candidate:CurrentHumanCandidate,
+  terminal:C2CustodiedTerminalCandidate,input:CurrentHumanTransportConfig):{
+  server:Server; snapshot():Readonly<TransportState>;
+} {
+  if(!terminal||Object.getPrototypeOf(terminal)!==C2CustodiedTerminalCandidate.prototype||
+    !C2CustodiedTerminalCandidate.prototype.usesCandidate.call(terminal,candidate))
+    throw new CurrentHumanLeaseError("CURRENT_HUMAN_TRANSPORT_CONFIG_INVALID");
+  return createTransport(candidate,input,(human,proof)=>C2CustodiedTerminalCandidate.prototype.enter.call(terminal,human,proof),
+    proof=>C2CustodiedTerminalCandidate.prototype.resolve.call(terminal,proof));
+}
+
+function createTransport(candidate:CurrentHumanCandidate,input:CurrentHumanTransportConfig,
+  enterOriginal:(human:string,proof:string)=>Promise<{lease_id:string;attempt_id:string}>,
+  resolveTerminal:(proof:string)=>Promise<{replayed:boolean;phase:string}>):{
+  server:Server; snapshot():Readonly<TransportState>;
 } {
   const pin = input.source_certificate_sha256;
   const limits = { ...input.limits };
@@ -116,13 +150,13 @@ export function createCurrentHumanTransport(candidate: CurrentHumanCandidate, in
         if (kind === "ENTER") {
           const parsed = enterBody.parse(body);
           operationStarted = true;
-          const acknowledgement = await candidate.enter(parsed.human_token, parsed.source_assertion);
+          const acknowledgement = await enterOriginal(parsed.human_token, parsed.source_assertion);
           state.accepted++;
           reply(res, 200, { schema_version: "pma.current-human-enter-ack.v1", ...acknowledgement });
         } else {
           const parsed = resolveBody.parse(body);
           operationStarted = true;
-          const acknowledgement = await candidate.resolve(parsed.source_assertion);
+          const acknowledgement = await resolveTerminal(parsed.source_assertion);
           state.accepted++; reply(res, 200, acknowledgement);
         }
       } catch (error) {

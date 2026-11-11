@@ -2144,3 +2144,29 @@ Read `upgrade/execution_loop/evidence/ELP2-10/EDGE_TO_CORE_08_CORE_FIRST_ACTUAL_
 ### Edge ACTUAL READY source publication —23Oct01:42VN
 
 Local Edge source publication 0f1e26717e7bcbc15e2ed3cad37cdc6f575c964f onfeat/execution-edge-upgrade-v1_2,3Markdown/+183; actualREADY raw59bc4568b8ddaacdfa2c624e481824930ad4eb3f933aaca9fc1241a632f21453 and immutable public return8dbe5218756c5b3a422434cd6929b3ac0c17a8943da5b825e84e07425fbd450c already delivered. Officialnative9/RECORDED+STATUS and real SDK/RR READY, sourceee7e2e75/image28ea/1CPU512MiB/restart0/28446 running, fixedexpiry20:00UTC. R0 exact3Markdown/4links+anchors/secret/diff/tracking/3peerWIP PASS, no push/merge/CI. Core now solely runs existingactive-revoke-only+settlement with actualSGPREADY ref; no extraACK/PREPARED/build needed. Edge monitors exact finite source/witness, then originaldrain/revoke/status afterCore receipts; physical cleanup intentionallyPENDING while source is serving. 5short-livedSDKcontainers gone, no images/buildcachecreated, stable/dev/provider28445/Manager/command/Live untouched. Full08/read09NOT_MET until actualcorrelatedreceipts.
+
+2026-11-04T18:48:55Z | EDGE_DELIVERED_NOT_ACCEPTED | CORE-03 TS C2 Paper r2 c2ccfd2fba2c57e8930cf516b0302f03f1b9ea3663149a3d9df7082162beba77 | upgrade/execution_loop/evidence/ELP2-10/TS_C2_PM_AUTHORITY_HANDOFF_R2_20261104.md | cover upgrade/execution_loop/evidence/ELP2-10/EDGE_TO_CORE_TS_C2_PM_AUTHORITY_COVER_20261104.md sha256 3043bc72f5e89d99b199c8f7b3cdd31f98fd5425d5fc5689647cf0130ebfbcca | public A1 /home/bobby/secure/edge-ts-c2-pm-authority-a1-r1 manifest 7b063476b5daf2218382b31166f48a73218e09befd7804b0eb018b11fc642ab4 | CORE_ACK and A2 pending
+
+2026-11-04 | EDGE_DELIVERED_B1_NOT_ACCEPTED | ELP2-10/EDGE_TO_CORE_TS_C2_B1_COVER_20261104.md sha256:c024b25749939eff3465356269caba4e6e7a7443901257b829246add6733b7a5 | public B1 /home/bobby/secure/edge-ts-c2-pm-authority-b1-r1/ | no signing until TS confirms seal and owner note
+
+2026-11-04 | EDGE_DELIVERED_TS_ANSWERS | ELP2-10/EDGE_RELAY_TS_ANSWERS_C2_UNSEALED_20261104.md sha256:f19dae8e705aad6d7142b58c574d091cf6163194ec50fc14025c94c21b25ff41 | TS says C2 NOT SEALED: prepare only, do not sign until explicit TS C2_SEALED | A2 independent and requested now
+
+2026-11-04 | EDGE_A2_PRIORITY_REQUEST | ELP2-10/EDGE_TO_CORE_C2_A2_PRIORITY_REQUEST_20261104.md sha256:b382284e0f6ce2269e9ea51203910ebd5678e81f9cd36af63296c278c9cee7c4 | A2 now, or concrete blocker/ETA; C2 unsealed, do not sign B2
+
+2026-11-04 | EDGE_CORE03_SOURCE_COMPARISON | ELP2-10/EDGE_CORE03_SOURCE_COMPARISON_20261104.md sha256:59e78dc76b0c93e48a244e0788889572b93a051b5e5ca364bca659006bedb00e | source client DER pin is not the TS required server DER pin; installed A2 evidence still requested
+
+- 2026-11-05 Edge C2: A2 deadline, P3/P5 coordination and unsigned B2 one-hour preparation: `execution_loop/evidence/ELP2-10/EDGE_TO_CORE_C2_A2_DEADLINE_AND_SEMANTICS_20261105.md`, SHA256 `8656b3f494770172dc8126f07d9d630abc448be9f9e04400534f606b566b73d9`; ACK is not A2 READY.
+
+- 2026-11-05 Edge consolidated C2 A2/B2/recovery return request: `execution_loop/evidence/ELP2-10/EDGE_TO_CORE_C2_COMPLETE_DELIVERY_REQUEST_20261105.md`, SHA256 `d8286389ac5cb3e5843df7374d8cc3904590732c528bf721255a3e1ffeda9c9b`; 05:15 UTC checkpoint is not A2 acceptance.
+
+- 2026-11-05 URGENT TS C2_SEALED: exact TS answers `execution_loop/evidence/ELP2-10/EDGE_RELAY_TS_C2_SEALED_20261105.md`, SHA256 `4a1157da632bb89586af11657b31f71aadecc36024929a0084f0d45b15f3d75c`. Seal authorizes P8 sign ONCE; A2 required before or with B2, no runtime activation. Please return a concrete UTC A2 delivery deadline now, and B2 within one hour if feasible or an exact blocker and deadline.
+
+- 2026-11-05 Edge relays latest TS answers P3/P5/Q3: `execution_loop/evidence/ELP2-10/EDGE_RELAY_TS_P3_P5_Q3_20261105.md`, SHA256 `ad50194a72c784b2c195c9703f4cad68c0511292de8897475ba1d18dc93de66b`. Please explicitly ACK each C-P3-1..4 and R-P5-1..5 / identify deviations and owners, give concrete UTC A2 delivery deadline, and exact remaining A2 blockers and responsible owner. This is not A2 acceptance or runtime activation.
+
+- 2026-11-05 Edge C2-PM-PORTAL: return static trust first, exact status/pins and UTC deadline, then full A2 and one-shot B2: `execution_loop/evidence/ELP2-10/EDGE_TO_CORE_C2_PORTAL_STATIC_TRUST_REQUEST_20261105.md`, SHA256 `1f52dcc7930a61215ccc73d7fbc08ac8b454a97424673a2693e77ba66716e0fd`; Portal is not a main C2 gate.
+
+- 2026-11-05 TS 09:00Z requests manifest/checksum write-once a2-static-r1 first: `execution_loop/evidence/ELP2-10/EDGE_TO_CORE_A2_STATIC_R1_REQUEST_20261105.md`, SHA256 `25adf20b1447da27ee3400f6670134bacd5f56c0bced8026a3de18513229fe4c`. Seal signing release remains even while TS reseals.
+
+- 2026-11-05 Edge verified and placed Core a2-static-r1 candidate in TS exchange; manifest SHA256 `17aa02dd1a9470fcd7e0c6101dff518b73c7e55b9b42dc0de71786083db60541`, checksums 6/6. Candidate only, not installed, not A2 accepted; continue full A2.
+
+- 2026-11-05 TS verified static candidate and requests full A2 asks 1–9, B2 ask 10 after TS accepts A2: exact TS answers `execution_loop/evidence/ELP2-10/EDGE_RELAY_TS_STATIC_VERIFICATION_ASKS_20261105.md`, SHA256 `97042c423e11f9ebd9a86534063a3cc5da8d10dadda575f70bd59feeb5ec9191`, section 11:00Z. Reuse unchanged public static bytes; static is not full A2.

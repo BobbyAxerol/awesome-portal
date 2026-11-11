@@ -112,6 +112,7 @@ export class FinancialSourceComposition {
 
   static async create(pool: Pool, input: FinancialSourceCompositionConfig): Promise<FinancialSourceComposition> {
     if (!input || !input.candidate?.installation_scope || input.candidate.installation_scope.environment !== "paper" ||
+      input.candidate.c2_delivery_schema_required !== undefined ||
       !Number.isSafeInteger(input.candidate.limits?.ttl_ms) || input.candidate.limits.ttl_ms < 1000 || input.candidate.limits.ttl_ms > 30_000 ||
       !Number.isSafeInteger(input.shutdown_deadline_ms) || input.shutdown_deadline_ms < 1 || input.shutdown_deadline_ms > 5000)
       throw failure("FINANCIAL_SOURCE_COMPOSITION_CONFIG_INVALID");

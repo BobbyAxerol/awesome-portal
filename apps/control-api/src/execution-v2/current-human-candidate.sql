@@ -14,6 +14,24 @@ INSERT INTO elp210_candidate.authority(singleton) VALUES(true);
 CREATE TABLE elp210_candidate.leases (
   lease_id text PRIMARY KEY,
   authority_revision bigint NOT NULL,
+  -- Exact human issuer at ISSUE time. NULL represents pre-binding legacy rows;
+  -- recovery must refuse them rather than reconstruct an issuer from config.
+  human_issuer text CHECK (human_issuer IS NULL OR (octet_length(human_issuer) BETWEEN 1 AND 128 AND human_issuer=btrim(human_issuer))),
+  -- Public signing-key identity at ISSUE; legacy rows remain NULL. This pin
+  -- fences new ENTER after issuer key rotation, but never blocks settlement
+  -- of an already-entered original authenticated by its original source.
+  human_signing_key_digest text CHECK (human_signing_key_digest IS NULL OR human_signing_key_digest ~ '^sha256:[a-f0-9]{64}$'),
+  -- Exact C2 assertion bytes, never the bearer. NULL means legacy/unproven.
+  human_assertion_digest text CHECK (human_assertion_digest IS NULL OR human_assertion_digest ~ '^sha256:[a-f0-9]{64}$'),
+  -- Exact independent custody identity for a C2 original. No historical backfill.
+  c2_custody_binding_digest text CHECK (c2_custody_binding_digest IS NULL OR c2_custody_binding_digest ~ '^sha256:[a-f0-9]{64}$'),
+  -- Present only for P7-guarded candidate originals; never infer on recovery.
+  c2_p7_binding_digest text CHECK (c2_p7_binding_digest IS NULL OR c2_p7_binding_digest ~ '^sha256:[a-f0-9]{64}$'),
+  -- Exact owner review original; never infer this for historical leases.
+  c2_p7_owner_intent_id uuid,
+  -- Public source-registration fingerprint captured at ISSUE, not a secret.
+  -- NULL denotes a historical original without an independently proven pin.
+  source_trust_digest text CHECK (source_trust_digest IS NULL OR source_trust_digest ~ '^sha256:[a-f0-9]{64}$'),
   subject_id text NOT NULL,
   session_id text NOT NULL,
   session_revision bigint NOT NULL,
@@ -34,6 +52,18 @@ CREATE TABLE elp210_candidate.leases (
 );
 CREATE INDEX leases_unresolved ON elp210_candidate.leases(phase,expires_at_ms)
   WHERE phase IN ('ISSUED','ENTERED','UNKNOWN');
+CREATE FUNCTION elp210_candidate.c2_custody_binding_immutable() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+  IF NEW.c2_custody_binding_digest IS DISTINCT FROM OLD.c2_custody_binding_digest OR
+     NEW.c2_p7_binding_digest IS DISTINCT FROM OLD.c2_p7_binding_digest OR
+     NEW.c2_p7_owner_intent_id IS DISTINCT FROM OLD.c2_p7_owner_intent_id OR
+     (OLD.c2_custody_binding_digest IS NOT NULL AND NEW.human_assertion_digest IS DISTINCT FROM OLD.human_assertion_digest) THEN
+    RAISE EXCEPTION 'C2_CUSTODY_BINDING_IMMUTABLE';
+  END IF;
+  RETURN NEW;
+END $$;
+CREATE TRIGGER c2_custody_binding_immutable BEFORE UPDATE ON elp210_candidate.leases
+  FOR EACH ROW EXECUTE FUNCTION elp210_candidate.c2_custody_binding_immutable();
 -- NC-01: fresh DISPOSABLE candidate schema only, not a production migration.
 -- A native ISSUE can commit before ENTER. Every native row blocks drain from
 -- admission onward. Default CUSTODY_ONLY remains nonreleasable; opt-in

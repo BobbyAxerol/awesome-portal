@@ -11,6 +11,7 @@ import { accessDigest } from "../src/execution-v2/access-digest";
 import type { ExecutionAccessService } from "../src/execution-v2/access.service";
 import { commandAuthorization } from "../src/execution-v2/command-trust";
 import { CurrentHumanLeaseError } from "../src/execution-v2/current-human-candidate";
+import { C2CustodyPendingError } from "../src/execution-v2/c2-custody-pending-error";
 import { commandIntent, commandStatus } from "../src/execution-v2/command.contract";
 import { CommandSourceAssertionAuthority, COMMAND_STATUS_PM_PATH, COMMAND_STATUS_EDGE_PATH,
   type CommandStatusInput, type CommandSourceAssertionResponse } from "../src/execution-v2/command-source-assertion";
@@ -60,7 +61,7 @@ function setup(){
   const preparations=new Map<string,Record<string,unknown>>();
   const db={query:vi.fn(async(sql:string,values:unknown[]=[])=>{
     if(sql.includes("SELECT revision,drain_id FROM elp210_candidate.authority"))return {rows:[{revision:"7",drain_id:null}],rowCount:1};
-    if(sql.includes("extract(epoch FROM clock_timestamp())"))return {rows:[{now_ms:Date.now()}],rowCount:1};
+    if(sql.startsWith("SELECT floor(extract(epoch FROM clock_timestamp())"))return {rows:[{now_ms:Date.now()}],rowCount:1};
     if(sql.includes("SELECT f.command_id FROM execution_command_status_original_fingerprints"))return {rows:[{command_id:status.command_id}],rowCount:1};
     if(sql.includes("LEFT JOIN execution_command_status_context_links"))return {rows:[],rowCount:0};
     if(sql.startsWith("DELETE FROM execution_command_status_preparations WHERE command_id")) {
@@ -80,6 +81,12 @@ function setup(){
       const p=[...preparations.values()].find(value=>value.context_digest===values[0]);
       return {rows:p?[p]:[],rowCount:p?1:0};
     }
+    if(sql.startsWith("SELECT context_digest,call_digest,binding_digest FROM execution_command_status_preparations")) {
+      const p=[...preparations.values()].find(value=>value.context_digest===values[0]);
+      return {rows:p?[p]:[],rowCount:p?1:0};
+    }
+    if(sql.startsWith("WITH ordered AS"))return {rows:[{total:0,unresolved:0}],rowCount:1};
+    if(sql.startsWith("SELECT 1 FROM execution_command_status_context_links c"))return {rows:[],rowCount:0};
     if(sql.includes("FROM execution_command_status_context_links c") && sql.includes("JOIN elp210_candidate.leases"))
       return {rows:[],rowCount:0};
     if(sql.startsWith("UPDATE execution_command_status_preparations SET consumed_at")) {
@@ -130,7 +137,9 @@ function setup(){
   const config={issuer:"TEST_ONLY:core",audience:original.gateway_ref,key_id:"TEST_ONLY:key",key:key.privateKey,
     workload_id:"TEST_ONLY:edge-status",ttl_ms:30000,maximum_contexts:4,maximum_requests_per_context:4};
   const authority=new CommandSourceAssertionAuthority(pool as unknown as Pool,access as unknown as ExecutionAccessService,candidate,config);
-  const input:CommandStatusInput={authorization,intent,actor,original,action:"STATUS",call_digest:accessDigest("TEST_ONLY:logical-call"),
+  const input:CommandStatusInput={authorization,intent,actor,original,action:"STATUS",
+    call_digest:accessDigest({action:"STATUS",authority:"CURRENT_REQUESTER",requester_digest:accessDigest(actor),original,
+      authorization_digest:accessDigest(authorization),intent_hash:authorization.intent_hash}),
     contract:{reference:"TEST_ONLY:contract",sha256:"a".repeat(64),edge_source_revision:"TEST_ONLY:source"},signal:new AbortController().signal};
   const pmBody=JSON.stringify({schema_version:"pma.edge-command-transport.v1",reference:"TEST_ONLY:distinct-PM-reference",
     payload:{TEST_ONLY:"source mapped payload"},transport_payload_digest:original.transport_payload_digest});
@@ -148,6 +157,39 @@ function setup(){
   return {authority,input,body,issue,completion,candidate,access,pool,row,state,grant,config};
 }
 describe("purpose-specific current-requester command STATUS authority",()=>{
+  it("cannot bind recovery while a STATUS preparation is in flight",async()=>{
+    const f=setup(),target=f.authority as any,authorize=target.authorize.bind(f.authority);
+    let release!:()=>void,entered!:()=>void;
+    const held=new Promise<void>(resolve=>{release=resolve;}),started=new Promise<void>(resolve=>{entered=resolve;});
+    vi.spyOn(target,"authorize").mockImplementation(async input=>{entered();await held;return authorize(input);});
+    const preparation=f.authority.prepare(f.input,f.body);
+    await started;
+    try {
+      expect(()=>f.authority.bindRecoverySource({original:async()=>structuredClone(f.input.original)},f.input.contract)).toThrow();
+    } finally {release();}
+    await expect(preparation).resolves.toHaveProperty("original_context");
+  });
+  it("refuses a noncanonical recoverable call before reserving or issuing",async()=>{
+    const f=setup();f.authority.bindRecoverySource({original:async()=>structuredClone(f.input.original)},f.input.contract);
+    const call_digest=accessDigest("TEST_ONLY:noncanonical-call"),input={...f.input,call_digest};
+    const body=JSON.stringify({...JSON.parse(f.body),call_digest});
+    await expect(f.authority.prepare(input,body)).rejects.toMatchObject({code:"COMMAND_STATUS_ASSERTION_BINDING_MISMATCH",status:403});
+    expect(f.authority.snapshot()).toMatchObject({contexts:0,pending:0});
+    expect(f.candidate.issueCommandStatus).not.toHaveBeenCalled();
+  });
+  it("passes the exact PM request and original context link to the issuance and revalidation seams",async()=>{
+    const f=setup(),prepared=await f.authority.prepare(f.input,f.body);
+    await f.authority.issue(prepared.original_context,f.issue);
+    const issueArgs=f.candidate.issueCommandStatus.mock.calls[0] as unknown as unknown[];
+    const link=issueArgs[2] as Record<string,unknown>;
+    expect(link).toMatchObject({context_digest:accessDigest(prepared.original_context),
+      original_digest:accessDigest(f.input.original),call_digest:f.input.call_digest,
+      binding_digest:f.issue.binding_digest,receiver_id:f.issue.receiver_id,delivery_sequence:0,previous_lease_id:null});
+    expect(issueArgs[3]).toEqual({method:"POST",raw_path:Buffer.from(COMMAND_STATUS_PM_PATH),
+      query_string:Buffer.alloc(0),body:Buffer.from(f.issue.body_utf8)});
+    const revalidateArgs=f.candidate.revalidateIssue.mock.calls[0] as unknown as unknown[];
+    expect(revalidateArgs[3]).toEqual(link);
+  });
   it("refuses a reused STATUS context when the authority deadline shrinks without a fingerprint change",async()=>{
     const f=setup(), prepared=await f.authority.prepare(f.input,f.body);
     f.state.lease=NOW+5000;
@@ -285,6 +327,45 @@ describe("purpose-specific current-requester command STATUS authority",()=>{
     expect(f.candidate.resumeCommandStatusIssue).not.toHaveBeenCalled();
     expect(f.candidate.acknowledgeCommandStatusIssue).not.toHaveBeenCalled();
   });
+  it("rejoins the committed lease after a same-process C2 custody timeout without a second ISSUE or ACK",async()=>{
+    const f=setup();
+    const call_digest=accessDigest({action:"STATUS",authority:"CURRENT_REQUESTER",requester_digest:accessDigest(f.input.actor),
+      original:f.input.original,authorization_digest:accessDigest(f.input.authorization),intent_hash:f.input.authorization.intent_hash});
+    const input={...f.input,call_digest},body=JSON.stringify({...JSON.parse(f.body),call_digest});
+    const issue={...f.issue,binding_digest:accessDigest({original:input.original,call:call_digest})};
+    const original=vi.fn(async()=>structuredClone(input.original));
+    f.authority.bindRecoverySource({original},input.contract);
+    const prepared=await f.authority.prepare(input,body),issueOnce=f.candidate.issueCommandStatus.getMockImplementation()!;
+    let persisted:Record<string,unknown>|undefined;
+    f.candidate.issueCommandStatus.mockImplementation(async(a,b,link)=>{
+      const issued=await issueOnce(a,b,link);
+      persisted={...(link as Record<string,unknown>),lease_id:issued.lease_id,subject_id:a.user_id,
+        session_id:a.session_id,session_revision:a.session_generation,workspace_id:input.intent.workspace_id,
+        environment:"paper",workload_id:issue.workload_id,request_digest:issue.request_digest,command_id:f.row.command_id,
+        pm_status_request_digest:issue.request_digest};
+      f.candidate.resumeCommandStatusIssue.mockResolvedValue(issued);
+      throw new C2CustodyPendingError(issued.lease_id);
+    });
+    const query=f.pool.query.getMockImplementation()!;let hideLink=false;
+    f.pool.query.mockImplementation(async(sql:string,...args:unknown[])=>
+      sql.includes("FROM execution_command_status_context_links c")&&sql.includes("JOIN elp210_candidate.leases")
+        ? persisted&&!hideLink ? {rows:[persisted],rowCount:1} : {rows:[],rowCount:0} : query(sql,...args));
+    await expect(f.authority.issue(prepared.original_context,issue))
+      .rejects.toMatchObject({code:"COMMAND_STATUS_ASSERTION_CUSTODY_RECOVERY_REQUIRED"});
+    await expect(f.authority.issue(prepared.original_context,{...issue,receiver_id:"TEST_ONLY:wrong"}))
+      .rejects.toMatchObject({code:"COMMAND_STATUS_ASSERTION_BINDING_MISMATCH"});
+    hideLink=true;
+    await expect(f.authority.issue(prepared.original_context,issue))
+      .rejects.toMatchObject({code:"COMMAND_STATUS_ASSERTION_CUSTODY_RECOVERY_REQUIRED"});
+    expect(f.candidate.issueCommandStatus).toHaveBeenCalledOnce();
+    hideLink=false;
+    const recovered=await f.authority.issue(prepared.original_context,issue);
+    expect(recovered.lease_id).toBe("TEST_ONLY:lease-1");
+    expect(f.candidate.issueCommandStatus).toHaveBeenCalledOnce();
+    expect(f.candidate.resumeCommandStatusIssue).toHaveBeenCalledOnce();
+    expect(f.candidate.acknowledgeCommandStatusIssue).not.toHaveBeenCalled();
+    expect(original).toHaveBeenCalledOnce();
+  });
   async function restartedCompletion() {
     const f=setup();
     const call_digest=accessDigest({action:"STATUS",authority:"CURRENT_REQUESTER",requester_digest:accessDigest(f.input.actor),
@@ -329,6 +410,12 @@ describe("purpose-specific current-requester command STATUS authority",()=>{
     const r=await restartedCompletion();
     expect(await r.resumed.issue(r.prepared.original_context,r.issue)).toEqual(r.lease);
     expect(r.f.candidate.resumeCommandStatusIssue).toHaveBeenCalledOnce();
+    const args=r.f.candidate.resumeCommandStatusIssue.mock.calls[0] as unknown as unknown[];
+    expect(args[3]).toEqual({method:"POST",raw_path:Buffer.from(COMMAND_STATUS_PM_PATH),
+      query_string:Buffer.alloc(0),body:Buffer.from(r.issue.body_utf8)});
+    expect(args[4]).toMatchObject({context_digest:accessDigest(r.prepared.original_context),
+      original_digest:accessDigest(r.input.original),call_digest:r.input.call_digest,
+      binding_digest:r.issue.binding_digest,delivery_sequence:0,previous_lease_id:null});
     expect(r.f.candidate.issueCommandStatus).toHaveBeenCalledOnce();
     expect(r.f.candidate.acknowledgeCommandStatusIssue).not.toHaveBeenCalled();
   });
@@ -391,12 +478,27 @@ describe("purpose-specific current-requester command STATUS authority",()=>{
   });
   it("does not release a restored outbound read until its linked terminal and Edge ACK are retained",async()=>{
     const r=await restartedCompletion();await r.resumed.issue(r.prepared.original_context,r.issue);
-    const originalQuery=r.f.pool.query.getMockImplementation()!;let unresolved=1;
+    const originalQuery=r.f.pool.query.getMockImplementation()!;let unresolved=1,lockedUnresolved=1;
+    const db=await r.f.pool.connect(), originalDbQuery=db.query.getMockImplementation()!;
+    db.query.mockImplementation(async(sql:string,values:unknown[]=[])=>
+      sql.startsWith("WITH ordered AS") ? {rows:[{total:2,unresolved:lockedUnresolved}],rowCount:1} :
+      sql.startsWith("SELECT context_digest,call_digest,binding_digest FROM execution_command_status_preparations")
+        ? {rows:[{context_digest:accessDigest(r.prepared.original_context),call_digest:r.input.call_digest,
+          binding_digest:r.issue.binding_digest}],rowCount:1} :
+      sql.startsWith("UPDATE execution_command_status_preparations SET consumed_at=")
+        ? {rows:[],rowCount:1} : originalDbQuery(sql,values));
     r.f.pool.query.mockImplementation(async(sql:string,...args:unknown[])=>
-      sql.includes("count(*)::int AS total") ? {rows:[{total:1,unresolved}],rowCount:1} : originalQuery(sql,...args));
+      sql.includes("count(*)::int AS total") ? {rows:[{total:2,unresolved}],rowCount:1} : originalQuery(sql,...args));
     await expect(r.resumed.acknowledgeRetainedRead(r.prepared.original_context,r.input))
       .rejects.toMatchObject({code:"COMMAND_STATUS_ASSERTION_DELIVERY_NOT_COMPLETED"});
+    const censusCall=r.f.pool.query.mock.calls.find(([sql])=>sql.includes("count(*)::int AS total"));
+    expect(censusCall?.[1]).toEqual([accessDigest(r.prepared.original_context),accessDigest(r.input.original),
+      r.input.call_digest,accessDigest({original:r.input.original,call:r.input.call_digest}),r.input.actor.user_id,
+      r.input.actor.session_id,r.input.actor.session_generation,r.input.intent.workspace_id,r.f.config.workload_id]);
     unresolved=0;
+    await expect(r.resumed.acknowledgeRetainedRead(r.prepared.original_context,r.input))
+      .rejects.toMatchObject({code:"COMMAND_STATUS_ASSERTION_DELIVERY_NOT_COMPLETED"});
+    lockedUnresolved=0;
     await expect(r.resumed.acknowledgeRetainedRead(r.prepared.original_context,r.input)).resolves.toBeUndefined();
   });
   it("rejects changed request bytes, previous lease or revoked authority before recovery",async()=>{
@@ -497,6 +599,48 @@ describe("purpose-specific current-requester command STATUS authority",()=>{
     const second=await f.authority.prepare(f.input,f.body);
     expect(second.original_context).not.toBe(first.original_context);
     expect(f.candidate.issue).not.toHaveBeenCalled();expect(f.candidate.canReplaceResolvedIssue).not.toHaveBeenCalled();
+  });
+  it("refuses issuance on a context after its retained STATUS response is consumed",async()=>{
+    const f=setup(),prepared=await f.authority.prepare(f.input,f.body);
+    await f.authority.acknowledgeRetainedRead(prepared.original_context,f.input);
+    await expect(f.authority.issue(prepared.original_context,f.issue))
+      .rejects.toMatchObject({code:"COMMAND_STATUS_ASSERTION_CONTEXT_REQUIRED",status:403});
+    expect(f.candidate.issueCommandStatus).not.toHaveBeenCalled();
+    const next=await f.authority.prepare(f.input,f.body);
+    expect(next.original_context).not.toBe(prepared.original_context);
+  });
+  it("does not issue while retained STATUS consumption is in flight",async()=>{
+    const f=setup();f.authority.bindRecoverySource({original:async()=>structuredClone(f.input.original)},f.input.contract);
+    const prepared=await f.authority.prepare(f.input,f.body),db=await f.pool.connect(),query=db.query.getMockImplementation()!;
+    let unblock!:()=>void,started!:()=>void;
+    const gate=new Promise<void>(resolve=>{unblock=resolve;}),entered=new Promise<void>(resolve=>{started=resolve;});
+    db.query.mockImplementation(async(sql:string,values:unknown[]=[])=>{
+      if(sql.startsWith("SELECT context_digest,call_digest,binding_digest FROM execution_command_status_preparations")) {
+        started();await gate;
+      }
+      return query(sql,values);
+    });
+    const consumed=f.authority.acknowledgeRetainedRead(prepared.original_context,f.input);
+    try {
+      await entered;
+      await expect(f.authority.issue(prepared.original_context,f.issue))
+        .rejects.toMatchObject({code:"COMMAND_STATUS_ASSERTION_CONTEXT_REQUIRED",status:403});
+      expect(f.candidate.issueCommandStatus).not.toHaveBeenCalled();
+    } finally {unblock();await consumed;}
+  });
+  it("releases the local close fence if retained STATUS consumption fails",async()=>{
+    const f=setup();f.authority.bindRecoverySource({original:async()=>structuredClone(f.input.original)},f.input.contract);
+    const prepared=await f.authority.prepare(f.input,f.body),db=await f.pool.connect(),query=db.query.getMockImplementation()!;
+    db.query.mockImplementation(async(sql:string,values:unknown[]=[])=>{
+      if(sql.startsWith("SELECT context_digest,call_digest,binding_digest FROM execution_command_status_preparations"))
+        throw new Error("TEST_ONLY:failed consume");
+      return query(sql,values);
+    });
+    await expect(f.authority.acknowledgeRetainedRead(prepared.original_context,f.input)).rejects.toThrow("TEST_ONLY:failed consume");
+    db.query.mockImplementation(query);
+    const issued=await f.authority.issue(prepared.original_context,f.issue);
+    expect(issued.delivery_sequence).toBe(0);
+    expect(f.candidate.issueCommandStatus).toHaveBeenCalledOnce();
   });
   it("local retained-read completion cannot overwrite unresolved actual PM identity custody",async()=>{
     const f=setup(),p=await f.authority.prepare(f.input,f.body);
@@ -925,6 +1069,36 @@ describe("purpose-specific current-requester command STATUS authority",()=>{
       delivery_sequence:f.config.maximum_requests_per_context,previous_lease_id:previous}))
       .rejects.toMatchObject({code:"COMMAND_STATUS_ASSERTION_CAPACITY_EXHAUSTED",status:429});
     expect(f.candidate.issue).toHaveBeenCalledTimes(f.config.maximum_requests_per_context);
+  });
+  it("does not return a superseded STATUS assertion after delayed revalidation",async()=>{
+    const f=setup(),p=await f.authority.prepare(f.input,f.body),first=await f.authority.issue(p.original_context,f.issue);
+    let release!:()=>void,entered!:()=>void;
+    const held=new Promise<void>(resolve=>{release=resolve;}),started=new Promise<void>(resolve=>{entered=resolve;});
+    f.candidate.revalidateIssue.mockImplementationOnce(async()=>{entered();await held;});
+    const retry=f.authority.issue(p.original_context,f.issue).catch(error=>error);
+    await started;
+    f.candidate.canReplaceResolvedIssue.mockResolvedValue(true);
+    await f.authority.complete(p.original_context,f.completion(first));
+    const successor=await f.authority.issue(p.original_context,{...f.issue,delivery_sequence:1,previous_lease_id:first.lease_id});
+    expect(successor.lease_id).not.toBe(first.lease_id);
+    release();
+    expect(await retry).toMatchObject({code:"COMMAND_STATUS_ASSERTION_DELIVERY_REQUEST_MISMATCH"});
+  });
+  it("counts and bounds held STATUS revalidations during shutdown",async()=>{
+    const f=setup(),p=await f.authority.prepare(f.input,f.body);
+    await f.authority.issue(p.original_context,f.issue);
+    let release!:()=>void;const held=new Promise<void>(resolve=>{release=resolve;});
+    f.candidate.revalidateIssue.mockImplementation(()=>held);
+    const retries=Array.from({length:16},()=>f.authority.issue(p.original_context,f.issue).catch(error=>error));
+    await vi.waitFor(()=>expect(f.candidate.revalidateIssue).toHaveBeenCalledTimes(17));
+    expect(f.authority.snapshot()).toMatchObject({pending:16,contexts:1});
+    await expect(f.authority.issue(p.original_context,f.issue)).rejects.toMatchObject({code:"COMMAND_STATUS_ASSERTION_CAPACITY_EXHAUSTED"});
+    f.authority.shutdown();
+    expect(f.authority.snapshot()).toMatchObject({pending:16,contexts:1,stopped:true});
+    release();const results=await Promise.all(retries);
+    expect(results.every(result=>result.code==="COMMAND_STATUS_ASSERTION_CONTEXT_REQUIRED")).toBe(true);
+    expect(f.authority.snapshot().pending).toBe(0);
+    expect(f.candidate.issueCommandStatus).toHaveBeenCalledOnce();
   });
   it("retries a lost ACK response against the same delivered lease without another ISSUE",async()=>{
     const f=setup(),p=await f.authority.prepare(f.input,f.body),issued=await f.authority.issue(p.original_context,f.issue);

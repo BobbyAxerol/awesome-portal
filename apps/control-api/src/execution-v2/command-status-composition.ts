@@ -82,6 +82,7 @@ export class CommandStatusComposition {
   usesPool(pool:Pool):boolean{return this.pool===pool;}
   static async create(pool:Pool,input:CommandStatusCompositionConfig):Promise<CommandStatusComposition> {
     if(!input||!input.candidate?.installation_scope||input.candidate.installation_scope.environment!=="paper"||
+      input.candidate.c2_delivery_schema_required!==undefined||
       !bounded(input.candidate.limits?.ttl_ms,1000,30000)||!bounded(input.shutdown_deadline_ms,1,5000)||
       inspectEdgeCommandGatewayBinding(input.gateway_binding).state==="REFUSED"||
       input.gateway_binding.requester_status!=="FRESH_CURRENT_HUMAN"||input.gateway_binding.scope.environment!=="paper"||

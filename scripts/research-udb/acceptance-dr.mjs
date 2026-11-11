@@ -9,7 +9,7 @@ import {VERIFY_ARTIFACTS} from '../research-p23/restore-receipt.mjs';
 import {HISTORICAL_TEST_MANIFEST_LOSSES} from '../research-p23/historical-manifest-exceptions.mjs';
 import {PROJECT,HOME,SOURCE,docker,owned,compose,privateWrite,readPrivate,coreQuery,inControl} from './acceptance-cell.mjs';
 import {namedClient,client,sessions,authSetup,refreshSessions} from './acceptance-api.mjs';
-import {assertLegacyDrSchemaSafe} from './legacy-dr-guard.mjs';
+import {assertLegacyDrSchemaSafe,restoreLegacyCoreGuarded} from './legacy-dr-guard.mjs';
 const hash=b=>createHash('sha256').update(b).digest('hex');
 const pause=ms=>new Promise(r=>setTimeout(r,ms));
 function assertLegacyDrSafe(){
@@ -217,11 +217,11 @@ async function main(){
     compose(['stop','control-api']);assertLegacyDrSafe();
     const currentCustody=custody();result.current_authority_sha256=currentCustody;
     cutoverAllowed=false;
-    restore('portal-postgres','portal','portal_control','core-before-revoke.dump');
+    restoreLegacyCoreGuarded(()=>restore('portal-postgres','portal','portal_control','core-before-revoke.dump'),assertLegacyDrSafe);
     result.stale_auth_restore_rejected=custody()!==currentCustody;assert.equal(result.stale_auth_restore_rejected,true);
     // Never start an application against the stale auth restore. Restore
     // current custody first, verify exact hash, then permit local cutover.
-    restore('portal-postgres','portal','portal_control','core-current-auth.dump');
+    restoreLegacyCoreGuarded(()=>restore('portal-postgres','portal','portal_control','core-current-auth.dump'),assertLegacyDrSafe);
     assert.equal(custody(),currentCustody,'CURRENT_AUTH_CUSTODY_REQUIRED');result.current_auth_cutover_verified=true;
     restore('execution-postgres','exec_owner','portal_execution','execution-final.dump');
     restoreArtifacts(result.artifact_backup);
@@ -231,6 +231,9 @@ async function main(){
     // An unsuccessful current-authority restore MUST NOT start applications
     // against the stale-before-revoke snapshot, even from a cleanup finally.
     if(cutoverAllowed){
+      // Never start a legacy harness over a schema introduced after its last
+      // restore/check. This is only a fail-closed probe, not a V2 restore fence.
+      assertLegacyDrSafe();
       compose(['up','-d','--no-build','--no-deps','--pull','never','--wait','--wait-timeout','120','control-api','portal-api','quant-worker-py']);
       docker(['exec',owned('portal-web'),'nginx','-s','reload']);
     }

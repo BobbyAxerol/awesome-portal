@@ -158,6 +158,7 @@ describe("private current-requester STATUS application composition",()=>{
   });
   const invalid:[string,(c:CommandStatusCompositionConfig)=>void][]=[
     ["non-Paper candidate",c=>Reflect.set(c.candidate.installation_scope!,"environment","live")],
+    ["C2 candidate on the generic non-custodied transport",c=>{c.candidate.c2_delivery_schema_required=true;}],
     ["wrong workspace",c=>{c.gateway_binding.scope.workspace_id="TEST_ONLY-other";}],
     ["wrong source workload",c=>{c.candidate.source.workload_id="TEST_ONLY-other";}],
     ["wrong assertion workload",c=>{c.assertion_transport.peer.workload_id="TEST_ONLY-other";}],

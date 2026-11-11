@@ -8,6 +8,7 @@ import {
   CommandSourceAssertionAuthority, CommandSourceAssertionError,
   commandSourceAssertionRequest, commandSourceAssertionResponse,
   commandSourceAssertionCompletionRequest, commandSourceAssertionCompletionResponse,
+  type CommandSourceAssertionRequest, type CommandSourceAssertionResponse,
 } from "./command-source-assertion";
 import { parseCompactJson } from "./private-root-file";
 
@@ -23,6 +24,27 @@ export interface CommandSourceAssertionTransportConfig {
  * cancellation of pending authority/DB work is introduced by construction. */
 export function createCommandSourceAssertionTransport(
   authority: Pick<CommandSourceAssertionAuthority, "issue" | "complete">, input: CommandSourceAssertionTransportConfig,
+) {
+  return buildTransport(authority,input);
+}
+
+/** Unmounted TEST-ONLY custody seam. No runtime wiring uses this entry point.
+ * The callback must bind and fence the exact source/lease before releasing any
+ * bytes; the transport authenticates its peer and validates the response first.
+ * A callback returning without finishing the response fails closed. */
+export function createCommandSourceAssertionTestCustodyTransport(
+  authority:Pick<CommandSourceAssertionAuthority,"issue"|"complete">,input:CommandSourceAssertionTransportConfig,
+  delivery:(context:string,request:CommandSourceAssertionRequest,output:CommandSourceAssertionResponse,
+    response:ServerResponse,remainingMs:number)=>Promise<void>,
+) {
+  if(typeof delivery!=="function")throw new Error("COMMAND_SOURCE_ASSERTION_TRANSPORT_CONFIG_INVALID");
+  return buildTransport(authority,input,delivery);
+}
+
+function buildTransport(
+  authority:Pick<CommandSourceAssertionAuthority,"issue"|"complete">,input:CommandSourceAssertionTransportConfig,
+  testDelivery?:(context:string,request:CommandSourceAssertionRequest,output:CommandSourceAssertionResponse,
+    response:ServerResponse,remainingMs:number)=>Promise<void>,
 ) {
   const peer = { ...input.peer }, limits = { ...input.limits };
   const bounded = (n: number, min: number, max: number) => Number.isSafeInteger(n) && n >= min && n <= max;
@@ -42,6 +64,7 @@ export function createCommandSourceAssertionTransport(
   };
   const reply = (res: ServerResponse, status: number, json: string) => {
     if (res.destroyed || res.writableEnded) return;
+    if (res.headersSent) { res.destroy(); return; }
     res.writeHead(status, { "content-type": "application/json", "content-length": Buffer.byteLength(json),
       "cache-control": "no-store", vary: "Authorization", "x-content-type-options": "nosniff", connection: "close" });
     res.end(json);
@@ -85,12 +108,13 @@ export function createCommandSourceAssertionTransport(
     if (length > limits.request_bytes) { state.denied++; problem(res, 413, "COMMAND_SOURCE_ASSERTION_REQUEST_BYTE_LIMIT"); return; }
     state.in_flight++;
     const deadlineAt = headerDeadline?.until ?? performance.now() + limits.deadline_ms;
-    let started = false, finished = false, timedOut = false, bytes = 0;
+    let started = false, finished = false, timedOut = false, custodySending = false, bytes = 0;
     const chunks: Buffer[] = [];
     const finish = () => { if (!finished) { finished = true; clearTimeout(deadline); chunks.length = 0; state.in_flight--; } };
     const timeout = () => {
       if (!timedOut) { timedOut = true; state.timed_out++; }
-      problem(res, 504, "COMMAND_SOURCE_ASSERTION_TRANSPORT_DEADLINE");
+      if (custodySending) res.destroy();
+      else problem(res, 504, "COMMAND_SOURCE_ASSERTION_TRANSPORT_DEADLINE");
       if (!started) { req.destroy(); finish(); }
       // Pending issue/DB capacity remains owned until the REAL promise settles.
     };
@@ -145,6 +169,18 @@ export function createCommandSourceAssertionTransport(
         if (performance.now() >= deadlineAt) { timeout(); return; }
         if (!completion && commandSourceAssertionResponse.parse(output).expires_at_ms <= Date.now()) {
           state.denied++; problem(res, 409, "COMMAND_SOURCE_ASSERTION_CONTEXT_EXPIRED"); return;
+        }
+        if (!completion && testDelivery) {
+          custodySending=true;
+          await testDelivery(token,commandSourceAssertionRequest.parse(parsed),commandSourceAssertionResponse.parse(output),res,
+            Math.max(1,Math.floor(deadlineAt-performance.now())));
+          custodySending=false;
+          if(timedOut)return;
+          if(!res.writableFinished) {
+            if(res.destroyed)return;
+            throw new Error("COMMAND_SOURCE_ASSERTION_CUSTODY_INCOMPLETE");
+          }
+          state.accepted++;return;
         }
         state.accepted++; reply(res, 200, json);
       } catch (error) {

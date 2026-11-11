@@ -36,6 +36,7 @@ import { commandAuthorization, type CommandTrust } from "../src/execution-v2/com
 import { CurrentHumanCandidate, type CurrentHumanBinding, type CurrentHumanCandidateConfig } from "../src/execution-v2/current-human-candidate";
 import { CurrentHumanMutations } from "../src/execution-v2/current-human-mutations";
 import { pmHttpRequestDigest } from "../src/execution-v2/pm-http-request-binding";
+import { captureV2RestoreInventory, compareV2RestoreInventories } from "../src/execution-v2/restore-inventory";
 import { PgCommandStatusOriginalFingerprints } from "../src/execution-v2/command-status-original-fingerprints";
 import { EdgeCommandStatusTransport, COMMAND_STATUS_ORIGINAL_PATH,
   type EdgeCommandStatusTransportConfig } from "../src/execution-v2/edge-command-status-transport";
@@ -691,6 +692,9 @@ describe.skipIf(!database).sequential("command STATUS concrete authority with re
         const priorRevision=await revision(ctx.pool), priorAck=await ackRows(ctx.pool);
         expect(await revision(restoredPool)).toBe(priorRevision);
         expect(priorAck).toHaveLength(1);
+        const beforeLogout = compareV2RestoreInventories(await captureV2RestoreInventory(ctx.pool),
+          await captureV2RestoreInventory(restoredPool));
+        expect(beforeLogout.state).toBe("LOCAL_MATCH_NOT_A_CUTOVER_FENCE");
         await coordinatedAuth.logout(f.session.token);
         expect(await sessionState(ctx.pool)).toEqual({state:"REVOKED",revoke_reason:"logout"});
         expect((await sessionState(restoredPool)).state).toBe("ACTIVE");
@@ -698,6 +702,16 @@ describe.skipIf(!database).sequential("command STATUS concrete authority with re
         expect(await revision(restoredPool)).toBe(priorRevision);
         expect(await ackRows(ctx.pool)).toEqual(priorAck);
         expect(await ackRows(restoredPool)).toEqual(priorAck);
+        const sourceInventory = await captureV2RestoreInventory(ctx.pool);
+        const restoredInventory = await captureV2RestoreInventory(restoredPool);
+        const comparison = compareV2RestoreInventories(sourceInventory, restoredInventory);
+        expect(comparison.state).toBe("MISMATCH");
+        expect(comparison.changed_tables).toContain("public.auth_sessions");
+        expect(comparison.changed_tables).toContain("elp210_candidate.authority");
+        // Even identical local snapshots are not independent authority/fencing
+        // evidence and must never become an automatic recovery permit.
+        expect(compareV2RestoreInventories(sourceInventory, sourceInventory).state)
+          .toBe("LOCAL_MATCH_NOT_A_CUTOVER_FENCE");
         const restoredAuth=new AuthService(restoredPool,ctx.config,auth.argon2);
         const restoredAccess=new ExecutionAccessService(restoredPool,restoredAuth,f.trust,true);
         const restoredCandidate=await CurrentHumanCandidate.create(restoredPool,config);
@@ -775,7 +789,12 @@ describe.skipIf(!database).sequential("command STATUS concrete authority with re
     afterAck.send({type:"PREPARE",input:retryInput,body:f.body});
     // Compare exact values without dumping the short-lived assertion/context
     // into the test log when a timeout or other failure occurs.
-    expect(accessDigest(await preparedAfterAck)).toBe(accessDigest(prepared));
+    const retriedAfterAck=await preparedAfterAck;
+    // This equality is only meaningful while the original short-lived STATUS
+    // context is still valid. Report expiration separately from a same-window
+    // recovery mismatch when a slow disposable runner crosses the 30s bound.
+    expect(Date.now()).toBeLessThan(prepared.prepared.expires_at_ms);
+    expect(accessDigest(retriedAfterAck)).toBe(accessDigest(prepared));
     expect((await post(afterAckOrigin,prepared.original_context,f.issue,edge)).status).not.toBe(200);
     expect(await leases(f.workspace)).toHaveLength(1);
     expect((await ctx.pool.query("SELECT count(*)::int AS n FROM execution_command_status_delivery_acks WHERE lease_id=$1",[result.lease_id])).rows[0].n).toBe(1);
@@ -830,6 +849,10 @@ describe.skipIf(!database).sequential("command STATUS concrete authority with re
     // A caller racing in this gap must stay on the same context.
     expect((await service.prepare(f.input, f.body)).original_context).toBe(prepared.original_context);
     await service.acknowledgeRetainedRead(prepared.original_context,f.input);
+    // Consuming the retained response closes this in-memory context too;
+    // it cannot rotate the already ACKed lease into a successor.
+    await expect(service.issue(prepared.original_context,{...f.issue,delivery_sequence:1,previous_lease_id:issued.lease_id}))
+      .rejects.toMatchObject({code:"COMMAND_STATUS_ASSERTION_CONTEXT_REQUIRED",status:403});
     expect((await service.prepare(f.input, f.body)).original_context).not.toBe(prepared.original_context);
     expect(await leases(f.workspace)).toEqual([terminal]); // ACK/preparation do not issue replacement credentials.
     // The capacity-limited process may retry its same context only after the

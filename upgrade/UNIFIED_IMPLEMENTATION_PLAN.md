@@ -18035,3 +18035,531 @@ isolated historical-clone/custody restore passed with the limitations in the
 receipt; an approved operational rollback and connected qualification remain.
 
 
+
+2026-11-04T18:48:55Z | EDGE_DELIVERED_NOT_ACCEPTED | CORE-03 TS C2 Paper r2 c2ccfd2fba2c57e8930cf516b0302f03f1b9ea3663149a3d9df7082162beba77 | upgrade/execution_loop/evidence/ELP2-10/TS_C2_PM_AUTHORITY_HANDOFF_R2_20261104.md | cover upgrade/execution_loop/evidence/ELP2-10/EDGE_TO_CORE_TS_C2_PM_AUTHORITY_COVER_20261104.md sha256 3043bc72f5e89d99b199c8f7b3cdd31f98fd5425d5fc5689647cf0130ebfbcca | public A1 /home/bobby/secure/edge-ts-c2-pm-authority-a1-r1 manifest 7b063476b5daf2218382b31166f48a73218e09befd7804b0eb018b11fc642ab4 | CORE_ACK and A2 pending
+
+2026-11-04 | EDGE_DELIVERED_B1_NOT_ACCEPTED | ELP2-10/EDGE_TO_CORE_TS_C2_B1_COVER_20261104.md sha256:c024b25749939eff3465356269caba4e6e7a7443901257b829246add6733b7a5 | public B1 /home/bobby/secure/edge-ts-c2-pm-authority-b1-r1/ | no signing until TS confirms seal and owner note
+
+2026-11-04 | EDGE_DELIVERED_TS_ANSWERS | ELP2-10/EDGE_RELAY_TS_ANSWERS_C2_UNSEALED_20261104.md sha256:f19dae8e705aad6d7142b58c574d091cf6163194ec50fc14025c94c21b25ff41 | TS says C2 NOT SEALED: prepare only, do not sign until explicit TS C2_SEALED | A2 independent and requested now
+
+2026-11-04 | EDGE_A2_PRIORITY_REQUEST | ELP2-10/EDGE_TO_CORE_C2_A2_PRIORITY_REQUEST_20261104.md sha256:b382284e0f6ce2269e9ea51203910ebd5678e81f9cd36af63296c278c9cee7c4 | A2 now, or concrete blocker/ETA; C2 unsealed, do not sign B2
+
+2026-11-04 | EDGE_CORE03_SOURCE_COMPARISON | ELP2-10/EDGE_CORE03_SOURCE_COMPARISON_20261104.md sha256:59e78dc76b0c93e48a244e0788889572b93a051b5e5ca364bca659006bedb00e | source client DER pin is not the TS required server DER pin; installed A2 evidence still requested
+
+2026-11-05 | CORE_A2_ACK_NOT_READY | [Research DB read-only observation](execution_loop/evidence/ELP2-10/CORE_TO_EDGE_C2_A2_RESEARCH_DB_OBSERVATION_20261105.md) supplements the already delivered Core ACK; schema and grants exist but C2 acceptance and mounted listener are not established. Recovery V2, connected authority and ELP2-10/11 remain open.
+
+2026-11-05 | CORE_C2_OWNER_DECISION | [Revoke/settlement and global-revision disposition](execution_loop/evidence/ELP2-10/CORE_C2_REVOKE_REVISION_DECISION_20261105.md): source-level regression 3/3; test WIP and normal hook pending. This does not close A2, V2 recovery or ELP2-10/11.
+
+2026-11-05 | CORE_EDGE_C2_AUTHORITY_RECOVERY | [Public source coordination](execution_loop/evidence/ELP2-10/CORE_TO_EDGE_C2_AUTHORITY_AND_RECOVERY_20261105.md): owner decision and exact checkpoint/fence/terminal inputs; A2 and connected gates remain open.
+
+- 2026-11-05 Edge C2: A2 deadline, P3/P5 coordination and unsigned B2 one-hour preparation: `execution_loop/evidence/ELP2-10/EDGE_TO_CORE_C2_A2_DEADLINE_AND_SEMANTICS_20261105.md`, SHA256 `8656b3f494770172dc8126f07d9d630abc448be9f9e04400534f606b566b73d9`; ACK is not A2 READY.
+
+2026-11-05 | CORE_A2_CHECKPOINT | [Public response](execution_loop/evidence/ELP2-10/CORE_TO_EDGE_C2_A2_CHECKPOINT_20261105.md), mirrored to HK, identifies owners and next checkpoint; A2/B2 remain NOT READY.
+
+2026-11-05 | CORE_V2_RESTORE_DIAGNOSTIC_WIP | [Inventory and limits](execution_loop/evidence/ELP2-10/CORE_V2_RESTORE_INVENTORY_20261105.md); not an independent authority, operational fence or recovery PASS. No frontend contract change.
+
+2026-11-05 | CORE_C2_PREPARATION_WIP | [Public trust/B1-B2 preparation and Core-local recovery](execution_loop/evidence/ELP2-10/CORE_C2_PREPARATION_FOLLOWTHROUGH_20261105.md); focused tests only. A2/B2, independent recovery barrier and connected acceptance are NOT_READY; no runtime installation or frontend contract change.
+
+2026-11-05 | CORE_C2_0515_CHECKPOINT | [Per-item status and image observation](execution_loop/evidence/ELP2-10/CORE_C2_0515_CHECKPOINT_20261105.md); A2/B2 and recovery remain NOT_READY.
+
+2026-11-05 | CORE_C2_CHECKPOINT_STORAGE_WIP | [Separate-cluster checkpoint tests, pinned public B1 stage and identity observation](execution_loop/evidence/ELP2-10/CORE_C2_CHECKPOINT_AND_B1_STAGING_20261105.md); not an installed recovery fence or P7 acceptance.
+
+2026-11-05 | CORE_C2_P7_SCOPE_APPROVED | [Bobby's exact Paper READ + HISTORY scope](execution_loop/evidence/ELP2-10/CORE_C2_P7_BOBBY_SCOPE_DECISION_20261105.md); decision only, actual authenticated P7 record and mapping remain NOT_READY.
+
+- 2026-11-05 Edge consolidated C2 A2/B2/recovery return request: `execution_loop/evidence/ELP2-10/EDGE_TO_CORE_C2_COMPLETE_DELIVERY_REQUEST_20261105.md`, SHA256 `d8286389ac5cb3e5843df7374d8cc3904590732c528bf721255a3e1ffeda9c9b`; 05:15 UTC checkpoint is not A2 acceptance.
+
+- 2026-11-05 URGENT TS C2_SEALED: exact TS answers `execution_loop/evidence/ELP2-10/EDGE_RELAY_TS_C2_SEALED_20261105.md`, SHA256 `4a1157da632bb89586af11657b31f71aadecc36024929a0084f0d45b15f3d75c`. Seal authorizes P8 sign ONCE; A2 required before or with B2, no runtime activation. Please return a concrete UTC A2 delivery deadline now, and B2 within one hour if feasible or an exact blocker and deadline.
+
+2026-11-05 | CORE_C2_SEAL_SCOPE_P8_WIP | [Seal confirmation, exact Bobby scope and P8 preparation](execution_loop/evidence/ELP2-10/CORE_C2_SEAL_SCOPE_P8_PROGRESS_20261105.md). A2, B2 and V2 recovery remain NOT_READY; P8 is not yet an accepted signer, and source P3/P5 requirements require implementation and verification.
+
+2026-11-05 | CORE_C2_TRUST_PREPARATION | [Public Research trust candidate](execution_loop/evidence/ELP2-10/CORE_C2_RESEARCH_PUBLIC_TRUST_PREPARATION_20261105.md), delivered to Edge for review only. No listener, source registration or activation.
+
+2026-11-05 | CORE_C2_ISSUER_PREPARATION | [Public issuer key candidate](execution_loop/evidence/ELP2-10/CORE_C2_RESEARCH_PUBLIC_ISSUER_PREPARATION_20261105.md), distinct from P8 and source proof; identity binding, live issuer and A2 remain NOT_READY.
+
+2026-11-05 | CORE_C2_JWKS_BYTE_CORRECTION | [Exact-byte candidate correction](execution_loop/evidence/ELP2-10/CORE_C2_JWKS_BYTE_CORRECTION_20261105.md); old public candidate retained, not an A2 pin or installed issuer.
+
+2026-11-05 | CORE_C2_P3_P7_TESTS | [Focused disposable tests](execution_loop/evidence/ELP2-10/CORE_C2_P3_P7_LOCAL_TESTS_20261105.md), source-only; not evidence of authenticated acceptance, installed schema or connected recovery.
+
+2026-11-05 | CORE_C2_0600_CHECKPOINT | [Per-item Core status](execution_loop/evidence/ELP2-10/CORE_C2_0600_CHECKPOINT_20261105.md): A2/B2/recovery NOT_READY; P5 least-privilege test in progress, candidate client certificate independently checked for 120-day remaining validity. Next progress checkpoint 06:30 UTC, not a delivery ETA.
+
+2026-11-05 | CORE_C2_P5_Q3_FOLLOWTHROUGH | [Least-privilege isolated retake and recovery completeness gap](execution_loop/evidence/ELP2-10/CORE_C2_P5_ACL_AND_Q3_FOLLOWTHROUGH_20261105.md). 4/4 P5 disposable PostgreSQL tests; actual preview DB role is superuser. Source journal/inventory alone cannot prove post-snapshot completeness. A2/recovery remain NOT_READY.
+
+2026-11-05 | CORE_C2_P5_FENCE_RECOVERY | [Fail-closed unknown-reason fence and one-original recovery](execution_loop/evidence/ELP2-10/CORE_C2_P5_FENCE_AND_ORIGINAL_RECOVERY_20261105.md); updated source pins, no runtime mount or cutover. Missing reason provenance/announcement and source receipt/coverage remain open.
+
+2026-11-05 | CORE_C2_0630_CHECKPOINT | [Per-item Core/Edge status](execution_loop/evidence/ELP2-10/CORE_C2_0630_CHECKPOINT_20261105.md): P7 PG 6/6 and local fence PG 2/2 source-only; A2/B2/recovery NOT_READY. Recipient issue-response ACK and post-snapshot completeness require source contract. Next progress checkpoint 07:00 UTC, not delivery ETA.
+
+- 2026-11-05 Edge relays latest TS answers P3/P5/Q3: `execution_loop/evidence/ELP2-10/EDGE_RELAY_TS_P3_P5_Q3_20261105.md`, SHA256 `ad50194a72c784b2c195c9703f4cad68c0511292de8897475ba1d18dc93de66b`. Please explicitly ACK each C-P3-1..4 and R-P5-1..5 / identify deviations and owners, give concrete UTC A2 delivery deadline, and exact remaining A2 blockers and responsible owner. This is not A2 acceptance or runtime activation.
+
+2026-11-05 | CORE_C2_BLOCK_NEW_RECOVERY | [Per-item TS answer and Core source-only progress](execution_loop/evidence/ELP2-10/CORE_C2_BLOCK_NEW_RECOVERY_PROGRESS_20261105.md). A2, B2 and recovery remain NOT_READY; no credible A2 ETA is claimed.
+
+2026-11-05 | CORE_C2_0700_CHECKPOINT | [Per-item C2 progress and qualification gaps](execution_loop/evidence/ELP2-10/CORE_C2_0700_CHECKPOINT_20261105.md); no connected proof or runtime installation. Next progress checkpoint 07:30 UTC, not a delivery ETA.
+
+2026-11-05 | CORE_C2_BOUNDED_RETAKES | [Isolated tests, failed attempts and resource limits](execution_loop/evidence/ELP2-10/CORE_C2_BOUNDED_CELL_RETAKES_20261105.md); source-only, not a recovery barrier or connected qualification.
+
+2026-11-05 | CORE_C2_0725_PROGRESS | [P7 and exact-original recovery follow-through](execution_loop/evidence/ELP2-10/CORE_C2_0725_PROGRESS_20261105.md); A2, B2 and recovery remain not ready; no runtime mount or connected proof.
+
+2026-11-05 | CORE_C2_0730_CHECKPOINT | [P5 continuity checks and owner-auth readiness](execution_loop/evidence/ELP2-10/CORE_C2_0730_CHECKPOINT_20261105.md); source-only, P5 delivery and connected acceptance remain open.
+
+2026-11-05 | CORE_C2_TERMINAL_COHERENCE | [Exact-original local terminal checks](execution_loop/evidence/ELP2-10/CORE_C2_RECOVERY_TERMINAL_COHERENCE_20261105.md); no production ACL, connected receipt or recovery cutover claimed.
+
+2026-11-05 | CORE_C2_STATIC_TRUST | [Public partial for Edge/TS](execution_loop/evidence/ELP2-10/CORE_TO_EDGE_C2_STATIC_TRUST_PARTIAL_20261105.md); candidate-only, issuer/audience and genuine delegation unavailable, A2/B2 not ready.
+
+2026-11-05 | CORE_C2_EXTENDED_WINDOW | [Static trust and extended coordination target](execution_loop/evidence/ELP2-10/CORE_TO_EDGE_C2_TRUST_DEADLINE_EXTENSION_20261105.md), delivered to Edge: 2026-11-06 08:00 UTC planning target, not an A2/B2 readiness guarantee or grant extension. [Bounded typecheck disposition](execution_loop/evidence/ELP2-10/CORE_C2_TYPECHECK_DISPOSITION_20261105.md); full semantic check remains open.
+
+2026-11-05 | CORE_C2_RECOVERY_ISSUER | [Original issuer binding and legacy-schema test](execution_loop/evidence/ELP2-10/CORE_C2_RECOVERY_ISSUER_BINDING_20261105.md); source-only, historical missing issuer is quarantined; independent fencing and connected recovery remain open. Follow-on `c2-regression` selected **8 passed / 102 skipped**, exit 0, same candidate source and bounded runner; this is not a full suite.
+
+2026-11-05 | CORE_C2_RECOVERY_SOURCE_TRUST | [Original source key/identity fingerprint](execution_loop/evidence/ELP2-10/CORE_C2_RECOVERY_SOURCE_TRUST_20261105.md); source-only, missing/rotated trust remains quarantined; actual registration, successor policy and connected recovery remain open.
+
+2026-11-05 | CORE_C2_REVOKE_REGRESSION | [Selected exact-original regression](execution_loop/evidence/ELP2-10/CORE_C2_REVOKE_REGRESSION_20261105.md): 8 passed, 102 skipped; source-only, no connected ACK or cutover.
+
+2026-11-05 | CORE_C2_STATIC_R1 | [Public static bundle and Edge return](execution_loop/evidence/ELP2-10/CORE_TO_EDGE_A2_STATIC_R1_RETURN_20261105.md); candidate only, A2/B2 and actual runtime remain open.
+
+- 2026-11-05 Edge C2-PM-PORTAL: return static trust first, exact status/pins and UTC deadline, then full A2 and one-shot B2: `execution_loop/evidence/ELP2-10/EDGE_TO_CORE_C2_PORTAL_STATIC_TRUST_REQUEST_20261105.md`, SHA256 `1f52dcc7930a61215ccc73d7fbc08ac8b454a97424673a2693e77ba66716e0fd`; Portal is not a main C2 gate.
+
+- 2026-11-05 TS 09:00Z requests manifest/checksum write-once a2-static-r1 first: `execution_loop/evidence/ELP2-10/EDGE_TO_CORE_A2_STATIC_R1_REQUEST_20261105.md`, SHA256 `25adf20b1447da27ee3400f6670134bacd5f56c0bced8026a3de18513229fe4c`. Seal signing release remains even while TS reseals.
+
+2026-11-05 | CORE_C2_HUMAN_KEY_BINDING | [Original human signing-key pin and recovery regressions](execution_loop/evidence/ELP2-10/CORE_C2_RECOVERY_HUMAN_KEY_BINDING_20261105.md); source-only, A2 and independent recovery remain open.
+
+2026-11-05 | CORE_C2_CHECKPOINT_INPUT_SNAPSHOT | [Immutable checkpoint input and focused tests](execution_loop/evidence/ELP2-10/CORE_C2_CHECKPOINT_INPUT_SNAPSHOT_20261105.md); source-only, no recovery cutover or connected acceptance.
+
+2026-11-05 | CORE_C2_P7_COMPOSED_PG | [P7 review-to-preparation integration test](execution_loop/evidence/ELP2-10/CORE_C2_P7_COMPOSED_PG_20261105.md); synthetic, unmounted, no real approval or delegation.
+
+2026-11-05 | CORE_C2_REGISTRATION_EXPIRY_FENCE | [Registration expiry and revision fence](execution_loop/evidence/ELP2-10/CORE_C2_REGISTRATION_EXPIRY_FENCE_20261105.md); candidate only, no installed or connected authority claim.
+
+2026-11-05 | CORE_C2_DELIVERY_FENCE_FOLLOWTHROUGH | [Delivery registration/revision/drain guard and focused tests](execution_loop/evidence/ELP2-10/CORE_C2_DELIVERY_FENCE_FOLLOWTHROUGH_20261105.md); source-only, HTTP custody and A2/recovery remain open.
+
+2026-11-05 | CORE_C2_P7_INTENT_RECOVERY | [Same-intent P7 preparation recovery, PostgreSQL and HTTP tests](execution_loop/evidence/ELP2-10/CORE_C2_P7_INTENT_RECOVERY_20261105.md); unmounted, not an owner acceptance or recovery cutover.
+
+2026-11-05 | CORE_C2_ACTUAL_ASSERTION_CUSTODY | [Existing issuer assertion and original-lease custody candidate](execution_loop/evidence/ELP2-10/CORE_C2_RECOVERY_ACTUAL_ASSERTION_CUSTODY_20261105.md); isolated tests only, not a no-gap recovery barrier or runtime authority.
+
+2026-11-05 | CORE_C2_CUSTODIED_ISSUER | [Issuer/custody and same-original restart candidate](execution_loop/evidence/ELP2-10/CORE_C2_CUSTODIED_ISSUER_RESUME_20261105.md); unmounted, not an HTTP fence, full A2 or restore cutover.
+
+- 2026-11-05 Edge verified and placed Core a2-static-r1 candidate in TS exchange; manifest SHA256 `17aa02dd1a9470fcd7e0c6101dff518b73c7e55b9b42dc0de71786083db60541`, checksums 6/6. Candidate only, not installed, not A2 accepted; continue full A2.
+
+2026-11-05 | CORE_C2_CUSTODY_TERMINAL_BINDING | [Custody terminal/original binding and revoke regression](execution_loop/evidence/ELP2-10/CORE_C2_CUSTODY_TERMINAL_BINDING_20261105.md); source-only, not an external checkpoint, connected ACK or restore cutover.
+
+2026-11-05 | CORE_C2_CUSTODIED_TERMINAL_TRANSPORT | [C2 terminal custody before mTLS ACK](execution_loop/evidence/ELP2-10/CORE_C2_CUSTODIED_TERMINAL_TRANSPORT_20261105.md); isolated only, full A2 and no-gap restore remain open.
+
+2026-11-05 | CORE_C2_CUSTODY_UNKNOWN | [UNKNOWN custody and same-original recovery](execution_loop/evidence/ELP2-10/CORE_C2_CUSTODY_UNKNOWN_RECOVERY_20261105.md); source-only, not a source ACK or recovery cutover.
+
+2026-11-05 | CORE_C2_CUSTODY_ENTER_CAPACITY | [ENTER custody and outcome-capacity reservation](execution_loop/evidence/ELP2-10/CORE_C2_CUSTODY_ENTER_CAPACITY_20261105.md); candidate only, independent authority and real connected A2 remain open.
+2026-11-05 | CORE_C2_CUSTODY_PREFLIGHT_RACE | [Preflight and concurrent capacity](execution_loop/evidence/ELP2-10/CORE_C2_CUSTODY_PREFLIGHT_RACE_20261105.md); source-only; preflight is advisory and a pending lease must resume as the same original.
+2026-11-05 | CORE_C2_RECOVERY_CUSTODY_PATH | [Recovery custody path](execution_loop/evidence/ELP2-10/CORE_C2_RECOVERY_CUSTODY_PATH_20261105.md); source-only, not a cutover or source-ACK receipt.
+2026-11-05 | CORE_C2_RECOVERY_BINDING_LOCK | [Recovery binding under lock](execution_loop/evidence/ELP2-10/CORE_C2_RECOVERY_BINDING_LOCK_20261105.md); source-only, not cutover or connected qualification.
+2026-11-05 | CORE_C2_RESOLVER_CUSTODY_BINDING | [ENTER and terminal custody binding](execution_loop/evidence/ELP2-10/CORE_C2_RESOLVER_CUSTODY_BINDING_20261105.md); source-only, no claim of qualified authority or connected receipt.
+2026-11-05 | CORE_C2_CURRENT_HUMAN_DISPOSABLE_REGRESSION | [Current-human PostgreSQL regression](execution_loop/evidence/ELP2-10/CORE_C2_CURRENT_HUMAN_DISPOSABLE_REGRESSION_20261105.md); 110/110 disposable tests, not connected acceptance.
+2026-11-05 | CORE_C2_CUSTODY_SOURCE_POOL | [Custody source-pool binding](execution_loop/evidence/ELP2-10/CORE_C2_CUSTODY_SOURCE_POOL_20261105.md); candidate only, per-lease custody pin and connected authority remain open.
+2026-11-05 | CORE_C2_CUSTODY_PER_LEASE | [Per-lease custody binding](execution_loop/evidence/ELP2-10/CORE_C2_CUSTODY_PER_LEASE_BINDING_20261105.md); candidate only, two-cluster 4/4 and upgrade 1/1, owner suite 14/18 with four legacy uncustodied scenarios requiring migration; no connected or final recovery claim.
+2026-11-05 | CORE_C2_OWNER_TWO_CLUSTER | [Owner follow-through](execution_loop/evidence/ELP2-10/CORE_C2_CUSTODY_PER_LEASE_BINDING_20261105.md): all 18 owner cases pass on a disposable two-cluster cell, superseding the 14/18 harness result; candidate only, no connected or final recovery claim.
+2026-11-05 | CORE_C2_PREPARED_ISSUER_CUSTODY | [Prepared issuer composition](execution_loop/evidence/ELP2-10/CORE_C2_PREPARED_ISSUER_CUSTODY_COMPOSITION_20261105.md): owner-pinned source-only issuer and reverse settlement share custody; not mounted or connected A2.
+2026-11-05 | CORE_C2_PREPARED_ISSUER_EDGE_MIRROR | Public receipt SHA-256 `f44d71b49e68097c5161f0eb0b1015017628b39b5b5be0abebc38094bc358fed` matches authenticated HK EPG10-08 mailbox; source-only, not A2 acceptance.
+2026-11-05 | CORE_C2_RECOVERY_TLS_SNAPSHOT | [Recovery TLS snapshot](execution_loop/evidence/ELP2-10/CORE_C2_RECOVERY_TLS_SNAPSHOT_20261105.md), 75/75 focused; source-only, not a recovery barrier or connected acceptance.
+
+2026-11-05 | CORE_C2_TS_A2_FOLLOWTHROUGH | [TS asks and P8 public candidate](execution_loop/evidence/ELP2-10/CORE_TO_EDGE_A2_TS_REVIEW_FOLLOWTHROUGH_20261105.md); static reused, 5/5 custody tests, A2 and recovery remain open.
+
+2026-11-05 | CORE_C2_P5_P6_O1_OBSERVATION | [Research identity and O-1](execution_loop/evidence/ELP2-10/CORE_C2_P5_P6_AND_O1_OBSERVATION_20261105.md): actual owner/workspace observed read-only, no active owner step-up, no installed C2 schemas; exact TS request handoff remains open.
+2026-11-05 | CORE_C2_RECOVERY_TLS_EDGE_MIRROR | Public receipt SHA-256 `61660a81e0ed89fe11b436b1f2cb3dac36c5ce020d3df890f037f2abca769dec` matches HK EPG10-08 mailbox; source-only.
+
+- 2026-11-05 TS verified static candidate and requests full A2 asks 1–9, B2 ask 10 after TS accepts A2: exact TS answers `execution_loop/evidence/ELP2-10/EDGE_RELAY_TS_STATIC_VERIFICATION_ASKS_20261105.md`, SHA256 `97042c423e11f9ebd9a86534063a3cc5da8d10dadda575f70bd59feeb5ec9191`, section 11:00Z. Reuse unchanged public static bytes; static is not full A2.
+
+2026-11-05 | CORE_C2_RETAINED_SOURCE_PROOF | [Encrypted source-proof custody and historical verification](execution_loop/evidence/ELP2-10/CORE_C2_RETAINED_SOURCE_PROOF_CANDIDATE_20261105.md); source-only, no real A2, ACK census or restore cutover.
+
+2026-11-05 | CORE_C2_TERMINAL_PROOF_TIEOUT | [Original/source proof and terminal digest tie-out](execution_loop/evidence/ELP2-10/CORE_C2_RECOVERY_TERMINAL_PROOF_TIEOUT_20261105.md); source-only, not an ACK census or cutover.
+
+2026-11-05 | CORE_C2_TIEOUT_NEGATIVES_P7 | [Tie-out negative tests and P7 commissioning finding](execution_loop/evidence/ELP2-10/CORE_C2_RECOVERY_TIEOUT_NEGATIVES_20261105.md); ACTIVE candidate registration is not genuine P7 acceptance.
+
+2026-11-05 | CORE_C2_ISSUER_P7_FAIL_CLOSED | [Issuer P7 hard fence](execution_loop/evidence/ELP2-10/CORE_C2_ISSUER_P7_FAIL_CLOSED_20261105.md); supersedes issuer-availability implications of earlier candidate notes; 28 focused tests, no A2 or connected acceptance.
+
+2026-11-05 | CORE_C2_P7_FENCE_POSTGRES | [P7 fence and two-cluster regression](execution_loop/evidence/ELP2-10/CORE_C2_P7_FENCE_POSTGRES_REGRESSION_20261105.md); preserves vault validation, new source pin, 5/5 disposable PG; A2 remains NOT_READY.
+
+2026-11-05 | CORE_C2_1200_CHECKPOINT | [C2 checkpoint](execution_loop/evidence/ELP2-10/CORE_C2_1200_CHECKPOINT_20261105.md); A2 NOT_READY, B2 NOT_SIGNED, recovery and connected gates open.
+
+2026-11-05 | CORE_C2_B2_VERIFIER_SNAPSHOT | [B2 custody verifier-fact race regression](execution_loop/evidence/ELP2-10/CORE_C2_B2_VERIFIER_SNAPSHOT_20261105.md): source-only fix, focused 9/9 and focused typecheck; dry-run/preflight retake 7 passed, 1 skipped after interrupted sandbox attempts. A2, signer authority and recovery remain open.
+
+2026-11-05 | CORE_C2_P7_RESEARCH_COMPOSITION | [Preparation-only Research composition](execution_loop/evidence/ELP2-10/CORE_C2_P7_RESEARCH_COMPOSITION_20261105.md): optional private injection, same-pool/source/intent/key guard and 50/50 focused tests; issuer remains fail-closed, no installed runtime or owner acceptance.
+
+2026-11-05 | CORE_C2_P7_ATOMICITY_GAP | [Owner intent/registration atomicity gap](execution_loop/evidence/ELP2-10/CORE_C2_P7_INTENT_REGISTRATION_ATOMICITY_GAP_20261105.md): two commits leave a non-recoverable pre-registration intent; an intent ID is not a bearer. Atomic same-transaction completion and revoke/lost-response tests remain OPEN.
+
+2026-11-05 | CORE_C2_P7_INTENT_REGISTRATION_ATOMIC | [Atomic preparation and same-original recovery](execution_loop/evidence/ELP2-10/CORE_C2_P7_INTENT_REGISTRATION_ATOMIC_20261105.md) supersedes that gap for new source-candidate intents: 53 focused tests and 4 disposable PostgreSQL tests; uncommitted/uninstalled, P7 and issuer still NOT_AUTHORIZED.
+
+2026-11-05 | CORE_C2_P7_CONFIRM_AMBIGUOUS_RECOVERY | [Confirm resumes the same original on ambiguous COMMIT](execution_loop/evidence/ELP2-10/CORE_C2_P7_CONFIRM_AMBIGUOUS_RECOVERY_20261105.md): 54 focused, 4 disposable PG tests; source-only, no P7 authority or runtime installation.
+
+2026-11-05 | CORE_C2_B2_SINGLE_B1_FENCE | [One B2 attempt per B1 across signers](execution_loop/evidence/ELP2-10/CORE_C2_B2_SINGLE_B1_FENCE_20261105.md): source-only partial unique index, 9 unit / 3 PG, plus 4 P7 PG race/revoke checks. Signer, A2 and restore barrier remain open.
+
+2026-11-05 | CORE_C2_REVOKE_ROLE_NEUTRAL | [Externally provisioned definer candidate](execution_loop/evidence/ELP2-10/CORE_C2_REVOKE_ROLE_NEUTRAL_CANDIDATE_20261105.md): 8/8 disposable PG tests; real installer ACL, fencing, restore and qualification remain open; no runtime install.
+
+2026-11-05 | CORE_C2_LOCAL_FENCE_ROLE_ESCALATION | [Privileged-writer negative tests](execution_loop/evidence/ELP2-10/CORE_C2_LOCAL_FENCE_ROLE_ESCALATION_20261105.md): 6/6 on disposable PG; migrated/candidate checkpoint retaken 8/8 against changed SQL hashes, no restore authorization.
+
+2026-11-05 | CORE_C2_B2_DEPENDENCY_PIN | [B2 verifier and pool composition](execution_loop/evidence/ELP2-10/CORE_C2_B2_CUSTODY_DEPENDENCY_PIN_20261105.md): 10 unit, 3 disposable PG, 7 dry-run tests passed, 1 skipped; source-only, A2 NOT_READY, B2 NOT_SIGNED.
+
+2026-11-05 | CORE_C2_OWNER_REVALIDATION_SESSION_LOCK | [C2 session-lock race](execution_loop/evidence/ELP2-10/CORE_C2_OWNER_REVALIDATION_SESSION_LOCK_20261105.md): reproduced on disposable PG, fixed in C2 revalidation; 19/19 owner regressions. HTTP custody, P7 and connected gates remain open.
+
+2026-11-05 | CORE_C2_TRIGGER_BYPASS_CALLER_FENCE | [Delivery and revoke caller fence](execution_loop/evidence/ELP2-10/CORE_C2_TRIGGER_BYPASS_CALLER_FENCE_20261105.md): two bypasses reproduced then rejected; disposable PG regressions 3/3, 19/19 and 8/8. Source-only; HTTP custody, recovery barrier and connected gates remain open.
+
+2026-11-05 | CORE_C2_QUALIFICATION_IMPACT | [Candidate receipt impact](execution_loop/evidence/ELP2-10/CORE_C2_QUALIFICATION_IMPACT_20261105.md): historical P7 review hashes differ from current source; retake affected tests, retain dependency checks, and do not reuse fixture results as connected qualification.
+
+2026-11-05 | CORE_C2_P7_CURRENT_RETAKE | [Current-source P7 retake](execution_loop/evidence/ELP2-10/CORE_C2_P7_CURRENT_RETAKE_20261105.md): 60 unit, 3 public-B1 codec and 5 disposable-PG tests; test-inclusive typecheck remains open after heap OOM and bounded timeout. P7/issuer remain uncommissioned.
+
+2026-11-05 | CORE_C2_P7_EMERGENCY_PATH | [Emergency path consolidation and public B1 retake](execution_loop/evidence/ELP2-10/CORE_C2_P7_EMERGENCY_PATH_CONSOLIDATION_20261105.md): refuse legacy direct registry update, validate scoped procedure using limited DB login; source only, P7/A2 and connected gates remain open.
+
+2026-11-05 | CORE_C2_CHECKPOINT_CAPTURE_PROVENANCE | [Checkpoint capture provenance](execution_loop/evidence/ELP2-10/CORE_C2_CHECKPOINT_CAPTURE_PROVENANCE_20261105.md): distinguish claimed and locked-capture digests in candidate hash chain; 6 unit and 8 two-PG tests. V2 candidate format is incompatible with v1; restore remains refused.
+
+2026-11-05 | CORE_C2_P7_TERMINAL_COMPOSITION_PINS | [P7/terminal composition](execution_loop/evidence/ELP2-10/CORE_C2_P7_TERMINAL_COMPOSITION_PINS_20261105.md): pin candidate dependencies and internal same-intent recovery; 38 focused tests, 5 P7 PG and 5 two-PG custody tests. Source only; P7 issuer and restore remain fenced.
+
+2026-11-05 | CORE_C2_HUMAN_CANDIDATE_PINS | [Issuer candidate pins](execution_loop/evidence/ELP2-10/CORE_C2_HUMAN_CANDIDATE_PINS_20261105.md): protect selected config/key/pool against property replacement; 19 issuer PG, 5 two-PG and 65 local tests pass, 33 skip. Not an issuer activation or Edge qualification.
+
+2026-11-05 | CORE_C2_RETAINED_ORIGINAL_CENSUS | [Retained-original comparison](execution_loop/evidence/ELP2-10/CORE_C2_RETAINED_ORIGINAL_CENSUS_20261105.md): bounded comparison of independent custody against observed Core; 5 two-PG tests pass, simulated stale/missing Core reads. No ACK completeness, old-holder fence or cutover proof.
+
+2026-11-05 | CORE_C2_RESTORED_DATABASE_CENSUS | [Pinned restored-database observation](execution_loop/evidence/ELP2-10/CORE_C2_RESTORED_DATABASE_CENSUS_20261105.md): 5 two-PG tests and focused source typecheck pass; real template DB copy on the source cluster, not a backup restore or cutover proof. P7 and recovery remain open.
+
+2026-11-05 | CORE_C2_P7_RECORD_VERIFIER_PINS | [P7 record verifier binding](execution_loop/evidence/ELP2-10/CORE_C2_P7_RECORD_VERIFIER_PINS_20261105.md): 36 focused and 6 disposable-PG tests plus focused typecheck pass; source-only, genuine P7 and issuer remain fenced.
+
+2026-11-05 | CORE_C2_P7_INTENT_RECORD_LINK | [Explicit P7 preparation/intent link](execution_loop/evidence/ELP2-10/CORE_C2_P7_INTENT_RECORD_LINK_20261105.md): 5 owner-intent PG and 6 acceptance PG tests pass; source-only SQL change, no genuine P7 or migration installed.
+
+2026-11-05 | CORE_C2_P7_LINK_FORWARD_REHEARSAL | [P7 forward-upgrade rehearsal](execution_loop/evidence/ELP2-10/CORE_C2_P7_LINK_FORWARD_REHEARSAL_20261105.md): one disposable PG test covers synthetic old schema, locks, data/ACL/guards and old-writer compatibility. Not a product migration or representative restore.
+
+2026-11-05 | CORE_C2_LOCAL_STOP_WRITES | [Local stop-writes candidate](execution_loop/evidence/ELP2-10/CORE_C2_LOCAL_STOP_WRITES_20261105.md): disposable PG fence 2/2, C2 2/2, delivery 2/2 and checkpoint 8/8. Source-only; no old-clone/source/HTTP fence, V2 restore remains refused.
+
+2026-11-05 | CORE_C2_P7_GRAPH_METHOD_PINS | [P7 graph method pins](execution_loop/evidence/ELP2-10/CORE_C2_P7_GRAPH_METHOD_PINS_20261105.md): 54 focused and 5 isolated-PG tests pass; source-only, P7 acceptance and issuer remain fenced. Focused source typecheck passes; broader test-inclusive check timed out.
+
+2026-11-05 | CORE_C2_P8_PUBLIC_KEY_PREFLIGHT | [P8 public preflight](execution_loop/evidence/ELP2-10/CORE_C2_P8_PUBLIC_KEY_PREFLIGHT_20261105.md): offline exact JWK/SPKI comparison and optional unsigned preview binding; six suites 32 PASS/3 SKIP. Source-only; P8 custody, A2 acceptance and one-shot signing remain open. B2 remains unsigned.
+
+2026-11-05 | CORE_C2_PINNED_PUBLIC_P7_RETAKE | [Public-input and P7 retake](execution_loop/evidence/ELP2-10/CORE_C2_PINNED_PUBLIC_P7_RETAKE_20261105.md): 20 suites 126/126 with pinned public A1/B1/P8; isolated P7 PG 6/6. Candidate/source only; no P7 acceptance, signer authority, connected proof or full gate.
+
+2026-11-05 | CORE_C2_FROZEN_LOCAL_CHECKPOINT | [Frozen local checkpoint candidate](execution_loop/evidence/ELP2-10/CORE_C2_FROZEN_LOCAL_CHECKPOINT_20261105.md): 8/8 disposable two-PG tests, 19/19 unit and focused typecheck. Source-only; schema upgrade, old-holder/source/HTTP fences and ACK census remain open; V2 restore is still refused.
+
+2026-11-05 | CORE_C2_P7_ISSUER_FENCE_RETRY | [P7 issuer fence and contention retry](execution_loop/evidence/ELP2-10/CORE_C2_P7_ISSUER_FENCE_RETRY_20261105.md): 51/51 focused and 6/6 isolated two-PG tests, targeted typecheck. Candidate only; old-holder/DB fence, real authority and issuer commissioning remain open.
+
+2026-11-05 | CORE_C2_P7_BOUND_LEASE_DB_FENCE | [P7 exact-intent DB fence candidate](execution_loop/evidence/ELP2-10/CORE_C2_P7_BOUND_LEASE_DB_FENCE_20261105.md): 6/6 isolated two-PG and 19/19 issuer PG, targeted typecheck; candidate-only. Role/ACL, rollout, old-holder/HTTP fences, real authority and issuer commissioning remain open.
+
+2026-11-05 | CORE_C2_P7_REVOCATION_ROLE_FIX | [P7 bounded emergency role fix](execution_loop/evidence/ELP2-10/CORE_C2_P7_REVOCATION_ROLE_FIX_20261105.md): 2/2 limited-login emergency and 6/6 two-PG P7 tests; candidate only. Positive issuer role/ACL and connected gates remain open.
+
+2026-11-05 | CORE_C2_P7_LIMITED_LOGIN_DEFINER | [P7 limited-login row-lock boundary](execution_loop/evidence/ELP2-10/CORE_C2_P7_LIMITED_LOGIN_DEFINER_20261105.md): 7/7 two-PG tests with real test login and unsafe-role negatives; source only. Legacy trigger ACL, HTTP custody, issuer and connected gates remain open.
+
+2026-11-05 | CORE_C2_P7_LEGACY_TRIGGER_ROLE_BOUNDARY | [P7 legacy-trigger role boundary](execution_loop/evidence/ELP2-10/CORE_C2_P7_LEGACY_TRIGGER_ROLE_BOUNDARY_20261105.md): 7/7 two-PG tests; test app no longer needs authority UPDATE or event INSERT. Source-only; combined revoke race, forged issuance, HTTP custody and connected gates remain open.
+
+2026-11-05 | CORE_C2_P7_LIMITED_LOGIN_REVOKE_RACE | [P7 restricted-login ENTER/revoke](execution_loop/evidence/ELP2-10/CORE_C2_P7_LIMITED_LOGIN_REVOKE_RACE_20261105.md): 7/7 two-PG tests, revoke waits behind restricted ENTER, stale snapshot and subsequent ENTER denied. Source only; real acceptance, committed settlement, HTTP custody and restore remain open.
+
+2026-11-05 | CORE_C2_ASSERTION_REVALIDATION_BINDING | [C2 assertion-to-lease binding](execution_loop/evidence/ELP2-10/CORE_C2_ASSERTION_REVALIDATION_BINDING_20261105.md): source-only signature/claims/digest fix; 7/7 P7 two-PG, 19/19 issuer PG and focused source typecheck. HTTP custody, runtime/source qualification and restore remain open.
+
+2026-11-05 | CORE_C2_P7_DELIVERY_REVOKE_FENCE | [C2 delivery follows P7 intent revoke](execution_loop/evidence/ELP2-10/CORE_C2_P7_DELIVERY_REVOKE_FENCE_20261105.md): 7/7 isolated P7 tests; post-revoke reserve/send rejected and exact-original UNKNOWN retained. Source-only; procedure ACL, HTTP custody, real source/ACK and restore remain open.
+
+2026-11-05 | CORE_C2_P7_DELIVERY_PROCEDURE_REVOKE | [Restricted procedure and P7 revoke](execution_loop/evidence/ELP2-10/CORE_C2_P7_DELIVERY_PROCEDURE_REVOKE_20261105.md): 4/4 disposable PostgreSQL tests including restricted login, definer ACL negatives and competing revoke/SENDING; source only. HTTP custody, genuine P7/source/ACK, safe restore and commissioning remain open.
+
+2026-11-05 | CORE_C2_P7_HTTP_DELIVERY_CELL | [P7 bounded HTTP delivery cell](execution_loop/evidence/ELP2-10/CORE_C2_P7_HTTP_DELIVERY_CELL_20261105.md): 4/4 disposable PG tests include real loopback success and zero-byte denial after synthetic revoke; source only, local finish is not peer ACK. Product auth, transport failure fences, source/ACK and restore remain open.
+
+2026-11-05 | CORE_C2_DRAIN_DELIVERY_CENSUS | [Drain counts retained delivery](execution_loop/evidence/ELP2-10/CORE_C2_DRAIN_DELIVERY_CENSUS_20261105.md): 11 unit, 1 focused PG, 8 legacy regression and 8 original-recovery tests passed. Source candidate; delivery remains nonreleasable, independent install marker/ACL, old-holder/source/ACK fences and restore remain open.
+
+2026-11-05 | CORE_C2_PINNED_DELIVERY_SCHEMA | [Pinned C2 delivery census](execution_loop/evidence/ELP2-10/CORE_C2_PINNED_DELIVERY_SCHEMA_20261105.md): 28 unit and 2 disposable PG tests passed; source only. Missing schema fails closed for the selected C2 issuer; an independent install marker, old-holder/source/ACK fences and safe restore remain open.
+
+2026-11-05 | CORE_C2_LEGACY_DR_PARTIAL_SCHEMA | [Legacy DR partial-schema refusal](execution_loop/evidence/ELP2-10/CORE_C2_LEGACY_DR_PARTIAL_SCHEMA_FENCE_20261105.md): node test and one disposable PG test pass. Source only; a fully missing V2 history still needs independent authority, and V2 restore remains refused.
+
+2026-11-05 | CORE_C2_P7_PRIVATE_REVIEW_BOOTSTRAP | [Private P7 preparation and startup schema fence](execution_loop/evidence/ELP2-10/CORE_C2_P7_PRIVATE_REVIEW_BOOTSTRAP_20261105.md): 21 focused tests pass; startup remains fail-closed until separate P7 schema/ACL commissioning. Source only, typecheck timed out; P7/A2 and recovery remain open.
+
+2026-11-05 | CORE_C2_P7_SCHEMA_OBSERVATION | [P7 catalogue observation](execution_loop/evidence/ELP2-10/CORE_C2_P7_SCHEMA_OBSERVATION_20261105.md): 2 disposable-PG tests pass for missing/wrong target and trigger/ACL drift. Observation is not a trusted schema verifier; startup remains fenced.
+
+2026-11-05 | CORE_C2_P7_ROLE_OBSERVATION | [P7 role/effective-rights observation](execution_loop/evidence/ELP2-10/CORE_C2_P7_ROLE_OBSERVATION_20261105.md): 2 disposable-PG tests retaken; role membership drift detected separately from schema. Not restricted-role qualification or startup authority.
+
+2026-11-05 | CORE_C2_P7_RESTRICTED_ROLE_OBSERVATION | [Restricted-role observation retake](execution_loop/evidence/ELP2-10/CORE_C2_P7_RESTRICTED_ROLE_OBSERVATION_20261105.md): 3/3 disposable-PG, including inherited grant/revoke with separate test login. No approved role policy or startup authority.
+
+2026-11-05 | CORE_C2_P7_RESTRICTED_ROLE_POLICY | [P7 restricted-role necessary negatives](execution_loop/evidence/ELP2-10/CORE_C2_P7_RESTRICTED_ROLE_POLICY_20261105.md): 3/3 disposable-PG including inherited privileged role, update/delete and schema-create refusal. Not an allowlist, trusted registry or startup authority.
+
+2026-11-05 | CORE_C2_P7_REVIEW_LOCK_DEFINER | [P7 review row-lock candidate](execution_loop/evidence/ELP2-10/CORE_C2_P7_REVIEW_LOCK_DEFINER_20261105.md): 4/4 disposable-PG; restricted login holds original lock via NOLOGIN definer, installer rejects unsafe role/body. Source-only, not wired or commissioned.
+
+2026-11-05 | CORE_C2_P7_REVIEW_LOCK_WRITER_WIRING | [P7 writer lock wiring and retakes](execution_loop/evidence/ELP2-10/CORE_C2_P7_REVIEW_LOCK_WRITER_WIRING_20261105.md): 8/8 two-PG, 2/2 emergency PG and 53 focused tests; source-only, startup fenced, no actual owner acceptance or Edge ACK.
+
+2026-11-05 | CORE_C2_P7_RECORD_LOCK_CANDIDATE | [P7 record-lock candidate and retakes](execution_loop/evidence/ELP2-10/CORE_C2_P7_RECORD_LOCK_CANDIDATE_20261105.md): 5/5 schema PG, 6/6 acceptance PG, 8/8 owner two-PG and 36 focused tests; issuer combined lock and full restricted service still open, runtime fenced.
+
+2026-11-05 | CORE_C2_P7_ISSUER_KEYED_LOCKS | [P7 issuer keyed locks and retake](execution_loop/evidence/ELP2-10/CORE_C2_P7_ISSUER_KEYED_LOCKS_20261105.md): 8/8 two-PG and 41 focused tests; source-only, full restricted-role service and runtime remain open.
+
+2026-11-05 | CORE_C2_P7_REGISTRATION_READ_LOCK | [P7 registration read lock and retakes](execution_loop/evidence/ELP2-10/CORE_C2_P7_REGISTRATION_READ_LOCK_20261105.md): 6/6 schema PG, 6/6 acceptance PG, 8/8 owner two-PG, 40 focused; writer ACL and full restricted-role service still open.
+
+2026-11-05 | CORE_C2_P7_REGISTRY_REVOKE_SPLIT_FENCE | [Refuse registry-only revoke](execution_loop/evidence/ELP2-10/CORE_C2_P7_REGISTRY_REVOKE_SPLIT_FENCE_20261105.md): 2/2 emergency PG, 8/8 owner two-PG, 32 focused; source-only, actual source revoke and writer ACL remain open.
+
+2026-11-05 | CORE_C2_P7_RESTRICTED_COMPOSITION | [P7 composition and column privileges](execution_loop/evidence/ELP2-10/CORE_C2_P7_RESTRICTED_COMPOSITION_AND_COLUMN_PRIVILEGES_20261105.md): 9/9 two-PG and 6/6 schema PG; current writer role fails necessary negative due direct P7 writes. Source-only, independent writer/provenance and startup qualification remain open.
+
+2026-11-05 | CORE_C2_P7_FORGED_REVIEW | [Forged-review counterexample](execution_loop/evidence/ELP2-10/CORE_C2_P7_FORGED_REVIEW_COUNTEREXAMPLE_20261105.md): disposable DB test reproduces fabricated review/intent passing the source-only fence; 9/9 test includes this counterexample, **not** a security PASS. Independent owner provenance required; issuer remains fenced.
+
+2026-11-05 | CORE_C2_P7_OWNER_CONFIRMATION_VERIFIER | [Signed owner-confirmation candidate](execution_loop/evidence/ELP2-10/CORE_C2_P7_OWNER_CONFIRMATION_VERIFIER_20261105.md): 4 unit and 9 isolated-PG tests, focused source typecheck. Stronger candidate rejects the fabricated review with an independently signed test witness; signer, trust, durable custody, actual issuance wiring and qualification remain open.
+
+2026-11-05 | CORE_C2_P7_AUTHENTICATED_ISSUER | [Authenticated issuer candidate wiring](execution_loop/evidence/ELP2-10/CORE_C2_P7_AUTHENTICATED_ISSUER_WIRING_20261105.md): 9/9 isolated two-PG, 20/20 focused and source typecheck; P7 supplied to issue/resume/ENTER now requires independently selected key pin and signed witness. Source-only; real signer/owner, legacy internal no-P7 path, HTTP/recovery and commissioning remain open; issuer still fenced.
+
+2026-11-05 | CORE_C2_P7_WITNESS_CUSTODY | [Encrypted witness custody candidate](execution_loop/evidence/ELP2-10/CORE_C2_P7_ENCRYPTED_WITNESS_CUSTODY_20261105.md): 9/9 isolated two-PG and focused source typecheck, including restart-object recovery and concurrent bounded capacity. Source-only; authenticated signer, independent operational trust, issuance integration and restore remain open; issuer still fenced.
+
+2026-11-05 | CORE_C2_P7_OWNER_CONFIRM_SIGNER | [Owner-confirm signer and guarded HTTP candidates](execution_loop/evidence/ELP2-10/CORE_C2_P7_OWNER_CONFIRM_SIGNER_CANDIDATE_20261105.md): 9/9 isolated two-PG including HTTP/session/CSRF negatives and same-original retry; first attempt failed on a test-cycle collision, corrected and retaken. Both candidates unmounted; independent signer/owner authority, commissioning and V2 restore remain open.
+
+2026-11-05 | CORE_C2_P7_INTENT_EXPIRY | [Original-intent expiry follow-up](execution_loop/evidence/ELP2-10/CORE_C2_P7_OWNER_CONFIRM_SIGNER_CANDIDATE_20261105.md#follow-up-original-intent-expiry-fence): reject a witness extending past owner intent and refuse expired intent; two-PG retake 9/9. Source-only; corrected focused controller-inclusive typecheck passes after interrupted/misconfigured attempts. Full candidate, independently trusted owner/signer and connected gates remain open.
+
+2026-11-05 | CORE_C2_CHECKPOINT_COLUMN_ACL_ROUTINES | [Checkpoint column-ACL and routine observation](execution_loop/evidence/ELP2-10/CORE_C2_CHECKPOINT_COLUMN_ACL_AND_ROUTINES_20261105.md): v3 candidate inventory detects column/function/EXECUTE drift, rejects unsupported routine kinds; final two-PG 8/8, targeted typecheck. Source only; no routine DDL/role/old-holder/HTTP fence, source ACK census or restore permit; old v2 capture is not a v3 receipt.
+
+2026-11-05 | CORE_C2_P7_OWNER_AUTH_ATTESTATION | [Separate owner-auth attestation candidate](execution_loop/evidence/ELP2-10/CORE_C2_P7_INDEPENDENT_AUTH_ATTESTATION_20261105.md): source-only signed actor/session/request binding before candidate writer, two-PG 9/9, focused unit 2/2 and strict focused typecheck; real independent provider, witness key custody and issuer remain uncommissioned. No runtime activation.
+
+2026-11-05 | CORE_C2_CUSTODY_CONTENTION_RETRY | [Same-original custody contention retry](execution_loop/evidence/ELP2-10/CORE_C2_CUSTODY_CONTENTION_RETRY_20261105.md): source-only bounded retry, isolated custody 5/5, P7 9/9 and issuer 21/21; does not retry ENTER or claim Edge ACK, independent authority or restore.
+
+2026-11-05 | CORE_C2_ENTER_PROOF_RECOVERY | [Entered-original proof retention](execution_loop/evidence/ELP2-10/CORE_C2_ENTER_PROOF_RECOVERY_20261105.md): unmounted candidate, isolated two-PG/mTLS 5/5 including lost custody and forged/wrong proof; no ENTER retry, entry ACK or recovery cutover.
+
+2026-11-05 | CORE_C2_ENTER_DRAIN_COORDINATION | [Drain coordinator follow-up](execution_loop/evidence/ELP2-10/CORE_C2_ENTER_PROOF_RECOVERY_20261105.md#follow-up-source-only-drain-coordinator-integration): unmounted same-original retention and pinned drain checks; two-PG 5/5 and drain regressions 8/8. No source proof discovery, entry ACK or cutover.
+
+2026-11-05 | CORE_C2_RECOVERY_CLIENT_BINDING | [Recovery client instance binding](execution_loop/evidence/ELP2-10/CORE_C2_RECOVERY_TLS_SNAPSHOT_20261105.md#follow-up-pin-the-runtime-instance-binding): reproduced replaceable TS-private URL/config, fixed with runtime-private fields; focused 47/47, restore 8/8, custody 5/5; source-only, not connected or restore authority.
+
+2026-11-05 | CORE_C2_GENERIC_ISSUER_FENCE | [Generic issuance bypass and C2 fence](execution_loop/evidence/ELP2-10/CORE_C2_GENERIC_ISSUER_FENCE_20261105.md): generic issuer could mint without P7 in C2 configuration; source-only fence and exact-original rollback tested, 23/23 C2 PG and 9/9 P7 PG. No installed issuer, owner acceptance, old-holder fence or connected proof.
+
+2026-11-05 | CORE_C2_ISSUER_INTERNAL_CUSTODY | [Protected issuer custody](execution_loop/evidence/ELP2-10/CORE_C2_ISSUER_INTERNAL_CUSTODY_20261105.md): selected C2 issue/resume require independent custody before bearer return, with same-original recovery; 9/9 P7, 5/5 custody, 23/23 issuer PG and focused typecheck. Source only; no independent operational authority, HTTP/old-holder fence, restore or connected acceptance.
+
+2026-11-05 | CORE_C2_INTEGRATION_TYPECHECK_REVIEW | [Candidate review and typecheck disposition](execution_loop/evidence/ELP2-10/CORE_C2_INTEGRATION_TYPECHECK_REVIEW_20261105.md): full Control API typecheck timed out at 240 seconds (exit 124), not PASS; startup P7 and composition remain fenced. Final candidate review and normal hook remain open.
+
+2026-11-05 | CORE_STATUS_RECOVERY_CANDIDATE_RETAKE | [STATUS/recovery retake](execution_loop/evidence/ELP2-10/CORE_STATUS_RECOVERY_CANDIDATE_RETAKE_20261105.md): 31/31 mocked/synthetic unit tests, source-only; not gateway/Edge ACK, independent authority or restore evidence.
+
+2026-11-05 | CORE_C2_SOURCE_TYPECHECK_LIMIT | [Source-only typecheck disposition](execution_loop/evidence/ELP2-10/CORE_STATUS_RECOVERY_CANDIDATE_RETAKE_20261105.md): 180-second limit exit 124, not PASS; retake with adequate time after candidate freeze rather than repeat against mutable WIP.
+
+2026-11-05 | CORE_C2_LOCAL_FENCE_COLUMN_GRANTS | [Local fence column-grant regression](execution_loop/evidence/ELP2-10/CORE_C2_LOCAL_FENCE_COLUMN_GRANTS_20261105.md): before-fix unsafe writer reproduced; base, C2 and delivery disposable-PG suites each 2/2 and checkpoint retake 8/8 after repair. Source candidate only; external old-holder, HTTP/source/ACK fences and V2 restore remain open.
+
+2026-11-05 | CORE_C2_P7_RETAINED_INTENT_RETRY | [P7 retained-intent retry](execution_loop/evidence/ELP2-10/CORE_C2_P7_RETAINED_INTENT_RETRY_20261105.md): source candidate prevents create when an authenticated retained witness is observed; 9/9 two-PG tests, including missing same-key lookup. Not a cross-database restore barrier; P7/A2 and V2 recovery remain open.
+
+2026-11-05 | CORE_C2_P7_PRECREATE_RESERVATION | [Pre-dispatch reservation](execution_loop/evidence/ELP2-10/CORE_C2_P7_PRECREATE_RESERVATION_20261105.md): source-only immutable independent-store reservation preserves one intent ID; 9/9 isolated two-PG tests and focused typecheck. An uncertain pre-dispatch attempt stays pending; independent authority, writer/old-holder fencing, reconciliation, A2 and V2 restore remain open.
+
+2026-11-05 | CORE_C2_P7_UNSIGNED_HTTP_BYPASS | [Unsigned preparation routes fenced](execution_loop/evidence/ELP2-10/CORE_C2_P7_UNSIGNED_HTTP_BYPASS_20261105.md): source-only legacy confirm/resume endpoints now deny rather than bypass candidate owner attestation/reservation; 9/9 isolated two-PG and 5/5 HTTP tests. Signer/source authority and V2 restore remain uncommissioned.
+
+2026-11-05 | CORE_C2_P7_RESERVATION_AUTH | [Reservation authentication and review precheck](execution_loop/evidence/ELP2-10/CORE_C2_P7_RESERVATION_AUTH_20261105.md): MAC rejects synthetic forged/wrong-key reservations; stale signed review does not consume a slot. Two-PG 9/9 and focused typecheck; not deletion/rollback fencing, actual authority or restore readiness.
+
+2026-11-05 | CORE_C2_P7_WITNESS_RESERVATION_TIEOUT | [P7 witness/reservation request tie-out](execution_loop/evidence/ELP2-10/CORE_C2_P7_WITNESS_RESERVATION_TIEOUT_20261105.md): fixes existing-witness retry bypass of reservation request/MAC; before-fix regression reproduced, two-PG retake 9/9. Source-only; legacy witnesses need reconciliation, real authority/A2 and V2 restore still open.
+
+2026-11-05 | CORE_C2_RECOVERY_UNENTERED_ROLLBACK_TIEOUT | [Recovery unentered rollback tie-out](execution_loop/evidence/ELP2-10/CORE_C2_RECOVERY_UNENTERED_ROLLBACK_TIEOUT_20261105.md): source-only census now reconciles signed rollback with exact same-snapshot event and rejects mismatched/duplicate history; two-PG 5/5. Not Edge ACK, old-holder fence or V2 restore permit.
+
+2026-11-05 | CORE_C2_RECOVERY_ORIGINAL_ASSERTION_TIEOUT | [Recovery original assertion tie-out](execution_loop/evidence/ELP2-10/CORE_C2_RECOVERY_ORIGINAL_ASSERTION_TIEOUT_20261105.md): source-only census verifies signing key, issued time and retained assertion digest; legacy events report not recorded. Two-PG 5/5; event-shape compatibility, independent authority and restore remain open.
+
+2026-11-05 | CORE_C2_RECOVERY_ACTIVATION_AUTHORITY_INVENTORY | [Activation and authority inventory](execution_loop/evidence/ELP2-10/CORE_C2_RECOVERY_ACTIVATION_AUTHORITY_INVENTORY_20261105.md): source-only versioned inventory includes activation and additional authority/audit facts; 14 focused and 8 two-PG tests, including migrated activation consumption. Older commitments are not relabelled; public/old-holder fencing, full census and restore remain open.
+
+2026-11-05 | CORE_C2_RECOVERY_LOCAL_PUBLIC_FENCE | [Local public-table fence](execution_loop/evidence/ELP2-10/CORE_C2_RECOVERY_LOCAL_PUBLIC_FENCE_20261105.md): unmounted fixed-table single-login candidate and frozen-checkpoint fail-closed check; 8 two-PG and 20 focused tests. Full writer census, independently fenced old holders/source/HTTP, real ACK and restore remain open.
+
+2026-11-05 | CORE_C2_RECOVERY_LOCAL_GUARD_DRIFT | [Guard drift follow-through](execution_loop/evidence/ELP2-10/CORE_C2_RECOVERY_LOCAL_PUBLIC_FENCE_20261105.md#follow-through-candidate-guard-drift-and-exact-target-set): checkpoint and guarded public writes now refuse missing C2/delivery guards; exact public inventory targets checked. 8 two-PG and 20 unit tests; unmounted, independent recovery still open.
+
+2026-11-05 | CORE_C2_RECOVERY_WRITER_ADMISSION | [Writer admission follow-through](execution_loop/evidence/ELP2-10/CORE_C2_RECOVERY_LOCAL_PUBLIC_FENCE_20261105.md#follow-through-consistent-writer-admission-and-candidate-writes): source-only local rotation and C2 writes enforce public writer safety and guard coverage; two-PG 8/8. Independent recovery and connected gates remain open.
+
+2026-11-05 | CORE_C2_RECOVERY_AUTHORITY_JOURNAL_GUARDS | [Authority journal guards](execution_loop/evidence/ELP2-10/CORE_C2_RECOVERY_AUTHORITY_JOURNAL_GUARDS_20261105.md): append-only checkpoint/custody event guards and DDL race test; final two-PG 8/8 and 5/5. Earlier insufficient lock failed; privileged DDL, independent authority and restore remain open.
+
+2026-11-05 | CORE_C2_RECOVERY_JOURNAL_UPGRADE_PREPARATION | [Candidate journal forward-upgrade](execution_loop/evidence/ELP2-10/CORE_C2_RECOVERY_JOURNAL_UPGRADE_PREPARATION_20261105.md): synthetic old-schema upgrade and checkpoint regressions 13/13 on disposable two-PG; earlier assertion failed and was corrected. Source/test only; prevalidation, writer quiescence and independent trust are not enforced. Not runtime migration or restore qualification.
+
+2026-11-05 | CORE_STATUS_RESTORED_LINK_CENSUS | [Restored STATUS link census](execution_loop/evidence/ELP2-10/CORE_STATUS_RESTORED_LINK_CENSUS_20261105.md): reproduces inner-join omission of a lost lease; source now fails closed on missing/mismatched linked leases and lineage. 17/17 isolated PG including four census cases; 76 focused assertion tests and 24 loopback transport tests passed (earlier sandbox EPERM recorded). Source-only; concurrent consume, external ACK completeness and restore remain open.
+
+2026-11-05 | CORE_STATUS_ATOMIC_RESTORED_CONSUME | [Locked census and consume](execution_loop/evidence/ELP2-10/CORE_STATUS_ATOMIC_RESTORED_CONSUME_20261105.md): source rechecks linked custody under the ISSUE authority lock before consumption; 19/19 disposable PG, 76/76 focused unit and focused typecheck PASS. Old-holder/source fencing, independent ACK completeness, connected proof and V2 restore remain open.
+
+2026-11-05 | CORE_C2_BIDIRECTIONAL_ORIGINAL_CENSUS | [Bidirectional original census](execution_loop/evidence/ELP2-10/CORE_C2_BIDIRECTIONAL_ORIGINAL_CENSUS_20261105.md): source-only bounded comparison now reports Core leases bound to this custody but missing from its independent chain; 5/5 disposable two-PG and focused source typecheck PASS. It is diagnostic, not a source/ACK census or restore fence.
+
+2026-11-05 | CORE_C2_P7_RECOVER_RESERVATION_FENCE | [P7 witness recovery reservation fence](execution_loop/evidence/ELP2-10/CORE_C2_P7_RECOVER_RESERVATION_FENCE_20261105.md): source-only recovery/locator now reject absent, mismatched or MAC-invalid reservations; final 9/9 two-PG and focused typecheck PASS. Orphan creation/reconciliation, genuine owner authority and issuer commissioning remain open.
+
+2026-11-05 | CORE_C2_P7_WITNESS_WRITER_ADMISSION | [P7 witness writer admission](execution_loop/evidence/ELP2-10/CORE_C2_P7_WITNESS_WRITER_ADMISSION_20261105.md): source-only writer now requires the authenticated same-intent reservation; 9/9 two-PG and focused typecheck PASS. Existing orphan reconciliation, independent owner authority, issuer and restore commissioning remain open.
+
+2026-11-05 | CORE_C2_P7_STATUS_INTEGRATION_RETAKE | [P7/STATUS focused retake](execution_loop/evidence/ELP2-10/CORE_C2_P7_STATUS_INTEGRATION_RETAKE_20261105.md): corrected three stale unsigned-controller test expectations while preserving the fail-closed route; 148/148 selected tests including pinned public B1. Full integration, P7 authority and connected acceptance remain open.
+
+2026-11-05 | CORE_FINANCIAL_APPROVAL_STATUS_SELECTED_RETAKE | [Financial/Approval/STATUS selected retake](execution_loop/evidence/ELP2-10/CORE_C2_P7_STATUS_INTEGRATION_RETAKE_20261105.md#financial--approval--status-selected-retake): sandbox listener run failed 75 tests; authorized loopback retake 444/444 passed. Test-only sources; Edge authority and full integration remain open.
+
+2026-11-05 | CORE_C2_P7_REPLICATION_ROLE_FENCE | [P7 inherited parameter privilege](execution_loop/evidence/ELP2-10/CORE_C2_P7_REPLICATION_ROLE_FENCE_20261105.md): source-only necessary role check now rejects effective `SET session_replication_role` and records it in rights observation; disposable schema PG 6/6, two-PG owner-intent 9/9, focused typecheck pass. Rights fingerprint changed; new qualified baseline and independent authority/recovery/connected gates remain required.
+
+2026-11-05 | CORE_C2_RECOVERY_P7_GUARD_COVERAGE | [P7 guards in local recovery coverage](execution_loop/evidence/ELP2-10/CORE_C2_RECOVERY_P7_GUARD_COVERAGE_20261105.md): source-only frozen checkpoint and local writes reject disabled/mismatched P7 guards; reproduced 18/19 before fix, final disposable-PG 19/19. Independent holder/source/ACK and safe restore remain open.
+
+2026-11-05 | CORE_C2_RECOVERY_NOINHERIT_REPLICATION | [Reachable role parameter privilege](execution_loop/evidence/ELP2-10/CORE_C2_RECOVERY_NOINHERIT_REPLICATION_20261105.md): source-only P7 and three local fence variants reject dangerous parameter privilege reachable through `SET ROLE`; base/C2/delivery 2/2 each, P7 6/6, checkpoint 19/19. A rolled-back test demonstrates that a privilege granted after admission can still disable the trigger; independent fencing remains mandatory.
+
+2026-11-05 | CORE_C2_P7_RECOVERY_REACHABLE_ACL | [Reachable role ACLs](execution_loop/evidence/ELP2-10/CORE_C2_P7_RECOVERY_REACHABLE_ACL_20261105.md): source-only P7 role/fingerprint and local/public fence negatives now examine reachable roles even with INHERIT FALSE; P7 6/6, base/C2/delivery 2/2 each and checkpoint 19/19. Independent privilege/old-holder fences and restore remain open.
+
+2026-11-05 | CORE_C2_RECOVERY_LOCAL_WRITER_QUARANTINE | [Pinned local writer quarantine](execution_loop/evidence/ELP2-10/CORE_C2_RECOVERY_LOCAL_WRITER_QUARANTINE_20261105.md): unmounted operator primitive and disposable PG 2/2; no external authority or cutover. Existing frozen checkpoint rejects NOLOGIN writer, so an independently qualified compatible protocol remains open.
+
+2026-11-05 | CORE_C2_RECOVERY_NOLOGIN_CHECKPOINT | [NOLOGIN checkpoint observation](execution_loop/evidence/ELP2-10/CORE_C2_RECOVERY_NOLOGIN_CHECKPOINT_20261105.md): separate source-only observation, 19/19 two-PG checkpoint suite and 2/2 per fence variant. Not an authenticated quarantine proof or restore permit; existing candidate schema needs an assessed forward upgrade, and independent holder/source/ACK fences remain open.
+
+2026-11-05 | CORE_C2_RECOVERY_NOLOGIN_UPGRADE | [NOLOGIN forward-upgrade preparation](execution_loop/evidence/ELP2-10/CORE_C2_RECOVERY_NOLOGIN_UPGRADE_20261105.md): unmounted schema candidate and disposable two-PG 21/21. History/ACL/authority prevalidation and full recovery fencing remain separate unimplemented prerequisites; no real migration or restore.
+
+2026-11-05 | CORE_C2_RECOVERY_PREPARED_XACT_CENSUS | [Prepared-transaction census](execution_loop/evidence/ELP2-10/CORE_C2_RECOVERY_PREPARED_XACT_CENSUS_20261105.md): source-only quarantine and NOLOGIN observation reject another role's prepared transaction in the selected DB; disposable PG 3/3 and 21/21. New-preparation races, independent source/holder/ACK fencing and restore remain open.
+
+2026-11-05 | CORE_C2_RECOVERY_LOCAL_DATABASE_QUARANTINE | [Database-wide quarantine candidate](execution_loop/evidence/ELP2-10/CORE_C2_RECOVERY_LOCAL_DATABASE_QUARANTINE_20261105.md): unmounted exact-DB closure/drain with same-pin lost-response retry; disposable PG 2/2. This can interrupt all DB users and is not an independent fence or restore authority; checkpoint ordering and all connected/restore gates remain open.
+
+2026-11-06 | CORE_C2_RECOVERY_OBSERVER_ORDERING | [Local quarantine/checkpoint ordering](execution_loop/evidence/ELP2-10/CORE_C2_RECOVERY_OBSERVER_ORDERING_20261106.md): unmounted test retains one pinned observer to append to a separate DB after local closure; two-PG 21/21 and quarantine 2/2. Checkpoint does not attest closure; independent authority and restore gates remain open.
+
+2026-11-06 | CORE_C2_RECOVERY_CLOSED_DB_CHECKPOINT | [Closed-DB local checkpoint](execution_loop/evidence/ELP2-10/CORE_C2_RECOVERY_CLOSED_DB_CHECKPOINT_20261106.md): distinct candidate kind ties local closure and observer to the frozen digest while a cluster-wide catalog SHARE lock is held; two-PG 21/21. No independent operator/clone/source/ACK fence or restore authorization; catalog lock impact needs qualification.
+
+2026-11-06 | CORE_C2_RECOVERY_CLOSED_PIN_RETRY | [Closed-DB retry normalization](execution_loop/evidence/ELP2-10/CORE_C2_RECOVERY_CLOSED_PIN_RETRY_20261106.md): reproduced a same-value reordered-pin conflict and fixed deterministic snapshot/digest; two-PG 21/21. Source-only; reconcile any old noncanonical candidate event before deployment; independent authority and V2 restore remain open.
+
+2026-11-06 | CORE_C2_RECOVERY_CLOSED_OBSERVATION_JOURNAL | [Closed-observation journal](execution_loop/evidence/ELP2-10/CORE_C2_RECOVERY_CLOSED_OBSERVATION_JOURNAL_20261106.md): atomic retained pin preimage, guard/history verification and refusal to fabricate legacy preimages; two-PG 23/23. Unmounted source only; independent authority/fences, genuine source/ACK, V2 restore and ELP2-10/11 remain open.
+
+2026-11-06 | CORE_C2_RECOVERY_AUTHORITY_READBACK | [Authority readback candidate](execution_loop/evidence/ELP2-10/CORE_C2_RECOVERY_AUTHORITY_READBACK_20261106.md): fixed observed ACCESS SHARE/trigger-DDL race with a narrowly scoped candidate SHARE-lock helper and verified actual locks; final two-PG 23/23. Unmounted source only; qualified independent anchor/authority, old-holder/source/ACK fences and V2 restore remain open.
+
+2026-11-06 | CORE_P7_INTEGRATED_SOURCE_COMPILE | [P7 bootstrap compile](execution_loop/evidence/ELP2-10/CORE_P7_INTEGRATED_SOURCE_COMPILE_20261106.md): corrected two source-wide TypeScript narrowing errors without removing the startup fence; build-config source typecheck exit 0 and 20/20 focused tests. Uncommitted source only; test-inclusive/full hook, P7 authority, A2, connected and recovery gates remain open.
+
+2026-11-06 | CORE_C2_RECOVERY_STALLED_READER | [Stalled authority reader](execution_loop/evidence/ELP2-10/CORE_C2_RECOVERY_AUTHORITY_STALLED_READER_20261106.md): reproduced SHARE lock held by an idle client (22/23 before fix); candidate idle-transaction timeout, writer-lock recovery and fresh read tested on two disposable PG clusters, 23/23. Source only; production timeout/ACL, independent authority and full recovery remain open.
+
+2026-11-06 | CORE_C2_RECOVERY_SIGNED_ANCHOR | [Signed checkpoint anchor candidate](execution_loop/evidence/ELP2-10/CORE_C2_RECOVERY_SIGNED_CHECKPOINT_ANCHOR_20261106.md): ephemeral Ed25519 signature and exact head verified against disposable PG, invalid scope/expiry/key and read-time expiry rejected; focused two-PG suite 23/23. Unmounted only; independent signer custody, anti-rollback, fences and actual restore remain open.
+
+2026-11-06 | CORE_C2_COMPOSITION_KEY_BINDING | [Actual custody key binding](execution_loop/evidence/ELP2-10/CORE_C2_COMPOSITION_CUSTODY_KEY_BINDING_20261106.md): prior composition accepted a different key with same issuer/audience/kid (16/17 before fix); source candidate now checks both exact public SPKIs, unit 21/21 and isolated two-PG custody 5/5. Existing persisted binding digest unchanged; P7, trusted commissioning and connected recovery remain open.
+
+2026-11-06 | CORE_C2_RECOVERY_FRESH_WITNESS | [Fresh witness candidate](execution_loop/evidence/ELP2-10/CORE_C2_RECOVERY_FRESH_WITNESS_20261106.md): nonce-bound separate-key head comparison before and after journal read and negative cases added to the existing two-PG suite, final 23/23; focused strict typecheck PASS. Unmounted, no witness service/independent monotonic authority or restore qualification; ELP2-10/11 remain open.
+
+2026-11-06 | CORE_C2_HISTORICAL_CLONE | [Historical clone candidate rehearsal](execution_loop/evidence/ELP2-10/CORE_C2_HISTORICAL_CLONE_REHEARSAL_20261106.md): actual historical preview snapshot already contains the current-human schema; the fresh installer refuses it. Selected upgrade/candidate SQL preserved 14 scoped table fingerprints including a synthetic pre-C2 lease, selected security metadata and NULL legacy pins after 0158; final disposable clone tests 2/2. Unmounted candidate only; role qualification, connected proof and final restore/rollback remain open.
+
+2026-11-06 | CORE_C2_ISSUER_PARTIAL_SCHEMA_GUARD | [Partial issuer schema guard](execution_loop/evidence/ELP2-10/CORE_C2_ISSUER_PARTIAL_SCHEMA_GUARD_20261106.md): an incomplete existing pin column previously passed upgrade; candidate now refuses missing/weak/unvalidated checks and unsafe column attributes. Owner/issuer PG 23/23 and historical clone retake 2/2; unmounted, full authority/recovery/integration gates remain open.
+
+2026-11-06 | CORE_C2_ISSUER_FUNCTION_DRIFT_GUARD | [Existing function drift guard](execution_loop/evidence/ELP2-10/CORE_C2_ISSUER_FUNCTION_DRIFT_GUARD_20261106.md): reproduced an upgrade silently replacing a drifted custody function; candidate now refuses it and retains absent-function compatibility. Disposable issuer PG 23/23, historical clone retake 2/2; owner/ACL, independent authority, connected and recovery gates remain open.
+
+2026-11-06 | CORE_C2_ISSUER_UPGRADE_DDL_RACE | [Concurrent table-DDL upgrade guard](execution_loop/evidence/ELP2-10/CORE_C2_ISSUER_UPGRADE_DDL_RACE_20261106.md): reproduced constraint drift during a blocked upgrade; table lock now precedes validation. C2 owner PG 23/23 and selected historical clone 2/2; target typecheck interrupted, function/role/privileged DDL fencing and final integrated migration remain open. Candidate only, no recovery authorization.
+
+2026-11-06 | CORE_C2_INTEGRATION_WIP_INVENTORY | [Point-in-time inventory and receipt triage](execution_loop/evidence/ELP2-10/CORE_C2_INTEGRATION_WIP_INVENTORY_20261106.md): hashes changed tracked and non-ignored untracked files to support safe integration review. Not a backup, review, frozen candidate, hook or product gate; independent authority, recovery and connected acceptance remain open.
+
+2026-11-06 | CORE_C2_INTEGRATED_TEST_TYPECHECK | [Test-inclusive typecheck and corrections](execution_loop/evidence/ELP2-10/CORE_C2_INTEGRATED_TEST_TYPECHECK_20261106.md): initial exit 2 corrected; full retake exit 0, affected P7 9/9 and independent custody 5/5, separate checkpoint suite 23/23. No claim of normal-hook or P7/recovery/connected PASS.
+
+2026-11-06 | CORE_C2_INVENTORY_FOLLOWTHROUGH | [Later-inventory tooling correction](execution_loop/evidence/ELP2-10/CORE_C2_INTEGRATION_WIP_INVENTORY_20261106.md#later-inventory-tool-correction): a separately named future capture can include prior evidence without overwriting it; isolated repository test 1/1. No new freeze, gate or frontend change.
+
+2026-11-06 | CORE_C2_RECOVERY_GUARD_FUNCTION_DRIFT | [Checkpoint guard body drift](execution_loop/evidence/ELP2-10/CORE_C2_RECOVERY_GUARD_FUNCTION_DRIFT_20261106.md): reproduced reader acceptance of a no-op function under an enabled trigger; unmounted reader/writer checks now refuse the altered body, PG 23/23 and focused typecheck exit 0. Function-DDL races, independent authority and V2 restore remain open.
+
+2026-11-06 | CORE_C2_CUSTODY_GUARD_FUNCTION_DRIFT | [Original/source-proof custody follow-through](execution_loop/evidence/ELP2-10/CORE_C2_RECOVERY_GUARD_FUNCTION_DRIFT_20261106.md#follow-through-originalsource-proof-custody): preflight and append now reject either replaced guard; isolated PG 5/5. Not an independent authority, DDL race fence or source ACK.
+
+2026-11-06 | CORE_C2_CUSTODY_BOUNDED_WRITER | [Bounded writer preflight and counterexample](execution_loop/evidence/ELP2-10/CORE_C2_CUSTODY_BOUNDED_WRITER_20261106.md): preflight now checks event/head write privileges; isolated restricted-role/two-PG suite 6/6. A bounded SQL writer can still forge an unkeyed chain, so independent custody and restore remain unqualified; no runtime installation.
+
+2026-11-06 | CORE_C2_CUSTODY_AUTHENTICATED_JOURNAL | [Authenticated journal candidate](execution_loop/evidence/ELP2-10/CORE_C2_CUSTODY_AUTHENTICATED_JOURNAL_20261106.md): source-only MAC-bound journal rejects the demonstrated SQL-only forgery, new C2 issuance requires it, and exact legacy original recovery is retained; P7 9/9, custody 6/6, unit 2/2. Independent key custody, monotonic anti-rollback, old-holder/source/ACK fences and actual restore remain open; no runtime installation.
+
+2026-11-06 | CORE_C2_RECOVERY_ORIGINAL_BINDING | [Exact original/custody binding](execution_loop/evidence/ELP2-10/CORE_C2_RECOVERY_ORIGINAL_BINDING_20261106.md): source-only recovery observer now checks the original's persisted custody binding and assertion digest; isolated PG/mTLS 6/6, unit 4/4 and focused typecheck pass. This does not establish independent custody, source ACK completeness or restore authority.
+
+2026-11-06 | CORE_C2_SOURCE_INTEGRATION_REVIEW | [Partial source integration review](execution_loop/evidence/ELP2-10/CORE_C2_SOURCE_INTEGRATION_REVIEW_20261106.md): source build-config typecheck exit 0 on live WIP; selected bootstrap, recovery and STATUS boundaries reviewed. Full diff review, candidate freeze, independent authority and connected gates remain open.
+
+2026-11-06 | CORE_C2_P7_INDEX_STATE | [P7 index-state observation](execution_loop/evidence/ELP2-10/CORE_C2_P7_INDEX_STATE_OBSERVATION_20261106.md): a failed unique index and repaired index had the same old catalogue digest; versioned candidate includes index lifecycle state, disposable PG 7/7. Diagnostic only; re-observe old pins and retain P7/bootstrap fail-closed.
+
+2026-11-06 | CORE_C2_WIP_PRESERVATION | [Point-in-time WIP copy](execution_loop/evidence/ELP2-10/CORE_C2_WIP_PRESERVATION_20261106.md): 366 archived paths independently size/hash verified after extraction. Not full repository/DB backup, diff review, candidate freeze, hook or runtime; preserve later changes separately.
+
+2026-11-06 | CORE_STATUS_RESTORED_CONTEXT_COHERENCE | [STATUS chain coherence](execution_loop/evidence/ELP2-10/CORE_STATUS_RESTORED_CONTEXT_COHERENCE_20261106.md): reproduced mixed-context metadata accepted despite individual synthetic ACKs; candidate census now rejects eight drift variants and prevents restored consume. PG 24/24 then affected 7/7; actual Edge ACK, external completeness and V2 restore remain open.
+
+2026-11-06 | CORE_STATUS_PREPARATION_CHAIN_BINDING | [STATUS preparation-to-chain binding](execution_loop/evidence/ELP2-10/CORE_STATUS_PREPARATION_CHAIN_BINDING_20261106.md): coherent but differently bound chain previously consumed a preparation; WIP now refuses it under the ISSUE lock. Isolated PG census 8/8 and real-Core/loopback-mTLS integration 2/2 selected; actual Edge ACK, independent authority, full V2 restore and final gate remain open.
+
+2026-11-06 | CORE_STATUS_LIVE_CHAIN_BINDING | [Live/restored STATUS custody](execution_loop/evidence/ELP2-10/CORE_STATUS_LIVE_CHAIN_BINDING_20261106.md): same locked preparation/lineage census now covers live contexts while permitting a genuine no-issue read. Isolated PG 9/9, real-Core/loopback integration 3 selected PASS; source ACK, independent authority, restore and final gate remain open.
+
+2026-11-06 | CORE_C2_RECOVERY_WITNESS_STORE_COUNTEREXAMPLE | [Three-store witness and rollback counterexample](execution_loop/evidence/ELP2-10/CORE_C2_RECOVERY_WITNESS_STORE_COUNTEREXAMPLE_20261106.md): unmounted signed-head producer, exact-ancestor verification and lost-response retry; three-PG 4/4 and authority regression 8/8. Deliberate rollback of both authority and witness stores defeats this candidate; independent monotonic authority, restore, connected and final gates remain OPEN.
+
+2026-11-06 | CORE_STATUS_ASSERTION_LINK_BINDING | [STATUS link assertion digest](execution_loop/evidence/ELP2-10/CORE_STATUS_ASSERTION_LINK_BINDING_20261106.md): synthetic mismatch or missing digest with C2 marker now refuses local consume; isolated PG 11/11, P7 9/9 and selected loopback restart 3/3 on retake, with prior failures and expiry uncertainty recorded. Source WIP only; positive C2 STATUS/P7/custody composition, genuine ACK and V2 restore remain OPEN.
+
+2026-11-06 | CORE_STATUS_HISTORICAL_SCHEMA_CENSUS | [Historical clone follow-through](execution_loop/evidence/ELP2-10/CORE_STATUS_ASSERTION_LINK_BINDING_20261106.md#follow-through-census-on-a-historical-schema-clone): after numbered migration and selected candidate upgrade, legacy synthetic STATUS census passed on pinned historical clone; 2/2 retake after a test-seeding attempt was correctly blocked by the closed write fence. Bounded disposable clone only; no live restore, authority or connected qualification.
+
+2026-11-06 | CORE_C2_RECOVERY_INDEPENDENT_FLOOR_CANDIDATE | [Attested exact-ancestor floor](execution_loop/evidence/ELP2-10/CORE_C2_RECOVERY_INDEPENDENT_FLOOR_CANDIDATE_20261106.md): source-only three-key challenge protocol rejects the demonstrated double-store rollback when a separately retained synthetic floor is newer; disposable three-PG 4/4, focused typecheck. Independent monotonic service/key custody, fences, actual restore and ELP2-10/11 remain OPEN.
+
+2026-11-06 | CORE_C2_RECOVERY_FUNCTION_DDL_FENCE | [Function DDL fence and helper upgrade](execution_loop/evidence/ELP2-10/CORE_C2_RECOVERY_FUNCTION_DDL_FENCE_20261106.md): unmounted checkpoint reader/writer catalog locks and forward old-helper upgrade; disposable suites 29/29 then affected upgrade 9/9, focused typecheck. Authority DB-wide DDL/role impact not qualified; custody guard, independent monotonic authority, real restore and ELP2-10/11 remain OPEN.
+
+2026-11-06 | CORE_C2_CUSTODY_FUNCTION_DDL_FENCE | [Custody function DDL fence](execution_loop/evidence/ELP2-10/CORE_C2_CUSTODY_FUNCTION_DDL_FENCE_20261106.md): unmounted custody writer fence and old-helper upgrade, isolated custody 8/8 and P7 9/9; first run 6/7 due to test-lease interference recorded. Strict typecheck stopped at ~2.3 GiB RSS, not PASS; syntax transpile only. DDL/ACL impact, independently held authority, source ACK, real restore and integrated gates remain OPEN.
+
+2026-11-06 | CORE_C2_BOUNDED_SOURCE_CHECK | [Bounded follow-through](execution_loop/evidence/ELP2-10/CORE_C2_CUSTODY_FUNCTION_DDL_FENCE_20261106.md#follow-through-bounded-source-checks-and-edge-observation): strict selected custody and issuer source checks passed with a 768 MiB Node heap cap; record also preserves the failed full-project heap-limited attempt and initial missing-decorator-options failure. Read-only Edge mailbox observation yielded no newer A2 acceptance; public candidate certificate dates are not runtime qualification. P7/STATUS composition, actual A2, restore and integrated gates remain OPEN.
+
+2026-11-06 | CORE_C2_STATUS_P7_CUSTODY | [STATUS P7/custody candidate](execution_loop/evidence/ELP2-10/CORE_C2_STATUS_P7_CUSTODY_CANDIDATE_20261106.md): unmounted STATUS-only issue/resume/revalidate links exact P7, lease, assertion and independent candidate custody; isolated P7 suite 9/9 and selected source typecheck PASS. STATUS authority/HTTP delivery integration, successor after authenticated ACK, actual Edge original/ACK and recovery remain OPEN. No runtime/command/Live activation.
+
+2026-11-06 | CORE_C2_STATUS_AUTHORITY_ADAPTER | [Unmounted adapter and exact-byte forwarding](execution_loop/evidence/ELP2-10/CORE_C2_STATUS_AUTHORITY_ADAPTER_20261106.md): authority unit 78/78 including same-process custody-pending rejoin with synthetic ports, P7/adapter two-PG 9/9, selected strict typecheck PASS; suites exercise ends separately, not a connected flow. Combined real-PG recovery, authenticated ACK successor, HTTP/composition, genuine source/ACK and full recovery remain OPEN.
+
+2026-11-06 | CORE_C2_STATUS_SUCCESSOR_NUMERIC_JOURNAL | [STATUS successor and numeric journal order](execution_loop/evidence/ELP2-10/CORE_C2_STATUS_SUCCESSOR_NUMERIC_JOURNAL_20261106.md): unmounted same-context successor after exact terminal and recipient ACK; numeric ordering corrected after a real 7/9 failure. Two-PG P7 retake 9/9 including successor race, checkpoint 10/10, selected STATUS recovery 3 PASS/5 skipped, existing fence 3 PASS/107 skipped, unit 78/78; split strict checks passed after combined heap OOM. Actual Edge ACK, HTTP composition, independent V2 restore and integrated gates remain OPEN.
+
+2026-11-06 | CORE_C2_STATUS_REVERSE_MTLS | [C2 reverse listener test](execution_loop/evidence/ELP2-10/CORE_C2_STATUS_REVERSE_MTLS_20261106.md): same candidate/P7/custody over test-only loopback mTLS; foreign leaf reset, entered terminal replay and post-revoke new-ENTER refusal plus prior-original RESOLVE, final two-PG 9/9 after correcting an initial 4/9 test expectation. Full STATUS authority/HTTP custody, genuine Edge ACK, independent restore and integrated gates remain OPEN.
+
+2026-11-06 | CORE_C2_STATUS_INNER_ASSEMBLY | [Unmounted STATUS inner assembly](execution_loop/evidence/ELP2-10/CORE_C2_STATUS_INNER_ASSEMBLY_20261106.md): authority, C2 adapter and terminal share one candidate/P7/custody; generic composition refuses C2. Lifecycle unit 28/28, isolated two-PG 9/9 and selected source typecheck PASS. Full authority flow and HTTP delivery custody, actual Edge ACK, V2 restore and final gate remain OPEN.
+
+2026-11-06 | CORE_C2_STATUS_DELIVERY_SEQUENCE | [Unmounted delivery sequence and context expiry](execution_loop/evidence/ELP2-10/CORE_C2_STATUS_DELIVERY_SEQUENCE_20261106.md): after a 4/9 expiry mismatch, cap STATUS assertion to its durable context; isolated P7 retake 9/9, restricted writer 4/4, selected generic STATUS 1 PASS/109 skipped and selected source typecheck pass. Earlier wrapper exit 127 recorded. Actual HTTP composition/role qualification, Edge ACK, V2 restore and final gate remain OPEN.
+
+2026-11-06 | CORE_C2_STATUS_DELIVERY_ROLE_BOUNDARY | [STATUS delivery ACL counterexamples and repair](execution_loop/evidence/ELP2-10/CORE_C2_STATUS_DELIVERY_ROLE_BOUNDARY_20261106.md): direct context/ACK writes and reachable NOINHERIT ACK writer were not rejected by the earlier candidate; isolated PG retake 4/4 after fail-closed role checks. Source only; actual role/DDL qualification, HTTP composition, Edge ACK and V2 restore remain OPEN.
+
+2026-11-06 | CORE_C2_STATUS_HTTP_CUSTODY_TEST_COMPOSITION | [Unmounted STATUS custody test composition](execution_loop/evidence/ELP2-10/CORE_C2_STATUS_HTTP_CUSTODY_TEST_COMPOSITION_20261106.md): mocked-authority mTLS transport 61/61 and combined synthetic mTLS/restricted PG delivery 4/4; source strict typecheck PASS, prior failures recorded. Actual authority/reader role, restart with genuine Edge ACK, V2 restore and integrated gate remain OPEN.
+
+2026-11-06 | CORE_C2_STATUS_RESTRICTED_READER_TEST | [Disposable restricted reader](execution_loop/evidence/ELP2-10/CORE_C2_STATUS_RESTRICTED_READER_TEST_20261106.md): test delivery no longer uses a privileged metadata reader; isolated PG/mTLS suite 4/4, 14 binding mismatches and reachable SELECT role denied, focused source check PASS. This is not production principal/field authority; actual authority, Edge ACK, V2 restore and integrated gates remain OPEN.
+
+2026-11-06 | CORE_C2_STATUS_ACCESS_SERVICE_BOUNDARY | [STATUS Core access-service assembly](execution_loop/evidence/ELP2-10/CORE_C2_STATUS_ACCESS_SERVICE_BOUNDARY_20261106.md): P7 now rejects duck-typed/forged access services and pool substitutions in an unmounted candidate; two-PG 9/9, focused unit 97/97 and source typecheck pass. Actual preparation, qualified trust, Edge ACK, V2 restore and final gate remain OPEN.
+
+2026-11-06 | CORE_C2_STATUS_REAL_CORE_PREPARATION | [Core preparation and recovery binding](execution_loop/evidence/ELP2-10/CORE_C2_STATUS_REAL_CORE_PREPARATION_20261106.md): unmounted P7/real Core access and store use synthetic source; canonical recoverable call and bind-race fences added. Final two-PG 9/9, unit 80/80, loopback/composition 89/89 and selected strict typecheck pass; failed intermediate runs recorded. Same-process reassembly is not OS restart, qualified Edge ACK, V2 restore or final integration.
+
+2026-11-06 | CORE_C2_STATUS_P7_OS_PROCESS_RECOVERY | [Separate-process P7 recovery](execution_loop/evidence/ELP2-10/CORE_C2_STATUS_P7_OS_PROCESS_RECOVERY_20261106.md): synthetic two-PG test rebuilds Core/P7/custody in a child process and resumes the same assertion/lease, 9/9 after a timeout retake; helper strict typecheck pass, test-inclusive check OOM at 768 and 1100 MiB. No installed restart, actual HTTP custody/Edge ACK, V2 restore or full gate claimed.
+
+2026-11-06 | CORE_C2_STATUS_REAL_AUTHORITY_HTTP_TEST | [Core/P7 and restricted HTTP test composition](execution_loop/evidence/ELP2-10/CORE_C2_STATUS_REAL_AUTHORITY_HTTP_TEST_20261106.md): same synthetic original and lease across child-process recovery, Core authority, loopback mTLS custody, signed synthetic terminal and idempotent synthetic ACK; two-PG 9/9 and prior delivery regression 4/4. Test-only, unmounted; runtime field authority/HTTP custody, genuine Edge ACK, independent V2 restore and final gate remain OPEN.
+
+2026-11-06 | CORE_C2_DELIVERY_PROCESS_LOSS_COUNTEREXAMPLE | [HTTP finish/process-loss counterexample](execution_loop/evidence/ELP2-10/CORE_C2_DELIVERY_PROCESS_LOSS_COUNTEREXAMPLE_20261106.md): in an unmounted synthetic cell, process death after the client received bytes rolled back SENDING to RESERVED; the restricted test caller could transition it to SENDING again. Focused regression 5/5. This is an OPEN fence defect, not a recovery fix or Edge receipt; keep runtime unmounted.
+
+2026-11-06 | CORE_C2_DELIVERY_DURABLE_CLAIM_CANDIDATE | [Durable claim retake](execution_loop/evidence/ELP2-10/CORE_C2_DELIVERY_DURABLE_CLAIM_CANDIDATE_20261106.md): unmounted helper commits a session-bound SENDING claim before egress, then revalidates/holds authority; crash and revoke-before-HOLD focused suite 5/5, obligation 5/5, two-PG P7 9/9, historical-clone 2/2. SQL cannot force a caller to commit before egress; runtime enforcement, old-holder fencing, actual source ACK and V2 restore remain OPEN.
+
+2026-11-06 | CORE_C2_DELIVERY_COMMITTED_CLAIM_FENCE | [Same-transaction claim fence](execution_loop/evidence/ELP2-10/CORE_C2_DELIVERY_COMMITTED_CLAIM_FENCE_20261106.md): unmounted restricted HOLD rejects a claim from its own uncommitted transaction, including savepoint; test suites 5/5, 5/5, two-PG 9/9 and clone 2/2. This does not prevent an unrelated runtime path from writing without HOLD; real source/field authority, old-holder restore fence and Edge ACK remain OPEN.
+
+2026-11-06 | CORE_C2_A2_OVERDUE_STATUS | [Core to Edge](execution_loop/evidence/ELP2-10/CORE_TO_EDGE_C2_A2_OVERDUE_STATUS_20261106.md): the 08:00 UTC planning target has passed; A2 NOT_READY, B2 NOT_SIGNED. Source-only P7/STATUS candidates and qualified runtime/restore remain distinct; no connected or phase PASS.
+
+2026-11-06 | CORE_C2_GENERIC_REVERSE_TRANSPORT_FENCE | [Construction-time listener guard](execution_loop/evidence/ELP2-10/CORE_C2_GENERIC_REVERSE_TRANSPORT_FENCE_20261106.md): generic reverse listener and financial composition refuse a C2-mode candidate; 90/90 focused tests and selected strict source check pass. Source WIP only, not complete runtime custody, Edge ACK or V2 recovery.
+
+2026-11-06 | CORE_C2_P7_CONFIRMATION_SOURCE_KEY_BINDING | [P7 reviewed-source/key binding](execution_loop/evidence/ELP2-10/CORE_C2_P7_CONFIRMATION_SOURCE_KEY_BINDING_20261106.md): unmounted signer requires the exact reviewed source/proof/selection and rejects owner/witness key reuse with the registered attestor or P8; unit 6/6, isolated two-PG 9/9, focused source typecheck. Independent owner authentication/key custody, A2 and recovery remain open.
+
+2026-11-06 | CORE_C2_CROSS_SLICE_REGRESSION | [P7/STATUS/recovery focused retake](execution_loop/evidence/ELP2-10/CORE_C2_CROSS_SLICE_REGRESSION_20261106.md): corrected stale catalog-lock SQL-flow fake and added a refusal test; 219 PASS/5 SKIP after sandbox loopback retake, public-B1 retake 16 PASS with overlap, isolated checkpoint/ACK/upgrade PostgreSQL 30/30. Initial 29 failures and self-lock attempts recorded. Not a frozen candidate, normal hook, connected acceptance or V2 restore.
+
+2026-11-06 | CORE_C2_P7_SINGLE_POOL_COUNTEREXAMPLE | [P7 source-pool exhaustion](execution_loop/evidence/ELP2-10/CORE_C2_P7_SINGLE_POOL_COUNTEREXAMPLE_20261106.md): a retry with the same synthetic original and a one-connection source pool times out while the signer holds that connection; 9/9 includes this expected defect. Fix source borrowing and custody/authority fencing together; no runtime or phase PASS.
+
+2026-11-06 | CORE_C2_P7_SINGLE_POOL_REPAIR | [Candidate retake](execution_loop/evidence/ELP2-10/CORE_C2_P7_SINGLE_POOL_COUNTEREXAMPLE_20261106.md#follow-through--source-only-single-pool-repair): same-original retry succeeds with max-1 source pool and callback expiry is enforced; two-PG 9/9 and focused strict source typecheck pass. Store-stall/revoke and trusted-composition boundaries remain open; no runtime or phase PASS.
+
+2026-11-06 | CORE_C2_P7_STALLED_WITNESS | [Source idle-lock bound](execution_loop/evidence/ELP2-10/CORE_C2_P7_STALLED_WITNESS_REVOCATION_20261106.md): 2-second idle transaction candidate; isolated stalled witness and rolled-back synthetic revoke exercise within two-PG 9/9. Source-only typecheck pass, test-inclusive typecheck timed out. Real revoke, authority/key and connected qualification remain OPEN.
+
+2026-11-06 | CORE_C2_P7_COMMITTED_REVOKE_TEST | [Committed synthetic revoke](execution_loop/evidence/ELP2-10/CORE_C2_P7_STALLED_WITNESS_REVOCATION_20261106.md#follow-through--committed-synthetic-session-revoke-via-http): real disposable-PG session revoke committed during delayed witness, HTTP/direct retry refused and intent count unchanged; two-PG handler suite 9/9. Prior retained witness, not first-write ambiguity or real Edge authority; A2/ELP2-10/11 remain OPEN.
+
+2026-11-06 | CORE_C2_P7_FIRST_WITNESS_REVOKE | [First witness after synthetic revoke](execution_loop/evidence/ELP2-10/CORE_C2_P7_STALLED_WITNESS_REVOCATION_20261106.md#follow-through--first-witness-commits-after-synthetic-revoke): store retains first witness after session revoke, authenticated issuer and same-intent retry refuse; two-PG 9/9. This is not a real source, owner, restart or Edge qualification; A2/ELP2-10/11 remain OPEN.
+
+2026-11-06 | CORE_STATUS_CONSUMED_CONTEXT_FENCE | [Local STATUS close fence](execution_loop/evidence/ELP2-10/CORE_STATUS_CONSUMED_CONTEXT_FENCE_20261106.md): synthetic tests reproduced issuance after/in-flight retained-read consumption; source WIP closes that in-process race, 167/167 overlapping unit/transport, 83/83 later source tests, 3 PASS/5 SKIP disposable PG and focused typecheck. Not cross-process old-holder fencing, Edge ACK, restore or phase PASS.
+
+2026-11-06 | CORE_C2_STATUS_PREPARATION_WRITER_FENCE | [C2 STATUS durable preparation fence](execution_loop/evidence/ELP2-10/CORE_C2_STATUS_PREPARATION_WRITER_FENCE_20261106.md): unmounted C2 writer requires and matches preparation and original fingerprint; two-PG 9/9 and selected legacy/recovery tests pass with skips documented; focused source typecheck passes. Independent owner/writer authority, actual Edge ACK, restore and integrated gate remain OPEN.
+
+2026-11-06 | CORE_C2_STATUS_PREPARATION_RESUME | [Resume/revalidation follow-through](execution_loop/evidence/ELP2-10/CORE_C2_STATUS_PREPARATION_WRITER_FENCE_20261106.md#follow-through-resume-and-revalidation): a test-only corrupted consumed preparation formerly permitted same-lease resume; C2 now checks the same durable correlation on resume and revalidation, two-PG 9/9, selected legacy 1 PASS/109 SKIP, focused source typecheck. No actual Edge ACK, independent authority, V2 restore or phase PASS.
+
+2026-11-06 | CORE_C2_STATUS_PREPARATION_ROW_LOCK | [Preparation lock](execution_loop/evidence/ELP2-10/CORE_C2_STATUS_PREPARATION_WRITER_FENCE_20261106.md#follow-through-preparation-held-through-revalidation): candidate holds the selected preparation row through issue/resume/revalidation; uncoordinated-writer contention passes in two-PG 9/9, selected legacy 1 PASS/109 SKIP, focused source typecheck. Runtime role/HTTP custody, genuine Edge ACK and V2 recovery remain OPEN.
+
+2026-11-06 | CORE_C2_STATUS_COMMAND_WORKSPACE | [Command workspace fence](execution_loop/evidence/ELP2-10/CORE_C2_STATUS_COMMAND_WORKSPACE_20261106.md): unmounted issuer now rechecks preparation against the immutable command workspace on issue/resume/revalidation; synthetic cross-workspace corruption refused in two-PG 9/9, focused source typecheck passed. First fixture failure documented; no runtime role, genuine Edge ACK or V2 restore qualification claimed.
+
+2026-11-06 | CORE_CLAUDE_ANCESTRY_FOLLOWTHROUGH | [Selected checkpoint reconciliation](execution_loop/evidence/ELP2-10/CORE_CLAUDE_WIP_ANCESTRY_FOLLOWTHROUGH_20261106.md): verified Core and Claude follow-through ancestors; fixture handoff already present by an equivalent ancestor; recovered a missing historical Claude request file byte-for-byte into WIP. This is not a full branch audit, merge, candidate freeze, frontend acceptance or normal hook.
+
+2026-11-06 | CORE_STATUS_COMPOSITION_INTEGRATION_RETAKE | [Selected composition review](execution_loop/evidence/ELP2-10/CORE_STATUS_COMPOSITION_INTEGRATION_RETAKE_20261106.md): 5 unit/loopback files 234/234; direct source/test hashes recorded. Partial WIP review only; P7 actual authority, sole HTTP custody, Edge ACK, V2 restore and normal hook remain OPEN.
+
+2026-11-06 | CORE_STATUS_CONSUME_ROW_FENCE | [STATUS preparation consumption](execution_loop/evidence/ELP2-10/CORE_STATUS_CONSUME_ROW_FENCE_20261106.md): an uncoordinated test writer changed the selected row during consume; WIP now holds it through census/UPDATE and refuses a suppressed UPDATE. Disposable PG 13/13, affected unit/loopback 172/172 after recorded initial failures, focused typecheck pass. Real roles, Edge ACK, V2 recovery and final integration remain OPEN.
+
+2026-11-06 | CORE_BACKEND_BRANCH_RECONCILIATION | [Selected backend slice review](execution_loop/evidence/ELP2-10/CORE_BACKEND_BRANCH_RECONCILIATION_20261106.md): selected divergent historical Claude/Core009 changes already have corresponding HEAD source or matching-subject ancestors, with later changes preserved; 5 focused files / 114 tests PASS. This is partial review, not a full branch audit, candidate freeze, runtime/source qualification or normal hook. P7, V2 recovery and connected gates remain OPEN.
+
+2026-11-06 | CORE_C2_P7_ATTESTOR_P8_SEPARATION | [Source/P8 key collision fence](execution_loop/evidence/ELP2-10/CORE_C2_P7_ATTESTOR_P8_SEPARATION_20261106.md): unmounted registered-source factory now rejects source-attestor and P8 key reuse even if a caller skipped P8 preflight; regression demonstrated before repair, 12 PASS/1 SKIP unit, two-PG 9/9 and focused source typecheck PASS. Independent custody, A2, Edge and recovery remain OPEN.
+
+2026-11-06 | CORE_FINANCIAL_REVALIDATION_CAPACITY | [Cached-retry capacity and shutdown](execution_loop/evidence/ELP2-10/CORE_FINANCIAL_REVALIDATION_CAPACITY_20261106.md): financial authority now counts and retains revalidation work against its shared bound; regression reproduced before repair, 146/146 focused unit/loopback tests PASS. Source WIP only; C2 financial composition, genuine source/ACK, A2 and recovery remain OPEN.
+
+2026-11-06 | CORE_FINANCIAL_STATUS_RETRY_FENCES | [Retry race and STATUS capacity](execution_loop/evidence/ELP2-10/CORE_FINANCIAL_STATUS_RETRY_FENCES_20261106.md): financial and STATUS refuse a superseded in-process delivery after revalidation; STATUS revalidation is counted/bounded. Six focused files 321/321 and selected strict source typecheck PASS; earlier hashes are superseded for changed files. Source WIP only, not C2 runtime, Edge, recovery or final qualification.
+
+2026-11-06 | CORE_C2_FINANCIAL_ADAPTER_WORKSPACE_FENCE | [C2 adapter workspace fence](execution_loop/evidence/ELP2-10/CORE_C2_FINANCIAL_ADAPTER_WORKSPACE_FENCE_20261106.md): reproduced an issuer/adapter workspace mismatch, then fail-closed financial and STATUS candidates on mismatched Paper workspace/workload; two-PG 9/9 and focused source typecheck PASS. Source WIP only: no qualified source/field authority, durable financial context, runtime HTTP custody, genuine Edge ACK, A2 or V2 restore.
+
+2026-11-06 | CORE_C2_FINANCIAL_INNER_CONTEXT | [Financial C2 inner context](execution_loop/evidence/ELP2-10/CORE_C2_FINANCIAL_INNER_CONTEXT_20261106.md): unmounted exact-request adapter connects the financial assertion authority to the C2 custodied issuer; synthetic two-PG 9/9, affected financial 148/148 and focused source typecheck PASS. Context restart remains refused; no source/field authority, terminal ACK, HTTP custody or runtime qualification claimed.
+
+2026-11-06 | CORE_C2_RECOVERY_TIMEOUT_ADMISSION | [Recovery timeout admission](execution_loop/evidence/ELP2-10/CORE_C2_RECOVERY_TIMEOUT_ADMISSION_20261106.md): source-only per-instance admission remains held until timed-out witness/floor work settles; pre-fix floor counterexample recorded, disposable three-PG 5/5 and focused test-inclusive typecheck PASS. No cross-process bound, independent authority, actual restore or connected qualification claimed.
+
+2026-11-06 | CORE_FINANCIAL_TERMINAL_BINDING | [Financial terminal binding and selection snapshot](execution_loop/evidence/ELP2-10/CORE_FINANCIAL_TERMINAL_BINDING_20261106.md): source-only captures initial terminal capability and rejects path getters; both pre-fix counterexamples reproduced, financial 151/151, changed test retake 55/55 and focused source/test typecheck PASS. Durable context, qualified owner/source and genuine ACK remain OPEN.
+
+2026-11-06 | CORE_C2_FINANCIAL_CUSTODY_REJOIN | [Financial same-original custody rejoin](execution_loop/evidence/ELP2-10/CORE_C2_FINANCIAL_CUSTODY_REJOIN_20261106.md): unmounted authority rejoins an explicit custody-pending lease without replacement; synthetic two-PG P7 suite 9/9, financial suites 153/153, subsequent changed-file 58/58 and focused typecheck PASS. Context is still process-local; genuine source/ACK, durable restart, V2 restore and qualification remain OPEN.
+
+2026-11-06 | CORE_C2_FINANCIAL_DURABLE_ORIGINAL | [Financial durable locator candidate](execution_loop/evidence/ELP2-10/CORE_C2_FINANCIAL_DURABLE_ORIGINAL_20261106.md): unmounted exact-context/lease binding in ISSUE transaction, synthetic two-PG 9/9, financial suites 154/154 and focused source typecheck PASS. Not wired into financial authority or an OS restart; independent authority, role/retention, runtime HTTP custody, Edge ACK and V2 restore remain OPEN.
+
+2026-11-06 | CORE_C2_FINANCIAL_CONTEXT_FENCE | [Issuer lock and internal composition](execution_loop/evidence/ELP2-10/CORE_C2_FINANCIAL_DURABLE_ORIGINAL_20261106.md#follow-through--issuer-lock-and-internal-recovery-composition): marked financial lease cannot drop exact context during resume/revalidation; candidate two-PG 9/9, issuer/financial 171/171 and focused source typecheck PASS. Unmounted candidate schema, not an OS restart, financial authority/HTTP integration, real Edge ACK or V2 restore.
+
+2026-11-06 | CORE_C2_FINANCIAL_SEPARATE_PROCESS | [Separate-process reassembly](execution_loop/evidence/ELP2-10/CORE_C2_FINANCIAL_DURABLE_ORIGINAL_20261106.md#follow-through--separate-process-candidate-reassembly): synthetic two-PG 9/9 including child reconstructing candidate and recovering same lease/digest. Parent was not killed; actual financial authority/multi-delivery state, old-holder fencing, Edge ACK and V2 restore remain OPEN.
+
+2026-11-06 | CORE_C2_FINANCIAL_UNBOUND_CAPACITY | [Expired unbound reservation cleanup](execution_loop/evidence/ELP2-10/CORE_C2_FINANCIAL_DURABLE_ORIGINAL_20261106.md#follow-through--expired-unbound-reservation-capacity): source-only bounded cleanup under ISSUE authority lock; two-PG 9/9 and focused source typecheck PASS. Linked custody, role/retention qualification, financial multi-delivery, real Edge and V2 restore remain OPEN.
+
+2026-11-06 | CORE_LEGACY_DR_POST_RESTORE_GUARD | [Legacy post-restore refusal](execution_loop/evidence/ELP2-10/CORE_LEGACY_DR_POST_RESTORE_GUARD_20261106.md): source/test WIP adds a V2-schema probe after each legacy Core restore and before application restart; 3/3 callback tests and syntax check PASS. No real restore, cross-process/DDL fence, V2 recovery, Edge qualification or phase PASS.
+
+2026-11-06 | CORE_NATIVE_RECONCILIATION_PG_RETAKE | [Selected branch reconciliation and PG retake](execution_loop/evidence/ELP2-10/CORE_NATIVE_RECONCILIATION_PG_RETAKE_20261106.md): selected native patches matched or reviewed against a later ancestor; 90 PASS/52 SKIP unit run, then 52/52 synthetic-source disposable PG/HTTP/SSE retake exit 0 after a documented runner failure. No complete branch review, real Edge qualification, frozen candidate or phase PASS.
+
+2026-11-06 | CORE_C2_FINANCIAL_RESERVATION_RETRY | [Idempotent original reservation](execution_loop/evidence/ELP2-10/CORE_C2_FINANCIAL_DURABLE_ORIGINAL_20261106.md#follow-through--idempotent-original-reservation): candidate exact-context retry preserves the original even at capacity, mismatched identity/request refused; two-PG 9/9 and focused source typecheck PASS after documented flag correction. Actual authority multi-delivery, authenticated ACK, Edge and V2 recovery remain OPEN.
+
+2026-11-06 | CORE_C2_FINANCIAL_AUTHORITY_LOCATOR | [Per-delivery locator through actual authority](execution_loop/evidence/ELP2-10/CORE_C2_FINANCIAL_DURABLE_ORIGINAL_20261106.md#follow-through--per-delivery-locator-in-the-actual-in-memory-authority): unmounted C2 adapter links the authority's same context/ordinal to one custodied original; two-PG 9/9, financial and loopback 116/116, focused typecheck PASS. No parent-context restart, second-delivery terminal/ACK proof, real Edge or phase PASS.
+
+2026-11-06 | CORE_C2_FINANCIAL_STATUS_PURPOSE_FENCE | [Financial versus STATUS ACK fence](execution_loop/evidence/ELP2-10/CORE_C2_FINANCIAL_STATUS_PURPOSE_FENCE_20261106.md): synthetic financial terminal previously passed the generic STATUS terminal and ACK helpers; marked financial originals now refuse both. Two-PG 9/9, assertion suites 143/143 and focused source typecheck PASS; test-inclusive typecheck OOM and remains open. No authenticated financial ACK, real Edge, restart or phase PASS.
+
+2026-11-06 | CORE_C2_FINANCIAL_TERMINAL_VERIFIER | [Same-original retained terminal](execution_loop/evidence/ELP2-10/CORE_C2_FINANCIAL_DURABLE_ORIGINAL_20261106.md#follow-through--same-original-retained-terminal-not-an-ack): unmounted read-only verifier ties marked financial original to signed source terminal, P7 and custody; two-PG 9/9, assertion suites 143/143 and focused source typecheck PASS. It explicitly does not acknowledge delivery or permit a successor; authenticated ACK, restart, external authority and phase gates remain OPEN.
+
+2026-11-06 | CORE_C2_FINANCIAL_CUSTODY_STALL | [Bounded source lock during stalled custody](execution_loop/evidence/ELP2-10/CORE_C2_FINANCIAL_DURABLE_ORIGINAL_20261106.md#follow-through--bound-source-lock-while-custody-is-stalled): unmounted verifier source transaction fails closed at its idle bound, releasing the session lock; final disposable two-PG 9/9 and focused source typecheck PASS after two recorded failing runs. This is not a committed revoke, source ACK, durable restart, Edge or recovery qualification.
+
+2026-11-06 | CORE_C2_FINANCIAL_RESERVATION_RACE | [Concurrent exact-original reservation](execution_loop/evidence/ELP2-10/CORE_C2_FINANCIAL_DURABLE_ORIGINAL_20261106.md#follow-through--concurrent-exact-original-reservation-race): unmounted candidate resumes the exact already-bound original after its specific contention refusal; two-PG 9/9, affected assertion tests 143/143 and focused typecheck PASS. Same-process adapters only; durable parent/ACK, old-holder and actual Edge remain OPEN.
+
+2026-11-06 | CORE_C2_FINANCIAL_FIRST_DELIVERY_PROCESS_EXIT | [First-delivery reconstruction after synthetic issuer exits](execution_loop/evidence/ELP2-10/CORE_C2_FINANCIAL_DURABLE_ORIGINAL_20261106.md#follow-through--first-financial-delivery-after-issuer-process-exits): unmounted authority recovers the exact original with explicit private context; two-PG 9/9 after two recorded failed retakes, financial/command assertions 145/145 and focused source typecheck PASS. Graceful child exit only; durable parent/ACK, old-holder fencing, V2 restore and actual Edge remain OPEN.
+
+2026-11-06 | CORE_C2_FINANCIAL_FIRST_DELIVERY_SIGKILL | [Abrupt synthetic issuer process loss](execution_loop/evidence/ELP2-10/CORE_C2_FINANCIAL_DURABLE_ORIGINAL_20261106.md#follow-through--abrupt-issuer-process-loss): exact first delivery recovered after confirmed SIGKILL of its test issuer; two-PG 9/9. Parent locator supplied by test; live-old-holder/HTTP fence, durable parent/ACK, V2 restore, Edge and integrated gate remain OPEN.
+
+2026-11-06 | CORE_C2_FINANCIAL_ENCRYPTED_PARENT | [Encrypted parent and exact lease locator candidate](execution_loop/evidence/ELP2-10/CORE_C2_FINANCIAL_ENCRYPTED_PARENT_20261106.md): synthetic two-PG 9/9 includes SIGKILL after save-before-ISSUE, parent lookup without private IPC, same-ref retry and negative cases; assertion suites 145/145 and focused source check PASS. Unmounted; real operation-ref persistence, key/role/retention, old-holder/HTTP fencing, ACK, V2 restore and Edge remain OPEN.
+
+2026-11-06 | CORE_C2_FINANCIAL_PARENT_ORCHESTRATION | [Unmounted parent/ISSUE orchestration](execution_loop/evidence/ELP2-10/CORE_C2_FINANCIAL_PARENT_ORCHESTRATION_20261106.md): two-PG 9/9 after synthetic SIGKILL, automatic same-original lookup and save-failure/identity/request negatives; assertion suites 145/145 and focused typecheck PASS. Actual operation UUID persistence, old-holder/HTTP fence, independent key/store/roles, Edge ACK and V2 restore remain OPEN.
+
+2026-11-06 | CORE_C2_FINANCIAL_TEST_HTTP_CUSTODY | [Synthetic restricted reader and HTTP custody](execution_loop/evidence/ELP2-10/CORE_C2_FINANCIAL_TEST_HTTP_CUSTODY_20261106.md): final two-PG 9/9 including exact 14-field negatives and unsafe financial-writer role refusal, shared delivery regression 5/5, focused unit/mTLS 184/184 and source typecheck PASS. Unmounted; qualified atomic role/field authority, sole HTTP egress, real ACK, restore and Edge remain OPEN.
+
+2026-11-06 | CORE_C2_FINANCIAL_PARENT_HTTP_BRIDGE | [Parent-to-test-HTTP bridge and scope race](execution_loop/evidence/ELP2-10/CORE_C2_FINANCIAL_PARENT_HTTP_BRIDGE_20261106.md): unmounted coordinator and synthetic mTLS/custody now run together; two-PG 9/9, focused unit 64/64 and source/test typecheck PASS. A scope-exit race was reproduced and fixed, including reopened scope. Not sole runtime egress, authenticated ACK, live-old-holder fence, V2 restore or connected acceptance.
+
+2026-11-06 | CORE_C2_FINANCIAL_TEST_HTTP_SCOPE | [Scoped test delivery and socket interruption](execution_loop/evidence/ELP2-10/CORE_C2_FINANCIAL_TEST_HTTP_SCOPE_20261106.md): distinct per-scope bearer, interrupted unfinished response and restricted-reader happy path in synthetic two-PG/mTLS 9/9; unit 64/64 and focused typecheck PASS. Not a DB-HOLD revoke, sole runtime egress, genuine ACK, V2 restore or connected acceptance.

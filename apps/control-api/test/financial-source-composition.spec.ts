@@ -136,6 +136,14 @@ describe("private financial source Core composition (TEST_ONLY lifecycle)", () =
     expect(f.composition.snapshot()).toMatchObject({ state: "CREATED", listeners: { assertion: null, reverse: null } });
     await expect(f.composition.withPrincipal(actor, () => "no")).rejects.toMatchObject({ code: "FINANCIAL_SOURCE_COMPOSITION_NOT_RUNNING" });
   });
+  it("rejects C2 candidate configuration before building the non-custodied financial listeners", async () => {
+    const c=config();c.candidate.c2_delivery_schema_required=true;
+    const pool={options:{connectionTimeoutMillis:1000,query_timeout:3000}} as unknown as Pool;
+    const create=vi.spyOn(CurrentHumanCandidate,"create");
+    await expect(FinancialSourceComposition.create(pool,c)).rejects.toMatchObject({code:"FINANCIAL_SOURCE_COMPOSITION_CONFIG_INVALID"});
+    expect(create).not.toHaveBeenCalled();
+    expect(factories.assertion).not.toHaveBeenCalled();expect(factories.reverse).not.toHaveBeenCalled();
+  });
   it("shares exact candidate ISSUE/revalidation and reverse ENTER/terminal implementation without a second identity authority", async () => {
     const c = config(), f = await setup(c); await f.composition.start(targets);
     expect(f.factory).toHaveBeenCalledWith(f.pool, expect.objectContaining({ installation_scope: c.candidate.installation_scope }));
@@ -305,7 +313,7 @@ describe("private financial source Core composition (TEST_ONLY lifecycle)", () =
     await vi.waitFor(() => expect(f.candidate.revalidateIssue).toHaveBeenCalledOnce());
     f.reverse.counts.in_flight = 1;
     await expect(f.composition.shutdown()).rejects.toMatchObject({ code: "FINANCIAL_SOURCE_COMPOSITION_SHUTDOWN_PENDING" });
-    expect(f.composition.snapshot()).toMatchObject({ authority: { pending: 0 }, assertion: { in_flight: 1 }, reverse: { in_flight: 1 } });
+    expect(f.composition.snapshot()).toMatchObject({ authority: { pending: 1 }, assertion: { in_flight: 1 }, reverse: { in_flight: 1 } });
     held.resolve(); await result;
     await expect(f.composition.shutdown()).rejects.toMatchObject({ code: "FINANCIAL_SOURCE_COMPOSITION_SHUTDOWN_PENDING" });
     f.reverse.counts.in_flight = 0; await f.composition.shutdown(); expect(f.end).not.toHaveBeenCalled();

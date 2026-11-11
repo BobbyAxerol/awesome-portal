@@ -5,7 +5,8 @@ import { beforeAll, describe, expect, it, vi } from "vitest";
 import { FinancialSourceAssertionAuthority, type FinancialSourceAssertionSelection,
   type FinancialSourceAssertionResponse } from "../src/execution-v2/financial-source-assertion";
 import { CurrentHumanLeaseError, type CurrentHumanCandidate } from "../src/execution-v2/current-human-candidate";
-import { pmHttpRequestDigest } from "../src/execution-v2/pm-http-request-binding";
+import { pmHttpRequestDigest, type PmHttpRequestBytes } from "../src/execution-v2/pm-http-request-binding";
+import { C2CustodyPendingError } from "../src/execution-v2/c2-custody-pending-error";
 
 const now0 = 1_792_857_600_000;
 const paths = ["/financial/dataset", "/financial/series", "/financial/snapshot", "/financial/page", "/financial/delta", "/financial/receipt"];
@@ -23,7 +24,7 @@ describe("private financial same-request current-human issuer", () => {
         session_revision: a.session_generation, authority_revision: 2, jti: lease, iat, exp })
         .setProtectedHeader({ alg: "EdDSA" }).sign(key.privateKey);
       return { token, lease_id: lease, expires_at_ms: exp * 1000, authority_revision: 2 };
-    }), revalidateIssue: vi.fn(async (..._args: Parameters<CurrentHumanCandidate["revalidateIssue"]>) => undefined),
+    }), revalidateIssue: vi.fn(async (..._args: Parameters<CurrentHumanCandidate["revalidateIssue"]>): Promise<void> => undefined),
       canReplaceResolvedIssue: vi.fn(async (..._args: Parameters<CurrentHumanCandidate["revalidateIssue"]>) => false) };
     const authority = new FinancialSourceAssertionAuthority(candidate, { ttl_ms: 60_000, maximum_contexts: 2,
       maximum_requests_per_context: maxRequests }, () => now);
@@ -55,6 +56,172 @@ describe("private financial same-request current-human issuer", () => {
       workload_id: selection.workload_id, request_digest: input.request_digest });
     expect(f.candidate.revalidateIssue).toHaveBeenCalledOnce();
   });
+  it("passes exact private request bytes to a bound issuer without granting terminal or restart recovery", async () => {
+    const f=fixture();
+    const bound={
+      issueBoundRequest:vi.fn(async (a:typeof actor,b:Parameters<typeof f.candidate.issue>[1],bytes:PmHttpRequestBytes)=>{
+        expect(bytes.method).toBe("POST");expect(Buffer.from(bytes.raw_path).toString()).toBe(paths[0]);
+        expect(bytes.query_string.length).toBe(0);expect(Buffer.from(bytes.body).toString()).toBe('{"a": 1}');
+        bytes.body.fill(0); // A candidate cannot mutate the bytes used on the next read.
+        return f.candidate.issue(a,b);
+      }),
+      revalidateBoundRequest:vi.fn(async (_a:typeof actor,_b:Parameters<typeof f.candidate.issue>[1],_i:unknown,
+        bytes:PmHttpRequestBytes)=>{expect(Buffer.from(bytes.body).toString()).toBe('{"a": 1}');}),
+    };
+    const authority=new FinancialSourceAssertionAuthority(bound,{ttl_ms:60000,maximum_contexts:2,
+      maximum_requests_per_context:4},()=>now0);
+    const registered=authority.register(actor,selection),input=request('{"a": 1}');
+    const first=await authority.issue(registered.original_context,input);
+    expect(await authority.issue(registered.original_context,input)).toEqual(first);
+    expect(bound.issueBoundRequest).toHaveBeenCalledOnce();
+    expect(bound.revalidateBoundRequest).toHaveBeenCalledTimes(2);
+    await expect(authority.complete(registered.original_context,completion(first)))
+      .rejects.toMatchObject({code:"FINANCIAL_ASSERTION_TERMINAL_NOT_CONFIRMED"});
+    const restarted=new FinancialSourceAssertionAuthority(bound,{ttl_ms:60000,maximum_contexts:2,
+      maximum_requests_per_context:4},()=>now0);
+    await expect(restarted.issue(registered.original_context,input))
+      .rejects.toMatchObject({code:"FINANCIAL_ASSERTION_CONTEXT_REQUIRED"});
+    expect(bound.issueBoundRequest).toHaveBeenCalledOnce();
+  });
+  it("does not acquire terminal authority by mutating the bound adapter after construction", async () => {
+    const f=fixture();
+    const bound={
+      issueBoundRequest:vi.fn(async (a:typeof actor,b:Parameters<typeof f.candidate.issue>[1])=>f.candidate.issue(a,b)),
+      revalidateBoundRequest:vi.fn(async ()=>undefined),
+    };
+    const authority=new FinancialSourceAssertionAuthority(bound,{ttl_ms:60000,maximum_contexts:2,
+      maximum_requests_per_context:4},()=>now0);
+    const registered=authority.register(actor,selection),first=await authority.issue(registered.original_context,request());
+    const forged=vi.fn(async()=>true);
+    Object.assign(bound,{canReplaceResolvedIssue:forged});
+    await expect(authority.complete(registered.original_context,completion(first)))
+      .rejects.toMatchObject({code:"FINANCIAL_ASSERTION_TERMINAL_NOT_CONFIRMED"});
+    expect(forged).not.toHaveBeenCalled();
+    expect(bound.issueBoundRequest).toHaveBeenCalledOnce();
+  });
+  it("rejoins a custody-pending original on the same lease without issuing a replacement", async () => {
+    const f=fixture();let original!:Awaited<ReturnType<typeof f.candidate.issue>>;
+    const bound={
+      issueBoundRequest:vi.fn(async (a:typeof actor,b:Parameters<typeof f.candidate.issue>[1])=>{
+        original=await f.candidate.issue(a,b);throw new C2CustodyPendingError(original.lease_id);
+      }),
+      resumeBoundRequest:vi.fn(async (_a:typeof actor,_b:Parameters<typeof f.candidate.issue>[1],_r:PmHttpRequestBytes,lease:string)=>{
+        expect(lease).toBe(original.lease_id);return original;
+      }),
+      revalidateBoundRequest:vi.fn(async ()=>undefined),
+    };
+    const authority=new FinancialSourceAssertionAuthority(bound,{ttl_ms:60000,maximum_contexts:2,
+      maximum_requests_per_context:4},()=>now0);
+    const registered=authority.register(actor,selection),input=request();
+    await expect(authority.issue(registered.original_context,input)).rejects.toBeInstanceOf(C2CustodyPendingError);
+    await expect(authority.issue(registered.original_context,request('{"changed":true}')))
+      .rejects.toMatchObject({code:"FINANCIAL_ASSERTION_DELIVERY_REQUEST_MISMATCH"});
+    const recovered=await Promise.all(Array.from({length:3},()=>authority.issue(registered.original_context,input)));
+    expect(recovered.every(value=>value.lease_id===original.lease_id&&value.assertion===original.token)).toBe(true);
+    expect(bound.issueBoundRequest).toHaveBeenCalledOnce();expect(bound.resumeBoundRequest).toHaveBeenCalledOnce();
+    await expect(authority.complete(registered.original_context,completion(recovered[0]!)))
+      .rejects.toMatchObject({code:"FINANCIAL_ASSERTION_TERMINAL_NOT_CONFIRMED"});
+  });
+  it("reconstructs only the exact first delivery through the durable resume port",async()=>{
+    const f=fixture(),input=request();
+    const binding={workspace_id:selection.workspace_id,environment:"paper" as const,workload_id:selection.workload_id,
+      request_digest:input.request_digest};
+    const issued=await f.candidate.issue(actor,binding);
+    const bound={issueBoundRequest:vi.fn(async()=>issued),revalidateBoundRequest:vi.fn(async()=>undefined),
+      issueBoundDelivery:vi.fn(async()=>issued),resumeBoundDelivery:vi.fn(async()=>issued),
+      revalidateBoundDelivery:vi.fn(async()=>undefined)};
+    const restarted=new FinancialSourceAssertionAuthority(bound,{ttl_ms:60000,maximum_contexts:2,
+      maximum_requests_per_context:4},()=>now0);
+    const response=await restarted.recoverFirstDelivery(actor,selection,f.registered.original_context,
+      f.registered.expires_at_ms,input,issued.lease_id);
+    expect(response.lease_id).toBe(issued.lease_id);
+    expect(await restarted.issue(f.registered.original_context,input)).toEqual(response);
+    expect(bound.issueBoundDelivery).not.toHaveBeenCalled();
+    expect(bound.resumeBoundDelivery).toHaveBeenCalledOnce();
+    await expect(restarted.complete(f.registered.original_context,completion(response)))
+      .rejects.toMatchObject({code:"FINANCIAL_ASSERTION_TERMINAL_NOT_CONFIRMED"});
+    await expect(restarted.issue(f.registered.original_context,request("{}",paths[1],1,response.lease_id)))
+      .rejects.toMatchObject({code:"FINANCIAL_ASSERTION_DELIVERY_NOT_COMPLETED"});
+    await expect(restarted.issue(f.registered.original_context,request('{"changed":true}')))
+      .rejects.toMatchObject({code:"FINANCIAL_ASSERTION_DELIVERY_REQUEST_MISMATCH"});
+  });
+  it("keeps recovery bounded and refuses a context retired during resume",async()=>{
+    const f=fixture(),input=request();let release!:()=>void;
+    const gate=new Promise<void>(resolve=>{release=resolve;});
+    const binding={workspace_id:selection.workspace_id,environment:"paper" as const,workload_id:selection.workload_id,
+      request_digest:input.request_digest};
+    const issued=await f.candidate.issue(actor,binding);
+    const bound={issueBoundRequest:vi.fn(async()=>issued),revalidateBoundRequest:vi.fn(async()=>undefined),
+      issueBoundDelivery:vi.fn(async()=>issued),resumeBoundDelivery:vi.fn(async()=>{await gate;return issued;}),
+      revalidateBoundDelivery:vi.fn(async()=>undefined)};
+    const restarted=new FinancialSourceAssertionAuthority(bound,{ttl_ms:60000,maximum_contexts:1,
+      maximum_requests_per_context:4},()=>now0);
+    const pending=restarted.recoverFirstDelivery(actor,selection,f.registered.original_context,
+      f.registered.expires_at_ms,input,issued.lease_id).catch(error=>error);
+    await vi.waitFor(()=>expect(bound.resumeBoundDelivery).toHaveBeenCalledOnce());
+    expect(restarted.snapshot().pending).toBe(1);
+    expect(()=>restarted.register(actor,selection)).toThrow();
+    restarted.release(f.registered.original_context);release();
+    expect(await pending).toMatchObject({code:"FINANCIAL_ASSERTION_CONTEXT_REQUIRED"});
+    expect(restarted.snapshot()).toMatchObject({pending:0,contexts:0});
+    await expect(restarted.issue(f.registered.original_context,input))
+      .rejects.toMatchObject({code:"FINANCIAL_ASSERTION_CONTEXT_REQUIRED"});
+  });
+  it("refuses a different lease on recovery and retries only the pending original", async () => {
+    const f=fixture();let original!:Awaited<ReturnType<typeof f.candidate.issue>>;
+    const bound={
+      issueBoundRequest:vi.fn(async (a:typeof actor,b:Parameters<typeof f.candidate.issue>[1])=>{
+        original=await f.candidate.issue(a,b);throw new C2CustodyPendingError(original.lease_id);
+      }),
+      resumeBoundRequest:vi.fn(async ()=>original),
+      revalidateBoundRequest:vi.fn(async ()=>undefined),
+    };
+    const authority=new FinancialSourceAssertionAuthority(bound,{ttl_ms:60000,maximum_contexts:2,
+      maximum_requests_per_context:4},()=>now0);
+    const registered=authority.register(actor,selection),input=request();
+    await expect(authority.issue(registered.original_context,input)).rejects.toBeInstanceOf(C2CustodyPendingError);
+    bound.resumeBoundRequest.mockImplementationOnce(async()=>({...original,lease_id:"TEST_ONLY-wrong-lease"}));
+    await expect(authority.issue(registered.original_context,input))
+      .rejects.toMatchObject({code:"FINANCIAL_ASSERTION_ISSUER_BINDING_INVALID"});
+    expect((await authority.issue(registered.original_context,input)).lease_id).toBe(original.lease_id);
+    expect(bound.issueBoundRequest).toHaveBeenCalledOnce();expect(bound.resumeBoundRequest).toHaveBeenCalledTimes(2);
+  });
+  it("does not return a recovered assertion after its context is retired", async () => {
+    const f=fixture();let original!:Awaited<ReturnType<typeof f.candidate.issue>>,release!:()=>void;
+    const gate=new Promise<void>(resolve=>{release=resolve;});
+    const bound={
+      issueBoundRequest:vi.fn(async (a:typeof actor,b:Parameters<typeof f.candidate.issue>[1])=>{
+        original=await f.candidate.issue(a,b);throw new C2CustodyPendingError(original.lease_id);
+      }),
+      resumeBoundRequest:vi.fn(async ()=>{await gate;return original;}),
+      revalidateBoundRequest:vi.fn(async ()=>undefined),
+    };
+    const authority=new FinancialSourceAssertionAuthority(bound,{ttl_ms:60000,maximum_contexts:2,
+      maximum_requests_per_context:4},()=>now0);
+    const registered=authority.register(actor,selection),input=request();
+    await expect(authority.issue(registered.original_context,input)).rejects.toBeInstanceOf(C2CustodyPendingError);
+    const pending=authority.issue(registered.original_context,input).catch(error=>error);
+    await vi.waitFor(()=>expect(bound.resumeBoundRequest).toHaveBeenCalledOnce());
+    expect(authority.snapshot().pending).toBe(1);authority.release(registered.original_context);release();
+    expect(await pending).toMatchObject({code:"FINANCIAL_ASSERTION_CONTEXT_REQUIRED"});
+    expect(authority.snapshot()).toMatchObject({pending:0,contexts:0});
+    expect(bound.issueBoundRequest).toHaveBeenCalledOnce();
+  });
+  it("rejects path array accessors without invoking them", () => {
+    const f=fixture(), unsafe=[...paths]; let called=0;
+    Object.defineProperty(unsafe,"0",{enumerable:true,get(){called++;return paths[0];}});
+    expect(()=>f.authority.register(actor,{...selection,paths:unsafe}))
+      .toThrow("The financial source identity assertion is not available.");
+    expect(called).toBe(0);
+  });
+  it("retains the initially selected terminal check when the adapter property is replaced", async () => {
+    const f=fixture(),first=await f.authority.issue(f.registered.original_context,request());
+    const selected=f.candidate.canReplaceResolvedIssue,forged=vi.fn(async()=>true);
+    f.candidate.canReplaceResolvedIssue=forged;
+    await expect(f.authority.complete(f.registered.original_context,completion(first)))
+      .rejects.toMatchObject({code:"FINANCIAL_ASSERTION_TERMINAL_NOT_CONFIRMED"});
+    expect(selected).toHaveBeenCalledOnce();expect(forged).not.toHaveBeenCalled();
+  });
   it("coalesces concurrent/lost-response retry to the original lease, without renewal", async () => {
     const f = fixture(), input = request();
     const results = await Promise.all(Array.from({ length: 5 }, () => f.authority.issue(f.registered.original_context, input)));
@@ -75,6 +242,37 @@ describe("private financial same-request current-human issuer", () => {
     f.candidate.revalidateIssue.mockRejectedValueOnce(new Error("TEST_ONLY revoked"));
     await expect(f.authority.issue(f.registered.original_context, request())).rejects.toThrow("revoked");
     expect(f.candidate.issue).toHaveBeenCalledOnce();
+  });
+  it("bounds cached-retry revalidation and retains it through shutdown", async () => {
+    const f = fixture(); await f.authority.issue(f.registered.original_context, request());
+    let release!: () => void;
+    const gate = new Promise<void>(resolve => { release = resolve; });
+    f.candidate.revalidateIssue.mockImplementation(() => gate);
+    const retries = Array.from({ length: 16 }, () => f.authority.issue(f.registered.original_context, request()).catch(error => error));
+    await vi.waitFor(() => expect(f.candidate.revalidateIssue).toHaveBeenCalledTimes(17));
+    expect(f.authority.snapshot()).toMatchObject({ pending: 16, contexts: 1 });
+    await expect(f.authority.issue(f.registered.original_context, request())).rejects.toMatchObject({ code: "FINANCIAL_ASSERTION_CAPACITY_EXHAUSTED" });
+    f.authority.shutdown();
+    expect(f.authority.snapshot()).toMatchObject({ pending: 16, contexts: 1, stopped: true });
+    release();
+    const results = await Promise.all(retries);
+    expect(results.every(result => result.code === "FINANCIAL_ASSERTION_CONTEXT_REQUIRED")).toBe(true);
+    expect(f.authority.snapshot()).toMatchObject({ pending: 0, contexts: 0, stopped: true });
+    expect(f.candidate.issue).toHaveBeenCalledOnce();
+  });
+  it("does not return an earlier assertion after its successor has replaced the delivery", async () => {
+    const f = fixture(), first = await f.authority.issue(f.registered.original_context, request());
+    let release!: () => void;
+    const gate = new Promise<void>(resolve => { release = resolve; });
+    f.candidate.revalidateIssue.mockImplementationOnce(() => gate);
+    const retry = f.authority.issue(f.registered.original_context, request()).catch(error => error);
+    await vi.waitFor(() => expect(f.candidate.revalidateIssue).toHaveBeenCalledTimes(2));
+    await completed(f, first);
+    const next = await f.authority.issue(f.registered.original_context, request("{}", paths[1], 1, first.lease_id));
+    expect(next.lease_id).not.toBe(first.lease_id);
+    release();
+    expect(await retry).toMatchObject({ code: "FINANCIAL_ASSERTION_DELIVERY_REQUEST_MISMATCH" });
+    expect(f.authority.snapshot().pending).toBe(0);
   });
   it.each(["binding_digest", "receiver_id", "workload_id", "path", "request_digest"])("refuses mismatched %s before candidate I/O", async field => {
     const f = fixture(), input = { ...request(), [field]: field.includes("digest") ? `sha256:${"f".repeat(64)}` : field === "path" ? "/mutate" : "wrong" };

@@ -54,6 +54,32 @@ describe("ELP2-10 recovery typed failure boundaries (TEST_ONLY mocked HTTPS)", (
       "CURRENT_HUMAN_RECOVERY_CONFIG_INVALID");
     expect(wire.request).not.toHaveBeenCalled(); expect(vi.getTimerCount()).toBe(0);
   });
+  it("captures array and passphrase-key TLS material without retaining caller buffers", async () => {
+    const key=Buffer.from("TEST_ONLY-key"),cert=Buffer.from("TEST_ONLY-cert"),ca=Buffer.from("TEST_ONLY-ca");
+    const input={...config(),tls:{key:[{pem:key,passphrase:"TEST_ONLY-pass"}],cert:[cert],ca:[ca]}};
+    const target=new CurrentHumanRecoveryClient(input),mock=mockedRequest();
+    key.fill(0);cert.fill(0);ca.fill(0);input.tls.key.length=0;
+    const pending=target.recover(attempt),options=wire.request.mock.calls[0][1];
+    expect(options.key[0].pem.toString()).toBe("TEST_ONLY-key");
+    expect(options.cert[0].toString()).toBe("TEST_ONLY-cert");
+    expect(options.ca[0].toString()).toBe("TEST_ONLY-ca");
+    const res=mock.respond();res.emit("data",Buffer.from(JSON.stringify(acknowledgement)));res.emit("end");
+    await expect(pending).resolves.toEqual(acknowledgement);
+  });
+  it("keeps the selected recovery origin and TLS binding when public-looking properties are replaced", async () => {
+    const target=client(),mock=mockedRequest();
+    expect(Reflect.set(target,"url",new URL("https://test-only-other.invalid/"))).toBe(true);
+    expect(Reflect.set(target,"config",{...config(),origin:"https://test-only-other.invalid",
+      tls:{key:"TEST_ONLY-other-key",cert:"TEST_ONLY-other-cert",ca:"TEST_ONLY-other-ca"},
+      source_certificate_sha256:`sha256:${"f".repeat(64)}`,deadline_ms:5000,response_bytes:32768})).toBe(true);
+    const pending=target.recover(attempt),[url,options]=wire.request.mock.calls[0];
+    expect(String(url)).toBe("https://pm.candidate.invalid/internal/elp210/current-human/recover");
+    expect(options.key).toBe("TEST_ONLY-mocked-key");
+    expect(options.cert).toBe("TEST_ONLY-mocked-certificate");
+    expect(options.ca).toBe("TEST_ONLY-mocked-CA");
+    const res=mock.respond();res.emit("data",Buffer.from(JSON.stringify(acknowledgement)));res.emit("end");
+    await expect(pending).resolves.toEqual(acknowledgement);
+  });
   it.each([
     ["circular", () => { const value: Record<string, unknown> = { ...attempt }; value.self = value; return value; }],
     ["throwing toJSON", () => ({ ...attempt, toJSON() { throw new Error(diagnostic); } })],

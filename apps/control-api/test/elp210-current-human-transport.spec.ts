@@ -8,6 +8,8 @@ import { createServer, request, type Server } from "node:https";
 import type { Duplex } from "node:stream";
 import { performance } from "node:perf_hooks";
 import { connect as connectTls, type ConnectionOptions } from "node:tls";
+import { generateKeyPair } from "jose";
+import type { Pool } from "pg";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { CurrentHumanCandidate } from "../src/execution-v2/current-human-candidate";
 import type { CurrentHumanRecoveryAttempt } from "../src/execution-v2/current-human-mutations";
@@ -31,6 +33,7 @@ const recoveryAck = { schema_version: "pma.current-human-recover-ack.v1", lease_
 describe("ELP2-10 private current-human real TLS transport (TEST_ONLY candidate operations)", () => {
   let core: Certificate, source: Certificate, otherCore: Certificate,
     otherSource: Certificate, foreignCore: Certificate, foreignSource: Certificate;
+  let legacyCandidate: CurrentHumanCandidate, c2Candidate: CurrentHumanCandidate;
   const allocated: { server: Server; sockets: Set<Duplex> }[] = [];
 
   const authority = (label: string): TestAuthority => {
@@ -73,10 +76,9 @@ describe("ELP2-10 private current-human real TLS transport (TEST_ONLY candidate 
     req.end(body);
   });
   const transport = (limits: Partial<{ maximum_in_flight: number; request_bytes: number; deadline_ms: number }> = {}) => {
-    const enter = vi.fn().mockResolvedValue({ lease_id: binding.lease_id, attempt_id: binding.attempt_id });
-    const resolve = vi.fn().mockResolvedValue({ replayed: false, phase: "UNKNOWN" });
-    const candidate = { enter, resolve } as unknown as CurrentHumanCandidate;
-    return { ...createCurrentHumanTransport(candidate, { tls: { key: core.key, cert: core.cert, ca: core.ca },
+    const enter = vi.spyOn(legacyCandidate,"enter").mockResolvedValue({ lease_id: binding.lease_id, attempt_id: binding.attempt_id });
+    const resolve = vi.spyOn(legacyCandidate,"resolve").mockResolvedValue({ replayed: false, phase: "UNKNOWN" });
+    return { ...createCurrentHumanTransport(legacyCandidate, { tls: { key: core.key, cert: core.cert, ca: core.ca },
       source_certificate_sha256: source.fingerprint,
       limits: { maximum_in_flight: 2, request_bytes: 32768, deadline_ms: 1000, ...limits } }), enter, resolve };
   };
@@ -104,11 +106,20 @@ describe("ELP2-10 private current-human real TLS transport (TEST_ONLY candidate 
     new CurrentHumanRecoveryClient({ origin, tls: { key: core.key, cert: core.cert, ca: core.ca },
       source_certificate_sha256: source.fingerprint, deadline_ms: 1000, response_bytes: 32768, ...changes });
 
-  beforeAll(() => {
+  beforeAll(async () => {
     const trusted = authority("root"), foreign = authority("foreign_root");
     core = leaf("core", trusted); source = leaf("source", trusted);
     otherCore = leaf("other_core", trusted); otherSource = leaf("other_source", trusted);
     foreignCore = leaf("foreign_core", foreign); foreignSource = leaf("foreign_source", foreign);
+    const [human, upstream]=await Promise.all([generateKeyPair("EdDSA",{crv:"Ed25519",extractable:true}),
+      generateKeyPair("EdDSA",{crv:"Ed25519",extractable:true})]);
+    const pool={options:{connectionTimeoutMillis:1000,query_timeout:3000}} as unknown as Pool;
+    const config={issuer:"test-only-portal",audience:"test-only-pm",key_id:"test-only-human-key",private_key:human.privateKey,
+      source:{issuer:"test-only-source",audience:"test-only-core",key_id:"test-only-source-key",
+        public_key:upstream.publicKey,workload_id:"test-only-source-workload"},
+      limits:{ttl_ms:30000,maximum_unresolved:1,maximum_retained:2}};
+    legacyCandidate=await CurrentHumanCandidate.create(pool,config);
+    c2Candidate=await CurrentHumanCandidate.create(pool,{...config,c2_delivery_schema_required:true});
   }, 15000);
   afterEach(async () => {
     for (const { server, sockets } of allocated.splice(0)) {
@@ -117,8 +128,20 @@ describe("ELP2-10 private current-human real TLS transport (TEST_ONLY candidate 
       server.closeAllConnections();
       await closing;
     }
+    vi.restoreAllMocks();
   });
   afterAll(() => { for (const identity of [core, source, otherCore, otherSource, foreignCore, foreignSource]) identity?.key.fill(0); });
+
+  it("refuses a C2 candidate and prototype-only forgery on the non-custodied legacy listener", () => {
+    const config={tls:{key:core.key,cert:core.cert,ca:core.ca},source_certificate_sha256:source.fingerprint,
+      limits:{maximum_in_flight:2,request_bytes:32768,deadline_ms:1000}};
+    expect(()=>createCurrentHumanTransport(c2Candidate,config)).toThrowError(expect.objectContaining({code:"CURRENT_HUMAN_TRANSPORT_CONFIG_INVALID"}));
+    // Instance method replacement cannot conceal the private C2 flag.
+    vi.spyOn(c2Candidate,"requiresC2DeliverySchema").mockReturnValue(false);
+    expect(()=>createCurrentHumanTransport(c2Candidate,config)).toThrowError(expect.objectContaining({code:"CURRENT_HUMAN_TRANSPORT_CONFIG_INVALID"}));
+    const fake=Object.create(CurrentHumanCandidate.prototype) as CurrentHumanCandidate;
+    expect(()=>createCurrentHumanTransport(fake,config)).toThrowError(expect.objectContaining({code:"CURRENT_HUMAN_TRANSPORT_CONFIG_INVALID"}));
+  });
 
   it("constructs unbound, then exchanges exact ENTER/UNKNOWN ACKs over real TLS1.3+mTLS", async () => {
     const lane = transport();
@@ -234,6 +257,42 @@ describe("ELP2-10 private current-human real TLS transport (TEST_ONLY candidate 
     });
     expect(await recovery(lane.origin).recover(binding)).toEqual({ ...recoveryAck, phase: "UNKNOWN", portal_acknowledged: true });
     expect(lane.requests()).toBe(1); expect(lane.bodies[0]).not.toContain("human_token");
+  });
+  it("recovery snapshots the original before the caller mutates its object", async () => {
+    const lane = await recoveryServer(source), original = { ...binding };
+    const pending = recovery(lane.origin).recover(original);
+    original.lease_id = "TEST_ONLY-substituted-lease";
+    original.attempt_id = "TEST_ONLY-substituted-attempt";
+    expect(await pending).toEqual(recoveryAck);
+    expect(JSON.parse(lane.bodies[0]).attempt).toEqual(binding);
+    expect(lane.requests()).toBe(1);
+  });
+  it("snapshots caller-owned TLS buffers before they can be changed after construction", async () => {
+    const lane=await recoveryServer(source);
+    const tls={key:Buffer.from(core.key),cert:Buffer.from(core.cert),ca:Buffer.from(core.ca)};
+    const client=recovery(lane.origin,{tls});
+    tls.key.fill(0);tls.cert.fill(0);tls.ca.fill(0);
+    expect(await client.recover(binding)).toEqual(recoveryAck);
+    expect(lane.requests()).toBe(1);
+  });
+  it("keeps the chosen mTLS recovery peer when instance properties are shadowed", async () => {
+    const lane=await recoveryServer(source),other=await recoveryServer(otherSource);
+    const client=recovery(lane.origin);
+    expect(Reflect.set(client,"url",new URL(`${other.origin}/internal/elp210/current-human/recover`))).toBe(true);
+    expect(Reflect.set(client,"config",{origin:other.origin,tls:{key:core.key,cert:core.cert,ca:core.ca},
+      source_certificate_sha256:otherSource.fingerprint,deadline_ms:1000,response_bytes:32768})).toBe(true);
+    expect(await client.recover(binding)).toEqual(recoveryAck);
+    expect(lane.requests()).toBe(1);
+    expect(other.requests()).toBe(0);expect(other.bytes()).toBe(0);
+  });
+  it("recovery refuses extra credentials and invalid original before network IO", async () => {
+    const lane = await recoveryServer(source), client = recovery(lane.origin);
+    for (const bad of [{ ...binding, human_token: "TEST_ONLY-credential" },
+      { ...binding, request_digest: "not-a-digest" }, { ...binding, authority_revision: -1 }]) {
+      await expect(client.recover(bad as CurrentHumanRecoveryAttempt))
+        .rejects.toMatchObject({ code: "CURRENT_HUMAN_RECOVERY_REQUEST_INVALID" });
+    }
+    expect(lane.requests()).toBe(0); expect(lane.bytes()).toBe(0);
   });
   it("recovery wrong server CA rejects before any HTTP headers or attempt bytes reach peer", async () => {
     const lane = await recoveryServer(foreignSource);

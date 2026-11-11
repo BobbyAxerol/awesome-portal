@@ -8,7 +8,8 @@ import { connect as connectTls } from "node:tls";
 import { performance } from "node:perf_hooks";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { CommandSourceAssertionError } from "../src/execution-v2/command-source-assertion";
-import { createCommandSourceAssertionTransport, type CommandSourceAssertionTransportConfig } from "../src/execution-v2/command-source-assertion-transport";
+import { createCommandSourceAssertionTransport,createCommandSourceAssertionTestCustodyTransport,
+  type CommandSourceAssertionTransportConfig } from "../src/execution-v2/command-source-assertion-transport";
 import { pmHttpRequestDigest } from "../src/execution-v2/pm-http-request-binding";
 import { commonName, testCertificate, type TestAuthority } from "./fixtures/elp210-test-certificates";
 
@@ -54,14 +55,16 @@ describe("command STATUS source assertion private transport (TEST_ONLY)", () => 
     peer: { certificate_sha256: edge.pin, dns_name: dns, workload_id: body.workload_id },
     limits: { maximum_in_flight: 2, request_bytes: 2_129_920, response_bytes: 65_536, deadline_ms: 1500, ...limits },
   });
-  async function start(limits: Partial<CommandSourceAssertionTransportConfig["limits"]> = {}, dns?: string) {
+  async function start(limits: Partial<CommandSourceAssertionTransportConfig["limits"]> = {}, dns?: string,
+    delivery?:Parameters<typeof createCommandSourceAssertionTestCustodyTransport>[2]) {
     const issue = vi.fn().mockImplementation(async () => response());
     const complete = vi.fn().mockImplementation(async (_context, input) => ({
       schema_version: "portal.execution.command-source-assertion-completion-response.v1",
       delivery_sequence: input.delivery_sequence, lease_id: input.lease_id, request_digest: input.request_digest,
       response_digest: input.response_digest, completed: true,
     }));
-    const transport = createCommandSourceAssertionTransport({ issue, complete }, config(limits, dns));
+    const transport = delivery ? createCommandSourceAssertionTestCustodyTransport({issue,complete},config(limits,dns),delivery)
+      : createCommandSourceAssertionTransport({ issue, complete }, config(limits, dns));
     const sockets = new Set<Duplex>(); allocated.push({ server: transport.server, sockets });
     for (const event of ["connection", "secureConnection"] as const)
       transport.server.on(event, socket => { sockets.add(socket); socket.once("close", () => sockets.delete(socket)); });
@@ -116,6 +119,34 @@ describe("command STATUS source assertion private transport (TEST_ONLY)", () => 
     expect(served.headers["x-content-type-options"]).toBe("nosniff");
     expect(served.body).not.toContain(token); expect(t.snapshot()).toMatchObject({ in_flight: 0, accepted: 1 });
     expect(t.complete).not.toHaveBeenCalled();
+  });
+  it("sends a validated issue only through the TEST_ONLY custody seam; completion stays separate",async()=>{
+    const delivery=vi.fn<Parameters<typeof createCommandSourceAssertionTestCustodyTransport>[2]>(async(_context,_request,output,res)=>{
+      const done=new Promise<void>(resolve=>res.once("finish",resolve));
+      res.writeHead(200,{"content-type":"application/json","cache-control":"no-store"});res.end(JSON.stringify(output));await done;
+    });
+    const t=await start({},undefined,delivery),served=await post(t.origin);
+    expect(served.status).toBe(200);expect(JSON.parse(served.body).lease_id).toBe("TEST_ONLY-lease");
+    expect(delivery).toHaveBeenCalledOnce();expect(delivery.mock.calls[0][0]).toBe(token);
+    expect(delivery.mock.calls[0][1]).toEqual(body);expect(delivery.mock.calls[0][2].request_digest).toBe(body.request_digest);
+    expect(t.complete).not.toHaveBeenCalled();
+    await vi.waitFor(()=>expect(t.snapshot().in_flight).toBe(0));expect(t.snapshot().accepted).toBe(1);
+  });
+  it("does not report success when TEST_ONLY custody returns without sending",async()=>{
+    const t=await start({},undefined,async()=>{});
+    const served=await post(t.origin);expect(served.status).toBe(503);
+    expect(served.body).not.toContain("TEST_ONLY-private-assertion");expect(t.snapshot().accepted).toBe(0);
+  });
+  it("destroys timed-out custody response and holds capacity until the delivery actually settles",async()=>{
+    let release!:()=>void;const pending=new Promise<void>(resolve=>{release=resolve;});
+    const delivery=vi.fn<Parameters<typeof createCommandSourceAssertionTestCustodyTransport>[2]>(async()=>pending);
+    const t=await start({deadline_ms:150,maximum_in_flight:1},undefined,delivery);
+    const exchangeResult=post(t.origin).then(()=>"response",()=>"closed");
+    try {
+      await vi.waitFor(()=>expect(delivery).toHaveBeenCalledOnce());
+      expect(await exchangeResult).toBe("closed");expect(t.snapshot()).toMatchObject({in_flight:1,timed_out:1,accepted:0});
+    } finally {release();}
+    await vi.waitFor(()=>expect(t.snapshot().in_flight).toBe(0));expect(t.complete).not.toHaveBeenCalled();
   });
   const completed = () => ({ schema_version: "portal.execution.command-source-assertion-completion-request.v1",
     binding_digest: body.binding_digest, receiver_id: body.receiver_id, workload_id: body.workload_id,

@@ -43,6 +43,11 @@ type OperationResult={receipt:AccessReceipt;replayed:boolean};
 type AuthorityMutation<T>={binding:CurrentHumanMutationBinding;authorize:(tx:Tx)=>Promise<void>;
   terminal:CurrentHumanMutationHooks<T>["terminal"]};
 
+// A prototype can be forged with Object.create and TypeScript-private pool
+// properties are mutable at runtime. Keep the constructor-selected pool in a
+// module-private brand so private compositions can reject either substitution.
+const accessServicePools=new WeakMap<ExecutionAccessService,Pool>();
+
 /** One application-policy boundary. Default trust is unqualified and seeds no production rights. */
 export class ExecutionAccessService {
   constructor(private readonly pool:Pool,private readonly auth:AuthService,
@@ -50,9 +55,10 @@ export class ExecutionAccessService {
     private readonly allowTestOnly=false,private readonly authorityMutations?:CurrentHumanMutations) {
     if(authorityMutations&&!authorityMutations.usesPool(pool)||trust.currentRelations&&!trust.currentRelations.usesPool(pool))
       throw new CurrentHumanLeaseError("CURRENT_HUMAN_MUTATION_CONFIG_INVALID");
+    accessServicePools.set(this,pool);
   }
 
-  usesPool(pool:Pool):boolean{return this.pool===pool;}
+  usesPool(pool:Pool):boolean{return accessServicePools.has(this)&&accessServicePools.get(this)===pool&&this.pool===pool;}
   hasNativeCurrentRelations():boolean{return this.trust.currentRelations!==undefined;}
 
   /** Purpose-specific finite boundary. The caller is the actual scoped read

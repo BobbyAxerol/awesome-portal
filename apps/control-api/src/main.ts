@@ -16,6 +16,7 @@ import { nativeRootRuntimeReference, prepareNativeRootRuntime, prepareNativeRoot
 import { accessDigest } from "./execution-v2/access-digest";
 import { approvalEvidenceDependency } from "./approval-evidence/approval-evidence.bootstrap";
 import { equityProjectionSourceDependency } from "./equity-projection/equity-projection-source.bootstrap";
+import { assertC2P7ReviewSchemaCommissioned, c2P7ReviewRuntimeReference, prepareC2P7ReviewRuntime } from "./execution-v2/c2-p7-review-runtime";
 
 async function bootstrap(): Promise<void> {
   const config = loadConfig();
@@ -33,9 +34,11 @@ async function bootstrap(): Promise<void> {
   if(statusRuntime&&!nativeResearchReview(config))throw new Error("COMMAND_STATUS_RESEARCH_TARGET_REQUIRED");
   const rootReference=nativeRootRuntimeReference();
   const rootRuntime=rootReference?await prepareNativeRootRuntime(rootReference):undefined;
+  const p7Reference=c2P7ReviewRuntimeReference();
   const reviewTarget=nativeResearchReview(config)
     ? native?.researchReviewTarget(config.EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID!) : undefined;
   if(nativeResearchReview(config)&&!reviewTarget)throw new Error("NATIVE_RESEARCH_REVIEW_COMPOSITION_REQUIRED");
+  if(p7Reference&&(!nativeResearchReview(config)||!reviewTarget||!native))throw new Error("C2_P7_RESEARCH_TARGET_REQUIRED");
   if(rootRuntime&&(!nativeResearchReview(config)||!reviewTarget||accessDigest(rootRuntime.schemaTarget)!==accessDigest(reviewTarget)))
     throw new Error("NATIVE_ROOT_RESEARCH_TARGET_REQUIRED");
   const pool = buildPool(config.DATABASE_URL, selectPrivateCorePoolProfile(native,currentViewRuntime,financialRuntime,finiteRuntime,statusRuntime,rootRuntime));
@@ -43,6 +46,7 @@ async function bootstrap(): Promise<void> {
   let nativeCurrent: Awaited<ReturnType<typeof prepareNativeCurrentApplication>> | undefined;
   let commandStatus: Awaited<ReturnType<typeof prepareCommandStatusApplication>> | undefined;
   let nativeRoot: Awaited<ReturnType<typeof prepareNativeRootApplication>> | undefined;
+  let p7Review: ReturnType<Awaited<ReturnType<typeof prepareC2P7ReviewRuntime>>["build"]> | undefined;
   const nativeDependencies = native ? await composeOwnedNativeCoreRuntime({compose:async ownedPool=>{
     if(reviewTarget)await assertRegisteredResearchCurrentHumanSchema(ownedPool,reviewTarget);
     // Both factories finish before any listener starts. A failed schema or
@@ -51,11 +55,21 @@ async function bootstrap(): Promise<void> {
     nativeCurrent=finiteRuntime?await prepareNativeCurrentApplication(ownedPool,finiteRuntime):undefined;
     commandStatus=statusRuntime?await prepareCommandStatusApplication(ownedPool,statusRuntime):undefined;
     nativeRoot=rootRuntime?await prepareNativeRootApplication(ownedPool,rootRuntime):undefined;
+    if(p7Reference&&reviewTarget){
+      // Capture the narrowed values before the deliberate `never` fence;
+      // TypeScript does not retain control-flow narrowing in unreachable code.
+      const selectedReference=p7Reference,selectedTarget=reviewTarget;
+      // The legacy schema registration does not qualify the P7 schema/ACL.
+      // Keep standalone startup closed until a P7-specific verifier exists.
+      assertC2P7ReviewSchemaCommissioned();
+      const prepared=await prepareC2P7ReviewRuntime(selectedReference);
+      try {p7Review=prepared.build(ownedPool,selectedTarget);} finally {prepared.dispose();}
+    }
     return native.compose(ownedPool,[...(financialSource?[financialSource.participant]:[]),
       ...(commandStatus?[commandStatus.participant]:[])],nativeCurrent?.provider,nativeRoot?.provider);
   }}, pool) : undefined;
   const dependencies = { ...nativeDependencies,...(currentViewRuntime?{currentViewRuntime}:{}),...(financialSource?{financialSource}:{}),
-    ...(nativeCurrent?{nativeCurrent}:{}),...(commandStatus?{commandStatus}:{}),...(nativeRoot?{nativeRoot}:{}),...approvalEvidenceDependency(config),...equityProjectionSourceDependency(config) };
+    ...(nativeCurrent?{nativeCurrent}:{}),...(commandStatus?{commandStatus}:{}),...(nativeRoot?{nativeRoot}:{}),...(p7Review??{}),...approvalEvidenceDependency(config),...equityProjectionSourceDependency(config) };
   const owner = native ? new NativeCoreApplicationOwner(pool) : undefined;
   try {
     const app = await createControlApiApp(config, pool, undefined, dependencies, owner);

@@ -8,11 +8,16 @@ import { z } from "zod";
 import { withTransaction } from "../db/pool";
 import type { AccessActor } from "./access.contract";
 import { accessDigest } from "./access-policy";
-import { captureCurrentHumanSnapshot, evaluateManagerDomainRead } from "./current-human-snapshot";
+import { RestoreIndependentCustodyCandidate } from "./restore-independent-custody-candidate";
+import {appendCustodiedOriginal} from "./c2-custody-append-contention";
+import {C2CustodyPendingError} from "./c2-custody-pending-error";
+import { captureCurrentHumanSnapshot, evaluateManagerDomainRead, lockCurrentHumanSnapshot } from "./current-human-snapshot";
+import { currentHumanDrainCounts } from "./current-human-drain-counts";
+import {C2P7IssuerFenceCandidate} from "./c2-p7-issuer-fence-candidate";
 import { SelectedNativeBusinessReadSource, selectedNativeBusinessReadSelection, selectedNativeBusinessReadObservation,
   selectedNativeBusinessReadInstallationExpiresAtMs,
   type VerifiedSelectedNativeReadObservation, type VerifiedSelectedNativeReadView } from "./native-business-read-selected-source";
-import { pmHttpRequestDigest } from "./pm-http-request-binding";
+import { pmHttpRequestDigest, type PmHttpRequestBytes, type PmHttpRequestBounds } from "./pm-http-request-binding";
 import { NativeReadEgress, type NativeReadEgressLimits, type NativeReadEgressObservation, type NativeReadEgressReservation,
   type NativeReadEgressWitness, type HeldNativeReadEgressPermit } from "./native-read-egress";
 import { nativeBusinessReadTransportRequest, nativeBusinessReadUtcMicroseconds,
@@ -23,6 +28,12 @@ import { NativeFrameSettlement, type NativeFrameSettlementTarget, type NativeFra
 import type { NativeReadEgressStream, NativeReadEgressFrameReservation, NativeReadEgressFrameWitness,
   NativeReadFrameObservation, HeldNativeReadFrameEgressPermit } from "./native-read-egress";
 
+// Capture the implementation, not a mutable prototype lookup supplied during
+// an issuance. The witness and its key remain independently pinned below.
+const c2P7CheckLocked=C2P7IssuerFenceCandidate.prototype.checkLocked;
+const c2P7CheckAuthenticated=C2P7IssuerFenceCandidate.prototype.checkAuthenticatedLocked;
+const c2P7ConfirmationKey=C2P7IssuerFenceCandidate.prototype.confirmationKeySha256;
+const c2P7BindingDigest=C2P7IssuerFenceCandidate.prototype.bindingDigest;
 const id = z.string().min(1).max(128).regex(/^[^\u0000-\u001f\u007f]+$/).refine(value => value === value.trim());
 const integer = z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER);
 const digest = z.string().length(71).regex(/^sha256:[a-f0-9]{64}$/);
@@ -40,6 +51,10 @@ const commandStatusContextLink = z.object({ context_digest: digest, context_nonc
   .refine(value => value.delivery_sequence === 0 ? value.previous_lease_id === null : value.previous_lease_id !== null)
   .refine(value => value.status_issued_at_ms < value.context_expires_at_ms);
 export type CommandStatusContextLink = z.infer<typeof commandStatusContextLink>;
+/** SOURCE ONLY: durable financial correlation is not itself authority. */
+const c2FinancialOriginalLink=z.object({context_digest:digest,receiver_id:id,binding_digest:digest,
+  expires_at_ms:z.number().int().positive().safe()}).strict();
+export type C2FinancialOriginalLink=z.infer<typeof c2FinancialOriginalLink>;
 const humanClaims = z.object({ iss: id, aud: id, sub: id, sid: id, jti: id, iat: integer, nbf: integer, exp: integer,
   purpose: z.literal("pma.identity.v1"), principal_kind: z.literal("human"), session_revision: integer,
   authority_revision: integer, workspace_id: id, environment: z.enum(["paper", "sandbox", "live"]),
@@ -65,6 +80,12 @@ export interface CurrentHumanCandidateConfig {
    * constructors stay compatible; this does not make them installed authority.
    * Expiry stops new issue/ENTER, NEVER clears an ENTERED/UNKNOWN obligation. */
   installation_scope?: { workspace_id: string; environment: "paper"; valid_until_ms: number };
+  /** Private deployment pin, never an HTTP parameter. Once C2 delivery is
+   * selected, an older snapshot without its schema must not clear a drain. */
+  c2_delivery_schema_required?: true;
+  /** Independently provisioned SPKI digest for owner confirmation. Never
+   * derive this from the request, P7 witness, or the writable application DB. */
+  c2_owner_confirmation_spki_sha256?: string;
   /** Optional CUSTODY selection only, never a read permit or runtime flag. */
   native_read_custody?: CurrentHumanNativeReadSelection;
 }
@@ -196,9 +217,45 @@ export type NativeHTTPRecovery=
   {state:"UNKNOWN"|"UNSENT_FENCED"|"RECONCILED";context:NativeBase}|
   {state:"TERMINAL";phase:"SERVED"|"ABORTED";context:NativeBase;terminal:string};
 
-type Row = { lease_id: string; authority_revision: string; subject_id: string; session_id: string; session_revision: string;
+type Row = { lease_id: string; authority_revision: string; human_issuer: string | null; human_signing_key_digest: string | null; human_assertion_digest: string | null; c2_custody_binding_digest: string | null; c2_p7_binding_digest:string|null; c2_p7_owner_intent_id:string|null; c2_financial_context_digest?:string|null; source_trust_digest: string | null; subject_id: string; session_id: string; session_revision: string;
   workspace_id: string; environment: "paper" | "sandbox" | "live"; workload_id: string; request_digest: string;
   issued_at_ms: string; expires_at_ms: string; phase: string; attempt_id: string | null; terminal_receipt_digest: string | null };
+
+const custodyUsesSourcePool = RestoreIndependentCustodyCandidate.prototype.usesSourcePool;
+const custodyInventory = RestoreIndependentCustodyCandidate.prototype.inventory;
+const custodyVerifyRetainedProof = RestoreIndependentCustodyCandidate.prototype.verifyRetainedSourceProof;
+const custodyBindingDigest = RestoreIndependentCustodyCandidate.prototype.bindingDigest;
+const custodyHasVault = RestoreIndependentCustodyCandidate.prototype.hasSourceProofVault;
+const custodyHasAuthenticatedJournal = RestoreIndependentCustodyCandidate.prototype.hasAuthenticatedJournal;
+const custodyPreflight = RestoreIndependentCustodyCandidate.prototype.preflightOriginal;
+const terminalSemanticDigest = (value: Record<string, unknown>): string => {
+  const { jti: _jti, iat: _iat, nbf: _nbf, exp: _exp, ...semantic } = value;
+  return accessDigest(semantic);
+};
+
+/** Candidate fence only: a scope row is not sufficient once its underlying
+ * registration expires or no longer matches the current authority revision.
+ * The caller already holds the authority lock; retain both row locks until the
+ * surrounding transaction ends. This is not P7/source qualification. */
+async function lockCurrentC2Registration(db:PoolClient, workspace:string, owner:string, workload:string,
+  revision:string):Promise<number> {
+  const installed=(await db.query(`SELECT to_regclass('elp210_c2_fence_candidate.scopes') IS NOT NULL
+    AND to_regclass('elp210_c2_p7_candidate.registrations') IS NOT NULL AS installed`)).rows[0]?.installed;
+  if(installed!==true)throw new CurrentHumanLeaseError("CURRENT_HUMAN_C2_FENCE_REQUIRED");
+  const fence=await db.query(`SELECT s.state AS scope_state,r.state AS registration_state,
+    r.authority_revision::text AS registration_revision,r.expires_at_ms::text AS expires_at_ms,
+    floor(extract(epoch FROM clock_timestamp())*1000)::bigint::text AS now_ms
+    FROM elp210_c2_fence_candidate.scopes s JOIN elp210_c2_p7_candidate.registrations r
+      ON r.registration_key=s.registration_key AND r.registration_sha256=s.registration_sha256
+      AND r.workspace_id=s.workspace_id AND r.owner_user_id=s.owner_user_id
+    WHERE s.workspace_id=$1 AND s.owner_user_id=$2 AND s.workload_id=$3 FOR SHARE OF s,r`,
+  [workspace,owner,workload]);
+  const row=fence.rows[0],expires=Number(row?.expires_at_ms),now=Number(row?.now_ms);
+  if(fence.rowCount!==1||row?.scope_state!=="OPEN"||row.registration_state!=="ACTIVE"||
+    row.registration_revision!==String(revision)||!Number.isSafeInteger(expires)||!Number.isSafeInteger(now)||now>=expires)
+    throw new CurrentHumanLeaseError("CURRENT_HUMAN_C2_FENCE_REQUIRED");
+  return expires;
+}
 
 /** UNMOUNTED internal candidate; no HTTP routes/DI registration/config defaults.
  * Requires its explicit isolated SQL installer and injected Ed25519 trust. JWTs
@@ -212,11 +269,48 @@ export class CurrentHumanCandidate {
   private readonly nativeSenderId=randomUUID();
   private readonly nativeHandles=new WeakMap<object,NativeHTTPState>();
   private readonly nativeById=new Map<string,NativeHTTPState>();
-  private constructor(private readonly pool: Pool, private readonly config: CandidateRuntimeConfig,
-    private readonly humanPublicKey: KeyLike) {}
+  readonly #pool:Pool;
+  readonly #config:CandidateRuntimeConfig;
+  readonly #humanPublicKey:KeyLike;
+  readonly #reverseTrustDigest?:string;
+  readonly #humanSigningKeyDigest?:string;
+  private constructor(pool:Pool,config:CandidateRuntimeConfig,humanPublicKey:KeyLike,
+    reverseTrustDigest?:string,humanSigningKeyDigest?:string) {
+    this.#pool=pool;this.#config=config;this.#humanPublicKey=humanPublicKey;
+    this.#reverseTrustDigest=reverseTrustDigest;this.#humanSigningKeyDigest=humanSigningKeyDigest;
+  }
 
   /** The writer coordinator must share this exact bounded Core pool. */
-  usesPool(pool: Pool): boolean { return pool === this.pool; }
+  usesPool(pool: Pool): boolean { return pool === this.#pool; }
+  requiresC2DeliverySchema():boolean { return this.#config.c2_delivery_schema_required===true; }
+  /** Compare against the configured source, without exposing its trust material. */
+  matchesCommandStatusWorkload(workload:string):boolean {
+    return this.#config.c2_delivery_schema_required===true && this.reverseSource().workload_id===workload;
+  }
+  /** Configuration identity only; this does not grant access or extend expiry. */
+  matchesC2Installation(workspace:string,workload:string):boolean {
+    const selected=this.#config.installation_scope;
+    return this.#config.c2_delivery_schema_required===true && !!selected &&
+      selected.environment==="paper" && selected.workspace_id===workspace &&
+      this.reverseSource().workload_id===workload;
+  }
+  /** A custody writer for this candidate must read the exact same Core pool;
+   * a different pool or DSN is not evidence of the same source original. */
+  usesCustodySource(custody: RestoreIndependentCustodyCandidate): boolean {
+    return !!custody && Object.getPrototypeOf(custody) === RestoreIndependentCustodyCandidate.prototype &&
+      custodyUsesSourcePool.call(custody, this.#pool);
+  }
+  /** Exact registered TS proof key and identifiers; NULL legacy pins cannot be
+   * inferred from today's source config. A future successor needs an audited
+   * delegation/rotation protocol rather than treating the same workload as proof. */
+  matchesReverseTrust(value: unknown): boolean {
+    return typeof value === "string" && value === this.#reverseTrustDigest && digest.safeParse(value).success;
+  }
+  /** Only admission/revalidation needs the original human signing key. Source
+   * settlement of an already-entered original must not depend on key rotation. */
+  private matchesHumanSigningKey(value: unknown): boolean {
+    return typeof value === "string" && value === this.#humanSigningKeyDigest && digest.safeParse(value).success;
+  }
 
   static async create(pool: Pool, input: CurrentHumanCandidateConfig) {
     if ([pool.options.connectionTimeoutMillis, pool.options.query_timeout]
@@ -226,6 +320,11 @@ export class CurrentHumanCandidate {
       installation_scope: input.installation_scope ? { ...input.installation_scope } : undefined,
       native_read_custody: input.native_read_custody
         ? nativeSelection(input.native_read_custody, input.issuer, input.source.workload_id) : undefined };
+    if(config.c2_delivery_schema_required!==undefined&&config.c2_delivery_schema_required!==true)
+      throw new CurrentHumanLeaseError("CURRENT_HUMAN_INSTALLATION_SCOPE_INVALID");
+    if(config.c2_owner_confirmation_spki_sha256!==undefined&&
+      !/^[a-f0-9]{64}$/.test(config.c2_owner_confirmation_spki_sha256))
+      throw new CurrentHumanLeaseError("CURRENT_HUMAN_C2_P7_AUTHORITY_INVALID");
     if (config.installation_scope) {
       const scope = config.installation_scope;
       if (!id.safeParse(scope.workspace_id).success || scope.environment !== "paper"
@@ -245,19 +344,36 @@ export class CurrentHumanCandidate {
       || maximum_retained < maximum_unresolved || maximum_retained > 4096)
       throw new CurrentHumanLeaseError("CURRENT_HUMAN_LIMITS_INVALID");
     const own = await exportJWK(config.private_key), source = await exportJWK(config.source.public_key);
-    if (own.kty !== "OKP" || own.crv !== "Ed25519" || !own.d
-      || source.kty !== "OKP" || source.crv !== "Ed25519" || source.d)
+    if (own.kty !== "OKP" || own.crv !== "Ed25519" || !own.d || typeof own.x !== "string"
+      || source.kty !== "OKP" || source.crv !== "Ed25519" || source.d || typeof source.x !== "string")
       throw new CurrentHumanLeaseError("CURRENT_HUMAN_ED25519_TRUST_REQUIRED");
+    const reverseTrustDigest = accessDigest({ domain:"portal.c2-reverse-source-trust.v1", issuer:config.source.issuer,
+      audience:config.source.audience, key_id:config.source.key_id, workload_id:config.source.workload_id,
+      public_key:{kty:source.kty,crv:source.crv,x:source.x} });
+    const humanSigningKeyDigest = accessDigest({domain:"portal.c2-human-signing-key.v1",issuer:config.issuer,
+      audience:config.audience,key_id:config.key_id,public_key:{kty:own.kty,crv:own.crv,x:own.x}});
+    Object.freeze(config.source);
+    Object.freeze(config.limits);
+    Object.freeze(config);
     const { d: _secret, ...publicJwk } = own;
     const publicKey = await importJWK(publicJwk, "EdDSA");
     if (publicKey instanceof Uint8Array) throw new CurrentHumanLeaseError("CURRENT_HUMAN_ED25519_TRUST_REQUIRED");
-    return new CurrentHumanCandidate(pool, config, publicKey);
+    return new CurrentHumanCandidate(pool, config, publicKey, reverseTrustDigest, humanSigningKeyDigest);
   }
 
-  private async transaction<T>(fn: (db: PoolClient, authority: { revision: string; drain_id: string | null }) => Promise<T>) {
-    return withTransaction(this.pool, async db => {
+  private async transaction<T>(fn: (db: PoolClient, authority: { revision: string; drain_id: string | null }) => Promise<T>,
+    boundIdleTransaction = false) {
+    return withTransaction(this.#pool, async db => {
+      // PostgreSQL can terminate an idle-in-transaction session while this
+      // process awaits the independent custody store. Consume that client's
+      // error event until the callback unwinds: the subsequent source query or
+      // COMMIT must still fail and withTransaction discards the broken client.
+      const onIdleTransactionError = () => {};
+      if(boundIdleTransaction)db.on("error",onIdleTransactionError);
+      try {
       if(this.nativeHTTP)await db.query("SET TRANSACTION ISOLATION LEVEL READ COMMITTED");
       await db.query("SET LOCAL lock_timeout='1000ms'; SET LOCAL statement_timeout='3000ms'");
+      if(boundIdleTransaction)await db.query("SET LOCAL idle_in_transaction_session_timeout='2000ms'");
       // Lazy fail-closed structural preflight: constructors stay zero-DB, and
       // an old installer may NEVER silently count legacy rows alone.
       const schema = (await db.query(`SELECT to_regclass('elp210_candidate.authority') IS NOT NULL
@@ -267,51 +383,348 @@ export class CurrentHumanCandidate {
       if (schema?.installed !== true) throw new CurrentHumanLeaseError("CURRENT_HUMAN_NATIVE_SCHEMA_NOT_INSTALLED");
       const authority = (await db.query("SELECT revision,drain_id FROM elp210_candidate.authority WHERE singleton FOR UPDATE")).rows[0];
       if (!authority) throw new CurrentHumanLeaseError("CURRENT_HUMAN_CANDIDATE_NOT_INSTALLED");
-      return fn(db, authority);
+      return await fn(db, authority);
+      } finally {if(boundIdleTransaction)db.removeListener("error",onIdleTransactionError);}
     });
   }
 
   async issue(actor: AccessActor, untrustedBinding: CurrentHumanBinding): Promise<{ token: string; lease_id: string; expires_at_ms: number; authority_revision: number }> {
-    return this.issueBound(actor, untrustedBinding, false);
+    return this.#issueBound(actor, untrustedBinding, false);
+  }
+
+  /** C2 internal preparation only; NEVER mount this as a generic signer. The
+   * caller still needs an independently accepted P7 request scope, exact
+   * native delivery custody and authorised owner session. Here we hash the
+   * request bytes ourselves and fence a repeated original durably. The latter
+   * stays closed even after a terminal: until a C2-specific delivery ACK and
+   * restart recovery exist, source terminal/expiry cannot authorize reissue. */
+  async issueC2ProtectedOwner(actor: AccessActor, expectedOwner: string, request: PmHttpRequestBytes,
+    bounds: PmHttpRequestBounds, custodyBinding?: string,p7?:C2P7IssuerFenceCandidate,custody?:RestoreIndependentCustodyCandidate,
+    financialOriginal?:C2FinancialOriginalLink): Promise<{ token: string; lease_id: string; expires_at_ms: number; authority_revision: number }> {
+    if(this.#config.c2_delivery_schema_required===true&&p7===undefined)
+      throw new CurrentHumanLeaseError("CURRENT_HUMAN_C2_P7_FENCE_REQUIRED");
+    const owner = id.parse(expectedOwner), selected = this.#config.installation_scope, capturedActor = nativeActor(actor);
+    if (!selected || selected.environment !== "paper" || capturedActor.user_id !== owner)
+      throw new CurrentHumanLeaseError("CURRENT_HUMAN_C2_OWNER_REQUIRED");
+    const request_digest = pmHttpRequestDigest(request, bounds);
+    const binding: CurrentHumanBinding = { workspace_id: selected.workspace_id, environment: "paper",
+      workload_id: this.reverseSource().workload_id, request_digest };
+    if (custodyBinding !== undefined) digest.parse(custodyBinding);
+    if(this.#config.c2_delivery_schema_required===true) {
+      this.#requireC2Custody(custody,custodyBinding);
+      // New C2 assertions cannot start on a journal where a DB writer can
+      // fabricate an unkeyed chain. A separately qualified key, external
+      // monotonic witness and restore barrier are still required before mount.
+      // Resume/terminal settlement deliberately remains bound to its exact
+      // original, including a legacy original, rather than being discarded.
+      if(!custodyHasAuthenticatedJournal.call(custody!))
+        throw new CurrentHumanLeaseError("CURRENT_HUMAN_C2_CUSTODY_REQUIRED");
+      await custodyPreflight.call(custody!);
+    }
+    if(financialOriginal!==undefined&&(this.#config.c2_delivery_schema_required!==true||!p7||!custody))
+      throw new CurrentHumanLeaseError("CURRENT_HUMAN_C2_CUSTODY_REQUIRED");
+    const issued = await this.#issueBound(capturedActor, binding, false, undefined, owner, custodyBinding,p7,financialOriginal);
+    if(this.#config.c2_delivery_schema_required===true) {
+      try {
+        await appendCustodiedOriginal(custody!,"ISSUED_HUMAN_ASSERTION",issued.lease_id,issued.token);
+        await this.#revalidateBoundIssue(capturedActor,binding,issued,owner,custodyBinding,p7,undefined,financialOriginal);
+      } catch {throw new C2CustodyPendingError(issued.lease_id);}
+    } else await this.#revalidateBoundIssue(capturedActor, binding, issued, owner, custodyBinding,p7);
+    return issued;
+  }
+
+  #requireC2Custody(custody:RestoreIndependentCustodyCandidate|undefined,binding:string|undefined):void {
+    if(!custody||Object.getPrototypeOf(custody)!==RestoreIndependentCustodyCandidate.prototype||
+      !custodyUsesSourcePool.call(custody,this.#pool)||!custodyHasVault.call(custody)||
+      !binding||custodyBindingDigest.call(custody)!==binding)
+      throw new CurrentHumanLeaseError("CURRENT_HUMAN_C2_CUSTODY_REQUIRED");
+  }
+
+  /** Recreate the same C2 assertion after a lost process/response. This never
+   * issues a new lease: a legacy NULL digest, entered/retired lease, revoked
+   * session, changed registration or changed serialized bytes all fail closed.
+   * The caller must still enforce independent custody before any delivery. */
+  async resumeC2ProtectedOwnerIssue(untrustedActor: AccessActor, expectedOwner: string, request: PmHttpRequestBytes,
+    bounds: PmHttpRequestBounds, leaseId?: string, custodyBinding?: string,p7?:C2P7IssuerFenceCandidate,custody?:RestoreIndependentCustodyCandidate,
+    untrustedStatusLink?:CommandStatusContextLink,untrustedFinancialOriginal?:C2FinancialOriginalLink): Promise<{ token: string; lease_id: string; expires_at_ms: number; authority_revision: number }> {
+    if(this.#config.c2_delivery_schema_required===true&&p7===undefined)
+      throw new CurrentHumanLeaseError("CURRENT_HUMAN_C2_P7_FENCE_REQUIRED");
+    if (custodyBinding !== undefined) digest.parse(custodyBinding);
+    const actor=nativeActor(untrustedActor),owner=id.parse(expectedOwner),lease=leaseId===undefined?null:id.parse(leaseId),selected=this.#config.installation_scope;
+    const statusLink=untrustedStatusLink===undefined?undefined:commandStatusContextLink.parse(untrustedStatusLink);
+    const financial=untrustedFinancialOriginal===undefined?undefined:c2FinancialOriginalLink.parse(untrustedFinancialOriginal);
+    if(financial&&(statusLink||lease===null||this.#config.c2_delivery_schema_required!==true))
+      throw new CurrentHumanLeaseError("CURRENT_HUMAN_C2_FINANCIAL_ORIGINAL_INVALID");
+    if(statusLink!==undefined&&(request.method!=="POST"||!Buffer.from(request.raw_path).equals(Buffer.from("/internal/elp210/pm-command/status"))||request.query_string.byteLength!==0||lease===null))
+      throw new CurrentHumanLeaseError("CURRENT_HUMAN_COMMAND_STATUS_LINK_INVALID");
+    if(!selected||selected.environment!=="paper"||actor.user_id!==owner)throw new CurrentHumanLeaseError("CURRENT_HUMAN_C2_OWNER_REQUIRED");
+    const binding:CurrentHumanBinding={workspace_id:selected.workspace_id,environment:"paper",
+      workload_id:this.reverseSource().workload_id,request_digest:pmHttpRequestDigest(request,bounds)};
+    if(this.#config.c2_delivery_schema_required===true)this.#requireC2Custody(custody,custodyBinding);
+    this.checkInstallation(binding,true);
+    const issued=await this.transaction(async(db,authority)=>{
+      const found=await db.query<Row & {authority_fingerprint:string;human_assertion_digest:string|null}>(
+        `SELECT * FROM elp210_candidate.leases WHERE workspace_id=$1 AND environment='paper' AND workload_id=$2
+          AND request_digest=$3 AND ($4::text IS NULL OR lease_id=$4) LIMIT 2 FOR SHARE`,
+        [binding.workspace_id,binding.workload_id,binding.request_digest,lease]);
+      const row=found.rows[0];
+      const p7Digest=p7===undefined?null:this.#c2P7Digest(p7);
+      if(found.rows.length!==1||!row||authority.drain_id||row.phase!=="ISSUED"||row.human_issuer!==this.#config.issuer||
+        !this.matchesHumanSigningKey(row.human_signing_key_digest)||!this.matchesReverseTrust(row.source_trust_digest)||
+        row.authority_revision!==authority.revision||row.subject_id!==owner||row.session_id!==actor.session_id||
+        Number(row.session_revision)!==actor.session_generation||row.workspace_id!==binding.workspace_id||
+        row.environment!==binding.environment||row.workload_id!==binding.workload_id||row.request_digest!==binding.request_digest||
+        !digest.safeParse(row.human_assertion_digest).success || row.c2_p7_binding_digest!==p7Digest ||
+        ((row.c2_custody_binding_digest !== null || custodyBinding !== undefined) &&
+          row.c2_custody_binding_digest !== custodyBinding))throw new CurrentHumanLeaseError("CURRENT_HUMAN_ENTRY_NOT_AVAILABLE");
+      const current=await lockCurrentHumanSnapshot(db,actor,binding.workspace_id);
+      const c2Expiry=await lockCurrentC2Registration(db,binding.workspace_id,owner,binding.workload_id,authority.revision);
+      if(p7!==undefined&&(await this.#checkC2P7(db,p7,actor,binding)).intent_id!==row.c2_p7_owner_intent_id)
+        throw new CurrentHumanLeaseError("CURRENT_HUMAN_ENTRY_NOT_AVAILABLE");
+      if(p7===undefined&&row.c2_p7_owner_intent_id!==null)
+        throw new CurrentHumanLeaseError("CURRENT_HUMAN_ENTRY_NOT_AVAILABLE");
+      this.checkInstallation(binding,true);
+      const issuedMs=Number(row.issued_at_ms),expiresMs=Number(row.expires_at_ms);
+      if(current.anchor!==owner||current.authority_fingerprint!==row.authority_fingerprint||
+        !Number.isSafeInteger(issuedMs)||issuedMs%1000!==0||!Number.isSafeInteger(expiresMs)||expiresMs%1000!==0||
+        expiresMs>c2Expiry||current.now>=expiresMs||current.now>=current.lease_until_ms||current.now>=c2Expiry||
+        current.now>=selected.valid_until_ms)throw new CurrentHumanLeaseError("CURRENT_HUMAN_ENTRY_NOT_AVAILABLE");
+      const claims=humanClaims.parse({iss:this.#config.issuer,aud:this.#config.audience,sub:owner,sid:actor.session_id,jti:row.lease_id,
+        iat:issuedMs/1000,nbf:issuedMs/1000,exp:expiresMs/1000,purpose:"pma.identity.v1",principal_kind:"human",
+        session_revision:actor.session_generation,authority_revision:Number(row.authority_revision),...binding});
+      const token=await new SignJWT(claims).setProtectedHeader({alg:"EdDSA",kid:this.#config.key_id,typ:"JWT"}).sign(this.#config.private_key);
+      if(accessDigest(token)!==row.human_assertion_digest)throw new CurrentHumanLeaseError("CURRENT_HUMAN_ASSERTION_CHANGED");
+      await this.#checkC2StatusLink(db,row.lease_id,binding.request_digest,accessDigest(token),statusLink);
+      if(statusLink!==undefined)await this.#checkStatusPreparation(db,actor,binding,statusLink,true);
+      await this.#checkFinancialOriginal(db,row,actor,binding,financial);
+      return {token,lease_id:row.lease_id,expires_at_ms:expiresMs,authority_revision:Number(row.authority_revision)};
+    });
+    if(this.#config.c2_delivery_schema_required===true) {
+      try {
+        await appendCustodiedOriginal(custody!,"ISSUED_HUMAN_ASSERTION",issued.lease_id,issued.token);
+        await this.#revalidateBoundIssue(actor,binding,issued,owner,custodyBinding,p7,statusLink,financial);
+      } catch {throw new C2CustodyPendingError(issued.lease_id);}
+    }
+    return issued;
+  }
+
+  /** Recheck this exact C2 original after independent custody completes.
+   * This is not an HTTP write fence; ENTER must still recheck current rights. */
+  async revalidateC2ProtectedOwnerIssue(actor:AccessActor,expectedOwner:string,request:PmHttpRequestBytes,
+    bounds:PmHttpRequestBounds,issued:{token:string;lease_id:string;expires_at_ms:number;authority_revision:number},custodyBinding?:string,p7?:C2P7IssuerFenceCandidate,
+    financialOriginal?:C2FinancialOriginalLink):Promise<void> {
+    if(this.#config.c2_delivery_schema_required===true&&p7===undefined)
+      throw new CurrentHumanLeaseError("CURRENT_HUMAN_C2_P7_FENCE_REQUIRED");
+    const owner=id.parse(expectedOwner),selected=this.#config.installation_scope;
+    if(!selected||selected.environment!=="paper")throw new CurrentHumanLeaseError("CURRENT_HUMAN_C2_OWNER_REQUIRED");
+    const binding:CurrentHumanBinding={workspace_id:selected.workspace_id,environment:"paper",
+      workload_id:this.reverseSource().workload_id,request_digest:pmHttpRequestDigest(request,bounds)};
+    await this.#revalidateBoundIssue(actor,binding,issued,owner,custodyBinding,p7,undefined,financialOriginal);
+  }
+
+  /** SOURCE/TEST ONLY: authenticate the same marked financial original and its
+   * retained source terminal under current P7/session locks. This is NOT a
+   * recipient ACK, HTTP-delivery fence, successor permit, or restore barrier.
+   * RESOLVE remains independent and may settle an entered original after revoke. */
+  async verifyC2FinancialTerminal(untrustedActor:AccessActor,expectedOwner:string,request:PmHttpRequestBytes,
+    bounds:PmHttpRequestBounds,issued:{token:string;lease_id:string;expires_at_ms:number;authority_revision:number},
+    untrustedLink:C2FinancialOriginalLink,custody:RestoreIndependentCustodyCandidate,p7:C2P7IssuerFenceCandidate):
+    Promise<{state:"VERIFIED_NOT_ACK";phase:"COMMITTED"|"ROLLED_BACK"}> {
+    const actor=nativeActor(untrustedActor),owner=id.parse(expectedOwner),link=c2FinancialOriginalLink.parse(untrustedLink);
+    const selected=this.#config.installation_scope,captured={token:issued.token,lease_id:issued.lease_id,
+      expires_at_ms:issued.expires_at_ms,authority_revision:issued.authority_revision};
+    if(!selected||selected.environment!=="paper"||this.#config.c2_delivery_schema_required!==true||actor.user_id!==owner||!p7||
+      !custody||Object.getPrototypeOf(custody)!==RestoreIndependentCustodyCandidate.prototype||
+      !custodyHasAuthenticatedJournal.call(custody))throw new CurrentHumanLeaseError("CURRENT_HUMAN_C2_CUSTODY_REQUIRED");
+    const custodyBinding=custodyBindingDigest.call(custody);
+    this.#requireC2Custody(custody,custodyBinding);
+    const binding:CurrentHumanBinding={workspace_id:selected.workspace_id,environment:"paper",
+      workload_id:this.reverseSource().workload_id,request_digest:pmHttpRequestDigest(request,bounds)};
+    let signed:z.infer<typeof humanClaims>;
+    try {
+      if(typeof captured.token!=="string"||Buffer.byteLength(captured.token)>8192)throw new Error();
+      const verified=await jwtVerify(captured.token,this.#humanPublicKey,{algorithms:["EdDSA"],
+        issuer:this.#config.issuer,audience:this.#config.audience});
+      if(verified.protectedHeader.kid!==this.#config.key_id||verified.protectedHeader.typ!=="JWT")throw new Error();
+      signed=humanClaims.parse(verified.payload);
+      if(signed.jti!==captured.lease_id||signed.sub!==actor.user_id||signed.sid!==actor.session_id||
+        signed.session_revision!==actor.session_generation||signed.authority_revision!==captured.authority_revision||
+        signed.workspace_id!==binding.workspace_id||signed.environment!==binding.environment||
+        signed.workload_id!==binding.workload_id||signed.request_digest!==binding.request_digest||
+        signed.exp*1000!==captured.expires_at_ms||signed.nbf!==signed.iat)throw new Error();
+    } catch {throw new CurrentHumanLeaseError("CURRENT_HUMAN_ASSERTION_CHANGED");}
+    const p7Digest=this.#c2P7Digest(p7);this.checkInstallation(binding,true);
+    return this.transaction(async(db,authority)=>{
+      const row=(await db.query<Row & {authority_fingerprint:string}>(
+        "SELECT * FROM elp210_candidate.leases WHERE lease_id=$1 FOR SHARE",[captured.lease_id])).rows[0];
+      if(!row||authority.drain_id||row.human_issuer!==this.#config.issuer||
+        !this.matchesHumanSigningKey(row.human_signing_key_digest)||!this.matchesReverseTrust(row.source_trust_digest)||
+        row.authority_revision!==authority.revision||Number(row.authority_revision)!==captured.authority_revision||
+        row.subject_id!==actor.user_id||row.session_id!==actor.session_id||Number(row.session_revision)!==actor.session_generation||
+        row.workspace_id!==binding.workspace_id||row.environment!==binding.environment||row.workload_id!==binding.workload_id||
+        row.request_digest!==binding.request_digest||row.c2_custody_binding_digest!==custodyBinding||row.c2_p7_binding_digest!==p7Digest||
+        row.human_assertion_digest!==accessDigest(captured.token)||Number(row.issued_at_ms)!==signed.iat*1000||
+        Number(row.expires_at_ms)!==captured.expires_at_ms||!row.attempt_id||
+        !["COMMITTED","ROLLED_BACK"].includes(row.phase)||!digest.safeParse(row.terminal_receipt_digest).success)
+        throw new CurrentHumanLeaseError("CURRENT_HUMAN_ENTRY_NOT_AVAILABLE");
+      const current=await lockCurrentHumanSnapshot(db,actor,binding.workspace_id);
+      if(current.authority_fingerprint!==row.authority_fingerprint||current.anchor!==owner)
+        throw new CurrentHumanLeaseError("CURRENT_HUMAN_ENTRY_NOT_AVAILABLE");
+      await this.#checkFinancialOriginal(db,row,actor,binding,link);
+      const c2Expiry=await lockCurrentC2Registration(db,binding.workspace_id,owner,binding.workload_id,authority.revision);
+      if((await this.#checkC2P7(db,p7,actor,binding)).intent_id!==row.c2_p7_owner_intent_id)
+        throw new CurrentHumanLeaseError("CURRENT_HUMAN_C2_P7_FENCE_REQUIRED");
+      const snapshot=await custodyInventory.call(custody);
+      const original=snapshot.events.filter(e=>e.kind==="ISSUED_HUMAN_ASSERTION"&&e.lease_id===row.lease_id&&
+        e.proof_hash===createHash("sha256").update(captured.token,"utf8").digest("hex"));
+      const terminals=snapshot.events.filter(e=>e.kind==="SIGNED_SOURCE_TERMINAL"&&e.lease_id===row.lease_id);
+      if(original.length!==1||terminals.length!==1)throw new CurrentHumanLeaseError("CURRENT_HUMAN_CUSTODY_PROOF_REQUIRED");
+      const proof=await custodyVerifyRetainedProof.call(custody,terminals[0].operation_id);
+      if(proof.generation!==terminals[0].generation||proof.event_hash!==terminals[0].event_hash||
+        proof.lease_id!==row.lease_id||proof.attempt_id!==row.attempt_id||proof.phase!==row.phase||
+        proof.terminal_receipt_digest!==row.terminal_receipt_digest||proof.source_trust_digest!==row.source_trust_digest)
+        throw new CurrentHumanLeaseError("CURRENT_HUMAN_CUSTODY_PROOF_REQUIRED");
+      const after=await custodyInventory.call(custody);
+      if(after.generation!==snapshot.generation||after.event_hash!==snapshot.event_hash)
+        throw new CurrentHumanLeaseError("CURRENT_HUMAN_CUSTODY_PROOF_REQUIRED");
+      // Recheck the signed owner confirmation and time after custody I/O;
+      // a valid historical terminal is not renewed authority for a new read.
+      if((await this.#checkC2P7(db,p7,actor,binding)).intent_id!==row.c2_p7_owner_intent_id)
+        throw new CurrentHumanLeaseError("CURRENT_HUMAN_C2_P7_FENCE_REQUIRED");
+      const now=Number((await db.query("SELECT floor(extract(epoch FROM clock_timestamp())*1000)::bigint AS ms")).rows[0]?.ms);
+      if(!Number.isSafeInteger(now)||now<current.now||now>=current.lease_until_ms||now>=Number(row.expires_at_ms)||
+        now>=link.expires_at_ms||now>=c2Expiry||now>=selected.valid_until_ms)
+        throw new CurrentHumanLeaseError("CURRENT_HUMAN_ENTRY_NOT_AVAILABLE");
+      return {state:"VERIFIED_NOT_ACK",phase:row.phase as "COMMITTED"|"ROLLED_BACK"};
+    },true);
   }
 
   /** STATUS has its own durable delivery fence. Unlike a financial read,
    * terminal source custody alone cannot authorize a replacement: an exact
    * authenticated Edge delivery ACK must also have been retained. */
   async issueCommandStatus(actor: AccessActor, untrustedBinding: CurrentHumanBinding, untrustedLink: CommandStatusContextLink): Promise<{ token: string; lease_id: string; expires_at_ms: number; authority_revision: number }> {
-    return this.issueBound(actor, untrustedBinding, true, untrustedLink);
+    return this.#issueBound(actor, untrustedBinding, true, untrustedLink);
   }
 
-  private async issueBound(actor: AccessActor, untrustedBinding: CurrentHumanBinding, commandStatus: boolean, untrustedLink?: CommandStatusContextLink): Promise<{ token: string; lease_id: string; expires_at_ms: number; authority_revision: number }> {
+  /** Unmounted C2 STATUS-only candidate. P7 attests the owner preparation;
+   * a separate STATUS authority must still authenticate the original and the
+   * callback. Neither P7 nor this method grants a command or starts one. */
+  async issueC2ProtectedOwnerCommandStatus(actor:AccessActor,expectedOwner:string,request:PmHttpRequestBytes,
+    bounds:PmHttpRequestBounds,untrustedLink:CommandStatusContextLink,custodyBinding:string,
+    p7:C2P7IssuerFenceCandidate,custody:RestoreIndependentCustodyCandidate):Promise<{
+      token:string;lease_id:string;expires_at_ms:number;authority_revision:number}> {
+    if(this.#config.c2_delivery_schema_required!==true)
+      throw new CurrentHumanLeaseError("CURRENT_HUMAN_C2_P7_FENCE_REQUIRED");
+    const owner=id.parse(expectedOwner),person=nativeActor(actor),selected=this.#config.installation_scope;
+    const link=commandStatusContextLink.parse(untrustedLink);
+    // Hash and copy caller bytes before any await. Only the published STATUS
+    // route is in this candidate; a P7 READ/HISTORY record is not a command
+    // permission and cannot be used as a generic request signer here.
+    pmHttpRequestDigest(request,bounds);
+    const copied={method:request.method,raw_path:Buffer.from(request.raw_path),
+      query_string:Buffer.from(request.query_string),body:Buffer.from(request.body)};
+    const capturedBounds={request_bytes:bounds.request_bytes};
+    if(!selected||selected.environment!=="paper"||person.user_id!==owner||copied.method!=="POST"||
+      !copied.raw_path.equals(Buffer.from("/internal/elp210/pm-command/status"))||copied.query_string.length!==0)
+      throw new CurrentHumanLeaseError("CURRENT_HUMAN_COMMAND_STATUS_LINK_INVALID");
+    const binding:CurrentHumanBinding={workspace_id:selected.workspace_id,environment:"paper",
+      workload_id:this.reverseSource().workload_id,request_digest:pmHttpRequestDigest(copied,capturedBounds)};
+    this.#requireC2Custody(custody,custodyBinding);
+    if(!custodyHasAuthenticatedJournal.call(custody))
+      throw new CurrentHumanLeaseError("CURRENT_HUMAN_C2_CUSTODY_REQUIRED");
+    await custodyPreflight.call(custody);
+    const issued=await this.#issueBound(person,binding,true,link,owner,custodyBinding,p7);
+    try {
+      await appendCustodiedOriginal(custody,"ISSUED_HUMAN_ASSERTION",issued.lease_id,issued.token);
+      await this.#revalidateBoundIssue(person,binding,issued,owner,custodyBinding,p7,link);
+    } catch {throw new C2CustodyPendingError(issued.lease_id);}
+    return issued;
+  }
+
+  /** Revalidate the same retained STATUS assertion immediately before a
+   * higher-level delivery. This is not itself an HTTP custody fence. */
+  async revalidateC2ProtectedOwnerCommandStatus(actor:AccessActor,expectedOwner:string,binding:CurrentHumanBinding,
+    issued:{token:string;lease_id:string;expires_at_ms:number;authority_revision:number},untrustedLink:CommandStatusContextLink,
+    custodyBinding:string,p7:C2P7IssuerFenceCandidate,custody:RestoreIndependentCustodyCandidate):Promise<void> {
+    if(this.#config.c2_delivery_schema_required!==true)
+      throw new CurrentHumanLeaseError("CURRENT_HUMAN_C2_P7_FENCE_REQUIRED");
+    const person=nativeActor(actor),owner=id.parse(expectedOwner),scope=currentHumanBinding.parse(binding),
+      link=commandStatusContextLink.parse(untrustedLink);
+    if(scope.environment!=="paper"||person.user_id!==owner)
+      throw new CurrentHumanLeaseError("CURRENT_HUMAN_C2_OWNER_REQUIRED");
+    this.#requireC2Custody(custody,custodyBinding);
+    await this.#revalidateBoundIssue(person,scope,issued,owner,custodyBinding,p7,link);
+  }
+
+  async #issueBound(actor: AccessActor, untrustedBinding: CurrentHumanBinding, commandStatus: boolean,
+    untrustedLink?: CommandStatusContextLink, c2Owner?: string, custodyBinding?:string,p7?:C2P7IssuerFenceCandidate,
+    untrustedFinancialOriginal?:C2FinancialOriginalLink): Promise<{ token: string; lease_id: string; expires_at_ms: number; authority_revision: number }> {
+    // A C2-pinned signer must not expose an alternate generic or STATUS
+    // issuance path around the exact-owner P7/custody composition. Other
+    // installations retain their existing generic and STATUS behavior.
+    if(this.#config.c2_delivery_schema_required===true&&(c2Owner===undefined||p7===undefined))
+      throw new CurrentHumanLeaseError("CURRENT_HUMAN_C2_P7_FENCE_REQUIRED");
     const binding = currentHumanBinding.parse(untrustedBinding);
+    const p7Digest=p7===undefined?null:this.#c2P7Digest(p7);
     const link = untrustedLink === undefined ? undefined : commandStatusContextLink.parse(untrustedLink);
+    const financial=untrustedFinancialOriginal===undefined?undefined:c2FinancialOriginalLink.parse(untrustedFinancialOriginal);
     // New STATUS leases must always carry the durable correlation required
     // for same-context restart recovery. Older unlinked leases are still
     // fenced by the request-digest lookup below; they are not rewritten.
     if (Boolean(link) !== commandStatus) throw new CurrentHumanLeaseError("CURRENT_HUMAN_COMMAND_STATUS_LINK_INVALID");
+    if(financial&&(commandStatus||!c2Owner||!p7||!custodyBinding||this.#config.c2_delivery_schema_required!==true))
+      throw new CurrentHumanLeaseError("CURRENT_HUMAN_C2_FINANCIAL_ORIGINAL_INVALID");
     if (commandStatus && binding.environment !== "paper") throw new CurrentHumanLeaseError("CURRENT_HUMAN_COMMAND_STATUS_PAPER_REQUIRED");
     this.checkInstallation(binding, true);
     if (binding.workload_id !== this.reverseSource().workload_id) throw new CurrentHumanLeaseError("CURRENT_HUMAN_WORKLOAD_MISMATCH");
     const issued = await this.transaction(async (db, authority) => {
       if (authority.drain_id) throw new CurrentHumanLeaseError("CURRENT_HUMAN_DRAINING");
-      const current = await captureCurrentHumanSnapshot(db, actor, binding.workspace_id);
+      const current = c2Owner === undefined ? await captureCurrentHumanSnapshot(db, actor, binding.workspace_id)
+        : await lockCurrentHumanSnapshot(db, actor, binding.workspace_id);
+      let c2Expiry=Number.MAX_SAFE_INTEGER,p7IntentId:string|null=null;
+      if (c2Owner !== undefined) {
+        if (binding.environment !== "paper" || actor.user_id !== c2Owner || current.anchor !== c2Owner)
+          throw new CurrentHumanLeaseError("CURRENT_HUMAN_C2_OWNER_REQUIRED");
+        // Candidate C2 is fail-closed if its independently provisioned DB
+        // fence is missing. This scope/row alone is not owner authorization,
+        // source acceptance or proof of upstream token invalidation.
+        c2Expiry=await lockCurrentC2Registration(db,binding.workspace_id,c2Owner,binding.workload_id,authority.revision);
+        if(p7!==undefined) {
+          const checked=await this.#checkC2P7(db,p7,actor,binding);
+          p7IntentId=checked.intent_id;c2Expiry=Math.min(c2Expiry,checked.expires_at_ms);
+        }
+        // The same authority singleton lock serializes this test and INSERT
+        // across processes. Include all phases, including retired and terminal:
+        // no source terminal proves that the client received the outcome.
+        // A new STATUS sequence may use the same source bytes only within
+        // the same immutable context/original. The later predecessor check
+        // requires the exact source terminal and persisted recipient ACK.
+        // Fresh contexts and non-STATUS issuances retain the strict fence.
+        const successor=commandStatus&&link!==undefined&&link.delivery_sequence>0;
+        const prior = await db.query(`SELECT 1 FROM elp210_candidate.leases l
+          LEFT JOIN execution_command_status_context_links c ON c.lease_id=l.lease_id
+          WHERE l.workspace_id=$1 AND l.environment=$2 AND l.workload_id=$3 AND l.request_digest=$4
+            AND (NOT $5::boolean OR c.context_digest IS DISTINCT FROM $6 OR c.original_digest IS DISTINCT FROM $7)
+          LIMIT 1`,
+        [binding.workspace_id, binding.environment, binding.workload_id, binding.request_digest,successor,
+          link?.context_digest??null,link?.original_digest??null]);
+        if (prior.rowCount) throw new CurrentHumanLeaseError("CURRENT_HUMAN_C2_SAME_ORIGINAL_RECOVERY_REQUIRED");
+      }
       if (link && current.now >= link.context_expires_at_ms)
         throw new CurrentHumanLeaseError("CURRENT_HUMAN_COMMAND_STATUS_LINK_EXPIRED");
-      if (link) {
-        // A consumed or replaced preparation may never authorize another
-        // ISSUE, even from a stale Core process that still has the bearer in
-        // memory. Legacy originals without a preparation remain subject to
-        // the existing immutable lease/ACK fence below.
-        const preparation=await db.query(`SELECT context_digest,consumed_at FROM execution_command_status_preparations
-          WHERE workspace_id=$1 AND workload_id=$2 AND original_digest=$3 LIMIT 2`,
-        [binding.workspace_id,binding.workload_id,link.original_digest]);
-        if(preparation.rowCount && (preparation.rowCount!==1 || preparation.rows[0].context_digest!==link.context_digest ||
-          preparation.rows[0].consumed_at!==null))
-          throw new CurrentHumanLeaseError("CURRENT_HUMAN_COMMAND_STATUS_PREPARATION_RETIRED");
+      if(financial) {
+        const original=await db.query(`SELECT context_digest FROM elp210_c2_financial_candidate.originals
+          WHERE context_digest=$1 AND subject_id=$2 AND session_id=$3 AND session_revision=$4 AND workspace_id=$5
+            AND workload_id=$6 AND receiver_id=$7 AND binding_digest=$8 AND request_digest=$9 AND expires_at_ms=$10
+            AND expires_at_ms>floor(extract(epoch FROM clock_timestamp())*1000) AND lease_id IS NULL FOR UPDATE`,
+        [financial.context_digest,actor.user_id,actor.session_id,actor.session_generation,binding.workspace_id,
+          binding.workload_id,financial.receiver_id,financial.binding_digest,binding.request_digest,financial.expires_at_ms]);
+        if(original.rowCount!==1)throw new CurrentHumanLeaseError("CURRENT_HUMAN_C2_FINANCIAL_ORIGINAL_INVALID");
       }
+      if (link) await this.#checkStatusPreparation(db,actor,binding,link,c2Owner!==undefined);
       const counts = (await db.query(`SELECT count(*)::int AS retained,
         count(*) FILTER (WHERE unresolved)::int AS unresolved FROM elp210_candidate.obligations`)).rows[0];
-      if (counts.unresolved >= this.config.limits.maximum_unresolved || counts.retained >= this.config.limits.maximum_retained)
+      if (counts.unresolved >= this.#config.limits.maximum_unresolved || counts.retained >= this.#config.limits.maximum_retained)
         throw new CurrentHumanLeaseError("CURRENT_HUMAN_CAPACITY_EXHAUSTED");
       if (commandStatus) {
         // The authority singleton is locked by transaction(), so this check
@@ -335,40 +748,69 @@ export class CurrentHumanCandidate {
         if (outstanding.rowCount) throw new CurrentHumanLeaseError("CURRENT_HUMAN_COMMAND_STATUS_RECOVERY_REQUIRED");
       }
       this.checkInstallation(binding, true);
-      const iat = Math.floor(current.now / 1000), exp = Math.floor(Math.min(current.now + this.config.limits.ttl_ms,
-        current.lease_until_ms, this.config.installation_scope?.valid_until_ms ?? Number.MAX_SAFE_INTEGER) / 1000);
+      if(p7!==undefined) {
+        if(c2Owner===undefined)throw new CurrentHumanLeaseError("CURRENT_HUMAN_C2_P7_FENCE_INVALID");
+        // Recheck clock and the same locked owner intent immediately before
+        // signing; earlier selection may have waited on capacity/other rows.
+        const checked=await this.#checkC2P7(db,p7,actor,binding);
+        if(checked.intent_id!==p7IntentId)throw new CurrentHumanLeaseError("CURRENT_HUMAN_C2_P7_FENCE_INVALID");
+        c2Expiry=Math.min(c2Expiry,checked.expires_at_ms);
+      }
+      const iat = Math.floor(current.now / 1000), exp = Math.floor(Math.min(current.now + this.#config.limits.ttl_ms,
+        current.lease_until_ms, this.#config.installation_scope?.valid_until_ms ?? Number.MAX_SAFE_INTEGER,c2Expiry,
+        link?.context_expires_at_ms ?? Number.MAX_SAFE_INTEGER,financial?.expires_at_ms ?? Number.MAX_SAFE_INTEGER) / 1000);
       if (exp <= iat) throw new CurrentHumanLeaseError("CURRENT_HUMAN_SESSION_EXPIRING");
-      const body = humanClaims.parse({ iss: this.config.issuer, aud: this.config.audience, sub: actor.user_id,
+      const body = humanClaims.parse({ iss: this.#config.issuer, aud: this.#config.audience, sub: actor.user_id,
         sid: actor.session_id, jti: randomUUID(), iat, nbf: iat, exp, purpose: "pma.identity.v1", principal_kind: "human",
         session_revision: actor.session_generation, authority_revision: Number(authority.revision), ...binding });
+      // C2 can resume only the exact assertion minted with this original.
+      // Hash the deterministic signed bytes before committing the lease; never
+      // persist the bearer. A legacy NULL row cannot be resumed by guessing.
+      let assertion: string | undefined = c2Owner === undefined ? undefined : await new SignJWT(body)
+        .setProtectedHeader({ alg: "EdDSA", kid: this.#config.key_id, typ: "JWT" }).sign(this.#config.private_key);
       await db.query(`INSERT INTO elp210_candidate.leases(lease_id,authority_revision,subject_id,session_id,session_revision,
-        workspace_id,environment,workload_id,request_digest,authority_fingerprint,issued_at_ms,expires_at_ms)
-        VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)`, [body.jti, body.authority_revision, body.sub, body.sid,
+        workspace_id,environment,workload_id,request_digest,authority_fingerprint,issued_at_ms,expires_at_ms,human_issuer,source_trust_digest,human_signing_key_digest,human_assertion_digest,c2_custody_binding_digest,c2_p7_binding_digest,c2_p7_owner_intent_id${financial?",c2_financial_context_digest":""})
+        VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19${financial?",$20":""})`, [body.jti, body.authority_revision, body.sub, body.sid,
         body.session_revision, body.workspace_id, body.environment, body.workload_id, body.request_digest,
-        current.authority_fingerprint, body.iat * 1000, body.exp * 1000]);
-      let assertion: string | undefined;
+        current.authority_fingerprint, body.iat * 1000, body.exp * 1000, body.iss, this.#reverseTrustDigest, this.#humanSigningKeyDigest,
+        assertion === undefined ? null : accessDigest(assertion), custodyBinding ?? null,p7Digest,p7IntentId,...(financial?[financial.context_digest]:[])]);
+      if(financial) {
+        const bound=await db.query(`UPDATE elp210_c2_financial_candidate.originals SET lease_id=$2
+          WHERE context_digest=$1 AND lease_id IS NULL
+            AND expires_at_ms>floor(extract(epoch FROM clock_timestamp())*1000) RETURNING lease_id`,[financial.context_digest,body.jti]);
+        if(bound.rowCount!==1||bound.rows[0]?.lease_id!==body.jti)
+          throw new CurrentHumanLeaseError("CURRENT_HUMAN_C2_FINANCIAL_ORIGINAL_INVALID");
+      }
       if (link) {
         if (link.delivery_sequence > 0) {
           const prior = await db.query(`SELECT 1 FROM execution_command_status_context_links p
             JOIN execution_command_status_delivery_acks a ON a.lease_id=p.lease_id
+            JOIN elp210_candidate.leases l ON l.lease_id=p.lease_id
             WHERE p.context_digest=$1 AND p.delivery_sequence=$2 AND p.lease_id=$3
               AND p.original_digest=$4 AND p.call_digest=$5 AND p.binding_digest=$6 AND p.authority_fingerprint=$15
               AND p.status_token_digest=$16 AND p.status_request_digest=$17 AND p.status_issued_at_ms=$18 AND p.context_nonce=$19
+              AND p.context_expires_at_ms=$23
               AND p.receiver_id=$7 AND p.request_digest=$8 AND a.request_digest=$8
               AND a.workspace_id=$9 AND a.environment=$10 AND a.workload_id=$11
-              AND a.subject_id=$12 AND a.session_id=$13 AND a.session_revision=$14`,
+              AND a.subject_id=$12 AND a.session_id=$13 AND a.session_revision=$14
+              AND l.phase IN ('COMMITTED','ROLLED_BACK') AND l.attempt_id IS NOT NULL
+              AND l.terminal_receipt_digest=a.terminal_receipt_digest
+              AND ($20::text IS NULL OR (l.c2_custody_binding_digest=$20 AND l.c2_p7_binding_digest=$21
+                AND l.c2_p7_owner_intent_id=$22::uuid AND l.human_assertion_digest=p.assertion_digest))`,
           [link.context_digest, link.delivery_sequence - 1, link.previous_lease_id,
             link.original_digest, link.call_digest, link.binding_digest, link.receiver_id, binding.request_digest,
             body.workspace_id, body.environment, body.workload_id, body.sub, body.sid, body.session_revision, link.authority_fingerprint,
-            link.status_token_digest,link.status_request_digest,link.status_issued_at_ms,link.context_nonce]);
+            link.status_token_digest,link.status_request_digest,link.status_issued_at_ms,link.context_nonce,
+            c2Owner===undefined?null:custodyBinding,c2Owner===undefined?null:p7Digest,c2Owner===undefined?null:p7IntentId,
+            link.context_expires_at_ms]);
           if (prior.rowCount !== 1) throw new CurrentHumanLeaseError("CURRENT_HUMAN_COMMAND_STATUS_LINK_PREVIOUS_REQUIRED");
         }
         // Commit the digest of the exact deterministic EdDSA assertion with
         // its lease before allowing the token to escape this process. This
         // permits a later retry of the same ISSUED lease without persisting
         // the bearer or accidentally minting another authority.
-        assertion = await new SignJWT(body).setProtectedHeader({ alg: "EdDSA", kid: this.config.key_id, typ: "JWT" })
-          .sign(this.config.private_key);
+        assertion = await new SignJWT(body).setProtectedHeader({ alg: "EdDSA", kid: this.#config.key_id, typ: "JWT" })
+          .sign(this.#config.private_key);
         await db.query(`INSERT INTO execution_command_status_context_links
           (context_digest,delivery_sequence,lease_id,previous_lease_id,original_digest,call_digest,binding_digest,
            request_digest,receiver_id,context_expires_at_ms,authority_fingerprint,assertion_digest,
@@ -383,8 +825,8 @@ export class CurrentHumanCandidate {
     // enter will refuse it. For linked STATUS only, local signing occurs in
     // the transaction so its exact assertion digest commits with the lease.
     const claims = issued.body;
-    return { token: issued.assertion ?? await new SignJWT(claims).setProtectedHeader({ alg: "EdDSA", kid: this.config.key_id, typ: "JWT" })
-      .sign(this.config.private_key), lease_id: claims.jti, expires_at_ms: claims.exp * 1000, authority_revision: claims.authority_revision };
+    return { token: issued.assertion ?? await new SignJWT(claims).setProtectedHeader({ alg: "EdDSA", kid: this.#config.key_id, typ: "JWT" })
+      .sign(this.#config.private_key), lease_id: claims.jti, expires_at_ms: claims.exp * 1000, authority_revision: claims.authority_revision };
   }
 
   /** Reproduce only an already committed ISSUED STATUS assertion. The stored
@@ -392,6 +834,8 @@ export class CurrentHumanCandidate {
    * retired, expired, revoked, drained, or rotated-key lease cannot resume. */
   async resumeCommandStatusIssue(untrustedActor: AccessActor, untrustedBinding: CurrentHumanBinding, leaseId: string): Promise<{
     token: string; lease_id: string; expires_at_ms: number; authority_revision: number }> {
+    if(this.#config.c2_delivery_schema_required===true)
+      throw new CurrentHumanLeaseError("CURRENT_HUMAN_C2_P7_FENCE_REQUIRED");
     const actor = nativeActor(untrustedActor), binding = currentHumanBinding.parse(untrustedBinding), lease = id.parse(leaseId);
     if (binding.environment !== "paper") throw new CurrentHumanLeaseError("CURRENT_HUMAN_COMMAND_STATUS_PAPER_REQUIRED");
     this.checkInstallation(binding, true);
@@ -400,7 +844,7 @@ export class CurrentHumanCandidate {
       const row = (await db.query(`SELECT l.*, c.assertion_digest, c.context_expires_at_ms
         FROM elp210_candidate.leases l JOIN execution_command_status_context_links c ON c.lease_id=l.lease_id
         WHERE l.lease_id=$1 FOR SHARE OF l`, [lease])).rows[0];
-      if (!row || authority.drain_id || row.phase !== "ISSUED" || Number(row.authority_revision) !== Number(authority.revision) ||
+      if (!row || authority.drain_id || row.phase !== "ISSUED" || row.human_issuer !== this.#config.issuer || !this.matchesHumanSigningKey(row.human_signing_key_digest) || !this.matchesReverseTrust(row.source_trust_digest) || Number(row.authority_revision) !== Number(authority.revision) ||
         row.subject_id !== actor.user_id || row.session_id !== actor.session_id || Number(row.session_revision) !== actor.session_generation ||
         row.workspace_id !== binding.workspace_id || row.environment !== binding.environment || row.workload_id !== binding.workload_id ||
         row.request_digest !== binding.request_digest) throw new CurrentHumanLeaseError("CURRENT_HUMAN_ENTRY_NOT_AVAILABLE");
@@ -411,12 +855,12 @@ export class CurrentHumanCandidate {
         !Number.isSafeInteger(expiresMs) || expiresMs % 1000 !== 0 || !Number.isSafeInteger(contextExpires) ||
         current.now >= expiresMs || current.now >= contextExpires)
         throw new CurrentHumanLeaseError("CURRENT_HUMAN_ENTRY_NOT_AVAILABLE");
-      const claims = humanClaims.parse({ iss: this.config.issuer, aud: this.config.audience, sub: actor.user_id,
+      const claims = humanClaims.parse({ iss: this.#config.issuer, aud: this.#config.audience, sub: actor.user_id,
         sid: actor.session_id, jti: lease, iat: issuedMs / 1000, nbf: issuedMs / 1000, exp: expiresMs / 1000,
         purpose: "pma.identity.v1", principal_kind: "human", session_revision: actor.session_generation,
         authority_revision: Number(row.authority_revision), ...binding });
-      const token = await new SignJWT(claims).setProtectedHeader({ alg: "EdDSA", kid: this.config.key_id, typ: "JWT" })
-        .sign(this.config.private_key);
+      const token = await new SignJWT(claims).setProtectedHeader({ alg: "EdDSA", kid: this.#config.key_id, typ: "JWT" })
+        .sign(this.#config.private_key);
       if (accessDigest(token) !== row.assertion_digest) throw new CurrentHumanLeaseError("CURRENT_HUMAN_ASSERTION_CHANGED");
       return { token, lease_id: lease, expires_at_ms: expiresMs, authority_revision: Number(row.authority_revision) };
     });
@@ -428,25 +872,162 @@ export class CurrentHumanCandidate {
    * authority; a persisted ENTERED/UNKNOWN lease remains recovery custody. */
   async revalidateIssue(untrustedActor: AccessActor, untrustedBinding: CurrentHumanBinding,
     issued: { token: string; lease_id: string; expires_at_ms: number; authority_revision: number }): Promise<void> {
+    return this.#revalidateBoundIssue(untrustedActor,untrustedBinding,issued);
+  }
+
+  /** C2 additionally holds/rechecks its scoped fence after signing. This does
+   * not hold authority through HTTP delivery and is not source/P5 revocation. */
+  async #revalidateBoundIssue(untrustedActor: AccessActor, untrustedBinding: CurrentHumanBinding,
+    issued: { token: string; lease_id: string; expires_at_ms: number; authority_revision: number },c2Owner?:string,custodyBinding?:string,p7?:C2P7IssuerFenceCandidate,
+    statusLink?:CommandStatusContextLink,financialOriginal?:C2FinancialOriginalLink): Promise<void> {
+    if(this.#config.c2_delivery_schema_required===true&&(c2Owner===undefined||p7===undefined))
+      throw new CurrentHumanLeaseError("CURRENT_HUMAN_C2_P7_FENCE_REQUIRED");
     const actor = nativeActor(untrustedActor), binding = currentHumanBinding.parse(untrustedBinding);
+    // Keep the exact assertion and coordinates stable across asynchronous
+    // verification/locks; a caller must not swap the object while we wait.
+    const captured={token:issued.token,lease_id:issued.lease_id,expires_at_ms:issued.expires_at_ms,
+      authority_revision:issued.authority_revision};
+    let signed:z.infer<typeof humanClaims>|undefined;
+    if(c2Owner!==undefined) {
+      try {
+        if(typeof captured.token!=="string"||Buffer.byteLength(captured.token)>8192)throw new Error("invalid assertion");
+        const verified=await jwtVerify(captured.token,this.#humanPublicKey,{algorithms:["EdDSA"],
+          issuer:this.#config.issuer,audience:this.#config.audience});
+        if(verified.protectedHeader.kid!==this.#config.key_id||verified.protectedHeader.typ!=="JWT")throw new Error("invalid header");
+        signed=humanClaims.parse(verified.payload);
+        if(signed.jti!==captured.lease_id||signed.sub!==actor.user_id||signed.sid!==actor.session_id||
+          signed.session_revision!==actor.session_generation||signed.authority_revision!==captured.authority_revision||
+          signed.workspace_id!==binding.workspace_id||signed.environment!==binding.environment||signed.workload_id!==binding.workload_id||
+          signed.request_digest!==binding.request_digest||signed.exp*1000!==captured.expires_at_ms)
+          throw new Error("assertion binding mismatch");
+      } catch {throw new CurrentHumanLeaseError("CURRENT_HUMAN_ASSERTION_CHANGED");}
+    }
+    const p7Digest=p7===undefined?null:this.#c2P7Digest(p7);
     this.checkInstallation(binding, true);
     if (binding.workload_id !== this.reverseSource().workload_id)
       throw new CurrentHumanLeaseError("CURRENT_HUMAN_WORKLOAD_MISMATCH");
     await this.transaction(async (db, authority) => {
       const row = (await db.query<Row & { authority_fingerprint: string }>(
-        "SELECT * FROM elp210_candidate.leases WHERE lease_id=$1 FOR SHARE", [issued.lease_id])).rows[0];
-      if (!row || authority.drain_id || row.phase !== "ISSUED" || row.authority_revision !== authority.revision ||
-        Number(row.authority_revision) !== issued.authority_revision || row.subject_id !== actor.user_id ||
+        "SELECT * FROM elp210_candidate.leases WHERE lease_id=$1 FOR SHARE", [captured.lease_id])).rows[0];
+      if (!row || authority.drain_id || row.phase !== "ISSUED" || row.human_issuer !== this.#config.issuer || !this.matchesHumanSigningKey(row.human_signing_key_digest) || !this.matchesReverseTrust(row.source_trust_digest) || row.authority_revision !== authority.revision ||
+        Number(row.authority_revision) !== captured.authority_revision || row.subject_id !== actor.user_id ||
         row.session_id !== actor.session_id || Number(row.session_revision) !== actor.session_generation ||
         row.workspace_id !== binding.workspace_id || row.environment !== binding.environment ||
         row.workload_id !== binding.workload_id || row.request_digest !== binding.request_digest ||
-        Number(row.expires_at_ms) !== issued.expires_at_ms)
+        (custodyBinding !== undefined && row.c2_custody_binding_digest !== custodyBinding) || row.c2_p7_binding_digest!==p7Digest ||
+        Number(row.expires_at_ms) !== captured.expires_at_ms ||
+        (signed!==undefined&&(row.human_assertion_digest!==accessDigest(captured.token)||
+          Number(row.issued_at_ms)!==signed.iat*1000||signed.nbf!==signed.iat)))
         throw new CurrentHumanLeaseError("CURRENT_HUMAN_ENTRY_NOT_AVAILABLE");
-      const current = await captureCurrentHumanSnapshot(db, actor, binding.workspace_id);
+      // Serialize the C2 post-signing check with session and policy changes.
+      // This lock ends at COMMIT; it does not fence later HTTP delivery.
+      const current = c2Owner === undefined ? await captureCurrentHumanSnapshot(db, actor, binding.workspace_id)
+        : await lockCurrentHumanSnapshot(db, actor, binding.workspace_id);
       this.checkInstallation(binding, true);
       if (current.authority_fingerprint !== row.authority_fingerprint || current.now >= Number(row.expires_at_ms))
         throw new CurrentHumanLeaseError("CURRENT_HUMAN_ENTRY_NOT_AVAILABLE");
+      if(c2Owner!==undefined) {
+        await this.#checkC2StatusLink(db,captured.lease_id,binding.request_digest,accessDigest(captured.token),statusLink);
+        if(statusLink!==undefined)await this.#checkStatusPreparation(db,actor,binding,statusLink,true);
+        await this.#checkFinancialOriginal(db,row,actor,binding,financialOriginal);
+        if(binding.environment!=="paper"||actor.user_id!==c2Owner||current.anchor!==c2Owner)
+          throw new CurrentHumanLeaseError("CURRENT_HUMAN_C2_OWNER_REQUIRED");
+        const c2Expiry=await lockCurrentC2Registration(db,binding.workspace_id,c2Owner,binding.workload_id,authority.revision);
+        if(p7!==undefined&&(await this.#checkC2P7(db,p7,actor,binding)).intent_id!==row.c2_p7_owner_intent_id)
+          throw new CurrentHumanLeaseError("CURRENT_HUMAN_ENTRY_NOT_AVAILABLE");
+        if(p7===undefined&&row.c2_p7_owner_intent_id!==null)
+          throw new CurrentHumanLeaseError("CURRENT_HUMAN_ENTRY_NOT_AVAILABLE");
+        const finalNow=Number((await db.query("SELECT floor(extract(epoch FROM clock_timestamp())*1000)::bigint AS ms")).rows[0]?.ms);
+        if(!Number.isSafeInteger(finalNow)||finalNow<current.now||finalNow>=current.lease_until_ms||
+          finalNow>=Number(row.expires_at_ms)||Number(row.expires_at_ms)>c2Expiry||finalNow>=c2Expiry||
+          finalNow>=(this.#config.installation_scope?.valid_until_ms??0))
+          throw new CurrentHumanLeaseError("CURRENT_HUMAN_ENTRY_NOT_AVAILABLE");
+      }
     });
+  }
+
+  /** A marked financial lease can only be resumed with its exact durable
+   * context. Keep the row locked during each authority transaction. */
+  async #checkFinancialOriginal(db:PoolClient,row:Row,actor:AccessActor,binding:CurrentHumanBinding,
+    untrusted?:C2FinancialOriginalLink):Promise<void> {
+    const marked=row.c2_financial_context_digest??null;
+    if(marked===null&&untrusted===undefined)return;
+    if(marked===null||untrusted===undefined)throw new CurrentHumanLeaseError("CURRENT_HUMAN_C2_FINANCIAL_ORIGINAL_INVALID");
+    const link=c2FinancialOriginalLink.parse(untrusted);
+    if(marked!==link.context_digest)throw new CurrentHumanLeaseError("CURRENT_HUMAN_C2_FINANCIAL_ORIGINAL_INVALID");
+    const found=await db.query(`SELECT 1 FROM elp210_c2_financial_candidate.originals WHERE context_digest=$1 AND lease_id=$2
+      AND subject_id=$3 AND session_id=$4 AND session_revision=$5 AND workspace_id=$6 AND workload_id=$7
+      AND request_digest=$8 AND receiver_id=$9 AND binding_digest=$10 AND expires_at_ms=$11
+      AND expires_at_ms>floor(extract(epoch FROM clock_timestamp())*1000) FOR SHARE`,
+    [link.context_digest,row.lease_id,actor.user_id,actor.session_id,actor.session_generation,binding.workspace_id,
+      binding.workload_id,binding.request_digest,link.receiver_id,link.binding_digest,link.expires_at_ms]);
+    if(found.rowCount!==1)throw new CurrentHumanLeaseError("CURRENT_HUMAN_C2_FINANCIAL_ORIGINAL_INVALID");
+  }
+
+  /** Called while the authority singleton is held by ISSUE, resume or
+   * revalidation. The same durable reservation must still exist and match;
+   * a link alone is not proof that its preparation remains current. */
+  async #checkStatusPreparation(db:PoolClient,actor:AccessActor,binding:CurrentHumanBinding,
+    link:CommandStatusContextLink,required:boolean):Promise<void> {
+    const preparation=await db.query(`SELECT p.*,f.original_digest AS fingerprint_original,
+      f.pm_status_request_digest AS fingerprint_request,t.workspace_id AS command_workspace
+      FROM execution_command_status_preparations p
+      LEFT JOIN execution_command_status_original_fingerprints f ON f.command_id=p.command_id
+      LEFT JOIN execution_trusted_commands t ON t.command_id=p.command_id
+      WHERE p.workspace_id=$1 AND p.workload_id=$2 AND p.original_digest=$3 LIMIT 2 FOR SHARE OF p`,
+    [binding.workspace_id,binding.workload_id,link.original_digest]);
+    const p=preparation.rows[0];
+    if((required && preparation.rowCount!==1) || (preparation.rowCount &&
+      (preparation.rowCount!==1 || p.consumed_at!==null || p.context_digest!==link.context_digest ||
+      p.subject_id!==actor.user_id || p.session_id!==actor.session_id || String(p.session_revision)!==String(actor.session_generation) ||
+      p.context_nonce!==link.context_nonce || p.call_digest!==link.call_digest || p.binding_digest!==link.binding_digest ||
+      p.authority_fingerprint!==link.authority_fingerprint || p.receiver_id!==link.receiver_id ||
+      p.pm_request_digest!==binding.request_digest || p.fingerprint_original!==p.original_digest || p.command_workspace!==p.workspace_id ||
+      p.fingerprint_request!==p.pm_request_digest || p.status_token_digest!==link.status_token_digest ||
+      p.status_request_digest!==link.status_request_digest || String(p.status_issued_at_ms)!==String(link.status_issued_at_ms) ||
+      String(p.context_expires_at_ms)!==String(link.context_expires_at_ms))))
+      throw new CurrentHumanLeaseError("CURRENT_HUMAN_COMMAND_STATUS_PREPARATION_RETIRED");
+  }
+
+  /** The immutable STATUS link belongs to the same lease and assertion.
+   * A generic C2 resume cannot drop that context; a STATUS retry cannot change
+   * its original, sequence, receiver or expiry. No ACK is inferred here. */
+  async #checkC2StatusLink(db:PoolClient,lease:string,requestDigest:string,assertionDigest:string,
+    expected?:CommandStatusContextLink):Promise<void> {
+    const result=await db.query(`SELECT *,floor(extract(epoch FROM clock_timestamp())*1000)::bigint::text AS now_ms
+      FROM execution_command_status_context_links WHERE lease_id=$1 FOR SHARE`,[lease]);
+    if(expected===undefined) {
+      if(result.rowCount!==0)throw new CurrentHumanLeaseError("CURRENT_HUMAN_COMMAND_STATUS_LINK_INVALID");
+      return;
+    }
+    const row=result.rows[0];
+    if(result.rowCount!==1||!row||row.request_digest!==requestDigest||row.assertion_digest!==assertionDigest||
+      row.context_digest!==expected.context_digest||row.context_nonce!==expected.context_nonce||
+      row.original_digest!==expected.original_digest||row.call_digest!==expected.call_digest||
+      row.binding_digest!==expected.binding_digest||row.authority_fingerprint!==expected.authority_fingerprint||
+      row.status_token_digest!==expected.status_token_digest||row.status_request_digest!==expected.status_request_digest||
+      Number(row.status_issued_at_ms)!==expected.status_issued_at_ms||row.receiver_id!==expected.receiver_id||
+      Number(row.delivery_sequence)!==expected.delivery_sequence||row.previous_lease_id!==expected.previous_lease_id||
+      Number(row.context_expires_at_ms)!==expected.context_expires_at_ms||!Number.isSafeInteger(Number(row.now_ms))||
+      Number(row.now_ms)>=expected.context_expires_at_ms)
+      throw new CurrentHumanLeaseError("CURRENT_HUMAN_COMMAND_STATUS_LINK_INVALID");
+  }
+
+  /** Unmounted preparation fence. It holds P7 intent/registry and
+   * owner locks inside the same DB transaction as issue/resume/revalidation;
+   * it is not a qualified grant or an HTTP transport fence. */
+  async #checkC2P7(db:PoolClient,p7:C2P7IssuerFenceCandidate,actor:AccessActor,binding:CurrentHumanBinding) {
+    this.#c2P7Digest(p7);
+    return c2P7CheckAuthenticated.call(p7,db,actor,binding.workspace_id,binding.workload_id);
+  }
+  #c2P7Digest(p7:C2P7IssuerFenceCandidate):string {
+    if(!p7||Object.getPrototypeOf(p7)!==C2P7IssuerFenceCandidate.prototype||
+      p7.checkLocked!==c2P7CheckLocked||p7.checkAuthenticatedLocked!==c2P7CheckAuthenticated||
+      p7.confirmationKeySha256!==c2P7ConfirmationKey||p7.bindingDigest!==c2P7BindingDigest||
+      !this.#config.c2_owner_confirmation_spki_sha256||
+      c2P7ConfirmationKey.call(p7)!==this.#config.c2_owner_confirmation_spki_sha256)
+      throw new CurrentHumanLeaseError("CURRENT_HUMAN_C2_P7_FENCE_INVALID");
+    return c2P7BindingDigest.call(p7);
   }
 
   /** Proof for the next DISTINCT financial read, never a retry/renewal of the
@@ -463,7 +1044,10 @@ export class CurrentHumanCandidate {
     return this.transaction(async (db, authority) => {
       const row = (await db.query<Row & { authority_fingerprint: string }>(
         "SELECT * FROM elp210_candidate.leases WHERE lease_id=$1 FOR SHARE", [issued.lease_id])).rows[0];
-      if (!row || authority.drain_id || row.authority_revision !== authority.revision ||
+      // A terminal financial original needs its own context, P7/custody and
+      // authenticated financial ACK proof. The generic terminal predicate is
+      // also used by STATUS and must never confer cross-purpose authority.
+      if (!row || row.c2_financial_context_digest != null || authority.drain_id || row.human_issuer !== this.#config.issuer || !this.matchesHumanSigningKey(row.human_signing_key_digest) || !this.matchesReverseTrust(row.source_trust_digest) || row.authority_revision !== authority.revision ||
         Number(row.authority_revision) !== issued.authority_revision || row.subject_id !== actor.user_id ||
         row.session_id !== actor.session_id || Number(row.session_revision) !== actor.session_generation ||
         row.workspace_id !== binding.workspace_id || row.environment !== binding.environment ||
@@ -499,7 +1083,10 @@ export class CurrentHumanCandidate {
     return this.transaction(async(db,authority)=>{
       const row=(await db.query<Row & {authority_fingerprint:string}>(
         "SELECT * FROM elp210_candidate.leases WHERE lease_id=$1 FOR SHARE",[issued.lease_id])).rows[0];
-      if(!row || authority.drain_id || row.authority_revision!==authority.revision ||
+      // STATUS ACKs cannot be attached to an exact financial original, even
+      // when owner, request and terminal happen to match. Do not infer an
+      // authenticated financial delivery from the other ledger.
+      if(!row || row.c2_financial_context_digest != null || authority.drain_id || row.human_issuer!==this.#config.issuer || !this.matchesHumanSigningKey(row.human_signing_key_digest) || !this.matchesReverseTrust(row.source_trust_digest) || row.authority_revision!==authority.revision ||
         Number(row.authority_revision)!==issued.authority_revision || row.subject_id!==actor.user_id ||
         row.session_id!==actor.session_id || Number(row.session_revision)!==actor.session_generation ||
         row.workspace_id!==binding.workspace_id || row.environment!==binding.environment ||
@@ -533,9 +1120,9 @@ export class CurrentHumanCandidate {
   private async nativeAdmission(untrustedActor:AccessActor,input:unknown,http:boolean,expectedScopeDigest?:string):Promise<NativeRow>{
     if(expectedScopeDigest!==undefined&&(!http||!digest.safeParse(expectedScopeDigest).success))
       throw new CurrentHumanLeaseError("CURRENT_HUMAN_NATIVE_BINDING_INVALID");
-    const actor=nativeActor(untrustedActor),captured=nativeBase(input),base=captured.base,selected=this.config.native_read_custody;
+    const actor=nativeActor(untrustedActor),captured=nativeBase(input),base=captured.base,selected=this.#config.native_read_custody;
     if(!selected)throw new CurrentHumanLeaseError("CURRENT_HUMAN_NATIVE_CUSTODY_NOT_SELECTED");
-    if(base.binding.human_issuer!==this.config.issuer||base.binding.subject!==actor.user_id
+    if(base.binding.human_issuer!==this.#config.issuer||base.binding.subject!==actor.user_id
       ||base.binding.workload_id!==this.workloadId()||base.binding.workspace_id!==selected.workspace_id
       ||base.binding.environment!==selected.environment||accessDigest(base.domain)!==accessDigest(selected.domain))
       throw new CurrentHumanLeaseError("CURRENT_HUMAN_NATIVE_BINDING_INVALID");
@@ -552,8 +1139,8 @@ export class CurrentHumanCandidate {
       if(decision&&decision.field_policy_sha256!==base.domain.field_policy_sha256)
         throw new CurrentHumanLeaseError("CURRENT_HUMAN_NATIVE_BINDING_INVALID");
       this.checkInstallation(base.binding,true);
-      const ceiling=Math.min(current.now+this.config.limits.ttl_ms,current.lease_until_ms,
-        this.config.installation_scope?.valid_until_ms??Number.MAX_SAFE_INTEGER);
+      const ceiling=Math.min(current.now+this.#config.limits.ttl_ms,current.lease_until_ms,
+        this.#config.installation_scope?.valid_until_ms??Number.MAX_SAFE_INTEGER);
       if(expires<=current.now||deadlineUs>BigInt(ceiling)*1000n
         ||http&&nativeIdentityExpiry(base.deadline).ms>ceiling)
         throw new CurrentHumanLeaseError("CURRENT_HUMAN_NATIVE_DEADLINE_INVALID");
@@ -561,7 +1148,7 @@ export class CurrentHumanCandidate {
         [base.binding.lease_id,base.binding.attempt_id]);
       if(prior.rowCount)throw new CurrentHumanLeaseError("CURRENT_HUMAN_NATIVE_ALREADY_ADMITTED");
       const counts=(await db.query("SELECT count(*)::int AS retained,count(*) FILTER(WHERE unresolved)::int AS unresolved FROM elp210_candidate.obligations")).rows[0];
-      if(counts.unresolved>=this.config.limits.maximum_unresolved||counts.retained>=this.config.limits.maximum_retained)
+      if(counts.unresolved>=this.#config.limits.maximum_unresolved||counts.retained>=this.#config.limits.maximum_retained)
         throw new CurrentHumanLeaseError("CURRENT_HUMAN_CAPACITY_EXHAUSTED");
       const extraColumns=http?",lifecycle_kind,sender_id,scope_digest":"",extraValues=http?",'MANAGER_HTTP',$19,$20":"";
       const row=(await db.query<NativeRow>(
@@ -757,7 +1344,7 @@ export class CurrentHumanCandidate {
         if (row.family === "NATIVE_READ") return { family: "NATIVE_READ" as const, attempt: this.nativeAttempt(row as NativeRow) };
         return { family: "REVERSE_HUMAN" as const, attempt: {
           lease_id: row.lease_id, attempt_id: row.attempt_id!, workspace_id: row.workspace_id, environment: row.environment,
-          workload_id: row.workload_id, request_digest: row.request_digest, human_issuer: this.config.issuer,
+          workload_id: row.workload_id, request_digest: row.request_digest, human_issuer: this.#config.issuer,
           subject: row.subject_id, session_id: row.session_id, session_revision: Number(row.session_revision),
           authority_revision: Number(row.authority_revision), expires_at: Number(row.expires_at_ms) / 1000 } };
       });
@@ -778,7 +1365,7 @@ export class CurrentHumanCandidate {
   }
 
   private checkInstallation(binding: Pick<CurrentHumanBinding, "workspace_id" | "environment">, fresh: boolean): void {
-    const scope = this.config.installation_scope;
+    const scope = this.#config.installation_scope;
     if (scope && (scope.workspace_id !== binding.workspace_id || scope.environment !== binding.environment
       || (fresh && Date.now() >= scope.valid_until_ms)))
       throw new CurrentHumanLeaseError("CURRENT_HUMAN_INSTALLATION_SCOPE_INVALID");
@@ -788,15 +1375,27 @@ export class CurrentHumanCandidate {
    * is refused, not permission for a second TS transaction. Lost enter ACK needs
    * the same source attempt's qualified resolution; never blindly retry a write. */
   async enter(humanToken: string, sourceProof: string): Promise<{ lease_id: string; attempt_id: string }> {
+    return this.enterInternal(humanToken, sourceProof);
+  }
+
+  /** Original must already be retained before an entered attempt can exist.
+   * The caller still must journal ENTER before emitting an ACK. */
+  async enterWithCustody(humanToken: string, sourceProof: string, custody: RestoreIndependentCustodyCandidate,p7?:C2P7IssuerFenceCandidate): Promise<{ lease_id: string; attempt_id: string }> {
+    if (!custody || Object.getPrototypeOf(custody) !== RestoreIndependentCustodyCandidate.prototype ||
+        !custodyUsesSourcePool.call(custody, this.#pool)) throw new CurrentHumanLeaseError("CURRENT_HUMAN_CUSTODY_MISMATCH");
+    return this.enterInternal(humanToken, sourceProof, custody,p7);
+  }
+
+  private async enterInternal(humanToken: string, sourceProof: string, custody?: RestoreIndependentCustodyCandidate,p7?:C2P7IssuerFenceCandidate): Promise<{ lease_id: string; attempt_id: string }> {
     const source = await this.attest(sourceProof);
     this.checkInstallation(source, true);
     if (typeof humanToken !== "string" || Buffer.byteLength(humanToken) > 8192)
       throw new CurrentHumanLeaseError("CURRENT_HUMAN_TOKEN_INVALID");
     let human: z.infer<typeof humanClaims>;
     try {
-      const verified = await jwtVerify(humanToken, this.humanPublicKey, { algorithms: ["EdDSA"],
-        issuer: this.config.issuer, audience: this.config.audience, maxTokenAge: "60s" });
-      if (verified.protectedHeader.kid !== this.config.key_id || verified.protectedHeader.typ !== "JWT") throw new Error();
+      const verified = await jwtVerify(humanToken, this.#humanPublicKey, { algorithms: ["EdDSA"],
+        issuer: this.#config.issuer, audience: this.#config.audience, maxTokenAge: "60s" });
+      if (verified.protectedHeader.kid !== this.#config.key_id || verified.protectedHeader.typ !== "JWT") throw new Error();
       human = humanClaims.parse(verified.payload);
       if (human.exp <= human.iat || human.exp - human.iat > 60 || human.nbf !== human.iat) throw new Error();
     } catch { throw new CurrentHumanLeaseError("CURRENT_HUMAN_TOKEN_INVALID"); }
@@ -806,13 +1405,44 @@ export class CurrentHumanCandidate {
       if (authority.drain_id) throw new CurrentHumanLeaseError("CURRENT_HUMAN_DRAINING");
       const row = (await db.query<Row>("SELECT * FROM elp210_candidate.leases WHERE lease_id=$1 FOR UPDATE", [human.jti])).rows[0];
       if (!row || row.phase !== "ISSUED") throw new CurrentHumanLeaseError("CURRENT_HUMAN_ENTRY_NOT_AVAILABLE");
+      // Existing generic leases are not retroactively authorized by enabling
+      // C2. Their exact source terminal remains settleable via RESOLVE.
+      if(this.#config.c2_delivery_schema_required===true&&
+        (row.c2_p7_binding_digest===null||row.human_assertion_digest===null||row.c2_custody_binding_digest===null))
+        throw new CurrentHumanLeaseError("CURRENT_HUMAN_C2_P7_FENCE_REQUIRED");
+      // This implementation refuses to omit or replace a bound P7
+      // preparation, including after owner-intent revoke. An older process
+      // that does not execute this check must be fenced separately before
+      // any rollout. Entered originals settle via the separate RESOLVE path.
+      if(row.c2_p7_binding_digest!==null) {
+        if(p7===undefined||row.c2_p7_binding_digest!==this.#c2P7Digest(p7))
+          throw new CurrentHumanLeaseError("CURRENT_HUMAN_C2_P7_FENCE_REQUIRED");
+        if((await this.#checkC2P7(db,p7,{user_id:row.subject_id,session_id:row.session_id,
+          session_generation:Number(row.session_revision)},source)).intent_id!==row.c2_p7_owner_intent_id)
+          throw new CurrentHumanLeaseError("CURRENT_HUMAN_C2_P7_FENCE_REQUIRED");
+      }
+      if (row.human_assertion_digest !== null) {
+        if (!custody || row.human_assertion_digest !== accessDigest(humanToken) ||
+            row.c2_custody_binding_digest !== custodyBindingDigest.call(custody))
+          throw new CurrentHumanLeaseError("CURRENT_HUMAN_C2_CUSTODY_REQUIRED");
+        const snapshot = await custodyInventory.call(custody);
+        const proofHash = createHash("sha256").update(humanToken, "utf8").digest("hex");
+        if (snapshot.events.filter(event => event.kind === "ISSUED_HUMAN_ASSERTION" && event.lease_id === row.lease_id &&
+          event.proof_hash === proofHash).length !== 1) throw new CurrentHumanLeaseError("CURRENT_HUMAN_CUSTODY_PROOF_REQUIRED");
+      }
       this.bind(row, source);
-      if (Number(row.authority_revision) !== human.authority_revision || row.authority_revision !== authority.revision
+      if (row.human_issuer !== human.iss || !this.matchesHumanSigningKey(row.human_signing_key_digest) || !this.matchesReverseTrust(row.source_trust_digest) || Number(row.authority_revision) !== human.authority_revision || row.authority_revision !== authority.revision
         || row.subject_id !== human.sub || row.session_id !== human.sid || Number(row.session_revision) !== human.session_revision
         || Number(row.issued_at_ms) !== human.iat * 1000 || Number(row.expires_at_ms) !== human.exp * 1000
         || row.workspace_id !== human.workspace_id || row.environment !== human.environment
         || row.workload_id !== human.workload_id || row.request_digest !== human.request_digest)
         throw new CurrentHumanLeaseError("CURRENT_HUMAN_BINDING_MISMATCH");
+      // Custody inspection above can wait on a separate store. Check the P7
+      // owner and step-up clock again just before the ENTER write.
+      if(row.c2_p7_binding_digest!==null&&p7!==undefined&&
+        (await this.#checkC2P7(db,p7,{user_id:row.subject_id,session_id:row.session_id,
+          session_generation:Number(row.session_revision)},source)).intent_id!==row.c2_p7_owner_intent_id)
+        throw new CurrentHumanLeaseError("CURRENT_HUMAN_C2_P7_FENCE_REQUIRED");
       const now = Number((await db.query("SELECT floor(extract(epoch FROM clock_timestamp())*1000)::bigint AS ms")).rows[0].ms);
       if (now >= Number(row.expires_at_ms)) throw new CurrentHumanLeaseError("CURRENT_HUMAN_EXPIRED");
       await db.query("UPDATE elp210_candidate.leases SET phase='ENTERED',attempt_id=$2 WHERE lease_id=$1", [row.lease_id, source.attempt_id]);
@@ -831,12 +1461,42 @@ export class CurrentHumanCandidate {
    * UNKNOWN persists/quarantines it. Token expiry and local cancellation do not
    * prove that an async COMMIT did not succeed. No TTL-based auto-release. */
   async resolve(sourceProof: string): Promise<{ replayed: boolean; phase: string }> {
+    return this.resolveInternal(sourceProof);
+  }
+
+  /** Recovery-only legacy path. The classification must be checked again
+   * inside the row-locking transaction, not just by the caller's prior read. */
+  async resolveLegacyForRestore(sourceProof: string): Promise<{ replayed: boolean; phase: string }> {
+    return this.resolveInternal(sourceProof);
+  }
+
+  /** C2 must bind the same authenticated original to its independent journal.
+   * This is a source-only candidate, not proof of a qualified failure domain. */
+  async resolveWithCustody(sourceProof: string, custody: RestoreIndependentCustodyCandidate): Promise<{ replayed: boolean; phase: string }> {
+    if (!custody || Object.getPrototypeOf(custody) !== RestoreIndependentCustodyCandidate.prototype ||
+        !custodyUsesSourcePool.call(custody, this.#pool)) throw new CurrentHumanLeaseError("CURRENT_HUMAN_CUSTODY_MISMATCH");
+    return this.resolveInternal(sourceProof, custody);
+  }
+
+  private async resolveInternal(sourceProof: string, custody?: RestoreIndependentCustodyCandidate): Promise<{ replayed: boolean; phase: string }> {
     const source = await this.attest(sourceProof);
     this.checkInstallation(source, false);
     if (source.phase === "ENTER") throw new CurrentHumanLeaseError("CURRENT_HUMAN_TERMINAL_REQUIRED");
     return this.transaction(async db => {
       const row = (await db.query<Row>("SELECT * FROM elp210_candidate.leases WHERE lease_id=$1 FOR UPDATE", [source.lease_id])).rows[0];
       if (!row) throw new CurrentHumanLeaseError("CURRENT_HUMAN_RESOLUTION_NOT_AVAILABLE");
+      if (row.human_assertion_digest !== null) {
+        if (!digest.safeParse(row.human_assertion_digest).success || !custody ||
+            row.c2_custody_binding_digest !== custodyBindingDigest.call(custody))
+          throw new CurrentHumanLeaseError("CURRENT_HUMAN_RESTORE_C2_CUSTODY_REQUIRED");
+        const snapshot = await custodyInventory.call(custody);
+        const expectedKind = source.phase === "UNKNOWN" ? "SIGNED_SOURCE_UNKNOWN" : "SIGNED_SOURCE_TERMINAL";
+        const matches = snapshot.events.filter(event => event.kind === expectedKind && event.lease_id === source.lease_id &&
+          terminalSemanticDigest(event.body) === terminalSemanticDigest(source));
+        if (matches.length !== 1) throw new CurrentHumanLeaseError("CURRENT_HUMAN_CUSTODY_PROOF_REQUIRED");
+      }
+      if (!this.matchesReverseTrust(row.source_trust_digest))
+        throw new CurrentHumanLeaseError("CURRENT_HUMAN_RECOVERY_SOURCE_TRUST_UNAVAILABLE");
       this.bind(row, source);
       const terminal = source.phase === "UNKNOWN" ? null : accessDigest({ lease_id: source.lease_id, attempt_id: source.attempt_id,
         phase: source.phase, source_receipt_id: source.source_receipt_id, source_receipt_digest: source.source_receipt_digest,
@@ -844,17 +1504,25 @@ export class CurrentHumanCandidate {
       if (row.phase === "ISSUED" || row.phase === "RETIRED") {
         // A signed source rollback is a separate fact, not a manufactured
         // ENTER or an inference from expiry. Keep unused Core leases RETIRED.
-        if (source.phase !== "ROLLED_BACK")
-          throw new CurrentHumanLeaseError("CURRENT_HUMAN_RESOLUTION_NOT_AVAILABLE");
         const prior = (await db.query<{ attempt_id: string; terminal_receipt_digest: string }>(
           "SELECT attempt_id,terminal_receipt_digest FROM elp210_candidate.events WHERE lease_id=$1 AND phase='SOURCE_ROLLED_BACK_UNENTERED' ORDER BY event_id LIMIT 2",
           [row.lease_id])).rows;
         if (prior.length) {
-          if (prior.length !== 1 || row.phase !== "RETIRED" || prior[0].attempt_id !== source.attempt_id
+          if (source.phase !== "ROLLED_BACK" || prior.length !== 1 || row.phase !== "RETIRED" || prior[0].attempt_id !== source.attempt_id
             || prior[0].terminal_receipt_digest !== terminal)
             throw new CurrentHumanLeaseError("CURRENT_HUMAN_TERMINAL_CONFLICT");
           return { replayed: true, phase: "ROLLED_BACK" };
         }
+        if (source.phase === "UNKNOWN") {
+          // The source journal predates ENTER. A lost/denied ENTER followed by
+          // an uncertain source read is not proof of either entry or rollback.
+          // Quarantine this exact attempt, including a previously retired token,
+          // so it can neither ENTER later nor disappear from drain/recovery.
+          await db.query("UPDATE elp210_candidate.leases SET phase='UNKNOWN',attempt_id=$2 WHERE lease_id=$1", [row.lease_id, source.attempt_id]);
+          return { replayed: false, phase: "UNKNOWN" };
+        }
+        if (source.phase !== "ROLLED_BACK")
+          throw new CurrentHumanLeaseError("CURRENT_HUMAN_RESOLUTION_NOT_AVAILABLE");
         if (row.phase === "ISSUED")
           await db.query("UPDATE elp210_candidate.leases SET phase='RETIRED' WHERE lease_id=$1", [row.lease_id]);
         await db.query("INSERT INTO elp210_candidate.events(lease_id,phase,attempt_id,terminal_receipt_digest) VALUES($1,'SOURCE_ROLLED_BACK_UNENTERED',$2,$3)",
@@ -866,6 +1534,10 @@ export class CurrentHumanCandidate {
         throw new CurrentHumanLeaseError("CURRENT_HUMAN_RESOLUTION_NOT_AVAILABLE");
       if (row.phase === source.phase && row.terminal_receipt_digest === terminal) return { replayed: true, phase: row.phase };
       if (["COMMITTED", "ROLLED_BACK"].includes(row.phase)) throw new CurrentHumanLeaseError("CURRENT_HUMAN_TERMINAL_CONFLICT");
+      if (row.phase === "UNKNOWN" && source.phase === "COMMITTED") {
+        const entered = await db.query("SELECT 1 FROM elp210_candidate.events WHERE lease_id=$1 AND phase='ENTERED' AND attempt_id=$2 LIMIT 1", [row.lease_id, source.attempt_id]);
+        if (entered.rowCount !== 1) throw new CurrentHumanLeaseError("CURRENT_HUMAN_RESOLUTION_NOT_AVAILABLE");
+      }
       await db.query("UPDATE elp210_candidate.leases SET phase=$2,terminal_receipt_digest=$3 WHERE lease_id=$1",
         [row.lease_id, source.phase, terminal]);
       return { replayed: false, phase: source.phase };
@@ -878,16 +1550,68 @@ export class CurrentHumanCandidate {
    * no old JWT/session credential or business grant is reconstructed. Reading
    * an attempt never releases it or authorizes another entry/transaction. */
   async recoverableAttempts() {
-    if(!this.config.source)return [];
+    if(!this.#config.source)return [];
     return this.transaction(async db => {
       const rows = await db.query<Row>(`SELECT * FROM elp210_candidate.leases
         WHERE workload_id=$1 AND phase IN ('ENTERED','UNKNOWN') ORDER BY issued_at_ms,lease_id LIMIT 128`,
         [this.reverseSource().workload_id]);
+      // Do not silently omit unresolved originals whose historical issuer is
+      // absent or differs from this installation after a restart/rotation.
+      if (rows.rows.some(row => row.human_issuer !== this.#config.issuer))
+        throw new CurrentHumanLeaseError("CURRENT_HUMAN_RECOVERY_ISSUER_UNAVAILABLE");
+      if (rows.rows.some(row => !this.matchesReverseTrust(row.source_trust_digest)))
+        throw new CurrentHumanLeaseError("CURRENT_HUMAN_RECOVERY_SOURCE_TRUST_UNAVAILABLE");
       return rows.rows.map(row => ({ lease_id: row.lease_id, attempt_id: row.attempt_id!, workspace_id: row.workspace_id,
         environment: row.environment, workload_id: row.workload_id, request_digest: row.request_digest,
-        human_issuer: this.config.issuer, subject: row.subject_id, session_id: row.session_id,
+        human_issuer: row.human_issuer!, subject: row.subject_id, session_id: row.session_id,
         session_revision: Number(row.session_revision), authority_revision: Number(row.authority_revision),
         expires_at: Number(row.expires_at_ms) / 1000 }));
+    });
+  }
+
+  /** Private recovery lookup for one already-known original. No LIMIT-based
+   * listing and no authority to create/re-enter a transaction. The configured
+   * source workload and installation scope still apply after revocation. */
+  async recoverableExactAttempt(leaseId: string, attemptId: string) {
+    id.parse(leaseId); id.parse(attemptId);
+    if (!this.#config.source) return null;
+    // This lookup is the C2 Research recovery seam, not the generic recovery
+    // enumeration. Never infer a Paper/workspace scope from the stored row.
+    if (!this.#config.installation_scope || this.#config.installation_scope.environment !== "paper")
+      throw new CurrentHumanLeaseError("CURRENT_HUMAN_INSTALLATION_SCOPE_INVALID");
+    return this.transaction(async db => {
+      const rows = await db.query<Row>(`SELECT * FROM elp210_candidate.leases
+        WHERE lease_id=$1 AND workload_id=$3 AND
+          ((attempt_id=$2 AND phase IN ('ENTERED','UNKNOWN','COMMITTED','ROLLED_BACK')) OR
+           (phase='RETIRED' AND attempt_id IS NULL))`,
+      [leaseId, attemptId, this.reverseSource().workload_id]);
+      if (rows.rows.length > 1) throw new CurrentHumanLeaseError("CURRENT_HUMAN_BINDING_MISMATCH");
+      const row = rows.rows[0];
+      if (!row) return null;
+      this.checkInstallation(row, false);
+      if (row.human_issuer !== this.#config.issuer)
+        throw new CurrentHumanLeaseError("CURRENT_HUMAN_RECOVERY_ISSUER_UNAVAILABLE");
+      if (!this.matchesReverseTrust(row.source_trust_digest))
+        throw new CurrentHumanLeaseError("CURRENT_HUMAN_RECOVERY_SOURCE_TRUST_UNAVAILABLE");
+      if (['RETIRED', 'COMMITTED', 'ROLLED_BACK'].includes(row.phase)) {
+        // Terminal rows and unentered rollbacks must have one matching event.
+        // This detects inconsistent local history; append-only triggers alone
+        // do NOT authenticate INSERT provenance or prove a source receipt.
+        const events = await db.query<{ phase: string; attempt_id: string | null; terminal_receipt_digest: string | null }>(
+          `SELECT phase,attempt_id,terminal_receipt_digest FROM elp210_candidate.events
+           WHERE lease_id=$1 AND phase IN ('COMMITTED','ROLLED_BACK','SOURCE_ROLLED_BACK_UNENTERED')
+           ORDER BY event_id LIMIT 2`, [row.lease_id]);
+        const event = events.rows[0];
+        const expectedPhase = row.phase === 'RETIRED' ? 'SOURCE_ROLLED_BACK_UNENTERED' : row.phase;
+        if (events.rows.length !== 1 || event.phase !== expectedPhase || event.attempt_id !== attemptId ||
+            !digest.safeParse(event.terminal_receipt_digest).success ||
+            (row.phase !== 'RETIRED' && event.terminal_receipt_digest !== row.terminal_receipt_digest)) return null;
+      }
+      return { lease_id: row.lease_id, attempt_id: attemptId, workspace_id: row.workspace_id,
+        environment: row.environment, workload_id: row.workload_id, request_digest: row.request_digest,
+        human_issuer: row.human_issuer, subject: row.subject_id, session_id: row.session_id,
+        session_revision: Number(row.session_revision), authority_revision: Number(row.authority_revision),
+        expires_at: Number(row.expires_at_ms) / 1000 };
     });
   }
 
@@ -905,9 +1629,7 @@ export class CurrentHumanCandidate {
   }
 
   private async drainState(db: PoolClient, drainId: string, revision: string) {
-    const counts = (await db.query(`SELECT count(*)::int AS pending,
-      count(*) FILTER (WHERE phase='UNKNOWN' OR expires_at_ms<=floor(extract(epoch FROM clock_timestamp())*1000))::int AS unknown
-      FROM elp210_candidate.obligations WHERE unresolved`)).rows[0];
+    const counts = await currentHumanDrainCounts(db,this.#config.c2_delivery_schema_required===true);
     return { drain_id: drainId, authority_revision: Number(revision),
       status: counts.unknown > 0 ? "DRAIN_UNKNOWN" : counts.pending > 0 ? "DRAIN_PENDING" : "DRAIN_READY",
       pending: Number(counts.pending) };
@@ -1071,7 +1793,7 @@ export class CurrentHumanCandidate {
       await revalidateNativeExecutionNotice(notice); // actual qualified adapter, no Core lock
       const row=await this.transaction(async(db,authority)=>{
         if(authority.drain_id)throw new CurrentHumanLeaseError("CURRENT_HUMAN_DRAINING");
-        const n=await assertNativeExecutionNoticeCurrent(db,notice,this.pool);
+        const n=await assertNativeExecutionNoticeCurrent(db,notice,this.#pool);
         const d=n.manager_read_decision??await evaluateManagerDomainRead(db,{actor,workspace_id:view.workspace_id,
           environment:view.environment,domain:c.selection.domain});
         if(Boolean(view.manager)!==Boolean(n.manager_read_decision)||
@@ -1249,8 +1971,8 @@ export class CurrentHumanCandidate {
   }
 
   private reverseSource(){
-    if(!this.config.source)throw new CurrentHumanLeaseError("CURRENT_HUMAN_REVERSE_PURPOSE_REQUIRED");
-    return this.config.source;
+    if(!this.#config.source)throw new CurrentHumanLeaseError("CURRENT_HUMAN_REVERSE_PURPOSE_REQUIRED");
+    return this.#config.source;
   }
   private workloadId(){return this.nativeHTTP?.workload_id??this.reverseSource().workload_id;}
   private nativeConfig(){
@@ -1296,7 +2018,7 @@ export class CurrentHumanCandidate {
       throw new CurrentHumanLeaseError("CURRENT_HUMAN_NATIVE_BINDING_INVALID");
   }
   private async nativeDecision(db:PoolClient,s:NativeHTTPState){
-    const notice=s.frame?await assertNativeExecutionNoticeCurrent(db,s.frame.notice,this.pool):undefined;
+    const notice=s.frame?await assertNativeExecutionNoticeCurrent(db,s.frame.notice,this.#pool):undefined;
     const d=notice?.manager_read_decision??await evaluateManagerDomainRead(db,{actor:s.actor,workspace_id:s.context.binding.workspace_id,
       environment:s.context.binding.environment,domain:s.context.domain,expected_scope_digest:s.frame?.domain_scope_digest??s.scope_digest});
     if(d.scope_digest!==(s.frame?.domain_scope_digest??s.scope_digest))

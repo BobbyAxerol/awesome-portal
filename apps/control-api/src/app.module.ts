@@ -21,6 +21,9 @@ import type { PendingControlTrust } from "./execution-v2/pending-control.trust";
 import type { AccessTrustProvider } from "./execution-v2/access-trust";
 import { ExecutionManagerRuntime, type ManagerRuntimeInstallation } from "./execution-v2/manager-runtime";
 import type { CurrentHumanMutations } from "./execution-v2/current-human-mutations";
+import { C2P7CandidateNoStoreGuard, C2P7EmergencyCandidateController,
+  C2P7ReviewCandidateController } from "./execution-v2/c2-p7-review-candidate.controller";
+import { C2P7EmergencyReviewCandidateService, C2P7ReviewCandidateService } from "./execution-v2/c2-p7-review-candidate.service";
 import { composeNativeCore,nativeCoreManagerReadConsumer } from "./execution-v2/native-core-composition";
 import { createNativeCacheObserver } from "./execution-v2/native-cache-observation";
 import { NativeManagerReadConsumer } from "./execution-v2/native-manager-consumer";
@@ -313,6 +316,10 @@ export interface ControlApiDependencies {
   /** Explicit private candidate composition, never an environment switch or
    * browser input. It must share the candidate's bounded Core pool. */
   currentHumanMutations?: CurrentHumanMutations;
+  /** Explicit Research-only owner review candidates, constructed by trusted
+   * bootstrap. No ENV/request switch creates one and they are not P7 authority. */
+  c2P7ReviewCandidate?: C2P7ReviewCandidateService;
+  c2P7EmergencyCandidate?: C2P7EmergencyReviewCandidateService;
   /** Genuine private composition only; never reconstructed from HTTP or ENV. */
   nativeManagerRead?: Awaited<ReturnType<typeof composeNativeCore>>;
   /** Private explicit connected budget only; no automatic runtime/source commissioning. */
@@ -334,6 +341,14 @@ export class AppModule implements OnApplicationShutdown {
 
   static register(config: ControlApiConfig, pool: Pool, executionPool?: Pool,
     dependencies: ControlApiDependencies = {}): DynamicModule {
+    const p7Review = dependencies.c2P7ReviewCandidate, p7Emergency = dependencies.c2P7EmergencyCandidate;
+    const p7Workspace = config.EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID;
+    if ((p7Review || p7Emergency) && (!nativeResearchReview(config) || !p7Workspace ||
+      (p7Review && (Object.getPrototypeOf(p7Review)!==C2P7ReviewCandidateService.prototype ||
+        !C2P7ReviewCandidateService.prototype.usesInstallation.call(p7Review,pool,p7Workspace))) ||
+      (p7Emergency && (Object.getPrototypeOf(p7Emergency)!==C2P7EmergencyReviewCandidateService.prototype ||
+        !C2P7EmergencyReviewCandidateService.prototype.usesInstallation.call(p7Emergency,pool,p7Workspace)))))
+      throw new Error("C2_P7_RESEARCH_COMPOSITION_REQUIRED");
     if (nativeResearchReview(config) && (!dependencies.nativeManagerRead || !dependencies.nativeManagerRealtimeLimits ||
       !dependencies.currentHumanMutations || !dependencies.executionAccessTrust))
       throw new Error("NATIVE_RESEARCH_REVIEW_COMPOSITION_REQUIRED");
@@ -389,6 +404,8 @@ export class AppModule implements OnApplicationShutdown {
     return {
       module: AppModule,
       controllers: [
+        ...(p7Review ? [C2P7ReviewCandidateController] : []),
+        ...(p7Emergency ? [C2P7EmergencyCandidateController] : []),
         ExecutionRetainedReviewController,
         HealthController,
         AuthController,
@@ -475,6 +492,9 @@ export class AppModule implements OnApplicationShutdown {
         ResearchAlphaVersionPublicationController,
       ],
       providers: [
+        ...((p7Review || p7Emergency) ? [C2P7CandidateNoStoreGuard] : []),
+        ...(p7Review ? [{ provide: C2P7ReviewCandidateService, useValue: p7Review }] : []),
+        ...(p7Emergency ? [{ provide: C2P7EmergencyReviewCandidateService, useValue: p7Emergency }] : []),
         { provide: BINDING_FINANCIAL_BATCH_SOURCE, useValue: dependencies.bindingFinancialBatch ?? createRetainedBindingFinancialBatchSource() },
         ...(dependencies.bindingFinancialRefresh ? [{ provide: BINDING_FINANCIAL_REFRESH_SOURCE, useValue: dependencies.bindingFinancialRefresh }] : []),
         ...(dependencies.operationalQueueHealth ? [{ provide: OPERATIONAL_QUEUE_HEALTH_SOURCE, useValue: dependencies.operationalQueueHealth }] : []),

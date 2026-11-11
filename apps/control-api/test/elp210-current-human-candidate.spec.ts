@@ -15,6 +15,7 @@ import type { AccessActor } from "../src/execution-v2/access.contract";
 import { migrateTestDatabase } from "./harness";
 import { FinancialSourceAssertionAuthority } from "../src/execution-v2/financial-source-assertion";
 import { pmHttpRequestDigest } from "../src/execution-v2/pm-http-request-binding";
+import { CoreRestoreQuiescence, newRestoreDrainId } from "../src/execution-v2/restore-core-quiescence";
 
 const database = process.env.TEST_DATABASE_URL;
 describe.skipIf(!database)("ELP2-10 unmounted authentic-human candidate, real Core DB", () => {
@@ -114,6 +115,27 @@ describe.skipIf(!database)("ELP2-10 unmounted authentic-human candidate, real Co
     await candidate.enter(lease.token, await proof(lease.lease_id));
     expect(await phase(lease.lease_id)).toBe("ENTERED");
   });
+  it("restore quiescence reconciles the same entered original on disposable PostgreSQL without authorizing cutover", async () => {
+    const lease = await enter();
+    const drain = newRestoreDrainId();
+    const recovery = new CoreRestoreQuiescence(pool, candidate);
+    const attempt = `test-only-attempt-${lease.lease_id}`;
+    expect(await recovery.open(drain)).toMatchObject({ state: "CORE_ONLY_NO_CUTOVER", local_drain: "DRAIN_PENDING", unresolved_count: 1 });
+    await expect(recovery.reconcileOriginal(drain, lease.lease_id, "test-only-wrong-attempt", await proof(lease.lease_id, "COMMITTED")))
+      .rejects.toThrow("V2_RESTORE_TERMINAL_ROUTING_INVALID");
+    await expect(recovery.reconcileOriginal(drain, lease.lease_id, attempt, await proof(lease.lease_id, "COMMITTED", {}, humanKey.privateKey)))
+      .rejects.toThrow();
+    expect(await phase(lease.lease_id)).toBe("ENTERED");
+    expect(await recovery.reconcileOriginal(drain, lease.lease_id, attempt, await proof(lease.lease_id, "UNKNOWN")))
+      .toMatchObject({ terminal: "UNKNOWN", progress: { local_drain: "DRAIN_UNKNOWN", unresolved_count: 1 } });
+    const restarted = new CoreRestoreQuiescence(pool, await CurrentHumanCandidate.create(pool, config));
+    expect(await restarted.status(drain)).toMatchObject({ local_drain: "DRAIN_UNKNOWN", unresolved_count: 1 });
+    const terminal = await proof(lease.lease_id, "COMMITTED");
+    expect(await restarted.reconcileOriginal(drain, lease.lease_id, attempt, terminal)).toMatchObject({ terminal: "CORE_RECORDED",
+      progress: { state: "CORE_ONLY_NO_CUTOVER", local_drain: "DRAIN_READY", unresolved_count: 0, independent_checkpoint: "NOT_VERIFIED", old_holder_fence: "NOT_VERIFIED", post_snapshot_ack_coverage: "NOT_VERIFIED" } });
+    expect(await recovery.reconcileOriginal(drain, lease.lease_id, attempt, terminal)).toMatchObject({ terminal: "CORE_REPLAYED" });
+    await expect(candidate.issue(actor, binding)).rejects.toThrow();
+  });
   it("fences same-lease financial identity delivery without allocating a second lease", async () => {
     const lease = await candidate.issue(actor, binding);
     await candidate.revalidateIssue(actor, binding, lease);
@@ -152,6 +174,10 @@ describe.skipIf(!database)("ELP2-10 unmounted authentic-human candidate, real Co
     expect(before).toMatchObject({ phase: terminal, attempt_id: `test-only-attempt-${lease.lease_id}` });
     expect(before.terminal_receipt_digest).toMatch(/^sha256:[a-f0-9]{64}$/);
     expect(await candidate.canReplaceResolvedIssue(actor, binding, lease)).toBe(true);
+    const replacement=await generateKeyPair("EdDSA",{crv:"Ed25519",extractable:true});
+    const otherTrust=await CurrentHumanCandidate.create(pool,{...config,source:{...config.source,public_key:replacement.publicKey}});
+    await expect(otherTrust.canReplaceResolvedIssue(actor,binding,lease))
+      .rejects.toMatchObject({code:"CURRENT_HUMAN_ENTRY_NOT_AVAILABLE"});
     await expect(candidate.canReplaceResolvedIssue(actor, { ...binding, request_digest: `sha256:${"f".repeat(64)}` }, lease))
       .rejects.toMatchObject({ code: "CURRENT_HUMAN_ENTRY_NOT_AVAILABLE" });
     expect((await pool.query("SELECT * FROM elp210_candidate.leases WHERE lease_id=$1", [lease.lease_id])).rows[0]).toEqual(before);
@@ -196,6 +222,10 @@ describe.skipIf(!database)("ELP2-10 unmounted authentic-human candidate, real Co
     await expect(restarted.issueCommandStatus(actor,binding,link))
       .rejects.toMatchObject({code:"CURRENT_HUMAN_COMMAND_STATUS_RECOVERY_REQUIRED"});
     await candidate.resolve(await proof(lease.lease_id,"COMMITTED"));
+    const replacement=await generateKeyPair("EdDSA",{crv:"Ed25519",extractable:true});
+    const otherTrust=await CurrentHumanCandidate.create(pool,{...config,source:{...config.source,public_key:replacement.publicKey}});
+    await expect(otherTrust.acknowledgeCommandStatusIssue(actor,binding,lease,reply))
+      .rejects.toMatchObject({code:"CURRENT_HUMAN_ENTRY_NOT_AVAILABLE"});
     // Source terminal is not delivery acknowledgement.
     await expect(restarted.issueCommandStatus(actor,binding,link))
       .rejects.toMatchObject({code:"CURRENT_HUMAN_COMMAND_STATUS_RECOVERY_REQUIRED"});
@@ -236,6 +266,8 @@ describe.skipIf(!database)("ELP2-10 unmounted authentic-human candidate, real Co
       status_token_digest:accessDigest("TEST_ONLY:status-token"),status_request_digest:accessDigest("TEST_ONLY:status-request"),
       status_issued_at_ms:Math.floor(Date.now()/1000)*1000 };
     const lease=await candidate.issueCommandStatus(actor,binding,link);
+    expect(lease.expires_at_ms).toBeLessThanOrEqual(link.context_expires_at_ms);
+    expect(decodeJwt(lease.token).exp! * 1000).toBe(lease.expires_at_ms);
     const stored=(await pool.query("SELECT * FROM execution_command_status_context_links WHERE lease_id=$1",[lease.lease_id])).rows[0];
     expect(stored).toMatchObject({context_digest:link.context_digest,original_digest:link.original_digest,
       binding_digest:link.binding_digest,request_digest:binding.request_digest,delivery_sequence:0,previous_lease_id:null,
@@ -248,7 +280,11 @@ describe.skipIf(!database)("ELP2-10 unmounted authentic-human candidate, real Co
     const rotated=await generateKeyPair("EdDSA",{crv:"Ed25519",extractable:true});
     const otherKey=await CurrentHumanCandidate.create(pool,{...config,private_key:rotated.privateKey});
     await expect(otherKey.resumeCommandStatusIssue(actor,binding,lease.lease_id))
-      .rejects.toMatchObject({code:"CURRENT_HUMAN_ASSERTION_CHANGED"});
+      .rejects.toMatchObject({code:"CURRENT_HUMAN_ENTRY_NOT_AVAILABLE"});
+    // The pinned signing-key digest rejects before re-signing or exposing a
+    // more specific mismatch. It must not create a replacement original.
+    expect((await pool.query("SELECT count(*)::int AS n FROM elp210_candidate.leases WHERE request_digest=$1",
+      [binding.request_digest])).rows[0].n).toBe(1);
     await expect(pool.query("UPDATE execution_command_status_context_links SET receiver_id='changed' WHERE lease_id=$1",[lease.lease_id]))
       .rejects.toThrow("COMMAND_STATUS_CONTEXT_LINK_IMMUTABLE");
     await expect(pool.query("TRUNCATE execution_command_status_context_links"))
@@ -268,6 +304,8 @@ describe.skipIf(!database)("ELP2-10 unmounted authentic-human candidate, real Co
     expect((await pool.query("SELECT count(*)::int AS n FROM elp210_candidate.leases")).rows[0].n).toBe(1);
     await restarted.acknowledgeCommandStatusIssue(actor,binding,lease,accessDigest("TEST_ONLY:actual edge ack"));
     await expect(restarted.issueCommandStatus(actor,binding,{...successor,original_digest:accessDigest("TEST_ONLY:wrong-original")}))
+      .rejects.toMatchObject({code:"CURRENT_HUMAN_COMMAND_STATUS_LINK_PREVIOUS_REQUIRED"});
+    await expect(restarted.issueCommandStatus(actor,binding,{...successor,context_expires_at_ms:link.context_expires_at_ms+1000}))
       .rejects.toMatchObject({code:"CURRENT_HUMAN_COMMAND_STATUS_LINK_PREVIOUS_REQUIRED"});
     expect((await pool.query("SELECT count(*)::int AS n FROM elp210_candidate.leases")).rows[0].n).toBe(1);
     const next=await restarted.issueCommandStatus(actor,binding,successor);
@@ -390,6 +428,47 @@ describe.skipIf(!database)("ELP2-10 unmounted authentic-human candidate, real Co
       .rejects.toThrow("CURRENT_HUMAN_DRAIN_REQUIRED");
     await candidate.resolve(await proof(lease.lease_id, "ROLLED_BACK"));
     expect(await candidate.drainStatus("test-only-partition")).toMatchObject({ status: "DRAIN_READY" });
+  });
+  it.each(["COMMITTED", "ROLLED_BACK"] as const)(
+    "blocks fresh entry during revocation and only replays the exact %s terminal after revoke",
+    async outcome => {
+      const entered = await enter(), unused = await candidate.issue(actor, binding);
+      const terminal = await proof(entered.lease_id, outcome);
+      expect(await candidate.beginDrain("test-only-c2-revoke")).toMatchObject({ status: "DRAIN_PENDING", pending: 1 });
+      await expect(candidate.issue(actor, binding)).rejects.toMatchObject({ code: "CURRENT_HUMAN_DRAINING" });
+      await expect(candidate.enter(unused.token, await proof(unused.lease_id)))
+        .rejects.toMatchObject({ code: "CURRENT_HUMAN_DRAINING" });
+      await expect(candidate.resolve(await proof(entered.lease_id, outcome, { attempt_id: "test-only-other-attempt" })))
+        .rejects.toMatchObject({ code: "CURRENT_HUMAN_BINDING_MISMATCH" });
+      expect(await candidate.resolve(terminal)).toEqual({ phase: outcome, replayed: false });
+      expect(await candidate.drainStatus("test-only-c2-revoke")).toMatchObject({ status: "DRAIN_READY", pending: 0 });
+      // The existing DB fence permits the authority writer only after source
+      // settlement. A replay following the real revoke records no new entry.
+      await pool.query("UPDATE auth_sessions SET state='REVOKED' WHERE session_id=$1", [actor.session_id]);
+      await candidate.endDrain("test-only-c2-revoke", Number((await state()).revision));
+      expect(await candidate.resolve(terminal)).toEqual({ phase: outcome, replayed: true });
+      await expect(candidate.issue(actor, binding)).rejects.toMatchObject({ code: "CURRENT_ACTOR_AUTHORITY_REQUIRED" });
+      await expect(candidate.enter(unused.token, await proof(unused.lease_id)))
+        .rejects.toMatchObject({ code: "CURRENT_HUMAN_ENTRY_NOT_AVAILABLE" });
+      expect(await phase(entered.lease_id)).toBe(outcome);
+      expect(await phase(unused.lease_id)).toBe("RETIRED");
+    },
+  );
+  it("advances the conservative global revision for an unrelated user without changing the original actor", async () => {
+    const first = await candidate.issue(actor, binding);
+    await candidate.beginDrain("test-only-global-revision");
+    const other = `test-only-other-${suffix}`;
+    await pool.query(`INSERT INTO portal_users(user_id,username,display_name,role,status,must_change_password,session_version)
+      VALUES($1,$1,'TEST_ONLY','USER','ACTIVE',false,7)`, [other]);
+    const changed = Number((await state()).revision);
+    expect(changed).toBeGreaterThan(first.authority_revision);
+    await candidate.endDrain("test-only-global-revision", changed);
+    const next = await candidate.issue(actor, binding);
+    expect(decodeJwt(next.token)).toMatchObject({ sub: actor.user_id, authority_revision: changed });
+    expect(await phase(first.lease_id)).toBe("RETIRED");
+    await candidate.beginDrain("test-only-global-cleanup");
+    await pool.query("DELETE FROM portal_users WHERE user_id=$1", [other]);
+    await candidate.endDrain("test-only-global-cleanup", Number((await state()).revision));
   });
   it("keeps a used lease mutation-blocking after its actual token expiry", async () => {
     candidate = await CurrentHumanCandidate.create(pool, { ...config, limits: { ...config.limits, ttl_ms: 2000 } });
@@ -747,8 +826,7 @@ describe.skipIf(!database)("ELP2-10 unmounted authentic-human candidate, real Co
   });
 
   it.each([
-    ["ISSUED", "UNKNOWN"], ["ISSUED", "COMMITTED"],
-    ["RETIRED", "UNKNOWN"], ["RETIRED", "COMMITTED"],
+    ["ISSUED", "COMMITTED"], ["RETIRED", "COMMITTED"],
   ] as const)("never accepts %s source %s as an unentered rollback", async (initial, terminal) => {
     const lease = await candidate.issue(actor, binding);
     if (initial === "RETIRED") await candidate.beginDrain("test-only-unentered-denial");
