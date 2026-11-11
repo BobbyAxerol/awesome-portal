@@ -1045,6 +1045,17 @@ class DurableQuantWorker:
         from the durable authority, but this worker never invents completion.
         """
 
+        # A broker that can say which subjects it retains (JetStream: `quant.run.requested.>` only) is asked
+        # first: `quant.run.succeeded` / `quant.run.failed` match no stream and have no subscriber, so a publish
+        # could only fail with NoStreamResponseError on every run. Skipping is the same outcome (no event)
+        # without a traceback; a broker that covers the subject, or one that cannot say, publishes as before.
+        covers = getattr(self._broker, "covers", None)
+        if callable(covers) and not covers(subject):
+            logger.info(
+                "terminal worker notification not published: no stream retains this subject; durable state remains authoritative",
+                extra={"subject": subject, "run_id": payload.get("run_id")},
+            )
+            return
         try:
             await self._broker.publish(subject, payload)
         except Exception:  # noqa: BLE001 - terminal notification is non-authoritative

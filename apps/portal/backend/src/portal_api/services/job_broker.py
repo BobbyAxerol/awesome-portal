@@ -56,6 +56,21 @@ class InMemoryJobBroker:
         self._handlers.clear()
 
 
+# The one place that says which subjects the JetStream stream retains (used to create the stream AND to answer `covers`).
+STREAM_SUBJECTS: tuple[str, ...] = ("quant.run.requested.>",)
+
+
+def nats_subject_matches(pattern: str, subject: str) -> bool:
+    """NATS wildcard match: `*` is exactly one token, a trailing `>` is one or more tokens."""
+    pattern_tokens, subject_tokens = pattern.split("."), subject.split(".")
+    for index, token in enumerate(pattern_tokens):
+        if token == ">":
+            return index == len(pattern_tokens) - 1 and len(subject_tokens) > index
+        if index >= len(subject_tokens) or (token != "*" and token != subject_tokens[index]):
+            return False
+    return len(pattern_tokens) == len(subject_tokens)
+
+
 class NatsJetStreamBroker:
     """NATS JetStream pull-consumer adapter (nats-py).
 
@@ -93,7 +108,7 @@ class NatsJetStreamBroker:
             await self._js.add_stream(
                 config=StreamConfig(
                     name=self._stream,
-                    subjects=["quant.run.requested.>"],
+                    subjects=list(STREAM_SUBJECTS),
                     retention="workqueue",
                 )
             )
@@ -154,6 +169,11 @@ class NatsJetStreamBroker:
 
         if self._task is None:
             self._task = asyncio.create_task(consume_loop())
+
+    def covers(self, subject: str) -> bool:
+        """Whether the stream retains `subject`. A JetStream publish to any other subject has no stream to
+        answer it and fails (`NoStreamResponseError`), so a caller that only wants to notify checks first."""
+        return any(nats_subject_matches(pattern, subject) for pattern in STREAM_SUBJECTS)
 
     async def publish(self, subject: str, payload: dict[str, Any]) -> None:
         if self._js is None:
