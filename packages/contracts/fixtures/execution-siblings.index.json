@@ -57,7 +57,9 @@
       "route": "/api/v1/execution/readiness",
       "valid": [
         "published",
-        "empty"
+        "empty",
+        "no_source",
+        "items_null"
       ],
       "post": null
     },

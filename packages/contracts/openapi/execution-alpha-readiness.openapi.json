@@ -157,8 +157,7 @@
           "workspace_id",
           "record_authority",
           "read_at_ms",
-          "environment",
-          "items"
+          "environment"
         ],
         "properties": {
           "schema_version": {
@@ -187,66 +186,73 @@
             ]
           },
           "items": {
-            "type": "array",
-            "maxItems": 200,
-            "items": {
-              "type": "object",
-              "additionalProperties": false,
-              "required": [
-                "alpha_id"
-              ],
-              "properties": {
-                "alpha_id": {
-                  "type": "string",
-                  "minLength": 1,
-                  "maxLength": 191,
-                  "pattern": "^[A-Za-z0-9._:-]+$(?![\\s\\S])"
-                },
-                "readiness": {
-                  "anyOf": [
-                    {
-                      "type": "object",
-                      "additionalProperties": false,
-                      "required": [
-                        "met",
-                        "total"
-                      ],
-                      "properties": {
-                        "met": {
-                          "type": "integer",
-                          "minimum": 0,
-                          "maximum": 9007199254740991
-                        },
-                        "total": {
-                          "type": "integer",
-                          "minimum": 1,
-                          "maximum": 9007199254740991
-                        }
-                      }
-                    },
-                    {
-                      "type": "null"
-                    }
-                  ]
-                },
-                "archive_state": {
-                  "anyOf": [
-                    {
+            "anyOf": [
+              {
+                "type": "array",
+                "maxItems": 200,
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "alpha_id"
+                  ],
+                  "properties": {
+                    "alpha_id": {
                       "type": "string",
-                      "enum": [
-                        "ACTIVE",
-                        "PAPER_WATCH",
-                        "ARCHIVE_IN_PROGRESS",
-                        "ARCHIVED"
+                      "minLength": 1,
+                      "maxLength": 191,
+                      "pattern": "^[A-Za-z0-9._:-]+$(?![\\s\\S])"
+                    },
+                    "readiness": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "required": [
+                            "met",
+                            "total"
+                          ],
+                          "properties": {
+                            "met": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 9007199254740991
+                            },
+                            "total": {
+                              "type": "integer",
+                              "minimum": 1,
+                              "maximum": 9007199254740991
+                            }
+                          }
+                        },
+                        {
+                          "type": "null"
+                        }
                       ]
                     },
-                    {
-                      "type": "null"
+                    "archive_state": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": [
+                            "ACTIVE",
+                            "PAPER_WATCH",
+                            "ARCHIVE_IN_PROGRESS",
+                            "ARCHIVED"
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
                     }
-                  ]
+                  }
                 }
+              },
+              {
+                "type": "null"
               }
-            }
+            ]
           }
         }
       },

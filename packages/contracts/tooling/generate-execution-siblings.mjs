@@ -166,17 +166,23 @@ def({
   name: 'alpha-readiness', gap: 'GAP-9', route: '/api/v1/execution/readiness', params: [], query: ['workspace_id', 'environment'],
   description: 'Per alpha: gate readiness {met, total} and the archive disposition, for the Fleet KPIs (Ready for exit, Archive in progress), the 7-segment stage and the Archived lens.',
   schema: T.obj({ ...head('alpha-readiness'), environment: T.en('paper', 'sandbox', 'live'),
-    items: T.arr(T.obj({ alpha_id: T.id(), readiness: T.sec(T.rule(T.obj({ met: T.int(), total: T.int(1) }), 'v.met <= v.total')), archive_state: T.sec(T.en('ACTIVE', 'PAPER_WATCH', 'ARCHIVE_IN_PROGRESS', 'ARCHIVED')) }), 200) }),
+    // `items` is a section like every other optional figure here: omitted or null = no owning source. An empty array would state "no alpha", which no
+    // source has said; the typed-absence answer omits it (11 Nov 2026, BACKEND_CONTRACT_ONLY_READS s3.1).
+    items: T.sec(T.arr(T.obj({ alpha_id: T.id(), readiness: T.sec(T.rule(T.obj({ met: T.int(), total: T.int(1) }), 'v.met <= v.total')), archive_state: T.sec(T.en('ACTIVE', 'PAPER_WATCH', 'ARCHIVE_IN_PROGRESS', 'ARCHIVED')) }), 200)) }),
   valid: {
     published: { ...hv('alpha-readiness'), environment: 'paper', items: [
       { alpha_id: 'TEST_ONLY:alpha-a', readiness: { met: 7, total: 7 }, archive_state: 'ACTIVE' }, { alpha_id: 'TEST_ONLY:alpha-b', readiness: { met: 3, total: 7 }, archive_state: 'PAPER_WATCH' },
       { alpha_id: 'TEST_ONLY:alpha-c', readiness: null, archive_state: 'ARCHIVED' }, { alpha_id: 'TEST_ONLY:alpha-d' }] },
     empty: { ...hv('alpha-readiness'), environment: 'live', items: [] },
+    no_source: { ...hv('alpha-readiness'), environment: 'paper' },
+    items_null: { ...hv('alpha-readiness'), environment: 'sandbox', items: null },
   },
   negatives: [
     { id: 'met-above-total', base: 'published', rule: 'met never exceeds total', ops: [{ op: 'set', path: ['items', 0, 'readiness', 'met'], value: 8 }], schemaCannot: true },
     { id: 'total-zero', base: 'published', rule: 'a gate has at least one criterion', ops: [{ op: 'set', path: ['items', 0, 'readiness', 'total'], value: 0 }] },
-    { id: 'archive-unknown', base: 'published', rule: 'archive states are closed', ops: [{ op: 'set', path: ['items', 0, 'archive_state'], value: 'LOST' }] }],
+    { id: 'archive-unknown', base: 'published', rule: 'archive states are closed', ops: [{ op: 'set', path: ['items', 0, 'archive_state'], value: 'LOST' }] },
+    { id: 'items-not-an-array', base: 'published', rule: 'items is a list, a null, or absent; never an object or text', ops: [{ op: 'set', path: ['items'], value: 'none' }] },
+    { id: 'environment-missing', base: 'no_source', rule: 'the answer names the environment it is about', ops: [{ op: 'delete', path: ['environment'] }] }],
 });
 
 // GAP-11: reconciliation runs and breaks.

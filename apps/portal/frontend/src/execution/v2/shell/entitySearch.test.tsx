@@ -338,6 +338,24 @@ describe("the one server search (GET /search) is the primary source", () => {
     ]);
   });
 
+  it("a NOT_COMMISSIONED group is said so (not a zero, not 'count not published') and the kind's own read is still asked", async () => {
+    const groups = ["alpha", "portfolio", "account", "operation", "approval", "incident"].map((kind) => ({ kind, totalMatched: null, rows: [], notCommissioned: true }));
+    const { api, calls } = fakeApi({ searchEntities: async () => ok(indexBody({ groups })) });
+    const out = (await searchEntities(api, "core", ALL, undefined, signal()))!;
+    expect(out.via).toBe("index");
+    // The index lines of the kinds the list reads then answered are replaced by those reads; the others keep the honest "not covered" line.
+    expect(out.notes.filter((note) => note.includes("entity search")).sort()).toEqual([
+      "Alphas: entity search does not cover this kind yet",
+      "Incidents: entity search does not cover this kind yet",
+      "Operations: entity search does not cover this kind yet",
+    ]);
+    expect(out.notes.filter((note) => note.includes("entity search")).some((note) => note.includes("count not published") || /\b0 of\b/.test(note))).toBe(false);
+    expect(calls.portfolios).toBe(1);
+    // The bindings read takes one environment, so the account is looked for in each of the three.
+    expect(calls.bindings).toHaveLength(3);
+    expect(calls.approvals).toHaveLength(1);
+  });
+
   it("asks only for the kinds the rail lists", async () => {
     const spy = vi.fn(async () => ok(indexBody()));
     const { api } = fakeApi({ searchEntities: spy });

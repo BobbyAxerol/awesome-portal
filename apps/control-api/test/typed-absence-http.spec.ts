@@ -27,6 +27,7 @@ const routes = [
 const subject = { type: "DEPLOYMENT", id: "dep-1" };
 const scoped = [
   { name: "execution-blotter-summary", schema: "BlotterSummary", path: "/api/v1/execution/blotter/summary", scope: "environment=live&deployment_id=dep-1", bare: "", version: "portal.execution.blotter-summary.v1", extra: { environment: "live" }, badValue: "environment=paper2" },
+  { name: "execution-alpha-readiness", schema: "AlphaReadiness", path: "/api/v1/execution/readiness", scope: "environment=paper", bare: "", version: "portal.execution.alpha-readiness.v1", extra: { environment: "paper" }, badValue: "environment=PAPER" },
   { name: "execution-cost-events", schema: "CostEvents", path: "/api/v1/execution/cost-events", scope: "subject_type=DEPLOYMENT&subject_id=dep-1&window=7d", bare: "", version: "portal.execution.cost-events.v1", extra: { subject }, badValue: "subject_type=deployment&subject_id=dep-1" },
   { name: "execution-grants", schema: "Grants", path: "/api/v1/execution/grants", scope: "subject_type=DEPLOYMENT&subject_id=dep-1", bare: "", version: "portal.execution.grants.v1", extra: { subject }, badValue: "subject_type=DEPLOYMENT&subject_id=bad%20id" },
   { name: "execution-limits", schema: "Limits", path: "/api/v1/execution/limits", scope: "subject_type=DEPLOYMENT&subject_id=dep-1", bare: "", version: "portal.execution.limits.v1", extra: { subject }, badValue: "subject_type=NOPE&subject_id=dep-1" },
@@ -114,7 +115,7 @@ describe("typed-absence HTTP routes (B3)", () => {
         // nothing beyond the envelope and the echoed scope: no section, count, state or zero
         expect(Object.keys(body).sort()).toEqual(["read_at_ms", "record_authority", "schema_version", "workspace_id", ...Object.keys(route.extra)].sort());
         expect(Number.isInteger(body.read_at_ms)).toBe(true);
-        expect(canRead).toHaveBeenCalledWith("ws-1", "user-1", route.name === "execution-blotter-summary" ? "live" : undefined);
+        expect(canRead).toHaveBeenCalledWith("ws-1", "user-1", route.name === "execution-blotter-summary" ? "live" : route.name === "execution-alpha-readiness" ? "paper" : undefined);
       });
       it("is typed on every refusal: 401 without a session, 404 for an unreadable or unnamed scope, 400 for an unknown or malformed key", async () => {
         for (const [target, session, status] of [
@@ -143,6 +144,59 @@ describe("typed-absence HTTP routes (B3)", () => {
       });
     });
   }
+
+  describe("execution-entity-search (command-bar search)", () => {
+    const api = load("openapi/execution-entity-search.openapi.json");
+    const validate = new Ajv2020({ strict: true }).compile(api.components.schemas.EntitySearch);
+    const problem = new Ajv2020({ strict: true }).compile(api.components.schemas.EntitySearchProblem);
+    const ALL = ["alpha", "portfolio", "account", "operation", "incident", "approval"];
+    const path = "/api/v1/execution/search";
+    it("answers every asked kind NOT_COMMISSIONED: valid, private, no row, no count, and the published fixture's shape", async () => {
+      const response = await get(`${path}?q=carry`);
+      expect(response.statusCode, response.body).toBe(200);
+      expect(response.headers["cache-control"]).toBe("private, no-store");
+      const body = response.json();
+      expect(validate(body), JSON.stringify(validate.errors)).toBe(true);
+      expect(body).toMatchObject({ schema_version: "portal.execution.entity-search.v1", workspace_id: "ws-1", record_authority: "PORTAL_PROJECTION", query: { q: "carry", kinds: ALL, limit: 8 } });
+      expect(body.groups).toEqual(ALL.map((kind) => ({ kind, total_matched: null, rows: [], state: "NOT_COMMISSIONED" })));
+      const fixture = load("fixtures/execution-entity-search.not-commissioned.synthetic.valid.json").value;
+      expect(Object.keys(body).sort()).toEqual(Object.keys(fixture).sort());
+      expect(canRead).toHaveBeenCalledWith("ws-1", "user-1", undefined);
+    });
+    it("answers only the kinds asked, in the order asked, and echoes the limit", async () => {
+      const body = (await get(`${path}?q=zz&kinds=approval,alpha&limit=3`)).json();
+      expect(validate(body), JSON.stringify(validate.errors)).toBe(true);
+      expect(body.query).toEqual({ q: "zz", kinds: ["approval", "alpha"], limit: 3 });
+      expect(body.groups.map((g: { kind: string }) => g.kind)).toEqual(["approval", "alpha"]);
+    });
+    it("is typed on every refusal: 401 without a session, 404 for an unreadable workspace, 400 for any malformed key", async () => {
+      for (const [target, session, status] of [
+        [`${path}?q=carry`, false, 401], [`${path}?q=carry&workspace_id=ws-2`, true, 404],
+        [path, true, 400], [`${path}?q=`, true, 400], [`${path}?q=a&q=b`, true, 400], [`${path}?q=%01bad`, true, 400], [`${path}?q=${"x".repeat(129)}`, true, 400],
+        [`${path}?q=a&kinds=user`, true, 400], [`${path}?q=a&kinds=alpha,alpha`, true, 400], [`${path}?q=a&kinds=`, true, 400],
+        [`${path}?q=a&limit=0`, true, 400], [`${path}?q=a&limit=51`, true, 400], [`${path}?q=a&limit=abc`, true, 400], [`${path}?q=a&extra=1`, true, 400],
+      ] as const) {
+        const response = await get(target, session);
+        expect(response.statusCode, `${target}: ${response.body}`).toBe(status);
+        expect(response.headers["cache-control"]).toBe("private, no-store");
+        if (status !== 401) {
+          expect(problem(response.json()), JSON.stringify(problem.errors)).toBe(true);
+          expect(response.json().error.code).toBe(status === 400 ? "EXECUTION_READ_QUERY_INVALID" : "EXECUTION_READ_NOT_AVAILABLE");
+        }
+      }
+      readable = false;
+      const refused = await get(`${path}?q=secretword`);
+      expect(refused.statusCode).toBe(404);
+      expect(refused.json().error.code).toBe("EXECUTION_READ_NOT_AVAILABLE");
+      expect(refused.body).not.toContain("secretword");
+    });
+    it("gives an unreadable workspace the same 404 and never confirms the query was accepted", async () => {
+      readable = false;
+      const response = await get(`${path}?q=ok`);
+      expect(response.statusCode).toBe(404);
+      expect(canRead).toHaveBeenCalled();
+    });
+  });
 
   it("states no section, no count and no zero: only the envelope and the echoed ids are present", async () => {
     for (const route of routes) {

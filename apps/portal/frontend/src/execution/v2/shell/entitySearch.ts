@@ -290,6 +290,8 @@ async function searchByIndex(api: ExecutionApi, query: string, sources: SearchSo
     const group = result.value.groups.find((g) => g.kind === kind);
     const label = INDEX_GROUP[kind];
     if (group === undefined) { notes.push(`${label}: entity search read, none returned`); continue; }
+    // The server has no source for this kind: that is not "no match" and not "count not published" (the kind's own read is asked below).
+    if (group.notCommissioned) { notes.push(`${label}: entity search does not cover this kind yet`); continue; }
     // A hit without a real id is not offered: opening it would land on "sel=undefined" (QA4 R3-01).
     for (const hit of group.rows.filter((row) => isRealId(row.id) && !/\bundefined\b/.test(row.routeHint)).slice(0, PER_KIND)) {
       entries.push({ id: `${kind}:${hit.id}`, group: label, label: hit.label, ...(hit.detail === null ? {} : { detail: hit.detail }), href: hrefFor(kind, hit.id, hit.routeHint, routes) });

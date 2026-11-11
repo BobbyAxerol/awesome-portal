@@ -10,7 +10,7 @@ const SCHEMA = "execution-entity-search.v1.schema.json";
 const body = (name: string): Draft => structuredClone(loadCanonical<{ value: Draft }>(`execution-entity-search.${name}.synthetic.valid.json`).value);
 
 describe("fixtures", () => {
-  it.each(["hit", "none"])("%s passes the schema and the reader", (name) => {
+  it.each(["hit", "none", "not-commissioned"])("%s passes the schema and the reader", (name) => {
     expect(validateAgainst(SCHEMA, "", body(name))).toEqual([]);
     expect(readEntitySearchV1(body(name))?.kind).toBe("entity_search");
   });
@@ -20,6 +20,13 @@ describe("fixtures", () => {
     expect(search.groups[0].rows[0]).toEqual({ kind: "alpha", id: "TEST_ONLY:alpha-a", label: "Carry A", detail: "v2 · Canary", routeHint: "/deployments/alphas/TEST_ONLY%3Aalpha-a" });
     expect(entitySearchAnswers(search, "carry")).toBe(true);
     expect(entitySearchAnswers(search, "other")).toBe(false);
+  });
+  it("reads a NOT_COMMISSIONED group as its own state: a null count and no rows, never a counted zero", () => {
+    const search = (readEntitySearchV1(body("not-commissioned")) as Draft).search;
+    expect(search.groups).toHaveLength(6);
+    for (const g of search.groups) expect(g).toMatchObject({ totalMatched: null, rows: [], notCommissioned: true });
+    const answered = (readEntitySearchV1(body("none")) as Draft).search;
+    for (const g of answered.groups) expect(g.notCommissioned).toBeUndefined();
   });
   it("builds a safe path", () => {
     expect(entitySearchPath({ q: " carry ", kinds: ["alpha", "portfolio"], limit: 8 })).toBe("/search?q=carry&kinds=alpha%2Cportfolio&limit=8");

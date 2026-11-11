@@ -1,7 +1,8 @@
 {
   "lane": "TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT",
   "bases": {
-    "hit": "execution-entity-search.hit.synthetic.valid.json"
+    "hit": "execution-entity-search.hit.synthetic.valid.json",
+    "notCommissioned": "execution-entity-search.not-commissioned.synthetic.valid.json"
   },
   "note": "WP-K slice 7: a count is a non-negative integer or null (never a string, never -1); a route hint is a path; kinds are closed; an entity is never \"denied\" (there is no such state); the object is closed.",
   "cases": [
@@ -101,6 +102,62 @@
             "limit"
           ],
           "value": 0
+        }
+      ]
+    },
+    {
+      "id": "WP-K/not-commissioned-with-rows",
+      "base": "notCommissioned",
+      "rule": "a group that no source answers has no rows",
+      "ops": [
+        {
+          "op": "set",
+          "path": [
+            "groups",
+            0,
+            "rows"
+          ],
+          "value": [
+            {
+              "kind": "alpha",
+              "id": "TEST_ONLY:alpha-a",
+              "label": "Carry A",
+              "detail": null,
+              "route_hint": "/deployments/alphas/TEST_ONLY%3Aalpha-a"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "WP-K/not-commissioned-with-count",
+      "base": "notCommissioned",
+      "rule": "a group that no source answers has no count, not even zero",
+      "ops": [
+        {
+          "op": "set",
+          "path": [
+            "groups",
+            0,
+            "total_matched"
+          ],
+          "value": 0
+        }
+      ]
+    },
+    {
+      "id": "WP-K/state-unknown",
+      "base": "notCommissioned",
+      "rule": "the group state vocabulary is closed",
+      "ops": [
+        {
+          "op": "set",
+          "path": [
+            "groups",
+            0,
+            "state"
+          ],
+          "value": "DENIED"
         }
       ]
     },

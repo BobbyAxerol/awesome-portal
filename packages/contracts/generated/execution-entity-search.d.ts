@@ -49,6 +49,8 @@ export interface components {
                     detail: string | null;
                     route_hint: string;
                 }[];
+                /** @enum {string} */
+                state?: "NOT_COMMISSIONED";
             }[];
         };
         EntitySearchProblem: {
