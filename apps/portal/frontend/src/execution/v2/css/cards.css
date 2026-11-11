@@ -190,6 +190,9 @@
   .exec-cards tbody td[data-l] {
     justify-content: flex-end;
     gap: var(--space-2);
+    /* A label and a value that do not fit one line stack instead of overflowing: flex-end pushes the overflow out of the left edge and
+     * cut "ALLOCATION" to "LLOCATION" (Alpha 360 windowed figures at 390). */
+    flex-wrap: wrap;
   }
   .exec-cards td[data-l]::before {
     content: attr(data-l);
