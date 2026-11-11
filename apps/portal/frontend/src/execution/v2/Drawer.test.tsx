@@ -245,6 +245,24 @@ describe("overlay mode", () => {
     expect(document.activeElement).toBe(summary);
   });
 
+  it("a link inside a CLOSED disclosure is not the last stop: Tab from the summary still wraps", () => {
+    render(
+      <MemoryRouter initialEntries={["/fleet"]}>
+        <Drawer open onClose={() => {}} title="Request" mode="overlay">
+          <details>
+            <summary>Actions not available yet</summary>
+            <a href="/somewhere">Hidden link</a>
+          </details>
+        </Drawer>
+      </MemoryRouter>,
+    );
+    const close = screen.getByText("Close");
+    const summary = screen.getByText("Actions not available yet");
+    summary.focus();
+    fireEvent.keyDown(summary, { key: "Tab" });
+    expect(document.activeElement).toBe(close);
+  });
+
   it("docked mode has no scrim and no aria-modal", () => {
     const { container } = mount("/fleet?sel=dep_1");
     expect(container.querySelector(".exec-dock-scrim")).toBeNull();
