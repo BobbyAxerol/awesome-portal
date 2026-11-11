@@ -17,7 +17,7 @@ import { readAlphaFleet } from "../../../api/profileRead";
 import { createHttpApi } from "../../../api/httpApi";
 import type { DeliveryPolicy } from "../../../profile";
 import { fixtureValue, FIXTURE_LIFECYCLE_LIVE, FIXTURE_PARTITIONS, type Draft } from "../../readers/managerDataset.testbase";
-import { alphasOf, newDatasetDouble, SNAPSHOT_B, wrapDatasetFetch, type DatasetDoubleState, type DatasetVariant, type DoubleAlpha } from "./datasetDouble.testbase";
+import { alphasOf, newDatasetDouble, openFilters, openNotes, SNAPSHOT_B, wrapDatasetFetch, type DatasetDoubleState, type DatasetVariant, type DoubleAlpha } from "./datasetDouble.testbase";
 import FleetScreen from "./index";
 
 afterEach(() => {
@@ -70,7 +70,12 @@ const mount = (api: ExecutionApi, entry: string, workspaceId?: string) =>
 const where = () => screen.getByTestId("where").textContent ?? "";
 const search = () => new URLSearchParams(where().split("?")[1] ?? "");
 const table = () => screen.getByRole("table", { name: "Alpha fleet" });
-const loaded = async () => screen.findByRole("table", { name: "Alpha fleet" }, SLOW);
+const loaded = async () => {
+  const found = await screen.findByRole("table", { name: "Alpha fleet" }, SLOW);
+  openFilters();
+  openNotes();
+  return found;
+};
 const dataRows = () => within(table()).getAllByRole("row").slice(1).filter((row) => !row.classList.contains("exec-cards-group"));
 const cell = (row: HTMLElement, label: string) => row.querySelector(`td[data-l='${label}']`)?.textContent ?? "";
 const ids = () => dataRows().map((row) => cell(row, "Alpha"));
@@ -879,14 +884,17 @@ describe("Owner and Health choices are the authorized population, or they say th
 describe("G1: the filter bar on a phone", () => {
   const phone = () => vi.stubGlobal("matchMedia", (query: string) => ({ matches: query === "(max-width: 660px)", media: query, addEventListener() {}, removeEventListener() {} }));
 
-  it("at 660px and narrower the filter bar sits behind a Filters button that counts what is applied; open, every control is reachable", async () => {
+  // `loaded()` opens the disclosures for the other tests; these two assert the closed state, so they wait for the table alone.
+  const tableOnly = async () => screen.findByRole("table", { name: "Alpha fleet" }, SLOW);
+
+  it("at 660px and narrower the whole bar sits behind the Filters and options button that counts what is applied; open, every control is reachable", async () => {
     phone();
     const { api } = harness({ live: MIXED }, "status:404");
     mount(api, `${LIVE_URL}&q=a`);
-    await loaded();
-    const toggle = screen.getByRole("button", { name: /^Filters/ });
+    await tableOnly();
+    const toggle = screen.getByRole("button", { name: /^Filters and options/ });
     expect(toggle.getAttribute("aria-expanded")).toBe("false");
-    expect(toggle.textContent).toMatch(/Filters · 2 active/);
+    expect(toggle.textContent).toMatch(/Filters and options · 2 active/);
     // Closed: the controls are out of the page and out of the tab order; the chips of what is applied stay.
     expect(screen.queryByRole("searchbox", { name: "Search alpha" })).toBeNull();
     expect(screen.queryByRole("combobox", { name: "Sort" })).toBeNull();
@@ -897,11 +905,24 @@ describe("G1: the filter bar on a phone", () => {
     expect(document.getElementById(toggle.getAttribute("aria-controls") ?? "")).not.toBeNull();
   });
 
-  it("above 660px (and where the browser cannot tell) nothing changes: no Filters button, the bar is drawn", async () => {
-    const { api } = harness({ live: MIXED }, "status:404");
+  it("above 660px (and where the browser cannot tell) the primary row keeps search, Health, Portfolio and Columns in view; everything else is behind the one Filters and options button", async () => {
+    const { api } = harness({ live: MIXED });
     mount(api, LIVE_URL);
-    await loaded();
-    expect(screen.queryByTestId("filters-toggle")).toBeNull();
-    expect(screen.getByRole("searchbox", { name: "Search alpha" })).toBeTruthy();
+    await tableOnly();
+    const toggle = screen.getByTestId("filters-toggle");
+    expect(toggle.getAttribute("aria-expanded")).toBe("false");
+    expect(toggle.getAttribute("aria-controls")).toBeTruthy();
+    const primary = within(screen.getByRole("search"));
+    expect(primary.getByRole("searchbox", { name: "Search alpha" })).toBeTruthy();
+    expect(primary.getByRole("button", { name: /^Health/ })).toBeTruthy();
+    expect(primary.getByRole("button", { name: /^Portfolio/ })).toBeTruthy();
+    expect(primary.getByRole("button", { name: /^Columns/ })).toBeTruthy();
+    // Closed, the rest is out of the page and the tab order.
+    expect(screen.queryByRole("combobox", { name: "Sort" })).toBeNull();
+    expect(screen.queryByRole("combobox", { name: /^Owner/ })).toBeNull();
+    fireEvent.click(toggle);
+    expect(toggle.getAttribute("aria-expanded")).toBe("true");
+    expect(screen.getByRole("combobox", { name: "Sort" })).toBeTruthy();
+    expect(document.getElementById(toggle.getAttribute("aria-controls") ?? "")).not.toBeNull();
   });
 });

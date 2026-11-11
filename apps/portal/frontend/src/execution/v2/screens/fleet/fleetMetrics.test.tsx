@@ -13,7 +13,7 @@ import type { AlphaFleetQuery, ExecutionApi } from "../../../api/ports";
 import { readAlphaFleet } from "../../../api/profileRead";
 import { createHttpApi } from "../../../api/httpApi";
 import type { DeliveryPolicy } from "../../../profile";
-import { newDatasetDouble, wrapDatasetFetch, type DatasetDoubleState, type DoubleAlpha } from "./datasetDouble.testbase";
+import { newDatasetDouble, openFilters, openNotes, wrapDatasetFetch, type DatasetDoubleState, type DoubleAlpha } from "./datasetDouble.testbase";
 import FleetScreen from "./index";
 
 afterEach(() => {
@@ -71,7 +71,12 @@ const mount = (api: ExecutionApi, entry = "/execution/fleet?stage=paper", all = 
   );
 const search = () => new URLSearchParams((screen.getByTestId("where").textContent ?? "").split("?")[1] ?? "");
 const table = () => screen.getByRole("table", { name: "Alpha fleet" });
-const loaded = async () => screen.findByRole("table", { name: "Alpha fleet" }, SLOW);
+const loaded = async () => {
+  const found = await screen.findByRole("table", { name: "Alpha fleet" }, SLOW);
+  openFilters();
+  openNotes();
+  return found;
+};
 const dataRows = () => within(table()).getAllByRole("row").slice(1).filter((row) => !row.classList.contains("exec-cards-group"));
 const cell = (row: HTMLElement, label: string) => row.querySelector(`td[data-l='${label}']`)?.textContent ?? "";
 const headers = () => [...table().querySelectorAll("th")].map((th) => th.textContent ?? "");
@@ -414,7 +419,7 @@ describe("guide 8.2 · filters are the server's", () => {
     const { api } = harness();
     mount(api);
     await loaded();
-    fireEvent.click(within(metrics()).getByRole("button", { name: "Portfolio" }));
+    fireEvent.click(within(toolbar()).getByRole("button", { name: "Portfolio" }));
     const menu = screen.getByRole("group", { name: "Portfolio" });
     expect(within(menu).getAllByRole("checkbox").map((box) => (box as HTMLInputElement).labels?.[0]?.textContent)).toEqual(["pf-1", "pf-2"]);
     expect(within(menu).getByTestId("portfolio-limit")).toBeTruthy();
