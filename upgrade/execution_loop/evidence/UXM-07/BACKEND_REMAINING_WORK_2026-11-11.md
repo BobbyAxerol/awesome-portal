@@ -57,3 +57,42 @@ R-MAN; `/readiness` contract shape; `/search` not-commissioned state; R-A/R-B sh
 ## What "connect live" would mean here
 
 Everything marked **[APPROVAL]** above. Claude did none of it and will not touch Edge, command, credentials or Live paths without a separate explicit approval per item.
+
+---
+
+# Plan added 11 Nov (Bobby: put it in the plan and do it)
+
+## A. Is the public lane on fixture endpoints today? Yes for Execution, measured
+
+Evidence, not memory:
+
+- research-portal nginx (`/etc/nginx/fixture/fixture-bff.conf`, hybrid marker present) sends **every** `/api/v1/execution/*`, `/api/v1/portal/*` and the Access/admin reads (`profile-access*`, `accounts`, `step-up`) to the fixture BFF, whose own header says "Execution fixture reads remain synthetic and bypass Control API authorization". Only auth (`/api/auth/*`) and Research/QuantBT (`/api/runs`, run library, alpha catalogue) reach the real isolated Control API.
+- Probe of the **real** Control API (preview auto-login session, which has no retained-review grant), 65 parameterless Execution GET routes of the live inventory:
+
+| Outcome | Routes | Meaning |
+| --- | --- | --- |
+| 200 | 11: `activation/capabilities`, `commands/catalog`, `commands/tasks`, `compositions/operations`, `compositions/waivers`, `governance/approvals`, `governance/approvals/history`, `governance/review-capture-capabilities`, `governance/stage-action-eligibility`, `governance/waivers`, `operations` | Portal-owned data, real today. These are the ones that can be flipped from fixture to real now |
+| 404 `REQUEST_REJECTED` | 43: all Manager/Fleet/Overview/alpha/portfolio/account reads, `blotter/summary`, typed-absence reads, `derivations/source-health`, `contract-authority`, ... | `SessionGuard` under `retained_review_v1` refuses non-core paths for a caller without a read grant on the projection workspace; behind that, the sources are dark (see P1) |
+| 400 / 403 / 204 | 10 | need parameters, a scope, or are realtime |
+| 404 `EXECUTION_READ_NOT_AVAILABLE` | 3: `command-center`, `compositions/command-center`, `visit-digest` | typed absence |
+
+So: Portal-owned governance, operations and command-catalog data can go real now; everything backed by TS/Edge/Core stays synthetic until the P1 items (trust refresh, DB grants, C2) and the P3 facts exist. Nothing from the Edge reaches any public screen today.
+
+## B. Work packages (Claude does these; owners of real sources are named in P1 to P4)
+
+| # | Package | Done when |
+| --- | --- | --- |
+| W1 | Land and gate: commit the three spec type fixes, fast-forward `docs/research-loop-plan`, full hook on the merged tip, refresh ledgers and route inventory | tsc clean in control-api, hook exit 0 on the merged tip |
+| W2 | **Fixture to real for the 11 Portal-owned reads**: capture each real body, run it through the frontend reader, fix any reader or producer mismatch, then move the exact location out of `fixture-bff.conf` one read at a time | per read: reader accepts the real body, a Playwright real-lane check passes, the screen shows real rows or an honest empty state; the lane is rebuilt and measured |
+| W3 | Consumer corrections that need no new source (ELP2-10 intake 18 Oct): FE-048 absent-stage handling, FE-053 malformed roster, FE-055 correct double, FE-044 and FE-050 consume the selected schema | each has a test that loads the canonical fixture; vitest and tsc green |
+| W4 | FE-035 fleet-map projection `view=MAP` (Portal-owned: row_key, name, allocation, windowed return and net PnL, health, stage_presence, at most 1000 rows, own byte cap) | contract plus 1000-row fixture, typed absence when the manager dataset is dark, heat map reading it; real values only when the dataset publishes |
+| W5 | Run the real-source readiness check the day a source is published: for each P1 to P4 item delivered, add its route to the W2 flip procedure | a published source is switched from fixture to real in one reviewed step |
+| W6 | Worker and queue (below) | decision recorded |
+| W7 | AppArmor persistence (approved by Bobby; waiting for the Bash allow rule) and receipt route (deferred by Bobby until a real Core exists) | allow rule added, profile in `/etc/apparmor.d`, loaded at boot |
+| W8 | Archive then remove the stale agent worktrees (about 40) | listed, each checked for unmerged commits, archived, removed |
+
+Order: W1, W2, W3, W6, W4, W7, W8; W5 whenever an owner publishes.
+
+## C. Worker and queue finding (11 Nov, read only)
+
+`quant-worker-py` is running (started 09:43:04Z). JetStream stream `QUANT_JOBS`: 0 messages; consumer `quant-worker-py` delivered and acknowledged everything up to stream sequence 106 (last message 14 Oct), nothing pending. So the run `rrun_5e1185f8...` shown as QUEUED is **not in any queue**: `run_read_models` holds 102 QUEUED and 5 COMPLETED rows that are read copies without a job; nothing will pick them up, and nothing was modified. Separate defect, not the cause: the stream covers `quant.run.requested.>` only, while the worker publishes terminal events to `quant.run.succeeded` and `quant.run.failed`, which match no stream, so each publish fails with `NoStreamResponseError` (logged as "terminal worker notification was not published; durable state remains authoritative"). No subscriber for those subjects exists in the repository. Decision needed before changing it: add the two subjects to the stream, or stop publishing them.
