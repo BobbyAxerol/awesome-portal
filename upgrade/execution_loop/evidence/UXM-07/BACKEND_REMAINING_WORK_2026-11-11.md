@@ -10,7 +10,7 @@ Prepared for Bobby and Codex after a read-only survey of the canonical checkout 
 
 ## Blocked on a root action (new)
 
-- **`quant-worker-py` cannot start**: host AppArmor profile `portal-research-child` (CG-RF02-01) was loaded by hand and lost at the host reboot of 10 Nov 14:11Z; no profile file exists on disk. Needs the profile recreated from the 25 Sep decision and loaded as root, then a worker start. The QUEUED run `rrun_5e1185f8...` will be picked up when the worker runs.
+- **`quant-worker-py` cannot start**: the host AppArmor profile `portal-research-child` (CG-RF02-01) was loaded by hand and lost at the host reboot of 10 Nov 14:11Z. The reviewed profile is committed at `deploy/research-preview/apparmor-research-child`; fix is `sudo apparmor_parser -r -W deploy/research-preview/apparmor-research-child` as root, then a worker start. Waiting for Bobby's go after seeing the profile. The QUEUED run `rrun_5e1185f8...` will be picked up when the worker runs.
 
 ## P1. Real source authority (blocks every real-data screen)
 
