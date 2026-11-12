@@ -17,8 +17,16 @@ import { z } from "zod";
 export const CONNECTED_READ_READY_SCHEMA = "portal.execution.connected-read-ready.v1";
 /** Fixed origin of the runner; Edge R2 6.1. */
 export const CONNECTED_READ_ORIGIN = "https://research-portal.primusspark.com";
-/** Edge: runner deadline 30 s total plus 600 s margin the genuine session must still have. */
-export const CONNECTED_READ_MINIMUM_REMAINING_MS = 630_000;
+/** Edge runner: global test deadline. Every source/native/ready timestamp must outlive it; none needs more. */
+export const CONNECTED_READ_DEADLINE_MS = 30_000;
+/** Edge runner: extra life the genuine PORTAL session must still have at admission (600 s). It is a Portal-session
+ * reserve only: it never lengthens a native lease, a source JWT or a ready/trust/native timestamp. */
+export const CONNECTED_READ_SESSION_RESERVE_MS = 600_000;
+/** Portal session life required at runner start: deadline + reserve. Exactly this much is accepted. */
+export const CONNECTED_READ_SESSION_MINIMUM_REMAINING_MS = CONNECTED_READ_DEADLINE_MS + CONNECTED_READ_SESSION_RESERVE_MS;
+/** Upper bound for any numeric override, so a typo cannot turn a check into a no-op. */
+const MAXIMUM_OVERRIDE_MS = 7 * 24 * 3_600_000;
+export const ACCEPTANCE_TOKEN_SCHEMA_V1 = "portal.research-acceptance-session-token.v1";
 
 const hex64 = z.string().regex(/^[a-f0-9]{64}$/);
 const boundedText = z.string().min(1).max(256);
@@ -33,6 +41,8 @@ export const connectedReadReadyDocument = z.object({
   environment: z.enum(["paper", "sandbox", "live"]),
   workspace_id: z.string().regex(/^ws_[A-Za-z0-9]{8,96}$/),
   profile_id: z.string().regex(/^[A-Z][A-Z0-9_]{2,95}$/),
+  /** The genuine Core-issued Portal session this document is bound to (`ses_...`); the runner refuses a mismatch. */
+  session_id: z.string().regex(/^ses_[A-Za-z0-9_-]{1,128}$/),
   projection_epoch: z.string().regex(/^[^\x00-\x20\x7f]{1,256}$/),
   acceptance_id: boundedText,
   core_commit: z.string().regex(/^[a-f0-9]{40}$/),
@@ -65,7 +75,8 @@ export type ConnectedReadReadyDocument = z.infer<typeof connectedReadReadyDocume
 export type ConnectedReadReadyCode =
   | "READY_SHAPE_INVALID" | "READY_API_IP_NOT_GLOBAL" | "READY_NOT_CURRENT" | "READY_STREAM_FIELDS_INCONSISTENT"
   | "READY_STREAM_GRANT_NOT_DISTINCT" | "READY_STREAM_SOURCE_SET_MISSING" | "READY_EXPIRY_TOO_SHORT"
-  | "READY_SESSION_HASH_MISMATCH" | "READY_CLOCK_INVALID";
+  | "READY_SESSION_HASH_MISMATCH" | "READY_CLOCK_INVALID" | "READY_SESSION_INVALID" | "READY_SESSION_BINDING_MISMATCH"
+  | "READY_SESSION_EXPIRY_TOO_SHORT" | "READY_OPTION_INVALID";
 export class ConnectedReadReadyError extends Error {
   constructor(readonly code: ConnectedReadReadyCode) { super(code); }
 }
@@ -94,21 +105,51 @@ export function isGlobalIp(value: string): boolean {
   return /^[23]/.test(lower);
 }
 
+/** The fields of the genuine `portal.research-acceptance-session-token.v1` file this producer binds to.
+ * The token value itself is never returned, copied or echoed. */
+export interface PortalSessionBinding { sessionId: string; userId: string; absoluteExpiresAtMs: number; fileSha256: string }
+
+const acceptanceTokenFile = z.object({
+  schema_version: z.literal(ACCEPTANCE_TOKEN_SCHEMA_V1), session_id: z.string().regex(/^ses_[A-Za-z0-9_-]{1,128}$/),
+  user_id: z.string().regex(/^usr_[A-Za-z0-9]{8,96}$/), cookie_name: z.literal("__Host-portal_session"),
+  token: z.string().regex(/^[A-Za-z0-9_.~%-]{16,4096}$/), absolute_expires_at: utc,
+}).strict();
+
+/** Reads the exact bytes of the issued session file and returns only its binding facts and SHA256. */
+export function portalSessionBinding(fileBytes: Buffer): PortalSessionBinding {
+  let value: unknown;
+  try { value = JSON.parse(fileBytes.toString("utf8")); } catch { throw new ConnectedReadReadyError("READY_SESSION_INVALID"); }
+  const parsed = acceptanceTokenFile.safeParse(value);
+  if (!parsed.success) throw new ConnectedReadReadyError("READY_SESSION_INVALID");
+  return { sessionId: parsed.data.session_id, userId: parsed.data.user_id,
+    absoluteExpiresAtMs: Date.parse(parsed.data.absolute_expires_at), fileSha256: createHash("sha256").update(fileBytes).digest("hex") };
+}
+
 export interface ConnectedReadReadyOptions {
   /** Epoch ms from the caller's clock. */
   nowMs: number;
-  /** Remaining life every expiry must have; defaults to the runner deadline plus the agreed margin. */
+  /** The exact bytes of the issued Portal session file this document is bound to. */
+  sessionFileBytes: Buffer;
+  /** Life every ready/trust/native timestamp must exceed. Defaults to the 30 s test deadline; no 600 s here. */
   minimumRemainingMs?: number;
-  /** SHA256 of the exact private session file bytes this document refers to. */
-  sessionFileSha256: string;
+  /** Extra life the Portal session must still have beyond the deadline. Defaults to 600 s; exactly deadline+reserve passes. */
+  sessionReserveMs?: number;
   /** Baseline stage needs a current read authority; post-revoke validation passes false. */
   requireReadCurrent?: boolean;
+}
+
+function bounded(value: number | undefined, fallback: number): number {
+  if (value === undefined) return fallback;
+  if (!Number.isSafeInteger(value) || value < 0 || value > MAXIMUM_OVERRIDE_MS) throw new ConnectedReadReadyError("READY_OPTION_INVALID");
+  return value;
 }
 
 /** Validates a candidate and returns the document, or throws with ONE stable code.
  * The error never echoes a value from the input. */
 export function validateConnectedReadReady(input: unknown, options: ConnectedReadReadyOptions): ConnectedReadReadyDocument {
   if (!Number.isSafeInteger(options.nowMs) || options.nowMs < 1) throw new ConnectedReadReadyError("READY_CLOCK_INVALID");
+  const need = bounded(options.minimumRemainingMs, CONNECTED_READ_DEADLINE_MS);
+  const reserve = bounded(options.sessionReserveMs, CONNECTED_READ_SESSION_RESERVE_MS);
   const parsed = connectedReadReadyDocument.safeParse(input);
   if (!parsed.success) throw new ConnectedReadReadyError("READY_SHAPE_INVALID");
   const d = parsed.data;
@@ -123,8 +164,14 @@ export function validateConnectedReadReady(input: unknown, options: ConnectedRea
   if (d.stream_authorized && d.stream_grant_id === d.manager_grant_id)
     throw new ConnectedReadReadyError("READY_STREAM_GRANT_NOT_DISTINCT");
   if (d.stream_authorized && d.source_set_ref === undefined) throw new ConnectedReadReadyError("READY_STREAM_SOURCE_SET_MISSING");
-  if (d.session_sha256 !== options.sessionFileSha256) throw new ConnectedReadReadyError("READY_SESSION_HASH_MISMATCH");
-  const need = options.minimumRemainingMs ?? CONNECTED_READ_MINIMUM_REMAINING_MS;
+  const session = portalSessionBinding(options.sessionFileBytes);
+  if (d.session_sha256 !== session.fileSha256) throw new ConnectedReadReadyError("READY_SESSION_HASH_MISMATCH");
+  // The runner requires producer.session_id == the issued session's id and producer.subject == its user.
+  if (d.session_id !== session.sessionId || d.subject !== session.userId) throw new ConnectedReadReadyError("READY_SESSION_BINDING_MISMATCH");
+  // Portal session only: >= deadline + reserve at start (exactly equal passes, like the runner).
+  if (session.absoluteExpiresAtMs - options.nowMs < CONNECTED_READ_DEADLINE_MS + reserve)
+    throw new ConnectedReadReadyError("READY_SESSION_EXPIRY_TOO_SHORT");
+  // Source/native/ready timestamps only have to outlive the test itself (strictly), not the Portal-session reserve.
   for (const stamp of [d.expires_at, d.trust_expires_at, d.native_expires_at])
     if (Date.parse(stamp) - options.nowMs <= need) throw new ConnectedReadReadyError("READY_EXPIRY_TOO_SHORT");
   return d;
