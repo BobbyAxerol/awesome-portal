@@ -191,6 +191,8 @@ export interface PreparedNativeCoreRuntime {
   /** Plan B caps pinned for the workspace's single owner intake. Throws (fail
    * closed) when the manifest does not carry them. Used by the offline installer. */
   researchGrantWindow(workspaceId:string):Readonly<PlanBGrantWindow>;
+  /** The domain of the manifest's one Research selection (successor domain renewal ceiling). Fails closed. */
+  researchSelectedDomain(workspaceId:string):Readonly<z.infer<typeof domain>>;
   compose(pool:Pool, reverseParticipants?:readonly CurrentHumanReverseRecoveryParticipant[],
     currentReadRecovery?:CurrentHumanCurrentReadRecoveryPort,rootProvider?:NativeRootReceiptProvider):Promise<ControlApiDependencies>;
 }
@@ -220,6 +222,10 @@ export async function prepareNativeCoreRuntime(input:NativeCoreRuntimeReference)
         nativeCoreResearchReviewTarget(parsed,workspaceId);
         const window=parsed.composition.owner_intakes[0]!.grant_window;
         return window?Object.freeze({...window}):fail();
+      },researchSelectedDomain:(workspaceId:string)=>{
+        nativeCoreResearchReviewTarget(parsed,workspaceId);
+        const entry=parsed.composition.selections.find(s=>s.selector.workspace_id===workspaceId);
+        return entry?Object.freeze({...entry.selector.domain}):fail();
       },compose:async(pool:Pool,reverseParticipants:readonly CurrentHumanReverseRecoveryParticipant[]=[],
         currentReadRecovery?:CurrentHumanCurrentReadRecoveryPort,rootProvider?:NativeRootReceiptProvider)=>{
       try{

@@ -308,3 +308,71 @@ describe("Manager successor finite window and pure document guards", () => {
     expect(managerSuccessorDigest(changed, "4".repeat(64))).not.toBe(digest);
   });
 });
+
+// Domain renewal (Bobby, 2026-11-12): a successor may change the domain ONLY to the one the hash-pinned runtime
+// manifest selects (`pin.renewed_domain`), keeping the profile id; every other policy or grant fact stays bound.
+const NEW_DOMAIN = { ...DOMAIN, catalogue_sha256: "a".repeat(64), profile_sha256: "b".repeat(64), field_policy_sha256: "c".repeat(64) };
+function renewalFixture() {
+  const f = fixture("ADVANCE");
+  const policy = f.document.policy, grant = f.document.grants[0]!.grant;
+  policy.manager_read_domains![0]!.domain = structuredClone(NEW_DOMAIN);
+  policy.manager_read_domains![0]!.field_policy_ref = "TEST_ONLY-fields-2";
+  grant.domain = structuredClone(NEW_DOMAIN);
+  grant.field_policy_ref = "TEST_ONLY-fields-2";
+  f.pin = managerSuccessorPin.parse({ ...f.pin, renewed_domain: structuredClone(NEW_DOMAIN) });
+  return f;
+}
+describe("Manager successor domain renewal to the manifest-pinned domain", () => {
+  it("renews the same identity onto the pinned new seals, still one finite READ grant", () => {
+    const f = renewalFixture(), result = run(f);
+    expect(result.policyChanged).toBe(true);
+    expect(result.grants.map(g => g.action)).toEqual(["business.read_all"]);
+    expect(result.grants[0]!.domain).toEqual(NEW_DOMAIN);
+  });
+  it("without a pinned renewed domain the old same-domain rule still refuses a new domain", () => {
+    const f = renewalFixture();
+    f.pin = managerSuccessorPin.parse({ ...f.pin, renewed_domain: undefined });
+    refused(f);
+  });
+  it("refuses a domain the manifest does not pin, even if the artifact seals it consistently", () => {
+    const f = renewalFixture();
+    f.pin = managerSuccessorPin.parse({ ...f.pin, renewed_domain: { ...NEW_DOMAIN, catalogue_sha256: "d".repeat(64) } });
+    refused(f);
+  });
+  it("refuses a renewed domain with another profile id", () => {
+    const f = renewalFixture();
+    const other = { ...NEW_DOMAIN, profile_id: "TEST_ONLY-other-profile" };
+    f.document.policy.manager_read_domains![0]!.domain = structuredClone(other);
+    f.document.grants[0]!.grant.domain = structuredClone(other);
+    f.pin = managerSuccessorPin.parse({ ...f.pin, renewed_domain: other });
+    refused(f);
+  });
+  it("needs a policy revision advance: KEEP with a changed domain is a revision conflict", () => {
+    const f = renewalFixture();
+    f.document.policy.revision = f.current.revision;
+    f.document.policy.artifact_digest = f.current.artifact_digest;
+    f.document.policy.approval_ref = f.current.approval_ref;
+    f.document.grants[0]!.grant.policy_revision = f.current.revision;
+    refused(f, "MANAGER_SUCCESSOR_REVISION_CONFLICT");
+  });
+  it("refuses any other policy change smuggled with the renewal", () => {
+    const f = renewalFixture();
+    f.document.policy.researcher_fields = { state: "PENDING", policy_ref: "TEST_ONLY-other-ref", fields: [] };
+    refused(f);
+  });
+  it("refuses a grant that keeps the old domain while the policy moved, a changed action, and a STREAM smuggle", () => {
+    const old = renewalFixture();
+    old.document.grants[0]!.grant.domain = structuredClone(DOMAIN);
+    old.document.grants[0]!.grant.field_policy_ref = "TEST_ONLY-fields";
+    refused(old);
+    const action = renewalFixture();
+    action.document.grants[0]!.grant.action = "stream.subscribe";
+    refused(action);
+  });
+  it("keeps the 2 h ceiling, the source-expiry ceiling and the window rules under renewal", () => {
+    const f = renewalFixture();
+    f.document.grants[0]!.grant.valid_until_ms = NOW + 61_000;
+    f.document.policy.manager_read_domains![0]!.valid_until_ms = NOW + 61_000;
+    refused(f);
+  });
+});

@@ -4,7 +4,7 @@
  * independently. Native source eligibility is still checked on every real read. */
 import { z } from "zod";
 import { accessDigest } from "./access-digest";
-import { accessText, managerDomainGrant, reviewedAccessPolicy, type ManagerDomainGrant,
+import { accessText, managerDomainGrant, managerReadDomain, reviewedAccessPolicy, type ManagerDomainGrant,
   type ReviewedAccessPolicy, type StoredAccessGrant } from "./access.contract";
 import { ownerTarget } from "./owner-target";
 import { parseCompactJson, readRootOwnedPinnedFile } from "./private-root-file";
@@ -27,6 +27,10 @@ export const managerSuccessorPin = z.object({ artifact_path: z.string().startsWi
   approved_sha256: z.string().regex(/^[a-f0-9]{64}$/), target: ownerTarget,
   not_before_ms: epoch, not_after_ms: epoch, source_expires_at_ms: epoch,
   maximum_grant_ms: z.number().int().positive().max(MANAGER_SUCCESSOR_MAX_MS),
+  /** Domain renewal (Bobby, 2026-11-12): the ONLY domain a successor may move to. It comes from the
+   * hash-pinned runtime manifest selection, never from the artifact, and must keep the predecessor's
+   * profile id; only its seals (catalogue/profile/field policy) may differ. Absent = same domain only. */
+  renewed_domain: managerReadDomain.optional(),
 }).strict().refine(v => v.not_after_ms > v.not_before_ms &&
   v.not_after_ms - v.not_before_ms <= MANAGER_SUCCESSOR_MAX_MS && v.not_after_ms <= v.source_expires_at_ms);
 export type ManagerSuccessorPin = z.infer<typeof managerSuccessorPin>;
@@ -81,13 +85,22 @@ export function planManagerSuccessor(document: ManagerSuccessorDocument, current
     t.principal_workspace_pins.some(p => p.workspace_id !== t.workspace_id)) return scope();
   const policyChanged = next.revision !== current.revision;
   if (!policyChanged && accessDigest(next) !== accessDigest(current)) return conflict();
-  const shape = (p: ReviewedAccessPolicy) => {
+  // Renewal: seals of the predecessors' domains may be replaced by the ONE manifest-pinned domain, and nothing else
+  // in the policy may change. Without a pinned renewed domain the original same-identity rule is unchanged.
+  const renewedDigest = pin.renewed_domain ? accessDigest(pin.renewed_domain) : null;
+  const predecessorDomains = new Set(document.grants.flatMap(e => {
+    const b = stored.find(g => g.grant_id === e.predecessor_grant_id);
+    return b && "schema_version" in b ? [accessDigest(b.domain)] : [];
+  }));
+  const shape = (p: ReviewedAccessPolicy, renewed: (domainDigest: string) => boolean) => {
     const { revision: _r, artifact_digest: _d, approval_ref: _a, manager_read_domains, ...rest } = p;
     return { ...rest, manager_read_domains: (manager_read_domains ?? []).map(s => {
-      const { valid_from_ms: _f, valid_until_ms: _u, ...identity } = s; return identity;
+      const { valid_from_ms: _f, valid_until_ms: _u, ...identity } = s;
+      return renewed(accessDigest(s.domain)) ? { environment: s.environment, domain: "RENEWED", field_policy_ref: "RENEWED" } : identity;
     }).sort((a, b) => accessDigest(a).localeCompare(accessDigest(b))) };
   };
-  if (accessDigest(shape(next)) !== accessDigest(shape(current))) return scope();
+  if (accessDigest(shape(next, d => renewedDigest !== null && d === renewedDigest)) !==
+    accessDigest(shape(current, d => renewedDigest !== null && predecessorDomains.has(d)))) return scope();
   // Advancing the workspace revision must not silently invalidate any legacy
   // fact or another still-active native grant (including DENY constraints).
   if (policyChanged && stored.some(g => !("schema_version" in g) ||
@@ -109,7 +122,8 @@ export function planManagerSuccessor(document: ManagerSuccessorDocument, current
       g.workspace_id !== t.workspace_id || g.subject_user_id !== before.subject_user_id ||
       g.issued_by !== t.protected_owner_user_id || before.issued_by !== t.protected_owner_user_id ||
       g.action !== before.action || g.effect !== "ALLOW" || g.environment !== "paper" || g.environment !== before.environment ||
-      accessDigest(g.domain) !== accessDigest(before.domain) || g.field_policy_ref !== before.field_policy_ref ||
+      !(accessDigest(g.domain) === accessDigest(before.domain) && g.field_policy_ref === before.field_policy_ref ||
+        renewedDigest !== null && accessDigest(g.domain) === renewedDigest && g.domain.profile_id === before.domain.profile_id) ||
       g.policy_revision !== next.revision || g.revoked_at_ms !== null ||
       !t.principal_workspace_pins.some(p => p.user_id === g.subject_user_id) ||
       g.valid_from_ms < pin.not_before_ms || g.valid_until_ms > pin.not_after_ms || g.valid_until_ms <= now ||

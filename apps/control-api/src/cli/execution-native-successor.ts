@@ -21,10 +21,12 @@ async function main() {
   const reference = nativeCoreRuntimeReference();
   if (!reference) throw new Error("NATIVE_RESEARCH_SUCCESSOR_SCOPE_REQUIRED");
   const native = await prepareNativeCoreRuntime(reference), workspace = config.EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID!;
-  const target = native.researchReviewTarget(workspace), caps = native.researchGrantWindow(workspace);
+  const target = native.researchReviewTarget(workspace), caps = native.researchGrantWindow(workspace),
+    renewedDomain = native.researchSelectedDomain(workspace);
   const token = await readPinnedManagerSuccessor({ artifact_path: args.artifact, approved_sha256: args.sha256,
     target: structuredClone(target), not_before_ms: args.notBeforeMs, not_after_ms: args.notAfterMs,
-    source_expires_at_ms: caps.trust_not_after_ms, maximum_grant_ms: caps.maximum_grant_ms }, Date.now());
+    source_expires_at_ms: caps.trust_not_after_ms, maximum_grant_ms: caps.maximum_grant_ms,
+    renewed_domain: renewedDomain }, Date.now());
   if (args.dryRun) {
     process.stdout.write(JSON.stringify({ schema_version: "portal.native-research-manager-successor.v1", dry_run: true,
       verified: true, database_cas_checked: false }) + "\n");
