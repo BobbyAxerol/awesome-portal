@@ -1,0 +1,74 @@
+{
+ "absence_authority": false,
+ "authority_transport_bounds": {
+  "deadline_ms": 5000,
+  "max_inflight": 1,
+  "request_bytes": 32768,
+  "response_bytes": 32768,
+  "source": "TS native_business_read_runtime.py:122, applied to Core's private draft"
+ },
+ "environment": "paper",
+ "images": {
+  "edge_rust": "sha256:2b929dff6d31036b6dd94fa8b5d6f941e4e7f662d94c4882921a334009db13d6",
+  "manager": "sha256:263db8dd8c940a32833fee1127f72c56675eeb1d2c6b29d5a0215bcec56204ec"
+ },
+ "installed_now": {
+  "catalogue_semantic_seal_sha256": "6d4c4a6505c02f58d32f0be70a3a80c7073dfbd5666ce9a5490fba645c049142",
+  "field_policy_sha256": "14ea7e455ebad34cda3c0076aa4ca90c22faa7296e6f2c90cdf3e43eaf3e05c9",
+  "overlay_sha256": "bc0a864490900be81dcb3072708811018cf44b7d1e7834bf1a3e0cde278e3aa1",
+  "profile_sha256": "f3ba94bd7647ade7aa665da45141d89aca4be4e00488603b02cb59121d9b664f",
+  "status": "INSTALLED_BYTE_IDENTICAL_UNTIL_REVIEWED_REPLACEMENT"
+ },
+ "m1": "OFF",
+ "manager_data_bounds": {
+  "page_bytes": 1048576,
+  "page_rows": 200
+ },
+ "note": "Public pins only. Installed Edge pack is unchanged and still the 6d4c/f3ba/14ea set; the A3 replacement candidates below are Edge-prepared and NOT TS-approved, NOT installed. No secret.",
+ "plan": "READ_ONLY",
+ "predecessor_epoch_uuid": "01a05c70-81ec-7380-801d-45c706f937c0",
+ "r2_contract": {
+  "document_sha256": "5f7f046174bae47fa3587829b9461a12a292442debe55cb8868fc61cd4255b29",
+  "manifest_sha256_expands_prefix_81a3c328": "81a3c3282875522d65cef53b68f346549ebe208a548ba45b7df2fbed76a32844",
+  "source": "EDGE_CORE_PREPARATION_INTAKE_AND_ACTIONS_20261112.md section 2 (N13 answered)",
+  "statements_sha256": "696e0d3715bdfc2651739152e6dfc6120731e6dd17b7a30ee911e8d04fec1ae6"
+ },
+ "rendered_config": {
+  "edge": "8600b9f4670c92e5c009f8aabed3c429faee2bfc6a759822fb284e0cb28b3cda",
+  "manager": "cf826a6e50b1e4f08139d4cc9727acf2d03a614da2ed7daa7ba9e6638a187462"
+ },
+ "replacement_candidates_not_approved": {
+  "PAPER_BINANCE_USDM": {
+   "catalogue_candidate_file_sha256": "859794719bad72507373d65f2c10099c3753681c7e1aaf6437b30f65fd5b3b47",
+   "catalogue_semantic_sha256": "ebbb5714b472b4c752389642382b6978dcf7f13e9573968767b08961a1d42c60",
+   "field_policy_sha256": "010594fe54de2b2239479c7af7bf5c083ee4da60426f5ee2a40008b0307a2145",
+   "manager_catalogue_release_file_sha256": "aa311e97c3cac05be15b17aeb2cb9a28499f8edc404467a71dfcff2e6e6edd1e",
+   "profile_sha256": "6b170f5fc8ab3063f3d07634631229463da36905baf9bf46466573c670e581f5",
+   "relation_catalogue_file_sha256": "f455a1e670d4d5a825e1cb7d67e8cbcbe766ed61edeea3902405b76b93d07133",
+   "role": "FIRST_BOUNDED_READ_CANDIDATE",
+   "venue": "BINANCE"
+  },
+  "PAPER_OKX": {
+   "catalogue_candidate_file_sha256": "514513ad2e4b410aec4130569ba9c143e93433080ea5b0aec9e9289811b2b88a",
+   "catalogue_semantic_sha256": "4b23e6cbd90f252c0d4a7e4cb20164f0142e684d72b9e89a85ccae9917db9a69",
+   "field_policy_sha256": "0b64384a49c0b1db066370df9f301e318bca287e836e30ad24f3ff49f88adf81",
+   "manager_catalogue_release_file_sha256": "165d5f3a885e0a5e54e553578354ac813e3e303d5febbd8dcbd098821cdeff0b",
+   "profile_sha256": "e6b86fb8b88cacd4b1b86d7dba4506e151ac3b36d8ec5b0407a5e7585f42e0a9",
+   "relation_catalogue_file_sha256": "159fac2b50a3d919bf20be564a6fe4c53661ed7e9aec6e032b8b5ec362f30019",
+   "role": "SEPARATE_CANDIDATE_NOT_BOUND_TO_WORKER",
+   "venue": "OKX"
+  },
+  "added_columns": 36,
+  "columns": 895,
+  "live_inventory_sha256": "e4ee8f58407228b69aa2aeda41d379e2e06bbb7721ddcb7600a61b65deba4807",
+  "relations": 49,
+  "rule": "Core pins none of these into the manifest, the owner artifact or a lock until TS returns approved exact pins and Edge installs them.",
+  "source_directory": "edge-m0-r2-schema-refresh-20261112 (SHA256SUMS sha256 515bdbcee68d3ba95db05db66c6e9edd17a49dce922bd4f2dce17c8be0ddc483, 16/16 verified on Core)"
+ },
+ "schema_version": "portal.core.m0-r2-pack-lock-candidate.v2",
+ "source_database_target": "trading_system",
+ "source_incarnation": "sha256:f976491370b16026b2f8fc38368ceb9c1e58abfcf33cfeefab85c186ed208a9e",
+ "status": "CANDIDATE_NOT_INSTALLED_NOT_OWNER_APPROVED_NOT_TS_APPROVED",
+ "stream": "NOT_GRANTED",
+ "supersedes_candidate": "CORE_M0_R2_PACK_LOCK_CANDIDATE_20261112.json sha256 641fb67bd3bc67fbb6d31be153df8ed624b359ead69a3b8c67e30e0fa5ade474 (kept immutable)"
+}
