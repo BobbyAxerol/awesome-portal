@@ -27,9 +27,10 @@ async function main(){
   const reference=nativeCoreRuntimeReference();
   if(!reference)throw new Error("NATIVE_RESEARCH_INSTALL_SCOPE_REQUIRED");
   const native=await prepareNativeCoreRuntime(reference),target=native.researchReviewTarget(config.EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID!);
-  // Plan B (Bobby, 2026-10-20): READ and STREAM are installed together, each
-  // finite (<= 2 h) and never beyond the renewed source trust. The caps ride in
-  // the hash-pinned manifest; without them nothing is installed.
+  // Plan B (Bobby, 2026-10-20): the pinned plan is READ_AND_STREAM (installed
+  // together) or, since 2026-11-12, READ_ONLY (exactly one READ grant, no
+  // STREAM). Every grant is finite (<= 2 h) and never beyond the renewed source
+  // trust. The caps ride in the hash-pinned manifest; without them nothing is installed.
   try{native.researchGrantWindow(config.EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID!);}
   catch{throw new Error("NATIVE_RESEARCH_INSTALL_GRANT_WINDOW_REQUIRED");}
   const pool=buildPool(config.DATABASE_URL,native.poolProfile);

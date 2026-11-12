@@ -36,7 +36,7 @@ export const PLAN_B_MAXIMUM_GRANT_MS=2*3_600_000;
  * `maximum_grant_ms` (never more than two hours) and never beyond the renewed
  * source trust end. Independent deployment pin (hash-pinned manifest), NOT read
  * back from the artifact. Absent = the pre-Plan-B artifact checks only. */
-export const planBGrantWindow=z.object({plan:z.literal("READ_AND_STREAM"),
+export const planBGrantWindow=z.object({plan:z.enum(["READ_AND_STREAM","READ_ONLY"]),
   maximum_grant_ms:z.number().int().positive().max(PLAN_B_MAXIMUM_GRANT_MS),
   trust_not_after_ms:z.number().int().positive().safe()}).strict();
 export type PlanBGrantWindow=z.infer<typeof planBGrantWindow>;
@@ -50,11 +50,17 @@ export function planBGrantFindings(grants:readonly z.infer<typeof managerDomainG
   const out:{code:PlanBGrantFinding;index:number|null}[]=[];
   const read=grants.filter(g=>g.action==="business.read_all"&&g.effect==="ALLOW"),
     stream=grants.filter(g=>g.action==="stream.subscribe"&&g.effect==="ALLOW");
-  if(grants.length!==2||read.length!==1||stream.length!==1){out.push({code:"PLAN_B_GRANT_SET_INVALID",index:null});return out;}
-  const [r,s]=[read[0]!,stream[0]!];
-  if(r.grant_id===s.grant_id)out.push({code:"PLAN_B_GRANT_ID_NOT_DISTINCT",index:null});
-  if(r.subject_user_id!==s.subject_user_id||r.environment!==s.environment||accessDigest(r.domain)!==accessDigest(s.domain)||
-    r.field_policy_ref!==s.field_policy_ref||r.workspace_id!==s.workspace_id)out.push({code:"PLAN_B_GRANTS_NOT_SAME_SCOPE",index:null});
+  if(window.plan==="READ_ONLY"){
+    // Bobby, 2026-11-12: READ never implies STREAM. Exactly ONE finite READ ALLOW grant and
+    // nothing else (no STREAM, no DENY), under the same <= 2 h and trust bounds as Plan B.
+    if(grants.length!==1||read.length!==1){out.push({code:"PLAN_B_GRANT_SET_INVALID",index:null});return out;}
+  }else{
+    if(grants.length!==2||read.length!==1||stream.length!==1){out.push({code:"PLAN_B_GRANT_SET_INVALID",index:null});return out;}
+    const [r,s]=[read[0]!,stream[0]!];
+    if(r.grant_id===s.grant_id)out.push({code:"PLAN_B_GRANT_ID_NOT_DISTINCT",index:null});
+    if(r.subject_user_id!==s.subject_user_id||r.environment!==s.environment||accessDigest(r.domain)!==accessDigest(s.domain)||
+      r.field_policy_ref!==s.field_policy_ref||r.workspace_id!==s.workspace_id)out.push({code:"PLAN_B_GRANTS_NOT_SAME_SCOPE",index:null});
+  }
   grants.forEach((g,index)=>{
     if(g.valid_until_ms-g.valid_from_ms>window.maximum_grant_ms)out.push({code:"GRANT_EXCEEDS_PLAN_B_WINDOW",index});
     if(g.valid_until_ms>window.trust_not_after_ms)out.push({code:"GRANT_OUTLIVES_TRUST",index});

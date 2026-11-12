@@ -204,8 +204,10 @@ export function inspectCore009Preparation(runtimeBytes: Uint8Array, ownerBytes: 
       // Plan B caps ride in the hash-pinned manifest and are what the installer enforces.
       const at = `/composition/owner_intakes/${i}/grant_window`;
       if (planB && !pin.grant_window) errors.push({ code: "GRANT_WINDOW_PIN_MISSING", path: at });
-      if (!planB && pin.grant_window) errors.push({ code: "GRANT_WINDOW_PIN_IN_READ_ONLY_PLAN", path: at });
-      if (planB && pin.grant_window && options.trustExpiresAtMs !== undefined && pin.grant_window.trust_not_after_ms > options.trustExpiresAtMs)
+      // A READ_ONLY pin (Bobby, 2026-11-12) is the bounded READ-only install: one finite READ grant and no STREAM.
+      if (!planB && pin.grant_window && pin.grant_window.plan !== "READ_ONLY") errors.push({ code: "GRANT_WINDOW_PIN_IN_READ_ONLY_PLAN", path: at });
+      if (planB && pin.grant_window && pin.grant_window.plan !== "READ_AND_STREAM") errors.push({ code: "GRANT_WINDOW_PIN_PLAN_MISMATCH", path: at });
+      if (pin.grant_window && options.trustExpiresAtMs !== undefined && pin.grant_window.trust_not_after_ms > options.trustExpiresAtMs)
         errors.push({ code: "GRANT_WINDOW_PIN_OUTLIVES_TRUST", path: `${at}/trust_not_after_ms` });
       if (artifact && accessDigest(artifact.target) !== accessDigest(pin.target)) errors.push({ code: "OWNER_TARGET_PIN_MISMATCH", path: `/composition/owner_intakes/${i}/target` });
     });
@@ -250,6 +252,20 @@ export function inspectCore009Preparation(runtimeBytes: Uint8Array, ownerBytes: 
       if (options.trustExpiresAtMs === undefined) errors.push({ code: "TRUST_END_REQUIRED_FOR_PLAN_B", path: "" });
       if (trusts.length > 0) {
         const window = { plan: "READ_AND_STREAM" as const,
+          maximum_grant_ms: Math.min(maxGrant, ...pins.map(p => p.grant_window?.maximum_grant_ms ?? PLAN_B_MAXIMUM_GRANT_MS)),
+          trust_not_after_ms: Math.min(...trusts) };
+        for (const f of planBGrantFindings(manager_domain_grants, window, now))
+          if (f.code !== "GRANT_ALREADY_EXPIRED")
+            errors.push({ code: f.code, path: f.index === null ? "/manager_domain_grants" : `/manager_domain_grants/${f.index}/valid_until_ms` });
+      }
+    }
+    // Bounded READ-only (pin plan READ_ONLY): the same 2 h and trust-end caps as Plan B, one READ grant, no STREAM.
+    if (!planB) {
+      const pins = (manifest?.composition.owner_intakes.filter(p => p.target.workspace_id === target.workspace_id) ?? [])
+        .filter(p => p.grant_window?.plan === "READ_ONLY");
+      if (pins.length > 0) {
+        const trusts = [options.trustExpiresAtMs, ...pins.map(p => p.grant_window?.trust_not_after_ms)].filter((v): v is number => v !== undefined);
+        const window = { plan: "READ_ONLY" as const,
           maximum_grant_ms: Math.min(maxGrant, ...pins.map(p => p.grant_window?.maximum_grant_ms ?? PLAN_B_MAXIMUM_GRANT_MS)),
           trust_not_after_ms: Math.min(...trusts) };
         for (const f of planBGrantFindings(manager_domain_grants, window, now))
