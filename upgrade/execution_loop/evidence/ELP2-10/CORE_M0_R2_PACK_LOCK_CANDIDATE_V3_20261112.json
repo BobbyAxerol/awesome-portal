@@ -1,0 +1,107 @@
+{
+ "absence_authority": false,
+ "approved_tuple_ts_accepted_20261112": {
+  "bundle": "edge-m0-r2-parent-scope-20261112 SHA256SUMS 0e8cb95ee51d47e8dfaeca26c5bb21ad9d02169db8cc3fab29d2aab7ef58d271 (17/17 verified on Core)",
+  "catalogue_candidate_file_sha256": "c6dba9b2bdd1242e11c03df14ef96f2bbe818136cb4a797c48fd6efd898f1708",
+  "catalogue_semantic_sha256": "aac7f93efaa415d222657ce65751302c597248c5a0362ae19ba2b79f9100b353",
+  "columns": 895,
+  "field_policy_sha256": "bee80b18f02444658e8bdc12a098bf3bffebf60fd993d64cc3779e4f922f7dbc",
+  "manager_catalogue_release_file_sha256": "04d32cdefb65c6acea9f2ca001cd268a0e75a991453063a37e4f5b58e2d73e47",
+  "profile_sha256": "c8fb434421f2a03544142253d7172b2efafea37a80a83cd51e84a80644f2d7aa",
+  "relation_catalogue_file_sha256": "55eb1c9e5b4f9c9205c65f5e87bbd318dd8f1d34bdb5b1070b69edcb1d2009d5",
+  "relations": 49,
+  "source": "TS-RETURN-EDGE-A3-OPTION-A-AND-CORE-CONDITIONS-20261112.md 26bd60e095b2841f91ff0deb805a37f09041603360ce5097eb2b781fc09f0727"
+ },
+ "bounds": {
+  "authority_transport": {
+   "deadline_ms": 5000,
+   "max_inflight": 1,
+   "request_bytes": 32768,
+   "response_bytes": 32768
+  },
+  "manager_data": {
+   "page_bytes": 1048576,
+   "page_rows": 200
+  },
+  "runner": {
+   "deadline_seconds": 30,
+   "probe_stream": false,
+   "session_margin_seconds": 600
+  }
+ },
+ "core_public_keys": {
+  "key_id": "research-core-20261112-6e988815aebe",
+  "pairing": "one Ed25519 key referenced by both the human and the terminal config of the private manifest; no private bytes leave Core",
+  "public_der_sha256": "6e988815aebe053a28c89a9cd3aabf452a6b6920bffa10e7ef6d335d99b3c192"
+ },
+ "environment": "paper",
+ "identity": {
+  "protected_owner_revision": "ts-user:d62f603e-1219-5d3a-9be2-217e69258a19:2 (goes to native.owner_mapping_revision only)",
+  "protected_owner_ts_user": "d62f603e-1219-5d3a-9be2-217e69258a19",
+  "subject_mapping": "NOT_READY: ts-user:<new uuid>:1 from the genuine identity step, read back by the SDK (gate c)"
+ },
+ "images": {
+  "edge_rust": "sha256:2b929dff6d31036b6dd94fa8b5d6f941e4e7f662d94c4882921a334009db13d6",
+  "manager": "sha256:263db8dd8c940a32833fee1127f72c56675eeb1d2c6b29d5a0215bcec56204ec"
+ },
+ "installed_now_unchanged": {
+  "catalogue_semantic_seal_sha256": "6d4c4a6505c02f58d32f0be70a3a80c7073dfbd5666ce9a5490fba645c049142",
+  "field_policy_sha256": "14ea7e455ebad34cda3c0076aa4ca90c22faa7296e6f2c90cdf3e43eaf3e05c9",
+  "overlay_sha256": "bc0a864490900be81dcb3072708811018cf44b7d1e7834bf1a3e0cde278e3aa1",
+  "profile_sha256": "f3ba94bd7647ade7aa665da45141d89aca4be4e00488603b02cb59121d9b664f",
+  "status": "INSTALLED_BYTE_IDENTICAL_UNTIL_REVIEWED_REPLACEMENT"
+ },
+ "m1": "OFF",
+ "note": "Public pins only. approved_tuple is TS-ACCEPTED metadata; staged_by_edge is PREPARED_NOT_INSTALLED; none of it is a native acceptance, an SDK ACK or an installed observer fingerprint. No secret.",
+ "owner_artifact": {
+  "approval_ref": null,
+  "approval_ref_missing_reason": "owner has not yet approved the review document",
+  "grant_id": "grant-m0r2-read-20261113-01",
+  "grant_revision": "rev-1",
+  "policy_review": "POLICY_REVIEW_M0R2_READ_20261113.md sha256 fa81b92b5b25093b5d3287cf41ce770671e942b849a6b0c8140b2a4b14ca94b9 (policy digest, awaiting owner approval)",
+  "policy_revision": "policy-m0r2-read-20261113-01"
+ },
+ "plan": "READ_ONLY",
+ "predecessor_epoch_uuid": "01a05c70-81ec-7380-801d-45c706f937c0",
+ "profile_id": "PAPER_BINANCE_USDM",
+ "r2_contract": {
+  "document_sha256": "5f7f046174bae47fa3587829b9461a12a292442debe55cb8868fc61cd4255b29",
+  "manifest_sha256_expands_prefix_81a3c328": "81a3c3282875522d65cef53b68f346549ebe208a548ba45b7df2fbed76a32844",
+  "source": "EDGE_CORE_PREPARATION_INTAKE_AND_ACTIONS_20261112.md section 2 (N13 answered)",
+  "statements_sha256": "696e0d3715bdfc2651739152e6dfc6120731e6dd17b7a30ee911e8d04fec1ae6"
+ },
+ "schema_version": "portal.core.m0-r2-pack-lock-candidate.v3",
+ "separate_candidate_not_first_trial": {
+  "PAPER_OKX": {
+   "catalogue_semantic_sha256": "8ef3e00323f9700b11f9f155be0d6af4d3663e4af0b5e3c04015c724a7cc9ce1",
+   "field_policy_sha256": "773db3a21799b0070123f48d6327ac32aab4f94879f4712593234671a808497b",
+   "profile_sha256": "2a7556fe3b9745dc28c64cea676b1254f50188b1fd168e04069336b850c200fe"
+  }
+ },
+ "source_database_target": "trading_system",
+ "staged_by_edge_prepared_not_installed": {
+  "note": "STAGED worker/Manager incarnation. It is NOT the installed native observer fingerprint (N8); Core does not copy it into source_fingerprint.",
+  "public_hashes": {
+   "edge-candidate.rendered.json": "b86a024bb0ab1fb867125d71b934d6b0e715457c677f0f295ded7959488fa0ad",
+   "m0-rollout.env": "38f730aaf6308e3ffc70ed9fa73b50c454fc3d460cbabd035bfed8667e053319",
+   "manager-candidate.rendered.json": "33f21dacc61d1ea2f171ff306864bd76d2b80cc7f3f9b7bdf2083b50dee0821a",
+   "manager-catalogue-release.json": "04d32cdefb65c6acea9f2ca001cd268a0e75a991453063a37e4f5b58e2d73e47",
+   "staged-references.json": "738aa5fd770db804986ef09d4a2adaf2f746f3a8ed2a8e2204ae5fa0d2b395fa"
+  },
+  "source": "EDGE_ACCEPTED_PINS_STAGE_AND_CORE_ACTIONS_20261112.md 9fbc10457e467b996d413066e543fb4e77c2c50bc2da62f7c73607b1789bd475",
+  "staged_manager_source_incarnation": "sha256:ec90a9e588aed6e44246c7ebdbee4682f2ad055e070c8809f93fb1b0d2c7d43f"
+ },
+ "status": "CANDIDATE_NOT_INSTALLED_NOT_OWNER_APPROVED",
+ "stream": "NOT_GRANTED",
+ "supersedes_candidate": "CORE_M0_R2_PACK_LOCK_CANDIDATE_V2_20261112.json sha256 013e1403cfb5b53106412ee17a6b9cc7165d3a168c90654f249989847258185a (kept immutable)",
+ "venue": "BINANCE",
+ "windows_utc_20261113": {
+  "core_owner_artifact_intake": "07:10-07:50Z",
+  "epoch": "07:15Z, not earlier",
+  "grant_read_only": "07:15:00Z-09:15:00Z exactly 7200000 ms",
+  "leaves": "06:30-10:00Z",
+  "native_acceptance": "before 07:10Z",
+  "revoke": "about 09:20Z",
+  "trust_identity_intake": "06:40-07:05Z (TS/Edge)"
+ }
+}
