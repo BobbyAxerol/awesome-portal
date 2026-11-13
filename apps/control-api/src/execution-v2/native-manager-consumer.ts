@@ -344,7 +344,12 @@ export class NativeManagerReadConsumer {
     try{
       const handle=await candidate.acquireNativeRead(actor,base,decision.scope_digest);
       settled=await candidate.sendNativeRead(handle,reply.raw,body);
-    }catch{
+    }catch(failure){
+      // Diagnostic only: a finite public reason code or error class name. Never the message, a token, a path or any value.
+      const code=(failure as {code?:unknown})?.code,name=(failure as {name?:unknown})?.name;
+      process.stderr.write(JSON.stringify({event:"native_manager_delivery_failed",
+        code:typeof code==="string"&&/^[A-Z0-9_]{1,80}$/.test(code)?code:null,
+        error_class:typeof name==="string"&&/^[A-Za-z0-9_]{1,80}$/.test(name)?name:null})+"\n");
       // Same durable key/recovery owner. Never ordinary error JSON, response
       // replay, fake terminal, TTL-as-closure or a fallback after admission.
       reply.raw.destroy();
