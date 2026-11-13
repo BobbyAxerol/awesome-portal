@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { documentInvalidReason } from "../execution/profile-projection.repository";
-import { MAXIMUM_DATA_DEPLOYMENT_OPERATION } from "../execution/maximum-data-operation.registry";
-import { managerObservationBaseline, managerObservationSourceSetDigest } from "../execution-v2/manager-observation-source";
-import { nativeSnapshotSeedDocument, NATIVE_SNAPSHOT_SEED_REASON } from "./execution-native-snapshot-seed";
+import { documentInvalidReason } from "../src/execution/profile-projection.repository";
+import { MAXIMUM_DATA_DEPLOYMENT_OPERATION } from "../src/execution/maximum-data-operation.registry";
+import { managerObservationBaseline, managerObservationSourceSetDigest } from "../src/execution-v2/manager-observation-source";
+import { nativeSnapshotSeedDocument, NATIVE_SNAPSHOT_SEED_REASON } from "../src/cli/execution-native-snapshot-seed";
 
 const WS = "11111111-2222-3333-4444-555555555555";
 describe("native snapshot seed document", () => {
