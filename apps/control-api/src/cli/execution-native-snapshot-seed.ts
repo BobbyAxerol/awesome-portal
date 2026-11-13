@@ -20,9 +20,11 @@ import {
  */
 export const NATIVE_SNAPSHOT_SEED_REASON = "PORTAL_SEED_NO_SOURCE_READ";
 
-export function nativeSnapshotSeedDocument(workspaceId: string): ProfileProjectionDocument {
+export function nativeSnapshotSeedDocument(
+  workspaceId: string,
+  profileId: string = maximumDataDeploymentBinding("paper").profileId,
+): ProfileProjectionDocument {
   const op = MAXIMUM_DATA_DEPLOYMENT_OPERATION;
-  const profileId = maximumDataDeploymentBinding("paper").profileId;
   const key = `${op.sourceId}:${op.relation}`;
   return {
     schema_version: "portal.execution.profile-projection.v1",
@@ -51,19 +53,22 @@ async function main(): Promise<void> {
   const args = process.argv.slice(2);
   const apply = args.includes("--apply");
   const dryRun = args.includes("--dry-run");
-  const w = args.indexOf("--workspace-id");
   const r = args.indexOf("--run-id");
-  const workspaceId = w >= 0 ? args[w + 1] : undefined;
   const runId = r >= 0 ? args[r + 1] : undefined;
-  if (apply === dryRun || !workspaceId || !runId || args.length !== 5 ||
-    !/^[A-Za-z0-9._-]{3,64}$/.test(runId) || !/^[0-9a-f-]{36}$/.test(workspaceId)) {
-    throw new Error("usage: execution-native-snapshot-seed (--dry-run|--apply) --workspace-id <uuid> --run-id <id>");
+  if (apply === dryRun || !runId || args.length !== 3 || !/^[A-Za-z0-9._-]{3,64}$/.test(runId)) {
+    throw new Error("usage: execution-native-snapshot-seed (--dry-run|--apply) --run-id <id>");
   }
   const config = loadConfig();
   const pool = config.EXECUTION_DATABASE_URL ? buildExecutionPool(config) : buildPool(config.DATABASE_URL);
   try {
+    // Same scope the server reads: workspace and profile come from the server's own config, never from arguments.
+    const workspaceId = config.EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID;
+    const profileId = config.EXECUTION_EDGE_PAPER_PROFILE_ID;
+    if (!workspaceId || !profileId || profileId !== maximumDataDeploymentBinding("paper").profileId) {
+      throw new Error("seed scope is not configured or does not match the native deployments binding");
+    }
     const repository = new ExecutionProfileProjectionRepository(pool);
-    const document = nativeSnapshotSeedDocument(workspaceId);
+    const document = nativeSnapshotSeedDocument(workspaceId, profileId);
     const before = await repository.snapshot(workspaceId, "paper", document.profile_id);
     const summary = (s: typeof before) => s === null ? null : {
       projection_sequence: s.projectionSequence, projection_epoch: s.projectionEpoch,
