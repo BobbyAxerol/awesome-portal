@@ -2391,6 +2391,14 @@ class DriverTests(unittest.TestCase):
                 with self.assertRaisesRegex(driver.Refused, "REVOKE_PROVENANCE_INVALID"):
                     self.prepare()
                 revoke.update(saved)
+        base = int(datetime(2026, 10, 20, 5, 0, 45, tzinfo=timezone.utc).timestamp() * 1000)
+        revoke.update(committed_at_utc="2026-10-20T05:00:45.128Z", revoked_at_ms=base + 128)   # equal to the commit time, to the millisecond
+        self.assertEqual(self.prepare()["revoke_action"], "stream.subscribe")
+        revoke.update(revoked_at_ms=base + 129)
+        with self.assertRaisesRegex(driver.Refused, "REVOKE_PROVENANCE_INVALID"):
+            self.prepare()
+        revoke["committed_at_utc"] = "2026-10-20T05:01:00Z"
+        revoke["revoked_at_ms"] = int(datetime(2026, 10, 20, 5, 0, 30, tzinfo=timezone.utc).timestamp() * 1000)
         for key in ("stream_grant_revision_after", "revoked_at_ms"):
             saved = revoke.pop(key)
             with self.assertRaisesRegex(driver.Refused, "REVOKE_PROVENANCE_INVALID"):

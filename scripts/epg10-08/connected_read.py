@@ -440,7 +440,7 @@ def stream_revoke_identity_ok(receipt, prior, revoke):
     return (type(prior.get("stream_grant_id")) is str and revoke.get("stream_grant_id") == prior["stream_grant_id"] and
             before == prior["stream_grant_revision"] and type(after) is str and 1 <= len(after) <= 256 and after != before and
             type(revoke.get("revoked_at_ms")) is int and
-            utc(prior["at_utc"]) * 1000 <= revoke["revoked_at_ms"] <= utc(revoke["committed_at_utc"]) * 1000)
+            round(utc(prior["at_utc"]) * 1000) <= revoke["revoked_at_ms"] <= round(utc(revoke["committed_at_utc"]) * 1000))
 
 
 def validate_stream_revoke(producer, prior, revoke, now):
