@@ -376,3 +376,57 @@ describe("Manager successor domain renewal to the manifest-pinned domain", () =>
     refused(f);
   });
 });
+
+describe("Manager successor first STREAM grant (stage-2d addition, pure SYNTHETIC)", () => {
+  function withStream(mode: "KEEP" | "ADVANCE" = "ADVANCE") {
+    const f = fixture(mode), read = f.document.grants[0]!.grant;
+    const stream: ManagerDomainGrant = { ...structuredClone(read), grant_id: "TEST_ONLY-first-stream", revision: "TEST_ONLY-stream-r1",
+      action: "stream.subscribe" };
+    (f.document as { stream_grants?: ManagerDomainGrant[] }).stream_grants = [stream];
+    return { f, stream, read };
+  }
+  it("adds one STREAM grant without a predecessor, bound to the READ grant of the same document", () => {
+    const { f, stream } = withStream();
+    const result = run(f);
+    expect(result.grants.map(g => g.action)).toEqual(["business.read_all", "stream.subscribe"]);
+    expect(result.grants[1]).toEqual(stream);
+    expect(managerSuccessorDocument.safeParse(f.document).success).toBe(true);
+  });
+  it("is optional: a document without stream_grants behaves exactly as before", () => {
+    const f = fixture("ADVANCE");
+    expect(run(f).grants.map(g => g.action)).toEqual(["business.read_all"]);
+    expect("stream_grants" in f.document).toBe(false);
+  });
+  it.each([
+    ["a READ action", (s: ManagerDomainGrant) => { s.action = "business.read_all"; }],
+    ["a DENY effect", (s: ManagerDomainGrant) => { s.effect = "DENY"; }],
+    ["a window beyond the READ grant", (s: ManagerDomainGrant) => { s.valid_until_ms += 1; }],
+    ["a window before the READ grant", (s: ManagerDomainGrant) => { s.valid_from_ms -= 1; }],
+    ["another subject", (s: ManagerDomainGrant) => { s.subject_user_id = "TEST_ONLY-other"; }],
+    ["another domain", (s: ManagerDomainGrant) => { s.domain = { ...s.domain, catalogue_sha256: "9".repeat(64) }; }],
+    ["another field policy", (s: ManagerDomainGrant) => { s.field_policy_ref = "TEST_ONLY-other-fields"; }],
+    ["a stale policy revision", (s: ManagerDomainGrant) => { s.policy_revision = "TEST_ONLY-policy-r1"; }],
+    ["an already revoked grant", (s: ManagerDomainGrant) => { s.revoked_at_ms = NOW - 1; }],
+    ["another issuer", (s: ManagerDomainGrant) => { s.issued_by = "TEST_ONLY-other-owner"; }],
+  ])("refuses a STREAM grant with %s", (_name, mutate) => {
+    const { f, stream } = withStream();
+    mutate(stream);
+    refused(f);
+  });
+  it("refuses a STREAM grant whose id already exists in stored history", () => {
+    const { f, stream } = withStream();
+    f.stored.push({ ...structuredClone(stream), revoked_at_ms: NOW - 1 });
+    refused(f, "MANAGER_SUCCESSOR_REVISION_CONFLICT");
+  });
+  it("refuses duplicate grant ids across READ and STREAM at schema level", () => {
+    const { f, stream } = withStream();
+    stream.grant_id = f.document.grants[0]!.grant.grant_id;
+    expect(managerSuccessorDocument.safeParse(f.document).success).toBe(false);
+  });
+  it("refuses more than two STREAM grants at schema level", () => {
+    const { f, stream } = withStream();
+    const three = [1, 2, 3].map(i => ({ ...structuredClone(stream), grant_id: `TEST_ONLY-stream-${i}` }));
+    (f.document as { stream_grants?: ManagerDomainGrant[] }).stream_grants = three;
+    expect(managerSuccessorDocument.safeParse(f.document).success).toBe(false);
+  });
+});

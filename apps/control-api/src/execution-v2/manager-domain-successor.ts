@@ -20,8 +20,13 @@ export const managerSuccessorDocument = z.object({
   policy: reviewedAccessPolicy,
   grants: z.array(z.object({ predecessor_grant_id: accessText,
     expected_revision: accessText, expected_digest: digest, grant: managerDomainGrant }).strict()).min(1).max(8),
+  /** Stage-2d addition: at most two NEW `stream.subscribe` grants with no predecessor, each bound to one READ grant
+   * of this same document (same subject, domain and field policy; window inside the READ window). The READ
+   * predecessor rules above stay exactly as they were. */
+  stream_grants: z.array(managerDomainGrant).min(1).max(2).optional(),
 }).strict().refine(v => new Set(v.grants.map(g => g.predecessor_grant_id)).size === v.grants.length &&
-  new Set(v.grants.map(g => g.grant.grant_id)).size === v.grants.length, "DUPLICATE_GRANT");
+  new Set([...v.grants.map(g => g.grant.grant_id), ...(v.stream_grants ?? []).map(g => g.grant_id)]).size ===
+    v.grants.length + (v.stream_grants?.length ?? 0), "DUPLICATE_GRANT");
 export type ManagerSuccessorDocument = z.infer<typeof managerSuccessorDocument>;
 export const managerSuccessorPin = z.object({ artifact_path: z.string().startsWith("/"),
   approved_sha256: z.string().regex(/^[a-f0-9]{64}$/), target: ownerTarget,
@@ -131,5 +136,23 @@ export function planManagerSuccessor(document: ManagerSuccessorDocument, current
       !next.manager_read_domains?.some(s => s.environment === g.environment && accessDigest(s.domain) === accessDigest(g.domain) &&
         s.field_policy_ref === g.field_policy_ref && s.valid_from_ms <= g.valid_from_ms && s.valid_until_ms >= g.valid_until_ms)) return scope();
   }
-  return { policyChanged, grants: document.grants.map(e => structuredClone(e.grant)) };
+  const streams: ManagerDomainGrant[] = [];
+  for (const g of document.stream_grants ?? []) {
+    // A STREAM grant is a NEW authority: it must sit exactly under a READ grant of this document.
+    const read = document.grants.map(e => e.grant).find(r => r.action === "business.read_all" &&
+      r.subject_user_id === g.subject_user_id && r.environment === g.environment &&
+      accessDigest(r.domain) === accessDigest(g.domain) && r.field_policy_ref === g.field_policy_ref);
+    if (stored.some(old => old.grant_id === g.grant_id)) return conflict();
+    if (!read || g.action !== "stream.subscribe" || g.effect !== "ALLOW" || g.environment !== "paper" ||
+      g.workspace_id !== t.workspace_id || g.issued_by !== t.protected_owner_user_id || g.parent_grant_id !== null ||
+      g.policy_revision !== next.revision || g.revoked_at_ms !== null ||
+      !t.principal_workspace_pins.some(p => p.user_id === g.subject_user_id) ||
+      g.valid_from_ms < read.valid_from_ms || g.valid_until_ms > read.valid_until_ms ||
+      g.valid_from_ms < pin.not_before_ms || g.valid_until_ms > pin.not_after_ms || g.valid_until_ms <= now ||
+      g.valid_until_ms - g.valid_from_ms > pin.maximum_grant_ms ||
+      !next.manager_read_domains?.some(s => s.environment === g.environment && accessDigest(s.domain) === accessDigest(g.domain) &&
+        s.field_policy_ref === g.field_policy_ref && s.valid_from_ms <= g.valid_from_ms && s.valid_until_ms >= g.valid_until_ms)) return scope();
+    streams.push(structuredClone(g));
+  }
+  return { policyChanged, grants: [...document.grants.map(e => structuredClone(e.grant)), ...streams] };
 }
