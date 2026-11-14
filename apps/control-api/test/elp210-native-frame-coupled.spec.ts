@@ -125,7 +125,7 @@ describe.skipIf(!pgUrl)("TEST_ONLY native scoped-notice actual PG/TLS/HTTP coupl
   const calls:Array<{action:string;lease_id:string}>=[],terminalKinds:string[]=[],peerErrors:unknown[]=[];
   let holdResolve:ReturnType<typeof deferred>|undefined,resolveArrived:ReturnType<typeof deferred>|undefined;
   let holdEnter:ReturnType<typeof deferred>|undefined,enterArrived:ReturnType<typeof deferred>|undefined;
-  let dropEnter=false,dropResolve=false;
+  let dropEnter=false,dropResolve=false,enterDelayMs=0,drainInFlight=false;
   const rows=async()=>(await pool.query("SELECT * FROM elp210_candidate.native_read_obligations ORDER BY issued_at_ms,lease_id")).rows;
   const frameRow=async(ordinal="1")=>(await pool.query(
     "SELECT * FROM elp210_candidate.native_read_obligations WHERE base_body::jsonb#>>'{manager_intent,frame_ordinal}'=$1",[ordinal])).rows[0];
@@ -177,7 +177,8 @@ describe.skipIf(!pgUrl)("TEST_ONLY native scoped-notice actual PG/TLS/HTTP coupl
         if(!person)throw Error("TEST_ONLY_CONFIGURED_PERSON_REQUIRED");
         expect(req.method).toBe("POST");expect(["issue","enter","status","unknown","cancel-unentered","resolve"]).toContain(action);
         // Real selected-source calls must never run with a Core client held.
-        expect(pool.idleCount).toBe(pool.totalCount);
+        // (not while a TEST-owned concurrent drain transaction legitimately holds a pooled client)
+        if(!drainInFlight)expect(pool.idleCount).toBe(pool.totalCount);
         expect(input.manager_intent).toMatchObject(input.manager_intent.schema_version==="pma.manager-read-intent.v2"
           ?{schema_version:"pma.manager-read-intent.v2",action:"scoped_notice"}
           :{schema_version:"pma.manager-read-intent.v1",action:"relation_page"});
@@ -201,6 +202,7 @@ describe.skipIf(!pgUrl)("TEST_ONLY native scoped-notice actual PG/TLS/HTTP coupl
         if(action==="enter"){
           if(current!=="ISSUED")throw Error("TEST_ONLY_ENTER_ORDER");phases.set(leaseId,"ENTERED");
           enterArrived?.resolve(undefined);if(holdEnter)await bounded(holdEnter.promise,5000);
+          if(enterDelayMs)await new Promise(resolve=>setTimeout(resolve,enterDelayMs));
           if(dropEnter){dropEnter=false;req.socket.destroy();return;}json(res,{...common,state:"ENTERED"});return;
         }
         if(action==="status"){
@@ -260,7 +262,7 @@ describe.skipIf(!pgUrl)("TEST_ONLY native scoped-notice actual PG/TLS/HTTP coupl
   beforeEach(async()=>{
     await truncateAll(pool);phases.clear();receipts.clear();fixturePeople.clear();calls.length=0;terminalKinds.length=0;peerErrors.length=0;
     holdResolve=undefined;resolveArrived=undefined;dropEnter=false;dropResolve=false;
-    holdEnter=undefined;enterArrived=undefined;
+    holdEnter=undefined;enterArrived=undefined;enterDelayMs=0;
     const now=Date.now(),repo=new AccessRepository(pool);
     await pool.query("INSERT INTO portal_users(user_id,username,display_name,role,status,must_change_password,session_version) "+
       "VALUES($1,$1,'TEST_ONLY','USER','ACTIVE',false,7),($2,$2,'TEST_ONLY','USER','ACTIVE',false,7)",[actor.user_id,owner]);
@@ -919,6 +921,28 @@ describe.skipIf(!pgUrl)("TEST_ONLY native scoped-notice actual PG/TLS/HTTP coupl
       expect(actionCount("issue")).toBe(1);expect(actionCount("enter")).toBe(1);expect(actionCount("resolve")).toBe(1);
       expect(actionCount("cancel-unentered")).toBe(0);
       expect(await pending()).toBe(0);expect(write).not.toHaveBeenCalled();expect(body()).toHaveLength(0);
+      expect((await candidate.drainStatus(drain)).status).toBe("DRAIN_READY");
+      candidate.closeNativeNoticeStream(stream);
+    });
+  });
+  // Race matrix: a shared drain begins at every phase of one frame (before ISSUE, during the ENTER round trip, after the
+  // ENTER record, around SENDING). Whatever the order, the original owner must leave NO unresolved obligation and the drain
+  // must finish; a frame that was written may settle SERVED, one that was sent never settles UNKNOWN, one never entered at the source CANCELLED, one entered but not sent ABORTED.
+  it.each([["start",0],["start",15],["ENTER arrival",0],["ENTER arrival",50],["ENTER arrival",150],["ENTER arrival",240],["ENTER arrival",300],["ENTER arrival",450]] as const)(
+    "drain begun %s +%i ms into one frame leaves no unresolved obligation and a finished drain",async(anchor,offset)=>{
+    await exchange(async({response})=>{
+      const drain="TEST_ONLY-matrix-drain-"+anchor.replace(/ /g,"-")+offset,stream=candidate.openNativeNoticeStream(response),n=await notice(stream);
+      enterDelayMs=250;enterArrived=deferred();
+      const run=(async()=>{try{const h=await candidate.acquireNativeFrame(stream,n);await candidate.sendNativeFrame(h);}catch{/* typed refusal is a valid outcome */}})();
+      if(anchor==="ENTER arrival")await bounded(enterArrived.promise);
+      await new Promise(resolve=>setTimeout(resolve,offset));
+      drainInFlight=true;try{await candidate.beginDrain(drain);}finally{drainInFlight=false;}
+      await bounded(run,10000);
+      for(const row of await rows())
+        if(!row.source_reconciled)await candidate.reconcileNativeRead(row.lease_id).catch(()=>undefined);
+      expect(await pending()).toBe(0);
+      expect((await rows()).map(row=>({phase:row.phase,reconciled:row.source_reconciled,enter:row.enter_response_digest!==null,body:row.body_digest!==null,fenced:row.no_send_fenced}))
+        .filter(row=>!(row.reconciled&&["SERVED","ABORTED","CANCELLED"].includes(row.phase)))).toEqual([]);
       expect((await candidate.drainStatus(drain)).status).toBe("DRAIN_READY");
       candidate.closeNativeNoticeStream(stream);
     });
