@@ -1985,6 +1985,49 @@ class DriverTests(unittest.TestCase):
         with self.assertRaisesRegex(driver.Refused, "READ_SCOPE_COMBINATION_INVALID"):
             self.prepare()
 
+    def both_revoked_inputs(self):
+        snapshot = self.stream_setup()
+        producer, revoke = self.post_inputs("CORE_MANAGER_DOMAIN")
+        prior = self.docs["/TEST_ONLY/baseline"]
+        prior.update(read_authorized=True, stream_authorized=True, stream_grant_id="stream-grant-TEST_ONLY",
+                     stream_grant_revision="stream-revision-1")
+        producer.update(read_authorized=False, stream_authorized=False, policy_revision="policy-2")
+        self.cfg.update(read_scope="stream_stage", read_spacing_seconds=3, revoke_action="business.read_all")
+        return snapshot, producer, prior
+
+    def test_stream_stage_post_revoke_after_both_grants_are_revoked_refuses_one_read_and_one_stream(self):
+        _, producer, prior = self.both_revoked_inputs()
+        denied = (403, {}, json.dumps({"error": {"code": "ACCESS_DENIED"}}).encode())
+        result, calls, _ = self.stream_run([denied, denied])
+        self.assertEqual((result["status"], result["requests"], result["read_scope"]),
+                         ("SCOPED_OBSERVATIONS_ONLY", 2, "stream_stage"))
+        self.assertEqual([(c[0], c[1]) for c in calls], [("deployments", None), ("stream", "TEST_ONLY-opaque")])
+        for case in ("post_revoke_read", "post_revoke_cursor"):
+            self.assertEqual((result["cases"][case]["status"], result["cases"][case]["http_status"]), ("PASS", 403))
+        self.assertEqual(result["cases"]["post_revoke_stream_read_preserved"]["status"], "NOT_RUN")
+        self.assertNotIn("TEST_ONLY-opaque", json.dumps(result))
+        ok = (200, {}, b"{}")                                                            # a read that is NOT denied fails
+        result, _, _ = self.stream_run([ok])
+        self.assertEqual((result["status"], result["reason"]), ("FAIL", "REVOKED_ACCESS_NOT_DENIED"))
+
+    def test_stream_stage_both_revoked_needs_a_live_stream_baseline_and_an_unauthorised_stream_now(self):
+        _, producer, prior = self.both_revoked_inputs()
+        producer["stream_authorized"] = True                                              # the post document still claims STREAM
+        with self.assertRaisesRegex(driver.Refused, "REVOKE_PROVENANCE_INVALID"):
+            self.prepare()
+        producer["stream_authorized"] = False
+        prior["stream_authorized"] = False                                                # the baseline never had a live STREAM
+        with self.assertRaisesRegex(driver.Refused, "REVOKE_PROVENANCE_INVALID"):
+            self.prepare()
+        prior["stream_authorized"] = True
+        producer["read_authorized"] = True                                                # READ must be revoked in this mode
+        with self.assertRaises(driver.Refused):
+            self.prepare()
+        producer["read_authorized"] = False
+        self.cfg.pop("revoke_action")                                                    # the revoke action stays mandatory
+        with self.assertRaisesRegex(driver.Refused, "READ_SCOPE_COMBINATION_INVALID"):
+            self.prepare()
+
     def test_snapshot_stage_post_revoke_runs_one_denied_read_and_needs_the_baseline_cursor(self):
         producer, _ = self.post_inputs("CORE_MANAGER_DOMAIN")
         producer.update(read_authorized=False, policy_revision="policy-2")

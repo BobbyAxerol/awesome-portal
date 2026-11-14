@@ -186,7 +186,7 @@ def prepare(config, now=None):
         not config.get("observe_active_stream", False) and "bounded_page_probe" not in config and
         "cache_proof" not in config and
         ((config["stage"] == "baseline" and config["probe_stream"] is True and "revoke_action" not in config) or
-         (config["stage"] == "post_revoke" and config.get("revoke_action") == "stream.subscribe"))),
+         (config["stage"] == "post_revoke" and config.get("revoke_action") in ("stream.subscribe", "business.read_all")))),
         "READ_SCOPE_COMBINATION_INVALID")
     # "snapshot_only": the redo of ONE snapshot read after a prior snapshot_stage run failed at the snapshot; the two
     # deployments passes are carried forward from that private result (never counted as requests, never plain PASS).
@@ -332,6 +332,10 @@ def prepare(config, now=None):
                 "REVOKE_PROVENANCE_INVALID")
         if action == "stream.subscribe":
             validate_stream_revoke(receipt, prior, revoke, now)
+        if action == "business.read_all" and config.get("read_scope", "full") == "stream_stage":
+            # Both grants revoked in one official document (READ and STREAM): the STREAM grant must have been live in the baseline and
+            # must no longer be authorised; the READ refusal and the STREAM refusal are then the two post_revoke requests.
+            require(prior.get("stream_authorized") is True and receipt.get("stream_authorized") is False, "REVOKE_PROVENANCE_INVALID")
     cache = None
     if "cache_proof" in config:
         require(config["stage"] == "post_revoke" and action == "business.read_all" and
