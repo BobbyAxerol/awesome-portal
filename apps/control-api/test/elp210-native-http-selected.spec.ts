@@ -98,6 +98,7 @@ describe.skipIf(!pgUrl)("TEST_ONLY NC03 native-family finite HTTP actual-PG inte
  const humanAssertions:Array<{action:"issue"|"enter";exp:number;deadline:string;base_body:string}>=[];
  let holdResolve:ReturnType<typeof deferred<void>>|undefined,resolveArrived:ReturnType<typeof deferred<void>>|undefined;
  let dropResolve=false,dropEnter=false,leaseShortenMs=0;
+ let holdEnter:ReturnType<typeof deferred<void>>|undefined,enterArrived:ReturnType<typeof deferred<void>>|undefined;
  const row=async()=> (await pool.query("SELECT * FROM elp210_candidate.native_read_obligations WHERE lease_id=$1",[ctx.binding.lease_id])).rows[0];
  const pending=async()=>Number((await pool.query("SELECT count(*)::int n FROM elp210_candidate.obligations WHERE unresolved")).rows[0].n);
  function json(response:ServerResponse,value:unknown){const body=Buffer.from(JSON.stringify(value));response.writeHead(200,{
@@ -111,7 +112,7 @@ describe.skipIf(!pgUrl)("TEST_ONLY NC03 native-family finite HTTP actual-PG inte
   ca=authority();core=identity("TEST_ONLY_CORE",ca);pm=identity("TEST_ONLY_PM",ca);
  },15000);
  async function createFixture(){
-  ctx=context();phases.clear();receipts.clear();calls.length=0;humanAssertions.length=0;dropResolve=false;dropEnter=false;leaseShortenMs=0;holdResolve=undefined;resolveArrived=undefined;
+  ctx=context();phases.clear();receipts.clear();calls.length=0;humanAssertions.length=0;dropResolve=false;dropEnter=false;leaseShortenMs=0;holdResolve=undefined;resolveArrived=undefined;holdEnter=undefined;enterArrived=undefined;
   const key=await generateKeyPair("EdDSA",{crv:"Ed25519",extractable:true}),terminal=await generateKeyPair("EdDSA",{crv:"Ed25519",extractable:true});
   humanKey=key.publicKey;terminalPublic=terminal.publicKey;
   const user="33333333-3333-3333-3333-333333333333";
@@ -156,6 +157,7 @@ describe.skipIf(!pgUrl)("TEST_ONLY NC03 native-family finite HTTP actual-PG inte
     }
     if(action==="enter"){
      if(current!=="ISSUED"){res.writeHead(409);res.end();return;}phases.set(id,"ENTERED");
+     enterArrived?.resolve();if(holdEnter)await bounded(holdEnter.promise,5000);
      if(dropEnter){dropEnter=false;req.socket.destroy();return;}json(res,{...common,state:"ENTERED"});return;
     }
     if(action==="status"){json(res,{...common,state:"OBSERVATION",may_authorize_read:false,recovery:current===undefined?
@@ -501,6 +503,22 @@ describe.skipIf(!pgUrl)("TEST_ONLY NC03 native-family finite HTTP actual-PG inte
    const count=calls.length,cold=await CurrentHumanCandidate.createNativeRead(pool,config);
    expect((await cold.reconcileNativeRead(ctx.binding.lease_id)).state).toBe("RECONCILED");expect(calls).toHaveLength(count);
   });
+ });
+ // KNOWN GAP (stage-2f class race on the HTTP read path, recorded 14 Nov 2026, NOT fixed by the frame fix 55ee92fcd):
+ // a drain begun between the source ENTER and its ACK record. The ENTER fact IS persisted (asserted below), but an HTTP lease
+ // has no reserved response/socket at acquire time, so the unsent-fence path has no physical witness and the lease stays UNKNOWN
+ // (DRAIN_UNKNOWN). Written as the INTENDED behaviour under it.fails so it flips (and must then be switched to it) when the
+ // HTTP path gets its own reviewed settlement. Mitigation until then: no revoke while a browser READ is in flight.
+ it.fails("KNOWN GAP: HTTP read, drain begun between source ENTER and its ACK commit settles without UNKNOWN",async()=>{
+  holdEnter=deferred<void>();enterArrived=deferred<void>();
+  const acquiring=candidate.acquireNativeRead(actor,ctx);void acquiring.catch(()=>undefined);
+  try{await bounded(enterArrived.promise);expect((await candidate.beginDrain("TEST_ONLY-http-race-drain")).status).toBe("DRAIN_PENDING");}
+  finally{holdEnter.resolve();}
+  await expect(bounded(acquiring)).rejects.toMatchObject({code:"CURRENT_HUMAN_ENTRY_NOT_AVAILABLE"});
+  const persisted=await row();expect(persisted.enter_response_digest).not.toBeNull();expect(persisted.no_send_fenced).toBe(true);
+  await candidate.reconcileNativeRead(ctx.binding.lease_id);
+  expect(await pending()).toBe(0);
+  expect((await candidate.drainStatus("TEST_ONLY-http-race-drain")).status).toBe("DRAIN_READY");
  });
  it("lost ENTER with no owning HTTP witness stays UNKNOWN; cold status cannot fabricate an abort",async()=>{
   dropEnter=true;await expect(candidate.acquireNativeRead(actor,ctx)).rejects.toMatchObject({code:"NATIVE_BUSINESS_READ_UNAVAILABLE"});
