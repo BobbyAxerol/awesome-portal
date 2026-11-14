@@ -1,5 +1,6 @@
 """TEST_ONLY pure driver checks; no runtime/session/DB/HTTP is contacted."""
 import copy
+from hashlib import sha256
 from datetime import datetime, timezone
 import importlib.util
 import io
@@ -14,6 +15,28 @@ driver = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(driver)
 PIN = "a" * 64
 NOW = datetime(2026, 10, 20, 6, tzinfo=timezone.utc).timestamp()
+SAMPLE_CATALOGUE = "6d4c4a6505c02f58d32f0be70a3a80c7073dfbd5666ce9a5490fba645c049142"
+# Copy of Core's real offline sample (CORE_STAGE2A_SAMPLE_SNAPSHOT_BODY_20261113.json, fake epoch/time, no data): the envelope
+# of the actual service on the seed row. Embedded so the test does not depend on the evidence path.
+SAMPLE_SEED_BODY = json.loads(r'''{"schema_version": "portal.execution.profile-realtime.v1", "event_type": "snapshot",
+"terminal": false, "reconnect_required": false, "workspace_id": "ws_06G19F61YB8CFR7TEWMS7HQ660", "environment": "paper",
+"profile_id": "PAPER_BINANCE_USDM", "cursor": "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee:1",
+"projection_epoch": "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee", "projection_sequence": 1,
+"payload_digest": "sha256:2222222222222222222222222222222222222222222222222222222222222222", "source_as_of": null,
+"received_at": "2026-11-13T17:17:59.336Z", "last_successful_refresh_at": "2026-11-13T17:17:59.336Z",
+"availability": "AVAILABLE", "freshness": "FRESH", "completeness": "UNKNOWN",
+"recovery": {"state": "HEALTHY", "reason_code": null, "retry_not_before": null},
+"observation": {"authority": "PORTAL_OBSERVATION", "semantics": "BOUNDED_CURRENT_PAGE", "derived": false,
+"operation_id": "EXECUTION_PROFILE_OBSERVATION_REVISION",
+"scope": {"workspace_id": "ws_06G19F61YB8CFR7TEWMS7HQ660", "environment": "paper", "profile_id": "PAPER_BINANCE_USDM",
+"resource_kind": "PROFILE", "resource_id": "PAPER_BINANCE_USDM", "venue": null},
+"source": {"contract_revision": "trading-system.portal-execution.manager-v2.runtime.v1",
+"catalogue_revision": "sha256:6d4c4a6505c02f58d32f0be70a3a80c7073dfbd5666ce9a5490fba645c049142",
+"as_of_ms": null, "received_at_ms": 1794590279336},
+"coverage": {"kind": "CURRENT_PROFILE_PROJECTION", "relation_count": 1}},
+"payload": {"snapshot_mode": "CURSOR_ONLY", "relation_count": 1,
+"source_contract_revision": "trading-system.portal-execution.manager-v2.runtime.v1",
+"source_catalogue_sha256": "sha256:6d4c4a6505c02f58d32f0be70a3a80c7073dfbd5666ce9a5490fba645c049142"}}''')
 SESSION_EVIDENCE = (
     "RESEARCH_APPLICATION_SESSION_NOT_CLOUDFLARE_NOT_PASSWORD_NOT_HUMAN_PRESENCE")
 
@@ -57,6 +80,22 @@ def page(name, cfg):
         "records": []}).encode()
 
 
+class SharedReferencePinTests(unittest.TestCase):
+    def test_actual_reviewed_helper_loads_with_duplicate_and_nonfinite_guards(self):
+        helper = driver.shared()
+        self.assertEqual(helper.decode(b'{"TEST_ONLY":1}'), {"TEST_ONLY": 1})
+        for raw in (b'{"key":1,"key":2}', b'{"key":NaN}', b'{"key":Infinity}'):
+            with self.subTest(raw=raw), self.assertRaisesRegex(ValueError, "INPUT_INVALID"):
+                helper.decode(raw)
+
+    def test_altered_helper_is_refused_before_any_exec(self):
+        with patch.object(Path, "read_bytes", return_value=b'raise RuntimeError("TEST_ONLY")'):
+            with patch("builtins.exec") as execute:
+                with self.assertRaisesRegex(driver.Refused, "HELPER_PIN_CHANGED"):
+                    driver.shared()
+                execute.assert_not_called()
+
+
 class DriverTests(unittest.TestCase):
     def setUp(self):
         self.cfg, self.docs = inputs()
@@ -68,8 +107,149 @@ class DriverTests(unittest.TestCase):
     def prepare(self):
         return driver.prepare(self.cfg, NOW)
 
+    def pagination_config(self, *, pages=5, rows=20, size=8192):
+        self.cfg["bounded_page_probe"] = {
+            "max_pages": pages, "max_rows": rows, "max_total_bytes": size}
+        self.cfg["limit"] = 2
+        return self.prepare()
+
+    def deployment_page(self, ids, next_cursor=None, *, completeness="COMPLETE"):
+        result = json.loads(page("deployments", self.cfg))
+        result["source_health"]["completeness"] = completeness
+        result["records"] = [{"deployment_id": identity} for identity in ids]
+        result["page"] = {"next_cursor": next_cursor, "has_more": next_cursor is not None,
+            "truncated": False, "total_unknown": True, "maximum_page_rows": 200,
+            "maximum_response_bytes": 1048576}
+        return json.dumps(result).encode()
+
+    def test_bounded_pages_observe_distinct_keys_without_claiming_r03(self):
+        prepared = self.pagination_config()
+        responses = iter([(200, {}, self.deployment_page(["PRIVATE-A"], "PRIVATE-CURSOR")),
+                          (200, {}, self.deployment_page(["PRIVATE-B"]))])
+        requests = []
+        def request(name, cursor):
+            requests.append((name, cursor))
+            return next(responses)
+        result = driver.bounded_deployment_pages(prepared, request)
+        self.assertEqual(requests, [("deployments", None), ("deployments", "PRIVATE-CURSOR")])
+        self.assertEqual((result["status"], result["pages"], result["rows"]),
+                         ("OBSERVED_NOT_PROVEN", 2, 2))
+        self.assertTrue(result["more_than_one_page"])
+        self.assertTrue(result["terminal_page"])
+        self.assertTrue(result["terminal_source_complete"])
+        self.assertEqual(result["source_oracle"], "NOT_CORRELATED")
+        self.assertEqual(result["source_ack"], "NOT_CORRELATED")
+        public = json.dumps(result)
+        for value in ("PRIVATE-A", "PRIVATE-B", "PRIVATE-CURSOR"):
+            self.assertNotIn(value, public)
+
+    def test_bounded_pages_single_partial_and_page_cap_never_claim_completeness(self):
+        prepared = self.pagination_config(pages=1)
+        result = driver.bounded_deployment_pages(prepared,
+            lambda *_: (200, {}, self.deployment_page(["A"], "next", completeness="PARTIAL")))
+        self.assertFalse(result["more_than_one_page"])
+        self.assertFalse(result["terminal_page"])
+        self.assertFalse(result["terminal_source_complete"])
+        terminal = driver.bounded_deployment_pages(prepared,
+            lambda *_: (200, {}, self.deployment_page(["A"], completeness="PARTIAL")))
+        self.assertTrue(terminal["terminal_page"])
+        self.assertFalse(terminal["terminal_source_complete"])
+        self.assertEqual(terminal["status"], "OBSERVED_NOT_PROVEN")
+
+    def test_bounded_pages_refuse_duplicate_key_and_cursor_cycle(self):
+        prepared = self.pagination_config()
+        for second, expected in ((self.deployment_page(["A"]), "R03_DUPLICATE_IDENTITY"),
+                                 (self.deployment_page(["B"], "again"), "R03_CURSOR_CYCLE")):
+            with self.subTest(expected=expected):
+                replies = iter([(200, {}, self.deployment_page(["A"], "again")),
+                                (200, {}, second)])
+                with self.assertRaisesRegex(driver.Refused, expected):
+                    driver.bounded_deployment_pages(prepared, lambda *_: next(replies))
+
+    def test_bounded_pages_reject_invalid_shape_scope_freshness_and_bounds(self):
+        prepared = self.pagination_config(rows=1, size=8192)
+        for raw, expected in ((self.deployment_page(["A", "B"]), "R03_ROW_BOUND_EXCEEDED"),
+                              (self.deployment_page([], "next"), "R03_EMPTY_CONTINUATION")):
+            with self.subTest(expected=expected), self.assertRaisesRegex(driver.Refused, expected):
+                driver.bounded_deployment_pages(prepared, lambda *_: (200, {}, raw))
+        original = json.loads(self.deployment_page(["A"]))
+        for change, expected in (({"environment": "live"}, "READ_SCOPE_MISMATCH"),
+                                 ({"profile_id": "LIVE_BINANCE_USDM"}, "READ_SCOPE_MISMATCH"),
+                                 ({"source_catalogue_sha256": "bad"}, "NATIVE_PAGE_UNPROVED")):
+            body = dict(original, **change)
+            with self.subTest(change=change), self.assertRaisesRegex(driver.Refused, expected):
+                driver.bounded_deployment_pages(prepared,
+                    lambda *_: (200, {}, json.dumps(body).encode()))
+        original["source_health"]["freshness"] = "STALE"
+        with self.assertRaisesRegex(driver.Refused, "NATIVE_PAGE_UNPROVED"):
+            driver.bounded_deployment_pages(prepared,
+                lambda *_: (200, {}, json.dumps(original).encode()))
+        prepared["config"]["bounded_page_probe"]["max_total_bytes"] = 1
+        with self.assertRaisesRegex(driver.Refused, "R03_BYTE_BOUND_EXCEEDED"):
+            driver.bounded_deployment_pages(prepared,
+                lambda *_: (200, {}, self.deployment_page(["A"])))
+
+    def test_pagination_mode_runs_without_snapshot_stream_command_or_event(self):
+        self.pagination_config()
+        transport = MagicMock()
+        transport.request.side_effect = [(200, {}, self.deployment_page(["A"], "next")),
+                                         (200, {}, self.deployment_page(["B"]))]
+        with patch.object(driver.time, "time", return_value=NOW):
+            result = driver.run(self.cfg, lambda _: transport)
+        self.assertEqual(result["requests"], 2)
+        self.assertEqual(result["cases"]["r03_deployment_pages"]["status"], "OBSERVED_NOT_PROVEN")
+        self.assertEqual((result["full_08"], result["full_09"]), ("NOT_MET", "NOT_MET"))
+        self.assertTrue(all(call.args[0] == "deployments" for call in transport.request.call_args_list))
+        for case, value in result["cases"].items():
+            if case != "r03_deployment_pages":
+                self.assertEqual(value["status"], "NOT_RUN")
+
+    def test_pagination_bounds_fail_before_any_transport(self):
+        self.pagination_config()
+        for key, value in (("max_pages", 0), ("max_pages", 101),
+                           ("max_rows", 20001), ("max_total_bytes", 20971521),
+                           ("max_rows", True)):
+            with self.subTest(key=key, value=value):
+                saved = self.cfg["bounded_page_probe"][key]
+                self.cfg["bounded_page_probe"][key] = value
+                self.assertRefusedNoNetwork("R03_BOUNDS_INVALID")
+                self.cfg["bounded_page_probe"][key] = saved
+        self.cfg["probe_stream"] = True
+        self.assertRefusedNoNetwork("R03_BOUNDS_INVALID")
+
+    def test_bounded_pages_enforce_core_declared_limits(self):
+        prepared = self.pagination_config()
+        for field, value in (("maximum_page_rows", True), ("maximum_page_rows", 0),
+                             ("maximum_page_rows", 201), ("maximum_response_bytes", True),
+                             ("maximum_response_bytes", 1),
+                             ("maximum_response_bytes", 1048577)):
+            with self.subTest(field=field, value=value):
+                body = json.loads(self.deployment_page(["A"]))
+                body["page"][field] = value
+                with self.assertRaisesRegex(driver.Refused, "R03_PAGE_INVALID"):
+                    driver.bounded_deployment_pages(prepared,
+                        lambda *_: (200, {}, json.dumps(body).encode()))
+        prepared["config"]["max_bytes"] = 1
+        with self.assertRaisesRegex(driver.Refused, "R03_PAGE_BYTE_BOUND_EXCEEDED"):
+            driver.bounded_deployment_pages(prepared,
+                lambda *_: (200, {}, self.deployment_page(["A"])))
+
     def test_valid_current_installed_scope(self):
         self.assertEqual(self.prepare()["headers"]["Cookie"], self.docs["/TEST_ONLY/session"]["cookie"])
+
+    def test_environment_requires_a_matching_installed_receipt(self):
+        for environment in ("paper", "sandbox", "live"):
+            with self.subTest(environment=environment):
+                self.cfg["environment"] = environment
+                self.docs["/TEST_ONLY/core"]["environment"] = environment
+                self.assertEqual(self.prepare()["config"]["environment"], environment)
+                self.docs["/TEST_ONLY/core"]["environment"] = "wrong_environment"
+                self.assertRefusedNoNetwork("SELECTION_MISMATCH")
+
+    def test_canary_is_not_assumed_to_be_a_live_binding(self):
+        self.cfg["environment"] = "canary"
+        self.docs["/TEST_ONLY/core"]["environment"] = "canary"
+        self.assertRefusedNoNetwork("SCOPE_INVALID")
 
     def use_official_session(self):
         self.docs["/TEST_ONLY/session"] = official_session()
@@ -135,6 +315,75 @@ class DriverTests(unittest.TestCase):
                 self.assertRefusedNoNetwork("SESSION_INVALID")
         self.use_official_session()["absolute_expires_at"] = "2026-10-20T06:00:31Z"
         self.assertEqual(self.prepare()["session_evidence_class"], SESSION_EVIDENCE)
+
+    def test_original_read_slot_2700s_session_is_not_a_two_hour_grant(self):
+        session = official_session()
+        session["absolute_expires_at"] = "2026-11-13T08:00:00Z"
+        producer = {"session_id": session["session_id"], "subject": session["user_id"]}
+        original = copy.deepcopy(session)
+        stamp = driver.utc
+        for now in ("2026-11-13T07:30:00Z", "2026-11-13T07:58:59Z"):
+            with self.subTest(now=now):
+                _, evidence = driver.session_headers(session, producer, stamp(now), 60)
+                self.assertEqual(evidence, SESSION_EVIDENCE)
+        for now, margin in (("2026-11-13T07:59:00Z", 0),
+                            ("2026-11-13T08:00:00Z", 0),
+                            ("2026-11-13T09:20:00Z", 0),
+                            ("2026-11-13T07:58:59Z", 60)):
+            with self.subTest(now=now, margin=margin):
+                with self.assertRaisesRegex(driver.Refused, "SESSION_INVALID"):
+                    driver.session_headers(session, producer, stamp(now), 60, margin)
+        self.assertEqual(session, original)  # No implicit expiry extension or reissue.
+
+    def test_agreed_session_reserve_accepts_exactly_630_seconds_remaining(self):
+        self.cfg["session_margin_seconds"] = 600
+        self.use_official_session()["absolute_expires_at"] = "2026-10-20T06:10:30Z"
+        self.assertEqual(self.prepare()["session_evidence_class"], SESSION_EVIDENCE)
+
+    def test_short_session_reserve_refuses_before_transport(self):
+        self.cfg["session_margin_seconds"] = 600
+        for expiry in ("2026-10-20T06:00:31Z", "2026-10-20T06:10:29Z",
+                       "2026-10-20T06:10:29.999999Z"):
+            with self.subTest(expiry=expiry):
+                self.use_official_session()["absolute_expires_at"] = expiry
+                self.assertRefusedNoNetwork("SESSION_INVALID")
+
+    def test_session_margin_requires_bounded_integer_before_transport(self):
+        self.use_official_session()
+        for margin in (True, False, -1, 601, "600", 600.0, None):
+            with self.subTest(margin=margin):
+                self.cfg["session_margin_seconds"] = margin
+                self.assertRefusedNoNetwork("SESSION_MARGIN_INVALID")
+
+    def test_legacy_cookie_cannot_prove_requested_session_reserve(self):
+        self.cfg["session_margin_seconds"] = 600
+        self.assertRefusedNoNetwork("SESSION_EXPIRY_UNVERIFIABLE")
+        self.cfg["session_margin_seconds"] = 0
+        self.assertEqual(self.prepare()["headers"]["Cookie"],
+                         self.docs["/TEST_ONLY/session"]["cookie"])
+
+    def test_portal_session_reserve_does_not_extend_native_or_ready_expiry(self):
+        self.cfg["session_margin_seconds"] = 600
+        self.use_official_session()["absolute_expires_at"] = "2026-10-20T06:10:30Z"
+        for key in ("native_expires_at", "trust_expires_at", "expires_at"):
+            self.docs["/TEST_ONLY/core"][key] = "2026-10-20T06:00:31Z"
+        self.assertEqual(self.prepare()["session_evidence_class"], SESSION_EVIDENCE)
+        self.docs["/TEST_ONLY/core"]["native_expires_at"] = "2026-10-20T06:00:30Z"
+        self.assertRefusedNoNetwork("INPUT_EXPIRED")
+
+    def test_session_reserve_receipt_contains_bound_without_credentials(self):
+        self.cfg["session_margin_seconds"] = 600
+        self.use_official_session()["absolute_expires_at"] = "2026-10-20T06:10:30Z"
+        self.pagination_config()
+        transport = MagicMock()
+        transport.request.return_value = (200, {}, self.deployment_page([]))
+        with patch.object(driver.time, "time", return_value=NOW):
+            result = driver.run(self.cfg, lambda _: transport)
+        self.assertEqual(result["session_margin_seconds"], 600)
+        self.assertEqual(result["status"], "SCOPED_OBSERVATIONS_ONLY")
+        public = json.dumps(result)
+        for value in ("TEST_ONLY_PRIVATE_TOKEN", "__Host-portal_session", "/TEST_ONLY/session"):
+            self.assertNotIn(value, public)
 
     def test_official_session_expiry_requires_a_valid_utc_timestamp(self):
         for label, expiry in (("naive", "2026-10-20T08:00:00"),
@@ -204,6 +453,23 @@ class DriverTests(unittest.TestCase):
                     self.prepare()
                 self.docs["/TEST_ONLY/core"][key] = old
 
+    def test_missing_ready_fields_never_start_transport(self):
+        required = ("schema_version", "status", "native_selection_verified", "origin",
+            "environment", "workspace_id", "profile_id", "core_config_sha256",
+            "field_policy_sha256", "catalogue_sha256", "core_commit", "core_image",
+            "projection_epoch", "subject", "native_revision", "policy_revision",
+            "manager_grant_id", "manager_grant_revision", "acceptance_id",
+            "read_authorized", "stream_authorized", "native_revoked", "expires_at",
+            "trust_expires_at", "native_expires_at", "session_sha256", "api_ip")
+        receipt = self.docs["/TEST_ONLY/core"]
+        for field in required:
+            with self.subTest(field=field):
+                original = receipt.pop(field)
+                try:
+                    self.assertRefusedNoNetwork()
+                finally:
+                    receipt[field] = original
+
     def test_retired_or_expired_head_is_not_ready(self):
         for key, value in (("native_revoked", True), ("read_authorized", False),
                            ("native_expires_at", "2026-10-20T04:35:00Z")):
@@ -270,6 +536,19 @@ class DriverTests(unittest.TestCase):
         self.assertEqual(driver.finite("deployments", 200, {}, page("deployments", self.cfg),
             self.prepare())["rows"], 0)
 
+    def test_page_receipt_preserves_freshness_and_completeness(self):
+        for completeness in ("PARTIAL", "COMPLETE"):
+            with self.subTest(completeness=completeness):
+                body = json.loads(page("deployments", self.cfg))
+                body["source_health"]["completeness"] = completeness
+                result = driver.finite("deployments", 200, {}, json.dumps(body).encode(),
+                    self.prepare())
+                self.assertEqual(result["freshness"], "FRESH")
+                self.assertEqual(result["completeness"], completeness)
+        body["source_health"]["freshness"] = "STALE"
+        with self.assertRaisesRegex(driver.Refused, "NATIVE_PAGE_UNPROVED"):
+            driver.finite("deployments", 200, {}, json.dumps(body).encode(), self.prepare())
+
     def test_snapshot_requires_native_marker_and_expected_epoch(self):
         snapshot = {"schema_version": "portal.execution.profile-realtime.v1",
             "environment": "paper", "profile_id": self.cfg["profile_id"],
@@ -285,7 +564,12 @@ class DriverTests(unittest.TestCase):
         raw = json.dumps(snapshot).encode()
         headers = {"x-portal-realtime-state": "NATIVE_SCOPED_BASELINE_V1",
             "x-portal-realtime-cursor": "TEST_ONLY-opaque"}
-        self.assertEqual(driver.finite("snapshot", 200, headers, raw, self.prepare())["status"], "PASS")
+        result = driver.finite("snapshot", 200, headers, raw, self.prepare())
+        self.assertEqual(result["status"], "PASS")
+        self.assertEqual((result["freshness"], result["completeness"]), ("FRESH", "PARTIAL"))
+        complete = json.dumps({**snapshot, "completeness": "COMPLETE"}).encode()
+        self.assertEqual(driver.finite("snapshot", 200, headers, complete,
+            self.prepare())["completeness"], "COMPLETE")
         for field in headers:
             changed = dict(headers)
             del changed[field]
@@ -336,6 +620,525 @@ class DriverTests(unittest.TestCase):
         producer, _ = self.post_inputs("CORE_MANAGER_DOMAIN")
         producer.update(read_authorized=False, policy_revision="policy-2")
         self.assertEqual(self.prepare()["prior"]["native_revision"], producer["native_revision"])
+
+    # --- owner-staged acceptance, stage 1: deployments read + its repeat only (no snapshot/cursor/relation/stream) ---
+    def test_deployments_only_baseline_runs_two_reads_and_writes_no_cursor(self):
+        self.cfg["read_scope"] = "deployments_only"
+        transport, sink = MagicMock(), MagicMock()
+        transport.request.side_effect = [(200, {}, page("deployments", self.cfg))] * 2
+        with patch.object(driver.time, "time", return_value=NOW):
+            result = driver.run(self.cfg, lambda _: transport, checkpoint_sink=sink)
+        self.assertEqual(result["status"], "SCOPED_OBSERVATIONS_ONLY")
+        self.assertEqual(result["requests"], 2)
+        self.assertEqual(result["read_scope"], "deployments_only")
+        self.assertEqual([c.args[0] for c in transport.request.call_args_list], ["deployments", "deployments"])
+        self.assertEqual((result["cases"]["deployments"]["status"], result["cases"]["repeat_read"]["status"]),
+                         ("PASS", "PASS"))
+        for case in ("snapshot", "relation", "cursor_resume", "stream_notice", "post_revoke_cursor"):
+            self.assertEqual(result["cases"][case]["status"], "NOT_RUN")
+        self.assertEqual((result["full_08"], result["full_09"]), ("NOT_MET", "NOT_MET"))
+        checkpoint = sink.call_args.args[0]
+        self.assertNotIn("cursor", checkpoint)
+        self.assertEqual(checkpoint["schema_version"], "portal.execution.connected-read-baseline.v1")
+
+    def test_failed_read_reports_http_status_and_safe_error_code_only(self):
+        self.cfg["read_scope"] = "deployments_only"
+        for status, body, code in ((403, json.dumps({"error": {"code": "NATIVE_MANAGER_READ_DENIED", "message": "secret-ish"}}).encode(),
+                                    "NATIVE_MANAGER_READ_DENIED"), (404, b"not json at all", None),
+                                   (503, json.dumps({"error": {"code": "bad code with spaces"}}).encode(), None)):
+            with self.subTest(status=status):
+                transport = MagicMock()
+                transport.request.side_effect = [(status, {}, body)]
+                with patch.object(driver.time, "time", return_value=NOW):
+                    result = driver.run(self.cfg, lambda _: transport)
+                self.assertEqual((result["status"], result["reason"], result["requests"]), ("FAIL", "READ_NOT_AVAILABLE", 1))
+                self.assertEqual(result["http_status"], status)
+                self.assertEqual(result.get("error_code"), code)
+                self.assertNotIn("secret-ish", json.dumps(result))
+
+    def test_read_spacing_pauses_between_reads_and_keeps_a_pass_when_the_next_read_fails(self):
+        self.cfg["read_scope"] = "deployments_only"
+        self.cfg["read_spacing_seconds"] = 3
+        transport, sink = MagicMock(), MagicMock()
+        transport.request.side_effect = [(200, {}, page("deployments", self.cfg)), (502, {}, b"x")]
+        with patch.object(driver.time, "time", return_value=NOW), patch.object(driver.time, "sleep") as pause:
+            result = driver.run(self.cfg, lambda _: transport, checkpoint_sink=sink)
+        pause.assert_called_once_with(3)
+        self.assertEqual((result["status"], result["requests"], result["http_status"]), ("FAIL", 2, 502))
+        self.assertEqual(result["cases"]["deployments"]["status"], "PASS")
+        self.assertEqual(result["cases"]["repeat_read"]["status"], "NOT_RUN")
+        sink.assert_not_called()
+
+    def test_read_spacing_is_bounded_and_off_by_default(self):
+        self.cfg["read_spacing_seconds"] = 11
+        with self.assertRaisesRegex(driver.Refused, "READ_SPACING_INVALID"):
+            self.prepare()
+        self.cfg["read_spacing_seconds"] = True
+        with self.assertRaisesRegex(driver.Refused, "READ_SPACING_INVALID"):
+            self.prepare()
+        self.cfg, self.docs = inputs()
+        transport = MagicMock()
+        transport.request.side_effect = [(404, {}, b"{}")]
+        with patch.object(driver.time, "time", return_value=NOW), patch.object(driver.time, "sleep") as pause:
+            driver.run(self.cfg, lambda _: transport)
+        pause.assert_not_called()
+
+    def test_full_scope_receipt_has_no_read_scope_marker(self):
+        transport = MagicMock()
+        transport.request.side_effect = [(404, {}, b"{}")]
+        with patch.object(driver.time, "time", return_value=NOW):
+            result = driver.run(self.cfg, lambda _: transport)
+        self.assertNotIn("read_scope", result)
+
+    def test_deployments_only_refuses_invalid_value_and_stream_or_page_combinations(self):
+        self.cfg["read_scope"] = "snapshot_nope"
+        with self.assertRaisesRegex(driver.Refused, "READ_SCOPE_INVALID"):
+            self.prepare()
+        for key, value in (("probe_stream", True), ("observe_active_stream", True),
+                           ("bounded_page_probe", {"max_pages": 2, "max_rows": 4, "max_total_bytes": 4096})):
+            with self.subTest(key=key):
+                self.cfg, self.docs = inputs()
+                self.cfg["read_scope"] = "deployments_only"
+                self.cfg[key] = value
+                if key == "observe_active_stream":
+                    self.cfg["probe_stream"] = True
+                with self.assertRaises(driver.Refused):
+                    self.prepare()
+
+    def test_deployments_only_post_revoke_accepts_cursorless_baseline_and_runs_one_denied_read(self):
+        producer, _ = self.post_inputs("CORE_MANAGER_DOMAIN")
+        producer.update(read_authorized=False, policy_revision="policy-2")
+        del self.docs["/TEST_ONLY/baseline"]["cursor"]
+        with self.assertRaisesRegex(driver.Refused, "BASELINE_PROVENANCE_INVALID"):
+            self.prepare()
+        self.cfg["read_scope"] = "deployments_only"
+        transport = MagicMock()
+        transport.request.side_effect = [(403, {}, json.dumps({"error": {"code": "NATIVE_MANAGER_READ_DENIED"}}).encode())]
+        with patch.object(driver.time, "time", return_value=NOW):
+            result = driver.run(self.cfg, lambda _: transport)
+        self.assertEqual(result["status"], "SCOPED_OBSERVATIONS_ONLY")
+        self.assertEqual(result["requests"], 1)
+        self.assertEqual(result["cases"]["post_revoke_read"]["status"], "PASS")
+        self.assertEqual(result["cases"]["post_revoke_cursor"]["status"], "NOT_RUN")
+        self.assertEqual(result["read_scope"], "deployments_only")
+
+    # --- owner-staged acceptance, stage 2a (snapshot_stage): deployments, its repeat and the native snapshot only ---
+    CURSOR = "TEST_ONLY-PRIVATE-REALTIME-CURSOR-VALUE"
+
+    def snapshot_reply(self, **changes):
+        body = {"schema_version": "portal.execution.profile-realtime.v1",
+            "environment": "paper", "profile_id": self.cfg["profile_id"],
+            "workspace_id": self.cfg["workspace_id"], "event_type": "snapshot", "terminal": False,
+            "reconnect_required": False, "availability": "AVAILABLE", "freshness": "FRESH",
+            "completeness": "PARTIAL", "recovery": {"state": "HEALTHY"},
+            "payload": {}, "payload_digest": "sha256:" + PIN,
+            "projection_epoch": "TEST_ONLY-epoch", "projection_sequence": 1,
+            "observation": {"authority": "PORTAL_OBSERVATION", "semantics": "BOUNDED_CURRENT_PAGE",
+                "derived": False, "scope": {k: self.cfg[k] for k in
+                    ("workspace_id", "environment", "profile_id")},
+                "source": {"catalogue_revision": "sha256:" + PIN}}}
+        body.update(changes)
+        return (200, {"x-portal-realtime-state": "NATIVE_SCOPED_BASELINE_V1",
+                      "x-portal-realtime-cursor": self.CURSOR}, json.dumps(body).encode())
+
+    def snapshot_stage(self, replies, *, spacing=3):
+        self.cfg.update(read_scope="snapshot_stage", read_spacing_seconds=spacing)
+        transport, sink = MagicMock(), MagicMock()
+        transport.request.side_effect = replies
+        with patch.object(driver.time, "time", return_value=NOW), patch.object(driver.time, "sleep") as pause:
+            result = driver.run(self.cfg, lambda _: transport, checkpoint_sink=sink)
+        return result, transport, sink, pause
+
+    def test_snapshot_stage_runs_three_reads_in_order_and_keeps_the_cursor_out_of_the_receipt(self):
+        page_reply = (200, {}, page("deployments", self.cfg))
+        result, transport, sink, pause = self.snapshot_stage([page_reply, page_reply, self.snapshot_reply()])
+        self.assertEqual(result["status"], "SCOPED_OBSERVATIONS_ONLY")
+        self.assertEqual((result["requests"], result["read_scope"]), (3, "snapshot_stage"))
+        self.assertEqual([c.args[0] for c in transport.request.call_args_list],
+                         ["deployments", "deployments", "snapshot"])
+        self.assertEqual([c.args[0] for c in pause.call_args_list], [3, 3])
+        for case in ("deployments", "repeat_read", "snapshot"):
+            self.assertEqual(result["cases"][case]["status"], "PASS")
+        for case in ("relation", "stream_notice", "post_revoke_cursor"):
+            self.assertEqual(result["cases"][case]["status"], "NOT_RUN")
+        self.assertEqual(result["cases"]["cursor_resume"],
+                         {"status": "NOT_RUN", "reason": "STREAM_SCOPE_NOT_IN_STAGE_2A"})
+        snapshot = result["cases"]["snapshot"]
+        self.assertEqual((snapshot["realtime_state"], snapshot["cursor_length"], snapshot["cursor_sha256"]),
+            ("NATIVE_SCOPED_BASELINE_V1", len(self.CURSOR), sha256(self.CURSOR.encode()).hexdigest()))
+        self.assertNotIn(self.CURSOR, json.dumps(result))      # the serialized receipt (what main() prints)
+        self.assertEqual(sink.call_args.args[0]["cursor"], self.CURSOR)   # only the private checkpoint keeps it
+        self.assertEqual((result["full_08"], result["full_09"]), ("NOT_MET", "NOT_MET"))
+
+    def test_snapshot_stage_never_runs_relation_even_when_the_ready_doc_pins_one(self):
+        self.docs["/TEST_ONLY/core"]["relation_catalogue_sha256"] = PIN
+        page_reply = (200, {}, page("deployments", self.cfg))
+        result, transport, _, _ = self.snapshot_stage([page_reply, page_reply, self.snapshot_reply()])
+        self.assertEqual([c.args[0] for c in transport.request.call_args_list],
+                         ["deployments", "deployments", "snapshot"])
+        self.assertEqual(result["cases"]["relation"]["status"], "NOT_RUN")
+
+    def test_snapshot_stage_refuses_stream_page_cache_combinations_low_spacing_and_stream_grant(self):
+        base = {"read_scope": "snapshot_stage", "read_spacing_seconds": 3}
+        for label, change in (("probe_stream", {"probe_stream": True}),
+                              ("observe", {"probe_stream": True, "observe_active_stream": True}),
+                              ("pages", {"bounded_page_probe": {"max_pages": 2, "max_rows": 4, "max_total_bytes": 4096}}),
+                              ("cache", {"cache_proof": {"path": "/TEST_ONLY/cache", "sha256": PIN}}),
+                              ("revoke_action", {"revoke_action": "stream.subscribe"})):
+            with self.subTest(label):
+                self.cfg, self.docs = inputs()
+                self.cfg.update(base, **change)
+                with self.assertRaises(driver.Refused):
+                    self.prepare()
+        for spacing in (None, 0, 1, 2):
+            with self.subTest(spacing=spacing):
+                self.cfg, self.docs = inputs()
+                self.cfg["read_scope"] = "snapshot_stage"
+                if spacing is not None:
+                    self.cfg["read_spacing_seconds"] = spacing
+                with self.assertRaisesRegex(driver.Refused, "READ_SPACING_TOO_LOW_FOR_SNAPSHOT_STAGE"):
+                    self.prepare()
+        self.cfg, self.docs = inputs()
+        self.cfg.update(base)
+        self.assertEqual(self.prepare()["config"]["read_scope"], "snapshot_stage")
+        self.docs["/TEST_ONLY/core"]["stream_authorized"] = True
+        with self.assertRaisesRegex(driver.Refused, "STREAM_AUTHORIZED_IN_SNAPSHOT_STAGE"):
+            self.prepare()
+
+    def test_snapshot_stage_keeps_passes_when_a_later_read_fails(self):
+        page_reply = (200, {}, page("deployments", self.cfg))
+        result, _, sink, _ = self.snapshot_stage([page_reply, page_reply, (502, {}, b"x")])
+        self.assertEqual((result["status"], result["requests"], result["http_status"]), ("FAIL", 3, 502))
+        self.assertEqual((result["cases"]["deployments"]["status"], result["cases"]["repeat_read"]["status"]),
+                         ("PASS", "PASS"))
+        self.assertEqual(result["cases"]["snapshot"]["status"], "NOT_RUN")
+        sink.assert_not_called()
+        result, _, _, _ = self.snapshot_stage([page_reply, (503, {}, b"x")])
+        self.assertEqual(result["cases"]["deployments"]["status"], "PASS")
+        self.assertEqual(result["cases"]["repeat_read"]["status"], "NOT_RUN")
+
+    def test_snapshot_stage_does_not_loosen_snapshot_checks_and_leaks_no_cursor_on_failure(self):
+        page_reply = (200, {}, page("deployments", self.cfg))
+        for label, change in (("unknown completeness", {"completeness": "UNKNOWN"}),
+                              ("unavailable", {"availability": "UNAVAILABLE"}),
+                              ("stale", {"freshness": "STALE"}),
+                              ("unhealthy", {"recovery": {"state": "DEGRADED"}}),
+                              ("other epoch", {"projection_epoch": "OTHER-epoch"})):
+            with self.subTest(label):
+                result, _, sink, _ = self.snapshot_stage([page_reply, page_reply, self.snapshot_reply(**change)])
+                self.assertEqual((result["status"], result["reason"]), ("FAIL", "NATIVE_SNAPSHOT_UNPROVED"))
+                self.assertEqual(result["cases"]["snapshot"]["status"], "NOT_RUN")
+                self.assertEqual(result["cases"]["deployments"]["status"], "PASS")
+                self.assertNotIn(self.CURSOR, json.dumps(result))
+                sink.assert_not_called()
+
+    def test_full_scope_snapshot_result_exposes_state_length_and_digest_but_not_the_cursor(self):
+        status, headers, raw = self.snapshot_reply()
+        result = driver.finite("snapshot", status, headers, raw, self.prepare())
+        self.assertEqual((result["realtime_state"], result["cursor_length"], result["cursor_sha256"]),
+            ("NATIVE_SCOPED_BASELINE_V1", len(self.CURSOR), sha256(self.CURSOR.encode()).hexdigest()))
+        self.assertNotIn(self.CURSOR, json.dumps(result))
+
+    def use_sample(self):
+        """Point the fixture config and ready doc at the real sample's identifiers so the sample is used unmodified."""
+        sample = copy.deepcopy(SAMPLE_SEED_BODY)
+        self.cfg["workspace_id"] = sample["workspace_id"]
+        ready = self.docs["/TEST_ONLY/core"]
+        ready.update(workspace_id=sample["workspace_id"], projection_epoch=sample["projection_epoch"],
+                     catalogue_sha256=SAMPLE_CATALOGUE)
+        return sample
+
+    def seed_reply(self, mutate=None, **headers):
+        sample = self.use_sample()
+        if mutate:
+            mutate(sample)
+        return (200, {"x-portal-realtime-state": "NATIVE_SCOPED_BASELINE_V1",
+                      "x-portal-realtime-cursor": self.CURSOR, **headers}, json.dumps(sample).encode())
+
+    def seed_stage(self, replies):
+        self.cfg["snapshot_expectation"] = "seed_read_path"
+        return self.snapshot_stage(replies)
+
+    def deployments_reply(self):
+        return (200, {}, json.dumps({**json.loads(page("deployments", self.cfg)),
+                "source_catalogue_sha256": "sha256:" + SAMPLE_CATALOGUE}).encode())
+
+    def test_real_sample_body_is_accepted_as_read_path_only_and_never_as_pass(self):
+        page_reply = self.deployments_reply()
+        result, transport, sink, _ = self.seed_stage([page_reply, page_reply, self.seed_reply()])
+        self.assertEqual((result["status"], result["requests"]), ("SCOPED_OBSERVATIONS_ONLY", 3))
+        read_path = result["cases"]["snapshot_read_path"]
+        self.assertEqual((read_path["status"], read_path["rows"], read_path["snapshot_mode"], read_path["relation_count"]),
+                         ("READ_PATH_ONLY", 0, "CURSOR_ONLY", 1))
+        self.assertEqual((read_path["completeness"], read_path["availability"], read_path["freshness"]),
+                         ("UNKNOWN", "AVAILABLE", "FRESH"))
+        self.assertIs(read_path["envelope_health_is_source_health"], False)
+        self.assertEqual((read_path["realtime_state"], read_path["cursor_length"], read_path["cursor_sha256"]),
+            ("NATIVE_SCOPED_BASELINE_V1", len(self.CURSOR), sha256(self.CURSOR.encode()).hexdigest()))
+        self.assertEqual(result["cases"]["snapshot"]["status"], "NOT_RUN")        # never the stage's snapshot PASS
+        self.assertEqual(result["cases"]["cursor_resume"]["status"], "NOT_RUN")
+        self.assertNotIn("PASS", [result["cases"][c]["status"] for c in ("snapshot", "snapshot_read_path")])
+        public = json.dumps(result)
+        for secret in (self.CURSOR, SAMPLE_SEED_BODY["cursor"]):                  # header cursor and the body's own cursor
+            self.assertNotIn(secret, public)
+        self.assertEqual(sink.call_args.args[0]["cursor"], self.CURSOR)
+
+    def test_seed_read_path_does_not_assert_availability_or_freshness_values_but_requires_strings(self):
+        page_reply = self.deployments_reply()
+        for freshness in ("AGING", "STALE", "FRESH"):
+            with self.subTest(freshness=freshness):
+                self.cfg, self.docs = inputs()
+                result, _, _, _ = self.seed_stage([page_reply, page_reply,
+                    self.seed_reply(lambda b: b.update(freshness=freshness))])
+                self.assertEqual(result["cases"]["snapshot_read_path"]["status"], "READ_PATH_ONLY")
+                self.assertEqual(result["cases"]["snapshot_read_path"]["freshness"], freshness)
+        for key, value in (("freshness", None), ("availability", None), ("freshness", 5), ("availability", "")):
+            with self.subTest(key=key, value=value):
+                self.cfg, self.docs = inputs()
+                result, _, _, _ = self.seed_stage([page_reply, page_reply,
+                    self.seed_reply(lambda b: b.update({key: value}))])
+                self.assertEqual((result["status"], result["reason"]), ("FAIL", "SEED_SIGNATURE_MISMATCH"))
+
+    def test_seed_read_path_refuses_every_deviation_and_still_runs_the_other_snapshot_checks(self):
+        def payload(**changes):
+            return lambda b: b["payload"].update(changes)
+        def drop(*path):
+            def go(b):
+                node = b
+                for key in path[:-1]:
+                    node = node[key]
+                del node[path[-1]]
+            return go
+        def put(path, value):
+            def go(b):
+                node = b
+                for key in path[:-1]:
+                    node = node[key]
+                node[path[-1]] = value
+            return go
+        deviations = {
+            "relation_count 2": payload(relation_count=2),
+            "relation_count bool": payload(relation_count=True),
+            "wrong snapshot_mode": payload(snapshot_mode="FULL"),
+            "wrong payload catalogue": payload(source_catalogue_sha256="sha256:" + "9" * 64),
+            "wrong payload contract": payload(source_contract_revision="other.contract.v1"),
+            "extra payload key": payload(relations=[{"relation": "x"}]),
+            "missing payload key": drop("payload", "snapshot_mode"),
+            "wrong observation catalogue": put(("observation", "source", "catalogue_revision"), "sha256:" + "9" * 64),
+            "wrong observation contract": put(("observation", "source", "contract_revision"), "other.contract.v1"),
+            "wrong epoch": put(("projection_epoch",), "other-epoch"),
+            "completeness COMPLETE": put(("completeness",), "COMPLETE"),
+            "completeness PARTIAL": put(("completeness",), "PARTIAL"),
+            "completeness missing": drop("completeness"),
+            "source_as_of set": put(("source_as_of",), "2026-11-13T17:00:00.000Z"),
+            "as_of_ms set": put(("observation", "source", "as_of_ms"), 1794590000000),
+            "coverage missing": drop("observation", "coverage"),
+            "coverage wrong kind": put(("observation", "coverage", "kind"), "OTHER"),
+            "coverage relation_count 2": put(("observation", "coverage", "relation_count"), 2),
+            "unhealthy recovery": put(("recovery", "state"), "DEGRADED"),
+            "terminal": put(("terminal",), True),
+            "reconnect required": put(("reconnect_required",), True),
+            "wrong event": put(("event_type",), "update"),
+            "wrong workspace": put(("workspace_id",), "ws_OTHER12345678"),
+            "wrong profile": put(("profile_id",), "OTHER_PROFILE"),
+            "wrong authority": put(("observation", "authority"), "OTHER"),
+            "derived": put(("observation", "derived"), True),
+            "bad digest": put(("payload_digest",), "sha256:short"),
+            "sequence negative": put(("projection_sequence",), -1),
+        }
+        page_reply = self.deployments_reply()
+        for label, mutate in deviations.items():
+            with self.subTest(label):
+                self.cfg, self.docs = inputs()
+                result, _, sink, _ = self.seed_stage([page_reply, page_reply, self.seed_reply(mutate)])
+                self.assertEqual(result["status"], "FAIL")
+                self.assertIn(result["reason"], ("SEED_SIGNATURE_MISMATCH", "NATIVE_SNAPSHOT_UNPROVED", "READ_SCOPE_MISMATCH"))
+                self.assertEqual(result["cases"]["snapshot_read_path"]["status"], "NOT_RUN")
+                self.assertEqual(result["cases"]["deployments"]["status"], "PASS")
+                self.assertNotIn(self.CURSOR, json.dumps(result))
+                sink.assert_not_called()
+        for label, headers in (("header state", {"x-portal-realtime-state": "OTHER"}),
+                               ("cursor characters", {"x-portal-realtime-cursor": "bad cursor!"})):
+            with self.subTest(label):
+                self.cfg, self.docs = inputs()
+                result, _, _, _ = self.seed_stage([page_reply, page_reply, self.seed_reply(None, **headers)])
+                self.assertEqual((result["status"], result["reason"]), ("FAIL", "NATIVE_SNAPSHOT_UNPROVED"))
+
+    def test_strict_snapshot_still_refuses_the_seed_envelope_and_the_expectation_is_scope_bound(self):
+        page_reply = self.deployments_reply()
+        status, headers, raw = self.seed_reply()
+        with self.assertRaisesRegex(driver.Refused, "NATIVE_SNAPSHOT_UNPROVED"):          # strict (full scope): completeness UNKNOWN
+            driver.finite("snapshot", status, headers, raw, self.prepare())
+        self.cfg, self.docs = inputs()
+        result, _, _, _ = self.snapshot_stage([page_reply, page_reply, self.seed_reply()])   # default expectation: complete
+        self.assertEqual((result["status"], result["reason"]), ("FAIL", "NATIVE_SNAPSHOT_UNPROVED"))
+        for scope in ("full", "deployments_only"):
+            with self.subTest(scope=scope):
+                self.cfg, self.docs = inputs()
+                self.cfg.update(read_scope=scope, snapshot_expectation="seed_read_path", read_spacing_seconds=3)
+                with self.assertRaisesRegex(driver.Refused, "SNAPSHOT_EXPECTATION_INVALID"):
+                    self.prepare()
+        self.cfg, self.docs = inputs()
+        self.cfg.update(read_scope="snapshot_stage", read_spacing_seconds=3, snapshot_expectation="whatever")
+        with self.assertRaisesRegex(driver.Refused, "SNAPSHOT_EXPECTATION_INVALID"):
+            self.prepare()
+
+    # --- snapshot_only: the ONE-request redo of the snapshot after a snapshot_stage run failed there ---
+    def snapshot_only_setup(self, **prior_changes):
+        sample = self.use_sample()
+        scope = self.prepare_baseline_scope()
+        prior = {"schema_version": "portal.execution.connected-read-result.v1", "status": "FAIL", "requests": 3,
+                 "read_scope": "snapshot_stage", "producer_sha256": PIN, "scope_sha256": scope,
+                 "cases": {"deployments": {"status": "PASS", "body_sha256": "1" * 64},
+                           "repeat_read": {"status": "PASS", "body_sha256": "2" * 64},
+                           "snapshot": {"status": "NOT_RUN"}, "snapshot_read_path": {"status": "NOT_RUN"}}}
+        prior.update(prior_changes)
+        self.docs["/TEST_ONLY/prior"] = prior
+        self.cfg.update(read_scope="snapshot_only", snapshot_expectation="seed_read_path",
+                        carry_forward_result={"path": "/TEST_ONLY/prior", "sha256": "c" * 64})
+        return prior
+
+    def run_snapshot_only(self, replies):
+        transport, sink = MagicMock(), MagicMock()
+        transport.request.side_effect = replies
+        with patch.object(driver.time, "time", return_value=NOW), patch.object(driver.time, "sleep") as pause:
+            result = driver.run(self.cfg, lambda _: transport, checkpoint_sink=sink)
+        return result, transport, sink, pause
+
+    def test_snapshot_only_makes_one_request_carries_the_passes_and_writes_the_checkpoint(self):
+        self.snapshot_only_setup()
+        result, transport, sink, pause = self.run_snapshot_only([self.seed_reply(), self.seed_reply()])
+        self.assertEqual((result["status"], result["requests"], result["read_scope"]),
+                         ("SCOPED_OBSERVATIONS_ONLY", 1, "snapshot_only"))
+        self.assertEqual([c.args[0] for c in transport.request.call_args_list], ["snapshot"])
+        pause.assert_not_called()
+        for case, digest_char in (("deployments", "1"), ("repeat_read", "2")):
+            self.assertEqual(result["cases"][case], {"status": "CARRIED_PASS",
+                "carried_from_result_sha256": "c" * 64, "body_sha256": digest_char * 64})
+        self.assertEqual(result["carried_from_result_sha256"], "c" * 64)
+        self.assertEqual(result["cases"]["snapshot_read_path"]["status"], "READ_PATH_ONLY")
+        self.assertEqual(result["cases"]["snapshot"]["status"], "NOT_RUN")
+        self.assertEqual(result["cases"]["cursor_resume"]["status"], "NOT_RUN")
+        self.assertNotIn("PASS", [v["status"] for v in result["cases"].values()])
+        checkpoint = sink.call_args.args[0]
+        self.assertEqual((checkpoint["prime_body_sha256"], checkpoint["read_body_sha256"], checkpoint["cursor"]),
+                         ("1" * 64, "2" * 64, self.CURSOR))
+        public = json.dumps(result)
+        for secret in (self.CURSOR, SAMPLE_SEED_BODY["cursor"]):
+            self.assertNotIn(secret, public)
+
+    def test_snapshot_only_failed_snapshot_keeps_carried_cases_counts_one_request_and_writes_no_checkpoint(self):
+        self.snapshot_only_setup()
+        result, transport, sink, _ = self.run_snapshot_only([(502, {}, b"x"), self.seed_reply()])
+        self.assertEqual((result["status"], result["requests"], result["http_status"]), ("FAIL", 1, 502))
+        self.assertEqual(transport.request.call_count, 1)
+        self.assertEqual(result["cases"]["deployments"]["status"], "CARRIED_PASS")
+        self.assertEqual(result["cases"]["snapshot_read_path"]["status"], "NOT_RUN")
+        sink.assert_not_called()
+        self.cfg, self.docs = inputs()          # a non-seed body is still refused on the single read
+        self.snapshot_only_setup()
+        result, _, sink, _ = self.run_snapshot_only([self.seed_reply(lambda b: b.update(completeness="COMPLETE"))])
+        self.assertEqual((result["status"], result["reason"], result["requests"]), ("FAIL", "SEED_SIGNATURE_MISMATCH", 1))
+        self.assertNotIn(self.CURSOR, json.dumps(result))
+        sink.assert_not_called()
+
+    def test_snapshot_only_refuses_an_invalid_carried_result_or_scope_combination_before_any_network(self):
+        refusals = {
+            "prior status PASS": lambda p: p.update(status="PASS"),
+            "prior not snapshot_stage": lambda p: p.update(read_scope="deployments_only"),
+            "prior scope missing": lambda p: p.pop("read_scope"),
+            "other producer": lambda p: p.update(producer_sha256="9" * 64),
+            "other scope": lambda p: p.update(scope_sha256="8" * 64),
+            "wrong schema": lambda p: p.update(schema_version="portal.execution.other.v1"),
+            "deployments not PASS": lambda p: p["cases"]["deployments"].update(status="NOT_RUN"),
+            "deployments FAIL": lambda p: p["cases"]["deployments"].update(status="FAIL"),
+            "repeat not PASS": lambda p: p["cases"]["repeat_read"].update(status="NOT_RUN"),
+            "carried PASS not plain": lambda p: p["cases"]["deployments"].update(status="CARRIED_PASS"),
+            "no body hash": lambda p: p["cases"]["repeat_read"].pop("body_sha256"),
+            "bad body hash": lambda p: p["cases"]["deployments"].update(body_sha256="nothex"),
+            "snapshot already PASS": lambda p: p["cases"]["snapshot"].update(status="PASS"),
+            "cases missing": lambda p: p.pop("cases"),
+        }
+        for label, change in refusals.items():
+            with self.subTest(label):
+                self.cfg, self.docs = inputs()
+                prior = self.snapshot_only_setup()
+                change(prior)
+                with self.assertRaisesRegex(driver.Refused, "CARRY_FORWARD_INVALID"):
+                    self.prepare()
+        for label, change, code in (
+                ("expectation complete", {"snapshot_expectation": "complete"}, "SNAPSHOT_EXPECTATION_INVALID"),
+                ("probe_stream", {"probe_stream": True}, None),
+                ("observe", {"probe_stream": True, "observe_active_stream": True}, None),
+                ("pages", {"bounded_page_probe": {"max_pages": 2, "max_rows": 4, "max_total_bytes": 4096}}, None),
+                ("cache", {"cache_proof": {"path": "/TEST_ONLY/cache", "sha256": PIN}}, None),
+                ("revoke_action", {"revoke_action": "stream.subscribe"}, None)):
+            with self.subTest(label):
+                self.cfg, self.docs = inputs()
+                self.snapshot_only_setup()
+                self.cfg.update(change)
+                with self.assertRaisesRegex(driver.Refused, code or ".") as caught:
+                    self.prepare()
+        self.cfg, self.docs = inputs()
+        self.snapshot_only_setup()
+        del self.cfg["snapshot_expectation"]
+        with self.assertRaisesRegex(driver.Refused, "SNAPSHOT_EXPECTATION_INVALID"):
+            self.prepare()
+        self.cfg, self.docs = inputs()
+        self.snapshot_only_setup()
+        del self.cfg["carry_forward_result"]
+        with self.assertRaisesRegex(driver.Refused, "CARRY_FORWARD_INVALID"):
+            self.prepare()
+        self.cfg, self.docs = inputs()
+        self.snapshot_only_setup()
+        self.cfg["read_scope"] = "snapshot_stage"; self.cfg["read_spacing_seconds"] = 3     # carry key outside snapshot_only
+        with self.assertRaisesRegex(driver.Refused, "CARRY_FORWARD_INVALID"):
+            self.prepare()
+        self.cfg, self.docs = inputs()
+        self.snapshot_only_setup()
+        self.docs["/TEST_ONLY/core"]["stream_authorized"] = True
+        with self.assertRaisesRegex(driver.Refused, "STREAM_AUTHORIZED_IN_SNAPSHOT_STAGE"):
+            self.prepare()
+
+    def test_snapshot_only_allows_but_does_not_require_read_spacing(self):
+        self.snapshot_only_setup()
+        self.assertEqual(self.prepare()["config"]["read_scope"], "snapshot_only")      # no spacing set
+        self.cfg["read_spacing_seconds"] = 3
+        self.assertEqual(self.prepare()["config"]["read_spacing_seconds"], 3)
+
+    def test_snapshot_only_post_revoke_runs_one_denied_read_and_takes_no_carry_forward(self):
+        producer, _ = self.post_inputs("CORE_MANAGER_DOMAIN")
+        producer.update(read_authorized=False, policy_revision="policy-2")
+        self.cfg.update(read_scope="snapshot_only", snapshot_expectation="seed_read_path")
+        transport = MagicMock()
+        transport.request.side_effect = [(403, {}, json.dumps({"error": {"code": "NATIVE_MANAGER_READ_DENIED"}}).encode())]
+        with patch.object(driver.time, "time", return_value=NOW):
+            result = driver.run(self.cfg, lambda _: transport)
+        self.assertEqual((result["status"], result["requests"], result["read_scope"]),
+                         ("SCOPED_OBSERVATIONS_ONLY", 1, "snapshot_only"))
+        self.assertEqual(result["cases"]["post_revoke_read"]["status"], "PASS")
+        self.assertEqual(result["cases"]["post_revoke_cursor"]["status"], "NOT_RUN")
+        self.cfg["carry_forward_result"] = {"path": "/TEST_ONLY/prior", "sha256": "c" * 64}
+        with self.assertRaisesRegex(driver.Refused, "CARRY_FORWARD_INVALID"):
+            self.prepare()
+
+    def test_snapshot_stage_post_revoke_runs_one_denied_read_and_needs_the_baseline_cursor(self):
+        producer, _ = self.post_inputs("CORE_MANAGER_DOMAIN")
+        producer.update(read_authorized=False, policy_revision="policy-2")
+        self.cfg.update(read_scope="snapshot_stage", read_spacing_seconds=3)
+        baseline_cursor = self.docs["/TEST_ONLY/baseline"].pop("cursor")
+        with self.assertRaisesRegex(driver.Refused, "BASELINE_PROVENANCE_INVALID"):
+            self.prepare()
+        self.docs["/TEST_ONLY/baseline"]["cursor"] = baseline_cursor
+        transport = MagicMock()
+        transport.request.side_effect = [(403, {}, json.dumps({"error": {"code": "NATIVE_MANAGER_READ_DENIED"}}).encode())]
+        with patch.object(driver.time, "time", return_value=NOW):
+            result = driver.run(self.cfg, lambda _: transport)
+        self.assertEqual((result["status"], result["requests"], result["read_scope"]),
+                         ("SCOPED_OBSERVATIONS_ONLY", 1, "snapshot_stage"))
+        self.assertEqual(result["cases"]["post_revoke_read"]["status"], "PASS")
+        self.assertEqual(result["cases"]["post_revoke_cursor"]["status"], "NOT_RUN")
+        self.assertNotIn(baseline_cursor, json.dumps(result))
 
     def test_pm_revoke_requires_new_head_not_policy_revision_change(self):
         producer, _ = self.post_inputs("PM_NATIVE_READ")
@@ -1065,6 +1868,41 @@ class CacheProofTests(unittest.TestCase):
         del self.docs["/TEST_ONLY/revoke"]["official_receipt"]
         self.assertRefusedNoNetwork("CACHE_REVOKE_RECEIPT_INVALID")
 
+    def test_original_read_slot_pre_expiry_revoke_is_a_positive_control(self):
+        self.cache_inputs()
+        producer = self.docs["/TEST_ONLY/core"]
+        prior, revoke = self.docs["/TEST_ONLY/baseline"], self.docs["/TEST_ONLY/revoke"]
+        prior["at_utc"] = "2026-11-13T07:16:00Z"
+        revoke["committed_at_utc"] = "2026-11-13T07:30:01Z"
+        official = self.docs["/TEST_ONLY/official"]["results"][0]
+        expiry = int(driver.utc("2026-11-13T09:15:00Z") * 1000)
+        decided = int(driver.utc("2026-11-13T07:30:00Z") * 1000)
+        official.update(valid_until_ms_before=expiry, valid_until_ms_after=expiry,
+                        revoked_at_ms=decided, decided_at_ms=decided)
+        driver.validate_domain_revoke(producer, prior, revoke,
+                                     driver.utc("2026-11-13T07:31:00Z"), "business.read_all")
+        self.assertEqual(official["valid_until_ms_after"], expiry)
+
+    def test_original_read_slot_revoke_at_or_after_0915_is_not_active_revoke(self):
+        for stamp in ("2026-11-13T09:15:00Z", "2026-11-13T09:20:00Z"):
+            with self.subTest(revoked_at=stamp):
+                self.cfg, self.docs = inputs()
+                self.cache_inputs()
+                producer = self.docs["/TEST_ONLY/core"]
+                prior = self.docs["/TEST_ONLY/baseline"]
+                revoke = self.docs["/TEST_ONLY/revoke"]
+                prior["at_utc"] = "2026-11-13T07:16:00Z"
+                revoke["committed_at_utc"] = stamp
+                official = self.docs["/TEST_ONLY/official"]["results"][0]
+                expiry = int(driver.utc("2026-11-13T09:15:00Z") * 1000)
+                decided = int(driver.utc(stamp) * 1000)
+                official.update(valid_until_ms_before=expiry, valid_until_ms_after=expiry,
+                                revoked_at_ms=decided, decided_at_ms=decided)
+                with self.assertRaisesRegex(driver.Refused, "CACHE_REVOKE_RECEIPT_INVALID"):
+                    driver.validate_domain_revoke(producer, prior, revoke,
+                                                 driver.utc("2026-11-13T09:21:00Z"),
+                                                 "business.read_all")
+
     def test_envelope_and_receipt_unknown_fields_are_not_accepted(self):
         for path in ("/TEST_ONLY/cache-proof", "/TEST_ONLY/hit"):
             with self.subTest(path=path):
@@ -1106,9 +1944,12 @@ class CacheProofTests(unittest.TestCase):
                 self.cfg, self.docs = inputs()
                 self.cache_inputs()
                 checks = self.docs["/TEST_ONLY/hit"]["checks"]
-                if change == "missing": del checks["body_digest_match"]
-                elif change == "extra": checks["extra"] = True
-                else: checks["body_digest_match"] = 1 if change == "truthy" else False
+                if change == "missing":
+                    del checks["body_digest_match"]
+                elif change == "extra":
+                    checks["extra"] = True
+                else:
+                    checks["body_digest_match"] = 1 if change == "truthy" else False
                 self.assertRefusedNoNetwork("CACHE_PROOF_CUSTODY_INVALID")
 
     def test_wrong_operation_body_and_egress_are_refused(self):
@@ -1144,7 +1985,8 @@ class CacheProofTests(unittest.TestCase):
             with self.subTest(field=field):
                 self.cfg, self.docs = inputs()
                 envelope = self.cache_inputs()
-                if field == "sha256": envelope["hit"][field] = envelope["prime"][field]
+                if field == "sha256":
+                    envelope["hit"][field] = envelope["prime"][field]
                 else:
                     value = self.docs["/TEST_ONLY/prime"]["observation"][field]
                     self.docs["/TEST_ONLY/hit"]["observation"][field] = value

@@ -17,6 +17,9 @@ Optional --checkpoint-fd writes ONLY an opaque baseline cursor/provenance to an
 already open private owner file (never stdout). Public stdout contains bounded
 hashes/counts/results only. Missing inputs are NOT_READY/NOT_RUN, not full08/09
 PASS. Do not point this browser API client at reverse-mTLS identity port28444.
+Optional session_margin_seconds (0..600) requires a verifiable Core session
+expiry beyond the global deadline plus that reserve. It does not extend a
+session/grant or change workload JWT/native lease TTL. Legacy configs default0.
 """
 from __future__ import annotations
 
@@ -42,15 +45,20 @@ from uuid import UUID
 ORIGIN = "https://research-portal.primusspark.com"
 HOST = "research-portal.primusspark.com"
 MAX_BYTES = 1024 * 1024
-HELPER_PIN = "e108a0a740831a3905c6174597420888160097de7ff4edd682bf276965f42424"
+HELPER_PIN = "a6fa59aeb1438a4cff2147dc2359f614c347e2d3f6dbfbed8e108faffa77ad1f"
 CASES = ("deployments", "relation", "repeat_read", "snapshot", "cursor_resume",
          "stream_notice", "post_revoke_read", "post_revoke_cursor",
          "post_revoke_stream", "post_revoke_stream_read_preserved",
-         "cache_revocation", "active_stream_revocation", "unaffected_scope")
+         "cache_revocation", "active_stream_revocation", "unaffected_scope",
+         "r03_deployment_pages")
 
 
 class Refused(ValueError):
     pass
+
+
+class ReadNotAvailable(Refused):
+    """A read that did not return HTTP 200: carries ONLY the status and a short error code string (never the body)."""
 
 
 def require(condition, code):
@@ -99,7 +107,7 @@ def pin(value):
     return type(value) is str and re.fullmatch("[a-f0-9]{64}", value) is not None
 
 
-def session_headers(session, producer, now, deadline_seconds):
+def session_headers(session, producer, now, deadline_seconds, margin_seconds=0):
     """Read either existing owner input or the actual Core-issued token file.
 
     This formats an existing credential in memory only. It never issues a
@@ -118,12 +126,15 @@ def session_headers(session, producer, now, deadline_seconds):
                 type(session["token"]) is str and
                 re.fullmatch(r"[A-Za-z0-9_.~%-]{16,4096}", session["token"]), "SESSION_INVALID")
         try:
-            require(utc(session["absolute_expires_at"]) > now + deadline_seconds,
+            expiry = utc(session["absolute_expires_at"])
+            require(expiry > now + deadline_seconds and
+                    expiry >= now + deadline_seconds + margin_seconds,
                     "SESSION_INVALID")
         except (ValueError, TypeError, OverflowError):
             raise Refused("SESSION_INVALID") from None
         return {"Cookie": "__Host-portal_session=" + session["token"], "Accept": "application/json"}, (
             "RESEARCH_APPLICATION_SESSION_NOT_CLOUDFLARE_NOT_PASSWORD_NOT_HUMAN_PRESENCE")
+    require(margin_seconds == 0, "SESSION_EXPIRY_UNVERIFIABLE")
     require(set(session) <= {"cookie", "cf_access_assertion", "subject"} and
             session.get("subject") == producer["subject"] and
             re.fullmatch(r"__Host-portal_session=[A-Za-z0-9_.~%-]{16,4096}",
@@ -149,8 +160,41 @@ def prepare(config, now=None):
             re.fullmatch(r"[A-Z][A-Z0-9_]{2,95}", config.get("profile_id", "")), "SCOPE_INVALID")
     for key, bound in (("limit", 200), ("deadline_seconds", 60), ("max_bytes", MAX_BYTES)):
         require(type(config.get(key)) is int and 1 <= config[key] <= bound, "BOUNDS_INVALID")
+    margin = config.get("session_margin_seconds", 0)
+    require(type(margin) is int and 0 <= margin <= 600, "SESSION_MARGIN_INVALID")
     require(type(config.get("probe_stream")) is bool and
             type(config.get("observe_active_stream", False)) is bool, "BOUNDS_INVALID")
+    require(type(config.get("read_spacing_seconds", 0)) is int and 0 <= config.get("read_spacing_seconds", 0) <= 10,
+            "READ_SPACING_INVALID")
+    # Owner-staged acceptance (stage 1): deployments read + its repeat only. snapshot/cursor/relation/stream stay NOT_RUN.
+    # Stage 2a ("snapshot_stage"): deployments, its repeat and the native snapshot only. Relation, stream and
+    # cursor_resume cannot run in this scope; the one native read at a time spacing must be at least 3 s.
+    require(config.get("read_scope", "full") in ("full", "deployments_only", "snapshot_stage", "snapshot_only"), "READ_SCOPE_INVALID")
+    require(config.get("read_scope", "full") != "snapshot_stage" or
+            3 <= config.get("read_spacing_seconds", 0) <= 10, "READ_SPACING_TOO_LOW_FOR_SNAPSHOT_STAGE")
+    require(config.get("read_scope", "full") == "full" or not (
+        config["probe_stream"] or config.get("observe_active_stream", False) or "bounded_page_probe" in config or
+        "cache_proof" in config or config.get("revoke_action", "business.read_all") != "business.read_all"),
+        "READ_SCOPE_COMBINATION_INVALID")
+    # "snapshot_only": the redo of ONE snapshot read after a prior snapshot_stage run failed at the snapshot; the two
+    # deployments passes are carried forward from that private result (never counted as requests, never plain PASS).
+    require(config.get("snapshot_expectation", "complete") in ("complete", "seed_read_path") and
+            (config.get("snapshot_expectation", "complete") == "complete" or
+             config.get("read_scope", "full") in ("snapshot_stage", "snapshot_only")) and
+            (config.get("read_scope", "full") != "snapshot_only" or
+             config.get("snapshot_expectation") == "seed_read_path"), "SNAPSHOT_EXPECTATION_INVALID")
+    require(("carry_forward_result" in config) == (config.get("read_scope", "full") == "snapshot_only" and
+            config["stage"] == "baseline") and
+            ("carry_forward_result" not in config or type(config["carry_forward_result"]) is dict),
+            "CARRY_FORWARD_INVALID")
+    if "bounded_page_probe" in config:
+        probe = config["bounded_page_probe"]
+        require(config["stage"] == "baseline" and not config["probe_stream"] and
+                not config.get("observe_active_stream", False) and type(probe) is dict and
+                set(probe) == {"max_pages", "max_rows", "max_total_bytes"} and
+                all(type(probe.get(k)) is int and 1 <= probe[k] <= cap for k, cap in
+                    (("max_pages", 100), ("max_rows", 20000),
+                     ("max_total_bytes", 20971520))), "R03_BOUNDS_INVALID")
     require(not config.get("observe_active_stream", False) or
             (config["stage"] == "baseline" and config["probe_stream"]), "OBSERVATION_MODE_INVALID")
     action = config.get("revoke_action", "business.read_all")
@@ -187,6 +231,8 @@ def prepare(config, now=None):
                 "SOURCE_OR_AUTHORITY_NOT_CURRENT")
     require(not config.get("observe_active_stream", False) or receipt["stream_authorized"],
             "STREAM_NOT_AUTHORIZED")
+    require(config.get("read_scope", "full") not in ("snapshot_stage", "snapshot_only") or not receipt["stream_authorized"],
+            "STREAM_AUTHORIZED_IN_SNAPSHOT_STAGE")   # 2a has no STREAM scope: a ready doc that grants one is refused
     if config["probe_stream"] and receipt["stream_authorized"]:
         require(type(receipt.get("source_set_ref")) is str and bool(receipt["source_set_ref"]),
                 "STREAM_SOURCE_SET_UNDECLARED")
@@ -195,17 +241,29 @@ def prepare(config, now=None):
     session = document(config["session"])
     require(receipt.get("session_sha256") == config["session"]["sha256"], "SESSION_INVALID")
     headers, session_evidence_class = session_headers(
-        session, receipt, now, config["deadline_seconds"])
+        session, receipt, now, config["deadline_seconds"], margin)
     ip = ipaddress.ip_address(receipt.get("api_ip", ""))
     require(ip.is_global, "API_IP_INVALID")  # No DNS/unbounded resolver or generic upstream.
     scope = digest({k: receipt[k] for k in ("origin", "subject", "workspace_id", "environment",
         "profile_id", "acceptance_id", "catalogue_sha256", "field_policy_sha256", "manager_grant_id")})
-    prior = revoke = None
+    prior = revoke = carried = None
+    if "carry_forward_result" in config:
+        carried = document(config["carry_forward_result"])
+        cases = carried.get("cases") if type(carried) is dict else None
+        require(type(cases) is dict and carried.get("schema_version") == "portal.execution.connected-read-result.v1" and
+                carried.get("status") == "FAIL" and carried.get("read_scope") == "snapshot_stage" and
+                carried.get("producer_sha256") == config["core_return"]["sha256"] and
+                carried.get("scope_sha256") == scope and
+                all(type(cases.get(k)) is dict and cases[k].get("status") == "PASS" and pin(cases[k].get("body_sha256"))
+                    for k in ("deployments", "repeat_read")) and
+                type(cases.get("snapshot")) is dict and cases["snapshot"].get("status") == "NOT_RUN",
+                "CARRY_FORWARD_INVALID")
     if config["stage"] == "post_revoke":
         prior, revoke = document(config["baseline"]), document(config["revoke_return"])
         require(prior.get("schema_version") == "portal.execution.connected-read-baseline.v1" and
                 prior.get("scope_sha256") == scope and pin(prior.get("producer_sha256")) and
-                cursor_valid(prior.get("cursor")), "BASELINE_PROVENANCE_INVALID")
+                (cursor_valid(prior.get("cursor")) or (config.get("read_scope", "full") == "deployments_only"
+                                                        and "cursor" not in prior)), "BASELINE_PROVENANCE_INVALID")
         require(revoke.get("schema_version") == "portal.execution.connected-read-revoke.v1" and
                 revoke.get("status") == "COMMITTED" and revoke.get("authority") in
                 ("CORE_MANAGER_DOMAIN", "PM_NATIVE_READ") and
@@ -247,7 +305,7 @@ def prepare(config, now=None):
         validate_domain_revoke(receipt, prior, revoke, now, "business.read_all")
         cache = validate_cache_proof(config, prior, scope)
     return {"config": config, "producer": receipt, "headers": headers, "ip": str(ip),
-            "scope": scope, "prior": prior, "revoke": revoke,
+            "scope": scope, "prior": prior, "revoke": revoke, "carried": carried,
             "revoke_action": action, "session_evidence_class": session_evidence_class,
             "cache_proof": cache}
 
@@ -365,6 +423,35 @@ def validate_domain_revoke(producer, prior, revoke, now, action):
             code)
 
 
+# Stage 2a "seed_read_path" expectation. Core's one-shot seed row reads no source: the snapshot envelope is the real
+# portal.execution.profile-realtime.v1 body with a CURSOR_ONLY payload (sample: CORE_STAGE2A_SAMPLE_SNAPSHOT_BODY_20261113.json).
+# completeness UNKNOWN is the honest marker. availability and freshness are health/age based (FRESH/AGING/STALE), NOT source
+# health, so only their presence as strings is required, never a value: an AVAILABLE/FRESH envelope over a seeded empty row proves
+# the read path only. The case is recorded as READ_PATH_ONLY, never PASS.
+SEED_READ_PATH = {"snapshot_mode": "CURSOR_ONLY", "relation_count": 1, "completeness": "UNKNOWN",
+                  "contract_revision": "trading-system.portal-execution.manager-v2.runtime.v1",
+                  "coverage": {"kind": "CURRENT_PROFILE_PROJECTION", "relation_count": 1}}
+
+
+def seed_read_path_signature(body, producer):
+    """Refuse anything that is not exactly Core's CURSOR_ONLY seed envelope; every other snapshot check has already run."""
+    for key in ("availability", "freshness"):   # health/age markers: present strings, values deliberately not asserted
+        require(type(body.get(key)) is str and body[key] != "", "SEED_SIGNATURE_MISMATCH")
+    payload, observation = body["payload"], body["observation"]
+    require(body.get("completeness") == SEED_READ_PATH["completeness"] and body.get("source_as_of") is None and
+            set(payload) == {"snapshot_mode", "relation_count", "source_contract_revision", "source_catalogue_sha256"} and
+            payload["snapshot_mode"] == SEED_READ_PATH["snapshot_mode"] and
+            type(payload["relation_count"]) is int and payload["relation_count"] == SEED_READ_PATH["relation_count"] and
+            payload["source_contract_revision"] == SEED_READ_PATH["contract_revision"] and
+            type(payload["source_catalogue_sha256"]) is str and
+            payload["source_catalogue_sha256"].removeprefix("sha256:") == producer["catalogue_sha256"],
+            "SEED_SIGNATURE_MISMATCH")
+    source, coverage = observation["source"], observation.get("coverage")
+    require(source.get("contract_revision") == SEED_READ_PATH["contract_revision"] and source.get("as_of_ms") is None and
+            type(coverage) is dict and coverage == SEED_READ_PATH["coverage"] and
+            type(coverage["relation_count"]) is int, "SEED_SIGNATURE_MISMATCH")
+
+
 def cursor_valid(value):
     return type(value) is str and 1 <= len(value) <= 4096 and re.fullmatch(r"[A-Za-z0-9._~-]+", value)
 
@@ -454,8 +541,12 @@ class Transport:
                         (not expired.is_set() and time.monotonic() < self.end),
                         "DEADLINE_EXCEEDED")
                 return response.status, dict(response.getheaders()), result
-            require(response.getheader("Content-Type", "").split(";")[0] == "application/json",
-                    "JSON_CONTENT_TYPE_INVALID")
+            if response.getheader("Content-Type", "").split(";")[0] != "application/json":
+                error = ReadNotAvailable("JSON_CONTENT_TYPE_INVALID")
+                kind = response.getheader("Content-Type", "")
+                error.http_status, error.error_code = response.status, None
+                error.content_type = kind if re.fullmatch(r"[A-Za-z0-9/+.;= _-]{1,64}", kind) else "UNPARSEABLE"
+                raise error
             raw = response.read(self.p["config"]["max_bytes"] + 1)
             require(len(raw) <= self.p["config"]["max_bytes"], "RESPONSE_LIMIT")
             require(not expired.is_set() and time.monotonic() < self.end, "DEADLINE_EXCEEDED")
@@ -580,11 +671,22 @@ def quality_valid(value):
 
 
 def finite(name, status, headers, raw, prepared):
-    require(status == 200, "READ_NOT_AVAILABLE")
+    if status != 200:
+        error = ReadNotAvailable("READ_NOT_AVAILABLE")
+        error.http_status, error.error_code = status, None
+        try:
+            parsed = shared().decode(raw)
+            inner = parsed.get("error", parsed) if type(parsed) is dict else None
+            code = inner.get("code") if type(inner) is dict else None
+            error.error_code = code if type(code) is str and re.fullmatch(r"[A-Z0-9_]{1,64}", code) else None
+        except Exception:
+            pass
+        raise error
     body = shared().decode(raw)
     cfg, producer = prepared["config"], prepared["producer"]
     require(type(body) is dict and body.get("environment") == cfg["environment"] and
             body.get("profile_id") == cfg["profile_id"], "READ_SCOPE_MISMATCH")
+    seed = name == "snapshot" and cfg.get("snapshot_expectation", "complete") == "seed_read_path"
     if name == "snapshot":
         observation = body.get("observation")
         require(type(observation) is dict and type(observation.get("scope")) is dict and
@@ -592,8 +694,8 @@ def finite(name, status, headers, raw, prepared):
         require(body.get("schema_version") == "portal.execution.profile-realtime.v1" and
                 body.get("event_type") == "snapshot" and body.get("terminal") is False and
                 body.get("reconnect_required") is False and body.get("workspace_id") == cfg["workspace_id"] and
-                body.get("availability") == "AVAILABLE" and body.get("freshness") == "FRESH" and
-                body.get("completeness") in ("COMPLETE", "PARTIAL") and
+                (seed or (body.get("availability") == "AVAILABLE" and body.get("freshness") == "FRESH" and
+                          body.get("completeness") in ("COMPLETE", "PARTIAL"))) and
                 type(body.get("payload")) is dict and type(body.get("payload_digest")) is str and
                 re.fullmatch(r"(?:sha256:)?[a-f0-9]{64}", body["payload_digest"]) and
                 type(body.get("recovery")) is dict and body["recovery"].get("state") == "HEALTHY" and
@@ -607,6 +709,8 @@ def finite(name, status, headers, raw, prepared):
                 all(observation["scope"].get(k) == cfg[k] for k in ("workspace_id", "environment", "profile_id")) and
                 observation["source"].get("catalogue_revision", "").removeprefix("sha256:") ==
                 producer["catalogue_sha256"], "NATIVE_SNAPSHOT_UNPROVED")
+        if seed:
+            seed_read_path_signature(body, producer)
     else:
         expected = "portal.execution." + ("maximum-data.deployment-page.v1" if
             name == "deployments" else "eds11r.manager-relation-page.v1")
@@ -618,8 +722,87 @@ def finite(name, status, headers, raw, prepared):
                 body.get("source_catalogue_sha256", "").removeprefix("sha256:") ==
                 producer["catalogue_sha256" if name == "deployments" else "relation_catalogue_sha256"],
                 "NATIVE_PAGE_UNPROVED")
-    return {"status": "PASS", "body_sha256": sha256(raw).hexdigest(), "bytes": len(raw),
-            "rows": len(body.get("records", []))}
+    if seed:
+        # Read-path proof only: never PASS, never business data, never the stage's snapshot PASS. The receipt keeps
+        # the state string and only the length plus a digest of the opaque cursor, never its bytes.
+        cursor = headers["x-portal-realtime-cursor"]
+        return {"status": "READ_PATH_ONLY", "body_sha256": sha256(raw).hexdigest(), "bytes": len(raw), "rows": 0,
+                "snapshot_mode": SEED_READ_PATH["snapshot_mode"], "relation_count": SEED_READ_PATH["relation_count"],
+                "completeness": body["completeness"], "availability": body["availability"],
+                "freshness": body["freshness"], "envelope_health_is_source_health": False,
+                "realtime_state": headers["x-portal-realtime-state"], "cursor_length": len(cursor),
+                "cursor_sha256": sha256(cursor.encode()).hexdigest()}
+    quality = body if name == "snapshot" else body["source_health"]
+    result = {"status": "PASS", "body_sha256": sha256(raw).hexdigest(), "bytes": len(raw),
+              "rows": len(body.get("records", [])), "freshness": quality["freshness"],
+              "completeness": quality["completeness"]}
+    if name == "snapshot":
+        # The receipt keeps the state string and only the length plus a digest of the opaque cursor, never its
+        # bytes; the cursor itself may only reach the private 0600 checkpoint file.
+        cursor = headers["x-portal-realtime-cursor"]
+        result.update(realtime_state=headers["x-portal-realtime-state"], cursor_length=len(cursor),
+                      cursor_sha256=sha256(cursor.encode()).hexdigest())
+    return result
+
+
+def bounded_deployment_pages(prepared, request):
+    """Observe one bounded Core deployment scan; never infer source completeness.
+
+    Identifiers and cursors remain in memory. A digest is useful for later
+    correlation with a separately obtained, same-scope source oracle, but is not
+    itself proof of an atomic snapshot, source ACK, R02 or R03 acceptance.
+    """
+    config, bounds = prepared["config"], prepared["config"]["bounded_page_probe"]
+    seen_ids, seen_cursors = set(), set()
+    total_bytes = pages = 0
+    cursor = None
+    complete_terminal = False
+    while pages < bounds["max_pages"]:
+        status, headers, raw = request("deployments", cursor)
+        require(len(raw) <= config["max_bytes"], "R03_PAGE_BYTE_BOUND_EXCEEDED")
+        finite("deployments", status, headers, raw, prepared)
+        total_bytes += len(raw)
+        require(total_bytes <= bounds["max_total_bytes"], "R03_BYTE_BOUND_EXCEEDED")
+        body = shared().decode(raw)
+        page, records = body.get("page"), body["records"]
+        require(type(page) is dict and type(page.get("has_more")) is bool and
+                page.get("truncated") is False and page.get("total_unknown") is True and
+                type(page.get("maximum_page_rows")) is int and
+                1 <= page["maximum_page_rows"] <= 200 and
+                len(records) <= page["maximum_page_rows"] and
+                type(page.get("maximum_response_bytes")) is int and
+                1 <= page["maximum_response_bytes"] <= MAX_BYTES and
+                len(raw) <= page["maximum_response_bytes"],
+                "R03_PAGE_INVALID")
+        next_cursor = page.get("next_cursor")
+        require((next_cursor is None and page["has_more"] is False) or
+                (cursor_valid(next_cursor) and page["has_more"] is True), "R03_CURSOR_INVALID")
+        require(not page["has_more"] or records, "R03_EMPTY_CONTINUATION")
+        for record in records:
+            require(type(record) is dict and type(record.get("deployment_id")) is str and
+                    1 <= len(record["deployment_id"].encode("utf-8")) <= 4096 and
+                    all(ord(ch) >= 32 and ord(ch) != 127 for ch in record["deployment_id"]),
+                    "R03_IDENTITY_INVALID")
+            identity = record["deployment_id"]
+            require(identity not in seen_ids, "R03_DUPLICATE_IDENTITY")
+            require(len(seen_ids) < bounds["max_rows"], "R03_ROW_BOUND_EXCEEDED")
+            seen_ids.add(identity)
+        pages += 1
+        if next_cursor is None:
+            complete_terminal = body["source_health"]["completeness"] == "COMPLETE"
+            break
+        require(next_cursor not in seen_cursors, "R03_CURSOR_CYCLE")
+        seen_cursors.add(next_cursor)
+        cursor = next_cursor
+    identities = json.dumps(sorted(seen_ids), ensure_ascii=False,
+                            separators=(",", ":")).encode("utf-8")
+    return {"status": "OBSERVED_NOT_PROVEN", "dataset": "strategy_deployments",
+            "pages": pages, "rows": len(seen_ids), "bytes": total_bytes,
+            "more_than_one_page": pages > 1, "terminal_page": next_cursor is None,
+            "terminal_source_complete": complete_terminal,
+            "identity_digest_algorithm": "sha256-canonical-json-sorted-utf8-v1",
+            "identity_digest": sha256(identities).hexdigest(),
+            "source_oracle": "NOT_CORRELATED", "source_ack": "NOT_CORRELATED"}
 
 
 def run(config, transport_factory=Transport, checkpoint_sink=None):
@@ -629,12 +812,20 @@ def run(config, transport_factory=Transport, checkpoint_sink=None):
     try:
         p = prepare(config)
         receipt.update(producer_sha256=config["core_return"]["sha256"], scope_sha256=p["scope"])
+        if config.get("session_margin_seconds", 0):
+            receipt["session_margin_seconds"] = config["session_margin_seconds"]
+        if config.get("read_scope", "full") != "full":
+            receipt["read_scope"] = config["read_scope"]
         if p["session_evidence_class"] is not None:
             receipt["session_evidence_class"] = p["session_evidence_class"]
         transport = transport_factory(p)
         def request(name, cursor=None, stream=False):
             receipt["requests"] += 1
             return transport.request(name, cursor, stream=stream)
+        if "bounded_page_probe" in config:
+            receipt["cases"]["r03_deployment_pages"] = bounded_deployment_pages(p, request)
+            receipt["status"] = "SCOPED_OBSERVATIONS_ONLY"
+            return receipt
         if config["stage"] == "post_revoke":
             if p["revoke"]["authority"] == "PM_NATIVE_READ":
                 # PM refusal after Core hijack may destroy HTTP without bytes. A
@@ -664,7 +855,8 @@ def run(config, transport_factory=Transport, checkpoint_sink=None):
                 receipt["status"] = "SCOPED_OBSERVATIONS_ONLY"
                 return receipt
             for case, name, cursor in (("post_revoke_read", "deployments", None),
-                                      ("post_revoke_cursor", "stream", p["prior"]["cursor"])):
+                                      ("post_revoke_cursor", "stream", p["prior"].get("cursor")))[
+                    :1 if config.get("read_scope", "full") in ("deployments_only", "snapshot_stage", "snapshot_only") else 2]:
                 status, _, raw = request(name, cursor)
                 body = shared().decode(raw)
                 code = (body.get("error", body).get("code") if type(body) is dict and
@@ -687,27 +879,57 @@ def run(config, transport_factory=Transport, checkpoint_sink=None):
                 receipt["cases"]["cache_revocation"] = p["cache_proof"]
         else:
             finite_results = {}
-            for case, name in (("deployments", "deployments"), ("relation", "relation"),
-                               ("repeat_read", "deployments"), ("snapshot", "snapshot")):
+            scope = config.get("read_scope", "full")
+            stage1 = scope == "deployments_only"
+            keep = scope != "full"   # narrow scopes keep a pass in the receipt even if a later case fails
+            if config.get("snapshot_expectation") == "seed_read_path":
+                receipt["cases"]["snapshot_read_path"] = {"status": "NOT_RUN"}
+            carried_cases = {}
+            if scope == "snapshot_only":   # ONE request: the snapshot; deployments/repeat are carried, not re-read, not PASS
+                sha = config["carry_forward_result"]["sha256"]
+                carried_cases = {case: {"status": "CARRIED_PASS", "carried_from_result_sha256": sha,
+                                        "body_sha256": p["carried"]["cases"][case]["body_sha256"]}
+                                 for case in ("deployments", "repeat_read")}
+                receipt["cases"].update(carried_cases)
+                receipt["carried_from_result_sha256"] = sha
+                plan = (("snapshot_read_path", "snapshot"),)
+            elif stage1:
+                plan = (("deployments", "deployments"), ("repeat_read", "deployments"))
+            elif scope == "snapshot_stage":   # stage 2a: no relation by construction, whatever the ready doc pins
+                plan = (("deployments", "deployments"), ("repeat_read", "deployments"),
+                        ("snapshot_read_path" if config.get("snapshot_expectation") == "seed_read_path" else "snapshot",
+                         "snapshot"))
+            else:
+                plan = (("deployments", "deployments"), ("relation", "relation"),
+                        ("repeat_read", "deployments"), ("snapshot", "snapshot"))
+            for case, name in plan:
                 if name == "relation" and not pin(p["producer"].get("relation_catalogue_sha256")):
                     continue  # A deployment source does not imply a separately selected relation source.
+                if finite_results and config.get("read_spacing_seconds", 0):
+                    time.sleep(config["read_spacing_seconds"])   # one unresolved native read at a time: let the previous retire
                 status, headers, raw = request(name)
                 finite_results[case] = finite(name, status, headers, raw, p)
+                if keep:   # narrow scopes keep a pass even if a later case fails; the full scope never credits finite JSON before the snapshot proof
+                    receipt["cases"][case] = finite_results[case]
             # Unchanged V1 JSON cannot prove native selection by itself. Do not
             # credit those finite observations before the native snapshot proof.
             receipt["cases"].update(finite_results)
-            cursor = headers["x-portal-realtime-cursor"]
+            if scope in ("snapshot_stage", "snapshot_only"):   # 2a has no STREAM scope, so cursor_resume is recorded as not run, with the reason
+                receipt["cases"]["cursor_resume"] = {"status": "NOT_RUN", "reason": "STREAM_SCOPE_NOT_IN_STAGE_2A"}
+            cursor = None if stage1 else headers["x-portal-realtime-cursor"]
             if checkpoint_sink is not None:
                 checkpoint = {"schema_version": "portal.execution.connected-read-baseline.v1",
                     "scope_sha256": p["scope"], "producer_sha256": config["core_return"]["sha256"],
                     "policy_revision": p["producer"]["policy_revision"],
                     "manager_grant_revision": p["producer"]["manager_grant_revision"],
                     "native_revision": p["producer"]["native_revision"],
-                    "prime_body_sha256": finite_results["deployments"]["body_sha256"],
-                    "read_body_sha256": finite_results["repeat_read"]["body_sha256"],
+                    "prime_body_sha256": {**carried_cases, **finite_results}["deployments"]["body_sha256"],
+                    "read_body_sha256": {**carried_cases, **finite_results}["repeat_read"]["body_sha256"],
                     "read_authorized": p["producer"]["read_authorized"],
                     "stream_authorized": p["producer"]["stream_authorized"],
-                    "at_utc": datetime.now(timezone.utc).isoformat(), "cursor": cursor}
+                    "at_utc": datetime.now(timezone.utc).isoformat()}
+                if cursor is not None:
+                    checkpoint["cursor"] = cursor
                 if "stream_grant_id" in p["producer"]:
                     checkpoint.update({k: p["producer"][k] for k in
                                        ("stream_grant_id", "stream_grant_revision")})
@@ -731,6 +953,12 @@ def run(config, transport_factory=Transport, checkpoint_sink=None):
         # Never stringify arbitrary exceptions: HTTP/JSON errors may contain data/session refs.
         receipt["status"] = "FAIL" if receipt["requests"] else "NOT_READY"
         receipt["reason"] = str(error) if isinstance(error, Refused) else "INPUT_OR_TRANSPORT_REFUSED"
+        if isinstance(error, ReadNotAvailable):
+            receipt["http_status"] = error.http_status
+            if error.error_code is not None:
+                receipt["error_code"] = error.error_code
+            if getattr(error, "content_type", None) is not None:
+                receipt["content_type"] = error.content_type
     return receipt
 
 
