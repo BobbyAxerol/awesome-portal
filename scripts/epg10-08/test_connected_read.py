@@ -2357,6 +2357,65 @@ class DriverTests(unittest.TestCase):
             "schema_version": "portal.native-research-manager-revoke.v1", "results": [official]}
         return producer, prior, revoke, official
 
+    def core_shaped_stream_revoke_inputs(self):
+        # The real STREAM-only post document of Core carries no stream fields (its schema refuses them when stream_authorized is false);
+        # the revoke-return names the grant id, both revisions and revoked_at_ms instead.
+        producer = self.docs["/TEST_ONLY/core"]
+        producer.update(stream_authorized=True, stream_grant_id="stream-grant-TEST_ONLY", stream_grant_revision="stream-revision-1")
+        producer, revoke = self.post_inputs("CORE_MANAGER_DOMAIN")
+        prior = self.docs["/TEST_ONLY/baseline"]
+        prior.update(read_authorized=True, stream_authorized=True, stream_grant_id="stream-grant-TEST_ONLY",
+                     stream_grant_revision="stream-revision-1")
+        for key in ("stream_grant_id", "stream_grant_revision"):
+            producer.pop(key, None)
+        producer.update(stream_authorized=False)
+        self.cfg["revoke_action"] = "stream.subscribe"
+        decided = int(datetime(2026, 10, 20, 5, 0, 30, tzinfo=timezone.utc).timestamp() * 1000)
+        revoke.update(action="stream.subscribe", stream_grant_id="stream-grant-TEST_ONLY", stream_grant_revision_before="stream-revision-1",
+                      stream_grant_revision_after="acr_TEST_ONLY_new", revoked_at_ms=decided)
+        return producer, prior, revoke
+
+    def test_core_shaped_stream_only_revoke_takes_the_identity_from_the_baseline_and_the_revoke_return(self):
+        producer, prior, revoke = self.core_shaped_stream_revoke_inputs()
+        self.assertEqual(self.prepare()["revoke_action"], "stream.subscribe")
+        for change, label in (({"stream_grant_id": "OTHER-grant"}, "other grant"),
+                              ({"stream_grant_revision_before": "stream-revision-0"}, "before differs from the baseline"),
+                              ({"stream_grant_revision_after": "stream-revision-1"}, "revision unchanged"),
+                              ({"stream_grant_revision_after": ""}, "empty revision"),
+                              ({"revoked_at_ms": 1}, "revoked before the baseline"),
+                              ({"revoked_at_ms": 4102444800000}, "revoked after the commit"),
+                              ({"revoked_at_ms": True}, "not an integer")):
+            with self.subTest(label=label):
+                saved = {k: revoke.get(k) for k in change}
+                revoke.update(change)
+                with self.assertRaisesRegex(driver.Refused, "REVOKE_PROVENANCE_INVALID"):
+                    self.prepare()
+                revoke.update(saved)
+        for key in ("stream_grant_revision_after", "revoked_at_ms"):
+            saved = revoke.pop(key)
+            with self.assertRaisesRegex(driver.Refused, "REVOKE_PROVENANCE_INVALID"):
+                self.prepare()
+            revoke[key] = saved
+        producer["stream_authorized"] = True                                                    # still claims STREAM
+        with self.assertRaisesRegex(driver.Refused, "REVOKE_PROVENANCE_INVALID"):
+            self.prepare()
+        producer["stream_authorized"] = False
+        producer["read_authorized"] = False                                                     # READ must be preserved in this mode
+        with self.assertRaisesRegex(driver.Refused, "REVOKE_PROVENANCE_INVALID"):
+            self.prepare()
+
+    def test_core_shaped_stream_only_post_revoke_runs_one_read_and_two_denied_stream_requests(self):
+        snapshot = self.stream_setup()
+        producer, prior, revoke = self.core_shaped_stream_revoke_inputs()
+        producer["source_set_ref"] = "TEST_ONLY-source-set"
+        denied = (403, {}, json.dumps({"error": {"code": "ACCESS_DENIED"}}).encode())
+        result, calls, _ = self.stream_run([snapshot, denied, denied])
+        self.assertEqual((result["status"], result["requests"]), ("SCOPED_OBSERVATIONS_ONLY", 3))
+        self.assertEqual([c[0] for c in calls], ["snapshot", "stream", "stream"])
+        self.assertEqual(result["cases"]["post_revoke_stream_read_preserved"]["status"], "PASS")
+        for case in ("post_revoke_stream", "post_revoke_cursor"):
+            self.assertEqual((result["cases"][case]["status"], result["cases"][case]["http_status"]), ("PASS", 403))
+
     def test_stream_only_revoke_preserves_read_policy_and_native_revision(self):
         producer, prior, _, _ = self.stream_revoke_inputs()
         prepared = self.prepare()

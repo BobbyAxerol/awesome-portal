@@ -335,14 +335,12 @@ def prepare(config, now=None):
                   receipt["policy_revision"] == prior["policy_revision"] and
                   receipt["manager_grant_revision"] == prior["manager_grant_revision"] and
                   receipt["native_revision"] == prior["native_revision"] and
-                  type(receipt.get("stream_grant_id")) is str and
-                  receipt["stream_grant_id"] == prior.get("stream_grant_id") and
                   type(prior.get("stream_grant_revision")) is str and
                   1 <= len(prior["stream_grant_revision"]) <= 256 and
-                  receipt["stream_grant_revision"] != prior["stream_grant_revision"])),
+                  stream_revoke_identity_ok(receipt, prior, revoke))),
                 "REVOKE_PROVENANCE_INVALID")
-        if action == "stream.subscribe":
-            validate_stream_revoke(receipt, prior, revoke, now)
+        if action == "stream.subscribe" and "stream_grant_id" in receipt:
+            validate_stream_revoke(receipt, prior, revoke, now)   # full design: stream identity inside the post document + official file
         if action == "business.read_all" and config.get("read_scope", "full") == "stream_stage":
             # Both grants revoked in one official document (READ and STREAM): the STREAM grant must have been live in the baseline and
             # must no longer be authorised; the READ refusal and the STREAM refusal are then the two post_revoke requests.
@@ -425,6 +423,24 @@ def validate_cache_proof(config, prior, scope):
             "CACHE_HIT_NOT_PROVED")
     return {"status": "PASS", "evidence_class": "OWNER_PINNED_P22_AND_HTTP_DENIAL",
             "prime_cli_sha256": refs[0], "hit_cli_sha256": refs[1]}
+
+
+def stream_revoke_identity_ok(receipt, prior, revoke):
+    """Where the revoked STREAM grant's identity comes from.
+
+    Full design (stage 2c-era tests): the post ready doc names the stream grant id and its NEW revision. Core's ready-doc schema refuses stream
+    fields when ``stream_authorized`` is false, so the real STREAM-only post document carries none: the identity is then the baseline's
+    ``stream_grant_id`` and the revoke-return states it (``stream_grant_id``, ``stream_grant_revision_before`` = the baseline's, a different
+    ``stream_grant_revision_after``, integer ``revoked_at_ms`` between the baseline time and the commit). The official receipt stays pinned by
+    hash only in that mode (its content is not read by Edge)."""
+    if "stream_grant_id" in receipt or "stream_grant_revision" in receipt:
+        return (type(receipt.get("stream_grant_id")) is str and receipt["stream_grant_id"] == prior.get("stream_grant_id") and
+                receipt.get("stream_grant_revision") != prior["stream_grant_revision"])
+    after, before = revoke.get("stream_grant_revision_after"), revoke.get("stream_grant_revision_before")
+    return (type(prior.get("stream_grant_id")) is str and revoke.get("stream_grant_id") == prior["stream_grant_id"] and
+            before == prior["stream_grant_revision"] and type(after) is str and 1 <= len(after) <= 256 and after != before and
+            type(revoke.get("revoked_at_ms")) is int and
+            utc(prior["at_utc"]) * 1000 <= revoke["revoked_at_ms"] <= utc(revoke["committed_at_utc"]) * 1000)
 
 
 def validate_stream_revoke(producer, prior, revoke, now):
