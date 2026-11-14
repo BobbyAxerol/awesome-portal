@@ -86,3 +86,15 @@ export async function resetResearchCurrentHumanSchema(pool: Pool, input: NativeC
   return { before, drain_open: true, unknown_obligations: unknown, removed_public_guards: removedGuards, after: await counts(pool),
     installed: true, schema_version: CURRENT_HUMAN_RESEARCH_SCHEMA_VERSION };
 }
+
+/** Read-only look used by the CLI dry run: registered schema check, table counts and the stuck predicate. */
+export async function inspectStuckCandidateSchema(pool: Pool, targetInput: NativeCoreSchemaTarget, schemaSqlPath?: string): Promise<{
+  counts: Record<string, number>; drain_open: boolean; unknown_obligations: number; stuck: boolean }> {
+  const target = nativeCoreSchemaTarget.safeParse(targetInput);
+  if (!target.success) return fail("TARGET_INVALID");
+  await assertRegisteredResearchCurrentHumanSchema(pool, target.data, schemaSqlPath);
+  const c = await counts(pool);
+  const drain = (await pool.query("SELECT (drain_id IS NOT NULL) AS open FROM elp210_candidate.authority WHERE singleton")).rows[0]?.open === true;
+  const unknown = Number((await pool.query("SELECT count(*)::int AS n FROM elp210_candidate.native_read_obligations WHERE phase='UNKNOWN' AND NOT source_reconciled")).rows[0].n);
+  return { counts: c, drain_open: drain, unknown_obligations: unknown, stuck: drain && unknown >= 1 };
+}
