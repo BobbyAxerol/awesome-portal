@@ -1122,6 +1122,869 @@ class DriverTests(unittest.TestCase):
         with self.assertRaisesRegex(driver.Refused, "CARRY_FORWARD_INVALID"):
             self.prepare()
 
+    # --- stage 2b (relation_stage): deployments, ONE relation read (account balances), seed snapshot; typed refusal or empty page ---
+    RELATION_PIN = PIN
+
+    def relation_reply(self, mutate=None, status=200):
+        body = json.loads(page("relation", self.cfg))
+        body["page"] = {"next_cursor": None, "has_more": False}
+        if mutate:
+            mutate(body)
+        return (status, {}, json.dumps(body).encode())
+
+    def typed_reply(self, status, code):
+        return (status, {}, json.dumps({"error": {"code": code, "message": "text that must never reach a receipt"}}).encode())
+
+    def relation_stage(self, replies, *, spacing=3, seed=True):
+        self.docs["/TEST_ONLY/core"]["relation_catalogue_sha256"] = self.RELATION_PIN
+        self.cfg.update(read_scope="relation_stage", read_spacing_seconds=spacing,
+                        snapshot_expectation="seed_read_path")
+        transport, sink = MagicMock(), MagicMock()
+        transport.request.side_effect = replies
+        with patch.object(driver.time, "time", return_value=NOW), patch.object(driver.time, "sleep") as pause:
+            result = driver.run(self.cfg, lambda _: transport, checkpoint_sink=sink)
+        return result, transport, sink, pause
+
+    def test_relation_stage_empty_page_is_observed_not_passed_and_runs_in_order_with_spacing(self):
+        snapshot = self.seed_reply()           # also points the fixture at the sample identifiers
+        result, transport, sink, pause = self.relation_stage([self.deployments_reply(), self.relation_reply(), snapshot])
+        self.assertEqual((result["status"], result["requests"], result["read_scope"]),
+                         ("SCOPED_OBSERVATIONS_ONLY", 3, "relation_stage"))
+        self.assertEqual([c.args[0] for c in transport.request.call_args_list], ["deployments", "relation", "snapshot"])
+        self.assertEqual([c.args[0] for c in pause.call_args_list], [3, 3])
+        relation = result["cases"]["relation"]
+        self.assertEqual((relation["status"], relation["rows"], relation["has_more"], relation["completeness"],
+                          relation["freshness"]), ("RELATION_PAGE_OBSERVED", 0, False, "PARTIAL", "FRESH"))
+        self.assertEqual(relation["body_sha256"], sha256(self.relation_reply()[2]).hexdigest())
+        self.assertEqual(result["cases"]["deployments"]["status"], "PASS")
+        self.assertEqual(result["cases"]["snapshot_read_path"]["status"], "READ_PATH_ONLY")
+        for case in ("repeat_read", "snapshot", "cursor_resume", "stream_notice"):
+            self.assertEqual(result["cases"][case]["status"], "NOT_RUN")
+        self.assertNotEqual(result["cases"]["relation"]["status"], "PASS")
+        checkpoint = sink.call_args.args[0]
+        self.assertEqual(checkpoint["cursor"], self.CURSOR)
+        self.assertNotIn("read_body_sha256", checkpoint)          # no repeat_read in this scope
+        public = json.dumps(result)
+        for secret in (self.CURSOR, SAMPLE_SEED_BODY["cursor"]):
+            self.assertNotIn(secret, public)
+
+    def test_relation_stage_page_with_more_records_is_observed_without_following_or_recording_the_cursor(self):
+        snapshot = self.seed_reply()
+        def more(body):
+            body["records"] = [{"account_id": "A"}]
+            body["page"] = {"next_cursor": "NEXT-PRIVATE-CURSOR", "has_more": True}
+        result, transport, _, _ = self.relation_stage([self.deployments_reply(), self.relation_reply(more), snapshot])
+        self.assertEqual((result["cases"]["relation"]["status"], result["cases"]["relation"]["rows"],
+                          result["cases"]["relation"]["has_more"]), ("RELATION_PAGE_OBSERVED", 1, True))
+        self.assertEqual(transport.request.call_count, 3)          # the continuation is never read (no R03)
+        self.assertNotIn("NEXT-PRIVATE-CURSOR", json.dumps(result))
+
+    def test_relation_stage_typed_refusals_are_recorded_and_the_run_continues_to_the_snapshot(self):
+        for status, code in ((400, "MANAGER_V2_INVALID_RELATION"), (400, "MANAGER_V2_INVALID_PAGE_LIMIT"),
+                             (400, "MANAGER_V2_INVALID_CURSOR"), (404, "MANAGER_V2_RELATION_NOT_CATALOGUED"),
+                             (502, "MANAGER_V2_AUTHORITY_REJECTED"), (413, "MANAGER_V2_SOURCE_RESPONSE_TOO_LARGE"),
+                             (400, "MANAGER_V2_FUTURE_CODE"), (503, "SOURCE_UNAVAILABLE"), (409, "SCOPE_CHANGED")):
+            with self.subTest(code=code):
+                self.cfg, self.docs = inputs()
+                snapshot = self.seed_reply()
+                reply = self.typed_reply(status, code)
+                result, transport, sink, _ = self.relation_stage([self.deployments_reply(), reply, snapshot])
+                relation = result["cases"]["relation"]
+                self.assertEqual((relation["status"], relation["http_status"], relation["error_code"], relation["rows"]),
+                                 ("RELATION_TYPED_REFUSAL", status, code, 0))
+                self.assertEqual(relation["body_sha256"], sha256(reply[2]).hexdigest())
+                self.assertEqual((result["status"], result["requests"]), ("SCOPED_OBSERVATIONS_ONLY", 3))
+                self.assertEqual([c.args[0] for c in transport.request.call_args_list],
+                                 ["deployments", "relation", "snapshot"])
+                self.assertEqual(result["cases"]["snapshot_read_path"]["status"], "READ_PATH_ONLY")
+                self.assertEqual(result["cases"]["deployments"]["status"], "PASS")
+                self.assertNotIn("text that must never reach a receipt", json.dumps(result))
+                self.assertNotIn(self.CURSOR, json.dumps(result))
+                self.assertEqual(sink.call_args.args[0]["cursor"], self.CURSOR)
+
+    def test_relation_stage_anything_else_is_a_fail_and_stops_with_the_deployments_pass_kept(self):
+        untyped = ReadNotAvailable = driver.ReadNotAvailable("JSON_CONTENT_TYPE_INVALID")
+        untyped.http_status, untyped.error_code, untyped.content_type = 502, None, "text/plain"
+        def swap(**fields):
+            return lambda body: body.update(fields)
+        cases = {
+            "502 text/plain at transport": untyped,
+            "denial is not typed": self.typed_reply(403, "NATIVE_MANAGER_READ_DENIED"),
+            "access denied is not typed": self.typed_reply(403, "ACCESS_DENIED"),
+            "502 json without code": (502, {}, b'{"error": {"message": "x"}}'),
+            "lowercase code": self.typed_reply(400, "manager_v2_invalid_relation"),
+            "non-json 500": (500, {}, b"<html>bad gateway</html>"),
+            "bad json 200": (200, {}, b"not json"),
+            "wrong schema": self.relation_reply(swap(schema_version="portal.execution.other.v1")),
+            "wrong authority": self.relation_reply(swap(record_authority="OTHER")),
+            "wrong pin": self.relation_reply(swap(source_catalogue_sha256="sha256:" + "9" * 64)),
+            "unavailable health": self.relation_reply(swap(source_health={"availability": "UNAVAILABLE",
+                "freshness": "FRESH", "completeness": "PARTIAL"})),
+            "records over limit": self.relation_reply(swap(records=[{"a": i} for i in range(6)])),
+            "has_more without cursor": self.relation_reply(swap(page={"next_cursor": None, "has_more": True})),
+            "cursor without has_more": self.relation_reply(swap(page={"next_cursor": "NEXT", "has_more": False})),
+            "has_more not bool": self.relation_reply(swap(page={"next_cursor": None, "has_more": 0})),
+        }
+        for label, reply in cases.items():
+            with self.subTest(label):
+                self.cfg, self.docs = inputs()
+                self.cfg["limit"] = 5
+                snapshot = self.seed_reply()
+                self.cfg["limit"] = 5
+                replies = [self.deployments_reply(), reply, snapshot]
+                result, transport, sink, _ = self.relation_stage(replies)
+                self.assertEqual(result["status"], "FAIL")
+                self.assertEqual(result["requests"], 2)
+                self.assertEqual(transport.request.call_count, 2)
+                self.assertEqual(result["cases"]["deployments"]["status"], "PASS")
+                self.assertEqual(result["cases"]["relation"]["status"], "NOT_RUN")
+                self.assertEqual(result["cases"]["snapshot_read_path"]["status"], "NOT_RUN")
+                sink.assert_not_called()
+
+    def test_relation_stage_needs_the_relation_pin_spacing_seed_expectation_and_refuses_stream_page_cache_combinations(self):
+        def fresh():
+            self.cfg, self.docs = inputs()
+            self.docs["/TEST_ONLY/core"]["relation_catalogue_sha256"] = PIN
+            self.cfg.update(read_scope="relation_stage", read_spacing_seconds=3, snapshot_expectation="seed_read_path")
+        fresh()
+        self.assertEqual(self.prepare()["config"]["read_scope"], "relation_stage")
+        for label, value in (("missing", None), ("not hex", "xyz"), ("short", "a" * 63), ("not string", 5)):
+            with self.subTest(pin=label):
+                fresh()
+                if value is None:
+                    del self.docs["/TEST_ONLY/core"]["relation_catalogue_sha256"]
+                else:
+                    self.docs["/TEST_ONLY/core"]["relation_catalogue_sha256"] = value
+                with self.assertRaisesRegex(driver.Refused, "RELATION_CATALOGUE_UNDECLARED"):
+                    self.prepare()
+        for spacing in (None, 0, 2):
+            with self.subTest(spacing=spacing):
+                fresh()
+                if spacing is None:
+                    del self.cfg["read_spacing_seconds"]
+                else:
+                    self.cfg["read_spacing_seconds"] = spacing
+                with self.assertRaisesRegex(driver.Refused, "READ_SPACING_TOO_LOW_FOR_SNAPSHOT_STAGE"):
+                    self.prepare()
+        for label, change in (("expectation complete", {"snapshot_expectation": "complete"}),
+                              ("probe_stream", {"probe_stream": True}),
+                              ("observe", {"probe_stream": True, "observe_active_stream": True}),
+                              ("pages", {"bounded_page_probe": {"max_pages": 2, "max_rows": 4, "max_total_bytes": 4096}}),
+                              ("cache", {"cache_proof": {"path": "/TEST_ONLY/cache", "sha256": PIN}}),
+                              ("revoke_action", {"revoke_action": "stream.subscribe"}),
+                              ("carry forward", {"carry_forward_result": {"path": "/TEST_ONLY/prior", "sha256": "c" * 64}})):
+            with self.subTest(label):
+                fresh()
+                self.cfg.update(change)
+                with self.assertRaises(driver.Refused):
+                    self.prepare()
+        fresh()
+        del self.cfg["snapshot_expectation"]
+        with self.assertRaisesRegex(driver.Refused, "SNAPSHOT_EXPECTATION_INVALID"):
+            self.prepare()
+        fresh()
+        self.docs["/TEST_ONLY/core"]["stream_authorized"] = True
+        with self.assertRaisesRegex(driver.Refused, "STREAM_AUTHORIZED_IN_SNAPSHOT_STAGE"):
+            self.prepare()
+
+    def test_relation_stage_post_revoke_runs_one_denied_read_and_nothing_else(self):
+        producer, _ = self.post_inputs("CORE_MANAGER_DOMAIN")
+        producer.update(read_authorized=False, policy_revision="policy-2", relation_catalogue_sha256=PIN)
+        self.cfg.update(read_scope="relation_stage", read_spacing_seconds=3, snapshot_expectation="seed_read_path")
+        transport = MagicMock()
+        transport.request.side_effect = [(403, {}, json.dumps({"error": {"code": "NATIVE_MANAGER_READ_DENIED"}}).encode())]
+        with patch.object(driver.time, "time", return_value=NOW):
+            result = driver.run(self.cfg, lambda _: transport)
+        self.assertEqual((result["status"], result["requests"], result["read_scope"]),
+                         ("SCOPED_OBSERVATIONS_ONLY", 1, "relation_stage"))
+        self.assertEqual([c.args[0] for c in transport.request.call_args_list], ["deployments"])
+        self.assertEqual(result["cases"]["post_revoke_read"]["status"], "PASS")
+        self.assertEqual(result["cases"]["post_revoke_cursor"]["status"], "NOT_RUN")
+        self.assertEqual(result["cases"]["relation"]["status"], "NOT_RUN")
+
+    # --- stage 2c (relation_walk): R03/R02 on the Binance-predicate rows; pages walked with hashes only ---
+    def walk_page(self, keys, *, column="portfolio_id", next_cursor=None, **page_changes):
+        body = json.loads(page("relation", self.cfg))
+        body["records"] = [{"resource_id": "por1_" + "0" * 8, "values": {column: key}} for key in keys]
+        body["page"] = {"next_cursor": next_cursor, "has_more": next_cursor is not None, "total_unknown": True,
+                        **page_changes}
+        return (200, {}, json.dumps(body).encode())
+
+    def walk_run(self, spec, replies, *, spacing=3, limit=200):
+        self.docs["/TEST_ONLY/core"]["relation_catalogue_sha256"] = PIN
+        self.cfg.update(read_scope="relation_walk", read_spacing_seconds=spacing, relation_walk=spec, limit=limit)
+        clock, calls, queue = [0.0], [], list(replies)
+        def fake_sleep(seconds):
+            clock[0] += seconds
+        def fake_request(name, cursor, stream=False):
+            calls.append((name, cursor, clock[0]))
+            return queue.pop(0)
+        transport, sink = MagicMock(), MagicMock()
+        transport.request.side_effect = fake_request
+        with patch.object(driver.time, "time", return_value=NOW), patch.object(driver.time, "sleep", fake_sleep):
+            result = driver.run(self.cfg, lambda _: transport, checkpoint_sink=sink)
+        return result, calls, sink
+
+    def gaps_at_least(self, calls, seconds=3):
+        return all(later[2] - earlier[2] >= seconds for earlier, later in zip(calls, calls[1:]))
+
+    def test_relation_walk_two_pages_with_a_hand_computed_keyset_and_no_raw_keys_or_cursors_in_the_receipt(self):
+        spec = [{"relation": "portfolios", "limit": 1, "max_pages": 3, "max_rows": 10}]
+        first, second = self.walk_page(["PRIVATE-KEY-BBB"], next_cursor="PRIVATE-CURSOR-1"), self.walk_page(["PRIVATE-KEY-AAA"])
+        result, calls, sink = self.walk_run(spec, [first, second])
+        self.assertEqual((result["status"], result["requests"], result["read_scope"]),
+                         ("SCOPED_OBSERVATIONS_ONLY", 2, "relation_walk"))
+        self.assertEqual([c[:2] for c in calls], [("relation_walk:portfolios:1", None),
+                                                  ("relation_walk:portfolios:1", "PRIVATE-CURSOR-1")])
+        self.assertTrue(self.gaps_at_least(calls))
+        walk = result["cases"]["walk_portfolios"]
+        # sorted keys PRIVATE-KEY-AAA, PRIVATE-KEY-BBB serialised exactly like this, then sha256:
+        hand = sha256(b'["PRIVATE-KEY-AAA","PRIVATE-KEY-BBB"]').hexdigest()
+        self.assertEqual((walk["status"], walk["pages"], walk["rows"], walk["terminal_page"], walk["more_than_one_page"],
+                          walk["keyset_sha256"], walk["limit"], walk["key_columns"]),
+                         ("RELATION_WALK_OBSERVED", 2, 2, True, True, hand, 1, ["portfolio_id"]))
+        self.assertEqual(walk["page_body_sha256"], [sha256(first[2]).hexdigest(), sha256(second[2]).hexdigest()])
+        self.assertEqual((walk["completeness"], walk["freshness"]), ("PARTIAL", "FRESH"))
+        self.assertEqual(result["cases"]["cursor_resume"]["status"], "NOT_RUN")
+        public = json.dumps(result)
+        for secret in ("PRIVATE-KEY-AAA", "PRIVATE-KEY-BBB", "PRIVATE-CURSOR-1"):
+            self.assertNotIn(secret, public)
+        checkpoint = sink.call_args.args[0]
+        self.assertEqual(checkpoint["prime_body_sha256"], sha256(first[2]).hexdigest())
+        self.assertNotIn("cursor", checkpoint)
+        self.assertNotIn("read_body_sha256", checkpoint)
+
+    def test_relation_walk_271_rows_over_two_pages_and_the_composite_key_canonicalisation(self):
+        keys = ["cmd-%03d" % n for n in range(271)]
+        spec = [{"relation": "command_journal", "limit": 200, "max_pages": 3, "max_rows": 300}]
+        replies = [self.walk_page(keys[:200], column="command_id", next_cursor="C-NEXT"),
+                   self.walk_page(keys[200:], column="command_id")]
+        result, calls, _ = self.walk_run(spec, replies)
+        walk = result["cases"]["walk_command_journal"]
+        hand = sha256(("[" + ",".join('"%s"' % key for key in sorted(keys)) + "]").encode()).hexdigest()
+        self.assertEqual((walk["pages"], walk["rows"], walk["terminal_page"], walk["keyset_sha256"]), (2, 271, True, hand))
+        self.assertEqual(calls[0][0], "relation_walk:command_journal:200")
+        # composite key (account_balances): values joined by U+0000 in catalogue order, then json.dumps escapes it
+        self.cfg, self.docs = inputs()
+        record_page = self.walk_page([], column="account_id")
+        body = json.loads(record_page[2])
+        body["records"] = [{"resource_id": "por1_x", "values": {"account_id": "acc1", "currency": "USDT"}}]
+        result, _, _ = self.walk_run([{"relation": "account_balances", "limit": 10, "max_pages": 1, "max_rows": 5}],
+                                     [(200, {}, json.dumps(body).encode())])
+        self.assertEqual(result["cases"]["walk_account_balances"]["keyset_sha256"],
+                         sha256(b'["acc1\\u0000USDT"]').hexdigest())
+        self.assertEqual(driver.keyset_sha256(["b", "a"]), sha256(b'["a","b"]').hexdigest())
+
+    def test_relation_walk_refuses_cycles_duplicates_empty_continuation_inconsistent_paging_and_bounds(self):
+        spec = [{"relation": "portfolios", "limit": 1, "max_pages": 5, "max_rows": 3}]
+        cases = {
+            "cursor cycle": ([self.walk_page(["A"], next_cursor="C1"), self.walk_page(["B"], next_cursor="C1"),
+                              self.walk_page(["C"])], "R03_CURSOR_CYCLE"),
+            "duplicate key": ([self.walk_page(["A"], next_cursor="C1"), self.walk_page(["A"])], "R03_DUPLICATE_IDENTITY"),
+            "has_more with empty records": ([self.walk_page(["A"], next_cursor="C1"),
+                                             self.walk_page([], next_cursor="C2")], "R03_EMPTY_CONTINUATION"),
+            "has_more without cursor": ([self.walk_page(["A"], has_more=True)], "R03_CURSOR_INVALID"),
+            "cursor with has_more false": ([self.walk_page(["A"], next_cursor="C1", has_more=False)], "R03_CURSOR_INVALID"),
+            "bad cursor characters": ([self.walk_page(["A"], next_cursor="bad cursor!")], "R03_CURSOR_INVALID"),
+            "page missing": ([(200, {}, json.dumps({k: v for k, v in json.loads(self.walk_page(["A"])[2]).items()
+                                                    if k != "page"}).encode())], "R03_PAGE_INVALID"),
+            "no key values": ([(200, {}, json.dumps({**json.loads(self.walk_page([])[2]), "records": [{"resource_id": "x"}]}).encode())],
+                              "WALK_KEY_UNAVAILABLE"),
+            "empty key": ([self.walk_page([""])], "WALK_KEY_UNAVAILABLE"),
+            "boolean key": ([self.walk_page([True])], "WALK_KEY_UNAVAILABLE"),
+        }
+        for label, (replies, reason) in cases.items():
+            with self.subTest(label):
+                self.cfg, self.docs = inputs()
+                result, calls, sink = self.walk_run(spec, replies, limit=200)
+                self.assertEqual((result["status"], result["reason"]), ("FAIL", reason))
+                self.assertEqual(result["cases"]["walk_portfolios"]["status"], "NOT_RUN")
+                sink.assert_not_called()
+        self.cfg, self.docs = inputs()      # more rows than max_rows (limit 2, max_rows 3)
+        result, _, sink = self.walk_run([dict(spec[0], limit=2)], [self.walk_page(["A", "B"], next_cursor="C1"),
+                                                                    self.walk_page(["C", "D"])])
+        self.assertEqual((result["status"], result["reason"]), ("FAIL", "R03_ROW_BOUND_EXCEEDED"))
+        sink.assert_not_called()
+        self.cfg, self.docs = inputs()      # records above the walk limit are refused by the page checks
+        result, _, _ = self.walk_run(spec, [self.walk_page(["A", "B"])])
+        self.assertEqual((result["status"], result["reason"]), ("FAIL", "NATIVE_PAGE_UNPROVED"))
+        self.cfg, self.docs = inputs()      # reaching max_pages with more pages left is observed, not terminal
+        capped = [{"relation": "portfolios", "limit": 1, "max_pages": 2, "max_rows": 10}]
+        result, calls, _ = self.walk_run(capped, [self.walk_page(["A"], next_cursor="C1"),
+                                                  self.walk_page(["B"], next_cursor="C2"), self.walk_page(["C"])])
+        walk = result["cases"]["walk_portfolios"]
+        self.assertEqual((walk["pages"], walk["terminal_page"], walk["more_than_one_page"], len(calls)), (2, False, True, 2))
+
+    def test_relation_walk_typed_refusal_continues_and_anything_else_fails_keeping_earlier_relations(self):
+        spec = [{"relation": "portfolios", "limit": 1, "max_pages": 3, "max_rows": 10},
+                {"relation": "venues", "limit": 5, "max_pages": 2, "max_rows": 10}]
+        refused = self.typed_reply(404, "MANAGER_V2_RELATION_NOT_CATALOGUED")
+        result, calls, sink = self.walk_run(spec, [refused, self.walk_page(["BINANCE"], column="venue")])
+        self.assertEqual(result["status"], "SCOPED_OBSERVATIONS_ONLY")
+        first = result["cases"]["walk_portfolios"]
+        self.assertEqual((first["status"], first["http_status"], first["error_code"], first["after_pages"]),
+                         ("RELATION_TYPED_REFUSAL", 404, "MANAGER_V2_RELATION_NOT_CATALOGUED", 0))
+        self.assertEqual(result["cases"]["walk_venues"]["status"], "RELATION_WALK_OBSERVED")
+        self.assertEqual([c[0] for c in calls], ["relation_walk:portfolios:1", "relation_walk:venues:5"])
+        self.assertTrue(self.gaps_at_least(calls))         # spacing also across the relation boundary
+        self.assertEqual(sink.call_args.args[0]["prime_body_sha256"], sha256(refused[2]).hexdigest())
+        self.assertNotIn("text that must never reach a receipt", json.dumps(result))
+        self.cfg, self.docs = inputs()                       # typed refusal in the middle of a walk
+        mid = self.typed_reply(502, "MANAGER_V2_AUTHORITY_REJECTED")
+        result, calls, _ = self.walk_run(spec[:1], [self.walk_page(["A"], next_cursor="C1"), mid])
+        self.assertEqual((result["cases"]["walk_portfolios"]["status"], result["cases"]["walk_portfolios"]["after_pages"]),
+                         ("RELATION_TYPED_REFUSAL", 1))
+        self.assertTrue(self.gaps_at_least(calls))
+        for label, bad in (("denial", self.typed_reply(403, "NATIVE_MANAGER_READ_DENIED")),
+                           ("text 502", (502, {}, b"<html>bad gateway</html>")),
+                           ("wrong schema", (200, {}, json.dumps({**json.loads(self.walk_page(["A"])[2]),
+                                                                  "schema_version": "x"}).encode()))):
+            with self.subTest(label):
+                self.cfg, self.docs = inputs()
+                result, _, sink = self.walk_run(spec[::-1], [self.walk_page(["BINANCE"], column="venue"), bad])
+                self.assertEqual(result["status"], "FAIL")
+                self.assertEqual(result["cases"]["walk_venues"]["status"], "RELATION_WALK_OBSERVED")    # earlier pass kept
+                self.assertEqual(result["cases"]["walk_portfolios"]["status"], "NOT_RUN")
+                sink.assert_not_called()
+
+    def test_relation_walk_config_bounds_scope_spacing_and_safety_refusals(self):
+        good = {"relation": "portfolios", "limit": 1, "max_pages": 2, "max_rows": 10}
+        def fresh(spec=None):
+            self.cfg, self.docs = inputs()
+            self.docs["/TEST_ONLY/core"]["relation_catalogue_sha256"] = PIN
+            self.cfg.update(read_scope="relation_walk", read_spacing_seconds=3, relation_walk=[dict(good)] if spec is None else spec)
+        fresh()
+        self.assertEqual(self.prepare()["config"]["read_scope"], "relation_walk")
+        bad_specs = {
+            "not a list": dict(good), "empty": [], "unknown relation": [dict(good, relation="orders")],
+            "hyphenated relation": [dict(good, relation="command-journal")], "duplicate": [dict(good), dict(good)],
+            "extra key": [dict(good, cursor="x")], "missing key": [{k: v for k, v in good.items() if k != "max_rows"}],
+            "limit 0": [dict(good, limit=0)], "limit 201": [dict(good, limit=201)], "limit bool": [dict(good, limit=True)],
+            "limit text": [dict(good, limit="1")], "pages 0": [dict(good, max_pages=0)], "pages 21": [dict(good, max_pages=21)],
+            "rows 0": [dict(good, max_rows=0)], "rows 1001": [dict(good, max_rows=1001)],
+            "total requests 21": [dict(good, max_pages=11), dict(good, relation="venues", max_pages=10)],
+            "six relations": [dict(good, relation=r) for r in ("portfolios", "venues", "instruments", "command_journal",
+                                                                "account_balances", "orders")],
+        }
+        for label, spec in bad_specs.items():
+            with self.subTest(label):
+                fresh(spec)
+                with self.assertRaisesRegex(driver.Refused, "RELATION_WALK_INVALID"):
+                    self.prepare()
+        fresh([dict(good, max_pages=10), dict(good, relation="venues", max_pages=10)])
+        self.assertEqual(self.prepare()["config"]["read_scope"], "relation_walk")        # exactly 20 total is allowed
+        fresh()
+        del self.cfg["relation_walk"]
+        with self.assertRaisesRegex(driver.Refused, "RELATION_WALK_INVALID"):
+            self.prepare()
+        fresh()
+        self.cfg.update(read_scope="relation_stage", snapshot_expectation="seed_read_path")   # key outside its scope
+        with self.assertRaisesRegex(driver.Refused, "RELATION_WALK_INVALID"):
+            self.prepare()
+        for spacing in (None, 0, 2):
+            with self.subTest(spacing=spacing):
+                fresh()
+                if spacing is None:
+                    del self.cfg["read_spacing_seconds"]
+                else:
+                    self.cfg["read_spacing_seconds"] = spacing
+                with self.assertRaisesRegex(driver.Refused, "READ_SPACING_TOO_LOW_FOR_SNAPSHOT_STAGE"):
+                    self.prepare()
+        for label, change in (("seed expectation", {"snapshot_expectation": "seed_read_path"}),
+                              ("probe_stream", {"probe_stream": True}),
+                              ("observe", {"probe_stream": True, "observe_active_stream": True}),
+                              ("pages", {"bounded_page_probe": {"max_pages": 2, "max_rows": 4, "max_total_bytes": 4096}}),
+                              ("cache", {"cache_proof": {"path": "/TEST_ONLY/cache", "sha256": PIN}}),
+                              ("revoke_action", {"revoke_action": "stream.subscribe"}),
+                              ("carry forward", {"carry_forward_result": {"path": "/TEST_ONLY/prior", "sha256": "c" * 64}})):
+            with self.subTest(label):
+                fresh()
+                self.cfg.update(change)
+                with self.assertRaises(driver.Refused):
+                    self.prepare()
+        fresh()
+        del self.docs["/TEST_ONLY/core"]["relation_catalogue_sha256"]
+        with self.assertRaisesRegex(driver.Refused, "RELATION_CATALOGUE_UNDECLARED"):
+            self.prepare()
+        fresh()
+        self.docs["/TEST_ONLY/core"]["stream_authorized"] = True
+        with self.assertRaisesRegex(driver.Refused, "STREAM_AUTHORIZED_IN_SNAPSHOT_STAGE"):
+            self.prepare()
+
+    def test_relation_walk_routes_are_fixed_and_the_limit_travels_in_the_name(self):
+        self.cfg.update(workspace_id="ws_TESTONLY12345", environment="paper")
+        for relation, segment in (("account_balances", "account-balances"), ("portfolios", "portfolios"),
+                                  ("venues", "venues"), ("instruments", "instruments"), ("command_journal", "command-journal")):
+            self.assertEqual(driver.route("relation_walk:%s:200" % relation, self.cfg),
+                "/api/v1/execution/manager/current/%s?workspace_id=ws_TESTONLY12345&environment=paper&limit=200" % segment)
+        self.assertTrue(driver.route("relation_walk:portfolios:1", self.cfg, "CUR-1").endswith("&limit=1&cursor=CUR-1"))
+        for name in ("relation_walk:orders:5", "relation_walk:portfolios:0", "relation_walk:portfolios:201",
+                     "relation_walk:portfolios", "relation_walk:command-journal:5", "relation_walk:portfolios:5/../x"):
+            with self.assertRaisesRegex(driver.Refused, "ROUTE_NOT_ALLOWED"):
+                driver.route(name, self.cfg)
+        with self.assertRaisesRegex(driver.Refused, "CURSOR_INVALID"):
+            driver.route("relation_walk:portfolios:1", self.cfg, "bad cursor!")
+
+    def test_relation_walk_post_revoke_makes_one_denied_read_on_the_first_route_with_a_cursorless_baseline(self):
+        spec = [{"relation": "venues", "limit": 5, "max_pages": 2, "max_rows": 10},
+                {"relation": "portfolios", "limit": 1, "max_pages": 3, "max_rows": 10}]
+        producer, _ = self.post_inputs("CORE_MANAGER_DOMAIN")
+        producer.update(read_authorized=False, policy_revision="policy-2", relation_catalogue_sha256=PIN)
+        self.cfg.update(read_scope="relation_walk", read_spacing_seconds=3, relation_walk=spec)
+        del self.docs["/TEST_ONLY/baseline"]["cursor"]                       # the walk baseline has no snapshot cursor
+        for status, code in ((403, "NATIVE_MANAGER_READ_DENIED"), (403, "ACCESS_DENIED"), (404, "WORKSPACE_NOT_FOUND")):
+            with self.subTest(code=code):
+                transport = MagicMock()
+                transport.request.side_effect = [(status, {}, json.dumps({"error": {"code": code}}).encode())]
+                with patch.object(driver.time, "time", return_value=NOW):
+                    result = driver.run(self.cfg, lambda _: transport)
+                self.assertEqual((result["status"], result["requests"], result["read_scope"]),
+                                 ("SCOPED_OBSERVATIONS_ONLY", 1, "relation_walk"))
+                self.assertEqual([c.args[:2] for c in transport.request.call_args_list], [("relation_walk:venues:5", None)])
+                self.assertEqual(result["cases"]["post_revoke_read"]["status"], "PASS")
+                self.assertEqual(result["cases"]["post_revoke_cursor"]["status"], "NOT_RUN")
+        transport = MagicMock()                                               # a read that is NOT denied fails
+        transport.request.side_effect = [self.walk_page(["BINANCE"], column="venue")]
+        with patch.object(driver.time, "time", return_value=NOW):
+            result = driver.run(self.cfg, lambda _: transport)
+        self.assertEqual((result["status"], result["reason"]), ("FAIL", "REVOKED_ACCESS_NOT_DENIED"))
+        self.docs["/TEST_ONLY/baseline"]["cursor"] = "TEST_ONLY-opaque"       # a baseline that has a cursor is fine too
+        self.assertEqual(self.prepare()["config"]["read_scope"], "relation_walk")
+        del self.cfg["relation_walk"]                                         # post_revoke needs the walk list
+        with self.assertRaisesRegex(driver.Refused, "RELATION_WALK_INVALID"):
+            self.prepare()
+        self.cfg["read_scope"] = "snapshot_stage"; self.cfg["read_spacing_seconds"] = 3     # other scopes still need a cursor
+        del self.docs["/TEST_ONLY/baseline"]["cursor"]
+        with self.assertRaisesRegex(driver.Refused, "BASELINE_PROVENANCE_INVALID"):
+            self.prepare()
+
+    # --- stage 2d (relation_sweep): ONE page of each listed relation route; typed refusals recorded; hashes only ---
+    SWEEP_26 = ("account-policies", "account-reservations", "account-sync-current-state", "account-sync-effective",
+                "account-sync-snapshots", "accounts", "broker-account-sync-current-state", "broker-account-sync-effective",
+                "broker-account-sync-snapshots", "broker-sync-state-history", "broker-sync-valuation-current-state",
+                "broker-sync-valuation-history", "conditional-order-groups", "execution-sessions", "fills",
+                "operator-operations", "order-brackets", "orders", "portfolio-allocations", "portfolio-capital-ledger",
+                "positions-v2", "reconciliation-findings", "risk-grants", "risk-profiles", "sizing-decisions",
+                "strategy-deployments")
+    KEYLESS = ("account_sync_effective", "broker_account_sync_effective", "risk_profiles")
+
+    def sweep_names(self):
+        return [route.replace("-", "_") for route in self.SWEEP_26]
+
+    def sweep_page(self, rows=(), next_cursor=None, has_more=None):
+        body = json.loads(page("relation", self.cfg))
+        body["records"] = [{"resource_id": "por1_x", "values": row} for row in rows]
+        body["page"] = {"next_cursor": next_cursor, "has_more": next_cursor is not None if has_more is None else has_more}
+        return (200, {}, json.dumps(body).encode())
+
+    def sweep_run(self, spec, replies, *, spacing=3):
+        self.docs["/TEST_ONLY/core"]["relation_catalogue_sha256"] = PIN
+        self.cfg.update(read_scope="relation_sweep", read_spacing_seconds=spacing, relation_sweep=spec)
+        clock, calls, queue = [0.0], [], list(replies)
+        def fake_sleep(seconds):
+            clock[0] += seconds
+        def fake_request(name, cursor, stream=False):
+            calls.append((name, cursor, clock[0]))
+            return queue.pop(0)
+        transport, sink = MagicMock(), MagicMock()
+        transport.request.side_effect = fake_request
+        with patch.object(driver.time, "time", return_value=NOW), patch.object(driver.time, "sleep", fake_sleep):
+            result = driver.run(self.cfg, lambda _: transport, checkpoint_sink=sink)
+        return result, calls, sink
+
+    def test_relation_sweep_all_26_in_order_one_request_each_with_spacing_and_keyless_relations(self):
+        names = self.sweep_names()
+        self.assertEqual(len(names), 26)
+        self.assertEqual(set(names) | {"account_balances", "command_journal", "instruments", "portfolios", "venues"},
+                         set(driver.SWEEP_RELATIONS))                       # 26 + the 5 walked ones = the 31
+        replies = [self.sweep_page() for _ in names]
+        result, calls, sink = self.sweep_run(names, replies)
+        self.assertEqual((result["status"], result["requests"], result["read_scope"]),
+                         ("SCOPED_OBSERVATIONS_ONLY", 26, "relation_sweep"))
+        self.assertEqual([c[0] for c in calls], ["relation_sweep:%s:50" % n for n in names])    # default limit 50
+        self.assertTrue(all(c[1] is None for c in calls))
+        self.assertTrue(all(b[2] - a[2] >= 3 for a, b in zip(calls, calls[1:])))              # fake clock: >= 3 s each
+        self.assertEqual(calls[-1][2], 75.0)
+        empty_keyset = sha256(b"[]").hexdigest()
+        for name in names:
+            case = result["cases"]["sweep_" + name]
+            self.assertEqual((case["status"], case["pages"], case["rows"], case["has_more"]),
+                             ("RELATION_PAGE_OBSERVED", 1, 0, False))
+            self.assertEqual(case["body_sha256"], sha256(replies[0][2]).hexdigest())
+            self.assertEqual((case["completeness"], case["freshness"], case["limit"]), ("PARTIAL", "FRESH", 50))
+            if name in self.KEYLESS:
+                self.assertEqual((case["key_columns"], case["keyset_sha256"]), ([], None))
+            else:
+                self.assertEqual(case["keyset_sha256"], empty_keyset)
+                self.assertTrue(case["key_columns"])
+        self.assertEqual(result["cases"]["cursor_resume"]["status"], "NOT_RUN")
+        checkpoint = sink.call_args.args[0]
+        self.assertEqual(checkpoint["prime_body_sha256"], sha256(replies[0][2]).hexdigest())
+        self.assertNotIn("cursor", checkpoint)
+        self.assertNotIn("read_body_sha256", checkpoint)
+
+    def test_relation_sweep_keys_are_hashed_never_recorded_and_a_continuation_is_noted_not_followed(self):
+        spec = [{"relation": "accounts", "limit": 5}, {"relation": "fills", "limit": 5}, {"relation": "risk_profiles", "limit": 5}]
+        replies = [self.sweep_page([{"account_id": "PRIVATE-KEY-ZZZ"}, {"account_id": "PRIVATE-KEY-AAA"}],
+                                   next_cursor="PRIVATE-CURSOR-9"),
+                   self.sweep_page([{"fill_id": "F1", "trade_time": "2026-11-13T00:00:00.000Z"}]),
+                   self.sweep_page([{"strategy_id": "S", "mode": "paper"}])]            # keyless: no key is read
+        result, calls, sink = self.sweep_run(spec, replies)
+        accounts = result["cases"]["sweep_accounts"]
+        self.assertEqual((accounts["rows"], accounts["has_more"]), (2, True))
+        self.assertEqual(accounts["keyset_sha256"], sha256(b'["PRIVATE-KEY-AAA","PRIVATE-KEY-ZZZ"]').hexdigest())
+        self.assertEqual(result["cases"]["sweep_fills"]["keyset_sha256"],
+                         sha256(b'["F1\\u00002026-11-13T00:00:00.000Z"]').hexdigest())     # composite: joined by U+0000
+        self.assertEqual((result["cases"]["sweep_risk_profiles"]["rows"], result["cases"]["sweep_risk_profiles"]["keyset_sha256"]),
+                         (1, None))
+        self.assertEqual(len(calls), 3)                                                  # the continuation was not followed
+        self.assertTrue(all(call[1] is None for call in calls))
+        public = json.dumps(result)
+        for secret in ("PRIVATE-KEY-ZZZ", "PRIVATE-KEY-AAA", "PRIVATE-CURSOR-9"):
+            self.assertNotIn(secret, public)
+
+    def test_relation_sweep_typed_refusal_continues_and_anything_else_fails_keeping_earlier_passes(self):
+        names = ["accounts", "orders", "fills", "positions_v2"]
+        refusal = self.typed_reply(404, "MANAGER_V2_RELATION_NOT_CATALOGUED")
+        result, calls, sink = self.sweep_run(names, [self.sweep_page(), refusal, self.sweep_page(), self.sweep_page()])
+        self.assertEqual((result["status"], result["requests"]), ("SCOPED_OBSERVATIONS_ONLY", 4))
+        case = result["cases"]["sweep_orders"]
+        self.assertEqual((case["status"], case["http_status"], case["error_code"], case["rows"]),
+                         ("RELATION_TYPED_REFUSAL", 404, "MANAGER_V2_RELATION_NOT_CATALOGUED", 0))
+        self.assertEqual(result["cases"]["sweep_fills"]["status"], "RELATION_PAGE_OBSERVED")      # continued after it
+        self.assertEqual(result["cases"]["sweep_positions_v2"]["status"], "RELATION_PAGE_OBSERVED")
+        self.assertTrue(all(b[2] - a[2] >= 3 for a, b in zip(calls, calls[1:])))
+        self.assertNotIn("text that must never reach a receipt", json.dumps(result))
+        def swap(**fields):
+            return (200, {}, json.dumps({**json.loads(self.sweep_page()[2]), **fields}).encode())
+        bad = {
+            "denial": self.typed_reply(403, "NATIVE_MANAGER_READ_DENIED"),
+            "text 502": (502, {}, b"<html>bad gateway</html>"),
+            "bad json": (200, {}, b"not json"),
+            "wrong schema": swap(schema_version="x"),
+            "wrong pin": swap(source_catalogue_sha256="sha256:" + "9" * 64),
+            "records over limit": self.sweep_page([{"order_id": str(n)} for n in range(6)]),
+            "has_more without cursor": swap(page={"next_cursor": None, "has_more": True}),
+            "cursor with has_more false": swap(page={"next_cursor": "C", "has_more": False}),
+            "page missing": (200, {}, json.dumps({k: v for k, v in json.loads(self.sweep_page()[2]).items() if k != "page"}).encode()),
+            "duplicate key": self.sweep_page([{"order_id": "A"}, {"order_id": "A"}]),
+            "missing key column": self.sweep_page([{"other": "A"}]),
+            "empty key": self.sweep_page([{"order_id": ""}]),
+        }
+        for label, reply in bad.items():
+            with self.subTest(label):
+                self.cfg, self.docs = inputs()
+                result, calls, sink = self.sweep_run([{"relation": "accounts", "limit": 5}, {"relation": "orders", "limit": 5},
+                                                      {"relation": "fills", "limit": 5}],
+                                                     [self.sweep_page(), reply, self.sweep_page()])
+                self.assertEqual(result["status"], "FAIL")
+                self.assertEqual(len(calls), 2)
+                self.assertEqual(result["cases"]["sweep_accounts"]["status"], "RELATION_PAGE_OBSERVED")   # earlier pass kept
+                self.assertEqual(result["cases"]["sweep_orders"]["status"], "NOT_RUN")
+                self.assertEqual(result["cases"]["sweep_fills"]["status"], "NOT_RUN")
+                sink.assert_not_called()
+
+    def test_relation_sweep_config_routes_and_safety_refusals(self):
+        def fresh(spec=None):
+            self.cfg, self.docs = inputs()
+            self.docs["/TEST_ONLY/core"]["relation_catalogue_sha256"] = PIN
+            self.cfg.update(read_scope="relation_sweep", read_spacing_seconds=3,
+                            relation_sweep=["accounts"] if spec is None else spec)
+        fresh()
+        self.assertEqual(self.prepare()["config"]["read_scope"], "relation_sweep")
+        fresh(["accounts", {"relation": "orders", "limit": 200}, {"relation": "fills"}])
+        self.assertEqual(driver.sweep_spec(self.cfg["relation_sweep"]), [("accounts", 50), ("orders", 200), ("fills", 50)])
+        fresh(list(driver.SWEEP_RELATIONS))
+        self.assertEqual(len(self.prepare()["config"]["relation_sweep"]), 31)          # all 31 are allowed
+        bad = {"not a list": "accounts", "empty": [], "unknown": ["orders_v9"], "hyphenated": ["account-policies"],
+               "duplicate": ["accounts", "accounts"], "dup via dict": ["accounts", {"relation": "accounts", "limit": 5}],
+               "too many": list(driver.SWEEP_RELATIONS) + ["accounts"], "limit 0": [{"relation": "accounts", "limit": 0}],
+               "limit 201": [{"relation": "accounts", "limit": 201}], "limit bool": [{"relation": "accounts", "limit": True}],
+               "limit text": [{"relation": "accounts", "limit": "5"}], "extra key": [{"relation": "accounts", "cursor": "x"}],
+               "not strings": [5]}
+        for label, spec in bad.items():
+            with self.subTest(label):
+                fresh(spec)
+                with self.assertRaisesRegex(driver.Refused, "RELATION_SWEEP_INVALID"):
+                    self.prepare()
+        fresh()
+        del self.cfg["relation_sweep"]
+        with self.assertRaisesRegex(driver.Refused, "RELATION_SWEEP_INVALID"):
+            self.prepare()
+        fresh()
+        self.cfg.update(read_scope="relation_stage", snapshot_expectation="seed_read_path")
+        with self.assertRaisesRegex(driver.Refused, "RELATION_SWEEP_INVALID"):
+            self.prepare()
+        for spacing in (None, 0, 2):
+            with self.subTest(spacing=spacing):
+                fresh()
+                if spacing is None:
+                    del self.cfg["read_spacing_seconds"]
+                else:
+                    self.cfg["read_spacing_seconds"] = spacing
+                with self.assertRaisesRegex(driver.Refused, "READ_SPACING_TOO_LOW_FOR_SNAPSHOT_STAGE"):
+                    self.prepare()
+        for label, change in (("seed expectation", {"snapshot_expectation": "seed_read_path"}),
+                              ("probe_stream", {"probe_stream": True}),
+                              ("observe", {"probe_stream": True, "observe_active_stream": True}),
+                              ("pages", {"bounded_page_probe": {"max_pages": 2, "max_rows": 4, "max_total_bytes": 4096}}),
+                              ("cache", {"cache_proof": {"path": "/TEST_ONLY/cache", "sha256": PIN}}),
+                              ("revoke_action", {"revoke_action": "stream.subscribe"}),
+                              ("carry forward", {"carry_forward_result": {"path": "/TEST_ONLY/prior", "sha256": "c" * 64}}),
+                              ("walk list", {"relation_walk": [{"relation": "portfolios", "limit": 1, "max_pages": 1, "max_rows": 1}]})):
+            with self.subTest(label):
+                fresh()
+                self.cfg.update(change)
+                with self.assertRaises(driver.Refused):
+                    self.prepare()
+        fresh()
+        del self.docs["/TEST_ONLY/core"]["relation_catalogue_sha256"]
+        with self.assertRaisesRegex(driver.Refused, "RELATION_CATALOGUE_UNDECLARED"):
+            self.prepare()
+        fresh()
+        self.docs["/TEST_ONLY/core"]["stream_authorized"] = True
+        with self.assertRaisesRegex(driver.Refused, "STREAM_AUTHORIZED_IN_SNAPSHOT_STAGE"):
+            self.prepare()
+        # routes: data-driven allowlist, the limit travels in the name, never a cursor
+        self.cfg.update(workspace_id="ws_TESTONLY12345", environment="paper")
+        for relation, entry in driver.SWEEP_RELATIONS.items():
+            self.assertEqual(entry["route"], relation.replace("_", "-"))               # all 31 are the hyphenated table name
+            self.assertEqual(driver.route("relation_sweep:%s:50" % relation, self.cfg),
+                "/api/v1/execution/manager/current/%s?workspace_id=ws_TESTONLY12345&environment=paper&limit=50" % entry["route"])
+        for relation, entry in driver.WALK_RELATIONS.items():                           # consistent with the live-proven routes
+            self.assertEqual(driver.SWEEP_RELATIONS[relation]["route"], entry["route"])
+            self.assertEqual(driver.SWEEP_RELATIONS[relation]["key"], entry["key"])
+        for name in ("relation_sweep:orders_v9:5", "relation_sweep:accounts:0", "relation_sweep:accounts:201",
+                     "relation_sweep:accounts", "relation_sweep:account-policies:5", "relation_sweep:accounts:5/../x"):
+            with self.assertRaisesRegex(driver.Refused, "ROUTE_NOT_ALLOWED"):
+                driver.route(name, self.cfg)
+        with self.assertRaisesRegex(driver.Refused, "CURSOR_INVALID"):
+            driver.route("relation_sweep:accounts:5", self.cfg, "C")
+
+    def test_relation_sweep_post_revoke_makes_one_denied_read_on_the_first_route_with_a_cursorless_baseline(self):
+        spec = [{"relation": "orders", "limit": 7}, "fills"]
+        producer, _ = self.post_inputs("CORE_MANAGER_DOMAIN")
+        producer.update(read_authorized=False, policy_revision="policy-2", relation_catalogue_sha256=PIN)
+        self.cfg.update(read_scope="relation_sweep", read_spacing_seconds=3, relation_sweep=spec)
+        del self.docs["/TEST_ONLY/baseline"]["cursor"]
+        for status, code in ((403, "NATIVE_MANAGER_READ_DENIED"), (403, "ACCESS_DENIED"), (404, "WORKSPACE_NOT_FOUND")):
+            with self.subTest(code=code):
+                transport = MagicMock()
+                transport.request.side_effect = [(status, {}, json.dumps({"error": {"code": code}}).encode())]
+                with patch.object(driver.time, "time", return_value=NOW):
+                    result = driver.run(self.cfg, lambda _: transport)
+                self.assertEqual((result["status"], result["requests"], result["read_scope"]),
+                                 ("SCOPED_OBSERVATIONS_ONLY", 1, "relation_sweep"))
+                self.assertEqual([c.args[:2] for c in transport.request.call_args_list], [("relation_sweep:orders:7", None)])
+                self.assertEqual(result["cases"]["post_revoke_read"]["status"], "PASS")
+                self.assertEqual(result["cases"]["post_revoke_cursor"]["status"], "NOT_RUN")
+        transport = MagicMock()
+        transport.request.side_effect = [self.sweep_page()]
+        with patch.object(driver.time, "time", return_value=NOW):
+            result = driver.run(self.cfg, lambda _: transport)
+        self.assertEqual((result["status"], result["reason"]), ("FAIL", "REVOKED_ACCESS_NOT_DENIED"))
+        del self.cfg["relation_sweep"]
+        with self.assertRaisesRegex(driver.Refused, "RELATION_SWEEP_INVALID"):
+            self.prepare()
+
+    # --- stage "stream_stage": snapshot cursor, first stream (first notice), resume (one more notice); STREAM grant distinct ---
+    def stream_setup(self, expectation="seed_read_path"):
+        snapshot = self.seed_reply()           # points the fixture at the sample identifiers first
+        self.docs["/TEST_ONLY/core"].update(stream_authorized=True, source_set_ref="TEST_ONLY-source-set",
+            stream_grant_id="stream-grant-TEST_ONLY", stream_grant_revision="stream-revision-1")
+        self.cfg.update(read_scope="stream_stage", read_spacing_seconds=3, probe_stream=True,
+                        snapshot_expectation=expectation)
+        return snapshot
+
+    def stream_result(self, notices, cursor="PRIVATE-NOTICE-1", termination="EOF", frames=None):
+        return (200, {}, {"frames": notices if frames is None else frames, "notices": notices, "bytes": 100 * notices,
+                          "cursor": cursor if notices else None, "termination": termination})
+
+    def stream_run(self, replies):
+        clock, calls, queue = [0.0], [], list(replies)
+        def fake_sleep(seconds):
+            clock[0] += seconds
+        def fake_request(name, cursor, stream=False):
+            calls.append((name, cursor, stream, clock[0]))
+            item = queue.pop(0)
+            if isinstance(item, Exception):
+                raise item
+            return item
+        transport, sink = MagicMock(), MagicMock()
+        transport.request.side_effect = fake_request
+        with patch.object(driver.time, "time", return_value=NOW), patch.object(driver.time, "sleep", fake_sleep):
+            result = driver.run(self.cfg, lambda _: transport, checkpoint_sink=sink)
+        return result, calls, sink
+
+    def test_stream_stage_two_notices_pass_with_pacing_and_no_cursor_bytes_in_the_receipt(self):
+        snapshot = self.stream_setup()
+        first, resumed = self.stream_result(1, "PRIVATE-NOTICE-1"), self.stream_result(1, "PRIVATE-NOTICE-2")
+        result, calls, sink = self.stream_run([snapshot, first, resumed])
+        self.assertEqual((result["status"], result["requests"], result["read_scope"]),
+                         ("SCOPED_OBSERVATIONS_ONLY", 3, "stream_stage"))
+        self.assertEqual([(c[0], c[1], c[2]) for c in calls], [("snapshot", None, False), ("stream", self.CURSOR, True),
+                                                               ("stream", "PRIVATE-NOTICE-1", True)])
+        self.assertTrue(all(b[3] - a[3] >= 3 for a, b in zip(calls, calls[1:])))      # pacing before each stream request
+        self.assertEqual(result["cases"]["snapshot_read_path"]["status"], "READ_PATH_ONLY")
+        self.assertEqual(result["cases"]["stream_notice"],
+                         {"status": "PASS", "frames": 1, "notices": 1, "bytes": 100, "termination": "EOF"})
+        self.assertEqual(result["cases"]["cursor_resume"],
+                         {"status": "PASS", "frames": 1, "notices": 1, "bytes": 100, "termination": "EOF"})
+        for case in ("deployments", "relation", "repeat_read", "snapshot", "post_revoke_read", "post_revoke_cursor",
+                     "post_revoke_stream", "post_revoke_stream_read_preserved", "cache_revocation",
+                     "active_stream_revocation", "unaffected_scope", "r03_deployment_pages"):
+            self.assertEqual(result["cases"][case]["status"], "NOT_RUN")
+        public = json.dumps(result)
+        for secret in (self.CURSOR, "PRIVATE-NOTICE-1", "PRIVATE-NOTICE-2", SAMPLE_SEED_BODY["cursor"],
+                       "stream-grant-TEST_ONLY", "stream-revision-1"):
+            self.assertNotIn(secret, public)
+        checkpoint = sink.call_args.args[0]                                            # private file only
+        self.assertEqual((checkpoint["cursor"], checkpoint["stream_authorized"], checkpoint["stream_grant_id"],
+                          checkpoint["stream_grant_revision"]),
+                         (self.CURSOR, True, "stream-grant-TEST_ONLY", "stream-revision-1"))
+        self.assertNotIn("read_body_sha256", checkpoint)
+        self.assertEqual(checkpoint["prime_body_sha256"], result["cases"]["snapshot_read_path"]["body_sha256"])
+
+    def test_stream_stage_never_passes_a_quiet_stream_a_timeout_or_a_replayed_notice(self):
+        for termination in ("SOCKET_TIMEOUT", "DEADLINE", "EOF", "FRAME_LIMIT", "TERMINAL"):
+            with self.subTest(first_quiet=termination):
+                self.cfg, self.docs = inputs()
+                snapshot = self.stream_setup()
+                result, calls, _ = self.stream_run([snapshot, self.stream_result(0, termination=termination, frames=2)])
+                self.assertEqual((result["status"], result["requests"]), ("SCOPED_OBSERVATIONS_ONLY", 2))
+                self.assertEqual(result["cases"]["stream_notice"], {"status": "NOT_RUN", "frames": 2, "notices": 0,
+                    "bytes": 0, "termination": termination, "reason": "NO_NOTICE_" + termination})
+                self.assertEqual(result["cases"]["cursor_resume"], {"status": "NOT_RUN", "reason": "FIRST_STREAM_NO_NOTICE"})
+                self.assertEqual(len(calls), 2)                                          # no resume on a quiet stream
+        self.cfg, self.docs = inputs()
+        snapshot = self.stream_setup()
+        result, calls, _ = self.stream_run([snapshot, self.stream_result(1), self.stream_result(0, termination="SOCKET_TIMEOUT")])
+        self.assertEqual(result["cases"]["stream_notice"]["status"], "PASS")              # kept: one notice was really seen
+        self.assertEqual(result["cases"]["cursor_resume"], {"status": "NOT_RUN", "frames": 0, "notices": 0, "bytes": 0,
+            "termination": "SOCKET_TIMEOUT", "reason": "NO_NOTICE_SOCKET_TIMEOUT"})
+        self.cfg, self.docs = inputs()
+        snapshot = self.stream_setup()
+        result, _, _ = self.stream_run([snapshot, self.stream_result(1, "PRIVATE-NOTICE-1"),
+                                        self.stream_result(1, "PRIVATE-NOTICE-1")])        # same notice id again: a replay
+        self.assertEqual((result["cases"]["cursor_resume"]["status"], result["cases"]["cursor_resume"]["reason"]),
+                         ("NOT_RUN", "RESUME_REPLAYED_SAME_NOTICE"))
+        self.assertNotIn("PRIVATE-NOTICE-1", json.dumps(result))
+
+    def test_stream_stage_failures_keep_earlier_cases_and_report_only_status_and_code(self):
+        refused = driver.ReadNotAvailable("JSON_CONTENT_TYPE_INVALID")
+        refused.http_status, refused.error_code, refused.content_type = 502, None, "text/plain"
+        for label, reply, reason in (
+                ("typed 403", (403, {}, json.dumps({"error": {"code": "ACCESS_DENIED", "message": "private text"}}).encode()),
+                 "READ_NOT_AVAILABLE"),
+                ("200 but not a stream result", (200, {}, b"{}"), "STREAM_NOT_AVAILABLE"),
+                ("proxy 502 text", refused, "JSON_CONTENT_TYPE_INVALID"),
+                ("deadline", driver.Refused("DEADLINE_EXCEEDED"), "DEADLINE_EXCEEDED"),
+                ("bad content type", driver.Refused("STREAM_CONTENT_TYPE_INVALID"), "STREAM_CONTENT_TYPE_INVALID")):
+            with self.subTest(label):
+                self.cfg, self.docs = inputs()
+                snapshot = self.stream_setup()
+                result, calls, sink = self.stream_run([snapshot, reply])
+                self.assertEqual((result["status"], result["reason"], result["requests"]), ("FAIL", reason, 2))
+                self.assertEqual(result["cases"]["snapshot_read_path"]["status"], "READ_PATH_ONLY")   # kept
+                self.assertEqual(result["cases"]["stream_notice"]["status"], "NOT_RUN")
+                self.assertEqual(result["cases"]["cursor_resume"]["status"], "NOT_RUN")
+                self.assertNotIn("private text", json.dumps(result))
+                self.assertNotIn(self.CURSOR, json.dumps(result))
+        self.cfg, self.docs = inputs()                 # a failing resume keeps the first stream's PASS
+        snapshot = self.stream_setup()
+        result, _, _ = self.stream_run([snapshot, self.stream_result(1), (503, {}, b'{"error": {"code": "SOURCE_UNAVAILABLE"}}')])
+        self.assertEqual((result["status"], result["http_status"], result["error_code"]), ("FAIL", 503, "SOURCE_UNAVAILABLE"))
+        self.assertEqual(result["cases"]["stream_notice"]["status"], "PASS")
+        self.assertEqual(result["cases"]["cursor_resume"]["status"], "NOT_RUN")
+
+    def test_stream_stage_needs_a_distinct_stream_grant_before_any_request_and_refuses_combinations(self):
+        def fresh():
+            self.cfg, self.docs = inputs()
+            self.stream_setup()
+        fresh()
+        self.assertEqual(self.prepare()["config"]["read_scope"], "stream_stage")
+        fresh(); self.cfg["snapshot_expectation"] = "complete"                           # a real strict snapshot is allowed too
+        self.assertEqual(self.prepare()["config"]["snapshot_expectation"], "complete")
+        for label, change in (("not authorised", {"stream_authorized": False}),
+                              ("no grant id", {"stream_grant_id": None}), ("no grant revision", {"stream_grant_revision": None})):
+            with self.subTest(label):
+                fresh()
+                for key, value in change.items():
+                    if value is None:
+                        del self.docs["/TEST_ONLY/core"][key]
+                    else:
+                        self.docs["/TEST_ONLY/core"][key] = value
+                with self.assertRaises(driver.Refused):
+                    self.prepare()
+                transport = MagicMock()
+                with patch.object(driver.time, "time", return_value=NOW):
+                    result = driver.run(self.cfg, lambda _: transport)
+                self.assertEqual((result["status"], result["requests"]), ("NOT_READY", 0))
+                transport.request.assert_not_called()
+        fresh(); self.docs["/TEST_ONLY/core"]["stream_grant_id"] = self.docs["/TEST_ONLY/core"]["manager_grant_id"]
+        with self.assertRaisesRegex(driver.Refused, "STREAM_GRANT_INVALID"):
+            self.prepare()
+        fresh(); del self.docs["/TEST_ONLY/core"]["source_set_ref"]
+        with self.assertRaisesRegex(driver.Refused, "STREAM_SOURCE_SET_UNDECLARED"):
+            self.prepare()
+        for label, change in (("probe_stream false", {"probe_stream": False}),
+                              ("observe", {"observe_active_stream": True}),
+                              ("pages", {"bounded_page_probe": {"max_pages": 2, "max_rows": 4, "max_total_bytes": 4096}}),
+                              ("cache", {"cache_proof": {"path": "/TEST_ONLY/cache", "sha256": PIN}}),
+                              ("revoke action in baseline", {"revoke_action": "stream.subscribe"}),
+                              ("walk key", {"relation_walk": [{"relation": "portfolios", "limit": 1, "max_pages": 1, "max_rows": 1}]}),
+                              ("sweep key", {"relation_sweep": ["accounts"]}),
+                              ("carry forward", {"carry_forward_result": {"path": "/TEST_ONLY/prior", "sha256": "c" * 64}}),
+                              ("bad expectation", {"snapshot_expectation": "whatever"})):
+            with self.subTest(label):
+                fresh(); self.cfg.update(change)
+                with self.assertRaises(driver.Refused):
+                    self.prepare()
+        for spacing in (None, 0, 2):
+            with self.subTest(spacing=spacing):
+                fresh()
+                if spacing is None:
+                    del self.cfg["read_spacing_seconds"]
+                else:
+                    self.cfg["read_spacing_seconds"] = spacing
+                with self.assertRaisesRegex(driver.Refused, "READ_SPACING_TOO_LOW_FOR_SNAPSHOT_STAGE"):
+                    self.prepare()
+        for scope in ("snapshot_stage", "relation_stage", "relation_walk", "relation_sweep", "snapshot_only"):
+            with self.subTest(other_scope=scope):          # the narrow scopes keep refusing a STREAM ready doc
+                self.cfg, self.docs = inputs()
+                self.docs["/TEST_ONLY/core"].update(stream_authorized=True, relation_catalogue_sha256=PIN)
+                self.cfg.update(read_scope=scope, read_spacing_seconds=3)
+                with self.assertRaises(driver.Refused):
+                    self.prepare()
+
+    def test_stream_stage_post_revoke_refuses_the_revoked_stream_and_preserves_one_read(self):
+        snapshot = self.stream_setup()
+        producer, prior, _, _ = self.stream_revoke_inputs()
+        producer["source_set_ref"] = "TEST_ONLY-source-set"
+        self.cfg.update(read_scope="stream_stage", read_spacing_seconds=3, snapshot_expectation="seed_read_path")
+        denied = (403, {}, json.dumps({"error": {"code": "ACCESS_DENIED"}}).encode())
+        result, calls, _ = self.stream_run([snapshot, denied, denied])
+        self.assertEqual((result["status"], result["requests"], result["read_scope"]),
+                         ("SCOPED_OBSERVATIONS_ONLY", 3, "stream_stage"))
+        self.assertEqual([(c[0], c[1], c[2]) for c in calls], [("snapshot", None, False), ("stream", None, False),
+                                                               ("stream", "TEST_ONLY-opaque", False)])
+        self.assertTrue(all(b[3] - a[3] >= 3 for a, b in zip(calls, calls[1:])))
+        preserved = result["cases"]["post_revoke_stream_read_preserved"]
+        self.assertEqual((preserved["status"], preserved["snapshot"]["status"]), ("PASS", "READ_PATH_ONLY"))
+        self.assertNotIn("page", preserved)                                              # this scope read no deployments
+        for case in ("post_revoke_stream", "post_revoke_cursor"):
+            self.assertEqual((result["cases"][case]["status"], result["cases"][case]["http_status"]), ("PASS", 403))
+        for case in ("deployments", "post_revoke_read", "stream_notice", "cursor_resume", "cache_revocation",
+                     "active_stream_revocation", "unaffected_scope"):
+            self.assertEqual(result["cases"][case]["status"], "NOT_RUN")
+        self.assertNotIn("TEST_ONLY-opaque", json.dumps(result))
+        ok = (200, {}, b"{}")                                                            # a stream that is NOT denied fails
+        result, _, _ = self.stream_run([snapshot, ok])
+        self.assertEqual((result["status"], result["reason"]), ("FAIL", "REVOKED_STREAM_NOT_DENIED"))
+        self.cfg.pop("revoke_action")                                                    # the revoke action is mandatory
+        with self.assertRaisesRegex(driver.Refused, "READ_SCOPE_COMBINATION_INVALID"):
+            self.prepare()
+
     def test_snapshot_stage_post_revoke_runs_one_denied_read_and_needs_the_baseline_cursor(self):
         producer, _ = self.post_inputs("CORE_MANAGER_DOMAIN")
         producer.update(read_authorized=False, policy_revision="policy-2")

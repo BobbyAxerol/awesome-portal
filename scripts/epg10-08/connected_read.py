@@ -169,20 +169,43 @@ def prepare(config, now=None):
     # Owner-staged acceptance (stage 1): deployments read + its repeat only. snapshot/cursor/relation/stream stay NOT_RUN.
     # Stage 2a ("snapshot_stage"): deployments, its repeat and the native snapshot only. Relation, stream and
     # cursor_resume cannot run in this scope; the one native read at a time spacing must be at least 3 s.
-    require(config.get("read_scope", "full") in ("full", "deployments_only", "snapshot_stage", "snapshot_only"), "READ_SCOPE_INVALID")
-    require(config.get("read_scope", "full") != "snapshot_stage" or
+    require(config.get("read_scope", "full") in ("full", "deployments_only", "snapshot_stage", "snapshot_only", "relation_stage", "relation_walk",
+                                                              "relation_sweep", "stream_stage"),
+            "READ_SCOPE_INVALID")
+    require(config.get("read_scope", "full") not in ("snapshot_stage", "relation_stage", "relation_walk", "relation_sweep",
+                                                              "stream_stage") or
             3 <= config.get("read_spacing_seconds", 0) <= 10, "READ_SPACING_TOO_LOW_FOR_SNAPSHOT_STAGE")
-    require(config.get("read_scope", "full") == "full" or not (
+    require(config.get("read_scope", "full") in ("full", "stream_stage") or not (
         config["probe_stream"] or config.get("observe_active_stream", False) or "bounded_page_probe" in config or
         "cache_proof" in config or config.get("revoke_action", "business.read_all") != "business.read_all"),
+        "READ_SCOPE_COMBINATION_INVALID")
+    # Stage "stream_stage": the STREAM + cursor_resume window. Baseline: the snapshot (cursor), the first stream collecting its
+    # first notice, the resume collecting one more; probe_stream must be true; no observe/page/cache probe. post_revoke: the
+    # existing stream.subscribe revoke path (STREAM denied, one READ read preserved); no relation/walk/sweep/carry keys.
+    require(config.get("read_scope", "full") != "stream_stage" or (
+        not config.get("observe_active_stream", False) and "bounded_page_probe" not in config and
+        "cache_proof" not in config and
+        ((config["stage"] == "baseline" and config["probe_stream"] is True and "revoke_action" not in config) or
+         (config["stage"] == "post_revoke" and config.get("revoke_action") == "stream.subscribe"))),
         "READ_SCOPE_COMBINATION_INVALID")
     # "snapshot_only": the redo of ONE snapshot read after a prior snapshot_stage run failed at the snapshot; the two
     # deployments passes are carried forward from that private result (never counted as requests, never plain PASS).
     require(config.get("snapshot_expectation", "complete") in ("complete", "seed_read_path") and
             (config.get("snapshot_expectation", "complete") == "complete" or
-             config.get("read_scope", "full") in ("snapshot_stage", "snapshot_only")) and
-            (config.get("read_scope", "full") != "snapshot_only" or
+             config.get("read_scope", "full") in ("snapshot_stage", "snapshot_only", "relation_stage", "stream_stage")) and
+            (config.get("read_scope", "full") not in ("snapshot_only", "relation_stage") or
              config.get("snapshot_expectation") == "seed_read_path"), "SNAPSHOT_EXPECTATION_INVALID")
+    # Stage 2c ("relation_walk"): R03/R02 on the Binance-predicate rows: walk the pages of a fixed allowlist of relations; no
+    # deployments, no snapshot (a seed expectation is refused), spacing of at least 3 s between EVERY request.
+    require(config.get("read_scope", "full") not in ("relation_walk", "relation_sweep") or
+            config.get("snapshot_expectation", "complete") == "complete", "SNAPSHOT_EXPECTATION_INVALID")
+    # Stage 2d ("relation_sweep"): ONE page of each listed relation route; typed refusals recorded; spacing before every request.
+    require(("relation_sweep" in config) == (config.get("read_scope", "full") == "relation_sweep"), "RELATION_SWEEP_INVALID")
+    if "relation_sweep" in config:
+        sweep_spec(config["relation_sweep"])
+    require(("relation_walk" in config) == (config.get("read_scope", "full") == "relation_walk"), "RELATION_WALK_INVALID")
+    if "relation_walk" in config:
+        walk_spec(config["relation_walk"])
     require(("carry_forward_result" in config) == (config.get("read_scope", "full") == "snapshot_only" and
             config["stage"] == "baseline") and
             ("carry_forward_result" not in config or type(config["carry_forward_result"]) is dict),
@@ -231,8 +254,18 @@ def prepare(config, now=None):
                 "SOURCE_OR_AUTHORITY_NOT_CURRENT")
     require(not config.get("observe_active_stream", False) or receipt["stream_authorized"],
             "STREAM_NOT_AUTHORIZED")
-    require(config.get("read_scope", "full") not in ("snapshot_stage", "snapshot_only") or not receipt["stream_authorized"],
+    require(config.get("read_scope", "full") != "stream_stage" or config["stage"] != "baseline" or
+            (receipt["stream_authorized"] is True and "stream_grant_id" in receipt and "stream_grant_revision" in receipt),
+            "STREAM_NOT_AUTHORIZED")   # stream_stage needs a STREAM grant distinct from the READ grant, before any request
+    require(config.get("read_scope", "full") not in ("snapshot_stage", "snapshot_only", "relation_stage", "relation_walk",
+                                                              "relation_sweep") or
+            not receipt["stream_authorized"],
             "STREAM_AUTHORIZED_IN_SNAPSHOT_STAGE")   # 2a has no STREAM scope: a ready doc that grants one is refused
+    # Stage 2b ("relation_stage"): deployments, ONE relation read (account balances) and the seed snapshot; the relation needs
+    # its own catalogue pin in the ready doc.
+    require(config.get("read_scope", "full") not in ("relation_stage", "relation_walk", "relation_sweep") or
+            pin(receipt.get("relation_catalogue_sha256")),
+            "RELATION_CATALOGUE_UNDECLARED")
     if config["probe_stream"] and receipt["stream_authorized"]:
         require(type(receipt.get("source_set_ref")) is str and bool(receipt["source_set_ref"]),
                 "STREAM_SOURCE_SET_UNDECLARED")
@@ -262,7 +295,8 @@ def prepare(config, now=None):
         prior, revoke = document(config["baseline"]), document(config["revoke_return"])
         require(prior.get("schema_version") == "portal.execution.connected-read-baseline.v1" and
                 prior.get("scope_sha256") == scope and pin(prior.get("producer_sha256")) and
-                (cursor_valid(prior.get("cursor")) or (config.get("read_scope", "full") == "deployments_only"
+                (cursor_valid(prior.get("cursor")) or (config.get("read_scope", "full") in ("deployments_only", "relation_walk",
+                                                                                            "relation_sweep")
                                                         and "cursor" not in prior)), "BASELINE_PROVENANCE_INVALID")
         require(revoke.get("schema_version") == "portal.execution.connected-read-revoke.v1" and
                 revoke.get("status") == "COMMITTED" and revoke.get("authority") in
@@ -457,6 +491,22 @@ def cursor_valid(value):
 
 
 def route(name, config, cursor=None):
+    walked = re.fullmatch(r"relation_walk:([a-z_]{1,32}):([0-9]{1,3})", name)
+    if walked is not None:   # stage 2c: one fixed Core relation route; the per-relation limit travels in the name
+        require(walked.group(1) in WALK_RELATIONS and 1 <= int(walked.group(2)) <= 200, "ROUTE_NOT_ALLOWED")
+        query = {"workspace_id": config["workspace_id"], "environment": config["environment"],
+                 "limit": int(walked.group(2))}
+        if cursor is not None:
+            require(cursor_valid(cursor), "CURSOR_INVALID")
+            query["cursor"] = cursor
+        return ("/api/v1/execution/manager/current/" + WALK_RELATIONS[walked.group(1)]["route"] + "?" + urlencode(query))
+    swept = re.fullmatch(r"relation_sweep:([a-z0-9_]{1,48}):([0-9]{1,3})", name)
+    if swept is not None:   # stage 2d: one fixed Core relation route per relation; the limit travels in the name
+        require(swept.group(1) in SWEEP_RELATIONS and 1 <= int(swept.group(2)) <= 200, "ROUTE_NOT_ALLOWED")
+        require(cursor is None, "CURSOR_INVALID")   # a sweep never follows a page
+        return ("/api/v1/execution/manager/current/" + SWEEP_RELATIONS[swept.group(1)]["route"] + "?" +
+                urlencode({"workspace_id": config["workspace_id"], "environment": config["environment"],
+                           "limit": int(swept.group(2))}))
     require(name in ("deployments", "relation", "snapshot", "stream"), "ROUTE_NOT_ALLOWED")
     env = config["environment"]
     if name in ("deployments", "relation"):
@@ -536,7 +586,9 @@ class Transport:
                     tls_socket.settimeout(max(0.001, self.end - time.monotonic()))
                 result = read_sse(response, self.p["config"]["max_bytes"], self.end,
                                   self.p["producer"]["projection_epoch"], self.p["producer"]["source_set_ref"],
-                                  observe=observe)
+                                  observe=observe,
+                                  **({"report_termination": True}
+                                     if self.p["config"].get("read_scope") == "stream_stage" else {}))
                 require(observe or not result["notices"] or
                         (not expired.is_set() and time.monotonic() < self.end),
                         "DEADLINE_EXCEEDED")
@@ -558,7 +610,7 @@ class Transport:
                 response.close()
 
 
-def read_sse(response, maximum, end, expected_epoch, source_set_ref, *, observe=False):
+def read_sse(response, maximum, end, expected_epoch, source_set_ref, *, observe=False, report_termination=False):
     count, notices, total, event, data, identifier = 0, 0, 0, None, [], None
     last = None
     started = time.monotonic() if observe else None
@@ -649,6 +701,8 @@ def read_sse(response, maximum, end, expected_epoch, source_set_ref, *, observe=
     if observation["termination"] is None:
         observation["termination"] = "DEADLINE" if time.monotonic() >= end else "FRAME_LIMIT"
     result = {"frames": count, "notices": notices, "bytes": total, "cursor": last}
+    if report_termination:   # stream_stage only: why the read ended (SOCKET_TIMEOUT, DEADLINE, EOF, FRAME_LIMIT, TERMINAL)
+        result["termination"] = observation["termination"]
     if observe:
         observation["elapsed_ms"] = max(0, int((time.monotonic() - started) * 1000))
         result["observation"] = observation
@@ -745,6 +799,312 @@ def finite(name, status, headers, raw, prepared):
     return result
 
 
+# Stage 2b relation outcomes. Core accepts BOTH a typed refusal and an empty page, recorded as such and never as a pass of
+# business data. Typed = a JSON non-200 whose safe code is an Edge manager-v2 code (MANAGER_V2_*: INVALID_RELATION,
+# INVALID_PAGE_LIMIT, INVALID_CURSOR, RELATION_NOT_CATALOGUED, AUTHORITY_REJECTED, SOURCE_RESPONSE_TOO_LARGE, ...) or one of
+# Core's reason codes. Authorisation denials (NATIVE_MANAGER_READ_DENIED, ACCESS_DENIED) are NOT typed outcomes: they stay a FAIL.
+RELATION_CORE_TYPED_CODES = ("SCOPE_CHANGED", "SOURCE_COVERAGE_UNPROVED", "SOURCE_UNAVAILABLE")
+
+
+def typed_relation_refusal(status, raw):
+    code = None
+    try:
+        parsed = shared().decode(raw)
+        inner = parsed.get("error", parsed) if type(parsed) is dict else None
+        value = inner.get("code") if type(inner) is dict else None
+        code = value if type(value) is str and re.fullmatch(r"[A-Z0-9_]{1,64}", value) else None
+    except Exception:
+        pass
+    if code is not None and (re.fullmatch(r"MANAGER_V2_[A-Z0-9_]{1,48}", code) or code in RELATION_CORE_TYPED_CODES):
+        return {"status": "RELATION_TYPED_REFUSAL", "http_status": status, "error_code": code,
+                "body_sha256": sha256(raw).hexdigest(), "rows": 0}
+    return None
+
+
+def relation_stage_outcome(status, headers, raw, prepared):
+    if status != 200:
+        refusal = typed_relation_refusal(status, raw)
+        if refusal is not None:
+            return refusal
+        finite("relation", status, headers, raw, prepared)   # raises ReadNotAvailable: untyped answers stay a FAIL
+    result = finite("relation", status, headers, raw, prepared)   # schema, authority, relation pin, records <= limit
+    body = shared().decode(raw)
+    page = body.get("page")
+    has_more = None
+    if page is not None:   # consistency only: no continuation is ever followed (no R03), the next cursor is never recorded
+        require(type(page) is dict and type(page.get("has_more")) is bool, "NATIVE_PAGE_UNPROVED")
+        next_cursor = page.get("next_cursor")
+        require((next_cursor is None and page["has_more"] is False) or
+                (cursor_valid(next_cursor) and page["has_more"] is True and body["records"]), "NATIVE_PAGE_UNPROVED")
+        has_more = page["has_more"]
+    return {"status": "RELATION_PAGE_OBSERVED", "body_sha256": result["body_sha256"], "bytes": result["bytes"],
+            "rows": result["rows"], "freshness": result["freshness"], "completeness": result["completeness"],
+            "has_more": has_more}
+
+
+# Stage 2c (relation_walk): a fixed allowlist of Core relation routes and the selected primary key of each, from the installed
+# catalogue (edge-m0-r2-20261112/relation-catalogue.json, seal 6d4c4a65...: key.selected.columns). Keys are only ever hashed.
+WALK_RELATIONS = {"account_balances": {"route": "account-balances", "key": ("account_id", "currency")},
+                  "portfolios": {"route": "portfolios", "key": ("portfolio_id",)},
+                  "venues": {"route": "venues", "key": ("venue",)},
+                  "instruments": {"route": "instruments", "key": ("instrument_id",)},
+                  "command_journal": {"route": "command-journal", "key": ("command_id",)}}
+WALK_BOUNDS = {"limit": (1, 200), "max_pages": (1, 20), "max_rows": (1, 1000)}
+
+
+def walk_spec(value):
+    """Validate the relation_walk list: fixed allowlist, bounded limits/pages/rows, total requests <= 20."""
+    require(type(value) is list and 1 <= len(value) <= len(WALK_RELATIONS), "RELATION_WALK_INVALID")
+    seen, total = set(), 0
+    for entry in value:
+        require(type(entry) is dict and set(entry) == {"relation", "limit", "max_pages", "max_rows"} and
+                entry["relation"] in WALK_RELATIONS and entry["relation"] not in seen, "RELATION_WALK_INVALID")
+        seen.add(entry["relation"])
+        for key, (low, high) in WALK_BOUNDS.items():
+            require(type(entry[key]) is int and low <= entry[key] <= high, "RELATION_WALK_INVALID")
+        total += entry["max_pages"]
+    require(total <= 20, "RELATION_WALK_INVALID")   # worst-case request count of the whole run
+    return value
+
+
+def walk_route_name(entry):
+    return f"relation_walk:{entry['relation']}:{entry['limit']}"
+
+
+def keyset_sha256(keys):
+    """Canonical keyset digest: sha256 of json.dumps(sorted(keys), separators=(',', ':')) (ensure_ascii default), UTF-8, where
+    each key is str(value) of the selected key column, or the values of a composite key joined by U+0000 in catalogue order."""
+    return sha256(json.dumps(sorted(keys), separators=(",", ":")).encode("utf-8")).hexdigest()
+
+
+def walk_one_relation(entry, p, request, pause):
+    """Walk the pages of one relation (R03 rules). Cursors and keys stay in memory; the receipt gets hashes only."""
+    columns = WALK_RELATIONS[entry["relation"]]["key"]
+    walk_prepared = dict(p, config={**p["config"], "limit": entry["limit"]})
+    name, cursor = walk_route_name(entry), None
+    keys, seen_cursors, hashes, pages, terminal, last = set(), set(), [], 0, False, None
+    while pages < entry["max_pages"]:
+        pause()
+        status, headers, raw = request(name, cursor)
+        if status != 200:
+            refusal = typed_relation_refusal(status, raw)
+            if refusal is not None:
+                return {**refusal, "after_pages": pages}
+            finite("relation", status, headers, raw, walk_prepared)   # raises ReadNotAvailable: untyped answers stay a FAIL
+        result = finite("relation", status, headers, raw, walk_prepared)   # schema, authority, pin, records <= limit
+        body = shared().decode(raw)
+        page, records = body.get("page"), body["records"]
+        require(type(page) is dict and type(page.get("has_more")) is bool, "R03_PAGE_INVALID")
+        next_cursor = page.get("next_cursor")
+        require((next_cursor is None and page["has_more"] is False) or
+                (cursor_valid(next_cursor) and page["has_more"] is True), "R03_CURSOR_INVALID")
+        require(not page["has_more"] or records, "R03_EMPTY_CONTINUATION")
+        for record in records:
+            values = record.get("values") if type(record) is dict else None
+            require(type(values) is dict and all(column in values for column in columns), "WALK_KEY_UNAVAILABLE")
+            parts = [values[column] for column in columns]
+            require(all(type(part) in (str, int) and type(part) is not bool and part != "" for part in parts),
+                    "WALK_KEY_UNAVAILABLE")
+            key = "\u0000".join(str(part) for part in parts)
+            require(key not in keys, "R03_DUPLICATE_IDENTITY")
+            require(len(keys) < entry["max_rows"], "R03_ROW_BOUND_EXCEEDED")
+            keys.add(key)
+        hashes.append(sha256(raw).hexdigest())
+        pages += 1
+        last = result
+        if next_cursor is None:
+            terminal = True
+            break
+        require(next_cursor not in seen_cursors, "R03_CURSOR_CYCLE")
+        seen_cursors.add(next_cursor)
+        cursor = next_cursor
+    return {"status": "RELATION_WALK_OBSERVED", "pages": pages, "rows": len(keys), "terminal_page": terminal,
+            "more_than_one_page": pages > 1, "page_body_sha256": hashes, "limit": entry["limit"],
+            "completeness": last["completeness"], "freshness": last["freshness"],
+            "key_columns": list(columns), "keyset_sha256": keyset_sha256(keys)}
+
+
+# Stage 2d (relation_sweep): the 31 screen-bound relation routes of tuple A. DATA-DRIVEN: "route" is Core's registry route_id
+# (generated registry, operations[].route_id; all 31 equal the hyphenated table name) and "key" is the catalogue's selected key
+# (key.selected.columns); the three relations whose selected key is PENDING_QUERY_KEY (account_sync_effective,
+# broker_account_sync_effective, risk_profiles) have no key and no keyset hash. A name or key fix is a one-line change here.
+SWEEP_RELATIONS = {
+    'account_balances': {"route": 'account-balances', "key": ('account_id', 'currency')},
+    'account_policies': {"route": 'account-policies', "key": ('account_policy_id',)},
+    'account_reservations': {"route": 'account-reservations', "key": ('reservation_id',)},
+    'account_sync_current_state': {"route": 'account-sync-current-state', "key": ('account_id',)},
+    'account_sync_effective': {"route": 'account-sync-effective', "key": ()},
+    'account_sync_snapshots': {"route": 'account-sync-snapshots', "key": ('sync_id',)},
+    'accounts': {"route": 'accounts', "key": ('account_id',)},
+    'broker_account_sync_current_state': {"route": 'broker-account-sync-current-state', "key": ('venue', 'mode', 'external_account_ref')},
+    'broker_account_sync_effective': {"route": 'broker-account-sync-effective', "key": ()},
+    'broker_account_sync_snapshots': {"route": 'broker-account-sync-snapshots', "key": ('sync_id',)},
+    'broker_sync_state_history': {"route": 'broker-sync-state-history', "key": ('history_id',)},
+    'broker_sync_valuation_current_state': {"route": 'broker-sync-valuation-current-state', "key": ('scope_type', 'scope_key', 'mode', 'venue')},
+    'broker_sync_valuation_history': {"route": 'broker-sync-valuation-history', "key": ('scope_type', 'scope_key', 'mode', 'venue', 'bucket_start')},
+    'command_journal': {"route": 'command-journal', "key": ('command_id',)},
+    'conditional_order_groups': {"route": 'conditional-order-groups', "key": ('group_id',)},
+    'execution_sessions': {"route": 'execution-sessions', "key": ('execution_session_id',)},
+    'fills': {"route": 'fills', "key": ('fill_id', 'trade_time')},
+    'instruments': {"route": 'instruments', "key": ('instrument_id',)},
+    'operator_operations': {"route": 'operator-operations', "key": ('operation_id',)},
+    'order_brackets': {"route": 'order-brackets', "key": ('bracket_group_id',)},
+    'orders': {"route": 'orders', "key": ('order_id',)},
+    'portfolio_allocations': {"route": 'portfolio-allocations', "key": ('allocation_id',)},
+    'portfolio_capital_ledger': {"route": 'portfolio-capital-ledger', "key": ('capital_ledger_id',)},
+    'portfolios': {"route": 'portfolios', "key": ('portfolio_id',)},
+    'positions_v2': {"route": 'positions-v2', "key": ('position_id',)},
+    'reconciliation_findings': {"route": 'reconciliation-findings', "key": ('finding_id',)},
+    'risk_grants': {"route": 'risk-grants', "key": ('risk_grant_id',)},
+    'risk_profiles': {"route": 'risk-profiles', "key": ()},
+    'sizing_decisions': {"route": 'sizing-decisions', "key": ('decision_id',)},
+    'strategy_deployments': {"route": 'strategy-deployments', "key": ('deployment_id',)},
+    'venues': {"route": 'venues', "key": ('venue',)},
+}
+SWEEP_DEFAULT_LIMIT = 50
+
+
+def sweep_spec(value):
+    """Validate relation_sweep: a list of relation names (or {relation, limit}) from the allowlist; returns [(relation, limit)]."""
+    require(type(value) is list and 1 <= len(value) <= len(SWEEP_RELATIONS), "RELATION_SWEEP_INVALID")
+    out, seen = [], set()
+    for entry in value:
+        if type(entry) is str:
+            entry = {"relation": entry}
+        require(type(entry) is dict and set(entry) in ({"relation"}, {"relation", "limit"}) and
+                type(entry["relation"]) is str and entry["relation"] in SWEEP_RELATIONS and
+                entry["relation"] not in seen, "RELATION_SWEEP_INVALID")
+        limit = entry.get("limit", SWEEP_DEFAULT_LIMIT)
+        require(type(limit) is int and 1 <= limit <= 200, "RELATION_SWEEP_INVALID")
+        seen.add(entry["relation"])
+        out.append((entry["relation"], limit))
+    return out
+
+
+def sweep_route_name(entry):
+    relation, limit = sweep_spec([entry])[0]
+    return f"relation_sweep:{relation}:{limit}"
+
+
+def sweep_one_relation(relation, limit, p, request):
+    """Exactly ONE request for one relation; a continuation is noted (has_more), never followed. Hashes only."""
+    columns = SWEEP_RELATIONS[relation]["key"]
+    swept_prepared = dict(p, config={**p["config"], "limit": limit})
+    status, headers, raw = request(f"relation_sweep:{relation}:{limit}", None)
+    if status != 200:
+        refusal = typed_relation_refusal(status, raw)
+        if refusal is not None:
+            return refusal
+        finite("relation", status, headers, raw, swept_prepared)   # raises ReadNotAvailable: untyped answers stay a FAIL
+    result = finite("relation", status, headers, raw, swept_prepared)   # schema, authority, pin, records <= limit
+    body = shared().decode(raw)
+    page, records = body.get("page"), body["records"]
+    require(type(page) is dict and type(page.get("has_more")) is bool, "R03_PAGE_INVALID")
+    next_cursor = page.get("next_cursor")
+    require((next_cursor is None and page["has_more"] is False) or
+            (cursor_valid(next_cursor) and page["has_more"] is True and records), "R03_CURSOR_INVALID")
+    keys = set()
+    for record in records:
+        require(type(record) is dict, "SWEEP_RECORD_INVALID")
+        if columns:
+            values = record.get("values")
+            require(type(values) is dict and all(column in values for column in columns), "WALK_KEY_UNAVAILABLE")
+            parts = [values[column] for column in columns]
+            require(all(type(part) in (str, int) and type(part) is not bool and part != "" for part in parts),
+                    "WALK_KEY_UNAVAILABLE")
+            key = "\u0000".join(str(part) for part in parts)
+            require(key not in keys, "R03_DUPLICATE_IDENTITY")
+            keys.add(key)
+    return {"status": "RELATION_PAGE_OBSERVED", "pages": 1, "rows": len(records), "has_more": page["has_more"],
+            "completeness": result["completeness"], "freshness": result["freshness"],
+            "body_sha256": sha256(raw).hexdigest(), "limit": limit, "key_columns": list(columns),
+            "keyset_sha256": keyset_sha256(keys) if columns else None}
+
+
+def relation_sweep_baseline(config, p, receipt, request, checkpoint_sink):
+    spec = sweep_spec(config["relation_sweep"])
+    for relation, _ in spec:
+        receipt["cases"]["sweep_" + relation] = {"status": "NOT_RUN"}
+    receipt["cases"]["cursor_resume"] = {"status": "NOT_RUN", "reason": "STREAM_SCOPE_NOT_IN_RELATION_SWEEP"}
+    first_hash = None
+    for index, (relation, limit) in enumerate(spec):
+        if index:
+            time.sleep(config["read_spacing_seconds"])   # before EVERY request after the first
+        outcome = sweep_one_relation(relation, limit, p, request)
+        receipt["cases"]["sweep_" + relation] = outcome   # a finished relation is kept even if a later one fails
+        first_hash = first_hash or outcome["body_sha256"]
+    if checkpoint_sink is not None:
+        # No snapshot cursor in this scope: cursorless checkpoint (accepted by post_revoke for relation_sweep only).
+        checkpoint_sink({"schema_version": "portal.execution.connected-read-baseline.v1",
+            "scope_sha256": p["scope"], "producer_sha256": config["core_return"]["sha256"],
+            "policy_revision": p["producer"]["policy_revision"],
+            "manager_grant_revision": p["producer"]["manager_grant_revision"],
+            "native_revision": p["producer"]["native_revision"], "prime_body_sha256": first_hash,
+            "read_authorized": p["producer"]["read_authorized"],
+            "stream_authorized": p["producer"]["stream_authorized"],
+            "at_utc": datetime.now(timezone.utc).isoformat()})
+
+
+def relation_walk_baseline(config, p, receipt, request, checkpoint_sink):
+    spec = config["relation_walk"]
+    for entry in spec:
+        receipt["cases"]["walk_" + entry["relation"]] = {"status": "NOT_RUN"}
+    receipt["cases"]["cursor_resume"] = {"status": "NOT_RUN", "reason": "STREAM_SCOPE_NOT_IN_RELATION_WALK"}
+    sent = []
+    def pause():   # spacing between EVERY request of the run, including successive pages and relations
+        if sent:
+            time.sleep(config["read_spacing_seconds"])
+        sent.append(True)
+    first_hash = None
+    for entry in spec:
+        outcome = walk_one_relation(entry, p, request, pause)
+        receipt["cases"]["walk_" + entry["relation"]] = outcome   # a finished relation is kept even if a later one fails
+        if first_hash is None:
+            first_hash = (outcome["page_body_sha256"][0] if outcome["status"] == "RELATION_WALK_OBSERVED" and
+                          outcome["page_body_sha256"] else outcome.get("body_sha256"))
+    if checkpoint_sink is not None and first_hash is not None:
+        # No snapshot cursor exists in this scope: the checkpoint is cursorless, like stage 1; post_revoke accepts that
+        # for relation_walk only. prime_body_sha256 is the first walked body; there is no repeat_read.
+        checkpoint_sink({"schema_version": "portal.execution.connected-read-baseline.v1",
+            "scope_sha256": p["scope"], "producer_sha256": config["core_return"]["sha256"],
+            "policy_revision": p["producer"]["policy_revision"],
+            "manager_grant_revision": p["producer"]["manager_grant_revision"],
+            "native_revision": p["producer"]["native_revision"], "prime_body_sha256": first_hash,
+            "read_authorized": p["producer"]["read_authorized"],
+            "stream_authorized": p["producer"]["stream_authorized"],
+            "at_utc": datetime.now(timezone.utc).isoformat()})
+
+
+def stream_stage_streams(config, p, receipt, request, cursor):
+    """STREAM window: first stream with the snapshot cursor until its first notice, then the resume with that notice's cursor
+    until one MORE notice. PASS only for notices actually observed; a quiet stream, timeout, EOF or replay is NOT_RUN with the
+    reason. Receipts keep frames/notices/bytes/termination only: no frame body, no cursor."""
+    def read(case, resume_cursor):
+        status, headers, stream = request("stream", resume_cursor, True)
+        if status != 200:
+            finite("stream", status, headers, stream if isinstance(stream, bytes) else b"", p)   # ReadNotAvailable with status/code
+        require(type(stream) is dict, "STREAM_NOT_AVAILABLE")
+        return stream
+    def counts(stream):
+        return {"frames": stream["frames"], "notices": stream["notices"], "bytes": stream["bytes"],
+                "termination": stream["termination"]}
+    time.sleep(config["read_spacing_seconds"])   # let the snapshot's native attempt retire before a stream frame takes one
+    first = read("stream_notice", cursor)
+    receipt["cases"]["stream_notice"] = {"status": "PASS" if first["notices"] else "NOT_RUN", **counts(first)}
+    if not first["notices"]:
+        receipt["cases"]["stream_notice"]["reason"] = "NO_NOTICE_" + first["termination"]
+        receipt["cases"]["cursor_resume"] = {"status": "NOT_RUN", "reason": "FIRST_STREAM_NO_NOTICE"}
+        return
+    time.sleep(config["read_spacing_seconds"])   # one unresolved native attempt at a time
+    resumed = read("cursor_resume", first["cursor"])
+    outcome = {"status": "PASS", **counts(resumed)}
+    if not resumed["notices"]:
+        outcome.update(status="NOT_RUN", reason="NO_NOTICE_" + resumed["termination"])
+    elif resumed["cursor"] == first["cursor"]:   # the same notice again is a replay, not a resumed one
+        outcome.update(status="NOT_RUN", reason="RESUME_REPLAYED_SAME_NOTICE")
+    receipt["cases"]["cursor_resume"] = outcome
+
+
 def bounded_deployment_pages(prepared, request):
     """Observe one bounded Core deployment scan; never infer source completeness.
 
@@ -826,12 +1186,37 @@ def run(config, transport_factory=Transport, checkpoint_sink=None):
             receipt["cases"]["r03_deployment_pages"] = bounded_deployment_pages(p, request)
             receipt["status"] = "SCOPED_OBSERVATIONS_ONLY"
             return receipt
+        if config["stage"] == "baseline" and config.get("read_scope", "full") == "relation_walk":
+            relation_walk_baseline(config, p, receipt, request, checkpoint_sink)
+            receipt["status"] = "SCOPED_OBSERVATIONS_ONLY"
+            return receipt
+        if config["stage"] == "baseline" and config.get("read_scope", "full") == "relation_sweep":
+            relation_sweep_baseline(config, p, receipt, request, checkpoint_sink)
+            receipt["status"] = "SCOPED_OBSERVATIONS_ONLY"
+            return receipt
         if config["stage"] == "post_revoke":
             if p["revoke"]["authority"] == "PM_NATIVE_READ":
                 # PM refusal after Core hijack may destroy HTTP without bytes. A
                 # generic EOF/timeout is not native DENIED proof; the owning
                 # attempt/receipt observer must correlate that separate drill.
                 receipt["reason"] = "PM_DENIAL_REQUIRES_CORRELATED_OWNER_RECEIPT"
+                return receipt
+            if p["revoke_action"] == "stream.subscribe" and config.get("read_scope", "full") == "stream_stage":
+                # One READ read must survive the STREAM revoke (the snapshot: this scope read no deployments), then the revoked
+                # STREAM grant must be refused without and with the baseline cursor; every request paced (one unresolved lease).
+                status, headers, raw = request("snapshot")
+                receipt["cases"]["post_revoke_stream_read_preserved"] = {
+                    "status": "PASS", "snapshot": finite("snapshot", status, headers, raw, p)}
+                for case, cursor in (("post_revoke_stream", None), ("post_revoke_cursor", p["prior"]["cursor"])):
+                    time.sleep(config["read_spacing_seconds"])
+                    status, _, raw = request("stream", cursor)
+                    body = shared().decode(raw)
+                    error = body.get("error", body) if type(body) is dict else None
+                    require(status == 403 and type(error) is dict and error.get("code") in
+                            ("ACCESS_DENIED", "EXECUTION_READ_SCOPE_REQUIRED"), "REVOKED_STREAM_NOT_DENIED")
+                    receipt["cases"][case] = {"status": "PASS", "http_status": status,
+                        "body_sha256": sha256(raw).hexdigest()}
+                receipt["status"] = "SCOPED_OBSERVATIONS_ONLY"
                 return receipt
             if p["revoke_action"] == "stream.subscribe":
                 # Positive READ uses the same subject/domain/native selection,
@@ -854,15 +1239,19 @@ def run(config, transport_factory=Transport, checkpoint_sink=None):
                         "body_sha256": sha256(raw).hexdigest()}
                 receipt["status"] = "SCOPED_OBSERVATIONS_ONLY"
                 return receipt
-            for case, name, cursor in (("post_revoke_read", "deployments", None),
+            for case, name, cursor in (("post_revoke_read", walk_route_name(config["relation_walk"][0])
+                                        if config.get("read_scope", "full") == "relation_walk" else
+                                        sweep_route_name(config["relation_sweep"][0])
+                                        if config.get("read_scope", "full") == "relation_sweep" else "deployments", None),
                                       ("post_revoke_cursor", "stream", p["prior"].get("cursor")))[
-                    :1 if config.get("read_scope", "full") in ("deployments_only", "snapshot_stage", "snapshot_only") else 2]:
+                    :1 if config.get("read_scope", "full") in ("deployments_only", "snapshot_stage", "snapshot_only", "relation_stage",
+                                                              "relation_walk", "relation_sweep") else 2]:
                 status, _, raw = request(name, cursor)
                 body = shared().decode(raw)
                 code = (body.get("error", body).get("code") if type(body) is dict and
                     type(body.get("error", body)) is dict else None)
                 allowed = ({403: ("NATIVE_MANAGER_READ_DENIED", "ACCESS_DENIED"),
-                            404: ("WORKSPACE_NOT_FOUND",)} if name == "deployments" else
+                            404: ("WORKSPACE_NOT_FOUND",)} if name == "deployments" or name.startswith(("relation_walk:", "relation_sweep:")) else
                            {403: ("NATIVE_MANAGER_READ_DENIED", "ACCESS_DENIED",
                                   "EXECUTION_READ_SCOPE_REQUIRED"),
                             409: ("SCOPE_CHANGED", "CURSOR_INVALID_OR_EXPIRED")})
@@ -893,6 +1282,11 @@ def run(config, transport_factory=Transport, checkpoint_sink=None):
                 receipt["cases"].update(carried_cases)
                 receipt["carried_from_result_sha256"] = sha
                 plan = (("snapshot_read_path", "snapshot"),)
+            elif scope == "stream_stage":   # the STREAM window: only the snapshot here (its cursor feeds the stream), then the streams
+                plan = (("snapshot_read_path" if config.get("snapshot_expectation") == "seed_read_path" else "snapshot",
+                         "snapshot"),)
+            elif scope == "relation_stage":   # stage 2b: deployments, relation (account balances), seed snapshot; no repeat_read
+                plan = (("deployments", "deployments"), ("relation", "relation"), ("snapshot_read_path", "snapshot"))
             elif stage1:
                 plan = (("deployments", "deployments"), ("repeat_read", "deployments"))
             elif scope == "snapshot_stage":   # stage 2a: no relation by construction, whatever the ready doc pins
@@ -908,13 +1302,15 @@ def run(config, transport_factory=Transport, checkpoint_sink=None):
                 if finite_results and config.get("read_spacing_seconds", 0):
                     time.sleep(config["read_spacing_seconds"])   # one unresolved native read at a time: let the previous retire
                 status, headers, raw = request(name)
-                finite_results[case] = finite(name, status, headers, raw, p)
+                finite_results[case] = (relation_stage_outcome(status, headers, raw, p)
+                                        if scope == "relation_stage" and name == "relation"
+                                        else finite(name, status, headers, raw, p))
                 if keep:   # narrow scopes keep a pass even if a later case fails; the full scope never credits finite JSON before the snapshot proof
                     receipt["cases"][case] = finite_results[case]
             # Unchanged V1 JSON cannot prove native selection by itself. Do not
             # credit those finite observations before the native snapshot proof.
             receipt["cases"].update(finite_results)
-            if scope in ("snapshot_stage", "snapshot_only"):   # 2a has no STREAM scope, so cursor_resume is recorded as not run, with the reason
+            if scope in ("snapshot_stage", "snapshot_only", "relation_stage"):   # 2a/2b have no STREAM scope, so cursor_resume is recorded as not run, with the reason
                 receipt["cases"]["cursor_resume"] = {"status": "NOT_RUN", "reason": "STREAM_SCOPE_NOT_IN_STAGE_2A"}
             cursor = None if stage1 else headers["x-portal-realtime-cursor"]
             if checkpoint_sink is not None:
@@ -923,18 +1319,23 @@ def run(config, transport_factory=Transport, checkpoint_sink=None):
                     "policy_revision": p["producer"]["policy_revision"],
                     "manager_grant_revision": p["producer"]["manager_grant_revision"],
                     "native_revision": p["producer"]["native_revision"],
-                    "prime_body_sha256": {**carried_cases, **finite_results}["deployments"]["body_sha256"],
-                    "read_body_sha256": {**carried_cases, **finite_results}["repeat_read"]["body_sha256"],
+                    "prime_body_sha256": ({**carried_cases, **finite_results}.get("deployments") or
+                                          next(iter(finite_results.values())))["body_sha256"],
+                    "read_body_sha256": ({**carried_cases, **finite_results}.get("repeat_read") or {}).get("body_sha256"),
                     "read_authorized": p["producer"]["read_authorized"],
                     "stream_authorized": p["producer"]["stream_authorized"],
                     "at_utc": datetime.now(timezone.utc).isoformat()}
+                if checkpoint["read_body_sha256"] is None:   # relation_stage has no repeat_read; nothing consumes the field
+                    del checkpoint["read_body_sha256"]
                 if cursor is not None:
                     checkpoint["cursor"] = cursor
                 if "stream_grant_id" in p["producer"]:
                     checkpoint.update({k: p["producer"][k] for k in
                                        ("stream_grant_id", "stream_grant_revision")})
                 checkpoint_sink(checkpoint)
-            if config["probe_stream"] and p["producer"]["stream_authorized"]:
+            if scope == "stream_stage":
+                stream_stage_streams(config, p, receipt, request, cursor)
+            elif config["probe_stream"] and p["producer"]["stream_authorized"]:
                 status, _, stream = request("stream", cursor, True)
                 require(status == 200 and type(stream) is dict, "STREAM_NOT_AVAILABLE")
                 receipt["cases"]["stream_notice"] = {"status": "PASS" if stream["notices"] else "NOT_RUN",
