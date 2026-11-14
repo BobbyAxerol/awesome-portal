@@ -1288,10 +1288,11 @@ export class CurrentHumanCandidate {
     await this.transaction(async(db,authority)=>{
       const row=(await db.query<NativeHTTPRow>("SELECT * FROM elp210_candidate.native_read_obligations WHERE lease_id=$1 FOR UPDATE",[s.context.binding.lease_id])).rows[0];
       this.assertNativeRow(row,s);
-      // Nothing about the source ENTER can be recorded for another phase/source or twice.
-      if(row.phase!=="ADMITTED"||row.native_source_digest!==s.source_digest||row.enter_response_digest!==null)
+      // Nothing about the source ENTER can be recorded for a SENT/terminal row, another source, or twice. A concurrent mutation's
+      // own recovery may already have fenced this still-unsent row to UNKNOWN before the ACK arrived (stage-2f end to end).
+      if(!["ADMITTED","UNKNOWN"].includes(row.phase)||row.body_digest!==null||row.native_source_digest!==s.source_digest||row.enter_response_digest!==null)
         throw new CurrentHumanLeaseError("CURRENT_HUMAN_ENTRY_NOT_AVAILABLE");
-      if(authority.drain_id||row.no_send_fenced||row.authority_revision!==authority.revision){
+      if(authority.drain_id||row.no_send_fenced||row.phase!=="ADMITTED"||row.authority_revision!==authority.revision){
         // A shared drain / fence / authority change began AFTER the source ENTER but BEFORE this record. The source ACK
         // was RECEIVED (unlike a lost wire ACK), so its digest is a durable fact of what the source did. Persist it with
         // the no-send fence, admit nothing and send nothing; the caller still gets the typed refusal after COMMIT, and the

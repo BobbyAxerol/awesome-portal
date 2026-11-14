@@ -947,6 +947,36 @@ describe.skipIf(!pgUrl)("TEST_ONLY native scoped-notice actual PG/TLS/HTTP coupl
       candidate.closeNativeNoticeStream(stream);
     });
   });
+  // End to end, the stage-2f shape with the REAL mutation coordinator: a revoke-class mutation (the same
+  // currentHumanMutations.execute path) starts while a frame's source ENTER is in flight. It may be refused as pending at first,
+  // but once the frame settled the SAME key must commit (never stuck in DRAIN_PENDING), with no unresolved obligation left.
+  it("a real mutation started while a frame's ENTER is in flight commits on retry after the frame settles (stage-2f end to end)",async()=>{
+    await exchange(async({response,body})=>{
+      const stream=candidate.openNativeNoticeStream(response),n=await notice(stream),write=vi.spyOn(response,"write");
+      holdEnter=deferred();enterArrived=deferred();
+      const acquiring=candidate.acquireNativeFrame(stream,n);void acquiring.catch(()=>undefined);
+      await bounded(enterArrived.promise);
+      const composition=await currentComposition();let applied=0;
+      const first=selfLogout(composition,()=>applied++).then(()=>"APPLIED",(error:{code?:string})=>error.code??"ERROR");
+      await new Promise(resolve=>setTimeout(resolve,150));
+      holdEnter.resolve(undefined);
+      await bounded(acquiring.then(()=>"ACQUIRED",(error:{code?:string})=>error.code??"ERROR"),10000);
+      const outcomes:string[]=[await bounded(first,10000)];
+      for(let attempt=0;attempt<6&&applied===0;attempt++){
+        await new Promise(resolve=>setTimeout(resolve,200));
+        outcomes.push(await bounded(selfLogout(composition,()=>applied++).then(()=>"APPLIED",(error:{code?:string})=>error.code??"ERROR"),10000));
+      }
+      const diag={outcomes,pending:await pending(),drain:(await pool.query("SELECT drain_id FROM elp210_candidate.authority WHERE singleton")).rows[0].drain_id!==null,
+        rows:(await rows()).map(row=>({phase:row.phase,reconciled:row.source_reconciled,enter:row.enter_response_digest!==null,body:row.body_digest!==null,fenced:row.no_send_fenced,reason:row.terminal_reason})),
+        calls:calls.map(call=>call.action).join(",")};
+      expect(outcomes.at(-1),JSON.stringify(diag)).toBe("APPLIED");expect(applied).toBe(1);
+      expect(await pending()).toBe(0);
+      expect((await pool.query("SELECT drain_id FROM elp210_candidate.authority WHERE singleton")).rows[0].drain_id).toBeNull();
+      expect((await pool.query("SELECT state FROM auth_sessions WHERE session_id=$1",[actor.session_id])).rows[0].state).toBe("REVOKED");
+      expect(write).not.toHaveBeenCalled();expect(body()).toHaveLength(0);
+      candidate.closeNativeNoticeStream(stream);
+    });
+  });
   it("SAME composition preserves lost ENTER ACK UNKNOWN and denies self-session revoke with zero bytes",async()=>{
     await exchange(async({response,body})=>{
       const stream=candidate.openNativeNoticeStream(response),write=vi.spyOn(response,"write");dropEnter=true;
