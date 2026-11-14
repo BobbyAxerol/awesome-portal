@@ -897,6 +897,32 @@ describe.skipIf(!pgUrl)("TEST_ONLY native scoped-notice actual PG/TLS/HTTP coupl
       blocked(stream);candidate.closeNativeNoticeStream(stream);
     });
   });
+  // Stage-2f regression: a shared drain began between the source ENTER and the
+  // Core transaction that records its ACK. The ACK was RECEIVED (unlike a lost
+  // wire ACK), so its digest is a durable fact; it must be persisted, nothing
+  // may be sent, and the existing unsent-fence path must settle the frame ABORTED.
+  it("drain begun between source ENTER and its ACK commit persists the ENTER fact, sends nothing and settles ABORTED",async()=>{
+    await exchange(async({response,body})=>{
+      const drain="TEST_ONLY-race-drain",stream=candidate.openNativeNoticeStream(response),n=await notice(stream),write=vi.spyOn(response,"write");
+      holdEnter=deferred();enterArrived=deferred();
+      const acquiring=candidate.acquireNativeFrame(stream,n);void acquiring.catch(()=>undefined);
+      try{
+        await bounded(enterArrived.promise);
+        expect((await candidate.beginDrain(drain)).status).toBe("DRAIN_PENDING");
+      }finally{holdEnter.resolve(undefined);}
+      await expect(bounded(acquiring)).rejects.toMatchObject({code:"CURRENT_HUMAN_ENTRY_NOT_AVAILABLE"});
+      const row=await frameRow();
+      expect(row.enter_response_digest).not.toBeNull();expect(row.no_send_fenced).toBe(true);
+      // The original owner (acquire's own reconcile) settles the unsent frame: ABORTED terminal, source resolve ACK, drain ready.
+      expect((await candidate.reconcileNativeRead(row.lease_id)).state).toBe("RECONCILED");
+      expect(await frameRow()).toMatchObject({phase:"ABORTED",source_reconciled:true});
+      expect(actionCount("issue")).toBe(1);expect(actionCount("enter")).toBe(1);expect(actionCount("resolve")).toBe(1);
+      expect(actionCount("cancel-unentered")).toBe(0);
+      expect(await pending()).toBe(0);expect(write).not.toHaveBeenCalled();expect(body()).toHaveLength(0);
+      expect((await candidate.drainStatus(drain)).status).toBe("DRAIN_READY");
+      candidate.closeNativeNoticeStream(stream);
+    });
+  });
   it("SAME composition preserves lost ENTER ACK UNKNOWN and denies self-session revoke with zero bytes",async()=>{
     await exchange(async({response,body})=>{
       const stream=candidate.openNativeNoticeStream(response),write=vi.spyOn(response,"write");dropEnter=true;
