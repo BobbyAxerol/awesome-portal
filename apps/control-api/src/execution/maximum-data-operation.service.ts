@@ -34,6 +34,7 @@ import {
   managerRelationOperationByRelation,
 } from "./eds11r-manager-relation.registry";
 import { MAXIMUM_DATA_INTAKE_V1, MaximumDataEnvironment } from "./maximum-data-intake";
+import { NATIVE_TUPLE_A_CATALOGUE_SHA256, nativeTupleARelationAllowed } from "./native-tuple-a";
 import { managerTimestamp } from "./manager-timestamp";
 import { carryCacheBranch, takeCacheBranch } from "../execution-v2/native-cache-observation";
 
@@ -212,13 +213,16 @@ export class MaximumDataOperationService {
       throw new MaximumDataOperationError("NATIVE_MANAGER_READ_UNAVAILABLE",503);
     const selected=selectedNativeBusinessReadSelection(source);
     const relation=operation.kind==="RELATION"?managerRelationOperationByRoute(operation.route_id):undefined;
+    // Native review serves tuple A only: a relation it does not carry is refused like any unknown selection.
+    if(operation.kind==="RELATION"&&relation&&!nativeTupleARelationAllowed(relation.relation))
+      throw new MaximumDataOperationError("NATIVE_MANAGER_READ_DENIED",403);
     if(operation.kind!=="DEPLOYMENTS"&&operation.kind!=="OBSERVATION"&&!relation||!Number.isInteger(query.limit)||query.limit<1||query.limit>200||
       !["paper","sandbox","live"].includes(query.environment)||
       query.cursor!==undefined&&(typeof query.cursor!=="string"||query.cursor.length<1||query.cursor.length>128))
       throw new MaximumDataOperationError("NATIVE_MANAGER_READ_DENIED",403);
     const profile=operation.kind==="RELATION"?managerRelationProfileBinding(query.environment).profileId:
       maximumDataDeploymentBinding(query.environment).profileId;
-    const catalogue=operation.kind==="RELATION"?MAXIMUM_DATA_INTAKE_V1.returnPack.catalogueDigest:
+    const catalogue=operation.kind==="RELATION"?NATIVE_TUPLE_A_CATALOGUE_SHA256:
       MAXIMUM_DATA_DEPLOYMENT_OPERATION.sourceCatalogueSha256;
     if(selected.binding.subject!==principal.user.userId||selected.human.portal_user_id!==principal.user.userId||
       selected.binding.workspace_id!==principal.workspaceId||selected.binding.environment!==query.environment||
@@ -396,6 +400,9 @@ export class MaximumDataOperationService {
     expectedProfileId: string,
   ) {
     const bff = asRelationObject(response);
+    // Native review (a native epoch is present) is bound to tuple A; the legacy path keeps the intake pack digest.
+    const relationCatalogue = scope.nativeEpochDigest !== undefined
+      ? NATIVE_TUPLE_A_CATALOGUE_SHA256 : MAXIMUM_DATA_INTAKE_V1.returnPack.catalogueDigest;
     if (
       bff.schema_version !== "portal.execution.current-source-bff.v2" ||
       bff.authority !== "PORTAL_CONTROL_API" ||
@@ -409,7 +416,7 @@ export class MaximumDataOperationService {
       source.contract_version !== MAXIMUM_DATA_INTAKE_V1.returnPack.managerContractRevision ||
       source.authority !== "EXECUTION_CELL" ||
       source.profile_id !== expectedProfileId ||
-      source.catalogue_sha256 !== MAXIMUM_DATA_INTAKE_V1.returnPack.catalogueDigest ||
+      source.catalogue_sha256 !== relationCatalogue ||
       !SOURCE_AVAILABILITY.has(string(source.availability))
     ) throw relationSourceContractRejected();
     if (source.availability !== "AVAILABLE") {
@@ -446,7 +453,7 @@ export class MaximumDataOperationService {
       environment: query.environment,
       profile_id: expectedProfileId,
       source_contract_revision: MAXIMUM_DATA_INTAKE_V1.returnPack.managerContractRevision,
-      source_catalogue_sha256: MAXIMUM_DATA_INTAKE_V1.returnPack.catalogueDigest,
+      source_catalogue_sha256: relationCatalogue,
       source_history_semantics: operation.sourceHistorySemantics,
       source_retention_semantics: operation.sourceRetentionSemantics,
       source_health: {
@@ -514,7 +521,8 @@ function relationContinuationScope(
     environment,
     profileId: managerRelationProfileBinding(environment).profileId,
     sourceContractRevision: MAXIMUM_DATA_INTAKE_V1.returnPack.managerContractRevision,
-    sourceCatalogueSha256: MAXIMUM_DATA_INTAKE_V1.returnPack.catalogueDigest,
+    sourceCatalogueSha256: principal.nativeEpochDigest !== undefined
+      ? NATIVE_TUPLE_A_CATALOGUE_SHA256 : MAXIMUM_DATA_INTAKE_V1.returnPack.catalogueDigest,
   };
 }
 

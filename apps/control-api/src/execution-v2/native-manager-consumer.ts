@@ -14,6 +14,7 @@ export { nativeManagerDataEpoch, type NativeManagerOperation } from "../executio
 import { MAXIMUM_DATA_DEPLOYMENT_OPERATION, maximumDataDeploymentBinding } from "../execution/maximum-data-operation.registry";
 import { managerRelationOperationByRoute, managerRelationProfileBinding } from "../execution/eds11r-manager-relation.registry";
 import { MAXIMUM_DATA_INTAKE_V1 } from "../execution/maximum-data-intake";
+import { NATIVE_TUPLE_A_CATALOGUE_SHA256 } from "../execution/native-tuple-a";
 import { accessDigest } from "./access-policy";
 import type { AccessActor, ManagerDomainReadDecision } from "./access.contract";
 import type { composeNativeCore, NativeCorePersonProfileSelector, NativeCoreSelection } from "./native-core-composition";
@@ -370,6 +371,6 @@ export class NativeManagerReadConsumer {
     const selected=managerRelationOperationByRoute(operation.route_id);
     if(!selected)throw new MaximumDataOperationError("EDS11R_OPERATION_NOT_FOUND",404);
     return{operation_id:selected.operationId,profile_id:managerRelationProfileBinding(environment).profileId,
-      catalogue_sha256:MAXIMUM_DATA_INTAKE_V1.returnPack.catalogueDigest};
+      catalogue_sha256:NATIVE_TUPLE_A_CATALOGUE_SHA256};
   }
 }
