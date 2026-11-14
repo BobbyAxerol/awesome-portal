@@ -667,9 +667,9 @@ def read_sse(response, maximum, end, expected_epoch, source_set_ref, *, observe=
                     break  # Buffered bytes after the deadline are not fresh observations.
                 if event == "revalidate":
                     require(observe or time.monotonic() < end, "DEADLINE_EXCEEDED")
-                    require(frame.get("next_action") == "READ_NAMED_SNAPSHOT" and
-                            quality_valid(frame.get("quality")) and
-                            frame["quality"]["source_set_ref"] == source_set_ref, "STREAM_NOTICE_INVALID")
+                    require(frame.get("next_action") == "READ_NAMED_SNAPSHOT", "STREAM_NOTICE_NEXT_ACTION_INVALID")
+                    require(quality_valid(frame.get("quality")), "STREAM_NOTICE_QUALITY_INVALID")
+                    require(frame["quality"]["source_set_ref"] == source_set_ref, "STREAM_NOTICE_SOURCE_SET_REF_MISMATCH")
                     notices += 1
                     last = identifier
                     if not observe:
@@ -717,7 +717,7 @@ def quality_valid(value):
         (value["source_as_of_ms"] is None or type(value["source_as_of_ms"]) is int and
          0 <= value["source_as_of_ms"] <= 9007199254740991) and
         value["completeness"] in ("COMPLETE", "PARTIAL", "UNRESOLVED") and
-        value["freshness"] == "FRESH" and value["coverage"] in
+        value["freshness"] in ("FRESH", "STALE", "UNKNOWN") and value["coverage"] in
         ("AUTHORIZED_ONLY", "CURRENT_PAGE_ONLY", "RETAINED_OBSERVATIONS") and
         value["confidence"] in ("VERIFIED", "PROVISIONAL", "UNKNOWN") and
         type(value["reasons"]) is list and len(value["reasons"]) <= 32 and

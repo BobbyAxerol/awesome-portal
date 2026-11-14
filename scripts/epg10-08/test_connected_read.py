@@ -2386,6 +2386,31 @@ class SseTests(unittest.TestCase):
         return driver.read_sse(io.BytesIO(raw), maximum, driver.time.monotonic() + 2,
             "TEST_ONLY-epoch", "TEST_ONLY-source-set")
 
+    def core_quality(self, **changes):
+        # The public values Core stated for its seeded-row revalidate frame on 14 Nov 2026 (CORE_ANSWER_STREAM1_FRAME_PUBLIC_VALUES):
+        # completeness UNRESOLVED, freshness UNKNOWN (never attested), coverage CURRENT_PAGE_ONLY, confidence UNKNOWN, three reasons.
+        quality = {"source_set_ref": "TEST_ONLY-source-set", "portal_observed_at_ms": 1794650640000, "source_as_of_ms": None,
+            "completeness": "UNRESOLVED", "freshness": "UNKNOWN", "coverage": "CURRENT_PAGE_ONLY", "confidence": "UNKNOWN",
+            "reasons": ["PORTAL_OBSERVATION_NOT_TS_EVENT", "CURRENT_PAGE_ONLY", "SOURCE_FRESHNESS_NOT_ATTESTED"]}
+        quality.update(changes)
+        return quality
+
+    def test_the_real_seeded_row_notice_with_unknown_freshness_and_unresolved_completeness_is_a_notice(self):
+        for freshness in ("FRESH", "STALE", "UNKNOWN"):
+            with self.subTest(freshness=freshness):
+                result = self.read(self.wire("revalidate", quality=self.core_quality(freshness=freshness)))
+                self.assertEqual(result["notices"], 1)
+
+    def test_a_notice_failure_names_the_sub_check_and_never_a_frame_value(self):
+        cases = (("STREAM_NOTICE_NEXT_ACTION_INVALID", self.wire("revalidate", next_action="RESUME_PORTAL_CURSOR", quality=self.core_quality())),
+                 ("STREAM_NOTICE_QUALITY_INVALID", self.wire("revalidate", quality=self.core_quality(freshness="AGING"))),
+                 ("STREAM_NOTICE_QUALITY_INVALID", self.wire("revalidate", quality=self.core_quality(confidence="HIGH"))),
+                 ("STREAM_NOTICE_SOURCE_SET_REF_MISMATCH", self.wire("revalidate", quality=self.core_quality(source_set_ref="OTHER-source-set"))))
+        for code, raw in cases:
+            with self.subTest(code=code):
+                with self.assertRaisesRegex(driver.Refused, code):
+                    self.read(raw)
+
     def test_mismatched_json_event_is_rejected(self):
         with self.assertRaisesRegex(driver.Refused, "STREAM_FRAME_INVALID"):
             self.read(self.wire("revalidate").replace(b'event: revalidate', b'event: heartbeat'))
