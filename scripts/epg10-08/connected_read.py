@@ -188,6 +188,17 @@ def prepare(config, now=None):
         ((config["stage"] == "baseline" and config["probe_stream"] is True and "revoke_action" not in config) or
          (config["stage"] == "post_revoke" and config.get("revoke_action") in ("stream.subscribe", "business.read_all")))),
         "READ_SCOPE_COMBINATION_INVALID")
+    # stream_hold (stage 2f): the baseline holds ONE stream open, writes the public revoke-signal file after min_notices notices and measures
+    # the time to the end of the stream. Only for stream_stage baseline; the signal file is a fixed-name public note in an existing directory.
+    hold = config.get("stream_hold")
+    require(hold is None or (
+        config.get("read_scope", "full") == "stream_stage" and config["stage"] == "baseline" and type(hold) is dict and
+        set(hold) == {"min_notices", "signal_path", "max_after_signal_seconds"} and
+        type(hold["min_notices"]) is int and 2 <= hold["min_notices"] <= 5 and
+        type(hold["max_after_signal_seconds"]) is int and 5 <= hold["max_after_signal_seconds"] <= 30 and
+        type(hold["signal_path"]) is str and
+        re.fullmatch(r"/[A-Za-z0-9_./-]{1,400}/EDGE_W7_REVOKE_STREAM_NOW_[0-9]{8}\.md", hold["signal_path"]) is not None and
+        os.path.isdir(os.path.dirname(hold["signal_path"]))), "STREAM_HOLD_INVALID")
     # "snapshot_only": the redo of ONE snapshot read after a prior snapshot_stage run failed at the snapshot; the two
     # deployments passes are carried forward from that private result (never counted as requests, never plain PASS).
     require(config.get("snapshot_expectation", "complete") in ("complete", "seed_read_path") and
@@ -533,6 +544,7 @@ class Transport:
         self.end = time.monotonic() + prepared["config"]["deadline_seconds"]
         self.context = ssl.create_default_context()
         self.context.minimum_version = ssl.TLSVersion.TLSv1_2
+        self.hold = None   # stream_hold: the StreamHold the driver attaches before the stream request
 
     def request(self, name, cursor=None, *, stream=False):
         remaining = self.end - time.monotonic()
@@ -582,7 +594,7 @@ class Transport:
             if stream and response.status == 200:
                 require(response.getheader("Content-Type", "").split(";")[0] == "text/event-stream",
                         "STREAM_CONTENT_TYPE_INVALID")
-                observe = self.p["config"].get("observe_active_stream", False)
+                observe = self.p["config"].get("observe_active_stream", False) or "stream_hold" in self.p["config"]
                 if observe:
                     # The global abort timer still owns the physical socket even
                     # after HTTPConnection detaches it. Quiet streams may stay
@@ -592,7 +604,8 @@ class Transport:
                                   self.p["producer"]["projection_epoch"], self.p["producer"]["source_set_ref"],
                                   observe=observe,
                                   **({"report_termination": True}
-                                     if self.p["config"].get("read_scope") == "stream_stage" else {}))
+                                     if self.p["config"].get("read_scope") == "stream_stage" else {}),
+                                  **({"hold": self.hold, "frame_cap": 100} if "stream_hold" in self.p["config"] else {}))
                 require(observe or not result["notices"] or
                         (not expired.is_set() and time.monotonic() < self.end),
                         "DEADLINE_EXCEEDED")
@@ -614,15 +627,51 @@ class Transport:
                 response.close()
 
 
-def read_sse(response, maximum, end, expected_epoch, source_set_ref, *, observe=False, report_termination=False):
+class StreamHold:
+    """stage 2f: after ``min_notices`` valid revalidate notices write the public revoke-signal file ONCE and bound the rest of the read.
+
+    The file holds only fixed public text and the runner's UTC time; no frame value, cursor or key. ``hard_end`` stops the read
+    ``max_after_signal_seconds`` after the signal (a stream that is still open then is a finding, not a pass)."""
+
+    def __init__(self, spec):
+        self.min_notices, self.path, self.max_after = spec["min_notices"], spec["signal_path"], spec["max_after_signal_seconds"]
+        self.signal_utc = self.signal_mono = self.notices_before_signal = self.hard_end = self.stream_started_mono = None
+
+    def on_notice(self, notices):
+        if self.signal_mono is not None or notices < self.min_notices:
+            return
+        self.signal_mono, self.signal_utc = time.monotonic(), datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+        self.notices_before_signal = notices
+        self.hard_end = self.signal_mono + self.max_after
+        text = ("# Edge -> Core: W7 revoke the STREAM grant now (public text only)\n\n"
+                f"Written {self.signal_utc} (runner clock). The stream_stage runner holds ONE stream open and has seen "
+                f"{notices} notices. Please revoke ONLY the stream.subscribe grant now (READ stays). The runner measures the time "
+                f"from this file to the end of the stream (bound {self.max_after} s).\n")
+        fd = os.open(self.path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o644)
+        try:
+            os.write(fd, text.encode())
+        finally:
+            os.close(fd)
+        digest_file = self.path[:-3] + ".sha256"
+        fd = os.open(digest_file, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o644)
+        try:
+            os.write(fd, (sha256(text.encode()).hexdigest() + "  " + os.path.basename(self.path) + "\n").encode())
+        finally:
+            os.close(fd)
+
+
+def read_sse(response, maximum, end, expected_epoch, source_set_ref, *, observe=False, report_termination=False,
+             hold=None, frame_cap=8):
     count, notices, total, event, data, identifier = 0, 0, 0, None, [], None
     last = None
     started = time.monotonic() if observe else None
+    if hold is not None:
+        hold.stream_started_mono = started
     observation = {"status": "OBSERVED_ONLY", "termination": None, "first_notice_after_ms": None,
         "terminal_event": None, "frame_observations": [], "final_egress_proved": False}
     if observe:
         observation["started_at_utc"] = datetime.now(timezone.utc).isoformat()
-    while count < 8 and time.monotonic() < end:
+    while count < frame_cap and time.monotonic() < end:
         try:
             line = response.readline(min(65537, maximum - total + 1))
         except TimeoutError:
@@ -635,6 +684,9 @@ def read_sse(response, maximum, end, expected_epoch, source_set_ref, *, observe=
             break  # Physical abort at the global deadline is not a server deny.
         total += len(line)
         require(total <= maximum and len(line) <= 65536, "STREAM_LIMIT")
+        if hold is not None and hold.hard_end is not None and time.monotonic() >= hold.hard_end:
+            observation["termination"] = "POST_SIGNAL_BOUND"
+            break  # the stream was still open max_after_signal_seconds after the signal
         if observe and time.monotonic() >= end:
             observation["termination"] = "DEADLINE"
             break  # Includes EOF caused by our own physical deadline abort.
@@ -676,6 +728,8 @@ def read_sse(response, maximum, end, expected_epoch, source_set_ref, *, observe=
                     require(frame["quality"]["source_set_ref"] == source_set_ref, "STREAM_NOTICE_SOURCE_SET_REF_MISMATCH")
                     notices += 1
                     last = identifier
+                    if hold is not None:
+                        hold.on_notice(notices)
                     if not observe:
                         break  # Old finite specimen: one notice, no active-stream proof.
                     if observation["first_notice_after_ms"] is None:
@@ -689,7 +743,9 @@ def read_sse(response, maximum, end, expected_epoch, source_set_ref, *, observe=
                 if observe:
                     observation["frame_observations"].append({"event_type": event,
                         "frame_sha256": digest(frame),
-                        "received_after_ms": max(0, int((received - started) * 1000))})
+                        "received_after_ms": max(0, int((received - started) * 1000)),
+                        **({"portal_observed_at_ms": frame["quality"]["portal_observed_at_ms"]
+                            if type(frame.get("quality")) is dict else None} if hold is not None else {})})
                 if frame.get("terminal") is True:
                     observation.update(termination="TERMINAL", terminal_event=event)
                     break
@@ -1109,6 +1165,46 @@ def stream_stage_streams(config, p, receipt, request, cursor):
     receipt["cases"]["cursor_resume"] = outcome
 
 
+def stream_hold_stage(config, p, receipt, request, cursor, hold):
+    """Stage 2f, active-stream revocation: ONE stream opened with the snapshot cursor and kept open. After ``min_notices`` notices the
+    StreamHold wrote the public signal file; Core then revokes ONLY the stream.subscribe grant and the stream must end by itself.
+    The receipt keeps counts, timings, the end kind and the public portal_observed_at_ms of each notice (for the causation comparison
+    with Core's published bump times): no frame body, no cursor, no key. A stream still open after the bound is a FAIL case, never a
+    pass; timing and EOF are client facts, not correlated official final-egress proof."""
+    time.sleep(config["read_spacing_seconds"])   # let the snapshot's native attempt retire before a stream frame takes one
+    status, headers, stream = request("stream", cursor, True)
+    ended = time.monotonic()
+    if status != 200:
+        finite("stream", status, headers, stream if isinstance(stream, bytes) else b"", p)
+    require(type(stream) is dict and type(stream.get("observation")) is dict, "STREAM_NOT_AVAILABLE")
+    obs = stream["observation"]
+    counts = {"frames": stream["frames"], "notices": stream["notices"], "bytes": stream["bytes"], "termination": stream["termination"]}
+    observed = [f.get("portal_observed_at_ms") for f in obs["frame_observations"] if f["event_type"] == "revalidate"]
+    receipt["cases"]["stream_notice"] = {"status": "PASS" if stream["notices"] else "NOT_RUN", **counts,
+                                         "portal_observed_at_ms": observed}
+    if hold.signal_mono is None:
+        receipt["cases"]["active_stream_revocation"] = {"status": "NOT_RUN", "reason": "FEWER_NOTICES_THAN_REQUIRED_" + stream["termination"],
+                                                        "min_notices": hold.min_notices}
+        receipt["cases"]["cursor_resume"] = {"status": "NOT_RUN", "reason": "NOT_IN_THIS_RUN"}
+        return
+    event = obs.get("terminal_event")
+    kind = ("ACCESS_REVOKED_FRAME" if stream["termination"] == "TERMINAL" and event == "access_revoked" else
+            "CLOSED_BY_SERVER" if stream["termination"] == "EOF" else None)
+    case = {"signal_utc": hold.signal_utc, "signal_after_stream_start_ms": max(0, int((hold.signal_mono - hold.stream_started_mono) * 1000)),
+            "notices_before_signal": hold.notices_before_signal, "notices_after_signal": stream["notices"] - hold.notices_before_signal,
+            "ended_after_signal_ms": max(0, int((ended - hold.signal_mono) * 1000)), "bound_ms": hold.max_after * 1000,
+            "termination": stream["termination"], "client_fact_not_final_egress_proof": True}
+    if kind is None:
+        case.update(status="FAIL", reason=("STREAM_ENDED_BY_OTHER_TERMINAL_" + str(event).upper()) if stream["termination"] == "TERMINAL"
+                    else "STREAM_NOT_TERMINATED_AFTER_SIGNAL")
+    else:
+        case.update(status="PASS", end_kind=kind)
+        if case["ended_after_signal_ms"] > case["bound_ms"]:
+            case.update(status="FAIL", reason="STREAM_ENDED_AFTER_BOUND")
+    receipt["cases"]["active_stream_revocation"] = case
+    receipt["cases"]["cursor_resume"] = {"status": "NOT_RUN", "reason": "NOT_IN_THIS_RUN"}
+
+
 def bounded_deployment_pages(prepared, request):
     """Observe one bounded Core deployment scan; never infer source completeness.
 
@@ -1183,6 +1279,9 @@ def run(config, transport_factory=Transport, checkpoint_sink=None):
         if p["session_evidence_class"] is not None:
             receipt["session_evidence_class"] = p["session_evidence_class"]
         transport = transport_factory(p)
+        hold = StreamHold(config["stream_hold"]) if "stream_hold" in config else None
+        if hold is not None:
+            transport.hold = hold
         def request(name, cursor=None, stream=False):
             receipt["requests"] += 1
             return transport.request(name, cursor, stream=stream)
@@ -1337,7 +1436,9 @@ def run(config, transport_factory=Transport, checkpoint_sink=None):
                     checkpoint.update({k: p["producer"][k] for k in
                                        ("stream_grant_id", "stream_grant_revision")})
                 checkpoint_sink(checkpoint)
-            if scope == "stream_stage":
+            if scope == "stream_stage" and hold is not None:
+                stream_hold_stage(config, p, receipt, request, cursor, hold)
+            elif scope == "stream_stage":
                 stream_stage_streams(config, p, receipt, request, cursor)
             elif config["probe_stream"] and p["producer"]["stream_authorized"]:
                 status, _, stream = request("stream", cursor, True)

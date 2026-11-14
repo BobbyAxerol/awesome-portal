@@ -1845,6 +1845,107 @@ class DriverTests(unittest.TestCase):
         self.assertNotIn("read_body_sha256", checkpoint)
         self.assertEqual(checkpoint["prime_body_sha256"], result["cases"]["snapshot_read_path"]["body_sha256"])
 
+    def hold_setup(self, directory):
+        snapshot = self.stream_setup()
+        self.cfg["stream_hold"] = {"min_notices": 2, "signal_path": str(Path(directory) / "EDGE_W7_REVOKE_STREAM_NOW_20261114.md"),
+                                   "max_after_signal_seconds": 15}
+        return snapshot
+
+    def hold_run(self, snapshot, notices_seen, stream_result):
+        clock, calls = [0.0], []
+        transport, sink = MagicMock(), MagicMock()
+        def fake_sleep(seconds):
+            clock[0] += seconds
+        def fake_request(name, cursor, stream=False):
+            calls.append((name, cursor, stream))
+            if name == "snapshot":
+                return snapshot
+            hold = transport.hold
+            hold.stream_started_mono = driver.time.monotonic() - 3
+            for n in range(1, notices_seen + 1):
+                hold.on_notice(n)
+            return 200, {}, stream_result
+        transport.request.side_effect = fake_request
+        with patch.object(driver.time, "time", return_value=NOW), patch.object(driver.time, "sleep", fake_sleep):
+            result = driver.run(self.cfg, lambda _: transport, checkpoint_sink=sink)
+        return result, calls
+
+    def hold_stream(self, notices, termination, event=None, frame_times=(111, 222)):
+        observation = {"status": "OBSERVED_ONLY", "termination": termination, "first_notice_after_ms": 10, "terminal_event": event,
+                       "frame_observations": [{"event_type": "revalidate", "frame_sha256": "a" * 64, "received_after_ms": 10 * (i + 1),
+                                               "portal_observed_at_ms": t} for i, t in enumerate(frame_times)],
+                       "final_egress_proved": False, "started_at_utc": "2026-10-20T05:00:00+00:00", "elapsed_ms": 5000}
+        return {"frames": notices + 1, "notices": notices, "bytes": 900, "cursor": "PRIVATE-HOLD-1", "termination": termination,
+                "observation": observation}
+
+    def test_stream_hold_writes_one_public_signal_after_two_notices_and_records_how_the_stream_ended(self):
+        import tempfile
+        with tempfile.TemporaryDirectory() as directory:
+            snapshot = self.hold_setup(directory)
+            for termination, event, kind in (("TERMINAL", "access_revoked", "ACCESS_REVOKED_FRAME"), ("EOF", None, "CLOSED_BY_SERVER")):
+                with self.subTest(ended=kind):
+                    for f in Path(directory).iterdir():
+                        f.unlink()
+                    result, calls = self.hold_run(snapshot, 3, self.hold_stream(3, termination, event))
+                    self.assertEqual((result["status"], result["requests"]), ("SCOPED_OBSERVATIONS_ONLY", 2))
+                    self.assertEqual([c[0] for c in calls], ["snapshot", "stream"])
+                    case = result["cases"]["active_stream_revocation"]
+                    self.assertEqual((case["status"], case["end_kind"], case["notices_before_signal"], case["notices_after_signal"]),
+                                     ("PASS", kind, 2, 1))
+                    self.assertEqual((case["bound_ms"], case["client_fact_not_final_egress_proof"]), (15000, True))
+                    self.assertEqual(result["cases"]["stream_notice"]["portal_observed_at_ms"], [111, 222])
+                    self.assertEqual(sorted(f.name for f in Path(directory).iterdir()),
+                                     ["EDGE_W7_REVOKE_STREAM_NOW_20261114.md", "EDGE_W7_REVOKE_STREAM_NOW_20261114.sha256"])
+                    text = (Path(directory) / "EDGE_W7_REVOKE_STREAM_NOW_20261114.md").read_text()
+                    self.assertIn("revoke ONLY the stream.subscribe grant", text)
+                    self.assertNotIn("PRIVATE-HOLD-1", json.dumps(result) + text)
+                    self.assertEqual((Path(directory) / "EDGE_W7_REVOKE_STREAM_NOW_20261114.sha256").read_text().split()[0],
+                                     sha256(text.encode()).hexdigest())
+
+    def test_stream_hold_never_passes_a_stream_that_stays_open_or_that_saw_too_few_notices(self):
+        import tempfile
+        with tempfile.TemporaryDirectory() as directory:
+            snapshot = self.hold_setup(directory)
+            for termination in ("POST_SIGNAL_BOUND", "DEADLINE", "SOCKET_TIMEOUT", "FRAME_LIMIT"):
+                with self.subTest(open_stream=termination):
+                    for f in Path(directory).iterdir():
+                        f.unlink()
+                    result, _ = self.hold_run(snapshot, 3, self.hold_stream(3, termination))
+                    case = result["cases"]["active_stream_revocation"]
+                    self.assertEqual((case["status"], case["reason"]), ("FAIL", "STREAM_NOT_TERMINATED_AFTER_SIGNAL"))
+            for f in Path(directory).iterdir():
+                f.unlink()
+            result, _ = self.hold_run(snapshot, 3, self.hold_stream(3, "TERMINAL", "unavailable"))
+            self.assertEqual(result["cases"]["active_stream_revocation"]["reason"], "STREAM_ENDED_BY_OTHER_TERMINAL_UNAVAILABLE")
+            for f in Path(directory).iterdir():
+                f.unlink()
+            result, _ = self.hold_run(snapshot, 1, self.hold_stream(1, "EOF"))                  # only one notice: no signal at all
+            case = result["cases"]["active_stream_revocation"]
+            self.assertEqual((case["status"], case["reason"]), ("NOT_RUN", "FEWER_NOTICES_THAN_REQUIRED_EOF"))
+            self.assertEqual(list(Path(directory).iterdir()), [])
+
+    def test_stream_hold_config_is_refused_outside_the_stream_stage_baseline_or_with_a_bad_signal_path(self):
+        import tempfile
+        with tempfile.TemporaryDirectory() as directory:
+            self.hold_setup(directory)
+            self.prepare()                                                                     # the valid combination prepares
+            good = dict(self.cfg["stream_hold"])
+            for change in ({"signal_path": str(Path(directory) / "OTHER_NAME_20261114.md")},
+                           {"signal_path": str(Path(directory) / "missing" / "EDGE_W7_REVOKE_STREAM_NOW_20261114.md")},
+                           {"signal_path": "relative/EDGE_W7_REVOKE_STREAM_NOW_20261114.md"},
+                           {"min_notices": 1}, {"min_notices": True}, {"max_after_signal_seconds": 31}):
+                with self.subTest(change=sorted(change)):
+                    self.cfg["stream_hold"] = {**good, **change}
+                    with self.assertRaisesRegex(driver.Refused, "STREAM_HOLD_INVALID"):
+                        self.prepare()
+            self.cfg["stream_hold"] = {**good, "extra": 1}
+            with self.assertRaisesRegex(driver.Refused, "STREAM_HOLD_INVALID"):
+                self.prepare()
+            self.cfg["stream_hold"] = good
+            self.cfg["read_scope"] = "snapshot_stage"
+            with self.assertRaises(driver.Refused):
+                self.prepare()
+
     def test_stream_stage_never_passes_a_quiet_stream_a_timeout_or_a_replayed_notice(self):
         for termination in ("SOCKET_TIMEOUT", "DEADLINE", "EOF", "FRAME_LIMIT", "TERMINAL"):
             with self.subTest(first_quiet=termination):
@@ -2453,6 +2554,43 @@ class SseTests(unittest.TestCase):
             with self.subTest(code=code):
                 with self.assertRaisesRegex(driver.Refused, code):
                     self.read(raw)
+
+    def test_hold_signals_once_after_the_second_notice_then_follows_the_stream_to_its_access_revoked_frame(self):
+        import tempfile
+        with tempfile.TemporaryDirectory() as directory:
+            spec = {"min_notices": 2, "signal_path": str(Path(directory) / "EDGE_W7_REVOKE_STREAM_NOW_20261114.md"),
+                    "max_after_signal_seconds": 15}
+            hold = driver.StreamHold(spec)
+            raw = (self.wire("revalidate", quality=self.core_quality(portal_observed_at_ms=101)) +
+                   self.wire("heartbeat") +
+                   self.wire("revalidate", quality=self.core_quality(portal_observed_at_ms=202)) +
+                   self.wire("revalidate", quality=self.core_quality(portal_observed_at_ms=303)) +
+                   self.wire("access_revoked", terminal=True, resume_cursor=None, projection_generation=None, quality=None,
+                             reason_code="ACCESS_CHANGED", next_action="SIGN_IN_OR_REQUEST_ACCESS"))
+            with patch.object(driver.time, "monotonic", return_value=10.0):
+                result = driver.read_sse(io.BytesIO(raw), 65536, 12.0, "TEST_ONLY-epoch", "TEST_ONLY-source-set", observe=True,
+                                         report_termination=True, hold=hold, frame_cap=100)
+            self.assertEqual((result["notices"], result["termination"], result["observation"]["terminal_event"]),
+                             (3, "TERMINAL", "access_revoked"))
+            self.assertEqual(hold.notices_before_signal, 2)
+            self.assertEqual([f["portal_observed_at_ms"] for f in result["observation"]["frame_observations"] if f["event_type"] == "revalidate"],
+                             [101, 202, 303])
+            self.assertEqual(len(list(Path(directory).iterdir())), 2)                           # the signal and its digest, once
+            with patch.object(driver.time, "monotonic", return_value=10.0):
+                plain = driver.read_sse(io.BytesIO(raw), 65536, 12.0, "TEST_ONLY-epoch", "TEST_ONLY-source-set", observe=True)
+            self.assertNotIn("portal_observed_at_ms", plain["observation"]["frame_observations"][0])   # default receipts keep their shape
+
+    def test_hold_stops_the_read_after_the_post_signal_bound(self):
+        import tempfile
+        with tempfile.TemporaryDirectory() as directory:
+            hold = driver.StreamHold({"min_notices": 2, "signal_path": str(Path(directory) / "EDGE_W7_REVOKE_STREAM_NOW_20261114.md"),
+                                      "max_after_signal_seconds": 5})
+            hold.signal_mono, hold.hard_end = 1.0, 2.0                                          # the bound is already past
+            raw = self.wire("heartbeat") * 3
+            with patch.object(driver.time, "monotonic", return_value=10.0):
+                result = driver.read_sse(io.BytesIO(raw), 65536, 12.0, "TEST_ONLY-epoch", "TEST_ONLY-source-set", observe=True,
+                                         report_termination=True, hold=hold, frame_cap=100)
+            self.assertEqual((result["termination"], result["frames"]), ("POST_SIGNAL_BOUND", 0))
 
     def test_mismatched_json_event_is_rejected(self):
         with self.assertRaisesRegex(driver.Refused, "STREAM_FRAME_INVALID"):
