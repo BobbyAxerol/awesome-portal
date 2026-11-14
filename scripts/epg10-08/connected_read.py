@@ -199,6 +199,10 @@ def prepare(config, now=None):
         type(hold["signal_path"]) is str and
         re.fullmatch(r"/[A-Za-z0-9_./-]{1,400}/EDGE_W7_REVOKE_STREAM_NOW_[0-9]{8}\.md", hold["signal_path"]) is not None and
         os.path.isdir(os.path.dirname(hold["signal_path"]))), "STREAM_HOLD_INVALID")
+    # snapshot_probe_only (stage 2f option B): the stream_stage baseline stops after the snapshot (ONE native READ request, no stream request).
+    require("snapshot_probe_only" not in config or (
+        config["snapshot_probe_only"] is True and config.get("read_scope", "full") == "stream_stage" and config["stage"] == "baseline" and
+        "stream_hold" not in config), "SNAPSHOT_PROBE_ONLY_INVALID")
     # "snapshot_only": the redo of ONE snapshot read after a prior snapshot_stage run failed at the snapshot; the two
     # deployments passes are carried forward from that private result (never counted as requests, never plain PASS).
     require(config.get("snapshot_expectation", "complete") in ("complete", "seed_read_path") and
@@ -1214,7 +1218,9 @@ def stream_hold_stage(config, p, receipt, request, cursor, hold):
         case.update(status="FAIL", reason=("STREAM_ENDED_BY_OTHER_TERMINAL_" + str(event).upper()) if stream["termination"] == "TERMINAL"
                     else "STREAM_NOT_TERMINATED_AFTER_SIGNAL")
     else:
-        case.update(status="PASS", end_kind=kind)
+        # Only an access_revoked frame is a revocation observation. A bare server close cannot be told apart from any other close (14 Nov 2026,
+        # stage 2f: the stream closed while Core's revoke attempt was refused with nothing committed), so it is recorded, never a PASS.
+        case.update(status="PASS" if kind == "ACCESS_REVOKED_FRAME" else "OBSERVED_END_UNCORRELATED", end_kind=kind)
         if case["ended_after_signal_ms"] > case["bound_ms"]:
             case.update(status="FAIL", reason="STREAM_ENDED_AFTER_BOUND")
     receipt["cases"]["active_stream_revocation"] = case
@@ -1452,7 +1458,9 @@ def run(config, transport_factory=Transport, checkpoint_sink=None):
                     checkpoint.update({k: p["producer"][k] for k in
                                        ("stream_grant_id", "stream_grant_revision")})
                 checkpoint_sink(checkpoint)
-            if scope == "stream_stage" and hold is not None:
+            if scope == "stream_stage" and config.get("snapshot_probe_only", False):
+                pass   # option B: the snapshot above was the only request
+            elif scope == "stream_stage" and hold is not None:
                 stream_hold_stage(config, p, receipt, request, cursor, hold)
             elif scope == "stream_stage":
                 stream_stage_streams(config, p, receipt, request, cursor)

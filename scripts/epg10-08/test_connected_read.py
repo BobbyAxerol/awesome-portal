@@ -1891,7 +1891,7 @@ class DriverTests(unittest.TestCase):
                     self.assertEqual([c[0] for c in calls], ["snapshot", "stream"])
                     case = result["cases"]["active_stream_revocation"]
                     self.assertEqual((case["status"], case["end_kind"], case["notices_before_signal"], case["notices_after_signal"]),
-                                     ("PASS", kind, 2, 1))
+                                     ("PASS" if kind == "ACCESS_REVOKED_FRAME" else "OBSERVED_END_UNCORRELATED", kind, 2, 1))
                     self.assertEqual((case["bound_ms"], case["client_fact_not_final_egress_proof"]), (15000, True))
                     self.assertEqual(result["cases"]["stream_notice"]["portal_observed_at_ms"], [111, 222])
                     self.assertEqual(sorted(f.name for f in Path(directory).iterdir()),
@@ -1945,6 +1945,23 @@ class DriverTests(unittest.TestCase):
             self.cfg["read_scope"] = "snapshot_stage"
             with self.assertRaises(driver.Refused):
                 self.prepare()
+
+    def test_stream_stage_snapshot_probe_only_makes_exactly_one_request_and_no_stream_request(self):
+        snapshot = self.stream_setup()
+        self.cfg["snapshot_probe_only"] = True
+        result, calls, sink = self.stream_run([snapshot])
+        self.assertEqual((result["status"], result["requests"], result["read_scope"]), ("SCOPED_OBSERVATIONS_ONLY", 1, "stream_stage"))
+        self.assertEqual([(c[0], c[2]) for c in calls], [("snapshot", False)])
+        self.assertEqual(result["cases"]["snapshot_read_path"]["status"], "READ_PATH_ONLY")
+        for case in ("stream_notice", "cursor_resume", "active_stream_revocation"):
+            self.assertEqual(result["cases"][case]["status"], "NOT_RUN")
+        self.cfg["snapshot_probe_only"] = 1                                                      # only the literal true is accepted
+        with self.assertRaisesRegex(driver.Refused, "SNAPSHOT_PROBE_ONLY_INVALID"):
+            self.prepare()
+        self.cfg["snapshot_probe_only"] = True
+        self.cfg["read_scope"] = "snapshot_stage"
+        with self.assertRaises(driver.Refused):
+            self.prepare()
 
     def test_stream_stage_never_passes_a_quiet_stream_a_timeout_or_a_replayed_notice(self):
         for termination in ("SOCKET_TIMEOUT", "DEADLINE", "EOF", "FRAME_LIMIT", "TERMINAL"):
