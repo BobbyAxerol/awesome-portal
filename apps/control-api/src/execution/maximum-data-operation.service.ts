@@ -558,10 +558,15 @@ export function managerRelationRecord(
         (payload as Record<string, unknown>).kind === "OBJECT") {
       const members = (payload as Record<string, unknown>).value;
       if (members !== null && typeof members === "object" && !Array.isArray(members)) {
+        const unreadable: string[] = [];
         for (const key of projection.keys) {
           if (!Object.prototype.hasOwnProperty.call(members, key.key)) continue;
-          values[key.field] = decodePayloadScalar(key.kind, (members as Record<string, unknown>)[key.key]);
+          // Owner decision (15 Nov): a value of the wrong kind inside the schema-free payload is NOT shown and does not
+          // reject the page: the field is null and its key is listed in payload_unreadable_keys (never a wrong value).
+          try { values[key.field] = decodePayloadScalar(key.kind, (members as Record<string, unknown>)[key.key]); }
+          catch { values[key.field] = null; unreadable.push(key.key); }
         }
+        if (unreadable.length > 0) values.payload_unreadable_keys = unreadable.join(",");
       }
     }
   }

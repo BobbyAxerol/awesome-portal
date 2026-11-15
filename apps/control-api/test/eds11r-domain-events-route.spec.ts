@@ -75,7 +75,7 @@ describe("domain-events: hand-authored extra operation next to the generated 54"
       operationId: "managerDomainEventsPageV1", sourceId: "manager.current.domain-events", relation: "domain_events" });
   });
   it("exposes exactly the 23 pinned payload keys as payload_* fields and never raw or payload as a field", () => {
-    const flat = operation.fields.filter((f) => f.name.startsWith("payload_")).map((f) => f.name.slice(8)).sort();
+    const flat = operation.fields.filter((f) => f.name.startsWith("payload_") && f.name !== "payload_unreadable_keys").map((f) => f.name.slice(8)).sort();
     expect(flat).toEqual([...ALLOWED_KEYS].sort());
     expect(operation.payloadProjection!.keys).toHaveLength(23);
     const names = operation.fields.map((f) => f.name);
@@ -121,11 +121,17 @@ describe("domain-events: hand-authored extra operation next to the generated 54"
     expect(json).not.toContain("must-not-cross");
     expect(json).not.toContain("secret");
   });
-  it("(5) a payload value of the wrong kind rejects the record", () => {
-    expect(() => valuesOf({}, payload({ status: { kind: "INTEGER", value: 3 } }))).toThrow();
-    expect(() => valuesOf({}, payload({ reduce_only: text("false") }))).toThrow();
-    expect(() => valuesOf({}, payload({ quantity: text("lots") }))).toThrow(); // text that is not a decimal
-    expect(() => valuesOf({}, payload({ quantity: { kind: "OBJECT", value: {} } }))).toThrow();
+  it("(5) a payload value of the wrong kind is shown as null and listed, the record is still served", () => {
+    const a = valuesOf({}, payload({ status: { kind: "INTEGER", value: 3 } }));
+    expect(a.payload_status).toBeNull();
+    expect(a.payload_unreadable_keys).toBe("status");
+    const b = valuesOf({}, payload({ reduce_only: text("false"), quantity: text("lots"), side: text("BUY") }));
+    expect(b.payload_reduce_only).toBeNull();
+    expect(b.payload_quantity).toBeNull();
+    expect(b.payload_side).toBe("BUY");
+    expect(String(b.payload_unreadable_keys).split(",").sort()).toEqual(["quantity", "reduce_only"]);
+    expect(valuesOf({}, payload({ status: text("FILLED") })).payload_unreadable_keys).toBeUndefined();
+    expect(JSON.stringify(a)).not.toContain("3,");
     expect(() => valuesOf({ event_ts: text("yesterday") })).toThrow(); // scalar columns stay strict
     // a DECIMAL field accepts the numeric spellings of JSON numbers and nothing else
     expect(decodePayloadScalar("DECIMAL", { kind: "INTEGER", value: 7 })).toBe("7");
@@ -203,12 +209,17 @@ describe("domain-events: private page path and the non-native refusal", () => {
     expect(JSON.stringify(page)).not.toContain("raw-source-key");
     expect(source.calls[0]).toMatchObject({ environment: "paper", policy: { relation: "domain_events", sourceId: "manager.current.domain-events" } });
   });
-  it("a typed source contract rejection (not a crash) when a row has a wrong payload kind", async () => {
+  it("a row with a wrong payload kind is served with the key null and listed; other rows unaffected", async () => {
     const source = new FakeSource();
-    source.response = envelope([item({}), item({ payload: payload({ side: { kind: "BOOLEAN", value: true } }) })]);
+    source.response = envelope([item({}), item({ event_id: text("9b9e1d2c-0000-4000-8000-000000000003"), payload: payload({ side: { kind: "BOOLEAN", value: true }, status: text("NEW") }) })]);
     const service = new MaximumDataOperationService(source as unknown as ExecutionCurrentSourceProxy, new FakeContinuations() as never);
-    await expect((service as unknown as { prepareRelationData(p: unknown, o: unknown, q: unknown): Promise<unknown> })
-      .prepareRelationData(principal, operation, { environment: "paper", limit: 50 })).rejects.toMatchObject({ status: expect.any(Number) });
+    const page = await (service as unknown as { prepareRelationData(p: unknown, o: unknown, q: unknown): Promise<any> })
+      .prepareRelationData(principal, operation, { environment: "paper", limit: 50 });
+    expect(page.records).toHaveLength(2);
+    expect(page.records[1].values.payload_side).toBeNull();
+    expect(page.records[1].values.payload_status).toBe("NEW");
+    expect(page.records[1].values.payload_unreadable_keys).toBe("side");
+    expect(page.records[0].values.payload_unreadable_keys).toBeUndefined();
   });
   it("the legacy/retained relation page refuses the extra operation like an unknown route (404)", async () => {
     const service = new MaximumDataOperationService(new FakeSource() as unknown as ExecutionCurrentSourceProxy, new FakeContinuations() as never);

@@ -67,6 +67,8 @@ const DOMAIN_EVENTS: ManagerRelationOperation = Object.freeze({
   fields: Object.freeze([
     ...SCALAR_FIELDS,
     ...PAYLOAD_PROJECTION.keys.map((k) => Object.freeze({ name: k.field, kind: k.kind })),
+    // Derived by Core, not a source column: the allow-listed payload keys whose value had the wrong kind (shown as null).
+    Object.freeze({ name: "payload_unreadable_keys", kind: "TEXT" as const }),
   ].sort((a, b) => a.name.localeCompare(b.name))),
   sourceHistorySemantics: "E2_REQUIRED_NO_DML_OR_ROW_HISTORY_PROBE",
   sourceRetentionSemantics: "NOT_QUERIED_E1_NO_BUSINESS_ROW_ACCESS",
