@@ -76,6 +76,10 @@ describe("R1c-ARCHIVE: Core-signed ABORTED terminal for the one stuck frame row"
     expect(canonical(rest)).toBe(row.base_body);
     expect(canonical(r.status_request!.body)).toBe(row.base_body);
   });
+  it("the status request is deterministic: identical for --check and --mint, so its hash can be approved before signing", async () => {
+    const row = fixtureRow(), a = await run(row, false), b = await run(row, true);
+    expect(JSON.stringify(a.status_request)).toBe(JSON.stringify(b.status_request));
+  });
   it("expectations from TS are enforced", async () => {
     const row = fixtureRow();
     await expect(run(row, true, { source_digest: hex("9") })).rejects.toMatchObject({ code: "ARCHIVE_SOURCE_DIGEST_EXPECTATION_MISMATCH" });

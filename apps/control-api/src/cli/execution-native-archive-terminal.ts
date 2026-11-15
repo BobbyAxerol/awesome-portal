@@ -1,6 +1,6 @@
 /** R1c-ARCHIVE, offline owner maintenance ONLY (never in a server path): checks (and, with --mint, signs) the ABORTED terminal for the
  * one stuck frame lease out of the verified schema archive. No database, no network, no HTTP listener.
- * usage: execution-native-archive-terminal --row <file> --row-sha256 <hex> (--check | --mint --out-dir <dir>)
+ * usage: execution-native-archive-terminal --row <file> --row-sha256 <hex> (--check | --mint) --out-dir <dir>
  *        [--expect-source-digest <hex>] [--expect-binding-digest <hex>]
  * Reads the pinned native Core manifest through the usual env pair (CONTROL_API_NATIVE_CORE_CONFIG_FILE/SHA256) for the terminal signer. */
 import "reflect-metadata";
@@ -44,20 +44,26 @@ async function main() {
   const row = JSON.parse((await readPinned(rowPath, rowSha, 65536)).toString("utf8"));
   const limits = { request_bytes: 32768, response_bytes: 32768 };
   const result = await mintArchivedUnsentFrameTerminal({
-    row, mint, limits, now_s: Math.floor(Date.now() / 1000),
+    row, mint, limits, now_s: Math.floor(Date.now() / 1000) - 1, // TS verifier: no leeway; iat = signing second - 1, exp = iat + 60 (usable <= ~58 s)
     terminal: { issuer: terminalCfg.issuer, audience: terminalCfg.audience, key_id: terminalCfg.key_id, private_key, ttl_seconds: terminalCfg.ttl_seconds },
     expect: { source_digest: val("--expect-source-digest"), binding_digest: val("--expect-binding-digest") },
   });
-  if (check) { process.stdout.write(JSON.stringify({ mode: "CHECK", checked: result.checked }) + "\n"); return; }
-  const dir = abs(val("--out-dir")), out: Record<string, string> = {};
-  for (const [name, doc] of [["recovery-request-status.json", result.status_request], ["recovery-request-resolve.json", result.resolve_request]] as const) {
+  const dir = abs(val("--out-dir"));
+  const put = async (name: string, doc: unknown) => {
     const bytes = Buffer.from(JSON.stringify(doc), "utf8");
     await writeFile(join(dir, name), bytes, { flag: "wx", mode: 0o600 });
-    out[name] = createHash("sha256").update(bytes).digest("hex");
+    return createHash("sha256").update(bytes).digest("hex");
+  };
+  if (check) {
+    // The status request carries no terminal: deterministic, so its hash can be approved BEFORE anything is signed.
+    const status_sha256 = await put("recovery-request-status.json", result.status_request);
+    process.stdout.write(JSON.stringify({ mode: "CHECK", checked: result.checked, status_request_sha256: status_sha256 }) + "\n");
+    return;
   }
-  // Hash of everything EXCEPT the signed terminal: what a reviewer can pin before the 60-second terminal exists.
-  process.stdout.write(JSON.stringify({ mode: "MINT", checked: result.checked, files_sha256: out, iat: result.iat, exp: result.exp,
-    receipt_id: result.receipt_id, receipt_digest: result.receipt_digest, unsigned_base_sha256: result.checked.stable_core_digest }) + "\n");
+  // MINT writes ONLY the resolve request (it embeds the short-lived terminal, so its hash exists only after signing).
+  const resolve_sha256 = await put("recovery-request-resolve.json", result.resolve_request);
+  process.stdout.write(JSON.stringify({ mode: "MINT", checked: result.checked, resolve_request_sha256: resolve_sha256, iat: result.iat, exp: result.exp,
+    receipt_id: result.receipt_id, receipt_digest: result.receipt_digest }) + "\n");
 }
 void main().catch(error => {
   const code = error instanceof NativeArchiveTerminalError ? error.code
