@@ -50,7 +50,7 @@ const SCALAR_FIELDS: readonly ManagerRelationFieldSelector[] = Object.freeze([
   ["canonical_contract_version", "TEXT"], ["causation_id", "TEXT"], ["client_order_id", "TEXT"], ["correlation_id", "TEXT"],
   ["created_at", "TIMESTAMP"], ["decision_digest", "TEXT"], ["engine_version", "TEXT"], ["event_id", "TEXT"],
   ["event_ts", "TIMESTAMP"], ["event_type", "TEXT"], ["account_id", "TEXT"], ["instrument_id", "TEXT"],
-  ["message_type", "TEXT"], ["mode", "TEXT"], ["portal_event_operation", "TEXT"], ["portal_supersedes_event_id", "TEXT"],
+  ["message_type", "TEXT"], ["mode", "TEXT"],
   ["producer", "TEXT"], ["schema_version", "TEXT"], ["strategy_id", "TEXT"], ["trace_id", "TEXT"],
   ["trade_id", "TEXT"], ["trader_id", "TEXT"], ["venue", "TEXT"], ["venue_order_id", "TEXT"],
 ].map(([name, kind]) => Object.freeze({ name: name!, kind: kind as ManagerRelationScalarKind })));
