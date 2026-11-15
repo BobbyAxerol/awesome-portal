@@ -224,4 +224,3 @@ describe("domain-events: private page path and the non-native refusal", () => {
     expect(get("/api/v1/execution/manager/current/events")).toBe(false);
   });
 });
-});
