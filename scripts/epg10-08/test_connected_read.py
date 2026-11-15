@@ -1354,6 +1354,64 @@ class DriverTests(unittest.TestCase):
         self.assertNotIn("cursor", checkpoint)
         self.assertNotIn("read_body_sha256", checkpoint)
 
+    # --- 15 Nov domain-events window (review R15): relation_walk over Core's domain-events route with a field allow-list ---
+    def domain_row(self, event_id, **extra):
+        values = {"event_id": event_id, "event_ts": {"kind": "TIMESTAMP", "value": "2026-11-07T08:55:49Z"}, "event_type": "ORDER_STATUS",
+                  "producer": "postgres.order-state-projector.v1", "payload_status": "FILLED", "payload_symbol": "BTCUSDT",
+                  "payload_unreadable_keys": None}
+        values.update(extra)
+        return values
+
+    def domain_page(self, rows, *, next_cursor=None):
+        body = json.loads(page("relation", self.cfg))
+        body["records"] = [{"resource_id": "dom1_" + "0" * 8, "values": row} for row in rows]
+        body["page"] = {"next_cursor": next_cursor, "has_more": next_cursor is not None, "total_unknown": True}
+        return (200, {}, json.dumps(body).encode())
+
+    def test_domain_events_walk_records_names_counts_and_hashes_only_and_uses_the_domain_events_route(self):
+        spec = [{"relation": "domain_events", "limit": 5, "max_pages": 3, "max_rows": 15}]
+        first = self.domain_page([self.domain_row("EV-PRIVATE-1"), self.domain_row("EV-PRIVATE-2", payload_unreadable_keys=["price"])],
+                                 next_cursor="PRIVATE-CURSOR-9")
+        second = self.domain_page([self.domain_row("EV-PRIVATE-3")])
+        result, calls, _ = self.walk_run(spec, [first, second], limit=5)
+        self.assertEqual(result["status"], "SCOPED_OBSERVATIONS_ONLY")
+        self.assertEqual([c[:2] for c in calls], [("relation_walk:domain_events:5", None), ("relation_walk:domain_events:5", "PRIVATE-CURSOR-9")])
+        walk = result["cases"]["walk_domain_events"]
+        self.assertEqual((walk["status"], walk["pages"], walk["rows"], walk["key_columns"]),
+                         ("RELATION_WALK_OBSERVED", 2, 3, ["event_id"]))
+        allow = walk["field_allowlist"]
+        self.assertEqual((allow["checked"], allow["rows_with_unreadable_payload_keys"], allow["allowed_count"]), (True, 1, 22 + 23 + 1))
+        self.assertIn("payload_status", allow["fields_seen"])
+        public = json.dumps(result)
+        for secret in ("EV-PRIVATE-1", "EV-PRIVATE-3", "PRIVATE-CURSOR-9", "FILLED", "BTCUSDT"):
+            self.assertNotIn(secret, public)
+        self.assertEqual(driver.route("relation_walk:domain_events:5", self.cfg).split("?")[0],
+                         "/api/v1/execution/manager/current/domain-events")
+
+    def test_domain_events_walk_fails_at_once_on_any_field_outside_the_owner_allow_list(self):
+        spec = [{"relation": "domain_events", "limit": 5, "max_pages": 3, "max_rows": 15}]
+        for forbidden in ("raw", "payload", "error_message", "payload_error_message", "instrument_metadata_version",
+                          "portal_event_operation", "portal_supersedes_event_id", "payload_new_future_key", "Payload_Status"):
+            with self.subTest(field=forbidden):
+                self.cfg, self.docs = inputs()
+                bad = self.domain_page([self.domain_row("EV-1"), self.domain_row("EV-2", **{forbidden: "SECRET-VALUE"})])
+                result, calls, _ = self.walk_run(spec, [bad], limit=5)
+                self.assertEqual((result["status"], result["reason"]), ("FAIL", "WALK_FIELD_NOT_ALLOWED"))
+                self.assertEqual(len(calls), 1)                                        # nothing else is requested after the finding
+                self.assertNotIn("SECRET-VALUE", json.dumps(result))
+
+    def test_domain_events_walk_typed_refusal_is_recorded_and_other_relations_keep_no_field_allowlist(self):
+        spec = [{"relation": "domain_events", "limit": 5, "max_pages": 3, "max_rows": 15}]
+        refusal = (404, {}, json.dumps({"error": {"code": "MANAGER_V2_RELATION_NOT_CATALOGUED"}}).encode())
+        result, _, _ = self.walk_run(spec, [refusal], limit=5)
+        self.assertEqual(result["status"], "SCOPED_OBSERVATIONS_ONLY")
+        self.assertEqual((result["cases"]["walk_domain_events"]["status"], result["cases"]["walk_domain_events"]["error_code"]),
+                         ("RELATION_TYPED_REFUSAL", "MANAGER_V2_RELATION_NOT_CATALOGUED"))
+        self.cfg, self.docs = inputs()
+        other = self.walk_page(["PK-1"])                                               # portfolios: no allow-list, unchanged
+        result, _, _ = self.walk_run([{"relation": "portfolios", "limit": 1, "max_pages": 3, "max_rows": 10}], [other])
+        self.assertNotIn("field_allowlist", result["cases"]["walk_portfolios"])
+
     def test_relation_walk_271_rows_over_two_pages_and_the_composite_key_canonicalisation(self):
         keys = ["cmd-%03d" % n for n in range(271)]
         spec = [{"relation": "command_journal", "limit": 200, "max_pages": 3, "max_rows": 300}]
@@ -1751,7 +1809,11 @@ class DriverTests(unittest.TestCase):
             self.assertEqual(entry["route"], relation.replace("_", "-"))               # all 31 are the hyphenated table name
             self.assertEqual(driver.route("relation_sweep:%s:50" % relation, self.cfg),
                 "/api/v1/execution/manager/current/%s?workspace_id=ws_TESTONLY12345&environment=paper&limit=50" % entry["route"])
+        self.assertEqual(driver.WALK_RELATIONS["domain_events"], {"route": "domain-events", "key": ("event_id",)})
+        self.assertNotIn("domain_events", driver.SWEEP_RELATIONS)                       # a walk-only relation (15 Nov window), not one of the 31
         for relation, entry in driver.WALK_RELATIONS.items():                           # consistent with the live-proven routes
+            if relation == "domain_events":
+                continue
             self.assertEqual(driver.SWEEP_RELATIONS[relation]["route"], entry["route"])
             self.assertEqual(driver.SWEEP_RELATIONS[relation]["key"], entry["key"])
         for name in ("relation_sweep:orders_v9:5", "relation_sweep:accounts:0", "relation_sweep:accounts:201",

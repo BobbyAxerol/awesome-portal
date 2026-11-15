@@ -928,7 +928,23 @@ WALK_RELATIONS = {"account_balances": {"route": "account-balances", "key": ("acc
                   "portfolios": {"route": "portfolios", "key": ("portfolio_id",)},
                   "venues": {"route": "venues", "key": ("venue",)},
                   "instruments": {"route": "instruments", "key": ("instrument_id",)},
-                  "command_journal": {"route": "command-journal", "key": ("command_id",)}}
+                  "command_journal": {"route": "command-journal", "key": ("command_id",)},
+                  # 15 Nov domain-events window (review R15): Core's new route; Core's identity is event_id only (the Edge cursor
+                  # carries the composite catalogue key (event_id, event_ts) and stays opaque). Fields are checked, see below.
+                  "domain_events": {"route": "domain-events", "key": ("event_id",)}}
+# Owner principle for domain_events (15 Nov 2026): ONLY these fields may appear in a record's values: 22 scalar columns of the 25-column
+# catalogue entry (without raw, payload and instrument_metadata_version), the 23 allow-listed payload keys flattened as payload_<key>
+# and Core's derived marker payload_unreadable_keys. Anything else (raw, payload as a whole, error_message in any spelling, a portal_*
+# ledger column, any other or future key) is a FAIL at once: Core revokes on the same condition. Only counts and hashes are recorded.
+DOMAIN_EVENTS_SCALARS = frozenset({"event_id", "event_ts", "event_type", "schema_version", "trace_id", "causation_id", "correlation_id",
+    "producer", "message_type", "trader_id", "strategy_id", "account_id", "mode", "venue", "instrument_id", "client_order_id",
+    "venue_order_id", "trade_id", "created_at", "engine_version", "canonical_contract_version", "decision_digest"})
+DOMAIN_EVENTS_PAYLOAD_KEYS = ("order_id", "client_order_id", "venue_order_id", "strategy_id", "account_id", "mode", "venue", "instrument_id",
+    "symbol", "side", "position_side", "order_type", "time_in_force", "quantity", "price", "trigger_price", "status", "reduce_only",
+    "post_only", "intent", "execution_session_id", "risk_grant_id", "error_code")
+DOMAIN_EVENTS_FIELDS = (DOMAIN_EVENTS_SCALARS | frozenset("payload_" + key for key in DOMAIN_EVENTS_PAYLOAD_KEYS)
+                        | frozenset({"payload_unreadable_keys"}))
+WALK_FIELD_ALLOWLISTS = {"domain_events": DOMAIN_EVENTS_FIELDS}
 WALK_BOUNDS = {"limit": (1, 200), "max_pages": (1, 20), "max_rows": (1, 1000)}
 
 
@@ -963,6 +979,8 @@ def walk_one_relation(entry, p, request, pause):
     walk_prepared = dict(p, config={**p["config"], "limit": entry["limit"]})
     name, cursor = walk_route_name(entry), None
     keys, seen_cursors, hashes, pages, terminal, last = set(), set(), [], 0, False, None
+    allowed_fields = WALK_FIELD_ALLOWLISTS.get(entry["relation"])
+    seen_fields, unreadable_rows = set(), 0
     while pages < entry["max_pages"]:
         pause()
         status, headers, raw = request(name, cursor)
@@ -982,6 +1000,11 @@ def walk_one_relation(entry, p, request, pause):
         for record in records:
             values = record.get("values") if type(record) is dict else None
             require(type(values) is dict and all(column in values for column in columns), "WALK_KEY_UNAVAILABLE")
+            if allowed_fields is not None:   # field allow-list: any name outside it fails the run before the row is processed further
+                require(all(type(name) is str and name in allowed_fields for name in values), "WALK_FIELD_NOT_ALLOWED")
+                seen_fields.update(values)
+                unmarker = values.get("payload_unreadable_keys")
+                unreadable_rows += 1 if unmarker not in (None, [], "") else 0
             parts = [values[column] for column in columns]
             require(all(type(part) in (str, int) and type(part) is not bool and part != "" for part in parts),
                     "WALK_KEY_UNAVAILABLE")
@@ -998,10 +1021,15 @@ def walk_one_relation(entry, p, request, pause):
         require(next_cursor not in seen_cursors, "R03_CURSOR_CYCLE")
         seen_cursors.add(next_cursor)
         cursor = next_cursor
-    return {"status": "RELATION_WALK_OBSERVED", "pages": pages, "rows": len(keys), "terminal_page": terminal,
+    outcome = {"status": "RELATION_WALK_OBSERVED", "pages": pages, "rows": len(keys), "terminal_page": terminal,
             "more_than_one_page": pages > 1, "page_body_sha256": hashes, "limit": entry["limit"],
             "completeness": last["completeness"], "freshness": last["freshness"],
             "key_columns": list(columns), "keyset_sha256": keyset_sha256(keys)}
+    if allowed_fields is not None:   # public field NAMES (all inside the allow-list) and counts only; never a value
+        outcome["field_allowlist"] = {"checked": True, "allowed_count": len(allowed_fields), "fields_seen": sorted(seen_fields),
+                                      "fields_seen_sha256": sha256(json.dumps(sorted(seen_fields), separators=(",", ":")).encode()).hexdigest(),
+                                      "rows_with_unreadable_payload_keys": unreadable_rows}
+    return outcome
 
 
 # Stage 2d (relation_sweep): the 31 screen-bound relation routes of tuple A. DATA-DRIVEN: "route" is Core's registry route_id
