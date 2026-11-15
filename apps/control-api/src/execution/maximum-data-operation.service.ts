@@ -29,6 +29,7 @@ import {
   ManagerRelationScalarKind,
   ManagerRelationOperation,
   managerRelationOperationByRoute,
+  isManagerExtraOperation,
   managerRelationOperationPolicy,
   managerRelationProfileBinding,
   managerRelationOperationByRelation,
@@ -165,6 +166,8 @@ export class MaximumDataOperationService {
   ) {
     const operation = managerRelationOperationByRoute(routeId);
     if (!operation) throw new MaximumDataOperationError("EDS11R_OPERATION_NOT_FOUND", 404);
+    // Hand-authored extra operations (domain-events) exist only on the native tuple-A path.
+    if (isManagerExtraOperation(operation)) throw new MaximumDataOperationError("EDS11R_OPERATION_NOT_FOUND", 404);
     if (!Number.isInteger(query.limit) || query.limit < 1 || query.limit > MAXIMUM_DATA_INTAKE_V1.pageBounds.maximumRows) {
       throw new MaximumDataOperationError("EDS11R_OPERATION_QUERY_INVALID", 400);
     }
@@ -528,7 +531,7 @@ function relationContinuationScope(
 
 type SafeManagerScalar = boolean | number | string | null;
 
-function managerRelationRecord(
+export function managerRelationRecord(
   value: unknown,
   operation: ManagerRelationOperation,
 ): { resource_id: string; values: Record<string, SafeManagerScalar> } {
@@ -539,9 +542,28 @@ function managerRelationRecord(
   }
   const fields = asRelationObject(record.fields);
   const values: Record<string, SafeManagerScalar> = {};
+  const projection = operation.payloadProjection;
+  const flattened = new Set(projection?.keys.map((key) => key.field) ?? []);
   for (const field of operation.fields) {
+    if (flattened.has(field.name)) continue; // filled from the allow-listed payload keys below
     if (!(field.name in fields)) continue;
     values[field.name] = decodeManagerScalar(field.kind, fields[field.name]);
+  }
+  if (projection && Object.prototype.hasOwnProperty.call(fields, projection.column)) {
+    // The jsonb column is NEVER emitted as a whole: only the pinned top-level keys, each type-checked. Any other or
+    // future key (including error_message) is dropped silently. A payload that is not an OBJECT (NULL, text, ...)
+    // yields no payload_* values; the row is still served.
+    const payload = fields[projection.column];
+    if (payload !== null && typeof payload === "object" && !Array.isArray(payload) &&
+        (payload as Record<string, unknown>).kind === "OBJECT") {
+      const members = (payload as Record<string, unknown>).value;
+      if (members !== null && typeof members === "object" && !Array.isArray(members)) {
+        for (const key of projection.keys) {
+          if (!Object.prototype.hasOwnProperty.call(members, key.key)) continue;
+          values[key.field] = decodePayloadScalar(key.kind, (members as Record<string, unknown>)[key.key]);
+        }
+      }
+    }
   }
   const identity = operation.identityFields.map((field) => {
     const value = values[field];
@@ -608,6 +630,23 @@ function decodeManagerScalar(
     return integer;
   }
   throw relationSourceContractRejected();
+}
+
+/**
+ * Payload values come from schema-free jsonb: a JSON number arrives as INTEGER or DECIMAL, so a DECIMAL field also
+ * accepts INTEGER and a numeric TEXT. Everything else must match its pinned kind exactly or the row is rejected.
+ */
+export function decodePayloadScalar(expectedKind: ManagerRelationScalarKind, encoded: unknown): SafeManagerScalar {
+  if (expectedKind === "DECIMAL") {
+    const value = asRelationObject(encoded);
+    if (value.kind === "INTEGER" || (value.kind === "TEXT" && typeof value.value === "string")) {
+      const text = typeof value.value === "number" ? (Number.isSafeInteger(value.value) ? String(value.value) : null)
+        : typeof value.value === "string" ? value.value : null;
+      if (text === null || text.length > 96 || !/^-?(?:0|[1-9]\d*)(?:\.\d+)?$/.test(text)) throw relationSourceContractRejected();
+      return text;
+    }
+  }
+  return decodeManagerScalar(expectedKind, encoded);
 }
 
 function deploymentRecord(value: unknown): Record<string, unknown> {
