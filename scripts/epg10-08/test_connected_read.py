@@ -2081,17 +2081,19 @@ class DriverTests(unittest.TestCase):
         producer["source_set_ref"] = "TEST_ONLY-source-set"
         self.cfg.update(read_scope="stream_stage", read_spacing_seconds=3, snapshot_expectation="seed_read_path")
         denied = (403, {}, json.dumps({"error": {"code": "ACCESS_DENIED"}}).encode())
-        result, calls, _ = self.stream_run([snapshot, denied, denied])
+        result, calls, _ = self.stream_run([snapshot, denied])
         self.assertEqual((result["status"], result["requests"], result["read_scope"]),
-                         ("SCOPED_OBSERVATIONS_ONLY", 3, "stream_stage"))
-        self.assertEqual([(c[0], c[1], c[2]) for c in calls], [("snapshot", None, False), ("stream", None, False),
+                         ("SCOPED_OBSERVATIONS_ONLY", 2, "stream_stage"))
+        self.assertEqual([(c[0], c[1], c[2]) for c in calls], [("snapshot", None, False),
                                                                ("stream", "TEST_ONLY-opaque", False)])
         self.assertTrue(all(b[3] - a[3] >= 3 for a, b in zip(calls, calls[1:])))
         preserved = result["cases"]["post_revoke_stream_read_preserved"]
         self.assertEqual((preserved["status"], preserved["snapshot"]["status"]), ("PASS", "READ_PATH_ONLY"))
         self.assertNotIn("page", preserved)                                              # this scope read no deployments
-        for case in ("post_revoke_stream", "post_revoke_cursor"):
-            self.assertEqual((result["cases"][case]["status"], result["cases"][case]["http_status"]), ("PASS", 403))
+        self.assertEqual((result["cases"]["post_revoke_cursor"]["status"], result["cases"]["post_revoke_cursor"]["http_status"]),
+                         ("PASS", 403))
+        self.assertEqual((result["cases"]["post_revoke_stream"]["status"], result["cases"]["post_revoke_stream"]["reason"]),
+                         ("NOT_RUN", "CURSORLESS_STREAM_REFUSED_BEFORE_AUTHORIZATION_NOT_A_PROBE"))
         for case in ("deployments", "post_revoke_read", "stream_notice", "cursor_resume", "cache_revocation",
                      "active_stream_revocation", "unaffected_scope"):
             self.assertEqual(result["cases"][case]["status"], "NOT_RUN")
@@ -2102,6 +2104,18 @@ class DriverTests(unittest.TestCase):
         self.cfg.pop("revoke_action")                                                    # the revoke action is mandatory
         with self.assertRaisesRegex(driver.Refused, "READ_SCOPE_COMBINATION_INVALID"):
             self.prepare()
+
+    def test_stream_only_post_revoke_a_non_denied_cursor_request_still_fails_and_409_snapshot_required_is_not_a_denial(self):
+        snapshot = self.stream_setup()
+        producer, prior, _, _ = self.stream_revoke_inputs()
+        producer["source_set_ref"] = "TEST_ONLY-source-set"
+        self.cfg.update(read_scope="stream_stage", read_spacing_seconds=3, snapshot_expectation="seed_read_path")
+        for status, raw in ((200, b"{}"), (409, json.dumps({"error": {"code": "SNAPSHOT_REQUIRED"}}).encode()),
+                            (403, json.dumps({"error": {"code": "OTHER"}}).encode())):
+            with self.subTest(status=status):
+                result, calls, _ = self.stream_run([snapshot, (status, {}, raw)])
+                self.assertEqual((result["status"], result["reason"]), ("FAIL", "REVOKED_STREAM_NOT_DENIED"))
+                self.assertEqual([c[0] for c in calls], ["snapshot", "stream"])      # the cursorless request is never sent
 
     def both_revoked_inputs(self):
         snapshot = self.stream_setup()
@@ -2429,17 +2443,18 @@ class DriverTests(unittest.TestCase):
         with self.assertRaisesRegex(driver.Refused, "REVOKE_PROVENANCE_INVALID"):
             self.prepare()
 
-    def test_core_shaped_stream_only_post_revoke_runs_one_read_and_two_denied_stream_requests(self):
+    def test_core_shaped_stream_only_post_revoke_runs_one_read_and_one_denied_cursor_stream_request(self):
         snapshot = self.stream_setup()
         producer, prior, revoke = self.core_shaped_stream_revoke_inputs()
         producer["source_set_ref"] = "TEST_ONLY-source-set"
         denied = (403, {}, json.dumps({"error": {"code": "ACCESS_DENIED"}}).encode())
-        result, calls, _ = self.stream_run([snapshot, denied, denied])
-        self.assertEqual((result["status"], result["requests"]), ("SCOPED_OBSERVATIONS_ONLY", 3))
-        self.assertEqual([c[0] for c in calls], ["snapshot", "stream", "stream"])
+        result, calls, _ = self.stream_run([snapshot, denied])
+        self.assertEqual((result["status"], result["requests"]), ("SCOPED_OBSERVATIONS_ONLY", 2))
+        self.assertEqual([c[0] for c in calls], ["snapshot", "stream"])
         self.assertEqual(result["cases"]["post_revoke_stream_read_preserved"]["status"], "PASS")
-        for case in ("post_revoke_stream", "post_revoke_cursor"):
-            self.assertEqual((result["cases"][case]["status"], result["cases"][case]["http_status"]), ("PASS", 403))
+        self.assertEqual((result["cases"]["post_revoke_cursor"]["status"], result["cases"]["post_revoke_cursor"]["http_status"]),
+                         ("PASS", 403))
+        self.assertEqual(result["cases"]["post_revoke_stream"]["status"], "NOT_RUN")
 
     def test_stream_only_revoke_preserves_read_policy_and_native_revision(self):
         producer, prior, _, _ = self.stream_revoke_inputs()

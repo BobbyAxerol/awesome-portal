@@ -1328,11 +1328,16 @@ def run(config, transport_factory=Transport, checkpoint_sink=None):
                 return receipt
             if p["revoke_action"] == "stream.subscribe" and config.get("read_scope", "full") == "stream_stage":
                 # One READ read must survive the STREAM revoke (the snapshot: this scope read no deployments), then the revoked
-                # STREAM grant must be refused without and with the baseline cursor; every request paced (one unresolved lease).
+                # STREAM grant must be refused WITH the baseline cursor; every request paced (one unresolved lease).
+                # A cursorless STREAM request is NOT a revocation probe: Core refuses it with 409 SNAPSHOT_REQUIRED before any
+                # authorization, grant or no grant (Core note CORE_ANSWER_TO_EDGE_POST_REVOKE_STREAM_STATUS_20261115, from its code
+                # and the 15 Nov live log), so it is not sent in this mode and the case is recorded as NOT_RUN with the reason.
                 status, headers, raw = request("snapshot")
                 receipt["cases"]["post_revoke_stream_read_preserved"] = {
                     "status": "PASS", "snapshot": finite("snapshot", status, headers, raw, p)}
-                for case, cursor in (("post_revoke_stream", None), ("post_revoke_cursor", p["prior"]["cursor"])):
+                receipt["cases"]["post_revoke_stream"] = {
+                    "status": "NOT_RUN", "reason": "CURSORLESS_STREAM_REFUSED_BEFORE_AUTHORIZATION_NOT_A_PROBE"}
+                for case, cursor in (("post_revoke_cursor", p["prior"]["cursor"]),):
                     time.sleep(config["read_spacing_seconds"])
                     status, _, raw = request("stream", cursor)
                     body = shared().decode(raw)
