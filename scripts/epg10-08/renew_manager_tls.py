@@ -53,6 +53,10 @@ TARGETS = (RUNTIME / 'facade-server-cert.pem', RUNTIME / 'issuer-server-cert.pem
 ANCHORS = (RUNTIME / 'mtls-ca-cert.pem', PROXY / 'manager-v2-ca.crt')
 PUBLIC_MODES = (0o600, 0o640, 0o644)
 NEW_CA_COMMON_NAME = 'trading-system-portal-manager-read-v2-ca'
+# Phase 2 (--drop-old-ca): SHA-256 of the DER of the v2 CA that is already in both anchors (public certificate, read
+# 2026-11-16 from runtime/mtls-ca-cert.pem). The anchors must hold exactly [CA_SHA, NEW_CA_SHA] before and [NEW_CA_SHA] after.
+NEW_CA_SHA = '786691e52b4ec5ba021484d663aa690b8d2020ccd016c34807d78cbfc2d04583'
+DROP_LEAF_MIN_DAYS = 30  # every live leaf must still be valid this long, or phase 2 would strand it
 PROFILES = (('172.23.0.1', 'paper', 'PAPER_BINANCE_USDM'),
             ('172.24.0.1', 'sandbox', 'SANDBOX_BINANCE_USDM'),
             ('172.25.0.1', 'live', 'LIVE_BINANCE_USDM'))
@@ -97,6 +101,8 @@ def public_key(key):
 
 
 def targets_of(manifest):
+    if manifest.get('drop_old_ca'):
+        return ANCHORS  # phase 2 replaces only the two trust anchors; every leaf stays untouched
     return TARGETS + ANCHORS if manifest.get('new_ca') else TARGETS
 
 
@@ -466,6 +472,8 @@ def qualify(new_ca=None):
 
 def validate_staged(bundle, manifest):
     """Revalidate both recovery sets immediately before operational writes."""
+    if manifest.get('drop_old_ca'):
+        return validate_staged_drop(bundle, manifest)
     ca = x509.load_pem_x509_certificate(private_read(RUNTIME / 'mtls-ca-cert.pem'))
     require(ca.fingerprint(hashes.SHA256()).hex() == CA_SHA and
             manifest.get('ca_sha256') == CA_SHA and
@@ -519,6 +527,103 @@ def validate_staged(bundle, manifest):
                     'STAGED_TRUST_BUNDLE_INVALID')
 
 
+def anchor_ca_fingerprints(blob):
+    return [c.fingerprint(hashes.SHA256()).hex() for c in x509.load_pem_x509_certificates(blob)]
+
+
+def live_leaves_signed_by_new_ca_only(new_ca, old_ca, now):
+    """Phase 2 gate: every Manager-CA leaf in play is issued by the NEW CA, current, and not by the old CA."""
+    hashes_of = []
+    for path in TARGETS:
+        leaf = x509.load_pem_x509_certificate(private_read(path))
+        require(leaf.issuer == new_ca.subject, 'LEAF_NOT_NEW_CA')
+        new_ca.public_key().verify(leaf.signature, leaf.tbs_certificate_bytes)
+        try:
+            old_ca.public_key().verify(leaf.signature, leaf.tbs_certificate_bytes)
+        except Exception:
+            pass
+        else:
+            raise ValueError('LEAF_STILL_SIGNED_BY_OLD_CA')
+        require(leaf.not_valid_before.replace(tzinfo=timezone.utc) <= now and
+                leaf.not_valid_after.replace(tzinfo=timezone.utc) > now + timedelta(days=DROP_LEAF_MIN_DAYS),
+                'LEAF_VALIDITY_TOO_SHORT_FOR_PHASE_2')
+        hashes_of.append(sha(private_read(path)))
+    return hashes_of
+
+
+def prepare_drop_old_ca():
+    """Phase 2: stage trust anchors that hold only the new CA. Never reads a CA key, never touches a leaf."""
+    check_lock()
+    originals = [private_read(path, PUBLIC_MODES) for path in ANCHORS]
+    require(all(anchor_ca_fingerprints(blob) == [CA_SHA, NEW_CA_SHA] for blob in originals),
+            'ANCHOR_NOT_DUAL_CA')  # also refuses a second drop (anchor already new-only)
+    certificates = x509.load_pem_x509_certificates(originals[0])
+    old_ca, new_ca = certificates
+    require(new_ca.extensions.get_extension_for_class(x509.BasicConstraints).value.ca and
+            new_ca.subject == new_ca.issuer, 'NEW_CA_INVALID')
+    new_ca.public_key().verify(new_ca.signature, new_ca.tbs_certificate_bytes)
+    now = datetime.now(timezone.utc)
+    require(new_ca.not_valid_before.replace(tzinfo=timezone.utc) <= now and
+            new_ca.not_valid_after.replace(tzinfo=timezone.utc) > now + timedelta(days=DROP_LEAF_MIN_DAYS),
+            'NEW_CA_VALIDITY_INSUFFICIENT')
+    require(private_read(TARGETS[2]) == private_read(TARGETS[3]), 'PROXY_IDENTITY_COPIES_DIVERGED')
+    leaf_hashes = live_leaves_signed_by_new_ca_only(new_ca, old_ca, now)
+    before = roster()
+    require(all(x['running'] for x in before), 'SERVICE_NOT_RUNNING')
+    new_pem = new_ca.public_bytes(serialization.Encoding.PEM)
+    bundle = Path(tempfile.mkdtemp(prefix='renewal-epg10-08-', dir=ROOT))
+    os.chmod(bundle, 0o700)
+    manifest = {'schema': 'epg10.manager-tls-renewal.v1', 'created_utc': now.isoformat(),
+                'runtime_acceptance': False, 'runtime_mutations': 0, 'drop_old_ca': True,
+                'ca_sha256': CA_SHA, 'new_ca_sha256': NEW_CA_SHA, 'roster': before,
+                'leaf_sha256': dict(zip(map(str, TARGETS), leaf_hashes)), 'targets': []}
+    try:
+        write_new(bundle / 'new-ca.pem', new_pem)  # public certificate only; qualify() pins the chain to it
+        for i, path in enumerate(ANCHORS):
+            info = path.stat()
+            write_new(bundle / f'primary-{i}.pem', new_pem)          # new CA only
+            write_new(bundle / f'fallback-{i}.pem', originals[i])     # the dual bundle: safe, all leaves are new-CA signed
+            write_new(bundle / f'original-{i}.pem', originals[i])
+            manifest['targets'].append({'path': str(path), 'original_sha256': sha(originals[i]),
+                'primary_sha256': sha(new_pem), 'fallback_sha256': sha(originals[i]),
+                'mode': stat.S_IMODE(info.st_mode), 'uid': info.st_uid, 'gid': info.st_gid})
+        validate_staged_drop(bundle, manifest)
+        write_new(bundle / 'manifest.json', json.dumps(manifest, sort_keys=True).encode())
+    except Exception:
+        for label in ('primary', 'fallback', 'original'):
+            for i in range(2):
+                (bundle / f'{label}-{i}.pem').unlink(missing_ok=True)
+        for name in ('manifest.json', 'new-ca.pem'):
+            (bundle / name).unlink(missing_ok=True)
+        bundle.rmdir()
+        raise
+    return {'status': 'PREPARED_NOT_ACTIVATED', 'private_bundle': str(bundle),
+            'manifest_sha256': sha(private_read(bundle / 'manifest.json')), 'drop_old_ca': True,
+            'new_ca_sha256': NEW_CA_SHA, 'keys_jwt_ca_db_config_images_unchanged': True,
+            'leaves_unchanged': True, 'runtime_mutations': 0}
+
+
+def validate_staged_drop(bundle, manifest):
+    """Phase 2 staged-set check, repeated before any write: new-only primary, dual fallback, live leaves still new-CA signed."""
+    require(manifest.get('drop_old_ca') is True and manifest.get('ca_sha256') == CA_SHA and
+            manifest.get('new_ca_sha256') == NEW_CA_SHA, 'DROP_MANIFEST_INVALID')
+    new_ca = x509.load_pem_x509_certificate(private_read(bundle / 'new-ca.pem'))
+    require(new_ca.fingerprint(hashes.SHA256()).hex() == NEW_CA_SHA, 'NEW_CA_INVALID')
+    for i in range(2):
+        primary = private_read(bundle / f'primary-{i}.pem', PUBLIC_MODES + (0o600,))
+        fallback = private_read(bundle / f'fallback-{i}.pem', PUBLIC_MODES + (0o600,))
+        require(primary.count(b'-----BEGIN ') == 1 and anchor_ca_fingerprints(primary) == [NEW_CA_SHA],
+                'STAGED_TRUST_BUNDLE_INVALID')
+        require(fallback.count(b'-----BEGIN ') == 2 and anchor_ca_fingerprints(fallback) == [CA_SHA, NEW_CA_SHA],
+                'STAGED_FALLBACK_BUNDLE_INVALID')
+    old_ca = x509.load_pem_x509_certificates(private_read(bundle / 'fallback-0.pem'))[0]
+    now = datetime.now(timezone.utc)
+    require(new_ca.not_valid_after.replace(tzinfo=timezone.utc) > now + timedelta(days=DROP_LEAF_MIN_DAYS),
+            'NEW_CA_VALIDITY_INSUFFICIENT')
+    current = live_leaves_signed_by_new_ca_only(new_ca, old_ca, now)
+    require(dict(zip(map(str, TARGETS), current)) == manifest.get('leaf_sha256'), 'LEAVES_CHANGED_SINCE_PREPARE')
+
+
 @contextmanager
 def bounded_stage(seconds):
     def expired(_signum, _frame):
@@ -539,7 +644,11 @@ def publish(bundle, manifest, label):
         replace_exact(targets[i], private_read(bundle / f'{label}-{i}.pem'), info)
     reload_contexts()
     proof = qualify(*([x509.load_pem_x509_certificate(private_read(bundle / 'new-ca.pem'))]
-                      if manifest.get('new_ca') else []))
+                      if manifest.get('new_ca') or manifest.get('drop_old_ca') else []))
+    if manifest.get('drop_old_ca'):  # the files the Managers and proxies now trust must be exactly what was staged
+        for i, path in enumerate(ANCHORS):
+            require(private_read(path, PUBLIC_MODES) == private_read(bundle / f'{label}-{i}.pem', PUBLIC_MODES + (0o600,)),
+                    'ANCHOR_NOT_AS_STAGED')
     require(roster() == manifest['roster'], 'SERVICE_ID_IMAGE_CONFIG_CHANGED')
     return proof
 
@@ -580,7 +689,8 @@ def activate(bundle):
             'TARGET_ROSTER_CHANGED')
     require(roster() == manifest['roster'], 'SERVICE_ID_IMAGE_CONFIG_CHANGED')
     for i, info in enumerate(manifest['targets']):
-        live = private_read(targets[i]) if i < len(TARGETS) else private_read(targets[i], PUBLIC_MODES)
+        live = (private_read(targets[i], PUBLIC_MODES) if targets[i] in ANCHORS
+                else private_read(targets[i]))
         require(sha(live) == info['original_sha256'], 'LIVE_INPUT_CHANGED')
         for label in ('primary', 'fallback'):
             require(sha(private_read(bundle / f'{label}-{i}.pem')) == info[label + '_sha256'],
@@ -603,7 +713,8 @@ def activate(bundle):
             return {'status': 'MANAGER_TLS_REPAIRED_NOT_HUMAN_POLICY_ACCEPTANCE',
                     'validity_days': manifest.get('validity_days'),
                     'leaf_not_after_utc': manifest.get('leaf_not_after_utc'),
-                    'new_ca_sha256': manifest.get('new_ca_sha256'), **proof}
+                    'new_ca_sha256': manifest.get('new_ca_sha256'),
+                    'drop_old_ca': bool(manifest.get('drop_old_ca')), **proof}
         except Exception as primary_error:
             note_stage_failure('primary', primary_error)
             # Never restore expired originals. Install the separately validated
@@ -631,15 +742,21 @@ def main():
                         help='prepare a NEW Manager CA with dual-CA trust bundles (see design file)')
     parser.add_argument('--ca-validity-days', type=int, default=None,
                         help=f'new CA lifetime, 1..{MAX_VALIDITY_DAYS} (default {DEFAULT_CA_VALIDITY_DAYS})')
+    parser.add_argument('--drop-old-ca', action='store_true',
+                        help='phase 2 for --prepare: trust anchors keep only the new CA; leaves untouched '
+                             '(see MANAGER_CA_PHASE2_PLAN_20261116.md)')
     args = parser.parse_args()
     try:
         require(args.prepare != bool(args.activate), 'EXACT_ACTION_REQUIRED')
+        require(not args.drop_old_ca or (args.prepare and not args.new_ca and args.validity_days is None and
+                                         args.ca_validity_days is None), 'DROP_OLD_CA_OPTIONS_INVALID')
         require(args.validity_days is None or args.prepare, 'VALIDITY_DAYS_ONLY_WITH_PREPARE')
         require((args.new_ca or args.ca_validity_days is None) and (args.prepare or not args.new_ca),
                 'NEW_CA_OPTIONS_INVALID')
         ca_days = (DEFAULT_CA_VALIDITY_DAYS if args.ca_validity_days is None
                    else args.ca_validity_days) if args.new_ca else None
-        result = (prepare(args.validity_days, new_ca_days=ca_days) if args.prepare
+        result = (prepare_drop_old_ca() if args.drop_old_ca
+                  else prepare(args.validity_days, new_ca_days=ca_days) if args.prepare
                   else activate(args.activate))
         print(json.dumps(result, sort_keys=True))
         return 0
