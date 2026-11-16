@@ -1,0 +1,13 @@
+# T1 + T2-five PAPER release (67 relations): ONLY the two catalogue/policy bind sources of the Paper Manager read service change (same targets, same image, env, command, ports).
+# Stacked after override-w2-image.yaml and override-t2-catalogue.yaml: the later file wins for the same mount target.
+services:
+  portal_manager_read:
+    volumes:
+      - type: bind
+        source: /home/bobby/secure/portal-manager-t1-20261116/relation-catalogue.json
+        target: /run/secrets/relation-catalogue.json
+        read_only: true
+      - type: bind
+        source: /home/bobby/secure/portal-manager-t1-20261116/serving-policy.json
+        target: /run/secrets/serving-policy.json
+        read_only: true

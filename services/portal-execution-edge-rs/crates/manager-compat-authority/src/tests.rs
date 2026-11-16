@@ -904,3 +904,155 @@ fn release_listing_a_t1_relation_is_accepted_only_when_it_is_in_the_v2_census() 
         ));
     }
 }
+
+// Real Paper release files, read as bytes exactly as the Edge loads them: the live T2-five release (54) and the
+// prepared T1 + T2-five release (67). Both come from the real catalogue tool (see docs/PAPER_T1_RELEASE_PLAN_20261116.md).
+const PAPER_T2_RELEASE: &[u8] = include_bytes!(
+    "../../../../../scripts/epg10-08/t1-release/artifacts/t2-live-manager-catalogue-release.json"
+);
+const PAPER_T1_RELEASE: &[u8] = include_bytes!(
+    "../../../../../scripts/epg10-08/t1-release/artifacts/manager-catalogue-release.json"
+);
+const SCOPE_GAP_RELATIONS: [&str; 3] = [
+    "public.dnse_trading_tokens",
+    "public.venue_credentials",
+    "public.engine_authority_decisions",
+];
+const T2_FIVE: [&str; 5] = [
+    "public.alphas",
+    "public.portfolio_audit_current_state",
+    "public.portfolio_equity_snapshots",
+    "public.strategies",
+    "public.traders",
+];
+
+fn real_release(bytes: &[u8]) -> Result<ManagerCompatibilityAuthority, AuthorityError> {
+    ManagerCompatibilityAuthority::from_pinned_release(
+        bytes,
+        &digest(bytes),
+        DeploymentEnvironment::Paper,
+        PROFILE,
+    )
+}
+
+fn release_relations(bytes: &[u8]) -> Vec<String> {
+    let manifest: Value = serde_json::from_slice(bytes).unwrap();
+    manifest["relations"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|name| name.as_str().unwrap().to_owned())
+        .collect()
+}
+
+fn catalogue_bound_to(
+    relation_ids: impl IntoIterator<Item = String>,
+    release: &[u8],
+) -> ManagerCatalogue {
+    let manifest: Value = serde_json::from_slice(release).unwrap();
+    let revision = manifest["catalogue_sha256"].as_str().unwrap();
+    let mut wire = catalogue_value(relation_ids);
+    wire["catalogue_sha256"] = json!(revision);
+    wire["data"]["catalogue_revision"] = json!(revision);
+    let ManagerPayload::Catalogue(envelope) = decode_success_for_profile(
+        &ManagerV2Request::catalogue(),
+        &serde_json::to_vec(&wire).unwrap(),
+        PROFILE,
+    )
+    .unwrap() else {
+        panic!("expected Manager catalogue")
+    };
+    envelope.into_data()
+}
+
+#[test]
+fn the_real_paper_t2_and_t1_release_files_are_accepted_by_the_census_v2_loader() {
+    let t2 = release_relations(PAPER_T2_RELEASE);
+    let t1 = release_relations(PAPER_T1_RELEASE);
+    assert_eq!((t2.len(), t1.len()), (54, 67));
+    assert!(
+        t2.iter().all(|name| t1.contains(name)),
+        "T1 release keeps every T2 relation"
+    );
+    let added: BTreeSet<&str> = t1
+        .iter()
+        .filter(|name| !t2.contains(name))
+        .map(String::as_str)
+        .collect();
+    let expected: BTreeSet<&str> = T1_RELATIONS.into_iter().collect();
+    assert_eq!(
+        added, expected,
+        "the release adds exactly the 13 census v2 T1 relations"
+    );
+    for gap in SCOPE_GAP_RELATIONS {
+        assert!(
+            !t2.iter().chain(&t1).any(|name| name == gap),
+            "{gap} must never be listed"
+        );
+    }
+
+    let live = real_release(PAPER_T2_RELEASE).unwrap();
+    let next = real_release(PAPER_T1_RELEASE).unwrap();
+    assert_eq!(
+        (
+            live.approved_relation_count(),
+            next.approved_relation_count()
+        ),
+        (54, 67)
+    );
+
+    // The whole release path: a Manager catalogue with exactly the release relations validates, a missing or
+    // extra relation is drift, and a request can be built for each T1 relation (and for none outside the release).
+    let catalogue = catalogue_bound_to(t1.clone(), PAPER_T1_RELEASE);
+    next.validate_catalogue(&catalogue).unwrap();
+    let mut short = t1.clone();
+    short.pop();
+    assert!(matches!(
+        next.validate_catalogue(&catalogue_bound_to(short, PAPER_T1_RELEASE)),
+        Err(AuthorityError::CatalogueDrift)
+    ));
+    let bound = next
+        .bind(context(
+            DeploymentEnvironment::Paper,
+            PROFILE,
+            DELEGATED_RESOURCE,
+            RUNTIME_CONTRACT_REVISION,
+        ))
+        .unwrap();
+    for name in T1_RELATIONS {
+        assert!(bound
+            .relation_page_request(&catalogue, name, None, PageLimit::default())
+            .is_ok());
+    }
+    for gap in SCOPE_GAP_RELATIONS {
+        assert!(matches!(
+            bound.relation_page_request(&catalogue, gap, None, PageLimit::default()),
+            Err(AuthorityError::RelationNotApproved)
+        ));
+    }
+    // The currently deployed T2 release must not accept the T1 relations (and so is unchanged by this binary).
+    let live_catalogue = catalogue_bound_to(t2, PAPER_T2_RELEASE);
+    live.validate_catalogue(&live_catalogue).unwrap();
+    assert!(matches!(
+        live.validate_catalogue(&catalogue),
+        Err(AuthorityError::CatalogueDrift)
+    ));
+}
+
+#[test]
+fn a_62_relation_listing_of_the_49_v1_plus_13_t1_relations_is_accepted_but_drops_the_t2_five() {
+    let without_t2_five: Vec<String> = release_relations(PAPER_T1_RELEASE)
+        .into_iter()
+        .filter(|name| !T2_FIVE.contains(&name.as_str()))
+        .collect();
+    assert_eq!(without_t2_five.len(), 62);
+    let release = paper_release(&without_t2_five).unwrap();
+    assert_eq!(release.approved_relation_count(), 62);
+    // Replacing the live 54 by this listing would remove five relations Core serves today.
+    let live = release_relations(PAPER_T2_RELEASE);
+    let dropped: Vec<&String> = live
+        .iter()
+        .filter(|name| !without_t2_five.contains(name))
+        .collect();
+    assert_eq!(dropped.len(), 5);
+}

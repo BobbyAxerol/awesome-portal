@@ -1,0 +1,11 @@
+# T1 + T2-five PAPER release (67 relations), Edge side: ONLY the release file bind source and its sha256 pin change (same image, ports, other env, mounts).
+# Stacked after override-t2-edge-release.yaml and before override-edge-running-source-memo-off.yaml (image 167e031a, catalogue memo TTL 0, no guard pin).
+services:
+  execution-edge:
+    environment:
+      EDGE_MANAGER_CATALOGUE_RELEASE_SHA256: "sha256:57d52f66d06f098769da43114fcd036045524c1482559ccb4c86089bfba5e5cc"
+    volumes:
+      - type: bind
+        source: /home/bobby/.local/state/portal-execution-edge/releases/t1-paper-20261116/manager-catalogue-release.json
+        target: /run/manager-release/catalogue.json
+        read_only: true
