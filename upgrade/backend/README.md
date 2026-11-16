@@ -1,11 +1,49 @@
 # Backend Architecture Deep Dives
 
+**08Nov N25 aged source:** snapshot-bound oldest/newest feed as-of is checked
+against the existing shadow policy, so stale/future proof downgrades analytics.
+PG14 26/26, Edge 3/3, synthetic schema 1/1 and scoped Clippy PASS; source-only,
+not immediate worker-crash detection or connected acceptance. [Unified journal](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#worker-source-health-seal-20261107).
+
+**08Nov N25 health:** single-query health maps unknown/degraded to UNKNOWN
+completeness and an existing bounded reason without changing the wire shape.
+Isolated PG14 26/26, Edge 3/3, synthetic schema 2/2 and scoped Clippy PASS.
+No deployment; crash-before-marker, cache/realtime and connected 08/read09
+remain open. [Unified journal](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#worker-source-health-seal-20261107).
+
+**08Nov Manager worker health:** disposable PG **26/26**, shadow mapping
+**1/1**, test Clippy and **1/1** guarded worker/mTLS/PG14 scenario passed.
+Crash-before-marker, cache/analytics, mixed-version and real-source release
+remain open; 08/read09 connected are NOT_MET. See the
+[Unified journal](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#worker-source-health-seal-20261107).
+
+**07Nov Manager health seal:** atomic failure/recovery ordering has isolated
+PG14 25/25 and Clippy PASS; worker/read/cache wiring and crash/rollback tests
+remain. Not deployed or connected acceptance. [Unified evidence](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#worker-source-health-seal-20261107).
+
+**07Nov worker source quality:** expanded TEST_ONLY worker/mTLS/PG14 rejection,
+recovery and restart scenario 1/1 plus test-inclusive Clippy PASS; immediate
+failure-to-reader freshness remains unfinished. See the
+[Unified journal](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#worker-source-quality-rejection-20261107).
+
+**07Nov Edge/N25:** source-only explicit deployment/portfolio attribution
+precedence has isolated PG 21/21 and scoped Clippy PASS; rows missing explicit
+IDs now have a source-only fail-closed successor with PG regression 23/23;
+the HTTP mapper is 1/1 and scoped lint passes. 08/read09 remain `NOT_MET`. See the
+[Unified journal](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#n25-weak-attribution-20261107).
+
 Các tài liệu trong thư mục này triển khai chi tiết từng `BAR-*` slice của
 [Backend Architecture Implementation Guide](../BACKEND_ARCHITECTURE_IMPLEMENTATION_GUIDE.md).
 Chúng không thay thế phase hoặc exit gate trong
 [Unified Implementation Plan](../UNIFIED_IMPLEMENTATION_PLAN.md).
 
 ## Active deep dives
+
+- **04Nov TS C2 Paper CORE-03 — DELIVERED / A2 PENDING:**
+  [Unified journal](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#04nov--ts-c2-paper-core-03-authority-relay-and-edge-proposals)
+  records exact r2/A1 public delivery and independent facade/worker proposals.
+  Core ACK and A2, TS verification and the later B1/B2 exchange remain open;
+  no runtime, TS DB or authority change and no connected acceptance claimed.
 
 - **28Oct Core ACK follow-through — BOUNDED_SOURCE_TESTED / CONNECTED_NOT_MET:**
   [journal](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#28oct--core-e1e5-consumption-ack-follow-through)
@@ -2507,3 +2545,244 @@ SPA HTML fallback. This closes the blank-page failure caused by a browser
 holding a previous release entry document. The scoped Nginx regression test and
 loopback-TLS header probe are required before promotion; no API, data, command,
 Cloudflare Access or database behavior changes.
+
+**2026-11-07 Edge / TS source preparation:** see the
+[Unified journal](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#07nov--edge-workerread-preparation-while-ts-c2-continues)
+for the 96-relation metadata comparison, missing target-DB read privileges,
+and worker 429/recovery tests. This is source/test preparation only; the
+worker, target DB binding and connected 08/read09 remain unqualified.
+The worker additionally refuses non-fresh source pages or incomplete catalogue
+and capabilities; projection/worker focused tests pass in isolation only.
+The shadow page now reports the worst returned-row freshness and retains
+UNKNOWN completeness; 3 focused synthetic tests and clippy pass. This does
+not establish real-source freshness or immediate stale-cache propagation.
+Paginated Manager feeds also retain oldest accepted page timestamps and reject
+individual clock inversions; 31 focused worker tests and clippy pass in
+isolation, without an HTTP/PG connected acceptance.
+The source-only Manager seal watermark additionally refuses query/analytics
+reads during a changed unsealed cycle. Disposable PG regression passed 16/16
+and the 503-mapper unit test 1/1; migration/rollout and cross-request cursor
+consistency are not yet qualified. Both Clippy checks passed and the isolated
+test cells were removed; see the Unified journal for disk evidence and the
+remaining availability trade-off.
+Manager entity-query cursors now bind to the sealed local projection sequence:
+changed cycles require resnapshot, unchanged cycles can continue. Disposable
+PG 17/17, query-api 36/36 and Clippy passed; test cells were removed. This is
+not a retained snapshot, restore-generation proof, or connected acceptance.
+
+**2026-11-08 journal SSE delivery freshness:** source-only replay/live now
+re-evaluates age at dequeue without changing payload or cursor. Isolated
+realtime library 30/30, Edge freshness 2/2, stream 6/6 and Clippy pass; exact
+hashes and cleanup are in the [Unified journal](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md).
+This is not deployed or connected acceptance; worker crash-before-marker and
+real source-health/per-frame revocation remain open.
+
+**2026-11-08 Manager crash-before-marker follow-through:** the source-only
+durable pending-attempt/UNKNOWN path now has PG14 27/27, race 5/5, worker
+31/31, a guarded child-kill/recovery scenario 1/1 and test-inclusive Clippy
+PASS. Exact inputs and scoped cleanup are in the [Unified journal](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md).
+This does not certify deadline calibration, capacity, mixed-version rollout,
+real per-frame policy or connected 08/read09.
+
+**2026-11-08 Edge worker candidate:** local image
+`sha256:ea2ebf524862f37c19cfbdebb268435e5c6e673758a0b315d037ed7f29182175`
+is built and has only a no-network/no-DB startup smoke. Source manifests,
+rollback retention and scoped build cleanup are in the [Unified journal](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md).
+It is not deployed, runtime-capacity qualified or connected acceptance.
+
+The exact `ea2ebf52…` image executable subsequently passed an isolated SGP
+mTLS/PG14 worker scenario including candidate-process 429 and recovery, and
+fixture Clippy passed. It ran as a host process with generated data; container
+capacity, real-source and connected qualification remain open. Cleanup and
+hashes are in the [Unified journal](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md).
+
+The exact candidate container also passed a synthetic 10-page/2,000-order
+SGP test (1/1; 24 requests) and test-inclusive Clippy. Sampled cgroup maximum
+was 64,008,192 bytes, not a kernel peak or production capacity figure. Owned
+test resources were removed and HK candidate/rollback retained; target-source
+and connected qualification remain open. See the
+[Unified journal](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md).
+
+12Nov M0 r2: source overlay on the existing TS Manager (not a new Python Edge
+service), typed Rust snapshot/worker guards and49-relation/all13-feed metadata
+candidate implemented. 191 selected unit/isolated-PG/TLS cases PASS; actual
+facade-login source probe reached official trading_system over verify-full,
+post-reset balances empty/shared portfolios2. No install, DB writes, E2E or
+continuity/deletion claim; M1 OFF. Full08/connected09 remain NOT_MET. Read the
+[source/worker evidence](../evidence/execution-edge-v1_2/EPG10-08/EDGE_S1_M0_R2_SOURCE_WORKER_INTEGRATION_20261112.md)
+and Unified for final resource cleanup and precise activation/Core inputs.
+
+12Nov scoped Manager worker follow-through: source now rejects a catalogue-valid
+record if its relation differs from the TS backing relation of its particular
+feed. This is source-only and does not supply missing parent predicates,
+snapshot authority or connected acceptance; see the
+[Unified journal](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md).
+
+TS subsequently confirmed the portfolio master is database-shared. The
+uninstalled Paper candidate now includes it as a reference, not membership:
+48 relations pass the Manager parser and exact Rust release authority; the
+worker still lacks the scoped `account_balances` feed and S1 implementation.
+See the [Unified journal](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md).
+
+**11Nov pagination guard:** the source-only worker checks repeated stable
+keys while collecting each feed (projection 63/63, worker 32/32 isolated
+tests). This does not provide coherent snapshot or deletion authority, and
+is not deployed. TS IDR-178 source publisher remains uninstalled; real bounded
+read is tracked independently in the [Unified journal](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md).
+
+PM stage mapping now locally preserves the source's four distinct stages and
+validates exact instance scope; it does not expose a current-stage route or
+enable Canary. 65 isolated projection tests passed; details are in the
+[Unified journal](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md).
+
+11Nov: bounded Manager-tagged G7 position and PM candidate revision/storage
+linkage have source-only isolated tests (60/60); they are not live source or
+worker acceptance. Current gaps and evidence are in the
+[Unified journal](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md).
+
+11Nov: PM candidate target/alias/alpha linkage has 61/61 isolated tests;
+source publication and connected acceptance remain open. See the
+[Unified journal](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md).
+
+11Nov 08 continuation: offline catalogue candidate has 47/96 relations,
+including two venue-scoped references shared across modes; 14 parent-scoped,
+33 unqualified and two credential relations remain out of this candidate.
+39 Rust tests and deployed Manager's in-memory parser check passed; no source
+was installed and 08/connected09 remain open. Details and cleanup:
+[Unified journal](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md).
+
+11Nov authority/worker continuation: source supports an opt-in pinned subset
+without widening canonical N18 and refuses an incomplete 13-feed cycle before
+polling. 50 focused Rust tests, strict Clippy and Edge `cargo check` passed;
+the subset is not wired/deployed and lacks two worker feeds. See the
+[Unified journal](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md).
+
+Optional Manager catalogue release configuration (source implementation,
+not a deployed release): `EDGE_MANAGER_CATALOGUE_RELEASE_FILE` points to a
+read-only operator-controlled JSON file, and
+`EDGE_MANAGER_CATALOGUE_RELEASE_SHA256` is `sha256:` plus the SHA256 of the
+exact file bytes. Both must be empty/unset for the existing 96-relation
+authority, or both set. The strict JSON object has exactly `schema_version`
+(`portal.execution.manager-catalogue-release.v1`), `environment`, `profile_id`,
+`catalogue_sha256` (`sha256:` plus catalogue digest), and `relations` (nonempty
+array of fully qualified frozen-N18 relation IDs). It is bound to the selected
+deployment environment/profile and cannot enlarge N18. Missing or wrong pins,
+extra fields, duplicates and unsupported profiles fail startup; a pinned
+subset that lacks any 13-feed relation cannot run a full projection cycle.
+Serving Edge and worker must receive the same reviewed file and digest; the
+47-relation candidate has not been commissioned or accepted as a release.
+
+11Nov TS R2 inventory follow-through: the offline generator attaches draft
+explanatory scope hints to the 33 previously unresolved legacy relations; it
+does not admit them or expand the candidate. G7/G10 source review remains a
+draft, not a typed adapter. See the [Unified journal](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md).
+
+Later 11Nov source-only continuation adds limited typed fact/posting and PM
+instance mapping drafts, locally tested but not bound to a source or endpoint;
+the remainder of G7/G10 and connected acceptance remain open. See the latest
+[Unified journal](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md).
+
+Subsequent 11Nov adapter accepts existing Manager tagged records for the
+limited G7/PM drafts, and a scope-key-bound G7 position metadata summary; it
+does not publish a relation, full projection or authorize a scope. 58 local
+tests pass; see the [Unified journal](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md).
+
+11Nov update: facade identity can now read the official DB, but the existing
+catalogue/policy cannot be re-pointed unchanged. An offline Rust candidate
+covered 45 mode+venue relations and passed the actual Manager parser; 51 other
+relations and complete-worker scope remain open. Five synthetic disposable
+PostgreSQL absence/recovery/cursor/health tests passed; this is not connected
+Core or production acceptance. The test DB/build copy were cleaned. See the
+[Unified journal](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md).
+
+11Nov: consolidated TS/Edge/Core official-database read request delivered to
+TS and Core mailboxes; 107 isolated runner/preflight cases passed. See the
+[Unified journal](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md) for
+hashes, exact owner inputs and per-mode acceptance; connected 08/read09 and
+Canary binding are not yet accepted.
+
+11Nov R2 adds exact Core/TS input and R01–R13 test matrix; bounded runner
+receipts preserve freshness and completeness, and 109 isolated cases pass.
+See [Unified journal](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md).
+
+The 08Nov Manager pagination counterexamples and their reconciliation boundary
+are recorded in [evidence](../evidence/execution-edge-v1_2/EPG10-08/EDGE_MANAGER_PAGINATION_CONSISTENCY_20261108.md).
+Poll-bounded shadow quality is PARTIAL; source-consistent absence and real
+connected testing are not yet established.
+
+**08Nov Edge multi-feed test:** candidate `8022ea09…` passed 10 pages each of
+2,000 synthetic orders and 2,000 synthetic fills, plus the 2,000-order
+pagination regression. These are isolated correctness results, not connected
+or production-capacity acceptance. Test-inclusive Clippy passed and the cell
+was cleaned; see the [Unified journal](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md).
+
+**08Nov fixed-context inventory:** metadata identifies 14 candidate direct
+profile-parent paths, six unmarked-parent paths and 21 relations with no
+outgoing FK in the census. Four synthetic PostgreSQL semantics cases passed;
+all-mode visibility, shared/empty portfolio meaning, actual grants and real
+source acceptance remain unchanged. See the [inventory](../evidence/execution-edge-v1_2/EPG10-08/EDGE_TS_V206_FIXED_CONTEXT_SCOPE_INVENTORY_20261108.md).
+
+**08Nov target role/keyset preflight:** facade login and manager-read group
+have SELECT on zero of the 96 mounted catalogue relations / 1,350 returnable
+columns at the TS target; login lacks CONNECT. Four isolated keyset/view tests
+passed but do not establish connected access or full history. [Evidence](../evidence/execution-edge-v1_2/EPG10-08/EDGE_TS_V206_PRIVILEGE_AND_KEYSET_PREFLIGHT_20261108.md).
+
+TS v2.0.6 / actual facade reconciliation: 13 worker feeds mapped; two are
+fixed-context with `TRUE` rather than a profile predicate. Classify all 41
+fixed-context relations before the shared-target Paper re-point; preserve
+owner-approved all-profile visibility. Time-first fills/events keysets,
+six legacy-key bindings and the inbox nullable drift need target-specific
+contract and connected evidence. Four full-column, first/continuation
+EXPLAIN-only plans for fills/events using a synthetic lowercase venue selected
+time-first indexes; the actual uppercase profile retake below differs. These
+are not real-role execution or capacity measurements. The running module is not
+the inspected TS release module. No DB/runtime change or 08/09 closure.
+[Unified journal](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md).
+
+Bounded aggregate-size probing of four TS feeds found zero rows for synthetic
+lowercase `paper/binance`; the verified actual Paper venue is uppercase
+`BINANCE`, and the retake returned nonempty small samples without row values.
+Case-correct first-page EXPLAIN produced seven index and six sort/seq plans;
+neither result proves representative performance or production capacity.
+
+**08Nov worker logical-budget failure:** isolated HK PG/mTLS tests of candidate
+`8022ea09…` passed record/retained/working rejection, sealed-state/cache
+preservation and recovery; candidate child record rejection/recovery and 429
+regression also passed. This is not total RSS or production budget evidence.
+See the [Unified journal](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md).
+
+**08Nov successor candidate:** `sha256:8022ea09016eaa3ffdcbfce13d8f3d6696d45d61b1408e97e9c0f93b672e9cef`
+contains the locally qualified digest-sort source and passed an isolated
+startup smoke, then its own synthetic 429/recovery/restart and candidate
+container 10-page/2,000-row pagination tests, each 1/1 on HK. rustfmt/Clippy
+passed; real-source capacity and connected acceptance remain unproven. The
+Paper worker was not restarted. See the
+[Unified journal](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md).
+
+Manager cycle digest sorting now has a locally tested comparator with legacy
+fallback: Rust 1.85.1 locked library 32/32, rustfmt and Clippy passed. The
+existing candidate image predates this change and a new build/worker test is
+needed to include it; paired probe figures are not production performance.
+No deployment or contract change is claimed. See the
+[Unified journal](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md).
+
+Read-only TS target statistics metadata covers only 4/13 worker feed
+relations; estimates are not JSON maxima or RSS. Nine feeds lack column
+statistics, so representative financial/fill workload and production budget
+remain unproven. The 08Nov privilege recheck still finds facade DB CONNECT
+false and effective SELECT on 0/13 feeds. No business rows were scanned. See the
+[Unified journal](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md).
+
+TS release source has an isolated-tested publisher fence candidate, but the
+inspected target has no installed fence schema or active logical slot; a
+replication-source pin differs from an older receipt; current-source unit
+retests passed 25/25 plus 1/1 cadence, not PG/WAL/fence. Current runtime proof,
+writer/retention coverage and connected 03/04/09 remain open. See the
+[Unified journal](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md).
+
+The current TS source subsequently passed **16 distinct actual PG15 native
+WAL/fence tests** in an owned isolated cell (stale owner 1, atomic claim 7,
+idle renewal 4, multi-source 4). The stale owner did not advance ACK. The cell
+was removed; this is not evidence the fence is installed or that production
+writer coverage, retention, TLS or connected 03/04/08/09 have been accepted.
+[Unified journal](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md).

@@ -115,6 +115,8 @@ pub struct ManagerCompatibilityAuthority {
     approved_relations: BTreeSet<String>,
     expected_operation_ids: BTreeSet<String>,
     expected_projection_kinds: BTreeSet<String>,
+    pinned_catalogue_digest: Option<String>,
+    pinned_context: Option<(DeploymentEnvironment, String)>,
 }
 
 /// A compatibility authority bound to one exact deployment/profile/resource
@@ -162,7 +164,81 @@ impl ManagerCompatibilityAuthority {
                 .into_iter()
                 .map(str::to_owned)
                 .collect(),
+            pinned_catalogue_digest: None,
+            pinned_context: None,
         })
+    }
+
+    /// Loads an exact release manifest from a trusted deployment input. The
+    /// separately configured digest pins the raw bytes, not an upstream reply.
+    /// The manifest narrows the frozen authority and is bound to one profile.
+    ///
+    /// # Errors
+    /// Rejects unpinned, malformed, oversized, mismatched or widened releases.
+    pub fn from_pinned_release(
+        bytes: &[u8],
+        manifest_digest: &str,
+        environment: DeploymentEnvironment,
+        profile_id: &str,
+    ) -> Result<Self, AuthorityError> {
+        if bytes.is_empty() || bytes.len() > 65_536 || digest(bytes) != manifest_digest {
+            return Err(AuthorityError::InvalidCatalogueRestriction);
+        }
+        let manifest: CatalogueReleaseManifest = serde_json::from_slice(bytes)
+            .map_err(|_| AuthorityError::InvalidCatalogueRestriction)?;
+        if manifest.schema_version != "portal.execution.manager-catalogue-release.v1"
+            || manifest.environment != environment.as_str()
+            || manifest.profile_id != profile_id
+        {
+            return Err(AuthorityError::InvalidCatalogueRestriction);
+        }
+        let authority = Self::canonical()?;
+        authority.bind(ManagerRequestContext {
+            environment,
+            profile_id,
+            delegated_resource: DELEGATED_RESOURCE,
+            owner_contract_revision: RUNTIME_CONTRACT_REVISION,
+        })?;
+        let relations: Vec<&str> = manifest.relations.iter().map(String::as_str).collect();
+        let mut restricted =
+            authority.restrict_to_pinned_catalogue(&manifest.catalogue_sha256, &relations)?;
+        restricted.pinned_context = Some((environment, profile_id.to_owned()));
+        Ok(restricted)
+    }
+
+    /// Narrows an already validated authority to an exact release-pinned set.
+    /// Both arguments must come from trusted deployment configuration, never
+    /// from a caller or an upstream catalogue response. This cannot authorize
+    /// any relation absent from the canonical frozen census.
+    ///
+    /// # Errors
+    /// Rejects malformed digests, empty/duplicate sets and unapproved names.
+    pub fn restrict_to_pinned_catalogue(
+        mut self,
+        digest: &str,
+        relations: &[&str],
+    ) -> Result<Self, AuthorityError> {
+        let valid_digest = digest.strip_prefix("sha256:").is_some_and(|value| {
+            value.len() == 64
+                && value
+                    .bytes()
+                    .all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte))
+        });
+        let restricted: BTreeSet<String> =
+            relations.iter().map(|item| (*item).to_owned()).collect();
+        if !valid_digest
+            || restricted.is_empty()
+            || restricted.len() != relations.len()
+            || !restricted.is_subset(&self.approved_relations)
+        {
+            return Err(AuthorityError::InvalidCatalogueRestriction);
+        }
+        self.expected_projection_kinds.retain(|kind| {
+            projection_relation(kind).is_some_and(|relation| restricted.contains(relation))
+        });
+        self.approved_relations = restricted;
+        self.pinned_catalogue_digest = Some(digest.to_owned());
+        Ok(self)
     }
 
     #[must_use]
@@ -191,6 +267,15 @@ impl ManagerCompatibilityAuthority {
         &self,
         context: ManagerRequestContext<'_>,
     ) -> Result<BoundManagerAuthority<'_>, AuthorityError> {
+        if self
+            .pinned_context
+            .as_ref()
+            .is_some_and(|(environment, profile)| {
+                *environment != context.environment || profile != context.profile_id
+            })
+        {
+            return Err(AuthorityError::ProfileDenied);
+        }
         let binding = self
             .matrix
             .profile_bindings
@@ -286,7 +371,12 @@ impl ManagerCompatibilityAuthority {
             .iter()
             .map(|relation| format!("{}.{}", relation.id().schema(), relation.id().relation()))
             .collect();
-        if actual != self.approved_relations {
+        if actual != self.approved_relations
+            || self
+                .pinned_catalogue_digest
+                .as_deref()
+                .is_some_and(|digest| catalogue.catalogue_revision().as_str() != digest)
+        {
             return Err(AuthorityError::CatalogueDrift);
         }
         Ok(())
@@ -301,6 +391,30 @@ impl ManagerCompatibilityAuthority {
             .iter()
             .find(|adapter| adapter.owner_contract_revision == owner_contract_revision)
             .ok_or(AuthorityError::RevisionUnsupported)
+    }
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct CatalogueReleaseManifest {
+    schema_version: String,
+    environment: String,
+    profile_id: String,
+    catalogue_sha256: String,
+    relations: Vec<String>,
+}
+
+// Published Manager named-projection mapping, not derived from user input.
+fn projection_relation(kind: &str) -> Option<&'static str> {
+    match kind {
+        "portfolio" => Some("public.portfolios"),
+        "account" => Some("public.accounts"),
+        "order" => Some("public.orders"),
+        "fill" => Some("public.fills"),
+        "position" => Some("public.positions_v2"),
+        "reconciliation" => Some("public.reconciliation_findings"),
+        "command_journal" => Some("public.command_journal"),
+        _ => None,
     }
 }
 
@@ -464,6 +578,8 @@ pub enum AuthorityError {
     RollbackUndefined,
     #[error("owner catalogue differs from the frozen N18 relation set")]
     CatalogueDrift,
+    #[error("catalogue restriction is malformed or exceeds the frozen N18 set")]
+    InvalidCatalogueRestriction,
     #[error("relation is not approved by N18")]
     RelationNotApproved,
     #[error("projection is not approved")]

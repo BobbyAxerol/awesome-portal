@@ -6,17 +6,19 @@ use std::{
 use chrono::{DateTime, TimeDelta, Utc};
 use execution_contracts::{CanonicalId, SourceAuthority, SourceCompleteness, SourceCursor};
 use futures_util::TryStreamExt as _;
+use manager_projection::FEEDS;
 use projection_core::{
     canonical_digest, semantic_state_digest, ProjectionEntityKey, ProjectionEntityKind,
     ProjectionObservation, ProjectionOperation, ProjectionScope, ProjectionSnapshot,
     SnapshotCompleteness, SourceSequenceSemantics,
 };
+use serde::{Deserialize, Serialize};
 use sqlx::{Postgres, Row, Transaction};
 use uuid::Uuid;
 
 use super::{
-    i64_from_u64, ActivatedEpoch, EpochWriteAuthority, PgProjectionStore, StoreApplyOutcome,
-    StoreError,
+    i64_from_u64, ActivatedEpoch, EpochWriteAuthority, ManagerSourceAttempt, PgProjectionStore,
+    StoreApplyOutcome, StoreError,
 };
 
 pub const MANAGER_PROJECTION_SOURCE_SCOPE: &str = "MANAGER_V2";
@@ -137,6 +139,16 @@ pub struct ManagerCycleCommitInput {
     pub source_input_digest: String,
     pub feed_count: usize,
     pub record_count: usize,
+    pub source_read_at: DateTime<Utc>,
+    pub poll_interval_ms: i64,
+}
+
+/// One successful, fully paginated feed observation; this is not a health
+/// signal for attempts made after the cycle was sealed.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ManagerFeedObservation {
+    pub as_of: DateTime<Utc>,
     pub source_read_at: DateTime<Utc>,
     pub poll_interval_ms: i64,
 }
@@ -609,6 +621,59 @@ impl PgProjectionStore {
         feed_reads: &BTreeMap<String, DateTime<Utc>>,
         committed_at: DateTime<Utc>,
     ) -> Result<ManagerSnapshotCommitReceipt, StoreError> {
+        self.commit_manager_projection_snapshot_inner(
+            scope,
+            epoch_id,
+            proof,
+            input,
+            feed_reads,
+            committed_at,
+            false,
+        )
+        .await
+    }
+
+    /// Commits a paginated poll only when it does not imply a deletion.
+    /// Exhausting Manager's independent page transactions is not proof that
+    /// an absent prior entity was deleted. Until the source provides such a
+    /// proof, reject this kind atomically and report a failed poll. If earlier
+    /// kinds advanced, the existing seal guard makes the view unavailable.
+    ///
+    /// # Errors
+    /// Returns `ManagerProjectionMissingAbsenceAuthority` on any missing prior
+    /// entity, in addition to the normal feed, lease and snapshot errors.
+    pub async fn commit_manager_projection_poll_without_absence_authority(
+        &self,
+        scope: &ProjectionScope,
+        epoch_id: Uuid,
+        proof: ManagerProjectionLeaseProof,
+        input: &ManagerSnapshotCommitInput,
+        feed_reads: &BTreeMap<String, DateTime<Utc>>,
+        committed_at: DateTime<Utc>,
+    ) -> Result<ManagerSnapshotCommitReceipt, StoreError> {
+        self.commit_manager_projection_snapshot_inner(
+            scope,
+            epoch_id,
+            proof,
+            input,
+            feed_reads,
+            committed_at,
+            true,
+        )
+        .await
+    }
+
+    #[allow(clippy::too_many_lines, clippy::too_many_arguments)]
+    async fn commit_manager_projection_snapshot_inner(
+        &self,
+        scope: &ProjectionScope,
+        epoch_id: Uuid,
+        proof: ManagerProjectionLeaseProof,
+        input: &ManagerSnapshotCommitInput,
+        feed_reads: &BTreeMap<String, DateTime<Utc>>,
+        committed_at: DateTime<Utc>,
+        reject_unproven_absence: bool,
+    ) -> Result<ManagerSnapshotCommitReceipt, StoreError> {
         validate_snapshot_input(scope, input)?;
         validate_manager_feed_reads(input, feed_reads, committed_at)?;
         let validated = ProjectionSnapshot::new(
@@ -635,6 +700,19 @@ impl PgProjectionStore {
         validate_manager_occurrence_tx(&mut transaction, epoch_id, &input.cycle_id).await?;
         let current =
             load_manager_current_tx(&mut transaction, epoch_id, input.snapshot.entity_kind).await?;
+        if reject_unproven_absence {
+            let observed = validated
+                .observations
+                .iter()
+                .map(|observation| observation.entity.entity_id.as_str())
+                .collect::<BTreeSet<_>>();
+            if current
+                .keys()
+                .any(|entity_id| !observed.contains(entity_id.as_str()))
+            {
+                return Err(StoreError::ManagerProjectionMissingAbsenceAuthority);
+            }
+        }
         let cycle_prior = sqlx::query(
             "SELECT snapshot_id,profile_id,entity_kind,source_input_digest,catalogue_digest,
                     expected_count,applied_count,removed_count,state_digest
@@ -856,6 +934,91 @@ impl PgProjectionStore {
         input: &ManagerCycleCommitInput,
         committed_at: DateTime<Utc>,
     ) -> Result<ManagerProjectionCycleReceipt, StoreError> {
+        self.commit_manager_projection_cycle_inner(
+            scope,
+            epoch_id,
+            proof,
+            input,
+            None,
+            None,
+            committed_at,
+        )
+        .await
+    }
+
+    /// Seals the complete cycle and its successful observations atomically.
+    ///
+    /// # Errors
+    /// Rejects incomplete or contradictory feed metadata, clock regression,
+    /// stale fences, incomplete cycles and persistence failures.
+    pub async fn commit_manager_projection_cycle_with_feed_observations(
+        &self,
+        scope: &ProjectionScope,
+        epoch_id: Uuid,
+        proof: ManagerProjectionLeaseProof,
+        input: &ManagerCycleCommitInput,
+        observations: &BTreeMap<String, ManagerFeedObservation>,
+        committed_at: DateTime<Utc>,
+    ) -> Result<ManagerProjectionCycleReceipt, StoreError> {
+        validate_manager_feed_observations(observations, input.source_read_at, committed_at)?;
+        self.commit_manager_projection_cycle_inner(
+            scope,
+            epoch_id,
+            proof,
+            input,
+            Some(observations),
+            None,
+            committed_at,
+        )
+        .await
+    }
+
+    /// Seal source health and observations in the same transaction as the
+    /// cycle. Only a complete attempt begun after a failure may recover it.
+    /// A partial attempt can advance an already-proven healthy seal only.
+    ///
+    /// # Errors
+    /// Rejects scope mismatch, invalid feed metadata, stale leases and
+    /// incomplete or contradictory snapshots.
+    #[allow(clippy::too_many_arguments)]
+    pub async fn commit_manager_projection_cycle_with_source_health(
+        &self,
+        scope: &ProjectionScope,
+        epoch_id: Uuid,
+        proof: ManagerProjectionLeaseProof,
+        input: &ManagerCycleCommitInput,
+        observations: &BTreeMap<String, ManagerFeedObservation>,
+        attempt: &ManagerSourceAttempt,
+        complete_refresh: bool,
+        committed_at: DateTime<Utc>,
+    ) -> Result<ManagerProjectionCycleReceipt, StoreError> {
+        if attempt.scope != *scope || attempt.order <= 0 {
+            return Err(StoreError::ScopeMismatch);
+        }
+        validate_manager_feed_observations(observations, input.source_read_at, committed_at)?;
+        self.commit_manager_projection_cycle_inner(
+            scope,
+            epoch_id,
+            proof,
+            input,
+            Some(observations),
+            Some((attempt, complete_refresh)),
+            committed_at,
+        )
+        .await
+    }
+
+    #[allow(clippy::too_many_arguments, clippy::too_many_lines)]
+    async fn commit_manager_projection_cycle_inner(
+        &self,
+        scope: &ProjectionScope,
+        epoch_id: Uuid,
+        proof: ManagerProjectionLeaseProof,
+        input: &ManagerCycleCommitInput,
+        observations: Option<&BTreeMap<String, ManagerFeedObservation>>,
+        source_health: Option<(&ManagerSourceAttempt, bool)>,
+        committed_at: DateTime<Utc>,
+    ) -> Result<ManagerProjectionCycleReceipt, StoreError> {
         validate_cycle_input(scope, input)?;
         let mut transaction = self.pool.begin().await?;
         validate_lease_tx(&mut transaction, scope, epoch_id, proof).await?;
@@ -866,12 +1029,55 @@ impl PgProjectionStore {
             EpochWriteAuthority::BuildingOrActive,
         )
         .await?;
+        // The epoch row is locked before both this read and the failure
+        // writer's upsert, so this is the health of the preceding seal.
+        let health_before = if source_health.is_some() {
+            Some(
+                sqlx::query(
+                    "SELECT COALESCE(s.last_failure_order,0) AS failure_order,
+                        COALESCE(s.cleared_by_attempt,0) AS cleared_order,
+                        COALESCE(s.cleared_by_attempt > s.last_failure_order
+                          AND s.sealed_observed_at=h.observed_at
+                          AND s.sealed_sequence=h.sealed_projection_sequence,false) AS healthy
+                 FROM portal_projection.epochs e
+                 LEFT JOIN portal_projection.manager_source_health s USING (epoch_id)
+                 LEFT JOIN portal_projection.manager_projection_heartbeats h USING (epoch_id)
+                 WHERE e.epoch_id=$1",
+                )
+                .bind(epoch_id)
+                .fetch_one(&mut *transaction)
+                .await?,
+            )
+        } else {
+            None
+        };
         validate_manager_occurrence_tx(&mut transaction, epoch_id, &input.cycle_id).await?;
         if input.cycle_id.as_str().starts_with(OCCURRENCE_PREFIX)
             && input.cycle_id.as_str().rsplit(':').next()
                 != Some(input.source_input_digest.trim_start_matches("sha256:"))
         {
             return Err(StoreError::ManagerProjectionCommitCollision);
+        }
+        if let Some(observations) = observations {
+            let previous = sqlx::query(
+                "SELECT feed_observations,source_read_at FROM portal_projection.manager_projection_heartbeats WHERE epoch_id=$1 FOR UPDATE",
+            )
+            .bind(epoch_id)
+            .fetch_optional(&mut *transaction)
+            .await?;
+            if let Some(previous) = previous {
+                if input.source_read_at < previous.try_get::<DateTime<Utc>, _>("source_read_at")? {
+                    return Err(StoreError::InvalidManagerProjectionSnapshot);
+                }
+                if let Some(value) =
+                    previous.try_get::<Option<serde_json::Value>, _>("feed_observations")?
+                {
+                    let previous: BTreeMap<String, ManagerFeedObservation> =
+                        serde_json::from_value(value)
+                            .map_err(|_| StoreError::InvalidManagerProjectionSnapshot)?;
+                    validate_manager_feed_progress(&previous, observations)?;
+                }
+            }
         }
         let receipt = if let Some(receipt) =
             reuse_manager_projection_cycle_tx(&mut transaction, epoch_id, input, committed_at)
@@ -882,8 +1088,125 @@ impl PgProjectionStore {
             seal_manager_projection_cycle_tx(&mut transaction, epoch_id, input, committed_at)
                 .await?
         };
+        // A legacy caller cannot prove the new lineage. Clearing it is safer
+        // than attaching a newer heartbeat to old successful observations.
+        let serialized = observations
+            .map(serde_json::to_value)
+            .transpose()
+            .map_err(|_| StoreError::Serialization)?;
+        let changed = sqlx::query(
+            "UPDATE portal_projection.manager_projection_heartbeats SET feed_observations=$2 WHERE epoch_id=$1",
+        )
+        .bind(epoch_id)
+        .bind(serialized)
+        .execute(&mut *transaction)
+        .await?;
+        if changed.rows_affected() != 1 {
+            return Err(StoreError::ManagerProjectionCycleIncomplete);
+        }
+        if let (Some((attempt, complete)), Some(previous)) = (source_health, health_before) {
+            let failure: i64 = previous.try_get("failure_order")?;
+            let cleared: i64 = previous.try_get("cleared_order")?;
+            let was_healthy: bool = previous.try_get("healthy")?;
+            if attempt.order > failure && attempt.order >= cleared && (complete || was_healthy) {
+                let updated = sqlx::query(
+                    "INSERT INTO portal_projection.manager_source_health AS s
+                       (epoch_id,cleared_by_attempt,sealed_observed_at,sealed_sequence)
+                     SELECT e.epoch_id,$2,h.observed_at,h.sealed_projection_sequence
+                     FROM portal_projection.epochs e
+                     JOIN portal_projection.manager_projection_heartbeats h USING (epoch_id)
+                     WHERE e.epoch_id=$1 AND h.sealed_projection_sequence=e.next_projection_sequence
+                     ON CONFLICT (epoch_id) DO UPDATE SET
+                       cleared_by_attempt=EXCLUDED.cleared_by_attempt,
+                       sealed_observed_at=EXCLUDED.sealed_observed_at,
+                       sealed_sequence=EXCLUDED.sealed_sequence",
+                )
+                .bind(epoch_id)
+                .bind(attempt.order)
+                .execute(&mut *transaction)
+                .await?;
+                if updated.rows_affected() != 1 {
+                    return Err(StoreError::ManagerProjectionCycleIncomplete);
+                }
+            }
+            // Completion is atomic with the seal. A newer full refresh can
+            // retire older expired, unproven attempts in its own scope; a
+            // late failure still obtains a new failure order and degrades it.
+            sqlx::query(
+                "DELETE FROM portal_projection.manager_source_attempts
+                 WHERE workspace_id=$1 AND environment=$2 AND
+                    (attempt_order=$3 OR ($4 AND attempt_order<$3
+                      AND deadline <= statement_timestamp()))",
+            )
+            .bind(scope.workspace_id.as_str())
+            .bind(&scope.environment)
+            .bind(attempt.order)
+            .bind(complete)
+            .execute(&mut *transaction)
+            .await?;
+            if complete {
+                sqlx::query(
+                    "DELETE FROM portal_projection.manager_source_attempt_watermarks
+                     WHERE workspace_id=$1 AND environment=$2 AND expired_order <= $3",
+                )
+                .bind(scope.workspace_id.as_str())
+                .bind(&scope.environment)
+                .bind(attempt.order)
+                .execute(&mut *transaction)
+                .await?;
+            }
+        } else {
+            // Existing call sites cannot certify a source attempt. Never let
+            // their new heartbeat inherit a previous health assertion.
+            sqlx::query(
+                "UPDATE portal_projection.manager_source_health
+                 SET cleared_by_attempt=0,sealed_observed_at=NULL,sealed_sequence=NULL
+                 WHERE epoch_id=$1",
+            )
+            .bind(epoch_id)
+            .execute(&mut *transaction)
+            .await?;
+        }
         transaction.commit().await?;
         Ok(receipt)
+    }
+
+    /// Returns observations only from the active, fully sealed Manager epoch.
+    /// `None` means legacy or unproven lineage, never an empty source.
+    ///
+    /// # Errors
+    /// Rejects missing/unsealed epochs and malformed persisted observations.
+    pub async fn load_manager_feed_observations(
+        &self,
+        scope: &ProjectionScope,
+    ) -> Result<Option<BTreeMap<String, ManagerFeedObservation>>, StoreError> {
+        let row = sqlx::query(
+            "SELECT h.feed_observations,h.source_read_at,h.observed_at, \
+                    COALESCE(h.sealed_projection_sequence=e.next_projection_sequence,false) AS sealed \
+             FROM portal_projection.epochs e \
+             LEFT JOIN portal_projection.manager_projection_heartbeats h USING(epoch_id) \
+             WHERE e.workspace_id=$1 AND e.environment=$2 AND e.status='ACTIVE' \
+               AND e.adapter_version LIKE 'portal.execution.manager-projection.%'",
+        )
+        .bind(scope.workspace_id.as_str())
+        .bind(&scope.environment)
+        .fetch_optional(&self.pool)
+        .await?
+        .ok_or(StoreError::EpochNotFound)?;
+        if !row.try_get::<bool, _>("sealed")? {
+            return Err(StoreError::ManagerProjectionCycleIncomplete);
+        }
+        let Some(value) = row.try_get::<Option<serde_json::Value>, _>("feed_observations")? else {
+            return Ok(None);
+        };
+        let observations = serde_json::from_value(value)
+            .map_err(|_| StoreError::InvalidManagerProjectionSnapshot)?;
+        validate_manager_feed_observations(
+            &observations,
+            row.try_get("source_read_at")?,
+            row.try_get("observed_at")?,
+        )?;
+        Ok(Some(observations))
     }
 
     /// Atomically activates a complete parity-matched N24 epoch and retains
@@ -1059,6 +1382,17 @@ impl PgProjectionStore {
         .bind(retained_epoch_id)
         .execute(&mut *transaction)
         .await?;
+        // A retained snapshot's last successful poll predates the failed
+        // cutover. It stays readable, but cannot become healthy merely by
+        // being selected again. A new full attempt must re-establish health.
+        sqlx::query(
+            "UPDATE portal_projection.manager_source_health
+             SET cleared_by_attempt=0,sealed_observed_at=NULL,sealed_sequence=NULL
+             WHERE epoch_id=$1",
+        )
+        .bind(retained_epoch_id)
+        .execute(&mut *transaction)
+        .await?;
         let restored_state_digest =
             restored_state_digest.ok_or(StoreError::InvalidManagerProjectionRollback)?;
         transaction.commit().await?;
@@ -1135,6 +1469,50 @@ struct ManagerCurrentEntity {
     semantic_digest: String,
     source_feed: Option<String>,
     source_read_at: DateTime<Utc>,
+}
+
+pub(crate) fn validate_manager_feed_observations(
+    observations: &BTreeMap<String, ManagerFeedObservation>,
+    cycle_read_at: DateTime<Utc>,
+    committed_at: DateTime<Utc>,
+) -> Result<(), StoreError> {
+    if observations.len() != FEEDS.len()
+        || FEEDS
+            .iter()
+            .any(|feed| !observations.contains_key(feed.feed_id))
+        || observations.values().any(|observation| {
+            observation.as_of > observation.source_read_at
+                // PostgreSQL timestamptz is microsecond precision, while the
+                // preserved source JSON may retain Rust nanoseconds.
+                || observation.source_read_at.timestamp_micros() > committed_at.timestamp_micros()
+                || !(250..=60_000).contains(&observation.poll_interval_ms)
+        })
+        || observations
+            .values()
+            .map(|o| o.source_read_at.timestamp_micros())
+            .min()
+            != Some(cycle_read_at.timestamp_micros())
+    {
+        return Err(StoreError::InvalidManagerProjectionSnapshot);
+    }
+    Ok(())
+}
+
+fn validate_manager_feed_progress(
+    previous: &BTreeMap<String, ManagerFeedObservation>,
+    current: &BTreeMap<String, ManagerFeedObservation>,
+) -> Result<(), StoreError> {
+    if previous.len() != current.len()
+        || current.iter().any(|(feed, now)| {
+            previous.get(feed).is_none_or(|before| {
+                now.source_read_at < before.source_read_at
+                    || (now.source_read_at == before.source_read_at && now != before)
+            })
+        })
+    {
+        return Err(StoreError::InvalidManagerProjectionSnapshot);
+    }
+    Ok(())
 }
 
 fn validate_manager_feed_reads(
@@ -1427,12 +1805,14 @@ async fn upsert_manager_projection_heartbeat_tx(
     let changed = sqlx::query(
         "INSERT INTO portal_projection.manager_projection_heartbeats
          (epoch_id,profile_id,catalogue_digest,state_digest,record_count,poll_interval_ms,
-          source_read_at,observed_at)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
+          source_read_at,observed_at,sealed_projection_sequence)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,
+          (SELECT next_projection_sequence FROM portal_projection.epochs WHERE epoch_id=$1))
          ON CONFLICT (epoch_id) DO UPDATE SET
            state_digest=EXCLUDED.state_digest,
            record_count=EXCLUDED.record_count,
            poll_interval_ms=EXCLUDED.poll_interval_ms,
+           sealed_projection_sequence=EXCLUDED.sealed_projection_sequence,
            source_read_at=GREATEST(
              portal_projection.manager_projection_heartbeats.source_read_at,
              EXCLUDED.source_read_at

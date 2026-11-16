@@ -1,3 +1,5 @@
+use std::collections::BTreeMap;
+
 use chrono::{DateTime, Utc};
 use execution_contracts::{DecimalString, SourceAuthority};
 use projection_core::{ProjectionEntityKind, ProjectionScope};
@@ -11,7 +13,20 @@ use query_api::{
 use sqlx::{Postgres, QueryBuilder, Row as _};
 use uuid::Uuid;
 
-use super::{authority_str, parse_authority, required_u64, PgProjectionStore, StoreError};
+use super::{
+    authority_str, parse_authority, required_u64, ManagerFeedObservation, ManagerSourceHealth,
+    PgProjectionStore, StoreError,
+};
+
+/// Source observations captured in the same database snapshot as the page.
+/// `None` means a non-Manager epoch; `Some(None)` is a legacy Manager epoch
+/// with unknown feed lineage, not a proven empty or fresh feed.
+pub struct ScopedProjectionPage {
+    pub page: ProjectionQueryPage,
+    pub manager_observations: Option<Option<BTreeMap<String, ManagerFeedObservation>>>,
+    /// None is a non-Manager epoch. Manager status shares the page snapshot.
+    pub manager_health: Option<ManagerSourceHealth>,
+}
 
 const EXACT_DECIMAL_PATTERN: &str = "^[+-]?[0-9]+([.][0-9]+)?$";
 
@@ -83,17 +98,88 @@ impl PgProjectionStore {
         cursor_codec: &CursorCodec,
         now: DateTime<Utc>,
     ) -> Result<ProjectionQueryPage, StoreError> {
+        Ok(self
+            .query_entities_scoped_with_observations(
+                scope,
+                kind,
+                request,
+                required_filters,
+                cursor_codec,
+                now,
+            )
+            .await?
+            .page)
+    }
+
+    /// Reads page and successful Manager feed observations in one repeatable
+    /// snapshot, preventing a newer cycle from being paired with older rows.
+    ///
+    /// # Errors
+    /// Rejects invalid scope, unsealed cycles, malformed observations and
+    /// query/cursor/database failures.
+    #[allow(clippy::too_many_lines)]
+    pub async fn query_entities_scoped_with_observations(
+        &self,
+        scope: &ProjectionScope,
+        kind: ProjectionEntityKind,
+        request: &EntityQueryRequest,
+        required_filters: &[QueryFilter],
+        cursor_codec: &CursorCodec,
+        now: DateTime<Utc>,
+    ) -> Result<ScopedProjectionPage, StoreError> {
         let mut transaction = self.pool.begin().await?;
         sqlx::query("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY")
             .execute(&mut *transaction)
             .await?;
-        let epoch_id = active_epoch(
+        let (epoch_id, manager_sequence) = active_epoch_and_manager_sequence(
             &mut transaction,
             scope.workspace_id.as_str(),
             &scope.environment,
         )
         .await?;
-        let resource = format!("projection:{}", kind.as_str());
+        let (manager_observations, manager_health) = if manager_sequence.is_some() {
+            let row = sqlx::query("SELECT h.feed_observations,h.source_read_at,h.observed_at,
+                    s.last_failure_order,s.cleared_by_attempt,s.sealed_observed_at,s.sealed_sequence,
+                    h.sealed_projection_sequence,e.next_projection_sequence,
+                    EXISTS (SELECT 1 FROM portal_projection.manager_source_attempts p
+                        WHERE p.workspace_id=e.workspace_id AND p.environment=e.environment
+                          AND p.deadline <= statement_timestamp())
+                    OR EXISTS (SELECT 1 FROM portal_projection.manager_source_attempt_watermarks w
+                        WHERE w.workspace_id=e.workspace_id AND w.environment=e.environment)
+                    AS attempt_timed_out
+                FROM portal_projection.epochs e
+                JOIN portal_projection.manager_projection_heartbeats h USING(epoch_id)
+                LEFT JOIN portal_projection.manager_source_health s USING(epoch_id)
+                WHERE e.epoch_id=$1")
+                .bind(epoch_id)
+                .fetch_one(&mut *transaction)
+                .await?;
+            let health = super::manager_source_health::manager_source_health_from_row(&row)?;
+            let value: Option<serde_json::Value> = row.try_get("feed_observations")?;
+            let observations = if let Some(value) = value {
+                let observations = serde_json::from_value(value)
+                    .map_err(|_| StoreError::InvalidManagerProjectionSnapshot)?;
+                super::manager_projection::validate_manager_feed_observations(
+                    &observations,
+                    row.try_get("source_read_at")?,
+                    row.try_get("observed_at")?,
+                )?;
+                Some(observations)
+            } else {
+                None
+            };
+            (Some(observations), Some(health))
+        } else {
+            (None, None)
+        };
+        // A repeatable-read snapshot lasts only for this request. Bind the
+        // existing opaque cursor to the sealed Manager state so continuation
+        // after a changed cycle requests a resnapshot instead of silently
+        // skipping or duplicating rows. This is not a source-event sequence.
+        let resource = manager_sequence.map_or_else(
+            || format!("projection:{}", kind.as_str()),
+            |sequence| format!("projection:{}:manager-sealed:{sequence}", kind.as_str()),
+        );
         let unbound_context = CursorContext {
             workspace_id: scope.workspace_id.as_str(),
             environment: &scope.environment,
@@ -217,26 +303,30 @@ impl PgProjectionStore {
         } else {
             None
         };
-        Ok(ProjectionQueryPage {
-            schema_version: QUERY_SCHEMA_VERSION.to_owned(),
-            epoch_id,
-            total_count: required_u64(total_count)?,
-            filtered_count: required_u64(filtered_count)?,
-            rows,
-            next_cursor,
-            prev_cursor,
-            has_more,
-            has_previous,
-            applied_filters: validated.filters,
-            applied_sort: validated.sorts,
-            aggregates_by_currency: aggregates,
-            // Order/fill/entity retention has no source policy plus requested
-            // range yet. Do not let an empty page masquerade as an empty hot
-            // result until that authority is published.
-            retention: ProjectionPageRetention {
-                availability: RetentionAvailability::Unknown,
-                policy_version: "UNCONFIGURED".to_owned(),
+        Ok(ScopedProjectionPage {
+            page: ProjectionQueryPage {
+                schema_version: QUERY_SCHEMA_VERSION.to_owned(),
+                epoch_id,
+                total_count: required_u64(total_count)?,
+                filtered_count: required_u64(filtered_count)?,
+                rows,
+                next_cursor,
+                prev_cursor,
+                has_more,
+                has_previous,
+                applied_filters: validated.filters,
+                applied_sort: validated.sorts,
+                aggregates_by_currency: aggregates,
+                // Order/fill/entity retention has no source policy plus requested
+                // range yet. Do not let an empty page masquerade as an empty hot
+                // result until that authority is published.
+                retention: ProjectionPageRetention {
+                    availability: RetentionAvailability::Unknown,
+                    policy_version: "UNCONFIGURED".to_owned(),
+                },
             },
+            manager_observations,
+            manager_health,
         })
     }
 
@@ -511,15 +601,42 @@ pub(super) async fn active_epoch(
     workspace_id: &str,
     environment: &str,
 ) -> Result<Uuid, StoreError> {
-    sqlx::query_scalar(
-        "SELECT epoch_id FROM portal_projection.epochs
-         WHERE workspace_id=$1 AND environment=$2 AND status='ACTIVE'",
+    Ok(
+        active_epoch_and_manager_sequence(transaction, workspace_id, environment)
+            .await?
+            .0,
+    )
+}
+
+async fn active_epoch_and_manager_sequence(
+    transaction: &mut sqlx::Transaction<'_, Postgres>,
+    workspace_id: &str,
+    environment: &str,
+) -> Result<(Uuid, Option<u64>), StoreError> {
+    let row = sqlx::query(
+        "SELECT e.epoch_id,
+                CASE WHEN e.adapter_version LIKE 'portal.execution.manager-projection.%'
+                  THEN COALESCE(h.sealed_projection_sequence = e.next_projection_sequence, false)
+                  ELSE true END AS read_consistent,
+                CASE WHEN e.adapter_version LIKE 'portal.execution.manager-projection.%'
+                  THEN e.next_projection_sequence ELSE NULL END AS manager_sequence
+         FROM portal_projection.epochs e
+         LEFT JOIN portal_projection.manager_projection_heartbeats h USING(epoch_id)
+         WHERE e.workspace_id=$1 AND e.environment=$2 AND e.status='ACTIVE'",
     )
     .bind(workspace_id)
     .bind(environment)
     .fetch_optional(&mut **transaction)
     .await?
-    .ok_or(StoreError::EpochNotFound)
+    .ok_or(StoreError::EpochNotFound)?;
+    if !row.try_get::<bool, _>("read_consistent")? {
+        return Err(StoreError::ManagerProjectionCycleIncomplete);
+    }
+    let manager_sequence = row
+        .try_get::<Option<i64>, _>("manager_sequence")?
+        .map(required_u64)
+        .transpose()?;
+    Ok((row.try_get("epoch_id")?, manager_sequence))
 }
 
 fn validate_name(value: &str) -> Result<(), StoreError> {

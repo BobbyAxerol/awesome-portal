@@ -245,6 +245,143 @@ fn missing_or_extra_catalogue_relation_fails_closed() {
 }
 
 #[test]
+fn pinned_subset_requires_exact_digest_and_never_widens_named_projections() {
+    let authority = ManagerCompatibilityAuthority::canonical()
+        .unwrap()
+        .restrict_to_pinned_catalogue(DIGEST, &["public.orders", "public.accounts"])
+        .unwrap();
+    let bound = authority
+        .bind(context(
+            DeploymentEnvironment::Paper,
+            PROFILE,
+            DELEGATED_RESOURCE,
+            RUNTIME_CONTRACT_REVISION,
+        ))
+        .unwrap();
+    let catalogue = decode_catalogue(["public.orders".to_owned(), "public.accounts".to_owned()]);
+    assert!(bound.validate_catalogue(&catalogue).is_ok());
+    assert!(bound
+        .projection_request(
+            &catalogue,
+            ProjectionKind::Order,
+            None,
+            PageLimit::default()
+        )
+        .is_ok());
+    assert!(matches!(
+        bound.projection_request(
+            &catalogue,
+            ProjectionKind::Portfolio,
+            None,
+            PageLimit::default()
+        ),
+        Err(AuthorityError::ProjectionDenied)
+    ));
+    assert!(matches!(
+        bound.relation_page_request(&catalogue, "public.portfolios", None, PageLimit::default()),
+        Err(AuthorityError::RelationNotApproved)
+    ));
+    assert!(matches!(
+        authority.validate_catalogue(&decode_catalogue(["public.orders".to_owned()])),
+        Err(AuthorityError::CatalogueDrift)
+    ));
+    let wrong_pin = format!("sha256:{}", "b".repeat(64));
+    let authority = ManagerCompatibilityAuthority::canonical()
+        .unwrap()
+        .restrict_to_pinned_catalogue(&wrong_pin, &["public.orders", "public.accounts"])
+        .unwrap();
+    assert!(matches!(
+        authority.validate_catalogue(&catalogue),
+        Err(AuthorityError::CatalogueDrift)
+    ));
+}
+
+#[test]
+fn invalid_or_widened_catalogue_restriction_fails_closed() {
+    for (digest, names) in [
+        (DIGEST, vec![]),
+        (DIGEST, vec!["public.orders", "public.orders"]),
+        (DIGEST, vec!["public.not_approved"]),
+        ("sha256:BAD", vec!["public.orders"]),
+    ] {
+        assert!(matches!(
+            ManagerCompatibilityAuthority::canonical()
+                .unwrap()
+                .restrict_to_pinned_catalogue(digest, &names),
+            Err(AuthorityError::InvalidCatalogueRestriction)
+        ));
+    }
+}
+
+#[test]
+fn release_manifest_is_byte_pinned_profile_bound_and_not_widened() {
+    let manifest = json!({"schema_version":"portal.execution.manager-catalogue-release.v1",
+        "environment":"paper", "profile_id":PROFILE, "catalogue_sha256":DIGEST,
+        "relations":["public.orders", "public.accounts"]});
+    let bytes = serde_json::to_vec(&manifest).unwrap();
+    let pin = digest(&bytes);
+    let release = ManagerCompatibilityAuthority::from_pinned_release(
+        &bytes,
+        &pin,
+        DeploymentEnvironment::Paper,
+        PROFILE,
+    )
+    .unwrap();
+    let exact = decode_catalogue(["public.orders".to_owned(), "public.accounts".to_owned()]);
+    assert!(release.validate_catalogue(&exact).is_ok());
+    assert!(matches!(
+        release.bind(context(
+            DeploymentEnvironment::Live,
+            "LIVE_BINANCE_USDM",
+            DELEGATED_RESOURCE,
+            RUNTIME_CONTRACT_REVISION
+        )),
+        Err(AuthorityError::ProfileDenied)
+    ));
+    assert!(ManagerCompatibilityAuthority::from_pinned_release(
+        &bytes,
+        DIGEST,
+        DeploymentEnvironment::Paper,
+        PROFILE
+    )
+    .is_err());
+    assert!(ManagerCompatibilityAuthority::from_pinned_release(
+        &bytes,
+        &pin,
+        DeploymentEnvironment::Live,
+        "LIVE_BINANCE_USDM"
+    )
+    .is_err());
+    let mut changed = manifest.clone();
+    changed["relations"] = json!(["public.orders", "public.not_approved"]);
+    let widened = serde_json::to_vec(&changed).unwrap();
+    assert!(ManagerCompatibilityAuthority::from_pinned_release(
+        &widened,
+        &digest(&widened),
+        DeploymentEnvironment::Paper,
+        PROFILE
+    )
+    .is_err());
+    changed["unexpected"] = json!(true);
+    let unknown = serde_json::to_vec(&changed).unwrap();
+    assert!(ManagerCompatibilityAuthority::from_pinned_release(
+        &unknown,
+        &digest(&unknown),
+        DeploymentEnvironment::Paper,
+        PROFILE
+    )
+    .is_err());
+    let large = vec![b' '; 65_537];
+    assert!(ManagerCompatibilityAuthority::from_pinned_release(
+        &large,
+        &digest(&large),
+        DeploymentEnvironment::Paper,
+        PROFILE
+    )
+    .is_err());
+}
+
+#[test]
 fn record_projection_cursor_and_exact_decimal_remain_owned_by_typed_contract() {
     let authority = ManagerCompatibilityAuthority::canonical().unwrap();
     let bound = authority

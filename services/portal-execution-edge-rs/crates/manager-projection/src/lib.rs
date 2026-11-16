@@ -8,12 +8,16 @@
 //! promotes an epoch. Poll-derived changes are explicitly Portal-owned deltas;
 //! no owner event sequence is invented.
 
-use std::collections::{BTreeMap, BTreeSet};
+use std::{
+    cmp::Ordering,
+    collections::{BTreeMap, BTreeSet},
+};
 
 use chrono::{DateTime, Utc};
 use execution_contracts::{CanonicalId, SourceAuthority, SourceCompleteness, SourceCursor};
 use manager_v2_contract::{
-    CataloguedRelation, Completeness, ManagerMeta, ManagerRecord, ProjectionKind,
+    CataloguedRelation, Completeness, Freshness, ManagerCatalogue, ManagerMeta, ManagerRecord,
+    ManagerValue, ProjectionKind,
 };
 use projection_core::{
     canonical_digest, ProjectionEntityKey, ProjectionEntityKind, ProjectionObservation,
@@ -24,7 +28,11 @@ use serde_json::{json, Value};
 use sha2::{Digest as _, Sha256};
 use thiserror::Error;
 
+pub mod economic_draft;
+pub mod manager_economic_draft;
 mod materialization;
+pub mod pm_registry_draft;
+pub mod target_catalogue;
 
 pub use materialization::{
     bounded_json_bytes, checked_json_byte_copies, checked_json_byte_sum,
@@ -111,11 +119,108 @@ pub struct ManagerProjectionFeed {
     pub class: FeedClass,
 }
 
+impl ManagerProjectionFeed {
+    /// A catalogue-valid record must also belong to this exact source feed.
+    /// This does not establish profile scope or snapshot authority.
+    ///
+    /// # Errors
+    /// Returns [`ProjectionMapError::RelationBindingMismatch`] on mismatch.
+    pub fn validate_record_relation(
+        self,
+        record: &ManagerRecord,
+    ) -> Result<(), ProjectionMapError> {
+        let expected = self.source.relation_id().split_once('.');
+        if expected != Some((record.relation().schema(), record.relation().relation())) {
+            return Err(ProjectionMapError::RelationBindingMismatch);
+        }
+        Ok(())
+    }
+
+    /// Reject contradictory owner-declared profile markers when those cells
+    /// are visible. Hidden markers and fixed context are not scope proof.
+    ///
+    /// # Errors
+    /// Returns [`ProjectionMapError::ProfileBindingMismatch`] for a visible
+    /// marker inconsistent with the existing deployment-bound profile.
+    pub fn validate_visible_profile_markers(
+        self,
+        profile: ManagerProjectionProfile,
+        relation: &CataloguedRelation,
+        record: &ManagerRecord,
+    ) -> Result<(), ProjectionMapError> {
+        self.validate_record_relation(record)?;
+        if relation.id() != record.relation() {
+            return Err(ProjectionMapError::RelationBindingMismatch);
+        }
+        validate_visible_markers(profile, relation.profile_columns(), record.fields())
+    }
+}
+
+fn validate_visible_markers(
+    profile: ManagerProjectionProfile,
+    declared: &[String],
+    fields: &BTreeMap<String, ManagerValue>,
+) -> Result<(), ProjectionMapError> {
+    for marker in declared {
+        let expected = match marker.as_str() {
+            "profile_id" => profile.profile_id(),
+            "mode" | "environment" => profile.environment(),
+            // All three existing fixed deployment profiles are BINANCE_USDM.
+            "venue" => "BINANCE",
+            _ => return Err(ProjectionMapError::ProfileBindingMismatch),
+        };
+        if let Some(value) = fields.get(marker) {
+            if !matches!(value, ManagerValue::Text(actual) if actual == expected) {
+                return Err(ProjectionMapError::ProfileBindingMismatch);
+            }
+        }
+    }
+    Ok(())
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize)]
 #[serde(tag = "kind", content = "value", rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum ManagerProjectionSource {
     Named(ProjectionKind),
     Relation(&'static str),
+}
+
+impl ManagerProjectionSource {
+    /// The Manager owner's published backing relation for each named feed.
+    #[must_use]
+    pub const fn relation_id(self) -> &'static str {
+        match self {
+            Self::Relation(relation) => relation,
+            Self::Named(ProjectionKind::Portfolio) => "public.portfolios",
+            Self::Named(ProjectionKind::Account) => "public.accounts",
+            Self::Named(ProjectionKind::Order) => "public.orders",
+            Self::Named(ProjectionKind::Fill) => "public.fills",
+            Self::Named(ProjectionKind::Position) => "public.positions_v2",
+            Self::Named(ProjectionKind::Reconciliation) => "public.reconciliation_findings",
+            Self::Named(ProjectionKind::CommandJournal) => "public.command_journal",
+        }
+    }
+}
+
+/// Refuse a complete worker cycle unless every feed has a catalogued source.
+/// This does not certify the scope, freshness or completeness of that source.
+///
+/// # Errors
+/// Returns [`ProjectionMapError::MissingCatalogueFeed`] for any missing feed.
+pub fn validate_catalogue_for_complete_cycle(
+    catalogue: &ManagerCatalogue,
+) -> Result<(), ProjectionMapError> {
+    for feed in FEEDS {
+        let (schema, relation) = feed
+            .source
+            .relation_id()
+            .split_once('.')
+            .ok_or(ProjectionMapError::MissingCatalogueFeed)?;
+        if catalogue.relation(schema, relation).is_none() {
+            return Err(ProjectionMapError::MissingCatalogueFeed);
+        }
+    }
+    Ok(())
 }
 
 /// Current, source-as-is feed set. Named projections provide the cross-profile
@@ -350,6 +455,38 @@ impl ManagerProjectionFact {
     }
 }
 
+/// Per-feed bounded guard for repeated stable source keys across page reads.
+/// It does not deduplicate records or prove that a source scan omitted none.
+#[derive(Debug, Default)]
+pub struct ManagerFeedKeyGuard {
+    keys: BTreeSet<[u8; 71]>,
+}
+
+impl ManagerFeedKeyGuard {
+    /// Rejects a repeated identity before a worker publishes a candidate feed.
+    ///
+    /// # Errors
+    /// Rejects a repeated or malformed stable digest, or the feed record bound.
+    pub fn admit(&mut self, fact: &ManagerProjectionFact) -> Result<(), ProjectionMapError> {
+        let key: [u8; 71] = fact
+            .source_key_digest
+            .as_bytes()
+            .try_into()
+            .map_err(|_| ProjectionMapError::InvalidFact)?;
+        if !fact.source_key_digest.starts_with("sha256:") {
+            return Err(ProjectionMapError::InvalidFact);
+        }
+        if self.keys.contains(&key) {
+            return Err(ProjectionMapError::DuplicateSourceKey);
+        }
+        if self.keys.len() >= MAXIMUM_FEED_RECORDS {
+            return Err(ProjectionMapError::UnsafeBound);
+        }
+        self.keys.insert(key);
+        Ok(())
+    }
+}
+
 /// One fully collected, bounded Manager feed. Pagination is completed by the
 /// transport adapter before this value can be admitted to a cycle.
 #[derive(Debug, Clone)]
@@ -366,6 +503,7 @@ pub struct ManagerFeedSnapshot {
     pub completeness: Completeness,
     pub page_count: usize,
     pub facts: Vec<ManagerProjectionFact>,
+    pub source_snapshot: Option<manager_v2_contract::s1::SourceSnapshot>,
 }
 
 impl ManagerFeedSnapshot {
@@ -399,6 +537,12 @@ impl ManagerFeedSnapshot {
         {
             return Err(ProjectionMapError::ProfileBindingMismatch);
         }
+        // This snapshot cannot carry the owner's freshness enum. Reject a
+        // non-fresh terminal page rather than replacing its quality with the
+        // local response time. The transport also validates every prior page.
+        if meta.freshness() != Freshness::Fresh {
+            return Err(ProjectionMapError::InvalidFeed);
+        }
         Ok(Self {
             feed,
             profile: expected_profile,
@@ -409,6 +553,7 @@ impl ManagerFeedSnapshot {
             completeness: meta.completeness(),
             page_count,
             facts,
+            source_snapshot: meta.source_snapshot().cloned(),
         })
     }
 }
@@ -621,7 +766,7 @@ impl ManagerProjectionCycle {
                 observation.poll_interval_ms = Some(poll_interval_ms);
             }
         }
-        input_facts.sort_by_key(Value::to_string);
+        input_facts.sort_by(compare_state_input_facts);
         let state_input_digest = canonical_digest(&input_facts)?;
         let source_read_at = source_read_at.ok_or(ProjectionMapError::MissingFeed)?;
         let cycle_id = CanonicalId::parse(format!(
@@ -702,6 +847,36 @@ impl ManagerProjectionCycle {
     }
 }
 
+// The legacy order is the lexical order of complete serialized JSON values.
+// Ordinary facts begin with a safe ASCII entity_id, so distinct such IDs
+// decide that same order without serializing either payload. The closing JSON
+// quote sorts before every allowed byte, preserving prefix ordering. Do not
+// assume map order, ASCII IDs, or uniqueness for the fallback cases.
+fn leading_unescaped_entity_id(value: &Value) -> Option<&str> {
+    let object = value.as_object()?;
+    if object.keys().next()?.as_str() != "entity_id" {
+        return None;
+    }
+    let entity_id = object.get("entity_id")?.as_str()?;
+    entity_id
+        .bytes()
+        .all(|byte| (b'#'..=b'~').contains(&byte) && byte != b'\\')
+        .then_some(entity_id)
+}
+
+fn compare_state_input_facts(left: &Value, right: &Value) -> Ordering {
+    if let (Some(left_id), Some(right_id)) = (
+        leading_unescaped_entity_id(left),
+        leading_unescaped_entity_id(right),
+    ) {
+        let ordering = left_id.cmp(right_id);
+        if ordering != Ordering::Equal {
+            return ordering;
+        }
+    }
+    left.to_string().cmp(&right.to_string())
+}
+
 fn validate_feed(
     feed: &ManagerFeedSnapshot,
     profile: ManagerProjectionProfile,
@@ -773,8 +948,12 @@ pub enum ProjectionMapError {
     InvalidCycle,
     #[error("Manager projection feed is duplicated")]
     DuplicateFeed,
+    #[error("Manager projection source key repeated within a feed")]
+    DuplicateSourceKey,
     #[error("Manager projection cycle is missing a required feed")]
     MissingFeed,
+    #[error("Manager catalogue does not cover the complete projection feed set")]
+    MissingCatalogueFeed,
     #[error("Manager projection bound was exceeded")]
     UnsafeBound,
     #[error("Manager projection serialization failed")]
@@ -798,6 +977,174 @@ mod tests {
 
     fn at(seconds: i64) -> DateTime<Utc> {
         Utc.timestamp_opt(seconds, 0).single().unwrap()
+    }
+
+    fn feed_catalogue_without(omitted: Option<&str>) -> ManagerCatalogue {
+        let digest = format!("sha256:{}", "a".repeat(64));
+        let relations: Vec<Value> = FEEDS
+            .iter()
+            .map(|feed| feed.source.relation_id())
+            .filter(|relation| Some(*relation) != omitted)
+            .map(|relation| {
+                let (schema, name) = relation.split_once('.').unwrap();
+                json!({"id":{"schema":schema,"relation":name}, "kind":"TABLE",
+                    "safe_columns":[{"name":"id","ordinal":1,"data_type":"text","nullable":false}],
+                    "secret_cell_excluded_column_count":0,
+                    "key":{"status":"PRIMARY_KEY","name":null,"columns":["id"]},
+                    "profile_classification":"FIXED_PROFILE_CONTEXT", "profile_columns":[],
+                    "query_status":"QUALIFIED_TS_OC_03D1"})
+            })
+            .collect();
+        let body = serde_json::to_vec(&json!({
+            "contract_version":RUNTIME_CONTRACT_REVISION,"authority":"EXECUTION_CELL",
+            "profile_id":"PAPER_BINANCE_USDM","catalogue_sha256":digest,
+            "availability":"AVAILABLE","freshness":"FRESH","completeness":"COMPLETE",
+            "trace_id":"feed-coverage-test","as_of":"2026-09-01T00:00:00Z",
+            "data":{"catalogue_revision":digest,"relation_count":relations.len(),"relations":relations}
+        })).unwrap();
+        let ManagerPayload::Catalogue(envelope) =
+            decode_success_for_profile(&ManagerV2Request::catalogue(), &body, "PAPER_BINANCE_USDM")
+                .unwrap()
+        else {
+            panic!("expected catalogue")
+        };
+        envelope.into_data()
+    }
+
+    #[test]
+    fn complete_cycle_requires_every_named_and_relation_feed_before_polling() {
+        assert!(validate_catalogue_for_complete_cycle(&feed_catalogue_without(None)).is_ok());
+        for feed in FEEDS {
+            let missing = feed_catalogue_without(Some(feed.source.relation_id()));
+            assert!(
+                matches!(
+                    validate_catalogue_for_complete_cycle(&missing),
+                    Err(ProjectionMapError::MissingCatalogueFeed)
+                ),
+                "{}",
+                feed.feed_id
+            );
+        }
+    }
+
+    #[test]
+    fn state_input_sort_preserves_legacy_json_order_and_digest() {
+        let mut values = vec![
+            json!({"entity_id":"manager.order:sha256:aaa", "payload":{"text":"wide 🍵"}}),
+            json!({"entity_id":"manager.order:sha256:aa", "payload":{"value":1}}),
+            json!({"entity_id":"manager.order:sha256:aaa", "payload":{"value":2}}),
+            json!({"entity_id":"manager.order:sha256:aaa", "payload":{"value":1}}),
+            json!({"entity_id":"quote\"backslash\\\n", "payload":{"value":1}}),
+            json!({"entity_id":"Việt 😀", "payload":{"value":2}}),
+            json!({"entity_id":"!prefix", "payload":{"value":3}}),
+            json!({"entity_id":"", "payload":{"value":4}}),
+            json!({"entity_id":null, "payload":{"value":5}}),
+            json!({"aaa":"non-leading", "entity_id":"safe", "payload":{}}),
+            json!({"payload":{"value":6}}),
+            json!([1, 2, 3]),
+        ];
+        for index in 0..128 {
+            values.push(json!({
+                "entity_id": format!("manager.orders:sha256:{index:064x}"),
+                "feed": "manager.orders",
+                "payload": {"nested": [{"ordinal":index}, {"text":"\"\\Việt"}]},
+                "poll_interval_ms": 2000,
+            }));
+        }
+        values.reverse();
+        let mut legacy = values.clone();
+        legacy.sort_by_key(Value::to_string);
+        values.sort_by(compare_state_input_facts);
+        assert_eq!(values, legacy);
+        assert_eq!(
+            canonical_digest(&values).unwrap(),
+            canonical_digest(&legacy).unwrap()
+        );
+    }
+
+    #[test]
+    fn state_input_comparator_matches_legacy_for_ascii_and_fallback_pairs() {
+        let mut values = vec![
+            json!({"entity_id":""}),
+            json!({"entity_id":null}),
+            json!({"entity_id":12}),
+            json!({"aaa":true,"entity_id":"a"}),
+            json!([1]),
+            json!(null),
+            json!({"entity_id":"Việt"}),
+            json!({"entity_id":"😀"}),
+        ];
+        for code in 0_u8..=127 {
+            let id = char::from(code).to_string();
+            values.push(json!({"entity_id":id,"payload":{"suffix":0}}));
+            values.push(json!({"entity_id":format!("{id}a"),"payload":{"suffix":1}}));
+            values.push(json!({"entity_id":id,"payload":{"suffix":2}}));
+        }
+        for left in &values {
+            for right in &values {
+                assert_eq!(
+                    compare_state_input_facts(left, right),
+                    left.to_string().cmp(&right.to_string())
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn decoded_non_fresh_metadata_never_becomes_a_current_snapshot() {
+        let digest = format!("sha256:{}", "a".repeat(64));
+        for (freshness, accepted) in [
+            ("FRESH", true),
+            ("DEGRADED", false),
+            ("STALE", false),
+            ("UNAVAILABLE", false),
+            ("UNKNOWN", false),
+        ] {
+            let wire = json!({
+                "contract_version": RUNTIME_CONTRACT_REVISION,
+                "authority": "EXECUTION_CELL",
+                "profile_id": "PAPER_BINANCE_USDM",
+                "catalogue_sha256": digest,
+                "availability": "AVAILABLE",
+                "freshness": freshness,
+                "completeness": "COMPLETE",
+                "trace_id": "TEST_ONLY-quality",
+                "as_of": "2026-09-01T00:00:00Z",
+                "data": {
+                    "catalogue_revision": digest,
+                    "relation_count": 1,
+                    "relations": [{
+                        "id": {"schema": "public", "relation": "orders"},
+                        "kind": "TABLE",
+                        "safe_columns": [{"name":"id", "ordinal":1, "data_type":"text", "nullable":false}],
+                        "secret_cell_excluded_column_count": 0,
+                        "key": {"status":"PRIMARY_KEY", "name":null, "columns":["id"]},
+                        "profile_classification": "FIXED_PROFILE_CONTEXT",
+                        "profile_columns": [],
+                        "query_status": "QUALIFIED_TS_OC_03D1"
+                    }]
+                }
+            });
+            let payload = decode_success_for_profile(
+                &ManagerV2Request::catalogue(),
+                &serde_json::to_vec(&wire).unwrap(),
+                "PAPER_BINANCE_USDM",
+            )
+            .unwrap();
+            let ManagerPayload::Catalogue(envelope) = payload else {
+                panic!("expected catalogue");
+            };
+            let result = ManagerFeedSnapshot::from_manager_meta(
+                FEEDS[0],
+                ManagerProjectionProfile::Paper,
+                envelope.meta(),
+                at(2_000_000_000),
+                DEFAULT_POLL_INTERVAL_MS,
+                1,
+                Vec::new(),
+            );
+            assert_eq!(result.is_ok(), accepted, "{freshness}");
+        }
     }
 
     fn cycle(profile: ManagerProjectionProfile) -> ManagerProjectionCycle {
@@ -830,6 +1177,7 @@ mod tests {
                         poll_interval_ms: DEFAULT_POLL_INTERVAL_MS,
                         completeness: Completeness::Complete,
                         page_count: 1,
+                        source_snapshot: None,
                         facts: vec![ManagerProjectionFact::new(
                             relation,
                             feed.feed_id.as_bytes(),
@@ -917,6 +1265,227 @@ mod tests {
         };
         let record = records.data().items()[0].clone();
         (catalogue, record)
+    }
+
+    #[test]
+    fn worker_feed_record_requires_exact_ts_backing_relation() {
+        let (catalogue, order) = catalogue_and_order_record("TEST_ONLY_TOKEN", "OPEN");
+        let order_feed = FEEDS
+            .iter()
+            .find(|feed| feed.feed_id == "manager.order")
+            .unwrap();
+        let fill_feed = FEEDS
+            .iter()
+            .find(|feed| feed.feed_id == "manager.fill")
+            .unwrap();
+        let balance_feed = FEEDS
+            .iter()
+            .find(|feed| feed.feed_id == "relation.account_balances")
+            .unwrap();
+        assert!(order_feed.validate_record_relation(&order).is_ok());
+        assert!(order_feed
+            .validate_visible_profile_markers(
+                ManagerProjectionProfile::Paper,
+                catalogue.relation("public", "orders").unwrap(),
+                &order,
+            )
+            .is_ok());
+        assert!(matches!(
+            order_feed.validate_visible_profile_markers(
+                ManagerProjectionProfile::Paper,
+                catalogue.relation("public", "fills").unwrap(),
+                &order,
+            ),
+            Err(ProjectionMapError::RelationBindingMismatch)
+        ));
+        assert!(matches!(
+            fill_feed.validate_record_relation(&order),
+            Err(ProjectionMapError::RelationBindingMismatch)
+        ));
+        assert!(matches!(
+            balance_feed.validate_record_relation(&order),
+            Err(ProjectionMapError::RelationBindingMismatch)
+        ));
+    }
+
+    #[test]
+    fn visible_markers_bind_exact_profile_mode_and_venue() {
+        let markers = ["profile_id", "mode", "environment", "venue"].map(str::to_owned);
+        for profile in [
+            ManagerProjectionProfile::Paper,
+            ManagerProjectionProfile::Sandbox,
+            ManagerProjectionProfile::Live,
+        ] {
+            let mut fields = BTreeMap::from([
+                (
+                    "profile_id".to_owned(),
+                    ManagerValue::Text(profile.profile_id().to_owned()),
+                ),
+                (
+                    "mode".to_owned(),
+                    ManagerValue::Text(profile.environment().to_owned()),
+                ),
+                (
+                    "environment".to_owned(),
+                    ManagerValue::Text(profile.environment().to_owned()),
+                ),
+                ("venue".to_owned(), ManagerValue::Text("BINANCE".to_owned())),
+            ]);
+            assert!(validate_visible_markers(profile, &markers, &fields).is_ok());
+            for (key, invalid) in [
+                ("profile_id", "PAPER_OKX"),
+                ("mode", "LIVE"),
+                ("environment", "other"),
+                ("venue", "OKX"),
+                ("venue", "binance"),
+            ] {
+                let prior = fields.insert(key.to_owned(), ManagerValue::Text(invalid.to_owned()));
+                assert!(matches!(
+                    validate_visible_markers(profile, &markers, &fields),
+                    Err(ProjectionMapError::ProfileBindingMismatch)
+                ));
+                fields.insert(key.to_owned(), prior.unwrap());
+            }
+            fields.insert("venue".to_owned(), ManagerValue::Null);
+            assert!(matches!(
+                validate_visible_markers(profile, &markers, &fields),
+                Err(ProjectionMapError::ProfileBindingMismatch)
+            ));
+        }
+    }
+
+    #[test]
+    fn hidden_markers_and_shared_context_are_not_invented_scope_proof() {
+        let markers = ["mode".to_owned(), "venue".to_owned()];
+        let fields = BTreeMap::from([("venue".to_owned(), ManagerValue::Text("OKX".to_owned()))]);
+        assert!(validate_visible_markers(
+            ManagerProjectionProfile::Paper,
+            &markers,
+            &BTreeMap::new()
+        )
+        .is_ok());
+        assert!(validate_visible_markers(ManagerProjectionProfile::Paper, &[], &fields).is_ok());
+        assert!(validate_visible_markers(
+            ManagerProjectionProfile::Paper,
+            &["unknown".to_owned()],
+            &fields
+        )
+        .is_err());
+    }
+
+    #[test]
+    fn decoded_catalogue_and_record_enforce_visible_venue_at_worker_boundary() {
+        let digest = format!("sha256:{}", "a".repeat(64));
+        let envelope = |data: Value| {
+            json!({
+                "contract_version": RUNTIME_CONTRACT_REVISION,
+                "authority": "EXECUTION_CELL", "profile_id": "PAPER_BINANCE_USDM",
+                "catalogue_sha256": digest, "availability": "AVAILABLE",
+                "freshness": "FRESH", "completeness": "COMPLETE",
+                "trace_id": "TEST_ONLY-visible-scope", "as_of": "2026-09-01T00:00:00Z",
+                "data": data,
+            })
+        };
+        let catalogue_wire = envelope(json!({
+            "catalogue_revision": digest, "relation_count": 1,
+            "relations": [{
+                "id": {"schema": "public", "relation": "orders"}, "kind": "TABLE",
+                "safe_columns": [
+                    {"name":"order_id", "ordinal":1, "data_type":"text", "nullable":false},
+                    {"name":"venue", "ordinal":2, "data_type":"text", "nullable":false}
+                ],
+                "secret_cell_excluded_column_count": 0,
+                "key": {"status":"PRIMARY_KEY", "name":null, "columns":["order_id"]},
+                "profile_classification":"RELATION_PROFILE_MARKERS_PRESENT",
+                "profile_columns":["venue"], "query_status":"QUALIFIED_TS_OC_03D1"
+            }]
+        }));
+        let ManagerPayload::Catalogue(envelope_catalogue) = decode_success_for_profile(
+            &ManagerV2Request::catalogue(),
+            &serde_json::to_vec(&catalogue_wire).unwrap(),
+            "PAPER_BINANCE_USDM",
+        )
+        .unwrap() else {
+            panic!("expected catalogue")
+        };
+        let catalogue = envelope_catalogue.into_data();
+        let relation = catalogue.relation("public", "orders").unwrap();
+        let request =
+            ManagerV2Request::relation_records(relation, None, PageLimit::default()).unwrap();
+        let feed = FEEDS
+            .iter()
+            .find(|feed| feed.feed_id == "manager.order")
+            .unwrap();
+        for (venue, allowed) in [("BINANCE", true), ("OKX", false)] {
+            let body = envelope(json!({
+                "relation":{"schema":"public","relation":"orders"},
+                "items":[{"relation":{"schema":"public","relation":"orders"},
+                    "record_key":"TEST_ONLY", "fields":{
+                        "order_id":{"kind":"TEXT","value":"order-42"},
+                        "venue":{"kind":"TEXT","value":venue}
+                    }}], "next_cursor":null
+            }));
+            let ManagerPayload::RelationRecords(records) = decode_success_for_profile(
+                &request,
+                &serde_json::to_vec(&body).unwrap(),
+                "PAPER_BINANCE_USDM",
+            )
+            .unwrap() else {
+                panic!("expected records")
+            };
+            assert_eq!(
+                feed.validate_visible_profile_markers(
+                    ManagerProjectionProfile::Paper,
+                    relation,
+                    &records.data().items()[0]
+                )
+                .is_ok(),
+                allowed
+            );
+        }
+    }
+
+    #[test]
+    fn worker_rejects_wrong_backing_relation_even_when_named_page_decodes() {
+        let (catalogue, _) = catalogue_and_order_record("TEST_ONLY_TOKEN", "OPEN");
+        let request = ManagerV2Request::projection(
+            &catalogue,
+            ProjectionKind::Fill,
+            None,
+            PageLimit::default(),
+        )
+        .unwrap();
+        let wire = serde_json::to_vec(&json!({
+            "contract_version": RUNTIME_CONTRACT_REVISION,
+            "authority": "EXECUTION_CELL",
+            "profile_id": "PAPER_BINANCE_USDM",
+            "catalogue_sha256": format!("sha256:{}", "a".repeat(64)),
+            "availability": "AVAILABLE", "freshness": "FRESH",
+            "completeness": "COMPLETE", "trace_id": "TEST_ONLY",
+            "as_of": "2026-09-01T00:00:00Z",
+            "data": {"kind": "fill", "items": [{
+                "relation": {"schema": "public", "relation": "orders"},
+                "record_key": "TEST_ONLY_TOKEN",
+                "fields": {
+                    "order_id": {"kind": "TEXT", "value": "order-42"},
+                    "status": {"kind": "TEXT", "value": "OPEN"}
+                }
+            }], "next_cursor": null}
+        }))
+        .unwrap();
+        let ManagerPayload::Projection(page) =
+            decode_success_for_profile(&request, &wire, "PAPER_BINANCE_USDM").unwrap()
+        else {
+            panic!("expected decoded projection")
+        };
+        let feed = FEEDS
+            .iter()
+            .find(|feed| feed.feed_id == "manager.fill")
+            .unwrap();
+        assert!(matches!(
+            feed.validate_record_relation(&page.data().items()[0]),
+            Err(ProjectionMapError::RelationBindingMismatch)
+        ));
     }
 
     #[test]
@@ -1090,6 +1659,52 @@ mod tests {
 
         assert_eq!(first.source_key_digest, second.source_key_digest);
         assert_ne!(first.fields, second.fields);
+    }
+
+    #[test]
+    fn per_feed_guard_rejects_repeated_stable_key_even_with_rotating_token_or_changed_state() {
+        let (catalogue, original) = catalogue_and_order_record("token-1", "OPEN");
+        let (_, repeated) = catalogue_and_order_record("token-2", "OPEN");
+        let (_, changed) = catalogue_and_order_record("token-3", "FILLED");
+        let relation = catalogue.relation("public", "orders").unwrap();
+        let first = ManagerProjectionFact::from_record(&original, relation).unwrap();
+        let same = ManagerProjectionFact::from_record(&repeated, relation).unwrap();
+        let updated = ManagerProjectionFact::from_record(&changed, relation).unwrap();
+        let other = ManagerProjectionFact::new("public.orders", b"another-key", json!({})).unwrap();
+        let mut keys = ManagerFeedKeyGuard::default();
+        keys.admit(&first).unwrap();
+        assert!(matches!(
+            keys.admit(&same),
+            Err(ProjectionMapError::DuplicateSourceKey)
+        ));
+        assert!(matches!(
+            keys.admit(&updated),
+            Err(ProjectionMapError::DuplicateSourceKey)
+        ));
+        keys.admit(&other).unwrap();
+        let mut another_feed = ManagerFeedKeyGuard::default();
+        another_feed.admit(&first).unwrap();
+    }
+
+    #[test]
+    fn per_feed_guard_refuses_malformed_key_and_caps_distinct_keys() {
+        let mut bad = ManagerProjectionFact::new("public.orders", b"a", json!({})).unwrap();
+        bad.source_key_digest = "bad".to_owned();
+        let mut keys = ManagerFeedKeyGuard::default();
+        assert!(matches!(
+            keys.admit(&bad),
+            Err(ProjectionMapError::InvalidFact)
+        ));
+        for n in 0..MAXIMUM_FEED_RECORDS {
+            let fact =
+                ManagerProjectionFact::new("public.orders", &n.to_le_bytes(), json!({})).unwrap();
+            keys.admit(&fact).unwrap();
+        }
+        let excess = ManagerProjectionFact::new("public.orders", b"excess", json!({})).unwrap();
+        assert!(matches!(
+            keys.admit(&excess),
+            Err(ProjectionMapError::UnsafeBound)
+        ));
     }
 
     #[test]

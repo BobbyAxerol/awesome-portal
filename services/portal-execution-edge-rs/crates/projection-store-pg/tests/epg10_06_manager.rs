@@ -8,16 +8,22 @@ use std::{
 
 use chrono::{DateTime, TimeDelta, Utc};
 use execution_contracts::{CanonicalId, SourceAuthority, SourceCompleteness, SourceCursor};
+use manager_projection::FEEDS;
 use projection_core::{
     canonical_digest, semantic_state_digest, ProjectedEntity, ProjectionEntityKey,
     ProjectionEntityKind, ProjectionObservation, ProjectionOperation, ProjectionScope,
     ProjectionSnapshot, SnapshotCompleteness, SourceSequenceSemantics,
 };
 use projection_store_pg::{
-    manager_snapshot_semantic_digest, EpochMetadata, ManagerCycleCommitInput,
+    manager_snapshot_semantic_digest, EpochMetadata, ManagerAnalyticsSubject,
+    ManagerAnalyticsSubjectKind, ManagerCycleCommitInput, ManagerFeedObservation,
     ManagerProjectionCycleReceipt, ManagerProjectionLeaseAcquireOutcome,
-    ManagerProjectionLeaseGrant, ManagerSnapshotCommitInput, PgProjectionStore, StoreApplyOutcome,
-    StoreError,
+    ManagerProjectionLeaseGrant, ManagerSnapshotCommitInput, ManagerSourceAttempt,
+    ManagerSourceHealth, PgProjectionStore, StoreApplyOutcome, StoreError,
+};
+use query_api::{
+    CursorBoundary, CursorCodec, CursorContext, CursorDirection, CursorScalar, EntityQueryRequest,
+    FilterField, FilterOperator, QueryAllowlist, QueryError, QueryFilter,
 };
 use serde_json::{json, Value};
 use sqlx::{postgres::PgPoolOptions, PgPool};
@@ -447,6 +453,62 @@ async fn manager_changed_key_cost_is_bounded_and_unchanged_is_noop() {
 }
 
 #[tokio::test]
+async fn manager_unproven_absence_rejects_poll_and_preserves_previous_state() {
+    let f = Fixture::new().await;
+    let full = rows(3);
+    let (_, receipt, _, _) = f.commit(&full, 1).await;
+    let before = f.xmin().await;
+    let journal_before = f.journal_count().await;
+
+    // A row can be omitted by a concurrent predicate change between pages;
+    // neither that omission nor a real deletion is authoritative here.
+    let mut incomplete = full.clone();
+    incomplete.remove("TEST_ONLY.order.0001");
+    incomplete.get_mut("TEST_ONLY.order.0000").unwrap()["state"] = json!("CORRECTED");
+    let pending = f.resolve(&incomplete, 2).await;
+    let input = f.snapshot(&incomplete, &pending, ProjectionEntityKind::Order);
+    for _ in 0..2 {
+        assert!(matches!(
+            f.store
+                .commit_manager_projection_poll_without_absence_authority(
+                    &f.scope,
+                    f.epoch,
+                    f.lease.proof(),
+                    &input,
+                    &BTreeMap::new(),
+                    at(2),
+                )
+                .await,
+            Err(StoreError::ManagerProjectionMissingAbsenceAuthority)
+        ));
+        assert_eq!(f.xmin().await, before);
+        assert_eq!(f.journal_count().await, journal_before);
+        f.assert_oracle(&full, &receipt.state_digest).await;
+    }
+
+    // A later poll that observes the omitted identity can apply corrections;
+    // no fabricated delete/recreate or duplicate journal entry is emitted.
+    let mut recovered = full.clone();
+    recovered.get_mut("TEST_ONLY.order.0000").unwrap()["state"] = json!("CORRECTED");
+    let next = f.resolve(&recovered, 3).await;
+    let next_input = f.snapshot(&recovered, &next, ProjectionEntityKind::Order);
+    let applied = f
+        .store
+        .commit_manager_projection_poll_without_absence_authority(
+            &f.scope,
+            f.epoch,
+            f.lease.proof(),
+            &next_input,
+            &BTreeMap::new(),
+            at(3),
+        )
+        .await
+        .unwrap();
+    assert_eq!((applied.applied_count, applied.removed_count), (1, 0));
+    assert_eq!(f.journal_count().await, journal_before + 1);
+}
+
+#[tokio::test]
 async fn manager_delete_readd_delete_does_not_reuse_historical_tombstone() {
     let f = Fixture::new().await;
     let full = rows(3);
@@ -638,6 +700,1353 @@ async fn manager_epoch_stream_refuses_row_80001_and_original_receipt_recovers() 
 }
 
 #[tokio::test]
+async fn manager_page_cursors_resnapshot_after_a_changed_sealed_cycle() {
+    let f = Fixture::new().await;
+    let mut view = rows(3);
+    let (_, receipt, _, _) = f.commit(&view, 1).await;
+    f.store
+        .activate_manager_projection_epoch(
+            &f.scope,
+            f.epoch,
+            &receipt.state_digest,
+            Utc::now(),
+            Duration::from_secs(600),
+        )
+        .await
+        .unwrap();
+    let codec = CursorCodec::new(
+        "TEST_ONLY.cursor",
+        BTreeMap::from([("TEST_ONLY.cursor".to_owned(), vec![7_u8; 32])]),
+        Duration::from_secs(300),
+    )
+    .unwrap();
+    let now = Utc::now();
+    let first_request = EntityQueryRequest {
+        limit: 1,
+        ..EntityQueryRequest::default()
+    };
+    let first = f
+        .store
+        .query_entities(
+            &f.scope,
+            ProjectionEntityKind::Order,
+            &first_request,
+            &codec,
+            now,
+        )
+        .await
+        .unwrap();
+    let forward = EntityQueryRequest {
+        after: first.next_cursor.clone(),
+        ..first_request.clone()
+    };
+    assert!(forward.after.is_some());
+    let second = f
+        .store
+        .query_entities(&f.scope, ProjectionEntityKind::Order, &forward, &codec, now)
+        .await
+        .unwrap();
+    assert_ne!(first.rows[0].entity_id, second.rows[0].entity_id);
+    assert_cursor_context_isolation(&f, &view, &forward, &codec, now).await;
+    let backward = EntityQueryRequest {
+        before: second.prev_cursor.clone(),
+        ..first_request.clone()
+    };
+    assert!(backward.before.is_some());
+    let previous = f
+        .store
+        .query_entities(
+            &f.scope,
+            ProjectionEntityKind::Order,
+            &backward,
+            &codec,
+            now,
+        )
+        .await
+        .unwrap();
+    assert_eq!(previous.rows[0].entity_id, first.rows[0].entity_id);
+
+    // An identical completed poll does not invalidate an outstanding page.
+    f.commit(&view, 2).await;
+    assert!(f
+        .store
+        .query_entities(&f.scope, ProjectionEntityKind::Order, &forward, &codec, now)
+        .await
+        .is_ok());
+
+    assert_legacy_manager_cursor_rejected(
+        &f,
+        &first_request,
+        &codec,
+        now,
+        first.rows[0].as_of,
+        &first.rows[0].entity_id,
+    )
+    .await;
+    assert_changed_cycle_invalidates_cursors(
+        &f,
+        &mut view,
+        &first_request,
+        &forward,
+        &backward,
+        &codec,
+        now,
+    )
+    .await;
+    assert_non_manager_cursor_is_unbound(&f, &first_request, &codec, now).await;
+}
+
+async fn assert_changed_cycle_invalidates_cursors(
+    f: &Fixture,
+    view: &mut View,
+    first_request: &EntityQueryRequest,
+    forward: &EntityQueryRequest,
+    backward: &EntityQueryRequest,
+    codec: &CursorCodec,
+    now: DateTime<Utc>,
+) {
+    view.get_mut("TEST_ONLY.order.0000").unwrap()["state"] = json!("CORRECTED");
+    f.commit(view, 3).await;
+    for stale in [forward, backward] {
+        assert!(matches!(
+            f.store
+                .query_entities(&f.scope, ProjectionEntityKind::Order, stale, codec, now)
+                .await,
+            Err(StoreError::Query(QueryError::CursorContextMismatch))
+        ));
+    }
+    assert!(f
+        .store
+        .query_entities(
+            &f.scope,
+            ProjectionEntityKind::Order,
+            first_request,
+            codec,
+            now
+        )
+        .await
+        .is_ok());
+}
+
+async fn assert_cursor_context_isolation(
+    f: &Fixture,
+    view: &View,
+    forward: &EntityQueryRequest,
+    codec: &CursorCodec,
+    now: DateTime<Utc>,
+) {
+    let other_page_size = EntityQueryRequest {
+        limit: 2,
+        ..forward.clone()
+    };
+    assert!(matches!(
+        f.store
+            .query_entities(
+                &f.scope,
+                ProjectionEntityKind::Order,
+                &other_page_size,
+                codec,
+                now
+            )
+            .await,
+        Err(StoreError::Query(QueryError::CursorContextMismatch))
+    ));
+    let filtered = EntityQueryRequest {
+        filters: vec![QueryFilter {
+            field: FilterField::Status,
+            operator: FilterOperator::Eq,
+            values: vec!["OPEN".to_owned()],
+        }],
+        ..forward.clone()
+    };
+    assert!(matches!(
+        f.store
+            .query_entities(&f.scope, ProjectionEntityKind::Order, &filtered, codec, now)
+            .await,
+        Err(StoreError::Query(QueryError::CursorContextMismatch))
+    ));
+    let other = Fixture::new().await;
+    let (_, other_receipt, _, _) = other.commit(view, 1).await;
+    other
+        .store
+        .activate_manager_projection_epoch(
+            &other.scope,
+            other.epoch,
+            &other_receipt.state_digest,
+            Utc::now(),
+            Duration::from_secs(600),
+        )
+        .await
+        .unwrap();
+    assert!(matches!(
+        other
+            .store
+            .query_entities(
+                &other.scope,
+                ProjectionEntityKind::Order,
+                forward,
+                codec,
+                now
+            )
+            .await,
+        Err(StoreError::Query(QueryError::CursorContextMismatch))
+    ));
+}
+
+async fn assert_legacy_manager_cursor_rejected(
+    f: &Fixture,
+    first_request: &EntityQueryRequest,
+    codec: &CursorCodec,
+    now: DateTime<Utc>,
+    first_as_of: DateTime<Utc>,
+    first_entity_id: &str,
+) {
+    // A pre-upgrade Manager cursor does not carry a sealed-state binding.
+    let legacy_context = CursorContext {
+        workspace_id: f.scope.workspace_id.as_str(),
+        environment: &f.scope.environment,
+        epoch_id: f.epoch,
+        resource: "projection:ORDER",
+        query_fingerprint: "",
+    };
+    let fingerprint = first_request
+        .validate(
+            &QueryAllowlist::projection_entities(),
+            codec,
+            &legacy_context,
+            now,
+        )
+        .unwrap()
+        .fingerprint;
+    let legacy_context = CursorContext {
+        query_fingerprint: &fingerprint,
+        ..legacy_context
+    };
+    let legacy = codec
+        .encode(
+            &legacy_context,
+            CursorDirection::After,
+            CursorBoundary {
+                sort_values: vec![CursorScalar::Timestamp(first_as_of)],
+                entity_id: first_entity_id.to_owned(),
+            },
+            now,
+        )
+        .unwrap();
+    let legacy_request = EntityQueryRequest {
+        after: Some(legacy),
+        ..first_request.clone()
+    };
+    assert!(matches!(
+        f.store
+            .query_entities(
+                &f.scope,
+                ProjectionEntityKind::Order,
+                &legacy_request,
+                codec,
+                now
+            )
+            .await,
+        Err(StoreError::Query(QueryError::CursorContextMismatch))
+    ));
+}
+
+async fn assert_non_manager_cursor_is_unbound(
+    f: &Fixture,
+    first_request: &EntityQueryRequest,
+    codec: &CursorCodec,
+    now: DateTime<Utc>,
+) {
+    // No Manager sequence is added to an unrelated adapter's cursor context.
+    // This mutation affects only the disposable test database.
+    sqlx::query("UPDATE portal_projection.epochs SET adapter_version='TEST_ONLY.non_manager' WHERE epoch_id=$1")
+        .bind(f.epoch)
+        .execute(&f.pool)
+        .await
+        .unwrap();
+    let non_manager_first = f
+        .store
+        .query_entities(
+            &f.scope,
+            ProjectionEntityKind::Order,
+            first_request,
+            codec,
+            now,
+        )
+        .await
+        .unwrap();
+    let non_manager_with_observations = f
+        .store
+        .query_entities_scoped_with_observations(
+            &f.scope,
+            ProjectionEntityKind::Order,
+            first_request,
+            &[],
+            codec,
+            now,
+        )
+        .await
+        .unwrap();
+    assert_eq!(non_manager_with_observations.manager_observations, None);
+    assert_eq!(non_manager_with_observations.manager_health, None);
+    let non_manager_forward = EntityQueryRequest {
+        after: non_manager_first.next_cursor,
+        ..first_request.clone()
+    };
+    assert!(non_manager_forward.after.is_some());
+    sqlx::query("UPDATE portal_projection.epochs SET next_projection_sequence=next_projection_sequence+1 WHERE epoch_id=$1")
+        .bind(f.epoch)
+        .execute(&f.pool)
+        .await
+        .unwrap();
+    assert!(f
+        .store
+        .query_entities(
+            &f.scope,
+            ProjectionEntityKind::Order,
+            &non_manager_forward,
+            codec,
+            now
+        )
+        .await
+        .is_ok());
+}
+
+#[tokio::test]
+async fn source_health_failures_are_ordered_scoped_and_preserve_the_sealed_view() {
+    let f = Fixture::new().await;
+    let view = rows(2);
+    let (_, receipt, _, _) = f.commit(&view, 1).await;
+    let early = f
+        .store
+        .begin_manager_source_attempt(&f.scope, Duration::from_secs(30))
+        .await
+        .unwrap();
+    // A candidate epoch cannot affect any active reader's source health.
+    assert!(!f
+        .store
+        .record_manager_source_failure(&early, f.epoch)
+        .await
+        .unwrap());
+    f.store
+        .activate_manager_projection_epoch(
+            &f.scope,
+            f.epoch,
+            &receipt.state_digest,
+            Utc::now(),
+            Duration::from_secs(600),
+        )
+        .await
+        .unwrap();
+    assert_eq!(
+        f.store.load_manager_source_health(&f.scope).await.unwrap(),
+        ManagerSourceHealth::Unknown
+    );
+    let observations = f
+        .store
+        .load_manager_feed_observations(&f.scope)
+        .await
+        .unwrap();
+    let other = ProjectionScope::new(id("TEST_ONLY.other-scope"), "paper").unwrap();
+    let other_attempt = f
+        .store
+        .begin_manager_source_attempt(&other, Duration::from_secs(30))
+        .await
+        .unwrap();
+    assert!(!f
+        .store
+        .record_manager_source_failure_for_active_scope(&other_attempt)
+        .await
+        .unwrap());
+    assert!(!f
+        .store
+        .record_manager_source_failure(&other_attempt, f.epoch)
+        .await
+        .unwrap());
+    let later = f
+        .store
+        .begin_manager_source_attempt(&f.scope, Duration::from_secs(30))
+        .await
+        .unwrap();
+    let (first, second) = tokio::join!(
+        f.store.record_manager_source_failure(&early, f.epoch),
+        f.store.record_manager_source_failure(&later, f.epoch),
+    );
+    assert!(first.unwrap());
+    assert!(second.unwrap());
+    assert_eq!(
+        f.store.load_manager_source_health(&f.scope).await.unwrap(),
+        ManagerSourceHealth::Degraded
+    );
+    assert_eq!(
+        f.store.load_manager_source_health(&other).await.unwrap(),
+        ManagerSourceHealth::Unknown
+    );
+    assert_eq!(
+        f.store
+            .load_manager_feed_observations(&f.scope)
+            .await
+            .unwrap(),
+        observations
+    );
+    f.assert_oracle(&view, &receipt.state_digest).await;
+    let marker: i64 = sqlx::query_scalar(
+        "SELECT last_failure_order FROM portal_projection.manager_source_health WHERE epoch_id=$1",
+    )
+    .bind(f.epoch)
+    .fetch_one(&f.pool)
+    .await
+    .unwrap();
+    let next: i64 = sqlx::query_scalar(
+        "SELECT nextval('portal_projection.manager_source_health_order'::regclass)",
+    )
+    .fetch_one(&f.pool)
+    .await
+    .unwrap();
+    assert!(marker > 0 && next > marker);
+}
+
+async fn seal_health_test_cycle(
+    f: &Fixture,
+    view: &View,
+    step: i64,
+    attempt: &ManagerSourceAttempt,
+    complete: bool,
+) -> ManagerProjectionCycleReceipt {
+    let input = f.resolve(view, step).await;
+    f.commit_snapshots(view, &input).await;
+    let observations = FEEDS
+        .iter()
+        .enumerate()
+        .map(|(index, feed)| {
+            (
+                feed.feed_id.to_owned(),
+                ManagerFeedObservation {
+                    as_of: at(if index == 0 { step - 1 } else { step }),
+                    source_read_at: at(step),
+                    poll_interval_ms: 2_000,
+                },
+            )
+        })
+        .collect();
+    f.store
+        .commit_manager_projection_cycle_with_source_health(
+            &f.scope,
+            f.epoch,
+            f.lease.proof(),
+            &input,
+            &observations,
+            attempt,
+            complete,
+            at(step + 1),
+        )
+        .await
+        .unwrap()
+}
+
+async fn assert_page_health(f: &Fixture, expected: ManagerSourceHealth, count: usize) {
+    let codec = CursorCodec::new(
+        "TEST_ONLY.health",
+        BTreeMap::from([("TEST_ONLY.health".to_owned(), vec![7_u8; 32])]),
+        Duration::from_secs(300),
+    )
+    .unwrap();
+    let result = f
+        .store
+        .query_entities_scoped_with_observations(
+            &f.scope,
+            ProjectionEntityKind::Order,
+            &EntityQueryRequest::default(),
+            &[],
+            &codec,
+            Utc::now(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(result.manager_health, Some(expected));
+    assert_eq!(result.page.rows.len(), count);
+}
+
+async fn assert_analytics_health(f: &Fixture, expected: ManagerSourceHealth) {
+    let snapshot = f
+        .store
+        .load_manager_analytics_snapshot(
+            &f.scope,
+            &ManagerAnalyticsSubject {
+                kind: ManagerAnalyticsSubjectKind::LiveGate,
+                id: id("TEST_ONLY.health"),
+            },
+        )
+        .await
+        .unwrap();
+    assert_eq!(snapshot.source_health, expected);
+    assert_eq!(snapshot.repository_query_count, 1);
+    assert!(snapshot.feed_as_of.is_some());
+    assert!(snapshot.feed_latest_as_of > snapshot.feed_as_of);
+    let encoded = serde_json::to_value(snapshot).unwrap();
+    assert!(encoded.get("source_health").is_none());
+    assert!(encoded.get("feed_latest_as_of").is_none());
+}
+
+#[tokio::test]
+#[allow(clippy::too_many_lines)] // Preserve one chronology across interleaved attempts.
+async fn source_health_expired_pending_attempt_is_unknown_until_newer_full_recovery() {
+    let f = Fixture::new().await;
+    let first = f
+        .store
+        .begin_manager_source_attempt(&f.scope, Duration::from_secs(30))
+        .await
+        .unwrap();
+    let receipt = seal_health_test_cycle(&f, &rows(1), 1, &first, true).await;
+    f.store
+        .activate_manager_projection_epoch(
+            &f.scope,
+            f.epoch,
+            &receipt.state_digest,
+            Utc::now(),
+            Duration::from_secs(600),
+        )
+        .await
+        .unwrap();
+    let other =
+        ProjectionScope::new(id(format!("TEST_ONLY.other.{}", Uuid::now_v7())), "paper").unwrap();
+    let _other_pending = f
+        .store
+        .begin_manager_source_attempt(&other, Duration::from_secs(30))
+        .await
+        .unwrap();
+    sqlx::query("UPDATE portal_projection.manager_source_attempts SET deadline=clock_timestamp()-interval '1 second' WHERE workspace_id=$1 AND environment=$2")
+        .bind(other.workspace_id.as_str()).bind(&other.environment).execute(&f.pool).await.unwrap();
+    assert_page_health(&f, ManagerSourceHealth::Healthy, 1).await;
+
+    let older = f
+        .store
+        .begin_manager_source_attempt(&f.scope, Duration::from_secs(30))
+        .await
+        .unwrap();
+    let crashed = f
+        .store
+        .begin_manager_source_attempt(&f.scope, Duration::from_secs(30))
+        .await
+        .unwrap();
+    // A normal in-flight attempt does not immediately invalidate a good seal.
+    assert_analytics_health(&f, ManagerSourceHealth::Healthy).await;
+    // Simulate the DB deadline after process death: no failure marker was made.
+    sqlx::query("UPDATE portal_projection.manager_source_attempts SET deadline=clock_timestamp()-interval '1 second' WHERE attempt_order=(SELECT MAX(attempt_order) FROM portal_projection.manager_source_attempts WHERE workspace_id=$1 AND environment=$2)")
+        .bind(f.scope.workspace_id.as_str()).bind(&f.scope.environment).execute(&f.pool).await.unwrap();
+    assert_page_health(&f, ManagerSourceHealth::Unknown, 1).await;
+    assert_analytics_health(&f, ManagerSourceHealth::Unknown).await;
+    // An older completion cannot erase a newer unproven attempt.
+    seal_health_test_cycle(&f, &rows(2), 3, &older, true).await;
+    assert_page_health(&f, ManagerSourceHealth::Unknown, 2).await;
+    let partial = f
+        .store
+        .begin_manager_source_attempt(&f.scope, Duration::from_secs(30))
+        .await
+        .unwrap();
+    let compacted: i64 = sqlx::query_scalar("SELECT count(*) FROM portal_projection.manager_source_attempt_watermarks WHERE workspace_id=$1 AND environment=$2")
+        .bind(f.scope.workspace_id.as_str()).bind(&f.scope.environment).fetch_one(&f.pool).await.unwrap();
+    assert_eq!(compacted, 1);
+    seal_health_test_cycle(&f, &rows(3), 5, &partial, false).await;
+    assert_page_health(&f, ManagerSourceHealth::Unknown, 3).await;
+    let recovery = f
+        .store
+        .begin_manager_source_attempt(&f.scope, Duration::from_secs(30))
+        .await
+        .unwrap();
+    seal_health_test_cycle(&f, &rows(4), 7, &recovery, true).await;
+    assert_page_health(&f, ManagerSourceHealth::Healthy, 4).await;
+    assert_analytics_health(&f, ManagerSourceHealth::Healthy).await;
+    let remaining: i64 = sqlx::query_scalar("SELECT count(*) FROM portal_projection.manager_source_attempts WHERE workspace_id=$1 AND environment=$2")
+        .bind(f.scope.workspace_id.as_str()).bind(&f.scope.environment).fetch_one(&f.pool).await.unwrap();
+    assert_eq!(remaining, 0);
+    let watermarks: i64 = sqlx::query_scalar("SELECT count(*) FROM portal_projection.manager_source_attempt_watermarks WHERE workspace_id=$1 AND environment=$2")
+        .bind(f.scope.workspace_id.as_str()).bind(&f.scope.environment).fetch_one(&f.pool).await.unwrap();
+    assert_eq!(watermarks, 0);
+    // An old in-flight failure that arrives later still invalidates the seal.
+    assert!(f
+        .store
+        .record_manager_source_failure_for_active_scope(&crashed)
+        .await
+        .unwrap());
+    assert_page_health(&f, ManagerSourceHealth::Degraded, 4).await;
+    let final_recovery = f
+        .store
+        .begin_manager_source_attempt(&f.scope, Duration::from_secs(30))
+        .await
+        .unwrap();
+    seal_health_test_cycle(&f, &rows(5), 9, &final_recovery, true).await;
+    assert_page_health(&f, ManagerSourceHealth::Healthy, 5).await;
+    assert!(f
+        .store
+        .begin_manager_source_attempt(&f.scope, Duration::ZERO)
+        .await
+        .is_err());
+    assert!(f
+        .store
+        .begin_manager_source_attempt(&f.scope, Duration::from_secs(86_401))
+        .await
+        .is_err());
+}
+
+#[tokio::test]
+async fn source_health_compaction_racing_partial_completion_retains_unknown() {
+    let f = Fixture::new().await;
+    let first = f
+        .store
+        .begin_manager_source_attempt(&f.scope, Duration::from_secs(30))
+        .await
+        .unwrap();
+    let receipt = seal_health_test_cycle(&f, &rows(1), 1, &first, true).await;
+    f.store
+        .activate_manager_projection_epoch(
+            &f.scope,
+            f.epoch,
+            &receipt.state_digest,
+            Utc::now(),
+            Duration::from_secs(600),
+        )
+        .await
+        .unwrap();
+    let _crashed = f
+        .store
+        .begin_manager_source_attempt(&f.scope, Duration::from_secs(30))
+        .await
+        .unwrap();
+    let partial = f
+        .store
+        .begin_manager_source_attempt(&f.scope, Duration::from_secs(30))
+        .await
+        .unwrap();
+    sqlx::query("UPDATE portal_projection.manager_source_attempts SET deadline=clock_timestamp()-interval '1 second' WHERE workspace_id=$1 AND environment=$2")
+        .bind(f.scope.workspace_id.as_str()).bind(&f.scope.environment).execute(&f.pool).await.unwrap();
+    let ((), recovery) = tokio::join!(
+        async {
+            seal_health_test_cycle(&f, &rows(2), 3, &partial, false).await;
+        },
+        f.store
+            .begin_manager_source_attempt(&f.scope, Duration::from_secs(30)),
+    );
+    let recovery = recovery.unwrap();
+    assert_page_health(&f, ManagerSourceHealth::Unknown, 2).await;
+    assert_analytics_health(&f, ManagerSourceHealth::Unknown).await;
+    seal_health_test_cycle(&f, &rows(3), 5, &recovery, true).await;
+    assert_page_health(&f, ManagerSourceHealth::Healthy, 3).await;
+}
+
+#[tokio::test]
+#[allow(clippy::too_many_lines)] // Preserve the actual activation/rollback sequence.
+async fn source_health_rollback_invalidates_retained_proof_until_full_recovery() {
+    let mut old = Fixture::new().await;
+    let old_attempt = old
+        .store
+        .begin_manager_source_attempt(&old.scope, Duration::from_secs(30))
+        .await
+        .unwrap();
+    let old_receipt = seal_health_test_cycle(&old, &rows(1), 1, &old_attempt, true).await;
+    old.store
+        .activate_manager_projection_epoch(
+            &old.scope,
+            old.epoch,
+            &old_receipt.state_digest,
+            Utc::now(),
+            Duration::from_secs(600),
+        )
+        .await
+        .unwrap();
+    assert_page_health(&old, ManagerSourceHealth::Healthy, 1).await;
+    old.store
+        .release_manager_projection_lease(&old.scope, old.epoch, old.lease.proof())
+        .await
+        .unwrap();
+    let next_epoch = old
+        .store
+        .create_building_epoch(
+            &old.scope,
+            &EpochMetadata {
+                adapter_version: ADAPTER.to_owned(),
+                source_gateway_digest: hash(&"TEST_ONLY.gateway"),
+                capability_snapshot_id: old.catalogue.clone(),
+            },
+            Utc::now(),
+        )
+        .await
+        .unwrap();
+    let next_lease = match old
+        .store
+        .acquire_manager_projection_lease(
+            &old.scope,
+            next_epoch,
+            Uuid::now_v7(),
+            &hash(&"TEST_ONLY.next-owner"),
+            Duration::from_secs(300),
+        )
+        .await
+        .unwrap()
+    {
+        ManagerProjectionLeaseAcquireOutcome::Acquired(lease) => lease,
+        ManagerProjectionLeaseAcquireOutcome::AlreadyHeld(_) => {
+            panic!("released scope must acquire")
+        }
+    };
+    let next = Fixture {
+        store: old.store.clone(),
+        pool: old.pool.clone(),
+        scope: old.scope.clone(),
+        epoch: next_epoch,
+        lease: next_lease,
+        catalogue: old.catalogue.clone(),
+    };
+    let next_attempt = next
+        .store
+        .begin_manager_source_attempt(&next.scope, Duration::from_secs(30))
+        .await
+        .unwrap();
+    let next_receipt = seal_health_test_cycle(&next, &rows(2), 2, &next_attempt, true).await;
+    next.store
+        .activate_manager_projection_epoch(
+            &next.scope,
+            next.epoch,
+            &next_receipt.state_digest,
+            Utc::now(),
+            Duration::from_secs(600),
+        )
+        .await
+        .unwrap();
+    assert_page_health(&next, ManagerSourceHealth::Healthy, 2).await;
+    assert!(matches!(
+        next.store
+            .rollback_manager_projection_epoch(&next.scope, next.epoch, old.epoch)
+            .await,
+        Err(StoreError::ManagerProjectionLeaseBusy)
+    ));
+    assert_page_health(&next, ManagerSourceHealth::Healthy, 2).await;
+    next.store
+        .release_manager_projection_lease(&next.scope, next.epoch, next.lease.proof())
+        .await
+        .unwrap();
+    old.store
+        .rollback_manager_projection_epoch(&old.scope, next.epoch, old.epoch)
+        .await
+        .unwrap();
+    assert_page_health(&old, ManagerSourceHealth::Unknown, 1).await;
+    assert_analytics_health(&old, ManagerSourceHealth::Unknown).await;
+    old.assert_oracle(&rows(1), &old_receipt.state_digest).await;
+    old.lease = match old
+        .store
+        .acquire_manager_projection_lease(
+            &old.scope,
+            old.epoch,
+            Uuid::now_v7(),
+            &hash(&"TEST_ONLY.recovery-owner"),
+            Duration::from_secs(300),
+        )
+        .await
+        .unwrap()
+    {
+        ManagerProjectionLeaseAcquireOutcome::Acquired(lease) => lease,
+        ManagerProjectionLeaseAcquireOutcome::AlreadyHeld(_) => {
+            panic!("released scope must reacquire")
+        }
+    };
+    let recovery = old
+        .store
+        .begin_manager_source_attempt(&old.scope, Duration::from_secs(30))
+        .await
+        .unwrap();
+    seal_health_test_cycle(&old, &rows(1), 3, &recovery, true).await;
+    assert_page_health(&old, ManagerSourceHealth::Healthy, 1).await;
+}
+
+#[tokio::test]
+#[allow(clippy::too_many_lines)] // One chronological proof across failure and recovery.
+async fn source_health_seal_cannot_clear_newer_failure_or_promote_partial_recovery() {
+    let f = Fixture::new().await;
+    let first = f
+        .store
+        .begin_manager_source_attempt(&f.scope, Duration::from_secs(30))
+        .await
+        .unwrap();
+    let receipt = seal_health_test_cycle(&f, &rows(1), 1, &first, true).await;
+    f.store
+        .activate_manager_projection_epoch(
+            &f.scope,
+            f.epoch,
+            &receipt.state_digest,
+            Utc::now(),
+            Duration::from_secs(600),
+        )
+        .await
+        .unwrap();
+    assert_eq!(
+        f.store.load_manager_source_health(&f.scope).await.unwrap(),
+        ManagerSourceHealth::Healthy
+    );
+    assert_page_health(&f, ManagerSourceHealth::Healthy, 1).await;
+    assert_analytics_health(&f, ManagerSourceHealth::Healthy).await;
+    let old = f
+        .store
+        .begin_manager_source_attempt(&f.scope, Duration::from_secs(30))
+        .await
+        .unwrap();
+    let failure = f
+        .store
+        .begin_manager_source_attempt(&f.scope, Duration::from_secs(30))
+        .await
+        .unwrap();
+    assert!(f
+        .store
+        .record_manager_source_failure_for_active_scope(&failure)
+        .await
+        .unwrap());
+    assert_page_health(&f, ManagerSourceHealth::Degraded, 1).await;
+    assert_analytics_health(&f, ManagerSourceHealth::Degraded).await;
+    seal_health_test_cycle(&f, &rows(2), 3, &old, true).await;
+    assert_eq!(
+        f.store.load_manager_source_health(&f.scope).await.unwrap(),
+        ManagerSourceHealth::Degraded
+    );
+    let partial = f
+        .store
+        .begin_manager_source_attempt(&f.scope, Duration::from_secs(30))
+        .await
+        .unwrap();
+    seal_health_test_cycle(&f, &rows(3), 5, &partial, false).await;
+    assert_eq!(
+        f.store.load_manager_source_health(&f.scope).await.unwrap(),
+        ManagerSourceHealth::Degraded
+    );
+    let recovery = f
+        .store
+        .begin_manager_source_attempt(&f.scope, Duration::from_secs(30))
+        .await
+        .unwrap();
+    seal_health_test_cycle(&f, &rows(4), 7, &recovery, true).await;
+    assert_eq!(
+        f.store.load_manager_source_health(&f.scope).await.unwrap(),
+        ManagerSourceHealth::Healthy
+    );
+    assert_page_health(&f, ManagerSourceHealth::Healthy, 4).await;
+    assert_analytics_health(&f, ManagerSourceHealth::Healthy).await;
+    let partial = f
+        .store
+        .begin_manager_source_attempt(&f.scope, Duration::from_secs(30))
+        .await
+        .unwrap();
+    seal_health_test_cycle(&f, &rows(5), 9, &partial, false).await;
+    assert_eq!(
+        f.store.load_manager_source_health(&f.scope).await.unwrap(),
+        ManagerSourceHealth::Healthy
+    );
+    // Concurrent failure is never erased by an earlier-issued success.
+    let early = f
+        .store
+        .begin_manager_source_attempt(&f.scope, Duration::from_secs(30))
+        .await
+        .unwrap();
+    let failed = f
+        .store
+        .begin_manager_source_attempt(&f.scope, Duration::from_secs(30))
+        .await
+        .unwrap();
+    let ((), result) = tokio::join!(
+        async {
+            seal_health_test_cycle(&f, &rows(6), 11, &early, true).await;
+        },
+        f.store.record_manager_source_failure(&failed, f.epoch),
+    );
+    assert!(result.unwrap());
+    assert_eq!(
+        f.store.load_manager_source_health(&f.scope).await.unwrap(),
+        ManagerSourceHealth::Degraded
+    );
+    let recovered = f
+        .store
+        .begin_manager_source_attempt(&f.scope, Duration::from_secs(30))
+        .await
+        .unwrap();
+    seal_health_test_cycle(&f, &rows(7), 13, &recovered, true).await;
+    assert_eq!(
+        f.store.load_manager_source_health(&f.scope).await.unwrap(),
+        ManagerSourceHealth::Healthy
+    );
+    // Legacy callers must not inherit the previous health proof.
+    f.commit(&rows(8), 15).await;
+    assert_ne!(
+        f.store.load_manager_source_health(&f.scope).await.unwrap(),
+        ManagerSourceHealth::Healthy
+    );
+    assert_page_health(&f, ManagerSourceHealth::Degraded, 8).await;
+}
+
+fn analytics_shared_scope_view() -> View {
+    BTreeMap::from([
+        (
+            "TEST_ONLY.deployment.a".to_owned(),
+            json!({
+                "source_relation":"public.strategy_deployments", "deployment_id":"dep-a",
+                "portfolio_id":"pf-a", "strategy_id":"shared", "account_id":"shared"
+            }),
+        ),
+        (
+            "TEST_ONLY.deployment.b".to_owned(),
+            json!({
+                "source_relation":"public.strategy_deployments", "deployment_id":"dep-b",
+                "portfolio_id":"pf-b", "strategy_id":"shared", "account_id":"shared"
+            }),
+        ),
+        (
+            "TEST_ONLY.order.a".to_owned(),
+            json!({
+                "source_relation":"public.orders", "deployment_id":"dep-a",
+                "portfolio_id":"pf-a", "strategy_id":"shared", "account_id":"shared"
+            }),
+        ),
+        (
+            "TEST_ONLY.order.b".to_owned(),
+            json!({
+                "source_relation":"public.orders", "deployment_id":"dep-b",
+                "portfolio_id":"pf-b", "strategy_id":"shared", "account_id":"shared"
+            }),
+        ),
+        (
+            "TEST_ONLY.order.only_b".to_owned(),
+            json!({
+                "source_relation":"public.orders", "portfolio_id":"pf-b", "account_id":"shared"
+            }),
+        ),
+        (
+            "TEST_ONLY.order.conflict".to_owned(),
+            json!({
+                "source_relation":"public.orders", "deployment_id":"dep-b",
+                "portfolio_id":"pf-a", "strategy_id":"shared", "account_id":"shared"
+            }),
+        ),
+        (
+            "TEST_ONLY.order.wrapped".to_owned(),
+            json!({
+                "source_relation":"public.orders", "fields": {
+                    "deployment_id":{"kind":"TEXT","value":"dep-b"}, "portfolio_id":{"kind":"TEXT","value":"pf-b"},
+                    "strategy_id":{"kind":"TEXT","value":"shared"}, "account_id":{"kind":"TEXT","value":"shared"}
+                }
+            }),
+        ),
+    ])
+}
+
+#[tokio::test]
+async fn analytics_explicit_scope_ids_beat_shared_strategy_and_account() {
+    let f = Fixture::new().await;
+    let view = analytics_shared_scope_view();
+    let (_, receipt, _, _) = f.commit(&view, 1).await;
+    f.store
+        .activate_manager_projection_epoch(
+            &f.scope,
+            f.epoch,
+            &receipt.state_digest,
+            Utc::now(),
+            Duration::from_secs(600),
+        )
+        .await
+        .unwrap();
+    for (kind, value) in [
+        (ManagerAnalyticsSubjectKind::Deployment, "dep-a"),
+        (ManagerAnalyticsSubjectKind::Portfolio, "pf-a"),
+    ] {
+        let snapshot = f
+            .store
+            .load_manager_analytics_snapshot(
+                &f.scope,
+                &ManagerAnalyticsSubject {
+                    kind,
+                    id: id(value),
+                },
+            )
+            .await
+            .unwrap();
+        let actual: Vec<_> = snapshot
+            .facts
+            .iter()
+            .map(|fact| fact.entity_id.as_str())
+            .collect();
+        assert_eq!(actual, ["TEST_ONLY.deployment.a", "TEST_ONLY.order.a"]);
+        assert_eq!(snapshot.repository_query_count, 1);
+    }
+}
+
+#[tokio::test]
+async fn analytics_weak_scope_match_fails_closed_without_hiding_source() {
+    let f = Fixture::new().await;
+    let mut view = analytics_shared_scope_view();
+    view.insert(
+        "TEST_ONLY.order.legacy".to_owned(),
+        json!({
+            "source_relation":"public.orders", "strategy_id":"shared", "account_id":"shared"
+        }),
+    );
+    let (_, receipt, _, _) = f.commit(&view, 1).await;
+    f.store
+        .activate_manager_projection_epoch(
+            &f.scope,
+            f.epoch,
+            &receipt.state_digest,
+            Utc::now(),
+            Duration::from_secs(600),
+        )
+        .await
+        .unwrap();
+    for (kind, value) in [
+        (ManagerAnalyticsSubjectKind::Deployment, "dep-a"),
+        (ManagerAnalyticsSubjectKind::Portfolio, "pf-a"),
+    ] {
+        assert!(matches!(
+            f.store
+                .load_manager_analytics_snapshot(
+                    &f.scope,
+                    &ManagerAnalyticsSubject {
+                        kind,
+                        id: id(value)
+                    },
+                )
+                .await,
+            Err(StoreError::AnalyticsAttributionUnproven)
+        ));
+    }
+    let alpha = f
+        .store
+        .load_manager_analytics_snapshot(
+            &f.scope,
+            &ManagerAnalyticsSubject {
+                kind: ManagerAnalyticsSubjectKind::Alpha,
+                id: id("shared"),
+            },
+        )
+        .await
+        .unwrap();
+    assert!(alpha
+        .facts
+        .iter()
+        .any(|fact| fact.entity_id == "TEST_ONLY.order.legacy"));
+    assert!(f
+        .store
+        .load_entity(
+            f.epoch,
+            &ProjectionEntityKey {
+                kind: ProjectionEntityKind::Order,
+                entity_id: id("TEST_ONLY.order.legacy"),
+            }
+        )
+        .await
+        .unwrap()
+        .is_some());
+}
+
+#[tokio::test]
+async fn analytics_portfolio_id_does_not_prove_deployment_id() {
+    let f = Fixture::new().await;
+    let mut view = analytics_shared_scope_view();
+    view.insert(
+        "TEST_ONLY.order.only_a".to_owned(),
+        json!({
+            "source_relation":"public.orders", "portfolio_id":"pf-a", "account_id":"shared"
+        }),
+    );
+    let (_, receipt, _, _) = f.commit(&view, 1).await;
+    f.store
+        .activate_manager_projection_epoch(
+            &f.scope,
+            f.epoch,
+            &receipt.state_digest,
+            Utc::now(),
+            Duration::from_secs(600),
+        )
+        .await
+        .unwrap();
+    assert!(matches!(
+        f.store
+            .load_manager_analytics_snapshot(
+                &f.scope,
+                &ManagerAnalyticsSubject {
+                    kind: ManagerAnalyticsSubjectKind::Deployment,
+                    id: id("dep-a")
+                },
+            )
+            .await,
+        Err(StoreError::AnalyticsAttributionUnproven)
+    ));
+    let portfolio = f
+        .store
+        .load_manager_analytics_snapshot(
+            &f.scope,
+            &ManagerAnalyticsSubject {
+                kind: ManagerAnalyticsSubjectKind::Portfolio,
+                id: id("pf-a"),
+            },
+        )
+        .await
+        .unwrap();
+    assert!(portfolio
+        .facts
+        .iter()
+        .any(|fact| fact.entity_id == "TEST_ONLY.order.only_a"));
+}
+
+#[tokio::test]
+async fn analytics_reobserved_fact_keeps_original_business_clock_and_digest() {
+    let f = Fixture::new().await;
+    let view = BTreeMap::from([(
+        String::from("manager.order:TEST_ONLY.order.1"),
+        json!({"source_relation":"public.orders", "source_feed":"manager.order",
+            "strategy_id":"TEST_ONLY.alpha", "quantity":"1"}),
+    )]);
+    let (cycle, receipt, _, _) = f.commit(&view, 1).await;
+    f.store
+        .activate_manager_projection_epoch(
+            &f.scope,
+            f.epoch,
+            &receipt.state_digest,
+            Utc::now(),
+            Duration::from_secs(600),
+        )
+        .await
+        .unwrap();
+    let subject = ManagerAnalyticsSubject {
+        kind: ManagerAnalyticsSubjectKind::Alpha,
+        id: id("TEST_ONLY.alpha"),
+    };
+    let before = f
+        .store
+        .load_manager_analytics_snapshot(&f.scope, &subject)
+        .await
+        .unwrap();
+    assert_eq!(before.as_of, Some(at(0)));
+    assert_eq!(before.feed_as_of, None);
+    let mut feeds: BTreeMap<_, _> = FEEDS
+        .iter()
+        .map(|feed| {
+            (
+                feed.feed_id.to_owned(),
+                ManagerFeedObservation {
+                    as_of: at(0),
+                    source_read_at: at(1),
+                    poll_interval_ms: 2_000,
+                },
+            )
+        })
+        .collect();
+    let order = feeds.get_mut("manager.order").unwrap();
+    order.as_of = at(2);
+    order.source_read_at = at(2);
+    f.store
+        .commit_manager_projection_cycle_with_feed_observations(
+            &f.scope,
+            f.epoch,
+            f.lease.proof(),
+            &cycle,
+            &feeds,
+            at(2),
+        )
+        .await
+        .unwrap();
+    let after = f
+        .store
+        .load_manager_analytics_snapshot(&f.scope, &subject)
+        .await
+        .unwrap();
+    assert_eq!(after.as_of, Some(at(2)));
+    assert_eq!(after.feed_as_of, Some(at(0))); // other feeds remain old
+    assert_eq!(after.facts, before.facts); // no business time or payload rewritten
+    assert_eq!(after.fact_digest, before.fact_digest);
+    assert_eq!(after.repository_query_count, 1);
+    for observation in feeds.values_mut() {
+        observation.as_of = at(3);
+        observation.source_read_at = at(3);
+    }
+    let mut refreshed_cycle = cycle.clone();
+    refreshed_cycle.source_read_at = at(3);
+    f.store
+        .commit_manager_projection_cycle_with_feed_observations(
+            &f.scope,
+            f.epoch,
+            f.lease.proof(),
+            &refreshed_cycle,
+            &feeds,
+            at(3),
+        )
+        .await
+        .unwrap();
+    let fully_refreshed = f
+        .store
+        .load_manager_analytics_snapshot(&f.scope, &subject)
+        .await
+        .unwrap();
+    assert_eq!(fully_refreshed.as_of, Some(at(3)));
+    assert_eq!(fully_refreshed.feed_as_of, Some(at(3)));
+    assert_eq!(fully_refreshed.facts, before.facts);
+    assert_eq!(fully_refreshed.fact_digest, before.fact_digest);
+}
+
+#[tokio::test]
+async fn manager_analytics_rejects_fact_without_source_as_of() {
+    let f = Fixture::new().await;
+    let view = BTreeMap::from([(
+        String::from("TEST_ONLY.order.1"),
+        json!({
+            "source_relation":"public.orders", "strategy_id":"TEST_ONLY.alpha", "quantity":"1"
+        }),
+    )]);
+    let (_, receipt, _, _) = f.commit(&view, 1).await;
+    f.store
+        .activate_manager_projection_epoch(
+            &f.scope,
+            f.epoch,
+            &receipt.state_digest,
+            Utc::now(),
+            Duration::from_secs(600),
+        )
+        .await
+        .unwrap();
+    let subject = ManagerAnalyticsSubject {
+        kind: ManagerAnalyticsSubjectKind::Alpha,
+        id: id("TEST_ONLY.alpha"),
+    };
+    let snapshot = f
+        .store
+        .load_manager_analytics_snapshot(&f.scope, &subject)
+        .await
+        .unwrap();
+    assert_eq!(snapshot.fact_count, 1);
+    assert_eq!(snapshot.as_of, Some(at(0)));
+    assert_eq!(snapshot.feed_as_of, None);
+    sqlx::query(
+        "UPDATE portal_projection.entities SET as_of=NULL WHERE epoch_id=$1 AND entity_id=$2",
+    )
+    .bind(f.epoch)
+    .bind("TEST_ONLY.order.1")
+    .execute(&f.pool)
+    .await
+    .unwrap();
+    assert!(matches!(
+        f.store
+            .load_manager_analytics_snapshot(&f.scope, &subject)
+            .await,
+        Err(StoreError::InvalidAnalyticsSourcePayload)
+    ));
+}
+
+#[tokio::test]
+async fn manager_queries_reject_unsealed_changed_cycle_and_recover() {
+    let f = Fixture::new().await;
+    let mut view = rows(1);
+    let (baseline, receipt, _, _) = f.commit(&view, 1).await;
+    f.store
+        .activate_manager_projection_epoch(
+            &f.scope,
+            f.epoch,
+            &receipt.state_digest,
+            Utc::now(),
+            Duration::from_secs(600),
+        )
+        .await
+        .unwrap();
+    let codec = CursorCodec::new(
+        "TEST_ONLY.cursor",
+        BTreeMap::from([("TEST_ONLY.cursor".to_owned(), vec![7_u8; 32])]),
+        Duration::from_secs(300),
+    )
+    .unwrap();
+    let request = EntityQueryRequest::default();
+    let subject = ManagerAnalyticsSubject {
+        kind: ManagerAnalyticsSubjectKind::LiveGate,
+        id: id("TEST_ONLY.subject"),
+    };
+    let query = || {
+        f.store.query_entities(
+            &f.scope,
+            ProjectionEntityKind::Order,
+            &request,
+            &codec,
+            Utc::now(),
+        )
+    };
+    assert_eq!(query().await.unwrap().rows.len(), 1);
+    assert!(f
+        .store
+        .load_manager_analytics_snapshot(&f.scope, &subject)
+        .await
+        .is_ok());
+
+    // Old heartbeats have no sequence and must not become trusted merely by
+    // migrating the schema; a checked repeat of the complete cycle restores it.
+    sqlx::query("UPDATE portal_projection.manager_projection_heartbeats SET sealed_projection_sequence=NULL WHERE epoch_id=$1")
+        .bind(f.epoch)
+        .execute(&f.pool)
+        .await
+        .unwrap();
+    assert!(matches!(
+        query().await,
+        Err(StoreError::ManagerProjectionCycleIncomplete)
+    ));
+    f.seal(&baseline).await;
+    assert!(query().await.is_ok());
+
+    view.get_mut("TEST_ONLY.order.0000").unwrap()["state"] = json!("CORRECTED");
+    let partial = f.resolve(&view, 2).await;
+    // A no-op kind does not change visible data and must not block a read.
+    for kind in [ProjectionEntityKind::Account, ProjectionEntityKind::Order] {
+        f.store
+            .commit_manager_projection_snapshot(
+                &f.scope,
+                f.epoch,
+                f.lease.proof(),
+                &f.snapshot(&view, &partial, kind),
+                at(2),
+            )
+            .await
+            .unwrap();
+        if kind == ProjectionEntityKind::Account {
+            assert!(query().await.is_ok());
+        }
+    }
+    assert!(matches!(
+        query().await,
+        Err(StoreError::ManagerProjectionCycleIncomplete)
+    ));
+    assert!(matches!(
+        f.store
+            .load_manager_analytics_snapshot(&f.scope, &subject)
+            .await,
+        Err(StoreError::ManagerProjectionCycleIncomplete)
+    ));
+
+    // A successor may recover an abandoned partial attempt. Historical
+    // unsealed receipts must not cause a permanent false unavailability.
+    view.get_mut("TEST_ONLY.order.0000").unwrap()["state"] = json!("NEWER");
+    f.commit(&view, 3).await;
+    assert_eq!(query().await.unwrap().rows[0].payload["state"], "NEWER");
+    assert!(f
+        .store
+        .load_manager_analytics_snapshot(&f.scope, &subject)
+        .await
+        .is_ok());
+
+    // The generic reader must preserve non-Manager adapter behavior even
+    // when no Manager heartbeat seal exists. This changes only the isolated
+    // synthetic epoch, after all Manager-specific checks above have finished.
+    sqlx::query("UPDATE portal_projection.epochs SET adapter_version='TEST_ONLY.non_manager' WHERE epoch_id=$1")
+        .bind(f.epoch)
+        .execute(&f.pool)
+        .await
+        .unwrap();
+    sqlx::query("UPDATE portal_projection.manager_projection_heartbeats SET sealed_projection_sequence=NULL WHERE epoch_id=$1")
+        .bind(f.epoch)
+        .execute(&f.pool)
+        .await
+        .unwrap();
+    assert_eq!(query().await.unwrap().rows[0].payload["state"], "NEWER");
+}
+
+#[tokio::test]
 async fn manager_partial_commit_retry_is_deterministic_and_durable() {
     let f = Fixture::new().await;
     let mut view = rows(4);
@@ -685,6 +2094,346 @@ async fn manager_stale_occurrence_cannot_reapply_after_newer_seal() {
             .is_err());
     }
     f.assert_oracle(&view, &latest.state_digest).await;
+}
+
+#[tokio::test]
+#[allow(clippy::too_many_lines)] // Keep atomic recovery and fencing in one trace.
+async fn manager_feed_observations_are_fenced_atomic_and_restart_safe() {
+    let mut f = Fixture::new().await;
+    let mut view = rows(1);
+    let mut baseline = f.resolve(&view, 1).await;
+    baseline.source_read_at = at(1) + TimeDelta::nanoseconds(123);
+    let mut feeds: BTreeMap<_, _> = FEEDS
+        .iter()
+        .map(|feed| {
+            (
+                feed.feed_id.to_owned(),
+                ManagerFeedObservation {
+                    as_of: at(0),
+                    source_read_at: baseline.source_read_at,
+                    poll_interval_ms: 2_000,
+                },
+            )
+        })
+        .collect();
+    // Missing snapshots cannot publish even a valid-looking feed map.
+    assert!(f
+        .store
+        .commit_manager_projection_cycle_with_feed_observations(
+            &f.scope,
+            f.epoch,
+            f.lease.proof(),
+            &baseline,
+            &feeds,
+            at(2),
+        )
+        .await
+        .is_err());
+    f.commit_snapshots(&view, &baseline).await;
+    let mut missing = feeds.clone();
+    missing.remove("manager.fill");
+    assert!(matches!(
+        f.store
+            .commit_manager_projection_cycle_with_feed_observations(
+                &f.scope,
+                f.epoch,
+                f.lease.proof(),
+                &baseline,
+                &missing,
+                at(2),
+            )
+            .await,
+        Err(StoreError::InvalidManagerProjectionSnapshot)
+    ));
+    let receipt = f
+        .store
+        .commit_manager_projection_cycle_with_feed_observations(
+            &f.scope,
+            f.epoch,
+            f.lease.proof(),
+            &baseline,
+            &feeds,
+            at(2),
+        )
+        .await
+        .unwrap();
+    f.store
+        .activate_manager_projection_epoch(
+            &f.scope,
+            f.epoch,
+            &receipt.state_digest,
+            Utc::now(),
+            Duration::from_secs(600),
+        )
+        .await
+        .unwrap();
+    assert_eq!(
+        f.store
+            .load_manager_feed_observations(&f.scope)
+            .await
+            .unwrap(),
+        Some(feeds.clone())
+    );
+    let subject = ManagerAnalyticsSubject {
+        kind: ManagerAnalyticsSubjectKind::LiveGate,
+        id: id("TEST_ONLY.empty.subject"),
+    };
+    let analytics = f
+        .store
+        .load_manager_analytics_snapshot(&f.scope, &subject)
+        .await
+        .unwrap();
+    assert!(analytics.facts.is_empty());
+    assert_eq!(analytics.as_of, None);
+    assert_eq!(analytics.feed_as_of, Some(at(0)));
+    assert_eq!(analytics.repository_query_count, 1);
+    // A malformed sealed map must fail closed, not become an optimistic clock.
+    sqlx::query("UPDATE portal_projection.manager_projection_heartbeats SET feed_observations='{}'::jsonb WHERE epoch_id=$1")
+        .bind(f.epoch).execute(&f.pool).await.unwrap();
+    assert!(matches!(
+        f.store
+            .load_manager_analytics_snapshot(&f.scope, &subject)
+            .await,
+        Err(StoreError::InvalidManagerProjectionSnapshot)
+    ));
+    sqlx::query("UPDATE portal_projection.manager_projection_heartbeats SET feed_observations=$2 WHERE epoch_id=$1")
+        .bind(f.epoch).bind(serde_json::to_value(&feeds).unwrap()).execute(&f.pool).await.unwrap();
+    let codec = CursorCodec::new(
+        "TEST_ONLY.cursor",
+        BTreeMap::from([("TEST_ONLY.cursor".to_owned(), vec![7_u8; 32])]),
+        Duration::from_secs(300),
+    )
+    .unwrap();
+    let request = EntityQueryRequest::default();
+    let page = f
+        .store
+        .query_entities_scoped_with_observations(
+            &f.scope,
+            ProjectionEntityKind::Order,
+            &request,
+            &[],
+            &codec,
+            Utc::now(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(page.page.epoch_id, f.epoch);
+    assert_eq!(page.page.rows.len(), 1);
+    assert_eq!(page.manager_observations, Some(Some(feeds.clone())));
+    assert!(feeds.contains_key("manager.fill")); // synthetic fill feed has no facts
+    let other = ProjectionScope::new(id("TEST_ONLY.other-workspace"), "paper").unwrap();
+    assert!(matches!(
+        f.store.load_manager_feed_observations(&other).await,
+        Err(StoreError::EpochNotFound)
+    ));
+
+    // No-op cycle updates only the refreshed class; another feed keeps its
+    // old clock. A fresh connection proves the exact map survives restart.
+    let order = feeds.get_mut("manager.order").unwrap();
+    order.source_read_at = at(2);
+    order.as_of = at(2);
+    f.store
+        .commit_manager_projection_cycle_with_feed_observations(
+            &f.scope,
+            f.epoch,
+            f.lease.proof(),
+            &baseline,
+            &feeds,
+            at(2),
+        )
+        .await
+        .unwrap();
+    let url = std::env::var("TEST_PROJECTION_DATABASE_URL").unwrap();
+    let reopened = PgProjectionStore::connect(&url).await.unwrap();
+    assert_eq!(
+        reopened
+            .load_manager_feed_observations(&f.scope)
+            .await
+            .unwrap(),
+        Some(feeds.clone())
+    );
+    assert_eq!(
+        feeds["manager.fill"].source_read_at,
+        baseline.source_read_at
+    );
+
+    let mut contradiction = feeds.clone();
+    contradiction.get_mut("manager.fill").unwrap().as_of = at(1);
+    assert!(matches!(
+        f.store
+            .commit_manager_projection_cycle_with_feed_observations(
+                &f.scope,
+                f.epoch,
+                f.lease.proof(),
+                &baseline,
+                &contradiction,
+                at(2),
+            )
+            .await,
+        Err(StoreError::InvalidManagerProjectionSnapshot)
+    ));
+    let mut regression = feeds.clone();
+    regression.get_mut("manager.order").unwrap().source_read_at = at(1);
+    regression.get_mut("manager.order").unwrap().as_of = at(0);
+    assert!(matches!(
+        f.store
+            .commit_manager_projection_cycle_with_feed_observations(
+                &f.scope,
+                f.epoch,
+                f.lease.proof(),
+                &baseline,
+                &regression,
+                at(2),
+            )
+            .await,
+        Err(StoreError::InvalidManagerProjectionSnapshot)
+    ));
+    assert_eq!(
+        reopened
+            .load_manager_feed_observations(&f.scope)
+            .await
+            .unwrap(),
+        Some(feeds.clone())
+    );
+
+    let old = f.lease.proof();
+    f.store
+        .release_manager_projection_lease(&f.scope, f.epoch, old)
+        .await
+        .unwrap();
+    f.lease = match f
+        .store
+        .acquire_manager_projection_lease(
+            &f.scope,
+            f.epoch,
+            Uuid::now_v7(),
+            &hash(&"TEST_ONLY.owner"),
+            Duration::from_secs(300),
+        )
+        .await
+        .unwrap()
+    {
+        ManagerProjectionLeaseAcquireOutcome::Acquired(lease) => lease,
+        ManagerProjectionLeaseAcquireOutcome::AlreadyHeld(_) => panic!("released lease"),
+    };
+    assert!(matches!(
+        f.store
+            .commit_manager_projection_cycle_with_feed_observations(
+                &f.scope,
+                f.epoch,
+                old,
+                &baseline,
+                &feeds,
+                at(2),
+            )
+            .await,
+        Err(StoreError::ManagerProjectionLeaseLost)
+    ));
+
+    view.get_mut("TEST_ONLY.order.0000").unwrap()["state"] = json!("UPDATED");
+    let changed = f.resolve(&view, 3).await;
+    f.store
+        .commit_manager_projection_snapshot(
+            &f.scope,
+            f.epoch,
+            f.lease.proof(),
+            &f.snapshot(&view, &changed, ProjectionEntityKind::Order),
+            at(3),
+        )
+        .await
+        .unwrap();
+    assert!(matches!(
+        reopened.load_manager_feed_observations(&f.scope).await,
+        Err(StoreError::ManagerProjectionCycleIncomplete)
+    ));
+    assert!(matches!(
+        reopened
+            .query_entities_scoped_with_observations(
+                &f.scope,
+                ProjectionEntityKind::Order,
+                &request,
+                &[],
+                &codec,
+                Utc::now(),
+            )
+            .await,
+        Err(StoreError::ManagerProjectionCycleIncomplete)
+    ));
+    f.commit_snapshots(&view, &changed).await;
+    for observation in feeds.values_mut() {
+        observation.source_read_at = at(3);
+        observation.as_of = at(3);
+    }
+    f.store
+        .commit_manager_projection_cycle_with_feed_observations(
+            &f.scope,
+            f.epoch,
+            f.lease.proof(),
+            &changed,
+            &feeds,
+            at(3),
+        )
+        .await
+        .unwrap();
+    assert_eq!(
+        reopened
+            .load_manager_feed_observations(&f.scope)
+            .await
+            .unwrap(),
+        Some(feeds.clone())
+    );
+
+    // A legacy/no-lineage seal must not keep an apparently current old map.
+    f.store
+        .commit_manager_projection_cycle(&f.scope, f.epoch, f.lease.proof(), &changed, at(3))
+        .await
+        .unwrap();
+    assert_eq!(
+        reopened
+            .load_manager_feed_observations(&f.scope)
+            .await
+            .unwrap(),
+        None
+    );
+    let legacy = reopened
+        .query_entities_scoped_with_observations(
+            &f.scope,
+            ProjectionEntityKind::Order,
+            &request,
+            &[],
+            &codec,
+            Utc::now(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(legacy.manager_observations, Some(None));
+    let legacy_analytics = reopened
+        .load_manager_analytics_snapshot(&f.scope, &subject)
+        .await
+        .unwrap();
+    assert!(legacy_analytics.facts.is_empty());
+    assert_eq!(legacy_analytics.feed_as_of, None);
+    assert_eq!(legacy_analytics.as_of, None);
+    // The updated worker can restore lineage after a legacy seal; leave this
+    // TEST_ONLY record available for an actual isolated PostgreSQL restart.
+    f.store
+        .commit_manager_projection_cycle_with_feed_observations(
+            &f.scope,
+            f.epoch,
+            f.lease.proof(),
+            &changed,
+            &feeds,
+            at(3),
+        )
+        .await
+        .unwrap();
+    assert_eq!(
+        reopened
+            .load_manager_feed_observations(&f.scope)
+            .await
+            .unwrap(),
+        Some(feeds)
+    );
 }
 
 #[tokio::test]

@@ -9,8 +9,15 @@ COPY upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/trading_system_porta
 RUN --mount=type=cache,target=/usr/local/cargo/registry,sharing=locked \
     --mount=type=cache,target=/repo/services/portal-execution-edge-rs/target,sharing=locked \
     cd services/portal-execution-edge-rs && \
-    cargo build --locked --release --package edge-service --quiet && \
-    cp target/release/edge-service /portal-execution-edge
+    CARGO_BUILD_JOBS=1 cargo build --locked --release \
+        --package edge-service --package manager-projection --bins --quiet && \
+    cp target/release/edge-service /portal-execution-edge && \
+    cp target/release/target_catalogue_candidate /target_catalogue_candidate
+
+# Offline release metadata tool: explicitly exported, never copied into the
+# serving image and never given a credential or network endpoint.
+FROM scratch AS metadata-tool
+COPY --from=build /target_catalogue_candidate /target_catalogue_candidate
 
 FROM gcr.io/distroless/cc-debian12:nonroot@sha256:9dac0a79194e45a7da0158a9c6da57b217585af0786db3845d1f0ec1a0dd182f
 

@@ -9,6 +9,8 @@ repository.workspace = true
 [features]
 # TEST_ONLY real disposable PostgreSQL qualification. No production behavior.
 pm-custody-pg-test = []
+# Explicit opt-in: loopback mTLS source + owned disposable PostgreSQL only.
+manager-projection-pg-test = []
 
 [dependencies]
 analytics = { path = "../analytics" }
@@ -55,6 +57,7 @@ base64.workspace = true
 jsonwebtoken.workspace = true
 rcgen = "0.13.2"
 rsa = { version = "0.9.8", features = ["pem"] }
+sqlx.workspace = true
 time.workspace = true
 
 [lints]

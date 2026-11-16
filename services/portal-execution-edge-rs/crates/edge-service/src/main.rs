@@ -18,7 +18,7 @@ use std::{
     collections::{BTreeMap, BTreeSet, HashMap, HashSet, VecDeque},
     convert::Infallible,
     env, fs,
-    io::BufReader,
+    io::{BufReader, Read as _},
     net::SocketAddr,
     path::{Path, PathBuf},
     sync::{Arc, Once},
@@ -33,7 +33,10 @@ use analytics::{
 };
 use axum::{
     extract::{Path as AxumPath, Query, State},
-    http::{header::AUTHORIZATION, HeaderMap, HeaderValue, StatusCode},
+    http::{
+        header::{AUTHORIZATION, RETRY_AFTER},
+        HeaderMap, HeaderValue, StatusCode,
+    },
     response::{sse::Event, IntoResponse, Response, Sse},
     routing::{get, post},
     Json, Router,
@@ -213,6 +216,7 @@ struct EdgeConfig {
     source_probes_enabled: RuntimeGate,
     manager_v2_read_enabled: RuntimeGate,
     manager_v2_profile_id: Option<String>,
+    manager_compatibility: Arc<ManagerCompatibilityAuthority>,
     manager_projection_enabled: RuntimeGate,
     manager_projection_rebuild_authorized: RuntimeGate,
     manager_projection_rollback_authorized: RuntimeGate,
@@ -224,6 +228,7 @@ struct EdgeConfig {
     manager_projection_class_intervals: ManagerProjectionClassIntervals,
     /// Opt-in source-fact JSON bounds; not allocator/RSS or SQL working-set limits.
     manager_projection_materialization_limits: Option<ManagerMaterializationLimits>,
+    manager_projection_s1_source_id: Option<String>,
     manager_event_ledger_enabled: RuntimeGate,
     manager_event_ledger_reanchor_authorized: RuntimeGate,
     manager_event_ledger_admission_file: Option<PathBuf>,
@@ -313,6 +318,12 @@ impl EdgeConfig {
             RuntimeGate::from(strict_boolean("EDGE_MANAGER_V2_READ_ENABLED", false)?);
         let manager_v2_profile_id =
             manager_v2_profile_from_environment(&environment, manager_v2_read_enabled)?;
+        let manager_compatibility = Arc::new(manager_compatibility_from_release(
+            &environment,
+            manager_v2_profile_id.as_deref(),
+            optional_release_var("EDGE_MANAGER_CATALOGUE_RELEASE_FILE")?.as_deref(),
+            optional_release_var("EDGE_MANAGER_CATALOGUE_RELEASE_SHA256")?.as_deref(),
+        )?);
         let manager_projection_enabled =
             RuntimeGate::from(strict_boolean("EDGE_MANAGER_PROJECTION_ENABLED", false)?);
         if manager_projection_enabled.is_enabled() && !manager_v2_read_enabled.is_enabled() {
@@ -400,6 +411,13 @@ impl EdgeConfig {
         };
         let manager_projection_materialization_limits =
             manager_materialization_limits_from_environment()?;
+        let manager_projection_s1_source_id = optional("EDGE_MANAGER_PROJECTION_S1_SOURCE_ID");
+        if manager_projection_s1_source_id
+            .as_deref()
+            .is_some_and(|value| !valid_sha256_digest(value))
+        {
+            return Err(ConfigError::Invalid("EDGE_MANAGER_PROJECTION_S1_SOURCE_ID"));
+        }
         let manager_event_ledger_enabled =
             RuntimeGate::from(strict_boolean("EDGE_MANAGER_EVENT_LEDGER_ENABLED", false)?);
         if manager_event_ledger_enabled.is_enabled() && !manager_v2_read_enabled.is_enabled() {
@@ -471,6 +489,7 @@ impl EdgeConfig {
             source_probes_enabled: runtime.source_probes_enabled,
             manager_v2_read_enabled,
             manager_v2_profile_id,
+            manager_compatibility,
             manager_projection_enabled,
             manager_projection_rebuild_authorized,
             manager_projection_rollback_authorized,
@@ -479,6 +498,7 @@ impl EdgeConfig {
             manager_projection_owner_digest,
             manager_projection_class_intervals,
             manager_projection_materialization_limits,
+            manager_projection_s1_source_id,
             manager_event_ledger_enabled,
             manager_event_ledger_reanchor_authorized,
             manager_event_ledger_admission_file,
@@ -852,7 +872,7 @@ async fn serve(config: EdgeConfig) -> Result<(), ServiceError> {
         3,
     )?;
     let (negotiator, manager_v2_client) = source_clients(&config)?;
-    let manager_compatibility = Arc::new(ManagerCompatibilityAuthority::canonical()?);
+    let manager_compatibility = Arc::clone(&config.manager_compatibility);
     let current_source_map = Arc::new(CurrentSourceMap::canonical()?);
     let current_gateway_acceptance = Arc::new(CurrentGatewayAcceptance::canonical()?);
     // N16B is compatibility-only. Loading the immutable contract at startup
@@ -1711,7 +1731,8 @@ fn current_source_client_error(error: &ManagerV2ClientError) -> Response {
     let (status, code) = match error {
         ManagerV2ClientError::QueueSaturated
         | ManagerV2ClientError::QueueClosed
-        | ManagerV2ClientError::RequestFailed => (
+        | ManagerV2ClientError::RequestFailed
+        | ManagerV2ClientError::RateLimited { .. } => (
             StatusCode::SERVICE_UNAVAILABLE,
             "CURRENT_SOURCE_TRANSPORT_UNAVAILABLE",
         ),
@@ -1720,14 +1741,31 @@ fn current_source_client_error(error: &ManagerV2ClientError) -> Response {
             "CURRENT_SOURCE_UPSTREAM_CONTRACT_REJECTED",
         ),
     };
-    current_source_problem(
+    let response = current_source_problem(
         status,
         code,
         "The current source did not satisfy the bounded transport contract.",
         FactClassification::Connected,
         "UNAVAILABLE",
         None,
-    )
+    );
+    if let ManagerV2ClientError::RateLimited { retry_after } = error {
+        with_retry_after(response, *retry_after)
+    } else {
+        response
+    }
+}
+
+fn with_retry_after(mut response: Response, retry_after: Option<Duration>) -> Response {
+    if let Some(delay) = retry_after {
+        let seconds = delay
+            .as_secs()
+            .saturating_add(u64::from(delay.subsec_nanos() != 0));
+        if let Ok(value) = HeaderValue::from_str(&seconds.to_string()) {
+            response.headers_mut().insert(RETRY_AFTER, value);
+        }
+    }
+    response
 }
 
 fn current_source_problem(
@@ -2527,6 +2565,14 @@ fn manager_client_error_response(error: &ManagerV2ClientError) -> Response {
             "MANAGER_V2_SOURCE_UNAVAILABLE",
             "Manager source is temporarily unavailable.",
         ),
+        ManagerV2ClientError::RateLimited { retry_after } => with_retry_after(
+            manager_problem(
+                StatusCode::SERVICE_UNAVAILABLE,
+                "MANAGER_V2_SOURCE_UNAVAILABLE",
+                "Manager source is temporarily unavailable.",
+            ),
+            *retry_after,
+        ),
         // A fixed relation page can be made smaller without widening a route,
         // cursor, profile, or byte budget.  Preserve this distinction so the
         // Portal BFF can make one bounded server-owned page-size adjustment
@@ -2551,6 +2597,7 @@ fn manager_client_error_response(error: &ManagerV2ClientError) -> Response {
         | ManagerV2ClientError::ExtensionContractHeaderMismatch
         | ManagerV2ClientError::MarketContextAdapterHeaderMismatch
         | ManagerV2ClientError::InvalidContentType
+        | ManagerV2ClientError::InvalidRetryAfter
         | ManagerV2ClientError::UnexpectedHttpStatus(_)
         | ManagerV2ClientError::ExtensionUnexpectedHttpStatus(_)
         | ManagerV2ClientError::MarketContextAdapterUnexpectedHttpStatus(_)
@@ -2996,6 +3043,7 @@ fn analytics_store_error(error: &StoreError) -> Response {
         | StoreError::AnalyticsSourceIntegrityMismatch
         | StoreError::AnalyticsSourceLimitExceeded
         | StoreError::AnalyticsSourcePayloadLimitExceeded
+        | StoreError::ManagerProjectionCycleIncomplete
         | StoreError::ActiveEpochNotFound
         | StoreError::EpochNotFound => StatusCode::SERVICE_UNAVAILABLE.into_response(),
         _ => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
@@ -3143,24 +3191,22 @@ async fn manager_query_analytics(
         Ok(value) => value,
         Err(error) => return n25_store_error(&error),
     };
-    let completeness = if snapshot
-        .facts
-        .iter()
-        .any(|fact| fact.source_completeness == SourceCompleteness::Unknown)
-    {
-        PopulationCompleteness::Unknown
-    } else {
-        // A committed N24 cycle contains every page of every selected
-        // relation. PollBounded describes acquisition semantics, not a
-        // partial population inside that immutable cycle.
-        PopulationCompleteness::Complete
+    let read_at = Utc::now();
+    let source_status =
+        manager_analytics_source_status(&snapshot, read_at, &state.shadow_query_freshness_policy);
+    let Some((as_of, completeness)) = manager_analytics_quality(&snapshot, source_status) else {
+        return manager_problem(
+            StatusCode::SERVICE_UNAVAILABLE,
+            "N25_SOURCE_OBSERVATION_UNPROVEN",
+            "No source observation establishes an as-of time for this empty analytics snapshot.",
+        );
     };
-    let analytics = match build_manager_query_analytics(&ManagerQueryAnalyticsInput {
+    let mut analytics = match build_manager_query_analytics(&ManagerQueryAnalyticsInput {
         subject_kind: subject_kind.contract_name().to_owned(),
         subject_id: snapshot.subject_id.clone(),
         environment: state.environment.clone(),
         profile_id: snapshot.profile_id.clone(),
-        as_of: snapshot.as_of.unwrap_or(snapshot.source_read_at),
+        as_of,
         projection_state_digest: snapshot.projection_state_digest.clone(),
         completeness,
         facts: snapshot
@@ -3177,6 +3223,7 @@ async fn manager_query_analytics(
         Ok(value) => value,
         Err(error) => return analytics_error_response(&error),
     };
+    apply_analytics_source_health(&mut analytics, source_status);
     manager_json_response(
         StatusCode::OK,
         QueryAnalyticsEnvelope {
@@ -3190,15 +3237,123 @@ async fn manager_query_analytics(
             source_fact_count: snapshot.fact_count,
             repository_query_count: snapshot.repository_query_count,
             source_read_at: snapshot.source_read_at,
-            read_at: Utc::now(),
+            read_at,
             analytics,
         },
     )
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum ManagerAnalyticsSourceStatus {
+    Healthy,
+    Degraded,
+    Unproven,
+    Stale,
+}
+
+fn manager_analytics_source_status(
+    snapshot: &projection_store_pg::ManagerAnalyticsSnapshot,
+    read_at: DateTime<Utc>,
+    policy: &FreshnessPolicy,
+) -> ManagerAnalyticsSourceStatus {
+    use projection_store_pg::ManagerSourceHealth;
+    match snapshot.source_health {
+        ManagerSourceHealth::Degraded => return ManagerAnalyticsSourceStatus::Degraded,
+        ManagerSourceHealth::Unknown => return ManagerAnalyticsSourceStatus::Unproven,
+        ManagerSourceHealth::Healthy => {}
+    }
+    let latest = evaluate_freshness(
+        policy,
+        &FreshnessInput {
+            as_of: snapshot.feed_latest_as_of,
+            read_at,
+            source_received_at: None,
+            projected_at: None,
+            venue_session: VenueSessionState::Unknown,
+        },
+    );
+    if !matches!(
+        latest.map(|value| value.state),
+        Ok(FreshnessState::Ok | FreshnessState::Aging | FreshnessState::Stale)
+    ) {
+        return ManagerAnalyticsSourceStatus::Unproven;
+    }
+    let earliest = evaluate_freshness(
+        policy,
+        &FreshnessInput {
+            as_of: snapshot.feed_as_of,
+            read_at,
+            source_received_at: None,
+            projected_at: None,
+            venue_session: VenueSessionState::Unknown,
+        },
+    );
+    match earliest.map(|value| value.state) {
+        Ok(FreshnessState::Ok | FreshnessState::Aging) => ManagerAnalyticsSourceStatus::Healthy,
+        Ok(FreshnessState::Stale) => ManagerAnalyticsSourceStatus::Stale,
+        Ok(FreshnessState::Unknown | FreshnessState::Paused) | Err(_) => {
+            ManagerAnalyticsSourceStatus::Unproven
+        }
+    }
+}
+
+fn manager_analytics_quality(
+    snapshot: &projection_store_pg::ManagerAnalyticsSnapshot,
+    source_status: ManagerAnalyticsSourceStatus,
+) -> Option<(DateTime<Utc>, PopulationCompleteness)> {
+    let as_of = match (snapshot.as_of, snapshot.feed_as_of) {
+        (Some(fact), Some(feed)) => fact.min(feed),
+        (Some(fact), None) => fact,
+        (None, Some(feed)) => feed,
+        (None, None) => return None,
+    };
+    // A successful poll cannot certify later source health, history coverage,
+    // or completeness of account/portfolio binding. An empty scoped result
+    // also cannot establish absence merely from a complete feed poll.
+    let completeness = if source_status != ManagerAnalyticsSourceStatus::Healthy
+        || snapshot.feed_as_of.is_none()
+        || snapshot.facts.is_empty()
+        || snapshot
+            .facts
+            .iter()
+            .any(|fact| fact.source_completeness == SourceCompleteness::Unknown)
+    {
+        PopulationCompleteness::Unknown
+    } else {
+        PopulationCompleteness::Partial
+    };
+    Some((as_of, completeness))
+}
+
+fn apply_analytics_source_health(
+    analytics: &mut ManagerQueryAnalytics,
+    status: ManagerAnalyticsSourceStatus,
+) {
+    let reason = match status {
+        ManagerAnalyticsSourceStatus::Healthy => return,
+        ManagerAnalyticsSourceStatus::Degraded => "N25_SOURCE_ATTEMPT_FAILED",
+        ManagerAnalyticsSourceStatus::Unproven => "N25_SOURCE_HEALTH_UNPROVEN",
+        ManagerAnalyticsSourceStatus::Stale => "N25_SOURCE_OBSERVATION_STALE",
+    };
+    if let Some(capability) = analytics
+        .capabilities
+        .iter_mut()
+        .find(|capability| capability.capability_id == "exact-query")
+    {
+        capability.reason_code = Some(reason.to_owned());
+    }
+}
+
 fn n25_store_error(error: &StoreError) -> Response {
     match error {
-        StoreError::AnalyticsSourceNotFound | StoreError::ActiveEpochNotFound => manager_problem(
+        StoreError::AnalyticsAttributionUnproven => manager_problem(
+            StatusCode::SERVICE_UNAVAILABLE,
+            "N25_ATTRIBUTION_UNPROVEN",
+            "The requested analytics include source facts without a proven subject binding.",
+        ),
+        StoreError::AnalyticsSourceNotFound
+        | StoreError::ActiveEpochNotFound
+        | StoreError::ManagerProjectionCycleIncomplete => manager_problem(
             StatusCode::SERVICE_UNAVAILABLE,
             "N25_PROJECTION_CYCLE_NOT_FOUND",
             "No committed active Manager projection cycle is available.",
@@ -3210,6 +3365,7 @@ fn n25_store_error(error: &StoreError) -> Response {
         ),
         StoreError::AnalyticsSourceIntegrityMismatch
         | StoreError::InvalidAnalyticsSourcePayload
+        | StoreError::InvalidManagerProjectionSnapshot
         | StoreError::PersistedVocabulary => manager_problem(
             StatusCode::SERVICE_UNAVAILABLE,
             "N25_PROJECTION_INTEGRITY_REJECTED",
@@ -3289,6 +3445,54 @@ impl ShadowPanel {
             Self::Orders => projection_core::ProjectionEntityKind::Order,
             Self::Positions => projection_core::ProjectionEntityKind::Position,
         }
+    }
+
+    const fn feed_id(self) -> &'static str {
+        match self {
+            Self::Orders => "manager.order",
+            Self::Positions => "manager.position",
+        }
+    }
+}
+
+#[derive(Clone, Copy)]
+enum ShadowFeedObservation<'a> {
+    NonManager,
+    Unknown,
+    Degraded,
+    Observed(
+        &'static str,
+        &'a projection_store_pg::ManagerFeedObservation,
+    ),
+}
+
+fn shadow_feed_with_health(
+    observations: Option<&BTreeMap<String, projection_store_pg::ManagerFeedObservation>>,
+    health: Option<projection_store_pg::ManagerSourceHealth>,
+    panel: ShadowPanel,
+) -> ShadowFeedObservation<'_> {
+    use projection_store_pg::ManagerSourceHealth;
+    match health {
+        None => ShadowFeedObservation::NonManager,
+        Some(ManagerSourceHealth::Unknown) => ShadowFeedObservation::Unknown,
+        Some(ManagerSourceHealth::Degraded) => ShadowFeedObservation::Degraded,
+        Some(ManagerSourceHealth::Healthy) => shadow_feed_observation(observations, true, panel),
+    }
+}
+
+fn shadow_feed_observation(
+    observations: Option<&BTreeMap<String, projection_store_pg::ManagerFeedObservation>>,
+    is_manager: bool,
+    panel: ShadowPanel,
+) -> ShadowFeedObservation<'_> {
+    match (is_manager, observations) {
+        (false, _) => ShadowFeedObservation::NonManager,
+        (true, None) => ShadowFeedObservation::Unknown,
+        (true, Some(observations)) => observations
+            .get(panel.feed_id())
+            .map_or(ShadowFeedObservation::Unknown, |value| {
+                ShadowFeedObservation::Observed(panel.feed_id(), value)
+            }),
     }
 }
 
@@ -3384,7 +3588,7 @@ async fn paper_workbench_shadow_query(
     };
     let read_at = Utc::now();
     let page = match store
-        .query_entities_scoped(
+        .query_entities_scoped_with_observations(
             &scope,
             panel.entity_kind(),
             &query.request,
@@ -3394,7 +3598,7 @@ async fn paper_workbench_shadow_query(
         )
         .await
     {
-        Ok(value) if value.epoch_id == authority.epoch_id => value,
+        Ok(value) if value.page.epoch_id == authority.epoch_id => value,
         Ok(_) => {
             return shadow_problem(
                 StatusCode::SERVICE_UNAVAILABLE,
@@ -3403,17 +3607,206 @@ async fn paper_workbench_shadow_query(
         }
         Err(error) => return shadow_store_error(&error),
     };
+    let feed_observation = shadow_feed_with_health(
+        page.manager_observations.as_ref().and_then(Option::as_ref),
+        page.manager_health,
+        panel,
+    );
     match build_shadow_envelope(
         &deployment_id,
         panel,
         authority,
-        page,
+        page.page,
         read_at,
         &state.shadow_query_freshness_policy,
+        feed_observation,
     ) {
         Ok(value) => Json(value).into_response(),
         Err(_) => shadow_problem(StatusCode::INTERNAL_SERVER_ERROR, "N07_FRESHNESS_INVALID"),
     }
+}
+
+fn shadow_row_matches_manager_feed(row: &query_api::ProjectionQueryRow, feed_id: &str) -> bool {
+    row.source_authority == SourceAuthority::Execution
+        && row.source_completeness == SourceCompleteness::PollBounded
+        && row.adapter_version == manager_projection::MANAGER_PROJECTION_ADAPTER_VERSION
+        && row
+            .entity_id
+            .strip_prefix(feed_id)
+            .is_some_and(|suffix| suffix.starts_with(':'))
+        && row
+            .payload
+            .get("source_feed")
+            .and_then(serde_json::Value::as_str)
+            == Some(feed_id)
+}
+
+fn shadow_row_freshness_input(
+    row: &query_api::ProjectionQueryRow,
+    read_at: DateTime<Utc>,
+    feed_observation: ShadowFeedObservation<'_>,
+) -> FreshnessInput {
+    // A sealed complete no-op poll proves the same Manager fact was observed
+    // again without rewriting its durable semantic row. An unrelated feed or
+    // an observation older than the row cannot establish that fact.
+    let reobserved = match feed_observation {
+        ShadowFeedObservation::Observed(feed_id, value)
+            if shadow_row_matches_manager_feed(row, feed_id)
+                && row.as_of <= value.as_of
+                && row.source_read_at <= value.source_read_at =>
+        {
+            Some(value)
+        }
+        _ => None,
+    };
+    FreshnessInput {
+        as_of: Some(reobserved.map_or(row.as_of, |value| value.as_of)),
+        read_at,
+        source_received_at: Some(
+            reobserved.map_or(row.source_read_at, |value| value.source_read_at),
+        ),
+        // Entity projected_at predates this no-op observation; do not invent
+        // a projection lag for the later seal.
+        projected_at: reobserved.is_none().then_some(row.projected_at),
+        venue_session: VenueSessionState::Unknown,
+    }
+}
+
+fn shadow_feed_evaluations(
+    page: &ProjectionQueryPage,
+    read_at: DateTime<Utc>,
+    policy: &FreshnessPolicy,
+    feed_observation: ShadowFeedObservation<'_>,
+) -> Result<Vec<projection_core::FreshnessEvaluation>, projection_core::ProjectionError> {
+    let mut evaluations = Vec::new();
+    if !matches!(feed_observation, ShadowFeedObservation::NonManager) {
+        let (as_of, source_received_at) = match feed_observation {
+            ShadowFeedObservation::Observed(_, value) => {
+                (Some(value.as_of), Some(value.source_read_at))
+            }
+            ShadowFeedObservation::NonManager
+            | ShadowFeedObservation::Unknown
+            | ShadowFeedObservation::Degraded => (None, None),
+        };
+        evaluations.push(evaluate_freshness(
+            policy,
+            &FreshnessInput {
+                as_of,
+                read_at,
+                source_received_at,
+                projected_at: None,
+                venue_session: VenueSessionState::Unknown,
+            },
+        )?);
+        if let ShadowFeedObservation::Observed(feed_id, _) = feed_observation {
+            let bad_provenance = page
+                .rows
+                .iter()
+                .any(|row| !shadow_row_matches_manager_feed(row, feed_id));
+            if bad_provenance {
+                evaluations.push(evaluate_freshness(
+                    policy,
+                    &FreshnessInput {
+                        as_of: None,
+                        read_at,
+                        source_received_at: None,
+                        projected_at: None,
+                        venue_session: VenueSessionState::Unknown,
+                    },
+                )?);
+            }
+        }
+        // A feed-level observation is not proof that this deployment's
+        // empty filtered population is complete or event-authoritative.
+        if page.rows.is_empty() {
+            evaluations.push(evaluate_freshness(
+                policy,
+                &FreshnessInput {
+                    as_of: None,
+                    read_at,
+                    source_received_at: None,
+                    projected_at: None,
+                    venue_session: VenueSessionState::Unknown,
+                },
+            )?);
+        }
+    }
+    Ok(evaluations)
+}
+
+// Evaluate each actual row tuple: independent timestamp maxima can combine
+// different rows and hide an older stale or future-dated observation.
+fn shadow_page_freshness(
+    page: &ProjectionQueryPage,
+    read_at: DateTime<Utc>,
+    policy: &FreshnessPolicy,
+    feed_observation: ShadowFeedObservation<'_>,
+) -> Result<projection_core::FreshnessEvaluation, projection_core::ProjectionError> {
+    let mut evaluations = page
+        .rows
+        .iter()
+        .map(|row| {
+            evaluate_freshness(
+                policy,
+                &shadow_row_freshness_input(row, read_at, feed_observation),
+            )
+        })
+        .collect::<Result<Vec<_>, _>>()?;
+    evaluations.extend(shadow_feed_evaluations(
+        page,
+        read_at,
+        policy,
+        feed_observation,
+    )?);
+    // Retain distinct warnings even when another row has a worse state.
+    let mut row_warnings: Vec<ContractWarning> = Vec::new();
+    for value in &evaluations {
+        for warning in &value.warnings {
+            if !row_warnings.iter().any(|known| known.code == warning.code) {
+                row_warnings.push(warning.clone());
+            }
+        }
+    }
+    let mut freshness = evaluations
+        .into_iter()
+        .max_by_key(|value| {
+            let severity = match value.state {
+                FreshnessState::Ok => 0,
+                FreshnessState::Aging => 1,
+                FreshnessState::Paused => 2,
+                FreshnessState::Unknown => 3,
+                FreshnessState::Stale => 4,
+            };
+            (severity, value.age_seconds.unwrap_or(-1))
+        })
+        .map_or_else(
+            || {
+                evaluate_freshness(
+                    policy,
+                    &FreshnessInput {
+                        as_of: None,
+                        read_at,
+                        source_received_at: None,
+                        projected_at: None,
+                        venue_session: VenueSessionState::Unknown,
+                    },
+                )
+            },
+            Ok,
+        )?;
+    for warning in row_warnings {
+        if !freshness
+            .warnings
+            .iter()
+            .any(|known| known.code == warning.code)
+        {
+            freshness.warnings.push(warning);
+        }
+    }
+    if matches!(feed_observation, ShadowFeedObservation::Degraded) {
+        freshness.state = FreshnessState::Stale;
+    }
+    Ok(freshness)
 }
 
 fn build_shadow_envelope(
@@ -3423,16 +3816,19 @@ fn build_shadow_envelope(
     page: ProjectionQueryPage,
     read_at: DateTime<Utc>,
     policy: &FreshnessPolicy,
+    feed_observation: ShadowFeedObservation<'_>,
 ) -> Result<PaperWorkbenchShadowEnvelope, projection_core::ProjectionError> {
-    let as_of = page.rows.iter().map(|row| row.as_of).max();
-    let source_read_at = page.rows.iter().map(|row| row.source_read_at).max();
-    let projected_at = page.rows.iter().map(|row| row.projected_at).max();
     let upstream_authorities = page
         .rows
         .iter()
         .map(|row| row.source_authority)
         .collect::<BTreeSet<_>>();
-    let source_completeness = if page.rows.is_empty() {
+    let source_completeness = if page.rows.is_empty()
+        || page
+            .rows
+            .iter()
+            .any(|row| row.source_completeness == SourceCompleteness::Unknown)
+    {
         SourceCompleteness::Unknown
     } else if page
         .rows
@@ -3454,16 +3850,7 @@ fn build_shadow_envelope(
         .iter()
         .filter_map(|row| row.poll_interval_ms)
         .max();
-    let freshness = evaluate_freshness(
-        policy,
-        &FreshnessInput {
-            as_of,
-            read_at,
-            source_received_at: source_read_at,
-            projected_at,
-            venue_session: VenueSessionState::Unknown,
-        },
-    )?;
+    let freshness = shadow_page_freshness(&page, read_at, policy, feed_observation)?;
     let mut warnings = freshness.warnings;
     if page.rows.is_empty() {
         warnings.push(shadow_warning(
@@ -3477,17 +3864,32 @@ fn build_shadow_envelope(
             "The panel is a bounded poll projection, not an event-complete ledger.",
         ));
     }
+    if matches!(feed_observation, ShadowFeedObservation::Degraded) {
+        warnings.push(shadow_warning(
+            "SOURCE_ATTEMPT_FAILED",
+            "The latest known source attempt failed; the previous projection is stale.",
+        ));
+    } else if matches!(feed_observation, ShadowFeedObservation::Unknown) {
+        warnings.push(shadow_warning(
+            "SOURCE_FAILURE_STATUS_UNAVAILABLE",
+            "The last successful observation does not establish current upstream health.",
+        ));
+    }
     if page.retention.policy_version == "UNCONFIGURED" {
         warnings.push(shadow_warning(
             "RETENTION_UNCONFIGURED",
             "Retention authority is not published for this entity page.",
         ));
     }
-    let panel_state = if page.rows.is_empty() {
-        PanelState::Empty
-    } else if freshness.state == FreshnessState::Stale {
+    // An empty local page does not establish that the source was observed
+    // recently or completely. The UNKNOWN quality below must remain PARTIAL.
+    let panel_state = if freshness.state == FreshnessState::Stale {
         PanelState::Stale
-    } else if source_completeness != SourceCompleteness::EventSourced {
+    } else if page.rows.is_empty()
+        || !matches!(feed_observation, ShadowFeedObservation::NonManager)
+        || freshness.state != FreshnessState::Ok
+        || source_completeness != SourceCompleteness::EventSourced
+    {
         PanelState::Partial
     } else {
         PanelState::Ok
@@ -3544,6 +3946,7 @@ fn shadow_store_error(error: &StoreError) -> Response {
     match error {
         StoreError::ShadowScreenNotActivated
         | StoreError::ActiveEpochNotFound
+        | StoreError::ManagerProjectionCycleIncomplete
         | StoreError::EpochNotFound => shadow_problem(
             StatusCode::SERVICE_UNAVAILABLE,
             "N07_SHADOW_EPOCH_UNAVAILABLE",
@@ -3632,6 +4035,8 @@ async fn realtime_stream(State(state): State<AppState>, headers: HeaderMap) -> R
     let machine = StreamMachine {
         initial,
         subscription: Some(subscription),
+        freshness_policy: state.realtime_freshness_policy.clone(),
+        venue_session: state.realtime_venue_session,
         heartbeat: tokio::time::interval_at(heartbeat_at, state.realtime_heartbeat),
         expires_at: tokio::time::Instant::now() + expires_in,
         assertion_expires_at: request.assertion_expires_at,
@@ -3932,7 +4337,7 @@ async fn prepare_resume(
     request: &RealtimeRequest,
     subscription: &mut RealtimeSubscription,
     policy: RealtimeResumePolicy<'_>,
-) -> Result<(VecDeque<Event>, bool), StatusCode> {
+) -> Result<(VecDeque<QueuedRealtimeEvent>, bool), StatusCode> {
     let decision = resume_decision(
         request.cursor,
         availability.active.as_core(),
@@ -3954,7 +4359,10 @@ async fn prepare_resume(
             let mut gap = GapEnvelope::new(GapReason::HistoryEvicted, Some(request.cursor));
             gap.active_epoch_id = Some(availability.active.epoch.epoch_id);
             gap.earliest_available_sequence = Some(earliest_available_sequence);
-            Ok((VecDeque::from([gap_event(&gap)]), true))
+            Ok((
+                VecDeque::from([QueuedRealtimeEvent::Control(gap_event(&gap))]),
+                true,
+            ))
         }
         ResumeDecision::Resnapshot {
             active_epoch_id,
@@ -3963,7 +4371,10 @@ async fn prepare_resume(
             let mut gap = GapEnvelope::new(GapReason::EpochChanged, Some(request.cursor));
             gap.active_epoch_id = Some(active_epoch_id);
             gap.resnapshot_not_before = Some(resnapshot_not_before);
-            Ok((VecDeque::from([gap_event(&gap)]), true))
+            Ok((
+                VecDeque::from([QueuedRealtimeEvent::Control(gap_event(&gap))]),
+                true,
+            ))
         }
         ResumeDecision::CursorAhead {
             active_epoch_id,
@@ -3974,7 +4385,10 @@ async fn prepare_resume(
             gap.active_epoch_id = Some(active_epoch_id);
             gap.latest_available_sequence = Some(latest_available_sequence);
             gap.resnapshot_not_before = Some(resnapshot_not_before);
-            Ok((VecDeque::from([gap_event(&gap)]), true))
+            Ok((
+                VecDeque::from([QueuedRealtimeEvent::Control(gap_event(&gap))]),
+                true,
+            ))
         }
     }
 }
@@ -3985,7 +4399,7 @@ async fn prepare_replay(
     cursor: ProjectionCursor,
     subscription: &mut RealtimeSubscription,
     policy: RealtimeResumePolicy<'_>,
-) -> Result<(VecDeque<Event>, bool), StatusCode> {
+) -> Result<(VecDeque<QueuedRealtimeEvent>, bool), StatusCode> {
     let page = load_realtime_records(
         store,
         policy.authority_mode,
@@ -3998,7 +4412,10 @@ async fn prepare_replay(
     if page.has_more {
         let mut gap = GapEnvelope::new(GapReason::ReplayWindowExceeded, Some(cursor));
         gap.active_epoch_id = Some(availability.active.epoch.epoch_id);
-        return Ok((VecDeque::from([gap_event(&gap)]), true));
+        return Ok((
+            VecDeque::from([QueuedRealtimeEvent::Control(gap_event(&gap))]),
+            true,
+        ));
     }
 
     let mut initial = VecDeque::new();
@@ -4007,10 +4424,10 @@ async fn prepare_replay(
     for record in page.records {
         if record.projection_sequence != expected || record.outcome == "GAP_APPLIED" {
             return Ok((
-                VecDeque::from([gap_event(&GapEnvelope::new(
+                VecDeque::from([QueuedRealtimeEvent::Control(gap_event(&GapEnvelope::new(
                     GapReason::SourceDiscontinuity,
                     Some(replay_cursor),
-                ))]),
+                )))]),
                 true,
             ));
         }
@@ -4022,15 +4439,22 @@ async fn prepare_replay(
         let envelope =
             record_to_envelope(record, policy.freshness, policy.venue_session, Utc::now())
                 .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-        initial.push_back(projection_event(&envelope));
+        initial.push_back(QueuedRealtimeEvent::Projection(envelope));
     }
     subscription.advance_after_replay(replay_cursor);
     Ok((initial, false))
 }
 
+enum QueuedRealtimeEvent {
+    Projection(RealtimeEnvelope),
+    Control(Event),
+}
+
 struct StreamMachine {
-    initial: VecDeque<Event>,
+    initial: VecDeque<QueuedRealtimeEvent>,
     subscription: Option<RealtimeSubscription>,
+    freshness_policy: FreshnessPolicy,
+    venue_session: VenueSessionState,
     heartbeat: tokio::time::Interval,
     expires_at: tokio::time::Instant,
     assertion_expires_at: DateTime<Utc>,
@@ -4054,6 +4478,15 @@ async fn next_sse_event(
         return Some((Ok(event), machine));
     }
     if let Some(event) = machine.initial.pop_front() {
+        let event = match event {
+            QueuedRealtimeEvent::Projection(envelope) => projection_event_at_delivery(
+                &envelope,
+                &machine.freshness_policy,
+                machine.venue_session,
+                Utc::now(),
+            ),
+            QueuedRealtimeEvent::Control(event) => event,
+        };
         return Some((Ok(event), machine));
     }
     if machine.terminal_after_initial {
@@ -4072,7 +4505,14 @@ async fn next_sse_event(
         return Some((Ok(event), machine));
     }
     let event = match next {
-        NextStreamEvent::Delivery(SubscriptionDelivery::Event(event)) => projection_event(&event),
+        NextStreamEvent::Delivery(SubscriptionDelivery::Event(event)) => {
+            projection_event_at_delivery(
+                &event,
+                &machine.freshness_policy,
+                machine.venue_session,
+                Utc::now(),
+            )
+        }
         NextStreamEvent::Delivery(SubscriptionDelivery::Gap(gap)) => {
             machine.terminal_after_initial = true;
             gap_event(&gap)
@@ -4144,10 +4584,101 @@ fn header_text<'a>(headers: &'a HeaderMap, name: &str) -> Result<Option<&'a str>
         .transpose()
 }
 
-fn projection_event(envelope: &RealtimeEnvelope) -> Event {
+// Borrow the payload and all provenance so per-subscriber dequeue never clones
+// a potentially large event merely to update its time-dependent freshness.
+#[derive(Serialize)]
+struct RealtimeDeliveryView<'a> {
+    event_type: &'a str,
+    schema_version: &'a str,
+    workspace_id: &'a str,
+    environment: &'a str,
+    projection_epoch: Uuid,
+    projection_sequence: u64,
+    entity_kind: &'a projection_core::ProjectionEntityKind,
+    entity_id: &'a str,
+    source_authority: &'a SourceAuthority,
+    source_cursor: &'a Option<execution_contracts::SourceCursor>,
+    source_sequence: Option<i64>,
+    source_completeness: &'a SourceCompleteness,
+    as_of: Option<DateTime<Utc>>,
+    source_read_at: DateTime<Utc>,
+    projected_at: DateTime<Utc>,
+    freshness: FreshnessState,
+    freshness_policy_version: &'a str,
+    source_discontinuity: bool,
+    payload: &'a serde_json::Value,
+}
+
+fn realtime_delivery_view<'a>(
+    envelope: &'a RealtimeEnvelope,
+    policy: &'a FreshnessPolicy,
+    venue_session: VenueSessionState,
+    read_at: DateTime<Utc>,
+) -> RealtimeDeliveryView<'a> {
+    let evaluated = evaluate_freshness(
+        policy,
+        &FreshnessInput {
+            as_of: envelope.as_of,
+            read_at,
+            source_received_at: Some(envelope.source_read_at),
+            projected_at: Some(envelope.projected_at),
+            venue_session,
+        },
+    )
+    .map_or(FreshnessState::Unknown, |result| result.state);
+    // A delivery-time clock evaluation may only degrade an existing source
+    // verdict, never erase a previously recorded non-fresh state.  A policy
+    // mismatch cannot establish fresh delivery under the current policy.
+    let evaluated = if envelope.freshness_policy_version == policy.policy_version {
+        evaluated
+    } else {
+        FreshnessState::Unknown
+    };
+    let rank = |state| match state {
+        FreshnessState::Ok => 0,
+        FreshnessState::Aging => 1,
+        FreshnessState::Paused => 2,
+        FreshnessState::Unknown => 3,
+        FreshnessState::Stale => 4,
+    };
+    let freshness = if rank(envelope.freshness) > rank(evaluated) {
+        envelope.freshness
+    } else {
+        evaluated
+    };
+    RealtimeDeliveryView {
+        event_type: &envelope.event_type,
+        schema_version: &envelope.schema_version,
+        workspace_id: &envelope.workspace_id,
+        environment: &envelope.environment,
+        projection_epoch: envelope.projection_epoch,
+        projection_sequence: envelope.projection_sequence,
+        entity_kind: &envelope.entity_kind,
+        entity_id: &envelope.entity_id,
+        source_authority: &envelope.source_authority,
+        source_cursor: &envelope.source_cursor,
+        source_sequence: envelope.source_sequence,
+        source_completeness: &envelope.source_completeness,
+        as_of: envelope.as_of,
+        source_read_at: envelope.source_read_at,
+        projected_at: envelope.projected_at,
+        freshness,
+        freshness_policy_version: &policy.policy_version,
+        source_discontinuity: envelope.source_discontinuity,
+        payload: &envelope.payload,
+    }
+}
+
+fn projection_event_at_delivery(
+    envelope: &RealtimeEnvelope,
+    policy: &FreshnessPolicy,
+    venue_session: VenueSessionState,
+    read_at: DateTime<Utc>,
+) -> Event {
+    let delivery = realtime_delivery_view(envelope, policy, venue_session, read_at);
     json_event(
         &envelope.event_type,
-        envelope,
+        &delivery,
         Some(envelope.cursor().to_string()),
     )
 }
@@ -4557,6 +5088,51 @@ fn optional_path(name: &str) -> Option<PathBuf> {
     optional(name).map(PathBuf::from)
 }
 
+fn optional_release_var(name: &'static str) -> Result<Option<String>, ConfigError> {
+    match env::var(name) {
+        Err(env::VarError::NotPresent) => Ok(None),
+        Ok(value) if value.is_empty() => Ok(None),
+        Ok(value) if value.trim() == value => Ok(Some(value)),
+        Ok(_) | Err(env::VarError::NotUnicode(_)) => Err(ConfigError::Invalid(name)),
+    }
+}
+
+// Only local trusted process configuration may select a release; callers and
+// upstream responses cannot influence the release manifest or its byte pin.
+fn manager_compatibility_from_release(
+    environment: &str,
+    profile: Option<&str>,
+    file: Option<&str>,
+    expected_digest: Option<&str>,
+) -> Result<ManagerCompatibilityAuthority, ConfigError> {
+    const CONFIG: &str = "EDGE_MANAGER_CATALOGUE_RELEASE";
+    match (file, expected_digest) {
+        (None, None) => {
+            ManagerCompatibilityAuthority::canonical().map_err(|_| ConfigError::Invalid(CONFIG))
+        }
+        (Some(path), Some(digest)) => {
+            let environment = DeploymentEnvironment::from_config(environment)
+                .ok_or(ConfigError::Invalid(CONFIG))?;
+            let profile = profile.ok_or(ConfigError::Invalid(CONFIG))?;
+            let file = fs::File::open(path).map_err(|_| ConfigError::Invalid(CONFIG))?;
+            if !file
+                .metadata()
+                .map_err(|_| ConfigError::Invalid(CONFIG))?
+                .is_file()
+            {
+                return Err(ConfigError::Invalid(CONFIG));
+            }
+            let mut bytes = Vec::new();
+            file.take(65_537)
+                .read_to_end(&mut bytes)
+                .map_err(|_| ConfigError::Invalid(CONFIG))?;
+            ManagerCompatibilityAuthority::from_pinned_release(&bytes, digest, environment, profile)
+                .map_err(|_| ConfigError::Invalid(CONFIG))
+        }
+        _ => Err(ConfigError::Invalid(CONFIG)),
+    }
+}
+
 fn optional_uuid(name: &'static str) -> Result<Option<Uuid>, ConfigError> {
     optional(name)
         .map(|value| Uuid::parse_str(&value).map_err(|_| ConfigError::Invalid(name)))
@@ -4719,6 +5295,81 @@ fn command_relay_runtime_gate(requested: bool) -> Result<(), ConfigError> {
         ));
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod manager_catalogue_release_config_tests {
+    use super::*;
+    use sha2::{Digest as _, Sha256};
+
+    struct OwnedFile(PathBuf);
+    impl Drop for OwnedFile {
+        fn drop(&mut self) {
+            let _ = fs::remove_file(&self.0);
+        }
+    }
+
+    #[test]
+    fn default_and_partial_release_pairs_fail_closed() {
+        let canonical = manager_compatibility_from_release("paper", None, None, None).unwrap();
+        assert_eq!(canonical.approved_relation_count(), 96);
+        assert!(manager_compatibility_from_release("paper", None, Some("/missing"), None).is_err());
+        assert!(
+            manager_compatibility_from_release("paper", None, None, Some("sha256:bad")).is_err()
+        );
+        assert!(manager_compatibility_from_release(
+            "paper",
+            Some("PAPER_BINANCE_USDM"),
+            Some("/missing"),
+            Some("sha256:bad")
+        )
+        .is_err());
+    }
+
+    #[test]
+    fn release_file_requires_matching_bytes_profile_and_authority() {
+        let path = OwnedFile(env::temp_dir().join(format!("edge-release-test-{}", Uuid::now_v7())));
+        let data = serde_json::to_vec(&serde_json::json!({
+            "schema_version":"portal.execution.manager-catalogue-release.v1",
+            "environment":"paper", "profile_id":"PAPER_BINANCE_USDM",
+            "catalogue_sha256":format!("sha256:{}", "a".repeat(64)),
+            "relations":["public.orders", "public.accounts"]
+        }))
+        .unwrap();
+        fs::write(&path.0, &data).unwrap();
+        let digest = format!("sha256:{:x}", Sha256::digest(&data));
+        let filename = path.0.to_str().unwrap();
+        let authority = manager_compatibility_from_release(
+            "paper",
+            Some("PAPER_BINANCE_USDM"),
+            Some(filename),
+            Some(&digest),
+        )
+        .unwrap();
+        assert_eq!(authority.approved_relation_count(), 2);
+        assert!(manager_compatibility_from_release(
+            "live",
+            Some("LIVE_BINANCE_USDM"),
+            Some(filename),
+            Some(&digest)
+        )
+        .is_err());
+        assert!(manager_compatibility_from_release(
+            "paper",
+            Some("PAPER_BINANCE_USDM"),
+            Some(filename),
+            Some("sha256:bad")
+        )
+        .is_err());
+        fs::write(&path.0, vec![b' '; 65_537]).unwrap();
+        assert!(manager_compatibility_from_release(
+            "paper",
+            Some("PAPER_BINANCE_USDM"),
+            Some(filename),
+            Some(&digest)
+        )
+        .is_err());
+    }
 }
 
 #[cfg(test)]
@@ -5301,6 +5952,24 @@ mod tests {
             manager_client_error_response(&ManagerV2ClientError::RequestFailed).status(),
             StatusCode::SERVICE_UNAVAILABLE
         );
+        for response in [
+            manager_client_error_response(&ManagerV2ClientError::RateLimited {
+                retry_after: Some(Duration::from_millis(1_001)),
+            }),
+            current_source_client_error(&ManagerV2ClientError::RateLimited {
+                retry_after: Some(Duration::from_millis(1_001)),
+            }),
+        ] {
+            assert_eq!(response.status(), StatusCode::SERVICE_UNAVAILABLE);
+            assert_eq!(response.headers()[RETRY_AFTER], "2");
+        }
+        assert!(
+            !manager_client_error_response(&ManagerV2ClientError::RateLimited {
+                retry_after: None,
+            })
+            .headers()
+            .contains_key(RETRY_AFTER)
+        );
         assert_eq!(
             manager_client_error_response(&ManagerV2ClientError::ContractHeaderMismatch).status(),
             StatusCode::BAD_GATEWAY
@@ -5381,6 +6050,13 @@ mod tests {
         let machine = StreamMachine {
             initial: VecDeque::new(),
             subscription: Some(subscription),
+            freshness_policy: FreshnessPolicy {
+                policy_version: "TEST_ONLY.realtime".to_owned(),
+                warning_after_ms: 5_000,
+                stale_after_ms: 30_000,
+                maximum_future_skew_ms: 2_000,
+            },
+            venue_session: VenueSessionState::Unknown,
             heartbeat: tokio::time::interval_at(
                 tokio::time::Instant::now() + Duration::from_secs(60),
                 Duration::from_secs(60),
@@ -5398,6 +6074,170 @@ mod tests {
         String::from_utf8(bytes.to_vec()).unwrap()
     }
 
+    fn realtime_delivery_fixture(as_of: DateTime<Utc>) -> RealtimeEnvelope {
+        RealtimeEnvelope {
+            event_type: "order.updated".to_owned(),
+            schema_version: REALTIME_SCHEMA_VERSION.to_owned(),
+            workspace_id: "TEST_ONLY_workspace".to_owned(),
+            environment: "paper".to_owned(),
+            projection_epoch: Uuid::nil(),
+            projection_sequence: 1,
+            entity_kind: projection_core::ProjectionEntityKind::Order,
+            entity_id: "TEST_ONLY_order".to_owned(),
+            source_authority: SourceAuthority::Execution,
+            source_cursor: None,
+            source_sequence: Some(42),
+            source_completeness: SourceCompleteness::PollBounded,
+            as_of: Some(as_of),
+            source_read_at: as_of,
+            projected_at: as_of,
+            freshness: FreshnessState::Ok,
+            freshness_policy_version: "TEST_ONLY.realtime".to_owned(),
+            source_discontinuity: false,
+            payload: serde_json::json!({"order_id": "TEST_ONLY_order", "size": "10"}),
+        }
+    }
+
+    #[tokio::test]
+    async fn realtime_delivery_preserves_wire_fields_and_borrows_payload() {
+        let now = Utc::now();
+        let (_, machine) = stream_expiry_fixture(
+            tokio::time::Instant::now() + Duration::from_secs(60),
+            now + chrono::Duration::seconds(60),
+        );
+        let mut envelope = realtime_delivery_fixture(now);
+        let view = realtime_delivery_view(
+            &envelope,
+            &machine.freshness_policy,
+            machine.venue_session,
+            now,
+        );
+        assert!(std::ptr::eq(view.payload, &envelope.payload));
+        assert_eq!(
+            serde_json::to_value(&view).unwrap(),
+            serde_json::to_value(&envelope).unwrap()
+        );
+        let view = realtime_delivery_view(
+            &envelope,
+            &machine.freshness_policy,
+            machine.venue_session,
+            now + chrono::Duration::seconds(30),
+        );
+        assert_eq!(view.freshness, FreshnessState::Stale);
+        let mut expected = serde_json::to_value(&envelope).unwrap();
+        expected["freshness"] = serde_json::json!("STALE");
+        assert_eq!(serde_json::to_value(&view).unwrap(), expected);
+        envelope.freshness = FreshnessState::Stale;
+        assert_eq!(
+            realtime_delivery_view(
+                &envelope,
+                &machine.freshness_policy,
+                machine.venue_session,
+                now
+            )
+            .freshness,
+            FreshnessState::Stale
+        );
+    }
+
+    #[tokio::test]
+    async fn realtime_delivery_fails_closed_at_boundaries_and_policy_mismatch() {
+        let now = Utc::now();
+        let (_, machine) = stream_expiry_fixture(
+            tokio::time::Instant::now() + Duration::from_secs(60),
+            now + chrono::Duration::seconds(60),
+        );
+        let mut envelope = realtime_delivery_fixture(now);
+        let evaluate = |event: &RealtimeEnvelope, at| {
+            realtime_delivery_view(event, &machine.freshness_policy, machine.venue_session, at)
+                .freshness
+        };
+        assert_eq!(
+            evaluate(&envelope, now + chrono::Duration::milliseconds(4_999)),
+            FreshnessState::Ok
+        );
+        assert_eq!(
+            evaluate(&envelope, now + chrono::Duration::milliseconds(5_000)),
+            FreshnessState::Aging
+        );
+        assert_eq!(
+            evaluate(&envelope, now + chrono::Duration::milliseconds(30_000)),
+            FreshnessState::Stale
+        );
+        assert_eq!(
+            evaluate(&envelope, now - chrono::Duration::milliseconds(2_001)),
+            FreshnessState::Unknown
+        );
+        envelope.as_of = None;
+        assert_eq!(evaluate(&envelope, now), FreshnessState::Unknown);
+        envelope.as_of = Some(now);
+        envelope.freshness_policy_version = "TEST_ONLY.other".to_owned();
+        assert_eq!(evaluate(&envelope, now), FreshnessState::Unknown);
+    }
+
+    #[tokio::test]
+    async fn stream_replay_and_live_dequeue_age_without_changing_cursor_or_payload() {
+        let now = Utc::now();
+        let (hub, mut machine) = stream_expiry_fixture(
+            tokio::time::Instant::now() + Duration::from_secs(60),
+            now + chrono::Duration::seconds(60),
+        );
+        let first = realtime_delivery_fixture(now - chrono::Duration::seconds(31));
+        let first_cursor = first.cursor().to_string();
+        machine
+            .initial
+            .push_back(QueuedRealtimeEvent::Projection(first));
+        let (event, machine) = next_sse_event(machine).await.unwrap();
+        let rendered = rendered_stream_event(event).await;
+        assert!(rendered.contains("event: order.updated"));
+        assert!(rendered.contains(&format!("id: {first_cursor}")));
+        assert!(rendered.contains("\"freshness\":\"STALE\""));
+        assert!(rendered.contains("TEST_ONLY_order"));
+        // This fixture bypasses prepare_replay, so advance the live cursor as
+        // the real replay path does before accepting the next live event.
+        let mut machine = machine;
+        machine
+            .subscription
+            .as_mut()
+            .unwrap()
+            .advance_after_replay(ProjectionCursor {
+                epoch_id: Uuid::nil(),
+                sequence: 1,
+            });
+        let mut second = realtime_delivery_fixture(now - chrono::Duration::seconds(31));
+        second.projection_sequence = 2;
+        let second_cursor = second.cursor().to_string();
+        hub.publish(second);
+        let (event, _) = tokio::time::timeout(Duration::from_secs(1), next_sse_event(machine))
+            .await
+            .unwrap()
+            .unwrap();
+        let rendered = rendered_stream_event(event).await;
+        assert!(rendered.contains(&format!("id: {second_cursor}")));
+        assert!(rendered.contains("\"freshness\":\"STALE\""));
+        assert!(rendered.contains("TEST_ONLY_order"));
+    }
+
+    #[tokio::test]
+    async fn stream_expiry_discards_typed_replay_before_serializing() {
+        let now = Utc::now();
+        let (_, mut machine) = stream_expiry_fixture(
+            tokio::time::Instant::now() - Duration::from_millis(1),
+            now + chrono::Duration::seconds(60),
+        );
+        machine
+            .initial
+            .push_back(QueuedRealtimeEvent::Projection(realtime_delivery_fixture(
+                now,
+            )));
+        let (event, machine) = next_sse_event(machine).await.unwrap();
+        let rendered = rendered_stream_event(event).await;
+        assert!(rendered.contains("event: auth.expiring"));
+        assert!(!rendered.contains("TEST_ONLY_order"));
+        assert!(machine.initial.is_empty());
+        assert!(next_sse_event(machine).await.is_none());
+    }
+
     #[tokio::test]
     async fn expired_stream_discards_initial_data_and_closes_after_one_auth_notice() {
         let (hub, mut machine) = stream_expiry_fixture(
@@ -5405,12 +6245,16 @@ mod tests {
             Utc::now() + chrono::Duration::seconds(60),
         );
         machine.initial = VecDeque::from([
-            Event::default()
-                .event("order.updated")
-                .data("TEST_ONLY_RESTRICTED_ORDER"),
-            Event::default()
-                .event("fill.recorded")
-                .data("TEST_ONLY_RESTRICTED_FILL"),
+            QueuedRealtimeEvent::Control(
+                Event::default()
+                    .event("order.updated")
+                    .data("TEST_ONLY_RESTRICTED_ORDER"),
+            ),
+            QueuedRealtimeEvent::Control(
+                Event::default()
+                    .event("fill.recorded")
+                    .data("TEST_ONLY_RESTRICTED_FILL"),
+            ),
         ]);
         let (event, machine) = next_sse_event(machine).await.unwrap();
         assert!(machine.initial.is_empty());
@@ -5429,11 +6273,11 @@ mod tests {
             tokio::time::Instant::now() + Duration::from_secs(60),
             Utc::now() - chrono::Duration::seconds(1),
         );
-        machine.initial.push_back(
+        machine.initial.push_back(QueuedRealtimeEvent::Control(
             Event::default()
                 .event("order.updated")
                 .data("TEST_ONLY_RESTRICTED_ORDER"),
-        );
+        ));
         machine.terminal_after_initial = true;
         let (event, machine) = next_sse_event(machine).await.unwrap();
         let body = rendered_stream_event(event).await;
@@ -5449,11 +6293,11 @@ mod tests {
             tokio::time::Instant::now() + Duration::from_secs(60),
             Utc::now() + chrono::Duration::seconds(60),
         );
-        machine.initial.push_back(
+        machine.initial.push_back(QueuedRealtimeEvent::Control(
             Event::default()
                 .event("order.updated")
                 .data("TEST_ONLY_ALLOWED_ORDER"),
-        );
+        ));
         let (event, machine) = next_sse_event(machine).await.unwrap();
         let body = rendered_stream_event(event).await;
         assert!(body.contains("event: order.updated"));
@@ -5580,6 +6424,176 @@ mod tests {
         assert_eq!(envelope.analytics.source_fact_count, 0);
     }
 
+    fn assert_n25_status_boundaries(
+        snapshot: &mut projection_store_pg::ManagerAnalyticsSnapshot,
+        now: DateTime<Utc>,
+    ) {
+        let policy = FreshnessPolicy {
+            policy_version: "TEST_ONLY".to_owned(),
+            warning_after_ms: 5_000,
+            stale_after_ms: 30_000,
+            maximum_future_skew_ms: 2_000,
+        };
+        let status = |snapshot: &projection_store_pg::ManagerAnalyticsSnapshot| {
+            manager_analytics_source_status(snapshot, now, &policy)
+        };
+        assert_eq!(status(snapshot), ManagerAnalyticsSourceStatus::Unproven);
+        snapshot.feed_as_of = Some(now - chrono::TimeDelta::milliseconds(29_999));
+        snapshot.feed_latest_as_of = Some(now);
+        assert_eq!(status(snapshot), ManagerAnalyticsSourceStatus::Healthy);
+        snapshot.feed_as_of = Some(now - chrono::TimeDelta::milliseconds(30_000));
+        assert_eq!(status(snapshot), ManagerAnalyticsSourceStatus::Stale);
+        snapshot.feed_latest_as_of = Some(now + chrono::TimeDelta::milliseconds(2_001));
+        assert_eq!(status(snapshot), ManagerAnalyticsSourceStatus::Unproven);
+        snapshot.source_health = projection_store_pg::ManagerSourceHealth::Degraded;
+        assert_eq!(status(snapshot), ManagerAnalyticsSourceStatus::Degraded);
+        snapshot.source_health = projection_store_pg::ManagerSourceHealth::Unknown;
+        assert_eq!(status(snapshot), ManagerAnalyticsSourceStatus::Unproven);
+        snapshot.source_health = projection_store_pg::ManagerSourceHealth::Healthy;
+        snapshot.feed_as_of = None;
+        snapshot.feed_latest_as_of = None;
+    }
+
+    #[test]
+    fn n25_quality_never_invents_empty_or_fresh_population() {
+        use projection_store_pg::{
+            ManagerAnalyticsFact, ManagerAnalyticsSnapshot, ManagerAnalyticsSubjectKind,
+        };
+        let now = Utc::now();
+        let mut snapshot = ManagerAnalyticsSnapshot {
+            schema_version: "TEST_ONLY".to_owned(),
+            epoch_id: uuid::Uuid::nil(),
+            subject_kind: ManagerAnalyticsSubjectKind::LiveGate,
+            subject_id: "TEST_ONLY.subject".to_owned(),
+            profile_id: "PAPER_TEST".to_owned(),
+            catalogue_digest: "TEST_ONLY".to_owned(),
+            projection_state_digest: "TEST_ONLY".to_owned(),
+            source_read_at: now,
+            as_of: None,
+            feed_as_of: None,
+            feed_latest_as_of: None,
+            source_health: projection_store_pg::ManagerSourceHealth::Healthy,
+            fact_digest: "TEST_ONLY".to_owned(),
+            fact_count: 0,
+            repository_query_count: 1,
+            facts: vec![],
+        };
+        assert_n25_status_boundaries(&mut snapshot, now);
+        let healthy = ManagerAnalyticsSourceStatus::Healthy;
+        assert_eq!(manager_analytics_quality(&snapshot, healthy), None);
+        snapshot.feed_as_of = Some(now - chrono::TimeDelta::seconds(60));
+        assert_eq!(
+            manager_analytics_quality(&snapshot, healthy),
+            Some((
+                snapshot.feed_as_of.unwrap(),
+                PopulationCompleteness::Unknown
+            ))
+        );
+        snapshot.as_of = Some(now - chrono::TimeDelta::seconds(10));
+        snapshot.facts.push(ManagerAnalyticsFact {
+            entity_id: "TEST_ONLY.order".to_owned(),
+            entity_kind: projection_core::ProjectionEntityKind::Order,
+            source_relation: "public.orders".to_owned(),
+            as_of: snapshot.as_of.unwrap(),
+            source_read_at: now,
+            source_completeness: SourceCompleteness::PollBounded,
+            fields: serde_json::json!({}),
+        });
+        assert_eq!(
+            manager_analytics_quality(&snapshot, healthy),
+            Some((
+                snapshot.feed_as_of.unwrap(),
+                PopulationCompleteness::Partial
+            ))
+        );
+        for status in [
+            ManagerAnalyticsSourceStatus::Unproven,
+            ManagerAnalyticsSourceStatus::Degraded,
+            ManagerAnalyticsSourceStatus::Stale,
+        ] {
+            assert_eq!(
+                manager_analytics_quality(&snapshot, status),
+                Some((
+                    snapshot.feed_as_of.unwrap(),
+                    PopulationCompleteness::Unknown
+                ))
+            );
+        }
+        snapshot.facts[0].source_completeness = SourceCompleteness::Unknown;
+        assert_eq!(
+            manager_analytics_quality(&snapshot, healthy),
+            Some((
+                snapshot.feed_as_of.unwrap(),
+                PopulationCompleteness::Unknown
+            ))
+        );
+        snapshot.feed_as_of = None;
+        assert_eq!(
+            manager_analytics_quality(&snapshot, healthy),
+            Some((snapshot.as_of.unwrap(), PopulationCompleteness::Unknown))
+        );
+    }
+
+    #[test]
+    fn n25_source_health_reason_keeps_wire_shape_and_unrelated_reasons() {
+        let mut analytics = build_manager_query_analytics(&ManagerQueryAnalyticsInput {
+            subject_kind: "DEPLOYMENT".to_owned(),
+            subject_id: "TEST_ONLY.subject".to_owned(),
+            environment: "paper".to_owned(),
+            profile_id: "PAPER_BINANCE_USDM".to_owned(),
+            as_of: Utc::now(),
+            projection_state_digest: format!("sha256:{}", "a".repeat(64)),
+            completeness: PopulationCompleteness::Unknown,
+            facts: vec![],
+        })
+        .unwrap();
+        let history_before = analytics
+            .capabilities
+            .iter()
+            .find(|capability| capability.capability_id == "market-candles")
+            .unwrap()
+            .reason_code
+            .clone();
+        for (status, expected) in [
+            (
+                ManagerAnalyticsSourceStatus::Degraded,
+                "N25_SOURCE_ATTEMPT_FAILED",
+            ),
+            (
+                ManagerAnalyticsSourceStatus::Unproven,
+                "N25_SOURCE_HEALTH_UNPROVEN",
+            ),
+            (
+                ManagerAnalyticsSourceStatus::Stale,
+                "N25_SOURCE_OBSERVATION_STALE",
+            ),
+        ] {
+            apply_analytics_source_health(&mut analytics, status);
+            assert_eq!(
+                analytics
+                    .capabilities
+                    .iter()
+                    .find(|c| c.capability_id == "exact-query")
+                    .unwrap()
+                    .reason_code
+                    .as_deref(),
+                Some(expected)
+            );
+            assert_eq!(
+                analytics
+                    .capabilities
+                    .iter()
+                    .find(|c| c.capability_id == "market-candles")
+                    .unwrap()
+                    .reason_code,
+                history_before
+            );
+        }
+        let encoded = serde_json::to_value(&analytics).unwrap();
+        assert!(encoded.get("source_health").is_none());
+        assert_eq!(encoded["completeness"], "UNKNOWN");
+    }
+
     #[test]
     fn paper_workbench_shadow_fixture_deserializes_through_rust_serde() {
         let envelope = serde_json::from_str::<PaperWorkbenchShadowEnvelope>(include_str!(
@@ -5634,58 +6648,442 @@ mod tests {
     }
 
     #[test]
-    fn empty_shadow_panel_is_honest_and_carries_activation_authority() {
-        let epoch_id = Uuid::now_v7();
-        let envelope = build_shadow_envelope(
+    fn empty_shadow_panel_without_source_quality_is_partial() {
+        for panel in [ShadowPanel::Orders, ShadowPanel::Positions] {
+            let epoch_id = Uuid::now_v7();
+            let envelope = build_shadow_envelope(
+                &CanonicalId::parse("dep_74").unwrap(),
+                panel,
+                projection_store_pg::ShadowScreenAuthority {
+                    epoch_id,
+                    screen_id: PAPER_WORKBENCH_SCREEN_ID.to_owned(),
+                    manifest_digest: format!("sha256:{}", "a".repeat(64)),
+                    capability_snapshot_id: "cap-n07".to_owned(),
+                },
+                ProjectionQueryPage {
+                    schema_version: QUERY_SCHEMA_VERSION.to_owned(),
+                    epoch_id,
+                    total_count: 0,
+                    filtered_count: 0,
+                    rows: Vec::new(),
+                    next_cursor: None,
+                    prev_cursor: None,
+                    has_more: false,
+                    has_previous: false,
+                    applied_filters: Vec::new(),
+                    applied_sort: vec![QuerySort {
+                        field: SortField::AsOf,
+                        direction: SortDirection::Desc,
+                    }],
+                    aggregates_by_currency: Vec::new(),
+                    retention: ProjectionPageRetention {
+                        availability: RetentionAvailability::Unknown,
+                        policy_version: "UNCONFIGURED".to_owned(),
+                    },
+                },
+                Utc::now(),
+                &FreshnessPolicy {
+                    policy_version: "paper.shadow-query.v1".to_owned(),
+                    warning_after_ms: 5_000,
+                    stale_after_ms: 30_000,
+                    maximum_future_skew_ms: 2_000,
+                },
+                ShadowFeedObservation::NonManager,
+            )
+            .unwrap();
+            assert_eq!(envelope.panel_state, PanelState::Partial);
+            assert_eq!(envelope.freshness_state, FreshnessState::Unknown);
+            assert_eq!(envelope.source_completeness, SourceCompleteness::Unknown);
+            assert_eq!(envelope.epoch_id, epoch_id);
+            assert_eq!(envelope.page.total_count, 0);
+            assert_eq!(envelope.page.filtered_count, 0);
+            assert!(envelope.page.rows.is_empty());
+            assert!(envelope.upstream_authorities.is_empty());
+            assert!(envelope
+                .warnings
+                .iter()
+                .any(|warning| warning.code == "EMPTY_SHADOW_PANEL"));
+            assert!(envelope
+                .warnings
+                .iter()
+                .any(|warning| warning.code == "RETENTION_UNCONFIGURED"));
+        }
+    }
+
+    #[test]
+    fn shadow_page_uses_worst_row_freshness_and_unknown_completeness() {
+        let fixture = serde_json::from_str::<PaperWorkbenchShadowEnvelope>(include_str!(
+            "../../../../../packages/contracts/fixtures/execution-paper-workbench.orders-shadow.valid.json"
+        ))
+        .unwrap();
+        let read_at = fixture.read_at;
+        let mut fresh = fixture.page.rows[0].clone();
+        fresh.as_of = read_at;
+        fresh.source_read_at = read_at;
+        fresh.projected_at = read_at;
+        fresh.source_completeness = SourceCompleteness::EventSourced;
+        let policy = FreshnessPolicy {
+            policy_version: "paper.shadow-query.v1".to_owned(),
+            warning_after_ms: 5_000,
+            stale_after_ms: 30_000,
+            maximum_future_skew_ms: 2_000,
+        };
+        let build = |rows| {
+            let mut page = fixture.page.clone();
+            page.rows = rows;
+            build_shadow_envelope(
+                &CanonicalId::parse("dep_74").unwrap(),
+                ShadowPanel::Orders,
+                projection_store_pg::ShadowScreenAuthority {
+                    epoch_id: page.epoch_id,
+                    screen_id: PAPER_WORKBENCH_SCREEN_ID.to_owned(),
+                    manifest_digest: format!("sha256:{}", "a".repeat(64)),
+                    capability_snapshot_id: "cap-n07".to_owned(),
+                },
+                page,
+                read_at,
+                &policy,
+                ShadowFeedObservation::NonManager,
+            )
+            .unwrap()
+        };
+        let current = build(vec![fresh.clone()]);
+        assert_eq!(current.freshness_state, FreshnessState::Ok);
+        assert_eq!(current.panel_state, PanelState::Ok);
+
+        let mut stale = fresh.clone();
+        stale.as_of = read_at - chrono::TimeDelta::seconds(60);
+        let mixed = build(vec![stale.clone(), fresh.clone()]);
+        assert_eq!(mixed.freshness_state, FreshnessState::Stale);
+        assert_eq!(mixed.panel_state, PanelState::Stale);
+        assert_eq!(mixed.age_seconds, Some(60));
+        let reversed = build(vec![fresh.clone(), stale.clone()]);
+        assert_eq!(reversed.freshness_state, FreshnessState::Stale);
+        assert_eq!(reversed.age_seconds, Some(60));
+
+        let mut aging = fresh.clone();
+        aging.as_of = read_at - chrono::TimeDelta::seconds(10);
+        let aging_page = build(vec![fresh.clone(), aging]);
+        assert_eq!(aging_page.freshness_state, FreshnessState::Aging);
+        assert_eq!(aging_page.panel_state, PanelState::Partial);
+
+        let mut future = fresh.clone();
+        future.as_of = read_at + chrono::TimeDelta::seconds(10);
+        let uncertain = build(vec![fresh.clone(), future]);
+        assert_eq!(uncertain.freshness_state, FreshnessState::Unknown);
+        assert_eq!(uncertain.panel_state, PanelState::Partial);
+        assert!(uncertain
+            .warnings
+            .iter()
+            .any(|warning| warning.code == "SOURCE_TIME_IN_FUTURE"));
+        let mut future = fresh.clone();
+        future.as_of = read_at + chrono::TimeDelta::seconds(10);
+        let stale_and_future = build(vec![stale, future]);
+        assert_eq!(stale_and_future.panel_state, PanelState::Stale);
+        assert!(stale_and_future
+            .warnings
+            .iter()
+            .any(|warning| warning.code == "SOURCE_TIME_IN_FUTURE"));
+
+        let mut bounded = fresh.clone();
+        bounded.source_completeness = SourceCompleteness::PollBounded;
+        fresh.source_completeness = SourceCompleteness::Unknown;
+        let mixed_authority = build(vec![bounded, fresh]);
+        assert_eq!(
+            mixed_authority.source_completeness,
+            SourceCompleteness::Unknown
+        );
+        assert_eq!(mixed_authority.panel_state, PanelState::Partial);
+    }
+
+    #[test]
+    fn shadow_manager_feed_observations_do_not_invent_freshness() {
+        let fixture = serde_json::from_str::<PaperWorkbenchShadowEnvelope>(include_str!(
+            "../../../../../packages/contracts/fixtures/execution-paper-workbench.orders-shadow.valid.json"
+        ))
+        .unwrap();
+        let read_at = fixture.read_at;
+        let mut fresh = fixture.page.rows[0].clone();
+        fresh.as_of = read_at;
+        fresh.source_read_at = read_at;
+        fresh.projected_at = read_at;
+        fresh.source_completeness = SourceCompleteness::EventSourced;
+        let policy = FreshnessPolicy {
+            policy_version: "paper.shadow-query.v1".to_owned(),
+            warning_after_ms: 5_000,
+            stale_after_ms: 30_000,
+            maximum_future_skew_ms: 2_000,
+        };
+        // A sealed feed observation can only make a row page less certain;
+        // legacy/no observations remain UNKNOWN, and old/future clocks cannot
+        // inherit a newer row's FRESH state.
+        let mut page = fixture.page.clone();
+        page.rows = vec![fresh.clone()];
+        let observed = projection_store_pg::ManagerFeedObservation {
+            as_of: read_at - chrono::TimeDelta::seconds(60),
+            source_read_at: read_at - chrono::TimeDelta::seconds(60),
+            poll_interval_ms: 1_000,
+        };
+        assert_eq!(
+            shadow_page_freshness(&page, read_at, &policy, ShadowFeedObservation::Unknown)
+                .unwrap()
+                .state,
+            FreshnessState::Unknown
+        );
+        assert_eq!(
+            shadow_page_freshness(
+                &page,
+                read_at,
+                &policy,
+                ShadowFeedObservation::Observed("manager.order", &observed)
+            )
+            .unwrap()
+            .state,
+            FreshnessState::Stale
+        );
+        let future_observation = projection_store_pg::ManagerFeedObservation {
+            as_of: read_at + chrono::TimeDelta::seconds(10),
+            ..observed.clone()
+        };
+        assert_eq!(
+            shadow_page_freshness(
+                &page,
+                read_at,
+                &policy,
+                ShadowFeedObservation::Observed("manager.order", &future_observation)
+            )
+            .unwrap()
+            .state,
+            FreshnessState::Unknown
+        );
+        page.rows.clear();
+        let fresh_observation = projection_store_pg::ManagerFeedObservation {
+            as_of: read_at,
+            source_read_at: read_at,
+            ..observed
+        };
+        assert_eq!(
+            shadow_page_freshness(
+                &page,
+                read_at,
+                &policy,
+                ShadowFeedObservation::Observed("manager.order", &fresh_observation)
+            )
+            .unwrap()
+            .state,
+            FreshnessState::Unknown
+        );
+        page.rows = vec![fresh.clone()];
+        let bounded = build_shadow_envelope(
             &CanonicalId::parse("dep_74").unwrap(),
             ShadowPanel::Orders,
             projection_store_pg::ShadowScreenAuthority {
-                epoch_id,
+                epoch_id: page.epoch_id,
                 screen_id: PAPER_WORKBENCH_SCREEN_ID.to_owned(),
                 manifest_digest: format!("sha256:{}", "a".repeat(64)),
                 capability_snapshot_id: "cap-n07".to_owned(),
             },
-            ProjectionQueryPage {
-                schema_version: QUERY_SCHEMA_VERSION.to_owned(),
-                epoch_id,
-                total_count: 0,
-                filtered_count: 0,
-                rows: Vec::new(),
-                next_cursor: None,
-                prev_cursor: None,
-                has_more: false,
-                has_previous: false,
-                applied_filters: Vec::new(),
-                applied_sort: vec![QuerySort {
-                    field: SortField::AsOf,
-                    direction: SortDirection::Desc,
-                }],
-                aggregates_by_currency: Vec::new(),
-                retention: ProjectionPageRetention {
-                    availability: RetentionAvailability::Unknown,
-                    policy_version: "UNCONFIGURED".to_owned(),
-                },
-            },
-            Utc::now(),
-            &FreshnessPolicy {
-                policy_version: "paper.shadow-query.v1".to_owned(),
-                warning_after_ms: 5_000,
-                stale_after_ms: 30_000,
-                maximum_future_skew_ms: 2_000,
-            },
+            page,
+            read_at,
+            &policy,
+            ShadowFeedObservation::Observed("manager.order", &fresh_observation),
         )
         .unwrap();
-        assert_eq!(envelope.panel_state, PanelState::Empty);
-        assert_eq!(envelope.freshness_state, FreshnessState::Unknown);
-        assert_eq!(envelope.source_completeness, SourceCompleteness::Unknown);
-        assert!(envelope
+        assert_eq!(bounded.panel_state, PanelState::Partial);
+        assert!(bounded
             .warnings
             .iter()
-            .any(|warning| warning.code == "EMPTY_SHADOW_PANEL"));
-        assert!(envelope
+            .any(|warning| warning.code == "SOURCE_FAILURE_STATUS_UNAVAILABLE"));
+    }
+
+    #[test]
+    fn shadow_noop_poll_refreshes_only_matching_manager_feed() {
+        let fixture = serde_json::from_str::<PaperWorkbenchShadowEnvelope>(include_str!(
+            "../../../../../packages/contracts/fixtures/execution-paper-workbench.orders-shadow.valid.json"
+        )).unwrap();
+        let now = fixture.read_at;
+        let policy = FreshnessPolicy {
+            policy_version: "test".to_owned(),
+            warning_after_ms: 5_000,
+            stale_after_ms: 30_000,
+            maximum_future_skew_ms: 2_000,
+        };
+        let mut page = fixture.page.clone();
+        page.rows.truncate(1);
+        let row = &mut page.rows[0];
+        row.entity_id = "manager.order:sha256:test".to_owned();
+        row.payload["source_feed"] = serde_json::json!("manager.order");
+        row.source_authority = SourceAuthority::Execution;
+        row.source_completeness = SourceCompleteness::PollBounded;
+        row.adapter_version = manager_projection::MANAGER_PROJECTION_ADAPTER_VERSION.to_owned();
+        row.as_of = now - chrono::TimeDelta::seconds(60);
+        row.source_read_at = row.as_of;
+        row.projected_at = row.as_of;
+        let fresh = projection_store_pg::ManagerFeedObservation {
+            as_of: now,
+            source_read_at: now,
+            poll_interval_ms: 1_000,
+        };
+        let evaluate = |page: &ProjectionQueryPage, observation| {
+            shadow_page_freshness(page, now, &policy, observation)
+                .unwrap()
+                .state
+        };
+        assert_eq!(
+            evaluate(
+                &page,
+                ShadowFeedObservation::Observed("manager.order", &fresh)
+            ),
+            FreshnessState::Ok
+        );
+        assert_eq!(
+            evaluate(&page, ShadowFeedObservation::Unknown),
+            FreshnessState::Stale
+        );
+        let old = projection_store_pg::ManagerFeedObservation {
+            as_of: now - chrono::TimeDelta::seconds(60),
+            source_read_at: now - chrono::TimeDelta::seconds(60),
+            ..fresh.clone()
+        };
+        assert_eq!(
+            evaluate(
+                &page,
+                ShadowFeedObservation::Observed("manager.order", &old)
+            ),
+            FreshnessState::Stale
+        );
+        // Even a fresh row cannot borrow the observation of a different feed.
+        page.rows[0].as_of = now;
+        page.rows[0].source_read_at = now;
+        page.rows[0].projected_at = now;
+        page.rows[0].payload["source_feed"] = serde_json::json!("manager.position");
+        assert_eq!(
+            evaluate(
+                &page,
+                ShadowFeedObservation::Observed("manager.order", &fresh)
+            ),
+            FreshnessState::Unknown
+        );
+        page.rows[0].payload["source_feed"] = serde_json::json!("manager.order");
+        page.rows[0].entity_id = "manager.position:sha256:test".to_owned();
+        assert_eq!(
+            evaluate(
+                &page,
+                ShadowFeedObservation::Observed("manager.order", &fresh)
+            ),
+            FreshnessState::Unknown
+        );
+        page.rows[0].entity_id = "manager.order:sha256:test".to_owned();
+        page.rows[0].source_authority = SourceAuthority::Broker;
+        assert_eq!(
+            evaluate(
+                &page,
+                ShadowFeedObservation::Observed("manager.order", &fresh)
+            ),
+            FreshnessState::Unknown
+        );
+    }
+
+    #[test]
+    fn shadow_feed_selects_panel_specific_observation() {
+        let now = Utc::now();
+        let order = projection_store_pg::ManagerFeedObservation {
+            as_of: now - chrono::TimeDelta::seconds(60),
+            source_read_at: now - chrono::TimeDelta::seconds(60),
+            poll_interval_ms: 1_000,
+        };
+        let position = projection_store_pg::ManagerFeedObservation {
+            as_of: now,
+            source_read_at: now,
+            ..order.clone()
+        };
+        let feed_map = BTreeMap::from([
+            ("manager.order".to_owned(), order.clone()),
+            ("manager.position".to_owned(), position.clone()),
+        ]);
+        assert!(
+            matches!(shadow_feed_observation(Some(&feed_map), true, ShadowPanel::Orders),
+            ShadowFeedObservation::Observed("manager.order", value) if value == &order)
+        );
+        assert!(
+            matches!(shadow_feed_observation(Some(&feed_map), true, ShadowPanel::Positions),
+            ShadowFeedObservation::Observed("manager.position", value) if value == &position)
+        );
+        assert!(matches!(
+            shadow_feed_observation(None, true, ShadowPanel::Orders),
+            ShadowFeedObservation::Unknown
+        ));
+        assert!(matches!(
+            shadow_feed_observation(None, false, ShadowPanel::Orders),
+            ShadowFeedObservation::NonManager
+        ));
+    }
+
+    #[test]
+    fn shadow_manager_health_overrides_fresh_cached_rows() {
+        use projection_store_pg::ManagerSourceHealth;
+        let fixture = serde_json::from_str::<PaperWorkbenchShadowEnvelope>(include_str!(
+            "../../../../../packages/contracts/fixtures/execution-paper-workbench.orders-shadow.valid.json"
+        )).unwrap();
+        let read_at = fixture.read_at;
+        let mut page = fixture.page.clone();
+        let row = &mut page.rows[0];
+        row.as_of = read_at;
+        row.source_read_at = read_at;
+        row.projected_at = read_at;
+        let policy = FreshnessPolicy {
+            policy_version: "paper.shadow-query.v1".to_owned(),
+            warning_after_ms: 5_000,
+            stale_after_ms: 30_000,
+            maximum_future_skew_ms: 2_000,
+        };
+        let observations = BTreeMap::from([(
+            "manager.order".to_owned(),
+            projection_store_pg::ManagerFeedObservation {
+                as_of: read_at,
+                source_read_at: read_at,
+                poll_interval_ms: 1_000,
+            },
+        )]);
+        let build = |health| {
+            build_shadow_envelope(
+                &CanonicalId::parse("dep_74").unwrap(),
+                ShadowPanel::Orders,
+                projection_store_pg::ShadowScreenAuthority {
+                    epoch_id: page.epoch_id,
+                    screen_id: PAPER_WORKBENCH_SCREEN_ID.to_owned(),
+                    manifest_digest: format!("sha256:{}", "a".repeat(64)),
+                    capability_snapshot_id: "cap-n07".to_owned(),
+                },
+                page.clone(),
+                read_at,
+                &policy,
+                shadow_feed_with_health(Some(&observations), health, ShadowPanel::Orders),
+            )
+            .unwrap()
+        };
+        let failed = build(Some(ManagerSourceHealth::Degraded));
+        assert_eq!(failed.freshness_state, FreshnessState::Stale);
+        assert_eq!(failed.panel_state, PanelState::Stale);
+        assert!(failed
             .warnings
             .iter()
-            .any(|warning| warning.code == "RETENTION_UNCONFIGURED"));
+            .any(|warning| warning.code == "SOURCE_ATTEMPT_FAILED"));
+        let unknown = build(Some(ManagerSourceHealth::Unknown));
+        assert_eq!(unknown.freshness_state, FreshnessState::Unknown);
+        assert_eq!(unknown.panel_state, PanelState::Partial);
+        assert!(matches!(
+            shadow_feed_with_health(
+                Some(&observations),
+                Some(ManagerSourceHealth::Healthy),
+                ShadowPanel::Orders
+            ),
+            ShadowFeedObservation::Observed("manager.order", _)
+        ));
+        assert!(matches!(
+            shadow_feed_with_health(Some(&observations), None, ShadowPanel::Orders),
+            ShadowFeedObservation::NonManager
+        ));
     }
 
     #[test]
@@ -5799,5 +7197,30 @@ mod tests {
                 UnixTime::now(),
             )
             .is_err());
+    }
+    #[test]
+    fn unsealed_manager_cycle_maps_to_temporary_unavailability() {
+        let error = StoreError::ManagerProjectionCycleIncomplete;
+        assert_eq!(
+            n25_store_error(&error).status(),
+            StatusCode::SERVICE_UNAVAILABLE
+        );
+        assert_eq!(
+            shadow_store_error(&error).status(),
+            StatusCode::SERVICE_UNAVAILABLE
+        );
+        assert_eq!(
+            analytics_store_error(&error).status(),
+            StatusCode::SERVICE_UNAVAILABLE
+        );
+    }
+
+    #[tokio::test]
+    async fn unproven_analytics_attribution_is_a_typed_503() {
+        let response = n25_store_error(&StoreError::AnalyticsAttributionUnproven);
+        assert_eq!(response.status(), StatusCode::SERVICE_UNAVAILABLE);
+        let bytes = to_bytes(response.into_body(), 4_096).await.unwrap();
+        let body: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+        assert_eq!(body["error"]["code"], "N25_ATTRIBUTION_UNPROVEN");
     }
 }

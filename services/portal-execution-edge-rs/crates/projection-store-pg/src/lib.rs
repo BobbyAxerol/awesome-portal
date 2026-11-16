@@ -28,6 +28,7 @@ pub mod command_pm;
 mod d4_writer;
 mod manager_projection;
 mod manager_query_analytics;
+mod manager_source_health;
 pub mod p16_history;
 mod query;
 mod realtime;
@@ -50,16 +51,17 @@ pub use d4_writer::{
     D4SnapshotLeaseInput, D4_CONTRACT_REVISION, D4_SCOPE_ID,
 };
 pub use manager_projection::{
-    manager_snapshot_semantic_digest, ManagerCycleCommitInput, ManagerProjectionCycleReceipt,
-    ManagerProjectionEpochSelection, ManagerProjectionLeaseAcquireOutcome,
-    ManagerProjectionLeaseGrant, ManagerProjectionLeaseProof, ManagerSnapshotCommitInput,
-    ManagerSnapshotCommitReceipt, MANAGER_PROJECTION_SOURCE_SCOPE,
+    manager_snapshot_semantic_digest, ManagerCycleCommitInput, ManagerFeedObservation,
+    ManagerProjectionCycleReceipt, ManagerProjectionEpochSelection,
+    ManagerProjectionLeaseAcquireOutcome, ManagerProjectionLeaseGrant, ManagerProjectionLeaseProof,
+    ManagerSnapshotCommitInput, ManagerSnapshotCommitReceipt, MANAGER_PROJECTION_SOURCE_SCOPE,
 };
 pub use manager_query_analytics::{
     ManagerAnalyticsFact, ManagerAnalyticsSnapshot, ManagerAnalyticsSubject,
     ManagerAnalyticsSubjectKind, N25_MANAGER_ANALYTICS_MAX_FACTS,
 };
-pub use query::{RetentionPolicySnapshot, SeriesPointWrite};
+pub use manager_source_health::{ManagerSourceAttempt, ManagerSourceHealth};
+pub use query::{RetentionPolicySnapshot, ScopedProjectionPage, SeriesPointWrite};
 pub use realtime::{
     ManagerRealtimeAuthority, RealtimeActiveEpochWatermark, RealtimeEpochAvailability,
     RealtimeJournalPage, RealtimeJournalRecord, RealtimeScopeAvailability,
@@ -1531,6 +1533,8 @@ pub enum StoreError {
     InvalidRealtimePageLimit,
     #[error("analytics source snapshot does not exist")]
     AnalyticsSourceNotFound,
+    #[error("analytics source attribution is not proven for the requested subject")]
+    AnalyticsAttributionUnproven,
     #[error("analytics source snapshot delivery profile does not match the requested profile")]
     AnalyticsSourceProfileMismatch,
     #[error("analytics source capability snapshot does not match the active capability")]
@@ -1599,6 +1603,8 @@ pub enum StoreError {
     ManagerProjectionInputDigestMismatch,
     #[error("N24 Manager projection snapshot was rejected atomically")]
     ManagerProjectionSnapshotRejected,
+    #[error("N24 Manager poll is missing prior entities without authoritative absence proof")]
+    ManagerProjectionMissingAbsenceAuthority,
     #[error("N24 Manager projection durable commit collides with existing evidence")]
     ManagerProjectionCommitCollision,
     #[error("N24 Manager projection cycle is invalid")]

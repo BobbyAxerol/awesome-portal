@@ -8,26 +8,28 @@ use std::{
 
 use chrono::{DateTime, Utc};
 use manager_compat_authority::{
-    AuthorityError, BoundManagerAuthority, DeploymentEnvironment, ManagerCompatibilityAuthority,
-    ManagerRequestContext, DELEGATED_RESOURCE,
+    AuthorityError, BoundManagerAuthority, DeploymentEnvironment, ManagerRequestContext,
+    DELEGATED_RESOURCE,
 };
 use manager_projection::{
-    checked_json_byte_sum, BuiltProjectionCycle, FeedClass, ManagerFeedSnapshot,
-    ManagerMaterializationError, ManagerMaterializationLimits, ManagerProjectionCycle,
-    ManagerProjectionFact, ManagerProjectionFeed, ManagerProjectionProfile,
-    ManagerProjectionSource, ProjectionMapError, FEEDS, MANAGER_PROJECTION_ADAPTER_VERSION,
-    MAXIMUM_CYCLE_RECORDS, MAXIMUM_FEED_PAGES, MAXIMUM_FEED_RECORDS,
+    checked_json_byte_sum, validate_catalogue_for_complete_cycle, BuiltProjectionCycle, FeedClass,
+    ManagerFeedKeyGuard, ManagerFeedSnapshot, ManagerMaterializationError,
+    ManagerMaterializationLimits, ManagerProjectionCycle, ManagerProjectionFact,
+    ManagerProjectionFeed, ManagerProjectionProfile, ManagerProjectionSource, ProjectionMapError,
+    FEEDS, MANAGER_PROJECTION_ADAPTER_VERSION, MAXIMUM_CYCLE_RECORDS, MAXIMUM_FEED_PAGES,
+    MAXIMUM_FEED_RECORDS,
 };
 use manager_v2_client::{ManagerV2Client, ManagerV2ClientConfig, ManagerV2ClientError};
 use manager_v2_contract::{
-    Completeness, ManagerCatalogue, ManagerMeta, ManagerPayload, ManagerRead, ManagerRecord,
-    ManagerV2Request, OpaqueCursor, PageLimit, RUNTIME_CONTRACT_REVISION,
+    Completeness, Freshness, ManagerCatalogue, ManagerMeta, ManagerPayload, ManagerRead,
+    ManagerRecord, ManagerV2Request, OpaqueCursor, PageLimit, RUNTIME_CONTRACT_REVISION,
 };
 use projection_core::ProjectionEpochStatus;
 use projection_store_pg::{
     manager_snapshot_semantic_digest, EpochMetadata, ManagerCycleCommitInput,
-    ManagerProjectionLeaseAcquireOutcome, ManagerSnapshotCommitInput, PgProjectionStore,
-    SourceAdmissionOutcome, SourceAdmissionRequest, StoreError,
+    ManagerFeedObservation, ManagerProjectionLeaseAcquireOutcome, ManagerSnapshotCommitInput,
+    ManagerSourceHealth, PgProjectionStore, SourceAdmissionOutcome, SourceAdmissionRequest,
+    StoreError,
 };
 use serde::Serialize;
 use thiserror::Error;
@@ -134,13 +136,30 @@ impl ManagerProjectionFeedCache {
         catalogue_digest: &str,
         refreshed: Vec<ManagerFeedSnapshot>,
     ) -> Result<Self, ManagerProjectionCommandError> {
-        let mut next = self.clone();
+        // A reviewed catalogue/profile transition starts a cold baseline. Do
+        // not compare generations across different source contracts or carry
+        // stale siblings into that new baseline.
+        let same_contract = self.feeds.values().all(|previous| {
+            previous.profile == profile && previous.catalogue_digest == catalogue_digest
+        });
+        let mut next = if same_contract {
+            self.clone()
+        } else {
+            Self::default()
+        };
         for snapshot in refreshed {
             if !FEEDS.contains(&snapshot.feed)
                 || snapshot.profile != profile
                 || snapshot.catalogue_digest != catalogue_digest
             {
                 return Err(ManagerProjectionCommandError::CycleMetadataDrift);
+            }
+            if let Some(previous) = next.feeds.get(snapshot.feed.feed_id) {
+                match (&previous.source_snapshot, &snapshot.source_snapshot) {
+                    (Some(old), Some(new)) if new.follows(old) => {}
+                    (None, None) => {}
+                    _ => return Err(ManagerProjectionCommandError::CycleMetadataDrift),
+                }
             }
             next.feeds.insert(snapshot.feed.feed_id, Arc::new(snapshot));
         }
@@ -271,194 +290,238 @@ async fn run_once_mode(
         .as_deref()
         .ok_or(ManagerProjectionCommandError::MissingDatabaseUrl)?;
     let database_url = read_nonempty(database_path)?;
-    let source_ca = read_nonempty_bytes(&config.source_ca_file)?;
-    let identity_path = config
-        .source_client_identity_file
-        .as_deref()
-        .ok_or(ManagerProjectionCommandError::MissingClientIdentity)?;
-    let source_identity = read_nonempty_bytes(identity_path)?;
-    let client = ManagerV2Client::new(ManagerV2ClientConfig {
-        source_proxy_origin: &config.source_origin,
-        profile_id,
-        root_ca_pem: &source_ca,
-        client_identity_pem: &source_identity,
-        limits: manager_v2_client::ManagerV2ClientLimits::default(),
-    })?;
-    let authority = ManagerCompatibilityAuthority::canonical()?;
-    let bound = authority.bind(ManagerRequestContext {
-        environment: deployment_environment,
-        profile_id,
-        delegated_resource: DELEGATED_RESOURCE,
-        owner_contract_revision: RUNTIME_CONTRACT_REVISION,
-    })?;
     let store = crate::projection_resources::connect_legacy(database_url.trim()).await?;
     store.ping().await?;
-    let (catalogue, catalogue_digest) =
-        load_catalogue(&store, config, owner_digest, &client, bound).await?;
-    load_and_validate_capabilities(
-        &store,
-        config,
-        owner_digest,
-        &client,
-        bound,
-        &catalogue_digest,
-    )
-    .await?;
-    // A catalogue revision invalidates the complete cache atomically. The
-    // first cycle under a new revision is therefore a full source baseline,
-    // not a mixture of old and new contract metadata.
-    let refreshed_classes =
-        if force_rebuild || !feed_cache.matches_catalogue(profile, &catalogue_digest) {
-            FeedClass::ALL.to_vec()
-        } else {
-            requested_classes
-        };
-    let mut materialization_budget = config
-        .manager_projection_materialization_limits
-        .map(|limits| {
-            feed_cache.materialization_budget(
-                profile,
-                &catalogue_digest,
-                &refreshed_classes,
-                limits,
-            )
-        })
-        .transpose()?;
-    let refreshed_feeds = load_feeds(
-        &store,
-        config,
-        owner_digest,
-        &client,
-        bound,
-        &catalogue,
-        profile,
-        &refreshed_classes,
-        config.manager_projection_class_intervals,
-        materialization_budget.as_mut(),
-    )
-    .await?;
-    // Only install the updated cache after the complete candidate has passed
-    // projection persistence/lease validation. A failure leaves the last
-    // complete state intact and cannot publish a partial class as truth.
-    let candidate_cache = feed_cache.with_refreshed(profile, &catalogue_digest, refreshed_feeds)?;
-    if let Some(budget) = &materialization_budget {
-        budget.check_owned_cycle_copy(candidate_cache.fact_json_bytes()?)?;
-    }
-    let cycle = candidate_cache
-        .complete_cycle(
-            profile,
-            &catalogue_digest,
-            config.manager_projection_class_intervals.fastest(),
-        )?
-        .build()?;
-
     let scope = projection_core::ProjectionScope::new(
         execution_contracts::CanonicalId::parse("workspace_execution_manager")?,
         profile.environment(),
     )?;
-    let metadata = EpochMetadata {
-        adapter_version: MANAGER_PROJECTION_ADAPTER_VERSION.to_owned(),
-        source_gateway_digest: config.source_gateway_digest.clone(),
-        capability_snapshot_id: catalogue_digest.clone(),
-    };
-    let epoch = if force_rebuild {
-        store
-            .prepare_manager_projection_rebuild_epoch(&scope, &metadata, Utc::now())
-            .await?
-    } else {
-        store
-            .ensure_manager_projection_epoch(&scope, &metadata, Utc::now())
-            .await?
-    };
-    let lease_ttl = manager_projection_lease_ttl(cycle.record_count);
-    let lease = match store
-        .acquire_manager_projection_lease(
-            &scope,
-            epoch.epoch_id,
-            Uuid::now_v7(),
+    // The ticket precedes any source request. Failures are recorded after
+    // the attempt, even if source setup or pagination fails early.
+    let grace_ms = u64::try_from(config.shadow_query_freshness_policy.stale_after_ms)
+        .map_err(|_| ManagerProjectionCommandError::InvalidPollInterval)?;
+    let source_attempt = store
+        .begin_manager_source_attempt(&scope, Duration::from_millis(grace_ms))
+        .await?;
+    let outcome: Result<ProjectionCycleAttempt, ManagerProjectionCommandError> = async {
+        let source_ca = read_nonempty_bytes(&config.source_ca_file)?;
+        let identity_path = config
+            .source_client_identity_file
+            .as_deref()
+            .ok_or(ManagerProjectionCommandError::MissingClientIdentity)?;
+        let source_identity = read_nonempty_bytes(identity_path)?;
+        let client = ManagerV2Client::new(ManagerV2ClientConfig {
+            source_proxy_origin: &config.source_origin,
+            profile_id,
+            root_ca_pem: &source_ca,
+            client_identity_pem: &source_identity,
+            limits: manager_v2_client::ManagerV2ClientLimits::default(),
+        })?;
+        let authority = &config.manager_compatibility;
+        let bound = authority.bind(ManagerRequestContext {
+            environment: deployment_environment,
+            profile_id,
+            delegated_resource: DELEGATED_RESOURCE,
+            owner_contract_revision: RUNTIME_CONTRACT_REVISION,
+        })?;
+        let (catalogue, catalogue_digest) =
+            load_catalogue(&store, config, owner_digest, &client, bound).await?;
+        // A cadence refresh still publishes a complete cached epoch. Never
+        // spend source requests or replace it from a partial feed catalogue.
+        validate_catalogue_for_complete_cycle(&catalogue)?;
+        load_and_validate_capabilities(
+            &store,
+            config,
             owner_digest,
-            lease_ttl,
-        )
-        .await?
-    {
-        ManagerProjectionLeaseAcquireOutcome::Acquired(grant)
-        | ManagerProjectionLeaseAcquireOutcome::AlreadyHeld(grant) => grant,
-    };
-    let occurrence = store
-        .manager_projection_cycle_id(
-            &scope,
-            epoch.epoch_id,
-            lease.proof(),
-            &ManagerCycleCommitInput {
-                cycle_id: cycle.cycle_id.clone(),
-                profile_id: profile.profile_id().to_owned(),
-                catalogue_digest: cycle.catalogue_digest.clone(),
-                source_input_digest: cycle.state_input_digest.clone(),
-                feed_count: cycle.feed_count,
-                record_count: cycle.record_count,
-                source_read_at: cycle.source_read_at,
-                poll_interval_ms: cycle.poll_interval_ms,
-            },
+            &client,
+            bound,
+            &catalogue_digest,
         )
         .await?;
-    let cycle = cycle.bind_durable_cycle_id(occurrence)?;
-    commit_cycle(&store, &scope, epoch.epoch_id, lease.proof(), &cycle).await?;
-    let cycle_receipt = store
-        .commit_manager_projection_cycle(
-            &scope,
-            epoch.epoch_id,
-            lease.proof(),
-            &ManagerCycleCommitInput {
-                cycle_id: cycle.cycle_id.clone(),
-                profile_id: profile.profile_id().to_owned(),
-                catalogue_digest: cycle.catalogue_digest.clone(),
-                source_input_digest: cycle.state_input_digest.clone(),
-                feed_count: cycle.feed_count,
-                record_count: cycle.record_count,
-                source_read_at: cycle.source_read_at,
-                poll_interval_ms: cycle.poll_interval_ms,
-            },
-            Utc::now(),
+        // A catalogue revision invalidates the complete cache atomically. The
+        // first cycle under a new revision is therefore a full source baseline,
+        // not a mixture of old and new contract metadata.
+        let refreshed_classes = if force_rebuild
+            || !feed_cache.matches_catalogue(profile, &catalogue_digest)
+            || store.load_manager_source_health(&scope).await? != ManagerSourceHealth::Healthy
+        {
+            FeedClass::ALL.to_vec()
+        } else {
+            requested_classes
+        };
+        let mut materialization_budget = config
+            .manager_projection_materialization_limits
+            .map(|limits| {
+                feed_cache.materialization_budget(
+                    profile,
+                    &catalogue_digest,
+                    &refreshed_classes,
+                    limits,
+                )
+            })
+            .transpose()?;
+        let refreshed_feeds = load_feeds(
+            &store,
+            config,
+            owner_digest,
+            &client,
+            bound,
+            &catalogue,
+            profile,
+            &refreshed_classes,
+            config.manager_projection_class_intervals,
+            materialization_budget.as_mut(),
         )
         .await?;
-    let (activated, retained_previous_epoch_id) = if epoch.status == ProjectionEpochStatus::Building
-    {
-        let result = store
-            .activate_manager_projection_epoch(
+        // Only install the updated cache after the complete candidate has passed
+        // projection persistence/lease validation. A failure leaves the last
+        // complete state intact and cannot publish a partial class as truth.
+        let candidate_cache =
+            feed_cache.with_refreshed(profile, &catalogue_digest, refreshed_feeds)?;
+        if let Some(budget) = &materialization_budget {
+            budget.check_owned_cycle_copy(candidate_cache.fact_json_bytes()?)?;
+        }
+        let cycle = candidate_cache
+            .complete_cycle(
+                profile,
+                &catalogue_digest,
+                config.manager_projection_class_intervals.fastest(),
+            )?
+            .build()?;
+        let feed_observations: BTreeMap<_, _> = candidate_cache
+            .feeds
+            .iter()
+            .map(|(id, snapshot)| {
+                (
+                    (*id).to_owned(),
+                    ManagerFeedObservation {
+                        as_of: snapshot.as_of,
+                        source_read_at: snapshot.source_read_at,
+                        poll_interval_ms: snapshot.poll_interval_ms,
+                    },
+                )
+            })
+            .collect();
+
+        let metadata = EpochMetadata {
+            adapter_version: MANAGER_PROJECTION_ADAPTER_VERSION.to_owned(),
+            source_gateway_digest: config.source_gateway_digest.clone(),
+            capability_snapshot_id: catalogue_digest.clone(),
+        };
+        let epoch = if force_rebuild {
+            store
+                .prepare_manager_projection_rebuild_epoch(&scope, &metadata, Utc::now())
+                .await?
+        } else {
+            store
+                .ensure_manager_projection_epoch(&scope, &metadata, Utc::now())
+                .await?
+        };
+        let lease_ttl = manager_projection_lease_ttl(cycle.record_count);
+        let lease = match store
+            .acquire_manager_projection_lease(
                 &scope,
                 epoch.epoch_id,
-                &cycle_receipt.state_digest,
-                Utc::now(),
-                ROLLBACK_OVERLAP,
+                Uuid::now_v7(),
+                owner_digest,
+                lease_ttl,
+            )
+            .await?
+        {
+            ManagerProjectionLeaseAcquireOutcome::Acquired(grant)
+            | ManagerProjectionLeaseAcquireOutcome::AlreadyHeld(grant) => grant,
+        };
+        let occurrence = store
+            .manager_projection_cycle_id(
+                &scope,
+                epoch.epoch_id,
+                lease.proof(),
+                &ManagerCycleCommitInput {
+                    cycle_id: cycle.cycle_id.clone(),
+                    profile_id: profile.profile_id().to_owned(),
+                    catalogue_digest: cycle.catalogue_digest.clone(),
+                    source_input_digest: cycle.state_input_digest.clone(),
+                    feed_count: cycle.feed_count,
+                    record_count: cycle.record_count,
+                    source_read_at: cycle.source_read_at,
+                    poll_interval_ms: cycle.poll_interval_ms,
+                },
             )
             .await?;
-        (true, result.retained_previous_epoch_id)
-    } else {
-        (false, None)
-    };
-    store
-        .release_manager_projection_lease(&scope, epoch.epoch_id, lease.proof())
-        .await?;
-    *feed_cache = candidate_cache;
-    Ok(ProjectionCycleAttempt {
-        report: ManagerProjectionRunReport {
-            schema_version: "portal.execution.manager-projection.run.v1",
-            environment: profile.environment().to_owned(),
-            profile_id: profile.profile_id().to_owned(),
-            epoch_id: epoch.epoch_id,
-            cycle_id: cycle.cycle_id.as_str().to_owned(),
-            catalogue_digest,
-            feed_count: cycle.feed_count,
-            snapshot_count: cycle.snapshots.len(),
-            record_count: cycle.record_count,
-            state_digest: cycle_receipt.state_digest,
-            activated,
-            retained_previous_epoch_id,
-            source_read_at: cycle.source_read_at,
-            completed_at: Utc::now(),
-        },
-        refreshed_classes,
-    })
+        let cycle = cycle.bind_durable_cycle_id(occurrence)?;
+        commit_cycle(&store, &scope, epoch.epoch_id, lease.proof(), &cycle).await?;
+        let cycle_receipt = store
+            .commit_manager_projection_cycle_with_source_health(
+                &scope,
+                epoch.epoch_id,
+                lease.proof(),
+                &ManagerCycleCommitInput {
+                    cycle_id: cycle.cycle_id.clone(),
+                    profile_id: profile.profile_id().to_owned(),
+                    catalogue_digest: cycle.catalogue_digest.clone(),
+                    source_input_digest: cycle.state_input_digest.clone(),
+                    feed_count: cycle.feed_count,
+                    record_count: cycle.record_count,
+                    source_read_at: cycle.source_read_at,
+                    poll_interval_ms: cycle.poll_interval_ms,
+                },
+                &feed_observations,
+                &source_attempt,
+                refreshed_classes.len() == FeedClass::ALL.len(),
+                Utc::now(),
+            )
+            .await?;
+        let (activated, retained_previous_epoch_id) =
+            if epoch.status == ProjectionEpochStatus::Building {
+                let result = store
+                    .activate_manager_projection_epoch(
+                        &scope,
+                        epoch.epoch_id,
+                        &cycle_receipt.state_digest,
+                        Utc::now(),
+                        ROLLBACK_OVERLAP,
+                    )
+                    .await?;
+                (true, result.retained_previous_epoch_id)
+            } else {
+                (false, None)
+            };
+        store
+            .release_manager_projection_lease(&scope, epoch.epoch_id, lease.proof())
+            .await?;
+        *feed_cache = candidate_cache;
+        Ok(ProjectionCycleAttempt {
+            report: ManagerProjectionRunReport {
+                schema_version: "portal.execution.manager-projection.run.v1",
+                environment: profile.environment().to_owned(),
+                profile_id: profile.profile_id().to_owned(),
+                epoch_id: epoch.epoch_id,
+                cycle_id: cycle.cycle_id.as_str().to_owned(),
+                catalogue_digest,
+                feed_count: cycle.feed_count,
+                snapshot_count: cycle.snapshots.len(),
+                record_count: cycle.record_count,
+                state_digest: cycle_receipt.state_digest,
+                activated,
+                retained_previous_epoch_id,
+                source_read_at: cycle.source_read_at,
+                completed_at: Utc::now(),
+            },
+            refreshed_classes,
+        })
+    }
+    .await;
+    if outcome.is_err() {
+        match store
+            .record_manager_source_failure_for_active_scope(&source_attempt)
+            .await
+        {
+            Ok(true) => {}
+            Ok(false) => warn!("N24 source failure has no active Manager epoch to mark"),
+            Err(error) => warn!(error = %error, "N24 could not persist source failure status"),
+        }
+    }
+    outcome
 }
 
 /// Executes one cycle and emits only its sanitized JSON receipt to stdout.
@@ -610,6 +673,65 @@ fn record_attempt_completion(last_run: &mut [Option<tokio::time::Instant>], grou
     }
 }
 
+/// A 429 delays all classes in this worker (not other processes). The ordinary
+/// cadence is the floor; bounded jitter spreads independent workers.
+/// A valid server Retry-After is never shortened, including when it exceeds
+/// the local exponential ceiling. This is a scheduling bound, not an RSS or
+/// production-rate certificate.
+fn rate_limit_delay(
+    base: Duration,
+    failures: u32,
+    hint: Option<Duration>,
+    random: u64,
+) -> Duration {
+    let ceiling = base
+        .saturating_mul(1_u32 << failures.min(20))
+        .min(Duration::from_secs(60))
+        .max(base);
+    let jitter_span = ceiling.saturating_sub(base).as_millis();
+    let jitter_ms = u64::try_from(jitter_span).unwrap_or(u64::MAX);
+    let jitter = if jitter_ms == u64::MAX {
+        random
+    } else {
+        random % (jitter_ms + 1)
+    };
+    base.max(hint.unwrap_or(Duration::ZERO))
+        .saturating_add(Duration::from_millis(jitter))
+}
+
+#[derive(Default)]
+struct RateLimitState {
+    failures: u32,
+    retry_not_before: Option<tokio::time::Instant>,
+}
+
+impl RateLimitState {
+    fn allows(&self, now: tokio::time::Instant) -> bool {
+        self.retry_not_before.is_none_or(|deadline| now >= deadline)
+    }
+
+    fn limited(
+        &mut self,
+        now: tokio::time::Instant,
+        base: Duration,
+        hint: Option<Duration>,
+        random: u64,
+    ) -> Result<(), ManagerProjectionCommandError> {
+        self.failures = self.failures.saturating_add(1);
+        let delay = rate_limit_delay(base, self.failures, hint, random);
+        self.retry_not_before = Some(
+            now.checked_add(delay)
+                .ok_or(ManagerProjectionCommandError::UnsafeRetryDelay)?,
+        );
+        Ok(())
+    }
+
+    fn recovered(&mut self) {
+        self.failures = 0;
+        self.retry_not_before = None;
+    }
+}
+
 /// The shared permit starts before its scheduled wait. Its lifetime must cover
 /// both the client queue and the whole bounded request, not just connection.
 /// Bounds come from the SAME client defaults used by all Manager callers.
@@ -682,9 +804,13 @@ pub async fn run_forever(config: &EdgeConfig) -> Result<(), ManagerProjectionCom
     let mut interval = tokio::time::interval(config.manager_projection_class_intervals.fastest());
     interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
     let mut last_run: Vec<Option<tokio::time::Instant>> = vec![None; class_groups.len()];
+    let mut rate_limit = RateLimitState::default();
     loop {
         interval.tick().await;
         let now = tokio::time::Instant::now();
+        if !rate_limit.allows(now) {
+            continue;
+        }
         let elapsed = last_run
             .iter()
             .map(|previous| previous.map_or(Duration::MAX, |at| now.duration_since(at)))
@@ -699,6 +825,7 @@ pub async fn run_forever(config: &EdgeConfig) -> Result<(), ManagerProjectionCom
             .collect::<Vec<_>>();
         match run_once_mode(config, false, &requested_classes, &mut cache).await {
             Ok(attempt) => {
+                rate_limit.recovered();
                 let ProjectionCycleAttempt {
                     report,
                     refreshed_classes,
@@ -729,6 +856,27 @@ pub async fn run_forever(config: &EdgeConfig) -> Result<(), ManagerProjectionCom
                 // failed account-state poll cannot slow the transactional
                 // class, and each class still has a bounded retry cadence.
                 record_attempt_completion(&mut last_run, &due);
+                match &error {
+                    ManagerProjectionCommandError::Client(ManagerV2ClientError::RateLimited {
+                        retry_after,
+                    }) => {
+                        let random = Uuid::now_v7().as_u64_pair().1;
+                        rate_limit.limited(
+                            tokio::time::Instant::now(),
+                            config.manager_projection_class_intervals.fastest(),
+                            *retry_after,
+                            random,
+                        )?;
+                    }
+                    // Never substitute a shorter local retry for an invalid
+                    // upstream Retry-After; leave the last projection intact.
+                    ManagerProjectionCommandError::Client(
+                        ManagerV2ClientError::InvalidRetryAfter,
+                    ) => {
+                        return Err(error);
+                    }
+                    _ => {}
+                }
                 warn!(error = %error, "N24 Manager projection cadence cycle failed closed");
             }
         }
@@ -752,6 +900,7 @@ async fn load_catalogue(
     .await?
     {
         ManagerRead::Available(ManagerPayload::Catalogue(envelope)) => {
+            require_complete_source(envelope.meta())?;
             authority.validate_catalogue(envelope.data())?;
             let digest = envelope.meta().catalogue_sha256().as_str().to_owned();
             let catalogue = envelope.into_data();
@@ -783,6 +932,7 @@ async fn load_and_validate_capabilities(
     .await?
     {
         ManagerRead::Available(ManagerPayload::Capabilities(envelope)) => {
+            require_complete_source(envelope.meta())?;
             if envelope.meta().catalogue_sha256().as_str() != catalogue_digest {
                 return Err(ManagerProjectionCommandError::CycleMetadataDrift);
             }
@@ -858,7 +1008,9 @@ async fn load_feed(
     let mut seen_cursors = BTreeSet::new();
     let mut page_count = 0_usize;
     let mut facts = Vec::new();
+    let mut keys = ManagerFeedKeyGuard::default();
     let mut previous_meta: Option<ManagerMeta> = None;
+    let mut oldest_page_boundary: Option<(DateTime<Utc>, DateTime<Utc>)> = None;
     loop {
         page_count += 1;
         if page_count > MAXIMUM_FEED_PAGES {
@@ -892,6 +1044,16 @@ async fn load_feed(
             profile,
             catalogue,
         )?;
+        validate_m0_page(
+            &meta,
+            feed,
+            profile,
+            records.len(),
+            page_count,
+            next.is_some(),
+            config.manager_projection_s1_source_id.as_deref(),
+        )?;
+        accumulate_page_boundary(&mut oldest_page_boundary, meta.as_of(), source_read_at)?;
         let next_count = facts
             .len()
             .checked_add(records.len())
@@ -903,9 +1065,12 @@ async fn load_feed(
             return Err(ManagerProjectionCommandError::CycleBoundExceeded);
         }
         for record in &records {
+            // Named pages can decode any relation in the catalogue; the TS
+            // feed contract binds each projection to one backing relation.
             let relation = catalogue
                 .relation(record.relation().schema(), record.relation().relation())
                 .ok_or(ManagerProjectionCommandError::CatalogueDrift)?;
+            feed.validate_visible_profile_markers(profile, relation, record)?;
             let fact = if let Some(budget) = materialization_budget.as_deref_mut() {
                 // Count borrowed fields/envelope before cloning any fact or
                 // growing the accumulated feed. Transport page limits remain
@@ -916,19 +1081,26 @@ async fn load_feed(
             } else {
                 ManagerProjectionFact::from_record(record, relation)?
             };
-            facts.push(fact);
+            append_unique_feed_fact(&mut keys, &mut facts, fact)?;
         }
         let Some(next) = next else {
-            return ManagerFeedSnapshot::from_manager_meta(
+            // The last page proves completeness, not that earlier pages were
+            // observed at its later timestamp. Use conservative feed-wide
+            // boundaries without claiming a transactional source snapshot.
+            let (oldest_as_of, oldest_read_at) =
+                oldest_page_boundary.ok_or(ManagerProjectionCommandError::CycleMetadataDrift)?;
+            let mut snapshot = ManagerFeedSnapshot::from_manager_meta(
                 feed,
                 profile,
                 &meta,
-                source_read_at,
+                oldest_read_at,
                 poll_interval_ms,
                 page_count,
                 facts,
             )
-            .map_err(Into::into);
+            .map_err(ManagerProjectionCommandError::from)?;
+            snapshot.as_of = oldest_as_of;
+            return Ok(snapshot);
         };
         if !seen_cursors.insert(next.as_str().to_owned()) {
             return Err(ManagerProjectionCommandError::CursorCycle);
@@ -936,6 +1108,35 @@ async fn load_feed(
         previous_meta = Some(meta);
         cursor = Some(next);
     }
+}
+
+fn append_unique_feed_fact(
+    keys: &mut ManagerFeedKeyGuard,
+    facts: &mut Vec<ManagerProjectionFact>,
+    fact: ManagerProjectionFact,
+) -> Result<(), ProjectionMapError> {
+    keys.admit(&fact)?;
+    facts.push(fact);
+    Ok(())
+}
+
+fn accumulate_page_boundary(
+    boundary: &mut Option<(DateTime<Utc>, DateTime<Utc>)>,
+    as_of: DateTime<Utc>,
+    source_read_at: DateTime<Utc>,
+) -> Result<(), ManagerProjectionCommandError> {
+    // Validate each pair before taking minima: otherwise one valid older
+    // page could hide a different page whose source time is in the future.
+    if as_of > source_read_at {
+        return Err(ManagerProjectionCommandError::CycleMetadataDrift);
+    }
+    *boundary = Some(match *boundary {
+        Some((oldest_as_of, oldest_read_at)) => {
+            (oldest_as_of.min(as_of), oldest_read_at.min(source_read_at))
+        }
+        None => (as_of, source_read_at),
+    });
+    Ok(())
 }
 
 /// Routes every projection source call through the same `PostgreSQL` authority
@@ -1022,6 +1223,48 @@ fn page_result(
     }
 }
 
+#[allow(clippy::too_many_arguments)] // All immutable request bindings are checked together.
+fn validate_m0_page(
+    meta: &ManagerMeta,
+    feed: ManagerProjectionFeed,
+    profile: ManagerProjectionProfile,
+    count: usize,
+    page_count: usize,
+    has_next: bool,
+    expected_source: Option<&str>,
+) -> Result<(), ManagerProjectionCommandError> {
+    let is_m0 = matches!(
+        feed.source.relation_id(),
+        "public.account_balances" | "public.portfolios"
+    );
+    let Some(snapshot) = meta.source_snapshot() else {
+        return if expected_source.is_some() && is_m0 {
+            Err(ManagerProjectionCommandError::CycleMetadataDrift)
+        } else {
+            Ok(())
+        };
+    };
+    let scope_matches = match (&snapshot.scope, snapshot.relation.as_str()) {
+        (None, "public.portfolios") => true,
+        (Some(scope), "public.account_balances") => {
+            scope.mode == profile.environment() && scope.venue == "BINANCE"
+        }
+        _ => false,
+    };
+    if snapshot.relation != feed.source.relation_id()
+        || expected_source != Some(snapshot.source_id.as_str())
+        || !scope_matches
+        || snapshot.status != "COMPLETE"
+        || snapshot.reason.is_some()
+        || snapshot.total_in_scope != count as u64
+        || page_count != 1
+        || has_next
+    {
+        return Err(ManagerProjectionCommandError::CycleMetadataDrift);
+    }
+    Ok(())
+}
+
 fn validate_page_meta(
     previous: Option<&ManagerMeta>,
     current: &ManagerMeta,
@@ -1029,6 +1272,7 @@ fn validate_page_meta(
     profile: ManagerProjectionProfile,
     catalogue: &ManagerCatalogue,
 ) -> Result<(), ManagerProjectionCommandError> {
+    require_fresh_source(current.freshness())?;
     if current.profile_id() != profile.profile_id()
         || current.catalogue_sha256() != catalogue.catalogue_revision()
         || !valid_page_shape(
@@ -1045,6 +1289,28 @@ fn validate_page_meta(
         return Err(ManagerProjectionCommandError::CycleMetadataDrift);
     }
     Ok(())
+}
+
+// The materialized projection records a local observation time and cannot
+// represent an upstream stale/degraded quality flag. Never let a newer local
+// read timestamp turn an explicitly non-fresh source page into fresh data.
+fn require_fresh_source(freshness: Freshness) -> Result<(), ManagerProjectionCommandError> {
+    if freshness == Freshness::Fresh {
+        Ok(())
+    } else {
+        Err(ManagerProjectionCommandError::SourceNotFresh)
+    }
+}
+
+// Catalogue and capabilities are not paginated: an incomplete contract
+// cannot safely authorize a complete replacement of the cached projection.
+fn require_complete_source(meta: &ManagerMeta) -> Result<(), ManagerProjectionCommandError> {
+    require_fresh_source(meta.freshness())?;
+    if meta.completeness() == Completeness::Complete {
+        Ok(())
+    } else {
+        Err(ManagerProjectionCommandError::CycleMetadataDrift)
+    }
 }
 
 fn valid_page_shape(
@@ -1081,7 +1347,7 @@ async fn commit_cycle(
             .get(&snapshot.entity_kind)
             .ok_or(ManagerProjectionCommandError::ProjectionCacheIncomplete)?;
         store
-            .commit_manager_projection_snapshot_with_feed_reads(
+            .commit_manager_projection_poll_without_absence_authority(
                 scope,
                 epoch_id,
                 proof,
@@ -1149,8 +1415,12 @@ pub enum ManagerProjectionCommandError {
     ProjectionCacheIncomplete,
     #[error("N24 Manager source returned typed unavailability")]
     SourceUnavailable,
+    #[error("N24 Manager source metadata is not fresh")]
+    SourceNotFresh,
     #[error("N24 Manager source admission budget denied the finite request")]
     SourceAdmissionDenied,
+    #[error("N24 Manager source retry delay is not representable")]
+    UnsafeRetryDelay,
     #[error("N24 Manager source returned an unexpected payload")]
     UnexpectedPayload,
     #[error("N24 Manager page metadata drifted within a cycle")]
@@ -1195,10 +1465,250 @@ pub enum ManagerProjectionCommandError {
     ProjectionResources(#[from] crate::projection_resources::ProjectionResourceError),
 }
 
+#[cfg(all(test, feature = "manager-projection-pg-test"))]
+mod http_pg_qualification {
+    include!("manager_projection_http_pg_test.rs");
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use chrono::TimeZone as _;
+
+    fn m0_meta(relation: &str, mode: &str, venue: &str, status: &str) -> ManagerMeta {
+        use manager_v2_contract::decode_success;
+        use serde_json::json;
+        let digest = format!("sha256:{}", "a".repeat(64));
+        let mut wire = json!({"contract_version":RUNTIME_CONTRACT_REVISION,"authority":"EXECUTION_CELL",
+            "profile_id":"PAPER_BINANCE_USDM","catalogue_sha256":digest,"availability":"AVAILABLE",
+            "freshness":"FRESH","completeness":"COMPLETE","trace_id":"TEST_ONLY_M0","as_of":"2026-11-12T00:00:00Z",
+            "data":{"catalogue_revision":digest,"relation_count":1,"relations":[{
+                "id":{"schema":"public","relation":relation},"kind":"TABLE",
+                "safe_columns":[{"name":"id","ordinal":1,"data_type":"text","nullable":false}],
+                "secret_cell_excluded_column_count":0,"key":{"status":"PRIMARY_KEY","name":null,"columns":["id"]},
+                "profile_classification":"FIXED_PROFILE_CONTEXT","profile_columns":[],"query_status":"QUALIFIED_TS_OC_03D1"}]}});
+        let ManagerPayload::Catalogue(catalogue) = decode_success(
+            &ManagerV2Request::catalogue(),
+            &serde_json::to_vec(&wire).unwrap(),
+        )
+        .unwrap() else {
+            panic!()
+        };
+        let request = ManagerV2Request::relation_records(
+            catalogue.data().relation("public", relation).unwrap(),
+            None,
+            PageLimit::default(),
+        )
+        .unwrap();
+        wire["data"] = json!({"relation":{"schema":"public","relation":relation},"items":[],"next_cursor":null});
+        wire["completeness"] = json!(status);
+        wire["source_snapshot"] = json!({"version":"edge-s1.v1","mechanism":"M0","source_id":digest,
+            "relation":format!("public.{relation}"), "scope":if relation == "portfolios" {serde_json::Value::Null} else {json!({"mode":mode,"venue":venue})},
+            "generation":{"at":"2026-11-12T00:00:00Z","snapshot":"10:20:11,12"},"total_in_scope":0,
+            "status":status,"reason":if status=="COMPLETE" {serde_json::Value::Null} else {json!("SCOPE_EXCEEDS_ONE_PAGE")},"absence_authority":false});
+        let ManagerPayload::RelationRecords(records) =
+            decode_success(&request, &serde_json::to_vec(&wire).unwrap()).unwrap()
+        else {
+            panic!()
+        };
+        records.meta().clone()
+    }
+
+    #[test]
+    fn m0_worker_checks_pin_scope_count_single_page_and_partial() {
+        let feed = FEEDS
+            .iter()
+            .find(|feed| feed.feed_id == "relation.account_balances")
+            .copied()
+            .unwrap();
+        let profile = ManagerProjectionProfile::Paper;
+        let digest = format!("sha256:{}", "a".repeat(64));
+        let meta = m0_meta("account_balances", "paper", "BINANCE", "COMPLETE");
+        assert!(validate_m0_page(&meta, feed, profile, 0, 1, false, Some(&digest)).is_ok());
+        for (count, pages, next, pin) in [
+            (1, 1, false, Some(digest.as_str())),
+            (0, 2, false, Some(digest.as_str())),
+            (0, 1, true, Some(digest.as_str())),
+            (0, 1, false, None),
+            (0, 1, false, Some("sha256:other")),
+        ] {
+            assert!(validate_m0_page(&meta, feed, profile, count, pages, next, pin).is_err());
+        }
+        for (mode, venue, status) in [
+            ("live", "BINANCE", "COMPLETE"),
+            ("paper", "OKX", "COMPLETE"),
+            ("paper", "binance", "COMPLETE"),
+            ("paper", "BINANCE", "PARTIAL"),
+        ] {
+            let invalid = m0_meta("account_balances", mode, venue, status);
+            assert!(validate_m0_page(&invalid, feed, profile, 0, 1, false, Some(&digest)).is_err());
+        }
+        let shared = m0_meta("portfolios", "paper", "BINANCE", "COMPLETE");
+        let portfolio = FEEDS
+            .iter()
+            .find(|feed| feed.feed_id == "manager.portfolio")
+            .copied()
+            .unwrap();
+        assert!(validate_m0_page(&shared, portfolio, profile, 0, 1, false, Some(&digest)).is_ok());
+        assert!(validate_m0_page(&shared, feed, profile, 0, 1, false, Some(&digest)).is_err());
+    }
+
+    #[test]
+    fn m0_cache_fence_keeps_old_candidate_on_downgrade_or_rewind() {
+        let profile = ManagerProjectionProfile::Paper;
+        let digest = format!("sha256:{}", "a".repeat(64));
+        let mut cache = complete_cache(profile, &digest);
+        let feed = FEEDS
+            .iter()
+            .find(|feed| feed.feed_id == "relation.account_balances")
+            .copied()
+            .unwrap();
+        let mut original = cache.feeds[feed.feed_id].as_ref().clone();
+        original.source_snapshot = m0_meta("account_balances", "paper", "BINANCE", "COMPLETE")
+            .source_snapshot()
+            .cloned();
+        cache.feeds.insert(feed.feed_id, Arc::new(original.clone()));
+        let mut next = original.clone();
+        next.source_snapshot.as_mut().unwrap().generation.snapshot = "20:30:".into();
+        let accepted = cache.with_refreshed(profile, &digest, vec![next]).unwrap();
+        assert!(accepted
+            .with_refreshed(profile, &digest, vec![original.clone()])
+            .is_err());
+        original.source_snapshot = None;
+        assert!(accepted
+            .with_refreshed(profile, &digest, vec![original])
+            .is_err());
+        assert_eq!(
+            accepted.feeds[feed.feed_id]
+                .source_snapshot
+                .as_ref()
+                .unwrap()
+                .generation
+                .snapshot,
+            "20:30:"
+        );
+    }
+
+    #[test]
+    fn m0_catalogue_transition_requires_a_new_complete_baseline() {
+        let profile = ManagerProjectionProfile::Paper;
+        let old_digest = format!("sha256:{}", "a".repeat(64));
+        let new_digest = format!("sha256:{}", "b".repeat(64));
+        let old = complete_cache(profile, &old_digest);
+        let feed = FEEDS
+            .iter()
+            .find(|feed| feed.feed_id == "relation.account_balances")
+            .copied()
+            .unwrap();
+        let mut fresh = old.feeds[feed.feed_id].as_ref().clone();
+        fresh.catalogue_digest = new_digest.clone();
+        fresh.source_snapshot = m0_meta("account_balances", "paper", "BINANCE", "COMPLETE")
+            .source_snapshot()
+            .cloned();
+        let partial = old
+            .with_refreshed(profile, &new_digest, vec![fresh.clone()])
+            .unwrap();
+        assert_eq!(partial.feeds.len(), 1);
+        assert!(partial
+            .complete_cycle(profile, &new_digest, Duration::from_secs(2))
+            .is_err());
+        let baseline = FEEDS
+            .iter()
+            .map(|expected| {
+                if *expected == feed {
+                    fresh.clone()
+                } else {
+                    let mut item = old.feeds[expected.feed_id].as_ref().clone();
+                    item.catalogue_digest = new_digest.clone();
+                    item
+                }
+            })
+            .collect();
+        let next = old.with_refreshed(profile, &new_digest, baseline).unwrap();
+        assert!(next
+            .complete_cycle(profile, &new_digest, Duration::from_secs(2))
+            .is_ok());
+        assert!(old.matches_catalogue(profile, &old_digest));
+    }
+
+    #[test]
+    fn repeated_key_never_enters_worker_candidate_feed() {
+        let mut keys = ManagerFeedKeyGuard::default();
+        let mut facts = Vec::new();
+        let first = ManagerProjectionFact::new(
+            "public.orders",
+            b"same-key",
+            serde_json::json!({"status":"OPEN"}),
+        )
+        .unwrap();
+        let changed = ManagerProjectionFact::new(
+            "public.orders",
+            b"same-key",
+            serde_json::json!({"status":"FILLED"}),
+        )
+        .unwrap();
+        append_unique_feed_fact(&mut keys, &mut facts, first).unwrap();
+        assert!(matches!(
+            append_unique_feed_fact(&mut keys, &mut facts, changed),
+            Err(ProjectionMapError::DuplicateSourceKey)
+        ));
+        assert_eq!(facts.len(), 1);
+    }
+
+    #[test]
+    fn rate_limit_delay_is_bounded_jittered_and_never_shortens_server_hint() {
+        let base = Duration::from_secs(2);
+        assert_eq!(rate_limit_delay(base, 1, None, 0), base);
+        assert_eq!(
+            rate_limit_delay(base, 1, None, 2_000),
+            Duration::from_secs(4)
+        );
+        assert_eq!(rate_limit_delay(base, 2, None, 0), base);
+        assert_eq!(
+            rate_limit_delay(base, 30, None, u64::MAX),
+            Duration::from_millis(29_729)
+        );
+        assert_eq!(
+            rate_limit_delay(base, 30, Some(Duration::from_secs(120)), 1_000),
+            Duration::from_secs(121)
+        );
+        for failures in 1..=100 {
+            for seed in [0, 1, u64::MAX] {
+                let delay = rate_limit_delay(base, failures, None, seed);
+                assert!(delay >= base && delay <= Duration::from_secs(60));
+            }
+        }
+    }
+
+    #[test]
+    fn rate_limit_state_waits_then_recovers_without_skipping_original_cadence() {
+        let start = tokio::time::Instant::now();
+        let mut state = RateLimitState::default();
+        assert!(state.allows(start));
+        state
+            .limited(
+                start,
+                Duration::from_secs(2),
+                Some(Duration::from_secs(5)),
+                1_000,
+            )
+            .unwrap();
+        assert!(!state.allows(start + Duration::from_millis(5_999)));
+        assert!(state.allows(start + Duration::from_secs(6)));
+        state
+            .limited(
+                start + Duration::from_secs(6),
+                Duration::from_secs(2),
+                None,
+                6_000,
+            )
+            .unwrap();
+        assert!(!state.allows(start + Duration::from_secs(13)));
+        assert!(state.allows(start + Duration::from_secs(14)));
+        state.recovered();
+        assert!(state.allows(start + Duration::from_secs(14)));
+        assert_eq!(state.failures, 0);
+    }
 
     #[test]
     fn long_cycle_completion_defers_attempted_classes_without_delaying_peers() {
@@ -1368,6 +1878,170 @@ mod tests {
     }
 
     #[test]
+    fn paginated_feed_uses_oldest_page_observation_boundaries() {
+        let mut boundary = None;
+        accumulate_page_boundary(&mut boundary, at(1), at(5)).unwrap();
+        assert_eq!(boundary, Some((at(1), at(5))));
+        accumulate_page_boundary(&mut boundary, at(2), at(4)).unwrap();
+        assert_eq!(boundary, Some((at(1), at(4))));
+        // A local clock correction must never make the first page newer.
+        accumulate_page_boundary(&mut boundary, at(3), at(3)).unwrap();
+        assert_eq!(boundary, Some((at(1), at(3))));
+        assert!(matches!(
+            accumulate_page_boundary(&mut boundary, at(4), at(2)),
+            Err(ManagerProjectionCommandError::CycleMetadataDrift)
+        ));
+        assert_eq!(boundary, Some((at(1), at(3))));
+    }
+
+    #[test]
+    fn paginated_feed_oldest_boundary_is_checked_by_cycle_validation() {
+        let profile = ManagerProjectionProfile::Paper;
+        let digest = format!("sha256:{}", "a".repeat(64));
+        let baseline = complete_cache(profile, &digest);
+        let mut source = baseline.feeds[FEEDS[0].feed_id].as_ref().clone();
+        // Defence in depth even if a caller ever bypasses the accumulator.
+        (source.as_of, source.source_read_at) = (at(3), at(2));
+        source.page_count = 2;
+        let candidate = baseline
+            .with_refreshed(profile, &digest, vec![source])
+            .unwrap();
+        assert!(candidate
+            .complete_cycle(profile, &digest, Duration::from_millis(2_000))
+            .unwrap()
+            .build()
+            .is_err());
+    }
+
+    #[test]
+    fn paginated_feed_oldest_boundary_reaches_built_observations() {
+        let profile = ManagerProjectionProfile::Paper;
+        let digest = format!("sha256:{}", "a".repeat(64));
+        let baseline = cache_with_facts(profile, &digest);
+        let mut source = baseline.feeds[FEEDS[0].feed_id].as_ref().clone();
+        let mut boundary = None;
+        accumulate_page_boundary(&mut boundary, at(1), at(2)).unwrap();
+        accumulate_page_boundary(&mut boundary, at(4), at(5)).unwrap();
+        (source.as_of, source.source_read_at) = boundary.unwrap();
+        source.page_count = 2;
+        let built = baseline
+            .with_refreshed(profile, &digest, vec![source])
+            .unwrap()
+            .complete_cycle(profile, &digest, Duration::from_millis(2_000))
+            .unwrap()
+            .build()
+            .unwrap();
+        let observation = built
+            .snapshots
+            .iter()
+            .flat_map(|snapshot| &snapshot.observations)
+            .find(|observation| observation.payload["source_feed"] == FEEDS[0].feed_id)
+            .unwrap();
+        assert_eq!(observation.as_of, Some(at(1)));
+        assert_eq!(observation.source_read_at, at(2));
+    }
+
+    #[test]
+    fn projection_rejects_every_non_fresh_owner_state() {
+        assert!(require_fresh_source(Freshness::Fresh).is_ok());
+        for freshness in [
+            Freshness::Degraded,
+            Freshness::Stale,
+            Freshness::Unavailable,
+            Freshness::Unknown,
+        ] {
+            assert!(matches!(
+                require_fresh_source(freshness),
+                Err(ManagerProjectionCommandError::SourceNotFresh)
+            ));
+        }
+    }
+
+    #[test]
+    fn pagination_rejects_stale_intermediate_and_terminal_pages() {
+        use manager_v2_contract::decode_success_for_profile;
+        use serde_json::json;
+
+        let digest = format!("sha256:{}", "a".repeat(64));
+        let wire = |freshness: &str, completeness: &str| {
+            serde_json::to_vec(&json!({
+                "contract_version": RUNTIME_CONTRACT_REVISION,
+                "authority": "EXECUTION_CELL",
+                "profile_id": "PAPER_BINANCE_USDM",
+                "catalogue_sha256": digest,
+                "availability": "AVAILABLE",
+                "freshness": freshness,
+                "completeness": completeness,
+                "trace_id": "TEST_ONLY-page-quality",
+                "as_of": "2026-09-01T00:00:00Z",
+                "data": {
+                    "catalogue_revision": digest,
+                    "relation_count": 1,
+                    "relations": [{
+                        "id": {"schema":"public", "relation":"orders"},
+                        "kind":"TABLE",
+                        "safe_columns":[{"name":"id", "ordinal":1, "data_type":"text", "nullable":false}],
+                        "secret_cell_excluded_column_count":0,
+                        "key":{"status":"PRIMARY_KEY", "name":null, "columns":["id"]},
+                        "profile_classification":"FIXED_PROFILE_CONTEXT",
+                        "profile_columns":[],
+                        "query_status":"QUALIFIED_TS_OC_03D1"
+                    }]
+                }
+            }))
+            .unwrap()
+        };
+        let decode = |freshness, completeness| {
+            let payload = decode_success_for_profile(
+                &ManagerV2Request::catalogue(),
+                &wire(freshness, completeness),
+                "PAPER_BINANCE_USDM",
+            )
+            .unwrap();
+            let ManagerPayload::Catalogue(envelope) = payload else {
+                panic!("expected catalogue");
+            };
+            envelope
+        };
+        let fresh_partial = decode("FRESH", "PARTIAL");
+        let stale_partial = decode("STALE", "PARTIAL");
+        let stale_final = decode("STALE", "COMPLETE");
+        let fresh_final = decode("FRESH", "COMPLETE");
+        let catalogue = fresh_partial.data();
+        let profile = ManagerProjectionProfile::Paper;
+        assert!(require_complete_source(fresh_final.meta()).is_ok());
+        assert!(matches!(
+            require_complete_source(fresh_partial.meta()),
+            Err(ManagerProjectionCommandError::CycleMetadataDrift)
+        ));
+        assert!(matches!(
+            require_complete_source(stale_final.meta()),
+            Err(ManagerProjectionCommandError::SourceNotFresh)
+        ));
+        assert!(validate_page_meta(None, fresh_partial.meta(), true, profile, catalogue).is_ok());
+        for (page, has_next) in [(&stale_partial, true), (&stale_final, false)] {
+            assert!(matches!(
+                validate_page_meta(
+                    Some(fresh_partial.meta()),
+                    page.meta(),
+                    has_next,
+                    profile,
+                    catalogue
+                ),
+                Err(ManagerProjectionCommandError::SourceNotFresh)
+            ));
+        }
+        assert!(validate_page_meta(
+            Some(fresh_partial.meta()),
+            fresh_final.meta(),
+            false,
+            profile,
+            catalogue
+        )
+        .is_ok());
+    }
+
+    #[test]
     fn current_source_page_shape_rejects_drift_and_false_completion() {
         assert!(!valid_page_shape(
             Some(at(2)),
@@ -1411,6 +2085,7 @@ mod tests {
             completeness: Completeness::Complete,
             page_count: 1,
             facts: Vec::new(),
+            source_snapshot: None,
         }
     }
 

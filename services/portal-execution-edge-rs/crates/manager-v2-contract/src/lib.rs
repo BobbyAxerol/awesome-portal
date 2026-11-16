@@ -20,6 +20,8 @@ use serde::{de::DeserializeOwned, ser::SerializeMap, Deserialize, Serialize, Ser
 use serde_json::Value;
 use thiserror::Error;
 
+pub mod s1;
+
 include!(concat!(env!("OUT_DIR"), "/contract_identity.rs"));
 
 pub const DEFAULT_PAGE_LIMIT: u16 = 100;
@@ -518,9 +520,15 @@ pub struct ManagerMeta {
     completeness: Completeness,
     trace_id: String,
     as_of: DateTime<Utc>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    source_snapshot: Option<s1::SourceSnapshot>,
 }
 
 impl ManagerMeta {
+    #[must_use]
+    pub fn source_snapshot(&self) -> Option<&s1::SourceSnapshot> {
+        self.source_snapshot.as_ref()
+    }
     #[must_use]
     pub const fn contract_version(&self) -> &'static str {
         self.contract_version
@@ -1244,6 +1252,12 @@ fn parse_envelope<T: DeserializeOwned>(
     }
     validate_trace_id(&wire.trace_id)?;
     let as_of = parse_utc_timestamp(&wire.as_of)?;
+    if let Some(snapshot) = &wire.source_snapshot {
+        snapshot.validate(as_of)?;
+        if (snapshot.status == "COMPLETE") != (wire.completeness == Completeness::Complete) {
+            return Err(ContractError::EnvelopeIdentityMismatch);
+        }
+    }
     Ok((
         ManagerMeta {
             contract_version: RUNTIME_CONTRACT_REVISION,
@@ -1255,6 +1269,7 @@ fn parse_envelope<T: DeserializeOwned>(
             completeness: wire.completeness,
             trace_id: wire.trace_id,
             as_of,
+            source_snapshot: wire.source_snapshot,
         },
         wire.data,
     ))
@@ -1720,6 +1735,8 @@ struct ManagerEnvelopeWire<T> {
     completeness: Completeness,
     trace_id: String,
     as_of: String,
+    #[serde(default)]
+    source_snapshot: Option<s1::SourceSnapshot>,
     data: T,
 }
 

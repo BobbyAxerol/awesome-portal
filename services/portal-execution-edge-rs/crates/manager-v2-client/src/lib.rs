@@ -22,7 +22,7 @@ use manager_v2_contract::{
     MAXIMUM_RESPONSE_BYTES, RUNTIME_CONTRACT_REVISION,
 };
 use reqwest::{
-    header::{HeaderName, HeaderValue, ACCEPT},
+    header::{HeaderMap, HeaderName, HeaderValue, ACCEPT, RETRY_AFTER},
     redirect::Policy,
     Certificate, Client, Identity,
 };
@@ -251,6 +251,11 @@ impl ManagerV2Client {
             return Err(ManagerV2ClientError::RedirectDenied);
         }
         let status = response.status().as_u16();
+        if status == 429 {
+            return Err(ManagerV2ClientError::RateLimited {
+                retry_after: parse_retry_after(response.headers())?,
+            });
+        }
         if !matches!(status, 200 | 503) {
             return Err(ManagerV2ClientError::UnexpectedHttpStatus(status));
         }
@@ -414,6 +419,33 @@ impl ManagerV2Client {
     }
 }
 
+/// Parse both RFC Retry-After forms. A malformed or ambiguous server hint
+/// fails closed rather than allowing a retry earlier than the source asked.
+fn parse_retry_after(headers: &HeaderMap) -> Result<Option<Duration>, ManagerV2ClientError> {
+    let all = headers.get_all(RETRY_AFTER);
+    let mut values = all.iter();
+    let Some(value) = values.next() else {
+        return Ok(None);
+    };
+    if values.next().is_some() {
+        return Err(ManagerV2ClientError::InvalidRetryAfter);
+    }
+    let value = value
+        .to_str()
+        .map_err(|_| ManagerV2ClientError::InvalidRetryAfter)?
+        .trim();
+    if !value.is_empty() && value.bytes().all(|byte| byte.is_ascii_digit()) {
+        let seconds = value
+            .parse::<u64>()
+            .map_err(|_| ManagerV2ClientError::InvalidRetryAfter)?;
+        return Ok(Some(Duration::from_secs(seconds)));
+    }
+    let deadline = chrono::DateTime::parse_from_rfc2822(value)
+        .map_err(|_| ManagerV2ClientError::InvalidRetryAfter)?;
+    let delta = deadline.signed_duration_since(chrono::Utc::now());
+    Ok(Some(delta.to_std().unwrap_or(Duration::ZERO)))
+}
+
 fn validate_origin(raw: &str, require_https: bool) -> Result<Url, ManagerV2ClientError> {
     let url = Url::parse(raw).map_err(|_| ManagerV2ClientError::InvalidSourceProxyOrigin)?;
     let scheme_ok = url.scheme() == "https" || (!require_https && url.scheme() == "http");
@@ -551,6 +583,10 @@ pub enum ManagerV2ClientError {
     InvalidContentType,
     #[error("Manager-v2 response exceeded the owner-qualified byte limit")]
     ResponseTooLarge,
+    #[error("Manager-v2 Source Proxy is rate limited")]
+    RateLimited { retry_after: Option<Duration> },
+    #[error("Manager-v2 Source Proxy returned an invalid Retry-After")]
+    InvalidRetryAfter,
     #[error("Manager-v2 Source Proxy returned unexpected HTTP status {0}")]
     UnexpectedHttpStatus(u16),
     #[error("Manager extension Source Proxy returned unexpected HTTP status {0}")]

@@ -15,6 +15,7 @@ execution-contracts = { path = "../execution-contracts" }
 futures-util.workspace = true
 hex.workspace = true
 home.workspace = true
+manager-projection = { path = "../manager-projection" }
 projection-core = { path = "../projection-core" }
 query-api = { path = "../query-api" }
 realtime-sse = { path = "../realtime-sse" }
