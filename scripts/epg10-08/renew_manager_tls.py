@@ -27,6 +27,7 @@ import http.client
 from cryptography import x509
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+from cryptography.x509.oid import NameOID
 
 ROOT = Path('/home/bobby/secure/portal-manager-read-v2')
 RUNTIME = ROOT / 'runtime'
@@ -47,11 +48,16 @@ SERVICES = (
 )
 TARGETS = (RUNTIME / 'facade-server-cert.pem', RUNTIME / 'issuer-server-cert.pem',
            RUNTIME / 'source-proxy-manager-client.pem', PROXY / 'manager-v2-client.pem')
+# Trust anchors; only a --new-ca bundle touches them (design: NEW_MANAGER_CA_DESIGN.md).
+ANCHORS = (RUNTIME / 'mtls-ca-cert.pem', PROXY / 'manager-v2-ca.crt')
+PUBLIC_MODES = (0o600, 0o640, 0o644)
+NEW_CA_COMMON_NAME = 'trading-system-portal-manager-read-v2-ca'
 PROFILES = (('172.23.0.1', 'paper', 'PAPER_BINANCE_USDM'),
             ('172.24.0.1', 'sandbox', 'SANDBOX_BINANCE_USDM'),
             ('172.25.0.1', 'live', 'LIVE_BINANCE_USDM'))
 MAX_BYTES = 1_048_576
 DEFAULT_VALIDITY_DAYS = 30
+DEFAULT_CA_VALIDITY_DAYS = 3650
 MAX_VALIDITY_DAYS = 3700
 LEAF_CA_MARGIN = timedelta(days=7)  # explicit --validity-days must end this early
 RUNTIME_CONTRACT = 'trading-system.portal-execution.manager-v2.runtime.v1'
@@ -63,13 +69,13 @@ def require(condition, code):
         raise ValueError(code)
 
 
-def private_read(path):
+def private_read(path, modes=(0o600, 0o640)):
     path = Path(path)
     fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW)
     try:
         info = os.fstat(fd)
         require(stat.S_ISREG(info.st_mode) and info.st_nlink == 1 and
-                stat.S_IMODE(info.st_mode) in (0o600, 0o640) and
+                stat.S_IMODE(info.st_mode) in modes and
                 0 < info.st_size <= MAX_BYTES, 'PRIVATE_FILE_INVALID')
         data = os.read(fd, MAX_BYTES + 1)
         require(len(data) == info.st_size, 'PRIVATE_FILE_CHANGED_OR_OVERSIZED')
@@ -87,11 +93,36 @@ def public_key(key):
                             serialization.PublicFormat.SubjectPublicKeyInfo)
 
 
-def renew(original, key, ca, ca_key, now, validity_days=None):
+def targets_of(manifest):
+    return TARGETS + ANCHORS if manifest.get('new_ca') else TARGETS
+
+
+def new_ca_certificate(old_ca, key, now, days):
+    """Self-signed Manager CA: old subject with only the CN replaced, CA:TRUE pathlen 0."""
+    subject = x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, NEW_CA_COMMON_NAME)
+                         if a.oid == NameOID.COMMON_NAME else a for a in old_ca.subject])
+    require(subject != old_ca.subject, 'NEW_CA_SUBJECT_NOT_DISTINCT')
+    return (x509.CertificateBuilder().subject_name(subject).issuer_name(subject)
+        .public_key(key.public_key()).serial_number(x509.random_serial_number())
+        .not_valid_before(now - timedelta(minutes=5)).not_valid_after(now + timedelta(days=days))
+        .add_extension(x509.BasicConstraints(ca=True, path_length=0), True)
+        .add_extension(x509.KeyUsage(False, False, False, False, False, True, True, False, False), True)
+        .add_extension(x509.SubjectKeyIdentifier.from_public_key(key.public_key()), False)
+        .sign(key, algorithm=None))
+
+
+def identity_extensions(cert, new_ca):
+    # A new issuer legitimately changes the AuthorityKeyIdentifier; nothing else may differ.
+    return [e for e in cert.extensions
+            if not (new_ca and isinstance(e.value, x509.AuthorityKeyIdentifier))]
+
+
+def renew(original, key, ca, ca_key, now, validity_days=None, old_ca=None):
     """Renew only validity/serial/signature; all identities/extensions/keys stay.
 
     validity_days None keeps the original 30-day bound. An explicit value is
     range-checked and must end at least LEAF_CA_MARGIN before the CA expires.
+    old_ca (new-CA mode): original was issued by old_ca; ca/ca_key are the NEW CA.
     """
     require(validity_days is None or 1 <= validity_days <= MAX_VALIDITY_DAYS,
             'LEAF_VALIDITY_OUT_OF_RANGE')
@@ -100,11 +131,12 @@ def renew(original, key, ca, ca_key, now, validity_days=None):
     require(public_key(key.public_key()) == public_key(original.public_key()),
             'LEAF_KEY_MISMATCH')
     require(public_key(ca_key.public_key()) == public_key(ca.public_key()), 'CA_KEY_MISMATCH')
-    require(original.issuer == ca.subject and not original.extensions.get_extension_for_class(
+    issued_by = old_ca or ca
+    require(original.issuer == issued_by.subject and not original.extensions.get_extension_for_class(
         x509.BasicConstraints).value.ca, 'LEAF_AUTHORITY_INVALID')
     require(ca.extensions.get_extension_for_class(x509.BasicConstraints).value.ca,
             'SIGNER_NOT_CA')
-    ca.public_key().verify(original.signature, original.tbs_certificate_bytes)
+    issued_by.public_key().verify(original.signature, original.tbs_certificate_bytes)
     until = now + timedelta(days=DEFAULT_VALIDITY_DAYS if validity_days is None else validity_days)
     ca_after = ca.not_valid_after.replace(tzinfo=timezone.utc)
     require(ca.not_valid_before.replace(tzinfo=timezone.utc) <= now and
@@ -116,7 +148,10 @@ def renew(original, key, ca, ca_key, now, validity_days=None):
         .serial_number(x509.random_serial_number())
         .not_valid_before(now - timedelta(minutes=5)).not_valid_after(until))
     for extension in original.extensions:
-        builder = builder.add_extension(extension.value, extension.critical)
+        value = extension.value
+        if old_ca and isinstance(value, x509.AuthorityKeyIdentifier):
+            value = x509.AuthorityKeyIdentifier.from_issuer_public_key(ca.public_key())
+        builder = builder.add_extension(value, extension.critical)
     cert = builder.sign(ca_key, algorithm=None)
     ca.public_key().verify(cert.signature, cert.tbs_certificate_bytes)
     return cert.public_bytes(serialization.Encoding.PEM)
@@ -168,24 +203,37 @@ def check_lock():
         raise ValueError('EXPIRED_LOCK_PRESENT_REMOVE_ONLY_AFTER_OWNER_CHECK')
 
 
-def prepare(validity_days=None):
+def prepare(validity_days=None, new_ca_days=None):
     require(validity_days is None or 1 <= validity_days <= MAX_VALIDITY_DAYS,
             'LEAF_VALIDITY_OUT_OF_RANGE')  # Refuse before any private read.
+    require(new_ca_days is None or 1 <= new_ca_days <= MAX_VALIDITY_DAYS,
+            'NEW_CA_VALIDITY_OUT_OF_RANGE')
     check_lock()  # Preparation also respects the read-only foreign window.
     ca_bytes = private_read(RUNTIME / 'mtls-ca-cert.pem')
     ca = x509.load_pem_x509_certificate(ca_bytes)
     require(ca.fingerprint(hashes.SHA256()).hex() == CA_SHA, 'PINNED_CA_CHANGED')
-    ca_key = serialization.load_pem_private_key(private_read(CA_KEY), None)
+    # New-CA mode never reads the old CA private key; the old CA is only trusted, not used.
+    ca_key = None if new_ca_days else serialization.load_pem_private_key(private_read(CA_KEY), None)
     before = roster()
     require(all(x['running'] for x in before), 'SERVICE_NOT_RUNNING')
+    targets = TARGETS + ANCHORS if new_ca_days else TARGETS
     originals = [private_read(path) for path in TARGETS]
     require(originals[2] == originals[3], 'PROXY_IDENTITY_COPIES_DIVERGED')
+    if new_ca_days:
+        originals += [private_read(path, PUBLIC_MODES) for path in ANCHORS]
+        require(all([c.fingerprint(hashes.SHA256()).hex() for c in
+                     x509.load_pem_x509_certificates(blob)] == [CA_SHA] for blob in originals[4:]),
+                'ANCHOR_NOT_PINNED_CA')  # Each anchor holds exactly the pinned old CA today.
     keys = [private_read(RUNTIME / 'facade-server-key.pem'),
             private_read(RUNTIME / 'issuer-server-key.pem'),
             re.search(rb'-----BEGIN PRIVATE KEY-----.*?-----END PRIVATE KEY-----',
                       originals[2], re.S).group(0) + b'\n']
     now = datetime.now(timezone.utc)
     days = DEFAULT_VALIDITY_DAYS if validity_days is None else validity_days
+    signer, signer_key, old_ca = ca, ca_key, None
+    if new_ca_days:
+        signer_key = Ed25519PrivateKey.generate()
+        signer, old_ca = new_ca_certificate(ca, signer_key, now, new_ca_days), ca
     bundle = Path(tempfile.mkdtemp(prefix='renewal-epg10-08-', dir=ROOT))
     os.chmod(bundle, 0o700)
     manifest = {'schema': 'epg10.manager-tls-renewal.v1', 'created_utc': now.isoformat(),
@@ -193,17 +241,30 @@ def prepare(validity_days=None):
                 'ca_sha256': CA_SHA, 'roster': before, 'targets': [], 'validity_days': days,
                 # X.509 keeps whole seconds; activate compares each staged notAfter to this.
                 'leaf_not_after_utc': (now + timedelta(days=days)).replace(microsecond=0).isoformat()}
+    if new_ca_days:
+        new_pem = signer.public_bytes(serialization.Encoding.PEM)
+        manifest.update(new_ca=True, ca_validity_days=new_ca_days,
+                        new_ca_sha256=signer.fingerprint(hashes.SHA256()).hex(),
+                        new_ca_not_after_utc=signer.not_valid_after.replace(tzinfo=timezone.utc).isoformat())
     try:
+        if new_ca_days:  # The CA private key lives only in this 0700 bundle; never printed.
+            write_new(bundle / 'new-ca.pem', new_pem)
+            write_new(bundle / 'new-ca-key.pem', signer_key.private_bytes(
+                serialization.Encoding.PEM, serialization.PrivateFormat.PKCS8,
+                serialization.NoEncryption()))
         # Fresh same-identity recovery; expired originals are forensic only.
         for label in ('primary', 'fallback'):
             values = [renew(x509.load_pem_x509_certificate(originals[i]),
-                            serialization.load_pem_private_key(keys[i], None), ca, ca_key, now,
-                            validity_days)
+                            serialization.load_pem_private_key(keys[i], None), signer, signer_key, now,
+                            validity_days, old_ca)
                       for i in range(3)]
             values[2] += keys[2]
             for i in range(4):
                 write_new(bundle / f'{label}-{i}.pem', values[min(i, 2)])
-        for i, path in enumerate(TARGETS):
+            for i in range(4, len(targets)):  # Trust bundle per anchor: old CA + new CA.
+                write_new(bundle / f'{label}-{i}.pem',
+                          ca.public_bytes(serialization.Encoding.PEM) + new_pem)
+        for i, path in enumerate(targets):
             info = path.stat()
             write_new(bundle / f'original-{i}.pem', originals[i])
             manifest['targets'].append({'path': str(path), 'original_sha256': sha(originals[i]),
@@ -215,14 +276,16 @@ def prepare(validity_days=None):
     except Exception:
         # Exact newly allocated private directory only, never live credentials.
         for label in ('primary', 'fallback', 'original'):
-            for i in range(4):
+            for i in range(6):
                 (bundle / f'{label}-{i}.pem').unlink(missing_ok=True)
-        (bundle / 'manifest.json').unlink(missing_ok=True)
+        for name in ('manifest.json', 'new-ca.pem', 'new-ca-key.pem'):
+            (bundle / name).unlink(missing_ok=True)
         bundle.rmdir()
         raise
     return {'status': 'PREPARED_NOT_ACTIVATED', 'private_bundle': str(bundle),
             'manifest_sha256': sha(private_read(bundle / 'manifest.json')),
-            'keys_jwt_ca_db_config_images_unchanged': True, 'runtime_mutations': 0}
+            'keys_jwt_ca_db_config_images_unchanged': not new_ca_days, 'runtime_mutations': 0,
+            **{k: manifest[k] for k in ('new_ca_sha256', 'new_ca_not_after_utc') if k in manifest}}
 
 
 def replace_exact(path, payload, info):
@@ -306,7 +369,7 @@ def page_data(body, *, relation=None, kind=None):
             (kind is None or data.get('kind') == kind), 'READ_TARGET_INVALID')
 
 
-def qualify():
+def qualify(new_ca=None):
     ca = RUNTIME / 'mtls-ca-cert.pem'
     identity = RUNTIME / 'source-proxy-manager-client.pem'
     context = tls_context(ca, identity)
@@ -315,8 +378,11 @@ def qualify():
         _operation_guard()
         name = 'manager-facade' if port % 2 else 'manager-issuer'
         expected_file = RUNTIME / ('facade-server-cert.pem' if port % 2 else 'issuer-server-cert.pem')
-        expected_sha = sha(x509.load_pem_x509_certificate(private_read(expected_file)).public_bytes(
-            serialization.Encoding.DER))
+        served = x509.load_pem_x509_certificate(private_read(expected_file))
+        expected_sha = sha(served.public_bytes(serialization.Encoding.DER))
+        if new_ca is not None:  # Stage-accurate: the served leaf must chain to the NEW CA.
+            require(served.issuer == new_ca.subject, 'SERVED_CHAIN_NOT_NEW_CA')
+            new_ca.public_key().verify(served.signature, served.tbs_certificate_bytes)
         for attempt in range(10):
             try:
                 with socket.create_connection(('127.0.0.1', port), timeout=5) as raw:
@@ -394,6 +460,14 @@ def validate_staged(bundle, manifest):
     require(ca.not_valid_before.replace(tzinfo=timezone.utc) <= now and
             ca.not_valid_after.replace(tzinfo=timezone.utc) > now + timedelta(days=1),
             'CA_VALIDITY_INSUFFICIENT')
+    new_ca = bool(manifest.get('new_ca'))
+    if new_ca:  # The new CA is pinned by the manifest; the old CA stays pinned by CA_SHA above.
+        ca = x509.load_pem_x509_certificate(private_read(bundle / 'new-ca.pem'))
+        require(ca.fingerprint(hashes.SHA256()).hex() == manifest.get('new_ca_sha256') and
+                ca.extensions.get_extension_for_class(x509.BasicConstraints).value.ca and
+                ca.not_valid_before.replace(tzinfo=timezone.utc) <= now and
+                ca.not_valid_after.replace(tzinfo=timezone.utc) > now + timedelta(days=1),
+                'NEW_CA_INVALID')
     for i in range(4):
         original = x509.load_pem_x509_certificate(private_read(TARGETS[i]))
         original_key = serialization.load_pem_private_key(private_read(
@@ -404,7 +478,7 @@ def validate_staged(bundle, manifest):
             blob = private_read(bundle / f'{label}-{i}.pem')
             leaf = x509.load_pem_x509_certificate(blob)
             require(leaf.subject == original.subject and leaf.issuer == ca.subject and
-                    list(leaf.extensions) == list(original.extensions) and
+                    identity_extensions(leaf, new_ca) == identity_extensions(original, new_ca) and
                     public_key(leaf.public_key()) == public_key(original.public_key()) ==
                     public_key(original_key.public_key()) and
                     leaf.not_valid_before.replace(tzinfo=timezone.utc) <= now and
@@ -422,6 +496,12 @@ def validate_staged(bundle, manifest):
                         'STAGED_CLIENT_KEY_CHANGED')
             serials.append(leaf.serial_number)
         require(serials[0] != serials[1], 'RECOVERY_CERTIFICATE_NOT_INDEPENDENT')
+    for i in range(4, 6 if new_ca else 4):  # Each trust bundle is exactly old CA + new CA.
+        for label in ('primary', 'fallback'):
+            blob = private_read(bundle / f'{label}-{i}.pem')
+            require(blob.count(b'-----BEGIN ') == 2 and [c.fingerprint(hashes.SHA256()).hex() for c in
+                    x509.load_pem_x509_certificates(blob)] == [CA_SHA, manifest['new_ca_sha256']],
+                    'STAGED_TRUST_BUNDLE_INVALID')
 
 
 @contextmanager
@@ -438,11 +518,13 @@ def bounded_stage(seconds):
 
 
 def publish(bundle, manifest, label):
+    targets = targets_of(manifest)
     for i, info in enumerate(manifest['targets']):
         _operation_guard()
-        replace_exact(TARGETS[i], private_read(bundle / f'{label}-{i}.pem'), info)
+        replace_exact(targets[i], private_read(bundle / f'{label}-{i}.pem'), info)
     reload_contexts()
-    proof = qualify()
+    proof = qualify(*([x509.load_pem_x509_certificate(private_read(bundle / 'new-ca.pem'))]
+                      if manifest.get('new_ca') else []))
     require(roster() == manifest['roster'], 'SERVICE_ID_IMAGE_CONFIG_CHANGED')
     return proof
 
@@ -466,11 +548,13 @@ def activate(bundle):
             bundle.name) and not bundle.is_symlink(), 'PRIVATE_BUNDLE_PATH_INVALID')
     check_lock()  # No file publication/container start before this gate.
     manifest = json.loads(private_read(bundle / 'manifest.json'))
-    require([x['path'] for x in manifest['targets']] == [str(p) for p in TARGETS],
+    targets = targets_of(manifest)
+    require([x['path'] for x in manifest['targets']] == [str(p) for p in targets],
             'TARGET_ROSTER_CHANGED')
     require(roster() == manifest['roster'], 'SERVICE_ID_IMAGE_CONFIG_CHANGED')
     for i, info in enumerate(manifest['targets']):
-        require(sha(private_read(TARGETS[i])) == info['original_sha256'], 'LIVE_INPUT_CHANGED')
+        live = private_read(targets[i]) if i < len(TARGETS) else private_read(targets[i], PUBLIC_MODES)
+        require(sha(live) == info['original_sha256'], 'LIVE_INPUT_CHANGED')
         for label in ('primary', 'fallback'):
             require(sha(private_read(bundle / f'{label}-{i}.pem')) == info[label + '_sha256'],
                     'STAGED_INPUT_CHANGED')
@@ -491,7 +575,8 @@ def activate(bundle):
                 proof = publish(bundle, manifest, 'primary')
             return {'status': 'MANAGER_TLS_REPAIRED_NOT_HUMAN_POLICY_ACCEPTANCE',
                     'validity_days': manifest.get('validity_days'),
-                    'leaf_not_after_utc': manifest.get('leaf_not_after_utc'), **proof}
+                    'leaf_not_after_utc': manifest.get('leaf_not_after_utc'),
+                    'new_ca_sha256': manifest.get('new_ca_sha256'), **proof}
         except Exception:
             # Never restore expired originals. Install the separately validated
             # valid same-identity fallback, reload only these same services.
@@ -513,11 +598,20 @@ def main():
     parser.add_argument('--validity-days', type=int, default=None,
                         help=f'leaf lifetime for --prepare, 1..{MAX_VALIDITY_DAYS} '
                              f'(default {DEFAULT_VALIDITY_DAYS})')
+    parser.add_argument('--new-ca', action='store_true',
+                        help='prepare a NEW Manager CA with dual-CA trust bundles (see design file)')
+    parser.add_argument('--ca-validity-days', type=int, default=None,
+                        help=f'new CA lifetime, 1..{MAX_VALIDITY_DAYS} (default {DEFAULT_CA_VALIDITY_DAYS})')
     args = parser.parse_args()
     try:
         require(args.prepare != bool(args.activate), 'EXACT_ACTION_REQUIRED')
         require(args.validity_days is None or args.prepare, 'VALIDITY_DAYS_ONLY_WITH_PREPARE')
-        result = prepare(args.validity_days) if args.prepare else activate(args.activate)
+        require((args.new_ca or args.ca_validity_days is None) and (args.prepare or not args.new_ca),
+                'NEW_CA_OPTIONS_INVALID')
+        ca_days = (DEFAULT_CA_VALIDITY_DAYS if args.ca_validity_days is None
+                   else args.ca_validity_days) if args.new_ca else None
+        result = (prepare(args.validity_days, new_ca_days=ca_days) if args.prepare
+                  else activate(args.activate))
         print(json.dumps(result, sort_keys=True))
         return 0
     except Exception as error:

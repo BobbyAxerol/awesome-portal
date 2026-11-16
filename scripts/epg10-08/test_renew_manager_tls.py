@@ -173,6 +173,51 @@ class CertificateTests(unittest.TestCase):
         self.assertTrue(self.renew_for(3700, ca_days=3800))
         self.assertTrue(self.renew_for(1))
 
+    def test_cli_new_ca_options_are_prepare_only_and_ca_days_default_to_3650(self):
+        for argv, expected_code, called in (
+                (['--prepare', '--new-ca', '--validity-days', '270'], None, (270, 3650)),
+                (['--prepare', '--new-ca', '--ca-validity-days', '900'], None, (None, 900)),
+                (['--prepare', '--new-ca', '--ca-validity-days', '0'], None, (None, 0)),
+                (['--prepare', '--ca-validity-days', '900'], 'NEW_CA_OPTIONS_INVALID', None),
+                (['--activate', '/TEST_ONLY_NEVER_READ', '--new-ca'], 'NEW_CA_OPTIONS_INVALID', None)):
+            with self.subTest(argv=argv):
+                output = io.StringIO()
+                with patch('sys.argv', ['renew_manager_tls.py', *argv]), \
+                        patch.object(renewal, 'prepare', return_value={}) as prepare, \
+                        patch.object(renewal, 'activate') as activate, patch('sys.stdout', output):
+                    code = renewal.main()
+                activate.assert_not_called()
+                if expected_code is None:
+                    self.assertEqual(code, 0)
+                    prepare.assert_called_once_with(called[0], new_ca_days=called[1])
+                else:
+                    self.assertEqual(json.loads(output.getvalue())['code'], expected_code)
+                    prepare.assert_not_called()
+
+    def test_served_certificate_chain_must_match_the_new_ca_when_one_is_given(self):
+        leaf = CertificateTests.leaf  # TEST_ONLY leaf issued by the CertificateTests CA
+        pem = leaf.public_bytes(serialization.Encoding.PEM)
+        foreign = CertificateTests.other_key
+        same_subject_other_key = (x509.CertificateBuilder().subject_name(CertificateTests.ca_name)
+            .issuer_name(CertificateTests.ca_name).public_key(foreign.public_key())
+            .serial_number(2).not_valid_before(CertificateTests.now - timedelta(days=1))
+            .not_valid_after(CertificateTests.now + timedelta(days=1)).sign(foreign, algorithm=None))
+        wrong_name = (x509.CertificateBuilder().subject_name(x509.Name([x509.NameAttribute(
+            NameOID.COMMON_NAME, 'TEST_ONLY another CA')])).issuer_name(x509.Name([x509.NameAttribute(
+            NameOID.COMMON_NAME, 'TEST_ONLY another CA')])).public_key(foreign.public_key())
+            .serial_number(1).not_valid_before(CertificateTests.now - timedelta(days=1))
+            .not_valid_after(CertificateTests.now + timedelta(days=1))
+            .sign(foreign, algorithm=None))
+        with patch.object(renewal, '_operation_guard'), patch.object(renewal, 'private_read', return_value=pem), \
+                patch.object(renewal, 'tls_context', return_value=MagicMock()), \
+                patch.object(renewal.socket, 'create_connection', side_effect=RuntimeError('TEST_ONLY_STOP')):
+            with self.assertRaisesRegex(ValueError, '^SERVED_CHAIN_NOT_NEW_CA$'):
+                renewal.qualify(wrong_name)  # different issuer subject
+            with self.assertRaises(InvalidSignature):
+                renewal.qualify(same_subject_other_key)  # same subject, different key
+            with self.assertRaises(RuntimeError):  # chain check passed, then network (mocked) stops
+                renewal.qualify(CertificateTests.ca)
+
     def test_cli_accepts_validity_days_only_with_prepare(self):
         for argv, expected_code, called in (
                 (['--prepare', '--validity-days', '270'], None, 270),
@@ -188,7 +233,7 @@ class CertificateTests(unittest.TestCase):
                 activate.assert_not_called()
                 if expected_code is None:
                     self.assertEqual(code, 0)
-                    prepare.assert_called_once_with(called)
+                    prepare.assert_called_once_with(called, new_ca_days=None)
                 else:
                     self.assertEqual(code, 2)
                     self.assertEqual(json.loads(output.getvalue())['code'], expected_code)
@@ -216,6 +261,15 @@ class PrivateFileTests(unittest.TestCase):
                 self.file.chmod(mode)
                 with self.assertRaisesRegex(ValueError, '^PRIVATE_FILE_INVALID$'):
                     renewal.private_read(self.file)
+
+    def test_public_trust_anchor_mode_is_accepted_only_when_the_caller_allows_it(self):
+        self.file.chmod(0o644)
+        with self.assertRaisesRegex(ValueError, '^PRIVATE_FILE_INVALID$'):
+            renewal.private_read(self.file)
+        self.assertEqual(renewal.private_read(self.file, renewal.PUBLIC_MODES), self.file.read_bytes())
+        self.file.chmod(0o666)
+        with self.assertRaisesRegex(ValueError, '^PRIVATE_FILE_INVALID$'):
+            renewal.private_read(self.file, renewal.PUBLIC_MODES)
 
     def test_symlink_is_not_followed(self):
         link = self.root / 'TEST_ONLY_symlink'
@@ -621,6 +675,7 @@ class PrivateRoundTripTests(unittest.TestCase):
                     .add_extension(x509.SubjectAlternativeName([x509.DNSName(label)]), False)
                     .add_extension(x509.ExtendedKeyUsage([ExtendedKeyUsageOID.CLIENT_AUTH
                         if client else ExtendedKeyUsageOID.SERVER_AUTH]), False)
+                    .add_extension(x509.AuthorityKeyIdentifier.from_issuer_public_key(ca_key.public_key()), False)
                     .sign(ca_key, algorithm=None)).public_bytes(serialization.Encoding.PEM)
             if client:
                 write(self.runtime / f'{stem}.pem', leaf + private_bytes(key))
@@ -630,13 +685,18 @@ class PrivateRoundTripTests(unittest.TestCase):
                 write(self.runtime / f'{stem}-key.pem', private_bytes(key))
         self.targets = (self.runtime / 'facade-server-cert.pem', self.runtime / 'issuer-server-cert.pem',
                         self.runtime / 'source-proxy-manager-client.pem', self.proxy / 'manager-v2-client.pem')
+        self.old_ca = ca
+        self.anchors = (self.runtime / 'mtls-ca-cert.pem', self.proxy / 'manager-v2-ca.crt')
+        write(self.anchors[1], ca.public_bytes(serialization.Encoding.PEM))
+        self.anchors[1].chmod(0o644)  # Public proxy CA file, like the real one.
         self.original_inputs = {path: path.read_bytes() for path in self.root.rglob('*.pem')}
+        self.original_inputs[self.anchors[1]] = self.anchors[1].read_bytes()
         self.scope = ExitStack()
         self.addCleanup(self.scope.close)
         self.addCleanup(self.overwrite_test_files)
         self.scope.enter_context(patch.multiple(renewal, ROOT=self.root, RUNTIME=self.runtime,
             PROXY=self.proxy, CA_KEY=self.ca_key_path, CA_SHA=ca.fingerprint(hashes.SHA256()).hex(),
-            LOCK=self.lock, TARGETS=self.targets))
+            LOCK=self.lock, TARGETS=self.targets, ANCHORS=self.anchors))
         self.roster = [{'name': name, 'id': f'TEST_ONLY_{index}', 'image': 'TEST_ONLY_image',
                         'config': 'TEST_ONLY_config', 'running': True}
                        for index, name in enumerate(renewal.SERVICES)]
@@ -718,6 +778,184 @@ class PrivateRoundTripTests(unittest.TestCase):
                     renewal.prepare(days)
                 self.assertEqual(list(self.root.glob('renewal-epg10-08-*')), [])
         self.assert_original_inputs_unchanged()
+
+    def prepare_new_ca(self, days=270, ca_days=3650):
+        # The old CA private key must not be needed: point CA_KEY at a missing file.
+        with patch.object(renewal, 'CA_KEY', self.root / 'TEST_ONLY_missing_old_ca_key'):
+            result = renewal.prepare(days, new_ca_days=ca_days)
+        bundle = Path(result['private_bundle'])
+        return result, bundle, json.loads(renewal.private_read(bundle / 'manifest.json'))
+
+    def load_new_ca(self, bundle):
+        return x509.load_pem_x509_certificate(renewal.private_read(bundle / 'new-ca.pem'))
+
+    def test_new_ca_prepare_stages_dual_trust_bundles_and_new_ca_signed_leaves(self):
+        result, bundle, manifest = self.prepare_new_ca()
+        new_ca = self.load_new_ca(bundle)
+        names = {f'{label}-{i}.pem' for label in ('primary', 'fallback', 'original') for i in range(6)}
+        self.assertEqual({path.name for path in bundle.iterdir()},
+                         names | {'manifest.json', 'new-ca.pem', 'new-ca-key.pem'})
+        self.assertEqual(bundle.stat().st_mode & 0o777, 0o700)
+        self.assertTrue(all(path.stat().st_mode & 0o777 == 0o600 for path in bundle.iterdir()))
+        self.assertTrue(manifest['new_ca'])
+        self.assertEqual(manifest['new_ca_sha256'], new_ca.fingerprint(hashes.SHA256()).hex())
+        self.assertEqual(result['new_ca_sha256'], manifest['new_ca_sha256'])
+        self.assertEqual(manifest['ca_sha256'], self.old_ca.fingerprint(hashes.SHA256()).hex())
+        self.assertEqual([t['path'] for t in manifest['targets']],
+                         [str(p) for p in (*self.targets, *self.anchors)])
+        self.assertNotIn('PRIVATE KEY', json.dumps(result) + json.dumps(manifest))
+        # CA shape: self-signed, distinct subject, CA:TRUE pathlen 0, expiry = now + M days.
+        self.assertEqual(new_ca.subject, new_ca.issuer)
+        self.assertNotEqual(new_ca.subject, self.old_ca.subject)
+        constraints = new_ca.extensions.get_extension_for_class(x509.BasicConstraints)
+        self.assertTrue(constraints.critical and constraints.value.ca and constraints.value.path_length == 0)
+        created = datetime.fromisoformat(manifest['created_utc'])
+        self.assertEqual(new_ca.not_valid_after.replace(tzinfo=timezone.utc),
+                         (created + timedelta(days=3650)).replace(microsecond=0))
+        new_ca.public_key().verify(new_ca.signature, new_ca.tbs_certificate_bytes)
+        # Trust bundles: old CA first, then new CA; both sets identical in content.
+        for label in ('primary', 'fallback'):
+            for i in (4, 5):
+                pems = x509.load_pem_x509_certificates(renewal.private_read(bundle / f'{label}-{i}.pem'))
+                self.assertEqual([c.fingerprint(hashes.SHA256()).hex() for c in pems],
+                                 [manifest['ca_sha256'], manifest['new_ca_sha256']])
+            for i in range(4):
+                leaf = x509.load_pem_x509_certificate(renewal.private_read(bundle / f'{label}-{i}.pem'))
+                original = x509.load_pem_x509_certificate(self.original_inputs[self.targets[i]])
+                self.assertEqual(leaf.issuer, new_ca.subject)
+                new_ca.public_key().verify(leaf.signature, leaf.tbs_certificate_bytes)
+                self.assertEqual(leaf.subject, original.subject)
+                self.assertEqual(renewal.public_key(leaf.public_key()), renewal.public_key(original.public_key()))
+                self.assertEqual(renewal.identity_extensions(leaf, True), renewal.identity_extensions(original, True))
+                aki = leaf.extensions.get_extension_for_class(x509.AuthorityKeyIdentifier).value
+                self.assertEqual(aki.key_identifier, x509.SubjectKeyIdentifier.from_public_key(
+                    new_ca.public_key()).digest)
+                self.assertEqual(leaf.not_valid_after.replace(tzinfo=timezone.utc),
+                                 datetime.fromisoformat(manifest['leaf_not_after_utc']))
+        key = serialization.load_pem_private_key(renewal.private_read(bundle / 'new-ca-key.pem'), None)
+        self.assertEqual(renewal.public_key(key.public_key()), renewal.public_key(new_ca.public_key()))
+        renewal.validate_staged(bundle, manifest)
+        self.assert_original_inputs_unchanged()
+
+    def test_new_ca_leaf_cannot_outlive_new_ca_and_ranges_are_enforced(self):
+        for kwargs, code in (({'days': 270, 'ca_days': 0}, 'NEW_CA_VALIDITY_OUT_OF_RANGE'),
+                             ({'days': 270, 'ca_days': 3701}, 'NEW_CA_VALIDITY_OUT_OF_RANGE'),
+                             ({'days': 3701, 'ca_days': 3650}, 'LEAF_VALIDITY_OUT_OF_RANGE'),
+                             ({'days': 3644, 'ca_days': 3650}, 'LEAF_VALIDITY_EXCEEDS_CA_MARGIN'),
+                             ({'days': 400, 'ca_days': 300}, 'CA_VALIDITY_INSUFFICIENT')):
+            with self.subTest(**kwargs):
+                with self.assertRaisesRegex(ValueError, '^' + code + '$'):
+                    self.prepare_new_ca(**kwargs)
+                self.assertEqual(list(self.root.glob('renewal-epg10-08-*')), [])
+        self.assert_original_inputs_unchanged()
+
+    def test_new_ca_prepare_refuses_an_anchor_that_is_not_exactly_the_pinned_old_ca(self):
+        other = Ed25519PrivateKey.generate()
+        name = x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, 'TEST_ONLY other CA')])
+        now = datetime.now(timezone.utc)
+        foreign = (x509.CertificateBuilder().subject_name(name).issuer_name(name)
+                   .public_key(other.public_key()).serial_number(x509.random_serial_number())
+                   .not_valid_before(now).not_valid_after(now + timedelta(days=5))
+                   .add_extension(x509.BasicConstraints(ca=True, path_length=None), True)
+                   .sign(other, algorithm=None)).public_bytes(serialization.Encoding.PEM)
+        old = self.old_ca.public_bytes(serialization.Encoding.PEM)
+        for blob in (foreign, old + foreign):  # wrong CA; already-dual (second prepare) bundle
+            with self.subTest(size=len(blob)):
+                self.anchors[1].write_bytes(blob)
+                with self.assertRaisesRegex(ValueError, '^ANCHOR_NOT_PINNED_CA$'):
+                    self.prepare_new_ca()
+                self.assertEqual(list(self.root.glob('renewal-epg10-08-*')), [])
+
+    def test_new_ca_validation_refuses_manifest_or_staged_tampering(self):
+        _, bundle, manifest = self.prepare_new_ca()
+        cases = [({**manifest, 'new_ca_sha256': 'a' * 64}, 'NEW_CA_INVALID'),
+                 ({k: v for k, v in manifest.items() if k != 'new_ca_sha256'}, 'NEW_CA_INVALID'),
+                 ({**manifest, 'leaf_not_after_utc': (datetime.fromisoformat(
+                     manifest['leaf_not_after_utc']) + timedelta(days=1)).isoformat()},
+                  'STAGED_VALIDITY_MISMATCH')]
+        for changed, code in cases:
+            with self.subTest(code=code):
+                with self.assertRaisesRegex(ValueError, '^' + code + '$'):
+                    renewal.validate_staged(bundle, changed)
+        old = self.old_ca.public_bytes(serialization.Encoding.PEM)
+        new = self.load_new_ca(bundle).public_bytes(serialization.Encoding.PEM)
+        for blob in (old, new + old, old + new + old):  # old only, wrong order, extra certificate
+            with self.subTest(trust_bundle_certificates=blob.count(b'BEGIN')):
+                (bundle / 'fallback-5.pem').write_bytes(blob)
+                with self.assertRaisesRegex(ValueError, '^STAGED_TRUST_BUNDLE_INVALID$'):
+                    renewal.validate_staged(bundle, manifest)
+        (bundle / 'fallback-5.pem').write_bytes(old + new)
+        renewal.validate_staged(bundle, manifest)
+
+    def test_new_ca_activate_publishes_six_files_then_probes_the_new_chain(self):
+        _, bundle, manifest = self.prepare_new_ca()
+        probed = []
+
+        def proof(new_ca):
+            probed.append(new_ca.fingerprint(hashes.SHA256()).hex())
+            return {'TEST_ONLY_qualified': True}
+
+        with patch.object(renewal, 'replace_exact', wraps=renewal.replace_exact) as replace, \
+                patch.object(renewal, 'reload_contexts') as reload, \
+                patch.object(renewal, 'qualify', side_effect=proof):
+            result = renewal.activate(bundle)
+        self.assertEqual(replace.call_count, 6)
+        reload.assert_called_once_with()
+        self.assertEqual(probed, [manifest['new_ca_sha256']])
+        self.assertEqual(result['new_ca_sha256'], manifest['new_ca_sha256'])
+        for i, path in enumerate((*self.targets, *self.anchors)):
+            self.assertEqual(path.read_bytes(), renewal.private_read(bundle / f'primary-{i}.pem'))
+        self.assertEqual(self.anchors[1].stat().st_mode & 0o777, 0o644)  # public mode preserved
+        self.assertFalse(self.lock.exists())
+
+    def test_new_ca_failed_primary_keeps_dual_bundles_and_installs_new_ca_fallback_leaves(self):
+        _, bundle, manifest = self.prepare_new_ca()
+        with patch.object(renewal, 'replace_exact', wraps=renewal.replace_exact) as replace, \
+                patch.object(renewal, 'reload_contexts') as reload, \
+                patch.object(renewal, 'qualify', side_effect=[ValueError('TEST_ONLY_PRIMARY_FAILED'),
+                                                          {'TEST_ONLY_qualified': True}]), \
+                patch.object(renewal, 'contain_failure') as contain:
+            with self.assertRaisesRegex(ValueError, '^PRIMARY_FAILED_VALID_FALLBACK_LOADED$'):
+                renewal.activate(bundle)
+        self.assertEqual((replace.call_count, reload.call_count), (12, 2))
+        contain.assert_not_called()
+        new_ca = self.load_new_ca(bundle)
+        for i, path in enumerate((*self.targets, *self.anchors)):
+            self.assertEqual(path.read_bytes(), renewal.private_read(bundle / f'fallback-{i}.pem'))
+        for anchor in self.anchors:
+            self.assertEqual(len(x509.load_pem_x509_certificates(anchor.read_bytes())), 2)
+        for path in self.targets[:2]:
+            leaf = x509.load_pem_x509_certificate(path.read_bytes())
+            self.assertEqual(leaf.issuer, new_ca.subject)
+        self.assertFalse(self.lock.exists())
+
+    def test_new_ca_activate_refuses_anything_not_in_the_manifest_before_publication(self):
+        _, bundle, manifest = self.prepare_new_ca()
+        manifest_path = bundle / 'manifest.json'
+        original = manifest_path.read_bytes()
+        cases = []
+        for name, change, code in (
+                ('anchor dropped', lambda m: m.update(targets=m['targets'][:4]), 'TARGET_ROSTER_CHANGED'),
+                ('anchor swapped', lambda m: m['targets'].reverse(), 'TARGET_ROSTER_CHANGED'),
+                ('new_ca flag removed', lambda m: m.pop('new_ca'), 'TARGET_ROSTER_CHANGED')):
+            changed = json.loads(original)
+            change(changed)
+            cases.append((name, json.dumps(changed).encode(), code))
+        for name, content, code in cases:
+            with self.subTest(name):
+                manifest_path.write_bytes(content)
+                with patch.object(renewal, 'replace_exact') as replace, \
+                        patch.object(renewal, 'reload_contexts') as reload:
+                    with self.assertRaisesRegex(ValueError, '^' + code + '$'):
+                        renewal.activate(bundle)
+                    replace.assert_not_called()
+                    reload.assert_not_called()
+        manifest_path.write_bytes(original)
+        self.anchors[1].write_bytes(self.original_inputs[self.anchors[1]] + b'\n')  # live anchor drifted
+        with patch.object(renewal, 'replace_exact') as replace:
+            with self.assertRaisesRegex(ValueError, '^LIVE_INPUT_CHANGED$'):
+                renewal.activate(bundle)
+            replace.assert_not_called()
 
     def test_prepare_partial_write_failure_removes_only_its_new_bundle(self):
         sentinel = self.root / 'TEST_ONLY_keep'
