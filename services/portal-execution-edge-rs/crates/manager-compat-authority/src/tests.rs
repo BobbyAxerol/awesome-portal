@@ -652,7 +652,11 @@ fn ledger_checks_follow_the_pin_minimum_and_ledger_status_required() {
     let unreadable = identity_member("trading_system", OID_HASH, None);
     // Null minimum and no status requirement: only name and OID hash are compared.
     check(&lenient, Some(unreadable.clone())).unwrap();
-    check(&lenient, Some(identity_member("trading_system", OID_HASH, Some(1)))).unwrap();
+    check(
+        &lenient,
+        Some(identity_member("trading_system", OID_HASH, Some(1))),
+    )
+    .unwrap();
 
     let mut status_required = no_minimum.clone();
     status_required["ledger_status_required"] = json!(true);

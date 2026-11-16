@@ -2251,7 +2251,12 @@ async fn admitted_manager_execute(
         .map_err(ManagerDispatchError::Client);
     // A Manager whose catalogue changed under a remembered copy answers with a
     // contract mismatch; drop the copy so the next request re-reads it.
-    if matches!(read, Err(ManagerDispatchError::Client(ManagerV2ClientError::Contract(_)))) {
+    if matches!(
+        read,
+        Err(ManagerDispatchError::Client(
+            ManagerV2ClientError::Contract(_)
+        ))
+    ) {
         state.manager_catalogue_memo.invalidate(profile_id);
     }
     read
@@ -7379,7 +7384,10 @@ mod tests {
         assert_eq!(body["error"]["code"], SOURCE_DB_IDENTITY_MISMATCH_CODE);
         assert_eq!(body["error"]["reason"], "DATABASE_NAME");
         assert_eq!(body["error"]["pinned_database_name"], "trading_system");
-        assert_eq!(body["error"]["observed_database_name"], "live_data_executor");
+        assert_eq!(
+            body["error"]["observed_database_name"],
+            "live_data_executor"
+        );
         assert_eq!(body["error"].as_object().unwrap().len(), 5);
 
         let drift = manager_authority_error_response(&ManagerAuthorityError::CatalogueDrift);

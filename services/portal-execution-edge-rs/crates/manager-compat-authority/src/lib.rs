@@ -317,8 +317,8 @@ impl ManagerCompatibilityAuthority {
         {
             return Err(AuthorityError::InvalidSourceIdentityPin);
         }
-        let pin: SourceIdentityPin = serde_json::from_slice(bytes)
-            .map_err(|_| AuthorityError::InvalidSourceIdentityPin)?;
+        let pin: SourceIdentityPin =
+            serde_json::from_slice(bytes).map_err(|_| AuthorityError::InvalidSourceIdentityPin)?;
         if pin.schema_version != SOURCE_IDENTITY_PIN_SCHEMA
             || pin.environment != environment.as_str()
             || pin.profile_id != profile_id
@@ -521,7 +521,11 @@ impl ManagerCompatibilityAuthority {
             }
         };
         match reason {
-            Some(reason) => Err(identity_mismatch(pin, reason, Some(identity.database_name()))),
+            Some(reason) => Err(identity_mismatch(
+                pin,
+                reason,
+                Some(identity.database_name()),
+            )),
             None => Ok(()),
         }
     }
