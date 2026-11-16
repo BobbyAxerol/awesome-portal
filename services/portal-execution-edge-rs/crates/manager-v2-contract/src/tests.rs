@@ -487,11 +487,25 @@ fn relayed_envelopes_preserve_owner_shape_without_validation_only_state() {
     .is_err());
 }
 
+const OID_HASH: &str = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+
 fn source_identity_member() -> Value {
     json!({
         "database_name": "trading_system",
-        "database_oid_sha256": DIGEST,
-        "schema_migration_count": 173
+        "database_oid_sha256": OID_HASH,
+        "schema_ledger_rows": 173,
+        "latest_ledger_version": "99zzzzzzzzzzzzzz-package-release-command-kind-v1",
+        "ledger_status": "READABLE"
+    })
+}
+
+fn not_readable_member() -> Value {
+    json!({
+        "database_name": "trading_system_sandbox",
+        "database_oid_sha256": OID_HASH,
+        "schema_ledger_rows": null,
+        "latest_ledger_version": null,
+        "ledger_status": "NOT_READABLE"
     })
 }
 
@@ -522,8 +536,13 @@ fn source_identity_member_is_decoded_exactly_and_survives_a_serialise_decode_rou
     };
     let identity = response.data().source_identity().unwrap();
     assert_eq!(identity.database_name(), "trading_system");
-    assert_eq!(identity.database_oid_sha256().as_str(), DIGEST);
-    assert_eq!(identity.schema_migration_count(), 173);
+    assert_eq!(identity.database_oid_sha256(), OID_HASH);
+    assert_eq!(identity.schema_ledger_rows(), Some(173));
+    assert_eq!(
+        identity.latest_ledger_version(),
+        Some("99zzzzzzzzzzzzzz-package-release-command-kind-v1")
+    );
+    assert_eq!(identity.ledger_status(), LedgerStatus::Readable);
 
     let serialized = serde_json::to_value(&response).unwrap();
     assert_eq!(
@@ -540,28 +559,57 @@ fn source_identity_member_is_decoded_exactly_and_survives_a_serialise_decode_rou
 }
 
 #[test]
-fn malformed_or_widened_source_identity_members_are_rejected() {
-    let mut not_a_digest = source_identity_member();
-    not_a_digest["database_oid_sha256"] = json!("not-a-digest");
-    let mut bad_name = source_identity_member();
-    bad_name["database_name"] = json!("bad-name");
-    let mut negative_count = source_identity_member();
-    negative_count["schema_migration_count"] = json!(-1);
-    let mut missing_count = source_identity_member();
-    missing_count
-        .as_object_mut()
-        .unwrap()
-        .remove("schema_migration_count");
-    let mut extra_member = source_identity_member();
-    extra_member["system_id"] = json!("raw-cluster-id");
+fn a_not_readable_ledger_decodes_with_null_rows_and_version_and_round_trips() {
+    let ManagerPayload::Catalogue(response) =
+        decode_catalogue_with(Some(not_readable_member())).unwrap()
+    else {
+        panic!("expected catalogue");
+    };
+    let identity = response.data().source_identity().unwrap();
+    assert_eq!(identity.schema_ledger_rows(), None);
+    assert_eq!(identity.latest_ledger_version(), None);
+    assert_eq!(identity.ledger_status(), LedgerStatus::NotReadable);
+    let serialized = serde_json::to_value(&response).unwrap();
+    assert_eq!(serialized["data"]["source_identity"], not_readable_member());
+}
+
+#[test]
+fn malformed_inconsistent_or_widened_source_identity_members_are_rejected() {
+    let with = |key: &str, value: Value| {
+        let mut member = source_identity_member();
+        member[key] = value;
+        member
+    };
+    let without = |key: &str| {
+        let mut member = source_identity_member();
+        member.as_object_mut().unwrap().remove(key);
+        member
+    };
     for member in [
-        not_a_digest,
-        bad_name,
-        negative_count,
-        missing_count,
-        extra_member,
+        with("database_oid_sha256", json!(format!("sha256:{OID_HASH}"))),
+        with("database_oid_sha256", json!("not-a-digest")),
+        with("database_oid_sha256", json!(OID_HASH.to_uppercase())),
+        with("database_name", json!("")),
+        with("database_name", json!("x".repeat(64))),
+        with("schema_ledger_rows", json!(-1)),
+        with("schema_ledger_rows", json!("173")),
+        with("ledger_status", json!("UNKNOWN")),
+        with("ledger_status", json!("readable")),
+        with("latest_ledger_version", json!("x".repeat(1025))),
+        // READABLE with null rows, NOT_READABLE with rows or a version.
+        with("schema_ledger_rows", Value::Null),
+        with("ledger_status", json!("NOT_READABLE")),
+        without("database_name"),
+        without("database_oid_sha256"),
+        without("schema_ledger_rows"),
+        without("latest_ledger_version"),
+        without("ledger_status"),
+        with("system_id", json!("raw-cluster-id")),
         json!("trading_system"),
     ] {
         assert!(decode_catalogue_with(Some(member)).is_err());
     }
+    let mut not_readable_with_version = not_readable_member();
+    not_readable_with_version["latest_ledger_version"] = json!("v1");
+    assert!(decode_catalogue_with(Some(not_readable_with_version)).is_err());
 }

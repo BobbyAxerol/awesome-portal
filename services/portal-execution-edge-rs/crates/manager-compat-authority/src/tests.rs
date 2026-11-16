@@ -526,13 +526,17 @@ fn negative_matrix_is_complete_and_contains_no_secrets() {
     }
 }
 
-const ALT_DIGEST: &str = "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+const OID_HASH: &str = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+const ALT_OID_HASH: &str = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
 
-fn identity_member(name: &str, oid: &str, count: u64) -> Value {
+/// Manager wire member; `rows: None` is a `NOT_READABLE` ledger.
+fn identity_member(name: &str, oid: &str, rows: Option<u64>) -> Value {
     json!({
         "database_name": name,
         "database_oid_sha256": oid,
-        "schema_migration_count": count
+        "schema_ledger_rows": rows,
+        "latest_ledger_version": rows.map(|_| "99zzzzzzzzzzzzzz-test-v1"),
+        "ledger_status": if rows.is_some() { "READABLE" } else { "NOT_READABLE" }
     })
 }
 
@@ -558,8 +562,8 @@ fn pin_value(required: bool) -> Value {
         "profile_id": PROFILE,
         "source_identity_required": required,
         "database_name": "trading_system",
-        "database_oid_sha256": DIGEST,
-        "minimum_schema_migration_count": 173
+        "database_oid_sha256": OID_HASH,
+        "minimum_schema_ledger_rows": 173
     })
 }
 
@@ -571,45 +575,68 @@ fn pinned_authority(pin: &Value) -> Result<ManagerCompatibilityAuthority, Author
     authority.with_source_identity_pin(&bytes, &pin_digest, environment, PROFILE)
 }
 
+fn check(
+    authority: &ManagerCompatibilityAuthority,
+    member: Option<Value>,
+) -> Result<(), AuthorityError> {
+    authority.validate_source_identity(PROFILE, &catalogue_with_identity(member))
+}
+
+fn reason_code(result: Result<(), AuthorityError>) -> &'static str {
+    result.unwrap_err().source_identity_detail().unwrap().0
+}
+
 #[test]
 fn unpinned_profile_is_not_identity_checked() {
     let authority = ManagerCompatibilityAuthority::canonical().unwrap();
-    let foreign = identity_member("any_database", ALT_DIGEST, 1);
-    for identity in [None, Some(foreign)] {
-        let catalogue = catalogue_with_identity(identity);
-        authority
-            .validate_source_identity(PROFILE, &catalogue)
-            .unwrap();
+    let foreign = identity_member("any_database", ALT_OID_HASH, None);
+    for member in [None, Some(foreign)] {
+        check(&authority, member).unwrap();
     }
 }
 
 #[test]
 fn pinned_exact_identity_and_a_higher_ledger_count_pass() {
     let authority = pinned_authority(&pin_value(true)).unwrap();
-    for count in [173, 174, 1_000] {
-        let member = identity_member("trading_system", DIGEST, count);
-        let catalogue = catalogue_with_identity(Some(member));
-        authority
-            .validate_source_identity(PROFILE, &catalogue)
-            .unwrap();
+    for rows in [173, 174, 1_000] {
+        let member = identity_member("trading_system", OID_HASH, Some(rows));
+        check(&authority, Some(member)).unwrap();
     }
 }
 
 #[test]
-fn pinned_name_oid_hash_or_lower_ledger_count_mismatch_is_typed_and_fail_closed() {
+fn each_mismatch_has_its_own_reason_and_never_echoes_hashes_or_counts() {
     let authority = pinned_authority(&pin_value(true)).unwrap();
-    for member in [
-        identity_member("trading_system_sandbox", DIGEST, 173),
-        identity_member("live_data_executor", DIGEST, 173),
-        identity_member("trading_system", ALT_DIGEST, 173),
-        identity_member("trading_system", DIGEST, 172),
-        identity_member("trading_system", DIGEST, 0),
-    ] {
-        let catalogue = catalogue_with_identity(Some(member));
-        assert!(matches!(
-            authority.validate_source_identity(PROFILE, &catalogue),
-            Err(AuthorityError::SourceDbIdentityMismatch)
-        ));
+    let cases = [
+        (
+            identity_member("trading_system_sandbox", OID_HASH, Some(173)),
+            "DATABASE_NAME",
+        ),
+        (
+            identity_member("live_data_executor", OID_HASH, Some(149)),
+            "DATABASE_NAME",
+        ),
+        (
+            identity_member("trading_system", ALT_OID_HASH, Some(173)),
+            "DATABASE_OID",
+        ),
+        (
+            identity_member("trading_system", OID_HASH, Some(172)),
+            "LEDGER_BELOW_MINIMUM",
+        ),
+        (
+            identity_member("trading_system", OID_HASH, None),
+            "LEDGER_NOT_READABLE",
+        ),
+    ];
+    for (member, expected) in cases {
+        let error = check(&authority, Some(member)).unwrap_err();
+        let (reason, pinned, observed) = error.source_identity_detail().unwrap();
+        assert_eq!(reason, expected);
+        assert_eq!(pinned, "trading_system");
+        assert!(observed.is_some());
+        let rendered = format!("{error} {error:?}");
+        assert!(!rendered.contains(OID_HASH) && !rendered.contains(ALT_OID_HASH));
     }
     assert_eq!(
         SOURCE_DB_IDENTITY_MISMATCH_CODE,
@@ -618,53 +645,76 @@ fn pinned_name_oid_hash_or_lower_ledger_count_mismatch_is_typed_and_fail_closed(
 }
 
 #[test]
+fn ledger_checks_follow_the_pin_minimum_and_ledger_status_required() {
+    let mut no_minimum = pin_value(true);
+    no_minimum["minimum_schema_ledger_rows"] = Value::Null;
+    let lenient = pinned_authority(&no_minimum).unwrap();
+    let unreadable = identity_member("trading_system", OID_HASH, None);
+    // Null minimum and no status requirement: only name and OID hash are compared.
+    check(&lenient, Some(unreadable.clone())).unwrap();
+    check(&lenient, Some(identity_member("trading_system", OID_HASH, Some(1)))).unwrap();
+
+    let mut status_required = no_minimum.clone();
+    status_required["ledger_status_required"] = json!(true);
+    let strict_status = pinned_authority(&status_required).unwrap();
+    assert_eq!(
+        reason_code(check(&strict_status, Some(unreadable))),
+        "LEDGER_NOT_READABLE"
+    );
+    let readable = identity_member("trading_system", OID_HASH, Some(1));
+    check(&strict_status, Some(readable)).unwrap();
+
+    // The key may also be absent: same as null.
+    let mut absent_minimum = pin_value(true);
+    absent_minimum
+        .as_object_mut()
+        .unwrap()
+        .remove("minimum_schema_ledger_rows");
+    let unpinned_count = pinned_authority(&absent_minimum).unwrap();
+    let member = identity_member("trading_system", OID_HASH, None);
+    check(&unpinned_count, Some(member)).unwrap();
+}
+
+#[test]
 fn an_absent_identity_is_refused_unless_the_pin_explicitly_allows_a_legacy_manager() {
     let strict = pinned_authority(&pin_value(true)).unwrap();
     let legacy_allowed = pinned_authority(&pin_value(false)).unwrap();
-    let absent = catalogue_with_identity(None);
-    assert!(matches!(
-        strict.validate_source_identity(PROFILE, &absent),
-        Err(AuthorityError::SourceDbIdentityMismatch)
-    ));
-    legacy_allowed
-        .validate_source_identity(PROFILE, &absent)
-        .unwrap();
+    assert_eq!(reason_code(check(&strict, None)), "IDENTITY_ABSENT");
+    check(&legacy_allowed, None).unwrap();
     // A Manager that does send an identity must still match, even when legacy is allowed.
-    let member = identity_member("trading_system", ALT_DIGEST, 173);
-    let wrong = catalogue_with_identity(Some(member));
-    assert!(matches!(
-        legacy_allowed.validate_source_identity(PROFILE, &wrong),
-        Err(AuthorityError::SourceDbIdentityMismatch)
-    ));
+    let member = identity_member("trading_system", ALT_OID_HASH, Some(173));
+    assert_eq!(
+        reason_code(check(&legacy_allowed, Some(member))),
+        "DATABASE_OID"
+    );
 }
 
 #[test]
 fn identity_pin_loading_rejects_unpinned_malformed_or_mis_bound_input() {
+    let with = |key: &str, value: Value| {
+        let mut pin = pin_value(true);
+        pin[key] = value;
+        pin
+    };
     let mut without_requirement = pin_value(true);
     without_requirement
         .as_object_mut()
         .unwrap()
         .remove("source_identity_required");
-    let mut extra_member = pin_value(true);
-    extra_member["system_identifier"] = json!("raw");
-    let mut bad_oid = pin_value(true);
-    bad_oid["database_oid_sha256"] = json!("not-a-digest");
-    let mut empty_name = pin_value(true);
-    empty_name["database_name"] = json!("");
-    let mut wrong_environment = pin_value(true);
-    wrong_environment["environment"] = json!("live");
-    let mut wrong_profile = pin_value(true);
-    wrong_profile["profile_id"] = json!("SANDBOX_BINANCE_USDM");
-    let mut wrong_schema = pin_value(true);
-    wrong_schema["schema_version"] = json!("unknown.v1");
     for pin in [
         without_requirement,
-        extra_member,
-        bad_oid,
-        empty_name,
-        wrong_environment,
-        wrong_profile,
-        wrong_schema,
+        with("system_identifier", json!("raw")),
+        // The pre-Manager-wire field name must not be silently accepted.
+        with("minimum_schema_migration_count", json!(173)),
+        with("database_oid_sha256", json!(format!("sha256:{OID_HASH}"))),
+        with("database_oid_sha256", json!(OID_HASH.to_uppercase())),
+        with("database_oid_sha256", json!("not-a-digest")),
+        with("database_name", json!("")),
+        with("environment", json!("live")),
+        with("profile_id", json!("SANDBOX_BINANCE_USDM")),
+        with("schema_version", json!("unknown.v1")),
+        with("minimum_schema_ledger_rows", json!(-1)),
+        with("ledger_status_required", json!("yes")),
     ] {
         assert!(matches!(
             pinned_authority(&pin),
@@ -673,10 +723,11 @@ fn identity_pin_loading_rejects_unpinned_malformed_or_mis_bound_input() {
     }
     let bytes = serde_json::to_vec(&pin_value(true)).unwrap();
     let authority = ManagerCompatibilityAuthority::canonical().unwrap();
+    let wrong_digest = format!("sha256:{ALT_OID_HASH}");
     assert!(matches!(
         authority.with_source_identity_pin(
             &bytes,
-            ALT_DIGEST,
+            &wrong_digest,
             DeploymentEnvironment::Paper,
             PROFILE,
         ),
@@ -695,8 +746,8 @@ fn bound_authority_applies_the_identity_guard_to_every_request_builder() {
             RUNTIME_CONTRACT_REVISION,
         ))
         .unwrap();
-    let good_member = identity_member("trading_system", DIGEST, 173);
-    let wrong_member = identity_member("live_data_executor", DIGEST, 149);
+    let good_member = identity_member("trading_system", OID_HASH, Some(173));
+    let wrong_member = identity_member("live_data_executor", OID_HASH, Some(149));
     let good = catalogue_with_identity(Some(good_member));
     let wrong = catalogue_with_identity(Some(wrong_member));
     let relation_id = authority.approved_relations.iter().next().unwrap().clone();
@@ -706,14 +757,14 @@ fn bound_authority_applies_the_identity_guard_to_every_request_builder() {
         .unwrap();
     assert!(matches!(
         bound.validate_catalogue(&wrong),
-        Err(AuthorityError::SourceDbIdentityMismatch)
+        Err(AuthorityError::SourceDbIdentityMismatch { .. })
     ));
     assert!(matches!(
         bound.relation_page_request(&wrong, &relation_id, None, PageLimit::default()),
-        Err(AuthorityError::SourceDbIdentityMismatch)
+        Err(AuthorityError::SourceDbIdentityMismatch { .. })
     ));
     assert!(matches!(
         bound.projection_request(&wrong, ProjectionKind::Order, None, PageLimit::default()),
-        Err(AuthorityError::SourceDbIdentityMismatch)
+        Err(AuthorityError::SourceDbIdentityMismatch { .. })
     ));
 }

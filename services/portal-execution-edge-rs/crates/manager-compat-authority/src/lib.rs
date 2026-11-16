@@ -11,8 +11,8 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use manager_v2_contract::{
-    ContractError, ManagerCapabilities, ManagerCatalogue, ManagerRecord, ManagerV2Request,
-    OpaqueCursor, PageLimit, ProjectionKind, RUNTIME_CONTRACT_REVISION,
+    ContractError, LedgerStatus, ManagerCapabilities, ManagerCatalogue, ManagerRecord,
+    ManagerV2Request, OpaqueCursor, PageLimit, ProjectionKind, RUNTIME_CONTRACT_REVISION,
 };
 use serde::Deserialize;
 use sha2::{Digest as _, Sha256};
@@ -138,8 +138,39 @@ pub struct SourceIdentityPin {
     /// pin without this member is rejected.
     source_identity_required: bool,
     database_name: String,
+    /// SHA-256 of the decimal database OID: 64 lowercase hex, no prefix.
     database_oid_sha256: String,
-    minimum_schema_migration_count: u64,
+    /// `null` or absent: the ledger row count is not checked. When set, the
+    /// ledger must be `READABLE` with at least this many rows.
+    #[serde(default)]
+    minimum_schema_ledger_rows: Option<u64>,
+    /// `true` additionally requires a `READABLE` ledger without a minimum.
+    #[serde(default)]
+    ledger_status_required: bool,
+}
+
+/// Why a Manager's reported source database was refused. The names are the
+/// public `reason` codes; none of them carries a hash or a count.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SourceIdentityMismatchReason {
+    IdentityAbsent,
+    DatabaseName,
+    DatabaseOid,
+    LedgerNotReadable,
+    LedgerBelowMinimum,
+}
+
+impl SourceIdentityMismatchReason {
+    #[must_use]
+    pub const fn code(self) -> &'static str {
+        match self {
+            Self::IdentityAbsent => "IDENTITY_ABSENT",
+            Self::DatabaseName => "DATABASE_NAME",
+            Self::DatabaseOid => "DATABASE_OID",
+            Self::LedgerNotReadable => "LEDGER_NOT_READABLE",
+            Self::LedgerBelowMinimum => "LEDGER_BELOW_MINIMUM",
+        }
+    }
 }
 
 /// A compatibility authority bound to one exact deployment/profile/resource
@@ -293,7 +324,7 @@ impl ManagerCompatibilityAuthority {
             || pin.profile_id != profile_id
             || pin.database_name.is_empty()
             || pin.database_name.len() > 63
-            || !is_sha256_digest(&pin.database_oid_sha256)
+            || !is_lowercase_hex_64(&pin.database_oid_sha256)
         {
             return Err(AuthorityError::InvalidSourceIdentityPin);
         }
@@ -450,35 +481,49 @@ impl ManagerCompatibilityAuthority {
     }
 
     /// Verifies the database the Manager reports against the release pin of
-    /// `profile_id`: exact name and OID hash, and a migration ledger count at
-    /// least the pinned minimum. A profile with no pin is not checked.
+    /// `profile_id`: exact name and OID hash always; when the pin sets a
+    /// minimum (or requires a readable ledger) the ledger must be `READABLE`
+    /// with at least that many rows. A profile with no pin is not checked.
     ///
     /// # Errors
     ///
-    /// Returns [`AuthorityError::SourceDbIdentityMismatch`] when the identity
-    /// differs, or is absent while the pin requires it.
+    /// Returns [`AuthorityError::SourceDbIdentityMismatch`] with the first
+    /// failing reason, including an absent member while the pin requires it.
     pub fn validate_source_identity(
         &self,
         profile_id: &str,
         catalogue: &ManagerCatalogue,
     ) -> Result<(), AuthorityError> {
+        use SourceIdentityMismatchReason as Reason;
         let Some(pin) = self.source_identity_pins.get(profile_id) else {
             return Ok(());
         };
         let Some(identity) = catalogue.source_identity() else {
             return if pin.source_identity_required {
-                Err(AuthorityError::SourceDbIdentityMismatch)
+                Err(identity_mismatch(pin, Reason::IdentityAbsent, None))
             } else {
                 Ok(())
             };
         };
-        if identity.database_name() != pin.database_name
-            || identity.database_oid_sha256().as_str() != pin.database_oid_sha256
-            || identity.schema_migration_count() < pin.minimum_schema_migration_count
-        {
-            return Err(AuthorityError::SourceDbIdentityMismatch);
+        let minimum = pin.minimum_schema_ledger_rows.unwrap_or(0);
+        let checked = pin.ledger_status_required || pin.minimum_schema_ledger_rows.is_some();
+        let reason = if identity.database_name() != pin.database_name {
+            Some(Reason::DatabaseName)
+        } else if identity.database_oid_sha256() != pin.database_oid_sha256 {
+            Some(Reason::DatabaseOid)
+        } else if !checked {
+            None
+        } else {
+            match (identity.ledger_status(), identity.schema_ledger_rows()) {
+                (LedgerStatus::Readable, Some(rows)) if rows >= minimum => None,
+                (LedgerStatus::Readable, Some(_)) => Some(Reason::LedgerBelowMinimum),
+                _ => Some(Reason::LedgerNotReadable),
+            }
+        };
+        match reason {
+            Some(reason) => Err(identity_mismatch(pin, reason, Some(identity.database_name()))),
+            None => Ok(()),
         }
-        Ok(())
     }
 
     fn adapter_for_owner_revision(
@@ -682,8 +727,12 @@ pub enum AuthorityError {
     CatalogueDrift,
     #[error("catalogue restriction is malformed or exceeds the frozen N18 set")]
     InvalidCatalogueRestriction,
-    #[error("manager source database identity does not match the release pin")]
-    SourceDbIdentityMismatch,
+    #[error("manager source database identity does not match the release pin: {reason:?}")]
+    SourceDbIdentityMismatch {
+        reason: SourceIdentityMismatchReason,
+        pinned_database_name: String,
+        observed_database_name: Option<String>,
+    },
     #[error("source database identity pin is malformed or not bound to this deployment")]
     InvalidSourceIdentityPin,
     #[error("relation is not approved by N18")]
@@ -696,6 +745,27 @@ pub enum AuthorityError {
     Contract(#[from] ContractError),
     #[error("compatibility authority JSON is invalid")]
     Json(#[from] serde_json::Error),
+}
+
+impl AuthorityError {
+    /// For a source database mismatch: the public reason code, the pinned
+    /// database name and the database name the Manager reported. Never a hash
+    /// or a count.
+    #[must_use]
+    pub fn source_identity_detail(&self) -> Option<(&'static str, &str, Option<&str>)> {
+        match self {
+            Self::SourceDbIdentityMismatch {
+                reason,
+                pinned_database_name,
+                observed_database_name,
+            } => Some((
+                reason.code(),
+                pinned_database_name,
+                observed_database_name.as_deref(),
+            )),
+            _ => None,
+        }
+    }
 }
 
 #[derive(Debug, Deserialize)]
@@ -1124,13 +1194,23 @@ fn digest(bytes: &[u8]) -> String {
     format!("sha256:{:x}", Sha256::digest(bytes))
 }
 
-fn is_sha256_digest(value: &str) -> bool {
-    value.strip_prefix("sha256:").is_some_and(|hex| {
-        hex.len() == 64
-            && hex
-                .bytes()
-                .all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte))
-    })
+fn is_lowercase_hex_64(value: &str) -> bool {
+    value.len() == 64
+        && value
+            .bytes()
+            .all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte))
+}
+
+fn identity_mismatch(
+    pin: &SourceIdentityPin,
+    reason: SourceIdentityMismatchReason,
+    observed_database_name: Option<&str>,
+) -> AuthorityError {
+    AuthorityError::SourceDbIdentityMismatch {
+        reason,
+        pinned_database_name: pin.database_name.clone(),
+        observed_database_name: observed_database_name.map(str::to_owned),
+    }
 }
 
 #[cfg(test)]

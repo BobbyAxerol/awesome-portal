@@ -66,49 +66,50 @@ etc. in `main.rs`; the compose assertion on `EDGE_MANAGER_SHARED_CACHE_TTL_MS:-7
 is untouched. I did not add the new variable to `deploy/compose.execution-edge.yaml`
 or `deploy/.env.execution-edge.example`; the code default applies.
 
-## 2. Change B: source-database identity guard (commit B)
+## 2. Change B: source-database identity guard (commits B and C)
 
-Wire (decode only, Manager side not yet built): optional member of the catalogue
-`data`:
+Commit B first guessed the wire shape (a single ledger count member and a
+`sha256:` prefixed OID hash). The Manager side (`ts-manager-source-identity-20261116`,
+commit `ec707e0d`, `docs/MANAGER_SOURCE_IDENTITY_NOTE.md`) emits a different
+shape, so a strict decoder would have refused every real answer. Commit C
+reshapes types, decoder, pin schema, tests and this document to the real wire.
+
+Wire (Manager side, decode only here): optional member `data.source_identity` of
+the catalogue answer, exactly five keys, all present when the member is present:
 
 ```json
 "source_identity": {
-  "database_name": "trading_system",
-  "database_oid_sha256": "sha256:<64 lowercase hex>",
-  "schema_migration_count": 173
+  "database_name": "trading_system_sandbox",
+  "database_oid_sha256": "<64 lowercase hex, no prefix>",
+  "schema_ledger_rows": 122,
+  "latest_ledger_version": "99zzzzzzzzzzzzzz-package-release-command-kind-v1",
+  "ledger_status": "READABLE"
 }
 ```
 
-`database_oid_sha256` is SHA-256 of the decimal `pg_database.oid` as ASCII text
-(for example `74352923`), written `sha256:` plus lowercase hex. The TS side and
-the pin author must use the same rule. It is an identity label, not a secret: the
-OID space is small, so do not rely on the hash to hide it.
+Decoder rules (`manager-v2-contract`): name 1..63 bytes without control
+characters; OID hash exactly 64 lowercase hex; `schema_ledger_rows` is
+`null` or an unsigned integer and `latest_ledger_version` is `null` or a string (the
+Manager keeps 256 characters; the decoder allows up to 1024 bytes), and **both keys must be present** (a missing key is refused,
+unlike serde's default for `Option`); `ledger_status` is a closed enum, exactly
+`READABLE` or `NOT_READABLE`, anything else refused; `READABLE` with null rows is
+refused; `NOT_READABLE` with non-null rows or a non-null version is refused;
+unknown keys are refused. `READABLE` with a null version is accepted (an empty
+ledger has no latest row; the Manager note does not say, so I did not refuse it).
 
-Edge code:
-- `manager-v2-contract/src/lib.rs`: `SourceIdentity` (`:460`),
-  `ManagerCatalogue::source_identity()` (`:491`), strict wire struct
-  `SourceIdentityWire` (`:1801`, `deny_unknown_fields`, required members inside),
-  `decode_source_identity` (`:1373`; name must be a valid identifier, hash must
-  be `sha256:` + 64 lowercase hex). The field serialises only when present, so
-  re-serialised cache entries round-trip and existing serialised output is
-  byte-identical when a Manager sends nothing.
-- `manager-compat-authority/src/lib.rs`: `SourceIdentityPin` (`:130`, strict,
-  every member required, no defaults), `with_source_identity_pin` (`:200`:
-  size-bounded 64 KiB, raw-bytes SHA-256 pin, schema, environment and profile
-  must match the deployment, profile must bind), `validate_source_identity`
-  (`:370`), error variants `SourceDbIdentityMismatch` / `InvalidSourceIdentityPin`
-  (`:570`), constant `SOURCE_DB_IDENTITY_MISMATCH_CODE`.
-  `BoundManagerAuthority::validate_catalogue` now also checks identity, and
-  `relation_page_request`, `record_request` and `projection_request` call it
-  instead of the unbound check, so every request builder is guarded.
-- `edge-service/src/main.rs`: `manager_compatibility_authority` (`:2094`) loads
-  the pin at startup; both `EDGE_MANAGER_SOURCE_DB_PIN_FILE` and
-  `EDGE_MANAGER_SOURCE_DB_PIN_SHA256` unset keeps today's behaviour, exactly one
-  set is a startup error. `manager_authority_error_response` (`:2600`) maps the
-  new variant to HTTP 502 with code `MANAGER_V2_SOURCE_DB_IDENTITY_MISMATCH`.
-  The memo only stores a catalogue that also passes the identity check.
+Manager wire field -> Rust field -> pin field:
 
-Pin file (deployed outside the repo, bytes pinned by the env digest):
+| Manager wire field | Rust field (`SourceIdentity`, `manager-v2-contract`) | Pin field (`SourceIdentityPin`) | Rule |
+|---|---|---|---|
+| `database_name` | `database_name: String`, `database_name()` | `database_name` | exact match, always |
+| `database_oid_sha256` | `database_oid_sha256: String`, `database_oid_sha256()` | `database_oid_sha256` (64 lowercase hex, no prefix) | exact match, always |
+| `schema_ledger_rows` | `schema_ledger_rows: Option<u64>`, `schema_ledger_rows()` | `minimum_schema_ledger_rows: Option<u64>` (null or absent = not checked) | if set: ledger `READABLE` and rows >= minimum |
+| `latest_ledger_version` | `latest_ledger_version: Option<String>`, `latest_ledger_version()` | none | decoded and kept, never compared (lexicographic, misleading) |
+| `ledger_status` | `ledger_status: LedgerStatus` (`Readable`, `NotReadable`), `ledger_status()` | `ledger_status_required: bool` (default false) | if true: ledger must be `READABLE` even without a minimum |
+| member absent | `ManagerCatalogue::source_identity() == None` | `source_identity_required: bool` (no default) | absent refused unless the pin says `false` |
+
+Pin file (deployed outside the repo, raw bytes pinned by
+`EDGE_MANAGER_SOURCE_DB_PIN_SHA256`; both variables or neither):
 
 ```json
 {
@@ -117,37 +118,70 @@ Pin file (deployed outside the repo, bytes pinned by the env digest):
   "profile_id": "PAPER_BINANCE_USDM",
   "source_identity_required": true,
   "database_name": "trading_system",
-  "database_oid_sha256": "sha256:...",
-  "minimum_schema_migration_count": 173
+  "database_oid_sha256": "<64 lowercase hex>",
+  "minimum_schema_ledger_rows": 173,
+  "ledger_status_required": false
 }
 ```
 
-Rules: name and OID hash must match exactly; the reported ledger count must be
->= the pinned minimum; absent member is refused unless the pin explicitly says
-`"source_identity_required": false` (the member has no default, a pin without it
-is rejected); a Manager that does send an identity must match even when absent is
-allowed. A profile with **no pin configured is not checked**, which is today's
-behaviour and what keeps existing deployments and fixtures valid. That makes the
-guard opt-in per deployment, not fail-closed by default. This is the main owner
-decision below.
+Guard order (`validate_source_identity`, compat `lib.rs:402`): no pin for the
+profile means not checked (today's behaviour). Member absent: refused with reason
+`IDENTITY_ABSENT` unless the pin allows a legacy Manager. Then name
+(`DATABASE_NAME`), then OID hash (`DATABASE_OID`), then, only if the pin sets a
+minimum or requires a readable ledger: `LEDGER_NOT_READABLE` when the ledger is
+not `READABLE`, `LEDGER_BELOW_MINIMUM` when rows are below the minimum. A Manager
+that sends an identity must match even when absence is allowed.
 
-Deviation from the request: the pins live in their own pinned file, not in "the
-release file", because that file does not exist in committed code (section 0).
-When the uncommitted catalogue-release work lands, the same seven members can
-become an optional `source_identity` object inside `CatalogueReleaseManifest`
-with `source_identity_pins` filled from it; that is a small follow-up, and the
-separate-file path can then be dropped.
+Typed problem: HTTP 502, body
+`{"error": {"code": "MANAGER_V2_SOURCE_DB_IDENTITY_MISMATCH", "message": "...",
+"reason": "<one of the five codes>", "pinned_database_name": "...",
+"observed_database_name": "..." | null}}`. Only the two database names are echoed;
+the OID hash, counts and ledger version never appear in the body or in the error's
+`Display`/`Debug` (tested). `IDENTITY_ABSENT` is my addition to your four codes,
+because an absent member needs a reason too.
 
-Tests added: contract crate (`tests.rs`): legacy decode gives `None`; member
-decodes exactly and survives serialise then decode; malformed, negative, missing
-or extra members are rejected. Authority crate (`tests.rs`): unpinned profile not
-checked; exact match and higher count pass; name, OID, lower count mismatches are
-`SourceDbIdentityMismatch`; absent member refused unless not-required; pin loader
-rejects wrong digest, missing member, extra member, bad hash, empty name, wrong
-environment, wrong profile, wrong schema; bound authority guards
-`validate_catalogue`, `relation_page_request` and `projection_request`. Edge
-service: the mismatch maps to 502. Not tested: `manager_compatibility_authority`
-config loading (needs a full `EdgeConfig`), and nothing exercises HTTP.
+Code locations: `manager-v2-contract/src/lib.rs`: `LedgerStatus` `:460`,
+`SourceIdentity` `:470`, `decode_source_identity` `:1396`, `SourceIdentityWire`
+`:1839`, `required_nullable` `:1851`. `manager-compat-authority/src/lib.rs`:
+`SourceIdentityPin` `:130`, `SourceIdentityMismatchReason` `:153`,
+`with_source_identity_pin` `:231` (size-bounded 64 KiB, digest of the raw bytes,
+schema, environment and profile must match, profile must bind),
+`validate_source_identity` `:402`, `SourceDbIdentityMismatch { reason,
+pinned_database_name, observed_database_name }` `:615`, `source_identity_detail`
+`:639`. `BoundManagerAuthority::validate_catalogue` also checks identity, and
+`relation_page_request`, `record_request` and `projection_request` call it instead
+of the unbound check. `edge-service/src/main.rs`: `manager_compatibility_authority`
+`:2108` loads the pin at startup (exactly one variable set is a startup error),
+`manager_authority_error_response` `:2594` and `manager_source_identity_problem`
+`:2730` build the 502. The catalogue memo (section 1) only stores a catalogue that
+also passes the identity check.
+
+A profile with **no pin configured is not checked**. That keeps existing
+deployments and fixtures valid, and makes the guard opt-in per deployment, not
+fail-closed by default (owner decision 1).
+
+Deviation from the original request: the pins live in their own pinned file, not
+in "the release file", because that file is not in committed code (section 0).
+When the uncommitted catalogue-release work lands, the same members can become an
+optional `source_identity` object inside `CatalogueReleaseManifest`.
+
+Tests (all unrun): contract crate: legacy decode gives `None`; a `READABLE` member
+decodes exactly and survives serialise then decode; a `NOT_READABLE` member decodes
+with null rows and version and round-trips; 19 malformed or inconsistent members
+are refused (bad hash prefix, uppercase hash, empty or 64-byte name, negative or
+string rows, unknown status, wrong-case status, long version, READABLE with null
+rows, NOT_READABLE with rows or a version, each of the five keys missing, extra
+key, non-object). Authority crate: unpinned not checked; exact match and higher
+rows pass; each mismatch yields its own reason and never echoes a hash or count;
+null or absent minimum skips the count, `ledger_status_required` and a set
+minimum require `READABLE`; absent member refused unless not-required; the pin
+loader rejects wrong digest, missing `source_identity_required`, unknown key, the
+pre-Manager-wire pin key for the ledger minimum, prefixed or uppercase hash, empty name,
+wrong environment, profile or schema, negative minimum, non-boolean status flag;
+the bound authority guards `validate_catalogue`, `relation_page_request` and
+`projection_request`. Edge service: the mismatch maps to 502 with the five-member
+body. Not tested: `manager_compatibility_authority` config loading (needs a full
+`EdgeConfig`) and any HTTP path.
 
 ## 3. How CI should build and test it
 
@@ -213,6 +247,9 @@ environment/profile.
   `maximum-data-adapter/src/lib.rs:615`. Both are follow-ups; the first is a
   one-line change once the dirty work there lands.
 - Capabilities responses carry no identity; only the catalogue is checked.
+- The wire is taken from the Manager note and checked against `build_source_identity`
+  (`manager_facade.py:656-685` in `ts-manager-source-identity-20261116`); it is not
+  exercised against a running Manager, and that Manager is not built or deployed.
 - Until TS ships the member and a pin is deployed, nothing changes at runtime.
   Today's evidence (sandbox and live read `live_data_executor`, 149 ledger rows)
   would be caught only after a pin for the Sandbox profile exists and says what
@@ -226,6 +263,6 @@ environment/profile.
 2. Where the pins live: separate pinned file now, or wait for the catalogue-release
    mechanism to be committed and fold them in.
 3. Memo default 30 s, and whether to add the variable to compose and the env example.
-4. Name, hashing rule and member names for the TS wire (section 2), since TS builds
-   against them.
+4. Whether `READABLE` with a null `latest_ledger_version` (empty ledger) should be
+   refused; currently accepted. The wire itself is now the Manager's, not mine.
 5. Which database the Sandbox profile must pin (owner is unsure per Core's note).

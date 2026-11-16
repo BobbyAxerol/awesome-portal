@@ -1317,6 +1317,20 @@ struct ManagerProblem {
     message: &'static str,
 }
 
+#[derive(Serialize)]
+struct ManagerSourceIdentityProblemBody<'a> {
+    error: ManagerSourceIdentityProblem<'a>,
+}
+
+#[derive(Serialize)]
+struct ManagerSourceIdentityProblem<'a> {
+    code: &'static str,
+    message: &'static str,
+    reason: &'static str,
+    pinned_database_name: &'a str,
+    observed_database_name: Option<&'a str>,
+}
+
 #[derive(Debug, Serialize)]
 struct CurrentSourceScreenResponse<'a> {
     schema_version: &'static str,
@@ -2592,6 +2606,9 @@ fn manager_capabilities_response(
 }
 
 fn manager_authority_error_response(error: &ManagerAuthorityError) -> Response {
+    if let Some((reason, pinned, observed)) = error.source_identity_detail() {
+        return manager_source_identity_problem(reason, pinned, observed);
+    }
     let (status, code, message) = match error {
         ManagerAuthorityError::EnvironmentDenied
         | ManagerAuthorityError::ProfileDenied
@@ -2610,11 +2627,6 @@ fn manager_authority_error_response(error: &ManagerAuthorityError) -> Response {
             StatusCode::NOT_FOUND,
             "MANAGER_COMPAT_RELATION_NOT_APPROVED",
             "The relation is not part of the frozen Manager compatibility surface.",
-        ),
-        ManagerAuthorityError::SourceDbIdentityMismatch => (
-            StatusCode::BAD_GATEWAY,
-            SOURCE_DB_IDENTITY_MISMATCH_CODE,
-            "The Manager reads a different database than the released identity pin.",
         ),
         ManagerAuthorityError::Contract(_) => (
             StatusCode::BAD_REQUEST,
@@ -2734,6 +2746,25 @@ fn manager_json_response<T: Serialize>(status: StatusCode, payload: T) -> Respon
         HeaderValue::from_static("nosniff"),
     );
     response
+}
+
+/// 502 with a `reason` that tells the operator which pinned fact failed. Only
+/// the database names are echoed, never the OID hash or any count.
+fn manager_source_identity_problem(
+    reason: &'static str,
+    pinned: &str,
+    observed: Option<&str>,
+) -> Response {
+    let body = ManagerSourceIdentityProblemBody {
+        error: ManagerSourceIdentityProblem {
+            code: SOURCE_DB_IDENTITY_MISMATCH_CODE,
+            message: "The Manager reads a different database than the released identity pin.",
+            reason,
+            pinned_database_name: pinned,
+            observed_database_name: observed,
+        },
+    };
+    (StatusCode::BAD_GATEWAY, Json(body)).into_response()
 }
 
 fn manager_problem(status: StatusCode, code: &'static str, message: &'static str) -> Response {
@@ -7332,17 +7363,27 @@ mod tests {
         assert_eq!(memo.get("PROFILE_A").as_deref(), Some("a2"));
     }
 
-    #[test]
-    fn source_database_mismatch_is_a_typed_bad_gateway_not_a_generic_drift() {
-        let response =
-            manager_authority_error_response(&ManagerAuthorityError::SourceDbIdentityMismatch);
+    #[tokio::test]
+    async fn source_database_mismatch_is_a_typed_bad_gateway_with_a_reason_and_only_names() {
+        use manager_compat_authority::SourceIdentityMismatchReason;
+
+        let error = ManagerAuthorityError::SourceDbIdentityMismatch {
+            reason: SourceIdentityMismatchReason::DatabaseName,
+            pinned_database_name: "trading_system".to_owned(),
+            observed_database_name: Some("live_data_executor".to_owned()),
+        };
+        let response = manager_authority_error_response(&error);
         assert_eq!(response.status(), StatusCode::BAD_GATEWAY);
+        let bytes = to_bytes(response.into_body(), 4096).await.unwrap();
+        let body: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+        assert_eq!(body["error"]["code"], SOURCE_DB_IDENTITY_MISMATCH_CODE);
+        assert_eq!(body["error"]["reason"], "DATABASE_NAME");
+        assert_eq!(body["error"]["pinned_database_name"], "trading_system");
+        assert_eq!(body["error"]["observed_database_name"], "live_data_executor");
+        assert_eq!(body["error"].as_object().unwrap().len(), 5);
+
         let drift = manager_authority_error_response(&ManagerAuthorityError::CatalogueDrift);
         assert_eq!(drift.status(), StatusCode::BAD_GATEWAY);
-        assert_eq!(
-            SOURCE_DB_IDENTITY_MISMATCH_CODE,
-            "MANAGER_V2_SOURCE_DB_IDENTITY_MISMATCH"
-        );
     }
 
     #[test]
