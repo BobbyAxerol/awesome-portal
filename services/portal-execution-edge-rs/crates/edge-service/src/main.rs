@@ -21,8 +21,8 @@ use std::{
     io::{BufReader, Read as _},
     net::SocketAddr,
     path::{Path, PathBuf},
-    sync::{Arc, Once},
-    time::Duration,
+    sync::{Arc, Mutex, Once},
+    time::{Duration, Instant},
 };
 
 use analytics::{
@@ -191,6 +191,7 @@ struct AppState {
     manager_shared_admission_maximum_wait: Duration,
     manager_shared_admission_lease_ttl: Duration,
     manager_shared_cache_ttl: Duration,
+    manager_catalogue_memo: Arc<ProfileTtlMemo<ManagerCatalogue>>,
     manager_compatibility: Arc<ManagerCompatibilityAuthority>,
     current_source_map: Arc<CurrentSourceMap>,
     current_gateway_acceptance: Arc<CurrentGatewayAcceptance>,
@@ -240,6 +241,7 @@ struct EdgeConfig {
     manager_shared_admission_maximum_wait: Duration,
     manager_shared_admission_lease_ttl: Duration,
     manager_shared_cache_ttl: Duration,
+    manager_catalogue_cache_ttl: Duration,
     probe_alpha_id: Option<String>,
     probe_interval: Duration,
     transport_limits: TransportLimits,
@@ -538,6 +540,13 @@ impl EdgeConfig {
                 750,
                 50,
                 5_000,
+            )? as u64),
+            // Process-local copy of the validated catalogue; 0 disables it.
+            manager_catalogue_cache_ttl: Duration::from_millis(bounded_usize(
+                "EDGE_MANAGER_CATALOGUE_CACHE_TTL_MS",
+                30_000,
+                0,
+                300_000,
             )? as u64),
             probe_alpha_id: optional("EDGE_PROBE_ALPHA_ID"),
             probe_interval: Duration::from_secs(probe_interval_seconds as u64),
@@ -930,6 +939,7 @@ async fn serve(config: EdgeConfig) -> Result<(), ServiceError> {
         manager_shared_admission_maximum_wait: config.manager_shared_admission_maximum_wait,
         manager_shared_admission_lease_ttl: config.manager_shared_admission_lease_ttl,
         manager_shared_cache_ttl: config.manager_shared_cache_ttl,
+        manager_catalogue_memo: Arc::new(ProfileTtlMemo::new(config.manager_catalogue_cache_ttl)),
         manager_compatibility,
         current_source_map,
         current_gateway_acceptance,
@@ -2215,9 +2225,15 @@ async fn admitted_manager_execute(
         .release_source_admission(&lease)
         .await
         .map_err(|_| ManagerDispatchError::AdmissionUnavailable)?;
-    result
+    let read = result
         .map_err(|_| ManagerDispatchError::AdmissionUnavailable)?
-        .map_err(ManagerDispatchError::Client)
+        .map_err(ManagerDispatchError::Client);
+    // A Manager whose catalogue changed under a remembered copy answers with a
+    // contract mismatch; drop the copy so the next request re-reads it.
+    if matches!(read, Err(ManagerDispatchError::Client(ManagerV2ClientError::Contract(_)))) {
+        state.manager_catalogue_memo.invalidate(profile_id);
+    }
+    read
 }
 
 #[derive(Debug)]
@@ -2275,7 +2291,69 @@ async fn admitted_manager_extension_execute(
         .map_err(ManagerExtensionDispatchError::Client)
 }
 
+/// Process-local, time-bounded copy of one validated answer per profile.
+/// A hit never outlives `ttl` (zero disables the memo); only values the caller
+/// chose to `put` are kept, so errors are never remembered.
+#[derive(Debug)]
+struct ProfileTtlMemo<T> {
+    ttl: Duration,
+    entries: Mutex<HashMap<String, (Instant, T)>>,
+}
+
+impl<T: Clone> ProfileTtlMemo<T> {
+    fn new(ttl: Duration) -> Self {
+        Self {
+            ttl,
+            entries: Mutex::new(HashMap::new()),
+        }
+    }
+
+    fn get(&self, profile_id: &str) -> Option<T> {
+        let entries = self.entries.lock().ok()?;
+        entries
+            .get(profile_id)
+            .filter(|(stored_at, _)| stored_at.elapsed() < self.ttl)
+            .map(|(_, value)| value.clone())
+    }
+
+    fn put(&self, profile_id: &str, value: &T) {
+        if self.ttl.is_zero() {
+            return;
+        }
+        if let Ok(mut entries) = self.entries.lock() {
+            entries.insert(profile_id.to_owned(), (Instant::now(), value.clone()));
+        }
+    }
+
+    fn invalidate(&self, profile_id: &str) {
+        if let Ok(mut entries) = self.entries.lock() {
+            entries.remove(profile_id);
+        }
+    }
+}
+
 async fn fetch_manager_catalogue(
+    state: &AppState,
+    profile_id: &str,
+    client: &ManagerV2Client,
+) -> Result<ManagerCatalogue, Response> {
+    if let Some(catalogue) = state.manager_catalogue_memo.get(profile_id) {
+        return Ok(catalogue);
+    }
+    let catalogue = fetch_shared_manager_catalogue(state, profile_id, client).await?;
+    // Remember only a catalogue that matches the frozen authority; a drifted
+    // one is re-read on every call so a repaired Manager is seen immediately.
+    if state
+        .manager_compatibility
+        .validate_catalogue(&catalogue)
+        .is_ok()
+    {
+        state.manager_catalogue_memo.put(profile_id, &catalogue);
+    }
+    Ok(catalogue)
+}
+
+async fn fetch_shared_manager_catalogue(
     state: &AppState,
     profile_id: &str,
     client: &ManagerV2Client,
@@ -5616,6 +5694,7 @@ mod tests {
             manager_shared_admission_maximum_wait: Duration::from_secs(1),
             manager_shared_admission_lease_ttl: Duration::from_secs(7),
             manager_shared_cache_ttl: Duration::from_millis(750),
+            manager_catalogue_memo: Arc::new(ProfileTtlMemo::new(Duration::ZERO)),
             manager_compatibility: Arc::new(ManagerCompatibilityAuthority::canonical().unwrap()),
             current_source_map: Arc::new(CurrentSourceMap::canonical().unwrap()),
             current_gateway_acceptance: Arc::new(CurrentGatewayAcceptance::canonical().unwrap()),
@@ -7175,6 +7254,33 @@ mod tests {
 
         assert_eq!(legacy.mode(), RealtimeAuthorityMode::LegacyShadow);
         assert_eq!(manager.mode(), RealtimeAuthorityMode::ManagerProjection);
+    }
+
+    #[test]
+    fn catalogue_memo_serves_only_inside_its_ttl_and_never_when_disabled() {
+        let memo = ProfileTtlMemo::new(Duration::from_millis(60));
+        assert_eq!(memo.get("PROFILE_A"), None);
+        memo.put("PROFILE_A", &"catalogue-a".to_owned());
+        assert_eq!(memo.get("PROFILE_A").as_deref(), Some("catalogue-a"));
+        assert_eq!(memo.get("PROFILE_B"), None);
+        std::thread::sleep(Duration::from_millis(120));
+        assert_eq!(memo.get("PROFILE_A"), None);
+
+        let disabled = ProfileTtlMemo::new(Duration::ZERO);
+        disabled.put("PROFILE_A", &"catalogue-a".to_owned());
+        assert_eq!(disabled.get("PROFILE_A"), None);
+    }
+
+    #[test]
+    fn catalogue_memo_invalidation_drops_only_the_named_profile() {
+        let memo = ProfileTtlMemo::new(Duration::from_secs(30));
+        memo.put("PROFILE_A", &"a".to_owned());
+        memo.put("PROFILE_B", &"b".to_owned());
+        memo.invalidate("PROFILE_A");
+        assert_eq!(memo.get("PROFILE_A"), None);
+        assert_eq!(memo.get("PROFILE_B").as_deref(), Some("b"));
+        memo.put("PROFILE_A", &"a2".to_owned());
+        assert_eq!(memo.get("PROFILE_A").as_deref(), Some("a2"));
     }
 
     #[test]
