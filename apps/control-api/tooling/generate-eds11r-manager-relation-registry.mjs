@@ -16,13 +16,38 @@ import { fileURLToPath } from "node:url";
 
 const toolingDirectory = dirname(fileURLToPath(import.meta.url));
 const repositoryRoot = resolve(toolingDirectory, "../../..");
+// Census versions the compiler knows. Each entry pins the file and the exact counts of that frozen census, so a new census
+// (for example v2 with more relations) is an explicit, reviewed addition here and never a silent drift of the v1 counts.
+const censusVersions = Object.freeze({
+  v1: Object.freeze({
+    file: "manager-surface-census.v1.json",
+    censusDirectory: "manager-surface-census-v1",
+    sourceDirectory: "maximum-data-return-v1",
+    relations: 96,
+    classifications: Object.freeze({ SCREEN_BOUND: 54, PROJECTION_INPUT: 16, AUDIT_ONLY: 13, INTERNAL_ONLY: 13 }),
+  }),
+  // Census v2 (16 Nov 2026): the 96 relations of v1 (byte-identical entries) plus the 13 T1 relations, all PROJECTION_INPUT
+  // (no screen binding, so the allowlist of 54 named screen operations does not grow). Owner decision, Edge candidate.
+  v2: Object.freeze({
+    file: "manager-surface-census.v2.json",
+    censusDirectory: "manager-surface-census-v2",
+    sourceDirectory: "maximum-data-return-v2",
+    relations: 109,
+    classifications: Object.freeze({ SCREEN_BOUND: 54, PROJECTION_INPUT: 29, AUDIT_ONLY: 13, INTERNAL_ONLY: 13 }),
+  }),
+});
+const censusVersion = process.env.EDS11R_CENSUS_VERSION ?? "v1";
+const censusSpec = censusVersions[censusVersion];
+if (!censusSpec) {
+  throw new Error(`unknown census version ${censusVersion}; known: ${Object.keys(censusVersions).join(", ")}`);
+}
 const sourcePack = process.env.EDS11R_SOURCE_PACK ?? join(
   repositoryRoot,
-  "services/portal-execution-edge-rs/contracts/maximum-data-return-v1",
+  `services/portal-execution-edge-rs/contracts/${censusSpec.sourceDirectory}`,
 );
 const censusPack = process.env.EDS11R_CENSUS_PACK ?? join(
   repositoryRoot,
-  "services/portal-execution-edge-rs/contracts/manager-surface-census-v1",
+  `services/portal-execution-edge-rs/contracts/${censusSpec.censusDirectory}`,
 );
 const outputFile = process.env.EDS11R_GENERATED_OUTPUT ?? join(
   toolingDirectory,
@@ -181,20 +206,6 @@ const screenCoverageOverrides = Object.freeze({
 
 const relationCensus = read(sourcePack, "DATABASE_RELATION_CENSUS.csv");
 const columnCatalogue = read(sourcePack, "COLUMN_SEMANTICS_CATALOG.csv");
-// Census versions the compiler knows. Each entry pins the file and the exact counts of that frozen census, so a new census
-// (for example v2 with more relations) is an explicit, reviewed addition here and never a silent drift of the v1 counts.
-const censusVersions = Object.freeze({
-  v1: Object.freeze({
-    file: "manager-surface-census.v1.json",
-    relations: 96,
-    classifications: Object.freeze({ SCREEN_BOUND: 54, PROJECTION_INPUT: 16, AUDIT_ONLY: 13, INTERNAL_ONLY: 13 }),
-  }),
-});
-const censusVersion = process.env.EDS11R_CENSUS_VERSION ?? "v1";
-const censusSpec = censusVersions[censusVersion];
-if (!censusSpec) {
-  throw new Error(`unknown census version ${censusVersion}; known: ${Object.keys(censusVersions).join(", ")}`);
-}
 const managerCensus = readJson(censusPack, censusSpec.file);
 
 const relationMetadata = new Map();
