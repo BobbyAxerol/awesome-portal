@@ -19,6 +19,7 @@ import signal
 import ssl
 import stat
 import subprocess
+import sys
 import tempfile
 import time
 from urllib.parse import quote
@@ -58,6 +59,8 @@ PROFILES = (('172.23.0.1', 'paper', 'PAPER_BINANCE_USDM'),
 MAX_BYTES = 1_048_576
 DEFAULT_VALIDITY_DAYS = 30
 DEFAULT_CA_VALIDITY_DAYS = 3650
+PORT_READY_SECONDS = 30  # a restarted Manager may need many seconds before it listens
+PORT_RETRY_SECONDS = 0.2
 MAX_VALIDITY_DAYS = 3700
 LEAF_CA_MARGIN = timedelta(days=7)  # explicit --validity-days must end this early
 RUNTIME_CONTRACT = 'trading-system.portal-execution.manager-v2.runtime.v1'
@@ -359,14 +362,41 @@ def available(payload, profile, catalogue_sha=None):
 
 def page_data(body, *, relation=None, kind=None):
     data = body['data']
-    require(isinstance(data.get('items'), list) and len(data['items']) <= 1 and
+    # One direction only: a continuation cursor implies PARTIAL. The live Paper Manager also
+    # answers PARTIAL without a cursor (observed 2026-11-16), so the converse is not required.
+    require(body['completeness'] in ('COMPLETE', 'PARTIAL') and
+            isinstance(data.get('items'), list) and len(data['items']) <= 1 and
             all(isinstance(item, dict) for item in data['items']) and
             (data.get('next_cursor') is None or
              isinstance(data['next_cursor'], str) and 0 < len(data['next_cursor']) <= 4096) and
-            (body['completeness'] == 'PARTIAL') == bool(data.get('next_cursor')),
+            (body['completeness'] == 'PARTIAL' or not data.get('next_cursor')),
             'READ_PAGE_INVALID')
     require((relation is None or data.get('relation') == relation) and
             (kind is None or data.get('kind') == kind), 'READ_TARGET_INVALID')
+
+
+def served_certificate(context, port, name):
+    """DER of the leaf a Manager serves, waiting up to PORT_READY_SECONDS for it to listen."""
+    give_up = time.monotonic() + PORT_READY_SECONDS
+    while True:
+        try:
+            with socket.create_connection(('127.0.0.1', port), timeout=5) as raw:
+                with context.wrap_socket(raw, server_hostname=name) as secured:
+                    return secured.getpeercert(binary_form=True), secured.version()
+        except (ConnectionError, socket.timeout, ssl.SSLEOFError):
+            if time.monotonic() >= give_up:
+                raise
+            time.sleep(PORT_RETRY_SECONDS)
+
+
+def missing_mtls_denied(host, context):
+    try:
+        status, _ = request(host, 8444, '/portal/execution/v2/manager/catalog', context)
+    except TimeoutError:
+        raise  # No answer is not a denial.
+    except OSError:
+        return True  # TLS alert, reset or broken pipe: the proxy refused the client.
+    return status in (400, 401, 403, 495, 496)
 
 
 def qualify(new_ca=None):
@@ -383,19 +413,10 @@ def qualify(new_ca=None):
         if new_ca is not None:  # Stage-accurate: the served leaf must chain to the NEW CA.
             require(served.issuer == new_ca.subject, 'SERVED_CHAIN_NOT_NEW_CA')
             new_ca.public_key().verify(served.signature, served.tbs_certificate_bytes)
-        for attempt in range(10):
-            try:
-                with socket.create_connection(('127.0.0.1', port), timeout=5) as raw:
-                    with context.wrap_socket(raw, server_hostname=name) as secured:
-                        loaded_sha = sha(secured.getpeercert(binary_form=True))
-                        require(loaded_sha == expected_sha, 'LOADED_CERTIFICATE_MISMATCH')
-                        certificates.append({'port': port, 'tls': secured.version(),
-                            'certificate_sha256': loaded_sha})
-                break
-            except (ConnectionError, socket.timeout):
-                if attempt == 9:
-                    raise
-                time.sleep(0.2)
+        der, version = served_certificate(context, port, name)
+        loaded_sha = sha(der)
+        require(loaded_sha == expected_sha, 'LOADED_CERTIFICATE_MISMATCH')
+        certificates.append({'port': port, 'tls': version, 'certificate_sha256': loaded_sha})
     edge = Path('/srv/primus/portal/execution-edge')
     context = tls_context(edge / 'source-proxy-ca.crt', edge / 'source-proxy-client.pem')
     profiles = []
@@ -434,14 +455,8 @@ def qualify(new_ca=None):
                                        ('GET', '/not-allowed', 404)):
             status, _ = request(host, 8444, base + path, context, method)
             require(status == expected, 'ROUTE_DENIAL_FAILED')
-        denied = False
-        try:
-            status, _ = request(host, 8444, base + '/catalog',
-                               tls_context(edge / 'source-proxy-ca.crt'))
-            denied = status in (400, 401, 403, 495, 496)
-        except ssl.SSLError:
-            denied = True
-        require(denied, 'MISSING_MTLS_NOT_DENIED')
+        require(missing_mtls_denied(host, tls_context(edge / 'source-proxy-ca.crt')),
+                'MISSING_MTLS_NOT_DENIED')
         profiles.append({'profile': profile, 'profile_id': expected_profile_id,
                          'positive_reads': 4, 'negative_cases': 4,
                          'catalogue_relations': len(relations), 'business_rows_recorded': False})
@@ -529,6 +544,18 @@ def publish(bundle, manifest, label):
     return proof
 
 
+def failure_code(error):
+    # Allow-listed code, or the exception class name: never an arbitrary message.
+    text = str(error)
+    return text if type(error) is ValueError and re.fullmatch(r'[A-Z0-9_]{1,96}', text) \
+        else type(error).__name__
+
+
+def note_stage_failure(stage, error):
+    print(json.dumps({'stage': stage, 'code': failure_code(error)}, sort_keys=True),
+          file=sys.stderr)
+
+
 def contain_failure():
     # Try every approved Manager independently; never claim containment on intent.
     for name in SERVICES[:6]:
@@ -577,13 +604,15 @@ def activate(bundle):
                     'validity_days': manifest.get('validity_days'),
                     'leaf_not_after_utc': manifest.get('leaf_not_after_utc'),
                     'new_ca_sha256': manifest.get('new_ca_sha256'), **proof}
-        except Exception:
+        except Exception as primary_error:
+            note_stage_failure('primary', primary_error)
             # Never restore expired originals. Install the separately validated
             # valid same-identity fallback, reload only these same services.
             try:
                 with bounded_stage(600):
                     publish(bundle, manifest, 'fallback')
-            except Exception:
+            except Exception as fallback_error:
+                note_stage_failure('fallback', fallback_error)
                 with bounded_stage(180):
                     contain_failure()
             raise ValueError('PRIMARY_FAILED_VALID_FALLBACK_LOADED') from None

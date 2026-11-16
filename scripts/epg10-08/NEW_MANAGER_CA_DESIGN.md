@@ -98,3 +98,16 @@ At a later calm window, after the new chain has been used without incident: prep
 - The new CA pin for activate comes from the manifest file in the root-owned bundle; there is no second independent pin. The owner should compare the printed `new_ca_sha256` and `manifest_sha256` at approval time.
 - Leaves signed by the new CA drop any `issuer name + serial` part of an original AuthorityKeyIdentifier and carry the key identifier only.
 - No real certificate was inspected (reading `/home/bobby/secure` and `/srv` was out of bounds), so the real leaf extension set, the real old CA subject attributes and the real file modes are unverified.
+
+## 8. Observed 16 Nov: probe invariant
+
+The first real `--activate` of a new-CA bundle (2026-11-16 08:48Z) published all six files correctly but both stages stopped the six
+Managers because `qualify()` raised `READ_PAGE_INVALID` (found by running `qualify()` alone). The Paper
+`/projections/portfolio?limit=1` answer is HTTP 200 with one item, `completeness` PARTIAL and no `next_cursor`. `page_data` required
+`PARTIAL <=> cursor present`, which the Paper Manager does not satisfy (PARTIAL can mean something other than "more pages"). The probe now
+requires only what is certain: a present cursor implies PARTIAL, completeness is COMPLETE or PARTIAL, items is a list of at most one
+object, and the cursor is a non-empty string of at most 4096 characters. Every other probe check is unchanged, including the route-denial
+expectations (POST 405, HEAD 405, unknown 404) that failed the 16 Oct 2026 attempt: this change does not touch them and cannot hide a
+wrong status. Together with this fix, `activate` now prints `{"stage","code"}` for each failed stage on stderr (stdout unchanged), the
+six-port TLS wait is up to 30 s instead of 2 s, and a reset or broken pipe on the no-client-certificate probe counts as a denial while a
+timeout does not.

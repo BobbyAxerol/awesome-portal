@@ -7,11 +7,14 @@ never through an active foreign host-measurement window.
 """
 from contextlib import ExitStack
 from datetime import datetime, timedelta, timezone
+import http.client
 import importlib.util
 import io
 import json
 import os
 from pathlib import Path
+import socket
+import ssl
 import tempfile
 from types import SimpleNamespace
 import unittest
@@ -463,13 +466,24 @@ class EnvelopeAndPageTests(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, '^READ_TARGET_INVALID$'):
                     renewal.page_data(body, **kwargs)
 
-    def test_oversized_rows_bad_cursor_or_partial_completeness_mismatch_are_denied(self):
+    def test_partial_without_a_cursor_is_accepted_as_the_live_paper_manager_returns_it(self):
+        for completeness, data in (('PARTIAL', {'items': [{}], 'next_cursor': None}),
+                                   ('PARTIAL', {'items': [{}]}),
+                                   ('COMPLETE', {'items': [], 'next_cursor': None}),
+                                   ('PARTIAL', {'items': [{}], 'next_cursor': 'TEST_ONLY_cursor'})):
+            with self.subTest(completeness=completeness, data=data):
+                renewal.page_data({**self.body, 'completeness': completeness, 'data': data})
+
+    def test_oversized_rows_bad_cursor_or_cursor_without_partial_are_denied(self):
         cases = [('COMPLETE', {'items': [{}, {}], 'next_cursor': None}),
                  ('COMPLETE', {'items': ['not-an-object'], 'next_cursor': None}),
+                 ('COMPLETE', {'items': 'not-a-list', 'next_cursor': None}),
                  ('COMPLETE', {'items': [], 'next_cursor': ''}),
+                 ('PARTIAL', {'items': [], 'next_cursor': ''}),
+                 ('PARTIAL', {'items': [], 'next_cursor': 7}),
                  ('PARTIAL', {'items': [], 'next_cursor': 'x' * 4097}),
                  ('COMPLETE', {'items': [], 'next_cursor': 'TEST_ONLY_cursor'}),
-                 ('PARTIAL', {'items': [], 'next_cursor': None})]
+                 ('UNKNOWN', {'items': [], 'next_cursor': None})]
         for index, (completeness, data) in enumerate(cases):
             with self.subTest(case=index):
                 with self.assertRaisesRegex(ValueError, '^READ_PAGE_INVALID$'):
@@ -957,6 +971,24 @@ class PrivateRoundTripTests(unittest.TestCase):
                 renewal.activate(bundle)
             replace.assert_not_called()
 
+    def test_activate_reports_both_stage_failure_codes_on_stderr_and_nothing_secret(self):
+        _, bundle, _ = self.prepare_new_ca()
+        errors = io.StringIO()
+        with patch.object(renewal, 'reload_contexts'), \
+                patch.object(renewal, 'qualify', side_effect=[
+                    ValueError('ROUTE_DENIAL_FAILED'), RuntimeError('TEST_ONLY sensitive detail')]), \
+                patch.object(renewal, 'contain_failure', side_effect=ValueError(
+                    'REPAIR_AND_FALLBACK_FAILED_AFFECTED_MANAGERS_STOPPED')), \
+                patch('sys.stderr', errors):
+            with self.assertRaisesRegex(
+                    ValueError, '^REPAIR_AND_FALLBACK_FAILED_AFFECTED_MANAGERS_STOPPED$'):
+                renewal.activate(bundle)
+        lines = [json.loads(line) for line in errors.getvalue().splitlines()]
+        self.assertEqual(lines, [{'stage': 'primary', 'code': 'ROUTE_DENIAL_FAILED'},
+                                 {'stage': 'fallback', 'code': 'RuntimeError'}])
+        self.assertNotIn('sensitive', errors.getvalue())
+        self.assertFalse(self.lock.exists())
+
     def test_prepare_partial_write_failure_removes_only_its_new_bundle(self):
         sentinel = self.root / 'TEST_ONLY_keep'
         sentinel.write_bytes(b'TEST_ONLY retained unrelated file')
@@ -1020,6 +1052,63 @@ class PrivateRoundTripTests(unittest.TestCase):
             leaf = x509.load_pem_x509_certificate(path.read_bytes())
             self.assertGreater(leaf.not_valid_after.replace(tzinfo=timezone.utc), datetime.now(timezone.utc))
         self.assertFalse(self.lock.exists())
+
+
+class ProbeHardeningTests(unittest.TestCase):
+    def test_failure_code_exposes_only_allow_listed_codes_or_the_class_name(self):
+        self.assertEqual(renewal.failure_code(ValueError('ROUTE_DENIAL_FAILED')), 'ROUTE_DENIAL_FAILED')
+        for error, expected in ((ValueError('TEST_ONLY sensitive detail'), 'ValueError'),
+                                (RuntimeError('ROUTE_DENIAL_FAILED'), 'RuntimeError'),
+                                (ConnectionResetError('TEST_ONLY_PRIVATE'), 'ConnectionResetError')):
+            with self.subTest(expected=expected):
+                self.assertEqual(renewal.failure_code(error), expected)
+
+    def test_missing_client_certificate_is_denied_by_status_alert_or_reset_but_not_by_silence(self):
+        for outcome in (ssl.SSLError('TEST_ONLY alert'), ConnectionResetError(), BrokenPipeError(),
+                        http.client.RemoteDisconnected('TEST_ONLY')):
+            with self.subTest(outcome=type(outcome).__name__):
+                with patch.object(renewal, 'request', side_effect=outcome):
+                    self.assertTrue(renewal.missing_mtls_denied('TEST_ONLY.invalid', object()))
+        for status, denied in ((400, True), (403, True), (496, True), (200, False), (404, False)):
+            with self.subTest(status=status):
+                with patch.object(renewal, 'request', return_value=(status, b'')):
+                    self.assertIs(renewal.missing_mtls_denied('TEST_ONLY.invalid', object()), denied)
+        with patch.object(renewal, 'request', side_effect=socket.timeout()):
+            with self.assertRaises(TimeoutError):
+                renewal.missing_mtls_denied('TEST_ONLY.invalid', object())
+        with patch.object(renewal, 'request', side_effect=ValueError('LOCK_EXPIRED')):
+            with self.assertRaisesRegex(ValueError, '^LOCK_EXPIRED$'):
+                renewal.missing_mtls_denied('TEST_ONLY.invalid', object())
+
+    def context_serving(self, certificate=b'TEST_ONLY_DER'):
+        context = MagicMock()
+        secured = context.wrap_socket.return_value.__enter__.return_value
+        secured.getpeercert.return_value = certificate
+        secured.version.return_value = 'TLSv1.3'
+        return context
+
+    def test_a_restarting_manager_is_waited_for_until_it_listens(self):
+        with patch.object(renewal, 'PORT_READY_SECONDS', 5), patch.object(renewal, 'PORT_RETRY_SECONDS', 0), \
+                patch.object(renewal.socket, 'create_connection', side_effect=[
+                    ConnectionRefusedError(), ConnectionResetError(), ssl.SSLEOFError(), MagicMock()]) as connect:
+            result = renewal.served_certificate(self.context_serving(), 8023, 'manager-facade')
+        self.assertEqual(result, (b'TEST_ONLY_DER', 'TLSv1.3'))
+        self.assertEqual(connect.call_count, 4)
+
+    def test_waiting_is_bounded_and_real_certificate_errors_are_not_retried(self):
+        with patch.object(renewal, 'PORT_READY_SECONDS', 0), \
+                patch.object(renewal.socket, 'create_connection', side_effect=ConnectionRefusedError()) as connect:
+            with self.assertRaises(ConnectionRefusedError):
+                renewal.served_certificate(self.context_serving(), 8023, 'manager-facade')
+        self.assertEqual(connect.call_count, 1)
+        context = self.context_serving()
+        context.wrap_socket.side_effect = ssl.SSLCertVerificationError('TEST_ONLY untrusted')
+        with patch.object(renewal, 'PORT_READY_SECONDS', 5), patch.object(renewal, 'PORT_RETRY_SECONDS', 0), \
+                patch.object(renewal.socket, 'create_connection', return_value=MagicMock()) as connect:
+            with self.assertRaises(ssl.SSLCertVerificationError):
+                renewal.served_certificate(context, 8023, 'manager-facade')
+        self.assertEqual(connect.call_count, 1)
+        self.assertEqual(renewal.PORT_READY_SECONDS, 30)
 
 
 class FullQualificationTests(unittest.TestCase):
