@@ -51,6 +51,9 @@ PROFILES = (('172.23.0.1', 'paper', 'PAPER_BINANCE_USDM'),
             ('172.24.0.1', 'sandbox', 'SANDBOX_BINANCE_USDM'),
             ('172.25.0.1', 'live', 'LIVE_BINANCE_USDM'))
 MAX_BYTES = 1_048_576
+DEFAULT_VALIDITY_DAYS = 30
+MAX_VALIDITY_DAYS = 3700
+LEAF_CA_MARGIN = timedelta(days=7)  # explicit --validity-days must end this early
 RUNTIME_CONTRACT = 'trading-system.portal-execution.manager-v2.runtime.v1'
 _operation_guard = lambda: None
 
@@ -84,8 +87,14 @@ def public_key(key):
                             serialization.PublicFormat.SubjectPublicKeyInfo)
 
 
-def renew(original, key, ca, ca_key, now):
-    """Renew only validity/serial/signature; all identities/extensions/keys stay."""
+def renew(original, key, ca, ca_key, now, validity_days=None):
+    """Renew only validity/serial/signature; all identities/extensions/keys stay.
+
+    validity_days None keeps the original 30-day bound. An explicit value is
+    range-checked and must end at least LEAF_CA_MARGIN before the CA expires.
+    """
+    require(validity_days is None or 1 <= validity_days <= MAX_VALIDITY_DAYS,
+            'LEAF_VALIDITY_OUT_OF_RANGE')
     require(isinstance(key, Ed25519PrivateKey) and isinstance(ca_key, Ed25519PrivateKey),
             'PINNED_KEY_TYPE_REQUIRED')
     require(public_key(key.public_key()) == public_key(original.public_key()),
@@ -96,9 +105,12 @@ def renew(original, key, ca, ca_key, now):
     require(ca.extensions.get_extension_for_class(x509.BasicConstraints).value.ca,
             'SIGNER_NOT_CA')
     ca.public_key().verify(original.signature, original.tbs_certificate_bytes)
-    until = now + timedelta(days=30)
+    until = now + timedelta(days=DEFAULT_VALIDITY_DAYS if validity_days is None else validity_days)
+    ca_after = ca.not_valid_after.replace(tzinfo=timezone.utc)
     require(ca.not_valid_before.replace(tzinfo=timezone.utc) <= now and
-            ca.not_valid_after.replace(tzinfo=timezone.utc) > until, 'CA_VALIDITY_INSUFFICIENT')
+            ca_after > until, 'CA_VALIDITY_INSUFFICIENT')
+    require(validity_days is None or until <= ca_after - LEAF_CA_MARGIN,
+            'LEAF_VALIDITY_EXCEEDS_CA_MARGIN')
     builder = (x509.CertificateBuilder().subject_name(original.subject)
         .issuer_name(ca.subject).public_key(original.public_key())
         .serial_number(x509.random_serial_number())
@@ -156,7 +168,9 @@ def check_lock():
         raise ValueError('EXPIRED_LOCK_PRESENT_REMOVE_ONLY_AFTER_OWNER_CHECK')
 
 
-def prepare():
+def prepare(validity_days=None):
+    require(validity_days is None or 1 <= validity_days <= MAX_VALIDITY_DAYS,
+            'LEAF_VALIDITY_OUT_OF_RANGE')  # Refuse before any private read.
     check_lock()  # Preparation also respects the read-only foreign window.
     ca_bytes = private_read(RUNTIME / 'mtls-ca-cert.pem')
     ca = x509.load_pem_x509_certificate(ca_bytes)
@@ -171,16 +185,20 @@ def prepare():
             re.search(rb'-----BEGIN PRIVATE KEY-----.*?-----END PRIVATE KEY-----',
                       originals[2], re.S).group(0) + b'\n']
     now = datetime.now(timezone.utc)
+    days = DEFAULT_VALIDITY_DAYS if validity_days is None else validity_days
     bundle = Path(tempfile.mkdtemp(prefix='renewal-epg10-08-', dir=ROOT))
     os.chmod(bundle, 0o700)
     manifest = {'schema': 'epg10.manager-tls-renewal.v1', 'created_utc': now.isoformat(),
                 'runtime_acceptance': False, 'runtime_mutations': 0,
-                'ca_sha256': CA_SHA, 'roster': before, 'targets': []}
+                'ca_sha256': CA_SHA, 'roster': before, 'targets': [], 'validity_days': days,
+                # X.509 keeps whole seconds; activate compares each staged notAfter to this.
+                'leaf_not_after_utc': (now + timedelta(days=days)).replace(microsecond=0).isoformat()}
     try:
         # Fresh same-identity recovery; expired originals are forensic only.
         for label in ('primary', 'fallback'):
             values = [renew(x509.load_pem_x509_certificate(originals[i]),
-                            serialization.load_pem_private_key(keys[i], None), ca, ca_key, now)
+                            serialization.load_pem_private_key(keys[i], None), ca, ca_key, now,
+                            validity_days)
                       for i in range(3)]
             values[2] += keys[2]
             for i in range(4):
@@ -392,6 +410,11 @@ def validate_staged(bundle, manifest):
                     leaf.not_valid_before.replace(tzinfo=timezone.utc) <= now and
                     now + timedelta(days=1) < leaf.not_valid_after.replace(tzinfo=timezone.utc) <
                     ca.not_valid_after.replace(tzinfo=timezone.utc), 'STAGED_CERTIFICATE_INVALID')
+            # Bundles staged before validity_days existed carry no pin and skip this.
+            require('leaf_not_after_utc' not in manifest or
+                    leaf.not_valid_after.replace(tzinfo=timezone.utc) ==
+                    datetime.fromisoformat(manifest['leaf_not_after_utc']),
+                    'STAGED_VALIDITY_MISMATCH')
             ca.public_key().verify(leaf.signature, leaf.tbs_certificate_bytes)
             if i >= 2:
                 key = serialization.load_pem_private_key(blob, None)
@@ -466,7 +489,9 @@ def activate(bundle):
         try:
             with bounded_stage(600):
                 proof = publish(bundle, manifest, 'primary')
-            return {'status': 'MANAGER_TLS_REPAIRED_NOT_HUMAN_POLICY_ACCEPTANCE', **proof}
+            return {'status': 'MANAGER_TLS_REPAIRED_NOT_HUMAN_POLICY_ACCEPTANCE',
+                    'validity_days': manifest.get('validity_days'),
+                    'leaf_not_after_utc': manifest.get('leaf_not_after_utc'), **proof}
         except Exception:
             # Never restore expired originals. Install the separately validated
             # valid same-identity fallback, reload only these same services.
@@ -485,10 +510,14 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--prepare', action='store_true')
     parser.add_argument('--activate', type=Path)
+    parser.add_argument('--validity-days', type=int, default=None,
+                        help=f'leaf lifetime for --prepare, 1..{MAX_VALIDITY_DAYS} '
+                             f'(default {DEFAULT_VALIDITY_DAYS})')
     args = parser.parse_args()
     try:
         require(args.prepare != bool(args.activate), 'EXACT_ACTION_REQUIRED')
-        result = prepare() if args.prepare else activate(args.activate)
+        require(args.validity_days is None or args.prepare, 'VALIDITY_DAYS_ONLY_WITH_PREPARE')
+        result = prepare(args.validity_days) if args.prepare else activate(args.activate)
         print(json.dumps(result, sort_keys=True))
         return 0
     except Exception as error:

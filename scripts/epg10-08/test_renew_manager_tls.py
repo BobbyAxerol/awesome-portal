@@ -143,6 +143,57 @@ class CertificateTests(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, '^CA_VALIDITY_INSUFFICIENT$'):
                     self.renew(ca=ca)
 
+    def renew_for(self, days, ca_days=284):
+        return renewal.renew(self.leaf, self.leaf_key, self.make_ca(after=self.now + timedelta(days=ca_days)),
+                             self.ca_key, self.now, days)
+
+    def test_explicit_validity_sets_not_after_and_default_is_unchanged(self):
+        for days, explicit in ((30, False), (30, True), (270, True)):
+            with self.subTest(days=days, explicit=explicit):
+                pem = self.renew() if not explicit else self.renew_for(days)
+                updated = x509.load_pem_x509_certificate(pem)
+                self.assertEqual(updated.not_valid_after.replace(tzinfo=timezone.utc),
+                                 self.now + timedelta(days=days))
+        self.assertEqual(renewal.DEFAULT_VALIDITY_DAYS, 30)
+
+    def test_explicit_validity_must_end_seven_days_before_the_ca(self):
+        self.renew_for(277)  # exactly CA notAfter - 7 days is still allowed
+        for days in (278, 280, 283):
+            with self.subTest(days=days):
+                with self.assertRaisesRegex(ValueError, '^LEAF_VALIDITY_EXCEEDS_CA_MARGIN$'):
+                    self.renew_for(days)
+        with self.assertRaisesRegex(ValueError, '^CA_VALIDITY_INSUFFICIENT$'):
+            self.renew_for(284)
+
+    def test_explicit_validity_range_is_one_to_3700_days(self):
+        for days in (0, -1, 3701):
+            with self.subTest(days=days):
+                with self.assertRaisesRegex(ValueError, '^LEAF_VALIDITY_OUT_OF_RANGE$'):
+                    self.renew_for(days, ca_days=4000)
+        self.assertTrue(self.renew_for(3700, ca_days=3800))
+        self.assertTrue(self.renew_for(1))
+
+    def test_cli_accepts_validity_days_only_with_prepare(self):
+        for argv, expected_code, called in (
+                (['--prepare', '--validity-days', '270'], None, 270),
+                (['--prepare'], None, None),
+                (['--activate', '/TEST_ONLY_NEVER_READ', '--validity-days', '270'],
+                 'VALIDITY_DAYS_ONLY_WITH_PREPARE', False)):
+            with self.subTest(argv=argv):
+                output = io.StringIO()
+                with patch('sys.argv', ['renew_manager_tls.py', *argv]), \
+                        patch.object(renewal, 'prepare', return_value={}) as prepare, \
+                        patch.object(renewal, 'activate') as activate, patch('sys.stdout', output):
+                    code = renewal.main()
+                activate.assert_not_called()
+                if expected_code is None:
+                    self.assertEqual(code, 0)
+                    prepare.assert_called_once_with(called)
+                else:
+                    self.assertEqual(code, 2)
+                    self.assertEqual(json.loads(output.getvalue())['code'], expected_code)
+                    prepare.assert_not_called()
+
 
 class PrivateFileTests(unittest.TestCase):
     def setUp(self):
@@ -624,6 +675,49 @@ class PrivateRoundTripTests(unittest.TestCase):
         self.assertEqual(result['manifest_sha256'], renewal.sha(renewal.private_read(bundle / 'manifest.json')))
         self.assert_original_inputs_unchanged()
         self.assertFalse(self.lock.exists())
+
+    def staged_leaf(self, bundle):
+        return x509.load_pem_x509_certificate(renewal.private_read(bundle / 'primary-0.pem'))
+
+    def test_prepare_default_manifest_records_30_days_and_matching_not_after(self):
+        bundle = Path(renewal.prepare()['private_bundle'])
+        manifest = json.loads(renewal.private_read(bundle / 'manifest.json'))
+        self.assertEqual(manifest['validity_days'], 30)
+        self.assertEqual(self.staged_leaf(bundle).not_valid_after.replace(tzinfo=timezone.utc),
+                         datetime.fromisoformat(manifest['leaf_not_after_utc']))
+
+    def test_prepare_with_validity_days_records_it_and_stages_matching_certificates(self):
+        bundle = Path(renewal.prepare(270)['private_bundle'])
+        manifest = json.loads(renewal.private_read(bundle / 'manifest.json'))
+        self.assertEqual(manifest['validity_days'], 270)
+        expected = datetime.fromisoformat(manifest['leaf_not_after_utc'])
+        created = datetime.fromisoformat(manifest['created_utc'])
+        self.assertEqual(expected, (created + timedelta(days=270)).replace(microsecond=0))
+        for label in ('primary', 'fallback'):
+            for i in range(4):
+                leaf = x509.load_pem_x509_certificate(renewal.private_read(bundle / f'{label}-{i}.pem'))
+                self.assertEqual(leaf.not_valid_after.replace(tzinfo=timezone.utc), expected)
+        renewal.validate_staged(bundle, manifest)
+        self.assert_original_inputs_unchanged()
+
+    def test_activation_validation_refuses_manifest_not_after_that_differs_from_staged(self):
+        bundle = Path(renewal.prepare(270)['private_bundle'])
+        manifest = json.loads(renewal.private_read(bundle / 'manifest.json'))
+        for delta in (timedelta(seconds=1), timedelta(days=-1), timedelta(days=30)):
+            with self.subTest(delta=delta):
+                changed = {**manifest, 'leaf_not_after_utc':
+                           (datetime.fromisoformat(manifest['leaf_not_after_utc']) + delta).isoformat()}
+                with self.assertRaisesRegex(ValueError, '^STAGED_VALIDITY_MISMATCH$'):
+                    renewal.validate_staged(bundle, changed)
+
+    def test_prepare_refuses_bad_validity_before_staging_anything(self):
+        for days, code in ((0, 'LEAF_VALIDITY_OUT_OF_RANGE'), (3701, 'LEAF_VALIDITY_OUT_OF_RANGE'),
+                           (360, 'LEAF_VALIDITY_EXCEEDS_CA_MARGIN')):  # CA ends in 365 days
+            with self.subTest(days=days):
+                with self.assertRaisesRegex(ValueError, '^' + code + '$'):
+                    renewal.prepare(days)
+                self.assertEqual(list(self.root.glob('renewal-epg10-08-*')), [])
+        self.assert_original_inputs_unchanged()
 
     def test_prepare_partial_write_failure_removes_only_its_new_bundle(self):
         sentinel = self.root / 'TEST_ONLY_keep'
