@@ -499,7 +499,11 @@ export class ExecutionProfileProjectionWorker implements OnApplicationBootstrap,
       `${environment}\u0000${profileId}`,
     );
     const retryNotBefore = new Date(failedAt.valueOf() + delayMs);
-    const reasonCode = safeFailureCode(error);
+    // The source refused because the Manager is connected to another database than the one the catalogue pins
+    // (Edge's typed MANAGER_V2_SOURCE_DB_IDENTITY_MISMATCH). Record that as its own stable reason, so the served health
+    // says "source database changed" instead of a generic rejection; the previous snapshot is never replaced by rows
+    // that came from another database.
+    const reasonCode = deferReasonCode(error);
     await this.repository.deferRefresh(workspaceId, environment, profileId, {
       reasonCode,
       failedAt,
@@ -510,6 +514,7 @@ export class ExecutionProfileProjectionWorker implements OnApplicationBootstrap,
       environment,
       profile_id: profileId,
       error_code: reasonCode,
+      ...(reasonCode === SOURCE_DATABASE_CHANGED ? { source_reason_code: SOURCE_DB_IDENTITY_MISMATCH } : {}),
       consecutive_failures: consecutiveFailures,
       retry_not_before: retryNotBefore.toISOString(),
       retry_delay_ms: delayMs,
@@ -673,6 +678,15 @@ function stableHash(value: string): number {
     hash = Math.imul(hash, 16_777_619);
   }
   return hash >>> 0;
+}
+
+/** Edge's typed refusal when a Manager reports another database than the pinned one, and Core's own stable reason code. */
+const SOURCE_DB_IDENTITY_MISMATCH = "MANAGER_V2_SOURCE_DB_IDENTITY_MISMATCH";
+const SOURCE_DATABASE_CHANGED = "N31_SOURCE_DATABASE_CHANGED";
+
+/** The durable reason a deferred profile records: a database-identity mismatch keeps its own stable code. */
+export function deferReasonCode(error: unknown): string {
+  return safeSourceReasonCode(error) === SOURCE_DB_IDENTITY_MISMATCH ? SOURCE_DATABASE_CHANGED : safeFailureCode(error);
 }
 
 function isTransientSourceFailure(error: unknown): boolean {
