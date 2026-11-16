@@ -8,7 +8,10 @@ It never connects to AWS-HK, a database, Redis, a broker, or a CLI.
 from __future__ import annotations
 
 import argparse
+import csv
+import datetime
 import hashlib
+import io
 import json
 import pathlib
 import re
@@ -23,6 +26,20 @@ CENSUS_DIR = (
     / "services/portal-execution-edge-rs/contracts/manager-surface-census-v1"
 )
 CENSUS_PATH = CENSUS_DIR / "manager-surface-census.v1.json"
+# Census v2: a SUPERSET of v1 (the 96 frozen relations plus the 13 T1 relations). v1 files are never touched.
+CENSUS_V2_DIR = (
+    ROOT
+    / "services/portal-execution-edge-rs/contracts/manager-surface-census-v2"
+)
+CENSUS_V2_PATH = CENSUS_V2_DIR / "manager-surface-census.v2.json"
+E1_V2_DIR = (
+    ROOT / "services/portal-execution-edge-rs/contracts/maximum-data-return-v2"
+)
+E1_V2_RELATIONS = E1_V2_DIR / "DATABASE_RELATION_CENSUS.csv"
+E1_V2_COLUMNS = E1_V2_DIR / "COLUMN_SEMANTICS_CATALOG.csv"
+E1_V2_PROVENANCE = E1_V2_DIR / "E1_CAPTURE_PROVENANCE.json"
+V2_SCHEMA_VERSION = "portal.execution.manager-surface-census.v2"
+V2_RELATION_TOTAL = 109
 PLAN_PATH = ROOT / "upgrade/EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md"
 
 SOURCE_PATHS = {
@@ -193,6 +210,33 @@ RELATION_GROUPS = {
         "venue_credentials",
         "venue_rate_limits",
     },
+}
+
+# The 13 T1 relations added by census v2. Every one is PROJECTION_INPUT (readable through the Edge, no Portal screen);
+# a later census revision upgrades one to SCREEN_BOUND when a screen needs it. Owner and data class come from the
+# Trading System ownership baseline through the E1 CSV (`owner_service`, `data_class`), not from this table.
+T1_RELATIONS = frozenset(
+    {
+        "alpha_deadman_heartbeats",
+        "command_transport_bindings",
+        "conditional_order_group_native_parents",
+        "economic_account_cash_balances",
+        "economic_account_fact_census",
+        "economic_account_scope_heads",
+        "economic_facts",
+        "economic_performance_projections_v2",
+        "economic_reconciliation_cases",
+        "economic_tie_out_reports",
+        "execution_algorithm_parents",
+        "risk_pool_state_projections",
+        "source_change_journal",
+    }
+)
+V2_EXPECTED_CLASS_COUNTS = {
+    "SCREEN_BOUND": 54,
+    "PROJECTION_INPUT": 29,
+    "AUDIT_ONLY": 13,
+    "INTERNAL_ONLY": 13,
 }
 
 CLASS_POLICY = {
@@ -702,6 +746,162 @@ def build_census() -> dict[str, Any]:
     }
 
 
+def _v1_relation_names() -> set[str]:
+    return set().union(*RELATION_GROUPS.values())
+
+
+def _read_csv_rows(path: pathlib.Path) -> list[dict[str, str]]:
+    return list(csv.DictReader(io.StringIO(path.read_text(encoding="utf-8"), newline="")))
+
+
+def _e1_selected_names() -> set[str]:
+    names = _v1_relation_names() | T1_RELATIONS
+    if len(names) != V2_RELATION_TOTAL or _v1_relation_names() & T1_RELATIONS:
+        raise CensusError("v2 relation selection is not 96 plus 13 distinct relations")
+    return names
+
+
+def _write_csv_rows(header: list[str], rows: list[list[str]]) -> bytes:
+    out = io.StringIO(newline="")
+    writer = csv.writer(out, lineterminator="\n")
+    writer.writerow(header)
+    writer.writerows(rows)
+    return out.getvalue().encode("utf-8")
+
+
+def derive_e1_subset(source_dir: pathlib.Path) -> dict[str, bytes]:
+    """Derive the v2 E1 pack files from an owner export directory (metadata only).
+
+    Copies only the rows of the 109 selected public relations and their columns; every other relation stays out.
+    Refuses an export whose files do not match the collector manifest, or whose gate is not clean.
+    """
+    manifest = json.loads((source_dir / "MANIFEST.json").read_text(encoding="utf-8"))
+    names = _e1_selected_names()
+    raws = {}
+    for name in ("DATABASE_RELATION_CENSUS.csv", "COLUMN_SEMANTICS_CATALOG.csv"):
+        raw = (source_dir / name).read_bytes()
+        if hashlib.sha256(raw).hexdigest() != manifest["artifact_sha256"][name]:
+            raise CensusError(f"E1 export file does not match its collector manifest: {name}")
+        raws[name] = raw
+    gate = manifest["classification_gate"]
+    if (
+        gate["unclassified_relevant_relations"]
+        or gate["unclassified_timestamp_columns"]
+        or gate["unclassified_mutability"]
+    ):
+        raise CensusError("E1 export has unclassified relations, columns or mutability")
+
+    def parse(name: str) -> tuple[list[str], list[list[str]]]:
+        rows = list(csv.reader(io.StringIO(raws[name].decode("utf-8"), newline="")))
+        return rows[0], rows[1:]
+
+    rel_header, rel_rows = parse("DATABASE_RELATION_CENSUS.csv")
+    col_header, col_rows = parse("COLUMN_SEMANTICS_CATALOG.csv")
+    schema_at, relation_at = rel_header.index("schema"), rel_header.index("relation")
+    selected_rel = [
+        row for row in rel_rows if row[schema_at] == "public" and row[relation_at] in names
+    ]
+    present = {row[relation_at] for row in selected_rel}
+    if present != names or len(selected_rel) != V2_RELATION_TOTAL:
+        raise CensusError(f"E1 export lacks selected relations: {sorted(names - present)}")
+    status_at = rel_header.index("baseline_status")
+    if any(
+        row[status_at] != "BASELINE_MATCHED"
+        for row in selected_rel
+        if row[relation_at] in T1_RELATIONS
+    ):
+        raise CensusError("a T1 relation is not matched to the ownership baseline")
+    cs, cr = col_header.index("schema"), col_header.index("relation")
+    selected_col = [row for row in col_rows if row[cs] == "public" and row[cr] in names]
+    relations_csv = _write_csv_rows(rel_header, selected_rel)
+    columns_csv = _write_csv_rows(col_header, selected_col)
+    capture = datetime.datetime.fromtimestamp(
+        manifest["capture_utc_epoch_ms"] / 1000, datetime.timezone.utc
+    ).strftime("%Y-%m-%dT%H:%M:%SZ")
+    provenance = {
+        "schema_version": "portal.execution.e1-census-subset.v2",
+        "capture_utc": capture,
+        "collector": {
+            "schema_version": manifest["schema_version"],
+            "canonical_contract_digest_sha256": manifest["canonical_contract_digest_sha256"],
+            "classification_gate": gate,
+            "disposition": manifest["disposition"],
+        },
+        "owner_export_artifact_sha256": manifest["artifact_sha256"],
+        "owner_export_totals": {"relations": len(rel_rows), "columns": len(col_rows)},
+        "selection_rule": (
+            "public relations of manager-surface-census v1 (96) plus the 13 T1 relations; "
+            "no other relation, column or file of the owner export is copied"
+        ),
+        "subset": {
+            "relations": len(selected_rel),
+            "columns": len(selected_col),
+            "relations_csv_sha256": hashlib.sha256(relations_csv).hexdigest(),
+            "columns_csv_sha256": hashlib.sha256(columns_csv).hexdigest(),
+        },
+        "business_rows_retained": 0,
+    }
+    return {
+        E1_V2_RELATIONS.name: relations_csv,
+        E1_V2_COLUMNS.name: columns_csv,
+        E1_V2_PROVENANCE.name: (
+            json.dumps(provenance, indent=2, sort_keys=True, ensure_ascii=False) + "\n"
+        ).encode("utf-8"),
+    }
+
+
+def _build_t1_relations() -> list[dict[str, Any]]:
+    rows = {
+        row["relation"]: row
+        for row in _read_csv_rows(E1_V2_RELATIONS)
+        if row["schema"] == "public"
+    }
+    if not T1_RELATIONS <= set(rows):
+        raise CensusError("v2 E1 pack lacks T1 relations")
+    consumer, phase = CLASS_POLICY["PROJECTION_INPUT"]
+    result = []
+    for name in sorted(T1_RELATIONS):
+        row = rows[name]
+        estimate = int(row["estimated_rows"])
+        # reltuples is -1 for a table PostgreSQL has never analysed: that is unknown, never EMPTY.
+        state = "UNKNOWN" if estimate < 0 else ("NONEMPTY" if estimate > 0 else "EMPTY")
+        result.append(
+            {
+                "relation_id": f"public.{name}",
+                "kind": row["kind"].upper(),
+                "source_capability": "managerRelationRecords",
+                "source_authority": "TRADING_SYSTEM",
+                "source_snapshot_state": state,
+                "source_snapshot_evidence": "SANITIZED_E1_CATALOG_CARDINALITY_2026_11_16",
+                "profile_availability": _profile_states(name, "PROJECTION_INPUT", state),
+                "classification": "PROJECTION_INPUT",
+                "owner": "TRADING_SYSTEM_SOURCE_OWNER",
+                "consumer": consumer,
+                "screen_ids": [],
+                "delivery_phase": phase,
+            }
+        )
+    return result
+
+
+def build_census_v2() -> dict[str, Any]:
+    census = build_census()
+    provenance = json.loads(E1_V2_PROVENANCE.read_text(encoding="utf-8"))
+    relations = sorted(
+        [*census["relations"], *_build_t1_relations()],
+        key=lambda item: item["relation_id"],
+    )
+    census["schema_version"] = V2_SCHEMA_VERSION
+    census["relations"] = relations
+    census["counts"]["relations"] = len(relations)
+    census["source_artifacts"]["e1_census_v2_relations"] = {
+        "path": str(E1_V2_RELATIONS.relative_to(ROOT)),
+        "sha256": sha256(E1_V2_RELATIONS),
+    }
+    census["evidence_time"]["e1_census_v2_capture"] = provenance["capture_utc"]
+    return census
+
+
 def _iter_nodes(value: Any) -> Iterable[Any]:
     yield value
     if isinstance(value, dict):
@@ -748,7 +948,10 @@ def _no_business_rows_or_secrets(census: dict[str, Any]) -> None:
                     raise CensusError(f"census contains secret-shaped material: {token}")
 
 
-def validate(census: dict[str, Any], *, compare_sources: bool = True) -> dict[str, Any]:
+def validate(
+    census: dict[str, Any], *, compare_sources: bool = True, version: int = 1
+) -> dict[str, Any]:
+    total = V2_RELATION_TOTAL if version == 2 else 96
     expected_top = {
         "schema_version",
         "phase",
@@ -771,7 +974,8 @@ def validate(census: dict[str, Any], *, compare_sources: bool = True) -> dict[st
     if set(census) != expected_top:
         raise CensusError("census top-level schema is not exact")
     if (
-        census["schema_version"] != "portal.execution.manager-surface-census.v1"
+        census["schema_version"]
+        != (V2_SCHEMA_VERSION if version == 2 else "portal.execution.manager-surface-census.v1")
         or census["phase"] != "N18"
         or census["decision"] != "N18_CAPABILITY_DATA_COVERAGE_CENSUS_COMPLETE"
         or census["generated_from_sanitized_contracts_only"] is not True
@@ -781,7 +985,7 @@ def validate(census: dict[str, Any], *, compare_sources: bool = True) -> dict[st
 
     counts = census["counts"]
     expected_counts = {
-        "relations": 96,
+        "relations": total,
         "manager_primitives": 5,
         "gateway_operations": 104,
         "gateway_get_operations": 56,
@@ -797,7 +1001,7 @@ def validate(census: dict[str, Any], *, compare_sources: bool = True) -> dict[st
 
     relations = census["relations"]
     relation_ids = [item["relation_id"] for item in relations]
-    if len(relation_ids) != len(set(relation_ids)) or len(relation_ids) != 96:
+    if len(relation_ids) != len(set(relation_ids)) or len(relation_ids) != total:
         raise CensusError("relation census is duplicated or incomplete")
     for item in relations:
         if item["classification"] not in RELATION_CLASSES:
@@ -811,6 +1015,28 @@ def validate(census: dict[str, Any], *, compare_sources: bool = True) -> dict[st
             raise CensusError("relation profile coverage is incomplete")
         if any(state["state"] not in PROFILE_STATES for state in states.values()):
             raise CensusError("relation profile state is invalid")
+
+    if version == 2:
+        by_class = Counter(item["classification"] for item in relations)
+        if dict(by_class) != V2_EXPECTED_CLASS_COUNTS:
+            raise CensusError(f"v2 classification counts drifted: {dict(by_class)}")
+        added = {
+            item["relation_id"].removeprefix("public."): item
+            for item in relations
+            if item["relation_id"].removeprefix("public.") in T1_RELATIONS
+        }
+        if set(added) != T1_RELATIONS or any(
+            item["classification"] != "PROJECTION_INPUT"
+            or item["screen_ids"]
+            or item["delivery_phase"] != "N24"
+            or item["source_snapshot_state"] not in {"NONEMPTY", "EMPTY", "UNKNOWN"}
+            for item in added.values()
+        ):
+            raise CensusError("v2 T1 relations are not exactly 13 screenless PROJECTION_INPUT entries")
+        if not _v1_relation_names() <= {
+            item["relation_id"].removeprefix("public.") for item in relations
+        }:
+            raise CensusError("v2 census dropped a v1 relation")
 
     baseline = census["corrected_n17b_baseline"]
     if set(baseline["relations"]) != N17B_RELATIONS or len(baseline["relations"]) != 6:
@@ -860,7 +1086,7 @@ def validate(census: dict[str, Any], *, compare_sources: bool = True) -> dict[st
     _no_business_rows_or_secrets(census)
 
     if compare_sources:
-        generated = build_census()
+        generated = build_census_v2() if version == 2 else build_census()
         if census != generated:
             raise CensusError("canonical census or a source digest drifted; render a reviewed revision")
 
@@ -883,20 +1109,49 @@ def main() -> int:
         help="render the deterministic census to stdout",
     )
     parser.add_argument(
+        "--census-version",
+        type=int,
+        choices=(1, 2),
+        default=1,
+        help="census revision to render or verify (default 1; v1 files are never modified)",
+    )
+    parser.add_argument(
+        "--write-e1-subset",
+        metavar="OWNER_EXPORT_DIR",
+        type=pathlib.Path,
+        help="derive the v2 E1 pack files (109 relations only) from an owner export directory",
+    )
+    parser.add_argument(
         "--verify",
         action="store_true",
         help="verify the committed census and every bound source digest",
     )
     args = parser.parse_args()
-    if args.render == args.verify:
-        parser.error("choose exactly one of --render or --verify")
+    modes = [args.render, args.verify, args.write_e1_subset is not None]
+    if sum(modes) != 1:
+        parser.error("choose exactly one of --render, --verify or --write-e1-subset")
+    if args.write_e1_subset is not None and args.census_version != 2:
+        parser.error("--write-e1-subset requires --census-version 2")
     try:
-        if args.render:
-            census = build_census()
-            validate(census, compare_sources=False)
+        if args.write_e1_subset is not None:
+            files = derive_e1_subset(args.write_e1_subset)
+            E1_V2_DIR.mkdir(parents=True, exist_ok=True)
+            for name, raw in files.items():
+                (E1_V2_DIR / name).write_bytes(raw)
+            print(json.dumps({name: hashlib.sha256(raw).hexdigest() for name, raw in files.items()}, sort_keys=True))
+        elif args.render:
+            if args.census_version == 2:
+                census = build_census_v2()
+                validate(census, compare_sources=False, version=2)
+            else:
+                census = build_census()
+                validate(census, compare_sources=False)
             print(json.dumps(census, indent=2, ensure_ascii=False, sort_keys=True))
         else:
-            result = validate(read_json(CENSUS_PATH))
+            if args.census_version == 2:
+                result = validate(read_json(CENSUS_V2_PATH), version=2)
+            else:
+                result = validate(read_json(CENSUS_PATH))
             print(json.dumps(result, separators=(",", ":"), sort_keys=True))
     except CensusError as exc:
         print(f"N18 census rejected: {exc}", file=sys.stderr)
