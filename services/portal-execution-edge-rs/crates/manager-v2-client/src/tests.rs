@@ -987,3 +987,75 @@ fn production_constructor_requires_https_mtls_and_safe_limits() {
         Err(ManagerV2ClientError::InvalidProfileId)
     ));
 }
+
+fn s1_catalogue_body() -> String {
+    let relation = |name: &str| {
+        format!(
+            r#"{{"id":{{"schema":"public","relation":"{name}"}},"kind":"TABLE","safe_columns":[{{"name":"id","ordinal":1,"data_type":"bigint","nullable":false}}],"secret_cell_excluded_column_count":0,"key":{{"status":"PRIMARY_KEY","name":null,"columns":["id"]}},"profile_classification":"FIXED_PROFILE_CONTEXT","profile_columns":[],"query_status":"QUALIFIED_TS_OC_03D1"}}"#
+        )
+    };
+    format!(
+        r#"{{"contract_version":"{}","authority":"EXECUTION_CELL","profile_id":"PAPER_BINANCE_USDM","catalogue_sha256":"{}","availability":"AVAILABLE","freshness":"FRESH","completeness":"COMPLETE","trace_id":"manager-client-s1","as_of":"2026-08-28T00:00:00Z","data":{{"catalogue_revision":"{}","relation_count":2,"relations":[{},{}]}}}}"#,
+        RUNTIME_CONTRACT_REVISION,
+        DIGEST,
+        DIGEST,
+        relation("account_balances"),
+        relation("portfolios")
+    )
+}
+
+/// A relation page as the S1 Manager (`manager_s1.py`) answers for `account_balances` and `portfolios`:
+/// the usual envelope plus a `source_snapshot` member.
+fn s1_page_body(relation: &str, scope: &str) -> String {
+    format!(
+        r#"{{"contract_version":"{}","authority":"EXECUTION_CELL","profile_id":"PAPER_BINANCE_USDM","catalogue_sha256":"{}","availability":"AVAILABLE","freshness":"FRESH","completeness":"COMPLETE","trace_id":"manager-client-s1-page","as_of":"2026-08-28T00:00:00Z","source_snapshot":{{"version":"edge-s1.v1","mechanism":"M0","source_id":"sha256:{}","relation":"public.{relation}","scope":{scope},"generation":{{"at":"2026-08-28T00:00:00Z","snapshot":"10:20:11,12"}},"total_in_scope":1,"status":"COMPLETE","reason":null,"absence_authority":false}},"data":{{"relation":{{"schema":"public","relation":"{relation}"}},"items":[{{"relation":{{"schema":"public","relation":"{relation}"}},"record_key":"record-key","fields":{{"id":{{"kind":"INTEGER","value":1}}}}}}],"next_cursor":null}}}}"#,
+        RUNTIME_CONTRACT_REVISION,
+        DIGEST,
+        "a".repeat(64)
+    )
+}
+
+#[tokio::test]
+async fn s1_pages_of_portfolios_and_account_balances_pass_the_whole_client_and_decoder_path() {
+    // Regression for the integrated Edge that answered 502 MANAGER_V2_SOURCE_CONTRACT_REJECTED for exactly
+    // these two relations: the response goes through the real HTTP client, header checks and the decoder.
+    let ManagerPayload::Catalogue(catalogue_response) = decode_success(
+        &ManagerV2Request::catalogue(),
+        s1_catalogue_body().as_bytes(),
+    )
+    .unwrap() else {
+        panic!("expected catalogue");
+    };
+    let catalogue = catalogue_response.into_data();
+    for (relation, scope) in [
+        ("account_balances", r#"{"mode":"paper","venue":"OKX"}"#),
+        ("portfolios", "null"),
+    ] {
+        let request = ManagerV2Request::relation_records(
+            catalogue.relation("public", relation).unwrap(),
+            None,
+            PageLimit::new(2).unwrap(),
+        )
+        .unwrap();
+        let captured = Arc::new(Mutex::new(Vec::new()));
+        let origin = one_response_server(
+            Arc::clone(&captured),
+            "200 OK",
+            qualified_headers(),
+            s1_page_body(relation, scope),
+            Duration::ZERO,
+        )
+        .await;
+        let client =
+            ManagerV2Client::new_for_test(&origin, ManagerV2ClientLimits::default()).unwrap();
+        let ManagerRead::Available(ManagerPayload::RelationRecords(page)) =
+            client.execute(&request).await.unwrap()
+        else {
+            panic!("{relation}: expected an available relation page");
+        };
+        let snapshot = page.meta().source_snapshot().unwrap();
+        assert_eq!(snapshot.relation, format!("public.{relation}"));
+        assert!(!snapshot.absence_authority);
+        assert_eq!(captured.lock().unwrap().len(), 1);
+    }
+}

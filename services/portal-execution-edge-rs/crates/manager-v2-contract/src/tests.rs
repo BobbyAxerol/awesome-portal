@@ -613,3 +613,136 @@ fn malformed_inconsistent_or_widened_source_identity_members_are_rejected() {
     not_readable_with_version["latest_ledger_version"] = json!("v1");
     assert!(decode_catalogue_with(Some(not_readable_with_version)).is_err());
 }
+
+/// Wire the S1 Manager (`manager_s1.py`, `_RELATIONS` = `account_balances` and `portfolios`) adds to a relation
+/// page of exactly those two relations: an envelope-level `source_snapshot` member.
+fn s1_snapshot(relation: &str, scope: &Value) -> Value {
+    json!({
+        "version": "edge-s1.v1", "mechanism": "M0",
+        "source_id": format!("sha256:{}", "a".repeat(64)),
+        "relation": relation, "scope": scope,
+        "generation": {"at": "2026-08-28T00:00:00Z", "snapshot": "10:20:11,12"},
+        "total_in_scope": 1, "status": "COMPLETE", "reason": null, "absence_authority": false
+    })
+}
+
+fn s1_catalogue() -> ManagerCatalogue {
+    let body = serde_json::to_vec(&envelope(json!({
+        "catalogue_revision": DIGEST,
+        "relation_count": 3,
+        "relations": [
+            relation("public", "account_balances"),
+            relation("public", "orders"),
+            relation("public", "portfolios")
+        ]
+    })))
+    .unwrap();
+    let ManagerPayload::Catalogue(response) =
+        decode_success(&ManagerV2Request::catalogue(), &body).unwrap()
+    else {
+        panic!("expected catalogue");
+    };
+    response.into_data()
+}
+
+fn decode_s1_page(
+    relation_name: &str,
+    snapshot: Option<Value>,
+    completeness: &str,
+) -> Result<ManagerPayload, ContractError> {
+    let catalogue = s1_catalogue();
+    let request = ManagerV2Request::relation_records(
+        catalogue.relation("public", relation_name).unwrap(),
+        None,
+        PageLimit::new(2).unwrap(),
+    )
+    .unwrap();
+    let mut page = envelope(json!({
+        "relation": {"schema": "public", "relation": relation_name},
+        "items": [record("public", relation_name, "record-key")],
+        "next_cursor": null
+    }));
+    page["completeness"] = json!(completeness);
+    if let Some(snapshot) = snapshot {
+        page["source_snapshot"] = snapshot;
+    }
+    decode_success(&request, &serde_json::to_vec(&page).unwrap())
+}
+
+#[test]
+fn s1_pages_of_portfolios_and_account_balances_carry_a_source_snapshot_the_edge_must_accept() {
+    // Regression: the integrated Edge rejected both with MANAGER_V2_SOURCE_CONTRACT_REJECTED because the
+    // envelope wire denies unknown members and did not know `source_snapshot`.
+    let scoped = json!({"mode": "paper", "venue": "OKX"});
+    assert!(decode_s1_page(
+        "account_balances",
+        Some(s1_snapshot("public.account_balances", &scoped)),
+        "COMPLETE"
+    )
+    .is_ok());
+    assert!(decode_s1_page(
+        "portfolios",
+        Some(s1_snapshot("public.portfolios", &Value::Null)),
+        "COMPLETE"
+    )
+    .is_ok());
+}
+
+#[test]
+fn the_accepted_snapshot_is_exposed_and_a_snapshot_on_any_other_relation_is_refused() {
+    let scoped = json!({"mode": "paper", "venue": "OKX"});
+    let ManagerPayload::RelationRecords(page) = decode_s1_page(
+        "account_balances",
+        Some(s1_snapshot("public.account_balances", &scoped)),
+        "COMPLETE",
+    )
+    .unwrap() else {
+        panic!("expected relation page")
+    };
+    let snapshot = page.meta().source_snapshot().unwrap();
+    assert_eq!(snapshot.relation, "public.account_balances");
+    assert!(!snapshot.absence_authority);
+    // A page without the member (every other relation) still decodes and carries none.
+    let ManagerPayload::RelationRecords(plain) =
+        decode_s1_page("orders", None, "COMPLETE").unwrap()
+    else {
+        panic!("expected relation page")
+    };
+    assert!(plain.meta().source_snapshot().is_none());
+    // The member is only valid for the two S1 relations.
+    assert!(decode_s1_page(
+        "orders",
+        Some(s1_snapshot("public.orders", &Value::Null)),
+        "COMPLETE"
+    )
+    .is_err());
+    assert!(decode_s1_page(
+        "portfolios",
+        Some(s1_snapshot("public.portfolios", &scoped)),
+        "COMPLETE"
+    )
+    .is_err());
+}
+
+#[test]
+fn a_malformed_or_inconsistent_snapshot_never_decodes() {
+    let good = || s1_snapshot("public.portfolios", &Value::Null);
+    let mut absence = good();
+    absence["absence_authority"] = json!(true);
+    let mut wrong_time = good();
+    wrong_time["generation"]["at"] = json!("2026-08-28T00:00:01Z");
+    let mut widened = good();
+    widened["unexpected"] = json!(true);
+    for (label, snapshot) in [
+        ("absence authority", absence),
+        ("generation differs from as_of", wrong_time),
+        ("unknown member", widened),
+    ] {
+        assert!(
+            decode_s1_page("portfolios", Some(snapshot), "COMPLETE").is_err(),
+            "{label}"
+        );
+    }
+    // The page completeness must agree with the snapshot status.
+    assert!(decode_s1_page("portfolios", Some(good()), "PARTIAL").is_err());
+}
