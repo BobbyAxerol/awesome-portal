@@ -1,0 +1,13 @@
+# PAPER source-database identity pin (guard ON), Edge side only: adds the two pin variables and a read-only bind of the pin file.
+# Stacked after the live Edge stack (rendered file + T2 release override + T1 release override + memo-on override); nothing else changes
+# (image 167e031a, release file and its pin, memo TTL default).
+services:
+  execution-edge:
+    environment:
+      EDGE_MANAGER_SOURCE_DB_PIN_FILE: "/run/manager-source-pin/pin.json"
+      EDGE_MANAGER_SOURCE_DB_PIN_SHA256: "sha256:f62d2bf73e7a586fa6f87b05140cbfa669e26f8013135b0be116f0f3ee488f2c"
+    volumes:
+      - type: bind
+        source: /home/bobby/.local/state/portal-execution-edge/releases/guard-pin-paper-20261116/pin.paper.json
+        target: /run/manager-source-pin/pin.json
+        read_only: true

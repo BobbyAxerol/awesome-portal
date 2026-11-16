@@ -1,0 +1,10 @@
+{
+  "database_name": "trading_system",
+  "database_oid_sha256": "5a35755d64384917a6c86adc8bc5eba5dadb17b90c761e35e24903c4e57cd97b",
+  "environment": "paper",
+  "ledger_status_required": false,
+  "minimum_schema_ledger_rows": 175,
+  "profile_id": "PAPER_BINANCE_USDM",
+  "schema_version": "portal.execution.manager-source-identity-pin.v1",
+  "source_identity_required": true
+}

@@ -7394,6 +7394,89 @@ mod tests {
         assert_eq!(drift.status(), StatusCode::BAD_GATEWAY);
     }
 
+    #[tokio::test]
+    async fn every_identity_mismatch_reason_is_a_typed_bad_gateway_with_its_own_code() {
+        use manager_compat_authority::SourceIdentityMismatchReason as Reason;
+
+        for (reason, code) in [
+            (Reason::IdentityAbsent, "IDENTITY_ABSENT"),
+            (Reason::DatabaseName, "DATABASE_NAME"),
+            (Reason::DatabaseOid, "DATABASE_OID"),
+            (Reason::LedgerNotReadable, "LEDGER_NOT_READABLE"),
+            (Reason::LedgerBelowMinimum, "LEDGER_BELOW_MINIMUM"),
+        ] {
+            let error = ManagerAuthorityError::SourceDbIdentityMismatch {
+                reason,
+                pinned_database_name: "trading_system".to_owned(),
+                observed_database_name: None,
+            };
+            let response = manager_authority_error_response(&error);
+            assert_eq!(response.status(), StatusCode::BAD_GATEWAY, "{code}");
+            let bytes = to_bytes(response.into_body(), 4096).await.unwrap();
+            let body: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+            assert_eq!(
+                body["error"]["code"],
+                "MANAGER_V2_SOURCE_DB_IDENTITY_MISMATCH"
+            );
+            assert_eq!(body["error"]["reason"], code);
+            assert!(
+                !body.to_string().contains("5a35755d"),
+                "no OID hash in the problem body"
+            );
+        }
+    }
+
+    #[test]
+    fn the_paper_pin_is_loaded_at_start_only_for_paper_and_its_profile_with_exact_bytes() {
+        const PIN: &[u8] =
+            include_bytes!("../../../../../scripts/epg10-08/guard-pin/pin.paper.json");
+        const PROFILE: &str = "PAPER_BINANCE_USDM";
+        use sha2::Digest as _;
+        let path = env::temp_dir().join(format!("edge-pin-test-{}", Uuid::now_v7()));
+        fs::write(&path, PIN).unwrap();
+        let file = path.to_str().unwrap();
+        let digest = format!("sha256:{:x}", sha2::Sha256::digest(PIN));
+        let load =
+            |environment: &str, profile: Option<&str>, file: Option<&str>, digest: Option<&str>| {
+                manager_source_identity_pinned(
+                    ManagerCompatibilityAuthority::canonical().unwrap(),
+                    environment,
+                    profile,
+                    file,
+                    digest,
+                )
+            };
+        assert!(
+            load("paper", Some(PROFILE), None, None).is_ok(),
+            "no pin: unchanged behaviour"
+        );
+        assert!(load("paper", Some(PROFILE), Some(file), Some(&digest)).is_ok());
+        // exactly one of the two variables, another environment or profile, a wrong digest or a missing file all stop the Edge at start
+        for refusal in [
+            load("paper", Some(PROFILE), Some(file), None),
+            load("paper", Some(PROFILE), None, Some(&digest)),
+            load("sandbox", Some(PROFILE), Some(file), Some(&digest)),
+            load("live", Some("LIVE_BINANCE_USDM"), Some(file), Some(&digest)),
+            load("paper", Some("PAPER_OKX"), Some(file), Some(&digest)),
+            load("paper", None, Some(file), Some(&digest)),
+            load(
+                "paper",
+                Some(PROFILE),
+                Some(file),
+                Some(&format!("sha256:{}", "0".repeat(64))),
+            ),
+            load(
+                "paper",
+                Some(PROFILE),
+                Some("/missing/pin.json"),
+                Some(&digest),
+            ),
+        ] {
+            assert!(refusal.is_err());
+        }
+        fs::remove_file(&path).unwrap();
+    }
+
     #[test]
     fn mtls_is_mandatory_and_rejects_a_client_from_another_ca() {
         let trusted = certificate_fixture("sgp-control-api");
