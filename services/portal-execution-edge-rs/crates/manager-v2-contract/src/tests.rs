@@ -486,3 +486,82 @@ fn relayed_envelopes_preserve_owner_shape_without_validation_only_state() {
     )
     .is_err());
 }
+
+fn source_identity_member() -> Value {
+    json!({
+        "database_name": "trading_system",
+        "database_oid_sha256": DIGEST,
+        "schema_migration_count": 173
+    })
+}
+
+fn decode_catalogue_with(identity: Option<Value>) -> Result<ManagerPayload, ContractError> {
+    let mut response = catalogue_response();
+    if let Some(identity) = identity {
+        response["data"]["source_identity"] = identity;
+    }
+    decode_success(
+        &ManagerV2Request::catalogue(),
+        &serde_json::to_vec(&response).unwrap(),
+    )
+}
+
+#[test]
+fn legacy_catalogue_without_source_identity_decodes_as_none() {
+    assert!(catalogue().source_identity().is_none());
+    let serialized = serde_json::to_value(catalogue()).unwrap();
+    assert!(serialized.get("source_identity").is_none());
+}
+
+#[test]
+fn source_identity_member_is_decoded_exactly_and_survives_a_serialise_decode_round_trip() {
+    let ManagerPayload::Catalogue(response) =
+        decode_catalogue_with(Some(source_identity_member())).unwrap()
+    else {
+        panic!("expected catalogue");
+    };
+    let identity = response.data().source_identity().unwrap();
+    assert_eq!(identity.database_name(), "trading_system");
+    assert_eq!(identity.database_oid_sha256().as_str(), DIGEST);
+    assert_eq!(identity.schema_migration_count(), 173);
+
+    let serialized = serde_json::to_value(&response).unwrap();
+    assert_eq!(
+        serialized["data"]["source_identity"],
+        source_identity_member()
+    );
+    let body = serde_json::to_vec(&serialized).unwrap();
+    let ManagerPayload::Catalogue(again) =
+        decode_success(&ManagerV2Request::catalogue(), &body).unwrap()
+    else {
+        panic!("expected catalogue");
+    };
+    assert_eq!(again.data().source_identity(), Some(identity));
+}
+
+#[test]
+fn malformed_or_widened_source_identity_members_are_rejected() {
+    let mut not_a_digest = source_identity_member();
+    not_a_digest["database_oid_sha256"] = json!("not-a-digest");
+    let mut bad_name = source_identity_member();
+    bad_name["database_name"] = json!("bad-name");
+    let mut negative_count = source_identity_member();
+    negative_count["schema_migration_count"] = json!(-1);
+    let mut missing_count = source_identity_member();
+    missing_count
+        .as_object_mut()
+        .unwrap()
+        .remove("schema_migration_count");
+    let mut extra_member = source_identity_member();
+    extra_member["system_id"] = json!("raw-cluster-id");
+    for member in [
+        not_a_digest,
+        bad_name,
+        negative_count,
+        missing_count,
+        extra_member,
+        json!("trading_system"),
+    ] {
+        assert!(decode_catalogue_with(Some(member)).is_err());
+    }
+}

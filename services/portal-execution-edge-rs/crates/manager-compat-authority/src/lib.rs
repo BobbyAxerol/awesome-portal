@@ -36,6 +36,10 @@ const PRODUCT_RELEASE_PROFILE_JSON: &str = include_str!(
 
 pub const AUTHORITY_REVISION: &str = "portal.execution.manager-compat-authority.v1";
 pub const DELEGATED_RESOURCE: &str = "execution:manager-v2:read";
+/// Typed problem code the Edge returns when the Manager reads another database.
+pub const SOURCE_DB_IDENTITY_MISMATCH_CODE: &str = "MANAGER_V2_SOURCE_DB_IDENTITY_MISMATCH";
+const SOURCE_IDENTITY_PIN_SCHEMA: &str = "portal.execution.manager-source-identity-pin.v1";
+const SOURCE_IDENTITY_PIN_MAXIMUM_BYTES: usize = 65_536;
 const N18_CENSUS_DIGEST: &str =
     "sha256:cb577bdd67eb8ffaf8ec8bb73ac273f064623f2acc7210cc8b2955439411cfe3";
 const N19_MATRIX_DIGEST: &str =
@@ -117,6 +121,25 @@ pub struct ManagerCompatibilityAuthority {
     expected_projection_kinds: BTreeSet<String>,
     pinned_catalogue_digest: Option<String>,
     pinned_context: Option<(DeploymentEnvironment, String)>,
+    source_identity_pins: BTreeMap<String, SourceIdentityPin>,
+}
+
+/// Release-pinned identity of the database one Manager profile must read.
+/// Built only from a trusted, digest-pinned deployment input; never from a
+/// caller or from an upstream Manager response.
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct SourceIdentityPin {
+    schema_version: String,
+    environment: String,
+    profile_id: String,
+    /// `false` accepts a legacy Manager that sends no `source_identity`; a
+    /// Manager that does send one must still match. There is no default: a
+    /// pin without this member is rejected.
+    source_identity_required: bool,
+    database_name: String,
+    database_oid_sha256: String,
+    minimum_schema_migration_count: u64,
 }
 
 /// A compatibility authority bound to one exact deployment/profile/resource
@@ -166,6 +189,7 @@ impl ManagerCompatibilityAuthority {
                 .collect(),
             pinned_catalogue_digest: None,
             pinned_context: None,
+            source_identity_pins: BTreeMap::new(),
         })
     }
 
@@ -238,6 +262,49 @@ impl ManagerCompatibilityAuthority {
         });
         self.approved_relations = restricted;
         self.pinned_catalogue_digest = Some(digest.to_owned());
+        Ok(self)
+    }
+
+    /// Adds the database identity pin of one profile from a trusted deployment
+    /// input. `pin_digest` (`sha256:` plus the SHA-256 of the exact bytes) is
+    /// configured separately from the file. Profiles without a pin are not
+    /// identity-checked; once pinned, a mismatch fails closed.
+    ///
+    /// # Errors
+    ///
+    /// Rejects unpinned, malformed, oversized, mismatched or unbound pins.
+    pub fn with_source_identity_pin(
+        mut self,
+        bytes: &[u8],
+        pin_digest: &str,
+        environment: DeploymentEnvironment,
+        profile_id: &str,
+    ) -> Result<Self, AuthorityError> {
+        if bytes.is_empty()
+            || bytes.len() > SOURCE_IDENTITY_PIN_MAXIMUM_BYTES
+            || digest(bytes) != pin_digest
+        {
+            return Err(AuthorityError::InvalidSourceIdentityPin);
+        }
+        let pin: SourceIdentityPin = serde_json::from_slice(bytes)
+            .map_err(|_| AuthorityError::InvalidSourceIdentityPin)?;
+        if pin.schema_version != SOURCE_IDENTITY_PIN_SCHEMA
+            || pin.environment != environment.as_str()
+            || pin.profile_id != profile_id
+            || pin.database_name.is_empty()
+            || pin.database_name.len() > 63
+            || !is_sha256_digest(&pin.database_oid_sha256)
+        {
+            return Err(AuthorityError::InvalidSourceIdentityPin);
+        }
+        self.bind(ManagerRequestContext {
+            environment,
+            profile_id,
+            delegated_resource: DELEGATED_RESOURCE,
+            owner_contract_revision: RUNTIME_CONTRACT_REVISION,
+        })?;
+        let pinned_profile = pin.profile_id.clone();
+        self.source_identity_pins.insert(pinned_profile, pin);
         Ok(self)
     }
 
@@ -382,6 +449,38 @@ impl ManagerCompatibilityAuthority {
         Ok(())
     }
 
+    /// Verifies the database the Manager reports against the release pin of
+    /// `profile_id`: exact name and OID hash, and a migration ledger count at
+    /// least the pinned minimum. A profile with no pin is not checked.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`AuthorityError::SourceDbIdentityMismatch`] when the identity
+    /// differs, or is absent while the pin requires it.
+    pub fn validate_source_identity(
+        &self,
+        profile_id: &str,
+        catalogue: &ManagerCatalogue,
+    ) -> Result<(), AuthorityError> {
+        let Some(pin) = self.source_identity_pins.get(profile_id) else {
+            return Ok(());
+        };
+        let Some(identity) = catalogue.source_identity() else {
+            return if pin.source_identity_required {
+                Err(AuthorityError::SourceDbIdentityMismatch)
+            } else {
+                Ok(())
+            };
+        };
+        if identity.database_name() != pin.database_name
+            || identity.database_oid_sha256().as_str() != pin.database_oid_sha256
+            || identity.schema_migration_count() < pin.minimum_schema_migration_count
+        {
+            return Err(AuthorityError::SourceDbIdentityMismatch);
+        }
+        Ok(())
+    }
+
     fn adapter_for_owner_revision(
         &self,
         owner_contract_revision: &str,
@@ -439,13 +538,16 @@ impl BoundManagerAuthority<'_> {
         ManagerV2Request::capabilities()
     }
 
-    /// Verifies the complete owner catalogue against the N18 allowlist.
+    /// Verifies the complete owner catalogue against the N18 allowlist and,
+    /// when this profile is pinned, the source database identity.
     ///
     /// # Errors
     ///
-    /// Rejects missing or extra relations.
+    /// Rejects missing or extra relations and a source database mismatch.
     pub fn validate_catalogue(&self, catalogue: &ManagerCatalogue) -> Result<(), AuthorityError> {
-        self.authority.validate_catalogue(catalogue)
+        self.authority.validate_catalogue(catalogue)?;
+        self.authority
+            .validate_source_identity(&self.binding.profile_id, catalogue)
     }
 
     /// Verifies the exact five runtime capability descriptors.
@@ -481,7 +583,7 @@ impl BoundManagerAuthority<'_> {
         cursor: Option<&OpaqueCursor>,
         limit: PageLimit,
     ) -> Result<ManagerV2Request, AuthorityError> {
-        self.authority.validate_catalogue(catalogue)?;
+        self.validate_catalogue(catalogue)?;
         if !self.authority.approved_relations.contains(relation_id) {
             return Err(AuthorityError::RelationNotApproved);
         }
@@ -506,7 +608,7 @@ impl BoundManagerAuthority<'_> {
         catalogue: &ManagerCatalogue,
         record: &ManagerRecord,
     ) -> Result<ManagerV2Request, AuthorityError> {
-        self.authority.validate_catalogue(catalogue)?;
+        self.validate_catalogue(catalogue)?;
         let relation_id = format!(
             "{}.{}",
             record.relation().schema(),
@@ -534,7 +636,7 @@ impl BoundManagerAuthority<'_> {
         cursor: Option<&OpaqueCursor>,
         limit: PageLimit,
     ) -> Result<ManagerV2Request, AuthorityError> {
-        self.authority.validate_catalogue(catalogue)?;
+        self.validate_catalogue(catalogue)?;
         if !self
             .authority
             .expected_projection_kinds
@@ -580,6 +682,10 @@ pub enum AuthorityError {
     CatalogueDrift,
     #[error("catalogue restriction is malformed or exceeds the frozen N18 set")]
     InvalidCatalogueRestriction,
+    #[error("manager source database identity does not match the release pin")]
+    SourceDbIdentityMismatch,
+    #[error("source database identity pin is malformed or not bound to this deployment")]
+    InvalidSourceIdentityPin,
     #[error("relation is not approved by N18")]
     RelationNotApproved,
     #[error("projection is not approved")]
@@ -1016,6 +1122,15 @@ fn false_flags(names: &[&str]) -> BTreeMap<String, bool> {
 
 fn digest(bytes: &[u8]) -> String {
     format!("sha256:{:x}", Sha256::digest(bytes))
+}
+
+fn is_sha256_digest(value: &str) -> bool {
+    value.strip_prefix("sha256:").is_some_and(|hex| {
+        hex.len() == 64
+            && hex
+                .bytes()
+                .all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte))
+    })
 }
 
 #[cfg(test)]

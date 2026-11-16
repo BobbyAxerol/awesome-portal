@@ -450,12 +450,48 @@ pub struct ManagerCatalogue {
     catalogue_revision: CatalogueDigest,
     relation_count: usize,
     relations: Vec<CataloguedRelation>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    source_identity: Option<SourceIdentity>,
+}
+
+/// Database identity a Manager reports for its source. Public values only:
+/// the database OID travels as a SHA-256 (`sha256:` plus 64 lowercase hex),
+/// never raw. Absent on a legacy Manager; the Edge decides whether that is
+/// acceptable from its own pin, never from this value.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct SourceIdentity {
+    database_name: String,
+    database_oid_sha256: CatalogueDigest,
+    schema_migration_count: u64,
+}
+
+impl SourceIdentity {
+    #[must_use]
+    pub fn database_name(&self) -> &str {
+        &self.database_name
+    }
+
+    #[must_use]
+    pub fn database_oid_sha256(&self) -> &CatalogueDigest {
+        &self.database_oid_sha256
+    }
+
+    #[must_use]
+    pub const fn schema_migration_count(&self) -> u64 {
+        self.schema_migration_count
+    }
 }
 
 impl ManagerCatalogue {
     #[must_use]
     pub fn catalogue_revision(&self) -> &CatalogueDigest {
         &self.catalogue_revision
+    }
+
+    /// The Manager-reported source database identity, when the Manager sends one.
+    #[must_use]
+    pub fn source_identity(&self) -> Option<&SourceIdentity> {
+        self.source_identity.as_ref()
     }
 
     #[must_use]
@@ -1337,10 +1373,25 @@ fn decode_catalogue(
         });
     }
     relations.sort_by(|left, right| left.id.cmp(&right.id));
+    let source_identity = match wire.source_identity {
+        Some(identity) => Some(decode_source_identity(identity)?),
+        None => None,
+    };
     Ok(ManagerCatalogue {
         catalogue_revision: revision,
         relation_count: wire.relation_count,
         relations,
+        source_identity,
+    })
+}
+
+fn decode_source_identity(wire: SourceIdentityWire) -> Result<SourceIdentity, ContractError> {
+    validate_identifier(&wire.database_name)?;
+    Ok(SourceIdentity {
+        database_name: wire.database_name,
+        database_oid_sha256: CatalogueDigest::parse(wire.database_oid_sha256)
+            .map_err(|_| ContractError::InvalidCatalogue)?,
+        schema_migration_count: wire.schema_migration_count,
     })
 }
 
@@ -1758,6 +1809,16 @@ struct ManagerCatalogueWire {
     catalogue_revision: String,
     relation_count: usize,
     relations: Vec<RelationSchemaWire>,
+    #[serde(default)]
+    source_identity: Option<SourceIdentityWire>,
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct SourceIdentityWire {
+    database_name: String,
+    database_oid_sha256: String,
+    schema_migration_count: u64,
 }
 
 #[derive(Deserialize)]

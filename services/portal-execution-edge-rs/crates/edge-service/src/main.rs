@@ -59,6 +59,7 @@ use intercell_gateway::current_acceptance::{CurrentAcceptanceError, CurrentGatew
 use manager_compat_authority::{
     AuthorityError as ManagerAuthorityError, BoundManagerAuthority, DeploymentEnvironment,
     ManagerCompatibilityAuthority, ManagerRequestContext, DELEGATED_RESOURCE,
+    SOURCE_DB_IDENTITY_MISMATCH_CODE,
 };
 use manager_extension_contract::{ManagerExtensionRead, ManagerExtensionRequest};
 use manager_projection::ManagerMaterializationLimits;
@@ -320,11 +321,17 @@ impl EdgeConfig {
             RuntimeGate::from(strict_boolean("EDGE_MANAGER_V2_READ_ENABLED", false)?);
         let manager_v2_profile_id =
             manager_v2_profile_from_environment(&environment, manager_v2_read_enabled)?;
-        let manager_compatibility = Arc::new(manager_compatibility_from_release(
+        let manager_compatibility = Arc::new(manager_source_identity_pinned(
+            manager_compatibility_from_release(
+                &environment,
+                manager_v2_profile_id.as_deref(),
+                optional_release_var("EDGE_MANAGER_CATALOGUE_RELEASE_FILE")?.as_deref(),
+                optional_release_var("EDGE_MANAGER_CATALOGUE_RELEASE_SHA256")?.as_deref(),
+            )?,
             &environment,
             manager_v2_profile_id.as_deref(),
-            optional_release_var("EDGE_MANAGER_CATALOGUE_RELEASE_FILE")?.as_deref(),
-            optional_release_var("EDGE_MANAGER_CATALOGUE_RELEASE_SHA256")?.as_deref(),
+            optional_release_var("EDGE_MANAGER_SOURCE_DB_PIN_FILE")?.as_deref(),
+            optional_release_var("EDGE_MANAGER_SOURCE_DB_PIN_SHA256")?.as_deref(),
         )?);
         let manager_projection_enabled =
             RuntimeGate::from(strict_boolean("EDGE_MANAGER_PROJECTION_ENABLED", false)?);
@@ -2341,16 +2348,24 @@ async fn fetch_manager_catalogue(
         return Ok(catalogue);
     }
     let catalogue = fetch_shared_manager_catalogue(state, profile_id, client).await?;
-    // Remember only a catalogue that matches the frozen authority; a drifted
-    // one is re-read on every call so a repaired Manager is seen immediately.
-    if state
-        .manager_compatibility
-        .validate_catalogue(&catalogue)
-        .is_ok()
-    {
+    // Remember only a catalogue that matches the frozen authority and the
+    // pinned source database; anything else is re-read on every call so a
+    // repaired Manager is seen immediately.
+    if catalogue_matches_release(state, profile_id, &catalogue) {
         state.manager_catalogue_memo.put(profile_id, &catalogue);
     }
     Ok(catalogue)
+}
+
+fn catalogue_matches_release(
+    state: &AppState,
+    profile_id: &str,
+    catalogue: &ManagerCatalogue,
+) -> bool {
+    let authority = &state.manager_compatibility;
+    let relations = authority.validate_catalogue(catalogue);
+    let identity = authority.validate_source_identity(profile_id, catalogue);
+    relations.is_ok() && identity.is_ok()
 }
 
 async fn fetch_shared_manager_catalogue(
@@ -2595,6 +2610,11 @@ fn manager_authority_error_response(error: &ManagerAuthorityError) -> Response {
             StatusCode::NOT_FOUND,
             "MANAGER_COMPAT_RELATION_NOT_APPROVED",
             "The relation is not part of the frozen Manager compatibility surface.",
+        ),
+        ManagerAuthorityError::SourceDbIdentityMismatch => (
+            StatusCode::BAD_GATEWAY,
+            SOURCE_DB_IDENTITY_MISMATCH_CODE,
+            "The Manager reads a different database than the released identity pin.",
         ),
         ManagerAuthorityError::Contract(_) => (
             StatusCode::BAD_REQUEST,
@@ -5211,6 +5231,35 @@ fn manager_compatibility_from_release(
     }
 }
 
+/// Optional database-identity pin on top of the (possibly release-narrowed)
+/// authority. Both unset keeps today's behaviour; exactly one set is an error.
+fn manager_source_identity_pinned(
+    authority: ManagerCompatibilityAuthority,
+    environment: &str,
+    profile: Option<&str>,
+    file: Option<&str>,
+    expected_digest: Option<&str>,
+) -> Result<ManagerCompatibilityAuthority, ConfigError> {
+    const CONFIG: &str = "EDGE_MANAGER_SOURCE_DB_PIN";
+    match (file, expected_digest) {
+        (None, None) => Ok(authority),
+        (Some(path), Some(digest)) => {
+            let environment = DeploymentEnvironment::from_config(environment)
+                .ok_or(ConfigError::Invalid(CONFIG))?;
+            let profile = profile.ok_or(ConfigError::Invalid(CONFIG))?;
+            let file = fs::File::open(path).map_err(|_| ConfigError::Invalid(CONFIG))?;
+            let mut bytes = Vec::new();
+            file.take(65_537)
+                .read_to_end(&mut bytes)
+                .map_err(|_| ConfigError::Invalid(CONFIG))?;
+            authority
+                .with_source_identity_pin(&bytes, digest, environment, profile)
+                .map_err(|_| ConfigError::Invalid(CONFIG))
+        }
+        _ => Err(ConfigError::Invalid(CONFIG)),
+    }
+}
+
 fn optional_uuid(name: &'static str) -> Result<Option<Uuid>, ConfigError> {
     optional(name)
         .map(|value| Uuid::parse_str(&value).map_err(|_| ConfigError::Invalid(name)))
@@ -7281,6 +7330,19 @@ mod tests {
         assert_eq!(memo.get("PROFILE_B").as_deref(), Some("b"));
         memo.put("PROFILE_A", &"a2".to_owned());
         assert_eq!(memo.get("PROFILE_A").as_deref(), Some("a2"));
+    }
+
+    #[test]
+    fn source_database_mismatch_is_a_typed_bad_gateway_not_a_generic_drift() {
+        let response =
+            manager_authority_error_response(&ManagerAuthorityError::SourceDbIdentityMismatch);
+        assert_eq!(response.status(), StatusCode::BAD_GATEWAY);
+        let drift = manager_authority_error_response(&ManagerAuthorityError::CatalogueDrift);
+        assert_eq!(drift.status(), StatusCode::BAD_GATEWAY);
+        assert_eq!(
+            SOURCE_DB_IDENTITY_MISMATCH_CODE,
+            "MANAGER_V2_SOURCE_DB_IDENTITY_MISMATCH"
+        );
     }
 
     #[test]
