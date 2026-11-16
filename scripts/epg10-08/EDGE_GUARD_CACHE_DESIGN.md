@@ -150,10 +150,12 @@ schema, environment and profile must match, profile must bind),
 pinned_database_name, observed_database_name }` `:615`, `source_identity_detail`
 `:639`. `BoundManagerAuthority::validate_catalogue` also checks identity, and
 `relation_page_request`, `record_request` and `projection_request` call it instead
-of the unbound check. `edge-service/src/main.rs`: `manager_compatibility_authority`
-`:2108` loads the pin at startup (exactly one variable set is a startup error),
-`manager_authority_error_response` `:2594` and `manager_source_identity_problem`
-`:2730` build the 502. The catalogue memo (section 1) only stores a catalogue that
+of the unbound check. `edge-service/src/main.rs`: `manager_source_identity_pinned`
+`:4749` attaches the pin to the authority that `EdgeConfig::from_environment` builds
+(after `manager_compatibility_from_release`, so serve and the projection worker both
+use it; exactly one of the two variables set is a config error),
+`manager_authority_error_response` `:2583` and `manager_source_identity_problem`
+`:2719` build the 502. The catalogue memo (section 1) only stores a catalogue that
 also passes the identity check.
 
 A profile with **no pin configured is not checked**. That keeps existing
@@ -180,8 +182,7 @@ pre-Manager-wire pin key for the ledger minimum, prefixed or uppercase hash, emp
 wrong environment, profile or schema, negative minimum, non-boolean status flag;
 the bound authority guards `validate_catalogue`, `relation_page_request` and
 `projection_request`. Edge service: the mismatch maps to 502 with the five-member
-body. Not tested: `manager_compatibility_authority` config loading (needs a full
-`EdgeConfig`) and any HTTP path.
+body. Not tested: `manager_source_identity_pinned` config loading and any HTTP path.
 
 ## 3. How CI should build and test it
 
