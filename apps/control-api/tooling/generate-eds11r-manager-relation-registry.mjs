@@ -181,7 +181,21 @@ const screenCoverageOverrides = Object.freeze({
 
 const relationCensus = read(sourcePack, "DATABASE_RELATION_CENSUS.csv");
 const columnCatalogue = read(sourcePack, "COLUMN_SEMANTICS_CATALOG.csv");
-const managerCensus = readJson(censusPack, "manager-surface-census.v1.json");
+// Census versions the compiler knows. Each entry pins the file and the exact counts of that frozen census, so a new census
+// (for example v2 with more relations) is an explicit, reviewed addition here and never a silent drift of the v1 counts.
+const censusVersions = Object.freeze({
+  v1: Object.freeze({
+    file: "manager-surface-census.v1.json",
+    relations: 96,
+    classifications: Object.freeze({ SCREEN_BOUND: 54, PROJECTION_INPUT: 16, AUDIT_ONLY: 13, INTERNAL_ONLY: 13 }),
+  }),
+});
+const censusVersion = process.env.EDS11R_CENSUS_VERSION ?? "v1";
+const censusSpec = censusVersions[censusVersion];
+if (!censusSpec) {
+  throw new Error(`unknown census version ${censusVersion}; known: ${Object.keys(censusVersions).join(", ")}`);
+}
+const managerCensus = readJson(censusPack, censusSpec.file);
 
 const relationMetadata = new Map();
 for (const row of parseCsv(relationCensus.body, "DATABASE_RELATION_CENSUS.csv")) {
@@ -197,8 +211,8 @@ for (const row of parseCsv(columnCatalogue.body, "COLUMN_SEMANTICS_CATALOG.csv")
 
 const allRelations = [...managerCensus.body.relations]
   .sort((left, right) => left.relation_id.localeCompare(right.relation_id));
-if (allRelations.length !== 96) {
-  throw new Error(`expected exactly 96 Manager relations, received ${allRelations.length}`);
+if (allRelations.length !== censusSpec.relations) {
+  throw new Error(`expected exactly ${censusSpec.relations} Manager relations (census ${censusVersion}), received ${allRelations.length}`);
 }
 const classificationCounts = Object.fromEntries(
   ["SCREEN_BOUND", "PROJECTION_INPUT", "AUDIT_ONLY", "INTERNAL_ONLY"].map((classification) => [
@@ -206,20 +220,15 @@ const classificationCounts = Object.fromEntries(
     allRelations.filter((relation) => relation.classification === classification).length,
   ]),
 );
-if (
-  classificationCounts.SCREEN_BOUND !== 54 ||
-  classificationCounts.PROJECTION_INPUT !== 16 ||
-  classificationCounts.AUDIT_ONLY !== 13 ||
-  classificationCounts.INTERNAL_ONLY !== 13
-) {
+if (Object.entries(censusSpec.classifications).some(([name, count]) => classificationCounts[name] !== count)) {
   throw new Error(`unexpected Manager relation classification counts: ${JSON.stringify(classificationCounts)}`);
 }
 
 const screenBound = allRelations
   .filter((relation) => relation.classification === "SCREEN_BOUND")
   .sort((left, right) => left.relation_id.localeCompare(right.relation_id));
-if (screenBound.length !== 54) {
-  throw new Error(`expected exactly 54 SCREEN_BOUND relations, received ${screenBound.length}`);
+if (screenBound.length !== censusSpec.classifications.SCREEN_BOUND) {
+  throw new Error(`expected exactly ${censusSpec.classifications.SCREEN_BOUND} SCREEN_BOUND relations, received ${screenBound.length}`);
 }
 
 const operations = screenBound.map((entry) => {
