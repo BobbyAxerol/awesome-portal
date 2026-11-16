@@ -98,7 +98,7 @@ fn validate_acceptance(
         release_blocker_count: array(debt, "/release_blockers")?.len(),
         product_release_authorized: boolean(acceptance, "/authority/product_release_authorized")?,
     };
-    if summary.relation_count != 96
+    if summary.relation_count != 109
         || summary.commissioned_request_count != 31
         || summary.portal_read_count != 27
         || summary.requested_command_count != 9
@@ -231,7 +231,7 @@ mod tests {
     #[test]
     fn embedded_closeout_is_exact_and_fail_closed() {
         let result = validate_embedded_acceptance().expect("valid N29 closeout");
-        assert_eq!(result.relation_count, 96);
+        assert_eq!(result.relation_count, 109);
         assert_eq!(result.commissioned_request_count, 31);
         assert_eq!(result.screen_contract_count, N29_SCREEN_CONTRACT_COUNT);
         assert_eq!(result.release_blocker_count, 1);

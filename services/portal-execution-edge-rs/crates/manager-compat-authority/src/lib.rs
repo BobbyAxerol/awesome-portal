@@ -19,7 +19,7 @@ use sha2::{Digest as _, Sha256};
 use thiserror::Error;
 
 const CENSUS_JSON: &str =
-    include_str!("../../../contracts/manager-surface-census-v1/manager-surface-census.v1.json");
+    include_str!("../../../contracts/manager-surface-census-v2/manager-surface-census.v2.json");
 const MATRIX_JSON: &str =
     include_str!("../../../contracts/manager-compat-authority-v1/adapter-matrix.v1.json");
 const ACTIVATION_JSON: &str =
@@ -41,11 +41,14 @@ pub const SOURCE_DB_IDENTITY_MISMATCH_CODE: &str = "MANAGER_V2_SOURCE_DB_IDENTIT
 const SOURCE_IDENTITY_PIN_SCHEMA: &str = "portal.execution.manager-source-identity-pin.v1";
 const SOURCE_IDENTITY_PIN_MAXIMUM_BYTES: usize = 65_536;
 const N18_CENSUS_DIGEST: &str =
-    "sha256:cb577bdd67eb8ffaf8ec8bb73ac273f064623f2acc7210cc8b2955439411cfe3";
+    "sha256:cab031d8495c61b8d319bb84b5a7506840011daa263e08d3ee06b5f2cf48516c";
 const N19_MATRIX_DIGEST: &str =
-    "sha256:51d971d7029ac6d3028f5b8168bafbf40f6cd58c0cdd24fe4fc262316c5e3102";
+    "sha256:9ff30c0df4a1a2f1f123c0b4c9592116d9449def645f3ccc8a8dbad7724bbb8d";
 const RUNTIME_ACTIVATION_DIGEST: &str =
-    "sha256:6f38c74ac1cbd42aa6b17755e584fafdc9a429dd64217ccb37da88a5b2b460fa";
+    "sha256:d33e5c19627f2abaa1cc59b68e2d074d1ecc050632fa8ec6a516d506949f4c68";
+/// Relations in the frozen N18 census v2: the 96 of v1 plus 13 projection-input relations. A release
+/// manifest still enables only the subset it names, so a larger census changes no runtime behaviour.
+const CENSUS_RELATION_COUNT: usize = 109;
 const REQUIRED_OPERATIONS: [&str; 5] = [
     "managerCapabilities",
     "managerCatalog",
@@ -1047,15 +1050,15 @@ fn validate_census(census: &Census) -> bool {
         .iter()
         .map(|relation| relation.relation_id.as_str())
         .collect();
-    census.schema_version == "portal.execution.manager-surface-census.v1"
+    census.schema_version == "portal.execution.manager-surface-census.v2"
         && census.phase == "N18"
         && census.decision == "N18_CAPABILITY_DATA_COVERAGE_CENSUS_COMPLETE"
         && census.runtime_effect == "NONE"
         && census.generated_from_sanitized_contracts_only
-        && census.counts.relations == 96
+        && census.counts.relations == CENSUS_RELATION_COUNT
         && census.counts.manager_primitives == 5
-        && census.relations.len() == 96
-        && relation_ids.len() == 96
+        && census.relations.len() == CENSUS_RELATION_COUNT
+        && relation_ids.len() == CENSUS_RELATION_COUNT
         && census.manager_primitives.len() == 5
         && operations == required_operations
         && census

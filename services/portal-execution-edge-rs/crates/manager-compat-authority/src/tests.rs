@@ -8,6 +8,24 @@ use super::*;
 
 const DIGEST: &str = "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
 const PROFILE: &str = "PAPER_BINANCE_USDM";
+const V1_CENSUS_JSON: &str =
+    include_str!("../../../contracts/manager-surface-census-v1/manager-surface-census.v1.json");
+/// The 13 T1 relations census v2 adds to the 96 frozen v1 relations.
+const T1_RELATIONS: [&str; 13] = [
+    "public.alpha_deadman_heartbeats",
+    "public.command_transport_bindings",
+    "public.conditional_order_group_native_parents",
+    "public.economic_account_cash_balances",
+    "public.economic_account_fact_census",
+    "public.economic_account_scope_heads",
+    "public.economic_facts",
+    "public.economic_performance_projections_v2",
+    "public.economic_reconciliation_cases",
+    "public.economic_tie_out_reports",
+    "public.execution_algorithm_parents",
+    "public.risk_pool_state_projections",
+    "public.source_change_journal",
+];
 
 fn envelope(data: impl Into<Value>) -> Value {
     let data = data.into();
@@ -80,7 +98,7 @@ fn context<'a>(
 #[test]
 fn canonical_authority_is_digest_bound_and_runtime_activated() {
     let authority = ManagerCompatibilityAuthority::canonical().unwrap();
-    assert_eq!(authority.approved_relation_count(), 96);
+    assert_eq!(authority.approved_relation_count(), 109);
     assert_eq!(
         authority.active_adapter_revision(),
         "portal.execution.manager-adapter.runtime-v1"
@@ -189,7 +207,7 @@ fn simulated_future_adapter_switch_and_explicit_rollback_do_not_widen_operations
 }
 
 #[test]
-fn all_ninety_six_relations_build_only_catalogue_bound_get_blueprints() {
+fn all_census_relations_build_only_catalogue_bound_get_blueprints() {
     let authority = ManagerCompatibilityAuthority::canonical().unwrap();
     let bound = authority
         .bind(context(
@@ -771,4 +789,118 @@ fn bound_authority_applies_the_identity_guard_to_every_request_builder() {
         bound.projection_request(&wrong, ProjectionKind::Order, None, PageLimit::default()),
         Err(AuthorityError::SourceDbIdentityMismatch { .. })
     ));
+}
+
+fn v1_relations() -> Vec<String> {
+    let census: Value = serde_json::from_str(V1_CENSUS_JSON).unwrap();
+    let mut relations: Vec<String> = census["relations"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|row| row["relation_id"].as_str().unwrap().to_owned())
+        .collect();
+    relations.sort();
+    relations
+}
+
+fn paper_release(relations: &[String]) -> Result<ManagerCompatibilityAuthority, AuthorityError> {
+    let manifest = json!({"schema_version":"portal.execution.manager-catalogue-release.v1",
+        "environment":"paper", "profile_id":PROFILE, "catalogue_sha256":DIGEST,
+        "relations":relations});
+    let bytes = serde_json::to_vec(&manifest).unwrap();
+    ManagerCompatibilityAuthority::from_pinned_release(
+        &bytes,
+        &digest(&bytes),
+        DeploymentEnvironment::Paper,
+        PROFILE,
+    )
+}
+
+#[test]
+fn census_v2_is_the_frozen_v1_set_plus_exactly_the_thirteen_t1_relations() {
+    let canonical = ManagerCompatibilityAuthority::canonical().unwrap();
+    let v1 = v1_relations();
+    assert_eq!(v1.len(), 96);
+    let mut expected: BTreeSet<String> = v1.into_iter().collect();
+    assert!(T1_RELATIONS
+        .iter()
+        .all(|name| expected.insert((*name).to_owned())));
+    assert_eq!(canonical.approved_relations, expected);
+    assert_eq!(canonical.approved_relation_count(), 109);
+}
+
+#[test]
+fn release_listing_the_current_49_v1_relations_is_accepted_and_enables_only_them() {
+    let current: Vec<String> = v1_relations().into_iter().take(49).collect();
+    let release = paper_release(&current).unwrap();
+    assert_eq!(release.approved_relation_count(), 49);
+    release
+        .validate_catalogue(&decode_catalogue(current.clone()))
+        .unwrap();
+
+    // The 13 T1 relations are in the census but stay disabled: a catalogue that carries one is drift, and
+    // no request can be built for it.
+    let mut widened = current.clone();
+    widened.push(T1_RELATIONS[6].to_owned());
+    assert!(matches!(
+        release.validate_catalogue(&decode_catalogue(widened)),
+        Err(AuthorityError::CatalogueDrift)
+    ));
+    let bound = release
+        .bind(context(
+            DeploymentEnvironment::Paper,
+            PROFILE,
+            DELEGATED_RESOURCE,
+            RUNTIME_CONTRACT_REVISION,
+        ))
+        .unwrap();
+    let catalogue = decode_catalogue(current);
+    for name in T1_RELATIONS {
+        assert!(matches!(
+            bound.relation_page_request(&catalogue, name, None, PageLimit::default()),
+            Err(AuthorityError::RelationNotApproved)
+        ));
+    }
+}
+
+#[test]
+fn release_listing_a_t1_relation_is_accepted_only_when_it_is_in_the_v2_census() {
+    let mut listed: Vec<String> = v1_relations().into_iter().take(49).collect();
+    for name in T1_RELATIONS {
+        let mut with_t1 = listed.clone();
+        with_t1.push(name.to_owned());
+        assert_eq!(
+            paper_release(&with_t1).unwrap().approved_relation_count(),
+            50
+        );
+    }
+    listed.push(T1_RELATIONS[6].to_owned());
+    let release = paper_release(&listed).unwrap();
+    let catalogue = decode_catalogue(listed.clone());
+    release.validate_catalogue(&catalogue).unwrap();
+    let bound = release
+        .bind(context(
+            DeploymentEnvironment::Paper,
+            PROFILE,
+            DELEGATED_RESOURCE,
+            RUNTIME_CONTRACT_REVISION,
+        ))
+        .unwrap();
+    assert!(bound
+        .relation_page_request(&catalogue, T1_RELATIONS[6], None, PageLimit::default())
+        .is_ok());
+
+    // A name outside the v2 census (including a near-miss of a T1 name) is refused.
+    for name in [
+        "public.economic_fact",
+        "public.economic_facts_v3",
+        "public.venue_secrets",
+    ] {
+        let mut outside = listed.clone();
+        outside.push(name.to_owned());
+        assert!(matches!(
+            paper_release(&outside),
+            Err(AuthorityError::InvalidCatalogueRestriction)
+        ));
+    }
 }

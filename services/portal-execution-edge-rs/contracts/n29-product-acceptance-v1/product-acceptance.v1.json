@@ -6,9 +6,9 @@
   "runtime_effect": "NONE",
   "accepted_scope": {
     "relations": {
-      "total": 96,
+      "total": 109,
       "screen_bound": 54,
-      "projection_input": 16,
+      "projection_input": 29,
       "audit_evidence": 13,
       "intentionally_internal": 13
     },

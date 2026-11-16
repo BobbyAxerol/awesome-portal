@@ -8,6 +8,13 @@ use serde_json::{json, Value};
 
 use super::*;
 
+/// The compatibility authority is pinned to census v2 (109 relations) while this adapter and the E5
+/// publication stay on the v1 census (96): the Manager catalogue the tests serve must carry every
+/// authority relation, so it is built from v2.
+const AUTHORITY_CENSUS_JSON: &str = include_str!(concat!(
+    env!("CARGO_MANIFEST_DIR"),
+    "/../../contracts/manager-surface-census-v2/manager-surface-census.v2.json"
+));
 const DIGEST: &str = "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
 const PAPER_PROFILE: &str = "PAPER_BINANCE_USDM";
 const SANDBOX_PROFILE: &str = "SANDBOX_BINANCE_USDM";
@@ -468,7 +475,7 @@ fn synthetic_catalogue(adapter: &MaximumDataAdapter, profile_id: &str) -> Manage
             ),
         );
     }
-    let census: Value = serde_json::from_str(MANAGER_CENSUS_JSON).unwrap();
+    let census: Value = serde_json::from_str(AUTHORITY_CENSUS_JSON).unwrap();
     let relations = census["relations"]
         .as_array()
         .unwrap()

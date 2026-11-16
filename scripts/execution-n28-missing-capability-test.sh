@@ -38,7 +38,7 @@ def digest(path):
     return "sha256:" + hashlib.sha256(path.read_bytes()).hexdigest()
 
 evidence = {
-    "n18_census_sha256": root / "services/portal-execution-edge-rs/contracts/manager-surface-census-v1/manager-surface-census.v1.json",
+    "n18_census_sha256": root / "services/portal-execution-edge-rs/contracts/manager-surface-census-v2/manager-surface-census.v2.json",
     "current_source_map_sha256": root / "services/portal-execution-edge-rs/contracts/current-source-v1/capability-source-map.json",
     "n25_release_profile_sha256": root / "deploy/manifests/query-analytics-release-profile.v1.json",
     "n27_task_fixture_sha256": root / "packages/contracts/fixtures/execution-command-tasks.valid.json",

@@ -27,7 +27,7 @@ import pathlib
 import sys
 
 root = pathlib.Path(sys.argv[1])
-census_path = root / "services/portal-execution-edge-rs/contracts/manager-surface-census-v1/manager-surface-census.v1.json"
+census_path = root / "services/portal-execution-edge-rs/contracts/manager-surface-census-v2/manager-surface-census.v2.json"
 matrix_path = root / "services/portal-execution-edge-rs/contracts/manager-compat-authority-v1/adapter-matrix.v1.json"
 negative_path = root / "services/portal-execution-edge-rs/contracts/manager-compat-authority-v1/negative-matrix.v1.json"
 activation_path = root / "services/portal-execution-edge-rs/contracts/manager-profile-activation-v1/runtime-activation.v1.json"
@@ -47,8 +47,8 @@ evidence = json.loads(evidence_bytes)
 
 expected_census_digest = "sha256:" + hashlib.sha256(census_bytes).hexdigest()
 assert matrix["n18_census_sha256"] == expected_census_digest
-assert census["counts"]["relations"] == len(census["relations"]) == 96
-assert len({row["relation_id"] for row in census["relations"]}) == 96
+assert census["counts"]["relations"] == len(census["relations"]) == 109
+assert len({row["relation_id"] for row in census["relations"]}) == 109
 assert all(row["relation_id"].startswith("public.") for row in census["relations"])
 
 expected_operations = {

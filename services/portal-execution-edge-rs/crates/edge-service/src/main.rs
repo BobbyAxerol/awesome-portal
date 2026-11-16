@@ -5475,7 +5475,7 @@ mod manager_catalogue_release_config_tests {
     #[test]
     fn default_and_partial_release_pairs_fail_closed() {
         let canonical = manager_compatibility_from_release("paper", None, None, None).unwrap();
-        assert_eq!(canonical.approved_relation_count(), 96);
+        assert_eq!(canonical.approved_relation_count(), 109);
         assert!(manager_compatibility_from_release("paper", None, Some("/missing"), None).is_err());
         assert!(
             manager_compatibility_from_release("paper", None, None, Some("sha256:bad")).is_err()
