@@ -28,7 +28,7 @@ import {
   projectionRecoveryDelayMs,
   provenanceCompatibleRows,
 } from "../src/execution/profile-projection.worker";
-import { WARM_WINDOW_MAX_ROWS } from "../src/execution/profile-projection.catalog";
+import { WARM_WINDOW_DAYS, WARM_WINDOW_MAX_ROWS } from "../src/execution/profile-projection.catalog";
 import { MAXIMUM_DATA_INTAKE_V1 } from "../src/execution/maximum-data-intake";
 import { migrateTestDatabase, testConfig, truncateAll } from "./harness";
 
@@ -1517,6 +1517,14 @@ describe("Full-depth time-series history store (owner directive 2026-09-03)", ()
   });
 
   it("persists every lineage-accepted drained row exactly once, at full depth", async () => {
+    // Dates are relative to now: the warm window is WARM_WINDOW_DAYS (30), so
+    // fixed calendar dates silently fall out of it as time passes (the test
+    // began failing on 2026-10-03 when 2026-09-03 aged out).
+    const wholeSecond = (ms: number) => new Date(Math.floor(ms / 1000) * 1000).toISOString();
+    const dayMs = 86_400_000;
+    const oldTs = wholeSecond(Date.now() - 4 * WARM_WINDOW_DAYS * dayMs);
+    const recentTs = wholeSecond(Date.now() - dayMs);
+    const ghostTs = wholeSecond(Date.now() - dayMs + 3_600_000);
     const source = {
       relationForProjection: async (
         _workspace: string, environment: string, _screen: string,
@@ -1531,9 +1539,9 @@ describe("Full-depth time-series history store (owner directive 2026-09-03)", ()
         }
         if (relation === "account_equity_snapshots") {
           response.source.data.items = [
-            typedRow(101, "2026-06-30T00:00:00.000Z", "acc_a"),
-            typedRow(102, "2026-09-03T00:00:00.000Z", "acc_a"),
-            typedRow(103, "2026-09-03T01:00:00.000Z", "acc_ghost"),
+            typedRow(101, oldTs, "acc_a"),
+            typedRow(102, recentTs, "acc_a"),
+            typedRow(103, ghostTs, "acc_ghost"),
           ];
         }
         return response;
@@ -1548,8 +1556,8 @@ describe("Full-depth time-series history store (owner directive 2026-09-03)", ()
     // the store; eq_1 predates the hot window yet IS kept — full depth.
     expect(coverage).toEqual({
       rowCount: 2,
-      oldestTs: "2026-06-30T00:00:00.000Z",
-      newestTs: "2026-09-03T00:00:00.000Z",
+      oldestTs: oldTs,
+      newestTs: recentTs,
     });
     const page = await repository.timeSeriesHistory(workspaceId, "paper", profileId, equityKey, { limit: 10 });
     expect(page.hasMore).toBe(false);
