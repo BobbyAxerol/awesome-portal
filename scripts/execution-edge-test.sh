@@ -122,7 +122,15 @@ fi
   -w /repo/services/portal-execution-edge-rs \
   "${IMAGE}" sh -eu -c '
     cargo fmt --all -- --check
-    cargo test --locked --all-targets
+    # The EPG10-08 TLS tests mint disposable certificates and run only with this
+    # explicit marker and a private root named /tmp/epg10-08-<suffix> (see
+    # tests/epg10_08_tls.rs); without them 10 of its 12 tests fail by design.
+    mkdir -m 0700 /tmp/epg10-08-ci
+    EPG10_TEST_ONLY=1 TMPDIR=/tmp/epg10-08-ci cargo test --locked --workspace --exclude projection-store-pg --all-targets
+    # The projection-store-pg integration targets (epg10_04..11) belong to the isolated
+    # EPG10 disposable-PG harness (scripts/epg10-04/run.py: loopback-only target, own
+    # database names, single-threaded); this gate runs the crate library tests only.
+    cargo test --locked -p projection-store-pg --lib
     # Release test artifacts before rebuilding the independent lint gate. The
     # anonymous /target volume is destroyed with this one-shot container.
     cargo clean
