@@ -5,6 +5,8 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 APP_DIR="${ROOT_DIR}/apps/control-api"
 MAXIMUM_DATA_PACK="${ROOT_DIR}/services/portal-execution-edge-rs/contracts/maximum-data-return-v1"
+# The registry compiler reads the column catalogue of the v2 return pack (fields-only census step, 18 Nov 2026).
+MAXIMUM_DATA_PACK_V2="${ROOT_DIR}/services/portal-execution-edge-rs/contracts/maximum-data-return-v2"
 EDS08_SOURCE_CONTINUITY_PACK="${ROOT_DIR}/services/portal-execution-edge-rs/contracts/eds08-source-continuity-v1"
 # EDS-11R's checked-in named-operation compiler consumes this immutable
 # Manager census in addition to the maximum-data evidence pack.  Keep it
@@ -76,6 +78,7 @@ cp "${APP_DIR}/package.json" "${APP_DIR}/package-lock.json" "${DEPS_DIR}/"
   "${NODE_IMAGE}" npm ci --no-audit --no-fund
 test -x "${DEPS_DIR}/node_modules/.bin/tsc"
 test -f "${MAXIMUM_DATA_PACK}/MANIFEST.sha256"
+test -f "${MAXIMUM_DATA_PACK_V2}/COLUMN_SEMANTICS_CATALOG.csv"
 test -f "${EDS08_SOURCE_CONTINUITY_PACK}/MANIFEST.sha256"
 test -f "${EDS11R_MANAGER_CENSUS_PACK}/manager-surface-census.v1.json"
 
@@ -140,6 +143,7 @@ fi
   -v "${ROOT_DIR}/packages/contracts:/contracts:ro" \
   -e PORTAL_CONTRACTS_DIR=/contracts \
   -v "${MAXIMUM_DATA_PACK}:/services/portal-execution-edge-rs/contracts/maximum-data-return-v1:ro" \
+  -v "${MAXIMUM_DATA_PACK_V2}:/services/portal-execution-edge-rs/contracts/maximum-data-return-v2:ro" \
   -v "${EDS08_SOURCE_CONTINUITY_PACK}:/services/portal-execution-edge-rs/contracts/eds08-source-continuity-v1:ro" \
   -v "${EDS11R_MANAGER_CENSUS_PACK}:/services/portal-execution-edge-rs/contracts/manager-surface-census-v1:ro" \
   --tmpfs /tmp:rw,exec,mode=1777,size=512m \
@@ -149,7 +153,7 @@ fi
   -e TEST_DATABASE_URL="postgres://portal:portal@${PG_CONTAINER}:5432/portal_control_test" \
   -e EDS02_SOURCE_PACK="/services/portal-execution-edge-rs/contracts/maximum-data-return-v1" \
   -e EDS08_SOURCE_CONTINUITY_PACK="/services/portal-execution-edge-rs/contracts/eds08-source-continuity-v1" \
-  -e EDS11R_SOURCE_PACK="/services/portal-execution-edge-rs/contracts/maximum-data-return-v1" \
+  -e EDS11R_SOURCE_PACK="/services/portal-execution-edge-rs/contracts/maximum-data-return-v2" \
   -e EDS11R_CENSUS_PACK="/services/portal-execution-edge-rs/contracts/manager-surface-census-v1" \
   "${NODE_IMAGE}" sh -c '
     set -e

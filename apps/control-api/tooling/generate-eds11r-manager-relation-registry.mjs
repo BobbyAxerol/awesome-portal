@@ -26,6 +26,27 @@ const censusVersions = Object.freeze({
     relations: 96,
     classifications: Object.freeze({ SCREEN_BOUND: 54, PROJECTION_INPUT: 16, AUDIT_ONLY: 13, INTERNAL_ONLY: 13 }),
   }),
+  // Fields-only step of census v2 (18 Nov 2026, owner: "apply 21, leave out 15"): the 96-relation census of v1 stays (so the
+  // frozen intake counts, the R3 coverage ledger and the D3 runtime manifests are untouched) and only the column catalogue of
+  // the v2 return pack is read, which adds scalar fields to existing screen-bound operations. The 13 T1 relations are not part
+  // of this step; they need the full v2 census together with an updated intake and have no screen consumer today.
+  v2fields: Object.freeze({
+    file: "manager-surface-census.v1.json",
+    censusDirectory: "manager-surface-census-v1",
+    sourceDirectory: "maximum-data-return-v2",
+    relations: 96,
+    classifications: Object.freeze({ SCREEN_BOUND: 54, PROJECTION_INPUT: 16, AUDIT_ONLY: 13, INTERNAL_ONLY: 13 }),
+    heldBackToV1Fields: Object.freeze({
+      "public.paper_matcher_config": Object.freeze([
+        "default_event_liquidity", "default_settlement_policy", "fee_model", "instrument_id", "latency_event_count",
+        "latency_ms", "maker_fee_bps", "max_fill_ratio_per_event", "partial_fill_enabled", "realistic_settlement",
+        "slippage_bps", "taker_fee_bps", "updated_at", "venue",
+      ]),
+      "public.redis_transport_epochs": Object.freeze([
+        "changed_at", "current_run_id", "first_seen_at", "last_seen_at", "previous_run_id", "transport_name",
+      ]),
+    }),
+  }),
   // Census v2 (16 Nov 2026): the 96 relations of v1 (byte-identical entries) plus the 13 T1 relations, all PROJECTION_INPUT
   // (no screen binding, so the allowlist of 54 named screen operations does not grow). Owner decision, Edge candidate.
   v2: Object.freeze({
@@ -34,9 +55,23 @@ const censusVersions = Object.freeze({
     sourceDirectory: "maximum-data-return-v2",
     relations: 109,
     classifications: Object.freeze({ SCREEN_BOUND: 54, PROJECTION_INPUT: 29, AUDIT_ONLY: 13, INTERNAL_ONLY: 13 }),
+    // Owner decision 18 Nov 2026 ("apply 21, leave out 15"): the 36 new scalar fields of v2 are applied except the 15 that
+    // belong to two infrastructure operations (paper_matcher_config +7: Paper matching simulator settings; redis_transport_epochs
+    // +8: Redis transport epochs). Those two operations keep exactly their v1 field list, so Portal does not expose them.
+    // A listed field that the census no longer carries fails the compile instead of silently shrinking the operation.
+    heldBackToV1Fields: Object.freeze({
+      "public.paper_matcher_config": Object.freeze([
+        "default_event_liquidity", "default_settlement_policy", "fee_model", "instrument_id", "latency_event_count",
+        "latency_ms", "maker_fee_bps", "max_fill_ratio_per_event", "partial_fill_enabled", "realistic_settlement",
+        "slippage_bps", "taker_fee_bps", "updated_at", "venue",
+      ]),
+      "public.redis_transport_epochs": Object.freeze([
+        "changed_at", "current_run_id", "first_seen_at", "last_seen_at", "previous_run_id", "transport_name",
+      ]),
+    }),
   }),
 });
-const censusVersion = process.env.EDS11R_CENSUS_VERSION ?? "v1";
+const censusVersion = process.env.EDS11R_CENSUS_VERSION ?? "v2fields";
 const censusSpec = censusVersions[censusVersion];
 if (!censusSpec) {
   throw new Error(`unknown census version ${censusVersion}; known: ${Object.keys(censusVersions).join(", ")}`);
@@ -250,6 +285,7 @@ const operations = screenBound.map((entry) => {
   }
   const metadata = relationMetadata.get(relationId);
   const columns = columnsByRelation.get(relationId);
+  const heldBack = censusSpec.heldBackToV1Fields?.[relationId];
   if (!metadata || !columns) throw new Error(`${relationId}: missing catalogue metadata`);
   const fields = columns
     .map((column) => ({
@@ -259,7 +295,13 @@ const operations = screenBound.map((entry) => {
     }))
     .filter((field) => field.kind !== null && !field.sensitivity.includes("MAY_CONTAIN_SENSITIVE_STRUCTURED_DATA"))
     .map(({ name, kind }) => ({ name, kind }))
+    .filter((field) => heldBack === undefined || heldBack.includes(field.name))
     .sort((left, right) => left.name.localeCompare(right.name));
+  if (heldBack !== undefined) {
+    const present = new Set(fields.map((field) => field.name));
+    const missing = heldBack.filter((name) => !present.has(name));
+    if (missing.length > 0) throw new Error(`${relationId}: held-back v1 fields missing from the census: ${missing.join(", ")}`);
+  }
   if (fields.length === 0) throw new Error(`${relationId}: no safe scalar fields`);
   const declaredPrimaryKey = metadata.primary_key_columns
     ? metadata.primary_key_columns.split("|").filter(Boolean)

@@ -4,8 +4,8 @@ export const EDS11R_MANAGER_RELATION_REGISTRY_SOURCE = {
   "schema_version": "portal.execution.eds11r.manager-relation-registry-source.v1",
   "input_digests": {
     "manager_surface_census": "sha256:cb577bdd67eb8ffaf8ec8bb73ac273f064623f2acc7210cc8b2955439411cfe3",
-    "database_relation_census": "sha256:a869e0823908788d91fba5d1579634097f7fb5b6e08c4195d25a56cb7d8926f4",
-    "column_semantics_catalogue": "sha256:1cd136b941061dc354a22d7caed2d3d14eb08d897ef80349be9ada4cc3237a72"
+    "database_relation_census": "sha256:e754a2a8fe662846f241b44ba5bff2f5595fe90faeb361f96e207e0ee2573ee6",
+    "column_semantics_catalogue": "sha256:5a61f5d1e4d6a4fd32b80ec23b1599bc44b14930024c9097209ad34116e72b6e"
   },
   "relation_count": 96,
   "screen_bound_relation_count": 54,
@@ -1211,8 +1211,16 @@ export const EDS11R_MANAGER_RELATION_REGISTRY_SOURCE = {
           "kind": "TEXT"
         },
         {
+          "name": "condition_type",
+          "kind": "TEXT"
+        },
+        {
           "name": "created_at",
           "kind": "TIMESTAMP"
+        },
+        {
+          "name": "custom_condition_id",
+          "kind": "TEXT"
         },
         {
           "name": "filled_quantity",
@@ -1228,6 +1236,14 @@ export const EDS11R_MANAGER_RELATION_REGISTRY_SOURCE = {
         },
         {
           "name": "leg_id",
+          "kind": "TEXT"
+        },
+        {
+          "name": "market_evidence_ref",
+          "kind": "TEXT"
+        },
+        {
+          "name": "native_algo_id",
           "kind": "TEXT"
         },
         {
@@ -1249,6 +1265,10 @@ export const EDS11R_MANAGER_RELATION_REGISTRY_SOURCE = {
         {
           "name": "price",
           "kind": "DECIMAL"
+        },
+        {
+          "name": "price_protection_policy",
+          "kind": "TEXT"
         },
         {
           "name": "quantity",
@@ -1279,6 +1299,14 @@ export const EDS11R_MANAGER_RELATION_REGISTRY_SOURCE = {
           "kind": "TEXT"
         },
         {
+          "name": "trigger_authority",
+          "kind": "TEXT"
+        },
+        {
+          "name": "trigger_direction",
+          "kind": "TEXT"
+        },
+        {
           "name": "trigger_price",
           "kind": "DECIMAL"
         },
@@ -1289,6 +1317,10 @@ export const EDS11R_MANAGER_RELATION_REGISTRY_SOURCE = {
         {
           "name": "updated_at",
           "kind": "TIMESTAMP"
+        },
+        {
+          "name": "valid_until_ms",
+          "kind": "INTEGER"
         },
         {
           "name": "venue_order_id",
@@ -1327,6 +1359,10 @@ export const EDS11R_MANAGER_RELATION_REGISTRY_SOURCE = {
         },
         {
           "name": "adapter_version",
+          "kind": "TEXT"
+        },
+        {
+          "name": "conditional_contract_version",
           "kind": "TEXT"
         },
         {
@@ -1390,6 +1426,10 @@ export const EDS11R_MANAGER_RELATION_REGISTRY_SOURCE = {
           "kind": "TEXT"
         },
         {
+          "name": "lifecycle_phase",
+          "kind": "TEXT"
+        },
+        {
           "name": "max_exposure_quantity",
           "kind": "DECIMAL"
         },
@@ -1406,11 +1446,19 @@ export const EDS11R_MANAGER_RELATION_REGISTRY_SOURCE = {
           "kind": "DECIMAL"
         },
         {
+          "name": "owner_scope_key",
+          "kind": "TEXT"
+        },
+        {
           "name": "policy_version",
           "kind": "INTEGER"
         },
         {
           "name": "position_side",
+          "kind": "TEXT"
+        },
+        {
+          "name": "protection_state",
           "kind": "TEXT"
         },
         {
@@ -1432,6 +1480,14 @@ export const EDS11R_MANAGER_RELATION_REGISTRY_SOURCE = {
         {
           "name": "target_quantity",
           "kind": "DECIMAL"
+        },
+        {
+          "name": "trigger_authority",
+          "kind": "TEXT"
+        },
+        {
+          "name": "trigger_phase",
+          "kind": "TEXT"
         },
         {
           "name": "updated_at",
@@ -1723,6 +1779,10 @@ export const EDS11R_MANAGER_RELATION_REGISTRY_SOURCE = {
         },
         {
           "name": "mode",
+          "kind": "TEXT"
+        },
+        {
+          "name": "pnl_currency",
           "kind": "TEXT"
         },
         {
@@ -3062,6 +3122,18 @@ export const EDS11R_MANAGER_RELATION_REGISTRY_SOURCE = {
           "kind": "TIMESTAMP"
         },
         {
+          "name": "economic_execution_version",
+          "kind": "INTEGER"
+        },
+        {
+          "name": "economic_position_key",
+          "kind": "TEXT"
+        },
+        {
+          "name": "economic_scope_key",
+          "kind": "TEXT"
+        },
+        {
           "name": "instrument_id",
           "kind": "TEXT"
         },
@@ -3088,6 +3160,10 @@ export const EDS11R_MANAGER_RELATION_REGISTRY_SOURCE = {
         {
           "name": "peak_qty",
           "kind": "DECIMAL"
+        },
+        {
+          "name": "pnl_currency",
+          "kind": "TEXT"
         },
         {
           "name": "position_id",
@@ -3460,6 +3536,10 @@ export const EDS11R_MANAGER_RELATION_REGISTRY_SOURCE = {
           "kind": "INTEGER"
         },
         {
+          "name": "max_price_deviation",
+          "kind": "DECIMAL"
+        },
+        {
           "name": "mode",
           "kind": "TEXT"
         },
@@ -3767,6 +3847,10 @@ export const EDS11R_MANAGER_RELATION_REGISTRY_SOURCE = {
         {
           "name": "deployment_id",
           "kind": "TEXT"
+        },
+        {
+          "name": "eligibility_generation",
+          "kind": "INTEGER"
         },
         {
           "name": "mode",

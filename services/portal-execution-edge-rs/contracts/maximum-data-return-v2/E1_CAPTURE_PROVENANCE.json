@@ -1,0 +1,35 @@
+{
+  "business_rows_retained": 0,
+  "capture_utc": "2026-11-16T10:54:04Z",
+  "collector": {
+    "canonical_contract_digest_sha256": "5ad052ef7514f896b0dbd1363f28dfb77bfb286c525853464c7631b07d80337d",
+    "classification_gate": {
+      "inaccessible_application_relations": 6,
+      "source_identity_scope_gap_relations": 6,
+      "unclassified_mutability": 0,
+      "unclassified_relevant_relations": 0,
+      "unclassified_timestamp_columns": 0
+    },
+    "disposition": "INCOMPLETE_SOURCE_IDENTITY_SCOPE",
+    "schema_version": "portal-source-census-v1"
+  },
+  "owner_export_artifact_sha256": {
+    "COLUMN_SEMANTICS_CATALOG.csv": "94a388041c2b4740dba21d1663e18d6997acba571eb78ae754465ea94031fe1c",
+    "DATABASE_RELATION_CENSUS.csv": "2ff704a0136f249bcc55ad71fe08937a4b7e5c2f8bc556d6a29edfb8754552e1",
+    "PROFILE_MODE_VENUE_COVERAGE.json": "b39f27733aba5fafdaf3b904bebe4f7b5670d3f9fe28a7e1baa2582efbcb3e62",
+    "SOURCE_LINEAGE_GRAPH.json": "6f54bf995b9ed8e1be336d626e942e5f91f0ee7d229f527764e733a71b289542",
+    "SOURCE_SYSTEM_INVENTORY.json": "4dd48e972f93771e2a526251fcbe8b4b4563ed10bc30c902de3b1d0326b66ac7"
+  },
+  "owner_export_totals": {
+    "columns": 3651,
+    "relations": 314
+  },
+  "schema_version": "portal.execution.e1-census-subset.v2",
+  "selection_rule": "public relations of manager-surface-census v1 (96) plus the 13 T1 relations; no other relation, column or file of the owner export is copied",
+  "subset": {
+    "columns": 1635,
+    "columns_csv_sha256": "5a61f5d1e4d6a4fd32b80ec23b1599bc44b14930024c9097209ad34116e72b6e",
+    "relations": 109,
+    "relations_csv_sha256": "e754a2a8fe662846f241b44ba5bff2f5595fe90faeb361f96e207e0ee2573ee6"
+  }
+}
