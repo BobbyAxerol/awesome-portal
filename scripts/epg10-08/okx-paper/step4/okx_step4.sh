@@ -110,7 +110,7 @@ proxy-up)   # option b: starts ONLY the new proxy on the existing bridge gateway
     [ "$(docker network ls --filter name=^${P}_execution-private$ -q | wc -l)" = 0 ] || { echo "STOP: the bridge already exists"; exit 3; }
   fi
   # pre-check of the nginx config with the same image, user, group and mounts, no network (nginx -t does not bind)
-  docker run --rm --pull=never --network none --user 101:101 --group-add $RUNTIME_GID --read-only --cap-drop ALL --tmpfs /tmp --tmpfs /var/cache/nginx:uid=101,gid=101 \
+  docker run --rm --pull=never --network host --user 101:101 --group-add $RUNTIME_GID --read-only --cap-drop ALL --tmpfs /tmp --tmpfs /var/cache/nginx:uid=101,gid=101 \
     -v $PX:/run/secrets:ro -v $PX/nginx.manager-okx.conf:/etc/nginx/nginx.conf:ro -v $PX/manager-v2-locations-okx.conf:/run/secrets/manager-v2-locations.conf:ro \
     --entrypoint nginx $PROXY_IMAGE -t -q
   echo "proxy-up start $(date -u +%FT%TZ) option $OPT"

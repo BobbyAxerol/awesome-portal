@@ -41,6 +41,7 @@ RELEASE_SHA = "sha256:8fd7bdf8d1cc36a50077b7e5565c58ba6886a03f76680c48640c00a9f9
 PLACEHOLDER = "__OKX_EDGE_IMAGE_DIGEST__"
 SERVER_CERT, SERVER_KEY = OPT["cert"]
 # Env of the Paper Edge that belongs to features this instance keeps OFF (files or manifests it must not reference): dropped from the copy.
+# NOTE (2026-11-18 live run): EDGE_PROJECTION_DATABASE_URL_FILE is dropped here but the Edge needs it for the shared admission lease; the live stack adds it through override-projection-url.yaml (sha256 fc8aa748...). The compose file expects the release file under releases/okx-paper-20261118/ (STATE below).
 DROP_PREFIXES = ("EDGE_MANAGER_EVENT_LEDGER_", "EDGE_REALTIME_", "EDGE_MANAGER_PROJECTION_", "EDGE_PROJECTION_DATABASE_URL_FILE", "EDGE_QUERY_CURSOR_")
 def use_option(name: str) -> None:
     """Switch the module constants to option a or b (the default is b)."""
