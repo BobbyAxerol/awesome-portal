@@ -58,7 +58,9 @@ for token in [
 
 assert "retry_count: 0" in control_proxy
 assert ".execute(request)" in edge_service
-assert "tokio::time::sleep(lease.wait)" in edge_service
+# Since d4e1bee6 the lease wait is bounded by the request deadline inside this helper
+# instead of an unbounded tokio::time::sleep(lease.wait).
+assert "within_source_admission_lease(" in edge_service and "lease.wait" in edge_service
 assert "EDGE_MANAGER_SHARED_ADMISSION_MAXIMUM_RPS:-8" in compose
 assert "EDGE_MANAGER_SHARED_CACHE_TTL_MS:-750" in compose
 for token in [
