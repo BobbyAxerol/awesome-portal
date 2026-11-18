@@ -185,7 +185,7 @@
     {
       "id": "projection_worker",
       "file": "apps/control-api/src/execution/profile-projection.worker.ts",
-      "sha256": "sha256:88673cf4f360d0c49dac76e79f57607d5c657b7a6ca3d60e556fa316916ce28d"
+      "sha256": "sha256:2c38cfedc21c6eb8b545903c82e2891ccfec9859a112777dc0cc6e78d2cc2a1b"
     },
     {
       "id": "projection_repository",
