@@ -153,7 +153,10 @@ export class ExecutionProductReadSource {
   private warmUpMatchesReadProfile(requestedEnvironment: CurrentSourceEnvironment): boolean {
     const environment = maximumDataEnvironment(requestedEnvironment);
     if (environment !== "paper") return true;
-    return managerRelationProfileBinding(environment).profileId === profile(this.config, environment);
+    const readProfile = paperReadProfileId(this.config);
+    // An unconfigured profile keeps the existing typed failure of the path
+    // below; only a configured, different profile is refused here.
+    return readProfile === undefined || managerRelationProfileBinding(environment).profileId === readProfile;
   }
 
   /**
