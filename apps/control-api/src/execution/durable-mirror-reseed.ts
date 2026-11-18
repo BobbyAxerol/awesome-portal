@@ -14,11 +14,13 @@ type ReseedConfig = Pick<
   | "FEATURE_EXECUTION_DURABLE_MIRROR_READS"
   | "FEATURE_EXECUTION_CURRENT_SOURCE_PAPER"
   | "FEATURE_EXECUTION_CURRENT_SOURCE_PAPER_DNSE"
+  | "FEATURE_EXECUTION_CURRENT_SOURCE_PAPER_OKX"
   | "FEATURE_EXECUTION_CURRENT_SOURCE_SANDBOX"
   | "FEATURE_EXECUTION_CURRENT_SOURCE_LIVE"
   | "EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID"
   | "EXECUTION_EDGE_PAPER_PROFILE_ID"
   | "EXECUTION_EDGE_PAPER_DNSE_PROFILE_ID"
+  | "EXECUTION_EDGE_PAPER_OKX_PROFILE_ID"
   | "EXECUTION_EDGE_SANDBOX_PROFILE_ID"
   | "EXECUTION_EDGE_LIVE_PROFILE_ID"
 >;
@@ -26,7 +28,7 @@ type ReseedConfig = Pick<
 export interface DurableMirrorReseedScope {
   readonly environment: ProjectionEnvironment;
   readonly profileId: string;
-  readonly sourceProfile: "PAPER_BINANCE_USDM" | "PAPER_DNSE_VNM" | "SANDBOX_BINANCE_USDM" | "LIVE_BINANCE_USDM";
+  readonly sourceProfile: "PAPER_BINANCE_USDM" | "PAPER_DNSE_VNM" | "PAPER_OKX_SWAP" | "SANDBOX_BINANCE_USDM" | "LIVE_BINANCE_USDM";
   readonly relationKeys: readonly string[];
 }
 
@@ -152,6 +154,8 @@ function configuredScopes(config: ReseedConfig): DurableMirrorReseedScope[] {
       profileId: config.EXECUTION_EDGE_PAPER_PROFILE_ID, sourceProfile: "PAPER_BINANCE_USDM" },
     { environment: "paper", enabled: config.FEATURE_EXECUTION_CURRENT_SOURCE_PAPER_DNSE,
       profileId: config.EXECUTION_EDGE_PAPER_DNSE_PROFILE_ID, sourceProfile: "PAPER_DNSE_VNM" },
+    { environment: "paper", enabled: config.FEATURE_EXECUTION_CURRENT_SOURCE_PAPER_OKX,
+      profileId: config.EXECUTION_EDGE_PAPER_OKX_PROFILE_ID, sourceProfile: "PAPER_OKX_SWAP" },
     { environment: "sandbox", enabled: config.FEATURE_EXECUTION_CURRENT_SOURCE_SANDBOX,
       profileId: config.EXECUTION_EDGE_SANDBOX_PROFILE_ID, sourceProfile: "SANDBOX_BINANCE_USDM" },
     { environment: "live", enabled: config.FEATURE_EXECUTION_CURRENT_SOURCE_LIVE,

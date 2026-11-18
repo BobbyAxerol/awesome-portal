@@ -152,6 +152,8 @@ export function environmentParity(config: ControlApiConfig): EnvironmentParity {
         origin_configured: Boolean(config.EXECUTION_EDGE_LIVE_ORIGIN) },
       { environment: "paper-dnse", profile_id: config.EXECUTION_EDGE_PAPER_DNSE_PROFILE_ID ?? null,
         origin_configured: Boolean(config.EXECUTION_EDGE_PAPER_DNSE_ORIGIN) },
+      { environment: "paper-okx", profile_id: config.EXECUTION_EDGE_PAPER_OKX_PROFILE_ID ?? null,
+        origin_configured: Boolean(config.EXECUTION_EDGE_PAPER_OKX_ORIGIN) },
     ],
     freshness_policy: freshnessPolicies(config),
     capability_readiness: [{
@@ -160,6 +162,10 @@ export function environmentParity(config: ControlApiConfig): EnvironmentParity {
       // and never blocks the parity of the environments that do have one.
       state: config.EXECUTION_EDGE_PAPER_DNSE_ORIGIN ? "READY" : "UNAVAILABLE",
       reason_code: config.EXECUTION_EDGE_PAPER_DNSE_ORIGIN ? null : "EDS_DNSE_ORIGIN_NOT_CONFIGURED",
+    }, {
+      capability: "source.paper-okx",
+      state: config.EXECUTION_EDGE_PAPER_OKX_ORIGIN ? "READY" : "UNAVAILABLE",
+      reason_code: config.EXECUTION_EDGE_PAPER_OKX_ORIGIN ? null : "EDS_OKX_ORIGIN_NOT_CONFIGURED",
     }],
   };
 }

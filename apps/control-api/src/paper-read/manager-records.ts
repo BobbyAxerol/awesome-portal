@@ -27,7 +27,7 @@ export interface ManagerPage {
 }
 
 export interface ManagerReadContext {
-  profileId: "PAPER_BINANCE_USDM" | "PAPER_DNSE_VNM" | "SANDBOX_BINANCE_USDM" | "LIVE_BINANCE_USDM";
+  profileId: "PAPER_BINANCE_USDM" | "PAPER_DNSE_VNM" | "PAPER_OKX_SWAP" | "SANDBOX_BINANCE_USDM" | "LIVE_BINANCE_USDM";
   mode: "paper" | "sandbox" | "live";
   errorPrefix: "N22" | "N23";
 }
@@ -45,6 +45,16 @@ const PAPER_CONTEXT: ManagerReadContext = {
  */
 export const PAPER_DNSE_CONTEXT: ManagerReadContext = {
   profileId: "PAPER_DNSE_VNM",
+  mode: "paper",
+  errorPrefix: "N22",
+};
+
+/**
+ * OKX Paper family (owner decision 2026-11-18, staged): reads under its own
+ * profile context; a row published for another Paper profile never passes it.
+ */
+export const PAPER_OKX_CONTEXT: ManagerReadContext = {
+  profileId: "PAPER_OKX_SWAP",
   mode: "paper",
   errorPrefix: "N22",
 };
