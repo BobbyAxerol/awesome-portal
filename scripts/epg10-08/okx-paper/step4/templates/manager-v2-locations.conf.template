@@ -1,0 +1,140 @@
+# Rendered only when SOURCE_PROXY_SOURCE_MODE=manager-paper-read.  This is a
+# distinct private Paper read contract; it does not widen D4/V1 or grant the
+# Portal process a database identity.
+
+# The Source Proxy owns the Manager mTLS client leaf.  It obtains one short-
+# lived certificate-bound token for each admitted request.  The issuer's
+# private signing key and the facade's database login remain outside Portal.
+location = /_manager_v2_issue {
+    internal;
+    proxy_pass_request_body off;
+    proxy_pass_request_headers off;
+    proxy_set_header Content-Length "";
+    proxy_set_header Host manager-issuer;
+    proxy_set_header X-Request-ID $request_id;
+    proxy_ssl_protocols TLSv1.3;
+    proxy_ssl_certificate /run/secrets/manager-v2-client.pem;
+    proxy_ssl_certificate_key /run/secrets/manager-v2-client.pem;
+    proxy_ssl_trusted_certificate /run/secrets/manager-v2-ca.crt;
+    proxy_ssl_verify on;
+    proxy_ssl_verify_depth 1;
+    proxy_ssl_server_name on;
+    proxy_ssl_name manager-issuer;
+    proxy_ssl_session_reuse off;
+    proxy_pass https://127.0.0.1:8024/internal/issue;
+}
+
+location = /portal/execution/v2/manager/catalog {
+    limit_except GET { deny all; }
+    limit_req zone=manager_v2_paper_read burst=20 nodelay;
+    limit_req_status 429;
+    auth_request /_manager_v2_issue;
+    auth_request_set $manager_v2_authorization $upstream_http_x_manager_authorization;
+    proxy_pass_request_headers off;
+    proxy_set_header Host manager-facade;
+    proxy_set_header Accept application/json;
+    proxy_set_header Authorization $manager_v2_authorization;
+    proxy_set_header X-Request-ID $request_id;
+    proxy_ssl_protocols TLSv1.3;
+    proxy_ssl_certificate /run/secrets/manager-v2-client.pem;
+    proxy_ssl_certificate_key /run/secrets/manager-v2-client.pem;
+    proxy_ssl_trusted_certificate /run/secrets/manager-v2-ca.crt;
+    proxy_ssl_verify on;
+    proxy_ssl_verify_depth 1;
+    proxy_ssl_server_name on;
+    proxy_ssl_name manager-facade;
+    proxy_ssl_session_reuse off;
+    proxy_pass https://127.0.0.1:8023;
+}
+
+location = /portal/execution/v2/manager/capabilities {
+    limit_except GET { deny all; }
+    limit_req zone=manager_v2_paper_read burst=20 nodelay;
+    limit_req_status 429;
+    auth_request /_manager_v2_issue;
+    auth_request_set $manager_v2_authorization $upstream_http_x_manager_authorization;
+    proxy_pass_request_headers off;
+    proxy_set_header Host manager-facade;
+    proxy_set_header Accept application/json;
+    proxy_set_header Authorization $manager_v2_authorization;
+    proxy_set_header X-Request-ID $request_id;
+    proxy_ssl_protocols TLSv1.3;
+    proxy_ssl_certificate /run/secrets/manager-v2-client.pem;
+    proxy_ssl_certificate_key /run/secrets/manager-v2-client.pem;
+    proxy_ssl_trusted_certificate /run/secrets/manager-v2-ca.crt;
+    proxy_ssl_verify on;
+    proxy_ssl_verify_depth 1;
+    proxy_ssl_server_name on;
+    proxy_ssl_name manager-facade;
+    proxy_ssl_session_reuse off;
+    proxy_pass https://127.0.0.1:8023;
+}
+
+location ~ ^/portal/execution/v2/manager/projections/(portfolio|account|order|fill|position|reconciliation|command_journal)$ {
+    limit_except GET { deny all; }
+    limit_req zone=manager_v2_paper_read burst=20 nodelay;
+    limit_req_status 429;
+    auth_request /_manager_v2_issue;
+    auth_request_set $manager_v2_authorization $upstream_http_x_manager_authorization;
+    proxy_pass_request_headers off;
+    proxy_set_header Host manager-facade;
+    proxy_set_header Accept application/json;
+    proxy_set_header Authorization $manager_v2_authorization;
+    proxy_set_header X-Request-ID $request_id;
+    proxy_ssl_protocols TLSv1.3;
+    proxy_ssl_certificate /run/secrets/manager-v2-client.pem;
+    proxy_ssl_certificate_key /run/secrets/manager-v2-client.pem;
+    proxy_ssl_trusted_certificate /run/secrets/manager-v2-ca.crt;
+    proxy_ssl_verify on;
+    proxy_ssl_verify_depth 1;
+    proxy_ssl_server_name on;
+    proxy_ssl_name manager-facade;
+    proxy_ssl_session_reuse off;
+    proxy_pass https://127.0.0.1:8023;
+}
+
+location ~ "^/portal/execution/v2/manager/records/[A-Za-z_][A-Za-z0-9_]*/[A-Za-z_][A-Za-z0-9_]*/[A-Za-z0-9_=-]{1,4096}$" {
+    limit_except GET { deny all; }
+    limit_req zone=manager_v2_paper_read burst=20 nodelay;
+    limit_req_status 429;
+    auth_request /_manager_v2_issue;
+    auth_request_set $manager_v2_authorization $upstream_http_x_manager_authorization;
+    proxy_pass_request_headers off;
+    proxy_set_header Host manager-facade;
+    proxy_set_header Accept application/json;
+    proxy_set_header Authorization $manager_v2_authorization;
+    proxy_set_header X-Request-ID $request_id;
+    proxy_ssl_protocols TLSv1.3;
+    proxy_ssl_certificate /run/secrets/manager-v2-client.pem;
+    proxy_ssl_certificate_key /run/secrets/manager-v2-client.pem;
+    proxy_ssl_trusted_certificate /run/secrets/manager-v2-ca.crt;
+    proxy_ssl_verify on;
+    proxy_ssl_verify_depth 1;
+    proxy_ssl_server_name on;
+    proxy_ssl_name manager-facade;
+    proxy_ssl_session_reuse off;
+    proxy_pass https://127.0.0.1:8023;
+}
+
+location ~ ^/portal/execution/v2/manager/records/[A-Za-z_][A-Za-z0-9_]*/[A-Za-z_][A-Za-z0-9_]*$ {
+    limit_except GET { deny all; }
+    limit_req zone=manager_v2_paper_read burst=20 nodelay;
+    limit_req_status 429;
+    auth_request /_manager_v2_issue;
+    auth_request_set $manager_v2_authorization $upstream_http_x_manager_authorization;
+    proxy_pass_request_headers off;
+    proxy_set_header Host manager-facade;
+    proxy_set_header Accept application/json;
+    proxy_set_header Authorization $manager_v2_authorization;
+    proxy_set_header X-Request-ID $request_id;
+    proxy_ssl_protocols TLSv1.3;
+    proxy_ssl_certificate /run/secrets/manager-v2-client.pem;
+    proxy_ssl_certificate_key /run/secrets/manager-v2-client.pem;
+    proxy_ssl_trusted_certificate /run/secrets/manager-v2-ca.crt;
+    proxy_ssl_verify on;
+    proxy_ssl_verify_depth 1;
+    proxy_ssl_server_name on;
+    proxy_ssl_name manager-facade;
+    proxy_ssl_session_reuse off;
+    proxy_pass https://127.0.0.1:8023;
+}

@@ -1,0 +1,160 @@
+{
+  "name": "portal-execution-edge-okx",
+  "networks": {
+    "execution-private": {
+      "driver": "bridge",
+      "ipam": {
+        "config": [
+          {
+            "gateway": "172.30.0.1",
+            "subnet": "172.30.0.0/24"
+          }
+        ]
+      }
+    }
+  },
+  "services": {
+    "execution-edge": {
+      "cap_drop": [
+        "ALL"
+      ],
+      "command": [
+        "serve"
+      ],
+      "container_name": "portal-execution-edge-okx-execution-edge-1",
+      "cpu_shares": 1024,
+      "cpus": 2.0,
+      "entrypoint": [
+        "/usr/local/bin/portal-execution-edge"
+      ],
+      "environment": {
+        "EDGE_ANALYTICS_QUERY_ENABLED": "false",
+        "EDGE_ANALYTICS_SOURCE_PROFILE": "fixture",
+        "EDGE_BIND_ADDRESS": "0.0.0.0:8443",
+        "EDGE_COMMAND_RELAY_ENABLED": "false",
+        "EDGE_CONNECT_TIMEOUT_MS": "2000",
+        "EDGE_DELEGATION_AUDIENCE": "portal-execution-edge-paper-okx",
+        "EDGE_DELEGATION_ISSUER": "portal-control-api",
+        "EDGE_DELEGATION_JWKS_FILE": "/run/secrets/control-api.jwks.json",
+        "EDGE_DELEGATION_MAXIMUM_TTL_SECONDS": "60",
+        "EDGE_ENVIRONMENT": "paper",
+        "EDGE_HEALTH_BIND_ADDRESS": "127.0.0.1:9100",
+        "EDGE_MANAGER_CATALOGUE_CACHE_TTL_MS": "0",
+        "EDGE_MANAGER_CATALOGUE_RELEASE_FILE": "/run/manager-release/catalogue.json",
+        "EDGE_MANAGER_CATALOGUE_RELEASE_SHA256": "sha256:8fd7bdf8d1cc36a50077b7e5565c58ba6886a03f76680c48640c00a9f97d6f82",
+        "EDGE_MANAGER_EVENT_LEDGER_ENABLED": "false",
+        "EDGE_MANAGER_PROJECTION_ENABLED": "false",
+        "EDGE_MANAGER_SHARED_ADMISSION_LEASE_TTL_MS": "7000",
+        "EDGE_MANAGER_SHARED_ADMISSION_MAXIMUM_CONCURRENCY": "8",
+        "EDGE_MANAGER_SHARED_ADMISSION_MAXIMUM_RPS": "8",
+        "EDGE_MANAGER_SHARED_ADMISSION_MAXIMUM_WAIT_MS": "1000",
+        "EDGE_MANAGER_SHARED_CACHE_TTL_MS": "750",
+        "EDGE_MANAGER_V2_PROFILE_ID": "PAPER_OKX_SWAP",
+        "EDGE_MANAGER_V2_READ_ENABLED": "true",
+        "EDGE_MAXIMUM_CONCURRENCY": "32",
+        "EDGE_MAXIMUM_RESPONSE_BYTES": "2097152",
+        "EDGE_MAXIMUM_RETRIES": "1",
+        "EDGE_PAPER_WORKBENCH_SHADOW_ENABLED": "false",
+        "EDGE_PROBE_ALPHA_ID": "",
+        "EDGE_PROBE_INTERVAL_SECONDS": "30",
+        "EDGE_PROJECTION_INGESTION_ENABLED": "false",
+        "EDGE_QUEUE_TIMEOUT_MS": "250",
+        "EDGE_REALTIME_SSE_ENABLED": "false",
+        "EDGE_REQUEST_TIMEOUT_MS": "5000",
+        "EDGE_RETRY_BACKOFF_MS": "100",
+        "EDGE_SHADOW_QUERY_ENABLED": "false",
+        "EDGE_SHADOW_QUERY_FRESHNESS_POLICY_VERSION": "paper.shadow-query.v1",
+        "EDGE_SHADOW_QUERY_FRESHNESS_STALE_AFTER_MS": "30000",
+        "EDGE_SHADOW_QUERY_FRESHNESS_WARNING_AFTER_MS": "5000",
+        "EDGE_SHADOW_QUERY_MAXIMUM_FUTURE_SKEW_MS": "2000",
+        "EDGE_SOURCE_API_KEY_FILE": "/run/secrets/source-proxy-admission-token",
+        "EDGE_SOURCE_CA_FILE": "/run/secrets/source-proxy-ca.crt",
+        "EDGE_SOURCE_CLIENT_IDENTITY_FILE": "/run/secrets/source-proxy-client.pem",
+        "EDGE_SOURCE_GATEWAY_DIGEST": "sha256:8a81f121f068bec80821c5f3be38c8865682e248147f1ca808800a18ea8c1fde",
+        "EDGE_SOURCE_ORIGIN": "https://172.30.0.1:8444",
+        "EDGE_SOURCE_PROBES_ENABLED": "false",
+        "EDGE_TLS_CERTIFICATE_FILE": "/run/secrets/edge-server.crt",
+        "EDGE_TLS_CLIENT_CA_FILE": "/run/secrets/sgp-client-ca.crt",
+        "EDGE_TLS_PRIVATE_KEY_FILE": "/run/secrets/edge-server.key",
+        "RUST_LOG": "info"
+      },
+      "group_add": [
+        "987"
+      ],
+      "healthcheck": {
+        "interval": "15s",
+        "retries": 4,
+        "start_period": "15s",
+        "test": [
+          "CMD",
+          "/usr/local/bin/portal-execution-edge",
+          "healthcheck"
+        ],
+        "timeout": "3s"
+      },
+      "image": "__OKX_EDGE_IMAGE_DIGEST__",
+      "init": true,
+      "logging": {
+        "driver": "json-file",
+        "options": {
+          "max-file": "3",
+          "max-size": "10m"
+        }
+      },
+      "mem_limit": "2147483648",
+      "mem_reservation": "536870912",
+      "memswap_limit": "4294967296",
+      "networks": {
+        "execution-private": null
+      },
+      "pids_limit": 128,
+      "ports": [
+        {
+          "host_ip": "10.70.0.2",
+          "mode": "ingress",
+          "protocol": "tcp",
+          "published": "8446",
+          "target": 8443
+        }
+      ],
+      "pull_policy": "never",
+      "read_only": true,
+      "restart": "unless-stopped",
+      "security_opt": [
+        "no-new-privileges:true"
+      ],
+      "shm_size": "67108864",
+      "stop_grace_period": "15s",
+      "tmpfs": [
+        "/tmp:rw,noexec,nosuid,nodev,size=16m,mode=1777"
+      ],
+      "ulimits": {
+        "nofile": {
+          "hard": 4096,
+          "soft": 1024
+        }
+      },
+      "user": "65532:65532",
+      "volumes": [
+        {
+          "bind": {
+            "create_host_path": false
+          },
+          "read_only": true,
+          "source": "/srv/primus/portal/execution-edge",
+          "target": "/run/secrets",
+          "type": "bind"
+        },
+        {
+          "bind": {
+            "create_host_path": false
+          },
+          "read_only": true,
+          "source": "/home/bobby/.local/state/portal-execution-edge/releases/okx-paper-20261118/manager-catalogue-release.json",
+          "target": "/run/manager-release/catalogue.json",
+          "type": "bind"
+        }
+      ]
+    }
+  }
+}
